@@ -14,6 +14,7 @@ import {
   completeOnboarding,
   createTenant,
   saveAddressStep,
+  saveBusinessStep,
   saveGstStep,
 } from 'modules/DigiKhaato/features/onboarding/redux/onboardingThunk';
 import { fetchPartyList } from 'modules/DigiKhaato/features/parties/redux/partyListThunk';
@@ -55,6 +56,7 @@ export const MUTATIONS = {
   confirmPasswordReset,
   // PLT-03 — the onboarding wizard, one mutation per step
   createTenant,
+  saveBusinessStep,
   saveGstStep,
   saveAddressStep,
   completeOnboarding,

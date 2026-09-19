@@ -40,6 +40,28 @@
   /* DigiKhaato mobile overrides (§23.2.1). */
   --bottom-nav-h: calc(64px + env(safe-area-inset-bottom, 0px));
 
+  /* ── Bottom furniture, and the one inset that clears it ─────────────────
+   * CR-2026-09-19-G. The global toast is `position: fixed` at the bottom of
+   * the VIEWPORT, and two archetypes already put something else there: the
+   * onboarding wizard's sticky Continue bar and the `(auth)` page footer
+   * (legal links + the language picker). The toast was landing on top of
+   * both — the primary action of one screen and the only control a merchant
+   * who cannot read English can use on the other.
+   *
+   * `--ub-bottom-inset` is how much of the bottom of the viewport is already
+   * occupied. It is 0 here, and `UbBottomBar` republishes it — on the root,
+   * because a custom property inherits DOWN and the toast is a sibling of the
+   * page, not a descendant of the bar. Anything fixed or floating at the
+   * bottom adds it, so the next screen with an action bar (and `UbBottomNav`,
+   * when it lands) inherits the clearance instead of rediscovering the bug.
+   */
+  --ub-bottom-inset: 0px;
+  /* The toast's own breathing room above whatever the inset cleared. */
+  --ub-toast-gap: var(--space-4);
+  --ub-toast-bottom: calc(
+    var(--ub-bottom-inset) + env(safe-area-inset-bottom, 0px) + var(--ub-toast-gap)
+  );
+
   /* ── Typography (§23.2.2) ──────────────────────────────────────────────── */
   /* Clash Grotesk/Display carry no Devanagari; the roles are kept and the faces
      substituted with Inter + Noto Sans Devanagari (§23.2.2 font decision). */
@@ -114,5 +136,17 @@
     --dur-base: 0ms;
     --dur-slow: 0ms;
     --dur-reveal: 0ms;
+  }
+}
+
+/*
+ * The toast sits 16 px clear of the furniture on a phone and 24 px clear from
+ * `md`, where the viewport has the room. Only the GAP changes at the
+ * breakpoint: `--ub-toast-bottom` is resolved where it is used, so redefining
+ * `--ub-toast-gap` is enough and the inset arithmetic is written once.
+ */
+@media (min-width: 768px) {
+  :root {
+    --ub-toast-gap: var(--space-6);
   }
 }

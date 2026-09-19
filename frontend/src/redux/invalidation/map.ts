@@ -47,6 +47,11 @@ export const INVALIDATION: TInvalidationMap = {
   // session summary — `enabled_modules` after the preset is applied, the tenant
   // name in the header — so the session is refetched while the user is looking
   // at the screen that changed it.
+  // FR-9 — step 1 edited on a business that already exists. A PATCH of the
+  // name, type and state, so it patches the same draft as steps 2 and 3; it is
+  // NOT `createTenant`'s `resetAll`, because no token is re-issued and there is
+  // no new tenant whose caches would have to be dropped.
+  saveBusinessStep: { patch: [['onboarding', 'draft']] },
   saveGstStep: { patch: [['onboarding', 'draft']] },
   saveAddressStep: { patch: [['onboarding', 'draft']] },
   // The preset the server applies on completion changes `enabled_modules` and

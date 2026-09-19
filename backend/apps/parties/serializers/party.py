@@ -22,6 +22,9 @@ class PartyListSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "name",
+            # The party's human-readable code — the subtitle the list row draws
+            # beside the name. It was on the model and off the wire.
+            "display_code",
             "mobile",
             "is_customer",
             "is_supplier",

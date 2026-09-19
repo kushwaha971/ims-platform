@@ -1,6 +1,8 @@
 import type { PageMeta } from 'src/types/api.types';
 import type { PartyStatus } from 'src/types/domain.types';
 
+import type { PartyListTotals } from '../view-model/partyDisplay';
+
 /**
  * Part 19 §19.2.3 — the feature's own types. Money is a STRING here and
  * everywhere below it (R-TS-7): `balance` is `numeric(14,2)` server-side and
@@ -50,4 +52,12 @@ export type PartyListFilters = PartyListParams;
 export interface PartyListResult {
   readonly rows: readonly Party[];
   readonly meta: PageMeta;
+  /**
+   * The two header figures for the WHOLE filtered set, when the server sends
+   * them (Part 22 §22.4 `meta.totals_*`). `null` means it did not, and the
+   * slice falls back to summing the page it has — which is the honest thing a
+   * client can do, and is stated as such on the screen rather than passed off
+   * as a business total.
+   */
+  readonly totals: PartyListTotals | null;
 }

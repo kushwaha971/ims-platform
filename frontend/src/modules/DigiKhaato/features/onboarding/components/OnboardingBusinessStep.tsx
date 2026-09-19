@@ -5,7 +5,7 @@ import { useCallback, useMemo } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm } from 'react-hook-form';
 
-import { UbCard, UbField, UbForm, UbSelect, UbTextInput } from 'src/design-system';
+import { UbDivider, UbField, UbForm, UbSelect, UbStack, UbTextInput } from 'src/design-system';
 import { useAppSelector } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { selectLocale } from 'src/redux/slice/localeSlice';
@@ -15,6 +15,7 @@ import { useOnboardingSchemas } from '../validation/onboardingSchemas';
 
 import { BusinessTypeGrid } from './BusinessTypeGrid';
 import { OnboardingStepActions } from './OnboardingStepActions';
+import { OnboardingStepCard } from './OnboardingStepCard';
 
 import type { BusinessType } from '../constants/businessTypes';
 import type { UseOnboardingResult } from '../hooks/useOnboarding';
@@ -64,24 +65,55 @@ export function OnboardingBusinessStep({
   );
 
   return (
-    <UbCard title={t('onboarding.step1.title')} description={t('onboarding.step1.body')}>
+    <OnboardingStepCard
+      title={t('onboarding.step1.title')}
+      description={t('onboarding.step1.body')}
+    >
       <UbForm form={form} onSubmit={submit} formErrors={onboarding.formErrors}>
-        <UbField name="name" label={t('onboarding.name.label')} required>
-          {(field) => <UbTextInput {...field} autoComplete="organization" autoFocus />}
-        </UbField>
-
-        {/* BR-7 — asked here only when `platform_user.full_name` is still blank,
-            which is the case for a sign-up that left the optional name field
-            empty (CR-2026-09-19-A) or an invited member who never filled it. */}
-        {onboarding.needsOwnerName && (
-          <UbField
-            name="ownerName"
-            label={t('onboarding.ownerName.label')}
-            optionalLabel={t('common.field.optional')}
-          >
-            {(field) => <UbTextInput {...field} autoComplete="name" />}
+        {/* ── CR-2026-09-19-F: the two real inputs are their own group ───────
+            Nine tiles in a 3×3 grid against two lone fields above them is a
+            step that looks like a tile picker with some typing attached. The
+            fields that name the business — what it is called, who runs it, and
+            the state its bills are taxed in — are one group on their own
+            surface, and the tiles are a labelled SECTION beneath, with a
+            divider between the two. The state moved up into the group: it is a
+            select, not a tile, and it was the field stranded under the grid. */}
+        <UbStack gap={4} className="rounded-card border border-border-subtle p-4 sm:p-5">
+          <UbField name="name" label={t('onboarding.name.label')} required>
+            {(field) => <UbTextInput {...field} autoComplete="organization" autoFocus />}
           </UbField>
-        )}
+
+          {/* BR-7 — asked here only when `platform_user.full_name` is still
+              blank, which is the case for a sign-up that left the optional name
+              field empty (CR-2026-09-19-A) or an invited member who never
+              filled it. */}
+          {onboarding.needsOwnerName && (
+            <UbField
+              name="ownerName"
+              label={t('onboarding.ownerName.label')}
+              optionalLabel={t('common.field.optional')}
+            >
+              {(field) => <UbTextInput {...field} autoComplete="name" />}
+            </UbField>
+          )}
+
+          <UbField
+            name="stateCode"
+            label={t('onboarding.state.label')}
+            hint={t('onboarding.state.hint')}
+            required
+          >
+            {(field) => (
+              <UbSelect
+                {...field}
+                options={stateOptions}
+                placeholder={t('onboarding.state.placeholder')}
+              />
+            )}
+          </UbField>
+        </UbStack>
+
+        <UbDivider decorative />
 
         <UbField
           name="businessType"
@@ -100,21 +132,6 @@ export function OnboardingBusinessStep({
           )}
         </UbField>
 
-        <UbField
-          name="stateCode"
-          label={t('onboarding.state.label')}
-          hint={t('onboarding.state.hint')}
-          required
-        >
-          {(field) => (
-            <UbSelect
-              {...field}
-              options={stateOptions}
-              placeholder={t('onboarding.state.placeholder')}
-            />
-          )}
-        </UbField>
-
         <OnboardingStepActions
           onBack={null}
           continueLabel={t('common.action.continue')}
@@ -125,6 +142,6 @@ export function OnboardingBusinessStep({
           disabled={!onboarding.canSubmit}
         />
       </UbForm>
-    </UbCard>
+    </OnboardingStepCard>
   );
 }

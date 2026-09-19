@@ -248,30 +248,3 @@ export const MLSeparator = forwardRef<HTMLHRElement, HTMLAttributes<HTMLHRElemen
     return <hr ref={ref} className={cn('border-t border-border-hairline', className)} {...rest} />;
   }
 );
-
-export interface MLToasterProps extends HTMLAttributes<HTMLDivElement> {
-  readonly className?: string;
-}
-
-/**
- * The real `MLToaster` is sonner. The stand-in is a live region positioned
- * where sonner puts it; `UbSnackbar` renders its children into it and keeps the
- * single-channel contract of §19.12.2 either way.
- */
-export const MLToaster = forwardRef<HTMLDivElement, MLToasterProps>(function MLToaster(
-  { className, ...rest },
-  ref
-) {
-  return (
-    <div
-      ref={ref}
-      role="region"
-      aria-live="polite"
-      className={cn(
-        'pointer-events-none fixed inset-x-0 bottom-20 z-50 flex flex-col items-center gap-2 px-4 md:bottom-6',
-        className
-      )}
-      {...rest}
-    />
-  );
-});

@@ -1,7 +1,7 @@
 import { API_PATHS } from 'src/api/APIPaths';
-import { api, ubConfig } from 'src/api/AxiosInstances';
+import { api } from 'src/api/AxiosInstances';
 import { DEFAULT_TENANT_TIMEZONE } from 'src/constants';
-import type { SessionPayload } from 'src/redux/slice/sessionSlice';
+import type { SessionPayload, SessionTenant } from 'src/redux/slice/sessionSlice';
 import type { TWriteClass } from 'src/types/api.types';
 import type { Locale, ModuleCode, PermissionCode } from 'src/types/domain.types';
 
@@ -48,13 +48,34 @@ interface AuthUserApiRow {
   readonly has_password?: boolean;
 }
 
+/**
+ * The active-tenant summary. Part 22 §22.2 is explicit that the enabled modules
+ * live HERE and not at the top level of the payload — "active tenant summary
+ * (`enabled_modules`, `gst_type`, `branding`)" — and `session_payload.build()`
+ * agrees: there is no top-level `enabled_modules` on any `/auth/*` response.
+ *
+ * Everything below `id`/`name` is optional because this type used to claim
+ * three fields while the server sent sixteen; a type that under-describes the
+ * wire is how the next reader gets `undefined` where they expected a value.
+ * Only what this file actually maps is listed, so the type stays a contract
+ * rather than a second copy of the serializer.
+ */
+interface ActiveTenantApiRow {
+  readonly id: string;
+  readonly name: string;
+  readonly timezone?: string;
+  readonly status?: string;
+  readonly onboarding_step?: number | null;
+  readonly enabled_modules?: readonly ModuleCode[];
+}
+
 interface AuthApiResponse {
   readonly data: {
     readonly user: AuthUserApiRow;
     readonly tenants: readonly TenantApiRow[];
     readonly active_tenant_id: string | null;
+    readonly active_tenant?: ActiveTenantApiRow | null;
     readonly permissions: readonly PermissionCode[];
-    readonly enabled_modules?: readonly ModuleCode[];
   };
 }
 
@@ -68,14 +89,15 @@ interface SessionApiResponse {
       readonly mobile?: string | null;
       readonly locale: Locale;
     };
-    readonly active_tenant: {
-      readonly id: string;
-      readonly name: string;
-      readonly timezone: string;
-    } | null;
+    readonly active_tenant: ActiveTenantApiRow | null;
     readonly tenants: readonly TenantApiRow[];
     readonly permissions: readonly PermissionCode[];
-    readonly enabled_modules: readonly ModuleCode[];
+    /**
+     * `ver` is the permissions version `sessionSlice` re-reads on (Part 22
+     * §22.2). `session_payload.build()` does not send it yet, so the read is
+     * forward-compatible and `null` is the documented "not told" value — it is
+     * never spread or indexed, unlike `enabled_modules` was.
+     */
     readonly ver?: number;
   };
 }
@@ -116,7 +138,11 @@ const toAuthResult = (body: AuthApiResponse): AuthResult => {
     activeTenantId: data.active_tenant_id,
     tenants: data.tenants.map(toAuthTenant),
     permissions: data.permissions,
-    enabledModules: data.enabled_modules ?? [],
+    // Part 22 §22.2 — modules belong to the ACTIVE TENANT, not to the user.
+    // This used to read a top-level `enabled_modules` the server has never
+    // sent; the `?? []` meant it degraded to "no modules" instead of throwing,
+    // which is why only `getSession` (below) blew up.
+    enabledModules: data.active_tenant?.enabled_modules ?? [],
   };
 };
 
@@ -126,10 +152,15 @@ const toAuthResult = (body: AuthApiResponse): AuthResult => {
  * POST /auth/register — `{ email, password, full_name? }` → the `/auth/me`
  * body, with the session cookies set as a side effect.
  *
- * The toast is suppressed because the two failures this call actually has —
- * a 400 whose `details.email` says the address is taken, and a 400 whose
- * `details.password` carries the server's policy — both belong under the field
- * that caused them, not in a corner of the screen (§19.4.3).
+ * CR-2026-09-19-E — this call used to pass `suppressErrorSnackbar: true`, and
+ * so did every other call in this file. The reason given was sound but the
+ * mechanism was too broad: the two failures it named — a 400 whose
+ * `details.email` says the address is taken, and a 400 whose `details.password`
+ * carries the server's policy — are both `validation_error`, which
+ * `shouldToast` already excludes BY CODE for the whole application. Opting the
+ * request out as well ALSO silenced the 500s, the 503s and the timeouts, which
+ * is why every auth screen had grown an error banner of its own. The flag is
+ * gone; the exceptions are decided once, by code, in src/utils/apiError.ts.
  */
 export const register = async (input: RegisterInput): Promise<AuthResult> => {
   const response = await api.post<AuthApiResponse>(
@@ -142,8 +173,7 @@ export const register = async (input: RegisterInput): Promise<AuthResult> => {
       // but an empty string in the body would claim they answered.
       ...(input.mobile ? { mobile: input.mobile } : {}),
       ...(input.deviceLabel ? { device_label: input.deviceLabel } : {}),
-    },
-    ubConfig({ suppressErrorSnackbar: true })
+    }
   );
   return toAuthResult(response.data);
 };
@@ -155,6 +185,12 @@ export const registerWriteClass: TWriteClass = 'online-only';
  * POST /auth/login. CR-2026-09-19-A: one identity and it is an email, so there
  * is no identifier to parse and no branch that could conflate an email with
  * somebody else's mobile.
+ *
+ * CR-2026-09-19-E — no `suppressErrorSnackbar`. AC-5's rule (one identical
+ * message, under the password field, for a wrong password and an unknown
+ * address alike) is kept by `invalid_credentials` being in `LOCALLY_PRESENTED`,
+ * which is a statement about that ERROR rather than about this request — so it
+ * holds for every screen that logs in, and a 500 here still reaches the user.
  */
 export const passwordLogin = async (input: PasswordLoginInput): Promise<AuthResult> => {
   const response = await api.post<AuthApiResponse>(
@@ -164,9 +200,6 @@ export const passwordLogin = async (input: PasswordLoginInput): Promise<AuthResu
       password: input.password,
       ...(input.deviceLabel ? { device_label: input.deviceLabel } : {}),
     },
-    // AC-5 — the wrong-password and unknown-address messages must be identical,
-    // and the screen renders that one message under the password field.
-    ubConfig({ suppressErrorSnackbar: true })
   );
   return toAuthResult(response.data);
 };
@@ -183,8 +216,7 @@ export const setPassword = async (input: PasswordSetInput): Promise<void> => {
       new_password: input.newPassword,
       ...(input.currentPassword ? { current_password: input.currentPassword } : {}),
       ...(input.logoutOtherDevices ? { logout_other_devices: true } : {}),
-    },
-    ubConfig({ suppressErrorSnackbar: true })
+    }
   );
 };
 export const setPasswordWriteClass: TWriteClass = 'online-only';
@@ -199,11 +231,7 @@ export const setPasswordWriteClass: TWriteClass = 'online-only';
  * the console mail backend; no message leaves the machine.
  */
 export const requestPasswordReset = async (email: string): Promise<void> => {
-  await api.post(
-    API_PATHS.AUTH_PASSWORD_RESET_REQUEST,
-    { email },
-    ubConfig({ suppressErrorSnackbar: true })
-  );
+  await api.post(API_PATHS.AUTH_PASSWORD_RESET_REQUEST, { email });
 };
 export const requestPasswordResetWriteClass: TWriteClass = 'online-only';
 
@@ -213,8 +241,7 @@ export const confirmPasswordReset = async (
 ): Promise<AuthResult> => {
   const response = await api.post<AuthApiResponse>(
     API_PATHS.AUTH_PASSWORD_RESET_CONFIRM,
-    { token: input.token, new_password: input.newPassword },
-    ubConfig({ suppressErrorSnackbar: true })
+    { token: input.token, new_password: input.newPassword }
   );
   return toAuthResult(response.data);
 };
@@ -226,6 +253,43 @@ export const confirmPasswordResetWriteClass: TWriteClass = 'online-only';
 export const getSession = async (signal?: AbortSignal): Promise<SessionPayload> => {
   const response = await api.get<SessionApiResponse>(API_PATHS.AUTH_ME, { signal });
   const data = response.data.data;
+
+  // PLT-04 FR-1 — the role, the default flag and the caller's own membership
+  // id travel with each row, because the switcher shows all three.
+  const tenants: readonly SessionTenant[] = data.tenants.map((row) => ({
+    id: row.id,
+    name: row.name,
+    timezone: row.timezone ?? DEFAULT_TENANT_TIMEZONE,
+    role: row.role ?? null,
+    isDefault: row.is_default ?? false,
+    status: row.status ?? 'active',
+    membershipId: row.membership_id ?? null,
+    onboardingStep: row.onboarding_step ?? null,
+  }));
+
+  /**
+   * The active tenant is a SUMMARY, not a membership row: it carries the
+   * business's own fields and knows nothing about the caller's role, default
+   * flag or membership id. Assigning the wire object straight through left
+   * `activeTenant.membershipId` permanently `undefined`, which is a second,
+   * independent reason PLT-04 FR-5 ("Make default") and FR-7 ("Leave
+   * business") can never render — `TenantSwitcherMenu` gates both on it. The
+   * matching `tenants[]` row is where those three live, so the two are merged
+   * here rather than in three components.
+   */
+  const activeRow = data.active_tenant;
+  const membership = activeRow ? tenants.find((row) => row.id === activeRow.id) : undefined;
+  const activeTenant: SessionTenant | null = activeRow
+    ? {
+        ...membership,
+        id: activeRow.id,
+        name: activeRow.name,
+        timezone: activeRow.timezone ?? membership?.timezone ?? DEFAULT_TENANT_TIMEZONE,
+        status: activeRow.status ?? membership?.status ?? 'active',
+        onboardingStep: activeRow.onboarding_step ?? membership?.onboardingStep ?? null,
+      }
+    : null;
+
   return {
     user: {
       id: data.user.id,
@@ -234,21 +298,16 @@ export const getSession = async (signal?: AbortSignal): Promise<SessionPayload> 
       mobile: data.user.mobile ?? null,
       locale: data.user.locale,
     },
-    activeTenant: data.active_tenant,
-    // PLT-04 FR-1 — the role, the default flag and the caller's own membership
-    // id travel with each row, because the switcher shows all three.
-    tenants: data.tenants.map((row) => ({
-      id: row.id,
-      name: row.name,
-      timezone: row.timezone ?? DEFAULT_TENANT_TIMEZONE,
-      role: row.role ?? null,
-      isDefault: row.is_default ?? false,
-      status: row.status ?? 'active',
-      membershipId: row.membership_id ?? null,
-      onboardingStep: row.onboarding_step ?? null,
-    })),
+    activeTenant,
+    tenants,
     permissions: data.permissions,
-    enabledModules: data.enabled_modules,
+    // Part 22 §22.2 and `session_payload.build()` both put the modules inside
+    // the active-tenant summary. This read used to be `data.enabled_modules`
+    // with NO fallback, and `sessionSlice` spreads it — so every authenticated
+    // page load threw `TypeError: undefined is not iterable` out of a reducer,
+    // where RTK's own try/catch cannot see it. A session with no active tenant
+    // legitimately has no modules, which is what `[]` says.
+    enabledModules: activeRow?.enabled_modules ?? [],
     version: data.ver ?? null,
   };
 };

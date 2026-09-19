@@ -128,3 +128,40 @@ export const requiresIdempotency = (url: string | undefined): boolean => {
     (candidate) => path === candidate || path.startsWith(`${candidate}/`)
   );
 };
+
+/**
+ * PLT-04 FR-4 — the two endpoints whose job is to MOVE the tab to a different
+ * tenant, and which therefore answer with the new tenant's id in `X-Tenant-Id`
+ * while the store still holds the old one.
+ *
+ * The stale-tab guard (`AxiosInstances.ts`) compares that header against
+ * `session.activeTenant.id` and rejects a mismatch. For every other response a
+ * mismatch means another tab switched business underneath this one. For these
+ * two it means the switch WORKED: the response is the authority on the new
+ * tenant, not a stale echo of an old one. Without the exemption, every tenant
+ * switch and every "Add business" by a merchant who already has one is
+ * rejected and the tab reloads back into the tenant it started in.
+ *
+ * This list is closed and exact on purpose. It is NOT derived from "endpoints
+ * that happen to emit the header today" — the server is being changed to emit
+ * `X-Tenant-Id` on every tenant-scoped response, at which point the guard
+ * starts firing for real and the exemption has to be a deliberate statement
+ * about these two transitions rather than a coincidence of which views set a
+ * header. `PATCH /tenants/current` is deliberately absent: it is scoped to the
+ * tenant the tab is already in, so a mismatch there is a genuine stale tab.
+ */
+export const TENANT_TRANSITION_PATHS: readonly string[] = [
+  API_PATHS.AUTH_SWITCH_TENANT,
+  API_PATHS.TENANTS,
+];
+
+/**
+ * True for a response the tab must accept even though it names another tenant.
+ * Exact-match only — `/tenants/current` must not inherit `/tenants`'s exemption,
+ * which is why this does not reuse `requiresIdempotency`'s prefix matching.
+ */
+export const isTenantTransitionPath = (url: string | undefined): boolean => {
+  if (!url) return false;
+  const path = url.split('?')[0] ?? url;
+  return TENANT_TRANSITION_PATHS.includes(path);
+};

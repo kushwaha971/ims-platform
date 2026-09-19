@@ -45,7 +45,7 @@ const AUTH_RESULT: AuthResult = {
 
 const error = (
   code: ApiErrorShape['code'],
-  details: Record<string, string[]> = {}
+  details: Record<string, unknown> = {}
 ): ApiErrorShape => ({
   code,
   message: 'nope',
@@ -127,7 +127,39 @@ describe('authSlice — PLT-02 password login', () => {
     expect(state.throttledUntil).toBeNull();
   });
 
-  it('turns a 429 into an absolute throttle deadline from details.retry_after', () => {
+  /**
+   * PLT-02 FR-6. `login_throttled` is a `D` envelope and `retry_after` is a
+   * SCALAR — `passwords.py` sends `details={"retry_after": int(retry_after)}`
+   * and `throttle.py` locks an identifier for 900 seconds.
+   *
+   * This case used to build the fixture as `{ retry_after: ['120'] }`, an
+   * array the server cannot produce, and so asserted the client's assumption
+   * rather than the contract. Against the old reader
+   * (`details.retry_after?.[0]`) a scalar yields `undefined`, `Number(undefined)`
+   * is `NaN`, and the 60-second floor won: the screen told a merchant locked
+   * out for 15 minutes to wait one, then handed them another 429 fourteen more
+   * times.
+   */
+  it('turns a 429 into an absolute deadline from the SCALAR details.retry_after', () => {
+    const before = Date.now();
+    const state = authReducer(initial, {
+      type: passwordLogin.rejected.type,
+      payload: error('login_throttled', { retry_after: 900 }),
+      meta: { arg: {}, aborted: false, requestId: 'r' },
+    });
+
+    // Absolute, not remaining: a backgrounded tab must come back correct.
+    expect(state.throttledUntil).toBeGreaterThanOrEqual(before + 900_000);
+    // And emphatically not the 60-second floor.
+    expect(state.throttledUntil).toBeGreaterThan(before + 60_000);
+  });
+
+  /**
+   * The backend half of this contract is being revisited concurrently. The
+   * reader takes a one-element array too, so whichever spelling lands, the
+   * countdown is the server's number and not the floor.
+   */
+  it('also accepts the array spelling, so the shape need not be guessed', () => {
     const before = Date.now();
     const state = authReducer(initial, {
       type: passwordLogin.rejected.type,
@@ -135,7 +167,6 @@ describe('authSlice — PLT-02 password login', () => {
       meta: { arg: {}, aborted: false, requestId: 'r' },
     });
 
-    // Absolute, not remaining: a backgrounded tab must come back correct.
     expect(state.throttledUntil).toBeGreaterThanOrEqual(before + 120_000);
   });
 

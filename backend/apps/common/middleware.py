@@ -49,6 +49,18 @@ class TenantContextMiddleware:
     — the earliest point at which the tenant is knowable. This middleware exists
     so the attribute always exists and so the contextvar is reset even when the
     view raises (Part 20 §20.4.3).
+
+    It is also the one place that can honour PLT-04 FR-4 / CCR-3 — "every
+    tenant-scoped response echoes the token's `tid` as `X-Tenant-Id`". The
+    client's stale-tab guard compares that echo against the tab's own active
+    tenant and discards a response that disagrees, which is what stops a tab
+    whose cookie was moved by a switch in another tab from rendering (or
+    writing) another business's rows. A guard that only fires on some responses
+    is a guard that does not fire; so the header goes here, once, for every
+    response whose tenant resolved — never per-view.
+
+    The header is an *echo of the resolved tenant*, not an input: `tenancy.py`
+    never reads `X-Tenant-Id` from the request.
     """
 
     def __init__(self, get_response: Callable) -> None:
@@ -64,6 +76,12 @@ class TenantContextMiddleware:
         tenant = getattr(request, "_ub_tenant", None)
         if tenant not in (None, "unset"):
             response["X-Tenant-Scope"] = "1"  # debugging aid, never the tenant id
+            # A view that moves the caller to a *different* tenant (switch-tenant,
+            # tenant-create) has already set this to the tenant it moved them to.
+            # That value is the authority; the memoised request tenant is the
+            # pre-switch one, so it must not overwrite it.
+            if "X-Tenant-Id" not in response:
+                response["X-Tenant-Id"] = str(tenant.id)
         return response
 
 

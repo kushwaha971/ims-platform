@@ -32,7 +32,8 @@ export function NetworkStrip(): React.JSX.Element | null {
       dispatch(
         showSnackbar({
           severity: 'success',
-          message: t('common.network.sent', { count: pendingWrites }),
+          id: 'common.network.sent',
+          params: { count: pendingWrites },
         })
       );
     }

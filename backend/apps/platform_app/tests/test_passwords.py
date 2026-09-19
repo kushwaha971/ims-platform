@@ -924,3 +924,69 @@ def test_the_verification_link_confirms_the_address_once(api_as: Any, tenant: An
 
     replayed = client.post(reverse("v1:auth-email-verify-confirm"), {"token": raw}, format="json")
     assert replayed.status_code == 400
+
+
+def test_a_refused_password_change_does_not_rename_the_account(api_as: Any, tenant: Any) -> None:
+    """`full_name` is persisted only once the change is authorised.
+
+    `set_password` is where `current_password` is checked. Writing the name
+    before that call meant a caller who supplied the wrong current password got
+    a 401 *and* a changed display name — a write from a request that was refused.
+    """
+    from tests.factories.platform import UserFactory
+
+    user = UserFactory(full_name="")
+    user.set_password("Kirana1234")
+    user.save(update_fields=["password"])
+    client, _member = api_as(tenant, user=user)
+
+    refused = client.post(
+        reverse(SET_URL),
+        {
+            "new_password": "Kirana5678",
+            "current_password": "WrongPassword1",
+            "full_name": "Somebody Else",
+        },
+        format="json",
+    )
+    assert refused.status_code == 401
+    user.refresh_from_db()
+    assert user.full_name == ""
+    assert user.check_password("Kirana1234")
+
+    accepted = client.post(
+        reverse(SET_URL),
+        {
+            "new_password": "Kirana5678",
+            "current_password": "Kirana1234",
+            "full_name": "Ramesh Sharma",
+        },
+        format="json",
+    )
+    assert accepted.status_code == 200
+    user.refresh_from_db()
+    assert user.full_name == "Ramesh Sharma"
+
+
+def test_asking_for_a_verification_link_is_throttled(api_as: Any, tenant: Any) -> None:
+    """Every other token-minting endpoint has a durable counter; this one mints
+    a link *and marks the previous one spent*, so an unthrottled loop is both a
+    mail amplifier and a way to keep a merchant's in-flight link dead.
+    """
+    from apps.platform_app.models import RateLimit
+    from apps.platform_app.services import throttle
+
+    client, member = api_as(tenant)
+    url = reverse("v1:auth-email-verify-request")
+    assert client.post(url, {}, format="json").status_code == 200
+
+    # The 60-second resend gap refuses the immediate second ask.
+    immediate = client.post(url, {}, format="json")
+    assert immediate.status_code == 429
+    assert immediate.json()["error"]["code"] == "rate_limited"
+    assert 0 < immediate.json()["error"]["details"]["retry_after"] <= 60
+    assert immediate["Retry-After"]
+
+    assert RateLimit.objects.filter(
+        scope=throttle.SCOPE_VERIFY_USER, key=throttle.digest(str(member.user.id))
+    ).exists()

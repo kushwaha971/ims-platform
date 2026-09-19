@@ -43,6 +43,26 @@ export const createTenant = createAsyncThunk<
   }
 });
 
+/**
+ * MUTATION — PLT-03 FR-9. Step 1 EDITED, on a tenant that already exists.
+ *
+ * This is the other half of `createTenant`: the stepper makes a completed step
+ * navigable, and `POST /tenants` is the wrong verb for a business the merchant
+ * already owns. No idempotency key, because a PATCH of three named fields is
+ * idempotent by construction — a replayed retry writes the same three values.
+ */
+export const saveBusinessStep = createAsyncThunk<
+  OnboardingResult,
+  OnboardingBusinessStep,
+  { rejectValue: ApiErrorShape }
+>('onboarding/saveBusinessStep', async (input, { rejectWithValue }) => {
+  try {
+    return await onboardingService.updateBusinessStep(input);
+  } catch (error) {
+    return rejectWithValue(toApiError(error, 'onboarding.error.save'));
+  }
+});
+
 /** MUTATION — PLT-03 FR-3. May return `warnings[]`; they are not failures. */
 export const saveGstStep = createAsyncThunk<
   OnboardingResult,

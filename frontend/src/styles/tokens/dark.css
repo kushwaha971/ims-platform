@@ -32,8 +32,8 @@
   --accent: var(--primary-400);
   --accent-hover: var(--primary-300);
   --accent-press: var(--primary-500);
-  --accent-quiet: rgba(77, 134, 234, 0.16);
-  --accent-line: rgba(128, 168, 245, 0.34);
+  --accent-quiet: rgba(113, 109, 228, 0.16);
+  --accent-line: rgba(157, 154, 240, 0.34);
 
   /* ── Surfaces — re-spaced so each tier is a visible step, not a rounding ── */
   --canvas: 214.29 30.43% 4.51%; /* ink-900 #080B0F */

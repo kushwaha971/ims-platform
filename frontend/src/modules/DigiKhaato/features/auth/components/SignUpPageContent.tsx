@@ -114,16 +114,10 @@ export function SignUpPageContent(): React.JSX.Element {
             />
           )}
 
-          {/* A `validation_error` is already anchored on the field that caused
-              it — "that address is already registered" belongs under the
-              address. */}
-          {signUp.error && signUp.error.code !== 'validation_error' && (
-            <UbStatusBanner
-              tone="error"
-              title={signUp.error.message}
-              description={signUp.error.requestId ?? undefined}
-            />
-          )}
+          {/* CR-2026-09-19-E — the §9 "Error" banner is gone; an API failure
+              surfaces once, from the transport, through the snackbar. A
+              `validation_error` is still anchored on the field that caused it —
+              "that address is already registered" belongs under the address. */}
 
           <UbForm form={form} onSubmit={submit} formErrors={signUp.formErrors}>
             <UbField name="email" label={t('auth.email.label')} required>

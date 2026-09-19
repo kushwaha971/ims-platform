@@ -7,7 +7,6 @@ import { useForm, useWatch } from 'react-hook-form';
 
 import {
   UbButton,
-  UbCard,
   UbField,
   UbForm,
   UbRadioGroup,
@@ -28,6 +27,7 @@ import {
 } from '../view-model/onboardingDisplay';
 
 import { OnboardingStepActions } from './OnboardingStepActions';
+import { OnboardingStepCard } from './OnboardingStepCard';
 
 import type { UseOnboardingResult } from '../hooks/useOnboarding';
 import type { GstStepFormValues } from '../validation/onboardingSchemas';
@@ -102,7 +102,10 @@ export function OnboardingGstStep({
   }, [mismatch.gstinStateCode, onboarding]);
 
   return (
-    <UbCard title={t('onboarding.step2.title')} description={t('onboarding.step2.body')}>
+    <OnboardingStepCard
+      title={t('onboarding.step2.title')}
+      description={t('onboarding.step2.body')}
+    >
       <UbForm form={form} onSubmit={submit} formErrors={onboarding.formErrors}>
         <UbField name="gstType" label={t('onboarding.gst.label')} required>
           {(field) => (
@@ -174,6 +177,6 @@ export function OnboardingGstStep({
           disabled={!onboarding.canSubmit}
         />
       </UbForm>
-    </UbCard>
+    </OnboardingStepCard>
   );
 }

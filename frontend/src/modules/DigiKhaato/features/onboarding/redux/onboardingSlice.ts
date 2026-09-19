@@ -7,7 +7,13 @@ import type { Locale } from 'src/types/domain.types';
 
 import { ONBOARDING_STEP_COUNT, type BusinessType, type GstType } from '../constants/businessTypes';
 
-import { completeOnboarding, createTenant, saveAddressStep, saveGstStep } from './onboardingThunk';
+import {
+  completeOnboarding,
+  createTenant,
+  saveAddressStep,
+  saveBusinessStep,
+  saveGstStep,
+} from './onboardingThunk';
 
 import type {
   OnboardingAddress,
@@ -55,6 +61,19 @@ export interface OnboardingState {
   error: ApiErrorShape | null;
   /** §9 "Completed" — the preset has been applied; the dashboard is next. */
   completed: boolean;
+  /**
+   * PLT-03 EC-7 — the `Idempotency-Key` for `POST /tenants`, minted ONCE for
+   * this wizard and held here rather than in the hook.
+   *
+   * `useIdempotencyKey`'s own docstring says "a remount must not mint a new
+   * one, which is why a write with slice state also stores it in the slice" —
+   * and this wizard has slice state and did not. Every step is a route, so
+   * `useOnboarding` is remounted on each navigation and minted a fresh key
+   * each time: a retry after a lost 201 carried a key the server had never
+   * seen, and created a second business, which is the exact failure the header
+   * exists to prevent.
+   */
+  tenantCreateKey: string | null;
 }
 
 const emptyAddress: OnboardingAddress = {
@@ -91,6 +110,7 @@ const initialState: OnboardingState = {
   status: 'idle',
   error: null,
   completed: false,
+  tenantCreateKey: null,
 };
 
 /** Fold a server tenant back into the draft, so a resume shows real values. */
@@ -129,6 +149,10 @@ const onboardingSlice = createSlice({
       state.draft.stateCode = action.payload;
       state.warnings = state.warnings.filter((warning) => warning.code !== 'gstin_state_mismatch');
     },
+    /** EC-7 — minted once per wizard, by the first mount that needs it. */
+    tenantCreateKeyMinted(state, action: PayloadAction<string>) {
+      if (state.tenantCreateKey === null) state.tenantCreateKey = action.payload;
+    },
     warningsDismissed(state) {
       state.warnings = [];
     },
@@ -160,6 +184,17 @@ const onboardingSlice = createSlice({
         state.step = 2;
       })
       .addCase(createTenant.rejected, rejected)
+
+      // FR-9 — step 1 EDITED. Same three fields, other verb, and crucially
+      // `step` is NOT forced to 2: an edit returns the merchant to where the
+      // stepper sent them from, it does not replay the wizard at them.
+      .addCase(saveBusinessStep.pending, pending)
+      .addCase(saveBusinessStep.fulfilled, (state, action) => {
+        state.status = 'succeeded';
+        applyTenant(state, action.payload.tenant);
+        state.warnings = [...action.payload.warnings];
+      })
+      .addCase(saveBusinessStep.rejected, rejected)
 
       .addCase(saveGstStep.pending, pending)
       .addCase(saveGstStep.fulfilled, (state, action) => {
@@ -228,6 +263,7 @@ export const {
   stepChanged,
   draftChanged,
   stateCodeAdopted,
+  tenantCreateKeyMinted,
   warningsDismissed,
   onboardingErrorCleared,
   resetOnboarding,
@@ -248,4 +284,7 @@ export const selectOnboardingWarnings = (state: RootState): readonly OnboardingW
   state.onboarding.warnings;
 export const selectOnboardingTenantId = (state: RootState): string | null =>
   state.onboarding.tenantId;
+/** EC-7 — the one key `POST /tenants` may carry for this wizard. */
+export const selectOnboardingCreateKey = (state: RootState): string | null =>
+  state.onboarding.tenantCreateKey;
 export const selectOnboardingCompleted = (state: RootState): boolean => state.onboarding.completed;

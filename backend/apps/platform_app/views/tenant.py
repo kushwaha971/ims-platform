@@ -19,7 +19,7 @@ from apps.common.tenancy import get_effective_tenant
 from apps.platform_app import tokens
 from apps.platform_app.permissions import TenantManagePermission
 from apps.platform_app.selectors import session_payload
-from apps.platform_app.selectors.memberships import membership_of_user
+from apps.platform_app.selectors.memberships import active_membership, membership_of_user
 from apps.platform_app.serializers.auth import AcceptInvitationSerializer
 from apps.platform_app.serializers.tenant import (
     MembershipPatchSerializer,
@@ -54,7 +54,7 @@ class TenantCreateView(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    @idempotent("tenant_create")
+    @idempotent("tenant_create", keyed_by="user")
     def post(self, request: Any) -> Any:
         serializer = TenantCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -96,6 +96,44 @@ class TenantCreateView(APIView):
             payload["access_token"] = issued.access
         response = StandardResponse.created(payload)
         response["X-Tenant-Id"] = str(membership.tenant_id)
+        return self._with_session(response, issued)
+
+    def idempotent_replay(self, request: Any, record: Any, response: Any) -> Any:
+        """Give a replayed 201 the side effects the original 201 carried.
+
+        The stored body describes a tenant; the *cookies* are what make that
+        tenant usable, and they are set on the response rather than written to a
+        row, so replaying the body alone is replaying half the answer. The
+        client then holds a 201 for a business it has no `tid` for, and the
+        wizard's next step — already tenant-scoped, as `post` says above — is
+        refused `no_active_tenant`. That is precisely the wedge EC-7 exists to
+        prevent, reached by the retry EC-7 tells the client to make.
+
+        A fresh session is issued rather than a stored one: tokens are not put
+        at rest, and the caller retrying is by definition the caller who lost
+        the first set. If the membership is gone by now — left, removed, tenant
+        deleted — the body still replays and the cookies simply do not, because
+        re-issuing a session for a membership that no longer exists would be a
+        worse answer than a stale body.
+        """
+        body = record.response_body or {}
+        tenant_id = ((body.get("data") or {}).get("tenant") or {}).get("id")
+        membership = active_membership(user=request.user, tenant_id=tenant_id)
+        if membership is None:
+            return response
+        meta = _meta(request)
+        issued = session_service.issue(
+            user=request.user,
+            tenant=membership.tenant,
+            membership=membership,
+            user_agent=meta["user_agent"],
+            ip=meta["ip"],
+        )
+        response["X-Tenant-Id"] = str(membership.tenant_id)
+        return self._with_session(response, issued)
+
+    @staticmethod
+    def _with_session(response: Any, issued: Any) -> Any:
         return tokens.set_auth_cookies(
             response, access=issued.access, refresh=issued.refresh, csrf=issued.csrf
         )

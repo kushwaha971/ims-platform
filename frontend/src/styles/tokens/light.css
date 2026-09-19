@@ -14,16 +14,16 @@
 
 :root {
   /* ── Primary ramp — Zoho-class blue; the ONLY white-label-overridable set ─ */
-  --primary-50: 218.82 100% 96.67%; /* #EEF4FF */
-  --primary-100: 219.47 100% 92.55%; /* #D9E6FF */
-  --primary-200: 220.26 100% 85.1%; /* #B3CCFF */
-  --primary-300: 219.49 85.4% 73.14%; /* #80A8F5 */
-  --primary-400: 218.22 78.89% 60.98%; /* #4D86EA */
-  --primary-500: 218.78 74.49% 52.35%; /* #2B6BE0 */
-  --primary-600: 219.36 71.69% 42.94%; /* #1F55BC */
-  --primary-700: 220.31 73.56% 34.12%; /* #174197 */
-  --primary-800: 220.88 73.98% 24.12%; /* #102D6B */
-  --primary-900: 221.79 73.68% 14.9%; /* #0A1B42 */
+  --primary-50: 244.29 87.50% 96.86%; /* #F1F0FE */
+  --primary-100: 242.14 82.35% 93.33%; /* #E1E0FC */
+  --primary-200: 242.26 81.54% 87.25%; /* #C6C4F9 */
+  --primary-300: 242.09 74.14% 77.25%; /* #9D9AF0 */
+  --primary-400: 242.02 68.79% 66.08%; /* #716DE4 */
+  --primary-500: 241.26 63.56% 55.88%; /* #4A47D6 */
+  --primary-600: 241.85 54.62% 46.67%; /* #3A36B8 */
+  --primary-700: 241.73 54.74% 37.25%; /* #2E2B93 */
+  --primary-800: 241.62 54.41% 26.67%; /* #211F69 */
+  --primary-900: 242.67 54.22% 16.27%; /* #151340 */
 
   /* ── Secondary (Koper teal, unchanged) — healthy baselines, "You got" tint ─ */
   --secondary-100: 168.26 56.1% 83.92%; /* #BFEDE4 */
@@ -53,8 +53,8 @@
   --accent-press: var(--primary-700);
   /* Tints are authored as colours, not channels: they are never alpha-composed
      a second time by Tailwind. */
-  --accent-quiet: rgba(43, 107, 224, 0.1);
-  --accent-line: rgba(43, 107, 224, 0.35);
+  --accent-quiet: rgba(74, 71, 214, 0.1);
+  --accent-line: rgba(74, 71, 214, 0.35);
 
   /* ── Surfaces ─────────────────────────────────────────────────────────── */
   --canvas: 220 20% 97.06%; /* #F6F7F9 */
@@ -106,7 +106,7 @@
   --form-error-bright: 339.75 66.81% 46.08%; /* #C4275C */
   --form-error-dim: 337.89 76% 95.1%; /* #FCE9F0 */
 
-  --info: 219.36 71.69% 42.94%; /* #1F55BC — primary-600, not 500, as text */
+  --info: 241.85 54.62% 46.67%; /* #3A36B8 — primary-600, not 500, as text */
   --info-bright: 211.89 66.51% 57.84%; /* #4C8FDB */
   --info-dim: 217.14 84% 95.1%; /* #E8F0FD */
 

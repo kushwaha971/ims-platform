@@ -127,9 +127,18 @@ export interface AuthTenant {
  * decision, computed by the view-model and executed by the hook, so the routing
  * rule is unit-testable without a router.
  */
+/**
+ * PLT-01 FR-9 / PLT-04 FR-9 — the five branches `postAuthDestination` can
+ * return, and only those.
+ *
+ * `{ kind: 'setPassword' }` used to be a sixth. CR-2026-09-19-D made
+ * registration always set a password, so `postAuthDestination` stopped being
+ * able to return it and `redirectTo`'s `case` for it became unreachable — a
+ * branch that looks like a supported route and is not. `/set-password` itself
+ * is a real screen and stays; it is simply never a POST-AUTH destination.
+ */
 export type PostAuthDestination =
   | { readonly kind: 'onboarding'; readonly step: number }
-  | { readonly kind: 'setPassword' }
   | { readonly kind: 'chooser' }
   | { readonly kind: 'invitation' }
   | { readonly kind: 'app'; readonly tenantId: string };

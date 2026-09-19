@@ -173,3 +173,24 @@ def test_request_id_is_echoed_on_an_error_response(two_tenants_full: dict) -> No
     assert response.status_code == 404
     assert response["X-Request-Id"] == "trace-me-42"
     assert response.json()["error"]["request_id"] == "trace-me-42"
+
+
+def test_retry_after_is_a_scalar_number_everywhere_the_product_can_429() -> None:
+    """Part 22 §22.1.1 registers every 429 as `D retry_after`.
+
+    `D` is "the named keys … at the top level of `details`, with their natural
+    JSON types (amounts as strings, counts as numbers)", so a count of seconds
+    is a bare number — never a one-element array, and never a string. This is
+    pinned because a client reading `details.retry_after[0]` would silently get
+    `undefined` and fall back to a wrong countdown rather than fail loudly.
+    """
+    from apps.platform_app.services.passwords import LoginThrottled, RequestThrottled
+
+    for exc in (LoginThrottled(900), RequestThrottled(60, 5)):
+        retry_after = exc.details["retry_after"]
+        assert isinstance(retry_after, int) and not isinstance(retry_after, bool), type(exc)
+
+    body, status = _handle(drf_exc.Throttled(wait=59.7))
+    assert status == 429
+    assert body["error"]["details"] == {"retry_after": 60}  # DRF ceils it
+    assert isinstance(body["error"]["details"]["retry_after"], int)

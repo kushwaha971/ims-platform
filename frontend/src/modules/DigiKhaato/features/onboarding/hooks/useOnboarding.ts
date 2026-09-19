@@ -10,7 +10,7 @@ import { useIdempotencyKey } from 'src/hooks/useIdempotencyKey';
 import { selectLocale } from 'src/redux/slice/localeSlice';
 import { selectEnabledModules, selectSessionUser } from 'src/redux/slice/sessionSlice';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
-import { ROUTES, onboardingStepPath } from 'src/routes';
+import { ONBOARDING_STEP_MAX, ROUTES, onboardingStepPath } from 'src/routes';
 import type { ApiErrorShape } from 'src/types/api.types';
 import type { ModuleCode } from 'src/types/domain.types';
 import { applyServerErrors } from 'src/utils/applyServerErrors';
@@ -20,18 +20,22 @@ import {
   onboardingErrorCleared,
   selectOnboardingCompleted,
   selectOnboardingCompletedStep,
+  selectOnboardingCreateKey,
   selectOnboardingDraft,
   selectOnboardingError,
   selectOnboardingStatus,
   selectOnboardingStep,
+  selectOnboardingTenantId,
   selectOnboardingWarnings,
   stateCodeAdopted,
   stepChanged,
+  tenantCreateKeyMinted,
 } from '../redux/onboardingSlice';
 import {
   completeOnboarding,
   createTenant,
   saveAddressStep,
+  saveBusinessStep,
   saveGstStep,
 } from '../redux/onboardingThunk';
 
@@ -111,7 +115,26 @@ export const useOnboarding = (routeStep: number): UseOnboardingResult => {
   const locale = useAppSelector(selectLocale);
   const user = useAppSelector(selectSessionUser);
   const { state: networkState, canWrite } = useDegradedNetwork();
-  const { key: idempotencyKey } = useIdempotencyKey();
+  const tenantId = useAppSelector(selectOnboardingTenantId);
+
+  /**
+   * EC-7 — ONE key for this wizard's `POST /tenants`, however many times the
+   * hook is remounted.
+   *
+   * `useIdempotencyKey` mints on mount, and every step of this wizard is its
+   * own route, so the hook remounts on each navigation and the key changed
+   * underneath the one write that must not change it. The key is therefore
+   * stored in the slice on first use and read back from there afterwards,
+   * which is exactly what that hook's docstring prescribes for a write with
+   * slice state.
+   */
+  const storedCreateKey = useAppSelector(selectOnboardingCreateKey);
+  const { key: mintedKey } = useIdempotencyKey();
+  const idempotencyKey = storedCreateKey ?? mintedKey;
+
+  useEffect(() => {
+    if (storedCreateKey === null) dispatch(tenantCreateKeyMinted(mintedKey));
+  }, [dispatch, storedCreateKey, mintedKey]);
 
   const [formErrors, setFormErrors] = useState<readonly string[]>([]);
 
@@ -161,11 +184,45 @@ export const useOnboarding = (routeStep: number): UseOnboardingResult => {
     [router]
   );
 
+  /**
+   * FR-2 the first time, FR-9 every time after.
+   *
+   * The stepper makes a completed step navigable for EDITS (`UbStepper`'s
+   * `number <= completed`), and step 1 is the business name — the single most
+   * likely thing a merchant comes back to fix. This handler used to call
+   * `createTenant` unconditionally, so that edit created a SECOND business,
+   * which then became the active tenant and which cannot be deleted at MVP.
+   * The branch is on the tenant the slice already holds, which is the only
+   * thing that distinguishes "create" from "correct".
+   *
+   * On an edit the wizard does NOT jump to step 2: the merchant came back
+   * deliberately, and `goToStep` will take them wherever they were.
+   */
   const submitBusinessStep = useCallback(
     async (values: BusinessStepFormValues, setError: UseFormSetError<BusinessStepFormValues>) => {
       setFormErrors([]);
       if (!values.businessType) return;
+      const isEdit = tenantId !== null;
       try {
+        if (isEdit) {
+          const result = await dispatch(
+            saveBusinessStep({
+              name: values.name,
+              businessType: values.businessType,
+              stateCode: values.stateCode,
+              ownerName: values.ownerName,
+            })
+          ).unwrap();
+          // An edit returns the merchant to where they were, which the SERVER
+          // knows: `onboarding_step` is untouched by this PATCH, so the next
+          // unfinished step is still the right destination. Reading it off the
+          // response rather than off `completedStep` avoids resuming from the
+          // value this render closed over.
+          advance(
+            Math.min(ONBOARDING_STEP_MAX, Math.max(2, (result.tenant.onboardingStep ?? 1) + 1))
+          );
+          return;
+        }
         await dispatch(
           createTenant({
             name: values.name,
@@ -184,7 +241,7 @@ export const useOnboarding = (routeStep: number): UseOnboardingResult => {
         // `gstin_in_use` cannot occur on step 1; everything else is the banner.
       }
     },
-    [dispatch, idempotencyKey, advance]
+    [dispatch, idempotencyKey, advance, tenantId]
   );
 
   const submitGstStep = useCallback(
@@ -276,7 +333,7 @@ export const useOnboarding = (routeStep: number): UseOnboardingResult => {
   const finish = useCallback(async () => {
     try {
       await dispatch(completeOnboarding({ locale: draft.locale ?? locale })).unwrap();
-      dispatch(showSnackbar({ severity: 'success', message: 'onboarding.done' }));
+      dispatch(showSnackbar({ severity: 'success', id: 'onboarding.done' }));
     } catch {
       // §9 "Failed" — the wizard stays on step 4 with Retry and the request id.
     }

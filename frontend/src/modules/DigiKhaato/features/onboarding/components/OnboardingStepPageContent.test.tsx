@@ -1,9 +1,10 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { store } from 'src/redux/store';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
 
+import en from 'locales/en.json';
 import hi from 'locales/hi.json';
 
 import { resetOnboarding } from '../redux/onboardingSlice';
@@ -23,6 +24,7 @@ jest.mock('../../auth/api/authService');
 
 const onboardingService = jest.requireMock('../api/onboardingService') as {
   createTenant: jest.Mock;
+  updateBusinessStep: jest.Mock;
   updateGstStep: jest.Mock;
   updateAddressStep: jest.Mock;
   completeOnboarding: jest.Mock;
@@ -119,6 +121,111 @@ describe('the wizard — step 1 (FR-2)', () => {
   it('has no Skip on step 1 — a wizard cannot patch a business that does not exist', () => {
     renderWithProviders(<OnboardingStepPageContent step={1} />);
     expect(screen.queryByRole('button', { name: 'Skip for now' })).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * PLT-03 FR-9 — "steps already completed are navigable via the stepper for
+ * edits", and canon §0.11 rule 5.
+ *
+ * The regression: `submitBusinessStep` called `createTenant` with no branch on
+ * "a tenant already exists". A merchant on step 2 who noticed the business name
+ * was misspelled, tapped "1 · Business" in the stepper, fixed it and pressed
+ * Continue ended up owning TWO businesses with almost the same name — the
+ * second of them the active tenant — and there is no delete-business path at
+ * MVP, so the duplicate is permanent.
+ */
+describe('the wizard — step 1 EDITED (FR-9)', () => {
+  const withExistingTenant = async () => {
+    onboardingService.createTenant.mockResolvedValue({
+      tenant: tenant({ onboardingStep: 2 }),
+      warnings: [],
+    });
+    await store.dispatch(
+      createTenant({
+        name: 'Sharma General Stor',
+        businessType: 'retail',
+        stateCode: '27',
+        ownerName: null,
+        idempotencyKey: 'k',
+      })
+    );
+    jest.clearAllMocks();
+  };
+
+  it('PATCHes the existing business instead of creating a second one', async () => {
+    const user = userEvent.setup();
+    await withExistingTenant();
+    onboardingService.updateBusinessStep.mockResolvedValue({
+      tenant: tenant({ name: 'Sharma General Store', onboardingStep: 2 }),
+      warnings: [],
+    });
+
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+
+    const nameField = screen.getByLabelText(/Business name/);
+    await user.clear(nameField);
+    await user.type(nameField, 'Sharma General Store');
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+
+    await waitFor(() => expect(onboardingService.updateBusinessStep).toHaveBeenCalledTimes(1));
+    // The whole point: no second business.
+    expect(onboardingService.createTenant).not.toHaveBeenCalled();
+    expect(onboardingService.updateBusinessStep).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'Sharma General Store',
+        businessType: 'retail',
+        stateCode: '27',
+      })
+    );
+    // One tenant, still the same one.
+    expect(store.getState().onboarding.tenantId).toBe('t1');
+  });
+
+  it('returns the merchant to the step they interrupted, not back to step 2', async () => {
+    const user = userEvent.setup();
+    await withExistingTenant();
+    onboardingService.updateBusinessStep.mockResolvedValue({
+      tenant: tenant({ name: 'Sharma General Store', onboardingStep: 3 }),
+      warnings: [],
+    });
+
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+
+    await waitFor(() => expect(onboardingService.updateBusinessStep).toHaveBeenCalled());
+    expect(push).toHaveBeenCalledWith('/onboarding/step/4');
+  });
+
+  /**
+   * EC-7 — the key for `POST /tenants` is minted ONCE per wizard. Every step is
+   * its own route, so `useOnboarding` remounts on every navigation; when the
+   * key lived in `useIdempotencyKey`'s `useState` initialiser, each remount
+   * minted a new one and a retry after a lost 201 was not deduplicated at all.
+   */
+  it('keeps one idempotency key across a remount, so a retry is deduplicated', async () => {
+    const user = userEvent.setup();
+    onboardingService.createTenant.mockRejectedValue(new Error('the 201 was lost'));
+
+    const first = renderWithProviders(<OnboardingStepPageContent step={1} />);
+    await user.type(screen.getByLabelText(/Business name/), 'Sharma General Store');
+    await user.click(screen.getByRole('radio', { name: /Retail shop/ }));
+    await user.selectOptions(screen.getByLabelText(/^State/), '27');
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    await waitFor(() => expect(onboardingService.createTenant).toHaveBeenCalledTimes(1));
+    const keyOnFirstAttempt = onboardingService.createTenant.mock.calls[0]?.[1] as string;
+    first.unmount();
+
+    // The merchant retries; the route remounted the hook in between.
+    onboardingService.createTenant.mockResolvedValue({ tenant: tenant(), warnings: [] });
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+    await user.type(screen.getByLabelText(/Business name/), 'Sharma General Store');
+    await user.click(screen.getByRole('radio', { name: /Retail shop/ }));
+    await user.selectOptions(screen.getByLabelText(/^State/), '27');
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    await waitFor(() => expect(onboardingService.createTenant).toHaveBeenCalledTimes(2));
+
+    expect(onboardingService.createTenant.mock.calls[1]?.[1]).toBe(keyOnFirstAttempt);
   });
 });
 
@@ -252,7 +359,19 @@ describe('the wizard — step 4 (FR-5) and §9 Failed', () => {
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/dashboard'));
   });
 
-  it('stays on step 4 with Retry and the request id when the preset fails', async () => {
+  /**
+   * CR-2026-09-19-E — was "stays on step 4 with Retry and the request id". The
+   * in-page error banner (and the Retry inside it) is gone: a failed preset is
+   * an API failure and surfaces once, centrally, through the snackbar, which
+   * carries the request id exactly as that banner did (see
+   * src/tests/globalErrorChannel.test.tsx).
+   *
+   * The behaviour that still matters here — and the reason a failed finish is
+   * NOT the "whole-page failure" exception — is that the wizard keeps its state
+   * and its own primary button, so the merchant retries with the control they
+   * already used rather than with a second one inside a banner.
+   */
+  it('stays on step 4 with its summary and its own action when the preset fails', async () => {
     const user = userEvent.setup();
     await atSummary();
     onboardingService.completeOnboarding.mockRejectedValue({
@@ -267,10 +386,13 @@ describe('the wizard — step 4 (FR-5) and §9 Failed', () => {
     renderWithProviders(<OnboardingStepPageContent step={4} />);
     await user.click(screen.getByRole('button', { name: /Start using/ }));
 
-    expect(await screen.findByText('Something went wrong.')).toBeInTheDocument();
-    expect(screen.getByText('req_4')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
+    await waitFor(() => expect(onboardingService.completeOnboarding).toHaveBeenCalledTimes(1));
     expect(replace).not.toHaveBeenCalledWith('/dashboard');
+    // The step is still on screen and still submittable …
+    expect(screen.getByRole('button', { name: /Start using/ })).toBeInTheDocument();
+    // … and the screen itself reports nothing.
+    expect(screen.queryByText('Something went wrong.')).not.toBeInTheDocument();
+    expect(screen.queryByText('req_4')).not.toBeInTheDocument();
   });
 });
 
@@ -286,5 +408,144 @@ describe('the wizard — Hindi', () => {
     expect(screen.getByRole('radio', { name: /खुदरा दुकान/ })).toBeInTheDocument();
     // The state list is a constant, not a locale file, and is Hindi too.
     expect(screen.getByText('महाराष्ट्र')).toBeInTheDocument();
+  });
+});
+
+/**
+ * CR-2026-09-19-F — the page, as against the forms on it.
+ *
+ * Layout A, the full-height rail, replaced a centred column with the step list
+ * floating beside it. Each assertion below is one of the four things the review
+ * rejected, turned into something that fails if it comes back.
+ */
+describe('the wizard — the page is a rail and a form half (layout A)', () => {
+  it('carries the steps in a rail, not floating beside a card', () => {
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+    const rail = screen.getByRole('complementary', { name: en['onboarding.rail.label'] as string });
+
+    // The three things the rail carries: the mark, the four steps, the line of
+    // reassurance that Zoho puts in an illustrated panel we do not have.
+    expect(within(rail).getByRole('img', { name: 'DigiKhaato' })).toBeInTheDocument();
+    expect(within(rail).getAllByRole('listitem')).toHaveLength(4);
+    expect(within(rail).getByText(en['onboarding.rail.reassurance'] as string)).toBeInTheDocument();
+  });
+
+  it('gives the rail the full viewport height and only shows it from lg', () => {
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+    const rail = screen.getByRole('complementary', { name: en['onboarding.rail.label'] as string });
+
+    expect(rail.className).toContain('hidden');
+    expect(rail.className).toContain('lg:flex');
+    // Full height, and pinned, so the steps do not scroll away from the form.
+    expect(rail.className).toContain('lg:h-dvh');
+    expect(rail.className).toContain('lg:sticky');
+  });
+
+  it('marks the step you are on inside the rail, and only that one', () => {
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+    const rail = screen.getByRole('complementary', { name: en['onboarding.rail.label'] as string });
+    const current = within(rail)
+      .getAllByRole('listitem')
+      .filter((item) => item.getAttribute('aria-current') === 'step');
+
+    expect(current).toHaveLength(1);
+    expect(current[0]).toHaveTextContent(en['onboarding.step1.title'] as string);
+  });
+
+  it('collapses to a slim named bar above the form below lg', () => {
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+    const bar = screen.getByRole('progressbar');
+
+    // A name AND a value: "how far am I" without reading the screen.
+    expect(bar).toHaveAccessibleName(`Step 1 of 4 — ${en['onboarding.step1.title'] as string}`);
+    expect(bar).toHaveAttribute('aria-valuenow', '25');
+    // It is the rail's stand-in, so it goes away exactly where the rail starts.
+    expect(bar.parentElement?.parentElement?.className).toContain('lg:hidden');
+
+    // Above the form, not below it.
+    const firstField = screen.getByLabelText(/Business name/);
+    expect(bar.compareDocumentPosition(firstField) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('caps the form at a readable measure and left-aligns it in its half', () => {
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+    const main = screen.getByRole('main');
+
+    expect(main.className).toContain('max-w-[560px]');
+    // Centred on a phone; left-aligned in its own half from lg (`lg:mx-0`).
+    expect(main.className).toContain('mx-auto');
+    expect(main.className).toContain('lg:mx-0');
+  });
+
+  it('leaves the sticky Continue bar enough slack to stop clipping a field', () => {
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+    const main = screen.getByRole('main');
+
+    // `pb-28` is 112 px against an action bar of ~69 px, so the last control
+    // always scrolls clear of it. This is the overflow defect, as a test.
+    expect(main.className).toContain('pb-28');
+    // The form half is its own scroll container at lg, which is what that
+    // padding is the bottom of.
+    expect(main.parentElement?.className).toContain('lg:overflow-y-auto');
+  });
+
+  it('keeps the footer OUT of main, where <footer> is not a landmark at all', () => {
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+    const footer = screen.getByRole('contentinfo');
+
+    expect(screen.getByRole('main')).not.toContainElement(footer);
+  });
+
+  it('keeps the page a page: one main, one footer, one h1 above the step h2', () => {
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+
+    expect(screen.getAllByRole('main')).toHaveLength(1);
+    expect(screen.getByRole('contentinfo')).toBeInTheDocument();
+
+    const h1 = screen.getAllByRole('heading', { level: 1 });
+    expect(h1).toHaveLength(1);
+    expect(h1[0]).toHaveTextContent(en['onboarding.title'] as string);
+    // The step is the section beneath it — level 2, with nothing skipped.
+    expect(
+      screen.getByRole('heading', { level: 2, name: en['onboarding.step1.title'] as string })
+    ).toBeInTheDocument();
+    expect(screen.queryAllByRole('heading', { level: 4 })).toHaveLength(0);
+  });
+});
+
+describe('the wizard — step 1 no longer belongs to its tiles', () => {
+  it('asks the two typed fields first and leaves the tiles a section beneath', () => {
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+
+    const name = screen.getByLabelText(/Business name/);
+    const state = screen.getByLabelText(/^State/);
+    const tiles = screen.getByRole('radiogroup', { name: 'What kind of business?' });
+
+    // The state used to be stranded BELOW the nine tiles. It is a select, not a
+    // tile, and it belongs with the other thing the merchant types.
+    expect(name.compareDocumentPosition(state) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(state.compareDocumentPosition(tiles) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // And they are one group, not two fields adrift above a grid.
+    expect(name.closest('.rounded-card')).toBe(state.closest('.rounded-card'));
+  });
+
+  it('lets the tile grid follow the width it has: 1, then 2, then 3', () => {
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+    const tiles = screen.getByRole('radiogroup', { name: 'What kind of business?' });
+
+    // One column at 360 px — two 160 px tiles wrap a label and a hint to four
+    // ragged lines each, nine times over.
+    expect(tiles.className).toContain('grid-cols-1');
+    expect(tiles.className).toContain('sm:grid-cols-2');
+    // The third column arrives with the rail, because from there it is the
+    // form's measure and not the viewport that decides how many fit.
+    expect(tiles.className).toContain('lg:grid-cols-3');
+  });
+
+  it('keeps every tile at the 44 px target', () => {
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+    for (const tile of screen.getAllByRole('radio')) {
+      expect(tile.className).toContain('min-h-[88px]');
+    }
   });
 });

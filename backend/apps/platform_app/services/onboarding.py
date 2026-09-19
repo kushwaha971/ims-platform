@@ -201,9 +201,12 @@ def update_tenant(
     """
     warnings: list[dict] = []
     before = {field: getattr(tenant, field) for field in UPDATABLE_FIELDS}
+    step_before = int(tenant.onboarding_step)
 
     payload = {k: v for k, v in changes.items() if k in UPDATABLE_FIELDS}
     _apply_gst(tenant=tenant, payload=payload, warnings=warnings)
+    if "onboarding_step" in payload:
+        payload["onboarding_step"] = _advance_step(step_before, payload["onboarding_step"])
 
     for field, value in payload.items():
         setattr(tenant, field, value)
@@ -213,7 +216,16 @@ def update_tenant(
         # never a stale one left over from a corrected step 2.
         tenant.gstin = None
 
-    completing = int(payload.get("onboarding_step", tenant.onboarding_step)) >= WIZARD_LAST_STEP
+    step_after = int(payload.get("onboarding_step", tenant.onboarding_step))
+    # BR-3 "audited once" and FR-8 "changing `business_type` later does not
+    # re-apply the preset" both require this to be a *transition* into the last
+    # step, not a threshold on the step the request happens to land on. This
+    # endpoint is also `PLT-07`'s whole profile surface (Part 22 §22.3), so a
+    # threshold re-runs ~25 `get_or_create`s, writes a second `preset_applied`
+    # audit row and rewrites `enabled_modules` back to the preset on every
+    # address edit a merchant ever makes — which, once `PLT-06`'s module toggles
+    # land, silently undoes the owner's own choices.
+    completing = step_after >= WIZARD_LAST_STEP > step_before
 
     with transaction.atomic():
         try:
@@ -339,6 +351,27 @@ def _seed_modules(*, partner: Any, plan: Any, business_type: str) -> list[str]:
         wanted.add("inventory")
     allowed = set(partner.allowed_modules or []) & set(plan.modules or [])
     return sorted(wanted & allowed)
+
+
+def _advance_step(current: int, requested: Any) -> int:
+    """FR-1/FR-9: `onboarding_step` is a progress marker, not a free-form field.
+
+    The serializer clamps it to 0…4, which stops a nonsense value but not a
+    nonsense *transition*. Two of those matter:
+
+    * *Forward.* `{"onboarding_step": 4}` from step 1 completes the wizard and
+      applies the preset without steps 2 and 3 ever running, which FR-1's
+      "progress is saved after each step" and §9's Processing→Completed
+      transition both rule out. So a request may advance the marker by at most
+      one step.
+    * *Backward.* FR-9 makes a completed step navigable for edits, and the
+      wizard sends the absolute step number it is on — so a merchant who goes
+      back to step 2 from step 4 to fix a GSTIN would otherwise regress a
+      finished business into the wizard and be resumed there at the next login.
+      So the marker never decreases; the edit still saves, only the marker
+      does not move.
+    """
+    return max(current, min(int(requested), current + 1))
 
 
 def _has_default(user: Any) -> bool:

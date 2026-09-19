@@ -85,13 +85,7 @@ export function SetPasswordPageContent(): React.JSX.Element {
             />
           )}
 
-          {password.error && password.error.code !== 'validation_error' && (
-            <UbStatusBanner
-              tone="error"
-              title={password.error.message}
-              description={password.error.requestId ?? undefined}
-            />
-          )}
+          {/* CR-2026-09-19-E — no error banner: the snackbar is the channel. */}
 
           <UbForm form={form} onSubmit={submit} formErrors={password.formErrors}>
             {/* PLT-03 BR-7 — the name is asked here and again on step 1 if blank,

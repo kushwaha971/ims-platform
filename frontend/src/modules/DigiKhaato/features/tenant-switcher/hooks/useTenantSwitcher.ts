@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useDegradedNetwork } from 'src/hooks/useDegradedNetwork';
-import { useTranslation } from 'src/hooks/useTranslation';
 import {
   selectActiveTenant,
   selectSessionTenants,
@@ -61,7 +60,6 @@ export interface UseTenantSwitcherResult {
 export const useTenantSwitcher = (): UseTenantSwitcherResult => {
   const dispatch = useAppDispatch();
   const router = useRouter();
-  const { t } = useTranslation();
   const activeTenant = useAppSelector(selectActiveTenant);
   const tenants = useAppSelector(selectSessionTenants);
   const { canWrite } = useDegradedNetwork();
@@ -84,9 +82,8 @@ export const useTenantSwitcher = (): UseTenantSwitcherResult => {
         dispatch(
           showSnackbar({
             severity: 'success',
-            message: t('tenant.switcher.switched', {
-              name: session.activeTenant?.name ?? '',
-            }),
+            id: 'tenant.switcher.switched',
+            params: { name: session.activeTenant?.name ?? '' },
           })
         );
         // §19.6.5 step 5 — never stay on a record id from the old tenant.
@@ -99,7 +96,7 @@ export const useTenantSwitcher = (): UseTenantSwitcherResult => {
         setSwitchingTenantId(null);
       }
     },
-    [activeTenant?.id, dispatch, router, t]
+    [activeTenant?.id, dispatch, router]
   );
 
   const makeDefault = useCallback(
@@ -108,14 +105,14 @@ export const useTenantSwitcher = (): UseTenantSwitcherResult => {
       setError(null);
       try {
         await dispatch(setDefaultTenant({ membershipId })).unwrap();
-        dispatch(showSnackbar({ severity: 'success', message: t('tenant.switcher.defaultSet') }));
+        dispatch(showSnackbar({ severity: 'success', id: 'tenant.switcher.defaultSet' }));
       } catch (thrown) {
         setError(thrown as ApiErrorShape);
       } finally {
         setBusyMembershipId(null);
       }
     },
-    [dispatch, t]
+    [dispatch]
   );
 
   const leave = useCallback(
@@ -124,7 +121,7 @@ export const useTenantSwitcher = (): UseTenantSwitcherResult => {
       setError(null);
       try {
         await dispatch(leaveTenant({ membershipId })).unwrap();
-        dispatch(showSnackbar({ severity: 'success', message: t('tenant.switcher.left') }));
+        dispatch(showSnackbar({ severity: 'success', id: 'tenant.switcher.left' }));
       } catch (thrown) {
         // 409 `last_owner` lands here and is rendered by the dialog, because
         // "a business must always have one owner" is guidance, not a toast.
@@ -133,7 +130,7 @@ export const useTenantSwitcher = (): UseTenantSwitcherResult => {
         setBusyMembershipId(null);
       }
     },
-    [dispatch, t]
+    [dispatch]
   );
 
   /**

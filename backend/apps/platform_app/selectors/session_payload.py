@@ -52,6 +52,12 @@ def tenant_rows(user: Any) -> list[dict]:
     return [
         {
             "id": str(m.tenant_id),
+            # PLT-04 FR-5 ("make this my default") and FR-7 ("leave this
+            # business") both act on the caller's own membership row, and
+            # `PATCH`/`DELETE /memberships/{id}` take that row's id. Without it
+            # here the client has no id to send and gates both affordances out,
+            # so the two endpoints have no reachable caller at all.
+            "membership_id": str(m.id),
             "name": m.tenant.name,
             "role": m.role.code,
             "is_default": m.is_default,

@@ -11,16 +11,22 @@ import {
   filtersChanged,
   filtersCleared,
   pageChanged,
+  selectionChanged,
   selectPartyFilters,
   selectPartyListError,
   selectPartyListMeta,
   selectPartyListStale,
   selectPartyListStatus,
+  selectPartyListTotals,
+  selectPartyListTotalsScope,
   selectPartyRows,
+  selectPartySelection,
 } from '../redux/partyListSlice';
 import { fetchPartyList } from '../redux/partyListThunk';
 
 import type { Party, PartyListFilters } from '../types/party.types';
+import type { PartyListTotals } from '../view-model/partyDisplay';
+
 
 export interface UsePartyListResult {
   readonly rows: readonly Party[];
@@ -28,6 +34,13 @@ export interface UsePartyListResult {
   readonly filters: PartyListFilters;
   readonly status: RequestStatus;
   readonly error: ApiErrorShape | null;
+  /** The two header figures, and which set they describe. */
+  readonly totals: PartyListTotals;
+  readonly totalsScope: 'filtered' | 'page';
+  readonly selectedIds: readonly string[];
+  readonly setSelectedIds: (ids: readonly string[]) => void;
+  /** Sorting is SERVER-side: it changes `ordering` and resets to page 1. */
+  readonly setOrdering: (ordering: string) => void;
   readonly searchInput: string;
   readonly setSearchInput: (value: string) => void;
   readonly setFilters: (patch: Partial<PartyListFilters>) => void;
@@ -53,6 +66,9 @@ export function usePartyList(mode: 'replace' | 'append' = 'replace'): UsePartyLi
   const status = useAppSelector(selectPartyListStatus);
   const error = useAppSelector(selectPartyListError);
   const stale = useAppSelector(selectPartyListStale);
+  const totals = useAppSelector(selectPartyListTotals);
+  const totalsScope = useAppSelector(selectPartyListTotalsScope);
+  const selectedIds = useAppSelector(selectPartySelection);
 
   // The raw input is local; only the debounced value is committed to the slice,
   // so every keystroke does not produce a request or a store write (§19.3.1).
@@ -90,6 +106,18 @@ export function usePartyList(mode: 'replace' | 'append' = 'replace'): UsePartyLi
     },
     [dispatch]
   );
+  const setSelectedIds = useCallback(
+    (ids: readonly string[]) => {
+      dispatch(selectionChanged([...ids]));
+    },
+    [dispatch]
+  );
+  const setOrdering = useCallback(
+    (ordering: string) => {
+      dispatch(filtersChanged({ ordering }));
+    },
+    [dispatch]
+  );
   const clearFilters = useCallback(() => {
     setSearchInput('');
     dispatch(filtersCleared());
@@ -104,6 +132,11 @@ export function usePartyList(mode: 'replace' | 'append' = 'replace'): UsePartyLi
     filters,
     status,
     error,
+    totals,
+    totalsScope,
+    selectedIds,
+    setSelectedIds,
+    setOrdering,
     searchInput,
     setSearchInput,
     setFilters,

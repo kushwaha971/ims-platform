@@ -5,12 +5,13 @@ import { useCallback } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm } from 'react-hook-form';
 
-import { UbCard, UbField, UbForm, UbGrid, UbPhoneInput, UbTextInput } from 'src/design-system';
+import { UbField, UbForm, UbGrid, UbPhoneInput, UbTextInput } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
 
 import { useOnboardingSchemas } from '../validation/onboardingSchemas';
 
 import { OnboardingStepActions } from './OnboardingStepActions';
+import { OnboardingStepCard } from './OnboardingStepCard';
 
 import type { UseOnboardingResult } from '../hooks/useOnboarding';
 import type { AddressStepFormValues } from '../validation/onboardingSchemas';
@@ -54,7 +55,10 @@ export function OnboardingAddressStep({
   );
 
   return (
-    <UbCard title={t('onboarding.step3.title')} description={t('onboarding.step3.body')}>
+    <OnboardingStepCard
+      title={t('onboarding.step3.title')}
+      description={t('onboarding.step3.body')}
+    >
       <UbForm form={form} onSubmit={submit} formErrors={onboarding.formErrors}>
         <UbField name="line1" label={t('onboarding.address.line1')}>
           {(field) => <UbTextInput {...field} autoComplete="address-line1" />}
@@ -110,6 +114,6 @@ export function OnboardingAddressStep({
           disabled={!onboarding.canSubmit}
         />
       </UbForm>
-    </UbCard>
+    </OnboardingStepCard>
   );
 }

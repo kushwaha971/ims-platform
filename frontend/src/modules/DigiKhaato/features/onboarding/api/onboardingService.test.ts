@@ -4,6 +4,7 @@ import {
   completeOnboarding,
   createTenant,
   updateAddressStep,
+  updateBusinessStep,
   updateGstStep,
 } from './onboardingService';
 
@@ -27,6 +28,58 @@ const TENANT = {
   enabled_modules: ['ledger', 'parties'],
   address: null,
 };
+
+describe('onboardingService.updateBusinessStep — FR-9, step 1 edited', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('PATCHes the three step-1 fields rather than POSTing a second business', async () => {
+    const patch = jest.spyOn(api, 'patch').mockResolvedValue({ data: { data: TENANT } });
+    const post = jest.spyOn(api, 'post');
+
+    await updateBusinessStep({
+      name: 'Sharma General Store',
+      businessType: 'retail',
+      stateCode: '27',
+      ownerName: 'Ramesh',
+    });
+
+    expect(post).not.toHaveBeenCalled();
+    expect(patch.mock.calls[0]?.[0]).toBe('/tenants/current');
+    expect(patch.mock.calls[0]?.[1]).toEqual({
+      name: 'Sharma General Store',
+      business_type: 'retail',
+      state_code: '27',
+    });
+  });
+
+  it('sends no onboarding_step, so an edit cannot regress the wizard', async () => {
+    // The server assigns the step it is given. Echoing `1` from a merchant who
+    // had reached step 3 would send them back to step 2 on their next login.
+    const patch = jest.spyOn(api, 'patch').mockResolvedValue({ data: { data: TENANT } });
+
+    await updateBusinessStep({
+      name: 'S & Co',
+      businessType: 'retail',
+      stateCode: '27',
+      ownerName: null,
+    });
+
+    expect(patch.mock.calls[0]?.[1]).not.toHaveProperty('onboarding_step');
+  });
+
+  it('sends no owner_name — the PATCH surface has no such field', async () => {
+    const patch = jest.spyOn(api, 'patch').mockResolvedValue({ data: { data: TENANT } });
+
+    await updateBusinessStep({
+      name: 'S & Co',
+      businessType: 'retail',
+      stateCode: '27',
+      ownerName: 'Ramesh',
+    });
+
+    expect(patch.mock.calls[0]?.[1]).not.toHaveProperty('owner_name');
+  });
+});
 
 describe('onboardingService.createTenant — FR-2 / EC-7', () => {
   afterEach(() => jest.restoreAllMocks());

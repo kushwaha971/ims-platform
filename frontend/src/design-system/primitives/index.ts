@@ -7,7 +7,8 @@
  * That registry is not reachable from this build environment, so the `ML*`
  * primitives the waves actually use are implemented locally in
  * ./mlPrimitives.tsx (wave 0), ./mlFormPrimitives.tsx and
- * ./mlOverlayPrimitives.tsx (wave 1) and re-exported here.
+ * ./mlOverlayPrimitives.tsx (wave 1), ./mlLayoutPrimitives.tsx (wave 2) and
+ * ./mlToastPrimitives.tsx (CR-2026-09-19-E) and re-exported here.
  *
  * THE SWAP IS STILL THIS FILE. Every `Ub*` component imports its primitives
  * from 'src/design-system/primitives' and never from a deep path, so replacing
@@ -15,7 +16,7 @@
  *
  *     export { MLCard, MLCardContent, MLCardHeader, MLBadge, MLAlert,
  *              MLAlertTitle, MLAlertDescription, MLSkeleton, MLEmpty,
- *              MLEmptyTitle, MLEmptyDescription, MLToaster, MLButton,
+ *              MLEmptyTitle, MLEmptyDescription, MLToast, MLToaster, MLButton,
  *              MLSpinner, MLSeparator, MLInput, MLTextarea, MLSelect,
  *              MLCheckbox, MLRadioGroup, MLToggleGroup, MLTabs, MLProgress,
  *              MLIconButton, MLDialog, MLDialogTitle, MLDialogDescription,
@@ -52,7 +53,6 @@ export {
   MLSeparator,
   MLSkeleton,
   MLSpinner,
-  MLToaster,
 } from './mlPrimitives';
 
 export type {
@@ -64,8 +64,17 @@ export type {
   MLCardProps,
   MLEmptyProps,
   MLSkeletonProps,
-  MLToasterProps,
 } from './mlPrimitives';
+
+// ── Toasts (CR-2026-09-19-E — the single failure channel of §19.12.2) ───────
+export { MLToast, MLToaster } from './mlToastPrimitives';
+
+export type {
+  MLToastPoliteness,
+  MLToastProps,
+  MLToastVariant,
+  MLToasterProps,
+} from './mlToastPrimitives';
 
 // ── Wave 1 — forms ───────────────────────────────────────────────────────────
 export {

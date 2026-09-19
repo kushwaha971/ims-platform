@@ -30,6 +30,9 @@ const row = {
 const payload: FetchPartyListResult = {
   rows: [row],
   meta: { page: 1, pageSize: 25, total: 1, totalPages: 1 },
+  // The Sprint 0 endpoint sends no totals block; the slice sums the page it has
+  // and says so through `totalsScope`.
+  totals: null,
   mode: 'replace',
 };
 

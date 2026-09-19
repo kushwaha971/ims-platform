@@ -117,3 +117,20 @@ def test_prod_settings_refuse_the_development_defaults(monkeypatch: pytest.Monke
     monkeypatch.setenv("UB_DEBUG", "0")
     with pytest.raises(AssertionError, match="UB_SECRET_KEY"):
         importlib.reload(importlib.import_module("config.settings.prod"))
+
+
+def test_the_custom_response_headers_are_exposed_cross_origin() -> None:
+    """`django-cors-headers` defaults `CORS_EXPOSE_HEADERS` to `[]`.
+
+    Dev is cross-origin (frontend :3000, API :8000) and production is
+    same-origin behind nginx, so an unexposed header is one that works in one
+    topology and silently does nothing in the other — the worst shape a bug can
+    have. Every header the client actually reads has to be on this list.
+    """
+    exposed = set(settings.CORS_EXPOSE_HEADERS)
+    assert {
+        "X-Request-Id",
+        "X-Tenant-Id",
+        "Idempotent-Replayed",
+        "Retry-After",
+    } <= exposed

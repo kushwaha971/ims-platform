@@ -128,20 +128,13 @@ export function LoginPageContent(): React.JSX.Element {
             />
           )}
 
-          {/* §9 "Error" — anything the fields cannot carry, with the request id.
-              A wrong password and a throttle both have a better home than a
-              banner and are deliberately excluded here. */}
-          {login.error &&
-            login.error.code !== 'validation_error' &&
-            login.error.code !== 'invalid_credentials' &&
-            login.error.code !== 'login_throttled' &&
-            login.error.code !== 'rate_limited' && (
-              <UbStatusBanner
-                tone="error"
-                title={login.error.message}
-                description={login.error.requestId ?? undefined}
-              />
-            )}
+          {/* CR-2026-09-19-E — there was a §9 "Error" banner here, repeating
+              whatever the server said with its request id. It is gone: an API
+              failure now surfaces once, from the transport, through the single
+              snackbar channel (§19.12.2). This screen contains no error-toast
+              code and no error-rendering code at all; the two banners above are
+              NETWORK and THROTTLE states, not failure reports, and the wrong
+              password lands under the password field (see `useLogin`). */}
 
           <UbForm
             form={form}
