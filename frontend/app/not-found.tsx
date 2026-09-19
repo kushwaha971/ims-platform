@@ -1,14 +1,25 @@
-import Link from 'next/link';
+import { UbLink, UbStack, UbText } from 'src/design-system';
+import { ROUTES } from 'src/routes';
 
 /** Part 19 §19.12.1 — the root not-found page; no shell, no store. */
 export default function NotFound(): React.JSX.Element {
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-canvas px-4 text-center">
-      <h1 className="ds-h2 text-text-primary">404</h1>
-      <p className="ds-body text-text-tertiary">This page does not exist.</p>
-      <Link href="/parties" className="ds-body-medium text-text-accent underline">
+    <UbStack
+      as="main"
+      align="center"
+      justify="center"
+      gap={4}
+      className="min-h-dvh bg-canvas px-4 text-center"
+    >
+      <UbText as="h1" variant="h2">
+        404
+      </UbText>
+      <UbText variant="body" tone="tertiary">
+        This page does not exist.
+      </UbText>
+      <UbLink href={ROUTES.PARTIES} variant="body-medium">
         Go back
-      </Link>
-    </main>
+      </UbLink>
+    </UbStack>
   );
 }

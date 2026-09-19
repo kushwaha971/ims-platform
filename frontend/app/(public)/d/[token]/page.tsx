@@ -1,4 +1,5 @@
 import { APP_NAME } from 'src/constants';
+import { UbStack, UbText } from 'src/design-system';
 
 /**
  * Part 19 §19.7.6 — the unauthenticated share view. It is a genuine server
@@ -15,11 +16,23 @@ export default async function PublicDocumentPage({
   const { token } = await params;
 
   return (
-    <article className="mx-auto flex max-w-md flex-col gap-3 rounded-card border border-border-hairline bg-surface-card p-6">
-      <h1 className="ds-h3 text-text-primary">This link has expired</h1>
-      <p className="ds-body-sm text-text-tertiary">Ask the shop to share the document again.</p>
-      <p className="ds-mono text-text-muted">{token.slice(0, 8)}</p>
-      <p className="ds-caption text-text-muted">Powered by {APP_NAME}</p>
-    </article>
+    <UbStack
+      as="article"
+      gap={3}
+      className="mx-auto max-w-md rounded-card border border-border-hairline bg-surface-card p-6"
+    >
+      <UbText as="h1" variant="h3">
+        This link has expired
+      </UbText>
+      <UbText variant="body-sm" tone="tertiary">
+        Ask the shop to share the document again.
+      </UbText>
+      <UbText variant="mono" tone="muted">
+        {token.slice(0, 8)}
+      </UbText>
+      <UbText variant="caption" tone="muted">
+        Powered by {APP_NAME}
+      </UbText>
+    </UbStack>
   );
 }

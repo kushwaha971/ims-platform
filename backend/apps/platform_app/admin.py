@@ -28,8 +28,8 @@ class TenantAdmin(admin.ModelAdmin):
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
-    list_display = ("mobile", "full_name", "is_active", "is_super_admin")
-    search_fields = ("mobile", "full_name")
+    list_display = ("email", "full_name", "mobile", "is_active", "is_super_admin")
+    search_fields = ("email", "mobile", "full_name")
 
 
 @admin.register(Job)

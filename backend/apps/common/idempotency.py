@@ -76,12 +76,23 @@ def idempotent(scope: str) -> Callable:
                 method=request.method, path=request.path, body=getattr(request, "data", None)
             )
 
+            user = request.user if request.user.is_authenticated else None
+            # `POST /tenants` presents a key before a tenant exists (PLT-03
+            # EC-7). The tenant-less case is scoped to the user by its own
+            # partial unique index, so the lookup below has to match whichever
+            # index actually holds the lock.
+            lookup = (
+                {"tenant": tenant, "scope": scope, "key": key}
+                if tenant is not None
+                else {"tenant__isnull": True, "user": user, "scope": scope, "key": key}
+            )
+
             # Claim the key with an INSERT. The unique index is the lock.
             try:
                 with transaction.atomic():
                     record = model.objects.create(
                         tenant=tenant,
-                        user=request.user if request.user.is_authenticated else None,
+                        user=user,
                         key=key,
                         scope=scope,
                         request_hash=digest,
@@ -90,7 +101,7 @@ def idempotent(scope: str) -> Callable:
                     )
                 claimed = True
             except IntegrityError:
-                record = model.objects.get(tenant=tenant, scope=scope, key=key)
+                record = model.objects.get(**lookup)
                 claimed = False
 
             if not claimed:
@@ -102,7 +113,17 @@ def idempotent(scope: str) -> Callable:
                 replay["Idempotent-Replayed"] = "true"
                 return replay
 
-            response = view_method(self, request, *args, **kwargs)
+            try:
+                response = view_method(self, request, *args, **kwargs)
+            except Exception:
+                # A view that raises — a serializer rejection, a business rule,
+                # anything — must not burn the key. Without this the row stays
+                # `in_progress` forever and the user's corrected retry is met
+                # with 409 instead of the fix they just made. The same reasoning
+                # as the non-2xx branch below, for the path that does not
+                # produce a response object at all.
+                model.objects.filter(pk=record.pk).delete()
+                raise
             if 200 <= response.status_code < 300:
                 model.objects.filter(pk=record.pk).update(
                     status=IdempotencyStatus.COMPLETED,

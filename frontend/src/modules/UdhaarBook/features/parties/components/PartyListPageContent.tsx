@@ -2,7 +2,15 @@
 
 import { useMemo } from 'react';
 
-import { UbCard, UbEmptyState, UbPageHeader, UbPageShell, UbSkeleton } from 'src/design-system';
+import {
+  UbButton,
+  UbCard,
+  UbEmptyState,
+  UbPageHeader,
+  UbPageShell,
+  UbSkeleton,
+  UbStack,
+} from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
 
 import { usePartyList } from '../hooks/usePartyList';
@@ -55,13 +63,9 @@ export function PartyListPageContent(): React.JSX.Element {
           description={error?.message ?? t('parties.list.error.body')}
           requestId={error?.requestId ?? null}
           action={
-            <button
-              type="button"
-              onClick={refetch}
-              className="ds-body-sm-medium rounded-control border border-border-strong px-4 py-2 text-text-primary hover:bg-surface-hover"
-            >
+            <UbButton variant="secondary" onClick={refetch}>
               {t('common.action.retry')}
-            </button>
+            </UbButton>
           }
         />
       )}
@@ -81,13 +85,9 @@ export function PartyListPageContent(): React.JSX.Element {
           }
           action={
             isFiltered ? (
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="ds-body-sm-medium rounded-control border border-border-strong px-4 py-2 text-text-primary hover:bg-surface-hover"
-              >
+              <UbButton variant="secondary" onClick={clearFilters}>
                 {t('common.action.retry')}
-              </button>
+              </UbButton>
             ) : undefined
           }
         />
@@ -95,11 +95,11 @@ export function PartyListPageContent(): React.JSX.Element {
 
       {rows.length > 0 && (
         <UbCard padded={false}>
-          <ul className="flex flex-col">
+          <UbStack as="ul">
             {rows.map((party) => (
               <PartyListRow key={party.id} party={party} balanceLabels={balanceLabels} />
             ))}
-          </ul>
+          </UbStack>
         </UbCard>
       )}
     </UbPageShell>

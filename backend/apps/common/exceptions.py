@@ -132,6 +132,8 @@ def drf_exception_handler(exc: Exception, context: dict) -> Response | None:
     request_id = getattr(request, "request_id", None)
 
     if isinstance(exc, DomainError):
+        if isinstance(exc, PlanLimitReached):
+            _record_plan_limit_hit(exc, request)
         payload, http_status = _from_domain(exc), exc.http_status
     elif isinstance(exc, Http404):
         payload, http_status = {"code": "not_found", "message": "Not found.", "details": {}}, 404
@@ -197,7 +199,11 @@ _AUTH_MESSAGES: dict[str, str] = {
     "token_stale": "Your permissions changed. Reloading.",
     "invalid_token": "Your session is not valid. Please sign in again.",
     "session_revoked": "You were signed out. Please sign in again.",
-    "invalid_credentials": "Mobile number or password is incorrect.",
+    # DEC-010 made email the identifier, so the registered copy of
+    # `invalid_credentials` ("Mobile number or password is incorrect.") now
+    # names a field the sign-in form does not have. `CR-LOG` carries the copy
+    # change to Part 22 §22.1.1; the code itself is unchanged.
+    "invalid_credentials": "Email or password is incorrect.",
     "unauthenticated": "Authentication credentials were not provided.",
 }
 
@@ -218,6 +224,21 @@ def _auth_code_and_message(exc: Exception) -> tuple[str, str]:
     if isinstance(exc, drf_exc.NotAuthenticated):
         return "unauthenticated", _AUTH_MESSAGES["unauthenticated"]
     return "invalid_token", _AUTH_MESSAGES["invalid_token"]
+
+
+def _record_plan_limit_hit(exc: "PlanLimitReached", request: Any) -> None:
+    """PLT-15 §16: the `plan.limit_hit` row is written even though the request failed.
+
+    It has to happen here rather than at the raise site: PLT-15 BR-7 makes the
+    check run inside a transaction with the tenant row locked, so a row written
+    there rolls back with the refusal it is meant to record. By the time the
+    handler runs, that transaction has unwound and the connection is in
+    autocommit again.
+    """
+    from apps.platform_app.services.entitlements import record_limit_hit
+
+    actor = getattr(request, "user", None)
+    record_limit_hit(exc, actor=actor if getattr(actor, "is_authenticated", False) else None)
 
 
 def _from_domain(exc: DomainError) -> dict:

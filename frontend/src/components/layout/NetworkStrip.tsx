@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 
-import { UbStatusBanner } from 'src/design-system';
+import { UbBox, UbStatusBanner } from 'src/design-system';
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useDegradedNetwork } from 'src/hooks/useDegradedNetwork';
 import { useTranslation } from 'src/hooks/useTranslation';
@@ -41,7 +41,7 @@ export function NetworkStrip(): React.JSX.Element | null {
   if (state === 'online') return null;
 
   return (
-    <div data-testid="offline-banner" className="px-4 pt-3 md:px-page">
+    <UbBox data-testid="offline-banner" className="px-4 pt-3 md:px-page">
       <UbStatusBanner
         tone={state === 'offline' ? 'offline' : 'warning'}
         title={state === 'offline' ? t('common.network.offline') : t('common.network.degraded')}
@@ -49,6 +49,6 @@ export function NetworkStrip(): React.JSX.Element | null {
           pendingWrites > 0 ? t('common.network.pending', { count: pendingWrites }) : undefined
         }
       />
-    </div>
+    </UbBox>
   );
 }

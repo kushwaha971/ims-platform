@@ -6,8 +6,12 @@
  */
 export const API_PATHS = {
   // ── auth ──────────────────────────────────────────────────────────────────
-  AUTH_OTP_REQUEST: '/auth/otp/request',
-  AUTH_OTP_VERIFY: '/auth/otp/verify',
+  /**
+   * CR-2026-09-19-A — `/auth/otp/request` and `/auth/otp/verify` left this list
+   * with the flow that called them. Registration is now its own endpoint,
+   * because nothing implicitly creates an account any more.
+   */
+  AUTH_REGISTER: '/auth/register',
   AUTH_LOGIN: '/auth/login',
   AUTH_REFRESH: '/auth/refresh',
   AUTH_LOGOUT: '/auth/logout',
@@ -18,6 +22,8 @@ export const API_PATHS = {
   AUTH_PASSWORD_RESET_CONFIRM: '/auth/password/reset/confirm',
 
   // ── platform ──────────────────────────────────────────────────────────────
+  /** PLT-03 FR-2 / CCR-1 — tenant creation; carries an Idempotency-Key. */
+  TENANTS: '/tenants',
   TENANT_CURRENT: '/tenants/current',
   TENANT_SETTINGS: '/tenants/current/settings',
   TENANT_BRANDING: '/tenants/current/branding',
@@ -109,6 +115,9 @@ export const IDEMPOTENT_POST_PATHS: readonly string[] = [
   API_PATHS.STOCK_ADJUSTMENTS,
   API_PATHS.EXPENSES,
   API_PATHS.PARTIES,
+  // PLT-03 EC-7 — a lost response after a successful POST /tenants must replay
+  // the created tenant, not create a second business.
+  API_PATHS.TENANTS,
 ];
 
 /** True when a POST to this url is on the mandatory-idempotency list. */

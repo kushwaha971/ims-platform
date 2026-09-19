@@ -36,3 +36,20 @@ export const DEFAULT_TENANT_TIMEZONE = 'Asia/Kolkata';
 
 /** Request timeout; exports and uploads are the reason it is not lower. */
 export const API_TIMEOUT_MS = 30_000;
+
+/**
+ * PLT-02 §10 / Part 27 §27.4.2 — the password floors the SERVER enforces
+ * (`backend/apps/platform_app/services/passwords.py`), stated once so the
+ * validator, the strength meter and the hint copy cannot drift apart.
+ *
+ * Eight characters for an ordinary member; TEN for anyone who holds `owner` or
+ * `admin` anywhere. At MVP a self-registered account becomes the owner of the
+ * business it creates, so ten is what every sign-up, set and reset screen
+ * applies (CR-2026-09-19-A).
+ */
+export const PASSWORD_MIN_LENGTH = 8;
+export const PASSWORD_MIN_LENGTH_PRIVILEGED = 10;
+export const PASSWORD_MAX_LENGTH = 128;
+
+/** The longest address DRF's `EmailField` accepts. */
+export const EMAIL_MAX_LENGTH = 254;

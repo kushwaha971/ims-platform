@@ -7,6 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { UbPageSkeleton } from 'src/design-system';
 import { useAppSelector } from 'src/hooks/useAppStore';
 import { selectSessionStatus } from 'src/redux/slice/sessionSlice';
+import { ROUTES, loginPathWithNext } from 'src/routes';
 
 /**
  * Part 19 §19.7.3 — the real guard. `middleware.ts` does the cheap
@@ -26,10 +27,10 @@ export function RequireSession({
 
   useEffect(() => {
     if (status === 'anonymous') {
-      router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+      router.replace(loginPathWithNext(pathname));
     }
     if (status === 'no_tenant') {
-      router.replace('/onboarding');
+      router.replace(ROUTES.ONBOARDING);
     }
   }, [status, router, pathname]);
 

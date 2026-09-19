@@ -32,6 +32,15 @@ export type ApiErrorCode =
   | 'otp_throttled'
   | 'login_throttled'
   | 'token_stale'
+  | 'invalid_token'
+  | 'session_revoked'
+  | 'no_active_tenant'
+  | 'invitation_invalid'
+  // platform and governance (Part 22 §22.1.1 group C) — the Sprint 1 subset
+  | 'last_owner'
+  | 'self_change_forbidden'
+  | 'tenant_suspended'
+  | 'gstin_in_use'
   // business
   | 'party_balance_nonzero'
   | 'party_archived'

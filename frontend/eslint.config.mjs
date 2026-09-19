@@ -159,6 +159,89 @@ const config = [
     },
   },
   {
+    /**
+     * Part 23 §23.3 / Part 25 R-S-10 — THE design-system rule, mechanically
+     * enforced, and the reason this refactor cannot regress.
+     *
+     * BrandHub's Customer module is written entirely out of `BHBox`, `BHGrid`,
+     * `BHTypography`, `BHDivider` and their siblings: across the sixty files of
+     * `apps/frontend/src/modules/customer-management` there is not one `<div>`,
+     * `<p>` or `<h1>`. It holds there by review. Here it holds by build failure
+     * — `npm run lint` runs with `--max-warnings=0`, so `'error'` below stops a
+     * merge rather than printing a line nobody reads.
+     *
+     * Each entry names the component to use instead, because a rule that only
+     * says "no" sends the author to grep.
+     *
+     * NOT forbidden, deliberately:
+     *  - `<html>`, `<head>`, `<body>` — the document, which only
+     *    `app/layout.tsx` renders and no component can replace.
+     *  - `<svg>` and its children — icons come from `lucide-react` (R-P-5) and
+     *    the few inline paths are graphics, not layout.
+     *  - React `<Fragment>` / `<>` — not a host element.
+     */
+    files: ['src/modules/**/*.tsx', 'src/components/**/*.tsx', 'app/**/*.tsx'],
+    rules: {
+      'react/forbid-elements': [
+        'error',
+        {
+          forbid: [
+            { element: 'div', message: 'Use UbBox / UbStack / UbGrid from src/design-system.' },
+            { element: 'span', message: 'Use UbText as="span", UbListItemText or UbBadge.' },
+            { element: 'p', message: 'Use UbText (variant="body" | "body-sm" | "caption").' },
+            { element: 'h1', message: 'Use UbText as="h1" variant="h1"|"h2" (§23.2.2).' },
+            { element: 'h2', message: 'Use UbText as="h2" variant="h2"|"h3" (§23.2.2).' },
+            { element: 'h3', message: 'Use UbText as="h3" variant="h3"|"h4" (§23.2.2).' },
+            { element: 'h4', message: 'Use UbText as="h4" (§23.2.2).' },
+            { element: 'h5', message: 'Use UbText as="h5" (§23.2.2).' },
+            { element: 'h6', message: 'Use UbText as="h6" (§23.2.2).' },
+            { element: 'ul', message: 'Use UbStack as="ul".' },
+            { element: 'ol', message: 'Use UbStack as="ol".' },
+            { element: 'li', message: 'Use UbStack as="li" / UbBox as="li".' },
+            { element: 'dl', message: 'Use UbGrid as="dl" / UbStack as="dl".' },
+            { element: 'dt', message: 'Use UbText as="dt" variant="label".' },
+            { element: 'dd', message: 'Use UbText as="dd".' },
+            { element: 'section', message: 'Use UbBox as="section".' },
+            { element: 'article', message: 'Use UbBox as="article".' },
+            { element: 'header', message: 'Use UbPageHeader, or UbBox as="header".' },
+            { element: 'footer', message: 'Use UbBox as="footer".' },
+            { element: 'main', message: 'Use UbPageShell, or UbBox as="main".' },
+            { element: 'nav', message: 'Use UbSidebar, or UbBox as="nav".' },
+            { element: 'aside', message: 'Use UbBox as="aside".' },
+            { element: 'form', message: 'Use UbForm (§19.5.4).' },
+            { element: 'fieldset', message: 'Use UbField / UbRadioGroup (§19.5.4).' },
+            { element: 'label', message: 'Use UbField — it binds the label to the control.' },
+            { element: 'input', message: 'Use UbTextInput / UbCheckbox / UbOtpInput.' },
+            { element: 'textarea', message: 'Use UbTextInput multiline.' },
+            { element: 'select', message: 'Use UbSelect.' },
+            { element: 'button', message: 'Use UbButton (keeps the 44 px target, R-A-3).' },
+            { element: 'a', message: 'Use UbLink — it wraps next/link.' },
+            { element: 'img', message: 'Use next/image; icons come from lucide-react (R-P-5).' },
+            { element: 'table', message: 'Use UbDataGrid (§19.5.6).' },
+            { element: 'thead', message: 'Use UbDataGrid (§19.5.6).' },
+            { element: 'tbody', message: 'Use UbDataGrid (§19.5.6).' },
+            { element: 'tr', message: 'Use UbDataGrid (§19.5.6).' },
+            { element: 'td', message: 'Use UbDataGrid (§19.5.6).' },
+            { element: 'th', message: 'Use UbDataGrid (§19.5.6).' },
+            { element: 'hr', message: 'Use UbDivider.' },
+            { element: 'strong', message: 'Use UbText variant="body-medium".' },
+            { element: 'em', message: 'Use UbText — emphasis is a tier, not a tag.' },
+            { element: 'small', message: 'Use UbText variant="caption".' },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    /**
+     * `app/layout.tsx` is the document. `<html lang>` and `<body>` are not
+     * forbidden above, but the file is listed here so the exemption is a
+     * stated decision rather than an omission somebody later "fixes".
+     */
+    files: ['app/layout.tsx'],
+    rules: { 'react/forbid-elements': 'off' },
+  },
+  {
     // The one module allowed to read navigator.onLine — it is the state machine.
     files: ['src/hooks/useDegradedNetwork.ts'],
     rules: { 'no-restricted-properties': 'off' },

@@ -5,7 +5,13 @@ import { useMemo } from 'react';
 import dayjs from 'dayjs';
 import * as Yup from 'yup';
 
-import { MAX_AMOUNT, MAX_QTY } from 'src/constants';
+import {
+  EMAIL_MAX_LENGTH,
+  MAX_AMOUNT,
+  MAX_QTY,
+  PASSWORD_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH_PRIVILEGED,
+} from 'src/constants';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { REGEX } from 'src/utils/regexConstants';
 
@@ -65,7 +71,23 @@ export interface ValidationSchemas {
   readonly noteValidation: (max?: number) => Yup.StringSchema<string | null | undefined>;
   readonly referenceValidation: (max?: number) => Yup.StringSchema<string | null | undefined>;
   readonly uuidValidation: (required?: boolean) => Yup.StringSchema<string | null | undefined>;
+  /**
+   * CR-2026-09-19-A — email is the MVP identity. Trims, lower-cases and checks
+   * the shape, so what leaves the form is what the server stores.
+   */
   readonly emailValidation: (required?: boolean) => Yup.StringSchema<string | null | undefined>;
+  /** The same rule with a non-null type, for a field that IS the identity. */
+  readonly emailIdentityValidation: () => Yup.StringSchema<string>;
+  /** PLT-01 §10 — exactly six digits. */
+  readonly otpCodeValidation: () => Yup.StringSchema<string>;
+  /**
+   * PLT-02 §10 — mirrors the server rule, floor included; `confirm` is a
+   * client-only check. `minLength` defaults to the privileged floor (10).
+   */
+  readonly passwordValidation: (options?: { minLength?: number }) => Yup.StringSchema<string>;
+  readonly passwordConfirmValidation: (ref: string) => Yup.StringSchema<string>;
+  /** PLT-03 §10 — a two-digit GST state code from the closed list. */
+  readonly stateCodeValidation: () => Yup.StringSchema<string>;
   readonly enumValidation: <T extends string>(
     values: readonly T[],
     messageId: string
@@ -201,12 +223,64 @@ export const useValidationSchemas = (): ValidationSchemas => {
       return required ? base.required(t('validation.id.required')) : base.nullable().notRequired();
     };
 
+    /**
+     * The transform runs BEFORE the checks, so " Ramesh@Example.COM " is
+     * validated — and submitted — as `ramesh@example.com`. A server that
+     * lower-cases on write and a client that does not is how one person ends up
+     * unable to log in with the address they typed at sign-up.
+     */
+    const emailBase = () =>
+      Yup.string()
+        .transform((value: unknown) =>
+          typeof value === 'string' ? value.trim().toLowerCase() : value
+        )
+        .max(EMAIL_MAX_LENGTH, t('validation.maxChars', { value: EMAIL_MAX_LENGTH }))
+        .matches(REGEX.EMAIL, t('validation.email.format'));
+
     const emailValidation = (required = false) => {
-      const base = Yup.string().trim().email(t('validation.email.format')).max(254);
+      const base = emailBase();
       return required
         ? base.required(t('validation.email.required'))
         : base.nullable().notRequired();
     };
+
+    const emailIdentityValidation = () => emailBase().required(t('validation.email.required'));
+
+    /**
+     * PLT-01 §10 — the code is a STRING: "012345" is not 12345.
+     *
+     * CR-2026-09-19-A backlogged the OTP flow; this validator is retained with
+     * `UbOtpInput` and has no screen at MVP.
+     */
+    const otpCodeValidation = () =>
+      Yup.string()
+        .required(t('validation.otp.required'))
+        .matches(REGEX.OTP_CODE, t('validation.otp.format'));
+
+    /**
+     * PLT-02 FR-2 / §10. The common-password list is Django's and lives on the
+     * server: the client cannot carry 20 000 words into a 120 kB auth bundle, so
+     * that rule arrives as a 400 with `details.password` and is anchored by
+     * `applyServerErrors()`. Everything the client CAN check, it checks here.
+     */
+    const passwordValidation = (options?: { minLength?: number }) => {
+      const min = options?.minLength ?? PASSWORD_MIN_LENGTH_PRIVILEGED;
+      return Yup.string()
+        .required(t('validation.password.required'))
+        .min(min, t('validation.password.tooShort', { value: min }))
+        .max(PASSWORD_MAX_LENGTH, t('validation.maxChars', { value: PASSWORD_MAX_LENGTH }))
+        .matches(REGEX.PASSWORD, t('validation.password.format'));
+    };
+
+    const passwordConfirmValidation = (ref: string) =>
+      Yup.string()
+        .required(t('validation.password.confirmRequired'))
+        .oneOf([Yup.ref(ref)], t('validation.password.mismatch'));
+
+    const stateCodeValidation = () =>
+      Yup.string()
+        .required(t('validation.stateCode.required'))
+        .matches(REGEX.GST_STATE_CODE, t('validation.stateCode.format'));
 
     const enumValidation = <T extends string>(values: readonly T[], messageId: string) =>
       Yup.mixed<T>()
@@ -229,6 +303,11 @@ export const useValidationSchemas = (): ValidationSchemas => {
       referenceValidation,
       uuidValidation,
       emailValidation,
+      emailIdentityValidation,
+      otpCodeValidation,
+      passwordValidation,
+      passwordConfirmValidation,
+      stateCodeValidation,
       enumValidation,
     };
   }, [t]);

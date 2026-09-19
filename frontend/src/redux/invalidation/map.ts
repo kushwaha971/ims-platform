@@ -20,4 +20,44 @@ export const INVALIDATION: TInvalidationMap = {
   // A new tenant means a new token and a new dataset; nothing survives.
   switchTenant: { resetAll: true },
   logout: { resetAll: true },
+
+  // ── PLT-02 / CR-2026-09-19-A — authentication ─────────────────────────────
+  // Asking for a reset link changes nothing the client caches, and — BR-2 — it
+  // must not even let the client learn whether the address exists. What it DOES
+  // change is one flag on the auth slice, written by that slice's extraReducers
+  // on this very action, which is what `patch` declares.
+  requestPasswordReset: { patch: [['auth', 'resetRequested']] },
+  // A successful registration, login or reset-confirm is a NEW SESSION.
+  // Anything a previous session left in the store belongs to a different user or
+  // a different business, so the teardown is total — the same signal a tenant
+  // switch sends (§19.6.5).
+  registerAccount: { resetAll: true },
+  passwordLogin: { resetAll: true },
+  confirmPasswordReset: { resetAll: true },
+  // Setting a password changes no cached row; it changes whether the account
+  // has one, which is a field of the auth slice.
+  setPassword: { patch: [['auth', 'passwordSet']] },
+
+  // ── PLT-03 — the onboarding wizard ────────────────────────────────────────
+  // Creating a business re-issues the token with a new `tid`: it is a tenant
+  // switch in everything but name, and anything cached before it is another
+  // tenant's (or no tenant's) data.
+  createTenant: { resetAll: true },
+  // The later steps patch the tenant the wizard is already in. They change the
+  // session summary — `enabled_modules` after the preset is applied, the tenant
+  // name in the header — so the session is refetched while the user is looking
+  // at the screen that changed it.
+  saveGstStep: { patch: [['onboarding', 'draft']] },
+  saveAddressStep: { patch: [['onboarding', 'draft']] },
+  // The preset the server applies on completion changes `enabled_modules` and
+  // the tenant summary. The thunk re-reads `/auth/me` and `sessionSlice`
+  // applies it in its own extraReducers on this action — a patch, in place,
+  // rather than a stale flag on a slice that has no stale fields.
+  completeOnboarding: { patch: [['session', 'enabledModules']] },
+
+  // ── PLT-04 — multiple businesses ──────────────────────────────────────────
+  // Both write the membership list that `sessionSlice` holds, in that slice's
+  // own extraReducers on these actions.
+  setDefaultTenant: { patch: [['session', 'tenants']] },
+  leaveTenant: { patch: [['session', 'tenants']] },
 };

@@ -2,6 +2,8 @@
 
 import { useEffect } from 'react';
 
+import { UbButton, UbStack, UbText } from 'src/design-system';
+
 /**
  * Part 19 §19.12.1 tier 2 — a crash inside an authenticated route. The shell
  * stays; only the content area shows the error card, with Retry and the digest.
@@ -15,20 +17,26 @@ export default function AppError({
   }, [error]);
 
   return (
-    <div
+    <UbStack
       role="alert"
-      className="m-4 flex flex-col items-start gap-3 rounded-md border border-formError bg-formError-dim p-5"
+      align="start"
+      gap={3}
+      className="m-4 rounded-md border border-formError bg-formError-dim p-5"
     >
-      <h2 className="ds-h3 text-text-primary">We could not load this screen</h2>
-      <p className="ds-body-sm text-text-tertiary">Try again, or go back to the dashboard.</p>
-      {error.digest && <p className="ds-mono text-text-muted">{error.digest}</p>}
-      <button
-        type="button"
-        onClick={reset}
-        className="ds-body-sm-medium rounded-control border border-border-strong px-4 py-2 text-text-primary"
-      >
+      <UbText as="h2" variant="h3">
+        We could not load this screen
+      </UbText>
+      <UbText variant="body-sm" tone="tertiary">
+        Try again, or go back to the dashboard.
+      </UbText>
+      {error.digest && (
+        <UbText variant="mono" tone="muted">
+          {error.digest}
+        </UbText>
+      )}
+      <UbButton variant="secondary" size="sm" onClick={reset}>
         Try again
-      </button>
-    </div>
+      </UbButton>
+    </UbStack>
   );
 }

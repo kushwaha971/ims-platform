@@ -1,9 +1,16 @@
 import { configureStore } from '@reduxjs/toolkit';
 
-// ── parties ──────────────────────────────────────────────────────────────────
 import { registerTransportHost } from 'src/api/transportBridge';
 
+// ── auth (PLT-01, PLT-02) ────────────────────────────────────────────────────
+import authReducer from 'modules/UdhaarBook/features/auth/redux/authSlice';
+// ── onboarding (PLT-03) ──────────────────────────────────────────────────────
+import onboardingReducer from 'modules/UdhaarBook/features/onboarding/redux/onboardingSlice';
+// ── parties ──────────────────────────────────────────────────────────────────
 import partyListReducer from 'modules/UdhaarBook/features/parties/redux/partyListSlice';
+// ── plan entitlements (PLT-15) ───────────────────────────────────────────────
+import planReducer, { limitHit } from 'modules/UdhaarBook/features/plan/redux/planSlice';
+import { toPlanLimitHit } from 'modules/UdhaarBook/features/plan/view-model/planDisplay';
 
 import { invalidationListener } from './invalidation/listener';
 // ── Cross-cutting ────────────────────────────────────────────────────────────
@@ -24,6 +31,11 @@ import whiteLabelReducer from './slice/whiteLabelSlice';
  *
  * Two deliberate absences: `redux-persist` (the store is rebuilt from the API
  * on load) and TanStack Query (ADR-004 — one data-layer pattern only).
+ *
+ * Sprint 1 adds four keys and no mechanism: `auth`, `onboarding`, `plan`, and
+ * PLT-04's state, which lives in the existing `session` key because a
+ * membership list IS the session summary and a second copy of it would be a
+ * second thing to keep true.
  */
 export const store = configureStore({
   reducer: {
@@ -34,6 +46,10 @@ export const store = configureStore({
     theme: themeReducer,
     network: networkReducer,
     offlineQueue: offlineQueueReducer,
+
+    auth: authReducer,
+    onboarding: onboardingReducer,
+    plan: planReducer,
 
     partyList: partyListReducer,
   },
@@ -67,6 +83,24 @@ registerTransportHost({
     store.dispatch(
       showSnackbar({ severity: 'error', message: error.message, requestId: error.requestId })
     );
+  },
+  // PLT-15 FR-6 — one dialog answers for every module's plan limit.
+  onPlanLimit: (error) => {
+    store.dispatch(limitHit(toPlanLimitHit(error)));
+    return true;
+  },
+  // PLT-04 FR-4 — the stale-tab guard's two dependencies.
+  getActiveTenantId: () => store.getState().session.activeTenant?.id ?? null,
+  onTenantMismatch: () => {
+    // The message goes up before the reload, so the user sees WHY the page
+    // jumped rather than watching it reload for no stated reason. The reload is
+    // deferred a tick so the snackbar paints first.
+    store.dispatch(
+      showSnackbar({ severity: 'warning', message: 'tenant.switcher.staleTab', requestId: null })
+    );
+    if (typeof window !== 'undefined') {
+      window.setTimeout(() => window.location.reload(), 600);
+    }
   },
 });
 

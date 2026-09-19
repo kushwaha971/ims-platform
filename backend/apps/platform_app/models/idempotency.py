@@ -17,8 +17,19 @@ class IdempotencyKey(TimeStampedModel):
     """
 
     id = uuid7_pk()
+    # Part 21 §21.3.1 has this column NOT NULL ("keys are scoped per tenant").
+    # `POST /tenants` (PLT-03 EC-7) is the one endpoint whose `Idempotency-Key`
+    # is presented *before* a tenant exists, and its retry must replay the
+    # created tenant rather than create a second one. The column is therefore
+    # nullable and a second partial unique index scopes the tenant-less case to
+    # the user, so the "unique index is the lock" property still holds in both
+    # cases. `CR-LOG` carries the request to amend Part 21 §21.3.1.
     tenant = models.ForeignKey(
-        "platform.Tenant", on_delete=models.RESTRICT, related_name="idempotency_keys"
+        "platform.Tenant",
+        on_delete=models.RESTRICT,
+        null=True,
+        blank=True,
+        related_name="idempotency_keys",
     )
     user = models.ForeignKey(
         "platform.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
@@ -40,6 +51,13 @@ class IdempotencyKey(TimeStampedModel):
         constraints = [
             models.UniqueConstraint(
                 fields=["tenant", "scope", "key"], name="uq_idempotency_tenant_scope_key"
+            ),
+            # PostgreSQL treats NULLs as distinct, so the constraint above does
+            # not lock the tenant-less case. This one does.
+            models.UniqueConstraint(
+                fields=["user", "scope", "key"],
+                condition=models.Q(tenant__isnull=True),
+                name="uq_idempotency_user_scope_key",
             ),
         ]
         indexes = [
