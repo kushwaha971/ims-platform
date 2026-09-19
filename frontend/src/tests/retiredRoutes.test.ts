@@ -1,14 +1,14 @@
 /**
  * @jest-environment node
  *
- * `middleware.ts` runs on the edge runtime and `next/server` reaches for the
+ * `proxy.ts` runs on the edge runtime and `next/server` reaches for the
  * WHATWG `Request` at import time, which jsdom does not provide. Node 22 does,
  * and this suite touches no DOM, so the node environment is the honest one.
  */
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { middleware } from '../../middleware';
+import { proxy } from '../../proxy';
 
 /**
  * CR-2026-09-19-A — mobile OTP is backlogged, and `/otp` is retired.
@@ -32,7 +32,7 @@ const request = (pathname: string) => {
   return {
     nextUrl: Object.assign(url, { clone: () => new URL(url.toString()) }),
     cookies: { has: () => false },
-  } as unknown as Parameters<typeof middleware>[0];
+  } as unknown as Parameters<typeof proxy>[0];
 };
 
 describe('the /otp route is gone', () => {
@@ -52,14 +52,14 @@ describe('the /otp route is gone', () => {
   });
 
   it('sends a bookmarked /otp to the login screen rather than to a 404', () => {
-    const response = middleware(request('/otp'));
+    const response = proxy(request('/otp'));
 
     expect(response.status).toBe(307);
     expect(new URL(response.headers.get('location') ?? '').pathname).toBe('/login');
   });
 
   it('drops the old flow’s query string on the way', () => {
-    const response = middleware(request('/otp?challenge=c1'));
+    const response = proxy(request('/otp?challenge=c1'));
 
     expect(new URL(response.headers.get('location') ?? '').search).toBe('');
   });
@@ -69,7 +69,7 @@ describe('the routes CR-2026-09-19-A adds are reachable', () => {
   it.each(['/signup', '/reset-password', '/login', '/forgot-password'])(
     'lets %s through the guard unauthenticated',
     (pathname) => {
-      const response = middleware(request(pathname));
+      const response = proxy(request(pathname));
       // `NextResponse.next()` is a 200 with no Location; a redirect would mean
       // an anonymous user could not reach the screen that creates an account.
       expect(response.headers.get('location')).toBeNull();
@@ -77,7 +77,7 @@ describe('the routes CR-2026-09-19-A adds are reachable', () => {
   );
 
   it('still guards an app path for an anonymous visitor', () => {
-    const response = middleware(request('/parties'));
+    const response = proxy(request('/parties'));
     const location = new URL(response.headers.get('location') ?? '');
 
     expect(location.pathname).toBe('/login');

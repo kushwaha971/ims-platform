@@ -6,7 +6,7 @@
  *
  * Before it existed, `'/dashboard'` appeared thirteen times across four
  * features, `'/onboarding/step/' + n` was built in four places from three
- * different expressions, and `middleware.ts` kept its own copy of the guarded
+ * different expressions, and `proxy.ts` kept its own copy of the guarded
  * prefixes — which is how a section ends up in the menu and not in the guard.
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';

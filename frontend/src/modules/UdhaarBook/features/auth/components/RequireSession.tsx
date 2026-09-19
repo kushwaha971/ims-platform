@@ -10,7 +10,7 @@ import { selectSessionStatus } from 'src/redux/slice/sessionSlice';
 import { ROUTES, loginPathWithNext } from 'src/routes';
 
 /**
- * Part 19 §19.7.3 — the real guard. `middleware.ts` does the cheap
+ * Part 19 §19.7.3 — the real guard. `proxy.ts` does the cheap
  * cookie-presence check before any JS ships; this one checks the session the
  * server actually confirmed, because a cookie can exist and still be invalid.
  *

@@ -13,13 +13,13 @@ import { APP_ROUTE_PREFIXES, RETIRED_ROUTES, ROUTES } from 'src/routes';
  * CR-2026-09-19-A — routes that USED to exist and now do not, and the prefixes
  * this guard covers, both from `src/routes.ts`. They used to be two literal
  * arrays here, which is how a new section ends up guarded in the menu and not
- * in the middleware.
+ * in the proxy.
  *
  * The retirement is a redirect and not a rewrite: the address bar must end up
  * saying `/login`, or the same back gesture repeats forever.
  */
 
-export function middleware(request: NextRequest): NextResponse {
+export function proxy(request: NextRequest): NextResponse {
   const { pathname, search } = request.nextUrl;
 
   const retired = RETIRED_ROUTES[pathname];
