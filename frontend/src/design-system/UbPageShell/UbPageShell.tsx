@@ -2,6 +2,7 @@
 
 import { memo, type ReactNode } from 'react';
 
+import { UbBottomBar } from 'src/design-system/UbBottomBar';
 import { cn } from 'src/utils/cn';
 
 /**
@@ -24,6 +25,13 @@ import { cn } from 'src/utils/cn';
  *    grids that genuinely want the room.
  *  · **Vertical rhythm.** 24 px above the content and 48 px below it, so a
  *    short page does not leave its last row flush against the fold.
+ *
+ * ── CR-2026-09-19-G ─────────────────────────────────────────────────────────
+ * The `footer` slot is a `UbBottomBar`. It renders the identical element with
+ * the identical classes; what it adds is the published `--ub-bottom-inset`, so
+ * that when the entry-form editors land their Save row the global toast is
+ * already anchored above it rather than on it — the defect the wizard and the
+ * `(auth)` footer were both found with.
  */
 export type UbPageShellWidth = 'measure' | 'full';
 
@@ -55,9 +63,9 @@ function UbPageShellBase({
         {children}
       </div>
       {footer && (
-        <div className="sticky bottom-0 z-10 border-t border-border-hairline bg-surface-card px-4 py-3 md:px-page">
+        <UbBottomBar className="border-t border-border-hairline bg-surface-card px-4 py-3 md:px-page">
           <div className={cn('mx-auto w-full', WIDTH[width])}>{footer}</div>
-        </div>
+        </UbBottomBar>
       )}
       {/* Clears the 64 px bottom nav plus the iOS safe area (§19.6.3). */}
       <div aria-hidden className="h-bottom-nav md:hidden" />

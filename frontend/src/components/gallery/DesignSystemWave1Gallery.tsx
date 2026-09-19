@@ -213,7 +213,7 @@ export function DesignSystemWave1Gallery(): React.JSX.Element {
         </UbStack>
       </UbCard>
 
-      <UbCard title="UbStepper" description="PLT-03 §7 — bar below md, labelled dots above.">
+      <UbCard title="UbStepper" description="PLT-03 §7 — bar below lg, labelled steps above.">
         <UbStepper
           steps={steps}
           current={2}

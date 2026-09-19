@@ -200,6 +200,17 @@ module.exports = {
         'sidebar-collapsed': 'var(--sidebar-collapsed)',
         'bottom-nav': 'var(--bottom-nav-h)',
       },
+      /**
+       * CR-2026-09-19-G — `bottom-toast` is the toast channel's anchor, and it
+       * is a token rather than a number because the number is not knowable
+       * from a stylesheet: it is `--ub-bottom-inset` (whatever sticky bottom
+       * furniture the current screen publishes) + the iOS safe area + the gap.
+       * Writing it here keeps the arithmetic in one place and keeps
+       * `mlToastPrimitives` free of a `calc()` spelled in underscores.
+       */
+      inset: {
+        toast: 'var(--ub-toast-bottom)',
+      },
       borderRadius: {
         xs: 'var(--radius-xs)',
         sm: 'var(--radius-sm)',
@@ -255,9 +266,18 @@ module.exports = {
         },
         'fade-out': { from: { opacity: '1' }, to: { opacity: '0' } },
       },
+      /**
+       * CR-2026-09-19-G — the durations and curves are the TOKENS, not the
+       * numbers they currently hold. That is not tidying: `--dur-*` is zeroed
+       * under `@media (prefers-reduced-motion: reduce)`
+       * (src/styles/tokens/primitives.css), and a literal `140ms` here opted
+       * the snackbar's entrance — the one animation that appears unbidden,
+       * and the one that moves — out of that. It now honours the preference
+       * for free.
+       */
       animation: {
-        'fade-in': 'fade-in 140ms cubic-bezier(.16,1,.3,1)',
-        'fade-out': 'fade-out 90ms cubic-bezier(.4,0,1,1)',
+        'fade-in': 'fade-in var(--dur-fast) var(--ease-entrance)',
+        'fade-out': 'fade-out var(--dur-instant) var(--ease-exit)',
       },
     },
   },

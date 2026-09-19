@@ -6,6 +6,7 @@ import type { RootState } from 'src/redux/store';
 import type { ApiErrorShape, PageMeta, RequestStatus } from 'src/types/api.types';
 
 import { DEFAULT_ORDERING, DEFAULT_PAGE_SIZE, SELECTION_CAP } from '../constants/partyListDefaults';
+import { partyTotals, ZERO_TOTALS, type PartyListTotals } from '../view-model/partyDisplay';
 
 import { fetchPartyList } from './partyListThunk';
 
@@ -24,6 +25,18 @@ export interface PartyListState {
   status: RequestStatus;
   error: ApiErrorShape | null;
   selectedIds: string[];
+  /**
+   * The two figures the sticky header shows at every width. They are STATE
+   * rather than a selector over `rows` because the server can send totals for
+   * the whole filtered set, and a page-sum is only the fallback.
+   */
+  totals: PartyListTotals;
+  /**
+   * Which set `totals` describes. The header says so out loud: a merchant told
+   * "You will get ₹1,24,300" has to be able to trust that it is not the sum of
+   * the twenty-five rows that happened to load.
+   */
+  totalsScope: 'filtered' | 'page';
   lastFetchedAt: number | null;
   /** Set by the invalidation listener (§19.3.6); the hook refetches on it. */
   stale: boolean;
@@ -47,6 +60,8 @@ const initialState: PartyListState = {
   status: 'loading',
   error: null,
   selectedIds: [],
+  totals: ZERO_TOTALS,
+  totalsScope: 'page',
   lastFetchedAt: null,
   stale: false,
   staleUrgency: null,
@@ -91,6 +106,8 @@ const partyListSlice = createSlice({
             ? [...state.rows, ...action.payload.rows]
             : [...action.payload.rows];
         state.meta = action.payload.meta;
+        state.totals = action.payload.totals ?? partyTotals(state.rows);
+        state.totalsScope = action.payload.totals ? 'filtered' : 'page';
         state.lastFetchedAt = Date.now();
         state.stale = false;
         state.staleUrgency = null;
@@ -125,3 +142,6 @@ export const selectPartyListError = (state: RootState): ApiErrorShape | null =>
 export const selectPartySelection = (state: RootState): readonly string[] =>
   state.partyList.selectedIds;
 export const selectPartyListStale = (state: RootState): boolean => state.partyList.stale;
+export const selectPartyListTotals = (state: RootState): PartyListTotals => state.partyList.totals;
+export const selectPartyListTotalsScope = (state: RootState): 'filtered' | 'page' =>
+  state.partyList.totalsScope;

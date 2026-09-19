@@ -17,23 +17,32 @@ import { UbLogo } from './UbLogo';
  * only theming this product sells.
  */
 describe('UbLogo — what it draws', () => {
-  it('draws the bahi-khata: a tile, a spine, a page behind, a front page and two rules', () => {
+  /**
+   * CR-2026-09-19-D (rev.) — the mark is the SPINE D now, not the abstract
+   * four-rectangle book. These two assertions changed with the artwork: the
+   * bowl is a `<path>`, so there are four rects rather than six, and the page
+   * stepping out behind is gone. Everything else in this file is unchanged,
+   * because none of it was ever about the artwork.
+   */
+  it("draws the spine D: a tile, the bowl as a path, the stem, and two rules", () => {
     const { container } = render(<UbLogo />);
-    // Six rects: tile, back page, spine, front page, long rule, short rule.
-    expect(container.querySelectorAll('svg rect')).toHaveLength(6);
+
+    expect(container.querySelectorAll('svg rect')).toHaveLength(4);
+    // The bowl is the only curve in the mark, and it is what makes it a D.
+    expect(container.querySelectorAll('svg path')).toHaveLength(1);
+    expect(container.querySelector('svg')).toHaveAttribute('viewBox', '0 0 64 64');
   });
 
   it('paints every part from a --brand-* token and never from a hex (R-S-2)', () => {
     const { container } = render(<UbLogo />);
-    const fills = [...container.querySelectorAll('svg rect')].map(
-      (rect) => rect.getAttribute('class') ?? ''
+    const fills = [...container.querySelectorAll('svg rect, svg path')].map(
+      (shape) => shape.getAttribute('class') ?? ''
     );
 
     expect(fills).toEqual([
       'fill-brand-mark',
+      'fill-brand-page',
       'fill-brand-pageBack',
-      'fill-brand-page',
-      'fill-brand-page',
       'fill-brand-rule',
       'fill-brand-ruleShort',
     ]);

@@ -68,16 +68,25 @@ function BusinessTypeGridBase({
   );
 
   return (
-    // Two columns at 320 px, three from `sm`. Never one: nine tiles in a single
-    // column is a scroll, and a scroll is a decision the merchant cannot see
-    // all of.
+    /*
+     * CR-2026-09-19-F — the column count follows the width the tiles actually
+     * have, not the width of the phone they were designed on.
+     *
+     * It was 2 at every width below `sm` and 3 above. At 360 px that is two
+     * 160 px tiles carrying a label AND a one-line hint, which wraps "Trader /
+     * mandi" to three lines and the hint under it to four — nine tiles of
+     * ragged type. One column at 360 px is a taller list, and a list the
+     * merchant can read beats a grid they cannot. From `sm` it is two, and the
+     * third column arrives at `lg` — where the rail takes 320 px and the form's
+     * measure is what decides how many tiles fit, not the viewport.
+     */
     <UbGrid
       role="radiogroup"
       aria-label={ariaLabel}
       aria-describedby={describedBy}
       aria-invalid={invalid || undefined}
       onKeyDown={onKeyDown}
-      columns={{ base: 2, sm: 3 }}
+      columns={{ base: 1, sm: 2, lg: 3 }}
       gap={2}
       className={className}
     >

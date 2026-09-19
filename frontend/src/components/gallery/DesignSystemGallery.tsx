@@ -25,6 +25,7 @@ import {
 } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
 
+import { DesignSystemChartsGallery } from './DesignSystemChartsGallery';
 import { DesignSystemWave1Gallery } from './DesignSystemWave1Gallery';
 
 /**
@@ -154,6 +155,8 @@ export function DesignSystemGallery(): React.JSX.Element {
           Wave 1 — Sprint 1
         </UbText>
         <DesignSystemWave1Gallery />
+
+        <DesignSystemChartsGallery />
 
         <UbText as="h2" variant="h3" className="mt-4">
           Wave 2 — layout and typography

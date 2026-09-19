@@ -2,7 +2,7 @@
 
 import { memo } from 'react';
 
-import { UbBox, UbDivider, UbStack, UbText } from 'src/design-system';
+import { UbBottomBar, UbDivider, UbStack, UbText } from 'src/design-system';
 import { useAppSelector } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { selectAppName } from 'src/redux/slice/whiteLabelSlice';
@@ -25,13 +25,27 @@ import { LanguagePicker } from './LanguagePicker';
  * The year is computed at render. That is a deliberate client-side read of the
  * clock in a component that is otherwise pure: a copyright year baked at build
  * time is wrong from the first of January until somebody redeploys.
+ *
+ * ── CR-2026-09-19-G ─────────────────────────────────────────────────────────
+ * It is a `UbBottomBar` (`sticky={false}` — it is at the end of a `min-h-dvh`
+ * column, not pinned to the viewport, and that should not change). The wrapper
+ * is what publishes `--ub-bottom-inset`, and it is here because the global
+ * toast was landing squarely on this row: on every `(auth)` screen at 360, 768
+ * and 1280, an error message covered the legal links and the LANGUAGE PICKER —
+ * the one control a merchant who cannot read the English error is looking for.
+ * `UbBottomBar` reports how much of the viewport bottom this footer actually
+ * occupies, so the toast rides above it when it is on screen and keeps its
+ * plain safe-area offset when the footer is scrolled below the fold.
+ *
+ * It renders the same `<footer>` element it always did, so `contentinfo` is
+ * still the page's one `contentinfo`.
  */
 function AuthFooterBase(): React.JSX.Element {
   const { t } = useTranslation();
   const appName = useAppSelector(selectAppName);
 
   return (
-    <UbBox as="footer" className="relative px-4 pb-8 pt-4">
+    <UbBottomBar as="footer" sticky={false} className="relative px-4 pb-8 pt-4">
       <UbStack gap={4} align="center" className="mx-auto w-full max-w-[560px]">
         <UbDivider decorative className="opacity-60" />
         <AuthLegalNotice />
@@ -49,7 +63,7 @@ function AuthFooterBase(): React.JSX.Element {
           <LanguagePicker />
         </UbStack>
       </UbStack>
-    </UbBox>
+    </UbBottomBar>
   );
 }
 

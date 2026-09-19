@@ -13,15 +13,21 @@ import { cn } from 'src/utils/cn';
  * product whose own name is set in `ds-h4` and whose only picture is the
  * browser-tab favicon reads as an internal tool, which is what the owner saw.
  *
- * WHAT IT DRAWS. An abstract bahi-khata — the tall cloth-bound ledger a kirana
- * counter actually has on it:
+ * WHAT IT DRAWS. The **D** of DigiKhaato, drawn as a bahi-khata — the tall
+ * cloth-bound ledger a kirana counter actually has on it. The letter and the
+ * book are the same shape, and that coincidence is the mark:
  *
- *   · the SPINE, the narrow bar on the left;
- *   · the FRONT PAGE, the panel it opens to;
- *   · one more PAGE stepping out behind it, because a khata is many pages and a
- *     single rectangle is a card, not a book;
- *   · two RULES of different lengths on the front page — the two columns every
+ *   · the letter's STEM is the khata's bound SPINE — the narrow bar on the
+ *     left, stepped back a shade so the binding reads as behind the page;
+ *   · the letter's BOWL is the PAGE it opens to — a rectangle closed by a
+ *     half-circle, which is the D's counter and the book's fore-edge at once;
+ *   · two RULES of different lengths lie on that page — the two columns every
  *     ledger in this market is ruled into, "diya" and "liya".
+ *
+ * There is no abstract second page stepping out behind any more. A letterform
+ * has to survive at 24 px, and a fourth element at that size is a smudge; the
+ * D is now legible as a D at the sidebar's `sm` tier, which is the size the
+ * mark is seen at most.
  *
  * WHY IT IS INLINE SVG. `next/image` on a PNG costs a request and a layout
  * shift for a 24 px graphic, cannot inherit a colour, and cannot follow a
@@ -109,24 +115,24 @@ function UbLogoBase({
 
   const mark = (
     <svg
-      viewBox="0 0 48 48"
+      viewBox="0 0 64 64"
       className={cn(MARK_SIZE[size], 'shrink-0')}
       role={named && variant === 'mark' ? 'img' : undefined}
       aria-hidden={named && variant === 'mark' ? undefined : true}
       focusable="false"
     >
       {named && variant === 'mark' && <title>{label}</title>}
-      {/* The tile. `rx` is 25 % of the edge — the squircle radius of §23.2.3. */}
-      <rect width="48" height="48" rx="12" className="fill-brand-mark" />
-      {/* The page stepping out behind, drawn first so the front page laps it. */}
-      <rect x="29.5" y="13" width="9.5" height="22" rx="3" className="fill-brand-pageBack" />
-      {/* The spine. */}
-      <rect x="10.5" y="10" width="5.5" height="28" rx="2.75" className="fill-brand-page" />
-      {/* The front page. */}
-      <rect x="18.5" y="10" width="15" height="28" rx="3" className="fill-brand-page" />
-      {/* The two ruled columns, long and short. */}
-      <rect x="21" y="18.5" width="10.5" height="3.2" rx="1.6" className="fill-brand-rule" />
-      <rect x="21" y="25.5" width="5.75" height="3.2" rx="1.6" className="fill-brand-ruleShort" />
+      {/* The tile. `rx` is the squircle radius of §23.2.3. */}
+      <rect width="64" height="64" rx="15" className="fill-brand-mark" />
+      {/* The bowl — the D's counter, and the page the khata opens to: a
+          rectangle closed by a right half-circle centred on (31, 32). */}
+      <path d="M20 16 h11 a16 16 0 0 1 0 32 h-11 z" className="fill-brand-page" />
+      {/* The stem — the D's upright, and the khata's bound spine. It is drawn
+          after the bowl so the binding laps the page's left edge. */}
+      <rect x="14.5" y="16" width="5.5" height="32" rx="2.4" className="fill-brand-pageBack" />
+      {/* The two ruled columns on that page, long and short. */}
+      <rect x="27" y="26" width="13" height="3.6" rx="1.8" className="fill-brand-rule" />
+      <rect x="27" y="34.5" width="7.5" height="3.6" rx="1.8" className="fill-brand-ruleShort" />
     </svg>
   );
 

@@ -37,6 +37,16 @@ export type { UbAvatarProps, UbAvatarSize, UbAvatarTone } from './UbAvatar';
 export { UbBox } from './UbBox';
 export type { UbBoxProps } from './UbBox';
 
+/**
+ * CR-2026-09-19-G — anything that occupies the bottom of the viewport: the
+ * wizard's sticky Continue bar, the `(auth)` page footer, `UbPageShell`'s
+ * action row, and `UbBottomNav` when it lands. It publishes its own share of
+ * that edge as `--ub-bottom-inset`, which is what keeps the global toast off
+ * it. Layout block, because that is what it is.
+ */
+export { UbBottomBar } from './UbBottomBar';
+export type { UbBottomBarElement, UbBottomBarProps } from './UbBottomBar';
+
 export { UbDivider } from './UbDivider';
 export type { UbDividerOrientation, UbDividerProps } from './UbDivider';
 
@@ -156,7 +166,7 @@ export { UbDialog } from './UbDialog';
 export type { UbDialogProps } from './UbDialog';
 
 export { UbStepper } from './UbStepper';
-export type { UbStepperProps, UbStepperStep } from './UbStepper';
+export type { UbStepperProps, UbStepperStep, UbStepperTone } from './UbStepper';
 
 export { UbTabs } from './UbTabs';
 export type { UbTabsProps } from './UbTabs';
@@ -167,3 +177,92 @@ export type { UbTabsProps } from './UbTabs';
  * (R-IM-3).
  */
 export type { MLRadioOption, MLTabDescriptor } from './primitives';
+
+// ── UbDataGrid — the responsive list (Part 17 §17.0.2, Part 19 §19.2.5) ──────
+// One column model, three renderings: cards below md, priority columns to lg,
+// full columns above. The priority order IS the design — see columnModel.ts.
+export {
+  cardModel,
+  cardSlotOf,
+  COMPACT_PRIORITY_CUTOFF,
+  describeHorizontalOverflow,
+  dropOrder,
+  fillTemplate,
+  findHorizontalOverflow,
+  LG_QUERY,
+  MAX_CARD_META,
+  MD_QUERY,
+  UbDataGrid,
+  UbDataGridEmptyState,
+  UbDataGridMobileList,
+  UbDataGridPagination,
+  UbDataGridTable,
+  UbDataGridToolbar,
+  useGridTier,
+  visibleColumns,
+} from './UbDataGrid';
+export type {
+  HorizontalOverflowFinding,
+  UbCardModel,
+  UbCardSlot,
+  UbColumnAlign,
+  UbColumnPriority,
+  UbDataGridColumn,
+  UbDataGridEmptyCopy,
+  UbDataGridEmptyStateProps,
+  UbDataGridEmptyStates,
+  UbDataGridLabels,
+  UbDataGridMobileListProps,
+  UbDataGridPaginationProps,
+  UbDataGridProps,
+  UbDataGridTableProps,
+  UbDataGridToolbarProps,
+  UbGridPage,
+  UbGridSort,
+  UbGridState,
+  UbGridTier,
+} from './UbDataGrid';
+
+// ── Charts and stat tiles ───────────────────────────────────────────────────
+// A single current value is a tile, not a one-bar chart. Three forms earn a
+// chart; pies, donuts, gauges and dual axes are banned product-wide.
+export { UbAgingBars } from './charts/UbAgingBars';
+export type { UbAgingBarsProps } from './charts/UbAgingBars';
+export { UbChartCard } from './charts/UbChartCard';
+export type { UbChartCardProps, UbChartCardTable } from './charts/UbChartCard';
+export { UbChartGrid } from './charts/UbChartGrid';
+export type { UbChartGridProps } from './charts/UbChartGrid';
+export { UbChartTable } from './charts/UbChartTable';
+export type { UbChartTableProps } from './charts/UbChartTable';
+export { UbChartTooltip } from './charts/UbChartTooltip';
+export type { UbChartTooltipProps } from './charts/UbChartTooltip';
+export { UB_RANKED_BARS_CAP, UbRankedBars } from './charts/UbRankedBars';
+export type { UbRankedBarsProps } from './charts/UbRankedBars';
+export { UbStatCard } from './charts/UbStatCard';
+export type {
+  UbStatCardDelta,
+  UbStatCardDeltaDirection,
+  UbStatCardProps,
+  UbStatCardTone,
+} from './charts/UbStatCard';
+export { UbStatGrid } from './charts/UbStatGrid';
+export type { UbStatGridProps } from './charts/UbStatGrid';
+export { UbTrendArea } from './charts/UbTrendArea';
+export type { UbTrendAreaProps } from './charts/UbTrendArea';
+export {
+  CHART_AGING_RAMP,
+  CHART_EMPHASIS_FILL,
+  CHART_EMPHASIS_KEY,
+  CHART_RECESSIVE_FILL,
+  CHART_RECESSIVE_KEY,
+  CHART_RESERVED_SERIES_TOKENS,
+} from './charts/chartPalette';
+export type { ChartRampStep } from './charts/chartPalette';
+export type {
+  UbAgingBucket,
+  UbChartA11yIds,
+  UbChartTableColumn,
+  UbChartTableRow,
+  UbRankedParty,
+  UbTrendPoint,
+} from './charts/chartTypes';

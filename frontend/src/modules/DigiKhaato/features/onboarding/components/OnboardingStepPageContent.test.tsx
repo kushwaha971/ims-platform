@@ -1,9 +1,10 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { store } from 'src/redux/store';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
 
+import en from 'locales/en.json';
 import hi from 'locales/hi.json';
 
 import { resetOnboarding } from '../redux/onboardingSlice';
@@ -301,5 +302,144 @@ describe('the wizard — Hindi', () => {
     expect(screen.getByRole('radio', { name: /खुदरा दुकान/ })).toBeInTheDocument();
     // The state list is a constant, not a locale file, and is Hindi too.
     expect(screen.getByText('महाराष्ट्र')).toBeInTheDocument();
+  });
+});
+
+/**
+ * CR-2026-09-19-F — the page, as against the forms on it.
+ *
+ * Layout A, the full-height rail, replaced a centred column with the step list
+ * floating beside it. Each assertion below is one of the four things the review
+ * rejected, turned into something that fails if it comes back.
+ */
+describe('the wizard — the page is a rail and a form half (layout A)', () => {
+  it('carries the steps in a rail, not floating beside a card', () => {
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+    const rail = screen.getByRole('complementary', { name: en['onboarding.rail.label'] as string });
+
+    // The three things the rail carries: the mark, the four steps, the line of
+    // reassurance that Zoho puts in an illustrated panel we do not have.
+    expect(within(rail).getByRole('img', { name: 'DigiKhaato' })).toBeInTheDocument();
+    expect(within(rail).getAllByRole('listitem')).toHaveLength(4);
+    expect(within(rail).getByText(en['onboarding.rail.reassurance'] as string)).toBeInTheDocument();
+  });
+
+  it('gives the rail the full viewport height and only shows it from lg', () => {
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+    const rail = screen.getByRole('complementary', { name: en['onboarding.rail.label'] as string });
+
+    expect(rail.className).toContain('hidden');
+    expect(rail.className).toContain('lg:flex');
+    // Full height, and pinned, so the steps do not scroll away from the form.
+    expect(rail.className).toContain('lg:h-dvh');
+    expect(rail.className).toContain('lg:sticky');
+  });
+
+  it('marks the step you are on inside the rail, and only that one', () => {
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+    const rail = screen.getByRole('complementary', { name: en['onboarding.rail.label'] as string });
+    const current = within(rail)
+      .getAllByRole('listitem')
+      .filter((item) => item.getAttribute('aria-current') === 'step');
+
+    expect(current).toHaveLength(1);
+    expect(current[0]).toHaveTextContent(en['onboarding.step1.title'] as string);
+  });
+
+  it('collapses to a slim named bar above the form below lg', () => {
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+    const bar = screen.getByRole('progressbar');
+
+    // A name AND a value: "how far am I" without reading the screen.
+    expect(bar).toHaveAccessibleName(`Step 1 of 4 — ${en['onboarding.step1.title'] as string}`);
+    expect(bar).toHaveAttribute('aria-valuenow', '25');
+    // It is the rail's stand-in, so it goes away exactly where the rail starts.
+    expect(bar.parentElement?.parentElement?.className).toContain('lg:hidden');
+
+    // Above the form, not below it.
+    const firstField = screen.getByLabelText(/Business name/);
+    expect(bar.compareDocumentPosition(firstField) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('caps the form at a readable measure and left-aligns it in its half', () => {
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+    const main = screen.getByRole('main');
+
+    expect(main.className).toContain('max-w-[560px]');
+    // Centred on a phone; left-aligned in its own half from lg (`lg:mx-0`).
+    expect(main.className).toContain('mx-auto');
+    expect(main.className).toContain('lg:mx-0');
+  });
+
+  it('leaves the sticky Continue bar enough slack to stop clipping a field', () => {
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+    const main = screen.getByRole('main');
+
+    // `pb-28` is 112 px against an action bar of ~69 px, so the last control
+    // always scrolls clear of it. This is the overflow defect, as a test.
+    expect(main.className).toContain('pb-28');
+    // The form half is its own scroll container at lg, which is what that
+    // padding is the bottom of.
+    expect(main.parentElement?.className).toContain('lg:overflow-y-auto');
+  });
+
+  it('keeps the footer OUT of main, where <footer> is not a landmark at all', () => {
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+    const footer = screen.getByRole('contentinfo');
+
+    expect(screen.getByRole('main')).not.toContainElement(footer);
+  });
+
+  it('keeps the page a page: one main, one footer, one h1 above the step h2', () => {
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+
+    expect(screen.getAllByRole('main')).toHaveLength(1);
+    expect(screen.getByRole('contentinfo')).toBeInTheDocument();
+
+    const h1 = screen.getAllByRole('heading', { level: 1 });
+    expect(h1).toHaveLength(1);
+    expect(h1[0]).toHaveTextContent(en['onboarding.title'] as string);
+    // The step is the section beneath it — level 2, with nothing skipped.
+    expect(
+      screen.getByRole('heading', { level: 2, name: en['onboarding.step1.title'] as string })
+    ).toBeInTheDocument();
+    expect(screen.queryAllByRole('heading', { level: 4 })).toHaveLength(0);
+  });
+});
+
+describe('the wizard — step 1 no longer belongs to its tiles', () => {
+  it('asks the two typed fields first and leaves the tiles a section beneath', () => {
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+
+    const name = screen.getByLabelText(/Business name/);
+    const state = screen.getByLabelText(/^State/);
+    const tiles = screen.getByRole('radiogroup', { name: 'What kind of business?' });
+
+    // The state used to be stranded BELOW the nine tiles. It is a select, not a
+    // tile, and it belongs with the other thing the merchant types.
+    expect(name.compareDocumentPosition(state) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(state.compareDocumentPosition(tiles) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // And they are one group, not two fields adrift above a grid.
+    expect(name.closest('.rounded-card')).toBe(state.closest('.rounded-card'));
+  });
+
+  it('lets the tile grid follow the width it has: 1, then 2, then 3', () => {
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+    const tiles = screen.getByRole('radiogroup', { name: 'What kind of business?' });
+
+    // One column at 360 px — two 160 px tiles wrap a label and a hint to four
+    // ragged lines each, nine times over.
+    expect(tiles.className).toContain('grid-cols-1');
+    expect(tiles.className).toContain('sm:grid-cols-2');
+    // The third column arrives with the rail, because from there it is the
+    // form's measure and not the viewport that decides how many fit.
+    expect(tiles.className).toContain('lg:grid-cols-3');
+  });
+
+  it('keeps every tile at the 44 px target', () => {
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+    for (const tile of screen.getAllByRole('radio')) {
+      expect(tile.className).toContain('min-h-[88px]');
+    }
   });
 });

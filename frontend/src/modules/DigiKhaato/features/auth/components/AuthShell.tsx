@@ -67,11 +67,9 @@ import { AuthFooter } from './AuthFooter';
 export interface AuthShellProps {
   readonly children: ReactNode;
   /**
-   * Overrides the width the shell picks for itself. The wizard is wider than a
-   * login form — four steps of business detail and a stepper rail do not belong
-   * in a 400 px column — and it is the one route in the group that is, so the
-   * shell reads the path rather than making every page declare a width it does
-   * not care about.
+   * Overrides the width the shell picks for itself. Every screen in the group
+   * is a form of the same measure, so there is one value and it is the default;
+   * the prop stays because the next screen that is not may need it.
    */
   readonly width?: 'form' | 'wide';
 }
@@ -84,7 +82,24 @@ const WIDTH: Readonly<Record<'form' | 'wide', string>> = {
 function AuthShellBase({ children, width }: Readonly<AuthShellProps>) {
   const appName = useAppSelector(selectAppName);
   const pathname = usePathname();
-  const resolved = width ?? (pathname.startsWith(ROUTES.ONBOARDING) ? 'wide' : 'form');
+  const resolved = width ?? 'form';
+
+  /**
+   * CR-2026-09-19-F — the wizard brings its own page.
+   *
+   * `/onboarding/step/n` used to be this centred column at `max-w-[880px]`,
+   * with the stepper floating beside the step. That layout was reviewed and
+   * rejected, and its replacement — `OnboardingShell`, layout A — is a
+   * full-height rail against an edge-to-edge form half. There is no width this
+   * shell can pass that produces that, because the rail has to reach the top
+   * and bottom of the viewport and out to the left edge, which is outside this
+   * component's `<main>` and its gutters.
+   *
+   * So the group's four auth screens keep this shell, and the wizard renders
+   * its own `<main>`, its own mark and the same `AuthFooter` — the three things
+   * that make the group read as one product — from its own page component.
+   */
+  if (pathname.startsWith(ROUTES.ONBOARDING)) return <>{children}</>;
 
   return (
     <UbStack className="relative min-h-dvh bg-canvas">
