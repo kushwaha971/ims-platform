@@ -1,0 +1,12 @@
+# Runtime dependencies. ADR-021 (canon §0.4) is a closed allow-list; every line
+# below appears in it verbatim. Anything not on that list is recorded in
+# NOTES-FOR-REVIEW.md and implemented in-house instead (see uuid7 in
+# apps/common/db/fields.py).
+Django==5.2.6
+djangorestframework==3.15.2
+djangorestframework-simplejwt==5.5.1
+psycopg[binary]==3.2.9
+django-filter==24.3
+django-cors-headers==4.6.0
+Pillow==11.0.0
+environs==11.2.1

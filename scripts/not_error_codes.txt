@@ -1,0 +1,17 @@
+# scripts/not_error_codes.txt — words the code regex cannot distinguish from codes.
+# Adding a real error code here instead of to Part 22 §22.1.1 is the defect this file exists to expose.
+failed_24h low_stock network_error entry_type entry_date party_id party_ids tag_id tag_ids
+document_id document_date place_of_supply_state credit_days credit_limit plan_limits plan_id
+amount amount_due partially_paid payment_in sale_out stock_value entry_count party_count
+request_id last_error current_version current_step token_hash token_epoch token_suffix
+is_inter_state is_customer itc_eligible max_users max_parties max_invoices_per_month
+other_partner_tenants required_permissions existing_party_id existing_status suggested_hex
+allowed_plan_ids received_qty value_impact_total expected_before_date include_archived
+enforce_monotonic override confirm_balance in_progress not_started sha256 imports_job
+payments_payment decrease_percent unit_cost result reset_at section class as_of against_id
+walk_in_name note notes online block channel opening paid ready received reversed queued
+importing invited draft converted cancelled completed sent active suspended alpha beta
+regular unregistered invoice credit_note expense inventory parties truncate upsert call
+comment errors format limit ordering direction confirm role user_id type_code personal_message
+next_number opening_balance location_id parent_id unit_id source_id meta name tags body
+skipped failed is_system is_customer

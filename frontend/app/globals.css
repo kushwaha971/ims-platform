@@ -1,0 +1,69 @@
+/*
+ * Part 19 §19.2.2 — tokens, then the ml-uikit stylesheet, then Tailwind's
+ * layers. Order matters: the tokens must exist before any layer reads them.
+ *
+ * The real ml-uikit stylesheet import goes here when the internal registry is
+ * reachable:  @import 'ml-uikit/dist/style.css';
+ * The local stand-in (src/design-system/primitives/) needs no stylesheet — it
+ * is styled entirely by the token-backed Tailwind utilities below.
+ */
+@import '../src/styles/tokens/primitives.css';
+@import '../src/styles/tokens/light.css';
+@import '../src/styles/tokens/dark.css';
+@import '../src/styles/tokens/alias.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    background-color: hsl(var(--canvas));
+    color: hsl(var(--text-primary));
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    font-family: var(--font-ui);
+    font-size: var(--size-body);
+    line-height: var(--leading-normal);
+    min-height: 100dvh;
+    background-color: hsl(var(--canvas));
+  }
+
+  /* Devanagari matras sit above and below the baseline; 1.5 is the floor
+     wherever text may be Hindi (Part 19 §19.11.6). */
+  :lang(hi) body {
+    line-height: var(--leading-normal);
+  }
+
+  *,
+  ::before,
+  ::after {
+    border-color: hsl(var(--border-hairline));
+  }
+
+  /* §23.5 — the focus ring is never removed. */
+  :focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
+
+  /* Below `sm` the page padding tightens (§23.2.1 UdhaarBook override). */
+  @media (max-width: 639px) {
+    :root {
+      --page-pad: 16px;
+      --gutter: 16px;
+    }
+  }
+}
+
+@layer utilities {
+  /* Reserved for the print routes of §19.2.2: they are always light. */
+  @media print {
+    :root {
+      --canvas: 0 0% 100%;
+      --surface-card: 0 0% 100%;
+    }
+  }
+}

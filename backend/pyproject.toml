@@ -1,0 +1,85 @@
+# Tooling configuration per Part 26 §26.14. Dependencies themselves are pinned in
+# requirements/{base,dev,prod}.txt (ADR-021 allow-list); this file carries only
+# formatter / linter / test configuration.
+#
+# target-version stays "py312" because the specification targets Python 3.12
+# (canon §0.4, ADR-007). The code itself uses no 3.12-only syntax and runs on 3.11.
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+extend-exclude = "/migrations/"
+
+[tool.isort]
+profile = "black"
+line_length = 100
+known_first_party = ["apps", "config"]
+sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
+skip_glob = ["**/migrations/*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+exclude = ["**/migrations/*"]
+
+[tool.ruff.lint]
+select = [
+  "E", "W",
+  "F",
+  "I",
+  "N",
+  "UP",
+  "B",
+  "C4",
+  "DJ",
+  "S",
+  "T20",
+  "RET",
+  "SIM",
+  "TID",
+  "ERA",
+  "PL",
+  "RUF",
+]
+ignore = [
+  "E501",
+  "B008",
+  "N802",
+  "PLR0913",
+  "S101",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/*" = ["S", "PLR2004"]
+"config/settings/*" = ["F403", "F405"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "parents"
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+module = ["apps.*.services.*", "apps.common.*"]
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.test"
+python_files = ["test_*.py"]
+addopts = "--strict-markers -q"
+testpaths = ["apps", "tests"]
+markers = [
+  "concurrency: spawns threads and needs a real transactional database",
+  "postgres: requires PostgreSQL-specific features (arrays, SKIP LOCKED, partial indexes)",
+  "slow: excluded from the pre-commit run",
+]
+
+[tool.coverage.run]
+source = ["apps"]
+omit = ["*/migrations/*", "*/tests/*", "*/admin.py", "config/*"]
+
+[tool.coverage.report]
+fail_under = 85
+exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:", "raise NotImplementedError"]

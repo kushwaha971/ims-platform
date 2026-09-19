@@ -1,0 +1,402 @@
+# .github/workflows/ci.yml — the pipeline of Part 28 §28.11.1, with the gates of
+# §28.11.2. The commands are the contract; the platform is not (Part 28 §28.11.4),
+# so every step here is the same command `make check` / `make test` runs locally.
+#
+# Jobs and their budgets (§28.11.1):
+#   lint-and-types        < 2 min   blocks merge
+#   spec-consistency      < 1 min   blocks merge   (canon §0.12.5, Part 23 §23.6)
+#   backend               < 6 min   blocks merge
+#   frontend              < 5 min   blocks merge
+#   e2e-smoke             < 4 min   blocks merge
+#   traceability          < 1 min   blocks merge
+#   gate                  —         the single required check for branch protection
+#
+# Repository layout assumed: backend/ and frontend/ as siblings of docs/, e2e/
+# and scripts/ at the root.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "20"
+  # Identical everywhere, asserted by Part 28 §28.3.9 — see Part 29 §29.1.
+  POSTGRES_DB: udhaarbook
+  POSTGRES_USER: udhaarbook
+  POSTGRES_PASSWORD: ci-not-a-secret
+  DJANGO_SETTINGS_MODULE: config.settings.test
+  UB_SECRET_KEY: ci-only-not-a-real-key
+  UB_DEBUG: "0"
+  UB_ENV_NAME: ci
+  UB_JOBS_EAGER: "1"
+  UB_LOG_FORMAT: json
+
+jobs:
+  # ──────────────────────────────────────────────────────────────────────────
+  # PR — lint & types. Formatters, linters, tsc, makemigrations --check and the
+  # AST checks (tenant scoping, no-float, no-update-on-immutable, no .objects.all()).
+  # ──────────────────────────────────────────────────────────────────────────
+  lint-and-types:
+    name: Lint, format and types
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: udhaarbook
+          POSTGRES_USER: udhaarbook
+          POSTGRES_PASSWORD: ci-not-a-secret
+        options: >-
+          --health-cmd "pg_isready -U udhaarbook -d udhaarbook"
+          --health-interval 10s --health-timeout 5s --health-retries 10
+        ports: ["5432:5432"]
+    env:
+      DATABASE_URL: postgresql://udhaarbook:ci-not-a-secret@localhost:5432/udhaarbook
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/requirements/*.txt
+      - name: Install backend dependencies
+        working-directory: backend
+        run: pip install -r requirements/dev.txt
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: black
+        working-directory: backend
+        run: black --check .
+      - name: isort
+        working-directory: backend
+        run: isort --check-only .
+      - name: ruff
+        working-directory: backend
+        run: ruff check .
+      - name: flake8
+        working-directory: backend
+        run: flake8 .
+      - name: mypy
+        working-directory: backend
+        run: mypy .
+
+      - name: eslint
+        working-directory: frontend
+        run: npx eslint .
+      - name: prettier
+        working-directory: frontend
+        run: npx prettier --check .
+      - name: tsc --noEmit
+        working-directory: frontend
+        run: npx tsc --noEmit
+
+      # Gate 7 (§28.11.2): makemigrations --check clean.
+      - name: makemigrations --check
+        working-directory: backend
+        run: python manage.py makemigrations --check --dry-run
+
+      # The architecture rules of Part 20 §20.1.4 D1–D9, run as tests because
+      # that is where they live.
+      - name: Architecture rules (AST checks)
+        working-directory: backend
+        run: pytest tests/architecture -q
+
+      # Gate 1 (§28.11.2): a suppression must carry a justification.
+      - name: Unjustified suppressions
+        run: |
+          set -o pipefail
+          if grep -rnE '(#\s*noqa|eslint-disable|@ts-ignore|@ts-expect-error)' \
+               backend frontend/src frontend/app \
+               --include='*.py' --include='*.ts' --include='*.tsx' 2>/dev/null \
+             | grep -v -- '— reason:' ; then
+            echo "::error::A suppression was added without a trailing '— reason: …' (Part 28 §28.11.2 gate 1)."
+            exit 1
+          fi
+          echo "no unjustified suppressions"
+
+      # Gate 9 (§28.11.2): no production data, no real mobile numbers, no secrets.
+      - name: Repository secret scan
+        run: |
+          set -o pipefail
+          if grep -rnE '^(UB_SECRET_KEY|POSTGRES_PASSWORD|UB_OTP_PEPPER)=[^[:space:]#]+' \
+               --include='*.env' --include='.env*' --include='*.yml' --include='*.yaml' . \
+             | grep -v '.env.example' | grep -v 'ci-not-a-secret' | grep -v 'ci-only-not-a-real-key'; then
+            echo "::error::A non-placeholder secret is committed (Part 29 §29.8.5, Part 28 §28.11.2 gate 9)."
+            exit 1
+          fi
+          echo "no committed secrets"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Specification consistency. Cheap, no services, fails fast.
+  # ──────────────────────────────────────────────────────────────────────────
+  spec-consistency:
+    name: Specification consistency
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+
+      # Both checks read the vendored specification. If docs/ is absent the repo
+      # is incomplete (Part 32 §32.3.3 S0-01 vendors it), and saying so is more
+      # useful than a stack trace from a missing file.
+      - name: The specification is vendored
+        run: |
+          test -f docs/000-index.md && test -f docs/00-canon.md && test -f docs/22-api-specification.md \
+            || { echo "::error::docs/ is missing or incomplete. The specification is vendored into this repository (Part 32 §32.3.3, S0-01) and scripts/check_table_ownership.py reads it."; exit 1; }
+          test -f scripts/not_error_codes.txt \
+            || { echo "::error::scripts/not_error_codes.txt is missing; the ORPHAN check needs it (Part 22 §22.1.5)."; exit 1; }
+
+      # Canon §0.12.5. DUPLICATE, DRIFT and PAIRED block from the first run;
+      # ORPHAN runs in WARN mode until the §22.1.4 corrections land in Parts
+      # 17-01…17-04, 20, 21, 24 and 27 (one change request per chapter, tracked
+      # in docs/CR-LOG.md) and flips to blocking at the same commit as the last
+      # of them (Part 22 §22.1.5). The script itself is verbatim from the canon
+      # and exits 1 on any finding; the warn/fail split is applied here, where it
+      # can be removed in one line.
+      - name: Table ownership (canon §0.12.5)
+        run: |
+          set +e
+          python3 scripts/check_table_ownership.py | tee /tmp/ownership.txt
+          set -e
+          blocking=$(grep -cE 'DUPLICATE|DRIFT|PAIRED|does not resolve|not in the index|not found' /tmp/ownership.txt || true)
+          orphans=$(grep -c 'ORPHAN' /tmp/ownership.txt || true)
+          echo "blocking=$blocking orphan=$orphans"
+          if [ "$orphans" != "0" ]; then
+            echo "::warning::${orphans} ORPHAN finding(s) — error codes used with an HTTP status and absent from Part 22 §22.1.1. Warn mode until the §22.1.4 corrections land (docs/CR-LOG.md)."
+          fi
+          if [ "$blocking" != "0" ]; then
+            echo "::error::${blocking} DUPLICATE/DRIFT/PAIRED finding(s): a second owner for a normative table (Part 0 §0.12.3)."
+            exit 1
+          fi
+
+      # Part 23 §23.6: recomputed from frontend/src/styles/tokens/*.css, never
+      # from the chapter. Fails with `low_contrast`.
+      - name: Contrast (Part 23 §23.6)
+        run: node scripts/check-contrast.mjs
+
+      - name: Contrast table (for the log)
+        if: always()
+        run: node scripts/check-contrast.mjs --print || true
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # PR — backend. Full pytest except `slow`; coverage; query budgets; migrations.
+  # ──────────────────────────────────────────────────────────────────────────
+  backend:
+    name: Backend tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: udhaarbook
+          POSTGRES_USER: udhaarbook
+          POSTGRES_PASSWORD: ci-not-a-secret
+        options: >-
+          --health-cmd "pg_isready -U udhaarbook -d udhaarbook"
+          --health-interval 10s --health-timeout 5s --health-retries 10
+        ports: ["5432:5432"]
+    env:
+      DATABASE_URL: postgresql://udhaarbook:ci-not-a-secret@localhost:5432/udhaarbook
+      UB_MEDIA_ROOT: /tmp/ub-media
+      UB_STATIC_ROOT: /tmp/ub-static
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/requirements/*.txt
+      - name: Install
+        working-directory: backend
+        run: pip install -r requirements/dev.txt
+      - name: Wait for the database
+        run: ./scripts/wait-for-db.sh --timeout 90
+      - name: Migrate (explicit — never an entrypoint side effect, §29.5.2)
+        working-directory: backend
+        run: python manage.py migrate --noinput
+      - name: pytest (fast bands, with coverage and query budgets)
+        working-directory: backend
+        run: pytest -m "not slow" --cov --cov-report=xml --cov-report=term
+      - name: Migration reversibility
+        working-directory: backend
+        run: pytest tests/migrations -q
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-coverage
+          path: backend/coverage.xml
+          if-no-files-found: ignore
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # PR — frontend. Jest with coverage; bundle size; i18n completeness; contrast.
+  # ──────────────────────────────────────────────────────────────────────────
+  frontend:
+    name: Frontend tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install
+        working-directory: frontend
+        run: npm ci
+      - name: Jest with coverage
+        working-directory: frontend
+        run: npx jest --coverage
+      - name: i18n key completeness (en ↔ hi)
+        working-directory: frontend
+        run: npm run i18n:check
+      - name: Build and check the bundle size
+        working-directory: frontend
+        run: |
+          npm run build
+          npm run bundle:check --if-present
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: frontend-coverage
+          path: frontend/coverage/
+          if-no-files-found: ignore
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # PR — E2E smoke, 8 specs, desktop + mobile, against the compose stack.
+  # ──────────────────────────────────────────────────────────────────────────
+  e2e-smoke:
+    name: E2E smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [lint-and-types]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Write the CI .env
+        run: |
+          cp .env.example .env
+          {
+            echo "UB_SECRET_KEY=ci-only-not-a-real-key"
+            echo "POSTGRES_PASSWORD=ci-not-a-secret"
+            echo "UB_E2E_MODE=1"
+            echo "UB_DEBUG=1"
+            echo "DJANGO_SETTINGS_MODULE=config.settings.local"
+          } >> .env
+      - name: Build the stack
+        run: docker compose build
+      - name: Start the database
+        run: |
+          docker compose up -d db
+          ./scripts/wait-for-db.sh --compose --timeout 180
+      - name: Migrate and seed (explicit steps, §29.4.1 steps 5–6)
+        run: |
+          docker compose run --rm backend python manage.py migrate --noinput
+          docker compose run --rm backend python manage.py seed_all
+          docker compose run --rm backend python manage.py seed_e2e --reset
+      - name: Start the stack
+        run: docker compose up -d
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - name: Playwright @smoke, 360 px and 1280 px
+        working-directory: e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          npx playwright test --grep @smoke
+      - name: Compose logs on failure
+        if: failure()
+        run: docker compose logs --tail=200
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: e2e/test-results/
+          if-no-files-found: ignore
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # PR — traceability. Fails on an unimplemented FRD test ID for any feature the
+  # PR marks done (§28.11.2 gate 5).
+  # ──────────────────────────────────────────────────────────────────────────
+  traceability:
+    name: Traceability
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: udhaarbook
+          POSTGRES_USER: udhaarbook
+          POSTGRES_PASSWORD: ci-not-a-secret
+        options: >-
+          --health-cmd "pg_isready -U udhaarbook -d udhaarbook"
+          --health-interval 10s --health-timeout 5s --health-retries 10
+        ports: ["5432:5432"]
+    env:
+      DATABASE_URL: postgresql://udhaarbook:ci-not-a-secret@localhost:5432/udhaarbook
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/requirements/*.txt
+      - name: Install
+        working-directory: backend
+        run: pip install -r requirements/dev.txt
+      - name: build_traceability
+        working-directory: backend
+        run: python manage.py build_traceability
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: traceability
+          path: build/traceability.json
+          if-no-files-found: ignore
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # The single required status check. Branch protection on `main` requires this
+  # job and nothing else, so adding a job above never means editing a setting.
+  # §28.11.3: a red `main` stops other merges; the fix or the revert is next.
+  # ──────────────────────────────────────────────────────────────────────────
+  gate:
+    name: Quality gate
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [lint-and-types, spec-consistency, backend, frontend, e2e-smoke, traceability]
+    steps:
+      - name: Require every blocking job to have succeeded
+        run: |
+          results='${{ toJSON(needs) }}'
+          echo "$results"
+          if echo "$results" | grep -qE '"result":[[:space:]]*"(failure|cancelled)"'; then
+            echo "::error::A blocking stage failed. Part 28 §28.11.2: a PR merges only when lint, types, tests, coverage floors, query budgets, traceability and the non-negotiable classes are all green."
+            exit 1
+          fi
+          echo "All blocking stages green."

@@ -1,0 +1,67 @@
+/*
+ * Part 23 §23.2.4 dark column — Koper's ink canvas, kept as the optional theme
+ * (Part 19 §19.8.4: light is the default; dark is secondary).
+ *
+ * Two things deliberately do NOT follow the theme: the desktop navigation rail
+ * (--surface-nav is dark in both) and print templates (always light).
+ * Ledger semantics are theme-invariant: red is still "you gave".
+ */
+
+:root[data-theme='dark'] {
+  --accent: var(--primary-400);
+  --accent-hover: var(--primary-300);
+  --accent-press: var(--primary-500);
+  --accent-quiet: rgba(77, 134, 234, 0.16);
+  --accent-line: rgba(128, 168, 245, 0.34);
+
+  --canvas: 210 21.43% 5.49%; /* ink-900 #0B0E11 */
+  --surface-sunken: 213.33 20.93% 8.43%; /* ink-850 #11151A */
+  --surface-card: 212.73 20% 10.78%; /* ink-800 #161B21 */
+  --surface-raised: 212.31 19.4% 13.14%; /* ink-750 #1B2128 */
+  --surface-hover: 213.75 19.05% 16.47%; /* ink-700 #222932 */
+  --surface-active: 213.33 16.98% 20.78%; /* ink-600 #2C343E */
+  --surface-nav: 210 20% 3.92%; /* ink-950 #080A0C */
+  --surface-nav-hover: 212.73 20% 10.78%; /* ink-800 */
+
+  --border-hairline: 212 19.48% 15.1%; /* #1F262E */
+  --border-subtle: 213.75 19.05% 16.47%; /* ink-700 */
+  --border-strong: 214.29 15.33% 26.86%; /* ink-500 */
+  --border-focus: var(--primary-300);
+
+  --text-primary: 210 22.22% 96.47%; /* #F4F6F8 */
+  --text-secondary: 213.33 12.5% 71.76%; /* #AEB6C0 */
+  --text-tertiary: 212.73 10.38% 58.43%; /* #8A94A0 */
+  /* Koper's #68737F is 3.58:1 on ink-800 — a fail; slate-300 is 5.63:1. */
+  --text-muted: 212.73 10.38% 58.43%; /* #8A94A0 */
+  --text-inverse: 210 21.43% 5.49%; /* ink-900 */
+  --text-accent: var(--primary-300);
+
+  --success: 150.85 60.68% 54.12%; /* #43D18C */
+  --success-bright: 151.65 57.47% 43.33%; /* #2FAE72 */
+  --success-dim: 154.5 52.63% 14.9%; /* #123A29 */
+
+  --warning: 38.12 86.73% 61.57%; /* #F2B448 */
+  --warning-bright: 36.34 69.72% 50.78%; /* #D9942A */
+  --warning-dim: 40.47 58.9% 14.31%; /* #3A2C0F */
+
+  --error: 8.78 86.01% 71.96%; /* #F58C7A */
+  --error-bright: 353.71 67.14% 58.24%; /* #DC4D5C */
+  --error-dim: 350.77 46.99% 16.27%; /* #3D161C */
+
+  --form-error: 337.67 88.97% 71.57%; /* #F776A6 */
+  --form-error-bright: 339.75 66.81% 46.08%; /* #C4275C */
+  --form-error-dim: 334.09 59.46% 14.51%; /* #3B0F22 */
+
+  --info: 210.44 89.47% 70.2%; /* #6FB2F7 */
+  --info-bright: 211.89 66.51% 57.84%; /* #4C8FDB */
+  --info-dim: 212.09 54.43% 15.49%; /* #12263D */
+
+  /* Koper's own shadow alphas are correct on an ink canvas. */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 2px 8px rgba(0, 0, 0, 0.45);
+  --shadow-3: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-4: 0 20px 48px rgba(0, 0, 0, 0.58);
+  --overlay-scrim: rgba(8, 10, 12, 0.72);
+
+  --focus-ring: 0 0 0 2px hsl(var(--canvas)), 0 0 0 4px hsl(var(--accent));
+}

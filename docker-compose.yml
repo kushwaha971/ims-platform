@@ -1,0 +1,149 @@
+# docker-compose.yml — base topology, shared by local, staging and production.
+# Materialised from Part 29 §29.2.2. Environment-specific behaviour lives in
+# docker-compose.override.yml (local, auto-loaded), docker-compose.staging.yml and
+# docker-compose.prod.yml.
+#
+# Deviations from the chapter's listing, all of them path-only, are recorded in
+# README.md § "Where this repository differs from Part 29":
+#   ops/postgres/init  -> scripts/postgres-init
+#   ops/nginx/*        -> nginx/*
+#   ops/backup/loop.sh -> scripts/backup-loop.sh (mounted at /opt/ops)
+name: udhaarbook
+
+x-backend-env: &backend-env
+  DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-config.settings.local}
+  UB_SECRET_KEY: ${UB_SECRET_KEY:?UB_SECRET_KEY is required}
+  UB_DEBUG: ${UB_DEBUG:-0}
+  UB_ENV_NAME: ${UB_ENV_NAME:-local}
+  UB_ALLOWED_HOSTS: ${UB_ALLOWED_HOSTS:-localhost,127.0.0.1,backend}
+  DATABASE_URL: postgresql://${POSTGRES_USER:-udhaarbook}:${POSTGRES_PASSWORD:?required}@db:5432/${POSTGRES_DB:-udhaarbook}
+  UB_DEFAULT_TIMEZONE: ${UB_DEFAULT_TIMEZONE:-Asia/Kolkata}
+  UB_DEFAULT_LOCALE: ${UB_DEFAULT_LOCALE:-en}
+  UB_MEDIA_ROOT: /srv/media
+  UB_STATIC_ROOT: /srv/static
+  UB_PUBLIC_BASE_URL: ${UB_PUBLIC_BASE_URL:-http://localhost:3000}
+  UB_CORS_ALLOWED_ORIGINS: ${UB_CORS_ALLOWED_ORIGINS:-http://localhost:3000}
+  UB_CSRF_TRUSTED_ORIGINS: ${UB_CSRF_TRUSTED_ORIGINS:-http://localhost:3000}
+  UB_SMS_BACKEND: ${UB_SMS_BACKEND:-platform.messaging.backends.ConsoleSmsBackend}
+  UB_WHATSAPP_BACKEND: ${UB_WHATSAPP_BACKEND:-platform.messaging.backends.DeepLinkWhatsAppBackend}
+  UB_EMAIL_BACKEND: ${UB_EMAIL_BACKEND:-django.core.mail.backends.console.EmailBackend}
+  UB_ACCESS_TOKEN_MINUTES: ${UB_ACCESS_TOKEN_MINUTES:-15}
+  UB_REFRESH_TOKEN_DAYS: ${UB_REFRESH_TOKEN_DAYS:-30}
+  UB_LOG_LEVEL: ${UB_LOG_LEVEL:-INFO}
+  UB_LOG_FORMAT: ${UB_LOG_FORMAT:-json}
+  UB_SCHEDULER_INTERVAL: ${UB_SCHEDULER_INTERVAL:-60}
+  UB_SCHEDULER_BATCH: ${UB_SCHEDULER_BATCH:-50}
+  UB_SCHEDULER_ENQUEUE_LOCK_ID: ${UB_SCHEDULER_ENQUEUE_LOCK_ID:-918273645}
+
+
+# NOTE — a correction to §29.2.2 as written. The chapter's `x-backend-env` block
+# lists ~20 of the ~45 UB_ variables in the §29.2.4 catalogue. A variable that is
+# in .env but in no `environment:` block is used by compose for interpolation and
+# never reaches the container, so UB_OTP_PEPPER, UB_COOKIE_SECURE, UB_RATE_LIMIT_*,
+# UB_VERSION and a dozen others would be silently absent from Django's environment
+# — which §29.2.4 explicitly does not want ("a typo'd variable is otherwise silent
+# and deadly"). `env_file: [.env]` loads the whole catalogue; the explicit
+# `environment:` entries below still win over it, so every default and every
+# `:?required` guard in this file is unchanged.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-udhaarbook}
+      POSTGRES_USER: ${POSTGRES_USER:-udhaarbook}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?required}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    volumes:
+      - ub_db_data:/var/lib/postgresql/data
+      - ./scripts/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-udhaarbook} -d ${POSTGRES_DB:-udhaarbook}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    stop_grace_period: 30s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: ${BACKEND_TARGET:-runtime}
+    restart: unless-stopped
+    env_file: [.env]
+    environment:
+      <<: *backend-env
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-3}
+      GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-60}
+    volumes:
+      - ub_media:/srv/media
+      - ub_static:/srv/static
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/v1/system/health', timeout=4).status==200 else 1)\""]
+      interval: 20s
+      timeout: 6s
+      retries: 5
+      start_period: 40s
+    stop_grace_period: 30s
+
+  scheduler:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: ${BACKEND_TARGET:-runtime}
+    restart: unless-stopped
+    command: ["python", "manage.py", "run_scheduler", "--loop",
+              "--interval", "${UB_SCHEDULER_INTERVAL:-60}",
+              "--batch", "${UB_SCHEDULER_BATCH:-50}"]
+    env_file: [.env]
+    environment:
+      <<: *backend-env
+      SERVICE_ROLE: scheduler
+    volumes:
+      - ub_media:/srv/media
+    depends_on:
+      db:
+        condition: service_healthy
+      backend:
+        condition: service_healthy      # migrations have run before jobs are drained
+    healthcheck:
+      test: ["CMD-SHELL", "python manage.py scheduler_health --max-age 300"]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 90s
+    stop_grace_period: 60s               # let an in-flight job finish
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: ${FRONTEND_TARGET:-runtime}
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000/api/v1}
+        NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-UdhaarBook}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3000
+      INTERNAL_API_BASE_URL: ${INTERNAL_API_BASE_URL:-http://backend:8000/api/v1}
+      NEXT_TELEMETRY_DISABLED: "1"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:3000/api/healthz',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
+      interval: 20s
+      timeout: 6s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  ub_db_data:
+  ub_media:
+  ub_static:

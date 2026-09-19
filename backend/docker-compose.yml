@@ -1,0 +1,71 @@
+# Part 20 §20.2.6. The `scheduler` service runs the SAME image as `backend`;
+# only the command differs (ADR-012).
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-udhaarbook}
+      POSTGRES_USER: ${POSTGRES_USER:-udhaarbook}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-udhaarbook}
+    volumes:
+      - ub_db_data:/var/lib/postgresql/data
+      - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-udhaarbook}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    ports: ["5432:5432"]
+
+  backend:
+    build:
+      context: .
+      args:
+        UB_VERSION: ${UB_VERSION:-dev}
+    # No migrate and no seed here: both are explicit deploy steps owned by
+    # Part 29 (§29.5.2, §29.6.2). Run `make migrate` once after a clone.
+    command: >
+      gunicorn config.wsgi:application --bind 0.0.0.0:8000
+      --workers ${GUNICORN_WORKERS:-3} --timeout ${GUNICORN_TIMEOUT:-60}
+    env_file: [.env]
+    environment:
+      POSTGRES_HOST: db
+    volumes:
+      - ub_media:/srv/media
+      - ub_static:/srv/static
+      - ./logs:/app/logs
+    depends_on:
+      db: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/api/v1/system/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    ports: ["8000:8000"]
+
+  scheduler:
+    build:
+      context: .
+      args:
+        UB_VERSION: ${UB_VERSION:-dev}
+    command: python manage.py run_scheduler --interval 15 --batch 20
+    env_file: [.env]
+    environment:
+      POSTGRES_HOST: db
+      UB_ROLE: scheduler
+    volumes:
+      - ub_media:/srv/media
+      - ./logs:/app/logs
+    depends_on:
+      db: {condition: service_healthy}
+      backend: {condition: service_started}
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f run_scheduler > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  ub_db_data:
+  ub_media:
+  ub_static:

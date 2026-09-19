@@ -1,0 +1,6 @@
+# Part 20 §20.8.6.1. Used when compose is not the runtime; the compose
+# `scheduler` service runs the loop (`--interval 15`) instead.
+# Drain the queue every minute, bounded to 55 s so runs never pile up.
+* * * * * cd /app && python manage.py run_scheduler --interval 0 --batch 50 --max-runtime 55 >> /app/logs/scheduler.log 2>&1
+# Materialise the daily schedules shortly after midnight IST (18:30 UTC the previous day).
+30 18 * * * cd /app && python manage.py enqueue_scheduled --period daily >> /app/logs/scheduler.log 2>&1

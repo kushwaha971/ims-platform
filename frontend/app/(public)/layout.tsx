@@ -1,0 +1,9 @@
+/**
+ * Part 19 §19.6.1 — the `(public)` group: bare, server-rendered, no store, no
+ * shell and no navigation into the app beyond one "Powered by" line.
+ */
+export default function PublicLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>): React.JSX.Element {
+  return <main className="min-h-dvh bg-canvas px-4 py-8">{children}</main>;
+}

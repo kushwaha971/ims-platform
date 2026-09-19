@@ -1,0 +1,110 @@
+/*
+ * Part 23 §23.2.1 / §23.2.2 / §23.2.3 — Koper primitives, verbatim where
+ * unchanged. These are theme-independent: spacing, radii, type sizes, weights,
+ * motion. Colour lives in light.css / dark.css; nothing here is tenant-themable.
+ */
+
+:root {
+  /* ── Spacing, radius, layout (§23.2.1) ─────────────────────────────────── */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-pill: 999px;
+  --radius-card: var(--radius-lg);
+  --radius-control: var(--radius-md);
+
+  --sidebar-width: 248px;
+  --sidebar-collapsed: 64px;
+  --topbar-height: 60px;
+  --content-max: 1440px;
+  --gutter: 24px;
+  --page-pad: 32px;
+  --grid-columns: 12;
+  --grid-gap: 20px;
+  /* UdhaarBook mobile overrides (§23.2.1). */
+  --bottom-nav-h: calc(64px + env(safe-area-inset-bottom, 0px));
+
+  /* ── Typography (§23.2.2) ──────────────────────────────────────────────── */
+  /* Clash Grotesk/Display carry no Devanagari; the roles are kept and the faces
+     substituted with Inter + Noto Sans Devanagari (§23.2.2 font decision). */
+  --font-display: 'Inter', 'Noto Sans Devanagari', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-ui: 'Inter', 'Noto Sans Devanagari', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', 'Menlo', monospace;
+  --font-metric: var(--font-display);
+
+  --size-display: 44px;
+  --size-h1: 32px;
+  --size-h2: 24px;
+  --size-h3: 19px;
+  --size-h4: 16px;
+  --size-body: 15px;
+  --size-body-sm: 13.5px;
+  --size-caption: 12.5px;
+  --size-label: 12.5px;
+  --size-label-caps: 11px;
+  --size-micro: 10.5px;
+  --size-metric-xl: 52px;
+  --size-metric-lg: 38px;
+  --size-metric-md: 28px;
+  --size-metric-sm: 20px;
+
+  --leading-tight: 1.05;
+  --leading-snug: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.65;
+  --leading-label: 1.4;
+  /* Devanagari matras clip below 1.5 — the Hindi label tier is taller (§23.2.2). */
+  --leading-label-hi: 1.5;
+  --size-label-hi: 13px;
+
+  --track-display: -0.025em;
+  --track-heading: -0.015em;
+  --track-body: 0;
+  --track-label: 0;
+  --track-label-caps: 0.09em;
+  --track-metric: -0.02em;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* ── Motion (§23.2.3) — used unchanged in both themes ──────────────────── */
+  --ease-standard: cubic-bezier(0.2, 0, 0.1, 1);
+  --ease-entrance: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --dur-instant: 90ms;
+  --dur-fast: 140ms;
+  --dur-base: 220ms;
+  --dur-slow: 360ms;
+  --dur-reveal: 640ms;
+  --transition-control:
+    background-color var(--dur-fast) var(--ease-standard),
+    border-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-instant: 0ms;
+    --dur-fast: 0ms;
+    --dur-base: 0ms;
+    --dur-slow: 0ms;
+    --dur-reveal: 0ms;
+  }
+}

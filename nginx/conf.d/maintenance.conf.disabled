@@ -1,0 +1,42 @@
+# nginx/conf.d/maintenance.conf.disabled — Part 29 §29.11.7 step 2.
+#
+# To announce an outage (restore, a contract migration, a disk incident):
+#   cp nginx/conf.d/maintenance.conf.disabled nginx/conf.d/maintenance.conf
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+#     exec nginx nginx -s reload
+# To end it:
+#   rm nginx/conf.d/maintenance.conf && … nginx -s reload
+#
+# The conf.d directory is bind-mounted read-only INTO the container, so the file
+# is created on the host, not with `ln -s` inside the container. That is the one
+# operational difference from §29.11.7's wording, and it exists because §29.8.3
+# wants nothing in the container writable.
+#
+# `listen 443 … default_server` outranks app.conf's non-default server for every
+# host, which is what takes the whole deployment — including partner hosts — out
+# of service in one step.
+server {
+    listen 443 ssl default_server;
+    http2 on;
+    server_name _;
+
+    ssl_certificate     /etc/letsencrypt/live/app.udhaarbook.in/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/app.udhaarbook.in/privkey.pem;
+
+    # The health endpoint stays reachable so the operator can watch recovery.
+    location = /api/v1/system/health {
+        proxy_pass http://ub_backend;
+        include /etc/nginx/proxy_params;
+    }
+
+    location / {
+        return 503;
+    }
+
+    error_page 503 @maintenance;
+    location @maintenance {
+        default_type text/html;
+        add_header Retry-After 900 always;
+        return 503 '<!doctype html><meta charset="utf-8"><title>UdhaarBook — maintenance</title><style>body{font:16px/1.5 system-ui;margin:12vh auto;max-width:34rem;padding:0 1rem;color:#14181D}h1{font-size:1.25rem}</style><h1>UdhaarBook is briefly unavailable</h1><p>We are restoring service. Your data is safe. Please try again in a few minutes.</p>';
+    }
+}

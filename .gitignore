@@ -1,0 +1,34 @@
+# Build artefacts
+build/
+dist/
+.next/
+out/
+node_modules/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+!.env.local.example
+
+# Local media & backups
+media/
+backups/
+*.dump
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Transfer artefacts
+_transfer.tar.gz

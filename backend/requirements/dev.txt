@@ -1,0 +1,11 @@
+-r base.txt
+# Tooling. ADR-021 dev allow-list: pytest, pytest-django, black, isort, flake8,
+# factory-boy. `ruff` and `mypy` are configured in pyproject.toml because Part 26
+# §26.14 specifies that configuration, but they are NOT installed here: neither is
+# on the ADR-021 list. See NOTES-FOR-REVIEW.md.
+pytest==8.3.4
+pytest-django==4.9.0
+black==24.10.0
+isort==5.13.2
+flake8==7.1.1
+factory-boy==3.3.1

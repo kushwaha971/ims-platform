@@ -1,0 +1,16 @@
+# nginx/proxy_params — included by every proxying location. Mounted at
+# /etc/nginx/proxy_params (the nginx:alpine image does not ship Debian's copy).
+proxy_http_version 1.1;
+proxy_set_header Host              $host;
+proxy_set_header X-Real-IP         $remote_addr;
+proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+proxy_set_header X-Forwarded-Proto $scheme;
+proxy_set_header X-Forwarded-Host  $host;
+proxy_set_header X-Request-Id      $ub_request_id;
+proxy_set_header Upgrade           $http_upgrade;
+proxy_set_header Connection        "";
+proxy_connect_timeout 5s;            # §29.6.2: hides most of the restart window
+proxy_send_timeout    60s;
+proxy_read_timeout    60s;
+proxy_next_upstream error timeout http_502 http_503 http_504;
+proxy_buffering on;

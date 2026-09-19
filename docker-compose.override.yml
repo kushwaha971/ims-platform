@@ -1,0 +1,35 @@
+# docker-compose.override.yml — LOCAL. Auto-loaded by `docker compose up`.
+# Part 29 §29.2.3.
+services:
+  db:
+    ports: ["5432:5432"]                 # psql from the host
+  backend:
+    build: { target: dev }
+    command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.local
+      UB_DEBUG: "1"
+      UB_LOG_FORMAT: console
+    volumes:
+      - ./backend:/app                   # live reload
+      - ub_media:/srv/media
+      - ub_static:/srv/static
+    ports: ["8000:8000"]
+  scheduler:
+    build: { target: dev }
+    command: ["python", "manage.py", "run_scheduler", "--loop", "--interval", "30", "--batch", "20"]
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.local
+      UB_DEBUG: "1"
+      UB_LOG_FORMAT: console
+    volumes: ["./backend:/app", "ub_media:/srv/media"]
+  frontend:
+    build: { target: dev }
+    command: ["npm", "run", "dev"]
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules                # keep the image's install
+      - /app/.next
+    ports: ["3000:3000"]

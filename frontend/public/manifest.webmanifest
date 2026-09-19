@@ -1,0 +1,27 @@
+{
+  "name": "UdhaarBook",
+  "short_name": "UdhaarBook",
+  "description": "Your shop's khata, bills and stock in one book.",
+  "start_url": "/dashboard?src=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F6F7F9",
+  "theme_color": "#2B6BE0",
+  "lang": "en",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    {
+      "src": "/icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    { "name": "You gave", "url": "/parties?action=gave" },
+    { "name": "New bill", "url": "/sales/invoices/new" },
+    { "name": "Parties", "url": "/parties" }
+  ]
+}

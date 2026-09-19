@@ -1,0 +1,45 @@
+/*
+ * Part 23 §23.2.5 / Part 19 §19.8.3 step 1 — the shadcn alias layer.
+ *
+ * `ml-uikit` (and the local stand-in that replaces it until the internal
+ * registry is reachable, see src/design-system/primitives/) reads shadcn's
+ * variable names. Aliasing them onto the Koper-named tokens is what themes the
+ * ML* primitives with zero overrides and zero forks. Nothing flows the other
+ * way: a Ub* component never declares a colour.
+ *
+ * There is no MUI on the page, so the BrandHub `scope:ml-uikit` CSS-prefixing
+ * script, `important: '.customer-scope'` and the disabled-preflight workaround
+ * are deliberately absent (§23.2.5).
+ */
+
+:root {
+  --background: var(--canvas);
+  --foreground: var(--text-primary);
+  --card: var(--surface-card);
+  --card-foreground: var(--text-primary);
+  --popover: var(--surface-raised);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--primary-500);
+  --primary-foreground: var(--text-inverse);
+  --secondary: var(--surface-sunken);
+  --secondary-foreground: var(--text-primary);
+  --muted: var(--surface-sunken);
+  --muted-foreground: var(--text-tertiary);
+  --destructive: var(--form-error);
+  --destructive-foreground: var(--text-inverse);
+  --border: var(--border-hairline);
+  --input: var(--border-subtle);
+  --ring: var(--primary-500);
+  --radius: var(--radius-control);
+  /* §19.8.3's alias sheet lists `--accent: var(--accent-quiet)`. That name is
+     already taken by Koper's own `--accent` (= primary-500, §23.2.4), so
+     writing it here would clobber the action colour with a 10 % tint. The
+     shadcn "accent" role (a hover wash) is expressed by --surface-hover
+     instead, and the collision is recorded rather than silently resolved. */
+  --accent-foreground: var(--text-primary);
+}
+
+:root[data-theme='dark'] {
+  --primary: var(--primary-400);
+  --ring: var(--primary-300);
+}

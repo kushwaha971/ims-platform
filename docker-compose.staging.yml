@@ -1,0 +1,104 @@
+# docker-compose.staging.yml — STAGING.
+# Part 29 §29.2.3: "The staging overlay is the production overlay with smaller
+# resource limits, BACKUP_KEEP_DAILY: 7, a single wildcard certificate, and the
+# E2E seed permitted."
+# Usage: docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d
+x-backend-env: &backend-env
+  DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-config.settings.staging}
+  UB_SECRET_KEY: ${UB_SECRET_KEY:?UB_SECRET_KEY is required}
+  UB_DEBUG: "0"
+  UB_ENV_NAME: ${UB_ENV_NAME:-staging}
+  UB_ALLOWED_HOSTS: ${UB_ALLOWED_HOSTS:?required}
+  DATABASE_URL: postgresql://${POSTGRES_USER:-udhaarbook}:${POSTGRES_PASSWORD:?required}@db:5432/${POSTGRES_DB:-udhaarbook}
+  POSTGRES_DB: ${POSTGRES_DB:-udhaarbook}
+  POSTGRES_USER: ${POSTGRES_USER:-udhaarbook}
+  UB_MEDIA_ROOT: /srv/media
+  UB_STATIC_ROOT: /srv/static
+  UB_LOG_LEVEL: ${UB_LOG_LEVEL:-INFO}
+  UB_LOG_FORMAT: ${UB_LOG_FORMAT:-json}
+  UB_E2E_MODE: ${UB_E2E_MODE:-1}          # the E2E seed and the test-only OTP endpoint
+
+services:
+  db:
+    command: >
+      postgres
+      -c shared_buffers=${PG_SHARED_BUFFERS:-512MB}
+      -c effective_cache_size=${PG_EFFECTIVE_CACHE:-1536MB}
+      -c work_mem=${PG_WORK_MEM:-8MB}
+      -c maintenance_work_mem=128MB
+      -c max_connections=${PG_MAX_CONNECTIONS:-60}
+      -c wal_level=replica
+      -c max_wal_size=1GB
+      -c checkpoint_completion_target=0.9
+      -c log_min_duration_statement=${PG_SLOW_MS:-500}
+      -c shared_preload_libraries=pg_stat_statements
+    volumes:
+      - /srv/udhaarbook/pgdata:/var/lib/postgresql/data
+      - ./scripts/postgres-init:/docker-entrypoint-initdb.d:ro
+    logging: &logging
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  backend:
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.staging
+      UB_DEBUG: "0"
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-2}
+    logging: *logging
+    deploy:
+      resources:
+        limits: { memory: 1g }
+
+  scheduler:
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.staging
+      UB_DEBUG: "0"
+    logging: *logging
+    deploy:
+      resources:
+        limits: { memory: 512m }
+
+  frontend:
+    logging: *logging
+    deploy:
+      resources:
+        limits: { memory: 512m }
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/proxy_params:/etc/nginx/proxy_params:ro
+      - ub_static:/srv/static:ro
+      - ub_media:/srv/media:ro
+      - /srv/udhaarbook/certs:/etc/letsencrypt:ro          # one wildcard certificate
+      - /srv/udhaarbook/acme-challenge:/var/www/acme:ro
+    depends_on:
+      backend:   { condition: service_healthy }
+      frontend:  { condition: service_healthy }
+    logging: *logging
+
+  backup:
+    build: { context: ./backend, dockerfile: Dockerfile, target: runtime }
+    restart: unless-stopped
+    entrypoint: ["/opt/ops/backup-loop.sh"]
+    env_file: [.env]
+    environment:
+      <<: *backend-env
+      PGPASSWORD: ${POSTGRES_PASSWORD:?required}
+      BACKUP_DIR: /srv/backups
+      BACKUP_HOUR_UTC: ${BACKUP_HOUR_UTC:-20}
+      BACKUP_KEEP_DAILY: ${BACKUP_KEEP_DAILY:-7}
+      BACKUP_KEEP_WEEKLY: ${BACKUP_KEEP_WEEKLY:-4}
+      BACKUP_REMOTE_TARGET: ${BACKUP_REMOTE_TARGET:-}
+      BACKUP_REMOTE_KEY: ${BACKUP_REMOTE_KEY:-}
+    volumes:
+      - /srv/udhaarbook/backups:/srv/backups
+      - ub_media:/srv/media:ro
+      - ./scripts:/opt/ops:ro
+    depends_on:
+      db: { condition: service_healthy }
+    logging: *logging
