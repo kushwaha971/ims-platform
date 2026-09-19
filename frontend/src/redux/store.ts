@@ -1,6 +1,7 @@
 import { configureStore } from '@reduxjs/toolkit';
 
 import { registerTransportHost } from 'src/api/transportBridge';
+import { errorMessageId } from 'src/utils/apiError';
 
 // ── auth (PLT-01, PLT-02) ────────────────────────────────────────────────────
 import authReducer from 'modules/DigiKhaato/features/auth/redux/authSlice';
@@ -79,9 +80,31 @@ registerTransportHost({
   onSessionExpired: () => {
     store.dispatch(sessionExpired());
   },
+  /**
+   * §19.12.2 / CR-2026-09-19-E — THE global error channel, and the only place
+   * an API failure becomes a toast. It is registered here, at the seam between
+   * the transport and the store, for the same reason BrandHub registers its
+   * handler in `app/layout.tsx`:
+   *
+   *     setErrorHandler(({ message }) => {
+   *       dispatch(showSnackbar({ message, severity: 'error' }));
+   *     });
+   *
+   * — one dispatcher, fed by the response interceptor (`handleAxiosError` there,
+   * the `api.interceptors.response` rejection handler here), so that no thunk
+   * and no component ever contains error-toast code. The four documented
+   * exceptions are decided BEFORE this is called: `shouldToast`
+   * (src/utils/apiError.ts), `onPlanLimit` below, `onSessionExpired` below, and
+   * a request's own `suppressErrorSnackbar` flag.
+   */
   onErrorToast: (error) => {
+    const id = errorMessageId(error);
     store.dispatch(
-      showSnackbar({ severity: 'error', message: error.message, requestId: error.requestId })
+      showSnackbar({
+        severity: 'error',
+        ...(id ? { id } : { message: error.message }),
+        requestId: error.requestId,
+      })
     );
   },
   // PLT-15 FR-6 — one dialog answers for every module's plan limit.
@@ -95,9 +118,7 @@ registerTransportHost({
     // The message goes up before the reload, so the user sees WHY the page
     // jumped rather than watching it reload for no stated reason. The reload is
     // deferred a tick so the snackbar paints first.
-    store.dispatch(
-      showSnackbar({ severity: 'warning', message: 'tenant.switcher.staleTab', requestId: null })
-    );
+    store.dispatch(showSnackbar({ severity: 'warning', id: 'tenant.switcher.staleTab' }));
     if (typeof window !== 'undefined') {
       window.setTimeout(() => window.location.reload(), 600);
     }

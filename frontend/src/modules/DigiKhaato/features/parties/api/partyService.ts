@@ -1,5 +1,5 @@
 import { API_PATHS } from 'src/api/APIPaths';
-import { api } from 'src/api/AxiosInstances';
+import { api, ubConfig } from 'src/api/AxiosInstances';
 import { toQueryString } from 'src/utils/queryString';
 
 import type { Party, PartyApiRow, PartyListParams, PartyListResult } from '../types/party.types';
@@ -42,7 +42,18 @@ const toParty = (row: PartyApiRow): Party => ({
   lastActivityAt: row.last_activity_at,
 });
 
-/** GET /parties — page-paginated list (Part 32 S0-70's read-only endpoint). */
+/**
+ * GET /parties — page-paginated list (Part 32 S0-70's read-only endpoint).
+ *
+ * CR-2026-09-19-E, DOCUMENTED EXCEPTION — a whole-page failure keeps its
+ * in-page error state, so this request sets `suppressErrorSnackbar`. This is a
+ * WHOLE-PAGE read: when it fails there is nothing on the screen but the
+ * failure, so `PartyListPageContent` renders it in place, with the request id
+ * and a Try again. A toast would say the same thing and then disappear,
+ * leaving an empty screen with no explanation of why it is empty. BrandHub has
+ * the same flag, for the same kind of case ("calls that present the API's
+ * message in their own UI").
+ */
 export const listParties = async (
   params: PartyListParams,
   signal?: AbortSignal
@@ -55,7 +66,10 @@ export const listParties = async (
     page_size: params.pageSize,
   });
 
-  const response = await api.get<PartyListApiResponse>(`${API_PATHS.PARTIES}${query}`, { signal });
+  const response = await api.get<PartyListApiResponse>(
+    `${API_PATHS.PARTIES}${query}`,
+    ubConfig({ signal, suppressErrorSnackbar: true })
+  );
 
   return {
     rows: response.data.data.map(toParty),

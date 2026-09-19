@@ -92,18 +92,10 @@ export function TenantChooserPageContent(): React.JSX.Element {
           />
         )}
 
-        {switcher.error && (
-          <UbStatusBanner
-            tone="error"
-            title={switcher.error.message}
-            description={switcher.error.requestId ?? undefined}
-            action={
-              <UbButton variant="secondary" size="sm" onClick={switcher.clearError}>
-                {t('common.action.dismiss')}
-              </UbButton>
-            }
-          />
-        )}
+        {/* CR-2026-09-19-E — the error banner is gone; a failed switch, a
+            failed "open by default" and a failed leave all surface once through
+            the snackbar, which has its own dismiss. `last_owner` on leave is
+            still rendered by the leave dialog, where the guidance belongs. */}
 
         {rows.length === 0 && (
           <UbEmptyState

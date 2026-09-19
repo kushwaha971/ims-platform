@@ -252,7 +252,19 @@ describe('the wizard — step 4 (FR-5) and §9 Failed', () => {
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/dashboard'));
   });
 
-  it('stays on step 4 with Retry and the request id when the preset fails', async () => {
+  /**
+   * CR-2026-09-19-E — was "stays on step 4 with Retry and the request id". The
+   * in-page error banner (and the Retry inside it) is gone: a failed preset is
+   * an API failure and surfaces once, centrally, through the snackbar, which
+   * carries the request id exactly as that banner did (see
+   * src/tests/globalErrorChannel.test.tsx).
+   *
+   * The behaviour that still matters here — and the reason a failed finish is
+   * NOT the "whole-page failure" exception — is that the wizard keeps its state
+   * and its own primary button, so the merchant retries with the control they
+   * already used rather than with a second one inside a banner.
+   */
+  it('stays on step 4 with its summary and its own action when the preset fails', async () => {
     const user = userEvent.setup();
     await atSummary();
     onboardingService.completeOnboarding.mockRejectedValue({
@@ -267,10 +279,13 @@ describe('the wizard — step 4 (FR-5) and §9 Failed', () => {
     renderWithProviders(<OnboardingStepPageContent step={4} />);
     await user.click(screen.getByRole('button', { name: /Start using/ }));
 
-    expect(await screen.findByText('Something went wrong.')).toBeInTheDocument();
-    expect(screen.getByText('req_4')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
+    await waitFor(() => expect(onboardingService.completeOnboarding).toHaveBeenCalledTimes(1));
     expect(replace).not.toHaveBeenCalledWith('/dashboard');
+    // The step is still on screen and still submittable …
+    expect(screen.getByRole('button', { name: /Start using/ })).toBeInTheDocument();
+    // … and the screen itself reports nothing.
+    expect(screen.queryByText('Something went wrong.')).not.toBeInTheDocument();
+    expect(screen.queryByText('req_4')).not.toBeInTheDocument();
   });
 });
 

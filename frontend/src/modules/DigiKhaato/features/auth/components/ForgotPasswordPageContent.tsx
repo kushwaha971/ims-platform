@@ -89,16 +89,9 @@ export function ForgotPasswordPageContent(): React.JSX.Element {
             />
           )}
 
-          {password.error &&
-            password.error.code !== 'validation_error' &&
-            password.error.code !== 'login_throttled' &&
-            password.error.code !== 'rate_limited' && (
-              <UbStatusBanner
-                tone="error"
-                title={password.error.message}
-                description={password.error.requestId ?? undefined}
-              />
-            )}
+          {/* CR-2026-09-19-E — no error banner: the snackbar is the channel.
+              The two banners above are network and throttle STATES, and the
+              info banner below is the successful outcome, not a failure. */}
 
           {password.resetRequested ? (
             <UbStack gap={4}>

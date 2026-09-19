@@ -212,7 +212,19 @@ describe('LoginPageContent — PLT-02 log in', () => {
     expect(screen.getByRole('button', { name: 'Log in' })).toBeDisabled();
   });
 
-  it('shows a 500 as a banner carrying the request id (R-E-4)', async () => {
+  /**
+   * CR-2026-09-19-E. This used to read "shows a 500 as a banner carrying the
+   * request id" and assert the server's sentence on THIS screen. That banner is
+   * gone: a 500 is an API failure like any other and surfaces once, centrally,
+   * through the snackbar — see src/tests/globalErrorChannel.test.tsx, which
+   * proves the routing end to end through the real interceptor.
+   *
+   * What this screen owes is the opposite assertion: after a 500 it renders NO
+   * failure of its own. The service is mocked above the transport here, so a
+   * toast cannot appear in this test either — and that is exactly the point.
+   * The screen contains no error-rendering code to fire.
+   */
+  it('renders no failure of its own on a 500 — the snackbar owns it', async () => {
     const user = userEvent.setup();
     authService.passwordLogin.mockRejectedValue({
       ...apiError('server_error', 'Something went wrong.'),
@@ -224,8 +236,12 @@ describe('LoginPageContent — PLT-02 log in', () => {
     await user.type(screen.getByLabelText(/^Password/, { selector: 'input' }), 'kirana2026');
     await user.click(screen.getByRole('button', { name: 'Log in' }));
 
-    expect(await screen.findByText('Something went wrong.')).toBeInTheDocument();
-    expect(screen.getByText('req_7f3a91')).toBeInTheDocument();
+    // The submit completes — the button comes back out of its busy state …
+    await waitFor(() => expect(authService.passwordLogin).toHaveBeenCalled());
+    // … and nothing on the screen reports the failure.
+    expect(screen.queryByText('Something went wrong.')).not.toBeInTheDocument();
+    expect(screen.queryByText('req_7f3a91')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('snackbar')).not.toBeInTheDocument();
   });
 
   it('hides the password behind a toggle with its own accessible name (FR-8)', async () => {

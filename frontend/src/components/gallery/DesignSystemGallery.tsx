@@ -22,7 +22,6 @@ import {
   UbStatusBadge,
   UbStatusBanner,
   UbText,
-  type UbSnackbarMessage,
 } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
 
@@ -37,19 +36,13 @@ import { DesignSystemWave1Gallery } from './DesignSystemWave1Gallery';
  * literal strings rather than translated props, and that is deliberate: the
  * gallery is developer chrome, not product (§23.2.2's `ds-label-caps` rule).
  */
-const DEMO: readonly UbSnackbarMessage[] = [
-  {
-    id: 'demo',
-    severity: 'error',
-    message: 'Could not reach the server.',
-    requestId: 'req_7f3a91',
-  },
-];
+const DEMO_MESSAGE = 'Could not reach the server.';
 
 export function DesignSystemGallery(): React.JSX.Element {
   const { t } = useTranslation();
-  const [messages, setMessages] = useState<readonly UbSnackbarMessage[]>(DEMO);
-  const onDismiss = useCallback(() => setMessages([]), []);
+  // CR-2026-09-19-E — `UbSnackbar` takes ONE message now, not a queue.
+  const [message, setMessage] = useState<string | null>(DEMO_MESSAGE);
+  const onDismiss = useCallback(() => setMessage(null), []);
 
   return (
     <UbPageShell
@@ -240,7 +233,9 @@ export function DesignSystemGallery(): React.JSX.Element {
       </UbStack>
 
       <UbSnackbar
-        messages={messages}
+        message={message}
+        severity="error"
+        requestId="req_7f3a91"
         onDismiss={onDismiss}
         dismissLabel={t('common.action.dismiss')}
       />

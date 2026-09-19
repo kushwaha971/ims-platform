@@ -276,7 +276,7 @@ export const useOnboarding = (routeStep: number): UseOnboardingResult => {
   const finish = useCallback(async () => {
     try {
       await dispatch(completeOnboarding({ locale: draft.locale ?? locale })).unwrap();
-      dispatch(showSnackbar({ severity: 'success', message: 'onboarding.done' }));
+      dispatch(showSnackbar({ severity: 'success', id: 'onboarding.done' }));
     } catch {
       // §9 "Failed" — the wizard stays on step 4 with Retry and the request id.
     }

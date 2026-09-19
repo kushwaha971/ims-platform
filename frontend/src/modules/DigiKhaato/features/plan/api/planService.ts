@@ -1,5 +1,5 @@
 import { API_PATHS } from 'src/api/APIPaths';
-import { api } from 'src/api/AxiosInstances';
+import { api, ubConfig } from 'src/api/AxiosInstances';
 
 import { PLAN_LIMIT_KEYS } from '../types/plan.types';
 
@@ -42,9 +42,18 @@ const toSupportContact = (raw: PlanLimitsApiPayload['support_contact']): PlanSup
  * block is absent on a deployment that has not seeded plans yet. Both are
  * normal, not errors: absent means "nothing to show", which is what an
  * uncapped MVP deployment genuinely is.
+ *
+ * CR-2026-09-19-E, DOCUMENTED EXCEPTION — a whole-page failure keeps its
+ * in-page error state, so this sets `suppressErrorSnackbar`, for the
+ * same reason as the party list: `PlanUsageCard` is entirely this read, so a
+ * failure leaves nothing on the card but the failure, and it renders that in
+ * place with the request id and a Try again.
  */
 export const getPlanEntitlements = async (signal?: AbortSignal): Promise<PlanEntitlements> => {
-  const response = await api.get<SessionWithPlanApiResponse>(API_PATHS.AUTH_ME, { signal });
+  const response = await api.get<SessionWithPlanApiResponse>(
+    API_PATHS.AUTH_ME,
+    ubConfig({ signal, suppressErrorSnackbar: true })
+  );
   const payload = response.data.data.plan_limits ?? null;
 
   const limits: PlanLimit[] = [];

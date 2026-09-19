@@ -89,23 +89,13 @@ export function OnboardingStepPageContent({
             />
           )}
 
-          {/* §9 "Error" / "Failed" — everything the fields cannot carry, with the
-            request id, which on a failed preset application is the only thing
-            that connects the merchant's screen to a backend log line (R-E-4). */}
-          {onboarding.error && onboarding.error.code !== 'validation_error' && (
-            <UbStatusBanner
-              tone="error"
-              title={onboarding.error.message}
-              description={onboarding.error.requestId ?? undefined}
-              action={
-                onboarding.step === ONBOARDING_STEP_COUNT ? (
-                  <UbButton variant="secondary" size="sm" onClick={finish}>
-                    {t('common.action.retry')}
-                  </UbButton>
-                ) : undefined
-              }
-            />
-          )}
+          {/* CR-2026-09-19-E — the §9 "Error" banner is gone. A failed step
+              submit surfaces once, from the transport, through the snackbar,
+              which carries the request id (R-E-4) exactly as this banner did.
+              The wizard keeps its state and the step stays on screen, so the
+              user retries with the step's own primary button rather than with a
+              second Retry inside a banner. A `validation_error` is still
+              anchored on the field that caused it. */}
 
           {onboarding.step <= 1 && <OnboardingBusinessStep onboarding={onboarding} />}
           {onboarding.step === 2 && <OnboardingGstStep onboarding={onboarding} />}

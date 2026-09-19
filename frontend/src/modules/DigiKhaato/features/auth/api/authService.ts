@@ -1,5 +1,5 @@
 import { API_PATHS } from 'src/api/APIPaths';
-import { api, ubConfig } from 'src/api/AxiosInstances';
+import { api } from 'src/api/AxiosInstances';
 import { DEFAULT_TENANT_TIMEZONE } from 'src/constants';
 import type { SessionPayload } from 'src/redux/slice/sessionSlice';
 import type { TWriteClass } from 'src/types/api.types';
@@ -126,10 +126,15 @@ const toAuthResult = (body: AuthApiResponse): AuthResult => {
  * POST /auth/register — `{ email, password, full_name? }` → the `/auth/me`
  * body, with the session cookies set as a side effect.
  *
- * The toast is suppressed because the two failures this call actually has —
- * a 400 whose `details.email` says the address is taken, and a 400 whose
- * `details.password` carries the server's policy — both belong under the field
- * that caused them, not in a corner of the screen (§19.4.3).
+ * CR-2026-09-19-E — this call used to pass `suppressErrorSnackbar: true`, and
+ * so did every other call in this file. The reason given was sound but the
+ * mechanism was too broad: the two failures it named — a 400 whose
+ * `details.email` says the address is taken, and a 400 whose `details.password`
+ * carries the server's policy — are both `validation_error`, which
+ * `shouldToast` already excludes BY CODE for the whole application. Opting the
+ * request out as well ALSO silenced the 500s, the 503s and the timeouts, which
+ * is why every auth screen had grown an error banner of its own. The flag is
+ * gone; the exceptions are decided once, by code, in src/utils/apiError.ts.
  */
 export const register = async (input: RegisterInput): Promise<AuthResult> => {
   const response = await api.post<AuthApiResponse>(
@@ -142,8 +147,7 @@ export const register = async (input: RegisterInput): Promise<AuthResult> => {
       // but an empty string in the body would claim they answered.
       ...(input.mobile ? { mobile: input.mobile } : {}),
       ...(input.deviceLabel ? { device_label: input.deviceLabel } : {}),
-    },
-    ubConfig({ suppressErrorSnackbar: true })
+    }
   );
   return toAuthResult(response.data);
 };
@@ -155,6 +159,12 @@ export const registerWriteClass: TWriteClass = 'online-only';
  * POST /auth/login. CR-2026-09-19-A: one identity and it is an email, so there
  * is no identifier to parse and no branch that could conflate an email with
  * somebody else's mobile.
+ *
+ * CR-2026-09-19-E — no `suppressErrorSnackbar`. AC-5's rule (one identical
+ * message, under the password field, for a wrong password and an unknown
+ * address alike) is kept by `invalid_credentials` being in `LOCALLY_PRESENTED`,
+ * which is a statement about that ERROR rather than about this request — so it
+ * holds for every screen that logs in, and a 500 here still reaches the user.
  */
 export const passwordLogin = async (input: PasswordLoginInput): Promise<AuthResult> => {
   const response = await api.post<AuthApiResponse>(
@@ -164,9 +174,6 @@ export const passwordLogin = async (input: PasswordLoginInput): Promise<AuthResu
       password: input.password,
       ...(input.deviceLabel ? { device_label: input.deviceLabel } : {}),
     },
-    // AC-5 — the wrong-password and unknown-address messages must be identical,
-    // and the screen renders that one message under the password field.
-    ubConfig({ suppressErrorSnackbar: true })
   );
   return toAuthResult(response.data);
 };
@@ -183,8 +190,7 @@ export const setPassword = async (input: PasswordSetInput): Promise<void> => {
       new_password: input.newPassword,
       ...(input.currentPassword ? { current_password: input.currentPassword } : {}),
       ...(input.logoutOtherDevices ? { logout_other_devices: true } : {}),
-    },
-    ubConfig({ suppressErrorSnackbar: true })
+    }
   );
 };
 export const setPasswordWriteClass: TWriteClass = 'online-only';
@@ -199,11 +205,7 @@ export const setPasswordWriteClass: TWriteClass = 'online-only';
  * the console mail backend; no message leaves the machine.
  */
 export const requestPasswordReset = async (email: string): Promise<void> => {
-  await api.post(
-    API_PATHS.AUTH_PASSWORD_RESET_REQUEST,
-    { email },
-    ubConfig({ suppressErrorSnackbar: true })
-  );
+  await api.post(API_PATHS.AUTH_PASSWORD_RESET_REQUEST, { email });
 };
 export const requestPasswordResetWriteClass: TWriteClass = 'online-only';
 
@@ -213,8 +215,7 @@ export const confirmPasswordReset = async (
 ): Promise<AuthResult> => {
   const response = await api.post<AuthApiResponse>(
     API_PATHS.AUTH_PASSWORD_RESET_CONFIRM,
-    { token: input.token, new_password: input.newPassword },
-    ubConfig({ suppressErrorSnackbar: true })
+    { token: input.token, new_password: input.newPassword }
   );
   return toAuthResult(response.data);
 };

@@ -7,9 +7,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { resetAllFeatureState } from 'src/redux/actions';
 import { localeFromProfile } from 'src/redux/slice/localeSlice';
-import { ROUTES, onboardingStepPath } from 'src/routes';
 
-import { DEFAULT_POST_LOGIN_PATH } from '../constants/authDefaults';
+import { AUTH_CONFIG } from '../config';
 import { authResultConsumed, selectAuthResult } from '../redux/authSlice';
 import { fetchSession } from '../redux/sessionThunk';
 import { postAuthDestination, safeNextPath } from '../view-model/authDisplay';
@@ -45,26 +44,35 @@ export const useAuthRedirect = (): UseAuthRedirectResult => {
   const searchParams = useSearchParams();
   const result = useAppSelector(selectAuthResult);
 
-  const nextPath = safeNextPath(searchParams.get('next'), DEFAULT_POST_LOGIN_PATH);
+  const nextPath = safeNextPath(searchParams.get('next'), AUTH_CONFIG.defaultPostLoginPath);
 
+  /**
+   * CR-2026-09-19-E — the destinations are read off `AUTH_CONFIG` rather than
+   * named here, which is the shape BrandHub's `postLoginRoute.ts` has: it takes
+   * a `CustomerAuthConfig` and routes to `config.checkoutRoute`,
+   * `config.ordersBasePath` and `config.dashboardRoute` without knowing a
+   * single path. This function is this product's `postLoginRoute.ts`; it keeps
+   * living in the hook because the five-branch rule of PLT-01 FR-9 is mounted
+   * by every auth screen and there is one flow, not two portals.
+   */
   const redirectTo = useCallback(
     (destination: PostAuthDestination) => {
       switch (destination.kind) {
         case 'onboarding':
-          router.replace(onboardingStepPath(destination.step));
+          router.replace(AUTH_CONFIG.onboardingStepPath(destination.step));
           return;
         case 'setPassword':
-          router.replace(ROUTES.SET_PASSWORD);
+          router.replace(AUTH_CONFIG.setPasswordRoute);
           return;
         case 'invitation':
         case 'chooser':
-          router.replace(ROUTES.SWITCH_TENANT);
+          router.replace(AUTH_CONFIG.chooserRoute);
           return;
         case 'app':
           router.replace(nextPath);
           return;
         default:
-          router.replace(DEFAULT_POST_LOGIN_PATH);
+          router.replace(AUTH_CONFIG.defaultPostLoginPath);
       }
     },
     [router, nextPath]

@@ -239,15 +239,36 @@ api.interceptors.response.use(
         const waiter = new Promise<void>((resolve, reject) => {
           pendingQueue.push({ resolve, reject });
         });
-        void runRefresh();
+        // The rejection is delivered through `waiter` below; swallowing it HERE
+        // stops the shared refresh promise becoming an unhandled rejection when
+        // the refresh itself 401s (which is the ordinary session-expiry path).
+        void runRefresh().catch(() => undefined);
         await waiter;
         return await api.request(config);
       } catch {
-        // Refresh failed — the session is genuinely over.
+        // EXCEPTION 3 (CR-2026-09-19-E) — refresh failed, so the session is
+        // genuinely over. `onSessionExpired` + a redirect to login IS the
+        // report; a toast on the way out would be a second one, and the screen
+        // it belonged to is about to be replaced anyway. Returning here is what
+        // keeps the 401 path out of the toast decision below.
         transportHost()?.onSessionExpired();
         redirectToLoginOnce();
         return Promise.reject(toApiError(error));
       }
+    }
+
+    /**
+     * The same exception, from the two other directions it can arrive:
+     *  - `_skipAuthRetry` is set by `/auth/refresh` itself, so a 401 HERE is
+     *    the refresh failing — the rejection the block above is waiting on. It
+     *    must not also toast on its own way out.
+     *  - `_retried` means the request already replayed once after a successful
+     *    refresh and 401'd again, which means the same thing.
+     * Without these, the session expiry is reported twice: once as a redirect
+     * to login, and once as a toast that lands behind the login screen.
+     */
+    if (status === 401 && (config?._skipAuthRetry === true || config?._retried === true)) {
+      return Promise.reject(toApiError(error));
     }
 
     const apiError = toApiError(error);
@@ -261,6 +282,25 @@ api.interceptors.response.use(
         ? (transportHost()?.onPlanLimit(apiError) ?? false)
         : false;
 
+    /**
+     * Read BEFORE the network machine is told about this failure, because this
+     * failure may be the one that flips it.
+     *
+     * §19.10.3 suppresses transport toasts while the shell is visibly impaired:
+     * the network strip is already saying the network is the problem, and a
+     * toast per failed request on a bad connection is noise. But the FIRST
+     * transport failure is exactly the one that causes the transition, and
+     * reading `isNetworkImpaired()` after the dispatch made it suppress itself
+     * — so a network failure reported nothing at all. On the `(app)` routes the
+     * strip covered that up; on login, sign-up and reset, which have no strip,
+     * it meant a merchant on a dead connection pressed Log in and saw nothing
+     * happen. That is what the per-screen error banners were compensating for.
+     *
+     * The rule now: the failure that takes the shell out of `online` reports
+     * once; the ones after it, while the strip is up, do not.
+     */
+    const impaired = transportHost()?.isNetworkImpaired() ?? false;
+
     // §19.10.3 — a 4xx is evidence of HEALTH: the server answered. Only a
     // transport-level failure moves the machine towards `degraded`.
     if ((config?.net ?? 'interactive') !== 'background') {
@@ -273,15 +313,39 @@ api.interceptors.response.use(
       else host?.onResponseObserved();
     }
 
-    // Global failure surfacing (§19.12.2). A call opts out when it renders the
-    // message itself — e.g. a 409 credit_limit_exceeded shown in a drawer.
-    const impaired = transportHost()?.isNetworkImpaired() ?? false;
+    /**
+     * ── THE GLOBAL ERROR CHANNEL (§19.12.2 / CR-2026-09-19-E) ───────────────
+     *
+     * Every API failure surfaces from HERE, once, by handing the normalised
+     * error to the store's `onErrorToast`. No thunk and no component contains
+     * error-toast code, which is the whole point: an error can be raised by any
+     * of a hundred calls and a hundred screens cannot each own the report.
+     *
+     * This mirrors BrandHub exactly — their `api.interceptors.response`
+     * rejection handler ends in `return handleAxiosError(error)`, which walks
+     * the status and calls the single `errorHandler` registered in
+     * `app/layout.tsx`, which dispatches `showSnackbar({severity:'error'})`.
+     *
+     * The four documented exceptions, in the order they are checked:
+     *   1. `suppressErrorSnackbar` on the request — BrandHub has the same flag,
+     *      with the same comment ("for calls that present the API's message in
+     *      their own UI"). Set it with `ubConfig({ suppressErrorSnackbar: true })`.
+     *   2. `claimedByPlanDialog` — PLT-15's dialog took it (above).
+     *   3. the 401 session-expiry path — handled and returned above.
+     *   4. `shouldToast(apiError)` — the codes that always have a better local
+     *      surface: field validation, a wrong password, a lockout countdown, a
+     *      spent reset link, and the business errors whose own UI carries the
+     *      number. The list and the reasoning are in src/utils/apiError.ts.
+     *
+     * Plus one state, not an error class: while the shell is ALREADY impaired
+     * the network strip is the channel, so transport toasts are suppressed
+     * there — see `impaired` above, which is sampled before this failure is
+     * allowed to change that state. Business errors still toast (§19.10.3).
+     */
     const transportError =
       apiError.code === 'network_error' ||
       apiError.code === 'timeout' ||
       apiError.code === 'offline';
-    // In degraded/offline the strip is the channel; transport toasts are
-    // suppressed there, business errors still toast (§19.10.3).
     if (
       !config?.suppressErrorSnackbar &&
       !claimedByPlanDialog &&

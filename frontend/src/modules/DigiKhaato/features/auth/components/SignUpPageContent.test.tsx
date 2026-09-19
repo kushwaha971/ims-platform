@@ -239,7 +239,13 @@ describe('SignUpPageContent — §9 Error', () => {
     expect(await screen.findByText('That name is too long.')).toBeInTheDocument();
   });
 
-  it('shows a 500 as a banner carrying the request id (R-E-4)', async () => {
+  /**
+   * CR-2026-09-19-E — was "shows a 500 as a banner carrying the request id".
+   * The banner is gone; a 500 surfaces through the single snackbar channel
+   * (src/tests/globalErrorChannel.test.tsx). What this screen owes now is that
+   * it renders no failure of its own.
+   */
+  it('renders no failure of its own on a 500 — the snackbar owns it', async () => {
     const user = userEvent.setup();
     authService.register.mockRejectedValue({
       ...apiError('server_error', 'Something went wrong.'),
@@ -250,8 +256,10 @@ describe('SignUpPageContent — §9 Error', () => {
     await fill(user);
     await user.click(screen.getByRole('button', { name: 'Create account' }));
 
-    expect(await screen.findByText('Something went wrong.')).toBeInTheDocument();
-    expect(screen.getByText('req_7f3a91')).toBeInTheDocument();
+    await waitFor(() => expect(authService.register).toHaveBeenCalled());
+    expect(screen.queryByText('Something went wrong.')).not.toBeInTheDocument();
+    expect(screen.queryByText('req_7f3a91')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('snackbar')).not.toBeInTheDocument();
   });
 });
 

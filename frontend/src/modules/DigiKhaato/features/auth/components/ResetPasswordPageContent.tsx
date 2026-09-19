@@ -107,9 +107,16 @@ export function ResetPasswordPageContent(): React.JSX.Element {
             />
           )}
 
-          {/* A spent, expired or forged token is `invalid_token` and has no field to
-              sit under, so it is the banner — with the way out beneath it. */}
-          {password.error && password.error.code !== 'validation_error' && (
+          {/* CR-2026-09-19-E, DOCUMENTED EXCEPTION (CASE 4 in src/utils/apiError.ts)
+              — this one banner stays,
+              and only for `invalid_token`. A spent, expired or forged link
+              makes this screen a dead end: the form below it can never succeed,
+              so a toast would fade and leave the merchant typing a new password
+              into a form that is already finished. Same reasoning as a list
+              that could not load at all. `invalid_token` is in
+              `LOCALLY_PRESENTED` (src/utils/apiError.ts), so it does not also
+              toast. Every OTHER failure on this screen goes to the snackbar. */}
+          {password.error?.code === 'invalid_token' && (
             <UbStatusBanner
               tone="error"
               title={password.error.message}

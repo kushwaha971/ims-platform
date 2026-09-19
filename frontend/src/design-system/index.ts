@@ -91,8 +91,8 @@ export type { UbPageShellProps, UbPageShellWidth } from './UbPageShell';
 export { UbPageSkeleton, UbSkeleton } from './UbSkeleton';
 export type { UbSkeletonProps, UbSkeletonVariant } from './UbSkeleton';
 
-export { UbSnackbar } from './UbSnackbar';
-export type { UbSnackbarMessage, UbSnackbarProps, UbSnackbarSeverity } from './UbSnackbar';
+export { UB_SNACKBAR_AUTO_HIDE_MS, UbSnackbar } from './UbSnackbar';
+export type { UbSnackbarProps, UbSnackbarSeverity } from './UbSnackbar';
 
 export { UbStatusBadge } from './UbStatusBadge';
 export type { UbStatusBadgeProps, UbStatusBadgeTone } from './UbStatusBadge';

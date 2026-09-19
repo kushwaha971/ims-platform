@@ -13,13 +13,70 @@ const hsl = (name) => `hsl(var(${name}) / <alpha-value>)`;
 
 module.exports = {
   darkMode: ['class', '[data-theme="dark"]'],
+
+  /**
+   * CR-2026-09-19-E — the content globs match BrandHub's shape: the two source
+   * roots, the two `!` exclusions for generated/never-rendered files, and the
+   * ml-uikit dist glob that stops the package's own compiled classes being
+   * purged. Theirs reads:
+   *
+   *     content: [
+   *       './app/ ** /*.{ts,tsx}',
+   *       './src/ ** /*.{ts,tsx}',
+   *       '!./src/ ** /*.{test,spec}.{ts,tsx}',
+   *       '!./src/tests/ ** ',
+   *       './node_modules/ml-uikit/dist/ ** /*.{js,cjs,mjs}',
+   *     ]
+   *
+   * The exclusions are not cosmetic: a class that only ever appears in a test
+   * file is a class in the production stylesheet that no screen can show.
+   *
+   * BrandHub's two other top-level keys are deliberately NOT copied, because
+   * both exist to solve a problem this product does not have: `important:
+   * '.customer-scope'` and `corePlugins: { preflight: false }` scope every
+   * utility so they cannot bleed into the MUI routes sharing one <html>. There
+   * are no MUI routes here — this is a standalone app — and disabling Preflight
+   * would cost the resets the design system assumes.
+   */
   content: [
     './app/**/*.{ts,tsx}',
     './src/**/*.{ts,tsx}',
+    '!./src/**/*.{test,spec}.{ts,tsx}',
+    '!./src/tests/**',
     // When the internal registry is reachable, ml-uikit's own classes must be
-    // scanned too: './node_modules/ml-uikit/dist/**/*.js'.
+    // scanned too: './node_modules/ml-uikit/dist/**/*.{js,cjs,mjs}'.
   ],
+
   theme: {
+    /**
+     * Breakpoints and the content container sit on `theme`, not on
+     * `theme.extend`, exactly as they do in BrandHub — they REPLACE Tailwind's
+     * defaults rather than adding to them, which is the point: a product with
+     * its own layout scale should not also carry five it never uses. The five
+     * values below are the ones this codebase already writes (`sm:`…`2xl:`).
+     */
+    screens: {
+      sm: '640px',
+      md: '768px',
+      lg: '1024px',
+      xl: '1280px',
+      '2xl': '1536px',
+    },
+
+    // Unlike BrandHub's, the padding here is tokens: the gutters are the same
+    // variables the shell and `UbPageShell` read, so a white-label build that
+    // widens the page widens both.
+    //
+    // BrandHub's `container.screens: { '2xl': '1400px' }` override is NOT
+    // copied. Those values become `@media (min-width: …)` breakpoints, where a
+    // `var()` is not legal CSS — and the maximum measure this product cares
+    // about is `--content-max`, which is already a token and is applied as
+    // `max-w-content` by `UbPageShell`, the component every page goes through.
+    container: {
+      center: true,
+      padding: { DEFAULT: 'var(--gutter)', lg: 'var(--page-pad)' },
+    },
+
     extend: {
       colors: {
         primary: {
@@ -179,6 +236,29 @@ module.exports = {
         mono: ['var(--font-mono)'],
       },
       maxWidth: { content: 'var(--content-max)' },
+
+      /**
+       * CR-2026-09-19-E — `keyframes` + `animation`, the pair BrandHub's
+       * `theme.extend` carries, so a motion role is named once here rather than
+       * written as an inline `transition` in whichever component needed it.
+       * Only the two the product actually uses are declared: `animate-fade-in`
+       * is the snackbar's entrance (see primitives/mlToastPrimitives.tsx).
+       * `tailwindcss-animate` is still registered below for its `animate-in` /
+       * `animate-out` utilities.
+       *
+       * The durations and the curve are the tokens above, not new numbers.
+       */
+      keyframes: {
+        'fade-in': {
+          from: { opacity: '0', transform: 'translateY(4px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
+        'fade-out': { from: { opacity: '1' }, to: { opacity: '0' } },
+      },
+      animation: {
+        'fade-in': 'fade-in 140ms cubic-bezier(.16,1,.3,1)',
+        'fade-out': 'fade-out 90ms cubic-bezier(.4,0,1,1)',
+      },
     },
   },
   plugins: [require('tailwindcss-animate'), require('./src/design-system/typographyPlugin')],

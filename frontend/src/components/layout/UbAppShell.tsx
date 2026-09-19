@@ -3,7 +3,6 @@
 import { type ReactNode } from 'react';
 
 import { NetworkStrip } from 'src/components/layout/NetworkStrip';
-import { SnackbarHost } from 'src/components/layout/SnackbarHost';
 import { UbSidebar } from 'src/components/layout/UbSidebar';
 import { UbBox, UbLink, UbLogo, UbStack } from 'src/design-system';
 import { useAppSelector } from 'src/hooks/useAppStore';
@@ -19,8 +18,8 @@ export const APP_CONTENT_ID = 'app-content';
 
 /**
  * Part 19 §19.6.1 — the `(app)` shell: the dark rail at ≥ 1024 px, the content
- * column, the network strip of §19.10.3 above the content (it PUSHES content
- * down, it never overlays) and the single snackbar host.
+ * column and the network strip of §19.10.3 above the content (it PUSHES
+ * content down, it never overlays).
  *
  * Sprint 1 adds two things, both of which belong to the shell rather than to a
  * screen because both answer for the whole application:
@@ -97,7 +96,10 @@ export function UbAppShell({ children }: Readonly<{ children: ReactNode }>): Rea
         </UbBox>
       </UbStack>
 
-      <SnackbarHost />
+      {/* CR-2026-09-19-E — `SnackbarHost` used to be mounted here. It is in
+          `AppProviders` now, so the one toast channel also covers the auth,
+          public and internal route groups. `PlanLimitDialog` stays: a plan
+          limit can only be hit from inside the app. */}
       <PlanLimitDialog />
     </UbStack>
   );

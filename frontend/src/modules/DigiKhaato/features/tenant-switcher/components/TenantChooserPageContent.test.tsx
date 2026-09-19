@@ -115,7 +115,8 @@ describe('TenantChooserPageContent — the list', () => {
     // Step 5 — never stay on a record id from the old tenant.
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/dashboard'));
     // The snackbar names the business the user is now in (§8).
-    expect(store.getState().snackbar.queue.at(-1)?.message).toBe('Now in Verma');
+    expect(store.getState().snackbar.id).toBe('tenant.switcher.switched');
+    expect(store.getState().snackbar.params).toEqual({ name: 'Verma' });
   });
 
   it('does not re-switch to the business already open', async () => {
@@ -128,7 +129,13 @@ describe('TenantChooserPageContent — the list', () => {
     expect(authService.switchTenant).not.toHaveBeenCalled();
   });
 
-  it('shows the failure with its request id and lets the user dismiss it', async () => {
+  /**
+   * CR-2026-09-19-E — was "shows the failure with its request id and lets the
+   * user dismiss it", asserting a banner with its own Dismiss button. The
+   * banner is gone: a failed switch surfaces through the snackbar, which has
+   * its own dismiss, and the list stays on screen and usable.
+   */
+  it('keeps the list usable and reports nothing itself when a switch fails', async () => {
     const user = userEvent.setup();
     loadSession([tenant({ id: 'a', name: 'Sharma' }), tenant({ id: 'b', name: 'Verma' })], 'a');
     authService.switchTenant.mockRejectedValue({
@@ -143,10 +150,12 @@ describe('TenantChooserPageContent — the list', () => {
     renderWithProviders(<TenantChooserPageContent />);
     await user.click(screen.getByText('Verma'));
 
+    await waitFor(() => expect(authService.switchTenant).toHaveBeenCalledWith('b'));
+    expect(screen.getByText('Verma')).toBeInTheDocument();
     expect(
-      await screen.findByText('You no longer have access to this business.')
-    ).toBeInTheDocument();
-    expect(screen.getByText('req_6')).toBeInTheDocument();
+      screen.queryByText('You no longer have access to this business.')
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText('req_6')).not.toBeInTheDocument();
   });
 });
 

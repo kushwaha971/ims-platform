@@ -83,13 +83,22 @@ describe('authService — CR-2026-09-19-A registration', () => {
     });
   });
 
-  it('suppresses the global toast — a taken address belongs under the field', async () => {
+  /**
+   * CR-2026-09-19-E — was "suppresses the global toast — a taken address
+   * belongs under the field", asserting `suppressErrorSnackbar: true` on this
+   * request. It no longer sets it, and that is the change: a taken address is a
+   * `validation_error` and `shouldToast` excludes that code for the WHOLE
+   * application, so the field still owns it — while the 500s and timeouts this
+   * blanket flag was also silencing now reach the single snackbar channel.
+   * src/tests/globalErrorChannel.test.tsx asserts both halves.
+   */
+  it('does NOT opt out of the global toast — the exceptions are by error code', async () => {
     const post = jest.spyOn(api, 'post').mockResolvedValue({ data: AUTH_BODY });
 
     await register({ email: 'ramesh@example.com', password: 'kirana2026' });
 
     const config = post.mock.calls[0]?.[2] as { suppressErrorSnackbar?: boolean } | undefined;
-    expect(config?.suppressErrorSnackbar).toBe(true);
+    expect(config?.suppressErrorSnackbar).toBeUndefined();
   });
 
   it('treats a user with no name as a new user with an empty one (FR-5)', async () => {

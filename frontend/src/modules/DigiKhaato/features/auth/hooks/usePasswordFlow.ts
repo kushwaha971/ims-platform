@@ -92,7 +92,7 @@ export const usePasswordFlow = (): UsePasswordFlowResult => {
       setFormErrors([]);
       try {
         await dispatch(setPassword({ newPassword: values.password })).unwrap();
-        dispatch(showSnackbar({ severity: 'success', message: 'auth.password.updated' }));
+        dispatch(showSnackbar({ severity: 'success', id: 'auth.password.updated' }));
       } catch (thrown) {
         const apiError = thrown as ApiErrorShape;
         if (apiError.code === 'validation_error') {
@@ -139,7 +139,7 @@ export const usePasswordFlow = (): UsePasswordFlowResult => {
       try {
         await dispatch(confirmPasswordReset({ token, newPassword: values.password })).unwrap();
         // FR-5 — the revocation is the part the user must be told about.
-        dispatch(showSnackbar({ severity: 'success', message: 'auth.password.resetDone' }));
+        dispatch(showSnackbar({ severity: 'success', id: 'auth.password.resetDone' }));
       } catch (thrown) {
         const apiError = thrown as ApiErrorShape;
         if (apiError.code === 'validation_error') {
