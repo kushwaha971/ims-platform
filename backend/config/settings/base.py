@@ -248,7 +248,7 @@ EMAIL_BACKEND = UB_EMAIL_BACKEND
 UB_EMAIL_ADAPTER = env.str(
     "UB_EMAIL_ADAPTER", "apps.common.integrations.email.console.ConsoleEmailBackend"
 )
-UB_EMAIL_FROM = env.str("UB_EMAIL_FROM", "no-reply@udhaarbook.local")
+UB_EMAIL_FROM = env.str("UB_EMAIL_FROM", "no-reply@digikhaato.local")
 
 # ── Misc feature flags / ops ─────────────────────────────────────────────────
 UB_SUPER_ADMIN_MOBILES = env.list("UB_SUPER_ADMIN_MOBILES", [])

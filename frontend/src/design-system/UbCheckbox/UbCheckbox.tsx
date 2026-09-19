@@ -12,8 +12,10 @@ import { MLCheckbox } from 'src/design-system/primitives';
  * checkbox whose label is not `htmlFor`-bound has a 20 px hit target instead of
  * a 200 px one, which on a phone is the whole difference.
  */
-export interface UbCheckboxProps
-  extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'checked' | 'onChange'> {
+export interface UbCheckboxProps extends Omit<
+  InputHTMLAttributes<HTMLInputElement>,
+  'type' | 'checked' | 'onChange'
+> {
   readonly checked: boolean;
   readonly onChange: (checked: boolean) => void;
   readonly label: ReactNode;

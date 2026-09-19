@@ -4,7 +4,7 @@ import { AppProviders } from 'src/components/providers/AppProviders';
 import { APP_NAME } from 'src/constants';
 import { LOCALE_COOKIE, THEME_COOKIE } from 'src/utils/cookieUtils';
 
-import { SessionBootstrap } from 'modules/UdhaarBook/features/auth/components/SessionBootstrap';
+import { SessionBootstrap } from 'modules/DigiKhaato/features/auth/components/SessionBootstrap';
 
 import type { Metadata, Viewport } from 'next';
 
@@ -36,7 +36,14 @@ import './globals.css';
 const THEME_INIT = `(function(){try{var m=document.cookie.match(/(?:^|; )${THEME_COOKIE}=([^;]*)/);var t=m&&decodeURIComponent(m[1]);if(t!=='dark'&&t!=='light'){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);}catch(e){}})();`;
 
 export const metadata: Metadata = {
-  title: APP_NAME,
+  /**
+   * CR-2026-09-19-D — a template rather than a bare name, so every route can
+   * set its own title and still carry the product's. A browser with fifteen
+   * tabs open shows about eighteen characters of each one, and every screen in
+   * this product used to render exactly the same eighteen.
+   */
+  title: { default: APP_NAME, template: `%s · ${APP_NAME}` },
+  applicationName: APP_NAME,
   description: "Your shop's khata, bills and stock in one book.",
   manifest: '/manifest.webmanifest',
   icons: {

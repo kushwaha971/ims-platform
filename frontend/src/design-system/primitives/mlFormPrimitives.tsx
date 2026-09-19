@@ -398,7 +398,10 @@ export const MLProgress = forwardRef<HTMLDivElement, MLProgressProps>(function M
       {...rest}
     >
       <div
-        className={cn('h-full rounded-pill transition-all duration-base ease-standard', PROGRESS_TONE[tone])}
+        className={cn(
+          'h-full rounded-pill transition-all duration-base ease-standard',
+          PROGRESS_TONE[tone]
+        )}
         style={{ width: `${clamped}%` }}
       />
     </div>

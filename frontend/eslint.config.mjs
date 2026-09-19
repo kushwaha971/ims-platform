@@ -93,7 +93,7 @@ const config = [
             },
             {
               target: './src/design-system/**',
-              from: './src/modules/UdhaarBook/features',
+              from: './src/modules/DigiKhaato/features',
               message: 'The design system never imports feature code.',
             },
             {
@@ -146,7 +146,7 @@ const config = [
           ],
           patterns: [
             {
-              group: ['modules/UdhaarBook/design-system/*/*'],
+              group: ['modules/DigiKhaato/design-system/*/*'],
               message: 'Import from the barrel (R-IM-3).',
             },
             { group: ['../../../*'], message: 'Use a path alias (R-IM-2).' },

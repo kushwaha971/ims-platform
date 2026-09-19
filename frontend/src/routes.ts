@@ -27,6 +27,12 @@ export const ROUTES = {
   SET_PASSWORD: '/set-password',
   ONBOARDING: '/onboarding',
 
+  // ── (public) — reachable with no session, because the sign-up screen links
+  //    to them BEFORE an account exists. CR-2026-09-19-D: "the terms" used to
+  //    be four words of prose with nothing behind them.
+  LEGAL_TERMS: '/legal/terms',
+  LEGAL_PRIVACY: '/legal/privacy',
+
   // ── (app) ─────────────────────────────────────────────────────────────────
   DASHBOARD: '/dashboard',
   PARTIES: '/parties',

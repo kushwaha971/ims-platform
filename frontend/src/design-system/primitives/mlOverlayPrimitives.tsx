@@ -88,7 +88,8 @@ export function MLDialog({
   // Remember the opener, move focus in, lock scroll — and undo all three.
   useEffect(() => {
     if (!open || typeof document === 'undefined') return undefined;
-    openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    openerRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
 
@@ -147,7 +148,7 @@ export function MLDialog({
         onPointerDown={dismissOnBackdrop ? () => onOpenChange(false) : undefined}
         className="absolute inset-0 bg-[rgba(0,0,0,0.45)]"
       />
-          <div
+      <div
         ref={panelRef}
         role="dialog"
         aria-modal="true"

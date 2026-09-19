@@ -1,18 +1,20 @@
 # Part 0 — Canon: Definitions, Decisions and Identifiers
 
-This part is the **normative vocabulary** of the UdhaarBook specification. Every other chapter, every FRD, every API path and every table name must use the identifiers defined here. If a later chapter conflicts with this part, this part wins and the later chapter is a defect to be fixed.
+This part is the **normative vocabulary** of the DigiKhaato specification. Every other chapter, every FRD, every API path and every table name must use the identifiers defined here. If a later chapter conflicts with this part, this part wins and the later chapter is a defect to be fixed.
 
 ## 0.1 Product identity
 
 | Item | Value |
 |---|---|
-| Product name | **UdhaarBook** (working name; white-label partners may rename per tenant/partner) |
+| Product name | **DigiKhaato** (final product name, `DEC-011`; white-label partners may rename per tenant/partner) |
 | One-line definition | A mobile-first, white-label business operating system for Indian small businesses of every type, built around a **party ledger (udhaar/khata)** that is fed by **GST-compliant billing**, **inventory** and **payments** — one book of truth instead of four apps. |
 | Vendor | Metis Labs (Metis Labs B.V.) |
 | Target market (v1) | India (INR, GST, UPI, WhatsApp, Hindi + English). Architecture keeps tax regime, currency and locale tenant-configurable for later regions. |
 | Target customers (v1) | Owner-operated and staffed small businesses of **all types**: retail shops, wholesalers/distributors, traders, service providers, small manufacturers/job-workers, professionals. Business type is chosen at onboarding and only tunes defaults. |
 | Delivery model | Multi-tenant SaaS, optionally white-labelled per **Partner** (bank, fintech, distributor, ERP vendor) who resells to their merchant base. |
-| Engineering reference | BrandHub Customer Module (`brandhub/BrandHub/apps/frontend/src/modules/Customer`, `app/customer/**`) for frontend organisation, `ml-uikit` design system, list-page/form/dialog patterns; BrandHub Django services for backend conventions; DigiKhaato `customer_ledger` for ledger semantics and fail-closed tenancy primitives. |
+| Engineering reference | BrandHub Customer Module (`brandhub/BrandHub/apps/frontend/src/modules/Customer`, `app/customer/**`) for frontend organisation, `ml-uikit` design system, list-page/form/dialog patterns; BrandHub Django services for backend conventions; legacy DigiKhaato `customer_ledger` for ledger semantics and fail-closed tenancy primitives. |
+
+**"legacy DigiKhaato".** The product was named **DigiKhaato** by `DEC-011`, replacing the working name *UdhaarBook*. Metis Labs already operates an older money-management application that this specification cites as an engineering reference, and that application is also called DigiKhaato; its udhaar ledger module was itself called UdhaarBook. Throughout this corpus the older application is written **legacy DigiKhaato** and the unqualified name **DigiKhaato** always means the product specified here. The two are different systems and must never be conflated.
 
 ## 0.2 Glossary (use these words in code, API and UI copy)
 
@@ -54,7 +56,7 @@ Vernacular mapping for UI copy (from research §C.4): "You gave" = उधार 
 | `notifications` | In-app inbox, transactional SMS adapter (config-gated), WhatsApp deep-link share | ✅ | WhatsApp Business API templates (utility), push (PWA) | — | — |
 | `import_export` | CSV import parties/items/opening balances; CSV export everywhere | ✅ | Excel templates, bulk edit | migration from Khatabook/Vyapar exports | — |
 | `help` | In-app help articles, FAQ, what's new | — | ✅ | tours | — |
-| `loans` | Daily-collection loan book (from DigiKhaato) | — | — | ✅ optional module | — |
+| `loans` | Daily-collection loan book (from legacy DigiKhaato) | — | — | ✅ optional module | — |
 | `accounting` | Double-entry GL, P&L, balance sheet, bank reconciliation | — | — | — | ✅ |
 
 ## 0.4 Technology decisions (normative)
@@ -237,7 +239,7 @@ System roles (MVP):
 
 ## 0.10 Naming conventions (cross-cutting)
 
-- Frontend mirrors `brandhub/apps/frontend` **exactly**: `app/**` thin route files (`page.tsx` = Suspense wrapper + `<XPageContent/>` from the feature); `src/modules/UdhaarBook/features/<feature>/{api,components,hooks,redux,types,constants,view-model,validation}`; `src/modules/UdhaarBook/design-system/Ub*/` with barrel `index.ts`; `src/modules/UdhaarBook/components/layout/` (shell, sidebar, header, bottom nav); `src/api/AxiosInstances.ts`, `src/api/APIPaths.ts`, `src/constants.ts`; `src/redux/store.ts` + `src/redux/slice/*` for cross-feature slices (`snackbarSlice`, `whiteLabelSlice`, `sessionSlice`); `src/hooks/useValidationSchemas.ts`, `src/hooks/useTranslation.ts`; `src/utils/*` (cn, money, dates, cookies, format); `locales/en.json`, `locales/hi.json`. File naming: components `PascalCase.tsx`; hooks `useX.ts`; services `<resource>Service.ts`; slices `<x>Slice.ts`; thunks `<x>Thunk.ts`; types `<x>.types.ts`; view-model helpers `<x>Display.ts`/`<x>Actions.ts`.
+- Frontend mirrors `brandhub/apps/frontend` **exactly**: `app/**` thin route files (`page.tsx` = Suspense wrapper + `<XPageContent/>` from the feature); `src/modules/DigiKhaato/features/<feature>/{api,components,hooks,redux,types,constants,view-model,validation}`; `src/modules/DigiKhaato/design-system/Ub*/` with barrel `index.ts`; `src/modules/DigiKhaato/components/layout/` (shell, sidebar, header, bottom nav); `src/api/AxiosInstances.ts`, `src/api/APIPaths.ts`, `src/constants.ts`; `src/redux/store.ts` + `src/redux/slice/*` for cross-feature slices (`snackbarSlice`, `whiteLabelSlice`, `sessionSlice`); `src/hooks/useValidationSchemas.ts`, `src/hooks/useTranslation.ts`; `src/utils/*` (cn, money, dates, cookies, format); `locales/en.json`, `locales/hi.json`. File naming: components `PascalCase.tsx`; hooks `useX.ts`; services `<resource>Service.ts`; slices `<x>Slice.ts`; thunks `<x>Thunk.ts`; types `<x>.types.ts`; view-model helpers `<x>Display.ts`/`<x>Actions.ts`.
 - Backend: Django apps named by module code (`platform`, `parties`, `ledger`, `inventory`, `sales`, `purchases`, `payments`, `expenses`, `reports`, `notifications`, `files`, `imports`, `tax`); models `PascalCase`; tables `<app>_<snake>`; services in `services/`; selectors in `selectors.py`.
 - API JSON: `snake_case` keys; frontend maps to `camelCase` at the service boundary (BrandHub pattern).
 - Dates: ISO-8601; business dates as `YYYY-MM-DD`; timestamps UTC with `Z`; tenant timezone `Asia/Kolkata` default.

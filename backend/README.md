@@ -1,4 +1,4 @@
-# UdhaarBook — backend
+# DigiKhaato — backend
 
 Sprint 0: the chassis and the walking skeleton. No business logic
 (Part 32 §32.3).

@@ -10,7 +10,7 @@ The tooling is constrained by ADR-021. Backend: `pytest`, `pytest-django`, `fact
 
 ### 28.1.1 What we are actually defending
 
-A test suite is a claim about what must not break. For most web products the claim is "the screens render and the happy path works". For UdhaarBook the claim is narrower and much harder:
+A test suite is a claim about what must not break. For most web products the claim is "the screens render and the happy path works". For DigiKhaato the claim is narrower and much harder:
 
 > A shopkeeper's balance is correct, was derived only from events that actually happened, and can be re-derived from those events at any time.
 
@@ -440,7 +440,7 @@ The budget is a **ceiling that may only be lowered**. A PR that raises a budget 
 Jest + `@testing-library/react` + `@testing-library/user-event` + `jest-environment-jsdom`. No Storybook (ADR-021 / Part 23 §23.4), no `msw`: HTTP is faked by mocking the thin `api/<x>Service.ts` module, which is the only place Axios is called, so the mock boundary is one module deep and stable.
 
 ```
-src/modules/UdhaarBook/
+src/modules/DigiKhaato/
   features/<feature>/
     api/<x>Service.ts            ← mocked in component and thunk tests
     redux/<x>Slice.ts            ← reducer tests

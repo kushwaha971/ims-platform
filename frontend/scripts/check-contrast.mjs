@@ -116,13 +116,31 @@ const NON_TEXT = [
   ['accent', 'canvas'],
 ];
 
-const DARK_PAIRS = [
-  ['text-primary', 'surface-card'],
-  ['text-muted', 'surface-card'],
-  ['success', 'surface-card'],
-  ['warning', 'surface-card'],
-  ['error', 'surface-card'],
-  ['form-error', 'surface-card'],
+/**
+ * CR-2026-09-19-D — the dark column is now checked exactly as hard as the light
+ * one. It used to be six hand-picked pairs against a single surface, which is
+ * how --border-strong sat at 1.93:1 for a whole sprint without anything
+ * noticing: nothing looked at it.
+ */
+const DARK_SURFACES = ['surface-card', 'canvas', 'surface-sunken', 'surface-hover'];
+
+/**
+ * SEPARATION is not a WCAG floor — it is the one this product needs and the one
+ * the first dark ramp failed. On an ink canvas a shadow does no work and a
+ * hairline at 1.2:1 is not visible, so a surface is only a surface if its own
+ * fill, or its edge, steps far enough away from the page behind it. Both are
+ * measured; 1.2:1 is the point at which the step survives an OLED phone at
+ * half brightness, which is the screen this product is read on.
+ *
+ * Light is excluded deliberately: there a white card on a #F6F7F9 canvas is
+ * 1.04:1 and separates by being BRIGHTER than its surroundings plus a hairline
+ * the eye can see, which is the opposite mechanism and not this one's business.
+ */
+const DARK_SEPARATION = [
+  ['surface-card', 'canvas', 1.2],
+  ['surface-raised', 'canvas', 1.3],
+  ['border-hairline', 'canvas', 1.4],
+  ['border-subtle', 'surface-card', 1.4],
 ];
 
 // ── Run ──────────────────────────────────────────────────────────────────────
@@ -173,7 +191,15 @@ TEXT_ON_SURFACES.forEach((fg) => {
 });
 TINTED.forEach(([fg, bg]) => check(fg, bg, 4.5, 'light', lightRaw));
 NON_TEXT.forEach(([fg, bg]) => check(fg, bg, 3.0, 'light', lightRaw));
-DARK_PAIRS.forEach(([fg, bg]) => check(fg, bg, 4.5, 'dark', darkRaw));
+
+TEXT_ON_SURFACES.forEach((fg) => {
+  DARK_SURFACES.forEach((bg) => check(fg, bg, 4.5, 'dark', darkRaw));
+});
+TINTED.forEach(([fg, bg]) => check(fg, bg, 4.5, 'dark', darkRaw));
+NON_TEXT.forEach(([fg, bg]) => check(fg, bg, 3.0, 'dark', darkRaw));
+check('border-strong', 'surface-card', 3.0, 'dark', darkRaw);
+check('accent', 'surface-card', 3.0, 'dark', darkRaw);
+DARK_SEPARATION.forEach(([fg, bg, floor]) => check(fg, bg, floor, 'dark', darkRaw));
 
 if (process.argv.includes('--print')) {
   rows.forEach((row) =>

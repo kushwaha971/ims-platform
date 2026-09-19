@@ -49,7 +49,7 @@
     box-shadow: var(--focus-ring);
   }
 
-  /* Below `sm` the page padding tightens (§23.2.1 UdhaarBook override). */
+  /* Below `sm` the page padding tightens (§23.2.1 DigiKhaato override). */
   @media (max-width: 639px) {
     :root {
       --page-pad: 16px;

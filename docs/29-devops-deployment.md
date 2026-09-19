@@ -1,6 +1,6 @@
 # Part 29 — DevOps and Deployment
 
-This part specifies how UdhaarBook is built, run, deployed, backed up and recovered. It is written for a product whose first deployment is **one machine running for one person** and whose second deployment is a small production VPS serving a few hundred tenants — and which must make that transition without a rewrite. Every decision below is made twice: once for the machine on the desk, once for the server, with the explicit constraint that the two configurations differ only in values, never in shape.
+This part specifies how DigiKhaato is built, run, deployed, backed up and recovered. It is written for a product whose first deployment is **one machine running for one person** and whose second deployment is a small production VPS serving a few hundred tenants — and which must make that transition without a rewrite. Every decision below is made twice: once for the machine on the desk, once for the server, with the explicit constraint that the two configurations differ only in values, never in shape.
 
 Governing decisions: docker-compose with `db`, `backend`, `scheduler`, `frontend` (plus `nginx` in production) — ADR-019. No Celery, no Redis — background work is `platform_job` rows drained by `manage.py run_scheduler` — ADR-012. No S3/MinIO — local `MEDIA_ROOT` through Django's storage API — ADR-013. No Sentry, no OpenTelemetry, no Prometheus — structured JSON logging to stdout and `/system/health` — ADR-018. PostgreSQL 16 in Docker for both development and production — ADR-008.
 
@@ -178,7 +178,7 @@ services:
       target: ${FRONTEND_TARGET:-runtime}
       args:
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000/api/v1}
-        NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-UdhaarBook}
+        NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-DigiKhaato}
     restart: unless-stopped
     environment:
       NODE_ENV: ${NODE_ENV:-production}
@@ -403,7 +403,7 @@ One file per host, `chmod 600`, never committed. `.env.example` is this table, i
 | `GUNICORN_TIMEOUT` | `60` | no | backend | Worker timeout (seconds) |
 | `NEXT_PUBLIC_API_BASE_URL` | `http://localhost:8000/api/v1` | no | frontend (build arg) | Browser-side API base |
 | `INTERNAL_API_BASE_URL` | `http://backend:8000/api/v1` | no | frontend (runtime) | Server-component fetches |
-| `NEXT_PUBLIC_APP_NAME` | `UdhaarBook` | no | frontend (build arg) | Fallback product name before branding resolves |
+| `NEXT_PUBLIC_APP_NAME` | `DigiKhaato` | no | frontend (build arg) | Fallback product name before branding resolves |
 | `BACKUP_DIR` | `/srv/backups` | no | backup | Dump destination |
 | `BACKUP_HOUR_UTC` | `20` | no | backup | Daily dump hour |
 | `BACKUP_KEEP_DAILY` / `_WEEKLY` | `30` / `12` | no | backup | Retention |

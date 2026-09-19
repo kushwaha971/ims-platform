@@ -131,9 +131,9 @@ Entries are grouped by decision type: product, technical, commercial, legal and 
 
 ### OQ-12 — Does the `LON` module belong in this product?
 
-**Question.** `LON-01`–`LON-03` are a daily-collection loan book for merchants who already lend — a bookkeeping feature, explicitly not UdhaarBook lending (Part 11 §11.3 item 7). Should it be built at all, or does it belong in a partner's product?
+**Question.** `LON-01`–`LON-03` are a daily-collection loan book for merchants who already lend — a bookkeeping feature, explicitly not DigiKhaato lending (Part 11 §11.3 item 7). Should it be built at all, or does it belong in a partner's product?
 
-**Why it is open.** It is carried from DigiKhaato rather than derived from UdhaarBook's own research, and it is the one module whose presence invites exactly the confusion Part 11 §11.3 item 7 exists to prevent.
+**Why it is open.** It is carried from legacy DigiKhaato rather than derived from this product's own research, and it is the one module whose presence invites exactly the confusion Part 11 §11.3 item 7 exists to prevent.
 
 **Options.** (a) Build it in Phase 3 as specified — consequence: a real capability for a real merchant segment, plus a permanent explanatory burden every time someone reads "loans" in the module list. (b) Drop it — consequence: merchants who lend on daily collection keep a separate book, and a source of positioning confusion disappears. (c) Build it as a partner-gated module, invisible unless a partner enables it — consequence: (a)'s capability with (b)'s positioning, at the cost of a module toggle that already exists.
 
@@ -479,7 +479,7 @@ Entries are grouped by decision type: product, technical, commercial, legal and 
 
 ### OQ-28 — Does Metis publish a data-processing agreement template for merchants?
 
-**Question.** UdhaarBook is the Data Processor for merchants' customer data and the merchant is the Data Fiduciary (Part 3 §3.10). That relationship requires a contract. Is it a clause in the terms of service, a separate DPA that every merchant accepts at onboarding, or a document offered only to partners and larger tenants?
+**Question.** DigiKhaato is the Data Processor for merchants' customer data and the merchant is the Data Fiduciary (Part 3 §3.10). That relationship requires a contract. Is it a clause in the terms of service, a separate DPA that every merchant accepts at onboarding, or a document offered only to partners and larger tenants?
 
 **Why it is open.** It has not been drafted, and the merchant-facing form of it is a product surface (an onboarding step) as much as a legal artefact.
 

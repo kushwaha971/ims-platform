@@ -16,7 +16,7 @@ import { MUTATIONS, QUERIES, REGISTERED_THUNK_NAMES } from 'src/redux/invalidati
  * actually permit — `export const <name> = createAsyncThunk<` at the top level
  * (R-FN-2, R-C-1) — without adding the compiler as a test-time dependency.
  */
-const FEATURES_ROOT = join(process.cwd(), 'src/modules/UdhaarBook/features');
+const FEATURES_ROOT = join(process.cwd(), 'src/modules/DigiKhaato/features');
 
 const walk = (dir: string): readonly string[] => {
   const entries = readdirSync(dir);

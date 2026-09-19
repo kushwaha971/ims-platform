@@ -24,7 +24,7 @@ Records are numbered `PD-01` upward, never reused. A superseded decision keeps i
 | `PD-02` | The small retailer and the wholesaler are the primary MVP customers | 18 Sep 2026 | Accepted |
 | `PD-03` | Business-type-agnostic, tuning defaults only — not vertical products | 18 Sep 2026 | Accepted |
 | `PD-04` | Ledger first, documents second — the ledger is the spine | 18 Sep 2026 | Accepted |
-| `PD-05` | Model the ledger on the existing DigiKhaato UdhaarBook rather than designing fresh | 18 Sep 2026 | Accepted |
+| `PD-05` | Model the ledger on the existing legacy DigiKhaato UdhaarBook rather than designing fresh | 18 Sep 2026 | Accepted |
 | `PD-06` | Inherit Khatabook's red/green and "you gave / you got" vocabulary | 18 Sep 2026 | Accepted |
 | `PD-07` | Adopt Zoho's status vocabularies; reject its module sprawl | 18 Sep 2026 | Accepted |
 | `PD-08` | Build white-label into the MVP chassis rather than retrofit it | 18 Sep 2026 | Accepted |
@@ -47,7 +47,7 @@ Records are numbered `PD-01` upward, never reused. A superseded decision keeps i
 
 **Date:** 18 September 2026 · **Status:** Accepted
 
-**Decision.** UdhaarBook targets **India only** at v1 — INR, GST, UPI, WhatsApp, English and Hindi — while keeping tax regime, currency and locale tenant-configurable so that a second region is architecturally possible; **no feature is built for a second region**.
+**Decision.** DigiKhaato targets **India only** at v1 — INR, GST, UPI, WhatsApp, English and Hindi — while keeping tax regime, currency and locale tenant-configurable so that a second region is architecturally possible; **no feature is built for a second region**.
 
 **Context.** The product's core artefact, the udhaar ledger, is a specific cultural and commercial practice. Its adjacent requirements — GST with its slab history, UPI, DLT-registered SMS, WhatsApp as the default communication channel, a 1 April financial year — are all India-specific. A product built to be regionally general would have to abstract every one of them, and a tax engine general enough for two countries is a tax engine nobody can verify against either.
 
@@ -123,7 +123,7 @@ Records are numbered `PD-01` upward, never reused. A superseded decision keeps i
 
 **Who decided.** Product owner with the engineering lead.
 
-**Evidence relied on.** Part 4 §4.6 (the gap UdhaarBook occupies) `[R3]`; Part 9 §9.5 (what Khatabook never built) `[R2]`; Part 11 §11.2; Part 18 §18.5 principle P1.
+**Evidence relied on.** Part 4 §4.6 (the gap DigiKhaato occupies) `[R3]`; Part 9 §9.5 (what Khatabook never built) `[R2]`; Part 11 §11.2; Part 18 §18.5 principle P1.
 
 **What would reverse it.** Nothing short of abandoning the product thesis. If merchants use only the document half, that is `RSK-01`'s stop-and-rethink condition, not a reason to invert the spine.
 
@@ -131,11 +131,11 @@ Records are numbered `PD-01` upward, never reused. A superseded decision keeps i
 
 ---
 
-## PD-05 — Model the ledger on the existing DigiKhaato UdhaarBook rather than designing fresh
+## PD-05 — Model the ledger on the existing legacy DigiKhaato UdhaarBook rather than designing fresh
 
 **Date:** 18 September 2026 · **Status:** Accepted
 
-**Decision.** The ledger's semantics — direction conventions, the meaning of a party balance, opening balances, correction-by-reversal, fail-closed tenancy primitives and the daily-collection patterns — are **taken from the existing DigiKhaato `customer_ledger` implementation** rather than designed from first principles; canon §0.1 names it as the reference for ledger semantics alongside BrandHub for engineering conventions.
+**Decision.** The ledger's semantics — direction conventions, the meaning of a party balance, opening balances, correction-by-reversal, fail-closed tenancy primitives and the daily-collection patterns — are **taken from the existing legacy DigiKhaato `customer_ledger` implementation** rather than designed from first principles; canon §0.1 names it as the reference for ledger semantics alongside BrandHub for engineering conventions.
 
 **Context.** Metis Labs already operates a working money-management product containing an udhaar ledger that has been used against real Indian small-business behaviour. Designing a ledger fresh would mean rediscovering, at cost, the things that implementation already resolved: what a debit means for a supplier, how an opening balance sits in the series, what happens when an entry is backdated past a correction.
 
@@ -145,9 +145,9 @@ Records are numbered `PD-01` upward, never reused. A superseded decision keeps i
 
 **Who decided.** Product owner with the engineering lead.
 
-**Evidence relied on.** Canon §0.1 (engineering reference); canon §0.2 (ledger direction definitions); the DigiKhaato `customer_ledger` implementation itself; Part 16 §16.14 (`LON-01`–`LON-03` carried from the same source).
+**Evidence relied on.** Canon §0.1 (engineering reference); canon §0.2 (ledger direction definitions); the legacy DigiKhaato `customer_ledger` implementation itself; Part 16 §16.14 (`LON-01`–`LON-03` carried from the same source).
 
-**What would reverse it.** Evidence that a DigiKhaato convention is wrong for this segment — most plausibly the supplier-side direction, which is the one place where "you gave / you got" and accounting intuition disagree and where a wholesaler's accountant would notice first.
+**What would reverse it.** Evidence that a legacy DigiKhaato convention is wrong for this segment — most plausibly the supplier-side direction, which is the one place where "you gave / you got" and accounting intuition disagree and where a wholesaler's accountant would notice first.
 
 **Affected features.** `LED-01`–`LED-11`; `PTY-03`; canon §0.2 and §0.7.
 
@@ -167,7 +167,7 @@ Records are numbered `PD-01` upward, never reused. A superseded decision keeps i
 
 **Who decided.** Product owner.
 
-**Evidence relied on.** Part 9 §9.7 (the conventions UdhaarBook must honour) and §9.8 (what UdhaarBook copies deliberately) `[R2 §A.1]`; Part 11 §11.1 (the two-button party ledger as table stakes); Part 23 (colour-plus-word rule).
+**Evidence relied on.** Part 9 §9.7 (the conventions DigiKhaato must honour) and §9.8 (what DigiKhaato copies deliberately) `[R2 §A.1]`; Part 11 §11.1 (the two-button party ledger as table stakes); Part 23 (colour-plus-word rule).
 
 **What would reverse it.** Nothing plausible. Accessibility work may change *how* red and green are rendered — contrast, pairing, non-colour indicators — but not what they mean.
 
@@ -359,7 +359,7 @@ Records are numbered `PD-01` upward, never reused. A superseded decision keeps i
 
 **Context.** Three of the category's top complaints are addressed here at once: intrusive advertising is ranked first against the second-largest ledger app; loan-processing delays and rejections dominate the largest one's recent reviews and pollute a bookkeeping product; and renewal price rises rank third across the whole category as a churn trigger.
 
-**Options considered.** *(a) None of the three (chosen)* — it forgoes an easy revenue line on a large free base and makes the paid wall of `PD-11` carry the whole load; it is also a business-model choice a competitor funded on a lending thesis structurally cannot copy, which is the defensibility argument. *(b) Ads on the free tier only* — the conventional answer, and it puts an interruption inside the eight-second counter loop that `LED-01` exists to protect. *(c) Lending as an opt-in module* — permitted only in the form Part 11 §11.3 item 7 describes: a partner originates, UdhaarBook provides consented exportable ledger data and the consent record, and the loan journey stays in the partner's app.
+**Options considered.** *(a) None of the three (chosen)* — it forgoes an easy revenue line on a large free base and makes the paid wall of `PD-11` carry the whole load; it is also a business-model choice a competitor funded on a lending thesis structurally cannot copy, which is the defensibility argument. *(b) Ads on the free tier only* — the conventional answer, and it puts an interruption inside the eight-second counter loop that `LED-01` exists to protect. *(c) Lending as an opt-in module* — permitted only in the form Part 11 §11.3 item 7 describes: a partner originates, DigiKhaato provides consented exportable ledger data and the consent record, and the loan journey stays in the partner's app.
 
 **Rationale.** These are not ethical gestures; they are the three specific behaviours that the research shows destroy trust in this category, and trust is the product's asset. The pricing half is equally concrete: Indian SMB products are priced flat per business with user counts as tier steps, per-user pricing draws tier-gating complaints, and renewal rises are a top-three churn trigger — so published and grandfathered prices are a direct response to measured behaviour.
 
@@ -447,7 +447,7 @@ Records are numbered `PD-01` upward, never reused. A superseded decision keeps i
 
 **Context.** Between "we do not have that" and "we have the full version" there is almost always a reduced form that covers the behaviour the target user actually performs. The distinction that makes this work is between a reduction with a growth path and a reduction that is a dead end — the former is a scope decision, the latter is a future rewrite.
 
-**Options considered.** *(a) Reduce with a growth path (chosen)* — the merchant gets the outcome, the team ships, and the extension is designed rather than discovered. The clearest example is approval workflows: no product in this segment has a working approval chain because the person who would approve is standing next to the person who acts, so UdhaarBook replaces the workflow with accountability — a mandatory typed reason, a plain-language consequence preview ("Stock +2, Ledger −₹898"), an audit row with before and after, and a permission that separates who may do it at all. That delivers what an approval chain is bought for at a fraction of the interface. *(b) Build the full version* — each one is weeks and several are months, and together they are the incumbents' product. *(c) Omit entirely* — several of these are parity items whose absence is disqualifying in the first session.
+**Options considered.** *(a) Reduce with a growth path (chosen)* — the merchant gets the outcome, the team ships, and the extension is designed rather than discovered. The clearest example is approval workflows: no product in this segment has a working approval chain because the person who would approve is standing next to the person who acts, so DigiKhaato replaces the workflow with accountability — a mandatory typed reason, a plain-language consequence preview ("Stock +2, Ledger −₹898"), an audit row with before and after, and a permission that separates who may do it at all. That delivers what an approval chain is bought for at a fraction of the interface. *(b) Build the full version* — each one is weeks and several are months, and together they are the incumbents' product. *(c) Omit entirely* — several of these are parity items whose absence is disqualifying in the first session.
 
 **Rationale.** Part 11 §11.5 states the rule that makes this durable: a **Differentiating** item that appears to require un-simplifying a **Simplify** item is a Class C change, and the simplification's growth path should be examined first. Credit control is a differentiator delivered by a nullable limit, three modes and an audited override — not by a credit-approval workflow.
 

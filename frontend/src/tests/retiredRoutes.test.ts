@@ -28,7 +28,7 @@ const APP_DIR = join(process.cwd(), 'app');
 const AUTH_GROUP = join(APP_DIR, '(auth)');
 
 const request = (pathname: string) => {
-  const url = new URL(`https://udhaarbook.test${pathname}`);
+  const url = new URL(`https://digikhaato.test${pathname}`);
   return {
     nextUrl: Object.assign(url, { clone: () => new URL(url.toString()) }),
     cookies: { has: () => false },

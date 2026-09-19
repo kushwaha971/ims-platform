@@ -2,7 +2,12 @@
 
 import { forwardRef, memo, type ButtonHTMLAttributes, type ReactNode } from 'react';
 
-import { MLButton, MLSpinner, type MLButtonSize, type MLButtonVariant } from 'src/design-system/primitives';
+import {
+  MLButton,
+  MLSpinner,
+  type MLButtonSize,
+  type MLButtonVariant,
+} from 'src/design-system/primitives';
 import { cn } from 'src/utils/cn';
 
 /**
@@ -24,8 +29,10 @@ import { cn } from 'src/utils/cn';
 export type UbButtonVariant = MLButtonVariant;
 export type UbButtonSize = MLButtonSize;
 
-export interface UbButtonProps
-  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'aria-busy'> {
+export interface UbButtonProps extends Omit<
+  ButtonHTMLAttributes<HTMLButtonElement>,
+  'children' | 'aria-busy'
+> {
   readonly variant?: UbButtonVariant;
   readonly size?: UbButtonSize;
   readonly busy?: boolean;

@@ -4,12 +4,12 @@
 
 | Field | Value |
 |---|---|
-| Document | UdhaarBook Product Requirements Document |
-| Part | 18 of the UdhaarBook Single Source of Truth |
+| Document | DigiKhaato Product Requirements Document |
+| Part | 18 of the DigiKhaato Single Source of Truth |
 | Version | 1.0 (first signable issue) |
 | Status | For approval |
 | Date | 18 September 2026 |
-| Product | UdhaarBook — mobile-first, white-label business operating system for Indian small businesses |
+| Product | DigiKhaato — mobile-first, white-label business operating system for Indian small businesses |
 | Vendor | Metis Labs (Metis Labs B.V.) |
 | Author | Product, Metis Labs |
 | Approvers | Product owner; engineering lead; compliance owner; launch partner representative where a partner is contracted |
@@ -41,13 +41,13 @@ The software market has not solved this. It has divided into two clusters that e
 
 The consequences are measurable. Credit is extended without limits or aging, so receivables age and are written off. Collection depends on remembering and on the social cost of asking. Invoices are compliant only to the extent the person writing them remembers the rules. Stock is discovered to be wrong rather than known to be right. And the accountant — present in almost every one of these businesses as a second, non-paying user — re-keys data that already exists in digital form, because what he receives is a PDF or a photograph rather than a file.
 
-**The problem UdhaarBook addresses:** an Indian small business of any type has no single record that holds its udhaar, its bills, its stock and its cash together, is fast enough to use at a counter with a customer waiting, is available in the language the owner reads, is trustworthy enough that a disputed balance can be settled by looking at it, and hands clean data to the accountant without re-keying.
+**The problem DigiKhaato addresses:** an Indian small business of any type has no single record that holds its udhaar, its bills, its stock and its cash together, is fast enough to use at a counter with a customer waiting, is available in the language the owner reads, is trustworthy enough that a disputed balance can be settled by looking at it, and hands clean data to the accountant without re-keying.
 
 ## 18.3 Goals and non-goals
 
 ### 18.3.1 Goals
 
-**G1 — Replace the paper.** A business that adopts UdhaarBook stops maintaining its paper khata, its bill book and its stock register. *Target:* at least 50 % of pilot merchants report at day 45 that they no longer maintain the paper khata; at least 40 % of onboarded tenants are still posting ledger entries on day 30.
+**G1 — Replace the paper.** A business that adopts DigiKhaato stops maintaining its paper khata, its bill book and its stock register. *Target:* at least 50 % of pilot merchants report at day 45 that they no longer maintain the paper khata; at least 40 % of onboarded tenants are still posting ledger entries on day 30.
 
 **G2 — Be faster than the pencil at the counter.** *Target:* median time from opening a party page to a saved ledger entry ≤ 8 seconds on a 2 GB Android phone; P95 server time for `POST /ledger-entries` ≤ 250 ms; ledger drawer visible ≤ 100 ms after tap.
 
@@ -146,7 +146,7 @@ These apply to every feature in every module and are not restated per feature. A
 
 **CC-6 Audit.** Every state-changing operation runs inside `transaction.atomic()` and writes a `platform_audit_log` row through the service layer, carrying actor, tenant, entity type and identifier, action, before and after snapshots for critical entities, and metadata including request identifier, IP and user agent. Reasons captured for voids, reversals, corrections, adjustments, write-offs and credit-limit overrides are part of the audit record and are visible to the owner in `PLT-08`, not only to operations. Audit rows are append-only.
 
-**CC-7 Data export and deletion under DPDP.** The merchant is the Data Fiduciary for their customers' data; UdhaarBook is the Data Processor for it and a Data Fiduciary for merchant accounts. Requirements: an owner can export the complete tenant as a CSV bundle at any time (`PLT-10`); an owner can request deletion, which runs after a stated cool-off, cascades to messaging logs, and preserves only what a statutory retention obligation requires — GST records for 72 months from the annual-return due date — with the retained set documented; every party carries per-channel opt-in and opt-out flags with the consent source and timestamp, and an opt-out suppresses every outbound message immediately; contacts-permission data is processed on-device and no address book is uploaded (`PTY-07`, Phase 2); a grievance contact is published in-product; security safeguards include encryption in transit and at rest, access control, and logs retained for at least a year; breach procedures meet the Data Protection Board's notification timelines and CERT-In's separate incident-reporting requirement; India-region hosting is preferred and cross-border transfer is a deployment decision recorded per partner; sign-up by anyone under 18 is blocked. Personal data never appears in analytics events or log lines — no mobile numbers, names, notes or amounts.
+**CC-7 Data export and deletion under DPDP.** The merchant is the Data Fiduciary for their customers' data; DigiKhaato is the Data Processor for it and a Data Fiduciary for merchant accounts. Requirements: an owner can export the complete tenant as a CSV bundle at any time (`PLT-10`); an owner can request deletion, which runs after a stated cool-off, cascades to messaging logs, and preserves only what a statutory retention obligation requires — GST records for 72 months from the annual-return due date — with the retained set documented; every party carries per-channel opt-in and opt-out flags with the consent source and timestamp, and an opt-out suppresses every outbound message immediately; contacts-permission data is processed on-device and no address book is uploaded (`PTY-07`, Phase 2); a grievance contact is published in-product; security safeguards include encryption in transit and at rest, access control, and logs retained for at least a year; breach procedures meet the Data Protection Board's notification timelines and CERT-In's separate incident-reporting requirement; India-region hosting is preferred and cross-border transfer is a deployment decision recorded per partner; sign-up by anyone under 18 is blocked. Personal data never appears in analytics events or log lines — no mobile numbers, names, notes or amounts.
 
 **CC-8 Messaging compliance.** SMS to Indian numbers requires DLT registration of the principal entity, a six-character alphabetic service header and content templates whose variables match exactly, or the message is dropped at scrubbing. Ledger-entry and reminder messages are service-implicit, never promotional. WhatsApp deep links (`wa.me`) are free, manual and need no approval and are the MVP mechanism; server-sent WhatsApp requires Meta business verification and approved Utility templates and is Phase 2 (`NTF-05`, `LED-12`), with per-message cost surfaced. Every outbound attempt writes a `notifications_message_log` row with provider identifier and status, including `skipped` when no provider is configured.
 
@@ -250,7 +250,7 @@ Each assumption is stated with what happens if it proves false, because an unexa
 
 **A9** GST rules, slabs and thresholds will continue to change. *This assumption is certain to hold*, which is why rates carry effective dates, thresholds are settings rather than constants, and a compliance owner is a named role.
 
-**A10** The BrandHub frontend conventions, `ml-uikit` primitives and the DigiKhaato ledger semantics are available and reusable as Part 0 §0.1 states. *If false:* the design-system and frontend-architecture estimates in Part 13 are understated by several weeks.
+**A10** The BrandHub frontend conventions, `ml-uikit` primitives and the legacy DigiKhaato ledger semantics are available and reusable as Part 0 §0.1 states. *If false:* the design-system and frontend-architecture estimates in Part 13 are understated by several weeks.
 
 ## 18.10 Constraints
 
@@ -380,7 +380,7 @@ Open questions are tracked here with an owner and the phase by which an answer i
 | OQ-09 | Does the product need a "move entry to another party" correction preset, or is reversal-plus-new-entry acceptable? | Product + UX | Phase 2 | Noted as a future enhancement in `LED-03` §24; frequency in production telemetry should decide. |
 | OQ-10 | Retention rule for `notifications_message_log` rows containing recipient numbers — how long, and is masking sufficient for DPDP? | Compliance owner | Before launch | Interacts with CC-7's deletion cascade and NFR-41. |
 | OQ-11 | Pilot cohort composition: how many of each business type, and is at least one wholesale tenant with staff included? | Product | Before pilot | Without a staffed wholesaler the credit-limit, roles and aging features are untested against their intended user. |
-| OQ-12 | Does `LON` (loans) belong in this product at all, or in a partner's? | Product | Phase 3 planning | Part 11 §11.3 item 7 distinguishes a merchant's own daily-collection book from UdhaarBook lending; the module's future should be reconfirmed before it is built. |
+| OQ-12 | Does `LON` (loans) belong in this product at all, or in a partner's? | Product | Phase 3 planning | Part 11 §11.3 item 7 distinguishes a merchant's own daily-collection book from DigiKhaato lending; the module's future should be reconfirmed before it is built. |
 
 ## 18.16 Approval
 

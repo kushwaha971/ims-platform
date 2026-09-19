@@ -51,6 +51,14 @@ module.exports = {
           quiet: 'var(--accent-quiet)',
           line: 'var(--accent-line)',
         },
+        /* The brand mark's own values — `UbLogo` and nothing else (§23.2.4). */
+        brand: {
+          mark: hsl('--brand-mark'),
+          page: hsl('--brand-page'),
+          pageBack: hsl('--brand-page-back'),
+          rule: hsl('--brand-rule'),
+          ruleShort: hsl('--brand-rule-short'),
+        },
         canvas: hsl('--canvas'),
         surface: {
           card: hsl('--surface-card'),

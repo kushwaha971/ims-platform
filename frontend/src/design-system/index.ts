@@ -1,6 +1,6 @@
 /**
  * Part 19 §19.2.5 — THE barrel. Features import only from
- * `modules/UdhaarBook/design-system`… in BrandHub's tree; here the design
+ * `modules/DigiKhaato/design-system`… in BrandHub's tree; here the design
  * system is shared across modules, so the import path is
  * `src/design-system` and never a deep path (R-IM-3). This is what lets a
  * component be split into several files later without touching a feature.
@@ -46,6 +46,13 @@ export type { UbGridColumns, UbGridProps, UbGridResponsiveColumns } from './UbGr
 export { UbLink } from './UbLink';
 export type { UbLinkProps } from './UbLink';
 
+/**
+ * CR-2026-09-19-D — the brand mark. It sits in the layout block because that is
+ * what it is: the first thing in a rail, a page header or an auth column.
+ */
+export { UbLogo } from './UbLogo';
+export type { UbLogoProps, UbLogoSize, UbLogoTone, UbLogoVariant } from './UbLogo';
+
 export { UbListItemText } from './UbListItemText';
 export type { UbListItemTextProps } from './UbListItemText';
 
@@ -56,12 +63,7 @@ export { UbSpacer } from './UbSpacer';
 export type { UbSpacerAxis, UbSpacerProps } from './UbSpacer';
 
 export { UbStack } from './UbStack';
-export type {
-  UbStackAlign,
-  UbStackDirection,
-  UbStackJustify,
-  UbStackProps,
-} from './UbStack';
+export type { UbStackAlign, UbStackDirection, UbStackJustify, UbStackProps } from './UbStack';
 
 export { UbText } from './UbText';
 export type { UbTextProps } from './UbText';
@@ -81,10 +83,10 @@ export { UbEmptyState } from './UbEmptyState';
 export type { UbEmptyStateProps, UbEmptyStateVariant } from './UbEmptyState';
 
 export { UbPageHeader } from './UbPageHeader';
-export type { UbPageHeaderProps } from './UbPageHeader';
+export type { UbPageHeaderProps, UbPageHeaderWidth } from './UbPageHeader';
 
 export { UbPageShell } from './UbPageShell';
-export type { UbPageShellProps } from './UbPageShell';
+export type { UbPageShellProps, UbPageShellWidth } from './UbPageShell';
 
 export { UbPageSkeleton, UbSkeleton } from './UbSkeleton';
 export type { UbSkeletonProps, UbSkeletonVariant } from './UbSkeleton';

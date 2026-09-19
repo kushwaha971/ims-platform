@@ -209,3 +209,52 @@ ADR-021 ↔ §26.14 contradiction recorded as `CR-j`.
   *identity* change is the expensive half: `platform.0004_email_identity` reverses cleanly
   only for rows the old schema could represent, i.e. users who have a mobile number.
 - **Amends:** ADR-011 (mobile as the natural key) is superseded — see `CR-136`.
+
+### DEC-011 — The product is named DigiKhaato; the repository folder stays `ims-platform`
+
+- **Raised:** 2026-09-19 by the owner   **Decider:** Owner (Product)   **Status:** `decided`
+- **Decision:** the product is named **DigiKhaato**. *UdhaarBook* was the working name and is
+  retired. The name has been applied across the backend and all of the specification corpus.
+  The **repository folder stays `ims-platform`** — it was chosen deliberately to be
+  product-name-neutral, so that naming changes never become directory moves, and this
+  decision is the first occasion on which that choice paid for itself. No directory is
+  renamed to match the product, now or later.
+- **Context:** the corpus was written under a working name and the name had reached the
+  canon's product-identity table, every chapter title, the FRDs, the email and SMS
+  templates and the operator-facing `README`s. Naming the product is cheap on the day it
+  is decided and expensive every week it is deferred.
+- **The domain vocabulary is untouched.** *udhaar*, *khaata*/*khata*, *jama*, *baaki*,
+  *hisaab*, "you gave"/"you got" and the red/green direction semantics are the words Indian
+  merchants actually use; they are grounded in Part 9 and fixed by canon §0.2, and they are
+  **not** part of this rename. A sentence like "the udhaar a customer owes" is unchanged.
+  The rename was applied occurrence by occurrence, never as a global substitution.
+- **Namespaces are deliberately not renamed.** The `UB_` environment-variable prefix stays:
+  it is a namespace, it spans 71 variables, and both
+  `tests/architecture/test_env_example.py` and Part 29 §29.2.4 pin it — renaming it is churn
+  with no reader benefit. The same reasoning keeps the `ub.` analytics event prefix
+  (Part 31) and the `Ub*` design-system component prefix (Part 23, ADR-002). A namespace is
+  an identifier, not a piece of copy.
+- **Infrastructure identifiers are deliberately not renamed** in this pass and are raised as
+  `CR-142`: the PostgreSQL database and role names (`udhaarbook`, `udhaarbook_backup`), the
+  Compose project name, the `/srv/udhaarbook` deployment path, the `app.udhaarbook.in`
+  family of hostnames and the `udhaarbook-backend` / `udhaarbook-frontend` image names.
+  Each of those is a live identity with a migration, a DNS record or a certificate behind
+  it. A product rename must not become a schema change or a cutover.
+- **Name collision — read this before writing "DigiKhaato".** Metis Labs already operates an
+  older money-management application that this corpus cites as an engineering reference,
+  and **that application is also called DigiKhaato**; its udhaar ledger module was itself
+  called UdhaarBook. The corpus now writes the predecessor as **legacy DigiKhaato**
+  throughout, and the unqualified name always means the product specified here. Canon §0.1
+  carries the definition. The four surviving occurrences of *UdhaarBook* in the corpus —
+  `PD-05`'s title and table row, and two lines in `STATUS.md` — name the **legacy** module
+  or a delivered artefact and are correct as they stand. See `CR-145`.
+- **Blast radius:** if the name is reversed, the affected surfaces are the canon §0.1
+  identity table, every chapter's prose, `apps/platform_app/services/passwords.py::APP_NAME`
+  and `otp.py::_app_name()` (which together feed every OTP SMS, reset email and verification
+  email through the `{app_name}` placeholder in `services/messaging.py`), the
+  `UB_EMAIL_FROM` default, and the log filename in `apps/common/logging.py`. It is a
+  copy change everywhere and a schema change nowhere, which is the property that made it
+  safe to do in one pass.
+- **Links:** `CR-142` · `CR-143` · `CR-144` · `CR-145` · canon §0.1 · Part 29 §29.2.4 ·
+  Part 31 · Part 23 · `BACKLOG.md`
+- **Decided:** 2026-09-19 by the owner

@@ -1,6 +1,6 @@
 # Part 7 — Zoho's Product Evolution as a Sequencing Lesson
 
-*Zoho Inventory launched in October 2015 and has published a dated changelog and a ten-year retrospective. Dossier R1 Part C reconstructs the timeline year by year, classifies the feature set into historical, mature, recent and roadmap buckets, and draws ten lessons. This chapter reads that history as a sequencing document: what Zoho built first, what it added later, what it added only under competitive or regulatory pressure, and what it still has not solved. It then derives UdhaarBook's own sequencing principles and states explicitly where UdhaarBook sequences differently — most importantly, ledger-first rather than invoice-first — and why.*
+*Zoho Inventory launched in October 2015 and has published a dated changelog and a ten-year retrospective. Dossier R1 Part C reconstructs the timeline year by year, classifies the feature set into historical, mature, recent and roadmap buckets, and draws ten lessons. This chapter reads that history as a sequencing document: what Zoho built first, what it added later, what it added only under competitive or regulatory pressure, and what it still has not solved. It then derives DigiKhaato's own sequencing principles and states explicitly where DigiKhaato sequences differently — most importantly, ledger-first rather than invoice-first — and why.*
 
 ---
 
@@ -36,7 +36,7 @@ The one genuine surprise in this period is **how late the warehouse got real**. 
 
 ## 7.3 What it added only under pressure
 
-Three distinct kinds of pressure are visible in the timeline, and distinguishing them matters because they predict different things about UdhaarBook's own roadmap.
+Three distinct kinds of pressure are visible in the timeline, and distinguishing them matters because they predict different things about DigiKhaato's own roadmap.
 
 ### Regulatory pressure
 
@@ -64,7 +64,7 @@ Escalation features are **retrofits**, and retrofits are the most expensive form
 
 The "hinted / roadmap" bucket and the complaints digest together name what remains open after ten years [R1 §C.2, §E.1]:
 
-**Manufacturing and MRP** is "the most-voted open idea with no commitment" [R1 §C.2]. Ten years, and the single loudest feature request is unbuilt. That is strong evidence that the demand is loud but narrow — a small number of users asking very often — and it is why composite items and BOM sit in UdhaarBook's Future bucket (INV-19) rather than Phase 3.
+**Manufacturing and MRP** is "the most-voted open idea with no commitment" [R1 §C.2]. Ten years, and the single loudest feature request is unbuilt. That is strong evidence that the demand is loud but narrow — a small number of users asking very often — and it is why composite items and BOM sit in DigiKhaato's Future bucket (INV-19) rather than Phase 3.
 
 **Reporting flexibility** remains the second-ranked complaint despite roughly seventy reports and a custom-report builder: "reporting features somewhat limited, requiring extra effort"; "custom report building could be more flexible"; the dashboard "not updating real time" [R1 §E.1 #2]. The dossier's conclusion is that *"reporting is never finished"* and that roughly a third of 2025–26 release notes are report columns, filters and scheduling [R1 §C.3 lesson 5].
 
@@ -84,7 +84,7 @@ The pattern across these is worth naming: **the unsolved problems are almost all
 
 ---
 
-## 7.5 Sequencing principles for UdhaarBook
+## 7.5 Sequencing principles for DigiKhaato
 
 The following principles are derived from the ten lessons in [R1 §C.3] plus the complaints digest, and they govern how Part 16's phase column was assigned.
 
@@ -128,7 +128,7 @@ India generated five distinct compliance events inside nine years [R1 §C.3 less
 
 Bundles became Assemblies and Kits; Item Groups became Items with Variants; Warehouse became Location [R1 §C.3 lesson 7].
 
-*Applied:* Immutability makes re-modelling survivable — since `LedgerEntry` and `StockMovement` are append-only, a model change adds new rows rather than rewriting history. UUIDv7 keys and the service layer keep entity boundaries explicit. The candidates for re-modelling in UdhaarBook are named in advance: `Item` when variants arrive (INV-12), `SalesDocument` when sales orders arrive (SAL-11), and `Location` when multi-location arrives (INV-11).
+*Applied:* Immutability makes re-modelling survivable — since `LedgerEntry` and `StockMovement` are append-only, a model change adds new rows rather than rewriting history. UUIDv7 keys and the service layer keep entity boundaries explicit. The candidates for re-modelling in DigiKhaato are named in advance: `Item` when variants arrive (INV-12), `SalesDocument` when sales orders arrive (SAL-11), and `Location` when multi-location arrives (INV-11).
 
 ### S8. Ship the trivial ergonomics on day one
 
@@ -152,7 +152,7 @@ Document-count caps monetise growth and generate the loudest pricing complaints;
 
 This principle has no corresponding Zoho lesson because Zoho never solved it — "doesn't allow removing unneeded features" remains a live complaint after ten years [R1 §E.1 #3].
 
-*Applied:* Per-tenant module toggles seeded from business type (Part 0 §0.3, PLT-06). A services business never sees inventory. This is the one place where UdhaarBook's architecture is deliberately shaped by a Zoho *failure* rather than a Zoho lesson.
+*Applied:* Per-tenant module toggles seeded from business type (Part 0 §0.3, PLT-06). A services business never sees inventory. This is the one place where DigiKhaato's architecture is deliberately shaped by a Zoho *failure* rather than a Zoho lesson.
 
 ### S12. Mobile and desktop reach parity together, not sequentially
 
@@ -162,7 +162,7 @@ Zoho's mobile app remains thinner than web in year eleven [R1 §E.1 #4], while t
 
 ---
 
-## 7.6 Where UdhaarBook sequences differently, and why
+## 7.6 Where DigiKhaato sequences differently, and why
 
 Three deliberate divergences from Zoho's order, each with its reasoning.
 
@@ -170,7 +170,7 @@ Three deliberate divergences from Zoho's order, each with its reasoning.
 
 **Zoho's order:** items and contacts, then the sales-order pipeline, then invoices; receivables emerge as a derived consequence, and after eleven years there is still no khata — no running party ledger accepting cash-in and cash-out entries without an invoice, no interest or late fee, and no scalable SMS collection [R1 §E.2].
 
-**UdhaarBook's order:** parties and ledger entries first; documents second, posting *into* the ledger that already exists (LED-10).
+**DigiKhaato's order:** parties and ledger entries first; documents second, posting *into* the ledger that already exists (LED-10).
 
 **Why.** Three reasons, in order of force.
 
@@ -186,7 +186,7 @@ Three deliberate divergences from Zoho's order, each with its reasoning.
 
 **Zoho's order:** GST edition in year three, e-invoicing in year six — but GST *returns* never, because they live in Zoho Books [R1 §A.24, §E.2].
 
-**UdhaarBook's order:** GST summary, sales register, purchase register and HSN summary at MVP (RPT-03, RPT-04, RPT-07); GSTR-1 JSON at Phase 2 (RPT-12); e-invoice, e-way bill and Tally XML at Phase 3 (SAL-12, SAL-13, RPT-13).
+**DigiKhaato's order:** GST summary, sales register, purchase register and HSN summary at MVP (RPT-03, RPT-04, RPT-07); GSTR-1 JSON at Phase 2 (RPT-12); e-invoice, e-way bill and Tally XML at Phase 3 (SAL-12, SAL-13, RPT-13).
 
 **Why.** GST compliance is the reason SMBs buy at all, and the CA is the second seat in every SMB and the person who advises switching [R3 #8, §3.3, §4.2]. But the *automation* of compliance — IRN generation through a GSP, e-way-bill API calls — is only mandatory above ₹5 crore turnover and is a tier-up trigger rather than an entry requirement [R2 §C.1; R3 #8]. Shipping the *outputs* at MVP costs a report engine; shipping the *automation* at MVP costs a GSP integration, IRP onboarding, cancellation windows and a permanent compliance-maintenance commitment. The former buys the CA's approval; the latter buys a customer segment that does not exist yet at launch.
 
@@ -194,7 +194,7 @@ Three deliberate divergences from Zoho's order, each with its reasoning.
 
 **Zoho's order:** payment gateways were present early but the *reconciliation* problem was never solved — there is no documented flow for collecting via a UPI QR on a bill and auto-matching an offline transfer [R1 §E.2]. Physical-warehouse mechanics consumed years nine and ten instead.
 
-**UdhaarBook's order:** UPI static and dynamic QR with intent links at MVP (PAY-03); a payment-aggregator adapter with webhooks, an unmatched-payments queue and payer-VPA-to-party learning at Phase 2 (PAY-06, PAY-07); bins and picklists never.
+**DigiKhaato's order:** UPI static and dynamic QR with intent links at MVP (PAY-03); a payment-aggregator adapter with webhooks, an unmatched-payments queue and payer-VPA-to-party learning at Phase 2 (PAY-06, PAY-07); bins and picklists never.
 
 **Why.** "Money debited, ledger not updated" is the second-ranked pain point in the entire ledger category and the single most damaging trust failure Khatabook and OkCredit both suffer [R2 §D #2, §C.2]. Meanwhile OkCredit's QR that auto-settles the balance is named as *the* key reconciliation win to replicate [R2 §A.1 F4]. Payments to a static QR carry no party context, so the queue plus a manual "I received it via UPI, here is the UTR" fallback is the mitigation [R2 §C.2]. Solving this is worth more to an Indian SMB than knowing which shelf a box is on — and the evidence that warehousing can wait is that Zoho's customers waited nine years without churning over it [R1 §E.1 #10].
 
@@ -202,7 +202,7 @@ Three deliberate divergences from Zoho's order, each with its reasoning.
 
 ## 7.7 The sequencing summary
 
-Reduced to a single ordering rule, Zoho's history says: **build what a business does every day before you build what it does every quarter, and build what the law requires before either.** UdhaarBook's version of that rule, with its own inversion, is:
+Reduced to a single ordering rule, Zoho's history says: **build what a business does every day before you build what it does every quarter, and build what the law requires before either.** DigiKhaato's version of that rule, with its own inversion, is:
 
 1. **Every hour:** record who owes what (ledger), take money (payments), issue a bill (sales).
 2. **Every day:** know what stock is left (inventory), what came in (purchases), what went out (expenses), and who to chase (reminders, ageing).

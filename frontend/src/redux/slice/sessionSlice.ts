@@ -9,12 +9,12 @@ import {
   fetchSession,
   logout,
   switchTenant,
-} from 'modules/UdhaarBook/features/auth/redux/sessionThunk';
-import { completeOnboarding } from 'modules/UdhaarBook/features/onboarding/redux/onboardingThunk';
+} from 'modules/DigiKhaato/features/auth/redux/sessionThunk';
+import { completeOnboarding } from 'modules/DigiKhaato/features/onboarding/redux/onboardingThunk';
 import {
   leaveTenant,
   setDefaultTenant,
-} from 'modules/UdhaarBook/features/tenant-switcher/redux/tenantSwitcherThunk';
+} from 'modules/DigiKhaato/features/tenant-switcher/redux/tenantSwitcherThunk';
 
 /**
  * Part 19 §19.7 — the session. This is the slice the task brief calls

@@ -1,6 +1,6 @@
 # Part 8 — Review Mining: What Real Users Say
 
-*Dossier R3 mines Software Advice, Capterra, G2, Techjockey, SoftwareSuggest and the Play Store across eight products — Zoho Inventory, Vyapar, myBillBook, TallyPrime, Busy, Marg ERP 9+, QuickBooks Online and Khatabook — and closes with fifteen ranked Insight → Implication → Confidence items. This chapter carries that evidence forward: what users praise, what they complain about, why they abandon products, where onboarding fails, what they expect from support, how mobile and desktop are actually used, and the fifteen implications with each one mapped to the UdhaarBook feature ID that answers it.*
+*Dossier R3 mines Software Advice, Capterra, G2, Techjockey, SoftwareSuggest and the Play Store across eight products — Zoho Inventory, Vyapar, myBillBook, TallyPrime, Busy, Marg ERP 9+, QuickBooks Online and Khatabook — and closes with fifteen ranked Insight → Implication → Confidence items. This chapter carries that evidence forward: what users praise, what they complain about, why they abandon products, where onboarding fails, what they expect from support, how mobile and desktop are actually used, and the fifteen implications with each one mapped to the DigiKhaato feature ID that answers it.*
 
 ---
 
@@ -32,7 +32,7 @@ Across eight products, praise clusters into six themes [R3 §2.2; R2 §D "what u
 
 **Simplicity that staff can absorb.** Vyapar's leading pro is that "staff learn quickly"; myBillBook's ease-of-use sub-score of 4.7 is the highest in the set. In a market where the owner is 45–54 and the billing clerk may have no software experience, low training burden is a purchase criterion, not a nicety.
 
-**All-in-one coverage.** Vyapar is praised specifically for combining billing, GST, inventory and expenses in one product — which is the same instinct that motivates UdhaarBook's "one book instead of four apps" thesis.
+**All-in-one coverage.** Vyapar is praised specifically for combining billing, GST, inventory and expenses in one product — which is the same instinct that motivates DigiKhaato's "one book instead of four apps" thesis.
 
 **WhatsApp as a first-class output.** "Send invoices directly through WhatsApp" is a top Vyapar pro, and blank WhatsApp PDFs are simultaneously a top complaint — which is the strongest possible evidence that the feature is used constantly rather than demoed occasionally [R3 §2.2, §5 #3].
 
@@ -116,7 +116,7 @@ What the research establishes about support is narrow but firm.
 
 **In a channel model, support quality is the partner's and the score is the vendor's.** Marg's 2.9 is the evidence [R3 §2.2, #9]. This is why the dossier recommends defining support ownership contractually — partner at L1, Metis at L2 — and building in-product self-service, with support SLAs treated as a product feature [R3 #9].
 
-The commitments this implies for UdhaarBook: in-app help centre and contextual help (HLP-01, HLP-02) as deflection; WhatsApp support in regional languages; a published status page; tutorial videos, which Vyapar users explicitly request; and a contractual L1/L2 split in every partner agreement.
+The commitments this implies for DigiKhaato: in-app help centre and contextual help (HLP-01, HLP-02) as deflection; WhatsApp support in regional languages; a published status page; tutorial videos, which Vyapar users explicitly request; and a contractual L1/L2 split in every partner agreement.
 
 ---
 
@@ -140,7 +140,7 @@ The architectural answer is ADR-020: **one responsive web application plus a PWA
 
 ## 8.8 The fifteen implications, carried forward
 
-Each item below restates the dossier's Insight → Implication → Confidence [R3 §9] and adds the UdhaarBook feature IDs that answer it.
+Each item below restates the dossier's Insight → Implication → Confidence [R3 §9] and adds the DigiKhaato feature IDs that answer it.
 
 ### 1. Free khata apps with 10M+ MAU could not get kiranas to pay; paid billing+inventory does get paid, at ₹3.4–4k/yr, at ~2% conversion
 **Implication.** The unit of monetisation is the GST-registered, staffed business with a PC, not the kirana with a phone. Design the free tier to acquire kiranas (ledger + WhatsApp reminders) but plan revenue from the desktop/multi-user tier and from partners. **Confidence: High.**
@@ -187,7 +187,7 @@ Each item below restates the dossier's Insight → Implication → Confidence [R
 **Answered by:** LED-03 (correct/reverse with reason), Part 0 §0.7 (`posted`/`reversed`, never deleted), PLT-08 (audit log viewer), RPT-02 (day book), RPT-08 (export), PTY-04/INV-01 (archive not delete).
 
 ### 12. White-label demand is inferred, not proven
-**Implication.** Position UdhaarBook to a partner as (a) engagement layer, (b) reconciliation of partner rails into merchant books, (c) underwriting-grade ledger data. Validate with two or three partner discovery interviews before building partner-specific features. **Confidence: Medium-low.**
+**Implication.** Position DigiKhaato to a partner as (a) engagement layer, (b) reconciliation of partner rails into merchant books, (c) underwriting-grade ledger data. Validate with two or three partner discovery interviews before building partner-specific features. **Confidence: Medium-low.**
 **Answered by:** WLB-01…06 as a *platform capability* rather than partner-specific features; PAY-06 (aggregator adapter as the reconciliation hook, P2); PLT-14 (super-admin console). The discovery interviews are a go-to-market action, not a build item.
 
 ### 13. Storefront/ONDC features have repeatedly failed among kiranas

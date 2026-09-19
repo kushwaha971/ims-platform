@@ -1,6 +1,6 @@
 # Part 31 — Analytics and Event Tracking
 
-This part specifies what UdhaarBook measures about itself, how the measurement is implemented within the minimal-dependency constraint (ADR-021: no third-party analytics SDK at MVP), and what is deliberately never collected. It is the destination for every FRD's section 18, and the event catalogue in §31.4 is the normative list — an event emitted by code but absent here is a defect, and an event named here but never emitted is dead weight to be removed.
+This part specifies what DigiKhaato measures about itself, how the measurement is implemented within the minimal-dependency constraint (ADR-021: no third-party analytics SDK at MVP), and what is deliberately never collected. It is the destination for every FRD's section 18, and the event catalogue in §31.4 is the normative list — an event emitted by code but absent here is a defect, and an event named here but never emitted is dead weight to be removed.
 
 ---
 
@@ -10,7 +10,7 @@ This part specifies what UdhaarBook measures about itself, how the measurement i
 
 Analytics exists here to answer six questions, and its design is judged by whether it answers them cheaply:
 
-1. **Is the product thesis true?** UdhaarBook's claim is that a ledger fed by billing, inventory and payments beats four apps. The measurable form of that claim is the share of active tenants using the ledger *and* at least one document module in the same month (Part 1 §1.11). If that number is low, the product is a khata app with extra screens.
+1. **Is the product thesis true?** DigiKhaato's claim is that a ledger fed by billing, inventory and payments beats four apps. The measurable form of that claim is the share of active tenants using the ledger *and* at least one document module in the same month (Part 1 §1.11). If that number is low, the product is a khata app with extra screens.
 2. **Where do merchants stop?** Onboarding, first party, first entry, first bill, first payment — a funnel with five steps, each of which a merchant can abandon, and each abandonment has a different fix.
 3. **What do merchants actually do daily?** Not what they say. The distribution of actions per active day tells us which features earn their maintenance and which are ballast.
 4. **Where does the product hurt?** Failed writes, blocked actions, validation rejections, limit hits, empty search results, retries. Every one of these is a merchant who tried and could not.
@@ -134,7 +134,7 @@ Each module owns two or three numbers. A module whose numbers do not move is a m
 
 ### 31.3.1 What "activated" means here
 
-A ledger app and an inventory app activate differently, and UdhaarBook is both. Using a single definition would misread half the base, so activation is defined **by the tenant's declared business type and enabled modules**, with a common floor.
+A ledger app and an inventory app activate differently, and DigiKhaato is both. Using a single definition would misread half the base, so activation is defined **by the tenant's declared business type and enabled modules**, with a common floor.
 
 **The aha-moment hypothesis.** The moment a merchant stops evaluating and starts depending is the moment the app tells them something they did not already know — the first time they open it to *check* rather than to *enter*. Operationally, that is the first time a merchant returns on a later day and views a party's balance or the dashboard without recording anything. That is a testable hypothesis, and §31.7.1 specifies the funnel that measures it.
 
@@ -777,7 +777,7 @@ With 500 tenants at six months and 5,000 at twelve (Part 1 §1.11), the arithmet
 | **Server-side holdouts** | Nothing yet | — |
 | **Randomised A/B** | **Only** from ~2,000 monthly active tenants, and only on a metric with a high base rate (a screen-level interaction, not a monthly one) | Retention, activation, revenue |
 
-Stated plainly so it is not relitigated: **UdhaarBook does not run A/B tests at MVP.** It ships with flags, rolls out in stages, watches friction daily, and talks to merchants.
+Stated plainly so it is not relitigated: **DigiKhaato does not run A/B tests at MVP.** It ships with flags, rolls out in stages, watches friction daily, and talks to merchants.
 
 ### 31.9.2 The feature-flag mechanism
 
@@ -831,7 +831,7 @@ Under India's Digital Personal Data Protection Act, the **merchant (tenant) is t
 
 ### 31.10.2 Consent
 
-- Product-analytics consent is requested **once**, during onboarding, in plain language in `en` and `hi`: "Help us improve UdhaarBook by sharing anonymous usage data. We never collect your customers' names, numbers or amounts." Options: *Allow* / *Not now*. Declining costs the merchant nothing and is never re-prompted more than once per 180 days.
+- Product-analytics consent is requested **once**, during onboarding, in plain language in `en` and `hi`: "Help us improve DigiKhaato by sharing anonymous usage data. We never collect your customers' names, numbers or amounts." Options: *Allow* / *Not now*. Declining costs the merchant nothing and is never re-prompted more than once per 180 days.
 - Consent is stored per user (`platform_user.analytics_consent ∈ {granted, denied, unset}` with `consent_at`) and is checked by both the client hook and the server emitter. `unset` behaves as denied for behavioural events.
 - **Operational events are exempt** from consent and are emitted regardless, because they are necessary for the service and for security rather than for product analytics: authentication outcomes (`otp_*`, `password_login`, `new_device_login`), failures and blocks (`*_failed`, `*_blocked`), message delivery status, limit hits, and admin/partner actions on a tenant. These are also the events that feed the audit and support paths. The distinction is recorded per event in the generated catalogue as `consent_required: bool`, and the emitter enforces it.
 - Consent is recorded in the audit log (`user.analytics_consent_changed`) so the record of consent exists independently of the flag.

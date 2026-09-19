@@ -24,8 +24,10 @@ export interface UbSelectOption {
   readonly disabled?: boolean;
 }
 
-export interface UbSelectProps
-  extends Omit<SelectHTMLAttributes<HTMLSelectElement>, 'value' | 'onChange' | 'children'> {
+export interface UbSelectProps extends Omit<
+  SelectHTMLAttributes<HTMLSelectElement>,
+  'value' | 'onChange' | 'children'
+> {
   readonly value: string | null | undefined;
   readonly onChange: (value: string) => void;
   readonly options: readonly UbSelectOption[];

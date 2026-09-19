@@ -1,4 +1,4 @@
-# UdhaarBook SSOT — Status
+# DigiKhaato SSOT — Status
 
 **Last updated:** 19 September 2026
 **State:** Baseline v1.0 complete and delivered. Not yet build-ready — see "What blocks build start" below.
@@ -39,7 +39,7 @@
   messaging (console SMS, `wa.me`), local UPI QR. Anything else needs a new ADR.
 - **Business-type-agnostic.** Retail, wholesale, services, traders, manufacturers, professionals.
   The onboarding business-type selection seeds defaults and never gates behaviour.
-- **Ledger modelled on the existing DigiKhaato / money-mgmt UdhaarBook** — parties, you-gave/you-got,
+- **Ledger modelled on the existing legacy DigiKhaato / money-mgmt UdhaarBook** — parties, you-gave/you-got,
   opening balance, running-balance statement, corrections with audit trail, reminders, WhatsApp share.
 - **Koper Design System tokens, re-themed** — Zoho-style blue primary (`#2B6BE0` base) on a
   light-first canvas with a dark nav rail; Koper's copper and dark-first stance not carried over.

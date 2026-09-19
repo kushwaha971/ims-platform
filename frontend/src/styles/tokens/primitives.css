@@ -37,7 +37,7 @@
   --page-pad: 32px;
   --grid-columns: 12;
   --grid-gap: 20px;
-  /* UdhaarBook mobile overrides (§23.2.1). */
+  /* DigiKhaato mobile overrides (§23.2.1). */
   --bottom-nav-h: calc(64px + env(safe-area-inset-bottom, 0px));
 
   /* ── Typography (§23.2.2) ──────────────────────────────────────────────── */
@@ -59,6 +59,13 @@
   --size-label: 12.5px;
   --size-label-caps: 11px;
   --size-micro: 10.5px;
+  /* The brand wordmark (§23.2.6, CR-2026-09-19-D). It is a NAME, not a heading,
+     so it gets its own four tiers rather than borrowing `ds-h*` — a wordmark
+     set in the page's heading tier competes with the page's heading. */
+  --size-wordmark-sm: 15px;
+  --size-wordmark-md: 18px;
+  --size-wordmark-lg: 22px;
+  --size-wordmark-xl: 26px;
   --size-metric-xl: 52px;
   --size-metric-lg: 38px;
   --size-metric-md: 28px;
@@ -78,6 +85,7 @@
   --track-body: 0;
   --track-label: 0;
   --track-label-caps: 0.09em;
+  --track-wordmark: -0.01em;
   --track-metric: -0.02em;
 
   --weight-regular: 400;

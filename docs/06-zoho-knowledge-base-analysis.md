@@ -1,6 +1,6 @@
-# Part 6 — Knowledge-Base Analysis and UdhaarBook's Help Content Plan
+# Part 6 — Knowledge-Base Analysis and DigiKhaato's Help Content Plan
 
-*Zoho runs two relevant help surfaces: the documentation it writes for its own products, and Zoho Desk Knowledge Base, the product it sells to other companies for writing theirs. Dossier R1 Part D catalogues both. This chapter extracts what each teaches about documenting a product of UdhaarBook's shape, then converts that into a concrete help content plan tied to features HLP-01, HLP-02 and HLP-03 — including the article tree and the first thirty articles to write.*
+*Zoho runs two relevant help surfaces: the documentation it writes for its own products, and Zoho Desk Knowledge Base, the product it sells to other companies for writing theirs. Dossier R1 Part D catalogues both. This chapter extracts what each teaches about documenting a product of DigiKhaato's shape, then converts that into a concrete help content plan tied to features HLP-01, HLP-02 and HLP-03 — including the article tree and the first thirty articles to write.*
 
 ---
 
@@ -48,15 +48,15 @@ Zoho Learn, the internal-SOP sibling, adds Spaces → Manuals → Chapters → A
 
 ---
 
-## 6.3 What this teaches for a product of UdhaarBook's shape
+## 6.3 What this teaches for a product of DigiKhaato's shape
 
-Zoho's help system is sized for a hundred-module suite sold to a company with an IT function. UdhaarBook has roughly fifteen concepts and is used by a 45–54-year-old owner-operator standing at a counter, on a phone, often in Hindi [R3 §4.2]. Five translations follow.
+Zoho's help system is sized for a hundred-module suite sold to a company with an IT function. DigiKhaato has roughly fifteen concepts and is used by a 45–54-year-old owner-operator standing at a counter, on a phone, often in Hindi [R3 §4.2]. Five translations follow.
 
-**1. Two levels, not four.** The dossier's own recommendation is explicit: *"Zoho's 3–4 levels are for a 100-module suite; UdhaarBook has ~15 concepts. Two levels keep mobile navigation sane"* [R1 §D.4]. Topic → Article. Nothing deeper.
+**1. Two levels, not four.** The dossier's own recommendation is explicit: *"Zoho's 3–4 levels are for a 100-module suite; DigiKhaato has ~15 concepts. Two levels keep mobile navigation sane"* [R1 §D.4]. Topic → Article. Nothing deeper.
 
 **2. Contextual help is the primary entry point, not search.** Zoho's number-one usability complaint is "I see a lot of tools I don't know how to use" [R1 §E.1 #3], and the prescribed answer is a "?" on every screen mapping to one to three articles [R1 §D.4]. On a phone, a reader who has to leave the screen, find the help centre and construct a query has already given up. The help must come to the screen.
 
-**3. The FAQ layer is not optional.** Zoho's KB exists specifically to answer "why can't I delete this item" [R1 §D.4] — and UdhaarBook generates exactly this class of question by design, because it archives instead of deleting, blocks archiving while a balance or stock is non-zero, corrects rather than edits, and blocks negative stock by default (Part 0 §0.7, §0.11). Every one of those correct decisions produces a confused user. Each needs an answer of 120 words or fewer.
+**3. The FAQ layer is not optional.** Zoho's KB exists specifically to answer "why can't I delete this item" [R1 §D.4] — and DigiKhaato generates exactly this class of question by design, because it archives instead of deleting, blocks archiving while a balance or stock is non-zero, corrects rather than edits, and blocks negative stock by default (Part 0 §0.7, §0.11). Every one of those correct decisions produces a confused user. Each needs an answer of 120 words or fewer.
 
 **4. Search must speak Hinglish.** The vocabulary of the user is *udhaar, khata, bill, parchi, stock, maal, hisaab, baaki, party* [R1 §D.4; R2 §C.4]. A search index that only matches "invoice" and "receivable" will return nothing for the majority of real queries. Synonym mapping is a content requirement, and zero-result queries must be logged — the Zoho lesson about keyword analytics applied at small scale.
 
@@ -79,7 +79,7 @@ The dossier is equally clear about what not to build [R1 §D.4], and each exclus
 
 ---
 
-## 6.4 UdhaarBook's help content plan
+## 6.4 DigiKhaato's help content plan
 
 ### Feature mapping
 
@@ -142,7 +142,7 @@ These are ordered by expected support volume, which in this product means: the t
 
 1. **Create your business and choose your business type** — what the business-type choice changes (defaults only) and how to change it later. *Screens: onboarding.*
 2. **Set up your business profile for bills** — legal name, trade name, GSTIN, address, logo, UPI ID, signature, terms; why each appears on a document. *Screens: settings/profile.*
-3. **Move your paper khata into UdhaarBook** — adding parties with opening balances one at a time versus CSV import; what date to use. *Screens: parties/new, imports.*
+3. **Move your paper khata into DigiKhaato** — adding parties with opening balances one at a time versus CSV import; what date to use. *Screens: parties/new, imports.*
 4. **Add your first party and record your first entry** — the two-minute path from empty state to a balance. *Screens: parties/list, party/detail.*
 5. **Run more than one business from one login** — creating and switching businesses, what is and is not shared. *Screens: business switcher.*
 
@@ -151,7 +151,7 @@ These are ordered by expected support volume, which in this product means: the t
 6. **You gave and You got: what the red and green buttons mean** — the direction rules for customers and for suppliers, in the market's own vocabulary. *Screens: party/detail, entry sheet.*
 7. **Set an opening balance for an old customer** — how it is posted, and until when it can be changed.
 8. **Someone is both my customer and my supplier** — one party, both flags, one net balance.
-9. **Fix a wrong entry** — why UdhaarBook corrects instead of editing, what a reversal looks like on the statement, and who is allowed to do it. *FAQ-adjacent; answers a designed-in confusion (Part 0 §0.11 rule 1).*
+9. **Fix a wrong entry** — why DigiKhaato corrects instead of editing, what a reversal looks like on the statement, and who is allowed to do it. *FAQ-adjacent; answers a designed-in confusion (Part 0 §0.11 rule 1).*
 10. **Send a customer their statement on WhatsApp** — date range, PDF, share.
 11. **Set a collection date and let reminders go out automatically** — D-1 and D0, per-party opt-out, what the customer receives.
 12. **Send reminders to many customers at once** — bulk selection, channel choice, what it costs.

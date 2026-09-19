@@ -1,5 +1,5 @@
 /**
- * Part 19 §19.4 — the transport layer. One instance, not eleven: UdhaarBook
+ * Part 19 §19.4 — the transport layer. One instance, not eleven: DigiKhaato
  * talks to one modular monolith (ADR-007) at one base URL. `publicApi` exists
  * solely for the unauthenticated public document routes and carries no auth
  * interceptor and no refresh logic.
@@ -166,9 +166,7 @@ const redirectToLoginOnce = (): void => {
   const next = `${window.location.pathname}${window.location.search}`;
   // `loginPathWithNext` owns both the address and the encoding (§19.6.4 rule 2);
   // this used to be the fourteenth hand-written `/login?next=` in the tree.
-  window.location.assign(
-    new URL(loginPathWithNext(next), window.location.origin).toString()
-  );
+  window.location.assign(new URL(loginPathWithNext(next), window.location.origin).toString());
 };
 
 /** Test seam: the module-level guards are per-process, and tests need both. */

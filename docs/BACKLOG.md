@@ -56,3 +56,16 @@ The five entries in `DECISIONS.md`. `DEC-001` and `DEC-003` have now defaulted; 
 (document rendering) is due before Sprint 4; `DEC-004` (partner business development owner)
 and `DEC-005` (compliance owner) have **no default** and will not resolve themselves.
 `DEC-005`'s urgency dropped with DEC-010, but the appointment did not go away.
+
+## Deferred by DEC-011 — renaming the infrastructure identifiers
+
+The product was named **DigiKhaato** by `DEC-011`; the copy changed everywhere and the
+identities did not. These still carry the retired working name and are deferred because
+each one is a cutover rather than an edit.
+
+| Item | State in the repo | Comes back when |
+|---|---|---|
+| **PostgreSQL database and role names** (`udhaarbook`, `udhaarbook_backup`) | Unchanged in `.env.example`, `docker-compose.yml`, `scripts/postgres-init/02-roles.sql` and CI. `tests/architecture/test_env_example.py` pins the password default. | A planned maintenance window exists. Renaming a database and a role is a dump-and-restore, not a rename. `CR-142`. |
+| **Hostnames** (`app.udhaarbook.in` and the partner/staging wildcards) | Unchanged in Part 24, Part 29 and `nginx/conf.d/`. | DNS and Let's Encrypt certificates for the new apex are provisioned and the old apex redirects. `CR-142`. |
+| **Deployment path** `/srv/udhaarbook` and the image names `udhaarbook-backend` / `udhaarbook-frontend` | Unchanged in Part 29's runbooks. | The same window as the database. Runbooks and the image tags move together or not at all. `CR-142`. |
+| **The `UB_` / `ub.` / `Ub*` namespaces** | Unchanged and **not** deferred — `DEC-011` decided they stay permanently. | Never. They are namespaces, not product copy. |

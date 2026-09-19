@@ -78,7 +78,7 @@ def build_logging_config(
     if log_dir:
         handlers["file"] = {
             "class": "logging.handlers.RotatingFileHandler",
-            "filename": f"{log_dir}/udhaarbook.log",
+            "filename": f"{log_dir}/digikhaato.log",
             "maxBytes": 20 * 1024 * 1024,
             "backupCount": 10,
             "formatter": "json",

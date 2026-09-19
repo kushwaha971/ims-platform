@@ -77,6 +77,10 @@ describe('ROUTES', () => {
       ROUTES.RESET_PASSWORD,
       ROUTES.SET_PASSWORD,
       ROUTES.ONBOARDING,
+      // CR-2026-09-19-D — the legal pages are linked from the sign-up screen,
+      // which by definition has no session behind it.
+      ROUTES.LEGAL_TERMS,
+      ROUTES.LEGAL_PRIVACY,
     ]) {
       expect(guarded(href)).toBe(false);
     }

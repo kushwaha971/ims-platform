@@ -6,7 +6,7 @@ import { store } from 'src/redux/store';
 
 import partyListReducer, {
   type PartyListState,
-} from 'modules/UdhaarBook/features/parties/redux/partyListSlice';
+} from 'modules/DigiKhaato/features/parties/redux/partyListSlice';
 
 /**
  * Part 19 §19.3.6 — the runtime half of the completeness machinery. The compile

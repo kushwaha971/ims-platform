@@ -1,6 +1,6 @@
 # Part 40 — Future Roadmap
 
-> **Status:** advisory. Nothing in this part is committed. It exists so that the things UdhaarBook might become are written down with their conditions attached, rather than arriving as surprises or as someone's enthusiasm mid-phase. Part 13 §13.5 states the rule this chapter operates under: **Future items must not influence MVP or Phase 2 architecture beyond the extension points already reserved in Part 21 §21.9.** An engineer who adds a nullable column, an abstraction layer or a configuration switch "for when we do accounting" is making the current product more expensive in order to serve a product that may never exist.
+> **Status:** advisory. Nothing in this part is committed. It exists so that the things DigiKhaato might become are written down with their conditions attached, rather than arriving as surprises or as someone's enthusiasm mid-phase. Part 13 §13.5 states the rule this chapter operates under: **Future items must not influence MVP or Phase 2 architecture beyond the extension points already reserved in Part 21 §21.9.** An engineer who adds a nullable column, an abstraction layer or a configuration switch "for when we do accounting" is making the current product more expensive in order to serve a product that may never exist.
 
 ## 40.1 How to read this chapter
 
@@ -12,7 +12,7 @@ Everything beyond Phase 3 is described in three fields, and the second and third
 
 **What would have to be rebuilt if attempted too early** is the field that stops premature work. For several of these the answer is "nothing, it is merely wasted"; for a few it is "the core", and knowing which is which is the point.
 
-The chapter closes with a ten-year picture and with the one section that is genuinely normative in spirit if not in force: what UdhaarBook should never become.
+The chapter closes with a ten-year picture and with the one section that is genuinely normative in spirit if not in force: what DigiKhaato should never become.
 
 ---
 
@@ -20,7 +20,7 @@ The chapter closes with a ten-year picture and with the one section that is genu
 
 **What it is.** A double-entry general ledger with a chart of accounts, journal vouchers, a trial balance, profit and loss, a balance sheet and bank reconciliation — the `accounting` module that canon §0.3 marks as Future and that Part 11 §11.3 item 1 excludes.
 
-**Why it is the largest gravitational pull on this product.** Every capability UdhaarBook ships makes the next accounting question more reasonable. A merchant who has invoices, purchase bills, payments, expenses and stock valuation in one place is one report away from asking for a profit and loss statement, and the person who asks is usually their accountant, who is the most credible voice in the room. It arrives not as a decision but as a sequence of small features, which is exactly how a ledger app becomes an unfinished accounting package.
+**Why it is the largest gravitational pull on this product.** Every capability DigiKhaato ships makes the next accounting question more reasonable. A merchant who has invoices, purchase bills, payments, expenses and stock valuation in one place is one report away from asking for a profit and loss statement, and the person who asks is usually their accountant, who is the most credible voice in the room. It arrives not as a decision but as a sequence of small features, which is exactly how a ledger app becomes an unfinished accounting package.
 
 **The trigger.** Two of three, as Part 11 §11.3 item 1 states: more than 30 % of paying tenants employ a full-time accountant who logs in weekly; the Tally XML export (`RPT-13`) is live and still insufficient in at least a quarter of churn interviews; or a partner contract worth more than the annual engineering cost requires a trial balance.
 
@@ -54,11 +54,11 @@ The chapter closes with a ten-year picture and with the one section that is genu
 
 **The lesson, stated exactly.** Lending as a monetisation thesis imports credit risk and regulatory whiplash. If it is ever added it must be **isolated from the ledger UX and must never gate a ledger feature behind it**.
 
-**The only shape permitted.** Part 11 §11.3 item 7 allows one: a **partner originates its own lending** and UdhaarBook provides consented, exportable ledger data plus the consent record. The loan journey — application, approval, disbursement, collection, grievance — stays in the partner's product. UdhaarBook sells data access with the merchant's consent, and carries none of the credit risk, none of the RBI obligations and none of the review damage.
+**The only shape permitted.** Part 11 §11.3 item 7 allows one: a **partner originates its own lending** and DigiKhaato provides consented, exportable ledger data plus the consent record. The loan journey — application, approval, disbursement, collection, grievance — stays in the partner's product. DigiKhaato sells data access with the merchant's consent, and carries none of the credit risk, none of the RBI obligations and none of the review damage.
 
 **The trigger.** A partner with its own NBFC or bank licence asking for consented ledger data, with a consent mechanism the merchant genuinely controls and can withdraw.
 
-**Architectural preparation already made.** Immutability (ADR-029) is what makes the data underwriting-grade — Part 11 §11.2 says so explicitly and it is the one place where a technical invariant has a direct commercial buyer. `PLT-10` (export) and the per-party consent fields are the mechanism. `LON-01`–`LON-03` are a **daily-collection loan book for merchants who already lend** — a bookkeeping feature — and must never be confused with UdhaarBook lending to merchants (`OQ-12`).
+**Architectural preparation already made.** Immutability (ADR-029) is what makes the data underwriting-grade — Part 11 §11.2 says so explicitly and it is the one place where a technical invariant has a direct commercial buyer. `PLT-10` (export) and the per-party consent fields are the mechanism. `LON-01`–`LON-03` are a **daily-collection loan book for merchants who already lend** — a bookkeeping feature — and must never be confused with DigiKhaato lending to merchants (`OQ-12`).
 
 **What would have to be rebuilt if attempted too early.** Nothing technical; everything reputational. A lending banner inside the ledger flow breaks `PD-15` and `LED-01`'s speed budget simultaneously, and the category has already run the experiment.
 
@@ -66,7 +66,7 @@ The chapter closes with a ten-year picture and with the one section that is genu
 
 ## 40.5 The marketplace and partner ecosystem
 
-**What it is.** A step beyond white-label resale: third parties building on UdhaarBook. An app directory, partner-built integrations, a developer surface, revenue sharing — the shape Zoho, Tally and every mature Indian SMB product eventually reaches.
+**What it is.** A step beyond white-label resale: third parties building on DigiKhaato. An app directory, partner-built integrations, a developer surface, revenue sharing — the shape Zoho, Tally and every mature Indian SMB product eventually reaches.
 
 **The trigger.** `PLT-13` (tenant API keys and outbound webhooks, Phase 3) in real use by more than a handful of tenants, plus at least two independent parties asking to build something specific — not "do you have an API" but "we want to push our order data into your purchase bills". Two named integrations with named owners is the difference between an ecosystem and a press release.
 
@@ -160,7 +160,7 @@ Third, **a payments and messaging substrate that the product can address**. UPI,
 
 ## 40.11 The platform play
 
-**What it is.** The endpoint that all the previous sections point toward: UdhaarBook as the record-keeping layer beneath a set of things other people build and sell — a partner's lending, a distributor's order capture, an accountant's practice tooling, a bank's merchant portfolio view — with UdhaarBook owning the ledger and the trust, and owning none of the adjacent products.
+**What it is.** The endpoint that all the previous sections point toward: DigiKhaato as the record-keeping layer beneath a set of things other people build and sell — a partner's lending, a distributor's order capture, an accountant's practice tooling, a bank's merchant portfolio view — with DigiKhaato owning the ledger and the trust, and owning none of the adjacent products.
 
 **Why this is the shape rather than the alternatives.** Every adjacent product attempted in this category by its incumbents failed or imported risk. Three storefronts were built and shut. Two lending books were built; one produced losses equal to its revenue and one was shut under regulatory pressure. The pattern is consistent enough to be a finding rather than an anecdote: the adjacent bet is a tax, not a hedge. What has *not* been tried is being the layer underneath — which is also the only position that does not compete with the partners the product depends on.
 
@@ -174,7 +174,7 @@ Third, **a payments and messaging substrate that the product can address**. UPI,
 
 ## 40.12 The ten-year picture
 
-Assume the thesis works. What does UdhaarBook look like in 2036?
+Assume the thesis works. What does DigiKhaato look like in 2036?
 
 It is the book that a few hundred thousand Indian small businesses actually keep — not the app they installed, the book they keep. Its ledger holds their receivables and payables, its documents are their invoices and bills, its stock figures are what they trust more than the shelf, and the paper khata is gone from those businesses in the way cash registers replaced ledgers a generation earlier in other markets. The measure of this is not installs; it is the share of active tenants using both the ledger and at least one document module in the same month, which Part 1 §1.11 already names as the single number that matters most.
 
@@ -182,7 +182,7 @@ It is sold mostly through other people. Banks, NBFCs, distributors and ERP vendo
 
 It is compliance infrastructure for the segment. e-Invoices, e-way bills and returns flow through it because they must, and because the effective-dated tax model has absorbed a decade of rule changes without producing a wrong historical document. Accountants receive files rather than photographs.
 
-It has become the data layer under other people's credit products, without having originated a single loan. Merchants consent, partners underwrite, UdhaarBook provides an immutable, attributable record and the consent trail — and carries none of the credit risk that the category's leader took on and none of the review damage that came with it.
+It has become the data layer under other people's credit products, without having originated a single loan. Merchants consent, partners underwrite, DigiKhaato provides an immutable, attributable record and the consent trail — and carries none of the credit risk that the category's leader took on and none of the review damage that came with it.
 
 And it is still, in shape, what it is today: one book of truth, a ledger spine with documents hanging off it, immutable, fast at the counter, in the user's language, deployable on one machine. The feature list has grown. The architecture has not changed, because the decisions that would have made it change — a second source of truth, a mutable ledger, a vertical fork, an accounting module built as a parallel system — were each declined with a written reason and a trigger that was never met.
 
@@ -190,7 +190,7 @@ If that picture is wrong, the most likely reasons are already written down: the 
 
 ---
 
-## 40.13 What UdhaarBook should never become
+## 40.13 What DigiKhaato should never become
 
 This section is the counterweight to everything above. Each item is something the product could plausibly drift into, each has been considered, and each is refused. Where a refusal has a trigger, the trigger is named; where it does not, that is stated.
 

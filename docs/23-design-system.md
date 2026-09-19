@@ -2,7 +2,7 @@
 
 ## 23.1 Decision summary
 
-UdhaarBook's UI is built from three layers, each with a fixed responsibility:
+DigiKhaato's UI is built from three layers, each with a fixed responsibility:
 
 | Layer | Source | Responsibility |
 |---|---|---|
@@ -26,7 +26,7 @@ Rules carried over verbatim from Koper (they suit a ledger product exactly): eve
 --sidebar-width:248px --sidebar-collapsed:64px --topbar-height:60px
 --content-max:1440px --gutter:24px --page-pad:32px --grid-columns:12 --grid-gap:20px
 ```
-UdhaarBook overrides for mobile: `--page-pad` 16px below `sm`, `--bottom-nav-h` 64px + `env(safe-area-inset-bottom)`, sidebar 248px only at ≥ 1280px, collapsed 64px between 1024–1279px, hidden below 1024px (drawer + bottom nav).
+DigiKhaato overrides for mobile: `--page-pad` 16px below `sm`, `--bottom-nav-h` 64px + `env(safe-area-inset-bottom)`, sidebar 248px only at ≥ 1280px, collapsed 64px between 1024–1279px, hidden below 1024px (drawer + bottom nav).
 
 ### 23.2.2 Typography (`tokens/typography.css`)
 
@@ -40,7 +40,7 @@ UdhaarBook overrides for mobile: `--page-pad` 16px below `sm`, `--bottom-nav-h` 
 --leading-label:1.4 --leading-label-hi:1.5 --size-label-hi:13px
 --weight-regular:400 --weight-medium:500 --weight-semibold:600 --weight-bold:700
 ```
-**Font decision for UdhaarBook.** Clash Grotesk/Clash Display are licensed brand files inside the Koper project; they do not cover Devanagari. UdhaarBook needs Hindi (and later Gujarati, Marathi, Tamil…) glyphs and a zero-dependency local setup, so the roles are kept and the faces are substituted: `--font-display` and `--font-ui` → **Inter** (variable, self-hosted via `next/font/local`, Latin + Devanagari subsets via **Noto Sans Devanagari** fallback in the same stack), `--font-mono` → **IBM Plex Mono** (self-hosted), `--font-metric` → Inter with `font-variant-numeric: tabular-nums`. This is also what makes the theme read "like Zoho" (Zoho's product UI is an Inter-class neutral grotesque). If a tenant licenses Clash, the tokens accept it without code change.
+**Font decision for DigiKhaato.** Clash Grotesk/Clash Display are licensed brand files inside the Koper project; they do not cover Devanagari. DigiKhaato needs Hindi (and later Gujarati, Marathi, Tamil…) glyphs and a zero-dependency local setup, so the roles are kept and the faces are substituted: `--font-display` and `--font-ui` → **Inter** (variable, self-hosted via `next/font/local`, Latin + Devanagari subsets via **Noto Sans Devanagari** fallback in the same stack), `--font-mono` → **IBM Plex Mono** (self-hosted), `--font-metric` → Inter with `font-variant-numeric: tabular-nums`. This is also what makes the theme read "like Zoho" (Zoho's product UI is an Inter-class neutral grotesque). If a tenant licenses Clash, the tokens accept it without code change.
 
 **Label tier decision (locale-aware).** Koper's single 11 px uppercase label role cannot carry this product's labels: Devanagari has no case, so `text-transform: uppercase` is a no-op on every Hindi string; `+0.09em` tracking breaks conjuncts and displaces matras; and 11 px is below the size at which a matra is legible on a 2 GB phone at counter distance. The role is therefore **split into two tiers**, and the default — the one every translated label uses — is the locale-safe one:
 
@@ -85,7 +85,7 @@ Fluid `clamp()` sizing (BrandHub) is **not** used; Koper's fixed sizes plus resp
 ```
 Light-theme shadow alphas are reduced (`.08 / .10 / .14 / .18`) because on a white canvas Koper's black-40% shadows read as heavy; the dark theme keeps Koper's values. Motion tokens are used unchanged: hover 140 ms lift one plane + border shift; press 0.5 px translate at 90 ms; drawers slide 24 px at 220 ms; modals rise 10 px with 1.5% scale; skeleton shimmer, never a full-page spinner; a single 360–640 ms data reveal on first paint of charts.
 
-### 23.2.4 Colour — Koper palette (reference) and UdhaarBook theme
+### 23.2.4 Colour — Koper palette (reference) and DigiKhaato theme
 
 Koper (verbatim, dark-first):
 
@@ -99,7 +99,7 @@ viz-1…8: #DE9A69 #4EC6B2 #6FB2F7 #C08BE0 #F2B448 #7FD168 #F4707C #8A94A0 · vi
 semantic aliases: --canvas ink-900 · --surface-sunken ink-850 · --surface-card ink-800 · --surface-raised ink-750 · --surface-hover ink-700 · --surface-active ink-600 · --border-hairline #1F262E · --border-subtle ink-700 · --border-strong ink-500 · --border-focus copper-300 · --text-primary white · --text-secondary slate-200 · --text-tertiary slate-300 · --text-muted slate-400 · --text-inverse ink-900 · --text-accent copper-300 · --accent copper-400 · --accent-hover copper-300 · --accent-press copper-500 · --accent-quiet rgba(208,129,63,.14) · --accent-line rgba(222,154,105,.34) · --focus-ring 0 0 0 2px var(--ink-900),0 0 0 4px var(--copper-400)
 ```
 
-**UdhaarBook default theme ("Zoho-like").** Same token names, new values. The primary ramp is a Zoho-class blue (Zoho's product UI uses a saturated mid blue for actions and links on a white/very-light-grey canvas with a near-black slate for navigation). Values are authored, not sampled from Zoho assets, and validated for WCAG AA.
+**DigiKhaato default theme ("Zoho-like").** Same token names, new values. The primary ramp is a Zoho-class blue (Zoho's product UI uses a saturated mid blue for actions and links on a white/very-light-grey canvas with a near-black slate for navigation). Values are authored, not sampled from Zoho assets, and validated for WCAG AA.
 
 | Token | Light (default) | Dark (optional theme) | Notes |
 |---|---|---|---|
@@ -249,7 +249,7 @@ For every UI component the spec requires, the table states whether it exists in 
 | Avatar | `MLAvatar*` | Use for party initials | |
 | Sidebar / nav | `MLSidebar*` | **Extend → `UbSidebar`** (entitlement-driven config, dark rail, collapse to 64 px) | Three groups, one level, active = accent edge + raised surface |
 | Top bar / page header | — | **New shared `UbPageHeader`** (title, breadcrumb, scope controls, actions) | 60 px sticky |
-| Bottom nav / FAB | `MLButton` | **New shared `UbBottomNav`, `UbFab`** (mobile) | — (Koper is desktop-only; UdhaarBook adds this) |
+| Bottom nav / FAB | `MLButton` | **New shared `UbBottomNav`, `UbFab`** (mobile) | — (Koper is desktop-only; DigiKhaato adds this) |
 | File upload / preview | `react-dropzone` + `MLCard` | **New shared `UbFileUpload`, `UbImagePreview`** | |
 | Search input | `MLInputGroup` | **New shared `UbSearchInput`** (debounce 300 ms) | |
 | Line-items editor | `MLTable*` + inputs | **New shared `UbLineItemsEditor`** | Keyboard-first counter |
