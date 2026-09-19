@@ -42,8 +42,18 @@ const AUTH_BODY = {
       },
     ],
     active_tenant_id: 't1',
+    // Part 22 §22.2 and `session_payload.build()` — the modules live INSIDE the
+    // active-tenant summary. This fixture used to invent a top-level
+    // `enabled_modules`, which is what hid the `getSession` crash below.
+    active_tenant: {
+      id: 't1',
+      name: 'Sharma General Store',
+      timezone: 'Asia/Kolkata',
+      status: 'active',
+      onboarding_step: 4,
+      enabled_modules: ['parties'],
+    },
     permissions: ['parties.party.read'],
-    enabled_modules: ['parties'],
   },
 };
 
@@ -235,13 +245,19 @@ describe('authService — GET /auth/me', () => {
             mobile: '+919876543210',
             locale: 'en',
           },
-          active_tenant: { id: 't1', name: 'Sharma', timezone: 'Asia/Kolkata' },
+          active_tenant: {
+            id: 't1',
+            name: 'Sharma',
+            timezone: 'Asia/Kolkata',
+            status: 'active',
+            onboarding_step: 4,
+            enabled_modules: ['parties'],
+          },
           tenants: [
             { id: 't1', name: 'Sharma', role: 'owner', is_default: true, membership_id: 'm1' },
             { id: 't2', name: 'Verma', status: 'invited' },
           ],
           permissions: ['parties.party.read'],
-          enabled_modules: ['parties'],
           ver: 3,
         },
       },
@@ -268,7 +284,6 @@ describe('authService — GET /auth/me', () => {
           active_tenant: null,
           tenants: [],
           permissions: [],
-          enabled_modules: [],
         },
       },
     });
@@ -277,5 +292,110 @@ describe('authService — GET /auth/me', () => {
 
     expect(session.user.mobile).toBeNull();
     expect(session.user.email).toBe('new@example.com');
+  });
+
+  /**
+   * The regression that made every authenticated page load throw.
+   *
+   * `session_payload.build()` has NO top-level `enabled_modules` — Part 22
+   * §22.2 puts them in the active-tenant summary — and this service read the
+   * top-level key with no fallback. `sessionSlice.sessionLoaded` then does
+   * `[...payload.enabledModules]`, so the `undefined` became
+   * `TypeError: undefined is not iterable` thrown out of a case reducer, where
+   * RTK's own try/catch cannot catch it and the session never reaches
+   * `authenticated`.
+   *
+   * The body below is the exact shape the server emits. Against the old reader
+   * `enabledModules` is `undefined` and this test fails on the first assertion.
+   */
+  it('reads enabled_modules from the active-tenant summary, where the server puts them', async () => {
+    jest.spyOn(api, 'get').mockResolvedValue({
+      data: {
+        data: {
+          user: { id: 'u1', full_name: 'Ramesh', email: 'r@example.com', locale: 'en' },
+          active_tenant: {
+            id: 't1',
+            name: 'Sharma',
+            timezone: 'Asia/Kolkata',
+            status: 'active',
+            onboarding_step: 4,
+            enabled_modules: ['parties', 'ledger'],
+          },
+          tenants: [{ id: 't1', name: 'Sharma', role: 'owner', is_default: true }],
+          permissions: [],
+        },
+      },
+    });
+
+    const session = await getSession();
+
+    expect(session.enabledModules).toEqual(['parties', 'ledger']);
+    // Whatever the shape, it must be spreadable: that is what the reducer does.
+    expect([...session.enabledModules]).toHaveLength(2);
+  });
+
+  it('gives a session with no active tenant an empty, spreadable module list', async () => {
+    jest.spyOn(api, 'get').mockResolvedValue({
+      data: {
+        data: {
+          user: { id: 'u2', full_name: '', email: 'invited@example.com', locale: 'en' },
+          active_tenant: null,
+          tenants: [{ id: 't9', name: 'Verma', status: 'invited' }],
+          permissions: [],
+        },
+      },
+    });
+
+    const session = await getSession();
+
+    expect(session.enabledModules).toEqual([]);
+    expect(session.activeTenant).toBeNull();
+  });
+
+  /**
+   * PLT-04 FR-5 / FR-7 — `TenantSwitcherMenu` gates "Make default" and "Leave
+   * business" on `activeTenant.membershipId`. The active-tenant summary is the
+   * BUSINESS, and carries no membership; the caller's role, default flag and
+   * membership id are on the matching `tenants[]` row. Assigning the wire
+   * summary straight through left all three undefined, so both affordances
+   * were unreachable no matter what the server sent.
+   */
+  it('merges the caller membership onto the active tenant (PLT-04 FR-5/FR-7)', async () => {
+    jest.spyOn(api, 'get').mockResolvedValue({
+      data: {
+        data: {
+          user: { id: 'u1', full_name: 'Ramesh', email: 'r@example.com', locale: 'en' },
+          active_tenant: {
+            id: 't1',
+            name: 'Sharma',
+            timezone: 'Asia/Kolkata',
+            status: 'active',
+            onboarding_step: 4,
+            enabled_modules: ['parties'],
+          },
+          tenants: [
+            {
+              id: 't1',
+              name: 'Sharma',
+              role: 'owner',
+              is_default: true,
+              status: 'active',
+              membership_id: 'm1',
+              onboarding_step: 4,
+            },
+          ],
+          permissions: [],
+        },
+      },
+    });
+
+    const session = await getSession();
+
+    expect(session.activeTenant).toMatchObject({
+      id: 't1',
+      role: 'owner',
+      isDefault: true,
+      membershipId: 'm1',
+    });
   });
 });

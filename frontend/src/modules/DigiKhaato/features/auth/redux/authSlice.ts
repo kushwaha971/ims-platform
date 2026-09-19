@@ -3,6 +3,7 @@ import { createSlice, type Draft, type PayloadAction } from '@reduxjs/toolkit';
 import { resetAllFeatureState } from 'src/redux/actions';
 import type { RootState } from 'src/redux/store';
 import type { ApiErrorShape, RequestStatus } from 'src/types/api.types';
+import { readDetailNumber } from 'src/utils/errorDetails';
 
 import {
   confirmPasswordReset,
@@ -68,13 +69,25 @@ const initialState: AuthState = {
  * and (per §22.1.1) as `details.retry_after`; the normalised error only keeps
  * `details`, so that is what is read, with a sane floor so a missing value never
  * produces a permanently disabled screen.
+ *
+ * `login_throttled` and `rate_limited` are **`D` envelopes**, so `retry_after`
+ * is the SCALAR `900`, not `["900"]` — `passwords.py` sends
+ * `details={"retry_after": int(retry_after)}` and the exception handler derives
+ * the `Retry-After` header from that same scalar. This read used to be
+ * `details.retry_after?.[0]`, which is `undefined` on a number: `Number(undefined)`
+ * is `NaN`, the 60-second floor always won, and a merchant locked out for the
+ * server's full 900 seconds was told to wait 60 and handed another 429 fourteen
+ * more times.
+ *
+ * `readDetailNumber` accepts the scalar AND the one-element-array spelling, so
+ * this stays correct whichever the server settles on — the shape is not
+ * guessed at here.
  */
 const throttleUntilFrom = (error: ApiErrorShape | null | undefined): number | null => {
   if (!error) return null;
   if (error.code !== 'login_throttled' && error.code !== 'rate_limited') return null;
-  const raw = error.details.retry_after?.[0];
-  const seconds = Number(raw);
-  return Date.now() + (Number.isFinite(seconds) && seconds > 0 ? seconds : 60) * 1000;
+  const seconds = readDetailNumber(error.details, 'retry_after');
+  return Date.now() + (seconds !== null && seconds > 0 ? seconds : 60) * 1000;
 };
 
 const authSlice = createSlice({

@@ -237,7 +237,7 @@ def test_accepting_an_invitation_at_the_seat_limit_is_refused(
     InvitationFactory(
         tenant=other_tenant,
         role=system_roles["staff"],
-        mobile=member.user.mobile,
+        email=member.user.email,
         raw_token="tok-at-limit",
     )
     response = client.post(
@@ -249,7 +249,9 @@ def test_accepting_an_invitation_at_the_seat_limit_is_refused(
     assert details["limit_key"] == "max_users"
     assert (details["limit"], details["used"]) == (2, 2)
     assert details["plan_code"] == other_tenant.plan.code
-    assert set(details["support_contact"]) == {"phone", "whatsapp", "email"}
+    # `name` is part of the block: FR-6/FR-7's "Contact {partner}" has nothing
+    # to interpolate without it.
+    assert set(details["support_contact"]) == {"name", "phone", "whatsapp", "email"}
 
 
 def test_accepting_below_the_seat_limit_succeeds(
@@ -266,7 +268,7 @@ def test_accepting_below_the_seat_limit_succeeds(
     InvitationFactory(
         tenant=other_tenant,
         role=system_roles["staff"],
-        mobile=member.user.mobile,
+        email=member.user.email,
         raw_token="tok-room",
     )
     response = client.post(
@@ -289,7 +291,7 @@ def test_an_unlimited_plan_never_blocks_a_seat(
     InvitationFactory(
         tenant=other_tenant,
         role=system_roles["staff"],
-        mobile=member.user.mobile,
+        email=member.user.email,
         raw_token="tok-unlimited",
     )
     assert (
@@ -322,7 +324,7 @@ def test_an_invited_seat_is_not_charged_twice_on_acceptance(
     InvitationFactory(
         tenant=other_tenant,
         role=system_roles["staff"],
-        mobile=member.user.mobile,
+        email=member.user.email,
         raw_token="tok-converted",
     )
     response = client.post(
@@ -359,7 +361,7 @@ def test_a_limit_hit_writes_an_audit_row(
     InvitationFactory(
         tenant=other_tenant,
         role=system_roles["staff"],
-        mobile=member.user.mobile,
+        email=member.user.email,
         raw_token="tok-audited",
     )
     client.post(reverse("v1:invitation-accept", kwargs={"token": "tok-audited"}), {}, format="json")

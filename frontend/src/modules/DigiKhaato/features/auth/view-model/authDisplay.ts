@@ -48,6 +48,34 @@ export const postAuthDestination = (result: AuthResult): PostAuthDestination => 
   return { kind: 'app', tenantId: chosen.id };
 };
 
+/**
+ * PLT-01 EC-5 / PLT-04 FR-8, FR-9 — where a session with NO active tenant
+ * belongs. This is `postAuthDestination`'s rule, asked of the session rather
+ * than of a login result, because the route guard has to answer it too.
+ *
+ * `sessionSlice` reports `no_tenant` whenever `activeTenant` is null, and that
+ * is three different situations, not one:
+ *
+ *  - no memberships at all → the wizard, which is what `no_tenant` was written
+ *    for;
+ *  - an `invited` membership and nothing active → the CHOOSER, which is the
+ *    only screen that lists an invitation (EC-5);
+ *  - several active memberships with no default → the chooser again (FR-9),
+ *    reachable as soon as a default membership's tenant is deleted.
+ *
+ * `RequireSession` used to send all three to `/onboarding`, so the two latter
+ * users were pushed into creating yet another business and the invitation they
+ * were sent could never be opened by any account the product can create.
+ */
+export type NoTenantDestination = 'chooser' | 'onboarding';
+
+export const noTenantDestination = (
+  tenants: readonly { readonly status?: string }[]
+): NoTenantDestination =>
+  tenants.some((tenant) => tenant.status === 'invited' || tenant.status === 'active')
+    ? 'chooser'
+    : 'onboarding';
+
 /** The active tenant, the default one, or — when several and no default — none. */
 export const resolveActiveTenant = (
   activeTenantId: string | null,

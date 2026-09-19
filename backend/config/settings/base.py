@@ -227,6 +227,24 @@ UB_API_BASE_PATH = env.str("UB_API_BASE_PATH", "/api/v1")
 CORS_ALLOWED_ORIGINS = env.list("UB_CORS_ALLOWED_ORIGINS", ["http://localhost:3000"])
 CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = env.list("UB_CSRF_TRUSTED_ORIGINS", ["http://localhost:3000"])
+# `django-cors-headers` defaults this to `[]`, which makes every response header
+# below invisible to a cross-origin browser — and the deployment topologies are
+# split: dev is cross-origin (frontend :3000, API :8000) while production is
+# same-origin behind nginx. Without this list a header-based guard passes in
+# production and silently does nothing in dev, or the reverse. Each entry is a
+# header some client code actually reads:
+#   X-Request-Id        — `toApiError` quotes it to support.
+#   X-Tenant-Id         — PLT-04 FR-4 / CCR-3 stale-tab guard.
+#   X-Tenant-Scope      — the debugging aid `TenantContextMiddleware` sets.
+#   Idempotent-Replayed — tells the client its retry was a replay, not a new write.
+#   Retry-After         — the throttle countdown (Part 22 §22.1).
+CORS_EXPOSE_HEADERS = [
+    "X-Request-Id",
+    "X-Tenant-Id",
+    "X-Tenant-Scope",
+    "Idempotent-Replayed",
+    "Retry-After",
+]
 
 # ── Jobs and scheduler (ADR-012, Part 20 §20.8) ──────────────────────────────
 UB_JOBS_EAGER = env.bool("UB_JOBS_EAGER", False)

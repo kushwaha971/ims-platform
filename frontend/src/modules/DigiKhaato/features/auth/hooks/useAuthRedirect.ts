@@ -61,9 +61,6 @@ export const useAuthRedirect = (): UseAuthRedirectResult => {
         case 'onboarding':
           router.replace(AUTH_CONFIG.onboardingStepPath(destination.step));
           return;
-        case 'setPassword':
-          router.replace(AUTH_CONFIG.setPasswordRoute);
-          return;
         case 'invitation':
         case 'chooser':
           router.replace(AUTH_CONFIG.chooserRoute);

@@ -48,7 +48,7 @@ def request_hash(*, method: str, path: str, body: Any) -> str:
     return hashlib.sha256(material.encode("utf-8")).hexdigest()
 
 
-def idempotent(scope: str) -> Callable:
+def idempotent(scope: str, *, keyed_by: str = "tenant") -> Callable:
     """View decorator implementing Part 22 §22.1 idempotency exactly.
 
     No key present                → execute normally (the header is required only
@@ -58,7 +58,34 @@ def idempotent(scope: str) -> Callable:
                                     `Idempotent-Replayed: true`.
     Key + same body + in_progress → 409 `idempotency_in_progress`.
     Key + different body          → 409 `idempotency_conflict`.
+
+    `keyed_by` picks which unique index holds the lock:
+
+    ``"tenant"`` (the default)
+        The row is `(tenant, scope, key)` — one namespace per business, which is
+        what every tenant-scoped write wants.
+
+    ``"user"``
+        The row is `(NULL, user, scope, key)`. This is for endpoints that
+        *create or change the caller's tenant*. Keying those by tenant is a
+        contradiction: the first attempt of `POST /tenants` runs under tenant A
+        (or under none) and its response moves the caller's `tid` to the new
+        tenant B, so the retry arrives under B, lands on a different tuple, is
+        treated as a fresh claim, and creates a *second business*. The key's
+        namespace must not depend on state the request itself mutates — PLT-03
+        EC-7 is exactly the case where it does.
+
+    **A replay must be a whole response, not a body.** The stored
+    `response_body` is replayed verbatim, but a response's side effects can live
+    in its headers — `POST /tenants` issues the session cookies carrying the new
+    `tid` there, and a replay without them hands the client a 201 for a tenant
+    it holds no token for, which wedges the next wizard step on
+    `no_active_tenant`. A view whose response carries such side effects declares
+    an `idempotent_replay(request, record, response)` method; the decorator
+    calls it on the replay path and returns what it returns.
     """
+    if keyed_by not in ("tenant", "user"):  # pragma: no cover - programming error
+        raise ValueError(f"keyed_by must be 'tenant' or 'user', not {keyed_by!r}")
 
     def decorator(view_method: Callable) -> Callable:
         @functools.wraps(view_method)
@@ -69,7 +96,7 @@ def idempotent(scope: str) -> Callable:
 
             from apps.common.tenancy import get_effective_tenant
 
-            tenant = get_effective_tenant(request)
+            tenant = None if keyed_by == "user" else get_effective_tenant(request)
             model = _idempotency_model()
             key = key[:KEY_MAX_LENGTH]
             digest = request_hash(
@@ -111,6 +138,9 @@ def idempotent(scope: str) -> Callable:
                     raise IdempotencyInProgress()
                 replay = Response(record.response_body, status=record.response_status)
                 replay["Idempotent-Replayed"] = "true"
+                rebuild = getattr(self, "idempotent_replay", None)
+                if rebuild is not None:
+                    replay = rebuild(request, record, replay)
                 return replay
 
             try:

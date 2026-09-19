@@ -177,6 +177,21 @@ def leave(
     return membership
 
 
+def normalise_email_or_none(raw: Any) -> str:
+    """Lower-case and strip an address for comparison; `""` when it is not one.
+
+    Invitation rows predate `DEC-010` and a legacy row may carry no address at
+    all; `""` never equals a real `platform_user.email`, so such a row is
+    refused rather than matched by accident.
+    """
+    from apps.platform_app.email import InvalidEmail, normalise_email
+
+    try:
+        return normalise_email(raw)
+    except InvalidEmail:
+        return ""
+
+
 def accept_invitation(
     *,
     user: Any,
@@ -209,8 +224,12 @@ def accept_invitation(
             status=InvitationStatus.EXPIRED, updated_at=timezone.now()
         )
         raise InvitationInvalid("This invitation has expired.")
-    if invitation.mobile != user.mobile:
-        raise InvitationInvalid("This invitation is not for your number.")
+    # DEC-010 / `CR-140`: the invitation names an *email address*, because that
+    # is the identity the product issues. Matching on `mobile` made acceptance
+    # unreachable for every account the sign-up screen can create, since none of
+    # them has one.
+    if not invitation.email or normalise_email_or_none(invitation.email) != (user.email or ""):
+        raise InvitationInvalid("This invitation is not for your email address.")
 
     with transaction.atomic():
         invitation = (

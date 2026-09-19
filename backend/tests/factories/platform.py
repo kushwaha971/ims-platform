@@ -203,7 +203,10 @@ class InvitationFactory(factory.django.DjangoModelFactory):
         model = Invitation
 
     tenant = factory.SubFactory(TenantFactory)
-    mobile = factory.Sequence(lambda n: f"+9197000{n:05d}")
+    # The identity, since DEC-010 / CR-140. `mobile` is left unset by default
+    # because the product's own accounts have none — a factory that always
+    # populates it is what hid the fact that acceptance matched on it.
+    email = factory.Sequence(lambda n: f"invitee{n}@example.com")
     role = factory.SubFactory(RoleFactory, code="staff", name="Staff")
     token_hash = factory.LazyAttribute(lambda o: hash_token(o.raw_token))
     status = InvitationStatus.PENDING

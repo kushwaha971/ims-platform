@@ -135,3 +135,44 @@ def test_the_tenant_is_resolved_once_per_http_request(two_tenants_full: dict) ->
     assert django_request._ub_tenant == a["tenant"]
     # A second wrapper over the same HTTP request reuses the memo.
     assert get_effective_tenant(Request(django_request)) == a["tenant"]
+
+
+# ── PLT-04 FR-4 / CCR-3: every tenant-scoped response echoes the tenant ──────
+
+
+def test_every_tenant_scoped_response_echoes_the_tenant_id(tenant: Any, api_as: Any) -> None:
+    """The stale-tab guard keys on `X-Tenant-Id`, so a response without it is
+    a response the guard cannot police. It is set once, in the middleware, for
+    every response whose tenant resolved — not per-view.
+    """
+    from django.urls import reverse as _reverse
+
+    client, _member = api_as(tenant)
+    for name in ("v1:party-list", "v1:tenant-current", "v1:auth-me"):
+        response = client.get(_reverse(name))
+        assert response["X-Tenant-Id"] == str(tenant.id), name
+        assert response["X-Tenant-Scope"] == "1", name
+
+
+def test_a_response_with_no_resolved_tenant_carries_no_tenant_header(
+    anonymous_client: Any,
+) -> None:
+    """The header is an echo of a resolved tenant, never a placeholder."""
+    from django.urls import reverse as _reverse
+
+    response = anonymous_client.get(_reverse("v1:party-list"))
+    assert response.status_code == 401
+    assert "X-Tenant-Id" not in response
+
+
+def test_the_tenant_header_is_never_read_from_the_request(
+    two_tenants_full: dict,
+) -> None:
+    """Scoping is the `tid` claim. A forged `X-Tenant-Id` changes nothing —
+    including the header the response echoes back."""
+    from django.urls import reverse as _reverse
+
+    a, b = two_tenants_full["a"], two_tenants_full["b"]
+    response = a["client"].get(_reverse("v1:party-list"), HTTP_X_TENANT_ID=str(b["tenant"].id))
+    assert response["X-Tenant-Id"] == str(a["tenant"].id)
+    assert [row["name"] for row in response.json()["data"]] == [a["party"].name]

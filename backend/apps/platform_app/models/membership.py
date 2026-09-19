@@ -78,13 +78,26 @@ class Membership(TimeStampedModel):
 
 
 class Invitation(TimeStampedModel):
-    """A pending membership invite (Part 21 §21.3.1)."""
+    """A pending membership invite (Part 21 §21.3.1).
+
+    **Identity is `email`, not `mobile` (DEC-010, `CR-140`).** The column was
+    originally `mobile` alone, from the sprint when a mobile number was how a
+    person signed in. `DEC-010` made email the identifier and left `mobile` an
+    optional profile field, and `CR-2026-09-19-D` removed it from the sign-up
+    form — so every account the product can create has `mobile = None`, and an
+    invitation matched on mobile is one no account can ever accept. An
+    invitation has to key on the identity the product actually issues.
+
+    `mobile` stays as what it now is: a notification channel, nullable, used to
+    reach an invitee by SMS or WhatsApp and never to decide who they are.
+    """
 
     id = uuid7_pk()
     tenant = models.ForeignKey(
         "platform.Tenant", on_delete=models.RESTRICT, related_name="invitations"
     )
-    mobile = models.CharField(max_length=15)
+    email = models.EmailField(max_length=254)
+    mobile = models.CharField(max_length=15, null=True, blank=True)
     role = models.ForeignKey("platform.Role", on_delete=models.RESTRICT, related_name="+")
     token_hash = models.CharField(max_length=64, unique=True)
     status = models.CharField(
@@ -104,7 +117,11 @@ class Invitation(TimeStampedModel):
         verbose_name_plural = "invitations"
         indexes = [
             models.Index(fields=["tenant", "status"], name="ix_invitation_tenant_status"),
+            # `accept` looks a row up by token and then checks the address; the
+            # invitee-facing list ("your pending invitations") looks up by
+            # address alone, which is what this serves.
+            models.Index(fields=["email", "status"], name="ix_invitation_email_status"),
         ]
 
     def __str__(self) -> str:
-        return f"{self.mobile} → {self.tenant_id}"
+        return f"{self.email} → {self.tenant_id}"

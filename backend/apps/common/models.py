@@ -70,10 +70,23 @@ class SoftDeleteModel(models.Model):
 class ImmutableModel(models.Model):
     """A row that is written once and never updated (`LedgerEntry`, `StockMovement`).
 
-    The database trigger `forbid_update_delete` (Part 21 §21.3.4) is the real
-    guarantee; this base stops the ORM path early so a bug fails in a test rather
-    than in production. Subclasses list the columns the product does permit to
-    change in `MUTABLE_FIELDS` — for `ledger_entry` that is exactly `status` and
+    **Append-only is an ORM convention here, not yet a database guarantee.**
+    Part 21 §21.3.4 specifies a `forbid_update_delete` trigger and §21.1 rule 2
+    mandates it for `ledger_entry` and `inventory_stock_movement`; no migration
+    in this repository creates any trigger, and both of those tables are
+    unbuilt. What this class does is stop the `Model.save()` / `Model.delete()`
+    path, so a bug fails in a test rather than in production — but
+    `QuerySet.update()` and `QuerySet.delete()` never call either, and raw SQL
+    calls neither. The only subclass today is `AuditLog`.
+
+    Saying so plainly matters more than it looks: a later reader deciding
+    whether a ledger invariant is enforced will read this docstring before they
+    read the migrations, and a claim that the real guarantee is already in place
+    is the kind of claim that stops the trigger from ever being written.
+    `CR-LOG` carries the trigger migration, to land with the tables that need it.
+
+    Subclasses list the columns the product does permit to change in
+    `MUTABLE_FIELDS` — for `ledger_entry` that is exactly `status` and
     `reversed_by_id`.
     """
 

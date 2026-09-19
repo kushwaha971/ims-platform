@@ -32,17 +32,27 @@ class StateCodeField(serializers.CharField):
 
 
 class AddressSerializer(serializers.Serializer):
-    """`platform_tenant.address` (Part 21 §21.3.1) — a closed jsonb shape."""
+    """`platform_tenant.address` (Part 21 §21.3.1) — a closed jsonb shape.
 
-    line1 = serializers.CharField(max_length=120, required=False, allow_blank=True)
-    line2 = serializers.CharField(max_length=120, required=False, allow_blank=True)
-    city = serializers.CharField(max_length=120, required=False, allow_blank=True)
-    district = serializers.CharField(max_length=120, required=False, allow_blank=True)
-    state = serializers.CharField(max_length=120, required=False, allow_blank=True)
+    Every field is `allow_null`: "I left this blank" and "clear what is there"
+    are the same gesture in a form, and a client that normalises an empty input
+    to `null` is spelling that gesture the only way JSON has for it. `validate`
+    on the parent drops both spellings out of the stored jsonb, so a cleared
+    field leaves no key behind rather than an empty one.
+    """
+
+    line1 = serializers.CharField(max_length=120, required=False, allow_blank=True, allow_null=True)
+    line2 = serializers.CharField(max_length=120, required=False, allow_blank=True, allow_null=True)
+    city = serializers.CharField(max_length=120, required=False, allow_blank=True, allow_null=True)
+    district = serializers.CharField(
+        max_length=120, required=False, allow_blank=True, allow_null=True
+    )
+    state = serializers.CharField(max_length=120, required=False, allow_blank=True, allow_null=True)
     pincode = serializers.RegexField(
         PINCODE_RE,
         required=False,
         allow_blank=True,
+        allow_null=True,
         error_messages={"invalid": "Enter a 6-digit PIN code"},
     )
 
@@ -67,35 +77,50 @@ class TenantUpdateSerializer(serializers.Serializer):
     """
 
     name = serializers.CharField(min_length=2, max_length=160, required=False)
-    legal_name = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    legal_name = serializers.CharField(
+        max_length=200, required=False, allow_blank=True, allow_null=True
+    )
     business_type = serializers.ChoiceField(choices=BusinessType.choices, required=False)
     gst_type = serializers.ChoiceField(choices=GstType.choices, required=False)
-    gstin = serializers.CharField(max_length=15, required=False, allow_blank=True)
-    pan = serializers.CharField(max_length=10, required=False, allow_blank=True)
+    gstin = serializers.CharField(max_length=15, required=False, allow_blank=True, allow_null=True)
+    pan = serializers.CharField(max_length=10, required=False, allow_blank=True, allow_null=True)
     state_code = StateCodeField(max_length=2, required=False)
-    address = AddressSerializer(required=False)
-    phone = serializers.CharField(max_length=15, required=False)
-    email = serializers.EmailField(required=False, allow_blank=True)
+    address = AddressSerializer(required=False, allow_null=True)
+    # `platform_tenant.phone` is NOT NULL, so `null` here means "clear it", which
+    # is the empty string on the column — not `None`. FR-10's "Skip for now"
+    # sends exactly that.
+    phone = serializers.CharField(max_length=15, required=False, allow_blank=True, allow_null=True)
+    email = serializers.EmailField(required=False, allow_blank=True, allow_null=True)
     locale = serializers.ChoiceField(choices=["en", "hi"], required=False)
     onboarding_step = serializers.IntegerField(min_value=0, max_value=4, required=False)
 
-    def validate_phone(self, value: str) -> str:
+    def validate_phone(self, value: str | None) -> str:
+        if value in (None, ""):
+            return ""
         try:
             return normalise_mobile(value)
         except InvalidMobile as exc:
             raise serializers.ValidationError(str(exc)) from exc
 
-    def validate_gstin(self, value: str) -> str:
+    def validate_gstin(self, value: str | None) -> str:
         return (value or "").strip().upper()
 
-    def validate_pan(self, value: str) -> str:
+    def validate_pan(self, value: str | None) -> str:
         return (value or "").strip().upper()
 
     def validate(self, attrs: dict) -> dict:
-        if attrs.get("address") is not None:
-            attrs["address"] = {k: v for k, v in attrs["address"].items() if v not in (None, "")}
+        # `null` and `""` are the same gesture on this endpoint — the wizard's
+        # "Skip for now" (FR-10) and a blank optional input both mean "there is
+        # no value here". They are normalised to whatever the column can hold:
+        # `None` for the nullable text columns, `{}` for the jsonb, `""` for the
+        # NOT NULL `phone`. The service layer behind this already expects `None`
+        # (`_apply_gst` sets `payload["gstin"] = None` for an unregistered
+        # business), so accepting it is what makes the two layers agree.
+        if "address" in attrs:
+            address = attrs["address"] or {}
+            attrs["address"] = {k: v for k, v in address.items() if v not in (None, "")}
         for optional in ("legal_name", "email", "gstin", "pan"):
-            if attrs.get(optional) == "":
+            if attrs.get(optional) in ("", None) and optional in attrs:
                 attrs[optional] = None
         return attrs
 

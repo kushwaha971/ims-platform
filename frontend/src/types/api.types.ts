@@ -28,6 +28,17 @@ export type ApiErrorCode =
   | 'server_error'
   // auth and session
   | 'invalid_credentials'
+  /**
+   * A 401 with no credentials at all, as opposed to wrong ones. The server has
+   * always emitted it — `exceptions.py` answers every DRF `NotAuthenticated`
+   * with it and `error_codes.py` registers it as `(401, False)` — but it was
+   * in neither closed registry: not in this union, and not in Part 22
+   * §22.1.1's table (it appears only in the prose at §16). §22.1's own rule is
+   * that the set of codes the application emits equals the set documented
+   * there, so that rule was false. Adding the member here closes the client
+   * half; the table is `docs/`, which this change cannot touch.
+   */
+  | 'unauthenticated'
   | 'otp_invalid'
   | 'otp_throttled'
   | 'login_throttled'
@@ -66,8 +77,24 @@ export interface ApiErrorShape {
   readonly code: ApiErrorCode;
   /** Human message; already localised by the server via Accept-Language. */
   readonly message: string;
-  /** Field errors for 400s: { field_name: [messages] }. */
-  readonly details: Readonly<Record<string, readonly string[]>>;
+  /**
+   * Part 22 §22.1 — whatever the server put in `details`, unconverted.
+   *
+   * This used to be typed `Record<string, readonly string[]>`, which is only
+   * the `F` (field-map) envelope and only its flat case. The server also sends
+   * the `D` envelope — named keys with their natural JSON types, e.g.
+   * `plan_limit_reached`'s `{limit: 3, plan_code: "free", support_contact: {…}}`
+   * and `login_throttled`'s `{retry_after: 900}` — and DRF nests a child
+   * serializer's errors as an object, so even a 400 carries
+   * `{address: {line1: […]}}`. The narrow type made three separate wrong
+   * readers look safe: one called `.join()` on an object and threw, one indexed
+   * `[0]` of a number and got `undefined`, one indexed `[0]` of a string and
+   * got a single letter.
+   *
+   * `unknown` is deliberately awkward. Read it with `src/utils/errorDetails`:
+   * `flattenErrorDetails` for the field map, `readDetail*` for named keys.
+   */
+  readonly details: Readonly<Record<string, unknown>>;
   /** Echo of X-Request-Id — shown to the user on error screens (R-E-4). */
   readonly requestId: string | null;
   readonly status: number | null;
@@ -79,7 +106,7 @@ export interface ServerErrorEnvelope {
   readonly error?: {
     readonly code?: string;
     readonly message?: string;
-    readonly details?: Record<string, string[]>;
+    readonly details?: Record<string, unknown>;
     readonly request_id?: string;
   };
 }

@@ -106,6 +106,45 @@ export const createTenant = async (
 };
 export const createTenantWriteClass: TWriteClass = 'online-only';
 
+/**
+ * PATCH /tenants/current — step 1 again, for a business that already exists.
+ *
+ * PLT-03 FR-9 makes a completed step navigable "for edits", and step 1 is the
+ * business name. Before this, editing it called `createTenant` unconditionally:
+ * a merchant who came back to fix a misspelled name got a SECOND business,
+ * which is permanent — there is no delete-business path at MVP (PLT-10 is
+ * unbuilt) — and which became the active tenant, so the wizard then carried on
+ * filling in the duplicate.
+ *
+ * `name`, `business_type` and `state_code` are all in the server's
+ * `UPDATABLE_FIELDS`, so this is the same three values by the other verb.
+ *
+ * `onboarding_step` is deliberately NOT sent. An edit is not progress: the
+ * server assigns the step it is given, so echoing `1` from a merchant who had
+ * reached step 3 would regress the wizard and resume them in the wrong place
+ * on their next login. Omitting it leaves the recorded step where it was.
+ *
+ * `owner_name` is likewise not sent: it is a field on the USER, accepted only
+ * by `POST /tenants` (`TenantCreateSerializer`), and there is no MVP endpoint
+ * that updates it. BR-7 only asks for it when it is blank, which on an edit it
+ * no longer is.
+ */
+export const updateBusinessStep = async (
+  input: OnboardingBusinessStep
+): Promise<OnboardingResult> => {
+  const response = await api.patch<TenantApiResponse>(
+    API_PATHS.TENANT_CURRENT,
+    {
+      name: input.name,
+      business_type: input.businessType,
+      state_code: input.stateCode,
+    },
+    ubConfig({ suppressErrorSnackbar: true })
+  );
+  return toResult(response.data);
+};
+export const updateBusinessStepWriteClass: TWriteClass = 'online-only';
+
 /** PATCH /tenants/current — step 2 (FR-3). */
 export const updateGstStep = async (input: OnboardingGstStep): Promise<OnboardingResult> => {
   const response = await api.patch<TenantApiResponse>(

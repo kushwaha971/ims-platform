@@ -5,6 +5,8 @@
 import axios, { type AxiosError } from 'axios';
 
 import type { ApiErrorCode, ApiErrorShape, ServerErrorEnvelope } from 'src/types/api.types';
+import { snakeToCamelPath } from 'src/utils/caseMapper';
+import { flattenErrorDetails } from 'src/utils/errorDetails';
 
 const EMPTY_DETAILS: Readonly<Record<string, readonly string[]>> = Object.freeze({});
 
@@ -24,7 +26,13 @@ const mapStatusToCode = (status: number): ApiErrorCode => {
     case 400:
       return 'validation_error';
     case 401:
-      return 'invalid_credentials';
+      // NOT `invalid_credentials`. That code is "you gave a password and it
+      // was wrong", it is in LOCALLY_PRESENTED below, and putting a bodyless
+      // 401 under it silently SUPPRESSED the toast — the one failure shape
+      // with no body is the one with no other surface to report it on. A real
+      // wrong password always arrives with a body naming its own code, so this
+      // branch only ever saw the credential-less case.
+      return 'unauthenticated';
     case 403:
       return 'permission_denied';
     case 404:
@@ -168,17 +176,17 @@ const CLIENT_MINTED_MESSAGE_ID: Partial<Record<ApiErrorCode, string>> = {
 export const errorMessageId = (error: ApiErrorShape): string | null =>
   CLIENT_MINTED_MESSAGE_ID[error.code] ?? (error.message ? null : 'error.generic');
 
-/** §19.4.4 — `details` feeds `setError`; snake_case keys become RHF paths. */
+/**
+ * §19.4.4 — `details` feeds `setError`; snake_case keys become RHF paths.
+ *
+ * Shares `flattenErrorDetails` with `applyServerErrors`, so a nested
+ * `{address: {line1: […]}}` yields `address.line1` here too rather than being
+ * silently dropped by a `.length` read on an object.
+ */
 export const fieldErrorEntries = (
   error: ApiErrorShape
 ): readonly { readonly field: string; readonly message: string }[] =>
-  Object.entries(error.details).flatMap(([field, messages]) =>
-    messages.length > 0 && messages[0] !== undefined
-      ? [
-          {
-            field: field.replace(/_([a-z0-9])/g, (_, c: string) => c.toUpperCase()),
-            message: messages[0],
-          },
-        ]
-      : []
-  );
+  flattenErrorDetails(error.details).map(({ path, message }) => ({
+    field: snakeToCamelPath(path),
+    message,
+  }));

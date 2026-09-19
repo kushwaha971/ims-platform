@@ -1,7 +1,7 @@
 import { API_PATHS } from 'src/api/APIPaths';
 import { api } from 'src/api/AxiosInstances';
 import { DEFAULT_TENANT_TIMEZONE } from 'src/constants';
-import type { SessionPayload } from 'src/redux/slice/sessionSlice';
+import type { SessionPayload, SessionTenant } from 'src/redux/slice/sessionSlice';
 import type { TWriteClass } from 'src/types/api.types';
 import type { Locale, ModuleCode, PermissionCode } from 'src/types/domain.types';
 
@@ -48,13 +48,34 @@ interface AuthUserApiRow {
   readonly has_password?: boolean;
 }
 
+/**
+ * The active-tenant summary. Part 22 §22.2 is explicit that the enabled modules
+ * live HERE and not at the top level of the payload — "active tenant summary
+ * (`enabled_modules`, `gst_type`, `branding`)" — and `session_payload.build()`
+ * agrees: there is no top-level `enabled_modules` on any `/auth/*` response.
+ *
+ * Everything below `id`/`name` is optional because this type used to claim
+ * three fields while the server sent sixteen; a type that under-describes the
+ * wire is how the next reader gets `undefined` where they expected a value.
+ * Only what this file actually maps is listed, so the type stays a contract
+ * rather than a second copy of the serializer.
+ */
+interface ActiveTenantApiRow {
+  readonly id: string;
+  readonly name: string;
+  readonly timezone?: string;
+  readonly status?: string;
+  readonly onboarding_step?: number | null;
+  readonly enabled_modules?: readonly ModuleCode[];
+}
+
 interface AuthApiResponse {
   readonly data: {
     readonly user: AuthUserApiRow;
     readonly tenants: readonly TenantApiRow[];
     readonly active_tenant_id: string | null;
+    readonly active_tenant?: ActiveTenantApiRow | null;
     readonly permissions: readonly PermissionCode[];
-    readonly enabled_modules?: readonly ModuleCode[];
   };
 }
 
@@ -68,14 +89,15 @@ interface SessionApiResponse {
       readonly mobile?: string | null;
       readonly locale: Locale;
     };
-    readonly active_tenant: {
-      readonly id: string;
-      readonly name: string;
-      readonly timezone: string;
-    } | null;
+    readonly active_tenant: ActiveTenantApiRow | null;
     readonly tenants: readonly TenantApiRow[];
     readonly permissions: readonly PermissionCode[];
-    readonly enabled_modules: readonly ModuleCode[];
+    /**
+     * `ver` is the permissions version `sessionSlice` re-reads on (Part 22
+     * §22.2). `session_payload.build()` does not send it yet, so the read is
+     * forward-compatible and `null` is the documented "not told" value — it is
+     * never spread or indexed, unlike `enabled_modules` was.
+     */
     readonly ver?: number;
   };
 }
@@ -116,7 +138,11 @@ const toAuthResult = (body: AuthApiResponse): AuthResult => {
     activeTenantId: data.active_tenant_id,
     tenants: data.tenants.map(toAuthTenant),
     permissions: data.permissions,
-    enabledModules: data.enabled_modules ?? [],
+    // Part 22 §22.2 — modules belong to the ACTIVE TENANT, not to the user.
+    // This used to read a top-level `enabled_modules` the server has never
+    // sent; the `?? []` meant it degraded to "no modules" instead of throwing,
+    // which is why only `getSession` (below) blew up.
+    enabledModules: data.active_tenant?.enabled_modules ?? [],
   };
 };
 
@@ -227,6 +253,43 @@ export const confirmPasswordResetWriteClass: TWriteClass = 'online-only';
 export const getSession = async (signal?: AbortSignal): Promise<SessionPayload> => {
   const response = await api.get<SessionApiResponse>(API_PATHS.AUTH_ME, { signal });
   const data = response.data.data;
+
+  // PLT-04 FR-1 — the role, the default flag and the caller's own membership
+  // id travel with each row, because the switcher shows all three.
+  const tenants: readonly SessionTenant[] = data.tenants.map((row) => ({
+    id: row.id,
+    name: row.name,
+    timezone: row.timezone ?? DEFAULT_TENANT_TIMEZONE,
+    role: row.role ?? null,
+    isDefault: row.is_default ?? false,
+    status: row.status ?? 'active',
+    membershipId: row.membership_id ?? null,
+    onboardingStep: row.onboarding_step ?? null,
+  }));
+
+  /**
+   * The active tenant is a SUMMARY, not a membership row: it carries the
+   * business's own fields and knows nothing about the caller's role, default
+   * flag or membership id. Assigning the wire object straight through left
+   * `activeTenant.membershipId` permanently `undefined`, which is a second,
+   * independent reason PLT-04 FR-5 ("Make default") and FR-7 ("Leave
+   * business") can never render — `TenantSwitcherMenu` gates both on it. The
+   * matching `tenants[]` row is where those three live, so the two are merged
+   * here rather than in three components.
+   */
+  const activeRow = data.active_tenant;
+  const membership = activeRow ? tenants.find((row) => row.id === activeRow.id) : undefined;
+  const activeTenant: SessionTenant | null = activeRow
+    ? {
+        ...membership,
+        id: activeRow.id,
+        name: activeRow.name,
+        timezone: activeRow.timezone ?? membership?.timezone ?? DEFAULT_TENANT_TIMEZONE,
+        status: activeRow.status ?? membership?.status ?? 'active',
+        onboardingStep: activeRow.onboarding_step ?? membership?.onboardingStep ?? null,
+      }
+    : null;
+
   return {
     user: {
       id: data.user.id,
@@ -235,21 +298,16 @@ export const getSession = async (signal?: AbortSignal): Promise<SessionPayload> 
       mobile: data.user.mobile ?? null,
       locale: data.user.locale,
     },
-    activeTenant: data.active_tenant,
-    // PLT-04 FR-1 — the role, the default flag and the caller's own membership
-    // id travel with each row, because the switcher shows all three.
-    tenants: data.tenants.map((row) => ({
-      id: row.id,
-      name: row.name,
-      timezone: row.timezone ?? DEFAULT_TENANT_TIMEZONE,
-      role: row.role ?? null,
-      isDefault: row.is_default ?? false,
-      status: row.status ?? 'active',
-      membershipId: row.membership_id ?? null,
-      onboardingStep: row.onboarding_step ?? null,
-    })),
+    activeTenant,
+    tenants,
     permissions: data.permissions,
-    enabledModules: data.enabled_modules,
+    // Part 22 §22.2 and `session_payload.build()` both put the modules inside
+    // the active-tenant summary. This read used to be `data.enabled_modules`
+    // with NO fallback, and `sessionSlice` spreads it — so every authenticated
+    // page load threw `TypeError: undefined is not iterable` out of a reducer,
+    // where RTK's own try/catch cannot see it. A session with no active tenant
+    // legitimately has no modules, which is what `[]` says.
+    enabledModules: activeRow?.enabled_modules ?? [],
     version: data.ver ?? null,
   };
 };

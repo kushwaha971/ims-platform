@@ -363,7 +363,7 @@ def test_accepting_an_invitation_activates_the_membership(
     invitation = InvitationFactory(
         tenant=other_tenant,
         role=system_roles["staff"],
-        mobile=member.user.mobile,
+        email=member.user.email,
         raw_token="tok-accept-1",
     )
     url = reverse("v1:invitation-accept", kwargs={"token": "tok-accept-1"})
@@ -378,24 +378,107 @@ def test_accepting_an_invitation_activates_the_membership(
     assert invitation.accepted_user_id == member.user.id
 
 
-def test_an_invitation_for_another_mobile_is_refused(
+def test_an_invitation_for_another_address_is_refused(
     api_as: Any, tenant: Any, other_tenant: Any, system_roles: dict
 ) -> None:
-    """PLT-05 §10: "caller mobile matches" → else 400 `invitation_invalid`."""
+    """PLT-05 §10, as amended by DEC-010: the caller's *email* must match."""
     from tests.factories.platform import InvitationFactory
 
     client, _member = api_as(tenant)
     InvitationFactory(
         tenant=other_tenant,
         role=system_roles["staff"],
-        mobile="+919999999999",
-        raw_token="tok-wrong-mobile",
+        email="somebody.else@example.com",
+        raw_token="tok-wrong-address",
     )
     response = client.post(
-        reverse("v1:invitation-accept", kwargs={"token": "tok-wrong-mobile"}), {}, format="json"
+        reverse("v1:invitation-accept", kwargs={"token": "tok-wrong-address"}), {}, format="json"
     )
     assert response.status_code == 400
     assert response.json()["error"]["code"] == "invitation_invalid"
+
+
+def test_an_invitation_is_accepted_by_an_account_the_product_can_create(
+    api_as: Any, tenant: Any, other_tenant: Any, system_roles: dict
+) -> None:
+    """`CR-140`: acceptance must work for an account with no mobile at all.
+
+    Since `DEC-010` the sign-up form is `{email, password}`, so every account the
+    product issues has `mobile = None`. Matching an invitation on `mobile` made
+    the whole path unreachable for all of them — and the suite stayed green only
+    because `UserFactory.mobile` populated a field the product never does.
+    """
+    from apps.platform_app.models import Membership
+    from tests.factories.platform import InvitationFactory, UserFactory
+
+    invitee = UserFactory(mobile=None)
+    client, member = api_as(tenant, user=invitee)
+    assert member.user.mobile is None
+
+    InvitationFactory(
+        tenant=other_tenant,
+        role=system_roles["staff"],
+        email=invitee.email,
+        mobile=None,
+        raw_token="tok-no-mobile",
+    )
+    response = client.post(
+        reverse("v1:invitation-accept", kwargs={"token": "tok-no-mobile"}), {}, format="json"
+    )
+    assert response.status_code == 200, response.json()
+    assert Membership.objects.get(user=invitee, tenant=other_tenant).status == "active"
+
+
+def test_a_mobile_less_stranger_cannot_take_somebody_elses_invitation(
+    api_as: Any, tenant: Any, other_tenant: Any, system_roles: dict
+) -> None:
+    """The other half of `CR-140`, and the dangerous half.
+
+    Matching on `mobile` did not merely refuse the right person — with `mobile`
+    absent on both sides, `None == None` *matched*, so once the invitee's row
+    also carried no number any account the product creates could take any
+    invitation it held a token for. Keying on the identity the product issues
+    fixes both directions at once.
+    """
+    from apps.platform_app.models import Membership
+    from tests.factories.platform import InvitationFactory, UserFactory
+
+    stranger = UserFactory(mobile=None)
+    client, member = api_as(tenant, user=stranger)
+    assert member.user.mobile is None
+
+    InvitationFactory(
+        tenant=other_tenant,
+        role=system_roles["staff"],
+        email="the.actual.invitee@example.com",
+        mobile=None,
+        raw_token="tok-not-yours",
+    )
+    response = client.post(
+        reverse("v1:invitation-accept", kwargs={"token": "tok-not-yours"}), {}, format="json"
+    )
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "invitation_invalid"
+    assert not Membership.objects.filter(user=stranger, tenant=other_tenant).exists()
+
+
+def test_an_invitation_address_matches_case_insensitively(
+    api_as: Any, tenant: Any, other_tenant: Any, system_roles: dict
+) -> None:
+    """`normalise_email` is how the product compares addresses everywhere else."""
+    from tests.factories.platform import InvitationFactory
+
+    client, member = api_as(tenant)
+    InvitationFactory(
+        tenant=other_tenant,
+        role=system_roles["staff"],
+        email=member.user.email.upper(),
+        raw_token="tok-upper",
+    )
+    response = client.post(
+        reverse("v1:invitation-accept", kwargs={"token": "tok-upper"}), {}, format="json"
+    )
+    assert response.status_code == 200, response.json()
 
 
 def test_an_expired_invitation_is_refused_and_marked_expired(
@@ -413,7 +496,7 @@ def test_an_expired_invitation_is_refused_and_marked_expired(
     invitation = InvitationFactory(
         tenant=other_tenant,
         role=system_roles["staff"],
-        mobile=member.user.mobile,
+        email=member.user.email,
         raw_token="tok-expired",
         expires_at=timezone.now() - dt.timedelta(days=1),
     )
@@ -442,9 +525,54 @@ def test_an_invitation_cannot_be_accepted_twice(
     InvitationFactory(
         tenant=other_tenant,
         role=system_roles["staff"],
-        mobile=member.user.mobile,
+        email=member.user.email,
         raw_token="tok-twice",
     )
     url = reverse("v1:invitation-accept", kwargs={"token": "tok-twice"})
     assert client.post(url, {}, format="json").status_code == 200
     assert client.post(url, {}, format="json").status_code == 400
+
+
+# ── FR-5 / FR-7: the switcher acts on a membership id it has to be given ─────
+
+
+def test_every_tenant_row_carries_its_membership_id(api_as: Any, two_tenants_full: dict) -> None:
+    """PLT-04 FR-5 and FR-7 act on the caller's own membership row, and
+    `PATCH`/`DELETE /memberships/{id}` take that row's id. Without it in
+    `tenants[]` the client has no id to send, gates both affordances out, and
+    the two endpoints have no reachable caller at all.
+    """
+    from apps.platform_app.models import Membership
+
+    a = two_tenants_full["a"]
+    rows = a["client"].get(reverse("v1:auth-me")).json()["data"]["tenants"]
+    assert rows
+    for row in rows:
+        membership = Membership.objects.get(pk=row["membership_id"])
+        assert membership.user_id == a["user"].id
+        assert str(membership.tenant_id) == row["id"]
+
+
+def test_the_membership_id_from_auth_me_reaches_the_membership_endpoint(
+    api_as: Any, two_tenants_full: dict
+) -> None:
+    """The round trip the client makes: read the id from `/auth/me`, PATCH it."""
+    a = two_tenants_full["a"]
+    row = a["client"].get(reverse("v1:auth-me")).json()["data"]["tenants"][0]
+    response = a["client"].patch(
+        reverse("v1:membership-detail", kwargs={"membership_id": row["membership_id"]}),
+        {"is_default": True},
+        format="json",
+    )
+    assert response.status_code == 200, response.json()
+    assert response.json()["data"]["is_default"] is True
+
+
+def test_plan_limits_carries_the_partner_support_contact(api_as: Any, tenant: Any) -> None:
+    """PLT-15 FR-6/FR-7: "Contact {partner}" needs a name and a channel, on the
+    Settings→Plan card and the near-limit banner — not only on the 403 the
+    merchant has already been stopped by."""
+    client, _member = api_as(tenant)
+    plan_limits = client.get(reverse("v1:auth-me")).json()["data"]["plan_limits"]
+    assert set(plan_limits["support_contact"]) == {"name", "phone", "whatsapp", "email"}
+    assert plan_limits["support_contact"]["name"]

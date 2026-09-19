@@ -102,8 +102,55 @@ def test_an_unmapped_action_is_denied_not_allowed_by_default(tenant: Any, api_as
 
 
 def test_a_tenant_scoped_response_is_marked_for_debugging(tenant: Any, api_as: Any) -> None:
-    """`X-Tenant-Scope: 1` says a tenant was resolved — never which one."""
+    """`X-Tenant-Scope: 1` says a tenant was resolved — never which one.
+
+    The claim is about *this* header. It used to be asserted as "no response
+    header anywhere carries the tenant id", which was true only because
+    `PLT-04` FR-4 / CCR-3's `X-Tenant-Id` had not been implemented; the client's
+    stale-tab guard cannot work without that echo, so the broad form of the
+    assertion was certifying the absence of a feature.
+    """
     client, _member = api_as(tenant)
     response = client.get(reverse("v1:party-list"))
     assert response["X-Tenant-Scope"] == "1"
-    assert str(tenant.id) not in "".join(f"{k}:{v}" for k, v in response.items())
+    assert str(tenant.id) not in response["X-Tenant-Scope"]
+
+
+def test_the_status_filter_the_client_sends_is_actually_applied(tenant: Any, api_as: Any) -> None:
+    """The list screen sends `status` on every request.
+
+    django-filter drops an undeclared parameter silently, so the list was
+    unfiltered while the UI presented it as filtered. It is also the whole
+    performance story of this endpoint: `ix_party_tenant_activity` is
+    `(tenant, status, -last_activity_at)` and cannot be used without the
+    predicate.
+    """
+    PartyFactory.create_batch(3, tenant=tenant, status="active")
+    PartyFactory.create_batch(2, tenant=tenant, status="archived")
+    client, _member = api_as(tenant)
+
+    active = client.get(reverse("v1:party-list"), {"status": "active"}).json()
+    assert active["meta"]["total"] == 3
+    assert {row["status"] for row in active["data"]} == {"active"}
+
+    archived = client.get(reverse("v1:party-list"), {"status": "archived"}).json()
+    assert archived["meta"]["total"] == 2
+
+    assert client.get(reverse("v1:party-list")).json()["meta"]["total"] == 5
+
+
+def test_an_unknown_status_is_refused_rather_than_ignored(tenant: Any, api_as: Any) -> None:
+    """A filter the server cannot honour must not read as one it applied."""
+    PartyFactory.create_batch(2, tenant=tenant)
+    client, _member = api_as(tenant)
+    response = client.get(reverse("v1:party-list"), {"status": "deleted"})
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "validation_error"
+
+
+def test_the_list_row_carries_the_display_code(tenant: Any, api_as: Any) -> None:
+    """`Party.display_code` is the subtitle the list row draws beside the name."""
+    PartyFactory(tenant=tenant, display_code="C-0007")
+    client, _member = api_as(tenant)
+    row = client.get(reverse("v1:party-list")).json()["data"][0]
+    assert row["display_code"] == "C-0007"

@@ -42,6 +42,19 @@ export const REGEX = {
    * letter and a number" when what was wrong was only the length.
    */
   PASSWORD: /^(?=.*[A-Za-z])(?=.*\d).*$/,
-  /** PLT-03 §10 — the two-digit GST state code. */
-  GST_STATE_CODE: /^\d{2}$/,
+  /**
+   * PLT-03 §10 / EC-4 — a two-digit GST state code.
+   *
+   * `01`–`38` are the states and union territories, `97` is Other Territory,
+   * and `99` (Centre jurisdiction) is REFUSED — which is what EC-4 says and
+   * what `StateCodeField` enforces server-side. This used to be `/^\d{2}$/`,
+   * which accepts `00`, `99` and every other two-digit number: laxer than the
+   * server, in the safe direction, but a rule that says nothing.
+   *
+   * The closed list itself lives with the data, in
+   * `features/onboarding/constants/gstStates.ts`, and the onboarding schema
+   * checks against it. This is the structural rule for anywhere that has a
+   * state code but not that table.
+   */
+  GST_STATE_CODE: /^(0[1-9]|[12]\d|3[0-8]|97)$/,
 } as const;

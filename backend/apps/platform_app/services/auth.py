@@ -187,11 +187,28 @@ def send_verification(
     user_agent: str | None = None,
     request_id: str | None = None,
 ) -> Any:
-    """Mint and deliver a verification link. Never a login gate — see the module docstring."""
+    """Mint and deliver a verification link. Never a login gate — see the module docstring.
+
+    Throttled like every other token-minting endpoint. This one needs it for a
+    reason of its own as well as the usual ones: minting a link marks the
+    previous link spent, so an attacker — or a client with a retry loop — can
+    keep a merchant's in-flight link permanently dead just by asking for
+    another.
+    """
     from django.utils import timezone
 
     from apps.platform_app.models import AuthToken, AuthTokenPurpose
     from apps.platform_app.services import messaging
+
+    decision = throttle.consume(
+        scope=throttle.SCOPE_VERIFY_USER,
+        identifier=str(user.id),
+        limit=throttle.VERIFY_REQUESTS_PER_USER,
+        window_seconds=throttle.VERIFY_USER_WINDOW_SECONDS,
+        min_gap_seconds=throttle.VERIFY_RESEND_GAP_SECONDS,
+    )
+    if not decision.allowed:
+        raise passwords.RequestThrottled(decision.retry_after, throttle.VERIFY_REQUESTS_PER_USER)
 
     ttl = int(settings.UB_VERIFY_TOKEN_TTL_SECONDS)
     with transaction.atomic():

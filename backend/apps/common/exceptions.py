@@ -153,6 +153,13 @@ def drf_exception_handler(exc: Exception, context: dict) -> Response | None:
             "details": {},
         }, 403
     elif isinstance(exc, drf_exc.Throttled):
+        # Part 22 §22.1.1 registers `rate_limited` as `D retry_after`: one named
+        # key at the top level of `details`, "with their natural JSON types
+        # (amounts as strings, counts as numbers)". `Throttled.__init__` already
+        # `math.ceil`s its argument, so `wait` is a whole number of seconds —
+        # the same scalar shape the domain throttles send (`LoginThrottled`,
+        # `RequestThrottled`), so a client reads one shape from every 429 the
+        # product can produce.
         payload, http_status = {
             "code": "rate_limited",
             "message": "Too many requests. Please wait a moment.",

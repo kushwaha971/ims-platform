@@ -1,5 +1,6 @@
 import type { ApiErrorShape } from 'src/types/api.types';
 import { rootOfPath, snakeToCamelPath } from 'src/utils/caseMapper';
+import { flattenErrorDetails } from 'src/utils/errorDetails';
 
 import type { FieldErrors, FieldValues, Path, UseFormSetError } from 'react-hook-form';
 
@@ -11,6 +12,15 @@ import type { FieldErrors, FieldValues, Path, UseFormSetError } from 'react-hook
  * `shouldFocus` matters more than it looks — on a 360 px screen with the
  * keyboard up, scrolling the rejected field into view is the difference between
  * a fixable error and an abandoned form.
+ *
+ * This used to call `.join(' ')` on every value in `details`, which is only
+ * true of the flat `F` envelope. DRF nests a child serializer's errors as an
+ * OBJECT — `TenantUpdateSerializer.address` is an `AddressSerializer`, so a
+ * rejected onboarding step 3 arrives as `{address: {line1: […]}, phone: […]}`
+ * — and `.join` is not a function on an object. The handler that exists to
+ * DISPLAY the 400 threw instead, and because `address` is declared before
+ * `phone` it threw on the first entry. `flattenErrorDetails` owns every shape
+ * `details` can take; see `src/utils/errorDetails.ts`.
  */
 export function applyServerErrors<T extends FieldValues>(
   error: ApiErrorShape,
@@ -18,20 +28,36 @@ export function applyServerErrors<T extends FieldValues>(
   knownFields: readonly string[]
 ): readonly string[] {
   const unanchored: string[] = [];
+  let focused = false;
 
-  Object.entries(error.details).forEach(([wireField, messages]) => {
-    const message = messages.join(' ');
-    if (!message) return;
-    if (wireField === 'non_field_errors') {
+  flattenErrorDetails(error.details).forEach(({ path: wirePath, message }) => {
+    // `non_field_errors` is DRF's form-level bucket, at any depth: the server's
+    // own `address.non_field_errors` belongs in the banner, not on a control
+    // called "nonFieldErrors" that no form has.
+    if (wirePath.split('.').includes('non_field_errors')) {
       unanchored.push(message);
       return;
     }
-    const path = snakeToCamelPath(wireField);
-    if (knownFields.includes(rootOfPath(path))) {
-      setError(path as Path<T>, { type: 'server', message }, { shouldFocus: true });
-    } else {
+
+    const path = snakeToCamelPath(wirePath);
+    // A nested path anchors on the control that owns it if the form is nested
+    // (`address.line1`), and on the leaf if the form is flat (`line1`) — the
+    // onboarding address step is the second kind, and before this it could not
+    // anchor a server message at all.
+    const candidates = [path, rootOfPath(path), path.split('.').slice(-1)[0] ?? path];
+    const anchor = candidates.find((candidate) =>
+      knownFields.includes(rootOfPath(candidate))
+    );
+
+    if (anchor === undefined) {
       unanchored.push(message);
+      return;
     }
+
+    // Only the FIRST rejected field is scrolled to. RHF focuses on every call,
+    // so focusing each one walked the user down the form to the last error.
+    setError(anchor as Path<T>, { type: 'server', message }, { shouldFocus: !focused });
+    focused = true;
   });
 
   return unanchored;

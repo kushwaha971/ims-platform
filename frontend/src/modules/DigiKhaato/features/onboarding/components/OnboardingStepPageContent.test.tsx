@@ -24,6 +24,7 @@ jest.mock('../../auth/api/authService');
 
 const onboardingService = jest.requireMock('../api/onboardingService') as {
   createTenant: jest.Mock;
+  updateBusinessStep: jest.Mock;
   updateGstStep: jest.Mock;
   updateAddressStep: jest.Mock;
   completeOnboarding: jest.Mock;
@@ -120,6 +121,111 @@ describe('the wizard — step 1 (FR-2)', () => {
   it('has no Skip on step 1 — a wizard cannot patch a business that does not exist', () => {
     renderWithProviders(<OnboardingStepPageContent step={1} />);
     expect(screen.queryByRole('button', { name: 'Skip for now' })).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * PLT-03 FR-9 — "steps already completed are navigable via the stepper for
+ * edits", and canon §0.11 rule 5.
+ *
+ * The regression: `submitBusinessStep` called `createTenant` with no branch on
+ * "a tenant already exists". A merchant on step 2 who noticed the business name
+ * was misspelled, tapped "1 · Business" in the stepper, fixed it and pressed
+ * Continue ended up owning TWO businesses with almost the same name — the
+ * second of them the active tenant — and there is no delete-business path at
+ * MVP, so the duplicate is permanent.
+ */
+describe('the wizard — step 1 EDITED (FR-9)', () => {
+  const withExistingTenant = async () => {
+    onboardingService.createTenant.mockResolvedValue({
+      tenant: tenant({ onboardingStep: 2 }),
+      warnings: [],
+    });
+    await store.dispatch(
+      createTenant({
+        name: 'Sharma General Stor',
+        businessType: 'retail',
+        stateCode: '27',
+        ownerName: null,
+        idempotencyKey: 'k',
+      })
+    );
+    jest.clearAllMocks();
+  };
+
+  it('PATCHes the existing business instead of creating a second one', async () => {
+    const user = userEvent.setup();
+    await withExistingTenant();
+    onboardingService.updateBusinessStep.mockResolvedValue({
+      tenant: tenant({ name: 'Sharma General Store', onboardingStep: 2 }),
+      warnings: [],
+    });
+
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+
+    const nameField = screen.getByLabelText(/Business name/);
+    await user.clear(nameField);
+    await user.type(nameField, 'Sharma General Store');
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+
+    await waitFor(() => expect(onboardingService.updateBusinessStep).toHaveBeenCalledTimes(1));
+    // The whole point: no second business.
+    expect(onboardingService.createTenant).not.toHaveBeenCalled();
+    expect(onboardingService.updateBusinessStep).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'Sharma General Store',
+        businessType: 'retail',
+        stateCode: '27',
+      })
+    );
+    // One tenant, still the same one.
+    expect(store.getState().onboarding.tenantId).toBe('t1');
+  });
+
+  it('returns the merchant to the step they interrupted, not back to step 2', async () => {
+    const user = userEvent.setup();
+    await withExistingTenant();
+    onboardingService.updateBusinessStep.mockResolvedValue({
+      tenant: tenant({ name: 'Sharma General Store', onboardingStep: 3 }),
+      warnings: [],
+    });
+
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+
+    await waitFor(() => expect(onboardingService.updateBusinessStep).toHaveBeenCalled());
+    expect(push).toHaveBeenCalledWith('/onboarding/step/4');
+  });
+
+  /**
+   * EC-7 — the key for `POST /tenants` is minted ONCE per wizard. Every step is
+   * its own route, so `useOnboarding` remounts on every navigation; when the
+   * key lived in `useIdempotencyKey`'s `useState` initialiser, each remount
+   * minted a new one and a retry after a lost 201 was not deduplicated at all.
+   */
+  it('keeps one idempotency key across a remount, so a retry is deduplicated', async () => {
+    const user = userEvent.setup();
+    onboardingService.createTenant.mockRejectedValue(new Error('the 201 was lost'));
+
+    const first = renderWithProviders(<OnboardingStepPageContent step={1} />);
+    await user.type(screen.getByLabelText(/Business name/), 'Sharma General Store');
+    await user.click(screen.getByRole('radio', { name: /Retail shop/ }));
+    await user.selectOptions(screen.getByLabelText(/^State/), '27');
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    await waitFor(() => expect(onboardingService.createTenant).toHaveBeenCalledTimes(1));
+    const keyOnFirstAttempt = onboardingService.createTenant.mock.calls[0]?.[1] as string;
+    first.unmount();
+
+    // The merchant retries; the route remounted the hook in between.
+    onboardingService.createTenant.mockResolvedValue({ tenant: tenant(), warnings: [] });
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+    await user.type(screen.getByLabelText(/Business name/), 'Sharma General Store');
+    await user.click(screen.getByRole('radio', { name: /Retail shop/ }));
+    await user.selectOptions(screen.getByLabelText(/^State/), '27');
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    await waitFor(() => expect(onboardingService.createTenant).toHaveBeenCalledTimes(2));
+
+    expect(onboardingService.createTenant.mock.calls[1]?.[1]).toBe(keyOnFirstAttempt);
   });
 });
 

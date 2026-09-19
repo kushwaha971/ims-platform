@@ -1,4 +1,5 @@
 import type { ApiErrorShape } from 'src/types/api.types';
+import { readDetailNumber, readDetailString } from 'src/utils/errorDetails';
 
 import { PLAN_LIMIT_KEYS } from '../types/plan.types';
 
@@ -21,30 +22,6 @@ export const nounIdFor = (key: PlanLimitKey | null): string =>
 const isPlanLimitKey = (value: unknown): value is PlanLimitKey =>
   typeof value === 'string' && (PLAN_LIMIT_KEYS as readonly string[]).includes(value);
 
-const firstNumber = (
-  details: Readonly<Record<string, readonly string[]>>,
-  ...keys: readonly string[]
-): number | null => {
-  for (const key of keys) {
-    const raw = details[key]?.[0];
-    if (raw === undefined) continue;
-    const parsed = Number(raw);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return null;
-};
-
-const firstString = (
-  details: Readonly<Record<string, readonly string[]>>,
-  ...keys: readonly string[]
-): string | null => {
-  for (const key of keys) {
-    const raw = details[key]?.[0];
-    if (raw !== undefined) return raw;
-  }
-  return null;
-};
-
 /**
  * FR-4 — a 403 `plan_limit_reached` into the dialog's shape.
  *
@@ -55,24 +32,35 @@ const firstString = (
  * A dialog that said "You have used null of null parties" because the backend
  * chose the other spelling would be worse than either.
  *
- * `ApiErrorShape.details` is `Record<string, string[]>` by contract, so every
- * value arrives as a string and is parsed here rather than trusted.
+ * This is a **`D` envelope**: named keys with their natural JSON types, and one
+ * of them nested. `entitlements.raise_plan_limit` sends
+ * `{limit_key: "max_users", limit: 3, used: 3, plan_code: "free",
+ * support_contact: {phone, whatsapp, email}}` — exactly what §22.1.1 §44
+ * specifies. The readers here used to index `details[key][0]`, which is only
+ * the `F` (field-map) spelling, so `"max_users"[0]` was the letter `"m"` (and
+ * failed `isPlanLimitKey`), `3[0]` was `undefined`, `"free"[0]` was `"f"`, and
+ * the flat `'support_contact.phone'` key the server never sends was all that
+ * was tried for the contact block. Every number in the dialog was `null` and
+ * PLT-15 FR-6's "contact your provider" had no route to a human.
+ *
+ * `readDetail*` accept a scalar, a one-element array or a nested object, so
+ * both envelopes read correctly and neither side has to be guessed at.
  */
 export const toPlanLimitHit = (error: ApiErrorShape): PlanLimitHit => {
   const details = error.details;
-  const rawKey = firstString(details, 'limit_key');
+  const rawKey = readDetailString(details, 'limit_key');
   return {
     limitKey: isPlanLimitKey(rawKey) ? rawKey : null,
     // §22.1.1 calls the ceiling `maximum`; FR-4 calls it `limit`.
-    limit: firstNumber(details, 'limit', 'maximum'),
+    limit: readDetailNumber(details, 'limit', 'maximum'),
     // §22.1.1 calls the count `current`; FR-4 calls it `used`.
-    used: firstNumber(details, 'used', 'current'),
-    planCode: firstString(details, 'plan_code'),
+    used: readDetailNumber(details, 'used', 'current'),
+    planCode: readDetailString(details, 'plan_code'),
     supportContact: {
-      phone: firstString(details, 'support_contact.phone', 'support_phone'),
-      whatsapp: firstString(details, 'support_contact.whatsapp', 'support_whatsapp'),
-      email: firstString(details, 'support_contact.email', 'support_email'),
-      name: firstString(details, 'support_contact.name', 'partner_name'),
+      phone: readDetailString(details, 'support_contact.phone', 'support_phone'),
+      whatsapp: readDetailString(details, 'support_contact.whatsapp', 'support_whatsapp'),
+      email: readDetailString(details, 'support_contact.email', 'support_email'),
+      name: readDetailString(details, 'support_contact.name', 'partner_name'),
     },
     message: error.message,
     requestId: error.requestId,

@@ -21,7 +21,7 @@ import { shouldToast, toApiError } from 'src/utils/apiError';
 import { readCsrfToken } from 'src/utils/cookieUtils';
 import { newRequestId } from 'src/utils/requestId';
 
-import { API_PATHS, requiresIdempotency } from './APIPaths';
+import { API_PATHS, isTenantTransitionPath, requiresIdempotency } from './APIPaths';
 import { transportHost } from './transportBridge';
 
 /** Requests that must never trigger a refresh, or that carry no auth. */
@@ -198,9 +198,17 @@ api.interceptors.response.use(
      * present AND this tab knows which tenant it is in AND the two differ — so
      * a backend that has not yet shipped CCR-3's header changes nothing, and a
      * response that arrives before `/auth/me` is never discarded.
+     *
+     * And it does not fire on the two endpoints whose whole purpose is to move
+     * this tab to another tenant: `POST /auth/switch-tenant` and
+     * `POST /tenants` answer with the NEW tenant while the store still holds
+     * the old one, so the comparison is guaranteed to differ and the guard
+     * would reject the very switch it exists to protect. See
+     * `TENANT_TRANSITION_PATHS` for why that exemption is a closed list rather
+     * than a reading of which views happen to set the header.
      */
     const echoed = response.headers?.['x-tenant-id'];
-    if (typeof echoed === 'string' && echoed.length > 0) {
+    if (typeof echoed === 'string' && echoed.length > 0 && !isTenantTransitionPath(config.url)) {
       const host = transportHost();
       const active = host?.getActiveTenantId() ?? null;
       if (active !== null && active !== echoed) {

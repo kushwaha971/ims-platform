@@ -275,10 +275,6 @@ class PasswordSetView(APIView):
         meta = _client_meta(request)
         claims = getattr(request, "auth_claims", {}) or {}
 
-        if data.get("full_name") and not (request.user.full_name or "").strip():
-            request.user.full_name = data["full_name"].strip()[:120]
-            request.user.save(update_fields=["full_name", "updated_at"])
-
         result = password_service.set_password(
             user=request.user,
             new_password=data["new_password"],
@@ -289,6 +285,14 @@ class PasswordSetView(APIView):
             ip=meta["ip"],
             user_agent=meta["user_agent"],
         )
+        # After `set_password`, never before it: `set_password` is where the
+        # caller's `current_password` is checked, and a request that fails that
+        # check must change nothing. Writing the name first meant a wrong
+        # current password returned 401 *and* renamed the account.
+        if data.get("full_name") and not (request.user.full_name or "").strip():
+            request.user.full_name = data["full_name"].strip()[:120]
+            request.user.save(update_fields=["full_name", "updated_at"])
+
         return StandardResponse.ok(
             {"sessions_revoked": result["sessions_revoked"], "has_password": True},
             message="Password updated",

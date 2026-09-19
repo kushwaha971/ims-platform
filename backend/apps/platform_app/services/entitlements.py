@@ -170,7 +170,6 @@ def raise_plan_limit(
     transaction has unwound — which is exactly §16's "the audit write happens in
     a separate autocommit call".
     """
-    support = dict(tenant.partner.support_contact or {})
     error = PlanLimitReached(
         f"You have used {used} of {cap} on the {tenant.plan.code} plan.",
         details={
@@ -178,11 +177,7 @@ def raise_plan_limit(
             "limit": cap,
             "used": used,
             "plan_code": tenant.plan.code,
-            "support_contact": {
-                "phone": support.get("phone"),
-                "whatsapp": support.get("whatsapp"),
-                "email": support.get("email"),
-            },
+            "support_contact": support_contact_of(tenant),
         },
     )
     # Carried on the exception rather than in `details`, because `details` is the
@@ -244,6 +239,25 @@ def plan_limits_payload(tenant: Any) -> dict:
         "plan_code": entitlement.plan_code,
         "limits": limits,
         "modules": sorted(effective_modules(tenant)),
+        # FR-6/FR-7's "Contact {partner}" has to be able to name the partner and
+        # reach them from the Settings→Plan card and the near-limit banner, not
+        # only from the 403 the merchant has already been stopped by.
+        "support_contact": support_contact_of(tenant),
+    }
+
+
+def support_contact_of(tenant: Any) -> dict:
+    """The partner's support block, in one shape for both the 403 and `/auth/me`.
+
+    `name` is included: without it FR-6's "Contact {partner}" has nothing to
+    interpolate and the copy degrades to a generic string.
+    """
+    support = dict(tenant.partner.support_contact or {})
+    return {
+        "name": support.get("name") or tenant.partner.name,
+        "phone": support.get("phone"),
+        "whatsapp": support.get("whatsapp"),
+        "email": support.get("email"),
     }
 
 

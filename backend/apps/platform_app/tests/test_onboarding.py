@@ -308,6 +308,20 @@ def _wizard(api_as: Any, tenant_fixture: Any) -> tuple:
     return scoped, new_tenant, membership
 
 
+def _complete(client: Any) -> Any:
+    """Walk steps 2 → 3 → 4 the way the wizard does, and return the last response.
+
+    `onboarding_step` advances by one request per step (FR-1, "progress is saved
+    after each step"): the server refuses to be jumped from step 1 straight to
+    step 4, because that would apply the preset for a business whose GST and
+    address steps never ran. Tests that want a *completed* tenant therefore have
+    to complete it, not assert it.
+    """
+    client.patch(reverse(CURRENT_URL), {"onboarding_step": 2}, format="json")
+    client.patch(reverse(CURRENT_URL), {"onboarding_step": 3}, format="json")
+    return client.patch(reverse(CURRENT_URL), {"onboarding_step": 4}, format="json")
+
+
 def test_step_two_derives_pan_and_keeps_the_gstin(
     api_as: Any, tenant: Any, onboarding_ready: Any
 ) -> None:
@@ -417,7 +431,7 @@ def test_completing_the_wizard_seeds_every_default(
     from apps.platform_app.services.presets import NUMBERING_PREFIXES
 
     client, new_tenant, _m = _wizard(api_as, tenant)
-    response = client.patch(reverse(CURRENT_URL), {"onboarding_step": 4}, format="json")
+    response = _complete(client)
     assert response.status_code == 200
 
     keys = set(TenantSetting.objects.filter(tenant=new_tenant).values_list("key", flat=True))
@@ -458,17 +472,24 @@ def test_the_reminder_templates_are_seeded_in_both_locales(
     from apps.platform_app.models import TenantSetting
 
     client, new_tenant, _m = _wizard(api_as, tenant)
-    client.patch(reverse(CURRENT_URL), {"onboarding_step": 4}, format="json")
+    _complete(client)
     value = TenantSetting.objects.get(tenant=new_tenant, key="ledger.reminder_templates").value
     assert set(value) == {"en", "hi"}
     assert all(text.strip() for text in value.values())
 
 
 def test_completion_is_idempotent(api_as: Any, tenant: Any, onboarding_ready: Any) -> None:
-    """T-PLT-03-6 / BR-3: a second completion creates no duplicate row."""
+    """T-PLT-03-6 / BR-3: a second completion creates no duplicate row.
+
+    Row counts alone do not prove BR-3: every seed is a `get_or_create`, so the
+    counts are stable even when the preset is re-applied in full. BR-3 says
+    "idempotent **and audited once**", so the audit row is the assertion that
+    actually bites, and it is checked here alongside the counts.
+    """
+    from apps.common.audit import AuditAction
     from apps.expenses.models import ExpenseCategory
     from apps.inventory.models import Location
-    from apps.platform_app.models import DocumentSequence, TenantSetting
+    from apps.platform_app.models import AuditLog, DocumentSequence, TenantSetting
 
     client, new_tenant, _m = _wizard(api_as, tenant)
 
@@ -480,11 +501,19 @@ def test_completion_is_idempotent(api_as: Any, tenant: Any, onboarding_ready: An
             Location.objects.filter(tenant=new_tenant).count(),
         )
 
-    client.patch(reverse(CURRENT_URL), {"onboarding_step": 4}, format="json")
+    def preset_audits() -> int:
+        return AuditLog.objects.filter(
+            tenant=new_tenant, action=AuditAction.TENANT_PRESET_APPLIED
+        ).count()
+
+    _complete(client)
     after_first = counts()
+    assert preset_audits() == 1
+
     client.patch(reverse(CURRENT_URL), {"onboarding_step": 4}, format="json")
     client.patch(reverse(CURRENT_URL), {"onboarding_step": 4}, format="json")
     assert counts() == after_first
+    assert preset_audits() == 1
 
 
 def test_a_services_business_does_not_get_inventory(
@@ -532,7 +561,7 @@ def test_the_fy_label_follows_the_tenants_financial_year(
     from apps.platform_app.models import DocumentSequence
 
     client, new_tenant, _m = _wizard(api_as, tenant)
-    client.patch(reverse(CURRENT_URL), {"onboarding_step": 4}, format="json")
+    _complete(client)
     expected = fy_label_for(new_tenant, tenant_today(new_tenant))
     assert set(
         DocumentSequence.objects.filter(tenant=new_tenant).values_list("fy_label", flat=True)
@@ -592,3 +621,202 @@ def test_a_caller_with_no_tenant_gets_no_active_tenant(
     client = APIClient()
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
     assert client.get(reverse(CURRENT_URL)).status_code == 403
+
+
+# ── EC-7: the idempotency key must outlive the tenant switch it causes ───────
+
+
+def test_a_retry_under_the_new_tid_replays_instead_of_creating_a_second_business(
+    api_as: Any, tenant: Any, onboarding_ready: Any
+) -> None:
+    """EC-7: `POST /tenants` re-issues the caller's `tid`, so the retry arrives
+    under a *different* tenant than the first attempt. If the key's namespace
+    included that tenant, the retry would land on a fresh tuple and "Add a
+    business" retried with the same key would create a second business.
+    """
+    from rest_framework.test import APIClient
+
+    from apps.platform_app.models import Membership, Tenant
+    from tests.fixtures import build_access_token
+
+    client, member = api_as(tenant)
+    before = Tenant.objects.count()
+
+    first = _create(client, name="Sharma Wholesale", idempotency_key="add-business-1")
+    assert first.status_code == 201
+    created_id = first.json()["data"]["tenant"]["id"]
+    assert Tenant.objects.count() == before + 1
+
+    # The retry carries the token the first response issued — the new tenant's.
+    new_membership = Membership.objects.get(user=member.user, tenant_id=created_id)
+    retried = APIClient()
+    retried.credentials(HTTP_AUTHORIZATION=f"Bearer {build_access_token(new_membership)}")
+
+    second = _create(retried, name="Sharma Wholesale", idempotency_key="add-business-1")
+    assert second.status_code == 201
+    assert second["Idempotent-Replayed"] == "true"
+    assert second.json()["data"]["tenant"]["id"] == created_id
+    assert Tenant.objects.count() == before + 1
+
+
+def test_a_replayed_creation_reissues_the_session_for_the_created_tenant(
+    api_as: Any, tenant: Any, onboarding_ready: Any
+) -> None:
+    """EC-7: a replay has to be a whole response, not a stored body.
+
+    The 201's usable half is the cookie carrying the new `tid`. A replay without
+    it hands the client a 201 for a business it holds no token for, and the
+    wizard's next step is refused `no_active_tenant` — the wedge EC-7 exists to
+    prevent, reached by the retry EC-7 prescribes.
+    """
+    from rest_framework.test import APIClient
+
+    from apps.platform_app.tokens import ACCESS_COOKIE, CSRF_COOKIE
+
+    client, _member = api_as(tenant)
+    first = _create(client, idempotency_key="lost-response")
+    created_id = first.json()["data"]["tenant"]["id"]
+
+    replay = _create(client, idempotency_key="lost-response")
+    assert replay.status_code == 201
+    assert replay["Idempotent-Replayed"] == "true"
+    assert replay["X-Tenant-Id"] == created_id
+    assert ACCESS_COOKIE in replay.cookies
+    assert CSRF_COOKIE in replay.cookies
+
+    # The cookie the replay issued is enough to run the next wizard step.
+    cookie_client = APIClient()
+    cookie_client.cookies[ACCESS_COOKIE] = replay.cookies[ACCESS_COOKIE].value
+    cookie_client.cookies[CSRF_COOKIE] = replay.cookies[CSRF_COOKIE].value
+    stepped = cookie_client.patch(
+        reverse(CURRENT_URL),
+        {"onboarding_step": 2},
+        format="json",
+        HTTP_X_CSRF_TOKEN=replay.cookies[CSRF_COOKIE].value,
+    )
+    assert stepped.status_code == 200, stepped.json()
+    assert stepped.json()["data"]["id"] == created_id
+
+
+# ── FR-10 / B-3: `null` is how a client clears an optional field ─────────────
+
+
+def test_skipping_the_gst_step_with_nulls_is_accepted(
+    api_as: Any, tenant: Any, onboarding_ready: Any
+) -> None:
+    """FR-10 "Skip for now" — the client normalises a blank input to `null`."""
+    client, new_tenant, _m = _wizard(api_as, tenant)
+    response = client.patch(
+        reverse(CURRENT_URL),
+        {
+            "gst_type": "unregistered",
+            "gstin": None,
+            "legal_name": None,
+            "pan": None,
+            "onboarding_step": 2,
+        },
+        format="json",
+    )
+    assert response.status_code == 200, response.json()
+    new_tenant.refresh_from_db()
+    assert new_tenant.gstin is None
+    assert new_tenant.legal_name is None
+
+
+def test_a_blank_address_field_is_accepted_as_null(
+    api_as: Any, tenant: Any, onboarding_ready: Any
+) -> None:
+    """Step 3: `optionalText` sends `null` for every input the merchant left blank."""
+    client, new_tenant, _m = _wizard(api_as, tenant)
+    client.patch(reverse(CURRENT_URL), {"onboarding_step": 2}, format="json")
+    response = client.patch(
+        reverse(CURRENT_URL),
+        {
+            "address": {
+                "line1": "12 Station Road",
+                "line2": None,
+                "city": "Pune",
+                "district": None,
+                "state": None,
+                "pincode": None,
+            },
+            "phone": None,
+            "email": None,
+            "onboarding_step": 3,
+        },
+        format="json",
+    )
+    assert response.status_code == 200, response.json()
+    new_tenant.refresh_from_db()
+    assert new_tenant.address == {"line1": "12 Station Road", "city": "Pune"}
+    assert new_tenant.email is None
+    assert new_tenant.phone == ""
+
+
+# ── FR-1 / FR-9: `onboarding_step` is a progress marker, not a free field ────
+
+
+def test_the_wizard_cannot_be_jumped_to_the_last_step(
+    api_as: Any, tenant: Any, onboarding_ready: Any
+) -> None:
+    """FR-1: a client cannot complete the wizard — and apply the preset — from step 1."""
+    from apps.platform_app.models import TenantSetting
+
+    client, new_tenant, _m = _wizard(api_as, tenant)
+    response = client.patch(reverse(CURRENT_URL), {"onboarding_step": 4}, format="json")
+    assert response.status_code == 200
+    new_tenant.refresh_from_db()
+    assert new_tenant.onboarding_step == 2
+    assert not TenantSetting.objects.filter(tenant=new_tenant).exists()
+
+
+def test_editing_an_earlier_step_does_not_regress_a_completed_tenant(
+    api_as: Any, tenant: Any, onboarding_ready: Any
+) -> None:
+    """FR-9: a completed step is navigable for edits, and the edit is not a regression."""
+    client, new_tenant, _m = _wizard(api_as, tenant)
+    _complete(client)
+    new_tenant.refresh_from_db()
+    assert new_tenant.onboarding_step == 4
+
+    response = client.patch(
+        reverse(CURRENT_URL),
+        {"legal_name": "Sharma General Store Pvt Ltd", "onboarding_step": 2},
+        format="json",
+    )
+    assert response.status_code == 200
+    new_tenant.refresh_from_db()
+    assert new_tenant.legal_name == "Sharma General Store Pvt Ltd"
+    assert new_tenant.onboarding_step == 4
+
+
+def test_a_profile_edit_after_completion_does_not_re_apply_the_preset(
+    api_as: Any, tenant: Any, onboarding_ready: Any
+) -> None:
+    """BR-3 / FR-8: the preset is applied on the transition, never on a later save.
+
+    `enabled_modules` is the part that bites: `apply_preset` rewrites it back to
+    the full preset set, so once `PLT-06`'s toggles land an owner who switches
+    `inventory` off and then edits their address has it switched back on.
+    """
+    from apps.common.audit import AuditAction
+    from apps.platform_app.models import AuditLog
+
+    client, new_tenant, _m = _wizard(api_as, tenant)
+    _complete(client)
+
+    new_tenant.refresh_from_db()
+    assert "inventory" in new_tenant.enabled_modules
+    owner_choice = [m for m in new_tenant.enabled_modules if m != "inventory"]
+    new_tenant.enabled_modules = owner_choice
+    new_tenant.save(update_fields=["enabled_modules", "updated_at"])
+
+    response = client.patch(reverse(CURRENT_URL), {"address": {"city": "Nashik"}}, format="json")
+    assert response.status_code == 200
+
+    new_tenant.refresh_from_db()
+    assert new_tenant.enabled_modules == owner_choice
+    assert (
+        AuditLog.objects.filter(tenant=new_tenant, action=AuditAction.TENANT_PRESET_APPLIED).count()
+        == 1
+    )

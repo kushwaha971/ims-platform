@@ -164,7 +164,7 @@ describe('PlanPageContent — FR-7 the pre-warning', () => {
 });
 
 describe('PlanLimitDialog — FR-4 / FR-6', () => {
-  const open403 = (details: Record<string, string[]>) => {
+  const open403 = (details: Record<string, unknown>) => {
     store.dispatch(
       limitHit(
         toPlanLimitHit({
@@ -179,14 +179,21 @@ describe('PlanLimitDialog — FR-4 / FR-6', () => {
     );
   };
 
+  /**
+   * The `D` envelope `entitlements.raise_plan_limit` actually sends: scalars at
+   * the top level of `details`, with `support_contact` NESTED. This case used
+   * to build it as `limit: ['3']` and two literal dotted keys
+   * (`'support_contact.whatsapp'`), neither of which the server emits — so it
+   * certified a dialog that, against a real 403, said "You have used null of
+   * null team members on the f plan" and offered no way to contact anybody.
+   */
   it('names the count, the plan and the contact route', async () => {
     open403({
-      limit_key: ['max_users'],
-      limit: ['3'],
-      used: ['3'],
-      plan_code: ['free'],
-      'support_contact.whatsapp': ['+919000000000'],
-      'support_contact.name': ['Metis'],
+      limit_key: 'max_users',
+      limit: 3,
+      used: 3,
+      plan_code: 'free',
+      support_contact: { whatsapp: '+919000000000', name: 'Metis' },
     });
 
     renderWithProviders(<PlanLimitDialog />);
@@ -201,13 +208,13 @@ describe('PlanLimitDialog — FR-4 / FR-6', () => {
   });
 
   it('restates that the ledger is never capped, where the fear is (DEC-001)', () => {
-    open403({ limit_key: ['max_users'], limit: ['3'], used: ['3'] });
+    open403({ limit_key: 'max_users', limit: 3, used: 3 });
     renderWithProviders(<PlanLimitDialog />);
     expect(screen.getByText('Udhaar entries are never limited.')).toBeInTheDocument();
   });
 
   it('offers no dead link when the partner has no support contact (§9 Failed)', () => {
-    open403({ limit_key: ['max_users'], limit: ['3'], used: ['3'] });
+    open403({ limit_key: 'max_users', limit: 3, used: 3 });
     renderWithProviders(<PlanLimitDialog />);
 
     expect(screen.getByRole('button', { name: 'Contact your provider' })).toBeDisabled();
@@ -215,7 +222,7 @@ describe('PlanLimitDialog — FR-4 / FR-6', () => {
 
   it('closes without disturbing anything the user had typed', async () => {
     const user = userEvent.setup();
-    open403({ limit_key: ['max_users'], limit: ['3'], used: ['3'] });
+    open403({ limit_key: 'max_users', limit: 3, used: 3 });
 
     renderWithProviders(<PlanLimitDialog />);
     await user.click(screen.getByRole('button', { name: 'Close' }));

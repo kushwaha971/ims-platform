@@ -35,6 +35,7 @@ SCOPE_LOGIN_IP = "login_ip"  # 100 per IP per hour
 SCOPE_RESET_EMAIL = "reset_email"  # 5 per address per hour, 60 s apart
 SCOPE_RESET_IP = "reset_ip"  # 20 per IP per hour
 SCOPE_REGISTER_IP = "register_ip"  # 20 sign-ups per IP per hour
+SCOPE_VERIFY_USER = "verify_user"  # 5 verification links per user per hour, 60 s apart
 
 # Reachable only when `UB_AUTH_OTP_ENABLED=1` (DEC-010).
 SCOPE_OTP_MOBILE = "otp_mobile"  # 5 per mobile per 10 min
@@ -65,6 +66,15 @@ RESET_IP_WINDOW_SECONDS = 3600
 
 REGISTRATIONS_PER_IP = 20
 REGISTER_IP_WINDOW_SECONDS = 3600
+
+# `POST /auth/email/verify/request` mints a link and invalidates the previous
+# one, so an unthrottled loop is both a mail amplifier and a way to keep a
+# merchant's in-flight link permanently dead. Same shape as the reset budget,
+# keyed on the caller's own user id — the endpoint is authenticated and
+# self-only, so there is nothing to enumerate and no IP dimension to add.
+VERIFY_REQUESTS_PER_USER = 5
+VERIFY_USER_WINDOW_SECONDS = 3600
+VERIFY_RESEND_GAP_SECONDS = 60
 
 
 @dataclass(frozen=True, slots=True)
