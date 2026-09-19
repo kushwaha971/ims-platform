@@ -23,3 +23,17 @@ export const camelizeKeys = <T>(value: unknown): T => mapKeys(value, toCamel) as
 export const snakeifyKeys = <T>(value: unknown): T => mapKeys(value, toSnake) as T;
 export const camelCase = toCamel;
 export const snakeCase = toSnake;
+
+/**
+ * Part 19 §19.5.6 — a wire field path becomes an RHF path. Dotted segments are
+ * mapped individually so that `lines.2.unit_price` → `lines.2.unitPrice` and a
+ * numeric index survives untouched.
+ */
+export const snakeToCamelPath = (path: string): string =>
+  path
+    .split('.')
+    .map((segment) => (/^\d+$/.test(segment) ? segment : toCamel(segment)))
+    .join('.');
+
+/** The first segment of a path — the field RHF actually knows about. */
+export const rootOfPath = (path: string): string => path.split('.')[0] ?? path;

@@ -46,7 +46,13 @@ def purge_jobs(job: Any, ctx: Any) -> dict:
 
 @job_handler("platform.purge_otp_challenges", requires_tenant=False, timeout_seconds=120)
 def purge_otp_challenges(job: Any, ctx: Any) -> dict:
-    """OTP rows are purged after 24 h (Part 21 §21.3.1). Idempotent by predicate."""
+    """OTP rows are purged after 24 h (Part 21 §21.3.1). Idempotent by predicate.
+
+    Still scheduled with `UB_AUTH_OTP_ENABLED=0`: the table is empty, so the
+    sweep is one indexed delete of nothing, and a retention job that stops
+    running when a feature is paused is a retention job that has to be
+    remembered when the feature comes back.
+    """
     import datetime as dt
 
     from apps.platform_app.models import OtpChallenge
@@ -85,3 +91,16 @@ def check_expected_runs(job: Any, ctx: Any) -> dict:
             missing.append(schedule.job_type)
             log.error("job.expected_run_missing", extra={"job_type": schedule.job_type})
     return {"checked": len(SCHEDULES), "missing": missing}
+
+
+@job_handler("platform.reconcile_entitlements", requires_tenant=False, timeout_seconds=600)
+def reconcile_entitlements(job: Any, ctx: Any) -> dict:
+    """PLT-15 FR-8's nightly trim of `enabled_modules`. Never deletes data.
+
+    Registered here rather than beside the command, because `tasks.py` is what
+    `PlatformConfig.ready()` imports and a handler the registry never sees is a
+    schedule that silently never runs (Part 20 §20.8.4).
+    """
+    from apps.platform_app.management.commands.reconcile_entitlements import reconcile
+
+    return {"tenants_trimmed": len(reconcile())}

@@ -22,6 +22,13 @@ WELL_KNOWN_SETTING_KEYS: tuple[str, ...] = (
     "documents.terms",
     "documents.show_upi_qr",
     "locale.number_format",
+    # Added in Sprint 1. The first two are required by `PLT-03` FR-6, which
+    # marks them "Canon change requests"; the third is read by `PLT-15` FR-2 and
+    # §15 (`platform_tenant_setting['plan.overrides']`). `CR-LOG` carries the
+    # request to add all three to Part 21 §21.3.1's well-known list (T-27).
+    "parties.labels",
+    "inventory.favourite_units",
+    "plan.overrides",
 )
 
 

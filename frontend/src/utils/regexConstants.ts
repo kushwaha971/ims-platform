@@ -18,4 +18,30 @@ export const REGEX = {
   PINCODE_IN: /^[1-9]\d{5}$/,
   UUID: /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/,
   ISO_DATE: /^\d{4}-\d{2}-\d{2}$/,
+  /**
+   * PLT-01 §10 — the OTP is exactly six digits, nothing else.
+   *
+   * CR-2026-09-19-A moved mobile OTP to the backlog; this pattern is retained
+   * with `UbOtpInput` for the day the flow returns, and is unused at MVP.
+   */
+  OTP_CODE: /^\d{6}$/,
+  /**
+   * CR-2026-09-19-A — email is the MVP identity, so the client checks the
+   * address it is about to send. Deliberately the pragmatic shape a browser's
+   * own `type="email"` accepts rather than RFC 5322: it must agree with
+   * DRF's `EmailField`, which is what actually decides, and a stricter client
+   * pattern would reject an address the server would have taken.
+   */
+  EMAIL: /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/,
+  /**
+   * PLT-02 §10 — COMPOSITION only: at least one letter and one digit. The
+   * length floor is applied separately (`passwordValidation`), because the
+   * floor is 8 for a member and 10 for an owner or an admin (Part 27 §27.4.2,
+   * `services/passwords.py`) and one regex cannot say which rule was broken.
+   * A single pattern here would tell a merchant "at least 8 characters with a
+   * letter and a number" when what was wrong was only the length.
+   */
+  PASSWORD: /^(?=.*[A-Za-z])(?=.*\d).*$/,
+  /** PLT-03 §10 — the two-digit GST state code. */
+  GST_STATE_CODE: /^\d{2}$/,
 } as const;

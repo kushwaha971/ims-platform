@@ -10,6 +10,11 @@ import {
   logout,
   switchTenant,
 } from 'modules/UdhaarBook/features/auth/redux/sessionThunk';
+import { completeOnboarding } from 'modules/UdhaarBook/features/onboarding/redux/onboardingThunk';
+import {
+  leaveTenant,
+  setDefaultTenant,
+} from 'modules/UdhaarBook/features/tenant-switcher/redux/tenantSwitcherThunk';
 
 /**
  * Part 19 §19.7 — the session. This is the slice the task brief calls
@@ -29,17 +34,40 @@ export type SessionStatus =
   /** A new user with no business yet — onboarding, not login (§19.7.3). */
   | 'no_tenant';
 
+/**
+ * CR-2026-09-19-A — the identity is the email. `mobile` stays on the user
+ * because parties, invoices and the later WhatsApp reminders all want a number
+ * to prefill, but it is a profile field now and an account may not have one, so
+ * it is nullable and `email` is not.
+ */
 export interface SessionUser {
   readonly id: string;
   readonly name: string;
-  readonly mobile: string;
+  readonly email: string;
+  readonly mobile: string | null;
   readonly locale: Locale;
 }
 
+/**
+ * PLT-04 FR-1 — the switcher lists every membership with its role and which one
+ * is the default, so the four fields below are part of the SESSION summary and
+ * not a second fetch. Part 22 §22.2's `/auth/me` returns them on each tenant
+ * row; they are optional here because Sprint 0's fixture did not carry them and
+ * a session without a role is still a usable session.
+ */
 export interface SessionTenant {
   readonly id: string;
   readonly name: string;
   readonly timezone: string;
+  /** `owner | admin | staff | accountant`, as the caller holds it here. */
+  readonly role?: string | null;
+  readonly isDefault?: boolean;
+  /** `active | invited | suspended | removed`. */
+  readonly status?: string;
+  /** The caller's OWN membership row id — what FR-5 and FR-7 act on. */
+  readonly membershipId?: string | null;
+  /** PLT-03 FR-9 — `< 4` means this business's wizard is unfinished. */
+  readonly onboardingStep?: number | null;
 }
 
 export interface SessionState {
@@ -124,6 +152,29 @@ const sessionSlice = createSlice({
         state.status = 'anonymous';
         state.error = (action.payload ?? null) as Draft<ApiErrorShape> | null;
       })
+      // PLT-04 FR-5 / FR-7 — both re-read `/auth/me` and hand back the whole
+      // summary, so the membership list is PATCHED in place here rather than
+      // marked stale (the INVALIDATION map's `patch` entries say exactly this).
+      .addCase(setDefaultTenant.fulfilled, (state, action) => {
+        sessionSlice.caseReducers.sessionLoaded(state, {
+          type: 'session/sessionLoaded',
+          payload: action.payload,
+        });
+      })
+      .addCase(leaveTenant.fulfilled, (state, action) => {
+        sessionSlice.caseReducers.sessionLoaded(state, {
+          type: 'session/sessionLoaded',
+          payload: action.payload,
+        });
+      })
+      // PLT-03 FR-5 — completing the wizard applies the preset, which changes
+      // `enabled_modules` and the tenant summary the navigation reads.
+      .addCase(completeOnboarding.fulfilled, (state, action) => {
+        sessionSlice.caseReducers.sessionLoaded(state, {
+          type: 'session/sessionLoaded',
+          payload: action.payload.session,
+        });
+      })
       .addCase(switchTenant.fulfilled, (state, action) => {
         sessionSlice.caseReducers.sessionLoaded(state, {
           type: 'session/sessionLoaded',
@@ -156,3 +207,6 @@ export const selectEnabledModules = (state: RootState): readonly ModuleCode[] =>
   state.session.enabledModules;
 export const selectTenantTimezone = (state: RootState): string | null =>
   state.session.activeTenant?.timezone ?? null;
+/** PLT-04 FR-1 — every membership the switcher may list. */
+export const selectSessionTenants = (state: RootState): readonly SessionTenant[] =>
+  state.session.tenants;

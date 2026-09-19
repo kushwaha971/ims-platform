@@ -145,3 +145,64 @@ Carried from Part 43 §43.5.4's last bullet, because a rejection with no reason 
 | `CR-026` | `deferred` | Cursor pagination — offset pagination is adequate at the MVP size envelope. Returns when a tenant's ledger exceeds the envelope. |
 | `CR-032` | `deferred` | The credit-limit index — required before any tenant exceeds 10,000 parties, and no MVP tenant will. |
 | `CR-049` | `deferred` | Advance allocation — Phase 2 by the raising chapter's own statement. |
+
+---
+
+## Batch 2026-09-19 — raised by the Sprint 1, DEC-010 and design-system work
+
+Raised by the implementing agents against chapters they did not own. All `raised`; none
+applied to the chapters yet. Grouped by what forces them.
+
+### Gate: immediate — the chapter now contradicts shipped code
+
+| ID | Target | Change |
+|---|---|---|
+| `CR-126` | Part 21 §21.3.1 `platform_user` (T-08) | DEC-010: `email varchar(254) NN, U`; `mobile varchar(15) NULL, U WHERE NOT NULL`; add `email_verified_at`. Implemented by migration `platform.0004_email_identity`. |
+| `CR-127` | Part 21 §21.3.1 (T-08) | Define `platform_auth_token` — the single-use, expiring, hashed link token Part 27 §27.4.2 requires and DEC-010's verification reuses. |
+| `CR-128` | Canon §0.8 | Register `POST /auth/register`. Sign-up used to be a side effect of `POST /auth/otp/verify`. |
+| `CR-129` | Canon §0.8 | Register `POST /auth/email/verify/{request,confirm}`; mark the two `otp/*` paths conditional on `UB_AUTH_OTP_ENABLED`. |
+| `CR-130` | Part 22 §22.2 (T-17) | Rewrite the auth block for DEC-010: register, login `{email}`, reset request `{email}`, reset confirm `{token}`, the verify pair, OTP conditional. |
+| `CR-131` | Part 22 §22.1.1 (T-16) | `invalid_credentials` copy: "Mobile number or password is incorrect." → "Email or password is incorrect." Code unchanged. Also `login_throttled`'s "per-mobile" → "per-identifier". |
+| `CR-133` | Part 27 §27.4.1, §27.4.2 | "per mobile" → "per identifier" (budgets unchanged); reset row becomes the hashed link; §27.4.1's OTP controls apply only when the flag is on. Register the reset and registration budgets. |
+| `CR-135` | Part 29 §29.2.4 (T-28) | Add `UB_AUTH_OTP_ENABLED`, `UB_RESET_TOKEN_TTL_SECONDS`, `UB_EMAIL_VERIFICATION_ENABLED`, `UB_VERIFY_TOKEN_TTL_SECONDS`, `UB_EMAIL_ADAPTER`, `UB_EMAIL_FROM`, `UB_ALLOW_CONSOLE_SMS`. Note `UB_EMAIL_ADAPTER` ≠ Django's `UB_EMAIL_BACKEND`. |
+| `CR-136` | Canon §0.4 ADR-011 | Supersede: identity is email, mobile is an optional profile field, OTP deferred behind a flag. Record the local-first reason so it is reversible on its own terms. |
+| `CR-137` | Canon §0.4 (new ADR) | Record the outbound **email** adapter, parallel to ADR-015 (SMS): one Protocol, console backend, `notifications_message_log`, provider by settings alone. |
+| `CR-a` | Part 21 §21.3.1 (T-08) | Register `platform_rate_limit`, which Part 27 §27.4.1 makes normative and §21.3 never defined. |
+| `CR-b` | Part 21 §21.3.2 | `notifications_message_log.tenant_id` must be nullable — messages are sent before tenant context exists. |
+| `CR-c` | Part 21 §21.3.1 | `platform_idempotency_key.tenant_id` nullable + `U(user_id, scope, key) WHERE tenant_id IS NULL`. Required by PLT-03 EC-7. |
+| `CR-d` | Part 20 §20.5.1 | Add the `epo` claim (`platform_user.token_epoch`) to the token claim tables. Part 21 requires the rejection; §20.5.1 has no claim to carry it. |
+| `CR-e` | Part 21 §21.3.1 (T-27) | Add `parties.labels`, `inventory.favourite_units`, `plan.overrides` to the well-known tenant-setting keys. |
+| `CR-g` | Part 22 §22.1 (T-17) | Register `X-Tenant-Id` as a **response** header (CCR-3). §22.1 names it only as an untrusted request header, which reads as a prohibition on emitting it. The client's stale-tab guard now consumes it. |
+
+### Gate: before the next platform sprint
+
+| ID | Target | Change |
+|---|---|---|
+| `CR-138` | PLT-01 | Written end-to-end as mobile OTP. Rewrite for email registration, or split into PLT-01 (email, MVP) and PLT-01b (OTP, backlog). BR-1 "one user per mobile" → "per email". |
+| `CR-139` | PLT-02 | FR-4/FR-5 specify reset as an OTP challenge. Rewrite for the link flow; FR-7's `{mobile\|email}` becomes `{email}`. |
+| `CR-140` | PLT-05 | Invitations are keyed on `platform_invitation.mobile` and accept matches `invitation.mobile == user.mobile` — unsatisfiable for a phone-less owner. Rule whether invitations move to email. **Blocks PLT-05.** |
+| `CR-i` | Canon §0.9 | Resolve `platform.tenant.manage` "(partial)" for `admin` — Part 22 §22.3 and PLT-03 §12 grant admin a PATCH the registry denies. |
+| `CR-j` | PLT-02 §10 ↔ Part 27 §27.4.2 | Reconcile the 8-vs-10 character password floor and the 15- vs 10-minute throttle window. One chapter should state each, not two. |
+| `CR-k` | PLT-01 FR-3 ↔ Part 20 §20.5.4 ↔ §20.13.4 | Three chapters name three loggers for the console OTP line. Pick one. |
+| `CR-141` | Part 31 | Register `auth.password_reset_requested`, `auth.email_verify_requested`, `auth.email_verified`; retire or flag `auth.otp_*`. |
+
+### Gate: deferred — needs a decision first
+
+| ID | Target | Change |
+|---|---|---|
+| `CR-132` | Part 22 §22.1.1 | Register an error code for "address not confirmed", or rule that verification will never gate login. Until then verification is plumbing, not a gate. |
+| `CR-134` | Part 27 §27.4.x | Rule whether `check --deploy` should gate the console **email** adapter outside DEBUG, as `platform.E001` does for SMS. Deliberately not added: reset links to a log *is* the intended local deployment. |
+| `CR-I` | Part 22 §22.2 | `POST /auth/email/verify/{request,confirm}` are served by the backend and called by no frontend screen. State when verification starts gating and which screen owns it. |
+
+### Design-system discipline (the BrandHub-parity change)
+
+| ID | Target | Change |
+|---|---|---|
+| `CR-D1` | Part 23 §23.3 | Add the Wave 2 block: `UbBox`, `UbStack`, `UbGrid`, `UbText`, `UbDivider`, `UbSpacer`, `UbAvatar`, `UbListItemText`, `UbPressable`, `UbLink`, with the BrandHub seat each fills. |
+| `CR-D2` | Part 23 §23.2.2 | The `ds-*` tiers are addressed through `UbText`'s `variant` union, not by writing the class; `scale.ts` is the single binding to the typography plugin. |
+| `CR-D3` | Part 25 (new rule R-S-10) | "Feature code renders no raw JSX host element." Ban list, the two exempt zones, `className` as the escape hatch, and `as` as how semantics and heading order are preserved. |
+| `CR-D4` | Part 25 §25.14 | Update the normative `eslint.config.mjs` listing with the `react/forbid-elements` block. |
+| `CR-D5` | Part 19 §19.6 | Record `src/routes.ts` as the single home for application paths; `middleware.ts` derives from it. |
+| `CR-D6` | Part 19 §19.11.5 | Record `src/utils/text.ts` and the promotion bar: a helper moves out of a feature's `view-model/` when a **second** feature needs it. |
+| `CR-D7` | Part 19 §19.2.5 | Note the barrel's Wave 2 section and `src/design-system/scale.ts`. |
+| `CR-D8` | Part 28 | Record `forbidElements.test.ts` and `routes.test.ts` as config-level anti-regression suites. |

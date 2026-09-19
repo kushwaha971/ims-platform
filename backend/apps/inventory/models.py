@@ -12,7 +12,7 @@ from django.db import models
 
 from apps.common.db.fields import uuid7_pk
 from apps.common.managers import AllObjectsManager, SoftDeleteManager
-from apps.common.models import TimeStampedModel
+from apps.common.models import TenantModel, TimeStampedModel
 
 
 class Unit(TimeStampedModel):
@@ -49,6 +49,34 @@ class Unit(TimeStampedModel):
                 condition=models.Q(tenant__isnull=True) & models.Q(deleted_at__isnull=True),
                 name="uq_unit_system_code",
             ),
+        ]
+
+    def __str__(self) -> str:
+        return self.code
+
+
+class Location(TenantModel):
+    """A stock location (Part 21 §21.3.6).
+
+    MVP auto-creates `MAIN` at onboarding (`PLT-03` FR-6) and hides the concept
+    in the UI until Phase 2 (`INV-11`). The row exists from Sprint 1 so that
+    `INV-11` is a UI and service change rather than a migration of live stock
+    (Part 32 §32.9).
+    """
+
+    id = uuid7_pk()
+    name = models.CharField(max_length=80)
+    code = models.CharField(max_length=24)
+    address = models.JSONField(default=dict, blank=True)
+    is_default = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = "inventory_location"
+        verbose_name = "location"
+        verbose_name_plural = "locations"
+        constraints = [
+            models.UniqueConstraint(fields=["tenant", "code"], name="uq_location_tenant_code"),
         ]
 
     def __str__(self) -> str:

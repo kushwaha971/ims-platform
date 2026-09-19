@@ -1,29 +1,37 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
+import { APP_ROUTE_PREFIXES, RETIRED_ROUTES, ROUTES } from 'src/routes';
+
 /**
  * Part 19 §19.7.3 — the cheap half of the guard. A cookie-PRESENCE check on
  * `(app)` paths, so an unauthenticated deep link does not download and boot the
  * whole application before redirecting. It never decodes or validates the
  * token: that is the server's job, and `<RequireSession>` does the real check.
  */
-const APP_PREFIXES = [
-  '/dashboard',
-  '/parties',
-  '/ledger',
-  '/items',
-  '/stock',
-  '/sales',
-  '/purchases',
-  '/payments',
-  '/expenses',
-  '/reports',
-  '/settings',
-  '/notifications',
-];
+
+/**
+ * CR-2026-09-19-A — routes that USED to exist and now do not, and the prefixes
+ * this guard covers, both from `src/routes.ts`. They used to be two literal
+ * arrays here, which is how a new section ends up guarded in the menu and not
+ * in the middleware.
+ *
+ * The retirement is a redirect and not a rewrite: the address bar must end up
+ * saying `/login`, or the same back gesture repeats forever.
+ */
 
 export function middleware(request: NextRequest): NextResponse {
   const { pathname, search } = request.nextUrl;
-  if (!APP_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))) {
+
+  const retired = RETIRED_ROUTES[pathname];
+  if (retired) {
+    const url = request.nextUrl.clone();
+    url.pathname = retired;
+    // The query string goes nowhere: it belonged to a flow that no longer runs.
+    url.search = '';
+    return NextResponse.redirect(url);
+  }
+
+  if (!APP_ROUTE_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))) {
     return NextResponse.next();
   }
 
@@ -31,7 +39,7 @@ export function middleware(request: NextRequest): NextResponse {
   if (hasSession) return NextResponse.next();
 
   const url = request.nextUrl.clone();
-  url.pathname = '/login';
+  url.pathname = ROUTES.LOGIN;
   url.search = `?next=${encodeURIComponent(`${pathname}${search}`)}`;
   return NextResponse.redirect(url);
 }

@@ -4,17 +4,28 @@ import { useCallback, useState } from 'react';
 
 import {
   UbAmount,
+  UbAvatar,
+  UbBox,
   UbCard,
+  UbDivider,
+  UbGrid,
+  UbListItemText,
+  UbPressable,
   UbEmptyState,
   UbPageHeader,
   UbPageShell,
   UbSkeleton,
   UbSnackbar,
+  UbSpacer,
+  UbStack,
   UbStatusBadge,
   UbStatusBanner,
+  UbText,
   type UbSnackbarMessage,
 } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
+
+import { DesignSystemWave1Gallery } from './DesignSystemWave1Gallery';
 
 /**
  * Part 23 §23.4 — the live gallery. Storybook is not a dependency (ADR-021), so
@@ -45,30 +56,30 @@ export function DesignSystemGallery(): React.JSX.Element {
         <UbPageHeader title={t('designSystem.title')} subtitle={t('designSystem.subtitle')} />
       }
     >
-      <div className="flex flex-col gap-6">
+      <UbStack gap={6}>
         <UbCard title="UbAmount" description="Part 23 §23.2.6 — every case in the table.">
-          <div className="flex flex-wrap items-start gap-8">
+          <UbStack direction="row" wrap align="start" gap={8}>
             <UbAmount value="500.00" tone="receivable" sign="minus" label="You gave" />
             <UbAmount value="300.00" tone="payable" sign="plus" label="You got" />
             <UbAmount value="2800.00" tone="receivable" label="You will get" size="lg" />
             <UbAmount value="0.00" tone="receivable" sign="minus" label="Settled" />
             <UbAmount value={null} />
             <UbAmount value="123456.5" tone="payable" label="You will give" size="sm" />
-          </div>
+          </UbStack>
         </UbCard>
 
         <UbCard title="UbStatusBadge">
-          <div className="flex flex-wrap gap-2">
+          <UbStack direction="row" wrap gap={2}>
             <UbStatusBadge label="Draft" tone="info" />
             <UbStatusBadge label="Paid" tone="success" />
             <UbStatusBadge label="Due soon" tone="warning" />
             <UbStatusBadge label="Overdue" tone="error" />
             <UbStatusBadge label="Archived" />
-          </div>
+          </UbStack>
         </UbCard>
 
         <UbCard title="UbStatusBanner">
-          <div className="flex flex-col gap-3">
+          <UbStack gap={3}>
             <UbStatusBanner tone="info" title="Draft saved" description="Saved a moment ago." />
             <UbStatusBanner tone="warning" title={t('common.network.degraded')} />
             <UbStatusBanner
@@ -81,11 +92,11 @@ export function DesignSystemGallery(): React.JSX.Element {
               title="We could not save this"
               description="Check the highlighted fields."
             />
-          </div>
+          </UbStack>
         </UbCard>
 
         <UbCard title="UbEmptyState">
-          <div className="flex flex-col gap-4">
+          <UbStack gap={4}>
             <UbEmptyState
               variant="firstUse"
               title={t('parties.list.empty.firstUse.title')}
@@ -102,17 +113,100 @@ export function DesignSystemGallery(): React.JSX.Element {
               description={t('parties.list.error.body')}
               requestId="req_7f3a91"
             />
-          </div>
+          </UbStack>
         </UbCard>
 
         <UbCard title="UbSkeleton">
-          <div className="flex flex-col gap-4">
+          <UbStack gap={4}>
             <UbSkeleton variant="list" count={3} />
             <UbSkeleton variant="card" />
             <UbSkeleton variant="form" count={2} />
-          </div>
+          </UbStack>
         </UbCard>
-      </div>
+
+        {/* Part 32 §32.4.4 — wave 1, in its own file so the gallery stays
+            readable as waves 2 and 3 land. */}
+        <UbText as="h2" variant="h3" className="mt-4">
+          Wave 1 — Sprint 1
+        </UbText>
+        <DesignSystemWave1Gallery />
+
+        <UbText as="h2" variant="h3" className="mt-4">
+          Wave 2 — layout and typography
+        </UbText>
+
+        <UbCard
+          title="UbText"
+          description="Part 23 §23.2.2 — the tiers. `as` picks the element, `variant` picks the tier."
+        >
+          <UbStack gap={2}>
+            <UbText variant="display">ds-display</UbText>
+            <UbText as="h1" variant="h1">
+              ds-h1 — on a real &lt;h1&gt;
+            </UbText>
+            <UbText as="h2" variant="h2">
+              ds-h2 — on a real &lt;h2&gt;
+            </UbText>
+            <UbText variant="body">ds-body — default text</UbText>
+            <UbText variant="body-sm" tone="tertiary">
+              ds-body-sm — text inside cards and tables
+            </UbText>
+            <UbText variant="caption" tone="muted">
+              ds-caption — metadata
+            </UbText>
+            <UbText variant="label" tone="tertiary">
+              ds-label — the translated label tier (13 px under :lang(hi))
+            </UbText>
+            <UbText variant="label-caps" tone="tertiary">
+              ds-label-caps — Latin only, never a translated string
+            </UbText>
+            <UbText variant="metric-md" dir="ltr">
+              1,23,456.50
+            </UbText>
+            <UbText variant="mono" tone="muted">
+              req_7f3a91
+            </UbText>
+          </UbStack>
+        </UbCard>
+
+        <UbCard title="UbStack · UbGrid · UbDivider · UbSpacer">
+          <UbStack gap={4}>
+            <UbStack direction="row" align="center" gap={3}>
+              <UbText variant="body-sm">row</UbText>
+              <UbDivider orientation="vertical" />
+              <UbText variant="body-sm">align=center</UbText>
+              <UbDivider orientation="vertical" />
+              <UbText variant="body-sm">gap=3</UbText>
+            </UbStack>
+            <UbDivider />
+            <UbGrid columns={{ base: 1, sm: 3 }} gap={3}>
+              <UbText variant="body-sm">one</UbText>
+              <UbText variant="body-sm">two</UbText>
+              <UbText variant="body-sm">three</UbText>
+            </UbGrid>
+            <UbSpacer size={4} />
+          </UbStack>
+        </UbCard>
+
+        <UbCard
+          title="UbAvatar · UbListItemText · UbPressable"
+          description="The row shape the party list, the tenant chooser and the switcher all share."
+        >
+          <UbStack as="ul">
+            {[
+              { id: 'a', name: 'Sharma General Store', role: 'Owner' },
+              { id: 'b', name: 'शर्मा जनरल स्टोर', role: 'Staff' },
+            ].map((row) => (
+              <UbBox as="li" key={row.id}>
+                <UbPressable className="flex min-h-[56px] items-center gap-3 px-1 py-3 hover:bg-surface-hover">
+                  <UbAvatar name={row.name} />
+                  <UbListItemText primary={row.name} secondary={row.role} />
+                </UbPressable>
+              </UbBox>
+            ))}
+          </UbStack>
+        </UbCard>
+      </UbStack>
 
       <UbSnackbar
         messages={messages}

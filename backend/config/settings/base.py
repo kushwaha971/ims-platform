@@ -120,10 +120,20 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"  # unused; every model decl
 DATA_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 2 * 1024 * 1024
 
+# Part 27 §27.4.2's blocklist row, in full: the bundled common-password list,
+# similarity to the user's own name / mobile / email, and all-numeric. The
+# length floors (8, and 10 for owners and admins) are applied by
+# `platform.services.passwords.validate`, which knows the caller's roles;
+# `MinimumLengthValidator` keeps the 8 here so a path that bypasses the service
+# still cannot set a four-character password.
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+    {
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+        "OPTIONS": {"user_attributes": ("full_name", "mobile", "email")},
+    },
 ]
 
 # ── i18n / tz (Part 20 §20.13.4) ─────────────────────────────────────────────
@@ -173,9 +183,23 @@ REST_FRAMEWORK = {
 # ── Auth / tokens (ADR-011, Part 20 §20.5.1) ─────────────────────────────────
 UB_ACCESS_TOKEN_MINUTES = env.int("UB_ACCESS_TOKEN_MINUTES", 15)
 UB_REFRESH_TOKEN_DAYS = env.int("UB_REFRESH_TOKEN_DAYS", 30)
+# DEC-010: identity at MVP is email + password. Mobile OTP, the SMS adapters and
+# everything that needs a telecom provider sit behind this flag, which is off.
+# With it off the OTP routes are not registered at all, so they 404, and no
+# module on the default path imports the OTP service.
+UB_AUTH_OTP_ENABLED = env.bool("UB_AUTH_OTP_ENABLED", False)
+
+# The OTP settings below are read only when that flag is on.
 UB_OTP_PEPPER = env.str("UB_OTP_PEPPER", "dev-otp-pepper")
 UB_OTP_TTL_SECONDS = env.int("UB_OTP_TTL_SECONDS", 300)
 UB_OTP_MAX_ATTEMPTS = env.int("UB_OTP_MAX_ATTEMPTS", 5)
+
+# Password reset: single-use, 15-minute, hashed at rest (Part 27 §27.4.2).
+UB_RESET_TOKEN_TTL_SECONDS = env.int("UB_RESET_TOKEN_TTL_SECONDS", 900)
+# Address verification is plumbed and **off**: nothing blocks login on it
+# (see `services/auth.py` and `NOTES-FOR-REVIEW.md`).
+UB_EMAIL_VERIFICATION_ENABLED = env.bool("UB_EMAIL_VERIFICATION_ENABLED", False)
+UB_VERIFY_TOKEN_TTL_SECONDS = env.int("UB_VERIFY_TOKEN_TTL_SECONDS", 86400)
 
 from datetime import timedelta  # noqa: E402  (kept next to the settings it feeds)
 
@@ -218,12 +242,22 @@ UB_WHATSAPP_BACKEND = env.str(
 )
 UB_EMAIL_BACKEND = env.str("UB_EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
 EMAIL_BACKEND = UB_EMAIL_BACKEND
+# The outbound-email *adapter* (our `MessageLog`-writing interface), which is a
+# different thing from Django's `EMAIL_BACKEND` above: this is the seam a real
+# provider is dropped into, and swapping it is a settings change, not a refactor.
+UB_EMAIL_ADAPTER = env.str(
+    "UB_EMAIL_ADAPTER", "apps.common.integrations.email.console.ConsoleEmailBackend"
+)
+UB_EMAIL_FROM = env.str("UB_EMAIL_FROM", "no-reply@udhaarbook.local")
 
 # ── Misc feature flags / ops ─────────────────────────────────────────────────
 UB_SUPER_ADMIN_MOBILES = env.list("UB_SUPER_ADMIN_MOBILES", [])
 UB_FEATURE_FLAGS = env.json("UB_FEATURE_FLAGS", "{}")
 UB_E2E_MODE = env.bool("UB_E2E_MODE", False)
 UB_ALLOW_PARTNER_HEADER = env.bool("UB_ALLOW_PARTNER_HEADER", False)
+# PLT-01 EC-6: `ConsoleSmsBackend` with DEBUG=False is a deployment defect
+# unless the operator says otherwise (the single-user local deployment).
+UB_ALLOW_CONSOLE_SMS = env.bool("UB_ALLOW_CONSOLE_SMS", False)
 
 # ── Logging (Part 20 §20.13.4, Part 30 §30.2) ────────────────────────────────
 UB_LOG_LEVEL = env.str("UB_LOG_LEVEL", "INFO")

@@ -7,9 +7,15 @@
  * Nothing above this file knows that axios exists, and nothing in this file
  * knows what a party is.
  */
-import axios, { type AxiosError, type AxiosInstance, type InternalAxiosRequestConfig } from 'axios';
+import axios, {
+  type AxiosError,
+  type AxiosInstance,
+  type AxiosRequestConfig,
+  type InternalAxiosRequestConfig,
+} from 'axios';
 
 import { API_BASE_URL, API_TIMEOUT_MS } from 'src/constants';
+import { loginPathWithNext } from 'src/routes';
 import type { TNetworkTag } from 'src/types/api.types';
 import { shouldToast, toApiError } from 'src/utils/apiError';
 import { readCsrfToken } from 'src/utils/cookieUtils';
@@ -21,8 +27,12 @@ import { transportHost } from './transportBridge';
 /** Requests that must never trigger a refresh, or that carry no auth. */
 const AUTH_FREE_PATHS: readonly string[] = [
   API_PATHS.AUTH_LOGIN,
-  API_PATHS.AUTH_OTP_REQUEST,
-  API_PATHS.AUTH_OTP_VERIFY,
+  // CR-2026-09-19-A — the three anonymous doors into the product. A 401 from
+  // any of them is the answer, not a stale token: refreshing on it would turn
+  // "that password is wrong" into a redirect to the screen the user is on.
+  API_PATHS.AUTH_REGISTER,
+  API_PATHS.AUTH_PASSWORD_RESET_REQUEST,
+  API_PATHS.AUTH_PASSWORD_RESET_CONFIRM,
   API_PATHS.AUTH_REFRESH,
   API_PATHS.SYSTEM_HEALTH,
 ];
@@ -39,6 +49,18 @@ export interface UbRequestConfig extends InternalAxiosRequestConfig {
   /** §19.10.3 — only `interactive` and `probe` feed the network machine. */
   net?: TNetworkTag;
 }
+
+/**
+ * The one place the per-request extras above are cast onto axios's own config
+ * type. A service writes `ubConfig({ suppressErrorSnackbar: true })` and never
+ * an inline `as`, so the cast is auditable in a single grep rather than spread
+ * across forty call sites.
+ */
+export const ubConfig = (
+  extras: Partial<Omit<UbRequestConfig, 'headers'>> & {
+    readonly headers?: Readonly<Record<string, string>>;
+  }
+): AxiosRequestConfig => extras as AxiosRequestConfig;
 
 export const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
@@ -141,8 +163,12 @@ let redirected = false;
 const redirectToLoginOnce = (): void => {
   if (redirected || typeof window === 'undefined') return;
   redirected = true;
-  const next = encodeURIComponent(`${window.location.pathname}${window.location.search}`);
-  window.location.assign(new URL(`/login?next=${next}`, window.location.origin).toString());
+  const next = `${window.location.pathname}${window.location.search}`;
+  // `loginPathWithNext` owns both the address and the encoding (§19.6.4 rule 2);
+  // this used to be the fourteenth hand-written `/login?next=` in the tree.
+  window.location.assign(
+    new URL(loginPathWithNext(next), window.location.origin).toString()
+  );
 };
 
 /** Test seam: the module-level guards are per-process, and tests need both. */
@@ -161,6 +187,35 @@ api.interceptors.response.use(
     if ((config.net ?? 'interactive') !== 'background') {
       transportHost()?.onResponseObserved();
     }
+
+    /**
+     * PLT-04 FR-4 / AC-4 — the stale-tab guard.
+     *
+     * Every tenant-scoped response echoes the token's `tid` as `X-Tenant-Id`
+     * (CCR-3). Two tabs, a switch in one: the other tab's next response is
+     * another business's data, and rendering one row of it is a cross-tenant
+     * leak the user would read as their own books.
+     *
+     * The check is deliberately one-sided. It fires ONLY when the header is
+     * present AND this tab knows which tenant it is in AND the two differ — so
+     * a backend that has not yet shipped CCR-3's header changes nothing, and a
+     * response that arrives before `/auth/me` is never discarded.
+     */
+    const echoed = response.headers?.['x-tenant-id'];
+    if (typeof echoed === 'string' && echoed.length > 0) {
+      const host = transportHost();
+      const active = host?.getActiveTenantId() ?? null;
+      if (active !== null && active !== echoed) {
+        host?.onTenantMismatch(echoed);
+        return Promise.reject(
+          toApiError(
+            new Error('This business was switched in another tab.'),
+            'tenant.switcher.staleTab'
+          )
+        );
+      }
+    }
+
     return response;
   },
   async (error: AxiosError) => {
@@ -199,6 +254,15 @@ api.interceptors.response.use(
 
     const apiError = toApiError(error);
 
+    // PLT-15 FR-6 — the plan-limit dialog is the presentation for this code,
+    // everywhere in the application. It is claimed BEFORE the toast decision so
+    // that the merchant gets "you have used 3 of 3 team members, contact X" and
+    // not a transient strip saying "Your plan's limit has been reached."
+    const claimedByPlanDialog =
+      apiError.code === 'plan_limit_reached'
+        ? (transportHost()?.onPlanLimit(apiError) ?? false)
+        : false;
+
     // §19.10.3 — a 4xx is evidence of HEALTH: the server answered. Only a
     // transport-level failure moves the machine towards `degraded`.
     if ((config?.net ?? 'interactive') !== 'background') {
@@ -220,7 +284,12 @@ api.interceptors.response.use(
       apiError.code === 'offline';
     // In degraded/offline the strip is the channel; transport toasts are
     // suppressed there, business errors still toast (§19.10.3).
-    if (!config?.suppressErrorSnackbar && shouldToast(apiError) && !(impaired && transportError)) {
+    if (
+      !config?.suppressErrorSnackbar &&
+      !claimedByPlanDialog &&
+      shouldToast(apiError) &&
+      !(impaired && transportError)
+    ) {
       transportHost()?.onErrorToast(apiError);
     }
 

@@ -64,9 +64,19 @@ class InvitationStatus(models.TextChoices):
 
 
 class OtpPurpose(models.TextChoices):
-    """Part 21 §21.3.1 `platform_otp_challenge.purpose`."""
+    """Part 21 §21.3.1 `platform_otp_challenge.purpose`.
+
+    Reachable only when `UB_AUTH_OTP_ENABLED=1` (DEC-010).
+    """
 
     LOGIN = "login", _("Login")
     SIGNUP = "signup", _("Signup")
     VERIFY = "verify", _("Verify")
     RESET = "reset", _("Reset")
+
+
+class AuthTokenPurpose(models.TextChoices):
+    """`platform_auth_token.purpose` — the two link flows the email identity needs."""
+
+    PASSWORD_RESET = "password_reset", _("Password reset")
+    EMAIL_VERIFY = "email_verify", _("Email verification")

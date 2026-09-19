@@ -159,3 +159,53 @@ The five below are Part 42 §42.6.1's blocking decisions. Every one of them was 
 ## 6. Decided
 
 Empty. The first entry here will be one of the five above, and the date it carries is the answer to "when did the build actually start on a settled foundation".
+
+
+---
+
+## Resolutions recorded 2026-09-19
+
+### DEC-001 — status: `defaulted` (2026-09-19)
+
+No answer from Commercial by the Sprint 1 planning deadline, so the stated default took
+effect automatically per §the escalation rule. **In force:** `PLT-15` enforces module
+entitlement and member count only. The ledger is never capped. `max_parties` and
+`max_invoices_per_month` are removed from enforcement on every MVP plan.
+
+Built to this exactly. Blast radius if Commercial reverses it:
+`backend/apps/platform_app/services/entitlements.py` (`LIMIT_KEYS` / `REMOVED_AT_MVP`),
+`backend/apps/platform_app/management/commands/seed_plans.py`, and the frontend's
+`PlanUsageCard`. The structural test `test_no_removed_limit_key_is_read_anywhere_in_the_codebase`
+makes the reversal a search rather than an excavation.
+
+### DEC-003 — status: `defaulted` (2026-09-19)
+
+Taken by what Sprint 0 actually needed. **In force:** the runtime allow-list stays exactly
+as ADR-021 has it — no runtime dependency was added in Sprint 0, Sprint 1 or the DEC-010
+change. The *tooling* list opened under ADR discipline: `postcss`, `autoprefixer`,
+`jest-environment-jsdom`, `ts-node`, the `@types/*` packages, the ESLint plugins named by
+§25.14, `prettier-plugin-tailwindcss` and `lint-staged` were required for the allow-listed
+tools to run at all. `ruff` and `mypy` remain configured but uninstalled, which is the
+ADR-021 ↔ §26.14 contradiction recorded as `CR-j`.
+
+### DEC-010 — Identity at MVP is email + password; mobile OTP moves to the backlog
+
+- **Raised:** 2026-09-19 by the owner   **Decider:** Owner (Product)   **Status:** `decided`
+- **Decision:** authentication at MVP is **email + password only**. Mobile OTP, the SMS
+  adapters and DLT registration move to the backlog.
+- **Context:** the product runs locally for the owner's personal use first, with minimal
+  third-party dependencies (the standing constraint behind ADR-021). A mobile-OTP flow
+  needs a telecom provider and a DLT registration with a two-to-four-week lead time, for a
+  product that currently has one user. Sprint 1 built the OTP flow before this was caught.
+- **Consequences:** `mobile` survives as an **optional profile field** — parties, invoices
+  and later WhatsApp all want it; it simply stops being how a person signs in. Password
+  reset becomes a single-use hashed link delivered through a console backend that logs it,
+  behind the same adapter interface a real mail provider will use. OTP is retired behind
+  `UB_AUTH_OTP_ENABLED=0`, not deleted: the service, its model, its endpoints and all 37 of
+  its tests remain and still run. `platform_otp_challenge` is not dropped.
+- **What this unblocks:** DLT registration leaves the critical path entirely. `DEC-005`'s
+  Sprint 2 deadline no longer gates Sprint 5's reminders — those move with the backlog.
+- **Reversal:** flip `UB_AUTH_OTP_ENABLED=1` and the OTP endpoints return. Reversing the
+  *identity* change is the expensive half: `platform.0004_email_identity` reverses cleanly
+  only for rows the old schema could represent, i.e. users who have a mobile number.
+- **Amends:** ADR-011 (mobile as the natural key) is superseded — see `CR-136`.

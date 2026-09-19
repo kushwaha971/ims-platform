@@ -20,6 +20,31 @@ class AuditAction:
     constants beside these rather than inventing strings at the call site.
     """
 
+    # ── Sprint 1: PLT-01 / PLT-02 (17-01 §16) ──────────────────────────────
+    OTP_REQUESTED = "auth.otp_requested"
+    OTP_FAILED = "auth.otp_failed"
+    LOGIN_SUCCEEDED = "auth.login_succeeded"
+    LOGIN_FAILED = "auth.login_failed"
+    USER_CREATED = "auth.user_created"
+    PASSWORD_SET = "auth.password_set"
+    PASSWORD_CHANGED = "auth.password_changed"
+    PASSWORD_RESET = "auth.password_reset"
+    PASSWORD_RESET_REQUESTED = "auth.password_reset_requested"
+    EMAIL_VERIFY_REQUESTED = "auth.email_verify_requested"
+    EMAIL_VERIFIED = "auth.email_verified"
+    REFRESH_REUSE_DETECTED = "auth.refresh_reuse_detected"
+    LOGGED_OUT = "auth.logged_out"
+    TENANT_SWITCHED = "auth.tenant_switched"
+    # ── Sprint 1: PLT-03 / PLT-04 / PLT-15 ─────────────────────────────────
+    TENANT_CREATED = "tenant.created"
+    TENANT_PRESET_APPLIED = "tenant.preset_applied"
+    MEMBER_CREATED = "member.created"
+    MEMBER_ACCEPTED = "member.accepted"
+    MEMBER_DEFAULT_CHANGED = "member.default_changed"
+    MEMBER_LEFT = "member.left"
+    PLAN_LIMIT_HIT = "plan.limit_hit"
+    PLAN_MODULES_TRIMMED = "plan.modules_trimmed"
+
     TENANT_UPDATED = "tenant.updated"
     MEMBER_INVITED = "member.invited"
     MEMBER_ROLE_CHANGED = "member.role_changed"

@@ -76,20 +76,31 @@ def HasPermission(mapping: str | dict[str, str]) -> type[BasePermission]:
 
 
 def ModuleEnabled(module: str) -> type[BasePermission]:
-    """403 `module_disabled` — tenant ∩ plan ∩ partner (Part 20 §20.5.6 rule 1)."""
+    """403 `module_disabled` — tenant ∩ plan ∩ partner (Part 20 §20.5.6 rule 1).
+
+    The set is computed by `platform.services.entitlements.effective_modules`,
+    which is `PLT-15` FR-2's formula plus `BR-6`'s second half: the plan and the
+    partner say what the tenant *may* have, `enabled_modules` says what the
+    owner has switched on, and both must be true. Sprint 1 moved the arithmetic
+    there so that one function answers the question for the permission class,
+    for `GET /auth/me`'s `plan_limits.modules`, and for the nightly
+    `reconcile_entitlements` — three readers that used to be able to disagree.
+
+    Rule D1 forbids `common` importing another app at module level, so the
+    entitlement service is resolved inside the call, exactly as `audit.py`
+    resolves `AuditLog`.
+    """
 
     class _ModuleEnabled(BasePermission):
         message = f"The '{module}' module is not enabled for this business."
 
         def has_permission(self, request: Any, view: Any) -> bool:
+            from apps.platform_app.services.entitlements import effective_modules
+
             tenant = get_effective_tenant(request)
             if tenant is None:
                 return False
-            if module not in (tenant.enabled_modules or []):
-                raise ModuleDisabled(self.message, details={"module": module})
-            if module not in (tenant.plan.modules or []):
-                raise ModuleDisabled(self.message, details={"module": module})
-            if module not in (tenant.partner.allowed_modules or []):
+            if module not in effective_modules(tenant):
                 raise ModuleDisabled(self.message, details={"module": module})
             return True
 
@@ -102,6 +113,18 @@ def PlanLimit(limit_key: str, counter: Callable[[Any], int]) -> type[BasePermiss
 
     Checked at the action that consumes the quota (invoice issue, member invite),
     never on reads. `counter(tenant) -> int` lives in the owning app's selectors.
+
+    **`DEC-001` narrowed what this may be used for.** At MVP `PLT-15` enforces
+    module entitlement and member count and nothing else: the ledger is never
+    capped, and `max_parties` and `max_invoices_per_month` are removed from
+    enforcement on every plan. `platform.services.entitlements.LIMIT_KEYS` is the
+    list; a `limit_key` outside it is refused here rather than silently reading a
+    `plan.limits` entry that DEC-001 says must not be read.
+
+    A seat check also needs the tenant row locked for the duration of the write
+    (`PLT-15` BR-7), which a permission class runs too early to do; that is why
+    `max_users` is enforced by `entitlements.assert_can_add_member` inside the
+    service transaction and not by this class.
     """
 
     class _PlanLimit(BasePermission):
@@ -111,7 +134,14 @@ def PlanLimit(limit_key: str, counter: Callable[[Any], int]) -> type[BasePermiss
             tenant = get_effective_tenant(request)
             if tenant is None:
                 return False
-            cap = (tenant.plan.limits or {}).get(limit_key)
+            from apps.platform_app.services.entitlements import LIMIT_KEYS, for_tenant
+
+            if limit_key not in LIMIT_KEYS:
+                raise ImproperlyConfigured(
+                    f"{limit_key!r} is not enforced at MVP (DEC-001). "
+                    f"Enforceable keys: {sorted(LIMIT_KEYS)}"
+                )
+            cap = for_tenant(tenant).limit(limit_key)
             if cap is None:
                 return True
             current = counter(tenant)

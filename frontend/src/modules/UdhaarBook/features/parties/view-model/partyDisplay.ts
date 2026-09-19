@@ -32,14 +32,11 @@ export const balanceView = (balance: string): PartyBalanceView => {
     : { tone: 'payable', labelId: 'parties.list.balance.payable', sign: 'none' };
 };
 
-/** Up to two initials for the avatar, script-agnostic (works for Devanagari). */
-export const initialsOf = (name: string): string =>
-  name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((word) => [...word][0] ?? '')
-    .join('');
+/**
+ * The avatar's initials used to be computed here AND, byte for byte, in
+ * `tenant-switcher/view-model/tenantDisplay.ts`. Both are gone: `UbAvatar`
+ * derives them from `src/utils/text.ts`, which is the one copy.
+ */
 
 /** The second line of a row: the code, the mobile, or nothing. */
 export const secondaryLine = (party: Party): string | null =>
