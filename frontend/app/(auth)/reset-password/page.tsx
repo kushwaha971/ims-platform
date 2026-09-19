@@ -4,7 +4,7 @@ import { Suspense } from 'react';
 
 import { UbPageSkeleton } from 'src/design-system';
 
-import { ResetPasswordPageContent } from 'modules/UdhaarBook/features/auth/components/ResetPasswordPageContent';
+import { ResetPasswordPageContent } from 'modules/DigiKhaato/features/auth/components/ResetPasswordPageContent';
 
 /** PLT-02 FR-5 — the landing page of the reset link, `?token=…`. */
 export default function ResetPasswordPage(): React.JSX.Element {

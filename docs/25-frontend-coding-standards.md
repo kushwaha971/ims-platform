@@ -281,7 +281,7 @@ import { PartyListRow } from './PartyListRow';
 import { PartyTotalsHeader } from './PartyTotalsHeader';
 
 // ✓ Right — the design system's single barrel
-import { UbDataGrid, UbStatCard, UbEmptyState } from 'modules/UdhaarBook/design-system';
+import { UbDataGrid, UbStatCard, UbEmptyState } from 'modules/DigiKhaato/design-system';
 ```
 
 ### R-FN-4 A file does one thing, and stays under 300 lines. **[review]**
@@ -640,7 +640,7 @@ const [pageSize, setPageSize] = useState(() => readNumber('ub.parties.pageSize',
 ---
 
 ## 25.5 Redux
-Because UdhaarBook has no query library, the store is the whole server-state story: what is cached, what is stale, what is in flight and what failed. That raises the bar on slice discipline. A slice that omits its `rejected` case leaves a spinner running forever; a slice that forgets its entry in the invalidation map leaves a shopkeeper looking at a balance that is one entry out of date, which in this product is indistinguishable from a bug in the ledger itself.
+Because DigiKhaato has no query library, the store is the whole server-state story: what is cached, what is stale, what is in flight and what failed. That raises the bar on slice discipline. A slice that omits its `rejected` case leaves a spinner running forever; a slice that forgets its entry in the invalidation map leaves a shopkeeper looking at a balance that is one entry out of date, which in this product is indistinguishable from a bug in the ledger itself.
 
 The rules below are therefore stricter than a typical RTK codebase would need. Read them as the price of the ADR-004 decision: we chose one explicit data pattern over a library that would have made caching implicit, and explicitness only pays when it is complete.
 
@@ -725,7 +725,7 @@ No `dispatch(showSnackbar(...))`, no `router.push`, no `window`, no JSX. A thunk
 
 ```ts
 // ✗ Wrong — the ledger feature reaching into the parties slice.
-import partyListSlice from 'modules/UdhaarBook/features/parties/redux/partyListSlice';
+import partyListSlice from 'modules/DigiKhaato/features/parties/redux/partyListSlice';
 dispatch(partyListSlice.actions.balanceUpdated(...));   // from inside a ledger thunk
 
 // ✓ Right — parties listens to the ledger's own thunk.
@@ -1127,7 +1127,7 @@ import { useDispatch } from 'react-redux';
 import type { Party } from '../types/party.types';
 import { cn } from 'src/utils/cn';
 import { useState } from 'react';
-import { UbDataGrid } from 'modules/UdhaarBook/design-system';
+import { UbDataGrid } from 'modules/DigiKhaato/design-system';
 
 // ✓ Right
 import { useCallback, useMemo, useState } from 'react';
@@ -1139,7 +1139,7 @@ import { useTranslation } from 'src/hooks/useTranslation';
 import { cn } from 'src/utils/cn';
 import type { AppDispatch } from 'src/redux/store';
 
-import { UbDataGrid, UbEmptyState, UbStatCard } from 'modules/UdhaarBook/design-system';
+import { UbDataGrid, UbEmptyState, UbStatCard } from 'modules/DigiKhaato/design-system';
 
 import { usePartyList } from '../hooks/usePartyList';
 import { partyDisplay } from '../view-model/partyDisplay';
@@ -1155,10 +1155,10 @@ import { PartyListRow } from './PartyListRow';
 
 ```ts
 // ✗ Wrong
-import { UbStatCard } from 'modules/UdhaarBook/design-system/UbStatCard/UbStatCard';
+import { UbStatCard } from 'modules/DigiKhaato/design-system/UbStatCard/UbStatCard';
 
 // ✓ Right
-import { UbStatCard } from 'modules/UdhaarBook/design-system';
+import { UbStatCard } from 'modules/DigiKhaato/design-system';
 ```
 
 ### R-IM-4 Type-only imports use `import type`. **[lint]**
@@ -1281,7 +1281,7 @@ Dashboard tiles, the line editor, the party timeline, each chart. A crash in one
 ---
 
 ## 25.13 Dependencies
-The dependency policy is stricter here than in most web projects, and the reason is in the canon: UdhaarBook runs locally for personal use first and must stay extensible and auditable later. Every package is a permanent obligation — bundle bytes on a 3G connection, a supply-chain surface, an upgrade that will one day block a Next.js major, and a piece of behaviour nobody on the team can read. A hundred lines of local code that we understand completely is almost always a better trade than a hundred kilobytes of code that we do not.
+The dependency policy is stricter here than in most web projects, and the reason is in the canon: DigiKhaato runs locally for personal use first and must stay extensible and auditable later. Every package is a permanent obligation — bundle bytes on a 3G connection, a supply-chain surface, an upgrade that will one day block a Next.js major, and a piece of behaviour nobody on the team can read. A hundred lines of local code that we understand completely is almost always a better trade than a hundred kilobytes of code that we do not.
 
 This is also why the allow-list is expressed as an ADR rather than a lint rule alone: adding a package is a product decision with a maintenance cost, not a developer convenience, and it should be recorded where the next person can find the reasoning.
 
@@ -1399,7 +1399,7 @@ export default [
           { target: './src/modules/**/components/**', from: './src/api', message: 'Components never call the API. Use a hook → thunk → service (R-C-8).' },
           { target: './src/modules/**/components/**', from: './src/modules/**/api', message: 'Components never import services (R-C-8).' },
           { target: './src/modules/**/view-model/**', from: './node_modules/react', message: 'View-models are pure: no React.' },
-          { target: './src/design-system/**', from: './src/modules/UdhaarBook/features', message: 'The design system never imports feature code.' },
+          { target: './src/design-system/**', from: './src/modules/DigiKhaato/features', message: 'The design system never imports feature code.' },
           { target: './src/design-system/**', from: './src/redux', message: 'The design system never reads Redux.' },
           { target: './app/**', from: './src/api', message: 'Route files are thin (Part 19 §19.1.4).' },
         ],
@@ -1430,7 +1430,7 @@ export default [
           { name: '@tanstack/react-query', message: 'Not used. Slice + thunk + service (ADR-004).' },
         ],
         patterns: [
-          { group: ['modules/UdhaarBook/design-system/*/*'], message: 'Import from the barrel (R-IM-3).' },
+          { group: ['modules/DigiKhaato/design-system/*/*'], message: 'Import from the barrel (R-IM-3).' },
           { group: ['../../../*'], message: 'Use a path alias (R-IM-2).' },
         ],
       }],
@@ -1638,7 +1638,7 @@ The client is not a security boundary — the server is — but client-side mist
 
 ### R-SEC-1 `dangerouslySetInnerHTML` is forbidden. **[lint]**
 
-There is no user-supplied HTML anywhere in UdhaarBook. Party names, item descriptions, notes, terms and tenant document headers are plain text and React escapes them. The temptation appears in print templates, where a developer wants a rich footer; the answer is a small set of typed blocks, not raw HTML. Combined with httpOnly token cookies (Part 19 §19.7.1), this keeps a single XSS from becoming a session compromise — but the rule stands on its own.
+There is no user-supplied HTML anywhere in DigiKhaato. Party names, item descriptions, notes, terms and tenant document headers are plain text and React escapes them. The temptation appears in print templates, where a developer wants a rich footer; the answer is a small set of typed blocks, not raw HTML. Combined with httpOnly token cookies (Part 19 §19.7.1), this keeps a single XSS from becoming a session compromise — but the rule stands on its own.
 
 ### R-SEC-2 Permission checks on the client hide, they do not authorise. **[review]**
 

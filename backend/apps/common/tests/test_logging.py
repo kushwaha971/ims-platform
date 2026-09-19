@@ -56,7 +56,7 @@ def test_the_logging_config_names_the_ub_logger_tree() -> None:
 def test_a_file_handler_is_added_only_when_a_log_dir_is_given(tmp_path: Any) -> None:
     assert "file" not in build_logging_config()["handlers"]
     config = build_logging_config(log_dir=str(tmp_path))
-    assert config["handlers"]["file"]["filename"] == f"{tmp_path}/udhaarbook.log"
+    assert config["handlers"]["file"]["filename"] == f"{tmp_path}/digikhaato.log"
 
 
 @pytest.mark.django_db

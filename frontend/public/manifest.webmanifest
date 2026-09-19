@@ -1,6 +1,6 @@
 {
-  "name": "UdhaarBook",
-  "short_name": "UdhaarBook",
+  "name": "DigiKhaato",
+  "short_name": "DigiKhaato",
   "description": "Your shop's khata, bills and stock in one book.",
   "start_url": "/dashboard?src=pwa",
   "scope": "/",

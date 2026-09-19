@@ -39,12 +39,7 @@ export interface UbAvatarProps {
   readonly className?: string;
 }
 
-function UbAvatarBase({
-  name,
-  size = 'md',
-  tone = 'default',
-  className,
-}: Readonly<UbAvatarProps>) {
+function UbAvatarBase({ name, size = 'md', tone = 'default', className }: Readonly<UbAvatarProps>) {
   return (
     <MLBox
       as="span"

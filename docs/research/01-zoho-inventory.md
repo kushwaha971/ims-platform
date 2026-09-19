@@ -1,8 +1,8 @@
 # Research Dossier 01 — Zoho Inventory (and Zoho Knowledge-Base capabilities)
 
-**Purpose:** Reference for the UdhaarBook team (SMB inventory + credit-ledger, India). Everything below is sourced from Zoho's public help docs, API docs, pricing pages, release notes, community forum and third-party review sites, retrieved 2026-09-18. Anything not directly verified is tagged **(unverified)**.
+**Purpose:** Reference for the DigiKhaato team (SMB inventory + credit-ledger, India). Everything below is sourced from Zoho's public help docs, API docs, pricing pages, release notes, community forum and third-party review sites, retrieved 2026-09-18. Anything not directly verified is tagged **(unverified)**.
 
-**Reading guide.** Part A is a module-by-module catalogue (problem → user → inputs → outputs → rules → states → quirks). Part B is pricing and hard limits. Part C is the evolution timeline. Part D covers Zoho's knowledge-base products and what UdhaarBook should copy. Part E is the complaints digest.
+**Reading guide.** Part A is a module-by-module catalogue (problem → user → inputs → outputs → rules → states → quirks). Part B is pricing and hard limits. Part C is the evolution timeline. Part D covers Zoho's knowledge-base products and what DigiKhaato should copy. Part E is the complaints digest.
 
 **Key sources (cited inline throughout):**
 - Help centre (US mirror, most reliable to fetch): `https://www.zoho.com/us/inventory/help/...`
@@ -61,7 +61,7 @@
 
 **UX notes:** item details page tabs = Overview, Serial Numbers (status IN/OUT per warehouse), Batch Details, Transactions (filter by type/status), History (timestamped log), Stock Locations. List view supports column customisation (e.g., Available for Sale, MPN, Dimensions & Weight) and pinning up to 2 columns (Feb 2025). Enhanced Item Search matches any word in the name; search covers SKU/UPC/EAN/ISBN/MPN (Jun 2026).
 
-**Lesson for UdhaarBook:** Zoho's item form is heavyweight; the SMB-relevant minimum is Name, Unit, Selling Price, Cost Price, GST rate + HSN, Opening Stock, Reorder Point, optional barcode. Zoho only recently (2024–26) added MRP, alias names and identifier search — all things Indian kirana/wholesale users ask for on day one.
+**Lesson for DigiKhaato:** Zoho's item form is heavyweight; the SMB-relevant minimum is Name, Unit, Selling Price, Cost Price, GST rate + HSN, Opening Stock, Reorder Point, optional barcode. Zoho only recently (2024–26) added MRP, alias names and identifier search — all things Indian kirana/wholesale users ask for on day one.
 
 ---
 
@@ -614,23 +614,23 @@ Sources: [Organizing KB](https://help.zoho.com/portal/en/kb/desk/self-service/kn
 ### D.3 Zoho Learn (internal KB / LMS)
 Spaces → Manuals → Chapters → Articles; templates; version history; approval workflow and verification reminders; mandatory reads; role-based and external sharing (branded portals); tags; search; comments/discussions; analytics/CSV; mobile app; AI SOP generator. Oriented to *internal* SOPs rather than customer help. ([Features](https://www.zoho.com/learn/features.html))
 
-### D.4 Recommendation for UdhaarBook
+### D.4 Recommendation for DigiKhaato
 
 **Include (high value / low cost for an India SMB ledger + inventory app):**
 
 | Concept | Why | How (minimal) |
 |---|---|---|
-| In-app Help Centre with 2-level tree (Topic → Article) | Zoho's 3–4 levels are for a 100-module suite; UdhaarBook has ~15 concepts. Two levels keep mobile navigation sane | Static Markdown/JSON content bundled + remote-updatable; topics: Getting started, Parties & Udhaar, Items & Stock, Bills/Invoices, GST, Payments & Reminders, Reports, Account & Security |
+| In-app Help Centre with 2-level tree (Topic → Article) | Zoho's 3–4 levels are for a 100-module suite; DigiKhaato has ~15 concepts. Two levels keep mobile navigation sane | Static Markdown/JSON content bundled + remote-updatable; topics: Getting started, Parties & Udhaar, Items & Stock, Bills/Invoices, GST, Payments & Reminders, Reports, Account & Security |
 | Contextual help ("?" per screen) | Zoho users' #1 complaint is "I see a lot of tools I don't know how to use" | Each screen ID maps to 1–3 articles; deep-link to help centre |
 | FAQ per topic | Zoho's KB/FAQ layer answers "why can't I delete this item" questions that otherwise become tickets | Q&A pairs, ≤120 words each, searchable |
 | Search with synonyms & Hinglish | Indian SMB vocabulary (udhaar/khata/bill/parchi/stock/maal) | Client-side index; log zero-result queries (Zoho tracks "commonly searched keywords") |
 | Article lifecycle Draft → Published → Archived, with version history | Cheap to implement in a CMS; lets non-engineers iterate content | Git-backed or headless CMS; no reviewer workflow needed at launch |
-| "Was this helpful?" thumbs + optional comment | Zoho pipes dislikes to tickets — for UdhaarBook this is the cheapest content-quality signal | Store per article/version; weekly review |
+| "Was this helpful?" thumbs + optional comment | Zoho pipes dislikes to tickets — for DigiKhaato this is the cheapest content-quality signal | Store per article/version; weekly review |
 | Related articles + "next step" links | Mirrors Zoho's Quick Navigation; drives onboarding flow | Manual curation per article |
 | Rich media: screenshots, short GIF/video, attachments | Inventory tasks are visual | Keep ≤1 MB per asset for low-bandwidth users |
 | Multilingual (English + Hindi first, then Gujarati/Marathi/Tamil) | Zoho gates translation to Enterprise; for kirana/wholesale users language is a core need, not a premium | Same article key, per-locale body; fall back to English |
 | What's New / release notes inside the app | Zoho's dated changelog + in-app Widget Pane are well liked | Simple list with date, 1-line entry, optional link |
-| Interactive tour guides for 3–4 critical flows | Zoho added in 2026 for blueprints; UdhaarBook needs them for "record udhaar", "add stock", "make GST bill", "send reminder" | Step overlay library; skippable; re-launchable from help |
+| Interactive tour guides for 3–4 critical flows | Zoho added in 2026 for blueprints; DigiKhaato needs them for "record udhaar", "add stock", "make GST bill", "send reminder" | Step overlay library; skippable; re-launchable from help |
 | Basic analytics | views, helpful ratio, search terms, article → ticket deflection | Event logging only |
 
 **Exclude (for now), with reasons:**
@@ -647,7 +647,7 @@ Spaces → Manuals → Chapters → Articles; templates; version history; approv
 | Customer-generated reviews/ratings of articles beyond thumbs | Low signal; adds moderation |
 | Standalone LMS features (courses, quizzes, certificates, SCORM) | Not a training product |
 
-**Content-model minimum for UdhaarBook help:** `article{id, slug, locale, title, body(md), topic, tags[], related[], screen_ids[], status(draft|published|archived), version, updated_at}`, `faq{question, answer, topic}`, `release_note{date, title, body, version}`, `feedback{article_id, version, helpful, comment, app_version}`, `search_log{query, results_count, locale}`.
+**Content-model minimum for DigiKhaato help:** `article{id, slug, locale, title, body(md), topic, tags[], related[], screen_ids[], status(draft|published|archived), version, updated_at}`, `faq{question, answer, topic}`, `release_note{date, title, body, version}`, `feedback{article_id, version, helpful, comment, app_version}`, `search_log{query, results_count, locale}`.
 
 ---
 
@@ -657,7 +657,7 @@ Sources: [Capterra](https://www.capterra.com/p/146241/Zoho-Inventory/reviews/) (
 
 ### E.1 Recurring complaints (ranked by frequency across sources)
 
-| # | Theme | Evidence / quotes | Relevance to UdhaarBook |
+| # | Theme | Evidence / quotes | Relevance to DigiKhaato |
 |---|---|---|---|
 | 1 | **Feature gating & plan caps** | "Certain integrations and features only available on higher tier plans"; "plan limitations based on line item counts in bills, sales orders, and purchase orders"; serial/batch/barcodes only Premium (₹2,299+/mo); monthly caps on SOs + invoices + POs + bills | Price by *users/outlets*, not documents; give barcode + batch/expiry in the base plan |
 | 2 | **Reporting rigidity** | "Reporting features somewhat limited, requiring extra effort"; "Custom report building could be more flexible"; dashboard "not updating real time" | Ship a handful of killer reports (party ledger, outstanding ageing, stock summary, GST summary, day book) with WhatsApp/PDF share |
@@ -673,7 +673,7 @@ Sources: [Capterra](https://www.capterra.com/p/146241/Zoho-Inventory/reviews/) (
 
 ### E.2 India-specific observations
 
-- **GST returns live in Zoho Books, not Inventory.** An Indian SMB needing GSTR-1/3B must run both apps (same org) — Inventory alone is not a compliance solution. UdhaarBook can bundle GST summary + JSON export in one app.
+- **GST returns live in Zoho Books, not Inventory.** An Indian SMB needing GSTR-1/3B must run both apps (same org) — Inventory alone is not a compliance solution. DigiKhaato can bundle GST summary + JSON export in one app.
 - **e-Invoicing setup requires GSP/API-user registration on the IRP** — non-trivial for a shop owner; help text still cites the ₹500 crore threshold. Simplify with guided IRP onboarding.
 - **Pricing in INR starts at ₹999/mo per org** with 3 users; batch/expiry (essential for pharma/FMCG kirana) needs ₹2,299/mo. Indian competitors (Vyapar, myBillBook, Khatabook) sit at ₹0–₹300/mo.
 - **No khata/udhaar ledger UX**: receivables are invoice-centric; no running party ledger with cash-in/cash-out entries without an invoice, no interest/late fee, no collection reminders by SMS at scale without paid IM credits.
@@ -682,7 +682,7 @@ Sources: [Capterra](https://www.capterra.com/p/146241/Zoho-Inventory/reviews/) (
 - **Payments**: Zoho Payments/Razorpay/Paytm cover UPI, but no "collect via UPI QR on the bill PDF and auto-match" flow documented for offline UPI transfers beyond gateway payments.
 - **Shipping**: only Delhivery, Shiprocket, Envia natively; no Bluedart/DTDC/India Post direct.
 
-### E.3 What Zoho does well that UdhaarBook should not under-estimate
+### E.3 What Zoho does well that DigiKhaato should not under-estimate
 - Clean status vocabularies and derived indicators (three-dot invoice/package/shipment status) — users understand order state at a glance.
 - Every transaction has Comments & History; audit trail with old/new values.
 - Import/export everywhere, with saved mappings and password-protected exports.

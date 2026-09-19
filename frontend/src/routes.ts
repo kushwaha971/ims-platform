@@ -14,7 +14,7 @@
  * expressions. A path that is written twice is a path that gets renamed once.
  *
  * The paths here are the ADDRESSES. `app/` is the file tree that serves them,
- * `middleware.ts` is the guard in front of them, and `sidebarConfig.ts` is the
+ * `proxy.ts` is the guard in front of them, and `sidebarConfig.ts` is the
  * menu that links to them — all three name the same constants.
  */
 
@@ -26,6 +26,12 @@ export const ROUTES = {
   RESET_PASSWORD: '/reset-password',
   SET_PASSWORD: '/set-password',
   ONBOARDING: '/onboarding',
+
+  // ── (public) — reachable with no session, because the sign-up screen links
+  //    to them BEFORE an account exists. CR-2026-09-19-D: "the terms" used to
+  //    be four words of prose with nothing behind them.
+  LEGAL_TERMS: '/legal/terms',
+  LEGAL_PRIVACY: '/legal/privacy',
 
   // ── (app) ─────────────────────────────────────────────────────────────────
   DASHBOARD: '/dashboard',
@@ -69,7 +75,7 @@ export const loginPathWithNext = (next: string): string =>
   `${ROUTES.LOGIN}?next=${encodeURIComponent(next)}`;
 
 /**
- * Part 19 §19.7.3 — the path prefixes `middleware.ts` guards. Derived from
+ * Part 19 §19.7.3 — the path prefixes `proxy.ts` guards. Derived from
  * `ROUTES` where it can be, and listing the section roots the menu does not
  * name yet (`/stock`, `/notifications`) so a Sprint-5 screen is guarded the day
  * its route file appears rather than the day someone remembers this list.

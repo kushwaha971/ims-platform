@@ -180,7 +180,7 @@ The persona codes match those used in Part 16: **OW** owner, **ST** staff, **AC*
 
 ## 14.7 Neha Raghavan — the platform partner administrator
 
-**Identity.** Thirty-six, heads merchant products at a regional NBFC that lends working capital to about forty thousand retailers across three states, and is the person who would decide to white-label UdhaarBook.
+**Identity.** Thirty-six, heads merchant products at a regional NBFC that lends working capital to about forty thousand retailers across three states, and is the person who would decide to white-label DigiKhaato.
 
 **Business context.** Her employer already has a merchant-facing app used mainly for loan repayment and a field force of two hundred relationship managers who visit merchants monthly. The NBFC's problem is that it underwrites on bank statements and bureau data, which describe a merchant's past and not their book. It has no view of a merchant's receivables, stock or sales. Her mandate is engagement and underwriting data, not software revenue; a bookkeeping product is a means to both.
 

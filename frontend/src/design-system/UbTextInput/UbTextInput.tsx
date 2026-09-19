@@ -1,6 +1,13 @@
 'use client';
 
-import { forwardRef, memo, useCallback, useState, type InputHTMLAttributes, type ReactNode } from 'react';
+import {
+  forwardRef,
+  memo,
+  useCallback,
+  useState,
+  type InputHTMLAttributes,
+  type ReactNode,
+} from 'react';
 
 import { Eye, EyeOff } from 'lucide-react';
 
@@ -20,8 +27,10 @@ import { cn } from 'src/utils/cn';
  * It never formats money or quantities — `UbMoneyInput` and `UbQuantityInput`
  * own those and are not in wave 1.
  */
-export interface UbTextInputProps
-  extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'value' | 'onChange'> {
+export interface UbTextInputProps extends Omit<
+  InputHTMLAttributes<HTMLInputElement>,
+  'type' | 'value' | 'onChange'
+> {
   readonly value: string | null | undefined;
   readonly onChange: (value: string) => void;
   readonly type?: 'text' | 'password' | 'email' | 'tel' | 'url';

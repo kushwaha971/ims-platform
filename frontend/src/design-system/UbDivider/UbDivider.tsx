@@ -43,10 +43,7 @@ function UbDividerBase({
   }
 
   return (
-    <MLSeparator
-      aria-hidden={decorative ? true : undefined}
-      className={cn('w-full', className)}
-    />
+    <MLSeparator aria-hidden={decorative ? true : undefined} className={cn('w-full', className)} />
   );
 }
 

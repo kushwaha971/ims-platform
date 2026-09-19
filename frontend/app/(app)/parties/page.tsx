@@ -4,7 +4,7 @@ import { Suspense } from 'react';
 
 import { UbPageSkeleton } from 'src/design-system';
 
-import { PartyListPageContent } from 'modules/UdhaarBook/features/parties/components/PartyListPageContent';
+import { PartyListPageContent } from 'modules/DigiKhaato/features/parties/components/PartyListPageContent';
 
 /**
  * Part 19 §19.1.4 — this is the ENTIRE file, and every application route looks

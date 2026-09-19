@@ -17,7 +17,7 @@ export const API_BASE_URL: string = required(
   process.env.NEXT_PUBLIC_API_BASE_URL
 );
 
-export const APP_NAME: string = process.env.NEXT_PUBLIC_APP_NAME ?? 'UdhaarBook';
+export const APP_NAME: string = process.env.NEXT_PUBLIC_APP_NAME ?? 'DigiKhaato';
 export const DEFAULT_LOCALE: Locale = (process.env.NEXT_PUBLIC_DEFAULT_LOCALE ?? 'en') as Locale;
 export const IS_PRODUCTION: boolean = process.env.NEXT_PUBLIC_ENV === 'production';
 export const SW_ENABLED: boolean = process.env.NEXT_PUBLIC_SW_ENABLED === 'true';

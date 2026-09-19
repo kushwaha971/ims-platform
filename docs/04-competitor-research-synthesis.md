@@ -1,6 +1,6 @@
 # Part 4 — Competitor Research Synthesis
 
-*This chapter is the single comparative reference for UdhaarBook's competitive landscape. It covers Zoho Inventory and Zoho Books, Khatabook, OkCredit, Vyapar, myBillBook, TallyPrime and the long tail of Busy, Marg, Swipe and the departed QuickBooks. It provides a capability-coverage matrix, a pricing comparison, a positioning analysis, and — for each competitor — what it gets right that UdhaarBook must match and what it gets wrong that UdhaarBook must beat. It closes with a numbered list of competitive commitments: things UdhaarBook must do at MVP purely because a competitor has trained the market to expect them.*
+*This chapter is the single comparative reference for DigiKhaato's competitive landscape. It covers Zoho Inventory and Zoho Books, Khatabook, OkCredit, Vyapar, myBillBook, TallyPrime and the long tail of Busy, Marg, Swipe and the departed QuickBooks. It provides a capability-coverage matrix, a pricing comparison, a positioning analysis, and — for each competitor — what it gets right that DigiKhaato must match and what it gets wrong that DigiKhaato must beat. It closes with a numbered list of competitive commitments: things DigiKhaato must do at MVP purely because a competitor has trained the market to expect them.*
 
 ---
 
@@ -24,7 +24,7 @@ Seven products and one departed incumbent define this market. They divide into t
 
 Legend: **Strong** = a first-class, well-reviewed capability; **Partial** = present but limited, gated to a higher tier, or reported as unreliable; **Absent** = not offered.
 
-| Capability area | Zoho Inv/Books | Khatabook | OkCredit | Vyapar | myBillBook | TallyPrime | UdhaarBook target |
+| Capability area | Zoho Inv/Books | Khatabook | OkCredit | Vyapar | myBillBook | TallyPrime | DigiKhaato target |
 |---|---|---|---|---|---|---|---|
 | **Party ledger with running balance (khata UX)** | Partial — AR/AP and statement PDF only; explicitly *no* khata view, no non-invoice cash entries, no interest, no SMS collections [R1 §E.2] | **Strong** — the core product; two-button gave/got, passbook, settle [R2 §A.1 F3–F4] | **Strong** — same model; QR auto-settles balance [R2 §B.2] | Partial — party ledger inside billing | Partial | Partial — AR/AP ledgers in accounting vocabulary | **Strong** — first-class immutable `LedgerEntry` (LED-01…11) |
 | **Customer SMS on every entry** | Absent (SMS credits are paid, invoice-centric) | **Strong** — free, DLT-registered, with view-khata link [R2 §A.1 F6] | Partial — free tier sends from merchant's own SIM; server SMS at ₹99/mo | Partial | Partial | Absent | Partial at MVP (provider-gated LED-08), Strong at Phase 2 |
@@ -56,7 +56,7 @@ Legend: **Strong** = a first-class, well-reviewed capability; **Partial** = pres
 | **Advertisements in free tier** | None | None (but loan banners) | **Heavy — the category's #1 complaint** [R2 §D #1] | None | None | n/a | **Never** |
 | **In-app lending** | Absent | Strong — ₹10K–₹5L at 15–24% via NBFC partners | Partial — scaled down 2025 | Partial | Partial | Absent | Phase 3, opt-in, partner-distributed only |
 
-Two readings of this matrix matter. First, **no product has a Strong rating in both the ledger column and the inventory-plus-GST columns**. That is the gap. Second, **no product has white-label tenancy at all**, which is why UdhaarBook's `Partner` abstraction is a structural rather than cosmetic differentiator.
+Two readings of this matrix matter. First, **no product has a Strong rating in both the ledger column and the inventory-plus-GST columns**. That is the gap. Second, **no product has white-label tenancy at all**, which is why DigiKhaato's `Partner` abstraction is a structural rather than cosmetic differentiator.
 
 ---
 
@@ -83,7 +83,7 @@ Four conclusions follow.
 
 **The micro ceiling is ₹3,400–₹4,000/year and it is set by two independent companies.** Vyapar Desktop Silver at ~₹3,399 and myBillBook Plus at ₹3,490 converge from different directions [R3 §3.1].
 
-**Metering by document count is the loudest pricing complaint in the set.** Zoho counts sales orders *and* invoices *and* purchase orders *and* bills separately, so a wholesaler issuing 20 invoices a day exhausts the Standard plan; reviewers also report "plan limitations based on line item counts" [R1 §Part B observations, §E.1 #1]. UdhaarBook's Principle 6 (Part 2 §2.4) is a direct response.
+**Metering by document count is the loudest pricing complaint in the set.** Zoho counts sales orders *and* invoices *and* purchase orders *and* bills separately, so a wholesaler issuing 20 invoices a day exhausts the Standard plan; reviewers also report "plan limitations based on line item counts" [R1 §Part B observations, §E.1 #1]. DigiKhaato's Principle 6 (Part 2 §2.4) is a direct response.
 
 **Batch and expiry — essential for pharma, FMCG and any kirana selling food — sits behind Zoho's ₹2,299/month tier**, which is roughly 8× the entire annual budget of the micro segment [R1 §Part B; R3 §3.1]. This is the clearest single example of a capability priced out of the Indian mass market.
 
@@ -101,9 +101,9 @@ The **upper-left quadrant** (high billing depth, low ledger depth) contains ever
 
 The **upper-right quadrant is empty.** No product in this research combines a genuine, first-class khata with genuine GST billing and inventory at a price the Indian micro and small segment pays. That emptiness is not an accident of product management; it is a consequence of origin. The ledger apps started from a consumer-simplicity premise and could not add depth without violating it — Khatabook's own reviewers now complain that "the interface is denser… can overwhelm less tech-savvy owners" [R2 §D #14]. The billing apps started from an accounting premise and treat the khata as a derived report because that is what it is in double-entry terms.
 
-UdhaarBook enters the empty quadrant **from the ledger side**, because entering from the billing side has been tried five times and always produces a product where udhaar is a receivables screen. The architectural expression of that choice is that `LedgerEntry` is a first-class immutable primitive rather than a view over invoices (Part 0 §0.2, §0.11).
+DigiKhaato enters the empty quadrant **from the ledger side**, because entering from the billing side has been tried five times and always produces a product where udhaar is a receivables screen. The architectural expression of that choice is that `LedgerEntry` is a first-class immutable primitive rather than a view over invoices (Part 0 §0.2, §0.11).
 
-A third axis, invisible on the map but decisive commercially, is **delivery model**. Every product listed is sold under its own brand. None offers white-label tenancy, and no public case exists of an Indian bank, NBFC or telecom licensing a third-party khata-plus-billing SaaS [R3 §8.2]. UdhaarBook's `Partner` abstraction therefore occupies uncontested space — with the caveat, recorded honestly in [R3 #12], that the demand for it is inferred rather than proven.
+A third axis, invisible on the map but decisive commercially, is **delivery model**. Every product listed is sold under its own brand. None offers white-label tenancy, and no public case exists of an Indian bank, NBFC or telecom licensing a third-party khata-plus-billing SaaS [R3 §8.2]. DigiKhaato's `Partner` abstraction therefore occupies uncontested space — with the caveat, recorded honestly in [R3 #12], that the demand for it is inferred rather than proven.
 
 ---
 
@@ -111,15 +111,15 @@ A third axis, invisible on the map but decisive commercially, is **delivery mode
 
 ### Zoho Inventory and Zoho Books
 
-**What it gets right that UdhaarBook must match.**
+**What it gets right that DigiKhaato must match.**
 
 Zoho's status vocabularies are exemplary and are the model for Part 0 §0.7. Every document has an unambiguous status set — invoices are `draft`, `sent`, `viewed`, `unpaid`, `partially_paid`, `paid`, `overdue`, `void`; purchase orders are Draft, Issued, Partially Received, Received, Cancelled with derived In Transit, Yet to be Received and Billed indicators; transfer orders are Draft → In Transit → Transferred — and the sales-order list shows three coloured dots for invoice, package and shipment status so a user reads order state at a glance [R1 §A.15, §A.11, §A.8, §E.3].
 
-Every transaction carries **Comments & History**, and the Activity Logs and Audit Trail report records old and new field values with click-through [R1 §A.40, §E.3]. Import and export exist on every module with saved field mappings and password-protected exports [R1 §A.38]. The **Sales Order Cycle automation** — one click producing invoice, package, shipment and recorded payment — is explicitly named as a good model for UdhaarBook's "record sale → bill → stock → ledger → WhatsApp" single-tap flow [R1 §E.3]. PDF templating is consistent, per-customer-associable and multilingual [R1 §A.37].
+Every transaction carries **Comments & History**, and the Activity Logs and Audit Trail report records old and new field values with click-through [R1 §A.40, §E.3]. Import and export exist on every module with saved field mappings and password-protected exports [R1 §A.38]. The **Sales Order Cycle automation** — one click producing invoice, package, shipment and recorded payment — is explicitly named as a good model for DigiKhaato's "record sale → bill → stock → ledger → WhatsApp" single-tap flow [R1 §E.3]. PDF templating is consistent, per-customer-associable and multilingual [R1 §A.37].
 
 Zoho also exposes **both stock realities plainly**: Stock on Hand, Committed Stock, Available for Sale, In-Transit, and a per-item toggle between them — because SMBs argue constantly about "how many do I actually have" [R1 §A.0, §C.3 lesson 4].
 
-**What it gets wrong that UdhaarBook must beat.**
+**What it gets wrong that DigiKhaato must beat.**
 
 *No khata.* The single most important gap: invoice-centric receivables, no running party ledger with non-invoice cash entries, no interest or late fee, no scalable SMS collection [R1 §E.2].
 
@@ -139,13 +139,13 @@ Zoho also exposes **both stock realities plainly**: Stock on Hand, Committed Sto
 
 ### Khatabook
 
-**What it gets right that UdhaarBook must match.**
+**What it gets right that DigiKhaato must match.**
 
 Almost the entire ledger interaction model. Onboarding is OTP on a mobile number with the **language picker as the first screen** and no forms or documents [R2 §A.1 F1]. Parties are added from phone contacts — a specifically praised feature [R2 §A.1 F2]. Entry is two large buttons, red "You gave" and green "You got", an amount keypad, an optional note and photo, a date defaulting to today with backdating allowed, and an instant balance update [R2 §A.1 F3]. The passbook shows a running balance after each row like a bank statement, with month separators [R2 §A.1 F3]. Settlement pre-fills a full-balance "You got" entry [R2 §A.1 F4].
 
 The **customer-facing SMS on every entry** is the trust primitive that makes disputes vanish, and it is the most-praised feature in the category [R2 §A.1 F6, §D]. **Remind** is a first-class button beside Call, offering WhatsApp, SMS or dialler, with bulk multi-select [R2 §A.1 F7]. The **collection date** produces automatic reminders one day before and on the date — no infinite nagging, which is a good default [R2 §A.1 F7]. Statements are free PDFs shareable over WhatsApp [R2 §A.1 F9]. Multiple businesses under one account are standard [R2 §A.1 F14]. Twelve to thirteen Indian languages including Hinglish transliteration [R2 §A.0].
 
-**What it gets wrong that UdhaarBook must beat.**
+**What it gets wrong that DigiKhaato must beat.**
 
 *Depth stops at the ledger.* Billing, inventory, staff roles and desktop are a reseller-sold licence with unpublished pricing [R2 §A.0].
 
@@ -165,11 +165,11 @@ The **customer-facing SMS on every entry** is the trust primitive that makes dis
 
 ### OkCredit
 
-**What it gets right that UdhaarBook must match.**
+**What it gets right that DigiKhaato must match.**
 
 The **QR that auto-settles the ledger balance** is the single most valuable reconciliation behaviour in the category and is explicitly flagged as the key win to replicate [R2 §A.1 F4]. Full offline functionality with cloud backup [R2 §B.2]. Eleven Indian languages. A **published, stable price list** with the explicit promise that "prices will remain stable" — unique in a market where renewal hikes are the top pricing complaint [R2 §B.3]. And the commercial proof point: profitability in November 2025 with 2 lakh-plus paying shopkeepers, reached by *abandoning* lending and charging ₹30–₹99/month [R2 §A.0, §B.4].
 
-**What it gets wrong that UdhaarBook must beat.**
+**What it gets wrong that DigiKhaato must beat.**
 
 *Heavy advertisements in the free tier* — the number-one ranked pain point across the entire category, with a 13% one-star share [R2 §D #1].
 
@@ -183,11 +183,11 @@ The **QR that auto-settles the ledger balance** is the single most valuable reco
 
 ### Vyapar
 
-**What it gets right that UdhaarBook must match.**
+**What it gets right that DigiKhaato must match.**
 
 Simplicity at scale — "staff learn quickly" — combined with genuine all-in-one coverage of billing, GST, inventory and expenses [R3 §2.2]. **Full offline operation**, with the desktop application offline-first; this is the reason it is the highest-rated app in the set at 4.8★ [R2 §B.2]. WhatsApp invoicing as a headline capability. The freemium structure — mobile free forever, desktop paid — is the proven Indian conversion wedge [R3 §3.1]. And the partner channel: 27,000 partners with top performers earning ₹2 lakh a month [R3 §8.1].
 
-**What it gets wrong that UdhaarBook must beat.**
+**What it gets wrong that DigiKhaato must beat.**
 
 *Support* — "zero communication even during the free trial" [R3 §2.2].
 
@@ -207,11 +207,11 @@ Simplicity at scale — "staff learn quickly" — combined with genuine all-in-o
 
 ### myBillBook (FloBooks)
 
-**What it gets right that UdhaarBook must match.**
+**What it gets right that DigiKhaato must match.**
 
 The easiest UI in the paid set (4.7 ease-of-use on Capterra), GST invoices across devices, barcode and batch inventory, P&L/GSTR/sales reports, WhatsApp support, unlimited godowns on the Pro tier, and — the top-tier hook that reveals what growing firms actually want — **Tally export** [R3 §2.2, §3.1].
 
-**What it gets wrong that UdhaarBook must beat.**
+**What it gets wrong that DigiKhaato must beat.**
 
 *Calculation errors* — "cost me thousands" [R3 §2.2].
 
@@ -227,11 +227,11 @@ The easiest UI in the paid set (4.7 ease-of-use on Capterra), GST invoices acros
 
 ### TallyPrime (and Busy, Marg)
 
-**What it gets right that UdhaarBook must match.**
+**What it gets right that DigiKhaato must match.**
 
 Keyboard-driven entry speed — a genuine advantage at a billing counter that mobile-first products routinely underestimate. Statutory depth and GST correctness that the CA trusts. Multi-tasking (opening a report without losing the entry in progress). Robust inventory. Cost-effectiveness against global alternatives [R3 §2.2]. Busy adds fast GST updates, batch and multi-location inventory, and customisable financial reports; Marg adds a genuine pharma and FMCG vertical fit with batch, expiry, schemes and sub-stockist handling [R3 §2.2].
 
-**What it gets wrong that UdhaarBook must beat.**
+**What it gets wrong that DigiKhaato must beat.**
 
 *No mobile app* — TallyPrime's number-one G2 con with 18 mentions [R3 §2.2].
 
@@ -257,7 +257,7 @@ Keyboard-driven entry speed — a genuine advantage at a billing counter that mo
 
 ---
 
-## 4.6 The gap UdhaarBook occupies
+## 4.6 The gap DigiKhaato occupies
 
 Stated precisely, the gap is defined by five simultaneous conditions that no existing product satisfies together:
 
@@ -273,7 +273,7 @@ The defensibility of this position rests on the argument in Part 2 §2.8: featur
 
 ## 4.7 Competitive commitments
 
-These are things UdhaarBook **must do at MVP**, not because they are strategically clever but because a competitor has already trained the Indian market to expect them. Failing any one of these makes the product feel broken rather than different. Each carries its feature ID from Part 16 and its evidence.
+These are things DigiKhaato **must do at MVP**, not because they are strategically clever but because a competitor has already trained the Indian market to expect them. Failing any one of these makes the product feel broken rather than different. Each carries its feature ID from Part 16 and its evidence.
 
 1. **Two-button ledger entry — red "You gave", green "You got" — with amount keypad, optional note, optional photo and a date defaulting to today with backdating allowed.** The colour convention is stable across every app in the category and must not be inverted. *(LED-01; [R2 §A.1 F3, §C.4])*
 

@@ -1,6 +1,6 @@
 # Part 16 — Feature Catalogue
 
-The catalogue is the index of everything UdhaarBook does or will do. Each row is a feature with a stable ID (Part 0 §0.5), its module, the release phase, the personas it serves, and a one-line definition. Detailed specifications for MVP and Phase 2 features are in Part 17 (FRD); later phases are specified to catalogue level only and elaborated when they enter a release.
+The catalogue is the index of everything DigiKhaato does or will do. Each row is a feature with a stable ID (Part 0 §0.5), its module, the release phase, the personas it serves, and a one-line definition. Detailed specifications for MVP and Phase 2 features are in Part 17 (FRD); later phases are specified to catalogue level only and elaborated when they enter a release.
 
 Legend — Phase: **M** = MVP, **2** = Phase 2, **3** = Phase 3, **F** = Future/Enterprise. Persona codes: **OW** owner, **ST** staff/salesperson, **AC** accountant/CA, **PA** partner admin, **SA** super admin (Metis ops), **CU** end customer (party).
 
@@ -197,7 +197,7 @@ Legend — Phase: **M** = MVP, **2** = Phase 2, **3** = Phase 3, **F** = Future/
 | HLP-02 | Contextual help & tours | 2 | OW | "?" per screen; 4 guided tours. |
 | HLP-03 | What's new | 2 | OW | Release notes list. |
 
-## 16.14 Loans (LON) — optional module carried from DigiKhaato
+## 16.14 Loans (LON) — optional module carried from legacy DigiKhaato
 
 | ID | Feature | Phase | Personas | Definition |
 |---|---|---|---|---|

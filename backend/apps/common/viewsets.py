@@ -11,7 +11,7 @@ from apps.common.tenancy import get_effective_tenant
 
 
 class TenantScopeMixin:
-    """Fail-closed tenant scoping for views (DigiKhaato pattern, UdhaarBook model)."""
+    """Fail-closed tenant scoping for views (legacy DigiKhaato pattern, this product's model)."""
 
     tenant_field = "tenant"
 

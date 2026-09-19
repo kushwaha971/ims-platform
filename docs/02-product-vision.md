@@ -1,6 +1,6 @@
 # Part 2 — Product Vision
 
-*This chapter states what UdhaarBook is trying to become, the principles that constrain how it gets there, how it is positioned against the two clusters of competitors that already exist, the wedge by which it enters the market, how a single product can honestly serve six kinds of business, what would make its position defensible, and — equally important — what it will never be.*
+*This chapter states what DigiKhaato is trying to become, the principles that constrain how it gets there, how it is positioned against the two clusters of competitors that already exist, the wedge by which it enters the market, how a single product can honestly serve six kinds of business, what would make its position defensible, and — equally important — what it will never be.*
 
 ---
 
@@ -22,7 +22,7 @@ That sentence contains four assertions worth making explicit, because each is a 
 
 ## 2.2 Mission
 
-**UdhaarBook's mission is to collapse the four-app stack of the Indian small business — khata, bill book, stock register and WhatsApp — into one book of truth, and to do it so cheaply and so simply that not using it becomes the irrational choice.**
+**DigiKhaato's mission is to collapse the four-app stack of the Indian small business — khata, bill book, stock register and WhatsApp — into one book of truth, and to do it so cheaply and so simply that not using it becomes the irrational choice.**
 
 The de facto stack today is well documented: UPI QR plus soundbox for collection, WhatsApp for orders and reminders and invoice PDFs, paper or Khatabook for udhaar, Excel for stock and price lists, and Tally at the CA for GST [R3 §4.4]. The mission is not to replace that stack wholesale — that is the mistake that killed the storefront products — but to *become its centre* while accepting it as the integration surface. Software that does not import Excel, export to Tally, share over WhatsApp and reconcile UPI is fighting habit [R3 #4, High].
 
@@ -34,11 +34,11 @@ Ten years out, the plausible end state is not "an Indian Zoho". It is an **opera
 
 **Years 1–2: the book.** One product that a business runs its month on. Ledger, billing, stock, payments, compliance outputs. Direct and white-label delivery. The objective is *trust*: the numbers are right, the data never disappears, the app does not crash during billing.
 
-**Years 3–5: the network.** Once a critical mass of businesses keep their books here, the interesting properties are relational rather than functional. A supplier and a retailer who both use UdhaarBook should not both key in the same invoice; a purchase bill issued by one can arrive as a draft at the other. Collection routes, distributor–retailer ordering and reconciled counter-party balances become possible because both sides of a transaction are on-platform. This is the direction Bizom approached from the brand side, with 800,000 retailers across 40-plus FMCG brands, and never completed because its retailer app is ordering-centric rather than books-centric [R3 §8.1].
+**Years 3–5: the network.** Once a critical mass of businesses keep their books here, the interesting properties are relational rather than functional. A supplier and a retailer who both use DigiKhaato should not both key in the same invoice; a purchase bill issued by one can arrive as a draft at the other. Collection routes, distributor–retailer ordering and reconciled counter-party balances become possible because both sides of a transaction are on-platform. This is the direction Bizom approached from the brand side, with 800,000 retailers across 40-plus FMCG brands, and never completed because its retailer app is ordering-centric rather than books-centric [R3 §8.1].
 
 **Years 5–10: the rails.** A business with two years of verified ledger, stock and GST history is an underwritable business. Every distribution owner in India already wants this — 45% of surveyed kiranas want credit support for working capital, Khatabook's entire thesis was free ledger → data → lend, and HDFC, Airtel and Bajaj Finance are assembling exactly these channels [R3 §4.4, §8.1]. The lesson from Khatabook, however, is decisive on *how*: lending must be a partner's product distributed through the platform, never the platform's own revenue thesis, because lending imports credit risk and regulatory whiplash that destroyed both Khatabook's economics and OkCredit's P2P product [R2 §B.4; R3 §7.4].
 
-The ten-year vision is therefore: **UdhaarBook keeps the books; partners monetise the consequences.** Every strategic decision in Parts 1–23 should be checked against whether it makes the books more trustworthy and more complete, because that is the only asset that compounds.
+The ten-year vision is therefore: **DigiKhaato keeps the books; partners monetise the consequences.** Every strategic decision in Parts 1–23 should be checked against whether it makes the books more trustworthy and more complete, because that is the only asset that compounds.
 
 ---
 
@@ -95,7 +95,7 @@ Each principle below is stated, justified from the research, and given a consequ
 
 **Statement.** Pricing is flat per business with user-count steps, published, and grandfathered at renewal. The ledger is never metered.
 
-**Justification.** Renewal hikes are the top pricing complaint across five products [R3 §3.3]. Zoho's document-count caps — sales orders *and* invoices *and* POs *and* bills, separately, with a wholesaler doing 20 invoices a day exhausting the Standard plan — generate its loudest pricing complaints [R1 §Part B observations, §E.1 #1]. OkCredit caps daily transactions on its free tier and charges ₹30/month to remove the cap, which the research explicitly flags as something UdhaarBook should not copy [R2 §A.1 F3].
+**Justification.** Renewal hikes are the top pricing complaint across five products [R3 §3.3]. Zoho's document-count caps — sales orders *and* invoices *and* POs *and* bills, separately, with a wholesaler doing 20 invoices a day exhausting the Standard plan — generate its loudest pricing complaints [R1 §Part B observations, §E.1 #1]. OkCredit caps daily transactions on its free tier and charges ₹30/month to remove the cap, which the research explicitly flags as something DigiKhaato should not copy [R2 §A.1 F3].
 
 **We will** price by users and outlets, publish prices, hold renewal at the original price, include the CA seat free in every tier, and keep entry creation unlimited on every tier including free.
 **We will not** cap ledger entries, invoices or parties as a monetisation lever, and we will not run advertisements — the most-hated pattern in the free tier of this category [R2 §D #1].
@@ -141,12 +141,12 @@ Each principle below is stated, justified from the research, and given a consequ
 ## 2.5 Positioning statement
 
 > **For** Indian small businesses of any type that run on credit and are tired of keeping their khata, their bills, their stock and their GST in four different places,
-> **UdhaarBook is** a mobile-first business book
+> **DigiKhaato is** a mobile-first business book
 > **that** keeps one running account per party and feeds it automatically from GST-compliant billing, inventory and UPI payments,
 > **unlike** free khata apps that stop at the ledger and paid billing suites that treat udhaar as a report,
 > **because** it is built ledger-first for the phone, priced flat and predictably, available in the owner's own language, and delivered either directly or under a partner's brand.
 
-The competitive landscape divides into two clusters that do not overlap well [R2 §B.4]. Ledger-first products — Khatabook, OkCredit — are free or near-free, multilingual, phone-only and weak at inventory and GST. Billing-first products — Vyapar, myBillBook, Swipe, Zoho, and the desktop incumbents Tally, Busy and Marg — are paid, English or English-plus-Hindi, desktop-heavy, and treat udhaar as receivables. Plotted on two axes — *ledger depth* against *billing and inventory depth* — the upper-right quadrant is empty. That quadrant, entered from the ledger side at a mobile price point, is UdhaarBook's position.
+The competitive landscape divides into two clusters that do not overlap well [R2 §B.4]. Ledger-first products — Khatabook, OkCredit — are free or near-free, multilingual, phone-only and weak at inventory and GST. Billing-first products — Vyapar, myBillBook, Swipe, Zoho, and the desktop incumbents Tally, Busy and Marg — are paid, English or English-plus-Hindi, desktop-heavy, and treat udhaar as receivables. Plotted on two axes — *ledger depth* against *billing and inventory depth* — the upper-right quadrant is empty. That quadrant, entered from the ledger side at a mobile price point, is DigiKhaato's position.
 
 ---
 
@@ -154,9 +154,9 @@ The competitive landscape divides into two clusters that do not overlap well [R2
 
 The wedge is a sequencing argument: **start where demand is proven and free, expand into where willingness to pay is proven and dear.**
 
-**Step 1 — Enter at the ledger, where Khatabook proved demand.** Khatabook reached 50 million installs, 10 million monthly actives and 264 million customer records [R2 §A.0]. That is not a hypothesis about demand; it is a measurement. Entry cost is low because the feature set is small and the value is immediate: a merchant sees their own dues on day one. UdhaarBook's MVP ledger is deliberately at or above Khatabook free-tier parity — parties, gave/got entries, running balance, opening balance, statement PDF, collection date with D-1/D0 reminders, WhatsApp share, UPI QR, multiple businesses, app lock, account deletion [R2 Appendix] — plus the things Khatabook's users complain are missing: no ads, no loan banners in the core flow, corrections with audit rather than deletes, soft delete with restore, and party tags for area and route [R2 §D #1, #4, #8, #17].
+**Step 1 — Enter at the ledger, where Khatabook proved demand.** Khatabook reached 50 million installs, 10 million monthly actives and 264 million customer records [R2 §A.0]. That is not a hypothesis about demand; it is a measurement. Entry cost is low because the feature set is small and the value is immediate: a merchant sees their own dues on day one. DigiKhaato's MVP ledger is deliberately at or above Khatabook free-tier parity — parties, gave/got entries, running balance, opening balance, statement PDF, collection date with D-1/D0 reminders, WhatsApp share, UPI QR, multiple businesses, app lock, account deletion [R2 Appendix] — plus the things Khatabook's users complain are missing: no ads, no loan banners in the core flow, corrections with audit rather than deletes, soft delete with restore, and party tags for area and route [R2 §D #1, #4, #8, #17].
 
-**Step 2 — Expand into billing and stock, where Zoho and Vyapar proved willingness to pay.** The same merchant, three weeks later, needs a bill. In Khatabook that requires a reseller-sold licence; in UdhaarBook it is a toggle. The expansion is natural because the ledger already holds the parties, and the invoice posts straight into the khata the merchant already trusts. The revenue evidence is direct: Vyapar earns ₹69 crore and myBillBook and Zoho both sustain paid bases in the ₹3,400–₹4,000 and ₹18,000–₹60,000 bands respectively [R3 §3.1, §3.4].
+**Step 2 — Expand into billing and stock, where Zoho and Vyapar proved willingness to pay.** The same merchant, three weeks later, needs a bill. In Khatabook that requires a reseller-sold licence; in DigiKhaato it is a toggle. The expansion is natural because the ledger already holds the parties, and the invoice posts straight into the khata the merchant already trusts. The revenue evidence is direct: Vyapar earns ₹69 crore and myBillBook and Zoho both sustain paid bases in the ₹3,400–₹4,000 and ₹18,000–₹60,000 bands respectively [R3 §3.1, §3.4].
 
 **Step 3 — Anchor with compliance, where the CA makes the switching decision.** GST-compliant invoicing plus a GST summary, sales and purchase registers and a CSV/Excel hand-off at MVP; GSTR-1 JSON in Phase 2; Tally XML and e-invoice in Phase 3. GST compliance is the reason SMBs buy at all, and e-invoice and e-way bill are the tier-up triggers [R3 #8, High].
 
@@ -217,7 +217,7 @@ What is explicitly *not* a moat: language coverage (copyable), UI quality (copya
 
 ## 2.9 Explicit non-goals
 
-The following are things UdhaarBook will not do. Each has a reason and, where relevant, a re-entry condition.
+The following are things DigiKhaato will not do. Each has a reason and, where relevant, a re-entry condition.
 
 | Non-goal | Reason | Re-entry condition |
 |---|---|---|

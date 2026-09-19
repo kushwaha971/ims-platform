@@ -3,14 +3,14 @@ import { configureStore } from '@reduxjs/toolkit';
 import { registerTransportHost } from 'src/api/transportBridge';
 
 // ── auth (PLT-01, PLT-02) ────────────────────────────────────────────────────
-import authReducer from 'modules/UdhaarBook/features/auth/redux/authSlice';
+import authReducer from 'modules/DigiKhaato/features/auth/redux/authSlice';
 // ── onboarding (PLT-03) ──────────────────────────────────────────────────────
-import onboardingReducer from 'modules/UdhaarBook/features/onboarding/redux/onboardingSlice';
+import onboardingReducer from 'modules/DigiKhaato/features/onboarding/redux/onboardingSlice';
 // ── parties ──────────────────────────────────────────────────────────────────
-import partyListReducer from 'modules/UdhaarBook/features/parties/redux/partyListSlice';
+import partyListReducer from 'modules/DigiKhaato/features/parties/redux/partyListSlice';
 // ── plan entitlements (PLT-15) ───────────────────────────────────────────────
-import planReducer, { limitHit } from 'modules/UdhaarBook/features/plan/redux/planSlice';
-import { toPlanLimitHit } from 'modules/UdhaarBook/features/plan/view-model/planDisplay';
+import planReducer, { limitHit } from 'modules/DigiKhaato/features/plan/redux/planSlice';
+import { toPlanLimitHit } from 'modules/DigiKhaato/features/plan/view-model/planDisplay';
 
 import { invalidationListener } from './invalidation/listener';
 // ── Cross-cutting ────────────────────────────────────────────────────────────

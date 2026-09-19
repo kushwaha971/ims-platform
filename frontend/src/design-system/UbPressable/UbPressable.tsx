@@ -20,8 +20,10 @@ import { cn } from 'src/utils/cn';
  * `type="button"` is not optional — a row inside a `<form>` that defaults to
  * `submit` posts the form when the user meant to open a record.
  */
-export interface UbPressableProps
-  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'type'> {
+export interface UbPressableProps extends Omit<
+  ButtonHTMLAttributes<HTMLButtonElement>,
+  'children' | 'type'
+> {
   /**
    * Announced as `aria-current` — "this is the one you are on". A surface with
    * an explicit `role` (a radio tile) carries its own `aria-checked` instead
@@ -32,28 +34,29 @@ export interface UbPressableProps
   readonly className?: string;
 }
 
-const UbPressableInner = forwardRef<HTMLButtonElement, UbPressableProps>(
-  function UbPressableInner({ selected, disabled, children, className, ...rest }, ref) {
-    return (
-      <button
-        ref={ref}
-        type="button"
-        disabled={disabled}
-        aria-current={selected ? 'true' : undefined}
-        aria-disabled={disabled || undefined}
-        className={cn(
-          'w-full text-left outline-none focus-visible:shadow-focus',
-          'transition-colors duration-fast ease-standard',
-          'disabled:cursor-not-allowed',
-          className
-        )}
-        {...rest}
-      >
-        {children}
-      </button>
-    );
-  }
-);
+const UbPressableInner = forwardRef<HTMLButtonElement, UbPressableProps>(function UbPressableInner(
+  { selected, disabled, children, className, ...rest },
+  ref
+) {
+  return (
+    <button
+      ref={ref}
+      type="button"
+      disabled={disabled}
+      aria-current={selected ? 'true' : undefined}
+      aria-disabled={disabled || undefined}
+      className={cn(
+        'w-full text-left outline-none focus-visible:shadow-focus',
+        'transition-colors duration-fast ease-standard',
+        'disabled:cursor-not-allowed',
+        className
+      )}
+      {...rest}
+    >
+      {children}
+    </button>
+  );
+});
 
 UbPressableInner.displayName = 'UbPressable';
 export const UbPressable = memo(UbPressableInner);

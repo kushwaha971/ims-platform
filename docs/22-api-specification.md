@@ -34,7 +34,7 @@
 
 ### 22.1.1 The error-code registry
 
-This registry is normative and complete: **every error an UdhaarBook API may return carries a `code` from this table, and no code outside it may be emitted.** Part 28 §28.3.6's equality assertion — the emitted set equals the documented set — is made against this section. Part 19 §19.4.4's rule that the client switches on `code` and never on `message` is only honourable because this table exists; an unregistered code is therefore a defect in the backend, not a gap in the frontend.
+This registry is normative and complete: **every error an DigiKhaato API may return carries a `code` from this table, and no code outside it may be emitted.** Part 28 §28.3.6's equality assertion — the emitted set equals the documented set — is made against this section. Part 19 §19.4.4's rule that the client switches on `code` and never on `message` is only honourable because this table exists; an unregistered code is therefore a defect in the backend, not a gap in the frontend.
 
 Ownership is recorded as **T-16** in Part 0 §0.12.2. No other chapter may carry this table, and a chapter that needs a code names the code.
 

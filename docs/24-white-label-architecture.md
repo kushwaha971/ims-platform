@@ -1,6 +1,6 @@
 # Part 24 — White-Label Architecture
 
-This part specifies how UdhaarBook is resold. It is the design behind features **WLB-01…WLB-06** (Part 17 §17.1b), the `platform_partner` / `platform_plan` tables (Part 21 §21.3.1), the `/admin/partners*` and `/partner/*` endpoints (Part 22 §22.3) and the theme-override mechanism that sits on top of the token pipeline in Part 23. Where this part and an FRD appear to disagree, the FRD's numbered `FR-n` wins and this part is a defect to be fixed; where this part and the canon (Part 0) disagree, the canon wins.
+This part specifies how DigiKhaato is resold. It is the design behind features **WLB-01…WLB-06** (Part 17 §17.1b), the `platform_partner` / `platform_plan` tables (Part 21 §21.3.1), the `/admin/partners*` and `/partner/*` endpoints (Part 22 §22.3) and the theme-override mechanism that sits on top of the token pipeline in Part 23. Where this part and an FRD appear to disagree, the FRD's numbered `FR-n` wins and this part is a defect to be fixed; where this part and the canon (Part 0) disagree, the canon wins.
 
 The governing engineering constraint is stated once and applies to every section below: **white-label is additive**. Partner scoping never replaces tenant scoping, never replaces permission checks, and never introduces a second code path. One deployment, one database, one Django project, one Next.js app serve Metis Labs and every partner. There is no partner branch, no partner fork, no per-partner settings module and no `if partner.code == 'x'` anywhere in the codebase. A partner is data.
 
@@ -10,7 +10,7 @@ The governing engineering constraint is stated once and applies to every section
 
 ### 24.1.1 What a partner is
 
-A **Partner** is a commercial entity that puts UdhaarBook in front of merchants it already has a relationship with, and takes responsibility for some part of the merchant's experience — the brand, the support desk, the bill, or all three. The canonical examples in the Indian small-business market are:
+A **Partner** is a commercial entity that puts DigiKhaato in front of merchants it already has a relationship with, and takes responsibility for some part of the merchant's experience — the brand, the support desk, the bill, or all three. The canonical examples in the Indian small-business market are:
 
 | Partner archetype | Why they want this | What they bring | What they want back |
 |---|---|---|---|
@@ -26,11 +26,11 @@ Metis Labs is itself a partner. The seeded row `platform_partner.code = 'metis'`
 
 The commercial arrangements collapse into three shapes. The platform supports all three with the same record; what differs is which fields are populated and which console the partner uses.
 
-**Shape 1 — Referral.** The partner sends merchants to UdhaarBook and is paid a referral fee or a revenue share. The merchant knows they are using UdhaarBook. The partner gets: a `platform_partner` row for attribution, a signup link or hostname that stamps `tenant.partner_id`, a read-only usage view (Phase 2 partner console), and a support contact shown in the app so the merchant knows who introduced them. The partner does **not** get branding overrides — `branding` is left empty so everything resolves to the product default. Cost to the platform: almost nothing. Time to live: minutes.
+**Shape 1 — Referral.** The partner sends merchants to DigiKhaato and is paid a referral fee or a revenue share. The merchant knows they are using DigiKhaato. The partner gets: a `platform_partner` row for attribution, a signup link or hostname that stamps `tenant.partner_id`, a read-only usage view (Phase 2 partner console), and a support contact shown in the app so the merchant knows who introduced them. The partner does **not** get branding overrides — `branding` is left empty so everything resolves to the product default. Cost to the platform: almost nothing. Time to live: minutes.
 
 **Shape 2 — Reseller / white-label.** The partner sells the product as their own. The merchant sees the partner's name, logo, colour and domain, and contacts the partner's support desk. The partner gets: full `branding` (WLB-01/WLB-05), one or more verified `hostnames` (WLB-03), a partner admin console (WLB-04) to provision and support merchants, branded messaging identities — DLT sender header, WhatsApp number, email domain (WLB-06) — and a plan catalogue they may assign within Metis-set ceilings. The product is still visibly "powered by" the platform in the legal footer, because GST documents must be attributable and because a fully anonymous invoice generator is a support liability. Time to live: hours to a day (DNS verification is the long pole).
 
-**Shape 3 — Embedded / OEM.** The partner surfaces UdhaarBook inside their own app — the merchant never sees a separate login. At MVP and Phase 2 this shape is **supported commercially but delivered as Shape 2 with a deep link**: the partner's app opens the branded hostname in a web view with a one-time login token. The genuinely embedded form requires partner-scoped API keys, SSO / OIDC token exchange and an outbound webhook feed, all of which are Phase 3 (PLT-13, WLB-04 §24 "Future Enhancements"). The architecture reserves the seams: `platform_partner_admin` already carries roles, `platform_session` already carries a family model that a token-exchange flow can hang off, and `/partner/*` is already a partner-scoped namespace distinct from `/admin/*` and from the tenant API. **Nothing in Shapes 1–2 may be built in a way that forecloses Shape 3.**
+**Shape 3 — Embedded / OEM.** The partner surfaces DigiKhaato inside their own app — the merchant never sees a separate login. At MVP and Phase 2 this shape is **supported commercially but delivered as Shape 2 with a deep link**: the partner's app opens the branded hostname in a web view with a one-time login token. The genuinely embedded form requires partner-scoped API keys, SSO / OIDC token exchange and an outbound webhook feed, all of which are Phase 3 (PLT-13, WLB-04 §24 "Future Enhancements"). The architecture reserves the seams: `platform_partner_admin` already carries roles, `platform_session` already carries a family model that a token-exchange flow can hang off, and `/partner/*` is already a partner-scoped namespace distinct from `/admin/*` and from the tenant API. **Nothing in Shapes 1–2 may be built in a way that forecloses Shape 3.**
 
 ### 24.1.3 What each shape gets — the entitlement matrix
 
@@ -134,13 +134,13 @@ Three properties of this function are load-bearing and are asserted by tests `T-
 
 | Key | Product default | Partner (`platform_partner`) | Tenant (`platform_tenant` / setting) | Lockable | Feature |
 |---|---|---|---|---|---|
-| `logo` | UdhaarBook mark | `branding.logo_attachment_id` | `branding.logo_attachment_id` | ✅ | WLB-01/02 |
+| `logo` | DigiKhaato mark | `branding.logo_attachment_id` | `branding.logo_attachment_id` | ✅ | WLB-01/02 |
 | `primary_hex` | `#2B6BE0` (Part 23) | `branding.primary_hex` | `branding.primary_hex` | ✅ | WLB-01/02 |
 | `secondary_hex` | teal ramp (Part 23) | `branding.secondary_hex` | `branding.secondary_hex` | ✅ | WLB-01/02 |
-| `app_name` | `UdhaarBook` | `branding.app_name` | `branding.app_name` | ✅ | WLB-01/02 |
+| `app_name` | `DigiKhaato` | `branding.app_name` | `branding.app_name` | ✅ | WLB-01/02 |
 | `doc_header` | — | `branding.doc_header` | `branding.doc_header` | ✅ | WLB-01 |
 | `doc_footer` | — | `branding.doc_footer` | `branding.doc_footer` | ✅ | WLB-01 |
-| `legal_footer` | "Powered by UdhaarBook" | `branding.legal_footer` | **not overridable** | n/a (always partner) | WLB-02 FR-7 |
+| `legal_footer` | "Powered by DigiKhaato" | `branding.legal_footer` | **not overridable** | n/a (always partner) | WLB-02 FR-7 |
 | `favicon` | product favicon | `branding.favicon_attachment_id` | — | n/a | WLB-03 (P2) |
 | `theme.radius_scale` | `default` | `branding.theme.radius_scale` | — | n/a | WLB-05 (P2) |
 | `theme.font_ui` / `font_display` | Inter / Inter | `branding.theme.*` | — | n/a | WLB-05 (P2) |
@@ -424,7 +424,7 @@ The block is ≤ 1.2 kB for a tenant theme and ≤ 4 kB with WLB-05 extensions (
 
 ### 24.4.6 A worked partner theme
 
-"Example Bank" resells UdhaarBook as **SmartKhata** to its current-account merchants. The partner row:
+"Example Bank" resells DigiKhaato as **SmartKhata** to its current-account merchants. The partner row:
 
 ```json
 {
@@ -445,7 +445,7 @@ The block is ≤ 1.2 kB for a tenant theme and ≤ 4 kB with WLB-05 extensions (
     "secondary_hex": "#B8860B",
     "app_name": "SmartKhata",
     "doc_footer": "Thank you for banking with Example Bank.",
-    "legal_footer": "SmartKhata is powered by UdhaarBook (Metis Labs B.V.). Example Bank Ltd is not a party to transactions recorded in this book.",
+    "legal_footer": "SmartKhata is powered by DigiKhaato (Metis Labs B.V.). Example Bank Ltd is not a party to transactions recorded in this book.",
     "locked_keys": ["primary_hex", "app_name", "logo"],
     "theme": {
       "radius_scale": "sharp",

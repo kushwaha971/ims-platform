@@ -1,6 +1,6 @@
 # Part 3 — Market Research Synthesis
 
-*This chapter synthesises the Indian SMB software market from research dossiers R2 (Khatabook and Indian ledger apps) and R3 (Software Advice, Capterra and market sizing). It establishes how large the market is, how it segments, what has made it addressable now, what forces businesses to buy, what they will actually pay, why the free-to-paid transition has broken every company that attempted it, how software reaches these buyers, what language and region demand, and which statutory obligations constrain the design. It closes with ten numbered market findings, each with its implication for UdhaarBook and a confidence rating.*
+*This chapter synthesises the Indian SMB software market from research dossiers R2 (Khatabook and Indian ledger apps) and R3 (Software Advice, Capterra and market sizing). It establishes how large the market is, how it segments, what has made it addressable now, what forces businesses to buy, what they will actually pay, why the free-to-paid transition has broken every company that attempted it, how software reaches these buyers, what language and region demand, and which statutory obligations constrain the design. It closes with ten numbered market findings, each with its implication for DigiKhaato and a confidence rating.*
 
 ---
 
@@ -25,7 +25,7 @@ The demand side segments cleanly into six populations, which are the six busines
 
 Two facts about this table drive product decisions. First, reviewer demographics for Indian products cluster at **2–10 and 11–50 employees**, with TallyPrime skewing to mid-market accountant users [R3 §4.2]. Second, India SME Forum's survey of 7,835 MSMEs finds **micro 59%, small 33%, medium 7%**, with 91% of respondents aged 45–54 [R3 §4.2]. The buyer is a middle-aged owner-operator of a micro or small business — not a digital native, not an accountant, and not the persona most SaaS design assumes.
 
-The supply side is bimodal and the two modes barely compete [R3 §0.1]. A **desktop accounting incumbent tier** — TallyPrime with 2.5M+ businesses sold through 28,000 partners, plus Busy and Marg — prices at ₹8,000–₹68,000. A **mobile-first billing and khata tier** — Vyapar, myBillBook, Khatabook, Swipe — prices at ₹0–₹4,000 a year with 10M+ claimed registrations each. The gap between them, described in the competitor dossier as the "multi-app trap" [R2 §B.4], is UdhaarBook's target.
+The supply side is bimodal and the two modes barely compete [R3 §0.1]. A **desktop accounting incumbent tier** — TallyPrime with 2.5M+ businesses sold through 28,000 partners, plus Busy and Marg — prices at ₹8,000–₹68,000. A **mobile-first billing and khata tier** — Vyapar, myBillBook, Khatabook, Swipe — prices at ₹0–₹4,000 a year with 10M+ claimed registrations each. The gap between them, described in the competitor dossier as the "multi-app trap" [R2 §B.4], is DigiKhaato's target.
 
 ---
 
@@ -47,13 +47,13 @@ It also means the competition for a new product is rarely another product. It is
 
 Three infrastructure facts make an Indian SMB product viable today in a way it was not five years ago.
 
-**UPI has eliminated the payments problem.** August 2026 volume was 24.51 billion transactions worth ₹29.82 lakh crore, growing 22% year on year, at 791 million transactions a day, averaging ₹1,217 each [R3 §7.1]. Merchant discount rate on UPI is zero by government mandate, which means collection through UPI costs a small business nothing [R2 §C.2]. For UdhaarBook this is doubly significant: it removes the need to build or acquire a payments rail, and it creates the reconciliation problem that becomes a differentiator — payments to a static QR carry no party context, so a ledger app must maintain an unmatched-payments queue and learn payer-VPA-to-party mappings [R2 §C.2].
+**UPI has eliminated the payments problem.** August 2026 volume was 24.51 billion transactions worth ₹29.82 lakh crore, growing 22% year on year, at 791 million transactions a day, averaging ₹1,217 each [R3 §7.1]. Merchant discount rate on UPI is zero by government mandate, which means collection through UPI costs a small business nothing [R2 §C.2]. For DigiKhaato this is doubly significant: it removes the need to build or acquire a payments rail, and it creates the reconciliation problem that becomes a differentiator — payments to a static QR carry no party context, so a ledger app must maintain an unmatched-payments queue and learn payer-VPA-to-party mappings [R2 §C.2].
 
 **WhatsApp has eliminated the distribution problem for documents.** India has 535 million WhatsApp users and 15 million active WhatsApp Business accounts [R3 §7.1]. Every Indian product in the category leads with WhatsApp sharing, and reviewers treat its breakage as a bug rather than a missing nicety — blank WhatsApp PDFs are a top Vyapar complaint precisely because the feature is used constantly [R3 §2.2, §6]. The `wa.me` deep link is free, needs no approval, and requires no server integration; it is the correct MVP mechanism [R2 §C.3]. Server-sent automation is a different and much more expensive proposition, covered in §3.9.
 
 **Android has eliminated the hardware problem for the micro segment, but not for the counter.** Mobile-first apps claim 10M+ registrations (Vyapar), 1 crore+ businesses (myBillBook) and 50M+ downloads (Khatabook) [R3 §4.3]. Reach is mobile. But **paid conversion is desktop-led**: Vyapar's free tier is mobile-only and its first paid tier is Desktop Silver; myBillBook's "most popular" Pro plan's headline feature is the desktop app [R3 §4.3, #7]. Counter billing with a barcode scanner, a thermal printer and a keyboard is a desktop job. Meanwhile Tally's number-one G2 gap is the missing mobile app — and what that accountant base wants is mobile *viewing*, not mobile *entry* [R3 §4.3].
 
-The synthesis for UdhaarBook: mobile is the acquisition product, the counter is the conversion product, and the same responsive application must serve both. Do not ship mobile-only [R3 #7, High].
+The synthesis for DigiKhaato: mobile is the acquisition product, the counter is the conversion product, and the same responsive application must serve both. Do not ship mobile-only [R3 #7, High].
 
 ---
 
@@ -89,7 +89,7 @@ The engineering consequence is absolute and is stated in the dossier: *"Software
 
 **Returns** are the ultimate output. GSTR-1 (outward supplies, monthly, or quarterly under QRMP for turnover up to ₹5 crore with an optional Invoice Furnishing Facility in the first two months) requires B2B invoice-wise data, B2C-large invoice-wise, B2C-small rate-wise summaries, credit and debit notes, an HSN summary and a document-series summary. GSTR-3B requires outward taxable value by CGST/SGST/IGST/cess plus inward ITC. GSTR-2B is consumed, not produced. The Invoice Management System introduced on GSTN in 2024-25 lets buyers accept or reject supplier invoices [R2 §C.1].
 
-The design consequence for UdhaarBook is a staged compliance ladder that matches the tier-up triggers: **GST summary, sales register, purchase register and HSN summary at MVP (RPT-03/04/07); GSTR-1 JSON export in Phase 2 (RPT-12); e-invoice and e-way bill through a GSP adapter and Tally XML in Phase 3 (SAL-12, SAL-13, RPT-13)**. Direct GST-portal filing is frequently requested but expensive to maintain and should be phased [R3 #8].
+The design consequence for DigiKhaato is a staged compliance ladder that matches the tier-up triggers: **GST summary, sales register, purchase register and HSN summary at MVP (RPT-03/04/07); GSTR-1 JSON export in Phase 2 (RPT-12); e-invoice and e-way bill through a GSP adapter and Tally XML in Phase 3 (SAL-12, SAL-13, RPT-13)**. Direct GST-portal filing is frequently requested but expensive to maintain and should be phased [R3 #8].
 
 ---
 
@@ -132,7 +132,7 @@ Six churn triggers are identified from reviews and financials [R3 §3.3], and ea
 
 ## 3.6 The free-to-paid conversion problem
 
-This is the problem that broke every company in the ledger category, and it deserves its own treatment because UdhaarBook's commercial model must survive it.
+This is the problem that broke every company in the ledger category, and it deserves its own treatment because DigiKhaato's commercial model must survive it.
 
 **The evidence.** Khatabook reached 10 million monthly active MSMEs and 264 million customer records by August 2021, on total funding of about $186.5M at a roughly $600M post-money valuation [R2 §A.0]. It earned ₹17 crore in FY21, ₹71 crore in FY22 against a ₹111 crore loss, ₹80.9 crore in FY23 against a ₹125.4 crore loss, and ₹102.7 crore in FY24 against a ₹116.2 crore loss — with revenue predominantly from lending and financial services rather than software, and "other expenses" (contractors plus payment-gateway charges) of ₹106 crore growing 51% year on year [R2 §A.0; R3 §3.4]. It has raised no priced round since August 2021, laid off 42 people (6%) in September 2023, and shut its MyStore storefront in November 2021 [R2 §A.0].
 
@@ -144,7 +144,7 @@ Vyapar, on the paid side, earned ₹69 crore in FY25 growing 53%, against a ₹6
 
 **The three lessons.** First, *scale of free usage does not predict revenue*: 10 million monthly actives produced essentially no software revenue for Khatabook. The trade press verdict is blunt — "barely any kiranas or small businesses pay for software" [R3 §0.2]. Second, *the wall matters more than the funnel*: OkCredit reached profitability by charging ₹30–₹99 a month for multi-device access, advertisement removal, a defaulters view, billing, desktop and stock — i.e. by paywalling the things a *staffed* business needs while leaving the ledger free [R2 §B.3, §B.4]. Third, *adjacent-product pivots failed twice each*: storefronts (MyStore, OkShop, Dukaan's kirana product) and lending (Khatabook's thesis, OkCredit's OkNivesh) [R3 §7.4].
 
-**The implication for UdhaarBook** is the commercial shape described in Part 1 §1.9 and it follows directly: keep the ledger permanently free and unmetered to win the habit, place the paid wall exactly where OkCredit and Vyapar proved willingness to pay (multiple users and devices, roles, stock, GST outputs, server-sent messaging, exports), refuse advertisements, refuse lending as a first-party line, and build the partner channel as a parallel revenue path that does not depend on self-serve conversion at all.
+**The implication for DigiKhaato** is the commercial shape described in Part 1 §1.9 and it follows directly: keep the ledger permanently free and unmetered to win the habit, place the paid wall exactly where OkCredit and Vyapar proved willingness to pay (multiple users and devices, roles, stock, GST outputs, server-sent messaging, exports), refuse advertisements, refuse lending as a first-party line, and build the partner channel as a parallel revenue path that does not depend on self-serve conversion at all.
 
 ---
 
@@ -205,7 +205,7 @@ The design consequence, reflected in Part 0 §0.4 (ADR-015) and Part 16 (NTF-02,
 
 The Digital Personal Data Protection Act was passed in August 2023 and its Rules were notified on 13 November 2025 with phased commencement: Phase 1 on 13 November 2025 (Board constitution, definitions), Phase 2 on 14 November 2026 (Consent Manager registration), and **Phase 3 on 14 May 2027 for all substantive obligations** — notice, consent, security, breach reporting, erasure, children's data and grievance redress. MeitY has floated pulling Phase 3 forward to November 2026, though this is not notified [R2 §C.6].
 
-The role allocation is the first thing to get right, because it determines who owes what duty. **The merchant is the Data Fiduciary** for their customers' names, phone numbers and balances. **UdhaarBook is the Data Processor** for that data, acting only on the merchant's instructions under contract, and is simultaneously a **Data Fiduciary for merchant accounts**. Customer-side messaging — an SMS carrying a balance — is processing on the merchant's behalf, for which the merchant needs a lawful basis: consent, or the "legitimate use" limb where the customer voluntarily provided the number for a specified purpose such as purchasing on credit. A per-party `consent_source` and `opt_in_ts` must therefore be stored [R2 §C.6].
+The role allocation is the first thing to get right, because it determines who owes what duty. **The merchant is the Data Fiduciary** for their customers' names, phone numbers and balances. **DigiKhaato is the Data Processor** for that data, acting only on the merchant's instructions under contract, and is simultaneously a **Data Fiduciary for merchant accounts**. Customer-side messaging — an SMS carrying a balance — is processing on the merchant's behalf, for which the merchant needs a lawful basis: consent, or the "legitimate use" limb where the customer voluntarily provided the number for a specified purpose such as purchasing on credit. A per-party `consent_source` and `opt_in_ts` must therefore be stored [R2 §C.6].
 
 Eight obligations translate into concrete design requirements [R2 §C.6]:
 
@@ -228,7 +228,7 @@ The strategic reading is that DPDP is a cost for everyone and an advantage for w
 
 ## 3.11 Ten market findings
 
-Each finding states the evidence, the implication for UdhaarBook, and a confidence rating. These are the market conclusions the rest of this specification is built on.
+Each finding states the evidence, the implication for DigiKhaato, and a confidence rating. These are the market conclusions the rest of this specification is built on.
 
 ### Finding 1 — Record-keeping is the undigitised layer, and paper is the competitor
 

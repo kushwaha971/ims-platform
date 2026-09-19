@@ -85,7 +85,13 @@ describe('UbDialog', () => {
 
   it('can hide the close control for a decision that must be made', () => {
     render(
-      <UbDialog open onOpenChange={jest.fn()} title="Plan limit" closeLabel="Dismiss" showClose={false} />
+      <UbDialog
+        open
+        onOpenChange={jest.fn()}
+        title="Plan limit"
+        closeLabel="Dismiss"
+        showClose={false}
+      />
     );
     expect(screen.queryByRole('button', { name: 'Dismiss' })).not.toBeInTheDocument();
   });

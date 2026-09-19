@@ -2,7 +2,7 @@
 
 > **Status:** normative. Every control here is a build requirement, not a recommendation. A feature that lacks its security controls is not complete (canon §0.11 rule 6).
 >
-> **Scope:** the UdhaarBook backend and the surfaces it exposes — the REST API under `/api/v1/`, the public token-scoped share links, the media store on local disk, the PostgreSQL database, the `platform_job` runner, and the SMS/WhatsApp adapters. Frontend-specific controls are cross-referenced where the backend depends on them.
+> **Scope:** the DigiKhaato backend and the surfaces it exposes — the REST API under `/api/v1/`, the public token-scoped share links, the media store on local disk, the PostgreSQL database, the `platform_job` runner, and the SMS/WhatsApp adapters. Frontend-specific controls are cross-referenced where the backend depends on them.
 >
 > **Constraint context:** MVP runs as docker-compose (`db`, `backend`, `scheduler`, `frontend`) on a single VPS with no Redis, no object store, no Sentry, no WAF and no SIEM (ADR-012, ADR-013, ADR-018, ADR-019). Every control below is achievable with Django, PostgreSQL and discipline. Controls that genuinely require Phase-2 infrastructure are marked **[P2]** and carry an interim mitigation.
 
@@ -16,7 +16,7 @@
 |---|---|---|---|
 | A1 | **The ledger** — every party's balance and its history | `ledger_entry`, `parties_party.balance` | This is the product. A corrupted or leaked ledger ends the business relationship and, for the merchant, the business. |
 | A2 | **Tenant isolation itself** | Application scoping (Part 20 §20.4) | One cross-tenant leak is existential; shared-schema multi-tenancy makes it a one-line mistake away. |
-| A3 | **Party PII** — names, mobile numbers, addresses, GSTIN | `parties_party`, document snapshots | DPDP Act 2023 personal data belonging to the merchant's customers, held by the merchant with UdhaarBook as processor. |
+| A3 | **Party PII** — names, mobile numbers, addresses, GSTIN | `parties_party`, document snapshots | DPDP Act 2023 personal data belonging to the merchant's customers, held by the merchant with DigiKhaato as processor. |
 | A4 | **Authentication material** | `platform_user.password_hash`, `platform_otp_challenge.code_hash`, `platform_session.token_hash`, JWT signing key | Account takeover gives A1 and A3 at once. |
 | A5 | **Tax documents** | `sales_document`, `purchases_document` and lines | Statutory records; GST requires 72-month retention and their integrity is legally material. |
 | A6 | **Share-link tokens** | `sales_document.public_token_hash`, `parties_share_link.token_hash` | A guessable token exposes a customer's statement to anyone. |
@@ -400,7 +400,7 @@ Nightly `pg_dump --format=custom` plus a media `rsync`, encrypted with `age`/GPG
 
 ### 27.9.1 Roles
 
-UdhaarBook is a **Data Processor** for party data: the merchant (the tenant) is the **Data Fiduciary** who decides why customer data is collected, and Metis Labs processes it on their behalf. For the merchant's own users (owner, staff), Metis Labs is the Data Fiduciary. Both roles are stated in the Terms and in the in-app privacy notice; the distinction drives who must obtain consent (the merchant, from their customer) and who must build the mechanism (Metis Labs).
+DigiKhaato is a **Data Processor** for party data: the merchant (the tenant) is the **Data Fiduciary** who decides why customer data is collected, and Metis Labs processes it on their behalf. For the merchant's own users (owner, staff), Metis Labs is the Data Fiduciary. Both roles are stated in the Terms and in the in-app privacy notice; the distinction drives who must obtain consent (the merchant, from their customer) and who must build the mechanism (Metis Labs).
 
 ### 27.9.2 Obligations mapped to product features
 
@@ -420,7 +420,7 @@ UdhaarBook is a **Data Processor** for party data: the merchant (the tenant) is 
 | **Grievance redressal** — a contact who must respond | Partner support contact (`platform_partner.support_contact`) surfaced in-app; Metis Labs' Data Protection contact in the privacy notice; a documented response SLA | Help/Settings screen | MVP |
 | **Breach notification** to the Data Protection Board and affected principals, without delay | §27.16 incident runbook, with a 72-hour internal target and the notification templates prepared in advance | Runbook | MVP |
 | **Children's data** — no processing likely to harm a child, no tracking or targeted advertising | The product is a B2B business tool; the Terms require users to be 18+; **no advertising, no behavioural tracking, no third-party trackers exist in the product at all**, so the prohibition is satisfied structurally rather than by policy | Terms + absence of ad SDKs | MVP |
-| **Consent manager** registration | Not applicable to a processor; UdhaarBook does not act as a Consent Manager. If a partner (a bank) integrates one, consent artefacts would be recorded in `parties_party.consent_source='link'` with the artefact reference in `notes` **[P2]** | — | P2 |
+| **Consent manager** registration | Not applicable to a processor; DigiKhaato does not act as a Consent Manager. If a partner (a bank) integrates one, consent artefacts would be recorded in `parties_party.consent_source='link'` with the artefact reference in `notes` **[P2]** | — | P2 |
 | **Reasonable security safeguards** | This entire chapter; specifically §27.3 isolation, §27.4 authentication, §27.7 encryption and secrets, §27.8 audit, §27.13 supply chain | — | MVP |
 | **Processor obligations flow-down** | Metis Labs processes only on the merchant's documented instructions; sub-processors (hosting, SMS provider in P2) are listed in the Terms and bound by contract | Terms | MVP |
 

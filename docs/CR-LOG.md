@@ -206,3 +206,12 @@ applied to the chapters yet. Grouped by what forces them.
 | `CR-D6` | Part 19 §19.11.5 | Record `src/utils/text.ts` and the promotion bar: a helper moves out of a feature's `view-model/` when a **second** feature needs it. |
 | `CR-D7` | Part 19 §19.2.5 | Note the barrel's Wave 2 section and `src/design-system/scale.ts`. |
 | `CR-D8` | Part 28 | Record `forbidElements.test.ts` and `routes.test.ts` as config-level anti-regression suites. |
+
+### Batch 2026-09-19 — raised by the DEC-011 product rename
+
+| ID | Target | Change |
+|---|---|---|
+| `CR-142` | Part 20 §20.3, Part 24 §24.5, Part 29 §29.2–§29.9 | Infrastructure identifiers still carry the retired working name: the PostgreSQL database and role (`udhaarbook`, `udhaarbook_backup`), the Compose project name, `/srv/udhaarbook`, the `app.udhaarbook.in` / `ingress.udhaarbook.in` / `*.staging.udhaarbook.in` hostnames, and the `udhaarbook-backend` / `udhaarbook-frontend` image names. `DEC-011` deliberately left every one of them: each has a migration, a DNS record or a certificate behind it, and a product rename must not become a cutover. Rule whether they move to `digikhaato` at a planned maintenance window or stay as permanent internal identifiers. |
+| `CR-143` | Part 20 §20.2 (repo tree) | The tree shows `udhaarbook-backend/` and `../udhaarbook-frontend`; the repository folder is `ims-platform` with `backend/` and `frontend/` inside it (`DEC-011`). The chapter's tree and the repository disagree independently of the rename. |
+| `CR-144` | Part 30 §30.4 ↔ `apps/common/logging.py` | Part 30 specifies the file handler as `LOG_DIR / "app.log"`; the code writes `<product>.log` (now `digikhaato.log`, renamed with the product under `DEC-011`). Pre-existing drift, surfaced by the rename. Pick one — the chapter or the code. |
+| `CR-145` | Canon §0.1 | The product name now collides with the name of the predecessor application the corpus cites as an engineering reference, which is also called DigiKhaato and whose ledger module was itself called UdhaarBook. `DEC-011` disambiguates the predecessor as **legacy DigiKhaato** throughout and canon §0.1 carries the definition. Confirm the term, or give the predecessor a distinct name of its own. |

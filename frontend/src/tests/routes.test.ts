@@ -6,7 +6,7 @@
  *
  * Before it existed, `'/dashboard'` appeared thirteen times across four
  * features, `'/onboarding/step/' + n` was built in four places from three
- * different expressions, and `middleware.ts` kept its own copy of the guarded
+ * different expressions, and `proxy.ts` kept its own copy of the guarded
  * prefixes — which is how a section ends up in the menu and not in the guard.
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
@@ -77,6 +77,10 @@ describe('ROUTES', () => {
       ROUTES.RESET_PASSWORD,
       ROUTES.SET_PASSWORD,
       ROUTES.ONBOARDING,
+      // CR-2026-09-19-D — the legal pages are linked from the sign-up screen,
+      // which by definition has no session behind it.
+      ROUTES.LEGAL_TERMS,
+      ROUTES.LEGAL_PRIVACY,
     ]) {
       expect(guarded(href)).toBe(false);
     }

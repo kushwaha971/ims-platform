@@ -22,8 +22,10 @@ import { cn } from 'src/utils/cn';
  * that is a `<button>` cannot be opened in a new tab, and a link that is a
  * `<div onClick>` cannot be reached by keyboard at all.
  */
-export interface UbLinkProps
-  extends Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href' | 'className'> {
+export interface UbLinkProps extends Omit<
+  AnchorHTMLAttributes<HTMLAnchorElement>,
+  'href' | 'className'
+> {
   readonly href: string;
   readonly variant?: UbTextVariant;
   readonly tone?: UbTextTone;

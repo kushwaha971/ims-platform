@@ -32,9 +32,8 @@ export const toNationalDigits = (value: string | null | undefined): string => {
   if (!value) return '';
   const digits = value.replace(/\D/g, '');
   // A pasted number may carry the country code, a trunk 0, or both.
-  const withoutCountry = digits.startsWith('91') && digits.length > IN_MOBILE_DIGITS
-    ? digits.slice(2)
-    : digits;
+  const withoutCountry =
+    digits.startsWith('91') && digits.length > IN_MOBILE_DIGITS ? digits.slice(2) : digits;
   const withoutTrunk =
     withoutCountry.startsWith('0') && withoutCountry.length > IN_MOBILE_DIGITS
       ? withoutCountry.slice(1)
@@ -46,8 +45,10 @@ export const toNationalDigits = (value: string | null | undefined): string => {
 export const toE164 = (national: string): string =>
   national.length === 0 ? '' : `${IN_DIAL_CODE}${national}`;
 
-export interface UbPhoneInputProps
-  extends Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'type'> {
+export interface UbPhoneInputProps extends Omit<
+  InputHTMLAttributes<HTMLInputElement>,
+  'value' | 'onChange' | 'type'
+> {
   /** E.164, or empty. Never a national-format string. */
   readonly value: string | null | undefined;
   /** Receives E.164, or '' while the field is empty. */

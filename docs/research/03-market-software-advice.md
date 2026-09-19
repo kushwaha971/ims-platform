@@ -1,4 +1,4 @@
-# 03 — Market Research Dossier: Review Sites, Pricing, Segments, Sizing (UdhaarBook)
+# 03 — Market Research Dossier: Review Sites, Pricing, Segments, Sizing (DigiKhaato)
 
 **Scope:** Market research (not requirements) for an SMB inventory + udhaar/khata ledger + GST billing SaaS for Indian small businesses, delivered white-label via Metis Labs.
 **Primary sources:** Software Advice, Capterra, G2, Techjockey/SoftwareSuggest (for Indian pricing), vendor pricing pages, PIB/GSTN/NPCI releases, Entrackr/YourStory/Inc42 financial filings coverage, Grand View / IMARC market reports.
@@ -25,7 +25,7 @@
 
 ### 1.1 How Software Advice / Capterra define the categories
 
-| Category | Software Advice / Capterra definition (paraphrased) | Where UdhaarBook sits |
+| Category | Software Advice / Capterra definition (paraphrased) | Where DigiKhaato sits |
 |---|---|---|
 | **Inventory management** | "Automates tracking and management of items through the supply chain, including stock level monitoring, categorization, order processing, barcode scanning, and automatic reordering." 768+ products, 11,702+ reviews. ([Software Advice](https://www.softwareadvice.com/inventory-management/)) | Core module |
 | **Small-business accounting** | Invoicing, expenses, bank feeds, GL, tax reports; Capterra's 2026 buyers list 139 accounting buyers in its 3,385-respondent survey. ([Capterra](https://www.capterra.com/resources/accounting-trends-technology-strategy/)) | Adjacent (ledger, GST, P&L) — not full double-entry GL at MVP |
@@ -402,7 +402,7 @@ Format: **Insight → Implication → Confidence.**
 
 11. **Data trust is the reason SMBs stay: "cost me thousands" and audit mismatches trigger switching.** → Immutable ledger entries with edit history, reconciliation reports, and CA-shareable audit exports are differentiators, not compliance overhead. → **Medium-high.**
 
-12. **White-label demand is inferred, not proven: banks/payments/telecoms embed payments + credit, stop short of books/inventory, and lend against merchant data.** → Position UdhaarBook to a partner as (a) engagement layer, (b) reconciliation of partner rails into merchant books, (c) underwriting-grade ledger data. Validate with 2–3 partner discovery interviews before building partner-specific features. → **Medium-low** (evidence is circumstantial).
+12. **White-label demand is inferred, not proven: banks/payments/telecoms embed payments + credit, stop short of books/inventory, and lend against merchant data.** → Position DigiKhaato to a partner as (a) engagement layer, (b) reconciliation of partner rails into merchant books, (c) underwriting-grade ledger data. Validate with 2–3 partner discovery interviews before building partner-specific features. → **Medium-low** (evidence is circumstantial).
 
 13. **Storefront/ONDC features have repeatedly failed among kiranas (MyStore, OkShop, Dukaan pivot).** → Exclude online-store from MVP; treat as partner-specific add-on only. → **High.**
 

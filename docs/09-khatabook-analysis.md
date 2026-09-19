@@ -1,6 +1,6 @@
 # Part 9 — Khatabook and the Indian Ledger-App Category
 
-*Khatabook is the most important single product in UdhaarBook's research, not because it is the strongest competitor but because it is the closest precedent: it took the artefact UdhaarBook is built around — the paper bahi-khata — and proved at the scale of fifty million installs that Indian businesses will digitise it. It also failed to turn that into a software business. This chapter analyses the product's actual model, why it was adopted, why it could not monetise, what it never built, the trust concerns its users raised, and the vernacular and interaction conventions it established that UdhaarBook must honour. It closes with what UdhaarBook copies deliberately, what it improves, and the monetisation lesson.*
+*Khatabook is the most important single product in DigiKhaato's research, not because it is the strongest competitor but because it is the closest precedent: it took the artefact DigiKhaato is built around — the paper bahi-khata — and proved at the scale of fifty million installs that Indian businesses will digitise it. It also failed to turn that into a software business. This chapter analyses the product's actual model, why it was adopted, why it could not monetise, what it never built, the trust concerns its users raised, and the vernacular and interaction conventions it established that DigiKhaato must honour. It closes with what DigiKhaato copies deliberately, what it improves, and the monetisation lesson.*
 
 ---
 
@@ -126,7 +126,7 @@ There is also a reputational concern attached to the lending business — the ap
 
 ---
 
-## 9.7 The conventions UdhaarBook must honour
+## 9.7 The conventions DigiKhaato must honour
 
 Khatabook, OkCredit and their peers have trained fifty million-plus Indian merchants in a specific interaction vocabulary. Deviating from it is not innovation; it is friction. Five conventions are non-negotiable.
 
@@ -157,7 +157,7 @@ Supporting conventions that matter almost as much: the **language picker as the 
 
 ---
 
-## 9.8 What UdhaarBook copies deliberately
+## 9.8 What DigiKhaato copies deliberately
 
 The following are adopted essentially unchanged, because they are correct and because fifty million merchants already know them. Each carries its feature ID.
 
@@ -180,11 +180,11 @@ The following are adopted essentially unchanged, because they are correct and be
 
 ---
 
-## 9.9 What UdhaarBook improves
+## 9.9 What DigiKhaato improves
 
 Each improvement below addresses a specific, evidenced Khatabook or category weakness.
 
-| # | Khatabook weakness | UdhaarBook improvement | Feature |
+| # | Khatabook weakness | DigiKhaato improvement | Feature |
 |---|---|---|---|
 | 1 | Entries can be deleted; "start fresh anytime"; no audit | **Immutable entries; corrections post a reversal plus a replacement with a mandatory reason; full history visible with a toggle** | LED-03, Part 0 §0.11 |
 | 2 | No audit trail of who changed what | **Append-only audit log with before/after values, viewable by the owner and accountant** | PLT-08 |
@@ -205,7 +205,7 @@ Each improvement below addresses a specific, evidenced Khatabook or category wea
 
 Two improvements deserve emphasis because they are the ones a user would notice immediately.
 
-**Improvement 4 is the whole product thesis.** In Khatabook, the moment a business needs a bill, it leaves the app's free surface. In UdhaarBook the invoice is the same object graph: it creates a `SalesDocument`, decrements stock, and posts a `LedgerEntry` into the khata that already exists, with a link back to the source document (LED-10). The user never leaves the book.
+**Improvement 4 is the whole product thesis.** In Khatabook, the moment a business needs a bill, it leaves the app's free surface. In DigiKhaato the invoice is the same object graph: it creates a `SalesDocument`, decrements stock, and posts a `LedgerEntry` into the khata that already exists, with a link back to the source document (LED-10). The user never leaves the book.
 
 **Improvement 7 is the trust repair.** The category's defining failure is "money debited, ledger not updated" [R2 §D #2]. The mitigation is three-layered and is specified rather than assumed: prefer dynamic payment requests carrying a reference that maps to a party; keep an unmatched-payments queue for static-QR credits with one-tap mapping and learned payer-VPA associations; and handle late-success webhooks idempotently by PSP transaction id or UTR, because UPI payments can move from pending to success up to T+1 [R2 §C.2].
 
@@ -221,6 +221,6 @@ Khatabook's history contains a single, transferable lesson, and it has three par
 
 **Part three: the adjacent bet is a tax, not a hedge.** Every adjacent product attempted in this category failed or imported risk. Storefronts: MyStore shut in a year, OkShop shut, Dukaan pivoted out of kirana entirely [R3 §7.4]. Lending: Khatabook's thesis produced revenue and equal losses and now dominates its negative reviews; OkCredit's OkNivesh shut in January 2025 under RBI rules with its lending book cut from ₹132 crore to ₹17 crore [R2 §B.4]. The analyst reading is that *"lending as monetisation imports credit risk and regulatory whiplash"* [R2 §D structural churn drivers].
 
-UdhaarBook's commercial model (Part 1 §1.9) is this lesson applied directly: **a permanently free, unmetered, ad-free ledger to buy the habit; a paid tier priced flat per business with user-count steps, walled at multi-user, multi-device, stock, GST outputs and server-sent messaging; a free accountant seat; published and grandfathered prices; a partner channel as a parallel revenue path; and no lending as a first-party line.**
+DigiKhaato's commercial model (Part 1 §1.9) is this lesson applied directly: **a permanently free, unmetered, ad-free ledger to buy the habit; a paid tier priced flat per business with user-count steps, walled at multi-user, multi-device, stock, GST outputs and server-sent messaging; a free accountant seat; published and grandfathered prices; a partner channel as a parallel revenue path; and no lending as a first-party line.**
 
-There is a fourth observation that is not quite a lesson but is worth recording, because it is the reason this specification exists. Khatabook built the right first product and could not build the second one inside it. The billing and inventory tier it needed became a reseller SKU with an unpublished price and a human gate — organisationally separate from the thing fifty million people had already installed. **The opportunity UdhaarBook is pursuing is not to out-ledger Khatabook. It is to be the product where the second thing is a toggle rather than a purchase order.**
+There is a fourth observation that is not quite a lesson but is worth recording, because it is the reason this specification exists. Khatabook built the right first product and could not build the second one inside it. The billing and inventory tier it needed became a reseller SKU with an unpublished price and a human gate — organisationally separate from the thing fifty million people had already installed. **The opportunity DigiKhaato is pursuing is not to out-ledger Khatabook. It is to be the product where the second thing is a toggle rather than a purchase order.**

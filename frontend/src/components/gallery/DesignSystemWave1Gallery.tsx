@@ -72,10 +72,7 @@ export function DesignSystemWave1Gallery(): React.JSX.Element {
     []
   );
 
-  const cellLabel = useCallback(
-    (index: number, total: number) => `Digit ${index} of ${total}`,
-    []
-  );
+  const cellLabel = useCallback((index: number, total: number) => `Digit ${index} of ${total}`, []);
 
   return (
     <UbStack gap={6}>
@@ -226,7 +223,10 @@ export function DesignSystemWave1Gallery(): React.JSX.Element {
         />
       </UbCard>
 
-      <UbCard title="UbProgress" description="Accent below 80 %, amber at 80 %, --form-error at 100 %.">
+      <UbCard
+        title="UbProgress"
+        description="Accent below 80 %, amber at 80 %, --form-error at 100 %."
+      >
         <UbStack gap={3}>
           <UbProgress used={1} limit={3} ariaLabel="team members, comfortable" />
           <UbProgress used={4} limit={5} ariaLabel="team members, near the limit" />
@@ -235,7 +235,10 @@ export function DesignSystemWave1Gallery(): React.JSX.Element {
         </UbStack>
       </UbCard>
 
-      <UbCard title="UbDialog · UbConfirmDialog" description="Portalled, focus-trapped, Escape-dismissible.">
+      <UbCard
+        title="UbDialog · UbConfirmDialog"
+        description="Portalled, focus-trapped, Escape-dismissible."
+      >
         <UbStack direction="row" wrap gap={3}>
           <UbButton variant="secondary" onClick={() => setDialogOpen(true)}>
             Open a dialog

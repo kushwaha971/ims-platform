@@ -1,4 +1,4 @@
-# UdhaarBook — Single Source of Truth
+# DigiKhaato — Single Source of Truth
 
 **Version 1.0 · Assembled 2026-09-18 · Metis Labs**
 
@@ -10,13 +10,13 @@ A GST-compliant khata, billing and inventory product for Indian small businesses
 
 | Field | Value |
 |---|---|
-| **Title** | UdhaarBook Single Source of Truth (SSOT) |
+| **Title** | DigiKhaato Single Source of Truth (SSOT) |
 | **Version** | 1.0 |
 | **Assembled** | 2026-09-18 |
 | **Status** | Baselined for build. Parts 0, 16, 21 and 22 are frozen except through the change-request register in Part 43. |
 | **Owner** | Metis Labs — product and engineering leadership jointly. Individual chapters carry named authors; no chapter may be changed by someone other than its author without a change request. |
 | **Audience** | Executives and investors (Parts 1–2, 13), product managers (Parts 10–18), engineers (Parts 19–33), operators (Parts 29–30), and the AI coding agent that will build from it. |
-| **Purpose** | To be the only document anyone needs to build, review, or make a decision about UdhaarBook. Where this document and any other artefact disagree — a Slack message, a Figma file, a ticket, a meeting — this document wins, and the other artefact is the thing that needs updating. |
+| **Purpose** | To be the only document anyone needs to build, review, or make a decision about DigiKhaato. Where this document and any other artefact disagree — a Slack message, a Figma file, a ticket, a meeting — this document wins, and the other artefact is the thing that needs updating. |
 | **Scale** | 43 chapters, approximately 591,000 words. |
 
 ### Revision history
@@ -34,11 +34,11 @@ A GST-compliant khata, billing and inventory product for Indian small businesses
 
 ## What this document is
 
-It is the **specification**. Every decision that has been made about UdhaarBook is written down here, with the reasoning that produced it. It is deliberately long, because the alternative to writing a decision down is making it again — differently — six weeks later in a code review.
+It is the **specification**. Every decision that has been made about DigiKhaato is written down here, with the reasoning that produced it. It is deliberately long, because the alternative to writing a decision down is making it again — differently — six weeks later in a code review.
 
 It is **normative**. Parts 0, 16, 21 and 22 are contracts: the canon defines terms, identifiers and architecture decisions; the feature catalogue defines scope and phase; the database and API specifications define the shapes everything else is built against. The functional requirement documents (Part 17) are binding on behaviour: an acceptance criterion in an FRD is a test that must pass.
 
-It is **self-contained**. There is no companion wiki, no "see the design doc", no tribal knowledge assumed. A competent engineer who has never met the team should be able to build UdhaarBook from these files alone. That is the acceptance test for the document itself.
+It is **self-contained**. There is no companion wiki, no "see the design doc", no tribal knowledge assumed. A competent engineer who has never met the team should be able to build DigiKhaato from these files alone. That is the acceptance test for the document itself.
 
 It is **traceable**. Every feature has an ID, every requirement has an ID, every decision has an ID, every open question has an ID, and every change to a foundation document has an ID. Nothing arrives anonymously.
 
@@ -170,7 +170,7 @@ Word counts computed with `wc -w` on 2026-09-18. They are here so you can budget
 | # | Title | What it is | Words |
 |---|---|---|---|
 | **1** | Executive Summary | The commercial case, the market opportunity, the bet being made, the principal risks and the definition of success. | 4,159 |
-| **2** | Product Vision | What UdhaarBook is for, who it serves, and the things it deliberately refuses to become. | 4,306 |
+| **2** | Product Vision | What DigiKhaato is for, who it serves, and the things it deliberately refuses to become. | 4,306 |
 
 ### Part B — Research (Parts 3–9)
 
@@ -179,7 +179,7 @@ Word counts computed with `wc -w` on 2026-09-18. They are here so you can budget
 | **3** | Market Research Synthesis | The Indian small-business software market: size, segments, digitisation pressure and what actually drives adoption. | 7,017 |
 | **4** | Competitor Research Synthesis | The competitive field — Vyapar, Khatabook, Zoho, Tally and the long tail — and where the gaps are. | 5,753 |
 | **5** | Zoho Inventory: Decision-Oriented Analysis | A feature-by-feature reading of a mature inventory product, used to decide what to copy, what to simplify and what to omit. | 5,315 |
-| **6** | Knowledge-Base Analysis and Help Content Plan | What Zoho's help centre reveals about where users get stuck, and the content model UdhaarBook's help system inherits from it. | 2,978 |
+| **6** | Knowledge-Base Analysis and Help Content Plan | What Zoho's help centre reveals about where users get stuck, and the content model DigiKhaato's help system inherits from it. | 2,978 |
 | **7** | Zoho's Product Evolution as a Sequencing Lesson | Ten years of release notes read as a warning about scope gravity and the order in which capability should arrive. | 3,215 |
 | **8** | Review Mining: What Real Users Say | Verbatim evidence from public review sites about what small businesses praise, tolerate and abandon software over. | 3,551 |
 | **9** | Khatabook and the Indian Ledger-App Category | The incumbent's model, its monetisation problem, and the specific room it leaves for a product that does billing and stock too. | 4,412 |

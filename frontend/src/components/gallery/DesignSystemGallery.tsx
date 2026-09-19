@@ -10,6 +10,7 @@ import {
   UbDivider,
   UbGrid,
   UbListItemText,
+  UbLogo,
   UbPressable,
   UbEmptyState,
   UbPageHeader,
@@ -57,6 +58,36 @@ export function DesignSystemGallery(): React.JSX.Element {
       }
     >
       <UbStack gap={6}>
+        <UbCard
+          title="UbLogo"
+          description="§23.2.6 — the mark alone and the full lockup, at every tier. Painted from --brand-*, so a white-label ramp repaints it."
+        >
+          <UbStack gap={5}>
+            <UbStack direction="row" wrap align="center" gap={6}>
+              <UbLogo size="sm" />
+              <UbLogo size="md" />
+              <UbLogo size="lg" />
+              <UbLogo size="xl" />
+            </UbStack>
+            <UbDivider decorative />
+            <UbStack direction="row" wrap align="center" gap={8}>
+              <UbLogo variant="full" size="sm" />
+              <UbLogo variant="full" size="md" />
+              <UbLogo variant="full" size="lg" />
+            </UbStack>
+            <UbDivider decorative />
+            {/* `tone="inherit"` is what the dark rail uses: the rail is dark in
+                BOTH themes, so the wordmark must not follow --text-primary. */}
+            <UbBox className="rounded-card bg-surface-nav p-5 text-text-onNav">
+              <UbLogo variant="full" size="md" tone="inherit" />
+            </UbBox>
+            <UbStack direction="row" wrap align="center" gap={6}>
+              <UbLogo variant="full" size="md" wordmark="Bharat Khata" />
+              <UbLogo size="md" label="Named, for a link that has no text" />
+            </UbStack>
+          </UbStack>
+        </UbCard>
+
         <UbCard title="UbAmount" description="Part 23 §23.2.6 — every case in the table.">
           <UbStack direction="row" wrap align="start" gap={8}>
             <UbAmount value="500.00" tone="receivable" sign="minus" label="You gave" />

@@ -6,7 +6,7 @@ import { notFound } from 'next/navigation';
 
 import { UbPageSkeleton } from 'src/design-system';
 
-import { OnboardingStepPageContent } from 'modules/UdhaarBook/features/onboarding/components/OnboardingStepPageContent';
+import { OnboardingStepPageContent } from 'modules/DigiKhaato/features/onboarding/components/OnboardingStepPageContent';
 
 /**
  * PLT-03 §7 / FR-9 — the wizard's step is the URL, so a resume is a redirect

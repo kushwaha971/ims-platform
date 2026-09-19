@@ -2,7 +2,7 @@
 
 ## 43.1 Why this document exists
 
-The UdhaarBook specification was written by several authors working in parallel against a shared foundation. Part 0 (canon), Part 21 (database architecture) and Part 22 (API specification) were fixed early so that the functional requirement documents could be written against something stable. That was the right call — but it meant every author who found a gap in the foundation had nowhere to put the fix except a note in their own chapter.
+The DigiKhaato specification was written by several authors working in parallel against a shared foundation. Part 0 (canon), Part 21 (database architecture) and Part 22 (API specification) were fixed early so that the functional requirement documents could be written against something stable. That was the right call — but it meant every author who found a gap in the foundation had nowhere to put the fix except a note in their own chapter.
 
 Each of them invented the same mechanism independently, and each of them invented it slightly differently.
 

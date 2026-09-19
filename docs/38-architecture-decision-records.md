@@ -87,9 +87,9 @@ The remaining new records, ADR-026 to ADR-040, were not numbered anywhere and ar
 
 **Status:** Accepted · **Date:** 18 September 2026
 
-**Context.** UdhaarBook's frontend must be mobile-first, fast on a 2 GB Android phone over a 3G-equivalent connection, installable as a PWA, capable of rendering public pages (a shared statement, a shared invoice) that are opened by people with no account and no app, and buildable by a very small team reusing an existing internal codebase. Metis Labs already operates the BrandHub Customer Module on Next.js with the App Router, and canon §0.1 names it as the engineering reference for frontend organisation, `ml-uikit` usage, list-page, form and dialog patterns. The choice is therefore not "which framework is best" but "is there a reason to depart from the one the team already knows and whose conventions this specification has already borrowed at file-naming depth".
+**Context.** DigiKhaato's frontend must be mobile-first, fast on a 2 GB Android phone over a 3G-equivalent connection, installable as a PWA, capable of rendering public pages (a shared statement, a shared invoice) that are opened by people with no account and no app, and buildable by a very small team reusing an existing internal codebase. Metis Labs already operates the BrandHub Customer Module on Next.js with the App Router, and canon §0.1 names it as the engineering reference for frontend organisation, `ml-uikit` usage, list-page, form and dialog patterns. The choice is therefore not "which framework is best" but "is there a reason to depart from the one the team already knows and whose conventions this specification has already borrowed at file-naming depth".
 
-**Decision.** The frontend is **Next.js with the App Router, on the same major version as BrandHub (16.x), with React 18.3 and TypeScript in strict mode**; `app/**` holds thin route files that are a Suspense wrapper plus a feature-owned page-content component, and all substance lives under `src/modules/UdhaarBook/`.
+**Decision.** The frontend is **Next.js with the App Router, on the same major version as BrandHub (16.x), with React 18.3 and TypeScript in strict mode**; `app/**` holds thin route files that are a Suspense wrapper plus a feature-owned page-content component, and all substance lives under `src/modules/DigiKhaato/`.
 
 The App Router is used for routing, layouts, loading and error boundaries, and for server rendering the small number of public pages. It is not used to move business logic to the server: every authenticated page is a client component tree talking to the Django API, because the API is the one authority (canon §0.11 rule 3) and a second data-fetching layer in the Next.js server would be a second place for money to be computed.
 
@@ -833,7 +833,7 @@ The compensating controls are explicit: a generic `invalid_credentials` response
 
 **Status:** Accepted · **Date:** 18 September 2026
 
-**Context.** `WLB-03` (Phase 2) lets a partner serve UdhaarBook on its own hostname. Each hostname needs a TLS certificate. Automating ACME from the application means adding an ACME client dependency and creating a write path from partner-controlled input (a hostname) into the TLS layer.
+**Context.** `WLB-03` (Phase 2) lets a partner serve DigiKhaato on its own hostname. Each hostname needs a TLS certificate. Automating ACME from the application means adding an ACME client dependency and creating a write path from partner-controlled input (a hostname) into the TLS layer.
 
 **Decision.** Certificate issuance for a partner domain is a **deliberate manual operations step**, gated on hostname verification having already succeeded; ACME automation from within the application is Phase 3 at the earliest and would need its own ADR.
 

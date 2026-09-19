@@ -4,7 +4,7 @@ import { Suspense } from 'react';
 
 import { UbPageSkeleton } from 'src/design-system';
 
-import { TenantChooserPageContent } from 'modules/UdhaarBook/features/tenant-switcher/components/TenantChooserPageContent';
+import { TenantChooserPageContent } from 'modules/DigiKhaato/features/tenant-switcher/components/TenantChooserPageContent';
 
 /** PLT-04 FR-9 / §7 — the full-screen business chooser. */
 export default function SwitchTenantPage(): React.JSX.Element {

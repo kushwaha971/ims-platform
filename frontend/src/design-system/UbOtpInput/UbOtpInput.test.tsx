@@ -73,7 +73,11 @@ describe('UbOtpInput', () => {
     first.focus();
     await user.paste('12 34 56');
 
-    expect(cells().map((cell) => cell.value).join('')).toBe('123456');
+    expect(
+      cells()
+        .map((cell) => cell.value)
+        .join('')
+    ).toBe('123456');
   });
 
   it('advances as digits are typed and auto-submits on the sixth', async () => {
@@ -83,7 +87,11 @@ describe('UbOtpInput', () => {
 
     await user.type(cells()[0] as HTMLInputElement, '123456');
 
-    expect(cells().map((cell) => cell.value).join('')).toBe('123456');
+    expect(
+      cells()
+        .map((cell) => cell.value)
+        .join('')
+    ).toBe('123456');
     expect(onComplete).toHaveBeenCalledWith('123456');
   });
 
@@ -103,7 +111,11 @@ describe('UbOtpInput', () => {
     third.focus();
     await user.keyboard('{Backspace}');
 
-    expect(cells().map((cell) => cell.value).join('')).toBe('1');
+    expect(
+      cells()
+        .map((cell) => cell.value)
+        .join('')
+    ).toBe('1');
   });
 
   it('is read-only, not disabled, while verifying — focus must survive', () => {
@@ -118,6 +130,10 @@ describe('UbOtpInput', () => {
     const user = userEvent.setup();
     render(<Harness readOnly initial="12" />);
     await user.type(cells()[2] as HTMLInputElement, '9');
-    expect(cells().map((cell) => cell.value).join('')).toBe('12');
+    expect(
+      cells()
+        .map((cell) => cell.value)
+        .join('')
+    ).toBe('12');
   });
 });

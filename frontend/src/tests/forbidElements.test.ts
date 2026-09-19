@@ -31,7 +31,7 @@ const ROOT = process.cwd();
 const ESLINT_BIN = join(ROOT, 'node_modules/.bin/eslint');
 
 /** A file under the ban, files exempt from it, and the document itself. */
-const FEATURE_FILE = 'src/modules/UdhaarBook/features/parties/components/PartyListRow.tsx';
+const FEATURE_FILE = 'src/modules/DigiKhaato/features/parties/components/PartyListRow.tsx';
 const SHELL_FILE = 'src/components/layout/UbAppShell.tsx';
 const ROUTE_FILE = 'app/not-found.tsx';
 const DESIGN_SYSTEM_FILE = 'src/design-system/UbText/UbText.tsx';
@@ -62,7 +62,7 @@ interface LintMessage {
   readonly fatal?: boolean;
 }
 
-const PROBE_SOURCE = "export const Probe = (): React.JSX.Element => <div>probe</div>;\n";
+const PROBE_SOURCE = 'export const Probe = (): React.JSX.Element => <div>probe</div>;\n';
 
 const lintProbe = (relativePath: string): readonly LintMessage[] => {
   const absolute = join(ROOT, relativePath);
@@ -173,7 +173,7 @@ describe('react/forbid-elements is configured, not merely mentioned', () => {
 describe('the rule actually fires', () => {
   it('rejects a raw <div> written into a feature path', () => {
     const messages = lintProbe(
-      'src/modules/UdhaarBook/features/parties/components/ForbidElementsProbe.tsx'
+      'src/modules/DigiKhaato/features/parties/components/ForbidElementsProbe.tsx'
     );
     expect(messages.length).toBeGreaterThan(0);
     expect(messages[0]?.severity).toBe(2);

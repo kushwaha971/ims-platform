@@ -4,24 +4,24 @@ import {
   registerAccount,
   requestPasswordReset,
   setPassword,
-} from 'modules/UdhaarBook/features/auth/redux/authThunk';
+} from 'modules/DigiKhaato/features/auth/redux/authThunk';
 import {
   fetchSession,
   logout,
   switchTenant,
-} from 'modules/UdhaarBook/features/auth/redux/sessionThunk';
+} from 'modules/DigiKhaato/features/auth/redux/sessionThunk';
 import {
   completeOnboarding,
   createTenant,
   saveAddressStep,
   saveGstStep,
-} from 'modules/UdhaarBook/features/onboarding/redux/onboardingThunk';
-import { fetchPartyList } from 'modules/UdhaarBook/features/parties/redux/partyListThunk';
-import { fetchPlanLimits } from 'modules/UdhaarBook/features/plan/redux/planThunk';
+} from 'modules/DigiKhaato/features/onboarding/redux/onboardingThunk';
+import { fetchPartyList } from 'modules/DigiKhaato/features/parties/redux/partyListThunk';
+import { fetchPlanLimits } from 'modules/DigiKhaato/features/plan/redux/planThunk';
 import {
   leaveTenant,
   setDefaultTenant,
-} from 'modules/UdhaarBook/features/tenant-switcher/redux/tenantSwitcherThunk';
+} from 'modules/DigiKhaato/features/tenant-switcher/redux/tenantSwitcherThunk';
 
 /**
  * Part 19 §19.3.6 — every async thunk in the codebase is registered exactly

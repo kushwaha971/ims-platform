@@ -1,6 +1,6 @@
 # Part 5 — Zoho Inventory: Decision-Oriented Analysis
 
-*Zoho Inventory is the most complete public specification of what an SMB inventory product looks like after ten years of production use. Dossier R1 catalogues it module by module with exact field names, status enumerations, limits and quirks. This chapter condenses that catalogue into decisions. For each major area it states what Zoho does, what UdhaarBook does, and an explicit **ADOPT / ADAPT / REJECT** verdict with reasoning and a pointer to the UdhaarBook feature ID that carries it.*
+*Zoho Inventory is the most complete public specification of what an SMB inventory product looks like after ten years of production use. Dossier R1 catalogues it module by module with exact field names, status enumerations, limits and quirks. This chapter condenses that catalogue into decisions. For each major area it states what Zoho does, what DigiKhaato does, and an explicit **ADOPT / ADAPT / REJECT** verdict with reasoning and a pointer to the DigiKhaato feature ID that carries it.*
 
 *The verdicts mean: **ADOPT** — take Zoho's model substantially as-is because it is correct and battle-tested. **ADAPT** — take the idea but change the shape for an India-first, ledger-first, mobile-first product. **REJECT** — deliberately do not build this, with a reason.*
 
@@ -12,11 +12,11 @@ Zoho Inventory organises itself as a suite of sibling modules — Items, Item Gr
 
 Underneath the module sprawl sits a **consistent chassis** that every entity eventually receives: statuses, custom fields (≤44 per module), custom views, approvals, comments and history, attachments, custom buttons, WhatsApp send, a PDF template, import/export and bulk actions. Zoho spent 2025–26 retrofitting this chassis onto its late modules — purchase receives, returns, transfer orders, packages [R1 §C.3 lesson 2].
 
-**Verdict on the chassis: ADOPT.** This is the single most valuable architectural lesson in the dossier. UdhaarBook defines the chassis once — canonical statuses (Part 0 §0.7), an append-only `AuditLog`, attachments through `files_attachment`, list filters and CSV export, and a share/print path — and instantiates it for every entity from day one rather than retrofitting. Carried by: Part 0 §0.11 rules 1–7, PLT-08, IMP-02.
+**Verdict on the chassis: ADOPT.** This is the single most valuable architectural lesson in the dossier. DigiKhaato defines the chassis once — canonical statuses (Part 0 §0.7), an append-only `AuditLog`, attachments through `files_attachment`, list filters and CSV export, and a share/print path — and instantiates it for every entity from day one rather than retrofitting. Carried by: Part 0 §0.11 rules 1–7, PLT-08, IMP-02.
 
-**Verdict on the module sprawl: REJECT.** Zoho's own third-ranked complaint is clutter: "doesn't allow removing unneeded features"; "I see a lot of tools I don't really know how to use"; "steep learning curve" [R1 §E.1 #3]. UdhaarBook ships eleven modules at MVP, each toggleable per tenant, seeded from the business-type choice. A services business sees no inventory at all. Carried by: Part 0 §0.3 module map, PLT-06.
+**Verdict on the module sprawl: REJECT.** Zoho's own third-ranked complaint is clutter: "doesn't allow removing unneeded features"; "I see a lot of tools I don't really know how to use"; "steep learning curve" [R1 §E.1 #3]. DigiKhaato ships eleven modules at MVP, each toggleable per tenant, seeded from the business-type choice. A services business sees no inventory at all. Carried by: Part 0 §0.3 module map, PLT-06.
 
-**Verdict on the split between Inventory and Books: REJECT.** An Indian SMB needing GSTR-1 or 3B must run two Zoho products on a shared organisation, because GST returns are not in Inventory [R1 §E.2]. UdhaarBook puts the GST summary, HSN summary and document-series summary in the same product as the invoice that produced them. Carried by: RPT-07, later RPT-12.
+**Verdict on the split between Inventory and Books: REJECT.** An Indian SMB needing GSTR-1 or 3B must run two Zoho products on a shared organisation, because GST returns are not in Inventory [R1 §E.2]. DigiKhaato puts the GST summary, HSN summary and document-series summary in the same product as the invoice that produced them. Carried by: RPT-07, later RPT-12.
 
 ---
 
@@ -26,13 +26,13 @@ This is Zoho's deepest and least obvious design decision. The organisation picks
 
 The reason this exists is stated in the evolution analysis: *"Stock reality vs book reality diverge… all exist because SMBs argue about 'how many do I actually have'. Expose both numbers plainly"* [R1 §C.3 lesson 4].
 
-**Verdict: ADAPT.** UdhaarBook does not implement two stock modes, because it has no separate receive-and-ship pipeline at MVP — an invoice *is* the shipment for a counter sale. What it adopts is the *principle*: `StockMovement` is an immutable signed quantity change and on-hand is the sum of movements, with `ItemStock` as a denormalised, recomputable cache (Part 0 §0.6). Committed stock becomes meaningful only when sales orders arrive in Phase 3 (SAL-11), and In-Transit only with multi-location transfers in Phase 2 (INV-11). Until then there is exactly one number — on-hand — which is the honest answer for a single-location business. Carried by: INV-03, INV-08.
+**Verdict: ADAPT.** DigiKhaato does not implement two stock modes, because it has no separate receive-and-ship pipeline at MVP — an invoice *is* the shipment for a counter sale. What it adopts is the *principle*: `StockMovement` is an immutable signed quantity change and on-hand is the sum of movements, with `ItemStock` as a denormalised, recomputable cache (Part 0 §0.6). Committed stock becomes meaningful only when sales orders arrive in Phase 3 (SAL-11), and In-Transit only with multi-location transfers in Phase 2 (INV-11). Until then there is exactly one number — on-hand — which is the honest answer for a single-location business. Carried by: INV-03, INV-08.
 
 ### Negative stock
 
 Zoho **allows** negative stock. The preference "Do you want an Out of Stock warning whenever your stock drops below zero?" only warns — "Enabling this option will only give you a heads up, however you can proceed" — and community threads repeatedly ask for hard blocking on sales-order confirmation [R1 §A.0, §E.1 #5]. The dossier's lesson is explicit: *"Negative stock is a philosophy choice. Zoho warns but allows; community keeps asking to block. Make it a per-org switch on day one"* [R1 §C.3 lesson 9].
 
-**Verdict: ADAPT — build the switch, default to block.** UdhaarBook exposes a tenant setting with three values (allow / warn / block) and defaults to **block** for stock-tracked items, because an Indian retail counter selling what it does not have produces a stock ledger nobody trusts, and because the complaint direction in the community is unambiguous. Carried by: INV-06, PLT-06.
+**Verdict: ADAPT — build the switch, default to block.** DigiKhaato exposes a tenant setting with three values (allow / warn / block) and defaults to **block** for stock-tracked items, because an Indian retail counter selling what it does not have produces a stock ledger nobody trusts, and because the complaint direction in the community is unambiguous. Carried by: INV-06, PLT-06.
 
 ### Valuation
 
@@ -56,7 +56,7 @@ The dossier's own verdict on the form: *"Zoho's item form is heavyweight; the SM
 
 **Verdict on the goods/service split: ADOPT.** `Item.item_type ∈ {goods, service}` with services carrying no stock is exactly right and is already canon (Part 0 §0.2). Services use SAC rather than HSN.
 
-**Verdict on active/inactive instead of delete: ADOPT, with a rename.** Zoho's rule — delete only when there are zero transactions, otherwise mark inactive — is correct and is the only safe behaviour for a financial record. UdhaarBook calls it `archived` and additionally blocks archiving while on-hand ≠ 0 (Part 0 §0.7), which Zoho does not, because a business archiving an item with stock silently loses valuation. Carried by: INV-01, Part 0 §0.7.
+**Verdict on active/inactive instead of delete: ADOPT, with a rename.** Zoho's rule — delete only when there are zero transactions, otherwise mark inactive — is correct and is the only safe behaviour for a financial record. DigiKhaato calls it `archived` and additionally blocks archiving while on-hand ≠ 0 (Part 0 §0.7), which Zoho does not, because a business archiving an item with stock silently loses valuation. Carried by: INV-01, Part 0 §0.7.
 
 **Verdict on 44 custom fields per module: REJECT at MVP.** Custom fields are a Phase 3+ consideration and an ADR when they arrive. They are the single largest source of complexity in a document engine — affecting forms, PDFs, imports, exports, reports, permissions and the API simultaneously.
 
@@ -87,9 +87,9 @@ Critically, **no disassembly is documented** [R1 §A.4].
 
 ## 5.5 Status models
 
-Zoho's status vocabularies are the single best thing about the product and are the direct source of Part 0 §0.7. The exact enumerations are worth restating because UdhaarBook's are derived from them.
+Zoho's status vocabularies are the single best thing about the product and are the direct source of Part 0 §0.7. The exact enumerations are worth restating because DigiKhaato's are derived from them.
 
-| Zoho entity | Zoho statuses | UdhaarBook equivalent | Verdict |
+| Zoho entity | Zoho statuses | DigiKhaato equivalent | Verdict |
 |---|---|---|---|
 | Invoice (API) | `draft`, `sent`, `viewed`, `unpaid`, `partially_paid`, `paid`, `overdue`, `void` | `draft`, `issued`, `partially_paid`, `paid`, `overdue`, `void` | **ADAPT** — merge sent/viewed/unpaid into `issued`; email open-tracking is not an MVP capability and "viewed" without it is a lie |
 | Sales Order | `Draft`, `Confirmed`, `On Hold`, `Closed`, `Void` + custom sub-statuses + three derived dots (invoice/package/shipment) | Deferred to SAL-11 (Phase 3) | **ADAPT later** — adopt Draft/Confirmed/Closed; reject On Hold (it exists only because backorders release on *bill* rather than *receive*, a behaviour Zoho's own community complains about [R1 §A.27]) |
@@ -106,9 +106,9 @@ Zoho's status vocabularies are the single best thing about the product and are t
 
 Two cross-cutting verdicts.
 
-**Custom sub-statuses: REJECT at MVP, revisit in Phase 3.** Zoho lets administrators define sub-statuses under a parent (Confirmed → "To be backordered") and its own lesson says *"Customers want intermediate states to run their floor — plan for user-defined sub-statuses early"* [R1 §C.3 lesson 3]. That is a genuine insight, but sub-statuses touch every filter, report and permission. The design accommodation UdhaarBook makes now is that statuses are stored as short codes with a display layer, so sub-statuses can be added without a migration.
+**Custom sub-statuses: REJECT at MVP, revisit in Phase 3.** Zoho lets administrators define sub-statuses under a parent (Confirmed → "To be backordered") and its own lesson says *"Customers want intermediate states to run their floor — plan for user-defined sub-statuses early"* [R1 §C.3 lesson 3]. That is a genuine insight, but sub-statuses touch every filter, report and permission. The design accommodation DigiKhaato makes now is that statuses are stored as short codes with a display layer, so sub-statuses can be added without a migration.
 
-**Derived statuses computed by a nightly job: ADOPT.** `overdue` in UdhaarBook is derived (issued or partially-paid with `due_on < today`) but *stored* so it can be filtered and indexed, refreshed by a scheduled management command (Part 0 §0.7, ADR-012). This is exactly Zoho's pattern and avoids the classic mistake of computing overdue in every query.
+**Derived statuses computed by a nightly job: ADOPT.** `overdue` in DigiKhaato is derived (issued or partially-paid with `due_on < today`) but *stored* so it can be filtered and indexed, refreshed by a scheduled management command (Part 0 §0.7, ADR-012). This is exactly Zoho's pattern and avoids the classic mistake of computing overdue in every query.
 
 ---
 
@@ -120,7 +120,7 @@ Transaction behaviour is asymmetric and instructive: purchase orders and bills c
 
 **Bin locations** (July 2024) add a Zone → Bin hierarchy with a configurable level, delimiter and alias, capped at 500 bins per location on Standard and Premium and 5,000 on Plus and Enterprise, immutable once used in a transaction, supported across sixteen document types, and — with Move Orders, Putaways and Picklists — sold as an "Advanced Warehousing" add-on at $124.17/month or bundled with Enterprise [R1 §A.7, §Part B].
 
-**Verdict on multi-location: ADAPT — Phase 2, uncapped.** INV-11 delivers a locations master with transfers posting atomic −out/+in movements and per-location on-hand. The capping by plan is **REJECTED**: a distributor with three godowns is exactly the customer UdhaarBook wants, and charging per location is Zoho's model, not the Indian market's (myBillBook advertises "unlimited godowns" on a ₹3,990/year plan [R3 §3.1]).
+**Verdict on multi-location: ADAPT — Phase 2, uncapped.** INV-11 delivers a locations master with transfers posting atomic −out/+in movements and per-location on-hand. The capping by plan is **REJECTED**: a distributor with three godowns is exactly the customer DigiKhaato wants, and charging per location is Zoho's model, not the Indian market's (myBillBook advertises "unlimited godowns" on a ₹3,990/year plan [R3 §3.1]).
 
 **Verdict on the one-warehouse-per-purchase, per-line-on-sales asymmetry: ADOPT.** It matches reality — goods arrive at one door and can ship from several.
 
@@ -136,7 +136,7 @@ Zoho gives every document type its own auto-number series with a configurable pr
 
 Indian law constrains this more tightly than Zoho's generic engine suggests: a tax invoice serial number must be **consecutive, at most 16 characters, unique per financial year, alphanumeric with only `/` and `-` permitted**, and the series must be declared and predictable [R2 §C.1]. GSTR-1 Table 13 requires a document-series summary.
 
-**Verdict: ADAPT — per tenant × document kind × financial year, reset on 1 April.** `DocumentSequence` is a canonical entity (Part 0 §0.6) keyed exactly this way. The 16-character and character-set constraints are validated at the model layer rather than left to the user. Voided numbers are retained and never reused, which UdhaarBook **ADOPTS** from Zoho and which Indian law effectively requires since the series must be consecutive. Multi-GSTIN branch series are deferred: a tenant is one GSTIN at MVP. Carried by: PLT-06, SAL-05, RPT-07.
+**Verdict: ADAPT — per tenant × document kind × financial year, reset on 1 April.** `DocumentSequence` is a canonical entity (Part 0 §0.6) keyed exactly this way. The 16-character and character-set constraints are validated at the model layer rather than left to the user. Voided numbers are retained and never reused, which DigiKhaato **ADOPTS** from Zoho and which Indian law effectively requires since the series must be consecutive. Multi-GSTIN branch series are deferred: a tenant is one GSTIN at MVP. Carried by: PLT-06, SAL-05, RPT-07.
 
 ---
 
@@ -144,15 +144,15 @@ Indian law constrains this more tightly than Zoho's generic engine suggests: a t
 
 Zoho keeps a single Contacts module with `contact_type` = customer|vendor and `customer_type` = Business|Individual, carrying credit limit, opening balance, payment terms, price list, portal access, and for India GST Treatment (`business_gst`, `business_none`, `overseas`, `consumer`), GSTIN, PAN, place of supply and TDS section, plus billing and shipping addresses with up to ten additional addresses, multiple contact persons, reporting tags and attachments. It supports **linking a customer to a vendor** for a combined AR/AP view, and an irreversible **merge** for duplicates [R1 §A.22].
 
-**Verdict on the single Contacts table: ADOPT and go further.** UdhaarBook's `Party` carries `is_customer` and `is_supplier` **flags on one row** rather than a type plus a link, which handles the extremely common Indian case where the same person buys and sells (Part 0 §0.2). This is strictly better than Zoho's customer↔vendor linking. Carried by: PTY-01.
+**Verdict on the single Contacts table: ADOPT and go further.** DigiKhaato's `Party` carries `is_customer` and `is_supplier` **flags on one row** rather than a type plus a link, which handles the extremely common Indian case where the same person buys and sells (Part 0 §0.2). This is strictly better than Zoho's customer↔vendor linking. Carried by: PTY-01.
 
-**Verdict on merge: ADOPT, Phase 2.** Duplicate parties are inevitable when adding from contacts. Zoho's merge is irreversible; UdhaarBook's re-points ledger entries with a full audit trail (PTY-08).
+**Verdict on merge: ADOPT, Phase 2.** Duplicate parties are inevitable when adding from contacts. Zoho's merge is irreversible; DigiKhaato's re-points ledger entries with a full audit trail (PTY-08).
 
-**Verdict on GST Treatment enumeration: ADAPT.** UdhaarBook derives treatment from the party's GSTIN presence and state rather than asking the user to pick from an eight-option dropdown whose UI labels the dossier could not even verify [R1 §A.22]. Registered/unregistered/consumer/overseas is the working set.
+**Verdict on GST Treatment enumeration: ADAPT.** DigiKhaato derives treatment from the party's GSTIN presence and state rather than asking the user to pick from an eight-option dropdown whose UI labels the dossier could not even verify [R1 §A.22]. Registered/unregistered/consumer/overseas is the working set.
 
 **Verdict on price lists: ADAPT to Phase 2.** Zoho supports markup/markdown by percentage with rounding rules, individual item rates per currency, and volume pricing with up to ten quantity tiers per item [R1 §A.23]. Wholesale versus retail pricing is a genuine Indian need (INV-13), but volume tiers and rounding schemes are not MVP.
 
-**Verdict on discount configuration: ADAPT — support both levels, no global "I don't give discounts" mode.** Zoho forces an organisation-wide choice between item-level, transaction-level (before or after tax) and no discounts [R1 §A.25]. Forcing that choice produces a support ticket the first time a shopkeeper needs the other kind. UdhaarBook supports line discount and document discount simultaneously, with `is_discount_before_tax` semantics fixed by GST rules (taxable value is computed after discount per Rule 46 [R2 §C.1]). Carried by: SAL-02.
+**Verdict on discount configuration: ADAPT — support both levels, no global "I don't give discounts" mode.** Zoho forces an organisation-wide choice between item-level, transaction-level (before or after tax) and no discounts [R1 §A.25]. Forcing that choice produces a support ticket the first time a shopkeeper needs the other kind. DigiKhaato supports line discount and document discount simultaneously, with `is_discount_before_tax` semantics fixed by GST rules (taxable value is computed after discount per Rule 46 [R2 §C.1]). Carried by: SAL-02.
 
 ---
 
@@ -164,7 +164,7 @@ Three things are wrong with it from an Indian SMB's point of view, and all three
 
 **Verdict on place-of-supply logic: ADOPT.** Shipping-address state, falling back to billing, falling back to default intrastate, driving CGST+SGST versus IGST, is the correct rule and matches [R2 §C.1]. Carried by: SAL-02.
 
-**Verdict on separate intrastate/interstate tax groups: REJECT.** UdhaarBook stores a single GST rate per item and *computes* the split at document time from place of supply. Zoho's two-tax-group model is an artefact of a generic tax engine and doubles the master data a shopkeeper maintains.
+**Verdict on separate intrastate/interstate tax groups: REJECT.** DigiKhaato stores a single GST rate per item and *computes* the split at document time from place of supply. Zoho's two-tax-group model is an artefact of a generic tax engine and doubles the master data a shopkeeper maintains.
 
 **Verdict on the pre-populated rate table: ADAPT — effective-dated, post-GST-2.0.** `TaxRate` carries slab, cess and effective dates (Part 0 §0.6), seeded with 0/0.25/3/5/18/40 and retaining 12/28 as historical rows so pre-22-September-2025 documents recompute correctly [R2 §C.1]. This is Principle 10 (Part 2 §2.4) made concrete.
 
@@ -176,7 +176,7 @@ Three things are wrong with it from an Indian SMB's point of view, and all three
 
 **Verdict on TDS/TCS: ADAPT — one narrow case at MVP.** Full section-wise TDS and TCS is an accountant's feature. The one case that matters to the ledger is "TDS deducted by customer", which must exist as a receivable-reducing entry type so the party balance nets correctly [R2 §C.1]. Carried by: LED-01 entry types.
 
-**Verdict on GST returns in-product: ADOPT the capability Zoho rejected.** RPT-07 delivers outward and inward summaries by slab with CGST/SGST/IGST split, an HSN summary and a document-series summary at MVP; RPT-12 delivers GSTR-1 JSON in the offline-tool schema at Phase 2. This is a deliberate inversion of Zoho's architecture and one of UdhaarBook's clearest advantages for the single-product Indian SMB [R1 §E.2].
+**Verdict on GST returns in-product: ADOPT the capability Zoho rejected.** RPT-07 delivers outward and inward summaries by slab with CGST/SGST/IGST split, an HSN summary and a document-series summary at MVP; RPT-12 delivers GSTR-1 JSON in the offline-tool schema at Phase 2. This is a deliberate inversion of Zoho's architecture and one of DigiKhaato's clearest advantages for the single-product Indian SMB [R1 §E.2].
 
 ---
 
@@ -184,19 +184,19 @@ Three things are wrong with it from an Indian SMB's point of view, and all three
 
 **Integrations.** Zoho's surface is enormous: Shopify, Amazon, eBay, Etsy, Walmart, WooCommerce and Zoho Commerce for sales channels; Zoho Books, QuickBooks Online and Xero for accounting; Zoho CRM; nine payment gateways globally with Razorpay, Paytm, PayU and Zoho Payments for India; UPS direct plus EasyPost, with Delhivery, Shiprocket and Envia for India; plus Analytics, Sign, Cliq, Desk, Avalara, Slack and Zapier [R1 §A.33]. Its own complaint list flags integration friction: WooCommerce plugin slowness, marketplace mapping issues, "difficult integrating accounting software other than Zoho Books", and the constraint that base currency must match the channel currency [R1 §E.1 #7]. India-specific gaps: **no native Tally integration**, and only three shipping carriers [R1 §E.2].
 
-**Verdict: REJECT the breadth, ADOPT the dossier's own prescription.** "Keep integrations few and deep (Tally export, WhatsApp, UPI)" [R1 §E.1 #7] aligns exactly with [R3 #4]. UdhaarBook's integration list at MVP is WhatsApp deep links, UPI QR and intent, and CSV; Phase 2 adds a payment aggregator; Phase 3 adds Tally XML and a GSP. Marketplace and shipping integrations are rejected until a paying segment demands them.
+**Verdict: REJECT the breadth, ADOPT the dossier's own prescription.** "Keep integrations few and deep (Tally export, WhatsApp, UPI)" [R1 §E.1 #7] aligns exactly with [R3 #4]. DigiKhaato's integration list at MVP is WhatsApp deep links, UPI QR and intent, and CSV; Phase 2 adds a payment aggregator; Phase 3 adds Tally XML and a GSP. Marketplace and shipping integrations are rejected until a paying segment demands them.
 
 **Automation.** Zoho offers workflow rules (10 per module, alerts capped at 500/day, with created/edited/deleted and date-based triggers), field updates, webhooks, Deluge custom functions, validation rules (10 per module), schedules (10 per organisation), blueprints, custom buttons and an extension SDK [R1 §A.32].
 
-**Verdict: REJECT at MVP.** A workflow engine is a product in itself. The three automations UdhaarBook actually needs — reminder scheduling at D-1/D0, a low-stock scan, and an overdue-status refresh — are idempotent scheduled commands (ADR-012), not user-configurable rules. Tenant webhooks and API keys are PLT-13 at Phase 3.
+**Verdict: REJECT at MVP.** A workflow engine is a product in itself. The three automations DigiKhaato actually needs — reminder scheduling at D-1/D0, a low-stock scan, and an overdue-status refresh — are idempotent scheduled commands (ADR-012), not user-configurable rules. Tenant webhooks and API keys are PLT-13 at Phase 3.
 
 **API.** Zoho's API is REST/JSON with OAuth 2.0, `organization_id` on every call, scopes per module and operation, 100 requests per minute per organisation, daily caps by plan, pagination and rich filters [R1 §A.41]. Notably the API documentation and the pricing page **disagree** on daily limits, and the dossier instructs trusting the pricing page [R1 §A.41].
 
-**Verdict: ADOPT the shape.** UdhaarBook's API is REST/JSON at `/api/v1/` with tenant scoping from the token claim, page and cursor pagination, a standard envelope, structured errors and idempotency keys on document POSTs (Part 0 §0.4 ADR-017, §0.8). The lesson about documentation drift is itself adopted: the API specification in Part 22 is the single source and is generated from the implementation.
+**Verdict: ADOPT the shape.** DigiKhaato's API is REST/JSON at `/api/v1/` with tenant scoping from the token claim, page and cursor pagination, a standard envelope, structured errors and idempotency keys on document POSTs (Part 0 §0.4 ADR-017, §0.8). The lesson about documentation drift is itself adopted: the API specification in Part 22 is the single source and is generated from the implementation.
 
 **Reporting.** Zoho ships roughly seventy named reports across eleven categories, plus custom reports, scheduled reports, chart views and grouped totals [R1 §A.29]. And yet "reporting rigidity" is its second-ranked complaint: "reporting features somewhat limited, requiring extra effort"; "custom report building could be more flexible"; dashboard "not updating real time" [R1 §E.1 #2]. The evolution analysis concludes: *"Reporting is never finished. Roughly a third of 2025–26 release notes are report columns/filters/scheduling. Ship a flexible report engine (filters, grouping, export, schedule) rather than fixed reports"* [R1 §C.3 lesson 5].
 
-**Verdict: ADAPT — few reports, one engine.** The dossier's own prescription for UdhaarBook is "ship a handful of killer reports (party ledger, outstanding ageing, stock summary, GST summary, day book) with WhatsApp/PDF share" [R1 §E.1 #2]. MVP ships nine (RPT-01 through RPT-08 plus the party statement LED-04), but they are built on a shared filter-group-export substrate so that adding the tenth is cheap. Scheduled reports are RPT-14 at Phase 3.
+**Verdict: ADAPT — few reports, one engine.** The dossier's own prescription for DigiKhaato is "ship a handful of killer reports (party ledger, outstanding ageing, stock summary, GST summary, day book) with WhatsApp/PDF share" [R1 §E.1 #2]. MVP ships nine (RPT-01 through RPT-08 plus the party statement LED-04), but they are built on a shared filter-group-export substrate so that adding the tenth is cheap. Scheduled reports are RPT-14 at Phase 3.
 
 ---
 
@@ -221,7 +221,7 @@ What each tier gates is the most instructive part:
 
 *Credit notes behind Premium is rejected.* A credit note is how a return is recorded. Gating it makes the product incorrect rather than merely limited.
 
-**Verdict on the free tier's existence: ADOPT the idea, REJECT the shape.** A permanently free tier is right for acquisition (Part 1 §1.9). UdhaarBook's free tier limits *users, businesses and modules* — never document counts, never ledger entries.
+**Verdict on the free tier's existence: ADOPT the idea, REJECT the shape.** A permanently free tier is right for acquisition (Part 1 §1.9). DigiKhaato's free tier limits *users, businesses and modules* — never document counts, never ledger entries.
 
 ---
 

@@ -12,6 +12,21 @@ import { cn } from 'src/utils/cn';
  * things: nothing exists yet, the filters excluded everything, or the request
  * failed. Koper's rule applies to all three: absence is a finding — name the
  * gap and offer the one action that closes it.
+ *
+ * ── CR-2026-09-19-D ─────────────────────────────────────────────────────────
+ * The states were specified and never designed. A 32 px grey icon on the bare
+ * canvas, a heading, a sentence and a button, all on a 12 px gap, is a stack of
+ * four elements rather than a composition — and on the parties screen it was
+ * the FIRST thing every new merchant saw.
+ *
+ *  · The icon sits in a tinted disc — `--surface-sunken` for the two neutral
+ *    variants, `--form-error-dim` for the failure — which gives the block a
+ *    centre of gravity and stops a lone glyph floating.
+ *  · The first-use and filtered variants sit on a dashed hairline panel. An
+ *    empty list still has to look like the list it will become; a heading
+ *    floating on the canvas looks like a page that failed to load.
+ *  · The title is `ds-h3` over a `ds-body` sentence with a real measure, and
+ *    the action is separated by 24 px rather than sharing the text's 12.
  */
 export type UbEmptyStateVariant = 'firstUse' | 'filtered' | 'error';
 
@@ -36,10 +51,16 @@ const ICON: Record<UbEmptyStateVariant, typeof Inbox> = {
 };
 
 const ICON_TONE: Record<UbEmptyStateVariant, string> = {
-  firstUse: 'text-text-tertiary',
-  filtered: 'text-text-tertiary',
+  firstUse: 'bg-surface-sunken text-text-tertiary',
+  filtered: 'bg-surface-sunken text-text-tertiary',
   // An error is the validation/system family, never the receivable red.
-  error: 'text-formError',
+  error: 'bg-formError-dim text-formError',
+};
+
+const PANEL: Record<UbEmptyStateVariant, string> = {
+  firstUse: 'rounded-card border border-dashed border-border-subtle bg-surface-card/50',
+  filtered: 'rounded-card border border-dashed border-border-subtle bg-surface-card/50',
+  error: 'rounded-card border border-formError bg-formError-dim',
 };
 
 function UbEmptyStateBase({
@@ -56,15 +77,20 @@ function UbEmptyStateBase({
     <MLEmpty
       // R-A-6 — an error state is announced.
       role={variant === 'error' ? 'alert' : undefined}
-      className={cn(
-        variant === 'error' && 'rounded-md border border-formError bg-formError-dim',
-        className
-      )}
+      className={cn('gap-4 px-6 py-14', PANEL[variant], className)}
     >
-      <Icon aria-hidden className={cn('h-8 w-8', ICON_TONE[variant])} />
+      <span
+        aria-hidden
+        className={cn(
+          'mb-1 flex h-12 w-12 items-center justify-center rounded-pill',
+          ICON_TONE[variant]
+        )}
+      >
+        <Icon className="h-6 w-6" />
+      </span>
       <MLEmptyTitle>{title}</MLEmptyTitle>
       {description && <MLEmptyDescription>{description}</MLEmptyDescription>}
-      {action}
+      {action && <span className="mt-2 inline-flex">{action}</span>}
       {requestId && (
         <p className="ds-mono text-text-muted" data-testid="request-id">
           {requestId}

@@ -2,7 +2,7 @@
 
 This chapter is addressed to you.
 
-You are the AI coding agent building UdhaarBook. Everything below is written in the imperative because it is an instruction, not a description. When this chapter says "do", it means do; when it says "never", it means there is no case in which it is acceptable, including the case you are about to construct in your head.
+You are the AI coding agent building DigiKhaato. Everything below is written in the imperative because it is an instruction, not a description. When this chapter says "do", it means do; when it says "never", it means there is no case in which it is acceptable, including the case you are about to construct in your head.
 
 Read this chapter once in full before your first task, and keep §34.11 in context permanently.
 
@@ -55,7 +55,7 @@ You stop and escalate in exactly three situations. Learn to tell them apart, bec
 
 **Case 2 — AMBIGUOUS.** Two readings of the same text are both defensible and produce different behaviour. Example: Part 22 §22.4 says party list `meta.totals` is "computed over the filtered set" — does "filtered" include the pagination window or only the filters?
 
-**Case 3 — CONTRADICTORY.** Two chapters say different things. Example: Part 19 §19.2.1 places the design system at `src/design-system/` while canon §0.10 places it at `src/modules/UdhaarBook/design-system/`.
+**Case 3 — CONTRADICTORY.** Two chapters say different things. Example: Part 19 §19.2.1 places the design system at `src/design-system/` while canon §0.10 places it at `src/modules/DigiKhaato/design-system/`.
 
 For Case 3 only, try the precedence order in §34.2.2 first. If precedence resolves it cleanly, follow the winner, note it in your PR, and raise a low-priority defect against the losing chapter. If precedence does not resolve it — because both chapters are at the same level, or because following the winner would break something concrete — escalate.
 
@@ -1068,7 +1068,7 @@ import { useTranslation } from 'src/hooks/useTranslation';
 import { usePermissions } from 'src/hooks/usePermissions';
 import {
   UbPageShell, UbPageHeader, UbEmptyState, UbSkeleton, UbDataGrid,
-} from 'modules/UdhaarBook/design-system';
+} from 'modules/DigiKhaato/design-system';
 
 import { PartyTotalsHeader } from './PartyTotalsHeader';
 import { PartyListToolbar } from './PartyListToolbar';
@@ -1312,7 +1312,7 @@ Tokens only.
 
 ```ts
 // NEVER
-import partyReducer from 'modules/UdhaarBook/features/parties/redux/partyListSlice';
+import partyReducer from 'modules/DigiKhaato/features/parties/redux/partyListSlice';
 ```
 
 React to the other feature's *thunk* in `extraReducers` (R-RX-8).
@@ -1540,7 +1540,7 @@ Keep this in context at all times. It is the whole chapter compressed; when it c
 
 ```
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  UDHAARBOOK — AI CODING AGENT OPERATING CARD                             ║
+║  DIGIKHAATO — AI CODING AGENT OPERATING CARD                             ║
 ╠══════════════════════════════════════════════════════════════════════════╣
 ║  ROLE     Implement the SSOT. Never invent product, UX or architecture.  ║
 ║  WHEN THE SPEC IS SILENT / AMBIGUOUS / CONTRADICTORY → stop, raise a     ║

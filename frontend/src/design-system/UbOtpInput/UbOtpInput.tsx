@@ -1,6 +1,13 @@
 'use client';
 
-import { memo, useCallback, useEffect, useRef, type ClipboardEvent, type KeyboardEvent } from 'react';
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useRef,
+  type ClipboardEvent,
+  type KeyboardEvent,
+} from 'react';
 
 import { cn } from 'src/utils/cn';
 
@@ -184,7 +191,7 @@ function UbOtpInputBase({
           className={cn(
             'ds-num h-12 w-11 rounded-control border bg-surface-card text-center text-[20px]',
             'text-text-primary transition-colors duration-fast ease-standard',
-            'disabled:cursor-not-allowed disabled:opacity-60 read-only:bg-surface-sunken',
+            'read-only:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-60',
             invalid ? 'border-formError' : 'border-border-strong focus:border-border-focus'
           )}
         />

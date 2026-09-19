@@ -1,6 +1,6 @@
 # Part 20 — Backend Architecture
 
-> **Status:** normative. This chapter is the build instruction for the UdhaarBook backend. Where it appears to conflict with Part 0 (Canon), Part 0 wins and this chapter is a defect. Where it appears to conflict with Part 21 (Database) or Part 22 (API), raise a change request — those three chapters are meant to be one design described from three angles.
+> **Status:** normative. This chapter is the build instruction for the DigiKhaato backend. Where it appears to conflict with Part 0 (Canon), Part 0 wins and this chapter is a defect. Where it appears to conflict with Part 21 (Database) or Part 22 (API), raise a change request — those three chapters are meant to be one design described from three angles.
 >
 > **Audience:** the AI coding agent (or human) writing the backend from an empty repository. Nothing in this chapter may be left to invention: if a decision is not written here, in Part 21, or in Part 22, it is a specification gap and must be raised as a CR, not guessed.
 
@@ -31,7 +31,7 @@ Every decision below is downstream of ADR-001 … ADR-021 in canon §0.4. Restat
 
 ### 20.1.1 The shape in one paragraph
 
-UdhaarBook's backend is a **modular monolith**: one Django project (`config`), one database, one process image, and thirteen Django applications that map one-to-one onto the product modules in canon §0.3. Every application owns its tables, its serializers, its services and its URLs. Applications talk to each other by **importing service functions and selector functions**, never by importing each other's views, serializers or querysets, and never over the network. The monolith is deliberate: the product is a single-tenant-per-row SaaS whose hardest problems (transactional consistency between ledger, stock and documents) are exactly the problems that distributed services make worse. The modularity is equally deliberate: the app boundaries are the seams along which a module could later become a separate deployable if a partner ever demands it, and the dependency rules in §20.1.4 are what keep those seams clean.
+DigiKhaato's backend is a **modular monolith**: one Django project (`config`), one database, one process image, and thirteen Django applications that map one-to-one onto the product modules in canon §0.3. Every application owns its tables, its serializers, its services and its URLs. Applications talk to each other by **importing service functions and selector functions**, never by importing each other's views, serializers or querysets, and never over the network. The monolith is deliberate: the product is a single-tenant-per-row SaaS whose hardest problems (transactional consistency between ledger, stock and documents) are exactly the problems that distributed services make worse. The modularity is equally deliberate: the app boundaries are the seams along which a module could later become a separate deployable if a partner ever demands it, and the dependency rules in §20.1.4 are what keep those seams clean.
 
 ### 20.1.2 The applications
 
@@ -1189,7 +1189,7 @@ class LedgerEntry(TenantModel):
 
 **(7) The response**
 
-`StandardResponse.created()` produces exactly the canon envelope (§22.1) — this is the UdhaarBook descendant of BrandHub's `StandardResponse` pattern, tightened to the `{data, meta, message}` / `{error:{code,message,details,request_id}}` contract:
+`StandardResponse.created()` produces exactly the canon envelope (§22.1) — this is the DigiKhaato descendant of BrandHub's `StandardResponse` pattern, tightened to the `{data, meta, message}` / `{error:{code,message,details,request_id}}` contract:
 
 ```python
 # apps/common/responses.py
@@ -1433,10 +1433,10 @@ REST_FRAMEWORK = {
 
 Part 21 §21.1 fixes the storage model: one database, one schema, a `tenant_id` column on every business table, with PostgreSQL row-level security reserved for Phase 2. The application is therefore the **only** thing standing between tenant A and tenant B at MVP, which is why tenancy is the most heavily tested area of the backend (§20.4.7) and why every default fails closed: *a request with no resolvable tenant sees nothing, never everything.*
 
-The primitive is lifted directly from the working DigiKhaato code (`apps/common/tenancy.py`, `apps/common/viewsets.py`) and extended for UdhaarBook's richer model — DigiKhaato's tenant is a `User` row with `role="admin"`; UdhaarBook's tenant is a first-class `Tenant` row reached through `Membership`.
+The primitive is lifted directly from the working legacy DigiKhaato code (`apps/common/tenancy.py`, `apps/common/viewsets.py`) and extended for this product's richer model — legacy DigiKhaato's tenant is a `User` row with `role="admin"`; this product's tenant is a first-class `Tenant` row reached through `Membership`.
 
 ```python
-# DigiKhaato, apps/common/viewsets.py — the pattern this design inherits
+# legacy DigiKhaato, apps/common/viewsets.py — the pattern this design inherits
 class TenantScopeMixin:
     tenant_field = "tenant"
 
@@ -1652,7 +1652,7 @@ from apps.common.tenancy import get_effective_tenant
 
 
 class TenantScopeMixin:
-    """Fail-closed tenant scoping for views (DigiKhaato pattern, UdhaarBook model)."""
+    """Fail-closed tenant scoping for views (legacy DigiKhaato pattern, this product's model)."""
 
     tenant_field = "tenant"
 
@@ -1682,7 +1682,7 @@ class TenantScopedViewSet(TenantScopeMixin, viewsets.ModelViewSet):
         return self.scope_to_tenant(super().get_queryset())
 ```
 
-For relations submitted in request bodies the same guarantee must hold, or a client could attach tenant B's party to tenant A's invoice. `TenantPrimaryKeyRelatedField` (DigiKhaato's IDOR guard, carried over verbatim in intent) makes a foreign id indistinguishable from a non-existent id:
+For relations submitted in request bodies the same guarantee must hold, or a client could attach tenant B's party to tenant A's invoice. `TenantPrimaryKeyRelatedField` (legacy DigiKhaato's IDOR guard, carried over verbatim in intent) makes a foreign id indistinguishable from a non-existent id:
 
 ```python
 # apps/common/serializers.py
@@ -1717,7 +1717,7 @@ class TenantPrimaryKeyRelatedField(serializers.PrimaryKeyRelatedField):
 | `Idempotency-Key` | client-generated UUID | Used only as a cache key, scoped to `(tenant, user, endpoint)`. |
 | `X-CSRF-Token` | browser | Required for cookie-authenticated unsafe methods. |
 
-JWT claims (canon §22.2): `sub` user id, `tid` tenant id, `rol` role code, `sid` session id, `ver` permissions version, `exp`. UdhaarBook adds `imp` (impersonated tenant id) only in super-admin impersonation tokens, and `typ` (`access` | `refresh`). **Claims are inputs to a database check, never a substitute for one:** `rol` renders the UI, but every permission decision re-reads the membership (§20.5.5).
+JWT claims (canon §22.2): `sub` user id, `tid` tenant id, `rol` role code, `sid` session id, `ver` permissions version, `exp`. DigiKhaato adds `imp` (impersonated tenant id) only in super-admin impersonation tokens, and `typ` (`access` | `refresh`). **Claims are inputs to a database check, never a substitute for one:** `rol` renders the UI, but every permission decision re-reads the membership (§20.5.5).
 
 ### 20.4.7 The tests that prove isolation
 

@@ -2,15 +2,15 @@
 
 ## 19.0 Status, scope and how to read this chapter
 
-This chapter is **normative**. It tells an engineer — or an AI coding agent — where every frontend file lives, what it may import, what it must contain and how it talks to the layer beneath it. Together with Part 23 (Design System), Part 22 (API Specification), Part 25 (Frontend Coding Standards) and the feature specifications in Part 17, it is sufficient to build the UdhaarBook web client from an empty directory without inventing a single structural decision.
+This chapter is **normative**. It tells an engineer — or an AI coding agent — where every frontend file lives, what it may import, what it must contain and how it talks to the layer beneath it. Together with Part 23 (Design System), Part 22 (API Specification), Part 25 (Frontend Coding Standards) and the feature specifications in Part 17, it is sufficient to build the DigiKhaato web client from an empty directory without inventing a single structural decision.
 
 Where this chapter and Part 0 (Canon) disagree, **Part 0 wins** and this chapter is a defect. Where this chapter and a Part 17 FRD disagree on a screen-level detail, the FRD wins for that screen; where they disagree on structure, this chapter wins.
 
-**The governing constraint.** The UdhaarBook frontend replicates the conventions of the **BrandHub Customer module** (`brandhub/BrandHub/apps/frontend/src/modules/Customer`, `app/customer/**`) exactly: the same folder layout, the same Redux Toolkit slice + `createAsyncThunk` data layer, the same service layer over a shared Axios instance, the same React Hook Form + Yup forms driven by one central `useValidationSchemas()` hook, the same design-system wrapper component template, the same thin `app/**` route files. This is not a suggestion to be weighed against alternatives. It is the reference implementation, and deviations require an ADR.
+**The governing constraint.** The DigiKhaato frontend replicates the conventions of the **BrandHub Customer module** (`brandhub/BrandHub/apps/frontend/src/modules/Customer`, `app/customer/**`) exactly: the same folder layout, the same Redux Toolkit slice + `createAsyncThunk` data layer, the same service layer over a shared Axios instance, the same React Hook Form + Yup forms driven by one central `useValidationSchemas()` hook, the same design-system wrapper component template, the same thin `app/**` route files. This is not a suggestion to be weighed against alternatives. It is the reference implementation, and deviations require an ADR.
 
 Three consequences follow immediately, and they are repeated here because they are the ones most often violated by well-meaning contributors:
 
-1. **TanStack Query is not used.** Not for server state, not for caching, not for "just this one screen". BrandHub Customer does not use it and UdhaarBook has exactly one data-layer pattern: slice + thunk + service. Caching, invalidation and refetch rules are specified explicitly in §19.3.6 rather than delegated to a library.
+1. **TanStack Query is not used.** Not for server state, not for caching, not for "just this one screen". BrandHub Customer does not use it and DigiKhaato has exactly one data-layer pattern: slice + thunk + service. Caching, invalidation and refetch rules are specified explicitly in §19.3.6 rather than delegated to a library.
 2. **The third-party dependency list is closed.** ADR-021 in the canon enumerates the permitted frontend packages. Anything not on that list — a date library beyond `dayjs`, a state library beyond `@reduxjs/toolkit`, a table library beyond `@tanstack/react-table`, a form library beyond `react-hook-form`, an icon set beyond `lucide-react` — requires a written ADR before the first `npm install`. The product runs locally for personal use first and must remain trivially extensible and auditable later; every dependency is a future migration cost.
 3. **The design system is `ml-uikit` primitives wrapped in `Ub*` components.** Features never reach past `Ub*` into raw HTML controls, and never fork `ml-uikit`.
 
@@ -22,7 +22,7 @@ The reader is assumed to have read Part 23 §23.4 (the component template) and P
 
 ### 19.1.1 The seven layers
 
-UdhaarBook's client is a strictly layered application. Data flows *down* through seven layers on the way out and back *up* the same seven on the way in. Every layer has exactly one job, one set of permitted imports and one forbidden direction.
+DigiKhaato's client is a strictly layered application. Data flows *down* through seven layers on the way out and back *up* the same seven on the way in. Every layer has exactly one job, one set of permitted imports and one forbidden direction.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
@@ -134,7 +134,7 @@ Note three properties of this flow that are architectural, not incidental:
 
 ### 19.1.4 Server components: the decision
 
-Next.js App Router offers React Server Components. **UdhaarBook does not use them for application screens.** Every route under `app/(app)/**` is a client component (`'use client'` at the top of its `*PageContent`).
+Next.js App Router offers React Server Components. **DigiKhaato does not use them for application screens.** Every route under `app/(app)/**` is a client component (`'use client'` at the top of its `*PageContent`).
 
 The reasoning is not laziness; it is coherence with the data layer. Server components would need a second way to fetch data (server-side, with the tenant JWT read from cookies on the server) alongside the Redux/thunk path used by every interaction. Two data paths means two caching stories, two error stories and two auth stories. BrandHub Customer reached the same conclusion. Server components are used for exactly two things:
 
@@ -148,8 +148,8 @@ The reasoning is not laziness; it is coherence with the data layer. Server compo
 'use client';
 
 import { Suspense } from 'react';
-import { PartyListPageContent } from 'modules/UdhaarBook/features/parties/components/PartyListPageContent';
-import { UbPageSkeleton } from 'modules/UdhaarBook/design-system';
+import { PartyListPageContent } from 'modules/DigiKhaato/features/parties/components/PartyListPageContent';
+import { UbPageSkeleton } from 'modules/DigiKhaato/design-system';
 
 export default function PartiesPage() {
   return (
@@ -199,7 +199,7 @@ udhaarbook/frontend/
 │   │   ├── useDegradedNetwork.ts       # the three-state network model (§19.10.3)
 │   │   └── useUnsavedChangesGuard.ts
 │   ├── modules/
-│   │   └── UdhaarBook/
+│   │   └── DigiKhaato/
 │   │       └── features/           # see §19.2.3
 │   ├── redux/
 │   │   ├── store.ts
@@ -245,7 +245,7 @@ udhaarbook/frontend/
 └── package.json
 ```
 
-`src/modules/UdhaarBook/` exists — rather than features sitting directly under `src/` — for one reason: it mirrors BrandHub's `src/modules/Customer/` so that a developer moving between the two codebases finds the same shape, and so that a second module (a partner admin console, a super-admin console) can be added later as `src/modules/UdhaarAdmin/` without disturbing anything.
+`src/modules/DigiKhaato/` exists — rather than features sitting directly under `src/` — for one reason: it mirrors BrandHub's `src/modules/Customer/` so that a developer moving between the two codebases finds the same shape, and so that a second module (a partner admin console, a super-admin console) can be added later as `src/modules/UdhaarAdmin/` without disturbing anything.
 
 ### 19.2.2 The `app/` tree
 
@@ -331,7 +331,7 @@ Two conventions are fixed here and must not be improvised:
 This is the canonical shape. Every feature folder has the same eight subdirectories, and a feature omits a subdirectory only when it genuinely has nothing to put in it.
 
 ```
-src/modules/UdhaarBook/features/parties/
+src/modules/DigiKhaato/features/parties/
 ├── api/
 │   ├── partyService.ts             # listParties, getParty, createParty, updateParty,
 │   │                               # archiveParty, restoreParty, exportParties
@@ -382,7 +382,7 @@ src/modules/UdhaarBook/features/parties/
 The sales feature is the stress test: a document editor with a field array, live totals, keyboard navigation, autosaved drafts, a tax engine mirrored from the backend, and three document kinds sharing one editor.
 
 ```
-src/modules/UdhaarBook/features/sales/
+src/modules/DigiKhaato/features/sales/
 ├── api/
 │   ├── salesService.ts             # createInvoice, updateInvoice, issueInvoice,
 │   │                               # getInvoice, deleteInvoice, listInvoices, voidInvoice
@@ -528,7 +528,7 @@ src/design-system/
 └── useExclusiveModal.ts
 ```
 
-Every component folder holds the component file plus an `index.ts` that re-exports the component and its prop types; the root `index.ts` re-exports everything. Features import **only** from `modules/UdhaarBook/design-system` (the barrel) — never from a deep path. This is what lets a component be split into several files later without touching a single feature.
+Every component folder holds the component file plus an `index.ts` that re-exports the component and its prop types; the root `index.ts` re-exports everything. Features import **only** from `modules/DigiKhaato/design-system` (the barrel) — never from a deep path. This is what lets a component be split into several files later without touching a single feature.
 
 ### 19.2.6 Path aliases
 
@@ -543,7 +543,7 @@ Every component folder holds the component file plus an `index.ts` that re-expor
 }
 ```
 
-Within a feature, sibling imports are relative (`../redux/partyListThunk`, `./PartyListRow`). Across features and into shared code, imports are aliased (`src/hooks/useTranslation`, `modules/UdhaarBook/design-system`). Relative paths that climb more than two levels (`../../../`) are forbidden — that is always a sign the import should be aliased.
+Within a feature, sibling imports are relative (`../redux/partyListThunk`, `./PartyListRow`). Across features and into shared code, imports are aliased (`src/hooks/useTranslation`, `modules/DigiKhaato/design-system`). Relative paths that climb more than two levels (`../../../`) are forbidden — that is always a sign the import should be aliased.
 
 ---
 
@@ -632,7 +632,7 @@ The action-type string is `'<sliceName>/<thunkName>'` — matching the slice tha
 
 This is the reference implementation for the party list (PTY-02). Every other list feature is a transliteration of these three files.
 
-**`src/modules/UdhaarBook/features/parties/api/partyService.ts`**
+**`src/modules/DigiKhaato/features/parties/api/partyService.ts`**
 
 ```ts
 import { api } from 'src/api/AxiosInstances';
@@ -763,7 +763,7 @@ export const exportParties = async (
 };
 ```
 
-**`src/modules/UdhaarBook/features/parties/redux/partyListThunk.ts`**
+**`src/modules/DigiKhaato/features/parties/redux/partyListThunk.ts`**
 
 ```ts
 import { createAsyncThunk } from '@reduxjs/toolkit';
@@ -814,7 +814,7 @@ export const exportPartyList = createAsyncThunk<
 });
 ```
 
-**`src/modules/UdhaarBook/features/parties/redux/partyListSlice.ts`**
+**`src/modules/DigiKhaato/features/parties/redux/partyListSlice.ts`**
 
 ```ts
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
@@ -825,7 +825,7 @@ import { DEFAULT_PAGE_SIZE, SELECTION_CAP } from '../constants/partyListDefaults
 import { fetchPartyList } from './partyListThunk';
 import { archivePartyThunk, restorePartyThunk } from './partyActionThunk';
 import { saveParty } from './partyFormThunk';
-import { postLedgerEntry } from 'modules/UdhaarBook/features/ledger/redux/ledgerEntryThunk';
+import { postLedgerEntry } from 'modules/DigiKhaato/features/ledger/redux/ledgerEntryThunk';
 
 export interface PartyListState {
   rows: Party[];
@@ -969,7 +969,7 @@ export const selectPartyListStale = (state: RootState) => state.partyList.stale;
 And the hook that binds it to React — the only place a component touches any of this:
 
 ```ts
-// src/modules/UdhaarBook/features/parties/hooks/usePartyList.ts
+// src/modules/DigiKhaato/features/parties/hooks/usePartyList.ts
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -1053,9 +1053,9 @@ export function usePartyList(mode: 'replace' | 'append' = 'replace') {
 
 ### 19.3.5 Normalisation policy
 
-**UdhaarBook does not normalise entities into an `entities`/`ids` graph, with two exceptions.** `createEntityAdapter` is not used for list slices.
+**DigiKhaato does not normalise entities into an `entities`/`ids` graph, with two exceptions.** `createEntityAdapter` is not used for list slices.
 
-The reasoning: normalisation pays for itself when the same entity appears in many places and must stay consistent. In UdhaarBook the lists are *server-filtered, server-sorted and server-aggregated*; a normalised store would still need the server's ordering and its filtered totals, so the id array plus a lookup table buys nothing but indirection. Every list refetch replaces the rows wholesale, and targeted patches (a balance after a ledger entry) are one `find` on an array of at most 100 rows.
+The reasoning: normalisation pays for itself when the same entity appears in many places and must stay consistent. In DigiKhaato the lists are *server-filtered, server-sorted and server-aggregated*; a normalised store would still need the server's ordering and its filtered totals, so the id array plus a lookup table buys nothing but indirection. Every list refetch replaces the rows wholesale, and targeted patches (a balance after a ledger entry) are one `find` on an array of at most 100 rows.
 
 The two exceptions, where entities genuinely appear in multiple views at once:
 
@@ -1378,7 +1378,7 @@ The list hook then does the only two things staleness can mean: `staleUrgency ==
 
 1. **Compile time — a missing entry.** `INVALIDATION: Record<TMutationName, TInvalidationEntry>` is total. Adding `voidDebitNote` to `MUTATIONS` without an entry is `error TS2741: Property 'voidDebitNote' is missing`. The build stops; nobody has to notice.
 2. **Compile time — a slice that does not exist.** `TSliceKey = keyof RootState`, so `'reports.*'`, `'partyStatment'` or a slice someone renamed is `error TS2322` at the map's own line.
-3. **CI — a thunk that never reached the registry.** `src/tests/invalidation.registry.test.ts` parses every `src/modules/UdhaarBook/features/**/redux/*Thunk.ts` with the TypeScript compiler API, collects every `createAsyncThunk(` call, and asserts that each one appears in exactly one of `QUERIES` or `MUTATIONS`. A thunk in neither fails with the file, the line and the message "register this thunk in QUERIES or MUTATIONS; if it mutates, add its INVALIDATION entry". This is the one an engineer can otherwise route around, and it is the one that catches the fourteenth feature.
+3. **CI — a thunk that never reached the registry.** `src/tests/invalidation.registry.test.ts` parses every `src/modules/DigiKhaato/features/**/redux/*Thunk.ts` with the TypeScript compiler API, collects every `createAsyncThunk(` call, and asserts that each one appears in exactly one of `QUERIES` or `MUTATIONS`. A thunk in neither fails with the file, the line and the message "register this thunk in QUERIES or MUTATIONS; if it mutates, add its INVALIDATION entry". This is the one an engineer can otherwise route around, and it is the one that catches the fourteenth feature.
 
 ```ts
 // src/tests/invalidation.map.test.ts — the runtime half
@@ -1482,16 +1482,16 @@ import offlineQueueReducer from './slice/offlineQueueSlice';
 import { invalidationListener } from './invalidation/listener';
 
 // ── parties ──────────────────────────────────────────────────────────────────
-import partyListReducer from 'modules/UdhaarBook/features/parties/redux/partyListSlice';
-import partyDetailReducer from 'modules/UdhaarBook/features/parties/redux/partyDetailSlice';
-import partyFormReducer from 'modules/UdhaarBook/features/parties/redux/partyFormSlice';
-import partyTagReducer from 'modules/UdhaarBook/features/parties/redux/partyTagSlice';
+import partyListReducer from 'modules/DigiKhaato/features/parties/redux/partyListSlice';
+import partyDetailReducer from 'modules/DigiKhaato/features/parties/redux/partyDetailSlice';
+import partyFormReducer from 'modules/DigiKhaato/features/parties/redux/partyFormSlice';
+import partyTagReducer from 'modules/DigiKhaato/features/parties/redux/partyTagSlice';
 
 // ── ledger ───────────────────────────────────────────────────────────────────
-import ledgerEntryReducer from 'modules/UdhaarBook/features/ledger/redux/ledgerEntrySlice';
-import ledgerSummaryReducer from 'modules/UdhaarBook/features/ledger/redux/ledgerSummarySlice';
-import ledgerAgingReducer from 'modules/UdhaarBook/features/ledger/redux/ledgerAgingSlice';
-import reminderListReducer from 'modules/UdhaarBook/features/ledger/redux/reminderListSlice';
+import ledgerEntryReducer from 'modules/DigiKhaato/features/ledger/redux/ledgerEntrySlice';
+import ledgerSummaryReducer from 'modules/DigiKhaato/features/ledger/redux/ledgerSummarySlice';
+import ledgerAgingReducer from 'modules/DigiKhaato/features/ledger/redux/ledgerAgingSlice';
+import reminderListReducer from 'modules/DigiKhaato/features/ledger/redux/reminderListSlice';
 // … inventory, sales, purchases, payments, expenses, reports, settings, notifications
 
 export const store = configureStore({
@@ -1538,7 +1538,7 @@ Two deliberate absences: **no `redux-persist`** (the store is rebuilt from the A
 
 ### 19.4.1 One instance, not eleven
 
-BrandHub has eleven Axios instances because it talks to eleven microservices. UdhaarBook talks to one modular monolith (ADR-007) at one base URL, so it has **one** instance, exported as `api`. A second instance, `publicApi`, exists solely for the unauthenticated public document routes; it carries no auth interceptor and no refresh logic.
+BrandHub has eleven Axios instances because it talks to eleven microservices. DigiKhaato talks to one modular monolith (ADR-007) at one base URL, so it has **one** instance, exported as `api`. A second instance, `publicApi`, exists solely for the unauthenticated public document routes; it carries no auth interceptor and no refresh logic.
 
 **`src/api/AxiosInstances.ts`** — the complete file, abbreviated only where a helper is defined elsewhere.
 
@@ -2543,8 +2543,8 @@ Four route groups, each owning one layout, as listed in §19.2.2.
 ```tsx
 'use client';
 
-import { UbAppShell } from 'modules/UdhaarBook/components/layout';
-import { RequireSession } from 'modules/UdhaarBook/features/auth/components/RequireSession';
+import { UbAppShell } from 'modules/DigiKhaato/components/layout';
+import { RequireSession } from 'modules/DigiKhaato/features/auth/components/RequireSession';
 
 export default function AppLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
@@ -2559,7 +2559,7 @@ There is no per-module layout nesting. A layout that exists only to add a page t
 
 ### 19.6.2 The entitlement-driven `sidebarConfig`
 
-Navigation is data, not markup. `src/modules/UdhaarBook/features/navigation/sidebarConfig.ts` maps a **module code** (canon §0.3) to its presentation, and `useNavigation()` intersects that config with the tenant's `enabled_modules` and the user's permissions from `sessionSlice`. A module the tenant has not enabled, or that the user cannot read, simply does not exist in the menu — it is never rendered disabled.
+Navigation is data, not markup. `src/modules/DigiKhaato/features/navigation/sidebarConfig.ts` maps a **module code** (canon §0.3) to its presentation, and `useNavigation()` intersects that config with the tenant's `enabled_modules` and the user's permissions from `sessionSlice`. A module the tenant has not enabled, or that the user cannot read, simply does not exist in the menu — it is never rendered disabled.
 
 ```ts
 // features/navigation/sidebarConfig.ts
@@ -2691,7 +2691,7 @@ Step 5 is non-negotiable: staying on `/parties/<uuid>` after a switch would requ
 
 This differs from BrandHub, which stores a bearer token in a readable cookie, and the difference is deliberate and ADR-011-backed. The reasoning:
 
-- **XSS is the realistic threat.** UdhaarBook renders user-entered party names, notes and item descriptions across every screen. React escapes by default, but one `dangerouslySetInnerHTML` in a print template — and print templates are exactly where teams reach for raw HTML — would exfiltrate a readable token. An httpOnly cookie survives that mistake.
+- **XSS is the realistic threat.** DigiKhaato renders user-entered party names, notes and item descriptions across every screen. React escapes by default, but one `dangerouslySetInnerHTML` in a print template — and print templates are exactly where teams reach for raw HTML — would exfiltrate a readable token. An httpOnly cookie survives that mistake.
 - **A refresh token in `localStorage` is worse still**, because it is long-lived and rotation gives an attacker a 30-day foothold rather than a 15-minute one.
 - **The cost is small**: the client already talks to one origin (the API is proxied under the same host in every deployment, §19.14.2), so `SameSite=Lax` works without third-party cookie exposure, and `withCredentials: true` is the only client-side change.
 - **API clients (scripts, the future mobile shell) still get bearer tokens** from the same endpoints — `/auth/login` returns `access_token` in the body for non-browser clients — so nothing is closed off.
@@ -2773,7 +2773,7 @@ export function RequireSession({ children }: Readonly<{ children: React.ReactNod
 Permissions arrive as a flat array of codenames (canon §0.9) on `GET /auth/me`. The client uses them to decide what to *render*; the server enforces them on every request. The client check is a UX affordance, never a security boundary — which is why a missing permission **hides** an action rather than disabling it: a disabled button invites a support call, and a hidden one is simply not part of that user's product.
 
 ```tsx
-// src/modules/UdhaarBook/features/auth/components/Can.tsx
+// src/modules/DigiKhaato/features/auth/components/Can.tsx
 'use client';
 
 import { memo, type ReactNode } from 'react';
@@ -3177,8 +3177,8 @@ This section is the single authority on network state for the whole frontend. `L
 
 ```json
 {
-  "name": "UdhaarBook",
-  "short_name": "UdhaarBook",
+  "name": "DigiKhaato",
+  "short_name": "DigiKhaato",
   "description": "Your shop's khata, bills and stock in one book.",
   "start_url": "/dashboard?src=pwa",
   "scope": "/",
@@ -3202,7 +3202,7 @@ This section is the single authority on network state for the whole frontend. `L
 
 `name`, `short_name`, `theme_color` and the icons are **tenant-overridable** in the white-label build (Part 24): the manifest is served by a route handler that reads the tenant branding rather than as a static file, with a one-hour cache.
 
-**Install prompt.** The `beforeinstallprompt` event is captured and stashed; the prompt is offered *contextually*, never on first load — after a user's third session, or right after they issue their first invoice, in a dismissible `UbStatusBanner` ("Add UdhaarBook to your home screen for one-tap billing"). Dismissal is remembered for 30 days in `localStorage`. On iOS, where the event does not fire, the same banner shows the Share → "Add to Home Screen" instruction when the browser is Safari and the app is not already standalone.
+**Install prompt.** The `beforeinstallprompt` event is captured and stashed; the prompt is offered *contextually*, never on first load — after a user's third session, or right after they issue their first invoice, in a dismissible `UbStatusBanner` ("Add DigiKhaato to your home screen for one-tap billing"). Dismissal is remembered for 30 days in `localStorage`. On iOS, where the event does not fire, the same banner shows the Share → "Add to Home Screen" instruction when the browser is Safari and the app is not already standalone.
 
 ### 19.10.2 Service worker scope and caching
 
@@ -3719,7 +3719,7 @@ Only `NEXT_PUBLIC_*` variables reach the browser, and the list is deliberately t
 ```bash
 # .env.local.example
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1
-NEXT_PUBLIC_APP_NAME=UdhaarBook
+NEXT_PUBLIC_APP_NAME=DigiKhaato
 NEXT_PUBLIC_DEFAULT_LOCALE=en
 NEXT_PUBLIC_ENV=local                 # local | staging | production
 NEXT_PUBLIC_ANALYTICS_ENABLED=false
@@ -3736,7 +3736,7 @@ const required = (name: string, value: string | undefined): string => {
 };
 
 export const API_BASE_URL = required('NEXT_PUBLIC_API_BASE_URL', process.env.NEXT_PUBLIC_API_BASE_URL);
-export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? 'UdhaarBook';
+export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? 'DigiKhaato';
 export const DEFAULT_LOCALE = (process.env.NEXT_PUBLIC_DEFAULT_LOCALE ?? 'en') as Locale;
 export const IS_PRODUCTION = process.env.NEXT_PUBLIC_ENV === 'production';
 export const SW_ENABLED = process.env.NEXT_PUBLIC_SW_ENABLED === 'true';

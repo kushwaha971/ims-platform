@@ -421,7 +421,7 @@ def _deliver_reset(*, user: Any, raw: str, ttl: int, token_id: Any) -> Any:
     )
 
 
-APP_NAME = "UdhaarBook"
+APP_NAME = "DigiKhaato"
 
 
 def reset_link(raw: str) -> str:

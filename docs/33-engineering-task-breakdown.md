@@ -1,6 +1,6 @@
 # Part 33 — Engineering Task Breakdown
 
-This is the work-breakdown structure for UdhaarBook. It decomposes the product to **Phase → Epic → Module → Feature → Task → Subtask** and is the document an AI coding agent (Part 34) is pointed at when it asks "what exactly do I build, in which file, and how do I know it is right?".
+This is the work-breakdown structure for DigiKhaato. It decomposes the product to **Phase → Epic → Module → Feature → Task → Subtask** and is the document an AI coding agent (Part 34) is pointed at when it asks "what exactly do I build, in which file, and how do I know it is right?".
 
 It is deliberately the least elegant chapter in the specification. It is a list. Its virtue is exhaustiveness, not readability: a task that is not in here does not get built, and a task that is in here but ambiguous gets built wrong. Where a choice existed between a shorter formulation and an unambiguous one, the unambiguous one was taken every time.
 
@@ -67,7 +67,7 @@ Layer codes, precisely:
 - **DB** — a migration, a constraint, a trigger, an index. Owns `migrations/` and nothing else.
 - **BE** — Python under `apps/`: models, managers, services, selectors, serializers, filters, permissions, views, urls, tasks.
 - **FE** — TypeScript under `frontend/src/modules/` and `frontend/app/`: services, thunks, slices, types, validation, view-models, hooks, components, routes.
-- **DS** — `frontend/src/modules/UdhaarBook/design-system/` and the token pipeline. Separate from FE because Part 23 governs it and because a `Ub*` component is reviewed against a different checklist.
+- **DS** — `frontend/src/modules/DigiKhaato/design-system/` and the token pipeline. Separate from FE because Part 23 governs it and because a `Ub*` component is reviewed against a different checklist.
 - **Infra** — compose, Dockerfiles, CI, Makefile, nginx, settings shape.
 - **Test** — a test that is not co-delivered with its production code: the generated matrices, the E2E suites, the performance fixtures, the architecture tests. **Ordinary unit and API tests are not separate tasks** — they are part of the BE or FE task that creates the code, because Part 28 and Part 26 §26.20 make a file without its tests incomplete by definition.
 - **Docs** — the traceability artefacts, the CSV templates, the runbooks.
@@ -129,8 +129,8 @@ Two numbers need explaining before the breakdown begins, and both are explained 
 | Shorthand | Expands to |
 |---|---|
 | `@be/<app>/…` | `backend/apps/<app>/…` (and `@be/platform/` is `backend/apps/platform_app/`, label `platform`) |
-| `@fe/<feature>/…` | `frontend/src/modules/UdhaarBook/features/<feature>/…` |
-| `@ds/<Component>/` | `frontend/src/modules/UdhaarBook/design-system/<Component>/` |
+| `@fe/<feature>/…` | `frontend/src/modules/DigiKhaato/features/<feature>/…` |
+| `@ds/<Component>/` | `frontend/src/modules/DigiKhaato/design-system/<Component>/` |
 | `@app/…` | `frontend/app/…` |
 | `@src/…` | `frontend/src/…` |
 
