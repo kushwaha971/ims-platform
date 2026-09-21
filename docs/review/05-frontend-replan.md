@@ -252,3 +252,54 @@ is called done. Not compiled, not unit-tested — run.
 2. **2K/4K "testing" is a viewport simulation**, not real hardware. I can render
    at 2560×1440 and 3840×2160 and inspect layout, but I cannot speak to physical
    DPI rendering.
+
+
+---
+
+# Progress — 21 September 2026
+
+All six reported defects are closed, each verified in a browser against the live
+stack rather than by reading code.
+
+| # | Defect | State |
+|---|---|---|
+| a | Dark theme by default | **Fixed.** `THEME_INIT` falls back to light, not the OS. `systemThemeObserved` deleted — it is what made the OS authoritative, and no version of "the OS decides unless overridden" is compatible with "light is the default". Cookie renamed to `ub_theme_choice` because its meaning changed. A theme picker exists, so `themeChanged` finally has a dispatcher. Harness forces `colorScheme: 'dark'` so this cannot regress on a light CI machine. |
+| b | Native `<select>` and chevron | **Fixed.** ml-uikit vendored; `UbSelect` is the Radix composite and the state field is now `UbCombobox` with a real search box. Verified: popover width equals trigger width (438/438, 324/324), typing "mah" narrows 38 states to five. |
+| c | Indigo ring + pink error border together | **Fixed**, BrandHub's way: no ring on a form control, focus is a border-colour change, error survives focus. Measured: focused + invalid reports `rgb(163,18,62)` with no box-shadow, on both the select and a plain input. |
+| d | Autofill overlapping the form | **Fixed.** `autoComplete="organization"` on an autofocused field opened Chrome's address book on page load — and was the wrong token anyway, since the merchant is naming a new business. Now `off`, plus the `-webkit-autofill` styling that did not exist anywhere. |
+| e | Language resets on refresh | **Fixed.** The cookie was write-only from the client's side; `readCookie()` had zero callers. `PreferencesBootstrap` restores in a layout effect, so it lands before paint rather than flashing English. |
+| f | No mobile navigation | **Fixed.** `MobileNavDrawer` on vaul, sharing `NavSections` with the rail so the two cannot drift. Verified at 360, 390 and 768: opens with all 11 links, Escape closes, following a link closes. |
+
+Plus two that were not reported:
+
+* **`/onboarding/*` had no route guard at all** — absent from the proxy's list and
+  with no `RequireSession`. Now guarded through `SESSION_ONLY_ROUTE_PREFIXES`,
+  which exists because onboarding needs a session and must *not* need a tenant.
+* **Forms jumped on validation.** A field with no hint had no message row, so the
+  first failed submit pushed everything below it down the page. Measured after:
+  0px movement, 0.0000 cumulative layout shift.
+
+## Standing evidence
+
+Two harnesses, both run against the live stack:
+
+* `e2e/journey.mjs` — 72/72 across eight viewports (360 → 3840 plus a
+  short-height case). Fails on console errors, page errors, failed requests,
+  unexpected 4xx/5xx and redirect loops.
+* `e2e/security.mjs` — 10/10. Every case checked on both tiers: a browser typing
+  the URL, and the API called directly with no cookies and no browser to redirect.
+
+Gates: 719 frontend tests, 715 backend, lint and type-check clean, production
+build green, bundle gate green.
+
+## What remains
+
+* **Step 7 — admin tenant onboarding.** The largest piece: tenant list, create,
+  configure, invite the first user. Needs backend work too (an invitation entity
+  with a real pending/accepted/expired lifecycle, which BrandHub does not have,
+  and an admin permission on tenant creation).
+* **`<Can>` is still rendered nowhere**, deliberately. No permission-gated control
+  exists in the product yet; wiring it in would be inventing a use for machinery
+  that is already correct.
+* **Figma.** Still no file or link, so no pixel comparison has been made or
+  claimed. Comparison has been against BrandHub's tokens and conventions only.
