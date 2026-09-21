@@ -2,6 +2,7 @@
 
 import { type ReactNode } from 'react';
 
+import { MobileNavDrawer } from 'src/components/layout/MobileNavDrawer';
 import { NetworkStrip } from 'src/components/layout/NetworkStrip';
 import { UbSidebar } from 'src/components/layout/UbSidebar';
 import { UbBox, UbLink, UbLogo, UbStack } from 'src/design-system';
@@ -77,6 +78,9 @@ export function UbAppShell({ children }: Readonly<{ children: ReactNode }>): Rea
           gap={3}
           className="h-14 shrink-0 border-b border-border-hairline bg-surface-card px-4 lg:hidden"
         >
+          {/* First in the header and first in the tab order, because on a phone
+              this is the only route out of the current screen. */}
+          <MobileNavDrawer />
           <UbLink
             href={ROUTES.DASHBOARD}
             tone="inherit"
