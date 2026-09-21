@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { APP_ROUTE_PREFIXES, RETIRED_ROUTES, ROUTES } from 'src/routes';
+import { GUARDED_ROUTE_PREFIXES, RETIRED_ROUTES, ROUTES } from 'src/routes';
 
 /**
  * Part 19 §19.7.3 — the cheap half of the guard. A cookie-PRESENCE check on
@@ -31,7 +31,12 @@ export function proxy(request: NextRequest): NextResponse {
     return NextResponse.redirect(url);
   }
 
-  if (!APP_ROUTE_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))) {
+  // GUARDED, not APP: onboarding needs a session and must NOT need a tenant, so
+  // it is guarded here and deliberately absent from the app list that
+  // `RequireSession` uses to bounce a tenantless session. It used to be in
+  // neither, which is how an anonymous visitor could fill the whole wizard and
+  // only discover the problem when `POST /tenants` answered 401.
+  if (!GUARDED_ROUTE_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))) {
     return NextResponse.next();
   }
 

@@ -14,6 +14,7 @@ import { join } from 'node:path';
 
 import {
   APP_ROUTE_PREFIXES,
+  GUARDED_ROUTE_PREFIXES,
   ONBOARDING_STEP_MAX,
   PUBLIC_ROUTE_PREFIXES,
   RETIRED_ROUTES,
@@ -181,6 +182,41 @@ describe('public routes and the login redirect loop', () => {
     // app route and skipped as a public one, which is how a loop comes back.
     for (const publicPrefix of PUBLIC_ROUTE_PREFIXES) {
       expect(APP_ROUTE_PREFIXES).not.toContain(publicPrefix);
+    }
+  });
+});
+
+describe('the onboarding guard', () => {
+  /**
+   * Regression for a real hole: `/onboarding/*` was guarded by nothing. It was
+   * absent from `APP_ROUTE_PREFIXES`, so `proxy.ts` called `NextResponse.next()`
+   * on it, and `app/(auth)/layout.tsx` mounts no `RequireSession`. An anonymous
+   * visitor could load and fill every step of the wizard; it failed only at
+   * `POST /tenants`, with a 401 after the work rather than a redirect before it.
+   */
+  it('guards onboarding', () => {
+    expect(GUARDED_ROUTE_PREFIXES).toContain(ROUTES.ONBOARDING);
+  });
+
+  it('does NOT treat onboarding as an app route', () => {
+    // The distinction that matters. App routes are the ones `RequireSession`
+    // sends a tenantless session away FROM — putting onboarding among them would
+    // bounce exactly the people it exists for, into a redirect loop between the
+    // wizard and the chooser.
+    expect(APP_ROUTE_PREFIXES).not.toContain(ROUTES.ONBOARDING);
+  });
+
+  it('guards every app route too, so the two lists cannot drift apart', () => {
+    for (const prefix of APP_ROUTE_PREFIXES) {
+      expect(GUARDED_ROUTE_PREFIXES).toContain(prefix);
+    }
+  });
+
+  it('keeps the guarded and public lists disjoint', () => {
+    // A path in both would be redirected to login by the proxy and skipped by
+    // the 401 handler — the shape of the redirect loop already fixed once.
+    for (const publicPrefix of PUBLIC_ROUTE_PREFIXES) {
+      expect(GUARDED_ROUTE_PREFIXES).not.toContain(publicPrefix);
     }
   });
 });
