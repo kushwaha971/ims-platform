@@ -87,18 +87,26 @@ def test_a_malformed_request_id_is_replaced_not_echoed(tenant: Any, api_as: Any)
     assert len(response["X-Request-Id"]) == 32
 
 
-def test_an_unmapped_action_is_denied_not_allowed_by_default(tenant: Any, api_as: Any) -> None:
+def test_a_method_the_slice_does_not_implement_is_405(tenant: Any, api_as: Any) -> None:
     """The slice is read-only: `PTY-02` (Sprint 3) adds create and update.
 
-    `HasPermission` maps `list` and `retrieve` only, and Part 20 §20.5.5 says an
-    action missing from the mapping is DENIED. So `create` is refused by the
-    permission layer before the router ever reports "method not allowed" — which
-    is the fail-closed behaviour, and the reason this asserts 403 rather than 405.
+    This asserted 403 until a live first-run walk-through showed what that costs.
+    The reasoning was that §20.5.5 denies any action missing from the permission
+    map, so `create` is refused before the router can report "method not allowed".
+    But §20.5.5 governs *actions* — things a viewset does — and `PartyViewSet`
+    has no `create` at all: the router maps only `get` on this route. Answering
+    403 told an owner holding every permission in the system to go and ask for
+    rights, and no rights would ever have made it work.
+
+    The fail-closed rule is unweakened, and is covered where it belongs, on the
+    permission class itself:
+    `apps.common.tests.test_permissions.test_an_implemented_action_missing_from_the_map_is_still_denied`.
+    An action the viewset *does* implement and the map does not cover is still
+    denied — that is the accident the rule exists to catch.
     """
     client, _member = api_as(tenant)
     response = client.post(reverse("v1:party-list"), {"name": "X"}, format="json")
-    assert response.status_code == 403
-    assert response.json()["error"]["code"] == "permission_denied"
+    assert response.status_code == 405
 
 
 def test_a_tenant_scoped_response_is_marked_for_debugging(tenant: Any, api_as: Any) -> None:

@@ -211,3 +211,28 @@ def test_stale_permissions_version_is_401_token_stale(tenant: Any, api_as: Any) 
 
 def test_module_of_maps_every_codename() -> None:
     assert set(MODULE_OF) == set(PERMISSIONS)
+
+
+@pytest.mark.django_db
+def test_an_implemented_action_missing_from_the_map_is_still_denied(
+    tenant: Any, api_as: Any
+) -> None:
+    """The fail-closed rule the 405 fix must not have loosened.
+
+    This is the case the rule exists for: a handler shipped without its permission
+    entry. `_method_has_no_handler` steps aside only where there is no handler, so
+    an action the viewset *does* implement and the map does not cover stays denied
+    — an accident in the map can never become an open endpoint.
+    """
+    from rest_framework.viewsets import ViewSet
+
+    gate = HasPermission({"list": "parties.party.read"})()
+
+    class _Unmapped(ViewSet):
+        action_map = {"get": "list", "post": "create"}  # create IS implemented
+        action = "create"
+
+    client, _member = api_as(tenant, role=RoleCode.OWNER.value)
+    request = client.post(reverse("v1:party-list")).wsgi_request
+
+    assert gate.has_permission(request, _Unmapped()) is False

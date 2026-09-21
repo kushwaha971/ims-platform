@@ -19,6 +19,34 @@ from apps.common.permissions_registry import PERMISSIONS, permissions_for
 from apps.common.tenancy import get_effective_tenant
 
 
+def _method_has_no_handler(request: Any, view: Any) -> bool:
+    """True when the viewset implements no handler for this method on this route.
+
+    DRF checks permissions in `initial()`, which runs *before* dispatch resolves
+    a handler. So `POST /parties`, on a read-only viewset whose router maps only
+    `get`, reached `HasPermission`, found no `create` entry in the map, and was
+    denied — answering `403 permission_denied` for a method the endpoint does not
+    implement at all. The caller reads that as "ask your owner for rights", and
+    no amount of asking will ever make it work.
+
+    The fail-closed rule is untouched by this. An action the viewset *does*
+    implement and that is missing from the permission map is still denied — that
+    is the case the rule exists for, a handler shipped without its permission
+    entry. This only steps aside where there is no handler to guard: returning
+    True here grants nothing, because dispatch then calls `http_method_not_allowed`
+    and answers 405 before any handler runs.
+
+    `action_map` is set by the router per matched route, so it is authoritative
+    about *this* route rather than the viewset as a whole — `POST /parties/{id}`
+    and `POST /parties` are judged separately. A plain `APIView` has no
+    `action_map`; there the question does not arise and behaviour is unchanged.
+    """
+    action_map = getattr(view, "action_map", None)
+    if not action_map:
+        return False
+    return request.method.lower() not in action_map
+
+
 def HasPermission(mapping: str | dict[str, str]) -> type[BasePermission]:
     """Declarative per-action permission gate.
 
@@ -44,6 +72,8 @@ def HasPermission(mapping: str | dict[str, str]) -> type[BasePermission]:
         message = _("You do not have permission to do this.")
 
         def has_permission(self, request: Any, view: Any) -> bool:
+            if _method_has_no_handler(request, view):
+                return True  # let dispatch answer 405, not a misleading 403
             user = getattr(request, "user", None)
             if not (user and user.is_authenticated and user.is_active):
                 return False
@@ -95,6 +125,8 @@ def ModuleEnabled(module: str) -> type[BasePermission]:
         message = f"The '{module}' module is not enabled for this business."
 
         def has_permission(self, request: Any, view: Any) -> bool:
+            if _method_has_no_handler(request, view):
+                return True  # 405 is the truthful answer; see _method_has_no_handler
             from apps.platform_app.services.entitlements import effective_modules
 
             tenant = get_effective_tenant(request)
