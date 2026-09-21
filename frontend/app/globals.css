@@ -70,6 +70,41 @@
     box-shadow: none;
   }
 
+  /* Autofill, which had no handling at all.
+   *
+   * Chrome paints its own background and text colour on an autofilled field —
+   * a pale yellow in light mode and, worse, a blue-grey in dark mode that sits
+   * on top of `--surface-card` and makes the field look broken. It cannot be
+   * overridden with `background-color`; the only thing that reaches it is an
+   * inset box-shadow large enough to cover the control, which is the documented
+   * workaround rather than a trick.
+   *
+   * `-webkit-text-fill-color` is likewise the only way to recolour the text,
+   * because `color` is ignored on an autofilled value.
+   *
+   * The long transition delay is the second half: Chrome repaints its own
+   * colour on focus and blur, and a delay outlasts that repaint so the field
+   * never flashes yellow on the way to being ours. */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill,
+  select:-webkit-autofill {
+    box-shadow: 0 0 0 1000px hsl(var(--surface-card)) inset;
+    -webkit-text-fill-color: hsl(var(--text-primary));
+    caret-color: hsl(var(--text-primary));
+    transition: background-color 100000s ease-in-out 0s;
+  }
+
+  /* An autofilled field that is ALSO in error keeps its error border: the inset
+     shadow above covers the control's interior, not its border, but a shadow on
+     a focused invalid control would otherwise reinstate the double outline this
+     file just removed. */
+  input:-webkit-autofill:focus-visible,
+  textarea:-webkit-autofill:focus-visible {
+    box-shadow: 0 0 0 1000px hsl(var(--surface-card)) inset;
+  }
+
   /* Below `sm` the page padding tightens (§23.2.1 DigiKhaato override). */
   @media (max-width: 639px) {
     :root {

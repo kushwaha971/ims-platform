@@ -80,7 +80,17 @@ export function OnboardingBusinessStep({
             select, not a tile, and it was the field stranded under the grid. */}
         <UbStack gap={4} className="rounded-card border border-border-subtle p-4 sm:p-5">
           <UbField name="name" label={t('onboarding.name.label')} required>
-            {(field) => <UbTextInput {...field} autoComplete="organization" autoFocus />}
+            {/* `autoComplete="off"`, not `"organization"`.
+                That token means "the company this person belongs to", so Chrome
+                offered its saved address-book entries — and because the field is
+                also autofocused, the list opened on page load with no gesture,
+                covering the form underneath. Reported as autofill overlapping
+                the screen.
+                It was also simply the wrong token: the merchant is NAMING a new
+                business here, not recalling an existing employer, so every
+                suggestion Chrome had was guaranteed to be wrong. The autofocus
+                stays — first field of a wizard is where the cursor belongs. */}
+            {(field) => <UbTextInput {...field} autoComplete="off" autoFocus />}
           </UbField>
 
           {/* BR-7 — asked here only when `platform_user.full_name` is still
