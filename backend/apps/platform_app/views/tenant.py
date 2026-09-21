@@ -24,6 +24,8 @@ from apps.platform_app.permissions import MembersManagePermission, TenantManageP
 from apps.platform_app.selectors import session_payload
 from apps.platform_app.selectors.memberships import (
     active_membership,
+    member_of_tenant,
+    members_of,
     invitation_of_tenant,
     invitations_of,
     membership_of_user,
@@ -35,12 +37,15 @@ from apps.platform_app.serializers.tenant import (
     InvitationCreateSerializer,
     InvitationListQuerySerializer,
     InvitationReadSerializer,
+    MemberCreateSerializer,
+    MemberReadSerializer,
     MembershipPatchSerializer,
     MembershipReadSerializer,
     TenantCreateSerializer,
     TenantReadSerializer,
     TenantUpdateSerializer,
 )
+from apps.platform_app.services import credentials as credentials_service
 from apps.platform_app.services import memberships as membership_service
 from apps.platform_app.services import onboarding as onboarding_service
 from apps.platform_app.services import sessions as session_service
@@ -390,3 +395,108 @@ class InvitationDetailView(APIView):
             raise NotFound()
         membership_service.revoke_invitation(invitation=invitation, ctx=Ctx.from_request(request))
         return StandardResponse.no_content()
+
+
+def _credentials_payload(issued: Any) -> dict:
+    """The one response the plaintext password ever appears in.
+
+    `password` is `null` for somebody who already had a DigiKhaato account: they
+    keep the password they chose, and returning a fresh one would mean this
+    endpoint could take over any account on the platform by typing its address.
+    `created_user` is what the dialog branches on so it says the true thing.
+    """
+    return {
+        "member": MemberReadSerializer(issued.membership).data,
+        "password": issued.password or None,
+        "password_expires_at": issued.expires_at,
+        "created_user": issued.created_user,
+        "email": issued.user.email,
+        "login_url": f"{(settings.UB_PUBLIC_BASE_URL or '').rstrip('/')}/login",
+    }
+
+
+class MemberListCreateView(APIView):
+    """`GET`/`POST /members` — the team, and adding to it (DEC-012).
+
+    This is the path that replaces copying an invitation link out of a dialog.
+    There is no mail provider in this deployment, so `POST` creates the account
+    and answers with a temporary password the owner passes on themselves —
+    WhatsApp, in practice. The invitation endpoints next door are untouched and
+    become the email path the day email is funded.
+
+    `platform.members.manage`, like the invitation endpoints: canon §0.9 gives
+    it to owner and admin and withholds it from staff and accountant.
+    """
+
+    permission_classes = [IsAuthenticated, MembersManagePermission]
+
+    def get(self, request: Any) -> Any:
+        queryset = members_of(tenant=_tenant_or_refuse(request))
+        paginator = PagePagination()
+        page = paginator.paginate_queryset(queryset, request, view=self)
+        return StandardResponse.paginated(paginator, MemberReadSerializer(page, many=True).data)
+
+    @idempotent("member_create")
+    def post(self, request: Any) -> Any:
+        """201 with the member and the temporary password — its only appearance."""
+        tenant = _tenant_or_refuse(request)
+        serializer = MemberCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        role = role_by_code(tenant=tenant, code=data["role"])
+        if role is None:
+            raise ValidationFailed({"role": ["That is not a role in this business."]})
+
+        issued = credentials_service.create_member(
+            tenant=tenant,
+            role=role,
+            email=data["email"],
+            full_name=data["full_name"],
+            mobile=data.get("mobile") or None,
+            actor=request.user,
+            ctx=Ctx.from_request(request),
+        )
+        return StandardResponse.created(_credentials_payload(issued))
+
+    def idempotent_response_body(self, request: Any, response: Any) -> Any:
+        """A replay gets the member and `password: null`.
+
+        The decorator keeps the 201 body in `platform_idempotency_key` for 24
+        hours, in the same database every support engineer can read. Only the
+        hash of this password is meant to be at rest, so the plaintext is
+        stripped before the body is stored — for the same reason `invite()`
+        keeps its token out of the audit log. A caller who lost the response
+        regenerates; there is nothing to recover and that is deliberate.
+        """
+        body = dict(response.data)
+        data = dict(body.get("data") or {})
+        data["password"] = None
+        body["data"] = data
+        return body
+
+
+class MemberCredentialsView(APIView):
+    """`POST /members/{id}/credentials` — reissue a temporary password (DEC-012).
+
+    The owner lost the message, or the seven days ran out. One click mints a new
+    password, kills the old one and bumps `token_epoch` so anything signed in on
+    the old one is thrown out too.
+
+    404 and never 403 for a membership in another business (canon §0.11 rule 2):
+    the id is matched inside the tenant filter, so "somebody else's" and "does
+    not exist" are one answer.
+    """
+
+    permission_classes = [IsAuthenticated, MembersManagePermission]
+
+    def post(self, request: Any, membership_id: Any) -> Any:
+        membership = member_of_tenant(
+            tenant=_tenant_or_refuse(request), membership_id=membership_id
+        )
+        if membership is None:
+            raise NotFound()
+        issued = credentials_service.regenerate(
+            membership=membership, actor=request.user, ctx=Ctx.from_request(request)
+        )
+        return StandardResponse.ok(_credentials_payload(issued))

@@ -51,6 +51,8 @@ const loadSession = (tenants: readonly SessionTenant[], activeId: string | null 
         email: 'ramesh@example.com',
         mobile: '+919876543210',
         locale: 'en',
+        mustChangePassword: false,
+        passwordExpiresAt: null,
       },
       activeTenant: active,
       tenants,

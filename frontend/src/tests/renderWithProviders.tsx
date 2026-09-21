@@ -4,6 +4,7 @@ import { render, type RenderOptions, type RenderResult } from '@testing-library/
 import { IntlProvider } from 'react-intl';
 import { Provider } from 'react-redux';
 
+import { formattingLocale } from 'src/i18n/formattingLocale';
 import { localeChanged } from 'src/redux/slice/localeSlice';
 import { store } from 'src/redux/store';
 import type { Locale } from 'src/types/domain.types';
@@ -40,7 +41,11 @@ export const renderWithProviders = (
   const Wrapper = ({ children }: { readonly children: ReactNode }) => (
     <Provider store={store}>
       <IntlProvider
-        locale={locale}
+        /* `formattingLocale`, exactly as `IntlProviderShell` does it. This
+           harness building its own provider is why the en-US date and number
+           formats went unnoticed for so long: the tests and the product agreed
+           with each other and both disagreed with the intent. */
+        locale={formattingLocale(locale)}
         defaultLocale="en"
         messages={messages ?? (en as Record<string, string>)}
       >

@@ -37,6 +37,9 @@ export const API_PATHS = {
    * person who is already in the business. Collapsing the two would mean the
    * team screen could not distinguish "asked and waiting" from "in".
    */
+  /** DEC-012 — the team, and adding to it with owner-issued credentials. */
+  MEMBERS: '/members',
+  MEMBER_CREDENTIALS: (membershipId: string) => `/members/${membershipId}/credentials`,
   INVITATIONS: '/invitations',
   INVITATION: (id: string) => `/invitations/${id}`,
   /** PLT-05 FR-10 — the seat-consuming accept. */
@@ -133,6 +136,10 @@ export const IDEMPOTENT_POST_PATHS: readonly string[] = [
    * usual duplicate-row argument: two links for one seat is two ways in.
    */
   API_PATHS.INVITATIONS,
+  // DEC-012 — a lost response after a successful POST /members must replay the
+  // member that was created. Two of them is two accounts and two seats spent
+  // for one salesman, and the second password is the one that works.
+  API_PATHS.MEMBERS,
   // PLT-03 EC-7 — a lost response after a successful POST /tenants must replay
   // the created tenant, not create a second business.
   API_PATHS.TENANTS,

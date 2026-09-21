@@ -52,6 +52,15 @@ export const isValidGstinChecksum = (value: string): boolean => {
 
 export interface ValidationSchemas {
   readonly optionalText: (max?: number) => Yup.StringSchema<string | null | undefined>;
+  /**
+   * A required string with no shape rule beyond "present and not too long".
+   *
+   * For a value the USER DID NOT CHOOSE and the SERVER will judge — an
+   * owner-issued temporary password being re-entered, say. Holding such a value
+   * to a client-side format rule rejects correct input, and every rule that
+   * matters is already enforced where the value is checked.
+   */
+  readonly requiredText: (max?: number, messageId?: string) => Yup.StringSchema<string>;
   readonly amountValidation: (options?: {
     allowZero?: boolean;
     max?: string;
@@ -109,6 +118,12 @@ export const useValidationSchemas = (): ValidationSchemas => {
         )
         .max(max, t('validation.maxChars', { value: max }));
 
+    const requiredText = (max = 255, messageId = 'validation.required') =>
+      Yup.string()
+        .trim()
+        .required(t(messageId))
+        .max(max, t('validation.maxChars', { value: max }));
+
     /** Money: a decimal STRING with ≤ 2 dp, > 0 unless allowZero (R-TS-7). */
     const amountValidation = (options?: { allowZero?: boolean; max?: string }) =>
       Yup.string()
@@ -140,16 +155,37 @@ export const useValidationSchemas = (): ValidationSchemas => {
         .min(0, t('validation.percent.min'))
         .max(max, t('validation.percent.max', { value: max }));
 
-    /** Indian mobile: E.164 with +91 default; exactly 10 digits after the code. */
+    /**
+     * Indian mobile: E.164 with +91 default; exactly 10 digits after the code.
+     *
+     * **The optional branch normalises `''` to `null` and excludes it from the
+     * pattern.** Yup's `.matches()` skips `undefined` but NOT the empty string,
+     * so `mobileValidation(false)` used to reject a field the merchant simply
+     * left blank — the one thing "optional" is supposed to permit. Nothing
+     * caught it because the only two callers are a form whose field is new here
+     * and the onboarding address step, whose optional phone had the same defect
+     * and the same silence: the form would refuse to submit with
+     * "Enter a 10-digit mobile number" against an empty box.
+     */
     const mobileValidation = (required = true) => {
       const base = Yup.string()
         .transform((value: unknown) =>
           typeof value === 'string' ? value.replace(/\s|-/g, '') : value
-        )
-        .matches(REGEX.MOBILE_E164_IN, t('validation.mobile.format'));
+        );
       return required
-        ? base.required(t('validation.mobile.required'))
-        : base.nullable().notRequired();
+        ? base
+            .matches(REGEX.MOBILE_E164_IN, t('validation.mobile.format'))
+            .required(t('validation.mobile.required'))
+        : base
+            .transform((value: unknown) =>
+              typeof value === 'string' && value.trim() === '' ? null : value
+            )
+            .nullable()
+            .notRequired()
+            .matches(REGEX.MOBILE_E164_IN, {
+              message: t('validation.mobile.format'),
+              excludeEmptyString: true,
+            });
     };
 
     /** GSTIN: 15 chars, statutory layout, checksum verified. */
@@ -289,6 +325,7 @@ export const useValidationSchemas = (): ValidationSchemas => {
 
     return {
       optionalText,
+      requiredText,
       amountValidation,
       quantityValidation,
       percentValidation,

@@ -14,6 +14,7 @@ import planReducer, { limitHit } from 'modules/DigiKhaato/features/plan/redux/pl
 import { toPlanLimitHit } from 'modules/DigiKhaato/features/plan/view-model/planDisplay';
 // ── team invitations (PLT-05) ────────────────────────────────────────────────
 import invitationReducer from 'modules/DigiKhaato/features/team/redux/invitationSlice';
+import memberReducer from 'modules/DigiKhaato/features/team/redux/memberSlice';
 
 import { invalidationListener } from './invalidation/listener';
 // ── Cross-cutting ────────────────────────────────────────────────────────────
@@ -56,6 +57,7 @@ export const store = configureStore({
 
     partyList: partyListReducer,
     invitation: invitationReducer,
+    member: memberReducer,
   },
   middleware: (getDefault) =>
     getDefault({

@@ -94,9 +94,9 @@ def test_the_frontend_health_route_the_compose_healthcheck_targets_exists() -> N
 
     route = REPO / "frontend" / "app" / "api" / "healthz" / "route.ts"
     assert route.exists(), f"{route.relative_to(REPO)} is missing"
-    assert re.search(r"export\s+(async\s+)?function\s+GET", route.read_text()), (
-        "the healthz route file exists but exports no GET handler"
-    )
+    assert re.search(
+        r"export\s+(async\s+)?function\s+GET", route.read_text()
+    ), "the healthz route file exists but exports no GET handler"
 
 
 # ── Build targets ────────────────────────────────────────────────────────────
@@ -144,9 +144,7 @@ def test_build_targets_were_found() -> None:
 
 
 @pytest.mark.parametrize("rel,context,target", sorted(_build_targets()))
-def test_every_build_target_is_a_real_dockerfile_stage(
-    rel: str, context: str, target: str
-) -> None:
+def test_every_build_target_is_a_real_dockerfile_stage(rel: str, context: str, target: str) -> None:
     dockerfile = REPO / context / "Dockerfile"
     assert dockerfile.exists(), f"{rel} builds {context}, which has no Dockerfile"
 

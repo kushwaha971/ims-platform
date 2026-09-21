@@ -26,11 +26,14 @@ import type { AuthResult, AuthTenant, PostAuthDestination } from '../types/auth.
  *     (EC-5); PLT-05 owns that screen, so Sprint 1 routes to the chooser, which
  *     lists the invitation and says what it is.
  *  3. An active tenant whose wizard is unfinished resumes it at `step + 1`
- *     (PLT-03 FR-9).
+ *     (PLT-03 FR-9) — but only for the OWNER, who is the only role that can
+ *     complete it. See the branch itself for the dead end this avoids.
  *  4. Exactly one active tenant, or a default among several, opens it.
  *  5. Several with no default opens the full-screen chooser.
  */
 export const postAuthDestination = (result: AuthResult): PostAuthDestination => {
+  if (result.mustChangePassword) return { kind: 'setPassword' };
+
   const active = result.tenants.filter((tenant) => tenant.status === 'active');
   const invited = result.tenants.filter((tenant) => tenant.status === 'invited');
 
@@ -42,7 +45,28 @@ export const postAuthDestination = (result: AuthResult): PostAuthDestination => 
   const chosen = resolveActiveTenant(result.activeTenantId, active);
   if (!chosen) return { kind: 'chooser' };
 
-  if (chosen.onboardingStep !== null && chosen.onboardingStep < 4) {
+  /**
+   * Rule 3, and the role test is not a refinement — it is what stops a dead end.
+   *
+   * The wizard writes through `PATCH /tenants/current`, which requires
+   * `platform.tenant.manage`, and canon §0.9 gives that to the OWNER alone —
+   * not even to an admin. So routing anybody else into an unfinished wizard
+   * sends them to a screen where every step answers 403, on every sign-in,
+   * with no way out: the router puts them back each time they navigate away.
+   *
+   * It was unreachable until DEC-012, because there was no working way for a
+   * second person to join a business. Measured against the live server the day
+   * that changed: a staff member added to a tenant with `onboarding_step: 1`
+   * landed on `/onboarding/step/2`, and `PATCH /tenants/current` answered
+   * `403 permission_denied`.
+   *
+   * An owner who has not finished setting the business up is not a reason to
+   * stop their salesman working, so the staff member goes to the app. The
+   * business is usable; it is the owner's own configuration that is pending,
+   * and the owner is the one who will be asked to finish it.
+   */
+  const canRunTheWizard = chosen.role === 'owner';
+  if (canRunTheWizard && chosen.onboardingStep !== null && chosen.onboardingStep < 4) {
     return { kind: 'onboarding', step: Math.max(1, chosen.onboardingStep + 1) };
   }
   return { kind: 'app', tenantId: chosen.id };

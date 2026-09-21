@@ -79,6 +79,24 @@ class User(AbstractBaseUser, TimeStampedModel):
     mfa_secret = models.CharField(max_length=64, null=True, blank=True)
     token_epoch = models.IntegerField(default=1)
 
+    # ── Owner-issued temporary credentials (DEC-012) ─────────────────────────
+    # There is no mail provider in this deployment and none is being paid for
+    # until the platform earns, so an owner adds staff by creating the account
+    # and handing over a password out of band -- WhatsApp, in practice, which
+    # is how an Indian shopkeeper reaches their salesman anyway.
+    #
+    # `must_change_password` is the gate, not a hint: `CookieOrBearerJWTAuthentication`
+    # refuses every authenticated route but the change itself while it is set,
+    # so the owner never keeps working knowledge of a staff member's password
+    # and an audit entry attributed to that person means them.
+    #
+    # `password_expires_at` is set ONLY for an issued temporary password and
+    # cleared the moment the person chooses their own. Without it an account
+    # nobody ever claimed is a live login sitting in a chat thread forever,
+    # and the member list is the only place anyone would notice.
+    must_change_password = models.BooleanField(default=False)
+    password_expires_at = models.DateTimeField(null=True, blank=True)
+
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["full_name"]
 
@@ -106,6 +124,19 @@ class User(AbstractBaseUser, TimeStampedModel):
     def is_email_verified(self) -> bool:
         """Never a login gate at MVP — see `services/auth.py` and the notes."""
         return self.email_verified_at is not None
+
+    @property
+    def is_temporary_password_expired(self) -> bool:
+        """A temp password past its window. Never true for a chosen password.
+
+        `password_expires_at` is null for everybody who picked their own, so
+        this cannot lock out a normal account no matter how old the password
+        is: DigiKhaato has no password-ageing policy and is not acquiring one
+        by accident through this field.
+        """
+        from django.utils import timezone
+
+        return self.password_expires_at is not None and self.password_expires_at <= timezone.now()
 
     @property
     def is_staff(self) -> bool:

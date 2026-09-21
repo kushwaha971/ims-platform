@@ -29,6 +29,7 @@ import { PAGE_SIZE_OPTIONS } from '../constants/teamDefaults';
 import { useInvitations } from '../hooks/useInvitations';
 
 import { createInvitationColumns } from './InvitationColumns';
+import { MembersSection } from './MembersSection';
 
 import type { Invitation } from '../types/invitation.types';
 
@@ -199,18 +200,15 @@ export function TeamPageContent(): React.JSX.Element {
         <UbPageHeader
           title={t('team.title')}
           subtitle={t('team.subtitle')}
-          actions={
-            <Can permission="platform.members.manage">
-              <UbButton
-                onClick={openInvite}
-                icon={<UserPlus aria-hidden className="h-4 w-4" />}
-                // Class C, online only: disabled rather than hidden (§19.10.4).
-                disabled={!canWrite}
-              >
-                {t('team.invite.action')}
-              </UbButton>
-            </Can>
-          }
+          /* No page-level action. This header used to carry "Invite member" as
+             a solid primary, and DEC-012 put "Add member" — also a solid
+             primary, also about putting a person in this business — directly
+             beneath it. Two indigo buttons a centimetre apart, leading to two
+             different outcomes, and nothing on screen to tell them apart
+             without reading both lists first.
+             Each section now carries the control that belongs to its own list,
+             and the two are weighted by which one a merchant actually wants:
+             adding somebody is primary, inviting is secondary. */
         />
       }
     >
@@ -224,7 +222,7 @@ export function TeamPageContent(): React.JSX.Element {
           />
         }
       >
-        <UbStack gap={2}>
+        <UbStack gap={6}>
           {!canWrite && (
             <UbStatusBanner
               tone="offline"
@@ -233,9 +231,30 @@ export function TeamPageContent(): React.JSX.Element {
             />
           )}
 
-          <UbText variant="label" tone="tertiary">
-            {t('team.list.count', { count: meta.total })}
-          </UbText>
+          {/* DEC-012 — members FIRST. "Who works here" is the list that is
+              true; an invitation is a hope. An owner chasing a salesman who
+              cannot sign in should meet the real answer before the pending
+              one. */}
+          <MembersSection />
+
+          <UbStack gap={2}>
+            <UbStack direction="row" justify="between" align="center" gap={2}>
+              <UbText variant="h4">{t('team.tab.invitations')}</UbText>
+              <Can permission="platform.members.manage">
+                <UbButton
+                  variant="secondary"
+                  onClick={openInvite}
+                  icon={<UserPlus aria-hidden className="h-4 w-4" />}
+                  // Class C, online only: disabled rather than hidden (§19.10.4).
+                  disabled={!canWrite}
+                >
+                  {t('team.invite.action')}
+                </UbButton>
+              </Can>
+            </UbStack>
+            <UbText variant="label" tone="tertiary">
+              {t('team.list.count', { count: meta.total })}
+            </UbText>
 
           <UbDataGrid
             rows={rows}
@@ -249,8 +268,9 @@ export function TeamPageContent(): React.JSX.Element {
             page={meta}
             onPageChange={setPage}
             onPageSizeChange={handlePageSize}
-            pageSizeOptions={PAGE_SIZE_OPTIONS}
-          />
+              pageSizeOptions={PAGE_SIZE_OPTIONS}
+            />
+          </UbStack>
         </UbStack>
 
         {inviteOpen && <InviteMemberDialog invitations={invitations} />}

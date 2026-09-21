@@ -58,6 +58,11 @@ export const useAuthRedirect = (): UseAuthRedirectResult => {
   const redirectTo = useCallback(
     (destination: PostAuthDestination) => {
       switch (destination.kind) {
+        // DEC-012 — first, and it does not honour `?next=`: wherever they were
+        // going, the server will refuse it until this is done.
+        case 'setPassword':
+          router.replace(AUTH_CONFIG.setPasswordRoute);
+          return;
         case 'onboarding':
           router.replace(AUTH_CONFIG.onboardingStepPath(destination.step));
           return;

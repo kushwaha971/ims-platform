@@ -26,6 +26,13 @@ package, say so instead of adding one.
 Anything still mentioning OTP or SMS is stale documentation or backlogged work,
 not a gap to fill. Do not build OTP.
 
+**Nothing is emailed (DEC-012).** `UB_EMAIL_BACKEND` is the console backend and
+no provider is being paid for until the platform earns. So an owner adds staff by
+creating the account — the server mints a temporary password, returns it once,
+and the owner sends it by hand, which is WhatsApp in practice. The invitation
+token flow is kept, untouched, because it *is* the email flow the day email
+lands. Do not write copy that implies a message was sent.
+
 **The frontend follows BrandHub's Customer module exactly.** Redux Toolkit slices
 with `createAsyncThunk`, React Hook Form, a central `useValidationSchemas()` Yup
 hook, an `api/<x>Service.ts` layer, shared `utils/` and enums. **TanStack Query is
@@ -78,13 +85,19 @@ There is no seeded merchant — sign up at `/signup`.
 ## Gates
 
 ```bash
-cd backend  && python3 -m pytest -q          # 701 passing
-cd frontend && npm run type-check && npm run lint && npm test   # 701 passing
-cd frontend && npm run build && npm run bundle:check            # 223.3 KB gz
+cd backend  && python3 -m pytest -q          # 777 passing
+cd frontend && npm run type-check && npm run lint && npm test   # 779 passing
+cd frontend && npm run build && npm run bundle:check            # 228.1 KB gz
+node e2e/journey.mjs && node e2e/security.mjs && node e2e/credentials.mjs
 ```
 
-All must stay green. The bundle budget has ~0.6 KB of headroom on `sharedApp` —
-if a change needs more, say so rather than raising the budget to fit it.
+All must stay green. The bundle budget has ~0.9 KB of headroom on `sharedApp`,
+and `bundle-budgets.json` explains why that keeps happening: every feature slice
+`store.ts` registers statically ships to every route, including the ones that
+render a paragraph of text. It has cost +4.5 KB across two features and ledger,
+inventory, sales, purchases and reports are all still to come. **§19.3.9 needs a
+decision from the owner before the ledger slice lands** — either the shell keeps
+growing with every feature, or the store admits lazily registered reducers.
 
 ## State
 

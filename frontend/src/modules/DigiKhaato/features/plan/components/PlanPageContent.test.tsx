@@ -48,6 +48,8 @@ beforeEach(() => {
         email: 'ramesh@example.com',
         mobile: '+919876543210',
         locale: 'en',
+        mustChangePassword: false,
+        passwordExpiresAt: null,
       },
       activeTenant: { id: 't1', name: 'Sharma', timezone: 'Asia/Kolkata' },
       tenants: [],

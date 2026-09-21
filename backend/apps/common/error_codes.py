@@ -40,6 +40,11 @@ _REGISTRY: dict[str, tuple[int, bool]] = {
     "session_revoked": (401, False),
     "current_session": (409, False),
     "no_active_tenant": (403, False),
+    # The account is on a temporary password issued by an owner. Every
+    # authenticated route except the change itself answers this until the
+    # person picks their own password -- see `common/authentication.py`.
+    "password_change_required": (403, False),
+    "password_expired": (401, False),
     "invitation_invalid": (400, False),
     "memberships_exist": (409, False),
     "export_required": (409, False),

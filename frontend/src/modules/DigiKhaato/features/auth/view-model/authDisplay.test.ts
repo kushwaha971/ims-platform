@@ -37,6 +37,8 @@ const result = (over: Partial<AuthResult> = {}): AuthResult => ({
   locale: 'en',
   isNew: false,
   hasPassword: true,
+  mustChangePassword: false,
+  passwordExpiresAt: null,
   activeTenantId: null,
   tenants: [],
   permissions: [],
@@ -187,5 +189,81 @@ describe('deviceLabelFrom — PLT-01 §7', () => {
 
   it('caps the label at the documented 120 characters', () => {
     expect(deviceLabelFrom('', 'x'.repeat(200))).toHaveLength(120);
+  });
+});
+
+
+describe('postAuthDestination — the forced password change (DEC-012)', () => {
+  it('outranks every tenant branch, including the empty one', () => {
+    // Found in a browser, not here: the server answered
+    // `403 password_change_required` while the client painted
+    // `/onboarding/step/2`. A member added by an owner has `tenants: []` in the
+    // login result — the session read that would populate it is one of the
+    // requests being refused — so the no-tenant rule claimed them and sent them
+    // into a wizard to create a business they did not want, on an account they
+    // could not yet use.
+    expect(
+      postAuthDestination(result({ mustChangePassword: true, tenants: [] }))
+    ).toEqual({ kind: 'setPassword' });
+  });
+
+  it('outranks a perfectly good active tenant too', () => {
+    // The same person after a second sign-in, once their membership is visible.
+    // Nothing behind the dashboard answers until they choose a password.
+    expect(
+      postAuthDestination(
+        result({
+          mustChangePassword: true,
+          activeTenantId: 't1',
+          tenants: [tenant({ id: 't1', role: 'staff', isDefault: true })],
+        })
+      )
+    ).toEqual({ kind: 'setPassword' });
+  });
+
+  it('leaves an ordinary sign-in exactly where it was', () => {
+    expect(
+      postAuthDestination(result({ mustChangePassword: false, tenants: [] }))
+    ).toEqual({ kind: 'onboarding', step: 1 });
+  });
+});
+
+describe('postAuthDestination — the unfinished wizard is the owner’s alone', () => {
+  it('sends an owner back into their unfinished wizard (PLT-03 FR-9)', () => {
+    expect(
+      postAuthDestination(
+        result({
+          activeTenantId: 't1',
+          tenants: [tenant({ id: 't1', role: 'owner', isDefault: true, onboardingStep: 1 })],
+        })
+      )
+    ).toEqual({ kind: 'onboarding', step: 2 });
+  });
+
+  it('sends a staff member to the app instead of a wizard they cannot complete', () => {
+    // The wizard writes through `PATCH /tenants/current`, which canon §0.9
+    // gives to the OWNER alone. Measured against the live server: a staff
+    // member landed on /onboarding/step/2 and every step answered 403 — on
+    // every sign-in, with no way out, because the router put them back each
+    // time. Unreachable until DEC-012 made a second person able to join at all.
+    expect(
+      postAuthDestination(
+        result({
+          activeTenantId: 't1',
+          tenants: [tenant({ id: 't1', role: 'staff', isDefault: true, onboardingStep: 1 })],
+        })
+      )
+    ).toEqual({ kind: 'app', tenantId: 't1' });
+  });
+
+  it('does not spare an admin either, who also cannot manage the tenant', () => {
+    expect(
+      postAuthDestination(
+        result({
+          activeTenantId: 't1',
+          tenants: [tenant({ id: 't1', role: 'admin', isDefault: true, onboardingStep: 2 })],
+        })
+      )
+    ).toEqual({ kind: 'app', tenantId: 't1' });
   });
 });

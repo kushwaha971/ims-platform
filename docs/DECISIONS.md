@@ -258,3 +258,51 @@ ADR-021 ↔ §26.14 contradiction recorded as `CR-j`.
 - **Links:** `CR-142` · `CR-143` · `CR-144` · `CR-145` · canon §0.1 · Part 29 §29.2.4 ·
   Part 31 · Part 23 · `BACKLOG.md`
 - **Decided:** 2026-09-19 by the owner
+
+### DEC-012 — An owner creates a member's login and hands it over; email delivery is backlogged
+
+- **Status:** `decided` (2026-09-21, by the owner)
+- **The question:** `PLT-05` invitations were built and nothing delivered them. `invite()`
+  created a row and returned a link; `UB_EMAIL_BACKEND` is the console backend, so no
+  message left the machine, and the UI said "Invitation sent." over an act that sent
+  nothing. Either email gets funded or the product needs a way to add staff without it.
+- **Decided:** the owner creates the account outright. The server generates a temporary
+  password, returns it **once**, and the owner passes it on by hand. The member is forced
+  to choose their own password before any other route answers.
+- **Why this and not email**, in the owner's words: the platform is not earning yet and
+  email is a cost — a provider, a domain, SPF and DKIM records, and deliverability to fix
+  when it goes to spam. But the reasoning is not only cost. WhatsApp is how an Indian
+  shopkeeper reaches their salesman, so the message was going to travel that way whichever
+  we built; and a password typed into the ordinary sign-in screen is something a shop
+  assistant on a cheap Android already understands, where a long URL in a chat message
+  opens in an in-app browser and loses the session. The security difference is smaller
+  than it looks: a link in a WhatsApp thread and a password in a WhatsApp thread are the
+  same secret on the same shared phone.
+- **The invitation flow is KEPT, not replaced.** The token path *is* the email path. When
+  delivery is funded it is already built and tested, and nothing has to be rebuilt.
+- **What was deliberately NOT copied from BrandHub's `temp_password_utils`,** which is the
+  pattern this was asked to follow:
+  - its generator draws from `random`, the Mersenne Twister — a predictable sequence whose
+    state is recoverable from enough outputs. Fine for shuffling, wrong for minting a
+    credential. This uses `secrets`. **The same one-line defect is live in BrandHub.**
+  - it stores the password Fernet-encrypted so an admin can read it back. `regenerate()`
+    gives the same outcome without a decryptable plaintext password at rest, without a key
+    to manage, and without the `cryptography` dependency `ADR-021` does not admit.
+- **Safeguards that are not in BrandHub's version:** the temporary password expires after
+  `UB_INVITATION_DAYS` (7), so an account nobody claimed is not a live login sitting in a
+  chat thread forever; `regenerate()` bumps `token_epoch`, so a leaked password does not
+  leave a live session behind it; and reissuing is **refused** once the person has chosen
+  their own password, which is the line between a resend and an owner walking into a staff
+  member's account.
+- **An address that already has an account keeps its own password.** It is added to the
+  team and told to sign in as usual. Issuing a new password there would be a takeover
+  wearing an onboarding costume.
+- **Enforcement is in `CookieOrBearerJWTAuthentication.authenticate()`**, not a permission
+  class. Every view in this product declares its own `permission_classes`, which overrides
+  the defaults, so a permission class would have to be remembered on every view ever added
+  and the one place it was forgotten would be the hole. There is one door into an
+  authenticated request.
+- **Two error codes beyond Part 22 §22.1.1:** `password_change_required` (403) and
+  `password_expired` (401). Neither could reuse an existing code without sending the person
+  to the wrong screen. Carried in `CR-LOG`.
+- **Links:** `PLT-05` · canon §0.7 · `ADR-021` · Part 27 §27.4.2, §27.4.4 · `BACKLOG.md`

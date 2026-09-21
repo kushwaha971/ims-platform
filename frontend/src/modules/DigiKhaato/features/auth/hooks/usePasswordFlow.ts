@@ -17,10 +17,12 @@ import {
   selectThrottledUntil,
 } from '../redux/authSlice';
 import { confirmPasswordReset, requestPasswordReset, setPassword } from '../redux/authThunk';
+import { fetchSession } from '../redux/sessionThunk';
 
 import { useCountdown } from './useCountdown';
 
 import type {
+  ForcePasswordChangeFormValues,
   PasswordResetConfirmFormValues,
   PasswordResetRequestFormValues,
   PasswordSetFormValues,
@@ -59,6 +61,16 @@ export interface UsePasswordFlowResult {
     values: PasswordSetFormValues,
     setError: UseFormSetError<PasswordSetFormValues>
   ) => Promise<void>;
+  /**
+   * DEC-012 — the forced change. Separate from `submitSetPassword` because it
+   * carries the current password, re-reads the session afterwards, and must not
+   * be skippable; folding the two together would put three conditionals in the
+   * one path that decides whether somebody can use the product at all.
+   */
+  readonly submitForcedChange: (
+    values: ForcePasswordChangeFormValues,
+    setError: UseFormSetError<ForcePasswordChangeFormValues>
+  ) => Promise<boolean>;
   readonly submitResetRequest: (
     values: PasswordResetRequestFormValues,
     setError: UseFormSetError<PasswordResetRequestFormValues>
@@ -100,6 +112,45 @@ export const usePasswordFlow = (): UsePasswordFlowResult => {
           // `details.new_password`, which maps to the `password` field here.
           setFormErrors(applyServerErrors(apiError, setError, ['name', 'password']));
         }
+      }
+    },
+    [dispatch]
+  );
+
+  const submitForcedChange = useCallback(
+    async (
+      values: ForcePasswordChangeFormValues,
+      setError: UseFormSetError<ForcePasswordChangeFormValues>
+    ): Promise<boolean> => {
+      setFormErrors([]);
+      try {
+        await dispatch(
+          setPassword({
+            newPassword: values.password,
+            currentPassword: values.currentPassword,
+          })
+        ).unwrap();
+        // The session in the store still says `mustChangePassword: true`, and
+        // `RequireSession` reads exactly that — so without this re-read the
+        // person is bounced straight back to this screen by the guard that
+        // sent them here, having just successfully changed their password.
+        await dispatch(fetchSession()).unwrap().catch(() => undefined);
+        dispatch(showSnackbar({ severity: 'success', id: 'auth.password.updated' }));
+        return true;
+      } catch (thrown) {
+        const apiError = thrown as ApiErrorShape;
+        if (apiError.code === 'validation_error') {
+          setFormErrors(
+            applyServerErrors(apiError, setError, ['currentPassword', 'password'])
+          );
+        } else if (apiError.code === 'invalid_credentials') {
+          // The server answers this for a wrong CURRENT password, and it is the
+          // one failure with an obvious field to sit on. Left to the global
+          // snackbar it would read as "Email or password is incorrect" over a
+          // form with no email on it.
+          setError('currentPassword', { message: apiError.message });
+        }
+        return false;
       }
     },
     [dispatch]
@@ -163,6 +214,7 @@ export const usePasswordFlow = (): UsePasswordFlowResult => {
     formErrors,
     startOverRequest,
     submitSetPassword,
+    submitForcedChange,
     submitResetRequest,
     submitResetConfirm,
   };

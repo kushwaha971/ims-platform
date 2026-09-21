@@ -57,6 +57,8 @@ const NEW_ACCOUNT = {
   locale: 'en',
   isNew: true,
   hasPassword: true,
+  mustChangePassword: false,
+  passwordExpiresAt: null,
   activeTenantId: null,
   tenants: [],
   permissions: [],

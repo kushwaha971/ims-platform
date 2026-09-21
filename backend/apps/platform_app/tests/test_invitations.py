@@ -95,20 +95,29 @@ def test_re_inviting_revokes_the_earlier_link_rather_than_adding_a_second(
     resend behaves: the old link stops, the new one is the only one that does.
     """
     first, first_raw = memberships.invite(
-        tenant=tenant, role=system_roles[RoleCode.STAFF.value], email="priya@shop.test",
-        actor=user, ctx=_ctx(user, tenant),
+        tenant=tenant,
+        role=system_roles[RoleCode.STAFF.value],
+        email="priya@shop.test",
+        actor=user,
+        ctx=_ctx(user, tenant),
     )
     second, second_raw = memberships.invite(
-        tenant=tenant, role=system_roles[RoleCode.STAFF.value], email="priya@shop.test",
-        actor=user, ctx=_ctx(user, tenant),
+        tenant=tenant,
+        role=system_roles[RoleCode.STAFF.value],
+        email="priya@shop.test",
+        actor=user,
+        ctx=_ctx(user, tenant),
     )
 
     assert first_raw != second_raw
     assert Invitation.objects.get(pk=first.pk).status == InvitationStatus.REVOKED
     assert Invitation.objects.get(pk=second.pk).status == InvitationStatus.PENDING
-    assert Invitation.objects.filter(
-        tenant=tenant, email="priya@shop.test", status=InvitationStatus.PENDING
-    ).count() == 1
+    assert (
+        Invitation.objects.filter(
+            tenant=tenant, email="priya@shop.test", status=InvitationStatus.PENDING
+        ).count()
+        == 1
+    )
 
 
 @pytest.mark.django_db
@@ -119,8 +128,11 @@ def test_a_revoked_invitation_stops_working(
         email="priya@shop.test", password="KhataBook2026!", full_name="Priya"
     )
     invitation, raw = memberships.invite(
-        tenant=tenant, role=system_roles[RoleCode.STAFF.value], email="priya@shop.test",
-        actor=user, ctx=_ctx(user, tenant),
+        tenant=tenant,
+        role=system_roles[RoleCode.STAFF.value],
+        email="priya@shop.test",
+        actor=user,
+        ctx=_ctx(user, tenant),
     )
 
     memberships.revoke_invitation(invitation=invitation, ctx=_ctx(user, tenant))
@@ -140,8 +152,11 @@ def test_revoking_is_idempotent_and_keeps_the_history(
     caller wanted — it does not work — so it is not a failure.
     """
     invitation, _ = memberships.invite(
-        tenant=tenant, role=system_roles[RoleCode.STAFF.value], email="priya@shop.test",
-        actor=user, ctx=_ctx(user, tenant),
+        tenant=tenant,
+        role=system_roles[RoleCode.STAFF.value],
+        email="priya@shop.test",
+        actor=user,
+        ctx=_ctx(user, tenant),
     )
     memberships.revoke_invitation(invitation=invitation, ctx=_ctx(user, tenant))
     again = memberships.revoke_invitation(invitation=invitation, ctx=_ctx(user, tenant))
@@ -157,8 +172,11 @@ def test_an_active_member_cannot_be_invited_again(
     """`membership` is an ACTIVE owner on `tenant`, so this is the real case."""
     with pytest.raises(BusinessRuleViolation):
         memberships.invite(
-            tenant=tenant, role=system_roles[RoleCode.STAFF.value], email=user.email,
-            actor=user, ctx=_ctx(user, tenant),
+            tenant=tenant,
+            role=system_roles[RoleCode.STAFF.value],
+            email=user.email,
+            actor=user,
+            ctx=_ctx(user, tenant),
         )
 
 
@@ -166,6 +184,9 @@ def test_an_active_member_cannot_be_invited_again(
 def test_an_invitation_needs_an_address(tenant: Any, user: Any, system_roles: dict) -> None:
     with pytest.raises(BusinessRuleViolation):
         memberships.invite(
-            tenant=tenant, role=system_roles[RoleCode.STAFF.value], email="   ",
-            actor=user, ctx=_ctx(user, tenant),
+            tenant=tenant,
+            role=system_roles[RoleCode.STAFF.value],
+            email="   ",
+            actor=user,
+            ctx=_ctx(user, tenant),
         )

@@ -46,6 +46,15 @@ interface AuthUserApiRow {
   readonly locale: Locale;
   readonly is_new?: boolean;
   readonly has_password?: boolean;
+  /**
+   * DEC-012 — the account is on a password its OWNER did not choose, issued by
+   * a business owner and passed on by hand. The server refuses every route but
+   * the change itself while this is true (`common/authentication.py`); this
+   * field is what lets the client route there instead of showing the person a
+   * wall of 403s on their first ever sign-in.
+   */
+  readonly must_change_password?: boolean;
+  readonly password_expires_at?: string | null;
 }
 
 /**
@@ -88,6 +97,9 @@ interface SessionApiResponse {
       readonly email?: string | null;
       readonly mobile?: string | null;
       readonly locale: Locale;
+      /** DEC-012 — see `AuthUserApiRow` above for why these are optional. */
+      readonly must_change_password?: boolean;
+      readonly password_expires_at?: string | null;
     };
     readonly active_tenant: ActiveTenantApiRow | null;
     readonly tenants: readonly TenantApiRow[];
@@ -138,6 +150,12 @@ const toAuthResult = (body: AuthApiResponse): AuthResult => {
     locale: data.user.locale,
     isNew: data.user.is_new ?? false,
     hasPassword: data.user.has_password ?? true,
+    // Defaults to FALSE, which is the safe default here and the opposite of
+    // `has_password` above: an older server that does not send the field has no
+    // such accounts, and defaulting to `true` would strand every existing user
+    // on the change-password screen.
+    mustChangePassword: data.user.must_change_password ?? false,
+    passwordExpiresAt: data.user.password_expires_at ?? null,
     activeTenantId: data.active_tenant_id,
     tenants: data.tenants.map(toAuthTenant),
     permissions: data.permissions,
@@ -300,6 +318,11 @@ export const getSession = async (signal?: AbortSignal): Promise<SessionPayload> 
       email: data.user.email ?? '',
       mobile: data.user.mobile ?? null,
       locale: data.user.locale,
+      // Defaults to FALSE. An older server that does not send this has no such
+      // accounts, and defaulting to `true` would strand every existing user on
+      // the change-password screen.
+      mustChangePassword: data.user.must_change_password ?? false,
+      passwordExpiresAt: data.user.password_expires_at ?? null,
     },
     activeTenant,
     tenants,

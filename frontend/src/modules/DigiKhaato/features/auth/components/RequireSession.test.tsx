@@ -40,7 +40,11 @@ const tenant = (over: Partial<SessionTenant> = {}): SessionTenant => ({
   ...over,
 });
 
-const loadSession = (tenants: readonly SessionTenant[], active: SessionTenant | null = null) => {
+const loadSession = (
+  tenants: readonly SessionTenant[],
+  active: SessionTenant | null = null,
+  user: { mustChangePassword?: boolean; passwordExpiresAt?: string | null } = {}
+) => {
   store.dispatch(
     sessionLoaded({
       user: {
@@ -49,6 +53,8 @@ const loadSession = (tenants: readonly SessionTenant[], active: SessionTenant | 
         email: 'ramesh@example.com',
         mobile: null,
         locale: 'en',
+        mustChangePassword: user.mustChangePassword ?? false,
+        passwordExpiresAt: user.passwordExpiresAt ?? null,
       },
       activeTenant: active,
       tenants,
@@ -146,5 +152,59 @@ describe('RequireSession — a session with no active tenant', () => {
     );
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/login?next=%2Fparties'));
+  });
+});
+
+
+describe('RequireSession — the forced password change (DEC-012)', () => {
+  it('sends a member on an owner-issued password to the change screen', async () => {
+    // The server refuses every other route while this flag is set. Without the
+    // redirect the person sees a wall of 403s on their first ever sign-in.
+    pathname = '/dashboard';
+    loadSession([tenant({ isDefault: true })], tenant({ isDefault: true }), {
+      mustChangePassword: true,
+    });
+
+    renderWithProviders(
+      <RequireSession>
+        <UbText>the app</UbText>
+      </RequireSession>
+    );
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/set-password'));
+    expect(screen.queryByText('the app')).not.toBeInTheDocument();
+  });
+
+  it('outranks the no-tenant redirect rather than losing to it', async () => {
+    // The sharp case. A member added to ONE business who has not changed their
+    // password reads as `no_tenant`, because the session fetch that would
+    // populate `activeTenant` is one of the requests the server is refusing.
+    // Checked second, this guard would send them into the onboarding wizard to
+    // create a business they do not want, on an account they cannot yet use.
+    pathname = '/dashboard';
+    loadSession([], null, { mustChangePassword: true });
+
+    renderWithProviders(
+      <RequireSession>
+        <UbText>the app</UbText>
+      </RequireSession>
+    );
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/set-password'));
+    expect(replace).not.toHaveBeenCalledWith('/onboarding');
+  });
+
+  it('lets an ordinary session through untouched', async () => {
+    pathname = '/dashboard';
+    loadSession([tenant({ isDefault: true })], tenant({ isDefault: true }));
+
+    renderWithProviders(
+      <RequireSession>
+        <UbText>the app</UbText>
+      </RequireSession>
+    );
+
+    expect(await screen.findByText('the app')).toBeInTheDocument();
+    expect(replace).not.toHaveBeenCalledWith('/set-password');
   });
 });

@@ -46,6 +46,16 @@ export interface SessionUser {
   readonly email: string;
   readonly mobile: string | null;
   readonly locale: Locale;
+  /**
+   * DEC-012 — this account is signed in on a password a business owner created
+   * for them and sent by hand. The SERVER is the authority and refuses every
+   * route but the change itself; this field exists so `RequireSession` can send
+   * them to that screen instead of letting them walk into a wall of 403s on
+   * their first ever sign-in.
+   */
+  readonly mustChangePassword: boolean;
+  /** ISO 8601, or `null` once they have chosen their own password. */
+  readonly passwordExpiresAt: string | null;
 }
 
 /**
@@ -198,6 +208,8 @@ export default sessionSlice.reducer;
 // ── Selectors ────────────────────────────────────────────────────────────────
 
 export const selectSessionStatus = (state: RootState): SessionStatus => state.session.status;
+export const selectMustChangePassword = (state: RootState): boolean =>
+  state.session.user?.mustChangePassword ?? false;
 export const selectSessionUser = (state: RootState): SessionUser | null => state.session.user;
 export const selectActiveTenant = (state: RootState): SessionTenant | null =>
   state.session.activeTenant;

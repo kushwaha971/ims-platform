@@ -25,6 +25,11 @@ import {
   revokeInvitation,
 } from 'modules/DigiKhaato/features/team/redux/invitationThunk';
 import {
+  addMember,
+  fetchMembers,
+  regenerateCredentials,
+} from 'modules/DigiKhaato/features/team/redux/memberThunk';
+import {
   leaveTenant,
   setDefaultTenant,
 } from 'modules/DigiKhaato/features/tenant-switcher/redux/tenantSwitcherThunk';
@@ -48,6 +53,8 @@ export const QUERIES = {
   fetchPartyList,
   // PLT-05 — the team screen's invitation list
   fetchInvitations,
+  // DEC-012 — the team screen's member list
+  fetchMembers,
 } as const;
 
 export const MUTATIONS = {
@@ -56,6 +63,9 @@ export const MUTATIONS = {
   logout,
   // CR-2026-09-19-A — email + password sign-up replaces the OTP pair
   registerAccount,
+  // DEC-012 — owner-issued credentials
+  addMember,
+  regenerateCredentials,
   // PLT-02 — password login, set and reset
   passwordLogin,
   setPassword,

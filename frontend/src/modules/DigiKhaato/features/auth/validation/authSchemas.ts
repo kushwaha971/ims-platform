@@ -68,6 +68,20 @@ export interface PasswordResetConfirmFormValues {
   password: string;
 }
 
+/**
+ * DEC-012 — the forced change, for an account on an owner-issued password.
+ *
+ * `currentPassword` is required and is NOT validated against the password
+ * policy: it is the temporary password the server generated, and holding the
+ * merchant's staff to "at least 8 characters with a letter and a number" on a
+ * value they did not choose would reject a correct paste. It is a plain
+ * required field, and the server is what decides whether it is right.
+ */
+export interface ForcePasswordChangeFormValues {
+  currentPassword: string;
+  password: string;
+}
+
 export const PASSWORD_LOGIN_FIELDS = ['email', 'password'] as const;
 /**
  * `fullName` and `mobile` are still listed: they are the SERVER's spellings, and
@@ -85,6 +99,7 @@ export interface AuthSchemas {
   readonly passwordResetRequestSchema: Yup.ObjectSchema<PasswordResetRequestFormValues>;
   readonly passwordSetSchema: Yup.ObjectSchema<PasswordSetFormValues>;
   readonly passwordResetConfirmSchema: Yup.ObjectSchema<PasswordResetConfirmFormValues>;
+  readonly forcePasswordChangeSchema: Yup.ObjectSchema<ForcePasswordChangeFormValues>;
 }
 
 export const useAuthSchemas = (): AuthSchemas => {
@@ -127,6 +142,11 @@ export const useAuthSchemas = (): AuthSchemas => {
       }),
 
       passwordResetConfirmSchema: Yup.object({
+        password: v.passwordValidation({ minLength: PASSWORD_FLOOR }).defined(),
+      }),
+
+      forcePasswordChangeSchema: Yup.object({
+        currentPassword: v.requiredText(128, 'validation.password.required').defined(),
         password: v.passwordValidation({ minLength: PASSWORD_FLOOR }).defined(),
       }),
     }),
