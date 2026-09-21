@@ -148,6 +148,46 @@
    * stays visible on a dark surface, which BrandHub never needs because its
    * customer portal does not go dark.
    */
+  /**
+   * The auth hero's brand wash.
+   *
+   * BrandHub's `CustomerAuthShell` sets this inline:
+   *   `linear-gradient(0deg, rgba(255,255,255,.95) 0%, rgba(255,255,255,.95) 100%),
+   *    hsl(var(--color-primary))`
+   * — a flat 95%-white sheet over the brand colour, which is a 5% tint that
+   * follows a white-label tenant without an asset to export per tenant. It has
+   * to be a gradient rather than a flat token precisely so it can sit ON TOP of
+   * `--color-primary` and track it at runtime.
+   *
+   * Written here rather than as `bg-[linear-gradient(...)]` for the same reason
+   * `.ub-native-select` is: Tailwind's arbitrary-value parser does not survive
+   * the commas inside the gradient's own colour functions. Measured by looking
+   * — the class compiled to nothing and the hero half rendered flat grey, which
+   * is exactly how it looked in the first screenshot of this layout.
+   *
+   * At 5% the tint changes no contrast ratio, so nothing on the panel needed
+   * re-checking.
+   */
+  .ub-auth-hero {
+    background-image: linear-gradient(
+      0deg,
+      rgb(255 255 255 / 0.95) 0%,
+      rgb(255 255 255 / 0.95) 100%
+    );
+    background-color: hsl(var(--color-primary));
+  }
+
+  :root[data-theme='dark'] .ub-auth-hero,
+  .dark .ub-auth-hero {
+    /* The same idea inverted: a near-black sheet, so the panel stays a tint of
+       the brand rather than becoming a bright block in a dark room. */
+    background-image: linear-gradient(
+      0deg,
+      rgb(10 9 11 / 0.92) 0%,
+      rgb(10 9 11 / 0.92) 100%
+    );
+  }
+
   .ub-native-select {
     appearance: none;
     background-repeat: no-repeat;
