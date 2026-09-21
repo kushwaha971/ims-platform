@@ -78,3 +78,112 @@ confirmed to fail against the pre-fix code before being kept.
   cannot be pulled from this environment, so "works under compose" remains unproven.
 * **Only the happy path plus one refusal.** Duplicate registration was observed
   returning a correct `validation_error`; no other error path was walked.
+
+---
+
+# Second pass — the two tiers running together
+
+The first pass drove the API over HTTP. This one ran the real frontend against
+the real backend in a real browser (Chromium via Playwright, three viewports:
+1440×900, 834×1112, 390×844), because nothing had yet exercised both tiers as
+one system. Two blocking defects, both of which made the product unusable, and
+neither of which any test could have seen.
+
+## B3 — every cross-origin request failed preflight, so nobody could sign in (fixed)
+
+**Severity: blocking.** Sign-in was impossible in the only topology developers run.
+
+The browser console said it plainly:
+
+```
+Access to XMLHttpRequest at 'http://localhost:8000/api/v1/auth/login'
+from origin 'http://localhost:3000' has been blocked by CORS policy:
+Request header field x-request-id is not allowed by
+Access-Control-Allow-Headers in preflight response.
+```
+
+`AxiosInstances` mints an `X-Request-Id` on every call. It was not in
+`CORS_ALLOW_HEADERS`, and a request header outside that list does not arrive
+stripped — the preflight fails and the browser never sends the request at all.
+So every call failed, including login.
+
+What makes this one worth dwelling on: `CORS_EXPOSE_HEADERS` sits directly above
+the gap, and its comment reasons correctly and at length about exactly the right
+thing — that dev is cross-origin and production is same-origin behind nginx, so
+a header rule can pass in one and silently do nothing in the other. It then
+applies that reasoning only to *response* headers and misses the request-header
+half, which is the half that stops the product working rather than merely
+blinding a client.
+
+Invisible to 676 backend tests because Django's test client calls the view
+directly and never performs an OPTIONS preflight. Invisible in production
+because same-origin requests are not subject to CORS. Wrong in exactly the
+topology every developer runs, right in the two that are tested.
+
+Fixed by adding `CORS_ALLOW_HEADERS` built from `corsheaders.defaults` plus the
+four headers this client actually sends. Note `X-CSRF-Token` is not
+`x-csrftoken`: the library default carries Django's spelling and the client uses
+the conventional one, so neither covers the other. `apps/common/tests/test_cors.py`
+drives real preflights; all six tests were confirmed to fail before the fix.
+
+## B4 — the login page redirected to itself, forever (fixed)
+
+**Severity: blocking.** The login form rendered and was navigated away from
+several times a second, so it could never be typed into.
+
+With CORS fixed, the page went blank. It was not blank — it was looping:
+
+```
+NAV /login
+401 /api/v1/auth/me
+NAV /login?next=%2Flogin
+401 /api/v1/auth/me
+NAV /login?next=%2Flogin%3Fnext%3D%252Flogin
+...
+```
+
+`SessionBootstrap` calls `GET /auth/me` from the **root** layout, so it runs on
+the login screen too and answers 401 for the entirely ordinary reason that
+nobody has signed in yet. The transport layer's 401 handler redirected to
+`/login?next=<current path>` — and the current path was `/login`. Each pass was
+a full page load that re-ran the bootstrap and re-encoded `next`, so the address
+doubled in length every time.
+
+The `redirectToLoginOnce` guard could not help: `redirected` is module-level
+state and `window.location.assign` is a full page load, so the module is
+re-evaluated and the flag is back to `false` on the other side. It stops
+concurrent 401s racing; it cannot stop a loop, because the loop goes through the
+one operation that resets it.
+
+Fixed by adding `PUBLIC_ROUTE_PREFIXES` and `isPublicPath` to `src/routes.ts` —
+where addresses belong — and returning early when the caller is already on an
+auth screen. Sending someone who is on the login page to the login page was
+never meaningful, so nothing of value was lost. Five tests in
+`src/tests/routes.test.ts`, including one asserting the public and app prefix
+lists stay disjoint, since a path in both would be guarded as an app route and
+skipped as a public one, which is how the loop returns.
+
+## Verified working, all three viewports
+
+Login → `/parties`, at 1440, 834 and 390 px. The rail collapses to a compact
+tenant bar below `lg`, search and filter stack, and the empty state reads
+correctly. No console errors beyond the expected pre-login 401.
+
+## Known gap, not a defect
+
+**There is no mobile navigation.** Below `lg` the sidebar is hidden and
+`UbBottomNav` does not exist yet — `UbAppShell` says so in its own docstring and
+names it as post-Sprint-1. A merchant on a phone can reach the screen they land
+on and no other. Worth knowing before testing on a phone; it is scheduled work,
+not something this pass broke.
+
+## Still not covered
+
+* **Docker.** Hub is unreachable from this environment, so images cannot be
+  pulled and the compose path remains validated (`docker compose config`) but
+  unproven. The stack was run natively instead: PostgreSQL 16, Django on :8000,
+  Next.js on :3000.
+* **Only the parties screen.** Dashboard, reminders and settings were not driven.
+* **No write path.** Ledger, inventory, sales and purchases are stubs and
+  parties is read-only until PTY-02, so nothing has yet been created through the
+  UI.

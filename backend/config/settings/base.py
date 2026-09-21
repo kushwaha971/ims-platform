@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from corsheaders.defaults import default_headers as default_cors_headers
 from environs import Env
 
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -258,6 +259,35 @@ CORS_EXPOSE_HEADERS = [
     "Idempotent-Replayed",
     "Retry-After",
 ]
+
+# The same split, in the other direction — and this is the half that stops the
+# product working rather than merely blinding a client. `CORS_EXPOSE_HEADERS`
+# above governs which response headers a cross-origin browser may *read*;
+# `CORS_ALLOW_HEADERS` governs which request headers it may *send*. A header
+# outside this list does not arrive stripped: the preflight fails and the
+# request is never made at all.
+#
+# Found by running the two tiers together for the first time. Every browser call
+# carries `X-Request-Id` (`AxiosInstances` mints one per request), so in dev —
+# frontend :3000, API :8000, genuinely cross-origin — *every* request failed
+# preflight and sign-in was impossible. Nothing caught it earlier because the
+# backend tests use Django's test client, which never performs a preflight, and
+# production is same-origin behind nginx, where CORS does not apply. So the
+# configuration was wrong in exactly the topology every developer runs and right
+# in the one the tests and production use.
+#
+# `django-cors-headers` defaults cover accept, authorization, content-type,
+# origin, user-agent, x-requested-with and `x-csrftoken`. The four below are the
+# ones this client actually sends and that the defaults miss. Note `X-CSRF-Token`
+# is *not* `x-csrftoken`: the default list carries Django's own spelling, and the
+# client uses the conventional one, so the two do not cover each other.
+CORS_ALLOW_HEADERS = (
+    *default_cors_headers,
+    "X-Request-Id",      # every request; quoted back to support by `toApiError`
+    "X-CSRF-Token",      # double-submit cookie guard (§20.4.6)
+    "Idempotency-Key",   # replay-safe writes (§22.3)
+    "X-Client",          # `web` | `api`, read by throttling and audit
+)
 
 # ── Jobs and scheduler (ADR-012, Part 20 §20.8) ──────────────────────────────
 UB_JOBS_EAGER = env.bool("UB_JOBS_EAGER", False)

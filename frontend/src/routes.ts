@@ -97,6 +97,35 @@ export const APP_ROUTE_PREFIXES: readonly string[] = [
 ];
 
 /**
+ * The addresses that do NOT require a session — the auth flow's own screens.
+ *
+ * Needed because "send an unauthenticated caller to login" is only correct when
+ * the caller is not already there. `SessionBootstrap` calls `GET /auth/me` from
+ * the root layout, so it runs on `/login` too and answers 401 for the ordinary
+ * reason that nobody has signed in yet. Without this list the 401 handler
+ * redirected `/login` to `/login?next=/login`, which is a full page load, which
+ * re-runs the bootstrap, which 401s again — an unbounded loop that re-encodes
+ * `next` each time, so the address doubles in length on every pass. The login
+ * form never settled long enough to type into.
+ *
+ * `isPublicPath` matches on prefix because `/reset-password` carries a token
+ * segment, and it is exported from here for the same reason every other address
+ * is: so there is one list, not one per guard.
+ */
+export const PUBLIC_ROUTE_PREFIXES: readonly string[] = [
+  ROUTES.LOGIN,
+  ROUTES.SIGNUP,
+  ROUTES.FORGOT_PASSWORD,
+  ROUTES.RESET_PASSWORD,
+  ROUTES.SET_PASSWORD,
+];
+
+export const isPublicPath = (pathname: string): boolean =>
+  PUBLIC_ROUTE_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+
+/**
  * CR-2026-09-19-A — addresses that used to exist. `/otp` was the six-digit code
  * screen; the redirect is what stops a bookmark landing on a 404.
  */
