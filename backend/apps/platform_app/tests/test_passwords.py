@@ -796,20 +796,96 @@ def test_reset_does_not_change_the_permission_version(auth_client: Any, membersh
     assert membership.permissions_version == before
 
 
-def test_reset_confirm_refuses_a_weak_password_but_the_token_is_still_spent(
+def test_reset_confirm_refuses_a_weak_password_without_spending_the_link(
     auth_client: Any, user: Any
 ) -> None:
-    """The token is spent first, so a link cannot be probed with bad passwords."""
+    """FR-5 / §9 "Failed" — a rejected password must not consume the link.
+
+    The rules the server owns are wider than the ones the client can mirror:
+    Django's `CommonPasswordValidator` and `UserAttributeSimilarityValidator`
+    live only on the server, so `Password123` reaches the endpoint looking
+    perfectly valid to the form. Spending the token first meant that merchant
+    got "Choose a less common password" *and* a dead link, behind a 60-second
+    minimum gap and a five-per-hour cap. The whole confirm is one transaction
+    now, so the refusal rolls the spend back with everything else.
+    """
     from apps.platform_app.models import AuthToken
     from tests.fixtures import reset_token_for
 
     raw = reset_token_for(user.email)
-    response = auth_client.post(
-        reverse(RESET_CONFIRM_URL), {"token": raw, "new_password": "short"}, format="json"
+    for rejected in ("short", "Password123"):
+        response = auth_client.post(
+            reverse(RESET_CONFIRM_URL), {"token": raw, "new_password": rejected}, format="json"
+        )
+        assert response.status_code == 400, rejected
+        assert "password" in response.json()["error"]["details"], rejected
+        assert AuthToken.objects.get().used_at is None, rejected
+
+    # The same link still works, which is the whole point of not spending it.
+    ok = auth_client.post(
+        reverse(RESET_CONFIRM_URL), {"token": raw, "new_password": "NayaPass1234"}, format="json"
     )
-    assert response.status_code == 400
-    assert "password" in response.json()["error"]["details"]
+    assert ok.status_code == 200
+    user.refresh_from_db()
+    assert user.check_password("NayaPass1234")
+
+
+def test_reset_confirm_still_spends_the_link_on_success(auth_client: Any, user: Any) -> None:
+    """The rollback must not become a token-reuse hole: one accepted use, ever."""
+    from apps.platform_app.models import AuthToken
+    from tests.fixtures import reset_token_for
+
+    raw = reset_token_for(user.email)
+    assert (
+        auth_client.post(
+            reverse(RESET_CONFIRM_URL),
+            {"token": raw, "new_password": "NayaPass1234"},
+            format="json",
+        ).status_code
+        == 200
+    )
     assert AuthToken.objects.get().used_at is not None
+    assert (
+        auth_client.post(
+            reverse(RESET_CONFIRM_URL),
+            {"token": raw, "new_password": "DusraPass1234"},
+            format="json",
+        ).status_code
+        == 400
+    )
+    user.refresh_from_db()
+    assert user.check_password("NayaPass1234")
+
+
+def test_a_failed_reset_leaves_the_password_and_sessions_alone(auth_client: Any, user: Any) -> None:
+    """The refusal changes nothing at all — not the password, not the sessions.
+
+    `reset_password` revokes every live session on its way to setting the new
+    one, so "the link survives" is only half of what §9's "Failed" state wants;
+    the merchant must also still be signed in where they were. Today `validate`
+    happens to run before that revocation, so this holds for a second reason as
+    well as the transaction — which is exactly why it is worth pinning.
+    """
+    from apps.platform_app.models import Session
+    from tests.fixtures import reset_token_for
+
+    _with_password(user, "Kirana123")
+    auth_client.post(
+        reverse(LOGIN_URL), {"email": user.email, "password": "Kirana123"}, format="json"
+    )
+    live_before = Session.objects.filter(user=user, revoked_at__isnull=True).count()
+    assert live_before > 0
+
+    raw = reset_token_for(user.email)
+    assert (
+        auth_client.post(
+            reverse(RESET_CONFIRM_URL), {"token": raw, "new_password": "Password123"}, format="json"
+        ).status_code
+        == 400
+    )
+    user.refresh_from_db()
+    assert user.check_password("Kirana123")
+    assert Session.objects.filter(user=user, revoked_at__isnull=True).count() == live_before
 
 
 def test_a_successful_reset_clears_the_login_lockout(auth_client: Any, user: Any) -> None:

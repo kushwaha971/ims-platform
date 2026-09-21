@@ -10,15 +10,22 @@ import { recoveryAnnounced, selectRecoveryAnnounced } from 'src/redux/slice/netw
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 
 /**
- * Part 19 §19.10.3 — the shell strip, and the ONE place the probe effect is
- * mounted. It pushes content down and never overlays, because a merchant
- * mid-entry must not have a banner land on the Save button.
+ * Part 19 §19.10.3 — the shell strip. It pushes content down and never
+ * overlays, because a merchant mid-entry must not have a banner land on the
+ * Save button.
  *
  * `online` shows nothing at all; the strip exists only when there is something
  * true to say.
+ *
+ * **It no longer mounts the probe.** This component lives in `UbAppShell`,
+ * inside `RequireSession`, so mounting the probe here meant the network state
+ * could only ever heal itself on a signed-in route — see
+ * `src/components/providers/NetworkProbe.tsx`, which is mounted above the guard
+ * and carries the reasoning. `withProbe: false` is what keeps the probe mounted
+ * once rather than twice on the routes where both are present.
  */
 export function NetworkStrip(): React.JSX.Element | null {
-  const { state, pendingWrites } = useDegradedNetwork({ withProbe: true });
+  const { state, pendingWrites } = useDegradedNetwork({ withProbe: false });
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
   const announced = useAppSelector(selectRecoveryAnnounced);

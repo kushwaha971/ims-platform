@@ -23,12 +23,32 @@ import type {
  * has never heard of.
  */
 
+/**
+ * `meta.warnings[]` exactly as `services/onboarding._apply_gst` appends it:
+ * `{code, field, gstin_state_code}` for `gstin_state_mismatch` and
+ * `{code, field, gstin_pan}` for `pan_gstin_mismatch`.
+ *
+ * Two things were wrong here and both were invisible because no component
+ * renders these yet. `message` was typed as REQUIRED and the server has never
+ * sent one — a warning is a code the client has its own translated copy for
+ * (`onboarding.gstin.stateMismatch`), not a server string, and typing it
+ * required made `warning.message` an `undefined` that the type said could not
+ * be. And `state_code` is the state the merchant CHOSE, not the state the
+ * GSTIN belongs to; reading it as the latter — which is what
+ * `OnboardingWarning.stateCode` is documented to be — inverted the meaning of
+ * the one field a mismatch banner would interpolate. The GSTIN's own state is
+ * `gstin_state_code`.
+ */
 interface TenantApiResponse {
   readonly data: TenantApiPayload | { readonly tenant: TenantApiPayload };
   readonly meta?: {
     readonly warnings?: readonly {
       readonly code: string;
-      readonly message: string;
+      readonly field?: string;
+      readonly message?: string;
+      /** The state the GSTIN itself encodes. */
+      readonly gstin_state_code?: string;
+      /** The state the merchant picked — NOT the GSTIN's. */
       readonly state_code?: string;
     }[];
   };
@@ -65,8 +85,9 @@ const toTenant = (row: TenantApiPayload): OnboardingTenant => ({
 const toWarnings = (body: TenantApiResponse): readonly OnboardingWarning[] =>
   (body.meta?.warnings ?? []).map((warning) => ({
     code: warning.code,
-    message: warning.message,
-    ...(warning.state_code ? { stateCode: warning.state_code } : {}),
+    ...(warning.field ? { field: warning.field } : {}),
+    ...(warning.message ? { message: warning.message } : {}),
+    ...(warning.gstin_state_code ? { stateCode: warning.gstin_state_code } : {}),
   }));
 
 const toResult = (body: TenantApiResponse): OnboardingResult => ({

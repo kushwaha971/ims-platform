@@ -349,6 +349,7 @@
   "validation.businessType.required": "व्यापार का प्रकार चुनें",
   "validation.gstType.required": "अपनी जीएसटी स्थिति चुनें",
   "errors.invalid_credentials": "मोबाइल नंबर या पासवर्ड गलत है।",
+  "errors.unauthenticated": "जारी रखने के लिए साइन इन करें।",
   "errors.login_throttled": "बहुत ज़्यादा प्रयास। बाद में कोशिश करें।",
   "errors.invalid_token": "आपका सत्र मान्य नहीं है। दोबारा साइन इन करें।",
   "errors.session_revoked": "आपको साइन आउट कर दिया गया। दोबारा साइन इन करें।",

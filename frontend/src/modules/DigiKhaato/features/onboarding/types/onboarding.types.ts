@@ -44,11 +44,21 @@ export interface OnboardingSummaryStep {
   readonly locale: Locale;
 }
 
-/** FR-3 — a non-blocking server note, e.g. `gstin_state_mismatch`. */
+/**
+ * FR-3 — a non-blocking server note, e.g. `gstin_state_mismatch`.
+ *
+ * `code` is the whole contract: the server sends a code and the facts behind
+ * it, and the CLIENT owns the copy, because `onboarding.gstin.stateMismatch`
+ * is already translated into `hi` and a server-minted English sentence in
+ * `meta` would not be. `message` is therefore optional — the server may say
+ * something, and today it says nothing.
+ */
 export interface OnboardingWarning {
   readonly code: string;
-  readonly message: string;
-  /** The state the GSTIN actually belongs to, when the code says so. */
+  /** The wire field the warning is about, when the server names one. */
+  readonly field?: string;
+  readonly message?: string;
+  /** The state the GSTIN actually belongs to (wire: `gstin_state_code`). */
   readonly stateCode?: string;
 }
 

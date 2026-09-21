@@ -129,6 +129,16 @@ def build(
         "plan_limits": plan_limits_payload(membership.tenant) if membership else None,
         "feature_flags": dict(settings.UB_FEATURE_FLAGS or {}),
         "sessions": session_rows(user),
+        # Part 22 §22.2's `ver` — the membership's `permissions_version`, which
+        # is also the `ver` claim `tokens.issue_access` mints and
+        # `HasPermission` compares against to answer `token_stale`. The client
+        # stores it as `session.version` and documents it as what a permissions
+        # re-read keys off; it was reading a field this payload never sent, so
+        # that value was permanently `null` while a test fixture invented a
+        # number for it — the same shape of drift as the top-level
+        # `enabled_modules` that used to throw out of the reducer. Sending it
+        # costs one integer already loaded on the membership row.
+        "ver": membership.permissions_version if membership is not None else None,
     }
     if access_token is not None:
         payload["access_token"] = access_token

@@ -608,7 +608,16 @@ def test_any_member_may_read_the_current_tenant(api_as: Any, tenant: Any) -> Non
 def test_a_caller_with_no_tenant_gets_no_active_tenant(
     api_as: Any, tenant: Any, onboarding_ready: Any
 ) -> None:
-    """Fail closed: `/tenants/current` without a `tid` claim is never somebody else's."""
+    """Fail closed: `/tenants/current` without a `tid` claim is never somebody else's.
+
+    And fail closed *legibly* (review 01 m-7c). This asserted only the 403,
+    which the permission class produced as a flat `permission_denied` before the
+    view ever ran — so the one answer the client can act on ("choose a business
+    first") was indistinguishable from the one it cannot ("you are not allowed
+    in this business"), and `no_active_tenant` had no emitter on this route
+    despite the view being written to raise it. Nothing is granted by naming the
+    reason: the status is unchanged and the view still does not execute.
+    """
     from rest_framework.test import APIClient
     from rest_framework_simplejwt.tokens import AccessToken
 
@@ -620,7 +629,15 @@ def test_a_caller_with_no_tenant_gets_no_active_tenant(
     token["epo"] = stranger.token_epoch
     client = APIClient()
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
-    assert client.get(reverse(CURRENT_URL)).status_code == 403
+
+    for response in (
+        client.get(reverse(CURRENT_URL)),
+        # The PATCH too: a tenant-less caller is not "not permitted to edit",
+        # there is simply nothing to edit yet.
+        client.patch(reverse(CURRENT_URL), {"name": "Nowhere"}, format="json"),
+    ):
+        assert response.status_code == 403
+        assert response.json()["error"]["code"] == "no_active_tenant"
 
 
 # ── EC-7: the idempotency key must outlive the tenant switch it causes ───────

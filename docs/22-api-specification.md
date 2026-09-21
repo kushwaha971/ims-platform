@@ -77,6 +77,7 @@ Ownership is recorded as **T-16** in Part 0 §0.12.2. No other chapter may carry
 | Code | HTTP | Envelope | Raised when | English message | `hi` key | Retryable |
 |---|---|---|---|---|---|---|
 | `invalid_credentials` | 401 | E | Mobile/email and password do not match. Deliberately indistinguishable from an unknown user. | "Mobile number or password is incorrect." | `errors.invalid_credentials` | no |
+| `unauthenticated` | 401 | E | No usable credential reached the server at all — no cookie, no bearer header, or one DRF rejected before a view ran. Distinct from `invalid_credentials`, which is a credential that was presented and was wrong. Emitted by the exception handler for DRF's `NotAuthenticated`. | "Please sign in to continue." | `errors.unauthenticated` | no |
 | `otp_invalid` | 400 | D `attempts_left` | The submitted OTP is wrong or the challenge is spent. Five wrong attempts void the challenge. | "That code is not correct." | `errors.otp_invalid` | no |
 | `otp_throttled` | 429 | D `retry_after` | OTP send or verify exceeded 5/mobile/10 min or 20/IP/hour. | "Too many attempts. Try again later." | `errors.otp_throttled` | **yes** |
 | `login_throttled` | 429 | D `retry_after` | Password login exceeded its per-mobile attempt budget. | "Too many attempts. Try again later." | `errors.login_throttled` | **yes** |

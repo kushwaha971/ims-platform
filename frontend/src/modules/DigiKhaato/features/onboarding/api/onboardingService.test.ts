@@ -185,13 +185,26 @@ describe('onboardingService — the PATCH steps', () => {
     });
   });
 
+  /**
+   * The fixture is `_apply_gst`'s dict verbatim — no `message`, and BOTH state
+   * codes, which is the whole point: `state_code` is the state the merchant
+   * chose (27) and `gstin_state_code` is the state the GSTIN encodes (09).
+   * `OnboardingWarning.stateCode` means the second. Reading the first — which
+   * is what this mapper did — would have made the banner say "your GSTIN
+   * belongs to the state you already picked".
+   */
   it('keeps `warnings[]` from `meta` — a note is not a failure (FR-3)', async () => {
     jest.spyOn(api, 'patch').mockResolvedValue({
       data: {
         data: TENANT,
         meta: {
           warnings: [
-            { code: 'gstin_state_mismatch', message: 'GSTIN belongs to 09.', state_code: '09' },
+            {
+              code: 'gstin_state_mismatch',
+              field: 'gstin',
+              gstin_state_code: '09',
+              state_code: '27',
+            },
           ],
         },
       },
@@ -205,7 +218,7 @@ describe('onboardingService — the PATCH steps', () => {
     });
 
     expect(result.warnings).toEqual([
-      { code: 'gstin_state_mismatch', message: 'GSTIN belongs to 09.', stateCode: '09' },
+      { code: 'gstin_state_mismatch', field: 'gstin', stateCode: '09' },
     ]);
   });
 

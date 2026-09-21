@@ -211,7 +211,12 @@ _AUTH_MESSAGES: dict[str, str] = {
     # names a field the sign-in form does not have. `CR-LOG` carries the copy
     # change to Part 22 §22.1.1; the code itself is unchanged.
     "invalid_credentials": "Email or password is incorrect.",
-    "unauthenticated": "Authentication credentials were not provided.",
+    # DRF's own phrasing ("Authentication credentials were not provided.") is
+    # written for the developer holding the curl, and this string is what a
+    # merchant reads in a toast — every other entry in this table is
+    # merchant-facing. It is also the copy Part 22 §22.1.1's row for
+    # `unauthenticated` now registers.
+    "unauthenticated": "Please sign in to continue.",
 }
 
 
