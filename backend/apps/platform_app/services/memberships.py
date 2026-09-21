@@ -7,6 +7,7 @@ change business is to get a new token — which is what `switch_tenant` mints.
 
 from __future__ import annotations
 
+import secrets
 from typing import Any
 
 from django.db import transaction
@@ -352,3 +353,130 @@ def _promote_default(*, user: Any) -> None:
     if replacement is not None:
         replacement.is_default = True
         replacement.save(update_fields=["is_default", "updated_at"])
+
+
+def invite(
+    *,
+    tenant: Any,
+    role: Any,
+    email: str,
+    actor: Any,
+    ctx: Ctx,
+    mobile: str | None = None,
+) -> tuple[Any, str]:
+    """`POST /invitations` (PLT-05 FR-9) — the half that did not exist.
+
+    `accept_invitation` above has been here since Sprint 1, and nothing could
+    ever create the row it accepts: there was no service, no endpoint, and no
+    caller. The lifecycle was modelled correctly — `pending / accepted / expired
+    / revoked`, a hashed token, an expiry, `invited_by` — and then had no way in.
+
+    Returns the invitation AND the raw token, in that order and exactly once.
+    Only the sha256 is stored (`token_hash`, like every other token in this
+    product), so this return value is the only moment the raw token exists; if
+    the caller drops it, the invitation can only be revoked and reissued. That is
+    the intended property, not an inconvenience.
+
+    **Seats are checked here as well as on accept.** `assert_can_add_member`
+    already runs on accept, which is the moment a seat is truly consumed, but
+    checking only there means an admin can send ten invitations against three
+    seats and seven people discover the problem when they click the link. The
+    tenant is locked for the check (PLT-15 BR-7) so two admins cannot both spend
+    the last seat.
+
+    **Re-inviting the same address replaces rather than duplicates.** Two live
+    invitations for one email would both be acceptable, and whichever arrived
+    second would look to the recipient like the only one — so the earlier row is
+    revoked in the same transaction. This is also how a genuine resend works:
+    the admin sends again, the old link stops working, the new one is the only
+    one that does.
+    """
+    import datetime as dt
+
+    from django.conf import settings
+
+    from apps.platform_app.models import Invitation, Membership
+    from apps.platform_app.tokens import hash_token
+
+    normalised = normalise_email_or_none(email)
+    if not normalised:
+        raise BusinessRuleViolation("validation_error", "An invitation needs an email address.")
+
+    with transaction.atomic():
+        locked = entitlements.lock_tenant_for_write(tenant)
+
+        existing_member = Membership.objects.filter(
+            user__email=normalised, tenant=locked
+        ).first()
+        if existing_member and existing_member.status == MembershipStatus.ACTIVE:
+            raise BusinessRuleViolation(
+                "validation_error", "That person is already on this team."
+            )
+
+        # An `invited` membership or a pending invitation already holds a seat,
+        # so only a genuinely new person has to buy one.
+        superseded = Invitation.objects.select_for_update(of=("self",)).filter(
+            tenant=locked, email=normalised, status=InvitationStatus.PENDING
+        )
+        holds_a_seat = bool(existing_member) or superseded.exists()
+        if not holds_a_seat:
+            entitlements.assert_can_add_member(tenant=locked, adding=1)
+
+        superseded_count = superseded.update(
+            status=InvitationStatus.REVOKED, updated_at=timezone.now()
+        )
+
+        raw_token = secrets.token_urlsafe(32)
+        invitation = Invitation.objects.create(
+            tenant=locked,
+            email=normalised,
+            mobile=mobile or None,
+            role=role,
+            token_hash=hash_token(raw_token),
+            status=InvitationStatus.PENDING,
+            expires_at=timezone.now() + dt.timedelta(days=settings.UB_INVITATION_DAYS),
+            invited_by=actor,
+        )
+
+        write_audit(
+            ctx=ctx,
+            action=AuditAction.MEMBER_INVITED,
+            entity_type="invitation",
+            entity_id=invitation.id,
+            after={"email": normalised, "role": role.code, "expires_at": invitation.expires_at},
+            # The raw token is deliberately NOT audited: an audit row a support
+            # engineer can read is an audit row that hands them a live seat.
+            metadata={"superseded": superseded_count},
+        )
+
+    return invitation, raw_token
+
+
+def revoke_invitation(*, invitation: Any, ctx: Ctx) -> Any:
+    """Stop a pending invitation working, without deleting the history of it.
+
+    Revoked rather than removed: "who invited this person, and what happened to
+    it" is exactly the question an audit answers, and a deleted row answers
+    nothing. `accept_invitation` already refuses anything whose status is not
+    `pending`, so revoking is sufficient to close the link.
+    """
+    from apps.platform_app.models import Invitation
+
+    with transaction.atomic():
+        changed = Invitation.objects.filter(
+            pk=invitation.pk, status=InvitationStatus.PENDING
+        ).update(status=InvitationStatus.REVOKED, updated_at=timezone.now())
+        if not changed:
+            # Already accepted, expired or revoked. Not an error: the caller
+            # wanted it not to work, and it does not.
+            return Invitation.objects.get(pk=invitation.pk)
+
+        write_audit(
+            ctx=ctx,
+            action=AuditAction.MEMBER_INVITED,
+            entity_type="invitation",
+            entity_id=invitation.pk,
+            before={"status": InvitationStatus.PENDING},
+            after={"status": InvitationStatus.REVOKED},
+        )
+    return Invitation.objects.get(pk=invitation.pk)

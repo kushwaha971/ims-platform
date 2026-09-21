@@ -24,6 +24,8 @@ KNOWN_UB_VARIABLES: frozenset[str] = frozenset(
         "UB_DB_STATEMENT_TIMEOUT_MS",
         "UB_DB_LOCK_TIMEOUT_MS",
         "UB_ACCESS_TOKEN_MINUTES",
+        # PLT-05 FR-11 — invitation lifetime in days.
+        "UB_INVITATION_DAYS",
         "UB_REFRESH_TOKEN_DAYS",
         "UB_AUTH_OTP_ENABLED",
         "UB_OTP_PEPPER",
