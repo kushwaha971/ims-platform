@@ -1,6 +1,8 @@
 'use client';
 
-import { useMemo, type ReactNode } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
+
+import dynamic from 'next/dynamic';
 
 import { MLSkeleton } from 'src/design-system/primitives';
 import { cn } from 'src/utils/cn';
@@ -9,7 +11,6 @@ import { visibleColumns } from './columnModel';
 import { UbDataGridEmptyState, type UbDataGridEmptyStates } from './UbDataGridEmptyState';
 import { UbDataGridMobileList } from './UbDataGridMobileList';
 import { UbDataGridPagination } from './UbDataGridPagination';
-import { UbDataGridTable } from './UbDataGridTable';
 import { UbDataGridToolbar } from './UbDataGridToolbar';
 import { useGridTier } from './useGridTier';
 
@@ -22,6 +23,7 @@ import type {
   UbGridState,
   UbGridTier,
 } from './types';
+import type { UbDataGridTableProps } from './UbDataGridTable';
 
 /**
  * Part 17 §17.0.2's `UbDataGrid`. **One component, one column model, three
@@ -106,12 +108,24 @@ const SkeletonRows = ({
 }: {
   readonly count: number;
   readonly columns: number;
-  readonly label: string;
+  /**
+   * Announces the wait (R-A-6). `null` draws the same shape SILENTLY, which is
+   * what the table-chunk fallback below wants: nothing is being fetched from
+   * the server there, the rows are already in the store, and a second "loading"
+   * announcement one chunk-fetch after the data one is noise rather than
+   * information.
+   */
+  readonly label: string | null;
   readonly isCards: boolean;
 }) => (
-  // R-A-6 — a loading state is announced, not merely drawn. R-P-6 — it reserves
-  // the real 60 px so the page does not jump when the rows land.
-  <div role="status" aria-busy aria-label={label} className="w-full">
+  // R-P-6 — it reserves the real 60 px so the page does not jump when the rows
+  // land, announced or not.
+  <div
+    {...(label === null
+      ? { 'aria-hidden': true }
+      : { role: 'status', 'aria-busy': true, 'aria-label': label })}
+    className="w-full"
+  >
     {Array.from({ length: count }, (_, index) => (
       <div
         key={index}
@@ -129,6 +143,48 @@ const SkeletonRows = ({
     ))}
   </div>
 );
+
+/**
+ * Part 19 §19.9.2's standing rule, made true by the build rather than by
+ * intention: **`@tanstack/react-table` is loaded only by routes that render a
+ * TABLE.**
+ *
+ * `useGridTier` already stopped the table EXECUTING on a phone — below `md`
+ * the tier is `cards` and this component never mounts. But a static
+ * `import { UbDataGridTable }` is a build-time edge, so the engine was in the
+ * module graph regardless, and Turbopack hoisted it into the chunk every route
+ * shares. Measured by building a variant with the import stubbed: **13.8 KB gz
+ * / 52.0 KB raw** downloaded and parsed by a merchant on `/login` and on
+ * `/legal/terms` for code their device never runs.
+ *
+ * `ssr: false` because the server snapshot of `useGridTier` is `cards` (see
+ * that file), so the table has never been part of a server render and saying so
+ * keeps it out of the server bundle too.
+ *
+ * The `loading` fallback is the same 60 px rows the data skeleton draws, so the
+ * swap costs no layout shift; `warmTableChunk` below means it is rarely seen.
+ */
+const UbDataGridTableLazy = dynamic(
+  () => import('./UbDataGridTable').then((m) => m.UbDataGridTable),
+  {
+    ssr: false,
+    loading: () => <SkeletonRows count={6} columns={4} label={null} isCards={false} />,
+  }
+  // `dynamic` erases the generic. The import is the split point; the cast
+  // restores the signature the callers below are type-checked against, and
+  // `UbDataGridTableProps` is a type-only import, so nothing is pulled back in.
+) as <TRow>(props: UbDataGridTableProps<TRow>) => React.JSX.Element;
+
+/**
+ * §19.9.3's one reservation about splitting is that it "trades bytes for a
+ * round trip, and on 3G the round trip is worse". This removes the trade: on a
+ * viewport that will need the table, the chunk is requested as soon as the grid
+ * mounts — in parallel with the list's own fetch — rather than when the rows
+ * finally arrive. On a phone it is never requested at all.
+ */
+const warmTableChunk = (): void => {
+  void import('./UbDataGridTable');
+};
 
 export function UbDataGrid<TRow>({
   rows,
@@ -159,6 +215,12 @@ export function UbDataGrid<TRow>({
   className,
 }: Readonly<UbDataGridProps<TRow>>): React.JSX.Element {
   const tier = useGridTier(forcedTier);
+
+  const needsTable = tier !== 'cards';
+  useEffect(() => {
+    if (needsTable) warmTableChunk();
+  }, [needsTable]);
+
   const shown = useMemo(
     () => visibleColumns(columns, tier, compactCutoff),
     [columns, tier, compactCutoff]
@@ -211,7 +273,7 @@ export function UbDataGrid<TRow>({
             listLabel={caption}
           />
         ) : (
-          <UbDataGridTable
+          <UbDataGridTableLazy
             rows={rows}
             columns={shown}
             rowId={rowId}

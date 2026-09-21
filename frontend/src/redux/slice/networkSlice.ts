@@ -24,6 +24,13 @@ export const NET_FAILS_TO_DEGRADE = 1;
 export const NET_PROBE_DEGRADED_MS = 10_000;
 export const NET_PROBE_OFFLINE_MS = 15_000;
 export const NET_PROBES_TO_OFFLINE = 3;
+/**
+ * The ceiling the probe backs off to. See `netProbeSpacingMs` below: a model
+ * that costs requests on a failing link and saves none is worse than no model,
+ * and a fixed 15 s probe on a dead connection was **20 requests every five
+ * minutes, forever**.
+ */
+export const NET_PROBE_BACKOFF_MAX_MS = 120_000;
 /** A queueable write stops waiting and goes to the outbox after this. */
 export const WRITE_HANDOFF_MS = 8_000;
 
@@ -78,6 +85,11 @@ const networkSlice = createSlice({
      * captive-portal Wi-Fi is the lie this model exists to absorb.
      */
     browserCameOnline(state) {
+      // The counter is reset as well as the state, because the backoff below is
+      // keyed on it: a Wi-Fi that has just reconnected is NEW evidence, and
+      // making the merchant wait out a two-minute backoff they earned during
+      // the outage is the one case where backing off would cost them.
+      state.failedProbes = 0;
       if (state.state === 'offline') state.state = 'degraded';
     },
     /** Signal 5 — one successful `GET /system/health`. */
@@ -126,9 +138,45 @@ export const selectNetworkState = (state: RootState): TNetworkState => state.net
 export const selectNetworkImpaired = (state: RootState): boolean =>
   state.network.state !== 'online';
 export const selectPendingWrites = (state: RootState): number => state.network.pendingWrites;
+export const selectFailedProbes = (state: RootState): number => state.network.failedProbes;
 export const selectLastOnlineAt = (state: RootState): string | null => state.network.lastOnlineAt;
 export const selectRecoveryAnnounced = (state: RootState): boolean =>
   state.network.recoveryAnnounced;
+
+/**
+ * How long to wait before the next `GET /system/health`, given the state and
+ * how many probes have failed in a row. Pure, so the policy is one readable
+ * expression and the hook only holds a timer.
+ *
+ * ── Why it backs off ────────────────────────────────────────────────────────
+ *
+ * The probe is the only honest way to detect recovery, so it stays. But at a
+ * fixed spacing it was the one part of the network model that CHANGED the
+ * merchant's traffic, and it changed it the wrong way: five minutes of bad
+ * signal cost roughly **30 extra requests on the connection that is already
+ * failing**, each of them competing with the retries of the request the
+ * merchant actually cares about.
+ *
+ * The shape below keeps the part of that which is evidence and drops the part
+ * which is noise:
+ *
+ *  · The first `NET_PROBES_TO_OFFLINE` failures are at the base spacing, so
+ *    §19.10.3's "roughly 35 s of honest evidence before the word offline
+ *    appears on screen" is unchanged to the second.
+ *  · Every failure beyond that doubles the wait, to a two-minute ceiling.
+ *    Those are the probes of a link that has already proved itself dead, and
+ *    the fifth identical answer is worth less than the first.
+ *
+ * Measured against the same five-minute spell: **7 probes instead of ~30**, and
+ * recovery is still noticed within two minutes at the very worst — usually far
+ * sooner, because ANY completed response (`responseObserved`) and the browser's
+ * own `online` event both reset this to the base spacing without a probe.
+ */
+export const netProbeSpacingMs = (state: TNetworkState, failedProbes: number): number => {
+  const base = state === 'offline' ? NET_PROBE_OFFLINE_MS : NET_PROBE_DEGRADED_MS;
+  const beyondEvidence = Math.max(0, failedProbes - NET_PROBES_TO_OFFLINE);
+  return Math.min(base * 2 ** beyondEvidence, NET_PROBE_BACKOFF_MAX_MS);
+};
 
 /**
  * §19.10.4's gate, as a pure function so the hook, the tests and the outbox all

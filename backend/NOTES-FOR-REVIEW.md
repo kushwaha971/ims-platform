@@ -551,3 +551,172 @@ are untouched. The only line any of them needed was
 `onboarding.create_tenant`'s `phone=user.mobile or ""`: `PLT-03` BR-6 defaults
 the tenant's phone to the owner's number, `platform_tenant.phone` is NOT NULL,
 and since DEC-010 an owner may not have one.
+
+---
+
+# Notes for review — performance pass (review `03-performance.md`)
+
+Measured against a real PostgreSQL 16 holding 98 000 alive parties in one tenant
+and a 200 000-row job queue (`ubperf`). Every number below is an
+`EXPLAIN (ANALYZE, BUFFERS)` or a `CaptureQueriesContext` count, warm, not an
+estimate. The suite ran against the live database after each change.
+
+## 25. The query budget is now a gate, and §20.14.1's numbers need restating
+
+§20.14.1 says the budget is "declared per endpoint and asserted in a test;
+exceeding it fails CI". Nothing asserted one — `grep -rn
+"num_queries\|CaptureQueriesContext" backend/` returned zero — while CI's backend
+step is *named* "with … query budgets" and the workflow lists them as
+merge-blocking. `GET /parties` had drifted to **7 queries against a specified 4**
+and nothing reported it.
+
+The gate is now `tests/performance/test_query_budgets.py`: a table of
+`QueryBudget` rows that four parametrised tests walk. Adding an endpoint to the
+gate is adding a row.
+
+**§20.14.1's numbers cannot be asserted as written, and the reason is not that
+they are wrong.** Its compositions count an endpoint's *own* data queries —
+"count, page, tags prefetch, `meta.totals` aggregate". A real request also pays
+for authentication and tenancy, and `django_assert_num_queries` counts every
+query on the connection. The floor is:
+
+| # | Query | Paid by |
+|---|---|---|
+| 1 | `platform_user` | every authenticated request |
+| 2 | `platform_membership` (with `tenant`, `role`, `tenant__plan`, `tenant__partner`) | every authenticated request |
+| 3 | `platform_tenant_setting` | every request behind `ModuleEnabled` |
+
+So **2 for an endpoint with no module gate, 3 for one with it**. Two of the four
+queries §20.14.1 composes for `GET /parties` are features that do not exist yet:
+`Party` has no `tags` relation until `PTY-02` and the list returns no
+`meta.totals`. Proposed restatement, carried to `CR-LOG` as `CR-146`:
+
+| Endpoint | §20.14.1 today | Proposed | Measured now |
+|---|---|---|---|
+| `GET /parties` | 4 | `floor(3) + 2` = **5** today, `floor(3) + 4` = **7** once tags and totals land | **5** |
+| `GET /parties/{id}` | 5 | `floor(3) + 1` = **4** today, `floor(3) + 5` = **8** once the ledger, tags and invoices exist | **4** |
+| `GET /auth/me` | — | `floor(2) + 5` = **7** | **7** |
+| `GET /tenants/current` | — | `floor(2) + 0` = **2** | **2** |
+
+The table is deliberately asymmetric about which direction is easy.
+`budget` must equal `len(composition)`, and `composition` is one line per query
+saying what it is *for*, so **raising** a budget means naming the query that was
+added; **lowering** one is a number and a deleted line, and
+`test_budget_has_no_slack` tells you when to do it.
+
+## 26. `django.contrib.postgres` is now in `INSTALLED_APPS`
+
+Not for models — it has none. Its `AppConfig.ready()` is what registers `OpClass`
+(and `OrderBy`, `Collate`) as index-expression wrappers. Without it,
+`GinIndex(OpClass(Upper("name"), name="gin_trgm_ops"))` renders as
+`USING gin ((UPPER(name) gin_trgm_ops))` — opclass *inside* the expression's
+parentheses — and PostgreSQL rejects it with a syntax error. With it, the SQL is
+`USING gin ((UPPER("name")) gin_trgm_ops)`, which is valid. §20.14.4 requires
+every index to be declared in a model `Meta.indexes` with an explicit `name=`;
+without this app the functional trigram index could only have been a `RunSQL`
+migration invisible to the model. `CR-147`.
+
+## 27. The `gin_trgm_ops` index on `parties_party.name` was unusable, and is replaced
+
+`icontains` compiles to `UPPER(name::text) LIKE UPPER(%s)`. `UPPER(name)` is a
+function expression; a GIN index on the bare column cannot match it. This is not
+the planner declining — with `enable_seqscan`, `enable_indexscan` and
+`enable_indexonlyscan` all off it still cannot reach `ix_party_name_trgm`.
+`0002_party_search_and_list_indexes` drops it and adds
+`ix_party_name_upper_trgm` on `UPPER(name)`. No application code changed.
+
+    before  31.9 ms, 2 414 buffers, 99 999 rows discarded by filter, 11 MB
+    after    0.15 ms,     8 buffers, Bitmap Index Scan,                6.5 MB
+
+§20.14.4 lists "`parties_party` GIN trigram on `name`". It should say
+`UPPER(name)`, or the rule should be stated as "on the expression the ORM emits".
+`CR-148`.
+
+## 28. Two indexes added that Part 21 §21.4 does not register
+
+Both are partial on `deleted_at IS NULL`, which is the soft-delete manager's own
+predicate, so they are smaller than the full-table equivalents.
+
+| Index | Serves | Before | After |
+|---|---|---|---|
+| `ix_party_tenant_recent` `(tenant, -last_activity_at) WHERE deleted_at IS NULL` | `GET /parties` with no `status` — a parallel seq scan and a top-N heapsort of the whole tenant | 25.6 ms / 3 401 buffers | **0.10 ms / 29 buffers** |
+| `ix_party_tenant_name` `(tenant, name) WHERE deleted_at IS NULL` | `?ordering=name`, which the list's Name column header sends today (`partyListSort.ts`) | 44.6 ms / 2 432 buffers | **0.08 ms / 22 buffers** |
+
+`ix_party_tenant_recent` also turns the paginator's `COUNT(*)` into an index-only
+scan (2 405 → 486 buffers). Its write cost was measured, not assumed: four
+alternating rounds of a 2 000-row `last_activity_at` update, index created and
+dropped between each, gave 143 ms mean without and 112 ms mean with — the
+difference is below run-to-run noise. `ix_party_tenant_name` indexes a column a
+party is given once and effectively never again. `CR-149`.
+
+`ix_party_tenant_activity` is **not** redundant with `ix_party_tenant_recent`.
+With 95 % of rows `active` the planner prefers the smaller partial index for
+`status=active`; on the minority status it does not, and it is 5× faster and 15×
+leaner for it (`status=archived`: 0.34 ms / 55 buffers, against 1.71 ms / 804
+buffers with `ix_party_tenant_activity` dropped). They cover opposite skews.
+
+## 29. `OrderingFilter` is replaced in the normative DRF block
+
+§20.3.5's `DEFAULT_FILTER_BACKENDS` named `rest_framework.filters.OrderingFilter`.
+That class **replaces** the queryset's ordering rather than appending to it, so
+`?ordering=-last_activity_at` — which the client sends on every request — turned
+the selector's `order_by("-last_activity_at", "name", "id")` into a single sort
+key. `last_activity_at` is nullable, so every party that has never had an entry
+ties, and `LIMIT/OFFSET` over a non-total sort has no defined paging semantics:
+the same row can come back on two pages while another is never returned.
+
+`apps.common.filters.StableOrderingFilter` appends the primary key to whatever
+ordering it produces. It is a correctness fix, not a performance one, and it
+costs nothing — the tie-breaker is only compared between rows already equal on
+every preceding key. `CR-150`.
+
+## 30. What was measured and deliberately *not* changed
+
+- **Memoising `platform_tenant_setting` to take the floor from 3 to 2.** The
+  review suggests it. `entitlements.for_tenant` already memoises its whole result
+  on the tenant instance, so the row is read once per request, not once per call;
+  removing the query at all would mean folding a correlated subquery for an
+  *entitlements* setting key into `common.tenancy`'s membership query. That trades
+  a layering rule for one indexed single-row lookup. Not done.
+- **`only()` on the detail path.** `list_parties` now defers 21 of the model's 30
+  columns (page of 100: 0.575 ms at planner width 897 → 0.181 ms at width 81).
+  `retrieve` deliberately does **not** inherit it — `party_detail_queryset` exists
+  so that a detail serializer growing one field does not turn a deferred column
+  into a query per row, which is the trap §20.14.2 names.
+- **Removing the five indexes with `idx_scan = 0`.** Four now have a reader:
+  `ix_party_tenant_activity` (§28 above), `ix_party_tenant_balance` (without it
+  `?ordering=-balance`, a shipping column header, is 51.1 ms / 4 337 buffers
+  instead of 0.22 ms / 38), and `ix_party_tenant_collection` /
+  `ix_party_tenant_customer` / `ix_party_tenant_supplier` are the `PTY-02` filters
+  landing in Sprint 3. The fifth, `parties_party_deleted_at_55b6ef2c`, is the
+  `db_index=True` on `SoftDeleteModel.deleted_at`; nothing in the product queries
+  `deleted_at` except as `IS NULL` alongside a tenant, where the tenant-prefixed
+  indexes win. Dropping it is a change to the shared base model and every
+  soft-deletable table, so it is raised rather than taken unilaterally.
+- **The job runner and the lock discipline.** Re-checked, not touched. The claim
+  query is served by `ix_job_claim` and all six `select_for_update` sites use
+  `of=("self",)` with no provider call inside.
+
+## 31. OTP and email delivery stay synchronous, and now say so
+
+`messaging.send_sms` and `send_email` block the response on the provider. The
+alternative, `enqueue()`, would delay an OTP by up to `UB_SCHEDULER_INTERVAL`
+(60 s) on a screen whose whole purpose is waiting for it. Both call sites already
+close their `atomic()` block before sending, so no lock is held across the HTTP
+call. The rule — *a message the user is waiting for goes through the service; a
+message nobody is waiting for goes through the queue, and `ledger.send_reminder`
+is the second kind* — is now written in the two docstrings rather than being an
+accident of where the code was put.
+
+## 32. The reaper is one statement per timeout, not one per job type
+
+`reap_stuck_jobs` looped over `REGISTRY`, so it issued one `UPDATE` per
+registered job type on every scheduler tick — including the tight iterations
+where the queue is not empty and the loop does not sleep. It now groups by
+`timeout_seconds`. The registry is what grows (5 types today, 20 named in
+`SCHEDULES`); the number of distinct visibility timeouts is not. Five types share
+three timeouts today: **5 statements per tick → 3**, and at 200 running jobs in a
+200 000-row queue the per-tick cost went from 2.0–7.1 ms to 0.33–0.79 ms over
+three runs. `test_the_reaper_still_uses_each_type_own_timeout` pins the behaviour
+that grouping must not flatten: a 400 s-old lock is expired for a 300 s job type
+and live for a 600 s one.

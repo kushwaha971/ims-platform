@@ -9,12 +9,12 @@ import {
   canWriteIn,
   probeFailed,
   probeSucceeded,
+  selectFailedProbes,
   selectLastOnlineAt,
   selectNetworkImpaired,
   selectNetworkState,
   selectPendingWrites,
-  NET_PROBE_DEGRADED_MS,
-  NET_PROBE_OFFLINE_MS,
+  netProbeSpacingMs,
   type TNetworkState,
 } from 'src/redux/slice/networkSlice';
 import type { TWriteClass } from 'src/types/api.types';
@@ -69,6 +69,7 @@ export function useDegradedNetwork(options?: { readonly withProbe?: boolean }): 
   const state = useAppSelector(selectNetworkState);
   const isImpaired = useAppSelector(selectNetworkImpaired);
   const pendingWrites = useAppSelector(selectPendingWrites);
+  const failedProbes = useAppSelector(selectFailedProbes);
   const lastOnlineAt = useAppSelector(selectLastOnlineAt);
   const withProbe = options?.withProbe ?? false;
 
@@ -91,29 +92,54 @@ export function useDegradedNetwork(options?: { readonly withProbe?: boolean }): 
     };
   }, [dispatch, withProbe]);
 
-  // Signal 5 — spaced probes while impaired. Three failures at the degraded
-  // spacing is roughly 35 s of honest evidence before the word "offline"
-  // appears on screen.
+  // Signal 5 — spaced probes while impaired. The first three failures are at
+  // the base spacing, so §19.10.3's "roughly 35 s of honest evidence before the
+  // word offline appears" still holds exactly; after that the wait doubles to a
+  // two-minute ceiling. `netProbeSpacingMs` carries the whole policy and the
+  // reasoning; this effect only holds the timer.
+  //
+  // Two things were wrong with the timer itself and both are fixed here:
+  //
+  //  · **A hidden tab used to stop probing for good.** The callback returned
+  //    early when `visibilityState === 'hidden'` and nothing re-armed it, and
+  //    the effect's dependencies cannot change without a probe result — so a
+  //    merchant who put the phone in their pocket while degraded came back to a
+  //    network model that had quietly stopped looking. It now re-arms on
+  //    `visibilitychange`, which is also the cheapest possible moment to probe:
+  //    the merchant is looking at the screen again.
+  //  · **`pendingWrites` was a dependency**, so every change to the outbox
+  //    depth cancelled the pending timer and started the wait again — on a bad
+  //    link, which is when writes queue, that could postpone the probe
+  //    indefinitely. The probe does not read it.
   useEffect(() => {
     if (!withProbe || state === 'online' || typeof window === 'undefined') return undefined;
 
     let cancelled = false;
-    const spacing = jitter(state === 'offline' ? NET_PROBE_OFFLINE_MS : NET_PROBE_DEGRADED_MS);
+    let timer = 0;
 
-    const timer = window.setTimeout(() => {
-      if (document.visibilityState === 'hidden') return;
-      void probe().then((ok) => {
-        if (cancelled) return;
-        dispatch(ok ? probeSucceeded() : probeFailed());
-      });
-    }, spacing);
+    const arm = (): void => {
+      window.clearTimeout(timer);
+      if (cancelled || document.visibilityState === 'hidden') return;
+      timer = window.setTimeout(() => {
+        if (cancelled || document.visibilityState === 'hidden') return;
+        void probe().then((ok) => {
+          if (cancelled) return;
+          dispatch(ok ? probeSucceeded() : probeFailed());
+        });
+      }, jitter(netProbeSpacingMs(state, failedProbes)));
+    };
+
+    arm();
+    document.addEventListener('visibilitychange', arm);
 
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
+      document.removeEventListener('visibilitychange', arm);
     };
-    // `state` in the deps is what re-arms the timer after every transition.
-  }, [dispatch, state, withProbe, pendingWrites]);
+    // `state` and `failedProbes` re-arm the timer after every transition, which
+    // is also what applies the backoff.
+  }, [dispatch, state, failedProbes, withProbe]);
 
   const canWrite = useCallback((writeClass: TWriteClass) => canWriteIn(state, writeClass), [state]);
 

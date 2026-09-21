@@ -19,7 +19,20 @@ export type { UbDataGridMobileListProps } from './UbDataGridMobileList';
 export { UbDataGridPagination } from './UbDataGridPagination';
 export type { UbDataGridPaginationProps } from './UbDataGridPagination';
 
-export { UbDataGridTable } from './UbDataGridTable';
+/**
+ * `UbDataGridTable` is deliberately NOT re-exported as a value.
+ *
+ * `UbDataGrid` reaches it through `next/dynamic` so that `@tanstack/react-table`
+ * (13.8 KB gz / 52.0 KB raw, measured) is fetched only by a viewport that
+ * renders a table. A value re-export here would restore the static edge and put
+ * the engine straight back into the chunk every route shares — including
+ * `/legal/terms` — because `src/design-system/index.ts` re-exports this file
+ * line for line and `app/error.tsx` imports that barrel.
+ *
+ * Nothing outside this folder ever rendered it directly; a screen that wants a
+ * table renders `UbDataGrid` and gets one at `md` and up. The TYPE is exported
+ * because types are erased and cost nothing.
+ */
 export type { UbDataGridTableProps } from './UbDataGridTable';
 
 export { UbDataGridToolbar } from './UbDataGridToolbar';

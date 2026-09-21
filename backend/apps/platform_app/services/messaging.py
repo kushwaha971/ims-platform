@@ -124,7 +124,24 @@ def send_sms(
     related_type: str | None = None,
     related_id: Any = None,
 ) -> Any:
-    """Send through the configured SMS adapter and write one `MessageLog` row."""
+    """Send through the configured SMS adapter and write one `MessageLog` row.
+
+    **This call is synchronous, on purpose, and only for interactive messages.**
+    A real Indian SMS gateway answers in 200–800 ms and the merchant waits for it
+    on top of their own round trip, so the obvious reaction is to `enqueue()` it.
+    That would be worse, not better: the scheduler polls every
+    `UB_SCHEDULER_INTERVAL` seconds (60 by default, `base.py`), so a queued OTP
+    would arrive up to a minute after the merchant asked for it, on a screen
+    whose whole purpose is to wait for it.
+
+    The decision is therefore: **a message the user is actively waiting for goes
+    through here; a message nobody is waiting for goes through `enqueue()`.** The
+    `ledger.send_reminder` class of message is the second kind and must not use
+    this function from a request. What makes the synchronous call safe is that
+    every caller closes its `atomic()` block first — `otp.request_code` and
+    `auth.send_email_verification` both do — so no lock is ever held across a
+    provider HTTP call (Part 20 §20.11.2).
+    """
     backend = _resolve("UB_SMS_BACKEND")
     now = timezone.now()
 
@@ -189,6 +206,10 @@ def send_email(
     related_id: Any = None,
 ) -> Any:
     """Send through the configured email adapter and write one `MessageLog` row.
+
+    Synchronous for the same reason `send_sms` is, and under the same rule: this
+    is for the message the user is waiting for on the screen in front of them.
+    Anything else belongs in the queue.
 
     The `payload` written here must never contain the link or the token: the
     row is readable by anyone with database access and by the operator UI, and

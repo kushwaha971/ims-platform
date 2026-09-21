@@ -59,8 +59,14 @@ def get_effective_tenant(request: Any) -> Any:
 def _resolve_membership_tenant(user: Any, tenant_id: Any) -> Any:
     from apps.platform_app.models import Membership, MembershipStatus, TenantStatus
 
+    # `tenant__plan` and `tenant__partner` are here because the permission layer
+    # reads them on every authenticated request: `ModuleEnabled` calls
+    # `effective_modules(tenant)` → `entitlements.for_tenant(tenant)`, which
+    # touches `tenant.plan` and `tenant.partner`. Left as lazy descriptors they
+    # cost two extra round trips per request — fixed overhead that every future
+    # endpoint inherits, not an N+1 (measured: `GET /parties` 7 → 5 queries).
     membership = (
-        Membership.objects.select_related("tenant", "role")
+        Membership.objects.select_related("tenant", "role", "tenant__plan", "tenant__partner")
         .filter(user=user, tenant_id=tenant_id, status=MembershipStatus.ACTIVE)
         .first()
     )

@@ -192,14 +192,13 @@ export const presetModules = (type: BusinessType): readonly ModuleCode[] =>
   BUSINESS_TYPE_CONFIG[type].inventoryEnabled ? [...BASE_MODULES, 'inventory'] : BASE_MODULES;
 
 /** PLT-03 §7 — the wizard is four steps and no more (§32.4.7's risk row). */
-export const ONBOARDING_STEPS = [
-  { key: 'business', labelId: 'onboarding.step1.title' },
-  { key: 'gst', labelId: 'onboarding.step2.title' },
-  { key: 'address', labelId: 'onboarding.step3.title' },
-  { key: 'summary', labelId: 'onboarding.step4.title' },
-] as const;
-
-export const ONBOARDING_STEP_COUNT = ONBOARDING_STEPS.length;
+/**
+ * Re-exported from `./onboardingSteps` so every existing caller keeps working.
+ * They live there because `onboardingSlice` imports `ONBOARDING_STEP_COUNT`,
+ * and anything a slice imports is in the store, which is in `AppProviders`,
+ * which is on every route — see that file's header.
+ */
+export { ONBOARDING_STEP_COUNT, ONBOARDING_STEPS } from './onboardingSteps';
 
 /** FR-3 — the GST registration status, which decides the document kinds (BR-2). */
 export const GST_TYPES = ['unregistered', 'composition', 'regular'] as const;

@@ -5,7 +5,7 @@ import type { RootState } from 'src/redux/store';
 import type { ApiErrorShape, RequestStatus } from 'src/types/api.types';
 import type { Locale } from 'src/types/domain.types';
 
-import { ONBOARDING_STEP_COUNT, type BusinessType, type GstType } from '../constants/businessTypes';
+import { ONBOARDING_STEP_COUNT } from '../constants/onboardingSteps';
 
 import {
   completeOnboarding,
@@ -15,6 +15,7 @@ import {
   saveGstStep,
 } from './onboardingThunk';
 
+import type { BusinessType, GstType } from '../constants/businessTypes';
 import type {
   OnboardingAddress,
   OnboardingTenant,
