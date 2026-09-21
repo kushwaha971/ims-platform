@@ -19,7 +19,7 @@ from apps.common.viewsets import TenantScopedReadOnlyViewSet
 from apps.parties.filters import PartyFilterSet
 from apps.parties.models import Party
 from apps.parties.permissions import PartyPermissions
-from apps.parties.selectors.party import list_parties
+from apps.parties.selectors.party import list_parties, party_detail_queryset
 from apps.parties.serializers.party import PartyListSerializer
 
 
@@ -42,8 +42,16 @@ class PartyViewSet(TenantScopedReadOnlyViewSet):
     ]
 
     def get_queryset(self) -> Any:
-        """The selector owns the query; the viewset owns nothing but the call."""
-        return list_parties(tenant=self.get_tenant())
+        """The selector owns the query; the viewset owns nothing but the call.
+
+        Two selectors rather than one because the list defers 21 of the model's
+        30 columns and `retrieve` must not inherit that: `get_object()` reads
+        this queryset, and a deferred column touched by a detail serializer is a
+        second query per row (§20.14.2).
+        """
+        if self.action == "list":
+            return list_parties(tenant=self.get_tenant())
+        return party_detail_queryset(tenant=self.get_tenant())
 
     def list(self, request: Any, *args: Any, **kwargs: Any) -> Any:
         queryset = self.filter_queryset(self.get_queryset())

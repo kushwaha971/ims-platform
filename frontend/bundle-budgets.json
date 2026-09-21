@@ -1,0 +1,97 @@
+{
+  "//": [
+    "Part 19 §19.9.2 — the bundle budgets, as a committed file so that raising one",
+    "is a reviewable line in a diff rather than an argument in a PR thread.",
+    "",
+    "Enforced by `npm run bundle:check` (scripts/check-bundle.mjs), which reads the",
+    "real `next build` output: `.next/build-manifest.json` for the framework chunks",
+    "and every `.next/server/app/**/page_client-reference-manifest.js` for the",
+    "per-route entry chunks. Every number here is KILOBYTES OF GZIP (level 9) — the",
+    "thing the merchant's phone downloads — not raw bytes.",
+    "",
+    "Definitions, so a number here means one thing only:",
+    "  framework  build-manifest `rootMainFiles` minus `polyfillFiles`: react-dom,",
+    "             the Next client runtime, the Turbopack loader.",
+    "  sharedApp  the chunks EVERY app route loads, minus framework. Redux, axios,",
+    "             react-intl + en.json, and whatever else has leaked into the shell.",
+    "  route      a route's first-load set minus framework and sharedApp.",
+    "  firstLoad  framework + sharedApp + route. What a cold visit costs.",
+    "",
+    "The legacy polyfill chunk is excluded everywhere: Next emits it with",
+    "`noModule`, so a modern browser never downloads it. Counting it would add ~38 KB",
+    "to every figure and make the budgets meaningless.",
+    "",
+    "`routes` keys are the URL path, route groups stripped: the manifest's",
+    "`/(app)/parties/page` is matched by `/parties`. Anything unnamed falls to",
+    "`default`."
+  ],
+
+  "//shared": [
+    "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
+    "figures in the specification table, and neither gap is something a PR can close,",
+    "so they are written down rather than left to fail the build every morning until",
+    "someone deletes the gate — which is how the last one ended up a no-op.",
+    "",
+    "framework — §19.9.2 says 95. Measured: 126.9, and that is the FLOOR, not drift.",
+    "  react-dom alone is 69.8 KB gz and the Next 16 App Router client runtime is",
+    "  42.7 KB; 112.5 KB before one line of this product's code exists. The 95 KB",
+    "  figure predates React 19 and the App Router. 128 is the measured value plus",
+    "  1 KB, so a framework upgrade that costs real bytes still has to be declared.",
+    "",
+    "sharedApp — §19.9.2 says 85. Measured: 95.8, down from 136.9 before this pass.",
+    "  What is left is: axios 21.9 (every route boots a session fetch), react-intl",
+    "  + en.json 31.9, redux-toolkit + react-redux 11.6, lucide's runtime and the",
+    "  snackbar's five icons 8.6 — all of which §19.9.2 names as legitimate shell",
+    "  contents — and **decimal.js-light at 11.1 KB**, which is not on that list and",
+    "  is the whole of the remaining gap.",
+    "",
+    "  decimal is in the shell because `src/redux/store.ts` registers every slice",
+    "  statically (§19.3.9 — a deliberate decision, no dynamic reducer injection),",
+    "  `partyListSlice` computes `partyTotals` in its reducer, and that is money",
+    "  arithmetic. So `/legal/terms` downloads a decimal library. Removing it means",
+    "  either injectable reducers, which §19.3.9 rules out, or money maths in a",
+    "  reducer without a money library, which is worse. It is the price of the",
+    "  specified store shape and it should be re-read when that shape is re-read.",
+    "",
+    "  Note the general rule it illustrates: ANYTHING A SLICE IMPORTS IS ON EVERY",
+    "  ROUTE. This budget is the thing that will notice when the ledger, sales and",
+    "  inventory slices land."
+  ],
+  "shared": {
+    "framework": 128,
+    "sharedApp": 97
+  },
+
+  "//routes": [
+    "The `route` figures are §19.9.2's, unchanged, and every route is comfortably",
+    "inside them — the largest is /onboarding/step/[n] at 51.5 against 60.",
+    "",
+    "`firstLoad` cannot be §19.9.2's 230 while `framework` is 31.9 KB above the",
+    "number that budget was built from: 95 + 85 + 45 = 225 was the arithmetic, and",
+    "the framework half of it is not reachable. These are ratchets on the measured",
+    "value instead — a few KB of headroom, no more — so a regression trips even",
+    "when the route chunk itself stays under 60.",
+    "",
+    "§19.9.6 item 4 asks for tight assertions on the three routes that matter and",
+    "looser cover elsewhere, which is the shape below. `/sales/invoices/new` does",
+    "not exist yet; its line is §19.9.2's, waiting for it."
+  ],
+  "default": {
+    "route": 60,
+    "firstLoad": 280
+  },
+
+  "routes": {
+    "/parties": { "route": 45, "firstLoad": 255 },
+    "/dashboard": { "route": 55, "firstLoad": 248 },
+    "/sales/invoices/new": { "route": 110, "firstLoad": 340 }
+  },
+
+  "//ignoreRoutes": [
+    "`_global-error` replaces the whole document, including the provider tree, so",
+    "it loads a different and much smaller set than any real route. Leaving it in",
+    "would drag the sharedApp intersection down to whatever those two files happen",
+    "to share and quietly weaken every other line in this file."
+  ],
+  "ignoreRoutes": ["/_global-error"]
+}

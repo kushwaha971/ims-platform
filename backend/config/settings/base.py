@@ -32,6 +32,14 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.admin",
+    # Not for its models — it has none. `django.contrib.postgres`'s AppConfig is
+    # what registers `OpClass` (and `OrderBy`, `Collate`) as index-expression
+    # wrappers; without it `GinIndex(OpClass(Upper("name"), name="gin_trgm_ops"))`
+    # renders as `USING gin ((UPPER(name) gin_trgm_ops))` — the opclass inside the
+    # expression's parentheses — which Postgres rejects with a syntax error. The
+    # functional trigram index of `parties/migrations/0002` needs it, and any
+    # future expression index with an opclass will too.
+    "django.contrib.postgres",
     "rest_framework",
     "django_filters",
     "corsheaders",
@@ -166,7 +174,12 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 25,
     "DEFAULT_FILTER_BACKENDS": [
         "django_filters.rest_framework.DjangoFilterBackend",
-        "rest_framework.filters.OrderingFilter",
+        # Not `rest_framework.filters.OrderingFilter`: that one *replaces* the
+        # selector's ordering with the single key the client sent, and a sort
+        # that is not total makes `LIMIT/OFFSET` paging non-deterministic — a
+        # tied row can appear on two pages or on none. The subclass appends the
+        # primary key so every ordering this product serves is total.
+        "apps.common.filters.StableOrderingFilter",
     ],
     "DEFAULT_THROTTLE_RATES": {
         "user": env.str("UB_RATE_LIMIT_USER", "600/min"),

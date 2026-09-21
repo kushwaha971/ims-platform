@@ -196,7 +196,6 @@ export {
   UbDataGridEmptyState,
   UbDataGridMobileList,
   UbDataGridPagination,
-  UbDataGridTable,
   UbDataGridToolbar,
   useGridTier,
   visibleColumns,

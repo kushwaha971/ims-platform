@@ -1,16 +1,29 @@
 'use client';
 
+import { AppRouteWarmup } from 'src/components/layout/AppRouteWarmup';
 import { UbAppShell } from 'src/components/layout/UbAppShell';
 
 import { RequireSession } from 'modules/DigiKhaato/features/auth/components/RequireSession';
 
-/** Part 19 §19.6.1 — the app shell plus one guard. Nothing else. */
+/**
+ * Part 19 §19.6.1 — the app shell plus one guard, and one thing that paints
+ * nothing.
+ *
+ * `AppRouteWarmup` is a SIBLING of the guard rather than a child of it, which
+ * is the entire point of it: the guard decides what is painted, and the screen
+ * that is about to be painted gets to start its own fetch in parallel with
+ * `GET /auth/me` instead of after it. It renders `null`, so nothing a
+ * signed-out visitor could see has changed. See that file.
+ */
 export default function AppLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>): React.JSX.Element {
   return (
-    <RequireSession>
-      <UbAppShell>{children}</UbAppShell>
-    </RequireSession>
+    <>
+      <AppRouteWarmup />
+      <RequireSession>
+        <UbAppShell>{children}</UbAppShell>
+      </RequireSession>
+    </>
   );
 }

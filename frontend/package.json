@@ -2,6 +2,32 @@
   "name": "digikhaato-frontend",
   "version": "0.1.0",
   "private": true,
+  "//sideEffects": [
+    "Part 19 §19.9.2 — this line is worth 27.6 KB gz on EVERY route, measured.",
+    "",
+    "`src/design-system/index.ts` is THE barrel (R-IM-3: features import from it",
+    "and never from a deep path). Without this field the bundler must assume any",
+    "module in this package might have a side effect on load, so it cannot drop",
+    "the barrel's unused re-exports: `SnackbarHost` importing `UbSnackbar` from",
+    "the barrel pulled `UbAmount`, `decimal.js-light`, `UbForm`, `react-hook-form`",
+    "and the rest of the design system into the chunk `app/layout` loads — which",
+    "is every route, including `/legal/terms` and `/d/[token]`.",
+    "",
+    "Measured on the tree at the time: shared app chunk 125.0 -> 97.4 KB gz, and",
+    "`/` 252.0 -> 224.4. The alternative that was tried first — deep-importing",
+    "in the shell and the route files — bought 0.1 KB, because Turbopack merges",
+    "a route's client entries into one chunk group either way, and it also",
+    "duplicated the design system into per-route chunks, taking `/parties` UP by",
+    "6.9 KB. This is the fix; that was not.",
+    "",
+    "`*.css` stays listed because `app/layout.tsx` imports `./globals.css` for",
+    "its side effect and nothing imports a binding from it. Anything else added",
+    "here must be a real load-time side effect, not a convenience."
+  ],
+  "sideEffects": [
+    "*.css",
+    "*.scss"
+  ],
   "engines": {
     "node": ">=22"
   },
@@ -17,7 +43,8 @@
     "test:coverage": "jest --coverage",
     "i18n:check": "node scripts/check-locales.mjs",
     "check:contrast": "node scripts/check-contrast.mjs",
-    "verify": "npm run type-check && npm run lint && npm run i18n:check && npm run check:contrast && npm run test && npm run build"
+    "verify": "npm run type-check && npm run lint && npm run i18n:check && npm run check:contrast && npm run test && npm run build && npm run bundle:check",
+    "bundle:check": "node scripts/check-bundle.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { SEARCH_DEBOUNCE_MS } from 'src/constants';
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useDebounce } from 'src/hooks/useDebounce';
+import { selectNetworkImpaired } from 'src/redux/slice/networkSlice';
 import type { ApiErrorShape, PageMeta, RequestStatus } from 'src/types/api.types';
 
 import {
@@ -23,6 +24,7 @@ import {
   selectPartySelection,
 } from '../redux/partyListSlice';
 import { fetchPartyList } from '../redux/partyListThunk';
+import { abortWarmPartyList, claimWarmPartyList } from '../redux/partyListWarmup';
 
 import type { Party, PartyListFilters } from '../types/party.types';
 import type { PartyListTotals } from '../view-model/partyDisplay';
@@ -69,6 +71,7 @@ export function usePartyList(mode: 'replace' | 'append' = 'replace'): UsePartyLi
   const totals = useAppSelector(selectPartyListTotals);
   const totalsScope = useAppSelector(selectPartyListTotalsScope);
   const selectedIds = useAppSelector(selectPartySelection);
+  const isImpaired = useAppSelector(selectNetworkImpaired);
 
   // The raw input is local; only the debounced value is committed to the slice,
   // so every keystroke does not produce a request or a store write (§19.3.1).
@@ -82,17 +85,40 @@ export function usePartyList(mode: 'replace' | 'append' = 'replace'): UsePartyLi
 
   // One effect, one request. The promise is aborted when the filter set changes
   // mid-flight so a slow page 1 can never overwrite a fast page 2.
+  //
+  // On the FIRST mount the request has usually already left the device:
+  // `AppRouteWarmup` starts it above `RequireSession` so it overlaps
+  // `GET /auth/me` instead of queueing behind it (see `partyListWarmup.ts`).
+  // Claiming it takes over that exact request — abort handle included — rather
+  // than issuing a second identical GET.
   useEffect(() => {
-    const promise = dispatch(fetchPartyList({ params: filters, mode }));
+    const arg = { params: filters, mode };
+    // Claimed: the warm-up owns that request's lifetime, so there is nothing to
+    // dispatch and nothing to abort here. Not claimed: this is something the
+    // warm-up did not predict, so anything still speculating is superseded
+    // before the real request goes out.
+    if (claimWarmPartyList(arg)) return undefined;
+    abortWarmPartyList();
+    const promise = dispatch(fetchPartyList(arg));
     return () => promise.abort();
   }, [dispatch, filters, mode]);
 
   // A mutation elsewhere marked us stale — refetch once, silently (§19.3.6).
+  //
+  // Not while the link is impaired. This is the one fetch on this screen that
+  // is genuinely NON-CRITICAL: the rows are already painted, the merchant asked
+  // for nothing, and the only thing at stake is that a figure changed in
+  // another tab. On a degraded connection it would compete with the request the
+  // merchant IS waiting for, so it waits — `isImpaired` is a dependency, so the
+  // moment the state returns to `online` this effect re-runs and the refresh
+  // happens then. §19.10.3's model is supposed to make the application do less
+  // when the pipe is the scarce thing; this is one of the two places it now
+  // actually does.
   useEffect(() => {
-    if (!stale) return;
+    if (!stale || isImpaired) return;
     const promise = dispatch(fetchPartyList({ params: filters, mode: 'replace' }));
     return () => promise.abort();
-  }, [stale, dispatch, filters]);
+  }, [stale, isImpaired, dispatch, filters]);
 
   const setFilters = useCallback(
     (patch: Partial<PartyListFilters>) => {

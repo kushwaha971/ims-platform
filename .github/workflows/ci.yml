@@ -276,11 +276,27 @@ jobs:
       - name: i18n key completeness (en ↔ hi)
         working-directory: frontend
         run: npm run i18n:check
+      # `--if-present` used to be here, against a `bundle:check` script that did
+      # not exist, so npm exited 0 having run nothing and every PR was green
+      # while the shared chunk drifted 59 % over §19.9.2. The script exists now
+      # (frontend/scripts/check-bundle.mjs, budgets in
+      # frontend/bundle-budgets.json) and the flag is gone, so a missing script
+      # is a failed build rather than a silent pass.
       - name: Build and check the bundle size
         working-directory: frontend
         run: |
           npm run build
-          npm run bundle:check --if-present
+          npm run bundle:check
+      - name: Bundle report
+        if: always()
+        working-directory: frontend
+        run: node scripts/check-bundle.mjs --json > bundle-report.json || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: frontend-bundle-report
+          path: frontend/bundle-report.json
+          if-no-files-found: ignore
       - uses: actions/upload-artifact@v4
         if: always()
         with:

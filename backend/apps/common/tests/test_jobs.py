@@ -13,6 +13,7 @@ from typing import Any
 import pytest
 from django.db import connections
 from django.test import TransactionTestCase
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
 from apps.common.constants import JobStatus
@@ -128,6 +129,50 @@ def test_reaper_returns_a_stuck_job_to_the_queue(tenant: Any, settings: Any) -> 
     # `attempts` stays at 1: it was incremented at claim, so a job that keeps
     # killing its runner still reaches max_attempts and dead-letters.
     assert row.attempts == 1
+
+
+@pytest.mark.postgres
+def test_the_reaper_issues_one_statement_per_distinct_timeout_not_per_job_type(
+    tenant: Any, settings: Any
+) -> None:
+    """The reaper must scale with the *timeouts*, not with the registry.
+
+    `run_scheduler` calls it at the top of every loop iteration, including the
+    tight iterations where the queue is not empty and the loop does not sleep.
+    Five registered job types share three distinct visibility timeouts today
+    (120 s, 300 s, 600 s); the specification's `SCHEDULES` names twenty types and
+    will not name twenty timeouts.
+    """
+    settings.UB_JOBS_EAGER = False
+    distinct_timeouts = {spec.timeout_seconds for spec in REGISTRY.values()}
+    assert len(distinct_timeouts) < len(REGISTRY), "fixture assumption: types share timeouts"
+
+    with CaptureQueriesContext(connections["default"]) as captured:
+        reap_stuck_jobs("me")
+    updates = [
+        q for q in captured.captured_queries if q["sql"].lstrip().upper().startswith("UPDATE")
+    ]
+    assert len(updates) == len(distinct_timeouts), [q["sql"][:120] for q in updates]
+
+
+@pytest.mark.postgres
+def test_the_reaper_still_uses_each_type_own_timeout(tenant: Any, settings: Any) -> None:
+    """Grouping must not flatten the per-type timeout into one shared number.
+
+    `platform.reconcile_entitlements` is a 600 s job and `platform.purge_jobs` a
+    300 s one; a lock 400 s old is expired for the second and live for the first.
+    """
+    settings.UB_JOBS_EAGER = False
+    locked_at = timezone.now() - dt.timedelta(seconds=400)
+    short = enqueue(job_type="platform.purge_jobs", payload={}, tenant=tenant)
+    long = enqueue(job_type="platform.reconcile_entitlements", payload={}, tenant=tenant)
+    Job.objects.filter(pk__in=[short.pk, long.pk]).update(
+        status=JobStatus.RUNNING, attempts=1, locked_at=locked_at, locked_by="dead-runner"
+    )
+
+    assert reap_stuck_jobs("me") == 1
+    assert Job.objects.get(pk=short.pk).status == JobStatus.QUEUED
+    assert Job.objects.get(pk=long.pk).status == JobStatus.RUNNING
 
 
 def test_backoff_doubles_and_caps_with_jitter() -> None:

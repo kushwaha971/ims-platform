@@ -5,3 +5,4 @@ coverage
 .env.local
 next-env.d.ts
 *.tsbuildinfo
+bundle-report.json

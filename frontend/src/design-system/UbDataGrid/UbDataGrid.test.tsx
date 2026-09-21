@@ -129,6 +129,28 @@ const renderGrid = (
     />
   );
 
+/**
+ * The `md`+ rendering is behind `next/dynamic` (`UbDataGrid.tsx`) so that
+ * `@tanstack/react-table` — 13.8 KB gz / 52.0 KB raw, measured — is fetched
+ * only by a viewport that renders a table and never by the phone rendering
+ * this product is designed around.
+ *
+ * That makes the table tiers ASYNCHRONOUS: the chunk resolves on a microtask,
+ * and until it does the grid draws the same 60 px skeleton rows it draws while
+ * data loads. So every table-tier test awaits the table once and then asserts
+ * exactly what it asserted before. No assertion is weakened; the card tier,
+ * which is the tier the merchant gets, stays synchronous because nothing about
+ * it is lazy.
+ */
+const renderGridWithTable = async (
+  tier: Exclude<UbGridTier, 'cards'>,
+  overrides: Partial<React.ComponentProps<typeof UbDataGrid<Row>>> = {}
+) => {
+  const result = renderGrid(tier, overrides);
+  await screen.findByRole('table');
+  return result;
+};
+
 describe('the three renderings', () => {
   it('below md it is a real LIST of cards and there is no table at all', () => {
     renderGrid('cards');
@@ -142,8 +164,8 @@ describe('the three renderings', () => {
     expect(screen.getByText('3 days ago')).toBeInTheDocument();
   });
 
-  it('between md and lg it is a table of the PRIORITY columns only', () => {
-    renderGrid('compact');
+  it('between md and lg it is a table of the PRIORITY columns only', async () => {
+    await renderGridWithTable('compact');
 
     const headers = screen.getAllByRole('columnheader').map((cell) => cell.textContent);
     expect(headers).toHaveLength(3);
@@ -155,8 +177,12 @@ describe('the three renderings', () => {
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
   });
 
-  it('at lg and up it is the full table, with selection', () => {
-    renderGrid('full', { selectable: true, selectedIds: [], onSelectionChange: jest.fn() });
+  it('at lg and up it is the full table, with selection', async () => {
+    await renderGridWithTable('full', {
+      selectable: true,
+      selectedIds: [],
+      onSelectionChange: jest.fn(),
+    });
 
     expect(screen.getAllByRole('columnheader')).toHaveLength(6); // 5 + the select column
     expect(screen.getByText('C-001 · 98765 43210')).toBeInTheDocument();
@@ -178,8 +204,8 @@ describe('the three renderings', () => {
 });
 
 describe('table semantics', () => {
-  it('is a real <table> with scoped header cells and a caption', () => {
-    renderGrid('full');
+  it('is a real <table> with scoped header cells and a caption', async () => {
+    await renderGridWithTable('full');
 
     const table = screen.getByRole('table', { name: 'Customers' });
     expect(table.tagName).toBe('TABLE');
@@ -191,7 +217,7 @@ describe('table semantics', () => {
 
   it('puts aria-sort on the header cell and the control in a button', async () => {
     const onSortChange = jest.fn();
-    renderGrid('full', {
+    await renderGridWithTable('full', {
       sort: { columnId: 'balance', direction: 'desc' },
       onSortChange,
     });
@@ -213,7 +239,7 @@ describe('table semantics', () => {
 
   it('selection reports the ids it was given, by row', async () => {
     const onSelectionChange = jest.fn();
-    renderGrid('full', { selectable: true, selectedIds: [], onSelectionChange });
+    await renderGridWithTable('full', { selectable: true, selectedIds: [], onSelectionChange });
 
     await userEvent.click(screen.getByRole('checkbox', { name: 'Select Sunita Stores' }));
     expect(onSelectionChange).toHaveBeenCalledWith(['p2']);
@@ -226,22 +252,22 @@ describe('table semantics', () => {
 });
 
 describe('no horizontal scroll on a primary list, at any width', () => {
-  it.each<UbGridTier>(['cards', 'compact', 'full'])('holds at the %s tier', (tier) => {
-    const { container } = renderGrid(tier);
+  it.each<UbGridTier>(['cards', 'compact', 'full'])('holds at the %s tier', async (tier) => {
+    const { container } = tier === 'cards' ? renderGrid(tier) : await renderGridWithTable(tier);
     const findings = findHorizontalOverflow(container);
     expect(describeHorizontalOverflow(findings)).toEqual([]);
   });
 
-  it('still holds when the grid is asked for a scroller it is not allowed', () => {
+  it('still holds when the grid is asked for a scroller it is not allowed', async () => {
     // `allowHorizontalScroll` is an `lg`-and-up REPORT affordance. A list that
     // sets it below `lg` gets nothing, which is what keeps a well-meaning fix
     // from turning the phone rendering into a drag.
-    const { container } = renderGrid('compact', { allowHorizontalScroll: true });
+    const { container } = await renderGridWithTable('compact', { allowHorizontalScroll: true });
     expect(describeHorizontalOverflow(findHorizontalOverflow(container))).toEqual([]);
   });
 
-  it('is the ONE opt-in: an accountant report at lg announces itself', () => {
-    const { container } = renderGrid('full', { allowHorizontalScroll: true });
+  it('is the ONE opt-in: an accountant report at lg announces itself', async () => {
+    const { container } = await renderGridWithTable('full', { allowHorizontalScroll: true });
     expect(describeHorizontalOverflow(findHorizontalOverflow(container))).toContain(
       'div[data-testid="ub-grid-table-scroller"] → data-ub-scroll-x="on"'
     );
@@ -286,13 +312,16 @@ describe('the states a list has', () => {
     expect(screen.queryByTestId('request-id')).not.toBeInTheDocument();
   });
 
-  it('shows the page summary at every tier and the page size only at lg', () => {
+  it('shows the page summary at every tier and the page size only at lg', async () => {
     const { unmount } = renderGrid('cards');
     expect(screen.getByText('Page 1 of 1')).toBeInTheDocument();
     expect(screen.queryByLabelText('Rows per page')).not.toBeInTheDocument();
     unmount();
 
-    renderGrid('full', { onPageSizeChange: jest.fn(), pageSizeOptions: [25, 50, 100] });
+    await renderGridWithTable('full', {
+      onPageSizeChange: jest.fn(),
+      pageSizeOptions: [25, 50, 100],
+    });
     expect(screen.getByLabelText('Rows per page')).toBeInTheDocument();
   });
 });
