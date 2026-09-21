@@ -74,35 +74,35 @@ Proven working; this is how the screenshots were taken.
 
 You need PostgreSQL 16 running locally, Python 3.11+ and Node 20+.
 
-```bash
-# database
-createdb digikhaato_dev
-
-# backend
-cd backend
-pip install -r requirements/local.txt
-export POSTGRES_DB=digikhaato_dev
-export UB_SECRET_KEY=any-long-random-string-for-local-use
-export UB_DEBUG=1
-python manage.py migrate
-python manage.py seed_all          # idempotent; safe to re-run
-python manage.py runserver 8000 --settings=config.settings.local
-```
-
-Then in a second terminal:
+Two terminals, one command each:
 
 ```bash
-cd frontend
-npm ci
-API_PROXY_TARGET=http://localhost:8000 npm run dev
+scripts/dev-backend.sh          # terminal 1
+scripts/dev-frontend.sh         # terminal 2
 ```
-
-`.env.local` already points the browser at `http://localhost:8000/api/v1`.
-`API_PROXY_TARGET` needs overriding only outside compose, because its default
-(`http://backend:8000`) is a compose service name that does not resolve on your
-machine.
 
 Open http://localhost:3000.
+
+`dev-backend.sh` creates the database if it is missing, migrates, seeds, and
+serves on :8000. Every step is idempotent, so run it as often as you like — on a
+machine that is already set up it just starts the server. `--reset` drops and
+rebuilds the database first; `--port 8080` moves it.
+
+`dev-frontend.sh` installs dependencies on first run and serves on :3000. Its
+one job beyond that is setting `API_PROXY_TARGET`, whose default
+(`http://backend:8000`) is a compose service name that does not resolve outside
+Docker — the browser calls still succeed when it is wrong, so the failure looks
+like a backend fault and is not one.
+
+Python dependencies, once:
+
+```bash
+pip install -r backend/requirements/local.txt
+```
+
+If `dev-backend.sh` says it cannot log in as your username, Postgres has no role
+by that name — pass `PGUSER=postgres scripts/dev-backend.sh`, or create one once
+with `createuser -s $(whoami)`.
 
 ---
 
