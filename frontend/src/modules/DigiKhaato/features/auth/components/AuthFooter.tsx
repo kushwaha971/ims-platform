@@ -9,6 +9,7 @@ import { selectAppName } from 'src/redux/slice/whiteLabelSlice';
 
 import { AuthLegalNotice } from './AuthLegalNotice';
 import { LanguagePicker } from './LanguagePicker';
+import { ThemePicker } from './ThemePicker';
 
 /**
  * CR-2026-09-19-D — the `(auth)` group's page footer.
@@ -59,8 +60,13 @@ function AuthFooterBase(): React.JSX.Element {
           <UbText variant="caption" tone="muted">
             {t('auth.footer.copyright', { year: new Date().getFullYear(), appName })}
           </UbText>
-          {/* Last control on the page, exactly as Notion places it. */}
-          <LanguagePicker />
+          {/* Last controls on the page, exactly as Notion places the language
+              one. Both are preferences a person must be able to set before they
+              have an account, which is why they live here and not in settings. */}
+          <UbStack direction="row" align="center" gap={2}>
+            <ThemePicker />
+            <LanguagePicker />
+          </UbStack>
         </UbStack>
       </UbStack>
     </UbBottomBar>

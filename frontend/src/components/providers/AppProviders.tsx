@@ -7,6 +7,7 @@ import { Provider } from 'react-redux';
 import { SnackbarHost } from 'src/components/layout/SnackbarHost';
 import { IntlProviderShell } from 'src/components/providers/IntlProviderShell';
 import { NetworkProbe } from 'src/components/providers/NetworkProbe';
+import { PreferencesBootstrap } from 'src/components/providers/PreferencesBootstrap';
 import { ThemeProvider } from 'src/components/providers/ThemeProvider';
 import { store } from 'src/redux/store';
 
@@ -14,6 +15,12 @@ import { store } from 'src/redux/store';
  * Part 19 §19.7.2 / §19.11.1 — the provider stack `app/layout.tsx` renders.
  * Order matters: Redux first (Intl reads the locale slice, Theme reads the
  * theme slice), then Intl, then Theme.
+ *
+ * `PreferencesBootstrap` sits directly inside `Provider` and outside
+ * `IntlProviderShell`, which is the whole point of its position: it restores the
+ * saved locale in a layout effect, so the restore lands before the browser paints
+ * and `IntlProviderShell` renders the right language in the first frame rather
+ * than flashing English. Nothing read those cookies back before it existed.
  *
  * CR-2026-09-19-E — `SnackbarHost` is mounted HERE, as a sibling of `children`,
  * rather than inside `UbAppShell`. §19.12.2 calls the snackbar the single
@@ -39,13 +46,15 @@ import { store } from 'src/redux/store';
 export function AppProviders({ children }: Readonly<{ children: ReactNode }>): React.JSX.Element {
   return (
     <Provider store={store}>
-      <IntlProviderShell>
-        <ThemeProvider>
-          {children}
-          <SnackbarHost />
-          <NetworkProbe />
-        </ThemeProvider>
-      </IntlProviderShell>
+      <PreferencesBootstrap>
+        <IntlProviderShell>
+          <ThemeProvider>
+            {children}
+            <SnackbarHost />
+            <NetworkProbe />
+          </ThemeProvider>
+        </IntlProviderShell>
+      </PreferencesBootstrap>
     </Provider>
   );
 }
