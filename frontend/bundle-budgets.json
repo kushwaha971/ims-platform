@@ -77,11 +77,28 @@
     "",
     "  Note the general rule it illustrates: ANYTHING A SLICE IMPORTS IS ON EVERY",
     "  ROUTE. This budget is the thing that will notice when the ledger, sales and",
-    "  inventory slices land."
+    "  inventory slices land.",
+    "",
+    "── 21 Sep 2026: the team feature, and the cost it makes visible ───────────",
+    "sharedApp 96.4 -> 99.1 (+2.5), so the budget moves 97 -> 100. None of that is",
+    "the Team SCREEN; it is `invitationSlice` -> `invitationThunk` ->",
+    "`invitationService`, which `store.ts` registers statically (§19.3.9 — no",
+    "dynamic reducer injection, a deliberate decision) and which therefore ships to",
+    "/legal/terms.",
+    "",
+    "This is the rule a few lines above, arriving: ANYTHING A SLICE IMPORTS IS ON",
+    "EVERY ROUTE. It cost +2.5 KB for one feature, and ledger, inventory, sales,",
+    "purchases and reports are all still to come. At the same rate that is another",
+    "12 KB on every route including the ones that render a paragraph of text.",
+    "",
+    "Raising the number is the honest move today — the alternative is breaking the",
+    "specified store shape to fit a budget — but the number is not the point. The",
+    "point is that §19.3.9 should be re-read before the fifth feature slice lands,",
+    "not after."
   ],
   "shared": {
     "framework": 128,
-    "sharedApp": 97
+    "sharedApp": 100
   },
   "//routes": [
     "The `route` figures are §19.9.2's, unchanged, and every route is comfortably",
@@ -141,11 +158,11 @@
   "routes": {
     "/parties": {
       "route": 79,
-      "firstLoad": 304
+      "firstLoad": 306
     },
     "/dashboard": {
       "route": 55,
-      "firstLoad": 273
+      "firstLoad": 276
     },
     "/sales/invoices/new": {
       "route": 110,
@@ -153,11 +170,15 @@
     },
     "/onboarding/step/[n]": {
       "route": 90,
-      "firstLoad": 314
+      "firstLoad": 316
     },
     "/design-system": {
       "route": 74,
-      "firstLoad": 298
+      "firstLoad": 300
+    },
+    "/settings/team": {
+      "route": 75,
+      "firstLoad": 301
     }
   },
   "//ignoreRoutes": [

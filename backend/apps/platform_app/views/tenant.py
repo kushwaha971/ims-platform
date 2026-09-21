@@ -9,19 +9,32 @@ from __future__ import annotations
 
 from typing import Any
 
+from django.conf import settings
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
-from apps.common.exceptions import NoActiveTenant, NotFound
+from apps.common.context import Ctx
+from apps.common.exceptions import NoActiveTenant, NotFound, ValidationFailed
 from apps.common.idempotency import idempotent
+from apps.common.pagination import PagePagination
 from apps.common.responses import StandardResponse
 from apps.common.tenancy import get_effective_tenant
 from apps.platform_app import tokens
-from apps.platform_app.permissions import TenantManagePermission
+from apps.platform_app.permissions import MembersManagePermission, TenantManagePermission
 from apps.platform_app.selectors import session_payload
-from apps.platform_app.selectors.memberships import active_membership, membership_of_user
+from apps.platform_app.selectors.memberships import (
+    active_membership,
+    invitation_of_tenant,
+    invitations_of,
+    membership_of_user,
+    role_by_code,
+)
 from apps.platform_app.serializers.auth import AcceptInvitationSerializer
 from apps.platform_app.serializers.tenant import (
+    ANY_STATUS,
+    InvitationCreateSerializer,
+    InvitationListQuerySerializer,
+    InvitationReadSerializer,
     MembershipPatchSerializer,
     MembershipReadSerializer,
     TenantCreateSerializer,
@@ -39,6 +52,33 @@ def _meta(request: Any) -> dict:
         "user_agent": (request.META.get("HTTP_USER_AGENT", "") or "")[:255] or None,
         "request_id": getattr(request, "request_id", None),
     }
+
+
+def accept_link(raw_token: str) -> str:
+    """The link the invitee clicks. `UB_PUBLIC_BASE_URL` is the frontend origin.
+
+    A path segment rather than a query string, because that is the screen the
+    frontend is planned against (`app/(auth)/accept-invite/[token]`), and because
+    `secrets.token_urlsafe` emits only `A–Z a–z 0–9 - _`, which needs no escaping
+    in a path. The sibling links — `passwords.reset_link`, `auth.verify_link` —
+    build theirs the same way from the same setting.
+    """
+    base = (settings.UB_PUBLIC_BASE_URL or "").rstrip("/")
+    return f"{base}/accept-invite/{raw_token}"
+
+
+def _tenant_or_refuse(request: Any) -> Any:
+    """The request's tenant, or `no_active_tenant`. Never "all tenants".
+
+    The permission class already refuses a tenant-less caller, so this is the
+    second of the two fail-closed checks canon §0.11 rule 2 asks for rather than
+    the only one — and it is what keeps the scoping true if the permission list
+    is ever edited.
+    """
+    tenant = get_effective_tenant(request)
+    if tenant is None:
+        raise NoActiveTenant()
+    return tenant
 
 
 class TenantCreateView(APIView):
@@ -238,3 +278,115 @@ class InvitationAcceptView(APIView):
         return StandardResponse.ok(
             MembershipReadSerializer(membership).data, message="You joined this business."
         )
+
+
+class InvitationListCreateView(APIView):
+    """`GET`/`POST /invitations` — PLT-05 FR-9 and FR-11's list.
+
+    The other half of `InvitationAcceptView` below, which has been able to
+    accept invitations since Sprint 1 with no way to create one.
+
+    Both methods need `platform.members.manage`, which canon §0.9 gives to owner
+    and admin and withholds from staff and accountant: who is on the team is the
+    owner's decision, and the list itself names people who are not yet members,
+    so reading it is part of the same decision rather than a lesser one.
+
+    Everything is scoped to the `tid` claim's tenant. There is no query
+    parameter, header or body field by which a caller can name a different
+    business — `X-Tenant-Id` is never read (canon §22.1) — so cross-tenant reads
+    are not refused here so much as unsayable.
+    """
+
+    permission_classes = [IsAuthenticated, MembersManagePermission]
+
+    def get(self, request: Any) -> Any:
+        query = InvitationListQuerySerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        wanted = query.validated_data["status"]
+        queryset = invitations_of(
+            tenant=_tenant_or_refuse(request),
+            status=None if wanted == ANY_STATUS else wanted,
+        )
+        paginator = PagePagination()
+        page = paginator.paginate_queryset(queryset, request, view=self)
+        return StandardResponse.paginated(paginator, InvitationReadSerializer(page, many=True).data)
+
+    @idempotent("invitation_create")
+    def post(self, request: Any) -> Any:
+        """201 with the invitation and `accept_url` — the token's only appearance.
+
+        `Idempotency-Key` matters more here than on most writes: the failure it
+        prevents is not a duplicate row but a *dead link*. Re-inviting the same
+        address supersedes the earlier invitation (the service revokes it), so a
+        retry after a lost response would silently kill the link the first
+        attempt already sent, and the invitee would click a revoked token.
+        """
+        tenant = _tenant_or_refuse(request)
+        serializer = InvitationCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        role = role_by_code(tenant=tenant, code=data["role"])
+        if role is None:
+            # A typo in a client is a bad field, not a server fault. Letting the
+            # lookup raise would answer 500 to `{"role": "stafff"}`.
+            raise ValidationFailed({"role": ["That is not a role in this business."]})
+
+        invitation, raw_token = membership_service.invite(
+            tenant=tenant,
+            role=role,
+            email=data["email"],
+            actor=request.user,
+            ctx=Ctx.from_request(request),
+            mobile=data.get("mobile"),
+        )
+        payload = InvitationReadSerializer(invitation).data
+        payload["accept_url"] = accept_link(raw_token)
+        return StandardResponse.created(payload)
+
+    def idempotent_response_body(self, request: Any, response: Any) -> Any:
+        """What may be kept for a replay: everything except the raw token.
+
+        The decorator stores the 201 body in `platform_idempotency_key` so a
+        retry can replay it, and that row lives for 24 hours in the same
+        database every support engineer can read. `accept_url` carries the raw
+        token, and only its sha256 is ever meant to be at rest — `invite()`
+        deliberately keeps the token out of the audit log for exactly this
+        reason, and storing it here would put it back by the side door.
+
+        So the replay is a 201 for the invitation that exists, with
+        `accept_url: null`. That is not a hole in the retry: the token exists
+        once, in one response, and a caller who lost it revokes the invitation
+        and sends another — which is the property `invite()` documents, not an
+        inconvenience introduced here.
+        """
+        body = dict(response.data)
+        data = dict(body.get("data") or {})
+        data["accept_url"] = None
+        body["data"] = data
+        return body
+
+
+class InvitationDetailView(APIView):
+    """`DELETE /invitations/{id}` — revoke (PLT-05 FR-9).
+
+    404 and never 403 for an id belonging to another business (canon §0.11 rule
+    2): the id is matched inside the tenant filter, so "somebody else's" and
+    "does not exist" produce the same answer, which is the point — a 403 would
+    confirm the invitation exists and leak that a competitor invited somebody.
+
+    Revoking something already accepted, expired or revoked is a 204 too. The
+    caller asked for that link not to work; it does not work; there is nothing
+    to report. The service is idempotent by the same reasoning.
+    """
+
+    permission_classes = [IsAuthenticated, MembersManagePermission]
+
+    def delete(self, request: Any, invitation_id: Any) -> Any:
+        invitation = invitation_of_tenant(
+            tenant=_tenant_or_refuse(request), invitation_id=invitation_id
+        )
+        if invitation is None:
+            raise NotFound()
+        membership_service.revoke_invitation(invitation=invitation, ctx=Ctx.from_request(request))
+        return StandardResponse.no_content()

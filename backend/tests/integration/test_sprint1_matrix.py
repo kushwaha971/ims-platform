@@ -188,6 +188,41 @@ EXPECTED: dict[tuple[str, str], dict[str, int]] = {
         "anon": 401,
         "other_tenant": 400,
     },
+    # ── Managing invitations (PLT-05 FR-9, canon §0.9) ──────────────────────
+    #
+    # `platform.members.manage` is owner and admin only. The list is gated as
+    # tightly as the create on purpose: it names people who are not members
+    # yet, so who the owner is hiring is not a staff member's to read.
+    ("GET", "v1:invitation-list"): {
+        "owner": 200,
+        "admin": 200,
+        "staff": 403,
+        "accountant": 403,
+        "anon": 401,
+        # Their own business's list — empty, and scoped to them. Not a refusal:
+        # every authenticated owner has an invitation list, it is just theirs.
+        "other_tenant": 200,
+    },
+    ("POST", "v1:invitation-list"): {
+        "owner": 400,
+        "admin": 400,
+        "staff": 403,
+        "accountant": 403,
+        "anon": 401,
+        "other_tenant": 400,
+    },
+    # The id below belongs to nobody, so the permitted roles meet 404 and the
+    # unpermitted meet 403 — which is the ordering canon asks for: authorisation
+    # is decided before existence, so a caller who may not manage members cannot
+    # use 404-versus-403 to probe which invitation ids are real.
+    ("DELETE", "v1:invitation-detail"): {
+        "owner": 404,
+        "admin": 404,
+        "staff": 403,
+        "accountant": 403,
+        "anon": 401,
+        "other_tenant": 404,
+    },
 }
 
 # Bodies that are valid enough to reach the view but never mutate anything.
@@ -232,6 +267,8 @@ def _url(name: str, membership: Any) -> str:
         return reverse(name, kwargs={"membership_id": membership.id})
     if name == "v1:invitation-accept":
         return reverse(name, kwargs={"token": "no-such-invitation-token"})
+    if name == "v1:invitation-detail":
+        return reverse(name, kwargs={"invitation_id": "0199c0a0-0000-7000-8000-00000000d1ed"})
     return reverse(name)
 
 

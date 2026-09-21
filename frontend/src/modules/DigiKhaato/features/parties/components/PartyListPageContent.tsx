@@ -18,11 +18,11 @@ import {
   type UbGridSort,
   type UbGridState,
 } from 'src/design-system/UbDataGrid';
+import { useNowMs } from 'src/hooks/useNowMs';
 import { useTranslation } from 'src/hooks/useTranslation';
 import type { PartyStatus } from 'src/types/domain.types';
 
 import { PAGE_SIZE_OPTIONS } from '../constants/partyListDefaults';
-import { useNowMs } from '../hooks/useNowMs';
 import { usePartyList } from '../hooks/usePartyList';
 import { orderingFor, sortFromOrdering } from '../view-model/partyListSort';
 
