@@ -5,6 +5,8 @@
   "auth.backToLogin": "Back to log in",
   "auth.email.label": "Email address",
   "auth.footer.copyright": "© {year} {appName}",
+  "auth.hero.description": "Track what you gave and what you got, keep stock, and send reminders — without a single paper page.",
+  "auth.hero.title": "Your khata, on your phone",
   "auth.language.change": "Change language",
   "auth.language.label": "Language",
   "auth.legal.and": "and",

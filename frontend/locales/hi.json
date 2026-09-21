@@ -5,6 +5,8 @@
   "auth.backToLogin": "लॉग इन पर वापस",
   "auth.email.label": "ईमेल पता",
   "auth.footer.copyright": "© {year} {appName}",
+  "auth.hero.description": "आपने क्या दिया और क्या मिला — सब रखें, स्टॉक संभालें और याद दिलाएँ, बिना कागज़ के एक भी पन्ने के।",
+  "auth.hero.title": "आपका खाता, आपके फ़ोन पर",
   "auth.language.change": "भाषा बदलें",
   "auth.language.label": "भाषा",
   "auth.legal.and": "और",
