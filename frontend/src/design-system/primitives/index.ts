@@ -161,4 +161,13 @@ export {
   MLDrawerPortal,
   MLDrawerTitle,
   MLDrawerTrigger,
+  MLPopover,
+  MLPopoverContent,
+  MLPopoverTrigger,
+  MLCommand,
+  MLCommandEmpty,
+  MLCommandGroup,
+  MLCommandInput,
+  MLCommandItem,
+  MLCommandList,
 } from 'ml-uikit';
