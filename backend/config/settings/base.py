@@ -195,6 +195,11 @@ REST_FRAMEWORK = {
 }
 
 # ── Auth / tokens (ADR-011, Part 20 §20.5.1) ─────────────────────────────────
+# PLT-05 FR-11 — how long an invitation stays acceptable. Seven days is the
+# span the spec names; it is a setting because a partner onboarding a cohort in
+# person wants hours, not a week, and that should not need a deploy.
+UB_INVITATION_DAYS = env.int("UB_INVITATION_DAYS", 7)
+
 UB_ACCESS_TOKEN_MINUTES = env.int("UB_ACCESS_TOKEN_MINUTES", 15)
 UB_REFRESH_TOKEN_DAYS = env.int("UB_REFRESH_TOKEN_DAYS", 30)
 # DEC-010: identity at MVP is email + password. Mobile OTP, the SMS adapters and
