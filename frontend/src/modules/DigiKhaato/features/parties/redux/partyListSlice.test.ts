@@ -30,9 +30,12 @@ const row = {
 const payload: FetchPartyListResult = {
   rows: [row],
   meta: { page: 1, pageSize: 25, total: 1, totalPages: 1 },
-  // The Sprint 0 endpoint sends no totals block; the slice sums the page it has
-  // and says so through `totalsScope`.
+  // The Sprint 0 endpoint sends no totals block. The SERVICE sums the page it
+  // has and labels it `page`; the slice no longer does arithmetic, because
+  // `partyTotals()` reaches `decimal.js-light` and this slice is statically
+  // registered, which put an 11 KB money library on every route in the product.
   totals: null,
+  totalsScope: 'page',
   mode: 'replace',
 };
 

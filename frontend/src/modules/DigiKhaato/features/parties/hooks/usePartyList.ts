@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { SEARCH_DEBOUNCE_MS } from 'src/constants';
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
@@ -25,6 +25,7 @@ import {
 } from '../redux/partyListSlice';
 import { fetchPartyList } from '../redux/partyListThunk';
 import { abortWarmPartyList, claimWarmPartyList } from '../redux/partyListWarmup';
+import { partyTotals } from '../view-model/partyDisplay';
 
 import type { Party, PartyListFilters } from '../types/party.types';
 import type { PartyListTotals } from '../view-model/partyDisplay';
@@ -68,8 +69,27 @@ export function usePartyList(mode: 'replace' | 'append' = 'replace'): UsePartyLi
   const status = useAppSelector(selectPartyListStatus);
   const error = useAppSelector(selectPartyListError);
   const stale = useAppSelector(selectPartyListStale);
-  const totals = useAppSelector(selectPartyListTotals);
+  const serverTotals = useAppSelector(selectPartyListTotals);
   const totalsScope = useAppSelector(selectPartyListTotalsScope);
+
+  /**
+   * The page-sum fallback, computed HERE rather than in the reducer.
+   *
+   * `partyTotals()` reaches `utils/money`, which is `decimal.js-light`, and a
+   * slice `store.ts` registers statically lives in the app shell (§19.3.9) —
+   * so summing in the reducer put an 11 KB money library on `/legal/terms`,
+   * `/login` and every other route that will never show a rupee. Measured
+   * saving: app shell 101.1 -> 94.4 KB gz, which is more than three feature
+   * slices' worth, for a computation that belongs on the screen anyway.
+   *
+   * `totalsScope` still says which of the two the header is showing, because a
+   * merchant told "₹2,40,000 receivable" has to know whether that is their book
+   * or the twenty-five rows in front of them.
+   */
+  const totals = useMemo(
+    () => serverTotals ?? partyTotals(rows),
+    [serverTotals, rows]
+  );
   const selectedIds = useAppSelector(selectPartySelection);
   const isImpaired = useAppSelector(selectNetworkImpaired);
 

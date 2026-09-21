@@ -121,11 +121,60 @@
     "This is a DECISION FOR THE OWNER, not a budget line: either §19.3.9 stands and",
     "the shell keeps growing with every feature, or the store admits lazily",
     "registered reducers for feature slices and the shell stops growing. It should",
-    "be settled before the ledger slice lands, because that one is not optional."
+    "be settled before the ledger slice lands, because that one is not optional.",
+    "",
+    "── 21 Sep 2026: the store-shape question, ANSWERED without changing the ────",
+    "── store shape ─────────────────────────────────────────────────────────────",
+    "sharedApp 101.1 -> 94.8 (-6.3), so the budget comes DOWN 102 -> 96. First",
+    "reduction in this file.",
+    "",
+    "The two notes above framed this as a choice between §19.3.9 standing and the",
+    "shell growing for ever, or lazily registered reducers. Both were measured",
+    "before choosing, and both framings were wrong.",
+    "",
+    "Lazy reducers buy about 2 KB per slice, ~16 KB across the eight features still",
+    "to come. The price is that `RootState` is total over the store: removing one",
+    "slice to measure the ceiling produced 16 type errors across the slice, its",
+    "selectors and the invalidation map, which is the cost written down. Every",
+    "selector for a lazily registered slice would have to survive its own state",
+    "being absent, on every render before injection. That is ~15 selectors x 8",
+    "slices of defensive code to save 16 KB.",
+    "",
+    "Meanwhile the single largest non-framework item in the shell was",
+    "decimal.js-light at 11 KB, and the note at the top of this file already said",
+    "why it was there: `partyListSlice` summed the page in its REDUCER, which",
+    "reaches `view-model/partyDisplay` -> `utils/money` -> decimal. So a money",
+    "library shipped to /legal/terms, /login and every other route that will never",
+    "show a rupee.",
+    "",
+    "Two changes, no architecture touched: the totals TYPE and its zero value moved",
+    "out of the view-model into `constants/partyListDefaults` (a type and a",
+    "two-field object carry nothing), and the page sum moved out of the reducer",
+    "into `usePartyList`, which is route-local. -6.3 KB on every route in the",
+    "product, against -2 KB per slice for the architectural change.",
+    "",
+    "The 11 KB did not vanish — it moved to the routes that do arithmetic:",
+    "/parties 79 -> 86 and /design-system 74 -> 80 on the route chunk. Both",
+    "routes' FIRST LOAD still fell, because they were paying the shell cost",
+    "anyway. That is the trade the whole file is about: the page that shows money",
+    "pays for the money library, and the page that shows a paragraph does not.",
+    "",
+    "**So §19.3.9 stands.** Static registration is not what makes the shell grow;",
+    "what a slice IMPORTS is. The rule to apply before the ledger slice lands is",
+    "the one this file has stated from the beginning — ANYTHING A SLICE IMPORTS IS",
+    "ON EVERY ROUTE — and the lesson is that it applies to a reducer's",
+    "computation, not only to its dependencies. Ledger, inventory and sales all",
+    "want money arithmetic. None of it belongs in a reducer.",
+    "",
+    "Also measured and rejected: lazily importing a feature's SERVICE from inside",
+    "its thunk. Worth 0.4 KB on the member slice, and it delayed the party list's",
+    "warm-up behind a chunk download — a prefetch that has to fetch its own code",
+    "first is not a prefetch. Three tests caught that, which is the warm-up's",
+    "tests doing their job."
   ],
   "shared": {
     "framework": 128,
-    "sharedApp": 102
+    "sharedApp": 96
   },
   "//routes": [
     "The `route` figures are §19.9.2's, unchanged, and every route is comfortably",
@@ -193,20 +242,39 @@
     "  /onboarding/step/[n]     316  -> 318  (measured 316.8)",
     "  /design-system           300  -> 302  (measured 300.5)",
     "  /dashboard               276  -> 278  (measured 276.3)",
-    "  default firstLoad        280  -> 282  (measured 280.1 on /switch)"
+    "  default firstLoad        280  -> 282  (measured 280.1 on /switch)",
+    "",
+    "── 21 Sep 2026: decimal.js-light moves to the routes that use it ──────────",
+    "Every firstLoad below comes DOWN by the 6.3 KB the shell shed (see //shared).",
+    "Two route chunks go up, because that is where the money library now lives:",
+    "",
+    "  /parties route          79 ->  86  (measured 84.6; firstLoad 306.7 -> 306.3)",
+    "  /design-system route    74 ->  80  (measured 78.0; firstLoad 300.5 -> 299.7)",
+    "",
+    "Both of those routes' FIRST LOAD still fell. They were paying the shell cost",
+    "already, so moving the library into them costs them nothing and saves it for",
+    "everybody else.",
+    "",
+    "The rest are re-cut from the measured values with ~2 KB of headroom:",
+    "  default firstLoad      282 -> 276   (measured 273.7 on /switch)",
+    "  /dashboard             278 -> 272   (measured 270.0)",
+    "  /settings/team         305 -> 299   (measured 296.8)",
+    "  /onboarding/step/[n]   318 -> 312   (measured 310.4)",
+    "  /parties               308 -> 308   (measured 306.3, unchanged)",
+    "  /design-system         302 -> 302   (measured 299.7, unchanged)"
   ],
   "default": {
     "route": 60,
-    "firstLoad": 282
+    "firstLoad": 276
   },
   "routes": {
     "/parties": {
-      "route": 79,
+      "route": 86,
       "firstLoad": 308
     },
     "/dashboard": {
       "route": 55,
-      "firstLoad": 278
+      "firstLoad": 272
     },
     "/sales/invoices/new": {
       "route": 110,
@@ -214,15 +282,15 @@
     },
     "/onboarding/step/[n]": {
       "route": 90,
-      "firstLoad": 318
+      "firstLoad": 312
     },
     "/design-system": {
-      "route": 74,
+      "route": 80,
       "firstLoad": 302
     },
     "/settings/team": {
       "route": 77,
-      "firstLoad": 305
+      "firstLoad": 299
     }
   },
   "//ignoreRoutes": [

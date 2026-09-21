@@ -1,7 +1,7 @@
 import type { PageMeta } from 'src/types/api.types';
 import type { PartyStatus } from 'src/types/domain.types';
 
-import type { PartyListTotals } from '../view-model/partyDisplay';
+import type { PartyListTotals, PartyTotalsScope } from '../constants/partyListDefaults';
 
 /**
  * Part 19 §19.2.3 — the feature's own types. Money is a STRING here and
@@ -52,6 +52,12 @@ export type PartyListFilters = PartyListParams;
 export interface PartyListResult {
   readonly rows: readonly Party[];
   readonly meta: PageMeta;
+  /**
+   * Which set `totals` describes. The service decides it, because the service
+   * is the only place that knows whether the server sent figures or the page
+   * had to be summed — and the header says it out loud to the merchant.
+   */
+  readonly totalsScope: PartyTotalsScope;
   /**
    * The two header figures for the WHOLE filtered set, when the server sends
    * them (Part 22 §22.4 `meta.totals_*`). `null` means it did not, and the

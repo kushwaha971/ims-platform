@@ -6,10 +6,14 @@ import type { RootState } from 'src/redux/store';
 import type { ApiErrorShape, PageMeta, RequestStatus } from 'src/types/api.types';
 
 import { DEFAULT_ORDERING, DEFAULT_PAGE_SIZE, SELECTION_CAP } from '../constants/partyListDefaults';
-import { partyTotals, ZERO_TOTALS, type PartyListTotals } from '../view-model/partyDisplay';
 
+/* From `constants/`, NOT from `../view-model/partyDisplay` — importing the
+ * totals type from beside `partyTotals()` pulls `decimal.js-light` into the app
+ * shell, because this slice is statically registered (§19.3.9). See
+ * `constants/partyListDefaults.ts` for the measurement. */
 import { fetchPartyList } from './partyListThunk';
 
+import type { PartyListTotals } from '../constants/partyListDefaults';
 import type { Party, PartyListFilters } from '../types/party.types';
 
 /**
@@ -30,7 +34,9 @@ export interface PartyListState {
    * rather than a selector over `rows` because the server can send totals for
    * the whole filtered set, and a page-sum is only the fallback.
    */
-  totals: PartyListTotals;
+  /** The server's figures, or `null` when it sent none and the page is summed
+   *  on the screen instead. */
+  totals: PartyListTotals | null;
   /**
    * Which set `totals` describes. The header says so out loud: a merchant told
    * "You will get ₹1,24,300" has to be able to trust that it is not the sum of
@@ -60,7 +66,7 @@ const initialState: PartyListState = {
   status: 'loading',
   error: null,
   selectedIds: [],
-  totals: ZERO_TOTALS,
+  totals: null,
   totalsScope: 'page',
   lastFetchedAt: null,
   stale: false,
@@ -106,8 +112,18 @@ const partyListSlice = createSlice({
             ? [...state.rows, ...action.payload.rows]
             : [...action.payload.rows];
         state.meta = action.payload.meta;
-        state.totals = action.payload.totals ?? partyTotals(state.rows);
-        state.totalsScope = action.payload.totals ? 'filtered' : 'page';
+        // NO ARITHMETIC IN THE REDUCER. Summing the page here meant importing
+        // `partyTotals()`, which reaches `utils/money`, which is
+        // `decimal.js-light` — and every slice `store.ts` registers statically
+        // is in the app shell (§19.3.9), so `/legal/terms` and `/login` were
+        // downloading an 11 KB money library to render a paragraph of text.
+        // Measured saving, with this and the totals type moved out of the
+        // view-model: app shell 101.1 -> 94.4 KB gz on EVERY route.
+        //
+        // The page sum now happens in `usePartyList`, which is route-local, so
+        // the arithmetic travels with the screen that does arithmetic.
+        state.totals = action.payload.totals;
+        state.totalsScope = action.payload.totalsScope;
         state.lastFetchedAt = Date.now();
         state.stale = false;
         state.staleUrgency = null;
@@ -142,6 +158,7 @@ export const selectPartyListError = (state: RootState): ApiErrorShape | null =>
 export const selectPartySelection = (state: RootState): readonly string[] =>
   state.partyList.selectedIds;
 export const selectPartyListStale = (state: RootState): boolean => state.partyList.stale;
-export const selectPartyListTotals = (state: RootState): PartyListTotals => state.partyList.totals;
+export const selectPartyListTotals = (state: RootState): PartyListTotals | null =>
+  state.partyList.totals;
 export const selectPartyListTotalsScope = (state: RootState): 'filtered' | 'page' =>
   state.partyList.totalsScope;
