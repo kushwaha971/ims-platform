@@ -8,7 +8,7 @@
 #
 # Usage:
 #   scripts/bootstrap.sh              # full sequence, interactive super admin
-#   scripts/bootstrap.sh --demo       # also run seed_demo (~120 ledger entries)
+#   scripts/bootstrap.sh --demo       # also run seed_demo_tenant (~120 ledger entries)
 #   scripts/bootstrap.sh --no-superadmin   # skip step 7 (CI, or a re-run)
 #   scripts/bootstrap.sh --verify-only     # just §29.4.3's checklist
 #
@@ -96,8 +96,8 @@ superadmin() {
 }
 demo()       {
   [ "$DEMO" = "1" ] || return 0
-  step "6b. Demo data (seed_demo refuses under DEBUG=0 without --force)"
-  docker compose run --rm backend python manage.py seed_demo
+  step "6b. Demo data (seed_demo_tenant refuses under DEBUG=0 without --force)"
+  docker compose run --rm backend python manage.py seed_demo_tenant
 }
 start_all()  {
   step "8. Starting everything"

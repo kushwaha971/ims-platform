@@ -59,7 +59,7 @@ seed: ## Seed reference data (idempotent: roles, plans, partners, units, tax rat
 	$(BACKEND_RUN) python manage.py seed_all
 
 seed-demo: ## Seed one demo tenant, ~120 entries. Refuses under DEBUG=0 without --force
-	$(BACKEND_RUN) python manage.py seed_demo
+	$(BACKEND_RUN) python manage.py seed_demo_tenant
 
 superadmin: ## Create a platform super admin (interactive)
 	$(BACKEND_RUN) python manage.py create_superadmin
@@ -105,7 +105,7 @@ test-frontend: ## Jest with coverage
 
 e2e: ## Playwright @smoke against a compose stack
 	$(COMPOSE) up -d
-	$(BACKEND_RUN) python manage.py seed_e2e --reset
+	$(BACKEND_RUN) python manage.py seed_demo_tenant --force
 	cd e2e && npx playwright test --grep @smoke
 
 ci: check test e2e ## Everything a PR must pass, plus traceability
