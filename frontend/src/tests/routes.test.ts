@@ -15,8 +15,10 @@ import { join } from 'node:path';
 import {
   APP_ROUTE_PREFIXES,
   ONBOARDING_STEP_MAX,
+  PUBLIC_ROUTE_PREFIXES,
   RETIRED_ROUTES,
   ROUTES,
+  isPublicPath,
   loginPathWithNext,
   onboardingStepPath,
 } from 'src/routes';
@@ -142,5 +144,43 @@ describe('no application path is hard-coded outside src/routes.ts', () => {
     }
 
     expect(offenders).toEqual([]);
+  });
+});
+
+describe('public routes and the login redirect loop', () => {
+  /**
+   * Regression for the loop found by running the frontend against a live
+   * backend: `/login` redirected to `/login?next=/login`, which is a full page
+   * load, which re-ran `SessionBootstrap`'s `GET /auth/me`, which 401'd again.
+   * The address doubled in length on every pass and the form never settled.
+   */
+  it('treats every auth screen as public', () => {
+    expect(isPublicPath(ROUTES.LOGIN)).toBe(true);
+    expect(isPublicPath(ROUTES.SIGNUP)).toBe(true);
+    expect(isPublicPath(ROUTES.FORGOT_PASSWORD)).toBe(true);
+    expect(isPublicPath(ROUTES.RESET_PASSWORD)).toBe(true);
+    expect(isPublicPath(ROUTES.SET_PASSWORD)).toBe(true);
+  });
+
+  it('matches on prefix, because the reset link carries a token segment', () => {
+    expect(isPublicPath(`${ROUTES.RESET_PASSWORD}/abc123`)).toBe(true);
+  });
+
+  it('does not treat an app route as public', () => {
+    expect(isPublicPath(ROUTES.DASHBOARD)).toBe(false);
+    expect(isPublicPath(ROUTES.PARTIES)).toBe(false);
+  });
+
+  it('does not let a look-alike path inherit public status', () => {
+    // `/login-help` is not `/login`; prefix matching must respect the boundary.
+    expect(isPublicPath(`${ROUTES.LOGIN}-help`)).toBe(false);
+  });
+
+  it('guards every public route the proxy does not guard, and no app route', () => {
+    // The two lists must stay disjoint: a path in both would be guarded as an
+    // app route and skipped as a public one, which is how a loop comes back.
+    for (const publicPrefix of PUBLIC_ROUTE_PREFIXES) {
+      expect(APP_ROUTE_PREFIXES).not.toContain(publicPrefix);
+    }
   });
 });

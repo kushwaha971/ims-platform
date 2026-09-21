@@ -15,7 +15,7 @@ import axios, {
 } from 'axios';
 
 import { API_BASE_URL, API_TIMEOUT_MS } from 'src/constants';
-import { loginPathWithNext } from 'src/routes';
+import { isPublicPath, loginPathWithNext } from 'src/routes';
 import type { TNetworkTag } from 'src/types/api.types';
 import { shouldToast, toApiError } from 'src/utils/apiError';
 import { readCsrfToken } from 'src/utils/cookieUtils';
@@ -159,9 +159,28 @@ const runRefresh = (): Promise<void> => {
 
 let redirected = false;
 
-/** The session is genuinely over; send the user to login exactly once. */
+/** The session is genuinely over; send the user to login exactly once.
+ *
+ * "Once" is enforced twice over, and it needs to be, because the two guards
+ * cover different things and the module-level flag alone cannot do the job:
+ * `window.location.assign` is a full page load, so the module is re-evaluated
+ * and `redirected` is back to `false` on the other side. It stops a burst of
+ * concurrent 401s from racing; it cannot stop a loop.
+ *
+ * The loop is stopped by the public-path check. `SessionBootstrap` calls
+ * `GET /auth/me` from the ROOT layout, so it runs on the login screen too and
+ * answers 401 for the ordinary reason that nobody has signed in yet. Redirecting
+ * on that sent `/login` to `/login?next=/login`, reloaded, 401'd again, and went
+ * round forever, re-encoding `next` each pass so the address doubled in length.
+ * Observed against a live backend: the form rendered and was navigated away from
+ * before it could be typed into, several times a second.
+ *
+ * Sending someone who is already on an auth screen to the auth screen was never
+ * meaningful, so the check costs nothing that was worth having.
+ */
 const redirectToLoginOnce = (): void => {
   if (redirected || typeof window === 'undefined') return;
+  if (isPublicPath(window.location.pathname)) return;
   redirected = true;
   const next = `${window.location.pathname}${window.location.search}`;
   // `loginPathWithNext` owns both the address and the encoding (§19.6.4 rule 2);
