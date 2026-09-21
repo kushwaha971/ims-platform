@@ -23,9 +23,25 @@
     "",
     "`routes` keys are the URL path, route groups stripped: the manifest's",
     "`/(app)/parties/page` is matched by `/parties`. Anything unnamed falls to",
-    "`default`."
+    "`default`.",
+    "",
+    "── 21 Sep 2026: the ml-uikit select ───────────────────────────────────────",
+    "Three route budgets were raised here, and the reason is measured, not",
+    "estimated. `UbSelect` was a native <select> standing in for a combobox the",
+    "unreachable ml-uikit could not supply; vendoring the real package makes it a",
+    "Radix composite, which costs ~20-28 KB gz on a route that renders one.",
+    "",
+    "What that buys: a positioned menu that cannot exceed its trigger's width, a",
+    "capped height so 38 GST states scroll instead of running off a short screen,",
+    "real keyboard navigation and type-ahead, and a chevron the design chose rather",
+    "than the platform's own — the defect the first review reported.",
+    "",
+    "What it did NOT buy, deliberately: the language and theme pickers in the auth",
+    "footer stayed native. The gate caught them putting 19.5 KB on",
+    "/forgot-password and /set-password, routes with no form field at all, to",
+    "restyle a two-item list. `UbNativeSelect` exists for that case and the",
+    "baseline is unchanged at 223.5 KB."
   ],
-
   "//shared": [
     "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
     "figures in the specification table, and neither gap is something a PR can close,",
@@ -67,7 +83,6 @@
     "framework": 128,
     "sharedApp": 97
   },
-
   "//routes": [
     "The `route` figures are §19.9.2's, unchanged, and every route is comfortably",
     "inside them — the largest is /onboarding/step/[n] at 51.5 against 60.",
@@ -80,24 +95,62 @@
     "",
     "§19.9.6 item 4 asks for tight assertions on the three routes that matter and",
     "looser cover elsewhere, which is the shape below. `/sales/invoices/new` does",
-    "not exist yet; its line is §19.9.2's, waiting for it."
+    "not exist yet; its line is §19.9.2's, waiting for it.",
+    "",
+    "── 21 Sep 2026: the ml-uikit select ───────────────────────────────────────",
+    "Three routes gained a line here, and the number is measured, not estimated.",
+    "`UbSelect` was a native <select> standing in for a combobox the unreachable",
+    "ml-uikit could not supply. Vendoring the real package makes it a Radix",
+    "composite, which costs ~20-28 KB gz on any route that renders one:",
+    "  /onboarding/step/[n]  60 -> 88   (the 38-state GST picker)",
+    "  /parties              45 -> 66   (the status filter)",
+    "  /design-system        60 -> 72   (the showcase renders every control)",
+    "",
+    "What it buys is the defect the first review reported: a menu that cannot",
+    "exceed its trigger's width, a capped height so 38 states scroll instead of",
+    "running off a short screen, real keyboard navigation and type-ahead, and a",
+    "chevron the design chose rather than the platform's own.",
+    "",
+    "What it deliberately did NOT buy: the language and theme pickers in the auth",
+    "footer stayed native. This gate caught them putting 19.5 KB onto",
+    "/forgot-password and /set-password — routes with no form field at all — to",
+    "restyle a two-item list. `UbNativeSelect` exists for that case. The shared",
+    "baseline is unchanged at 223.5 KB, which is the number that actually matters:",
+    "nothing was added to the shell."
   ],
   "default": {
     "route": 60,
     "firstLoad": 280
   },
-
   "routes": {
-    "/parties": { "route": 45, "firstLoad": 255 },
-    "/dashboard": { "route": 55, "firstLoad": 248 },
-    "/sales/invoices/new": { "route": 110, "firstLoad": 340 }
+    "/parties": {
+      "route": 66,
+      "firstLoad": 290
+    },
+    "/dashboard": {
+      "route": 55,
+      "firstLoad": 248
+    },
+    "/sales/invoices/new": {
+      "route": 110,
+      "firstLoad": 340
+    },
+    "/onboarding/step/[n]": {
+      "route": 88,
+      "firstLoad": 312
+    },
+    "/design-system": {
+      "route": 72,
+      "firstLoad": 296
+    }
   },
-
   "//ignoreRoutes": [
     "`_global-error` replaces the whole document, including the provider tree, so",
     "it loads a different and much smaller set than any real route. Leaving it in",
     "would drag the sharedApp intersection down to whatever those two files happen",
     "to share and quietly weaken every other line in this file."
   ],
-  "ignoreRoutes": ["/_global-error"]
+  "ignoreRoutes": [
+    "/_global-error"
+  ]
 }

@@ -1,0 +1,1 @@
+{"version":3,"file":"index.cjs6.js","sources":["../src/components/ui/aspect-ratio.tsx"],"sourcesContent":["import * as AspectRatioPrimitive from \"@radix-ui/react-aspect-ratio\"\n\nconst AspectRatio = AspectRatioPrimitive.Root\n\nexport { AspectRatio }\n"],"names":["AspectRatio","AspectRatioPrimitive"],"mappings":"0ZAEMA,EAAcC,EAAqB"}

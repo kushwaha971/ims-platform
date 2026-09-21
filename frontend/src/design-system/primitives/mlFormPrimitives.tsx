@@ -50,8 +50,29 @@ export const ML_CONTROL_BASE =
   'disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:opacity-60 ' +
   'read-only:bg-surface-sunken';
 
+/**
+ * Border colour by state — and the other half of the double-outline fix.
+ *
+ * Focus is expressed here, as a border colour, because `app/globals.css` no
+ * longer paints a ring on form controls. That is BrandHub's rule copied
+ * verbatim: its portal never rings an input, and
+ * `focus-visible:border-foreground focus-visible:outline-none
+ * focus-visible:ring-0` appears in five independent places there.
+ *
+ * `invalid` keeps the error colour THROUGH focus. BrandHub gets this wrong on
+ * most of its own wrappers — `focus-visible:border-foreground` sits before the
+ * conditional `border-destructive` in the `cn()` call, and because they are
+ * different variants twMerge cannot collapse them, so a focused invalid field
+ * turns dark and loses the error colour until blur. Only `BrandHubWebsiteInput`
+ * handles it, with `invalid && 'border-destructive focus-within:border-destructive'`.
+ * ml-uikit's own inputs do the same thing with
+ * `aria-invalid:focus-visible:border-[#ff3b30]`. This follows those two, not the
+ * majority.
+ */
 export const ML_CONTROL_TONE = (invalid?: boolean): string =>
-  invalid ? 'border-formError' : 'border-border-strong hover:border-border-focus';
+  invalid
+    ? 'border-formError focus-visible:border-formError'
+    : 'border-border-strong hover:border-border-focus focus-visible:border-border-focus';
 
 export const MLInput = forwardRef<HTMLInputElement, MLInputProps>(function MLInput(
   { invalid, className, type = 'text', ...rest },
