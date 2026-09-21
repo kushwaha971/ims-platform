@@ -81,8 +81,10 @@ export const listParties = async (
 
   const { totals_receivable: receivable, totals_payable: payable } = response.data.meta;
 
+  const rows = response.data.data.map(toParty);
+
   return {
-    rows: response.data.data.map(toParty),
+    rows,
     meta: {
       page: response.data.meta.page,
       pageSize: response.data.meta.page_size,
@@ -92,7 +94,13 @@ export const listParties = async (
     // Both or neither: half a total is worse than none, because the screen
     // would show one server figure beside one page figure and label them the
     // same way.
-    totals:
-      receivable !== undefined && payable !== undefined ? { receivable, payable } : null,
+    //
+    // `totalsScope` says which of the two this is, because a merchant told
+    // "₹2,40,000 receivable" has to know whether that is their book or the
+    // twenty-five rows in front of them. The PAGE SUM itself is computed on the
+    // screen, not here and not in the reducer — see `partyListSlice`.
+    ...(receivable !== undefined && payable !== undefined
+      ? { totals: { receivable, payable }, totalsScope: 'filtered' as const }
+      : { totals: null, totalsScope: 'page' as const }),
   };
 };

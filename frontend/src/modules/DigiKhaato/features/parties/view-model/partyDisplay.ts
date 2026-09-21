@@ -1,6 +1,7 @@
 import type { UbAmountTone } from 'src/design-system';
 import { absMoney, compareMoney, isZeroAmount, sumMoney } from 'src/utils/money';
 
+import type { PartyListTotals } from '../constants/partyListDefaults';
 import type { Party } from '../types/party.types';
 
 /**
@@ -95,12 +96,11 @@ export const activityView = (lastActivityAt: string | null, nowMs: number): Part
  * merchant has no use for, because the money they will collect and the money
  * they owe are two different jobs on two different days.
  */
-export interface PartyListTotals {
-  readonly receivable: string;
-  readonly payable: string;
-}
-
-export const ZERO_TOTALS: PartyListTotals = { receivable: '0.00', payable: '0.00' };
+/* Defined in `constants/partyListDefaults` and re-exported here so the existing
+ * call sites are unchanged. The slice must import them from THERE, not from
+ * this module, or it drags `decimal.js-light` into the app shell — see that
+ * file for the measurement. */
+export { ZERO_TOTALS, type PartyListTotals } from '../constants/partyListDefaults';
 
 export const partyTotals = (rows: readonly Party[]): PartyListTotals => {
   const receivable = rows.filter((row) => compareMoney(row.balance, '0.00') > 0);
