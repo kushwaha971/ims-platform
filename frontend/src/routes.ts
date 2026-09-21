@@ -80,6 +80,23 @@ export const loginPathWithNext = (next: string): string =>
  * name yet (`/stock`, `/notifications`) so a Sprint-5 screen is guarded the day
  * its route file appears rather than the day someone remembers this list.
  */
+/**
+ * Paths that need a SESSION but must not need a tenant.
+ *
+ * The onboarding wizard is the whole of this category and it was guarded by
+ * nothing: not in `APP_ROUTE_PREFIXES`, so `proxy.ts` waved it through, and
+ * `app/(auth)/layout.tsx` mounts no `RequireSession`. An anonymous visitor could
+ * load and fill every step; it only failed at `POST /tenants`, with a 401 after
+ * the work rather than a redirect before it.
+ *
+ * It cannot simply join `APP_ROUTE_PREFIXES`, because those are the routes
+ * `RequireSession` sends a tenantless session AWAY from — putting onboarding
+ * among them would bounce the very people it exists for. Hence a second list:
+ * the proxy guards both, and only the app list implies a tenant.
+ */
+export const SESSION_ONLY_ROUTE_PREFIXES: readonly string[] = [ROUTES.ONBOARDING];
+
+
 export const APP_ROUTE_PREFIXES: readonly string[] = [
   ROUTES.DASHBOARD,
   ROUTES.PARTIES,
@@ -94,6 +111,12 @@ export const APP_ROUTE_PREFIXES: readonly string[] = [
   ROUTES.SETTINGS,
   ROUTES.SWITCH_TENANT,
   '/notifications',
+];
+
+/** Everything the proxy guards: a session is required for all of it. */
+export const GUARDED_ROUTE_PREFIXES: readonly string[] = [
+  ...SESSION_ONLY_ROUTE_PREFIXES,
+  ...APP_ROUTE_PREFIXES,
 ];
 
 /**
