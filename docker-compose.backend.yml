@@ -47,11 +47,20 @@ services:
       UB_ALLOWED_HOSTS: localhost,127.0.0.1,0.0.0.0,backend
       UB_CORS_ALLOWED_ORIGINS: http://localhost:3000
       UB_CSRF_TRUSTED_ORIGINS: http://localhost:3000
-      POSTGRES_DB: ${POSTGRES_DB:-digikhaato_dev}
-      POSTGRES_USER: ${POSTGRES_USER:-$USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
+      # POSTGRES_DB, _USER, _PASSWORD and _PORT are deliberately NOT set here.
+      # `./backend` is bind-mounted at /app and `settings/base.py` does
+      # `env.read_env(BASE_DIR / ".env")`, so the container reads `backend/.env` —
+      # the same file the native path reads. One place holds the credentials, and
+      # it is git-ignored.
+      #
+      # They must not be listed here as well: `read_env` defaults to
+      # `override=False`, so a real environment variable wins over the file, and
+      # setting them here would silently shadow whatever you put in backend/.env.
+      #
+      # HOST is the exception and has to be forced: `backend/.env` says
+      # 127.0.0.1 for the native path, and inside a container that is the
+      # container itself.
       POSTGRES_HOST: host.docker.internal
-      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
     volumes:
       - ./backend:/app          # live reload; the image's code is bind-mounted over
     ports:
