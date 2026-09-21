@@ -2,7 +2,7 @@ import { cookies } from 'next/headers';
 
 import { AppProviders } from 'src/components/providers/AppProviders';
 import { APP_NAME } from 'src/constants';
-import { LOCALE_COOKIE, THEME_COOKIE } from 'src/utils/cookieUtils';
+import { LOCALE_COOKIE, THEME_CHOICE_COOKIE } from 'src/utils/cookieUtils';
 
 import { SessionBootstrap } from 'modules/DigiKhaato/features/auth/components/SessionBootstrap';
 
@@ -33,7 +33,19 @@ import './globals.css';
  * <html>, <head>, <body> and the boot script have no design-system equivalent.
  */
 
-const THEME_INIT = `(function(){try{var m=document.cookie.match(/(?:^|; )${THEME_COOKIE}=([^;]*)/);var t=m&&decodeURIComponent(m[1]);if(t!=='dark'&&t!=='light'){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);}catch(e){}})();`;
+/**
+ * Resolve the theme before first paint.
+ *
+ * The fallback is `light`, not `prefers-color-scheme`. It used to be the media
+ * query, which is why a merchant on a Mac set to Dark got a dark khata: the OS
+ * decided, the specification said light, and the specification lost. §19.8.4's
+ * reason for light is that the product is used in bright shops on cheap screens
+ * — the operating system of the phone or laptop knows nothing about that.
+ *
+ * Only an explicit choice is read, and `ub_theme_choice` only ever holds one —
+ * see `cookieUtils` for why it is not the old `ub_theme`.
+ */
+const THEME_INIT = `(function(){try{var m=document.cookie.match(/(?:^|; )${THEME_CHOICE_COOKIE}=([^;]*)/);var t=m&&decodeURIComponent(m[1]);document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');}catch(e){document.documentElement.setAttribute('data-theme','light');}})();`;
 
 export const metadata: Metadata = {
   /**
@@ -67,7 +79,9 @@ export default async function RootLayout({
 }: Readonly<{ children: React.ReactNode }>): Promise<React.JSX.Element> {
   const store = await cookies();
   const locale = store.get(LOCALE_COOKIE)?.value === 'hi' ? 'hi' : 'en';
-  const theme = store.get(THEME_COOKIE)?.value === 'dark' ? 'dark' : 'light';
+  // Same source as THEME_INIT, so the server-rendered attribute and the one
+  // the blocking script writes agree and there is nothing to correct.
+  const theme = store.get(THEME_CHOICE_COOKIE)?.value === 'dark' ? 'dark' : 'light';
 
   return (
     <html lang={locale} data-theme={theme} suppressHydrationWarning>

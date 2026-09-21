@@ -140,7 +140,17 @@ both apply.
 
 ---
 
-## C. The three decisions I need before coding
+## C. The three decisions — ANSWERED 21 Sep 2026
+
+| # | Question | Decision |
+|---|---|---|
+| C1 | Relationship to BrandHub | **Separate product, BrandHub patterns.** DigiKhaato keeps its own Django backend and its own auth. BrandHub is a reference, never a callee. |
+| C2 | Tenant creation | **Keep self-serve, add admin provisioning alongside.** A merchant still signs up and creates their own khata; a Supplier/Platform Admin can additionally create tenants and invite the first user. DEC-001 and the MVP scope stand unchanged. |
+| C3 | `ml-uikit` | **Vendor the licensed copy** from BrandHub's `node_modules` into DigiKhaato. No public-npm install. |
+
+The original framing of each, for the record:
+
+### C1. What is DigiKhaato's relationship to BrandHub?
 
 ### C1. What is DigiKhaato's relationship to BrandHub?
 
