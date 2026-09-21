@@ -97,3 +97,63 @@ def test_the_frontend_health_route_the_compose_healthcheck_targets_exists() -> N
     assert re.search(r"export\s+(async\s+)?function\s+GET", route.read_text()), (
         "the healthz route file exists but exports no GET handler"
     )
+
+
+# ── Build targets ────────────────────────────────────────────────────────────
+# `docker-compose.override.yml` built backend and scheduler with `target: dev`
+# and `backend/Dockerfile` had no such stage — it was a single `runtime` stage.
+# So `docker compose up` locally failed at BUILD, before anything ran. Only the
+# frontend image had a `dev`. `docker compose config` cannot catch this: it
+# interpolates and validates the YAML without resolving a Dockerfile, which is
+# why the compose files "validated" for weeks while the path could not start.
+
+_TARGET = re.compile(r"target:\s*(?:\$\{[A-Z_]+:-)?([a-z][a-z0-9_-]*)\}?")
+_STAGE = re.compile(r"^\s*FROM\s+\S+\s+AS\s+(\S+)", re.MULTILINE | re.IGNORECASE)
+
+COMPOSE_FILES = tuple(f for f in OPERATOR_FILES if f.startswith("docker-compose"))
+
+
+def _declared_stages(dockerfile: Path) -> set[str]:
+    return {m.lower() for m in _STAGE.findall(dockerfile.read_text())}
+
+
+def _build_targets() -> set[tuple[str, str, str]]:
+    """(compose file, dockerfile context, target) for every `target:` under a build."""
+    found: set[tuple[str, str, str]] = set()
+    for rel in (*COMPOSE_FILES, "docker-compose.backend.yml"):
+        path = REPO / rel
+        if not path.exists():
+            continue
+        text = path.read_text()
+        # `context:` and `target:` travel together under `build:`; pair each
+        # target with the nearest context above it.
+        context = None
+        for line in text.splitlines():
+            ctx = re.match(r"\s*context:\s*(\S+)", line)
+            if ctx:
+                context = ctx.group(1).strip("./") or "."
+                continue
+            tgt = _TARGET.search(line)
+            if tgt and context and "ports" not in line:
+                found.add((rel, context, tgt.group(1)))
+    return found
+
+
+def test_build_targets_were_found() -> None:
+    assert len(_build_targets()) >= 3
+
+
+@pytest.mark.parametrize("rel,context,target", sorted(_build_targets()))
+def test_every_build_target_is_a_real_dockerfile_stage(
+    rel: str, context: str, target: str
+) -> None:
+    dockerfile = REPO / context / "Dockerfile"
+    assert dockerfile.exists(), f"{rel} builds {context}, which has no Dockerfile"
+
+    stages = _declared_stages(dockerfile)
+    assert target in stages, (
+        f"{rel} builds {context} with `target: {target}`, and "
+        f"{context}/Dockerfile declares only {sorted(stages)}. "
+        f"`docker compose config` passes on this because it never resolves a "
+        f"Dockerfile — the failure only appears at build time."
+    )

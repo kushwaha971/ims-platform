@@ -1,0 +1,59 @@
+# docker-compose.backend.yml — the Django API in Docker, nothing else.
+#
+# Self-contained on purpose: run it with `-f` and it needs no root `.env`, no
+# `db` service and no other compose file. The database is the PostgreSQL already
+# running on your machine, and the frontend runs natively with
+# `scripts/dev-frontend.sh`.
+#
+#   docker compose -f docker-compose.backend.yml up --build
+#
+# Two things this arrangement needs from your host PostgreSQL, because a
+# container is not localhost:
+#
+#  1. It must listen on more than the loopback interface. Homebrew's default is
+#     `listen_addresses = 'localhost'`, which the container cannot reach. Set
+#     `listen_addresses = '*'` in postgresql.conf.
+#  2. It must accept connections from Docker's bridge network. Add to
+#     pg_hba.conf, ABOVE the existing host lines:
+#         host  all  all  192.168.65.0/24  trust      # Docker Desktop for Mac
+#         host  all  all  172.16.0.0/12    trust      # Linux bridge networks
+#     `trust` is fine for a local development database and is wrong anywhere
+#     else; use `scram-sha-256` and a password if this machine is not yours alone.
+#
+#  Then `brew services restart postgresql@16`.
+#
+# `scripts/docker-backend.sh` checks both of these before starting and tells you
+# which one is missing, because the failure mode otherwise is a container that
+# retries for sixty seconds and exits with "database not ready".
+name: digikhaato-backend
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: dev
+    # `host.docker.internal` resolves to the host from inside the container on
+    # Docker Desktop. `host-gateway` adds it on Linux, where it is not built in.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.local
+      UB_DEBUG: "1"
+      UB_LOG_FORMAT: console
+      # Local development only. Nothing here is a secret worth protecting, which
+      # is exactly why this file can be committed and the root .env cannot.
+      UB_SECRET_KEY: ${UB_SECRET_KEY:-local-docker-dev-not-a-secret}
+      UB_ALLOWED_HOSTS: localhost,127.0.0.1,0.0.0.0,backend
+      UB_CORS_ALLOWED_ORIGINS: http://localhost:3000
+      UB_CSRF_TRUSTED_ORIGINS: http://localhost:3000
+      POSTGRES_DB: ${POSTGRES_DB:-digikhaato_dev}
+      POSTGRES_USER: ${POSTGRES_USER:-$USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
+      POSTGRES_HOST: host.docker.internal
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+    volumes:
+      - ./backend:/app          # live reload; the image's code is bind-mounted over
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
