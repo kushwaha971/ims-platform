@@ -126,8 +126,23 @@ export function UbField({
           </>
         )}
       />
-      {hint && !error && <UbInputHint id={`${name}-hint`}>{hint}</UbInputHint>}
-      {error && <UbFieldError id={`${name}-error`}>{error}</UbFieldError>}
+      {/* One row for the message, whichever message it is.
+       *
+       * The hint is REPLACED by the error rather than stacked beneath it, which
+       * was already right — two lines of guidance about one field is one too
+       * many. What was missing is that a field with no hint had no row at all,
+       * so the first failed submit grew every such field by a line and pushed
+       * everything below it down the page. On the wizard that moved the Continue
+       * button under the cursor mid-click.
+       *
+       * `min-h-5` reserves exactly one line of `ds-caption`, so the row exists
+       * before there is anything in it and nothing moves when there is. A field
+       * that never shows a message pays 20px of deliberate space; a form that
+       * jumps on validation costs more than that. */}
+      <div className="min-h-5">
+        {hint && !error && <UbInputHint id={`${name}-hint`}>{hint}</UbInputHint>}
+        {error && <UbFieldError id={`${name}-error`}>{error}</UbFieldError>}
+      </div>
     </div>
   );
 }
