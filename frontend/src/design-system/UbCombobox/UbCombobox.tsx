@@ -107,6 +107,13 @@ const UbComboboxInner = forwardRef<HTMLButtonElement, UbComboboxProps>(function 
       <MLPopoverTrigger
         ref={ref}
         id={id}
+        // Radix's trigger defaults to a plain button with
+        // `aria-haspopup="dialog"`. This is a combobox and assistive tech should
+        // say so — and the role is load-bearing, not cosmetic: without it a test
+        // or a screen reader looking for a combobox finds a button, which is how
+        // a working component got reported as broken. `aria-expanded` and
+        // `aria-controls` are Radix's own and are left to it.
+        role="combobox"
         disabled={disabled}
         onBlur={onBlur}
         className={cn(

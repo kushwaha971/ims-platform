@@ -5,7 +5,7 @@ import { useCallback, useMemo } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm } from 'react-hook-form';
 
-import { UbDivider, UbField, UbForm, UbSelect, UbStack, UbTextInput } from 'src/design-system';
+import { UbCombobox, UbDivider, UbField, UbForm, UbStack, UbTextInput } from 'src/design-system';
 import { useAppSelector } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { selectLocale } from 'src/redux/slice/localeSlice';
@@ -114,10 +114,12 @@ export function OnboardingBusinessStep({
             required
           >
             {(field) => (
-              <UbSelect
+              <UbCombobox
                 {...field}
                 options={stateOptions}
                 placeholder={t('onboarding.state.placeholder')}
+                searchPlaceholder={t('onboarding.state.search')}
+                emptyLabel={t('onboarding.state.empty')}
               />
             )}
           </UbField>

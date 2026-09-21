@@ -141,7 +141,7 @@
   "routes": {
     "/parties": {
       "route": 79,
-      "firstLoad": 302
+      "firstLoad": 304
     },
     "/dashboard": {
       "route": 55,
