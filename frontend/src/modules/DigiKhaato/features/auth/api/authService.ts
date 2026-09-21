@@ -94,11 +94,14 @@ interface SessionApiResponse {
     readonly permissions: readonly PermissionCode[];
     /**
      * `ver` is the permissions version `sessionSlice` re-reads on (Part 22
-     * §22.2). `session_payload.build()` does not send it yet, so the read is
-     * forward-compatible and `null` is the documented "not told" value — it is
-     * never spread or indexed, unlike `enabled_modules` was.
+     * §22.2) — the same integer as the access token's `ver` claim, which the
+     * server compares against `membership.permissions_version` to answer
+     * `token_stale`. `session_payload.build()` now sends it; it is `null` for a
+     * session with no membership, because the version belongs to a membership.
+     * Still read with `?? null` rather than required: it is never spread or
+     * indexed, unlike `enabled_modules` was.
      */
-    readonly ver?: number;
+    readonly ver?: number | null;
   };
 }
 

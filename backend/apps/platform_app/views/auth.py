@@ -18,6 +18,7 @@ from __future__ import annotations
 from typing import Any
 
 from django.conf import settings
+from django.db import transaction
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 
@@ -329,8 +330,29 @@ class PasswordResetRequestView(APIView):
 class PasswordResetConfirmView(APIView):
     """`POST /auth/password/reset/confirm` (PLT-02 FR-5, BR-2, AC-3).
 
-    The token is spent before the new password is validated, so a link cannot be
-    probed by submitting deliberately bad passwords against it.
+    **Spending the link and accepting the password are one transaction.**
+    The token used to be consumed in its own committed transaction and the
+    password validated afterwards, on the reasoning that a link must not be
+    probeable by submitting deliberately bad passwords. That reasoning does not
+    hold — whoever holds the link can already spend it by submitting a *good*
+    password, so probing buys an attacker nothing — and the cost was real: the
+    client can mirror §10's composition rule but not Django's 20,000-word
+    `CommonPasswordValidator` or `UserAttributeSimilarityValidator`
+    (`settings/base.py`), so a merchant who typed `Password123` at the end of a
+    reset was told to choose a less common password *and* handed a dead link,
+    behind a 60-second minimum gap and a five-per-hour cap. §9's "Failed" state
+    describes the opposite.
+
+    `ATOMIC_REQUESTS` is `False` (Part 20 §20.11.1), so the boundary is declared
+    here. Everything the request does — the spend, the password write, the
+    session revocation and the new session — commits together or not at all.
+
+    This does **not** open a token-reuse hole: `consume_reset_token` takes its
+    `SELECT … FOR UPDATE` on the token row inside this block, and a row lock is
+    held to the end of the *outermost* transaction, so a second confirm of the
+    same link blocks until this one resolves and then sees `used_at` set. The
+    only thing the rollback restores is a link whose password was refused, which
+    is precisely FR-5's intent.
     """
 
     permission_classes = [AllowAny]
@@ -343,22 +365,23 @@ class PasswordResetConfirmView(APIView):
         data = serializer.validated_data
         meta = _client_meta(request)
 
-        user = password_service.consume_reset_token(token=data["token"])
-        revoked = password_service.reset_password(
-            user=user,
-            new_password=data["new_password"],
-            request_id=meta["request_id"],
-            ip=meta["ip"],
-            user_agent=meta["user_agent"],
-        )
-        outcome = auth_service.start_session(
-            user=user,
-            method="password_reset",
-            device_label=data.get("device_label"),
-            user_agent=meta["user_agent"],
-            ip=meta["ip"],
-            request_id=meta["request_id"],
-        )
+        with transaction.atomic():
+            user = password_service.consume_reset_token(token=data["token"])
+            revoked = password_service.reset_password(
+                user=user,
+                new_password=data["new_password"],
+                request_id=meta["request_id"],
+                ip=meta["ip"],
+                user_agent=meta["user_agent"],
+            )
+            outcome = auth_service.start_session(
+                user=user,
+                method="password_reset",
+                device_label=data.get("device_label"),
+                user_agent=meta["user_agent"],
+                ip=meta["ip"],
+                request_id=meta["request_id"],
+            )
         response = _login_response(request, outcome)
         response.data["data"]["sessions_revoked"] = revoked
         return response

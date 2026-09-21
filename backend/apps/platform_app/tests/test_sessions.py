@@ -276,6 +276,44 @@ def test_the_session_row_records_the_device_and_me_lists_it(
     assert data["sessions"][0]["user_agent"].startswith("Mozilla/5.0")
 
 
+def test_me_sends_the_permissions_version_the_client_keys_a_re_read_off(
+    auth_client: Any, membership: Any
+) -> None:
+    """Part 22 §22.2's `ver` — review 01 m-6.
+
+    `ver` is the same integer as the token's `ver` claim and as
+    `membership.permissions_version`; `HasPermission` compares the two to
+    answer `token_stale`, and the client stores the payload's copy as
+    `session.version` so a bump can force a permissions re-read. The payload
+    did not carry it, so that value was permanently `null` while a frontend
+    fixture supplied a number for it — a green test certifying a field the
+    server never sent.
+    """
+    data = _login(auth_client, membership)
+    assert data["ver"] == membership.permissions_version
+
+    membership.permissions_version += 1
+    membership.save(update_fields=["permissions_version"])
+
+    # A new session mints a token at the new version, and `/auth/me` agrees.
+    fresh = _login(auth_client, membership)
+    assert fresh["ver"] == membership.permissions_version
+
+
+def test_me_sends_no_permissions_version_when_there_is_no_membership(
+    auth_client: Any, user: Any
+) -> None:
+    """No active tenant means no membership, and `ver` belongs to a membership."""
+    user.set_password("Kirana1234")
+    user.save(update_fields=["password"])
+    data = auth_client.post(
+        reverse("v1:auth-login"),
+        {"email": user.email, "password": "Kirana1234"},
+        format="json",
+    ).json()["data"]
+    assert data["ver"] is None
+
+
 def test_the_refresh_cookie_is_scoped_to_the_refresh_path(
     auth_client: Any, membership: Any
 ) -> None:

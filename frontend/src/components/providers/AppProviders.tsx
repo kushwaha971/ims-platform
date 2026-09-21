@@ -6,6 +6,7 @@ import { Provider } from 'react-redux';
 
 import { SnackbarHost } from 'src/components/layout/SnackbarHost';
 import { IntlProviderShell } from 'src/components/providers/IntlProviderShell';
+import { NetworkProbe } from 'src/components/providers/NetworkProbe';
 import { ThemeProvider } from 'src/components/providers/ThemeProvider';
 import { store } from 'src/redux/store';
 
@@ -26,6 +27,14 @@ import { store } from 'src/redux/store';
  * It sits inside `IntlProvider` because the host resolves i18n keys, and inside
  * `Provider` because it reads the slice. It renders nothing until a message is
  * dispatched — only the two empty live regions of `MLToaster`.
+ *
+ * `NetworkProbe` is mounted here for the same reason and it is the same bug:
+ * §19.10.3's connectivity probe hung off `UbAppShell`, so the only mechanism
+ * that can return the network state to `online` without the merchant generating
+ * traffic ran on the signed-in routes and nowhere else — while `/login` feeds
+ * that state on every visit through `SessionBootstrap`'s `GET /auth/me`. It
+ * renders `null` and issues nothing while the state is `online`, which is its
+ * initial value, so the public routes pay an effect and no requests.
  */
 export function AppProviders({ children }: Readonly<{ children: ReactNode }>): React.JSX.Element {
   return (
@@ -34,6 +43,7 @@ export function AppProviders({ children }: Readonly<{ children: ReactNode }>): R
         <ThemeProvider>
           {children}
           <SnackbarHost />
+          <NetworkProbe />
         </ThemeProvider>
       </IntlProviderShell>
     </Provider>

@@ -13,6 +13,7 @@ from typing import Any
 from django.utils.translation import gettext_lazy as _
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
+from apps.common.exceptions import NoActiveTenant
 from apps.common.permissions import HasPermission
 from apps.common.permissions_registry import permissions_for
 from apps.common.tenancy import get_effective_tenant
@@ -47,6 +48,15 @@ class TenantManagePermission(BasePermission):
 
     Fail closed on both paths: no tenant, no membership, or a stale `ver` claim
     is a refusal, never a default-allow.
+
+    "No tenant at all" is refused too, but it is refused with its OWN code.
+    This class ran before the view and answered a flat `permission_denied` to a
+    caller whose token simply carries no `tid`, so a client could not tell
+    "choose a business first" from "you are not allowed in this one" — and the
+    view's `NoActiveTenant` (Part 22 §22.1.1 `no_active_tenant`, "Choose a
+    business first.") was unreachable behind it. Raising it here keeps the
+    refusal — same 403, same absence of any view execution — and only makes the
+    reason legible.
     """
 
     message = _("You do not have permission to do this.")
@@ -57,7 +67,7 @@ class TenantManagePermission(BasePermission):
             return False
         tenant = get_effective_tenant(request)
         if tenant is None:
-            return False
+            raise NoActiveTenant()
         membership = getattr(tenant, "_ub_membership", None)
         if membership is None:
             return False

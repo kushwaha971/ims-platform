@@ -349,6 +349,7 @@
   "validation.businessType.required": "Choose a business type",
   "validation.gstType.required": "Choose your GST status",
   "errors.invalid_credentials": "Mobile number or password is incorrect.",
+  "errors.unauthenticated": "Please sign in to continue.",
   "errors.login_throttled": "Too many attempts. Try again later.",
   "errors.invalid_token": "Your session is not valid. Please sign in again.",
   "errors.session_revoked": "You were signed out. Please sign in again.",
