@@ -71,3 +71,21 @@ if (typeof Element !== 'undefined') {
     Element.prototype.scrollIntoView = () => undefined;
   }
 }
+
+/**
+ * jsdom has no ResizeObserver, and `cmdk` — the list `UbCombobox` is built on —
+ * constructs one on mount. Same class of gap as the Pointer Events above: the
+ * component is fine, the environment is missing a browser API.
+ *
+ * A no-op is the correct stand-in rather than a measuring shim. Nothing in jsdom
+ * has a layout to observe — every element reports zero size — so a faithful
+ * implementation would report zero changes anyway, and a test that depended on
+ * real measurements would be lying about what it proved.
+ */
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  globalThis.ResizeObserver = class {
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  } as unknown as typeof ResizeObserver;
+}

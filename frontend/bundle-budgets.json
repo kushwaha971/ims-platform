@@ -116,7 +116,11 @@
     "/forgot-password and /set-password — routes with no form field at all — to",
     "restyle a two-item list. `UbNativeSelect` exists for that case. The shared",
     "baseline is unchanged at 223.5 KB, which is the number that actually matters:",
-    "nothing was added to the shell."
+    "nothing was added to the shell.",
+    "",
+    "Then UbCombobox (cmdk + Radix Popover, for the 38-state picker, where a",
+    "scroll-only menu is slower than typing three letters) added ~2 KB more to the",
+    "routes that render one. Same trade, same reason."
   ],
   "default": {
     "route": 60,
@@ -124,8 +128,8 @@
   },
   "routes": {
     "/parties": {
-      "route": 66,
-      "firstLoad": 290
+      "route": 68,
+      "firstLoad": 292
     },
     "/dashboard": {
       "route": 55,
@@ -140,8 +144,8 @@
       "firstLoad": 312
     },
     "/design-system": {
-      "route": 72,
-      "firstLoad": 296
+      "route": 74,
+      "firstLoad": 298
     }
   },
   "//ignoreRoutes": [

@@ -153,7 +153,19 @@ function OnboardingShellBase({
           as="main"
           id="auth-main"
           gap={6}
-          className={cn(MEASURE, 'mx-auto px-4 pb-28 pt-8 lg:mx-0 lg:px-10 lg:pt-12')}
+          /* Centred at every width, including `lg`.
+           *
+           * It used to be `lg:mx-0`, which pinned a 560px form to the left edge
+           * of a column that is over 1100px wide on a 1440 screen — so the
+           * content sat hard against the rail with roughly 560px of empty page
+           * to its right. A capped measure is right; anchoring it to one side
+           * of a much wider column is what made the screen look unbalanced.
+           *
+           * Centring here is centring within the column beside the rail, not
+           * within the viewport, which is what a rail layout should do: the
+           * form reads as the subject of its own space rather than as something
+           * pushed aside by the navigation. */
+          className={cn(MEASURE, 'mx-auto px-4 pb-28 pt-8 lg:px-10 lg:pt-12')}
         >
           {/* The mark is the first thing on the page below `lg`; above it the
               rail already carries it, and two marks on one screen is one too

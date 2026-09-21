@@ -398,7 +398,7 @@ describe('the wizard — step 4 (FR-5) and §9 Failed', () => {
 });
 
 describe('the wizard — Hindi', () => {
-  it('renders step 1 in Hindi, including the type tiles', () => {
+  it('renders step 1 in Hindi, including the type tiles', async () => {
     renderWithProviders(<OnboardingStepPageContent step={1} />, {
       locale: 'hi',
       messages: hi as Record<string, string>,
@@ -407,8 +407,13 @@ describe('the wizard — Hindi', () => {
     // Twice: once as the stepper's label for step 1, once as the card title.
     expect(screen.getAllByText('अपने व्यापार के बारे में बताएँ').length).toBeGreaterThan(0);
     expect(screen.getByRole('radio', { name: /खुदरा दुकान/ })).toBeInTheDocument();
-    // The state list is a constant, not a locale file, and is Hindi too.
-    expect(screen.getByText('महाराष्ट्र')).toBeInTheDocument();
+    // The state list is a constant, not a locale file, and is Hindi too. It has
+    // to be opened to be asserted now: `UbCombobox` renders its options into a
+    // popover on demand, where a native `<select>` kept all 38 in the document
+    // whether or not anyone looked at them.
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('combobox', { name: /राज्य/ }));
+    expect(await screen.findByRole('option', { name: 'महाराष्ट्र' })).toBeInTheDocument();
   });
 });
 
@@ -468,14 +473,17 @@ describe('the wizard — the page is a rail and a form half (layout A)', () => {
     expect(bar.compareDocumentPosition(firstField) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('caps the form at a readable measure and left-aligns it in its half', () => {
+  it('caps the form at a readable measure and centres it in its half', () => {
     renderWithProviders(<OnboardingStepPageContent step={1} />);
     const main = screen.getByRole('main');
 
     expect(main.className).toContain('max-w-[560px]');
-    // Centred on a phone; left-aligned in its own half from lg (`lg:mx-0`).
     expect(main.className).toContain('mx-auto');
-    expect(main.className).toContain('lg:mx-0');
+    // NOT `lg:mx-0`. That pinned a 560px form to the left edge of a column over
+    // 1100px wide on a 1440 screen, leaving ~560px of empty page to its right —
+    // reported as "too much spacing on the right side". The cap is right; the
+    // anchoring was not.
+    expect(main.className).not.toContain('lg:mx-0');
   });
 
   it('leaves the sticky Continue bar enough slack to stop clipping a field', () => {

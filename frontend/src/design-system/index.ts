@@ -152,6 +152,8 @@ export type { UbProgressProps } from './UbProgress';
 export { UbRadioGroup } from './UbRadioGroup';
 export type { UbRadioGroupProps } from './UbRadioGroup';
 
+export { UbCombobox } from './UbCombobox';
+export type { UbComboboxProps } from './UbCombobox';
 export { UbNativeSelect } from './UbNativeSelect';
 export type { UbNativeSelectProps } from './UbNativeSelect';
 export { UbSelect } from './UbSelect';
