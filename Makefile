@@ -62,7 +62,11 @@ seed-demo: ## Seed one demo tenant, ~120 entries. Refuses under DEBUG=0 without 
 	$(BACKEND_RUN) python manage.py seed_demo_tenant
 
 superadmin: ## Create a platform super admin (interactive)
-	$(BACKEND_RUN) python manage.py create_superadmin
+	# Django's own command. `create_superadmin` was named here and in
+	# bootstrap.sh and never existed. `UserManager.create_superuser` already sets
+	# `is_super_admin`, and USERNAME_FIELD is `email` with
+	# REQUIRED_FIELDS = ["full_name"], so the built-in prompts for the right three.
+	$(BACKEND_RUN) python manage.py createsuperuser
 
 # ── The gate ─────────────────────────────────────────────────────────────────
 
@@ -108,8 +112,11 @@ e2e: ## Playwright @smoke against a compose stack
 	$(BACKEND_RUN) python manage.py seed_demo_tenant --force
 	cd e2e && npx playwright test --grep @smoke
 
-ci: check test e2e ## Everything a PR must pass, plus traceability
-	$(BACKEND_RUN) python manage.py build_traceability
+ci: check test e2e ## Everything a PR must pass
+	# `build_traceability` belonged here and does not exist yet: it is
+	# TSK-CHS-CI-17, still unbuilt. Calling it made `make ci` fail on a clean
+	# clone for a reason that had nothing to do with the change under test.
+	# Restore this line with the command, not before it.
 
 # ── First run, backup, deploy ────────────────────────────────────────────────
 

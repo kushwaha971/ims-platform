@@ -91,8 +91,14 @@ seed()       {
 }
 superadmin() {
   [ "$SUPERADMIN" = "1" ] || { echo "  (skipped: --no-superadmin)"; return 0; }
-  step "7. Creating the super admin (interactive: mobile, name, password)"
-  docker compose run --rm backend python manage.py create_superadmin
+  step "7. Creating the super admin (interactive: email, full name, password)"
+  # Django's own `createsuperuser`, not a `create_superadmin` of ours — that
+  # command has never existed, so this step aborted the whole script under
+  # `set -e`. `UserManager.create_superuser` already sets `is_super_admin`, and
+  # `USERNAME_FIELD` is `email` with `REQUIRED_FIELDS = ["full_name"]`, so the
+  # built-in prompts for exactly the right three things. DEC-010 made the
+  # identifier an email; the old prompt said "mobile".
+  docker compose run --rm backend python manage.py createsuperuser
 }
 demo()       {
   [ "$DEMO" = "1" ] || return 0
@@ -161,7 +167,7 @@ verify() {
   Then, in the browser, the functional checklist (§29.4.3). These are not
   automatable here and are the operator's sign-off:
 
-  [ ] Sign up with a mobile; the OTP appears in `docker compose logs backend`
+  [ ] Sign up with an email and password (DEC-010 replaced the mobile OTP flow)
   [ ] Complete onboarding; land on the dashboard with the product theme, no flash
   [ ] Create a party; record "You gave ₹500"; balance ₹500, "You will get", red tone
   [ ] Create an item with opening stock; create and issue an invoice; the number
