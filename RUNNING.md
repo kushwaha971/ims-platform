@@ -68,6 +68,41 @@ output and I will fix it rather than guess.
 
 ---
 
+## Database credentials — one file, both paths
+
+`backend/.env` holds them, and it is git-ignored:
+
+```dotenv
+POSTGRES_DB=digikhaato_dev
+POSTGRES_USER=your-mac-username
+POSTGRES_PASSWORD=your-password
+POSTGRES_HOST=127.0.0.1
+POSTGRES_PORT=5432
+```
+
+Django reads this file directly (`settings/base.py` does
+`env.read_env(BASE_DIR / ".env")`, and `BASE_DIR` is `backend/`), so the native
+path picks it up as-is. Under Docker, `./backend` is mounted at `/app`, so the
+same file is `/app/.env` and the container reads it too — which is why
+`docker-compose.backend.yml` sets only `POSTGRES_HOST` and leaves the rest alone.
+
+Two things worth knowing, because both fail silently:
+
+* **The names must be `POSTGRES_*`.** `DB_NAME` is not read; a database named
+  there is ignored and Django falls back to `udhaarbook`, so you get a
+  connection to the wrong database rather than an error.
+* **A real environment variable beats this file.** `read_env` defaults to
+  `override=False`. That is deliberate — it is how compose forces
+  `POSTGRES_HOST=host.docker.internal` for the container while the file keeps
+  saying `127.0.0.1` for the native path — but it also means anything exported in
+  your shell silently wins.
+
+The root `.env` is a different file for a different purpose: Docker Compose
+interpolation for the *full* stack. Neither the native path nor the backend-only
+Docker path needs it.
+
+---
+
 ## Option C — backend in Docker, everything else native
 
 The API in a container, talking to the PostgreSQL already on your machine, with
