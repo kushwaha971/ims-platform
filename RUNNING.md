@@ -68,6 +68,47 @@ output and I will fix it rather than guess.
 
 ---
 
+## Option C — backend in Docker, everything else native
+
+The API in a container, talking to the PostgreSQL already on your machine, with
+the frontend running natively. Needs no root `.env`.
+
+```bash
+scripts/docker-backend.sh       # terminal 1 — checks, builds, migrates, seeds, serves
+scripts/dev-frontend.sh         # terminal 2
+```
+
+Because a container is not localhost, your host PostgreSQL needs two settings it
+does not have by default. The script checks both before starting and names the
+one that is missing, rather than leaving you with "database not ready":
+
+1. `listen_addresses = '*'` in `postgresql.conf` — Homebrew defaults to
+   `localhost`, which a container cannot reach.
+2. A `pg_hba.conf` rule for Docker's network, **above** the existing host lines:
+
+   ```
+   host  all  all  192.168.65.0/24  trust
+   host  all  all  172.16.0.0/12    trust
+   ```
+
+   `trust` is fine for a local development database and wrong anywhere else.
+
+Then `brew services restart postgresql@16`. `scripts/docker-backend.sh --check`
+runs just the preflight.
+
+Day to day:
+
+```bash
+docker compose -f docker-compose.backend.yml up      # start
+docker compose -f docker-compose.backend.yml logs -f
+docker compose -f docker-compose.backend.yml down
+```
+
+pgAdmin connects to your own PostgreSQL as it always did — `localhost:5432`, no
+container involved.
+
+---
+
 ## Option B — natively, no Docker
 
 Proven working; this is how the screenshots were taken.
@@ -97,7 +138,7 @@ like a backend fault and is not one.
 Python dependencies, once:
 
 ```bash
-pip install -r backend/requirements/local.txt
+pip install -r backend/requirements/dev.txt
 ```
 
 If `dev-backend.sh` says it cannot log in as your username, Postgres has no role
