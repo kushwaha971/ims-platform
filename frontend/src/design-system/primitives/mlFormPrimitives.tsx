@@ -43,12 +43,26 @@ export interface MLInputProps extends InputHTMLAttributes<HTMLInputElement> {
 /**
  * 44px tall at every size: R-A-3's touch-target floor is not a mobile-only
  * rule, because the same markup renders on both breakpoints.
+ *
+ * **This is the one measurement deliberately NOT taken from BrandHub.** Its
+ * customer controls are `h-10` (40px), and that is fine for a portal people
+ * open on a laptop. This product is used one-handed, on a cheap Android, by a
+ * shopkeeper with a customer waiting — 44px is the touch-target floor and the
+ * four pixels are not decoration. Everything else on this line follows
+ * BrandHub.
+ *
+ * **Disabled is FILLED, not faded** — `disabled:opacity-100` with a solid
+ * `surface-sunken`, which is BrandHub's `disabled:bg-[#f2f2f2] …
+ * disabled:opacity-100`. It used to be `opacity-60`, and a 60%-opacity field is
+ * unreadable on a phone held at arm's length in daylight, which is the normal
+ * reading condition for this product. A disabled control should look
+ * unavailable, not look broken.
  */
 export const ML_CONTROL_BASE =
   'h-11 w-full rounded-control border bg-surface-card px-3 ds-body text-text-primary ' +
   'placeholder:text-text-muted transition-colors duration-fast ease-standard ' +
-  'disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:opacity-60 ' +
-  'read-only:bg-surface-sunken';
+  'disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-text-muted ' +
+  'disabled:opacity-100 read-only:bg-surface-sunken';
 
 /**
  * Border colour by state — and the other half of the double-outline fix.
@@ -122,6 +136,14 @@ export interface MLSelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
  * searchable and renders as the platform picker on a 2 GB Android phone, which
  * is what PLT-03's 38-row state list actually needs.
  */
+/**
+ * The native select's chevron and padding. The rule itself is
+ * `.ub-native-select` in `app/globals.css`, because a data-URI background does
+ * not survive Tailwind's arbitrary-value parser — the URI's own commas end the
+ * class, and the utility compiles to nothing. See that rule for the rest.
+ */
+export const ML_NATIVE_SELECT_CHEVRON = 'ub-native-select pr-9';
+
 export const MLSelect = forwardRef<HTMLSelectElement, MLSelectProps>(function MLSelect(
   { invalid, className, children, ...rest },
   ref
@@ -130,7 +152,7 @@ export const MLSelect = forwardRef<HTMLSelectElement, MLSelectProps>(function ML
     <select
       ref={ref}
       aria-invalid={invalid || undefined}
-      className={cn(ML_CONTROL_BASE, ML_CONTROL_TONE(invalid), 'pr-8', className)}
+      className={cn(ML_CONTROL_BASE, ML_CONTROL_TONE(invalid), ML_NATIVE_SELECT_CHEVRON, className)}
       {...rest}
     >
       {children}

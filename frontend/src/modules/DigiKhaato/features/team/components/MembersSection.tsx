@@ -106,6 +106,11 @@ export function MembersSection(): React.JSX.Element {
       previousPage: t('common.grid.previousPage'),
       nextPage: t('common.grid.nextPage'),
       pageSize: t('common.grid.pageSize'),
+      // `{page}` and `{total}` pass through as literal text, like `pageOf`
+      // above: the pagination bar substitutes them, because it is the only
+      // thing that knows which page a button points at.
+      goToPage: t('common.grid.goToPage', { page: '{page}' }),
+      ofTotal: t('common.grid.ofTotal', { total: '{total}' }),
       selectAll: t('team.list.select.all'),
       selectRow: t('team.list.select.row', { name: '{name}' }),
       sortBy: t('common.grid.sortBy', { column: '{column}' }),

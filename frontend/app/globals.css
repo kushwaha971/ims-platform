@@ -123,3 +123,41 @@
     }
   }
 }
+
+@layer components {
+  /**
+   * The native `<select>` chevron.
+   *
+   * Without `appearance-none` the browser paints its own arrow AND its own
+   * background, so a native select sat in this product looking like a control
+   * from a different application — taller, greyer, with a platform chevron —
+   * right beside `UbSelect`'s Radix trigger, which has none of those things.
+   * On the team screen it was the most obvious inconsistency on the page.
+   *
+   * BrandHub draws `<ChevronDown className="h-4 w-4 text-[#7f7d83]" />` inside
+   * its Radix trigger. A `<select>` cannot hold a child element, so this is the
+   * same lucide path (`m6 9 6 6 6-6`) at the same 16px in the same grey.
+   *
+   * It is written here rather than as a Tailwind arbitrary value because
+   * `bg-[image:data:image/svg+xml,...]` does not survive the arbitrary-value
+   * parser — the URI's own commas and slashes end the class. Measured: the
+   * utility compiled to nothing and the chevron simply vanished.
+   *
+   * `#7f7d83` is BrandHub's `neutral-grey-900`, which is what `--text-tertiary`
+   * resolves to here; the dark variant lifts it to `neutral-grey-800` so it
+   * stays visible on a dark surface, which BrandHub never needs because its
+   * customer portal does not go dark.
+   */
+  .ub-native-select {
+    appearance: none;
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 16px 16px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237f7d83' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  }
+
+  :root[data-theme='dark'] .ub-native-select,
+  .dark .ub-native-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23adacb0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  }
+}

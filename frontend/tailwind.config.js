@@ -277,11 +277,41 @@ module.exports = {
         md: 'var(--radius-md)',
         lg: 'var(--radius-lg)',
         xl: 'var(--radius-xl)',
+        '2xl': 'var(--radius-2xl)',
         pill: 'var(--radius-pill)',
         card: 'var(--radius-card)',
         control: 'var(--radius-control)',
       },
+      /**
+       * BrandHub's customer shadow set, verbatim (`apps/frontend/tailwind.config.js`).
+       *
+       * These are the values a senior designer signed off on and they are copied
+       * rather than re-derived: every one is built on `rgb(10 9 11 / a)` — the
+       * `noble-black` ink — instead of pure black, which is why a BrandHub card
+       * reads as lifted rather than smudged. The four `--shadow-*` variables this
+       * replaces were this product's own invention and did not match anything.
+       *
+       * `auth-card`, `brandhub-modal` and `brandhub-popover` are the three
+       * component shadows the customer UI actually uses; the numeric ramp is for
+       * everything else.
+       */
       boxShadow: {
+        xs: '0 1px 2px 0 rgb(10 9 11 / 0.05)',
+        sm: '0 1px 3px 0 rgb(10 9 11 / 0.08), 0 1px 2px -1px rgb(10 9 11 / 0.06)',
+        DEFAULT:
+          '0 0 0 1px rgb(10 9 11 / 0.05), 0 2px 7px 0 rgb(10 9 11 / 0.05), 0 2px 5px -2px rgb(10 9 11 / 0.06)',
+        md: '0 4px 6px -1px rgb(10 9 11 / 0.08), 0 2px 4px -2px rgb(10 9 11 / 0.05)',
+        lg: '0 10px 15px -3px rgb(10 9 11 / 0.08), 0 4px 6px -4px rgb(10 9 11 / 0.05)',
+        xl: '0 20px 25px -5px rgb(10 9 11 / 0.08), 0 8px 10px -6px rgb(10 9 11 / 0.04)',
+        popover: '0 8px 24px 0 rgb(10 9 11 / 0.12)',
+        inner: 'inset 0 2px 4px 0 rgb(10 9 11 / 0.06)',
+        none: '0 0 #0000',
+        'auth-card':
+          '0px 4px 6px -4px rgba(19,25,39,0.12), 0px 8px 8px -4px rgba(19,25,39,0.08)',
+        'ub-popover':
+          '0 4px 8px -2px rgba(16, 24, 40, 0.10), 0 2px 4px -2px rgba(16, 24, 40, 0.06)',
+        'ub-modal': '0px 4px 6px -1px rgba(0, 0, 0, 0.10), 0px 2px 4px -2px rgba(0, 0, 0, 0.05)',
+        /* Kept: the token indirection the existing screens already use. */
         1: 'var(--shadow-1)',
         2: 'var(--shadow-2)',
         3: 'var(--shadow-3)',
@@ -306,7 +336,19 @@ module.exports = {
         ui: ['var(--font-ui)'],
         mono: ['var(--font-mono)'],
       },
-      maxWidth: { content: 'var(--content-max)' },
+      maxWidth: {
+        content: 'var(--content-max)',
+        /* BrandHub `maxWidth['auth-form']` — 340px. THE auth form column width,
+           used by the shell title block, the card, the skeleton and the back
+           link, so all four line up exactly. */
+        'auth-form': '21.25rem',
+      },
+      width: {
+        /* BrandHub's popover/menu widths, so a dropdown is the same size here. */
+        'ub-popover': '18.75rem',
+        'actions-menu': '13.75rem',
+      },
+      minWidth: { 'actions-menu': '13.75rem' },
 
       /**
        * CR-2026-09-19-E — `keyframes` + `animation`, the pair BrandHub's
@@ -325,6 +367,37 @@ module.exports = {
           to: { opacity: '1', transform: 'translateY(0)' },
         },
         'fade-out': { from: { opacity: '1' }, to: { opacity: '0' } },
+        /* The rest of BrandHub's customer set. `fade-in` above already matched
+           it — including the 4px lift, which is what stops a popover appearing
+           to blink into place — so only these four were missing, and every
+           Radix surface this product has added since (select menus, popovers,
+           the mobile drawer) has been falling back on whatever
+           `tailwindcss-animate` supplied rather than the kit's own motion.
+           The accordion/collapsible pairs read Radix's own CSS variables. */
+        'accordion-down': {
+          from: { height: '0' },
+          to: { height: 'var(--radix-accordion-content-height)' },
+        },
+        'accordion-up': {
+          from: { height: 'var(--radix-accordion-content-height)' },
+          to: { height: '0' },
+        },
+        'collapsible-down': {
+          from: { height: '0' },
+          to: { height: 'var(--radix-collapsible-content-height)' },
+        },
+        'collapsible-up': {
+          from: { height: 'var(--radix-collapsible-content-height)' },
+          to: { height: '0' },
+        },
+        'slide-in-from-right': {
+          from: { transform: 'translateX(100%)' },
+          to: { transform: 'translateX(0)' },
+        },
+        'slide-out-to-right': {
+          from: { transform: 'translateX(0)' },
+          to: { transform: 'translateX(100%)' },
+        },
       },
       /**
        * CR-2026-09-19-G — the durations and curves are the TOKENS, not the
@@ -338,6 +411,16 @@ module.exports = {
       animation: {
         'fade-in': 'fade-in var(--dur-fast) var(--ease-entrance)',
         'fade-out': 'fade-out var(--dur-instant) var(--ease-exit)',
+        /* BrandHub writes these as literal `0.2s ease-out`. They are tokens here
+           for the reason the note above gives: a literal duration opts the
+           animation out of `prefers-reduced-motion`, and a drawer that slides in
+           regardless of that preference is the one most likely to cause harm. */
+        'accordion-down': 'accordion-down var(--dur-base) var(--ease-entrance)',
+        'accordion-up': 'accordion-up var(--dur-base) var(--ease-exit)',
+        'collapsible-down': 'collapsible-down var(--dur-base) var(--ease-entrance)',
+        'collapsible-up': 'collapsible-up var(--dur-base) var(--ease-exit)',
+        'slide-in-from-right': 'slide-in-from-right var(--dur-base) var(--ease-entrance)',
+        'slide-out-to-right': 'slide-out-to-right var(--dur-base) var(--ease-exit)',
       },
     },
   },
