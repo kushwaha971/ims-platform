@@ -1,15 +1,14 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
-
-import { UbBox, UbDivider, UbLink, UbLogo, UbStack, UbText } from 'src/design-system';
+import { NavSections } from 'src/components/layout/NavSections';
+import { UbBox, UbLink, UbLogo } from 'src/design-system';
 import { useAppSelector } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { selectAppName } from 'src/redux/slice/whiteLabelSlice';
 import { ROUTES } from 'src/routes';
 import { cn } from 'src/utils/cn';
 
-import { useNavigation } from 'modules/DigiKhaato/features/navigation/useNavigation';
+
 import { TenantSwitcherMenu } from 'modules/DigiKhaato/features/tenant-switcher/components/TenantSwitcherMenu';
 
 /**
@@ -40,9 +39,7 @@ import { TenantSwitcherMenu } from 'modules/DigiKhaato/features/tenant-switcher/
  *    groups of links at one gap read as sixteen links.
  */
 export function UbSidebar(): React.JSX.Element {
-  const { sections } = useNavigation();
   const { t } = useTranslation();
-  const pathname = usePathname();
   const appName = useAppSelector(selectAppName);
 
   return (
@@ -70,50 +67,7 @@ export function UbSidebar(): React.JSX.Element {
           `--surface-nav`, above the navigation it changes the contents of. */}
       <TenantSwitcherMenu className="px-1" />
 
-      <UbStack gap={5} as="div" className="min-h-0 flex-1">
-        {sections.map((section, index) => (
-          <UbStack key={section.key} gap={1}>
-            {index > 0 && (
-              <UbDivider decorative className="mb-3 border-surface-navHover opacity-80" />
-            )}
-            <UbText as="span" variant="label" tone="onNavMuted" className="px-2 pb-1">
-              {t(section.labelId)}
-            </UbText>
-            {section.items.map((item) => {
-              const Icon = item.icon;
-              const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-              return (
-                <UbLink
-                  key={item.key}
-                  href={item.href}
-                  variant="body-sm"
-                  tone="inherit"
-                  underline={false}
-                  aria-current={active ? 'page' : undefined}
-                  className={cn(
-                    'relative flex min-h-11 items-center gap-3 rounded-control px-3',
-                    'transition-colors duration-fast ease-standard',
-                    active
-                      ? 'bg-surface-navHover font-medium text-text-onNav'
-                      : 'text-text-onNavMuted hover:bg-surface-navHover hover:text-text-onNav'
-                  )}
-                >
-                  {/* The accent edge, outside the row's own box so the label
-                      does not move when the row becomes current. */}
-                  {active && (
-                    <UbBox
-                      aria-hidden
-                      className="absolute inset-y-2 left-0 w-0.5 rounded-pill bg-accent"
-                    />
-                  )}
-                  <Icon aria-hidden className="h-4 w-4 shrink-0" />
-                  {t(item.labelId)}
-                </UbLink>
-              );
-            })}
-          </UbStack>
-        ))}
-      </UbStack>
+      <NavSections />
     </UbBox>
   );
 }

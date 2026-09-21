@@ -120,7 +120,19 @@
     "",
     "Then UbCombobox (cmdk + Radix Popover, for the 38-state picker, where a",
     "scroll-only menu is slower than typing three letters) added ~2 KB more to the",
-    "routes that render one. Same trade, same reason."
+    "routes that render one. Same trade, same reason.",
+    "",
+    "── 21 Sep 2026: the mobile drawer ─────────────────────────────────────────",
+    "`MobileNavDrawer` (vaul + Radix Dialog) lands on every `(app)` route, because",
+    "it is in the shell: +8.8 KB on /parties, +23.7 KB on /dashboard, which had the",
+    "tightest line in this file.",
+    "",
+    "This is the one increase in the file that needs no trade-off argument. Below",
+    "1024px there was NO navigation at all — the rail is lg-only, UbBottomNav was",
+    "never built, and `useNavigation().bottomNav` was computed and consumed by",
+    "nothing — so a merchant on a phone could use the screen they landed on and",
+    "reach no other except by typing a URL. Bytes that make ten routes reachable",
+    "are not a regression."
   ],
   "default": {
     "route": 60,
@@ -128,20 +140,20 @@
   },
   "routes": {
     "/parties": {
-      "route": 68,
-      "firstLoad": 292
+      "route": 79,
+      "firstLoad": 302
     },
     "/dashboard": {
       "route": 55,
-      "firstLoad": 248
+      "firstLoad": 273
     },
     "/sales/invoices/new": {
       "route": 110,
       "firstLoad": 340
     },
     "/onboarding/step/[n]": {
-      "route": 88,
-      "firstLoad": 312
+      "route": 90,
+      "firstLoad": 314
     },
     "/design-system": {
       "route": 74,
