@@ -101,6 +101,10 @@ export interface UbDataGridLabels {
   readonly previousPage: string;
   readonly nextPage: string;
   readonly pageSize: string;
+  /** `Go to page {page}` — the accessible name of a page-number button. */
+  readonly goToPage: string;
+  /** `of {total}` — the row count beside the page-size selector. */
+  readonly ofTotal: string;
   readonly selectAll: string;
   /** `{name}` is substituted with `rowName(row)`. */
   readonly selectRow: string;

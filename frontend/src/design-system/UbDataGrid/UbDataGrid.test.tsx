@@ -92,6 +92,8 @@ const LABELS: UbDataGridLabels = {
   previousPage: 'Previous page',
   nextPage: 'Next page',
   pageSize: 'Rows per page',
+  goToPage: 'Go to page {page}',
+  ofTotal: 'of {total}',
   selectAll: 'Select every customer on this page',
   selectRow: 'Select {name}',
   sortBy: 'Sort by {column}',
@@ -323,5 +325,67 @@ describe('the states a list has', () => {
       pageSizeOptions: [25, 50, 100],
     });
     expect(screen.getByLabelText('Rows per page')).toBeInTheDocument();
+  });
+});
+
+/**
+ * The pagination bar, rebuilt on BrandHub's customer layout.
+ *
+ * What it replaced was "Page 1 of 12" beside two chevrons: reaching page 5 was
+ * four clicks and the only way to know how far along you were was to read a
+ * sentence. These tests pin the two things that made it worth changing — the
+ * numbers are there, and they are reachable — plus the one thing BrandHub does
+ * not do, which is surviving a 360px screen.
+ */
+describe('UbDataGrid — pagination', () => {
+  const MANY = { page: 10, pageSize: 25, total: 500, totalPages: 20 };
+
+  it('shows page numbers with an ellipsis, and the current one is marked', async () => {
+    renderGrid('full', { page: MANY });
+
+    const current = await screen.findByRole('button', { name: 'Go to page 10' });
+    expect(current).toHaveAttribute('aria-current', 'page');
+    // First and last are always reachable, so a merchant on page 10 of 20 can
+    // get to either end without stepping.
+    expect(screen.getByRole('button', { name: 'Go to page 1' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Go to page 20' })).toBeInTheDocument();
+    // …and page 4 is not on screen, which is the elision doing its job.
+    expect(screen.queryByRole('button', { name: 'Go to page 4' })).not.toBeInTheDocument();
+  });
+
+  it('jumps straight to a page when its number is pressed', async () => {
+    const onPageChange = jest.fn();
+    renderGrid('full', { page: MANY, onPageChange });
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Go to page 20' }));
+
+    expect(onPageChange).toHaveBeenCalledWith(20);
+  });
+
+  it('disables the step controls at each end rather than hiding them', async () => {
+    // Hiding a control that will come back reads as the product removing a
+    // feature; a disabled one says "you are at the start".
+    renderGrid('full', { page: { page: 1, pageSize: 25, total: 500, totalPages: 20 } });
+    expect(await screen.findByRole('button', { name: 'Previous page' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Next page' })).toBeEnabled();
+  });
+
+  it('drops the numbers on a phone and keeps the sentence', async () => {
+    // BrandHub has no responsive handling here — twenty page numbers at 360px
+    // either wrap into three rows or push the summary off the edge. The
+    // sentence is the one thing that has to survive, because it is the only
+    // part that says where you are.
+    renderGrid('cards', { page: MANY });
+
+    expect(screen.queryByRole('button', { name: 'Go to page 20' })).not.toBeInTheDocument();
+    expect(screen.getByText('Page 10 of 20')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Next page' })).toBeInTheDocument();
+  });
+
+  it('shows no page numbers at all when there is only one page', async () => {
+    // A lone "1" button that does nothing is furniture.
+    renderGrid('full');
+    expect(await screen.findByRole('button', { name: 'Next page' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Go to page 1' })).not.toBeInTheDocument();
   });
 });
