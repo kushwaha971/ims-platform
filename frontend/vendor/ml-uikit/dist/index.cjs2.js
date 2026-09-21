@@ -1,0 +1,2 @@
+"use strict";Object.defineProperty(exports,Symbol.toStringTag,{value:"Module"});const e=require("./index.cjs62.js"),t=require("./index.cjs29.js"),r=require("./index.cjs10.js");function s(){return e.jsxRuntimeExports.jsxs("div",{className:"border p-4 flex gap-4 rounded-md flex-col",children:[e.jsxRuntimeExports.jsx(t.Input,{type:"email",placeholder:"Email"}),e.jsxRuntimeExports.jsx(t.Input,{type:"password",placeholder:"Password"}),e.jsxRuntimeExports.jsx(r.Button,{children:"Login"})]})}exports.Login=s;
+//# sourceMappingURL=index.cjs2.js.map

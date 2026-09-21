@@ -85,7 +85,7 @@ export {
   MLInput,
   MLProgress,
   MLRadioGroup,
-  MLSelect,
+  MLSelect as MLNativeSelect,
   MLTabs,
   MLTextarea,
   MLToggleGroup,
@@ -98,7 +98,7 @@ export type {
   MLProgressProps,
   MLRadioGroupProps,
   MLRadioOption,
-  MLSelectProps,
+  MLSelectProps as MLNativeSelectProps,
   MLTabDescriptor,
   MLTabsProps,
   MLTextareaProps,
@@ -123,3 +123,42 @@ export type {
   MLMenuItemProps,
   MLMenuProps,
 } from './mlOverlayPrimitives';
+
+/* ── The first real ml-uikit primitives ────────────────────────────────────
+ *
+ * The package is vendored at `frontend/vendor/ml-uikit` and wired in through
+ * `package.json`'s `file:` dependency and the Tailwind content glob. Before
+ * this, every `ML*` name in this directory resolved to a local stand-in,
+ * because the internal registry that hosts the package is unreachable from the
+ * build environment — so the stand-ins were honest about what they could not do
+ * and three reported UI defects were downstream of exactly that.
+ *
+ * These are re-exported here rather than imported directly by feature code, so
+ * the swap point stays this one file, exactly as the header describes.
+ *
+ * The local native `<select>` survives as `MLNativeSelect`. It is not dead: on a
+ * 2 GB Android phone the platform picker is genuinely the better control for a
+ * long closed list, and §23.3's reasoning for it still stands. What it could
+ * never be was a styled trigger with a positioned menu, which is what the design
+ * asks for and what `MLSelect` now is.
+ */
+export {
+  MLSelect,
+  MLSelectContent,
+  MLSelectGroup,
+  MLSelectItem,
+  MLSelectLabel,
+  MLSelectSeparator,
+  MLSelectTrigger,
+  MLSelectValue,
+  MLDrawer,
+  MLDrawerClose,
+  MLDrawerContent,
+  MLDrawerDescription,
+  MLDrawerFooter,
+  MLDrawerHeader,
+  MLDrawerOverlay,
+  MLDrawerPortal,
+  MLDrawerTitle,
+  MLDrawerTrigger,
+} from 'ml-uikit';

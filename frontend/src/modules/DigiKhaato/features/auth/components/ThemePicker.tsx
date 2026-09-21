@@ -4,7 +4,7 @@ import { memo, useCallback } from 'react';
 
 import { Moon, Sun } from 'lucide-react';
 
-import { UbBox, UbSelect } from 'src/design-system';
+import { UbBox, UbNativeSelect } from 'src/design-system';
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { selectThemeMode, themeChanged } from 'src/redux/slice/themeSlice';
@@ -55,7 +55,7 @@ function ThemePickerBase({ className }: Readonly<{ className?: string }>) {
         aria-hidden
         className="pointer-events-none absolute left-3 h-4 w-4 shrink-0 text-text-tertiary"
       />
-      <UbSelect
+      <UbNativeSelect
         value={mode}
         onChange={onChange}
         options={options}

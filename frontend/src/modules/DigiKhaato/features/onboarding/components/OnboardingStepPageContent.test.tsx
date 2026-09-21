@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 
 import { store } from 'src/redux/store';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
+import { chooseOption } from 'src/tests/selectHelper';
 
 import en from 'locales/en.json';
 import hi from 'locales/hi.json';
@@ -89,7 +90,7 @@ describe('the wizard — step 1 (FR-2)', () => {
     renderWithProviders(<OnboardingStepPageContent step={1} />);
     await user.type(screen.getByLabelText(/Business name/), 'Sharma General Store');
     await user.click(screen.getByRole('radio', { name: /Retail shop/ }));
-    await user.selectOptions(screen.getByLabelText(/^State/), '27');
+    await chooseOption(user, /^State/, /Maharashtra/);
     await user.click(screen.getByRole('button', { name: 'Continue' }));
 
     await waitFor(() => expect(onboardingService.createTenant).toHaveBeenCalledTimes(1));
@@ -112,7 +113,7 @@ describe('the wizard — step 1 (FR-2)', () => {
 
     await user.type(screen.getByLabelText(/Business name/), 'S');
     await user.click(screen.getByRole('radio', { name: /Retail shop/ }));
-    await user.selectOptions(screen.getByLabelText(/^State/), '27');
+    await chooseOption(user, /^State/, /Maharashtra/);
     await user.click(screen.getByRole('button', { name: 'Continue' }));
 
     await waitFor(() => expect(onboardingService.createTenant).not.toHaveBeenCalled());
@@ -210,7 +211,7 @@ describe('the wizard — step 1 EDITED (FR-9)', () => {
     const first = renderWithProviders(<OnboardingStepPageContent step={1} />);
     await user.type(screen.getByLabelText(/Business name/), 'Sharma General Store');
     await user.click(screen.getByRole('radio', { name: /Retail shop/ }));
-    await user.selectOptions(screen.getByLabelText(/^State/), '27');
+    await chooseOption(user, /^State/, /Maharashtra/);
     await user.click(screen.getByRole('button', { name: 'Continue' }));
     await waitFor(() => expect(onboardingService.createTenant).toHaveBeenCalledTimes(1));
     const keyOnFirstAttempt = onboardingService.createTenant.mock.calls[0]?.[1] as string;
@@ -221,7 +222,7 @@ describe('the wizard — step 1 EDITED (FR-9)', () => {
     renderWithProviders(<OnboardingStepPageContent step={1} />);
     await user.type(screen.getByLabelText(/Business name/), 'Sharma General Store');
     await user.click(screen.getByRole('radio', { name: /Retail shop/ }));
-    await user.selectOptions(screen.getByLabelText(/^State/), '27');
+    await chooseOption(user, /^State/, /Maharashtra/);
     await user.click(screen.getByRole('button', { name: 'Continue' }));
     await waitFor(() => expect(onboardingService.createTenant).toHaveBeenCalledTimes(2));
 

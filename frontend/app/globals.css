@@ -43,10 +43,31 @@
     border-color: hsl(var(--border-hairline));
   }
 
-  /* §23.5 — the focus ring is never removed. */
+  /* §23.5 — the focus ring is never removed.
+   *
+   * But it is not painted on form controls, because they express focus as a
+   * border-colour change instead. This is BrandHub's rule, copied: its portal
+   * never puts a ring on an input, and the triplet
+   * `focus-visible:border-foreground focus-visible:outline-none
+   * focus-visible:ring-0` appears in five independent places there.
+   *
+   * The unscoped version of this rule was half of the double outline in the
+   * reported screenshot. A focused invalid field painted, from the inside out,
+   * a 1px crimson `--form-error` border from `ML_CONTROL_TONE`, then this rule's
+   * 2px card-coloured spacer, then its 2px indigo ring — two error signals and a
+   * focus signal fighting over the same 5 pixels, because neither rule knew the
+   * other existed.
+   *
+   * Everything that is NOT a form control — links, buttons, tabs, menu items,
+   * the skip link — keeps the ring, which is where a ring belongs: on things
+   * with no border of their own to recolour. */
   :focus-visible {
     outline: none;
     box-shadow: var(--focus-ring);
+  }
+
+  :where(input, textarea, select, [role='combobox']):focus-visible {
+    box-shadow: none;
   }
 
   /* Below `sm` the page padding tightens (§23.2.1 DigiKhaato override). */

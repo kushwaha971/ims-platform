@@ -43,8 +43,15 @@ module.exports = {
     './src/**/*.{ts,tsx}',
     '!./src/**/*.{test,spec}.{ts,tsx}',
     '!./src/tests/**',
-    // When the internal registry is reachable, ml-uikit's own classes must be
-    // scanned too: './node_modules/ml-uikit/dist/**/*.{js,cjs,mjs}'.
+    // ml-uikit ships compiled components carrying Tailwind class NAMES, not
+    // compiled CSS for them, so this build has to see them or its buttons and
+    // selects render unstyled. Scanned from `vendor/` rather than
+    // `node_modules/` because the package is vendored: the internal registry
+    // that hosts it is not reachable from here, and a package of this name also
+    // resolves on public npm — installing that one to satisfy an internal import
+    // is how dependency confusion lands. The copy in `vendor/` is the licensed
+    // one, committed, and the `file:` dependency in package.json points at it.
+    './vendor/ml-uikit/dist/**/*.{js,cjs,mjs}',
   ],
 
   theme: {
@@ -79,7 +86,51 @@ module.exports = {
 
     extend: {
       colors: {
+        /* ────────────────────────────────────────────────────────────────────
+         * The ml-uikit bridge.
+         *
+         * `ml-uikit` is shadcn-derived, so its compiled components reference the
+         * shadcn semantic names — `bg-background`, `text-foreground`,
+         * `border-input`, `ring-ring`, `bg-destructive`. None of those existed
+         * here, because this product named its tokens for what they are
+         * (`--canvas`, `--surface-card`, `--text-primary`) rather than for
+         * shadcn's roles.
+         *
+         * So the names are mapped onto the tokens that already exist, rather
+         * than importing `ml-uikit/dist/style.css`. That import is what BrandHub
+         * does and it is why their portal has an indigo focus ring nobody chose:
+         * the stylesheet is a whole second Tailwind build, and it emits
+         * `*, ::before, ::after { --tw-ring-color: rgb(59 130 246 / .5) }`
+         * globally, plus a second preflight and a second set of token defaults
+         * competing with the first.
+         *
+         * Mapping instead means an ml-uikit component renders in DigiKhaato's
+         * palette automatically, in both themes, with no `dark:` variants and no
+         * stylesheet to keep in sync — the tokens change underneath it exactly as
+         * they do for every `Ub*` component. One token layer, not two.
+         * ──────────────────────────────────────────────────────────────────── */
+        background: hsl('--canvas'),
+        foreground: hsl('--text-primary'),
+        input: hsl('--border-strong'),
+        ring: hsl('--border-focus'),
+        popover: {
+          DEFAULT: hsl('--surface-card'),
+          foreground: hsl('--text-primary'),
+        },
+        destructive: {
+          DEFAULT: hsl('--form-error'),
+          foreground: hsl('--text-inverse'),
+        },
+        muted: {
+          DEFAULT: hsl('--surface-sunken'),
+          foreground: hsl('--text-secondary'),
+        },
+
         primary: {
+          /* ml-uikit's `bg-primary` / `text-primary-foreground`. The numeric
+             ramp is this product's own and is untouched. */
+          DEFAULT: hsl('--accent'),
+          foreground: hsl('--text-inverse'),
           50: hsl('--primary-50'),
           100: hsl('--primary-100'),
           200: hsl('--primary-200'),
@@ -92,6 +143,8 @@ module.exports = {
           900: hsl('--primary-900'),
         },
         secondary: {
+          DEFAULT: hsl('--secondary-500'),
+          foreground: hsl('--text-inverse'),
           100: hsl('--secondary-100'),
           200: hsl('--secondary-200'),
           300: hsl('--secondary-300'),
@@ -117,6 +170,11 @@ module.exports = {
           ruleShort: hsl('--brand-rule-short'),
         },
         canvas: hsl('--canvas'),
+        /* ml-uikit's `bg-card` / `text-card-foreground`. */
+        card: {
+          DEFAULT: hsl('--surface-card'),
+          foreground: hsl('--text-primary'),
+        },
         surface: {
           card: hsl('--surface-card'),
           sunken: hsl('--surface-sunken'),
@@ -127,6 +185,8 @@ module.exports = {
           navHover: hsl('--surface-nav-hover'),
         },
         border: {
+          /* ml-uikit's `border-border`; ours stays the named scale below. */
+          DEFAULT: hsl('--border-subtle'),
           hairline: hsl('--border-hairline'),
           subtle: hsl('--border-subtle'),
           strong: hsl('--border-strong'),

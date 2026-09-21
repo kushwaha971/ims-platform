@@ -11,7 +11,19 @@ import prettier from 'eslint-config-prettier';
 import next from 'eslint-config-next/core-web-vitals';
 
 const config = [
-  { ignores: ['.next/**', 'node_modules/**', 'coverage/**', 'next-env.d.ts'] },
+  {
+    ignores: [
+      '.next/**',
+      'node_modules/**',
+      'coverage/**',
+      'next-env.d.ts',
+      // The vendored ml-uikit is a compiled third-party build, not source. It is
+      // committed because the internal registry that hosts it is unreachable
+      // from this build environment, but linting a minified bundle produces
+      // hundreds of findings about code nobody here wrote or can fix.
+      'vendor/**',
+    ],
+  },
   ...next,
   prettier,
   {

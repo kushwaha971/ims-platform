@@ -4,7 +4,7 @@ import { memo, useCallback } from 'react';
 
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-import { MLButton, MLSelect } from 'src/design-system/primitives';
+import { MLButton, MLNativeSelect } from 'src/design-system/primitives';
 import { cn } from 'src/utils/cn';
 
 import { fillTemplate } from './columnModel';
@@ -62,8 +62,13 @@ function UbDataGridPaginationBase({
       </p>
 
       <div className="flex items-center gap-2">
+        {/* Deliberately the native control, not `UbSelect`: a four-option
+            page-size picker inside a toolbar, where the platform picker is
+            smaller, needs no portal, and on a phone is the better control
+            outright. `MLSelect` is now ml-uikit's Radix composite; this keeps
+            the native `<select>` it was written for. */}
         {showSizes && (
-          <MLSelect
+          <MLNativeSelect
             aria-label={labels.pageSize}
             value={String(page.pageSize)}
             onChange={(event) => handleSize(event.target.value)}
@@ -74,7 +79,7 @@ function UbDataGridPaginationBase({
                 {size}
               </option>
             ))}
-          </MLSelect>
+          </MLNativeSelect>
         )}
         <MLButton
           variant="secondary"

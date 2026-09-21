@@ -32,3 +32,12 @@ Thumbs.db
 
 # Transfer artefacts
 _transfer.tar.gz
+
+# The vendored ml-uikit's compiled output IS the package — `dist/` above would
+# otherwise drop it, leaving a `file:` dependency pointing at two metadata files
+# and a build that fails everywhere except the machine it was vendored on. Its
+# own node_modules stays ignored: npm installs the library's dependencies there
+# when it links a file: dependency, and that is 71 MB of other people's packages
+# that `npm ci` recreates from the lockfile.
+!/frontend/vendor/ml-uikit/dist/
+/frontend/vendor/*/node_modules/

@@ -46,3 +46,28 @@ if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout !== 'functi
     },
   });
 }
+
+/**
+ * jsdom lacks the Pointer Events API that Radix's Select, Dialog and Drawer all
+ * rely on, so a component from `ml-uikit` throws the moment a test opens one —
+ * not because the component is wrong, but because the environment is missing a
+ * browser API. These four are the exact set Radix touches; adding them is the
+ * documented workaround rather than a behaviour change.
+ *
+ * `scrollIntoView` is here for the same reason: Radix calls it to bring the
+ * highlighted option into view, and jsdom does not implement it.
+ */
+if (typeof Element !== 'undefined') {
+  if (!Element.prototype.hasPointerCapture) {
+    Element.prototype.hasPointerCapture = () => false;
+  }
+  if (!Element.prototype.setPointerCapture) {
+    Element.prototype.setPointerCapture = () => undefined;
+  }
+  if (!Element.prototype.releasePointerCapture) {
+    Element.prototype.releasePointerCapture = () => undefined;
+  }
+  if (!Element.prototype.scrollIntoView) {
+    Element.prototype.scrollIntoView = () => undefined;
+  }
+}
