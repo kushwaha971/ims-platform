@@ -91,10 +91,13 @@ export function InviteLinkDialog({
           </UbStack>
         ) : (
           /**
-           * The 201 arrived without a link. It is not a failure — the
-           * invitation exists and the email has been sent — but the merchant
-           * asked for something to pass on, so the screen says which of the two
-           * happened instead of showing an empty box.
+           * The 201 arrived without a link — an idempotent REPLAY, which is
+           * the only way this happens: the raw token is stripped from the
+           * stored replay body on purpose. Nothing is emailed by this product
+           * (DEC-012), so there is no "we sent it anyway" to fall back on; the
+           * invitation exists and its link does not, and the way forward is to
+           * revoke and reissue. The copy says that rather than implying a
+           * delivery that never occurs.
            */
           <UbText variant="body-sm" tone="secondary">
             {t('team.link.absent')}

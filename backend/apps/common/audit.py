@@ -47,6 +47,14 @@ class AuditAction:
 
     TENANT_UPDATED = "tenant.updated"
     MEMBER_INVITED = "member.invited"
+    # Revoking was writing MEMBER_INVITED, so the audit trail said an
+    # invitation had been sent at the moment it was cancelled. A revocation
+    # is its own event and needs its own word.
+    MEMBER_INVITE_REVOKED = "member.invite_revoked"
+    # An owner created a member directly and was handed a temporary
+    # password to pass on (DEC-012). The password itself is never audited.
+    MEMBER_CREDENTIALS_ISSUED = "member.credentials_issued"
+    MEMBER_CREDENTIALS_REGENERATED = "member.credentials_regenerated"
     MEMBER_ROLE_CHANGED = "member.role_changed"
     MEMBER_REMOVED = "member.removed"
     PARTY_CREATED = "party.created"

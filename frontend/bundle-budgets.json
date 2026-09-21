@@ -94,11 +94,38 @@
     "Raising the number is the honest move today — the alternative is breaking the",
     "specified store shape to fit a budget — but the number is not the point. The",
     "point is that §19.3.9 should be re-read before the fifth feature slice lands,",
-    "not after."
+    "not after.",
+    "",
+    "── 21 Sep 2026: owner-issued credentials (DEC-012), and the prediction ────",
+    "sharedApp 99.1 -> 101.1 (+2.0), so the budget moves 100 -> 102.",
+    "",
+    "The note directly above this one, written when `invitationSlice` landed, said:",
+    "\"§19.3.9 should be re-read before the FIFTH feature slice lands, not after.\"",
+    "`memberSlice` is the fifth. The prediction was right and the re-read has not",
+    "happened, so this entry is the second instalment of a bill that was already",
+    "itemised: +2.0 KB that /legal/terms, /login and every other route pays to",
+    "carry a team-management slice they will never dispatch.",
+    "",
+    "Nothing here is the Team SCREEN — the dialogs are `dynamic()` and the grid",
+    "still pays for itself. It is `memberSlice` -> `memberThunk` -> `memberService`,",
+    "statically registered in `store.ts` (§19.3.9 — no dynamic reducer injection, a",
+    "deliberate decision), plus the two new invalidation-registry entries.",
+    "",
+    "Raising the number is again the honest move today, and again it is not the",
+    "point. The running total for the store shape is now +4.5 KB across two",
+    "features, on every route in the product. Ledger, inventory, sales, purchases",
+    "and reports are still to come. At this rate the shell crosses 110 KB before a",
+    "merchant can record a single transaction, and the routes that pay most for it",
+    "are the ones with no application state at all.",
+    "",
+    "This is a DECISION FOR THE OWNER, not a budget line: either §19.3.9 stands and",
+    "the shell keeps growing with every feature, or the store admits lazily",
+    "registered reducers for feature slices and the shell stops growing. It should",
+    "be settled before the ledger slice lands, because that one is not optional."
   ],
   "shared": {
     "framework": 128,
-    "sharedApp": 100
+    "sharedApp": 102
   },
   "//routes": [
     "The `route` figures are §19.9.2's, unchanged, and every route is comfortably",
@@ -149,20 +176,37 @@
     "never built, and `useNavigation().bottomNav` was computed and consumed by",
     "nothing — so a merchant on a phone could use the screen they landed on and",
     "reach no other except by typing a URL. Bytes that make ten routes reachable",
-    "are not a regression."
+    "are not a regression.",
+    "",
+    "── 21 Sep 2026: owner-issued credentials (DEC-012) ────────────────────────",
+    "Every firstLoad below moves by the +2.0 KB the shell gained (see //shared);",
+    "none of them gained route-local bytes except /settings/team, which gained 0.1",
+    "for the member grid's columns and cells. The dialogs are `dynamic()`, so the",
+    "add form and the credentials panel are not in the route chunk at all — a",
+    "merchant opening Settings -> Team to read the list still does not download",
+    "react-hook-form.",
+    "",
+    "  sharedApp                100  -> 102  (measured 101.1)",
+    "  /settings/team route      75  ->  77  (measured  75.1)",
+    "  /settings/team firstLoad 301  -> 305  (measured 303.1)",
+    "  /parties firstLoad       306  -> 308  (measured 306.7)",
+    "  /onboarding/step/[n]     316  -> 318  (measured 316.8)",
+    "  /design-system           300  -> 302  (measured 300.5)",
+    "  /dashboard               276  -> 278  (measured 276.3)",
+    "  default firstLoad        280  -> 282  (measured 280.1 on /switch)"
   ],
   "default": {
     "route": 60,
-    "firstLoad": 280
+    "firstLoad": 282
   },
   "routes": {
     "/parties": {
       "route": 79,
-      "firstLoad": 306
+      "firstLoad": 308
     },
     "/dashboard": {
       "route": 55,
-      "firstLoad": 276
+      "firstLoad": 278
     },
     "/sales/invoices/new": {
       "route": 110,
@@ -170,15 +214,15 @@
     },
     "/onboarding/step/[n]": {
       "route": 90,
-      "firstLoad": 316
+      "firstLoad": 318
     },
     "/design-system": {
       "route": 74,
-      "firstLoad": 300
+      "firstLoad": 302
     },
     "/settings/team": {
-      "route": 75,
-      "firstLoad": 301
+      "route": 77,
+      "firstLoad": 305
     }
   },
   "//ignoreRoutes": [

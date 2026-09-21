@@ -106,6 +106,48 @@ def tenant_by_id(*, tenant_id: Any) -> Tenant | None:
     return Tenant.objects.select_related("plan", "partner").filter(pk=tenant_id).first()
 
 
+def members_of(*, tenant: Any) -> QuerySet:
+    """`GET /members` — one tenant's team (PLT-05 FR-11).
+
+    `removed` rows are excluded: they are kept so the audit trail can say who
+    was on the team when an entry was written, which is a different question
+    from who is on it now, and a team screen that lists everyone ever employed
+    is a team screen nobody reads.
+
+    Ordered so the rows an owner has to act on surface first — anybody still on
+    a temporary password they have not changed, then the rest by name. That is
+    the whole job of this list: knowing who has not signed in yet.
+
+    Scoped on the tenant first, so a `None` tenant yields nothing rather than
+    every business's staff (canon §0.11 rule 2).
+    """
+    if tenant is None:
+        return Membership.objects.none()
+    return (
+        Membership.objects.select_related("user", "role")
+        .filter(tenant=tenant)
+        .exclude(status=MembershipStatus.REMOVED)
+        .order_by("-user__must_change_password", "user__full_name", "id")
+    )
+
+
+def member_of_tenant(*, tenant: Any, membership_id: Any) -> Membership | None:
+    """One membership of this tenant, by id. Never another tenant's.
+
+    Matched inside the tenant filter for the same reason `invitation_of_tenant`
+    is: a cross-tenant id must be indistinguishable from one that does not
+    exist, so the endpoint answers 404 rather than confirming the row by
+    answering 403 (canon §0.11 rule 2).
+    """
+    if tenant is None or not membership_id:
+        return None
+    return (
+        Membership.objects.select_related("user", "role")
+        .filter(tenant=tenant, pk=membership_id)
+        .first()
+    )
+
+
 def invitations_of(*, tenant: Any, status: str | None = InvitationStatus.PENDING) -> QuerySet:
     """`GET /invitations` — one tenant's invitations, newest first.
 

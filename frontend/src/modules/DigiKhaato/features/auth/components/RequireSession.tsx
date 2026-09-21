@@ -6,7 +6,11 @@ import { usePathname, useRouter } from 'next/navigation';
 
 import { UbPageSkeleton } from 'src/design-system';
 import { useAppSelector } from 'src/hooks/useAppStore';
-import { selectSessionStatus, selectSessionTenants } from 'src/redux/slice/sessionSlice';
+import {
+  selectMustChangePassword,
+  selectSessionStatus,
+  selectSessionTenants,
+} from 'src/redux/slice/sessionSlice';
 import { ROUTES, loginPathWithNext } from 'src/routes';
 
 import { noTenantDestination } from '../view-model/authDisplay';
@@ -32,12 +36,23 @@ import { noTenantDestination } from '../view-model/authDisplay';
  *
  * `noTenantDestination` is the shared rule, so the guard and the post-login
  * redirect cannot drift apart.
+ *
+ * **DEC-012 — the forced password change outranks everything above it.** A
+ * member created by an owner arrives on a password somebody else chose, and the
+ * SERVER refuses every route but the change itself. So this guard has to send
+ * them there before it asks any of its other questions: a person in that state
+ * whose only membership is the business they were just added to would otherwise
+ * be read as `no_tenant` — the session fetch that would have populated
+ * `activeTenant` is one of the requests being refused — and bounced into the
+ * onboarding wizard to create a business they do not want, on an account they
+ * cannot yet use.
  */
 export function RequireSession({
   children,
 }: Readonly<{ children: ReactNode }>): React.JSX.Element | null {
   const status = useAppSelector(selectSessionStatus);
   const tenants = useAppSelector(selectSessionTenants);
+  const mustChangePassword = useAppSelector(selectMustChangePassword);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -50,16 +65,23 @@ export function RequireSession({
   useEffect(() => {
     if (status === 'anonymous') {
       router.replace(loginPathWithNext(pathname));
+      return;
+    }
+    // Before any tenant question: the server will refuse everything else.
+    if (mustChangePassword) {
+      router.replace(ROUTES.SET_PASSWORD);
+      return;
     }
     if (status === 'no_tenant' && !noTenantAllowed) {
       router.replace(
         noTenantDestination(tenants) === 'chooser' ? ROUTES.SWITCH_TENANT : ROUTES.ONBOARDING
       );
     }
-  }, [status, router, pathname, tenants, noTenantAllowed]);
+  }, [status, router, pathname, tenants, noTenantAllowed, mustChangePassword]);
 
   if (status === 'loading' || status === 'idle') return <UbPageSkeleton variant="app" />;
   if (status === 'anonymous') return null;
+  if (mustChangePassword) return null;
   if (status === 'no_tenant' && !noTenantAllowed) return null;
   return <>{children}</>;
 }

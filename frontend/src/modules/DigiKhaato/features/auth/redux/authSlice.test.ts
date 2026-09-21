@@ -26,6 +26,8 @@ const AUTH_RESULT: AuthResult = {
   locale: 'en',
   isNew: false,
   hasPassword: true,
+  mustChangePassword: false,
+  passwordExpiresAt: null,
   activeTenantId: 't1',
   tenants: [
     {

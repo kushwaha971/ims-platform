@@ -40,6 +40,13 @@ def user_block(user: Any, *, is_new: bool = False) -> dict:
         "email_verified": user.email_verified_at is not None,
         "email_verification_required": bool(settings.UB_EMAIL_VERIFICATION_ENABLED),
         "last_login_at": user.last_login_at,
+        # DEC-012. The server is the authority -- `authentication.py` refuses
+        # every other route regardless of what the client does with this -- but
+        # without it the client cannot tell a 403 that means "choose a password"
+        # from one that means "you are not allowed", and would bounce a new
+        # staff member to an error screen on their first ever login.
+        "must_change_password": bool(user.must_change_password),
+        "password_expires_at": user.password_expires_at,
     }
 
 

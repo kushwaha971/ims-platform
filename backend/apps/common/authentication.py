@@ -58,12 +58,70 @@ class CookieOrBearerJWTAuthentication(JWTAuthentication):
         if cookie_auth and request.method not in SAFE_METHODS:
             self._assert_csrf(request)
 
+        self._assert_password_usable(request, user)
+
         # Bind the tenant contextvar as early as the tenant is knowable (§20.4.3).
         request.user = user
         tenant = get_effective_tenant(request)
         if tenant is not None:
             _current_tenant.set(tenant)
         return user, validated
+
+    # Reachable while the account is on an owner-issued temporary password
+    # (DEC-012). Everything else answers `password_change_required` until the
+    # person has picked their own.
+    #
+    # `me` is here because the client has to be able to read the state that is
+    # blocking it; `logout` because someone handed the wrong credentials must be
+    # able to get out; `refresh` because a fifteen-minute access token expiring
+    # mid-password-change would strand them on the one screen they are allowed
+    # to be on. The reset paths are here so "I would rather set it by email" is
+    # not a dead end. Nothing that reads or writes business data is here.
+    PASSWORD_CHANGE_ALLOWED = frozenset(
+        {
+            "/api/v1/auth/password/set",
+            "/api/v1/auth/password/reset/request",
+            "/api/v1/auth/password/reset/confirm",
+            "/api/v1/auth/me",
+            "/api/v1/auth/logout",
+            "/api/v1/auth/refresh",
+        }
+    )
+
+    @classmethod
+    def _assert_password_usable(cls, request: Any, user: Any) -> None:
+        """Fail closed: the gate is an allowlist, checked before any view runs.
+
+        This lives in `authenticate()` rather than in a permission class on
+        purpose. Every view in this product declares its own
+        `permission_classes`, which *overrides* `DEFAULT_PERMISSION_CLASSES` —
+        so a permission class would have to be remembered on every view ever
+        added, and the one place it was forgotten would be the hole. There is
+        exactly one door into an authenticated request and this is it.
+
+        An expired temporary password is refused outright rather than routed to
+        the change screen: the window has passed, and the way back is the owner
+        regenerating it, not the holder of a week-old WhatsApp message using it.
+        """
+        # Imported here, not at module level: `common.exceptions` pulls in
+        # `rest_framework.views`, and DRF resolves DEFAULT_AUTHENTICATION_CLASSES
+        # while `rest_framework.views` is still initialising -- a module-level
+        # import deadlocks the whole app at startup. Measured exactly that way.
+        from apps.common.exceptions import BusinessRuleViolation
+
+        if not getattr(user, "must_change_password", False):
+            return
+        if user.is_temporary_password_expired:
+            raise BusinessRuleViolation(
+                "password_expired",
+                "This temporary password has expired. Ask the business owner to issue a new one.",
+            )
+        if request.path.rstrip("/") in cls.PASSWORD_CHANGE_ALLOWED:
+            return
+        raise BusinessRuleViolation(
+            "password_change_required",
+            "Choose your own password before continuing.",
+        )
 
     @staticmethod
     def _assert_csrf(request: Any) -> None:

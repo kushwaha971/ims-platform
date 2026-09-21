@@ -69,3 +69,16 @@ each one is a cutover rather than an edit.
 | **Hostnames** (`app.udhaarbook.in` and the partner/staging wildcards) | Unchanged in Part 24, Part 29 and `nginx/conf.d/`. | DNS and Let's Encrypt certificates for the new apex are provisioned and the old apex redirects. `CR-142`. |
 | **Deployment path** `/srv/udhaarbook` and the image names `udhaarbook-backend` / `udhaarbook-frontend` | Unchanged in Part 29's runbooks. | The same window as the database. Runbooks and the image tags move together or not at all. `CR-142`. |
 | **The `UB_` / `ub.` / `Ub*` namespaces** | Unchanged and **not** deferred — `DEC-011` decided they stay permanently. | Never. They are namespaces, not product copy. |
+
+## Deferred by DEC-012 — email delivery
+
+The owner's decision, in their words: *"that email will do later once we start earning
+from that platform."* Nothing about the invitation path is unfinished — `invite()`,
+`accept_invitation`, the token hashing, the expiry and the accept screen are all built and
+tested. What is missing is a provider.
+
+| Item | State in the repo | Comes back when |
+|---|---|---|
+| **A real mail provider** | `UB_EMAIL_BACKEND` defaults to Django's console backend, so reset links and invitations are written to the log and nothing leaves the machine. The adapter seam in `services/messaging.py` is the only thing that changes. | The platform earns. Needs a provider account, a domain, and SPF/DKIM records — the deliverability work is the real cost, not the sending. |
+| **Emailing an invitation** | `POST /invitations` returns `accept_url` for the owner to copy. The dialog says so plainly rather than implying a delivery. | Above. The flow is already built; only `_deliver_*` gains a caller. |
+| **Emailing owner-issued credentials** | Not built, and should NOT be: a password in an inbox is worse than a password in a chat the owner controls. If email lands, the invitation link is the thing to send, not the password. | Probably never. Recorded so the question is not re-opened as an oversight. |

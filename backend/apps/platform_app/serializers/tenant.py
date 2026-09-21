@@ -169,6 +169,68 @@ class MembershipReadSerializer(serializers.Serializer):
     joined_at = serializers.DateTimeField(read_only=True)
 
 
+class MemberReadSerializer(serializers.Serializer):
+    """A row of the team list (PLT-05 FR-11).
+
+    `must_change_password` is surfaced because it is the difference between
+    "this person is set up" and "this person has never signed in and the
+    password is still sitting in a WhatsApp message" -- which is exactly what
+    an owner opens this list to find out. `password_expires_at` lets the row say
+    "expires in 2 days" rather than making them count.
+
+    The password itself is not here and cannot be: only its hash was ever
+    stored.
+    """
+
+    id = serializers.UUIDField(read_only=True)
+    user_id = serializers.UUIDField(read_only=True)
+    email = serializers.EmailField(source="user.email", read_only=True)
+    full_name = serializers.CharField(source="user.full_name", read_only=True)
+    mobile = serializers.CharField(source="user.mobile", read_only=True, allow_null=True)
+    role = serializers.CharField(source="role.code", read_only=True)
+    status = serializers.CharField(read_only=True)
+    joined_at = serializers.DateTimeField(read_only=True)
+    last_login_at = serializers.DateTimeField(source="user.last_login_at", read_only=True)
+    must_change_password = serializers.BooleanField(
+        source="user.must_change_password", read_only=True
+    )
+    password_expires_at = serializers.DateTimeField(
+        source="user.password_expires_at", read_only=True, allow_null=True
+    )
+
+
+class MemberCreateSerializer(serializers.Serializer):
+    """`POST /members` (DEC-012).
+
+    `full_name` is required and it is not ceremony: the owner is creating an
+    account on somebody else's behalf, and a team list of bare email addresses
+    is unreadable the moment there are four of them. Sign-up asks for it too.
+
+    `mobile` is optional and is a notification channel, never an identity
+    (DEC-010) -- it is here so the owner can record the number they are about to
+    WhatsApp the password to.
+    """
+
+    email = serializers.EmailField(max_length=254)
+    full_name = serializers.CharField(max_length=120, trim_whitespace=True)
+    role = serializers.CharField(max_length=32)
+    mobile = serializers.CharField(max_length=15, required=False, allow_blank=True, allow_null=True)
+
+    def validate_role(self, value: str) -> str:
+        """`owner` is not invitable. A business has exactly one and it is transferred.
+
+        Canon §0.7: ownership moves by an explicit transfer that the current
+        owner performs, so an endpoint that mints a second owner would be a
+        privilege-escalation path dressed as an onboarding convenience.
+        """
+        code = (value or "").strip().lower()
+        if code == "owner":
+            raise serializers.ValidationError(
+                "Ownership is transferred, not granted. Choose admin, accountant or staff."
+            )
+        return code
+
+
 class MembershipPatchSerializer(serializers.Serializer):
     """`PATCH /memberships/{id}` — the self-service subset (PLT-04 FR-5).
 

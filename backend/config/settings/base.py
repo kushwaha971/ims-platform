@@ -288,10 +288,10 @@ CORS_EXPOSE_HEADERS = [
 # client uses the conventional one, so the two do not cover each other.
 CORS_ALLOW_HEADERS = (
     *default_cors_headers,
-    "X-Request-Id",      # every request; quoted back to support by `toApiError`
-    "X-CSRF-Token",      # double-submit cookie guard (§20.4.6)
-    "Idempotency-Key",   # replay-safe writes (§22.3)
-    "X-Client",          # `web` | `api`, read by throttling and audit
+    "X-Request-Id",  # every request; quoted back to support by `toApiError`
+    "X-CSRF-Token",  # double-submit cookie guard (§20.4.6)
+    "Idempotency-Key",  # replay-safe writes (§22.3)
+    "X-Client",  # `web` | `api`, read by throttling and audit
 )
 
 # ── Jobs and scheduler (ADR-012, Part 20 §20.8) ──────────────────────────────

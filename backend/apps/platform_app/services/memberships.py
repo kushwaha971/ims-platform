@@ -405,13 +405,9 @@ def invite(
     with transaction.atomic():
         locked = entitlements.lock_tenant_for_write(tenant)
 
-        existing_member = Membership.objects.filter(
-            user__email=normalised, tenant=locked
-        ).first()
+        existing_member = Membership.objects.filter(user__email=normalised, tenant=locked).first()
         if existing_member and existing_member.status == MembershipStatus.ACTIVE:
-            raise BusinessRuleViolation(
-                "validation_error", "That person is already on this team."
-            )
+            raise BusinessRuleViolation("validation_error", "That person is already on this team.")
 
         # An `invited` membership or a pending invitation already holds a seat,
         # so only a genuinely new person has to buy one.
@@ -473,7 +469,7 @@ def revoke_invitation(*, invitation: Any, ctx: Ctx) -> Any:
 
         write_audit(
             ctx=ctx,
-            action=AuditAction.MEMBER_INVITED,
+            action=AuditAction.MEMBER_INVITE_REVOKED,
             entity_type="invitation",
             entity_id=invitation.pk,
             before={"status": InvitationStatus.PENDING},

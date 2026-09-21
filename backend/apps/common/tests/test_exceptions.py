@@ -30,9 +30,26 @@ def _handle(exc: Exception, request_id: str = "req-123") -> tuple[dict, int]:
 
 
 def test_registry_is_closed_and_complete() -> None:
-    """150 codes in Part 22 §22.1.1, plus `unauthenticated` (Part 26 R8.2)."""
-    assert len(REGISTRY) == 151
+    """150 codes in Part 22 §22.1.1, plus `unauthenticated` (Part 26 R8.2), plus two.
+
+    This count is a guard, not a formality: the registry is closed, and a code
+    appearing without the chapter that defines it is how a client ends up
+    handling an error nobody documented. It fired on DEC-012 and this is the
+    record of why the number moved.
+
+    `password_change_required` and `password_expired` are additions beyond
+    §22.1.1, carried in `CR-LOG`. Neither could be an existing code:
+    `permission_denied` means "your role does not allow this" and a client
+    quite reasonably shows a dead end for it, where this means "do one specific
+    thing and everything works" — a new staff member's first ever login would
+    land on the wrong screen. `invalid_credentials` is equally wrong for an
+    expired temporary password: the password was right, the window was not, and
+    telling the holder otherwise sends them to reset a password they never had.
+    """
+    assert len(REGISTRY) == 153
     assert "unauthenticated" in ERROR_CODES
+    assert REGISTRY["password_change_required"] == (403, False)
+    assert REGISTRY["password_expired"] == (401, False)
 
 
 def test_every_retryable_code_is_one_the_spec_marks_retryable() -> None:

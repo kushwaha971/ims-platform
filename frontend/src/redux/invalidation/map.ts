@@ -79,4 +79,19 @@ export const INVALIDATION: TInvalidationMap = {
   // event on the invitee's device and not on this one.
   inviteMember: { refetch: ['invitation'] },
   revokeInvitation: { refetch: ['invitation'] },
+
+  // DEC-012 — adding a member is the case that DOES move the member count, and
+  // that is the difference from `inviteMember` above. An invitation is an
+  // intent that spends a seat when the invitee accepts, on their device; a
+  // member is created here, now, with their account and their seat, so
+  // `plan_limits` on this device is stale the moment the 201 lands and the
+  // "3 of 3 team members" banner would otherwise keep saying 2. It is `stale`
+  // and not `patch`: this slice does not write the plan's counters and must not
+  // claim to — `patch` is a statement that THIS mutation's own extraReducers
+  // already fixed the field, and an entry that says so falsely is worse than no
+  // entry, because the next reader stops looking for the refetch.
+  addMember: { refetch: ['member'], stale: ['plan'] },
+  // A reissue changes `must_change_password` and the expiry on one row, which
+  // is what the list is FOR. It spends no seat, so the session is untouched.
+  regenerateCredentials: { refetch: ['member'] },
 };

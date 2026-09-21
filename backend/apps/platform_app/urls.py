@@ -22,6 +22,8 @@ from apps.platform_app.views.tenant import (
     InvitationAcceptView,
     InvitationDetailView,
     InvitationListCreateView,
+    MemberCredentialsView,
+    MemberListCreateView,
     MembershipDetailView,
     TenantCreateView,
     TenantCurrentView,
@@ -34,6 +36,12 @@ urlpatterns = [
         "memberships/<uuid:membership_id>",
         MembershipDetailView.as_view(),
         name="membership-detail",
+    ),
+    path("members", MemberListCreateView.as_view(), name="member-list"),
+    path(
+        "members/<uuid:membership_id>/credentials",
+        MemberCredentialsView.as_view(),
+        name="member-credentials",
     ),
     path("invitations", InvitationListCreateView.as_view(), name="invitation-list"),
     # Ordered before the token route for the reader only — Django matches whole

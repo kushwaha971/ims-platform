@@ -215,3 +215,18 @@ applied to the chapters yet. Grouped by what forces them.
 | `CR-143` | Part 20 §20.2 (repo tree) | The tree shows `udhaarbook-backend/` and `../udhaarbook-frontend`; the repository folder is `ims-platform` with `backend/` and `frontend/` inside it (`DEC-011`). The chapter's tree and the repository disagree independently of the rename. |
 | `CR-144` | Part 30 §30.4 ↔ `apps/common/logging.py` | Part 30 specifies the file handler as `LOG_DIR / "app.log"`; the code writes `<product>.log` (now `digikhaato.log`, renamed with the product under `DEC-011`). Pre-existing drift, surfaced by the rename. Pick one — the chapter or the code. |
 | `CR-145` | Canon §0.1 | The product name now collides with the name of the predecessor application the corpus cites as an engineering reference, which is also called DigiKhaato and whose ledger module was itself called UdhaarBook. `DEC-011` disambiguates the predecessor as **legacy DigiKhaato** throughout and canon §0.1 carries the definition. Confirm the term, or give the predecessor a distinct name of its own. |
+
+## CR-2026-09-21-A — two error codes beyond Part 22 §22.1.1
+
+`DEC-012` adds `password_change_required` (403, not retryable) and `password_expired`
+(401, not retryable) to the closed registry in `apps/common/error_codes.py`. The count
+guard in `apps/common/tests/test_exceptions.py` moved 151 → 153 and names both.
+
+Neither could reuse an existing code. `permission_denied` means "your role does not allow
+this", and a client quite reasonably shows a dead end for it — a new staff member's first
+ever sign-in would land on an error screen instead of the one screen they can use.
+`invalid_credentials` is equally wrong for an expired temporary password: the password was
+right, the window was not, and telling the holder otherwise sends them to reset a password
+they never had.
+
+Requested against Part 22 §22.1.1 table T-16.

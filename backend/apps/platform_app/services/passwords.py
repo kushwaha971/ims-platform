@@ -184,8 +184,14 @@ def set_password(
     value = validate(user=user, password=new_password)
 
     with transaction.atomic():
+        from apps.platform_app.services import credentials
+
         user.set_password(value)
         user.save(update_fields=["password", "updated_at"])
+        # DEC-012: this is the moment an owner-issued temporary password stops
+        # being one. Inside the same transaction as the hash, so there is no
+        # window where the new password is live and the gate is still up.
+        credentials.clear_on_chosen_password(user=user)
         revoked = 0
         if logout_other_devices:
             from apps.platform_app.services import sessions as session_service
@@ -219,8 +225,15 @@ def reset_password(
 
     value = validate(user=user, password=new_password)
     with transaction.atomic():
+        from apps.platform_app.services import credentials
+
         user.set_password(value)
         user.save(update_fields=["password", "updated_at"])
+        # A reset is equally a chosen password, so it lowers the DEC-012 gate
+        # too. Without this, someone who used "Forgot password" rather than the
+        # change screen would set a password that works and still be refused
+        # every route by it.
+        credentials.clear_on_chosen_password(user=user)
         revoked = session_service.revoke_all(user=user)
         write_audit(
             ctx=_ctx(user=user, request_id=request_id, ip=ip, user_agent=user_agent),

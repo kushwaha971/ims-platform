@@ -105,6 +105,10 @@ export interface AuthResult {
   readonly isNew: boolean;
   /** PLT-02 FR-3 — whether the account already has a password. */
   readonly hasPassword: boolean;
+  /** DEC-012 — signed in on an owner-issued password that must be replaced. */
+  readonly mustChangePassword: boolean;
+  /** ISO 8601, or `null` once they have chosen their own password. */
+  readonly passwordExpiresAt: string | null;
   readonly activeTenantId: string | null;
   readonly tenants: readonly AuthTenant[];
   readonly permissions: readonly PermissionCode[];
@@ -131,13 +135,15 @@ export interface AuthTenant {
  * PLT-01 FR-9 / PLT-04 FR-9 — the five branches `postAuthDestination` can
  * return, and only those.
  *
- * `{ kind: 'setPassword' }` used to be a sixth. CR-2026-09-19-D made
- * registration always set a password, so `postAuthDestination` stopped being
- * able to return it and `redirectTo`'s `case` for it became unreachable — a
- * branch that looks like a supported route and is not. `/set-password` itself
- * is a real screen and stays; it is simply never a POST-AUTH destination.
+ * `{ kind: 'setPassword' }` was removed once by CR-2026-09-19-D, because
+ * registration always set a password and the branch became unreachable. DEC-012
+ * makes it reachable again and for a different reason: an owner can now create
+ * an account on somebody else's behalf, so a session CAN arrive on a password
+ * its holder did not choose. The branch is back because the situation is, not
+ * because the old one returned.
  */
 export type PostAuthDestination =
+  | { readonly kind: 'setPassword' }
   | { readonly kind: 'onboarding'; readonly step: number }
   | { readonly kind: 'chooser' }
   | { readonly kind: 'invitation' }

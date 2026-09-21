@@ -10,6 +10,7 @@ import type { PermissionCode } from 'src/types/domain.types';
 import hi from 'locales/hi.json';
 
 import { resetInvitations } from '../redux/invitationSlice';
+import { resetMembers } from '../redux/memberSlice';
 
 import { TeamPageContent } from './TeamPageContent';
 
@@ -24,11 +25,23 @@ import { TeamPageContent } from './TeamPageContent';
  * Each test names the defect it prevents.
  */
 jest.mock('../api/invitationService');
+// DEC-012 — the screen now carries a members list above the invitations one, so
+// this suite has two grids in the tree. It is mocked rather than left to the
+// real service because these tests are about the INVITATION half: an unmocked
+// member fetch would reject through axios and paint a second error panel for a
+// failure that is not what any assertion here is checking.
+jest.mock('../api/memberService');
 
 const invitationService = jest.requireMock('../api/invitationService') as {
   listInvitations: jest.Mock;
   createInvitation: jest.Mock;
   revokeInvitation: jest.Mock;
+};
+
+const memberService = jest.requireMock('../api/memberService') as {
+  listMembers: jest.Mock;
+  createMember: jest.Mock;
+  regenerateCredentials: jest.Mock;
 };
 
 const HOUR = 60 * 60 * 1000;
@@ -87,6 +100,8 @@ const signIn = (permissions: readonly PermissionCode[]): void => {
         email: 'ramesh@example.com',
         mobile: null,
         locale: 'en',
+        mustChangePassword: false,
+        passwordExpiresAt: null,
       },
       activeTenant: { id: 't1', name: 'Sharma', timezone: 'Asia/Kolkata' },
       tenants: [],
@@ -99,9 +114,14 @@ const signIn = (permissions: readonly PermissionCode[]): void => {
 
 beforeEach(() => {
   store.dispatch(resetInvitations());
+  store.dispatch(resetMembers());
   jest.clearAllMocks();
   setTier('cards');
   signIn(['platform.members.manage']);
+  // The members list is a real fetch on this screen now. Left as the bare
+  // automock it resolves `undefined`, the slice reads `.rows` off it and every
+  // test in the file dies inside a reducer for a reason none of them are about.
+  memberService.listMembers.mockResolvedValue(page([]));
 });
 
 describe('TeamPageContent — permission-denied', () => {
@@ -145,7 +165,10 @@ describe('TeamPageContent — the list states', () => {
 
     renderWithProviders(<TeamPageContent />);
 
-    expect(screen.getByRole('status')).toBeInTheDocument();
+    // Two grids, so two live regions: scoped rather than loosened, because
+    // `getAllByRole(...)[0]` would keep passing if the invitation grid stopped
+    // rendering its skeleton altogether.
+    expect(screen.getAllByRole('status').length).toBeGreaterThan(0);
     expect(await screen.findByText('Nobody has been invited yet')).toBeInTheDocument();
     expect(invitationService.listInvitations).toHaveBeenCalledTimes(1);
   });

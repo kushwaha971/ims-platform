@@ -6,6 +6,7 @@ import { IntlProvider } from 'react-intl';
 
 import { useAppSelector } from 'src/hooks/useAppStore';
 import { useMessages } from 'src/hooks/useMessages';
+import { formattingLocale } from 'src/i18n/formattingLocale';
 import { selectLocale } from 'src/redux/slice/localeSlice';
 
 /** Part 19 §19.11.1 — `react-intl` with ICU messages (ADR-006). */
@@ -17,8 +18,8 @@ export function IntlProviderShell({
 
   return (
     <IntlProvider
-      locale={locale}
-      defaultLocale="en"
+      locale={formattingLocale(locale)}
+      defaultLocale="en-IN"
       messages={messages}
       // A missing key is a bug, not a crash: log in dev, render the key in prod.
       onError={(error) => {
