@@ -30,6 +30,17 @@ export const API_PATHS = {
   MEMBERSHIPS: '/memberships',
   MEMBERSHIP: (id: string) => `/memberships/${id}`,
   MEMBERSHIP_INVITE: '/memberships/invite',
+  /**
+   * PLT-05 — team invitations. A separate collection from `/memberships`
+   * on purpose: an invitation is a pending intent addressed to an EMAIL, and it
+   * has a lifetime (`expires_at`) and a revocation of its own. A membership is a
+   * person who is already in the business. Collapsing the two would mean the
+   * team screen could not distinguish "asked and waiting" from "in".
+   */
+  INVITATIONS: '/invitations',
+  INVITATION: (id: string) => `/invitations/${id}`,
+  /** PLT-05 FR-10 — the seat-consuming accept. */
+  INVITATION_ACCEPT: (token: string) => `/invitations/${token}/accept`,
   PERMISSIONS_ME: '/permissions/me',
   AUDIT_LOGS: '/audit-logs',
 
@@ -115,6 +126,13 @@ export const IDEMPOTENT_POST_PATHS: readonly string[] = [
   API_PATHS.STOCK_ADJUSTMENTS,
   API_PATHS.EXPENSES,
   API_PATHS.PARTIES,
+  /**
+   * PLT-05 — a lost response after a successful `POST /invitations` must replay
+   * the invitation that was created, not send a second one to the same person
+   * with a second link. The one-time `accept_url` makes this sharper than the
+   * usual duplicate-row argument: two links for one seat is two ways in.
+   */
+  API_PATHS.INVITATIONS,
   // PLT-03 EC-7 — a lost response after a successful POST /tenants must replay
   // the created tenant, not create a second business.
   API_PATHS.TENANTS,

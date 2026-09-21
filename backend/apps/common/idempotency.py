@@ -83,6 +83,12 @@ def idempotent(scope: str, *, keyed_by: str = "tenant") -> Callable:
     `no_active_tenant`. A view whose response carries such side effects declares
     an `idempotent_replay(request, record, response)` method; the decorator
     calls it on the replay path and returns what it returns.
+
+    **A body with a one-time secret in it must not be stored whole.** The
+    symmetric hook `idempotent_response_body(request, response)` chooses what is
+    written to the row; a view that returns a raw token uses it to redact that
+    token, so the replay is the same 201 minus the secret rather than a second
+    copy of a live credential sitting in a table for a day.
     """
     if keyed_by not in ("tenant", "user"):  # pragma: no cover - programming error
         raise ValueError(f"keyed_by must be 'tenant' or 'user', not {keyed_by!r}")
@@ -155,10 +161,20 @@ def idempotent(scope: str, *, keyed_by: str = "tenant") -> Callable:
                 model.objects.filter(pk=record.pk).delete()
                 raise
             if 200 <= response.status_code < 300:
+                # What is *stored* is the response body unless the view says
+                # otherwise. A view whose body carries a one-time secret —
+                # `POST /invitations` returns the raw invitation token, which is
+                # meant to exist in exactly one response and nowhere at rest —
+                # declares `idempotent_response_body(request, response)` and
+                # returns the redacted body to keep. Without the hook a 24-hour
+                # `platform_idempotency_key` row would hold a live credential
+                # that the audit log is careful not to hold.
+                redact = getattr(self, "idempotent_response_body", None)
+                stored = response.data if redact is None else redact(request, response)
                 model.objects.filter(pk=record.pk).update(
                     status=IdempotencyStatus.COMPLETED,
                     response_status=response.status_code,
-                    response_body=json.loads(canonical_json(response.data)),
+                    response_body=json.loads(canonical_json(stored)),
                     entity_id=_entity_id_of(response),
                     completed_at=timezone.now(),
                 )

@@ -50,3 +50,18 @@ export type ThemeMode = 'light' | 'dark';
 
 /** Part 21 §21.3.3 — a party is active or archived; nothing else at MVP. */
 export type PartyStatus = 'active' | 'archived';
+
+/**
+ * Canon §0.7 — the roles a membership or an invitation carries.
+ *
+ * Mirrored from the server's `common.constants.Role`; `super_admin` is NOT here
+ * because it is a platform role rather than a tenant one, and nothing a tenant
+ * user can do in this product may hand it out. `tenant.role.<code>` is the
+ * translated label for each, and it already existed for the switcher.
+ */
+export const TENANT_ROLES = ['owner', 'admin', 'staff', 'accountant'] as const;
+export type TenantRole = (typeof TENANT_ROLES)[number];
+
+/** Canon §0.7 Invitation.status — mirrors `platform_app.constants.InvitationStatus`. */
+export const INVITATION_STATUSES = ['pending', 'accepted', 'expired', 'revoked'] as const;
+export type InvitationStatus = (typeof INVITATION_STATUSES)[number];

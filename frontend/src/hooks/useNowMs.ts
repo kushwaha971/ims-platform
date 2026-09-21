@@ -17,6 +17,11 @@ import { useSyncExternalStore } from 'react';
  * and is therefore pure; the number is refreshed when a subscriber arrives and
  * once an hour after that, which is enough to carry "Today" over a midnight
  * that happens while the tab sits in the background.
+ *
+ * It began inside the parties feature and moved here when the team screen
+ * needed the same thing to decide whether a `pending` invitation has lapsed.
+ * There is nothing about a party in it, and a second copy of a module-level
+ * clock would mean two intervals and two answers to what time it is.
  */
 const REFRESH_MS = 60 * 60 * 1000;
 

@@ -20,6 +20,11 @@ import {
 import { fetchPartyList } from 'modules/DigiKhaato/features/parties/redux/partyListThunk';
 import { fetchPlanLimits } from 'modules/DigiKhaato/features/plan/redux/planThunk';
 import {
+  fetchInvitations,
+  inviteMember,
+  revokeInvitation,
+} from 'modules/DigiKhaato/features/team/redux/invitationThunk';
+import {
   leaveTenant,
   setDefaultTenant,
 } from 'modules/DigiKhaato/features/tenant-switcher/redux/tenantSwitcherThunk';
@@ -41,6 +46,8 @@ export const QUERIES = {
   fetchPlanLimits,
   // parties (the walking skeleton, Part 32 S0-71)
   fetchPartyList,
+  // PLT-05 — the team screen's invitation list
+  fetchInvitations,
 } as const;
 
 export const MUTATIONS = {
@@ -63,6 +70,9 @@ export const MUTATIONS = {
   // PLT-04 — multiple businesses
   setDefaultTenant,
   leaveTenant,
+  // PLT-05 — the team screen
+  inviteMember,
+  revokeInvitation,
 } as const;
 
 export type TQueryName = keyof typeof QUERIES;

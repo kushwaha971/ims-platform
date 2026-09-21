@@ -12,9 +12,9 @@ from typing import Any
 
 from rest_framework import serializers
 
-from apps.platform_app.constants import BusinessType, GstType
+from apps.platform_app.constants import BusinessType, GstType, InvitationStatus
 from apps.platform_app.mobile import InvalidMobile, normalise_mobile
-from apps.platform_app.models import Tenant
+from apps.platform_app.models import Invitation, Tenant
 
 PINCODE_RE = r"^[1-9][0-9]{5}$"
 
@@ -182,3 +182,96 @@ class MembershipPatchSerializer(serializers.Serializer):
         if value is not True:
             raise serializers.ValidationError("Choose another business as your default instead.")
         return value
+
+
+# `?status=all` on the invitation list. Not an `InvitationStatus`: it is the
+# absence of a status filter, spelled so a client can ask for it explicitly.
+ANY_STATUS = "all"
+
+
+class InvitationListQuerySerializer(serializers.Serializer):
+    """`GET /invitations?status=` (PLT-05 FR-11).
+
+    The query string is validated rather than read raw, so `?status=pendingg`
+    is a `validation_error` naming the field instead of an empty list that looks
+    like "you have invited nobody".
+    """
+
+    status = serializers.ChoiceField(
+        choices=[*InvitationStatus.values, ANY_STATUS],
+        required=False,
+        default=InvitationStatus.PENDING,
+    )
+
+
+class InvitationCreateSerializer(serializers.Serializer):
+    """`POST /invitations` (PLT-05 FR-9) — shape only.
+
+    `role` is a *code* on the wire and a `Role` row in the service; resolving
+    the one to the other needs the tenant, which the view has and a field does
+    not, so the view resolves it and turns an unknown code into a
+    `validation_error` on this field.
+
+    The address is checked here and normalised again in the service — the
+    service is callable from a job, so it cannot rely on a serializer having
+    run, and this layer exists to give the merchant the field-level message.
+    """
+
+    email = serializers.EmailField(max_length=254)
+    role = serializers.CharField(max_length=32, trim_whitespace=True)
+    # Not the identity (DEC-010) — a notification channel, so `null` and "" are
+    # both "no number" rather than a rejection.
+    mobile = serializers.CharField(max_length=20, required=False, allow_blank=True, allow_null=True)
+
+    def validate_role(self, value: str) -> str:
+        return value.strip().lower()
+
+    def validate_mobile(self, value: str | None) -> str | None:
+        """Normalise to E.164 or refuse. `platform_invitation.mobile` is 15 chars.
+
+        Without this an over-long or oddly punctuated number reaches the column
+        and Postgres answers with a `DataError` — a 500 for what is a bad field.
+        """
+        if value in (None, ""):
+            return None
+        try:
+            return normalise_mobile(value)
+        except InvalidMobile as exc:
+            raise serializers.ValidationError(str(exc)) from exc
+
+
+class InvitationReadSerializer(serializers.ModelSerializer):
+    """The invitation as the team screen sees it.
+
+    `fields` is explicit (R6.2) and the explicitness is load-bearing here:
+    `token_hash` is a column on this model, and a `ModelSerializer` with
+    `exclude` or `__all__` would publish the one column that must never leave
+    the server. The raw token is not on the model at all — it exists only in
+    `invite()`'s return value — and the create endpoint adds it to its own
+    response as `accept_url`, once.
+    """
+
+    role = serializers.CharField(source="role.code", read_only=True)
+    invited_by = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Invitation
+        fields = (
+            "id",
+            "email",
+            "role",
+            "status",
+            "expires_at",
+            "created_at",
+            "invited_by",
+        )
+        read_only_fields = fields
+
+    def get_invited_by(self, obj: Invitation) -> str | None:
+        """The inviter's name, or `null` — never their id or address.
+
+        `invited_by` is `ON DELETE SET NULL`, so "somebody who has since gone"
+        is a real state the screen has to render.
+        """
+        inviter = obj.invited_by
+        return (inviter.full_name or None) if inviter is not None else None

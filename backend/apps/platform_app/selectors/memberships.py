@@ -9,9 +9,18 @@ from __future__ import annotations
 
 from typing import Any
 
-from django.db.models import QuerySet
+from django.db.models import F, Q, QuerySet
 
-from apps.platform_app.models import Membership, MembershipStatus, Session, Tenant, TenantStatus
+from apps.platform_app.models import (
+    Invitation,
+    InvitationStatus,
+    Membership,
+    MembershipStatus,
+    Role,
+    Session,
+    Tenant,
+    TenantStatus,
+)
 
 # PLT-04 FR-1: the switcher lists `active` and `invited` memberships, and nothing
 # else. A `suspended` or `removed` membership is not a business the user has.
@@ -95,3 +104,62 @@ def live_sessions_of(*, user: Any) -> QuerySet:
 
 def tenant_by_id(*, tenant_id: Any) -> Tenant | None:
     return Tenant.objects.select_related("plan", "partner").filter(pk=tenant_id).first()
+
+
+def invitations_of(*, tenant: Any, status: str | None = InvitationStatus.PENDING) -> QuerySet:
+    """`GET /invitations` — one tenant's invitations, newest first.
+
+    `status=None` means every status; the endpoint's default is `pending`,
+    because "who is still waiting" is the question the team screen asks and a
+    tenant that has invited the same person four times should not have to read
+    past three revoked rows to see the live one.
+
+    Scoped on the tenant first, so a `None` tenant yields nothing rather than
+    every business's invitations (canon §0.11 rule 2).
+    """
+    if tenant is None:
+        return Invitation.objects.none()
+    queryset = Invitation.objects.select_related("role", "invited_by").filter(tenant=tenant)
+    if status is not None:
+        queryset = queryset.filter(status=status)
+    return queryset.order_by("-created_at", "-id")
+
+
+def invitation_of_tenant(*, tenant: Any, invitation_id: Any) -> Invitation | None:
+    """One invitation of this tenant, by id. Never another tenant's.
+
+    The id is matched *inside* the tenant filter rather than fetched and then
+    compared, so a cross-tenant id is indistinguishable from an id that does not
+    exist — which is what lets the endpoint answer 404 and not 403 (canon §0.11
+    rule 2). A 403 would confirm the row exists.
+    """
+    if tenant is None or not invitation_id:
+        return None
+    return (
+        Invitation.objects.select_related("role", "invited_by")
+        .filter(tenant=tenant, pk=invitation_id)
+        .first()
+    )
+
+
+def role_by_code(*, tenant: Any, code: Any) -> Role | None:
+    """Resolve a role *code* to the row it names for this tenant, or `None`.
+
+    The wire carries `"staff"`; every service takes a `Role`. Custom roles are
+    P3 but the column already allows them, so a tenant's own role of that code
+    wins over the system role of the same code — `uq_role_tenant_code` and
+    `uq_role_system_code` together guarantee at most one of each, so the
+    ordering below is total rather than a tie-break on a UUID.
+
+    `None` rather than an exception: the caller turns an unknown code into a
+    `validation_error` on the `role` field, which is what a typo in a client is.
+    A `Role.DoesNotExist` escaping a view is a 500 for a bad request body.
+    """
+    if tenant is None or not code or not isinstance(code, str):
+        return None
+    return (
+        Role.objects.filter(code=code)
+        .filter(Q(tenant=tenant) | Q(tenant__isnull=True))
+        .order_by(F("tenant_id").desc(nulls_last=True))
+        .first()
+    )

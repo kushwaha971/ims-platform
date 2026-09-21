@@ -24,6 +24,8 @@ export const ROUTES = {
   SIGNUP: '/signup',
   FORGOT_PASSWORD: '/forgot-password',
   RESET_PASSWORD: '/reset-password',
+  /** PLT-05 FR-10 — where an invitation link lands. */
+  ACCEPT_INVITE: '/accept-invite',
   SET_PASSWORD: '/set-password',
   ONBOARDING: '/onboarding',
 
@@ -94,7 +96,15 @@ export const loginPathWithNext = (next: string): string =>
  * among them would bounce the very people it exists for. Hence a second list:
  * the proxy guards both, and only the app list implies a tenant.
  */
-export const SESSION_ONLY_ROUTE_PREFIXES: readonly string[] = [ROUTES.ONBOARDING];
+export const SESSION_ONLY_ROUTE_PREFIXES: readonly string[] = [
+  ROUTES.ONBOARDING,
+  // Accepting an invitation needs a session — it is how the server knows WHOSE
+  // membership to create, and the token is checked against the signed-in
+  // address. It must NOT need a tenant: an invitee with no business of their own
+  // is the ordinary case, and the app list would bounce them away from the very
+  // link that would give them one.
+  ROUTES.ACCEPT_INVITE,
+];
 
 
 export const APP_ROUTE_PREFIXES: readonly string[] = [

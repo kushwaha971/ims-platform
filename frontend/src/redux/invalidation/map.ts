@@ -65,4 +65,18 @@ export const INVALIDATION: TInvalidationMap = {
   // own extraReducers on these actions.
   setDefaultTenant: { patch: [['session', 'tenants']] },
   leaveTenant: { patch: [['session', 'tenants']] },
+
+  // ── PLT-05 — the team screen ──────────────────────────────────────────────
+  // Both write the list the merchant is looking at WHILE they look at it, which
+  // is the whole of the `refetch` case: `stale` would wait for a remount the
+  // merchant has no reason to perform. The slice applies its own optimistic
+  // change first (a new row; a row that now reads "Revoked") so the screen
+  // answers immediately, and the refetch behind it replaces the guess with the
+  // server's own ordering, expiry and status.
+  //
+  // Neither is `patch` on `session`: an invitation is not a membership, so the
+  // member count in `plan_limits` only moves when someone ACCEPTS, which is an
+  // event on the invitee's device and not on this one.
+  inviteMember: { refetch: ['invitation'] },
+  revokeInvitation: { refetch: ['invitation'] },
 };

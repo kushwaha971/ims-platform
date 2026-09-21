@@ -12,6 +12,8 @@ import partyListReducer from 'modules/DigiKhaato/features/parties/redux/partyLis
 // ── plan entitlements (PLT-15) ───────────────────────────────────────────────
 import planReducer, { limitHit } from 'modules/DigiKhaato/features/plan/redux/planSlice';
 import { toPlanLimitHit } from 'modules/DigiKhaato/features/plan/view-model/planDisplay';
+// ── team invitations (PLT-05) ────────────────────────────────────────────────
+import invitationReducer from 'modules/DigiKhaato/features/team/redux/invitationSlice';
 
 import { invalidationListener } from './invalidation/listener';
 // ── Cross-cutting ────────────────────────────────────────────────────────────
@@ -53,6 +55,7 @@ export const store = configureStore({
     plan: planReducer,
 
     partyList: partyListReducer,
+    invitation: invitationReducer,
   },
   middleware: (getDefault) =>
     getDefault({
