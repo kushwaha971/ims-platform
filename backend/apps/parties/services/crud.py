@@ -264,11 +264,25 @@ def create_party(*, ctx: Ctx, payload: dict) -> tuple[Party, list[dict]]:
         fields["consent_at"] = timezone.now()
 
     try:
-        party = Party.objects.create(tenant=ctx.tenant, **fields)
+        # ── The savepoint is the whole point of this nesting ─────────────────
+        # The pre-check above loses a race with a concurrent create — there is
+        # nothing between its SELECT and this INSERT — and the partial unique
+        # index is what actually decides. The reader must get the same 400
+        # either way.
+        #
+        # But an `IntegrityError` inside an atomic block marks the WHOLE block
+        # as needing rollback, and Django then refuses to run any further query
+        # in it. So the recovery lookup below — the one that finds who holds the
+        # number, to build a useful message — raised `TransactionManagementError`
+        # instead, which is not an `IntegrityError`, was not caught, and left as
+        # a 500. Two staff entering the same walk-in customer at the same moment
+        # is not an exotic case; it is Tuesday.
+        #
+        # A nested `atomic()` is a SAVEPOINT: the failed INSERT rolls back to
+        # it, the outer transaction stays usable, and the lookup can run.
+        with transaction.atomic():
+            party = Party.objects.create(tenant=ctx.tenant, **fields)
     except IntegrityError as exc:
-        # The pre-check above loses a race with a concurrent create; the partial
-        # unique index is what actually decides, and the reader gets the same
-        # answer either way rather than a 500.
         if "uq_party_tenant_mobile" in str(exc) and mobile:
             existing = _duplicate_mobile(tenant=ctx.tenant, mobile=mobile)
             if existing is not None:
@@ -322,7 +336,12 @@ def update_party(*, ctx: Ctx, party: Party, payload: dict) -> tuple[Party, list[
             setattr(party, field, value)
 
     try:
-        party.save()
+        # Savepoint, for the reason `create_party` gives at length: without it
+        # the recovery lookup runs inside a transaction the `IntegrityError`
+        # has already broken, and the merchant gets a 500 instead of being told
+        # the number is taken.
+        with transaction.atomic():
+            party.save()
     except IntegrityError as exc:
         if "uq_party_tenant_mobile" in str(exc) and mobile:
             existing = _duplicate_mobile(tenant=ctx.tenant, mobile=mobile, exclude_id=party.pk)

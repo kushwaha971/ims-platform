@@ -70,6 +70,19 @@ export interface UbFieldProps {
   readonly optionalLabel?: string;
   /** Hides the label visually; it stays in the accessible name. */
   readonly labelHidden?: boolean;
+  /**
+   * The control renders its OWN `<label>` — `UbSwitch` and `UbCheckbox` both
+   * do, because their label is part of their layout rather than above them.
+   *
+   * Without this, wrapping one of those in a field produced TWO `<label for>`
+   * elements pointing at one control, and an accessible name that read
+   * "I sell to them I sell to them". `labelHidden` does not help: a
+   * visually-hidden label is still in the name.
+   *
+   * `label` is still required, and is still used — for the error message's
+   * association and for anything that needs to say which field failed.
+   */
+  readonly controlOwnsLabel?: boolean;
   readonly children: (field: UbFieldRenderProps) => ReactNode;
   readonly className?: string;
 }
@@ -81,6 +94,7 @@ export function UbField({
   required,
   optionalLabel,
   labelHidden,
+  controlOwnsLabel,
   children,
   className,
 }: Readonly<UbFieldProps>): React.JSX.Element {
@@ -93,21 +107,23 @@ export function UbField({
 
   return (
     <div className={cn('flex w-full flex-col gap-1.5', className)}>
-      <label
-        htmlFor={name}
-        className={cn(
-          'ds-label flex items-baseline gap-2 text-text-secondary',
-          labelHidden && 'sr-only'
-        )}
-      >
-        {label}
-        {/* The exception, not the rule. It is real text inside the `<label>`,
-            so it is part of the control's accessible name — "Mobile number,
-            optional" — rather than a glyph nothing reads out. */}
-        {optionalLabel && (
-          <span className="ds-caption font-normal text-text-muted">{optionalLabel}</span>
-        )}
-      </label>
+      {!controlOwnsLabel && (
+        <label
+          htmlFor={name}
+          className={cn(
+            'ds-label flex items-baseline gap-2 text-text-secondary',
+            labelHidden && 'sr-only'
+          )}
+        >
+          {label}
+          {/* The exception, not the rule. It is real text inside the `<label>`,
+              so it is part of the control's accessible name — "Mobile number,
+              optional" — rather than a glyph nothing reads out. */}
+          {optionalLabel && (
+            <span className="ds-caption font-normal text-text-muted">{optionalLabel}</span>
+          )}
+        </label>
+      )}
       <Controller
         control={control}
         name={name}

@@ -9,13 +9,18 @@
  * wave 1 (Part 32 §32.4.4) — the form anatomy, the auth-screen controls, the
  * overlays and the wizard's stepper. Waves 2–3 add lines here and nothing else.
  *
- * Wave 1, as shipped, differs from §32.4.4's list in two ways, both recorded in
- * the sprint report: `UbMoneyInput` and `UbDateInput` are deferred with
- * `UbFileUpload`, `UbPercentInput` and `UbQuantityInput`, because no Sprint 1
- * screen takes money or a date; and `UbDrawer` is deferred for the same reason
- * (PLT-02's change-password drawer lives on `/profile`, which is PLT-07's
- * screen in Sprint 2). `UbTextInput`, `UbOtpInput`, `UbSelect`, `UbRadioGroup`,
- * `UbCheckbox` and `UbProgress` are additions the Sprint 1 screens do need.
+ * Wave 1, as shipped, differed from §32.4.4's list in two ways, both recorded
+ * in the sprint report: `UbMoneyInput`, `UbDateInput` and `UbDrawer` were
+ * deferred with `UbFileUpload`, `UbPercentInput` and `UbQuantityInput`, because
+ * no Sprint 1 screen took money, a date or a form long enough to need a drawer.
+ * `UbTextInput`, `UbOtpInput`, `UbSelect`, `UbRadioGroup`, `UbCheckbox` and
+ * `UbProgress` are additions the Sprint 1 screens did need.
+ *
+ * **Sprint 3 / PTY-01 closes three of those deferrals.** The party form takes an
+ * opening balance, a collection date and twenty-odd fields, so `UbMoneyInput`,
+ * `UbDateInput` and `UbDrawer` are built below. `UbFileUpload`,
+ * `UbPercentInput` and `UbQuantityInput` stay deferred — nothing yet uploads a
+ * file, sets a rate or counts stock.
  */
 
 // ── Wave 2 — layout and typography (§23.3) ───────────────────────────────────
@@ -160,6 +165,15 @@ export { UbNativeSelect } from './UbNativeSelect';
 export type { UbNativeSelectProps } from './UbNativeSelect';
 export { UbSelect } from './UbSelect';
 export type { UbSelectOption, UbSelectProps } from './UbSelect';
+
+export { UbDisclosure } from './UbDisclosure';
+export type { UbDisclosureProps } from './UbDisclosure';
+export { UbDrawer } from './UbDrawer';
+export type { UbDrawerProps } from './UbDrawer';
+export { UbMoneyInput, groupIndian, padDecimals, sanitiseAmount } from './UbMoneyInput';
+export type { UbMoneyInputProps } from './UbMoneyInput';
+export { UbDateInput, isoFinancialYearStart, isoToday } from './UbDateInput';
+export type { UbDateInputProps, UbDateQuickChoice } from './UbDateInput';
 
 export { UbPopover } from './UbPopover';
 export type { UbPopoverProps } from './UbPopover';

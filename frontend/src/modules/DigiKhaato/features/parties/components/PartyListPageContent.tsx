@@ -2,6 +2,10 @@
 
 import { useCallback, useMemo } from 'react';
 
+import dynamic from 'next/dynamic';
+
+import { Plus } from 'lucide-react';
+
 import {
   UbButton,
   UbPageHeader,
@@ -22,11 +26,22 @@ import { useTranslation } from 'src/hooks/useTranslation';
 import type { PartyStatus } from 'src/types/domain.types';
 
 import { PAGE_SIZE_OPTIONS } from '../constants/partyListDefaults';
+import { usePartyForm } from '../hooks/usePartyForm';
 import { usePartyList } from '../hooks/usePartyList';
 import { orderingFor, sortFromOrdering } from '../view-model/partyListSort';
 
 import { createPartyColumns } from './PartyListColumns';
 import { PartyListStats } from './PartyListStats';
+
+/**
+ * `ssr: false` because a drawer is never part of a server render: it opens on
+ * an interaction, so `open` is false in every server pass and there is no
+ * hydration mismatch to avoid.
+ */
+const PartyFormDrawerLazy = dynamic(
+  () => import('./PartyFormDrawer').then((m) => m.PartyFormDrawer),
+  { ssr: false }
+);
 
 import type { Party } from '../types/party.types';
 
@@ -64,6 +79,7 @@ const STATUS_OPTIONS: readonly PartyStatus[] = ['active', 'archived'];
 
 export function PartyListPageContent(): React.JSX.Element {
   const { t, n } = useTranslation();
+  const partyForm = usePartyForm();
   const {
     rows,
     meta,
@@ -152,6 +168,12 @@ export function PartyListPageContent(): React.JSX.Element {
       firstUse: {
         title: t('parties.list.empty.firstUse.title'),
         description: t('parties.list.empty.firstUse.body'),
+        // The empty state's whole job is to offer the one move that closes it.
+        // Before PTY-01 it described a screen and left the merchant to find the
+        // way out themselves.
+        action: partyForm.canWrite ? (
+          <UbButton onClick={partyForm.openCreate}>{t('parties.list.add')}</UbButton>
+        ) : undefined,
       },
       filtered: {
         title: t('parties.list.empty.filtered.title'),
@@ -173,7 +195,7 @@ export function PartyListPageContent(): React.JSX.Element {
         ),
       },
     }),
-    [t, clearFilters, refetch, error]
+    [t, clearFilters, refetch, error, partyForm.canWrite, partyForm.openCreate]
   );
 
   const gridState: UbGridState =
@@ -222,6 +244,16 @@ export function PartyListPageContent(): React.JSX.Element {
         <UbPageHeader
           title={t('parties.list.title')}
           subtitle={t('parties.list.subtitle')}
+          actions={
+            /* Hidden rather than disabled when the role cannot write (§19.7.5).
+               A disabled Add button invites a support call; an absent one says
+               nothing a merchant has to interpret. */
+            partyForm.canWrite ? (
+              <UbButton icon={<Plus className="h-4 w-4" aria-hidden />} onClick={partyForm.openCreate}>
+                {t('parties.list.add')}
+              </UbButton>
+            ) : undefined
+          }
         />
       }
     >
@@ -306,6 +338,14 @@ export function PartyListPageContent(): React.JSX.Element {
             />
           }
         />
+        {/* Loaded when the merchant asks for it, not when the list loads.
+            Measured: the form carries React Hook Form's resolver, the Yup
+            schema, a Radix switch and the three new inputs, and putting it in
+            the route's own chunk cost /parties 39.8 KB gz — paid by every
+            merchant who opens the list to READ it, which is almost all of
+            them. `openFor` is the only thing the page needs eagerly, and that
+            lives in the slice. */}
+        {partyForm.open && <PartyFormDrawerLazy form={partyForm} />}
       </UbStack>
     </UbPageShell>
   );

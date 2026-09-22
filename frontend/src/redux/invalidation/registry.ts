@@ -17,6 +17,7 @@ import {
   saveBusinessStep,
   saveGstStep,
 } from 'modules/DigiKhaato/features/onboarding/redux/onboardingThunk';
+import { saveParty } from 'modules/DigiKhaato/features/parties/redux/partyFormThunk';
 import { fetchPartyList } from 'modules/DigiKhaato/features/parties/redux/partyListThunk';
 import { fetchPlanLimits } from 'modules/DigiKhaato/features/plan/redux/planThunk';
 import {
@@ -83,6 +84,8 @@ export const MUTATIONS = {
   // PLT-05 — the team screen
   inviteMember,
   revokeInvitation,
+  // PTY-01 — create and edit a party
+  saveParty,
 } as const;
 
 export type TQueryName = keyof typeof QUERIES;

@@ -2,7 +2,15 @@ import { API_PATHS } from 'src/api/APIPaths';
 import { api, ubConfig } from 'src/api/AxiosInstances';
 import { toQueryString } from 'src/utils/queryString';
 
-import type { Party, PartyApiRow, PartyListParams, PartyListResult } from '../types/party.types';
+import type {
+  Party,
+  PartyApiRow,
+  PartyDetail,
+  PartyFormValues,
+  PartyListParams,
+  PartyListResult,
+  PartySaveResult,
+} from '../types/party.types';
 
 /**
  * Part 19 §19.3.4 — the service layer: one exported async function per
@@ -103,4 +111,147 @@ export const listParties = async (
       ? { totals: { receivable, payable }, totalsScope: 'filtered' as const }
       : { totals: null, totalsScope: 'page' as const }),
   };
+};
+
+// ── PTY-01 — create and edit ────────────────────────────────────────────────
+
+interface PartyDetailApiRow extends PartyApiRow {
+  readonly alt_phone: string | null;
+  readonly email: string | null;
+  readonly gstin: string | null;
+  readonly gst_registration: string;
+  readonly state_code: string | null;
+  readonly notes: string;
+  readonly collection_date: string | null;
+  readonly credit_limit: string | null;
+  readonly credit_days: number | null;
+  readonly sms_opt_in: boolean;
+  readonly consent_source: string | null;
+  readonly billing_address: Record<string, string>;
+  readonly opening_balance_amount: string | null;
+  readonly opening_balance_direction: string | null;
+  readonly opening_balance_as_of: string | null;
+}
+
+interface PartySaveApiResponse {
+  readonly data: PartyDetailApiRow;
+  readonly meta?: {
+    readonly warnings?: readonly {
+      readonly code: string;
+      readonly field?: string;
+      readonly gstin_state_code?: string;
+      readonly state_code?: string;
+    }[];
+  };
+}
+
+const toPartyDetail = (row: PartyDetailApiRow): PartyDetail => ({
+  ...toParty(row),
+  altPhone: row.alt_phone,
+  email: row.email,
+  gstin: row.gstin,
+  gstRegistration: row.gst_registration,
+  stateCode: row.state_code,
+  notes: row.notes,
+  collectionDate: row.collection_date,
+  creditLimit: row.credit_limit,
+  creditDays: row.credit_days,
+  smsOptIn: row.sms_opt_in,
+  consentSource: row.consent_source,
+  billingAddress: row.billing_address ?? {},
+  openingAmount: row.opening_balance_amount,
+  openingDirection: row.opening_balance_direction,
+  openingAsOf: row.opening_balance_as_of,
+});
+
+const toSaveResult = (body: PartySaveApiResponse): PartySaveResult => ({
+  party: toPartyDetail(body.data),
+  warnings: (body.meta?.warnings ?? []).map((warning) => ({
+    code: warning.code,
+    field: warning.field,
+    gstinStateCode: warning.gstin_state_code,
+    stateCode: warning.state_code,
+  })),
+});
+
+/**
+ * The wire body. Empty strings become `undefined` rather than `""`, because the
+ * two mean different things to the server: a missing key leaves a column alone,
+ * and `""` is a value that fails an email or a date field's own validation. The
+ * form cannot hold `null` — an uncontrolled input is a React warning — so the
+ * translation happens here, once, instead of in every field.
+ */
+const toWireBody = (values: PartyFormValues, { create }: { create: boolean }) => {
+  const text = (value: string | null | undefined) => (value?.trim() ? value.trim() : undefined);
+  const address = {
+    ...(text(values.billingLine1) ? { line1: text(values.billingLine1) } : {}),
+    ...(text(values.billingCity) ? { city: text(values.billingCity) } : {}),
+    ...(text(values.billingPincode) ? { pincode: text(values.billingPincode) } : {}),
+  };
+
+  return {
+    name: values.name.trim(),
+    is_customer: values.isCustomer,
+    is_supplier: values.isSupplier,
+    mobile: text(values.mobile),
+    alt_phone: text(values.altPhone),
+    email: text(values.email),
+    display_code: text(values.displayCode),
+    gstin: text(values.gstin),
+    state_code: text(values.stateCode),
+    notes: values.notes.trim(),
+    credit_limit: text(values.creditLimit),
+    credit_days: text(values.creditDays) ? Number(values.creditDays) : undefined,
+    collection_date: text(values.collectionDate),
+    sms_opt_in: values.smsOptIn,
+    consent_source: text(values.consentSource),
+    ...(Object.keys(address).length > 0 ? { billing_address: address } : {}),
+    // Create only. PATCH does not accept these at all — the server's update
+    // serializer does not have the fields, so sending them would be a lie the
+    // client told itself.
+    ...(create && text(values.openingAmount)
+      ? {
+          opening_balance_amount: values.openingAmount,
+          opening_balance_direction: values.openingDirection,
+          ...(text(values.openingAsOf) ? { opening_balance_as_of: values.openingAsOf } : {}),
+        }
+      : {}),
+  };
+};
+
+/**
+ * POST /parties.
+ *
+ * `Idempotency-Key` is mandatory — `API_PATHS.PARTIES` is on
+ * `IDEMPOTENT_POST_PATHS` — and is minted ONCE per logical save by the caller,
+ * so a retry after a lost response replays the party that was created rather
+ * than adding a second one. A party with no mobile has no uniqueness backstop
+ * at all, which makes the key the only protection there is.
+ *
+ * The snackbar is left on: a failed save is a thing that happened to an action
+ * the merchant just took, and the form shows the field errors itself.
+ */
+export const createParty = async (
+  values: PartyFormValues,
+  idempotencyKey: string
+): Promise<PartySaveResult> => {
+  const response = await api.post<PartySaveApiResponse>(
+    API_PATHS.PARTIES,
+    toWireBody(values, { create: true }),
+    ubConfig({ headers: { 'Idempotency-Key': idempotencyKey } })
+  );
+  return toSaveResult(response.data);
+};
+
+/** PATCH /parties/{id}. No idempotency key: an edit is already idempotent. */
+export const updateParty = async (
+  id: string,
+  values: PartyFormValues
+): Promise<PartySaveResult> => {
+  const response = await api.patch<PartySaveApiResponse>(
+    `${API_PATHS.PARTIES}/${id}`,
+    toWireBody(values, { create: false }),
+    ubConfig({})
+  );
+  return toSaveResult(response.data);
 };

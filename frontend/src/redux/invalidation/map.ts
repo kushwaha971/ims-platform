@@ -94,4 +94,21 @@ export const INVALIDATION: TInvalidationMap = {
   // A reissue changes `must_change_password` and the expiry on one row, which
   // is what the list is FOR. It spends no seat, so the session is untouched.
   regenerateCredentials: { refetch: ['member'] },
+
+  // ── PTY-01 — create and edit a party ──────────────────────────────────────
+  // `refetch`, not `stale`: the drawer opens over the list the merchant is
+  // reading, and when it closes they are looking straight at the place the new
+  // row belongs. `stale` waits for a remount that is not going to happen.
+  //
+  // Not optimistic, unlike the team screen's invite. A party's row carries a
+  // balance the server owns, an ordering the server decides
+  // (`last_activity_at` NULLS FIRST) and a display code the server may have
+  // assigned — so a guessed row would be in the wrong place with the wrong
+  // subtitle, and the correction a moment later would look like a bug. The
+  // refetch is one request against a list that is already paginated.
+  //
+  // No `stale: ['plan']`: DEC-001 took `max_parties` out of the enforceable
+  // limits at MVP, so no counter on the plan slice moves when a party is
+  // created. When that decision is revisited, this line is where it lands.
+  saveParty: { refetch: ['partyList'] },
 };

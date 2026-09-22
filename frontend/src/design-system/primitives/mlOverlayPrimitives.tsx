@@ -64,6 +64,18 @@ export interface MLDialogProps {
   readonly describedBy?: string;
   /** False for a destructive confirm: a stray backdrop tap must not dismiss. */
   readonly dismissOnBackdrop?: boolean;
+  /**
+   * `center` (the default) is the modal: a bottom sheet below `sm`, a centred
+   * card above. `drawer` is the long form: the same bottom sheet below `lg`,
+   * and a full-height right-hand panel above it.
+   *
+   * One primitive rather than two, because the hard parts — the portal, the
+   * focus trap, the scroll lock, restoring focus to the opener — are identical
+   * and are the parts that go subtly wrong when they are written twice. What
+   * differs between a modal and a drawer is where the panel is and how wide,
+   * which is a class name.
+   */
+  readonly placement?: 'center' | 'drawer';
   readonly children: ReactNode;
   readonly className?: string;
 }
@@ -79,6 +91,7 @@ export function MLDialog({
   labelledBy,
   describedBy,
   dismissOnBackdrop = true,
+  placement = 'center',
   children,
   className,
 }: Readonly<MLDialogProps>): React.JSX.Element | null {
@@ -141,8 +154,15 @@ export function MLDialog({
   // mismatch and no `mounted` flag is required to avoid one.
   if (!open || typeof document === 'undefined') return null;
 
+  const isDrawer = placement === 'drawer';
+
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+    <div
+      className={cn(
+        'fixed inset-0 z-50 flex items-end justify-center',
+        isDrawer ? 'lg:items-stretch lg:justify-end' : 'sm:items-center'
+      )}
+    >
       <div
         aria-hidden
         onPointerDown={dismissOnBackdrop ? () => onOpenChange(false) : undefined}
@@ -174,7 +194,15 @@ export function MLDialog({
              BrandHub centres a `max-w-[calc(100vw-2rem)]` panel at every width.
              A sheet anchored to the bottom edge is reachable with a thumb, and
              this product is used one-handed. */
-          'max-h-[90dvh] rounded-t-xl sm:w-[420px] sm:max-w-[calc(100vw-2rem)] sm:rounded-xl',
+          isDrawer
+            ? /* A form long enough to need a drawer is long enough to need
+                 room: 92dvh on a phone rather than 90, and the full height of
+                 the window on a desktop so the list stays visible beside it
+                 rather than behind it. `rounded-l-xl` only — the panel is
+                 flush with three edges, which is what makes it read as
+                 attached to the side rather than floating. */
+              'max-h-[92dvh] rounded-t-xl lg:h-full lg:max-h-none lg:w-[520px] lg:max-w-[calc(100vw-2rem)] lg:rounded-none lg:rounded-l-xl'
+            : 'max-h-[90dvh] rounded-t-xl sm:w-[420px] sm:max-w-[calc(100vw-2rem)] sm:rounded-xl',
           className
         )}
       >

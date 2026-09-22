@@ -85,25 +85,44 @@ There is no seeded merchant — sign up at `/signup`.
 ## Gates
 
 ```bash
-cd backend  && python3 -m pytest -q          # 777 passing
-cd frontend && npm run type-check && npm run lint && npm test   # 779 passing
-cd frontend && npm run build && npm run bundle:check            # 228.1 KB gz
+cd backend  && python3 -m pytest -q          # 821 passing
+cd frontend && npm run type-check && npm run lint && npm test   # 881 passing
+cd frontend && npm run build && npm run bundle:check            # 223.7 KB gz baseline
 node e2e/journey.mjs && node e2e/security.mjs && node e2e/credentials.mjs
 ```
 
-All must stay green. The bundle budget has ~0.9 KB of headroom on `sharedApp`,
-and `bundle-budgets.json` explains why that keeps happening: every feature slice
-`store.ts` registers statically ships to every route, including the ones that
-render a paragraph of text. It has cost +4.5 KB across two features and ledger,
-inventory, sales, purchases and reports are all still to come. **§19.3.9 needs a
-decision from the owner before the ledger slice lands** — either the shell keeps
-growing with every feature, or the store admits lazily registered reducers.
+All must stay green. `bundle-budgets.json` explains the shell's growth: every
+feature slice `store.ts` registers statically ships to every route, including
+the ones that render a paragraph of text. PTY-01's `partyForm` slice added
+another 0.8 KB. **§19.3.9 is now overdue rather than approaching** — either the
+shell keeps growing with every feature, or the store admits lazily registered
+reducers, and ledger, inventory, sales, purchases and reports are all still to
+come.
+
+Two route-chunk lessons from PTY-01, both worth knowing before the next form:
+the party drawer is `dynamic()` (statically imported it cost /parties 39.8 KB
+that every merchant opening the list to READ it would pay), and its field-name
+constants live in a module that imports nothing, because importing them from
+the file that also holds the Yup schema dragged Yup into the route for another
+17 KB. Module-level imports tree-shake between modules, not within one.
 
 ## State
 
-Sprint 1 is in. Parties is **read-only** until PTY-02 in Sprint 3; ledger,
-inventory, sales and purchases are skeletons; `seed_demo_tenant` is a stub;
-there is no mobile navigation below `lg` (`UbBottomNav` is unbuilt).
+Sprint 1 is in, and Sprint 3 has started: **PTY-01 (create/edit a party) is
+done** — `POST`/`PATCH /parties`, a form drawer, and the three design-system
+components Sprint 1 deferred (`UbMoneyInput`, `UbDateInput`, `UbDrawer`, plus
+`UbDisclosure`). Parties is no longer read-only.
+
+The opening balance is **stored and unapplied**: PTY-01 records what a merchant
+is carrying over from paper in three columns on `parties_party`, and posts no
+ledger entry. Sprint 4's LED-02 consumes them. A test asserts the balance stays
+0.00 — do not wire the two together early or every opening balance posts twice.
+
+Still to come in Sprint 3: PTY-02's filters (`q` trigram, balance, tag,
+collection) and `meta.totals` over the filtered set, PTY-03 detail, PTY-04
+archive/restore, PTY-05 tags, PTY-06 credit-limit checks. Ledger, inventory,
+sales and purchases are skeletons; `seed_demo_tenant` is a stub; there is no
+mobile navigation below `lg` (`UbBottomNav` is unbuilt).
 
 `docs/review/01`–`04` are audit findings with their status. `docs/DECISIONS.md`,
 `docs/BACKLOG.md` and `docs/CR-LOG.md` carry decisions, deferred work and change

@@ -174,7 +174,7 @@
   ],
   "shared": {
     "framework": 128,
-    "sharedApp": 96
+    "sharedApp": 98
   },
   "//routes": [
     "The `route` figures are §19.9.2's, unchanged, and every route is comfortably",
@@ -322,36 +322,65 @@
     "already existed for RPT-01's tiles, so what is new here is the page's own",
     "stats row and three lucide icons; `PartyListTotals` came back out, which is",
     "why it is not more.",
-    "  /parties  route  89 -> 90  (measured 89.0)"
+    "  /parties  route  89 -> 90  (measured 89.0)",
+    "",
+    "── 22 Sep 2026: PTY-01, the party form ───────────────────────────────────",
+    "The form is `dynamic()` and is NOT in these figures — twice over, because",
+    "the first two measurements were both wrong and both instructive.",
+    "",
+    "Measured with the drawer imported statically: **/parties 90 -> 129.8**, an",
+    "extra 39.8 KB paid by every merchant who opens the list to READ it, for a",
+    "form most of them never open in a session. Behind `next/dynamic` that fell",
+    "to 107.1 — still 17 KB too much, and the cause was a two-line import:",
+    "`usePartyForm` reads `PARTY_FIELDS` and `SERVER_FIELD_TO_FORM`, which lived",
+    "beside the Yup schema, so the hook dragged Yup and the whole central",
+    "validation hook into the route. Module-level imports tree-shake BETWEEN",
+    "modules and not within one — the same lesson the checkbox/radio split",
+    "taught — so the constants moved to a module that imports nothing and",
+    "/parties came back to 90.6.",
+    "",
+    "What is left is honest: +0.6 on the route for the Add button, the form",
+    "hook and the service's two new calls, and **+0.8 on the shell** for the",
+    "`partyForm` slice, which registers statically like every other slice.",
+    "",
+    "That 0.8 is the §19.3.9 question arriving on schedule. This file has said",
+    "since Sprint 1 that every feature slice ships to every route including the",
+    "ones that render a paragraph, and ledger, inventory, sales, purchases and",
+    "reports are all still to come. The budget is raised because the growth is",
+    "real and small; the DECISION is still the owner's, and it is now overdue",
+    "rather than approaching.",
+    "  shared app       96 ->  98",
+    "  /parties         90 ->  92  (measured 90.6)",
+    "  every firstLoad  +2, being the shell growth plus its own route's"
   ],
   "default": {
     "route": 60,
-    "firstLoad": 276
+    "firstLoad": 278
   },
   "routes": {
     "/parties": {
-      "route": 90,
-      "firstLoad": 312
+      "route": 92,
+      "firstLoad": 316
     },
     "/dashboard": {
       "route": 55,
-      "firstLoad": 272
+      "firstLoad": 274
     },
     "/sales/invoices/new": {
       "route": 110,
-      "firstLoad": 340
+      "firstLoad": 342
     },
     "/onboarding/step/[n]": {
       "route": 98,
-      "firstLoad": 320
+      "firstLoad": 322
     },
     "/design-system": {
       "route": 94,
-      "firstLoad": 316
+      "firstLoad": 318
     },
     "/settings/team": {
       "route": 79,
-      "firstLoad": 301
+      "firstLoad": 303
     }
   },
   "//ignoreRoutes": [

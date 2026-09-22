@@ -82,3 +82,37 @@ tested. What is missing is a provider.
 | **A real mail provider** | `UB_EMAIL_BACKEND` defaults to Django's console backend, so reset links and invitations are written to the log and nothing leaves the machine. The adapter seam in `services/messaging.py` is the only thing that changes. | The platform earns. Needs a provider account, a domain, and SPF/DKIM records — the deliverability work is the real cost, not the sending. |
 | **Emailing an invitation** | `POST /invitations` returns `accept_url` for the owner to copy. The dialog says so plainly rather than implying a delivery. | Above. The flow is already built; only `_deliver_*` gains a caller. |
 | **Emailing owner-issued credentials** | Not built, and should NOT be: a password in an inbox is worse than a password in a chat the owner controls. If email lands, the invitation link is the thing to send, not the password. | Probably never. Recorded so the question is not re-opened as an oversight. |
+
+## PTY-01 — deferred with reasons (22 Sep 2026)
+
+**The `max_parties` plan limit.** `docs/17-01` PTY-01 §21 asks for a 403
+`plan_limit_reached` at the tenant's party ceiling, and PTY-01 does not
+implement it. DEC-001 removed `max_parties` from `PlanLimit`'s enforceable
+`LIMIT_KEYS` at MVP, so building the check would have contradicted a decision
+already recorded. If DEC-001 is revisited, the check belongs in
+`create_party()` and the invalidation map's `saveParty` entry gains
+`stale: ['plan']` — the line is already there with a comment saying so.
+
+**The `display_code` uniqueness race.** BR-10 says uniqueness is service-checked
+with no DB constraint, and CCR-19's proposed partial unique index is not
+accepted. Two concurrent creates can therefore both take one code. Not built
+here because it needs the constraint decision first; PTY-01 does not check it at
+all rather than half-checking it.
+
+**FR-9's timing contradiction.** The FRD reads as though `post_opening_balance()`
+runs inside `create_party()`. The sprint plan §32.6.4 and Part 33's
+TSK-PTY-01-05 are explicit that Sprint 3 stores it unapplied and LED-02 posts
+it. The code follows the sprint plan; the FRD's §4 should be annotated rather
+than left to be resolved by whoever reads Part 33 next.
+
+**Part 21 §21.3.3 has no column for the unapplied opening balance.** PTY-01 adds
+three (`opening_balance_amount`, `_direction`, `_as_of`). The database chapter
+should record them.
+
+**The native date input's display format follows the BROWSER's locale, not the
+app's.** `<input type="date">` renders 2026-04-01 as 04/01/2026 under an en-US
+browser and 01/04/2026 under en-IN. On a merchant's own device these agree; in a
+mixed setup they do not. The quick chips ("Year start", "Today") are unambiguous
+and cover the common cases. Revisit only if a real user is confused by it — the
+alternative is a hand-built calendar, which is several hundred lines whose
+failure modes are all in the keyboard and screen-reader paths.

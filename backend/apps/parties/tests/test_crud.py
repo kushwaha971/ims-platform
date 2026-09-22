@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 from django.urls import reverse
@@ -430,3 +431,79 @@ def test_a_replayed_create_returns_the_first_answer_rather_than_a_second_party(
     assert first.status_code == 201
     assert second.json()["data"]["id"] == first.json()["data"]["id"]
     assert Party.objects.filter(tenant=tenant, name="Ramesh Traders").count() == 1
+
+
+def test_the_integrity_error_path_answers_400_rather_than_500(tenant: Any, api_as: Any) -> None:
+    """The duplicate-mobile race, which every other test in this file misses.
+
+    Two staff entering the same walk-in customer at the same moment both pass
+    the pre-check — there is nothing between the SELECT and the INSERT — and the
+    partial unique index decides. That path was answering **500**.
+
+    The cause is subtle and is the reason this needs its own test: the service
+    runs inside `@transaction.atomic`, so an `IntegrityError` marks the whole
+    block as needing rollback, and the `except` handler's own SELECT — the one
+    that looks up who has the number, to build a useful 400 — is then refused
+    by Django with `TransactionManagementError`. Not an `IntegrityError`, not
+    caught, straight out as a 500.
+
+    Simulated rather than raced, because a race is not a test: the pre-check is
+    patched to answer "free" so the INSERT is reached with the number already
+    taken, which is exactly the state a lost race leaves.
+    """
+    from apps.parties.services import crud
+
+    client, _ = api_as(tenant)
+    PartyFactory(tenant=tenant, name="Already Here", mobile="+919812345678")
+
+    real = crud._duplicate_mobile
+    calls = {"n": 0}
+
+    def first_call_says_free(**kwargs: Any) -> Any:
+        """Only the PRE-CHECK lies. The recovery lookup runs for real.
+
+        Stubbing both would hide the defect completely: the whole failure is
+        that the recovery SELECT cannot run inside a transaction the
+        `IntegrityError` has already broken, and a mocked lookup never touches
+        the database.
+        """
+        calls["n"] += 1
+        return None if calls["n"] == 1 else real(**kwargs)
+
+    with patch.object(crud, "_duplicate_mobile", side_effect=first_call_says_free):
+        response = _create(client, name="Racing Entry", mobile="+919812345678")
+
+    assert response.status_code == 400
+    details = response.json()["error"]["details"]
+    assert "mobile" in details
+    assert details["existing_party_id"]
+
+
+def test_the_edit_path_has_the_same_savepoint(tenant: Any, api_as: Any) -> None:
+    """The same race, on PATCH. Two people moving two parties onto one number.
+
+    Written separately rather than parametrised because they are two different
+    `try` blocks in two different functions, and the point of the test is that
+    the fix was applied to BOTH — which is exactly the kind of thing a single
+    parametrised test over one code path quietly fails to check.
+    """
+    from apps.parties.services import crud
+
+    client, _ = api_as(tenant)
+    PartyFactory(tenant=tenant, name="Holds The Number", mobile="+919812345678")
+    moving = PartyFactory(tenant=tenant, name="Moving", mobile="+919800000099")
+
+    real = crud._duplicate_mobile
+    calls = {"n": 0}
+
+    def first_call_says_free(**kwargs: Any) -> Any:
+        calls["n"] += 1
+        return None if calls["n"] == 1 else real(**kwargs)
+
+    with patch.object(crud, "_duplicate_mobile", side_effect=first_call_says_free):
+        response = client.patch(
+            reverse(DETAIL, args=[moving.id]), {"mobile": "+919812345678"}, format="json"
+        )
+
+    assert response.status_code == 400
+    assert "mobile" in response.json()["error"]["details"]

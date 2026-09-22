@@ -61,6 +61,9 @@ export interface ValidationSchemas {
    * matters is already enforced where the value is checked.
    */
   readonly requiredText: (max?: number, messageId?: string) => Yup.StringSchema<string>;
+  readonly optionalAmountValidation: (options?: {
+    max?: string;
+  }) => Yup.StringSchema<string | null | undefined>;
   readonly amountValidation: (options?: {
     allowZero?: boolean;
     max?: string;
@@ -125,6 +128,14 @@ export const useValidationSchemas = (): ValidationSchemas => {
         .max(max, t('validation.maxChars', { value: max }));
 
     /** Money: a decimal STRING with ≤ 2 dp, > 0 unless allowZero (R-TS-7). */
+    /**
+     * `optional: true` for an amount a form does not insist on — a credit limit,
+     * an opening balance a merchant is not carrying over.
+     *
+     * Without it the only shape available was "required", so an optional money
+     * field said "Enter an amount." about a box nobody had touched. The party
+     * form has two of them, which is how this turned up.
+     */
     const amountValidation = (options?: { allowZero?: boolean; max?: string }) =>
       Yup.string()
         .required(t('validation.amount.required'))
@@ -134,6 +145,35 @@ export const useValidationSchemas = (): ValidationSchemas => {
           const parsed = Number(value);
           return options?.allowZero ? parsed >= 0 : parsed > 0;
         })
+        .test('max', t('validation.amount.tooLarge'), (value) =>
+          value ? Number(value) <= Number(options?.max ?? MAX_AMOUNT) : true
+        );
+
+    /**
+     * An amount a form does not insist on — a credit limit, an opening balance
+     * a merchant is not carrying over.
+     *
+     * A separate function rather than a flag on `amountValidation`, because the
+     * two have genuinely different output types (this one is nullable) and
+     * because the call site then says which it is without anyone reading the
+     * options object.
+     *
+     * It exists at all because the only shape available was "required", so the
+     * party form's two optional money fields both said "Enter an amount."
+     * about a box nobody had touched.
+     */
+    const optionalAmountValidation = (options?: { max?: string }) =>
+      Yup.string()
+        .transform(blankToNull)
+        .nullable()
+        .notRequired()
+        .matches(REGEX.DECIMAL_2DP, {
+          message: t('validation.amount.format'),
+          excludeEmptyString: true,
+        })
+        .test('positive', t('validation.amount.positive'), (value) =>
+          value == null || value === '' ? true : Number(value) >= 0
+        )
         .test('max', t('validation.amount.tooLarge'), (value) =>
           value ? Number(value) <= Number(options?.max ?? MAX_AMOUNT) : true
         );
@@ -167,6 +207,22 @@ export const useValidationSchemas = (): ValidationSchemas => {
      * and the same silence: the form would refuse to submit with
      * "Enter a 10-digit mobile number" against an empty box.
      */
+    /**
+     * `''` → `null`, for every optional field.
+     *
+     * Yup's `.matches()`, `.length()` and `.email()` all skip `undefined` and
+     * NONE of them skip the empty string, so an optional field a merchant
+     * simply left alone fails its own format rule. `mobileValidation` was fixed
+     * for this once; `gstin`, `email` and `pincode` had the identical defect
+     * and the identical silence, and the party form is the first screen with
+     * all four optional on one page — which is how they turned up together.
+     *
+     * Extracted rather than repeated: the next optional validator gets this by
+     * reaching for it, not by remembering the story.
+     */
+    const blankToNull = (value: unknown) =>
+      typeof value === 'string' && value.trim() === '' ? null : value;
+
     const mobileValidation = (required = true) => {
       const base = Yup.string()
         .transform((value: unknown) =>
@@ -177,9 +233,7 @@ export const useValidationSchemas = (): ValidationSchemas => {
             .matches(REGEX.MOBILE_E164_IN, t('validation.mobile.format'))
             .required(t('validation.mobile.required'))
         : base
-            .transform((value: unknown) =>
-              typeof value === 'string' && value.trim() === '' ? null : value
-            )
+            .transform(blankToNull)
             .nullable()
             .notRequired()
             .matches(REGEX.MOBILE_E164_IN, {
@@ -194,16 +248,30 @@ export const useValidationSchemas = (): ValidationSchemas => {
         .transform((value: unknown) =>
           typeof value === 'string' ? value.trim().toUpperCase() : value
         )
-        .length(15, t('validation.gstin.length'))
-        .matches(REGEX.GSTIN, t('validation.gstin.format'))
         .test(
           'checksum',
           t('validation.gstin.checksum'),
           (value) => !value || isValidGstinChecksum(value)
         );
       return required
-        ? base.required(t('validation.gstin.required'))
-        : base.nullable().notRequired();
+        ? base
+            .length(15, t('validation.gstin.length'))
+            .matches(REGEX.GSTIN, t('validation.gstin.format'))
+            .required(t('validation.gstin.required'))
+        : base
+            // `.length(15)` on an optional field rejects the empty string as
+            // "a GSTIN has 15 characters", which is true and is not what the
+            // merchant did. The rules move inside the required branch and the
+            // optional branch checks them only once there is something to
+            // check.
+            .transform(blankToNull)
+            .nullable()
+            .notRequired()
+            .test(
+              'gstin-shape',
+              t('validation.gstin.format'),
+              (value) => !value || (value.length === 15 && REGEX.GSTIN.test(value))
+            );
     };
 
     const panValidation = () =>
@@ -219,10 +287,19 @@ export const useValidationSchemas = (): ValidationSchemas => {
       Yup.string().nullable().notRequired().matches(REGEX.HSN, t('validation.hsn.format'));
 
     const pincodeValidation = (required = false) => {
-      const base = Yup.string().matches(REGEX.PINCODE_IN, t('validation.pincode.format'));
+      const base = Yup.string();
       return required
-        ? base.required(t('validation.pincode.required'))
-        : base.nullable().notRequired();
+        ? base
+            .matches(REGEX.PINCODE_IN, t('validation.pincode.format'))
+            .required(t('validation.pincode.required'))
+        : base
+            .transform(blankToNull)
+            .nullable()
+            .notRequired()
+            .matches(REGEX.PINCODE_IN, {
+              message: t('validation.pincode.format'),
+              excludeEmptyString: true,
+            });
     };
 
     /** Business date: ISO yyyy-mm-dd, not in the future unless allowFuture. */
@@ -277,7 +354,10 @@ export const useValidationSchemas = (): ValidationSchemas => {
       const base = emailBase();
       return required
         ? base.required(t('validation.email.required'))
-        : base.nullable().notRequired();
+        : // `.matches()` inside `emailBase()` does not skip the empty string,
+          // so an optional address the merchant left alone failed with "enter a
+          // valid email address". Same defect as `mobileValidation` had.
+          base.transform(blankToNull).nullable().notRequired();
     };
 
     const emailIdentityValidation = () => emailBase().required(t('validation.email.required'));
@@ -327,6 +407,7 @@ export const useValidationSchemas = (): ValidationSchemas => {
       optionalText,
       requiredText,
       amountValidation,
+      optionalAmountValidation,
       quantityValidation,
       percentValidation,
       mobileValidation,

@@ -8,6 +8,7 @@ import authReducer from 'modules/DigiKhaato/features/auth/redux/authSlice';
 // ── onboarding (PLT-03) ──────────────────────────────────────────────────────
 import onboardingReducer from 'modules/DigiKhaato/features/onboarding/redux/onboardingSlice';
 // ── parties ──────────────────────────────────────────────────────────────────
+import { partyFormReducer } from 'modules/DigiKhaato/features/parties/redux/partyFormSlice';
 import partyListReducer from 'modules/DigiKhaato/features/parties/redux/partyListSlice';
 // ── plan entitlements (PLT-15) ───────────────────────────────────────────────
 import planReducer, { limitHit } from 'modules/DigiKhaato/features/plan/redux/planSlice';
@@ -56,6 +57,7 @@ export const store = configureStore({
     plan: planReducer,
 
     partyList: partyListReducer,
+    partyForm: partyFormReducer,
     invitation: invitationReducer,
     member: memberReducer,
   },

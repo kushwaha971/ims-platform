@@ -76,9 +76,9 @@ class TestOrderingIsTotal:
             client.get(reverse("v1:party-list") + "?ordering=name")
         ordered = [q["sql"] for q in captured.captured_queries if "ORDER BY" in q["sql"]]
         assert ordered, "the page query did not run"
-        assert (
-            'ORDER BY "parties_party"."name" ASC, "parties_party"."id" ASC' in ordered[-1]
-        ), ordered[-1]
+        assert 'ORDER BY "parties_party"."name" ASC, "parties_party"."id" ASC' in ordered[-1], (
+            ordered[-1]
+        )
 
 
 class TestTheListFetchesTheColumnsItDraws:
