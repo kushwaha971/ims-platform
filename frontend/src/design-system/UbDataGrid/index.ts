@@ -35,18 +35,48 @@ export type { UbDataGridPaginationProps } from './UbDataGridPagination';
  */
 export type { UbDataGridTableProps } from './UbDataGridTable';
 
+export {
+  UbDataGridSkeletonRows,
+  UbDataGridStateRow,
+  UbDataGridStateTable,
+} from './UbDataGridStateTable';
+export type {
+  UbDataGridSkeletonRowsProps,
+  UbDataGridStateRowProps,
+  UbDataGridStateTableProps,
+} from './UbDataGridStateTable';
+
+/**
+ * `UbDataGridColumnMenu` is NOT re-exported as a value, for the same reason
+ * `UbDataGridTable` is not: it is the grid's only `@radix-ui/react-popover`
+ * consumer and `UbDataGrid` reaches it through `next/dynamic`. A value export
+ * here restores the static edge through `src/design-system/index.ts`, which
+ * `app/error.tsx` imports, and the popover engine lands in the chunk every
+ * route shares.
+ */
+export type { UbDataGridColumnMenuProps } from './UbDataGridColumnMenu';
+
 export { UbDataGridToolbar } from './UbDataGridToolbar';
 export type { UbDataGridToolbarProps } from './UbDataGridToolbar';
 
 export {
   cardModel,
   cardSlotOf,
+  columnWidths,
   COMPACT_PRIORITY_CUTOFF,
   dropOrder,
   fillTemplate,
+  isHideable,
   MAX_CARD_META,
   visibleColumns,
 } from './columnModel';
+
+export {
+  loadColumnVisibility,
+  useColumnVisibility,
+  visibilityStorageKey,
+} from './useColumnVisibility';
+export type { UbColumnVisibility, UbColumnVisibilityApi } from './useColumnVisibility';
 export type { UbCardModel } from './columnModel';
 
 export { LG_QUERY, MD_QUERY, useGridTier } from './useGridTier';

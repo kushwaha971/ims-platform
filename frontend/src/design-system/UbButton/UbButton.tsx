@@ -72,7 +72,17 @@ const UbButtonInner = forwardRef<HTMLButtonElement, UbButtonProps>(function UbBu
       {...rest}
     >
       {busy ? <MLSpinner /> : icon}
-      <span>{busy ? (busyLabel ?? children) : children}</span>
+      {/* `inline-flex items-center gap-2` rather than a bare `<span>`.
+          Tailwind's preflight sets `svg { display: block }`, so an icon a
+          caller passes as a CHILD instead of through `icon` becomes a block
+          inside an inline span: it takes its own line and the label drops
+          underneath it. A plain text label is unaffected — a single child has
+          no gap and nothing to align — and a caller who gets the slot wrong now
+          gets a button that is merely unidiomatic rather than one that is
+          visibly broken. */}
+      <span className="inline-flex items-center gap-2">
+        {busy ? (busyLabel ?? children) : children}
+      </span>
     </MLButton>
   );
 });

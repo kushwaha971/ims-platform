@@ -65,10 +65,25 @@ export interface UbDataGridColumn<TRow> {
   /** Defaults to `meta`: a column with no stated card role is a supporting fact. */
   readonly cardSlot?: UbCardSlot;
   /**
-   * A `table-fixed` width class (`w-[22%]`, `w-32`). Optional: the remaining
-   * columns share what is left. Tokens and Tailwind scale only, never a hex.
+   * This column's share of the table, as a WEIGHT rather than a width.
+   *
+   * The numbers are relative: `34` beside `12` means about three times as wide,
+   * and the grid normalises whatever set it ends up painting to 100% (see
+   * `columnWidths`). That is the point — a column model is rendered at three
+   * tiers and through a column menu, so the set on screen is rarely the set the
+   * widths were written for, and a screen that states absolute percentages is
+   * doing an arithmetic it does not have the facts for.
+   *
+   * Omitted on every column means an equal-width table, which `table-fixed`
+   * already gives.
    */
-  readonly widthClassName?: string;
+  readonly widthShare?: number;
+  /**
+   * Whether the column menu may switch this column off. Defaults to
+   * `priority > 1` — see `isHideable`. A screen sets it explicitly only when it
+   * knows something the priority number does not.
+   */
+  readonly hideable?: boolean;
   /**
    * The header text is for screen readers only — a column of icon actions.
    * The `<th>` is still a real `<th scope="col">`; only its text is hidden.
@@ -105,9 +120,26 @@ export interface UbDataGridLabels {
   readonly goToPage: string;
   /** `of {total}` — the row count beside the page-size selector. */
   readonly ofTotal: string;
+  /** `Showing` — the word before the page-size control. BrandHub's bar reads
+   *  "Showing [25] of 1,234"; a bare number says nothing about what it counts. */
+  readonly showing: string;
+  /**
+   * `2 selected` — the selection bar's label, ALREADY RESOLVED, count and all.
+   *
+   * The one label on this interface that is not a template, and deliberately
+   * so. It is an ICU plural, and ICU must see the number to pick the form —
+   * Hindi's one and other differ. A feature that hands over
+   * `t('…', { count: '{count}' })` and expects the grid to fill the blank gets
+   * "NaN selected", because `#` was evaluated against a string.
+   */
+  readonly selectedCount: string;
   readonly selectAll: string;
   /** `{name}` is substituted with `rowName(row)`. */
   readonly selectRow: string;
+  /** The column-menu trigger, and the panel's accessible name. */
+  readonly columns: string;
+  /** The menu's reset row — puts every column the tier allows back. */
+  readonly showAllColumns: string;
   readonly sortBy: string;
   readonly sortedAscending: string;
   readonly sortedDescending: string;

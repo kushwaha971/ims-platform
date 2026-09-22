@@ -121,14 +121,31 @@ export function PartyListPageContent(): React.JSX.Element {
       // thing that knows which page a button points at.
       goToPage: t('common.grid.goToPage', { page: '{page}' }),
       ofTotal: t('common.grid.ofTotal', { total: '{total}' }),
+      // The ONLY label here that is finished rather than a template, and the
+      // reason is ICU: `selectedCount` is a PLURAL message, and a plural cannot
+      // be resolved later. Passing the literal string `'{count}'` as its value
+      // made `#` evaluate to NaN, so the selection bar read "NaN selected" —
+      // which no unit test saw, because the test's fixture was a plain
+      // `'{count} selected'` string that never went through `react-intl`. The
+      // count is known here, and Hindi's one/other forms differ, so `t()` does
+      // the plural and the grid paints what it is given.
+      selectedCount: t('common.grid.selectedCount', { count: selectedIds.length }),
+
       selectAll: t('parties.list.select.all'),
       selectRow: t('parties.list.select.row', { name: '{name}' }),
+      showing: t('common.grid.showing'),
+      columns: t('common.grid.columns'),
+      showAllColumns: t('common.grid.showAllColumns'),
       sortBy: t('common.grid.sortBy', { column: '{column}' }),
       sortedAscending: t('common.grid.sortedAscending'),
       sortedDescending: t('common.grid.sortedDescending'),
       openRow: t('parties.list.open', { name: '{name}' }),
     }),
-    [t]
+    // `selectedIds.length` is a real dependency now that the plural is resolved
+    // here. It rebuilds this object while the merchant is ticking rows, which
+    // is a handful of renders of a toolbar that is re-rendering anyway — the
+    // alternative was a label that said NaN.
+    [t, selectedIds.length]
   );
 
   const emptyStates = useMemo<UbDataGridEmptyStates>(
@@ -222,6 +239,12 @@ export function PartyListPageContent(): React.JSX.Element {
           {t('parties.list.count', { count: meta.total })}
         </UbText>
 
+        {/* `storageId` puts the column choices in `sessionStorage`: they survive
+            a trip to a party and back. Session rather than account, because
+            this is a reading preference for the afternoon rather than a
+            setting — putting it on the server means an endpoint and a
+            migration for something the merchant expects to undo by closing
+            the tab. */}
         <UbDataGrid
           rows={rows}
           columns={columns}
@@ -231,6 +254,7 @@ export function PartyListPageContent(): React.JSX.Element {
           labels={labels}
           emptyStates={emptyStates}
           caption={t('parties.list.caption')}
+          storageId="parties.list"
           page={meta}
           onPageChange={setPage}
           onPageSizeChange={handlePageSize}
@@ -240,11 +264,13 @@ export function PartyListPageContent(): React.JSX.Element {
           selectable
           selectedIds={selectedIds}
           onSelectionChange={setSelectedIds}
+          /* The count is NOT repeated here. The selection bar paints
+             "{n} selected" on its left now (BrandHub's arrangement), and this
+             slot used to carry the same sentence again three inches to the
+             right — so a merchant who ticked one row was told twice. What
+             belongs here is what they can DO about the selection. */
           bulkActions={
             <>
-              <UbText variant="body-sm" tone="secondary">
-                {t('parties.list.selected', { count: selectedIds.length })}
-              </UbText>
               <UbButton variant="secondary" size="sm" onClick={clearSelection}>
                 {t('parties.list.bulk.clearSelection')}
               </UbButton>

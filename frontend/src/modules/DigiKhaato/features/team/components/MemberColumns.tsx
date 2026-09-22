@@ -59,7 +59,7 @@ export const createMemberColumns = ({
     header: t('team.members.column.name'),
     priority: 1,
     cardSlot: 'title',
-    widthClassName: 'w-[34%]',
+    widthShare: 34,
     cell: (member) => <MemberNameCell name={member.fullName} email={member.email} />,
   },
   {
@@ -67,7 +67,7 @@ export const createMemberColumns = ({
     header: t('team.members.column.access'),
     priority: 1,
     cardSlot: 'meta',
-    widthClassName: 'w-[20%]',
+    widthShare: 20,
     cell: (member) => {
       const state = accessStateOf(member, nowMs);
       return (
@@ -87,14 +87,14 @@ export const createMemberColumns = ({
     header: t('team.members.column.role'),
     priority: 2,
     cardSlot: 'meta',
-    widthClassName: 'w-[14%]',
+    widthShare: 14,
     cell: (member) => <MemberMetaCell text={t(`tenant.role.${member.role}`)} />,
   },
   {
     id: 'lastLogin',
     header: t('team.members.column.lastLogin'),
     priority: 3,
-    widthClassName: 'w-[16%]',
+    widthShare: 16,
     cell: (member) => (
       <MemberMetaCell
         text={member.lastLoginAt ? d(member.lastLoginAt) : t('team.members.state.never')}
@@ -106,7 +106,7 @@ export const createMemberColumns = ({
     header: t('team.members.column.actions'),
     priority: 1,
     cardSlot: 'trailing',
-    widthClassName: 'w-[16%]',
+    widthShare: 16,
     align: 'end',
     cell: (member) => (
       <MemberRegenerateCell

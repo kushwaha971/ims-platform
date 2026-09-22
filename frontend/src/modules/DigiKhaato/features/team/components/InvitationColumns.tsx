@@ -64,7 +64,7 @@ export const createInvitationColumns = ({
     header: t('team.list.column.email'),
     priority: 1,
     cardSlot: 'title',
-    widthClassName: 'w-[32%]',
+    widthShare: 32,
     cell: (invitation) => <InvitationEmailCell email={invitation.email} />,
   },
   {
@@ -72,7 +72,7 @@ export const createInvitationColumns = ({
     header: t('team.list.column.status'),
     priority: 1,
     cardSlot: 'meta',
-    widthClassName: 'w-[16%]',
+    widthShare: 16,
     cell: (invitation) => {
       const status = effectiveStatus(invitation.status, invitation.expiresAt, nowMs);
       return <InvitationStatusCell status={status} label={t(`team.status.${status}`)} />;
@@ -83,7 +83,7 @@ export const createInvitationColumns = ({
     header: t('team.list.column.role'),
     priority: 2,
     cardSlot: 'meta',
-    widthClassName: 'w-[14%]',
+    widthShare: 14,
     cell: (invitation) => <InvitationMetaCell text={t(`tenant.role.${invitation.role}`)} />,
   },
   {
@@ -91,7 +91,7 @@ export const createInvitationColumns = ({
     header: t('team.list.column.expires'),
     priority: 3,
     cardSlot: 'none',
-    widthClassName: 'w-[16%]',
+    widthShare: 16,
     cell: (invitation) => <InvitationMetaCell text={d(invitation.expiresAt)} />,
   },
   {
@@ -99,7 +99,7 @@ export const createInvitationColumns = ({
     header: t('team.list.column.invitedBy'),
     priority: 4,
     cardSlot: 'none',
-    widthClassName: 'w-[14%]',
+    widthShare: 14,
     cell: (invitation) => <InvitationMetaCell text={invitation.invitedBy ?? '—'} />,
   },
   {
@@ -111,7 +111,7 @@ export const createInvitationColumns = ({
     priority: 1,
     align: 'end',
     cardSlot: 'trailing',
-    widthClassName: 'w-[8%]',
+    widthShare: 8,
     cell: (invitation) => (
       <InvitationRevokeCell
         id={invitation.id}

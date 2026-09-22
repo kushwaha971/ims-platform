@@ -288,7 +288,33 @@
     "                                            are three more Radix packages",
     "",
     "/login gained ~6 KB for its 'Remember this address' checkbox and is still",
-    "comfortably inside 60. The shell did not move: 94.9 against a 96 budget."
+    "comfortably inside 60. The shell did not move: 94.9 against a 96 budget.",
+    "",
+    "── 22 Sep 2026: the table's own states, and the column menu ───────────────",
+    "Two route budgets move, and only two, because only two routes render a grid.",
+    "",
+    "**+1.2 KB on every grid route: `UbDataGridStateTable`.** The loading, empty,",
+    "filtered-empty and error states used to be drawn INSTEAD of the table — a",
+    "stack of divs, then a panel. They are now `<td>`s and one `<td colSpan>`",
+    "inside a real table with the real header, which is what BrandHub does. The",
+    "bytes buy the thing the skeleton existed for and was not delivering: with no",
+    "table under it, the skeleton had no column geometry, so `table-fixed`",
+    "redistributed every column width at the exact moment the rows landed and the",
+    "reader started reading. It is eager rather than lazy on purpose — a skeleton",
+    "that waits for a chunk is not a skeleton — and `tableChrome.ts` plus a guard",
+    "in `designSystemGuards.test.ts` keep the two tables' geometry identical.",
+    "  /settings/team  route  77 -> 79  (measured 78.2)",
+    "",
+    "**+0.7 KB more on /parties: the column menu's wiring.** The menu ITSELF is",
+    "`dynamic()` and is not in this figure — it is the grid's only",
+    "`@radix-ui/react-popover` consumer, and a static import would have put the",
+    "popover engine in the chunk every route shares, `/legal/terms` included. What",
+    "is counted here is what has to be eager: the visibility state, the second",
+    "filter over the column model, and the two labels.",
+    "  /parties        route  86 -> 89  (measured 88.0)",
+    "",
+    "/settings/team pays the 1.2 and not the 0.7: its grid has no toolbar, so by",
+    "BrandHub's own rule it gets no column menu."
   ],
   "default": {
     "route": 60,
@@ -296,8 +322,8 @@
   },
   "routes": {
     "/parties": {
-      "route": 86,
-      "firstLoad": 308
+      "route": 89,
+      "firstLoad": 311
     },
     "/dashboard": {
       "route": 55,
@@ -316,8 +342,8 @@
       "firstLoad": 316
     },
     "/settings/team": {
-      "route": 77,
-      "firstLoad": 299
+      "route": 79,
+      "firstLoad": 301
     }
   },
   "//ignoreRoutes": [

@@ -67,7 +67,7 @@ export const createPartyColumns = ({
     priority: 1,
     sortField: PARTY_SORT_FIELDS.name,
     cardSlot: 'title',
-    widthClassName: 'w-[38%]',
+    widthShare: 34,
     cell: (party) => <PartyNameCell name={party.name} />,
   },
   {
@@ -77,7 +77,7 @@ export const createPartyColumns = ({
     align: 'end',
     sortField: PARTY_SORT_FIELDS.balance,
     cardSlot: 'trailing',
-    widthClassName: 'w-[22%]',
+    widthShare: 20,
     cell: (party) => <PartyBalanceCell balance={party.balance} labels={balanceLabels} />,
   },
   {
@@ -86,7 +86,7 @@ export const createPartyColumns = ({
     priority: 2,
     sortField: PARTY_SORT_FIELDS.activity,
     cardSlot: 'meta',
-    widthClassName: 'w-[20%]',
+    widthShare: 16,
     cell: (party) => {
       const view = activityView(party.lastActivityAt, nowMs);
       return <PartyMetaCell text={t(view.labelId, view.values)} />;
@@ -97,6 +97,18 @@ export const createPartyColumns = ({
     header: t('parties.list.column.contact'),
     priority: 3,
     cardSlot: 'meta',
+    /**
+     * Every column states a width and the five sum to 100, including this one.
+     *
+     * Leaving one column unsized to "take the rest" is what was here before,
+     * and on a SELECTABLE grid it does not work: the checkbox column is a fixed
+     * 48 px that no percentage accounts for, so the four sized columns took
+     * their 92% of the full table and this one was left with 36 px — its header
+     * overlapped Status and every cell read "C…". `table-fixed` scales stated
+     * percentages down to fit the space the checkbox leaves, so a full hundred
+     * is the shape that survives selection being switched on.
+     */
+    widthShare: 18,
     cell: (party) => <PartyMetaCell text={contactLine(party)} />,
   },
   {
@@ -106,7 +118,7 @@ export const createPartyColumns = ({
     // The card does not carry it: a phone shows the active list, and a word
     // that is the same on every row is furniture, not information.
     cardSlot: 'none',
-    widthClassName: 'w-[12%]',
+    widthShare: 12,
     cell: (party) => (
       <PartyStatusCell
         archived={party.status === 'archived'}

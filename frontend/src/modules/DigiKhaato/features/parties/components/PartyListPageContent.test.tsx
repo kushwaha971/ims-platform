@@ -240,8 +240,23 @@ describe('the approved responsive rules, on the real screen', () => {
     expect(headers.some((text) => text.includes('Status'))).toBe(true);
 
     await userEvent.click(screen.getByRole('checkbox', { name: 'Select Ramesh Traders' }));
-    expect(await screen.findByText('1 selected')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Clear selection' })).toBeInTheDocument();
+
+    /**
+     * Read off the SELECTION BAR, not off the page.
+     *
+     * This assertion existed before and passed while the bar was rendering
+     * "NaN selected" — because the page's bulk-action slot painted its own
+     * "1 selected" three inches to the right, and `findByText` found that one.
+     * Two copies of the same sentence hid a broken one. The duplicate is gone,
+     * so the only thing that can satisfy this now is the bar's own label, and
+     * the label only reads correctly if the ICU plural was resolved where the
+     * count is known (see `UbDataGridLabels.selectedCount`).
+     */
+    const bar = await screen.findByTestId('ub-grid-toolbar');
+    expect(bar).toHaveAttribute('data-selecting', 'true');
+    expect(within(bar).getByText('1 selected')).toBeInTheDocument();
+    expect(within(bar).getByRole('button', { name: 'Clear selection' })).toBeInTheDocument();
+    expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
   });
 
   it('renders the paging summary from the real message, slots and all', async () => {

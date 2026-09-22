@@ -11,7 +11,13 @@ import { visibleColumns } from './columnModel';
 import { UbDataGridEmptyState, type UbDataGridEmptyStates } from './UbDataGridEmptyState';
 import { UbDataGridMobileList } from './UbDataGridMobileList';
 import { UbDataGridPagination } from './UbDataGridPagination';
+import {
+  UbDataGridSkeletonRows,
+  UbDataGridStateRow,
+  UbDataGridStateTable,
+} from './UbDataGridStateTable';
 import { UbDataGridToolbar } from './UbDataGridToolbar';
+import { useColumnVisibility } from './useColumnVisibility';
 import { useGridTier } from './useGridTier';
 
 import type {
@@ -23,6 +29,7 @@ import type {
   UbGridState,
   UbGridTier,
 } from './types';
+import type { UbDataGridColumnMenuProps } from './UbDataGridColumnMenu';
 import type { UbDataGridTableProps } from './UbDataGridTable';
 
 /**
@@ -94,6 +101,19 @@ export interface UbDataGridProps<TRow> {
   readonly compactCutoff?: UbColumnPriority;
   /** Accountant reports at `lg`+ only. A primary list never sets it. */
   readonly allowHorizontalScroll?: boolean;
+  /**
+   * The column menu. BrandHub's rule exactly: a grid that already has a toolbar
+   * gets one without asking, a grid with no toolbar does not grow one for this
+   * alone. Set it explicitly either way to override.
+   */
+  readonly columnMenu?: boolean;
+  /**
+   * Opts this grid's column choices into `sessionStorage` under this id.
+   * Without one the toggles last for the mount, which is the right default: an
+   * id is a promise that this grid is the same grid next time, and only the
+   * screen can make that promise.
+   */
+  readonly storageId?: string;
   /** Tests and the design-system gallery only. */
   readonly tier?: UbGridTier;
   readonly skeletonRows?: number;
@@ -176,6 +196,22 @@ const UbDataGridTableLazy = dynamic(
 ) as <TRow>(props: UbDataGridTableProps<TRow>) => React.JSX.Element;
 
 /**
+ * The column menu is split for the same reason and by the same measurement:
+ * it is the only thing in the grid that reaches for `@radix-ui/react-popover`,
+ * and a static import would put the popover engine into the chunk every route
+ * shares — including `/legal/terms`, whose page is a paragraph — for a control
+ * that exists on table tiers only and is never rendered on a phone at all.
+ *
+ * `loading: () => null` rather than a placeholder: this is one 32 px button at
+ * the end of a toolbar row, so there is nothing to reserve and a grey ghost of
+ * it would be more noticeable than its absence for the frame it is missing.
+ */
+const UbDataGridColumnMenuLazy = dynamic(
+  () => import('./UbDataGridColumnMenu').then((m) => m.UbDataGridColumnMenu),
+  { ssr: false, loading: () => null }
+) as <TRow>(props: UbDataGridColumnMenuProps<TRow>) => React.JSX.Element;
+
+/**
  * §19.9.3's one reservation about splitting is that it "trades bytes for a
  * round trip, and on 3G the round trip is worse". This removes the trade: on a
  * viewport that will need the table, the chunk is requested as soon as the grid
@@ -210,6 +246,8 @@ export function UbDataGrid<TRow>({
   onRowOpen,
   compactCutoff,
   allowHorizontalScroll = false,
+  columnMenu,
+  storageId,
   tier: forcedTier,
   skeletonRows = 6,
   className,
@@ -221,9 +259,26 @@ export function UbDataGrid<TRow>({
     if (needsTable) warmTableChunk();
   }, [needsTable]);
 
-  const shown = useMemo(
+  /**
+   * Two filters, in this order, and the order is the rule:
+   *
+   *  1. `tierColumns` — what this WIDTH can carry. Not negotiable; it is what
+   *     keeps a primary list off a horizontal scrollbar.
+   *  2. `shown` — what the READER still wants of those.
+   *
+   * The menu is offered `tierColumns`, never `columns`, so nobody can switch
+   * on a column the width has already refused and put the scrollbar back.
+   */
+  const tierColumns = useMemo(
     () => visibleColumns(columns, tier, compactCutoff),
     [columns, tier, compactCutoff]
+  );
+
+  const { visibility, setColumnVisible, showAllColumns } = useColumnVisibility(storageId);
+
+  const shown = useMemo(
+    () => tierColumns.filter((column) => visibility[column.id] !== false),
+    [tierColumns, visibility]
   );
 
   // Selection, bulk actions and the page-size control are >= lg affordances:
@@ -232,6 +287,12 @@ export function UbDataGrid<TRow>({
   const isFull = tier === 'full';
   const canSelect = selectable && isFull;
   const scrollX = allowHorizontalScroll && isFull;
+
+  // BrandHub's rule: a grid that already has a toolbar gets the menu without
+  // opting in; one with no toolbar does not sprout a row of chrome for it
+  // alone. And never on cards — a phone shows three facts chosen by `cardSlot`,
+  // which is a different model that this menu does not describe.
+  const showColumnMenu = (columnMenu ?? Boolean(search || filters)) && needsTable;
 
   return (
     <div
@@ -245,21 +306,66 @@ export function UbDataGrid<TRow>({
       <UbDataGridToolbar
         search={search}
         filters={filters}
-        bulk={canSelect && (selectedIds?.length ?? 0) > 0 ? bulkActions : undefined}
+        bulk={canSelect ? bulkActions : undefined}
+        selectedCount={canSelect ? (selectedIds?.length ?? 0) : 0}
+        /* Painted as given. `selectedCount` is an ICU plural and the FEATURE
+           resolved it — a plural cannot be deferred behind a `{count}`
+           placeholder the way `pageOf` and `selectRow` are, because ICU has to
+           see the number to choose the form. Substituting here as well is how
+           it came to read "NaN selected". */
+        selectionLabel={labels.selectedCount}
+        columns={
+          showColumnMenu ? (
+            <UbDataGridColumnMenuLazy
+              columns={tierColumns}
+              visibility={visibility}
+              onColumnVisibleChange={setColumnVisible}
+              onShowAll={showAllColumns}
+              labels={labels}
+            />
+          ) : undefined
+        }
       />
 
-      {state === 'loading' && (
-        <SkeletonRows
-          count={skeletonRows}
-          columns={Math.max(shown.length, 1)}
-          label={labels.loading}
-          isCards={tier === 'cards'}
-        />
-      )}
+      {/* Loading, empty, filtered-empty and error are drawn INSIDE the table on
+          a table tier — BrandHub's arrangement, and see `UbDataGridStateTable`
+          for the three reasons. `cards` keeps the stacked shapes and the plain
+          panel, because there is no table there to keep the reader's place in. */}
+      {state === 'loading' &&
+        (tier === 'cards' ? (
+          <SkeletonRows
+            count={skeletonRows}
+            columns={Math.max(shown.length, 1)}
+            label={labels.loading}
+            isCards
+          />
+        ) : (
+          // The live region wraps the table rather than living in it: `role` on
+          // a `<tbody>` would cost the table its own semantics, and a merchant
+          // navigating by table keys needs those more than the announcement
+          // needs a tidy home.
+          <div role="status" aria-busy aria-label={labels.loading}>
+            <UbDataGridStateTable columns={shown} caption={caption} selectable={canSelect}>
+              <UbDataGridSkeletonRows
+                columnCount={shown.length}
+                rowCount={skeletonRows}
+                selectable={canSelect}
+              />
+            </UbDataGridStateTable>
+          </div>
+        ))}
 
-      {state !== 'loading' && state !== 'rows' && (
-        <UbDataGridEmptyState state={state} copy={emptyStates} className="m-4" />
-      )}
+      {state !== 'loading' &&
+        state !== 'rows' &&
+        (tier === 'cards' ? (
+          <UbDataGridEmptyState state={state} copy={emptyStates} className="m-4" />
+        ) : (
+          <UbDataGridStateTable columns={shown} caption={caption} selectable={canSelect}>
+            <UbDataGridStateRow colSpan={shown.length + (canSelect ? 1 : 0)}>
+              <UbDataGridEmptyState state={state} copy={emptyStates} className="m-4" />
+            </UbDataGridStateRow>
+          </UbDataGridStateTable>
+        ))}
 
       {state === 'rows' &&
         (tier === 'cards' ? (

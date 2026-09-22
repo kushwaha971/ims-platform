@@ -14,7 +14,18 @@ import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 import { MLCheckbox } from 'src/design-system/primitives';
 import { cn } from 'src/utils/cn';
 
-import { fillTemplate } from './columnModel';
+import { columnWidths, fillTemplate } from './columnModel';
+import {
+  ALIGN,
+  GRID_HEAD_ROW,
+  GRID_ROW,
+  GRID_SCROLLER,
+  GRID_SELECT_CELL,
+  GRID_TABLE,
+  GRID_TD,
+  GRID_TH,
+  GRID_THEAD,
+} from './tableChrome';
 
 import type { UbDataGridColumn, UbDataGridLabels, UbGridSort } from './types';
 
@@ -65,8 +76,6 @@ export interface UbDataGridTableProps<TRow> {
   readonly allowHorizontalScroll?: boolean;
   readonly className?: string;
 }
-
-const ALIGN = { start: 'text-left', end: 'text-right' } as const;
 
 function UbDataGridTableBase<TRow>({
   rows,
@@ -126,6 +135,16 @@ function UbDataGridTableBase<TRow>({
 
   const modelRows = table.getRowModel().rows;
 
+  /**
+   * Widths are an inline `style`, not a class, and that is deliberate: the
+   * value is COMPUTED from the set being rendered (see `columnWidths`), and
+   * Tailwind cannot emit a class it never saw in the source. It is a number
+   * derived from data rather than a design decision, so no token is being
+   * bypassed — the weights the numbers come from are the design decision, and
+   * they live in the column model.
+   */
+  const widths = useMemo(() => columnWidths(columns), [columns]);
+
   const emit = useCallback(
     (next: RowSelectionState) => onSelectionChange?.(Object.keys(next).filter((id) => next[id])),
     [onSelectionChange]
@@ -176,31 +195,22 @@ function UbDataGridTableBase<TRow>({
       data-testid="ub-grid-table-scroller"
       data-ub-scroll-x={allowHorizontalScroll ? 'on' : 'off'}
       className={cn(
-        'w-full min-w-0',
+        GRID_SCROLLER,
         allowHorizontalScroll ? 'overflow-x-auto' : 'overflow-x-hidden',
         className
       )}
     >
       <table
         data-testid="ub-grid-table"
-        className={cn('w-full border-collapse', allowHorizontalScroll ? 'table-auto' : 'table-fixed')}
+        className={cn(GRID_TABLE, allowHorizontalScroll ? 'table-auto' : 'table-fixed')}
       >
         <caption className="sr-only">{caption}</caption>
-        {/* BrandHub's `TableHeader` is `bg-[#fafafa]` with a hairline under it,
-            and the tint is what actually separates the head from the body — a
-            header that is the same colour as the rows relies entirely on the
-            font weight, which at 13px is not much. `surface-sunken` is this
-            product's token for the same near-white.
-
-            Row hover and the 56px row height are KEPT and are departures:
-            BrandHub has neither a hover rule nor striping, and its rows are
-            48px. Hover is how you keep your place scanning a wide table with a
-            mouse, and the extra 8px is a comfortable touch row rather than a
-            minimal one. */}
-        <thead className="sticky top-0 z-10 bg-surface-sunken">
-          <tr className="border-b border-border-hairline">
+        {/* The chrome — tint, hairline, heights, paddings — is in
+            `tableChrome.ts`, shared with the skeleton so the two cannot drift. */}
+        <thead className={GRID_THEAD}>
+          <tr className={GRID_HEAD_ROW}>
             {selectable && (
-              <th scope="col" className="w-12 px-3 py-2">
+              <th scope="col" className={GRID_SELECT_CELL}>
                 {/* `indeterminate` is a real state now rather than a DOM property
                     poked through a ref: the checkbox is Radix and takes
                     `checked="indeterminate"`, which draws a `Minus`. The old
@@ -215,20 +225,23 @@ function UbDataGridTableBase<TRow>({
                 />
               </th>
             )}
-            {columns.map((column) => {
+            {columns.map((column, index) => {
               const active = sort?.columnId === column.id;
               const align = ALIGN[column.align ?? 'start'];
+              const width = widths[index];
               return (
                 <th
                   key={column.id}
                   scope="col"
+                  style={width ? { width } : undefined}
                   aria-sort={
                     active ? (sort?.direction === 'asc' ? 'ascending' : 'descending') : undefined
                   }
                   className={cn(
-                    'ds-body-sm-medium h-12 px-3 py-2 align-middle text-text-primary',
-                    align,
-                    column.widthClassName
+                    'group',
+                    GRID_TH,
+                    column.sortField && onSortChange && 'cursor-pointer transition-colors',
+                    align
                   )}
                 >
                   {column.sortField && onSortChange ? (
@@ -244,14 +257,31 @@ function UbDataGridTableBase<TRow>({
                       <span className={cn(column.headerHidden && 'sr-only')}>{column.header}</span>
                       {/* The glyph is decorative: `aria-sort` on the cell is the
                           state, and the button's own name says what it does. */}
+                      {/* BrandHub's treatment: the ACTIVE glyph is the accent
+                          colour, and the idle one is invisible until the header
+                          is hovered. A column of permanently-visible sort arrows
+                          is noise on every row of chrome, and the one that
+                          matters — which column is sorted — was rendering in the
+                          same muted grey as the seven that are not.
+
+                          `focus-visible:opacity-100` is added on top of theirs.
+                          A keyboard user tabbing across the header cannot hover,
+                          and an affordance that only appears under a pointer is
+                          one they never see. */}
                       {active ? (
                         sort?.direction === 'asc' ? (
-                          <ArrowUp className="h-3.5 w-3.5" aria-hidden />
+                          <ArrowUp className="h-3.5 w-3.5 text-text-accent" aria-hidden />
                         ) : (
-                          <ArrowDown className="h-3.5 w-3.5" aria-hidden />
+                          <ArrowDown className="h-3.5 w-3.5 text-text-accent" aria-hidden />
                         )
                       ) : (
-                        <ArrowUpDown className="h-3.5 w-3.5 text-text-muted" aria-hidden />
+                        <ArrowUpDown
+                          className={cn(
+                            'h-3.5 w-3.5 text-text-muted opacity-0 transition-opacity',
+                            'group-hover:opacity-100 group-focus-within:opacity-100'
+                          )}
+                          aria-hidden
+                        />
                       )}
                       <span className="sr-only">
                         {active
@@ -277,10 +307,23 @@ function UbDataGridTableBase<TRow>({
                 key={row.id}
                 data-testid="ub-grid-row"
                 data-row-id={row.id}
-                className="h-14 border-b border-border-hairline last:border-b-0 hover:bg-surface-hover"
+                className={cn(
+                  GRID_ROW,
+                  // BrandHub tints a selected row `bg-primary/5`. There was no
+                  // selected style at all here: with the checkbox column
+                  // scrolled out of view on a wide table, or simply not looked
+                  // at, a merchant had no way to see which rows a bulk action
+                  // was about to apply to.
+                  // BrandHub also sets `cursor-pointer` when a row is
+                  // clickable. This grid has no row-click: a row is opened
+                  // through a named control in its own cell, which is the
+                  // accessible version of the same affordance and is why there
+                  // is nothing to borrow here.
+                  row.getIsSelected() ? 'bg-accent-quiet' : 'hover:bg-surface-hover'
+                )}
               >
                 {selectable && (
-                  <td className="px-3 py-2 align-middle">
+                  <td className={cn(GRID_SELECT_CELL, 'align-middle')}>
                     <MLCheckbox
                       checked={row.getIsSelected()}
                       onCheckedChange={handleToggleRow(row.id)}
@@ -298,10 +341,7 @@ function UbDataGridTableBase<TRow>({
                   return (
                     <td
                       key={cell.id}
-                      className={cn(
-                        'ds-body-sm truncate px-3 py-2 align-middle text-text-primary',
-                        ALIGN[column?.align ?? 'start']
-                      )}
+                      className={cn(GRID_TD, ALIGN[column?.align ?? 'start'])}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>

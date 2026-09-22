@@ -1,4 +1,4 @@
-import { cardModel, dropOrder, MAX_CARD_META, visibleColumns } from './columnModel';
+import { cardModel, columnWidths, dropOrder, MAX_CARD_META, visibleColumns } from './columnModel';
 
 import type { UbDataGridColumn } from './types';
 
@@ -83,5 +83,43 @@ describe('cardModel', () => {
       { id: 'extra', header: 'Extra', priority: 3, cardSlot: 'meta', cell: text('e') },
     ];
     expect(cardModel(many).meta).toHaveLength(MAX_CARD_META);
+  });
+});
+
+describe('columnWidths — the table always fills itself', () => {
+  const col = (id: string, widthShare?: number) => ({
+    id,
+    header: id,
+    priority: 1 as const,
+    widthShare,
+    cell: () => id,
+  });
+
+  it('normalises whatever set is being painted to a full 100%', () => {
+    // The party list's weights. All five, then the three `compact` keeps.
+    const all = [col('name', 34), col('balance', 20), col('activity', 16), col('contact', 18), col('status', 12)];
+    const sum = (columns: ReturnType<typeof col>[]) =>
+      columnWidths(columns).reduce((total, width) => total + Number.parseFloat(width), 0);
+
+    expect(sum(all)).toBeCloseTo(100, 3);
+    // This is the defect: at `compact` the same model rendered 70% of a table
+    // and left the last quarter of the card empty.
+    expect(sum(all.slice(0, 3))).toBeCloseTo(100, 3);
+    // And with a column switched off in the menu.
+    expect(sum(all.filter((column) => column.id !== 'activity'))).toBeCloseTo(100, 3);
+  });
+
+  it('keeps the ratios the screen asked for', () => {
+    // 34 against 12 is "about three times as wide", at every tier. Compared to
+    // four decimals because the percentages are rounded to four — a tenth of a
+    // thousandth of a column, which is nothing a table can draw.
+    const [name = '0', status = '0'] = columnWidths([col('name', 34), col('status', 12)]);
+    expect(Number.parseFloat(name) / Number.parseFloat(status)).toBeCloseTo(34 / 12, 4);
+  });
+
+  it('states nothing at all when no column states a weight', () => {
+    // An equal-width table is what `table-fixed` already does; adding widths
+    // that say the same thing is noise in the markup.
+    expect(columnWidths([col('a'), col('b')])).toEqual(['', '']);
   });
 });

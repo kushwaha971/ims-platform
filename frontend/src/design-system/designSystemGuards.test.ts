@@ -116,3 +116,37 @@ describe('the vendored ml-uikit bundle carries no absolute colour', () => {
     expect(found).toEqual([]);
   });
 });
+
+/**
+ * The skeleton table and the real table are two components painting one table,
+ * and the whole reason that is worth doing — no layout shift when the rows
+ * land — holds only while their geometry is identical. `tableChrome.ts` exists
+ * so that geometry is written once.
+ *
+ * A rendering test cannot catch this. Both files would still render, the
+ * columns would just be 4 px apart, and the only symptom is a flinch at the
+ * moment the reader starts reading.
+ */
+describe('the data grid paints one table, not two', () => {
+  const chrome = ['GRID_TABLE', 'GRID_THEAD', 'GRID_HEAD_ROW', 'GRID_TH', 'GRID_SELECT_CELL'];
+
+  it.each([
+    ['UbDataGridTable.tsx'],
+    ['UbDataGridStateTable.tsx'],
+  ])('%s takes its chrome from tableChrome.ts', (file) => {
+    const source = readFileSync(join(ROOT, 'src/design-system/UbDataGrid', file), 'utf8');
+    for (const constant of chrome) expect(source).toContain(constant);
+  });
+
+  it.each([
+    ['UbDataGridTable.tsx'],
+    ['UbDataGridStateTable.tsx'],
+  ])('%s spells no cell padding or row height of its own', (file) => {
+    const source = readFileSync(join(ROOT, 'src/design-system/UbDataGrid', file), 'utf8');
+    // The literals that decide where a column edge lands. Finding one here
+    // means someone re-typed the chrome instead of importing it, and the two
+    // tables have started to diverge.
+    const strays = ['h-12 select-none', 'border-collapse', "'h-14"];
+    for (const stray of strays) expect(source).not.toContain(stray);
+  });
+});
