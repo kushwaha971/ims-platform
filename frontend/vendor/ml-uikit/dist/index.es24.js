@@ -59,15 +59,15 @@ const V = o.forwardRef(
         ref: S,
         sideOffset: t,
         className: p(
-          "z-50 overflow-hidden rounded-lg border border-[#e5e5e5] bg-white shadow-lg",
+          "z-50 overflow-hidden rounded-lg border border-border-subtle bg-surface-card shadow-lg",
           "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-dropdown-menu-content-transform-origin]",
           e
         ),
         style: { width: s, ...b },
         ...w,
         children: [
-          /* @__PURE__ */ a.jsx("div", { className: "border-b border-[#e5e5e5] px-4 py-3", children: /* @__PURE__ */ a.jsxs("div", { className: "flex items-center gap-3 rounded-lg border border-[#e6e6e6] bg-white px-3 py-2.5 transition-colors focus-within:border-[#1D1C20]", children: [
-            /* @__PURE__ */ a.jsx(E, { className: "size-5 flex-shrink-0 text-[#999999]" }),
+          /* @__PURE__ */ a.jsx("div", { className: "border-b border-border-subtle px-4 py-3", children: /* @__PURE__ */ a.jsxs("div", { className: "flex items-center gap-3 rounded-lg border border-border-subtle bg-surface-card px-3 py-2.5 transition-colors focus-within:border-text-primary", children: [
+            /* @__PURE__ */ a.jsx(E, { className: "size-5 flex-shrink-0 text-text-tertiary" }),
             /* @__PURE__ */ a.jsx(
               "input",
               {
@@ -79,7 +79,7 @@ const V = o.forwardRef(
                 onKeyDown: (c) => {
                   c.key !== "Escape" && c.key !== "Tab" && c.stopPropagation();
                 },
-                className: "flex-1 bg-transparent text-[14px] text-[#111111] outline-none placeholder:text-[#999999]",
+                className: "flex-1 bg-transparent text-[14px] text-text-primary outline-none placeholder:text-text-tertiary",
                 autoComplete: "off",
                 "aria-label": r
               }
@@ -91,7 +91,7 @@ const V = o.forwardRef(
                 onClick: () => {
                   y(""), u.current?.focus();
                 },
-                className: "flex-shrink-0 text-[#999999] transition-colors hover:text-[#111111]",
+                className: "flex-shrink-0 text-text-tertiary transition-colors hover:text-text-primary",
                 "aria-label": "Clear search",
                 children: /* @__PURE__ */ a.jsx(v, { className: "size-4" })
               }
@@ -133,13 +133,13 @@ const I = o.forwardRef(
       {
         ref: d,
         className: p(
-          "relative flex cursor-pointer select-none items-center justify-between px-4 py-3 text-[15px] text-[#111111] outline-none transition-colors hover:bg-[#f5f5f5] focus:bg-[#f5f5f5] data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+          "relative flex cursor-pointer select-none items-center justify-between px-4 py-3 text-[15px] text-text-primary outline-none transition-colors hover:bg-surface-hover focus:bg-surface-hover data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
           e
         ),
         ...s,
         children: [
           /* @__PURE__ */ a.jsx("span", { children: l }),
-          n ? /* @__PURE__ */ a.jsx(A, { className: "size-5 text-[#26453f]" }) : null
+          n ? /* @__PURE__ */ a.jsx(A, { className: "size-5 text-accent" }) : null
         ]
       }
     ) : null;
@@ -150,7 +150,7 @@ const L = o.forwardRef(({ className: e, ...t }, r) => o.useContext(h)?.hasResult
   "div",
   {
     ref: r,
-    className: p("px-4 py-6 text-center text-sm text-[#666666]", e),
+    className: p("px-4 py-6 text-center text-sm text-text-tertiary", e),
     ...t
   }
 ));
@@ -159,7 +159,7 @@ const k = o.forwardRef(({ className: e, ...t }, r) => /* @__PURE__ */ a.jsx(
   "div",
   {
     ref: r,
-    className: p("px-4 py-2 text-sm font-semibold text-[#666666]", e),
+    className: p("px-4 py-2 text-sm font-semibold text-text-tertiary", e),
     ...t
   }
 ));
@@ -168,7 +168,7 @@ const z = o.forwardRef(({ className: e, ...t }, r) => /* @__PURE__ */ a.jsx(
   i.Separator,
   {
     ref: r,
-    className: p("mx-0 my-0 h-px bg-[#e5e5e5]", e),
+    className: p("mx-0 my-0 h-px bg-border-subtle", e),
     ...t
   }
 ));

@@ -60,13 +60,13 @@ const K = J, Q = L, W = (s) => {
       [i, f]
     ), T = m["aria-invalid"] === !0 || m["aria-invalid"] === "true", A = !!l || T, w = h || I;
     return /* @__PURE__ */ e.jsxs("div", { className: r("flex w-full flex-col items-start gap-1", s), children: [
-      n ? /* @__PURE__ */ e.jsx("p", { className: "w-full text-[14px] font-medium leading-[20px] text-black", children: n }) : null,
+      n ? /* @__PURE__ */ e.jsx("p", { className: "w-full text-[14px] font-medium leading-[20px] text-text-primary", children: n }) : null,
       /* @__PURE__ */ e.jsxs(
         "div",
         {
           className: r(
-            "flex h-10 w-full items-stretch overflow-hidden rounded-[8px] border bg-white transition-colors",
-            d ? "border-[#e6e6e6] bg-[#f2f2f2]" : A ? "border-[#ff3b30]" : w ? "border-[#1d1c20]" : "border-[#e6e6e6]"
+            "flex h-10 w-full items-stretch overflow-hidden rounded-[8px] border bg-surface-card transition-colors",
+            d ? "border-border-subtle bg-surface-sunken" : A ? "border-formError" : w ? "border-text-primary" : "border-border-subtle"
           ),
           children: [
             /* @__PURE__ */ e.jsxs(
@@ -85,15 +85,15 @@ const K = J, Q = L, W = (s) => {
                       "aria-label": "Select country",
                       className: r(
                         "flex h-full shrink-0 items-center gap-1 px-2 text-[14px] leading-[20px] outline-none transition-colors",
-                        p ? w ? "bg-white" : "bg-[#fafafa]" : "bg-white",
-                        d && "bg-[#f2f2f2] text-[#b3b3b3]"
+                        p ? w ? "bg-surface-card" : "bg-surface-sunken" : "bg-surface-card",
+                        d && "bg-surface-sunken text-text-muted"
                       ),
                       children: [
                         p ? /* @__PURE__ */ e.jsxs(e.Fragment, { children: [
                           /* @__PURE__ */ e.jsx(N, { flag: p.flag }),
-                          /* @__PURE__ */ e.jsx("span", { className: "font-normal text-black", children: p.label })
-                        ] }) : /* @__PURE__ */ e.jsx(R, { className: "h-4 w-4 text-[#adacb0]" }),
-                        /* @__PURE__ */ e.jsx(U, { className: "h-4 w-4 text-[#adacb0]" })
+                          /* @__PURE__ */ e.jsx("span", { className: "font-normal text-text-primary", children: p.label })
+                        ] }) : /* @__PURE__ */ e.jsx(R, { className: "h-4 w-4 text-text-muted" }),
+                        /* @__PURE__ */ e.jsx(U, { className: "h-4 w-4 text-text-muted" })
                       ]
                     }
                   ) }),
@@ -102,20 +102,20 @@ const K = J, Q = L, W = (s) => {
                     {
                       align: "start",
                       sideOffset: 8,
-                      className: "w-[240px] rounded-[8px] border border-[#e6e6e6] bg-white p-0 shadow-[0px_2px_4px_0px_rgba(19,25,39,0.12),0px_4px_4px_0px_rgba(19,25,39,0.08)]",
+                      className: "w-[240px] rounded-[8px] border border-border-subtle bg-surface-card p-0 shadow-[0px_2px_4px_0px_rgba(19,25,39,0.12),0px_4px_4px_0px_rgba(19,25,39,0.08)]",
                       children: /* @__PURE__ */ e.jsxs(
                         M,
                         {
                           className: r(
-                            "rounded-[8px] bg-white",
-                            "[&_[cmdk-input-wrapper]]:mx-2 [&_[cmdk-input-wrapper]]:mb-1 [&_[cmdk-input-wrapper]]:mt-2 [&_[cmdk-input-wrapper]]:h-8 [&_[cmdk-input-wrapper]]:rounded-[4px] [&_[cmdk-input-wrapper]]:border [&_[cmdk-input-wrapper]]:border-[#e6e6e6] [&_[cmdk-input-wrapper]]:px-3",
-                            "[&_[cmdk-input-wrapper]_svg]:mr-2 [&_[cmdk-input-wrapper]_svg]:h-4 [&_[cmdk-input-wrapper]_svg]:w-4 [&_[cmdk-input-wrapper]_svg]:text-[#adacb0]",
-                            "[&_[cmdk-input]]:h-full [&_[cmdk-input]]:py-0 [&_[cmdk-input]]:text-[14px] [&_[cmdk-input]]:leading-[20px] [&_[cmdk-input]]:text-black [&_[cmdk-input]]:placeholder:text-[#adacb0]"
+                            "rounded-[8px] bg-surface-card",
+                            "[&_[cmdk-input-wrapper]]:mx-2 [&_[cmdk-input-wrapper]]:mb-1 [&_[cmdk-input-wrapper]]:mt-2 [&_[cmdk-input-wrapper]]:h-8 [&_[cmdk-input-wrapper]]:rounded-[4px] [&_[cmdk-input-wrapper]]:border [&_[cmdk-input-wrapper]]:border-border-subtle [&_[cmdk-input-wrapper]]:px-3",
+                            "[&_[cmdk-input-wrapper]_svg]:mr-2 [&_[cmdk-input-wrapper]_svg]:h-4 [&_[cmdk-input-wrapper]_svg]:w-4 [&_[cmdk-input-wrapper]_svg]:text-text-muted",
+                            "[&_[cmdk-input]]:h-full [&_[cmdk-input]]:py-0 [&_[cmdk-input]]:text-[14px] [&_[cmdk-input]]:leading-[20px] [&_[cmdk-input]]:text-text-primary [&_[cmdk-input]]:placeholder:text-text-muted"
                           ),
                           children: [
                             /* @__PURE__ */ e.jsx(Y, { placeholder: "Search country" }),
                             /* @__PURE__ */ e.jsxs($, { className: "max-h-56 px-1 pb-1", children: [
-                              /* @__PURE__ */ e.jsx(B, { className: "px-3 py-2 text-left text-[12px] leading-[16px] text-[#7f7d83]", children: "No country found" }),
+                              /* @__PURE__ */ e.jsx(B, { className: "px-3 py-2 text-left text-[12px] leading-[16px] text-text-tertiary", children: "No country found" }),
                               /* @__PURE__ */ e.jsx(D, { className: "p-0", children: x.map((t) => {
                                 const _ = t.value === u, j = t.name || t.label;
                                 return /* @__PURE__ */ e.jsxs(
@@ -124,19 +124,19 @@ const K = J, Q = L, W = (s) => {
                                     value: `${t.label} ${j} ${t.dialCode}`,
                                     onSelect: () => E(t),
                                     className: r(
-                                      "flex w-full cursor-pointer items-center gap-2 rounded-[4px] px-3 py-2 text-[14px] leading-[20px] text-black",
-                                      "data-[selected=true]:bg-[#fafafa] data-[selected=true]:text-black",
-                                      _ && "bg-[#fafafa]"
+                                      "flex w-full cursor-pointer items-center gap-2 rounded-[4px] px-3 py-2 text-[14px] leading-[20px] text-text-primary",
+                                      "data-[selected=true]:bg-surface-sunken data-[selected=true]:text-text-primary",
+                                      _ && "bg-surface-sunken"
                                     ),
                                     children: [
                                       /* @__PURE__ */ e.jsx(N, { flag: t.flag }),
                                       /* @__PURE__ */ e.jsx("span", { className: "min-w-0 flex-1 truncate", children: j }),
-                                      t.dialCode ? /* @__PURE__ */ e.jsx("span", { className: "text-[#7f7d83]", children: t.dialCode }) : null,
+                                      t.dialCode ? /* @__PURE__ */ e.jsx("span", { className: "text-text-tertiary", children: t.dialCode }) : null,
                                       /* @__PURE__ */ e.jsx(
                                         G,
                                         {
                                           className: r(
-                                            "h-4 w-4 text-[#1d1c20]",
+                                            "h-4 w-4 text-text-primary",
                                             _ ? "opacity-100" : "opacity-0"
                                           )
                                         }
@@ -159,11 +159,11 @@ const K = J, Q = L, W = (s) => {
               "div",
               {
                 className: r(
-                  "flex min-w-0 flex-1 items-center gap-2 border-l border-[#e6e6e6] bg-white px-3 py-2",
-                  d && "bg-[#f2f2f2]"
+                  "flex min-w-0 flex-1 items-center gap-2 border-l border-border-subtle bg-surface-card px-3 py-2",
+                  d && "bg-surface-sunken"
                 ),
                 children: [
-                  p?.dialCode ? /* @__PURE__ */ e.jsx("span", { className: "shrink-0 text-[14px] leading-[20px] text-[#7f7d83]", children: p.dialCode }) : null,
+                  p?.dialCode ? /* @__PURE__ */ e.jsx("span", { className: "shrink-0 text-[14px] leading-[20px] text-text-tertiary", children: p.dialCode }) : null,
                   /* @__PURE__ */ e.jsx(
                     "input",
                     {
@@ -177,8 +177,8 @@ const K = J, Q = L, W = (s) => {
                         g(!1), y?.(t);
                       },
                       className: r(
-                        "h-full w-full min-w-0 border-0 bg-transparent p-0 text-[14px] leading-[20px] text-black outline-none placeholder:text-[#adacb0]",
-                        d && "cursor-not-allowed text-[#9ca3af] placeholder:text-[#b3b3b3]",
+                        "h-full w-full min-w-0 border-0 bg-transparent p-0 text-[14px] leading-[20px] text-text-primary outline-none placeholder:text-text-muted",
+                        d && "cursor-not-allowed text-text-muted placeholder:text-text-muted",
                         c
                       ),
                       type: C,
@@ -191,7 +191,7 @@ const K = J, Q = L, W = (s) => {
           ]
         }
       ),
-      l ? /* @__PURE__ */ e.jsx("p", { className: "w-full text-[12px] leading-[16px] text-[#ff3b30]", children: l }) : a ? /* @__PURE__ */ e.jsx("p", { className: "w-full text-[12px] leading-[16px] text-[#7f7d83]", children: a }) : null
+      l ? /* @__PURE__ */ e.jsx("p", { className: "w-full text-[12px] leading-[16px] text-formError", children: l }) : a ? /* @__PURE__ */ e.jsx("p", { className: "w-full text-[12px] leading-[16px] text-text-tertiary", children: a }) : null
     ] });
   }
 );

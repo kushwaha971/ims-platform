@@ -22,13 +22,13 @@ const u = m.forwardRef(({ className: a, disabled: l, value: o, defaultValue: s, 
           e.Track,
           {
             className: i(
-              "relative h-2 w-full grow overflow-hidden rounded-full bg-[#e6e6e6] group-data-[disabled=true]/slider:bg-[#f2f2f2]"
+              "relative h-2 w-full grow overflow-hidden rounded-full bg-border-subtle group-data-[disabled=true]/slider:bg-surface-sunken"
             ),
             children: /* @__PURE__ */ r.jsx(
               e.Range,
               {
                 className: i(
-                  "absolute z-0 h-full bg-[#26453f]",
+                  "absolute z-0 h-full bg-accent",
                   f ? "rounded-full" : "rounded-l-full"
                 )
               }
@@ -38,7 +38,7 @@ const u = m.forwardRef(({ className: a, disabled: l, value: o, defaultValue: s, 
         t.map((b, c) => /* @__PURE__ */ r.jsx(
           e.Thumb,
           {
-            className: "block h-4 w-4 rounded-full border border-[#26453f] bg-white shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+            className: "block h-4 w-4 rounded-full border border-accent bg-surface-card shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
           },
           `thumb-${c}`
         ))

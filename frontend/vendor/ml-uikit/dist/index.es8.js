@@ -5,13 +5,13 @@ import { cn as N } from "./index.es63.js";
 const v = h("inline-flex items-center gap-1 rounded-[12px] font-medium", {
   variants: {
     variant: {
-      color: "bg-[#26453f] text-white",
-      neutral: "bg-[#f1f1f1] text-black",
-      "outline-color": "border border-[#26453f] bg-white text-[#26453f]",
-      "outline-neutral": "border border-[#dcdcde] bg-white text-black",
-      success: "bg-[#e8f6ed] text-[#307f4a]",
-      warning: "bg-[#fff0d8] text-[#e49614]",
-      destructive: "bg-[#fceaea] text-[#e73f3f]"
+      color: "bg-accent text-text-inverse",
+      neutral: "bg-surface-hover text-text-primary",
+      "outline-color": "border border-accent bg-surface-card text-accent",
+      "outline-neutral": "border border-border-subtle bg-surface-card text-text-primary",
+      success: "bg-success-dim text-success",
+      warning: "bg-warning-dim text-warning",
+      destructive: "bg-formError-dim text-formError"
     },
     size: {
       default: "px-2 py-0.5 text-[12px] leading-[16px]",

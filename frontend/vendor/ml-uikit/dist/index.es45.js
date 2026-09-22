@@ -16,10 +16,10 @@ const l = t.forwardRef(({ className: s, ...o }, i) => /* @__PURE__ */ r.jsx(
   {
     ref: i,
     className: a(
-      "relative flex h-4 w-4 items-center justify-center rounded-full border border-[#e6e6e6] bg-white text-[#26453f] transition-colors",
-      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111] focus-visible:ring-offset-2",
-      "disabled:cursor-not-allowed disabled:bg-[#f2f2f2] disabled:border-[#e6e6e6] disabled:text-[#bdbdbd]",
-      "data-[state=checked]:border-[#26453f]",
+      "relative flex h-4 w-4 items-center justify-center rounded-full border border-border-subtle bg-surface-card text-accent transition-colors",
+      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text-primary focus-visible:ring-offset-2",
+      "disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:border-border-subtle disabled:text-border-strong",
+      "data-[state=checked]:border-accent",
       s
     ),
     ...o,

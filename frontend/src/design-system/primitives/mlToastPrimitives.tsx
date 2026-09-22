@@ -49,7 +49,7 @@
  * button — directly above Continue / Save at exactly the widths where the
  * corner was supposed to be the empty one, trading an overlap for a mis-tap
  * next to the primary action. Centred keeps it over the content column it is
- * talking about (`max-w-md`, against a `measure` page or a 400–560 px form),
+ * talking about (`max-w-[420px]`, against a `measure` page or a 400–560 px form),
  * which is also where the eye already is after a submit. The anchor is the
  * same at every width; only the inset changes, and that is the property the
  * next screen inherits.
@@ -132,7 +132,7 @@ export const MLToast = forwardRef<HTMLDivElement, MLToastProps>(function MLToast
     <div
       ref={ref}
       className={cn(
-        'pointer-events-auto flex w-full max-w-md items-start gap-3 rounded-md border bg-surface-raised p-4 shadow-3',
+        'pointer-events-auto flex w-full max-w-[420px] items-start gap-3 rounded-md border bg-surface-raised p-4 shadow-3',
         'animate-fade-in',
         TOAST_VARIANT[variant],
         className

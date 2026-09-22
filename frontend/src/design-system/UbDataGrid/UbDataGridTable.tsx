@@ -197,10 +197,10 @@ function UbDataGridTableBase<TRow>({
             48px. Hover is how you keep your place scanning a wide table with a
             mouse, and the extra 8px is a comfortable touch row rather than a
             minimal one. */}
-        <thead className="bg-surface-sunken">
+        <thead className="sticky top-0 z-10 bg-surface-sunken">
           <tr className="border-b border-border-hairline">
             {selectable && (
-              <th scope="col" className="w-12 px-4 py-2">
+              <th scope="col" className="w-12 px-3 py-2">
                 <MLCheckbox
                   checked={allSelected}
                   ref={(node) => {
@@ -223,7 +223,7 @@ function UbDataGridTableBase<TRow>({
                     active ? (sort?.direction === 'asc' ? 'ascending' : 'descending') : undefined
                   }
                   className={cn(
-                    'ds-label px-4 py-2 align-middle text-text-tertiary',
+                    'ds-body-sm-medium h-12 px-3 py-2 align-middle text-text-primary',
                     align,
                     column.widthClassName
                   )}
@@ -277,7 +277,7 @@ function UbDataGridTableBase<TRow>({
                 className="h-14 border-b border-border-hairline last:border-b-0 hover:bg-surface-hover"
               >
                 {selectable && (
-                  <td className="px-4 py-2 align-middle">
+                  <td className="px-3 py-2 align-middle">
                     <MLCheckbox
                       checked={row.getIsSelected()}
                       onChange={(event) => handleToggleRow(row.id)(event.target.checked)}
@@ -296,7 +296,7 @@ function UbDataGridTableBase<TRow>({
                     <td
                       key={cell.id}
                       className={cn(
-                        'ds-body-sm truncate px-4 py-2 align-middle text-text-primary',
+                        'ds-body-sm truncate px-3 py-2 align-middle text-text-primary',
                         ALIGN[column?.align ?? 'start']
                       )}
                     >

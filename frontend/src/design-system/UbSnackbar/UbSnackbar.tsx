@@ -85,7 +85,7 @@ function UbSnackbarBase({
         <MLToast data-testid="snackbar" variant={severity}>
           <Icon aria-hidden className={cn('mt-0.5 h-4 w-4 shrink-0', ICON_TONE[severity])} />
           <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <p className="ds-body-sm text-text-primary">{message}</p>
+            <p className="ds-body-sm text-current">{message}</p>
             {requestId ? <p className="ds-mono text-text-muted">{requestId}</p> : null}
           </div>
           {actionLabel && onAction ? (

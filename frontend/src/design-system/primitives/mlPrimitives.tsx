@@ -39,14 +39,14 @@ export const MLCardHeader = forwardRef<HTMLDivElement, MLCardProps>(function MLC
   { className, ...rest },
   ref
 ) {
-  return <div ref={ref} className={cn('flex flex-col gap-1 p-5', className)} {...rest} />;
+  return <div ref={ref} className={cn('flex flex-col gap-1 p-6', className)} {...rest} />;
 });
 
 export const MLCardContent = forwardRef<HTMLDivElement, MLCardProps>(function MLCardContent(
   { className, ...rest },
   ref
 ) {
-  return <div ref={ref} className={cn('p-5', className)} {...rest} />;
+  return <div ref={ref} className={cn('p-6', className)} {...rest} />;
 });
 
 export type MLBadgeVariant = 'neutral' | 'success' | 'warning' | 'error' | 'info';
@@ -91,7 +91,7 @@ export const MLBadge = forwardRef<HTMLSpanElement, MLBadgeProps>(function MLBadg
     <span
       ref={ref}
       className={cn(
-        'ds-label inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-pill px-2 py-0.5',
+        'ds-chip inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-pill px-2 py-0.5',
         BADGE_VARIANT[variant],
         className
       )}
@@ -200,7 +200,14 @@ export const MLEmptyDescription = forwardRef<
   );
 });
 
-export type MLButtonVariant = 'primary' | 'secondary' | 'ghost' | 'destructive';
+export type MLButtonVariant =
+  | 'primary'
+  | 'secondary'
+  /** BrandHub's `outline-neutral`: a hairline box on the card surface. */
+  | 'outlineNeutral'
+  | 'ghost'
+  | 'link'
+  | 'destructive';
 export type MLButtonSize = 'sm' | 'md' | 'lg';
 
 export interface MLButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -211,8 +218,18 @@ export interface MLButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const BUTTON_VARIANT: Record<MLButtonVariant, string> = {
   primary: 'bg-accent text-text-inverse hover:bg-accent-hover active:bg-accent-press',
-  secondary: 'border border-border-strong bg-surface-card text-text-primary hover:bg-surface-hover',
-  ghost: 'text-text-accent hover:bg-surface-hover',
+  /* BrandHub's `secondary` is a FILL (`bg-[#f1f1f1] hover:bg-[#e6e6e6]`), not
+     an outline. What this called `secondary` was actually its
+     `outline-neutral`, and with the dark `--border-strong` rather than a
+     hairline — so a secondary button read heavier than a primary one. Both now
+     exist under the names BrandHub gives them. */
+  secondary: 'bg-surface-sunken text-text-primary hover:bg-surface-hover',
+  outlineNeutral:
+    'border border-border-hairline bg-surface-card text-text-primary hover:bg-surface-hover',
+  /* `ghost` was `--text-accent` indigo, so every ghost button in the product
+     read as a link. BrandHub's is plain ink. */
+  ghost: 'text-text-primary hover:bg-surface-hover',
+  link: 'text-text-accent underline-offset-4 hover:underline',
   // §23.3: destructive is an OUTLINED danger in --form-error, never a red fill.
   destructive: 'border border-formError bg-transparent text-formError hover:bg-formError-dim',
 };

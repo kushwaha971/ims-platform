@@ -8,13 +8,13 @@ const c = s.forwardRef(({ className: a, ...r }, i) => /* @__PURE__ */ e.jsx(
   {
     ref: i,
     className: d(
-      "grid place-content-center peer h-4 w-4 shrink-0 rounded-[4px] border border-[#e6e6e6] bg-white text-white transition-colors",
-      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111] focus-visible:ring-offset-2",
-      "disabled:cursor-not-allowed disabled:bg-[#f2f2f2] disabled:border-[#e6e6e6] disabled:text-[#b3b3b3]",
-      "data-[state=checked]:border-[#26453f] data-[state=checked]:bg-[#26453f]",
-      "data-[state=indeterminate]:border-[#26453f] data-[state=indeterminate]:bg-[#26453f]",
-      "disabled:data-[state=checked]:border-[#bdbdbd] disabled:data-[state=checked]:bg-[#bdbdbd]",
-      "disabled:data-[state=indeterminate]:border-[#bdbdbd] disabled:data-[state=indeterminate]:bg-[#bdbdbd]",
+      "grid place-content-center peer h-4 w-4 shrink-0 rounded-[4px] border border-border-subtle bg-surface-card text-text-inverse transition-colors",
+      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text-primary focus-visible:ring-offset-2",
+      "disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:border-border-subtle disabled:text-text-muted",
+      "data-[state=checked]:border-accent data-[state=checked]:bg-accent",
+      "data-[state=indeterminate]:border-accent data-[state=indeterminate]:bg-accent",
+      "disabled:data-[state=checked]:border-border-strong disabled:data-[state=checked]:bg-border-strong",
+      "disabled:data-[state=indeterminate]:border-border-strong disabled:data-[state=indeterminate]:bg-border-strong",
       a
     ),
     ...r,

@@ -117,8 +117,8 @@ const UbComboboxInner = forwardRef<HTMLButtonElement, UbComboboxProps>(function 
         disabled={disabled}
         onBlur={onBlur}
         className={cn(
-          'flex h-11 w-full items-center justify-between gap-2 rounded-lg border px-3',
-          'ds-body-base bg-surface-card text-left text-text-primary',
+          'flex h-11 w-full items-center justify-between gap-2 rounded-control border px-3',
+          'ds-body bg-surface-card text-left text-text-primary',
           'disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-text-muted',
           'focus-visible:outline-none focus-visible:ring-0',
           invalid
@@ -141,7 +141,7 @@ const UbComboboxInner = forwardRef<HTMLButtonElement, UbComboboxProps>(function 
         className="w-[var(--radix-popover-trigger-width)] border-border-subtle bg-surface-card p-0"
       >
         <MLCommand>
-          <MLCommandInput placeholder={searchPlaceholder} className="ds-body-base h-11" />
+          <MLCommandInput placeholder={searchPlaceholder} className="ds-body h-11" />
           <MLCommandList className="max-h-[min(18rem,55dvh)]">
             <MLCommandEmpty className="ds-body-sm px-3 py-6 text-center text-text-tertiary">
               {emptyLabel}
@@ -153,7 +153,7 @@ const UbComboboxInner = forwardRef<HTMLButtonElement, UbComboboxProps>(function 
                   value={option.label}
                   disabled={option.disabled}
                   onSelect={() => handleSelect(option.value)}
-                  className="ds-body-base gap-2"
+                  className="ds-body gap-2"
                 >
                   <Check
                     aria-hidden
