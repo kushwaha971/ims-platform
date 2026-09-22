@@ -1,6 +1,6 @@
 'use client';
 
-import { memo } from 'react';
+import { memo, type ReactNode } from 'react';
 
 import { ArrowDownRight, ArrowRight, ArrowUpRight } from 'lucide-react';
 
@@ -42,10 +42,26 @@ export interface UbStatCardDelta {
 }
 
 export interface UbStatCardProps {
+  /**
+   * A small glyph beside the label — BrandHub's stat card leads with one, and
+   * it is what stops a row of three cards reading as three paragraphs of grey
+   * text. Decorative: the label says what the figure is, so the icon is
+   * `aria-hidden` and never the only thing carrying the meaning (R-A-2).
+   */
+  readonly icon?: ReactNode;
   /** Sentence case, no trailing colon. */
   readonly label: string;
   /** Preformatted — `formatInr(...)` for money, a plain count otherwise. */
   readonly value: string;
+  /**
+   * The qualifier that sits on the value's baseline — "across all 30
+   * customers", "incl. VAT". BrandHub's `subtext`.
+   *
+   * It exists because a figure without its SCOPE is a figure a merchant cannot
+   * act on: ₹36,018 to collect means one thing across the whole book and
+   * another across the twenty-five names on this page.
+   */
+  readonly subtext?: string;
   readonly delta?: UbStatCardDelta;
   readonly tone?: UbStatCardTone;
   readonly onClick?: () => void;
@@ -74,8 +90,10 @@ const DELTA_ICON = {
 } as const;
 
 function UbStatCardBase({
+  icon,
   label,
   value,
+  subtext,
   delta,
   tone = 'default',
   onClick,
@@ -85,8 +103,28 @@ function UbStatCardBase({
 
   const body = (
     <MLCardContent className="flex flex-col gap-1 p-4">
-      <span className="ds-label text-text-tertiary">{label}</span>
-      <span className={cn('ds-metric-md', TONE[tone])}>{value}</span>
+      <span className="flex items-center gap-2">
+        {icon && (
+          <span aria-hidden className="flex h-3.5 w-3.5 shrink-0 items-center justify-center text-text-tertiary">
+            {icon}
+          </span>
+        )}
+        <span className="ds-label text-text-tertiary">{label}</span>
+      </span>
+      {/* 20px on a phone, 28px from `sm` up. A tile is two-across at 360px, so
+          a card gets about 140px of content width — and "₹36,018.00" at 28px
+          tabular needs 170 and ran straight out of the card. The KPI tier is
+          still the KPI tier; it is one step down where there is no room for
+          it, which is the same trade every figure on this product makes. */}
+      <span className={cn('ds-metric-sm sm:ds-metric-md', TONE[tone])}>{value}</span>
+      {/* Its own line, which is where this departs from BrandHub.
+          They set the value and the subtext on a shared baseline, and it works
+          because theirs are two words — "incl. VAT". Ours are sentences that
+          name the scope, so a long one wrapped under the figure while a short
+          one stayed beside it, and a row of three cards came out in three
+          different shapes. A fixed line keeps them identical whatever the copy
+          says, which matters more here than the baseline does. */}
+      {subtext && <span className="ds-caption text-text-tertiary">{subtext}</span>}
       {delta && DeltaIcon && (
         <span className="flex items-center gap-1">
           <DeltaIcon aria-hidden className={cn('h-4 w-4', DELTA_TONE[delta.tone ?? 'neutral'])} />

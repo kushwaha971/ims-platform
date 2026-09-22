@@ -8,7 +8,6 @@ import {
   UbPageShell,
   UbSelect,
   UbStack,
-  UbText,
   UbTextInput,
 } from 'src/design-system';
 import {
@@ -27,7 +26,7 @@ import { usePartyList } from '../hooks/usePartyList';
 import { orderingFor, sortFromOrdering } from '../view-model/partyListSort';
 
 import { createPartyColumns } from './PartyListColumns';
-import { PartyListTotals } from './PartyListTotals';
+import { PartyListStats } from './PartyListStats';
 
 import type { Party } from '../types/party.types';
 
@@ -64,7 +63,7 @@ import type { Party } from '../types/party.types';
 const STATUS_OPTIONS: readonly PartyStatus[] = ['active', 'archived'];
 
 export function PartyListPageContent(): React.JSX.Element {
-  const { t } = useTranslation();
+  const { t, n } = useTranslation();
   const {
     rows,
     meta,
@@ -219,25 +218,31 @@ export function PartyListPageContent(): React.JSX.Element {
         <UbPageHeader
           title={t('parties.list.title')}
           subtitle={t('parties.list.subtitle')}
-          controls={
-            <PartyListTotals
-              totals={totals}
-              receivableLabel={t('parties.list.totals.receivable')}
-              payableLabel={t('parties.list.totals.payable')}
-              scopeNote={
-                totalsScope === 'filtered'
-                  ? t('parties.list.totals.scope.filtered')
-                  : t('parties.list.totals.scope.page', { count: rows.length })
-              }
-            />
-          }
         />
       }
     >
-      <UbStack gap={2}>
-        <UbText variant="label" tone="tertiary">
-          {t('parties.list.count', { count: meta.total })}
-        </UbText>
+      {/* BrandHub's page rhythm: the figures under the title, then the list,
+          24 px apart. The count that used to sit here in grey label type is
+          the third card now — it was the same job said in a different voice. */}
+      <UbStack gap={6}>
+        <PartyListStats
+          totals={totals}
+          total={meta.total}
+          receivableLabel={t('parties.list.totals.receivable')}
+          payableLabel={t('parties.list.totals.payable')}
+          countLabel={t('parties.list.stats.customers')}
+          countValue={n(meta.total)}
+          scopeNote={
+            totalsScope === 'filtered'
+              ? t('parties.list.totals.scope.filtered')
+              : t('parties.list.totals.scope.page', { count: rows.length })
+          }
+          countNote={
+            isFiltered
+              ? t('parties.list.stats.count.filtered')
+              : t('parties.list.stats.count.all')
+          }
+        />
 
         {/* `storageId` puts the column choices in `sessionStorage`: they survive
             a trip to a party and back. Session rather than account, because

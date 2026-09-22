@@ -314,7 +314,15 @@
     "  /parties        route  86 -> 89  (measured 88.0)",
     "",
     "/settings/team pays the 1.2 and not the 0.7: its grid has no toolbar, so by",
-    "BrandHub's own rule it gets no column menu."
+    "BrandHub's own rule it gets no column menu.",
+    "",
+    "── 22 Sep 2026: the parties page's stat cards ─────────────────────────────",
+    "+0.9 KB on /parties: three `UbStatCard`s and their glyphs, replacing the two",
+    "bare figures that sat in the sticky header's `controls` slot. The component",
+    "already existed for RPT-01's tiles, so what is new here is the page's own",
+    "stats row and three lucide icons; `PartyListTotals` came back out, which is",
+    "why it is not more.",
+    "  /parties  route  89 -> 90  (measured 89.0)"
   ],
   "default": {
     "route": 60,
@@ -322,8 +330,8 @@
   },
   "routes": {
     "/parties": {
-      "route": 89,
-      "firstLoad": 311
+      "route": 90,
+      "firstLoad": 312
     },
     "/dashboard": {
       "route": 55,

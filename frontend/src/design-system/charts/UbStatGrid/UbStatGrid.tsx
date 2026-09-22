@@ -19,7 +19,10 @@ export interface UbStatGridProps {
 
 function UbStatGridBase({ children, className }: Readonly<UbStatGridProps>) {
   return (
-    <div className={cn('grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4', className)}>
+    <div
+      data-testid="ub-stat-grid"
+      className={cn('grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4', className)}
+    >
       {children}
     </div>
   );

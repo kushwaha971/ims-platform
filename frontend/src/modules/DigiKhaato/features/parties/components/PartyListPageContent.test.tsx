@@ -163,34 +163,77 @@ describe('PartyListPageContent', () => {
   });
 });
 
-describe('the header total', () => {
+describe('the figures the screen answers', () => {
   beforeEach(() => {
     store.dispatch(resetPartyList());
     jest.clearAllMocks();
     partyService.listParties.mockResolvedValue(loaded([RAMESH, SUNITA]));
   });
 
+  /**
+   * These used to assert the two totals sat inside the `sticky` header, which
+   * was Part 17 §17.0.2's rule. The rule was right about the problem — a total
+   * you have to scroll back for is a total you cannot use — and wrong about
+   * the remedy: three figures, two labels and a scope note crammed into a
+   * header's `controls` slot read as a caption, and there was nowhere to put
+   * the customer count except a grey line of its own below.
+   *
+   * They are BrandHub stat cards in the page body now, which is what the
+   * owner asked for and what BrandHub's own payments and stock pages do. The
+   * trade was made knowingly: the cards scroll away, and the sticky header
+   * keeps the TITLE so a merchant twenty rows down still knows which list they
+   * are reading. What these tests hold onto is everything else about the rule —
+   * both sums present, at every tier, each labelled and each carrying its
+   * scope.
+   */
   it.each<UbGridTier>(['cards', 'compact', 'full'])(
-    'stays on the sticky header at the %s tier — it is the number the screen answers',
+    'shows both sums and the count at the %s tier',
     async (tier) => {
       setTier(tier);
       renderWithProviders(<PartyListPageContent />);
       await screen.findByTestId('ub-grid');
 
-      const totals = screen.getByTestId('party-list-totals');
-      expect(within(totals).getByText('You will get, ₹2,800.00')).toBeInTheDocument();
-      expect(within(totals).getByText('You will give, ₹900.00')).toBeInTheDocument();
-      // It lives inside the header, which is `sticky top-0`.
-      expect(totals.closest('header')).not.toBeNull();
+      const stats = screen.getByTestId('ub-stat-grid');
+      expect(within(stats).getByText('You will get')).toBeInTheDocument();
+      expect(within(stats).getByText('₹2,800.00')).toBeInTheDocument();
+      expect(within(stats).getByText('You will give')).toBeInTheDocument();
+      expect(within(stats).getByText('₹900.00')).toBeInTheDocument();
+      expect(within(stats).getByText('Customers')).toBeInTheDocument();
     }
   );
+
+  it('sits in the body, under a header that still carries the title', async () => {
+    setTier('full');
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByTestId('ub-grid');
+
+    // BrandHub's arrangement: cards scroll with the page…
+    expect(screen.getByTestId('ub-stat-grid').closest('header')).toBeNull();
+    // …and the sticky header still says which list this is.
+    const heading = screen.getByRole('heading', { name: 'Customers', level: 1 });
+    expect(heading.closest('header')).not.toBeNull();
+  });
 
   it('says which set the two figures describe, rather than leaving it to be guessed', async () => {
     setTier('cards');
     renderWithProviders(<PartyListPageContent />);
     await screen.findByTestId('ub-grid');
     // Sprint 0's endpoint sends no totals block, so these are the page's sum.
-    expect(screen.getByText('From the 2 customers on this page')).toBeInTheDocument();
+    // Both money cards carry it; the count card says what it counts instead.
+    expect(screen.getAllByText('From the 2 customers on this page')).toHaveLength(2);
+    expect(screen.getByText('In your book')).toBeInTheDocument();
+  });
+
+  it('counts every party the filter matches, not the rows on this page', async () => {
+    setTier('full');
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByTestId('ub-grid');
+
+    // The count card reads the server's total. Two rows are rendered; the
+    // figure beside "Customers" is the whole list, which is the number a
+    // merchant is actually asking for.
+    const stats = screen.getByTestId('ub-stat-grid');
+    expect(within(stats).getByText('2')).toBeInTheDocument();
   });
 });
 

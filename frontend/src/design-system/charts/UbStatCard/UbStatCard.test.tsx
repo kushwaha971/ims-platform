@@ -50,3 +50,31 @@ describe('UbStatCard — the form most of a ledger dashboard takes', () => {
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('the BrandHub slots', () => {
+  it('puts the scope on the value, where the figure is read', () => {
+    render(
+      <UbStatCard
+        icon={<svg data-testid="glyph" />}
+        label="To collect"
+        value="₹36,018.00"
+        subtext="across all 30 customers"
+      />
+    );
+
+    // A figure without its scope is a figure nobody can act on: ₹36,018 means
+    // one thing across the whole book and another across this page of 25.
+    expect(screen.getByText('across all 30 customers')).toBeInTheDocument();
+    expect(screen.getByText('₹36,018.00')).toBeInTheDocument();
+  });
+
+  it('hides the glyph from a screen reader — the label carries the meaning', () => {
+    const { container } = render(
+      <UbStatCard icon={<svg data-testid="glyph" />} label="To pay" value="₹293.00" />
+    );
+
+    const glyph = container.querySelector('[aria-hidden="true"]');
+    expect(glyph).not.toBeNull();
+    expect(glyph?.querySelector('svg')).not.toBeNull();
+  });
+});
