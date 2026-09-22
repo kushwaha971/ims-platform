@@ -24,6 +24,14 @@ import { cn } from 'src/utils/cn';
  *  · A `border-b` alone did not separate a sticky header from the rows it
  *    scrolls over on a dark theme; it carries `shadow-1` as well.
  */
+/**
+ * Kept only so the existing imports still type-check: the header no longer has
+ * a width of its own. `UbPageShell` renders it inside the content column, so
+ * the column's width IS the header's width and the two cannot disagree — which
+ * is the defect this removes, not a simplification for its own sake.
+ *
+ * @deprecated Pass `width` to `UbPageShell` instead.
+ */
 export type UbPageHeaderWidth = 'measure' | 'full';
 
 export interface UbPageHeaderProps {
@@ -33,33 +41,42 @@ export interface UbPageHeaderProps {
   readonly controls?: ReactNode;
   /** One primary action per view (Koper). */
   readonly actions?: ReactNode;
-  /** Must match the `UbPageShell` it sits above. */
-  readonly width?: UbPageHeaderWidth;
-  readonly className?: string;
+    readonly className?: string;
 }
-
-const WIDTH: Readonly<Record<UbPageHeaderWidth, string>> = {
-  measure: 'max-w-[1120px]',
-  full: 'max-w-content',
-};
 
 function UbPageHeaderBase({
   title,
   subtitle,
   controls,
   actions,
-  width = 'measure',
   className,
 }: Readonly<UbPageHeaderProps>) {
   return (
-    <header
-      className={cn(
-        'sticky top-0 z-20 border-b border-border-hairline bg-surface-card shadow-1',
-        'px-4 py-4 md:px-page md:py-5',
-        className
-      )}
-    >
-      <div className={cn('mx-auto flex w-full flex-col gap-4', WIDTH[width])}>
+    /**
+     * ── No card, no band, not sticky ──────────────────────────────────────
+     * This was a `sticky top-0` white bar with its own border, shadow and
+     * 32 px padding, sitting above the page rather than in it. Three things
+     * were wrong with that, and the owner named all three:
+     *
+     *  · Its inset did not match the content's, so the title sat 32 px left of
+     *    every card and table under it.
+     *  · A band with a shadow reads as a CARD, and a page whose first element
+     *    is a card about the page's own name spends its most valuable strip of
+     *    screen on a label.
+     *  · It cost vertical space twice over — its own padding, then the
+     *    content's padding again immediately below.
+     *
+     * BrandHub has none of it: the title is simply the first row of the page
+     * column. `UbPageShell` owns the inset and the rhythm now, so this
+     * component carries no padding, no width and no background of its own.
+     *
+     * What is lost is the sticky title on a long list, and that was weighed:
+     * the owner asked for BrandHub's layout knowing the totals moved into the
+     * body with it. The `<header>` element stays, because it is still the
+     * page's banner to a screen reader.
+     */
+    <header className={cn('flex flex-col gap-4', className)}>
+      <div className="flex w-full flex-col gap-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 flex-col gap-1">
             <h1 className="ds-h2 truncate text-text-primary md:ds-h1">{title}</h1>

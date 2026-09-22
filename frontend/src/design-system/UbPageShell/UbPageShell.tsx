@@ -36,6 +36,10 @@ import { cn } from 'src/utils/cn';
 export type UbPageShellWidth = 'measure' | 'full';
 
 export interface UbPageShellProps {
+  /**
+   * `UbPageHeader`. It renders INSIDE the content column (see below), so it
+   * carries no padding of its own and shares the page's inset exactly.
+   */
   readonly header?: ReactNode;
   readonly children: ReactNode;
   /** A sticky action bar — the invoice editor's "Issue" row, a drawer's Save. */
@@ -58,8 +62,23 @@ function UbPageShellBase({
 }: Readonly<UbPageShellProps>) {
   return (
     <div className={cn('flex min-h-full w-full flex-col bg-canvas', className)}>
-      {header}
-      <div className={cn('mx-auto w-full flex-1 px-4 pb-12 pt-6 md:px-page', WIDTH[width])}>
+      {/* ── One column, header included ──────────────────────────────────
+          The header used to render OUTSIDE this padded div, with padding of
+          its own, so the title landed 32 px to the left of everything under
+          it: h1 at x=284, the cards and the grid at x=316. Nothing was wrong
+          with either number on its own, which is why it survived — a title
+          that does not line up with its content just reads as sloppy.
+
+          BrandHub's `BrandHubPageShell` is one padded column with the title as
+          its first child, and that is the arrangement that makes the mismatch
+          impossible rather than merely fixed. */}
+      <div
+        className={cn(
+          'mx-auto flex w-full flex-1 flex-col gap-5 px-4 pb-6 pt-5 lg:px-6',
+          WIDTH[width]
+        )}
+      >
+        {header}
         {children}
       </div>
       {footer && (

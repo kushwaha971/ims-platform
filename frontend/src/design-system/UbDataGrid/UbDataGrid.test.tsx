@@ -701,3 +701,37 @@ describe('the paging bar', () => {
     expect(within(toolbar).queryByText(/NaN|\{count\}/)).not.toBeInTheDocument();
   });
 });
+
+describe("BrandHub's height logic", () => {
+  it('gives every row the same 52px, set as a height rather than a class', async () => {
+    await renderGridWithTable('full');
+
+    // BrandHub sets `style={{ height: rowHeight }}` on the `<tr>` so a screen
+    // can override it; ours was `h-14` baked into the class, which no caller
+    // could reach. 52 is BrandHub's default and this grid's.
+    for (const row of screen.getAllByTestId('ub-grid-row')) {
+      expect(row).toHaveStyle({ height: '52px' });
+    }
+  });
+
+  it('reserves the same height in the skeleton, or the rows would jump', () => {
+    renderGrid('full', { state: 'loading', skeletonRows: 2, rowHeight: 40 });
+
+    for (const row of screen.getAllByTestId('ub-grid-skeleton-row')) {
+      expect(row).toHaveStyle({ height: '40px' });
+    }
+  });
+
+  it('lets the PAGE scroll by default, and caps the body only when asked', async () => {
+    const { unmount } = await renderGridWithTable('full');
+    // 'fill': no cap, no internal scroll. A header that sticks to a box which
+    // never scrolls is a header that never sticks, so the box must not exist.
+    expect(screen.getByTestId('ub-grid-table-scroller')).toHaveAttribute('data-ub-scroll-y', 'off');
+    unmount();
+
+    await renderGridWithTable('full', { maxHeight: '320px' });
+    const scroller = screen.getByTestId('ub-grid-table-scroller');
+    expect(scroller).toHaveAttribute('data-ub-scroll-y', 'on');
+    expect(scroller).toHaveStyle({ maxHeight: '320px' });
+  });
+});

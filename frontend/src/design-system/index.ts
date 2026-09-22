@@ -200,6 +200,7 @@ export {
   dropOrder,
   fillTemplate,
   findHorizontalOverflow,
+  GRID_ROW_HEIGHT,
   isHideable,
   LG_QUERY,
   loadColumnVisibility,

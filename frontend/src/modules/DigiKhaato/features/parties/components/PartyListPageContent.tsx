@@ -213,7 +213,11 @@ export function PartyListPageContent(): React.JSX.Element {
   const rowName = useCallback((party: Party) => party.name, []);
 
   return (
+    // `full` rather than the default `measure`: this is the data-grid opt-out
+    // the shell documents. A 1120 px column on a 1440 px screen left a band of
+    // empty canvas down the right of a table that had columns truncating in it.
     <UbPageShell
+      width="full"
       header={
         <UbPageHeader
           title={t('parties.list.title')}

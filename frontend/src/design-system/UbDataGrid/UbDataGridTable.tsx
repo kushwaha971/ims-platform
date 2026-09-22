@@ -19,6 +19,7 @@ import {
   ALIGN,
   GRID_HEAD_ROW,
   GRID_ROW,
+  GRID_ROW_HEIGHT,
   GRID_SCROLLER,
   GRID_SELECT_CELL,
   GRID_TABLE,
@@ -74,6 +75,19 @@ export interface UbDataGridTableProps<TRow> {
    * and a primary list never sets it.
    */
   readonly allowHorizontalScroll?: boolean;
+  /**
+   * BrandHub's `maxHeight`. `'fill'` — the default — means the table grows to
+   * whatever it holds and the PAGE scrolls, which is what a list wants: the
+   * merchant scrolls one thing, and the pagination is where the rows end.
+   *
+   * A CSS length instead caps the body and scrolls it internally, with the
+   * header staying put and the pagination pinned below the scroll region. That
+   * is for a table inside something else — a drawer, a dialog, a two-pane
+   * screen — where the page cannot scroll on the table's behalf.
+   */
+  readonly maxHeight?: 'fill' | string;
+  /** BrandHub's `rowHeight`. 52 px, and set as a height so every row matches. */
+  readonly rowHeight?: number;
   readonly className?: string;
 }
 
@@ -90,6 +104,8 @@ function UbDataGridTableBase<TRow>({
   selectedIds,
   onSelectionChange,
   allowHorizontalScroll = false,
+  maxHeight = 'fill',
+  rowHeight = GRID_ROW_HEIGHT,
   className,
 }: Readonly<UbDataGridTableProps<TRow>>): React.JSX.Element {
   const selection = useMemo<RowSelectionState>(() => {
@@ -134,6 +150,8 @@ function UbDataGridTableBase<TRow>({
   });
 
   const modelRows = table.getRowModel().rows;
+
+  const capped = maxHeight !== 'fill';
 
   /**
    * Widths are an inline `style`, not a class, and that is deliberate: the
@@ -194,9 +212,16 @@ function UbDataGridTableBase<TRow>({
     <div
       data-testid="ub-grid-table-scroller"
       data-ub-scroll-x={allowHorizontalScroll ? 'on' : 'off'}
+      data-ub-scroll-y={capped ? 'on' : 'off'}
+      // `overflow-y-auto` only when a cap was asked for. Applying it always
+      // would make `position: sticky` on the header resolve against THIS box
+      // rather than the page, and a header that sticks to a box that never
+      // scrolls is a header that never sticks.
+      style={capped ? { maxHeight } : undefined}
       className={cn(
         GRID_SCROLLER,
         allowHorizontalScroll ? 'overflow-x-auto' : 'overflow-x-hidden',
+        capped && 'overflow-y-auto',
         className
       )}
     >
@@ -307,6 +332,7 @@ function UbDataGridTableBase<TRow>({
                 key={row.id}
                 data-testid="ub-grid-row"
                 data-row-id={row.id}
+                style={{ height: rowHeight }}
                 className={cn(
                   GRID_ROW,
                   // BrandHub tints a selected row `bg-primary/5`. There was no

@@ -56,6 +56,8 @@ export type {
  */
 export type { UbDataGridColumnMenuProps } from './UbDataGridColumnMenu';
 
+export { GRID_ROW_HEIGHT } from './tableChrome';
+
 export { UbDataGridToolbar } from './UbDataGridToolbar';
 export type { UbDataGridToolbarProps } from './UbDataGridToolbar';
 

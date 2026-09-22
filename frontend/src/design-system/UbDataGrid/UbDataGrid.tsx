@@ -102,6 +102,14 @@ export interface UbDataGridProps<TRow> {
   /** Accountant reports at `lg`+ only. A primary list never sets it. */
   readonly allowHorizontalScroll?: boolean;
   /**
+   * BrandHub's `maxHeight`, passed straight through. `'fill'` (the default)
+   * lets the page do the scrolling; a CSS length caps the rows and scrolls
+   * them under a header that stays put.
+   */
+  readonly maxHeight?: 'fill' | string;
+  /** BrandHub's `rowHeight`. Defaults to 52 px. */
+  readonly rowHeight?: number;
+  /**
    * The column menu. BrandHub's rule exactly: a grid that already has a toolbar
    * gets one without asking, a grid with no toolbar does not grow one for this
    * alone. Set it explicitly either way to override.
@@ -248,6 +256,8 @@ export function UbDataGrid<TRow>({
   allowHorizontalScroll = false,
   columnMenu,
   storageId,
+  maxHeight,
+  rowHeight,
   tier: forcedTier,
   skeletonRows = 6,
   className,
@@ -350,6 +360,7 @@ export function UbDataGrid<TRow>({
                 columnCount={shown.length}
                 rowCount={skeletonRows}
                 selectable={canSelect}
+                rowHeight={rowHeight}
               />
             </UbDataGridStateTable>
           </div>
@@ -392,6 +403,8 @@ export function UbDataGrid<TRow>({
             selectedIds={selectedIds}
             onSelectionChange={onSelectionChange}
             allowHorizontalScroll={scrollX}
+            maxHeight={maxHeight}
+            rowHeight={rowHeight}
           />
         ))}
 

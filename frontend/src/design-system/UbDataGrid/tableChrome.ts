@@ -39,11 +39,21 @@ export const GRID_TH =
 export const GRID_SELECT_CELL = 'w-12 px-3 py-2';
 
 /**
- * Row hover and the 56 px height are departures from BrandHub, kept
- * deliberately: BrandHub has neither a hover rule nor striping and its rows are
- * 48 px. Hover is how a mouse keeps its place across a wide table, and the extra
- * 8 px is a comfortable touch row rather than a minimal one.
+ * BrandHub's row is 52 px, set as an inline height on the `<tr>` so a grid can
+ * override it per screen; ours was `h-14` (56) as a documented "comfortable
+ * touch row". The owner asked for parity, and parity is right here: the table
+ * tiers start at 768 px, so this row is never the one a thumb hits — the phone
+ * gets cards, where the tap target is the whole card.
+ *
+ * The height itself is `UbDataGridTable`'s `rowHeight` prop now (default 52);
+ * what stays in the class is everything that is not the height.
+ *
+ * Row hover IS still a departure and is kept: BrandHub has neither hover nor
+ * striping, and hover is how a mouse keeps its place across a wide table.
  */
-export const GRID_ROW = 'h-14 border-b border-border-hairline transition-colors last:border-b-0';
+export const GRID_ROW = 'border-b border-border-hairline transition-colors last:border-b-0';
+
+/** BrandHub's `rowHeight` default. */
+export const GRID_ROW_HEIGHT = 52;
 
 export const GRID_TD = 'ds-body-sm truncate px-3 py-2 align-middle text-text-primary';

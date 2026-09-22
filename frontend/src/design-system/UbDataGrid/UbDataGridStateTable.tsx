@@ -10,6 +10,7 @@ import {
   ALIGN,
   GRID_HEAD_ROW,
   GRID_ROW,
+  GRID_ROW_HEIGHT,
   GRID_SCROLLER,
   GRID_SELECT_CELL,
   GRID_TABLE,
@@ -128,18 +129,26 @@ export interface UbDataGridSkeletonRowsProps {
   readonly columnCount: number;
   readonly rowCount: number;
   readonly selectable?: boolean;
+  /** The real table's row height, or the skeleton reserves the wrong space. */
+  readonly rowHeight?: number;
 }
 
 function UbDataGridSkeletonRowsBase({
   columnCount,
   rowCount,
   selectable = false,
+  rowHeight = GRID_ROW_HEIGHT,
 }: Readonly<UbDataGridSkeletonRowsProps>): React.JSX.Element {
   const count = Math.max(columnCount, 1);
   return (
     <>
       {Array.from({ length: rowCount }, (_, row) => (
-        <tr key={row} data-testid="ub-grid-skeleton-row" className={GRID_ROW}>
+        <tr
+          key={row}
+          data-testid="ub-grid-skeleton-row"
+          style={{ height: rowHeight }}
+          className={GRID_ROW}
+        >
           {selectable && (
             <td className={GRID_SELECT_CELL}>
               <MLSkeleton className="h-4 w-4 rounded-sm" />
