@@ -186,7 +186,18 @@ function UbDataGridTableBase<TRow>({
         className={cn('w-full border-collapse', allowHorizontalScroll ? 'table-auto' : 'table-fixed')}
       >
         <caption className="sr-only">{caption}</caption>
-        <thead>
+        {/* BrandHub's `TableHeader` is `bg-[#fafafa]` with a hairline under it,
+            and the tint is what actually separates the head from the body — a
+            header that is the same colour as the rows relies entirely on the
+            font weight, which at 13px is not much. `surface-sunken` is this
+            product's token for the same near-white.
+
+            Row hover and the 56px row height are KEPT and are departures:
+            BrandHub has neither a hover rule nor striping, and its rows are
+            48px. Hover is how you keep your place scanning a wide table with a
+            mouse, and the extra 8px is a comfortable touch row rather than a
+            minimal one. */}
+        <thead className="bg-surface-sunken">
           <tr className="border-b border-border-hairline">
             {selectable && (
               <th scope="col" className="w-12 px-4 py-2">

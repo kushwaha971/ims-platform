@@ -146,7 +146,12 @@ export function MLDialog({
       <div
         aria-hidden
         onPointerDown={dismissOnBackdrop ? () => onOpenChange(false) : undefined}
-        className="absolute inset-0 bg-[rgba(0,0,0,0.45)]"
+        /* BrandHub's `BrandHubDialog` uses `bg-black/40`, not ml-uikit's own
+           `bg-black/80`. The lighter scrim is deliberate there and worth
+           copying: at 80% the page behind a modal is gone, and a merchant loses
+           the row they were acting on while they read the confirmation about
+           it. 0.45 was already close; this is the reference value. */
+        className="absolute inset-0 bg-black/40"
       />
       <div
         ref={panelRef}
@@ -157,8 +162,19 @@ export function MLDialog({
         tabIndex={-1}
         onKeyDown={onKeyDown}
         className={cn(
-          'relative z-10 flex w-full flex-col gap-4 bg-surface-raised p-5 shadow-4',
-          'max-h-[90dvh] overflow-y-auto rounded-t-card sm:max-w-[480px] sm:rounded-card',
+          /* BrandHub's dialog panel: 16px radius (`rounded-2xl` there,
+             `rounded-xl` here after the scale was realigned), a hairline border
+             and `shadow-ub-modal`. The gap is gone because the header, body and
+             footer now carry their own 24px padding and are separated by rules
+             rather than by whitespace — see `MLDialogHeader` below for why.
+             `p-0` on the panel; the sections pad themselves. */
+          'relative z-10 flex w-full flex-col overflow-hidden bg-surface-raised',
+          'border border-border-hairline shadow-ub-modal',
+          /* The bottom-sheet-on-a-phone behaviour is KEPT, and is a departure:
+             BrandHub centres a `max-w-[calc(100vw-2rem)]` panel at every width.
+             A sheet anchored to the bottom edge is reachable with a thumb, and
+             this product is used one-handed. */
+          'max-h-[90dvh] rounded-t-xl sm:max-w-[480px] sm:rounded-xl',
           className
         )}
       >
@@ -166,6 +182,41 @@ export function MLDialog({
       </div>
     </div>,
     document.body
+  );
+}
+
+/**
+ * The three sections of a dialog, each padding itself, separated by rules.
+ *
+ * BrandHub's `BrandHubDialog` is `header: … border-b border-border p-6` /
+ * body / `footer: … border-t border-border p-6`, and the panel itself has no
+ * padding at all. This was one 20px-padded box with `gap-4` between the parts.
+ *
+ * The rules are not decoration. A dialog's body scrolls when it is long, and
+ * without a rule the heading and the actions float over scrolled content with
+ * nothing marking where the scrollable region starts and stops — the reason
+ * every serious modal has them. `overflow-hidden` on the panel plus
+ * `overflow-y-auto` here is what makes the body the only thing that moves.
+ */
+export function MLDialogHeader({
+  children,
+  className,
+}: Readonly<{ children: ReactNode; className?: string }>): React.JSX.Element {
+  return (
+    <div className={cn('flex items-start gap-3 border-b border-border-hairline p-6', className)}>
+      {children}
+    </div>
+  );
+}
+
+export function MLDialogBody({
+  children,
+  className,
+}: Readonly<{ children: ReactNode; className?: string }>): React.JSX.Element {
+  return (
+    <div className={cn('flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-6', className)}>
+      {children}
+    </div>
   );
 }
 
@@ -204,7 +255,18 @@ export function MLDialogFooter({
   className,
 }: Readonly<{ readonly children: ReactNode; readonly className?: string }>): React.JSX.Element {
   return (
-    <div className={cn('flex flex-col-reverse gap-2 sm:flex-row sm:justify-end', className)}>
+    /* `border-t` and its own 24px, matching `MLDialogHeader`: BrandHub's
+       footer is `flex items-center gap-4 border-t border-border p-6`. The
+       column-reverse below `sm` is kept and is not theirs — on a phone the
+       primary action belongs under the thumb, which means last in the DOM and
+       first on screen. */
+    <div
+      className={cn(
+        'flex flex-col-reverse gap-3 border-t border-border-hairline p-6',
+        'sm:flex-row sm:justify-end sm:gap-4',
+        className
+      )}
+    >
       {children}
     </div>
   );
