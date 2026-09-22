@@ -30,6 +30,7 @@ import {
   type TextareaHTMLAttributes,
 } from 'react';
 
+
 import { cn } from 'src/utils/cn';
 
 // ── Text entry ───────────────────────────────────────────────────────────────
@@ -161,100 +162,6 @@ export const MLSelect = forwardRef<HTMLSelectElement, MLSelectProps>(function ML
 });
 
 // ── Choice controls ──────────────────────────────────────────────────────────
-
-export interface MLCheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
-  readonly label: ReactNode;
-  readonly className?: string;
-}
-
-export const MLCheckbox = forwardRef<HTMLInputElement, MLCheckboxProps>(function MLCheckbox(
-  { label, className, id, ...rest },
-  ref
-) {
-  const generated = useId();
-  const inputId = id ?? generated;
-  return (
-    <div className={cn('flex min-h-11 items-center gap-2', className)}>
-      <input
-        ref={ref}
-        id={inputId}
-        type="checkbox"
-        className="h-5 w-5 shrink-0 rounded-xs border border-border-strong accent-accent"
-        {...rest}
-      />
-      <label htmlFor={inputId} className="ds-body-sm text-text-primary">
-        {label}
-      </label>
-    </div>
-  );
-});
-
-export interface MLRadioOption<T extends string> {
-  readonly value: T;
-  readonly label: ReactNode;
-  readonly hint?: ReactNode;
-  readonly disabled?: boolean;
-}
-
-export interface MLRadioGroupProps<T extends string> {
-  readonly name: string;
-  readonly value: T | null;
-  readonly onValueChange: (value: T) => void;
-  readonly options: readonly MLRadioOption<T>[];
-  readonly ariaLabel?: string;
-  readonly ariaDescribedBy?: string;
-  readonly invalid?: boolean;
-  readonly className?: string;
-}
-
-export function MLRadioGroup<T extends string>({
-  name,
-  value,
-  onValueChange,
-  options,
-  ariaLabel,
-  ariaDescribedBy,
-  invalid,
-  className,
-}: Readonly<MLRadioGroupProps<T>>): React.JSX.Element {
-  return (
-    <div
-      role="radiogroup"
-      aria-label={ariaLabel}
-      aria-describedby={ariaDescribedBy}
-      aria-invalid={invalid || undefined}
-      className={cn('flex flex-col gap-2', className)}
-    >
-      {options.map((option) => (
-        <label
-          key={option.value}
-          className={cn(
-            'flex min-h-11 cursor-pointer items-start gap-3 rounded-control border px-3 py-2.5',
-            'transition-colors duration-fast ease-standard',
-            value === option.value
-              ? 'border-accent bg-accent-quiet'
-              : 'border-border-subtle hover:bg-surface-hover',
-            option.disabled && 'cursor-not-allowed opacity-60'
-          )}
-        >
-          <input
-            type="radio"
-            name={name}
-            value={option.value}
-            checked={value === option.value}
-            disabled={option.disabled}
-            onChange={() => onValueChange(option.value)}
-            className="mt-1 h-4 w-4 shrink-0 accent-accent"
-          />
-          <span className="flex min-w-0 flex-col gap-0.5">
-            <span className="ds-body-sm-medium text-text-primary">{option.label}</span>
-            {option.hint && <span className="ds-caption text-text-tertiary">{option.hint}</span>}
-          </span>
-        </label>
-      ))}
-    </div>
-  );
-}
 
 export interface MLToggleOption<T extends string> {
   readonly value: T;

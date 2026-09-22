@@ -261,7 +261,34 @@
     "  /settings/team         305 -> 299   (measured 296.8)",
     "  /onboarding/step/[n]   318 -> 312   (measured 310.4)",
     "  /parties               308 -> 308   (measured 306.3, unchanged)",
-    "  /design-system         302 -> 302   (measured 299.7, unchanged)"
+    "  /design-system         302 -> 302   (measured 299.7, unchanged)",
+    "",
+    "── 22 Sep 2026: the drawn controls, and a barrel that cost 11.5 KB ────────",
+    "`MLCheckbox` and `MLRadioGroup` were native `<input>`s, which cannot be",
+    "styled — the browser draws the tick, the dot, the corner radius and the",
+    "checked fill, so they looked like Chrome on Chrome and like Safari on Safari,",
+    "beside a kit that looks like itself everywhere. Both are Radix now, matching",
+    "BrandHub, and `indeterminate` is a real state rather than a DOM property poked",
+    "through a ref.",
+    "",
+    "The first measurement of that change was +11.5 KB on EVERY route, including",
+    "/forgot-password — one email field, on a route that has never had a checkbox.",
+    "Cause: both controls lived in `mlFormPrimitives.tsx` beside `MLInput`, so any",
+    "file importing a text field pulled `@radix-ui/react-checkbox` and",
+    "`@radix-ui/react-radio-group` with it. Module-level imports tree-shake BETWEEN",
+    "modules, not within one. Splitting them into their own files put",
+    "/forgot-password back to 44.0 from 55.2 and took /parties and /settings/team",
+    "back inside their budgets without changing a line of their code.",
+    "",
+    "What is left is honest — these two routes really do render these components:",
+    "  /onboarding/step/[n]  route  90 ->  98  (measured 96.0) — the GST-type radio",
+    "  /design-system        route  80 ->  94  (measured 92.1) — the gallery renders",
+    "                                            every control, and now also the",
+    "                                            tooltip, popover and switch, which",
+    "                                            are three more Radix packages",
+    "",
+    "/login gained ~6 KB for its 'Remember this address' checkbox and is still",
+    "comfortably inside 60. The shell did not move: 94.9 against a 96 budget."
   ],
   "default": {
     "route": 60,
@@ -281,12 +308,12 @@
       "firstLoad": 340
     },
     "/onboarding/step/[n]": {
-      "route": 90,
-      "firstLoad": 312
+      "route": 98,
+      "firstLoad": 320
     },
     "/design-system": {
-      "route": 80,
-      "firstLoad": 302
+      "route": 94,
+      "firstLoad": 316
     },
     "/settings/team": {
       "route": 77,

@@ -201,12 +201,15 @@ function UbDataGridTableBase<TRow>({
           <tr className="border-b border-border-hairline">
             {selectable && (
               <th scope="col" className="w-12 px-3 py-2">
+                {/* `indeterminate` is a real state now rather than a DOM property
+                    poked through a ref: the checkbox is Radix and takes
+                    `checked="indeterminate"`, which draws a `Minus`. The old
+                    version set `node.indeterminate = …` on a native input and
+                    got whatever dash the operating system felt like drawing. */}
                 <MLCheckbox
                   checked={allSelected}
-                  ref={(node) => {
-                    if (node) node.indeterminate = someSelected && !allSelected;
-                  }}
-                  onChange={(event) => handleToggleAll(event.target.checked)}
+                  indeterminate={someSelected && !allSelected}
+                  onCheckedChange={handleToggleAll}
                   label={<span className="sr-only">{labels.selectAll}</span>}
                   className="min-h-0"
                 />
@@ -280,7 +283,7 @@ function UbDataGridTableBase<TRow>({
                   <td className="px-3 py-2 align-middle">
                     <MLCheckbox
                       checked={row.getIsSelected()}
-                      onChange={(event) => handleToggleRow(row.id)(event.target.checked)}
+                      onCheckedChange={handleToggleRow(row.id)}
                       label={
                         <span className="sr-only">
                           {fillTemplate(labels.selectRow, { name })}

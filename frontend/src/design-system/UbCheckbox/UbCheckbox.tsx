@@ -1,6 +1,6 @@
 'use client';
 
-import { forwardRef, memo, useCallback, type InputHTMLAttributes, type ReactNode } from 'react';
+import { forwardRef, memo, type InputHTMLAttributes, type ReactNode } from 'react';
 
 import { MLCheckbox } from 'src/design-system/primitives';
 
@@ -17,25 +17,23 @@ export interface UbCheckboxProps extends Omit<
   'type' | 'checked' | 'onChange'
 > {
   readonly checked: boolean;
+  /** Partly selected — the select-all case. Wins over `checked`. */
+  readonly indeterminate?: boolean;
   readonly onChange: (checked: boolean) => void;
   readonly label: ReactNode;
   readonly className?: string;
 }
 
-const UbCheckboxInner = forwardRef<HTMLInputElement, UbCheckboxProps>(function UbCheckboxInner(
-  { checked, onChange, label, className, ...rest },
+const UbCheckboxInner = forwardRef<HTMLButtonElement, UbCheckboxProps>(function UbCheckboxInner(
+  { checked, indeterminate, onChange, label, className, ...rest },
   ref
 ) {
-  const handleChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => onChange(event.target.checked),
-    [onChange]
-  );
-
   return (
     <MLCheckbox
       ref={ref}
       checked={checked}
-      onChange={handleChange}
+      indeterminate={indeterminate}
+      onCheckedChange={onChange}
       label={label}
       className={className}
       {...rest}

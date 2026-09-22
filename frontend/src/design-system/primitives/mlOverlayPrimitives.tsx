@@ -377,8 +377,13 @@ export function MLMenu({
           aria-labelledby={`${id}-trigger`}
           onKeyDown={onKeyDown}
           className={cn(
-            'absolute z-40 mt-1 flex w-[min(320px,calc(100vw-32px))] flex-col gap-0.5',
-            'rounded-card border border-border-hairline bg-surface-raised p-1.5 shadow-3',
+            /* `z-[60]` and `shadow-ub-popover`, so a menu matches every other
+               floating surface in the kit and can open inside a dialog. It was
+               `z-40` — BELOW the dialog's own `z-50` — so a menu opened from
+               inside a modal rendered behind it. Same class of bug as the Radix
+               popper wrapper, and fixed the same way. */
+            'absolute z-[60] mt-1 flex w-[min(320px,calc(100vw-32px))] flex-col gap-0.5',
+            'rounded-card border border-border-hairline bg-surface-raised p-1.5 shadow-ub-popover',
             align === 'end' ? 'right-0' : 'left-0'
           )}
         >

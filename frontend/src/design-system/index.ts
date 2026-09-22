@@ -76,6 +76,8 @@ export { UbStack } from './UbStack';
 export type { UbStackAlign, UbStackDirection, UbStackJustify, UbStackProps } from './UbStack';
 
 export { UbText } from './UbText';
+export { UbTooltip } from './UbTooltip';
+export type { UbTooltipProps, UbTooltipPlacement } from './UbTooltip';
 export type { UbTextProps } from './UbText';
 
 /** The shared scales, so a feature names a tier rather than restating a class. */
@@ -159,6 +161,10 @@ export type { UbNativeSelectProps } from './UbNativeSelect';
 export { UbSelect } from './UbSelect';
 export type { UbSelectOption, UbSelectProps } from './UbSelect';
 
+export { UbPopover } from './UbPopover';
+export type { UbPopoverProps } from './UbPopover';
+export { UbSwitch } from './UbSwitch';
+export type { UbSwitchProps } from './UbSwitch';
 export { UbTextInput } from './UbTextInput';
 export type { UbTextInputProps } from './UbTextInput';
 

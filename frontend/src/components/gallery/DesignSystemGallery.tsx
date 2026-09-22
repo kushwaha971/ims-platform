@@ -6,22 +6,26 @@ import {
   UbAmount,
   UbAvatar,
   UbBox,
+  UbButton,
   UbCard,
   UbDivider,
+  UbEmptyState,
   UbGrid,
   UbListItemText,
   UbLogo,
-  UbPressable,
-  UbEmptyState,
   UbPageHeader,
   UbPageShell,
+  UbPopover,
+  UbPressable,
   UbSkeleton,
   UbSnackbar,
   UbSpacer,
   UbStack,
   UbStatusBadge,
   UbStatusBanner,
+  UbSwitch,
   UbText,
+  UbTooltip,
 } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
 
@@ -43,6 +47,7 @@ export function DesignSystemGallery(): React.JSX.Element {
   const { t } = useTranslation();
   // CR-2026-09-19-E — `UbSnackbar` takes ONE message now, not a queue.
   const [message, setMessage] = useState<string | null>(DEMO_MESSAGE);
+  const [switchOn, setSwitchOn] = useState(true);
   const onDismiss = useCallback(() => setMessage(null), []);
 
   return (
@@ -146,6 +151,53 @@ export function DesignSystemGallery(): React.JSX.Element {
             <UbSkeleton variant="list" count={3} />
             <UbSkeleton variant="card" />
             <UbSkeleton variant="form" count={2} />
+          </UbStack>
+        </UbCard>
+
+        {/* The three BrandHub components that had no counterpart here at all,
+            so the first screen that wants a settings toggle or an explanation
+            for a disabled control has something to render. */}
+        <UbCard title="UbTooltip" description="White card and arrow, like BrandHub's.">
+          <UbStack direction="row" gap={4} align="center">
+            <UbTooltip title="Needs signal — this write is online-only.">
+              <UbButton variant="secondary">Hover me</UbButton>
+            </UbTooltip>
+            <UbTooltip title="Below the trigger." placement="bottom">
+              <UbButton variant="ghost">Bottom</UbButton>
+            </UbTooltip>
+            {/* A blank title renders the child bare — the `disabled ? reason : ''`
+                call, which is most of what this component is for. */}
+            <UbTooltip title="">
+              <UbButton variant="outlineNeutral">No tooltip at all</UbButton>
+            </UbTooltip>
+          </UbStack>
+        </UbCard>
+
+        <UbCard title="UbPopover" description="Anchored panel, 300px, its content scrolls.">
+          <UbPopover
+            label="Demo popover"
+            trigger={<UbButton variant="secondary">Open popover</UbButton>}
+          >
+            <UbStack gap={2} className="p-4">
+              <UbText variant="body-medium">Anchored panel</UbText>
+              <UbText variant="body-sm" tone="secondary">
+                The frame is fixed and the body scrolls, with the page behind it held
+                still — `overscroll-contain`.
+              </UbText>
+            </UbStack>
+          </UbPopover>
+        </UbCard>
+
+        <UbCard title="UbSwitch" description="33×18 track, 44px target, label inside it.">
+          <UbStack gap={2}>
+            <UbSwitch
+              checked={switchOn}
+              onCheckedChange={setSwitchOn}
+              label="WhatsApp reminders"
+              description="Send a reminder when a khata goes past its due date."
+            />
+            <UbSwitch checked={false} onCheckedChange={() => undefined} label="Off" />
+            <UbSwitch checked disabled onCheckedChange={() => undefined} label="On, disabled" />
           </UbStack>
         </UbCard>
 

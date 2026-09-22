@@ -33,6 +33,18 @@
  */
 
 // ── Layout (wave 2 — Part 23 §23.3, the BrandHub `BHBox` seat) ───────────────
+/* The two Radix-backed controls live in their own modules, and that is not
+ * tidying — it is 11.5 KB. While they sat in `mlFormPrimitives.tsx` beside
+ * `MLInput`, every file importing a text field pulled
+ * `@radix-ui/react-checkbox` and `@radix-ui/react-radio-group` with it, because
+ * module-level imports tree-shake BETWEEN modules and not within one. Measured:
+ * every auth route gained 11.5 KB, `/forgot-password` included — one email
+ * field, on a route that has never had a checkbox. */
+export { MLCheckbox } from './mlCheckboxPrimitive';
+export type { MLCheckboxProps } from './mlCheckboxPrimitive';
+export { MLRadioGroup } from './mlRadioPrimitive';
+export type { MLRadioGroupProps, MLRadioOption } from './mlRadioPrimitive';
+
 export { ML_BOX_DEFAULT_ELEMENT, MLBox } from './mlLayoutPrimitives';
 
 export type { MLPolymorphicProps } from './mlLayoutPrimitives';
@@ -80,11 +92,9 @@ export type {
 export {
   ML_CONTROL_BASE,
   ML_CONTROL_TONE,
-  MLCheckbox,
   MLIconButton,
   MLInput,
   MLProgress,
-  MLRadioGroup,
   MLSelect as MLNativeSelect,
   MLTabs,
   MLTextarea,
@@ -92,12 +102,9 @@ export {
 } from './mlFormPrimitives';
 
 export type {
-  MLCheckboxProps,
   MLIconButtonProps,
   MLInputProps,
   MLProgressProps,
-  MLRadioGroupProps,
-  MLRadioOption,
   MLSelectProps as MLNativeSelectProps,
   MLTabDescriptor,
   MLTabsProps,
