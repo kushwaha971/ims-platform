@@ -117,7 +117,7 @@ export const MLTextarea = forwardRef<HTMLTextAreaElement, MLTextareaProps>(funct
       ref={ref}
       rows={rows}
       aria-invalid={invalid || undefined}
-      className={cn(ML_CONTROL_BASE, ML_CONTROL_TONE(invalid), 'h-auto py-2', className)}
+      className={cn(ML_CONTROL_BASE, ML_CONTROL_TONE(invalid), 'h-auto min-h-[120px] py-2', className)}
       {...rest}
     />
   );

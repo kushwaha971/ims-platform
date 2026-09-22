@@ -53,6 +53,19 @@ export interface UbDataGridPaginationProps {
 /** 44px, square, and the same box whether it holds a chevron or a number. */
 const STEP_BUTTON = 'h-11 w-11 p-0';
 
+/**
+ * BrandHub's `TablePaginationButton` is a bare glyph — `text-[#7f7d83]
+ * hover:text-foreground`, no border — and its inactive page numbers are the
+ * same muted grey, with only the CURRENT page getting a hairline box.
+ *
+ * These were `variant="secondary"` (a bordered box) and `variant="ghost"`
+ * (which is `--text-accent` indigo), so a row of ten page numbers rendered as
+ * ten indigo links with one boxed. The point of the control is that one of them
+ * is current and the rest are not.
+ */
+const STEP_QUIET = 'text-text-tertiary hover:text-text-primary';
+const STEP_CURRENT = 'border border-border-hairline bg-surface-card text-text-primary';
+
 function UbDataGridPaginationBase({
   page,
   tier,
@@ -78,18 +91,18 @@ function UbDataGridPaginationBase({
       data-testid="ub-grid-pagination"
       className={cn(
         'grid w-full grid-cols-[auto_1fr_auto] items-center gap-3',
-        'border-t border-border-hairline px-4 py-3',
+        'border-t border-border-hairline p-4',
         className
       )}
     >
       <div className="col-start-1 flex items-center gap-1 justify-self-start">
         <MLButton
-          variant="secondary"
+          variant="ghost"
           size="md"
           aria-label={labels.previousPage}
           disabled={page.page <= 1}
           onClick={handlePrevious}
-          className={STEP_BUTTON}
+          className={cn(STEP_BUTTON, STEP_QUIET)}
         >
           <ChevronLeft className="h-5 w-5" aria-hidden />
         </MLButton>
@@ -114,12 +127,16 @@ function UbDataGridPaginationBase({
             ) : (
               <MLButton
                 key={entry}
-                variant={entry === page.page ? 'secondary' : 'ghost'}
+                variant="ghost"
                 size="md"
                 aria-label={fillTemplate(labels.goToPage, { page: entry })}
                 aria-current={entry === page.page ? 'page' : undefined}
                 onClick={() => onPageChange(entry)}
-                className={cn(STEP_BUTTON, 'ds-body-sm')}
+                className={cn(
+                  STEP_BUTTON,
+                  'ds-num-sm',
+                  entry === page.page ? STEP_CURRENT : STEP_QUIET
+                )}
               >
                 {entry}
               </MLButton>
@@ -127,12 +144,12 @@ function UbDataGridPaginationBase({
           )}
 
         <MLButton
-          variant="secondary"
+          variant="ghost"
           size="md"
           aria-label={labels.nextPage}
           disabled={page.page >= pages}
           onClick={handleNext}
-          className={STEP_BUTTON}
+          className={cn(STEP_BUTTON, STEP_QUIET)}
         >
           <ChevronRight className="h-5 w-5" aria-hidden />
         </MLButton>

@@ -30,7 +30,7 @@ const x = o.forwardRef(
           onClick: () => p((m) => !m),
           disabled: e,
           "aria-label": t ? i : r,
-          className: "absolute right-3 top-1/2 -translate-y-1/2 text-[#7f7d83] transition-colors hover:text-[#111111] focus-visible:outline-none disabled:cursor-not-allowed disabled:text-[#b3b3b3]",
+          className: "absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary transition-colors hover:text-text-primary focus-visible:outline-none disabled:cursor-not-allowed disabled:text-text-muted",
           children: t ? /* @__PURE__ */ s.jsx(c, { className: "h-4 w-4" }) : /* @__PURE__ */ s.jsx(d, { className: "h-4 w-4" })
         }
       )

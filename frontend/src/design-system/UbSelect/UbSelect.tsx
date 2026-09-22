@@ -87,7 +87,7 @@ const UbSelectInner = forwardRef<HTMLButtonElement, UbSelectProps>(function UbSe
         className={cn(
           // 44px, not shadcn's 40 — R-A-3's touch target, which the product's
           // own controls all meet and ml-uikit's default does not.
-          'h-11 w-full rounded-lg bg-surface-card text-text-primary',
+          'h-11 w-full rounded-control bg-surface-card text-text-primary',
           'focus-visible:outline-none focus-visible:ring-0',
           // `aria-invalid:` is not decoration — ml-uikit's own trigger carries
           // `aria-invalid:border-[#ff3b30]` and `aria-invalid:focus-visible:border-[#ff3b30]`

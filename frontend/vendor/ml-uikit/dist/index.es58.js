@@ -5,10 +5,10 @@ const d = o.forwardRef(({ className: e, ...r }, a) => /* @__PURE__ */ i.jsx(
   "textarea",
   {
     className: t(
-      "flex min-h-[120px] w-full rounded-[8px] border border-[#e6e6e6] bg-white px-3 py-2 text-[14px] leading-[20px] text-[#111111] transition-colors",
-      "placeholder:text-[#b3b3b3] focus-visible:outline-none focus-visible:border-[#1D1C20] focus-visible:ring-0",
-      "disabled:cursor-not-allowed disabled:bg-[#f2f2f2] disabled:text-[#9ca3af] disabled:placeholder:text-[#b3b3b3] disabled:opacity-100",
-      "aria-invalid:border-[#ff3b30] aria-invalid:focus-visible:border-[#ff3b30]",
+      "flex min-h-[120px] w-full rounded-[8px] border border-border-subtle bg-surface-card px-3 py-2 text-[14px] leading-[20px] text-text-primary transition-colors",
+      "placeholder:text-text-muted focus-visible:outline-none focus-visible:border-text-primary focus-visible:ring-0",
+      "disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-text-muted disabled:placeholder:text-text-muted disabled:opacity-100",
+      "aria-invalid:border-formError aria-invalid:focus-visible:border-formError",
       e
     ),
     ref: a,

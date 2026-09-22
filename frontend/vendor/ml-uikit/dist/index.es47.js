@@ -8,17 +8,17 @@ const A = t.Root, K = t.Group, G = t.Value, k = l.forwardRef(({ className: a, ch
   {
     ref: n,
     className: i(
-      "flex h-10 w-full items-center justify-between whitespace-nowrap rounded-[8px] border border-[#e6e6e6] bg-white px-3 py-2 text-[14px] leading-[20px] text-[#111111] shadow-none",
-      "data-[placeholder]:text-[#b3b3b3] [&>span]:line-clamp-1",
-      "focus-visible:outline-none focus-visible:border-[#1D1C20] data-[state=open]:border-[#1D1C20]",
-      "disabled:cursor-not-allowed disabled:bg-[#f2f2f2] disabled:text-[#9ca3af] disabled:data-[placeholder]:text-[#b3b3b3]",
-      "aria-invalid:border-[#ff3b30] aria-invalid:focus-visible:border-[#ff3b30]",
+      "flex h-10 w-full items-center justify-between whitespace-nowrap rounded-[8px] border border-border-subtle bg-surface-card px-3 py-2 text-[14px] leading-[20px] text-text-primary shadow-none",
+      "data-[placeholder]:text-text-muted [&>span]:line-clamp-1",
+      "focus-visible:outline-none focus-visible:border-text-primary data-[state=open]:border-text-primary",
+      "disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-text-muted disabled:data-[placeholder]:text-text-muted",
+      "aria-invalid:border-formError aria-invalid:focus-visible:border-formError",
       a
     ),
     ...o,
     children: [
       s,
-      /* @__PURE__ */ e.jsx(t.Icon, { asChild: !0, children: /* @__PURE__ */ e.jsx(b, { className: "h-4 w-4 text-[#7f7d83]" }) })
+      /* @__PURE__ */ e.jsx(t.Icon, { asChild: !0, children: /* @__PURE__ */ e.jsx(b, { className: "h-4 w-4 text-text-tertiary" }) })
     ]
   }
 ));
@@ -28,7 +28,7 @@ const w = l.forwardRef(({ className: a, ...s }, o) => /* @__PURE__ */ e.jsx(
   {
     ref: o,
     className: i(
-      "flex cursor-default items-center justify-center py-1 text-[#7f7d83]",
+      "flex cursor-default items-center justify-center py-1 text-text-tertiary",
       a
     ),
     ...s,
@@ -41,7 +41,7 @@ const y = l.forwardRef(({ className: a, ...s }, o) => /* @__PURE__ */ e.jsx(
   {
     ref: o,
     className: i(
-      "flex cursor-default items-center justify-center py-1 text-[#7f7d83]",
+      "flex cursor-default items-center justify-center py-1 text-text-tertiary",
       a
     ),
     ...s,
@@ -85,7 +85,7 @@ const g = l.createContext({
       {
         ref: N,
         className: i(
-          "relative z-50 max-h-[--radix-select-content-available-height] min-w-[8rem] overflow-y-auto overflow-x-hidden rounded-[8px] border border-[#e6e6e6] bg-white text-[#111111] shadow-sm",
+          "relative z-50 max-h-[--radix-select-content-available-height] min-w-[8rem] overflow-y-auto overflow-x-hidden rounded-[8px] border border-border-subtle bg-surface-card text-text-primary shadow-sm",
           "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-select-content-transform-origin]",
           o === "popper" && "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
           a
@@ -94,8 +94,8 @@ const g = l.createContext({
         ...f,
         children: [
           /* @__PURE__ */ e.jsx(w, {}),
-          n ? /* @__PURE__ */ e.jsx("div", { className: "border-b border-[#e6e6e6] p-1", children: /* @__PURE__ */ e.jsxs("div", { className: "flex h-9 items-center gap-2 rounded-[6px] border border-[#e6e6e6] px-2", children: [
-            /* @__PURE__ */ e.jsx(I, { className: "h-4 w-4 text-[#7f7d83]" }),
+          n ? /* @__PURE__ */ e.jsx("div", { className: "border-b border-border-subtle p-1", children: /* @__PURE__ */ e.jsxs("div", { className: "flex h-9 items-center gap-2 rounded-[6px] border border-border-subtle px-2", children: [
+            /* @__PURE__ */ e.jsx(I, { className: "h-4 w-4 text-text-tertiary" }),
             /* @__PURE__ */ e.jsx(
               "input",
               {
@@ -120,7 +120,7 @@ const g = l.createContext({
                 },
                 placeholder: c,
                 "aria-label": "Search options",
-                className: "h-full w-full border-0 bg-transparent text-[14px] leading-[20px] text-[#111111] outline-none placeholder:text-[#b3b3b3]"
+                className: "h-full w-full border-0 bg-transparent text-[14px] leading-[20px] text-text-primary outline-none placeholder:text-text-muted"
               }
             )
           ] }) }) : null,
@@ -145,7 +145,7 @@ const L = l.forwardRef(({ className: a, ...s }, o) => /* @__PURE__ */ e.jsx(
   t.Label,
   {
     ref: o,
-    className: i("px-2 py-1 text-[12px] font-medium text-[#7f7d83]", a),
+    className: i("px-2 py-1 text-[12px] font-medium text-text-tertiary", a),
     ...s
   }
 ));
@@ -158,13 +158,13 @@ const T = l.forwardRef(({ className: a, children: s, ...o }, n) => {
       ref: n,
       className: i(
         "relative flex w-full cursor-default select-none items-center rounded-[6px] py-2 pl-2 pr-8 text-[14px] leading-[20px] outline-none",
-        "focus:bg-[#f1f1f1] focus:text-[#111111] data-[state=checked]:bg-[#f1f1f1] data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        "focus:bg-surface-hover focus:text-text-primary data-[state=checked]:bg-surface-hover data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
         f && "hidden",
         a
       ),
       ...o,
       children: [
-        /* @__PURE__ */ e.jsx("span", { className: "absolute right-2 flex h-3.5 w-3.5 items-center justify-center", children: /* @__PURE__ */ e.jsx(t.ItemIndicator, { children: /* @__PURE__ */ e.jsx(P, { className: "h-4 w-4 text-[#26453f]" }) }) }),
+        /* @__PURE__ */ e.jsx("span", { className: "absolute right-2 flex h-3.5 w-3.5 items-center justify-center", children: /* @__PURE__ */ e.jsx(t.ItemIndicator, { children: /* @__PURE__ */ e.jsx(P, { className: "h-4 w-4 text-accent" }) }) }),
         /* @__PURE__ */ e.jsx(t.ItemText, { children: s })
       ]
     }
@@ -175,7 +175,7 @@ const U = l.forwardRef(({ className: a, ...s }, o) => /* @__PURE__ */ e.jsx(
   t.Separator,
   {
     ref: o,
-    className: i("-mx-1 my-1 h-px bg-[#e6e6e6]", a),
+    className: i("-mx-1 my-1 h-px bg-border-subtle", a),
     ...s
   }
 ));

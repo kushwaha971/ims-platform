@@ -3,7 +3,7 @@ import * as r from "react";
 import { ChevronDown as f, ChevronLeft as x, ChevronRight as c } from "lucide-react";
 import { cn as o } from "./index.es63.js";
 const m = r.forwardRef(
-  ({ className: t, pagination: a, maxHeight: e, scrollContainerClassName: l, stickyHeader: n, ...d }, i) => /* @__PURE__ */ s.jsxs("div", { className: "relative w-full overflow-hidden rounded-[8px] border border-[#e6e6e6] bg-white", children: [
+  ({ className: t, pagination: a, maxHeight: e, scrollContainerClassName: l, stickyHeader: n, ...d }, i) => /* @__PURE__ */ s.jsxs("div", { className: "relative w-full overflow-hidden rounded-[8px] border border-border-subtle bg-surface-card", children: [
     /* @__PURE__ */ s.jsx(
       "div",
       {
@@ -15,7 +15,7 @@ const m = r.forwardRef(
             ref: i,
             className: o(
               "w-full caption-bottom text-[14px] leading-[20px]",
-              n ? "[&_thead]:sticky [&_thead]:top-0 [&_thead]:z-10 [&_thead]:bg-[#fafafa]" : void 0,
+              n ? "[&_thead]:sticky [&_thead]:top-0 [&_thead]:z-10 [&_thead]:bg-surface-sunken" : void 0,
               t
             ),
             ...d
@@ -31,7 +31,7 @@ const p = r.forwardRef(({ className: t, ...a }, e) => /* @__PURE__ */ s.jsx(
   "thead",
   {
     ref: e,
-    className: o("bg-[#fafafa] [&_tr]:border-b [&_tr]:border-[#e6e6e6]", t),
+    className: o("bg-surface-sunken [&_tr]:border-b [&_tr]:border-border-subtle", t),
     ...a
   }
 ));
@@ -50,7 +50,7 @@ const g = r.forwardRef(({ className: t, ...a }, e) => /* @__PURE__ */ s.jsx(
   {
     ref: e,
     className: o(
-      "border-t border-[#e6e6e6] bg-[#fafafa] font-medium [&>tr]:last:border-b-0",
+      "border-t border-border-subtle bg-surface-sunken font-medium [&>tr]:last:border-b-0",
       t
     ),
     ...a
@@ -62,7 +62,7 @@ const N = r.forwardRef(({ className: t, ...a }, e) => /* @__PURE__ */ s.jsx(
   {
     ref: e,
     className: o(
-      "border-b border-[#e6e6e6]",
+      "border-b border-border-subtle",
       t
     ),
     ...a
@@ -107,7 +107,7 @@ const j = r.forwardRef(({ className: t, ...a }, e) => /* @__PURE__ */ s.jsx(
   {
     ref: e,
     className: o(
-      "grid w-full grid-cols-[auto_1fr_auto] items-center border-t border-[#e6e6e6] bg-white p-4",
+      "grid w-full grid-cols-[auto_1fr_auto] items-center border-t border-border-subtle bg-surface-card p-4",
       t
     ),
     ...a
@@ -121,8 +121,8 @@ const h = r.forwardRef(({ className: t, label: a = "Total entries:", count: e = 
     className: o("col-start-1 flex items-center gap-1 justify-self-start", t),
     ...l,
     children: [
-      /* @__PURE__ */ s.jsx("span", { className: "text-[14px] font-normal leading-[20px] text-[#4f4d55]", children: a }),
-      /* @__PURE__ */ s.jsx("span", { className: "text-[14px] font-normal leading-[20px] text-[#1d1c20]", children: e })
+      /* @__PURE__ */ s.jsx("span", { className: "text-[14px] font-normal leading-[20px] text-text-secondary", children: a }),
+      /* @__PURE__ */ s.jsx("span", { className: "text-[14px] font-normal leading-[20px] text-text-primary", children: e })
     ]
   }
 ));
@@ -151,7 +151,7 @@ const R = r.forwardRef(({ className: t, ...a }, e) => /* @__PURE__ */ s.jsx(
     ref: e,
     type: "button",
     className: o(
-      "flex h-7 w-7 items-center justify-center rounded-[8px] text-[#7f7d83] hover:text-foreground",
+      "flex h-7 w-7 items-center justify-center rounded-[8px] text-text-tertiary hover:text-foreground",
       t
     ),
     ...a
@@ -166,7 +166,7 @@ const v = r.forwardRef(({ className: t, isActive: a, ...e }, l) => /* @__PURE__ 
     "aria-current": a ? "page" : void 0,
     className: o(
       "flex h-8 w-8 items-center justify-center rounded-[8px] text-[12px] leading-[16px]",
-      a ? "border border-[#e6e6e6] bg-white text-foreground" : "text-[#7f7d83]",
+      a ? "border border-border-subtle bg-surface-card text-foreground" : "text-text-tertiary",
       t
     ),
     ...e
@@ -180,8 +180,8 @@ const C = r.forwardRef(({ className: t, label: a = "Total entries:", total: e = 
     className: o("flex items-center gap-1 text-[14px] font-normal leading-[20px]", t),
     ...l,
     children: [
-      /* @__PURE__ */ s.jsx("span", { className: "text-[#4f4d55]", children: a }),
-      /* @__PURE__ */ s.jsx("span", { className: "text-[#1d1c20]", children: e })
+      /* @__PURE__ */ s.jsx("span", { className: "text-text-secondary", children: a }),
+      /* @__PURE__ */ s.jsx("span", { className: "text-text-primary", children: e })
     ]
   }
 ));
@@ -207,10 +207,10 @@ const _ = r.forwardRef(
           {
             type: "button",
             "aria-haspopup": "listbox",
-            className: "flex h-8 min-w-[72px] items-center justify-between gap-2 rounded-[8px] border border-[#e6e6e6] bg-white px-3 text-[12px] leading-[16px] text-foreground shadow-sm",
+            className: "flex h-8 min-w-[72px] items-center justify-between gap-2 rounded-[8px] border border-border-subtle bg-surface-card px-3 text-[12px] leading-[16px] text-foreground shadow-sm",
             children: [
-              /* @__PURE__ */ s.jsx("span", { className: e === l ? "text-[#7f7d83]" : void 0, children: e === l ? l : e }),
-              n || /* @__PURE__ */ s.jsx(f, { className: "h-4 w-4 text-[#7f7d83]" })
+              /* @__PURE__ */ s.jsx("span", { className: e === l ? "text-text-tertiary" : void 0, children: e === l ? l : e }),
+              n || /* @__PURE__ */ s.jsx(f, { className: "h-4 w-4 text-text-tertiary" })
             ]
           }
         )

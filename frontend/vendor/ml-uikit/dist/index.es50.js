@@ -96,7 +96,7 @@ const Y = i.forwardRef(
       "div",
       {
         className: s(
-          "flex h-full w-[--sidebar-width] flex-col border-r border-[#e6e6e6] bg-white text-black",
+          "flex h-full w-[--sidebar-width] flex-col border-r border-border-subtle bg-surface-card text-text-primary",
           o
         ),
         ref: c,
@@ -109,7 +109,7 @@ const Y = i.forwardRef(
         "data-sidebar": "sidebar",
         "data-mobile": "true",
         className: s(
-          "w-[--sidebar-width] border-r border-[#e6e6e6] bg-white p-0 text-black shadow-none [&>button]:hidden",
+          "w-[--sidebar-width] border-r border-border-subtle bg-surface-card p-0 text-text-primary shadow-none [&>button]:hidden",
           o
         ),
         style: {
@@ -128,7 +128,7 @@ const Y = i.forwardRef(
       "div",
       {
         ref: c,
-        className: "group peer hidden text-black lg:block",
+        className: "group peer hidden text-text-primary lg:block",
         "data-state": l,
         "data-collapsible": l === "collapsed" ? m : "",
         "data-variant": t,
@@ -152,7 +152,7 @@ const Y = i.forwardRef(
                 "fixed inset-y-0 z-20 hidden h-svh w-[--sidebar-width] transition-[left,right,width] duration-200 ease-linear lg:flex",
                 a === "left" ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]" : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
                 // Adjust the padding for floating and inset variants.
-                t === "floating" ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]" : "group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[side=left]:border-r group-data-[side=left]:border-[#e6e6e6] group-data-[side=right]:border-l group-data-[side=right]:border-[#e6e6e6]",
+                t === "floating" ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]" : "group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[side=left]:border-r group-data-[side=left]:border-border-subtle group-data-[side=right]:border-l group-data-[side=right]:border-border-subtle",
                 o
               ),
               ...d,
@@ -160,7 +160,7 @@ const Y = i.forwardRef(
                 "div",
                 {
                   "data-sidebar": "sidebar",
-                  className: "flex h-full w-full flex-col bg-white text-black group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-[#e6e6e6] group-data-[variant=floating]:shadow",
+                  className: "flex h-full w-full flex-col bg-surface-card text-text-primary group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-border-subtle group-data-[variant=floating]:shadow",
                   children: n
                 }
               )
@@ -183,7 +183,7 @@ const J = i.forwardRef(({ className: a, onClick: t, ...e }, o) => {
       size: "icon",
       "data-state": l ? "open" : "closed",
       className: s(
-        "h-9 w-9 rounded-lg border border-[#dcdcde] bg-white text-black hover:bg-[#fafafa] hover:text-black",
+        "h-9 w-9 rounded-lg border border-border-subtle bg-surface-card text-text-primary hover:bg-surface-sunken hover:text-text-primary",
         a
       ),
       onClick: (u) => {
@@ -242,7 +242,7 @@ const ee = i.forwardRef(({ className: a, ...t }, e) => /* @__PURE__ */ r.jsx(
     ref: e,
     "data-sidebar": "input",
     className: s(
-      "h-10 w-full rounded-lg border-[#e6e6e6] bg-white text-black placeholder:text-[#adacb0] shadow-none focus-visible:ring-2 focus-visible:ring-[#26453f]",
+      "h-10 w-full rounded-lg border-border-subtle bg-surface-card text-text-primary placeholder:text-text-muted shadow-none focus-visible:ring-2 focus-visible:ring-accent",
       a
     ),
     ...t
@@ -280,7 +280,7 @@ const re = i.forwardRef(({ className: a, ...t }, e) => /* @__PURE__ */ r.jsx(
   {
     ref: e,
     "data-sidebar": "separator",
-    className: s("mx-0 w-full bg-[#e6e6e6]", a),
+    className: s("mx-0 w-full bg-border-subtle", a),
     ...t
   }
 ));
@@ -319,7 +319,7 @@ const se = i.forwardRef(({ className: a, asChild: t = !1, ...e }, o) => {
       ref: o,
       "data-sidebar": "group-label",
       className: s(
-        "flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium uppercase tracking-wide text-[#adacb0] outline-none ring-sidebar-ring transition-[margin,opacity] duration-200 ease-linear focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
+        "flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium uppercase tracking-wide text-text-muted outline-none ring-sidebar-ring transition-[margin,opacity] duration-200 ease-linear focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
         "group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0",
         a
       ),
@@ -378,12 +378,12 @@ const ce = i.forwardRef(({ className: a, ...t }, e) => /* @__PURE__ */ r.jsx(
 ));
 ce.displayName = "SidebarMenuItem";
 const be = R(
-  "peer/menu-button flex w-full items-center gap-2 overflow-hidden rounded-[4px] border border-transparent bg-white p-2 text-left text-sm font-normal text-[#7f7d83] outline-none ring-sidebar-ring transition-[background-color,border-color,color,width,height,padding] hover:border-[#f1f1f1] hover:bg-[#fafafa] hover:text-black focus-visible:ring-2 focus-visible:ring-[#26453f] active:border-[#f1f1f1] active:bg-[#fafafa] active:text-black disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:border-[#f1f1f1] data-[active=true]:bg-[#fafafa] data-[active=true]:font-medium data-[active=true]:text-black data-[state=open]:border-[#f1f1f1] data-[state=open]:bg-[#fafafa] data-[state=open]:text-black group-data-[collapsible=icon]:!size-10 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!p-0 group-data-[collapsible=icon]:[&>span:last-child]:hidden [&>span:last-child]:truncate [&>svg]:size-5 [&>svg]:shrink-0",
+  "peer/menu-button flex w-full items-center gap-2 overflow-hidden rounded-[4px] border border-transparent bg-surface-card p-2 text-left text-sm font-normal text-text-tertiary outline-none ring-sidebar-ring transition-[background-color,border-color,color,width,height,padding] hover:border-surface-hover hover:bg-surface-sunken hover:text-text-primary focus-visible:ring-2 focus-visible:ring-accent active:border-surface-hover active:bg-surface-sunken active:text-text-primary disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:border-surface-hover data-[active=true]:bg-surface-sunken data-[active=true]:font-medium data-[active=true]:text-text-primary data-[state=open]:border-surface-hover data-[state=open]:bg-surface-sunken data-[state=open]:text-text-primary group-data-[collapsible=icon]:!size-10 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!p-0 group-data-[collapsible=icon]:[&>span:last-child]:hidden [&>span:last-child]:truncate [&>svg]:size-5 [&>svg]:shrink-0",
   {
     variants: {
       variant: {
         default: "",
-        outline: "border-[#e6e6e6] text-black hover:border-[#dcdcde] hover:bg-[#fafafa]"
+        outline: "border-border-subtle text-text-primary hover:border-border-subtle hover:bg-surface-sunken"
       },
       size: {
         default: "h-10 text-sm",

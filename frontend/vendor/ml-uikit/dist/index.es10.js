@@ -3,8 +3,8 @@ import * as p from "react";
 import { Slot as g } from "@radix-ui/react-slot";
 import { cva as c } from "class-variance-authority";
 import { cn as d } from "./index.es63.js";
-const e = "bg-[#26453f] text-white hover:bg-[#1f3631]", u = "bg-[#f1f1f1] text-[#111111] hover:bg-[#e6e6e6]", v = "border border-[#26453f] bg-white text-[#26453f] hover:bg-[#e5f1ee]", t = "border border-[#e6e6e6] bg-white text-[#111111] hover:bg-[#f5f5f5]", x = "bg-transparent text-[#111111] hover:bg-[#f1f1f1]", b = "bg-[#e73f3f] text-white hover:bg-[#cf2f2f]", m = "text-[#26453f] underline-offset-4 hover:underline", h = c(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[8px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+const e = "bg-accent text-text-inverse hover:bg-accent-press", u = "bg-surface-hover text-text-primary hover:bg-border-subtle", v = "border border-accent bg-surface-card text-accent hover:bg-accent-quiet", t = "border border-border-subtle bg-surface-card text-text-primary hover:bg-surface-hover", x = "bg-transparent text-text-primary hover:bg-surface-hover", b = "bg-formError text-text-inverse hover:bg-formError", m = "text-accent underline-offset-4 hover:underline", h = c(
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[8px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {

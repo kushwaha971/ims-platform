@@ -174,7 +174,7 @@ export function MLDialog({
              BrandHub centres a `max-w-[calc(100vw-2rem)]` panel at every width.
              A sheet anchored to the bottom edge is reachable with a thumb, and
              this product is used one-handed. */
-          'max-h-[90dvh] rounded-t-xl sm:max-w-[480px] sm:rounded-xl',
+          'max-h-[90dvh] rounded-t-xl sm:w-[420px] sm:max-w-[calc(100vw-2rem)] sm:rounded-xl',
           className
         )}
       >
@@ -203,7 +203,7 @@ export function MLDialogHeader({
   className,
 }: Readonly<{ children: ReactNode; className?: string }>): React.JSX.Element {
   return (
-    <div className={cn('flex items-start gap-3 border-b border-border-hairline p-6', className)}>
+    <div className={cn('flex items-start gap-2 border-b border-border-hairline p-6', className)}>
       {children}
     </div>
   );
@@ -232,7 +232,7 @@ export function MLDialogTitle({
   className,
 }: Readonly<MLDialogTitleProps>): React.JSX.Element {
   return (
-    <h2 id={id} className={cn('ds-h3 text-text-primary', className)}>
+    <h2 id={id} className={cn('ds-title-sm text-text-primary', className)}>
       {children}
     </h2>
   );

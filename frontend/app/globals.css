@@ -124,6 +124,111 @@
   }
 }
 
+@layer base {
+  /**
+   * Scrollbars.
+   *
+   * There were none defined at all, so on Windows and Linux Chrome the default
+   * 15-17px platform scrollbar appeared on every overflow container — the grid
+   * scroller, select menus, dialog bodies, the mobile drawer. BrandHub styles
+   * them document-wide at 4px (§2.7). Its values are literals; these are tokens,
+   * so the bar survives dark theme, which BrandHub never has to handle.
+   */
+  ::-webkit-scrollbar {
+    width: 4px;
+    border-radius: var(--radius-lg);
+    background-color: hsl(var(--surface-sunken));
+  }
+
+  ::-webkit-scrollbar:horizontal {
+    height: 4px;
+    border-radius: var(--radius-lg);
+    background-color: hsl(var(--surface-sunken));
+  }
+
+  ::-webkit-scrollbar-track {
+    border-radius: var(--radius-lg);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border-subtle));
+    border-radius: var(--radius-lg);
+  }
+
+  /* Firefox has no pseudo-elements for this; these two properties are the whole
+     API it offers. */
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border-subtle)) transparent;
+  }
+
+  /* BrandHub sets both on `#customer-root` (§2.4). Without them Inter renders
+     visibly heavier on macOS than the same weight does in the reference — the
+     kind of difference that reads as "a different font" without anyone being
+     able to say why. */
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /**
+   * ── The vendored ml-uikit palette ─────────────────────────────────────────
+   *
+   * There is no remap block here, and there was one for about an hour.
+   *
+   * ml-uikit ships compiled with BrandHub's palette baked into its class strings
+   * (`text-[#26453f]`, `bg-white`, `disabled:bg-[#f2f2f2]`, 36 more), and
+   * `tailwind.config.js` puts the bundle in `content`, so they compile and win.
+   * BrandHub solves this with exactly such a block (its §2.5). Copying that here
+   * broke on STATE VARIANTS: `disabled:bg-[#f2f2f2]` needs the override to apply
+   * only when disabled, which means hand-writing every variant of every literal
+   * — 38 colours across `hover`, `focus`, `focus-visible`, `disabled`,
+   * `aria-invalid` and four `data-[state]` values — and missing one is invisible
+   * until somebody disables a field in dark mode.
+   *
+   * `scripts/retone-ml-uikit.mjs` rewrites the class NAMES in the vendored
+   * bundle instead, which leaves the variant prefix alone:
+   * `disabled:bg-[#f2f2f2]` becomes `disabled:bg-surface-sunken`. 650 classes,
+   * no `!important`, nothing to keep in step. Re-run it after an ml-uikit
+   * upgrade; `designSystemGuards.test.ts` fails if a literal comes back.
+   */
+
+  /**
+   * cmdk's highlighted row.
+   *
+   * `MLCommandItem` carries `data-[selected=true]:bg-accent
+   * data-[selected=true]:text-accent-foreground`, which is shadcn's contract
+   * where `accent` is a near-white HOVER WASH. In this product `--accent` is the
+   * indigo ACTION colour (§23.2.4) — `alias.css` records that collision in a
+   * comment — and `accent.foreground` was never added to the Tailwind theme, so
+   * `text-accent-foreground` compiled to nothing at all.
+   *
+   * The result: every keyboard-active row in the combobox was a solid `#4A47D6`
+   * block with near-black text on it. Roughly 1.6:1 — below any legibility
+   * floor, on the control a merchant uses to pick their GST state from 38
+   * options with the keyboard.
+   *
+   * Fixed here rather than by renaming `--accent`, because that name is the
+   * product's action colour across 200 files and ml-uikit is the thing with the
+   * different meaning.
+   */
+  [cmdk-item][data-selected='true'],
+  [data-radix-collection-item][data-highlighted] {
+    background-color: hsl(var(--surface-hover)) !important;
+    color: hsl(var(--text-primary)) !important;
+  }
+
+  /**
+   * Radix poppers carry no z-index of their own, so a `UbSelect` opened inside a
+   * `UbDialog` was relying on DOM order alone to sit above a `z-50` panel.
+   * BrandHub pins the wrapper (§2.6); same idea, one layer above this product's
+   * dialog.
+   */
+  [data-radix-popper-content-wrapper] {
+    z-index: 60 !important;
+  }
+}
+
 @layer components {
   /**
    * The native `<select>` chevron.

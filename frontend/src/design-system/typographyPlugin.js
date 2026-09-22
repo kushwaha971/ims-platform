@@ -166,10 +166,68 @@ module.exports = plugin(({ addComponents }) => {
       letterSpacing: 'var(--track-metric)',
       fontVariantNumeric: 'tabular-nums',
     },
+    /**
+     * `.ds-num` sets a family and a weight and NO SIZE, so it is a modifier
+     * meant to be worn over a body tier. It does not work that way: the plugin
+     * emits it after `.ds-body-sm`, the two have equal specificity, and the
+     * later rule wins — so `class="ds-body-sm ds-num"` silently renders at
+     * weight 500 instead of 400. Every rupee amount in a table cell was a step
+     * bolder than the text beside it (`charts/ChartBarRow.tsx`,
+     * `UbChartTable.tsx`).
+     *
+     * BrandHub has no such modifier. It has eighteen complete numeric tiers —
+     * `ds-num-{2xl,xl,l,base,s,xs}-{semibold,medium,regular}` — each carrying
+     * its own size and weight, precisely so this cannot happen. The two below
+     * are the two this product actually needs; the rest can follow the day a
+     * screen wants them.
+     */
     '.ds-num': {
       fontFamily: 'var(--font-metric)',
       fontWeight: 'var(--weight-medium)',
       fontVariantNumeric: 'tabular-nums',
+    },
+    '.ds-num-base': {
+      fontFamily: 'var(--font-metric)',
+      fontSize: 'var(--size-body)',
+      lineHeight: 'var(--leading-normal)',
+      fontWeight: 'var(--weight-regular)',
+      fontVariantNumeric: 'tabular-nums',
+    },
+    '.ds-num-sm': {
+      fontFamily: 'var(--font-metric)',
+      fontSize: 'var(--size-body-sm)',
+      lineHeight: 'var(--leading-normal)',
+      fontWeight: 'var(--weight-regular)',
+      fontVariantNumeric: 'tabular-nums',
+    },
+    /**
+     * The FIXED chrome tiers, which BrandHub deliberately keeps out of its fluid
+     * ramp: `ds-nav-label-*` (12/16) and `ds-fixed-base-regular` (14/20). Chrome
+     * does not want to grow with the viewport — a status chip that gets bigger
+     * on a desktop monitor is a chip that stops matching the row it labels.
+     *
+     * `.ds-chip` is the one items 6 and 9 of the audit both wanted: 12/16 at
+     * weight 400. Status pills were using `.ds-label`, which is weight 600, so
+     * a column of them read bolder than the content they were labelling —
+     * exactly backwards.
+     */
+    '.ds-chip': {
+      fontFamily: 'var(--font-ui)',
+      fontSize: '12px',
+      lineHeight: '16px',
+      fontWeight: 'var(--weight-regular)',
+    },
+    /**
+     * 16/24/500 — BrandHub's dialog title (`text-base font-medium leading-6`).
+     * Its own `ds-h*` tiers are far larger and are for page headings; a modal
+     * heading is chrome. This product was using `.ds-h3` (19px, 500, −0.015em
+     * tracking), which is why a confirm dialog read like a page.
+     */
+    '.ds-title-sm': {
+      fontFamily: 'var(--font-ui)',
+      fontSize: '16px',
+      lineHeight: '24px',
+      fontWeight: 'var(--weight-medium)',
     },
     '.ds-mono': {
       fontFamily: 'var(--font-mono)',

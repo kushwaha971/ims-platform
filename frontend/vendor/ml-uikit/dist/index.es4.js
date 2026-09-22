@@ -4,16 +4,16 @@ import { Info as v, AlertCircle as w, CircleX as x, CheckCircle2 as h, SquareDas
 import { cva as o } from "class-variance-authority";
 import { cn as s } from "./index.es63.js";
 const N = o(
-  "flex w-full flex-col items-end gap-3 rounded-[8px] border bg-white px-3 py-3 text-[14px] leading-[20px] shadow-[0px_2px_4px_-2px_rgba(19,25,39,0.12),0px_4px_4px_-2px_rgba(19,25,39,0.08)]",
+  "flex w-full flex-col items-end gap-3 rounded-[8px] border bg-surface-card px-3 py-3 text-[14px] leading-[20px] shadow-[0px_2px_4px_-2px_rgba(19,25,39,0.12),0px_4px_4px_-2px_rgba(19,25,39,0.08)]",
   {
     variants: {
       variant: {
-        default: "border-[#e6e6e6] text-black",
-        success: "border-[#307f4a] text-[#307f4a]",
-        error: "border-[#e73f3f] text-[#e73f3f]",
-        destructive: "border-[#e73f3f] text-[#e73f3f]",
-        warning: "border-[#e49614] text-[#e49614]",
-        info: "border-[#2563eb] text-[#2563eb]"
+        default: "border-border-subtle text-text-primary",
+        success: "border-success text-success",
+        error: "border-formError text-formError",
+        destructive: "border-formError text-formError",
+        warning: "border-warning text-warning",
+        info: "border-info text-info"
       }
     },
     defaultVariants: {
@@ -23,12 +23,12 @@ const N = o(
 ), b = o("flex h-6 w-6 shrink-0 items-center justify-center", {
   variants: {
     variant: {
-      default: "text-[#adacb0]",
-      success: "text-[#307f4a]",
-      error: "text-[#e73f3f]",
-      destructive: "text-[#e73f3f]",
-      warning: "text-[#e49614]",
-      info: "text-[#2563eb]"
+      default: "text-text-muted",
+      success: "text-success",
+      error: "text-formError",
+      destructive: "text-formError",
+      warning: "text-warning",
+      info: "text-info"
     }
   },
   defaultVariants: {
@@ -80,7 +80,7 @@ const y = n.forwardRef(({ className: a, ...r }, t) => /* @__PURE__ */ e.jsx(
   {
     ref: t,
     className: s(
-      "text-[12px] leading-[16px] text-[#7f7d83] [&:not(:first-child)]:mt-2",
+      "text-[12px] leading-[16px] text-text-tertiary [&:not(:first-child)]:mt-2",
       a
     ),
     ...r

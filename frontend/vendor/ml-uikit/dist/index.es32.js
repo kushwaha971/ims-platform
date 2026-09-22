@@ -11,7 +11,7 @@ function v({ className: a, ...t }) {
       "data-slot": "input-group",
       role: "group",
       className: e(
-        "group/input-group relative flex w-full items-center rounded-[8px] border border-[#e6e6e6] bg-white text-[14px] leading-[20px] text-foreground transition-colors",
+        "group/input-group relative flex w-full items-center rounded-[8px] border border-border-subtle bg-surface-card text-[14px] leading-[20px] text-foreground transition-colors",
         "h-10 has-[>textarea]:h-auto",
         // Variants based on alignment.
         "has-[>[data-align=inline-start]]:[&>input]:pl-2",
@@ -19,11 +19,11 @@ function v({ className: a, ...t }) {
         "has-[>[data-align=block-start]]:h-auto has-[>[data-align=block-start]]:flex-col has-[>[data-align=block-start]]:[&>input]:pb-3",
         "has-[>[data-align=block-end]]:h-auto has-[>[data-align=block-end]]:flex-col has-[>[data-align=block-end]]:[&>input]:pt-3",
         // Focus state.
-        "focus-within:border-[#1D1C20]",
+        "focus-within:border-text-primary",
         // Error state.
-        "has-[[data-slot][aria-invalid=true]]:border-[#ff3b30]",
+        "has-[[data-slot][aria-invalid=true]]:border-formError",
         // Disabled state.
-        "data-[disabled=true]:cursor-not-allowed data-[disabled=true]:bg-[#f2f2f2] data-[disabled=true]:text-[#9ca3af]",
+        "data-[disabled=true]:cursor-not-allowed data-[disabled=true]:bg-surface-sunken data-[disabled=true]:text-text-muted",
         a
       ),
       ...t
@@ -31,7 +31,7 @@ function v({ className: a, ...t }) {
   );
 }
 const l = o(
-  "flex h-auto cursor-text select-none items-center justify-center gap-2 py-1.5 text-sm font-medium text-[#7f7d83] group-data-[disabled=true]/input-group:text-[#b3b3b3] [&>kbd]:rounded-[calc(var(--radius)-5px)] [&>svg:not([class*='size-'])]:size-4",
+  "flex h-auto cursor-text select-none items-center justify-center gap-2 py-1.5 text-sm font-medium text-text-tertiary group-data-[disabled=true]/input-group:text-text-muted [&>kbd]:rounded-[calc(var(--radius)-5px)] [&>svg:not([class*='size-'])]:size-4",
   {
     variants: {
       align: {
