@@ -24,6 +24,8 @@ import {
   onboardingStepPath,
 } from 'src/routes';
 
+import { NAV_ITEMS } from 'modules/DigiKhaato/features/navigation/sidebarConfig';
+
 const ROOT = process.cwd();
 
 const walk = (dir: string): readonly string[] =>
@@ -217,6 +219,49 @@ describe('the onboarding guard', () => {
     // the 401 handler — the shape of the redirect loop already fixed once.
     for (const publicPrefix of PUBLIC_ROUTE_PREFIXES) {
       expect(GUARDED_ROUTE_PREFIXES).not.toContain(publicPrefix);
+    }
+  });
+});
+
+/**
+ * Every nav row that claims to be a link must have a page behind it.
+ *
+ * `next/link` prefetches, and the sidebar renders on EVERY app route — so a row
+ * pointing at a page that does not exist is not a dead link a merchant might
+ * find, it is eight `?_rsc=` requests fired on every screen, all 404, on the
+ * phone connection this product is designed around. It was found when a browser
+ * journey stopped reaching network-idle, which is a roundabout way to discover
+ * a navigation bug and exactly why this assertion now exists.
+ *
+ * `ready` is opt-in, so a row added before its route defaults to inert. This
+ * checks the other direction: nothing may claim `ready: true` without a page.
+ */
+describe('the sidebar only links to pages that exist', () => {
+  const pageDirs = walk(join(ROOT, 'app'))
+    .filter((file) => file.endsWith('page.tsx'))
+    .map((file) =>
+      file
+        .slice(join(ROOT, 'app').length)
+        .replace(/\/page\.tsx$/, '')
+        // Route groups — `(app)`, `(auth)` — are not part of the URL.
+        .replace(/\/\([^)]+\)/g, '')
+    )
+    .map((path) => path || '/');
+
+  it.each(NAV_ITEMS.filter((item) => item.ready).map((item) => [item.key, item.href]))(
+    '%s → %s has a page',
+    (_key, href) => {
+      expect(pageDirs).toContain(href);
+    }
+  );
+
+  it('leaves every other row inert rather than linking it', () => {
+    // Not a style rule: an inert row renders no `<Link>`, so it prefetches
+    // nothing. The row stays visible — it is what tells a shopkeeper the
+    // product will eventually do stock and invoices.
+    const notReady = NAV_ITEMS.filter((item) => !item.ready).map((item) => item.href);
+    for (const href of notReady) {
+      expect(pageDirs).not.toContain(href);
     }
   });
 });

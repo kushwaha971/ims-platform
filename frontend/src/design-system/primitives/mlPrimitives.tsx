@@ -56,12 +56,31 @@ export interface MLBadgeProps extends HTMLAttributes<HTMLSpanElement> {
   readonly className?: string;
 }
 
+/**
+ * BrandHub's canonical status tones (`Customer/utils/statusColor.ts`), which are
+ * a MUTED FILL plus the solid tone as text, and no border:
+ *
+ *   yellow  bg-warning-muted     text-warning       #FFF0D8 on #B6760E
+ *   blue    bg-info-muted        text-info          #E9F0FF on #245FE0
+ *   green   bg-success-muted     text-success       #E8F6ED on #307F4A
+ *   red     bg-destructive-muted text-destructive   #FEEBEB on #E12121
+ *   neutral bg-muted             text-muted-fg      #F1F1F1 on #7F7D83
+ *
+ * The border is what changed. These carried `border-success/30` and friends, and
+ * a 30%-alpha ring around an already-tinted pill reads as a second, fuzzier edge
+ * — at 12px it is just noise. BrandHub's chips are borderless filled pills and
+ * are cleaner for it. The fill/text pairings here were already the same idea in
+ * this product's own tokens, so only the ring comes off.
+ *
+ * BrandHub has a sixth tone, `purple`/`stored`, for a warehouse state this
+ * product does not have. Adding it now would be a colour nobody can trigger.
+ */
 const BADGE_VARIANT: Record<MLBadgeVariant, string> = {
-  neutral: 'bg-surface-sunken text-text-secondary border-border-subtle',
-  success: 'bg-success-dim text-success border-success/30',
-  warning: 'bg-warning-dim text-warning border-warning/30',
-  error: 'bg-error-dim text-error border-error/30',
-  info: 'bg-info-dim text-info border-info/30',
+  neutral: 'bg-surface-sunken text-text-secondary',
+  success: 'bg-success-dim text-success',
+  warning: 'bg-warning-dim text-warning',
+  error: 'bg-error-dim text-error',
+  info: 'bg-info-dim text-info',
 };
 
 export const MLBadge = forwardRef<HTMLSpanElement, MLBadgeProps>(function MLBadge(
@@ -72,7 +91,7 @@ export const MLBadge = forwardRef<HTMLSpanElement, MLBadgeProps>(function MLBadg
     <span
       ref={ref}
       className={cn(
-        'ds-label inline-flex items-center gap-1 rounded-pill border px-2 py-0.5',
+        'ds-label inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-pill px-2 py-0.5',
         BADGE_VARIANT[variant],
         className
       )}

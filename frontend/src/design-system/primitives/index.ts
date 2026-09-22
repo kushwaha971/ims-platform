@@ -110,7 +110,9 @@ export type {
 export {
   MLDialog,
   MLDialogDescription,
+  MLDialogBody,
   MLDialogFooter,
+  MLDialogHeader,
   MLDialogTitle,
   MLMenu,
   MLMenuItem,

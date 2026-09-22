@@ -38,6 +38,26 @@ export interface NavItemConfig {
   readonly bottomNav?: boolean;
   /** Slice selector key for the badge count, if any. */
   readonly badge?: 'overdueReminders' | 'lowStock' | 'unreadNotifications';
+  /**
+   * Does `href` actually resolve to a page yet?
+   *
+   * Absent means no, which is the safe default: a new entry added here before
+   * its route exists is inert rather than a 404 waiting for a merchant to tap
+   * it. `tests/routes.test.ts` asserts every `ready` item has a page, so this
+   * cannot drift the other way either.
+   *
+   * It exists because `next/link` PREFETCHES. The sidebar renders on every app
+   * route, so eight links pointing at unbuilt pages meant eight `?_rsc=` fetches
+   * on every screen, all 404, on a phone connection this product is explicitly
+   * designed around — and then a merchant who tapped one landed on a
+   * not-found. Found while a browser journey hung: the prefetch traffic never
+   * let the page reach network-idle.
+   *
+   * The rows stay VISIBLE. They are what tells a shopkeeper the product will
+   * eventually do stock and invoices, and hiding them would make the app look
+   * smaller than the plan. They are simply not links yet.
+   */
+  readonly ready?: boolean;
 }
 
 export const NAV_SECTIONS: readonly { readonly key: NavSection; readonly labelId: string }[] = [
@@ -50,6 +70,7 @@ export const NAV_SECTIONS: readonly { readonly key: NavSection; readonly labelId
 export const NAV_ITEMS: readonly NavItemConfig[] = [
   {
     key: 'dashboard',
+    ready: true,
     icon: BarChart3,
     labelId: 'nav.dashboard',
     href: ROUTES.DASHBOARD,
@@ -60,6 +81,7 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
   },
   {
     key: 'parties',
+    ready: true,
     icon: BookUser,
     labelId: 'nav.parties',
     href: ROUTES.PARTIES,
@@ -145,6 +167,7 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
   },
   {
     key: 'team',
+    ready: true,
     icon: Users,
     labelId: 'nav.team',
     href: ROUTES.SETTINGS_TEAM,

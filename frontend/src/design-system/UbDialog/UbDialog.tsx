@@ -6,12 +6,13 @@ import { X } from 'lucide-react';
 
 import {
   MLDialog,
+  MLDialogBody,
+  MLDialogHeader,
   MLDialogDescription,
   MLDialogFooter,
   MLDialogTitle,
   MLIconButton,
 } from 'src/design-system/primitives';
-import { cn } from 'src/utils/cn';
 
 /**
  * Part 23 §23.3 — the modal. Desktop: a 480 px centred card. Mobile: a bottom
@@ -68,7 +69,7 @@ function UbDialogBase({
       dismissOnBackdrop={dismissOnBackdrop}
       className={className}
     >
-      <div className="flex items-start gap-3">
+      <MLDialogHeader>
         {icon && <span className="mt-0.5 shrink-0">{icon}</span>}
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <MLDialogTitle id={titleId}>{title}</MLDialogTitle>
@@ -77,16 +78,12 @@ function UbDialogBase({
           )}
         </div>
         {showClose && (
-          <MLIconButton
-            aria-label={closeLabel}
-            onClick={() => onOpenChange(false)}
-            className="-mr-2 -mt-2"
-          >
+          <MLIconButton aria-label={closeLabel} onClick={() => onOpenChange(false)} className="-mr-2">
             <X aria-hidden className="h-4 w-4" />
           </MLIconButton>
         )}
-      </div>
-      {children && <div className={cn('flex flex-col gap-3')}>{children}</div>}
+      </MLDialogHeader>
+      {children && <MLDialogBody>{children}</MLDialogBody>}
       {footer && <MLDialogFooter>{footer}</MLDialogFooter>}
     </MLDialog>
   );
