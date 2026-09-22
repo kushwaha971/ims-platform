@@ -14,7 +14,12 @@ from django.db.models.functions import Upper
 from apps.common.db.fields import MoneyField, uuid7_pk
 from apps.common.managers import AllObjectsManager, SoftDeleteManager
 from apps.common.models import SoftDeleteModel, TenantModel
-from apps.parties.constants import ConsentSource, GstRegistration, PartyStatus
+from apps.parties.constants import (
+    ConsentSource,
+    GstRegistration,
+    OpeningDirection,
+    PartyStatus,
+)
 
 
 class Party(TenantModel, SoftDeleteModel):
@@ -45,6 +50,26 @@ class Party(TenantModel, SoftDeleteModel):
     receivable_total = MoneyField(default=0)
     payable_total = MoneyField(default=0)
     last_activity_at = models.DateTimeField(null=True, blank=True)
+
+    # ── The opening balance, STORED AND UNAPPLIED (TSK-PTY-01-05) ───────────
+    #
+    # What a merchant is carrying over from the paper book. PTY-01 records it;
+    # it posts nothing. `LED-02` in Sprint 4 reads these three columns, posts
+    # the `opening` ledger entry and is what finally moves `balance`.
+    #
+    # Three typed columns rather than one jsonb blob, and the reason is canon
+    # rule 3: an amount is a `Decimal` on the server, and money inside jsonb is
+    # neither `numeric(14,2)` nor indexable. It is also exactly the argument
+    # list `post_opening_balance()` will take, so Sprint 4 reads the row and
+    # calls the function with no translation step in between.
+    #
+    # Until then the invariant is testable and tested: a party may have these
+    # set while `balance` is still 0.00 and no `ledger_entry` row exists.
+    opening_balance_amount = MoneyField(null=True, blank=True)
+    opening_balance_direction = models.CharField(
+        max_length=6, choices=OpeningDirection.choices, null=True, blank=True
+    )
+    opening_balance_as_of = models.DateField(null=True, blank=True)
     collection_date = models.DateField(null=True, blank=True)
     credit_limit = MoneyField(null=True, blank=True)
     credit_days = models.SmallIntegerField(null=True, blank=True)

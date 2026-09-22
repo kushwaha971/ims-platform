@@ -87,25 +87,29 @@ def test_a_malformed_request_id_is_replaced_not_echoed(tenant: Any, api_as: Any)
     assert len(response["X-Request-Id"]) == 32
 
 
-def test_a_method_the_slice_does_not_implement_is_405(tenant: Any, api_as: Any) -> None:
-    """The slice is read-only: `PTY-02` (Sprint 3) adds create and update.
+def test_a_method_the_viewset_does_not_implement_is_405(tenant: Any, api_as: Any) -> None:
+    """DELETE is 405, and the distinction it draws still matters.
 
-    This asserted 403 until a live first-run walk-through showed what that costs.
-    The reasoning was that §20.5.5 denies any action missing from the permission
-    map, so `create` is refused before the router can report "method not allowed".
-    But §20.5.5 governs *actions* — things a viewset does — and `PartyViewSet`
-    has no `create` at all: the router maps only `get` on this route. Answering
-    403 told an owner holding every permission in the system to go and ask for
-    rights, and no rights would ever have made it work.
+    This test used to assert POST was 405, which was true while `/parties` was
+    read-only and is the exact assumption PTY-01 removes. What it was really
+    guarding is subtler than "POST is refused", so it now guards it on a verb
+    the viewset still does not implement.
 
-    The fail-closed rule is unweakened, and is covered where it belongs, on the
-    permission class itself:
-    `apps.common.tests.test_permissions.test_an_implemented_action_missing_from_the_map_is_still_denied`.
-    An action the viewset *does* implement and the map does not cover is still
-    denied — that is the accident the rule exists to catch.
+    The point: an action the viewset does NOT have is 405, not 403. Canon
+    §20.5.5 is fail-closed about actions the viewset DOES have and the
+    permission map does not cover — that accident is caught on the permission
+    class itself
+    (`apps.common.tests.test_permissions.test_an_implemented_action_missing_from_the_map_is_still_denied`).
+    Answering 403 here would tell an owner holding every permission in the
+    system to go and ask for rights that would never have made it work.
+
+    Destroy arrives with PTY-04 as archive/restore, which is a state change with
+    an audit trail rather than a DELETE — a party with entries against it is
+    never removed from the book.
     """
     client, _member = api_as(tenant)
-    response = client.post(reverse("v1:party-list"), {"name": "X"}, format="json")
+    party = PartyFactory(tenant=tenant, name="Ramesh Traders")
+    response = client.delete(reverse("v1:party-detail", args=[party.id]))
     assert response.status_code == 405
 
 

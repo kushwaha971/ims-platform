@@ -28,3 +28,16 @@ class ConsentSource(models.TextChoices):
     VERBAL = "verbal", _("Verbal")
     FORM = "form", _("Form")
     LINK = "link", _("Link")
+
+
+class OpeningDirection(models.TextChoices):
+    """Which way the balance a merchant is carrying over from paper points.
+
+    A direction rather than a signed amount, for the reason canon §0.3 gives
+    about money generally: a minus sign in front of a figure is a thing a
+    merchant has to decode, and "they owe me ₹2,300" is a thing they already
+    know. The sign is the database's problem, not the shopkeeper's.
+    """
+
+    DEBIT = "debit", _("They owe me")
+    CREDIT = "credit", _("I owe them")

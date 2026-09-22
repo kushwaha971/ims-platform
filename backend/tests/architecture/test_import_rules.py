@@ -39,7 +39,16 @@ ALLOWED: dict[str, set[str]] = {
     "platform_app": {"common"},
     "tax": {"common", "platform_app"},
     "files": {"common", "platform_app"},
-    "parties": {"common", "platform_app", "files"},
+    # `tax` added for PTY-01. `parties_party.gstin` and `.state_code` are in
+    # the canonical schema (Part 21 §21.3.3), so validating a party's GSTIN is
+    # work this app cannot avoid — and `tax` is the app that owns the checksum,
+    # the state-code table and the PAN extraction. The alternative was a second
+    # copy of the check-digit algorithm inside `parties`, which is how two
+    # implementations of the same rule start disagreeing.
+    #
+    # No cycle: `tax` depends on `{common, platform_app}` only, and `inventory`,
+    # `sales` and `purchases` already reach it the same way.
+    "parties": {"common", "platform_app", "tax", "files"},
     "ledger": {"common", "platform_app", "parties", "files"},
     "inventory": {"common", "platform_app", "tax", "files"},
     "sales": {"common", "platform_app", "tax", "files", "parties", "ledger", "inventory"},

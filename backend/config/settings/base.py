@@ -188,6 +188,11 @@ REST_FRAMEWORK = {
         "otp_ip": "20/hour",
         "export": env.str("UB_RATE_LIMIT_EXPORT", "10/hour"),
         "public_link": "60/min",
+        # Party creation. Generous for a shopkeeper adding names from a paper
+        # book, tight enough that a stolen token cannot enumerate mobile
+        # numbers through the duplicate-mobile response or fill a tenant's
+        # book with junk faster than anyone would notice.
+        "party_write": env.str("UB_RATE_LIMIT_PARTY_WRITE", "60/min"),
     },
     "UNAUTHENTICATED_USER": None,
     "COERCE_DECIMAL_TO_STRING": True,
