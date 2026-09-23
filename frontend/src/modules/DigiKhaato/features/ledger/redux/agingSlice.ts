@@ -138,7 +138,6 @@ export const ledgerAgingReducer = ledgerAgingSlice.reducer;
 // answers the initial state until the first action lands.
 
 declare module 'src/redux/store' {
-   
   export interface LazyLoadedSlices extends WithSlice<typeof ledgerAgingSlice> {}
 }
 
@@ -148,19 +147,19 @@ const slice$ = (state: RootState) => injected.selectSlice(state);
 // ── Selectors ────────────────────────────────────────────────────────────────
 
 export const selectAgingRows = (state: RootState): readonly AgingRow[] => slice$(state).rows;
-export const selectAgingTotals = (state: RootState): AgingAmounts | null =>
-  slice$(state).totals;
+export const selectAgingTotals = (state: RootState): AgingAmounts | null => slice$(state).totals;
 export const selectLedgerPosition = (state: RootState): LedgerSummary | null =>
   slice$(state).summary;
 export const selectAgingStatus = (state: RootState): RequestStatus => slice$(state).status;
 export const selectAgingError = (state: RootState): ApiErrorShape | null => slice$(state).error;
 export const selectAgingAsOf = (state: RootState): string | null => slice$(state).asOf;
 export const selectAgingCachedAt = (state: RootState): string | null => slice$(state).cachedAt;
-export const selectAgingPageInfo = (
-  state: RootState
-): { page: number; pageSize: number; total: number } => ({
-  page: slice$(state).page,
-  pageSize: slice$(state).pageSize,
-  total: slice$(state).total,
-});
+/* Three primitives rather than one object: a selector that built a fresh
+   `{ page, pageSize, total }` per call re-rendered the aging page on EVERY
+   store update anywhere in the app (the component tests caught Redux warning
+   about it seventeen times). `createSelector` would fix it too, and would put
+   reselect on the app shell for one screen. */
+export const selectAgingPage = (state: RootState): number => slice$(state).page;
+export const selectAgingPageSize = (state: RootState): number => slice$(state).pageSize;
+export const selectAgingTotal = (state: RootState): number => slice$(state).total;
 export const selectAgingStale = (state: RootState): boolean => slice$(state).stale;

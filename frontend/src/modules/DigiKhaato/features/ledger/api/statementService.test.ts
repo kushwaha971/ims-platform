@@ -141,4 +141,11 @@ describe('the CSV address', () => {
     expect(url).toContain('?format=csv');
     expect(url).not.toContain('&format=csv');
   });
+
+  it('points at the API origin, not the page', () => {
+    /* A relative href resolves against the FRONTEND, where the statement's
+       path is the statement PAGE — the download saved HTML (found by
+       e2e/aging.mjs, which clicks the link rather than fetching the API). */
+    expect(statementCsvUrl(PARTY, filters())).toMatch(/^https?:\/\//);
+  });
 });

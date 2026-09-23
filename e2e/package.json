@@ -12,7 +12,9 @@
     "credit": "node credit.mjs",
     "credit:shots": "node credit.mjs --shots",
     "tags": "node tags.mjs",
-    "tags:shots": "node tags.mjs --shots"
+    "tags:shots": "node tags.mjs --shots",
+    "aging": "node aging.mjs",
+    "aging:shots": "node aging.mjs --shots"
   },
   "devDependencies": {
     "playwright": "1.56.0"

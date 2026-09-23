@@ -16,7 +16,9 @@ import {
   selectAgingAsOf,
   selectAgingCachedAt,
   selectAgingError,
-  selectAgingPageInfo,
+  selectAgingPage,
+  selectAgingPageSize,
+  selectAgingTotal,
   selectAgingRows,
   selectAgingStale,
   selectAgingStatus,
@@ -83,7 +85,9 @@ export const useLedgerAging = (): UseLedgerAgingResult => {
   const error = useAppSelector(selectAgingError);
   const asOf = useAppSelector(selectAgingAsOf);
   const cachedAt = useAppSelector(selectAgingCachedAt);
-  const pageInfo = useAppSelector(selectAgingPageInfo);
+  const page = useAppSelector(selectAgingPage);
+  const pageSize = useAppSelector(selectAgingPageSize);
+  const total = useAppSelector(selectAgingTotal);
   const stale = useAppSelector(selectAgingStale);
   const isImpaired = useAppSelector(selectNetworkImpaired);
 
@@ -184,7 +188,9 @@ export const useLedgerAging = (): UseLedgerAgingResult => {
       error,
       status,
       asOfProblem: problem,
-      ...pageInfo,
+      page,
+      pageSize,
+      total,
       setKind,
       setAsOf,
       setTag,
@@ -205,7 +211,9 @@ export const useLedgerAging = (): UseLedgerAgingResult => {
       canExport,
       error,
       problem,
-      pageInfo,
+      page,
+      pageSize,
+      total,
       setKind,
       setAsOf,
       setTag,

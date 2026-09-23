@@ -1,4 +1,5 @@
 import { API_PATHS } from 'src/api/APIPaths';
+import { absoluteApiUrl } from 'src/api/apiUrl';
 import { api, ubConfig } from 'src/api/AxiosInstances';
 import { toQueryString } from 'src/utils/queryString';
 
@@ -112,7 +113,9 @@ export const getStatement = async (
  * It carries no `Idempotency-Key` and no body; it is a GET, and the only thing
  * this function does is compose the address.
  */
-export const statementCsvUrl = (partyId: string, filters: StatementFilters): string =>
-  `${API_PATHS.PARTY_STATEMENT(partyId)}${toQuery(filters)}${
-    toQuery(filters) ? '&' : '?'
-  }format=csv`;
+export const statementCsvUrl = (partyId: string, filters: StatementFilters): string => {
+  const query = toQuery(filters);
+  return absoluteApiUrl(
+    `${API_PATHS.PARTY_STATEMENT(partyId)}${query}${query ? '&' : '?'}format=csv`
+  );
+};

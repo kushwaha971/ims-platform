@@ -305,7 +305,11 @@ export function AgingPageContent(): React.JSX.Element {
               onPageChange={setPage}
               sort={sort}
               onSortChange={handleSort}
-              onRowOpen={handleOpen}
+              /* Cards only. On a table the party cell is already a link to
+                 the same statement (`AgingColumns`), and the grid wraps the
+                 first cell in its row-open button whenever this is passed —
+                 which made that link an `<a>` inside a `<button>`. */
+              onRowOpen={tier === 'cards' ? handleOpen : undefined}
             />
           </UbStack>
         </UbTabs>

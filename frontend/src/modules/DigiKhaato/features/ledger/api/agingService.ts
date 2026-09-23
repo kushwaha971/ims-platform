@@ -1,4 +1,5 @@
 import { API_PATHS } from 'src/api/APIPaths';
+import { absoluteApiUrl } from 'src/api/apiUrl';
 import { api, ubConfig } from 'src/api/AxiosInstances';
 import { toQueryString } from 'src/utils/queryString';
 
@@ -101,5 +102,5 @@ export const agingCsvUrl = (filters: AgingFilters): string => {
     tag: filters.tag || undefined,
     ordering: filters.ordering || undefined,
   });
-  return `${API_PATHS.LEDGER_AGING}${query}${query ? '&' : '?'}format=csv`;
+  return absoluteApiUrl(`${API_PATHS.LEDGER_AGING}${query}${query ? '&' : '?'}format=csv`);
 };
