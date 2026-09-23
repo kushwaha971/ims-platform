@@ -336,8 +336,8 @@ set is computed by the database under `FOR UPDATE`, so an entry posted on
 another device between the read and the write cannot archive somebody who owes
 money.
 
-**Deferred, with reasons**: the write-off escape (FR-3) posts a `ledger_entry`
-and there is no such table; cancelling scheduled reminders and revoking share
+**The write-off escape (FR-3) is in** as of 23 Sep 2026 — see Part 43 CR-135 and
+`e2e/writeoff.mjs`. **Still deferred, with reasons**: cancelling scheduled reminders and revoking share
 links (FR-7) need `ledger_reminder` and `parties_share_link`; the dialog's
 consequence counts (FR-6) count rows in those same tables. None are stubbed — a
 `cancelled_reminders: 0` would be a statement about this party's reminders made
