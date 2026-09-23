@@ -34,10 +34,12 @@ from dataclasses import dataclass
 from typing import Any
 
 from django.conf import settings
+from django.contrib.auth.hashers import check_password, get_hasher, make_password
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.utils import timezone
+from django.utils.crypto import get_random_string
 
 from apps.common.audit import AuditAction, write_audit
 from apps.common.context import Ctx
@@ -293,19 +295,14 @@ def authenticate(
 
     user = User.objects.filter(email=identifier).first()
 
-    ok = bool(
-        user is not None
-        and user.is_active
-        and user.has_usable_password()
-        and user.check_password(normalise(password))
-    )
-    if ok:
+    if _verify(user=user, password=password):
         throttle.clear(scope=throttle.SCOPE_LOGIN_EMAIL, identifier=identifier)
         return user
 
-    # EC-6 / FR-1: an inactive user, an unknown address and a wrong password are
-    # one outcome. The hash is still computed above for an existing user, so the
-    # timing of the three cases does not separate them either.
+    # EC-6 / FR-1: an inactive user, an unknown address, an account with no
+    # password and a wrong password are one outcome — one body, and, because
+    # `_verify` computes exactly one password hash on every one of those paths,
+    # one cost as well.
     throttle.record_failure(
         scope=throttle.SCOPE_LOGIN_EMAIL,
         identifier=identifier,
@@ -328,6 +325,51 @@ def authenticate(
     # PLT-02 FR-6 counts the 11th as the throttled one. The lock this failure may
     # have just set is enforced by `check_lock` at the top of the next call.
     raise InvalidCredentials()
+
+
+def _verify(*, user: Any, password: str) -> bool:
+    """Check `password` against `user`, spending exactly ONE hash whatever the outcome.
+
+    The body of a failed login never says whether the address has an account;
+    this makes the wall clock agree. With PBKDF2 at Django 5.2's 1,000,000
+    iterations a hash is tens to hundreds of milliseconds, and it used to be
+    computed only when the address belonged to an active user with a password —
+    so "fast 401" meant "no such account" to anyone with a stopwatch. Every
+    miss path now burns one hash of the supplied password with the CURRENT
+    default hasher, which is the same work `user.check_password` does for a
+    wrong password (Django's `ModelBackend` does the same thing for the same
+    reason). The caller still reads both throttle locks first, so a locked-out
+    caller never reaches this and never costs the server a hash.
+    """
+    value = normalise(password)
+    if user is not None and user.is_active and user.has_usable_password():
+        return bool(user.check_password(value))
+    _burn_one_hash(value)
+    return False
+
+
+#: One dummy encoded password per (algorithm, work factor) of the default
+#: hasher, made on first use. Keyed rather than a single value so a settings
+#: change — a raised iteration count, a swapped hasher, `override_settings` in
+#: a test — gets a dummy that costs what a real verification now costs.
+_DUMMY_ENCODED: dict[tuple, str] = {}
+
+
+def _burn_one_hash(value: str) -> None:
+    """Compute exactly one password hash with the current default hasher, and discard it.
+
+    The dummy is a hash of a random string, never of anything a caller sent, so
+    it cannot match anybody's password (and the result is thrown away anyway).
+    The first miss after start-up pays its one hash MAKING the dummy; every
+    later miss pays it VERIFYING against the dummy — one hash either way.
+    """
+    hasher = get_hasher("default")
+    key = (hasher.algorithm, getattr(hasher, "iterations", None), getattr(hasher, "rounds", None))
+    encoded = _DUMMY_ENCODED.get(key)
+    if encoded is None:
+        _DUMMY_ENCODED[key] = make_password(get_random_string(32))
+        return
+    check_password(value, encoded)
 
 
 def record_login(*, user: Any) -> None:

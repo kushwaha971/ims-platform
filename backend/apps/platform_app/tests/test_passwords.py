@@ -12,9 +12,14 @@ ones that prove nothing depends on it any more.
 from __future__ import annotations
 
 import datetime as dt
-from typing import Any
+import statistics
+import time
+from contextlib import contextmanager
+from typing import Any, Iterator
+from unittest import mock
 
 import pytest
+from django.contrib.auth.hashers import PBKDF2PasswordHasher
 from django.urls import reverse
 from django.utils import timezone
 
@@ -613,6 +618,197 @@ def test_the_ip_lockout_says_nothing_about_the_address(auth_client: Any, user: A
     # The same one IP row answers both, so the wait differs by clock drift only.
     assert set(known_error["details"]) == set(unknown_error["details"]) == {"retry_after"}
     assert abs(known_error["details"]["retry_after"] - unknown_error["details"]["retry_after"]) <= 1
+
+
+# ── Timing: every login miss costs exactly one password hash ────────────────
+#
+# The 401 body never says whether an address has an account; the clock used to.
+# `authenticate` computed a hash only for an active user WITH a password, so an
+# unknown address, a deactivated account and a password-less one all answered
+# in the time of one indexed SELECT, while a wrong password on a real account
+# answered in the time of one PBKDF2 (1,000,000 iterations in production). The
+# tests below count calls to the default hasher's `encode` — the one method
+# every hash of every Django hasher goes through — so they hold under the MD5
+# hasher the suite runs with, where the wall-clock gap itself is invisible.
+
+
+class _FastPBKDF2(PBKDF2PasswordHasher):
+    """PBKDF2 at a test-sized work factor, so the timing test can afford real hashes."""
+
+    iterations = 60_000
+
+
+class _FasterPBKDF2(PBKDF2PasswordHasher):
+    """The same algorithm at a different work factor — a settings change, as it were."""
+
+    iterations = 2_000
+
+
+_THIS_MODULE = __name__
+
+
+@contextmanager
+def _count_hashes() -> Iterator[list[int]]:
+    """Count every hash the CURRENT default hasher computes inside the block."""
+    from django.contrib.auth.hashers import get_hasher
+
+    hasher_cls = type(get_hasher("default"))
+    original = hasher_cls.encode
+    calls: list[int] = []
+
+    def spy(self: Any, *args: Any, **kwargs: Any) -> str:
+        calls.append(1)
+        return original(self, *args, **kwargs)
+
+    with mock.patch.object(hasher_cls, "encode", spy):
+        yield calls
+
+
+def _login_target(kind: str, user: Any, passwordless_user: Any) -> str:
+    if kind == "unknown":
+        return "nobody-by-this-name@example.com"
+    if kind == "no_password":
+        return passwordless_user.email
+    _with_password(user)
+    if kind == "inactive":
+        user.is_active = False
+        user.save(update_fields=["is_active"])
+    return user.email
+
+
+@pytest.mark.parametrize("kind", ["wrong_password", "unknown", "inactive", "no_password"])
+def test_every_login_miss_computes_exactly_one_password_hash(
+    kind: str, user: Any, passwordless_user: Any, monkeypatch: Any
+) -> None:
+    """Enumeration by timing: every refusal pays for one hash, like a wrong password.
+
+    Before the fix the `unknown`, `inactive` and `no_password` cases returned
+    before `check_password` and computed ZERO hashes, so with PBKDF2 a fast 401
+    meant "no usable account at this address". Each case is run twice, from an
+    empty dummy cache, so both halves of `_burn_one_hash` are counted: the first
+    miss pays its hash making the dummy, the second verifying against it.
+    """
+    from apps.platform_app.services import passwords
+
+    monkeypatch.setattr(passwords, "_DUMMY_ENCODED", {})
+    email = _login_target(kind, user, passwordless_user)
+    for _ in range(2):
+        with _count_hashes() as calls:
+            with pytest.raises(passwords.InvalidCredentials):
+                passwords.authenticate(identifier=email, password="Wrong12345", ip="198.51.100.7")
+        assert len(calls) == 1, f"{kind}: {len(calls)} hashes"
+
+
+def test_a_right_password_still_logs_in_with_one_hash(user: Any) -> None:
+    """The success path is untouched: one verification, no dummy on top of it."""
+    from apps.platform_app.services import passwords
+
+    _with_password(user)
+    with _count_hashes() as calls:
+        assert passwords.authenticate(identifier=user.email, password="Kirana123") == user
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize("lock", ["email", "ip"])
+@pytest.mark.parametrize("kind", ["wrong_password", "unknown", "no_password"])
+def test_a_locked_caller_costs_the_server_no_hash_at_all(
+    lock: str, kind: str, user: Any, passwordless_user: Any
+) -> None:
+    """Both locks are read BEFORE any hashing — real or dummy.
+
+    Equalising the miss paths must not turn the lockout into a CPU sink: a
+    caller who is already refused gets its 429 without a single PBKDF2, whether
+    the address is known or not, so a locked stuffer cannot keep the server
+    hashing and the dummy cannot become an oracle of its own.
+    """
+    from apps.platform_app.services import passwords, throttle
+
+    email = _login_target(kind, user, passwordless_user)
+    ip = "203.0.113.9"
+    if lock == "email":
+        scope, identifier, threshold = (
+            throttle.SCOPE_LOGIN_EMAIL,
+            email,
+            throttle.LOGIN_FAILURES_PER_IDENTIFIER,
+        )
+        window, lockout = throttle.LOGIN_FAILURE_WINDOW_SECONDS, throttle.LOGIN_LOCKOUT_SECONDS
+    else:
+        scope, identifier, threshold = (
+            throttle.SCOPE_LOGIN_IP,
+            ip,
+            throttle.LOGIN_FAILURES_PER_IP,
+        )
+        window, lockout = throttle.LOGIN_IP_WINDOW_SECONDS, throttle.LOGIN_IP_LOCKOUT_SECONDS
+    for _ in range(threshold):
+        throttle.record_failure(
+            scope=scope,
+            identifier=identifier,
+            threshold=threshold,
+            window_seconds=window,
+            lockout_seconds=lockout,
+        )
+
+    with _count_hashes() as calls:
+        with pytest.raises(passwords.LoginThrottled):
+            passwords.authenticate(identifier=email, password="Kirana123", ip=ip)
+    assert calls == []
+
+
+def test_the_dummy_hash_follows_the_current_default_hasher(
+    user: Any, monkeypatch: Any, settings: Any
+) -> None:
+    """The dummy costs what a real verification costs NOW, not what it cost at start-up.
+
+    A raised iteration count or a swapped hasher must not leave the miss path
+    burning the old, cheaper work factor while real accounts pay the new one.
+    """
+    from apps.platform_app.services import passwords
+
+    monkeypatch.setattr(passwords, "_DUMMY_ENCODED", {})
+    for cls, iterations in ((_FastPBKDF2, 60_000), (_FasterPBKDF2, 2_000)):
+        settings.PASSWORD_HASHERS = [f"{_THIS_MODULE}.{cls.__name__}"]
+        with _count_hashes() as calls:
+            with pytest.raises(passwords.InvalidCredentials):
+                passwords.authenticate(identifier="ghost@example.com", password="Wrong12345")
+        assert len(calls) == 1
+        assert (
+            f"pbkdf2_sha256${iterations}$"
+            in passwords._DUMMY_ENCODED[("pbkdf2_sha256", iterations, None)]
+        )
+    assert len(passwords._DUMMY_ENCODED) == 2
+
+
+@pytest.mark.timing
+def test_an_unknown_address_takes_about_as_long_as_a_wrong_password(
+    user: Any, settings: Any
+) -> None:
+    """Coarse wall-clock check with a real PBKDF2, generous on purpose.
+
+    Before the fix the unknown-address median was a few percent of the
+    wrong-password one (a SELECT against a SELECT plus 60,000 iterations);
+    now both are dominated by one hash. The bound is a factor of two either
+    way, which a loaded runner does not reach but the old gap is far outside.
+    Deselect with `-m 'not timing'`.
+    """
+    from apps.platform_app.services import passwords
+
+    settings.PASSWORD_HASHERS = [f"{_THIS_MODULE}.{_FastPBKDF2.__name__}"]
+    _with_password(user)  # re-hashed under the PBKDF2 above
+
+    def median_seconds(identifier: str) -> float:
+        samples = []
+        for _ in range(7):  # under the 10-failure lockout, with the warm-up
+            started = time.perf_counter()
+            with pytest.raises(passwords.InvalidCredentials):
+                passwords.authenticate(identifier=identifier, password="Wrong12345")
+            samples.append(time.perf_counter() - started)
+        return statistics.median(samples)
+
+    with pytest.raises(passwords.InvalidCredentials):  # warm the dummy
+        passwords.authenticate(identifier="warm-up@example.com", password="Wrong12345")
+    wrong = median_seconds(user.email)
+    unknown = median_seconds("nobody-here@example.com")
+    assert 0.5 <= unknown / wrong <= 2.0, f"unknown {unknown:.4f}s vs wrong {wrong:.4f}s"
 
 
 # ── T-PLT-02-6 API: setting a password ───────────────────────────────────────
