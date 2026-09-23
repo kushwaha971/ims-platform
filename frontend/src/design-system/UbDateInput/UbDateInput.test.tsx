@@ -51,6 +51,7 @@ describe('the control', () => {
         value={null}
         onChange={onChange}
         aria-label="As of"
+        quickChoicesLabel="Common dates"
         quickChoices={[{ label: 'FY start', date: '2026-04-01' }]}
       />
     );

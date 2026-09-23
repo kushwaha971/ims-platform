@@ -193,6 +193,12 @@ REST_FRAMEWORK = {
         # numbers through the duplicate-mobile response or fill a tenant's
         # book with junk faster than anyone would notice.
         "party_write": env.str("UB_RATE_LIMIT_PARTY_WRITE", "60/min"),
+        # Ledger entries. Higher than `party_write` because this is the most
+        # frequent write in the product and the ceiling has to clear the case it
+        # is built for: a merchant copying a month of a paper khata in on a slow
+        # afternoon, one entry every few seconds, for an hour. What 120/min
+        # stops is a loop, not a person.
+        "ledger_write": env.str("UB_RATE_LIMIT_LEDGER_WRITE", "120/min"),
     },
     "UNAUTHENTICATED_USER": None,
     "COERCE_DECIMAL_TO_STRING": True,

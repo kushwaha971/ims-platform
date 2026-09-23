@@ -16,6 +16,19 @@ export interface UbRadioGroupProps<T extends string> {
   readonly value: T | null;
   readonly onChange: (value: T) => void;
   readonly options: readonly MLRadioOption<T>[];
+  /**
+   * `plain` is a bare circle beside a label; `card` is a bordered row that
+   * tints when chosen.
+   *
+   * A passthrough to the primitive, which has had both since Sprint 1. It is
+   * exposed now because LED-01 is the second caller that wants the card: "You
+   * gave" and "You got" are the entry drawer's first decision and the merchant
+   * taps one of them with a thumb, so they need a target rather than a dot —
+   * and the tint is what makes the drawer say which one it is about without a
+   * coloured header (§23's rule that red and green are never the only signal
+   * holds either way, because both rows carry their words).
+   */
+  readonly variant?: 'plain' | 'card';
   readonly ariaLabel?: string;
   readonly invalid?: boolean;
   readonly describedBy?: string;
@@ -27,6 +40,7 @@ export function UbRadioGroup<T extends string>({
   value,
   onChange,
   options,
+  variant,
   ariaLabel,
   invalid,
   describedBy,
@@ -38,6 +52,7 @@ export function UbRadioGroup<T extends string>({
       value={value}
       onValueChange={onChange}
       options={options}
+      variant={variant}
       ariaLabel={ariaLabel}
       ariaDescribedBy={describedBy}
       invalid={invalid}

@@ -51,3 +51,49 @@ describe('the long form', () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 });
+
+describe('where focus lands when it opens', () => {
+  it('honours a control that asked for it', async () => {
+    /**
+     * Prevents: `autoFocus` inside a drawer or dialog doing nothing at all.
+     *
+     * `MLDialog` moved focus to the FIRST focusable element in the panel, which
+     * is the close button in the header, and four callers had already written
+     * `autoFocus` expecting otherwise — LED-01's amount field, PTY-05's tag
+     * name, and the Cancel button in both archive dialogs, which is there so a
+     * destructive confirmation opens on the safe choice.
+     *
+     * None of them worked, and nothing failed. On the ledger drawer it cost two
+     * things at once: the numeric keypad did not come up on a phone, on the
+     * screen whose whole target is eight seconds from tap to saved; and the
+     * blur that followed marked the amount TOUCHED, so `mode: 'onTouched'` ran
+     * the resolver against an empty field and the drawer opened with
+     * "Enter an amount." already under it, in error red, before the merchant
+     * had done anything.
+     *
+     * jsdom does not reproduce it — this test does, because it asserts where
+     * focus IS rather than what the markup asks for. A screenshot from a real
+     * browser is what found it.
+     */
+    render(
+      <UbDrawer
+        open
+        onOpenChange={jest.fn()}
+        title="Add entry"
+        closeLabel="Close"
+        footer={<button type="button">Save</button>}
+      >
+        <input aria-label="Amount" autoFocus />
+      </UbDrawer>
+    );
+
+    expect(screen.getByLabelText('Amount')).toHaveFocus();
+  });
+
+  it('falls back to the first focusable when nothing asked', () => {
+    /** The behaviour every other dialog in the product relies on, unchanged. */
+    open();
+
+    expect(screen.getByRole('button', { name: 'Close' })).toHaveFocus();
+  });
+});

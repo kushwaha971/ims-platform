@@ -89,6 +89,30 @@ const UbComboboxInner = forwardRef<HTMLButtonElement, UbComboboxProps>(function 
     [onChange]
   );
 
+  /**
+   * Escape closes THIS menu and stops there.
+   *
+   * Found on `UbTokenInput` first (see the long note there) and fixed here in
+   * the same pass, because the exposure is identical the moment a combobox is
+   * put inside an overlay — which PTY-05's merge dialog does. Radix portals the
+   * popover out of the overlay's subtree, so the overlay's Escape handler and
+   * this one are two listeners on the same document with no knowledge of each
+   * other, and the overlay's was registered first.
+   *
+   * The GST state picker, this component's original caller, sits on a page
+   * rather than in a dialog and was never affected — which is exactly why this
+   * would have gone unnoticed until somebody lost a half-filled form.
+   */
+  const handleEscape = useCallback((event: React.KeyboardEvent<HTMLElement>) => {
+    if (event.key !== 'Escape') return;
+    event.preventDefault();
+    event.stopPropagation();
+    // Native too: React's synthetic `stopPropagation` does not stop a listener
+    // attached directly to `document`, which is what the overlay's is.
+    event.nativeEvent.stopImmediatePropagation();
+    setOpen(false);
+  }, []);
+
   return (
     <MLPopover open={open} onOpenChange={setOpen}>
       {/* Not `asChild`.
@@ -136,6 +160,7 @@ const UbComboboxInner = forwardRef<HTMLButtonElement, UbComboboxProps>(function 
 
       <MLPopoverContent
         align="start"
+        onKeyDownCapture={handleEscape}
         // Matched to the trigger so a long option cannot make the menu wider
         // than the field it belongs to — the same rule `UbSelect` follows.
         className="w-[var(--radix-popover-trigger-width)] border-border-subtle bg-surface-card p-0"

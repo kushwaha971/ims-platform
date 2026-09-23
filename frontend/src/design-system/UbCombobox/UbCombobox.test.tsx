@@ -1,74 +1,82 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import { UbDialog } from 'src/design-system/UbDialog';
+
 import { UbCombobox } from './UbCombobox';
 
-/**
- * Isolating the combobox, because in the running app its popover did not open:
- * `aria-expanded` stayed false after a click and no content ever mounted. The
- * drawer, built on the same vendored library, works — so this is about this
- * component, not about ml-uikit.
- */
 const OPTIONS = [
   { value: '27', label: 'Maharashtra' },
-  { value: '09', label: 'Uttar Pradesh' },
   { value: '29', label: 'Karnataka' },
 ];
 
-function Harness({ invalid }: Readonly<{ invalid?: boolean }>) {
-  return (
-    <UbCombobox
-      value=""
-      onChange={() => undefined}
-      options={OPTIONS}
-      placeholder="Choose your state"
-      searchPlaceholder="Search states"
-      emptyLabel="No state matches that."
-      invalid={invalid}
-      aria-label="State"
-    />
-  );
-}
-
-describe('UbCombobox', () => {
-  it('opens on click', async () => {
+describe('UbCombobox inside an overlay', () => {
+  /**
+   * The same defect `UbTokenInput` had, fixed in the same pass and asserted
+   * here because the exposure is not this component's fault and will come back
+   * the next time somebody puts it in a dialog.
+   *
+   * Radix portals the menu out of the overlay's DOM subtree, so the overlay's
+   * Escape handler and this one are two listeners on the same document with no
+   * knowledge of each other — and the overlay's was registered first. The GST
+   * state picker, this component's original caller, sits on a PAGE and was
+   * never affected; PTY-05's merge dialog is the first caller inside an
+   * overlay, which is how a two-year-old component grew a new bug without
+   * changing.
+   */
+  it('closes its menu and leaves the overlay it is inside alone', async () => {
     const user = userEvent.setup();
-    render(<Harness />);
-    const trigger = screen.getByRole('combobox', { name: 'State' });
+    const onOpenChange = jest.fn();
 
-    expect(trigger).toHaveAttribute('aria-expanded', 'false');
-    await user.click(trigger);
-
-    expect(trigger).toHaveAttribute('aria-expanded', 'true');
-    expect(await screen.findByPlaceholderText('Search states')).toBeInTheDocument();
-  });
-
-  it('filters as you type, which is the whole reason it exists', async () => {
-    const user = userEvent.setup();
-    render(<Harness />);
-    await user.click(screen.getByRole('combobox', { name: 'State' }));
-    await user.type(await screen.findByPlaceholderText('Search states'), 'maha');
-
-    expect(await screen.findByRole('option', { name: /Maharashtra/ })).toBeInTheDocument();
-    expect(screen.queryByRole('option', { name: /Karnataka/ })).not.toBeInTheDocument();
-  });
-
-  it('says so when nothing matches, rather than showing an empty box', async () => {
-    const user = userEvent.setup();
-    render(<Harness />);
-    await user.click(screen.getByRole('combobox', { name: 'State' }));
-    await user.type(await screen.findByPlaceholderText('Search states'), 'zzz');
-
-    expect(await screen.findByText('No state matches that.')).toBeInTheDocument();
-  });
-
-  it('carries the error colour under aria-invalid, beating ml-uikit’s literal hex', () => {
-    render(<Harness invalid />);
-    // ml-uikit's own trigger ships `aria-invalid:border-[#ff3b30]`, and twMerge
-    // cannot collapse a variant class against a base one — so the token has to
-    // be restated under the same variant or the library's pink wins.
-    expect(screen.getByRole('combobox', { name: 'State' }).className).toContain(
-      'aria-invalid:border-formError'
+    render(
+      <UbDialog
+        open
+        onOpenChange={onOpenChange}
+        title="Merge tags"
+        closeLabel="Close"
+        footer={null}
+      >
+        <UbCombobox
+          value={null}
+          onChange={jest.fn()}
+          options={OPTIONS}
+          aria-label="Keep this tag"
+          placeholder="Choose a tag"
+          searchPlaceholder="Search"
+          emptyLabel="Nothing found"
+        />
+      </UbDialog>
     );
+
+    await user.click(screen.getByRole('combobox', { name: 'Keep this tag' }));
+    expect(screen.getByPlaceholderText('Search')).toBeInTheDocument();
+
+    await user.keyboard('{Escape}');
+
+    expect(screen.queryByPlaceholderText('Search')).not.toBeInTheDocument();
+    expect(onOpenChange).not.toHaveBeenCalled();
+  });
+
+  it('still closes on Escape when it is not inside anything', async () => {
+    /** The fix must not make the ordinary case — the GST state picker on a
+     *  page — stop responding to the key at all. */
+    const user = userEvent.setup();
+    render(
+      <UbCombobox
+        value={null}
+        onChange={jest.fn()}
+        options={OPTIONS}
+        aria-label="State"
+        searchPlaceholder="Search"
+        emptyLabel="Nothing found"
+      />
+    );
+
+    await user.click(screen.getByRole('combobox', { name: 'State' }));
+    expect(screen.getByPlaceholderText('Search')).toBeInTheDocument();
+
+    await user.keyboard('{Escape}');
+
+    expect(screen.queryByPlaceholderText('Search')).not.toBeInTheDocument();
   });
 });

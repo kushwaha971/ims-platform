@@ -91,21 +91,25 @@ QUERY_BUDGETS: tuple[QueryBudget, ...] = (
         id="parties-list",
         label="GET /parties",
         url=lambda w: reverse("v1:party-list"),
-        budget=5,
+        budget=7,
         composition=(
             *AUTH_FLOOR,
             *MODULE_GATE,
             "parties_party — the paginator's COUNT(*) over the filtered set",
             "parties_party — the page itself",
+            "parties_tag — the chips, prefetched once for the whole page",
+            "parties_party — the meta.totals aggregate over the filtered set",
         ),
         spec_budget=4,
         spec_note=(
-            "§20.14.1 composes 4 as 'count, page, tags prefetch, meta.totals aggregate'. "
-            "Two of those four are features that do not exist yet: there is no `tags` "
-            "relation on `Party` until PTY-02 and the list returns no `meta.totals`. The "
-            "endpoint as built issues 2 queries of its own, so the honest spec number for "
-            "today is 2, rising to 4 when both land. The 4 in §20.14.1 is not wrong about "
-            "the finished endpoint; it is being read as a total, which it never was."
+            "§20.14.1 composes 4 as 'count, page, tags prefetch, meta.totals aggregate', "
+            "and with PTY-05 all four are now real — so the endpoint issues exactly the "
+            "4 the spec allows, plus the 3-query floor. The tags prefetch is ONE query "
+            "for the page however many rows it holds, which is the whole reason "
+            "`list_parties` prefetches rather than letting the serializer walk the "
+            "relation: without it a page of 25 is 26 queries. The totals aggregate is "
+            "likewise one query for three numbers — `count` rides along with the two "
+            "conditional sums rather than taking a `queryset.count()` of its own."
         ),
         page_sizes=(25, 100),
     ),
@@ -113,27 +117,35 @@ QUERY_BUDGETS: tuple[QueryBudget, ...] = (
         id="parties-list-search",
         label="GET /parties?q=",
         url=lambda w: reverse("v1:party-list") + "?q=budget",
-        budget=5,
+        budget=7,
         composition=(
             *AUTH_FLOOR,
             *MODULE_GATE,
             "parties_party — COUNT(*) over the filtered set",
             "parties_party — the page itself",
+            "parties_tag — the chips, prefetched once for the whole page",
+            "parties_party — the meta.totals aggregate over the filtered set",
         ),
         spec_budget=4,
-        spec_note="Same endpoint as `parties-list`; the `q` filter is a predicate, not a query.",
+        spec_note=(
+            "Same endpoint as `parties-list`; the `q` filter is a predicate, not a query — "
+            "including the mobile-suffix and GSTIN branches, which are OR'd into the same "
+            "WHERE rather than fetched separately."
+        ),
         page_sizes=(25, 100),
     ),
     QueryBudget(
         id="parties-list-status",
         label="GET /parties?status=active",
         url=lambda w: reverse("v1:party-list") + "?status=active",
-        budget=5,
+        budget=7,
         composition=(
             *AUTH_FLOOR,
             *MODULE_GATE,
             "parties_party — COUNT(*) over the filtered set",
             "parties_party — the page itself",
+            "parties_tag — the chips, prefetched once for the whole page",
+            "parties_party — the meta.totals aggregate over the filtered set",
         ),
         spec_budget=4,
         spec_note="Same endpoint as `parties-list`; this is the request the shipping UI sends.",
@@ -143,18 +155,29 @@ QUERY_BUDGETS: tuple[QueryBudget, ...] = (
         id="parties-detail",
         label="GET /parties/{id}",
         url=lambda w: reverse("v1:party-detail", args=[w["party"].id]),
-        budget=4,
+        budget=6,
         composition=(
             *AUTH_FLOOR,
             *MODULE_GATE,
             "parties_party — the row",
+            "parties_tag — the party's chips",
+            "platform_tenant_setting — PTY-06's credit mode",
         ),
         spec_budget=5,
         spec_note=(
             "§20.14.1 composes 5 as 'party, summary aggregate, recent entries, tags, "
-            "open-invoice count'. Four of those five need the ledger, tags and sales "
-            "documents, none of which exist yet, so the endpoint issues 1 query of its own. "
-            "The budget rises with the feature, not before it."
+            "open-invoice count'. Two of the five are real now — the row and PTY-05's "
+            "tags. The summary aggregate costs nothing because `retrieve` computes it "
+            "from the row it is already holding; the recent entries and the open-invoice "
+            "count need the ledger and sales documents, which do not exist."
+            "\n\n"
+            "PTY-06 adds the sixth, which the spec's composition does not list: one read "
+            "of `ledger.credit_limit_mode`. It is deliberately NOT cached on the tenant "
+            "object — a cache here would be a second thing to invalidate the moment "
+            "PLT-06 lets somebody change the mode, in exchange for one indexed read of a "
+            "table with one row per tenant per key. The alternative, sending the credit "
+            "block without the mode, would make the client ask a second question before "
+            "it could decide whether to draw the bar at all (FR-10)."
         ),
     ),
     QueryBudget(

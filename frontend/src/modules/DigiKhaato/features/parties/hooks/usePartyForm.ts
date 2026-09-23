@@ -19,6 +19,7 @@ import {
   partyWarningsDismissed,
   selectPartyFormEditing,
   selectPartyFormOpenFor,
+  selectPartyFormPrefillName,
   selectPartyFormStatus,
   selectPartyFormWarnings,
   selectPartyFormLastSaved,
@@ -43,6 +44,8 @@ import type { UseFormSetError } from 'react-hook-form';
 export interface UsePartyFormResult {
   readonly open: boolean;
   readonly isEdit: boolean;
+  /** The name a create was opened WITH, or `''`. Empty on every edit. */
+  readonly prefillName: string;
   readonly editing: PartyDetail | null;
   readonly isSaving: boolean;
   readonly canWrite: boolean;
@@ -51,7 +54,8 @@ export interface UsePartyFormResult {
   readonly duplicateOf: string | null;
   readonly warnings: readonly PartyWarning[];
   readonly lastSaved: PartyDetail | null;
-  readonly openCreate: () => void;
+  /** `name` starts the form with that name filled in — see `partyCreateOpened`. */
+  readonly openCreate: (name?: string) => void;
   readonly openEdit: (party: PartyDetail) => void;
   readonly close: () => void;
   readonly dismissWarnings: () => void;
@@ -67,6 +71,7 @@ export const usePartyForm = (): UsePartyFormResult => {
   const { canWrite: canWriteIn } = useDegradedNetwork();
 
   const openFor = useAppSelector(selectPartyFormOpenFor);
+  const prefillName = useAppSelector(selectPartyFormPrefillName);
   const editing = useAppSelector(selectPartyFormEditing);
   const status = useAppSelector(selectPartyFormStatus);
   const warnings = useAppSelector(selectPartyFormWarnings);
@@ -92,11 +97,14 @@ export const usePartyForm = (): UsePartyFormResult => {
    */
   const canWrite = can('parties.party.write') && canWriteIn('deferred');
 
-  const openCreate = useCallback(() => {
-    setFormErrors([]);
-    setDuplicateOf(null);
-    dispatch(partyCreateOpened());
-  }, [dispatch]);
+  const openCreate = useCallback(
+    (name?: string) => {
+      setFormErrors([]);
+      setDuplicateOf(null);
+      dispatch(partyCreateOpened(name));
+    },
+    [dispatch]
+  );
 
   const openEdit = useCallback(
     (party: PartyDetail) => {
@@ -211,6 +219,7 @@ export const usePartyForm = (): UsePartyFormResult => {
   return useMemo(
     () => ({
       open: openFor !== null,
+      prefillName,
       isEdit: openFor !== null && openFor !== 'new',
       editing,
       isSaving: status === 'loading',
@@ -228,6 +237,7 @@ export const usePartyForm = (): UsePartyFormResult => {
     [
       openFor,
       editing,
+      prefillName,
       status,
       canWrite,
       formErrors,

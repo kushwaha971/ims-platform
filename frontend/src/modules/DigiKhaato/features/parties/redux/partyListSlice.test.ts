@@ -25,6 +25,7 @@ const row = {
   balance: '500.00',
   status: 'active' as const,
   lastActivityAt: '2026-09-18T10:00:00Z',
+  tags: [],
 };
 
 const payload: FetchPartyListResult = {
@@ -36,6 +37,7 @@ const payload: FetchPartyListResult = {
   // registered, which put an 11 KB money library on every route in the product.
   totals: null,
   totalsScope: 'page',
+  overLimit: null,
   mode: 'replace',
 };
 

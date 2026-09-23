@@ -1,4 +1,5 @@
 import type { UbDataGridColumn } from 'src/design-system/UbDataGrid';
+import type { TranslateFn } from 'src/hooks/useTranslation';
 
 import { activityView, contactLine } from '../view-model/partyDisplay';
 import { PARTY_SORT_FIELDS } from '../view-model/partyListSort';
@@ -11,6 +12,7 @@ import {
 } from './PartyListRow';
 
 import type { Party } from '../types/party.types';
+
 
 /**
  * Part 19 §19.9.4 — a MODULE-LEVEL column factory, memoised by the screen on
@@ -37,15 +39,29 @@ import type { Party } from '../types/party.types';
  * name / balance / last entry: three columns, none of them below 13 px, and
  * nothing to drag sideways to read.
  *
- * **GSTIN, address, tags and the customer/supplier flags are not here at all.**
- * They are real fields the API returns or soon will, and none of them changes
- * who gets a phone call this afternoon. They belong on the party's detail page,
+ * **GSTIN, address and the customer/supplier flags are not here at all.** They
+ * are real fields the API returns or soon will, and none of them changes who
+ * gets a phone call this afternoon. They belong on the party's detail page,
  * where the decision they support — "is this invoice's tax right", "where do I
  * deliver" — is actually being made.
+ *
+ * ── Tags were on that list, and PTY-05 took them off it ─────────────────────
+ * The reasoning above is right about a tag COLUMN and wrong about a tag chip,
+ * and the difference is worth stating because the earlier version of this
+ * comment did not see it. A column of tags would be a fourth thing to read
+ * across a row that already asks four questions. A chip under the NAME is part
+ * of who the party is — the merchant working through Camp Area this morning is
+ * scanning for exactly that, and sending them to a detail page to find out
+ * whether a row belongs to today's round is sending them to twenty-five detail
+ * pages.
+ *
+ * So tags live in the `name` cell rather than in a column of their own, which
+ * also means they survive the drop order and reach the phone card, where a
+ * third `meta` slot would have been discarded.
  */
 export interface PartyColumnDeps {
   /** Already-bound `t` from the screen; a column never calls `useTranslation`. */
-  readonly t: (id: string, values?: Record<string, string | number | Date>) => string;
+  readonly t: TranslateFn;
   /**
    * "Now", captured once by the screen. Passing it makes `activityView` pure
    * and this array stable: a factory that read the clock itself would produce a
@@ -54,12 +70,27 @@ export interface PartyColumnDeps {
   readonly nowMs: number;
   /** The three balance direction words, resolved once by the screen. */
   readonly balanceLabels: Readonly<Record<string, string>>;
+  /**
+   * Whether ANY row on this page carries a tag. When none does, the chip lane
+   * is not reserved and the list is exactly the height it was before PTY-05 —
+   * a book that does not use tags pays nothing for them.
+   */
+  readonly hasTags: boolean;
+  /**
+   * How many chips a row shows before the rest become a count — one on a phone
+   * card, two in a table. The screen reads the grid's own tier and passes it,
+   * because a `cell` function is called identically at all three renderings and
+   * cannot tell which one it is painting.
+   */
+  readonly tagChipsPerRow: number;
 }
 
 export const createPartyColumns = ({
   t,
   nowMs,
   balanceLabels,
+  hasTags,
+  tagChipsPerRow,
 }: PartyColumnDeps): readonly UbDataGridColumn<Party>[] => [
   {
     id: 'name',
@@ -68,7 +99,19 @@ export const createPartyColumns = ({
     sortField: PARTY_SORT_FIELDS.name,
     cardSlot: 'title',
     widthShare: 34,
-    cell: (party) => <PartyNameCell name={party.name} />,
+    cell: (party) => (
+      <PartyNameCell
+        name={party.name}
+        tags={party.tags}
+        reserveTagLane={hasTags}
+        maxTags={tagChipsPerRow}
+        /* Named after the party, because a row's chip list sits beside
+           twenty-four other chip lists and "Tags" alone announces as one of
+           twenty-five identical lists with no way to tell which is whose. */
+        tagsLabel={t('parties.tags.listLabel', { name: party.name })}
+        overflowLabel={(count) => t('parties.tags.overflow', { count })}
+      />
+    ),
   },
   {
     id: 'balance',

@@ -10,6 +10,7 @@ const party = (overrides: Partial<Party>): Party => ({
   mobile: '+919876543210',
   isCustomer: true,
   isSupplier: false,
+  tags: [],
   balance: '0.00',
   status: 'active',
   lastActivityAt: null,

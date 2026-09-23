@@ -96,6 +96,12 @@ export interface UbDataGridProps<TRow> {
 
   /** Cards only: the whole row becomes a 44 px tap target when this is given. */
   readonly onRowOpen?: (row: TRow) => void;
+  /**
+   * Cards only: the initials disc at the left of each card. On by default,
+   * because most lists here are lists of PEOPLE. A grid of THINGS turns it off —
+   * see `UbDataGridMobileList`.
+   */
+  readonly cardAvatar?: boolean;
 
   /** md–lg cutoff. Columns above it are dropped there. Default 2. */
   readonly compactCutoff?: UbColumnPriority;
@@ -252,6 +258,7 @@ export function UbDataGrid<TRow>({
   search,
   filters,
   onRowOpen,
+  cardAvatar,
   compactCutoff,
   allowHorizontalScroll = false,
   columnMenu,
@@ -388,6 +395,7 @@ export function UbDataGrid<TRow>({
             onRowOpen={onRowOpen}
             labels={labels}
             listLabel={caption}
+            avatar={cardAvatar}
           />
         ) : (
           <UbDataGridTableLazy
@@ -395,6 +403,7 @@ export function UbDataGrid<TRow>({
             columns={shown}
             rowId={rowId}
             rowName={rowName}
+            onRowOpen={onRowOpen}
             labels={labels}
             caption={caption}
             sort={sort}

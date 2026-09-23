@@ -220,5 +220,21 @@ export const selectEnabledModules = (state: RootState): readonly ModuleCode[] =>
 export const selectTenantTimezone = (state: RootState): string | null =>
   state.session.activeTenant?.timezone ?? null;
 /** PLT-04 FR-1 — every membership the switcher may list. */
+/**
+ * The caller's role IN THE ACTIVE BUSINESS, or `null`.
+ *
+ * Added for LED-01's "Save anyway" (BR-8), which is the one place in this
+ * product where a decision turns on a role rather than a permission codename —
+ * a tenant that grants a staff member `ledger.entry.write`, which is the
+ * ordinary thing to do because staff work the counter, must not thereby hand
+ * them the power to lend past the cap the owner set.
+ *
+ * The client uses it only to decide which button to draw. The server checks the
+ * same thing again inside the transaction that writes, because a client that
+ * was told "you may override" a minute ago is repeating what it was told.
+ */
+export const selectActiveRole = (state: RootState): string | null =>
+  state.session.activeTenant?.role ?? null;
+
 export const selectSessionTenants = (state: RootState): readonly SessionTenant[] =>
   state.session.tenants;

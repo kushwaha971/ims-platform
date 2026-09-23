@@ -60,6 +60,22 @@ export type ApiErrorCode =
   | 'document_already_void'
   | 'credit_limit_exceeded'
   | 'duplicate_supplier_invoice'
+  // PTY-05 — tags. Both are closed-registry codes the server mints
+  // (`apps/common/error_codes.py`), and both are handled rather than merely
+  // displayed: `tag_name_taken` carries `details.existing_tag_id` and becomes
+  // an offer to merge, and `tag_limit_reached` points at the manager.
+  | 'tag_name_taken'
+  | 'tag_limit_reached'
+  // LED-02 — at most one posted opening balance per party (BR-2). Handled
+  // rather than merely displayed: it is the one refusal in this feature a
+  // merchant can hit without doing anything wrong — two tabs, or a colleague
+  // on another phone — so it is shown above the form they are looking at
+  // rather than toasted over a drawer that is closing.
+  | 'opening_balance_exists'
+  // LED-01 — only an owner or admin may post past a blocking credit limit
+  // (BR-8). A role check rather than a codename one, so the client draws the
+  // override from the session's role and the server decides again on write.
+  | 'override_not_allowed'
   // transport-level codes minted on the client, never sent by the server:
   | 'network_error'
   | 'timeout'

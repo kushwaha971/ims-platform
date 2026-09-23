@@ -98,18 +98,72 @@ export function MLDialog({
   const panelRef = useRef<HTMLDivElement | null>(null);
   const openerRef = useRef<HTMLElement | null>(null);
 
-  // Remember the opener, move focus in, lock scroll — and undo all three.
+  /* The opener is remembered CONTINUOUSLY rather than read when the dialog
+     opens, and the ordering is the whole reason.
+ 
+     React applies `autoFocus` during commit, before this component's effects
+     run — so by the time an open-time read happened, `document.activeElement`
+     could already be a field INSIDE the dialog, and recording that as "the
+     element to restore focus to on close" means restoring focus to a node that
+     is about to be removed. Reading it during render would be early enough and
+     is what `react-hooks/refs` forbids, correctly.
+ 
+     A capture-phase `focusin` listener that ignores anything inside the panel
+     leaves the ref holding the last element focused OUTSIDE it, which is the
+     button the merchant pressed. Writing a ref from an event handler is exactly
+     what refs are for.
+ 
+     It stays null when the opener never took focus at all — a tap on iOS, where
+     buttons do not focus — and a null simply means no restoration, which is
+     what happened before. */
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+    const remember = (event: FocusEvent) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      if (panelRef.current?.contains(target)) return;
+      openerRef.current = target;
+    };
+    document.addEventListener('focusin', remember, true);
+    return () => document.removeEventListener('focusin', remember, true);
+  }, []);
+
+  // Move focus in, lock scroll — and undo both.
   useEffect(() => {
     if (!open || typeof document === 'undefined') return undefined;
-    openerRef.current =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
 
     const panel = panelRef.current;
     if (panel) {
-      const first = focusableWithin(panel)[0];
-      (first ?? panel).focus();
+      /* Move focus in ONLY if it is not already inside.
+ 
+         This used to move it unconditionally to the first focusable element,
+         which is the close button in the header — so `autoFocus` inside a
+         dialog did nothing at all, silently, and four callers had already
+         written it expecting otherwise: the ledger entry drawer's amount,
+         PTY-05's tag name, and the Cancel button in both archive dialogs, which
+         is there precisely so a destructive confirmation opens on the safe
+         choice.
+ 
+         On the ledger drawer it cost two things at once. The numeric keypad did
+         not come up on a phone, on the screen whose whole target is eight
+         seconds from tap to saved. And the BLUR this effect caused marked the
+         amount touched, so React Hook Form's `onTouched` mode ran the resolver
+         against an empty field and the drawer opened with "Enter an amount."
+         under it, in error red, before the merchant had touched anything.
+ 
+         The check is on where focus IS rather than on an `[autofocus]`
+         attribute, because React does not render one: it applies `autoFocus` by
+         focusing the node during commit and drops the attribute, so a
+         `querySelector('[autofocus]')` matches nothing. Asking the document
+         where focus went is the only reading that is true of what React
+         actually did. */
+      const active = document.activeElement;
+      const alreadyInside = active instanceof HTMLElement && panel.contains(active);
+      if (!alreadyInside) {
+        (focusableWithin(panel)[0] ?? panel).focus();
+      }
     }
 
     return () => {

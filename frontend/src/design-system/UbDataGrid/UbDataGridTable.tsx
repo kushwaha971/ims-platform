@@ -46,11 +46,17 @@ import type { UbDataGridColumn, UbDataGridLabels, UbGridSort } from './types';
  *  · **Sorting is a `<button>` inside the `<th>`,** and the `<th>` carries
  *    `aria-sort`. The state lives on the cell, per ARIA; the control is a
  *    control.
- *  · **A row is not a click target.** Opening a record is a LINK in the name
- *    cell and a row action is a button in its own column, because a `<tr>` with
- *    an `onClick` is unreachable by keyboard and invisible to a screen reader's
- *    control list — the exact defect the card rendering avoids by being a real
- *    `<button>`.
+ *  · **A row is not a click target.** Opening a record is a control in the
+ *    FIRST cell and a row action is a button in its own column, because a
+ *    `<tr>` with an `onClick` is unreachable by keyboard and invisible to a
+ *    screen reader's control list — the exact defect the card rendering avoids
+ *    by being a real `<button>`.
+ *
+ *    That paragraph described the intent for a while before anything
+ *    implemented it: `onRowOpen` reached `UbDataGridMobileList` and stopped
+ *    there, so a record was openable on a phone and not on a laptop. The
+ *    parties list shipped with rows that did nothing at `md` and above, and
+ *    nothing failed, because every test that cared rendered the `cards` tier.
  *  · **`table-fixed` and no horizontal scroll.** The wrapper is
  *    `overflow-x-hidden` unless the caller opts in. A column that cannot fit
  *    truncates — and a column that keeps needing to truncate is a column with
@@ -61,6 +67,12 @@ export interface UbDataGridTableProps<TRow> {
   readonly columns: readonly UbDataGridColumn<TRow>[];
   readonly rowId: (row: TRow) => string;
   readonly rowName: (row: TRow) => string;
+  /**
+   * Opens the record. The first column's cell becomes a control when this is
+   * set, and stays plain text when it is not — a grid of things that are not
+   * openable must not grow an affordance that goes nowhere.
+   */
+  readonly onRowOpen?: (row: TRow) => void;
   readonly labels: UbDataGridLabels;
   readonly caption: string;
   readonly sort?: UbGridSort | null;
@@ -96,6 +108,7 @@ function UbDataGridTableBase<TRow>({
   columns,
   rowId,
   rowName,
+  onRowOpen,
   labels,
   caption,
   sort,
@@ -191,6 +204,11 @@ function UbDataGridTableBase<TRow>({
       emit(next);
     },
     [emit, selection]
+  );
+
+  const handleOpen = useCallback(
+    (row: TRow) => () => onRowOpen?.(row),
+    [onRowOpen]
   );
 
   const handleSort = useCallback(
@@ -342,9 +360,10 @@ function UbDataGridTableBase<TRow>({
                   // was about to apply to.
                   // BrandHub also sets `cursor-pointer` when a row is
                   // clickable. This grid has no row-click: a row is opened
-                  // through a named control in its own cell, which is the
-                  // accessible version of the same affordance and is why there
-                  // is nothing to borrow here.
+                  // through a named control in its first cell, which is the
+                  // accessible version of the same affordance — so the cursor
+                  // changes over that control and nowhere else, which is also
+                  // the honest thing for a row whose other cells do nothing.
                   row.getIsSelected() ? 'bg-accent-quiet' : 'hover:bg-surface-hover'
                 )}
               >
@@ -362,14 +381,38 @@ function UbDataGridTableBase<TRow>({
                     />
                   </td>
                 )}
-                {row.getVisibleCells().map((cell) => {
+                {row.getVisibleCells().map((cell, index) => {
                   const column = columns.find((entry) => entry.id === cell.column.id);
+                  const content = flexRender(cell.column.columnDef.cell, cell.getContext());
                   return (
                     <td
                       key={cell.id}
                       className={cn(GRID_TD, ALIGN[column?.align ?? 'start'])}
                     >
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      {/* The first cell carries the open control, and only the
+                          first: one named control per row. Wrapping every cell
+                          would put eight identical "Open Ramesh Traders"
+                          buttons in a screen reader's control list for one row.
+
+                          `aria-label` rather than the cell's own text, so the
+                          control announces what it DOES — matching the card
+                          rendering, where the same label is the whole card's
+                          name. */}
+                      {index === 0 && onRowOpen ? (
+                        <button
+                          type="button"
+                          onClick={handleOpen(row.original)}
+                          aria-label={fillTemplate(labels.openRow, { name })}
+                          className={cn(
+                            'w-full rounded-sm text-left outline-none',
+                            'hover:underline focus-visible:shadow-focus'
+                          )}
+                        >
+                          {content}
+                        </button>
+                      ) : (
+                        content
+                      )}
                     </td>
                   );
                 })}

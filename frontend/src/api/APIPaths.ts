@@ -145,13 +145,42 @@ export const IDEMPOTENT_POST_PATHS: readonly string[] = [
   API_PATHS.TENANTS,
 ];
 
+/**
+ * Sub-trees that the prefix rule above would sweep in, and that are idempotent
+ * WITHOUT a key.
+ *
+ * `IDEMPOTENT_POST_PATHS` matches by prefix, which is what makes
+ * `POST /parties/{id}/archive` inherit the requirement from `/parties` without
+ * anyone having to remember to add it. PTY-05 then hung `/parties/tags` off the
+ * same root, and every tag POST started minting a key it does not need and
+ * warning, in development, that "a retry will double-post" — which is false for
+ * all three of them and is exactly the kind of warning people learn to ignore.
+ *
+ * Each one is idempotent by its own construction rather than by a stored
+ * response:
+ *   - `POST /parties/tags` answers 200 with the EXISTING tag for a name that is
+ *     already taken (FR-3), so a replay returns the same tag and creates
+ *     nothing.
+ *   - `POST /parties/tags/bulk` is `bulk_create(ignore_conflicts=True)` for
+ *     `add`, a delete-then-insert of a stated set for `replace`, and a delete
+ *     for `remove`. Running any of them twice leaves the same rows.
+ *   - `POST /parties/tags/{id}/merge` deletes its source, so a replay is a 404
+ *     — not a duplicate merge.
+ *
+ * This is an EXEMPTION LIST and not a loosening of the prefix rule, because the
+ * default has to stay "a POST under /parties needs a key". Anything added here
+ * is a claim that the endpoint cannot double-write, and it belongs in the same
+ * commit as the endpoint that makes the claim true.
+ */
+export const IDEMPOTENCY_EXEMPT_PATHS: readonly string[] = [`${API_PATHS.PARTIES}/tags`];
+
 /** True when a POST to this url is on the mandatory-idempotency list. */
 export const requiresIdempotency = (url: string | undefined): boolean => {
   if (!url) return false;
   const path = url.split('?')[0] ?? url;
-  return IDEMPOTENT_POST_PATHS.some(
-    (candidate) => path === candidate || path.startsWith(`${candidate}/`)
-  );
+  const matches = (candidate: string) => path === candidate || path.startsWith(`${candidate}/`);
+  if (IDEMPOTENCY_EXEMPT_PATHS.some(matches)) return false;
+  return IDEMPOTENT_POST_PATHS.some(matches);
 };
 
 /**

@@ -38,6 +38,11 @@ export const ROUTES = {
   // ── (app) ─────────────────────────────────────────────────────────────────
   DASHBOARD: '/dashboard',
   PARTIES: '/parties',
+  /** PTY-05 FR-7 — the tag manager. A sibling of the list rather than a
+   *  settings page: tags are a way of working through the book, and a merchant
+   *  renaming one is in the middle of using the list, not configuring the
+   *  product. */
+  PARTY_TAGS: '/parties/tags',
   LEDGER_REMINDERS: '/ledger/reminders',
   ITEMS: '/items',
   SALES_INVOICES: '/sales/invoices',
@@ -52,6 +57,29 @@ export const ROUTES = {
 } as const;
 
 export type RouteKey = keyof typeof ROUTES;
+
+/**
+ * PTY-03's khata page — `/parties/{id}`.
+ *
+ * A function rather than a template literal at the call site, for the same
+ * reason `ROUTES` exists at all: the path is written once. `encodeURIComponent`
+ * because the id reaches this from a row, a notification payload or a URL, and
+ * a path segment built by concatenation is a path segment somebody can put a
+ * slash in.
+ */
+export const partyPath = (id: string): string =>
+  `${ROUTES.PARTIES}/${encodeURIComponent(id)}`;
+
+/**
+ * PTY-05 — the party list, filtered to one tag.
+ *
+ * The manager's party count links here, which is what turns "Camp Area · 34"
+ * from a statistic into a way in. By NAME, because that is what the filter
+ * takes and what a person reading the URL can check — see `PartyTagFilter` for
+ * why the parameter is names rather than ids.
+ */
+export const partiesByTagPath = (name: string): string =>
+  `${ROUTES.PARTIES}?tag=${encodeURIComponent(name)}`;
 export type Route = (typeof ROUTES)[RouteKey];
 
 /**

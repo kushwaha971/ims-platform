@@ -56,6 +56,16 @@ export const usePartySchemas = (): {
             (value) => !value || (Number(value) >= 0 && Number(value) <= 365)
           ),
         collectionDate: Yup.string().defined().default(''),
+        /* PTY-05 BR-3. The ceiling is the server's and is restated here so the
+           merchant is told at the picker rather than by a 400 after they have
+           filled in twenty other fields. The picker also stops offering at ten,
+           so this fires only when a party that already had eleven — from a bulk
+           call made before the ceiling was enforced there — is opened for edit. */
+        tags: Yup.array()
+          .of(Yup.string().required().max(40))
+          .max(10, t('parties.tags.field.full', { max: 10 }))
+          .defined()
+          .default([]),
         smsOptIn: Yup.boolean().defined().default(true),
         consentSource: Yup.string().defined().default(''),
         openingAmount: v.optionalAmountValidation().defined().default(''),

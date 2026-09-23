@@ -63,4 +63,47 @@ describe('UbAmount', () => {
     expect(screen.getByText('You got, ₹10.00')).toBeInTheDocument();
     expect(screen.queryByText('You got')).not.toBeInTheDocument();
   });
+
+  it('renders a NEGATIVE balance unsigned, because the label carries the direction', () => {
+    /**
+     * §23.2.6 rule 3, and the case the rule exists for. The test above asserts
+     * an unsigned balance using a POSITIVE value, which every implementation
+     * passes — including the broken one.
+     *
+     * The defect: the magnitude came from `formatInr(value)`, and `formatInr`
+     * signs what it formats. So `sign="none"` rendered an empty sign slot and
+     * the minus arrived anyway, inside the number, and a party the merchant
+     * owes ₹282.90 read "−₹282.90 · You will give" on the list and on the khata
+     * page. Two mechanisms, one silently overruling the other.
+     */
+    const { container } = render(
+      <UbAmount value="-282.90" tone="payable" label="You will give" />
+    );
+
+    expect(container.querySelector('[aria-hidden="true"]')?.textContent).toBe('₹282.90');
+  });
+
+  it('still says it out loud without a sign word', () => {
+    /** Rule 8: "minus two hundred rupees" is not how the number is read in the
+     *  shop, and the label has already said which way it goes. */
+    render(<UbAmount value="-282.90" tone="payable" label="You will give" />);
+
+    expect(screen.getByText('You will give, ₹282.90')).toBeInTheDocument();
+  });
+
+  it('puts the glyph in the slot when a caller genuinely wants a sign', () => {
+    /**
+     * A ledger delta is signed on purpose, and the fixed slot is what keeps its
+     * decimal column aligned with the unsigned rows around it. Fixing the
+     * magnitude must not take that away — so a negative value asked to show a
+     * minus shows exactly one.
+     */
+    const { container } = render(
+      <UbAmount value="-500.00" tone="payable" sign="minus" label="You gave" />
+    );
+
+    const figure = container.querySelector('[aria-hidden="true"]')?.textContent;
+    expect(figure).toBe('\u2212₹500.00');
+    expect(figure?.match(/[−-]/g)).toHaveLength(1);
+  });
 });

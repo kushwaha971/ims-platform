@@ -3,6 +3,7 @@
 import { forwardRef, memo, useCallback, type InputHTMLAttributes, type ReactNode } from 'react';
 
 import { MLInput } from 'src/design-system/primitives';
+import { UbFilterChip, UbFilterChipGroup } from 'src/design-system/UbFilterChip';
 import { cn } from 'src/utils/cn';
 
 /**
@@ -38,7 +39,27 @@ export interface UbDateQuickChoice {
   readonly date: string;
 }
 
-export interface UbDateInputProps
+/**
+ * The quick choices and their group's name travel together, or neither does.
+ *
+ * A row of chips with no accessible name reads as three unrelated toggles, so
+ * `UbFilterChipGroup` requires one — and a prop that is only required
+ * SOMETIMES is the kind of thing a compiler can state and a comment cannot.
+ * `quickChoicesLabel?: string` would have let a caller pass choices and no
+ * name, and the consequence is invisible to everyone who is not using a screen
+ * reader.
+ */
+type UbDateQuickChoices =
+  | { readonly quickChoices?: undefined; readonly quickChoicesLabel?: never }
+  | {
+      readonly quickChoices: readonly UbDateQuickChoice[];
+      /** Names the row — "Common dates", "Collection in". */
+      readonly quickChoicesLabel: string;
+    };
+
+export type UbDateInputProps = UbDateInputOwnProps & UbDateQuickChoices;
+
+interface UbDateInputOwnProps
   extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'value' | 'onChange'> {
   /** ISO `YYYY-MM-DD`, or null for no date. */
   readonly value: string | null | undefined;
@@ -47,7 +68,6 @@ export interface UbDateInputProps
   /** ISO bounds handed to the platform picker, which enforces them itself. */
   readonly min?: string;
   readonly max?: string;
-  readonly quickChoices?: readonly UbDateQuickChoice[];
   readonly className?: string;
 }
 
@@ -71,7 +91,7 @@ export const isoFinancialYearStart = (now: Date = new Date()): string => {
 };
 
 const UbDateInputInner = forwardRef<HTMLInputElement, UbDateInputProps>(function UbDateInputInner(
-  { value, onChange, invalid, min, max, quickChoices, className, ...rest },
+  { value, onChange, invalid, min, max, quickChoices, quickChoicesLabel, className, ...rest },
   ref
 ) {
   const handleChange = useCallback(
@@ -79,28 +99,24 @@ const UbDateInputInner = forwardRef<HTMLInputElement, UbDateInputProps>(function
     [onChange]
   );
 
+  /* The pill, the 44px hit area and the pressed tint used to be written out
+     here. They are `UbFilterChip` now, because PTY-02 needed the same control
+     three more times and the hit area is exactly the part that goes missing in
+     the third copy. `onToggle` ignores the next state: a date chip is a choice
+     among dates, so pressing the applied one again re-applies it rather than
+     clearing the field — that is `UbDateInput`'s own judgement and not the
+     chip's. */
   const chips: ReactNode = quickChoices?.length ? (
-    <div className="flex flex-wrap gap-2">
+    <UbFilterChipGroup label={quickChoicesLabel ?? ''} className="flex-wrap shrink">
       {quickChoices.map((choice) => (
-        <button
+        <UbFilterChip
           key={choice.date}
-          type="button"
-          onClick={() => onChange(choice.date)}
-          aria-pressed={value === choice.date}
-          /* 44px tall (R-A-3) with a 32px visible pill inside it — the same
-             arrangement the paging bar uses. A chip a merchant cannot hit with
-             a thumb is a chip that does not exist. */
-          className={cn(
-            'inline-flex min-h-11 items-center rounded-pill px-3 ds-chip transition-colors',
-            value === choice.date
-              ? 'bg-accent-quiet text-text-accent'
-              : 'text-text-tertiary hover:bg-surface-hover hover:text-text-primary'
-          )}
-        >
-          {choice.label}
-        </button>
+          label={choice.label}
+          pressed={value === choice.date}
+          onToggle={() => onChange(choice.date)}
+        />
       ))}
-    </div>
+    </UbFilterChipGroup>
   ) : null;
 
   return (

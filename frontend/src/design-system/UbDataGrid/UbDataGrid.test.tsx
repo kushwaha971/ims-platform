@@ -225,6 +225,41 @@ describe('the three renderings', () => {
   });
 });
 
+describe('opening a record from the table', () => {
+  it('puts ONE named control in the row, in the first cell', async () => {
+    /**
+     * The defect: `onRowOpen` reached the card rendering and stopped there, so
+     * a party was openable on a phone and not on a laptop, and the parties list
+     * shipped with desktop rows that did nothing at all. Nothing failed,
+     * because every test that exercised row opening rendered the `cards` tier —
+     * the one tier where it worked.
+     *
+     * One control and not eight: wrapping every cell would put an identical
+     * "Open Ramesh Traders" in a screen reader's control list once per column,
+     * for a single row.
+     */
+    const onRowOpen = jest.fn();
+    await renderGridWithTable('full', { onRowOpen });
+
+    const opens = screen.getAllByRole('button', { name: 'Open Ramesh Traders' });
+    expect(opens).toHaveLength(1);
+
+    await userEvent.click(opens[0] as HTMLElement);
+    expect(onRowOpen).toHaveBeenCalledWith(ROWS[0]);
+  });
+
+  it('leaves the cells as plain text when there is nowhere to go', async () => {
+    /**
+     * A grid whose rows are not openable must not grow an affordance that does
+     * nothing — the parties list was in exactly that state for a sprint, and an
+     * underline on hover would have been a promise it could not keep.
+     */
+    await renderGridWithTable('full');
+
+    expect(screen.queryByRole('button', { name: /^Open / })).not.toBeInTheDocument();
+  });
+});
+
 describe('table semantics', () => {
   it('is a real <table> with scoped header cells and a caption', async () => {
     await renderGridWithTable('full');
@@ -733,5 +768,30 @@ describe("BrandHub's height logic", () => {
     const scroller = screen.getByTestId('ub-grid-table-scroller');
     expect(scroller).toHaveAttribute('data-ub-scroll-y', 'on');
     expect(scroller).toHaveStyle({ maxHeight: '320px' });
+  });
+});
+
+describe('the card avatar', () => {
+  /**
+   * Most lists in this product are lists of PEOPLE, and a disc of initials is
+   * how a merchant finds one at a glance — so it is on by default and stays on.
+   *
+   * PTY-05's tag manager is the first list of THINGS. A card reading "CA"
+   * beside "Camp Area" invites the reader to look for somebody, and the 40 px
+   * it costs was the difference between that row's three actions sitting on one
+   * line and stacking on three — which is how a screenshot at 360 px found it.
+   */
+  it('is drawn by default, because most of these lists are people', () => {
+    renderGrid('cards');
+
+    expect(screen.getAllByText('RT').length).toBeGreaterThan(0);
+  });
+
+  it('is absent when the grid says the rows are not people', () => {
+    renderGrid('cards', { cardAvatar: false });
+
+    expect(screen.queryByText('RT')).not.toBeInTheDocument();
+    /* And the row is still a row: the name and the figure survive. */
+    expect(screen.getByText('Ramesh Traders')).toBeInTheDocument();
   });
 });

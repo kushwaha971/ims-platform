@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useMemo } from 'react';
 
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 
 import {
   UbButton,
@@ -25,8 +25,13 @@ import {
   isoToday,
 } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
+import { compareMoney, formatAmount, parseAmountInput } from 'src/utils/money';
 
+import { MAX_TAGS_PER_PARTY } from '../constants/partyTags';
+import { usePartyTags } from '../hooks/usePartyTags';
 import { usePartySchemas } from '../validation/partySchemas';
+
+import { PartyTagField } from './PartyTagField';
 
 import type { UsePartyFormResult } from '../hooks/usePartyForm';
 import type { PartyFormValues } from '../types/party.types';
@@ -58,13 +63,19 @@ export function PartyFormDrawer({
   const { t } = useTranslation();
   const { partySchema } = usePartySchemas();
   const formId = useId();
+  /* Unconditional: the thunk's own `condition` decides whether a request goes
+     out, so three screens asking at once still costs one (§19.3.5). */
+  const { byUsage: tagOptions } = usePartyTags();
 
-  const { open, isEdit, editing, isSaving, canWrite, formErrors, duplicateOf, close, submit } =
+  const { open, isEdit, editing, prefillName, isSaving, canWrite, formErrors, duplicateOf, close, submit } =
     partyForm;
 
   const defaults = useMemo<PartyFormValues>(
     () => ({
-      name: editing?.name ?? '',
+      /* `prefillName` is the search term the merchant had typed when the list
+         came back empty and they pressed "Add 'ramesh'". It is only ever set
+         for a create, so the edit branch cannot be shadowed by it. */
+      name: editing?.name ?? prefillName,
       mobile: editing?.mobile ?? '',
       isCustomer: editing?.isCustomer ?? true,
       isSupplier: editing?.isSupplier ?? false,
@@ -82,11 +93,14 @@ export function PartyFormDrawer({
       collectionDate: editing?.collectionDate ?? '',
       smsOptIn: editing?.smsOptIn ?? true,
       consentSource: editing?.consentSource ?? '',
+      /* The names, not the ids: the picker creates inline and the server
+         resolves a name to a tag inside the party's own transaction. */
+      tags: editing?.tags.map((tag) => tag.name) ?? [],
       openingAmount: '',
       openingDirection: 'debit',
       openingAsOf: isoFinancialYearStart(),
     }),
-    [editing]
+    [editing, prefillName]
   );
 
   const form = useForm<PartyFormValues>({
@@ -137,6 +151,47 @@ export function PartyFormDrawer({
     ],
     [t]
   );
+
+  /**
+   * "They already owe ₹47,500 — this limit is already crossed."
+   *
+   * Watched rather than read once, so it appears while the merchant is typing
+   * the figure rather than after they save it. `editing` only: a party being
+   * created owes nothing yet, so there is nothing to cross.
+   *
+   * `useWatch`, not `form.watch()`. The latter returns a function the React
+   * Compiler cannot memoize safely, so it skips memoizing THIS WHOLE COMPONENT
+   * — a three-hundred-line form with twenty-odd controls — to display one hint.
+   * The compiler says so as a warning rather than an error, which is exactly
+   * the kind of cost that gets paid silently. Every other watcher in this
+   * codebase uses `useWatch` for the same reason.
+   */
+  const typedLimit = useWatch({ control: form.control, name: 'creditLimit' });
+  const creditHint = useMemo(() => {
+    /* `parseAmountInput` FIRST, and this is not tidiness.
+ 
+       `UbMoneyInput` groups as the merchant types, so the value reaching here
+       is "10,000.00" rather than "10000.00" — and `toDecimal` stops at the
+       comma. The hint therefore worked for any figure under a thousand and
+       silently stopped working for every realistic credit limit, which is the
+       worst possible place for it to stop: a merchant lowering a cap to ₹10,000
+       on somebody who owes ₹47,500 is exactly who the notice is for.
+ 
+       Caught by a test that typed "9" and passed, beside one that typed "10000"
+       and did not. */
+    const typed = parseAmountInput(typedLimit ?? '');
+    if (!isEdit || !editing || !typed.trim()) return undefined;
+    /* String comparison would say "9" is more than "47500". `compareMoney`
+       parses both with decimal.js-light, which is the only arithmetic this
+       component does and the only kind canon rule 3 allows on money. */
+    if (compareMoney(editing.balance, typed) <= 0) return undefined;
+    /* `formatAmount`, not `formatInr`: the message is "They already owe
+       ₹{balance} — …" and the symbol belongs to the SENTENCE, because Hindi
+       puts it elsewhere in the line. A formatter that carried its own produced
+       "₹₹47,500.00", which is the second time this exact pair of mistakes has
+       met in this feature — see `creditCaption`. */
+    return t('parties.credit.alreadyCrossed', { balance: formatAmount(editing.balance) });
+  }, [isEdit, editing, typedLimit, t]);
 
   const consentOptions = useMemo(
     () =>
@@ -238,6 +293,39 @@ export function PartyFormDrawer({
           )}
         </UbField>
 
+        {/* PTY-05 FR-5 — visible, not folded, and that is a deliberate
+            exception to this form's own rule.
+ 
+            Everything past the first three fields is behind a disclosure
+            because it is in the way of somebody adding their fourth customer of
+            the morning. Tags are the one addition that EARNS its place there:
+            the flow the feature exists for is "type Camp, press Create, save"
+            at the counter (FRD PTY-05 §6), and a tag behind a fold is a tag
+            nobody applies — which makes the filter, the bulk dialog and the
+            manager furniture around an empty table.
+ 
+            It is last in the visible group, so the fifteen-second path is still
+            name, number, which-kind, save, with tags sitting where the eye lands
+            after the decision rather than before it. */}
+        <UbField
+          name="tags"
+          label={t('parties.tags.field.label')}
+          hint={t('parties.tags.field.hint', { max: MAX_TAGS_PER_PARTY })}
+        >
+          {(field) => (
+            <PartyTagField
+              t={t}
+              id={field.id}
+              value={(field.value as string[] | undefined) ?? []}
+              onChange={field.onChange}
+              tags={tagOptions}
+              disabled={!canWrite}
+              invalid={Boolean(errors.tags)}
+              aria-describedby={field['aria-describedby']}
+            />
+          )}
+        </UbField>
+
         {/* ── Everything else, folded away ───────────────────────────────── */}
         {!isEdit && (
           <UbDisclosure
@@ -256,6 +344,7 @@ export function PartyFormDrawer({
                 <UbDateInput
                   {...field}
                   max={isoToday()}
+                  quickChoicesLabel={t('parties.form.opening.quickDates')}
                   quickChoices={[
                     { label: t('parties.form.opening.fyStart'), date: isoFinancialYearStart() },
                     { label: t('parties.form.opening.today'), date: isoToday() },
@@ -293,7 +382,23 @@ export function PartyFormDrawer({
         </UbDisclosure>
 
         <UbDisclosure label={t('parties.form.section.credit')} open={creditHasError || undefined}>
-          <UbField name="creditLimit" label={t('parties.form.creditLimit.label')}>
+          {/* PTY-06 FR-13 — a NOTICE, not an error.
+ 
+              Lowering a limit below what somebody already owes is allowed and
+              is often the whole point: a merchant who has decided to stop
+              lending to this person is doing it precisely when they are owed
+              the most. Refusing it would trap them, and it reverses nothing
+              already posted (BR-10). So the form says what will be true and
+              lets them save.
+ 
+              `hint` rather than a banner, because it belongs to this field and
+              disappears with it. It is computed from the balance the form
+              already has, so there is no request behind it. */}
+          <UbField
+            name="creditLimit"
+            label={t('parties.form.creditLimit.label')}
+            hint={creditHint}
+          >
             {(field) => <UbMoneyInput {...field} />}
           </UbField>
           <UbField

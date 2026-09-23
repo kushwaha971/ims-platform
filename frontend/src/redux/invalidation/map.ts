@@ -110,5 +110,185 @@ export const INVALIDATION: TInvalidationMap = {
   // No `stale: ['plan']`: DEC-001 took `max_parties` out of the enforceable
   // limits at MVP, so no counter on the plan slice moves when a party is
   // created. When that decision is revisited, this line is where it lands.
-  saveParty: { refetch: ['partyList'] },
+  //
+  // PTY-05 added `stale: ['partyTag']`, and it closes a gap that only appears on
+  // the feature's PRIMARY create path. A merchant adds a party and types a new
+  // tag into the picker; the server creates the tag row inside the party's own
+  // transaction, so nothing on this device ever saw a tag mutation. The list
+  // refetched and the chip appeared on the row — and the tag was missing from
+  // the filter, from the bulk dialog and from the next party's picker for the
+  // rest of the session, because `fetchPartyTags` refuses to ask twice once it
+  // has an answer. The merchant could see the tag and not use it.
+  //
+  // `stale` rather than `refetch`: the drawer has just closed over the list, and
+  // the picker the tag is missing from is not on screen. It is fetched when
+  // something next mounts that needs it, which is the definition of the cheap
+  // one.
+  saveParty: { refetch: ['partyList', 'partyDetail'], stale: ['partyTag'] },
+
+  // ── PTY-03 — the promise date on the khata page ───────────────────────────
+  // Two slices, two different reasons, which is why this entry is not one of
+  // them.
+  //
+  // `patch` on `partyDetail` because this thunk's OWN extraReducers write the
+  // party the PATCH returned straight into the slice — the screen the merchant
+  // is looking at is already correct when the promise resolves, and a refetch
+  // of it would be a round trip to learn what the response just said.
+  //
+  // `refetch` on `partyList` because the date is not only a detail field: it is
+  // PTY-02's `collection` chip and one of the four orderings, so a list sitting
+  // behind this page is now wrong about which parties are due today. It is
+  // `refetch` rather than `stale` on the strength of where the merchant goes
+  // next — back to the list they came from, usually within seconds, which is
+  // exactly the remount `stale` would be waiting for and would not get, because
+  // the list stays mounted in the router's cache.
+  saveCollectionDate: {
+    patch: [['partyDetail', 'party']],
+    refetch: ['partyList'],
+  },
+
+  // ── LED-01 — a posted ledger entry ────────────────────────────────────────
+  //
+  // Three things change and each gets the treatment it deserves.
+  //
+  // `patch` on the timeline, because the response CARRIES the new row:
+  // `ledgerEntrySlice` splices it into the list in its own extraReducers on
+  // this action, in the position the server's ordering would put it. A refetch
+  // here would be a round trip to re-learn what the 201 already said, on the
+  // connection this product is built for, at the moment the merchant is
+  // watching for their entry to appear.
+  //
+  // `patch` on the party header for the same reason: `meta.party_balance` is
+  // the balance this transaction produced, which is a better number than
+  // whatever a second read a moment later happens to find.
+  //
+  // `refetch` on the LIST, because that is the one thing the response cannot
+  // patch. The party's balance changed, so its row's amount is wrong, its
+  // position in a recency ordering is wrong, and the header totals — computed
+  // over the whole filtered set, not over the page — are wrong by this amount.
+  // `stale` would wait for a remount the merchant may never perform: they post
+  // an entry, tap back, and read a list that says something else.
+  postEntry: {
+    patch: [
+      ['ledgerEntry', 'rows'],
+      ['partyDetail', 'summary'],
+    ],
+    refetch: ['partyList'],
+  },
+
+  // ── LED-02 — the opening balance ──────────────────────────────────────────
+  //
+  // The same three effects as a posted entry, and one more that is the whole
+  // reason this is a separate thunk: whether the khata still OFFERS "Add
+  // opening balance". That question is answered by whether the party has a
+  // posted opening entry, which lives in `ledgerEntry.rows` — so the patch on
+  // the rows is what takes the action away, and the action does not have to
+  // remember to hide itself.
+  postOpeningBalance: {
+    patch: [
+      ['ledgerEntry', 'rows'],
+      ['partyDetail', 'summary'],
+    ],
+    refetch: ['partyList'],
+  },
+
+  // ── LED-03 — corrections and reversals ────────────────────────────────────
+  //
+  // The same two patches, and both are CLAIMS that a reducer already did the
+  // work: `ledgerEntrySlice.applyReversal` strikes or drops the original and
+  // places whatever replaced it, and `partyDetailSlice.applyCorrectionBalance`
+  // writes the balance the server returned onto the header. A `patch` this file
+  // declares and no reducer performs is the defect `postEntry` shipped with —
+  // see this file's own docstring on why a false claim is worse than none.
+  //
+  // `refetch: ['partyList']` because the list carries every party's balance and
+  // its `meta.totals`, and a correction changes both. The merchant is very
+  // often one back-tap from that list.
+  reverseEntry: {
+    patch: [
+      ['ledgerEntry', 'rows'],
+      ['partyDetail', 'summary'],
+    ],
+    refetch: ['partyList'],
+  },
+  correctEntry: {
+    patch: [
+      ['ledgerEntry', 'rows'],
+      ['partyDetail', 'summary'],
+    ],
+    refetch: ['partyList'],
+  },
+
+  // ── PTY-04 — archive and restore ──────────────────────────────────────────
+  // Archiving MOVES a party between the two tabs of the list the merchant is
+  // looking at: the row leaves Active and appears under Archived, and the
+  // header totals lose whatever it contributed. `refetch` rather than `stale`
+  // for the same reason PTY-01's save is — the merchant is looking straight at
+  // the place the row used to be, and `stale` waits for a remount that is not
+  // going to happen.
+  //
+  // `patch` on `partyDetail` because both thunks' own extraReducers write the
+  // party the server returned, so a khata page open behind the dialog is
+  // already correct.
+  archiveParty: { patch: [['partyDetail', 'party']], refetch: ['partyList'] },
+  restoreParty: { patch: [['partyDetail', 'party']], refetch: ['partyList'] },
+  // No `patch` here: a bulk archive is about rows in a list and says nothing
+  // about whichever single party the detail slice happens to hold.
+  bulkArchiveParties: { refetch: ['partyList'] },
+
+  // ── PTY-05 — tags ─────────────────────────────────────────────────────────
+  //
+  // The distinction that runs through all five entries: a tag's IDENTITY lives
+  // in `partyTag`, and COPIES of its name and colour live inside every party
+  // row that carries it, because the list response embeds them (they are
+  // prefetched server-side so the list never issues a per-row request). So the
+  // question for each mutation is not "did the tag change" but "is a name or a
+  // colour now wrong somewhere else on the screen".
+  //
+  // Creating one changes nothing that is already drawn — no party carries it
+  // yet. The slice's own extraReducers put it in the picker, which is where the
+  // merchant is looking, and that is the whole of it.
+  createPartyTag: { patch: [['partyTag', 'tags']] },
+
+  // A rename or a recolour is the case the embedded copies exist for. The join
+  // stores the id and never the name, so ONE row changed in the database and
+  // every chip on every list row is now showing the old spelling — which is
+  // precisely the bug US-4 exists to prevent, arriving from the other side.
+  // `refetch` rather than `stale` because the manager sits over the list the
+  // merchant came from, and `partyDetail` because a khata page open in the
+  // router's cache shows the same chips in its header.
+  updatePartyTag: {
+    patch: [['partyTag', 'tags']],
+    refetch: ['partyList', 'partyDetail'],
+  },
+  // A delete removes the chip from every party that carried it — BR-5, the
+  // parties survive and the label does not. Same reasoning as the rename.
+  deletePartyTag: {
+    patch: [['partyTag', 'tags']],
+    refetch: ['partyList', 'partyDetail'],
+  },
+  // A merge is a rename and a delete at once: parties on the source now show
+  // the target's name and colour, and the source is gone.
+  // `stale` on its own slice as well as `patch`, and the pair is not a
+  // contradiction: the patch removes the source tag and writes the target's new
+  // name, which are the server's own answer; the COUNTS it cannot compute,
+  // because `moved` is counted over live parties and the row's count excludes
+  // archived ones, and adding the two produced a number neither of them meant.
+  mergePartyTags: {
+    patch: [['partyTag', 'tags']],
+    stale: ['partyTag'],
+    refetch: ['partyList', 'partyDetail'],
+  },
+
+  // The only one that changes WHICH tags a party carries rather than what a tag
+  // is called. It moves rows in and out of an active tag filter, so the list the
+  // merchant is looking at may be about to lose the very rows they selected —
+  // `refetch`, and immediately.
+  //
+  // No `patch` on `partyTag`: the counts in the manager are now wrong by up to
+  // two hundred, and this slice does not compute them. `stale` marks them for
+  // the next time the manager mounts, which is the screen that cares. Claiming
+  // a `patch` this slice does not perform would be worse than no entry at all,
+  // because the next reader would stop looking for the refetch.
+  bulkTagPartiesThunk: { refetch: ['partyList'], stale: ['partyTag'] },
 };

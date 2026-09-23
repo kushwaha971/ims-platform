@@ -3,11 +3,13 @@
 import { useCallback, useMemo } from 'react';
 
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 
-import { Plus } from 'lucide-react';
+import { Plus, Tags } from 'lucide-react';
 
 import {
   UbButton,
+  UbLink,
   UbPageHeader,
   UbPageShell,
   UbSelect,
@@ -16,6 +18,7 @@ import {
 } from 'src/design-system';
 import {
   UbDataGrid,
+  useGridTier,
   type UbDataGridEmptyStates,
   type UbDataGridLabels,
   type UbGridSort,
@@ -23,15 +26,30 @@ import {
 } from 'src/design-system/UbDataGrid';
 import { useNowMs } from 'src/hooks/useNowMs';
 import { useTranslation } from 'src/hooks/useTranslation';
+import { ROUTES, partyPath } from 'src/routes';
 import type { PartyStatus } from 'src/types/domain.types';
 
 import { PAGE_SIZE_OPTIONS } from '../constants/partyListDefaults';
+import { TAG_CHIPS_PER_ROW } from '../constants/partyTags';
+import { useBulkArchive } from '../hooks/usePartyArchive';
+import { usePartyBulkTag } from '../hooks/usePartyBulkTag';
 import { usePartyForm } from '../hooks/usePartyForm';
 import { usePartyList } from '../hooks/usePartyList';
+import { usePartyTags } from '../hooks/usePartyTags';
 import { orderingFor, sortFromOrdering } from '../view-model/partyListSort';
 
+import { PartyBulkArchiveDialog } from './PartyBulkArchiveDialog';
 import { createPartyColumns } from './PartyListColumns';
+import { PartyListFilters } from './PartyListFilters';
 import { PartyListStats } from './PartyListStats';
+
+import type {
+  PartyBalanceFilter,
+  PartyCollectionFilter,
+  PartyCreditFilter,
+  PartyTypeFilter,
+} from '../constants/partyFilters';
+import type { Party } from '../types/party.types';
 
 /**
  * `ssr: false` because a drawer is never part of a server render: it opens on
@@ -43,7 +61,21 @@ const PartyFormDrawerLazy = dynamic(
   { ssr: false }
 );
 
-import type { Party } from '../types/party.types';
+/**
+ * PTY-05's bulk dialog, split out for the same reason and by the same measure.
+ *
+ * It carries `UbTokenInput` (a popover, a command palette and the chip
+ * rendering), `UbRadioGroup` and the tag picker's own adapter — and it opens
+ * only when a merchant has selected rows AND pressed Add tag, which is a
+ * deliberate, occasional act. In the route chunk it cost /parties 7.4 KB gz,
+ * paid by every merchant who opens the list to READ it, which is almost all of
+ * them. The selection bar's button is what the page needs eagerly, and that is
+ * a string.
+ */
+const PartyBulkTagDialogLazy = dynamic(
+  () => import('./PartyBulkTagDialog').then((m) => m.PartyBulkTagDialog),
+  { ssr: false }
+);
 
 /**
  * PTY-02's list, and the reference implementation of the approved responsive
@@ -79,6 +111,7 @@ const STATUS_OPTIONS: readonly PartyStatus[] = ['active', 'archived'];
 
 export function PartyListPageContent(): React.JSX.Element {
   const { t, n } = useTranslation();
+  const router = useRouter();
   const partyForm = usePartyForm();
   const {
     rows,
@@ -88,6 +121,7 @@ export function PartyListPageContent(): React.JSX.Element {
     error,
     totals,
     totalsScope,
+    overLimit,
     selectedIds,
     setSelectedIds,
     setOrdering,
@@ -96,12 +130,27 @@ export function PartyListPageContent(): React.JSX.Element {
     searchInput,
     setSearchInput,
     isFiltered,
+    activeFilterCount,
+    toggleBalance,
     clearFilters,
     refetch,
   } = usePartyList();
 
   /** Read outside render, so the column array's memo key is stable. */
   const nowMs = useNowMs();
+
+  const { tags, byUsage: tagOptions } = usePartyTags();
+
+  /**
+   * Whether the CHIP LANE is reserved on every row.
+   *
+   * Read from the tenant's tag list rather than from the rows on screen, and
+   * the difference matters: a merchant filtered to "Settled" might be looking
+   * at twenty-five untagged parties in a book that uses tags heavily, and a
+   * lane that appeared and disappeared as they moved between filters would be
+   * a list that changes height when they change their mind.
+   */
+  const hasTags = tags.length > 0;
 
   // Resolved once so a memoised cell never has to reach for `react-intl`.
   const balanceLabels = useMemo(
@@ -113,9 +162,15 @@ export function PartyListPageContent(): React.JSX.Element {
     [t]
   );
 
+  /* The grid's own tier, read by the screen so the column model can be built
+     for the rendering it is about to be painted at. `UbDataGrid` resolves this
+     identically for itself, from the same media queries. */
+  const tier = useGridTier();
+  const tagChipsPerRow = TAG_CHIPS_PER_ROW[tier];
+
   const columns = useMemo(
-    () => createPartyColumns({ t, nowMs, balanceLabels }),
-    [t, nowMs, balanceLabels]
+    () => createPartyColumns({ t, nowMs, balanceLabels, hasTags, tagChipsPerRow }),
+    [t, nowMs, balanceLabels, hasTags, tagChipsPerRow]
   );
 
   const labels = useMemo<UbDataGridLabels>(
@@ -163,6 +218,20 @@ export function PartyListPageContent(): React.JSX.Element {
     [t, selectedIds.length]
   );
 
+  /* NOT `onClick={partyForm.openCreate}`. The moment `openCreate` took an
+     optional name, that spelling started handing React's MouseEvent to it as
+     the name — and the form would have opened prefilled with an event object
+     rendered as a string. TypeScript caught it here; a `() => void` signature
+     would not have. */
+  const openBlankCreate = useCallback(() => partyForm.openCreate(), [partyForm]);
+  /** The committed term, trimmed once — the empty state quotes it and the Add
+   *  action prefills the form with it, and they must be the same string. */
+  const searchTerm = searchInput.trim();
+  const addSearchedName = useCallback(
+    () => partyForm.openCreate(searchTerm),
+    [partyForm, searchTerm]
+  );
+
   const emptyStates = useMemo<UbDataGridEmptyStates>(
     () => ({
       firstUse: {
@@ -172,16 +241,40 @@ export function PartyListPageContent(): React.JSX.Element {
         // Before PTY-01 it described a screen and left the merchant to find the
         // way out themselves.
         action: partyForm.canWrite ? (
-          <UbButton onClick={partyForm.openCreate}>{t('parties.list.add')}</UbButton>
+          <UbButton onClick={openBlankCreate}>{t('parties.list.add')}</UbButton>
         ) : undefined,
       },
       filtered: {
-        title: t('parties.list.empty.filtered.title'),
-        description: t('parties.list.empty.filtered.body'),
+        /* Two filtered-empty states, because there are two ways to reach it and
+           they need different words. "No customers match this search. Clear the
+           search to see everyone again." was the only copy, and the moment
+           `isFiltered` started counting the chips as well, a merchant who
+           tapped "Settled" with an empty search box was told to clear a search
+           they had not made. The search wording also gets to quote the term,
+           which is the thing they will want to check for a typo. */
+        title: searchTerm
+          ? t('parties.list.empty.filtered.searchTitle', { q: searchTerm })
+          : t('parties.list.empty.filtered.chipsTitle'),
+        description: searchTerm
+          ? t('parties.list.empty.filtered.searchBody')
+          : t('parties.list.empty.filtered.chipsBody'),
+        /* Two ways out, and the second one is the point (T-PTY-02-15). A
+           search that found nobody usually means the party is not in the book
+           yet, not that the merchant mistyped — so the primary move is to add
+           them, with the name they already typed. It is offered only when
+           there IS a name: a chip filter that matched nothing says nothing
+           about what to call anyone. */
         action: (
-          <UbButton variant="secondary" onClick={clearFilters}>
-            {t('common.action.clearFilters')}
-          </UbButton>
+          <>
+            {partyForm.canWrite && searchTerm.length > 0 && (
+              <UbButton onClick={addSearchedName}>
+                {t('parties.list.empty.filtered.add', { name: searchTerm })}
+              </UbButton>
+            )}
+            <UbButton variant="secondary" onClick={clearFilters}>
+              {t('common.action.clearFilters')}
+            </UbButton>
+          </>
         ),
       },
       error: {
@@ -195,7 +288,16 @@ export function PartyListPageContent(): React.JSX.Element {
         ),
       },
     }),
-    [t, clearFilters, refetch, error, partyForm.canWrite, partyForm.openCreate]
+    [
+      t,
+      clearFilters,
+      refetch,
+      error,
+      partyForm.canWrite,
+      openBlankCreate,
+      addSearchedName,
+      searchTerm,
+    ]
   );
 
   const gridState: UbGridState =
@@ -224,12 +326,36 @@ export function PartyListPageContent(): React.JSX.Element {
     [setFilters]
   );
 
-  const handlePageSize = useCallback(
-    (pageSize: number) => setPage(1, pageSize),
-    [setPage]
+  const handleType = useCallback((type: PartyTypeFilter) => setFilters({ type }), [setFilters]);
+  const handleBalance = useCallback(
+    (balance: PartyBalanceFilter) => setFilters({ balance }),
+    [setFilters]
+  );
+  const handleCollection = useCallback(
+    (collection: PartyCollectionFilter) => setFilters({ collection }),
+    [setFilters]
+  );
+  const handleTag = useCallback((tag: string) => setFilters({ tag }), [setFilters]);
+  const handleCredit = useCallback(
+    (credit: PartyCreditFilter) => setFilters({ credit }),
+    [setFilters]
   );
 
+  const handlePageSize = useCallback((pageSize: number) => setPage(1, pageSize), [setPage]);
+
   const clearSelection = useCallback(() => setSelectedIds([]), [setSelectedIds]);
+
+  /* The yearly clean-up (PTY-04 FR-9). The selection bar was a count and a
+     "Clear selection" — the one thing a merchant can DO with a selection, and
+     the reason the bar exists at all, was missing. */
+  const bulk = useBulkArchive(selectedIds, clearSelection);
+  const bulkTag = usePartyBulkTag(selectedIds, clearSelection);
+
+  /* The list finally leads somewhere. Until PTY-03 there was no `/parties/[id]`
+     to go to, so the grid's row-open affordance was left unwired — a chevron
+     that navigated to a 404 would have been worse than a row that plainly does
+     not move. */
+  const openParty = useCallback((party: Party) => router.push(partyPath(party.id)), [router]);
 
   const rowId = useCallback((party: Party) => party.id, []);
   const rowName = useCallback((party: Party) => party.name, []);
@@ -245,14 +371,32 @@ export function PartyListPageContent(): React.JSX.Element {
           title={t('parties.list.title')}
           subtitle={t('parties.list.subtitle')}
           actions={
-            /* Hidden rather than disabled when the role cannot write (§19.7.5).
-               A disabled Add button invites a support call; an absent one says
-               nothing a merchant has to interpret. */
-            partyForm.canWrite ? (
-              <UbButton icon={<Plus className="h-4 w-4" aria-hidden />} onClick={partyForm.openCreate}>
-                {t('parties.list.add')}
-              </UbButton>
-            ) : undefined
+            <>
+              {/* FR-7 reaches the manager from an overflow menu on this header.
+                  This screen's header has no overflow menu, and inventing one
+                  for a single item would be a menu that exists to hide one
+                  link. A secondary button says the same thing in one press.
+                  It is shown to anyone who can READ parties, because the
+                  manager is useful read-only — the counts are the fastest way
+                  to see which tag holds which part of the book — and the
+                  destructive actions inside it are permission-gated there. */}
+              <UbLink
+                href={ROUTES.PARTY_TAGS}
+                variant="body-sm"
+                className="inline-flex items-center gap-1.5"
+              >
+                <Tags className="h-4 w-4" aria-hidden />
+                {t('parties.tags.filter.manage')}
+              </UbLink>
+              {/* Hidden rather than disabled when the role cannot write
+                  (§19.7.5). A disabled Add button invites a support call; an
+                  absent one says nothing a merchant has to interpret. */}
+              {partyForm.canWrite && (
+                <UbButton icon={<Plus className="h-4 w-4" aria-hidden />} onClick={openBlankCreate}>
+                  {t('parties.list.add')}
+                </UbButton>
+              )}
+            </>
           }
         />
       }
@@ -268,16 +412,46 @@ export function PartyListPageContent(): React.JSX.Element {
           payableLabel={t('parties.list.totals.payable')}
           countLabel={t('parties.list.stats.customers')}
           countValue={n(meta.total)}
+          regionLabel={t('parties.list.totals.region')}
+          appliedBalance={filters.balance}
+          onBalanceToggle={toggleBalance}
+          receivableActionLabel={t('parties.list.totals.receivable.action')}
+          payableActionLabel={t('parties.list.totals.payable.action')}
           scopeNote={
             totalsScope === 'filtered'
               ? t('parties.list.totals.scope.filtered')
               : t('parties.list.totals.scope.page', { count: rows.length })
           }
           countNote={
-            isFiltered
-              ? t('parties.list.stats.count.filtered')
-              : t('parties.list.stats.count.all')
+            isFiltered ? t('parties.list.stats.count.filtered') : t('parties.list.stats.count.all')
           }
+        />
+
+        {/* Between the figures and the list, which is the order the FRD sets
+            and the order the eye takes: how much, then who. Not in the grid's
+            toolbar — its filter slot is a `shrink-0` group that deliberately
+            does not wrap, and seven chips in it would squeeze the search box
+            to nothing. */}
+        <PartyListFilters
+          t={t}
+          type={filters.type}
+          balance={filters.balance}
+          collection={filters.collection}
+          onTypeChange={handleType}
+          onBalanceChange={handleBalance}
+          onCollectionChange={handleCollection}
+          credit={filters.credit}
+          onCreditChange={handleCredit}
+          /* The count is the UNFILTERED one when nothing is applied, which is
+             the number the chip is for. Once a filter narrows the list it
+             narrows with it, so the chip answers the question the merchant just
+             asked rather than one about a set they are not looking at. */
+          overLimitCount={overLimit}
+          tag={filters.tag}
+          onTagChange={handleTag}
+          tags={tagOptions}
+          activeFilterCount={activeFilterCount}
+          onClear={clearFilters}
         />
 
         {/* `storageId` puts the column choices in `sessionStorage`: they survive
@@ -302,6 +476,7 @@ export function PartyListPageContent(): React.JSX.Element {
           pageSizeOptions={PAGE_SIZE_OPTIONS}
           sort={sort}
           onSortChange={handleSort}
+          onRowOpen={openParty}
           selectable
           selectedIds={selectedIds}
           onSelectionChange={setSelectedIds}
@@ -312,6 +487,22 @@ export function PartyListPageContent(): React.JSX.Element {
              belongs here is what they can DO about the selection. */
           bulkActions={
             <>
+              {/* Archived rows are already archived; offering it on that tab
+                  would be a button whose every row comes back skipped. */}
+              {/* Tagging comes FIRST, and the order is the point: it is the
+                  everyday move on a selection and archiving is the yearly one,
+                  so the destructive button must not be the one a thumb lands on
+                  by default. */}
+              {bulkTag.canTag && (
+                <UbButton variant="secondary" size="sm" onClick={bulkTag.start}>
+                  {t('parties.tags.bulk.action')}
+                </UbButton>
+              )}
+              {bulk.canArchive && filters.status === 'active' && (
+                <UbButton variant="destructive" size="sm" onClick={bulk.start}>
+                  {t('parties.archive.action')}
+                </UbButton>
+              )}
               <UbButton variant="secondary" size="sm" onClick={clearSelection}>
                 {t('parties.list.bulk.clearSelection')}
               </UbButton>
@@ -346,6 +537,35 @@ export function PartyListPageContent(): React.JSX.Element {
             them. `openFor` is the only thing the page needs eagerly, and that
             lives in the slice. */}
         {partyForm.open && <PartyFormDrawerLazy form={partyForm} />}
+
+        {/* Mounted only once it is open, so the chunk is fetched on the press
+            rather than on the route. */}
+        {bulkTag.open && (
+          <PartyBulkTagDialogLazy
+            t={t}
+            open={bulkTag.open}
+            count={selectedIds.length}
+            saving={bulkTag.saving}
+            undoing={bulkTag.undoing}
+            undone={bulkTag.undone}
+            result={bulkTag.result}
+            appliedMode={bulkTag.appliedMode}
+            tags={tagOptions}
+            onConfirm={bulkTag.confirm}
+            onUndo={bulkTag.undo}
+            onClose={bulkTag.close}
+          />
+        )}
+
+        <PartyBulkArchiveDialog
+          t={t}
+          open={bulk.open}
+          count={selectedIds.length}
+          saving={bulk.saving}
+          result={bulk.result}
+          onConfirm={bulk.confirm}
+          onClose={bulk.close}
+        />
       </UbStack>
     </UbPageShell>
   );

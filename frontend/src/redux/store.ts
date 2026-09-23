@@ -5,11 +5,16 @@ import { errorMessageId } from 'src/utils/apiError';
 
 // ── auth (PLT-01, PLT-02) ────────────────────────────────────────────────────
 import authReducer from 'modules/DigiKhaato/features/auth/redux/authSlice';
+// ── ledger (LED-01) ──────────────────────────────────────────────────────────
+import ledgerEntryReducer from 'modules/DigiKhaato/features/ledger/redux/ledgerEntrySlice';
+import { ledgerFormReducer } from 'modules/DigiKhaato/features/ledger/redux/ledgerFormSlice';
 // ── onboarding (PLT-03) ──────────────────────────────────────────────────────
 import onboardingReducer from 'modules/DigiKhaato/features/onboarding/redux/onboardingSlice';
 // ── parties ──────────────────────────────────────────────────────────────────
+import partyDetailReducer from 'modules/DigiKhaato/features/parties/redux/partyDetailSlice';
 import { partyFormReducer } from 'modules/DigiKhaato/features/parties/redux/partyFormSlice';
 import partyListReducer from 'modules/DigiKhaato/features/parties/redux/partyListSlice';
+import partyTagReducer from 'modules/DigiKhaato/features/parties/redux/partyTagSlice';
 // ── plan entitlements (PLT-15) ───────────────────────────────────────────────
 import planReducer, { limitHit } from 'modules/DigiKhaato/features/plan/redux/planSlice';
 import { toPlanLimitHit } from 'modules/DigiKhaato/features/plan/view-model/planDisplay';
@@ -58,6 +63,10 @@ export const store = configureStore({
 
     partyList: partyListReducer,
     partyForm: partyFormReducer,
+    partyDetail: partyDetailReducer,
+    partyTag: partyTagReducer,
+    ledgerEntry: ledgerEntryReducer,
+    ledgerForm: ledgerFormReducer,
     invitation: invitationReducer,
     member: memberReducer,
   },

@@ -6,8 +6,9 @@ import { store } from 'src/redux/store';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
 import type { PermissionCode } from 'src/types/domain.types';
 
-import { resetPartyForm } from '../redux/partyFormSlice';
+import { partyEditOpened, resetPartyForm } from '../redux/partyFormSlice';
 import { resetPartyList } from '../redux/partyListSlice';
+import { resetPartyTags } from '../redux/partyTagSlice';
 
 import { PartyListPageContent } from './PartyListPageContent';
 
@@ -16,6 +17,20 @@ import { PartyListPageContent } from './PartyListPageContent';
  * server's refusals, and the two rules a merchant would notice first.
  */
 jest.mock('../api/partyService');
+/* PTY-05 — the form's Tags picker asks for the tenant's tags on mount. Stubbed
+   at the same module boundary as `partyService`, so these tests decide what the
+   picker offers rather than leaving an unmocked request to fail into jsdom. */
+jest.mock('../api/tagService');
+
+/* The list underneath the drawer navigates now, so this file's renders need a
+   router too — the drawer is opened from `PartyListPageContent`. */
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn(), prefetch: jest.fn() }),
+  useSearchParams: () => new URLSearchParams(''),
+  usePathname: () => '/parties',
+}));
+
+const tagService = jest.requireMock('../api/tagService') as { listTags: jest.Mock };
 
 const partyService = jest.requireMock('../api/partyService') as {
   listParties: jest.Mock;
@@ -41,6 +56,7 @@ const SAVED = {
     balance: '0.00',
     status: 'active' as const,
     lastActivityAt: null,
+    tags: [],
     altPhone: null,
     email: null,
     gstin: null,
@@ -56,6 +72,7 @@ const SAVED = {
     openingAmount: null,
     openingDirection: null,
     openingAsOf: null,
+    createdAt: '2026-01-05T08:00:00Z',
   },
   warnings: [],
 };
@@ -84,7 +101,9 @@ const signIn = (permissions: readonly PermissionCode[]): void => {
 beforeEach(() => {
   store.dispatch(resetPartyList());
   store.dispatch(resetPartyForm());
+  store.dispatch(resetPartyTags());
   jest.clearAllMocks();
+  tagService.listTags.mockResolvedValue([]);
   partyService.listParties.mockResolvedValue(EMPTY);
   partyService.createParty.mockResolvedValue(SAVED);
   partyService.updateParty.mockResolvedValue(SAVED);
@@ -287,5 +306,141 @@ describe('what the merchant is told afterwards', () => {
     expect(snackbar.snackbarSeverity).toBe('warning');
     expect(snackbar.id).toBe('parties.form.warning.gstinState');
     expect(snackbar.params).toMatchObject({ gstinState: '27', state: '29' });
+  });
+
+  // ── PTY-02 T-PTY-02-15 — the way out of a search that found nobody ────────
+
+  it('opens the form with the searched name already filled in', async () => {
+    /**
+     * A search that found nobody usually means the party is not in the book
+     * yet, not that the merchant mistyped. They have typed the name once
+     * already; the empty state's job is to turn that into a party rather than
+     * into a second round of typing on a 360px keyboard.
+     */
+    const user = userEvent.setup();
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByTestId('ub-grid');
+
+    await user.type(screen.getByLabelText('Search customers'), 'Kamla Devi');
+
+    const add = await screen.findByRole('button', { name: 'Add “Kamla Devi”' });
+    await user.click(add);
+
+    const name = await screen.findByLabelText(/Name/);
+    expect(name).toHaveValue('Kamla Devi');
+  });
+
+  it('does not offer to add anyone when the search box is empty', async () => {
+    /**
+     * A chip that matched nothing says nothing about what to call a new party,
+     * and an Add button with an empty pair of quotation marks in its label
+     * opens a form with an empty required field and no explanation.
+     *
+     * This assertion is only worth anything with a writer signed in, which is
+     * why it lives here: in a store with no permissions the button is absent
+     * regardless and the test proves nothing.
+     */
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByTestId('ub-grid');
+
+    expect(screen.queryByRole('button', { name: /“/ })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Add party' }).length).toBeGreaterThan(0);
+  });
+
+  it('forgets the prefilled name the next time the form is opened blank', async () => {
+    /**
+     * `prefillName` is store state, so it outlives the drawer unless something
+     * clears it — and a merchant who cancels a prefilled form and then presses
+     * the header's Add button would otherwise get the old search term back in
+     * a form they opened to type something else.
+     */
+    const user = userEvent.setup();
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByTestId('ub-grid');
+
+    await user.type(screen.getByLabelText('Search customers'), 'Kamla Devi');
+    await user.click(await screen.findByRole('button', { name: 'Add “Kamla Devi”' }));
+    expect(await screen.findByLabelText(/Name/)).toHaveValue('Kamla Devi');
+
+    // The drawer has both an X in its header and a Cancel in its footer.
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    const [header] = screen.getAllByRole('button', { name: 'Add party' });
+    if (!header) throw new Error('the list offered no way to add a party');
+    await user.click(header);
+
+    expect(await screen.findByLabelText(/Name/)).toHaveValue('');
+  });
+});
+
+describe('PTY-06 — the credit limit on the form', () => {
+  /**
+   * FR-13. Lowering a limit below what somebody already owes is ALLOWED, and it
+   * is often the whole point: a merchant who has decided to stop lending to
+   * this person is doing it precisely when they are owed the most. Refusing it
+   * would trap them, and it reverses nothing already posted (BR-10).
+   *
+   * So the form says what will be true and lets them save. The assertion that
+   * matters is the second one: the Save button is still live.
+   */
+  it('warns that a limit is already crossed, without refusing it', async () => {
+    const user = userEvent.setup();
+    store.dispatch(
+      partyEditOpened({ ...SAVED.party, balance: '47500.00', creditLimit: '50000.00' })
+    );
+
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByRole('button', { name: 'Save changes' });
+
+    await user.click(screen.getByRole('button', { name: 'Credit' }));
+    const limit = await screen.findByRole('textbox', { name: /Credit limit/i });
+    await user.clear(limit);
+    await user.type(limit, '10000');
+
+    expect(
+      await screen.findByText(
+        'They already owe ₹47,500.00 — this limit is already crossed'
+      )
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeEnabled();
+  });
+
+  it('says nothing when the new limit still covers what they owe', async () => {
+    const user = userEvent.setup();
+    store.dispatch(
+      partyEditOpened({ ...SAVED.party, balance: '4750.00', creditLimit: '50000.00' })
+    );
+
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByRole('button', { name: 'Save changes' });
+
+    await user.click(screen.getByRole('button', { name: 'Credit' }));
+    const limit = await screen.findByRole('textbox', { name: /Credit limit/i });
+    await user.clear(limit);
+    await user.type(limit, '10000');
+
+    expect(screen.queryByText(/already crossed/)).not.toBeInTheDocument();
+  });
+
+  it('compares the figures as MONEY, not as strings', async () => {
+    /**
+     * "9" is not more than "47500", and a string comparison says it is. The
+     * hint is the only arithmetic this component does, and it goes through
+     * `compareMoney` — which parses both with decimal.js-light — for the same
+     * reason every other figure in this product does (canon rule 3).
+     */
+    const user = userEvent.setup();
+    store.dispatch(
+      partyEditOpened({ ...SAVED.party, balance: '47500.00', creditLimit: '50000.00' })
+    );
+
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByRole('button', { name: 'Save changes' });
+
+    await user.click(screen.getByRole('button', { name: 'Credit' }));
+    const limit = await screen.findByRole('textbox', { name: /Credit limit/i });
+    await user.clear(limit);
+    await user.type(limit, '9');
+
+    expect(await screen.findByText(/already crossed/)).toBeInTheDocument();
   });
 });

@@ -6,7 +6,13 @@
   "description": "End-to-end journeys run against the live stack. Separate from frontend/ because these drive a browser against a running backend, not a bundler.",
   "scripts": {
     "journey": "node journey.mjs",
-    "journey:shots": "node journey.mjs --shots"
+    "journey:shots": "node journey.mjs --shots",
+    "parties": "node parties.mjs",
+    "parties:shots": "node parties.mjs --shots",
+    "credit": "node credit.mjs",
+    "credit:shots": "node credit.mjs --shots",
+    "tags": "node tags.mjs",
+    "tags:shots": "node tags.mjs --shots"
   },
   "devDependencies": {
     "playwright": "1.56.0"

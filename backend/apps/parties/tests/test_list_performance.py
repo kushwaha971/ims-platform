@@ -76,20 +76,60 @@ class TestOrderingIsTotal:
             client.get(reverse("v1:party-list") + "?ordering=name")
         ordered = [q["sql"] for q in captured.captured_queries if "ORDER BY" in q["sql"]]
         assert ordered, "the page query did not run"
-        assert 'ORDER BY "parties_party"."name" ASC, "parties_party"."id" ASC' in ordered[-1], (
-            ordered[-1]
-        )
+        assert (
+            'ORDER BY "parties_party"."name" ASC, "parties_party"."id" ASC' in ordered[-1]
+        ), ordered[-1]
 
 
 class TestTheListFetchesTheColumnsItDraws:
     """§20.14.2 allows `only()` on a hot list path, and warns about what it costs."""
 
-    def test_list_columns_cover_every_field_the_serializer_reads(self) -> None:
-        """If they ever drift, the deferred field becomes a query per row."""
-        declared = set(PartyListSerializer().fields)
+    def test_list_columns_cover_every_CONCRETE_field_the_serializer_reads(self) -> None:
+        """If they ever drift, the deferred column becomes a query per row.
+
+        Relations are excluded and are checked by the test below instead.
+        `only()` is about columns on the row; a many-to-many is not one, and
+        adding `tags` to `LIST_COLUMNS` to satisfy this assertion would have
+        produced a queryset that raises rather than one that is fast.
+        """
+        # `concrete` alone is not the discriminator: Django reports a
+        # `ManyToManyField` as concrete (it is declared on the model) even
+        # though it has no column on the row, which is the property `only()`
+        # actually cares about.
+        concrete = {
+            field.name
+            for field in Party._meta.get_fields()
+            if getattr(field, "concrete", False) and not field.many_to_many
+        }
+        declared = {name for name in PartyListSerializer().fields if name in concrete}
         assert declared <= set(LIST_COLUMNS), (
             f"{declared - set(LIST_COLUMNS)} is on the wire but not in LIST_COLUMNS, so the "
             f"list page defers it and fetches it again once per row."
+        )
+
+    def test_every_RELATION_the_serializer_reads_is_prefetched(self) -> None:
+        """The same defect, one category over, and it needed its own guard.
+
+        A relation the serializer renders and the selector does not prefetch is
+        a query per row exactly like a deferred column — and the `only()` check
+        above cannot see it, because `only()` has nothing to say about a
+        many-to-many. PTY-05's `tags` was the first relation on this row, so
+        this is the first time the gap mattered.
+        """
+        relations = {
+            field.name
+            for field in Party._meta.get_fields()
+            if field.is_relation and (field.many_to_many or field.one_to_many)
+        }
+        declared = {name for name in PartyListSerializer().fields if name in relations}
+
+        prefetched = {
+            lookup if isinstance(lookup, str) else lookup.prefetch_to
+            for lookup in list_parties(tenant=None)._prefetch_related_lookups
+        }
+        assert declared <= prefetched, (
+            f"{declared - prefetched} is rendered on every row and not prefetched, so the "
+            f"list page fetches it once per row."
         )
 
     def test_every_list_column_is_a_concrete_model_field(self) -> None:
@@ -142,9 +182,29 @@ class TestTheSearchIndexMatchesTheSearch:
         assert "UPPER" in sql.upper() and "LIKE" in sql.upper(), sql
 
     @pytest.mark.django_db
-    def test_the_default_list_view_has_an_index_to_walk(self) -> None:
-        """Without `ix_party_tenant_recent` the unfiltered page 1 is a scan of the tenant."""
-        assert self._indexdef("ix_party_tenant_recent") is not None
+    def test_the_list_index_holds_the_order_the_list_asks_for(self) -> None:
+        """An index the planner cannot use is not an index, and existence tests miss it.
+
+        This assertion used to read `ix_party_tenant_recent is not None`, and it
+        passed for months while page 1 of the party list was a sequential scan
+        of the tenant and a full sort. Both halves of it were wrong: that index
+        was declared `DESC`, which is `NULLS FIRST` in Postgres, against a query
+        that orders `DESC NULLS LAST` — two different orderings, so the planner
+        skipped it — and PTY-02 BR-4 then removed the query shape it existed
+        for, since the filterset now supplies `status=active` rather than
+        leaving the parameter out.
+
+        So it is replaced by an assertion about the index the list actually
+        needs, and specifically about the property the old one lacked. The
+        definitive guarantee is a plan read out of `EXPLAIN` in
+        `tests/performance/test_party_list_plans.py`; this one is here because
+        it costs nothing and names the mistake at the point where it was made.
+        """
+        definition = self._indexdef("ix_party_tenant_activity")
+        assert definition is not None, "ix_party_tenant_activity is missing"
+        assert "NULLS LAST" in definition.upper(), definition
+        assert "deleted_at IS NULL" in definition, definition
+        assert self._indexdef("ix_party_tenant_recent") is None
 
     @pytest.mark.django_db
     def test_ordering_by_name_has_an_index_to_walk(self) -> None:

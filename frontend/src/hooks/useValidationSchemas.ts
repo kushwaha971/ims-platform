@@ -82,6 +82,44 @@ export interface ValidationSchemas {
   readonly nameValidation: (min?: number, max?: number) => Yup.StringSchema<string>;
   readonly noteValidation: (max?: number) => Yup.StringSchema<string | null | undefined>;
   readonly referenceValidation: (max?: number) => Yup.StringSchema<string | null | undefined>;
+  /**
+   * An optional text field whose value stays `''` rather than becoming `null`.
+   *
+   * The two above transform a blank to `null`, and they are right to: a
+   * validator with a `.matches()` behind it must, because Yup skips `undefined`
+   * and NOT the empty string, which is how `mobileValidation(false)` once
+   * rejected a field nobody had touched. A plain length bound has no such trap,
+   * and the transform costs something: a form field typed `string | null` needs
+   * a `?? ''` at the input and one more nullable branch everywhere it is read.
+   *
+   * The party form worked around this with a raw
+   * `Yup.string().max(500, t('parties.form.notes.max'))`, and the ledger form
+   * would have been the second copy. R-F-2's concern is a hard-coded English
+   * message in a feature, so the answer is a factory here rather than a second
+   * workaround there.
+   */
+  readonly boundedText: (
+    max?: number,
+    messageId?: string
+    // The fourth type argument is Yup's own "has a default" flag. It is spelled
+    // out because this is the one factory here that carries `.default('')`, and
+    // a `StringSchema<string>` return type silently means "flags: none" — which
+    // does not accept the schema this returns.
+  ) => Yup.StringSchema<string, Yup.AnyObject, string, 'd'>;
+  /**
+   * `boundedText` with a floor, for a box the form insists on.
+   *
+   * LED-03's reason is the first: three to 160 characters, required, because a
+   * correction without a reason leaves the surviving row saying what changed
+   * and nothing saying why. `boundedText().required()` at the call site would
+   * have needed a raw English string for the message, which is R-F-2's whole
+   * concern — so the factory takes the message id and the floor together.
+   */
+  readonly requiredBoundedText: (
+    max?: number,
+    min?: number,
+    requiredMessageId?: string
+  ) => Yup.StringSchema<string, Yup.AnyObject, string, 'd'>;
   readonly uuidValidation: (required?: boolean) => Yup.StringSchema<string | null | undefined>;
   /**
    * CR-2026-09-19-A — email is the MVP identity. Trims, lower-cases and checks
@@ -126,6 +164,29 @@ export const useValidationSchemas = (): ValidationSchemas => {
         .trim()
         .required(t(messageId))
         .max(max, t('validation.maxChars', { value: max }));
+
+    /** Optional text that stays a string — see the interface for why both exist.
+     *
+     * `.defined()` and `.default('')`, so an untouched field is `''` rather
+     * than `undefined`: React Hook Form hands `undefined` to the input, React
+     * warns that a controlled component became uncontrolled, and the value the
+     * submit handler receives is not the `string` the form's own type promised.
+     */
+    const boundedText = (max = 255, messageId = 'validation.maxChars') =>
+      Yup.string()
+        .max(max, t(messageId, { value: max }))
+        .defined()
+        .default('');
+
+    const requiredBoundedText = (max = 255, min = 1, requiredMessageId = 'validation.required') =>
+      boundedText(max)
+        /* `.trim()` BEFORE `.min()`, so a box holding three spaces fails rather
+           than passing a length check it only meets with whitespace. Yup runs
+           transforms before tests, so the order in the chain is the order it
+           happens in. */
+        .trim()
+        .min(min, t(requiredMessageId))
+        .required(t(requiredMessageId));
 
     /** Money: a decimal STRING with ≤ 2 dp, > 0 unless allowZero (R-TS-7). */
     /**
@@ -224,10 +285,9 @@ export const useValidationSchemas = (): ValidationSchemas => {
       typeof value === 'string' && value.trim() === '' ? null : value;
 
     const mobileValidation = (required = true) => {
-      const base = Yup.string()
-        .transform((value: unknown) =>
-          typeof value === 'string' ? value.replace(/\s|-/g, '') : value
-        );
+      const base = Yup.string().transform((value: unknown) =>
+        typeof value === 'string' ? value.replace(/\s|-/g, '') : value
+      );
       return required
         ? base
             .matches(REGEX.MOBILE_E164_IN, t('validation.mobile.format'))
@@ -406,6 +466,8 @@ export const useValidationSchemas = (): ValidationSchemas => {
     return {
       optionalText,
       requiredText,
+      boundedText,
+      requiredBoundedText,
       amountValidation,
       optionalAmountValidation,
       quantityValidation,

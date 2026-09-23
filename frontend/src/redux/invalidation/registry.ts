@@ -11,14 +11,39 @@ import {
   switchTenant,
 } from 'modules/DigiKhaato/features/auth/redux/sessionThunk';
 import {
+  correctEntry,
+  fetchEntryHistory,
+  fetchPartyEntries,
+  postEntry,
+  postOpeningBalance,
+  reverseEntry,
+} from 'modules/DigiKhaato/features/ledger/redux/ledgerEntryThunk';
+import {
   completeOnboarding,
   createTenant,
   saveAddressStep,
   saveBusinessStep,
   saveGstStep,
 } from 'modules/DigiKhaato/features/onboarding/redux/onboardingThunk';
+import {
+  archiveParty,
+  bulkArchiveParties,
+  restoreParty,
+} from 'modules/DigiKhaato/features/parties/redux/partyArchiveThunk';
+import {
+  fetchPartyDetail,
+  saveCollectionDate,
+} from 'modules/DigiKhaato/features/parties/redux/partyDetailThunk';
 import { saveParty } from 'modules/DigiKhaato/features/parties/redux/partyFormThunk';
 import { fetchPartyList } from 'modules/DigiKhaato/features/parties/redux/partyListThunk';
+import {
+  bulkTagPartiesThunk,
+  createPartyTag,
+  deletePartyTag,
+  fetchPartyTags,
+  mergePartyTags,
+  updatePartyTag,
+} from 'modules/DigiKhaato/features/parties/redux/partyTagThunk';
 import { fetchPlanLimits } from 'modules/DigiKhaato/features/plan/redux/planThunk';
 import {
   fetchInvitations,
@@ -52,10 +77,18 @@ export const QUERIES = {
   fetchPlanLimits,
   // parties (the walking skeleton, Part 32 S0-71)
   fetchPartyList,
+  // PTY-03 — the khata page's header and info panel
+  fetchPartyDetail,
+  // PTY-05 — every tag in the tenant, held once for the session
+  fetchPartyTags,
   // PLT-05 — the team screen's invitation list
   fetchInvitations,
   // DEC-012 — the team screen's member list
   fetchMembers,
+  // LED-01 — one page of a party's khata
+  fetchPartyEntries,
+  // LED-03 — the correction chain behind ONE entry, for the history sheet
+  fetchEntryHistory,
 } as const;
 
 export const MUTATIONS = {
@@ -86,6 +119,25 @@ export const MUTATIONS = {
   revokeInvitation,
   // PTY-01 — create and edit a party
   saveParty,
+  // PTY-03 — the khata page's one editable control
+  saveCollectionDate,
+  // LED-01 — the write everything else in the ledger is downstream of
+  postEntry,
+  // LED-02 — the first row of a khata migrated from paper
+  postOpeningBalance,
+  // LED-03 — the two writes that change a line already in the book
+  reverseEntry,
+  correctEntry,
+  // PTY-04 — archive and restore
+  archiveParty,
+  restoreParty,
+  bulkArchiveParties,
+  // PTY-05 — tags
+  createPartyTag,
+  updatePartyTag,
+  deletePartyTag,
+  mergePartyTags,
+  bulkTagPartiesThunk,
 } as const;
 
 export type TQueryName = keyof typeof QUERIES;

@@ -4,8 +4,21 @@ import { useMemo } from 'react';
 
 import { useIntl } from 'react-intl';
 
+/**
+ * `t`, as a name rather than as a signature copied into every caller.
+ *
+ * It was written out longhand in `PartyListColumns` and again in
+ * `PartyListFilters`, and a third copy is where the copies start disagreeing —
+ * the values record in particular, which quietly decides whether a component
+ * can pass a number to an ICU plural.
+ */
+export type TranslateFn = (
+  id: string,
+  values?: Record<string, string | number | Date>
+) => string;
+
 export interface UseTranslationResult {
-  readonly t: (id: string, values?: Record<string, string | number | Date>) => string;
+  readonly t: TranslateFn;
   readonly n: (value: number, options?: Intl.NumberFormatOptions) => string;
   readonly d: (value: string | Date, options?: Intl.DateTimeFormatOptions) => string;
   readonly locale: string;

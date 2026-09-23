@@ -41,6 +41,21 @@ export interface UbButtonProps extends Omit<
   readonly fullWidth?: boolean;
   /** Leading icon; hidden while busy so the spinner takes its slot. */
   readonly icon?: ReactNode;
+  /**
+   * The icon carries the meaning and the label is for a screen reader only.
+   *
+   * `children` stays REQUIRED, which is the point: an icon button still has to
+   * say what it does, and making the label optional would let a caller ship a ⋯
+   * that announces itself as "button". The word is rendered `sr-only` instead
+   * of dropped, so the accessible name comes from the same string a sighted
+   * user would have read — no `aria-label` that drifts from the visible text,
+   * because there is no visible text to drift from.
+   *
+   * LED-03's timeline is the first caller: a worded button on a khata row
+   * pushed the amount off a 360 px phone, which is the defect that feature's
+   * own screenshot sweep exists to catch.
+   */
+  readonly iconOnly?: boolean;
   readonly children: ReactNode;
   readonly className?: string;
 }
@@ -53,6 +68,7 @@ const UbButtonInner = forwardRef<HTMLButtonElement, UbButtonProps>(function UbBu
     busyLabel,
     fullWidth = false,
     icon,
+    iconOnly = false,
     children,
     disabled,
     className,
@@ -68,7 +84,7 @@ const UbButtonInner = forwardRef<HTMLButtonElement, UbButtonProps>(function UbBu
       disabled={disabled || busy}
       aria-busy={busy || undefined}
       aria-disabled={disabled || busy || undefined}
-      className={cn(fullWidth && 'w-full', className)}
+      className={cn(fullWidth && 'w-full', iconOnly && 'aspect-square px-0', className)}
       {...rest}
     >
       {busy ? <MLSpinner /> : icon}
@@ -80,7 +96,7 @@ const UbButtonInner = forwardRef<HTMLButtonElement, UbButtonProps>(function UbBu
           no gap and nothing to align — and a caller who gets the slot wrong now
           gets a button that is merely unidiomatic rather than one that is
           visibly broken. */}
-      <span className="inline-flex items-center gap-2">
+      <span className={cn('inline-flex items-center gap-2', iconOnly && 'sr-only')}>
         {busy ? (busyLabel ?? children) : children}
       </span>
     </MLButton>

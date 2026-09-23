@@ -27,6 +27,8 @@ import type { PartyDetail, PartyWarning } from '../types/party.types';
 export interface PartyFormState {
   /** `null` when closed. `'new'` for a create; a party id for an edit. */
   openFor: string | null;
+  /** A name to start a CREATE with, or `''`. Never set for an edit. */
+  prefillName: string;
   /** The record being edited, loaded from the list row the merchant clicked. */
   editing: PartyDetail | null;
   status: RequestStatus;
@@ -39,6 +41,7 @@ export interface PartyFormState {
 
 const initialState: PartyFormState = {
   openFor: null,
+  prefillName: '',
   editing: null,
   status: 'idle',
   error: null,
@@ -50,21 +53,37 @@ const partyFormSlice = createSlice({
   name: 'partyForm',
   initialState,
   reducers: {
-    partyCreateOpened(state) {
+    /**
+     * `payload` is a name to start the form with (PTY-02 T-PTY-02-15).
+     *
+     * The filtered-empty state offers "Add 'ramesh'" after a search that found
+     * nobody, and the merchant has already typed the name once. Making them
+     * type it again is the difference between a dead end that offers a way out
+     * and one that offers a form.
+     *
+     * It is stored rather than passed to the drawer as a prop because the
+     * drawer is `dynamic()` and mounts a tick after the dispatch — a prop would
+     * have to be held somewhere for that tick anyway, and the store is where
+     * this feature holds things.
+     */
+    partyCreateOpened(state, action: PayloadAction<string | undefined>) {
       state.openFor = 'new';
       state.editing = null;
+      state.prefillName = action.payload?.trim() ?? '';
       state.status = 'idle';
       state.error = null;
     },
     partyEditOpened(state, action: PayloadAction<PartyDetail>) {
       state.openFor = action.payload.id;
       state.editing = action.payload as Draft<PartyDetail>;
+      state.prefillName = '';
       state.status = 'idle';
       state.error = null;
     },
     partyFormClosed(state) {
       state.openFor = null;
       state.editing = null;
+      state.prefillName = '';
       state.error = null;
       state.status = 'idle';
     },
@@ -102,6 +121,7 @@ const partyFormSlice = createSlice({
         // already been saved.
         state.openFor = null;
         state.editing = null;
+        state.prefillName = '';
         state.warnings = [...action.payload.warnings] as Draft<PartyWarning>[];
         state.lastSaved = action.payload.party as Draft<PartyDetail>;
       })
@@ -127,6 +147,9 @@ export const partyFormReducer = partyFormSlice.reducer;
 
 export const selectPartyFormOpenFor = (state: RootState): string | null =>
   state.partyForm.openFor;
+
+export const selectPartyFormPrefillName = (state: RootState): string =>
+  state.partyForm.prefillName;
 export const selectPartyFormEditing = (state: RootState): PartyDetail | null =>
   state.partyForm.editing;
 export const selectPartyFormStatus = (state: RootState): RequestStatus =>

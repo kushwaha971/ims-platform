@@ -95,17 +95,26 @@ def test_one_party_can_be_both(tenant: Any, api_as: Any) -> None:
     assert response.json()["data"]["is_supplier"] is True
 
 
-# ── The opening balance: stored, and provably unapplied ─────────────────────
+# ── The opening balance: stored, and now posted ─────────────────────────────
 
 
-def test_the_opening_balance_is_stored_and_posts_nothing(tenant: Any, api_as: Any) -> None:
-    """TSK-PTY-01-05, and the test that keeps the deferral honest.
+def test_the_opening_balance_is_stored_and_posted(tenant: Any, api_as: Any) -> None:
+    """PTY-01 FR-9 / LED-02 FR-2 / AC-1 — and the deferral being let in.
 
-    PTY-01 records what the merchant is carrying over from paper. LED-02 in
-    Sprint 4 is what posts it. Between now and then the only thing stopping
-    somebody "helpfully" wiring the two together — and double-posting every
-    opening balance when LED-02 lands — is this assertion.
+    This test used to be called `..._and_posts_nothing`, and its docstring said
+    the only thing stopping somebody wiring PTY-01 to the ledger before LED-02
+    — and double-posting every opening balance when it landed — was the
+    assertion below. LED-02 is that landing, so the assertion is inverted here
+    rather than deleted: the columns still hold what the merchant typed, and now
+    there is exactly ONE entry behind them.
+
+    Both halves matter. Dropping the column assertions would lose PTY-01 BR-5,
+    which says the record of what was requested survives a later correction of
+    what it became.
     """
+    from apps.ledger.constants import EntryType
+    from apps.ledger.models import LedgerEntry
+
     client, _ = api_as(tenant)
     response = _create(
         client,
@@ -120,7 +129,37 @@ def test_the_opening_balance_is_stored_and_posts_nothing(tenant: Any, api_as: An
     assert data["opening_balance_direction"] == OpeningDirection.DEBIT
 
     party = Party.objects.get(id=data["id"])
-    # Recorded, and not yet money.
+    assert party.balance == Decimal("2300.00")
+    # BR-4 in PTY-01: the stamp is set on creation only when an entry is posted,
+    # so a party carrying nothing over still sorts below one that traded today.
+    assert party.last_activity_at is not None
+
+    entries = LedgerEntry.objects.filter(party=party)
+    assert entries.count() == 1
+    entry = entries.get()
+    assert entry.entry_type == EntryType.OPENING
+    assert entry.entry_date.isoformat() == "2026-04-01"
+    # BR-1 — stored in English, translated on display. A row whose note is in
+    # the merchant's own locale is a row no report, export or support query can
+    # find.
+    assert entry.note == "Opening balance"
+
+
+def test_a_party_carrying_nothing_over_gets_no_entry(tenant: Any, api_as: Any) -> None:
+    """The other half, and the one a wiring mistake breaks first.
+
+    Most parties are created with no opening balance at all. An empty section
+    must produce no row — not a ₹0.00 opening, which would put a line in every
+    khata saying nothing and would then have to be reversed before a real
+    opening could be added (BR-2).
+    """
+    from apps.ledger.models import LedgerEntry
+
+    client, _ = api_as(tenant)
+    response = _create(client)
+
+    party = Party.objects.get(id=response.json()["data"]["id"])
+    assert LedgerEntry.objects.filter(party=party).count() == 0
     assert party.balance == Decimal("0.00")
     assert party.last_activity_at is None
 

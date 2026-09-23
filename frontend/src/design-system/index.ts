@@ -130,6 +130,18 @@ export type { UbFieldErrorProps } from './UbFieldError';
 export { UbInputHint } from './UbInputHint';
 export type { UbInputHintProps } from './UbInputHint';
 
+// ── PTY-02 — filter chips ────────────────────────────────────────────────────
+// A toggle that says something about the list below it, and the group that
+// gives a row of them a name. Extracted from the copy that was inline in
+// `UbDateInput`'s quick choices once PTY-02 needed the same pill three more
+// times.
+export { UbFilterBar, UbFilterChip, UbFilterChipGroup } from './UbFilterChip';
+export type {
+  UbFilterBarProps,
+  UbFilterChipGroupProps,
+  UbFilterChipProps,
+} from './UbFilterChip';
+
 // ── Wave 1 — controls ────────────────────────────────────────────────────────
 export { UbButton } from './UbButton';
 export type { UbButtonProps, UbButtonSize, UbButtonVariant } from './UbButton';
@@ -181,6 +193,16 @@ export { UbSwitch } from './UbSwitch';
 export type { UbSwitchProps } from './UbSwitch';
 export { UbTextInput } from './UbTextInput';
 export type { UbTextInputProps } from './UbTextInput';
+
+/**
+ * PTY-05 — a merchant's own labels. `UbTag` is the chip; `UbTagList` is the
+ * fixed-height lane a list row reserves for it; `UbTokenInput` is the picker
+ * that adds one, including one that does not exist yet.
+ */
+export { isUbTagColor, UB_TAG_COLORS, UbTag, UbTagList } from './UbTag';
+export type { UbTagColor, UbTagListItem, UbTagListProps, UbTagProps } from './UbTag';
+export { UbTokenInput } from './UbTokenInput';
+export type { UbTokenInputOption, UbTokenInputProps } from './UbTokenInput';
 
 // ── Wave 1 — structure and overlays ──────────────────────────────────────────
 export { UbConfirmDialog } from './UbConfirmDialog';

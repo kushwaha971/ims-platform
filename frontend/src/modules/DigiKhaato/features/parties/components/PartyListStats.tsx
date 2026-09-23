@@ -1,12 +1,13 @@
 'use client';
 
-import { memo } from 'react';
+import { memo, useCallback } from 'react';
 
 import { ArrowDownLeft, ArrowUpRight, Users } from 'lucide-react';
 
 import { UbStatCard, UbStatGrid } from 'src/design-system';
 import { formatInr } from 'src/utils/money';
 
+import type { PartyBalanceFilter } from '../constants/partyFilters';
 import type { PartyListTotals } from '../view-model/partyDisplay';
 
 /**
@@ -33,6 +34,19 @@ import type { PartyListTotals } from '../view-model/partyDisplay';
  * Unchanged from the old header and worth restating, because a three-card row
  * invites a fourth: money to collect and money owed are two different jobs on
  * two different days, and "₹35,725 net" is a number nobody acts on.
+ *
+ * ── The money tiles are the filter (FRD §6 Alternate A) ─────────────────────
+ * "Tap 'You will get' → `balance=owes_me` applied" is the collection-round
+ * flow, and it is the reason the figure and the filter are the same control:
+ * the merchant reads ₹36,018 and the next thing they want is the list of who
+ * it is made of. Tapping the applied tile clears it, and the matching chip
+ * below lights up either way, so the filter is never applied with nothing on
+ * screen saying so.
+ *
+ * The COUNT tile is not pressable. "Customers" is not a filter — there is no
+ * narrowing it could apply that the list is not already showing — and a tile
+ * that looks like the two beside it and does nothing when tapped is worse than
+ * one that plainly does not invite the tap.
  */
 export interface PartyListStatsProps {
   readonly totals: PartyListTotals;
@@ -47,6 +61,19 @@ export interface PartyListStatsProps {
   readonly scopeNote: string;
   /** The same for the count, which always covers the whole filtered list. */
   readonly countNote: string;
+  /** Names the live region the three tiles sit in. */
+  readonly regionLabel: string;
+  /** Which balance filter is applied, so the matching tile can say it is on. */
+  readonly appliedBalance: PartyBalanceFilter;
+  /**
+   * Applies or clears that tile's balance filter. Narrowed to the two values a
+   * TILE can ask for: there is no "Settled" tile, and typing this as the full
+   * filter union would let a caller wire a tile to a value it cannot show.
+   */
+  readonly onBalanceToggle: (value: 'owes_me' | 'i_owe') => void;
+  /** What tapping each money tile does, for a screen reader. */
+  readonly receivableActionLabel: string;
+  readonly payableActionLabel: string;
 }
 
 function PartyListStatsBase({
@@ -57,9 +84,17 @@ function PartyListStatsBase({
   countValue,
   scopeNote,
   countNote,
+  regionLabel,
+  appliedBalance,
+  onBalanceToggle,
+  receivableActionLabel,
+  payableActionLabel,
 }: Readonly<PartyListStatsProps>) {
+  const showReceivable = useCallback(() => onBalanceToggle('owes_me'), [onBalanceToggle]);
+  const showPayable = useCallback(() => onBalanceToggle('i_owe'), [onBalanceToggle]);
+
   return (
-    <UbStatGrid>
+    <UbStatGrid live label={regionLabel}>
       <UbStatCard
         icon={<ArrowDownLeft className="h-3.5 w-3.5" />}
         label={receivableLabel}
@@ -68,6 +103,9 @@ function PartyListStatsBase({
         // §23.2.4 — receivable is the ledger debit family, never the
         // validation red.
         tone="danger"
+        onClick={showReceivable}
+        pressed={appliedBalance === 'owes_me'}
+        actionLabel={receivableActionLabel}
       />
       <UbStatCard
         icon={<ArrowUpRight className="h-3.5 w-3.5" />}
@@ -75,6 +113,9 @@ function PartyListStatsBase({
         value={formatInr(totals.payable)}
         subtext={scopeNote}
         tone="success"
+        onClick={showPayable}
+        pressed={appliedBalance === 'i_owe'}
+        actionLabel={payableActionLabel}
       />
       {/* Neutral on purpose. A count is not money and must not wear a ledger
           colour — a green "30" beside a green "₹293.00" reads as a figure the

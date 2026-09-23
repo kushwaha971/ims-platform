@@ -61,6 +61,35 @@ class AuditAction:
     PARTY_UPDATED = "party.updated"
     PARTY_ARCHIVED = "party.archived"
     PARTY_RESTORED = "party.restored"
+    # PTY-06 §16 — emitted IN ADDITION to `party.updated` when a credit limit or
+    # its payment terms change. A limit is a financial control rather than a
+    # field, and an auditor asking "when did this customer's cap move, and what
+    # did they owe at the time" should not have to read every party edit to find
+    # out. `balance_at_change` is in the metadata for exactly that question: it
+    # is not recoverable later, because the balance moves.
+    CREDIT_LIMIT_SET = "credit.limit.set"
+    # ── Sprint 4: LED-01 (17-02 §16) ───────────────────────────────────────
+    #
+    # `after` is the full row, which is what an append-only table's audit means:
+    # there is no `before`, because there was nothing before, and there will
+    # never be an update to diff against.
+    LEDGER_ENTRY_CREATED = "ledger.entry.created"
+    # Written IN ADDITION to the entry's own row when an owner posts past a
+    # blocking credit limit (LED-01 FR-7). Its own action rather than a flag on
+    # the create, because "who has ever lent past a limit" is a question about a
+    # rare deliberate act, and filtering every entry create by a metadata key
+    # makes the rare event as hard to find as the common one.
+    CREDIT_LIMIT_OVERRIDDEN = "ledger.credit_limit.overridden"
+    # ── Sprint 4: LED-03 (17-02 §16) ───────────────────────────────────────
+    #
+    # These two carry a `before` as well as an `after`, which nothing else in
+    # the ledger does — because they are the only events that CHANGE a posted
+    # line rather than adding one. §16 asks for 7 years of retention on them,
+    # which is the retention a financial correction needs: "who changed this
+    # number, when, and what did they say the reason was" is the question an
+    # auditor arrives with, and the answer has to outlive everyone involved.
+    LEDGER_ENTRY_REVERSED = "ledger.entry.reversed"
+    LEDGER_ENTRY_CORRECTED = "ledger.entry.corrected"
     JOB_REQUEUED = "job.requeued"
     REFERENCE_DATA_SEEDED = "platform.reference_data_seeded"
 

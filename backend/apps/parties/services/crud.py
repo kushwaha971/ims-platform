@@ -22,12 +22,9 @@ from apps.common.context import Ctx
 from apps.common.exceptions import BusinessRuleViolation, ValidationFailed
 from apps.parties.constants import GstRegistration, PartyStatus
 from apps.parties.models import Party
-from apps.tax.validators import (
-    InvalidGstin,
-    is_valid_state_code,
-    state_from_gstin,
-    validate_gstin,
-)
+from apps.parties.services.credit import MAX_CREDIT_LIMIT
+from apps.parties.services.tags import set_party_tags
+from apps.tax.validators import InvalidGstin, is_valid_state_code, state_from_gstin, validate_gstin
 
 # Every column a client may write, in one place, because a whitelist that lives
 # in two places is a whitelist that will disagree with itself. The serializer
@@ -136,8 +133,18 @@ def _validate(payload: dict, *, party: Party | None) -> None:
     if credit_days is not None and not 0 <= int(credit_days) <= CREDIT_DAYS_MAX:
         details["credit_days"] = [f"Credit days must be between 0 and {CREDIT_DAYS_MAX}."]
 
-    if payload.get("credit_limit") is not None and Decimal(payload["credit_limit"]) < 0:
-        details["credit_limit"] = ["A credit limit cannot be negative."]
+    limit = payload.get("credit_limit")
+    if limit is not None:
+        # PTY-06 §10. Zero is allowed and is a REAL limit meaning "no udhaar at
+        # all" (BR-1) — it is never conflated with NULL, which means no limit.
+        if Decimal(limit) < 0:
+            details["credit_limit"] = ["A credit limit cannot be negative."]
+        elif Decimal(limit) > MAX_CREDIT_LIMIT:
+            # ₹99,99,99,999.99 is the column's ceiling and past it a figure is a
+            # typo rather than a decision. Refused here rather than by the
+            # database, so the merchant gets a field error on the field rather
+            # than a 500 on the form.
+            details["credit_limit"] = ["Enter a credit limit under ₹99,99,99,999.99."]
 
     if details:
         raise ValidationFailed(details)
@@ -240,12 +247,23 @@ def _audit_snapshot(party: Party) -> dict:
 def create_party(*, ctx: Ctx, payload: dict) -> tuple[Party, list[dict]]:
     """Create one party. Returns `(party, warnings)`.
 
-    The opening balance is stored and NOT posted. Sprint 4's LED-02 reads the
-    three columns and posts the entry; until then a test asserts the ledger is
-    untouched, which is the only thing that keeps a deferral honest.
+    The opening balance is stored AND posted, in this transaction (LED-02 FR-2 /
+    PTY-01 FR-9). It was stored and deliberately unposted until LED-01 built
+    `ledger_entry`; the test that kept that deferral honest is the one that had
+    to change to let it in.
+
+    The three columns stay alongside the entry, and the pair is not redundant:
+    the columns are what the merchant TYPED and PTY-01 BR-5 forbids editing
+    them, while the entry is the money and LED-03 corrects it. A correction
+    therefore changes the balance and leaves the record of the original request
+    intact, which is what an auditor asking "what did they say on day one" wants.
     """
     warnings: list[dict] = []
     data = _normalise(payload)
+    # Pulled out BEFORE the writable-field filter: `tags` is not a column on
+    # `parties_party` and would be dropped by it. `None` means the key was
+    # absent, which is different from `[]` — see `update_party`.
+    tag_names = data.pop("tags", None)
     _apply_gstin(payload=data, warnings=warnings)
     _validate(data, party=None)
 
@@ -289,6 +307,9 @@ def create_party(*, ctx: Ctx, payload: dict) -> tuple[Party, list[dict]]:
                 _raise_duplicate_mobile(existing)
         raise
 
+    if tag_names is not None:
+        set_party_tags(ctx=ctx, party=party, names=tag_names)
+
     write_audit(
         ctx=ctx,
         action=AuditAction.PARTY_CREATED,
@@ -296,6 +317,8 @@ def create_party(*, ctx: Ctx, payload: dict) -> tuple[Party, list[dict]]:
         entity_id=party.id,
         after=_audit_snapshot(party),
     )
+
+    _post_opening_if_asked(ctx=ctx, party=party, fields=fields)
     return party, warnings
 
 
@@ -304,11 +327,16 @@ def update_party(*, ctx: Ctx, party: Party, payload: dict) -> tuple[Party, list[
     """Edit one party. Returns `(party, warnings)`."""
     warnings: list[dict] = []
     data = _normalise(payload)
+    tag_names = data.pop("tags", None)
 
     # An archived party takes notes and nothing else. Refused with 409 rather
     # than 400: the request is well-formed, the record's state is what says no,
     # and the client's move is to restore the party rather than to fix a field.
     if party.status == PartyStatus.ARCHIVED:
+        # Tags are explicitly editable on an archived party (PTY-01 FR-2 lists
+        # notes and tags), which is what lets a merchant reorganise a book that
+        # includes people they have filed away — and what makes PTY-05's Undo
+        # work after a party was archived mid-flight (EC-9).
         offered = {k for k in data if k in WRITABLE_FIELDS} - ARCHIVED_EDITABLE_FIELDS
         if offered:
             raise BusinessRuleViolation(
@@ -349,6 +377,12 @@ def update_party(*, ctx: Ctx, party: Party, payload: dict) -> tuple[Party, list[
                 _raise_duplicate_mobile(existing)
         raise
 
+    # `None` means the key was absent and tags are left alone; `[]` means the
+    # merchant removed the last one. Collapsing the two would make it
+    # impossible to clear a party's tags through the form (FR-4).
+    if tag_names is not None:
+        set_party_tags(ctx=ctx, party=party, names=tag_names)
+
     after = _audit_snapshot(party)
     changed_before, changed_after = diff_fields(before, after, fields=WRITABLE_FIELDS)
     if changed_after:
@@ -363,4 +397,79 @@ def update_party(*, ctx: Ctx, party: Party, payload: dict) -> tuple[Party, list[
             before=changed_before,
             after=changed_after,
         )
+        _audit_credit_change(ctx=ctx, party=party, before=changed_before, after=changed_after)
     return party, warnings
+
+
+#: PTY-06 §16's two fields. `credit_days` is in here even though it has no
+#: effect on the limit check (FR-15) because it is the other half of the same
+#: decision: a cap of ₹50,000 over seven days and the same cap over ninety are
+#: different amounts of trust, and an auditor reading one without the other has
+#: half the story.
+CREDIT_CONTROL_FIELDS: tuple[str, ...] = ("credit_limit", "credit_days")
+
+
+def _post_opening_if_asked(*, ctx: Ctx, party: Party, fields: dict) -> None:
+    """LED-02 FR-2 — post the opening entry, in the party's own transaction.
+
+    AFTER the party's audit row, so the log reads in the order the events
+    happened: the party existed, then it was given a balance. Both rows commit
+    together or neither does, which is the point of it being one transaction —
+    a party with a balance and no entry to justify it is a number nobody can
+    explain, and an entry against a party that failed to save is an orphan.
+
+    The import is deferred to the call. `parties` may not import `ledger` at
+    module scope (Part 20 §20.1.4), and that rule is not a formality here: it is
+    what stopped `GET /parties/{id}` growing a ledger read during LED-01, and
+    keeping it means the dependency still runs one way even though this line
+    crosses it.
+
+    The party is passed rather than its id, because `Party.objects.create()`
+    above has it in hand and re-reading it under `SELECT … FOR UPDATE` would
+    take a lock on a row nothing else can see yet.
+    """
+    from apps.ledger.services.opening import post_opening_balance
+
+    amount = fields.get("opening_balance_amount")
+    direction = fields.get("opening_balance_direction")
+    as_of = fields.get("opening_balance_as_of")
+    if not amount or not direction or not as_of:
+        return
+    post_opening_balance(
+        ctx=ctx,
+        party=party,
+        amount=amount,
+        direction=direction,
+        as_of=as_of,
+        via="party_create",
+    )
+
+
+def _audit_credit_change(*, ctx: Ctx, party: Party, before: dict, after: dict) -> None:
+    """A second audit row when a credit control moved (PTY-06 §16).
+
+    ── Why this is not just `party.updated` ──────────────────────────────────
+    It is, as well — this row is written IN ADDITION. A limit is a financial
+    control rather than a field, and the question it answers is one an auditor
+    asks on its own: "when did this customer's cap move, and what did they owe
+    at the time". Finding that in the stream of every party edit means reading
+    every typo fix in the notes.
+
+    `balance_at_change` is the reason the metadata exists. It is not recoverable
+    afterwards, because the balance moves — so a limit lowered below what
+    somebody already owed (FR-13, which allows it deliberately) is only ever
+    provably a deliberate act if the figure is captured here, in the same
+    transaction.
+    """
+    moved = {field for field in CREDIT_CONTROL_FIELDS if field in after}
+    if not moved:
+        return
+    write_audit(
+        ctx=ctx,
+        action=AuditAction.CREDIT_LIMIT_SET,
+        entity_type="parties_party",
+        entity_id=party.id,
+        before={field: before.get(field) for field in moved},
+        after={field: after[field] for field in moved},
+        metadata={"balance_at_change": str(party.balance)},
+    )

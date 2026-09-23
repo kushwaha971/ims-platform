@@ -6,12 +6,15 @@ import {
   findHorizontalOverflow,
   type UbGridTier,
 } from 'src/design-system/UbDataGrid';
+import { sessionLoaded } from 'src/redux/slice/sessionSlice';
 import { store } from 'src/redux/store';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
+import type { PermissionCode } from 'src/types/domain.types';
 
 import hi from 'locales/hi.json';
 
 import { resetPartyList } from '../redux/partyListSlice';
+import { resetPartyTags } from '../redux/partyTagSlice';
 
 import { PartyListPageContent } from './PartyListPageContent';
 
@@ -22,10 +25,55 @@ import { PartyListPageContent } from './PartyListPageContent';
  * on the real screen rather than only on the component that implements them.
  */
 jest.mock('../api/partyService');
+/* PTY-05 — the list now asks for the tenant's tags on mount, for the filter and
+   the bulk dialog. Stubbed at the same boundary as `partyService`, so these
+   tests decide whether the book uses tags rather than leaving an unmocked
+   request to fail into jsdom and take the chip lane with it. */
+jest.mock('../api/tagService');
+
+/**
+ * The list navigates now, so it needs a router. `mockPush` is captured rather
+ * than thrown away because "the row opens the khata page" is a claim worth
+ * asserting: until PTY-03 the rows did not move at all.
+ *
+ * The `mock` prefix is not style — `jest.mock` is hoisted above the imports,
+ * and a factory referencing any other out-of-scope name throws at module load.
+ */
+const mockPush = jest.fn();
+const mockReplace = jest.fn();
+/**
+ * The URL is now an INPUT to this screen (PTY-05's manager links to
+ * `/parties?tag=Camp Area`), so the search params are settable per test rather
+ * than a constant empty string. `mockSearch` is mutated by the tests that care;
+ * everything else sees the unfiltered list it always saw.
+ *
+ * The `mock` prefix is not style — `jest.mock` is hoisted above the imports,
+ * and a factory referencing any other out-of-scope name throws at module load.
+ */
+let mockSearch = '';
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: mockPush,
+    replace: mockReplace,
+    back: jest.fn(),
+    prefetch: jest.fn(),
+  }),
+  useSearchParams: () => new URLSearchParams(mockSearch),
+  usePathname: () => '/parties',
+}));
 
 const partyService = jest.requireMock('../api/partyService') as {
   listParties: jest.Mock;
+  bulkArchiveParties: jest.Mock;
 };
+
+const tagService = jest.requireMock('../api/tagService') as {
+  listTags: jest.Mock;
+  bulkTagParties: jest.Mock;
+};
+
+const CAMP = { id: 'tag-1', name: 'Camp Area', color: 'viz-1' };
+const ROUTE2 = { id: 'tag-2', name: 'Route 2', color: null };
 
 const EMPTY = {
   rows: [],
@@ -43,6 +91,7 @@ const RAMESH = {
   balance: '2800.00',
   status: 'active' as const,
   lastActivityAt: '2026-09-18T10:00:00Z',
+  tags: [],
 };
 
 const SUNITA = {
@@ -88,7 +137,12 @@ const setTier = (tier: UbGridTier): void => {
 describe('PartyListPageContent', () => {
   beforeEach(() => {
     store.dispatch(resetPartyList());
+    store.dispatch(resetPartyTags());
     jest.clearAllMocks();
+    /* No tags, which is what most of this file is about — the list as it is on
+       a book that has not adopted them. The tag suite at the bottom says
+       otherwise for itself. */
+    tagService.listTags.mockResolvedValue([]);
     setTier('cards');
   });
 
@@ -155,7 +209,9 @@ describe('PartyListPageContent', () => {
     partyService.listParties.mockResolvedValue(EMPTY);
     await userEvent.type(screen.getByLabelText('Search customers'), 'zzz');
 
-    expect(await screen.findByText('No customers match this search')).toBeInTheDocument();
+    /* The search wording, which quotes the term the merchant typed — that is
+       the thing they will want to read back to check for a typo. */
+    expect(await screen.findByText('No customers match “zzz”')).toBeInTheDocument();
     // CR-2026-09-19-D — the action clears the search, so the label says so.
     // It read "Try again", which is what the ERROR state's action does.
     expect(screen.getByRole('button', { name: 'Clear filters' })).toBeInTheDocument();
@@ -321,4 +377,840 @@ describe('the approved responsive rules, on the real screen', () => {
       expect(container).toBeTruthy();
     }
   );
+
+  // ── PTY-02 — the chips, the tiles and which empty state the screen picks ───
+
+  const lastParams = () =>
+    partyService.listParties.mock.calls.at(-1)?.[0] as Record<string, unknown>;
+
+  it('sends a chip filter to the server when it is tapped', async () => {
+    partyService.listParties.mockResolvedValue(loaded([RAMESH]));
+    const user = userEvent.setup();
+
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+
+    await user.click(screen.getByRole('button', { name: 'Overdue' }));
+
+    await waitFor(() => expect(lastParams()?.collection).toBe('overdue'));
+    expect(screen.getByRole('button', { name: 'Overdue', pressed: true })).toBeInTheDocument();
+  });
+
+  it('clears a chip when the applied one is tapped again', async () => {
+    partyService.listParties.mockResolvedValue(loaded([RAMESH]));
+    const user = userEvent.setup();
+
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+
+    const chip = screen.getByRole('button', { name: 'Suppliers' });
+    await user.click(chip);
+    await waitFor(() => expect(lastParams()?.type).toBe('supplier'));
+
+    await user.click(screen.getByRole('button', { name: 'Suppliers' }));
+    await waitFor(() => expect(lastParams()?.type).toBe(''));
+  });
+
+  it('replaces rather than adds when a second chip on the same axis is tapped', async () => {
+    /**
+     * `balance` is one value on the wire — a `ChoiceFilter`. A chip row that
+     * looked multi-select would silently drop one of the two choices, which is
+     * worse than a control that never offered it.
+     */
+    partyService.listParties.mockResolvedValue(loaded([RAMESH]));
+    const user = userEvent.setup();
+
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+
+    await user.click(screen.getByRole('button', { name: 'Owes me' }));
+    await waitFor(() => expect(lastParams()?.balance).toBe('owes_me'));
+
+    await user.click(screen.getByRole('button', { name: 'I owe them' }));
+    await waitFor(() => expect(lastParams()?.balance).toBe('i_owe'));
+    expect(screen.getByRole('button', { name: 'Owes me', pressed: false })).toBeInTheDocument();
+  });
+
+  it('filters the list from the receivable tile, and the chip says so', async () => {
+    /**
+     * FRD §6 Alternate A, the collection round: the merchant reads ₹2,800 and
+     * the next thing they want is the list of who it is made of. The chip
+     * lighting up is half the requirement — a filter applied with nothing on
+     * screen saying it is applied is how a merchant concludes that parties
+     * have gone missing.
+     */
+    partyService.listParties.mockResolvedValue(loaded([RAMESH]));
+    const user = userEvent.setup();
+
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+
+    await user.click(screen.getByRole('button', { name: 'Show only who owes me' }));
+
+    await waitFor(() => expect(lastParams()?.balance).toBe('owes_me'));
+    expect(screen.getByRole('button', { name: 'Owes me', pressed: true })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Show only who owes me', pressed: true })
+    ).toBeInTheDocument();
+  });
+
+  it('un-filters when the applied tile is tapped again', async () => {
+    partyService.listParties.mockResolvedValue(loaded([RAMESH]));
+    const user = userEvent.setup();
+
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+
+    await user.click(screen.getByRole('button', { name: 'Show only who I owe' }));
+    await waitFor(() => expect(lastParams()?.balance).toBe('i_owe'));
+
+    await user.click(screen.getByRole('button', { name: 'Show only who I owe' }));
+    await waitFor(() => expect(lastParams()?.balance).toBe(''));
+  });
+
+  it('announces the totals when a filter changes them', async () => {
+    /**
+     * PTY-02's NFR. A filter changes the rows visibly and the totals silently;
+     * without the live region a merchant using a screen reader taps "Owes me"
+     * and is told nothing about the number they tapped it to find out.
+     */
+    partyService.listParties.mockResolvedValue(loaded([RAMESH]));
+
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+
+    const region = screen.getByRole('region', { name: 'Totals for this list' });
+    expect(region).toHaveAttribute('aria-live', 'polite');
+  });
+
+  it('shows the FILTERED empty state when a chip matched nothing', async () => {
+    /**
+     * The defect this pins. `isFiltered` was `filters.q.length > 0`, and it is
+     * what chooses the empty state — so a merchant with three hundred parties
+     * who tapped "Settled" and had none was told "No customers yet. Add the
+     * first person you give udhaar to", with a button to create one, on a book
+     * full of them. The rows were right and the reason was wrong, and the
+     * reason is the only thing an empty state is for.
+     */
+    partyService.listParties.mockResolvedValueOnce(loaded([RAMESH]));
+    const user = userEvent.setup();
+
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+
+    partyService.listParties.mockResolvedValue(EMPTY);
+    await user.click(screen.getByRole('button', { name: 'Settled' }));
+
+    /* And the words match the way it was reached: no search was typed, so it
+       must not tell the merchant to clear one. */
+    expect(await screen.findByText('No customers match these filters')).toBeInTheDocument();
+    expect(screen.getByText('Clear the filters to see everyone again.')).toBeInTheDocument();
+    expect(screen.queryByText('No customers yet')).not.toBeInTheDocument();
+  });
+
+  it('still shows the first-use empty state on a genuinely empty book', async () => {
+    /**
+     * The other side of the same decision: `status` is excluded from the
+     * filter count precisely so a brand-new tenant is not told to clear
+     * filters they never set.
+     */
+    partyService.listParties.mockResolvedValue(EMPTY);
+
+    renderWithProviders(<PartyListPageContent />);
+
+    expect(await screen.findByText('No customers yet')).toBeInTheDocument();
+  });
+
+  /* The two "Add “{q}”" tests are in `PartyFormDrawer.test.tsx`, not here.
+     They belong wherever a WRITER is signed in: this file's store has no
+     permissions, so `partyForm.canWrite` is false and the button is absent
+     whatever the search box says — which is how the negative one of the pair
+     passed here for entirely the wrong reason before it moved. */
+
+  it('offers to clear filters only once there are filters to clear', async () => {
+    partyService.listParties.mockResolvedValue(loaded([RAMESH]));
+    const user = userEvent.setup();
+
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+
+    expect(screen.queryByRole('button', { name: /Clear filters/ })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Overdue' }));
+
+    expect(
+      await screen.findByRole('button', { name: 'Clear filters (1)' })
+    ).toBeInTheDocument();
+  });
+
+  it('clears the chips but stays on the tab the merchant is reading', async () => {
+    /**
+     * "Clear filters" on Archived must not silently move them back to Active.
+     * They would be looking at a different set of people, and the only thing
+     * that changed on screen is that the rows are different.
+     */
+    partyService.listParties.mockResolvedValue(loaded([RAMESH]));
+    const user = userEvent.setup();
+
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+
+    /* `UbSelect` is a Radix listbox since `ml-uikit` was vendored, not a native
+       `<select>` — `selectOptions` finds nothing. */
+    await user.click(screen.getByRole('combobox', { name: 'Show' }));
+    await user.click(await screen.findByRole('option', { name: 'Archived' }));
+    await waitFor(() => expect(lastParams()?.status).toBe('archived'));
+    await user.click(screen.getByRole('button', { name: 'Owes me' }));
+    await waitFor(() => expect(lastParams()?.balance).toBe('owes_me'));
+
+    await user.click(screen.getByRole('button', { name: 'Clear filters (1)' }));
+
+    await waitFor(() => expect(lastParams()?.balance).toBe(''));
+    expect(lastParams()?.status).toBe('archived');
+  });
+
+  it('opens the khata page when a row is tapped', async () => {
+    /**
+     * PTY-03 made the list lead somewhere. Before it there was no
+     * `/parties/[id]` route, so the grid's row-open affordance was left
+     * unwired on purpose — a chevron that navigates to a 404 is worse than a
+     * row that plainly does not move.
+     */
+    setTier('full');
+    partyService.listParties.mockResolvedValue(loaded([RAMESH]));
+    const user = userEvent.setup();
+
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+
+    await user.click(screen.getByRole('button', { name: 'Open Ramesh Traders' }));
+
+    expect(mockPush).toHaveBeenCalledWith(
+      `/parties/${encodeURIComponent(RAMESH.id)}`
+    );
+  });
+});
+
+describe('the yearly clean-up', () => {
+  /**
+   * PTY-04 FR-9. The selection bar existed with a count and a "Clear
+   * selection" — the one thing a merchant can DO with a selection, and the
+   * reason the bar exists at all, was missing.
+   */
+  const signIn = (permissions: readonly PermissionCode[]): void => {
+    store.dispatch(
+      sessionLoaded({
+        user: {
+          id: 'u1',
+          name: 'Owner',
+          email: 'owner@shop.test',
+          mobile: null,
+          locale: 'en',
+          mustChangePassword: false,
+          passwordExpiresAt: null,
+        },
+        activeTenant: { id: 't1', name: 'Kumar Stores', timezone: 'Asia/Kolkata' },
+        tenants: [{ id: 't1', name: 'Kumar Stores', timezone: 'Asia/Kolkata' }],
+        permissions: [...permissions],
+        enabledModules: [],
+        version: 1,
+      })
+    );
+  };
+
+  const selectFirstRow = async (user: ReturnType<typeof userEvent.setup>) => {
+    setTier('full');
+    partyService.listParties.mockResolvedValue(loaded([RAMESH, SUNITA]));
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+    await user.click(screen.getByRole('checkbox', { name: 'Select Ramesh Traders' }));
+    return screen.findByTestId('ub-grid-toolbar');
+  };
+
+  beforeEach(() => {
+    store.dispatch(resetPartyList());
+    jest.clearAllMocks();
+    partyService.bulkArchiveParties.mockResolvedValue({ archived: [RAMESH.id], skipped: [] });
+    signIn(['parties.party.read', 'parties.party.delete']);
+  });
+
+  it('offers to archive what is selected', async () => {
+    const user = userEvent.setup();
+    const bar = await selectFirstRow(user);
+
+    expect(within(bar).getByRole('button', { name: 'Archive' })).toBeInTheDocument();
+  });
+
+  it('does not offer it to a role that cannot archive', async () => {
+    signIn(['parties.party.read']);
+    const user = userEvent.setup();
+    const bar = await selectFirstRow(user);
+
+    expect(within(bar).queryByRole('button', { name: 'Archive' })).not.toBeInTheDocument();
+  });
+
+  it('says up front that anyone with a balance will be skipped', async () => {
+    /**
+     * Before the press, not after. A merchant who knows it reads the result as
+     * the system working; one who does not reads "26 of 30" as a partial
+     * failure and goes looking for what went wrong.
+     */
+    const user = userEvent.setup();
+    const bar = await selectFirstRow(user);
+    await user.click(within(bar).getByRole('button', { name: 'Archive' }));
+
+    expect(
+      await screen.findByText('Anyone with a balance will be skipped.')
+    ).toBeInTheDocument();
+  });
+
+  it('reports who was skipped and what they owe, instead of closing', async () => {
+    /**
+     * A partial success is the NORMAL outcome, and "Archived 1 · 1 skipped" in
+     * a snackbar tells the merchant a number and then disappears. What they
+     * need is which one and how much, so that they can go and chase it — so the
+     * dialog becomes the report rather than dismissing itself.
+     */
+    partyService.bulkArchiveParties.mockResolvedValue({
+      archived: [RAMESH.id],
+      skipped: [
+        { id: SUNITA.id, name: 'Sunita Stores', code: 'party_balance_nonzero', balance: '900.00' },
+        /* A NEGATIVE balance, because this line first shipped rendering
+           "Naidu Agency — -₹282.90 outstanding": `formatInr` signs what it
+           formats, and "outstanding" says nothing about who owes whom. The
+           direction belongs in the wording (§23.2.6 rule 3). */
+        { id: 'p3', name: 'Naidu Agency', code: 'party_balance_nonzero', balance: '-282.90' },
+      ],
+    });
+    const user = userEvent.setup();
+    const bar = await selectFirstRow(user);
+    await user.click(within(bar).getByRole('button', { name: 'Archive' }));
+
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Archive' }));
+
+    expect(await screen.findByText('Archived 1 · 2 skipped')).toBeInTheDocument();
+    expect(screen.getByText('Sunita Stores — ₹900.00 still to collect')).toBeInTheDocument();
+    expect(screen.getByText('Naidu Agency — ₹282.90 still to pay')).toBeInTheDocument();
+    expect(screen.queryByText(/-₹|−₹/)).not.toBeInTheDocument();
+  });
+
+  it('is not offered on the Archived tab, where every row would be skipped', async () => {
+    const user = userEvent.setup();
+    setTier('full');
+    partyService.listParties.mockResolvedValue(loaded([RAMESH]));
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+
+    await user.click(screen.getByRole('combobox', { name: 'Show' }));
+    await user.click(await screen.findByRole('option', { name: 'Archived' }));
+    await user.click(await screen.findByRole('checkbox', { name: 'Select Ramesh Traders' }));
+
+    const bar = await screen.findByTestId('ub-grid-toolbar');
+    expect(within(bar).queryByRole('button', { name: 'Archive' })).not.toBeInTheDocument();
+  });
+});
+
+describe('tags on the party list', () => {
+  /**
+   * PTY-05. Its own block rather than a few cases bolted on to the clean-up
+   * suite above, because the tag list is a SECOND stubbed service with its own
+   * default — a book with no tags — and sharing a `beforeEach` that clears
+   * every mock is how a tag test quietly starts asserting against an empty
+   * picker and passing for the wrong reason.
+   */
+  const signIn = (permissions: readonly PermissionCode[]): void => {
+    store.dispatch(
+      sessionLoaded({
+        user: {
+          id: 'u1',
+          name: 'Owner',
+          email: 'owner@shop.test',
+          mobile: null,
+          locale: 'en',
+          mustChangePassword: false,
+          passwordExpiresAt: null,
+        },
+        activeTenant: { id: 't1', name: 'Kumar Stores', timezone: 'Asia/Kolkata' },
+        tenants: [{ id: 't1', name: 'Kumar Stores', timezone: 'Asia/Kolkata' }],
+        permissions: [...permissions],
+        enabledModules: [],
+        version: 1,
+      })
+    );
+  };
+
+  beforeEach(() => {
+    store.dispatch(resetPartyList());
+    store.dispatch(resetPartyTags());
+    jest.clearAllMocks();
+    mockSearch = '';
+    /* The default is a book with NO tags, which is the state most tenants are
+       in and the one the chip lane must cost nothing in. A test about tags says
+       so explicitly. */
+    tagService.listTags.mockResolvedValue([]);
+    signIn(['parties.party.read', 'parties.party.write']);
+    setTier('cards');
+  });
+
+  it('shows a party’s tags on the row, and names the list after them', async () => {
+    /**
+     * FR-6's chips, rendered from the tags the LIST response already carried —
+     * they are prefetched server-side precisely so a list of twenty-five rows
+     * is not twenty-five extra requests. The `listTags` stub is irrelevant to
+     * this assertion, which is the point.
+     */
+    setTier('full');
+    partyService.listParties.mockResolvedValue(
+      loaded([{ ...RAMESH, tags: [CAMP, ROUTE2] }])
+    );
+
+    renderWithProviders(<PartyListPageContent />);
+
+    const list = await screen.findByRole('list', { name: 'Tags on Ramesh Traders' });
+    expect(within(list).getByText('Camp Area')).toBeInTheDocument();
+    expect(within(list).getByText('Route 2')).toBeInTheDocument();
+  });
+
+  it('shows ONE chip and a count on a phone card', async () => {
+    /**
+     * Found in a screenshot at 360 px, not in a test.
+     *
+     * The card's title column is about 180 px wide, and two chips in it ran off
+     * the edge — the second one cut mid-glyph, reading "Decca" with no ellipsis,
+     * which looks like a rendering fault rather than a shortened label. One chip
+     * and "+1" is the same information in the space there is: which group this
+     * party is in, and that there is more. The khata page is one tap away and
+     * shows all of them.
+     *
+     * The table keeps two, which is why this is a property of the SCREEN rather
+     * than of the chip: a `cell` function is called identically at all three
+     * renderings and cannot tell which one it is painting.
+     */
+    setTier('cards');
+    partyService.listParties.mockResolvedValue(
+      loaded([{ ...RAMESH, tags: [CAMP, ROUTE2] }])
+    );
+
+    renderWithProviders(<PartyListPageContent />);
+
+    const list = await screen.findByRole('list', { name: 'Tags on Ramesh Traders' });
+    expect(within(list).getByText('Camp Area')).toBeInTheDocument();
+    expect(within(list).queryByText('Route 2')).not.toBeInTheDocument();
+    expect(within(list).getByText('+1')).toBeInTheDocument();
+    /* And the one it could not show is still reachable without leaving the row. */
+    expect(within(list).getByTitle('Route 2')).toBeInTheDocument();
+  });
+
+  it('offers no tag filter at all in a book that has no tags', async () => {
+    /**
+     * An empty picker on a new install is a control that can only disappoint.
+     * The three fixed axes are answerable on day one; this one needs the
+     * merchant to have set something up first, so it appears when they have.
+     */
+    partyService.listParties.mockResolvedValue(loaded([RAMESH]));
+    tagService.listTags.mockResolvedValue([]);
+
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+
+    expect(screen.queryByRole('combobox', { name: 'Tag' })).not.toBeInTheDocument();
+  });
+
+  it('sends the chosen tag to the server and counts it as a filter', async () => {
+    /**
+     * Two claims in one, and the second is the one that was broken first.
+     *
+     * The filter reaches the wire as `tag` — asserted on the REQUEST, because a
+     * chip that looks applied over an unfiltered list is the failure mode a
+     * control-level assertion cannot see.
+     *
+     * And `activeFilterCount` counts it: before PTY-05 that list was
+     * `[q, type, balance, collection]`, so a merchant who filtered to a tag and
+     * found nobody would have been shown the FIRST-USE empty state — "No
+     * customers yet, add the first person you give udhaar to" — on a book with
+     * three hundred parties in it, and no Clear affordance to get back out.
+     */
+    partyService.listParties.mockResolvedValue(loaded([RAMESH]));
+    tagService.listTags.mockResolvedValue([{ ...CAMP, partyCount: 34 }]);
+    const user = userEvent.setup();
+
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+
+    await user.click(await screen.findByRole('combobox', { name: 'Tag' }));
+    await user.click(await screen.findByText('Camp Area'));
+
+    await waitFor(() => {
+      expect(partyService.listParties).toHaveBeenLastCalledWith(
+        expect.objectContaining({ tag: 'Camp Area' }),
+        expect.anything()
+      );
+    });
+    expect(screen.getByRole('button', { name: /Clear filters/ })).toBeInTheDocument();
+  });
+
+  it('tags a selection, and reports who was skipped rather than only how many', async () => {
+    /**
+     * FR-8. The dialog becomes the report for the same reason PTY-04's bulk
+     * archive does: "1 party" with no list sends a merchant back through forty
+     * rows to find the one that did not take.
+     */
+    setTier('full');
+    partyService.listParties.mockResolvedValue(loaded([RAMESH, SUNITA]));
+    tagService.listTags.mockResolvedValue([{ ...ROUTE2, partyCount: 0 }]);
+    tagService.bulkTagParties.mockResolvedValue({
+      updatedCount: 1,
+      previous: [],
+      skipped: [{ id: SUNITA.id, reason: 'tag_limit_reached' }],
+    });
+    const user = userEvent.setup();
+
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+
+    await user.click(screen.getByRole('checkbox', { name: 'Select Ramesh Traders' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Select Sunita Stores' }));
+    await user.click(screen.getByRole('button', { name: 'Add tag' }));
+
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('combobox', { name: 'Tags' }));
+    /* Screen-level, not `within(dialog)`: Radix portals the picker's popover to
+       the body rather than nesting it inside the dialog, so scoping the query
+       to the dialog would look in the one place the options are not. */
+    await user.click(await screen.findByText('Route 2'));
+    await user.click(within(dialog).getByRole('button', { name: 'Apply' }));
+
+    expect(await screen.findByText('Tagged 1 party')).toBeInTheDocument();
+    expect(screen.getByText('already carries 10 tags')).toBeInTheDocument();
+  });
+
+  it('does not offer Add tag to a role that cannot write', async () => {
+    /**
+     * §19.7.5 — hidden, not disabled. An accountant reads the book; a control
+     * that would 403 is a support call waiting to happen.
+     */
+    setTier('full');
+    partyService.listParties.mockResolvedValue(loaded([RAMESH]));
+    const user = userEvent.setup();
+
+    signIn(['parties.party.read']);
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+
+    await user.click(screen.getByRole('checkbox', { name: 'Select Ramesh Traders' }));
+
+    expect(screen.queryByRole('button', { name: 'Add tag' })).not.toBeInTheDocument();
+  });
+
+  it('applies a tag filter that arrived in the URL', async () => {
+    /**
+     * The defect this test exists for.
+     *
+     * PTY-05's manager makes "Camp Area · 34" a link to `/parties?tag=Camp
+     * Area` — the fastest route from "which tag holds this part of the book" to
+     * working through it. It went to an UNFILTERED list, because nothing on
+     * this screen had ever read the URL: the filters lived only in Redux and
+     * were seeded from their defaults on every mount. The link was not subtly
+     * wrong, it was inert, and every unit test passed because none of them had
+     * a URL.
+     */
+    mockSearch = 'tag=Camp+Area';
+    partyService.listParties.mockResolvedValue(loaded([RAMESH]));
+    tagService.listTags.mockResolvedValue([{ ...CAMP, partyCount: 34 }]);
+
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+
+    await waitFor(() => {
+      expect(partyService.listParties).toHaveBeenLastCalledWith(
+        expect.objectContaining({ tag: 'Camp Area' }),
+        expect.anything()
+      );
+    });
+  });
+
+  it('shows the filter that arrived in the URL as an applied chip', async () => {
+    /**
+     * Half a fix would have been worse than none: a list that is filtered while
+     * every control says it is not gives the merchant no way to see what is
+     * applied and no way to take it off.
+     */
+    mockSearch = 'tag=Camp+Area';
+    partyService.listParties.mockResolvedValue(loaded([RAMESH]));
+    tagService.listTags.mockResolvedValue([{ ...CAMP, partyCount: 34 }]);
+
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+
+    expect(
+      await screen.findByRole('button', { name: 'Remove tag Camp Area' })
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Clear filters/ })).toBeInTheDocument();
+  });
+
+  it('puts a search term from the URL into the search box', async () => {
+    /**
+     * The other direction of the same rule. A link carrying `?q=ramesh`
+     * filtered the list correctly over an EMPTY search field, so the merchant
+     * could see neither what was applied nor how to clear it — and the first
+     * keystroke would have silently replaced a filter they did not know was
+     * there.
+     */
+    mockSearch = 'q=ramesh';
+    partyService.listParties.mockResolvedValue(loaded([RAMESH]));
+
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+
+    expect(await screen.findByDisplayValue('ramesh')).toBeInTheDocument();
+  });
+
+  it('ignores a filter value the product does not have', async () => {
+    /**
+     * A URL is untrusted input and `type` reaches the database as a query
+     * parameter. An unrecognised value is DROPPED rather than refused: a link
+     * with a stale spelling should show the list, not an error page.
+     */
+    mockSearch = 'type=wholesaler&tag=Camp+Area';
+    partyService.listParties.mockResolvedValue(loaded([RAMESH]));
+    tagService.listTags.mockResolvedValue([{ ...CAMP, partyCount: 34 }]);
+
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+
+    await waitFor(() => {
+      expect(partyService.listParties).toHaveBeenLastCalledWith(
+        expect.objectContaining({ tag: 'Camp Area', type: '' }),
+        expect.anything()
+      );
+    });
+  });
+
+  it('writes a filter the merchant applied back into the address bar', async () => {
+    /**
+     * Reading without writing would give a link that works once and an address
+     * bar that lies for the rest of the session — the merchant taps two chips,
+     * copies the URL and sends somebody the unfiltered list.
+     *
+     * `replace`, not `push`: a chip tap refines the screen they are on, and
+     * pushing would make Back walk them through every chip they tried.
+     */
+    partyService.listParties.mockResolvedValue(loaded([RAMESH]));
+    tagService.listTags.mockResolvedValue([{ ...CAMP, partyCount: 34 }]);
+    const user = userEvent.setup();
+
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+
+    await user.click(await screen.findByRole('combobox', { name: 'Tag' }));
+    await user.click(await screen.findByRole('option', { name: 'Camp Area' }));
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenLastCalledWith('/parties?tag=Camp+Area', { scroll: false });
+    });
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('says so plainly when a bulk change changed nothing', async () => {
+    /**
+     * Found in a screenshot of the finished dialog.
+     *
+     * `updated_count` is parties CHANGED, so adding a tag every selected party
+     * already carries gives zero — correct, and it rendered as "Tagged 0
+     * parties" over an empty box with an Undo button beside it. Undo of nothing
+     * is a control that can only confuse, and "0" is a number standing in for a
+     * sentence.
+     */
+    setTier('full');
+    partyService.listParties.mockResolvedValue(loaded([RAMESH]));
+    tagService.listTags.mockResolvedValue([{ ...ROUTE2, partyCount: 1 }]);
+    tagService.bulkTagParties.mockResolvedValue({
+      updatedCount: 0,
+      previous: [],
+      changed: [],
+      skipped: [],
+    });
+    const user = userEvent.setup();
+
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+
+    await user.click(screen.getByRole('checkbox', { name: 'Select Ramesh Traders' }));
+    await user.click(screen.getByRole('button', { name: 'Add tag' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('combobox', { name: 'Tags' }));
+    await user.click(await screen.findByText('Route 2'));
+    await user.click(within(dialog).getByRole('button', { name: 'Apply' }));
+
+    expect(await screen.findByText('They already had those tags')).toBeInTheDocument();
+    expect(screen.getByText('Nothing was changed, so there is nothing to undo.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Undo' })).not.toBeInTheDocument();
+  });
+
+  it('names the party it could not tag, rather than only counting it', async () => {
+    /**
+     * "3 were skipped" over three identical fragments reading "already carries
+     * 10 tags" tells a merchant that something is wrong and not which party —
+     * and a party at the ceiling is exactly the one they can fix, by opening it
+     * and taking a tag off. The server sends the name for this reason.
+     */
+    setTier('full');
+    partyService.listParties.mockResolvedValue(loaded([RAMESH, SUNITA]));
+    tagService.listTags.mockResolvedValue([{ ...ROUTE2, partyCount: 0 }]);
+    tagService.bulkTagParties.mockResolvedValue({
+      updatedCount: 1,
+      previous: [],
+      changed: [{ partyId: RAMESH.id, tagIds: [ROUTE2.id] }],
+      skipped: [{ id: SUNITA.id, name: 'Sunita Stores', reason: 'tag_limit_reached' }],
+    });
+    const user = userEvent.setup();
+
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+
+    await user.click(screen.getByRole('checkbox', { name: 'Select Ramesh Traders' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Select Sunita Stores' }));
+    await user.click(screen.getByRole('button', { name: 'Add tag' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('combobox', { name: 'Tags' }));
+    await user.click(await screen.findByText('Route 2'));
+    await user.click(within(dialog).getByRole('button', { name: 'Apply' }));
+
+    expect(await screen.findByText('Tagged 1 party')).toBeInTheDocument();
+    expect(screen.getByText('Sunita Stores already carries 10 tags')).toBeInTheDocument();
+  });
+});
+
+describe('the over-limit chip', () => {
+  /**
+   * PTY-06 FR-12. The chip is a way IN to a morning's work — "Over limit (7)"
+   * is a list to work through, and "Over limit" on its own is a question.
+   */
+  beforeEach(() => {
+    store.dispatch(resetPartyList());
+    store.dispatch(resetPartyTags());
+    jest.clearAllMocks();
+    mockSearch = '';
+    tagService.listTags.mockResolvedValue([]);
+    setTier('cards');
+  });
+
+  const withOverLimit = (overLimit: number | null) => ({
+    rows: [RAMESH],
+    meta: { page: 1, pageSize: 25, total: 1, totalPages: 1 },
+    totals: null,
+    overLimit,
+  });
+
+  it('does not exist in a book where nobody is over', async () => {
+    /**
+     * A permanently visible "Over limit (0)" is a control whose only outcome is
+     * an empty list, on a screen that already has seven — and most books will
+     * never have a credit limit set at all.
+     */
+    partyService.listParties.mockResolvedValue(withOverLimit(0));
+
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+
+    expect(screen.queryByRole('button', { name: /Over limit/ })).not.toBeInTheDocument();
+  });
+
+  it('does not exist when the server did not count', async () => {
+    /**
+     * `null` and zero are different states — "this server does not count"
+     * against "nobody is over" — and the chip treats them the same way, which
+     * is right: neither is a reason to draw a control whose only outcome is a
+     * list nobody asked for. This client deploys separately from its API.
+     */
+    partyService.listParties.mockResolvedValue(withOverLimit(null));
+
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+
+    expect(screen.queryByRole('button', { name: /Over limit/ })).not.toBeInTheDocument();
+  });
+
+  it('carries the count, because the count is what decides whether to tap it', async () => {
+    partyService.listParties.mockResolvedValue(withOverLimit(7));
+
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+
+    expect(await screen.findByRole('button', { name: 'Over limit (7)' })).toBeInTheDocument();
+  });
+
+  it('sends the band to the server and counts as a filter', async () => {
+    /**
+     * Asserted on the REQUEST, for the reason `e2e/parties.mjs` exists: a chip
+     * that lights up is not a chip that filters. And it must count towards
+     * `activeFilterCount`, or a merchant who narrows to the over-limit list and
+     * finds nobody gets the FIRST-USE empty state on a book full of parties,
+     * with no Clear affordance to get back out.
+     */
+    partyService.listParties.mockResolvedValue(withOverLimit(7));
+    const user = userEvent.setup();
+
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+
+    await user.click(await screen.findByRole('button', { name: 'Over limit (7)' }));
+
+    await waitFor(() => {
+      expect(partyService.listParties).toHaveBeenLastCalledWith(
+        expect.objectContaining({ credit: 'over' }),
+        expect.anything()
+      );
+    });
+    expect(screen.getByRole('button', { name: /Clear filters/ })).toBeInTheDocument();
+  });
+
+  it('stays on screen while one of its own bands is applied', async () => {
+    /**
+     * Prevents: tapping "Near limit" made the whole credit group DISAPPEAR.
+     *
+     * `overLimit` counts the FILTERED set — it rides in the same aggregate as
+     * the money totals, deliberately, so that it costs nothing. Narrowing to
+     * the near-limit band therefore leaves nobody over, the count comes back
+     * zero, and the group's own "only when there is something to act on" rule
+     * then hid the three chips the merchant had just used — including the
+     * pressed one. The band stayed applied and the control that applied it was
+     * gone, so there was no way to switch to "Within limit" or to come back;
+     * only the generic Clear filters, which drops the other filters too.
+     *
+     * The rule is right for a merchant who has not narrowed anything. It is not
+     * a rule about the count; it is a rule about whether this group is any use,
+     * and a group that is currently filtering the list is in use by definition.
+     */
+    mockSearch = 'credit=near';
+    partyService.listParties.mockResolvedValue(withOverLimit(0));
+
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+
+    const near = await screen.findByRole('button', { name: 'Near limit' });
+    expect(near).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Within limit' })).toBeInTheDocument();
+    // Without a count there is nothing to put in the brackets, and "(0)" is a
+    // worse answer than none: it reads as a tally of the list on screen.
+    expect(screen.getByRole('button', { name: 'Over limit' })).toBeInTheDocument();
+  });
+
+  it('applies a credit band that arrived in the URL', async () => {
+    /** The dashboard tile RPT-01 will link here with, and a link a merchant can
+     *  send somebody. */
+    mockSearch = 'credit=over';
+    partyService.listParties.mockResolvedValue(withOverLimit(7));
+
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+
+    await waitFor(() => {
+      expect(partyService.listParties).toHaveBeenLastCalledWith(
+        expect.objectContaining({ credit: 'over' }),
+        expect.anything()
+      );
+    });
+  });
 });

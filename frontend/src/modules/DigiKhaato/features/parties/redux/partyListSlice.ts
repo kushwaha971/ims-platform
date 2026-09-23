@@ -43,15 +43,35 @@ export interface PartyListState {
    * the twenty-five rows that happened to load.
    */
   totalsScope: 'filtered' | 'page';
+  /**
+   * PTY-06 FR-12 — how many matched parties are over their credit limit, or
+   * null when the server did not count. The chip is drawn from this and only
+   * when it is above zero: a permanently visible "Over limit (0)" is a control
+   * whose only outcome is an empty list, on a screen that already has seven.
+   */
+  overLimit: number | null;
   lastFetchedAt: number | null;
   /** Set by the invalidation listener (§19.3.6); the hook refetches on it. */
   stale: boolean;
   staleUrgency: 'now' | 'next-mount' | null;
 }
 
-const initialFilters: PartyListFilters = {
+/**
+ * The unfiltered list, and the baseline the URL is written against.
+ *
+ * Exported because `usePartyListUrl` omits any axis that still holds its
+ * default, so an untouched list has a clean `/parties` and a shared link
+ * carries only what the sender actually chose. A second copy of these values
+ * over there would be a second thing to keep true.
+ */
+export const DEFAULT_PARTY_FILTERS: PartyListFilters = {
   q: '',
   status: 'active',
+  type: '',
+  balance: '',
+  collection: '',
+  tag: '',
+  credit: '',
   ordering: DEFAULT_ORDERING,
   page: 1,
   pageSize: DEFAULT_PAGE_SIZE,
@@ -60,7 +80,7 @@ const initialFilters: PartyListFilters = {
 const initialState: PartyListState = {
   rows: [],
   meta: { page: 1, pageSize: DEFAULT_PAGE_SIZE, total: 0, totalPages: 0 },
-  filters: initialFilters,
+  filters: DEFAULT_PARTY_FILTERS,
   // Start in 'loading' so the grid paints its skeleton on first render rather
   // than flashing an empty state before the first request resolves.
   status: 'loading',
@@ -68,6 +88,7 @@ const initialState: PartyListState = {
   selectedIds: [],
   totals: null,
   totalsScope: 'page',
+  overLimit: null,
   lastFetchedAt: null,
   stale: false,
   staleUrgency: null,
@@ -86,8 +107,16 @@ const partyListSlice = createSlice({
       state.filters.page = action.payload.page;
       if (action.payload.pageSize) state.filters.pageSize = action.payload.pageSize;
     },
+    /**
+     * Everything except `status`, which survives on purpose.
+     *
+     * "Clear filters" on the Archived tab must not silently move the merchant
+     * back to Active — they would be looking at a different set of people and
+     * the only thing that changed on screen is that the rows are different.
+     * The tab is where they ARE; the chips are what they asked of it.
+     */
     filtersCleared(state) {
-      state.filters = { ...initialFilters, status: state.filters.status };
+      state.filters = { ...DEFAULT_PARTY_FILTERS, status: state.filters.status };
       state.selectedIds = [];
     },
     selectionChanged(state, action: PayloadAction<string[]>) {
@@ -107,10 +136,16 @@ const partyListSlice = createSlice({
       })
       .addCase(fetchPartyList.fulfilled, (state, action) => {
         state.status = 'succeeded';
-        state.rows =
+        // The cast is the same one `error` below needs, for the same reason:
+        // Immer's `Draft<T>` cannot hold a `readonly` array, and `Party.tags`
+        // is readonly by contract (R-TS-5). Rows are replaced wholesale here
+        // and never mutated in place, so nothing is being smuggled past the
+        // type system — the array the reducer assigns was built one line above.
+        state.rows = (
           action.payload.mode === 'append'
             ? [...state.rows, ...action.payload.rows]
-            : [...action.payload.rows];
+            : [...action.payload.rows]
+        ) as Draft<Party>[];
         state.meta = action.payload.meta;
         // NO ARITHMETIC IN THE REDUCER. Summing the page here meant importing
         // `partyTotals()`, which reaches `utils/money`, which is
@@ -124,6 +159,7 @@ const partyListSlice = createSlice({
         // the arithmetic travels with the screen that does arithmetic.
         state.totals = action.payload.totals;
         state.totalsScope = action.payload.totalsScope;
+        state.overLimit = action.payload.overLimit;
         state.lastFetchedAt = Date.now();
         state.stale = false;
         state.staleUrgency = null;
@@ -162,3 +198,5 @@ export const selectPartyListTotals = (state: RootState): PartyListTotals | null 
   state.partyList.totals;
 export const selectPartyListTotalsScope = (state: RootState): 'filtered' | 'page' =>
   state.partyList.totalsScope;
+export const selectPartyOverLimit = (state: RootState): number | null =>
+  state.partyList.overLimit;

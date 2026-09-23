@@ -65,6 +65,30 @@ export interface UbStatCardProps {
   readonly delta?: UbStatCardDelta;
   readonly tone?: UbStatCardTone;
   readonly onClick?: () => void;
+  /**
+   * For a tile that APPLIES something and keeps applying it — the receivable
+   * tile that filters the list to who owes the merchant.
+   *
+   * Set it and the tile becomes a toggle: `aria-pressed`, and a tint that says
+   * so without relying on the tint alone, since the chip row below carries the
+   * same state in words. Leave it unset and the tile is an ordinary action
+   * that navigates or opens something, and announces no state at all — which
+   * is right for a tile that does not have one, and wrong for this one, where
+   * a merchant who cannot see the tint would otherwise have no way to know the
+   * list they are reading is narrowed.
+   *
+   * Only meaningful with `onClick`.
+   */
+  readonly pressed?: boolean;
+  /**
+   * What the press DOES — "Show only who owes me".
+   *
+   * The tile's own text is a label and a figure; read aloud, the button is
+   * "You will get, ₹36,018" and gives no hint that activating it filters
+   * anything. This replaces the accessible name for the button only; the
+   * visible text is untouched.
+   */
+  readonly actionLabel?: string;
   readonly className?: string;
 }
 
@@ -97,6 +121,8 @@ function UbStatCardBase({
   delta,
   tone = 'default',
   onClick,
+  pressed,
+  actionLabel,
   className,
 }: Readonly<UbStatCardProps>) {
   const DeltaIcon = delta ? DELTA_ICON[delta.direction] : null;
@@ -142,10 +168,21 @@ function UbStatCardBase({
   }
 
   return (
-    <MLCard className={cn('flex flex-col', className)}>
+    <MLCard
+      className={cn(
+        'flex flex-col',
+        // The applied tint goes on the CARD, not the button, so the border
+        // moves with it — a tinted panel inside an untinted border reads as a
+        // hover state rather than as a tile that is doing something.
+        pressed && 'border-accent bg-accent-quiet',
+        className
+      )}
+    >
       <button
         type="button"
         onClick={onClick}
+        aria-pressed={pressed}
+        aria-label={actionLabel}
         className="flex min-h-[44px] flex-col rounded-card text-left transition-colors duration-fast ease-standard hover:bg-surface-hover focus-visible:shadow-focus focus-visible:outline-none motion-reduce:transition-none"
       >
         {body}

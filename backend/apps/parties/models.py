@@ -1,25 +1,19 @@
-"""Party — the customer/supplier master (Part 21 §21.3.3).
+"""Party, Tag and the join between them (Part 21 §21.3.3).
 
-`Tag`, `PartyTag` and `ShareLink` are named in Part 20 §20.2.3 and land with
-`PTY-02` and `PTY-09`; Sprint 0's walking skeleton needs `Party` alone
-(Part 32 §32.3.6 task S0-70).
+`ShareLink` is named in Part 20 §20.2.3 and lands with PTY-09.
 """
 
 from __future__ import annotations
 
 from django.contrib.postgres.indexes import GinIndex, OpClass
 from django.db import models
-from django.db.models.functions import Upper
+from django.db.models import F
+from django.db.models.functions import Lower, Upper
 
 from apps.common.db.fields import MoneyField, uuid7_pk
 from apps.common.managers import AllObjectsManager, SoftDeleteManager
 from apps.common.models import SoftDeleteModel, TenantModel
-from apps.parties.constants import (
-    ConsentSource,
-    GstRegistration,
-    OpeningDirection,
-    PartyStatus,
-)
+from apps.parties.constants import ConsentSource, GstRegistration, OpeningDirection, PartyStatus
 
 
 class Party(TenantModel, SoftDeleteModel):
@@ -88,6 +82,13 @@ class Party(TenantModel, SoftDeleteModel):
     objects = SoftDeleteManager()
     all_objects = AllObjectsManager()
 
+    #: PTY-05. Declared here rather than on `Tag` so that `party.tags` reads
+    #: naturally at every call site; `through` is an explicit model because the
+    #: join needs its own indexes (see `PartyTag`).
+    tags = models.ManyToManyField(
+        "parties.Tag", through="parties.PartyTag", related_name="parties", blank=True
+    )
+
     class Meta:
         db_table = "parties_party"
         verbose_name = "party"
@@ -100,25 +101,43 @@ class Party(TenantModel, SoftDeleteModel):
             ),
         ]
         indexes = [
+            # The list's default order, and after PTY-02 BR-4 the order of EVERY
+            # list query: the filterset now supplies `status=active` when the
+            # client sends none, so there is no longer a list shape that reaches
+            # this table without a status predicate.
+            #
+            # `DESC NULLS LAST`, spelled out, is the whole point of the index.
+            # `fields=["-last_activity_at"]` compiles to a plain `DESC`, and
+            # Postgres puts NULLs FIRST on a DESC index; the query asks for
+            # `DESC NULLS LAST` (FR-7/BR-6, because a party who has never
+            # transacted must not sort above one who bought something this
+            # morning). Those are two different orderings, so the planner could
+            # not use this index for the query it was added to serve, and said
+            # so by not using it at all.
+            #
+            # Measured on a 100,000-party tenant, page 1 of the default list:
+            # parallel seq scan of 55,845 rows and a full sort, 5,728 cost units
+            # -> index scan and an incremental sort over one tie group, 29
+            # buffers and 0.088 ms. Carrying `name, id` in the index too would
+            # remove even that sort (0.075 ms) and cost 9.3 MB against 4.3 MB —
+            # not a trade worth making for 13 microseconds.
             models.Index(
-                fields=["tenant", "status", "-last_activity_at"], name="ix_party_tenant_activity"
+                "tenant",
+                "status",
+                F("last_activity_at").desc(nulls_last=True),
+                condition=models.Q(deleted_at__isnull=True),
+                name="ix_party_tenant_activity",
             ),
             models.Index(fields=["tenant", "balance"], name="ix_party_tenant_balance"),
             models.Index(fields=["tenant", "collection_date"], name="ix_party_tenant_collection"),
             models.Index(fields=["tenant", "is_customer"], name="ix_party_tenant_customer"),
             models.Index(fields=["tenant", "is_supplier"], name="ix_party_tenant_supplier"),
-            # The default list view, which sends no `status` at all. Without it
-            # the unfiltered page-1 query is a parallel sequential scan and a
-            # top-N heapsort over every alive row in the tenant; with it the
-            # planner walks the index and stops at the page (measured at 98,000
-            # alive rows: 25.6 ms / 3,401 buffers -> 0.10 ms / 29 buffers). The
-            # `status`-filtered form is served by `ix_party_tenant_activity`,
-            # which cannot serve this one because `status` is its middle column.
-            models.Index(
-                fields=["tenant", "-last_activity_at"],
-                condition=models.Q(deleted_at__isnull=True),
-                name="ix_party_tenant_recent",
-            ),
+            # `ix_party_tenant_recent` lived here: (tenant, -last_activity_at)
+            # partial, added for the default list "which sends no `status` at
+            # all". PTY-02 BR-4 removed that shape — the filterset defaults the
+            # status rather than leaving it out — so the index had no query left
+            # to serve and 4.6 MB per 100,000 parties to keep current on every
+            # ledger entry. `ix_party_tenant_activity` above serves both forms.
             # `?ordering=name`, which the list's Name column header sends
             # (`partyListSort.ts` maps the column to the `name` field). No index
             # covered it: page 1 was a parallel index scan of the tenant and a
@@ -146,3 +165,72 @@ class Party(TenantModel, SoftDeleteModel):
 
     def __str__(self) -> str:
         return self.name
+
+
+class Tag(TenantModel):
+    """A label a merchant puts on parties — "Camp Area", "Monday route".
+
+    ── Flat, and carrying no behaviour (BR-8) ─────────────────────────────────
+    A tag never changes pricing, tax, reminders or permissions. It is a filter
+    dimension and a label, and keeping it that way is what lets a merchant
+    invent one at the counter without wondering what it will do. Per-party
+    pricing is a different mechanism entirely (INV-13).
+
+    There is no parent/child: Indian small businesses reorganise by season, and
+    a hierarchy is a promise about structure that the next season breaks.
+    Groups are Phase 2 and are a different entity, which is why the copy never
+    calls a tag a group.
+    """
+
+    id = uuid7_pk()
+    #: As the merchant first typed it. The lookup is case-insensitive (BR-1),
+    #: but the display is theirs — "GST" is not "Gst".
+    name = models.CharField(max_length=40)
+    #: `#RRGGBB` from a fixed palette, or NULL for no colour. Presentational
+    #: only (BR-10), and never the only signal: every chip carries its name.
+    color = models.CharField(max_length=7, null=True, blank=True)
+
+    class Meta:
+        db_table = "parties_tag"
+        constraints = [
+            # `lower(name)`, not `name`. The service normalises before it looks
+            # up, and a service is not a constraint: two staff members creating
+            # "Camp Area" and "camp area" from two party forms at the same
+            # moment both pass their own check and both insert. The database is
+            # the only place that can refuse the second one.
+            models.UniqueConstraint(
+                Lower("name"),
+                "tenant",
+                name="uq_tag_tenant_lower_name",
+            ),
+        ]
+
+    def __str__(self) -> str:  # pragma: no cover - admin convenience
+        return self.name
+
+
+class PartyTag(models.Model):
+    """The join. A party carries 0–10 tags; a tag carries any number of parties.
+
+    A model rather than a bare `ManyToManyField` through-table so that the
+    indexes below can be declared, and so that a future column (who tagged this,
+    when) does not need a migration that rewrites the relation.
+    """
+
+    id = uuid7_pk()
+    party = models.ForeignKey("parties.Party", on_delete=models.CASCADE, related_name="party_tags")
+    tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name="party_tags")
+
+    class Meta:
+        db_table = "parties_party_tag"
+        constraints = [
+            models.UniqueConstraint(fields=["party", "tag"], name="uq_party_tag"),
+        ]
+        indexes = [
+            # `U(party, tag)` above serves party → tags, because `party` leads
+            # it. It cannot serve tag → parties, and that is the direction the
+            # `party_count` annotation and the list's tag filter both read in.
+            # Without this the manager's count is a sequential scan of every
+            # join row in the tenant, once per tag.
+            models.Index(fields=["tag"], name="ix_party_tag_tag"),
+        ]

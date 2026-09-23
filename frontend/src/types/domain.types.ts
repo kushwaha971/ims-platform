@@ -33,8 +33,26 @@ export type ModuleCode = (typeof MODULE_CODES)[number];
 export const PERMISSION_CODES = [
   'parties.party.read',
   'parties.party.write',
+  /**
+   * PTY-04 — archiving IS the delete capability, because the product has no
+   * hard delete: deleting a party would destroy the ledger behind it. The
+   * codename is the server's (`common/permissions_registry.py`), and it is
+   * what gates Archive, Restore and the bulk clean-up.
+   */
+  'parties.party.delete',
   'ledger.entry.read',
   'ledger.entry.write',
+  /**
+   * LED-03 BR-8 — reversing and correcting a posted line.
+   *
+   * Separate from `write` because they are separate jobs. Staff record what
+   * happens at the counter; going back and changing a number a customer has
+   * already been shown is the owner's decision, and the server's registry gives
+   * this to the owner and the manager only. A tenant that wants their senior
+   * cashier to fix typos can grant it — unlike the credit-limit override, which
+   * is a role check precisely so that it cannot be granted.
+   */
+  'ledger.entry.correct',
   'inventory.item.read',
   'sales.invoice.read',
   'purchases.bill.read',
@@ -65,3 +83,19 @@ export type TenantRole = (typeof TENANT_ROLES)[number];
 /** Canon §0.7 Invitation.status — mirrors `platform_app.constants.InvitationStatus`. */
 export const INVITATION_STATUSES = ['pending', 'accepted', 'expired', 'revoked'] as const;
 export type InvitationStatus = (typeof INVITATION_STATUSES)[number];
+
+/**
+ * Part 21 §21.3.4 `ledger_entry.payment_mode` — how money arrived.
+ *
+ * Here rather than in the ledger feature because it is not the ledger's alone:
+ * PAY-01's payments, EXP-01's expenses and EXP-03's cashbook all carry the same
+ * six values, and a second copy is how the two copies eventually disagree about
+ * whether the third one is spelled `bank` or `bank_transfer`.
+ *
+ * An array rather than a bare union so a control can map over it without a
+ * second list to keep in step — the order is the order the chips appear in, and
+ * it is frequency order for an Indian counter: cash first, UPI beside it, the
+ * rest behind them.
+ */
+export const PAYMENT_MODES = ['cash', 'upi', 'bank', 'cheque', 'card', 'other'] as const;
+export type PaymentMode = (typeof PAYMENT_MODES)[number];
