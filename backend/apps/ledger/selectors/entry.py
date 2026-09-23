@@ -15,6 +15,7 @@ from django.db.models.functions import Coalesce
 
 from apps.common.constants import Direction
 from apps.common.money import ZERO
+from apps.ledger.constants import EntryType
 from apps.ledger.models import LedgerEntry
 
 MONEY = DecimalField(max_digits=14, decimal_places=2)
@@ -137,6 +138,76 @@ def recent_entries(*, tenant: Any, party_id: UUID | str, limit: int = 5) -> list
     return list(party_entries(tenant=tenant, party_id=party_id)[:limit])
 
 
+# ── Gave, got, and written off (CR-2026-09-24-A) ─────────────────────────────
+#
+# A write-off (PTY-04 FR-3, LED-11) is a ledger line with a direction — `credit`
+# when a receivable is forgiven, `debit` when a payable is — and it moves the
+# balance exactly as a payment would. It is NOT a payment: LED-11 BR-3 keeps it
+# out of every "collections" total and §8 paints it "neither gave nor got". So a
+# khata that summed it into "You got in all" told the merchant they had been
+# paid ₹2,500 they will never see, over a row that reads "Written off".
+#
+# The fix keeps the arithmetic and moves the figure: every total the ledger
+# reports is split into THREE mutually exclusive buckets over one set of rows —
+#
+#     debit       Σ amount, direction=debit,  entry_type ≠ write_off
+#     credit      Σ amount, direction=credit, entry_type ≠ write_off
+#     written_off {debit, credit} — the write-off rows, by direction
+#
+# so `debit − credit + written_off.debit − written_off.credit` is still exactly
+# the signed sum of the rows (and, on an unbounded statement, the balance). The
+# server carries the components and NEVER the net (CR-125): the client adds the
+# third line to the two it already shows.
+#
+# Classified by the row's OWN `entry_type`, and only that. A correction's
+# replacement keeps `write_off` (LED-11 BR-4, `PRESERVED_ENTRY_TYPES`) and so
+# stays in the bucket; a reversal row is `entry_type='reversal'` and is out of
+# every live total anyway (both halves of a pair are excluded by
+# `LIVE_ENTRIES`). With corrections shown on a statement the reversal sits in
+# gave/got as every reversal does — the same column its row is printed in.
+#
+# Opening entries are unchanged: an `opening` debit counts in `debit` ("You gave
+# in all") and an `opening` credit in `credit`, as they always have. LED-02 says
+# nothing to the contrary and the khata header has read that way since LED-02.
+
+#: The write-off rows. One `Q`, used by the timeline summary and the statement.
+WRITE_OFF_ENTRIES = Q(entry_type=EntryType.WRITE_OFF)
+
+
+def _money_sum(condition: Q) -> Coalesce:
+    return Coalesce(Sum("amount", filter=condition), Decimal("0.00"), output_field=MONEY)
+
+
+def split_total_expressions(within: Q | None = None) -> dict[str, Coalesce]:
+    """The four conditional sums behind every gave / got / written-off figure.
+
+    `within` narrows the rows (the timeline passes `LIVE_ENTRIES`; the statement
+    has already filtered its queryset). Returned as expressions rather than a
+    result so a caller can add its own aggregate — `entry_count` — to the SAME
+    query instead of making a second trip.
+    """
+    base = within if within is not None else Q()
+    debit, credit = Q(direction=Direction.DEBIT), Q(direction=Direction.CREDIT)
+    return {
+        "debit": _money_sum(base & debit & ~WRITE_OFF_ENTRIES),
+        "credit": _money_sum(base & credit & ~WRITE_OFF_ENTRIES),
+        "written_off_debit": _money_sum(base & debit & WRITE_OFF_ENTRIES),
+        "written_off_credit": _money_sum(base & credit & WRITE_OFF_ENTRIES),
+    }
+
+
+def split_totals(aggregate: dict) -> dict:
+    """Shape `split_total_expressions`' result as the wire carries it."""
+    return {
+        "debit": aggregate["debit"] or ZERO,
+        "credit": aggregate["credit"] or ZERO,
+        "written_off": {
+            "debit": aggregate["written_off_debit"] or ZERO,
+            "credit": aggregate["written_off_credit"] or ZERO,
+        },
+    }
+
+
 def party_ledger_summary(*, tenant: Any, party_id: UUID | str) -> dict:
     """The khata header's figures that come from the LEDGER rather than the party row.
 
@@ -146,27 +217,27 @@ def party_ledger_summary(*, tenant: Any, party_id: UUID | str) -> dict:
     out of PTY-03: a zero this code cannot verify is indistinguishable from a
     real zero once it is on the screen.
 
-    One aggregate, three numbers, over the same `LIVE_ENTRIES` predicate the
-    balance uses — so "total you gave" and the balance can never tell different
-    stories about the same rows.
+    One aggregate over the same `LIVE_ENTRIES` predicate the balance uses — so
+    "total you gave" and the balance can never tell different stories about the
+    same rows. `total_debit` / `total_credit` exclude write-offs, which arrive
+    beside them as `written_off {debit, credit}`; the three together still sum
+    to the balance (see the block above).
     """
     if tenant is None:
-        return {"total_debit": ZERO, "total_credit": ZERO, "entry_count": 0}
+        return {
+            "total_debit": ZERO,
+            "total_credit": ZERO,
+            "written_off": {"debit": ZERO, "credit": ZERO},
+            "entry_count": 0,
+        }
     aggregate = LedgerEntry.objects.filter(tenant=tenant, party_id=party_id).aggregate(
-        total_debit=Coalesce(
-            Sum("amount", filter=LIVE_ENTRIES & Q(direction=Direction.DEBIT)),
-            Decimal("0.00"),
-            output_field=MONEY,
-        ),
-        total_credit=Coalesce(
-            Sum("amount", filter=LIVE_ENTRIES & Q(direction=Direction.CREDIT)),
-            Decimal("0.00"),
-            output_field=MONEY,
-        ),
+        **split_total_expressions(LIVE_ENTRIES),
         entry_count=Count("id", filter=LIVE_ENTRIES),
     )
+    totals = split_totals(aggregate)
     return {
-        "total_debit": aggregate["total_debit"],
-        "total_credit": aggregate["total_credit"],
+        "total_debit": totals["debit"],
+        "total_credit": totals["credit"],
+        "written_off": totals["written_off"],
         "entry_count": aggregate["entry_count"],
     }

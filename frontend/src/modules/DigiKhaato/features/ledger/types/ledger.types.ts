@@ -132,9 +132,30 @@ export interface LedgerEntryFormValues {
  * merchant scrolls.
  */
 export interface LedgerSummary {
+  /** "You gave in all" — debits EXCLUDING write-offs (opening debits count). */
   readonly totalDebit: string;
+  /** "You got in all" — credits EXCLUDING write-offs (opening credits count). */
   readonly totalCredit: string;
+  /**
+   * CR-2026-09-24-A — the write-off rows, by direction, which are neither gave
+   * nor got (LED-11 §8). Optional so a fixture or an older server without the
+   * key reads as "nothing written off" rather than as a type error.
+   */
+  readonly writtenOff?: WrittenOffTotals;
   readonly entryCount: number;
+}
+
+/**
+ * The write-off rows' totals, split by direction rather than netted.
+ *
+ * `credit` is a receivable forgiven (the party owed, and will not pay);
+ * `debit` is a payable forgiven. Together with gave and got they reconcile:
+ * `opening + gave − got + debit − credit = closing`. The server carries the
+ * components and never the net (CR-125).
+ */
+export interface WrittenOffTotals {
+  readonly debit: string;
+  readonly credit: string;
 }
 
 export interface LedgerPage {

@@ -96,6 +96,16 @@ export interface SessionState {
   /** The token's `ver` claim; a change forces a re-read (Part 22 §22.2). */
   version: number | null;
   lastFetchedAt: number | null;
+  /**
+   * N1-P1 — has THIS DOCUMENT (this JS runtime) held a session before?
+   *
+   * It survives every reset in this slice — logout, expiry, the login screen's
+   * teardown, a new sign-in — and is cleared only by a page load, which is the
+   * point: `useAuthRedirect` reads it to decide that a sign-in following an
+   * earlier session in the same runtime must finish with a DOCUMENT load, not
+   * a client navigation. See `useAuthRedirect` for why.
+   */
+  heldInThisDocument: boolean;
 }
 
 const initialState: SessionState = {
@@ -108,7 +118,19 @@ const initialState: SessionState = {
   error: null,
   version: null,
   lastFetchedAt: null,
+  heldInThisDocument: false,
 };
+
+/**
+ * A session that has just ended, or not yet begun: everything back to
+ * `initialState` and `anonymous` — except `heldInThisDocument`, which only a
+ * page load clears.
+ */
+const endedSession = (state: SessionState): SessionState => ({
+  ...initialState,
+  status: 'anonymous',
+  heldInThisDocument: state.heldInThisDocument,
+});
 
 export interface SessionPayload {
   readonly user: SessionUser;
@@ -138,15 +160,22 @@ const sessionSlice = createSlice({
       state.lastFetchedAt = Date.now();
       state.error = null;
       state.status = payload.activeTenant ? 'authenticated' : 'no_tenant';
+      state.heldInThisDocument = true;
     },
     sessionAnonymous(state, action: PayloadAction<ApiErrorShape | null>) {
-      Object.assign(state, initialState);
-      state.status = 'anonymous';
+      Object.assign(state, endedSession(state));
       // See partyListSlice: a frozen, never-mutated ApiErrorShape in a draft.
       state.error = action.payload as Draft<ApiErrorShape> | null;
     },
     /** Dispatched by the transport layer when the refresh itself failed. */
-    sessionExpired: () => ({ ...initialState, status: 'anonymous' as const }),
+    sessionExpired: (state) => endedSession(state),
+    /**
+     * The session exactly as a freshly loaded document has it —
+     * `heldInThisDocument` included. Nothing in the product dispatches this:
+     * only a page load clears that flag. It is the test seam for the singleton
+     * store, as `resetAuth` is for the auth slice.
+     */
+    resetSession: () => initialState,
   },
   extraReducers: (builder) => {
     builder
@@ -163,8 +192,7 @@ const sessionSlice = createSlice({
       .addCase(fetchSession.rejected, (state, action) => {
         // An aborted bootstrap is a remount, not a logout.
         if (action.meta.aborted) return;
-        Object.assign(state, initialState);
-        state.status = 'anonymous';
+        Object.assign(state, endedSession(state));
         state.error = (action.payload ?? null) as Draft<ApiErrorShape> | null;
       })
       // PLT-04 FR-5 / FR-7 — both re-read `/auth/me` and hand back the whole
@@ -196,7 +224,7 @@ const sessionSlice = createSlice({
           payload: action.payload,
         });
       })
-      .addCase(logout.fulfilled, () => ({ ...initialState, status: 'anonymous' as const }))
+      .addCase(logout.fulfilled, (state) => endedSession(state))
       /* NEW-1 — a successful sign-in, sign-up or reset-confirm is a NEW
          session, and whatever summary the store held belongs to the previous
          one. It is cleared here, on the fulfilled action itself, before
@@ -215,12 +243,9 @@ const sessionSlice = createSlice({
          `anonymous` rather than `loading`: nothing is being fetched yet, and
          `fetchSession.pending` moves it to `loading` in the same tick
          `useAuthRedirect` dispatches it. */
-      .addCase(passwordLogin.fulfilled, () => ({ ...initialState, status: 'anonymous' as const }))
-      .addCase(registerAccount.fulfilled, () => ({ ...initialState, status: 'anonymous' as const }))
-      .addCase(confirmPasswordReset.fulfilled, () => ({
-        ...initialState,
-        status: 'anonymous' as const,
-      }))
+      .addCase(passwordLogin.fulfilled, (state) => endedSession(state))
+      .addCase(registerAccount.fulfilled, (state) => endedSession(state))
+      .addCase(confirmPasswordReset.fulfilled, (state) => endedSession(state))
       // A tenant switch keeps the session and clears everything else; the
       // session itself is refetched immediately afterwards (§19.6.5 step 2).
       .addCase(resetAllFeatureState, (state) => {
@@ -229,7 +254,7 @@ const sessionSlice = createSlice({
   },
 });
 
-export const { sessionRequested, sessionLoaded, sessionAnonymous, sessionExpired } =
+export const { sessionRequested, sessionLoaded, sessionAnonymous, sessionExpired, resetSession } =
   sessionSlice.actions;
 
 /**
@@ -260,6 +285,9 @@ export default sessionSlice.reducer;
 // ── Selectors ────────────────────────────────────────────────────────────────
 
 export const selectSessionStatus = (state: RootState): SessionStatus => state.session.status;
+/** N1-P1 — see `SessionState.heldInThisDocument`. */
+export const selectSessionHeldInThisDocument = (state: RootState): boolean =>
+  state.session.heldInThisDocument;
 export const selectMustChangePassword = (state: RootState): boolean =>
   state.session.user?.mustChangePassword ?? false;
 export const selectSessionUser = (state: RootState): SessionUser | null => state.session.user;

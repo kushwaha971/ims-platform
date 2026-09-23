@@ -235,6 +235,78 @@ describe('the khata timeline', () => {
     view.unmount();
   });
 
+  it('shows a write-off as its own figure, not inside "You got in all"', async () => {
+    /* CR-2026-09-24-A, the QA defect: after a write-off the header read
+       "You got in all ₹930.00" over a row saying "Written off". The server now
+       reports gave and got WITHOUT write-offs, and the forgiven amount is a
+       third line — so the header adds up the way a merchant checks it:
+       2,800 − 300 − 2,500 = 0. */
+    ledgerService.listPartyEntries.mockResolvedValue(
+      page(
+        [
+          entry({
+            direction: 'credit',
+            entryType: 'write_off',
+            amount: '2500.00',
+            note: 'Shop closed',
+            reason: 'Shop closed',
+          }),
+        ],
+        {
+          summary: {
+            totalDebit: '2800.00',
+            totalCredit: '300.00',
+            writtenOff: { debit: '0.00', credit: '2500.00' },
+            entryCount: 4,
+          },
+        }
+      )
+    );
+
+    renderWithProviders(<PartyLedgerTimeline partyId={PARTY_ID} />);
+
+    expect(await screen.findByText('Written off in all')).toBeInTheDocument();
+    expect(screen.getByText('Written off in all, ₹2,500.00')).toBeInTheDocument();
+    expect(screen.getByText('You got in all, ₹300.00')).toBeInTheDocument();
+    expect(screen.getByText('You gave in all, ₹2,800.00')).toBeInTheDocument();
+  });
+
+  it('draws no written-off line for a khata nobody has forgiven', async () => {
+    ledgerService.listPartyEntries.mockResolvedValue(
+      page([entry()], {
+        summary: {
+          totalDebit: '500.00',
+          totalCredit: '0.00',
+          writtenOff: { debit: '0.00', credit: '0.00' },
+          entryCount: 1,
+        },
+      })
+    );
+
+    renderWithProviders(<PartyLedgerTimeline partyId={PARTY_ID} />);
+
+    expect(await screen.findByText('You gave in all')).toBeInTheDocument();
+    expect(screen.queryByText(/Written off in all/)).not.toBeInTheDocument();
+  });
+
+  it('names each side when a party has both kinds of write-off', async () => {
+    ledgerService.listPartyEntries.mockResolvedValue(
+      page([entry()], {
+        summary: {
+          totalDebit: '500.00',
+          totalCredit: '0.00',
+          writtenOff: { debit: '35.00', credit: '20.00' },
+          entryCount: 3,
+        },
+      })
+    );
+
+    renderWithProviders(<PartyLedgerTimeline partyId={PARTY_ID} />);
+
+    expect(await screen.findByText('Written off in all (to get)')).toBeInTheDocument();
+    expect(screen.getByText('Written off in all (to give)')).toBeInTheDocument();
+  });
+
   it('tells a merchant with an empty khata what to do about it', async () => {
     ledgerService.listPartyEntries.mockResolvedValue(
       page([], { summary: { totalDebit: '0.00', totalCredit: '0.00', entryCount: 0 } })

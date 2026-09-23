@@ -140,3 +140,12 @@ The frontend packages already in `package.json` beyond the canon list (`@radix-u
 `cmdk`, `vaul`, `sonner`, `recharts`, `react-day-picker`, …) are peer dependencies of the
 vendored `ml-uikit`, not choices made by feature code; feature code imports none of them
 except through the design system. No new package is added for any row above.
+
+## Split locale catalogues per route group (raised 24 Sep 2026)
+
+The app shell grew about 1.8 KB gzip during Sprint 3, most of it `locales/en.json`
+copy that ships with react-intl on every route — the login screen downloads the
+statement's and the write-off's strings. Splitting the catalogue into a shell set
+(auth, navigation, errors, snackbar) and per-route-group sets loaded with their
+route chunk is the structural fix. Owner: frontend. Not blocking; every route is
+inside its recorded budget (`frontend/bundle-budgets.json`).

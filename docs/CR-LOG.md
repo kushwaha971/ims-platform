@@ -313,3 +313,76 @@ specification — listed so the chapter's §19 can absorb the rules):
 
 Part 43 in the Claude project is the authoritative register and needs the same entry (this
 file is a local carry).
+
+## CR-2026-09-24-A — a write-off is neither "You gave" nor "You got" in any total
+
+**State:** `raised` (implemented; awaiting registration in Part 43). **Target:** Part 17-02
+LED-01 (khata header, PTY-03 §14 summary), LED-04 FR-1, §7.2, §8, §14, BR-5; LED-11 FR-4;
+Part 22 §22.5 (`meta.summary`, statement `totals`). **Gate:** immediate — QA found the
+screens contradicting LED-11 §8.
+
+**Observed.** After a write-off the khata read "You got in all ₹930.00" — a figure that
+included the written-off amount — over a row labelled "Written off" — and no money had been received. A
+payable write-off inflated "You gave in all" the same way; the statement's "You got" tile and
+its printed summary line did too. Both summaries summed every `credit`/`debit`, and a
+write-off is a credit (receivable forgiven) or a debit (payable forgiven).
+
+**Why that is wrong.** LED-11 BR-3 keeps write-offs out of every "collections" total, §8
+paints them "neither gave nor got", PTY-04 BR-5 calls them "a P&L event, not a cash event",
+and RPT-06/RPT-01 report them as their own line ("Bad debts written off", "Write-offs this
+period"). The row already said so (`entryAmountView` → "Written off", neutral); the totals
+above it did not.
+
+**Decision.**
+
+1. Every gave/got total the ledger reports is split into **three mutually exclusive
+   buckets over one set of rows**: `debit` = Σ debit rows with `entry_type ≠ 'write_off'`
+   ("You gave"), `credit` = the same for credit ("You got"), and
+   `written_off { debit, credit }` = the write-off rows by direction (`credit` = receivable
+   forgiven, `debit` = payable forgiven). Split rather than netted, because a party that is
+   both customer and supplier can carry one of each and a single signed figure would need a
+   label the client cannot choose.
+2. **Arithmetic integrity is preserved and made visible**:
+   `brought forward + gave − got + written_off.debit − written_off.credit = closing`. The
+   closing figure, the running balance and `parties_party.balance` are untouched, so LED-04
+   BR-3 (unbounded closing = party balance) holds by construction.
+3. **CR-125 holds**: the server carries components only — no `net_change`, no net
+   written-off — and the client subtracts.
+4. **Classification is by the row's own `entry_type`.** A correction's replacement keeps
+   `write_off` (LED-11 BR-4) and stays in the bucket; a reversal row is `entry_type =
+   'reversal'`, out of every live total with its original (canon §0.2), and — with
+   corrections shown on a statement — sits in gave/got like every reversal, i.e. in the
+   column it is printed in.
+5. **Opening entries are unchanged**: an `opening` debit counts in "You gave" and an
+   `opening` credit in "You got", as since LED-02. LED-02 says nothing to the contrary; the
+   row itself is labelled "They owe me" / "I owe them".
+6. **Presentation**: a "Written off" figure appears only when non-zero — as a full-width
+   third line under the khata's two-cell "You gave in all / You got in all" row, as a fifth
+   `UbStatCard` in the statement strip, and as a fifth figure on the printed summary line.
+   Neutral tone (LED-11 §8). When both directions are non-zero each says which ("to get" /
+   "to give"). Copy: `ledger.timeline.writtenOff`, `ledger.statement.writtenOff` (ICU
+   `select` on `side`), en + hi.
+7. **Rows stay where they are.** On the printed table and in the CSV a write-off's amount
+   stays in its direction's column, so an accountant can still add the columns down
+   (BR-8's columns are a contract; `entry_type` = `write_off` distinguishes the row). The
+   printed Particulars now reads "Write-off · {reason}" so the "You got" column never shows a
+   bare reason that reads like a payment, and the reason is no longer printed twice (it is
+   also the note, PTY-04 FR-3). The CSV has no totals row, so nothing else changes there.
+8. **Aging is unchanged and already right**: a write-off credit is on the paid side of the
+   FIFO CTE and retires the oldest debit first (test added).
+
+**API (additive; no key removed or renamed).**
+- `GET /parties/{id}/ledger-entries` first page `meta.summary`:
+  `{ total_debit, total_credit, written_off: { debit, credit }, entry_count }`.
+- `GET /parties/{id}/statement` `data.totals`: `{ debit, credit, written_off: { debit, credit } }`.
+- Semantics note: `total_debit`/`total_credit` and `totals.debit`/`totals.credit` now
+  EXCLUDE write-offs. A consumer that derived a net as `debit − credit` must add
+  `written_off.debit − written_off.credit`; the only consumer, this frontend, never did
+  (it reads `closing_balance`), and ships in the same change. `written_off` is always
+  present (zeros when none).
+
+**Amendments requested.** LED-04 FR-1/§7.2: the strip and summary line gain "Written off"
+(when non-zero); §14 `totals` gains `written_off`; BR-5 "debit_total, credit_total exclude
+`write_off` rows, which are reported as `written_off`". LED-01/PTY-03 §14 summary gains
+`written_off`. Part 22 §22.5 both shapes. Part 43 in the Claude project is the authoritative
+register and needs the same entry (this file is a local carry).

@@ -1644,12 +1644,12 @@ async function phaseN1(browser, state) {
   const landed = (u) => ['/dashboard', '/parties'].includes(new URL(u).pathname);
   for (const size of [DESKTOP, PHONE]) {
     const ctx = await browser.newContext({ viewport: { width: size.width, height: size.height } });
-    let armed = false; const leaks = []; const snacks = []; let docLoads = 0;
+    let armed = false; const leaks = []; const snacks = []; let docLoads = 0; const docUrls = [];
     await ctx.exposeBinding('__nLeak', (_s, n, where) => { if (armed) leaks.push({ n, where }); });
     await ctx.exposeBinding('__nSnack', (_s, t) => { if (armed) snacks.push(t); });
-    await ctx.exposeBinding('__nDoc', () => { docLoads += 1; });
+    await ctx.exposeBinding('__nDoc', (_s, where) => { docLoads += 1; docUrls.push(where); });
     await ctx.addInitScript((names) => {
-      window.__nDoc();
+      window.__nDoc(`${location.pathname}${location.search}`);
       const start = () => {
         const scan = (node) => {
           const t = node.textContent || '';
@@ -1699,7 +1699,7 @@ async function phaseN1(browser, state) {
     const tSubmit = Date.now();
     await page.click('button[type="submit"]');
     for (let k = 0; k < 20; k += 1) { await page.screenshot({ path: nShot(size.id, `N1-2-flash-${String(k).padStart(2, '0')}`) }).catch(() => {}); await page.waitForTimeout(100); }
-    await page.getByText(tenantA.shop).first().waitFor({ timeout: 30000 }).catch(() => {});
+    await page.getByText(tenantA.shop).filter({ visible: true }).first().waitFor({ timeout: 30000 }).catch(() => {});
     const landedMs = Date.now() - tSubmit;
     await page.waitForTimeout(3000);
     const me = await whoAmI(page);
@@ -1709,7 +1709,18 @@ async function phaseN1(browser, state) {
     record('N1', `${size.id}: ONE sign-in as tenant A (${tenantA.email}) lands on /dashboard (→ /parties) as A`, landed(page.url()) && me.email === tenantA.email && shellA > 0 && loginPosts === 1,
       `url=${page.url().replace(FRONTEND, '')} me=${me.email} shellA=${shellA} POST /auth/login×${loginPosts} ~${landedMs}ms navs=${JSON.stringify(navs.slice(v1))}`);
     record('N1', `${size.id}: no "switched in another tab" snackbar`, snacks.length === 0, JSON.stringify(snacks));
-    record('N1', `${size.id}: no document reload after cookie expiry (logout→login→dashboard is one JS runtime)`, docLoads === l0, `docLoads+${docLoads - l0} (since submit +${docLoads - l1})`);
+    /* N1-P1 (fix of this phase's own finding): expiry → /login stays in the
+       same JS runtime (asserted above, and again here as l1 === l0), but the
+       sign-in that follows an earlier session in the same document now ends
+       in ONE document load of the destination. A client navigation there read
+       Next's route cache, which had learned "/dashboard IS /login?next=…" from
+       the proxy's redirect while the cookies were gone, and never left /login
+       on a phone. What this check guards against is still what it was written
+       for: a reload BACK TO /login (the old stale-tab bounce) or a second one. */
+    const docsAfterSubmit = docUrls.slice(l1);
+    record('N1', `${size.id}: no reload between expiry and sign-in; the sign-in ends in exactly one document load, of the destination (never /login)`,
+      l1 === l0 && docsAfterSubmit.length === 1 && landed(`${FRONTEND}${docsAfterSubmit[0]}`),
+      `docLoads before submit +${l1 - l0}, after submit ${JSON.stringify(docsAfterSubmit)}`);
     record('N1', `${size.id}: tenant B's name and parties never rendered after expiry (MutationObserver across navigations)`, leaks.length === 0, JSON.stringify(leaks.slice(0, 3)));
     note(`${size.id}: network after submit: ${JSON.stringify(net.slice(n1).slice(0, 25))}`);
     note(`${size.id}: network between expiry and submit: ${JSON.stringify(net.slice(n0, n1))}`);

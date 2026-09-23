@@ -10,6 +10,7 @@ import {
   isOpeningEntry,
   isReversalRow,
   supersededIds,
+  writtenOffLines,
 } from './entryDisplay';
 
 import type { LedgerEntry } from '../types/ledger.types';
@@ -421,5 +422,29 @@ describe('a write-off row', () => {
     expect(entryReason(entry({ note: 'Cement', reason: 'Typed 5000 for 500' }))).toBe(
       'Typed 5000 for 500'
     );
+  });
+});
+
+describe('writtenOffLines (CR-2026-09-24-A)', () => {
+  it('draws nothing when nothing was written off, or the server did not say', () => {
+    expect(writtenOffLines(undefined)).toEqual([]);
+    expect(writtenOffLines(null)).toEqual([]);
+    expect(writtenOffLines({ debit: '0.00', credit: '0.00' })).toEqual([]);
+  });
+
+  it('is plain "Written off" when only one side was forgiven', () => {
+    expect(writtenOffLines({ debit: '0.00', credit: '2500.00' })).toEqual([
+      { side: 'other', amount: '2500.00' },
+    ]);
+    expect(writtenOffLines({ debit: '35.00', credit: '0.00' })).toEqual([
+      { side: 'other', amount: '35.00' },
+    ]);
+  });
+
+  it('names each side, receivable first, when both were', () => {
+    expect(writtenOffLines({ debit: '35.00', credit: '20.00' })).toEqual([
+      { side: 'receivable', amount: '20.00' },
+      { side: 'payable', amount: '35.00' },
+    ]);
   });
 });

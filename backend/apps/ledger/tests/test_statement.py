@@ -162,7 +162,11 @@ def test_the_totals_are_over_the_period_not_the_page(book: Any) -> None:
     reading a figure about the table; the figure they want is about the period."""
     totals = statement_totals(tenant=book.tenant, party_id=book.id)
 
-    assert totals == {"debit": Decimal("2800.00"), "credit": Decimal("300.00")}
+    assert totals == {
+        "debit": Decimal("2800.00"),
+        "credit": Decimal("300.00"),
+        "written_off": {"debit": Decimal("0.00"), "credit": Decimal("0.00")},
+    }
 
 
 def test_a_period_with_nothing_in_it_still_carries_its_opening(book: Any) -> None:
@@ -347,7 +351,11 @@ def test_the_statement_reads_like_a_passbook(book: Any, api_as: Any) -> None:
         "2500.00",
     ]
     assert body["closing_balance"] == "2500.00"
-    assert body["totals"] == {"debit": "2800.00", "credit": "300.00"}
+    assert body["totals"] == {
+        "debit": "2800.00",
+        "credit": "300.00",
+        "written_off": {"debit": "0.00", "credit": "0.00"},
+    }
 
 
 def test_a_narrowed_period_carries_its_opening(book: Any, api_as: Any) -> None:

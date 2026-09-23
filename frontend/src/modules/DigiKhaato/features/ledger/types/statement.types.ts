@@ -1,4 +1,9 @@
-import type { LedgerDirection, LedgerEntryStatus, LedgerEntryType } from './ledger.types';
+import type {
+  LedgerDirection,
+  LedgerEntryStatus,
+  LedgerEntryType,
+  WrittenOffTotals,
+} from './ledger.types';
 
 /**
  * LED-04 §14 — the statement's own wire and domain shapes.
@@ -59,8 +64,12 @@ export interface StatementRow {
 export interface StatementSummary {
   readonly openingBalance: string;
   readonly closingBalance: string;
+  /** "You gave" over the period — excludes write-offs (CR-2026-09-24-A). */
   readonly totalDebit: string;
+  /** "You got" over the period — excludes write-offs. */
   readonly totalCredit: string;
+  /** The period's write-offs, by direction. Absent reads as none. */
+  readonly writtenOff?: WrittenOffTotals;
   /**
    * FR-11 / LED-02 BR-3 — there is a row dated before the opening balance.
    *

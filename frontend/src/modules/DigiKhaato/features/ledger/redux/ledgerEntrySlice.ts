@@ -313,15 +313,33 @@ const applyReversal = (state: Draft<LedgerEntryState>, patch: ReversalPatch): vo
   if (!state.summary) return;
   const removed = patch.original;
   const added = patch.replacement;
-  const debit =
-    (removed.direction === 'debit' ? -Number(removed.amount) : 0) +
-    (added && added.direction === 'debit' ? Number(added.amount) : 0);
-  const credit =
-    (removed.direction === 'credit' ? -Number(removed.amount) : 0) +
-    (added && added.direction === 'credit' ? Number(added.amount) : 0);
+  /* CR-2026-09-24-A — a write-off sits in its own bucket, not in gave/got, so
+     undoing one (or correcting it, which keeps `write_off` — LED-11 BR-4) moves
+     `writtenOff` and leaves the other two alone. */
+  const delta = (
+    entry: Draft<LedgerEntry> | null,
+    direction: LedgerEntry['direction'],
+    writeOff: boolean
+  ): number =>
+    entry && entry.direction === direction && (entry.entryType === 'write_off') === writeOff
+      ? Number(entry.amount)
+      : 0;
+  const change = (direction: LedgerEntry['direction'], writeOff: boolean): number =>
+    delta(added, direction, writeOff) - delta(removed, direction, writeOff);
+  const writtenOff = state.summary.writtenOff;
+  const writtenOffDebit = change('debit', true);
+  const writtenOffCredit = change('credit', true);
   state.summary = {
-    totalDebit: addMoney(state.summary.totalDebit, debit),
-    totalCredit: addMoney(state.summary.totalCredit, credit),
+    totalDebit: addMoney(state.summary.totalDebit, change('debit', false)),
+    totalCredit: addMoney(state.summary.totalCredit, change('credit', false)),
+    ...(writtenOff || writtenOffDebit || writtenOffCredit
+      ? {
+          writtenOff: {
+            debit: addMoney(writtenOff?.debit ?? '0.00', writtenOffDebit),
+            credit: addMoney(writtenOff?.credit ?? '0.00', writtenOffCredit),
+          },
+        }
+      : {}),
     entryCount: state.summary.entryCount + (added ? 0 : -1),
   };
 };

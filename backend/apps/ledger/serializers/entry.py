@@ -161,17 +161,45 @@ class PartyScopedEntryWriteSerializer(LedgerEntryWriteSerializer):
         return fields
 
 
+class WrittenOffTotalsSerializer(serializers.Serializer):
+    """`written_off {debit, credit}` — the write-off rows, by direction.
+
+    CR-2026-09-24-A. `credit` is receivable forgiven ("you will not get it"),
+    `debit` is payable forgiven ("you will not pay it"). Split rather than
+    netted, because a party that is both customer and supplier can carry one of
+    each, and a single signed figure would need a label the client cannot pick.
+    """
+
+    debit = MoneySerializerField(read_only=True)
+    credit = MoneySerializerField(read_only=True)
+
+
 class LedgerSummarySerializer(serializers.Serializer):
-    """The three khata figures the ledger can answer (PTY-03 §14).
+    """The khata figures the ledger can answer (PTY-03 §14).
 
     Money as strings, for the reason `PartyTotalsSerializer` is a serializer at
     all: handed a raw dict the renderer emits `0.0` and the precision is gone
     before the client sees it.
+
+    `total_debit` / `total_credit` are "You gave in all" / "You got in all" and
+    exclude write-offs, which are `written_off` (additive, CR-2026-09-24-A).
     """
 
     total_debit = MoneySerializerField(read_only=True)
     total_credit = MoneySerializerField(read_only=True)
+    written_off = WrittenOffTotalsSerializer(read_only=True)
     entry_count = serializers.IntegerField(read_only=True)
+
+
+class StatementTotalsSerializer(serializers.Serializer):
+    """LED-04 §14 `totals` — `{debit, credit}` plus `written_off {debit, credit}`.
+
+    No net figure, by CR-125: the client subtracts.
+    """
+
+    debit = MoneySerializerField(read_only=True)
+    credit = MoneySerializerField(read_only=True)
+    written_off = WrittenOffTotalsSerializer(read_only=True)
 
 
 class EntryReverseSerializer(serializers.Serializer):

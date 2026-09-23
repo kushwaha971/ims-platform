@@ -1,7 +1,8 @@
 import type { UbAmountSign, UbAmountTone } from 'src/design-system';
 import type { TranslateFn } from 'src/hooks/useTranslation';
+import { isZeroAmount } from 'src/utils/money';
 
-import type { LedgerDirection, LedgerEntry } from '../types/ledger.types';
+import type { LedgerDirection, LedgerEntry, WrittenOffTotals } from '../types/ledger.types';
 
 /**
  * Part 19 §19.2.5 — pure presentation decisions, shared by every surface that
@@ -289,4 +290,39 @@ export const groupByDay = (entries: readonly LedgerEntry[]): readonly EntryDayGr
     }
   }
   return groups;
+};
+
+/**
+ * One "Written off" figure beside "You gave" / "You got" (CR-2026-09-24-A).
+ *
+ * `side` feeds the copy's ICU `select`: `other` is plain "Written off", used
+ * whenever only one direction has been written off — which is every party but
+ * one that is both customer and supplier. Only when BOTH are non-zero does each
+ * figure say which it is ("to get" / "to give"), because two cells both reading
+ * "Written off" over different numbers is a riddle.
+ */
+export interface WrittenOffLine {
+  readonly side: 'receivable' | 'payable' | 'other';
+  readonly amount: string;
+}
+
+/**
+ * The written-off figures to draw — none at all when nothing was written off.
+ *
+ * Absent rather than "₹0.00", as "You gave in all ₹0.00" is absent on an empty
+ * khata: a third zero on every party would teach the merchant to read past the
+ * line on the one party where it matters. A receivable write-off (a credit)
+ * comes first; it is the common case and it sits beside "You got".
+ */
+export const writtenOffLines = (
+  writtenOff: WrittenOffTotals | null | undefined
+): readonly WrittenOffLine[] => {
+  if (!writtenOff) return [];
+  const receivable = !isZeroAmount(writtenOff.credit);
+  const payable = !isZeroAmount(writtenOff.debit);
+  const both = receivable && payable;
+  const lines: WrittenOffLine[] = [];
+  if (receivable) lines.push({ side: both ? 'receivable' : 'other', amount: writtenOff.credit });
+  if (payable) lines.push({ side: both ? 'payable' : 'other', amount: writtenOff.debit });
+  return lines;
 };

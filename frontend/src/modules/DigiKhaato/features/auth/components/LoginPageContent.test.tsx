@@ -1,6 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import { resetSession } from 'src/redux/slice/sessionSlice';
 import { store } from 'src/redux/store';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
 
@@ -78,6 +79,10 @@ const AUTH_RESULT = {
 beforeEach(() => {
   mockSearch = '';
   store.dispatch(resetAuth());
+  // Each test is a fresh load of /login: a sign-in after an earlier session in
+  // the same document finishes with a document load instead (N1-P1), which
+  // `useAuthRedirect.test.tsx` covers.
+  store.dispatch(resetSession());
   jest.clearAllMocks();
   window.localStorage.clear();
   authService.getSession.mockResolvedValue({

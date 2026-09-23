@@ -119,6 +119,27 @@ describe('asking for a statement', () => {
     expect(page.nextCursor).toBe('abc');
     expect(page.hasMore).toBe(true);
   });
+
+  it('maps the written-off totals when the server sends them (CR-2026-09-24-A)', async () => {
+    mockApi.get.mockResolvedValue({
+      data: {
+        ...WIRE,
+        data: {
+          ...WIRE.data,
+          totals: {
+            debit: '2800.00',
+            credit: '300.00',
+            written_off: { debit: '0.00', credit: '2500.00' },
+          },
+        },
+      },
+    });
+
+    const page = await getStatement(PARTY, filters());
+
+    expect(page.summary.totalCredit).toBe('300.00');
+    expect(page.summary.writtenOff).toEqual({ debit: '0.00', credit: '2500.00' });
+  });
 });
 
 describe('the CSV address', () => {

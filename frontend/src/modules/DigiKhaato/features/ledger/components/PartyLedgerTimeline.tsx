@@ -36,6 +36,7 @@ import {
   isCorrectable,
   isOpeningEntry,
   isReversalRow,
+  writtenOffLines,
 } from '../view-model/entryDisplay';
 
 import { EntryActionsMenu } from './EntryActionsMenu';
@@ -184,6 +185,29 @@ export function PartyLedgerTimeline({
             </UbStack>
           </UbBox>
         )}
+        {/* CR-2026-09-24-A — a write-off is neither gave nor got (LED-11 §8), so
+            it is its own line under the two, full width so a 360 px phone does
+            not have to fit three figures across. Only when there is one: the
+            khata of a party nobody has forgiven reads exactly as before. Neutral
+            tone, as the row itself is. With it the header reconciles the way a
+            merchant checks it: gave − got − written off = the balance. */}
+        {hasEntries &&
+          writtenOffLines(ledger.summary?.writtenOff).map((line) => (
+            <UbStack key={line.side} gap={1} className="border-t border-border-hairline px-4 py-3">
+              <UbText as="span" variant="inherit" className="ds-body-s-medium text-text-tertiary">
+                {t('ledger.timeline.writtenOff', { side: line.side })}
+              </UbText>
+              <UbAmount
+                value={line.amount}
+                tone="neutral"
+                sign="none"
+                label={t('ledger.timeline.writtenOff', { side: line.side })}
+                labelHidden
+                size="md"
+                className="self-start"
+              />
+            </UbStack>
+          ))}
 
         {ledger.isLoading && (
           <UbBox className="p-4">

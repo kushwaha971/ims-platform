@@ -4,6 +4,7 @@ import { UbAmount, UbBox, UbStack, UbText } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { formatInr } from 'src/utils/money';
 
+import { writtenOffLines } from '../../view-model/entryDisplay';
 import {
   balanceDirection,
   balanceLabelId,
@@ -125,6 +126,18 @@ export function StatementPrintView({
             label={t('ledger.statement.youGot')}
             size="sm"
           />
+          {/* CR-2026-09-24-A — the fifth figure, only when non-zero, so the
+              summary line a customer reads adds up to the closing on its own. */}
+          {writtenOffLines(summary.writtenOff).map((line) => (
+            <UbAmount
+              key={line.side}
+              value={line.amount}
+              tone="neutral"
+              sign="none"
+              label={t('ledger.statement.writtenOff', { side: line.side })}
+              size="sm"
+            />
+          ))}
           <UbAmount
             value={unsigned(summary.closingBalance)}
             tone={balanceDirection(summary.closingBalance) === 'payable' ? 'payable' : 'receivable'}
@@ -211,10 +224,7 @@ function StatementPrintTable({
         {rows.map((row) => (
           <tr key={row.id} className={isStruckThrough(row) ? 'line-through opacity-60' : undefined}>
             <td>{d(row.entryDate)}</td>
-            <td>
-              {row.note.trim() || t(`ledger.entry.type.${row.entryType}`)}
-              {row.reason ? ` · ${row.reason}` : ''}
-            </td>
+            <td>{printParticulars(row, t)}</td>
             {/* Grouped, with the symbol. A printed statement read "2300.00"
                 where a merchant reading it out says "twenty-three hundred
                 rupees", and grouping is what makes a column of figures
@@ -227,4 +237,26 @@ function StatementPrintTable({
       </tbody>
     </table>
   );
+}
+
+/**
+ * The Particulars cell.
+ *
+ * A write-off's amount is printed in its direction's column — "You got" for a
+ * forgiven receivable — so that the columns stay a direction ledger an
+ * accountant can add down (brought forward + Σ gave − Σ got = closing), which is
+ * also how the CSV is ruled (BR-8). So the cell has to say what the row is:
+ * the note of a write-off is the merchant's reason, and "Shop closed" alone in
+ * the "You got" column reads as a payment. It is prefixed "Write-off", and the
+ * reason — the same sentence as the note on every write-off PTY-04 posts — is
+ * not printed twice (CR-2026-09-24-A).
+ */
+function printParticulars(row: StatementRow, t: (id: string) => string): string {
+  const title = row.note.trim() || t(`ledger.entry.type.${row.entryType}`);
+  const reason = row.reason && row.reason.trim() !== row.note.trim() ? ` · ${row.reason}` : '';
+  if (row.entryType === 'write_off') {
+    const label = t('ledger.entry.type.write_off');
+    return title === label ? `${label}${reason}` : `${label} · ${title}${reason}`;
+  }
+  return `${title}${reason}`;
 }

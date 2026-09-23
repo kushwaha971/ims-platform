@@ -317,6 +317,56 @@ describe('a reversal, on the rows already on screen', () => {
   });
 });
 
+describe('undoing a write-off (CR-2026-09-24-A)', () => {
+  /* A write-off is in its own bucket, so reversing one must move `writtenOff`
+     and leave "You gave in all" / "You got in all" exactly where they were —
+     the reverse of the QA defect, where got absorbed it. */
+  const writeOff = entry({
+    id: 'wo',
+    direction: 'credit',
+    entryType: 'write_off',
+    amount: '2500.00',
+    note: 'Shop closed',
+    reason: 'Shop closed',
+  });
+  const reversal = entry({
+    id: 'wo-rev',
+    direction: 'debit',
+    entryType: 'reversal',
+    amount: '2500.00',
+    reversesId: 'wo',
+    createdAt: '2026-09-17T11:00:00Z',
+  });
+
+  it('takes it out of written off, not out of got', () => {
+    const next = reducer(
+      {
+        ...opened(),
+        rows: [writeOff],
+        status: 'succeeded',
+        summary: {
+          totalDebit: '2800.00',
+          totalCredit: '300.00',
+          writtenOff: { debit: '0.00', credit: '2500.00' },
+          entryCount: 4,
+        },
+      },
+      {
+        type: reverseEntry.fulfilled.type,
+        payload: { entry: reversal, balance: '2500.00', originalId: 'wo', reversalId: 'wo-rev' },
+        meta: { arg: { entry: writeOff, reason: 'Paid after all', idempotencyKey: 'k' } },
+      }
+    );
+
+    expect(next.summary).toEqual({
+      totalDebit: '2800.00',
+      totalCredit: '300.00',
+      writtenOff: { debit: '0.00', credit: '0.00' },
+      entryCount: 3,
+    });
+  });
+});
+
 describe('a correction, on the rows already on screen', () => {
   const original = entry({ id: 'original', amount: '500.00' });
   const replacement = entry({

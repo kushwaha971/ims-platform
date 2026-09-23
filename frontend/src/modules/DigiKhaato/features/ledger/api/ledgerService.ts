@@ -41,6 +41,8 @@ interface LedgerListApiResponse {
     readonly summary?: {
       readonly total_debit: string;
       readonly total_credit: string;
+      /** CR-2026-09-24-A — additive; absent from an older server. */
+      readonly written_off?: { readonly debit: string; readonly credit: string };
       readonly entry_count: number;
     };
   };
@@ -191,6 +193,14 @@ export const listPartyEntries = async (
       ? {
           totalDebit: summary.total_debit,
           totalCredit: summary.total_credit,
+          ...(summary.written_off
+            ? {
+                writtenOff: {
+                  debit: summary.written_off.debit,
+                  credit: summary.written_off.credit,
+                },
+              }
+            : {}),
           entryCount: summary.entry_count,
         }
       : null,

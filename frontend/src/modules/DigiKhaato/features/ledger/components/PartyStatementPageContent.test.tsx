@@ -247,6 +247,82 @@ describe('what a role may take away', () => {
   });
 });
 
+describe('write-offs (CR-2026-09-24-A)', () => {
+  /* Opening 2,300 inside the period, gave 500, got 300, written off 2,500:
+     the server reports gave 2,800 and got 300 WITHOUT the write-off, and the
+     write-off as its own figure — so the strip adds up on its face. */
+  const writtenOffPage = () =>
+    page({
+      summary: {
+        openingBalance: '0.00',
+        closingBalance: '0.00',
+        totalDebit: '2800.00',
+        totalCredit: '300.00',
+        writtenOff: { debit: '0.00', credit: '2500.00' },
+        hasEntriesBeforeOpening: false,
+      },
+      rows: [
+        {
+          id: 'wo',
+          entryDate: '2026-09-24',
+          entryType: 'write_off' as const,
+          direction: 'credit' as const,
+          amount: '2500.00',
+          note: 'Shop closed',
+          status: 'posted' as const,
+          runningBalance: '0.00',
+          source: null,
+          reversesId: null,
+          supersedesId: null,
+          reason: 'Shop closed',
+        },
+      ],
+    });
+
+  it('shows a Written off tile beside You gave and You got', async () => {
+    statementService.getStatement.mockResolvedValue(writtenOffPage());
+
+    renderWithProviders(<PartyStatementPageContent id={PARTY_ID} />);
+    const view = await onScreen();
+    await view.findByText('Shop closed');
+
+    const strip = within(view.getByTestId('ub-stat-grid'));
+    expect(strip.getByText('Written off')).toBeInTheDocument();
+    expect(strip.getByText('₹2,500.00')).toBeInTheDocument();
+    expect(strip.getByText('₹300.00')).toBeInTheDocument();
+    expect(strip.getByText('₹2,800.00')).toBeInTheDocument();
+  });
+
+  it('shows no Written off tile when nothing was written off', async () => {
+    statementService.getStatement.mockResolvedValue(
+      page({
+        summary: { ...page().summary, writtenOff: { debit: '0.00', credit: '0.00' } },
+      })
+    );
+
+    renderWithProviders(<PartyStatementPageContent id={PARTY_ID} />);
+    const view = await onScreen();
+
+    await view.findByText('Cement bags');
+    expect(screen.queryByText(/Written off/)).not.toBeInTheDocument();
+  });
+
+  it('prints the written-off figure and labels the row, once', async () => {
+    statementService.getStatement.mockResolvedValue(writtenOffPage());
+
+    renderWithProviders(<PartyStatementPageContent id={PARTY_ID} />);
+    await (await onScreen()).findByText('Shop closed');
+
+    const sheet = screen.getByRole('table').closest('.ub-print-sheet') as HTMLElement;
+    const printed = within(sheet);
+    // The summary line's fifth figure — label shown and in the accessible name.
+    expect(printed.getByText('Written off, ₹2,500.00')).toBeInTheDocument();
+    // The row sits in the "You got" column, so the cell says it is a write-off
+    // and does not repeat the reason that is also its note.
+    expect(printed.getByText('Write-off · Shop closed')).toBeInTheDocument();
+  });
+});
+
 describe('printing', () => {
   it('fetches the whole period before opening the print dialog', async () => {
     /* FR-8, and the defect it prevents: a print dialog gets what is in the DOM

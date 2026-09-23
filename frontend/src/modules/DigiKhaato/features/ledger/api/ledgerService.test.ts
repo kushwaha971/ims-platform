@@ -295,6 +295,33 @@ describe('reading a khata', () => {
     });
   });
 
+  it('maps the written-off totals beside gave and got (CR-2026-09-24-A)', async () => {
+    mockApi.get.mockResolvedValue({
+      data: {
+        data: [WIRE_ROW],
+        meta: {
+          next_cursor: null,
+          has_more: false,
+          summary: {
+            total_debit: '2800.00',
+            total_credit: '300.00',
+            written_off: { debit: '0.00', credit: '2500.00' },
+            entry_count: 4,
+          },
+        },
+      },
+    });
+
+    const page = await listPartyEntries(PARTY);
+
+    expect(page.summary).toEqual({
+      totalDebit: '2800.00',
+      totalCredit: '300.00',
+      writtenOff: { debit: '0.00', credit: '2500.00' },
+      entryCount: 4,
+    });
+  });
+
   it('turns a missing note or reference into an empty string, not undefined', async () => {
     /** So nothing downstream has to ask whether absent means "none" or "unknown". */
     mockApi.get.mockResolvedValue({

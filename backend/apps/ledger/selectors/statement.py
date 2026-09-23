@@ -36,7 +36,7 @@ from apps.common.constants import Direction
 from apps.common.money import ZERO
 from apps.common.pagination import keyset_after
 from apps.ledger.models import LedgerEntry
-from apps.ledger.selectors.entry import LIVE_ENTRIES
+from apps.ledger.selectors.entry import LIVE_ENTRIES, split_total_expressions, split_totals
 
 MONEY = DecimalField(max_digits=14, decimal_places=2)
 
@@ -233,23 +233,21 @@ def statement_totals(
     period. One aggregate, two conditional sums.
 
     `net_change` is deliberately NOT here. It is `closing − opening` and it is
-    also `debit − credit`; a third place to compute it is a third place for the
-    three to disagree, and the client can subtract.
+    also `debit − credit + written_off.debit − written_off.credit`; a third
+    place to compute it is a third place for the three to disagree, and the
+    client can subtract (CR-125).
+
+    `debit` and `credit` are "You gave" and "You got" and so EXCLUDE write-offs,
+    which are neither (LED-11 §8, BR-3); they arrive as `written_off {debit,
+    credit}` so the strip can print a third line and still add up —
+    CR-2026-09-24-A, and `selectors/entry.py` has the whole rule.
     """
     scoped = _scoped(tenant=tenant, party_id=party_id, include_corrections=include_corrections)
     if date_from is not None:
         scoped = scoped.filter(entry_date__gte=date_from)
     if date_to is not None:
         scoped = scoped.filter(entry_date__lte=date_to)
-    totals = scoped.aggregate(
-        debit=Coalesce(
-            Sum("amount", filter=Q(direction=Direction.DEBIT)), Decimal("0.00"), output_field=MONEY
-        ),
-        credit=Coalesce(
-            Sum("amount", filter=Q(direction=Direction.CREDIT)), Decimal("0.00"), output_field=MONEY
-        ),
-    )
-    return {"debit": totals["debit"] or ZERO, "credit": totals["credit"] or ZERO}
+    return split_totals(scoped.aggregate(**split_total_expressions()))
 
 
 def has_entries_before_opening(*, tenant: Any, party_id: UUID | str) -> bool:

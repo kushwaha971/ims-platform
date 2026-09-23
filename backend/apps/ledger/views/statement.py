@@ -33,7 +33,7 @@ from apps.ledger.selectors.statement import (
     statement_rows,
     statement_totals,
 )
-from apps.ledger.serializers.entry import StatementRowSerializer
+from apps.ledger.serializers.entry import StatementRowSerializer, StatementTotalsSerializer
 from apps.ledger.services.statement_csv import statement_csv_rows
 from apps.ledger.views.exports import audit_export, authorise_export
 
@@ -184,12 +184,9 @@ class PartyStatementView(TenantScopeMixin, APIView):
                 "opening_balance": str(opening),
                 "closing_balance": str(closing),
                 "rows": serializer.data,
-                "totals": {
-                    key: str(value)
-                    for key, value in statement_totals(
-                        **scope, date_from=date_from, date_to=date_to
-                    ).items()
-                },
+                "totals": StatementTotalsSerializer(
+                    statement_totals(**scope, date_from=date_from, date_to=date_to)
+                ).data,
                 "has_entries_before_opening": has_entries_before_opening(
                     tenant=scope["tenant"], party_id=party.id
                 ),

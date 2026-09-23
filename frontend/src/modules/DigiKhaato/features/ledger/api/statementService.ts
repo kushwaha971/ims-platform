@@ -25,7 +25,12 @@ interface StatementApiResponse {
     readonly period: { readonly from: string | null; readonly to: string | null };
     readonly opening_balance: string;
     readonly closing_balance: string;
-    readonly totals: { readonly debit: string; readonly credit: string };
+    readonly totals: {
+      readonly debit: string;
+      readonly credit: string;
+      /** CR-2026-09-24-A — additive; absent from an older server. */
+      readonly written_off?: { readonly debit: string; readonly credit: string };
+    };
     readonly has_entries_before_opening: boolean;
     readonly rows: readonly StatementRowApi[];
   };
@@ -94,6 +99,14 @@ export const getStatement = async (
       closingBalance: data.closing_balance,
       totalDebit: data.totals.debit,
       totalCredit: data.totals.credit,
+      ...(data.totals.written_off
+        ? {
+            writtenOff: {
+              debit: data.totals.written_off.debit,
+              credit: data.totals.written_off.credit,
+            },
+          }
+        : {}),
       hasEntriesBeforeOpening: data.has_entries_before_opening,
     },
     rows: data.rows.map(toRow),

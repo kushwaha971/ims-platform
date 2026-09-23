@@ -753,6 +753,7 @@ def test_the_first_page_carries_the_khata_headers_ledger_figures(tenant: Any, ap
     assert meta["summary"] == {
         "total_debit": "1000.00",
         "total_credit": "250.00",
+        "written_off": {"debit": "0.00", "credit": "0.00"},
         "entry_count": 2,
     }
 

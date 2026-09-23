@@ -32,7 +32,7 @@ import { formatInr } from 'src/utils/money';
 
 import { statementCsvUrl } from '../api/statementService';
 import { usePartyStatement } from '../hooks/usePartyStatement';
-import { entryAmountView } from '../view-model/entryDisplay';
+import { entryAmountView, writtenOffLines } from '../view-model/entryDisplay';
 import {
   balanceDirection,
   balanceLabelId,
@@ -325,6 +325,18 @@ function StatementSummaryStrip({
         value={formatInr(summary.totalCredit)}
         tone="success"
       />
+      {/* CR-2026-09-24-A — the period's write-offs, neither gave nor got, and
+          only when there are any. With it the strip adds up on its face:
+          brought forward + gave − got − written off = closing (a payable
+          write-off is added back, and its tile says so). */}
+      {writtenOffLines(summary.writtenOff).map((line) => (
+        <UbStatCard
+          key={line.side}
+          label={t('ledger.statement.writtenOff', { side: line.side })}
+          value={formatInr(line.amount)}
+          tone="default"
+        />
+      ))}
       <UbStatCard
         label={t('ledger.statement.closing')}
         value={formatInr(unsigned(closing))}
@@ -353,6 +365,10 @@ function StatementRowView({
 }>): React.JSX.Element {
   const struck = isStruckThrough(row);
   const view = entryAmountView(row.direction, row.entryType);
+  /* A write-off stores its reason as its note too (PTY-04 FR-3), so the title
+     already says it — the timeline's `entryReason` drops the echo, and so does
+     this row. */
+  const reason = row.reason && row.reason.trim() !== row.note.trim() ? row.reason : null;
 
   /* One line on a laptop — date, particulars, amount, balance, the way a
      passbook is ruled — and stacked on a phone. It was stacked everywhere, so a
@@ -386,14 +402,14 @@ function StatementRowView({
           {/* The badges and the reason sit under the title, on their own line —
             the rule LED-03 arrived at after the ⋯ squeezed a khata row's note
             to a sliver. */}
-          {(struck || row.reason) && (
+          {(struck || reason) && (
             <UbStack direction="row" align="center" className="flex-wrap gap-2">
               {struck && (
                 <UbStatusBadge label={t('ledger.correction.badge.reversed')} tone="neutral" />
               )}
-              {row.reason && (
+              {reason && (
                 <UbText variant="caption" tone="tertiary" className="line-clamp-2 break-words">
-                  {row.reason}
+                  {reason}
                 </UbText>
               )}
             </UbStack>
