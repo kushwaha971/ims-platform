@@ -1,4 +1,31 @@
-import type { TInvalidationMap } from './types';
+import type { TInvalidationMap, TSliceKey } from './types';
+
+/**
+ * NEW-2 (QA retest, 24 Sep 2026) — what every ledger write refetches, as one
+ * list so the four entries below cannot drift apart.
+ *
+ * `partyList` was always here: the list row's balance and `meta.totals`.
+ *
+ * `partyDetail` and `ledgerEntry` were not, and the khata showed it. The
+ * header's BALANCE moved from the 201 (the `patch` entries below), and nothing
+ * else on the page did: the credit block — "₹250.00 over the ₹1,000.00 limit",
+ * the usage bar a merchant reads before lending more — and the timeline's
+ * "You gave in all" / "You got in all" stayed on the page-load figures until a
+ * reload. Both are the SERVER's: the credit block's exposure, available, over-
+ * by, percent and status are computed with `Decimal` in `GET /parties/{id}`,
+ * and the totals are `meta.summary` on the timeline's first page. The 201
+ * carries neither, and recomputing them here would be money arithmetic in the
+ * client that canon rule 3 forbids — and a percent that would eventually
+ * disagree with the caption beside it by a point. So they are re-read.
+ *
+ * `refetch` rather than `stale`: the merchant is on the khata when they post,
+ * looking at exactly these figures. The `patch` entries stay, and are still
+ * true: the balance and the new row are on screen from the 201 before either
+ * read returns. The re-read replaces them with the server's own copy, and a
+ * read that was requested BEFORE a later write is dropped rather than allowed
+ * to put older figures back — see `TStaleState.staleSeq`.
+ */
+const LEDGER_WRITE_REFETCH: readonly TSliceKey[] = ['partyList', 'partyDetail', 'ledgerEntry'];
 
 /**
  * Part 19 §19.3.6 — THE single normative statement of what a mutation
@@ -31,9 +58,17 @@ export const INVALIDATION: TInvalidationMap = {
   // Anything a previous session left in the store belongs to a different user or
   // a different business, so the teardown is total — the same signal a tenant
   // switch sends (§19.6.5).
-  registerAccount: { resetAll: true },
-  passwordLogin: { resetAll: true },
-  confirmPasswordReset: { resetAll: true },
+  //
+  // NEW-1 — and the session SUMMARY too, which `resetAll` never touched
+  // (`sessionSlice` keeps itself through `resetAllFeatureState`, because a
+  // tenant switch refetches it rather than dropping it). `sessionSlice` clears
+  // it on these three fulfilled actions in its own extraReducers, which is what
+  // the `patch` declares: without it, the previous session's `activeTenant`
+  // was still there when `/auth/me` answered for the new one, and the
+  // stale-tab guard read a different tenant as "switched in another tab".
+  registerAccount: { resetAll: true, patch: [['session', 'activeTenant']] },
+  passwordLogin: { resetAll: true, patch: [['session', 'activeTenant']] },
+  confirmPasswordReset: { resetAll: true, patch: [['session', 'activeTenant']] },
   // Setting a password changes no cached row; it changes whether the account
   // has one, which is a field of the auth slice.
   setPassword: { patch: [['auth', 'passwordSet']] },
@@ -162,12 +197,16 @@ export const INVALIDATION: TInvalidationMap = {
   // the balance this transaction produced, which is a better number than
   // whatever a second read a moment later happens to find.
   //
-  // `refetch` on the LIST, because that is the one thing the response cannot
-  // patch. The party's balance changed, so its row's amount is wrong, its
-  // position in a recency ordering is wrong, and the header totals — computed
-  // over the whole filtered set, not over the page — are wrong by this amount.
-  // `stale` would wait for a remount the merchant may never perform: they post
-  // an entry, tap back, and read a list that says something else.
+  // `refetch` on the LIST, because the response cannot patch it. The party's
+  // balance changed, so its row's amount is wrong, its position in a recency
+  // ordering is wrong, and the header totals — computed over the whole
+  // filtered set, not over the page — are wrong by this amount. `stale` would
+  // wait for a remount the merchant may never perform: they post an entry, tap
+  // back, and read a list that says something else.
+  //
+  // And — NEW-2 — `refetch` on the khata header and the timeline, for the
+  // figures on them the response does not carry: the credit block and the
+  // two totals. See `LEDGER_WRITE_REFETCH`.
   postEntry: {
     patch: [
       ['ledgerEntry', 'rows'],
@@ -183,7 +222,7 @@ export const INVALIDATION: TInvalidationMap = {
        third answer: the statement refreshes the next time it is mounted, which
        is exactly when the number matters again. */
     stale: ['statement', 'ledgerAging'],
-    refetch: ['partyList'],
+    refetch: LEDGER_WRITE_REFETCH,
   },
 
   // ── LED-02 — the opening balance ──────────────────────────────────────────
@@ -209,7 +248,7 @@ export const INVALIDATION: TInvalidationMap = {
        third answer: the statement refreshes the next time it is mounted, which
        is exactly when the number matters again. */
     stale: ['statement', 'ledgerAging'],
-    refetch: ['partyList'],
+    refetch: LEDGER_WRITE_REFETCH,
   },
 
   // ── LED-03 — corrections and reversals ────────────────────────────────────
@@ -239,7 +278,7 @@ export const INVALIDATION: TInvalidationMap = {
        third answer: the statement refreshes the next time it is mounted, which
        is exactly when the number matters again. */
     stale: ['statement', 'ledgerAging'],
-    refetch: ['partyList'],
+    refetch: LEDGER_WRITE_REFETCH,
   },
   correctEntry: {
     patch: [
@@ -256,7 +295,7 @@ export const INVALIDATION: TInvalidationMap = {
        third answer: the statement refreshes the next time it is mounted, which
        is exactly when the number matters again. */
     stale: ['statement', 'ledgerAging'],
-    refetch: ['partyList'],
+    refetch: LEDGER_WRITE_REFETCH,
   },
 
   // ── PTY-04 — archive and restore ──────────────────────────────────────────
@@ -274,12 +313,16 @@ export const INVALIDATION: TInvalidationMap = {
      — so the khata timeline, the statement and aging are marked stale. For a
      plain archive that costs one refetch of a timeline that has not changed,
      which is cheaper than a second thunk for the same endpoint. */
+  /* NEW-2: `partyDetail` is refetched as well, for the same reason as the
+     ledger writes above — a write-off moves the balance to zero, the patch
+     moves the header, and the credit block is the server's and was left
+     reading "₹250.00 over the limit" on a party that now owes nothing. */
   archiveParty: {
     patch: [
       ['partyDetail', 'party'],
       ['partyDetail', 'summary'],
     ],
-    refetch: ['partyList'],
+    refetch: ['partyList', 'partyDetail'],
     stale: ['ledgerEntry', 'statement', 'ledgerAging'],
   },
   restoreParty: { patch: [['partyDetail', 'party']], refetch: ['partyList'] },

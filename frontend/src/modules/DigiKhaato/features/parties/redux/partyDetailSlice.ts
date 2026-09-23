@@ -1,7 +1,7 @@
 import { createSlice, type Draft, type PayloadAction } from '@reduxjs/toolkit';
 
 import { resetAllFeatureState } from 'src/redux/actions';
-import { acceptInvalidation } from 'src/redux/invalidation/listener';
+import { acceptInvalidation, takeReadSeq } from 'src/redux/invalidation/listener';
 import type { RootState } from 'src/redux/store';
 import type { ApiErrorShape, RequestStatus } from 'src/types/api.types';
 
@@ -42,6 +42,10 @@ export interface PartyDetailState {
   /** Set by the invalidation listener (§19.3.6); the hook refetches on it. */
   stale: boolean;
   staleUrgency: 'now' | 'next-mount' | null;
+  /** NEW-2 — see `TStaleState.staleSeq`. */
+  staleSeq: number;
+  /** NEW-2 — the `staleSeq` each in-flight read started at, by request id. */
+  readSeq: Record<string, number>;
 }
 
 const initialState: PartyDetailState = {
@@ -54,6 +58,8 @@ const initialState: PartyDetailState = {
   collectionStatus: 'idle',
   stale: false,
   staleUrgency: null,
+  staleSeq: 0,
+  readSeq: {},
 };
 
 const partyDetailSlice = createSlice({
@@ -94,13 +100,29 @@ const partyDetailSlice = createSlice({
         // shows the skeleton.
         state.status = state.party && state.id === action.meta.arg ? 'refreshing' : 'loading';
         state.error = null;
+        state.readSeq[action.meta.requestId] = state.staleSeq;
       })
       .addCase(fetchPartyDetail.fulfilled, (state, action) => {
         /* The late-response guard. `state.id` is what the page is showing NOW;
            `action.meta.arg` is what this response is about. They differ when a
            merchant opened another party before this one landed, and writing it
            anyway puts one party's name above another's balance. */
+        const startedAt = takeReadSeq(state.readSeq, action.meta.requestId);
         if (state.id !== null && state.id !== action.meta.arg) return;
+        /* NEW-2 — the stale-read guard. This read was requested BEFORE the
+           latest write this slice was told about, so it cannot contain that
+           write: two quick entries, and the first one's credit refetch landing
+           after the second one's balance patch, would put the first balance
+           back on the header — the figure going backwards on the screen the
+           merchant reads it from. Dropped, and `stale` is left set; the hook
+           has already re-fired on the new `staleSeq`.
+
+           Only when something is on screen: a first load has nothing to
+           protect, and dropping it would leave a skeleton up. */
+        if (state.party !== null && startedAt !== undefined && startedAt !== state.staleSeq) {
+          state.status = 'succeeded';
+          return;
+        }
         state.status = 'succeeded';
         state.id = action.meta.arg;
         state.party = action.payload.party as Draft<PartyDetail>;
@@ -111,6 +133,7 @@ const partyDetailSlice = createSlice({
         state.staleUrgency = null;
       })
       .addCase(fetchPartyDetail.rejected, (state, action) => {
+        takeReadSeq(state.readSeq, action.meta.requestId);
         if (action.meta.aborted) return;
         if (state.id !== null && state.id !== action.meta.arg) return;
         state.status = 'failed';
@@ -251,3 +274,4 @@ export const selectPartyDetailError = (state: RootState): ApiErrorShape | null =
 export const selectCollectionStatus = (state: RootState): RequestStatus =>
   state.partyDetail.collectionStatus;
 export const selectPartyDetailStale = (state: RootState): boolean => state.partyDetail.stale;
+export const selectPartyDetailStaleSeq = (state: RootState): number => state.partyDetail.staleSeq;

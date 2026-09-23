@@ -7,6 +7,7 @@ import { usePermissions } from 'src/hooks/usePermissions';
 import { selectNetworkImpaired } from 'src/redux/slice/networkSlice';
 import type { ApiErrorShape, RequestStatus } from 'src/types/api.types';
 
+import { timelineRefreshLimit } from '../constants/timelinePaging';
 import {
   correctionsVisibilityToggled,
   ledgerTimelineOpened,
@@ -16,6 +17,7 @@ import {
   selectLedgerHasMore,
   selectLedgerMoreStatus,
   selectLedgerStale,
+  selectLedgerStaleSeq,
   selectLedgerStatus,
   selectLedgerSummary,
   selectShowCorrections,
@@ -69,6 +71,7 @@ export const usePartyLedger = (partyId: string): UsePartyLedgerResult => {
   const hasMore = useAppSelector(selectLedgerHasMore);
   const cursor = useAppSelector(selectLedgerCursor);
   const stale = useAppSelector(selectLedgerStale);
+  const staleSeq = useAppSelector(selectLedgerStaleSeq);
   const showCorrections = useAppSelector(selectShowCorrections);
   const isImpaired = useAppSelector(selectNetworkImpaired);
 
@@ -98,12 +101,23 @@ export const usePartyLedger = (partyId: string): UsePartyLedgerResult => {
 
   /* The silent refresh the invalidation listener asks for. Skipped while the
      network is impaired: a background request on a connection that is already
-     failing turns one visible error into two. */
+     failing turns one visible error into two.
+
+     NEW-2 made this the path every write takes, because the totals above the
+     rows are the server's (`meta.summary`) and a write changes them. Two things
+     follow. It re-reads at the DEPTH already loaded (`refreshLimit`), so a
+     merchant three pages down is not dropped back to one by a refresh that was
+     about two figures. And `staleSeq` re-fires it on every write, so a second
+     entry while the first refresh is in flight aborts that one and asks again
+     — the slice drops a page requested before the last write in any case. */
+  const refreshLimit = timelineRefreshLimit(rows.length);
   useEffect(() => {
     if (!stale || isImpaired || !canRead) return undefined;
-    const promise = dispatch(fetchPartyEntries({ partyId, includeReversed: showCorrections }));
+    const promise = dispatch(
+      fetchPartyEntries({ partyId, includeReversed: showCorrections, limit: refreshLimit })
+    );
     return () => promise.abort();
-  }, [stale, isImpaired, canRead, dispatch, partyId, showCorrections]);
+  }, [stale, staleSeq, isImpaired, canRead, dispatch, partyId, showCorrections, refreshLimit]);
 
   /* `void` on both: the dispatch returns a promise that resolves whether the
      request succeeded or failed, and there is nothing here to do with it. The

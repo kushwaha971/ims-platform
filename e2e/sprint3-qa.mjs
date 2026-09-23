@@ -18,6 +18,8 @@
  *   node e2e/sprint3-qa.mjs --only=A,B      # a subset (C is not re-runnable
  *                                           # against the same accounts)
  *   node e2e/sprint3-qa.mjs --fresh         # new accounts (2 registrations)
+ *   node e2e/sprint3-qa.mjs --only=R        # retest of 2b365b6 (D1–D4, O3–O6);
+ *                                           # one owner sign-in at most, reused
  *
  * Fixtures that the API cannot create are written with psql and SAID SO in
  * the output: an archived party that still has a balance (the archive guard
@@ -1039,13 +1041,449 @@ print('TOKEN', issued.access)
   }
 }
 
+// ═════════════════════════════════════════════════════════════════════════════
+// R — retest of the fixes in 2b365b6 (D1–D4, O3–O6), `--only=R`
+//
+// The per-IP login budget (`login_ip`) counts successful sign-ins too, so this
+// phase signs the owner in AT MOST ONCE and reuses a Playwright storageState
+// for every check, at every width. API calls use the `ub_access` cookie from
+// that same state as a Bearer token rather than a second /auth/login.
+// ═════════════════════════════════════════════════════════════════════════════
+const RT_DIR = `${SHOT_ROOT}/retest`;
+const RT_STORAGE = `${RT_DIR}/owner-storage.json`;
+const RT_STATE = `${RT_DIR}/state.json`;
+const rtShot = (size, name) => `${RT_DIR}/${size}/${name}.png`;
+let rtLogins = 0;
+
+const ownerSession = async (browser, state, viewport, cookies = []) => {
+  const ctx = await browser.newContext({ viewport, ...(existsSync(RT_STORAGE) ? { storageState: RT_STORAGE } : {}) });
+  if (cookies.length) await ctx.addCookies(cookies);
+  await ctx.route(/^https:\/\/(wa\.me|api\.whatsapp\.com)\//, (route) => route.fulfill({ status: 200, body: 'intercepted' }));
+  const page = await ctx.newPage();
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      await page.goto(`${FRONTEND}/parties`, { waitUntil: 'domcontentloaded', timeout: 120000 });
+      break;
+    } catch (e) { if (attempt === 3) throw e; await sleep(5000); }
+  }
+  // Let the app refresh an expired access cookie before asking who we are.
+  await page.waitForTimeout(3000);
+  let me = await whoAmI(page).catch(() => ({ email: null }));
+  if (me.email !== state.owner.email || page.url().includes('/login')) {
+    rtLogins += 1;
+    note(`browser sign-in #${rtLogins} this run (owner) — stored state absent or expired`);
+    await signIn(page, state.owner);
+    me = await whoAmI(page);
+  }
+  // Saved WITHOUT the locale cookie, so one Hindi check does not make every later session Hindi.
+  const saved = await ctx.storageState();
+  saved.cookies = saved.cookies.filter((c) => c.name !== 'ub_locale');
+  writeFileSync(RT_STORAGE, JSON.stringify(saved));
+  const token = (await ctx.cookies()).find((c) => c.name === 'ub_access')?.value ?? null;
+  return { ctx, page, me, token };
+};
+
+/** The focused element, identified. `isMore` compares IDENTITY with the ⋯ recorded when it was focused. */
+const focusInfo = (page) =>
+  page.evaluate(() => {
+    const a = document.activeElement;
+    return {
+      tag: a?.tagName ?? null,
+      label: a?.getAttribute?.('aria-label') ?? null,
+      text: (a?.innerText ?? '').trim().slice(0, 40),
+      isMore: Boolean(window.__qaMore) && a === window.__qaMore,
+      isGave: Boolean(window.__qaGave) && a === window.__qaGave,
+      moreConnected: Boolean(window.__qaMore?.isConnected),
+      inDialog: Boolean(a?.closest?.('[role="dialog"],[role="alertdialog"]')),
+    };
+  });
+/** Tab (keyboard only) until `match(focusInfo)`; returns the info or null. */
+const tabTo = async (page, match, max = 80) => {
+  for (let i = 0; i < max; i += 1) {
+    await page.keyboard.press('Tab');
+    const f = await focusInfo(page);
+    if (match(f)) return f;
+  }
+  return null;
+};
+const dialogCount = (page) => page.locator('[role="dialog"], [role="alertdialog"]').count();
+
+async function d1Flow(page, size, { item, close, target, pass, tag }) {
+  // Start from the document (as after a page load): nothing focused.
+  await page.evaluate(() => document.activeElement?.blur?.());
+  const more = await tabTo(page, (f) => f.label === 'More actions');
+  if (!more) return { ok: false, detail: 'could not Tab to ⋯' };
+  await page.evaluate(() => { window.__qaMore = document.activeElement; });
+  await page.keyboard.press('Enter');
+  await page.getByRole('dialog').last().waitFor({ timeout: 15000 });
+  await page.waitForTimeout(500);
+  const itemFocus = await tabTo(page, (f) => f.inDialog && f.text === item, 20);
+  if (!itemFocus) return { ok: false, detail: `could not Tab to "${item}" in the ⋯ sheet` };
+  await page.keyboard.press('Enter');
+  // the ⋯ sheet closes and the target dialog opens (lazily, on first use)
+  await page.waitForFunction((t) => {
+    const ds = [...document.querySelectorAll('[role="dialog"],[role="alertdialog"]')];
+    return ds.length >= 1 && ds.some((d) => d.innerText.includes(t));
+  }, target, { timeout: 20000 });
+  await page.waitForTimeout(700);
+  const opened = await focusInfo(page);
+  if (pass === 1) await page.screenshot({ path: rtShot(size, `D1-${tag}-open`) });
+  if (close === 'Escape') {
+    await page.keyboard.press('Escape');
+  } else {
+    const x = await tabTo(page, (f) => f.inDialog && /^(Close|बंद)/i.test(f.label ?? ''), 30);
+    if (!x) return { ok: false, detail: `no ✕ reachable by Tab in "${target}" dialog (focus on open: ${JSON.stringify(opened)})` };
+    await page.keyboard.press('Enter');
+  }
+  await page.waitForTimeout(900);
+  const left = await dialogCount(page);
+  const f = await focusInfo(page);
+  return { ok: left === 0 && f.isMore, detail: `dialogs=${left} focus=${JSON.stringify(f)} (focus when opened: ${opened.label ?? opened.text})` };
+}
+
+async function phaseR(browser, state) {
+  mkdirSync(`${RT_DIR}/phone`, { recursive: true });
+  mkdirSync(`${RT_DIR}/desktop`, { recursive: true });
+  const P = state.parties;
+  const rt = existsSync(RT_STATE) ? JSON.parse(readFileSync(RT_STATE, 'utf8')) : {};
+  const saveRt = () => writeFileSync(RT_STATE, JSON.stringify(rt, null, 2));
+  const loginBefore = psql(`select coalesce(max(count),0)||' since '||coalesce(max(window_start)::text,'-') from platform_rate_limit where scope='login_ip'`);
+  note(`login_ip before R: ${loginBefore}`);
+
+  // ── session + API token (no API login unless the cookie will not do) ─────
+  let { ctx, page, me, token } = await ownerSession(browser, state, { width: DESKTOP.width, height: DESKTOP.height });
+  record('R', 'signed in as the OWNER (stored session reused where valid)', me.email === state.owner.email, me.email);
+  let probe = await api('GET', '/auth/me', null, token);
+  if (probe.status !== 200) {
+    rtLogins += 1;
+    note(`API sign-in #${rtLogins} — ub_access cookie refused as Bearer (${probe.status})`);
+    token = await login(state.owner.email, state.owner.password);
+  }
+  await ctx.close();
+
+  // ── fixtures (API; restored at the end) ─────────────────────────────────
+  // O4: Sunita Tailors gets two entries that net to zero and is archived; the
+  // CONTROL is her own rows before archiving.
+  if (!rt.sunitaEntries) {
+    await must('POST', `/parties/${P.sunita}/ledger-entries`, { entry_date: daysAgo(2), direction: 'debit', amount: '250.00', note: 'Stitching thread' }, token, { 'Idempotency-Key': `rt-sun-1-${state.stamp}` });
+    await must('POST', `/parties/${P.sunita}/ledger-entries`, { entry_date: daysAgo(1), direction: 'credit', amount: '250.00', note: 'Cash received', payment_mode: 'cash' }, token, { 'Idempotency-Key': `rt-sun-2-${state.stamp}` });
+    rt.sunitaEntries = true; saveRt();
+    note('FIXTURE (API): Sunita Tailors — You gave ₹250 and You got ₹250 (balance stays 0)');
+  }
+  // D4/O3: a pending invitation for an address that ALREADY has an account, so
+  // the team shows both an invited member row and the invitation row.
+  const r2 = JSON.parse(readFileSync('/tmp/claude-0/retest/state.json', 'utf8')).R2.email;
+  const inv = await api('POST', '/invitations', { email: r2, role: 'staff' }, token, { 'Idempotency-Key': `rt-inv-${Date.now()}` });
+  record('R', `FIXTURE: pending invitation for an existing account (${r2}) → 201`, inv.status === 201, `${inv.status} ${JSON.stringify(inv.body?.error ?? '').slice(0, 160)}`);
+  const invitationId = inv.body?.data?.id;
+  // O6: a foreign number on Kavita Dairy (restored at the end)
+  const kav = await must('GET', `/parties/${P.kavita}`, null, token);
+  const kavMobile = kav.body.data.mobile;
+  const foreign = await api('PATCH', `/parties/${P.kavita}`, { mobile: '+44 7700 900123' }, token);
+  let kavStored = foreign.body?.data?.mobile ?? null;
+  note(`PATCH Kavita mobile '+44 7700 900123' → ${foreign.status}, stored ${JSON.stringify(kavStored)} ${foreign.status >= 400 ? JSON.stringify(foreign.body?.error) : ''}`);
+  if (foreign.status >= 400) {
+    psql(`update parties_party set mobile='+44 7700 900123' where id='${P.kavita}'`);
+    kavStored = '+44 7700 900123';
+    note('FIXTURE (psql): the API refused a foreign mobile, so it was written directly');
+  }
+
+  try {
+    // ═══ D1 focus return, keyboard only, desktop and phone ═══════════════
+    for (const size of [DESKTOP, PHONE]) {
+      ({ ctx, page } = await ownerSession(browser, state, { width: size.width, height: size.height }));
+      await openKhata(page, P.ramesh, /Ramesh Traders/);
+      const cases = [
+        { item: 'Send reminder', close: 'Escape', target: 'Send reminder', tag: 'reminder-esc' },
+        { item: 'Send reminder', close: 'X', target: 'Send reminder', tag: 'reminder-x' },
+        { item: 'Archive', close: 'Escape', target: 'Archive', tag: 'archive-esc' },
+        { item: 'Archive', close: 'X', target: 'Archive', tag: 'archive-x' },
+        { item: 'Edit', close: 'Escape', target: 'Edit', tag: 'edit-esc' },
+      ];
+      for (const c of cases) {
+        for (const pass of [1, 2]) {
+          const r = await d1Flow(page, size.id, { ...c, pass });
+          record('D1', `${size.id}: Ramesh (owes ₹2,300) ⋯ → ${c.item} → ${c.close === 'X' ? '✕' : 'Escape'} — focus back on ⋯ (pass ${pass}${pass === 2 ? ', cached chunk' : ''})`, r.ok, r.detail);
+          if (!r.ok) {
+            await page.screenshot({ path: rtShot(size.id, `D1-${c.tag}-FAIL-pass${pass}`) });
+            while ((await dialogCount(page)) > 0) { await page.keyboard.press('Escape'); await page.waitForTimeout(400); }
+          }
+        }
+      }
+      // "You gave" → Escape → back on "You gave"
+      for (const pass of [1, 2]) {
+        await page.evaluate(() => document.activeElement?.blur?.());
+        const g = await tabTo(page, (f) => /^You gave/.test(f.text));
+        if (!g) { record('D1', `${size.id}: Tab reaches "You gave"`, false, 'not reached'); break; }
+        await page.evaluate(() => { window.__qaGave = document.activeElement; });
+        await page.keyboard.press('Enter');
+        await page.getByRole('dialog').last().waitFor({ timeout: 20000 });
+        await page.waitForTimeout(800);
+        if (pass === 1) await page.screenshot({ path: rtShot(size.id, 'D1-you-gave-open') });
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(900);
+        const f = await focusInfo(page);
+        record('D1', `${size.id}: "You gave" → Escape — focus back on "You gave" (pass ${pass})`, (await dialogCount(page)) === 0 && f.isGave, JSON.stringify(f));
+      }
+      // Add opening balance on a party WITHOUT one (Lakshmi Bakers)
+      await openKhata(page, P.lakshmi, /Lakshmi Bakers/);
+      for (const pass of [1, 2]) {
+        const r = await d1Flow(page, size.id, { item: 'Add opening balance', close: 'Escape', target: 'opening balance', pass, tag: 'opening-esc' });
+        record('D1', `${size.id}: Lakshmi (no opening balance) ⋯ → Add opening balance → Escape — focus back on ⋯ (pass ${pass})`, r.ok, r.detail);
+        if (!r.ok) while ((await dialogCount(page)) > 0) { await page.keyboard.press('Escape'); await page.waitForTimeout(400); }
+      }
+      await ctx.close();
+    }
+
+    // ═══ D2 network failure → the reference is the request's X-Request-Id ═
+    for (const size of [DESKTOP, PHONE]) {
+      ({ ctx, page } = await ownerSession(browser, state, { width: size.width, height: size.height }));
+      const sent = [];
+      page.on('request', (r) => {
+        if (/\/api\/v1\/parties/.test(r.url())) sent.push({ url: r.url().split('/api/v1')[1], id: r.headers()['x-request-id'] ?? null, method: r.method() });
+      });
+      await page.route(/\/api\/v1\/parties/, (route) => route.abort('failed'));
+      await page.goto(`${FRONTEND}/parties`, { waitUntil: 'domcontentloaded', timeout: 120000 });
+      await page.getByText('We could not load your customers').first().waitFor({ timeout: 60000 }).catch(() => {});
+      await page.waitForTimeout(1500);
+      const errText = await page.locator('[data-testid="ub-grid"]').innerText().catch(() => '');
+      await page.screenshot({ path: rtShot(size.id, 'D2-network-error-reference') });
+      // The id is printed under "Try again", with or without a "Reference" label.
+      const shown = /(?:Reference\s*[:·]?\s*)?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[0-9a-f]{32})/i.exec(errText)?.[1] ?? null;
+      const labelled = /Reference/i.test(errText);
+      const snack = (await page.locator('[role="status"], [role="alert"]').allInnerTexts()).filter((t) => /could not reach/i.test(t));
+      const snackId = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[0-9a-f]{32})/i.exec(snack.join(' '))?.[1] ?? null;
+      note(`${size.id}: error-state id=${shown} (labelled "Reference": ${labelled}); snackbar id=${snackId} belongs to ${JSON.stringify(sent.find((x) => x.id === snackId) ?? 'no /parties* request')}; all /parties* requests: ${JSON.stringify(sent)}`);
+      const listReqs = sent.filter((s) => /^\/parties(\?|$)/.test(s.url) && s.method === 'GET');
+      const last = listReqs[listReqs.length - 1];
+      record('D2', `${size.id}: the network-failure error state shows a reference`, Boolean(shown), errText.replace(/\n/g, ' | ').slice(0, 300));
+      record('D2', `${size.id}: the reference EQUALS the X-Request-Id the failed list request carried`, Boolean(shown) && shown === last?.id,
+        `shown=${shown} lastListRequest=${JSON.stringify(last)} allListRequests=${JSON.stringify(listReqs.map((s) => s.id))}`);
+      await ctx.close();
+    }
+
+    // ═══ D3 360 px, list 3 s slow → the loading state fits ═══════════════
+    {
+      ({ ctx, page } = await ownerSession(browser, state, { width: PHONE.width, height: PHONE.height }));
+      await page.route(/\/api\/v1\/parties\?/, async (route) => { await sleep(3000); await route.continue(); });
+      await page.goto(`${FRONTEND}/parties`, { waitUntil: 'commit', timeout: 120000 });
+      const samples = [];
+      for (let i = 0; i < 400 && samples.length < 4; i += 1) {
+        const m = await page.evaluate(() => {
+          const loading = document.querySelector('[data-testid="ub-stat-grid"] [aria-busy="true"], [data-testid="ub-grid"] [role="status"][aria-busy="true"]');
+          if (!loading) return null;
+          const bars = [...document.querySelectorAll('.animate-pulse')].filter((b) => b.getBoundingClientRect().width > 0);
+          const bad = [];
+          for (const b of bars) {
+            const card = b.closest('.rounded-card') ?? b.closest('[aria-busy="true"]');
+            if (!card) continue;
+            const br = b.getBoundingClientRect();
+            const cr = card.getBoundingClientRect();
+            if (br.right > cr.right + 0.5 || br.width > cr.width + 0.5 || br.left < cr.left - 0.5) bad.push({ where: card.closest('[data-testid="ub-stat-grid"]') ? 'totals tile' : 'list card', cls: b.className.replace('animate-pulse rounded-sm bg-surface-sunken ', ''), bar: Math.round(br.width), card: Math.round(cr.width), overRight: Math.round(br.right - cr.right) });
+          }
+          return { scrollWidth: document.documentElement.scrollWidth, bars: bars.length, bad, statCards: document.querySelectorAll('[data-testid="ub-stat-grid"] [aria-busy="true"]').length, rowSkeleton: Boolean(document.querySelector('[data-testid="ub-grid"] [role="status"][aria-busy="true"]')) };
+        }).catch(() => null);
+        if (m) {
+          samples.push(m);
+          if (samples.length === 1) { await page.waitForTimeout(150); await page.screenshot({ path: rtShot('phone', 'D3-loading-360') }); }
+          await page.waitForTimeout(300);
+        } else await page.waitForTimeout(40);
+      }
+      record('D3', 'phone 360: the loading state was observed (list delayed 3 s)', samples.length > 0, JSON.stringify(samples.map((s) => ({ bars: s.bars, statCards: s.statCards, rowSkeleton: s.rowSkeleton }))));
+      record('D3', 'phone 360: while loading, documentElement.scrollWidth <= 360 at every sample', samples.length > 0 && samples.every((s) => s.scrollWidth <= 360), JSON.stringify(samples.map((s) => s.scrollWidth)));
+      record('D3', 'phone 360: no TOTALS-TILE skeleton bar wider than (or running past) its tile (the original D3)', samples.length > 0 && samples.every((s) => s.bad.every((b) => b.where !== 'totals tile')), JSON.stringify(samples.map((s) => s.bad.filter((b) => b.where === 'totals tile'))).slice(0, 400));
+      const listBad = samples.flatMap((s) => s.bad.filter((b) => b.where === 'list card'));
+      record('D3', 'phone 360: no LIST-ROW skeleton bar running past the list card', samples.length > 0 && listBad.length === 0, `${listBad.length} bars over, e.g. ${JSON.stringify(listBad.slice(0, 2))}`);
+      await page.getByText('Ramesh Traders').first().waitFor({ timeout: 60000 }).catch(() => {});
+      await ctx.close();
+    }
+
+    // ═══ D4 + O3 the team screen with a pending invitation ═══════════════
+    for (const size of [SIZES[2], DESKTOP]) {
+      ({ ctx, page } = await ownerSession(browser, state, { width: size.width, height: size.height }));
+      await page.goto(`${FRONTEND}/settings/team`, { waitUntil: 'domcontentloaded', timeout: 120000 });
+      await page.getByRole('button', { name: /^Revoke/ }).first().waitFor({ timeout: 60000 }).catch(() => {});
+      await page.waitForTimeout(1200);
+      const shotDir = size.id === 'desktop' ? 'desktop' : 'desktop';
+      await page.screenshot({ path: rtShot(shotDir, `D4-team-${size.width}`), fullPage: true });
+      const m = await page.evaluate(() => {
+        const tables = [...document.querySelectorAll('table')];
+        const invT = tables.find((t) => [...t.querySelectorAll('button')].some((b) => /^Revoke/.test(b.innerText.trim())));
+        const memT = tables.find((t) => t !== invT && [...t.querySelectorAll('th')].some((th) => th.textContent.trim() === 'Actions'));
+        const btn = invT && [...invT.querySelectorAll('button')].find((b) => /^Revoke/.test(b.innerText.trim()));
+        const td = btn?.closest('td');
+        const truncated = btn ? [btn, ...btn.querySelectorAll('*')].filter((n) => n.scrollWidth > n.clientWidth + 1 || getComputedStyle(n).textOverflow === 'ellipsis' && n.scrollWidth > n.clientWidth).map((n) => ({ tag: n.tagName, sw: n.scrollWidth, cw: n.clientWidth, text: n.textContent.trim() })) : null;
+        // an ancestor between the button and the cell that clips it
+        const clippers = [];
+        for (let n = btn?.parentElement; n && n !== td?.parentElement; n = n.parentElement) {
+          const cs = getComputedStyle(n);
+          if (n.scrollWidth > n.clientWidth + 1 && cs.overflow !== 'visible') clippers.push({ tag: n.tagName, sw: n.scrollWidth, cw: n.clientWidth, cls: n.className.toString().slice(0, 60) });
+        }
+        const thOf = (t) => t && [...t.querySelectorAll('th')].find((th) => th.textContent.trim() === 'Actions');
+        const vis = (el) => {
+          if (!el) return null;
+          const r = el.getBoundingClientRect();
+          const inner = el.querySelector('*') ?? el;
+          const ir = [...el.querySelectorAll('*')].map((k) => k.getBoundingClientRect()).filter((x) => x.width > 1 && x.height > 1);
+          const cs = getComputedStyle(inner);
+          const srOnly = [...el.querySelectorAll('*'), el].some((k) => k.classList?.contains('sr-only'));
+          return { left: Math.round(r.left), right: Math.round(r.right), width: Math.round(r.width), srOnly, visibleText: el.innerText.trim(), clip: cs.clip };
+        };
+        const bR = btn?.getBoundingClientRect();
+        const tR = td?.getBoundingClientRect();
+        return {
+          found: { inv: Boolean(invT), mem: Boolean(memT), btn: Boolean(btn) },
+          button: btn ? { text: btn.innerText.trim(), width: Math.round(bR.width), left: Math.round(bR.left), right: Math.round(bR.right) } : null,
+          cell: td ? { width: Math.round(tR.width), left: Math.round(tR.left), right: Math.round(tR.right) } : null,
+          truncated, clippers,
+          invHeader: vis(thOf(invT)), memHeader: vis(thOf(memT)),
+          invTable: invT ? Math.round(invT.getBoundingClientRect().width) : null,
+          memTable: memT ? Math.round(memT.getBoundingClientRect().width) : null,
+        };
+      });
+      const tag = `${size.width}`;
+      record('D4', `${tag}px: the invitations table and a Revoke button are present`, m.found.inv && m.found.btn, JSON.stringify(m.found));
+      record('D4', `${tag}px: "Revoke" fully visible — reads "Revoke", nothing inside it truncated or clipped`,
+        m.button?.text === 'Revoke' && (m.truncated ?? []).length === 0 && m.clippers.length === 0, JSON.stringify({ button: m.button, truncated: m.truncated, clippers: m.clippers }));
+      record('D4', `${tag}px: button width <= cell width, and inside the cell`,
+        Boolean(m.button && m.cell) && m.button.width <= m.cell.width && m.button.left >= m.cell.left && m.button.right <= m.cell.right, JSON.stringify({ button: m.button, cell: m.cell }));
+      record('D4', `${tag}px: the invitations table shows a VISIBLE "Actions" header`, Boolean(m.invHeader) && m.invHeader.visibleText === 'Actions' && !m.invHeader.srOnly && m.invHeader.width > 1, JSON.stringify(m.invHeader));
+      const dl = m.invHeader && m.memHeader ? Math.abs(m.invHeader.left - m.memHeader.left) : null;
+      const dr = m.invHeader && m.memHeader ? Math.abs(m.invHeader.right - m.memHeader.right) : null;
+      record('D4', `${tag}px: its "Actions" column lines up with the Members table's (left/right within 2 px)`, dl !== null && dl <= 2 && dr <= 2,
+        `invitations th ${JSON.stringify(m.invHeader)} members th ${JSON.stringify(m.memHeader)} Δleft=${dl} Δright=${dr} tables ${m.invTable}/${m.memTable}`);
+      // O3 heading
+      const heading = await page.locator('main').innerText();
+      const hm = /(\d+) people · (\d+) invited/.exec(heading);
+      record('O3', `${tag}px: the Members heading reads "N people · M invited" (expect 3 people · 1 invited)`, Boolean(hm) && hm[1] === '3' && hm[2] === '1', hm?.[0] ?? heading.split('\n').slice(0, 12).join(' | '));
+      await ctx.close();
+    }
+    // O3 at 360: the invited member card and the invitation card carry a mail icon
+    {
+      ({ ctx, page } = await ownerSession(browser, state, { width: PHONE.width, height: PHONE.height }));
+      await page.goto(`${FRONTEND}/settings/team`, { waitUntil: 'domcontentloaded', timeout: 120000 });
+      await page.getByText(r2).first().waitFor({ timeout: 60000 }).catch(() => {});
+      await page.waitForTimeout(1500);
+      await page.screenshot({ path: rtShot('phone', 'O3-team-360'), fullPage: true });
+      const cards = await page.evaluate((email) => {
+        const sel = 'li, [role="listitem"], article, [role="row"], tr, [data-testid*="card"], [data-testid*="row"]';
+        const all = [...document.querySelectorAll(sel)].filter((el) => el.textContent.includes(email));
+        const minimal = all.filter((el) => ![...el.querySelectorAll(sel)].some((c) => c.textContent.includes(email)));
+        return minimal.map((el) => {
+          const discs = [...el.querySelectorAll('span.rounded-pill[aria-hidden="true"]')].filter((s) => /\bh-(7|10)\b/.test(s.className));
+          return {
+            text: el.innerText.replace(/\n/g, ' | ').slice(0, 120),
+            discs: discs.map((d) => ({ text: d.innerText.trim(), mail: Boolean(d.querySelector('svg.lucide-mail')), svg: d.querySelector('svg')?.getAttribute('class') ?? null })),
+          };
+        });
+      }, r2);
+      const invitedCard = cards.find((c) => /Invited — has not joined yet/.test(c.text));
+      const invitationCard = cards.find((c) => /Revoke|Waiting|Pending/.test(c.text));
+      record('O3', 'phone 360: the INVITED MEMBER card shows a mail icon, not an email initial', Boolean(invitedCard) && invitedCard.discs.length > 0 && invitedCard.discs.every((d) => d.mail && d.text === ''), JSON.stringify(invitedCard ?? cards));
+      record('O3', 'phone 360: the INVITATION card shows a mail icon, not an email initial', Boolean(invitationCard) && invitationCard.discs.length > 0 && invitationCard.discs.every((d) => d.mail && d.text === ''), JSON.stringify(invitationCard ?? cards));
+      record('O3', 'phone 360: the team screen fits the viewport', (await overflowPx(page)) <= 0, `overflow ${await overflowPx(page)}px`);
+      await ctx.close();
+    }
+
+    // ═══ O4 archived khata rows carry no ⋯ ═══════════════════════════════
+    {
+      ({ ctx, page } = await ownerSession(browser, state, { width: DESKTOP.width, height: DESKTOP.height }));
+      const rowMenus = () => page.getByRole('button', { name: /^More actions for / }).count();
+      await openKhata(page, P.sunita, /Sunita Tailors/);
+      await page.getByText('Cash received').first().waitFor({ timeout: 30000 }).catch(() => {});
+      const activeSunita = await rowMenus();
+      record('O4', 'control — ACTIVE Sunita Tailors (2 entries): timeline rows have ⋯', activeSunita >= 2, `row ⋯ count=${activeSunita}`);
+      await openKhata(page, P.ramesh, /Ramesh Traders/);
+      await page.waitForTimeout(800);
+      const activeRamesh = await rowMenus();
+      note(`active Ramesh Traders (opening entry only): row ⋯ count=${activeRamesh}`);
+      const arch = await api('POST', `/parties/${P.sunita}/archive`, { reason: 'QA retest O4' }, token, { 'Idempotency-Key': `rt-arch-${Date.now()}` });
+      record('O4', 'FIXTURE: archive Sunita Tailors (balance 0) via API → 2xx', arch.status < 300, `${arch.status} ${JSON.stringify(arch.body?.error ?? '')}`);
+      await openKhata(page, P.sunita, /Sunita Tailors/);
+      await page.getByText('Cash received').first().waitFor({ timeout: 30000 }).catch(() => {});
+      await page.waitForTimeout(800);
+      const entriesShown = await page.getByText(/Stitching thread|Cash received/).count();
+      const archivedSunita = await rowMenus();
+      await page.screenshot({ path: rtShot('desktop', 'O4-archived-sunita-no-row-menu'), fullPage: true });
+      record('O4', 'ARCHIVED Sunita Tailors: entries are shown and no timeline row has ⋯', entriesShown >= 2 && archivedSunita === 0, `entries shown=${entriesShown} row ⋯=${archivedSunita}`);
+      await openKhata(page, P.dinesh, /Dinesh Kirana/);
+      await page.waitForTimeout(1200);
+      const archivedDinesh = await rowMenus();
+      record('O4', 'ARCHIVED Dinesh Kirana (opening entry): no timeline row has ⋯', archivedDinesh === 0, `row ⋯=${archivedDinesh}`);
+      const rs = await api('POST', `/parties/${P.sunita}/restore`, {}, token, { 'Idempotency-Key': `rt-rest-${Date.now()}` });
+      note(`FIXTURE restored: Sunita Tailors restore → ${rs.status}`);
+      await ctx.close();
+    }
+
+    // ═══ O6 recipient line, English ═════════════════════════════════════
+    {
+      ({ ctx, page } = await ownerSession(browser, state, { width: DESKTOP.width, height: DESKTOP.height }));
+      const cases = [
+        ['ramesh', /Ramesh Traders/, 'To Ramesh Traders · +91 98123 45678', 'stored "09812345678"'],
+        ['priya', /Priya Textiles/, 'To Priya Textiles · +91 98123 45679', 'stored "+91 98123 45679"'],
+        ['kavita', /Kavita Dairy/, `To Kavita Dairy · ${kavStored}`, `foreign, stored ${JSON.stringify(kavStored)} → shown as stored`],
+      ];
+      for (const [key, name, expected, why] of cases) {
+        await openKhata(page, P[key], name);
+        const sheet = await openReminder(page);
+        const s = await readSheet(sheet);
+        await page.screenshot({ path: rtShot('desktop', `O6-recipient-${key}`) });
+        record('O6', `${why}: recipient line reads "${expected}"`, s.description === expected, `${s.description} | wa=${s.waHref?.slice(0, 32)}`);
+        await closeTopDialog(page);
+      }
+      await ctx.close();
+    }
+
+    // ═══ O5 Hindi: brand names in Latin, snackbar ═══════════════════════
+    for (const size of [DESKTOP, PHONE]) {
+      ({ ctx, page } = await ownerSession(browser, state, { width: size.width, height: size.height }, [{ name: 'ub_locale', value: 'hi', url: FRONTEND }]));
+      await openKhata(page, P.ramesh, /Ramesh Traders/);
+      const items = await menuItems(page);
+      await page.getByRole('dialog').last().getByRole('button', { name: 'रिमाइंडर भेजें' }).click();
+      const sheet = page.getByRole('dialog').last();
+      await sheet.locator('[data-ub-share-preview]').waitFor({ timeout: 20000 });
+      await page.waitForTimeout(600);
+      const labels = await sheet.evaluate((el) => {
+        const links = [...el.querySelectorAll('a')];
+        const wa = links.find((a) => a.href.startsWith('https://wa.me'));
+        const sms = links.find((a) => a.href.startsWith('sms:'));
+        return { wa: wa?.innerText.trim() ?? null, sms: sms?.innerText.trim() ?? null, waName: wa?.getAttribute('aria-label'), smsName: sms?.getAttribute('aria-label'), buttons: [...el.querySelectorAll('a,button')].map((b) => b.innerText.trim()).filter(Boolean), description: el.querySelector('[id$="-description"]')?.textContent ?? null };
+      });
+      await page.screenshot({ path: rtShot(size.id, 'O5-hindi-share-sheet') });
+      record('O5', `${size.id} hi: the share sheet's buttons read "WhatsApp" and "SMS" in Latin`, labels.wa === 'WhatsApp' && labels.sms === 'SMS', JSON.stringify(labels));
+      note(`${size.id} hi: menu=${JSON.stringify(items)} recipient line=${labels.description}`);
+      const popupP = ctx.waitForEvent('page', { timeout: 10000 }).catch(() => null);
+      await sheet.locator('a[href^="https://wa.me"]').click();
+      const popup = await popupP;
+      await page.waitForTimeout(1200);
+      const snack = await page.locator('[role="status"], [role="alert"]').allInnerTexts();
+      await page.screenshot({ path: rtShot(size.id, 'O5-hindi-whatsapp-snackbar') });
+      record('O5', `${size.id} hi: the snackbar after WhatsApp reads "WhatsApp खुल गया"`, snack.some((t) => t.trim() === 'WhatsApp खुल गया' || t.includes('WhatsApp खुल गया')), JSON.stringify(snack));
+      if (popup) await popup.close();
+      await ctx.close();
+    }
+  } finally {
+    if (invitationId) {
+      const rv = await api('DELETE', `/invitations/${invitationId}`, null, token);
+      note(`FIXTURE restored: invitation for ${r2} revoked → ${rv.status}`);
+    }
+    const back = await api('PATCH', `/parties/${P.kavita}`, { mobile: kavMobile }, token);
+    if (back.status >= 400) psql(`update parties_party set mobile='${kavMobile}' where id='${P.kavita}'`);
+    note(`FIXTURE restored: Kavita Dairy mobile back to ${kavMobile} (${back.status})`);
+  }
+  const loginAfter = psql(`select coalesce(max(count),0)||' since '||coalesce(max(window_start)::text,'-') from platform_rate_limit where scope='login_ip'`);
+  note(`logins spent by R this run: ${rtLogins}; login_ip after R: ${loginAfter}`);
+}
+
 const main = async () => {
-  const state = await seed();
+  // R alone reuses the stored accounts without seed()'s API sign-in (login budget).
+  const state = PHASES.join() === 'R' && existsSync(STATE_FILE) ? JSON.parse(readFileSync(STATE_FILE, 'utf8')) : await seed();
   if (process.argv.includes('--seed-only')) { console.log(JSON.stringify(state, null, 2)); return; }
   const browser = await chromium.launch();
   if (PHASES.includes('A')) await phaseA(browser, state);
   if (PHASES.includes('B')) await phaseB(browser, state);
   if (PHASES.includes('C')) await phaseC(browser, state);
+  if (PHASES.includes('R')) await phaseR(browser, state);
   await browser.close();
   const passed = results.filter((r) => r.ok).length;
   console.log(`\n${passed}/${results.length} checks passed`);

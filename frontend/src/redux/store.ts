@@ -22,13 +22,12 @@ import { toPlanLimitHit } from 'modules/DigiKhaato/features/plan/view-model/plan
 import invitationReducer from 'modules/DigiKhaato/features/team/redux/invitationSlice';
 import memberReducer from 'modules/DigiKhaato/features/team/redux/memberSlice';
 
-import { resetAllFeatureState } from './actions';
 import { invalidationListener } from './invalidation/listener';
 // ── Cross-cutting ────────────────────────────────────────────────────────────
 import localeReducer from './slice/localeSlice';
 import networkReducer, { responseObserved, transportFailed } from './slice/networkSlice';
 import offlineQueueReducer from './slice/offlineQueueSlice';
-import sessionReducer, { sessionExpired } from './slice/sessionSlice';
+import sessionReducer, { endSessionLocally } from './slice/sessionSlice';
 import snackbarReducer, { showSnackbar } from './slice/snackbarSlice';
 import themeReducer from './slice/themeSlice';
 import whiteLabelReducer from './slice/whiteLabelSlice';
@@ -119,8 +118,7 @@ registerTransportHost({
    * do a logout.
    */
   onSessionExpired: () => {
-    store.dispatch(sessionExpired());
-    store.dispatch(resetAllFeatureState());
+    endSessionLocally(store.dispatch);
   },
   /**
    * §19.12.2 / CR-2026-09-19-E — THE global error channel, and the only place

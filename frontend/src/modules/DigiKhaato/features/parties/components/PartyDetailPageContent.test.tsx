@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { sessionLoaded } from 'src/redux/slice/sessionSlice';
@@ -8,6 +8,7 @@ import type { PermissionCode } from 'src/types/domain.types';
 import { formatBusinessDate, todayInTenantTz } from 'src/utils/dates';
 
 import { resetLedgerEntries } from 'modules/DigiKhaato/features/ledger/redux/ledgerEntrySlice';
+import { postEntry, reverseEntry } from 'modules/DigiKhaato/features/ledger/redux/ledgerEntryThunk';
 import { resetLedgerForm } from 'modules/DigiKhaato/features/ledger/redux/ledgerFormSlice';
 
 import { resetPartyDetail } from '../redux/partyDetailSlice';
@@ -37,6 +38,7 @@ jest.mock('modules/DigiKhaato/features/ledger/api/ledgerService');
 const ledgerService = jest.requireMock('modules/DigiKhaato/features/ledger/api/ledgerService') as {
   listPartyEntries: jest.Mock;
   postLedgerEntry: jest.Mock;
+  reverseLedgerEntry: jest.Mock;
 };
 
 const partyService = jest.requireMock('../api/partyService') as {
@@ -285,7 +287,7 @@ describe('the khata page', () => {
     expect(await screen.findByText('You gave · Ramesh Traders')).toBeInTheDocument();
   });
 
-  it('moves the header balance to the number the entry produced, with no refetch', async () => {
+  it('moves the header balance to the number the entry produced, before any refetch lands', async () => {
     /**
      * LED-01 FR-3, and the reason `meta.party_balance` is on the 201 at all.
      *
@@ -301,8 +303,18 @@ describe('the khata page', () => {
      * own docstring says an entry that claims it falsely is worse than no entry
      * — the next reader stops looking for the refetch. It was false, and the
      * header sat on ₹2,300 while the server held ₹2,800.
+     *
+     * NEW-2 changed the second half of this test and not the first. The entry
+     * now DOES refetch the party — the credit block is computed by the server
+     * and nothing in the 201 carries it — so the claim is that the header moves
+     * from the 201 while that refetch is still in the air, not that there is
+     * no refetch. The refetch is held open here so the figure on screen can
+     * only have come from the patch.
      */
     const user = userEvent.setup();
+    partyService.getParty
+      .mockResolvedValueOnce(RESULT)
+      .mockReturnValue(new Promise(() => undefined));
     ledgerService.postLedgerEntry.mockResolvedValue({
       entry: {
         id: 'e1',
@@ -336,8 +348,10 @@ describe('the khata page', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(await screen.findByText('₹2,800.00')).toBeInTheDocument();
-    // One read, at mount. The 201 carried the rest.
-    expect(partyService.getParty).toHaveBeenCalledTimes(1);
+    // The read at mount, and the credit block's refetch — still pending, so the
+    // ₹2,800 above is the 201's figure and nobody else's.
+    await waitFor(() => expect(partyService.getParty).toHaveBeenCalledTimes(2));
+    expect(screen.getByText('₹2,800.00')).toBeInTheDocument();
   });
 
   it('hides both actions from a role that may read the ledger and not write it', async () => {
@@ -1264,5 +1278,311 @@ describe('an archived party’s timeline (QA O4)', () => {
     expect(
       await screen.findByRole('button', { name: 'More actions for Cement bags' })
     ).toBeInTheDocument();
+  });
+});
+
+/* ── NEW-2 (QA retest, 24 Sep 2026) — the credit block and the totals ───── */
+
+describe('after an entry, the credit block and the totals follow the balance (NEW-2)', () => {
+  /**
+   * NEW-2. After a save, only the header balance moved: `partyDetailSlice`
+   * patched `balance` from `meta.party_balance` and nothing else, so the credit
+   * block ("₹250.00 over the ₹1,000.00 limit", the bar) and the timeline's
+   * "You gave in all" / "You got in all" kept the figures of the page load
+   * until a reload. The credit bar is what a merchant reads before lending
+   * more, and it was telling them about a balance that no longer existed.
+   *
+   * Both figures are the SERVER's — the credit block is computed with
+   * `Decimal` in `GET /parties/{id}` and the totals are `meta.summary` on the
+   * timeline's first page — so the fix is a refetch through the invalidation
+   * map, and these tests assert the refetched figures reach the screen. The
+   * header's instant patch is asserted to survive alongside it.
+   */
+  const LIMIT = '1000.00';
+  const credit = (
+    exposure: string,
+    available: string,
+    overBy: string,
+    usagePct: number,
+    status: 'ok' | 'near' | 'over'
+  ) => ({ limit: LIMIT, days: 30, exposure, available, overBy, usagePct, mode: 'warn', status });
+
+  const detail = (balance: string, creditBlock: ReturnType<typeof credit>) => ({
+    party: { ...PARTY, balance, creditLimit: LIMIT },
+    summary: { balance },
+    credit: creditBlock,
+  });
+
+  const timeline = (
+    totalDebit: string,
+    totalCredit: string,
+    rows: readonly Record<string, unknown>[] = [ENTRY]
+  ) => ({
+    rows,
+    nextCursor: null,
+    hasMore: false,
+    summary: { totalDebit, totalCredit, entryCount: rows.length },
+  });
+
+  const ENTRY = {
+    id: 'e0',
+    partyId: ID,
+    direction: 'debit' as const,
+    amount: '1250.00',
+    entryDate: '2026-09-15',
+    entryType: 'manual_gave',
+    sourceType: 'manual',
+    sourceId: null,
+    note: 'Cement bags',
+    paymentMode: null,
+    upiApp: null,
+    reference: '',
+    status: 'posted' as const,
+    reversedById: null,
+    reversesId: null,
+    supersedesId: null,
+    reason: null,
+    createdBy: null,
+    createdAt: '2026-09-15T10:00:00Z',
+  };
+
+  const posted = (id: string, direction: 'debit' | 'credit', amount: string) => ({
+    ...ENTRY,
+    id,
+    direction,
+    amount,
+    note: '',
+    entryType: direction === 'debit' ? 'manual_gave' : 'manual_got',
+    entryDate: '2026-09-17',
+    createdAt: '2026-09-17T10:00:00Z',
+  });
+
+  it('over the limit → further over: the caption and "You gave in all" move with the entry', async () => {
+    partyService.getParty
+      .mockResolvedValueOnce(detail('1250.00', credit('1250.00', '0.00', '250.00', 125, 'over')))
+      .mockResolvedValue(detail('1450.00', credit('1450.00', '0.00', '450.00', 145, 'over')));
+    ledgerService.listPartyEntries
+      .mockResolvedValueOnce(timeline('1250.00', '0.00'))
+      .mockResolvedValue(timeline('1450.00', '0.00', [posted('e1', 'debit', '200.00'), ENTRY]));
+    ledgerService.postLedgerEntry.mockResolvedValue({
+      entry: posted('e1', 'debit', '200.00'),
+      balance: '1450.00',
+      warnings: [],
+    });
+
+    renderWithProviders(<PartyDetailPageContent id={ID} />);
+    expect(await screen.findByText('₹250.00 over the ₹1,000.00 limit')).toBeInTheDocument();
+    expect(await screen.findByText('You gave in all, ₹1,250.00')).toBeInTheDocument();
+
+    await act(async () => {
+      await store.dispatch(
+        postEntry({
+          partyId: ID,
+          idempotencyKey: 'k1',
+          values: {
+            direction: 'debit',
+            amount: '200.00',
+            entryDate: '2026-09-17',
+            note: '',
+            paymentMode: '',
+            upiApp: '',
+            reference: '',
+          } as Parameters<typeof postEntry>[0]['values'],
+        })
+      );
+    });
+
+    expect(await screen.findByText('₹450.00 over the ₹1,000.00 limit')).toBeInTheDocument();
+    expect(screen.queryByText('₹250.00 over the ₹1,000.00 limit')).not.toBeInTheDocument();
+    expect(await screen.findByText('You gave in all, ₹1,450.00')).toBeInTheDocument();
+  });
+
+  it('under the limit → near it: the bar and the caption come from the server’s new block', async () => {
+    partyService.getParty
+      .mockResolvedValueOnce(detail('500.00', credit('500.00', '500.00', '0.00', 50, 'ok')))
+      .mockResolvedValue(detail('750.00', credit('750.00', '250.00', '0.00', 75, 'near')));
+    ledgerService.listPartyEntries
+      .mockResolvedValueOnce(timeline('500.00', '0.00', [{ ...ENTRY, amount: '500.00' }]))
+      .mockResolvedValue(
+        timeline('750.00', '0.00', [
+          posted('e1', 'debit', '250.00'),
+          { ...ENTRY, amount: '500.00' },
+        ])
+      );
+    ledgerService.postLedgerEntry.mockResolvedValue({
+      entry: posted('e1', 'debit', '250.00'),
+      balance: '750.00',
+      warnings: [],
+    });
+
+    renderWithProviders(<PartyDetailPageContent id={ID} />);
+    expect(await screen.findByText('₹500.00 left of ₹1,000.00')).toBeInTheDocument();
+
+    await act(async () => {
+      await store.dispatch(
+        postEntry({
+          partyId: ID,
+          idempotencyKey: 'k2',
+          values: {
+            direction: 'debit',
+            amount: '250.00',
+            entryDate: '2026-09-17',
+            note: '',
+            paymentMode: '',
+            upiApp: '',
+            reference: '',
+          } as Parameters<typeof postEntry>[0]['values'],
+        })
+      );
+    });
+
+    expect(await screen.findByText('₹250.00 left of ₹1,000.00')).toBeInTheDocument();
+    expect(
+      screen.getByRole('progressbar', { name: /Credit used — ₹250.00 left of ₹1,000.00/ })
+    ).toHaveAttribute('aria-valuenow', '75');
+    expect(await screen.findByText('You gave in all, ₹750.00')).toBeInTheDocument();
+  });
+
+  it('a reversal takes a party back under the limit, and "You gave in all" drops', async () => {
+    /* The typo case LED-03 exists for: ₹400 written twice at a busy counter.
+       Undoing it takes the party from ₹200 over to ₹200 left — the difference
+       between refusing the next sale and making it. */
+    const first = { ...ENTRY, amount: '800.00' };
+    const duplicate = posted('e2', 'debit', '400.00');
+    partyService.getParty
+      .mockResolvedValueOnce(detail('1200.00', credit('1200.00', '0.00', '200.00', 120, 'over')))
+      .mockResolvedValue(detail('800.00', credit('800.00', '200.00', '0.00', 80, 'near')));
+    ledgerService.listPartyEntries
+      .mockResolvedValueOnce(timeline('1200.00', '0.00', [duplicate, first]))
+      .mockResolvedValue(timeline('800.00', '0.00', [first]));
+    ledgerService.reverseLedgerEntry.mockResolvedValue({
+      entry: { ...duplicate, id: 'rev', direction: 'credit', reversesId: 'e2', reason: 'Twice' },
+      balance: '800.00',
+      originalId: 'e2',
+      reversalId: 'rev',
+    });
+
+    renderWithProviders(<PartyDetailPageContent id={ID} />);
+    expect(await screen.findByText('₹200.00 over the ₹1,000.00 limit')).toBeInTheDocument();
+    expect(await screen.findByText('You gave in all, ₹1,200.00')).toBeInTheDocument();
+
+    await act(async () => {
+      await store.dispatch(
+        reverseEntry({
+          entry: duplicate as Parameters<typeof reverseEntry>[0]['entry'],
+          reason: 'Twice',
+          idempotencyKey: 'k3',
+        })
+      );
+    });
+
+    expect(await screen.findByText('₹200.00 left of ₹1,000.00')).toBeInTheDocument();
+    expect(screen.queryByText('₹200.00 over the ₹1,000.00 limit')).not.toBeInTheDocument();
+    expect(await screen.findByText('You gave in all, ₹800.00')).toBeInTheDocument();
+    // The header's instant patch is still there, and still the 200's figure.
+    expect(screen.getAllByText('₹800.00').length).toBeGreaterThan(0);
+  });
+
+  const values = (amount: string) =>
+    ({
+      direction: 'debit',
+      amount,
+      entryDate: '2026-09-17',
+      note: '',
+      paymentMode: '',
+      upiApp: '',
+      reference: '',
+    }) as Parameters<typeof postEntry>[0]['values'];
+
+  it('two quick entries: the first one’s late refetch does not put its figures back', async () => {
+    /* The refetch NEW-2 added has a failure the patch alone never had. Entry 1
+       asks for the credit block; entry 2 lands before that answer does. The
+       hook must ask AGAIN for entry 2 (it re-fires on `staleSeq`, aborting the
+       first read), or the credit block stays on entry 1's figures — and without
+       the slice's guard, the header's balance would go backwards to them. */
+    let answerFirst: (value: unknown) => void = () => undefined;
+    partyService.getParty
+      .mockResolvedValueOnce(detail('1250.00', credit('1250.00', '0.00', '250.00', 125, 'over')))
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          answerFirst = resolve;
+        })
+      )
+      .mockResolvedValue(detail('1650.00', credit('1650.00', '0.00', '650.00', 165, 'over')));
+    ledgerService.listPartyEntries.mockResolvedValue(timeline('1250.00', '0.00'));
+    ledgerService.postLedgerEntry
+      .mockResolvedValueOnce({
+        entry: posted('e1', 'debit', '200.00'),
+        balance: '1450.00',
+        warnings: [],
+      })
+      .mockResolvedValueOnce({
+        entry: { ...posted('e2', 'debit', '200.00'), createdAt: '2026-09-17T10:00:05Z' },
+        balance: '1650.00',
+        warnings: [],
+      });
+
+    renderWithProviders(<PartyDetailPageContent id={ID} />);
+    expect(await screen.findByText('₹250.00 over the ₹1,000.00 limit')).toBeInTheDocument();
+
+    await act(async () => {
+      await store.dispatch(
+        postEntry({ partyId: ID, idempotencyKey: 'a', values: values('200.00') })
+      );
+    });
+    await waitFor(() => expect(partyService.getParty).toHaveBeenCalledTimes(2));
+    await act(async () => {
+      await store.dispatch(
+        postEntry({ partyId: ID, idempotencyKey: 'b', values: values('200.00') })
+      );
+    });
+
+    expect(await screen.findByText('₹650.00 over the ₹1,000.00 limit')).toBeInTheDocument();
+    // Entry 1's read finally answers, with entry 1's figures. Nothing moves.
+    await act(async () => {
+      answerFirst(detail('1450.00', credit('1450.00', '0.00', '450.00', 145, 'over')));
+      await Promise.resolve();
+    });
+    expect(screen.getByText('₹650.00 over the ₹1,000.00 limit')).toBeInTheDocument();
+    expect(screen.queryByText('₹450.00 over the ₹1,000.00 limit')).not.toBeInTheDocument();
+    expect(screen.getAllByText('₹1,650.00').length).toBeGreaterThan(0);
+  });
+
+  it('re-reads the timeline at the depth already loaded, not back to one page', async () => {
+    /* The refresh is for the totals; it must not cost a merchant who had
+       scrolled past the first fifty rows their place. */
+    const many = Array.from({ length: 60 }, (_, index) => ({
+      ...ENTRY,
+      id: `old-${index}`,
+      amount: '10.00',
+      note: `Row ${index}`,
+      createdAt: `2026-09-15T10:${String(index).padStart(2, '0')}:00Z`,
+    }));
+    partyService.getParty.mockResolvedValue(
+      detail('600.00', credit('600.00', '400.00', '0.00', 60, 'ok'))
+    );
+    ledgerService.listPartyEntries.mockResolvedValue(timeline('600.00', '0.00', many));
+    ledgerService.postLedgerEntry.mockResolvedValue({
+      entry: posted('e1', 'debit', '200.00'),
+      balance: '800.00',
+      warnings: [],
+    });
+
+    renderWithProviders(<PartyDetailPageContent id={ID} />);
+    expect(await screen.findByText('You gave in all, ₹600.00')).toBeInTheDocument();
+
+    await act(async () => {
+      await store.dispatch(
+        postEntry({ partyId: ID, idempotencyKey: 'c', values: values('200.00') })
+      );
+    });
+
+    await waitFor(() =>
+      expect(ledgerService.listPartyEntries).toHaveBeenLastCalledWith(
+        ID,
+        expect.objectContaining({ limit: 61 }),
+        expect.anything()
+      )
+    );
   });
 });

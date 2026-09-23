@@ -38,6 +38,13 @@ export interface FetchEntriesArg {
   readonly cursor?: string | null;
   /** LED-03 FR-7 — the "Show corrections" toggle's position at request time. */
   readonly includeReversed?: boolean;
+  /**
+   * NEW-2 — how many rows the first page should carry. Absent for an ordinary
+   * load (the server's page size). Set by the silent refresh after a write, so
+   * a merchant who had loaded three pages is not dropped back to one by a
+   * refetch that only wanted the totals to be the server's.
+   */
+  readonly limit?: number;
 }
 
 /** QUERY. One page of a party's khata. */
@@ -47,9 +54,9 @@ export const fetchPartyEntries = createAsyncThunk<
   { rejectValue: ApiErrorShape }
 >(
   'ledgerEntry/fetchPartyEntries',
-  async ({ partyId, cursor, includeReversed }, { signal, rejectWithValue }) => {
+  async ({ partyId, cursor, includeReversed, limit }, { signal, rejectWithValue }) => {
     try {
-      return await listPartyEntries(partyId, { cursor, includeReversed }, signal);
+      return await listPartyEntries(partyId, { cursor, includeReversed, limit }, signal);
     } catch (error) {
       return rejectWithValue(toApiError(error, 'ledger.timeline.error.title'));
     }

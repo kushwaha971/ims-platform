@@ -13,6 +13,7 @@ import {
   selectPartyDetail,
   selectPartyDetailError,
   selectPartyDetailStale,
+  selectPartyDetailStaleSeq,
   selectPartyDetailStatus,
   selectPartySummary,
 } from '../redux/partyDetailSlice';
@@ -67,6 +68,7 @@ export function usePartyDetail(id: string): UsePartyDetailResult {
   const status = useAppSelector(selectPartyDetailStatus);
   const error = useAppSelector(selectPartyDetailError);
   const stale = useAppSelector(selectPartyDetailStale);
+  const staleSeq = useAppSelector(selectPartyDetailStaleSeq);
   const collectionStatus = useAppSelector(selectCollectionStatus);
   const rows = useAppSelector(selectPartyRows);
   const isImpaired = useAppSelector(selectNetworkImpaired);
@@ -89,12 +91,16 @@ export function usePartyDetail(id: string): UsePartyDetailResult {
      while the link is impaired. Same judgement as the list: the page is already
      painted, the merchant asked for nothing, and on a degraded connection this
      would compete with a request they ARE waiting for. `isImpaired` is a
-     dependency, so the refresh happens the moment the link recovers. */
+     dependency, so the refresh happens the moment the link recovers.
+
+     `staleSeq` is one too (NEW-2): a second write while the first refetch is
+     in flight aborts it and asks again, so the read that lands was requested
+     after the last write rather than between two of them. */
   useEffect(() => {
     if (!stale || isImpaired) return;
     const promise = dispatch(fetchPartyDetail(id));
     return () => promise.abort();
-  }, [stale, isImpaired, dispatch, id]);
+  }, [stale, staleSeq, isImpaired, dispatch, id]);
 
   const setCollectionDate = useCallback(
     (date: string | null) => {

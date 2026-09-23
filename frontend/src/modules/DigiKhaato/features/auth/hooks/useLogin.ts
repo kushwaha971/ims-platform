@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useDegradedNetwork } from 'src/hooks/useDegradedNetwork';
+import { endSessionLocally, selectHoldsSession } from 'src/redux/slice/sessionSlice';
 import type { ApiErrorShape } from 'src/types/api.types';
 import { applyServerErrors } from 'src/utils/applyServerErrors';
 import { readLocal, writeLocal, removeLocal } from 'src/utils/storage';
@@ -68,6 +69,29 @@ export const useLogin = (): UseLoginResult => {
   const { state: networkState, canWrite } = useDegradedNetwork();
 
   const [formErrors, setFormErrors] = useState<readonly string[]>([]);
+
+  /* NEW-1 — the login screen does not sit over somebody else's session.
+
+     A session that ends by COOKIE EXPIRY never 401s: the proxy sees no cookie
+     on the next route change and redirects here, in the same JS runtime, so
+     the transport's `onSessionExpired` never runs and the previous user's
+     session summary — their business's name — and every feature slice are
+     still in the store behind this form. On a shared counter PC the next
+     person signs in over it, sees the old business in the shell, and is
+     bounced by the stale-tab guard into signing in twice.
+
+     So a login screen that OPENS over a held session ends it exactly as
+     logout does. Read once, at mount (`useState`'s initialiser), and never
+     again: this screen's own successful sign-in produces a session a moment
+     later, while it is still mounted, and that one must survive.
+
+     `idle` and `loading` are not "held" — a hard load of /login is still
+     bootstrapping, and tearing that down would race `SessionBootstrap`. */
+  const holdsSession = useAppSelector(selectHoldsSession);
+  const [heldAtMount] = useState(holdsSession);
+  useEffect(() => {
+    if (heldAtMount) endSessionLocally(dispatch);
+  }, [heldAtMount, dispatch]);
 
   // PLT-01 §8 — restore the preference once, into the slice, so the prefilled
   // address survives a remount of the screen.

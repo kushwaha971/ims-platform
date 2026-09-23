@@ -1,7 +1,7 @@
 import { createSlice, type Draft, type PayloadAction } from '@reduxjs/toolkit';
 
 import { resetAllFeatureState } from 'src/redux/actions';
-import { acceptInvalidation } from 'src/redux/invalidation/listener';
+import { acceptInvalidation, takeReadSeq } from 'src/redux/invalidation/listener';
 import type { RootState } from 'src/redux/store';
 import type { ApiErrorShape, RequestStatus } from 'src/types/api.types';
 
@@ -43,6 +43,10 @@ export interface LedgerEntryState {
   error: ApiErrorShape | null;
   stale: boolean;
   staleUrgency: 'now' | 'next-mount' | null;
+  /** NEW-2 — see `TStaleState.staleSeq`. */
+  staleSeq: number;
+  /** NEW-2 — the `staleSeq` each in-flight first-page read started at. */
+  readSeq: Record<string, number>;
   /**
    * LED-03 FR-7 — "Show corrections", off by default.
    *
@@ -72,6 +76,8 @@ const initialState: LedgerEntryState = {
   error: null,
   stale: false,
   staleUrgency: null,
+  staleSeq: 0,
+  readSeq: {},
   showCorrections: false,
 };
 
@@ -118,11 +124,31 @@ const ledgerEntrySlice = createSlice({
         }
         state.status = state.rows.length > 0 ? 'refreshing' : 'loading';
         state.error = null;
+        state.readSeq[action.meta.requestId] = state.staleSeq;
       })
       .addCase(fetchPartyEntries.fulfilled, (state, action) => {
+        const startedAt = takeReadSeq(state.readSeq, action.meta.requestId);
         // The late-response guard — see the interface docstring.
         if (state.partyId !== null && state.partyId !== action.meta.arg.partyId) return;
         const isMore = Boolean(action.meta.arg.cursor);
+        /* NEW-2 — a first page requested BEFORE the latest write this slice
+           was told about cannot contain it. Two quick entries: the first one's
+           refresh lands after the second one was spliced in, and writing it
+           would take the second entry back off the screen and put the totals
+           back to what they were between the two. Dropped, `stale` left set;
+           the hook has already re-fired on the new `staleSeq`.
+
+           Only when a timeline is on screen (`summary` is the first page's
+           marker): a first load has nothing to protect. */
+        if (
+          !isMore &&
+          state.summary !== null &&
+          startedAt !== undefined &&
+          startedAt !== state.staleSeq
+        ) {
+          state.status = 'succeeded';
+          return;
+        }
         const incoming = action.payload.rows as Draft<LedgerEntry>[];
         if (isMore) {
           /* Append, and DEDUPE by id.
@@ -151,6 +177,7 @@ const ledgerEntrySlice = createSlice({
         }
       })
       .addCase(fetchPartyEntries.rejected, (state, action) => {
+        takeReadSeq(state.readSeq, action.meta.requestId);
         if (action.meta.aborted) return;
         if (state.partyId !== null && state.partyId !== action.meta.arg.partyId) return;
         if (action.meta.arg.cursor) {
@@ -233,8 +260,9 @@ const ledgerEntrySlice = createSlice({
              so with the toggle ON a correction leaves a gap the next fetch
              fills. That is deliberate: sending the row back would mean a second
              serialised entry on the wire for the one case where a merchant is
-             looking at the raw history, and `stale` already asks for the
-             refresh. */
+             looking at the raw history, and the map's `refetch` on this slice
+             (NEW-2) already asks for the refresh. Until NEW-2 this comment said
+             `stale` did, and nothing in the map marked this slice at all. */
           reversal: null,
           replacement: action.payload.entry as Draft<LedgerEntry>,
           original: action.meta.arg.entry as Draft<LedgerEntry>,
@@ -251,8 +279,9 @@ const ledgerEntrySlice = createSlice({
  * replacement row arrives — and two copies of this arithmetic would be two
  * copies that disagree the first time either is changed.
  *
- * The summary is adjusted rather than refetched, and by the ORIGINAL's own
- * direction and amount: `totalDebit` and `totalCredit` are sums over the rows
+ * The summary is adjusted here so it is right the moment the response lands,
+ * and then refetched (NEW-2, the map's `refetch`) so the figures end up the
+ * server's own. It is adjusted by the ORIGINAL's own direction and amount: `totalDebit` and `totalCredit` are sums over the rows
  * that count, and the original has just stopped counting. A merchant who
  * reverses a ₹500 "You gave" must not be left reading "You gave in all ₹2,800"
  * over a ₹2,300 balance — which is the same class of defect as the header that
@@ -373,5 +402,6 @@ export const selectLedgerError = (state: RootState): ApiErrorShape | null =>
 export const selectLedgerHasMore = (state: RootState): boolean => state.ledgerEntry.hasMore;
 export const selectLedgerCursor = (state: RootState): string | null => state.ledgerEntry.cursor;
 export const selectLedgerStale = (state: RootState): boolean => state.ledgerEntry.stale;
+export const selectLedgerStaleSeq = (state: RootState): number => state.ledgerEntry.staleSeq;
 export const selectShowCorrections = (state: RootState): boolean =>
   state.ledgerEntry.showCorrections;

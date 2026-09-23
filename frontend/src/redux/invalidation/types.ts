@@ -35,4 +35,21 @@ export type TInvalidationMap = Readonly<Record<TMutationName, TInvalidationEntry
 export interface TStaleState {
   stale: boolean;
   staleUrgency: 'now' | 'next-mount' | null;
+  /**
+   * NEW-2 — how many invalidations this slice has received, for the slices
+   * whose refetch races a write the SAME slice has already patched.
+   *
+   * Optional, because only such a slice needs it. The khata header is the case
+   * that made it necessary: a post patches the balance from the 201 and asks
+   * for a refetch of the credit block; a SECOND post a moment later patches the
+   * balance again — and the first refetch, requested before the second write,
+   * then lands and puts the first balance back. The number the merchant reads
+   * out at the counter would go backwards.
+   *
+   * A slice that carries it snapshots it when a fetch starts (the thunk's
+   * `getPendingMeta`), discards a response whose snapshot is older than the
+   * current value, and its hook re-fires on every change of it, so the refetch
+   * that DOES land was asked for after the last write.
+   */
+  staleSeq?: number;
 }

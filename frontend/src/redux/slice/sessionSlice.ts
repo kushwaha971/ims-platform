@@ -1,10 +1,15 @@
-import { createSlice, type Draft, type PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, type Draft, type PayloadAction, type UnknownAction } from '@reduxjs/toolkit';
 
 import { resetAllFeatureState } from 'src/redux/actions';
 import type { RootState } from 'src/redux/store';
 import type { ApiErrorShape } from 'src/types/api.types';
 import type { Locale, ModuleCode, PermissionCode } from 'src/types/domain.types';
 
+import {
+  confirmPasswordReset,
+  passwordLogin,
+  registerAccount,
+} from 'modules/DigiKhaato/features/auth/redux/authThunk';
 import {
   fetchSession,
   logout,
@@ -192,6 +197,30 @@ const sessionSlice = createSlice({
         });
       })
       .addCase(logout.fulfilled, () => ({ ...initialState, status: 'anonymous' as const }))
+      /* NEW-1 — a successful sign-in, sign-up or reset-confirm is a NEW
+         session, and whatever summary the store held belongs to the previous
+         one. It is cleared here, on the fulfilled action itself, before
+         `useAuthRedirect` asks `/auth/me` who this is.
+
+         Leaving it was the second half of NEW-1: a session that ended by
+         cookie expiry was still in the store (tenant B), the new user signed
+         in to tenant A, and `/auth/me` answered with `X-Tenant-Id: A` — which
+         the stale-tab guard compared against B, took for "switched in another
+         tab", and answered with a hard reload back to /login. Meanwhile the
+         shell had painted B's business name for the new user. With no
+         `activeTenant` the guard has nothing to compare against, which is its
+         documented one-sided behaviour for "before `/auth/me` has said which
+         tenant this tab is in"; it is armed again the moment `/auth/me` lands.
+
+         `anonymous` rather than `loading`: nothing is being fetched yet, and
+         `fetchSession.pending` moves it to `loading` in the same tick
+         `useAuthRedirect` dispatches it. */
+      .addCase(passwordLogin.fulfilled, () => ({ ...initialState, status: 'anonymous' as const }))
+      .addCase(registerAccount.fulfilled, () => ({ ...initialState, status: 'anonymous' as const }))
+      .addCase(confirmPasswordReset.fulfilled, () => ({
+        ...initialState,
+        status: 'anonymous' as const,
+      }))
       // A tenant switch keeps the session and clears everything else; the
       // session itself is refetched immediately afterwards (§19.6.5 step 2).
       .addCase(resetAllFeatureState, (state) => {
@@ -202,6 +231,29 @@ const sessionSlice = createSlice({
 
 export const { sessionRequested, sessionLoaded, sessionAnonymous, sessionExpired } =
   sessionSlice.actions;
+
+/**
+ * FB-3 / NEW-1 — end the session on this device, as logout does, without a
+ * request: the session goes anonymous first (so `RequireSession` unmounts every
+ * screen in the same render and none of them can refetch into a 401), then the
+ * one teardown every feature slice answers.
+ *
+ * One function because there are two callers and the ORDER is the point: the
+ * transport host's `onSessionExpired` (the refresh itself 401'd) and the login
+ * screen finding a session in the store that the cookies no longer back.
+ */
+export const endSessionLocally = (dispatch: (action: UnknownAction) => unknown): void => {
+  dispatch(sessionExpired());
+  dispatch(resetAllFeatureState());
+};
+
+/**
+ * NEW-1 — does the store hold a session summary a login screen must not sit
+ * over? `authenticated` and `no_tenant` both carry a user; `idle` and `loading`
+ * are a bootstrap still deciding, and `anonymous` is already torn down.
+ */
+export const selectHoldsSession = (state: RootState): boolean =>
+  state.session.status === 'authenticated' || state.session.status === 'no_tenant';
 
 export default sessionSlice.reducer;
 
