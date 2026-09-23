@@ -1,8 +1,8 @@
-import { createSlice, type Draft, type PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, type WithSlice, type Draft, type PayloadAction } from '@reduxjs/toolkit';
 
 import { resetAllFeatureState } from 'src/redux/actions';
 import { acceptInvalidation } from 'src/redux/invalidation/listener';
-import type { RootState } from 'src/redux/store';
+import { rootReducer, type RootState } from 'src/redux/store';
 import type { ApiErrorShape, RequestStatus } from 'src/types/api.types';
 
 import { fetchLedgerAging, fetchLedgerSummary } from './agingThunk';
@@ -132,22 +132,35 @@ export const { agingFiltersChanged, resetLedgerAging } = ledgerAgingSlice.action
 
 export const ledgerAgingReducer = ledgerAgingSlice.reducer;
 
+// ── Lazy registration (CR-134) ───────────────────────────────────────────────
+// Only the route that imports this module needs this state, so the reducer
+// arrives with that route's chunk instead of with every page. `selectSlice`
+// answers the initial state until the first action lands.
+
+declare module 'src/redux/store' {
+   
+  export interface LazyLoadedSlices extends WithSlice<typeof ledgerAgingSlice> {}
+}
+
+const injected = ledgerAgingSlice.injectInto(rootReducer);
+const slice$ = (state: RootState) => injected.selectSlice(state);
+
 // ── Selectors ────────────────────────────────────────────────────────────────
 
-export const selectAgingRows = (state: RootState): readonly AgingRow[] => state.ledgerAging.rows;
+export const selectAgingRows = (state: RootState): readonly AgingRow[] => slice$(state).rows;
 export const selectAgingTotals = (state: RootState): AgingAmounts | null =>
-  state.ledgerAging.totals;
+  slice$(state).totals;
 export const selectLedgerPosition = (state: RootState): LedgerSummary | null =>
-  state.ledgerAging.summary;
-export const selectAgingStatus = (state: RootState): RequestStatus => state.ledgerAging.status;
-export const selectAgingError = (state: RootState): ApiErrorShape | null => state.ledgerAging.error;
-export const selectAgingAsOf = (state: RootState): string | null => state.ledgerAging.asOf;
-export const selectAgingCachedAt = (state: RootState): string | null => state.ledgerAging.cachedAt;
+  slice$(state).summary;
+export const selectAgingStatus = (state: RootState): RequestStatus => slice$(state).status;
+export const selectAgingError = (state: RootState): ApiErrorShape | null => slice$(state).error;
+export const selectAgingAsOf = (state: RootState): string | null => slice$(state).asOf;
+export const selectAgingCachedAt = (state: RootState): string | null => slice$(state).cachedAt;
 export const selectAgingPageInfo = (
   state: RootState
 ): { page: number; pageSize: number; total: number } => ({
-  page: state.ledgerAging.page,
-  pageSize: state.ledgerAging.pageSize,
-  total: state.ledgerAging.total,
+  page: slice$(state).page,
+  pageSize: slice$(state).pageSize,
+  total: slice$(state).total,
 });
-export const selectAgingStale = (state: RootState): boolean => state.ledgerAging.stale;
+export const selectAgingStale = (state: RootState): boolean => slice$(state).stale;

@@ -1,4 +1,4 @@
-import { configureStore } from '@reduxjs/toolkit';
+import { combineSlices, configureStore } from '@reduxjs/toolkit';
 
 import { registerTransportHost } from 'src/api/transportBridge';
 import { errorMessageId } from 'src/utils/apiError';
@@ -6,10 +6,8 @@ import { errorMessageId } from 'src/utils/apiError';
 // ── auth (PLT-01, PLT-02) ────────────────────────────────────────────────────
 import authReducer from 'modules/DigiKhaato/features/auth/redux/authSlice';
 // ── ledger (LED-01) ──────────────────────────────────────────────────────────
-import { ledgerAgingReducer } from 'modules/DigiKhaato/features/ledger/redux/agingSlice';
 import ledgerEntryReducer from 'modules/DigiKhaato/features/ledger/redux/ledgerEntrySlice';
 import { ledgerFormReducer } from 'modules/DigiKhaato/features/ledger/redux/ledgerFormSlice';
-import { statementReducer } from 'modules/DigiKhaato/features/ledger/redux/statementSlice';
 // ── onboarding (PLT-03) ──────────────────────────────────────────────────────
 import onboardingReducer from 'modules/DigiKhaato/features/onboarding/redux/onboardingSlice';
 // ── parties ──────────────────────────────────────────────────────────────────
@@ -35,23 +33,27 @@ import themeReducer from './slice/themeSlice';
 import whiteLabelReducer from './slice/whiteLabelSlice';
 
 /**
- * Part 19 §19.3.9 — a flat `configureStore` with one key per slice, grouped and
- * commented by module, exactly BrandHub's arrangement. No `combineReducers`
- * nesting, no dynamic reducer injection, no persistence middleware, and no
- * hand-written middleware: the one listener is RTK's own, carrying the
- * invalidation map of §19.3.6.
+ * Part 19 §19.3.9 — one key per slice, grouped and commented by module,
+ * BrandHub's arrangement. No persistence middleware and no hand-written
+ * middleware: the one listener is RTK's own, carrying the invalidation map of
+ * §19.3.6. Two deliberate absences: `redux-persist` (the store is rebuilt from
+ * the API on load) and TanStack Query (ADR-004 — one data-layer pattern only).
  *
- * Two deliberate absences: `redux-persist` (the store is rebuilt from the API
- * on load) and TanStack Query (ADR-004 — one data-layer pattern only).
+ * ── Static and lazy (CR-134, decided 23 Sep 2026) ───────────────────────────
+ * Every slice registered here ships to EVERY route, login screen included —
+ * nine measured data points, the last two provably route-local. So a slice
+ * that exactly one route reads is not registered here: it declares itself
+ * on `LazyLoadedSlices` by module augmentation and injects into
+ * `rootReducer` when its own module is imported, which is when that route's
+ * chunk loads. Its selectors read through the injected slice's `selectSlice`,
+ * which answers the initial state before the first action lands.
  *
- * Sprint 1 adds four keys and no mechanism: `auth`, `onboarding`, `plan`, and
- * PLT-04's state, which lives in the existing `session` key because a
- * membership list IS the session summary and a second copy of it would be a
- * second thing to keep true.
+ * What stays static is what more than one screen reads: the session, the
+ * party list (the nav's counts), the ledger form (opened from the khata and
+ * the list). `statement` and `ledgerAging` are the first two lazy slices.
+ * `combineSlices` is part of Redux Toolkit; no dependency was added.
  */
-export const store = configureStore({
-  reducer: {
-    snackbar: snackbarReducer,
+const staticReducers = {    snackbar: snackbarReducer,
     session: sessionReducer,
     whiteLabel: whiteLabelReducer,
     locale: localeReducer,
@@ -69,20 +71,18 @@ export const store = configureStore({
     partyTag: partyTagReducer,
     ledgerEntry: ledgerEntryReducer,
     ledgerForm: ledgerFormReducer,
-    /* LED-04. The clearest case yet for §19.3.9, and the slice's own docstring
-       makes the argument: this one is provably ROUTE-LOCAL — the statement has
-       its own address and nothing else reads this state — so every merchant who
-       opens the login screen downloads it and the ones who print a statement
-       read it. Every earlier slice could at least be argued into the shell. */
-    statement: statementReducer,
-    /* LED-09, and the second route-local slice in a row: `/ledger/aging` is the
-       only screen that reads this. The statement's docstring made the
-       qualitative argument for §19.3.9; this is the instance that turns it from
-       an observation into a pattern. */
-    ledgerAging: ledgerAgingReducer,
     invitation: invitationReducer,
     member: memberReducer,
-  },
+};
+
+/** Route-local slices add themselves here with `declare module` (CR-134). */
+ 
+export interface LazyLoadedSlices {}
+
+export const rootReducer = combineSlices(staticReducers).withLazyLoadedSlices<LazyLoadedSlices>();
+
+export const store = configureStore({
+  reducer: rootReducer,
   middleware: (getDefault) =>
     getDefault({
       // Money is strings, dates are ISO strings, errors are plain objects.

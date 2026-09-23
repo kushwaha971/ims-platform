@@ -1,8 +1,8 @@
-import { createSlice, type Draft, type PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, type WithSlice, type Draft, type PayloadAction } from '@reduxjs/toolkit';
 
 import { resetAllFeatureState } from 'src/redux/actions';
 import { acceptInvalidation } from 'src/redux/invalidation/listener';
-import type { RootState } from 'src/redux/store';
+import { rootReducer, type RootState } from 'src/redux/store';
 import type { ApiErrorShape, RequestStatus } from 'src/types/api.types';
 
 /* From `constants/`, NOT from the view-model: a slice is registered
@@ -207,27 +207,40 @@ export const { statementOpened, statementFiltersChanged, printRowsDiscarded, res
 
 export const statementReducer = statementSlice.reducer;
 
+// ── Lazy registration (CR-134) ───────────────────────────────────────────────
+// Only the route that imports this module needs this state, so the reducer
+// arrives with that route's chunk instead of with every page. `selectSlice`
+// answers the initial state until the first action lands.
+
+declare module 'src/redux/store' {
+   
+  export interface LazyLoadedSlices extends WithSlice<typeof statementSlice> {}
+}
+
+const injected = statementSlice.injectInto(rootReducer);
+const slice$ = (state: RootState) => injected.selectSlice(state);
+
 // ── Selectors ────────────────────────────────────────────────────────────────
 
 export const selectStatementRows = (state: RootState): readonly StatementRow[] =>
-  state.statement.rows;
+  slice$(state).rows;
 export const selectStatementParty = (state: RootState): StatementParty | null =>
-  state.statement.party;
+  slice$(state).party;
 export const selectStatementPeriod = (state: RootState): StatementPeriod | null =>
-  state.statement.period;
+  slice$(state).period;
 export const selectStatementSummary = (state: RootState): StatementSummary | null =>
-  state.statement.summary;
-export const selectStatementStatus = (state: RootState): RequestStatus => state.statement.status;
+  slice$(state).summary;
+export const selectStatementStatus = (state: RootState): RequestStatus => slice$(state).status;
 export const selectStatementMoreStatus = (state: RootState): RequestStatus =>
-  state.statement.moreStatus;
+  slice$(state).moreStatus;
 export const selectStatementError = (state: RootState): ApiErrorShape | null =>
-  state.statement.error;
-export const selectStatementHasMore = (state: RootState): boolean => state.statement.hasMore;
-export const selectStatementCursor = (state: RootState): string | null => state.statement.cursor;
+  slice$(state).error;
+export const selectStatementHasMore = (state: RootState): boolean => slice$(state).hasMore;
+export const selectStatementCursor = (state: RootState): string | null => slice$(state).cursor;
 export const selectStatementFilters = (state: RootState): StatementFilters =>
-  state.statement.filters;
+  slice$(state).filters;
 export const selectStatementPrintRows = (state: RootState): readonly StatementRow[] | null =>
-  state.statement.printRows;
+  slice$(state).printRows;
 export const selectStatementPrintStatus = (state: RootState): RequestStatus =>
-  state.statement.printStatus;
-export const selectStatementStale = (state: RootState): boolean => state.statement.stale;
+  slice$(state).printStatus;
+export const selectStatementStale = (state: RootState): boolean => slice$(state).stale;

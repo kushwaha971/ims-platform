@@ -263,7 +263,17 @@
   "slice could at least be argued into the shell — the party list's filters are",
   "read by the nav, the ledger form is opened from more than one screen. This",
   "one is downloaded by everybody and read by the merchants who print a",
-  "statement, and there is no argument that makes that right. Nine features in."
+  "statement, and there is no argument that makes that right. Nine features in.",
+  "",
+  "── 23 Sep 2026: CR-134, the first two lazy slices ─────────────────────────",
+  "`statement` and `ledgerAging` are no longer registered in store.ts; each",
+  "injects into `combineSlices(...).withLazyLoadedSlices()` when its route's",
+  "chunk loads. Measured against the build before it: the shell went 109.9 →",
+  "109.8, because `combineSlices` and the injection plumbing cost about what the",
+  "two slices did. That is the entry fee, paid once: every route-local slice",
+  "from here on costs the shell nothing. The two routes gained their slices",
+  "(statement 86.4 → 87.0, aging 89.1 → 89.5), so statement's route budget",
+  "moves 87 → 88 and its first load 324 → 325."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -683,8 +693,8 @@
    "firstLoad": 309
   },
   "/parties/[id]/statement": {
-   "route": 87,
-   "firstLoad": 324
+   "route": 88,
+   "firstLoad": 325
   },
   "/ledger/aging": {
    "route": 90,
