@@ -3,6 +3,7 @@ import {
   buildWhatsAppUrl,
   canUseNativeShare,
   encodeShareText,
+  formatPhoneForDisplay,
   isShareAbort,
   toWhatsAppDigits,
 } from './share';
@@ -145,5 +146,40 @@ describe('isShareAbort', () => {
     expect(isShareAbort({ name: 'AbortError' })).toBe(true);
     expect(isShareAbort(new Error('NotAllowedError'))).toBe(false);
     expect(isShareAbort(null)).toBe(false);
+  });
+});
+
+describe('formatPhoneForDisplay (QA O6)', () => {
+  /* Prevents QA O6: the reminder sheet's "To …" line printed the mobile
+     exactly as stored — "09812345678", "+91 98123 45679", "+919812345678" —
+     three spellings of the same kind of number on the line whose whole job
+     is to let the merchant check the recipient before WhatsApp opens. It
+     reads through the SAME normaliser the links use, so the number shown is
+     the number the link dials. */
+  it.each([
+    ['+919812345678', '+91 98123 45678'],
+    ['09812345678', '+91 98123 45678'],
+    ['9812345678', '+91 98123 45678'],
+    ['+91 98123 45679', '+91 98123 45679'],
+    ['0091-98123-45678', '+91 98123 45678'],
+    ['+91 098123 45678', '+91 98123 45678'],
+  ])('shows the Indian mobile %s as %s', (raw, shown) => {
+    expect(formatPhoneForDisplay(raw)).toBe(shown);
+  });
+
+  it.each([
+    ['+44 20 7946 0958', '+44 20 7946 0958'],
+    ['+1 (415) 555-0100', '+1 (415) 555-0100'],
+  ])('shows a foreign number %s as it was stored', (raw, shown) => {
+    expect(formatPhoneForDisplay(raw)).toBe(shown);
+  });
+
+  it('shows an unreadable number as stored rather than guess at it', () => {
+    expect(formatPhoneForDisplay(' 12345 ')).toBe('12345');
+  });
+
+  it('is empty for nothing', () => {
+    expect(formatPhoneForDisplay(null)).toBe('');
+    expect(formatPhoneForDisplay(undefined)).toBe('');
   });
 });

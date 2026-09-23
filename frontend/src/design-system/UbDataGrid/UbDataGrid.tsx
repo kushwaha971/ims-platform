@@ -102,6 +102,11 @@ export interface UbDataGridProps<TRow> {
    * see `UbDataGridMobileList`.
    */
   readonly cardAvatar?: boolean;
+  /**
+   * Cards only: an icon for the disc in place of initials, per row — for a row
+   * with no name, such as an invitation (QA O3). `null` keeps the initials.
+   */
+  readonly cardAvatarIcon?: (row: TRow) => ReactNode;
 
   /** md–lg cutoff. Columns above it are dropped there. Default 2. */
   readonly compactCutoff?: UbColumnPriority;
@@ -268,6 +273,7 @@ export function UbDataGrid<TRow>({
   filters,
   onRowOpen,
   cardAvatar,
+  cardAvatarIcon,
   compactCutoff,
   allowHorizontalScroll = false,
   columnMenu,
@@ -424,6 +430,7 @@ export function UbDataGrid<TRow>({
               labels={labels}
               listLabel={caption}
               avatar={cardAvatar}
+              avatarIcon={cardAvatarIcon}
             />
           ) : (
             <UbDataGridTableLazy

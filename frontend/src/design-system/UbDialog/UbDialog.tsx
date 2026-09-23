@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useId, type ReactNode } from 'react';
+import { memo, useId, type ReactNode, type RefObject } from 'react';
 
 import { X } from 'lucide-react';
 
@@ -40,6 +40,12 @@ export interface UbDialogProps {
   readonly icon?: ReactNode;
   readonly children?: ReactNode;
   readonly footer?: ReactNode;
+  /**
+   * Where focus returns on close if the element that opened this is no longer
+   * in the document — e.g. an item in a menu sheet that closed as it opened
+   * this one (QA D1, WCAG 2.4.3). Pass the control that opened the menu.
+   */
+  readonly returnFocusRef?: RefObject<HTMLElement | null>;
   readonly className?: string;
 }
 
@@ -54,6 +60,7 @@ function UbDialogBase({
   icon,
   children,
   footer,
+  returnFocusRef,
   className,
 }: Readonly<UbDialogProps>) {
   const id = useId();
@@ -67,6 +74,7 @@ function UbDialogBase({
       labelledBy={titleId}
       describedBy={description ? descriptionId : undefined}
       dismissOnBackdrop={dismissOnBackdrop}
+      returnFocusRef={returnFocusRef}
       className={className}
     >
       <MLDialogHeader>

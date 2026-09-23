@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
@@ -147,6 +147,9 @@ export function PartyDetailPageContent({
   } = usePartyDetail(id);
 
   const archive = usePartyArchive(id);
+  /* The header's ⋯. Every dialog it opens returns focus here when it closes,
+     because the menu item that opened it closed with the menu (QA D1). */
+  const moreRef = useRef<HTMLButtonElement | null>(null);
   /* The same test the timeline is drawn on: a tenant without the ledger module
      has no statement to read, and a role that may not read entries must not be
      handed a link to a page that would refuse them (§19.7.5 — hide, never
@@ -306,6 +309,7 @@ export function PartyDetailPageContent({
             party && !isArchived ? (
               <PartyHeaderMenu
                 t={t}
+                triggerRef={moreRef}
                 statementHref={canReadLedger ? partyStatementPath(id) : undefined}
                 onRemind={reminder.canRemind ? reminder.openSheet : undefined}
                 onEdit={partyForm.canWrite ? openEdit : undefined}
@@ -375,7 +379,7 @@ export function PartyDetailPageContent({
                 reads like and when an author is worth naming, neither of which
                 a `UbTimeline` could know. It renders nothing at all when the
                 tenant has not enabled the ledger module. */}
-            <PartyLedgerTimeline partyId={id} />
+            <PartyLedgerTimeline partyId={id} readOnly={isArchived} />
           </UbStack>
 
           <UbBox className="w-full lg:sticky lg:top-6 lg:w-[320px] lg:shrink-0">
@@ -400,7 +404,7 @@ export function PartyDetailPageContent({
           carries React Hook Form's resolver, the Yup schema and the controls,
           and putting it in the route's own chunk charges every merchant who
           opened this page to READ it. */}
-      {partyForm.open && <PartyFormDrawerLazy form={partyForm} />}
+      {partyForm.open && <PartyFormDrawerLazy form={partyForm} returnFocusRef={moreRef} />}
 
       {entryForm.open && <LedgerEntryDrawerLazy form={entryForm} partyName={shown.name} />}
 
@@ -420,6 +424,7 @@ export function PartyDetailPageContent({
           labels={reminder.labels}
           onShared={reminder.onShared}
           onFailed={reminder.onFailed}
+          returnFocusRef={moreRef}
         />
       )}
 
@@ -427,6 +432,7 @@ export function PartyDetailPageContent({
         <OpeningBalanceDrawerLazy
           opening={opening}
           partyName={shown.name}
+          returnFocusRef={moreRef}
           /* LED-02 §8 / PTY-01 FR-9 — a supplier-only party is somebody this
              business buys from, so the balance carried over is what the
              business owes THEM. A party that is both starts on "they owe me"
@@ -447,6 +453,7 @@ export function PartyDetailPageContent({
           error={archive.error}
           onConfirm={archive.confirm}
           onClose={archive.close}
+          returnFocusRef={moreRef}
           savingFrom={archive.savingFrom}
           canWriteOff={archive.canWriteOff}
           onStartWriteOff={archive.startWriteOff}

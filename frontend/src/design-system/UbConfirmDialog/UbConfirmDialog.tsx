@@ -1,6 +1,6 @@
 'use client';
 
-import { memo } from 'react';
+import { memo, type RefObject } from 'react';
 
 import { TriangleAlert } from 'lucide-react';
 
@@ -35,6 +35,12 @@ export interface UbConfirmDialogProps {
   readonly busy?: boolean;
   readonly busyLabel?: string;
   readonly destructive?: boolean;
+  /**
+   * Where focus returns on close if the element that opened this is no longer
+   * in the document — e.g. an item in a menu sheet that closed as it opened
+   * this one (QA D1, WCAG 2.4.3). Pass the control that opened the menu.
+   */
+  readonly returnFocusRef?: RefObject<HTMLElement | null>;
 }
 
 function UbConfirmDialogBase({
@@ -49,6 +55,7 @@ function UbConfirmDialogBase({
   busy = false,
   busyLabel,
   destructive = true,
+  returnFocusRef,
 }: Readonly<UbConfirmDialogProps>) {
   return (
     <UbDialog
@@ -58,6 +65,7 @@ function UbConfirmDialogBase({
       description={description}
       closeLabel={closeLabel}
       dismissOnBackdrop={!destructive}
+      returnFocusRef={returnFocusRef}
       icon={
         destructive ? <TriangleAlert aria-hidden className="h-5 w-5 text-warning" /> : undefined
       }

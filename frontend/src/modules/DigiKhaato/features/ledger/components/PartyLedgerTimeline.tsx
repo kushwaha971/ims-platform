@@ -90,7 +90,17 @@ const ReverseEntryDialogLazy = dynamic(
  */
 export function PartyLedgerTimeline({
   partyId,
-}: Readonly<{ partyId: string }>): React.JSX.Element | null {
+  readOnly = false,
+}: Readonly<{
+  partyId: string;
+  /**
+   * The party is archived (PTY-04 FR-14): the rows are read, never corrected.
+   * The server refuses a correction or a reversal on an archived party with
+   * 409 `party_archived`, and each row's ⋯ still offered both (QA O4). Hidden
+   * rather than disabled (§19.7.5), like the header's You gave / You got.
+   */
+  readOnly?: boolean;
+}>): React.JSX.Element | null {
   const { t, d } = useTranslation();
   const ledger = usePartyLedger(partyId);
   const correction = useEntryCorrection();
@@ -226,7 +236,9 @@ export function PartyLedgerTimeline({
                   viewerId={viewerId}
                   wasCorrected={ledger.superseded.has(entry.id)}
                   onOpenMenu={
-                    correction.canCorrect && isCorrectable(entry) ? setMenuFor : undefined
+                    !readOnly && correction.canCorrect && isCorrectable(entry)
+                      ? setMenuFor
+                      : undefined
                   }
                 />
               </UbBox>

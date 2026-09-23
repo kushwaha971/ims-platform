@@ -19,7 +19,9 @@ import { useTranslation } from 'src/hooks/useTranslation';
 import { Can } from '../../auth/components/Can';
 import { PAGE_SIZE_OPTIONS } from '../constants/teamDefaults';
 import { useMembers } from '../hooks/useMembers';
+import { memberCountOf } from '../view-model/memberCount';
 
+import { INVITE_AVATAR_ICON } from './InvitationRow';
 import { createMemberColumns } from './MemberColumns';
 
 import type { Member } from '../types/member.types';
@@ -164,6 +166,17 @@ export function MembersSection(): React.JSX.Element {
 
   const rowId = useCallback((member: Member) => member.id, []);
   const rowName = useCallback((member: Member) => member.fullName || member.email, []);
+  const avatarIcon = useCallback(
+    (member: Member) => (member.status === 'invited' ? INVITE_AVATAR_ICON : null),
+    []
+  );
+  /* QA O3 — people who have joined, and the invited apart: an invited row
+     holds no access, and "3 people" counted it as a colleague. */
+  const count = memberCountOf(rows, meta);
+  const countLabel =
+    count.invited
+      ? t('team.members.countWithInvited', { count: count.joined, invited: count.invited })
+      : t('team.members.count', { count: count.joined });
   const handlePageSize = useCallback((pageSize: number) => setPage(1, pageSize), [setPage]);
   const handleRegenerateOpenChange = useCallback(
     (next: boolean) => {
@@ -182,7 +195,7 @@ export function MembersSection(): React.JSX.Element {
           the count used to take a line of its own under the heading. */}
       <UbSectionHeading
         title={t('team.tab.members')}
-        meta={t('team.members.count', { count: meta.total })}
+        meta={countLabel}
         aside={
           <Can permission="platform.members.manage">
             <UbButton
@@ -206,6 +219,7 @@ export function MembersSection(): React.JSX.Element {
         labels={labels}
         emptyStates={emptyStates}
         caption={t('team.members.caption')}
+        cardAvatarIcon={avatarIcon}
         page={meta}
         onPageChange={setPage}
         onPageSizeChange={handlePageSize}

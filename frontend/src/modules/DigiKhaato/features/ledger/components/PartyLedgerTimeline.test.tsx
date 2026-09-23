@@ -497,3 +497,18 @@ describe('correcting from the khata', () => {
     expect(screen.getByText('Reversed')).toBeInTheDocument();
   });
 });
+
+describe('an archived party’s khata (QA O4)', () => {
+  it('offers no Correct / Reverse on a row when the khata is read-only', async () => {
+    /* Prevents QA O4: an ARCHIVED party's rows still offered "Correct this
+       entry / Reverse this entry", and the server refuses both (409
+       party_archived). Hidden rather than disabled (§19.7.5) — the same rule
+       as the header's You gave / You got on that page. */
+    signIn(['ledger.entry.read', 'ledger.entry.write', 'ledger.entry.correct']);
+    ledgerService.listPartyEntries.mockResolvedValue(page([entry({ note: 'Cement bags' })]));
+    renderWithProviders(<PartyLedgerTimeline partyId={PARTY_ID} readOnly />);
+
+    await screen.findByText('Cement bags');
+    expect(screen.queryByRole('button', { name: /More actions/ })).not.toBeInTheDocument();
+  });
+});

@@ -997,6 +997,7 @@
   "team.members.column.name": "Name",
   "team.members.column.role": "Role",
   "team.members.count": "{count, plural, one {# person} other {# people}}",
+  "team.members.countWithInvited": "{count, plural, one {# person} other {# people}} · {invited} invited",
   "team.members.empty.body": "Add the people who help you run this business. They get their own login, so you never share yours.",
   "team.members.empty.title": "It is just you so far",
   "team.members.error.body": "Check your connection and try again. Quote the reference below to support.",

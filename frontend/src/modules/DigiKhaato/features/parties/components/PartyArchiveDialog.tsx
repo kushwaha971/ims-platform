@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useState, type RefObject } from 'react';
 
 import {
   UbAmount,
@@ -66,6 +66,8 @@ export interface PartyArchiveDialogProps {
   readonly onConfirmWriteOff?: (values: { reason: string; entryDate: string }) => void;
   /** Hand over to the entry drawer, in the direction that settles the balance. */
   readonly onRecordPayment?: () => void;
+  /** Focus target on close when the opener is gone (QA D1) — the khata's ⋯. */
+  readonly returnFocusRef?: RefObject<HTMLElement | null>;
 }
 
 const WRITE_OFF_REASON_MIN = 3;
@@ -84,6 +86,7 @@ function PartyArchiveDialogBase({
   onCancelWriteOff,
   onConfirmWriteOff,
   onRecordPayment,
+  returnFocusRef,
 }: Readonly<PartyArchiveDialogProps>) {
   const [reason, setReason] = useState('');
   const [writeOffReason, setWriteOffReason] = useState('');
@@ -150,6 +153,7 @@ function PartyArchiveDialogBase({
       /* A destructive decision does not dismiss on a backdrop tap: the merchant
          has to say yes or no, and a stray tap outside the box is neither. */
       dismissOnBackdrop={false}
+      returnFocusRef={returnFocusRef}
       footer={
         isWriteOff ? (
           <>

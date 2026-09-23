@@ -11,6 +11,7 @@ import { resetLedgerEntries } from 'modules/DigiKhaato/features/ledger/redux/led
 import { resetLedgerForm } from 'modules/DigiKhaato/features/ledger/redux/ledgerFormSlice';
 
 import { resetPartyDetail } from '../redux/partyDetailSlice';
+import { resetPartyForm } from '../redux/partyFormSlice';
 import { resetPartyList } from '../redux/partyListSlice';
 
 import { PartyDetailPageContent } from './PartyDetailPageContent';
@@ -1058,7 +1059,8 @@ describe('sending a reminder from the khata page (LED-06)', () => {
       'Kindly pay at your convenience. Thank you.\n— Kumar Stores';
 
     expect(sheet.querySelector('[data-ub-share-preview]')?.textContent).toBe(expected);
-    expect(sheet).toHaveAccessibleDescription('To Ramesh Traders · +919876543210');
+    // QA O6: the recipient's mobile is shown normalised, as the link dials it.
+    expect(sheet).toHaveAccessibleDescription('To Ramesh Traders · +91 98765 43210');
     const href = within(sheet).getByRole('link', { name: 'WhatsApp' }).getAttribute('href') ?? '';
     expect(href.startsWith('https://wa.me/919876543210?text=')).toBe(true);
     expect(new URL(href).searchParams.get('text')).toBe(expected);
@@ -1126,5 +1128,141 @@ describe('sending a reminder from the khata page (LED-06)', () => {
 
     expect(screen.queryByRole('button', { name: 'Send reminder' })).not.toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: 'Send reminder' })).not.toBeInTheDocument();
+  });
+});
+
+describe('focus returns to ⋯ when a dialog opened from the header menu closes (D1, WCAG 2.4.3)', () => {
+  /**
+   * Prevents QA defect D1 (Sprint 3): keyboard ⋯ → Enter → "Send reminder" →
+   * Escape left focus on <body>. The menu sheet closes (and restores focus to
+   * ⋯) BEFORE the lazily mounted share sheet exists, so the share sheet never
+   * saw its opener take focus and had nothing to return to — a keyboard user
+   * was dropped at the top of the document. The archive dialog is mounted the
+   * same way and had the same defect.
+   */
+  /* The party form's slice is not reset by the file's own beforeEach, so the
+     earlier "Edit actually opens the form" test leaves the drawer open, and
+     this block would be closing a drawer that was never opened from the menu. */
+  beforeEach(() => {
+    store.dispatch(resetPartyForm());
+  });
+
+  const openFromMenu = async (user: ReturnType<typeof userEvent.setup>, item: string) => {
+    renderWithProviders(<PartyDetailPageContent id={ID} />);
+    await screen.findByText('Ramesh Traders');
+    const more = await screen.findByRole('button', { name: 'More actions' });
+    more.focus();
+    await user.keyboard('{Enter}');
+    const menuItem = await screen.findByRole('button', { name: item });
+    menuItem.focus();
+    await user.keyboard('{Enter}');
+    return more;
+  };
+
+  it.each([
+    ['the reminder sheet', 'Send reminder', 'Send reminder'],
+    ['the archive dialog', 'Archive', 'Archive Ramesh Traders?'],
+    ['the edit drawer', 'Edit', 'Edit party'],
+    ['the opening balance drawer', 'Add opening balance', 'Opening balance'],
+  ])('returns focus to ⋯ after Escape on %s', async (_label, item, dialogName) => {
+    const user = userEvent.setup();
+    const more = await openFromMenu(user, item);
+    const dialog = await screen.findByRole('dialog', { name: dialogName });
+    await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
+
+    await user.keyboard('{Escape}');
+
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: dialogName })).not.toBeInTheDocument()
+    );
+    expect(document.activeElement).toBe(more);
+  });
+
+  it.each([
+    ['the reminder sheet', 'Send reminder', 'Send reminder'],
+    ['the archive dialog', 'Archive', 'Archive Ramesh Traders?'],
+  ])('returns focus to ⋯ after ✕ on %s', async (_label, item, dialogName) => {
+    const user = userEvent.setup();
+    const more = await openFromMenu(user, item);
+    const dialog = await screen.findByRole('dialog', { name: dialogName });
+
+    await user.click(within(dialog).getByRole('button', { name: 'Close' }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: dialogName })).not.toBeInTheDocument()
+    );
+    expect(document.activeElement).toBe(more);
+  });
+});
+
+describe('an archived party’s timeline (QA O4)', () => {
+  const CEMENT_PAGE = {
+    rows: [
+      {
+        id: 'e1',
+        partyId: ID,
+        direction: 'debit',
+        amount: '500.00',
+        entryDate: '2026-09-17',
+        entryType: 'manual_gave',
+        sourceType: 'manual',
+        sourceId: null,
+        note: 'Cement bags',
+        paymentMode: null,
+        reference: '',
+        status: 'posted',
+        reversedById: null,
+        reversesId: null,
+        supersedesId: null,
+        reason: null,
+        createdBy: { id: 'u1', name: 'Owner' },
+        createdAt: '2026-09-17T10:00:00Z',
+      },
+    ],
+    nextCursor: null,
+    hasMore: false,
+    summary: { totalDebit: '500.00', totalCredit: '0.00', entryCount: 1 },
+  };
+
+  it('offers no Correct / Reverse ⋯ on its rows, because the server refuses both', async () => {
+    /* Prevents QA O4: the khata page hid You gave / You got for an archived
+       party but each timeline row's ⋯ still offered "Correct this entry /
+       Reverse this entry", which the server answers with 409 party_archived.
+       Hidden rather than disabled (§19.7.5). */
+    signIn([
+      'parties.party.read',
+      'parties.party.write',
+      'ledger.entry.read',
+      'ledger.entry.write',
+      'ledger.entry.correct',
+    ]);
+    ledgerService.listPartyEntries.mockResolvedValue(CEMENT_PAGE);
+    partyService.getParty.mockResolvedValue({
+      ...RESULT,
+      party: { ...PARTY, status: 'archived' as const },
+    });
+    renderWithProviders(<PartyDetailPageContent id={ID} />);
+
+    await screen.findByText('This party is archived');
+    expect(await screen.findByText('Cement bags')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'More actions for Cement bags' })
+    ).not.toBeInTheDocument();
+  });
+
+  it('still offers them on an active party (the control above is not simply gone)', async () => {
+    signIn([
+      'parties.party.read',
+      'parties.party.write',
+      'ledger.entry.read',
+      'ledger.entry.write',
+      'ledger.entry.correct',
+    ]);
+    ledgerService.listPartyEntries.mockResolvedValue(CEMENT_PAGE);
+    renderWithProviders(<PartyDetailPageContent id={ID} />);
+
+    expect(
+      await screen.findByRole('button', { name: 'More actions for Cement bags' })
+    ).toBeInTheDocument();
   });
 });

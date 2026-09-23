@@ -29,6 +29,7 @@ import { PAGE_SIZE_OPTIONS } from '../constants/teamDefaults';
 import { useInvitations } from '../hooks/useInvitations';
 
 import { createInvitationColumns } from './InvitationColumns';
+import { INVITE_AVATAR_ICON } from './InvitationRow';
 import { MembersSection } from './MembersSection';
 
 import type { Invitation } from '../types/invitation.types';
@@ -199,6 +200,9 @@ export function TeamPageContent(): React.JSX.Element {
 
   const rowId = useCallback((invitation: Invitation) => invitation.id, []);
   const rowName = useCallback((invitation: Invitation) => invitation.email, []);
+  /* Every invitation is somebody with no name yet: an invite icon, never a
+     letter cut from the address (QA O3). */
+  const inviteAvatar = useCallback(() => INVITE_AVATAR_ICON, []);
   const handlePageSize = useCallback((pageSize: number) => setPage(1, pageSize), [setPage]);
   const handleRevokeOpenChange = useCallback(
     (next: boolean) => {
@@ -281,6 +285,7 @@ export function TeamPageContent(): React.JSX.Element {
               labels={labels}
               emptyStates={emptyStates}
               caption={t('team.list.caption')}
+              cardAvatarIcon={inviteAvatar}
               page={meta}
               onPageChange={setPage}
               onPageSizeChange={handlePageSize}

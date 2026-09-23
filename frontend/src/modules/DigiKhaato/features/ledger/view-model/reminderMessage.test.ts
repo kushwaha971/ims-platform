@@ -105,8 +105,12 @@ describe('reminderRecipient', () => {
        no hint WhatsApp will ask for the chat. */
     const withMobile = reminderRecipient('Ramesh Traders', '+919812345678');
     expect(resolve('en', withMobile.id, withMobile.values)).toBe(
-      'To Ramesh Traders · +919812345678'
+      'To Ramesh Traders · +91 98123 45678'
     );
+    /* QA O6: shown normalised, whatever spelling was stored — the same
+       normaliser the WhatsApp and SMS links dial through. */
+    const legacy = reminderRecipient('Ramesh Traders', '09812345678');
+    expect(resolve('en', legacy.id, legacy.values)).toBe('To Ramesh Traders · +91 98123 45678');
     const without = reminderRecipient('Ramesh Traders', null);
     expect(resolve('en', without.id, without.values)).toMatch(
       /^To Ramesh Traders · no mobile saved/

@@ -1,5 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { AxiosError, AxiosHeaders, type InternalAxiosRequestConfig } from 'axios';
 
 import {
   describeHorizontalOverflow,
@@ -202,6 +203,26 @@ describe('PartyListPageContent', () => {
     // R-E-4 — the only thing that connects a screenshot to a backend log line.
     expect(screen.getByTestId('request-id')).toHaveTextContent('req_7f3a91');
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
+  });
+
+  it('shows the CLIENT request id when the server never answered (QA D2)', async () => {
+    /* Prevents QA defect D2: a network-level failure (no response) rendered
+       the error state with no reference at all, because `toApiError` read
+       the id only from a response — although the client sent an
+       X-Request-Id on the request. The raw AxiosError goes through the real
+       thunk and `toApiError`, not a pre-shaped error. */
+    partyService.listParties.mockRejectedValue(
+      new AxiosError('Network Error', 'ERR_NETWORK', {
+        headers: new AxiosHeaders({ 'X-Request-Id': 'req_abc' }),
+      } as InternalAxiosRequestConfig)
+    );
+
+    renderWithProviders(<PartyListPageContent />);
+
+    await waitFor(() =>
+      expect(screen.getByText('We could not load your customers')).toBeInTheDocument()
+    );
+    expect(screen.getByTestId('request-id')).toHaveTextContent('req_abc');
   });
 
   it('offers to CLEAR the search on a filtered-empty result, and says so', async () => {

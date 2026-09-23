@@ -1,6 +1,6 @@
 'use client';
 
-import { memo } from 'react';
+import { memo, type ReactNode } from 'react';
 
 import { MLBox } from 'src/design-system/primitives';
 import { cn } from 'src/utils/cn';
@@ -36,10 +36,23 @@ export interface UbAvatarProps {
   readonly name: string;
   readonly size?: UbAvatarSize;
   readonly tone?: UbAvatarTone;
+  /**
+   * Drawn INSTEAD of the initials, for a row that has no name to take them
+   * from. An invited team member has only an email address, and the disc read
+   * "q" for "qa-invitee@…" — a lowercase letter that looks like a person's
+   * initial and is not one (QA O3). A neutral icon says "not a person yet".
+   */
+  readonly icon?: ReactNode;
   readonly className?: string;
 }
 
-function UbAvatarBase({ name, size = 'md', tone = 'default', className }: Readonly<UbAvatarProps>) {
+function UbAvatarBase({
+  name,
+  size = 'md',
+  tone = 'default',
+  icon,
+  className,
+}: Readonly<UbAvatarProps>) {
   return (
     <MLBox
       as="span"
@@ -51,7 +64,7 @@ function UbAvatarBase({ name, size = 'md', tone = 'default', className }: Readon
         className
       )}
     >
-      {initialsOf(name)}
+      {icon ?? initialsOf(name)}
     </MLBox>
   );
 }

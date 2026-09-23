@@ -2,6 +2,8 @@
 
 import { memo, useCallback } from 'react';
 
+import { Mail } from 'lucide-react';
+
 import { UbButton, UbStatusBadge, UbText } from 'src/design-system';
 import type { InvitationStatus } from 'src/types/domain.types';
 
@@ -17,6 +19,15 @@ import { statusTone } from '../view-model/invitationDisplay';
  * None of them calls `useTranslation`; the screen resolves the copy once and
  * passes it down (`t` in a cell is a subscription per row).
  */
+
+/**
+ * The phone card's disc for somebody who has been INVITED and has no name yet
+ * — every invitation row, and an invited row in the members list. Initials cut
+ * from an email address read "q" for "qa-invitee@…", a lowercase letter that
+ * looks like a person's initial and is not one (QA O3). One element, shared by
+ * both grids, so the two lists on the Team screen say "invited" the same way.
+ */
+export const INVITE_AVATAR_ICON = <Mail aria-hidden className="h-4 w-4" />;
 
 export const InvitationEmailCell = memo(function InvitationEmailCell({
   email,

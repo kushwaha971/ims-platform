@@ -222,6 +222,18 @@ describe('TeamPageContent — the list states', () => {
     expect(within(cards).getByRole('button', { name: 'Revoke' })).toBeInTheDocument();
   });
 
+  it('fronts an invitation card with an invite icon, not a letter cut from the address (QA O3)', async () => {
+    /* Prevents QA O3: the disc read "s" for "sunita@example.com" — a lowercase
+       letter that looks like a person's initial and is not one. */
+    invitationService.listInvitations.mockResolvedValue(page([PENDING]));
+
+    renderWithProviders(<TeamPageContent />);
+
+    const cards = await screen.findByTestId('ub-grid-cards');
+    expect(within(cards).queryByText('s')).not.toBeInTheDocument();
+    expect(cards.querySelector('[aria-hidden] svg.lucide-mail')).not.toBeNull();
+  });
+
   /**
    * A `pending` row whose `expires_at` has passed is NOT pending: the server
    * will refuse the token. Showing "Waiting" beside a Revoke button invited the

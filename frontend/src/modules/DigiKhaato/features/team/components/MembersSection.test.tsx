@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { sessionLoaded } from 'src/redux/slice/sessionSlice';
@@ -232,5 +232,57 @@ describe('MembersSection — the optional mobile field', () => {
       role: 'staff',
       mobile: null,
     });
+  });
+});
+
+describe('MembersSection — the heading count and the invited row’s disc (QA O3)', () => {
+  const INVITED = {
+    ...MEMBER,
+    id: '33333333-3333-4333-8333-333333333333',
+    email: 'priya@shop.test',
+    fullName: '',
+    status: 'invited',
+    mustChangePassword: false,
+    passwordExpiresAt: null,
+  };
+  const OWNER = {
+    ...MEMBER,
+    id: '44444444-4444-4444-8444-444444444444',
+    email: 'owner@shop.test',
+    fullName: 'Suresh Sharma',
+    role: 'owner' as const,
+  };
+
+  it('counts the people who have joined, and the invited apart', async () => {
+    /* Prevents QA O3: "3 people" for two members and an invited address that
+       holds no access to this business. */
+    memberService.listMembers.mockResolvedValue(page([MEMBER, INVITED, OWNER]));
+    renderWithProviders(<MembersSection />);
+
+    expect(await screen.findByText('2 people · 1 invited')).toBeInTheDocument();
+    expect(screen.queryByText('3 people')).not.toBeInTheDocument();
+  });
+
+  it('says only the people when nobody is waiting', async () => {
+    memberService.listMembers.mockResolvedValue(page([MEMBER, OWNER]));
+    renderWithProviders(<MembersSection />);
+
+    expect(await screen.findByText('2 people')).toBeInTheDocument();
+  });
+
+  it('draws an invite icon, not a lowercase letter of the email, for an invited row', async () => {
+    /* Prevents QA O3: the phone card's disc read "p" for "priya@shop.test" —
+       an initial that looks like a person's and is not one. */
+    memberService.listMembers.mockResolvedValue(page([MEMBER, INVITED]));
+    renderWithProviders(<MembersSection />);
+
+    const cards = await screen.findAllByTestId('ub-grid-card');
+    const invitedCard = cards.find((card) => within(card).queryByText('priya@shop.test'));
+    const memberCard = cards.find((card) => within(card).queryByText('Ramesh Kumar'));
+    expect(invitedCard).toBeDefined();
+    expect(within(invitedCard as HTMLElement).queryByText('p')).not.toBeInTheDocument();
+    expect(invitedCard?.querySelector('[aria-hidden] svg.lucide-mail')).not.toBeNull();
+    // A joined member keeps their initials.
+    expect(within(memberCard as HTMLElement).getByText('RK')).toBeInTheDocument();
   });
 });

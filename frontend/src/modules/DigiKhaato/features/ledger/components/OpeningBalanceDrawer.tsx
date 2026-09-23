@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useId, useMemo } from 'react';
+import { useCallback, useEffect, useId, useMemo, type RefObject } from 'react';
 
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, useWatch } from 'react-hook-form';
@@ -50,10 +50,13 @@ export function OpeningBalanceDrawer({
   opening,
   partyName,
   defaultDirection,
+  returnFocusRef,
 }: Readonly<{
   opening: UseOpeningBalanceResult;
   partyName: string;
   defaultDirection: LedgerDirection;
+  /** Focus target on close when the opener is gone (QA D1) — the khata's ⋯. */
+  returnFocusRef?: RefObject<HTMLElement | null>;
 }>): React.JSX.Element {
   const { t } = useTranslation();
   const { openingBalanceSchema } = useLedgerSchemas();
@@ -136,6 +139,7 @@ export function OpeningBalanceDrawer({
       description={partyName}
       closeLabel={t('common.action.close')}
       dismissOnBackdrop={!formState.isDirty}
+      returnFocusRef={returnFocusRef}
       footer={
         <>
           <UbButton variant="secondary" onClick={close} disabled={isSaving}>

@@ -12,6 +12,28 @@ const EMPTY_DETAILS: Readonly<Record<string, readonly string[]>> = Object.freeze
 
 const freeze = (shape: ApiErrorShape): ApiErrorShape => Object.freeze(shape);
 
+/**
+ * The `X-Request-Id` the client itself sent (`AxiosInstances`' request
+ * interceptor mints one for every request). It is the fallback for a failure
+ * the server never answered — offline, a dropped connection, a timeout, a
+ * proxy's own 502 page — which used to carry `requestId: null` and so an
+ * error state with no reference to quote (QA D2). The server logs the same
+ * id if the request reached it at all.
+ *
+ * `config.headers` is an `AxiosHeaders` in the interceptor's hands and may be
+ * a plain object elsewhere, so both are read.
+ */
+const clientRequestId = (error: AxiosError): string | undefined => {
+  const headers: unknown = error.config?.headers;
+  if (!headers || typeof headers !== 'object') return undefined;
+  const value =
+    typeof (headers as { get?: unknown }).get === 'function'
+      ? (headers as { get: (name: string) => unknown }).get('X-Request-Id')
+      : ((headers as Record<string, unknown>)['X-Request-Id'] ??
+        (headers as Record<string, unknown>)['x-request-id']);
+  return typeof value === 'string' && value ? value : undefined;
+};
+
 /** Errors must stay serialisable — the store and the outbox both JSON them. */
 export const isApiErrorShape = (value: unknown): value is ApiErrorShape =>
   typeof value === 'object' &&
@@ -67,6 +89,7 @@ export const toApiError = (error: unknown, fallbackMessageId = 'error.generic'):
     const requestId =
       (typeof headerId === 'string' ? headerId : undefined) ??
       axiosError.response?.data?.error?.request_id ??
+      clientRequestId(axiosError) ??
       null;
 
     if (!axiosError.response) {

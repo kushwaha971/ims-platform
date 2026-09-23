@@ -806,6 +806,22 @@ describe('the card avatar', () => {
     expect(screen.getAllByText('RT').length).toBeGreaterThan(0);
   });
 
+  it('draws a per-row icon in place of initials where the row has no name (QA O3)', () => {
+    /* Prevents QA O3: an invited team member's disc read a lowercase letter
+       cut from their email address. The grid lets a row swap the initials
+       for an icon, and leaves every other row's initials alone. */
+    renderGrid('cards', {
+      cardAvatarIcon: (row) =>
+        row.id === ROWS[0]?.id ? <svg data-testid="row-icon" aria-hidden /> : null,
+    });
+
+    const [first, ...rest] = screen.getAllByTestId('ub-grid-card');
+    expect(screen.getAllByTestId('row-icon')).toHaveLength(1);
+    expect(first?.querySelector('[data-testid="row-icon"]')).not.toBeNull();
+    expect(first?.textContent).not.toContain('RT');
+    for (const card of rest) expect(card.querySelector('[data-testid="row-icon"]')).toBeNull();
+  });
+
   it('is absent when the grid says the rows are not people', () => {
     renderGrid('cards', { cardAvatar: false });
 

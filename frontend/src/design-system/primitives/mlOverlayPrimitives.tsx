@@ -33,6 +33,7 @@ import {
   useState,
   type KeyboardEvent,
   type ReactNode,
+  type RefObject,
 } from 'react';
 
 import { createPortal } from 'react-dom';
@@ -76,9 +77,32 @@ export interface MLDialogProps {
    * which is a class name.
    */
   readonly placement?: 'center' | 'drawer';
+  /**
+   * Where focus goes on close when the element that opened the dialog is no
+   * longer in the document (WCAG 2.4.3). The case is a dialog opened from
+   * another overlay — an item in the khata's ⋯ sheet opens the reminder sheet,
+   * and the item is unmounted with its sheet — so the caller names the control
+   * that is still on the page, usually the ⋯ that opened the menu.
+   */
+  readonly returnFocusRef?: RefObject<HTMLElement | null>;
   readonly children: ReactNode;
   readonly className?: string;
 }
+
+/**
+ * The element focus should return to, in order of preference: the one that
+ * was remembered, if it is still in the document; else the caller's fallback.
+ * A node that has been removed accepts `.focus()` and does nothing, which is
+ * how focus used to land on <body> (QA D1).
+ */
+const restoreTarget = (
+  remembered: HTMLElement | null,
+  fallback: HTMLElement | null | undefined
+): HTMLElement | null => {
+  if (remembered?.isConnected) return remembered;
+  if (fallback?.isConnected) return fallback;
+  return null;
+};
 
 /**
  * A modal dialog: portalled to `document.body`, `aria-modal`, focus trapped,
@@ -92,11 +116,30 @@ export function MLDialog({
   describedBy,
   dismissOnBackdrop = true,
   placement = 'center',
+  returnFocusRef,
   children,
   className,
 }: Readonly<MLDialogProps>): React.JSX.Element | null {
   const panelRef = useRef<HTMLDivElement | null>(null);
   const openerRef = useRef<HTMLElement | null>(null);
+
+  /* A dialog MOUNTED open never sees its opener take focus. Every lazily
+     loaded dialog in this product is rendered as `{open && <LazyDialog open />}`,
+     so the `focusin` listener below is registered after the click that opened
+     it — and, where the dialog has an `autoFocus` (the archive dialog's Cancel,
+     the entry drawer's amount), after focus has already moved inside. That
+     left the ref null and focus fell to <body> on close (QA D1).
+
+     So the element focused at the moment of the FIRST render is kept, which is
+     before React commits any `autoFocus`. Only for a dialog that mounts open:
+     for one mounted closed, whatever had focus at page load is stale, and the
+     listener is the right source. A lazy state initialiser runs once and reads
+     no ref, which is what `react-hooks/refs` asks. */
+  const [focusedAtMount] = useState<HTMLElement | null>(() =>
+    open && typeof document !== 'undefined' && document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null
+  );
 
   /* The opener is remembered CONTINUOUSLY rather than read when the dialog
      opens, and the ordering is the whole reason.
@@ -135,6 +178,17 @@ export function MLDialog({
     document.body.style.overflow = 'hidden';
 
     const panel = panelRef.current;
+    /* Read once, on open: the caller's control (the khata's ⋯) is mounted by
+       then, and `restoreTarget` checks it is still in the document on close. */
+    const fallback = returnFocusRef?.current ?? null;
+    if (
+      !openerRef.current?.isConnected &&
+      focusedAtMount &&
+      focusedAtMount !== document.body &&
+      !panel?.contains(focusedAtMount)
+    ) {
+      openerRef.current = focusedAtMount;
+    }
     if (panel) {
       /* Move focus in ONLY if it is not already inside.
  
@@ -168,9 +222,11 @@ export function MLDialog({
 
     return () => {
       document.body.style.overflow = previousOverflow;
-      openerRef.current?.focus();
+      restoreTarget(openerRef.current, fallback)?.focus();
     };
-  }, [open]);
+    /* Both extra deps are stable for the dialog's life — a state value set
+       once and a ref object — and are listed so the rule can see them. */
+  }, [open, focusedAtMount, returnFocusRef]);
 
   const onKeyDown = useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {

@@ -76,6 +76,28 @@ export const toWhatsAppDigits = (raw: string | null | undefined): string | null 
   return null;
 };
 
+/**
+ * A phone number for a person to READ — "+91 98123 45678" — through the same
+ * normaliser the links dial with, so the number on screen is the number the
+ * link opens. The reminder sheet's "To …" line printed whatever was stored
+ * ("09812345678", "+91 98123 45679", "+919812345678"), on the line that exists
+ * so a merchant can check the recipient before WhatsApp opens (QA O6).
+ *
+ * Only an Indian mobile is regrouped, 5 + 5 as Indians write it. A foreign
+ * number, or one the normaliser cannot read, is shown exactly as stored:
+ * grouping conventions differ by country, and re-spacing a number this code
+ * could not parse would dress up a guess as a fact.
+ */
+export const formatPhoneForDisplay = (raw: string | null | undefined): string => {
+  if (!raw) return '';
+  const digits = toWhatsAppDigits(raw);
+  if (digits && digits.length === NATIONAL_DIGITS + 2 && digits.startsWith(INDIA_COUNTRY_CODE)) {
+    const national = digits.slice(INDIA_COUNTRY_CODE.length);
+    return `+${INDIA_COUNTRY_CODE} ${national.slice(0, 5)} ${national.slice(5)}`;
+  }
+  return raw.trim();
+};
+
 /** Newlines normalised, then UTF-8 percent-encoded — see the header. */
 export const encodeShareText = (text: string): string =>
   encodeURIComponent(text.replace(/\r\n?/g, '\n'));

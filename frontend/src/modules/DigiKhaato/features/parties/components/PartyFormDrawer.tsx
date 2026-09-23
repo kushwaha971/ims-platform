@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useId, useMemo } from 'react';
+import { useCallback, useEffect, useId, useMemo, type RefObject } from 'react';
 
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, useWatch } from 'react-hook-form';
@@ -59,7 +59,12 @@ import type { PartyFormValues } from '../types/party.types';
  */
 export function PartyFormDrawer({
   form: partyForm,
-}: Readonly<{ form: UsePartyFormResult }>): React.JSX.Element {
+  returnFocusRef,
+}: Readonly<{
+  form: UsePartyFormResult;
+  /** Focus target on close when the opener is gone (QA D1) — the khata's ⋯. */
+  returnFocusRef?: RefObject<HTMLElement | null>;
+}>): React.JSX.Element {
   const { t } = useTranslation();
   const { partySchema } = usePartySchemas();
   const formId = useId();
@@ -221,6 +226,7 @@ export function PartyFormDrawer({
       closeLabel={t('common.action.close')}
       // A stray tap on the backdrop must not take a half-filled form with it.
       dismissOnBackdrop={!formState.isDirty}
+      returnFocusRef={returnFocusRef}
       footer={
         <>
           <UbButton variant="secondary" onClick={close} disabled={isSaving}>

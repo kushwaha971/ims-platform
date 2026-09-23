@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useCallback, useSyncExternalStore } from 'react';
+import { memo, useCallback, useSyncExternalStore, type RefObject } from 'react';
 
 import { Copy, MessageCircle, MessageSquare, Share2 } from 'lucide-react';
 
@@ -81,6 +81,12 @@ export interface UbShareSheetProps {
   readonly onShared?: (channel: UbShareChannel) => void;
   /** The clipboard refused, or the platform sheet failed for a reason other than dismissal. */
   readonly onFailed?: (channel: UbShareChannel) => void;
+  /**
+   * Where focus returns on close if the element that opened this is no longer
+   * in the document — e.g. an item in a menu sheet that closed as it opened
+   * this one (QA D1, WCAG 2.4.3). Pass the control that opened the menu.
+   */
+  readonly returnFocusRef?: RefObject<HTMLElement | null>;
   readonly className?: string;
 }
 
@@ -99,6 +105,7 @@ function UbShareSheetBase({
   labels,
   onShared,
   onFailed,
+  returnFocusRef,
   className,
 }: Readonly<UbShareSheetProps>) {
   const nativeShare = useSyncExternalStore(
@@ -147,6 +154,7 @@ function UbShareSheetBase({
       title={title}
       description={description}
       closeLabel={labels.close}
+      returnFocusRef={returnFocusRef}
       className={className}
     >
       <div className="flex flex-col gap-4">

@@ -56,6 +56,12 @@ export interface UbDataGridMobileListProps<TRow> {
    * actions sitting on one line and stacking on three.
    */
   readonly avatar?: boolean;
+  /**
+   * A per-row icon drawn in the disc instead of initials, for a row with no
+   * name to take them from (an invitation, an invited member — QA O3).
+   * Return `null`/`undefined` to keep the initials.
+   */
+  readonly avatarIcon?: (row: TRow) => ReactNode;
   readonly className?: string;
 }
 
@@ -71,10 +77,11 @@ const cardBody = <TRow,>(
   row: TRow,
   name: string,
   model: UbCardModel<TRow>,
-  avatar: boolean
+  avatar: boolean,
+  avatarIcon?: (row: TRow) => ReactNode
 ): ReactNode => (
   <>
-    {avatar && <UbAvatar name={name} />}
+    {avatar && <UbAvatar name={name} icon={avatarIcon?.(row) ?? undefined} />}
     <span className="flex min-w-0 flex-1 flex-col">
       <span className="ds-body-sm-medium truncate text-text-primary">
         {model.title ? model.title.cell(row) : name}
@@ -102,6 +109,7 @@ function UbDataGridMobileListBase<TRow>({
   labels,
   listLabel,
   avatar = true,
+  avatarIcon,
   className,
 }: Readonly<UbDataGridMobileListProps<TRow>>): React.JSX.Element {
   const model = cardModel(columns);
@@ -120,7 +128,7 @@ function UbDataGridMobileListBase<TRow>({
     >
       {rows.map((row) => {
         const name = rowName(row);
-        const body = cardBody(row, name, model, avatar);
+        const body = cardBody(row, name, model, avatar, avatarIcon);
 
         return (
           <li

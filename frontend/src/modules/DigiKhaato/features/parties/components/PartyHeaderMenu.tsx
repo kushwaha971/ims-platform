@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type Ref } from 'react';
 
 import { useRouter } from 'next/navigation';
 
@@ -65,6 +65,13 @@ export interface PartyHeaderMenuProps {
    * (`usePartyReminder` decides); absent, the item is not drawn.
    */
   readonly onRemind?: () => void;
+  /**
+   * The ⋯ button, for the page to hand to every dialog this menu opens as its
+   * `returnFocusRef`. Each item closes this sheet as it opens the next one, so
+   * the item a keyboard user pressed is gone by the time that dialog closes,
+   * and without a named fallback focus fell to <body> (QA D1, WCAG 2.4.3).
+   */
+  readonly triggerRef?: Ref<HTMLButtonElement>;
 }
 
 export function PartyHeaderMenu({
@@ -74,6 +81,7 @@ export function PartyHeaderMenu({
   onArchive,
   statementHref,
   onRemind,
+  triggerRef,
 }: Readonly<PartyHeaderMenuProps>): React.JSX.Element | null {
   const [open, setOpen] = useState(false);
   const router = useRouter();
@@ -119,6 +127,7 @@ export function PartyHeaderMenu({
           a button announced as just "More" tells somebody navigating by control
           nothing about what it is more of. */}
       <UbButton
+        ref={triggerRef}
         variant="outlineNeutral"
         icon={<MoreHorizontal className="h-4 w-4" aria-hidden />}
         iconOnly="mobile"

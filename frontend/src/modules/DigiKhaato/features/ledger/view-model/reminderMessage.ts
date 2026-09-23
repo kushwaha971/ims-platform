@@ -1,5 +1,6 @@
 import { formatBusinessDate } from 'src/utils/dates';
 import { formatAmount } from 'src/utils/money';
+import { formatPhoneForDisplay } from 'src/utils/share';
 
 /**
  * LED-06 — the words of a payment reminder, as a decision rather than a
@@ -92,5 +93,6 @@ export const reminderRecipient = (
   mobile: string | null | undefined
 ): { readonly id: string; readonly values: Readonly<Record<string, string>> } =>
   mobile
-    ? { id: 'ledger.remind.to', values: { name: partyName, mobile } }
+    ? /* Normalised for reading (QA O6) — the same normaliser the links use. */
+      { id: 'ledger.remind.to', values: { name: partyName, mobile: formatPhoneForDisplay(mobile) } }
     : { id: 'ledger.remind.toNoMobile', values: { name: partyName } };

@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useId, type ReactNode } from 'react';
+import { memo, useId, type ReactNode, type RefObject } from 'react';
 
 import { X } from 'lucide-react';
 
@@ -53,6 +53,12 @@ export interface UbDrawerProps {
   readonly children?: ReactNode;
   /** The action row. Cancel first in the DOM, primary last. */
   readonly footer?: ReactNode;
+  /**
+   * Where focus returns on close if the element that opened this is no longer
+   * in the document — e.g. an item in a menu sheet that closed as it opened
+   * this one (QA D1, WCAG 2.4.3). Pass the control that opened the menu.
+   */
+  readonly returnFocusRef?: RefObject<HTMLElement | null>;
   readonly className?: string;
 }
 
@@ -65,6 +71,7 @@ function UbDrawerBase({
   dismissOnBackdrop = true,
   children,
   footer,
+  returnFocusRef,
   className,
 }: Readonly<UbDrawerProps>) {
   const id = useId();
@@ -79,6 +86,7 @@ function UbDrawerBase({
       describedBy={description ? descriptionId : undefined}
       dismissOnBackdrop={dismissOnBackdrop}
       placement="drawer"
+      returnFocusRef={returnFocusRef}
       className={className}
     >
       <MLDialogHeader>
