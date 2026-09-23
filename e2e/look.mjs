@@ -203,6 +203,8 @@ const screenText = (page) => page.locator('[data-testid="statement-screen"]').in
 
 const SIZES2 = [
   { id: 'phone', width: 390, height: 844 },
+  { id: 'tablet', width: 768, height: 1024 },
+  { id: 'laptop', width: 1280, height: 800 },
   { id: 'desktop', width: 1440, height: 1000 },
 ];
 const main = async () => {
@@ -212,6 +214,10 @@ const main = async () => {
   for (const size of SIZES2) {
     const context = await browser.newContext({ viewport: { width: size.width, height: size.height } });
     const page = await context.newPage();
+    await page.goto(`${FRONTEND}/login`, { waitUntil: 'networkidle', timeout: 180000 });
+    await settle(page, 1200);
+    mkdirSync(`${SHOT_DIR}/${size.id}`, { recursive: true });
+    await page.screenshot({ path: `${SHOT_DIR}/${size.id}/login.png` });
     await signIn(page);
     const go = async (path, name, sel) => {
       await page.goto(`${FRONTEND}${path}`, { waitUntil: 'domcontentloaded', timeout: 180000 });

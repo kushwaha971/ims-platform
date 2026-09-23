@@ -122,13 +122,13 @@ const toDate = (iso: string | null | undefined): Date | undefined => {
 };
 const toIso = (date: Date): string => isoToday(date);
 
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** "23 Sep 2026". Written out rather than `Intl`: en-IN and en-GB both say
+ *  "Sept", and a date field one letter wider than its neighbours reads wrong. */
 const defaultFormat = (iso: string): string => {
   const date = toDate(iso);
-  return date
-    ? new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(
-        date
-      )
-    : iso;
+  return date ? `${date.getDate()} ${MONTHS[date.getMonth()]} ${date.getFullYear()}` : iso;
 };
 
 const UbDateInputInner = forwardRef<HTMLButtonElement, UbDateInputProps>(function UbDateInputInner(
@@ -150,12 +150,12 @@ const UbDateInputInner = forwardRef<HTMLButtonElement, UbDateInputProps>(functio
     'aria-label': ariaLabel,
     'aria-describedby': ariaDescribedBy,
     'aria-invalid': ariaInvalid,
-    'aria-required': ariaRequired,
   },
   ref
 ) {
   const [open, setOpen] = useState(false);
   const selected = toDate(value);
+  const isInvalid = Boolean(invalid) || ariaInvalid === true;
 
   const handleSelect = useCallback(
     (date: Date | undefined) => {
@@ -193,16 +193,18 @@ const UbDateInputInner = forwardRef<HTMLButtonElement, UbDateInputProps>(functio
       disabled={disabled}
       onBlur={onBlur as React.FocusEventHandler<HTMLButtonElement> | undefined}
       aria-label={ariaLabel}
+      /* A button cannot carry aria-invalid or aria-required (they are not
+         states of the button role), so the field's error and required
+         messages reach assistive tech through `aria-describedby`, which
+         UbField already points at them. The red border follows either signal. */
       aria-describedby={ariaDescribedBy}
-      aria-invalid={ariaInvalid ?? (invalid || undefined)}
-      aria-required={ariaRequired}
       aria-haspopup="dialog"
       aria-expanded={open}
       className={cn(
         'ds-body-base-regular flex h-10 w-full items-center gap-2 rounded-control border bg-surface-card px-3 text-left',
         'outline-none transition-colors duration-fast ease-standard',
         'disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-text-muted',
-        ML_CONTROL_TONE(invalid)
+        ML_CONTROL_TONE(isInvalid)
       )}
     >
       <Calendar aria-hidden className="h-4 w-4 shrink-0 text-text-tertiary" />

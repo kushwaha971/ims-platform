@@ -1,4 +1,4 @@
-import { UbAmount, UbBox, UbLink, UbText } from 'src/design-system';
+import { UbAmount, UbLink, UbText } from 'src/design-system';
 import type { UbDataGridColumn, UbGridTier } from 'src/design-system/UbDataGrid';
 import type { TranslateFn } from 'src/hooks/useTranslation';
 import { formatInr } from 'src/utils/money';
@@ -27,7 +27,7 @@ import type { AgingBucket, AgingKind, AgingRow } from '../types/aging.types';
  * | Party   | 1 | title    | Who. |
  * | 90+     | 1 | none     | The oldest money — §8's default sort and the reason the report exists. |
  * | Total   | 1 | trailing | How much, in one figure. |
- * | Age bar | 2 | meta     | The shape of the debt at a glance; on a card it carries the oldest bucket in words. |
+ * | Age bar | 2 | meta     | The shape of the debt at a glance; on a card, the oldest bucket in words instead. |
  * | 61–90   | 3 | none     | Next week's 90+. A desktop luxury. |
  * | 0–30, 31–60 | 3 | none | Money that is not late yet. |
  *
@@ -121,28 +121,25 @@ export const createAgingColumns = ({
       cardSlot: 'meta',
       widthShare: 18,
       cell: (row) => {
-        const bar = (
+        /* On a phone card the bar is dropped and the oldest bucket is said in
+           words: at 360 px the meta line has about 140 px, and a 48 px bar
+           beside "₹2,000.00 · 31–60 days" cut the bucket to "31–60 da" — the
+           half of the line that answers the report's question. */
+        if (isCards) {
+          const oldest = oldestBucket(row.amounts);
+          return oldest
+            ? t('ledger.aging.oldest', {
+                amount: formatInr(oldest.amount),
+                bucket: bucketLabel(oldest.bucket),
+              })
+            : null;
+        }
+        return (
           <AgingBucketBar
             amounts={row.amounts}
             bucketLabel={bucketLabel}
             ariaLabel={(detail) => t('ledger.aging.bar.label', { party: row.partyName, detail })}
-            className={isCards ? 'w-20' : undefined}
           />
-        );
-        if (!isCards) return bar;
-        const oldest = oldestBucket(row.amounts);
-        return (
-          <UbBox as="span" className="inline-flex items-center gap-2">
-            {bar}
-            {oldest && (
-              <UbText as="span" variant="inherit">
-                {t('ledger.aging.oldest', {
-                  amount: formatInr(oldest.amount),
-                  bucket: bucketLabel(oldest.bucket),
-                })}
-              </UbText>
-            )}
-          </UbBox>
         );
       },
     },

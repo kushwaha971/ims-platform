@@ -27,7 +27,7 @@ const sourceFiles = [...walk(join(ROOT, 'src')), ...walk(join(ROOT, 'app'))].fil
 /* Run the plugin rather than grep it: the BrandHub tiers are generated in a
    loop (`ds-body-{size}-{weight}`), so their names never appear as literals. */
 const emittedTiers = (() => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
+   
   const typography = require('./typographyPlugin.js') as {
     handler: (api: { addComponents: (components: Record<string, unknown>) => void }) => void;
   };

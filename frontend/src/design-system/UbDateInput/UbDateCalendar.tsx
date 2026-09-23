@@ -18,7 +18,12 @@ export interface UbDateCalendarProps {
   readonly max?: Date;
 }
 
-export function UbDateCalendar({ selected, onSelect, min, max }: Readonly<UbDateCalendarProps>) {
+export function UbDateCalendar({
+  selected,
+  onSelect,
+  min,
+  max,
+}: Readonly<UbDateCalendarProps>): React.JSX.Element {
   const disabled = [...(min ? [{ before: min }] : []), ...(max ? [{ after: max }] : [])];
   return (
     <MLCalendar
