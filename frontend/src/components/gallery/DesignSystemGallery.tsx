@@ -143,6 +143,7 @@ export function DesignSystemGallery(): React.JSX.Element {
               title={t('parties.list.error.title')}
               description={t('parties.list.error.body')}
               requestId="req_7f3a91"
+              requestIdLabel={t('common.error.reference')}
             />
           </UbStack>
         </UbCard>
@@ -297,6 +298,7 @@ export function DesignSystemGallery(): React.JSX.Element {
         message={message}
         severity="error"
         requestId="req_7f3a91"
+        requestIdLabel={t('common.error.reference')}
         onDismiss={onDismiss}
         dismissLabel={t('common.action.dismiss')}
       />

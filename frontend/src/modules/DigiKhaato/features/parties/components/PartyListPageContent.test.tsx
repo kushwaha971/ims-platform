@@ -201,7 +201,9 @@ describe('PartyListPageContent', () => {
       expect(screen.getByText('We could not load your customers')).toBeInTheDocument()
     );
     // R-E-4 — the only thing that connects a screenshot to a backend log line.
-    expect(screen.getByTestId('request-id')).toHaveTextContent('req_7f3a91');
+    // Labelled, not a bare id (QA B5): the merchant has to know it is the
+    // thing to quote.
+    expect(screen.getByTestId('request-id')).toHaveTextContent('Reference req_7f3a91');
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
   });
 
@@ -222,7 +224,9 @@ describe('PartyListPageContent', () => {
     await waitFor(() =>
       expect(screen.getByText('We could not load your customers')).toBeInTheDocument()
     );
-    expect(screen.getByTestId('request-id')).toHaveTextContent('req_abc');
+    // … and labelled "Reference" (QA B5): D2 put the id on screen but as a
+    // bare UUID, because UbEmptyState never printed the label.
+    expect(screen.getByTestId('request-id')).toHaveTextContent('Reference req_abc');
   });
 
   it('offers to CLEAR the search on a filtered-empty result, and says so', async () => {
@@ -335,7 +339,8 @@ describe('the approved responsive rules, on the real screen', () => {
     const card = screen.getAllByTestId('ub-grid-card')[0] as HTMLElement;
     expect(within(card).getByText('Ramesh Traders')).toBeInTheDocument();
     expect(within(card).getByText('You will get, ₹2,800.00')).toBeInTheDocument();
-    expect(within(card).getByText('C-001 · +919876543210')).toBeInTheDocument();
+    // Formatted as the khata and the reminder sheet show it (QA O6 follow-up).
+    expect(within(card).getByText('C-001 · +91 98765 43210')).toBeInTheDocument();
   });
 
   it('between md and lg it keeps Customer, Balance and Last entry and drops the rest', async () => {
@@ -1505,7 +1510,9 @@ describe('PTY-02 §9 — the ten states of the party list', () => {
     renderWithProviders(<PartyListPageContent />);
 
     expect(await screen.findByText('We could not load your customers')).toBeInTheDocument();
-    expect(screen.getByTestId('request-id')).toHaveTextContent('req_7f3a91');
+    // Labelled, not a bare id (QA B5): the merchant has to know it is the
+    // thing to quote.
+    expect(screen.getByTestId('request-id')).toHaveTextContent('Reference req_7f3a91');
     // No figures without an answer: not "You will get ₹0.00" over a failure.
     expect(screen.queryByTestId('ub-stat-grid')).not.toBeInTheDocument();
 

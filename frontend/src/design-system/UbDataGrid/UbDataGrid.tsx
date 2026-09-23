@@ -168,25 +168,45 @@ const SkeletonRows = ({
 }) => (
   // R-P-6 — it reserves the real 60 px so the page does not jump when the rows
   // land, announced or not.
+  //
+  // Every bar is FLUID — `w-full` or a fraction, the length it would like in
+  // `max-w-*` — the rule `UbSkeleton` has followed since QA D3. This drew one
+  // fixed 80 px bar (`w-20 shrink-0`) per table COLUMN even in cards, so on a
+  // 360 px phone the third ended 17 px past the 328 px card and the name bars
+  // in the flex middle were squeezed to nothing (QA N1). A card now draws the
+  // card it is standing in for: disc, name, caption, amount.
   <div
     {...(label === null
       ? { 'aria-hidden': true }
       : { role: 'status', 'aria-busy': true, 'aria-label': label })}
-    className="w-full"
+    className="w-full min-w-0 overflow-hidden"
   >
     {Array.from({ length: count }, (_, index) => (
       <div
         key={index}
-        className="flex min-h-[60px] items-center gap-3 border-b border-border-hairline px-4 py-3 last:border-b-0"
+        data-testid={isCards ? 'ub-grid-skeleton-card' : 'ub-grid-skeleton-fallback-row'}
+        className="flex min-h-[60px] min-w-0 items-center gap-3 border-b border-border-hairline px-4 py-3 last:border-b-0"
       >
-        {isCards && <MLSkeleton className="h-10 w-10 shrink-0 rounded-pill" />}
-        <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <MLSkeleton className="h-4 w-1/3" />
-          {isCards && <MLSkeleton className="h-3 w-1/5" />}
-        </div>
-        {Array.from({ length: Math.max(columns - 1, 1) }, (_, cell) => (
-          <MLSkeleton key={cell} className="h-4 w-20 shrink-0" />
-        ))}
+        {isCards ? (
+          <>
+            <MLSkeleton className="h-10 w-10 max-w-full shrink-0 rounded-pill" />
+            <div className="flex min-w-0 flex-1 flex-col gap-2">
+              <MLSkeleton className="h-4 w-3/5 max-w-40" />
+              <MLSkeleton className="h-3 w-2/5 max-w-24" />
+            </div>
+            <MLSkeleton className="h-4 w-1/5 max-w-20" />
+          </>
+        ) : (
+          // The table-chunk fallback: one bar per column, each bounded by a
+          // flex "cell" of its own so no column count can push a bar out.
+          Array.from({ length: Math.max(columns, 1) }, (_, cell) => (
+            <div key={cell} className="flex min-w-0 flex-1">
+              <MLSkeleton
+                className={cell === 0 ? 'h-4 w-3/5 max-w-full' : 'h-4 w-4/5 max-w-full'}
+              />
+            </div>
+          ))
+        )}
       </div>
     ))}
   </div>

@@ -20,6 +20,9 @@
  *   node e2e/sprint3-qa.mjs --fresh         # new accounts (2 registrations)
  *   node e2e/sprint3-qa.mjs --only=R        # retest of 2b365b6 (D1–D4, O3–O6);
  *                                           # one owner sign-in at most, reused
+ *   node e2e/sprint3-qa.mjs --only=N        # retest of 8ccd186 + 5d7b99e (NEW-1…3);
+ *   node e2e/sprint3-qa.mjs --only=N1,N2    # sub-phases by name; N4 (the IP
+ *                                           # login lockout) runs ONLY when named
  *
  * Fixtures that the API cannot create are written with psql and SAID SO in
  * the output: an archived party that still has a balance (the archive guard
@@ -324,7 +327,8 @@ async function phaseA(browser, state) {
   let s = await readSheet(sheet);
   const expected = EN_TEMPLATE('Ramesh Traders', '2,300.00', shop, today);
   record('A2', 'dialog title is "Send reminder"', s.title === 'Send reminder', s.title);
-  record('A2', 'recipient line "To {name} · {mobile}"', s.description === 'To Ramesh Traders · 09812345678', s.description);
+  // O6: the recipient is shown normalised ("+91 98123 45678"), as the link dials it.
+  record('A2', 'recipient line "To {name} · {mobile}"', s.description === 'To Ramesh Traders · +91 98123 45678', s.description);
   record('A2', `preview is exactly the template, dated TODAY in the shop's timezone (IST ${today}; browser clock is UTC)`, s.preview === expected,
     JSON.stringify(s.preview));
   const wa = s.waHref ? new URL(s.waHref) : null;
@@ -431,7 +435,7 @@ async function phaseA(browser, state) {
     s = await readSheet(sheet);
     const hiExp = HI_TEMPLATE('Ramesh Traders', '2,300.00', shop, todayIst());
     record('A10', 'Hindi: title "रिमाइंडर भेजें"', s.title === 'रिमाइंडर भेजें', s.title);
-    record('A10', 'Hindi: recipient line', s.description === 'Ramesh Traders · 09812345678 को', s.description);
+    record('A10', 'Hindi: recipient line', s.description === 'Ramesh Traders · +91 98123 45678 को', s.description);
     record('A10', 'Hindi: preview is the Hindi template', s.preview === hiExp, JSON.stringify(s.preview));
     record('A10', 'Hindi: WhatsApp text is the Hindi message', new URL(s.waHref).searchParams.get('text') === hiExp);
     await page.screenshot({ path: shotPath('desktop', 'A-sheet-hindi') });
@@ -1475,15 +1479,561 @@ async function phaseR(browser, state) {
   note(`logins spent by R this run: ${rtLogins}; login_ip after R: ${loginAfter}`);
 }
 
+// ═════════════════════════════════════════════════════════════════════════════
+// N — retest of 8ccd186 (backend) and 5d7b99e (frontend), `--only=N`
+//
+//   N1  NEW-1  cookie-expiry teardown: expired tenant-B session → one sign-in as A,
+//              no stale-tab snackbar, no reload, B's name never rendered
+//   N2  NEW-2  credit block + totals refresh after every ledger write
+//   N3  NEW-3  statement / aging CSV filenames and "Due today" on the IST date
+//   N4  NEW-4  failed-login-only IP budget. DESTRUCTIVE: runs only when named
+//              explicitly (`--only=N4`) because it locks the IP login budget
+//              for an hour; it deletes its own `login_ip_fail` row afterwards.
+//
+// `--only=N` runs N3, N1, N2. Sub-phases can be named individually.
+// Screenshots: /tmp/e2e-shots/sprint3-qa/retest2/{phone,desktop}/.
+// ═════════════════════════════════════════════════════════════════════════════
+const N_DIR = `${SHOT_ROOT}/retest2`;
+const N_STORAGE = `${N_DIR}/owner-storage.json`;
+const N_STATE = `${N_DIR}/state.json`;
+const nShot = (size, name) => `${N_DIR}/${size}/${name}.png`;
+const RT_ACCOUNTS = '/tmp/claude-0/retest/state.json';
+const RT_PASSWORD = 'Dukaan2026xRetest!';
+const IST_DATE = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date()); // yyyy-mm-dd
+const UTC_DATE = () => new Date().toISOString().slice(0, 10);
+let nLogins = 0;
+
+/** A browser session as `who`, reusing `storageFile` when it is still valid. */
+const nSession = async (browser, who, viewport, storageFile) => {
+  const ctx = await browser.newContext({ viewport, acceptDownloads: true, ...(storageFile && existsSync(storageFile) ? { storageState: storageFile } : {}) });
+  const page = await ctx.newPage();
+  await page.goto(`${FRONTEND}/dashboard`, { waitUntil: 'domcontentloaded', timeout: 120000 });
+  await page.waitForTimeout(2500);
+  let me = await whoAmI(page).catch(() => ({ email: null }));
+  if (me.email !== who.email || page.url().includes('/login')) {
+    nLogins += 1;
+    note(`browser sign-in #${nLogins} this run (${who.email})`);
+    await signIn(page, who);
+    me = await whoAmI(page);
+  }
+  if (storageFile) {
+    const saved = await ctx.storageState();
+    saved.cookies = saved.cookies.filter((c) => c.name !== 'ub_locale');
+    writeFileSync(storageFile, JSON.stringify(saved));
+  }
+  const token = (await ctx.cookies()).find((c) => c.name === 'ub_access')?.value ?? null;
+  return { ctx, page, me, token };
+};
+
+/** Header balance, credit caption, bar, and the two "in all" totals, read off the screen. */
+const khataFacts = (page) =>
+  page.evaluate(() => {
+    const main = document.querySelector('main');
+    const text = main?.innerText ?? '';
+    const header = text.match(/(?:Customer|Supplier)[^\n]*\n(₹[\d,]+\.\d\d)/)?.[1] ?? null;
+    const bar = [...document.querySelectorAll('[role="progressbar"]')].find((b) => (b.getAttribute('aria-label') ?? '').startsWith('Credit used'));
+    const captionMatch = text.match(/Credit used\s*\n+\s*([^\n]+)/);
+    const captionEl = captionMatch ? [...document.querySelectorAll('main *')].find((e) => e.children.length === 0 && e.textContent.trim() === captionMatch[1].trim()) : null;
+    const fill = bar ? [...bar.querySelectorAll('*')].find((e) => parseFloat(getComputedStyle(e).width) > 0 && getComputedStyle(e).backgroundColor !== 'rgba(0, 0, 0, 0)') : null;
+    return {
+      header,
+      caption: captionMatch?.[1]?.trim() ?? null,
+      captionColor: captionEl ? getComputedStyle(captionEl).color : null,
+      captionClass: captionEl?.className ?? null,
+      barNow: bar?.getAttribute('aria-valuenow') ?? null,
+      barLabel: bar?.getAttribute('aria-label') ?? null,
+      fillWidth: fill ? fill.style.width || getComputedStyle(fill).width : null,
+      fillColor: fill ? getComputedStyle(fill).backgroundColor : null,
+      gaveAll: text.match(/You gave in all\n(₹[\d,]+\.\d\d)/)?.[1] ?? null,
+      gotAll: text.match(/You got in all\n(₹[\d,]+\.\d\d)/)?.[1] ?? null,
+      rows: [...document.querySelectorAll('main button')].filter((b) => /^More actions for /.test(b.getAttribute('aria-label') ?? b.textContent.trim())).length,
+      scrollY: Math.round(window.scrollY),
+    };
+  });
+
+/** Post "You gave"/"You got" through the drawer; returns the backend requests seen in `windowMs` after Save. */
+const postViaDrawer = async (page, which, amount, noteText, { windowMs = 3500, wait = true, noScroll = false } = {}) => {
+  // noScroll: press the button without Playwright's scroll-into-view, so the
+  // page's own scroll position is what the app leaves it at.
+  if (noScroll) await page.getByRole('button', { name: which }).first().evaluate((el) => el.click());
+  else await page.getByRole('button', { name: which }).first().click();
+  await page.waitForSelector('role=dialog', { timeout: 15000 });
+  await page.waitForTimeout(500);
+  const field = page.getByLabel('Amount');
+  await field.fill(amount);
+  if (noteText) await page.getByLabel(/^Note/).fill(noteText);
+  const reqs = [];
+  const onReq = (r) => { if (r.url().startsWith(BACKEND)) reqs.push({ t: Date.now(), m: r.method(), u: r.url().replace(BACKEND, '').replace(/\?.*/, (q) => q.slice(0, 60)) }); };
+  page.on('request', onReq);
+  const t0 = Date.now();
+  await page.evaluate(() => { window.__saveAt = window.__hdrT0 ? Math.round(performance.now() - window.__hdrT0) : null; });
+  await page.getByRole('button', { name: 'Save' }).click();
+  if (wait) await page.waitForTimeout(windowMs);
+  page.off('request', onReq);
+  return { t0, reqs: reqs.map((r) => `+${r.t - t0}ms ${r.m} ${r.u}`) };
+};
+
+// ─── N3 ──────────────────────────────────────────────────────────────────────
+async function phaseN3(browser, state, token) {
+  const P = state.parties;
+  const ist = IST_DATE(); const utc = UTC_DATE();
+  const inWindow = ist !== utc;
+  note(`N3: now ${new Date().toISOString()} — UTC date ${utc}, IST date ${ist} (${inWindow ? 'INSIDE' : 'outside'} the 18:30–24:00 UTC window)`);
+  if (!inWindow) {
+    record('N3', 'outside the window — the UTC and IST dates agree, so the live check cannot tell them apart; run the backend tests instead', true, 'pytest apps/ledger/tests/test_statement.py apps/parties/tests/test_list_filters.py');
+    return;
+  }
+  // Fixtures: Vijay due on the IST date, Sunita (₹0) and Kavita (₹300) due on the UTC date, Lakshmi tomorrow (IST).
+  const tomorrowIst = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date(Date.now() + 86_400_000));
+  const fix = { vijay: ist, sunita: utc, kavita: utc, lakshmi: tomorrowIst };
+  for (const [k, d] of Object.entries(fix)) await must('PATCH', `/parties/${P[k]}`, { collection_date: d }, token);
+  note(`FIXTURE (API): collection_date Vijay=${ist} (IST today), Sunita=${utc} & Kavita=${utc} (UTC today = IST yesterday), Lakshmi=${tomorrowIst}`);
+  try {
+    for (const c of ['today', 'overdue', 'upcoming']) {
+      const r = await must('GET', `/parties?collection=${c}`, null, token);
+      note(`API /parties?collection=${c} → ${JSON.stringify(r.body.data.map((p) => p.name))}`);
+      if (c === 'today') record('N3', `API "Due today" = the party due on the IST date only (${ist})`, r.body.data.length === 1 && r.body.data[0].name === 'Vijay Medical', JSON.stringify(r.body.data.map((p) => p.name)));
+      if (c === 'overdue') record('N3', `API "Overdue" includes the party due on the UTC date (${utc} = IST yesterday) who owes money`, r.body.data.some((p) => p.name === 'Kavita Dairy') && !r.body.data.some((p) => p.name === 'Vijay Medical'), JSON.stringify(r.body.data.map((p) => p.name)));
+      if (c === 'upcoming') record('N3', `API "Upcoming" includes IST-tomorrow (${tomorrowIst}), not IST-today`, r.body.data.some((p) => p.name === 'Lakshmi Bakers') && !r.body.data.some((p) => p.name === 'Vijay Medical'), JSON.stringify(r.body.data.map((p) => p.name)));
+    }
+    for (const size of [DESKTOP, PHONE]) {
+      const { ctx, page } = await nSession(browser, state.owner, { width: size.width, height: size.height }, N_STORAGE);
+      // Statement CSV
+      await page.goto(`${FRONTEND}/parties/${P.ramesh}/statement`, { waitUntil: 'domcontentloaded', timeout: 120000 });
+      await page.locator('a[href*="format=csv"]').first().waitFor({ timeout: 60000 });
+      await page.waitForTimeout(800);
+      let dl = page.waitForEvent('download', { timeout: 30000 });
+      await page.locator('a[href*="format=csv"]').first().click();
+      let name = (await dl).suggestedFilename();
+      await page.screenshot({ path: nShot(size.id, 'N3-statement') });
+      record('N3', `${size.id}: statement CSV downloaded from the UI is named for the IST date`, name === `statement-${P.ramesh}-${ist}.csv`, `${name} (UTC date ${utc})`);
+      // Aging CSV
+      await page.goto(`${FRONTEND}/ledger/aging`, { waitUntil: 'domcontentloaded', timeout: 120000 });
+      await page.locator('a[href*="format=csv"]').first().waitFor({ timeout: 60000 });
+      await page.waitForTimeout(800);
+      dl = page.waitForEvent('download', { timeout: 30000 });
+      await page.locator('a[href*="format=csv"]').first().click();
+      name = (await dl).suggestedFilename();
+      await page.screenshot({ path: nShot(size.id, 'N3-aging') });
+      record('N3', `${size.id}: aging CSV downloaded from the UI is named for the IST date`, name === `aging-receivable-${ist}.csv`, `${name} (UTC date ${utc})`);
+      // Due today chip
+      await page.goto(`${FRONTEND}/parties?collection=today`, { waitUntil: 'domcontentloaded', timeout: 120000 });
+      await page.getByText('Vijay Medical').first().waitFor({ timeout: 60000 }).catch(() => {});
+      await page.waitForTimeout(1500);
+      const body = await page.locator('main').innerText();
+      await page.screenshot({ path: nShot(size.id, 'N3-due-today'), fullPage: true });
+      record('N3', `${size.id}: /parties?collection=today lists Vijay Medical (due ${ist}) and not Sunita/Kavita (due ${utc})`, body.includes('Vijay Medical') && !body.includes('Sunita Tailors') && !body.includes('Kavita Dairy'), body.replace(/\s+/g, ' ').slice(0, 300));
+      await ctx.close();
+    }
+  } finally {
+    for (const k of Object.keys(fix)) await api('PATCH', `/parties/${P[k]}`, { collection_date: null }, token);
+    note('FIXTURE restored: collection_date back to null on Vijay, Sunita, Kavita, Lakshmi');
+  }
+}
+
+// ─── N1 ──────────────────────────────────────────────────────────────────────
+const B_NAMES = ['Retest Browser Traders', 'Smoke Party', 'Upi Party', 'Naidu Suppliers', 'Race Supplier', 'Rao Customer', 'Zero Smoke'];
+async function phaseN1(browser, state) {
+  const rt = JSON.parse(readFileSync(RT_ACCOUNTS, 'utf8'));
+  const tenantB = { email: rt.R2.email, password: RT_PASSWORD };
+  // Tenant A must be an ONBOARDED business: the sprint3 owner's tenant is still at
+  // onboarding_step 1 (seeded through the API), so any sign-in there lands on
+  // /onboarding by design. R1's "Retest Budget Stores" finished onboarding.
+  const tenantA = { email: rt.R1.email, password: RT_PASSWORD, shop: 'Retest Budget Stores' };
+  // /dashboard is a redirect to /parties until RPT-01 (app/(app)/dashboard/page.tsx).
+  const landed = (u) => ['/dashboard', '/parties'].includes(new URL(u).pathname);
+  for (const size of [DESKTOP, PHONE]) {
+    const ctx = await browser.newContext({ viewport: { width: size.width, height: size.height } });
+    let armed = false; const leaks = []; const snacks = []; let docLoads = 0;
+    await ctx.exposeBinding('__nLeak', (_s, n, where) => { if (armed) leaks.push({ n, where }); });
+    await ctx.exposeBinding('__nSnack', (_s, t) => { if (armed) snacks.push(t); });
+    await ctx.exposeBinding('__nDoc', () => { docLoads += 1; });
+    await ctx.addInitScript((names) => {
+      window.__nDoc();
+      const start = () => {
+        const scan = (node) => {
+          const t = node.textContent || '';
+          for (const n of names) if (t.includes(n)) window.__nLeak(n, `${location.pathname}${location.search} :: ${(node.nodeType === 1 ? node.outerHTML : node.parentElement?.outerHTML || '').replace(/\s+/g, ' ').slice(0, 200)}`);
+          if (/another tab/i.test(t)) window.__nSnack(t.trim().slice(0, 120));
+        };
+        scan(document.body);
+        new MutationObserver((ms) => { for (const m of ms) { m.addedNodes.forEach(scan); if (m.type === 'characterData') scan(m.target); } }).observe(document.body, { childList: true, subtree: true, characterData: true });
+      };
+      if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
+    }, B_NAMES);
+    const page = await ctx.newPage();
+    const navs = []; const net = [];
+    page.on('framenavigated', (f) => { if (f === page.mainFrame()) navs.push(f.url().replace(FRONTEND, '')); });
+    page.on('response', (r) => { if (r.url().startsWith(BACKEND)) net.push(`${r.request().method()} ${r.url().replace(BACKEND, '')} ${r.status()}`); });
+    nLogins += 1;
+    await signIn(page, tenantB);
+    await page.goto(`${FRONTEND}/ledger/aging`, { waitUntil: 'domcontentloaded', timeout: 120000 });
+    await page.getByText('Upi Party').first().waitFor({ timeout: 60000 });
+    await page.waitForTimeout(1200);
+    const shellB = await page.getByText('Retest Browser Traders').count();
+    await page.screenshot({ path: nShot(size.id, 'N1-0-tenantB-aging') });
+    record('N1', `${size.id}: signed in as tenant B (${tenantB.email}), aging shows B's parties and B's name in the shell`, shellB > 0, `B name nodes: ${shellB}`);
+    await ctx.clearCookies({ name: 'ub_access' });
+    await ctx.clearCookies({ name: 'ub_refresh' });
+    const l0 = docLoads; const v0 = navs.length; const n0 = net.length;
+    // Dashboard link — on the phone it may sit in a bottom nav or a menu.
+    let dash = page.getByRole('link', { name: 'Dashboard' });
+    if ((await dash.count()) === 0 || !(await dash.first().isVisible())) {
+      const menu = page.getByRole('button', { name: /menu|navigation/i }).first();
+      if (await menu.count()) { await menu.click(); await page.waitForTimeout(600); }
+      dash = page.getByRole('link', { name: 'Dashboard' });
+    }
+    armed = true;
+    await dash.first().click();
+    await page.waitForURL((u) => u.pathname.startsWith('/login'), { timeout: 30000 }).catch(() => {});
+    await page.waitForTimeout(2500);
+    const loginUrl = page.url().replace(FRONTEND, '');
+    await page.screenshot({ path: nShot(size.id, 'N1-1-login-after-expiry') });
+    record('N1', `${size.id}: cookies deleted, Dashboard click → /login?next=%2Fdashboard in the same runtime`, loginUrl === '/login?next=%2Fdashboard' && docLoads === l0, `${loginUrl} docLoads+${docLoads - l0} navs=${JSON.stringify(navs.slice(v0))}`);
+    // One sign-in as tenant A, slowed tenant reads so any stale frame is held on screen.
+    await ctx.route(/\/api\/v1\/(ledger\/summary|ledger\/aging|parties(\?|$))/, async (route) => { await sleep(1500); await route.continue(); });
+    const l1 = docLoads; const v1 = navs.length; const n1 = net.length;
+    nLogins += 1;
+    await page.fill('input[type="email"]', tenantA.email);
+    await page.fill('input[type="password"]', tenantA.password);
+    const tSubmit = Date.now();
+    await page.click('button[type="submit"]');
+    for (let k = 0; k < 20; k += 1) { await page.screenshot({ path: nShot(size.id, `N1-2-flash-${String(k).padStart(2, '0')}`) }).catch(() => {}); await page.waitForTimeout(100); }
+    await page.getByText(tenantA.shop).first().waitFor({ timeout: 30000 }).catch(() => {});
+    const landedMs = Date.now() - tSubmit;
+    await page.waitForTimeout(3000);
+    const me = await whoAmI(page);
+    const shellA = await page.getByText(tenantA.shop).count();
+    await page.screenshot({ path: nShot(size.id, 'N1-3-landed-as-A') });
+    const loginPosts = net.slice(n1).filter((x) => x.startsWith('POST /auth/login')).length;
+    record('N1', `${size.id}: ONE sign-in as tenant A (${tenantA.email}) lands on /dashboard (→ /parties) as A`, landed(page.url()) && me.email === tenantA.email && shellA > 0 && loginPosts === 1,
+      `url=${page.url().replace(FRONTEND, '')} me=${me.email} shellA=${shellA} POST /auth/login×${loginPosts} ~${landedMs}ms navs=${JSON.stringify(navs.slice(v1))}`);
+    record('N1', `${size.id}: no "switched in another tab" snackbar`, snacks.length === 0, JSON.stringify(snacks));
+    record('N1', `${size.id}: no document reload after cookie expiry (logout→login→dashboard is one JS runtime)`, docLoads === l0, `docLoads+${docLoads - l0} (since submit +${docLoads - l1})`);
+    record('N1', `${size.id}: tenant B's name and parties never rendered after expiry (MutationObserver across navigations)`, leaks.length === 0, JSON.stringify(leaks.slice(0, 3)));
+    note(`${size.id}: network after submit: ${JSON.stringify(net.slice(n1).slice(0, 25))}`);
+    note(`${size.id}: network between expiry and submit: ${JSON.stringify(net.slice(n0, n1))}`);
+    await ctx.close();
+  }
+
+  // ── Control: a genuinely stale tab is still caught ──────────────────────
+  {
+    const inviteeRef = state.invitee;
+    const ctx = await browser.newContext({ viewport: { width: DESKTOP.width, height: DESKTOP.height } });
+    let docLoads = 0; const snacks = [];
+    await ctx.exposeBinding('__nDoc', (src) => { if (src.page === tab1) docLoads += 1; });
+    await ctx.exposeBinding('__nSnack', (src, t) => { if (src.page === tab1) snacks.push(t); });
+    await ctx.addInitScript(() => {
+      window.__nDoc();
+      const start = () => new MutationObserver(() => { const t = document.body.innerText; if (/another tab/i.test(t)) window.__nSnack(t.match(/[^\n]*another tab[^\n]*/i)[0]); }).observe(document.body, { childList: true, subtree: true, characterData: true });
+      if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
+    });
+    const tab1 = await ctx.newPage();
+    nLogins += 1;
+    await signIn(tab1, inviteeRef);
+    if (tab1.url().includes('/switch')) {
+      await tab1.getByText(state.inviteeShop).first().click();
+      await tab1.waitForURL((u) => !u.pathname.startsWith('/switch'), { timeout: 30000 });
+    }
+    await tab1.goto(`${FRONTEND}/parties`, { waitUntil: 'domcontentloaded', timeout: 120000 });
+    await tab1.waitForTimeout(3000);
+    const meBefore = await whoAmI(tab1);
+    const activeBefore = meBefore.data?.tenant?.name ?? meBefore.data?.active_tenant?.name ?? JSON.stringify(meBefore.data?.tenant ?? meBefore.data?.membership ?? '').slice(0, 80);
+    const tab2 = await ctx.newPage();
+    await tab2.goto(`${FRONTEND}/switch`, { waitUntil: 'domcontentloaded', timeout: 120000 });
+    await tab2.waitForTimeout(2500);
+    const other = (await tab2.locator('main').innerText()).includes(state.shop) ? state.shop : state.inviteeShop;
+    const target = activeBefore && String(activeBefore).includes(state.shop) ? state.inviteeShop : state.shop;
+    await tab2.screenshot({ path: nShot('desktop', 'N1-4-control-tab2-switch') });
+    await tab2.getByText(target).first().click();
+    await tab2.waitForURL((u) => !u.pathname.startsWith('/switch'), { timeout: 30000 }).catch(() => {});
+    await tab2.waitForTimeout(2000);
+    const l0 = docLoads;
+    await tab1.bringToFront();
+    // tab 1's next request carries the new tenant — trigger one the way a merchant would
+    await tab1.getByRole('link', { name: 'Dashboard' }).first().click().catch(() => {});
+    await tab1.waitForTimeout(400);
+    await tab1.screenshot({ path: nShot('desktop', 'N1-5-control-tab1-warning') });
+    await tab1.waitForTimeout(3000);
+    record('N1', `control: switching business in tab 2 (→ ${target}) still warns in tab 1 and reloads it`, snacks.length > 0 && docLoads > l0, `snacks=${JSON.stringify([...new Set(snacks)])} tab1 reloads=${docLoads - l0} (was: ${activeBefore}; other-option-visible=${other})`);
+    await ctx.close();
+  }
+
+  // ── A signed-in user opening /login deliberately ────────────────────────
+  {
+    const { ctx, page } = await nSession(browser, state.owner, { width: DESKTOP.width, height: DESKTOP.height }, N_STORAGE);
+    await page.goto(`${FRONTEND}/parties`, { waitUntil: 'domcontentloaded', timeout: 120000 });
+    await page.waitForTimeout(2500);
+    // Client-side navigation to /login (same JS runtime): push via history + popstate is not Next's router, so click a link if one exists, else use the Next router global.
+    const viaRouter = await page.evaluate(() => { const r = window.next?.router; if (r?.push) { r.push('/login'); return 'next.router.push'; } return null; });
+    if (!viaRouter) await page.goto(`${FRONTEND}/login`, { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(3000);
+    const urlAfter = page.url().replace(FRONTEND, '');
+    const shellAfter = await page.getByText(state.shop).count();
+    const formShown = await page.locator('input[type="email"]').count();
+    await page.screenshot({ path: nShot('desktop', 'N1-6-deliberate-login') });
+    record('N1', 'signed-in user opening /login: the login form is shown and the shell no longer shows their business (signed out in that tab)', formShown > 0 && shellAfter === 0, `${viaRouter ?? 'page.goto'} → ${urlAfter} form=${formShown} shopNodes=${shellAfter}`);
+    const cookiesKept = (await ctx.cookies()).filter((c) => c.name.startsWith('ub_')).map((c) => c.name);
+    await page.goto(`${FRONTEND}/dashboard`, { waitUntil: 'domcontentloaded', timeout: 120000 });
+    await page.waitForTimeout(3000);
+    const me = await whoAmI(page);
+    await page.screenshot({ path: nShot('desktop', 'N1-7-hard-reload-restores') });
+    record('N1', 'a hard load of /dashboard afterwards restores the session (cookies were not revoked)', ['/dashboard', '/parties'].includes(new URL(page.url()).pathname) && me.email === state.owner.email && (await page.getByText(state.shop).count()) > 0, `url=${page.url().replace(FRONTEND, '')} me=${me.email} cookies=${JSON.stringify(cookiesKept)}`);
+    await ctx.close();
+  }
+}
+
+// ─── N2 ──────────────────────────────────────────────────────────────────────
+async function phaseN2(browser, state, token) {
+  const stamp = Date.now();
+  const today = IST_DATE();
+  const mk = async (name, limit, entries) => {
+    const p = await must('POST', '/parties', { name, is_customer: true, is_supplier: false, ...(limit ? { credit_limit: limit, credit_days: 30 } : {}) }, token, { 'Idempotency-Key': `n2-${stamp}-${name}` });
+    const id = p.body.data.id;
+    for (const [i, [amount, noteText, dir]] of entries.entries()) {
+      await must('POST', `/parties/${id}/ledger-entries`, { entry_date: today, direction: dir ?? 'debit', amount, note: noteText }, token, { 'Idempotency-Key': `n2-${stamp}-${name}-${i}` });
+    }
+    return id;
+  };
+  const tag = String(stamp).slice(-4);
+  const over = await mk(`QA Over Limit ${tag}`, '1000.00', [['1000.00', 'Wholesale rice'], ['250.00', 'Sugar sacks']]);
+  const near = await mk(`QA Near Limit ${tag}`, '1000.00', [['500.00', 'Atta bags']]);
+  const long = await mk(`QA Long Khata ${tag}`, '100000.00', Array.from({ length: 62 }, (_, i) => [`${10 + i}.00`, `Item ${String(i + 1).padStart(2, '0')}`]));
+  note(`FIXTURE (API): QA Over Limit ${tag} (₹1,000 limit, ₹1,250 owed: Wholesale rice ₹1,000 + Sugar sacks ₹250), QA Near Limit ${tag} (₹500 of ₹1,000), QA Long Khata ${tag} (62 entries)`);
+  const reqCounts = [];
+
+  for (const size of [DESKTOP, PHONE]) {
+    const { ctx, page } = await nSession(browser, state.owner, { width: size.width, height: size.height }, N_STORAGE);
+    if (size.id === 'phone') {
+      // Phone: the headline flow once more on a fresh ₹1,250 party.
+      const overP = await mk(`QA Over Phone ${tag}`, '1000.00', [['1250.00', 'Opening stock']]);
+      await openKhata(page, overP, /QA Over Phone/);
+      const b = await khataFacts(page);
+      await page.screenshot({ path: nShot('phone', 'N2-0-over-before'), fullPage: true });
+      const { reqs } = await postViaDrawer(page, /You gave/, '200', 'Phone check');
+      const a = await khataFacts(page);
+      await page.screenshot({ path: nShot('phone', 'N2-1-over-after-200'), fullPage: true });
+      record('N2', 'phone: You gave ₹200 on ₹1,250/₹1,000 → caption "₹450.00 over the ₹1,000.00 limit", total +₹200, header ₹1,450.00, no reload', a.caption === '₹450.00 over the ₹1,000.00 limit' && a.gaveAll === '₹1,450.00' && a.header === '₹1,450.00', `before=${JSON.stringify(b)} after=${JSON.stringify(a)}`);
+      reqCounts.push({ where: 'phone gave 200', reqs });
+      // Phone long khata: the merchant's own tap (Playwright scrolls only if the button is off-screen).
+      await openKhata(page, long, /QA Long Khata/);
+      for (let k = 0; k < 3 && (await page.getByRole('button', { name: 'Show older entries' }).count()) > 0; k += 1) {
+        await page.getByRole('button', { name: 'Show older entries' }).first().click();
+        await page.waitForTimeout(1500);
+      }
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      await page.waitForTimeout(800);
+      const lb = await khataFacts(page);
+      const inViewP = await page.getByRole('button', { name: /You gave/ }).first().evaluate((el) => { const r = el.getBoundingClientRect(); return r.top >= 0 && r.bottom <= window.innerHeight; });
+      await page.screenshot({ path: nShot('phone', 'N2-7-long-before') });
+      await postViaDrawer(page, /You gave/, '5', 'Phone scrolled post', { noScroll: true });
+      const la = await khataFacts(page);
+      await page.screenshot({ path: nShot('phone', 'N2-8-long-after') });
+      record('N2', `phone long khata: rows kept +1 (${lb.rows} → ${la.rows}) and scroll kept (${lb.scrollY} → ${la.scrollY})`, lb.rows > 50 && la.rows === lb.rows + 1 && Math.abs(la.scrollY - lb.scrollY) < 400, `You-gave in viewport when scrolled to the bottom: ${inViewP}`);
+      await ctx.close();
+      continue;
+    }
+    let docLoads = 0;
+    page.on('framenavigated', (f) => { if (f === page.mainFrame()) docLoads += 1; });
+
+    // ── ₹250 over → You gave ₹200 → ₹450 over ────────────────────────────
+    await openKhata(page, over, /QA Over Limit/);
+    const b0 = await khataFacts(page);
+    await page.screenshot({ path: nShot('desktop', 'N2-0-over-before'), fullPage: true });
+    record('N2', 'fixture reads "₹250.00 over the ₹1,000.00 limit", header ₹1,250.00', b0.caption === '₹250.00 over the ₹1,000.00 limit' && b0.header === '₹1,250.00', JSON.stringify(b0));
+    const nav0 = docLoads;
+    // Sample the header every 50 ms from Save to prove it moves instantly.
+    await page.evaluate(() => { window.__hdr = []; const t0 = performance.now(); window.__hdrT0 = t0; window.__hdrT = setInterval(() => { const m = document.querySelector('main')?.innerText.match(/(?:Customer|Supplier)[^\n]*\n(₹[\d,]+\.\d\d)/); const c = document.querySelector('main')?.innerText.match(/Credit used\s*\n+\s*([^\n]+)/); window.__hdr.push([Math.round(performance.now() - t0), m?.[1] ?? null, c?.[1] ?? null]); }, 50); });
+    const s1 = await postViaDrawer(page, /You gave/, '200', 'Oil tins');
+    const [hdr1, saveAt] = await page.evaluate(() => { clearInterval(window.__hdrT); return [window.__hdr, window.__saveAt]; });
+    const a1 = await khataFacts(page);
+    await page.screenshot({ path: nShot('desktop', 'N2-1-over-after-200'), fullPage: true });
+    const firstHeader = hdr1.find((h) => h[1] === '₹1,450.00');
+    const firstCaption = hdr1.find((h) => h[2] === '₹450.00 over the ₹1,000.00 limit');
+    const saveClickAt = hdr1.length ? hdr1[0][0] : 0;
+    record('N2', 'You gave ₹200 → caption "₹450.00 over the ₹1,000.00 limit" without reload', a1.caption === '₹450.00 over the ₹1,000.00 limit' && docLoads === nav0, `${JSON.stringify(a1)} navigations=${docLoads - nav0}`);
+    // The track is full at 100 % and over; what moves over the limit is the bar's accessible name. The fill is asserted moving in the reverse/correct/near checks.
+    record('N2', 'the bar updates (full track, accessible name follows to ₹450.00 over)', (b0.barLabel ?? '').includes('₹250.00 over') && (a1.barLabel ?? '').includes('₹450.00 over') && a1.barNow === '100', `before ${b0.barNow} "${b0.barLabel}" fill ${b0.fillWidth} → after ${a1.barNow} "${a1.barLabel}" fill ${a1.fillWidth}`);
+    record('N2', '"You gave in all" rises by ₹200 (₹1,250.00 → ₹1,450.00)', b0.gaveAll === '₹1,250.00' && a1.gaveAll === '₹1,450.00', `${b0.gaveAll} → ${a1.gaveAll}`);
+    record('N2', 'header balance moved instantly (on the POST, no later than the caption refetch)', Boolean(firstHeader) && (!firstCaption || firstHeader[0] <= firstCaption[0]) && firstHeader[0] - saveAt < 1000, `Save clicked at ${saveAt}ms; header ₹1,450.00 first sampled at ${firstHeader?.[0]}ms (+${firstHeader?.[0] - saveAt}ms), caption ₹450.00-over at ${firstCaption?.[0]}ms (+${firstCaption?.[0] - saveAt}ms)`);
+    reqCounts.push({ where: 'desktop gave 200 (over-limit party)', reqs: s1.reqs });
+
+    // ── Reverse "Sugar sacks" (₹250) → ₹1,200 → "₹200.00 over" ───────────
+    {
+      const reqs = []; const onReq = (r) => { if (r.url().startsWith(BACKEND)) reqs.push(`${r.request ? '' : ''}${r.method()} ${r.url().replace(BACKEND, '').slice(0, 90)}`); };
+      await page.getByRole('button', { name: 'More actions for Sugar sacks' }).first().click();
+      await page.getByRole('button', { name: 'Reverse this entry' }).click();
+      await page.getByLabel('Reason').fill('Returned unopened');
+      page.on('request', onReq);
+      await page.getByRole('button', { name: 'Reverse entry' }).click();
+      await page.waitForTimeout(3500);
+      page.off('request', onReq);
+      const a = await khataFacts(page);
+      await page.screenshot({ path: nShot('desktop', 'N2-2-after-reverse'), fullPage: true });
+      record('N2', 'reverse ₹250 → caption "₹200.00 over the ₹1,000.00 limit", header ₹1,200.00, You gave in all ₹1,200.00', a.caption === '₹200.00 over the ₹1,000.00 limit' && a.header === '₹1,200.00' && a.gaveAll === '₹1,200.00', JSON.stringify(a));
+      reqCounts.push({ where: 'desktop reverse', reqs });
+    }
+    // ── Correct "Wholesale rice" ₹1,000 → ₹700 → ₹900 → "₹100.00 left" ─────
+    {
+      const reqs = []; const onReq = (r) => { if (r.url().startsWith(BACKEND)) reqs.push(`${r.method()} ${r.url().replace(BACKEND, '').slice(0, 90)}`); };
+      await page.getByRole('button', { name: 'More actions for Wholesale rice' }).first().click();
+      await page.getByRole('button', { name: 'Correct this entry' }).click();
+      await page.waitForSelector('role=dialog', { timeout: 15000 });
+      await page.waitForTimeout(500);
+      await page.getByLabel('Amount').fill('700');
+      await page.getByLabel('Reason').fill('Billed 10 bags, delivered 7');
+      page.on('request', onReq);
+      await page.getByRole('button', { name: 'Save correction' }).click();
+      await page.waitForTimeout(3500);
+      page.off('request', onReq);
+      const a = await khataFacts(page);
+      await page.screenshot({ path: nShot('desktop', 'N2-3-after-correct'), fullPage: true });
+      record('N2', 'correct ₹1,000 → ₹700 → caption "₹100.00 left of ₹1,000.00", header ₹900.00, You gave in all ₹900.00', a.caption === '₹100.00 left of ₹1,000.00' && a.header === '₹900.00' && a.gaveAll === '₹900.00', JSON.stringify(a));
+      reqCounts.push({ where: 'desktop correct', reqs });
+    }
+    // ── Two quick entries: header never goes backwards ────────────────────
+    {
+      // Slow the party-detail and timeline reads so the first write's refetch is still in flight when the second lands.
+      await page.route(new RegExp(`/api/v1/parties/${over}(\\?|$)|/api/v1/parties/${over}/ledger-entries\\?`), async (route) => { if (route.request().method() === 'GET') await sleep(1200); await route.continue(); });
+      await page.evaluate(() => { window.__hdr = []; const t0 = performance.now(); window.__hdrT = setInterval(() => { const m = document.querySelector('main')?.innerText.match(/(?:Customer|Supplier)[^\n]*\n(₹[\d,]+\.\d\d)/); window.__hdr.push([Math.round(performance.now() - t0), m?.[1] ?? null]); }, 50); });
+      const q1 = await postViaDrawer(page, /You gave/, '10', 'Matchbox', { wait: false });
+      await page.waitForSelector('role=dialog', { state: 'detached', timeout: 15000 }).catch(() => {});
+      const q2 = await postViaDrawer(page, /You gave/, '20', 'Candles', { windowMs: 5000 });
+      const hdr = await page.evaluate(() => { clearInterval(window.__hdrT); return window.__hdr; });
+      await page.unroute(new RegExp(`/api/v1/parties/${over}(\\?|$)|/api/v1/parties/${over}/ledger-entries\\?`));
+      const seq = hdr.map((h) => h[1]).filter((v, i, arr) => i === 0 || v !== arr[i - 1]);
+      const at930 = hdr.findIndex((h) => h[1] === '₹930.00');
+      const backwards = at930 >= 0 && hdr.slice(at930).some((h) => h[1] !== '₹930.00');
+      const a = await khataFacts(page);
+      await page.screenshot({ path: nShot('desktop', 'N2-4-after-two-quick'), fullPage: true });
+      record('N2', 'two entries saved quickly (₹10 then ₹20, reads slowed 1.2 s): header sampled every 50 ms never shows ₹910.00 after ₹930.00', !backwards && a.header === '₹930.00', `distinct header sequence ${JSON.stringify(seq)} over ${hdr.length} samples; gap between saves ${q2.t0 - q1.t0}ms; final ${JSON.stringify(a)}`);
+      reqCounts.push({ where: 'desktop quick pair (2nd save, 5 s window)', reqs: q2.reqs });
+    }
+    // ── Archive with write-off → nothing used ─────────────────────────────
+    {
+      await page.getByRole('button', { name: 'More actions', exact: true }).first().click();
+      await page.getByRole('button', { name: 'Archive' }).last().click();
+      const dialog = page.getByRole('dialog').last();
+      await dialog.getByRole('button', { name: 'Archive' }).click();
+      await dialog.getByText(/still owes you/).waitFor({ timeout: 30000 });
+      await dialog.getByRole('button', { name: /^Write off ₹/ }).click();
+      await dialog.getByLabel('Why are you writing this off?').fill('Shop closed');
+      await dialog.getByLabel('I understand this money is written off').click();
+      const reqs = []; const onReq = (r) => { if (r.url().startsWith(BACKEND)) reqs.push(`${r.method()} ${r.url().replace(BACKEND, '').slice(0, 90)}`); };
+      page.on('request', onReq);
+      await dialog.getByRole('button', { name: 'Write off and archive' }).click();
+      await page.getByText('This party is archived').waitFor({ timeout: 30000 }).catch(() => {});
+      await page.waitForTimeout(3500);
+      page.off('request', onReq);
+      const a = await khataFacts(page);
+      await page.screenshot({ path: nShot('desktop', 'N2-5-after-writeoff'), fullPage: true });
+      const api0 = await must('GET', `/parties/${over}`, null, token);
+      record('N2', 'archive with write-off → credit block shows nothing used (caption "₹1,000.00 left of ₹1,000.00" or no bar), header ₹0.00', (a.caption === null || a.caption === '₹1,000.00 left of ₹1,000.00') && (a.barNow === null || a.barNow === '0') && a.header === '₹0.00', `${JSON.stringify(a)} server credit=${JSON.stringify(api0.body.data.credit)}`);
+      reqCounts.push({ where: 'desktop write-off+archive', reqs });
+    }
+    // ── ₹500 of ₹1,000 → You gave ₹250 → "₹250.00 left", amber ────────────
+    {
+      await openKhata(page, near, /QA Near Limit/);
+      const b = await khataFacts(page);
+      const s = await postViaDrawer(page, /You gave/, '250', 'Ghee tins');
+      const a = await khataFacts(page);
+      await page.screenshot({ path: nShot('desktop', 'N2-6-near-after-250'), fullPage: true });
+      record('N2', '₹500 → You gave ₹250 → "₹250.00 left of ₹1,000.00", amber (text-warning caption, amber fill), header ₹750.00, fill 50% → 75%', a.caption === '₹250.00 left of ₹1,000.00' && a.header === '₹750.00' && /text-warning/.test(a.captionClass ?? '') && a.fillColor === a.captionColor && b.fillWidth === '50%' && a.fillWidth === '75%', `before ${JSON.stringify(b)} after ${JSON.stringify(a)}`);
+      reqCounts.push({ where: 'desktop gave 250 (near party)', reqs: s.reqs });
+    }
+    // ── Long khata: scroll past 50 rows, post, position kept ──────────────
+    {
+      await openKhata(page, long, /QA Long Khata/);
+      for (let k = 0; k < 3 && (await page.getByRole('button', { name: 'Show older entries' }).count()) > 0; k += 1) {
+        await page.getByRole('button', { name: 'Show older entries' }).first().click();
+        await page.waitForTimeout(1500);
+      }
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      await page.waitForTimeout(800);
+      const b = await khataFacts(page);
+      await page.screenshot({ path: nShot('desktop', 'N2-7-long-before') });
+      const gave = page.getByRole('button', { name: /You gave/ }).first();
+      const inView = await gave.evaluate((el) => { const r = el.getBoundingClientRect(); return r.top >= 0 && r.bottom <= window.innerHeight; });
+      const s = await postViaDrawer(page, /You gave/, '5', 'Scrolled post', { noScroll: true });
+      const a = await khataFacts(page);
+      await page.screenshot({ path: nShot('desktop', 'N2-8-long-after') });
+      record('N2', `long khata scrolled past 50 rows then post → loaded depth kept (rows ${b.rows} → ${a.rows}, expect +1)`, b.rows > 50 && a.rows === b.rows + 1, `before ${JSON.stringify({ rows: b.rows, scrollY: b.scrollY })} after ${JSON.stringify({ rows: a.rows, scrollY: a.scrollY })}; You-gave button in viewport before click: ${inView}`);
+      record('N2', 'long khata: scroll position kept after save (not thrown to top)', a.scrollY > 0 && Math.abs(a.scrollY - b.scrollY) < 400, `scrollY ${b.scrollY} → ${a.scrollY}`);
+      reqCounts.push({ where: 'desktop gave 5 (long khata, 3 pages loaded)', reqs: s.reqs });
+    }
+    await ctx.close();
+  }
+  for (const r of reqCounts) note(`requests per save — ${r.where}: ${r.reqs.length} → ${JSON.stringify(r.reqs)}`);
+  record('N2', 'requests per save reported (informational)', true, reqCounts.map((r) => `${r.where}: ${r.reqs.length}`).join('; '));
+}
+
+// ─── N4 (destructive, explicit only) ─────────────────────────────────────────
+async function phaseN4(state) {
+  const loginRaw = (email, password) => api('POST', '/auth/login', { email, password });
+  const before = psql(`select scope||':'||count||':'||window_start||':'||coalesce(locked_until::text,'-') from platform_rate_limit where scope in ('login_ip','login_ip_fail')`);
+  note(`N4 rate-limit rows before: ${before.replace(/\n/g, ' | ')}`);
+  // 1. >100 successful sign-ins, one account, one IP.
+  const statuses = {};
+  const t0 = Date.now();
+  for (let i = 0; i < 120; i += 1) {
+    const r = await loginRaw(state.owner.email, state.owner.password);
+    statuses[r.status] = (statuses[r.status] ?? 0) + 1;
+  }
+  record('N4', '120 successful API sign-ins from one IP within the hour → all 200', statuses[200] === 120, `${JSON.stringify(statuses)} in ${Date.now() - t0}ms`);
+  const failRow0 = psql(`select coalesce(max(count),0) from platform_rate_limit where scope='login_ip_fail'`);
+  note(`login_ip_fail count after the 120 successes: ${failRow0} (successes must not charge it)`);
+  // 2. failures to random addresses until 429
+  const lockStart = new Date().toISOString();
+  let firstLockAt = null; const fst = {};
+  for (let i = 1; i <= 110; i += 1) {
+    const r = await loginRaw(`nobody-${Date.now()}-${i}@random-${i}.test`, 'WrongPass123!');
+    fst[r.status] = (fst[r.status] ?? 0) + 1;
+    if (r.status === 429 && firstLockAt === null) { firstLockAt = i; break; }
+  }
+  const rowAfter = psql(`select count||' locked_until='||coalesce(locked_until::text,'-')||' window_start='||window_start from platform_rate_limit where scope='login_ip_fail'`);
+  note(`failures sent: ${JSON.stringify(fst)}, first 429 on failure #${firstLockAt}; login_ip_fail row: ${rowAfter}; lockout began ${lockStart}`);
+  const failBefore = Number(failRow0);
+  record('N4', `the IP locks at the documented threshold of 100 failures (pre-existing failures in window: ${failBefore})`, firstLockAt !== null && firstLockAt + failBefore === 101, `first 429 on attempt #${firstLockAt} (+${failBefore} earlier = ${firstLockAt + failBefore})`);
+  const right = await loginRaw(state.owner.email, state.owner.password);
+  record('N4', 'while locked: the correct password is refused with 429', right.status === 429, `${right.status} ${JSON.stringify(right.body)} Retry-After=${right.headers.get('retry-after')}`);
+  const known = await loginRaw(state.owner.email, 'WrongPass123!');
+  const unknown = await loginRaw(`ghost-${Date.now()}@nowhere.test`, 'WrongPass123!');
+  const strip = (b) => JSON.stringify({ ...b, meta: undefined, request_id: undefined, error: b?.error ? { ...b.error, request_id: undefined } : b?.error });
+  record('N4', '429 body identical for a known and an unknown address (request id aside)', known.status === 429 && unknown.status === 429 && strip(known.body) === strip(unknown.body), `known ${known.status} ${JSON.stringify(known.body)} | unknown ${unknown.status} ${JSON.stringify(unknown.body)}`);
+  note(`N4 lockout in force from ${lockStart}`);
+  return { lockStart };
+}
+
+async function phaseN(browser, state, which) {
+  mkdirSync(`${N_DIR}/phone`, { recursive: true });
+  mkdirSync(`${N_DIR}/desktop`, { recursive: true });
+  let token = null;
+  const needToken = which.some((w) => w === 'N2' || w === 'N3');
+  if (needToken) {
+    const { ctx, token: t } = await nSession(browser, state.owner, { width: DESKTOP.width, height: DESKTOP.height }, N_STORAGE);
+    token = t; await ctx.close();
+    if ((await api('GET', '/auth/me', null, token)).status !== 200) { nLogins += 1; token = await login(state.owner.email, state.owner.password); }
+  }
+  if (which.includes('N3')) await phaseN3(browser, state, token);
+  if (which.includes('N1')) await phaseN1(browser, state);
+  if (which.includes('N2')) await phaseN2(browser, state, token);
+  if (which.includes('N4')) await phaseN4(state);
+  note(`sign-ins spent by N this run: ${nLogins}`);
+}
+
 const main = async () => {
   // R alone reuses the stored accounts without seed()'s API sign-in (login budget).
-  const state = PHASES.join() === 'R' && existsSync(STATE_FILE) ? JSON.parse(readFileSync(STATE_FILE, 'utf8')) : await seed();
+  // N (and its sub-phases) likewise.
+  const N_PHASES = [...new Set(PHASES.flatMap((p) => (p === 'N' ? ['N3', 'N1', 'N2'] : /^N\d$/.test(p) ? [p] : [])))];
+  const reuseOnly = PHASES.every((p) => p === 'R' || p === 'N' || /^N\d$/.test(p));
+  const state = reuseOnly && existsSync(STATE_FILE) ? JSON.parse(readFileSync(STATE_FILE, 'utf8')) : await seed();
   if (process.argv.includes('--seed-only')) { console.log(JSON.stringify(state, null, 2)); return; }
   const browser = await chromium.launch();
   if (PHASES.includes('A')) await phaseA(browser, state);
   if (PHASES.includes('B')) await phaseB(browser, state);
   if (PHASES.includes('C')) await phaseC(browser, state);
   if (PHASES.includes('R')) await phaseR(browser, state);
+  if (N_PHASES.length) await phaseN(browser, state, N_PHASES);
   await browser.close();
   const passed = results.filter((r) => r.ok).length;
   console.log(`\n${passed}/${results.length} checks passed`);

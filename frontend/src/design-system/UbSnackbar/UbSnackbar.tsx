@@ -5,6 +5,7 @@ import { memo, useEffect } from 'react';
 import { AlertCircle, CheckCircle2, Info, TriangleAlert, X } from 'lucide-react';
 
 import { MLButton, MLToast, MLToaster } from 'src/design-system/primitives';
+import { UbRequestId, type UbRequestIdFields } from 'src/design-system/UbRequestId';
 import { cn } from 'src/utils/cn';
 
 /**
@@ -28,12 +29,16 @@ import { cn } from 'src/utils/cn';
  */
 export type UbSnackbarSeverity = 'success' | 'error' | 'warning' | 'info';
 
-export interface UbSnackbarProps {
+/**
+ * `requestId` / `requestIdLabel` (UbRequestIdFields): printed "Reference <id>"
+ * so a screenshot carries the trace id and says what it is (R-E-4, QA B5).
+ */
+export type UbSnackbarProps = UbSnackbarBaseProps & UbRequestIdFields;
+
+interface UbSnackbarBaseProps {
   /** `null` renders nothing but the (empty) live regions. */
   readonly message: string | null;
   readonly severity: UbSnackbarSeverity;
-  /** Shown as `ds-mono` caption so a screenshot carries the trace id (R-E-4). */
-  readonly requestId?: string | null;
   readonly actionLabel?: string;
   readonly onDismiss: () => void;
   readonly onAction?: () => void;
@@ -64,6 +69,7 @@ function UbSnackbarBase({
   message,
   severity,
   requestId,
+  requestIdLabel,
   actionLabel,
   onDismiss,
   onAction,
@@ -86,7 +92,9 @@ function UbSnackbarBase({
           <Icon aria-hidden className={cn('mt-0.5 h-4 w-4 shrink-0', ICON_TONE[severity])} />
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             <p className="ds-fixed-base-regular text-current">{message}</p>
-            {requestId ? <p className="ds-mono text-text-muted">{requestId}</p> : null}
+            {requestId && requestIdLabel ? (
+              <UbRequestId id={requestId} label={requestIdLabel} />
+            ) : null}
           </div>
           {actionLabel && onAction ? (
             <MLButton variant="ghost" size="sm" onClick={onAction}>

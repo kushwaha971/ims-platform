@@ -1,5 +1,6 @@
 import type { UbAmountTone } from 'src/design-system';
 import { absMoney, compareMoney, isZeroAmount, sumMoney } from 'src/utils/money';
+import { formatPhoneForDisplay } from 'src/utils/share';
 
 import type { PartyListTotals } from '../constants/partyListDefaults';
 import type { Party } from '../types/party.types';
@@ -113,6 +114,10 @@ export const partyTotals = (rows: readonly Party[]): PartyListTotals => {
   };
 };
 
-/** `C-001 · 98765 43210`, or whichever of the two the party has. */
+/**
+ * `C-001 · +91 98765 43210`, or whichever of the two the party has. The mobile
+ * is shown as the khata header and the reminder sheet show it — not as stored
+ * ("+919876543210", "09812345678"), which is three spellings for one number.
+ */
 export const contactLine = (party: Party): string =>
-  [party.displayCode, party.mobile].filter(Boolean).join(' · ');
+  [party.displayCode, formatPhoneForDisplay(party.mobile)].filter(Boolean).join(' · ');

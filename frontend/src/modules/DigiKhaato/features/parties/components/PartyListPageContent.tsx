@@ -302,6 +302,7 @@ export function PartyListPageContent(): React.JSX.Element {
         title: t('parties.list.error.title'),
         description: error?.message ?? t('parties.list.error.body'),
         requestId: error?.requestId ?? null,
+        requestIdLabel: t('common.error.reference'),
         action: (
           <UbButton variant="secondary" onClick={refetch}>
             {t('common.action.retry')}

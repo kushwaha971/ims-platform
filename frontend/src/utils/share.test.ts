@@ -4,6 +4,7 @@ import {
   canUseNativeShare,
   encodeShareText,
   formatPhoneForDisplay,
+  toDialableNumber,
   isShareAbort,
   toWhatsAppDigits,
 } from './share';
@@ -181,5 +182,30 @@ describe('formatPhoneForDisplay (QA O6)', () => {
   it('is empty for nothing', () => {
     expect(formatPhoneForDisplay(null)).toBe('');
     expect(formatPhoneForDisplay(undefined)).toBe('');
+  });
+});
+
+describe('toDialableNumber — what a tel: link dials and Copy copies (QA O6 follow-up)', () => {
+  /* The khata header printed the mobile as stored ("09812345678") while the
+     reminder sheet printed "+91 98123 45678". The display now goes through
+     `formatPhoneForDisplay`; the `tel:` href and the clipboard get this — the
+     same normalised number, as E.164 WITH the plus and no spaces, which every
+     dialler and every paste target (a contact form, a UPI app's search) reads
+     the same way, and which carries the country code a national "0…" drops. */
+  it.each([
+    ['09812345678', '+919812345678'],
+    ['+91 98123 45678', '+919812345678'],
+    ['9812345678', '+919812345678'],
+    ['+44 20 7946 0958', '+442079460958'],
+  ])('dials %s as %s', (raw, dialled) => {
+    expect(toDialableNumber(raw)).toBe(dialled);
+  });
+
+  it('passes an unreadable number through without its spaces rather than guess', () => {
+    expect(toDialableNumber(' 123 45 ')).toBe('12345');
+  });
+
+  it('is empty for nothing', () => {
+    expect(toDialableNumber(null)).toBe('');
   });
 });

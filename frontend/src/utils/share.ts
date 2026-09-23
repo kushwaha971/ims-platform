@@ -98,6 +98,22 @@ export const formatPhoneForDisplay = (raw: string | null | undefined): string =>
   return raw.trim();
 };
 
+/**
+ * A phone number for a MACHINE — a `tel:` href, the clipboard — as E.164 with
+ * the plus and no spaces ("+919812345678"), through the same normaliser.
+ *
+ * Copy copies this rather than the spaced display form: it is what the call
+ * link dials, it carries the country code a stored national "0…" drops, and a
+ * paste target (a contact form, a UPI app's search, another phone field) reads
+ * it without having to strip spaces. A number the normaliser cannot read is
+ * passed through with only its whitespace removed — never guessed at.
+ */
+export const toDialableNumber = (raw: string | null | undefined): string => {
+  if (!raw) return '';
+  const digits = toWhatsAppDigits(raw);
+  return digits ? `+${digits}` : raw.replace(/\s/g, '');
+};
+
 /** Newlines normalised, then UTF-8 percent-encoded — see the header. */
 export const encodeShareText = (text: string): string =>
   encodeURIComponent(text.replace(/\r\n?/g, '\n'));

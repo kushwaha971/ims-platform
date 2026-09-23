@@ -218,6 +218,31 @@ describe('the khata page', () => {
     expect(screen.getAllByText(/12 Bazaar Road/).length).toBeGreaterThan(0);
   });
 
+  it('shows the mobile as the reminder sheet does, and dials and copies it normalised', async () => {
+    /* Prevents the QA O6 follow-up: the header and the info panel's "Mobile
+       number" printed the mobile as stored — "09812345678" — while the
+       reminder sheet on the same page printed "+91 98123 45678". The DISPLAY
+       goes through `formatPhoneForDisplay`; the `tel:` href and the Copy
+       button get the normalised E.164 ("+919812345678"): dialable anywhere,
+       no spaces for a paste target to choke on. */
+    const user = userEvent.setup();
+    partyService.getParty.mockResolvedValue({
+      ...RESULT,
+      party: { ...PARTY, mobile: '09812345678' },
+    });
+    renderWithProviders(<PartyDetailPageContent id={ID} />);
+    await screen.findByText('Ramesh Traders');
+
+    const call = screen.getByRole('link', { name: '+91 98123 45678' });
+    expect(call).toHaveAttribute('href', 'tel:+919812345678');
+    // The header's link, and the info panel's "Mobile number" value.
+    expect(screen.getAllByText('+91 98123 45678').length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByText('09812345678')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Copy' }));
+    expect(await navigator.clipboard.readText()).toBe('+919812345678');
+  });
+
   it('leaves out the fields that were never filled in', async () => {
     /**
      * Fifteen labelled dashes reads as broken data rather than as an unfilled

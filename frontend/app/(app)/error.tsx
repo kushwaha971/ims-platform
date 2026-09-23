@@ -45,6 +45,7 @@ export default function AppError({
           description={t('common.error.screen.body')}
           // R-E-4 — the digest is the only trace id a client-side crash has.
           requestId={error.digest ?? null}
+          requestIdLabel={t('common.error.reference')}
           action={
             <UbStack direction="row" gap={2} wrap justify="center">
               <UbButton variant="secondary" onClick={reset}>

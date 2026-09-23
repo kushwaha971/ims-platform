@@ -154,6 +154,9 @@ describe('ResetPasswordPageContent — §9 Error', () => {
       await screen.findByText('Your session is not valid. Please sign in again.')
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Back to log in' })).toBeInTheDocument();
+    // The request id is labelled, as on every error surface (QA B5) — it read
+    // as a bare "req_7f3a91" under the title.
+    expect(screen.getByText('Reference req_7f3a91')).toBeInTheDocument();
   });
 
   it("anchors the server's password policy under the password field", async () => {

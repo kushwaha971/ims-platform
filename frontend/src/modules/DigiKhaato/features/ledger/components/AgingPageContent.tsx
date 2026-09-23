@@ -137,6 +137,7 @@ export function AgingPageContent(): React.JSX.Element {
         title: t('ledger.aging.error.title'),
         description: error?.message ?? t('ledger.aging.error.body'),
         requestId: error?.requestId ?? null,
+        requestIdLabel: t('common.error.reference'),
         action: (
           <UbButton variant="secondary" onClick={refetch}>
             {t('common.action.retry')}

@@ -138,6 +138,7 @@ export function PartyStatementPageContent({ id }: Readonly<{ id: string }>): Rea
                   title={t('ledger.statement.error.title')}
                   description={t('ledger.statement.error.body')}
                   requestId={statement.error?.requestId}
+                  requestIdLabel={t('common.error.reference')}
                   action={
                     <UbButton variant="secondary" onClick={statement.refetch}>
                       {t('common.action.retry')}

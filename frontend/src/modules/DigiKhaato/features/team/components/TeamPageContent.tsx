@@ -179,6 +179,7 @@ export function TeamPageContent(): React.JSX.Element {
         title: t('team.list.error.title'),
         description: error?.message ?? t('team.list.error.body'),
         requestId: error?.requestId ?? null,
+        requestIdLabel: t('common.error.reference'),
         action: (
           <UbButton variant="secondary" onClick={refetch}>
             {t('common.action.retry')}

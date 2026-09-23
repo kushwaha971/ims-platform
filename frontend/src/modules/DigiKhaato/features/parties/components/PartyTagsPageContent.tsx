@@ -178,6 +178,7 @@ export function PartyTagsPageContent(): React.JSX.Element {
         title: t('parties.tags.manage.error.title'),
         description: error?.message ?? t('parties.tags.load.error'),
         requestId: error?.requestId ?? null,
+        requestIdLabel: t('common.error.reference'),
         action: (
           <UbButton variant="secondary" onClick={refetch}>
             {t('parties.tags.manage.error.retry')}

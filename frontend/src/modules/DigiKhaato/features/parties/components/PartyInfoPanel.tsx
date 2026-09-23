@@ -5,6 +5,7 @@ import { memo, type ReactNode } from 'react';
 import { UbInfoRow, UbPanel, UbPanelSection, UbStack, UbText } from 'src/design-system';
 import type { TranslateFn } from 'src/hooks/useTranslation';
 import { formatInr } from 'src/utils/money';
+import { formatPhoneForDisplay } from 'src/utils/share';
 
 import type { PartyDetail } from '../types/party.types';
 
@@ -100,8 +101,9 @@ function PartyInfoPanelBase({
       <Section
         title={t('parties.detail.section.contact')}
         fields={[
-          { label: t('parties.form.mobile.label'), value: party.mobile },
-          { label: t('parties.form.altPhone.label'), value: party.altPhone },
+          // Shown as the header and the reminder sheet show it (QA O6).
+          { label: t('parties.form.mobile.label'), value: formatPhoneForDisplay(party.mobile) },
+          { label: t('parties.form.altPhone.label'), value: formatPhoneForDisplay(party.altPhone) },
           { label: t('parties.form.email.label'), value: party.email },
         ]}
       />

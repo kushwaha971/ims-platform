@@ -151,7 +151,7 @@ function UbDataGridSkeletonRowsBase({
         >
           {selectable && (
             <td className={GRID_SELECT_CELL}>
-              <MLSkeleton className="h-4 w-4 rounded-sm" />
+              <MLSkeleton className="h-4 w-4 max-w-full rounded-sm" />
             </td>
           )}
           {Array.from({ length: count }, (_, cell) => (
@@ -159,7 +159,7 @@ function UbDataGridSkeletonRowsBase({
               {/* BrandHub's bar is `h-4 rounded-md bg-muted animate-pulse`;
                   `MLSkeleton` already carries the pulse and the token fill, so
                   only the radius is restated. */}
-              <MLSkeleton className={cn('h-4 rounded-md', skeletonWidth(cell, count))} />
+              <MLSkeleton className={cn('h-4 max-w-full rounded-md', skeletonWidth(cell, count))} />
             </td>
           ))}
         </tr>

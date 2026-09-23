@@ -150,6 +150,8 @@ describe('the rule: an API failure surfaces centrally, through the snackbar', ()
     expect(toast).toHaveTextContent('The books are briefly unavailable.');
     // R-E-4 — the trace id travels with the failure, as the banner used to do.
     expect(toast).toHaveTextContent('req_channel');
+    // Labelled as the thing to quote, as every error surface labels it (QA B5).
+    expect(toast).toHaveTextContent('Reference req_channel');
     // It reached the store's single channel, not some component's local state.
     expect(store.getState().snackbar.snackbarSeverity).toBe('error');
   });

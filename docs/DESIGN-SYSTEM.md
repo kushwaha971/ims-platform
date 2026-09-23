@@ -97,6 +97,8 @@ the render props.
 | Money | `UbAmount` |
 | Party picker source | `usePartySearch` (never a second debounced party fetch) |
 | Toasts | dispatch to the snackbar; it renders top-centre |
+| A failure's request id | `UbRequestId` — "Reference 3f2b…", label from `common.error.reference`; `UbEmptyState` / `UbSnackbar` / `UbDataGrid` error copy take `requestId` + `requestIdLabel` (the type requires the label with the id); a banner's text uses `formatRequestReference` |
+| A phone number on screen | `formatPhoneForDisplay` ("+91 98123 45678"); `tel:` hrefs and Copy use `toDialableNumber` ("+919812345678"), both in `src/utils/share.ts` |
 
 A dialog opened FROM another overlay (an item in a ⋯ sheet opening a share
 sheet, a drawer or a confirm) passes `returnFocusRef` — the control that opened
@@ -104,7 +106,9 @@ the first overlay — to `UbDialog` / `UbDrawer` / `UbShareSheet` /
 `UbConfirmDialog`. The item that opened it closes with its sheet, and without a
 named fallback focus fell to `<body>` on close (Sprint 3 QA D1, WCAG 2.4.3).
 Skeleton bars are fluid (`w-full` or a fraction, the length in `max-w-*`), so
-no skeleton can be wider than the tile it sits in (QA D3).
+no skeleton can be wider than the tile it sits in (QA D3). That includes the
+data grid's own loading rows: a phone card draws a card-shaped skeleton, and a
+table-tier bar is capped `max-w-full` by its cell (QA N1).
 
 When none of these fits, add the new component to `src/design-system`, add it
 to this table in the same change, and write down which Figma node it follows.

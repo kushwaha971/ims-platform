@@ -113,7 +113,12 @@ const LABELS: UbDataGridLabels = {
 const EMPTY: UbDataGridEmptyStates = {
   firstUse: { title: 'No customers yet', description: 'Add your first one.' },
   filtered: { title: 'Nothing matches', description: 'Clear the search.' },
-  error: { title: 'We could not load this', description: 'Try again.', requestId: 'req_7f3a91' },
+  error: {
+    title: 'We could not load this',
+    description: 'Try again.',
+    requestId: 'req_7f3a91',
+    requestIdLabel: 'Reference',
+  },
 };
 
 const PAGE = { page: 1, pageSize: 25, total: 2, totalPages: 1 };
@@ -368,7 +373,8 @@ describe('the states a list has', () => {
 
   it('carries the request id on the error state and nowhere else', () => {
     const { rerender } = renderGrid('cards', { state: 'error' });
-    expect(screen.getByTestId('request-id')).toHaveTextContent('req_7f3a91');
+    // Labelled, never a bare id (QA B5).
+    expect(screen.getByTestId('request-id')).toHaveTextContent('Reference req_7f3a91');
 
     rerender(
       <UbDataGrid<Row>
@@ -544,9 +550,7 @@ describe('the states are drawn inside the table', () => {
   it("follows BrandHub's long-first, short-last bar widths", () => {
     renderGrid('full', { state: 'loading', skeletonRows: 1 });
 
-    const cells = within(at(screen.getAllByTestId('ub-grid-skeleton-row'), 0)).getAllByRole(
-      'cell'
-    );
+    const cells = within(at(screen.getAllByTestId('ub-grid-skeleton-row'), 0)).getAllByRole('cell');
     const widths = cells.map((cell) => cell.firstElementChild?.className.match(/w-\d\/\d/)?.[0]);
     // A name, some facts, a figure — which is what is actually coming.
     expect(widths).toEqual(['w-3/5', 'w-4/5', 'w-4/5', 'w-4/5', 'w-2/5']);
@@ -620,9 +624,9 @@ describe('the column menu', () => {
     const listbox = await openMenu(user);
     await user.click(within(listbox).getByRole('option', { name: /Contact/ }));
 
-    expect(
-      screen.getAllByRole('columnheader').map((cell) => cell.textContent)
-    ).not.toContain('Contact');
+    expect(screen.getAllByRole('columnheader').map((cell) => cell.textContent)).not.toContain(
+      'Contact'
+    );
     expect(screen.getAllByRole('columnheader')).toHaveLength(4);
   });
 
@@ -645,11 +649,11 @@ describe('the column menu', () => {
     const listbox = await openMenu(user);
     // `compact` keeps priority <= 2. Contact (3) and Status (4) are not the
     // reader's to switch on here; the table has no room for them.
-    expect(within(listbox).getAllByRole('option').map((o) => o.textContent)).toEqual([
-      'Customer',
-      'Balance',
-      'Last entry',
-    ]);
+    expect(
+      within(listbox)
+        .getAllByRole('option')
+        .map((o) => o.textContent)
+    ).toEqual(['Customer', 'Balance', 'Last entry']);
   });
 
   it('puts every column back', async () => {
@@ -671,19 +675,15 @@ describe('the column menu', () => {
       storageId: 'customers',
     });
 
-    await user.click(
-      within(await openMenu(user)).getByRole('option', { name: /Contact/ })
-    );
-    expect(window.sessionStorage.getItem('ub-grid-columns:customers')).toBe(
-      '{"contact":false}'
-    );
+    await user.click(within(await openMenu(user)).getByRole('option', { name: /Contact/ }));
+    expect(window.sessionStorage.getItem('ub-grid-columns:customers')).toBe('{"contact":false}');
     unmount();
 
     // Back on the same screen: the column is still off.
     await renderGridWithTable('full', { ...withToolbar, storageId: 'customers' });
-    expect(
-      screen.getAllByRole('columnheader').map((cell) => cell.textContent)
-    ).not.toContain('Contact');
+    expect(screen.getAllByRole('columnheader').map((cell) => cell.textContent)).not.toContain(
+      'Contact'
+    );
   });
 
   it('survives a stored value that is corrupt or hostile', async () => {
@@ -704,9 +704,7 @@ describe('the column menu', () => {
     const user = userEvent.setup();
     await renderGridWithTable('full', withToolbar);
 
-    await user.click(
-      within(await openMenu(user)).getByRole('option', { name: /Contact/ })
-    );
+    await user.click(within(await openMenu(user)).getByRole('option', { name: /Contact/ }));
     expect(window.sessionStorage.length).toBe(0);
   });
 });
@@ -828,5 +826,59 @@ describe('the card avatar', () => {
     expect(screen.queryByText('RT')).not.toBeInTheDocument();
     /* And the row is still a row: the name and the figure survive. */
     expect(screen.getByText('Ramesh Traders')).toBeInTheDocument();
+  });
+});
+
+/**
+ * QA defect N1 (Sprint 3): on a 360 px phone the party list's loading skeleton
+ * overran its 328 px card. The cards-tier skeleton drew one FIXED 80 px bar
+ * (`h-4 w-20 shrink-0`) per table column, so the third bar ended 17 px past the
+ * card and the name/caption bars in the flex middle were squeezed to 0 px.
+ * jsdom has no layout, so — like `UbSkeleton.test.tsx` for D3 — this asserts
+ * the rule that makes the overflow impossible: a bar is sized relative to its
+ * container (`w-full`, a fraction) and any fixed width is capped `max-w-full`.
+ */
+describe('the loading skeleton cannot be wider than its container (N1)', () => {
+  const FIXED_WIDTH = /^w-(\d+(\.\d+)?|px|\[[\d.]+(px|rem|em)\])$/;
+  const RELATIVE_WIDTH = /^w-(full|\d+\/\d+|\[\d+%\])$/;
+  const barsIn = (root: HTMLElement): HTMLElement[] =>
+    Array.from(root.querySelectorAll<HTMLElement>('.animate-pulse'));
+
+  it('cards: draws a card — disc, two fluid text bars, an amount — with no uncapped fixed bar', () => {
+    renderGrid('cards', { state: 'loading', skeletonRows: 1 });
+    const bars = barsIn(screen.getByRole('status'));
+
+    // One card-shaped row, not one bar per table column.
+    expect(bars).toHaveLength(4);
+    for (const bar of bars) {
+      const classes = Array.from(bar.classList);
+      const fixed = classes.filter((c) => FIXED_WIDTH.test(c));
+      const relative = classes.filter((c) => RELATIVE_WIDTH.test(c));
+      expect({
+        bar: bar.className,
+        ok: fixed.length === 0 || classes.includes('max-w-full'),
+      }).toEqual({
+        bar: bar.className,
+        ok: true,
+      });
+      expect({ bar: bar.className, sized: fixed.length + relative.length > 0 }).toEqual({
+        bar: bar.className,
+        sized: true,
+      });
+      // `shrink-0` on a text bar is what let the old bars push out of the card.
+      if (fixed.length === 0) expect(classes).not.toContain('shrink-0');
+    }
+  });
+
+  it('table tiers: every skeleton bar is bounded by its cell (max-w-full)', () => {
+    renderGrid('full', { state: 'loading', skeletonRows: 2, selectable: true });
+    const bars = barsIn(screen.getByRole('status'));
+    expect(bars.length).toBeGreaterThan(0);
+    for (const bar of bars) {
+      expect({ bar: bar.className, bounded: bar.classList.contains('max-w-full') }).toEqual({
+        bar: bar.className,
+        bounded: true,
+      });
+    }
   });
 });

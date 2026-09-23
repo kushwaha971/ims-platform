@@ -5,6 +5,7 @@ import { memo, type ReactNode } from 'react';
 import { AlertCircle, Inbox, SearchX } from 'lucide-react';
 
 import { MLEmpty, MLEmptyDescription, MLEmptyTitle } from 'src/design-system/primitives';
+import { UbRequestId, type UbRequestIdFields } from 'src/design-system/UbRequestId';
 import { cn } from 'src/utils/cn';
 
 /**
@@ -30,17 +31,20 @@ import { cn } from 'src/utils/cn';
  */
 export type UbEmptyStateVariant = 'firstUse' | 'filtered' | 'error';
 
-export interface UbEmptyStateProps {
+export type UbEmptyStateProps = UbEmptyStateBaseProps & UbRequestIdFields;
+
+interface UbEmptyStateBaseProps {
   readonly variant: UbEmptyStateVariant;
   readonly title: string;
   readonly description?: string;
   /** Exactly one action: the move that closes the gap. */
   readonly action?: ReactNode;
-  /**
-   * The request id of the failure, rendered as `ds-mono` caption (R-E-4). It is
-   * the only thing that connects a user's screenshot to a backend log line.
+  /*
+   * `requestId` / `requestIdLabel` (UbRequestIdFields): the failure's request id,
+   * printed "Reference <id>" (R-E-4) — the only thing that connects a user's
+   * screenshot to a backend log line. It printed the bare id until QA's B5; the
+   * label is required by type whenever an id can be passed.
    */
-  readonly requestId?: string | null;
   readonly className?: string;
 }
 
@@ -69,6 +73,7 @@ function UbEmptyStateBase({
   description,
   action,
   requestId,
+  requestIdLabel,
   className,
 }: Readonly<UbEmptyStateProps>) {
   const Icon = ICON[variant];
@@ -91,11 +96,7 @@ function UbEmptyStateBase({
       <MLEmptyTitle>{title}</MLEmptyTitle>
       {description && <MLEmptyDescription>{description}</MLEmptyDescription>}
       {action && <span className="mt-2 inline-flex">{action}</span>}
-      {requestId && (
-        <p className="ds-mono text-text-muted" data-testid="request-id">
-          {requestId}
-        </p>
-      )}
+      {requestId && requestIdLabel && <UbRequestId id={requestId} label={requestIdLabel} />}
     </MLEmpty>
   );
 }

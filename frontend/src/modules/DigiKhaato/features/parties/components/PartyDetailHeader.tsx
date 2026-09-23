@@ -16,6 +16,7 @@ import {
   UbText,
 } from 'src/design-system';
 import type { TranslateFn } from 'src/hooks/useTranslation';
+import { formatPhoneForDisplay, toDialableNumber } from 'src/utils/share';
 
 import { showsCreditBar } from '../view-model/creditDisplay';
 import { balanceView } from '../view-model/partyDisplay';
@@ -80,6 +81,7 @@ export interface PartyDetailHeaderProps {
   readonly tags: readonly PartyTag[];
   /** True while the detail request is still in flight over a cached row. */
   readonly pending: boolean;
+  /** Receives the normalised E.164 number ("+919812345678"), not the stored spelling. */
   readonly onCopyMobile: (mobile: string) => void;
   /** Set for a moment after a successful copy, so the button can say so. */
   readonly copied: boolean;
@@ -101,9 +103,16 @@ function PartyDetailHeaderBase({
   copied,
 }: Readonly<PartyDetailHeaderProps>) {
   const view = balanceView(balance);
+  /* QA O6 follow-up — the number is SHOWN as the reminder sheet shows it
+     ("+91 98123 45678"), never as stored ("09812345678"); the `tel:` href and
+     Copy get the normalised E.164 ("+919812345678"), which is what the link
+     dials and what any paste target reads without stripping spaces. Both come
+     from the one normaliser in `src/utils/share.ts`. */
+  const shownMobile = formatPhoneForDisplay(mobile);
+  const dialMobile = toDialableNumber(mobile);
   const handleCopy = useCallback(() => {
-    if (mobile) onCopyMobile(mobile);
-  }, [mobile, onCopyMobile]);
+    if (dialMobile) onCopyMobile(dialMobile);
+  }, [dialMobile, onCopyMobile]);
 
   return (
     /* Two columns: who they are on the left, how much on the right, on one row
@@ -139,12 +148,12 @@ function PartyDetailHeaderBase({
                 merchant came for, and the platform's own handler is better than
                 anything this screen could do with the number. */}
             <UbLink
-              href={`tel:${mobile}`}
+              href={`tel:${dialMobile}`}
               variant="inherit"
               className="ds-num-base-regular inline-flex items-center gap-2"
             >
               <Phone className="h-3.5 w-3.5" aria-hidden />
-              {mobile}
+              {shownMobile}
             </UbLink>
             {/* Labelled, not icon-only. An icon-only copy button is a 16px
                 glyph whose meaning a merchant has to already know, and the word

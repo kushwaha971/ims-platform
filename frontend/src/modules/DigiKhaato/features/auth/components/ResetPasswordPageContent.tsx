@@ -8,6 +8,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, useWatch } from 'react-hook-form';
 
 import {
+  formatRequestReference,
   UbButton,
   UbField,
   UbForm,
@@ -120,7 +121,11 @@ export function ResetPasswordPageContent(): React.JSX.Element {
             <UbStatusBanner
               tone="error"
               title={password.error.message}
-              description={password.error.requestId ?? undefined}
+              description={
+                password.error.requestId
+                  ? formatRequestReference(t('common.error.reference'), password.error.requestId)
+                  : undefined
+              }
             />
           )}
 

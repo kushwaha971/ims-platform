@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 
 import { Gauge } from 'lucide-react';
 
-import { UbButton, UbDialog, UbProgress, UbStack, UbText } from 'src/design-system';
+import { UbButton, UbDialog, UbProgress, UbRequestId, UbStack, UbText } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
 
 import { usePlanLimits } from '../hooks/usePlanLimits';
@@ -115,11 +115,7 @@ export function PlanLimitDialog(): React.JSX.Element | null {
       </UbText>
 
       {/* R-E-4 — the one thing that connects this screen to a backend log line. */}
-      {hit.requestId && (
-        <UbText variant="mono" tone="muted" data-testid="request-id">
-          {hit.requestId}
-        </UbText>
-      )}
+      {hit.requestId && <UbRequestId id={hit.requestId} label={t('common.error.reference')} />}
     </UbDialog>
   );
 }

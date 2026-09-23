@@ -145,6 +145,7 @@ export function MembersSection(): React.JSX.Element {
         title: t('team.members.error.title'),
         description: error?.message ?? t('team.members.error.body'),
         requestId: error?.requestId ?? null,
+        requestIdLabel: t('common.error.reference'),
         action: (
           <UbButton variant="secondary" onClick={refetch}>
             {t('common.action.retry')}

@@ -47,6 +47,7 @@ export function SnackbarHost(): React.JSX.Element {
       message={snackbarOpen && resolved ? resolved : null}
       severity={snackbarSeverity}
       requestId={requestId}
+      requestIdLabel={t('common.error.reference')}
       onDismiss={onDismiss}
       dismissLabel={t('common.action.dismiss')}
     />

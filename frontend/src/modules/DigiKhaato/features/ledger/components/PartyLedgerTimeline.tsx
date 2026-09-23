@@ -198,6 +198,7 @@ export function PartyLedgerTimeline({
               title={t('ledger.timeline.error.title')}
               description={t('ledger.timeline.error.body')}
               requestId={ledger.error?.requestId}
+              requestIdLabel={t('common.error.reference')}
               action={
                 <UbButton variant="secondary" onClick={ledger.refetch}>
                   {t('common.action.retry')}

@@ -99,6 +99,9 @@ export type { UbCardProps } from './UbCard';
 export { UbEmptyState } from './UbEmptyState';
 export type { UbEmptyStateProps, UbEmptyStateVariant } from './UbEmptyState';
 
+export { UbRequestId, formatRequestReference } from './UbRequestId';
+export type { UbRequestIdFields, UbRequestIdProps } from './UbRequestId';
+
 export { UbPageHeader } from './UbPageHeader';
 export type { UbPageHeaderProps, UbPageHeaderWidth } from './UbPageHeader';
 
