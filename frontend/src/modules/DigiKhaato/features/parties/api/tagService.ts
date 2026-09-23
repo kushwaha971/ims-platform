@@ -104,7 +104,7 @@ export const updateTag = async (
   changes: { readonly name?: string; readonly color?: string | null }
 ): Promise<PartyTag> => {
   const response = await api.patch<{ data: TagApiRow }>(
-    `${TAGS}/${id}`,
+    API_PATHS.PARTY_TAG(id),
     {
       ...(changes.name !== undefined ? { name: changes.name } : {}),
       ...(changes.color !== undefined ? { color: changes.color } : {}),
@@ -124,7 +124,7 @@ export const updateTag = async (
  */
 export const countTagParties = async (id: string, signal?: AbortSignal): Promise<number> => {
   const response = await api.delete<{ data: { party_count: number } }>(
-    `${TAGS}/${id}?dry_run=true`,
+    `${API_PATHS.PARTY_TAG(id)}?dry_run=true`,
     ubConfig({ signal })
   );
   return response.data.data.party_count;
@@ -132,7 +132,7 @@ export const countTagParties = async (id: string, signal?: AbortSignal): Promise
 
 /** `DELETE /parties/tags/{id}` — removes the label. Every party survives (BR-5). */
 export const deleteTag = async (id: string): Promise<void> => {
-  await api.delete(`${TAGS}/${id}`, ubConfig({}));
+  await api.delete(API_PATHS.PARTY_TAG(id), ubConfig({}));
 };
 
 export interface TagMergeResult {
@@ -154,7 +154,7 @@ export const mergeTags = async (id: string, intoId: string): Promise<TagMergeRes
   const response = await api.post<{
     data: TagApiRow;
     meta: { moved: number; skipped_duplicates: number };
-  }>(`${TAGS}/${id}/merge`, { into_tag_id: intoId }, ubConfig({}));
+  }>(API_PATHS.PARTY_TAG_MERGE(id), { into_tag_id: intoId }, ubConfig({}));
   return {
     tag: toTag(response.data.data),
     moved: response.data.meta.moved,

@@ -2,8 +2,19 @@
  * Part 19 §19.4.5 — one object, grouped by module, mirroring canon §0.8 and
  * Part 22 exactly. Static paths are string constants; parameterised paths are
  * arrow functions. Nothing else lives in this file: no base URL, no query
- * building, no helpers.
+ * building, and no helper beyond `seg` below.
  */
+
+/**
+ * I-2 (QA, 23 Sep 2026) — every id or token spliced into a path is one
+ * `encodeURIComponent`d segment, as `partyPath` in `src/routes.ts` already is.
+ * Defence in depth: ids come from the server and from the address bar, and an
+ * unencoded `../../auth/logout` or `x?format=csv` would re-address the request
+ * to a different endpoint on our own API, with the session's cookies. UUIDs
+ * and tokens encode to themselves, so no real URL changes.
+ */
+const seg = (value: string): string => encodeURIComponent(value);
+
 export const API_PATHS = {
   // ── auth ──────────────────────────────────────────────────────────────────
   /**
@@ -28,7 +39,7 @@ export const API_PATHS = {
   TENANT_SETTINGS: '/tenants/current/settings',
   TENANT_BRANDING: '/tenants/current/branding',
   MEMBERSHIPS: '/memberships',
-  MEMBERSHIP: (id: string) => `/memberships/${id}`,
+  MEMBERSHIP: (id: string) => `/memberships/${seg(id)}`,
   MEMBERSHIP_INVITE: '/memberships/invite',
   /**
    * PLT-05 — team invitations. A separate collection from `/memberships`
@@ -39,23 +50,25 @@ export const API_PATHS = {
    */
   /** DEC-012 — the team, and adding to it with owner-issued credentials. */
   MEMBERS: '/members',
-  MEMBER_CREDENTIALS: (membershipId: string) => `/members/${membershipId}/credentials`,
+  MEMBER_CREDENTIALS: (membershipId: string) => `/members/${seg(membershipId)}/credentials`,
   INVITATIONS: '/invitations',
-  INVITATION: (id: string) => `/invitations/${id}`,
+  INVITATION: (id: string) => `/invitations/${seg(id)}`,
   /** PLT-05 FR-10 — the seat-consuming accept. */
-  INVITATION_ACCEPT: (token: string) => `/invitations/${token}/accept`,
+  INVITATION_ACCEPT: (token: string) => `/invitations/${seg(token)}/accept`,
   PERMISSIONS_ME: '/permissions/me',
   AUDIT_LOGS: '/audit-logs',
 
   // ── parties ───────────────────────────────────────────────────────────────
   PARTIES: '/parties',
-  PARTY: (id: string) => `/parties/${id}`,
-  PARTY_ARCHIVE: (id: string) => `/parties/${id}/archive`,
-  PARTY_RESTORE: (id: string) => `/parties/${id}/restore`,
+  PARTY: (id: string) => `/parties/${seg(id)}`,
+  PARTY_ARCHIVE: (id: string) => `/parties/${seg(id)}/archive`,
+  PARTY_RESTORE: (id: string) => `/parties/${seg(id)}/restore`,
   /** LED-04 — the statement, and with `format=csv` the export of it. */
-  PARTY_STATEMENT: (id: string) => `/parties/${id}/statement`,
-  PARTY_LEDGER_ENTRIES: (id: string) => `/parties/${id}/ledger-entries`,
-  PARTY_SHARE_LINKS: (id: string) => `/parties/${id}/share-links`,
+  PARTY_STATEMENT: (id: string) => `/parties/${seg(id)}/statement`,
+  PARTY_LEDGER_ENTRIES: (id: string) => `/parties/${seg(id)}/ledger-entries`,
+  PARTY_SHARE_LINKS: (id: string) => `/parties/${seg(id)}/share-links`,
+  /** PTY-06 — the pre-flight credit check. */
+  PARTY_CREDIT_CHECK: (id: string) => `/parties/${seg(id)}/credit-check`,
   /**
    * PTY-05 — the tag collection. Its own constant rather than
    * `${PARTIES}/tags`, because `API_PATHS.PARTIES` is the party SEARCH
@@ -63,24 +76,26 @@ export const API_PATHS = {
    * second party fetch; see eslint.config.mjs, PARTY_FETCH_MESSAGE).
    */
   PARTY_TAGS: '/parties/tags',
+  PARTY_TAG: (id: string) => `/parties/tags/${seg(id)}`,
+  PARTY_TAG_MERGE: (id: string) => `/parties/tags/${seg(id)}/merge`,
 
   // ── ledger ────────────────────────────────────────────────────────────────
   LEDGER_ENTRIES: '/ledger-entries',
-  LEDGER_ENTRY: (id: string) => `/ledger-entries/${id}`,
-  LEDGER_ENTRY_REVERSE: (id: string) => `/ledger-entries/${id}/reverse`,
-  LEDGER_ENTRY_CORRECT: (id: string) => `/ledger-entries/${id}/correct`,
+  LEDGER_ENTRY: (id: string) => `/ledger-entries/${seg(id)}`,
+  LEDGER_ENTRY_REVERSE: (id: string) => `/ledger-entries/${seg(id)}/reverse`,
+  LEDGER_ENTRY_CORRECT: (id: string) => `/ledger-entries/${seg(id)}/correct`,
   /** LED-09 — the tenant's position, and the aging behind it. */
   LEDGER_SUMMARY: '/ledger/summary',
   LEDGER_AGING: '/ledger/aging',
   REMINDERS: '/reminders',
-  REMINDER: (id: string) => `/reminders/${id}`,
-  REMINDER_SEND: (id: string) => `/reminders/${id}/send`,
+  REMINDER: (id: string) => `/reminders/${seg(id)}`,
+  REMINDER_SEND: (id: string) => `/reminders/${seg(id)}/send`,
   REMINDERS_BULK: '/reminders/bulk',
 
   // ── inventory ─────────────────────────────────────────────────────────────
   ITEMS: '/items',
-  ITEM: (id: string) => `/items/${id}`,
-  ITEM_MOVEMENTS: (id: string) => `/items/${id}/movements`,
+  ITEM: (id: string) => `/items/${seg(id)}`,
+  ITEM_MOVEMENTS: (id: string) => `/items/${seg(id)}/movements`,
   ITEM_LOOKUP: '/items/lookup',
   CATEGORIES: '/categories',
   UNITS: '/units',
@@ -90,20 +105,20 @@ export const API_PATHS = {
 
   // ── sales ─────────────────────────────────────────────────────────────────
   SALES_INVOICES: '/sales/invoices',
-  SALES_INVOICE: (id: string) => `/sales/invoices/${id}`,
-  SALES_INVOICE_ISSUE: (id: string) => `/sales/invoices/${id}/issue`,
-  SALES_INVOICE_VOID: (id: string) => `/sales/invoices/${id}/void`,
-  SALES_INVOICE_SHARE_LINKS: (id: string) => `/sales/invoices/${id}/share-links`,
-  SALES_INVOICE_UPI_INTENT: (id: string) => `/sales/invoices/${id}/upi-intent`,
+  SALES_INVOICE: (id: string) => `/sales/invoices/${seg(id)}`,
+  SALES_INVOICE_ISSUE: (id: string) => `/sales/invoices/${seg(id)}/issue`,
+  SALES_INVOICE_VOID: (id: string) => `/sales/invoices/${seg(id)}/void`,
+  SALES_INVOICE_SHARE_LINKS: (id: string) => `/sales/invoices/${seg(id)}/share-links`,
+  SALES_INVOICE_UPI_INTENT: (id: string) => `/sales/invoices/${seg(id)}/upi-intent`,
   SALES_ESTIMATES: '/sales/estimates',
-  SALES_ESTIMATE_CONVERT: (id: string) => `/sales/estimates/${id}/convert`,
+  SALES_ESTIMATE_CONVERT: (id: string) => `/sales/estimates/${seg(id)}/convert`,
   SALES_CREDIT_NOTES: '/sales/credit-notes',
 
   // ── purchases, payments, expenses, reports, misc ──────────────────────────
   PURCHASE_BILLS: '/purchases/bills',
-  PURCHASE_BILL_RECORD: (id: string) => `/purchases/bills/${id}/record`,
+  PURCHASE_BILL_RECORD: (id: string) => `/purchases/bills/${seg(id)}/record`,
   PAYMENTS: '/payments',
-  PAYMENT_VOID: (id: string) => `/payments/${id}/void`,
+  PAYMENT_VOID: (id: string) => `/payments/${seg(id)}/void`,
   PAYMENTS_UPI_INTENT: '/payments/upi-intent',
   PAYMENTS_QR: '/payments/qr.svg',
   EXPENSES: '/expenses',
@@ -114,17 +129,17 @@ export const API_PATHS = {
   REPORT_GST_SUMMARY: '/reports/gst-summary',
   REPORT_STOCK_SUMMARY: '/reports/stock-summary',
   REPORT_RECEIVABLES_AGING: '/reports/receivables-aging',
-  REPORT_EXPORT: (id: string) => `/reports/exports/${id}`,
+  REPORT_EXPORT: (id: string) => `/reports/exports/${seg(id)}`,
   NOTIFICATIONS: '/notifications',
-  NOTIFICATION_READ: (id: string) => `/notifications/${id}/read`,
+  NOTIFICATION_READ: (id: string) => `/notifications/${seg(id)}/read`,
   ATTACHMENTS: '/attachments',
   IMPORTS: '/imports',
-  IMPORT: (id: string) => `/imports/${id}`,
-  IMPORT_COMMIT: (id: string) => `/imports/${id}/commit`,
+  IMPORT: (id: string) => `/imports/${seg(id)}`,
+  IMPORT_COMMIT: (id: string) => `/imports/${seg(id)}/commit`,
   TAX_RATES: '/taxes/rates',
   TAX_HSN: '/taxes/hsn',
   SYSTEM_HEALTH: '/system/health',
-  PUBLIC_DOCUMENT: (token: string) => `/public/d/${token}`,
+  PUBLIC_DOCUMENT: (token: string) => `/public/d/${seg(token)}`,
 } as const;
 
 /** POSTs that must carry an Idempotency-Key (canon §0.11 rule 5). */

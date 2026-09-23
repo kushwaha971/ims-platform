@@ -22,6 +22,7 @@ import { toPlanLimitHit } from 'modules/DigiKhaato/features/plan/view-model/plan
 import invitationReducer from 'modules/DigiKhaato/features/team/redux/invitationSlice';
 import memberReducer from 'modules/DigiKhaato/features/team/redux/memberSlice';
 
+import { resetAllFeatureState } from './actions';
 import { invalidationListener } from './invalidation/listener';
 // ── Cross-cutting ────────────────────────────────────────────────────────────
 import localeReducer from './slice/localeSlice';
@@ -106,8 +107,20 @@ registerTransportHost({
     store.dispatch(transportFailed());
   },
   isNetworkImpaired: () => store.getState().network.state !== 'online',
+  /**
+   * FB-3 — expiry is a logout the server decided, so it sends logout's two
+   * signals in logout's order: the session goes anonymous first (which makes
+   * `RequireSession` unmount every screen in the same render, so no feature
+   * page can see its slice go idle and refetch into another 401), then the
+   * one teardown every feature slice — the lazily injected statement and aging
+   * included — already answers. It used to reset the session alone, leaving
+   * the previous user's party list, khata and statement in memory behind the
+   * login screen. Locale and theme do not listen for it and survive, as they
+   * do a logout.
+   */
   onSessionExpired: () => {
     store.dispatch(sessionExpired());
+    store.dispatch(resetAllFeatureState());
   },
   /**
    * §19.12.2 / CR-2026-09-19-E — THE global error channel, and the only place

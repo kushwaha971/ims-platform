@@ -6,7 +6,7 @@ import { useAppDispatch } from 'src/hooks/useAppStore';
 import { usePermissions } from 'src/hooks/usePermissions';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import type { ApiErrorShape } from 'src/types/api.types';
-import { formatAmount } from 'src/utils/money';
+import { absMoney, formatAmount, isNegativeAmount } from 'src/utils/money';
 import { newRequestId } from 'src/utils/requestId';
 
 import { archiveParty, bulkArchiveParties, restoreParty } from '../redux/partyArchiveThunk';
@@ -20,10 +20,40 @@ import type { BulkArchiveResult } from '../api/partyService';
 export type ArchiveStage = 'closed' | 'confirm' | 'blocked' | 'writeOff' | 'saving';
 
 export interface BlockedBalance {
+  /** The SIGNED balance as the server sent it (`"-500.00"` for a payable) — for `UbAmount`. */
   readonly amount: string;
+  /**
+   * The positive magnitude (`"500.00"`) — what the copy prints and what
+   * `write_off.amount` confirms. FB-1: sending the signed figure made every
+   * payable write-off fail with "Enter an amount greater than 0".
+   */
+  readonly magnitude: string;
   /** `receivable` — they owe the merchant; `payable` — the merchant owes them. */
   readonly label: string;
 }
+
+/**
+ * The dialog's blocked figure from a 409's `details`, in one place so the
+ * archive refusal and the write-off's `balance_changed` cannot disagree.
+ *
+ * `party_balance_nonzero` carries `balance` (signed) and `balance_label`;
+ * `balance_changed` adds `amount`, the server's own `|balance|`, which is
+ * preferred when present because it is the exact figure the server will
+ * compare the next confirmation against. `absMoney` rather than a hand-rolled
+ * strip of `-`: `src/utils/money` is already in this route (this hook's
+ * `formatAmount`, and `UbAmount`), so it costs nothing and is not a second
+ * implementation of the same rule. A missing label is derived from the sign,
+ * which is the server's own convention (positive = receivable).
+ */
+export const blockedFromDetails = (details: Record<string, string>): BlockedBalance | null => {
+  const balance = details.balance;
+  if (!balance) return null;
+  return {
+    amount: balance,
+    magnitude: details.amount || absMoney(balance),
+    label: details.balance_label ?? (isNegativeAmount(balance) ? 'payable' : 'receivable'),
+  };
+};
 
 export interface UsePartyArchiveResult {
   readonly canArchive: boolean;
@@ -102,10 +132,9 @@ export function usePartyArchive(id: string | null): UsePartyArchiveResult {
         .catch((rejected: ApiErrorShape) => {
           if (rejected?.code === 'party_balance_nonzero') {
             const details = (rejected.details ?? {}) as Record<string, string>;
-            setBlocked({
-              amount: details.balance ?? '0.00',
-              label: details.balance_label ?? 'receivable',
-            });
+            setBlocked(
+              blockedFromDetails(details) ?? { amount: '0.00', magnitude: '0.00', label: 'receivable' }
+            );
             setStage('blocked');
             return;
           }
@@ -143,7 +172,9 @@ export function usePartyArchive(id: string | null): UsePartyArchiveResult {
           id,
           reason: '',
           idempotencyKey: writeOffKey,
-          writeOff: { reason, entryDate, amount: blocked.amount },
+          // The MAGNITUDE: the server confirms against |balance| and refuses a
+          // signed "-500.00" for every payable (FB-1).
+          writeOff: { reason, entryDate, amount: blocked.magnitude },
         })
       )
         .unwrap()
@@ -155,7 +186,7 @@ export function usePartyArchive(id: string | null): UsePartyArchiveResult {
             showSnackbar({
               severity: 'success',
               id: 'parties.writeOff.done',
-              params: { amount: formatAmount(blocked.amount) },
+              params: { amount: formatAmount(blocked.magnitude) },
             })
           );
         })
@@ -165,10 +196,8 @@ export function usePartyArchive(id: string | null): UsePartyArchiveResult {
              writing off an amount they did not see would be the product
              deciding a financial question for them. */
           if (rejected?.code === 'balance_changed' || rejected?.code === 'party_balance_nonzero') {
-            const details = (rejected.details ?? {}) as Record<string, string>;
-            if (details.balance) {
-              setBlocked({ amount: details.balance, label: details.balance_label ?? 'receivable' });
-            }
+            const next = blockedFromDetails((rejected.details ?? {}) as Record<string, string>);
+            if (next) setBlocked(next);
           }
           if (rejected?.code === 'nothing_to_write_off') {
             // Settled elsewhere meanwhile: the plain archive now works.

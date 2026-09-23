@@ -718,6 +718,119 @@ describe('archiving from the khata page', () => {
     );
   });
 
+  /**
+   * FB-1 (QA, 23 Sep 2026) — writing off a PAYABLE balance always failed. The
+   * 409 carries the signed balance ("-500.00"), the hook sent it verbatim as
+   * `write_off.amount`, and the server — which confirms against |balance| —
+   * refused every one with "Enter an amount greater than 0". The dialog printed
+   * the sign too: "Write off ₹-500.00".
+   */
+  const blockPayableOnce = (): void => {
+    partyService.archiveParty.mockRejectedValueOnce({
+      code: 'party_balance_nonzero',
+      message: 'Settle the balance or write it off before archiving.',
+      details: { balance: '-500.00', balance_label: 'payable', suggestion: 'write_off' },
+      requestId: 'req_pay',
+      status: 409,
+      warnings: [],
+    });
+  };
+
+  const reachPayableWriteOff = async (
+    user: ReturnType<typeof userEvent.setup>
+  ): Promise<HTMLElement> => {
+    renderWithProviders(<PartyDetailPageContent id={ID} />);
+    await screen.findByText('Ramesh Traders');
+    await openMenu(user);
+    await user.click(await screen.findByRole('button', { name: 'Archive' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Archive' }));
+    await screen.findByText('You still owe Ramesh Traders');
+    const blocked = screen.getByRole('dialog');
+    // The figure is positive; the words carry the direction.
+    expect(within(blocked).getByText('₹500.00')).toBeInTheDocument();
+    expect(within(blocked).queryByText(/-500|−500/)).not.toBeInTheDocument();
+    await user.click(within(blocked).getByRole('button', { name: 'Write off ₹500.00' }));
+    return blocked;
+  };
+
+  it('writes off a payable balance as its positive magnitude (FB-1)', async () => {
+    blockPayableOnce();
+    const user = userEvent.setup();
+    const dialog = await reachPayableWriteOff(user);
+
+    expect(
+      within(dialog).getByText(
+        'Your ledger gets a ₹500.00 write-off, and what you owe Ramesh Traders becomes ₹0.'
+      )
+    ).toBeInTheDocument();
+    await user.type(within(dialog).getByLabelText('Why are you writing this off?'), 'Shop closed');
+    await user.click(within(dialog).getByLabelText('I understand this money is written off'));
+    await user.click(within(dialog).getByRole('button', { name: 'Write off and archive' }));
+
+    await waitFor(() =>
+      expect(partyService.archiveParty).toHaveBeenLastCalledWith(
+        ID,
+        '',
+        expect.any(String),
+        expect.objectContaining({ reason: 'Shop closed', amount: '500.00' })
+      )
+    );
+  });
+
+  it('re-shows the new figure on balance_changed and confirms the new magnitude (FB-1)', async () => {
+    /**
+     * EC-1 for write-offs. The server's `balance_changed` carries the new
+     * signed `balance` and its own `amount` (|balance|); the dialog must show
+     * the new figure, drop the old acknowledgement, and send the new magnitude.
+     */
+    blockPayableOnce();
+    partyService.archiveParty.mockRejectedValueOnce({
+      code: 'balance_changed',
+      message: 'The balance changed since you confirmed the write-off. Check the new amount.',
+      details: {
+        balance: '-750.00',
+        balance_label: 'payable',
+        amount: '750.00',
+        confirmed_amount: '500.00',
+      },
+      requestId: 'req_chg',
+      status: 409,
+      warnings: [],
+    });
+    const user = userEvent.setup();
+    const dialog = await reachPayableWriteOff(user);
+
+    await user.type(within(dialog).getByLabelText('Why are you writing this off?'), 'Shop closed');
+    await user.click(within(dialog).getByLabelText('I understand this money is written off'));
+    await user.click(within(dialog).getByRole('button', { name: 'Write off and archive' }));
+
+    expect(
+      await within(dialog).findByText(
+        'Your ledger gets a ₹750.00 write-off, and what you owe Ramesh Traders becomes ₹0.'
+      )
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(
+        'The balance changed since you confirmed the write-off. Check the new amount.'
+      )
+    ).toBeInTheDocument();
+    // The tick was for ₹500.00; it does not carry over to ₹750.00.
+    const confirm = within(dialog).getByRole('button', { name: 'Write off and archive' });
+    expect(confirm).toBeDisabled();
+
+    await user.click(within(dialog).getByLabelText('I understand this money is written off'));
+    await user.click(confirm);
+    await waitFor(() =>
+      expect(partyService.archiveParty).toHaveBeenLastCalledWith(
+        ID,
+        '',
+        expect.any(String),
+        expect.objectContaining({ amount: '750.00' })
+      )
+    );
+  });
+
   it('does not offer a write-off to a role without ledger.entry.write', async () => {
     /** T-PTY-04-12: archive rights alone do not make a write-off. */
     signIn([

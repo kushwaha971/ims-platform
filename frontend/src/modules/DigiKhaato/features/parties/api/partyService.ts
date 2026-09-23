@@ -333,7 +333,7 @@ export const updateParty = async (
   values: PartyFormValues
 ): Promise<PartySaveResult> => {
   const response = await api.patch<PartySaveApiResponse>(
-    `${API_PATHS.PARTIES}/${id}`,
+    API_PATHS.PARTY(id),
     toWireBody(values, { create: false }),
     ubConfig({})
   );
@@ -381,7 +381,7 @@ interface PartyDetailApiResponse {
  */
 export const getParty = async (id: string, signal?: AbortSignal): Promise<PartyDetailResult> => {
   const response = await api.get<PartyDetailApiResponse>(
-    `${API_PATHS.PARTIES}/${id}`,
+    API_PATHS.PARTY(id),
     ubConfig({ signal, suppressErrorSnackbar: true })
   );
   const { summary, credit } = response.data.data;
@@ -423,7 +423,7 @@ export const setCollectionDate = async (
   collectionDate: string | null
 ): Promise<PartyDetail> => {
   const response = await api.patch<PartySaveApiResponse>(
-    `${API_PATHS.PARTIES}/${id}`,
+    API_PATHS.PARTY(id),
     { collection_date: collectionDate },
     ubConfig({})
   );
@@ -486,7 +486,7 @@ export const archiveParty = async (
     };
   }
   const response = await api.post<PartySaveApiResponse>(
-    `${API_PATHS.PARTIES}/${id}/archive`,
+    API_PATHS.PARTY_ARCHIVE(id),
     body,
     ubConfig({ headers: { 'Idempotency-Key': idempotencyKey } })
   );
@@ -504,7 +504,7 @@ export const archiveParty = async (
  */
 export const restoreParty = async (id: string, idempotencyKey: string): Promise<PartyDetail> => {
   const response = await api.post<PartySaveApiResponse>(
-    `${API_PATHS.PARTIES}/${id}/restore`,
+    API_PATHS.PARTY_RESTORE(id),
     {},
     ubConfig({ headers: { 'Idempotency-Key': idempotencyKey } })
   );
@@ -593,7 +593,7 @@ export const creditCheck = async (
 ): Promise<CreditCheck> => {
   const query = toQueryString({ amount, operation });
   const response = await api.get<CreditCheckApiResponse>(
-    `${API_PATHS.PARTIES}/${id}/credit-check${query}`,
+    `${API_PATHS.PARTY_CREDIT_CHECK(id)}${query}`,
     ubConfig({ signal, suppressErrorSnackbar: true })
   );
   const { data } = response.data;

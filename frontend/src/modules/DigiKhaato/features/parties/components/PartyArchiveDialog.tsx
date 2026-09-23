@@ -87,7 +87,17 @@ function PartyArchiveDialogBase({
 }: Readonly<PartyArchiveDialogProps>) {
   const [reason, setReason] = useState('');
   const [writeOffReason, setWriteOffReason] = useState('');
-  const [acknowledged, setAcknowledged] = useState(false);
+  /* The acknowledgement is given FOR a figure, not in general. When a write-off
+     comes back `balance_changed` the dialog shows the new amount, and a tick
+     left over from the old one would let the merchant confirm a sum they never
+     ticked — so the tick is stored against the figure and lapses when it moves. */
+  const [acknowledgedFigure, setAcknowledgedFigure] = useState<string | null>(null);
+  const figure = blocked ? `${blocked.label}:${blocked.magnitude}` : null;
+  const acknowledged = figure !== null && acknowledgedFigure === figure;
+  const setAcknowledged = useCallback(
+    (value: boolean) => setAcknowledgedFigure(value ? figure : null),
+    [figure]
+  );
   const timezone = useAppSelector(selectTenantTimezone);
   /* The tenant's today, not the device's (LED-01 EC-8): a write-off entered at
      11.50 p.m. IST on a phone set to UTC must not land on yesterday. */
@@ -114,7 +124,11 @@ function PartyArchiveDialogBase({
 
   const isBlocked = shown === 'blocked' && blocked !== null;
   const isWriteOff = shown === 'writeOff' && blocked !== null;
-  const amountText = blocked ? formatAmount(blocked.amount) : '';
+  /* The magnitude, never the signed balance: every string this feeds already
+     says the direction in words ("You owe", "what you owe {name}"), so a
+     payable printed "Write off ₹-500.00" (FB-1). `UbAmount` below keeps the
+     signed figure, because it paints direction itself. */
+  const amountText = blocked ? formatAmount(blocked.magnitude) : '';
 
   return (
     <UbDialog
