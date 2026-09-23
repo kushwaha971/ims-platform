@@ -60,12 +60,7 @@ from apps.ledger.constants import (
 from apps.ledger.models import LedgerEntry
 from apps.parties.constants import PartyStatus
 from apps.parties.services.balance import apply_entry, lock_party
-from apps.parties.services.credit import (
-    CREDIT_MODE_BLOCK,
-    check_credit,
-    credit_mode,
-    may_override,
-)
+from apps.parties.services.credit import CREDIT_MODE_BLOCK, check_credit, credit_mode, may_override
 
 
 def _clean_text(value: Any) -> str:
@@ -285,9 +280,7 @@ def post_entry(*, ctx: Ctx, payload: dict) -> dict:
         # only reduce exposure, and a rule that stopped a merchant recording a
         # payment because the party is over their limit would be stopping the
         # one action that fixes it.
-        decision = check_credit(
-            party=party, amount=cleaned["amount"], mode=credit_mode(ctx.tenant)
-        )
+        decision = check_credit(party=party, amount=cleaned["amount"], mode=credit_mode(ctx.tenant))
         if decision["status"] == CREDIT_MODE_BLOCK:
             if not payload.get("override"):
                 raise BusinessRuleViolation(
@@ -328,9 +321,7 @@ def post_entry(*, ctx: Ctx, payload: dict) -> dict:
         reference=cleaned["reference"],
         status=EntryStatus.POSTED,
     )
-    balance = apply_entry(
-        party=party, direction=cleaned["direction"], amount=cleaned["amount"]
-    )
+    balance = apply_entry(party=party, direction=cleaned["direction"], amount=cleaned["amount"])
 
     write_audit(
         ctx=ctx,

@@ -90,6 +90,15 @@ class AuditAction:
     # auditor arrives with, and the answer has to outlive everyone involved.
     LEDGER_ENTRY_REVERSED = "ledger.entry.reversed"
     LEDGER_ENTRY_CORRECTED = "ledger.entry.corrected"
+    # ── Sprint 4: LED-04 / LED-09 (17-02 §16) ──────────────────────────────
+    #
+    # Reading a statement or the aging report is not audited — §16 rules it out
+    # on volume. Leaving with one in a file is: a statement is a customer's
+    # whole account with the shop and the aging export is the shop's debtor
+    # list, and "who took it, and which one" is answerable only if the
+    # parameters and the row count are written at the moment it left.
+    LEDGER_STATEMENT_EXPORTED = "ledger.statement.exported"
+    LEDGER_AGING_EXPORTED = "ledger.aging.exported"
     JOB_REQUEUED = "job.requeued"
     REFERENCE_DATA_SEEDED = "platform.reference_data_seeded"
 

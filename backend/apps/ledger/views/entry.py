@@ -24,11 +24,7 @@ from apps.common.viewsets import TenantScopeMixin
 from apps.ledger.constants import EntryType
 from apps.ledger.models import LedgerEntry
 from apps.ledger.permissions import LedgerEntryPermissions
-from apps.ledger.selectors.entry import (
-    TIMELINE_ORDERING,
-    party_entries,
-    party_ledger_summary,
-)
+from apps.ledger.selectors.entry import TIMELINE_ORDERING, party_entries, party_ledger_summary
 from apps.ledger.serializers.entry import (
     EntryCorrectSerializer,
     EntryReverseSerializer,

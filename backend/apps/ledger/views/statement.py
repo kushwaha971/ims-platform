@@ -15,6 +15,7 @@ from django.http import StreamingHttpResponse
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
+from apps.common.audit import AuditAction
 from apps.common.constants import ModuleCode
 from apps.common.exceptions import ValidationFailed
 from apps.common.pagination import CursorPagination, decode_cursor
@@ -33,6 +34,7 @@ from apps.ledger.selectors.statement import (
 )
 from apps.ledger.serializers.entry import StatementRowSerializer
 from apps.ledger.services.statement_csv import statement_csv_rows
+from apps.ledger.views.exports import audit_export, charge_export_budget
 
 #: §10 — five years, and the cap is what makes "print fetches all rows first"
 #: (FR-8) a finite promise. A merchant who wants more has a reason to ask for
@@ -145,9 +147,7 @@ class PartyStatementView(TenantScopeMixin, APIView):
         # alternative — renaming one after both are in tests and change requests
         # — is a bigger one. The SELECTOR has a single parameter, so they cannot
         # mean different things.
-        include_corrections = (
-            request.query_params.get("include_corrections", "").lower() == "true"
-        )
+        include_corrections = request.query_params.get("include_corrections", "").lower() == "true"
         scope = {
             "tenant": self.get_tenant(),
             "party_id": party.id,
@@ -212,7 +212,7 @@ class PartyStatementView(TenantScopeMixin, APIView):
         papered over. It is NOT corrected here: a read that repairs data is a
         read that hides how often the repair was needed.
         """
-        from apps.ledger.selectors.statement import _signed_total, _scoped
+        from apps.ledger.selectors.statement import _scoped, _signed_total
 
         scoped = _scoped(**scope)
         if date_from is not None:
@@ -251,27 +251,28 @@ class PartyStatementView(TenantScopeMixin, APIView):
 
         # The export budget, applied HERE rather than on the class, because the
         # export is a query parameter and a class-level scope cannot see one.
-        # Reading a statement is cheap and frequent; streaming five thousand
-        # rows is neither.
-        throttle = ScopedUserRateThrottle()
-        throttle.scope = "export"
-        throttle.rate = throttle.get_rate()
-        throttle.num_requests, throttle.duration = throttle.parse_rate(throttle.rate)
-        if not throttle.allow_request(self.request, self):
-            from rest_framework.exceptions import Throttled
-
-            raise Throttled(wait=throttle.wait())
+        charge_export_budget(self.request, self)
 
         rows_qs = statement_rows(**scope, date_from=date_from, date_to=date_to)
         count = rows_qs.count()
         if count > MAX_SYNC_CSV_ROWS:
             raise ValidationFailed(
-                {
-                    "non_field_errors": [
-                        f"That is {count} rows. Narrow the dates and export again."
-                    ]
-                }
+                {"non_field_errors": [f"That is {count} rows. Narrow the dates and export again."]}
             )
+
+        audit_export(
+            request=self.request,
+            tenant=scope["tenant"],
+            action=AuditAction.LEDGER_STATEMENT_EXPORTED,
+            entity_type="parties_party",
+            entity_id=party.id,
+            params={
+                "date_from": date_from.isoformat() if date_from else None,
+                "date_to": date_to.isoformat() if date_to else None,
+                "include_corrections": scope["include_corrections"],
+            },
+            row_count=count,
+        )
 
         carried = opening_balance(**scope, date_from=date_from)
         response = StreamingHttpResponse(
@@ -279,9 +280,7 @@ class PartyStatementView(TenantScopeMixin, APIView):
             content_type="text/csv",
         )
         stamp = dt.date.today().isoformat()
-        response["Content-Disposition"] = (
-            f'attachment; filename="statement-{party.id}-{stamp}.csv"'
-        )
+        response["Content-Disposition"] = f'attachment; filename="statement-{party.id}-{stamp}.csv"'
         return response
 
 

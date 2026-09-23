@@ -617,9 +617,7 @@ def test_the_over_limit_count_follows_the_filters(tenant: Any, api_as: Any) -> N
     assert customers["over_limit"] == 1
 
 
-def test_the_list_does_not_pay_an_extra_query_for_the_count(
-    tenant: Any, api_as: Any
-) -> None:
+def test_the_list_does_not_pay_an_extra_query_for_the_count(tenant: Any, api_as: Any) -> None:
     """The reason it is in the aggregate rather than in a request of its own.
 
     A separate `COUNT(*)` over an unindexed two-column comparison, on every

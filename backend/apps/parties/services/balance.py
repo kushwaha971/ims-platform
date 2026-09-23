@@ -27,6 +27,7 @@ from apps.common.constants import Direction
 from apps.common.money import ZERO
 from apps.parties.models import Party
 
+
 def lock_party(*, tenant: Any, party_id: Any) -> Party | None:
     """The party row, locked for the rest of this transaction (BR-2, EC-7).
 

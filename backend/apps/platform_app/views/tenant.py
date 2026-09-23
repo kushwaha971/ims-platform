@@ -24,10 +24,10 @@ from apps.platform_app.permissions import MembersManagePermission, TenantManageP
 from apps.platform_app.selectors import session_payload
 from apps.platform_app.selectors.memberships import (
     active_membership,
-    member_of_tenant,
-    members_of,
     invitation_of_tenant,
     invitations_of,
+    member_of_tenant,
+    members_of,
     membership_of_user,
     role_by_code,
 )

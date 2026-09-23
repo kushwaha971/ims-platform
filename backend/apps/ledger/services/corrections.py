@@ -33,7 +33,6 @@ with themselves.
 
 from __future__ import annotations
 
-import datetime as dt
 from decimal import Decimal
 from typing import Any
 
@@ -96,7 +95,11 @@ def _validate_reason(raw: Any) -> str:
     reason = _clean_text(raw or "")
     if len(reason) < REASON_MIN_LENGTH or len(reason) > REASON_MAX_LENGTH:
         raise ValidationFailed(
-            {"reason": [f"Give a short reason ({REASON_MIN_LENGTH}–{REASON_MAX_LENGTH} characters)."]}
+            {
+                "reason": [
+                    f"Give a short reason ({REASON_MIN_LENGTH}–{REASON_MAX_LENGTH} characters)."
+                ]
+            }
         )
     return reason
 
@@ -343,11 +346,7 @@ def correct_entry(*, ctx: Ctx, entry_id: Any, payload: dict) -> dict:
     }
     if not changed:
         raise ValidationFailed(
-            {
-                "non_field_errors": [
-                    "Nothing changed — use Reverse if the entry should not exist."
-                ]
-            }
+            {"non_field_errors": ["Nothing changed — use Reverse if the entry should not exist."]}
         )
 
     party = _locked_open_party(tenant=ctx.tenant, party_id=original.party_id)

@@ -21,8 +21,8 @@ from django.urls import reverse
 from apps.common.constants import Direction
 from apps.ledger.constants import EntryStatus, EntryType, SourceType
 from apps.ledger.models import LedgerEntry
-from apps.parties.constants import PartyStatus
 from apps.ledger.selectors.entry import computed_balance
+from apps.parties.constants import PartyStatus
 from apps.parties.services.credit import CREDIT_MODE_SETTING_KEY
 from tests.factories.parties import PartyFactory
 
@@ -99,8 +99,13 @@ def test_you_got_reduces_it(tenant: Any, api_as: Any) -> None:
 
     response = client.post(
         reverse(ENTRIES),
-        body(party, direction=Direction.CREDIT, amount="300.00",
-             payment_mode="upi", reference="UTR123"),
+        body(
+            party,
+            direction=Direction.CREDIT,
+            amount="300.00",
+            payment_mode="upi",
+            reference="UTR123",
+        ),
         format="json",
     )
 
@@ -223,9 +228,7 @@ def test_the_database_refuses_to_delete_a_posted_entry(tenant: Any, api_as: Any)
     assert LedgerEntry.objects.count() == 1
 
 
-def test_the_two_columns_a_correction_needs_may_still_be_written(
-    tenant: Any, api_as: Any
-) -> None:
+def test_the_two_columns_a_correction_needs_may_still_be_written(tenant: Any, api_as: Any) -> None:
     """The other half of the trigger, and the half a blanket refusal would break.
 
     LED-03 marks an original `reversed` and points it at the row that undid it.
@@ -269,9 +272,7 @@ def test_a_credit_must_say_how_the_money_arrived(tenant: Any, api_as: Any) -> No
     client, _ = api_as(tenant)
     party = PartyFactory(tenant=tenant)
 
-    response = client.post(
-        reverse(ENTRIES), body(party, direction=Direction.CREDIT), format="json"
-    )
+    response = client.post(reverse(ENTRIES), body(party, direction=Direction.CREDIT), format="json")
 
     assert response.status_code == 400
     assert response.json()["error"]["code"] == "validation_error"
@@ -340,9 +341,7 @@ def test_todays_date_in_the_tenants_timezone_is_accepted_when_utc_disagrees(
     assert response.status_code == 201, response.json()
 
 
-def test_three_decimal_places_are_refused_rather_than_rounded(
-    tenant: Any, api_as: Any
-) -> None:
+def test_three_decimal_places_are_refused_rather_than_rounded(tenant: Any, api_as: Any) -> None:
     """EC-4. The client rounds on blur and SHOWS what it did.
 
     A server that quietly quantised would change an amount somebody typed
@@ -437,9 +436,7 @@ def test_another_tenants_party_is_not_found_rather_than_forbidden(
     assert LedgerEntry.objects.count() == 0
 
 
-def test_the_party_row_is_locked_before_the_balance_is_read(
-    tenant: Any, api_as: Any
-) -> None:
+def test_the_party_row_is_locked_before_the_balance_is_read(tenant: Any, api_as: Any) -> None:
     """EC-7. Two staff posting to one party must not lose an entry's worth of money.
 
     Asserted on the SQL rather than by racing two threads, because a race that
@@ -465,13 +462,10 @@ def test_the_party_row_is_locked_before_the_balance_is_read(
     assert any("FOR UPDATE" in s.upper() for s in party_selects), party_selects
 
 
-
 # ── The credit limit, now that there is a write to guard ────────────────────
 
 
-def test_warn_mode_posts_the_entry_and_says_what_it_means(
-    tenant: Any, api_as: Any
-) -> None:
+def test_warn_mode_posts_the_entry_and_says_what_it_means(tenant: Any, api_as: Any) -> None:
     """AC-5's first half, and the reason a warning is not an error.
 
     The merchant has already handed over the goods. Refusing the record does not
@@ -565,9 +559,7 @@ def test_money_coming_back_is_never_blocked(tenant: Any, api_as: Any) -> None:
     assert response.status_code == 201, response.json()
 
 
-def test_an_amount_landing_exactly_on_the_limit_is_allowed(
-    tenant: Any, api_as: Any
-) -> None:
+def test_an_amount_landing_exactly_on_the_limit_is_allowed(tenant: Any, api_as: Any) -> None:
     """EC-12. `>=` would make a ₹50,000 limit mean ₹49,999.99."""
     set_mode(tenant, "block")
     client, _ = api_as(tenant, "staff")
@@ -579,9 +571,7 @@ def test_an_amount_landing_exactly_on_the_limit_is_allowed(
 # ── Permissions ─────────────────────────────────────────────────────────────
 
 
-def test_an_accountant_reads_the_book_and_cannot_post_to_it(
-    tenant: Any, api_as: Any
-) -> None:
+def test_an_accountant_reads_the_book_and_cannot_post_to_it(tenant: Any, api_as: Any) -> None:
     """T-LED-01-12. Which is what an accountant is."""
     client, _ = api_as(tenant, "accountant")
     party = PartyFactory(tenant=tenant)
@@ -617,18 +607,14 @@ def test_a_replayed_save_does_not_post_the_entry_twice(tenant: Any, api_as: Any)
     assert party.balance == Decimal("500.00")
 
 
-def test_the_same_key_with_a_different_amount_is_a_conflict(
-    tenant: Any, api_as: Any
-) -> None:
+def test_the_same_key_with_a_different_amount_is_a_conflict(tenant: Any, api_as: Any) -> None:
     """BR-8. A key identifies one intent; a changed body is a different one."""
     client, _ = api_as(tenant)
     party = PartyFactory(tenant=tenant, balance="0.00")
     headers = {"HTTP_IDEMPOTENCY_KEY": "save-tap-2"}
 
     client.post(reverse(ENTRIES), body(party), format="json", **headers)
-    second = client.post(
-        reverse(ENTRIES), body(party, amount="900.00"), format="json", **headers
-    )
+    second = client.post(reverse(ENTRIES), body(party, amount="900.00"), format="json", **headers)
 
     assert second.status_code == 409
     assert second.json()["error"]["code"] == "idempotency_conflict"
@@ -637,9 +623,7 @@ def test_the_same_key_with_a_different_amount_is_a_conflict(
 # ── The timeline ────────────────────────────────────────────────────────────
 
 
-def test_the_timeline_is_this_partys_entries_newest_first(
-    tenant: Any, api_as: Any
-) -> None:
+def test_the_timeline_is_this_partys_entries_newest_first(tenant: Any, api_as: Any) -> None:
     """BR-5 — ordered by the BUSINESS date, which is what a merchant reads by."""
     client, _ = api_as(tenant)
     party = PartyFactory(tenant=tenant, balance="0.00")
@@ -656,9 +640,7 @@ def test_the_timeline_is_this_partys_entries_newest_first(
     assert [row["amount"] for row in rows] == ["100.00", "101.00", "102.00"]
 
 
-def test_the_timeline_does_not_leak_another_partys_entries(
-    tenant: Any, api_as: Any
-) -> None:
+def test_the_timeline_does_not_leak_another_partys_entries(tenant: Any, api_as: Any) -> None:
     """The one thing a per-party read must never do."""
     client, _ = api_as(tenant)
     mine = PartyFactory(tenant=tenant, balance="0.00")
@@ -686,9 +668,7 @@ def test_a_list_without_a_party_is_empty_rather_than_the_whole_tenant(
     assert client.get(reverse(ENTRIES)).json()["data"] == []
 
 
-def test_paging_a_busy_saturday_returns_every_entry_exactly_once(
-    tenant: Any, api_as: Any
-) -> None:
+def test_paging_a_busy_saturday_returns_every_entry_exactly_once(tenant: Any, api_as: Any) -> None:
     """The keyset bug `common/pagination.py` carried, seen from the feature.
 
     Twelve entries on one date, three to a page. Under an AND-of-terms cursor
@@ -747,9 +727,7 @@ def test_the_party_scoped_route_is_the_same_write(tenant: Any, api_as: Any) -> N
     assert response.json()["meta"]["party_balance"] == "150.00"
 
 
-def test_the_first_page_carries_the_khata_headers_ledger_figures(
-    tenant: Any, api_as: Any
-) -> None:
+def test_the_first_page_carries_the_khata_headers_ledger_figures(tenant: Any, api_as: Any) -> None:
     """PTY-03 §14's summary, on the endpoint that owns the table.
 
     `GET /parties/{id}` cannot answer these — `parties` may not import `ledger`
@@ -797,9 +775,7 @@ def test_the_summary_is_not_recomputed_on_every_page_of_the_cursor(
     assert "summary" not in second["meta"]
 
 
-def test_the_summary_counts_the_same_rows_the_balance_does(
-    tenant: Any, api_as: Any
-) -> None:
+def test_the_summary_counts_the_same_rows_the_balance_does(tenant: Any, api_as: Any) -> None:
     """One predicate, two readers. The header and the balance cannot disagree.
 
     `total_debit − total_credit` is the balance, by construction: both are sums

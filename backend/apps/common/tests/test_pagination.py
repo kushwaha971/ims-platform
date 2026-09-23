@@ -26,9 +26,9 @@ def test_page_meta_has_exactly_the_four_canon_keys(tenant: Any) -> None:
     """
     from rest_framework.request import Request
 
-    from tests.factories.parties import PartyFactory
     from apps.common.pagination import PagePagination
     from apps.parties.models import Party
+    from tests.factories.parties import PartyFactory
 
     PartyFactory.create_batch(3, tenant=tenant)
     paginator = PagePagination()

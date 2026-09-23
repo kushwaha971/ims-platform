@@ -78,6 +78,7 @@ def computed_balance(*, tenant: Any, party_id: Any) -> Decimal:
     )["balance"]
     return total or ZERO
 
+
 #: The ordering the timeline reads and the cursor pages by, in one place because
 #: the two must agree exactly or the cursor skips rows.
 #:

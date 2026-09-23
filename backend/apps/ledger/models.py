@@ -174,9 +174,7 @@ class LedgerEntry(TenantModel, ImmutableModel):
             # Nothing posts from a document yet; the index is here with the
             # column pair it serves, because adding it later means an index
             # build on a table that by then has a tenant's whole history in it.
-            models.Index(
-                fields=["tenant", "source_type", "source_id"], name="ix_ledger_source"
-            ),
+            models.Index(fields=["tenant", "source_type", "source_id"], name="ix_ledger_source"),
             # The day book and the aging report: every party, by business date.
             models.Index(fields=["tenant", "entry_date"], name="ix_ledger_tenant_date"),
         ]

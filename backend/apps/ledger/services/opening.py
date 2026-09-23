@@ -80,11 +80,7 @@ def default_direction(party: Party) -> str:
     shopkeeper is carrying over in the overwhelming majority of rows and EC-5
     says the both-flag case defaults that way too.
     """
-    return (
-        Direction.CREDIT
-        if party.is_supplier and not party.is_customer
-        else Direction.DEBIT
-    )
+    return Direction.CREDIT if party.is_supplier and not party.is_customer else Direction.DEBIT
 
 
 @transaction.atomic

@@ -103,11 +103,11 @@ def test_an_empty_list_reports_zero_rather_than_nothing(tenant: Any, api_as: Any
     client, _ = api_as(tenant)
     totals = _get(client, "?q=nobody-by-this-name")["meta"]["totals"]
     assert totals == {
-            "receivable": "0.00",
-            "payable": "0.00",
-            "count": 0,
-            "over_limit": 0,
-        }
+        "receivable": "0.00",
+        "payable": "0.00",
+        "count": 0,
+        "over_limit": 0,
+    }
 
 
 # ── The chips ───────────────────────────────────────────────────────────────

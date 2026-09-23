@@ -94,13 +94,9 @@ def test_page_two_does_not_restart_the_running_balance(book: Any) -> None:
     500 and 200 where the true running balances are 2,800 and 2,500.
     """
     first_page = list(statement_rows(tenant=book.tenant, party_id=book.id))[:1]
-    cursor = {
-        f"{field}__gt": getattr(first_page[-1], field) for field in STATEMENT_ORDERING
-    }
+    cursor = {f"{field}__gt": getattr(first_page[-1], field) for field in STATEMENT_ORDERING}
 
-    carried = carried_forward(
-        tenant=book.tenant, party_id=book.id, date_from=None, position=cursor
-    )
+    carried = carried_forward(tenant=book.tenant, party_id=book.id, date_from=None, position=cursor)
     rest = list(
         statement_rows(tenant=book.tenant, party_id=book.id).filter(
             entry_date__gte=dt.date(2026, 4, 18)
@@ -137,13 +133,9 @@ def test_a_credit_only_book_runs_negative(tenant: Any) -> None:
 
 def test_the_opening_is_everything_before_the_period(book: Any) -> None:
     """AC-2 / T-LED-04-2. Narrowing to September shows April's ₹2,300 as the opening."""
-    opening = opening_balance(
-        tenant=book.tenant, party_id=book.id, date_from=dt.date(2026, 4, 18)
-    )
+    opening = opening_balance(tenant=book.tenant, party_id=book.id, date_from=dt.date(2026, 4, 18))
     rows = list(
-        statement_rows(
-            tenant=book.tenant, party_id=book.id, date_from=dt.date(2026, 4, 18)
-        )
+        statement_rows(tenant=book.tenant, party_id=book.id, date_from=dt.date(2026, 4, 18))
     )
 
     assert opening == Decimal("2300.00")
@@ -176,14 +168,8 @@ def test_the_totals_are_over_the_period_not_the_page(book: Any) -> None:
 def test_a_period_with_nothing_in_it_still_carries_its_opening(book: Any) -> None:
     """The month a customer did not come in. The statement is not empty of meaning:
     it says what they owed throughout it."""
-    opening = opening_balance(
-        tenant=book.tenant, party_id=book.id, date_from=dt.date(2026, 5, 1)
-    )
-    rows = list(
-        statement_rows(
-            tenant=book.tenant, party_id=book.id, date_from=dt.date(2026, 5, 1)
-        )
-    )
+    opening = opening_balance(tenant=book.tenant, party_id=book.id, date_from=dt.date(2026, 5, 1))
+    rows = list(statement_rows(tenant=book.tenant, party_id=book.id, date_from=dt.date(2026, 5, 1)))
 
     assert opening == Decimal("2500.00")
     assert rows == []
@@ -219,9 +205,7 @@ def test_showing_corrections_adds_rows_and_changes_no_figure(book: Any) -> None:
     gave.save(update_fields=["status", "reversed_by"])
 
     clean = list(statement_rows(tenant=book.tenant, party_id=book.id))
-    full = list(
-        statement_rows(tenant=book.tenant, party_id=book.id, include_corrections=True)
-    )
+    full = list(statement_rows(tenant=book.tenant, party_id=book.id, include_corrections=True))
 
     assert len(clean) == 3
     assert len(full) == 5
@@ -319,12 +303,9 @@ def test_another_tenants_party_yields_nothing_rather_than_everything(
     entry(a["party"], 4, Direction.DEBIT, "500.00")
 
     assert list(statement_rows(tenant=b["tenant"], party_id=a["party"].id)) == []
-    assert (
-        opening_balance(
-            tenant=None, party_id=a["party"].id, date_from=dt.date(2026, 4, 30)
-        )
-        == Decimal("0.00")
-    )
+    assert opening_balance(
+        tenant=None, party_id=a["party"].id, date_from=dt.date(2026, 4, 30)
+    ) == Decimal("0.00")
 
 
 # ── Through the endpoint ────────────────────────────────────────────────────
@@ -548,9 +529,7 @@ def test_the_accountant_may_export(tenant: Any, api_as: Any) -> None:
     party = PartyFactory(tenant=tenant, balance="0.00")
     entry(party, 3, Direction.DEBIT, "500.00")
 
-    response = accountant.get(
-        reverse(STATEMENT, args=[party.id]), {"format": "csv"}
-    )
+    response = accountant.get(reverse(STATEMENT, args=[party.id]), {"format": "csv"})
 
     assert response.status_code == 200
 
@@ -574,3 +553,32 @@ def test_reading_a_statement_is_not_on_the_export_budget(book: Any, api_as: Any)
     statuses = {client.get(url).status_code for _ in range(12)}
 
     assert statuses == {200}
+
+
+def test_an_export_leaves_an_audit_row(book: Any, api_as: Any) -> None:
+    """§16 — `ledger.statement.exported`, which LED-04 shipped without.
+
+    Found while building LED-09's export, which the same section asks to be
+    audited. A statement file is a customer's whole account with the shop,
+    leaving the product; "who took Ramesh's statement, and for which months" is
+    the question the row answers, so it carries the period and the row count.
+    """
+    from apps.common.audit import AuditAction
+    from apps.platform_app.models import AuditLog
+
+    client, membership = api_as(book.tenant)
+
+    read_csv(
+        client.get(
+            reverse(STATEMENT, args=[book.id]),
+            {"format": "csv", "date_from": "2026-04-01", "date_to": "2026-09-23"},
+        )
+    )
+
+    log = AuditLog.objects.get(action=AuditAction.LEDGER_STATEMENT_EXPORTED)
+    assert log.actor_id == membership.user_id
+    assert log.entity_type == "parties_party"
+    assert str(log.entity_id) == str(book.id)
+    assert log.metadata["row_count"] == 3
+    assert log.metadata["params"]["date_from"] == "2026-04-01"
+    assert log.metadata["params"]["date_to"] == "2026-09-23"

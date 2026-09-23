@@ -5,6 +5,7 @@ from __future__ import annotations
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 
+from apps.ledger.views.aging import LedgerAgingView, LedgerSummaryView
 from apps.ledger.views.entry import LedgerEntryViewSet, PartyLedgerEntryViewSet
 from apps.ledger.views.statement import PartyStatementView
 
@@ -26,5 +27,9 @@ urlpatterns = [
         PartyStatementView.as_view(),
         name="party-statement",
     ),
+    # LED-09. Two reads about the book as a whole rather than about one party,
+    # which is why they hang off `/ledger` and not off `/parties/{id}`.
+    path("ledger/summary", LedgerSummaryView.as_view(), name="ledger-summary"),
+    path("ledger/aging", LedgerAgingView.as_view(), name="ledger-aging"),
     *router.urls,
 ]

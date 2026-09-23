@@ -197,9 +197,7 @@ def test_only_a_posted_opening_counts_as_one(tenant: Any, api_as: Any) -> None:
 # ── The rules it shares with every other entry ──────────────────────────────
 
 
-def test_an_opening_obeys_the_same_amount_rule_as_any_entry(
-    tenant: Any, api_as: Any
-) -> None:
+def test_an_opening_obeys_the_same_amount_rule_as_any_entry(tenant: Any, api_as: Any) -> None:
     """Prevents: an opening accepting what an ordinary entry refuses.
 
     Same endpoint, same body shape, one field different — and the first version
@@ -298,17 +296,16 @@ def test_creating_a_party_with_an_opening_posts_it(tenant: Any, api_as: Any) -> 
     assert audit.metadata["via"] == "party_create"
 
 
-def test_a_party_whose_opening_fails_is_not_created_either(
-    tenant: Any, api_as: Any
-) -> None:
+def test_a_party_whose_opening_fails_is_not_created_either(tenant: Any, api_as: Any) -> None:
     """One transaction, and this is what that sentence buys.
 
     A party saved with a balance of zero, under a form that said ₹2,300, is a
     khata that is quietly wrong from its first day — and nothing later would
     ever notice, because the party exists and looks fine.
     """
-    from apps.parties.models import Party
     from django.utils import timezone
+
+    from apps.parties.models import Party
 
     client, _ = api_as(tenant)
     tomorrow = (timezone.now().date() + dt.timedelta(days=2)).isoformat()

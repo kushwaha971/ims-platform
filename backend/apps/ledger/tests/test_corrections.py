@@ -25,8 +25,8 @@ from apps.common.constants import Direction
 from apps.ledger.constants import EntryStatus, EntryType, SourceType
 from apps.ledger.models import LedgerEntry
 from apps.ledger.selectors.entry import computed_balance
-from apps.platform_app.models import AuditLog
 from apps.parties.constants import PartyStatus
+from apps.platform_app.models import AuditLog
 from tests.factories.parties import PartyFactory
 
 pytestmark = pytest.mark.django_db
@@ -158,9 +158,7 @@ def test_a_reason_is_required_and_bounded(khata: dict) -> None:
     assert not LedgerEntry.objects.filter(entry_type=EntryType.REVERSAL).exists()
 
 
-def test_a_document_backed_entry_says_to_void_the_document(
-    tenant: Any, api_as: Any
-) -> None:
+def test_a_document_backed_entry_says_to_void_the_document(tenant: Any, api_as: Any) -> None:
     """FR-6 / T-LED-03-6.
 
     Reversing the ledger line of an invoice without touching the invoice leaves
@@ -181,9 +179,7 @@ def test_a_document_backed_entry_says_to_void_the_document(
         source_id=party.id,
     )
 
-    response = client.post(
-        entry_url(entry, "reverse"), {"reason": "Wrong invoice"}, format="json"
-    )
+    response = client.post(entry_url(entry, "reverse"), {"reason": "Wrong invoice"}, format="json")
 
     assert response.status_code == 409
     error = response.json()["error"]
@@ -335,9 +331,9 @@ def test_a_correction_can_itself_be_corrected(khata: dict) -> None:
 
     assert second.status_code == 200, second.json()
     assert second.json()["meta"]["party_balance"] == "5500.00"
-    assert computed_balance(
-        tenant=khata["party"].tenant, party_id=khata["party"].id
-    ) == Decimal("5500.00")
+    assert computed_balance(tenant=khata["party"].tenant, party_id=khata["party"].id) == Decimal(
+        "5500.00"
+    )
 
 
 def test_correcting_nothing_is_refused(khata: dict) -> None:
@@ -434,9 +430,11 @@ def test_the_summary_counts_only_the_standing_rows(khata: dict) -> None:
         format="json",
     )
 
-    summary = khata["client"].get(
-        reverse(ENTRIES), {"party": str(khata["party"].id)}
-    ).json()["meta"]["summary"]
+    summary = (
+        khata["client"]
+        .get(reverse(ENTRIES), {"party": str(khata["party"].id)})
+        .json()["meta"]["summary"]
+    )
     assert summary["total_debit"] == "550.00"
     assert summary["entry_count"] == 1
 
@@ -451,9 +449,7 @@ def test_the_detail_carries_the_whole_chain_oldest_first(khata: dict) -> None:
     replacement_id = corrected.json()["data"]["id"]
 
     for entry_id in (str(khata["entry"].id), replacement_id):
-        history = khata["client"].get(reverse(DETAIL, args=[entry_id])).json()["data"][
-            "history"
-        ]
+        history = khata["client"].get(reverse(DETAIL, args=[entry_id])).json()["data"]["history"]
         assert [row["entry_type"] for row in history] == [
             EntryType.MANUAL_GAVE,
             EntryType.REVERSAL,

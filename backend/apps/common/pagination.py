@@ -107,7 +107,7 @@ def encode_cursor(instance: Any, ordering: tuple[str, ...]) -> str:
 
 
 def keyset_after(position: dict, ordering: tuple[str, ...]) -> Q:
-    """"Strictly after this row in this ordering" — as a TUPLE comparison.
+    """ "Strictly after this row in this ordering" — as a TUPLE comparison.
 
     A keyset over several columns is `(a, b, c) < (x, y, z)`, which expands to
 

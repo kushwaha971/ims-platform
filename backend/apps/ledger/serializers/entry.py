@@ -12,14 +12,7 @@ from rest_framework import serializers
 
 from apps.common.constants import Direction, PaymentMode
 from apps.common.serializers import MoneySerializerField
-from apps.ledger.constants import (
-    NOTE_MAX_LENGTH,
-    REASON_MAX_LENGTH,
-    REFERENCE_MAX_LENGTH,
-    EntryType,
-    SourceType,
-)
-from apps.ledger.services.corrections import REASON_MIN_LENGTH
+from apps.ledger.constants import NOTE_MAX_LENGTH, REFERENCE_MAX_LENGTH, EntryType, SourceType
 from apps.ledger.models import LedgerEntry
 
 
@@ -210,9 +203,7 @@ class EntryCorrectSerializer(EntryReverseSerializer):
     direction = serializers.ChoiceField(choices=Direction.choices, required=False)
     amount = serializers.CharField(max_length=20, required=False)
     entry_date = serializers.DateField(required=False)
-    note = serializers.CharField(
-        max_length=NOTE_MAX_LENGTH, required=False, allow_blank=True
-    )
+    note = serializers.CharField(max_length=NOTE_MAX_LENGTH, required=False, allow_blank=True)
     payment_mode = serializers.ChoiceField(
         choices=PaymentMode.choices, required=False, allow_null=True
     )

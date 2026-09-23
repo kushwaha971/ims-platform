@@ -83,7 +83,9 @@ def statement_predicate(*, include_corrections: bool) -> Q:
     return ALL_POSTED_OR_REVERSED if include_corrections else LIVE_ENTRIES
 
 
-def _scoped(*, tenant: Any, party_id: UUID | str, include_corrections: bool) -> QuerySet[LedgerEntry]:
+def _scoped(
+    *, tenant: Any, party_id: UUID | str, include_corrections: bool
+) -> QuerySet[LedgerEntry]:
     """One party's rows, tenant first (canon §0.11 rule 2)."""
     if tenant is None:
         return LedgerEntry.objects.none()
@@ -93,9 +95,12 @@ def _scoped(*, tenant: Any, party_id: UUID | str, include_corrections: bool) -> 
 
 
 def _signed_total(queryset: QuerySet[LedgerEntry]) -> Decimal:
-    return queryset.aggregate(
-        total=Coalesce(Sum(SIGNED), Decimal("0.00"), output_field=MONEY)
-    )["total"] or ZERO
+    return (
+        queryset.aggregate(total=Coalesce(Sum(SIGNED), Decimal("0.00"), output_field=MONEY))[
+            "total"
+        ]
+        or ZERO
+    )
 
 
 def opening_balance(
