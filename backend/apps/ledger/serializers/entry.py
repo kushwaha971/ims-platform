@@ -6,6 +6,8 @@ tuple (R6.2); money travels as a string (R6.3).
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 from rest_framework import serializers
 
 from apps.common.constants import Direction, PaymentMode
@@ -15,6 +17,7 @@ from apps.ledger.constants import (
     REASON_MAX_LENGTH,
     REFERENCE_MAX_LENGTH,
     EntryType,
+    SourceType,
 )
 from apps.ledger.services.corrections import REASON_MIN_LENGTH
 from apps.ledger.models import LedgerEntry
@@ -216,3 +219,94 @@ class EntryCorrectSerializer(EntryReverseSerializer):
     reference = serializers.CharField(
         max_length=REFERENCE_MAX_LENGTH, required=False, allow_blank=True
     )
+
+
+class StatementRowSerializer(serializers.ModelSerializer):
+    """One line of the statement (LED-04 §14).
+
+    A different shape from `LedgerEntrySerializer` and deliberately so: a
+    statement row carries `running_balance`, which no other row does, and drops
+    `payment_mode`, `reference` and `created_by`, which a customer looking at a
+    shared statement has no business reading. R6.1 keeps read and write
+    serializers apart; this keeps two READ shapes apart for the same reason —
+    one field added to the wrong one is a field on a screen somebody else sees.
+    """
+
+    amount = MoneySerializerField(read_only=True)
+    running_balance = serializers.SerializerMethodField()
+    source = serializers.SerializerMethodField()
+
+    class Meta:
+        model = LedgerEntry
+        fields = (
+            "id",
+            "entry_date",
+            "entry_type",
+            "direction",
+            "amount",
+            "note",
+            "status",
+            "running_balance",
+            "source",
+            "reverses_id",
+            "supersedes_id",
+            "reason",
+        )
+        read_only_fields = fields
+
+    def get_running_balance(self, entry: LedgerEntry) -> str:
+        """The carried figure plus this row's own window delta.
+
+        The addition happens HERE rather than in the selector because the
+        carried figure is a property of the PAGE, not of the row — see
+        `carried_forward`, which exists because Django computes a window after
+        the keyset filter and a page-two row would otherwise restart from zero.
+        """
+        carried = self.context.get("carried") or Decimal("0.00")
+        return str(carried + getattr(entry, "running_delta", Decimal("0.00")))
+
+    def get_source(self, entry: LedgerEntry) -> dict | None:
+        """FR-4's document link, which is `null` for every row in the product today.
+
+        Every entry that exists is `source_type='manual'`, because
+        `sales_document`, `purchases_document`, `payments_payment` and
+        `expenses_expense` have no tables — their apps hold a models.py with a
+        docstring in it. The KEY is here and the batch lookup §15 describes is a
+        function with one branch, so the day a document posts a ledger line this
+        is a resolver rather than a response-shape change that breaks a client.
+
+        `null` rather than an empty object, for the reason `GET /parties/{id}`
+        omits its unbuilt summary figures: a key that is always empty is a claim
+        this code cannot verify, and the client cannot tell it from a real one.
+        """
+        if entry.source_type == SourceType.MANUAL or entry.source_id is None:
+            return None
+        return {"type": entry.source_type, "id": str(entry.source_id), "number": None, "url": None}
+
+
+class StatementPartySerializer(serializers.Serializer):
+    """BR-6 — who the statement is about, and nothing else about them.
+
+    The mobile is MASKED here and not on the party detail, because this shape is
+    the one FR-7's public page renders: a link a merchant sends on WhatsApp ends
+    up in a group, and a full mobile number in it is a customer's number
+    published by their shopkeeper. The masking is in the serializer rather than
+    at the public boundary so that it cannot be forgotten when that boundary is
+    built.
+    """
+
+    id = serializers.UUIDField(read_only=True)
+    name = serializers.CharField(read_only=True)
+    mobile_masked = serializers.CharField(read_only=True, allow_null=True)
+
+
+class StatementSerializer(serializers.Serializer):
+    """The whole response body (§14), so the shape is declared in one place."""
+
+    party = StatementPartySerializer(read_only=True)
+    period = serializers.DictField(read_only=True)
+    opening_balance = MoneySerializerField(read_only=True)
+    closing_balance = MoneySerializerField(read_only=True)
+    totals = serializers.DictField(read_only=True)
+    has_entries_before_opening = serializers.BooleanField(read_only=True)
+    rows = StatementRowSerializer(many=True, read_only=True)

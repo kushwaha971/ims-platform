@@ -85,9 +85,9 @@ There is no seeded merchant — sign up at `/signup`.
 ## Gates
 
 ```bash
-cd backend  && python3 -m pytest -q          # 1097 passing
-cd frontend && npm run type-check && npm run lint && npm test   # 1199 passing
-cd frontend && npm run build && npm run bundle:check            # 233.5 KB gz baseline
+cd backend  && python3 -m pytest -q          # 1121 passing
+cd frontend && npm run type-check && npm run lint && npm test   # 1235 passing
+cd frontend && npm run build && npm run bundle:check            # 235.5 KB gz baseline
 
 # The e2e harnesses run against a LIVE stack, which has to be served the way
 # `output: standalone` requires — `next start` cannot serve this build and
@@ -95,11 +95,11 @@ cd frontend && npm run build && npm run bundle:check            # 233.5 KB gz ba
 ./e2e/serve-api.sh && ./e2e/serve.sh
 node e2e/journey.mjs && node e2e/security.mjs && node e2e/credentials.mjs \
   && node e2e/parties.mjs && node e2e/tags.mjs && node e2e/credit.mjs \
-  && node e2e/ledger.mjs
+  && node e2e/ledger.mjs && node e2e/statement.mjs
 ```
 
-214 checks across the seven: journey 72, security 10, credentials 17, parties 30,
-tags 13, credit 18, ledger 54.
+238 checks across the eight: journey 72, security 10, credentials 17, parties 30,
+tags 13, credit 18, ledger 54, statement 24.
 
 `node e2e/tags.mjs --shots` additionally sweeps every screen the tags feature
 touches at four widths, in each of its conditions, into `/tmp/e2e-shots/tags`.
@@ -200,6 +200,31 @@ which appears for the owner's still-valid session whether or not the staff login
 worked. The staff checks now run in their own context and assert WHO is signed in
 before asserting anything else. A check that cannot fail for the reason it names
 is worse than no check.
+
+`node e2e/statement.mjs --shots` sweeps LED-04 into `/tmp/e2e-shots/statement` —
+the passbook, a paged book, a party in advance, a quiet period, the custom range,
+corrections shown, the before-opening warning, the refused range, and the PRINT
+SHEET at both states. Forty images, and the last two per size are captured with
+`emulateMedia({ media: 'print' })`, which is the only way to photograph a
+stylesheet jsdom never loads.
+
+It found five defects in one screenshot, all on the page a customer reads:
+a row's particulars printed the raw message id **`ledger.entry.type.manual_got`**,
+because only two of the fourteen entry types had a label; the opening entry was
+labelled **"You gave ₹2,300.00"** when nothing was given — the exact thing LED-02
+fixed on the timeline, decided a second time here instead of reusing
+`entryAmountView`; the running balance read **"Balance ₹2300.00"**, ungrouped,
+which is the FIFTH time `formatInr`-versus-a-raw-string has met in this codebase;
+**"Opening balance" appeared twice meaning two different figures** — the period's
+carried-in total and LED-02's entry — so the period's is "Brought forward" now,
+which is what a passbook calls it; and the header read **"Statement · Ramesh
+Trad…"** on a phone, cutting the half that says which customer.
+
+The first end-to-end run found a sixth before any of those: the statement was
+declared `throttle_scope = "export"`, which is ten an hour. A statement is a
+screen a merchant opens at a counter while a customer is arguing about a bill.
+The EXPORT is the expensive act and it is a query parameter on the same URL, so
+its budget is applied in the handler where the parameter can be seen.
 
 Two operational notes that cost an hour each before they were written down:
 a stale `next-server` from an earlier session holds port 3000 and serves the
@@ -402,6 +427,43 @@ SAL-05 does not exist — the 409 `use_document_void` and its `source_id` are in
 place so the client changes and the server does not; attachments on a correction
 (EC-5) need the `files` app, which has no table.
 
+**LED-04 the statement is in**: `/parties/[id]/statement`, a running balance from
+a SQL window function, an opening for any period, the corrections toggle, a CSV
+export, and a print sheet that `window.print()` turns into the PDF a merchant
+sends. It is the artefact the ledger has been building towards — the thing a
+shopkeeper puts in front of a customer who disagrees.
+
+*The running balance is computed and never stored*, which is the sentence
+`ledger_entry.running_balance_after` has been carrying a NULL for since LED-01. A
+running balance is a property of an ORDERING, not of a row: one backdated entry
+invalidates every cached figure after it, silently, for ever.
+
+*And the window has one trap, which cost a morning to find and is written into
+the selector.* `.annotate(Window(...)).filter(keyset)` is the obvious
+implementation and Django 5 does not wrap it in a subquery — the keyset goes into
+the WHERE, the window is computed over what survives it, and page two restarts
+from zero. Page ONE is correct, which is the page every unit test and every
+screenshot looks at. So the window runs over the page and `carried_forward()`
+adds what the merchant already scrolled past.
+
+*The closing balance of an unbounded statement must equal `parties_party.balance`*
+(BR-3), and that is the most valuable assertion in the feature: a cached column
+moved one entry at a time and a window function replaying every row have to reach
+the same number. A fuzzed twenty-five-entry book proves it in the unit suite and
+the live stack proves it again.
+
+**Deferred, and the reason is a decision rather than a table.** Share links, the
+public `/d/<token>` page, the WhatsApp arm and the UPI QR — FR-6, FR-7, AC-3 and
+AC-5 — all need `parties_share_link`, whose SHAPE is an open contradiction
+between two chapters (Part 43 §43.4.6 C1, which says it "must be answered before
+the first migration"). Inventing a narrow table to unblock this feature is the
+exact trap that contradiction names. The QR additionally needs PAY-03's encoder,
+blocked on its own ADR contradiction, and a `tenant.upi_vpa` PLT-07 would
+collect. Document links (FR-4, FR-9) have no documents: every entry in the
+product is `source_type='manual'`, so `source` is `null` and the KEY is in the
+shape so the day a document posts a ledger line is a resolver rather than a
+breaking change.
+
 Still to come in Sprint 3: nothing. Inventory, sales and purchases are
 skeletons; `seed_demo_tenant` is a stub; there is no mobile navigation below
 `lg` (`UbBottomNav` is unbuilt).
@@ -412,6 +474,17 @@ the three stat cards take the whole viewport, so a merchant opening Customers
 sees no customer without scrolling. The stat-card layout is what the owner
 asked for two waves ago; dropping the count tile to a caption below `md` would
 recover about 120px and put two rows above the fold.
+
+**The specification on disk and the specification in the project have diverged,
+and the direction matters.** `docs/` here is the 49-chapter SSOT and is fine to
+READ — the FRDs have not changed. But Part 43, the change-request register, is
+maintained in the attached Claude project, and the copies under `docs/`,
+`/tmp/clean/docs/`, `~/udhaarbook-ssot/docs/` and `/mnt/attach/outputs/ssot/docs/`
+are all several revisions behind: they still name CR-118 as the next free id and
+carry none of CR-119 through CR-128. Syncing a local copy INTO the project would
+silently delete ten change requests, including the C6 contradiction LED-03
+raised. Read Part 43 through `project_read` and write it through `project_write`;
+the same goes for `STATUS-sprint3.md`.
 
 `docs/review/01`–`04` are audit findings with their status. `docs/DECISIONS.md`,
 `docs/BACKLOG.md` and `docs/CR-LOG.md` carry decisions, deferred work and change

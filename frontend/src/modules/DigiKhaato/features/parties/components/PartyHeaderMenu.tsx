@@ -2,7 +2,10 @@
 
 import { useCallback, useState } from 'react';
 
-import { Archive, BookOpen, MoreHorizontal, Pencil } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+
+import { Archive, BookOpen, FileText, MoreHorizontal, Pencil } from 'lucide-react';
+
 
 import { UbButton, UbDialog, UbStack } from 'src/design-system';
 import type { TranslateFn } from 'src/hooks/useTranslation';
@@ -55,6 +58,8 @@ export interface PartyHeaderMenuProps {
   readonly onEdit?: () => void;
   readonly onAddOpening?: () => void;
   readonly onArchive?: () => void;
+  /** LED-04 — the statement. A navigation rather than a drawer, so an href. */
+  readonly statementHref?: string;
 }
 
 export function PartyHeaderMenu({
@@ -62,8 +67,10 @@ export function PartyHeaderMenu({
   onEdit,
   onAddOpening,
   onArchive,
+  statementHref,
 }: Readonly<PartyHeaderMenuProps>): React.JSX.Element | null {
   const [open, setOpen] = useState(false);
+  const router = useRouter();
 
   /* Every item closes the menu before it acts, and the order matters: an item
      that opens a drawer while its own popover is still mounted leaves two
@@ -74,6 +81,16 @@ export function PartyHeaderMenu({
   }, []);
 
   const items = [
+    /* LED-04, first in the list and not last: it is the only thing in this menu
+       a merchant does FOR a customer rather than to a record, and it is the one
+       they reach for while somebody is standing at the counter disputing a
+       figure. Edit, opening balance and archive are all housekeeping. */
+    {
+      key: 'statement',
+      label: t('ledger.statement.title'),
+      icon: FileText,
+      action: statementHref ? () => router.push(statementHref) : undefined,
+    },
     { key: 'edit', label: t('parties.detail.edit'), icon: Pencil, action: onEdit },
     { key: 'opening', label: t('ledger.opening.action'), icon: BookOpen, action: onAddOpening },
     { key: 'archive', label: t('parties.archive.action'), icon: Archive, action: onArchive },

@@ -229,7 +229,41 @@
   "The `default` first-load went 286 -> 288 in the same pass, and it is not a",
   "route budget at all: it is what every UNNAMED route pays, so it moves with",
   "the shared figure above by arithmetic. /switch is the one that tripped it, at",
-  "0.5 KB over, having imported nothing new."
+  "0.5 KB over, having imported nothing new.",
+  "── 23 Sep 2026: LED-04's statement ────────────────────────────────────────",
+  "shared app 107 -> 109 (measured 108.6), a new route `/parties/[id]/statement`",
+  "at 71 route / 306 first load (measured 68.4 / 303.9), and the shells that",
+  "follow the shared figure.",
+  "",
+  "The route chunk is the statement page, the print sheet and the filter bar,",
+  "and it is the FIRST route in this product that is only ever opened on",
+  "purpose — nobody lands on a statement by accident. It is also the only page",
+  "that renders its content twice: once for the screen and once as the sheet",
+  "`window.print()` turns into a PDF, which is ADR-021's answer to document",
+  "rendering and is why there is no PDF library in the dependency list.",
+  "",
+  "The shared figure is the one worth reading, and it came down before it went",
+  "up. `statementSlice` needed one constant — the default period preset — and",
+  "importing it from `view-model/statementDisplay.ts`, where it naturally",
+  "lives, put that whole module on the app shell: the financial-year",
+  "arithmetic, the month-length table, the URL parser and the range check,",
+  "downloaded by every merchant who opens the login screen to render a login",
+  "screen. **2.2 KB**, refused by this gate. Moving the three constants into a",
+  "module that imports nothing took it to 1.6 KB.",
+  "",
+  "That is the third time this file's own one-line rule has been paid for —",
+  "**anything a slice imports is on every route** — after PTY-01's Yup schema",
+  "and LED-03's form drawers. Module-level imports tree-shake between modules,",
+  "not within one.",
+  "",
+  "What is left, 1.6 KB, is the slice and its two thunks, and it is the",
+  "strongest §19.3.9 data point yet for a reason that is qualitative rather",
+  "than arithmetic: this slice is provably ROUTE-LOCAL. The statement has its",
+  "own address and nothing else in the product reads its state. Every earlier",
+  "slice could at least be argued into the shell — the party list's filters are",
+  "read by the nav, the ledger form is opened from more than one screen. This",
+  "one is downloaded by everybody and read by the merchants who print a",
+  "statement, and there is no argument that makes that right. Nine features in."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -413,7 +447,7 @@
  ],
  "shared": {
   "framework": 128,
-  "sharedApp": 107
+  "sharedApp": 109
  },
  "//routes": [
   "The `route` figures are §19.9.2's, unchanged, and every route is comfortably",
@@ -594,16 +628,16 @@
  ],
  "default": {
   "route": 60,
-  "firstLoad": 288
+  "firstLoad": 290
  },
  "routes": {
   "/parties": {
    "route": 98,
-   "firstLoad": 332
+   "firstLoad": 335
   },
   "/dashboard": {
    "route": 55,
-   "firstLoad": 284
+   "firstLoad": 287
   },
   "/sales/invoices/new": {
    "route": 110,
@@ -611,23 +645,27 @@
   },
   "/onboarding/step/[n]": {
    "route": 98,
-   "firstLoad": 331
+   "firstLoad": 334
   },
   "/design-system": {
    "route": 94,
-   "firstLoad": 326
+   "firstLoad": 330
   },
   "/settings/team": {
    "route": 80,
-   "firstLoad": 314
+   "firstLoad": 317
   },
   "/parties/[id]": {
    "route": 76,
-   "firstLoad": 310
+   "firstLoad": 312
   },
   "/parties/tags": {
    "route": 63,
-   "firstLoad": 296
+   "firstLoad": 299
+  },
+  "/parties/[id]/statement": {
+   "route": 71,
+   "firstLoad": 306
   }
  },
  "//ignoreRoutes": [

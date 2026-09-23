@@ -8,6 +8,7 @@ import authReducer from 'modules/DigiKhaato/features/auth/redux/authSlice';
 // ── ledger (LED-01) ──────────────────────────────────────────────────────────
 import ledgerEntryReducer from 'modules/DigiKhaato/features/ledger/redux/ledgerEntrySlice';
 import { ledgerFormReducer } from 'modules/DigiKhaato/features/ledger/redux/ledgerFormSlice';
+import { statementReducer } from 'modules/DigiKhaato/features/ledger/redux/statementSlice';
 // ── onboarding (PLT-03) ──────────────────────────────────────────────────────
 import onboardingReducer from 'modules/DigiKhaato/features/onboarding/redux/onboardingSlice';
 // ── parties ──────────────────────────────────────────────────────────────────
@@ -67,6 +68,12 @@ export const store = configureStore({
     partyTag: partyTagReducer,
     ledgerEntry: ledgerEntryReducer,
     ledgerForm: ledgerFormReducer,
+    /* LED-04. The clearest case yet for §19.3.9, and the slice's own docstring
+       makes the argument: this one is provably ROUTE-LOCAL — the statement has
+       its own address and nothing else reads this state — so every merchant who
+       opens the login screen downloads it and the ones who print a statement
+       read it. Every earlier slice could at least be argued into the shell. */
+    statement: statementReducer,
     invitation: invitationReducer,
     member: memberReducer,
   },

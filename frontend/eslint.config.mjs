@@ -254,6 +254,21 @@ const config = [
     rules: { 'react/forbid-elements': 'off' },
   },
   {
+    /**
+     * LED-04's print view, and only the print DIRECTORY — a named place rather
+     * than a named rule, so the exemption cannot spread by somebody adding a
+     * file beside it.
+     *
+     * A printed statement needs a real `<table>`: `display: table-header-group`
+     * is what repeats the column headings on every page, and it only works on an
+     * actual `<thead>`. A grid built from divs prints its headings once and
+     * leaves page four a wall of unlabelled numbers — on the one artefact in
+     * this product that a customer reads without the app around it.
+     */
+    files: ['src/modules/**/components/print/**/*.tsx'],
+    rules: { 'react/forbid-elements': 'off' },
+  },
+  {
     // The one module allowed to read navigator.onLine — it is the state machine.
     files: ['src/hooks/useDegradedNetwork.ts'],
     rules: { 'no-restricted-properties': 'off' },

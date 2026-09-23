@@ -173,6 +173,16 @@ export const INVALIDATION: TInvalidationMap = {
       ['ledgerEntry', 'rows'],
       ['partyDetail', 'summary'],
     ],
+    /* `statement` is marked STALE rather than patched or refetched, and the
+       three verbs mean three different things here. It cannot be patched: a
+       running balance is a property of the whole ordering, so one new row
+       invalidates every figure after it and there is no field to fix. It is not
+       refetched either, because the merchant is almost never looking at it —
+       the entry was posted from the khata page, and firing a second request at
+       a screen nobody has open is a request nobody reads. `stale` is the
+       third answer: the statement refreshes the next time it is mounted, which
+       is exactly when the number matters again. */
+    stale: ['statement'],
     refetch: ['partyList'],
   },
 
@@ -189,6 +199,16 @@ export const INVALIDATION: TInvalidationMap = {
       ['ledgerEntry', 'rows'],
       ['partyDetail', 'summary'],
     ],
+    /* `statement` is marked STALE rather than patched or refetched, and the
+       three verbs mean three different things here. It cannot be patched: a
+       running balance is a property of the whole ordering, so one new row
+       invalidates every figure after it and there is no field to fix. It is not
+       refetched either, because the merchant is almost never looking at it —
+       the entry was posted from the khata page, and firing a second request at
+       a screen nobody has open is a request nobody reads. `stale` is the
+       third answer: the statement refreshes the next time it is mounted, which
+       is exactly when the number matters again. */
+    stale: ['statement'],
     refetch: ['partyList'],
   },
 
@@ -209,6 +229,16 @@ export const INVALIDATION: TInvalidationMap = {
       ['ledgerEntry', 'rows'],
       ['partyDetail', 'summary'],
     ],
+    /* `statement` is marked STALE rather than patched or refetched, and the
+       three verbs mean three different things here. It cannot be patched: a
+       running balance is a property of the whole ordering, so one new row
+       invalidates every figure after it and there is no field to fix. It is not
+       refetched either, because the merchant is almost never looking at it —
+       the entry was posted from the khata page, and firing a second request at
+       a screen nobody has open is a request nobody reads. `stale` is the
+       third answer: the statement refreshes the next time it is mounted, which
+       is exactly when the number matters again. */
+    stale: ['statement'],
     refetch: ['partyList'],
   },
   correctEntry: {
@@ -216,6 +246,16 @@ export const INVALIDATION: TInvalidationMap = {
       ['ledgerEntry', 'rows'],
       ['partyDetail', 'summary'],
     ],
+    /* `statement` is marked STALE rather than patched or refetched, and the
+       three verbs mean three different things here. It cannot be patched: a
+       running balance is a property of the whole ordering, so one new row
+       invalidates every figure after it and there is no field to fix. It is not
+       refetched either, because the merchant is almost never looking at it —
+       the entry was posted from the khata page, and firing a second request at
+       a screen nobody has open is a request nobody reads. `stale` is the
+       third answer: the statement refreshes the next time it is mounted, which
+       is exactly when the number matters again. */
+    stale: ['statement'],
     refetch: ['partyList'],
   },
 

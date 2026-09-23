@@ -510,16 +510,38 @@ describe('archiving from the khata page', () => {
 
   it('draws no menu at all for a role with nothing behind it', async () => {
     /**
-     * An accountant. A ⋯ that opens an empty panel is worse than no ⋯: it is a
-     * control that teaches a merchant the app is broken, and it is the failure
-     * mode an overflow menu introduces that a row of buttons did not have.
+     * A ⋯ that opens an empty panel is worse than no ⋯: it is a control that
+     * teaches a merchant the app is broken, and it is the failure mode an
+     * overflow menu introduces that a row of buttons did not have.
+     *
+     * The role that has nothing here is one that may read a party and NOT the
+     * ledger. It used to be the accountant — until LED-04 gave them a statement
+     * to read, which is the one thing in this menu that is their job.
      */
-    signIn(['parties.party.read', 'ledger.entry.read']);
+    signIn(['parties.party.read']);
 
     renderWithProviders(<PartyDetailPageContent id={ID} />);
     await screen.findByText('Ramesh Traders');
 
     expect(screen.queryByRole('button', { name: 'More actions' })).not.toBeInTheDocument();
+  });
+
+  it('offers the accountant the statement and nothing else', async () => {
+    /**
+     * §12 of LED-04: everybody who may read the ledger may read a statement,
+     * and the accountant is the role the export exists for. They still may not
+     * edit a party, add an opening balance or archive anybody — so the menu is
+     * one item long rather than absent, which is the honest shape.
+     */
+    signIn(['parties.party.read', 'ledger.entry.read']);
+
+    renderWithProviders(<PartyDetailPageContent id={ID} />);
+    await screen.findByText('Ramesh Traders');
+    await userEvent.click(screen.getByRole('button', { name: 'More actions' }));
+
+    const menu = await screen.findByRole('dialog');
+    expect(within(menu).getByText('Statement')).toBeInTheDocument();
+    expect(within(menu).queryByText('Archive')).not.toBeInTheDocument();
   });
 
   it('asks before it acts, and does not archive on a stray backdrop tap', async () => {

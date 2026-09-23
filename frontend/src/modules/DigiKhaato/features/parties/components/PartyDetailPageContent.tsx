@@ -19,8 +19,9 @@ import {
   UbStack,
   UbStatusBanner,
 } from 'src/design-system';
+import { usePermissions } from 'src/hooks/usePermissions';
 import { useTranslation } from 'src/hooks/useTranslation';
-import { ROUTES } from 'src/routes';
+import { ROUTES, partyStatementPath } from 'src/routes';
 import { copyText } from 'src/utils/clipboard';
 
 import { PartyLedgerTimeline } from 'modules/DigiKhaato/features/ledger/components/PartyLedgerTimeline';
@@ -134,6 +135,12 @@ export function PartyDetailPageContent({
   } = usePartyDetail(id);
 
   const archive = usePartyArchive(id);
+  /* The same test the timeline is drawn on: a tenant without the ledger module
+     has no statement to read, and a role that may not read entries must not be
+     handed a link to a page that would refuse them (§19.7.5 — hide, never
+     disable). */
+  const { can, hasModule } = usePermissions();
+  const canReadLedger = hasModule('ledger') && can('ledger.entry.read');
 
   const [copied, setCopied] = useState(false);
   const handleCopyMobile = useCallback(async (mobile: string) => {
@@ -284,6 +291,7 @@ export function PartyDetailPageContent({
                     one tap further away, not somewhere else. */}
                 <PartyHeaderMenu
                   t={t}
+                  statementHref={canReadLedger ? partyStatementPath(id) : undefined}
                   onEdit={partyForm.canWrite ? openEdit : undefined}
                   onAddOpening={opening.canAdd ? opening.openDrawer : undefined}
                   onArchive={archive.canArchive ? archive.open : undefined}

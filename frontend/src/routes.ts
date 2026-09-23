@@ -80,6 +80,18 @@ export const partyPath = (id: string): string =>
  */
 export const partiesByTagPath = (name: string): string =>
   `${ROUTES.PARTIES}?tag=${encodeURIComponent(name)}`;
+
+/**
+ * LED-04 — the statement, `/parties/{id}/statement`.
+ *
+ * Its own address rather than a tab on the khata page, because that is what the
+ * feature is FOR: a statement is a document a merchant sends somebody, and a
+ * document needs a link you can put in a message. The period and the
+ * corrections toggle ride in the query string for the same reason (FR-8), which
+ * is also what makes the browser's back button and a bookmark both work.
+ */
+export const partyStatementPath = (id: string): string =>
+  `${partyPath(id)}/statement`;
 export type Route = (typeof ROUTES)[RouteKey];
 
 /**

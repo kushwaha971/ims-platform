@@ -19,6 +19,10 @@ import {
   reverseEntry,
 } from 'modules/DigiKhaato/features/ledger/redux/ledgerEntryThunk';
 import {
+  fetchPartyStatement,
+  fetchStatementAllRows,
+} from 'modules/DigiKhaato/features/ledger/redux/statementThunk';
+import {
   completeOnboarding,
   createTenant,
   saveAddressStep,
@@ -89,6 +93,9 @@ export const QUERIES = {
   fetchPartyEntries,
   // LED-03 — the correction chain behind ONE entry, for the history sheet
   fetchEntryHistory,
+  // LED-04 — one page of a statement, and the whole period for print
+  fetchPartyStatement,
+  fetchStatementAllRows,
 } as const;
 
 export const MUTATIONS = {

@@ -53,6 +53,16 @@ export const PERMISSION_CODES = [
    * is a role check precisely so that it cannot be granted.
    */
   'ledger.entry.correct',
+  /**
+   * LED-04 §12 — taking the statement away as a file.
+   *
+   * Separate from `ledger.entry.read` because reading a customer's history at
+   * the counter and walking out with the whole book in a CSV are not the same
+   * act. Staff hold the first and not this; the accountant holds both, which is
+   * their job. The server checks the same codename on the same URL, because the
+   * export is a query parameter rather than a route of its own.
+   */
+  'ledger.statement.export',
   'inventory.item.read',
   'sales.invoice.read',
   'purchases.bill.read',

@@ -52,6 +52,7 @@ export const API_PATHS = {
   PARTY: (id: string) => `/parties/${id}`,
   PARTY_ARCHIVE: (id: string) => `/parties/${id}/archive`,
   PARTY_RESTORE: (id: string) => `/parties/${id}/restore`,
+  /** LED-04 — the statement, and with `format=csv` the export of it. */
   PARTY_STATEMENT: (id: string) => `/parties/${id}/statement`,
   PARTY_LEDGER_ENTRIES: (id: string) => `/parties/${id}/ledger-entries`,
   PARTY_SHARE_LINKS: (id: string) => `/parties/${id}/share-links`,

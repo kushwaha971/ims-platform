@@ -121,6 +121,87 @@
       --canvas: 0 0% 100%;
       --surface-card: 0 0% 100%;
     }
+
+    /**
+     * LED-04 §7 — what a printed statement is, and what it is not.
+     *
+     * The page a merchant hands a customer is one artefact and the application
+     * around it is another, so printing hides the second: the sidebar, the page
+     * header, the filter bar and every control. `.ub-print-only` is the
+     * statement itself, which is hidden on screen and is the only thing on
+     * paper, so the two never compete for the same markup.
+     *
+     * `window.print()` rather than a server-rendered PDF is ADR-021's choice
+     * and LED-04 FR-5's, and it is why this stylesheet is the whole print
+     * pipeline. It also means the layout below has to be right in every browser
+     * a merchant has, which is what the four-width screenshot sweep is for.
+     */
+    .ub-print-hide,
+    nav,
+    aside,
+    header[data-app-header],
+    [data-print='hide'] {
+      display: none !important;
+    }
+
+    .ub-print-only {
+      display: block !important;
+    }
+
+    /* A statement is a table of money and it is read by running a finger down a
+       column, so the figures have to line up: `tabular-nums` makes every digit
+       the same width, which a proportional font does not. */
+    .ub-print-sheet {
+      font-size: 11pt;
+      color: #000;
+      background: #fff;
+    }
+
+    .ub-print-sheet table {
+      width: 100%;
+      border-collapse: collapse;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* §7.6 — a row must not be split across a page break, and the header must
+       repeat on every page. A statement whose second page starts mid-row and
+       has no column headings is a statement a customer cannot read. */
+    .ub-print-sheet thead {
+      display: table-header-group;
+    }
+
+    /* §7.3's hairlines, and on paper they are not decoration. The table is wide
+       — "Cement bags" on the left and ₹2,800.00 on the right, with empty space
+       between — and without a rule the eye loses the row on the way across. A
+       printed statement is read by a customer who is looking for one line. */
+    .ub-print-sheet th,
+    .ub-print-sheet td {
+      border-bottom: 0.5pt solid #ccc;
+      padding: 4pt 6pt;
+      vertical-align: top;
+    }
+
+    .ub-print-sheet th {
+      border-bottom-width: 1pt;
+      border-bottom-color: #333;
+    }
+
+    .ub-print-sheet tr {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    /* The closing block is the sentence the whole page exists for; orphaning it
+       onto a page of its own is the one break that must not happen. */
+    .ub-print-closing {
+      break-before: avoid;
+      page-break-before: avoid;
+    }
+
+    @page {
+      size: A4 portrait;
+      margin: 14mm 12mm;
+    }
   }
 }
 
