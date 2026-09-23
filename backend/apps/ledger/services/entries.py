@@ -91,12 +91,21 @@ def _parse_amount(raw: Any, details: dict) -> Decimal | None:
     if raw is None or raw == "":
         details["amount"] = ["Enter an amount greater than 0."]
         return None
+    # `Decimal` parses "Infinity", "NaN" and "sNaN" without complaint, and
+    # "1e400" is finite but wider than the context — all four then raised
+    # `InvalidOperation` from `quantize()` (or, for sNaN, from the comparison)
+    # OUTSIDE this `try`, and every write taking an amount answered 500
+    # (security review F-4). So finiteness is checked the moment the value
+    # exists, and the quantize that can still overflow is inside the `try`.
     try:
         amount = D(raw)
+        if not amount.is_finite():
+            raise InvalidOperation
+        has_more_than_two_places = amount != amount.quantize(Decimal("0.01"))
     except (InvalidOperation, TypeError, ValueError):
         details["amount"] = ["Enter a valid amount."]
         return None
-    if amount != amount.quantize(Decimal("0.01")):
+    if has_more_than_two_places:
         details["amount"] = ["Amounts can have at most two decimal places."]
         return None
     if amount <= 0:

@@ -15,7 +15,52 @@ from rest_framework.exceptions import Throttled
 
 from apps.common.audit import write_audit
 from apps.common.context import Ctx
+from apps.common.exceptions import PermissionDenied
 from apps.common.throttling import ScopedUserRateThrottle
+
+#: The one `Sec-Fetch-Site` value an export refuses. `same-origin` and
+#: `same-site` are our own pages (the SPA and the API are one site, which the
+#: session cookie already requires); `none` is a URL typed or bookmarked; and a
+#: missing header is an older browser, curl or a script with a token.
+CROSS_SITE = "cross-site"
+
+
+def request_has(request: Any, codename: str) -> bool:
+    """The actor's effective permission set, through the SAME resolver the
+    permission classes use.
+
+    `permissions_for` applies the role set, the member's allow and deny
+    overrides, and the tenant's module gating, in that order. Reading the role's
+    codenames directly here would be a second implementation of that resolution
+    — and the one place it would first differ is a member with a `deny`
+    override, which is to say the exact member somebody set the override FOR.
+    """
+    from apps.common.permissions_registry import permissions_for
+    from apps.common.tenancy import get_effective_tenant
+
+    tenant = get_effective_tenant(request)
+    membership = getattr(tenant, "_ub_membership", None) if tenant else None
+    return bool(membership) and codename in permissions_for(membership)
+
+
+def refuse_cross_site(request: Any) -> None:
+    """403 for an export another site started (security review F-3).
+
+    The session cookies are `SameSite=Lax`, which a top-level GET navigation
+    from ANY site still carries — and both exports are GETs. So a link or a
+    redirect on a hostile page could make a signed-in merchant's browser
+    download their book, spend their export budget and leave an audit row
+    saying they chose to. Browsers mark such a request `Sec-Fetch-Site:
+    cross-site`, which a page cannot forge or suppress.
+
+    Only the exact value is refused. Absent means a client that does not send
+    the header, and refusing those would break curl and older browsers for no
+    gain: the attack needs a browser, and every browser that sends cookies
+    under `SameSite=Lax` sends this header too.
+    """
+    site = (request.META.get("HTTP_SEC_FETCH_SITE") or "").strip().lower()
+    if site == CROSS_SITE:
+        raise PermissionDenied("Start the export from inside the app, not from a link elsewhere.")
 
 
 def charge_export_budget(request: Any, view: Any) -> None:
@@ -25,13 +70,33 @@ def charge_export_budget(request: Any, view: Any) -> None:
     and is on the 10/hour export one. LED-04's first version put the whole view
     on the export scope and a merchant arguing over a bill at the counter ran
     out of statement views in ten taps.
+
+    The scope goes to the CONSTRUCTOR. This used to build the throttle bare and
+    assign `.scope = "export"` afterwards, and `get_cache_key` then replaced it
+    with the statement view's `throttle_scope = "user"` — so statement exports
+    ran on 600/min (F-1). Aging escaped only because its view has no scope.
     """
-    throttle = ScopedUserRateThrottle()
-    throttle.scope = "export"
-    throttle.rate = throttle.get_rate()
-    throttle.num_requests, throttle.duration = throttle.parse_rate(throttle.rate)
+    throttle = ScopedUserRateThrottle("export")
     if not throttle.allow_request(request, view):
         raise Throttled(wait=throttle.wait())
+
+
+def authorise_export(request: Any, view: Any, *, codename: str, refusal: str) -> None:
+    """Everything an export must pass before it reads a row, in this order.
+
+    1. Not started by another site (F-3) — first, so a hostile page can neither
+       learn what the victim may export nor spend their budget.
+    2. The export's own permission — a query parameter on a URL everybody may
+       read, so the permission class cannot see it.
+    3. The export budget — charged only for an export that is going to run.
+
+    The caller computes the report AFTER this, never before (I-5): a refused
+    export must not cost the server the whole walk over the book.
+    """
+    refuse_cross_site(request)
+    if not request_has(request, codename):
+        raise PermissionDenied(refusal)
+    charge_export_budget(request, view)
 
 
 def audit_export(

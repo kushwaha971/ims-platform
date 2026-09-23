@@ -22,6 +22,7 @@ from apps.common.permissions import ModuleEnabled
 from apps.common.responses import StandardResponse
 from apps.common.throttling import ScopedUserRateThrottle
 from apps.common.viewsets import TenantScopedNoDeleteViewSet
+from apps.parties.constants import archive_via
 from apps.parties.filters import PartyFilterSet
 from apps.parties.models import Party
 from apps.parties.permissions import PartyPermissions, WriteOffPermissions
@@ -298,7 +299,7 @@ class PartyViewSet(TenantScopedNoDeleteViewSet):
             ctx=self._ctx(request),
             party=party,
             reason=serializer.validated_data.get("reason", ""),
-            via=request.data.get("via") if isinstance(request.data.get("via"), str) else "api",
+            via=archive_via(request.data.get("via")),
             write_off=dict(write_off) if write_off is not None else None,
         )
         return StandardResponse.ok(

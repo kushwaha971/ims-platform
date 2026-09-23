@@ -636,3 +636,28 @@ def test_every_sortable_column_sorts_both_ways(
     names = [row["party"]["name"] for row in response.json()["data"]]
     if ordering == "90_plus":
         assert names[-1] == "Aarav Traders"
+
+
+def test_the_aging_tag_filter_never_reaches_another_tenants_same_named_tag(
+    tenant: Any, other_tenant: Any, api_as: Any
+) -> None:
+    """I-4 — the aging report's `?tag=` is the party list's predicate, called
+    on a filterset built WITHOUT a request, so the tenant comes only from the
+    party row. Two tenants with a "Camp Area" tag each: the caller's report,
+    rows and totals, holds only their own debtor."""
+    from apps.parties.models import PartyTag, Tag
+
+    client, _ = api_as(tenant)
+    mine = PartyFactory(tenant=tenant, name="My Camp Debtor", balance="300.00")
+    entry(mine, 10, Direction.DEBIT, "300.00")
+    theirs = PartyFactory(tenant=other_tenant, name="Their Camp Debtor", balance="900.00")
+    entry(theirs, 10, Direction.DEBIT, "900.00")
+    for party in (mine, theirs):
+        tag = Tag.objects.create(tenant=party.tenant, name="Camp Area")
+        PartyTag.objects.create(party=party, tag=tag)
+
+    body = client.get(reverse(AGING), {"tag": "Camp Area"}).json()
+
+    assert [row["party"]["name"] for row in body["data"]] == ["My Camp Debtor"]
+    assert body["meta"]["totals"]["total"] == "300.00"
+    assert body["meta"]["total"] == 1

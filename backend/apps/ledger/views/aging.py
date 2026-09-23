@@ -24,8 +24,7 @@ from apps.common.throttling import ScopedUserRateThrottle
 from apps.common.viewsets import TenantScopeMixin
 from apps.ledger.selectors.aging import BUCKET_KEYS, aging_rows, aging_totals, ledger_summary
 from apps.ledger.services.statement_csv import neutralise
-from apps.ledger.views.exports import audit_export, charge_export_budget
-from apps.ledger.views.statement import request_has
+from apps.ledger.views.exports import audit_export, authorise_export
 
 #: §14 — above this the export becomes an async job, and `reports_export` has no
 #: table. The synchronous path refuses and says what to do, rather than timing
@@ -111,11 +110,25 @@ class LedgerAgingView(TenantScopeMixin, APIView):
             raise ValidationFailed({"type": ["Choose receivable or payable."]})
         return kind
 
+    def _ordering(self, request: Any) -> str:
+        ordering = request.query_params.get("ordering") or DEFAULT_ORDERING
+        if ordering not in ALLOWED_ORDERING:
+            raise ValidationFailed({"ordering": ["That is not a sort this report offers."]})
+        return ordering
+
+    def _validate_params(self, request: Any) -> tuple[dt.date, str, str]:
+        """Every query parameter, checked without touching a ledger row.
+
+        Separate from `_rows` so an export with a typo in it is a 400 BEFORE
+        the export budget is charged: the merchant who fat-fingers a date
+        should not lose one of their ten exports an hour to it.
+        """
+        return self._as_of(request), self._kind(request), self._ordering(request)
+
     def _rows(self, request: Any) -> tuple[list[dict], dict, dt.date, str]:
         """The report, named, filtered, ordered — before paging."""
         tenant = self.get_tenant()
-        as_of = self._as_of(request)
-        kind = self._kind(request)
+        as_of, kind, ordering = self._validate_params(request)
         raw = aging_rows(tenant=tenant, as_of=as_of, kind=kind)
 
         names = self._party_names(tenant, list(raw), request.query_params.get("tag"))
@@ -130,9 +143,6 @@ class LedgerAgingView(TenantScopeMixin, APIView):
         ]
         totals = aging_totals({key: value for key, value in raw.items() if key in names})
 
-        ordering = request.query_params.get("ordering") or DEFAULT_ORDERING
-        if ordering not in ALLOWED_ORDERING:
-            raise ValidationFailed({"ordering": ["That is not a sort this report offers."]})
         rows.sort(key=self._sort_key(ordering), reverse=ordering.startswith("-"))
         return rows, totals, as_of, kind
 
@@ -175,9 +185,23 @@ class LedgerAgingView(TenantScopeMixin, APIView):
         return {str(row.id): row.name for row in queryset.only("id", "name")}
 
     def get(self, request: Any, *args: Any, **kwargs: Any) -> Any:
+        is_csv = request.query_params.get("format") == "csv"
+        if is_csv:
+            self._validate_params(request)
+            # BEFORE the report is computed (security review I-5). The FIFO walk
+            # over every party is the expensive part of this view; a caller who
+            # may not export, has spent their budget, or was sent here by
+            # another site is refused without the server doing it first.
+            authorise_export(
+                request,
+                self,
+                codename="reports.export",
+                refusal="You do not have permission to export reports.",
+            )
+
         rows, totals, as_of, kind = self._rows(request)
 
-        if request.query_params.get("format") == "csv":
+        if is_csv:
             return self._csv(rows, as_of, kind)
 
         page = self._positive_int(request, "page", default=1)
@@ -218,17 +242,13 @@ class LedgerAgingView(TenantScopeMixin, APIView):
         return value
 
     def _csv(self, rows: list[dict], as_of: dt.date, kind: str) -> Any:
-        """FR-3's export, gated on `reports.export` (§12).
+        """FR-3's export. `get` has already authorised it (§12, I-5).
 
-        In the handler rather than the permission class for the same reason
+        The gate — cross-site refusal, `reports.export`, the export budget — is
+        in the handler rather than the permission class for the same reason
         LED-04's is: the export is a QUERY PARAMETER on a URL everybody may
         read, and a permission map keyed on the HTTP verb cannot see one.
         """
-        from apps.common.exceptions import PermissionDenied
-
-        if not request_has(self.request, "reports.export"):
-            raise PermissionDenied("You do not have permission to export reports.")
-        charge_export_budget(self.request, self)
         if len(rows) > MAX_SYNC_CSV_ROWS:
             raise ValidationFailed(
                 {

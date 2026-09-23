@@ -34,7 +34,7 @@ from apps.ledger.selectors.statement import (
 )
 from apps.ledger.serializers.entry import StatementRowSerializer
 from apps.ledger.services.statement_csv import statement_csv_rows
-from apps.ledger.views.exports import audit_export, charge_export_budget
+from apps.ledger.views.exports import audit_export, authorise_export
 
 #: §10 — five years, and the cap is what makes "print fetches all rows first"
 #: (FR-8) a finite promise. A merchant who wants more has a reason to ask for
@@ -244,14 +244,16 @@ class PartyStatementView(TenantScopeMixin, APIView):
         the roles that may take the book away. A permission map keyed on the HTTP
         verb cannot see the difference.
         """
-        from apps.common.exceptions import PermissionDenied
-
-        if not request_has(self.request, "ledger.statement.export"):
-            raise PermissionDenied("You do not have permission to export statements.")
-
-        # The export budget, applied HERE rather than on the class, because the
-        # export is a query parameter and a class-level scope cannot see one.
-        charge_export_budget(self.request, self)
+        # Cross-site refusal, permission and the export budget — in that order,
+        # in one helper both exports share. The budget is applied HERE rather
+        # than on the class because the export is a query parameter and a
+        # class-level scope cannot see one.
+        authorise_export(
+            self.request,
+            self,
+            codename="ledger.statement.export",
+            refusal="You do not have permission to export statements.",
+        )
 
         rows_qs = statement_rows(**scope, date_from=date_from, date_to=date_to)
         count = rows_qs.count()
@@ -282,24 +284,6 @@ class PartyStatementView(TenantScopeMixin, APIView):
         stamp = dt.date.today().isoformat()
         response["Content-Disposition"] = f'attachment; filename="statement-{party.id}-{stamp}.csv"'
         return response
-
-
-def request_has(request: Any, codename: str) -> bool:
-    """The actor's effective permission set, through the SAME resolver the
-    permission classes use.
-
-    `permissions_for` applies the role set, the member's allow and deny
-    overrides, and the tenant's module gating, in that order. Reading the role's
-    codenames directly here would be a second implementation of that resolution
-    — and the one place it would first differ is a member with a `deny`
-    override, which is to say the exact member somebody set the override FOR.
-    """
-    from apps.common.permissions_registry import permissions_for
-    from apps.common.tenancy import get_effective_tenant
-
-    tenant = get_effective_tenant(request)
-    membership = getattr(tenant, "_ub_membership", None) if tenant else None
-    return bool(membership) and codename in permissions_for(membership)
 
 
 def _csv_lines(rows: Any) -> Any:

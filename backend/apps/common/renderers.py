@@ -49,4 +49,22 @@ class PassthroughCsvRenderer(BaseRenderer):
     def render(
         self, data: Any, accepted_media_type: str | None = None, renderer_context: Any = None
     ) -> Any:
+        """Bytes pass through; an ERROR envelope is rendered as JSON.
+
+        Negotiation has already picked this renderer by the time the handler
+        refuses — a 403 for a role that may not export, a 429 on the export
+        budget, a 400 for a bad date — so the exception handler's envelope
+        arrives here. Passed through, a `dict` became an HTTP body of its keys
+        (`error`) labelled `text/csv`: the client could not read the code, and
+        a browser following the download link saved a file called the export's
+        name containing the word "error". Rendered as JSON with a JSON content
+        type, the refusal says what it is, like every other error in the API.
+        """
+        if isinstance(data, (dict, list)):
+            response = (renderer_context or {}).get("response")
+            if response is not None:
+                response["Content-Type"] = EnvelopeJSONRenderer.media_type
+            return EnvelopeJSONRenderer().render(
+                data, EnvelopeJSONRenderer.media_type, renderer_context
+            )
         return data

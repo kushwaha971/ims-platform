@@ -331,7 +331,14 @@ def correct_entry(*, ctx: Ctx, entry_id: Any, payload: dict) -> dict:
             "direction": payload.get("direction", original.direction),
             "amount": payload.get("amount", original.amount),
             "entry_date": payload.get("entry_date", original.entry_date),
-            "payment_mode": payload.get("payment_mode"),
+            # Omitted means "as it was" for the mode too (FB-2). It used to be
+            # `payload.get("payment_mode")` — None when absent — so correcting
+            # only the amount, or only the UPI app, of a "You got" was refused
+            # "Choose how you received the money" for a field the merchant never
+            # touched. An explicit `null` is still a CLEAR, which the validator
+            # refuses on a credit; and a mode kept onto a corrected DEBIT is
+            # dropped by the validator, as a debit's always is.
+            "payment_mode": payload.get("payment_mode", original.payment_mode),
             # Omitted means "as it was", the contract `EntryCorrectSerializer`
             # states — so a client that sends only `{amount, payment_mode}`
             # keeps the PhonePe it did not mention, rather than losing it to a

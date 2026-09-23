@@ -343,3 +343,77 @@ def test_the_statement_does_not_carry_the_app(phonepe: dict) -> None:
     header = content.splitlines()[0]
     assert "upi" not in header.lower()
     assert "phonepe" not in content.lower()
+
+
+# ── FB-2: an omitted payment mode is the original's ─────────────────────────
+
+
+def test_correcting_only_the_app_keeps_the_mode(phonepe: dict) -> None:
+    """FB-2 — `{upi_app, reason}` alone is a valid correction.
+
+    `EntryCorrectSerializer` says every omitted field means "as it was", yet
+    `correct_entry` passed `payload.get("payment_mode")` — `None` when omitted —
+    so a credit lost its mode and the request was refused 400 "Choose how you
+    received the money" for a field the merchant never touched. Before the fix
+    this answered 400.
+    """
+    response = phonepe["client"].post(
+        entry_url(phonepe["entry"], "correct"),
+        {"upi_app": "gpay", "reason": "It was Google Pay"},
+        format="json",
+    )
+
+    assert response.status_code == 200, response.json()
+    replacement = LedgerEntry.objects.get(pk=response.json()["data"]["id"])
+    assert replacement.payment_mode == PaymentMode.UPI
+    assert replacement.upi_app == UpiApp.GPAY
+    log = AuditLog.objects.get(action=AuditAction.LEDGER_ENTRY_CORRECTED)
+    assert log.metadata["changed_fields"] == ["upi_app"]
+
+
+def test_correcting_only_the_amount_of_a_upi_receipt_keeps_mode_and_app(phonepe: dict) -> None:
+    """FB-2 — `{amount, reason}` on a PhonePe receipt keeps UPI and PhonePe.
+
+    The same defect from the amount side: fixing a typo in the figure was
+    refused because the omitted mode was read as "none". Before the fix: 400.
+    """
+    response = phonepe["client"].post(
+        entry_url(phonepe["entry"], "correct"),
+        {"amount": "550.00", "reason": "Typed 500 for 550"},
+        format="json",
+    )
+
+    assert response.status_code == 200, response.json()
+    replacement = LedgerEntry.objects.get(pk=response.json()["data"]["id"])
+    assert replacement.amount == Decimal("550.00")
+    assert replacement.payment_mode == PaymentMode.UPI
+    assert replacement.upi_app == UpiApp.PHONEPE
+
+
+def test_an_explicit_null_mode_on_a_credit_is_still_refused(phonepe: dict) -> None:
+    """The other half of FB-2's rule: `payment_mode: null` is a CLEAR, not an
+    omission, and a "You got" must still say how the money arrived."""
+    response = phonepe["client"].post(
+        entry_url(phonepe["entry"], "correct"),
+        {"payment_mode": None, "amount": "550.00", "reason": "Typed 500 for 550"},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert "payment_mode" in response.json()["error"]["details"]
+
+
+def test_correcting_a_upi_credit_into_a_debit_drops_the_kept_mode(phonepe: dict) -> None:
+    """Defaulting the mode must not put one on a debit, which
+    `ck_ledger_entry_debit_has_no_mode` would turn into a 500."""
+    response = phonepe["client"].post(
+        entry_url(phonepe["entry"], "correct"),
+        {"direction": Direction.DEBIT, "reason": "It was a sale, not a receipt"},
+        format="json",
+    )
+
+    assert response.status_code == 200, response.json()
+    replacement = LedgerEntry.objects.get(pk=response.json()["data"]["id"])
+    assert replacement.direction == Direction.DEBIT
+    assert replacement.payment_mode is None
+    assert replacement.upi_app is None

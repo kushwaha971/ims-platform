@@ -971,3 +971,38 @@ def test_another_tenants_tag_is_not_found(tenant: Any, other_tenant: Any, api_as
         ).status_code
         == 404
     )
+
+
+def test_a_tag_filter_never_reaches_another_tenants_same_named_tag(
+    tenant: Any, other_tenant: Any, api_as: Any
+) -> None:
+    """I-4 — two tenants each with a "Camp Area" tag; `?tag=Camp Area` returns
+    only the caller's parties, and the totals count only theirs.
+
+    The filter matches tags by NAME (folded), not by id, so the tenant
+    condition is the only thing keeping tenant B's "Camp Area" out of tenant
+    A's list. It lives in the EXISTS subquery (`tag__tenant_id =
+    OuterRef("tenant_id")`) on top of the list's own tenant scope; this test
+    pins both, since dropping either would put another shop's customers and
+    balances on this screen.
+    """
+    mine, _ = api_as(tenant)
+    theirs, _ = api_as(other_tenant)
+    assert (
+        mine.post(
+            reverse(PARTIES), {"name": "My Camp Party", "tags": ["Camp Area"]}, format="json"
+        ).status_code
+        == 201
+    )
+    assert (
+        theirs.post(
+            reverse(PARTIES), {"name": "Their Camp Party", "tags": ["camp area"]}, format="json"
+        ).status_code
+        == 201
+    )
+    assert Tag.objects.filter(name__iexact="camp area").count() == 2
+
+    body = mine.get(reverse(PARTIES), {"tag": "Camp Area"}).json()
+
+    assert [row["name"] for row in body["data"]] == ["My Camp Party"]
+    assert body["meta"]["total"] == 1

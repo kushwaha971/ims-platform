@@ -41,3 +41,21 @@ class OpeningDirection(models.TextChoices):
 
     DEBIT = "debit", _("They owe me")
     CREDIT = "credit", _("I owe them")
+
+
+#: Where a single-party archive came from, as `party.archived`'s audit row
+#: records it (FRD 17-01 §16: `via: 'detail'|'list'|'bulk'|'form'`).
+#:
+#: A CLOSED set, because the client sends it and an auditor reads it as fact:
+#: taken verbatim, `request.data["via"]` let any caller write any string of any
+#: length into the audit log (security review F-6). `bulk` is deliberately not
+#: here — `/parties/bulk-archive` sets it itself, and a single archive claiming
+#: to be one would be a false statement about its origin. Anything else,
+#: including nothing at all, is recorded as `api`.
+ARCHIVE_VIA_DEFAULT = "api"
+ARCHIVE_VIA_VALUES = frozenset({"detail", "list", "form", ARCHIVE_VIA_DEFAULT})
+
+
+def archive_via(raw: object) -> str:
+    """`raw` if it is one of `ARCHIVE_VIA_VALUES`, otherwise `"api"`."""
+    return raw if isinstance(raw, str) and raw in ARCHIVE_VIA_VALUES else ARCHIVE_VIA_DEFAULT

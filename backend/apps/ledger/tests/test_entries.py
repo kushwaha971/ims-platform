@@ -302,12 +302,17 @@ def test_a_debit_that_carries_a_mode_has_it_dropped_rather_than_refused(
 
 
 def test_a_future_date_is_refused(tenant: Any, api_as: Any) -> None:
-    """T-LED-01-3. A khata records what happened, not what is going to."""
-    from django.utils import timezone
+    """T-LED-01-3. A khata records what happened, not what is going to.
+
+    "Tomorrow" is the TENANT's tomorrow. This used the server's UTC date plus
+    one, which between 18:30 and 00:00 UTC is TODAY in IST — so the test posted
+    a legal date, got 201, and failed every evening (EC-8 from the test side).
+    """
+    from apps.common.dates import tenant_today
 
     client, _ = api_as(tenant)
     party = PartyFactory(tenant=tenant)
-    tomorrow = (timezone.now().date() + dt.timedelta(days=1)).isoformat()
+    tomorrow = (tenant_today(tenant) + dt.timedelta(days=1)).isoformat()
 
     response = post(client, party, entry_date=tomorrow)
 

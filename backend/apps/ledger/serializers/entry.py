@@ -206,13 +206,15 @@ class EntryCorrectSerializer(EntryReverseSerializer):
     it — which is why `partial` semantics live there and not in a
     `ModelSerializer` update that would have to be given the instance.
 
-    `payment_mode` is `allow_null` because clearing it is a real correction: a
-    "You got" recorded as UPI that was actually cash gets a new mode, and a
-    credit corrected into a debit has none at all.
+    `payment_mode` is `allow_null` because a credit corrected into a debit has
+    none at all; OMITTING it keeps the original's mode, so a correction of only
+    the amount or only the UPI app of a "You got" is not refused for a mode the
+    merchant never touched (FB-2). An explicit `null` on a credit is still
+    refused, because a receipt must say how the money arrived.
 
     `upi_app` is `allow_null` for the same reason, and OMITTING it keeps the
-    original's app (unlike `payment_mode`, which the service does not default):
-    a client that does not know the field must not erase it by not sending it.
+    original's app too: a client that does not know the field must not erase
+    it by not sending it.
     """
 
     direction = serializers.ChoiceField(choices=Direction.choices, required=False)

@@ -217,12 +217,17 @@ def test_an_opening_obeys_the_same_amount_rule_as_any_entry(tenant: Any, api_as:
 
 
 def test_an_opening_cannot_be_dated_in_the_future(tenant: Any, api_as: Any) -> None:
-    """EC-2. A khata records what was true, not what is going to be."""
-    from django.utils import timezone
+    """EC-2. A khata records what was true, not what is going to be.
+
+    "Tomorrow" is the TENANT's tomorrow. This used the server's UTC date plus
+    one, which between 18:30 and 00:00 UTC is TODAY in IST — so the test posted
+    a legal date, got 201, and failed every evening (EC-8 from the test side).
+    """
+    from apps.common.dates import tenant_today
 
     client, _ = api_as(tenant)
     party = PartyFactory(tenant=tenant, balance="0.00")
-    tomorrow = (timezone.now().date() + dt.timedelta(days=1)).isoformat()
+    tomorrow = (tenant_today(tenant) + dt.timedelta(days=1)).isoformat()
 
     response = post_opening(client, party, entry_date=tomorrow)
 

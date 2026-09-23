@@ -437,3 +437,48 @@ def test_a_staff_member_who_is_refused_changes_nothing(tenant: Any, api_as: Any)
 
     party.refresh_from_db()
     assert party.status == "active"
+
+
+# ── F-6: `via` on the audit row is an allow-listed word ────────────────────
+
+
+@pytest.mark.parametrize(
+    ("sent", "stored"),
+    [
+        ("detail", "detail"),
+        ("list", "list"),
+        ("form", "form"),
+        ("api", "api"),
+        ("<script>alert(1)</script>", "api"),
+        pytest.param("x" * 5000, "api", id="5000-chars"),
+        ("bulk", "api"),
+        ("party_archive", "api"),
+        (None, "api"),
+        (12, "api"),
+    ],
+)
+def test_the_archive_audit_row_records_only_a_known_via(
+    sent: Any, stored: str, tenant: Any, api_as: Any
+) -> None:
+    """F-6 — `request.data["via"]` went into the audit metadata unvalidated.
+
+    Any string of any length — markup, a 5,000-character blob, or a word that
+    impersonates a server-side origin like `bulk` — was written into
+    `party.archived`'s `metadata.via`, which an auditor reads as fact about
+    WHERE the archive came from. Only the client surfaces FRD §16 names
+    (`detail`, `list`, `form`) and `api` are kept; anything else is `api`.
+    `bulk` belongs to `/parties/bulk-archive`, which sets it itself. Before the
+    fix the unknown values were stored verbatim.
+    """
+    from apps.common.audit import AuditAction
+    from apps.platform_app.models import AuditLog
+
+    party = PartyFactory(tenant=tenant, balance="0.00")
+    client, _member = api_as(tenant)
+    body = {} if sent is None else {"via": sent}
+
+    response = client.post(archive_url(party), body, format="json")
+
+    assert response.status_code == 200, response.json()
+    row = AuditLog.objects.get(action=AuditAction.PARTY_ARCHIVED, entity_id=party.id)
+    assert row.metadata["via"] == stored

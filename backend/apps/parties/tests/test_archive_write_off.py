@@ -620,3 +620,34 @@ def test_a_plain_archive_carries_no_write_off_meta(tenant: Any, api_as: Any) -> 
     assert "write_off_entry_id" not in (body.get("meta") or {})
     row = AuditLog.objects.get(action=AuditAction.PARTY_ARCHIVED, entity_id=party.id)
     assert "write_off_entry_id" not in row.metadata
+
+
+# ── I-4: another tenant's party ─────────────────────────────────────────────
+
+
+@pytest.mark.parametrize("with_write_off", [False, True])
+def test_another_tenant_cannot_archive_or_write_off_a_party(
+    with_write_off: bool, owing: dict, other_tenant: Any, api_as: Any
+) -> None:
+    """I-4 — tenant B posting to tenant A's `/parties/{id}/archive`, with and
+    without a write-off, is 404 and writes nothing: no entry, no audit row, the
+    balance and status exactly as they were.
+
+    A 403 would confirm the id exists (canon §0.11 rule 2); a write-off that
+    ran before the lookup would forgive another shop's debt.
+    """
+    party = owing["party"]
+    intruder, _ = api_as(other_tenant)
+    entries_before = LedgerEntry.objects.filter(party=party).count()
+    audit_before = AuditLog.objects.count()
+    body = write_off_body(amount="2300.00") if with_write_off else {"reason": "Mine now"}
+
+    response = intruder.post(archive_url(party), body, format="json")
+
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "not_found"
+    party.refresh_from_db()
+    assert party.status == PartyStatus.ACTIVE
+    assert party.balance == Decimal("2300.00")
+    assert LedgerEntry.objects.filter(party=party).count() == entries_before
+    assert AuditLog.objects.count() == audit_before
