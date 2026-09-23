@@ -51,7 +51,52 @@ export function StatementFilterBar({
   );
 
   return (
-    <UbFilterBar>
+    /* The period's dates and the corrections switch are pinned to the right —
+       the owner's rule for a screen's date — so on a laptop the whole scope is
+       one line, and on a phone the chips scroll on their own track above. */
+    <UbFilterBar
+      end={
+        <>
+          {/* Shown only for Custom. A pair of date boxes beside six chips is two
+              ways of answering one question, and on a 360 px phone it is also
+              the two controls that push the chips off the screen. */}
+          {filters.preset === 'custom' && (
+            <UbStack direction="row" align="center" className="gap-2">
+              <UbDateInput
+                name="statement-from"
+                aria-label={t('ledger.statement.period.from')}
+                placeholder={t('ledger.statement.period.from')}
+                value={filters.dateFrom ?? ''}
+                max={filters.dateTo ?? today}
+                onChange={(value: string | null) => setCustomRange(value || null, filters.dateTo)}
+                className="w-36"
+              />
+              <UbDateInput
+                name="statement-to"
+                aria-label={t('ledger.statement.period.to')}
+                placeholder={t('ledger.statement.period.to')}
+                value={filters.dateTo ?? ''}
+                min={filters.dateFrom ?? undefined}
+                max={today}
+                onChange={(value: string | null) => setCustomRange(filters.dateFrom, value || null)}
+                className="w-36"
+              />
+            </UbStack>
+          )}
+          {/* AC-4. Off by default: a statement a customer reads should show
+              what the book says now, not the history of somebody fixing a
+              typo. An accountant auditing a dispute turns it on, and the
+              closing balance does not move — which is the assertion that
+              proves the ledger's arithmetic. */}
+          <UbSwitch
+            checked={filters.includeCorrections}
+            onCheckedChange={setIncludeCorrections}
+            label={t('ledger.statement.showCorrections')}
+            className="min-h-10 w-auto"
+          />
+        </>
+      }
+    >
       <UbFilterChipGroup label={t('ledger.statement.period.label')}>
         {STATEMENT_PRESETS.map((preset) => (
           <UbFilterChip
@@ -62,42 +107,6 @@ export function StatementFilterBar({
           />
         ))}
       </UbFilterChipGroup>
-
-      {/* Shown only for Custom. A pair of date boxes beside six chips is two
-          ways of answering one question, and on a 360 px phone it is also the
-          two controls that push the chips off the screen. */}
-      {filters.preset === 'custom' && (
-        <UbStack direction="row" className="flex-wrap gap-3">
-          <UbDateInput
-            name="statement-from"
-            aria-label={t('ledger.statement.period.from')}
-            placeholder={t('ledger.statement.period.from')}
-            value={filters.dateFrom ?? ''}
-            max={filters.dateTo ?? today}
-            onChange={(value: string | null) => setCustomRange(value || null, filters.dateTo)}
-          />
-          <UbDateInput
-            name="statement-to"
-            aria-label={t('ledger.statement.period.to')}
-            placeholder={t('ledger.statement.period.to')}
-            value={filters.dateTo ?? ''}
-            min={filters.dateFrom ?? undefined}
-            max={today}
-            onChange={(value: string | null) => setCustomRange(filters.dateFrom, value || null)}
-          />
-        </UbStack>
-      )}
-
-      {/* AC-4. Off by default: a statement a customer reads should show what
-          the book says now, not the history of somebody fixing a typo. An
-          accountant auditing a dispute turns it on, and the closing balance
-          does not move — which is the assertion that proves the ledger's
-          arithmetic. */}
-      <UbSwitch
-        checked={filters.includeCorrections}
-        onCheckedChange={setIncludeCorrections}
-        label={t('ledger.statement.showCorrections')}
-      />
     </UbFilterBar>
   );
 }

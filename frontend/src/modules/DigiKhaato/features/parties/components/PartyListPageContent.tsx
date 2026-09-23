@@ -8,8 +8,8 @@ import { useRouter } from 'next/navigation';
 import { Plus, Tags } from 'lucide-react';
 
 import {
+  UbActionLink,
   UbButton,
-  UbLink,
   UbPageHeader,
   UbPageShell,
   UbSelect,
@@ -380,19 +380,22 @@ export function PartyListPageContent(): React.JSX.Element {
                   manager is useful read-only — the counts are the fastest way
                   to see which tag holds which part of the book — and the
                   destructive actions inside it are permission-gated there. */}
-              <UbLink
+              <UbActionLink
                 href={ROUTES.PARTY_TAGS}
-                variant="body-sm"
-                className="inline-flex items-center gap-1.5"
+                icon={<Tags className="h-4 w-4" aria-hidden />}
+                iconOnly="mobile"
               >
-                <Tags className="h-4 w-4" aria-hidden />
                 {t('parties.tags.filter.manage')}
-              </UbLink>
+              </UbActionLink>
               {/* Hidden rather than disabled when the role cannot write
                   (§19.7.5). A disabled Add button invites a support call; an
                   absent one says nothing a merchant has to interpret. */}
               {partyForm.canWrite && (
-                <UbButton icon={<Plus className="h-4 w-4" aria-hidden />} onClick={openBlankCreate}>
+                <UbButton
+                  icon={<Plus className="h-4 w-4" aria-hidden />}
+                  iconOnly="mobile"
+                  onClick={openBlankCreate}
+                >
                   {t('parties.list.add')}
                 </UbButton>
               )}
@@ -402,9 +405,10 @@ export function PartyListPageContent(): React.JSX.Element {
       }
     >
       {/* BrandHub's page rhythm: the figures under the title, then the list,
-          24 px apart. The count that used to sit here in grey label type is
-          the third card now — it was the same job said in a different voice. */}
-      <UbStack gap={6}>
+          16 px apart (tightened from 24 at the owner's request, 23 Sep). The
+          count that used to sit here in grey label type is the third card
+          now — it was the same job said in a different voice. */}
+      <UbStack gap={4}>
         <PartyListStats
           totals={totals}
           total={meta.total}

@@ -239,58 +239,50 @@ export function PartyDetailPageContent({
       header={
         <UbPageHeader
           title={shown.name}
-          actions={
-            /* Edit is the only action this wave can offer, and it is real:
-               PTY-01's drawer exists. It is hidden for a role that cannot
-               write (§19.7.5) and for an archived party, whose edits PTY-01
-               restricts to notes — a drawer that refuses most of its own
-               fields is a worse answer than PTY-04's Restore, which is where
-               that flow belongs. */
-            party && !isArchived ? (
-              <>
-                {/* LED-01 FR-1 — the two actions this page exists for, and the
-                    most frequent thing anybody does in this product. They stay
-                    as BUTTONS while everything else moved behind the menu,
-                    because the target is eight seconds from tapping the party
-                    to the entry being saved and a menu costs a tap and a
-                    decision on the one action that cannot afford either.
+          /* LED-01 FR-1 — the two actions this page exists for, and the most
+             frequent thing anybody does in this product. They stay as BUTTONS
+             while everything else moved behind the menu, because the target
+             is eight seconds from tapping the party to the entry being saved
+             and a menu costs a tap and a decision on the one action that
+             cannot afford either. On a phone the header lays them out as an
+             equal-width pair under the name, like two tabs.
 
-                    Hidden rather than disabled when the role cannot write
-                    (§19.7.5 / R-SEC-2): a greyed button with a tooltip is a
-                    support call, and an accountant does not need to be told
-                    every time they open a page that they are an accountant. */}
-                {entryForm.canWrite && (
-                  <>
-                    <UbButton variant="primary" onClick={() => entryForm.openEntry(id, 'debit')}>
-                      {t('ledger.entry.gaveAction')}
-                    </UbButton>
-                    <UbButton variant="secondary" onClick={() => entryForm.openEntry(id, 'credit')}>
-                      {t('ledger.entry.gotAction')}
-                    </UbButton>
-                  </>
-                )}
-                {/* Edit, Add opening balance and Archive. All three are things
-                    done once a month or once in a party's life, and at five
-                    buttons the row ran 275 px off the right edge of a 360 px
-                    phone — see `PartyHeaderMenu` for the whole story. Archive
-                    is still on THIS screen, which was PTY-04's argument: a
-                    merchant filing somebody away is looking at the balance, the
-                    last entry and the contact details while they decide. It is
-                    one tap further away, not somewhere else. */}
-                <PartyHeaderMenu
-                  t={t}
-                  statementHref={canReadLedger ? partyStatementPath(id) : undefined}
-                  onEdit={partyForm.canWrite ? openEdit : undefined}
-                  onAddOpening={opening.canAdd ? opening.openDrawer : undefined}
-                  onArchive={archive.canArchive ? archive.open : undefined}
-                />
+             Hidden rather than disabled when the role cannot write (§19.7.5 /
+             R-SEC-2): a greyed button with a tooltip is a support call. */
+          primaryActions={
+            party && !isArchived && entryForm.canWrite ? (
+              <>
+                <UbButton variant="primary" onClick={() => entryForm.openEntry(id, 'debit')}>
+                  {t('ledger.entry.gaveAction')}
+                </UbButton>
+                <UbButton variant="secondary" onClick={() => entryForm.openEntry(id, 'credit')}>
+                  {t('ledger.entry.gotAction')}
+                </UbButton>
               </>
+            ) : undefined
+          }
+          actions={
+            /* Edit, Add opening balance and Archive. All three are things done
+               once a month or once in a party's life, and at five buttons the
+               row ran 275 px off the right edge of a 360 px phone — see
+               `PartyHeaderMenu` for the whole story. Archive is still on THIS
+               screen, which was PTY-04's argument: a merchant filing somebody
+               away is looking at the balance while they decide. Hidden for an
+               archived party, whose flow is PTY-04's Restore. */
+            party && !isArchived ? (
+              <PartyHeaderMenu
+                t={t}
+                statementHref={canReadLedger ? partyStatementPath(id) : undefined}
+                onEdit={partyForm.canWrite ? openEdit : undefined}
+                onAddOpening={opening.canAdd ? opening.openDrawer : undefined}
+                onArchive={archive.canArchive ? archive.open : undefined}
+              />
             ) : undefined
           }
         />
       }
     >
-      <UbStack gap={6}>
+      <UbStack gap={4}>
         {isArchived && (
           <UbStatusBanner
             tone="warning"
@@ -341,7 +333,7 @@ export function PartyDetailPageContent({
             collapsible under the header, collapsed by default, because the
             merchant came here for the balance and the transactions and not for
             the GSTIN. */}
-        <UbBox className="flex flex-col gap-6 lg:flex-row lg:items-start">
+        <UbBox className="flex flex-col gap-4 lg:flex-row lg:items-start">
           <UbStack gap={4} className="min-w-0 flex-1">
             {/* The ledger feature's own component, and deliberately not a
                 generic one lifted into the design system: it knows what a debit

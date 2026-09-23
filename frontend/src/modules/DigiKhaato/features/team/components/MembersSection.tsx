@@ -6,12 +6,7 @@ import dynamic from 'next/dynamic';
 
 import { UserPlus } from 'lucide-react';
 
-import {
-  UbButton,
-  UbConfirmDialog,
-  UbStack,
-  UbText,
-} from 'src/design-system';
+import { UbButton, UbConfirmDialog, UbSectionHeading, UbStack } from 'src/design-system';
 import {
   UbDataGrid,
   type UbDataGridEmptyStates,
@@ -182,28 +177,25 @@ export function MembersSection(): React.JSX.Element {
 
   return (
     <UbStack gap={2}>
-      {/* There is no `UbSectionHeader` in the design system and this screen is
-          not the place to invent one: a section heading plus a trailing action
-          is a pattern the product will want in several places, and adding it
-          here would make the first version of it a team-screen shape. A row
-          composed from existing primitives is the honest interim. */}
-      <UbStack direction="row" justify="between" align="center" gap={2}>
-        <UbText variant="h4">{t('team.tab.members')}</UbText>
-        <Can permission="platform.members.manage">
-          <UbButton
-            onClick={openAdd}
-            icon={<UserPlus aria-hidden className="h-4 w-4" />}
-            // Class C, online only: disabled rather than hidden (§19.10.4).
-            disabled={!canWrite}
-          >
-            {t('team.member.add.action')}
-          </UbButton>
-        </Can>
-      </UbStack>
-
-      <UbText variant="label" tone="tertiary">
-        {t('team.members.count', { count: meta.total })}
-      </UbText>
+      {/* `UbSectionHeading` now exists (the BrandHub pass), so the title,
+          the count beside it and the action on the right are one line —
+          the count used to take a line of its own under the heading. */}
+      <UbSectionHeading
+        title={t('team.tab.members')}
+        meta={t('team.members.count', { count: meta.total })}
+        aside={
+          <Can permission="platform.members.manage">
+            <UbButton
+              onClick={openAdd}
+              icon={<UserPlus aria-hidden className="h-4 w-4" />}
+              // Class C, online only: disabled rather than hidden (§19.10.4).
+              disabled={!canWrite}
+            >
+              {t('team.member.add.action')}
+            </UbButton>
+          </Can>
+        }
+      />
 
       <UbDataGrid
         rows={rows}

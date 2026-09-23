@@ -77,7 +77,7 @@ function UbEmptyStateBase({
     <MLEmpty
       // R-A-6 — an error state is announced.
       role={variant === 'error' ? 'alert' : undefined}
-      className={cn('gap-4 px-6 py-14', PANEL[variant], className)}
+      className={cn('gap-3 px-6 py-10', PANEL[variant], className)}
     >
       <span
         aria-hidden

@@ -63,9 +63,7 @@ export function InviteLinkDialog({
       // A stray backdrop tap on a phone would destroy a link that cannot be
       // recovered. The merchant has to say they are done with it.
       dismissOnBackdrop={false}
-      footer={
-        <UbButton onClick={dismissInviteLink}>{t('team.link.done')}</UbButton>
-      }
+      footer={<UbButton onClick={dismissInviteLink}>{t('team.link.done')}</UbButton>}
     >
       <UbStack gap={3}>
         <UbStatusBanner tone="warning" title={t('team.link.once')} />

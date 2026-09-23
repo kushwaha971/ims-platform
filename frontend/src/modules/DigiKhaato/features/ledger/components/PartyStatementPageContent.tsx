@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { ArrowLeft, Download, Printer } from 'lucide-react';
 
 import {
+  UbActionLink,
   UbAmount,
   UbBox,
   UbButton,
@@ -256,11 +257,15 @@ function StatementActions({
     statement.prepareForPrint();
   }, [statement]);
 
+  /* Both are header actions, so both are buttons of one kind — outline, icon
+     and word — and on a phone both are icons on the title's line. Export was a
+     text link beside a filled button, two visual languages for one job. */
   return (
-    <UbStack direction="row" align="center" className="gap-2">
+    <>
       <UbButton
-        variant="secondary"
+        variant="outlineNeutral"
         icon={<Printer className="h-4 w-4" aria-hidden />}
+        iconOnly="mobile"
         busy={statement.printStatus === 'loading'}
         busyLabel={t('ledger.statement.preparing')}
         onClick={print}
@@ -272,14 +277,16 @@ function StatementActions({
           fetch, so the browser saves the stream the server is already writing
           instead of the client holding five thousand rows in memory. */}
       {statement.canExport && (
-        <UbLink href={statementCsvUrl(id, statement.filters)} variant="body-sm" download>
-          <UbStack direction="row" align="center" className="gap-1">
-            <Download className="h-4 w-4" aria-hidden />
-            {t('ledger.statement.export')}
-          </UbStack>
-        </UbLink>
+        <UbActionLink
+          href={statementCsvUrl(id, statement.filters)}
+          download
+          icon={<Download className="h-4 w-4" aria-hidden />}
+          iconOnly="mobile"
+        >
+          {t('ledger.statement.export')}
+        </UbActionLink>
       )}
-    </UbStack>
+    </>
   );
 }
 
@@ -346,40 +353,54 @@ function StatementRowView({
   const struck = isStruckThrough(row);
   const view = entryAmountView(row.direction, row.entryType);
 
+  /* One line on a laptop — date, particulars, amount, balance, the way a
+     passbook is ruled — and stacked on a phone. It was stacked everywhere, so a
+     three-entry statement filled a 1440 px screen with 94 px rows. */
   return (
-    <UbStack direction="row" justify="between" align="start" className="gap-3 py-3">
-      <UbStack gap={1} className="min-w-0 flex-1">
-        <UbText variant="caption" tone="tertiary">
+    <UbStack
+      direction="row"
+      justify="between"
+      align="start"
+      className="gap-3 py-3 md:items-center md:gap-6"
+    >
+      <UbStack gap={1} className="min-w-0 flex-1 md:flex-row md:items-center md:gap-6">
+        <UbText
+          variant="caption"
+          tone="tertiary"
+          className="md:ds-body-base-regular md:w-24 md:shrink-0"
+        >
           {d(row.entryDate)}
         </UbText>
-        <UbText
-          variant="body"
-          className={
-            struck ? 'line-clamp-2 break-words line-through opacity-60' : 'line-clamp-2 break-words'
-          }
-        >
-          {row.note.trim() || t(`ledger.entry.type.${row.entryType}`)}
-        </UbText>
-        {/* The badges and the reason sit under the title, on their own line —
+        <UbStack gap={1} className="min-w-0 flex-1">
+          <UbText
+            variant="body"
+            className={
+              struck
+                ? 'line-clamp-2 break-words line-through opacity-60'
+                : 'line-clamp-2 break-words'
+            }
+          >
+            {row.note.trim() || t(`ledger.entry.type.${row.entryType}`)}
+          </UbText>
+          {/* The badges and the reason sit under the title, on their own line —
             the rule LED-03 arrived at after the ⋯ squeezed a khata row's note
-            to a sliver. A statement row is wider than a khata row and would
-            survive it today; it will not the first time somebody adds a
-            document link. */}
-        {(struck || row.reason) && (
-          <UbStack direction="row" align="center" className="flex-wrap gap-2">
-            {struck && (
-              <UbStatusBadge label={t('ledger.correction.badge.reversed')} tone="neutral" />
-            )}
-            {row.reason && (
-              <UbText variant="caption" tone="tertiary" className="line-clamp-2 break-words">
-                {row.reason}
-              </UbText>
-            )}
-          </UbStack>
-        )}
+            to a sliver. */}
+          {(struck || row.reason) && (
+            <UbStack direction="row" align="center" className="flex-wrap gap-2">
+              {struck && (
+                <UbStatusBadge label={t('ledger.correction.badge.reversed')} tone="neutral" />
+              )}
+              {row.reason && (
+                <UbText variant="caption" tone="tertiary" className="line-clamp-2 break-words">
+                  {row.reason}
+                </UbText>
+              )}
+            </UbStack>
+          )}
+        </UbStack>
       </UbStack>
 
-      <UbStack align="end" className="gap-1">
+      <UbStack align="end" className="gap-1 md:flex-row md:items-center md:gap-6">
         {/* `entryAmountView` rather than a ternary on the direction, and the
             screenshot sweep is why: an opening balance came out labelled "You
             gave ₹2,300.00" — nothing was given, the party already owed it when
@@ -401,7 +422,7 @@ function StatementRowView({
             Through `formatInr`, because the raw decimal string printed
             "Balance ₹2300.00" — ungrouped, on the figure a customer reads out.
             That is the FIFTH time the formatter pair has met in this codebase. */}
-        <UbText variant="caption" tone="tertiary">
+        <UbText variant="caption" tone="tertiary" className="md:w-44 md:text-right">
           {t('ledger.statement.balanceAfter', { amount: formatInr(unsigned(row.runningBalance)) })}
         </UbText>
       </UbStack>

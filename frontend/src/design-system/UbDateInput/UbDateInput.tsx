@@ -84,6 +84,15 @@ interface UbDateInputOwnProps {
   readonly min?: string;
   readonly max?: string;
   readonly className?: string;
+  /**
+   * `inline` — the date as text with a calendar icon and no box, for a
+   * page's scope in its header ("As of 23/09/2026"). It is still a button
+   * that opens the calendar; it just does not look like a form field on a
+   * screen that has no form. `field` (default) is the boxed control.
+   */
+  readonly appearance?: 'field' | 'inline';
+  /** `inline` only: a word before the date, inside the tap target ("As of"). */
+  readonly inlineLabel?: string;
 }
 
 /** Today as ISO, in the browser's own zone — a date is a calendar day, not an instant. */
@@ -124,8 +133,9 @@ const toIso = (date: Date): string => isoToday(date);
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-/** "23 Sep 2026". Written out rather than `Intl`: en-IN and en-GB both say
- *  "Sept", and a date field one letter wider than its neighbours reads wrong. */
+/** "1 Apr 2026" — the owner confirmed this face on 23 Sep 2026. Written out
+ *  rather than `Intl`: en-IN and en-GB both say "Sept", and the face must not
+ *  follow the device's locale (04/01 on an en-US laptop is 1 April here). */
 const defaultFormat = (iso: string): string => {
   const date = toDate(iso);
   return date ? `${date.getDate()} ${MONTHS[date.getMonth()]} ${date.getFullYear()}` : iso;
@@ -143,6 +153,8 @@ const UbDateInputInner = forwardRef<HTMLButtonElement, UbDateInputProps>(functio
     className,
     placeholder,
     formatDate = defaultFormat,
+    appearance = 'field',
+    inlineLabel,
     disabled,
     id,
     name,
@@ -200,22 +212,51 @@ const UbDateInputInner = forwardRef<HTMLButtonElement, UbDateInputProps>(functio
       aria-describedby={ariaDescribedBy}
       aria-haspopup="dialog"
       aria-expanded={open}
-      className={cn(
-        'ds-body-base-regular flex h-10 w-full items-center gap-2 rounded-control border bg-surface-card px-3 text-left',
-        'outline-none transition-colors duration-fast ease-standard',
-        'disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-text-muted',
-        ML_CONTROL_TONE(isInvalid)
-      )}
+      className={
+        appearance === 'inline'
+          ? cn(
+              'ds-body-base-medium inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-control px-2 text-left text-text-primary',
+              'outline-none transition-colors duration-fast ease-standard hover:bg-surface-hover focus-visible:shadow-focus',
+              'disabled:cursor-not-allowed disabled:text-text-muted',
+              isInvalid && 'text-formError'
+            )
+          : cn(
+              'ds-body-base-regular flex h-10 w-full items-center gap-2 rounded-control border bg-surface-card px-3 text-left',
+              'outline-none transition-colors duration-fast ease-standard',
+              'disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-text-muted',
+              ML_CONTROL_TONE(isInvalid)
+            )
+      }
     >
-      <Calendar aria-hidden className="h-4 w-4 shrink-0 text-text-tertiary" />
-      <span className={cn('min-w-0 flex-1 truncate', !value && 'text-text-muted')}>
-        {value ? formatDate(value) : (placeholder ?? '')}
-      </span>
+      {appearance === 'inline' ? (
+        <>
+          {inlineLabel && (
+            <span className="ds-body-base-regular text-text-tertiary">{inlineLabel}</span>
+          )}
+          <span className={cn('ds-body-base-medium', !value && 'text-text-muted')}>
+            {value ? formatDate(value) : (placeholder ?? '')}
+          </span>
+          <Calendar aria-hidden className="h-4 w-4 shrink-0 text-text-tertiary" />
+        </>
+      ) : (
+        <>
+          <Calendar aria-hidden className="h-4 w-4 shrink-0 text-text-tertiary" />
+          <span className={cn('min-w-0 flex-1 truncate', !value && 'text-text-muted')}>
+            {value ? formatDate(value) : (placeholder ?? '')}
+          </span>
+        </>
+      )}
     </button>
   );
 
   return (
-    <div className={cn('flex w-full flex-col gap-2', className)}>
+    <div
+      className={cn(
+        'flex flex-col gap-2',
+        appearance === 'inline' ? 'w-auto' : 'w-full',
+        className
+      )}
+    >
       <UbPopover
         open={open}
         onOpenChange={setOpen}

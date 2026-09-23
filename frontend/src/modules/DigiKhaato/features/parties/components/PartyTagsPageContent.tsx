@@ -228,6 +228,7 @@ export function PartyTagsPageContent(): React.JSX.Element {
             manager.canWrite ? (
               <UbButton
                 icon={<Plus className="h-4 w-4" aria-hidden />}
+                iconOnly="mobile"
                 onClick={manager.openCreate}
                 /* Disabled rather than hidden, uniquely on this screen: the
                    reason is stated in the banner directly above it and the fix
@@ -243,7 +244,7 @@ export function PartyTagsPageContent(): React.JSX.Element {
         />
       }
     >
-      <UbStack gap={6}>
+      <UbStack gap={4}>
         {atCeiling ? (
           <UbStatusBanner
             tone="warning"

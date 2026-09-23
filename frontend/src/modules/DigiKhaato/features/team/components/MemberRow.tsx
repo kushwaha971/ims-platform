@@ -39,9 +39,7 @@ export const MemberNameCell = memo(function MemberNameCell({
   );
 });
 
-export const MemberMetaCell = memo(function MemberMetaCell({
-  text,
-}: Readonly<{ text: string }>) {
+export const MemberMetaCell = memo(function MemberMetaCell({ text }: Readonly<{ text: string }>) {
   return (
     <UbText as="span" variant="body-sm" tone="tertiary" truncate>
       {text}

@@ -67,7 +67,10 @@ describe('AcceptInvitePageContent', () => {
     // someone else — is one a retry cannot change, so the message has to stay on
     // screen long enough to read and the only action offered is the one that works.
     service.acceptInvitation = jest.fn().mockRejectedValue({
-      response: { status: 400, data: { error: { code: 'invitation_invalid', message: 'This invitation is not valid.' } } },
+      response: {
+        status: 400,
+        data: { error: { code: 'invitation_invalid', message: 'This invitation is not valid.' } },
+      },
     });
 
     renderWithProviders(<AcceptInvitePageContent token="tok-4" />);

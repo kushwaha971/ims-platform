@@ -41,6 +41,18 @@ export interface UbPageHeaderProps {
   readonly controls?: ReactNode;
   /** One primary action per view (Koper). */
   readonly actions?: ReactNode;
+  /**
+   * The page's everyday pair — a khata's "You gave" / "You got". Beside the
+   * title from `sm` up, before `actions`; on a phone an equal-width row of
+   * its own under the title, like two tabs (owner, 23 Sep 2026), while
+   * `actions` (the ⋯) stay on the title's line.
+   *
+   * One DOM position, rearranged by CSS: the cluster is `display: contents`
+   * on a phone so its children join the title's row, and the pair takes
+   * `order-last basis-full`. Rendering the pair twice and hiding one would
+   * put two "You gave" buttons in the accessibility tree.
+   */
+  readonly primaryActions?: ReactNode;
   readonly className?: string;
 }
 
@@ -49,6 +61,7 @@ function UbPageHeaderBase({
   subtitle,
   controls,
   actions,
+  primaryActions,
   className,
 }: Readonly<UbPageHeaderProps>) {
   return (
@@ -75,22 +88,44 @@ function UbPageHeaderBase({
      * body with it. The `<header>` element stays, because it is still the
      * page's banner to a screen reader.
      */
-    <header className={cn('flex flex-col gap-4', className)}>
-      <div className="flex w-full flex-col gap-4">
-        {/* Figma "top bar": 8 px vertical padding, the title at 20/32 semibold
-            and the sentence under it at 14/20 tertiary, 2 px apart; the
-            actions centred on the pair. */}
-        <div className="flex flex-col gap-3 py-2 lg:flex-row lg:items-center lg:gap-6">
-          <div className="flex min-w-0 flex-col gap-0.5 lg:flex-1">
-            <h1 className="ds-body-xl-semibold truncate leading-8 text-text-primary">{title}</h1>
-            {subtitle && (
-              <p className="ds-body-base-regular leading-5 text-text-tertiary">{subtitle}</p>
-            )}
-          </div>
-          {actions && <div className="flex shrink-0 items-center gap-4">{actions}</div>}
+    <header className={cn('flex flex-col gap-3', className)}>
+      {/* ── One row at every width (owner, 23 Sep 2026) ─────────────────────
+          Title on the left, actions on the right — on a phone too. It was a
+          column below `lg`, so a phone spent three lines on a title, a
+          sentence and a row of buttons before the first figure. Now the
+          actions share the title's line, as icons below `sm` (`iconOnly=
+          "mobile"` on each), and only wrap when even the icons do not fit.
+          When they wrap they start at the LEFT, under the title (owner, same
+          day): the title's `flex-1` is what pushes them right while they share
+          its line, so no `ml-auto` pins them there once they do not.
+
+          The title keeps an 8rem floor so a long action row wraps instead of
+          crushing the name to an ellipsis. No vertical padding: the shell's
+          top inset is the header's. */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <div className="flex min-w-[8rem] flex-1 flex-col gap-0.5">
+          <h1 className="ds-body-xl-semibold truncate leading-8 text-text-primary">{title}</h1>
+          {subtitle && (
+            <p className="ds-body-base-regular truncate leading-5 text-text-tertiary">{subtitle}</p>
+          )}
         </div>
-        {controls}
+        {(actions || primaryActions) && (
+          <div
+            className={cn(
+              'flex shrink-0 flex-wrap items-center gap-2',
+              primaryActions && 'max-sm:contents'
+            )}
+          >
+            {primaryActions && (
+              <div className="flex items-center gap-2 max-sm:order-last max-sm:grid max-sm:basis-full max-sm:grid-cols-2 max-sm:[&>*]:w-full">
+                {primaryActions}
+              </div>
+            )}
+            {actions}
+          </div>
+        )}
       </div>
+      {controls}
     </header>
   );
 }

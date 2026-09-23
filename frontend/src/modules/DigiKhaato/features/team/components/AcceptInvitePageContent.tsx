@@ -39,9 +39,7 @@ import { acceptInvitation } from '../api/invitationService';
  */
 type Phase = 'working' | 'joined' | 'failed';
 
-export function AcceptInvitePageContent({
-  token,
-}: Readonly<{ token: string }>): React.JSX.Element {
+export function AcceptInvitePageContent({ token }: Readonly<{ token: string }>): React.JSX.Element {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
   const router = useRouter();
@@ -89,7 +87,9 @@ export function AcceptInvitePageContent({
       try {
         await acceptInvitation(token);
         // The membership is new, so the cached session predates it.
-        await dispatch(fetchSession()).unwrap().catch(() => undefined);
+        await dispatch(fetchSession())
+          .unwrap()
+          .catch(() => undefined);
         setPhase('joined');
       } catch (error) {
         setMessage(toApiError(error, 'team.accept.failed').message);

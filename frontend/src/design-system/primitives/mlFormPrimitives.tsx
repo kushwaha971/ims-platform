@@ -235,6 +235,10 @@ export interface MLTabsProps<T extends string> {
   readonly children: ReactNode;
   readonly idPrefix?: string;
   readonly className?: string;
+  /** `fit`: tabs as wide as their labels, left-aligned. `fill` shares the row. */
+  readonly layout?: 'fill' | 'fit';
+  /** A control at the right end of the tab row — a filter that scopes every tab. */
+  readonly trailing?: ReactNode;
 }
 
 /**
@@ -249,6 +253,8 @@ export function MLTabs<T extends string>({
   children,
   idPrefix,
   className,
+  layout = 'fill',
+  trailing,
 }: Readonly<MLTabsProps<T>>): React.JSX.Element {
   const generated = useId();
   const prefix = idPrefix ?? generated;
@@ -274,36 +280,43 @@ export function MLTabs<T extends string>({
 
   return (
     <div className={cn('flex w-full flex-col gap-4', className)}>
-      <div
-        role="tablist"
-        aria-label={ariaLabel}
-        onKeyDown={onKeyDown}
-        className="flex w-full items-center gap-1 border-b border-border-hairline"
-      >
-        {tabs.map((tab) => {
-          const active = tab.value === value;
-          return (
-            <button
-              key={tab.value}
-              type="button"
-              role="tab"
-              id={`${prefix}-tab-${tab.value}`}
-              aria-selected={active}
-              aria-controls={`${prefix}-panel-${tab.value}`}
-              tabIndex={active ? 0 : -1}
-              onClick={() => onValueChange(tab.value)}
-              className={cn(
-                'ds-body-sm-medium min-h-11 flex-1 border-b-2 px-4 py-2',
-                'transition-colors duration-fast ease-standard',
-                active
-                  ? 'border-accent text-text-accent'
-                  : 'border-transparent text-text-tertiary hover:text-text-primary'
-              )}
-            >
-              {tab.label}
-            </button>
-          );
-        })}
+      <div className="flex w-full flex-wrap items-center gap-x-4 gap-y-2 border-b border-border-hairline">
+        <div
+          role="tablist"
+          aria-label={ariaLabel}
+          onKeyDown={onKeyDown}
+          className={cn(
+            '-mb-px flex items-center gap-1',
+            layout === 'fill' ? 'w-full' : 'max-w-full overflow-x-auto'
+          )}
+        >
+          {tabs.map((tab) => {
+            const active = tab.value === value;
+            return (
+              <button
+                key={tab.value}
+                type="button"
+                role="tab"
+                id={`${prefix}-tab-${tab.value}`}
+                aria-selected={active}
+                aria-controls={`${prefix}-panel-${tab.value}`}
+                tabIndex={active ? 0 : -1}
+                onClick={() => onValueChange(tab.value)}
+                className={cn(
+                  'ds-body-base-medium h-10 whitespace-nowrap border-b-2 px-4',
+                  layout === 'fill' ? 'flex-1' : 'flex-none',
+                  'transition-colors duration-fast ease-standard',
+                  active
+                    ? 'border-accent text-text-accent'
+                    : 'border-transparent text-text-tertiary hover:text-text-primary'
+                )}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+        {trailing && <div className="ml-auto flex items-center gap-2 pb-1">{trailing}</div>}
       </div>
       <div
         role="tabpanel"

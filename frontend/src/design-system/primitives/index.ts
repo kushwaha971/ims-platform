@@ -56,6 +56,7 @@ export {
   MLAlertTitle,
   MLBadge,
   MLButton,
+  mlButtonClasses,
   MLCard,
   MLCardContent,
   MLCardHeader,

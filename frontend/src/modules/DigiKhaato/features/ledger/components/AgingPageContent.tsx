@@ -8,12 +8,11 @@ import { useRouter } from 'next/navigation';
 import { Download } from 'lucide-react';
 
 import {
+  UbActionLink,
   UbBox,
   UbButton,
   UbDateInput,
   UbEmptyState,
-  UbFilterBar,
-  UbLink,
   UbPageHeader,
   UbPageShell,
   UbStack,
@@ -78,7 +77,7 @@ const PartyTagFilterLazy = dynamic(
  * FR-4, and the payoff for having built LED-04 first. See `AgingColumns`.
  */
 export function AgingPageContent(): React.JSX.Element {
-  const { t, d } = useTranslation();
+  const { t } = useTranslation();
   const router = useRouter();
   const tier = useGridTier();
   const aging = useLedgerAging();
@@ -181,11 +180,11 @@ export function AgingPageContent(): React.JSX.Element {
       (['receivable', 'payable'] as const).map((kind) => ({
         value: kind,
         label: (
-          <UbBox as="span" className="flex flex-col items-center gap-0.5">
-            <UbText as="span" variant="caption" tone="inherit">
+          <UbBox as="span" className="inline-flex items-baseline gap-2">
+            <UbText as="span" variant="inherit" tone="inherit">
               {t(`ledger.aging.${kind}`)}
             </UbText>
-            <UbText as="span" variant="body-medium" tone="inherit" className="ds-num">
+            <UbText as="span" variant="inherit" tone="inherit" className="ds-num-base-semibold">
               {aging.summary ? formatInr(aging.summary[kind]) : '—'}
             </UbText>
           </UbBox>
@@ -208,67 +207,65 @@ export function AgingPageContent(): React.JSX.Element {
 
   return (
     <UbPageShell>
+      {/* The as-of date is the page's scope, so it sits on the header's right
+          beside the export — the owner's rule for every dated screen — and
+          the "As of 23/09/2026" subtitle that repeated it is gone. */}
       <UbPageHeader
         title={t('ledger.aging.title')}
-        subtitle={aging.asOf ? t('ledger.aging.asOfValue', { date: d(aging.asOf) }) : undefined}
         actions={
-          aging.canExport ? (
-            <UbLink
-              href={agingCsvUrl(aging.filters)}
-              variant="body-sm-medium"
-              underline={false}
-              download
-              data-testid="aging-export"
-            >
-              <UbStack as="span" direction="row" align="center" className="gap-1.5">
-                <Download className="h-4 w-4" aria-hidden />
+          <>
+            {/* Text, not a boxed field: the as-of date is read far more
+                often than it is changed, and a form field on a report with no
+                form read as something to fill in. It is still the button that
+                opens the calendar. */}
+            <UbDateInput
+              name="aging-as-of"
+              appearance="inline"
+              inlineLabel={t('ledger.aging.asOf')}
+              aria-label={t('ledger.aging.asOf')}
+              placeholder={t('ledger.entry.date.placeholder')}
+              value={filters.asOf}
+              max={today}
+              onChange={(value: string | null) => setAsOf(value || today)}
+            />
+            {aging.canExport && (
+              <UbActionLink
+                href={agingCsvUrl(aging.filters)}
+                download
+                icon={<Download className="h-4 w-4" aria-hidden />}
+                iconOnly="mobile"
+                data-testid="aging-export"
+              >
                 {t('ledger.aging.export')}
-              </UbStack>
-            </UbLink>
-          ) : undefined
+              </UbActionLink>
+            )}
+          </>
         }
       />
 
-      <UbStack gap={4} className="pt-4" data-testid="aging-screen">
+      <UbStack gap={4} data-testid="aging-screen">
         <UbTabs<AgingKind>
           value={filters.kind}
           onValueChange={setKind}
           tabs={tabs}
           ariaLabel={t('ledger.aging.side')}
+          layout="fit"
+          /* Only once there are tags to pick, for the reason the party list
+             gives: a picker that opens empty is the first thing a merchant
+             with no tags would meet. */
+          trailing={
+            tags.length > 0 || filters.tag ? (
+              <PartyTagFilterLazy
+                t={t}
+                value={filters.tag ?? ''}
+                onChange={handleTag}
+                tags={tags}
+                className="w-48 shrink-0"
+              />
+            ) : undefined
+          }
         >
           <UbStack gap={4}>
-            <UbFilterBar>
-              <UbStack direction="row" align="center" className="gap-2">
-                <UbText
-                  as="span"
-                  variant="inherit"
-                  className="ds-body-base-medium whitespace-nowrap text-text-primary"
-                >
-                  {t('ledger.aging.asOf')}
-                </UbText>
-                <UbDateInput
-                  name="aging-as-of"
-                  aria-label={t('ledger.aging.asOf')}
-                  placeholder={t('ledger.entry.date.placeholder')}
-                  value={filters.asOf}
-                  max={today}
-                  onChange={(value: string | null) => setAsOf(value || today)}
-                />
-              </UbStack>
-              {/* Only once there are tags to pick, for the reason the party
-                  list gives: a picker that opens empty is the first thing a
-                  merchant with no tags would meet. */}
-              {(tags.length > 0 || filters.tag) && (
-                <PartyTagFilterLazy
-                  t={t}
-                  value={filters.tag ?? ''}
-                  onChange={handleTag}
-                  tags={tags}
-                  className="w-48 shrink-0"
-                />
-              )}
-            </UbFilterBar>
-
             {aging.asOfProblem && (
               <UbStatusBanner tone="error" title={t('ledger.aging.asOf.future')} />
             )}

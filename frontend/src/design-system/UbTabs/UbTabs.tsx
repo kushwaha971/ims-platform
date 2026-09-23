@@ -27,6 +27,10 @@ export interface UbTabsProps<T extends string> {
   readonly ariaLabel: string;
   readonly children: ReactNode;
   readonly className?: string;
+  /** `fit` — tabs as wide as their labels; `fill` (default) shares the row. */
+  readonly layout?: 'fill' | 'fit';
+  /** A control at the right end of the tab row, scoping every tab. */
+  readonly trailing?: ReactNode;
 }
 
 export function UbTabs<T extends string>({
@@ -36,6 +40,8 @@ export function UbTabs<T extends string>({
   ariaLabel,
   children,
   className,
+  layout,
+  trailing,
 }: Readonly<UbTabsProps<T>>): React.JSX.Element {
   return (
     <MLTabs
@@ -44,6 +50,8 @@ export function UbTabs<T extends string>({
       tabs={tabs}
       ariaLabel={ariaLabel}
       className={className}
+      layout={layout}
+      trailing={trailing}
     >
       {children}
     </MLTabs>

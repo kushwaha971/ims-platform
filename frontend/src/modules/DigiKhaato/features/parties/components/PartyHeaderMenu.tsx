@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 
 import { Archive, BookOpen, FileText, MoreHorizontal, Pencil } from 'lucide-react';
 
-
 import { UbButton, UbDialog, UbStack } from 'src/design-system';
 import type { TranslateFn } from 'src/hooks/useTranslation';
 
@@ -108,8 +107,9 @@ export function PartyHeaderMenu({
           a button announced as just "More" tells somebody navigating by control
           nothing about what it is more of. */}
       <UbButton
-        variant="ghost"
+        variant="outlineNeutral"
         icon={<MoreHorizontal className="h-4 w-4" aria-hidden />}
+        iconOnly="mobile"
         aria-label={t('parties.detail.moreActions')}
         onClick={() => setOpen(true)}
       >

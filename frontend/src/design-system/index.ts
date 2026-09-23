@@ -149,6 +149,8 @@ export type { UbFilterBarProps, UbFilterChipGroupProps, UbFilterChipProps } from
 // ── Wave 1 — controls ────────────────────────────────────────────────────────
 export { UbButton } from './UbButton';
 export type { UbButtonProps, UbButtonSize, UbButtonVariant } from './UbButton';
+export { UbActionLink } from './UbActionLink';
+export type { UbActionLinkProps } from './UbActionLink';
 
 export { UbCheckbox } from './UbCheckbox';
 export type { UbCheckboxProps } from './UbCheckbox';

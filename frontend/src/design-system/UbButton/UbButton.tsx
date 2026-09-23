@@ -55,10 +55,20 @@ export interface UbButtonProps extends Omit<
    * pushed the amount off a 360 px phone, which is the defect that feature's
    * own screenshot sweep exists to catch.
    */
-  readonly iconOnly?: boolean;
+  /**
+   * `'mobile'` — worded from `sm` up, icon-only below it. The owner's rule for
+   * a page header's actions on a phone: they stay on the title's row, at the
+   * right, as icons, so the header costs one line rather than three.
+   */
+  readonly iconOnly?: boolean | 'mobile';
   readonly children: ReactNode;
   readonly className?: string;
 }
+
+/** Below `sm`: a 32 px square (owner: the 40 px ones "look so large" beside a
+ *  title), label kept for AT. Still inside the 44 px row the header gives it. */
+export const ICON_ONLY_MOBILE = 'max-sm:h-8 max-sm:w-8 max-sm:px-0';
+export const LABEL_ONLY_FROM_SM = 'max-sm:sr-only';
 
 const UbButtonInner = forwardRef<HTMLButtonElement, UbButtonProps>(function UbButtonInner(
   {
@@ -84,7 +94,12 @@ const UbButtonInner = forwardRef<HTMLButtonElement, UbButtonProps>(function UbBu
       disabled={disabled || busy}
       aria-busy={busy || undefined}
       aria-disabled={disabled || busy || undefined}
-      className={cn(fullWidth && 'w-full', iconOnly && 'aspect-square px-0', className)}
+      className={cn(
+        fullWidth && 'w-full',
+        iconOnly === true && 'aspect-square px-0',
+        iconOnly === 'mobile' && ICON_ONLY_MOBILE,
+        className
+      )}
       {...rest}
     >
       {busy ? <MLSpinner /> : icon}
@@ -96,7 +111,13 @@ const UbButtonInner = forwardRef<HTMLButtonElement, UbButtonProps>(function UbBu
           no gap and nothing to align — and a caller who gets the slot wrong now
           gets a button that is merely unidiomatic rather than one that is
           visibly broken. */}
-      <span className={cn('inline-flex items-center gap-2', iconOnly && 'sr-only')}>
+      <span
+        className={cn(
+          'inline-flex items-center gap-2',
+          iconOnly === true && 'sr-only',
+          iconOnly === 'mobile' && LABEL_ONLY_FROM_SM
+        )}
+      >
         {busy ? (busyLabel ?? children) : children}
       </span>
     </MLButton>

@@ -41,16 +41,23 @@ export interface UbFilterBarProps {
   readonly children: ReactNode;
   /** A clear-filters control, or anything else that acts on the whole bar. */
   readonly trailing?: ReactNode;
+  /**
+   * Scope controls pinned to the RIGHT of the row, outside the scrolling
+   * track: a date or a range, a switch. The owner's rule is that a screen's
+   * date sits on the right; when the row cannot hold both they wrap under the
+   * chips, starting at the left.
+   */
+  readonly end?: ReactNode;
   readonly className?: string;
 }
 
-function UbFilterBarBase({ children, trailing, className }: Readonly<UbFilterBarProps>) {
+function UbFilterBarBase({ children, trailing, end, className }: Readonly<UbFilterBarProps>) {
   /* `toArray` rather than `map`: it drops nulls and false branches, so a group
      a screen renders conditionally does not leave a rule with nothing on one
      side of it. */
   const groups = Children.toArray(children);
 
-  return (
+  const track = (
     <div
       className={cn(
         'flex items-center gap-3 overflow-x-auto overscroll-x-contain',
@@ -71,6 +78,17 @@ function UbFilterBarBase({ children, trailing, className }: Readonly<UbFilterBar
         </Fragment>
       ))}
       {trailing}
+    </div>
+  );
+
+  if (!end) return track;
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+      {/* The chips keep at least 24rem (or the whole row, if narrower), so on a
+          phone the end cluster wraps to its own line rather than squeezing
+          the chip track to two and a half chips. */}
+      <div className="min-w-[min(100%,24rem)] flex-1">{track}</div>
+      <div className="flex shrink-0 flex-wrap items-center gap-3">{end}</div>
     </div>
   );
 }

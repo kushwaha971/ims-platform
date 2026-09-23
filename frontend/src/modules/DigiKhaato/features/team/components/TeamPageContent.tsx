@@ -11,9 +11,9 @@ import {
   UbConfirmDialog,
   UbPageHeader,
   UbPageShell,
+  UbSectionHeading,
   UbStack,
   UbStatusBanner,
-  UbText,
 } from 'src/design-system';
 import {
   UbDataGrid,
@@ -238,7 +238,7 @@ export function TeamPageContent(): React.JSX.Element {
           />
         }
       >
-        <UbStack gap={6}>
+        <UbStack gap={4}>
           {!canWrite && (
             <UbStatusBanner
               tone="offline"
@@ -254,36 +254,36 @@ export function TeamPageContent(): React.JSX.Element {
           <MembersSection />
 
           <UbStack gap={2}>
-            <UbStack direction="row" justify="between" align="center" gap={2}>
-              <UbText variant="h4">{t('team.tab.invitations')}</UbText>
-              <Can permission="platform.members.manage">
-                <UbButton
-                  variant="secondary"
-                  onClick={openInvite}
-                  icon={<UserPlus aria-hidden className="h-4 w-4" />}
-                  // Class C, online only: disabled rather than hidden (§19.10.4).
-                  disabled={!canWrite}
-                >
-                  {t('team.invite.action')}
-                </UbButton>
-              </Can>
-            </UbStack>
-            <UbText variant="label" tone="tertiary">
-              {t('team.list.count', { count: meta.total })}
-            </UbText>
+            <UbSectionHeading
+              title={t('team.tab.invitations')}
+              meta={t('team.list.count', { count: meta.total })}
+              aside={
+                <Can permission="platform.members.manage">
+                  <UbButton
+                    variant="secondary"
+                    onClick={openInvite}
+                    icon={<UserPlus aria-hidden className="h-4 w-4" />}
+                    // Class C, online only: disabled rather than hidden (§19.10.4).
+                    disabled={!canWrite}
+                  >
+                    {t('team.invite.action')}
+                  </UbButton>
+                </Can>
+              }
+            />
 
-          <UbDataGrid
-            rows={rows}
-            columns={columns}
-            rowId={rowId}
-            rowName={rowName}
-            state={gridState}
-            labels={labels}
-            emptyStates={emptyStates}
-            caption={t('team.list.caption')}
-            page={meta}
-            onPageChange={setPage}
-            onPageSizeChange={handlePageSize}
+            <UbDataGrid
+              rows={rows}
+              columns={columns}
+              rowId={rowId}
+              rowName={rowName}
+              state={gridState}
+              labels={labels}
+              emptyStates={emptyStates}
+              caption={t('team.list.caption')}
+              page={meta}
+              onPageChange={setPage}
+              onPageSizeChange={handlePageSize}
               pageSizeOptions={PAGE_SIZE_OPTIONS}
             />
           </UbStack>

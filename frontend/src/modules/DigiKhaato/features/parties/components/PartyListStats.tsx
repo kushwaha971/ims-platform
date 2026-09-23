@@ -129,7 +129,11 @@ function PartyListStatsBase({
         label={countLabel}
         value={countValue}
         subtext={countNote}
-        className="col-span-2 md:col-span-1"
+        /* The phone fold (owner, 23 Sep 2026: "reduce scrolling"). Below
+           `md` the count tile is dropped: it cost a whole row of a 360 px
+           screen, and the same number is in the list's footer ("of 6").
+           The two money tiles — the ones a merchant acts on — stay. */
+        className="max-md:hidden"
       />
     </UbStatGrid>
   );
