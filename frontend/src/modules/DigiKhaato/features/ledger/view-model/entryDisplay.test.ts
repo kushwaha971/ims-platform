@@ -38,6 +38,7 @@ const entry = (over: Partial<LedgerEntry> = {}): LedgerEntry => ({
   sourceId: null,
   note: '',
   paymentMode: null,
+  upiApp: null,
   reference: '',
   status: 'posted',
   reversedById: null,
@@ -119,6 +120,13 @@ describe('the caption', () => {
      * joined.
      */
     expect(entryCaption(entry({ paymentMode: 'cash' }), t, 'u1')).toBe('ledger.mode.cash');
+    // The app, when known, is the word the merchant heard: "PhonePe", not "UPI".
+    expect(entryCaption(entry({ paymentMode: 'upi', upiApp: 'phonepe' }), t, 'u1')).toBe(
+      'ledger.upiApp.phonepe'
+    );
+    expect(entryCaption(entry({ paymentMode: 'upi', upiApp: null }), t, 'u1')).toBe(
+      'ledger.mode.upi'
+    );
     expect(entryCaption(entry(), t, 'u1')).toBe('');
   });
 
@@ -264,7 +272,6 @@ describe('what an opening row calls its own direction', () => {
   });
 });
 
-
 /**
  * LED-03's presentation rules.
  *
@@ -333,7 +340,6 @@ describe('telling a reversal apart from what it reversed', () => {
     expect(supersededIds([entry(), entry({ id: 'e2' })]).size).toBe(0);
   });
 });
-
 
 describe('what a reversal row says for itself', () => {
   it('is titled by the reason the merchant gave, not by its direction', () => {

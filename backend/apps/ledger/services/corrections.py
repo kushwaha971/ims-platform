@@ -236,6 +236,14 @@ def _write_reversal(*, ctx: Ctx, original: LedgerEntry, reason: str) -> LedgerEn
         source_type=SourceType.LEDGER_ENTRY,
         source_id=original.id,
         reverses=original,
+        # No `payment_mode` and no `upi_app`, deliberately — and not because
+        # nobody thought of it. A reversal runs in the OPPOSITE direction, so
+        # the reversal of a "You got" by PhonePe is a DEBIT, and
+        # `ck_ledger_entry_debit_has_no_mode` forbids a debit a mode (and
+        # `ck_ledger_entry_upi_app_needs_upi` an app without one). Copying them
+        # would make every UPI receipt impossible to reverse. How the money
+        # moved is still one hop away: `reverses` points at the original, which
+        # keeps both columns for ever.
         reason=reason,
         status=EntryStatus.POSTED,
     )
@@ -256,6 +264,7 @@ def _snapshot(entry: LedgerEntry) -> dict:
         "source_type": entry.source_type,
         "note": entry.note,
         "payment_mode": entry.payment_mode,
+        "upi_app": entry.upi_app,
         "reference": entry.reference,
         "status": entry.status,
         "reason": entry.reason,
@@ -323,6 +332,12 @@ def correct_entry(*, ctx: Ctx, entry_id: Any, payload: dict) -> dict:
             "amount": payload.get("amount", original.amount),
             "entry_date": payload.get("entry_date", original.entry_date),
             "payment_mode": payload.get("payment_mode"),
+            # Omitted means "as it was", the contract `EntryCorrectSerializer`
+            # states — so a client that sends only `{amount, payment_mode}`
+            # keeps the PhonePe it did not mention, rather than losing it to a
+            # key it did not know about. An explicit `null` clears it, and the
+            # validator drops it anyway if the corrected mode is not UPI.
+            "upi_app": payload.get("upi_app", original.upi_app),
             "note": payload.get("note", original.note),
             "reference": payload.get("reference", original.reference),
         },
@@ -340,6 +355,9 @@ def correct_entry(*, ctx: Ctx, entry_id: Any, payload: dict) -> dict:
             ("entry_date", cleaned["entry_date"]),
             ("note", cleaned["note"]),
             ("payment_mode", cleaned["payment_mode"]),
+            # PhonePe corrected to Google Pay moves no money and is still a
+            # correction: the app is what the merchant checks a dispute against.
+            ("upi_app", cleaned["upi_app"]),
             ("reference", cleaned["reference"]),
         )
         if getattr(original, field) != value
@@ -371,6 +389,7 @@ def correct_entry(*, ctx: Ctx, entry_id: Any, payload: dict) -> dict:
         source_type=SourceType.MANUAL,
         note=cleaned["note"] if original.entry_type not in PRESERVED_ENTRY_TYPES else original.note,
         payment_mode=cleaned["payment_mode"],
+        upi_app=cleaned["upi_app"],
         reference=cleaned["reference"],
         supersedes=original,
         reason=clean_reason,

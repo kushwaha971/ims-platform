@@ -228,6 +228,17 @@ const main = async () => {
     };
     await go('/parties', 'parties', '[data-testid="ub-grid"]');
     await go(`/parties/${parties.passbook.id}`, 'khata');
+    // The "You got" drawer: the payment chips, then Other UPI's app picker.
+    await page.getByRole('button', { name: /You got/ }).first().click();
+    await page.getByRole('radiogroup').first().waitFor({ timeout: 30000 }).catch(() => {});
+    await settle(page, 800);
+    await page.getByRole('radio', { name: 'PhonePe' }).click().catch(() => {});
+    await settle(page, 300);
+    await page.screenshot({ path: `${SHOT_DIR}/${size.id}/drawer-got.png` });
+    await page.getByRole('radio', { name: 'Other UPI' }).click().catch(() => {});
+    await settle(page, 300);
+    await page.screenshot({ path: `${SHOT_DIR}/${size.id}/drawer-other-upi.png` });
+    await page.keyboard.press('Escape');
     await go(`/parties/${parties.passbook.id}/statement`, 'statement', '[data-testid="statement-screen"]');
     await go('/ledger/aging', 'aging', '[data-testid="aging-screen"]');
     await go('/parties/tags', 'tags');

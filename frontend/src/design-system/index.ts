@@ -151,6 +151,8 @@ export { UbButton } from './UbButton';
 export type { UbButtonProps, UbButtonSize, UbButtonVariant } from './UbButton';
 export { UbActionLink } from './UbActionLink';
 export type { UbActionLinkProps } from './UbActionLink';
+export { UbChoiceChips } from './UbChoiceChips';
+export type { UbChoiceChipOption, UbChoiceChipsProps } from './UbChoiceChips';
 
 export { UbCheckbox } from './UbCheckbox';
 export type { UbCheckboxProps } from './UbCheckbox';

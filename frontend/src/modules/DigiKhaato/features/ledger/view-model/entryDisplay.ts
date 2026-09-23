@@ -129,8 +129,7 @@ export const amountLabelRepeatsTitle = (entry: LedgerEntry): boolean =>
  * last line apart from a sale at a glance, and the words "Opening balance"
  * alone do not do it — a merchant can type those words into a note.
  */
-export const isOpeningEntry = (entry: LedgerEntry): boolean =>
-  entry.entryType === 'opening';
+export const isOpeningEntry = (entry: LedgerEntry): boolean => entry.entryType === 'opening';
 
 /**
  * LED-03 BR-6 — may this row be reversed or corrected from the khata?
@@ -206,7 +205,10 @@ export const entryCaption = (
   viewerId: string | null
 ): string => {
   const parts: string[] = [];
-  if (entry.paymentMode) parts.push(t(`ledger.mode.${entry.paymentMode}`));
+  /* "PhonePe" rather than "UPI" when the app is known: it is the word the
+     merchant heard at the counter, and the one they will look for. */
+  if (entry.paymentMode === 'upi' && entry.upiApp) parts.push(t(`ledger.upiApp.${entry.upiApp}`));
+  else if (entry.paymentMode) parts.push(t(`ledger.mode.${entry.paymentMode}`));
   if (entry.reference.trim()) parts.push(entry.reference.trim());
   if (entry.createdBy && entry.createdBy.id !== viewerId && entry.createdBy.name) {
     parts.push(t('ledger.entry.by', { name: entry.createdBy.name }));

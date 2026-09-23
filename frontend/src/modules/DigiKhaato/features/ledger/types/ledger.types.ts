@@ -1,4 +1,4 @@
-import type { PaymentMode } from 'src/types/domain.types';
+import type { PaymentMode, UpiApp } from 'src/types/domain.types';
 
 /**
  * Part 19 §19.2.3 — the ledger feature's own types.
@@ -40,12 +40,7 @@ export type LedgerEntryType =
   | 'correction';
 
 export type LedgerSourceType =
-  | 'manual'
-  | 'sales_document'
-  | 'purchase_document'
-  | 'payment'
-  | 'expense'
-  | 'ledger_entry';
+  'manual' | 'sales_document' | 'purchase_document' | 'payment' | 'expense' | 'ledger_entry';
 
 /** Canon §0.7 — two values, never a third. A line is standing or it was undone. */
 export type LedgerEntryStatus = 'posted' | 'reversed';
@@ -68,6 +63,8 @@ export interface LedgerEntryApiRow {
   readonly source_id: string | null;
   readonly note: string;
   readonly payment_mode: PaymentMode | null;
+  /** Absent from rows written before the column existed; treat as null. */
+  readonly upi_app?: UpiApp | null;
   readonly reference: string;
   readonly status: LedgerEntryStatus;
   readonly reversed_by_id: string | null;
@@ -91,6 +88,8 @@ export interface LedgerEntry {
   readonly sourceId: string | null;
   readonly note: string;
   readonly paymentMode: PaymentMode | null;
+  /** Only ever set when `paymentMode` is `upi`. */
+  readonly upiApp: UpiApp | null;
   readonly reference: string;
   readonly status: LedgerEntryStatus;
   readonly reversedById: string | null;
@@ -118,6 +117,8 @@ export interface LedgerEntryFormValues {
   readonly note: string;
   /** Required when `direction` is `credit`; ignored by the server otherwise. */
   readonly paymentMode: PaymentMode | '';
+  /** Which UPI app, when the mode is `upi`; optional even then. */
+  readonly upiApp: UpiApp | '';
   readonly reference: string;
 }
 
@@ -193,6 +194,7 @@ export interface LedgerCorrectionValues {
   readonly entryDate?: string;
   readonly note?: string;
   readonly paymentMode?: PaymentMode | '';
+  readonly upiApp?: UpiApp | '';
   readonly reference?: string;
   readonly reason: string;
 }
@@ -204,6 +206,7 @@ export interface LedgerCorrectionFormValues {
   readonly entryDate: string;
   readonly note: string;
   readonly paymentMode: PaymentMode | '';
+  readonly upiApp: UpiApp | '';
   readonly reference: string;
   readonly reason: string;
 }

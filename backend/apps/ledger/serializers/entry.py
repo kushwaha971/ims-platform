@@ -10,7 +10,7 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
-from apps.common.constants import Direction, PaymentMode
+from apps.common.constants import Direction, PaymentMode, UpiApp
 from apps.common.serializers import MoneySerializerField
 from apps.ledger.constants import NOTE_MAX_LENGTH, REFERENCE_MAX_LENGTH, EntryType, SourceType
 from apps.ledger.models import LedgerEntry
@@ -52,6 +52,7 @@ class LedgerEntrySerializer(serializers.ModelSerializer):
             "source_id",
             "note",
             "payment_mode",
+            "upi_app",
             "reference",
             "status",
             "reversed_by_id",
@@ -123,6 +124,16 @@ class LedgerEntryWriteSerializer(serializers.Serializer):
     )
     payment_mode = serializers.ChoiceField(
         choices=PaymentMode.choices, required=False, allow_null=True, default=None
+    )
+    # Which UPI app. Optional, and meaningful only with `payment_mode='upi'` —
+    # the service drops it silently otherwise, so a client may leave the pick in
+    # form state after switching the mode. The choice list bounds the SHAPE; an
+    # unknown app is a 400 naming this field.
+    upi_app = serializers.ChoiceField(
+        choices=UpiApp.choices,
+        required=False,
+        allow_null=True,
+        error_messages={"invalid_choice": "Choose a UPI app from the list."},
     )
     reference = serializers.CharField(
         max_length=REFERENCE_MAX_LENGTH, required=False, allow_blank=True, default=""
@@ -198,6 +209,10 @@ class EntryCorrectSerializer(EntryReverseSerializer):
     `payment_mode` is `allow_null` because clearing it is a real correction: a
     "You got" recorded as UPI that was actually cash gets a new mode, and a
     credit corrected into a debit has none at all.
+
+    `upi_app` is `allow_null` for the same reason, and OMITTING it keeps the
+    original's app (unlike `payment_mode`, which the service does not default):
+    a client that does not know the field must not erase it by not sending it.
     """
 
     direction = serializers.ChoiceField(choices=Direction.choices, required=False)
@@ -206,6 +221,12 @@ class EntryCorrectSerializer(EntryReverseSerializer):
     note = serializers.CharField(max_length=NOTE_MAX_LENGTH, required=False, allow_blank=True)
     payment_mode = serializers.ChoiceField(
         choices=PaymentMode.choices, required=False, allow_null=True
+    )
+    upi_app = serializers.ChoiceField(
+        choices=UpiApp.choices,
+        required=False,
+        allow_null=True,
+        error_messages={"invalid_choice": "Choose a UPI app from the list."},
     )
     reference = serializers.CharField(
         max_length=REFERENCE_MAX_LENGTH, required=False, allow_blank=True

@@ -88,6 +88,7 @@ const toEntry = (row: LedgerEntryApiRow): LedgerEntry => ({
   sourceId: row.source_id,
   note: row.note ?? '',
   paymentMode: row.payment_mode,
+  upiApp: row.upi_app ?? null,
   reference: row.reference ?? '',
   status: row.status,
   reversedById: row.reversed_by_id,
@@ -134,6 +135,9 @@ const toWireBody = (values: LedgerEntryFormValues): Record<string, unknown> => {
     ...(isCredit
       ? {
           payment_mode: values.paymentMode || undefined,
+          // The app only rides with UPI; for any other mode it is form state
+          // left over from a chip the merchant tapped and moved off.
+          upi_app: values.paymentMode === 'upi' ? values.upiApp || undefined : undefined,
           reference: values.reference.trim() || undefined,
         }
       : {}),
@@ -227,7 +231,11 @@ export const listPartyEntries = async (
  */
 export const postOpeningBalance = async (
   partyId: string,
-  values: { readonly amount: string; readonly direction: 'debit' | 'credit'; readonly asOf: string },
+  values: {
+    readonly amount: string;
+    readonly direction: 'debit' | 'credit';
+    readonly asOf: string;
+  },
   idempotencyKey: string
 ): Promise<LedgerEntryPostResult> => {
   const response = await api.post<LedgerEntryApiResponse>(
@@ -267,7 +275,6 @@ export const postLedgerEntry = async (
     warnings: (response.data.meta?.warnings ?? []).map(toWarning),
   };
 };
-
 
 // ── LED-03: reversing and correcting ────────────────────────────────────────
 
@@ -318,6 +325,18 @@ const toCorrectionBody = (
        a credit without one. */
     if (original.direction !== 'credit' && body.payment_mode === undefined) {
       body.payment_mode = values.paymentMode || null;
+    }
+    /* The app is sent only when it CHANGED and the entry will end up as UPI.
+       Omitted means "as it was" on the server, which is what keeps PhonePe on
+       an entry whose amount alone was corrected. Moving off UPI needs nothing:
+       the server drops the app with the mode. */
+    const finalMode = values.paymentMode ?? original.paymentMode ?? '';
+    if (
+      finalMode === 'upi' &&
+      values.upiApp !== undefined &&
+      (values.upiApp || null) !== original.upiApp
+    ) {
+      body.upi_app = values.upiApp || null;
     }
   }
   return body;

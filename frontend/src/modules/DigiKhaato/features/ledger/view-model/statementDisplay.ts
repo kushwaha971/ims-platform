@@ -1,8 +1,4 @@
-import {
-  DEFAULT_PRESET,
-  FY_START_MONTH,
-  STATEMENT_PRESETS,
-} from '../constants/statementPeriod';
+import { DEFAULT_PRESET, FY_START_MONTH, STATEMENT_PRESETS } from '../constants/statementPeriod';
 
 import type { StatementFilters, StatementPreset, StatementRow } from '../types/statement.types';
 
@@ -127,10 +123,7 @@ export const resolvePreset = (
  * pasted looks like; a preset with no dates is resolved by the caller against
  * the tenant's today.
  */
-export const filtersFromQuery = (
-  query: URLSearchParams,
-  today: string
-): StatementFilters => {
+export const filtersFromQuery = (query: URLSearchParams, today: string): StatementFilters => {
   const from = query.get('from');
   const to = query.get('to');
   const raw = query.get('preset');
@@ -139,7 +132,8 @@ export const filtersFromQuery = (
     : from || to
       ? 'custom'
       : DEFAULT_PRESET;
-  const resolved = preset === 'custom' ? { dateFrom: from, dateTo: to } : resolvePreset(preset, today);
+  const resolved =
+    preset === 'custom' ? { dateFrom: from, dateTo: to } : resolvePreset(preset, today);
   return {
     preset,
     dateFrom: resolved.dateFrom,
@@ -175,6 +169,7 @@ export const rangeProblem = (filters: StatementFilters): 'inverted' | 'tooLong' 
   const { dateFrom, dateTo } = filters;
   if (!dateFrom || !dateTo) return null;
   if (dateFrom > dateTo) return 'inverted';
-  const days = (Date.parse(`${dateTo}T00:00:00Z`) - Date.parse(`${dateFrom}T00:00:00Z`)) / 86_400_000;
+  const days =
+    (Date.parse(`${dateTo}T00:00:00Z`) - Date.parse(`${dateFrom}T00:00:00Z`)) / 86_400_000;
   return days > MAX_RANGE_DAYS ? 'tooLong' : null;
 };

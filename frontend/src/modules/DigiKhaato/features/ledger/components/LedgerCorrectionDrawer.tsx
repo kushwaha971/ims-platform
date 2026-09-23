@@ -13,17 +13,17 @@ import {
   UbForm,
   UbMoneyInput,
   UbRadioGroup,
-  UbSelect,
   UbStatusBanner,
   UbTextInput,
 } from 'src/design-system';
 import { useAppSelector } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { selectTenantTimezone } from 'src/redux/slice/sessionSlice';
-import { PAYMENT_MODES } from 'src/types/domain.types';
 import { todayInTenantTz } from 'src/utils/dates';
 
 import { useLedgerSchemas } from '../validation/ledgerSchemas';
+
+import { PaymentMethodField } from './PaymentMethodField';
 
 import type { UseEntryCorrectionResult } from '../hooks/useEntryCorrection';
 import type { LedgerCorrectionFormValues, LedgerDirection } from '../types/ledger.types';
@@ -78,6 +78,7 @@ export function LedgerCorrectionDrawer({
       entryDate: correcting?.entryDate ?? today,
       note: correcting?.note ?? '',
       paymentMode: correcting?.paymentMode ?? '',
+      upiApp: correcting?.upiApp ?? '',
       reference: correcting?.reference ?? '',
       // Never prefilled. The reason is about THIS correction, and a remembered
       // one would be last week's answer attached to today's change.
@@ -125,10 +126,7 @@ export function LedgerCorrectionDrawer({
     [t, isOpening]
   );
 
-  const modeOptions = useMemo(
-    () => PAYMENT_MODES.map((mode) => ({ value: mode, label: t(`ledger.mode.${mode}`) })),
-    [t]
-  );
+  const watchedApp = useWatch({ control: form.control, name: 'upiApp' });
 
   const handleSubmit = useCallback(
     async (values: LedgerCorrectionFormValues) => {
@@ -220,13 +218,22 @@ export function LedgerCorrectionDrawer({
         </UbField>
 
         {isCredit && !isOpening && (
-          <UbField
-            name="paymentMode"
-            label={t('ledger.entry.mode')}
-            placeholder={t('ledger.entry.mode.placeholder')}
-            required
-          >
-            {(field) => <UbSelect {...field} options={modeOptions} />}
+          <UbField name="paymentMode" label={t('ledger.entry.mode')} required>
+            {(field) => (
+              <PaymentMethodField
+                id={field.id}
+                t={t}
+                mode={field.value as LedgerCorrectionFormValues['paymentMode']}
+                app={watchedApp}
+                invalid={field.invalid}
+                describedBy={field['aria-describedby']}
+                onBlur={field.onBlur}
+                onChange={(mode, app) => {
+                  field.onChange(mode);
+                  form.setValue('upiApp', app, { shouldDirty: true });
+                }}
+              />
+            )}
           </UbField>
         )}
 

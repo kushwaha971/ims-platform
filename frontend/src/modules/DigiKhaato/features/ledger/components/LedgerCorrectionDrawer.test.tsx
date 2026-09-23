@@ -48,6 +48,7 @@ const entry = (over: Partial<LedgerEntry> = {}): LedgerEntry => ({
   sourceId: null,
   note: 'Cement bags',
   paymentMode: null,
+  upiApp: null,
   reference: '',
   status: 'posted',
   reversedById: null,
@@ -163,9 +164,7 @@ describe('the correction drawer', () => {
        the point: every one goes through `formatAmount` and not `formatInr`,
        because the copy carries its own ₹. That pair has now met four times in
        this codebase. */
-    await waitFor(() =>
-      expect(store.getState().snackbar.id).toBe('ledger.correction.corrected')
-    );
+    await waitFor(() => expect(store.getState().snackbar.id).toBe('ledger.correction.corrected'));
     expect(store.getState().snackbar.params).toEqual({
       amount: '550.00',
       balance: '2,850.00',
@@ -177,9 +176,7 @@ describe('the correction drawer', () => {
        changed hands: it is the position the book started from. LED-02's form
        asks "They owe me" / "I owe them", and a correction that relabelled the
        same control would be asking a different question about the same row. */
-    store.dispatch(
-      correctionOpened(entry({ entryType: 'opening', note: 'Opening balance' }))
-    );
+    store.dispatch(correctionOpened(entry({ entryType: 'opening', note: 'Opening balance' })));
     renderWithProviders(<Harness />);
 
     expect(await screen.findByRole('radio', { name: 'They owe me' })).toBeInTheDocument();
@@ -194,7 +191,10 @@ describe('the correction drawer', () => {
        screen — saying so where they are standing is the only version of that
        message that helps. */
     ledgerService.correctLedgerEntry.mockRejectedValue(
-      apiError('use_document_void', 'This entry came from a document. Void that document to reverse it.')
+      apiError(
+        'use_document_void',
+        'This entry came from a document. Void that document to reverse it.'
+      )
     );
     store.dispatch(correctionOpened(entry()));
     renderWithProviders(<Harness />);

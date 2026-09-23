@@ -13,6 +13,7 @@ export const LEDGER_ENTRY_FIELDS = [
   'entryDate',
   'note',
   'paymentMode',
+  'upiApp',
   'reference',
 ] as const;
 
@@ -32,6 +33,7 @@ export type LedgerEntryField = (typeof LEDGER_ENTRY_FIELDS)[number];
 export const SERVER_FIELD_TO_FORM: Readonly<Record<string, string>> = {
   entry_date: 'entryDate',
   payment_mode: 'paymentMode',
+  upi_app: 'upiApp',
 };
 
 /**
@@ -50,6 +52,7 @@ export const LEDGER_CORRECTION_FIELDS = [
   'entryDate',
   'note',
   'paymentMode',
+  'upiApp',
   'reference',
   'reason',
 ] as const;

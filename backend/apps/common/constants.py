@@ -64,6 +64,40 @@ class PaymentMode(models.TextChoices):
     OTHER = "other", _("Other")
 
 
+class UpiApp(models.TextChoices):
+    """`ledger_entry.upi_app` — which app a UPI payment was made with.
+
+    The APP and not the PSP handle (`@ybl`, `@okaxis`, `@paytm`…), because the
+    app is what both sides of the counter actually know. The customer says
+    "PhonePe kiya", the merchant sees a PhonePe notification or a Paytm
+    soundbox announce it, and that is the word they will look for when a
+    customer disputes a payment a month later. A handle is a bank routing detail
+    most merchants have never read, one app maps to several handles, and a
+    handle names the PAYER's bank rather than anything the merchant saw.
+
+    Only meaningful when `payment_mode == PaymentMode.UPI`. The service drops it
+    silently for every other mode (the client may keep it in form state after
+    the mode is switched), and `ck_ledger_entry_upi_app_needs_upi` is what makes
+    that silence safe.
+
+    Ordered roughly by how often a merchant will hear the name, not
+    alphabetically, and with the two catch-alls last — a client renders the
+    picker in this order.
+    """
+
+    PHONEPE = "phonepe", _("PhonePe")
+    GPAY = "gpay", _("Google Pay")
+    PAYTM = "paytm", _("Paytm")
+    BHIM = "bhim", _("BHIM")
+    AMAZONPAY = "amazonpay", _("Amazon Pay")
+    CRED = "cred", _("CRED")
+    WHATSAPP = "whatsapp", _("WhatsApp Pay")
+    NAVI = "navi", _("Navi")
+    SUPERMONEY = "supermoney", _("super.money")
+    BANK_APP = "bank_app", _("Bank's own app")
+    OTHER = "other", _("Other UPI app")
+
+
 class DocumentKind(models.TextChoices):
     """Part 21 §21.3.1 `platform_document_sequence.kind`."""
 

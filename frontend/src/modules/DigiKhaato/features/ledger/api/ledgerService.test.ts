@@ -54,6 +54,7 @@ const values = (over: Partial<LedgerEntryFormValues> = {}): LedgerEntryFormValue
   entryDate: '2026-09-17',
   note: '',
   paymentMode: '',
+  upiApp: '',
   reference: '',
   ...over,
 });
@@ -110,6 +111,39 @@ describe('posting an entry', () => {
 
     const [, body] = mockApi.post.mock.calls[0];
     expect(body).toMatchObject({ payment_mode: 'upi', reference: 'UTR1' });
+  });
+
+  it('sends the UPI app with a UPI credit', async () => {
+    /** "PhonePe kiya" is the fact the merchant recorded; it must reach the
+     *  server rather than stay in form state. */
+    resolveOk();
+
+    await postLedgerEntry(
+      PARTY,
+      values({ direction: 'credit', paymentMode: 'upi', upiApp: 'phonepe' }),
+      'k'
+    );
+
+    expect(mockApi.post.mock.calls[0][1]).toMatchObject({
+      payment_mode: 'upi',
+      upi_app: 'phonepe',
+    });
+  });
+
+  it('drops a leftover UPI app when the mode is not UPI', async () => {
+    /** The merchant tapped PhonePe, then Cash. The app is form state from a
+     *  chip they moved off; sending it would ask the server to discard it. */
+    resolveOk();
+
+    await postLedgerEntry(
+      PARTY,
+      values({ direction: 'credit', paymentMode: 'cash', upiApp: 'phonepe' }),
+      'k'
+    );
+
+    const body = mockApi.post.mock.calls[0][1] as Record<string, unknown>;
+    expect(body.payment_mode).toBe('cash');
+    expect(body.upi_app).toBeUndefined();
   });
 
   it('sends the override only when there is one', async () => {
@@ -202,7 +236,9 @@ describe('reading a khata', () => {
      * and not `/…/ledger-entries?cursor=&limit=`. The URL is the request's
      * identity, and two spellings of one request are two cache entries.
      */
-    mockApi.get.mockResolvedValue({ data: { data: [], meta: { next_cursor: null, has_more: false } } });
+    mockApi.get.mockResolvedValue({
+      data: { data: [], meta: { next_cursor: null, has_more: false } },
+    });
 
     await listPartyEntries(PARTY);
 
@@ -210,7 +246,9 @@ describe('reading a khata', () => {
   });
 
   it('carries the cursor when there is one', async () => {
-    mockApi.get.mockResolvedValue({ data: { data: [], meta: { next_cursor: null, has_more: false } } });
+    mockApi.get.mockResolvedValue({
+      data: { data: [], meta: { next_cursor: null, has_more: false } },
+    });
 
     await listPartyEntries(PARTY, { cursor: 'abc123', limit: 20 });
 
@@ -274,7 +312,6 @@ describe('reading a khata', () => {
   });
 });
 
-
 /**
  * LED-03 on the wire.
  *
@@ -296,6 +333,7 @@ const ORIGINAL: LedgerEntry = {
   sourceId: null,
   note: 'Cement bags',
   paymentMode: null,
+  upiApp: null,
   reference: '',
   status: 'posted',
   reversedById: null,
@@ -312,6 +350,7 @@ const unchangedForm = {
   entryDate: ORIGINAL.entryDate,
   note: ORIGINAL.note,
   paymentMode: '' as const,
+  upiApp: '' as const,
   reference: ORIGINAL.reference,
 };
 
@@ -327,7 +366,11 @@ describe('correcting an entry', () => {
   });
 
   it('sends only the field that changed, plus the reason', async () => {
-    await correctLedgerEntry(ORIGINAL, { ...unchangedForm, amount: '550.00', reason: 'Typo' }, 'k1');
+    await correctLedgerEntry(
+      ORIGINAL,
+      { ...unchangedForm, amount: '550.00', reason: 'Typo' },
+      'k1'
+    );
 
     const [url, body] = mockApi.post.mock.calls[0] as [string, Record<string, unknown>];
     expect(url).toBe(API_PATHS.LEDGER_ENTRY_CORRECT('entry-1'));
@@ -375,6 +418,53 @@ describe('correcting an entry', () => {
     expect(body).toEqual({ amount: '600.00', reason: 'Fix' });
   });
 
+  it('sends the UPI app when only the app changed', async () => {
+    /** A correction from PhonePe to Google Pay is a real correction; a body
+     *  built without the app would be "nothing changed" and refused. */
+    const upiOriginal: LedgerEntry = {
+      ...ORIGINAL,
+      direction: 'credit',
+      entryType: 'manual_got',
+      paymentMode: 'upi',
+      upiApp: 'phonepe',
+    };
+    await correctLedgerEntry(
+      upiOriginal,
+      { ...unchangedForm, direction: 'credit', paymentMode: 'upi', upiApp: 'gpay', reason: 'App' },
+      'k1'
+    );
+
+    const [, body] = mockApi.post.mock.calls[0] as [string, Record<string, unknown>];
+    expect(body).toEqual({ upi_app: 'gpay', reason: 'App' });
+  });
+
+  it('leaves the UPI app out when it did not change', async () => {
+    /** Omitted means "as it was" on the server, which is what keeps PhonePe on
+     *  an entry whose amount alone was corrected. */
+    const upiOriginal: LedgerEntry = {
+      ...ORIGINAL,
+      direction: 'credit',
+      entryType: 'manual_got',
+      paymentMode: 'upi',
+      upiApp: 'phonepe',
+    };
+    await correctLedgerEntry(
+      upiOriginal,
+      {
+        ...unchangedForm,
+        direction: 'credit',
+        paymentMode: 'upi',
+        upiApp: 'phonepe',
+        amount: '550.00',
+        reason: 'Typo',
+      },
+      'k1'
+    );
+
+    const [, body] = mockApi.post.mock.calls[0] as [string, Record<string, unknown>];
+    expect(body).toEqual({ amount: '550.00', reason: 'Typo' });
+  });
+
   it('returns the replacement, the balance and both ids', async () => {
     const result = await correctLedgerEntry(
       ORIGINAL,
@@ -418,7 +508,9 @@ describe('reversing an entry', () => {
 describe('the timeline request', () => {
   it('asks for the struck-through rows only when the toggle is on', async () => {
     mockApi.get.mockReset();
-    mockApi.get.mockResolvedValue({ data: { data: [], meta: { next_cursor: null, has_more: false } } });
+    mockApi.get.mockResolvedValue({
+      data: { data: [], meta: { next_cursor: null, has_more: false } },
+    });
 
     await listPartyEntries(PARTY, {});
     await listPartyEntries(PARTY, { includeReversed: true });

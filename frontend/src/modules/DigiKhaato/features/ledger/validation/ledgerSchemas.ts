@@ -4,7 +4,7 @@ import * as Yup from 'yup';
 
 import { useTranslation } from 'src/hooks/useTranslation';
 import { useValidationSchemas } from 'src/hooks/useValidationSchemas';
-import { PAYMENT_MODES } from 'src/types/domain.types';
+import { PAYMENT_MODES, UPI_APPS } from 'src/types/domain.types';
 
 import type { OpeningBalanceValues } from '../hooks/useOpeningBalance';
 import type { LedgerCorrectionFormValues, LedgerEntryFormValues } from '../types/ledger.types';
@@ -88,6 +88,11 @@ export const useLedgerSchemas = (): LedgerSchemas => {
       // with the error on a field that is hidden for a debit.
       paymentMode: Yup.mixed<(typeof PAYMENT_MODES)[number] | ''>()
         .oneOf([...PAYMENT_MODES, ''])
+        .defined()
+        .default(''),
+      // Optional even for UPI: "UPI, don't know which app" is a true answer.
+      upiApp: Yup.mixed<(typeof UPI_APPS)[number] | ''>()
+        .oneOf([...UPI_APPS, ''])
         .defined()
         .default(''),
       reference: v.boundedText(64),

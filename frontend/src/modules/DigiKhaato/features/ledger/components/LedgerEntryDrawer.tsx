@@ -13,18 +13,19 @@ import {
   UbForm,
   UbMoneyInput,
   UbRadioGroup,
-  UbSelect,
   UbStatusBanner,
   UbTextInput,
 } from 'src/design-system';
 import { useAppSelector } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { selectTenantTimezone } from 'src/redux/slice/sessionSlice';
-import { PAYMENT_MODES } from 'src/types/domain.types';
+import { PAYMENT_MODES, UPI_APPS } from 'src/types/domain.types';
 import { todayInTenantTz } from 'src/utils/dates';
 import { formatAmount } from 'src/utils/money';
 
 import { useLedgerSchemas } from '../validation/ledgerSchemas';
+
+import { PaymentMethodField } from './PaymentMethodField';
 
 import type { UseLedgerEntryFormResult } from '../hooks/useLedgerEntryForm';
 import type { LedgerDirection, LedgerEntryFormValues } from '../types/ledger.types';
@@ -92,6 +93,7 @@ export function LedgerEntryDrawer({
         entryDate: today,
         note: '',
         paymentMode: lastPaymentMode(),
+        upiApp: lastUpiApp(),
         reference: '',
       },
     [draft, direction, today]
@@ -126,10 +128,7 @@ export function LedgerEntryDrawer({
     [t]
   );
 
-  const modeOptions = useMemo(
-    () => PAYMENT_MODES.map((mode) => ({ value: mode, label: t(`ledger.mode.${mode}`) })),
-    [t]
-  );
+  const watchedApp = useWatch({ control: form.control, name: 'upiApp' });
 
   /* A credit arriving with no mode gets the one this device used last — which
      for almost every shop is the same mode every time, and is the difference
@@ -143,7 +142,7 @@ export function LedgerEntryDrawer({
   const handleSubmit = useCallback(
     async (values: LedgerEntryFormValues) => {
       if (values.direction === 'credit' && values.paymentMode) {
-        rememberPaymentMode(values.paymentMode);
+        rememberPaymentMode(values.paymentMode, values.upiApp);
       }
       await submit(values, setError);
     },
@@ -272,26 +271,28 @@ export function LedgerEntryDrawer({
         {/* Shown only for a credit. The field keeps its value when the merchant
             switches to "You gave" and back — the server drops it silently for a
             debit (EC-9) and the service does not send it. */}
-        {/* FRD §7 asks for a row of six chips with icons. `UbSelect` here, and
-            the reason is that the chip row does not exist: `UbFilterChip` is a
-            filter TOGGLE with a pressed state, not a single-choice group, and
-            §23's rule is that a `Ub*` is added when the pattern recurs in two
-            features. Payment mode does recur — PAY-01 and EXP-01 both carry it
-            — so `UbChoiceChips` lands with the second caller, and this call
-            site changes to it in one line.
-
-            The tap count that matters is already spent: `lastPaymentMode`
-            pre-selects what this device used last, which for almost every shop
-            is the same mode every time, so the common path is zero taps on this
-            control either way. */}
+        {/* FRD §7's row of chips — `UbChoiceChips` now that the pattern has
+            its second caller (the correction drawer), flattened so PhonePe,
+            Google Pay and Paytm are one tap each rather than "UPI" and then a
+            second question. `lastPaymentMode` still pre-selects what this
+            device used last, app included, so the common path is zero taps. */}
         {isCredit && (
-          <UbField
-            name="paymentMode"
-            label={t('ledger.entry.mode')}
-            placeholder={t('ledger.entry.mode.placeholder')}
-            required
-          >
-            {(field) => <UbSelect {...field} options={modeOptions} />}
+          <UbField name="paymentMode" label={t('ledger.entry.mode')} required>
+            {(field) => (
+              <PaymentMethodField
+                id={field.id}
+                t={t}
+                mode={field.value as LedgerEntryFormValues['paymentMode']}
+                app={watchedApp}
+                invalid={field.invalid}
+                describedBy={field['aria-describedby']}
+                onBlur={field.onBlur}
+                onChange={(mode, app) => {
+                  field.onChange(mode);
+                  setValue('upiApp', app, { shouldDirty: true });
+                }}
+              />
+            )}
           </UbField>
         )}
 
@@ -342,9 +343,24 @@ const lastPaymentMode = (): LedgerEntryFormValues['paymentMode'] => {
   }
 };
 
-const rememberPaymentMode = (mode: string): void => {
+const LAST_APP_KEY = 'ub.lastUpiApp';
+
+const lastUpiApp = (): LedgerEntryFormValues['upiApp'] => {
+  try {
+    const stored = window.localStorage.getItem(LAST_APP_KEY);
+    return UPI_APPS.includes(stored as never) ? (stored as never) : '';
+  } catch {
+    return '';
+  }
+};
+
+const rememberPaymentMode = (mode: string, app: string): void => {
   try {
     window.localStorage.setItem(LAST_MODE_KEY, mode);
+    // Cleared for a non-UPI mode, so a shop that switches to cash does not
+    // get last month's PhonePe back the next time somebody pays by UPI.
+    if (mode === 'upi' && app) window.localStorage.setItem(LAST_APP_KEY, app);
+    else window.localStorage.removeItem(LAST_APP_KEY);
   } catch {
     /* A preference that cannot be stored is not worth a failed save. */
   }

@@ -27,6 +27,7 @@ const entry = (over: Partial<LedgerEntry> = {}): LedgerEntry => ({
   sourceId: null,
   note: '',
   paymentMode: null,
+  upiApp: null,
   reference: '',
   status: 'posted',
   reversedById: null,
@@ -239,7 +240,6 @@ describe('opening the page', () => {
   });
 });
 
-
 /**
  * LED-03 — what a reversal and a correction do to a list the merchant is
  * already looking at.
@@ -274,7 +274,12 @@ describe('a reversal, on the rows already on screen', () => {
   const reversed = (state: LedgerEntryState): LedgerEntryState =>
     reducer(state, {
       type: reverseEntry.fulfilled.type,
-      payload: { entry: reversal, balance: '2300.00', originalId: 'original', reversalId: 'reversal' },
+      payload: {
+        entry: reversal,
+        balance: '2300.00',
+        originalId: 'original',
+        reversalId: 'reversal',
+      },
       meta: { arg: { entry: original, reason: 'Duplicate', idempotencyKey: 'k' } },
     });
 
@@ -302,7 +307,7 @@ describe('a reversal, on the rows already on screen', () => {
     expect(next.summary).toEqual({ totalDebit: '2300.00', totalCredit: '0.00', entryCount: 0 });
   });
 
-  it('leaves another party\'s timeline alone', () => {
+  it("leaves another party's timeline alone", () => {
     /* The row is found by id and there is no id to find, so nothing happens —
        which is what has to happen: a reversal answered after the merchant has
        navigated to the next customer must not delete a row from THEIR khata. */

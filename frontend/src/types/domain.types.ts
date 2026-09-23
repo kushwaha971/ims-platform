@@ -117,3 +117,28 @@ export type InvitationStatus = (typeof INVITATION_STATUSES)[number];
  */
 export const PAYMENT_MODES = ['cash', 'upi', 'bank', 'cheque', 'card', 'other'] as const;
 export type PaymentMode = (typeof PAYMENT_MODES)[number];
+
+/**
+ * Which UPI app the money came through — `ledger_entry.upi_app`, meaningful
+ * only when the mode is `upi` (the server nulls it otherwise). The app rather
+ * than a PSP handle because it is what the merchant hears: "PhonePe kiya".
+ * Order matches the server's `UpiApp` choices.
+ */
+export const UPI_APPS = [
+  'phonepe',
+  'gpay',
+  'paytm',
+  'bhim',
+  'amazonpay',
+  'cred',
+  'whatsapp',
+  'navi',
+  'supermoney',
+  'bank_app',
+  'other',
+] as const;
+export type UpiApp = (typeof UPI_APPS)[number];
+
+/** The three apps that carry most of India's UPI volume get chips of their
+ *  own; the rest sit behind "Other UPI". */
+export const FEATURED_UPI_APPS = ['phonepe', 'gpay', 'paytm'] as const satisfies readonly UpiApp[];

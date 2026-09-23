@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from django.db import models
 
-from apps.common.constants import Direction, PaymentMode
+from apps.common.constants import Direction, PaymentMode, UpiApp
 from apps.common.db.fields import MoneyField, uuid7_pk
 from apps.common.models import ImmutableModel, TenantModel
 from apps.ledger.constants import (
@@ -39,6 +39,13 @@ class LedgerEntry(TenantModel, ImmutableModel):
     `reversed`. Those two writes on the original are the entire set of changes
     the product ever makes to a posted line, which is why they are the entire
     set the trigger permits.
+
+    **Adding a column here needs a trigger migration too.** The trigger names
+    the frozen columns one by one, so a column it does not name is one an
+    UPDATE may change — 0002's docstring claims the opposite, and 0004 (which
+    froze `upi_app`) records why that claim is wrong. Re-create
+    `forbid_update_delete()` with the new column in the same migration that
+    adds it, and add a test that `QuerySet.update()` of it raises.
 
     ── Why there is no `updated_at` ──────────────────────────────────────────
     `TimeStampedModel` gives every table one, and Part 21 §21.1 rule 7 asks for
@@ -81,6 +88,12 @@ class LedgerEntry(TenantModel, ImmutableModel):
     payment_mode = models.CharField(
         max_length=16, choices=PaymentMode.choices, null=True, blank=True
     )
+    #: Which UPI app the money came through — "PhonePe kiya" — so a merchant
+    #: checking a disputed payment knows which app's history to open. Only ever
+    #: set when `payment_mode` is `upi` (`ck_ledger_entry_upi_app_needs_upi`);
+    #: the service nulls it silently for every other mode, as it does the mode
+    #: itself on a debit. Optional even for UPI: "UPI, not sure which" is true.
+    upi_app = models.CharField(max_length=16, choices=UpiApp.choices, null=True, blank=True)
     reference = models.CharField(max_length=REFERENCE_MAX_LENGTH, blank=True, default="")
     status = models.CharField(
         max_length=10, choices=EntryStatus.choices, default=EntryStatus.POSTED
@@ -143,6 +156,15 @@ class LedgerEntry(TenantModel, ImmutableModel):
                     | models.Q(direction=Direction.DEBIT, payment_mode__isnull=True)
                 ),
                 name="ck_ledger_entry_debit_has_no_mode",
+            ),
+            # The app belongs to the mode that has one. With the rule above this
+            # also keeps it off every debit, whose mode is always null. The
+            # service drops a stray app silently (the client keeps it in form
+            # state when the mode is switched); this is what makes that safe
+            # for every writer that does not go through the service.
+            models.CheckConstraint(
+                condition=(models.Q(upi_app__isnull=True) | models.Q(payment_mode=PaymentMode.UPI)),
+                name="ck_ledger_entry_upi_app_needs_upi",
             ),
             # LED-02 BR-2 — at most one POSTED opening per party. `post_opening_
             # balance()` checks it under a row lock, which is correct for every

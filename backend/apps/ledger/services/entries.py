@@ -43,7 +43,7 @@ from typing import Any
 from django.db import transaction
 
 from apps.common.audit import AuditAction, write_audit
-from apps.common.constants import Direction, PaymentMode
+from apps.common.constants import Direction, PaymentMode, UpiApp
 from apps.common.context import Ctx
 from apps.common.dates import tenant_today
 from apps.common.exceptions import BusinessRuleViolation, NotFound, ValidationFailed
@@ -183,6 +183,19 @@ def validate_entry_payload(payload: dict, *, tenant: Any, needs_mode: bool = Tru
     else:
         mode = None
 
+    # Which UPI app, and the same asymmetry one level down. Optional even for
+    # UPI — "UPI, not sure which" is a true answer — and dropped SILENTLY for
+    # every other mode, including a debit, whose mode was nulled just above:
+    # the client keeps the pick in form state when the merchant switches from
+    # UPI to cash, and refusing a field that is no longer on screen is the
+    # same form-that-cannot-say-why EC-9 describes. The CHECK constraint
+    # `ck_ledger_entry_upi_app_needs_upi` is what makes the silence safe.
+    upi_app = payload.get("upi_app") or None
+    if mode != PaymentMode.UPI:
+        upi_app = None
+    elif upi_app is not None and upi_app not in UpiApp.values:
+        details["upi_app"] = ["Choose a UPI app from the list."]
+
     note = _clean_text(payload.get("note") or "")
     if len(note) > NOTE_MAX_LENGTH:
         details["note"] = [f"Keep the note under {NOTE_MAX_LENGTH} characters."]
@@ -202,6 +215,7 @@ def validate_entry_payload(payload: dict, *, tenant: Any, needs_mode: bool = Tru
         "amount": amount,
         "entry_date": entry_date,
         "payment_mode": mode,
+        "upi_app": upi_app,
         "note": note,
         "reference": reference,
     }
@@ -226,6 +240,7 @@ def _audit_snapshot(entry: LedgerEntry) -> dict:
         "source_id": str(entry.source_id) if entry.source_id else None,
         "note": entry.note,
         "payment_mode": entry.payment_mode,
+        "upi_app": entry.upi_app,
         "reference": entry.reference,
         "status": entry.status,
     }
@@ -318,6 +333,7 @@ def post_entry(*, ctx: Ctx, payload: dict) -> dict:
         source_type=SourceType.MANUAL,
         note=cleaned["note"],
         payment_mode=cleaned["payment_mode"],
+        upi_app=cleaned["upi_app"],
         reference=cleaned["reference"],
         status=EntryStatus.POSTED,
     )

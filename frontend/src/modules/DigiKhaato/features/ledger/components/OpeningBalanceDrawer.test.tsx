@@ -40,6 +40,7 @@ const entry = (over: Partial<LedgerEntry> = {}): LedgerEntry => ({
   sourceId: null,
   note: 'Opening balance',
   paymentMode: null,
+  upiApp: null,
   reference: '',
   status: 'posted',
   reversedById: null,
