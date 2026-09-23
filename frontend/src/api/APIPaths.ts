@@ -62,6 +62,7 @@ export const API_PATHS = {
   LEDGER_ENTRY: (id: string) => `/ledger-entries/${id}`,
   LEDGER_ENTRY_REVERSE: (id: string) => `/ledger-entries/${id}/reverse`,
   LEDGER_ENTRY_CORRECT: (id: string) => `/ledger-entries/${id}/correct`,
+  /** LED-09 — the tenant's position, and the aging behind it. */
   LEDGER_SUMMARY: '/ledger/summary',
   LEDGER_AGING: '/ledger/aging',
   REMINDERS: '/reminders',

@@ -63,7 +63,7 @@ function UbFilterChipBase({
       aria-pressed={pressed}
       onClick={() => onToggle(!pressed)}
       className={cn(
-        'inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-pill px-3 ds-chip',
+        'ds-body-s-regular inline-flex h-8 shrink-0 items-center gap-1.5 rounded-pill px-3',
         'border transition-colors duration-fast ease-standard motion-reduce:transition-none',
         'outline-none focus-visible:shadow-focus',
         'disabled:cursor-not-allowed disabled:opacity-60',

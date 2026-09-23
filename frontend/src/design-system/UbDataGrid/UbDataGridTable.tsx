@@ -206,10 +206,7 @@ function UbDataGridTableBase<TRow>({
     [emit, selection]
   );
 
-  const handleOpen = useCallback(
-    (row: TRow) => () => onRowOpen?.(row),
-    [onRowOpen]
-  );
+  const handleOpen = useCallback((row: TRow) => () => onRowOpen?.(row), [onRowOpen]);
 
   const handleSort = useCallback(
     (column: UbDataGridColumn<TRow>) => () => {
@@ -223,7 +220,8 @@ function UbDataGridTableBase<TRow>({
     [onSortChange, sort]
   );
 
-  const allSelected = selectable && modelRows.length > 0 && modelRows.every((row) => row.getIsSelected());
+  const allSelected =
+    selectable && modelRows.length > 0 && modelRows.every((row) => row.getIsSelected());
   const someSelected = selectable && modelRows.some((row) => row.getIsSelected());
 
   return (
@@ -292,7 +290,7 @@ function UbDataGridTableBase<TRow>({
                       type="button"
                       onClick={handleSort(column)}
                       className={cn(
-                        'inline-flex min-h-11 items-center gap-1 rounded-sm outline-none',
+                        'inline-flex h-12 items-center gap-1 rounded-sm outline-none',
                         'hover:text-text-primary focus-visible:shadow-focus',
                         column.align === 'end' && 'flex-row-reverse'
                       )}
@@ -321,7 +319,7 @@ function UbDataGridTableBase<TRow>({
                         <ArrowUpDown
                           className={cn(
                             'h-3.5 w-3.5 text-text-muted opacity-0 transition-opacity',
-                            'group-hover:opacity-100 group-focus-within:opacity-100'
+                            'group-focus-within:opacity-100 group-hover:opacity-100'
                           )}
                           aria-hidden
                         />
@@ -373,9 +371,7 @@ function UbDataGridTableBase<TRow>({
                       checked={row.getIsSelected()}
                       onCheckedChange={handleToggleRow(row.id)}
                       label={
-                        <span className="sr-only">
-                          {fillTemplate(labels.selectRow, { name })}
-                        </span>
+                        <span className="sr-only">{fillTemplate(labels.selectRow, { name })}</span>
                       }
                       className="min-h-0"
                     />
@@ -385,10 +381,7 @@ function UbDataGridTableBase<TRow>({
                   const column = columns.find((entry) => entry.id === cell.column.id);
                   const content = flexRender(cell.column.columnDef.cell, cell.getContext());
                   return (
-                    <td
-                      key={cell.id}
-                      className={cn(GRID_TD, ALIGN[column?.align ?? 'start'])}
-                    >
+                    <td key={cell.id} className={cn(GRID_TD, ALIGN[column?.align ?? 'start'])}>
                       {/* The first cell carries the open control, and only the
                           first: one named control per row. Wrapping every cell
                           would put eight identical "Open Ramesh Traders"

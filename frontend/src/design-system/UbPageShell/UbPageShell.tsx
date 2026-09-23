@@ -49,7 +49,7 @@ export interface UbPageShellProps {
 }
 
 const WIDTH: Readonly<Record<UbPageShellWidth, string>> = {
-  measure: 'max-w-[1120px]',
+  measure: 'max-w-none',
   full: 'max-w-content',
 };
 
@@ -74,7 +74,7 @@ function UbPageShellBase({
           impossible rather than merely fixed. */}
       <div
         className={cn(
-          'mx-auto flex w-full flex-1 flex-col gap-5 px-4 pb-6 pt-5 lg:px-6',
+          'mx-auto flex w-full flex-1 flex-col gap-4 px-4 pb-6 pt-4 lg:px-6 lg:pb-3 lg:pt-3',
           WIDTH[width]
         )}
       >

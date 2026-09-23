@@ -499,7 +499,7 @@ export function MLMenuItem({
       aria-current={selected ? 'true' : undefined}
       onClick={onSelect}
       className={cn(
-        'flex min-h-11 w-full items-center gap-3 rounded-control px-3 py-2 text-left',
+        'ds-body-base-regular flex min-h-9 w-full items-center gap-3 rounded-control px-3 py-2 text-left',
         'ds-body-sm text-text-primary transition-colors duration-fast ease-standard',
         'hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-45',
         selected && 'bg-accent-quiet',

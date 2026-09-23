@@ -71,6 +71,7 @@ export function StatementFilterBar({
           <UbDateInput
             name="statement-from"
             aria-label={t('ledger.statement.period.from')}
+            placeholder={t('ledger.statement.period.from')}
             value={filters.dateFrom ?? ''}
             max={filters.dateTo ?? today}
             onChange={(value: string | null) => setCustomRange(value || null, filters.dateTo)}
@@ -78,6 +79,7 @@ export function StatementFilterBar({
           <UbDateInput
             name="statement-to"
             aria-label={t('ledger.statement.period.to')}
+            placeholder={t('ledger.statement.period.to')}
             value={filters.dateTo ?? ''}
             min={filters.dateFrom ?? undefined}
             max={today}

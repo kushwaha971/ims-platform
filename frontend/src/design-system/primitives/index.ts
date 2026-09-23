@@ -170,6 +170,7 @@ export {
   MLDrawerPortal,
   MLDrawerTitle,
   MLDrawerTrigger,
+  MLCalendar,
   MLPopover,
   MLPopoverContent,
   MLPopoverTrigger,

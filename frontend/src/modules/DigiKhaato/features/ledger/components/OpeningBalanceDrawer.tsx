@@ -121,7 +121,12 @@ export function OpeningBalanceDrawer({
     (values: OpeningBalanceValues) => submit(values, setError),
     [submit, setError]
   );
-  const handleOpenChange = useCallback((next: boolean) => { if (!next) close(); }, [close]);
+  const handleOpenChange = useCallback(
+    (next: boolean) => {
+      if (!next) close();
+    },
+    [close]
+  );
 
   return (
     <UbDrawer
@@ -154,7 +159,12 @@ export function OpeningBalanceDrawer({
             and a field repeating its own dialog's title says nothing and makes
             the two ambiguous to anybody navigating by label, including a screen
             reader reading the form's controls in order. */}
-        <UbField name="amount" label={t('ledger.entry.amount')} required>
+        <UbField
+          name="amount"
+          label={t('ledger.entry.amount')}
+          placeholder={t('ledger.entry.amount.placeholder')}
+          required
+        >
           {(field) => <UbMoneyInput {...field} autoFocus inputMode="decimal" />}
         </UbField>
 
@@ -176,7 +186,12 @@ export function OpeningBalanceDrawer({
             own — which is exactly when a merchant is re-reading the form. */}
         {hint && <UbInputHint>{hint}</UbInputHint>}
 
-        <UbField name="asOf" label={t('ledger.opening.asOf')} required>
+        <UbField
+          name="asOf"
+          label={t('ledger.opening.asOf')}
+          placeholder={t('ledger.opening.asOf.placeholder')}
+          required
+        >
           {(field) => (
             <UbDateInput
               {...field}

@@ -97,6 +97,7 @@ function PartyCollectionDateBase({
         value={draft}
         onChange={handleChange}
         aria-label={t('parties.detail.collection.label')}
+        placeholder={t('parties.form.collectionDate.placeholder')}
         disabled={saving}
         quickChoicesLabel={t('parties.detail.collection.quick')}
         quickChoices={[{ label: t('parties.detail.collection.today'), date: isoToday() }]}

@@ -52,9 +52,7 @@ import type { StatementRow } from '../types/statement.types';
  * a feed: two money columns and a balance, in the order things happened, with
  * the opening above the first row and the closing under the last.
  */
-export function PartyStatementPageContent({
-  id,
-}: Readonly<{ id: string }>): React.JSX.Element {
+export function PartyStatementPageContent({ id }: Readonly<{ id: string }>): React.JSX.Element {
   const { t, d } = useTranslation();
   const timezone = useAppSelector(selectTenantTimezone);
   const tenant = useAppSelector(selectActiveTenant);
@@ -128,7 +126,7 @@ export function PartyStatementPageContent({
           {statement.summary && <StatementSummaryStrip statement={statement} t={t} />}
 
           <UbCard>
-            <UbStack gap={3} className="p-4">
+            <UbStack gap={3}>
               {statement.isLoading && (
                 <UbSkeleton variant="list" count={6} label={t('common.loading')} />
               )}
@@ -232,7 +230,11 @@ function StatementActions({
   statement,
   id,
   t,
-}: Readonly<{ statement: ReturnType<typeof usePartyStatement>; id: string; t: TranslateFn }>): React.JSX.Element {
+}: Readonly<{
+  statement: ReturnType<typeof usePartyStatement>;
+  id: string;
+  t: TranslateFn;
+}>): React.JSX.Element {
   const wantsPrint = useRef(false);
 
   useEffect(() => {
@@ -285,7 +287,10 @@ function StatementActions({
 function StatementSummaryStrip({
   statement,
   t,
-}: Readonly<{ statement: ReturnType<typeof usePartyStatement>; t: TranslateFn }>): React.JSX.Element | null {
+}: Readonly<{
+  statement: ReturnType<typeof usePartyStatement>;
+  t: TranslateFn;
+}>): React.JSX.Element | null {
   const summary = statement.summary;
   if (!summary) return null;
   const closing = summary.closingBalance;
@@ -333,7 +338,11 @@ function StatementRowView({
   row,
   t,
   d,
-}: Readonly<{ row: StatementRow; t: TranslateFn; d: (value: string) => string }>): React.JSX.Element {
+}: Readonly<{
+  row: StatementRow;
+  t: TranslateFn;
+  d: (value: string) => string;
+}>): React.JSX.Element {
   const struck = isStruckThrough(row);
   const view = entryAmountView(row.direction, row.entryType);
 
@@ -345,7 +354,9 @@ function StatementRowView({
         </UbText>
         <UbText
           variant="body"
-          className={struck ? 'line-clamp-2 break-words line-through opacity-60' : 'line-clamp-2 break-words'}
+          className={
+            struck ? 'line-clamp-2 break-words line-through opacity-60' : 'line-clamp-2 break-words'
+          }
         >
           {row.note.trim() || t(`ledger.entry.type.${row.entryType}`)}
         </UbText>

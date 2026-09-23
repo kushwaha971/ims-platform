@@ -54,6 +54,8 @@ export interface UbFieldRenderProps extends ControllerRenderProps<FieldValues, s
   readonly 'aria-required': boolean | undefined;
   readonly 'aria-describedby': string | undefined;
   readonly invalid: boolean;
+  /** The field's placeholder, handed to the control like every other prop. */
+  readonly placeholder?: string;
 }
 
 export interface UbFieldProps {
@@ -61,6 +63,13 @@ export interface UbFieldProps {
   readonly name: string;
   readonly label: string;
   readonly hint?: string;
+  /**
+   * Every input carries a placeholder (owner's rule, Sep 2026): an example of
+   * what goes in — "e.g. Ramesh Traders", "10-digit mobile number" — never a
+   * repeat of the label. Passed through the render props, so a control that
+   * spreads `{...field}` shows it with no further wiring.
+   */
+  readonly placeholder?: string;
   /** Sets `aria-required` on the control. It draws nothing. */
   readonly required?: boolean;
   /**
@@ -91,6 +100,7 @@ export function UbField({
   name,
   label,
   hint,
+  placeholder,
   required,
   optionalLabel,
   labelHidden,
@@ -106,12 +116,12 @@ export function UbField({
       .join(' ') || undefined;
 
   return (
-    <div className={cn('flex w-full flex-col gap-1.5', className)}>
+    <div className={cn('flex w-full flex-col gap-1', className)}>
       {!controlOwnsLabel && (
         <label
           htmlFor={name}
           className={cn(
-            'ds-label flex items-baseline gap-2 text-text-secondary',
+            'ds-body-base-medium flex items-baseline gap-2 text-text-primary',
             labelHidden && 'sr-only'
           )}
         >
@@ -138,6 +148,7 @@ export function UbField({
               'aria-required': required ? true : undefined,
               'aria-describedby': describedBy,
               invalid: Boolean(error),
+              placeholder,
             })}
           </>
         )}

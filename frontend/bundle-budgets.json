@@ -447,7 +447,7 @@
  ],
  "shared": {
   "framework": 128,
-  "sharedApp": 109
+  "sharedApp": 111
  },
  "//routes": [
   "The `route` figures are §19.9.2's, unchanged, and every route is comfortably",
@@ -624,20 +624,39 @@
   "rather than approaching.",
   "  shared app       96 ->  98",
   "  /parties         90 ->  92  (measured 90.6)",
-  "  every firstLoad  +2, being the shell growth plus its own route's"
+  "  every firstLoad  +2, being the shell growth plus its own route's",
+  "",
+  "── 23 Sep 2026: the BrandHub/Figma design pass, and LED-09 ─────────────────",
+  "Every route moves, and the causes are named rather than guessed:",
+  "  · the app bar (party quick search + account menu) is in the shell: sharedApp",
+  "    109.5 -> ~110.5. It is the one control asked for on every screen.",
+  "  · `UbDateInput` is BrandHub's calendar button + ml-uikit `MLCalendar` in a",
+  "    Radix popover. The day grid itself is `dynamic()`; the popover and the",
+  "    trigger are eager on the routes with a date field (/parties/[id], the",
+  "    statement, aging) — +8 to +15 KB there.",
+  "  · `UbPanel`, `UbSectionHeading`, `UbInfoRow`, `UbSearchInput` and the",
+  "    re-pointed typography are small each and land on every route that renders",
+  "    a card, a list or a header (+2 to +8 KB with the shell).",
+  "  · /ledger/aging is new: `UbDataGrid`, `UbTabs`, the bucket bar and four stat",
+  "    tiles. Measured 88.6 route / 324.9 first load.",
+  "The measured values are in the build log for this commit; every line below is",
+  "measured + ~1 KB, the ratchet this file has always used. What is NOT here is",
+  "a claim that this is the floor: the per-route +8 on non-date routes deserves a",
+  "dedicated look (candidates: the Radix DismissableLayer now shared by the menu",
+  "in the app bar and the date popover)."
  ],
  "default": {
-  "route": 60,
-  "firstLoad": 290
+  "route": 64,
+  "firstLoad": 300
  },
  "routes": {
   "/parties": {
-   "route": 98,
-   "firstLoad": 335
+   "route": 100,
+   "firstLoad": 337
   },
   "/dashboard": {
-   "route": 55,
-   "firstLoad": 287
+   "route": 60,
+   "firstLoad": 297
   },
   "/sales/invoices/new": {
    "route": 110,
@@ -652,20 +671,24 @@
    "firstLoad": 330
   },
   "/settings/team": {
-   "route": 80,
-   "firstLoad": 317
+   "route": 90,
+   "firstLoad": 327
   },
   "/parties/[id]": {
-   "route": 76,
-   "firstLoad": 312
+   "route": 92,
+   "firstLoad": 329
   },
   "/parties/tags": {
-   "route": 63,
-   "firstLoad": 299
+   "route": 72,
+   "firstLoad": 309
   },
   "/parties/[id]/statement": {
-   "route": 71,
-   "firstLoad": 306
+   "route": 87,
+   "firstLoad": 324
+  },
+  "/ledger/aging": {
+   "route": 90,
+   "firstLoad": 327
   }
  },
  "//ignoreRoutes": [

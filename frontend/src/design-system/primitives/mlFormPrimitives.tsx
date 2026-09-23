@@ -30,7 +30,6 @@ import {
   type TextareaHTMLAttributes,
 } from 'react';
 
-
 import { cn } from 'src/utils/cn';
 
 // ── Text entry ───────────────────────────────────────────────────────────────
@@ -60,7 +59,7 @@ export interface MLInputProps extends InputHTMLAttributes<HTMLInputElement> {
  * unavailable, not look broken.
  */
 export const ML_CONTROL_BASE =
-  'h-11 w-full rounded-control border bg-surface-card px-3 ds-body text-text-primary ' +
+  'h-10 w-full rounded-control border bg-surface-card px-3 ds-body-base-regular text-text-primary ' +
   'placeholder:text-text-muted transition-colors duration-fast ease-standard ' +
   'disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-text-muted ' +
   'disabled:opacity-100 read-only:bg-surface-sunken';
@@ -87,7 +86,8 @@ export const ML_CONTROL_BASE =
 export const ML_CONTROL_TONE = (invalid?: boolean): string =>
   invalid
     ? 'border-formError focus-visible:border-formError'
-    : 'border-border-strong hover:border-border-focus focus-visible:border-border-focus';
+    : // BrandHub: a #E6E6E6 hairline at rest, the ink colour on focus.
+      'border-border-hairline hover:border-border-subtle focus-visible:border-text-primary';
 
 export const MLInput = forwardRef<HTMLInputElement, MLInputProps>(function MLInput(
   { invalid, className, type = 'text', ...rest },
@@ -118,7 +118,12 @@ export const MLTextarea = forwardRef<HTMLTextAreaElement, MLTextareaProps>(funct
       ref={ref}
       rows={rows}
       aria-invalid={invalid || undefined}
-      className={cn(ML_CONTROL_BASE, ML_CONTROL_TONE(invalid), 'h-auto min-h-[120px] py-2', className)}
+      className={cn(
+        ML_CONTROL_BASE,
+        ML_CONTROL_TONE(invalid),
+        'h-auto min-h-[120px] py-2',
+        className
+      )}
       {...rest}
     />
   );

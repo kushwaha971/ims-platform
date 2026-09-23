@@ -79,7 +79,12 @@ export function OnboardingBusinessStep({
             divider between the two. The state moved up into the group: it is a
             select, not a tile, and it was the field stranded under the grid. */}
         <UbStack gap={4} className="rounded-card border border-border-subtle p-4 sm:p-5">
-          <UbField name="name" label={t('onboarding.name.label')} required>
+          <UbField
+            name="name"
+            label={t('onboarding.name.label')}
+            placeholder={t('onboarding.name.placeholder')}
+            required
+          >
             {/* `autoComplete="off"`, not `"organization"`.
                 That token means "the company this person belongs to", so Chrome
                 offered its saved address-book entries — and because the field is
@@ -101,6 +106,7 @@ export function OnboardingBusinessStep({
             <UbField
               name="ownerName"
               label={t('onboarding.ownerName.label')}
+              placeholder={t('onboarding.ownerName.placeholder')}
               optionalLabel={t('common.field.optional')}
             >
               {(field) => <UbTextInput {...field} autoComplete="name" />}
@@ -110,6 +116,7 @@ export function OnboardingBusinessStep({
           <UbField
             name="stateCode"
             label={t('onboarding.state.label')}
+            placeholder={t('onboarding.state.placeholder')}
             hint={t('onboarding.state.hint')}
             required
           >
@@ -130,6 +137,7 @@ export function OnboardingBusinessStep({
         <UbField
           name="businessType"
           label={t('onboarding.type.label')}
+          placeholder={t('onboarding.type.placeholder')}
           hint={t('onboarding.type.hint')}
           required
         >

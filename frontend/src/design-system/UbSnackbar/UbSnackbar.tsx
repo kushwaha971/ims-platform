@@ -57,7 +57,7 @@ const ICON_TONE: Record<UbSnackbarSeverity, string> = {
   success: 'text-success',
   info: 'text-info',
   warning: 'text-warning',
-  error: 'text-formError',
+  error: 'text-error',
 };
 
 function UbSnackbarBase({
@@ -85,7 +85,7 @@ function UbSnackbarBase({
         <MLToast data-testid="snackbar" variant={severity}>
           <Icon aria-hidden className={cn('mt-0.5 h-4 w-4 shrink-0', ICON_TONE[severity])} />
           <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <p className="ds-body-sm text-current">{message}</p>
+            <p className="ds-fixed-base-regular text-current">{message}</p>
             {requestId ? <p className="ds-mono text-text-muted">{requestId}</p> : null}
           </div>
           {actionLabel && onAction ? (
@@ -93,7 +93,13 @@ function UbSnackbarBase({
               {actionLabel}
             </MLButton>
           ) : null}
-          <MLButton variant="ghost" size="sm" aria-label={dismissLabel} onClick={onDismiss}>
+          <MLButton
+            variant="ghost"
+            size="sm"
+            aria-label={dismissLabel}
+            onClick={onDismiss}
+            className="-my-1 h-6 w-6 px-0 text-current"
+          >
             <X aria-hidden className="h-4 w-4" />
           </MLButton>
         </MLToast>

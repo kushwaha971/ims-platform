@@ -4,6 +4,7 @@ import { type ReactNode } from 'react';
 
 import { MobileNavDrawer } from 'src/components/layout/MobileNavDrawer';
 import { NetworkStrip } from 'src/components/layout/NetworkStrip';
+import { UbAppTopBar } from 'src/components/layout/UbAppTopBar';
 import { UbSidebar } from 'src/components/layout/UbSidebar';
 import { UbBox, UbLink, UbLogo, UbStack } from 'src/design-system';
 import { useAppSelector } from 'src/hooks/useAppStore';
@@ -92,6 +93,8 @@ export function UbAppShell({ children }: Readonly<{ children: ReactNode }>): Rea
           </UbLink>
           <TenantSwitcherMenu className="min-w-0 flex-1" />
         </UbStack>
+
+        <UbAppTopBar />
 
         <NetworkStrip />
 

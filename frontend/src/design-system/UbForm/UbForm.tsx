@@ -42,7 +42,9 @@ function UbFormBase<T extends FieldValues>({
         id={id}
         noValidate
         onSubmit={form.handleSubmit(onSubmit)}
-        className={cn('flex w-full flex-col gap-4', className)}
+        /* BrandHub: 24 px between fields = the 20 px reserved message row
+           under each field + this 4 px. */
+        className={cn('flex w-full flex-col gap-1', className)}
       >
         {formErrors && formErrors.length > 0 && (
           <div className="flex flex-col gap-1 rounded-md border border-formError bg-formError-dim p-3">

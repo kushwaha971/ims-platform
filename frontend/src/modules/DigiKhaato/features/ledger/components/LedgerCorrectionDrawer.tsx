@@ -191,11 +191,21 @@ export function LedgerCorrectionDrawer({
           )}
         </UbField>
 
-        <UbField name="amount" label={t('ledger.entry.amount')} required>
+        <UbField
+          name="amount"
+          label={t('ledger.entry.amount')}
+          placeholder={t('ledger.entry.amount.placeholder')}
+          required
+        >
           {(field) => <UbMoneyInput {...field} autoFocus inputMode="decimal" />}
         </UbField>
 
-        <UbField name="entryDate" label={t('ledger.entry.date')} required>
+        <UbField
+          name="entryDate"
+          label={t('ledger.entry.date')}
+          placeholder={t('ledger.entry.date.placeholder')}
+          required
+        >
           {(field) => (
             <UbDateInput
               {...field}
@@ -210,7 +220,12 @@ export function LedgerCorrectionDrawer({
         </UbField>
 
         {isCredit && !isOpening && (
-          <UbField name="paymentMode" label={t('ledger.entry.mode')} required>
+          <UbField
+            name="paymentMode"
+            label={t('ledger.entry.mode')}
+            placeholder={t('ledger.entry.mode.placeholder')}
+            required
+          >
             {(field) => <UbSelect {...field} options={modeOptions} />}
           </UbField>
         )}
@@ -219,6 +234,7 @@ export function LedgerCorrectionDrawer({
           <UbField
             name="reference"
             label={t('ledger.entry.reference')}
+            placeholder={t('ledger.entry.reference.placeholder')}
             hint={t('ledger.entry.reference.hint')}
             optionalLabel={t('common.field.optional')}
           >
@@ -230,6 +246,7 @@ export function LedgerCorrectionDrawer({
           <UbField
             name="note"
             label={t('ledger.entry.note')}
+            placeholder={t('ledger.entry.note.placeholder')}
             hint={t('ledger.entry.note.hint')}
             optionalLabel={t('common.field.optional')}
           >
@@ -243,6 +260,7 @@ export function LedgerCorrectionDrawer({
         <UbField
           name="reason"
           label={t('ledger.correction.reason')}
+          placeholder={t('ledger.correction.reason.placeholder')}
           hint={t('ledger.correction.reason.hint')}
           required
         >

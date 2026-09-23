@@ -4,6 +4,7 @@ import {
   Boxes,
   CreditCard,
   FileText,
+  Hourglass,
   Receipt,
   Settings,
   ShoppingCart,
@@ -92,6 +93,20 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
     bottomNav: true,
   },
   {
+    // LED-09 — "who do I ring first". In the DAILY section beside Customers
+    // rather than under Reports, because it is the collection round's starting
+    // list, not a month-end document.
+    key: 'aging',
+    ready: true,
+    icon: Hourglass,
+    labelId: 'nav.aging',
+    href: ROUTES.LEDGER_AGING,
+    module: 'ledger',
+    permission: 'ledger.entry.read',
+    section: 'daily',
+    order: 3,
+  },
+  {
     key: 'reminders',
     icon: Wallet,
     labelId: 'nav.reminders',
@@ -99,7 +114,7 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
     module: 'ledger',
     permission: 'ledger.entry.read',
     section: 'daily',
-    order: 3,
+    order: 4,
     badge: 'overdueReminders',
   },
   {

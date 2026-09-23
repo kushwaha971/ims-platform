@@ -22,6 +22,7 @@ import { useAuthRedirect } from '../hooks/useAuthRedirect';
 import { useSignUp } from '../hooks/useSignUp';
 import { useAuthSchemas } from '../validation/authSchemas';
 
+import { AuthLegalNotice } from './AuthLegalNotice';
 import { AuthPanel } from './AuthPanel';
 import { AuthScreenHeading } from './AuthScreenHeading';
 import { PasswordStrengthHint } from './PasswordStrengthHint';
@@ -120,7 +121,12 @@ export function SignUpPageContent(): React.JSX.Element {
               "that address is already registered" belongs under the address. */}
 
           <UbForm form={form} onSubmit={submit} formErrors={signUp.formErrors}>
-            <UbField name="email" label={t('auth.email.label')} required>
+            <UbField
+              name="email"
+              label={t('auth.email.label')}
+              placeholder={t('auth.email.placeholder')}
+              required
+            >
               {(field) => (
                 <UbTextInput
                   {...field}
@@ -137,6 +143,7 @@ export function SignUpPageContent(): React.JSX.Element {
             <UbField
               name="password"
               label={t('auth.password.label')}
+              placeholder={t('auth.password.placeholder')}
               hint={t('auth.password.rule')}
               required
             >
@@ -174,6 +181,11 @@ export function SignUpPageContent(): React.JSX.Element {
           {t('auth.signIn')}
         </UbLink>
       </UbText>
+
+      {/* The terms line moved here from the footer the owner removed: an
+          account is where somebody accepts them, so it is the one screen that
+          must still say so. */}
+      <AuthLegalNotice />
     </UbStack>
   );
 }

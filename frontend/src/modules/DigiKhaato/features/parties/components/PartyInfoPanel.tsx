@@ -2,7 +2,7 @@
 
 import { memo, type ReactNode } from 'react';
 
-import { UbCard, UbStack, UbText } from 'src/design-system';
+import { UbInfoRow, UbPanel, UbPanelSection, UbStack, UbText } from 'src/design-system';
 import type { TranslateFn } from 'src/hooks/useTranslation';
 import { formatInr } from 'src/utils/money';
 
@@ -41,6 +41,11 @@ interface Field {
   readonly value: string | null | undefined;
 }
 
+/**
+ * One section of the right-column panel (BrandHub `OrderPanelSection`), its
+ * facts as label ↔ value rows (`OrderInfoRow`). Returns null when it has
+ * neither a filled fact nor a control, so `UbPanel` drops its divider too.
+ */
 const Section = memo(function Section({
   title,
   fields,
@@ -50,27 +55,30 @@ const Section = memo(function Section({
   if (filled.length === 0 && !children) return null;
 
   return (
-    <UbCard>
-      <UbStack gap={3} className="p-4">
-        <UbText variant="label" tone="tertiary">
-          {title}
-        </UbText>
-        {filled.map((field) => (
-          <UbStack key={field.label} gap={0}>
-            <UbText variant="caption" tone="tertiary">
-              {field.label}
-            </UbText>
-            {/* `break-words`: a GSTIN is 15 characters with no spaces and an
-                email can be longer than a 320px rail, and either one overflows
-                a card that does not say otherwise. */}
-            <UbText variant="body-sm" className="break-words">
-              {field.value}
-            </UbText>
-          </UbStack>
-        ))}
-        {children}
-      </UbStack>
-    </UbCard>
+    <UbPanelSection title={title}>
+      {filled.length > 0 && (
+        <UbStack gap={2}>
+          {filled.map((field) => (
+            /* `break-all` on the value: a GSTIN is 15 characters with no
+               spaces and an email can outrun a 320 px column. */
+            <UbInfoRow
+              key={field.label}
+              label={field.label}
+              value={
+                <UbText
+                  as="span"
+                  variant="inherit"
+                  className="whitespace-normal break-all text-right"
+                >
+                  {field.value}
+                </UbText>
+              }
+            />
+          ))}
+        </UbStack>
+      )}
+      {children}
+    </UbPanelSection>
   );
 });
 
@@ -88,7 +96,7 @@ function PartyInfoPanelBase({
   collectionControl,
 }: Readonly<PartyInfoPanelProps>) {
   return (
-    <UbStack gap={4}>
+    <UbPanel as="aside">
       <Section
         title={t('parties.detail.section.contact')}
         fields={[
@@ -141,7 +149,11 @@ function PartyInfoPanelBase({
       </Section>
 
       <Section title={t('parties.detail.section.notes')}>
-        <UbText variant="body-sm" tone={party.notes ? 'primary' : 'tertiary'}>
+        <UbText
+          variant="body-sm"
+          tone={party.notes ? 'primary' : 'tertiary'}
+          className="break-words"
+        >
           {party.notes || t('parties.detail.notes.empty')}
         </UbText>
       </Section>
@@ -153,7 +165,7 @@ function PartyInfoPanelBase({
           { label: t('parties.detail.meta.lastActivity'), value: lastActivity },
         ]}
       />
-    </UbStack>
+    </UbPanel>
   );
 }
 

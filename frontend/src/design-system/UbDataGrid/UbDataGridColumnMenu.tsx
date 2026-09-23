@@ -70,7 +70,7 @@ function UbDataGridColumnMenuBase<TRow>({
              44 (R-A-3): two controls sharing a toolbar row match each other,
              and a 30 px button beside a 44 px select is the misalignment that
              reads as broken before anyone can say why. */
-          className="h-11 shrink-0 whitespace-nowrap"
+          className="h-10 shrink-0 whitespace-nowrap"
           /* The `icon` SLOT, not a child. `UbButton` wraps its children in a
              `<span>` for the busy-label swap, and Tailwind's preflight makes an
              `<svg>` `display: block` — so an icon passed as a child becomes a

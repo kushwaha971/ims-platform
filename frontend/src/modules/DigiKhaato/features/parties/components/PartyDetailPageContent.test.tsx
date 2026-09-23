@@ -32,9 +32,10 @@ jest.mock('../api/partyService');
    feature's own tests are what assert the rows. */
 jest.mock('modules/DigiKhaato/features/ledger/api/ledgerService');
 
-const ledgerService = jest.requireMock(
-  'modules/DigiKhaato/features/ledger/api/ledgerService'
-) as { listPartyEntries: jest.Mock; postLedgerEntry: jest.Mock };
+const ledgerService = jest.requireMock('modules/DigiKhaato/features/ledger/api/ledgerService') as {
+  listPartyEntries: jest.Mock;
+  postLedgerEntry: jest.Mock;
+};
 
 const partyService = jest.requireMock('../api/partyService') as {
   getParty: jest.Mock;
@@ -431,12 +432,15 @@ describe('the promise date', () => {
     renderWithProviders(<PartyDetailPageContent id={ID} />);
     await screen.findByText('Ramesh Traders');
 
-    const field = screen.getByLabelText('Promised to pay on');
-    await user.clear(field);
-    await user.type(field, '2026-09-25');
+    // The quick choice is the one-tap path a merchant uses; the calendar
+    // popover is the same `onChange` with a day grid in front of it.
+    await user.click(screen.getByRole('button', { name: 'Today' }));
 
     await waitFor(() =>
-      expect(partyService.setCollectionDate).toHaveBeenCalledWith(ID, '2026-09-25')
+      expect(partyService.setCollectionDate).toHaveBeenCalledWith(
+        ID,
+        expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/)
+      )
     );
   });
 
@@ -605,9 +609,7 @@ describe('archiving from the khata page', () => {
     /* Inside the dialog: the header behind it is showing the same ₹2,300.00,
        which is the point — the dialog repeats the figure so the merchant does
        not have to look past a modal to read it. */
-    expect(
-      within(screen.getByRole('dialog')).getByText('₹2,300.00')
-    ).toBeInTheDocument();
+    expect(within(screen.getByRole('dialog')).getByText('₹2,300.00')).toBeInTheDocument();
     /* And it stops offering the action that just failed: a second press would
        fail the same way for the same reason, and the merchant's next move is
        to settle the balance rather than to try again. */

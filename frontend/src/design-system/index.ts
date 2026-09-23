@@ -114,6 +114,14 @@ export type { UbSnackbarProps, UbSnackbarSeverity } from './UbSnackbar';
 export { UbStatusBadge } from './UbStatusBadge';
 export type { UbStatusBadgeProps, UbStatusBadgeTone } from './UbStatusBadge';
 
+export { UbSearchInput } from './UbSearchInput';
+export type { UbSearchInputProps } from './UbSearchInput';
+export { UbSectionHeading } from './UbSectionHeading';
+export type { UbSectionHeadingProps } from './UbSectionHeading';
+export { UbPanel, UbPanelSection } from './UbPanel';
+export type { UbPanelProps, UbPanelSectionProps } from './UbPanel';
+export { UbInfoRow } from './UbInfoRow';
+export type { UbInfoRowProps, UbInfoRowVariant } from './UbInfoRow';
 export { UbStatusBanner } from './UbStatusBanner';
 export type { UbStatusBannerProps, UbStatusBannerTone } from './UbStatusBanner';
 
@@ -136,11 +144,7 @@ export type { UbInputHintProps } from './UbInputHint';
 // `UbDateInput`'s quick choices once PTY-02 needed the same pill three more
 // times.
 export { UbFilterBar, UbFilterChip, UbFilterChipGroup } from './UbFilterChip';
-export type {
-  UbFilterBarProps,
-  UbFilterChipGroupProps,
-  UbFilterChipProps,
-} from './UbFilterChip';
+export type { UbFilterBarProps, UbFilterChipGroupProps, UbFilterChipProps } from './UbFilterChip';
 
 // ── Wave 1 — controls ────────────────────────────────────────────────────────
 export { UbButton } from './UbButton';

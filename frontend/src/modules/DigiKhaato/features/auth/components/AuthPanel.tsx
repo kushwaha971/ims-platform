@@ -30,8 +30,8 @@ function AuthPanelBase({ children, className }: Readonly<AuthPanelProps>) {
   return (
     <UbBox
       className={cn(
+        // Figma: the form sits on the page, not in a card.
         'w-full',
-        'sm:rounded-card sm:border sm:border-border-hairline sm:bg-surface-card sm:p-6 sm:shadow-1',
         className
       )}
     >

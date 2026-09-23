@@ -11,7 +11,6 @@ import { selectAppName } from 'src/redux/slice/whiteLabelSlice';
 import { ROUTES } from 'src/routes';
 import { cn } from 'src/utils/cn';
 
-import { AuthFooter } from './AuthFooter';
 import { AuthHeroArt } from './AuthHeroArt';
 
 /**
@@ -91,7 +90,7 @@ export interface AuthShellProps {
  * with nothing behind it.
  */
 const WIDTH: Readonly<Record<'form' | 'wide', string>> = {
-  form: 'max-w-auth-form',
+  form: 'max-w-[340px]',
   wide: 'max-w-[880px]',
 };
 
@@ -120,45 +119,53 @@ function AuthShellBase({ children, width }: Readonly<AuthShellProps>) {
 
   const brandRow = (
     <UbStack direction="row" justify="center" className="w-full">
-      <UbLogo variant="full" size="lg" wordmark={appName} label={appName} />
+      <UbLogo variant="full" size="xl" wordmark={appName} label={appName} />
     </UbStack>
   );
 
   return (
-    <UbBox className="grid min-h-dvh w-full bg-canvas lg:grid-cols-2">
-      {/* ── The hero half. `hidden` below lg, so the phone layout is unchanged. */}
+    <UbBox className="grid min-h-dvh w-full bg-surface-card lg:grid-cols-2">
+      {/* ── The hero half — Figma 13504:19278: a 5 % brand tint, 40 px between
+          the logo, the storefront and the headline, the headline in Fraunces
+          Bold 32/48 and the line under it in Epilogue 16/20. */}
       <UbStack
         as="section"
         align="center"
         justify="center"
-        gap={8}
         aria-hidden
         className={cn(
-          'hidden min-h-dvh p-6 lg:flex xl:gap-10',
-          // BrandHub's wash — 95% white over the brand colour, a 5% tint that
-          // follows a white-label tenant with no asset to export. The rule is
-          // `.ub-auth-hero` in globals.css; a Tailwind arbitrary value does not
-          // survive the commas inside the gradient's own colour functions.
-          'ub-auth-hero'
+          'hidden min-h-dvh gap-10 p-2.5 lg:flex',
+          'ub-auth-hero drop-shadow-[0px_2px_2px_rgba(0,0,0,0.05)]'
         )}
       >
         {brandRow}
 
-        <UbBox className="relative mx-auto w-full max-w-xl px-4 text-accent">
+        <UbBox className="w-full px-4">
           <AuthHeroArt />
         </UbBox>
 
-        <UbStack gap={1} align="center" className="w-full max-w-lg text-center">
-          <UbText variant="h3" align="center">
+        <UbStack gap={1} align="center" className="w-full max-w-[500px] text-center">
+          <UbText
+            as="h2"
+            variant="inherit"
+            align="center"
+            className="w-full font-fraunces text-[clamp(1.75rem,calc(1rem_+_1.2vw),2rem)] font-bold leading-[1.5] text-text-primary [font-variation-settings:'SOFT'_0,'WONK'_1]"
+          >
             {t('auth.hero.title', { name: appName })}
           </UbText>
-          <UbText variant="body" tone="secondary" align="center">
+          <UbText
+            variant="inherit"
+            align="center"
+            className="w-full font-epilogue text-base leading-5 text-text-tertiary"
+          >
             {t('auth.hero.description')}
           </UbText>
         </UbStack>
       </UbStack>
 
-      {/* ── The form half. This IS the phone layout, unchanged. */}
+      {/* ── The form half: a 340 px column, centred, 24 px between blocks —
+          no card, no footer. The theme and language pickers are gone from
+          here at the owner's request; both still live in settings. */}
       <UbStack
         as="main"
         align="center"
@@ -167,16 +174,11 @@ function AuthShellBase({ children, width }: Readonly<AuthShellProps>) {
         className="relative min-h-dvh px-6 py-10"
         id="auth-main"
       >
-        {/* The mark moves here below lg, where the hero half is not rendered —
-            BrandHub does the same, and it is what stops the phone screen
-            losing its top. */}
         <UbBox className="lg:hidden">{brandRow}</UbBox>
 
         <UbStack gap={6} className={cn('w-full', WIDTH[resolved])}>
           {children}
         </UbStack>
-
-        <AuthFooter />
       </UbStack>
     </UbBox>
   );

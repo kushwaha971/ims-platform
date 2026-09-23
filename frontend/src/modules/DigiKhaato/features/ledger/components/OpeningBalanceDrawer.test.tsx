@@ -132,7 +132,13 @@ beforeEach(async () => {
 describe('whether the action is offered at all', () => {
   it('is offered on a khata that has no opening', () => {
     let result: ReturnType<typeof useOpeningBalance> | undefined;
-    renderWithProviders(<Harness onResult={(r) => { result = r; }} />);
+    renderWithProviders(
+      <Harness
+        onResult={(r) => {
+          result = r;
+        }}
+      />
+    );
 
     expect(result?.canAdd).toBe(true);
   });
@@ -142,7 +148,13 @@ describe('whether the action is offered at all', () => {
      *  refuses them has learned nothing except that the app is unpredictable. */
     await loadTimeline([entry()]);
     let result: ReturnType<typeof useOpeningBalance> | undefined;
-    renderWithProviders(<Harness onResult={(r) => { result = r; }} />);
+    renderWithProviders(
+      <Harness
+        onResult={(r) => {
+          result = r;
+        }}
+      />
+    );
 
     expect(result?.canAdd).toBe(false);
     expect(result?.existing?.id).toBe('e1');
@@ -156,7 +168,13 @@ describe('whether the action is offered at all', () => {
      */
     await loadTimeline([entry({ status: 'reversed' })]);
     let result: ReturnType<typeof useOpeningBalance> | undefined;
-    renderWithProviders(<Harness onResult={(r) => { result = r; }} />);
+    renderWithProviders(
+      <Harness
+        onResult={(r) => {
+          result = r;
+        }}
+      />
+    );
 
     expect(result?.canAdd).toBe(true);
     expect(result?.existing).toBeNull();
@@ -171,7 +189,13 @@ describe('whether the action is offered at all', () => {
     store.dispatch(resetLedgerEntries());
     store.dispatch(ledgerTimelineOpened(PARTY_ID));
     let result: ReturnType<typeof useOpeningBalance> | undefined;
-    renderWithProviders(<Harness onResult={(r) => { result = r; }} />);
+    renderWithProviders(
+      <Harness
+        onResult={(r) => {
+          result = r;
+        }}
+      />
+    );
 
     expect(result?.canAdd).toBe(false);
   });
@@ -182,7 +206,13 @@ describe('whether the action is offered at all', () => {
     signIn(['ledger.entry.read', 'ledger.entry.write']);
     await loadTimeline();
     let result: ReturnType<typeof useOpeningBalance> | undefined;
-    renderWithProviders(<Harness onResult={(r) => { result = r; }} />);
+    renderWithProviders(
+      <Harness
+        onResult={(r) => {
+          result = r;
+        }}
+      />
+    );
 
     expect(result?.canAdd).toBe(false);
   });
@@ -192,10 +222,22 @@ describe('the drawer', () => {
   const open = async (direction: LedgerDirection = 'debit') => {
     let result: ReturnType<typeof useOpeningBalance> | undefined;
     const view = renderWithProviders(
-      <Harness direction={direction} onResult={(r) => { result = r; }} />
+      <Harness
+        direction={direction}
+        onResult={(r) => {
+          result = r;
+        }}
+      />
     );
     result?.openDrawer();
-    view.rerender(<Harness direction={direction} onResult={(r) => { result = r; }} />);
+    view.rerender(
+      <Harness
+        direction={direction}
+        onResult={(r) => {
+          result = r;
+        }}
+      />
+    );
     await screen.findByText('Ramesh Traders');
     return view;
   };
@@ -208,8 +250,8 @@ describe('the drawer', () => {
      */
     await open();
 
-    const asOf = await screen.findByLabelText('As of');
-    expect((asOf as HTMLInputElement).value).toMatch(/-04-01$/);
+    const asOf = await screen.findByRole('button', { name: /As of/ });
+    expect(asOf).toHaveTextContent(/1 Apr \d{4}/);
   });
 
   it('does not label a field with the name of the drawer it is in', async () => {
@@ -311,9 +353,7 @@ describe('the drawer', () => {
     await user.type(screen.getByLabelText('Amount'), '2300');
     await user.click(screen.getByRole('button', { name: 'Save opening balance' }));
 
-    expect(
-      await screen.findByText(/already has an opening balance/)
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/already has an opening balance/)).toBeInTheDocument();
   });
 
   it('anchors a server date error on the date field the merchant can fix', async () => {

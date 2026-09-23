@@ -109,7 +109,12 @@ export function ForgotPasswordPageContent(): React.JSX.Element {
             </UbStack>
           ) : (
             <UbForm form={form} onSubmit={submit} formErrors={password.formErrors}>
-              <UbField name="email" label={t('auth.email.label')} required>
+              <UbField
+                name="email"
+                label={t('auth.email.label')}
+                placeholder={t('auth.email.placeholder')}
+                required
+              >
                 {(field) => (
                   <UbTextInput
                     {...field}

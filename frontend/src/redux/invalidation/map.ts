@@ -182,7 +182,7 @@ export const INVALIDATION: TInvalidationMap = {
        a screen nobody has open is a request nobody reads. `stale` is the
        third answer: the statement refreshes the next time it is mounted, which
        is exactly when the number matters again. */
-    stale: ['statement'],
+    stale: ['statement', 'ledgerAging'],
     refetch: ['partyList'],
   },
 
@@ -208,7 +208,7 @@ export const INVALIDATION: TInvalidationMap = {
        a screen nobody has open is a request nobody reads. `stale` is the
        third answer: the statement refreshes the next time it is mounted, which
        is exactly when the number matters again. */
-    stale: ['statement'],
+    stale: ['statement', 'ledgerAging'],
     refetch: ['partyList'],
   },
 
@@ -238,7 +238,7 @@ export const INVALIDATION: TInvalidationMap = {
        a screen nobody has open is a request nobody reads. `stale` is the
        third answer: the statement refreshes the next time it is mounted, which
        is exactly when the number matters again. */
-    stale: ['statement'],
+    stale: ['statement', 'ledgerAging'],
     refetch: ['partyList'],
   },
   correctEntry: {
@@ -255,7 +255,7 @@ export const INVALIDATION: TInvalidationMap = {
        a screen nobody has open is a request nobody reads. `stale` is the
        third answer: the statement refreshes the next time it is mounted, which
        is exactly when the number matters again. */
-    stale: ['statement'],
+    stale: ['statement', 'ledgerAging'],
     refetch: ['partyList'],
   },
 

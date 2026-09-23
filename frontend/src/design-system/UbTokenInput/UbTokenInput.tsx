@@ -126,10 +126,7 @@ function UbTokenInputBase({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
 
-  const selectedValues = useMemo(
-    () => new Set(value.map((option) => option.value)),
-    [value]
-  );
+  const selectedValues = useMemo(() => new Set(value.map((option) => option.value)), [value]);
   const full = max != null && value.length >= max;
 
   const matches = useMemo(() => {
@@ -224,32 +221,32 @@ function UbTokenInputBase({
   return (
     <MLPopover open={open} onOpenChange={setOpen}>
       {/* ── The field is a DIV; the chips and the trigger are siblings ────────
-        *
-        * The chips used to be rendered inside `MLPopoverTrigger`, which is a
-        * real `<button>` — so every chip's remove button was a button inside a
-        * button. Two things followed, and both were invisible in review:
-        *
-        *   1. Removing a tag also opened the picker, because the click bubbled
-        *      to the trigger. The comment at the top of this file claimed the
-        *      remove button stopped propagation. It did not.
-        *   2. `<button>` inside `<button>` is invalid HTML. React's client
-        *      render keeps the nesting; a SERVER render emits markup the parser
-        *      auto-closes, so the chips hydrate somewhere React did not put
-        *      them. Assistive technology is also not required to expose
-        *      controls nested inside a `role="combobox"` button, which made a
-        *      correctly labelled "Remove tag Camp Area" potentially
-        *      unreachable.
-        *
-        * The wrapper carries the field's border and focus treatment via
-        * `focus-within`, so it still LOOKS like one control — which it is. */}
+       *
+       * The chips used to be rendered inside `MLPopoverTrigger`, which is a
+       * real `<button>` — so every chip's remove button was a button inside a
+       * button. Two things followed, and both were invisible in review:
+       *
+       *   1. Removing a tag also opened the picker, because the click bubbled
+       *      to the trigger. The comment at the top of this file claimed the
+       *      remove button stopped propagation. It did not.
+       *   2. `<button>` inside `<button>` is invalid HTML. React's client
+       *      render keeps the nesting; a SERVER render emits markup the parser
+       *      auto-closes, so the chips hydrate somewhere React did not put
+       *      them. Assistive technology is also not required to expose
+       *      controls nested inside a `role="combobox"` button, which made a
+       *      correctly labelled "Remove tag Camp Area" potentially
+       *      unreachable.
+       *
+       * The wrapper carries the field's border and focus treatment via
+       * `focus-within`, so it still LOOKS like one control — which it is. */}
       <div
         className={cn(
-          'flex min-h-11 w-full flex-wrap items-center gap-1.5 rounded-control border px-2 py-1.5',
+          'flex min-h-10 w-full flex-wrap items-center gap-1.5 rounded-control border px-2 py-1.5',
           'ds-body bg-surface-card text-left text-text-primary',
           disabled && 'cursor-not-allowed bg-surface-sunken text-text-muted',
           invalid
             ? 'border-formError'
-            : 'border-border-strong hover:border-border-focus focus-within:border-border-focus',
+            : 'border-border-hairline focus-within:border-text-primary hover:border-border-subtle',
           className
         )}
       >
@@ -276,7 +273,7 @@ function UbTokenInputBase({
              tap target however many chips are in front of it — and never
              narrower than a thumb once it is down to the chevron alone. */
           className={cn(
-            'flex min-h-8 min-w-11 flex-1 items-center justify-between gap-2 rounded-control',
+            'flex min-h-7 min-w-11 flex-1 items-center justify-between gap-2 rounded-control',
             'bg-transparent px-1 text-left',
             'disabled:cursor-not-allowed disabled:text-text-muted',
             'outline-none focus-visible:shadow-focus'
@@ -306,7 +303,7 @@ function UbTokenInputBase({
             onValueChange={setQuery}
             onKeyDown={handleKeyDown}
             placeholder={searchPlaceholder}
-            className="ds-body h-11"
+            className="ds-body-base-regular h-10"
           />
           <MLCommandList className="max-h-[min(18rem,55dvh)]">
             {full ? (
@@ -329,7 +326,7 @@ function UbTokenInputBase({
                     >
                       <UbTag name={option.label} color={option.color ?? null} />
                       {option.hint ? (
-                        <span className="ml-auto ds-label text-text-tertiary">{option.hint}</span>
+                        <span className="ds-label ml-auto text-text-tertiary">{option.hint}</span>
                       ) : null}
                     </MLCommandItem>
                   ))}
@@ -340,7 +337,9 @@ function UbTokenInputBase({
                       className="ds-body gap-2 text-text-accent"
                     >
                       <Plus aria-hidden className="size-4 shrink-0" />
-                      <span className="truncate">{createLabel?.(query.trim()) ?? query.trim()}</span>
+                      <span className="truncate">
+                        {createLabel?.(query.trim()) ?? query.trim()}
+                      </span>
                     </MLCommandItem>
                   ) : null}
                 </MLCommandGroup>

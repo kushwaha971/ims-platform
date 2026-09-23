@@ -24,11 +24,21 @@ const sourceFiles = [...walk(join(ROOT, 'src')), ...walk(join(ROOT, 'app'))].fil
  * Every `ds-*` class the plugin emits. Parsed from the plugin rather than
  * listed here, so the two cannot drift.
  */
-const emittedTiers = new Set(
-  [...readFileSync(join(ROOT, 'src/design-system/typographyPlugin.js'), 'utf8').matchAll(
-    /'\.(ds-[a-z0-9-]+)'/g
-  )].map((match) => match[1] as string)
-);
+/* Run the plugin rather than grep it: the BrandHub tiers are generated in a
+   loop (`ds-body-{size}-{weight}`), so their names never appear as literals. */
+const emittedTiers = (() => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const typography = require('./typographyPlugin.js') as {
+    handler: (api: { addComponents: (components: Record<string, unknown>) => void }) => void;
+  };
+  const names = new Set<string>();
+  typography.handler({
+    addComponents: (components) => {
+      for (const selector of Object.keys(components)) names.add(selector.replace(/^\./, ''));
+    },
+  });
+  return names;
+})();
 
 describe('every ds-* class used in the product is one the plugin emits', () => {
   /**
@@ -56,7 +66,9 @@ describe('every ds-* class used in the product is one the plugin emits', () => {
 
   const used = new Map<string, string>();
   for (const file of sourceFiles) {
-    for (const match of stripComments(readFileSync(file, 'utf8')).matchAll(/\b(ds-[a-z0-9-]+)\b/g)) {
+    for (const match of stripComments(readFileSync(file, 'utf8')).matchAll(
+      /\b(ds-[a-z0-9-]+)\b/g
+    )) {
       const tier = match[1] as string;
       if (!used.has(tier)) used.set(tier, file.slice(ROOT.length + 1));
     }
@@ -94,9 +106,9 @@ describe('the vendored ml-uikit bundle carries no absolute colour', () => {
   it('uses no hex literal in a colour utility', () => {
     const found = [
       ...new Set(
-        [...vendorSource.matchAll(/(?:bg|text|border|ring|fill|stroke)-\[(#[0-9a-fA-F]{6})\]/g)].map(
-          (match) => (match[1] as string).toLowerCase()
-        )
+        [
+          ...vendorSource.matchAll(/(?:bg|text|border|ring|fill|stroke)-\[(#[0-9a-fA-F]{6})\]/g),
+        ].map((match) => (match[1] as string).toLowerCase())
       ),
     ].sort();
     expect(found).toEqual([]);
@@ -130,23 +142,23 @@ describe('the vendored ml-uikit bundle carries no absolute colour', () => {
 describe('the data grid paints one table, not two', () => {
   const chrome = ['GRID_TABLE', 'GRID_THEAD', 'GRID_HEAD_ROW', 'GRID_TH', 'GRID_SELECT_CELL'];
 
-  it.each([
-    ['UbDataGridTable.tsx'],
-    ['UbDataGridStateTable.tsx'],
-  ])('%s takes its chrome from tableChrome.ts', (file) => {
-    const source = readFileSync(join(ROOT, 'src/design-system/UbDataGrid', file), 'utf8');
-    for (const constant of chrome) expect(source).toContain(constant);
-  });
+  it.each([['UbDataGridTable.tsx'], ['UbDataGridStateTable.tsx']])(
+    '%s takes its chrome from tableChrome.ts',
+    (file) => {
+      const source = readFileSync(join(ROOT, 'src/design-system/UbDataGrid', file), 'utf8');
+      for (const constant of chrome) expect(source).toContain(constant);
+    }
+  );
 
-  it.each([
-    ['UbDataGridTable.tsx'],
-    ['UbDataGridStateTable.tsx'],
-  ])('%s spells no cell padding or row height of its own', (file) => {
-    const source = readFileSync(join(ROOT, 'src/design-system/UbDataGrid', file), 'utf8');
-    // The literals that decide where a column edge lands. Finding one here
-    // means someone re-typed the chrome instead of importing it, and the two
-    // tables have started to diverge.
-    const strays = ['h-12 select-none', 'border-collapse', "'h-14"];
-    for (const stray of strays) expect(source).not.toContain(stray);
-  });
+  it.each([['UbDataGridTable.tsx'], ['UbDataGridStateTable.tsx']])(
+    '%s spells no cell padding or row height of its own',
+    (file) => {
+      const source = readFileSync(join(ROOT, 'src/design-system/UbDataGrid', file), 'utf8');
+      // The literals that decide where a column edge lands. Finding one here
+      // means someone re-typed the chrome instead of importing it, and the two
+      // tables have started to diverge.
+      const strays = ['h-12 select-none', 'border-collapse', "'h-14"];
+      for (const stray of strays) expect(source).not.toContain(stray);
+    }
+  );
 });

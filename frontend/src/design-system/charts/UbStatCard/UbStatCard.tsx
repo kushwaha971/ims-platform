@@ -98,7 +98,15 @@ const TONE: Record<UbStatCardTone, string> = {
   warning: 'text-warning',
   /* §23.2.4: `--error` is the LEDGER debit family — overdue, receivable, out of
      stock. Validation errors are `--form-error` and never appear on a tile. */
-  danger: 'text-error',
+  danger: 'text-error-bright',
+};
+
+/** BrandHub `TONE_ACCENT` — the icon and the label carry the tone too. */
+const ACCENT: Record<UbStatCardTone, string> = {
+  default: 'text-text-tertiary',
+  success: 'text-success',
+  warning: 'text-warning-bright',
+  danger: 'text-error-bright',
 };
 
 const DELTA_TONE: Record<NonNullable<UbStatCardDelta['tone']>, string> = {
@@ -128,29 +136,34 @@ function UbStatCardBase({
   const DeltaIcon = delta ? DELTA_ICON[delta.direction] : null;
 
   const body = (
-    <MLCardContent className="flex flex-col gap-1 p-4">
+    /* BrandHub "Served" stat card (Figma 13003:15783): 12 px / 16 px padding,
+       a 4 px gap, the title row at 14/20 regular with a 12 px icon, and the
+       figure at 20/32 semibold with its subtext on the SAME line, 12/16. An
+       80 px tile — it was 112 px, which on a phone was the difference between
+       a customer row above the fold and none. */
+    <MLCardContent className="flex flex-col gap-1 px-4 py-3">
       <span className="flex items-center gap-2">
         {icon && (
-          <span aria-hidden className="flex h-3.5 w-3.5 shrink-0 items-center justify-center text-text-tertiary">
+          <span
+            aria-hidden
+            className={cn(
+              'flex h-3 w-3 shrink-0 items-center justify-center [&>svg]:h-3 [&>svg]:w-3',
+              ACCENT[tone]
+            )}
+          >
             {icon}
           </span>
         )}
-        <span className="ds-label text-text-tertiary">{label}</span>
+        <span className={cn('ds-body-base-regular', ACCENT[tone])}>{label}</span>
       </span>
-      {/* 20px on a phone, 28px from `sm` up. A tile is two-across at 360px, so
-          a card gets about 140px of content width — and "₹36,018.00" at 28px
-          tabular needs 170 and ran straight out of the card. The KPI tier is
-          still the KPI tier; it is one step down where there is no room for
-          it, which is the same trade every figure on this product makes. */}
-      <span className={cn('ds-metric-sm sm:ds-metric-md', TONE[tone])}>{value}</span>
-      {/* Its own line, which is where this departs from BrandHub.
-          They set the value and the subtext on a shared baseline, and it works
-          because theirs are two words — "incl. VAT". Ours are sentences that
-          name the scope, so a long one wrapped under the figure while a short
-          one stayed beside it, and a row of three cards came out in three
-          different shapes. A fixed line keeps them identical whatever the copy
-          says, which matters more here than the baseline does. */}
-      {subtext && <span className="ds-caption text-text-tertiary">{subtext}</span>}
+      {/* The subtext shares the figure's line and wraps UNDER it only when the
+          tile is too narrow to hold both — a phone's two-across grid. */}
+      <span className="flex flex-wrap items-baseline gap-x-3">
+        <span className={cn('ds-body-xl-semibold whitespace-nowrap tabular-nums', TONE[tone])}>
+          {value}
+        </span>
+        {subtext && <span className="ds-body-s-regular text-text-tertiary">{subtext}</span>}
+      </span>
       {delta && DeltaIcon && (
         <span className="flex items-center gap-1">
           <DeltaIcon aria-hidden className={cn('h-4 w-4', DELTA_TONE[delta.tone ?? 'neutral'])} />

@@ -138,8 +138,12 @@ function PartyDetailHeaderBase({
             {/* A `tel:` link and not a button: on a phone this is the action the
                 merchant came for, and the platform's own handler is better than
                 anything this screen could do with the number. */}
-            <UbLink href={`tel:${mobile}`} className="inline-flex items-center gap-2">
-              <Phone className="h-4 w-4" aria-hidden />
+            <UbLink
+              href={`tel:${mobile}`}
+              variant="inherit"
+              className="ds-num-base-regular inline-flex items-center gap-2"
+            >
+              <Phone className="h-3.5 w-3.5" aria-hidden />
               {mobile}
             </UbLink>
             {/* Labelled, not icon-only. An icon-only copy button is a 16px
@@ -148,15 +152,19 @@ function PartyDetailHeaderBase({
                 needed to explain it. The label also carries the confirmation:
                 "Copied" replaces "Copy" for a moment, which is the feedback the
                 action otherwise has none of. */}
+            {/* BrandHubCopyButton: a 24 px icon button beside the value, the
+                tick standing in for the icon for a moment as the feedback. */}
             <UbButton
               variant="ghost"
               size="sm"
+              iconOnly
               onClick={handleCopy}
+              className="h-6 w-6 text-text-tertiary"
               icon={
                 copied ? (
-                  <Check className="h-4 w-4" aria-hidden />
+                  <Check className="h-3.5 w-3.5 text-success" aria-hidden />
                 ) : (
-                  <Copy className="h-4 w-4" aria-hidden />
+                  <Copy className="h-3.5 w-3.5" aria-hidden />
                 )
               }
             >

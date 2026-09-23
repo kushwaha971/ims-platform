@@ -498,18 +498,15 @@ describe('the wizard — the page is a rail and a form half (layout A)', () => {
     expect(main.parentElement?.className).toContain('lg:overflow-y-auto');
   });
 
-  it('keeps the footer OUT of main, where <footer> is not a landmark at all', () => {
+  it('has no footer — the owner removed the pickers and the copyright line', () => {
     renderWithProviders(<OnboardingStepPageContent step={1} />);
-    const footer = screen.getByRole('contentinfo');
-
-    expect(screen.getByRole('main')).not.toContainElement(footer);
+    expect(screen.queryByRole('contentinfo')).not.toBeInTheDocument();
   });
 
-  it('keeps the page a page: one main, one footer, one h1 above the step h2', () => {
+  it('keeps the page a page: one main, one h1 above the step h2', () => {
     renderWithProviders(<OnboardingStepPageContent step={1} />);
 
     expect(screen.getAllByRole('main')).toHaveLength(1);
-    expect(screen.getByRole('contentinfo')).toBeInTheDocument();
 
     const h1 = screen.getAllByRole('heading', { level: 1 });
     expect(h1).toHaveLength(1);

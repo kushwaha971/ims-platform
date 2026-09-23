@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 
 import { AppProviders } from 'src/components/providers/AppProviders';
 import { APP_NAME } from 'src/constants';
+import { dmSans, epilogue, fraunces, inter, notoDevanagari } from 'src/fonts';
 import { LOCALE_COOKIE, THEME_CHOICE_COOKIE } from 'src/utils/cookieUtils';
 
 import { SessionBootstrap } from 'modules/DigiKhaato/features/auth/components/SessionBootstrap';
@@ -84,7 +85,12 @@ export default async function RootLayout({
   const theme = store.get(THEME_CHOICE_COOKIE)?.value === 'dark' ? 'dark' : 'light';
 
   return (
-    <html lang={locale} data-theme={theme} suppressHydrationWarning>
+    <html
+      lang={locale}
+      data-theme={theme}
+      className={`${dmSans.variable} ${inter.variable} ${fraunces.variable} ${epilogue.variable} ${notoDevanagari.variable}`}
+      suppressHydrationWarning
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
       </head>

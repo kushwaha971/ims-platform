@@ -67,8 +67,18 @@ export function PartyFormDrawer({
      out, so three screens asking at once still costs one (§19.3.5). */
   const { byUsage: tagOptions } = usePartyTags();
 
-  const { open, isEdit, editing, prefillName, isSaving, canWrite, formErrors, duplicateOf, close, submit } =
-    partyForm;
+  const {
+    open,
+    isEdit,
+    editing,
+    prefillName,
+    isSaving,
+    canWrite,
+    formErrors,
+    duplicateOf,
+    close,
+    submit,
+  } = partyForm;
 
   const defaults = useMemo<PartyFormValues>(
     () => ({
@@ -249,7 +259,12 @@ export function PartyFormDrawer({
         )}
 
         {/* ── The fifteen-second path ─────────────────────────────────────── */}
-        <UbField name="name" label={t('parties.form.name.label')} required>
+        <UbField
+          name="name"
+          label={t('parties.form.name.label')}
+          placeholder={t('parties.form.name.placeholder')}
+          required
+        >
           {(field) => (
             <UbTextInput {...field} autoComplete="off" placeholder={t('parties.form.name.hint')} />
           )}
@@ -263,6 +278,7 @@ export function PartyFormDrawer({
         <UbField
           name="mobile"
           label={t('parties.form.mobile.label')}
+          placeholder={t('parties.form.mobile.placeholder')}
           hint={t('parties.form.mobile.hint')}
         >
           {(field) => <UbPhoneInput {...field} autoComplete="off" />}
@@ -310,6 +326,7 @@ export function PartyFormDrawer({
         <UbField
           name="tags"
           label={t('parties.tags.field.label')}
+          placeholder={t('parties.tags.field.placeholder')}
           hint={t('parties.tags.field.hint', { max: MAX_TAGS_PER_PARTY })}
         >
           {(field) => (
@@ -333,13 +350,21 @@ export function PartyFormDrawer({
             hint={t('parties.form.section.opening.hint')}
             open={openingHasError || undefined}
           >
-            <UbField name="openingAmount" label={t('parties.form.opening.amount')}>
+            <UbField
+              name="openingAmount"
+              label={t('parties.form.opening.amount')}
+              placeholder={t('parties.form.opening.amount.placeholder')}
+            >
               {(field) => <UbMoneyInput {...field} />}
             </UbField>
             <UbField name="openingDirection" label={t('parties.form.opening.direction')}>
               {(field) => <UbRadioGroup {...field} options={directionOptions} />}
             </UbField>
-            <UbField name="openingAsOf" label={t('parties.form.opening.asOf')}>
+            <UbField
+              name="openingAsOf"
+              label={t('parties.form.opening.asOf')}
+              placeholder={t('parties.form.opening.asOf.placeholder')}
+            >
               {(field) => (
                 <UbDateInput
                   {...field}
@@ -361,22 +386,46 @@ export function PartyFormDrawer({
         )}
 
         <UbDisclosure label={t('parties.form.section.gst')} open={gstHasError || undefined}>
-          <UbField name="gstin" label={t('parties.form.gstin.label')}>
+          <UbField
+            name="gstin"
+            label={t('parties.form.gstin.label')}
+            placeholder={t('parties.form.gstin.placeholder')}
+          >
             {(field) => <UbTextInput {...field} uppercase autoComplete="off" />}
           </UbField>
-          <UbField name="stateCode" label={t('parties.form.state.label')}>
+          <UbField
+            name="stateCode"
+            label={t('parties.form.state.label')}
+            placeholder={t('parties.form.state.placeholder')}
+          >
             {(field) => <UbTextInput {...field} uppercase maxLength={2} autoComplete="off" />}
           </UbField>
-          <UbField name="email" label={t('parties.form.email.label')}>
+          <UbField
+            name="email"
+            label={t('parties.form.email.label')}
+            placeholder={t('parties.form.email.placeholder')}
+          >
             {(field) => <UbTextInput {...field} type="email" autoComplete="off" />}
           </UbField>
-          <UbField name="billingLine1" label={t('parties.form.address.line1')}>
+          <UbField
+            name="billingLine1"
+            label={t('parties.form.address.line1')}
+            placeholder={t('parties.form.address.line1.placeholder')}
+          >
             {(field) => <UbTextInput {...field} autoComplete="off" />}
           </UbField>
-          <UbField name="billingCity" label={t('parties.form.address.city')}>
+          <UbField
+            name="billingCity"
+            label={t('parties.form.address.city')}
+            placeholder={t('parties.form.address.city.placeholder')}
+          >
             {(field) => <UbTextInput {...field} autoComplete="off" />}
           </UbField>
-          <UbField name="billingPincode" label={t('parties.form.address.pincode')}>
+          <UbField
+            name="billingPincode"
+            label={t('parties.form.address.pincode')}
+            placeholder={t('parties.form.address.pincode.placeholder')}
+          >
             {(field) => <UbTextInput {...field} inputMode="numeric" autoComplete="off" />}
           </UbField>
         </UbDisclosure>
@@ -397,6 +446,7 @@ export function PartyFormDrawer({
           <UbField
             name="creditLimit"
             label={t('parties.form.creditLimit.label')}
+            placeholder={t('parties.form.creditLimit.placeholder')}
             hint={creditHint}
           >
             {(field) => <UbMoneyInput {...field} />}
@@ -404,23 +454,40 @@ export function PartyFormDrawer({
           <UbField
             name="creditDays"
             label={t('parties.form.creditDays.label')}
+            placeholder={t('parties.form.creditDays.placeholder')}
             hint={t('parties.form.creditDays.hint')}
           >
             {(field) => <UbTextInput {...field} inputMode="numeric" autoComplete="off" />}
           </UbField>
-          <UbField name="collectionDate" label={t('parties.form.collectionDate.label')}>
+          <UbField
+            name="collectionDate"
+            label={t('parties.form.collectionDate.label')}
+            placeholder={t('parties.form.collectionDate.placeholder')}
+          >
             {(field) => <UbDateInput {...field} />}
           </UbField>
         </UbDisclosure>
 
         <UbDisclosure label={t('parties.form.section.other')}>
-          <UbField name="displayCode" label={t('parties.form.code.label')}>
+          <UbField
+            name="displayCode"
+            label={t('parties.form.code.label')}
+            placeholder={t('parties.form.code.placeholder')}
+          >
             {(field) => <UbTextInput {...field} autoComplete="off" />}
           </UbField>
-          <UbField name="altPhone" label={t('parties.form.altPhone.label')}>
+          <UbField
+            name="altPhone"
+            label={t('parties.form.altPhone.label')}
+            placeholder={t('parties.form.altPhone.placeholder')}
+          >
             {(field) => <UbPhoneInput {...field} autoComplete="off" />}
           </UbField>
-          <UbField name="notes" label={t('parties.form.notes.label')}>
+          <UbField
+            name="notes"
+            label={t('parties.form.notes.label')}
+            placeholder={t('parties.form.notes.placeholder')}
+          >
             {(field) => <UbTextInput {...field} autoComplete="off" />}
           </UbField>
           <UbField name="smsOptIn" label={t('parties.form.sms.label')} controlOwnsLabel>

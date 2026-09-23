@@ -46,6 +46,13 @@
      navigation reads as a panel the page sits beside rather than on. */
   --surface-nav: 213.33 30.77% 10.2%; /* #121922 */
   --surface-nav-hover: 213.75 22.22% 14.12%; /* ink-800 */
+  --surface-nav-active: 213.75 22.22% 16%;
+  /* The rail is light in the light theme now, so its ink follows the theme:
+     restated here for the dark rail. */
+  --text-on-nav: 210 22.22% 96.47%; /* #F4F6F8 */
+  --text-on-nav-muted: 213.33 12.5% 71.76%; /* #AEB6C0 */
+  --surface-subtle: 213.75 18% 12%;
+  --border-nav-active: 213.75 18% 22%;
 
   /* ── Borders — the edge is what makes a dark surface a surface ─────────── */
   --border-hairline: 214.74 17.76% 20.98%; /* #2C343F — 1.57:1 on canvas */

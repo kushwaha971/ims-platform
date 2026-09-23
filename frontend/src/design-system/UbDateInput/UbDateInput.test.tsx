@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { isoFinancialYearStart, isoToday, UbDateInput } from './UbDateInput';
@@ -21,26 +21,32 @@ describe('the dates a merchant actually means', () => {
 });
 
 describe('the control', () => {
-  it('emits ISO, which is already the wire format', async () => {
-    const user = userEvent.setup();
-    const onChange = jest.fn();
-    render(<UbDateInput value={null} onChange={onChange} aria-label="As of" />);
+  it('shows the chosen date the way a merchant reads one, not as the wire ISO', () => {
+    /**
+     * The field used to be a native `<input type="date">`, whose face follows
+     * the BROWSER's locale (04/01 on an en-US laptop). It is BrandHub's
+     * calendar button now, and it says the date in words.
+     */
+    render(<UbDateInput value="2026-04-01" onChange={jest.fn()} aria-label="As of" />);
 
-    await user.type(screen.getByLabelText('As of'), '2026-04-01');
-    expect(onChange).toHaveBeenLastCalledWith('2026-04-01');
+    expect(screen.getByRole('button', { name: 'As of' })).toHaveTextContent('1 Apr 2026');
   });
 
-  it('clears to null rather than to an empty string', () => {
-    // The API distinguishes them: null removes the date, "" is a validation
-    // error on a date field.
-    const onChange = jest.fn();
-    render(<UbDateInput value="2026-04-01" onChange={onChange} aria-label="As of" />);
+  it('shows its placeholder, muted, when there is no date', () => {
+    render(
+      <UbDateInput value={null} onChange={jest.fn()} aria-label="As of" placeholder="Pick a date" />
+    );
 
-    // `fireEvent.change` rather than a raw DOM event: React listens through its
-    // own synthetic system, so a hand-dispatched `change` reaches nothing.
-    fireEvent.change(screen.getByLabelText('As of'), { target: { value: '' } });
+    expect(screen.getByRole('button', { name: 'As of' })).toHaveTextContent('Pick a date');
+  });
 
-    expect(onChange).toHaveBeenCalledWith(null);
+  it("opens a calendar in a popover rather than the operating system's picker", async () => {
+    const user = userEvent.setup();
+    render(<UbDateInput value="2026-04-01" onChange={jest.fn()} aria-label="As of" />);
+
+    await user.click(screen.getByRole('button', { name: 'As of' }));
+
+    expect(screen.getByRole('button', { name: 'As of' })).toHaveAttribute('aria-expanded', 'true');
   });
 
   it('offers the shortcut the native picker cannot', async () => {

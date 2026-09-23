@@ -209,7 +209,7 @@ function UbDataGridPaginationBase({
              * selector is ever shown below `full`, it goes back to `h-11`;
              * the test below in `UbDataGrid.test.tsx` guards the tier.
              */
-            className="ds-chip h-8 w-[72px] px-3"
+            className="ds-body-base-regular h-10 w-[76px] px-3"
           >
             {pageSizeOptions?.map((size) => (
               <option key={size} value={String(size)}>

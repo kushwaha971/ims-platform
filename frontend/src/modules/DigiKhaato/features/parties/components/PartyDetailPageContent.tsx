@@ -5,8 +5,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 
-
-
 import {
   UbBox,
   UbButton,
@@ -31,7 +29,6 @@ import { useOpeningBalance } from 'modules/DigiKhaato/features/ledger/hooks/useO
 import { usePartyArchive } from '../hooks/usePartyArchive';
 import { usePartyDetail } from '../hooks/usePartyDetail';
 import { usePartyForm } from '../hooks/usePartyForm';
-
 
 import { PartyArchiveDialog } from './PartyArchiveDialog';
 import { PartyCollectionDate } from './PartyCollectionDate';
@@ -103,9 +100,6 @@ const OpeningBalanceDrawerLazy = dynamic(
     ),
   { ssr: false }
 );
-
-const shortDate = (value: string | null | undefined): string | null =>
-  value ? value.slice(0, 10) : null;
 
 export interface PartyDetailPageContentProps {
   readonly id: string;
@@ -220,7 +214,7 @@ export function PartyDetailPageContent({
     <PartyInfoPanel
       t={t}
       party={party}
-      addedOn={shortDate(party.createdAt)}
+      addedOn={party.createdAt ? d(party.createdAt) : null}
       lastActivity={asOf}
       collectionControl={
         <PartyCollectionDate
@@ -267,16 +261,10 @@ export function PartyDetailPageContent({
                     every time they open a page that they are an accountant. */}
                 {entryForm.canWrite && (
                   <>
-                    <UbButton
-                      variant="primary"
-                      onClick={() => entryForm.openEntry(id, 'debit')}
-                    >
+                    <UbButton variant="primary" onClick={() => entryForm.openEntry(id, 'debit')}>
                       {t('ledger.entry.gaveAction')}
                     </UbButton>
-                    <UbButton
-                      variant="secondary"
-                      onClick={() => entryForm.openEntry(id, 'credit')}
-                    >
+                    <UbButton variant="secondary" onClick={() => entryForm.openEntry(id, 'credit')}>
                       {t('ledger.entry.gotAction')}
                     </UbButton>
                   </>
@@ -329,7 +317,7 @@ export function PartyDetailPageContent({
         )}
 
         <UbCard>
-          <UbBox className="p-4">
+          <UbBox>
             <PartyDetailHeader
               t={t}
               name={shown.name}

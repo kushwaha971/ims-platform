@@ -10,7 +10,8 @@ import {
   UbAmount,
   UbBox,
   UbButton,
-  UbCard,
+  UbPanel,
+  UbSectionHeading,
   UbDivider,
   UbEmptyState,
   UbSkeleton,
@@ -107,118 +108,146 @@ export function PartyLedgerTimeline({
      state, no explanation of a feature they have not bought. */
   if (!ledger.canRead) return null;
 
+  const hasEntries = Boolean(ledger.summary && ledger.summary.entryCount > 0);
+
   return (
-    <UbCard>
-      <UbStack gap={3} className="p-4">
-        <UbStack direction="row" justify="between" align="center" className="gap-3">
-          <UbText variant="label" tone="tertiary">
-            {t('ledger.timeline.title')}
-          </UbText>
-          {ledger.summary && ledger.summary.entryCount > 0 && (
-            <UbText variant="caption" tone="tertiary">
-              {t('ledger.timeline.count', { count: ledger.summary.entryCount })}
-            </UbText>
-          )}
-        </UbStack>
+    /* BrandHub's list pattern (dashboard "Active orders", Figma 13105:10332):
+       the section's title row OUTSIDE the card — title, count, and the one
+       control on the right — then a single bordered card whose rows are
+       separated by hairlines. It used to be a card holding its own title,
+       switch, totals and rows, which put 16 px of padding around 16 px of
+       padding around every line. */
+    <UbStack gap={3}>
+      <UbSectionHeading
+        title={t('ledger.timeline.title')}
+        meta={
+          hasEntries
+            ? t('ledger.timeline.count', { count: ledger.summary?.entryCount ?? 0 })
+            : undefined
+        }
+        /* LED-03 FR-7: offered only to somebody who could correct, and only
+           once there is something to reveal. A MODE, not a filter, so a switch. */
+        aside={
+          correction.canCorrect && hasEntries ? (
+            <UbSwitch
+              checked={ledger.showCorrections}
+              onCheckedChange={ledger.toggleCorrections}
+              label={t('ledger.correction.showCorrections')}
+              className="min-h-0 w-auto gap-2"
+            />
+          ) : undefined
+        }
+      />
 
-        {/* LED-03 FR-7. Offered only to somebody who could make a correction,
-            and only once the book has something in it — a switch that reveals
-            history on an empty khata reveals nothing and asks a question the
-            merchant has no way to answer.
-
-            It is a switch rather than a chip because it is a MODE, not a
-            filter: the two positions are two ways of reading the same book,
-            and only one of them is on at a time. */}
-        {correction.canCorrect && ledger.summary && ledger.summary.entryCount > 0 && (
-          <UbSwitch
-            checked={ledger.showCorrections}
-            onCheckedChange={ledger.toggleCorrections}
-            label={t('ledger.correction.showCorrections')}
-          />
+      <UbPanel as="section">
+        {/* BrandHub PaymentsCard's two-cell total row: label 12/16 medium grey,
+            figure 16/24 medium, a hairline between the cells. */}
+        {hasEntries && ledger.summary && (
+          <UbBox className="grid grid-cols-2 divide-x divide-border-hairline">
+            <UbStack gap={1} className="px-4 py-3">
+              <UbText as="span" variant="inherit" className="ds-body-s-medium text-text-tertiary">
+                {t('ledger.timeline.gave')}
+              </UbText>
+              <UbAmount
+                value={ledger.summary.totalDebit}
+                tone="receivable"
+                sign="none"
+                label={t('ledger.timeline.gave')}
+                labelHidden
+                size="md"
+                className="self-start"
+              />
+            </UbStack>
+            <UbStack gap={1} className="px-4 py-3">
+              <UbText as="span" variant="inherit" className="ds-body-s-medium text-text-tertiary">
+                {t('ledger.timeline.got')}
+              </UbText>
+              <UbAmount
+                value={ledger.summary.totalCredit}
+                tone="payable"
+                sign="none"
+                label={t('ledger.timeline.got')}
+                labelHidden
+                size="md"
+                className="self-start"
+              />
+            </UbStack>
+          </UbBox>
         )}
 
-        {/* The two running totals. Only when there is something to total: a
-            khata with no entries showing "You gave in all ₹0.00" is two lines
-            of nothing above an empty state that already says it. */}
-        {ledger.summary && ledger.summary.entryCount > 0 && (
-          <UbStack direction="row" className="gap-6">
-            <UbAmount
-              value={ledger.summary.totalDebit}
-              tone="receivable"
-              sign="none"
-              label={t('ledger.timeline.gave')}
-              size="sm"
-            />
-            <UbAmount
-              value={ledger.summary.totalCredit}
-              tone="payable"
-              sign="none"
-              label={t('ledger.timeline.got')}
-              size="sm"
-            />
-          </UbStack>
+        {ledger.isLoading && (
+          <UbBox className="p-4">
+            <UbSkeleton variant="list" count={3} label={t('common.loading')} />
+          </UbBox>
         )}
-
-        {ledger.isLoading && <UbSkeleton variant="list" count={3} label={t('common.loading')} />}
 
         {ledger.status === 'failed' && (
-          <UbEmptyState
-            variant="error"
-            title={t('ledger.timeline.error.title')}
-            description={t('ledger.timeline.error.body')}
-            requestId={ledger.error?.requestId}
-            action={
-              <UbButton variant="secondary" onClick={ledger.refetch}>
-                {t('common.action.retry')}
-              </UbButton>
-            }
-          />
+          <UbBox className="p-4">
+            <UbEmptyState
+              variant="error"
+              title={t('ledger.timeline.error.title')}
+              description={t('ledger.timeline.error.body')}
+              requestId={ledger.error?.requestId}
+              action={
+                <UbButton variant="secondary" onClick={ledger.refetch}>
+                  {t('common.action.retry')}
+                </UbButton>
+              }
+            />
+          </UbBox>
         )}
 
         {ledger.isEmpty && (
-          <UbEmptyState
-            variant="firstUse"
-            title={t('ledger.timeline.empty.title')}
-            description={t('ledger.timeline.empty.body')}
-          />
+          <UbBox className="p-4">
+            <UbEmptyState
+              variant="firstUse"
+              title={t('ledger.timeline.empty.title')}
+              description={t('ledger.timeline.empty.body')}
+            />
+          </UbBox>
         )}
 
         {ledger.groups.map((group) => (
-          <UbStack key={group.date} gap={2}>
-            <UbText variant="caption" tone="tertiary">
+          <UbStack key={group.date} gap={0}>
+            {/* The day, as a quiet band — the rows under it are that day's. */}
+            <UbText
+              as="span"
+              variant="inherit"
+              className="ds-body-s-medium bg-surface-hover px-4 py-2 text-text-tertiary"
+            >
               {d(group.date)}
             </UbText>
-            <UbStack gap={0}>
-              {group.entries.map((entry, index) => (
-                <UbBox key={entry.id}>
-                  {index > 0 && <UbDivider />}
-                  <EntryRow
-                    entry={entry}
-                    t={t}
-                    viewerId={viewerId}
-                    wasCorrected={ledger.superseded.has(entry.id)}
-                    onOpenMenu={
-                      correction.canCorrect && isCorrectable(entry) ? setMenuFor : undefined
-                    }
-                  />
-                </UbBox>
-              ))}
-            </UbStack>
+            {group.entries.map((entry, index) => (
+              <UbBox key={entry.id} className="px-4">
+                {index > 0 && <UbDivider />}
+                <EntryRow
+                  entry={entry}
+                  t={t}
+                  viewerId={viewerId}
+                  wasCorrected={ledger.superseded.has(entry.id)}
+                  onOpenMenu={
+                    correction.canCorrect && isCorrectable(entry) ? setMenuFor : undefined
+                  }
+                />
+              </UbBox>
+            ))}
           </UbStack>
         ))}
 
         {ledger.hasMore && (
-          <UbButton
-            variant="ghost"
-            onClick={ledger.loadMore}
-            busy={ledger.isLoadingMore}
-            busyLabel={t('ledger.timeline.loadingMore')}
-            fullWidth
-          >
-            {t('ledger.timeline.loadMore')}
-          </UbButton>
+          <UbBox className="p-2">
+            <UbButton
+              variant="ghost"
+              onClick={ledger.loadMore}
+              busy={ledger.isLoadingMore}
+              busyLabel={t('ledger.timeline.loadingMore')}
+              fullWidth
+            >
+              {t('ledger.timeline.loadMore')}
+            </UbButton>
+          </UbBox>
         )}
-      </UbStack>
+      </UbPanel>
 
       {/* All three mounted ONCE, outside the list. See `EntryActionsMenu`. */}
       <EntryActionsMenu
@@ -234,7 +263,7 @@ export function PartyLedgerTimeline({
           about the IMPORT, not the render. */}
       {correction.reversing && <ReverseEntryDialogLazy correction={correction} />}
       {correction.correcting && <LedgerCorrectionDrawerLazy correction={correction} />}
-    </UbCard>
+    </UbStack>
   );
 }
 

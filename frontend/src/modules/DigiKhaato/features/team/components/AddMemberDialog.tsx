@@ -106,6 +106,7 @@ export function AddMemberDialog({
         <UbField
           name="fullName"
           label={t('team.member.name.label')}
+          placeholder={t('team.member.name.placeholder')}
           hint={t('team.member.name.hint')}
           required
         >
@@ -115,13 +116,19 @@ export function AddMemberDialog({
         <UbField
           name="email"
           label={t('team.member.email.label')}
+          placeholder={t('team.member.email.placeholder')}
           hint={t('team.member.email.hint')}
           required
         >
           {(field) => <UbTextInput {...field} type="email" autoComplete="off" />}
         </UbField>
 
-        <UbField name="role" label={t('team.member.role.label')} required>
+        <UbField
+          name="role"
+          label={t('team.member.role.label')}
+          placeholder={t('team.member.role.placeholder')}
+          required
+        >
           {(field) => (
             <UbSelect
               {...field}
@@ -134,6 +141,7 @@ export function AddMemberDialog({
         <UbField
           name="mobile"
           label={t('team.member.mobile.label')}
+          placeholder={t('team.member.mobile.placeholder')}
           hint={t('team.member.mobile.hint')}
         >
           {(field) => <UbTextInput {...field} type="tel" inputMode="tel" autoComplete="off" />}

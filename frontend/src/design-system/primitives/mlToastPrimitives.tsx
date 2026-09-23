@@ -79,7 +79,8 @@ export const MLToaster = forwardRef<HTMLDivElement, MLToasterProps>(function MLT
     <div
       ref={ref}
       className={cn(
-        'pointer-events-none fixed inset-x-0 bottom-toast z-50 px-4',
+        // BrandHub CustomerSnackbar: fixed, 25 px from the top, centred.
+        'pointer-events-none fixed inset-x-0 top-[25px] z-[2000] px-4',
         className
       )}
       {...rest}
@@ -116,12 +117,13 @@ export interface MLToastProps extends HTMLAttributes<HTMLDivElement> {
   readonly className?: string;
 }
 
+/** ml-uikit `MLAlert` variants, as BrandHub's snackbar renders them: an
+ *  outlined card whose border AND text take the tone. */
 const TOAST_VARIANT: Record<MLToastVariant, string> = {
-  info: 'border-info/40',
-  success: 'border-success/40',
-  warning: 'border-warning/40',
-  // §23.5: an outlined block, never a filled red one.
-  error: 'border-formError',
+  info: 'border-info text-info',
+  success: 'border-success text-success',
+  warning: 'border-warning text-warning',
+  error: 'border-error text-error',
 };
 
 export const MLToast = forwardRef<HTMLDivElement, MLToastProps>(function MLToast(
@@ -132,7 +134,8 @@ export const MLToast = forwardRef<HTMLDivElement, MLToastProps>(function MLToast
     <div
       ref={ref}
       className={cn(
-        'pointer-events-auto flex w-full max-w-[420px] items-start gap-3 rounded-md border bg-surface-raised p-4 shadow-3',
+        'pointer-events-auto flex w-full max-w-[420px] items-start gap-3 rounded-md border bg-surface-card px-3 py-3',
+        'ds-fixed-base-regular shadow-[0px_2px_4px_-2px_rgba(19,25,39,0.12),0px_4px_4px_-2px_rgba(19,25,39,0.08)]',
         'animate-fade-in',
         TOAST_VARIANT[variant],
         className

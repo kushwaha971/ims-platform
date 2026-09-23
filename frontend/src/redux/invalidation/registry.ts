@@ -11,6 +11,10 @@ import {
   switchTenant,
 } from 'modules/DigiKhaato/features/auth/redux/sessionThunk';
 import {
+  fetchLedgerAging,
+  fetchLedgerSummary,
+} from 'modules/DigiKhaato/features/ledger/redux/agingThunk';
+import {
   correctEntry,
   fetchEntryHistory,
   fetchPartyEntries,
@@ -96,6 +100,9 @@ export const QUERIES = {
   // LED-04 — one page of a statement, and the whole period for print
   fetchPartyStatement,
   fetchStatementAllRows,
+  // LED-09 — the aging report, and the two figures above it
+  fetchLedgerAging,
+  fetchLedgerSummary,
 } as const;
 
 export const MUTATIONS = {

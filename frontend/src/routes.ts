@@ -44,6 +44,8 @@ export const ROUTES = {
    *  product. */
   PARTY_TAGS: '/parties/tags',
   LEDGER_REMINDERS: '/ledger/reminders',
+  /** LED-09 — receivable and payable aging. */
+  LEDGER_AGING: '/ledger/aging',
   ITEMS: '/items',
   SALES_INVOICES: '/sales/invoices',
   PURCHASE_BILLS: '/purchases/bills',

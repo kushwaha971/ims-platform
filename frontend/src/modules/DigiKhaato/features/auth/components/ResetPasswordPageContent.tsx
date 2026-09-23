@@ -128,6 +128,7 @@ export function ResetPasswordPageContent(): React.JSX.Element {
             <UbField
               name="password"
               label={t('auth.password.new.label')}
+              placeholder={t('auth.password.new.placeholder')}
               hint={t('auth.password.rule')}
               required
             >

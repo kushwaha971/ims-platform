@@ -145,6 +145,7 @@ export function ReverseEntryDialog({
         <UbField
           name="reason"
           label={t('ledger.correction.reason')}
+          placeholder={t('ledger.correction.reason.placeholder')}
           hint={t('ledger.correction.reason.hint')}
           required
         >

@@ -116,3 +116,27 @@ mixed setup they do not. The quick chips ("Year start", "Today") are unambiguous
 and cover the common cases. Revisit only if a real user is confused by it — the
 alternative is a hand-built calendar, which is several hundred lines whose
 failure modes are all in the keyboard and screen-reader paths.
+
+## Owner directive, 23 Sep 2026 — Django, PostgreSQL and the frontend stack only
+
+The owner restated the constraint in its narrowest form: for the current scope the product
+uses **Django, PostgreSQL and the frontend stack**, nothing else. Any feature that needs
+another library or a service goes here; where a native mechanism does the job, the feature
+is built on that instead. "Native" means a browser or OS capability reached from a button
+click or a page load, never a scheduler, a queue or a provider.
+
+| Feature | Built now, natively | Backlogged |
+|---|---|---|
+| **Payment reminders** (`LED-05`) | A button that opens `https://wa.me/<number>?text=…` or `sms:<number>?body=…` with the message pre-filled; the merchant presses send in their own app. The reminder row is recorded on the click. | Automated/scheduled sends (`LED-07`, `LED-08`), WhatsApp Cloud API, any SMS provider. |
+| **"Who to chase today"** | Computed by a query when the dashboard or party list loads. | A nightly job that pre-computes it. |
+| **Notifications** (`NTF-*`) | In-app list derived on page load and on window focus. | Web push (`NTF-04`), email and SMS delivery. |
+| **PDF** (statements, invoices, bills) | `window.print()` over a print stylesheet; the browser's own "Save as PDF". Already in use for the LED-04 statement. This also answers `DEC-002` for MVP. | Server-side rendering (WeasyPrint or similar), emailed PDFs. |
+| **Sharing a statement or invoice** | `navigator.share()` where the browser has it, falling back to the `wa.me` link and a copy-to-clipboard. | Hosted public share links with expiry (`UbShareSheet`'s link tab) until the share-link shape (C1) is decided. |
+| **UPI collection** | `upi://pay?…` intent link on a button, which opens the payer's UPI app on a phone. | The QR image (needs a QR encoder — in-house only if the owner wants it written; no library), payment aggregator (`PAY-06`). |
+| **Background work** (balance-drift check, large exports, report snapshots) | Run on a button click or as a Django management command; exports stay synchronous under a row cap (the statement CSV caps at 5,000). | Celery, Redis, cron workers, async export files. |
+| **Barcode lookup** (inventory, later sprint) | Typed or pasted code; the browser `BarcodeDetector` API where present. | Any scanning library. |
+
+The frontend packages already in `package.json` beyond the canon list (`@radix-ui/*`,
+`cmdk`, `vaul`, `sonner`, `recharts`, `react-day-picker`, …) are peer dependencies of the
+vendored `ml-uikit`, not choices made by feature code; feature code imports none of them
+except through the design system. No new package is added for any row above.

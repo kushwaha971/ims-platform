@@ -69,6 +69,14 @@ export const PERMISSION_CODES = [
   'payments.payment.read',
   'expenses.expense.read',
   'reports.basic.read',
+  /**
+   * LED-09 §12 — taking a report away as a file.
+   *
+   * The same act `ledger.statement.export` gates one party at a time, at the
+   * scale of the whole book: staff chase collections and do not leave with the
+   * debtor list. The accountant holds both, which is their job.
+   */
+  'reports.export',
   'platform.members.manage',
   'platform.settings.manage',
 ] as const;

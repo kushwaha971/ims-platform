@@ -57,58 +57,64 @@
   --accent-line: rgba(74, 71, 214, 0.35);
 
   /* ── Surfaces ─────────────────────────────────────────────────────────── */
-  --canvas: 220 20% 97.06%; /* #F6F7F9 */
-  --surface-sunken: 216 17.24% 94.31%; /* #EEF0F3 */
+  --canvas: 0 0% 100%; /* #FFFFFF — the owner asked for a white ground over the Figma #FAF9F8 */
+  --surface-sunken: 240 5% 94.9%; /* #F1F1F1 — BrandHub --muted */
   --surface-card: 0 0% 100%; /* #FFFFFF */
   --surface-raised: 0 0% 100%; /* #FFFFFF + shadow-2 */
-  --surface-hover: 216 21.74% 95.49%; /* #F1F3F6 */
-  --surface-active: 216 25% 92.16%; /* #E6EAF0 */
-  /* The desktop rail stays dark in BOTH themes (Zoho-style). */
-  --surface-nav: 212.31 19.4% 13.14%; /* #1B2128 */
-  --surface-nav-hover: 213.75 19.05% 16.47%; /* ink-700 #222932 */
+  --surface-hover: 0 0% 96.08%; /* #F5F5F5 — neutral-grey-200 */
+  --surface-subtle: 0 0% 98.04%; /* #FAFAFA — BrandHub muted-subtle: table heads, drop zones */
+  --surface-active: 240 5% 94.9%; /* #F1F1F1 */
+  /* The desktop rail: a white card floating on the page ground, as BrandHub's
+     "Served" designs draw it (Figma, Sep 2026). It was dark in both themes
+     (Zoho-style, Part 23 §23.2.1); the owner's reference design supersedes
+     that, recorded as a CR. Dark mode keeps its dark rail (dark.css). */
+  --surface-nav: 0 0% 100%; /* #FFFFFF */
+  --surface-nav-hover: 0 0% 99.22%; /* #FDFDFD — neutral-grey-100, row hover */
+  --surface-nav-active: 0 0% 96.08%; /* #F5F5F5 — neutral-grey-200, current row */
+  --border-nav-active: 240 5% 94.9%; /* #F1F1F1 — neutral-grey-300, current row edge */
 
   /* ── Borders ──────────────────────────────────────────────────────────── */
-  --border-hairline: 214.29 15.56% 91.18%; /* #E5E8EC */
-  --border-subtle: 212.73 16.42% 86.86%; /* #D8DDE3 */
+  --border-hairline: 0 0% 90.2%; /* #E6E6E6 — BrandHub --border */
+  --border-subtle: 240 4.35% 86.47%; /* #DCDCDE — outline buttons */
   /* Was #AEB6C0 — 1.91:1 on canvas, below WCAG 1.4.11's 3:1 for a control
      boundary that identifies the control. Re-toned to 3.39:1. */
   --border-strong: 215.45 9.32% 53.73%; /* #7E8794 */
   --border-focus: var(--primary-500);
 
   /* ── Text ─────────────────────────────────────────────────────────────── */
-  --text-primary: 213.33 18.37% 9.61%; /* #14181D */
-  --text-secondary: 214.29 15.33% 26.86%; /* #3A434F */
-  --text-tertiary: 212.73 10.38% 41.57%; /* #5F6975 — was #68737F, 4.23 on sunken */
-  --text-muted: 212.73 9.91% 43.53%; /* #646E7A — was #8A94A0, 2.87 on canvas */
+  --text-primary: 270 10% 3.92%; /* #0A090B — BrandHub foreground */
+  --text-secondary: 255 4.8% 31.76%; /* #4F4D55 — label-strong */
+  --text-tertiary: 260.00 2.70% 43.53%; /* #6E6C72 — BrandHub #7F7D83 one step darker: 4.07:1 → 5.2:1 on white (§23.6 floor) */
+  --text-muted: 260.00 2.70% 43.53%; /* #6E6C72 — placeholders and captions; BrandHub #ADACB0 is 2.3:1 and fails §23.6 */
   --text-inverse: 0 0% 100%; /* #FFFFFF */
   --text-accent: var(--primary-600); /* links: primary-500 fails on sunken */
   /* The rail is dark in both themes, so its text does NOT follow --text-*.
      #F4F6F8 on #1B2128 is 14.97:1 (§23.6). */
-  --text-on-nav: 210 22.22% 96.47%; /* #F4F6F8 */
-  --text-on-nav-muted: 213.33 12.5% 71.76%; /* slate-200 #AEB6C0 */
+  --text-on-nav: 270 10% 3.92%; /* #0A090B */
+  --text-on-nav-muted: 260.00 2.70% 43.53%; /* #6E6C72 — as text-tertiary */
 
   /* ── Semantic — ledger credit (§23.2.4 semantic mapping) ──────────────── */
-  --success: 154.64 72.93% 26.08%; /* #12734A — was #1E9E62, 3.43:1 */
+  --success: 139.73 45.91% 31.18%; /* #2B7443 — BrandHub #307F4A one step darker so it holds 4.5:1 on grey fills */
   --success-bright: 151.65 57.47% 43.33%; /* #2FAE72 — fill/icon only */
-  --success-dim: 150 43.75% 93.73%; /* #E8F6EF */
+  --success-dim: 142.5 46.15% 94.9%; /* #E8F6ED */
 
-  --warning: 35.91 85.71% 30.2%; /* #8F5A0B — was #B97612, 3.71:1 */
-  --warning-bright: 36.34 69.72% 50.78%; /* #D9942A */
-  --warning-dim: 38.57 87.5% 93.73%; /* #FDF3E1 */
+  --warning: 37.06 86.47% 31.37%; /* #957B0C-ish: #955F0B — BrandHub #B6760E darkened one step to clear 4.5:1 on its tint */
+  --warning-bright: 38.09 83.33% 48.63%; /* #E49614 — BrandHub warning-action */
+  --warning-dim: 36.92 100% 92.35%; /* #FFF0D8 */
 
   /* Ledger DEBIT only — "You gave", receivable, overdue, out of stock. */
-  --error: 5.64 63.4% 46.08%; /* #C0392B — hue 6°, separated from --form-error */
-  --error-bright: 353.71 67.14% 58.24%; /* #DC4D5C */
-  --error-dim: 7.06 80.95% 95.88%; /* #FDEEEC */
+  --error: 0.00 75.86% 45.49%; /* #CC1C1C — BrandHub #E12121 one step darker so it holds 4.5:1 on grey fills and its tint */
+  --error-bright: 0 77.97% 57.65%; /* #E73F3F — destructive-strong */
+  --error-dim: 0 85.71% 97.25%; /* #FEF1F1 — BrandHub #FEEBEB lifted to keep #E12121 text at 4.5:1 */
 
   /* Validation and system errors ONLY — never an amount (§23.2.4 two families). */
-  --form-error: 341.79 80.11% 35.49%; /* #A3123E — hue 342° */
+  --form-error: 0 78.43% 45.1%; /* #CD1919 — one step under BrandHub #E12121 so an error line reads at 4.5:1 on grey fills */
   --form-error-bright: 339.75 66.81% 46.08%; /* #C4275C */
-  --form-error-dim: 337.89 76% 95.1%; /* #FCE9F0 */
+  --form-error-dim: 0 85.71% 97.25%; /* #FEF1F1 */
 
-  --info: 241.85 54.62% 46.67%; /* #3A36B8 — primary-600, not 500, as text */
+  --info: 221.18 75.11% 51.18%; /* #245FE0 — BrandHub blue text */
   --info-bright: 211.89 66.51% 57.84%; /* #4C8FDB */
-  --info-dim: 217.14 84% 95.1%; /* #E8F0FD */
+  --info-dim: 221.54 100% 95.88%; /* #E9F0FF */
 
   /* ── Charts — decorative fills; a series is always also labelled ──────── */
   --viz-1: var(--primary-500);
@@ -123,7 +129,7 @@
   /* ── Elevation (§23.2.3) — light-theme alphas are reduced ─────────────── */
   --shadow-0: none;
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.08);
-  --shadow-2: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --shadow-2: 0px 4px 6px -4px rgba(19, 25, 39, 0.12), 0px 8px 8px -4px rgba(19, 25, 39, 0.08); /* BrandHub auth-card / Figma shadow-200 */
   --shadow-3: 0 8px 24px rgba(0, 0, 0, 0.14);
   --shadow-4: 0 20px 48px rgba(0, 0, 0, 0.18);
   --shadow-inset-top: inset 0 1px 0 rgba(255, 255, 255, 0.04);

@@ -230,12 +230,7 @@ export function LedgerEntryDrawer({
           />
         )}
 
-        <UbField
-          name="direction"
-          label={t('ledger.entry.direction')}
-          labelHidden
-          required
-        >
+        <UbField name="direction" label={t('ledger.entry.direction')} labelHidden required>
           {(field) => (
             <UbRadioGroup<LedgerDirection>
               {...field}
@@ -246,11 +241,21 @@ export function LedgerEntryDrawer({
           )}
         </UbField>
 
-        <UbField name="amount" label={t('ledger.entry.amount')} required>
+        <UbField
+          name="amount"
+          label={t('ledger.entry.amount')}
+          placeholder={t('ledger.entry.amount.placeholder')}
+          required
+        >
           {(field) => <UbMoneyInput {...field} autoFocus inputMode="decimal" />}
         </UbField>
 
-        <UbField name="entryDate" label={t('ledger.entry.date')} required>
+        <UbField
+          name="entryDate"
+          label={t('ledger.entry.date')}
+          placeholder={t('ledger.entry.date.placeholder')}
+          required
+        >
           {(field) => (
             <UbDateInput
               {...field}
@@ -280,7 +285,12 @@ export function LedgerEntryDrawer({
             is the same mode every time, so the common path is zero taps on this
             control either way. */}
         {isCredit && (
-          <UbField name="paymentMode" label={t('ledger.entry.mode')} required>
+          <UbField
+            name="paymentMode"
+            label={t('ledger.entry.mode')}
+            placeholder={t('ledger.entry.mode.placeholder')}
+            required
+          >
             {(field) => <UbSelect {...field} options={modeOptions} />}
           </UbField>
         )}
@@ -289,6 +299,7 @@ export function LedgerEntryDrawer({
           <UbField
             name="reference"
             label={t('ledger.entry.reference')}
+            placeholder={t('ledger.entry.reference.placeholder')}
             hint={t('ledger.entry.reference.hint')}
             optionalLabel={t('common.field.optional')}
           >
@@ -299,6 +310,7 @@ export function LedgerEntryDrawer({
         <UbField
           name="note"
           label={t('ledger.entry.note')}
+          placeholder={t('ledger.entry.note.placeholder')}
           hint={t('ledger.entry.note.hint')}
           optionalLabel={t('common.field.optional')}
         >

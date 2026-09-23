@@ -42,7 +42,14 @@ function UbStatGridBase({ children, live, label, className }: Readonly<UbStatGri
       role={live ? 'region' : undefined}
       aria-live={live ? 'polite' : undefined}
       aria-label={label}
-      className={cn('grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4', className)}
+      /* Responsive, up to FIVE across (owner, Sep 2026): each tile is at least
+         180 px and at least a fifth of the row, so a wide screen never packs a
+         sixth in, and three tiles stretch to fill the row instead of leaving
+         two empty slots. On a phone the floor gives two across. */
+      className={cn(
+        'grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(max(150px,calc((100%-4*1rem)/5)),1fr))] md:gap-4',
+        className
+      )}
     >
       {children}
     </div>

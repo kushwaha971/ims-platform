@@ -41,7 +41,7 @@ export interface UbPageHeaderProps {
   readonly controls?: ReactNode;
   /** One primary action per view (Koper). */
   readonly actions?: ReactNode;
-    readonly className?: string;
+  readonly className?: string;
 }
 
 function UbPageHeaderBase({
@@ -77,12 +77,17 @@ function UbPageHeaderBase({
      */
     <header className={cn('flex flex-col gap-4', className)}>
       <div className="flex w-full flex-col gap-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="flex min-w-0 flex-col gap-1">
-            <h1 className="ds-h2 truncate text-text-primary md:ds-h1">{title}</h1>
-            {subtitle && <p className="ds-body-sm text-text-tertiary">{subtitle}</p>}
+        {/* Figma "top bar": 8 px vertical padding, the title at 20/32 semibold
+            and the sentence under it at 14/20 tertiary, 2 px apart; the
+            actions centred on the pair. */}
+        <div className="flex flex-col gap-3 py-2 lg:flex-row lg:items-center lg:gap-6">
+          <div className="flex min-w-0 flex-col gap-0.5 lg:flex-1">
+            <h1 className="ds-body-xl-semibold truncate leading-8 text-text-primary">{title}</h1>
+            {subtitle && (
+              <p className="ds-body-base-regular leading-5 text-text-tertiary">{subtitle}</p>
+            )}
           </div>
-          {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+          {actions && <div className="flex shrink-0 items-center gap-4">{actions}</div>}
         </div>
         {controls}
       </div>

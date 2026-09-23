@@ -49,9 +49,11 @@ const TONE: Record<UbAmountTone, string> = {
 };
 
 const SIZE: Record<NonNullable<UbAmountBaseProps['size']>, string> = {
-  sm: 'ds-body-sm',
-  md: 'ds-body-medium',
-  lg: 'ds-metric-sm',
+  /* BrandHub sets every figure in Inter (`ds-num-*`): 12/16 medium in a row,
+     16/24 medium in a total cell, 20/32 semibold as a headline balance. */
+  sm: 'ds-num-s-medium',
+  md: 'ds-num-l-medium',
+  lg: 'ds-num-xl-semibold',
 };
 
 /** U+2212 MINUS SIGN, not a hyphen, so it aligns with `ds-num`'s figures. */
@@ -99,7 +101,7 @@ function UbAmountBase({
         lang="en-IN"
         dir="ltr"
         aria-hidden
-        className={cn('ds-num whitespace-nowrap', SIZE[size], TONE[effectiveTone])}
+        className={cn('whitespace-nowrap', SIZE[size], TONE[effectiveTone])}
       >
         {/* fixed slot so signed and unsigned rows keep one decimal column */}
         <span className="inline-block min-w-[0.6em] text-right">{GLYPH[effectiveSign]}</span>

@@ -8,9 +8,11 @@ import { ChevronsUpDown, Plus, Star } from 'lucide-react';
 
 import {
   UbAvatar,
+  UbBox,
   UbConfirmDialog,
   UbListItemText,
   UbStatusBadge,
+  UbLogo,
   UbText,
 } from 'src/design-system';
 import { MLMenu, MLMenuItem, MLMenuLabel, MLSpinner } from 'src/design-system/primitives';
@@ -44,7 +46,19 @@ import {
  */
 export function TenantSwitcherMenu({
   className,
-}: Readonly<{ className?: string }>): React.JSX.Element | null {
+  rail = false,
+  caption,
+}: Readonly<{
+  className?: string;
+  /**
+   * The desktop rail's header row — BrandHub's sidebar logo block: a 32 px
+   * square mark, the business name at 12/16 medium and a 10/16 caption under
+   * it, the whole row the switcher's trigger.
+   */
+  rail?: boolean;
+  /** The line under the name in the rail (the product name). */
+  caption?: string;
+}>): React.JSX.Element | null {
   const { t } = useTranslation();
   const router = useRouter();
   const switcher = useTenantSwitcher();
@@ -73,21 +87,52 @@ export function TenantSwitcherMenu({
         ariaLabel={t('tenant.switcher.title')}
         triggerLabel={t('tenant.switcher.trigger', { name: active.name })}
         className={className}
+        triggerClassName={
+          rail ? 'min-h-0 gap-2 rounded-none p-3 hover:bg-surface-navHover' : undefined
+        }
         trigger={
-          <>
-            <UbAvatar name={active.name} size="sm" tone="onNav" />
-            <UbText
-              as="span"
-              variant="body-sm-medium"
-              tone="inherit"
-              truncate
-              title={activeName.truncated ? active.name : undefined}
-              className="min-w-0 flex-1 text-left"
-            >
-              {activeName.text}
-            </UbText>
-            <ChevronsUpDown aria-hidden className="h-4 w-4 shrink-0 opacity-70" />
-          </>
+          rail ? (
+            <>
+              <UbLogo variant="mark" size="md" />
+              <UbBox as="span" className="flex min-w-0 flex-1 flex-col justify-center">
+                <UbText
+                  as="span"
+                  variant="inherit"
+                  truncate
+                  title={activeName.truncated ? active.name : undefined}
+                  className="ds-nav-label-medium text-text-onNav"
+                >
+                  {activeName.text}
+                </UbText>
+                {caption && (
+                  <UbText
+                    as="span"
+                    variant="inherit"
+                    truncate
+                    className="ds-nav-caption-regular text-text-onNavMuted"
+                  >
+                    {caption}
+                  </UbText>
+                )}
+              </UbBox>
+              <ChevronsUpDown aria-hidden className="h-4 w-4 shrink-0 text-text-onNavMuted" />
+            </>
+          ) : (
+            <>
+              <UbAvatar name={active.name} size="sm" tone="onNav" />
+              <UbText
+                as="span"
+                variant="body-sm-medium"
+                tone="inherit"
+                truncate
+                title={activeName.truncated ? active.name : undefined}
+                className="min-w-0 flex-1 text-left"
+              >
+                {activeName.text}
+              </UbText>
+              <ChevronsUpDown aria-hidden className="h-4 w-4 shrink-0 opacity-70" />
+            </>
+          )
         }
       >
         <MLMenuLabel>{t('tenant.switcher.title')}</MLMenuLabel>

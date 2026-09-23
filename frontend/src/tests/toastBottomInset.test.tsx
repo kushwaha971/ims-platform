@@ -10,7 +10,6 @@ import { hideSnackbar } from 'src/redux/slice/snackbarSlice';
 import { store } from 'src/redux/store';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
 
-import { AuthFooter } from 'modules/DigiKhaato/features/auth/components/AuthFooter';
 import { OnboardingStepActions } from 'modules/DigiKhaato/features/onboarding/components/OnboardingStepActions';
 
 /**
@@ -155,24 +154,6 @@ describe('the two archetypes that own the bottom of the page declare it', () => 
     expect(bar?.className).toContain('sticky');
     expect(bar?.className).toContain('bottom-0');
   });
-
-  it('the (auth) footer is a bottom bar, and is still the one contentinfo', () => {
-    renderWithProviders(<AuthFooter />);
-
-    const footer = screen.getByRole('contentinfo');
-    expect(footer).toHaveAttribute('data-ub-bottom-bar');
-    expect(footer.tagName).toBe('FOOTER');
-    // It sits at the end of a `min-h-dvh` column; it was never pinned, and
-    // publishing its height must not pin it now.
-    expect(footer.className).not.toContain('sticky');
-  });
-
-  it('keeps the language picker inside that footer — it is what the toast was covering', () => {
-    renderWithProviders(<AuthFooter />);
-
-    const footer = screen.getByRole('contentinfo');
-    expect(footer).toContainElement(screen.getByRole('combobox', { name: 'Change language' }));
-  });
 });
 
 // ── The anchor, and the arithmetic behind it ─────────────────────────────────
@@ -186,10 +167,14 @@ describe('the toast viewport reads the custom property', () => {
     return viewport;
   };
 
-  it('is anchored on `bottom-toast`, not on a number', () => {
+  it('is anchored top-centre, 25 px down — BrandHub CustomerSnackbar', () => {
     const viewport = toastViewport();
 
-    expect(viewport.className).toContain('bottom-toast');
+    /* The owner moved it (Sep 2026): top-centre at every width, the way
+       BrandHub's snackbar sits, clear of every bottom bar by construction.
+       The bottom-inset arithmetic below is kept: `UbBottomBar` still
+       publishes its height and a bottom-anchored overlay can use it. */
+    expect(viewport.className).toContain('top-[25px]');
     // The offsets it used to carry. `bottom-20` was a guess at the height of a
     // `UbBottomNav` that does not exist yet — a number per screen, in the toast.
     expect(viewport.className).not.toContain('bottom-20');

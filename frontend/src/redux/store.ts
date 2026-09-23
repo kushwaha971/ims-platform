@@ -6,6 +6,7 @@ import { errorMessageId } from 'src/utils/apiError';
 // ── auth (PLT-01, PLT-02) ────────────────────────────────────────────────────
 import authReducer from 'modules/DigiKhaato/features/auth/redux/authSlice';
 // ── ledger (LED-01) ──────────────────────────────────────────────────────────
+import { ledgerAgingReducer } from 'modules/DigiKhaato/features/ledger/redux/agingSlice';
 import ledgerEntryReducer from 'modules/DigiKhaato/features/ledger/redux/ledgerEntrySlice';
 import { ledgerFormReducer } from 'modules/DigiKhaato/features/ledger/redux/ledgerFormSlice';
 import { statementReducer } from 'modules/DigiKhaato/features/ledger/redux/statementSlice';
@@ -74,6 +75,11 @@ export const store = configureStore({
        opens the login screen downloads it and the ones who print a statement
        read it. Every earlier slice could at least be argued into the shell. */
     statement: statementReducer,
+    /* LED-09, and the second route-local slice in a row: `/ledger/aging` is the
+       only screen that reads this. The statement's docstring made the
+       qualitative argument for §19.3.9; this is the instance that turns it from
+       an observation into a pattern. */
+    ledgerAging: ledgerAgingReducer,
     invitation: invitationReducer,
     member: memberReducer,
   },

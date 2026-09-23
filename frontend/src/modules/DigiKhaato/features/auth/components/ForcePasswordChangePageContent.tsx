@@ -77,9 +77,7 @@ export function ForcePasswordChangePageContent(): React.JSX.Element {
    * that accepts input and then refuses it would send them to try harder at
    * something that cannot succeed.
    */
-  const expired = Boolean(
-    user?.passwordExpiresAt && Date.parse(user.passwordExpiresAt) <= nowMs
-  );
+  const expired = Boolean(user?.passwordExpiresAt && Date.parse(user.passwordExpiresAt) <= nowMs);
 
   if (expired) {
     return (
@@ -118,6 +116,7 @@ export function ForcePasswordChangePageContent(): React.JSX.Element {
             <UbField
               name="currentPassword"
               label={t('team.credentials.password.label')}
+              placeholder={t('team.credentials.password.placeholder')}
               required
             >
               {(field) => (
@@ -134,6 +133,7 @@ export function ForcePasswordChangePageContent(): React.JSX.Element {
             <UbField
               name="password"
               label={t('auth.password.label')}
+              placeholder={t('auth.password.placeholder')}
               hint={t('auth.password.rule')}
               required
             >

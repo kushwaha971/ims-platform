@@ -28,12 +28,12 @@ export const GRID_TABLE = 'w-full border-collapse';
  * colour as the rows relies entirely on font weight, which at 13 px is not
  * much. `surface-sunken` is this product's token for the same near-white.
  */
-export const GRID_THEAD = 'sticky top-0 z-10 bg-surface-sunken';
+export const GRID_THEAD = 'sticky top-0 z-10 bg-surface-subtle';
 
 export const GRID_HEAD_ROW = 'border-b border-border-hairline';
 
 export const GRID_TH =
-  'ds-body-sm-medium h-12 select-none whitespace-nowrap px-3 py-2 align-middle text-text-primary';
+  'ds-body-s-medium h-12 select-none whitespace-nowrap px-3 py-0 align-middle text-text-primary';
 
 /** The checkbox column: fixed at 48 px so the name column starts in one place. */
 export const GRID_SELECT_CELL = 'w-12 px-3 py-2';
@@ -56,4 +56,4 @@ export const GRID_ROW = 'border-b border-border-hairline transition-colors last:
 /** BrandHub's `rowHeight` default. */
 export const GRID_ROW_HEIGHT = 52;
 
-export const GRID_TD = 'ds-body-sm truncate px-3 py-2 align-middle text-text-primary';
+export const GRID_TD = 'ds-body-base-regular truncate px-3 py-2 align-middle text-text-primary';

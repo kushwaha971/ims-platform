@@ -116,18 +116,18 @@ const UbComboboxInner = forwardRef<HTMLButtonElement, UbComboboxProps>(function 
   return (
     <MLPopover open={open} onOpenChange={setOpen}>
       {/* Not `asChild`.
-        *
-        * The first version wrapped a hand-written <button> in
-        * `<MLPopoverTrigger asChild>`, and the popover never opened: measured in
-        * a browser, `aria-expanded` stayed `false` after a click and no popper
-        * content was ever mounted. Radix's Slot clones the child to merge its
-        * props, and an explicit `ref` and `aria-expanded` on that child fight
-        * the ones Slot is trying to inject.
-        *
-        * Letting the trigger render its own button removes the whole
-        * interaction. It already carries `role="combobox"`, `aria-expanded` and
-        * `aria-controls` itself — correctly, and without anything to override
-        * — so the styling is all that has to come from here. */}
+       *
+       * The first version wrapped a hand-written <button> in
+       * `<MLPopoverTrigger asChild>`, and the popover never opened: measured in
+       * a browser, `aria-expanded` stayed `false` after a click and no popper
+       * content was ever mounted. Radix's Slot clones the child to merge its
+       * props, and an explicit `ref` and `aria-expanded` on that child fight
+       * the ones Slot is trying to inject.
+       *
+       * Letting the trigger render its own button removes the whole
+       * interaction. It already carries `role="combobox"`, `aria-expanded` and
+       * `aria-controls` itself — correctly, and without anything to override
+       * — so the styling is all that has to come from here. */}
       <MLPopoverTrigger
         ref={ref}
         id={id}
@@ -141,13 +141,13 @@ const UbComboboxInner = forwardRef<HTMLButtonElement, UbComboboxProps>(function 
         disabled={disabled}
         onBlur={onBlur}
         className={cn(
-          'flex h-11 w-full items-center justify-between gap-2 rounded-control border px-3',
+          'flex h-10 w-full items-center justify-between gap-2 rounded-control border px-3',
           'ds-body bg-surface-card text-left text-text-primary',
           'disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-text-muted',
           'focus-visible:outline-none focus-visible:ring-0',
           invalid
-            ? 'border-formError focus-visible:border-formError aria-invalid:border-formError aria-invalid:focus-visible:border-formError'
-            : 'border-border-strong hover:border-border-focus focus-visible:border-border-focus',
+            ? 'aria-invalid:border-formError aria-invalid:focus-visible:border-formError border-formError focus-visible:border-formError'
+            : 'border-border-hairline hover:border-border-subtle focus-visible:border-text-primary',
           className
         )}
         {...aria}
@@ -166,7 +166,7 @@ const UbComboboxInner = forwardRef<HTMLButtonElement, UbComboboxProps>(function 
         className="w-[var(--radix-popover-trigger-width)] border-border-subtle bg-surface-card p-0"
       >
         <MLCommand>
-          <MLCommandInput placeholder={searchPlaceholder} className="ds-body h-11" />
+          <MLCommandInput placeholder={searchPlaceholder} className="ds-body-base-regular h-10" />
           <MLCommandList className="max-h-[min(18rem,55dvh)]">
             <MLCommandEmpty className="ds-body-sm px-3 py-6 text-center text-text-tertiary">
               {emptyLabel}
