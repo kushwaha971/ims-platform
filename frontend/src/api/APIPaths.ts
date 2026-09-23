@@ -56,6 +56,13 @@ export const API_PATHS = {
   PARTY_STATEMENT: (id: string) => `/parties/${id}/statement`,
   PARTY_LEDGER_ENTRIES: (id: string) => `/parties/${id}/ledger-entries`,
   PARTY_SHARE_LINKS: (id: string) => `/parties/${id}/share-links`,
+  /**
+   * PTY-05 — the tag collection. Its own constant rather than
+   * `${PARTIES}/tags`, because `API_PATHS.PARTIES` is the party SEARCH
+   * endpoint and is fenced by lint to `partyService` (Sprint 3 §32.6.7 — no
+   * second party fetch; see eslint.config.mjs, PARTY_FETCH_MESSAGE).
+   */
+  PARTY_TAGS: '/parties/tags',
 
   // ── ledger ────────────────────────────────────────────────────────────────
   LEDGER_ENTRIES: '/ledger-entries',
@@ -174,7 +181,7 @@ export const IDEMPOTENT_POST_PATHS: readonly string[] = [
  * is a claim that the endpoint cannot double-write, and it belongs in the same
  * commit as the endpoint that makes the claim true.
  */
-export const IDEMPOTENCY_EXEMPT_PATHS: readonly string[] = [`${API_PATHS.PARTIES}/tags`];
+export const IDEMPOTENCY_EXEMPT_PATHS: readonly string[] = [API_PATHS.PARTY_TAGS];
 
 /** True when a POST to this url is on the mandatory-idempotency list. */
 export const requiresIdempotency = (url: string | undefined): boolean => {

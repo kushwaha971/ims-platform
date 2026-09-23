@@ -31,6 +31,7 @@ import { useTranslation } from 'src/hooks/useTranslation';
 
 import { DesignSystemChartsGallery } from './DesignSystemChartsGallery';
 import { DesignSystemWave1Gallery } from './DesignSystemWave1Gallery';
+import { DesignSystemWave3Gallery } from './DesignSystemWave3Gallery';
 
 /**
  * Part 23 §23.4 — the live gallery. Storybook is not a dependency (ADR-021), so
@@ -207,6 +208,11 @@ export function DesignSystemGallery(): React.JSX.Element {
           Wave 1 — Sprint 1
         </UbText>
         <DesignSystemWave1Gallery />
+
+        <UbText as="h2" variant="h3" className="mt-4">
+          Wave 3 — Sprint 3
+        </UbText>
+        <DesignSystemWave3Gallery />
 
         <DesignSystemChartsGallery />
 

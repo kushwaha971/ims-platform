@@ -3,7 +3,7 @@ import { createAsyncThunk } from '@reduxjs/toolkit';
 import type { ApiErrorShape } from 'src/types/api.types';
 import { toApiError } from 'src/utils/apiError';
 
-import * as partyService from '../api/partyService';
+import { createParty, updateParty } from '../api/partyService';
 
 import type { PartyFormValues, PartySaveResult } from '../types/party.types';
 
@@ -43,9 +43,7 @@ export const saveParty = createAsyncThunk<
   { rejectValue: ApiErrorShape }
 >('partyForm/save', async ({ values, partyId, idempotencyKey }, { rejectWithValue }) => {
   try {
-    return partyId
-      ? await partyService.updateParty(partyId, values)
-      : await partyService.createParty(values, idempotencyKey);
+    return partyId ? await updateParty(partyId, values) : await createParty(values, idempotencyKey);
   } catch (error) {
     return rejectWithValue(toApiError(error, 'parties.form.error.title'));
   }

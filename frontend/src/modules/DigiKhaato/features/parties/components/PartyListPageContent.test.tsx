@@ -13,6 +13,7 @@ import type { PermissionCode } from 'src/types/domain.types';
 
 import hi from 'locales/hi.json';
 
+import { resetPartyForm } from '../redux/partyFormSlice';
 import { resetPartyList } from '../redux/partyListSlice';
 import { resetPartyTags } from '../redux/partyTagSlice';
 
@@ -151,7 +152,9 @@ describe('PartyListPageContent', () => {
 
     renderWithProviders(<PartyListPageContent />);
 
-    expect(screen.getByRole('status')).toBeInTheDocument();
+    /* Named: the totals tiles shimmer too now (§9 Initial), so the grid's
+       skeleton is one of several `status` regions on the first frame. */
+    expect(screen.getByRole('status', { name: 'Loading customers' })).toBeInTheDocument();
     expect(await screen.findByText('No customers yet')).toBeInTheDocument();
     expect(
       screen.getByText('Add the first person you give udhaar to, and their khata starts here.')
@@ -538,9 +541,7 @@ describe('the approved responsive rules, on the real screen', () => {
 
     await user.click(screen.getByRole('button', { name: 'Overdue' }));
 
-    expect(
-      await screen.findByRole('button', { name: 'Clear filters (1)' })
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Clear filters (1)' })).toBeInTheDocument();
   });
 
   it('clears the chips but stays on the tab the merchant is reading', async () => {
@@ -585,9 +586,7 @@ describe('the approved responsive rules, on the real screen', () => {
 
     await user.click(screen.getByRole('button', { name: 'Open Ramesh Traders' }));
 
-    expect(mockPush).toHaveBeenCalledWith(
-      `/parties/${encodeURIComponent(RAMESH.id)}`
-    );
+    expect(mockPush).toHaveBeenCalledWith(`/parties/${encodeURIComponent(RAMESH.id)}`);
   });
 });
 
@@ -659,9 +658,7 @@ describe('the yearly clean-up', () => {
     const bar = await selectFirstRow(user);
     await user.click(within(bar).getByRole('button', { name: 'Archive' }));
 
-    expect(
-      await screen.findByText('Anyone with a balance will be skipped.')
-    ).toBeInTheDocument();
+    expect(await screen.findByText('Anyone with a balance will be skipped.')).toBeInTheDocument();
   });
 
   it('reports who was skipped and what they owe, instead of closing', async () => {
@@ -761,9 +758,7 @@ describe('tags on the party list', () => {
      * this assertion, which is the point.
      */
     setTier('full');
-    partyService.listParties.mockResolvedValue(
-      loaded([{ ...RAMESH, tags: [CAMP, ROUTE2] }])
-    );
+    partyService.listParties.mockResolvedValue(loaded([{ ...RAMESH, tags: [CAMP, ROUTE2] }]));
 
     renderWithProviders(<PartyListPageContent />);
 
@@ -788,9 +783,7 @@ describe('tags on the party list', () => {
      * renderings and cannot tell which one it is painting.
      */
     setTier('cards');
-    partyService.listParties.mockResolvedValue(
-      loaded([{ ...RAMESH, tags: [CAMP, ROUTE2] }])
-    );
+    partyService.listParties.mockResolvedValue(loaded([{ ...RAMESH, tags: [CAMP, ROUTE2] }]));
 
     renderWithProviders(<PartyListPageContent />);
 
@@ -943,9 +936,7 @@ describe('tags on the party list', () => {
     renderWithProviders(<PartyListPageContent />);
     await screen.findByText('Ramesh Traders');
 
-    expect(
-      await screen.findByRole('button', { name: 'Remove tag Camp Area' })
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Remove tag Camp Area' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Clear filters/ })).toBeInTheDocument();
   });
 
@@ -1044,7 +1035,9 @@ describe('tags on the party list', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Apply' }));
 
     expect(await screen.findByText('They already had those tags')).toBeInTheDocument();
-    expect(screen.getByText('Nothing was changed, so there is nothing to undo.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Nothing was changed, so there is nothing to undo.')
+    ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Undo' })).not.toBeInTheDocument();
   });
 
@@ -1212,5 +1205,529 @@ describe('the over-limit chip', () => {
         expect.anything()
       );
     });
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PTY-02 §9 — the ten states, one test (or pair) per state, named by the FRD.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('PTY-02 §9 — the ten states of the party list', () => {
+  /**
+   * Sprint 3's exit criterion is "every one of the ten states of PTY-02 §9
+   * rendered and component-tested". Several were already covered piecemeal
+   * above, under names that said what they did rather than which state they
+   * were; three were not rendered at all (the totals skeleton, the dimmed
+   * refresh, the stale-cache banner) and one rendered the wrong state (the
+   * Archived tab's first-use copy). This block is the index: each test is
+   * named `§9 <State>` so the criterion can be checked by reading test names.
+   *
+   * Where the product deliberately differs from §9's wording, the test pins
+   * what the product does and its docstring says where the deviation is
+   * recorded — a test that asserted the FRD's words over a documented decision
+   * would be a test nobody could make pass.
+   */
+  const API_ERROR = {
+    code: 'server_error',
+    message: 'Something went wrong.',
+    details: {},
+    requestId: 'req_7f3a91',
+    status: 500,
+    warnings: [],
+  };
+
+  const lastListParams = () =>
+    partyService.listParties.mock.calls.at(-1)?.[0] as Record<string, unknown>;
+
+  /** A promise the test settles by hand, for the in-flight states. */
+  const deferred = <T,>() => {
+    const box = {
+      resolve: (_value: T): void => undefined,
+      reject: (_reason: unknown): void => undefined,
+    };
+    const promise = new Promise<T>((resolve, reject) => {
+      box.resolve = resolve;
+      box.reject = reject;
+    });
+    return { promise, resolve: box.resolve, reject: box.reject };
+  };
+
+  const signIn = (permissions: readonly PermissionCode[]): void => {
+    store.dispatch(
+      sessionLoaded({
+        user: {
+          id: 'u1',
+          name: 'Owner',
+          email: 'owner@shop.test',
+          mobile: null,
+          locale: 'en',
+          mustChangePassword: false,
+          passwordExpiresAt: null,
+        },
+        activeTenant: { id: 't1', name: 'Kumar Stores', timezone: 'Asia/Kolkata' },
+        tenants: [{ id: 't1', name: 'Kumar Stores', timezone: 'Asia/Kolkata' }],
+        permissions: [...permissions],
+        enabledModules: [],
+        version: 1,
+      })
+    );
+  };
+
+  const WRITER: readonly PermissionCode[] = ['parties.party.read', 'parties.party.write'];
+
+  beforeEach(() => {
+    store.dispatch(resetPartyList());
+    store.dispatch(resetPartyTags());
+    // The filtered-empty case opens the form drawer, whose `open` is store
+    // state — left open, it is a second dialog in every test after it.
+    store.dispatch(resetPartyForm());
+    jest.clearAllMocks();
+    mockSearch = '';
+    tagService.listTags.mockResolvedValue([]);
+    signIn(WRITER);
+    setTier('cards');
+  });
+
+  // ── Initial ────────────────────────────────────────────────────────────────
+
+  it('§9 Initial — shimmering totals cards and eight skeleton rows, never ₹0, toolbar live', async () => {
+    /**
+     * Prevents: the first frame reading "You will get ₹0.00" on a book with
+     * lakhs outstanding. The tiles were drawn from a page-sum of zero rows
+     * while the request was in flight — the one figure the screen exists to
+     * get right, wrong for a second on every cold open. And six skeleton rows
+     * where §9 says eight.
+     */
+    partyService.listParties.mockReturnValue(new Promise(() => undefined));
+
+    renderWithProviders(<PartyListPageContent />);
+
+    const skeleton = screen.getByRole('status', { name: 'Loading customers' });
+    expect(skeleton.children).toHaveLength(8);
+    expect(screen.getAllByRole('status', { name: 'Loading totals' }).length).toBeGreaterThanOrEqual(
+      2
+    );
+    expect(screen.queryByText('₹0.00')).not.toBeInTheDocument();
+    // "Toolbar interactive immediately" — the search box is usable before data.
+    const search = screen.getByLabelText('Search customers');
+    expect(search).toBeEnabled();
+    await userEvent.type(search, 'ra');
+    expect(search).toHaveValue('ra');
+  });
+
+  // ── Loading ────────────────────────────────────────────────────────────────
+
+  it('§9 Loading — a later load keeps the rows on screen, dimmed under a progress bar', async () => {
+    /**
+     * Prevents: a filter change that looked like nothing happened. The slice
+     * already kept the old rows during a refresh (`refreshing`), but nothing on
+     * screen said a request was in flight — on a 3G phone a merchant tapped
+     * "Owes me", saw the same list for two seconds, and tapped it again, which
+     * CLEARED the filter they had just applied.
+     */
+    partyService.listParties.mockResolvedValue(loaded([RAMESH]));
+    const user = userEvent.setup();
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+    expect(screen.queryByTestId('ub-grid-busy')).not.toBeInTheDocument();
+
+    const inFlight = deferred<ReturnType<typeof loaded>>();
+    partyService.listParties.mockReturnValue(inFlight.promise);
+    await user.click(screen.getByRole('button', { name: 'Owes me' }));
+
+    expect(await screen.findByTestId('ub-grid-busy')).toBeInTheDocument();
+    const row = screen.getByText('Ramesh Traders');
+    expect(row.closest('[aria-busy="true"]')).not.toBeNull();
+    // No skeleton: the rows stay readable while the new ones are fetched.
+    expect(screen.queryByRole('status', { name: 'Loading customers' })).not.toBeInTheDocument();
+
+    inFlight.resolve(loaded([RAMESH]));
+    await waitFor(() => expect(screen.queryByTestId('ub-grid-busy')).not.toBeInTheDocument());
+    expect(screen.getByText('Ramesh Traders').closest('[aria-busy="true"]')).toBeNull();
+  });
+
+  it('§9 Loading — a page change replaces the rows with the skeleton instead of dimming them', async () => {
+    /**
+     * Prevents: page 1's names sitting dimmed under a "page 2" request, which
+     * reads as "these are the next twenty-five" for as long as the request
+     * takes. §9 is explicit that a page change is the skeleton, not the dim.
+     */
+    partyService.listParties.mockResolvedValue({
+      rows: [RAMESH],
+      meta: { page: 1, pageSize: 25, total: 60, totalPages: 3 },
+      totals: null,
+    });
+    const user = userEvent.setup();
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+
+    partyService.listParties.mockReturnValue(new Promise(() => undefined));
+    await user.click(screen.getByRole('button', { name: 'Next page' }));
+
+    expect(await screen.findByRole('status', { name: 'Loading customers' })).toBeInTheDocument();
+    expect(screen.queryByText('Ramesh Traders')).not.toBeInTheDocument();
+    expect(lastListParams()?.page).toBe(2);
+    // The totals describe the whole filtered set, which a page change does not
+    // alter, so they stay rather than shimmer.
+    expect(screen.queryByRole('status', { name: 'Loading totals' })).not.toBeInTheDocument();
+  });
+
+  // ── Empty (the three FR-13 variants, plus the Archived tab) ────────────────
+
+  it('§9 Empty (first-use) — no totals tiles (EC-1), one way in, no controls for unbuilt features', async () => {
+    /**
+     * Prevents: a brand-new book greeted by "You will get ₹0.00 · You will
+     * give ₹0.00 · 0 customers" above the empty state — EC-1's "two
+     * meaningless zeroes". Also pins that FR-13's "Import from CSV" (PTY-10)
+     * and "Add from contacts" (PTY-07) are NOT drawn: neither is built.
+     */
+    partyService.listParties.mockResolvedValue(EMPTY);
+
+    renderWithProviders(<PartyListPageContent />);
+
+    expect(await screen.findByText('No customers yet')).toBeInTheDocument();
+    expect(screen.queryByTestId('ub-stat-grid')).not.toBeInTheDocument();
+    // Header action + the empty state's own primary action.
+    expect(screen.getAllByRole('button', { name: 'Add party' })).toHaveLength(2);
+    expect(screen.queryByRole('button', { name: /import/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /contacts/i })).not.toBeInTheDocument();
+  });
+
+  it('§9 Empty (filtered) — "Clear filters", and "Add “{q}”" with the searched name (T-PTY-02-15)', async () => {
+    /**
+     * Prevents: a search that found nobody leaving the merchant to retype the
+     * name into a blank form — Alternate E's whole point is that the name
+     * they searched for IS the party they are about to add. Asserted with a
+     * WRITER signed in; without one the button is correctly absent (see the
+     * Disabled state below), which is how an earlier version of this test
+     * passed for the wrong reason.
+     */
+    partyService.listParties.mockResolvedValue(loaded([RAMESH]));
+    const user = userEvent.setup();
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+
+    partyService.listParties.mockResolvedValue(EMPTY);
+    await user.type(screen.getByLabelText('Search customers'), 'Kamla Devi');
+
+    expect(await screen.findByText('No customers match “Kamla Devi”')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Clear filters' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Add “Kamla Devi”' }));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByDisplayValue('Kamla Devi')).toBeInTheDocument();
+    // A filtered-empty list still has figures — they are the filtered set's.
+    expect(screen.getByTestId('ub-stat-grid')).toBeInTheDocument();
+  });
+
+  it('§9 Empty (Archived tab) — says nobody is archived, not "No customers yet"', async () => {
+    /**
+     * Prevents the defect this block found: `status` is deliberately not
+     * counted as a filter (so a new tenant is never told to clear filters),
+     * which meant an empty ARCHIVED tab fell through to the first-use state —
+     * a merchant with three hundred active parties read "No customers yet"
+     * with an Add party button on a book full of them. Adding from there
+     * would create an ACTIVE party the tab cannot show.
+     */
+    partyService.listParties.mockResolvedValue(loaded([RAMESH]));
+    const user = userEvent.setup();
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+
+    partyService.listParties.mockResolvedValue(EMPTY);
+    await user.click(screen.getByRole('combobox', { name: 'Show' }));
+    await user.click(await screen.findByRole('option', { name: 'Archived' }));
+
+    expect(await screen.findByText('No archived customers')).toBeInTheDocument();
+    expect(
+      screen.getByText('Customers you archive are kept here, with their khata.')
+    ).toBeInTheDocument();
+    expect(screen.queryByText('No customers yet')).not.toBeInTheDocument();
+    // Only the header's Add party remains; the empty state offers none.
+    expect(screen.getAllByRole('button', { name: 'Add party' })).toHaveLength(1);
+  });
+
+  // ── Success ────────────────────────────────────────────────────────────────
+
+  it('§9 Success — rows and both totals, with nothing left loading', async () => {
+    /**
+     * Prevents: a loaded list that still carries a skeleton, a progress bar or
+     * a stale banner from an earlier state. NOT covered, and recorded as a
+     * gap rather than asserted: §9's "freshly upserted row flashes
+     * --accent-quiet for 2 s" — it needs a row-highlight API in `UbDataGrid`
+     * (both the table and the card rendering) that does not exist yet.
+     */
+    partyService.listParties.mockResolvedValue(loaded([RAMESH, SUNITA]));
+
+    renderWithProviders(<PartyListPageContent />);
+
+    expect(await screen.findByText('Ramesh Traders')).toBeInTheDocument();
+    expect(screen.getByText('Sunita Stores')).toBeInTheDocument();
+    const stats = screen.getByTestId('ub-stat-grid');
+    expect(within(stats).getByText('₹2,800.00')).toBeInTheDocument();
+    expect(within(stats).getByText('₹900.00')).toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: /Loading/ })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('ub-grid-busy')).not.toBeInTheDocument();
+    expect(screen.queryByText('Showing saved list')).not.toBeInTheDocument();
+  });
+
+  // ── Error ──────────────────────────────────────────────────────────────────
+
+  it('§9 Error — the error state with Try again and the request id, and Try again recovers', async () => {
+    /**
+     * Prevents: an error state that is a dead end. The request id (R-E-4) is
+     * what joins a merchant's screenshot to a server log line; Try again must
+     * actually re-request and put the rows back, not just re-render.
+     */
+    partyService.listParties.mockRejectedValue(API_ERROR);
+    const user = userEvent.setup();
+    renderWithProviders(<PartyListPageContent />);
+
+    expect(await screen.findByText('We could not load your customers')).toBeInTheDocument();
+    expect(screen.getByTestId('request-id')).toHaveTextContent('req_7f3a91');
+    // No figures without an answer: not "You will get ₹0.00" over a failure.
+    expect(screen.queryByTestId('ub-stat-grid')).not.toBeInTheDocument();
+
+    partyService.listParties.mockResolvedValue(loaded([RAMESH]));
+    await user.click(screen.getByRole('button', { name: 'Try again' }));
+
+    expect(await screen.findByText('Ramesh Traders')).toBeInTheDocument();
+    expect(screen.queryByText('We could not load your customers')).not.toBeInTheDocument();
+  });
+
+  it('§9 Error (stale-cache variant) — a failed refresh keeps the saved rows under a banner (T-PTY-02-16)', async () => {
+    /**
+     * Prevents: coming back to the list on a dead connection and having every
+     * row replaced by "We could not load your customers" — the rows from a
+     * minute ago were in the store the whole time. FR-15: the cached rows
+     * stay, with "Showing saved list · Try again".
+     */
+    partyService.listParties.mockResolvedValue(loaded([RAMESH]));
+    const user = userEvent.setup();
+    const first = renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+    first.unmount();
+
+    // Re-entry (back from a khata page): the slice survives, the refresh fails.
+    partyService.listParties.mockRejectedValue(API_ERROR);
+    renderWithProviders(<PartyListPageContent />);
+
+    expect(await screen.findByText('Showing saved list')).toBeInTheDocument();
+    expect(
+      screen.getByText('We could not refresh it, so balances may be out of date.')
+    ).toBeInTheDocument();
+    expect(screen.getByText('Ramesh Traders')).toBeInTheDocument();
+    expect(screen.queryByText('We could not load your customers')).not.toBeInTheDocument();
+    // The saved rows' own totals stay with them.
+    expect(within(screen.getByTestId('ub-stat-grid')).getByText('₹2,800.00')).toBeInTheDocument();
+
+    partyService.listParties.mockResolvedValue(loaded([SUNITA]));
+    await user.click(screen.getByRole('button', { name: 'Try again' }));
+
+    expect(await screen.findByText('Sunita Stores')).toBeInTheDocument();
+    expect(screen.queryByText('Showing saved list')).not.toBeInTheDocument();
+  });
+
+  it('§9 Error — a failure for a DIFFERENT query shows the error, never the old rows', async () => {
+    /**
+     * Prevents the stale-cache variant from lying. Rows fetched for "all
+     * parties" shown under a pressed "Settled" chip would tell the merchant
+     * that Ramesh, who owes ₹2,800, is settled. The saved list is only ever
+     * the answer to the query that failed.
+     */
+    partyService.listParties.mockResolvedValue(loaded([RAMESH]));
+    const user = userEvent.setup();
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+
+    partyService.listParties.mockRejectedValue(API_ERROR);
+    await user.click(screen.getByRole('button', { name: 'Settled' }));
+
+    expect(await screen.findByText('We could not load your customers')).toBeInTheDocument();
+    expect(screen.queryByText('Ramesh Traders')).not.toBeInTheDocument();
+    expect(screen.queryByText('Showing saved list')).not.toBeInTheDocument();
+    // Nor the old query's totals: ₹2,800 under a pressed "Settled" is the same lie.
+    expect(screen.queryByText('₹2,800.00')).not.toBeInTheDocument();
+  });
+
+  // ── Disabled ───────────────────────────────────────────────────────────────
+
+  it('§9 Disabled — an accountant reads every row; the write controls are absent, not disabled', async () => {
+    /**
+     * Prevents: a read-only role shown controls that 403 (§19.7.5 — hidden,
+     * not disabled). §9's "⋯ menu contains only View and Export" has no
+     * counterpart yet: the row ⋯ menu (FR-10) and Export CSV (FR-12) are not
+     * built, so nothing is drawn for either — the row itself is "View".
+     */
+    /* The accountant preset: every `.read` codename and the two export
+       codenames, no `.write` (apps/parties/permissions.py). FRD §12's
+       `parties.party.export` is not a codename in this product — there is no
+       party-list export to gate. */
+    signIn([
+      'parties.party.read',
+      'ledger.entry.read',
+      'ledger.statement.export',
+      'reports.basic.read',
+      'reports.export',
+    ]);
+    setTier('full');
+    partyService.listParties.mockResolvedValue(loaded([RAMESH, SUNITA]));
+    const user = userEvent.setup();
+    renderWithProviders(<PartyListPageContent />);
+
+    expect(await screen.findByText('Ramesh Traders')).toBeInTheDocument();
+    expect(screen.getByText('Sunita Stores')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add party' })).not.toBeInTheDocument();
+    // Reading is what the role is for: the row opens the khata.
+    expect(screen.getByRole('button', { name: 'Open Ramesh Traders' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('checkbox', { name: 'Select Ramesh Traders' }));
+    const bar = await screen.findByTestId('ub-grid-toolbar');
+    expect(within(bar).queryByRole('button', { name: 'Add tag' })).not.toBeInTheDocument();
+    expect(within(bar).queryByRole('button', { name: 'Archive' })).not.toBeInTheDocument();
+    expect(within(bar).getByRole('button', { name: 'Clear selection' })).toBeInTheDocument();
+
+    // And a search that finds nobody offers to clear it, never to add. (The
+    // selection bar replaces the search box while rows are ticked.)
+    await user.click(within(bar).getByRole('button', { name: 'Clear selection' }));
+    partyService.listParties.mockResolvedValue(EMPTY);
+    await user.type(screen.getByLabelText('Search customers'), 'zzz');
+    expect(await screen.findByText('No customers match “zzz”')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add “zzz”' })).not.toBeInTheDocument();
+  });
+
+  // ── Partial ────────────────────────────────────────────────────────────────
+
+  it('§9 Partial — a partial result is PAGED: the footer says where you are and fetches the next page', async () => {
+    /**
+     * Prevents: a list that silently shows only its first page. §9 describes
+     * Partial as mobile infinite scroll (a footer spinner, and "Refine your
+     * search" at a 500-row cap); that append mode is NOT built — every tier
+     * pages through `UbDataGrid`'s footer — so this pins the partial result the
+     * product actually has, and the report flags the append mode as a decision
+     * owed. Nothing for it is drawn (no "Load more", no cap message).
+     */
+    partyService.listParties.mockResolvedValue({
+      rows: [RAMESH, SUNITA],
+      meta: { page: 1, pageSize: 25, total: 60, totalPages: 3 },
+      totals: null,
+    });
+    const user = userEvent.setup();
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+
+    expect(screen.getByText('Page 1 of 3')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /load more/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/refine your search/i)).not.toBeInTheDocument();
+
+    partyService.listParties.mockResolvedValue({
+      rows: [SUNITA],
+      meta: { page: 2, pageSize: 25, total: 60, totalPages: 3 },
+      totals: null,
+    });
+    await user.click(screen.getByRole('button', { name: 'Next page' }));
+
+    expect(await screen.findByText('Page 2 of 3')).toBeInTheDocument();
+    expect(lastListParams()?.page).toBe(2);
+  });
+
+  // ── Processing / Completed / Failed (the bulk action) ──────────────────────
+
+  /**
+   * The three bulk states. PTY-05's DOCUMENTED DEVIATION (usePartyBulkTag.ts,
+   * "Undo lives in the dialog, not in a ten-second snackbar") moves §9's
+   * selection-bar spinner and completion snackbar into the bulk dialog: the
+   * global snackbar carries a message and no callback, so it cannot hold Undo,
+   * and a partial result needs names, not a count. These tests pin the dialog.
+   */
+  const openBulkTag = async (user: ReturnType<typeof userEvent.setup>) => {
+    setTier('full');
+    partyService.listParties.mockResolvedValue(loaded([RAMESH, SUNITA]));
+    tagService.listTags.mockResolvedValue([{ ...ROUTE2, partyCount: 0 }]);
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+    await user.click(screen.getByRole('checkbox', { name: 'Select Ramesh Traders' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Select Sunita Stores' }));
+    await user.click(screen.getByRole('button', { name: 'Add tag' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('combobox', { name: 'Tags' }));
+    await user.click(await screen.findByText('Route 2'));
+    return dialog;
+  };
+
+  it('§9 Processing — while the bulk tag is in flight it says so, cannot be dismissed, and the rows stay', async () => {
+    /**
+     * Prevents: a second press of Apply sending the same bulk change twice, or
+     * a dismissal mid-request leaving the merchant unsure whether it applied.
+     */
+    const inFlight = deferred<unknown>();
+    tagService.bulkTagParties.mockReturnValue(inFlight.promise);
+    const user = userEvent.setup();
+    const dialog = await openBulkTag(user);
+
+    await user.click(within(dialog).getByRole('button', { name: 'Apply' }));
+
+    const applying = await within(dialog).findByRole('button', { name: /Applying…/ });
+    expect(applying).toHaveAttribute('aria-busy', 'true');
+    expect(applying).toBeDisabled();
+    expect(within(dialog).getByRole('button', { name: 'Cancel' })).toBeDisabled();
+    // "Rows are not blocked": the list behind is still the list, not a spinner.
+    expect(screen.getByText('Ramesh Traders')).toBeInTheDocument();
+    expect(tagService.bulkTagParties).toHaveBeenCalledTimes(1);
+
+    inFlight.resolve({
+      updatedCount: 2,
+      previous: [],
+      changed: [
+        { partyId: RAMESH.id, tagIds: [ROUTE2.id] },
+        { partyId: SUNITA.id, tagIds: [ROUTE2.id] },
+      ],
+      skipped: [],
+    });
+    expect(await screen.findByText('Tagged 2 parties')).toBeInTheDocument();
+  });
+
+  it('§9 Completed — the result says how many were tagged and offers Undo', async () => {
+    /**
+     * Prevents: a bulk change with no way back. PTY-05 FR-9's Undo must be on
+     * the completed state — here, the dialog's report.
+     */
+    tagService.bulkTagParties.mockResolvedValue({
+      updatedCount: 2,
+      previous: [],
+      changed: [
+        { partyId: RAMESH.id, tagIds: [ROUTE2.id] },
+        { partyId: SUNITA.id, tagIds: [ROUTE2.id] },
+      ],
+      skipped: [],
+    });
+    const user = userEvent.setup();
+    const dialog = await openBulkTag(user);
+
+    await user.click(within(dialog).getByRole('button', { name: 'Apply' }));
+
+    expect(await screen.findByText('Tagged 2 parties')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeInTheDocument();
+  });
+
+  it('§9 Failed — a partial failure names who was not tagged and why', async () => {
+    /**
+     * Prevents: "Added to 1 of 2. 1 failed." with no way to find which one —
+     * §9's "See details" is the list, shown in the report itself, with the
+     * party's name so the merchant can open it and fix it.
+     */
+    tagService.bulkTagParties.mockResolvedValue({
+      updatedCount: 1,
+      previous: [],
+      changed: [{ partyId: RAMESH.id, tagIds: [ROUTE2.id] }],
+      skipped: [{ id: SUNITA.id, name: 'Sunita Stores', reason: 'tag_limit_reached' }],
+    });
+    const user = userEvent.setup();
+    const dialog = await openBulkTag(user);
+
+    await user.click(within(dialog).getByRole('button', { name: 'Apply' }));
+
+    expect(await screen.findByText('Tagged 1 party')).toBeInTheDocument();
+    expect(screen.getByText('Sunita Stores already carries 10 tags')).toBeInTheDocument();
   });
 });

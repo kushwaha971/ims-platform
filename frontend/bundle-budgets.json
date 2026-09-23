@@ -273,7 +273,21 @@
   "two slices did. That is the entry fee, paid once: every route-local slice",
   "from here on costs the shell nothing. The two routes gained their slices",
   "(statement 86.4 → 87.0, aging 89.1 → 89.5), so statement's route budget",
-  "moves 87 → 88 and its first load 324 → 325."
+  "moves 87 → 88 and its first load 324 → 325.",
+  "",
+  "── 23 Sep 2026: Sprint 3 close — reminders, ten states, invited members ───",
+  "Shell 110.1 → 110.9 (inside 111): the en.json copy for four features rides in",
+  "the shell with react-intl, the party list's stale-cache and busy state live",
+  "in the static partyList slice (it is read by the nav), and planDisplay now",
+  "calls the shared wa.me builder. Every first load moves with the shell, so",
+  "the routes within ~1 KB of their first-load ceiling get +1 (/parties,",
+  "/ledger/aging, /settings/team, statement, /switch).",
+  "/parties/[id] 90.6 → 94.6: Send reminder (the menu item, the reminder",
+  "view-model and hook, share feedback). The share SHEET itself is dynamic() —",
+  "it loads when it opens, which took 1 KB back — and a decimal.js-light import",
+  "for a sign check was removed. Route 92 → 95, first load 329 → 333.",
+  "/parties route 100 → 101 for the ten PTY-02 §9 states (busy bar, stale banner).",
+  "/design-system 94 → 99: the wave-3 gallery; a developer page, not a merchant's."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -661,8 +675,8 @@
  },
  "routes": {
   "/parties": {
-   "route": 100,
-   "firstLoad": 337
+   "route": 101,
+   "firstLoad": 339
   },
   "/dashboard": {
    "route": 60,
@@ -677,28 +691,31 @@
    "firstLoad": 334
   },
   "/design-system": {
-   "route": 94,
-   "firstLoad": 330
+   "route": 99,
+   "firstLoad": 337
   },
   "/settings/team": {
    "route": 90,
-   "firstLoad": 327
+   "firstLoad": 328
   },
   "/parties/[id]": {
-   "route": 92,
-   "firstLoad": 329
+   "route": 95,
+   "firstLoad": 333
   },
   "/parties/tags": {
    "route": 72,
    "firstLoad": 309
   },
   "/parties/[id]/statement": {
-   "route": 88,
-   "firstLoad": 325
+   "route": 89,
+   "firstLoad": 327
   },
   "/ledger/aging": {
    "route": 90,
-   "firstLoad": 327
+   "firstLoad": 328
+  },
+  "/switch": {
+   "firstLoad": 301
   }
  },
  "//ignoreRoutes": [

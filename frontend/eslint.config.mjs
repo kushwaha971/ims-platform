@@ -10,6 +10,118 @@ import tsparser from '@typescript-eslint/parser';
 import prettier from 'eslint-config-prettier';
 import next from 'eslint-config-next/core-web-vitals';
 
+// ── Shared rule options ─────────────────────────────────────────────────────
+//
+// `no-restricted-syntax` and `no-restricted-imports` are each configured in the
+// main block AND restated for the party-fetch allowlist further down. Flat
+// config does not MERGE a rule's options across matching blocks — a later block
+// that sets them replaces them wholesale — so the allowlist block has to repeat
+// the base options minus the party entries. Holding the base options in one
+// constant is what keeps those two copies from drifting apart.
+const RESTRICTED_SYNTAX_BASE = [
+  {
+    selector: 'TSEnumDeclaration',
+    message: 'Use an `as const` object + union type (R-TS-8).',
+  },
+];
+
+const RESTRICTED_IMPORTS_BASE = {
+  paths: [
+    { name: 'lodash', message: 'Not on the ADR-021 list (R-D-1).' },
+    { name: 'moment', message: 'Use dayjs (ADR-021).' },
+    {
+      name: '@tanstack/react-query',
+      message: 'Not used. Slice + thunk + service (ADR-004).',
+    },
+  ],
+  patterns: [
+    {
+      group: ['modules/DigiKhaato/design-system/*/*'],
+      message: 'Import from the barrel (R-IM-3).',
+    },
+    { group: ['../../../*'], message: 'Use a path alias (R-IM-2).' },
+  ],
+};
+
+/**
+ * Sprint 3 §32.6.7 risk: "Party search becomes four different implementations
+ * in four features." Mitigation: `usePartySearch` is THE party picker source,
+ * and a lint rule forbids a second debounced party fetch outside it.
+ *
+ * ── What is fenced, and why these three things ───────────────────────────────
+ * A party fetch can only be written three ways in this codebase, and each gets
+ * a precise, built-in rule (no plugin — ADR-021):
+ *
+ *  1. `import { listParties } from '…/parties/api/partyService'` —
+ *     `no-restricted-imports` with `importNames`, so the REST of partyService
+ *     (getParty, createParty, the BulkArchiveResult type, …) stays importable
+ *     wherever the layering rules already allow it. Also catches re-exports.
+ *  2. `import { fetchPartyList } from '…/redux/partyListThunk'` — the list's
+ *     thunk is the other door to the same endpoint; dispatching it with a `q`
+ *     from a picker would be the second implementation wearing the list's
+ *     clothes, and it would also overwrite the list screen's rows.
+ *  3. `partyService.listParties(…)` through a namespace import, or
+ *     `API_PATHS.PARTIES` used to hand-roll `GET /parties?q=` in some other
+ *     service — `no-restricted-syntax`, because an import rule cannot see a
+ *     member access. `API_PATHS.PARTY(id)` and the other per-party paths are
+ *     NOT fenced: fetching one party by id is not a search.
+ *
+ * ── Who may ──────────────────────────────────────────────────────────────────
+ * Exactly the modules that ARE the two sources: `partyService` (defines it),
+ * `usePartySearch` (the picker source), the party-list thunk, slice, warm-up
+ * and hook (the list screen's source), the invalidation registry (which names
+ * the list thunk as a refetch target), `APIPaths.ts` (defines the path), and
+ * tests. Everything else goes through `usePartySearch()` or `usePartyList()`.
+ * See docs/DESIGN-SYSTEM.md, "Party picker source: usePartySearch".
+ *
+ * Proven by src/tests/partyFetchLintRule.test.ts, which lints deliberately-bad
+ * fixtures from src/tests/lint-fixtures/party-fetch and expects these rule ids.
+ */
+const PARTY_FETCH_MESSAGE =
+  'Party search goes through usePartySearch() (pickers) or usePartyList() (the list screen) — never a second party fetch (Sprint 3 §32.6.7, docs/DESIGN-SYSTEM.md).';
+
+const PARTY_FETCH_IMPORT_PATTERNS = [
+  {
+    group: ['**/parties/api/partyService', '**/api/partyService', './partyService'],
+    importNames: ['listParties'],
+    message: PARTY_FETCH_MESSAGE,
+  },
+  {
+    group: ['**/parties/redux/partyListThunk', '**/redux/partyListThunk', './partyListThunk'],
+    importNames: ['fetchPartyList'],
+    message: PARTY_FETCH_MESSAGE,
+  },
+];
+
+const PARTY_FETCH_SYNTAX = [
+  {
+    selector: "MemberExpression[property.name='listParties']",
+    message: PARTY_FETCH_MESSAGE,
+  },
+  {
+    selector: "MemberExpression[property.name='fetchPartyList']",
+    message: PARTY_FETCH_MESSAGE,
+  },
+  {
+    selector: "MemberExpression[object.name='API_PATHS'][property.name='PARTIES']",
+    message: PARTY_FETCH_MESSAGE,
+  },
+];
+
+/** The modules that ARE the party sources, and may therefore touch them. */
+const PARTY_FETCH_ALLOWED = [
+  'src/modules/DigiKhaato/features/parties/api/partyService.ts',
+  'src/modules/DigiKhaato/features/parties/hooks/usePartySearch.ts',
+  'src/modules/DigiKhaato/features/parties/hooks/usePartyList.ts',
+  'src/modules/DigiKhaato/features/parties/redux/partyListThunk.ts',
+  'src/modules/DigiKhaato/features/parties/redux/partyListSlice.ts',
+  'src/modules/DigiKhaato/features/parties/redux/partyListWarmup.ts',
+  'src/redux/invalidation/registry.ts',
+  'src/api/APIPaths.ts',
+  '**/*.test.{ts,tsx}',
+  'src/tests/**',
+];
+
 const config = [
   {
     ignores: [
@@ -22,6 +134,11 @@ const config = [
       // from this build environment, but linting a minified bundle produces
       // hundreds of findings about code nobody here wrote or can fix.
       'vendor/**',
+      // src/tests/partyFetchLintRule.test.ts writes its deliberately-bad
+      // fixtures here for a few seconds and lints them with `--no-ignore`.
+      // Ignored so that an `npm run lint` running at the same moment neither
+      // reports them nor crashes on a file deleted mid-walk.
+      'src/modules/DigiKhaato/features/__lint_probe_*/**',
     ],
   },
   ...next,
@@ -49,13 +166,7 @@ const config = [
         { checksVoidReturn: { attributes: false } },
       ],
       '@typescript-eslint/explicit-module-boundary-types': 'warn',
-      'no-restricted-syntax': [
-        'error',
-        {
-          selector: 'TSEnumDeclaration',
-          message: 'Use an `as const` object + union type (R-TS-8).',
-        },
-      ],
+      'no-restricted-syntax': ['error', ...RESTRICTED_SYNTAX_BASE, ...PARTY_FETCH_SYNTAX],
 
       // ── React ─────────────────────────────────────────────────────────────
       'react-hooks/rules-of-hooks': 'error',
@@ -145,24 +256,12 @@ const config = [
             'Use useDegradedNetwork() (Part 19 §19.10.3). Only src/hooks/useDegradedNetwork.ts may read this.',
         },
       ],
+      // The base list, plus the party-fetch fence (see PARTY_FETCH_MESSAGE).
       'no-restricted-imports': [
         'error',
         {
-          paths: [
-            { name: 'lodash', message: 'Not on the ADR-021 list (R-D-1).' },
-            { name: 'moment', message: 'Use dayjs (ADR-021).' },
-            {
-              name: '@tanstack/react-query',
-              message: 'Not used. Slice + thunk + service (ADR-004).',
-            },
-          ],
-          patterns: [
-            {
-              group: ['modules/DigiKhaato/design-system/*/*'],
-              message: 'Import from the barrel (R-IM-3).',
-            },
-            { group: ['../../../*'], message: 'Use a path alias (R-IM-2).' },
-          ],
+          paths: RESTRICTED_IMPORTS_BASE.paths,
+          patterns: [...RESTRICTED_IMPORTS_BASE.patterns, ...PARTY_FETCH_IMPORT_PATTERNS],
         },
       ],
       eqeqeq: ['error', 'always', { null: 'ignore' }],
@@ -267,6 +366,19 @@ const config = [
      */
     files: ['src/modules/**/components/print/**/*.tsx'],
     rules: { 'react/forbid-elements': 'off' },
+  },
+  {
+    /**
+     * The party-fetch allowlist (see PARTY_FETCH_MESSAGE at the top). Same two
+     * rules, base options only — the party entries are what these files are
+     * FOR. Adding a file here is adding a second party source, and wants the
+     * same review a new design-system component does.
+     */
+    files: PARTY_FETCH_ALLOWED,
+    rules: {
+      'no-restricted-syntax': ['error', ...RESTRICTED_SYNTAX_BASE],
+      'no-restricted-imports': ['error', RESTRICTED_IMPORTS_BASE],
+    },
   },
   {
     // The one module allowed to read navigator.onLine — it is the state machine.

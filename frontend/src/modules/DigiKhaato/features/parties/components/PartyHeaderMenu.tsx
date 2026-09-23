@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { Archive, BookOpen, FileText, MoreHorizontal, Pencil } from 'lucide-react';
+import { Archive, BellRing, BookOpen, FileText, MoreHorizontal, Pencil } from 'lucide-react';
 
 import { UbButton, UbDialog, UbStack } from 'src/design-system';
 import type { TranslateFn } from 'src/hooks/useTranslation';
@@ -59,6 +59,12 @@ export interface PartyHeaderMenuProps {
   readonly onArchive?: () => void;
   /** LED-04 — the statement. A navigation rather than a drawer, so an href. */
   readonly statementHref?: string;
+  /**
+   * LED-06 — opens the reminder share sheet. Passed only when the party owes
+   * the merchant, the page is not archived and the viewer can read the ledger
+   * (`usePartyReminder` decides); absent, the item is not drawn.
+   */
+  readonly onRemind?: () => void;
 }
 
 export function PartyHeaderMenu({
@@ -67,6 +73,7 @@ export function PartyHeaderMenu({
   onAddOpening,
   onArchive,
   statementHref,
+  onRemind,
 }: Readonly<PartyHeaderMenuProps>): React.JSX.Element | null {
   const [open, setOpen] = useState(false);
   const router = useRouter();
@@ -90,6 +97,11 @@ export function PartyHeaderMenu({
       icon: FileText,
       action: statementHref ? () => router.push(statementHref) : undefined,
     },
+    /* LED-06, beside the statement and for the same reason: it is done FOR a
+       customer, usually with them in mind at the counter. In the menu rather
+       than on the header row, because the row is You gave / You got and at
+       five buttons it ran off a 360 px phone (see above). */
+    { key: 'remind', label: t('ledger.remind.action'), icon: BellRing, action: onRemind },
     { key: 'edit', label: t('parties.detail.edit'), icon: Pencil, action: onEdit },
     { key: 'opening', label: t('ledger.opening.action'), icon: BookOpen, action: onAddOpening },
     { key: 'archive', label: t('parties.archive.action'), icon: Archive, action: onArchive },

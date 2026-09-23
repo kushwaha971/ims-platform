@@ -347,6 +347,25 @@ describe('the states a list has', () => {
     expect(screen.getByText(title)).toBeInTheDocument();
   });
 
+  it('dims the rows and shows an indeterminate bar while busy, and leaves the toolbar alone', () => {
+    /**
+     * Prevents a background load that looks like nothing happened (PTY-02 §9
+     * Loading) — and a dim that swallowed the search box the merchant is
+     * typing into, which is why only the ROWS are marked busy.
+     */
+    renderGrid('cards', { state: 'rows', busy: true, search: <input aria-label="Search" /> });
+    const bar = screen.getByTestId('ub-grid-busy');
+    expect(bar).toHaveAttribute('role', 'progressbar');
+    expect(bar).not.toHaveAttribute('aria-valuenow');
+    expect(screen.getByRole('list').closest('[aria-busy="true"]')).not.toBeNull();
+    expect(screen.getByLabelText('Search').closest('[aria-busy="true"]')).toBeNull();
+  });
+
+  it('ignores busy on every state but rows — the skeleton already says it', () => {
+    renderGrid('cards', { state: 'loading', busy: true });
+    expect(screen.queryByTestId('ub-grid-busy')).not.toBeInTheDocument();
+  });
+
   it('carries the request id on the error state and nowhere else', () => {
     const { rerender } = renderGrid('cards', { state: 'error' });
     expect(screen.getByTestId('request-id')).toHaveTextContent('req_7f3a91');

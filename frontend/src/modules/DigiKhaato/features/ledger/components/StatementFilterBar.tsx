@@ -1,32 +1,24 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useMemo } from 'react';
 
-import {
-  UbDateInput,
-  UbFilterBar,
-  UbFilterChip,
-  UbFilterChipGroup,
-  UbStack,
-  UbSwitch,
-} from 'src/design-system';
+import { UbDateRangePicker, UbSwitch } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
 
 import { STATEMENT_PRESETS } from '../view-model/statementDisplay';
 
 import type { UsePartyStatementResult } from '../hooks/usePartyStatement';
-import type { StatementPreset } from '../types/statement.types';
 
 /**
  * LED-04 FR-1 — the period, and whether to show what was corrected.
  *
- * ── Why this is not `UbDateRangePicker` ───────────────────────────────────
- * The FRD names that component and the design system does not have it. §23's
- * rule is that a `Ub*` is added when the pattern recurs in two features, and
- * the second caller is RPT-04 and the reports that follow it — none of which
- * exist. So the control is composed here from the chips and the date inputs the
- * design system already has, in a shape that lifts to a component in one move:
- * six presets and two bounded dates, with the presets doing the work.
+ * ── Now `UbDateRangePicker`, as the FRD names it ─────────────────────────
+ * This was composed here from chips and two date inputs, with a note that it
+ * would lift into the design system "in one move" once a second caller
+ * appeared. Sprint 3's design-system wave built the component (§32.6.4), so
+ * the move is made and the behaviour is unchanged: six presets, the two dates
+ * only for Custom, `from` bounded by `to` and both by today, and the
+ * corrections switch after the dates in the filter bar's right-hand cluster.
  *
  * The presets are what a merchant actually uses. "This FY" is the default
  * because a shopkeeper asking for "the year" means the financial one, which
@@ -39,74 +31,44 @@ export function StatementFilterBar({
   const { t } = useTranslation();
   const { filters, setPreset, setCustomRange, setIncludeCorrections } = statement;
 
-  /* `onToggle` is called with the state the chip WILL be in, and a period is a
-     single choice rather than a set — so turning one OFF means nothing, and the
-     handler ignores `false`. Re-tapping the applied preset leaves it applied,
-     which is what a merchant expects of a period they have already chosen. */
-  const choose = useCallback(
-    (preset: StatementPreset) => (next: boolean) => {
-      if (next) setPreset(preset);
-    },
-    [setPreset]
+  const presets = useMemo(
+    () =>
+      STATEMENT_PRESETS.map((preset) => ({
+        value: preset,
+        label: t(`ledger.statement.period.${preset}`),
+      })),
+    [t]
   );
 
   return (
-    /* The period's dates and the corrections switch are pinned to the right —
-       the owner's rule for a screen's date — so on a laptop the whole scope is
-       one line, and on a phone the chips scroll on their own track above. */
-    <UbFilterBar
+    <UbDateRangePicker
+      name="statement"
+      presets={presets}
+      preset={filters.preset}
+      onPresetChange={setPreset}
+      customPreset="custom"
+      from={filters.dateFrom}
+      to={filters.dateTo}
+      onRangeChange={setCustomRange}
+      max={today}
+      labels={{
+        presets: t('ledger.statement.period.label'),
+        from: t('ledger.statement.period.from'),
+        to: t('ledger.statement.period.to'),
+      }}
       end={
-        <>
-          {/* Shown only for Custom. A pair of date boxes beside six chips is two
-              ways of answering one question, and on a 360 px phone it is also
-              the two controls that push the chips off the screen. */}
-          {filters.preset === 'custom' && (
-            <UbStack direction="row" align="center" className="gap-2">
-              <UbDateInput
-                name="statement-from"
-                aria-label={t('ledger.statement.period.from')}
-                placeholder={t('ledger.statement.period.from')}
-                value={filters.dateFrom ?? ''}
-                max={filters.dateTo ?? today}
-                onChange={(value: string | null) => setCustomRange(value || null, filters.dateTo)}
-                className="w-36"
-              />
-              <UbDateInput
-                name="statement-to"
-                aria-label={t('ledger.statement.period.to')}
-                placeholder={t('ledger.statement.period.to')}
-                value={filters.dateTo ?? ''}
-                min={filters.dateFrom ?? undefined}
-                max={today}
-                onChange={(value: string | null) => setCustomRange(filters.dateFrom, value || null)}
-                className="w-36"
-              />
-            </UbStack>
-          )}
-          {/* AC-4. Off by default: a statement a customer reads should show
-              what the book says now, not the history of somebody fixing a
-              typo. An accountant auditing a dispute turns it on, and the
-              closing balance does not move — which is the assertion that
-              proves the ledger's arithmetic. */}
-          <UbSwitch
-            checked={filters.includeCorrections}
-            onCheckedChange={setIncludeCorrections}
-            label={t('ledger.statement.showCorrections')}
-            className="min-h-10 w-auto"
-          />
-        </>
+        /* AC-4. Off by default: a statement a customer reads should show what
+           the book says now, not the history of somebody fixing a typo. An
+           accountant auditing a dispute turns it on, and the closing balance
+           does not move — which is the assertion that proves the ledger's
+           arithmetic. */
+        <UbSwitch
+          checked={filters.includeCorrections}
+          onCheckedChange={setIncludeCorrections}
+          label={t('ledger.statement.showCorrections')}
+          className="min-h-10 w-auto"
+        />
       }
-    >
-      <UbFilterChipGroup label={t('ledger.statement.period.label')}>
-        {STATEMENT_PRESETS.map((preset) => (
-          <UbFilterChip
-            key={preset}
-            label={t(`ledger.statement.period.${preset}`)}
-            pressed={filters.preset === preset}
-            onToggle={choose(preset)}
-          />
-        ))}
-      </UbFilterChipGroup>
-    </UbFilterBar>
+    />
   );
 }

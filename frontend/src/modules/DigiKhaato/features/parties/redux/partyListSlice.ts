@@ -51,6 +51,24 @@ export interface PartyListState {
    */
   overLimit: number | null;
   lastFetchedAt: number | null;
+  /**
+   * The query `rows` answer — the params of the request that last SUCCEEDED.
+   *
+   * Two PTY-02 §9 states hang off it. A PAGE change (same query, another page)
+   * shows the skeleton, because page 2's rows are not page 1's dimmed; any
+   * other change keeps the old rows dimmed under a progress bar. And a failed
+   * request whose query is the one `rows` already answer keeps them on screen
+   * as the saved list (FR-15) instead of swapping them for the error state —
+   * while a failed request for a DIFFERENT query still shows the error, because
+   * rows for "Settled" under an "Owes me" chip would be a list that lies.
+   */
+  rowsQuery: PartyListFilters | null;
+  /**
+   * FR-15 / §9 Error, stale-cache variant: the last request failed, and `rows`
+   * are the saved answer to the very query that failed. The screen shows them
+   * under a "Showing saved list · Try again" banner rather than the error state.
+   */
+  showingSaved: boolean;
   /** Set by the invalidation listener (§19.3.6); the hook refetches on it. */
   stale: boolean;
   staleUrgency: 'now' | 'next-mount' | null;
@@ -90,9 +108,25 @@ const initialState: PartyListState = {
   totalsScope: 'page',
   overLimit: null,
   lastFetchedAt: null,
+  rowsQuery: null,
+  showingSaved: false,
   stale: false,
   staleUrgency: null,
 };
+
+/**
+ * Whether two queries ask for the same rows. `PartyListFilters` is flat and
+ * every value is a primitive, so a key-by-key comparison is exact; `ignorePage`
+ * asks whether they differ ONLY by page.
+ */
+export const sameQuery = (
+  a: PartyListFilters,
+  b: PartyListFilters,
+  { ignorePage = false }: { readonly ignorePage?: boolean } = {}
+): boolean =>
+  (Object.keys(a) as (keyof PartyListFilters)[]).every(
+    (key) => (ignorePage && key === 'page') || a[key] === b[key]
+  );
 
 const partyListSlice = createSlice({
   name: 'partyList',
@@ -129,10 +163,24 @@ const partyListSlice = createSlice({
 
     builder
       .addCase(fetchPartyList.pending, (state, action) => {
-        // A background refresh keeps rows visible; a replace shows the skeleton.
+        const { params, mode } = action.meta.arg;
+        /* PTY-02 §9 Loading: "subsequent loads keep the previous rows at 60 %
+           opacity with a top MLProgress; page changes replace rows with
+           skeletons." A page change is the same query at another page — the
+           old page's rows are not a preview of the new one, so dimming them
+           would show the merchant names that are about to vanish. */
+        const pageChange =
+          state.rowsQuery !== null &&
+          state.rowsQuery.page !== params.page &&
+          sameQuery(state.rowsQuery, params, { ignorePage: true });
         state.status =
-          action.meta.arg.mode === 'append' || state.rows.length > 0 ? 'refreshing' : 'loading';
+          mode === 'append'
+            ? 'refreshing'
+            : state.rows.length === 0 || pageChange
+              ? 'loading'
+              : 'refreshing';
         state.error = null;
+        state.showingSaved = false;
       })
       .addCase(fetchPartyList.fulfilled, (state, action) => {
         state.status = 'succeeded';
@@ -161,6 +209,8 @@ const partyListSlice = createSlice({
         state.totalsScope = action.payload.totalsScope;
         state.overLimit = action.payload.overLimit;
         state.lastFetchedAt = Date.now();
+        state.rowsQuery = { ...action.meta.arg.params };
+        state.showingSaved = false;
         state.stale = false;
         state.staleUrgency = null;
       })
@@ -172,6 +222,11 @@ const partyListSlice = createSlice({
         // `details` is readonly by contract (R-TS-5). The object is frozen by
         // `toApiError` and never mutated in the store, so the cast is safe.
         state.error = (action.payload ?? null) as Draft<ApiErrorShape> | null;
+        // FR-15 — keep the saved rows only when they answer the query that failed.
+        state.showingSaved =
+          state.rows.length > 0 &&
+          state.rowsQuery !== null &&
+          sameQuery(state.rowsQuery, action.meta.arg.params);
       })
       // Logout and tenant switch clear every feature slice (§19.6.5).
       .addCase(resetAllFeatureState, () => initialState);
@@ -198,5 +253,6 @@ export const selectPartyListTotals = (state: RootState): PartyListTotals | null 
   state.partyList.totals;
 export const selectPartyListTotalsScope = (state: RootState): 'filtered' | 'page' =>
   state.partyList.totalsScope;
-export const selectPartyOverLimit = (state: RootState): number | null =>
-  state.partyList.overLimit;
+export const selectPartyOverLimit = (state: RootState): number | null => state.partyList.overLimit;
+export const selectPartyListShowingSaved = (state: RootState): boolean =>
+  state.partyList.showingSaved;

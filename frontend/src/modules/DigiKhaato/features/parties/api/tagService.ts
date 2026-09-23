@@ -14,7 +14,7 @@ import type { PartyTag, PartyTagWithCount } from '../types/party.types';
  * route and a reader is entitled to wonder.
  */
 
-const TAGS = `${API_PATHS.PARTIES}/tags`;
+const TAGS = API_PATHS.PARTY_TAGS;
 
 interface TagApiRow {
   readonly id: string;
@@ -234,11 +234,7 @@ export const bulkTagParties = async (
       changed: readonly { party_id: string; tag_ids: readonly string[] }[];
       skipped: readonly BulkTagSkip[];
     };
-  }>(
-    `${TAGS}/bulk`,
-    { party_ids: [...partyIds], tag_names: [...tagNames], mode },
-    ubConfig({})
-  );
+  }>(`${TAGS}/bulk`, { party_ids: [...partyIds], tag_names: [...tagNames], mode }, ubConfig({}));
   const { data } = response.data;
   return {
     updatedCount: data.updated_count,

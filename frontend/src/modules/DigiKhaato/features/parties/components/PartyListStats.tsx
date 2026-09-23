@@ -4,7 +4,7 @@ import { memo, useCallback } from 'react';
 
 import { ArrowDownLeft, ArrowUpRight, Users } from 'lucide-react';
 
-import { UbStatCard, UbStatGrid } from 'src/design-system';
+import { UbSkeleton, UbStatCard, UbStatGrid } from 'src/design-system';
 import { formatInr } from 'src/utils/money';
 
 import type { PartyBalanceFilter } from '../constants/partyFilters';
@@ -74,6 +74,16 @@ export interface PartyListStatsProps {
   /** What tapping each money tile does, for a screen reader. */
   readonly receivableActionLabel: string;
   readonly payableActionLabel: string;
+  /**
+   * PTY-02 §9 Initial — nothing has loaded yet, so there are no figures to
+   * show. The tiles are drawn as shimmering cards in their own shape instead of
+   * "₹0.00 / ₹0.00", which on a book with ₹2 lakh outstanding reads for a
+   * second as "you are owed nothing" — the one figure this screen exists to get
+   * right.
+   */
+  readonly loading?: boolean;
+  /** Names the skeleton cards while `loading`. */
+  readonly loadingLabel?: string;
 }
 
 function PartyListStatsBase({
@@ -89,9 +99,23 @@ function PartyListStatsBase({
   onBalanceToggle,
   receivableActionLabel,
   payableActionLabel,
+  loading = false,
+  loadingLabel,
 }: Readonly<PartyListStatsProps>) {
   const showReceivable = useCallback(() => onBalanceToggle('owes_me'), [onBalanceToggle]);
   const showPayable = useCallback(() => onBalanceToggle('i_owe'), [onBalanceToggle]);
+
+  if (loading) {
+    return (
+      <UbStatGrid live label={regionLabel}>
+        <UbSkeleton variant="card" label={loadingLabel} />
+        <UbSkeleton variant="card" label={loadingLabel} />
+        {/* The count tile's slot, reserved at the widths that show it, so the
+            row does not reflow when the figures land (R-P-6). */}
+        <UbSkeleton variant="card" label={loadingLabel} className="max-md:hidden" />
+      </UbStatGrid>
+    );
+  }
 
   return (
     <UbStatGrid live label={regionLabel}>

@@ -90,6 +90,9 @@ the render props.
 | Search box | `UbSearchInput` |
 | A header action that navigates or downloads | `UbActionLink` |
 | Date | `UbDateInput` (calendar popover; quick choices below) |
+| A screen's period — presets plus a custom from/to | `UbDateRangePicker` (renders the `UbFilterBar`: chips on the track, dates and the screen's other scope in `end`, on the right) |
+| Sending something to a customer — WhatsApp, SMS, copy, the platform sheet | `UbShareSheet` over `UbDialog`; links from `src/utils/share.ts`; outcomes to the snackbar through `useShareFeedback` |
+| One floating primary action on a phone | `UbFab` (56 px, safe-area aware, clears the toast via `useBottomInset`) — gallery only until a screen has no header room for its primary action |
 | Status pill | `UbStatusBadge` |
 | Money | `UbAmount` |
 | Party picker source | `usePartySearch` (never a second debounced party fetch) |
@@ -97,6 +100,72 @@ the render props.
 
 When none of these fits, add the new component to `src/design-system`, add it
 to this table in the same change, and write down which Figma node it follows.
+
+### Wave 3 (Sprint 3, §32.6.4) — what was built and what was not
+
+Part 23 §23.3 lists six wave-3 components. Four exist; two were considered and
+deliberately NOT built, because the rule for a `Ub*` is that the pattern
+RECURS, and each of these would have exactly one caller:
+
+- **`UbTimeline` — not built.** The day-banded list (a quiet date band, rows
+  under it, hairlines between rows) has one user, `PartyLedgerTimeline`. The
+  statement is a `UbDataGrid` with a running-balance column, not a banded
+  list, and the aging report is a table too. A generic timeline would be a
+  render-prop wrapper around fifteen lines of `UbStack`/`UbText`/`UbDivider`
+  with one caller — the band's classes would move files and nothing would be
+  shared. Build it when a second banded list appears (the payments or
+  cashbook day view, EXP-03, is the likely one), by lifting the `groups.map`
+  block out of `PartyLedgerTimeline` with `renderHeading`/`renderRow` props.
+- **`UbPartyHeader` — not built.** The khata header card (avatar, customer /
+  supplier badges, the `tel:` link with copy, the balance with its baseline
+  and the credit bar) has one user, `PartyDetailHeader`. The statement's
+  header is `UbPageHeader` plus `UbStatCard`s and shares none of it, and
+  `PartyDetailHeader`'s own docstring records why a component that knows what
+  a positive balance MEANS is feature code rather than design system. The
+  reusable halves — `UbAvatar`, `UbAmount`, `UbStatusBadge`, `UbTagList` — are
+  already in the barrel. Revisit when invoices or bills get a party block.
+- **`UbFab` — built, not placed.** The only candidate action, Add party, is
+  already in the one-row page header; a FAB there would be the same action
+  twice. It lives in the gallery until a screen needs it.
+- **`UbShareSheet`** is a `UbDialog` (a bottom sheet on a phone) rather than
+  NTF-03 FR-1's dropdown-on-desktop, because `@radix-ui/react-popover` cost
+  the khata route +10.9 KB and the bundle gate refused it. WhatsApp and SMS
+  are real anchors (`wa.me/<digits>?text=`, `sms:<+number>?&body=`), which is
+  NTF-03 FR-13's popup-blocker fallback used as the primary path. Its copy
+  never says "sent" — DEC-012: the merchant sends it.
+
+### Party picker source: usePartySearch
+
+Every party picker — the app bar's quick search today; the sale, purchase,
+payment and expense editors next — gets its results from
+`usePartySearch()` (`features/parties/hooks/usePartySearch.ts`): 250 ms
+debounce, a 2-character minimum, the in-flight request aborted on every
+keystroke, active parties only, and the same trigram-backed `GET /parties` the
+list uses, so a party findable on the list is findable in every picker. The
+party LIST screen has its own source, `usePartyList()`, because its results are
+shared Redux state (restored on Back, invalidated by writes) and a picker's are
+not.
+
+There is no third source, and lint enforces it (Sprint 3 §32.6.7 — "party
+search becomes four different implementations in four features"). Outside
+those two hooks and the modules behind them, `npm run lint` fails on:
+
+| Spelling | Rule |
+|---|---|
+| `import { listParties } from '…/parties/api/partyService'` (also `import *` of it, and re-exports) | `no-restricted-imports` |
+| `import { fetchPartyList } from '…/parties/redux/partyListThunk'` | `no-restricted-imports` |
+| `partyService.listParties(…)`, `x.fetchPartyList` | `no-restricted-syntax` |
+| `API_PATHS.PARTIES` — hand-rolling `GET /parties?q=` in another service | `no-restricted-syntax` |
+
+Everything else in `partyService` (`getParty`, `createParty`, types) and the
+per-party paths (`API_PATHS.PARTY(id)`, `PARTY_TAGS`, …) stay importable:
+reading one party by id is not a search. The allowlist is
+`PARTY_FETCH_ALLOWED` in `frontend/eslint.config.mjs`, and
+`src/tests/partyFetchLintRule.test.ts` lints the deliberately-bad fixtures in
+`src/tests/lint-fixtures/party-fetch/` to prove each spelling fails with its
+rule id. If a picker needs something the hook does not do (a `type` filter is
+already there), extend the hook; adding a file to the allowlist is adding a
+second party source and wants the same review as a new design-system component.
 
 ## 5. What is deliberately not shown
 

@@ -25,6 +25,7 @@ import { copyText } from 'src/utils/clipboard';
 import { PartyLedgerTimeline } from 'modules/DigiKhaato/features/ledger/components/PartyLedgerTimeline';
 import { useLedgerEntryForm } from 'modules/DigiKhaato/features/ledger/hooks/useLedgerEntryForm';
 import { useOpeningBalance } from 'modules/DigiKhaato/features/ledger/hooks/useOpeningBalance';
+import { usePartyReminder } from 'modules/DigiKhaato/features/ledger/hooks/usePartyReminder';
 
 import { usePartyArchive } from '../hooks/usePartyArchive';
 import { usePartyDetail } from '../hooks/usePartyDetail';
@@ -54,10 +55,13 @@ import type { PartyDetail } from '../types/party.types';
  *
  * ── What is still NOT here ───────────────────────────────────────────────
  * Three of the five quick actions FRD §7 lists — the invoice, the estimate and
- * the payment against a document — and the share sheet. All four are about
- * `sales_document` and `payments_payment`, which have no tables, and the
- * judgement is the one this page was built on: a control that opens nothing
- * teaches a merchant that the product is broken rather than unfinished.
+ * the payment against a document — and the statement share link. The first
+ * three are about `sales_document` and `payments_payment`, the last about
+ * `parties_share_link`, none of which have tables, and the judgement is the one
+ * this page was built on: a control that opens nothing teaches a merchant that
+ * the product is broken rather than unfinished. LED-06's reminder IS here, in
+ * the ⋯ menu, because it needs no table: the merchant sends it themselves
+ * through `UbShareSheet` (see `usePartyReminder`).
  */
 /**
  * `ssr: false` because a drawer is never part of a server render: it opens on
@@ -108,6 +112,13 @@ export interface PartyDetailPageContentProps {
    to the khata, so it loads when it opens — the same rule as the party form
    and LED-03's drawers. The write-off form (FR-3) made it the heaviest thing
    on the page that most visits never render: +3 KB on the route, statically. */
+/* The reminder sheet loads when it opens, like the archive dialog: carried
+   statically, the sheet, its link builders and the clipboard path cost the
+   khata route 3.6 KB on every visit to read a balance. */
+const UbShareSheetLazy = /* @__PURE__ */ dynamic(() =>
+  import('src/design-system/UbShareSheet').then((m) => m.UbShareSheet)
+);
+
 const PartyArchiveDialogLazy = /* @__PURE__ */ dynamic(() =>
   import('./PartyArchiveDialog').then((m) => m.PartyArchiveDialog)
 );
@@ -173,6 +184,22 @@ export function PartyDetailPageContent({
      dropping the memoisation. */
   const lastActivityAt = shown?.lastActivityAt ?? null;
   const asOf = useMemo(() => (lastActivityAt ? d(lastActivityAt) : null), [lastActivityAt, d]);
+
+  /* LED-06 — the SAME balance the header prints (`summary` when the detail has
+     landed, the cached row until then), so the figure in the message can never
+     differ from the one the merchant is looking at when they tap. Offered only
+     once the detail has loaded: `party`, not `shown`, because the archived flag
+     a cached list row carries may be a page old. */
+  const reminder = usePartyReminder(
+    party
+      ? {
+          name: party.name,
+          balance: summary?.balance ?? party.balance,
+          mobile: party.mobile,
+          isArchived,
+        }
+      : null
+  );
 
   if (notFound) {
     return (
@@ -280,6 +307,7 @@ export function PartyDetailPageContent({
               <PartyHeaderMenu
                 t={t}
                 statementHref={canReadLedger ? partyStatementPath(id) : undefined}
+                onRemind={reminder.canRemind ? reminder.openSheet : undefined}
                 onEdit={partyForm.canWrite ? openEdit : undefined}
                 onAddOpening={opening.canAdd ? opening.openDrawer : undefined}
                 onArchive={archive.canArchive ? archive.open : undefined}
@@ -375,6 +403,25 @@ export function PartyDetailPageContent({
       {partyForm.open && <PartyFormDrawerLazy form={partyForm} />}
 
       {entryForm.open && <LedgerEntryDrawerLazy form={entryForm} partyName={shown.name} />}
+
+      {/* LED-06. The merchant sends it from their own WhatsApp or SMS app
+          (DEC-012) — the feedback says "WhatsApp opened", never "Reminder
+          sent". Static rather than `dynamic()`: `UbDialog` is already on this
+          route for the menu and the archive dialog, and what this adds is a
+          few hundred bytes of link-building. */}
+      {reminder.canRemind && reminder.open && (
+        <UbShareSheetLazy
+          open={reminder.open}
+          onOpenChange={reminder.setOpen}
+          title={reminder.title}
+          description={reminder.description}
+          message={reminder.message}
+          phone={reminder.phone}
+          labels={reminder.labels}
+          onShared={reminder.onShared}
+          onFailed={reminder.onFailed}
+        />
+      )}
 
       {opening.open && (
         <OpeningBalanceDrawerLazy

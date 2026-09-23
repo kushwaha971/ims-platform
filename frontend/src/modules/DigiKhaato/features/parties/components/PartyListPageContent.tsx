@@ -14,6 +14,7 @@ import {
   UbPageShell,
   UbSelect,
   UbStack,
+  UbStatusBanner,
   UbTextInput,
 } from 'src/design-system';
 import {
@@ -134,6 +135,8 @@ export function PartyListPageContent(): React.JSX.Element {
     toggleBalance,
     clearFilters,
     refetch,
+    isRefreshing,
+    showingSaved,
   } = usePartyList();
 
   /** Read outside render, so the column array's memo key is stable. */
@@ -232,18 +235,36 @@ export function PartyListPageContent(): React.JSX.Element {
     [partyForm, searchTerm]
   );
 
+  const isArchivedTab = filters.status === 'archived';
+
   const emptyStates = useMemo<UbDataGridEmptyStates>(
     () => ({
-      firstUse: {
-        title: t('parties.list.empty.firstUse.title'),
-        description: t('parties.list.empty.firstUse.body'),
-        // The empty state's whole job is to offer the one move that closes it.
-        // Before PTY-01 it described a screen and left the merchant to find the
-        // way out themselves.
-        action: partyForm.canWrite ? (
-          <UbButton onClick={openBlankCreate}>{t('parties.list.add')}</UbButton>
-        ) : undefined,
-      },
+      /* The ARCHIVED tab reaches the grid's "empty" state too — `status` is not
+         counted as a filter, so that a new tenant is never told to clear
+         filters they never set — and it used to get the first-use copy: a
+         merchant with three hundred active parties opened Archived and read
+         "No customers yet", with an Add party button, on a book full of them.
+         Nobody archived is its own sentence, and it has no action: adding a
+         party from here would add an ACTIVE one to a tab that cannot show it.
+         (PTY-02 §9 Empty / FR-13 name three variants; the tab is FR-6's.) */
+      firstUse: isArchivedTab
+        ? {
+            title: t('parties.list.empty.archived.title'),
+            description: t('parties.list.empty.archived.body'),
+          }
+        : {
+            title: t('parties.list.empty.firstUse.title'),
+            description: t('parties.list.empty.firstUse.body'),
+            // The empty state's whole job is to offer the one move that closes
+            // it. Before PTY-01 it described a screen and left the merchant to
+            // find the way out themselves. FR-13's secondary "Import from CSV"
+            // (PTY-10) and "Add from contacts" (PTY-07) are NOT drawn: neither
+            // is built, and a control for an unbuilt feature is not rendered
+            // (docs/DESIGN-SYSTEM.md §5).
+            action: partyForm.canWrite ? (
+              <UbButton onClick={openBlankCreate}>{t('parties.list.add')}</UbButton>
+            ) : undefined,
+          },
       filtered: {
         /* Two filtered-empty states, because there are two ways to reach it and
            they need different words. "No customers match this search. Clear the
@@ -297,19 +318,40 @@ export function PartyListPageContent(): React.JSX.Element {
       openBlankCreate,
       addSearchedName,
       searchTerm,
+      isArchivedTab,
     ]
   );
 
+  /* A failure over the saved answer to the SAME query keeps the rows (FR-15):
+     the error state would take away a list the merchant could still read and
+     act on, to tell them about a refresh they did not ask for. */
   const gridState: UbGridState =
     status === 'loading'
       ? 'loading'
-      : status === 'failed'
+      : status === 'failed' && !showingSaved
         ? 'error'
         : rows.length === 0
           ? isFiltered
             ? 'filtered-empty'
             : 'empty'
           : 'rows';
+
+  /* §9 Initial: nothing has landed yet, so the tiles shimmer rather than
+     claim ₹0. A later load over an EMPTY list (a filter change from a
+     filtered-empty result) is the same situation — there are no figures to
+     keep — and is drawn the same way. */
+  const statsLoading = status === 'loading' && rows.length === 0;
+  /* EC-1: a book with no parties at all hides the tiles entirely, "not ₹0 /
+     ₹0, so the screen is not two meaningless zeroes" — the empty state below
+     is the whole message. EC-13 is the opposite case and keeps them: when
+     every party is settled, zero is information. The Archived tab with nobody
+     in it is EC-1's situation on that tab.
+     The ERROR state hides them too: with no answer to this query there are no
+     figures for it, and what the tiles would show is either ₹0 (a cold
+     failure) or the PREVIOUS query's totals under the new chips — the same
+     lie the error state exists to avoid telling with rows. The stale-cache
+     variant keeps them, because there the rows and totals ARE this query's. */
+  const showStats = gridState !== 'empty' && gridState !== 'error';
 
   const sort = useMemo(() => sortFromOrdering(filters.ordering), [filters.ordering]);
 
@@ -409,27 +451,33 @@ export function PartyListPageContent(): React.JSX.Element {
           count that used to sit here in grey label type is the third card
           now — it was the same job said in a different voice. */}
       <UbStack gap={4}>
-        <PartyListStats
-          totals={totals}
-          total={meta.total}
-          receivableLabel={t('parties.list.totals.receivable')}
-          payableLabel={t('parties.list.totals.payable')}
-          countLabel={t('parties.list.stats.customers')}
-          countValue={n(meta.total)}
-          regionLabel={t('parties.list.totals.region')}
-          appliedBalance={filters.balance}
-          onBalanceToggle={toggleBalance}
-          receivableActionLabel={t('parties.list.totals.receivable.action')}
-          payableActionLabel={t('parties.list.totals.payable.action')}
-          scopeNote={
-            totalsScope === 'filtered'
-              ? t('parties.list.totals.scope.filtered')
-              : t('parties.list.totals.scope.page', { count: rows.length })
-          }
-          countNote={
-            isFiltered ? t('parties.list.stats.count.filtered') : t('parties.list.stats.count.all')
-          }
-        />
+        {showStats && (
+          <PartyListStats
+            loading={statsLoading}
+            loadingLabel={t('parties.list.totals.loading')}
+            totals={totals}
+            total={meta.total}
+            receivableLabel={t('parties.list.totals.receivable')}
+            payableLabel={t('parties.list.totals.payable')}
+            countLabel={t('parties.list.stats.customers')}
+            countValue={n(meta.total)}
+            regionLabel={t('parties.list.totals.region')}
+            appliedBalance={filters.balance}
+            onBalanceToggle={toggleBalance}
+            receivableActionLabel={t('parties.list.totals.receivable.action')}
+            payableActionLabel={t('parties.list.totals.payable.action')}
+            scopeNote={
+              totalsScope === 'filtered'
+                ? t('parties.list.totals.scope.filtered')
+                : t('parties.list.totals.scope.page', { count: rows.length })
+            }
+            countNote={
+              isFiltered
+                ? t('parties.list.stats.count.filtered')
+                : t('parties.list.stats.count.all')
+            }
+          />
+        )}
 
         {/* Between the figures and the list, which is the order the FRD sets
             and the order the eye takes: how much, then who. Not in the grid's
@@ -458,6 +506,23 @@ export function PartyListPageContent(): React.JSX.Element {
           onClear={clearFilters}
         />
 
+        {/* FR-15 / §9 Error, stale-cache variant: the refresh failed, the rows
+            below are the last good answer to this same query, and the banner
+            says so with the one move that fixes it. Amber, not red — the list
+            is usable; it is only possibly out of date (§23.2.4). */}
+        {showingSaved && (
+          <UbStatusBanner
+            tone="warning"
+            title={t('parties.list.stale')}
+            description={t('parties.list.stale.body')}
+            action={
+              <UbButton variant="secondary" size="sm" onClick={refetch}>
+                {t('common.action.retry')}
+              </UbButton>
+            }
+          />
+        )}
+
         {/* `storageId` puts the column choices in `sessionStorage`: they survive
             a trip to a party and back. Session rather than account, because
             this is a reading preference for the afternoon rather than a
@@ -470,6 +535,12 @@ export function PartyListPageContent(): React.JSX.Element {
           rowId={rowId}
           rowName={rowName}
           state={gridState}
+          /* §9 Loading: a later load keeps the rows it has, dimmed under a
+             progress bar; the slice turns a page change into `loading` (the
+             skeleton) instead, because page 2 is not page 1 dimmed. */
+          busy={isRefreshing}
+          /* §9 Initial: eight skeleton rows, never a full-page spinner. */
+          skeletonRows={8}
           labels={labels}
           emptyStates={emptyStates}
           caption={t('parties.list.caption')}

@@ -131,6 +131,15 @@ export interface UbDataGridProps<TRow> {
   /** Tests and the design-system gallery only. */
   readonly tier?: UbGridTier;
   readonly skeletonRows?: number;
+  /**
+   * A background load is in flight over rows ALREADY on screen — Part 17's
+   * "subsequent loads keep the previous rows at 60 % opacity with a top
+   * progress bar" (PTY-02 §9 Loading). The rows dim and are marked
+   * `aria-busy`; the toolbar does NOT, because the merchant is usually still
+   * typing in it. A first load or a page change is `state="loading"` instead —
+   * the skeleton — and this prop is ignored for every state but `rows`.
+   */
+  readonly busy?: boolean;
   readonly className?: string;
 }
 
@@ -267,6 +276,7 @@ export function UbDataGrid<TRow>({
   rowHeight,
   tier: forcedTier,
   skeletonRows = 6,
+  busy = false,
   className,
 }: Readonly<UbDataGridProps<TRow>>): React.JSX.Element {
   const tier = useGridTier(forcedTier);
@@ -385,37 +395,57 @@ export function UbDataGrid<TRow>({
           </UbDataGridStateTable>
         ))}
 
-      {state === 'rows' &&
-        (tier === 'cards' ? (
-          <UbDataGridMobileList
-            rows={rows}
-            columns={shown}
-            rowId={rowId}
-            rowName={rowName}
-            onRowOpen={onRowOpen}
-            labels={labels}
-            listLabel={caption}
-            avatar={cardAvatar}
-          />
-        ) : (
-          <UbDataGridTableLazy
-            rows={rows}
-            columns={shown}
-            rowId={rowId}
-            rowName={rowName}
-            onRowOpen={onRowOpen}
-            labels={labels}
-            caption={caption}
-            sort={sort}
-            onSortChange={onSortChange}
-            selectable={canSelect}
-            selectedIds={selectedIds}
-            onSelectionChange={onSelectionChange}
-            allowHorizontalScroll={scrollX}
-            maxHeight={maxHeight}
-            rowHeight={rowHeight}
-          />
-        ))}
+      {/* Indeterminate on purpose: a list request has no progress to report,
+          and a bar that crept to 90 % and waited would be a lie with a
+          percentage on it. No `aria-valuenow` is how ARIA says "indeterminate". */}
+      {state === 'rows' && busy && (
+        <div
+          role="progressbar"
+          aria-label={labels.loading}
+          data-testid="ub-grid-busy"
+          className="h-0.5 w-full overflow-hidden bg-surface-sunken"
+        >
+          <div className="h-full w-1/3 animate-pulse bg-accent motion-reduce:animate-none" />
+        </div>
+      )}
+
+      {state === 'rows' && (
+        <div
+          aria-busy={busy || undefined}
+          className={cn('transition-opacity duration-base', busy && 'opacity-60')}
+        >
+          {tier === 'cards' ? (
+            <UbDataGridMobileList
+              rows={rows}
+              columns={shown}
+              rowId={rowId}
+              rowName={rowName}
+              onRowOpen={onRowOpen}
+              labels={labels}
+              listLabel={caption}
+              avatar={cardAvatar}
+            />
+          ) : (
+            <UbDataGridTableLazy
+              rows={rows}
+              columns={shown}
+              rowId={rowId}
+              rowName={rowName}
+              onRowOpen={onRowOpen}
+              labels={labels}
+              caption={caption}
+              sort={sort}
+              onSortChange={onSortChange}
+              selectable={canSelect}
+              selectedIds={selectedIds}
+              onSelectionChange={onSelectionChange}
+              allowHorizontalScroll={scrollX}
+              maxHeight={maxHeight}
+              rowHeight={rowHeight}
+            />
+          )}
+        </div>
+      )}
 
       {state === 'rows' && (
         <UbDataGridPagination

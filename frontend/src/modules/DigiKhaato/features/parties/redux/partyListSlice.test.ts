@@ -4,6 +4,7 @@ import type { ApiErrorShape } from 'src/types/api.types';
 import partyListReducer, {
   filtersChanged,
   pageChanged,
+  sameQuery,
   selectionChanged,
   type PartyListState,
 } from './partyListSlice';
@@ -108,6 +109,73 @@ describe('partyListSlice', () => {
     });
     expect(failed.status).toBe('failed');
     expect(failed.error?.requestId).toBe('req_7f3a91');
+  });
+
+  describe('PTY-02 §9 — Loading and the stale-cache Error variant', () => {
+    const error: ApiErrorShape = {
+      code: 'network_error',
+      message: 'No connection.',
+      details: {},
+      requestId: 'req_0001',
+      status: 0,
+      warnings: [],
+    };
+    const pendingFor = (params: typeof initial.filters) => ({
+      type: fetchPartyList.pending.type,
+      meta: { arg: { params, mode: 'replace' }, requestId: 'p' },
+    });
+    const rejectedFor = (params: typeof initial.filters) => ({
+      type: fetchPartyList.rejected.type,
+      payload: error,
+      meta: { arg: { params, mode: 'replace' }, aborted: false, requestId: 'x' },
+    });
+
+    it('dims (refreshing) on a filter change but shows the skeleton on a page change', () => {
+      /** Prevents page 1's names sitting dimmed under a page-2 request (§9). */
+      const loaded = partyListReducer(initial, fulfilled());
+      expect(loaded.rowsQuery).toEqual(initial.filters);
+
+      expect(
+        partyListReducer(loaded, pendingFor({ ...initial.filters, balance: 'owes_me' })).status
+      ).toBe('refreshing');
+      expect(partyListReducer(loaded, pendingFor({ ...initial.filters, page: 2 })).status).toBe(
+        'loading'
+      );
+      // A page change that ALSO changes a filter is a filter change.
+      expect(
+        partyListReducer(loaded, pendingFor({ ...initial.filters, page: 2, q: 'ram' })).status
+      ).toBe('refreshing');
+    });
+
+    it('keeps the rows as the saved list when the SAME query fails (FR-15)', () => {
+      /** Prevents a failed re-entry refresh from wiping a list the store still holds. */
+      const loaded = partyListReducer(initial, fulfilled());
+      const failed = partyListReducer(loaded, rejectedFor(initial.filters));
+      expect(failed.status).toBe('failed');
+      expect(failed.showingSaved).toBe(true);
+      expect(failed.rows).toHaveLength(1);
+      // Retrying clears the flag while in flight; success keeps it clear.
+      const retrying = partyListReducer(failed, pendingFor(initial.filters));
+      expect(retrying.showingSaved).toBe(false);
+      expect(partyListReducer(retrying, fulfilled()).showingSaved).toBe(false);
+    });
+
+    it('never offers the saved list for a DIFFERENT query, or with nothing saved', () => {
+      /** Prevents "all parties" rows being shown under a "Settled" chip as its answer. */
+      const loaded = partyListReducer(initial, fulfilled());
+      const otherQuery = { ...initial.filters, balance: 'settled' as const };
+      expect(partyListReducer(loaded, rejectedFor(otherQuery)).showingSaved).toBe(false);
+      expect(partyListReducer(initial, rejectedFor(initial.filters)).showingSaved).toBe(false);
+    });
+
+    it('compares queries field by field, optionally ignoring the page', () => {
+      expect(sameQuery(initial.filters, { ...initial.filters })).toBe(true);
+      expect(sameQuery(initial.filters, { ...initial.filters, page: 3 })).toBe(false);
+      expect(
+        sameQuery(initial.filters, { ...initial.filters, page: 3 }, { ignorePage: true })
+      ).toBe(true);
+      expect(sameQuery(initial.filters, { ...initial.filters, tag: 'Camp Area' })).toBe(false);
+    });
   });
 
   it('resets pagination on any filter change and keeps it on an explicit page change', () => {

@@ -5,6 +5,7 @@ import { sessionLoaded } from 'src/redux/slice/sessionSlice';
 import { store } from 'src/redux/store';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
 import type { PermissionCode } from 'src/types/domain.types';
+import { formatBusinessDate, todayInTenantTz } from 'src/utils/dates';
 
 import { resetLedgerEntries } from 'modules/DigiKhaato/features/ledger/redux/ledgerEntrySlice';
 import { resetLedgerForm } from 'modules/DigiKhaato/features/ledger/redux/ledgerFormSlice';
@@ -530,12 +531,17 @@ describe('archiving from the khata page', () => {
     expect(screen.queryByRole('button', { name: 'More actions' })).not.toBeInTheDocument();
   });
 
-  it('offers the accountant the statement and nothing else', async () => {
+  it('offers the accountant the statement and the reminder, and nothing that writes', async () => {
     /**
      * §12 of LED-04: everybody who may read the ledger may read a statement,
      * and the accountant is the role the export exists for. They still may not
      * edit a party, add an opening balance or archive anybody — so the menu is
-     * one item long rather than absent, which is the honest shape.
+     * short rather than absent, which is the honest shape.
+     *
+     * LED-06's reminder is in it too, and that is a decision: nothing is
+     * written (no `ledger_reminder` row exists to write), the merchant sends
+     * the text from their own phone, and anybody who can read the balance
+     * could type it. `ledger.reminder.write` takes over the day it writes.
      */
     signIn(['parties.party.read', 'ledger.entry.read']);
 
@@ -545,7 +551,9 @@ describe('archiving from the khata page', () => {
 
     const menu = await screen.findByRole('dialog');
     expect(within(menu).getByText('Statement')).toBeInTheDocument();
+    expect(within(menu).getByText('Send reminder')).toBeInTheDocument();
     expect(within(menu).queryByText('Archive')).not.toBeInTheDocument();
+    expect(within(menu).queryByText('Edit')).not.toBeInTheDocument();
   });
 
   it('asks before it acts, and does not archive on a stray backdrop tap', async () => {
@@ -905,5 +913,105 @@ describe('archiving from the khata page', () => {
     await user.click(await screen.findByRole('button', { name: 'Edit' }));
 
     expect(await screen.findByRole('button', { name: 'Save changes' })).toBeInTheDocument();
+  });
+});
+
+describe('sending a reminder from the khata page (LED-06)', () => {
+  /* jsdom cannot navigate; the browser would follow the link after the click. */
+  const swallowNavigation = (event: MouseEvent) => {
+    if ((event.target as Element | null)?.closest('a')) event.preventDefault();
+  };
+  beforeEach(() => document.addEventListener('click', swallowNavigation));
+  afterEach(() => document.removeEventListener('click', swallowNavigation));
+
+  const openReminder = async (user: ReturnType<typeof userEvent.setup>) => {
+    renderWithProviders(<PartyDetailPageContent id={ID} />);
+    await screen.findByText('Ramesh Traders');
+    await openMenu(user);
+    await user.click(await screen.findByRole('button', { name: 'Send reminder' }));
+    return screen.findByRole('dialog', { name: 'Send reminder' });
+  };
+
+  it('composes the message from the shop, the party, the header balance and today', async () => {
+    /* Prevents: a reminder whose figure differs from the one on the header
+       the merchant is looking at, one that names the wrong business, one that
+       prints "₹₹" or an ungrouped figure, and one dated from the last entry
+       rather than the day it is sent. */
+    const user = userEvent.setup();
+    const sheet = await openReminder(user);
+    const today = formatBusinessDate(todayInTenantTz('Asia/Kolkata'));
+    const expected =
+      `Namaste Ramesh Traders,\nRs 2,300.00 is pending with Kumar Stores as of ${today}.\n` +
+      'Kindly pay at your convenience. Thank you.\n— Kumar Stores';
+
+    expect(sheet.querySelector('[data-ub-share-preview]')?.textContent).toBe(expected);
+    expect(sheet).toHaveAccessibleDescription('To Ramesh Traders · +919876543210');
+    const href = within(sheet).getByRole('link', { name: 'WhatsApp' }).getAttribute('href') ?? '';
+    expect(href.startsWith('https://wa.me/919876543210?text=')).toBe(true);
+    expect(new URL(href).searchParams.get('text')).toBe(expected);
+  });
+
+  it('says WhatsApp was OPENED — never that a reminder was sent', async () => {
+    /* Prevents: DEC-012 / NTF-03 BR-1 broken in the snackbar. Nothing is sent
+       by this product; the merchant still has to press send in WhatsApp. And
+       no request is made, because there is no reminder table to write. */
+    const user = userEvent.setup();
+    const sheet = await openReminder(user);
+    await user.click(within(sheet).getByRole('link', { name: 'WhatsApp' }));
+
+    const snackbar = store.getState().snackbar;
+    expect(snackbar.id).toBe('share.opened.whatsapp');
+    expect(snackbar.snackbarSeverity).toBe('info');
+    expect(JSON.stringify(snackbar)).not.toMatch(/sent/i);
+    expect(ledgerService.postLedgerEntry).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['a party the merchant owes (payable)', '-2300.00'],
+    ['a settled party', '0.00'],
+  ])('is not offered for %s', async (_label, balance) => {
+    /* Prevents: LED-06 FR-8 — "please pay" sent to a supplier the merchant
+       owes, or to somebody who owes nothing. The menu is still there (Edit),
+       so the absence is about the balance and not about the role. */
+    partyService.getParty.mockResolvedValue({
+      ...RESULT,
+      party: { ...PARTY, balance },
+      summary: { balance },
+    });
+    const user = userEvent.setup();
+    renderWithProviders(<PartyDetailPageContent id={ID} />);
+    await screen.findByText('Ramesh Traders');
+    await openMenu(user);
+
+    expect(await screen.findByRole('button', { name: 'Edit' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Send reminder' })).not.toBeInTheDocument();
+  });
+
+  it('is not offered to a role that cannot read the ledger', async () => {
+    /* Prevents: a role with no view of the balance being handed a message
+       that contains it. */
+    signIn(['parties.party.read', 'parties.party.write']);
+    const user = userEvent.setup();
+    renderWithProviders(<PartyDetailPageContent id={ID} />);
+    await screen.findByText('Ramesh Traders');
+    await openMenu(user);
+
+    expect(await screen.findByRole('button', { name: 'Edit' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Send reminder' })).not.toBeInTheDocument();
+  });
+
+  it('is not offered on an archived party', async () => {
+    /* Prevents: FR-14 — chasing a party the merchant has filed away, from a
+       page that is read-only. */
+    partyService.getParty.mockResolvedValue({
+      ...RESULT,
+      party: { ...PARTY, status: 'archived' as const },
+    });
+    renderWithProviders(<PartyDetailPageContent id={ID} />);
+    await screen.findByText('Ramesh Traders');
+    await screen.findByText(/archived/i);
+
+    expect(screen.queryByRole('button', { name: 'Send reminder' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Send reminder' })).not.toBeInTheDocument();
   });
 });

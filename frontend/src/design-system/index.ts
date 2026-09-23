@@ -219,6 +219,27 @@ export type { UbConfirmDialogProps } from './UbConfirmDialog';
 export { UbDialog } from './UbDialog';
 export type { UbDialogProps } from './UbDialog';
 
+// ── Wave 3 — Sprint 3 §32.6.4 ────────────────────────────────────────────────
+/**
+ * `UbShareSheet` — NTF-03's one share surface: WhatsApp, SMS, copy and the
+ * platform sheet, over `UbDialog` (no Radix popover — the khata route's bundle
+ * gate refused one). The links it opens are built in `src/utils/share.ts`.
+ * `UbDateRangePicker` — a period as presets plus a custom from/to, in a
+ * `UbFilterBar`. `UbFab` — the floating action button, which clears the toast
+ * through `useBottomInset`. `UbTimeline` and `UbPartyHeader` are NOT here, by
+ * decision: each would have one caller (docs/DESIGN-SYSTEM.md §4).
+ */
+export { UbShareSheet } from './UbShareSheet';
+export type { UbShareChannel, UbShareSheetLabels, UbShareSheetProps } from './UbShareSheet';
+export { UbDateRangePicker } from './UbDateRangePicker';
+export type {
+  UbDateRangePickerLabels,
+  UbDateRangePickerProps,
+  UbDateRangePreset,
+} from './UbDateRangePicker';
+export { UbFab } from './UbFab';
+export type { UbFabProps } from './UbFab';
+
 export { UbStepper } from './UbStepper';
 export type { UbStepperProps, UbStepperStep, UbStepperTone } from './UbStepper';
 

@@ -17,6 +17,7 @@ import {
   selectPartyFilters,
   selectPartyListError,
   selectPartyListMeta,
+  selectPartyListShowingSaved,
   selectPartyListStale,
   selectPartyListStatus,
   selectPartyListTotals,
@@ -34,7 +35,6 @@ import { usePartyListUrl } from './usePartyListUrl';
 import type { PartyBalanceFilter } from '../constants/partyFilters';
 import type { Party, PartyListFilters } from '../types/party.types';
 import type { PartyListTotals } from '../view-model/partyDisplay';
-
 
 export interface UsePartyListResult {
   readonly rows: readonly Party[];
@@ -59,6 +59,11 @@ export interface UsePartyListResult {
   readonly refetch: () => void;
   readonly isLoading: boolean;
   readonly isRefreshing: boolean;
+  /**
+   * FR-15 — the last request failed and `rows` are the saved answer to that
+   * same query: show them under the "Showing saved list" banner, not the error.
+   */
+  readonly showingSaved: boolean;
   /** Any narrowing at all is applied — the search box or any of the chips. */
   readonly isFiltered: boolean;
   /** How many, for the "Clear filters (2)" affordance (§19.3.4's example). */
@@ -81,6 +86,7 @@ export function usePartyList(mode: 'replace' | 'append' = 'replace'): UsePartyLi
   const status = useAppSelector(selectPartyListStatus);
   const error = useAppSelector(selectPartyListError);
   const stale = useAppSelector(selectPartyListStale);
+  const showingSaved = useAppSelector(selectPartyListShowingSaved);
   const serverTotals = useAppSelector(selectPartyListTotals);
   const totalsScope = useAppSelector(selectPartyListTotalsScope);
   const overLimit = useAppSelector(selectPartyOverLimit);
@@ -99,10 +105,7 @@ export function usePartyList(mode: 'replace' | 'append' = 'replace'): UsePartyLi
    * merchant told "₹2,40,000 receivable" has to know whether that is their book
    * or the twenty-five rows in front of them.
    */
-  const totals = useMemo(
-    () => serverTotals ?? partyTotals(rows),
-    [serverTotals, rows]
-  );
+  const totals = useMemo(() => serverTotals ?? partyTotals(rows), [serverTotals, rows]);
   const selectedIds = useAppSelector(selectPartySelection);
   const isImpaired = useAppSelector(selectNetworkImpaired);
 
@@ -222,14 +225,7 @@ export function usePartyList(mode: 'replace' | 'append' = 'replace'): UsePartyLi
         filters.tag,
         filters.credit,
       ].filter(Boolean).length,
-    [
-      filters.q,
-      filters.type,
-      filters.balance,
-      filters.collection,
-      filters.tag,
-      filters.credit,
-    ]
+    [filters.q, filters.type, filters.balance, filters.collection, filters.tag, filters.credit]
   );
 
   const setFilters = useCallback(
@@ -310,6 +306,7 @@ export function usePartyList(mode: 'replace' | 'append' = 'replace'): UsePartyLi
     toggleBalance,
     isLoading: status === 'loading',
     isRefreshing: status === 'refreshing',
+    showingSaved,
     isFiltered: activeFilterCount > 0,
     activeFilterCount,
   };
