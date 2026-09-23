@@ -297,7 +297,13 @@
   "",
   "── 24 Sep 2026: QA fixes — /parties/[id] 95 → 96, first load 333 → 334 for",
   "returning focus to ⋯ from four dialogs (triggerRef/returnFocusRef) and the",
-  "archived timeline's read-only mode. Accessibility, not features."
+  "archived timeline's read-only mode. Accessibility, not features.",
+  "",
+  "── 24 Sep 2026: session teardown + stale-read guard in the shell ───────────",
+  "The cookie-expiry teardown (sessionSlice, useLogin) and the staleSeq read",
+  "guard in the invalidation listener live in the shell: +0.2–0.3 KB on every",
+  "first load. Five routes within 0.2 KB of their ceilings get +1: aging, team,",
+  "switch, plan, dashboard."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -690,7 +696,7 @@
   },
   "/dashboard": {
    "route": 60,
-   "firstLoad": 297
+   "firstLoad": 298
   },
   "/sales/invoices/new": {
    "route": 110,
@@ -706,7 +712,7 @@
   },
   "/settings/team": {
    "route": 90,
-   "firstLoad": 328
+   "firstLoad": 329
   },
   "/parties/[id]": {
    "route": 96,
@@ -722,9 +728,12 @@
   },
   "/ledger/aging": {
    "route": 90,
-   "firstLoad": 328
+   "firstLoad": 329
   },
   "/switch": {
+   "firstLoad": 302
+  },
+  "/settings/plan": {
    "firstLoad": 301
   }
  },
