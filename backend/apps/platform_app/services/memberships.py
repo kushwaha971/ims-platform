@@ -211,19 +211,43 @@ def accept_invitation(
     Expiry is handled in its own pass, before the work transaction opens:
     PLT-05 FR-11 wants the row marked `expired`, and a status change written
     inside the transaction that then raises is a status change that never
-    happened.
+    happened. The `invited` membership the invitation created goes with it, so
+    an expired link and a revoked one leave the team in the same state.
+
+    **Idempotent for the person who accepted.** The token is single-use
+    (BR-5), but "use" means *grant*: the same signed-in person presenting a
+    token they already redeemed gets their membership back with 200, and
+    nothing is written. The accept screen fires on mount, so a refresh, a
+    remount or a retry after a lost response used to spend the link and then
+    tell the new member "This invitation cannot be used" about a business they
+    had just joined. Anybody else presenting it — and the same person after
+    being suspended or removed — still gets 400: replay returns an ACTIVE
+    membership or nothing, so it can never restore access.
+
+    **An invitation never lifts a suspension.** A suspended member holding an
+    old link is refused; reactivating is a manager's decision (FR-7), not
+    something a URL in a chat thread can do.
+
+    **An already-active member keeps their role.** A stale invitation closes
+    as accepted, but the role on it was decided before whatever decision put
+    them on the team since, and applying it would be a role change nobody made.
     """
     from apps.platform_app.models import Invitation, Membership
     from apps.platform_app.tokens import hash_token
 
     token_hash = hash_token(token)
     invitation = Invitation.objects.filter(token_hash=token_hash).first()
-    if invitation is None or invitation.status != InvitationStatus.PENDING:
+    if invitation is None:
+        raise InvitationInvalid()
+    if invitation.status == InvitationStatus.ACCEPTED:
+        replay = _accepted_replay(invitation=invitation, user=user)
+        if replay is not None:
+            return replay
+        raise InvitationInvalid()
+    if invitation.status != InvitationStatus.PENDING:
         raise InvitationInvalid()
     if invitation.expires_at <= timezone.now():
-        Invitation.objects.filter(pk=invitation.pk, status=InvitationStatus.PENDING).update(
-            status=InvitationStatus.EXPIRED, updated_at=timezone.now()
-        )
+        _expire(invitation)
         raise InvitationInvalid("This invitation has expired.")
     # DEC-010 / `CR-140`: the invitation names an *email address*, because that
     # is the identity the product issues. Matching on `mobile` made acceptance
@@ -233,23 +257,47 @@ def accept_invitation(
         raise InvitationInvalid("This invitation is not for your email address.")
 
     with transaction.atomic():
-        invitation = (
+        locked_invitation = (
             Invitation.objects.select_for_update(of=("self",))
             .select_related("tenant", "role")
             .filter(token_hash=token_hash, status=InvitationStatus.PENDING)
             .first()
         )
-        if invitation is None:  # taken by a concurrent accept between the passes
+        if locked_invitation is None:
+            # Taken between the passes. If it was taken by THIS person (a
+            # double-fired request), that is the replay case, not a failure.
+            again = Invitation.objects.filter(token_hash=token_hash).first()
+            if again is not None and again.status == InvitationStatus.ACCEPTED:
+                replay = _accepted_replay(invitation=again, user=user)
+                if replay is not None:
+                    return replay
             raise InvitationInvalid()
+        invitation = locked_invitation
 
         tenant = entitlements.lock_tenant_for_write(invitation.tenant)
-        membership = Membership.objects.filter(user=user, tenant=tenant).first()
-        if membership is None or membership.status != MembershipStatus.ACTIVE:
-            # An `invited` row already counts toward `max_users`; only a seat
-            # that does not yet exist has to be bought.
-            adding = 0 if (membership and membership.status == MembershipStatus.INVITED) else 1
+        membership = (
+            Membership.objects.select_for_update(of=("self",))
+            .select_related("role")
+            .filter(user=user, tenant=tenant)
+            .first()
+        )
+        if membership is not None and membership.status == MembershipStatus.SUSPENDED:
+            raise InvitationInvalid(
+                "Your access to this business is suspended. Ask the owner to restore it."
+            )
+        already_active = membership is not None and membership.status == MembershipStatus.ACTIVE
+        before_status = membership.status if membership is not None else None
+
+        if not already_active:
+            # "Everybody else, plus me": this person's own promised seat — the
+            # `invited` row, or this very invitation when they had no account
+            # at invite time — is already in the count and is being converted,
+            # not bought a second time.
             entitlements.assert_can_add_member(
-                tenant=tenant, adding=adding, endpoint="invitations.accept"
+                tenant=tenant,
+                adding=1,
+                endpoint="invitations.accept",
+                excluding_email=normalise_email_or_none(invitation.email),
             )
 
         if membership is None:
@@ -261,16 +309,18 @@ def accept_invitation(
                 joined_at=timezone.now(),
                 is_default=not _has_default(user),
             )
-        else:
+        elif not already_active:
             membership.status = MembershipStatus.ACTIVE
             membership.role = invitation.role
             membership.joined_at = membership.joined_at or timezone.now()
+            membership.is_default = not _has_default(user)
             membership.permissions_version += 1
             membership.save(
                 update_fields=[
                     "status",
                     "role",
                     "joined_at",
+                    "is_default",
                     "permissions_version",
                     "updated_at",
                 ]
@@ -291,9 +341,83 @@ def accept_invitation(
             action=AuditAction.MEMBER_ACCEPTED,
             entity_type="platform_membership",
             entity_id=membership.id,
+            before={"status": before_status} if before_status else None,
             after={"status": membership.status, "role": membership.role.code},
+            # The invitation's id, never its token: the raw token is not on the
+            # row, and the hash is not something a reader of this log needs.
             metadata={"invitation_id": str(invitation.id)},
         )
+    return membership
+
+
+def _accepted_replay(*, invitation: Any, user: Any) -> Any:
+    """The membership an already-accepted invitation gave THIS user, if still live.
+
+    `None` for anybody else, and for the acceptor once they are no longer an
+    active member — a replay returns what exists, it never re-creates it.
+    """
+    from apps.platform_app.models import Membership
+
+    if invitation.accepted_user_id is None or invitation.accepted_user_id != user.id:
+        return None
+    return (
+        Membership.objects.select_related("tenant", "role")
+        .filter(user=user, tenant_id=invitation.tenant_id, status=MembershipStatus.ACTIVE)
+        .first()
+    )
+
+
+def _expire(invitation: Any) -> None:
+    """Mark a lapsed invitation `expired` and cancel the seat it was holding.
+
+    Its own small transaction, committed before the caller raises — see
+    `accept_invitation`.
+    """
+    from apps.platform_app.models import Invitation
+
+    with transaction.atomic():
+        changed = Invitation.objects.filter(
+            pk=invitation.pk, status=InvitationStatus.PENDING
+        ).update(status=InvitationStatus.EXPIRED, updated_at=timezone.now())
+        if changed:
+            _cancel_invited_membership(tenant_id=invitation.tenant_id, email=invitation.email)
+
+
+def _cancel_invited_membership(*, tenant_id: Any, email: str) -> Any:
+    """Close the `invited` membership an invitation opened, if nothing else holds it.
+
+    PLT-05 FR-8: "Removing an `invited` membership revokes the invitation" —
+    and the converse, which the FRD leaves implicit: revoking the invitation
+    removes the membership, or the team screen goes on listing somebody who can
+    no longer join and the seat stays spent. `removed` rather than deleted, per
+    BR-7: a later invitation returns this same row to `invited`
+    (`U(user_id, tenant_id)`).
+
+    Left alone while another live invitation for the address exists (a resend
+    supersedes by revoking the old row, and the new one still needs the seat).
+    Only ever touches an `invited` row — an active member is never removed by
+    anything that happens to an invitation.
+    """
+    from apps.platform_app.models import Invitation, Membership
+
+    normalised = normalise_email_or_none(email)
+    if not normalised:
+        return None
+    if Invitation.objects.filter(
+        tenant_id=tenant_id, email=normalised, status=InvitationStatus.PENDING
+    ).exists():
+        return None
+    membership = (
+        Membership.objects.select_for_update(of=("self",))
+        .filter(tenant_id=tenant_id, user__email=normalised, status=MembershipStatus.INVITED)
+        .first()
+    )
+    if membership is None:
+        return None
+    membership.status = MembershipStatus.REMOVED
+    membership.is_default = False
+    membership.permissions_version += 1
+    membership.save(update_fields=["status", "is_default", "permissions_version", "updated_at"])
     return membership
 
 
@@ -390,12 +514,27 @@ def invite(
     revoked in the same transaction. This is also how a genuine resend works:
     the admin sends again, the old link stops working, the new one is the only
     one that does.
+
+    **An address that already has an account gets an `invited` membership**
+    (FR-2, BR-7), so the business appears under "Invitations" in that person's
+    own switcher (PLT-04 FR-1/FR-8) and on this team's list as Invited. It
+    grants nothing: every door into a tenant — `tenancy`, `switch_tenant`,
+    login's default, refresh, `permissions_for` — admits `active` only, and
+    `accept_invitation` is the one thing that flips it. A removed member's row
+    is reused (`U(user_id, tenant_id)`), which is BR-7's "returns to invited".
+    An address with no account yet has no user to hang a membership on
+    (`user_id` is NOT NULL); its invitation holds the seat on its own, and
+    `count_members` counts it (PLT-05 FR-12).
+
+    **A suspended member cannot be invited back** (§10: "no active|suspended
+    membership"). Otherwise an invitation would be a second, unaudited way to
+    lift a suspension.
     """
     import datetime as dt
 
     from django.conf import settings
 
-    from apps.platform_app.models import Invitation, Membership
+    from apps.platform_app.models import Invitation, Membership, User
     from apps.platform_app.tokens import hash_token
 
     normalised = normalise_email_or_none(email)
@@ -404,23 +543,36 @@ def invite(
 
     with transaction.atomic():
         locked = entitlements.lock_tenant_for_write(tenant)
+        now = timezone.now()
 
-        existing_member = Membership.objects.filter(user__email=normalised, tenant=locked).first()
+        existing_member = (
+            Membership.objects.select_for_update(of=("self",))
+            .filter(user__email=normalised, tenant=locked)
+            .first()
+        )
         if existing_member and existing_member.status == MembershipStatus.ACTIVE:
             raise BusinessRuleViolation("validation_error", "That person is already on this team.")
+        if existing_member and existing_member.status == MembershipStatus.SUSPENDED:
+            raise BusinessRuleViolation(
+                "validation_error",
+                "That person is suspended from this business. Restore their access "
+                "instead of inviting them again.",
+            )
 
-        # An `invited` membership or a pending invitation already holds a seat,
-        # so only a genuinely new person has to buy one.
+        # A seat already promised to this address — an `invited` membership, or
+        # a live invitation (a resend) — is not bought a second time.
         superseded = Invitation.objects.select_for_update(of=("self",)).filter(
             tenant=locked, email=normalised, status=InvitationStatus.PENDING
         )
-        holds_a_seat = bool(existing_member) or superseded.exists()
+        holds_a_seat = (
+            existing_member is not None and existing_member.status == MembershipStatus.INVITED
+        ) or superseded.filter(expires_at__gt=now).exists()
         if not holds_a_seat:
-            entitlements.assert_can_add_member(tenant=locked, adding=1)
+            entitlements.assert_can_add_member(
+                tenant=locked, adding=1, endpoint="invitations.create"
+            )
 
-        superseded_count = superseded.update(
-            status=InvitationStatus.REVOKED, updated_at=timezone.now()
-        )
+        superseded_count = superseded.update(status=InvitationStatus.REVOKED, updated_at=now)
 
         raw_token = secrets.token_urlsafe(32)
         invitation = Invitation.objects.create(
@@ -430,9 +582,40 @@ def invite(
             role=role,
             token_hash=hash_token(raw_token),
             status=InvitationStatus.PENDING,
-            expires_at=timezone.now() + dt.timedelta(days=settings.UB_INVITATION_DAYS),
+            expires_at=now + dt.timedelta(days=settings.UB_INVITATION_DAYS),
             invited_by=actor,
         )
+
+        membership = None
+        if existing_member is not None:
+            # `invited` (a resend, perhaps with a new role) or `removed` (BR-7).
+            existing_member.status = MembershipStatus.INVITED
+            existing_member.role = role
+            existing_member.is_default = False
+            existing_member.joined_at = None  # stamped afresh on acceptance
+            existing_member.permissions_version += 1
+            existing_member.save(
+                update_fields=[
+                    "status",
+                    "role",
+                    "is_default",
+                    "joined_at",
+                    "permissions_version",
+                    "updated_at",
+                ]
+            )
+            membership = existing_member
+        else:
+            invitee = User.objects.filter(email=normalised).first()
+            if invitee is not None:
+                membership = Membership.objects.create(
+                    user=invitee,
+                    tenant=locked,
+                    role=role,
+                    status=MembershipStatus.INVITED,
+                    is_default=False,
+                    joined_at=None,
+                )
 
         write_audit(
             ctx=ctx,
@@ -442,7 +625,10 @@ def invite(
             after={"email": normalised, "role": role.code, "expires_at": invitation.expires_at},
             # The raw token is deliberately NOT audited: an audit row a support
             # engineer can read is an audit row that hands them a live seat.
-            metadata={"superseded": superseded_count},
+            metadata={
+                "superseded": superseded_count,
+                "membership_id": str(membership.id) if membership is not None else None,
+            },
         )
 
     return invitation, raw_token
@@ -464,8 +650,17 @@ def revoke_invitation(*, invitation: Any, ctx: Ctx) -> Any:
         ).update(status=InvitationStatus.REVOKED, updated_at=timezone.now())
         if not changed:
             # Already accepted, expired or revoked. Not an error: the caller
-            # wanted it not to work, and it does not.
+            # wanted it not to work, and it does not. An ACCEPTED invitation in
+            # particular never reaches the membership below — revoking a link
+            # somebody already used is not how a member is removed.
             return Invitation.objects.get(pk=invitation.pk)
+
+        # FR-8's converse: the `invited` membership this invitation opened goes
+        # with it, in the same transaction, so the seat frees and the person's
+        # switcher stops listing a business they can no longer join.
+        cancelled = _cancel_invited_membership(
+            tenant_id=invitation.tenant_id, email=invitation.email
+        )
 
         write_audit(
             ctx=ctx,
@@ -474,5 +669,6 @@ def revoke_invitation(*, invitation: Any, ctx: Ctx) -> Any:
             entity_id=invitation.pk,
             before={"status": InvitationStatus.PENDING},
             after={"status": InvitationStatus.REVOKED},
+            metadata={"membership_id": str(cancelled.id) if cancelled is not None else None},
         )
     return Invitation.objects.get(pk=invitation.pk)

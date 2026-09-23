@@ -46,7 +46,7 @@ const toMember = (row: MemberApiRow): Member => ({
   id: row.id,
   userId: row.user_id,
   email: row.email,
-  fullName: row.full_name,
+  fullName: row.full_name ?? '',
   mobile: row.mobile ?? null,
   role: row.role,
   status: row.status,

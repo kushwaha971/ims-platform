@@ -12,7 +12,7 @@ from typing import Any
 
 from rest_framework import serializers
 
-from apps.platform_app.constants import BusinessType, GstType, InvitationStatus
+from apps.platform_app.constants import BusinessType, GstType, InvitationStatus, MembershipStatus
 from apps.platform_app.mobile import InvalidMobile, normalise_mobile
 from apps.platform_app.models import Invitation, Tenant
 
@@ -185,7 +185,7 @@ class MemberReadSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     user_id = serializers.UUIDField(read_only=True)
     email = serializers.EmailField(source="user.email", read_only=True)
-    full_name = serializers.CharField(source="user.full_name", read_only=True)
+    full_name = serializers.CharField(source="user.full_name", read_only=True, allow_null=True)
     mobile = serializers.CharField(source="user.mobile", read_only=True, allow_null=True)
     role = serializers.CharField(source="role.code", read_only=True)
     status = serializers.CharField(read_only=True)
@@ -197,6 +197,27 @@ class MemberReadSerializer(serializers.Serializer):
     password_expires_at = serializers.DateTimeField(
         source="user.password_expires_at", read_only=True, allow_null=True
     )
+
+    #: What an `invited` row may NOT show. The person has an account — that is
+    #: the only reason the row exists (`platform_membership.user_id` is NOT
+    #: NULL) — but they have not agreed to join, and their profile is theirs:
+    #: their name as they spelt it, their phone number, when they last signed in
+    #: anywhere on the platform, and whether they are still on a password some
+    #: OTHER business issued. The inviting business knows the address it typed
+    #: and the role it chose; that is all this row repeats until acceptance.
+    INVITED_REDACTED: dict = {
+        "full_name": None,
+        "mobile": None,
+        "last_login_at": None,
+        "must_change_password": False,
+        "password_expires_at": None,
+    }
+
+    def to_representation(self, instance: Any) -> dict:
+        data = super().to_representation(instance)
+        if data.get("status") == MembershipStatus.INVITED:
+            data.update(self.INVITED_REDACTED)
+        return data
 
 
 class MemberCreateSerializer(serializers.Serializer):
@@ -286,7 +307,21 @@ class InvitationCreateSerializer(serializers.Serializer):
     mobile = serializers.CharField(max_length=20, required=False, allow_blank=True, allow_null=True)
 
     def validate_role(self, value: str) -> str:
-        return value.strip().lower()
+        """`owner` is refused here exactly as `MemberCreateSerializer` refuses it.
+
+        It was not, and the team screen's own comment (`INVITABLE_ROLES`) said
+        "the server is the authority and will refuse it". An admin holds
+        `platform.members.manage`, so an admin could invite an address they
+        control as `owner`, accept it, and outrank the person who hired them —
+        the privilege escalation PLT-05 §12 forbids ("Invite/promote owner:
+        admin ❌"). Ownership is transferred, never granted (canon §0.7).
+        """
+        code = (value or "").strip().lower()
+        if code == "owner":
+            raise serializers.ValidationError(
+                "Ownership is transferred, not granted. Choose admin, accountant or staff."
+            )
+        return code
 
     def validate_mobile(self, value: str | None) -> str | None:
         """Normalise to E.164 or refuse. `platform_invitation.mobile` is 15 chars.

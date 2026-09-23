@@ -165,10 +165,14 @@ export const revokeInvitationWriteClass: TWriteClass = 'online-only';
  * said "you have joined".
  */
 export const acceptInvitation = async (token: string): Promise<void> => {
-  await api.post(API_PATHS.INVITATION_ACCEPT(token), undefined, ubConfig({
-    // The page renders the failure in place — an expired or already-used link
-    // needs an explanation and a way onward, not a toast that vanishes.
-    suppressErrorSnackbar: true,
-  }));
+  await api.post(
+    API_PATHS.INVITATION_ACCEPT(token),
+    undefined,
+    ubConfig({
+      // The page renders the failure in place — an expired or already-used link
+      // needs an explanation and a way onward, not a toast that vanishes.
+      suppressErrorSnackbar: true,
+    })
+  );
 };
 export const acceptInvitationWriteClass: TWriteClass = 'online-only';

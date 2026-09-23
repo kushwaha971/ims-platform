@@ -113,10 +113,10 @@ export const createMemberColumns = ({
         membershipId={member.id}
         label={t('team.regenerate.action')}
         canWrite={canWrite}
-        // Hidden once they have chosen their own password: the server refuses
-        // that case, and a control whose only outcome is a refusal teaches the
-        // merchant to distrust the screen.
-        visible={member.mustChangePassword}
+        // Hidden once they have chosen their own password, and for somebody
+        // only invited: the server refuses both, and a control whose only
+        // outcome is a refusal teaches the merchant to distrust the screen.
+        visible={member.mustChangePassword && member.status !== 'invited'}
         onRegenerate={onRegenerate}
       />
     ),

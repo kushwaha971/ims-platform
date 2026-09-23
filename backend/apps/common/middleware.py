@@ -8,7 +8,7 @@ import time
 import uuid
 from typing import Any, Callable
 
-from apps.common.logging import _current_request_id
+from apps.common.logging import _current_request_id, redact_secret_paths
 from apps.common.tenancy import _current_tenant
 
 _REQUEST_ID_RE = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
@@ -98,7 +98,9 @@ class AccessLogMiddleware:
             "http.request",
             extra={
                 "method": request.method,
-                "path": request.path,
+                # Scrubbed at source: `/invitations/{token}/accept` carries a raw
+                # invitation token in the path (`SecretPathFilter` is the second lock).
+                "path": redact_secret_paths(request.path),
                 "status": response.status_code,
                 "duration_ms": int((time.monotonic() - started) * 1000),
                 "request_id": getattr(request, "request_id", ""),

@@ -27,14 +27,20 @@ export const MemberNameCell = memo(function MemberNameCell({
   // title, and "Ramesh Kumar" identifies a person to their employer in a way
   // that `r.kumar+shop@gmail.com` does not — but the address is what they sign
   // in with, so it is what the owner reads back when something is wrong.
+  // An invited row has no name to show (the server withholds the profile of
+  // somebody who has not joined), so the address is the title and is not
+  // repeated underneath it.
+  const title = name || email;
   return (
     <UbStack gap={0}>
       <UbText as="span" variant="body-sm-medium" truncate>
-        {name}
+        {title}
       </UbText>
-      <UbText as="span" variant="caption" tone="tertiary" truncate>
-        {email}
-      </UbText>
+      {title !== email && (
+        <UbText as="span" variant="caption" tone="tertiary" truncate>
+          {email}
+        </UbText>
+      )}
     </UbStack>
   );
 });
@@ -47,7 +53,10 @@ export const MemberMetaCell = memo(function MemberMetaCell({ text }: Readonly<{ 
   );
 });
 
-const ACCESS_TONE: Readonly<Record<MemberAccessState, 'success' | 'warning' | 'error'>> = {
+const ACCESS_TONE: Readonly<Record<MemberAccessState, 'info' | 'success' | 'warning' | 'error'>> = {
+  // Info, as the switcher shows the same state from the invitee's side: nothing
+  // is wrong and there is nothing for the owner to fix — the next move is theirs.
+  invited: 'info',
   active: 'success',
   // Warning, not neutral: "has not signed in yet" is a thing the owner may need
   // to act on — the password is still in a chat thread and may never have

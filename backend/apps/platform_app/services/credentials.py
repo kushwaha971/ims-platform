@@ -41,7 +41,7 @@ from django.utils import timezone
 from apps.common.audit import AuditAction, write_audit
 from apps.common.context import Ctx
 from apps.common.exceptions import BusinessRuleViolation, ValidationFailed
-from apps.platform_app.constants import MembershipStatus
+from apps.platform_app.constants import InvitationStatus, MembershipStatus
 from apps.platform_app.services import entitlements
 from apps.platform_app.services import memberships as membership_service
 
@@ -105,16 +105,55 @@ def _expiry() -> dt.datetime:
     return timezone.now() + dt.timedelta(days=int(settings.UB_INVITATION_DAYS))
 
 
-def _apply(*, user: Any, password: str) -> dt.datetime:
-    """Set the hash, raise the gate, stamp the expiry. Never logs the plaintext."""
+def _apply(*, user: Any, password: str, tenant: Any) -> dt.datetime:
+    """Set the hash, raise the gate, stamp the expiry and the issuer. Never logs the plaintext."""
     expires_at = _expiry()
     user.set_password(password)
     user.must_change_password = True
     user.password_expires_at = expires_at
+    user.temp_password_tenant = tenant
     user.save(
-        update_fields=["password", "must_change_password", "password_expires_at", "updated_at"]
+        update_fields=[
+            "password",
+            "must_change_password",
+            "password_expires_at",
+            "temp_password_tenant",
+            "updated_at",
+        ]
     )
     return expires_at
+
+
+def _issued_here(*, user: Any, tenant: Any) -> bool:
+    """Whether `tenant` is the business that minted this person's temporary password.
+
+    The only business allowed to reissue it. A person added to a SECOND business
+    before choosing their own password still has `must_change_password` set, and
+    without this check that second business could press "New password", be shown
+    the result, and sign in as them — into the first business too, and every
+    other one they belong to. That is not a resend, it is an account takeover
+    across the tenancy boundary.
+
+    Rows written before `temp_password_tenant` existed carry `NULL`; for those
+    the rule falls back to "this is the only business they belong to", which is
+    the case where no other tenant's data sits behind the credential.
+    """
+    from apps.platform_app.models import Membership
+
+    if user.temp_password_tenant_id is not None:
+        return user.temp_password_tenant_id == tenant.id
+    return (
+        not Membership.objects.filter(
+            user=user,
+            status__in=(
+                MembershipStatus.ACTIVE,
+                MembershipStatus.SUSPENDED,
+                MembershipStatus.INVITED,
+            ),
+        )
+        .exclude(tenant=tenant)
+        .exists()
+    )
 
 
 def create_member(
@@ -139,8 +178,16 @@ def create_member(
 
     The seat is checked under the tenant lock (PLT-15 BR-7) before anything is
     created, so two owners cannot both spend the last one.
+
+    **Somebody already invited is converted, not double-charged.** This is the
+    primary path (DEC-012) and the invitation path is the future email one, so
+    an owner who invited an address and then, with no email to carry the link,
+    simply creates the login is the ordinary case. Their `invited` membership
+    becomes the active one and any live invitation to the address is revoked in
+    the same write: left pending, it would still be acceptable later, and
+    accepting it could re-apply a role the owner has since decided against.
     """
-    from apps.platform_app.models import Membership, User
+    from apps.platform_app.models import Invitation, Membership, User
 
     normalised = membership_service.normalise_email_or_none(email)
     if not normalised:
@@ -160,14 +207,18 @@ def create_member(
                     "validation_error", "That person is already on this team."
                 )
 
-        entitlements.assert_can_add_member(tenant=locked, adding=1)
+        # "Everybody else, plus this person" — a seat already promised to the
+        # address by an invitation is converted rather than bought twice.
+        entitlements.assert_can_add_member(
+            tenant=locked, adding=1, endpoint="members.create", excluding_email=normalised
+        )
 
         if existing_user is None:
             user = User.objects.create_user(
                 email=normalised, password=None, full_name=display_name, mobile=mobile or None
             )
             password = generate_temp_password()
-            expires_at = _apply(user=user, password=password)
+            expires_at = _apply(user=user, password=password, tenant=locked)
             created_user = True
         else:
             # Their account, their password. We are only granting access.
@@ -187,6 +238,10 @@ def create_member(
         )
         membership_service._promote_default(user=user)
 
+        invitations_closed = Invitation.objects.filter(
+            tenant=locked, email=normalised, status=InvitationStatus.PENDING
+        ).update(status=InvitationStatus.REVOKED, updated_at=timezone.now())
+
         write_audit(
             ctx=ctx,
             action=AuditAction.MEMBER_CREDENTIALS_ISSUED,
@@ -200,6 +255,7 @@ def create_member(
             },
             # The password is not here and must never be. An audit row a support
             # engineer can read is an audit row that hands them the account.
+            metadata={"invitations_closed": invitations_closed or None},
         )
 
     return IssuedCredentials(
@@ -226,6 +282,14 @@ def regenerate(*, membership: Any, actor: Any, ctx: Ctx) -> IssuedCredentials:
     is the reset link, which only its owner can complete.
     """
     user = membership.user
+    # Checked FIRST, before anything about the person's password: an invited
+    # address has not joined, and telling this business whether a stranger has
+    # chosen their own password yet would be answering a question about another
+    # tenant's staff.
+    if membership.status == MembershipStatus.INVITED:
+        raise BusinessRuleViolation(
+            "validation_error", "That person has not joined this business yet."
+        )
     if not user.must_change_password:
         raise BusinessRuleViolation(
             "validation_error",
@@ -233,10 +297,16 @@ def regenerate(*, membership: Any, actor: Any, ctx: Ctx) -> IssuedCredentials:
         )
     if membership.status == MembershipStatus.REMOVED:
         raise BusinessRuleViolation("validation_error", "That person is no longer on this team.")
+    if not _issued_here(user=user, tenant=membership.tenant):
+        raise BusinessRuleViolation(
+            "validation_error",
+            "This login was created by another business, so only they can issue a new "
+            "password. Ask them, or ask the person to use ‘Forgot password’.",
+        )
 
     with transaction.atomic():
         password = generate_temp_password()
-        expires_at = _apply(user=user, password=password)
+        expires_at = _apply(user=user, password=password, tenant=membership.tenant)
         # Anything issued against the dead password goes with it (Part 27
         # §27.4.4 step 2): if the old one leaked, a live session is the hole
         # that changing the password on its own would leave open.
@@ -267,11 +337,19 @@ def clear_on_chosen_password(*, user: Any) -> None:
     the gate is down but the expiry still stands (which would lock the person
     out of the product the moment their own password aged past the window).
     """
-    if not (user.must_change_password or user.password_expires_at):
+    if not (user.must_change_password or user.password_expires_at or user.temp_password_tenant_id):
         return
     user.must_change_password = False
     user.password_expires_at = None
-    user.save(update_fields=["must_change_password", "password_expires_at", "updated_at"])
+    user.temp_password_tenant = None
+    user.save(
+        update_fields=[
+            "must_change_password",
+            "password_expires_at",
+            "temp_password_tenant",
+            "updated_at",
+        ]
+    )
 
 
 __all__ = [

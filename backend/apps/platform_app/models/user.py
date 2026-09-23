@@ -96,6 +96,19 @@ class User(AbstractBaseUser, TimeStampedModel):
     # and the member list is the only place anyone would notice.
     must_change_password = models.BooleanField(default=False)
     password_expires_at = models.DateTimeField(null=True, blank=True)
+    # The business whose owner minted the temporary password now on this row,
+    # and therefore the only one allowed to REISSUE it (`credentials.regenerate`).
+    # Without it, any business the person was later added to could press "New
+    # password", read the result and sign in as them — into every OTHER business
+    # they belong to as well. Cleared with the gate when they choose their own.
+    # `SET_NULL` because a deleted business must not delete the people in it.
+    temp_password_tenant = models.ForeignKey(
+        "platform.Tenant",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["full_name"]

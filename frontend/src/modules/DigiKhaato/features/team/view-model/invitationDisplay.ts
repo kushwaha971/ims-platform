@@ -43,8 +43,5 @@ export const statusTone = (status: InvitationStatus): InvitationTone => {
  * is a different act (removing a member) on a different endpoint, and offering
  * it here would be a control that fails every time it is pressed.
  */
-export const isRevocable = (
-  status: InvitationStatus,
-  expiresAt: string,
-  nowMs: number
-): boolean => effectiveStatus(status, expiresAt, nowMs) === 'pending';
+export const isRevocable = (status: InvitationStatus, expiresAt: string, nowMs: number): boolean =>
+  effectiveStatus(status, expiresAt, nowMs) === 'pending';

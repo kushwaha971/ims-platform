@@ -164,6 +164,52 @@ describe('MembersSection — the list', () => {
   });
 });
 
+describe('MembersSection — somebody invited but not yet joined', () => {
+  const INVITED = {
+    ...MEMBER,
+    id: '33333333-3333-4333-8333-333333333333',
+    email: 'priya@shop.test',
+    // What the server sends for an invited row (CR-2026-09-23-B): the address
+    // the owner typed and the role, and none of the invitee's own profile.
+    fullName: '',
+    status: 'invited',
+    mustChangePassword: false,
+    passwordExpiresAt: null,
+  };
+
+  it('says Invited rather than Signed in', async () => {
+    // With the profile withheld, the password fields alone read as "Signed in"
+    // — telling the owner somebody has access who has not even accepted.
+    memberService.listMembers.mockResolvedValue(page([INVITED]));
+    renderWithProviders(<MembersSection />);
+
+    expect(await screen.findByText('Invited — has not joined yet')).toBeInTheDocument();
+    expect(screen.queryByText('Signed in')).not.toBeInTheDocument();
+  });
+
+  it('titles the row by the address, once, when there is no name', async () => {
+    // An empty title over the address would be a blank line on a phone card;
+    // the address twice would be the same line printed two ways.
+    memberService.listMembers.mockResolvedValue(page([INVITED]));
+    renderWithProviders(<MembersSection />);
+
+    expect(await screen.findAllByText('priya@shop.test')).toHaveLength(1);
+  });
+
+  it('offers no new password for somebody who has not joined', async () => {
+    // The server refuses to reissue credentials for an invited row — there is
+    // no login of theirs in this business — so the control is not rendered,
+    // even when the (withheld) password fields would otherwise show it.
+    memberService.listMembers.mockResolvedValue(
+      page([{ ...INVITED, mustChangePassword: true, passwordExpiresAt: MEMBER.passwordExpiresAt }])
+    );
+    renderWithProviders(<MembersSection />);
+
+    expect(await screen.findByText('Invited — has not joined yet')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /New password/ })).not.toBeInTheDocument();
+  });
+});
+
 describe('MembersSection — the optional mobile field', () => {
   it('submits with the mobile left blank', async () => {
     // It used to not. `mobileValidation(false)` ran `.matches()` over the empty

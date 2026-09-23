@@ -154,9 +154,7 @@ const memberSlice = createSlice({
         state.regenerateTargetId = null;
         state.lastCredentials = action.payload as Draft<IssuedCredentials>;
         state.rows = state.rows.map((row) =>
-          row.id === action.payload.member.id
-            ? (action.payload.member as Draft<Member>)
-            : row
+          row.id === action.payload.member.id ? (action.payload.member as Draft<Member>) : row
         );
       })
       .addCase(regenerateCredentials.rejected, (state, action) => {

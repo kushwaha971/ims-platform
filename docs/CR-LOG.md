@@ -257,3 +257,59 @@ field, and `write_off.entry_date` becomes optional (defaulting to the tenant's t
 
 Requested against Part 22 §22.1.1 table T-16. Part 43 in the Claude project is the
 authoritative register and needs the same entry (this file is a local carry).
+
+## CR-2026-09-23-B — PLT-05 is stale against what shipped, and against DEC-010/DEC-012
+
+**State:** `raised`. **Target:** Part 17-01 PLT-05 (§4, §10, §11, §13, §14, §16, §21, §22),
+Part 21 §21.3.1 (`platform_user`), PLT-15 FR-3. **Gate:** before the next platform sprint
+(it is the chapter the membership-management endpoints — FR-4/6/7/8 — will be built from).
+
+The FRD was written for the mobile-OTP identity and an SMS/WhatsApp share sheet. `DEC-010`
+made email the identity and `DEC-012` made "the owner creates the login" the primary way to
+add staff, keeping the token flow as the future email path. The chapter was never amended, so
+it now describes an API that does not exist and omits two that do. Where the two disagree
+`DEC-012` has been followed. The code changed on 23 Sep 2026 is listed last.
+
+**Chapter changes requested (the FRD must say what shipped):**
+
+| § | FRD says | Shipped / decided | Requested amendment |
+|---|---|---|---|
+| FR-1, §14 | `GET /memberships?status=`, tabs Active · Invited · Suspended, masked mobile, last active | `GET /members` (no status filter; `removed` excluded), two tabs Team · Invitations; an `invited` row shows as **Invited** with the invitee's profile withheld | Rename to `/members`; document the redaction; keep the three tabs as a later UI refinement |
+| FR-2, §14 | `POST /memberships/invite {mobile, role, name}` → `share_text`, `join_url` `/join/{token}` | `POST /invitations {email, role, mobile?}` → `accept_url` `/accept-invite/{token}`, returned once; `null` on idempotent replay; no `share_text` (nothing is sent — DEC-012) | Rewrite for email identity (closes `CR-140`); state the once-only link and the replay rule |
+| FR-2 | `invited` membership "so the invited tenant shows in `tenants[]`" | Now implemented **for an address that already has an account**. `platform_membership.user_id` is NOT NULL, so an address with no account has no membership; its invitation holds the seat alone and acceptance creates the membership (EC-1) | Say so; the FRD reads as if every invitation has a membership row |
+| — (new) | — | `POST /members` + `POST /members/{id}/credentials` (DEC-012) are the primary add-staff path | Add both to §4/§14 as FR-2a/FR-2b; the invitation path becomes "email delivery, when funded" |
+| FR-3, §12 | owner offered to owners | `owner` refused on BOTH create paths (`POST /members` already; `POST /invitations` now) — ownership is transferred, canon §0.7 | Remove `owner` from the invitable set; §12 row "Invite owner" → ❌ for all |
+| FR-9 | resend rotates the token on the same row | resend revokes the old invitation and inserts a new one; the `invited` membership is kept and takes the new role | Describe supersede-by-revoke; "no duplicate rows" → "one live invitation per address" |
+| FR-10, BR-6, US-5, AC-5 | OTP on the invited mobile; `GET /public/invitations/{token}` preview | Sign in with email/password, then accept; the caller's email must equal the invitation's. No preview endpoint | Rewrite for email; the preview is unbuilt — keep as backlog or drop |
+| FR-10, BR-5 | single use | single GRANT: the acceptor replaying gets 200 and the same membership, nothing written; anybody else, or the acceptor after suspension/removal, gets 400 | State the replay rule (the accept screen fires on mount) |
+| FR-10 | — | a pending invitation never lifts a suspension; an already-active member keeps their role | Add as BR-9/BR-10 |
+| FR-8 | removing an `invited` membership revokes the invitation | revoking the invitation (`DELETE /invitations/{id}`) removes the `invited` membership in the same transaction; lazy expiry does the same | Add the converse; name the endpoint |
+| FR-11 | `expire_invitations` scheduler | not built; expiry is marked lazily on an accept attempt, and a lapsed invitation stops holding a seat at `expires_at` | Keep FR-11 as backlog; document the interim rule |
+| FR-12, PLT-15 FR-3, §10 | seats = active + invited **memberships** | seats = active + invited memberships **+ live pending invitations to addresses with no such membership**, counted once per person. Checked on invite, accept, `POST /members` and activate; a conversion (accepting, or creating the login of somebody invited) is not charged twice | Amend both chapters: counting memberships alone let ten invitations go out against three seats |
+| §10 | mobile ≠ an active/suspended member | email; inviting a suspended member is refused ("restore their access instead") | Email; keep the suspended refusal |
+| §16 | `member.invited` with mobile **hashed** | `after.email` is stored in the clear; `member.invite_resent` is not a separate action (supersede count is metadata); revoke/invite rows carry `membership_id` | Rule whether the address must be hashed in audit (Part 27); record the metadata |
+| §17, §6 | SMS template, `UbShareSheet`, "Send" | nothing is sent (DEC-012); copy must not imply a message was sent | Strike the SMS/share-sheet flow until email is funded |
+| §19 | rate limit 30 invites/tenant/day | not built | Keep; backlog |
+| FR-4, FR-6, FR-7, FR-13, EC-3, EC-7, AC-3/4/6 | override switches, role change, suspend/reactivate, remove, self-change guard | not built (`PATCH/DELETE /memberships/{id}` act on the caller's own row only) | No change to the text; they are the next sprint's work |
+| Part 21 §21.3.1 | — | new column `platform_user.temp_password_tenant_id` (FK `platform_tenant`, NULL, `ON DELETE SET NULL`), migration `platform.0008` | Register the column (see below) |
+
+**Security defects found in the same area and fixed with this change** (code, not
+specification — listed so the chapter's §19 can absorb the rules):
+
+1. **Admin → owner escalation.** `POST /invitations` accepted `role: "owner"`; an admin could
+   invite an address they control and accept it. Now a `validation_error` on `role`.
+2. **Cross-tenant account takeover via "New password".** A person added to a *second* business
+   before choosing their own password still has `must_change_password` set, and
+   `POST /members/{id}/credentials` from that second business minted a password, showed it,
+   and let it sign in as them — into the first business too. Only the business recorded in
+   `temp_password_tenant` may reissue; legacy rows (NULL) may be reissued only where no other
+   live membership exists.
+3. **Raw invitation token in the logs.** `POST /invitations/{token}/accept` carries the token
+   in the path, which `AccessLogMiddleware` and `runserver` both logged. The path is scrubbed
+   at source and by a `SecretPathFilter` on every handler (including `django.server`).
+4. **Invited rows are inert by construction.** `permissions_for()` now returns the empty set
+   for any non-`active` membership, as a second lock behind `tenancy`, which already admitted
+   `active` only.
+
+Part 43 in the Claude project is the authoritative register and needs the same entry (this
+file is a local carry).
