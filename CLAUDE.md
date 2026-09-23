@@ -521,9 +521,14 @@ chunk that renders the screen it opens from. `EntryActionsMenu` is deliberately
 not lazy — it is a dialog with two buttons and it is what the merchant taps
 first, and a ⋯ that waits for a chunk is worse than the bytes.
 
-Open decisions needing the owner: §19.3.9 above, DEC-002 (document rendering),
-DEC-004 (partner BD owner), DEC-005 (compliance owner), and the phone-fold
-question above. The
+**Decided on 23 Sep 2026, the owner having delegated the calls (Part 43
+CR-129–CR-134):** §19.3.9 — route-local slices are injected lazily with
+`combineSlices().inject()`; the phone fold — the count tile is dropped below
+`md`; C1 — `parties_share_link` is the generalised table; C6 — both reversal
+dating rules stand, discriminated by `source_type`. DEC-004/DEC-005 stay with
+the founder until someone is named. The visual language is BrandHub's
+(`docs/DESIGN-SYSTEM.md` — read it before adding UI). Still open: DEC-002
+(document rendering). The
 `NULLS LAST` ordering that used to be listed here was never actually open —
 FR-7 says it and BR-6 repeats it — and it is now implemented in the index, the
 selector and the ordering filter alike, with `tests/performance/test_party_list_plans.py`
