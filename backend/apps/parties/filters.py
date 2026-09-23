@@ -10,12 +10,12 @@ was exactly that bug before Sprint 1 closed it.
 from __future__ import annotations
 
 from datetime import date, timedelta
-from typing import Any
 
 import django_filters
 from django.db.models import Exists, F, OuterRef, Q, QuerySet, Value
 from django.db.models.functions import Lower
 
+from apps.common.dates import tenant_today
 from apps.common.filters import BaseTenantFilterSet
 from apps.parties.constants import PartyStatus
 from apps.parties.models import Party, PartyTag
@@ -316,12 +316,16 @@ class PartyFilterSet(BaseTenantFilterSet):
         return queryset
 
     def _today(self) -> date:
-        """The business date, resolved once per request.
+        """The business date: today on the TENANT's wall clock (Part 20 §20.2.2).
 
         A method rather than a module-level constant because a module-level
         `date.today()` is evaluated at import and then wrong for as long as the
         process lives — a worker started on Monday still filtering for Monday on
         Thursday.
+
+        And not `date.today()` at call time either (NEW-3): that is the server's
+        UTC date, so from midnight to 05:30 IST "Due today" showed yesterday's
+        list. It used to look for a `request.business_date` first, which
+        nothing ever set.
         """
-        request: Any = getattr(self, "request", None)
-        return getattr(request, "business_date", None) or date.today()
+        return tenant_today(self.tenant)

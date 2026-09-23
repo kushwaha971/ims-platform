@@ -17,6 +17,7 @@ from rest_framework.views import APIView
 
 from apps.common.audit import AuditAction
 from apps.common.constants import ModuleCode
+from apps.common.dates import tenant_today
 from apps.common.exceptions import ValidationFailed
 from apps.common.pagination import CursorPagination, decode_cursor
 from apps.common.permissions import HasPermission, ModuleEnabled
@@ -281,7 +282,11 @@ class PartyStatementView(TenantScopeMixin, APIView):
             _csv_lines(statement_csv_rows(rows_qs.iterator(chunk_size=500), carried=carried)),
             content_type="text/csv",
         )
-        stamp = dt.date.today().isoformat()
+        # NEW-3: the merchant's today, not the server's. `dt.date.today()` is the
+        # UTC date, so between midnight and 05:30 IST a statement whose period
+        # ends today was named for yesterday, beside an aging export (which
+        # uses `tenant_today`) named for today.
+        stamp = tenant_today(self.get_tenant()).isoformat()
         response["Content-Disposition"] = f'attachment; filename="statement-{party.id}-{stamp}.csv"'
         return response
 

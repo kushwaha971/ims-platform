@@ -487,6 +487,38 @@ def test_the_csv_carries_the_running_balance_and_its_label(book: Any, api_as: An
     assert rows[-1][6] == "You will get"
 
 
+def test_the_csv_is_named_for_the_tenants_today_not_the_servers(
+    book: Any, api_as: Any, monkeypatch: Any
+) -> None:
+    """NEW-3: the filename stamp was `dt.date.today()` — the SERVER's UTC date.
+
+    Frozen at 20:00 UTC, which is 01:30 IST the next day: the merchant's
+    statement period ends today, the aging export beside it is named for today,
+    and the statement file was named for yesterday. Both stamps now come from
+    `tenant_today`, so the two files a merchant downloads at 01:30 agree.
+    """
+    import types
+
+    import apps.common.dates as dates_module
+
+    server_today = dt.date.today()  # Django runs the process in TIME_ZONE = UTC
+    frozen = dt.datetime.combine(server_today, dt.time(20, 0), tzinfo=dt.UTC)
+    monkeypatch.setattr(dates_module, "timezone", types.SimpleNamespace(now=lambda: frozen))
+    india_today = server_today + dt.timedelta(days=1)
+
+    client, _ = api_as(book.tenant)
+    statement = client.get(reverse(STATEMENT, args=[book.id]), {"format": "csv"})
+    aging = client.get(reverse("v1:ledger-aging"), {"format": "csv"})
+
+    assert statement.status_code == aging.status_code == 200
+    assert statement["Content-Disposition"] == (
+        f'attachment; filename="statement-{book.id}-{india_today.isoformat()}.csv"'
+    )
+    assert aging["Content-Disposition"] == (
+        f'attachment; filename="aging-receivable-{india_today.isoformat()}.csv"'
+    )
+
+
 def test_a_note_that_looks_like_a_formula_is_neutralised(book: Any, api_as: Any) -> None:
     """§19 / T-LED-04-6.
 

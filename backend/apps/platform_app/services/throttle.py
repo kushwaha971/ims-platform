@@ -31,7 +31,11 @@ from django.utils import timezone
 # the identifier was a mobile number. DEC-010 changes the identifier, not the
 # budget: the numbers below are Part 27's, keyed on the email address instead.
 SCOPE_LOGIN_EMAIL = "login_email"  # 10 per identifier per 10 min → 15 min lockout
-SCOPE_LOGIN_IP = "login_ip"  # 100 per IP per hour
+# NEW-4: FAILED logins per IP. Was `login_ip`, charged on every attempt, so a
+# shared NAT was locked out by its hundredth *successful* sign-in of the hour.
+# The scope was renamed with the meaning so that `login_ip` rows written by the
+# old rule — counts of successes — are inert rather than an instant lockout.
+SCOPE_LOGIN_IP = "login_ip_fail"  # 100 failures per IP per hour → locked for the hour
 SCOPE_RESET_EMAIL = "reset_email"  # 5 per address per hour, 60 s apart
 SCOPE_RESET_IP = "reset_ip"  # 20 per IP per hour
 SCOPE_REGISTER_IP = "register_ip"  # 20 sign-ups per IP per hour
@@ -57,6 +61,7 @@ LOGIN_FAILURE_WINDOW_SECONDS = 600
 LOGIN_LOCKOUT_SECONDS = 900
 LOGIN_FAILURES_PER_IP = 100
 LOGIN_IP_WINDOW_SECONDS = 3600
+LOGIN_IP_LOCKOUT_SECONDS = 3600
 
 RESET_REQUESTS_PER_EMAIL = 5
 RESET_EMAIL_WINDOW_SECONDS = 3600

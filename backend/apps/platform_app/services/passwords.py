@@ -264,6 +264,22 @@ def authenticate(
     The throttle counters are keyed on the **normalised** identifier, so an
     attacker cannot reset the counter by alternating `Ramesh@x.com` and
     `ramesh@x.com`: the caller normalises before this is reached.
+
+    ── Both budgets count FAILURES, and both are read BEFORE the hash ────────
+    Part 27 §27.4.2: "10 attempts per mobile per 10 min, then 15-minute
+    lockout; 100 per IP per hour", and its "On success" row clears "every
+    failed-attempt counter". The per-IP half is the same kind of budget — it is
+    the credential-stuffing control of Part 27 T4 — so it is charged by a wrong
+    password and never by a right one (NEW-4: it used to be charged on every
+    attempt, and a shop-market NAT was locked out by its hundredth successful
+    sign-in of the hour). Neither spec asks for a separate ceiling on total
+    attempts, so there is none.
+
+    The order is check-then-verify-then-record. Both locks are read first, and
+    while either holds the password is not checked at all, so a locked-out
+    caller cannot use 200-versus-429 as an oracle for a right guess. A success
+    clears the per-ACCOUNT counter only: clearing the per-IP one would let a
+    stuffer who owns one real account refill the budget by signing into it.
     """
     from apps.platform_app.models import User
 
@@ -271,12 +287,7 @@ def authenticate(
     if not locked.allowed:
         raise LoginThrottled(locked.retry_after)
     if ip:
-        per_ip = throttle.consume(
-            scope=throttle.SCOPE_LOGIN_IP,
-            identifier=ip,
-            limit=throttle.LOGIN_FAILURES_PER_IP,
-            window_seconds=throttle.LOGIN_IP_WINDOW_SECONDS,
-        )
+        per_ip = throttle.check_lock(scope=throttle.SCOPE_LOGIN_IP, identifier=ip)
         if not per_ip.allowed:
             raise LoginThrottled(per_ip.retry_after)
 
@@ -302,6 +313,14 @@ def authenticate(
         window_seconds=throttle.LOGIN_FAILURE_WINDOW_SECONDS,
         lockout_seconds=throttle.LOGIN_LOCKOUT_SECONDS,
     )
+    if ip:
+        throttle.record_failure(
+            scope=throttle.SCOPE_LOGIN_IP,
+            identifier=ip,
+            threshold=throttle.LOGIN_FAILURES_PER_IP,
+            window_seconds=throttle.LOGIN_IP_WINDOW_SECONDS,
+            lockout_seconds=throttle.LOGIN_IP_LOCKOUT_SECONDS,
+        )
     _audit_login_failed(identifier=identifier, request_id=request_id, ip=ip)
     # The attempt that *reaches* the threshold is still an attempt, and it gets
     # the generic credential error like the nine before it. Part 27 §27.4.2 reads

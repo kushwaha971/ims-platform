@@ -441,6 +441,180 @@ def test_the_throttle_key_is_a_hash_not_the_address(auth_client: Any, user: Any)
     assert all(len(key) == 64 and user.email not in key for key in stored)
 
 
+# ── NEW-4: the per-IP budget counts FAILURES, not sign-ins ───────────────────
+#
+# Part 27 §27.4.2 "Throttle": "10 attempts per mobile per 10 min, then 15-minute
+# lockout; 100 per IP per hour", and §27.11 "Login | 10/mobile/10 min;
+# 100/IP/hour". The same cell's "On success" row clears "every failed-attempt
+# counter", PLT-02 FR-6 reads the per-identifier half as "10 FAILED attempts",
+# and the constant was always `LOGIN_FAILURES_PER_IP`. The IP half is the same
+# kind of budget: it exists for credential stuffing (Part 27 T4), and a
+# credential that works is not stuffing.
+
+
+def _fail_from_this_ip(auth_client: Any, count: int, *, start: int = 0) -> None:
+    """`count` wrong passwords, each for a DIFFERENT unknown address.
+
+    Different addresses so the per-account lock (10) never fires and the only
+    budget being spent is the per-IP one — the credential-stuffing shape.
+    """
+    for index in range(start, start + count):
+        response = auth_client.post(
+            reverse(LOGIN_URL),
+            {"email": f"stuffed{index}@example.com", "password": "Wrong12345"},
+            format="json",
+        )
+        assert response.status_code == 401, (index, response.json())
+
+
+def test_a_hundred_and_fifty_successful_logins_from_one_ip_all_succeed(
+    auth_client: Any, user: Any
+) -> None:
+    """NEW-4: `login_ip` was charged on EVERY attempt, successes included.
+
+    `throttle.consume` ran before the password was checked, so a shared NAT — a
+    market full of shops, one office — was locked out after its hundredth
+    *successful* sign-in of the hour, and so was an e2e run. The 101st correct
+    password answered 429 `login_throttled`.
+    """
+    from apps.platform_app.services import throttle
+
+    _with_password(user)
+    for index in range(150):
+        response = auth_client.post(
+            reverse(LOGIN_URL), {"email": user.email, "password": "Kirana123"}, format="json"
+        )
+        assert response.status_code == 200, (index, response.json())
+    assert throttle.LOGIN_FAILURES_PER_IP < 150
+
+
+def test_failures_from_one_ip_lock_it_at_the_documented_threshold(
+    auth_client: Any, user: Any
+) -> None:
+    """Part 27 §27.4.2 / §27.11 "100 per IP per hour": the 101st failure is refused."""
+    from apps.platform_app.services import throttle
+
+    _fail_from_this_ip(auth_client, throttle.LOGIN_FAILURES_PER_IP)
+
+    refused = auth_client.post(
+        reverse(LOGIN_URL),
+        {"email": "one-more@example.com", "password": "Wrong12345"},
+        format="json",
+    )
+    assert refused.status_code == 429
+    assert refused.json()["error"]["code"] == "login_throttled"
+    assert int(refused["Retry-After"]) > 0
+
+
+def test_a_locked_ip_is_refused_before_the_password_is_checked(
+    auth_client: Any, user: Any, monkeypatch: Any
+) -> None:
+    """NEW-4's guard rail: counting failures must not open a verification oracle.
+
+    If the IP lock were checked only AFTER the hash, a locked-out stuffer could
+    keep submitting and read 200-versus-429 as "right password". The lock is
+    read first and the password is never verified while it holds.
+    """
+    from apps.platform_app.models import User
+    from apps.platform_app.services import throttle
+
+    _with_password(user)
+    _fail_from_this_ip(auth_client, throttle.LOGIN_FAILURES_PER_IP)
+
+    checked: list[str] = []
+    original = User.check_password
+
+    def spy(self: Any, raw: str) -> bool:
+        checked.append(raw)
+        return original(self, raw)
+
+    monkeypatch.setattr(User, "check_password", spy)
+    refused = auth_client.post(
+        reverse(LOGIN_URL), {"email": user.email, "password": "Kirana123"}, format="json"
+    )
+    assert refused.status_code == 429
+    assert refused.json()["error"]["code"] == "login_throttled"
+    assert checked == []
+
+
+def test_a_success_does_not_refill_the_per_ip_failure_budget(auth_client: Any, user: Any) -> None:
+    """NEW-4: successes neither SPEND the IP budget nor REFILL it.
+
+    Clearing the IP counter on success would let a stuffer who owns one real
+    account reset their budget by signing into it every 99 guesses. Before the
+    fix the success below was the 100th charge, so the 100th failure after it
+    was refused as throttled instead of answered 401.
+    """
+    from apps.platform_app.services import throttle
+
+    _with_password(user)
+    _fail_from_this_ip(auth_client, throttle.LOGIN_FAILURES_PER_IP - 1)
+    ok = auth_client.post(
+        reverse(LOGIN_URL), {"email": user.email, "password": "Kirana123"}, format="json"
+    )
+    assert ok.status_code == 200
+
+    # The hundredth failure is still an answered attempt …
+    _fail_from_this_ip(auth_client, 1, start=500)
+    # … and after it the IP is closed, correct password or not.
+    locked = auth_client.post(
+        reverse(LOGIN_URL), {"email": user.email, "password": "Kirana123"}, format="json"
+    )
+    assert locked.status_code == 429
+
+
+def test_a_counter_left_by_the_old_every_attempt_rule_does_not_lock_anyone(
+    auth_client: Any, user: Any
+) -> None:
+    """NEW-4 deploy safety: pre-fix `login_ip` rows hold counts of SUCCESSES.
+
+    A row at 100 written by the old rule would otherwise make the very next
+    failure — or, before the fix, the next correct password — a lockout for
+    everybody behind that address. The failure budget lives under its own
+    scope, so those rows are inert.
+    """
+    from apps.platform_app.models import RateLimit
+    from apps.platform_app.services import throttle
+
+    _with_password(user)
+    RateLimit.objects.create(
+        scope="login_ip",
+        key=throttle.digest("127.0.0.1"),
+        window_start=timezone.now(),
+        count=throttle.LOGIN_FAILURES_PER_IP,
+        last_hit_at=timezone.now(),
+    )
+    ok = auth_client.post(
+        reverse(LOGIN_URL), {"email": user.email, "password": "Kirana123"}, format="json"
+    )
+    assert ok.status_code == 200
+    _fail_from_this_ip(auth_client, 1)
+
+
+def test_the_ip_lockout_says_nothing_about_the_address(auth_client: Any, user: Any) -> None:
+    """US-PLT-02-5 / BR-1: a known and an unknown address get the same 429."""
+    from apps.platform_app.services import throttle
+
+    _with_password(user)
+    _fail_from_this_ip(auth_client, throttle.LOGIN_FAILURES_PER_IP)
+
+    known = auth_client.post(
+        reverse(LOGIN_URL), {"email": user.email, "password": "Wrong12345"}, format="json"
+    )
+    unknown = auth_client.post(
+        reverse(LOGIN_URL),
+        {"email": "nobody-at-all@example.com", "password": "Wrong12345"},
+        format="json",
+    )
+    assert known.status_code == unknown.status_code == 429
+    known_error, unknown_error = known.json()["error"], unknown.json()["error"]
+    assert known_error["code"] == unknown_error["code"] == "login_throttled"
+    assert known_error["message"] == unknown_error["message"]
+    # The same one IP row answers both, so the wait differs by clock drift only.
+    assert set(known_error["details"]) == set(unknown_error["details"]) == {"retry_after"}
+    assert abs(known_error["details"]["retry_after"] - unknown_error["details"]["retry_after"]) <= 1
+
+
 # ── T-PLT-02-6 API: setting a password ───────────────────────────────────────
 
 

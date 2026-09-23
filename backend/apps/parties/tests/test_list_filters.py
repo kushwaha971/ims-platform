@@ -8,6 +8,7 @@ feature.
 
 from __future__ import annotations
 
+import datetime as dt
 from datetime import date, timedelta
 from decimal import Decimal
 from typing import Any
@@ -15,6 +16,7 @@ from typing import Any
 import pytest
 from django.urls import reverse
 
+from apps.common.dates import tenant_today
 from apps.parties.constants import PartyStatus
 from tests.factories.parties import PartyFactory
 
@@ -158,7 +160,7 @@ def test_the_overdue_chip_leaves_out_people_who_have_paid(tenant: Any, api_as: A
     already paid, which is the fastest way to make a merchant stop opening it.
     """
     client, _ = api_as(tenant)
-    yesterday = date.today() - timedelta(days=1)
+    yesterday = tenant_today(tenant) - timedelta(days=1)
     PartyFactory(
         tenant=tenant, name="Still Owes", collection_date=yesterday, balance=Decimal("500.00")
     )
@@ -170,13 +172,48 @@ def test_the_overdue_chip_leaves_out_people_who_have_paid(tenant: Any, api_as: A
 
 def test_upcoming_is_the_week_ahead_and_not_today(tenant: Any, api_as: Any) -> None:
     client, _ = api_as(tenant)
-    today = date.today()
+    today = tenant_today(tenant)
     PartyFactory(tenant=tenant, name="Due Today", collection_date=today)
     PartyFactory(tenant=tenant, name="Due Friday", collection_date=today + timedelta(days=3))
     PartyFactory(tenant=tenant, name="Due Next Month", collection_date=today + timedelta(days=30))
 
     assert [r["name"] for r in _get(client, "?collection=today")["data"]] == ["Due Today"]
     assert [r["name"] for r in _get(client, "?collection=upcoming")["data"]] == ["Due Friday"]
+
+
+def test_the_collection_chips_use_the_tenants_today_not_the_servers(
+    tenant: Any, api_as: Any, monkeypatch: Any
+) -> None:
+    """NEW-3 sweep: `_today()` fell back to `date.today()`, the SERVER's date.
+
+    Its docstring said "against the tenant's own today", but the
+    `request.business_date` it looked for first was never set anywhere. At
+    20:00 UTC — 01:30 IST — a merchant opening "Due today" got yesterday's
+    list, and the party due today sat under "Upcoming".
+    """
+    import types
+
+    import apps.common.dates as dates_module
+
+    server_today = date.today()  # Django runs the process in TIME_ZONE = UTC
+    frozen = dt.datetime.combine(server_today, dt.time(20, 0), tzinfo=dt.UTC)
+    monkeypatch.setattr(dates_module, "timezone", types.SimpleNamespace(now=lambda: frozen))
+    india_today = server_today + timedelta(days=1)
+
+    client, _ = api_as(tenant)
+    PartyFactory(tenant=tenant, name="Due Today In India", collection_date=india_today)
+    PartyFactory(
+        tenant=tenant,
+        name="Due Yesterday In India",
+        collection_date=server_today,
+        balance=Decimal("500.00"),
+    )
+
+    assert [r["name"] for r in _get(client, "?collection=today")["data"]] == ["Due Today In India"]
+    assert [r["name"] for r in _get(client, "?collection=overdue")["data"]] == [
+        "Due Yesterday In India"
+    ]
+    assert _get(client, "?collection=upcoming")["data"] == []
 
 
 # ── The search ──────────────────────────────────────────────────────────────
