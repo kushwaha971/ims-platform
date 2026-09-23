@@ -263,3 +263,81 @@ def test_ordering_by_a_non_nullable_column_is_left_exactly_alone(tenant: Any, ap
     body = client.get(reverse("v1:party-list"), {"ordering": "name"}).json()
 
     assert [row["name"] for row in body["data"]] == ["Anand Stores", "Bose Traders"]
+
+
+# ── Throttling: which budget each verb spends (PTY-02 §19) ───────────────────
+
+
+def _rate(scope: str) -> int:
+    """The number of requests `scope` allows per window, from the live settings."""
+    from apps.common.throttling import ScopedUserRateThrottle
+
+    return ScopedUserRateThrottle(scope).num_requests
+
+
+def test_sixty_one_reads_in_a_minute_are_all_served(tenant: Any, api_as: Any) -> None:
+    """Reading the list is on the 600/min user budget, not the 60/min write one.
+
+    The viewset declared one `throttle_scope = "party_write"` for every verb, so
+    the WRITE ceiling applied to GET: the 61st read in a minute answered 429. A
+    merchant paging through the book, flipping chips and opening khatas gets
+    there in a busy minute, and the e2e harnesses got there in seconds — the
+    same shape of defect as the statement view that was once on the export
+    budget. Sixty-one is one past the write ceiling and nowhere near the read one.
+    """
+    PartyFactory.create_batch(2, tenant=tenant)
+    client, _ = api_as(tenant)
+    url = reverse("v1:party-list")
+    reads = _rate("party_write") + 1
+
+    statuses = [client.get(url, {"status": "active"}).status_code for _ in range(reads)]
+
+    assert statuses == [200] * reads
+
+
+def test_writes_are_still_held_to_the_party_write_budget(tenant: Any, api_as: Any) -> None:
+    """Moving reads off `party_write` must not move writes off it too.
+
+    The write ceiling exists because the duplicate-mobile response answers a
+    question about another record, and a write endpoint with no ceiling can fill
+    a tenant's book. An empty body is refused with 400 — cheaply — but the
+    throttle runs before validation, so each one still spends the budget, and
+    the request after the last allowed one is 429. A read is unaffected by the
+    write budget running out.
+    """
+    client, _ = api_as(tenant)
+    url = reverse("v1:party-list")
+    allowed = _rate("party_write")
+
+    refused = [client.post(url, {}, format="json").status_code for _ in range(allowed)]
+    over = client.post(url, {}, format="json")
+
+    assert set(refused) == {400}
+    assert over.status_code == 429
+    assert over.json()["error"]["code"] == "rate_limited"
+    assert client.get(url).status_code == 200
+
+
+def test_search_is_guarded_by_its_own_budget_on_top_of_the_read_one(
+    tenant: Any, api_as: Any, monkeypatch: Any
+) -> None:
+    """PTY-02 §19's 120/min search guard, spent only by a request carrying `q`.
+
+    The guard is shrunk to three here so the test does not issue 121 searches;
+    what it proves is the WIRING — `?q=` spends `party_search`, a list without
+    it does not, and a blank `q` (which the filterset ignores) is not a search.
+    """
+    from apps.common.throttling import ScopedUserRateThrottle
+
+    monkeypatch.setitem(ScopedUserRateThrottle.THROTTLE_RATES, "party_search", "3/min")
+    PartyFactory(tenant=tenant, name="Ramesh Traders")
+    client, _ = api_as(tenant)
+    url = reverse("v1:party-list")
+
+    searches = [client.get(url, {"q": "ramesh"}).status_code for _ in range(3)]
+    over = client.get(url, {"q": "ramesh"})
+
+    assert searches == [200, 200, 200]
+    assert over.status_code == 429
+    assert client.get(url).status_code == 200
+    assert client.get(url, {"q": "  "}).status_code == 200

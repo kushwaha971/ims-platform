@@ -11,7 +11,7 @@ from typing import Any
 
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
 
 from apps.common.constants import ModuleCode
 from apps.common.context import Ctx
@@ -73,6 +73,19 @@ class LedgerEntryViewSet(
     # to allow. What it stops is a loop.
     throttle_classes = [ScopedUserRateThrottle]
     throttle_scope = "ledger_write"
+
+    def get_throttles(self) -> list[Any]:
+        """Reads on the user budget; only writes spend `ledger_write`.
+
+        The party list had the same defect and the 2,000-party performance pass
+        found it there: one class-level scope applies to every verb, so reading
+        a khata timeline — the screen a merchant opens more than any other —
+        spent the WRITE ceiling. A merchant flipping between khatas at a
+        counter, and every e2e harness, reads far faster than they write.
+        """
+        if self.request.method in SAFE_METHODS:
+            return [ScopedUserRateThrottle("user")]
+        return [ScopedUserRateThrottle("ledger_write")]
 
     def get_serializer_class(self) -> Any:
         if self.action == "create":

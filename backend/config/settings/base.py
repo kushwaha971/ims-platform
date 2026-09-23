@@ -193,6 +193,12 @@ REST_FRAMEWORK = {
         # numbers through the duplicate-mobile response or fill a tenant's
         # book with junk faster than anyone would notice.
         "party_write": env.str("UB_RATE_LIMIT_PARTY_WRITE", "60/min"),
+        # PTY-02 §19's search guard, spent only by a list request that carries
+        # `?q=`, and ON TOP of the user budget rather than instead of it. The
+        # search is the one list query that reads indexes other than the
+        # ordering one, and it is typed a character at a time; 120/min is two a
+        # second, sustained, which a person at a counter does not do.
+        "party_search": env.str("UB_RATE_LIMIT_PARTY_SEARCH", "120/min"),
         # Ledger entries. Higher than `party_write` because this is the most
         # frequent write in the product and the ceiling has to clear the case it
         # is built for: a merchant copying a month of a paper khata in on a slow

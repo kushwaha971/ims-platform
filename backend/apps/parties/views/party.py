@@ -13,7 +13,7 @@ from __future__ import annotations
 from typing import Any
 
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
 
 from apps.common.constants import ModuleCode
 from apps.common.context import Ctx
@@ -72,18 +72,41 @@ class PartyViewSet(TenantScopedNoDeleteViewSet):
         ModuleEnabled(ModuleCode.PARTIES),
         PartyPermissions,
     ]
-    # Nothing throttled this endpoint before. The duplicate-mobile response
-    # answers a question about another record — even reduced to an id, a
-    # sufficiently patient caller could walk a number range with it — and a
-    # write endpoint with no ceiling is a write endpoint that can fill a
-    # tenant's book. 60/min is far above a shopkeeper copying a paper ledger.
+    # Three budgets, chosen per request in `get_throttles` below. No class-level
+    # `throttle_scope`: a single scope on this class is what put every GET on
+    # the write budget.
     throttle_classes = [ScopedUserRateThrottle]
-    throttle_scope = "party_write"
 
     # The base is `TenantScopedNoDeleteViewSet` rather than the full
     # `ModelViewSet` for exactly one reason: a party is archived, never
     # deleted. PTY-04 adds archive and restore as state changes with audit
     # rows; DELETE is not a verb this route has.
+
+    def get_throttles(self) -> list[Any]:
+        """Reads on the user budget, writes on `party_write`, search guarded too.
+
+        PTY-02 §19: the list is read on the general user bucket (600/min) with a
+        120/min guard on search. This viewset used to declare one
+        `throttle_scope = "party_write"` for everything, so the WRITE ceiling —
+        60/min — applied to every GET as well. The 61st read in a minute was a
+        429, and a merchant paging through a list, flipping chips and opening
+        khatas does that in a busy minute; the e2e harnesses do it in seconds.
+
+        Writes keep `party_write`, and its reason is unchanged: the
+        duplicate-mobile response answers a question about another record — even
+        reduced to an id, a patient caller could walk a number range with it —
+        and a write endpoint with no ceiling can fill a tenant's book. 60/min is
+        far above a shopkeeper copying a paper ledger.
+
+        The search guard is spent IN ADDITION to the user budget, and only by a
+        list request that actually carries a search term.
+        """
+        if self.request.method not in SAFE_METHODS:
+            return [ScopedUserRateThrottle("party_write")]
+        throttles = [ScopedUserRateThrottle("user")]
+        if self.action == "list" and (self.request.query_params.get("q") or "").strip():
+            throttles.append(ScopedUserRateThrottle("party_search"))
+        return throttles
 
     def get_serializer_class(self) -> Any:
         """Read and write shapes are different classes (R6.1).

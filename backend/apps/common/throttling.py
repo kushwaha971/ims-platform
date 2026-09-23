@@ -8,12 +8,24 @@ from rest_framework.throttling import SimpleRateThrottle, UserRateThrottle
 
 
 class ScopedUserRateThrottle(UserRateThrottle):
-    """600 req/min per user by default; a view may declare `throttle_scope`."""
+    """600 req/min per user by default; a view may declare `throttle_scope`.
+
+    A view whose verbs cost different amounts builds its throttles itself with
+    `ScopedUserRateThrottle(scope)` from `get_throttles()`. A throttle given its
+    scope that way keeps it: the view's single `throttle_scope`, which is what
+    applied a WRITE budget to every GET on `/parties`, is not consulted.
+    """
 
     scope = "user"
 
+    def __init__(self, scope: str | None = None) -> None:
+        self.fixed_scope = scope
+        if scope:
+            self.scope = scope
+        super().__init__()
+
     def get_cache_key(self, request: Any, view: Any) -> str | None:
-        scope = getattr(view, "throttle_scope", None)
+        scope = None if self.fixed_scope else getattr(view, "throttle_scope", None)
         if scope:
             self.scope = scope
             self.rate = self.get_rate()

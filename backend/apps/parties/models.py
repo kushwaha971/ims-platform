@@ -128,8 +128,40 @@ class Party(TenantModel, SoftDeleteModel):
                 condition=models.Q(deleted_at__isnull=True),
                 name="ix_party_tenant_activity",
             ),
+            # The same index the other way up, for `?ordering=last_activity_at`
+            # — the Activity header clicked a second time, oldest first. A
+            # B-tree walked backwards reverses its null placement as well as its
+            # order, so the index above read backwards is `ASC NULLS FIRST`,
+            # while `StableOrderingFilter` asks for `ASC NULLS LAST` (a party
+            # that has never transacted does not outrank one that has, in either
+            # direction). Different orderings; the header's second click was a
+            # sequential scan and a sort of every active party. Same columns and
+            # same partial predicate as its twin, so the planner can use it for
+            # exactly the `tenant + status + deleted_at` shape every list query
+            # has (0008).
+            models.Index(
+                "tenant",
+                "status",
+                F("last_activity_at").asc(nulls_last=True),
+                condition=models.Q(deleted_at__isnull=True),
+                name="ix_party_tenant_activity_asc",
+            ),
             models.Index(fields=["tenant", "balance"], name="ix_party_tenant_balance"),
+            # `ASC NULLS LAST` — it serves `?ordering=collection_date` and the
+            # three collection chips' range predicates. It cannot serve
+            # `?ordering=-collection_date`: walked backwards it is `DESC NULLS
+            # FIRST`, and the filter asks for `DESC NULLS LAST`.
             models.Index(fields=["tenant", "collection_date"], name="ix_party_tenant_collection"),
+            # ...which is what this one is for (0008). A collection date is set
+            # by hand a few times in a party's life, so unlike the activity pair
+            # it costs next to nothing to keep current.
+            models.Index(
+                "tenant",
+                "status",
+                F("collection_date").desc(nulls_last=True),
+                condition=models.Q(deleted_at__isnull=True),
+                name="ix_party_tenant_collect_desc",
+            ),
             models.Index(fields=["tenant", "is_customer"], name="ix_party_tenant_customer"),
             models.Index(fields=["tenant", "is_supplier"], name="ix_party_tenant_supplier"),
             # `ix_party_tenant_recent` lived here: (tenant, -last_activity_at)
@@ -160,6 +192,46 @@ class Party(TenantModel, SoftDeleteModel):
             GinIndex(
                 OpClass(Upper("name"), name="gin_trgm_ops"),
                 name="ix_party_name_upper_trgm",
+            ),
+            # ── The other three arms of `?q=` (0008) ─────────────────────────────
+            #
+            # `PartyFilterSet.filter_search` ORs up to four predicates, and
+            # Postgres can answer a disjunction from indexes only as a BitmapOr
+            # in which EVERY arm has an index of its own. One arm without one
+            # and the whole OR becomes a filter over every row in the tenant —
+            # which is what happened: the trigram index above was unreachable
+            # from the endpoint it was built for, because the display-code arm
+            # had no index at all.
+            #
+            # None of the three is partial, deliberately. The planner only reads
+            # the statistics ANALYZE gathers on an index EXPRESSION when the
+            # index is not partial; with `WHERE deleted_at IS NULL` on them it
+            # fell back to a 0.5% default per arm — 483 rows for a GSTIN that
+            # matches one — and chose to walk the ordering index and filter
+            # rather than use the BitmapOr (measured at 50,000 parties).
+            #
+            # `display_code__istartswith` is `UPPER(display_code) LIKE 'X%'`: a
+            # prefix, so a B-tree serves it — but only with `text_pattern_ops`
+            # under any collation other than C, and only on the same UPPER()
+            # expression.
+            models.Index(
+                F("tenant"),
+                OpClass(Upper("display_code"), name="text_pattern_ops"),
+                name="ix_party_tenant_code_upper",
+            ),
+            # `mobile__endswith` is `mobile LIKE '%1234'`, a suffix: no B-tree
+            # can serve that, and a trigram index can. It is only in the OR when
+            # the query has four or more digits.
+            GinIndex(
+                OpClass("mobile", name="gin_trgm_ops"),
+                name="ix_party_mobile_trgm",
+            ),
+            # `gstin__iexact` is `UPPER(gstin) = UPPER(x)`, in the OR only for a
+            # fifteen-character query.
+            models.Index(
+                F("tenant"),
+                Upper("gstin"),
+                name="ix_party_tenant_gstin_upper",
             ),
         ]
 

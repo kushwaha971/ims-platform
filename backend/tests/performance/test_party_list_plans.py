@@ -80,9 +80,13 @@ def _populate(tenant: Any, count: int) -> None:
                 # walk the ordering index and filter rather than to go through
                 # the trigram index — a search test written on that term
                 # asserts the wrong thing.
+                #
+                # Offset 7, not 0: every twentieth party is archived, so at
+                # offset 0 every one of these was, and a search sent the way
+                # the client sends it (`status=active`) matched nothing at all.
                 name=(
                     f"Zylberschatz Bullion {index}"
-                    if index % 1_000 == 0
+                    if index % 1_000 == 7
                     else f"{rng.choice(SURNAMES)} {rng.choice(SUFFIXES)} {index}"
                 ),
                 display_code=f"C-{index:06d}",
@@ -190,22 +194,67 @@ def test_the_default_page_does_not_sort_the_whole_result(ordering_tenant: Any) -
         assert "Presorted Key: last_activity_at" in plan, plan
 
 
-def test_the_search_reaches_the_trigram_index(search_tenant: Any) -> None:
-    """`?q=` must not turn into a scan of every name in the tenant.
+def test_the_search_reaches_the_trigram_index(search_tenant: Any, api_as: Any) -> None:
+    """`?q=` must not turn into a scan of every name in the tenant — as the ENDPOINT asks it.
 
-    `icontains` compiles to `UPPER(name) LIKE UPPER(%s)`, which only
-    `ix_party_name_upper_trgm` — a GIN index on the same expression — can
-    serve. A bare-column index cannot, which is why that one is built on
-    `Upper("name")`.
+    This test used to build `name__icontains` by hand and EXPLAIN that, and it
+    passed. The endpoint never issued that query: `PartyFilterSet.filter_search`
+    ORs the name with a display-code prefix match, and with no index on the
+    display code the OR could not be a BitmapOr, so the real request filtered
+    every row in the tenant and the trigram index went unused. A test that
+    passes on a query nobody sends is how that shipped, which is the same lesson
+    as `test_the_plan_of_the_sql_the_ENDPOINT_emits` below, learned twice.
+
+    So the SQL is captured from the request `usePartyList` makes, and all three
+    statements that carry the search — the page, the paginator's `COUNT(*)` and
+    the totals aggregate — must reach `ix_party_name_upper_trgm` through a
+    BitmapOr, with no sequential scan, on the NATURAL plan. At 50,000 parties
+    with one name in a thousand matching, that is what the planner picks once
+    every arm has an index (0008), and what it did not pick before:
+
+        before  count/totals: Seq Scan on parties_party, Filter (… OR upper(display_code) ~~ …)
+                page: Index Scan using ix_party_tenant_activity, same Filter, walked
+        after   Bitmap Heap Scan <- BitmapOr(ix_party_name_upper_trgm,
+                                             ix_party_tenant_code_upper)
     """
-    queryset = (
-        list_parties(tenant=search_tenant)
-        .filter(status=PartyStatus.ACTIVE, name__icontains="zylberschatz")
-        .order_by(F("last_activity_at").desc(nulls_last=True), "pk")[:25]
-    )
-    plan = _plan(queryset)
-    assert "ix_party_name_upper_trgm" in plan, plan
-    assert "Seq Scan" not in plan, plan
+    client, _member = api_as(search_tenant)
+    with connection.cursor() as cursor:
+        # `bulk_create` put every trigram into the GIN pending list, which a
+        # live database's autovacuum merges and a test transaction never does;
+        # priced as an unmerged list, one lookup costs twenty times what it will.
+        for index in ("ix_party_name_upper_trgm", "ix_party_mobile_trgm"):
+            cursor.execute("SELECT gin_clean_pending_list(%s::regclass)", [index])
+        cursor.execute("ANALYZE parties_party")
+
+    with CaptureQueriesContext(connection) as captured:
+        response = client.get(
+            reverse("v1:party-list"),
+            {
+                "status": "active",
+                "ordering": "-last_activity_at",
+                "page": 1,
+                "page_size": 25,
+                "q": "zylberschatz",
+            },
+        )
+    assert response.status_code == 200
+    assert response.json()["meta"]["totals"]["count"] > 0, "the search matched nothing"
+
+    searches = [
+        query["sql"]
+        for query in captured.captured_queries
+        if 'FROM "parties_party"' in query["sql"] and "LIKE" in query["sql"]
+    ]
+    # The page, the count and the totals — each carries the whole OR.
+    assert len(searches) == 3, "\n".join(searches)
+    for sql in searches:
+        assert 'UPPER("parties_party"."display_code"::text) LIKE' in sql, sql
+        with connection.cursor() as cursor:
+            cursor.execute("EXPLAIN (FORMAT TEXT) " + sql)
+            plan = "\n".join(row[0] for row in cursor.fetchall())
+        assert "ix_party_name_upper_trgm" in plan, plan
+        assert "BitmapOr" in plan, plan
+        assert "Seq Scan" not in plan, plan
 
 
 def test_the_dead_index_is_gone() -> None:

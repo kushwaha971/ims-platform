@@ -796,3 +796,23 @@ def test_the_summary_counts_the_same_rows_the_balance_does(tenant: Any, api_as: 
     party.refresh_from_db()
 
     assert Decimal(summary["total_debit"]) - Decimal(summary["total_credit"]) == party.balance
+
+
+def test_reading_a_khata_does_not_spend_the_write_budget(tenant: Any, api_as: Any) -> None:
+    """The timeline is read on the user budget; only posting spends `ledger_write`.
+
+    One class-level `throttle_scope = "ledger_write"` applied to every verb, so
+    opening khatas spent the WRITE ceiling — the defect the party list had, found
+    there by the 2,000-party performance pass and here by looking for its twin.
+    One read past the write ceiling must still be served.
+    """
+    from apps.common.throttling import ScopedUserRateThrottle
+
+    party = PartyFactory(tenant=tenant)
+    client, _ = api_as(tenant)
+    url = reverse(ENTRIES) + f"?party_id={party.id}"
+    reads = ScopedUserRateThrottle("ledger_write").num_requests + 1
+
+    statuses = [client.get(url).status_code for _ in range(reads)]
+
+    assert set(statuses) == {200}

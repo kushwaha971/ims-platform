@@ -55,6 +55,7 @@ KNOWN_UB_VARIABLES: frozenset[str] = frozenset(
         "UB_RATE_LIMIT_OTP",
         "UB_RATE_LIMIT_EXPORT",
         "UB_RATE_LIMIT_PARTY_WRITE",
+        "UB_RATE_LIMIT_PARTY_SEARCH",
         "UB_RATE_LIMIT_LEDGER_WRITE",
         "UB_DEFAULT_TIMEZONE",
         "UB_DEFAULT_LOCALE",

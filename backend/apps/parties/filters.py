@@ -13,7 +13,8 @@ from datetime import date, timedelta
 from typing import Any
 
 import django_filters
-from django.db.models import Exists, F, OuterRef, Q, QuerySet
+from django.db.models import Exists, F, OuterRef, Q, QuerySet, Value
+from django.db.models.functions import Lower
 
 from apps.common.filters import BaseTenantFilterSet
 from apps.parties.constants import PartyStatus
@@ -110,13 +111,36 @@ class PartyFilterSet(BaseTenantFilterSet):
         by a stray query, and a search that reaches them turns a private field
         into an index.
 
-        Each branch is written so the planner can still use an index: the name
-        goes through `icontains`, which the GIN trigram index on `UPPER(name)`
-        serves; `display_code` is a PREFIX match, not a contains, so
-        `ix_party_tenant_name`-style B-tree logic applies; the mobile is a
-        suffix match, which cannot use an index and is therefore gated behind a
-        digit-count check so it only runs on a query that really looks like a
-        phone number.
+        ── Every arm of the OR has its own index, and it has to ──────────────
+        Postgres can answer a disjunction from indexes only as a BitmapOr in
+        which EVERY arm has one; a single arm without an index turns the whole
+        predicate into a filter over every row in the tenant, and the other
+        arms' indexes go unused. This docstring used to say the display-code
+        arm was served by "`ix_party_tenant_name`-style B-tree logic". It was
+        served by nothing — no index on `display_code` existed — and so the
+        trigram index on the name was unreachable from this endpoint, while a
+        test that EXPLAINed a hand-built name-only query said it was used.
+
+        Each arm and the index that answers it (all created in parties 0008,
+        except the first):
+
+        * `name__icontains` -> `UPPER(name) LIKE '%X%'` -> `ix_party_name_upper_trgm`
+          (GIN trigram on the same `UPPER()` expression).
+        * `display_code__istartswith` -> `UPPER(display_code) LIKE 'X%'` ->
+          `ix_party_tenant_code_upper`, a B-tree on `(tenant, UPPER(display_code)
+          text_pattern_ops)`. A prefix is a range, which a B-tree serves — but
+          under any collation other than C only with `text_pattern_ops`.
+        * `mobile__endswith` -> `mobile LIKE '%1234'` -> `ix_party_mobile_trgm`.
+          A suffix is not a range, so no B-tree helps; a trigram index does. It
+          is still gated behind the digit count, because a two-digit suffix
+          matches most of the book and buries the name the merchant wanted.
+        * `gstin__iexact` -> `UPPER(gstin) = UPPER(x)` -> `ix_party_tenant_gstin_upper`.
+
+        Change the lookup on any arm — `icontains` for `istartswith`, a
+        different case fold — and its index stops matching.
+        `tests/performance/test_two_thousand_party_book.py` and
+        `test_party_list_plans.py` EXPLAIN the SQL this method produces, through
+        the endpoint, so that failure is loud.
         """
         term = (value or "").strip()
         if not term:
@@ -226,10 +250,31 @@ class PartyFilterSet(BaseTenantFilterSet):
         #
         # `normalise_tag_name` above folds the whitespace the same way the write
         # path does, so `?tag=Camp  Area` finds "Camp Area" too.
-        match_any = Q()
-        for name in names:
-            match_any |= Q(tag__name__iexact=name)
-        matching = PartyTag.objects.filter(match_any, party_id=OuterRef("pk"))
+        #
+        # ── `lower()`, and the party's own tenant, to match the one index ────
+        #
+        # `iexact` compiles to `UPPER(name) = UPPER(x)`, and the only index on a
+        # tag's name is `uq_tag_tenant_lower_name` — `(lower(name), tenant)`.
+        # An `UPPER()` predicate cannot use a `lower()` index, and with no tenant
+        # condition either, every tag lookup read tags across all tenants by
+        # primary key and filtered. `lower()` is also the right fold on its
+        # merits: it is the one the uniqueness constraint uses, so it is the
+        # database's own definition of "the same tag", and folding with the
+        # same function on both sides (SQL, not Python's `str.lower`) keeps the
+        # two from disagreeing on some Unicode letter nobody has tested.
+        #
+        # The tenant comes from the PARTY row (`OuterRef`), not the request: the
+        # aging view calls this method on a filterset it builds without one.
+        #
+        # One `IN (…)` rather than an OR of equalities: Postgres turns it into a
+        # single `= ANY(array)` index condition, where an OR has to be costed
+        # as a BitmapOr of one probe per name — and on a book with a handful of
+        # tags the planner then prefers reading the tag table whole.
+        matching = PartyTag.objects.alias(tag_name_folded=Lower("tag__name")).filter(
+            tag_name_folded__in=[Lower(Value(name)) for name in names],
+            party_id=OuterRef("pk"),
+            tag__tenant_id=OuterRef("tenant_id"),
+        )
         return queryset.filter(Exists(matching))
 
     def filter_credit(self, queryset: QuerySet, name: str, value: str) -> QuerySet:
