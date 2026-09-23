@@ -293,7 +293,11 @@
   "Shell 110.9 → 111.0x: the hardened safeNextPath (auth, loaded on every",
   "route), encodeURIComponent on every API_PATHS builder, and session expiry",
   "tearing feature state down like logout. Security, not features: sharedApp",
-  "111 → 112, and /parties/tags' first load 309 → 310 with it."
+  "111 → 112, and /parties/tags' first load 309 → 310 with it.",
+  "",
+  "── 24 Sep 2026: QA fixes — /parties/[id] 95 → 96, first load 333 → 334 for",
+  "returning focus to ⋯ from four dialogs (triggerRef/returnFocusRef) and the",
+  "archived timeline's read-only mode. Accessibility, not features."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -705,8 +709,8 @@
    "firstLoad": 328
   },
   "/parties/[id]": {
-   "route": 95,
-   "firstLoad": 333
+   "route": 96,
+   "firstLoad": 334
   },
   "/parties/tags": {
    "route": 72,
