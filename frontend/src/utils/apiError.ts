@@ -156,6 +156,15 @@ const LOCALLY_PRESENTED: ReadonlySet<ApiErrorCode> = new Set<ApiErrorCode>([
   'stale_version',
   'document_not_draft',
   'idempotency_conflict',
+
+  // PTY-04 — the archive dialog swaps in place to say what the party still
+  // owes and offers the two ways out; `balance_changed` re-shows the new
+  // figure for the merchant to confirm. The writeoff.mjs sweep caught the
+  // blocked archive toasting "Settle the balance…" over the very dialog that
+  // was saying it, request id and all.
+  'party_balance_nonzero',
+  'balance_changed',
+  'nothing_to_write_off',
 ]);
 
 export const shouldToast = (error: ApiErrorShape): boolean => !LOCALLY_PRESENTED.has(error.code);

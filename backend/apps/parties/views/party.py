@@ -24,7 +24,7 @@ from apps.common.throttling import ScopedUserRateThrottle
 from apps.common.viewsets import TenantScopedNoDeleteViewSet
 from apps.parties.filters import PartyFilterSet
 from apps.parties.models import Party
-from apps.parties.permissions import PartyPermissions
+from apps.parties.permissions import PartyPermissions, WriteOffPermissions
 from apps.parties.selectors.party import (
     list_parties,
     party_detail_queryset,
@@ -253,24 +253,55 @@ class PartyViewSet(TenantScopedNoDeleteViewSet):
     @idempotent("party_archive")
     @action(detail=True, methods=["post"])
     def archive(self, request: Any, *args: Any, **kwargs: Any) -> Any:
-        """Take a party out of the working list.
+        """Take a party out of the working list, optionally writing the balance off.
 
         Idempotent by key, and the reason is the one canon rule 5 is about: a
         merchant on a 2G connection taps Archive, the response is lost, they tap
         again — and without a key the second attempt answers 409
         `party_already_archived` for a party they just successfully archived,
-        which reads as a failure. The replay returns the original 200.
+        which reads as a failure. The replay returns the original 200 — with
+        its `meta.write_off_entry_id` — and posts no second write-off.
+
+        With a `write_off` (FR-3) the response carries `meta.write_off_entry_id`
+        so the client can prepend the new row to the khata timeline.
         """
         party = self.get_object()
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        archived = archive_party(
+        write_off = serializer.validated_data.get("write_off")
+        if write_off is not None:
+            self._authorise_write_off(request)
+        archived, write_off_entry_id = archive_party(
             ctx=self._ctx(request),
             party=party,
             reason=serializer.validated_data.get("reason", ""),
             via=request.data.get("via") if isinstance(request.data.get("via"), str) else "api",
+            write_off=dict(write_off) if write_off is not None else None,
         )
-        return StandardResponse.ok(PartyDetailSerializer(archived).data)
+        return StandardResponse.ok(
+            PartyDetailSerializer(archived).data,
+            meta={"write_off_entry_id": write_off_entry_id} if write_off_entry_id else None,
+        )
+
+    def _authorise_write_off(self, request: Any) -> None:
+        """T-PTY-04-12 — the write-off's extra gates, in Part 20 §20.5.5's order.
+
+        Entitlement before authorisation, as on every viewset: a tenant with the
+        ledger switched off is told `module_disabled`, not `permission_denied` —
+        and it has to be this order, because `permissions_for` strips every
+        `ledger.*` codename from a tenant whose ledger is off, so asking about
+        the codename first would answer "ask your owner for rights" to an owner.
+
+        Both are the permission CLASSES `/ledger-entries` itself declares,
+        instantiated here because they apply to one body key rather than to the
+        route. The route's own `parties.party.delete` has already passed by the
+        time this runs.
+        """
+        for permission in (ModuleEnabled(ModuleCode.LEDGER)(), WriteOffPermissions()):
+            if not permission.has_permission(request, self):
+                self.permission_denied(
+                    request, message="You do not have permission to write off a balance."
+                )
 
     @action(detail=True, methods=["post"])
     def restore(self, request: Any, *args: Any, **kwargs: Any) -> Any:

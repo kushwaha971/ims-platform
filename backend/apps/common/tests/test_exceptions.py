@@ -30,7 +30,7 @@ def _handle(exc: Exception, request_id: str = "req-123") -> tuple[dict, int]:
 
 
 def test_registry_is_closed_and_complete() -> None:
-    """150 codes in Part 22 §22.1.1, plus `unauthenticated` (Part 26 R8.2), plus two.
+    """150 codes in Part 22 §22.1.1, plus `unauthenticated` (Part 26 R8.2), plus four.
 
     This count is a guard, not a formality: the registry is closed, and a code
     appearing without the chapter that defines it is how a client ends up
@@ -46,10 +46,18 @@ def test_registry_is_closed_and_complete() -> None:
     expired temporary password: the password was right, the window was not, and
     telling the holder otherwise sends them to reset a password they never had.
     """
-    assert len(REGISTRY) == 153
+    assert len(REGISTRY) == 155
     assert "unauthenticated" in ERROR_CODES
     assert REGISTRY["password_change_required"] == (403, False)
     assert REGISTRY["password_expired"] == (401, False)
+    # PTY-04 FR-3 (CR-2026-09-23-A). Neither could be an existing code:
+    # `validation_error` is about a field and `nothing_to_write_off` is about
+    # the PARTY — no field of a well-formed write-off is wrong when the balance
+    # is zero. `stale_version` promises a `current_version` a party row does not
+    # carry; `balance_changed` carries the current balance instead, which is
+    # the figure the confirmation dialog has to redraw.
+    assert REGISTRY["nothing_to_write_off"] == (400, False)
+    assert REGISTRY["balance_changed"] == (409, False)
 
 
 def test_every_retryable_code_is_one_the_spec_marks_retryable() -> None:

@@ -341,11 +341,13 @@ export function MLDialogFooter({
        footer is `flex items-center gap-4 border-t border-border p-6`. The
        column-reverse below `sm` is kept and is not theirs — on a phone the
        primary action belongs under the thumb, which means last in the DOM and
-       first on screen. */
+       first on screen. `sm:flex-wrap` because a footer can carry three
+       actions (PTY-04's blocked archive: Cancel, Record payment, Write off)
+       and a 480 px dialog clipped the first one to "cel" rather than wrap. */
     <div
       className={cn(
         'flex flex-col-reverse gap-3 border-t border-border-hairline p-6',
-        'sm:flex-row sm:justify-end sm:gap-4',
+        'sm:flex-row sm:flex-wrap sm:justify-end sm:gap-3',
         className
       )}
     >

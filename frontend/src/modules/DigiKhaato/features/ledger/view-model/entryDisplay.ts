@@ -51,6 +51,13 @@ export const entryAmountView = (
       ? { tone: 'receivable', sign: 'none', labelId: 'ledger.opening.theyOwe' }
       : { tone: 'payable', sign: 'none', labelId: 'ledger.opening.iOwe' };
   }
+  /* A write-off (PTY-04 FR-3) is money that did NOT move: "You got ₹2,300" on
+     it, which the first sweep printed, tells a merchant they were paid. It is
+     neutral in tone — it is neither money standing out nor money owed — and
+     it says what it is. */
+  if (entryType === 'write_off') {
+    return { tone: 'neutral', sign: 'none', labelId: 'ledger.entry.writtenOff' };
+  }
   return direction === 'debit'
     ? { tone: 'receivable', sign: 'none', labelId: 'ledger.entry.gave' }
     : { tone: 'payable', sign: 'none', labelId: 'ledger.entry.got' };
@@ -232,8 +239,13 @@ export const entryCaption = (
  *
  * Empty for a reversal, which is titled by its reason already (`entryTitle`).
  */
-export const entryReason = (entry: LedgerEntry): string =>
-  entry.entryType === 'reversal' ? '' : (entry.reason?.trim() ?? '');
+export const entryReason = (entry: LedgerEntry): string => {
+  if (entry.entryType === 'reversal') return '';
+  const reason = entry.reason?.trim() ?? '';
+  /* A write-off stores its reason as the note too (FR-3), so the row's title
+     already says it; printing it again underneath read as an echo. */
+  return reason && reason === entry.note.trim() ? '' : reason;
+};
 
 /**
  * Was this entry written down well after it happened (EC-2)?

@@ -7,18 +7,20 @@ would destroy the entries behind it, which breaks canon §0.11 rule 1 and the
 72-month GST retention rule at the same time. So the party leaves the working
 list and every entry, bill and statement behind it stays readable forever.
 
+── The write-off escape (FR-3) ────────────────────────────────────────────────
+The one way to archive a party who still owes something is to post a
+`ledger_entry` of `entry_type='write_off'` for `|balance|` in the same
+transaction. That entry is the ledger's to write, and Part 20 §20.1.4 forbids
+this app importing the ledger, so `archive_party` calls it through the port in
+`parties/services/write_off.py`, which `LedgerConfig.ready()` fills. The
+handler runs AFTER this module has taken the row lock, on the locked instance,
+so the figure written off is the balance under the lock and the guard below
+re-checks the same object — a write-off that left a residue would still be
+refused.
+
 ── What this module does NOT do yet, and why ──────────────────────────────────
+Three of FR-7's side effects need tables that do not exist:
 
-FRD PTY-04 gives archive four side effects and one escape hatch. Three of the
-four and the escape hatch all need tables the `ledger` app does not have — it
-has no models and no migrations at all:
-
-  · **The write-off path (FR-3).** The one way to archive a party who still owes
-    something is to post a `ledger_entry` of `entry_type='write_off'` in the
-    same transaction. There is no `ledger_entry` table, so there is no way to
-    write anything off. The guard below therefore refuses and says so, and the
-    client offers no Write-off button — a button that opens a dialog that cannot
-    post anything is worse than no button.
   · **Cancelling scheduled reminders (FR-7a)** needs `ledger_reminder`.
   · **Revoking share links (FR-7b)** needs `parties_share_link`, which arrives
     with PTY-03's share sheet and PTY-09.
@@ -28,7 +30,7 @@ has no models and no migrations at all:
 None of them are stubbed. A `cancelled_reminders: 0` in the response would be a
 statement about this party's reminders, made by code that has never looked at a
 reminder, and the client cannot tell it apart from a party who genuinely has
-none. They arrive with LED-01 and LED-06, and the tests that hold them absent
+none. They arrive with LED-06 and PTY-09, and the tests that hold them absent
 are what has to change to let them in.
 
 The plan-limit guard on restore (FR-13) is absent for a different reason:
@@ -51,6 +53,7 @@ from apps.common.context import Ctx
 from apps.common.exceptions import BusinessRuleViolation
 from apps.parties.constants import PartyStatus
 from apps.parties.models import Party
+from apps.parties.services.write_off import get_write_off_handler
 
 #: How the balance is described back to the client, so the message the merchant
 #: reads is the one the server chose rather than one the client inferred from a
@@ -87,8 +90,8 @@ def _refuse_nonzero_balance(party: Party) -> None:
     renders it rather than deciding: "collect" when the party owes the merchant,
     because that money is worth chasing, and "write_off" when the amount is
     already lost. Both are advisory; the client shows what it can actually
-    offer, and today it can offer neither, so it shows the explanation and a
-    way out of the dialog.
+    offer. The write-off itself is FR-3's `write_off` body on this same
+    endpoint, which the server accepts whichever suggestion it made.
     """
     label = RECEIVABLE if party.balance > ZERO else PAYABLE
     raise BusinessRuleViolation(
@@ -103,8 +106,15 @@ def _refuse_nonzero_balance(party: Party) -> None:
 
 
 @transaction.atomic
-def archive_party(*, ctx: Ctx, party: Party, reason: str = "", via: str = "api") -> Party:
-    """Take a party out of the working list. Returns the updated party.
+def archive_party(
+    *,
+    ctx: Ctx,
+    party: Party,
+    reason: str = "",
+    via: str = "api",
+    write_off: dict | None = None,
+) -> tuple[Party, str | None]:
+    """Take a party out of the working list. Returns `(party, write_off_entry_id)`.
 
     `select_for_update` on the row, because the guard and the write are two
     statements and the balance is written by every ledger entry that will ever
@@ -113,7 +123,19 @@ def archive_party(*, ctx: Ctx, party: Party, reason: str = "", via: str = "api")
     reached through the gap between two correct statements. EC-1 describes the
     same race from the client's side and is answered by the same lock: the 409
     fires on the server's reading, never on the browser's.
+
+    `write_off` (FR-3) is the client's object, passed through unread: the
+    ledger's handler owns every rule about it. It is called on the LOCKED row
+    and never on `party`, which the view read before the lock and which can be
+    stale by the time this runs — the amount forgiven must be the one nobody
+    else can move. The entry id is `None` for a plain archive.
+
+    Authorisation for the write-off (`ledger.entry.write`, the ledger module
+    being enabled) is the VIEW's, like every other permission; this function
+    only refuses when no ledger is installed at all, because that is a fact
+    about the deployment rather than about the caller.
     """
+    handler = get_write_off_handler() if write_off is not None else None
     locked = Party.objects.select_for_update().get(pk=party.pk)
 
     if locked.status == PartyStatus.ARCHIVED:
@@ -127,10 +149,18 @@ def archive_party(*, ctx: Ctx, party: Party, reason: str = "", via: str = "api")
             "This party is already archived.",
         )
 
+    # Taken BEFORE the write-off, so the audit row says what the balance was
+    # when the decision was made — ₹2,300 written off, not "0.00 archived".
+    before = _audit_snapshot(locked)
+
+    write_off_entry_id: str | None = None
+    if handler is not None:
+        written = handler(ctx=ctx, party=locked, request=write_off)
+        write_off_entry_id = written["entry_id"]
+
     if locked.balance != ZERO:
         _refuse_nonzero_balance(locked)
 
-    before = _audit_snapshot(locked)
     locked.status = PartyStatus.ARCHIVED
     # `last_activity_at` is deliberately NOT touched (BR-12): it is when the
     # party last traded, not when somebody filed them away, and restoring must
@@ -145,9 +175,16 @@ def archive_party(*, ctx: Ctx, party: Party, reason: str = "", via: str = "api")
         entity_id=locked.id,
         before=before,
         after=_audit_snapshot(locked),
-        metadata={"reason": reason, "via": via},
+        metadata={
+            "reason": reason,
+            "via": via,
+            # FR-7(c) — the link from "why did this party leave the book" to
+            # the entry that made it possible. The entry's own audit row points
+            # back with `via='party_archive'`.
+            **({"write_off_entry_id": write_off_entry_id} if write_off_entry_id else {}),
+        },
     )
-    return locked
+    return locked, write_off_entry_id
 
 
 @transaction.atomic
@@ -163,6 +200,11 @@ def restore_party(*, ctx: Ctx, party: Party, via: str = "api") -> Party:
     once there are side effects to undo: a cancelled reminder was a decision
     about a date that has probably passed, and a revoked share link was given to
     somebody who should not get it back by accident.
+
+    Nor does it reverse a write-off (FR-4). The write-off was a real financial
+    event with its own immutable entry; the party resumes from a zero balance,
+    and a merchant who wants the money back on the khata reverses that entry
+    through LED-03 like any other.
     """
     locked = Party.objects.select_for_update().get(pk=party.pk)
 

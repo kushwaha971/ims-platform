@@ -54,6 +54,9 @@ export type ApiErrorCode =
   | 'gstin_in_use'
   // business
   | 'party_balance_nonzero'
+  // PTY-04 FR-3 — the write-off escape (Part 43 CR-135).
+  | 'nothing_to_write_off'
+  | 'balance_changed'
   | 'party_archived'
   | 'insufficient_stock'
   | 'document_not_draft'

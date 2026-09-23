@@ -230,3 +230,30 @@ right, the window was not, and telling the holder otherwise sends them to reset 
 they never had.
 
 Requested against Part 22 §22.1.1 table T-16.
+
+## CR-2026-09-23-A — two error codes beyond Part 22 §22.1.1, for PTY-04 FR-3
+
+The write-off escape on `POST /parties/{id}/archive` adds `nothing_to_write_off`
+(400, not retryable) and `balance_changed` (409, not retryable) to the closed registry in
+`apps/common/error_codes.py`. The count guard in `apps/common/tests/test_exceptions.py`
+moved 153 → 155 and names both.
+
+`nothing_to_write_off` answers a `write_off` sent for a party whose balance is already
+0.00. The FRD is silent on that case; quietly archiving was the alternative, and it hides
+the client bug (a dialog showing a balance the server does not have) that will next write
+off the wrong figure. It cannot be `validation_error`: no field of a well-formed write-off
+is wrong — the PARTY is in the wrong state.
+
+`balance_changed` answers a `write_off.amount` — the figure the merchant confirmed by
+ticking "I understand ₹2,300 is written off" — that differs from the balance read under
+`FOR UPDATE`. `details = { balance, balance_label, amount, confirmed_amount }`. It cannot
+be `stale_version`, which promises a `current_version` a party row does not carry. This
+also amends FRD PTY-04 EC-2, which accepts an over-credited archived party as the outcome
+of a write-off racing a payment: with the lock and the pin, that race produces a 409 and a
+redrawn dialog instead.
+
+Also requested against Part 17-01 PTY-04 §14: `write_off` gains the optional `amount`
+field, and `write_off.entry_date` becomes optional (defaulting to the tenant's today).
+
+Requested against Part 22 §22.1.1 table T-16. Part 43 in the Claude project is the
+authoritative register and needs the same entry (this file is a local carry).

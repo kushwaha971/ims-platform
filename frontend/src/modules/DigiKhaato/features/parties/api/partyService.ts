@@ -340,7 +340,6 @@ export const updateParty = async (
   return toSaveResult(response.data);
 };
 
-
 // ── PTY-03 — the khata page ─────────────────────────────────────────────────
 
 /**
@@ -431,7 +430,6 @@ export const setCollectionDate = async (
   return toPartyDetail(response.data.data);
 };
 
-
 // ── PTY-04 — archive and restore ────────────────────────────────────────────
 
 /**
@@ -458,14 +456,38 @@ export const setCollectionDate = async (
  * at all; a fresh key per call would protect nothing, because the lost-response
  * retry is a second call.
  */
+export interface ArchiveWriteOff {
+  /** Why the money is being written off — 3 to 160 characters, required. */
+  readonly reason: string;
+  /** ISO date; the server defaults to today in the tenant's timezone. */
+  readonly entryDate?: string;
+  /**
+   * The amount the merchant CONFIRMED — the figure the dialog showed beside
+   * "I understand this money is written off". The server writes off the
+   * balance it reads under the row lock and refuses 409 `balance_changed`
+   * when the two differ, so a payment that lands between the dialog and the
+   * press cannot turn a ₹2,300 write-off into a ₹2,800 one.
+   */
+  readonly amount: string;
+}
+
 export const archiveParty = async (
   id: string,
   reason: string,
-  idempotencyKey: string
+  idempotencyKey: string,
+  writeOff?: ArchiveWriteOff
 ): Promise<PartyDetail> => {
+  const body: Record<string, unknown> = reason ? { reason } : {};
+  if (writeOff) {
+    body.write_off = {
+      reason: writeOff.reason.trim(),
+      amount: writeOff.amount,
+      ...(writeOff.entryDate ? { entry_date: writeOff.entryDate } : {}),
+    };
+  }
   const response = await api.post<PartySaveApiResponse>(
     `${API_PATHS.PARTIES}/${id}/archive`,
-    reason ? { reason } : {},
+    body,
     ubConfig({ headers: { 'Idempotency-Key': idempotencyKey } })
   );
   return toPartyDetail(response.data.data);
@@ -480,10 +502,7 @@ export const archiveParty = async (
  * which is the truth and costs nothing — the party is active, which is what the
  * caller wanted.
  */
-export const restoreParty = async (
-  id: string,
-  idempotencyKey: string
-): Promise<PartyDetail> => {
+export const restoreParty = async (id: string, idempotencyKey: string): Promise<PartyDetail> => {
   const response = await api.post<PartySaveApiResponse>(
     `${API_PATHS.PARTIES}/${id}/restore`,
     {},
@@ -533,7 +552,6 @@ export const bulkArchiveParties = async (
   );
   return { archived: response.data.data.archived, skipped: response.data.data.skipped };
 };
-
 
 // ── PTY-06 — the credit limit's pre-flight ──────────────────────────────────
 

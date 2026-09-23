@@ -402,3 +402,24 @@ describe('where the reason shows on a corrected line', () => {
     expect(entryReason(reversal)).toBe('');
   });
 });
+
+describe('a write-off row', () => {
+  it('says it was written off, not that money came in', () => {
+    /** The first write-off sweep printed "You got ₹2,300" on a balance that
+     *  was abandoned — the one sentence that row must never say. */
+    expect(entryAmountView('credit', 'write_off')).toEqual({
+      tone: 'neutral',
+      sign: 'none',
+      labelId: 'ledger.entry.writtenOff',
+    });
+  });
+
+  it('does not echo a reason that is already the title', () => {
+    expect(
+      entryReason(entry({ entryType: 'write_off', note: 'Shop closed', reason: 'Shop closed' }))
+    ).toBe('');
+    expect(entryReason(entry({ note: 'Cement', reason: 'Typed 5000 for 500' }))).toBe(
+      'Typed 5000 for 500'
+    );
+  });
+});

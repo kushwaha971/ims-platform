@@ -6,13 +6,10 @@ import { useAppDispatch } from 'src/hooks/useAppStore';
 import { usePermissions } from 'src/hooks/usePermissions';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import type { ApiErrorShape } from 'src/types/api.types';
+import { formatAmount } from 'src/utils/money';
 import { newRequestId } from 'src/utils/requestId';
 
-import {
-  archiveParty,
-  bulkArchiveParties,
-  restoreParty,
-} from '../redux/partyArchiveThunk';
+import { archiveParty, bulkArchiveParties, restoreParty } from '../redux/partyArchiveThunk';
 
 import type { BulkArchiveResult } from '../api/partyService';
 
@@ -20,7 +17,7 @@ import type { BulkArchiveResult } from '../api/partyService';
  * What the archive dialog is showing: the ordinary confirmation, or the state
  * the server puts it in when the party still owes something.
  */
-export type ArchiveStage = 'closed' | 'confirm' | 'blocked' | 'saving';
+export type ArchiveStage = 'closed' | 'confirm' | 'blocked' | 'writeOff' | 'saving';
 
 export interface BlockedBalance {
   readonly amount: string;
@@ -36,6 +33,15 @@ export interface UsePartyArchiveResult {
   readonly open: () => void;
   readonly close: () => void;
   readonly confirm: (reason: string) => void;
+  /** Owner-level: archive rights AND `ledger.entry.write` (T-PTY-04-12). */
+  readonly canWriteOff: boolean;
+  /** Blocked → the write-off form, in the same dialog (FR-10: no second modal). */
+  readonly startWriteOff: () => void;
+  /** Back from the write-off form to the blocked state. */
+  readonly cancelWriteOff: () => void;
+  readonly confirmWriteOff: (values: { reason: string; entryDate: string }) => void;
+  /** What the dialog was in when `saving` began, so a failure returns there. */
+  readonly savingFrom: ArchiveStage;
   readonly restore: () => void;
   readonly restoring: boolean;
 }
@@ -67,8 +73,10 @@ export function usePartyArchive(id: string | null): UsePartyArchiveResult {
   const [error, setError] = useState<ApiErrorShape | null>(null);
   const [key, setKey] = useState('');
   const [restoring, setRestoring] = useState(false);
+  const [savingFrom, setSavingFrom] = useState<ArchiveStage>('confirm');
 
   const canArchive = can('parties.party.delete');
+  const canWriteOff = canArchive && can('ledger.entry.write');
 
   const open = useCallback(() => {
     setBlocked(null);
@@ -82,6 +90,7 @@ export function usePartyArchive(id: string | null): UsePartyArchiveResult {
   const confirm = useCallback(
     (reason: string) => {
       if (!id) return;
+      setSavingFrom('confirm');
       setStage('saving');
       setError(null);
       void dispatch(archiveParty({ id, reason, idempotencyKey: key }))
@@ -110,6 +119,71 @@ export function usePartyArchive(id: string | null): UsePartyArchiveResult {
     [dispatch, id, key]
   );
 
+  const startWriteOff = useCallback(() => {
+    setError(null);
+    setStage('writeOff');
+  }, []);
+  const cancelWriteOff = useCallback(() => {
+    setError(null);
+    setStage('blocked');
+  }, []);
+
+  /* FR-3. The same key as the archive attempt is NOT reused: the blocked
+     archive was refused and wrote nothing, and a write-off is a different
+     intent — reusing the key would have the server replay the 409. */
+  const confirmWriteOff = useCallback(
+    ({ reason, entryDate }: { reason: string; entryDate: string }) => {
+      if (!id || !blocked) return;
+      const writeOffKey = newRequestId();
+      setSavingFrom('writeOff');
+      setStage('saving');
+      setError(null);
+      void dispatch(
+        archiveParty({
+          id,
+          reason: '',
+          idempotencyKey: writeOffKey,
+          writeOff: { reason, entryDate, amount: blocked.amount },
+        })
+      )
+        .unwrap()
+        .then(() => {
+          setStage('closed');
+          /* AC-3: no Undo. A write-off is a real financial event, and Restore
+             does not reverse it (FR-4). */
+          dispatch(
+            showSnackbar({
+              severity: 'success',
+              id: 'parties.writeOff.done',
+              params: { amount: formatAmount(blocked.amount) },
+            })
+          );
+        })
+        .catch((rejected: ApiErrorShape) => {
+          /* EC-1 for write-offs: something moved the balance after the dialog
+             showed it. Show the NEW figure and make the merchant confirm it —
+             writing off an amount they did not see would be the product
+             deciding a financial question for them. */
+          if (rejected?.code === 'balance_changed' || rejected?.code === 'party_balance_nonzero') {
+            const details = (rejected.details ?? {}) as Record<string, string>;
+            if (details.balance) {
+              setBlocked({ amount: details.balance, label: details.balance_label ?? 'receivable' });
+            }
+          }
+          if (rejected?.code === 'nothing_to_write_off') {
+            // Settled elsewhere meanwhile: the plain archive now works.
+            setBlocked(null);
+            setError(rejected ?? null);
+            setStage('confirm');
+            return;
+          }
+          setError(rejected ?? null);
+          setStage('writeOff');
+        });
+    },
+    [dispatch, id, blocked]
+  );
+
   const restore = useCallback(() => {
     if (!id) return;
     setRestoring(true);
@@ -128,10 +202,30 @@ export function usePartyArchive(id: string | null): UsePartyArchiveResult {
       open,
       close,
       confirm,
+      canWriteOff,
+      startWriteOff,
+      cancelWriteOff,
+      confirmWriteOff,
+      savingFrom,
       restore,
       restoring,
     }),
-    [canArchive, stage, blocked, error, open, close, confirm, restore, restoring]
+    [
+      canArchive,
+      stage,
+      blocked,
+      error,
+      open,
+      close,
+      confirm,
+      canWriteOff,
+      startWriteOff,
+      cancelWriteOff,
+      confirmWriteOff,
+      savingFrom,
+      restore,
+      restoring,
+    ]
   );
 }
 
@@ -153,10 +247,7 @@ export interface UseBulkArchiveResult {
  * carry — the merchant needs to see which four and what they owe, so the dialog
  * stays open and becomes the report.
  */
-export function useBulkArchive(
-  ids: readonly string[],
-  onDone: () => void
-): UseBulkArchiveResult {
+export function useBulkArchive(ids: readonly string[], onDone: () => void): UseBulkArchiveResult {
   const dispatch = useAppDispatch();
   const { can } = usePermissions();
 
@@ -177,9 +268,7 @@ export function useBulkArchive(
   const confirm = useCallback(
     (reason: string) => {
       setSaving(true);
-      void dispatch(
-        bulkArchiveParties({ ids, reason, idempotencyKey: newRequestId() })
-      )
+      void dispatch(bulkArchiveParties({ ids, reason, idempotencyKey: newRequestId() }))
         .unwrap()
         .then((outcome) => {
           setResult(outcome);

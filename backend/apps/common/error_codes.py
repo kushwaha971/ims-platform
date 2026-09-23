@@ -77,6 +77,12 @@ _REGISTRY: dict[str, tuple[int, bool]] = {
     "party_already_archived": (409, False),
     "party_not_archived": (409, False),
     "party_balance_nonzero": (409, False),
+    # PTY-04 FR-3's write-off escape — beyond §22.1.1, carried in `CR-LOG`
+    # (CR-2026-09-23-A). `nothing_to_write_off` is a client bug made visible (a
+    # write-off sent for a party who owes nothing); `balance_changed` is the
+    # locked balance disagreeing with the amount the merchant confirmed.
+    "nothing_to_write_off": (400, False),
+    "balance_changed": (409, False),
     "party_deleted": (409, False),
     "credit_limit_exceeded": (409, False),
     "override_not_allowed": (403, False),

@@ -574,7 +574,12 @@ describe('archiving from the khata page', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Archive' }));
 
     await waitFor(() =>
-      expect(partyService.archiveParty).toHaveBeenCalledWith(ID, 'Moved away', expect.any(String))
+      expect(partyService.archiveParty).toHaveBeenCalledWith(
+        ID,
+        'Moved away',
+        expect.any(String),
+        undefined // no write-off on a plain archive
+      )
     );
   });
 
@@ -616,6 +621,108 @@ describe('archiving from the khata page', () => {
     expect(
       within(screen.getByRole('dialog')).queryByRole('button', { name: 'Archive' })
     ).not.toBeInTheDocument();
+  });
+
+  const blockOnce = (): void => {
+    partyService.archiveParty.mockRejectedValueOnce({
+      code: 'party_balance_nonzero',
+      message: 'Settle the balance or write it off before archiving.',
+      details: { balance: '2300.00', balance_label: 'receivable', suggestion: 'write_off' },
+      requestId: 'req_zzz',
+      status: 409,
+      warnings: [],
+    });
+  };
+
+  const reachBlocked = async (user: ReturnType<typeof userEvent.setup>): Promise<HTMLElement> => {
+    renderWithProviders(<PartyDetailPageContent id={ID} />);
+    await screen.findByText('Ramesh Traders');
+    await openMenu(user);
+    await user.click(await screen.findByRole('button', { name: 'Archive' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Archive' }));
+    await screen.findByText('Ramesh Traders still owes you');
+    return screen.getByRole('dialog');
+  };
+
+  it('offers both ways out of a blocked archive now that the ledger exists', async () => {
+    /**
+     * FR-10 / AC-2: Record payment, Write off ₹2,300 and Cancel. Until LED-01
+     * the dialog could only explain; a blocked dialog that still only explains
+     * leaves the merchant to find the entry drawer and come back.
+     */
+    blockOnce();
+    const user = userEvent.setup();
+    const dialog = await reachBlocked(user);
+
+    expect(within(dialog).getByRole('button', { name: 'Record payment' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Write off ₹2,300.00' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+  });
+
+  it('waits for a reason and the acknowledgement before it writes anything off', async () => {
+    /**
+     * T-PTY-04-14. A write-off is a financial decision; the destructive button
+     * must not be reachable by a merchant holding Enter or tapping through.
+     */
+    blockOnce();
+    const user = userEvent.setup();
+    const dialog = await reachBlocked(user);
+    await user.click(within(dialog).getByRole('button', { name: 'Write off ₹2,300.00' }));
+
+    const confirm = await within(dialog).findByRole('button', { name: 'Write off and archive' });
+    expect(confirm).toBeDisabled();
+
+    await user.type(
+      within(dialog).getByLabelText('Why are you writing this off?'),
+      'Cannot recover'
+    );
+    expect(confirm).toBeDisabled();
+
+    await user.click(within(dialog).getByLabelText('I understand this money is written off'));
+    expect(confirm).toBeEnabled();
+  });
+
+  it('writes off exactly the amount the merchant confirmed', async () => {
+    /**
+     * FR-3 and the confirmed-amount rule: the server writes off the balance it
+     * reads under the lock and refuses when it differs from what the dialog
+     * showed, so the client must SEND what it showed.
+     */
+    blockOnce();
+    const user = userEvent.setup();
+    const dialog = await reachBlocked(user);
+    await user.click(within(dialog).getByRole('button', { name: 'Write off ₹2,300.00' }));
+    await user.type(
+      within(dialog).getByLabelText('Why are you writing this off?'),
+      'Cannot recover'
+    );
+    await user.click(within(dialog).getByLabelText('I understand this money is written off'));
+    await user.click(within(dialog).getByRole('button', { name: 'Write off and archive' }));
+
+    await waitFor(() =>
+      expect(partyService.archiveParty).toHaveBeenLastCalledWith(
+        ID,
+        '',
+        expect.any(String),
+        expect.objectContaining({ reason: 'Cannot recover', amount: '2300.00' })
+      )
+    );
+  });
+
+  it('does not offer a write-off to a role without ledger.entry.write', async () => {
+    /** T-PTY-04-12: archive rights alone do not make a write-off. */
+    signIn([
+      'parties.party.read',
+      'parties.party.write',
+      'parties.party.delete',
+      'ledger.entry.read',
+    ]);
+    blockOnce();
+    const user = userEvent.setup();
+    const dialog = await reachBlocked(user);
+
+    expect(within(dialog).queryByRole('button', { name: /Write off/ })).not.toBeInTheDocument();
   });
 
   it('offers Restore on an archived party, and takes it', async () => {

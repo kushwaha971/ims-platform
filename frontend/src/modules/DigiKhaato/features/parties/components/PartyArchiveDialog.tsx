@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useCallback, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 
 import {
   UbAmount,
@@ -11,8 +11,14 @@ import {
   UbText,
   UbTextInput,
 } from 'src/design-system';
+import { useAppSelector } from 'src/hooks/useAppStore';
 import type { TranslateFn } from 'src/hooks/useTranslation';
+import { selectTenantTimezone } from 'src/redux/slice/sessionSlice';
 import type { ApiErrorShape } from 'src/types/api.types';
+import { todayInTenantTz } from 'src/utils/dates';
+import { formatAmount } from 'src/utils/money';
+
+import { PartyWriteOffForm } from './PartyWriteOffForm';
 
 import type { ArchiveStage, BlockedBalance } from '../hooks/usePartyArchive';
 
@@ -36,11 +42,13 @@ import type { ArchiveStage, BlockedBalance } from '../hooks/usePartyArchive';
  * true without counting anything: nothing is deleted, and they stop appearing
  * in the list.
  *
- * ── No Write-off button ────────────────────────────────────────────────────
- * The escape from the balance guard is a `write_off` ledger entry, and there is
- * no `ledger_entry` table. A button that opens a form that cannot post is worse
- * than no button: it teaches a merchant that the way out exists and then fails
- * at the last step, having taken a reason and an acknowledgement off them.
+ * ── The two ways out (FR-10) ───────────────────────────────────────────────
+ * Blocked offers Record payment and Write off, now that the ledger exists.
+ * Record payment hands over to LED-01's drawer, in the direction that settles
+ * the balance. Write off swaps THIS dialog to a form — reason, date, and an
+ * acknowledgement the destructive button waits for (T-PTY-04-14) — because it
+ * is a financial decision taken once per party, never in bulk (FR-9), and the
+ * one thing a merchant must not do by holding Enter.
  */
 export interface PartyArchiveDialogProps {
   readonly t: TranslateFn;
@@ -50,7 +58,17 @@ export interface PartyArchiveDialogProps {
   readonly error: ApiErrorShape | null;
   readonly onConfirm: (reason: string) => void;
   readonly onClose: () => void;
+  /** Where `saving` began, so the right body stays on screen while it runs. */
+  readonly savingFrom?: ArchiveStage;
+  readonly canWriteOff?: boolean;
+  readonly onStartWriteOff?: () => void;
+  readonly onCancelWriteOff?: () => void;
+  readonly onConfirmWriteOff?: (values: { reason: string; entryDate: string }) => void;
+  /** Hand over to the entry drawer, in the direction that settles the balance. */
+  readonly onRecordPayment?: () => void;
 }
+
+const WRITE_OFF_REASON_MIN = 3;
 
 function PartyArchiveDialogBase({
   t,
@@ -60,9 +78,29 @@ function PartyArchiveDialogBase({
   error,
   onConfirm,
   onClose,
+  savingFrom = 'confirm',
+  canWriteOff = false,
+  onStartWriteOff,
+  onCancelWriteOff,
+  onConfirmWriteOff,
+  onRecordPayment,
 }: Readonly<PartyArchiveDialogProps>) {
   const [reason, setReason] = useState('');
+  const [writeOffReason, setWriteOffReason] = useState('');
+  const [acknowledged, setAcknowledged] = useState(false);
+  const timezone = useAppSelector(selectTenantTimezone);
+  /* The tenant's today, not the device's (LED-01 EC-8): a write-off entered at
+     11.50 p.m. IST on a phone set to UTC must not land on yesterday. */
+  const today = useMemo(() => todayInTenantTz(timezone ?? undefined), [timezone]);
+  const [writeOffDate, setWriteOffDate] = useState('');
   const saving = stage === 'saving';
+  const shown: ArchiveStage = saving ? savingFrom : stage;
+  const canSubmitWriteOff = writeOffReason.trim().length >= WRITE_OFF_REASON_MIN && acknowledged;
+
+  const handleConfirmWriteOff = useCallback(
+    () => onConfirmWriteOff?.({ reason: writeOffReason.trim(), entryDate: writeOffDate || today }),
+    [onConfirmWriteOff, writeOffReason, writeOffDate, today]
+  );
 
   const handleConfirm = useCallback(() => onConfirm(reason.trim()), [onConfirm, reason]);
   const handleOpenChange = useCallback(
@@ -74,46 +112,99 @@ function PartyArchiveDialogBase({
 
   if (stage === 'closed') return null;
 
-  const isBlocked = stage === 'blocked' && blocked !== null;
+  const isBlocked = shown === 'blocked' && blocked !== null;
+  const isWriteOff = shown === 'writeOff' && blocked !== null;
+  const amountText = blocked ? formatAmount(blocked.amount) : '';
 
   return (
     <UbDialog
       open
       onOpenChange={handleOpenChange}
       title={
-        isBlocked
-          ? t(
-              blocked.label === 'receivable'
-                ? 'parties.archive.blocked.title'
-                : 'parties.archive.blocked.titleGive',
-              { name }
-            )
-          : t('parties.archive.title', { name })
+        isWriteOff
+          ? t('parties.writeOff.title', { amount: amountText, name })
+          : isBlocked
+            ? t(
+                blocked.label === 'receivable'
+                  ? 'parties.archive.blocked.title'
+                  : 'parties.archive.blocked.titleGive',
+                { name }
+              )
+            : t('parties.archive.title', { name })
       }
       closeLabel={t('common.action.close')}
       /* A destructive decision does not dismiss on a backdrop tap: the merchant
          has to say yes or no, and a stray tap outside the box is neither. */
       dismissOnBackdrop={false}
       footer={
-        <>
-          {/* Cancel first and Cancel focused. The destructive action requires a
-              deliberate move to reach, so a merchant holding Enter cannot
-              archive anybody by accident. */}
-          <UbButton variant="secondary" onClick={onClose} disabled={saving} autoFocus>
-            {t('common.action.cancel')}
-          </UbButton>
-          {!isBlocked && (
-            /* Outlined danger, never a filled red block: a destructive action
-               should be reachable and unmistakable, not shouted. */
-            <UbButton variant="destructive" onClick={handleConfirm} busy={saving} busyLabel={t('parties.archive.saving')}>
-              {t('parties.archive.action')}
+        isWriteOff ? (
+          <>
+            <UbButton variant="secondary" onClick={onCancelWriteOff} disabled={saving} autoFocus>
+              {t('parties.writeOff.back')}
             </UbButton>
-          )}
-        </>
+            {/* Disabled until a reason and the acknowledgement (T-PTY-04-14).
+                Outlined danger, like every destructive action here. */}
+            <UbButton
+              variant="destructive"
+              onClick={handleConfirmWriteOff}
+              disabled={!canSubmitWriteOff}
+              busy={saving}
+              busyLabel={t('parties.writeOff.saving')}
+            >
+              {t('parties.writeOff.confirm')}
+            </UbButton>
+          </>
+        ) : (
+          <>
+            {/* Cancel first and Cancel focused. The destructive action requires a
+                deliberate move to reach, so a merchant holding Enter cannot
+                archive anybody by accident. */}
+            <UbButton variant="secondary" onClick={onClose} disabled={saving} autoFocus>
+              {t('common.action.cancel')}
+            </UbButton>
+            {isBlocked && onRecordPayment && (
+              <UbButton variant="outlineNeutral" onClick={onRecordPayment}>
+                {t('parties.archive.recordPayment')}
+              </UbButton>
+            )}
+            {isBlocked && canWriteOff && onStartWriteOff && (
+              <UbButton variant="destructive" onClick={onStartWriteOff}>
+                {t('parties.writeOff.action', { amount: amountText })}
+              </UbButton>
+            )}
+            {!isBlocked && (
+              /* Outlined danger, never a filled red block: a destructive action
+                 should be reachable and unmistakable, not shouted. */
+              <UbButton
+                variant="destructive"
+                onClick={handleConfirm}
+                busy={saving}
+                busyLabel={t('parties.archive.saving')}
+              >
+                {t('parties.archive.action')}
+              </UbButton>
+            )}
+          </>
+        )
       }
     >
       <UbStack gap={4}>
-        {isBlocked ? (
+        {isWriteOff && blocked ? (
+          <PartyWriteOffForm
+            t={t}
+            name={name}
+            blocked={blocked}
+            amountText={amountText}
+            today={today}
+            saving={saving}
+            reason={writeOffReason}
+            onReasonChange={setWriteOffReason}
+            entryDate={writeOffDate || today}
+            onEntryDateChange={setWriteOffDate}
+            acknowledged={acknowledged}
+            onAcknowledgedChange={setAcknowledged}
+          />
+        ) : isBlocked ? (
           <UbStack gap={3}>
             <UbAmount
               value={blocked.amount}
@@ -126,13 +217,12 @@ function PartyArchiveDialogBase({
               )}
             />
             <UbText variant="body-sm">{t('parties.archive.blocked.body')}</UbText>
-            {/* FR-10's three actions are Record payment, Write off and Cancel.
-                The first needs LED-01's entry drawer and the second needs a
-                `ledger_entry` table; neither exists, so the dialog explains and
-                offers the way out it has. The merchant settles the balance in
-                the ledger once there is one. */}
             <UbText variant="caption" tone="tertiary">
-              {t('parties.archive.blocked.soon')}
+              {t(
+                canWriteOff
+                  ? 'parties.archive.blocked.options'
+                  : 'parties.archive.blocked.optionsNoWriteOff'
+              )}
             </UbText>
           </UbStack>
         ) : (
@@ -157,7 +247,9 @@ function PartyArchiveDialogBase({
           <UbStatusBanner
             tone="error"
             title={error.message}
-            description={error.requestId ? `${t('common.error.reference')} ${error.requestId}` : undefined}
+            description={
+              error.requestId ? `${t('common.error.reference')} ${error.requestId}` : undefined
+            }
           />
         )}
       </UbStack>

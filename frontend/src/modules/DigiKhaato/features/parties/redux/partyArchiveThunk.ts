@@ -7,6 +7,7 @@ import {
   archiveParty as archivePartyCall,
   bulkArchiveParties as bulkArchiveCall,
   restoreParty as restorePartyCall,
+  type ArchiveWriteOff,
   type BulkArchiveResult,
 } from '../api/partyService';
 
@@ -17,6 +18,8 @@ export interface ArchivePartyArg {
   readonly reason: string;
   /** Minted once per confirm dialog, so a retry is the same intent. */
   readonly idempotencyKey: string;
+  /** PTY-04 FR-3 — write the balance off and archive, in one transaction. */
+  readonly writeOff?: ArchiveWriteOff;
 }
 
 /**
@@ -32,13 +35,16 @@ export const archiveParty = createAsyncThunk<
   PartyDetail,
   ArchivePartyArg,
   { rejectValue: ApiErrorShape }
->('partyArchive/archiveParty', async ({ id, reason, idempotencyKey }, { rejectWithValue }) => {
-  try {
-    return await archivePartyCall(id, reason, idempotencyKey);
-  } catch (error) {
-    return rejectWithValue(toApiError(error, 'parties.archive.error'));
+>(
+  'partyArchive/archiveParty',
+  async ({ id, reason, idempotencyKey, writeOff }, { rejectWithValue }) => {
+    try {
+      return await archivePartyCall(id, reason, idempotencyKey, writeOff);
+    } catch (error) {
+      return rejectWithValue(toApiError(error, 'parties.archive.error'));
+    }
   }
-});
+);
 
 export interface RestorePartyArg {
   readonly id: string;

@@ -270,7 +270,18 @@ export const INVALIDATION: TInvalidationMap = {
   // `patch` on `partyDetail` because both thunks' own extraReducers write the
   // party the server returned, so a khata page open behind the dialog is
   // already correct.
-  archiveParty: { patch: [['partyDetail', 'party']], refetch: ['partyList'] },
+  /* PTY-04 FR-3: an archive can carry a write-off, which posts a ledger entry
+     — so the khata timeline, the statement and aging are marked stale. For a
+     plain archive that costs one refetch of a timeline that has not changed,
+     which is cheaper than a second thunk for the same endpoint. */
+  archiveParty: {
+    patch: [
+      ['partyDetail', 'party'],
+      ['partyDetail', 'summary'],
+    ],
+    refetch: ['partyList'],
+    stale: ['ledgerEntry', 'statement', 'ledgerAging'],
+  },
   restoreParty: { patch: [['partyDetail', 'party']], refetch: ['partyList'] },
   // No `patch` here: a bulk archive is about rows in a list and says nothing
   // about whichever single party the detail slice happens to hold.

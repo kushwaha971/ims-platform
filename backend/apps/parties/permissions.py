@@ -40,3 +40,14 @@ PartyPermissions = HasPermission(
         "credit_check": "parties.party.read",
     }
 )
+
+
+# PTY-04 §12 / T-PTY-04-12 — archive WITH a write-off needs `parties.party.delete`
+# (the route's own entry above) AND `ledger.entry.write`, because it posts a
+# ledger entry. Checked by the archive view only when the body carries a
+# `write_off`, through the same class — and therefore the same resolver, with a
+# member's allow and deny overrides and the tenant's module switches — that
+# guards `/ledger-entries`. A second implementation of that resolution would
+# first disagree for a member with a `deny` override, which is to say the exact
+# member somebody set the override FOR.
+WriteOffPermissions = HasPermission("ledger.entry.write")

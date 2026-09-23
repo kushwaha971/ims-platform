@@ -383,8 +383,30 @@ class CreditCheckQuerySerializer(serializers.Serializer):
 # ── PTY-04 — archive and restore ────────────────────────────────────────────
 
 
+class PartyWriteOffSerializer(serializers.Serializer):
+    """FR-3's `write_off` object — its SHAPE, and deliberately none of its rules.
+
+    `{ reason, entry_date?, amount? }`. Every rule about these values is a
+    ledger rule — the 3–160 reason LED-03 already enforces, the not-in-the-
+    future date in the tenant's timezone that every entry obeys, the two-decimal
+    amount — and `parties` may not import the ledger (Part 20 §20.1.4). Restating
+    them here would be the second copy LED-02's opening balance was: the one
+    that accepted the year 202600 while the ordinary entry refused it. So this
+    class checks that the keys are there and are scalars, and the ledger's
+    handler validates them and answers under `details.write_off.*`.
+
+    `amount` is the figure the merchant CONFIRMED ("I understand ₹2,300 is
+    written off"). Optional; when sent, a locked balance that differs is a 409
+    `balance_changed` rather than a write-off of a sum nobody agreed to.
+    """
+
+    reason = serializers.CharField(required=True, allow_blank=True, trim_whitespace=True)
+    entry_date = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    amount = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+
 class PartyArchiveSerializer(serializers.Serializer):
-    """The archive body: a reason, and nothing else yet.
+    """The archive body: a reason, and optionally a write-off.
 
     FRD FR-1 makes `reason` optional and caps it at 160 characters, which is a
     sentence — "No longer trading", "Moved away", "Duplicate of C-0042". It is
@@ -393,15 +415,16 @@ class PartyArchiveSerializer(serializers.Serializer):
     book is reading the audit trail, and a party who is restored and archived
     again has two reasons, not one overwritten one.
 
-    `write_off` is absent. FR-3 makes it the one escape from the balance guard,
-    and it works by posting a `ledger_entry` — a table the `ledger` app does not
-    have. A field the server would have to refuse is worse than no field: it
-    tells a client the capability exists.
+    `write_off` is FR-3, the one escape from the balance guard. Its own reason
+    is separate from this one and required: this one says why the party left
+    the book, that one says why the money was forgiven, and it becomes the
+    ledger entry's note.
     """
 
     reason = serializers.CharField(
         required=False, allow_blank=True, max_length=160, trim_whitespace=True
     )
+    write_off = PartyWriteOffSerializer(required=False)
 
 
 class PartyBulkArchiveSerializer(serializers.Serializer):
@@ -421,6 +444,21 @@ class PartyBulkArchiveSerializer(serializers.Serializer):
     reason = serializers.CharField(
         required=False, allow_blank=True, max_length=160, trim_whitespace=True
     )
+
+    def validate(self, attrs: dict) -> dict:
+        """BR-10 / FR-9 — bulk archive never writes off, and says so.
+
+        Refused rather than ignored. DRF drops an unknown key silently, so a
+        client that sent `write_off` here would get a 200 with the owing parties
+        in `skipped` and could reasonably believe it had asked for something the
+        server declined on the merits. Forgiving a debt is a decision about one
+        person and one amount; the single-party endpoint is where it is made.
+        """
+        if isinstance(self.initial_data, dict) and "write_off" in self.initial_data:
+            raise serializers.ValidationError(
+                {"write_off": ["Write-offs are made one party at a time, not in bulk."]}
+            )
+        return attrs
 
 
 class PartyBulkArchiveResultSerializer(serializers.Serializer):

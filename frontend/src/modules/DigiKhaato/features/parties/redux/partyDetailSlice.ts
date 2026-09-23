@@ -144,7 +144,13 @@ const partyDetailSlice = createSlice({
          would put a party the merchant is not looking at into the detail
          slice. */
       .addCase(archiveParty.fulfilled, (state, action) => {
-        if (state.id === action.payload.id) state.party = action.payload as Draft<PartyDetail>;
+        if (state.id !== action.payload.id) return;
+        state.party = action.payload as Draft<PartyDetail>;
+        /* PTY-04 FR-3: a write-off moved the balance to zero, and the header
+           reads `summary.balance` first. Patching only the row left the
+           writeoff.mjs sweep's archived khata still saying "₹2,300 · You will
+           get" above a timeline that had just written it off. */
+        if (state.summary) state.summary = { ...state.summary, balance: action.payload.balance };
       })
       .addCase(restoreParty.fulfilled, (state, action) => {
         if (state.id === action.payload.id) state.party = action.payload as Draft<PartyDetail>;

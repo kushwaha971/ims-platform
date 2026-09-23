@@ -30,7 +30,6 @@ import { usePartyArchive } from '../hooks/usePartyArchive';
 import { usePartyDetail } from '../hooks/usePartyDetail';
 import { usePartyForm } from '../hooks/usePartyForm';
 
-import { PartyArchiveDialog } from './PartyArchiveDialog';
 import { PartyCollectionDate } from './PartyCollectionDate';
 import { PartyDetailHeader } from './PartyDetailHeader';
 import { PartyHeaderMenu } from './PartyHeaderMenu';
@@ -104,6 +103,14 @@ const OpeningBalanceDrawerLazy = dynamic(
 export interface PartyDetailPageContentProps {
   readonly id: string;
 }
+
+/* PTY-04's dialog is opened once in a party's life and read on every visit
+   to the khata, so it loads when it opens — the same rule as the party form
+   and LED-03's drawers. The write-off form (FR-3) made it the heaviest thing
+   on the page that most visits never render: +3 KB on the route, statically. */
+const PartyArchiveDialogLazy = /* @__PURE__ */ dynamic(() =>
+  import('./PartyArchiveDialog').then((m) => m.PartyArchiveDialog)
+);
 
 export function PartyDetailPageContent({
   id,
@@ -384,15 +391,33 @@ export function PartyDetailPageContent({
         />
       )}
 
-      <PartyArchiveDialog
-        t={t}
-        name={shown.name}
-        stage={archive.stage}
-        blocked={archive.blocked}
-        error={archive.error}
-        onConfirm={archive.confirm}
-        onClose={archive.close}
-      />
+      {archive.stage !== 'closed' && (
+        <PartyArchiveDialogLazy
+          t={t}
+          name={shown.name}
+          stage={archive.stage}
+          blocked={archive.blocked}
+          error={archive.error}
+          onConfirm={archive.confirm}
+          onClose={archive.close}
+          savingFrom={archive.savingFrom}
+          canWriteOff={archive.canWriteOff}
+          onStartWriteOff={archive.startWriteOff}
+          onCancelWriteOff={archive.cancelWriteOff}
+          onConfirmWriteOff={archive.confirmWriteOff}
+          onRecordPayment={
+            entryForm.canWrite
+              ? () => {
+                  /* The direction that SETTLES the balance: they owe you, so
+                   money comes in (You got); you owe them, so it goes out. */
+                  const direction = archive.blocked?.label === 'payable' ? 'debit' : 'credit';
+                  archive.close();
+                  entryForm.openEntry(id, direction);
+                }
+              : undefined
+          }
+        />
+      )}
     </UbPageShell>
   );
 }
