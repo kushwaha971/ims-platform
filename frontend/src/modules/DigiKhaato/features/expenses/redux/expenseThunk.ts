@@ -3,14 +3,6 @@ import { createAsyncThunk } from '@reduxjs/toolkit';
 import type { ApiErrorShape } from 'src/types/api.types';
 import { toApiError } from 'src/utils/apiError';
 
-import {
-  createExpense as createExpenseRequest,
-  createExpenseCategory as createCategoryRequest,
-  listExpenseCategories,
-  listExpenses,
-  voidExpense as voidExpenseRequest,
-} from '../api/expenseService';
-
 import type {
   ExpenseCategory,
   ExpenseFilters,
@@ -19,7 +11,20 @@ import type {
   ExpenseSaveResult,
 } from '../types/expense.types';
 
-/** Part 19 §19.3.3 — one service call each, and a catch that normalises. */
+/**
+ * Part 19 §19.3.3 — one service call each, and a catch that normalises.
+ *
+ * ── Why the service is imported INSIDE each thunk ─────────────────────────
+ * The invalidation registry imports every thunk statically, and the registry
+ * is in the shell — so a service imported at the top of this file ships to
+ * every route, `/legal/terms` included (measured: the two expense services
+ * were most of a 2.7 KB shell increase). The members slice measured and
+ * rejected this for a reason that does not apply here: its list has a warm-up
+ * prefetch that must not wait for a chunk. Nothing prefetches expenses, so the
+ * price here is one small chunk fetched with the first expense request of a
+ * session — paid by the merchant who opened Expenses, not by every route.
+ */
+const service = () => import('../api/expenseService');
 
 /** QUERY. One page of the expense list with its filtered totals. */
 export const fetchExpenses = createAsyncThunk<
@@ -28,7 +33,7 @@ export const fetchExpenses = createAsyncThunk<
   { rejectValue: ApiErrorShape }
 >('expenseList/fetchExpenses', async (filters, { signal, rejectWithValue }) => {
   try {
-    return await listExpenses(filters, signal);
+    return await (await service()).listExpenses(filters, signal);
   } catch (error) {
     return rejectWithValue(toApiError(error, 'expenses.list.error.title'));
   }
@@ -41,7 +46,7 @@ export const fetchExpenseCategories = createAsyncThunk<
   { rejectValue: ApiErrorShape }
 >('expenseForm/fetchExpenseCategories', async (_arg, { signal, rejectWithValue }) => {
   try {
-    return await listExpenseCategories(signal);
+    return await (await service()).listExpenseCategories(signal);
   } catch (error) {
     return rejectWithValue(toApiError(error, 'expenses.category.error'));
   }
@@ -54,7 +59,7 @@ export const createExpenseCategory = createAsyncThunk<
   { rejectValue: ApiErrorShape }
 >('expenseForm/createExpenseCategory', async (name, { rejectWithValue }) => {
   try {
-    return await createCategoryRequest(name);
+    return await (await service()).createExpenseCategory(name);
   } catch (error) {
     return rejectWithValue(toApiError(error, 'expenses.category.error'));
   }
@@ -67,7 +72,7 @@ export const createExpense = createAsyncThunk<
   { rejectValue: ApiErrorShape }
 >('expenseForm/createExpense', async ({ values, idempotencyKey }, { rejectWithValue }) => {
   try {
-    return await createExpenseRequest(values, idempotencyKey);
+    return await (await service()).createExpense(values, idempotencyKey);
   } catch (error) {
     return rejectWithValue(toApiError(error, 'expenses.save.error'));
   }
@@ -80,7 +85,7 @@ export const voidExpense = createAsyncThunk<
   { rejectValue: ApiErrorShape }
 >('expenseForm/voidExpense', async ({ id, reason, idempotencyKey }, { rejectWithValue }) => {
   try {
-    return await voidExpenseRequest(id, reason, idempotencyKey);
+    return await (await service()).voidExpense(id, reason, idempotencyKey);
   } catch (error) {
     return rejectWithValue(toApiError(error, 'expenses.void.error'));
   }

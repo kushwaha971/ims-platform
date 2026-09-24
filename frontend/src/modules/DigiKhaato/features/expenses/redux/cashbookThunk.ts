@@ -3,8 +3,6 @@ import { createAsyncThunk } from '@reduxjs/toolkit';
 import type { ApiErrorShape } from 'src/types/api.types';
 import { toApiError } from 'src/utils/apiError';
 
-import { getCashbook } from '../api/cashbookService';
-
 import type { CashbookData, CashbookFilters } from '../types/cashbook.types';
 
 /**
@@ -17,6 +15,8 @@ export const fetchCashbook = createAsyncThunk<
   { rejectValue: ApiErrorShape }
 >('cashbook/fetchCashbook', async (filters, { signal, rejectWithValue }) => {
   try {
+    // Imported here, not at the top: see `expenseThunk.ts` on the shell.
+    const { getCashbook } = await import('../api/cashbookService');
     return await getCashbook(filters, signal);
   } catch (error) {
     return rejectWithValue(toApiError(error, 'cashbook.error.title'));

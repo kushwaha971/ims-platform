@@ -337,7 +337,28 @@
   "axios interceptor every route loads; the server field-code mapping (NEW-2",
   "message in Hindi) rides in the same layer. Both are correctness fixes with",
   "no lazy seam — the guard must run on the first request. Shared budget 114,",
-  "first-load budgets on the listed routes +1. /parties/[id] route 97 → 98: the archive-blocked focus move (M4)."
+  "first-load budgets on the listed routes +1. /parties/[id] route 97 → 98: the archive-blocked focus move (M4).",
+  "",
+  "── 24 Sep 2026 (T4): EXP-01/02/03 — expenses and the cashbook ─────────────",
+  "shared app 113.1 → 115.0 KB (budget 114 → 116). Measured, and already cut once:",
+  "the first build was 115.8, because the invalidation registry imports every",
+  "thunk statically and the two expense thunks imported their SERVICES at the",
+  "top — mappers and all, on /legal/terms. The services are now imported inside",
+  "the thunks (-0.8 KB); nothing prefetches expenses, so the cost is one small",
+  "chunk on the first expense request of a session. What is left is honest:",
+  "~140 en.json keys (react-intl ships the catalogue with the shell), six thunk",
+  "shells in the registry, the sidebar's two live rows and one lucide glyph.",
+  "The three expense slices are lazily injected (CR-134) and are NOT in this.",
+  "",
+  "/expenses (new)  route 105.6, first load 347.5 → budgets 107 / 349. Same",
+  "  shape as /parties (103): UbDataGrid, the period picker with its date",
+  "  popover, two Radix selects, tabs, search, stat tile and the money library",
+  "  for formatInr. The drawer and the detail sheet are dynamic() and not in it.",
+  "/cashbook (new)  route 89.8, first load 331.8 → budgets 91 / 333: the period",
+  "  picker, choice chips, stat tiles, disclosures, progress bars and the",
+  "  counted-cash money input. The expense drawer it opens is dynamic().",
+  "Every other first-load line moves by the shell's +1.9 (+1 KB headroom);",
+  "/parties route 103 → 104 (measured 103.1)."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -521,7 +542,7 @@
  ],
  "shared": {
   "framework": 128,
-  "sharedApp": 114
+  "sharedApp": 116
  },
  "//routes": [
   "The `route` figures are §19.9.2's, unchanged, and every route is comfortably",
@@ -725,12 +746,12 @@
  },
  "routes": {
   "/parties": {
-   "route": 103,
-   "firstLoad": 343
+   "route": 104,
+   "firstLoad": 346
   },
   "/dashboard": {
    "route": 61,
-   "firstLoad": 301
+   "firstLoad": 303
   },
   "/sales/invoices/new": {
    "route": 110,
@@ -738,38 +759,46 @@
   },
   "/onboarding/step/[n]": {
    "route": 98,
-   "firstLoad": 334
+   "firstLoad": 337
   },
   "/design-system": {
    "route": 99,
-   "firstLoad": 339
+   "firstLoad": 341
   },
   "/settings/team": {
    "route": 92,
-   "firstLoad": 332
+   "firstLoad": 334
   },
   "/parties/[id]": {
    "route": 98,
-   "firstLoad": 338
+   "firstLoad": 340
   },
   "/parties/tags": {
    "route": 73,
-   "firstLoad": 313
+   "firstLoad": 315
   },
   "/parties/[id]/statement": {
    "route": 91,
-   "firstLoad": 331
+   "firstLoad": 333
   },
   "/ledger/aging": {
    "route": 92,
-   "firstLoad": 332
+   "firstLoad": 334
   },
   "/switch": {
-   "firstLoad": 305,
+   "firstLoad": 307,
    "route": 65
   },
   "/settings/plan": {
-   "firstLoad": 304
+   "firstLoad": 306
+  },
+  "/expenses": {
+   "route": 107,
+   "firstLoad": 349
+  },
+  "/cashbook": {
+   "route": 91,
+   "firstLoad": 333
   }
  },
  "//ignoreRoutes": [
