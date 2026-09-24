@@ -31,12 +31,19 @@ def br10_lines(make_item: Any) -> list[dict]:
     ]
 
 
-def test_credit_sale_posts_stock_ledger_number_and_audit(owner: Any, make_item: Any, make_party: Any) -> None:
+def test_credit_sale_posts_stock_ledger_number_and_audit(
+    owner: Any, make_item: Any, make_party: Any
+) -> None:
     """T-SAL02-10 / AC-2 / AC-5 / AC-8 — the BR-10 invoice to a party: number INV/26-27/0001,
     stock down, one ledger debit of the ROUNDED total linked back, balance moved, audit written."""
     party = make_party()
-    body = {"party_id": str(party.id), "document_date": "2026-09-18", "discount_type": "amount",
-            "discount_value": "50.00", "lines": br10_lines(make_item)}
+    body = {
+        "party_id": str(party.id),
+        "document_date": "2026-09-18",
+        "discount_type": "amount",
+        "discount_value": "50.00",
+        "lines": br10_lines(make_item),
+    }
     created = draft(owner, **body)
     assert created.status_code == 201, created.json()
     doc = created.json()["data"]
@@ -54,10 +61,18 @@ def test_credit_sale_posts_stock_ledger_number_and_audit(owner: Any, make_item: 
     assert meta["party_balance"] == "1772.00"
 
     entry = LedgerEntry.objects.get(pk=meta["ledger_entry_id"])
-    assert (entry.direction, entry.amount, entry.entry_type) == ("debit", Decimal("1772.00"), "invoice")
+    assert (entry.direction, entry.amount, entry.entry_type) == (
+        "debit",
+        Decimal("1772.00"),
+        "invoice",
+    )
     assert (entry.source_type, str(entry.source_id)) == ("sales_document", doc["id"])
     party.refresh_from_db()
-    assert party.balance == Decimal("1772.00") == computed_balance(tenant=party.tenant, party_id=party.id)
+    assert (
+        party.balance
+        == Decimal("1772.00")
+        == computed_balance(tenant=party.tenant, party_id=party.id)
+    )
     moves = StockMovement.objects.filter(source_type="sales_document", source_id=doc["id"])
     assert sorted(m.qty for m in moves) == [Decimal("-4.000"), Decimal("-3.000"), Decimal("-2.000")]
     assert all(m.movement_type == "sale_out" for m in moves)
@@ -69,14 +84,22 @@ def test_credit_sale_posts_stock_ledger_number_and_audit(owner: Any, make_item: 
 def test_inter_state_invoice_splits_igst(owner: Any, make_item: Any, make_party: Any) -> None:
     """T-SAL02-16 / AC-3 — POS 24 from a 27 shop: IGST only, CGST/SGST zero."""
     party = make_party(state_code="24")
-    created = draft(owner, party_id=str(party.id), document_date="2026-09-18",
-                    discount_type="amount", discount_value="50.00", lines=br10_lines(make_item))
+    created = draft(
+        owner,
+        party_id=str(party.id),
+        document_date="2026-09-18",
+        discount_type="amount",
+        discount_value="50.00",
+        lines=br10_lines(make_item),
+    )
     data = issue(owner, created.json()["data"]["id"]).json()["data"]
     assert data["is_inter_state"] is True and data["place_of_supply_state"] == "24"
     assert data["igst_total"] == "130.05" and data["cgst_total"] == "0.00"
 
 
-def test_composition_forces_bill_of_supply_and_refuses_invoice(owner: Any, shop: Any, make_item: Any) -> None:
+def test_composition_forces_bill_of_supply_and_refuses_invoice(
+    owner: Any, shop: Any, make_item: Any
+) -> None:
     """T-SAL02-8 / AC-7 — composition: omitted kind → bill_of_supply with zero tax; kind=invoice → 400."""
     shop.gst_type = "composition"
     shop.save()
@@ -88,7 +111,9 @@ def test_composition_forces_bill_of_supply_and_refuses_invoice(owner: Any, shop:
     assert data["lines"][0]["tax_code"] == "GST18" and data["lines"][0]["tax_rate"] == "0.000"
 
 
-def test_insufficient_stock_writes_nothing(owner: Any, make_item: Any, make_party: Any, shop: Any) -> None:
+def test_insufficient_stock_writes_nothing(
+    owner: Any, make_item: Any, make_party: Any, shop: Any
+) -> None:
     """T-SAL02-9 / FR-8 — stock 1, qty 2 → 409 with per-line detail; no movement, no ledger,
     and the sequence unchanged (the number is allocated after the stock check)."""
     item = make_item(stock="1")
@@ -102,15 +127,21 @@ def test_insufficient_stock_writes_nothing(owner: Any, make_item: Any, make_part
     assert error["details"]["lines"][0]["available"] == "1.000"
     assert not StockMovement.objects.filter(source_type="sales_document").exists()
     assert not LedgerEntry.objects.filter(party=party).exists()
-    assert not DocumentSequence.objects.filter(tenant=shop, kind="invoice").exists() or \
-        DocumentSequence.objects.get(tenant=shop, kind="invoice", fy_label="2026-27").next_number == 1
+    assert (
+        not DocumentSequence.objects.filter(tenant=shop, kind="invoice").exists()
+        or DocumentSequence.objects.get(tenant=shop, kind="invoice", fy_label="2026-27").next_number
+        == 1
+    )
     assert SalesDocument.objects.get(pk=doc["id"]).status == "draft"
 
 
-def test_negative_stock_setting_lets_the_sale_through(owner: Any, make_item: Any, shop: Any) -> None:
+def test_negative_stock_setting_lets_the_sale_through(
+    owner: Any, make_item: Any, shop: Any
+) -> None:
     """EC-15 — with `inventory.allow_negative_stock` on, on-hand goes negative."""
-    TenantSetting.objects.update_or_create(tenant=shop, key="inventory.allow_negative_stock",
-                                           defaults={"value": {"value": True}})
+    TenantSetting.objects.update_or_create(
+        tenant=shop, key="inventory.allow_negative_stock", defaults={"value": {"value": True}}
+    )
     item = make_item(stock="1", price="100.00")
     doc = draft(owner, walk_in_name="Walk-in", lines=[line(item, "3")]).json()["data"]
     response = issue(owner, doc["id"], payment=cash(doc["grand_total"]))
@@ -127,8 +158,12 @@ def test_walk_in_requires_full_payment_and_posts_no_ledger(owner: Any, make_item
     assert none.status_code == 400 and "payment" in none.json()["error"]["details"]
     partial = issue(owner, doc["id"], payment=cash("100.00"))
     assert partial.json()["error"]["details"]["payment"] == ["Walk-in sale must be paid in full"]
-    split = {"mode_breakup": [{"mode": "upi", "amount": "150.00", "reference": "UTR1"},
-                              {"mode": "cash", "amount": "50.00"}]}
+    split = {
+        "mode_breakup": [
+            {"mode": "upi", "amount": "150.00", "reference": "UTR1"},
+            {"mode": "cash", "amount": "50.00"},
+        ]
+    }
     paid = issue(owner, doc["id"], payment=split)
     assert paid.status_code == 200, paid.json()
     data = paid.json()["data"]
@@ -137,15 +172,18 @@ def test_walk_in_requires_full_payment_and_posts_no_ledger(owner: Any, make_item
     assert not LedgerEntry.objects.exists()
 
 
-def test_party_payment_at_issue_is_deferred_to_payments(owner: Any, make_item: Any, make_party: Any) -> None:
+def test_party_payment_at_issue_is_deferred_to_payments(
+    owner: Any, make_item: Any, make_party: Any
+) -> None:
     """The PAY-01 seam — a party sale takes no payment at issue this wave (no second payment writer)."""
     doc = draft(owner, party_id=str(make_party().id), lines=[line(make_item())]).json()["data"]
     response = issue(owner, doc["id"], payment=cash("472.50"))
     assert response.status_code == 400 and "payment" in response.json()["error"]["details"]
 
 
-def test_credit_limit_warn_block_and_override(owner: Any, make_item: Any, make_party: Any,
-                                              shop: Any, api_as: Any) -> None:
+def test_credit_limit_warn_block_and_override(
+    owner: Any, make_item: Any, make_party: Any, shop: Any, api_as: Any
+) -> None:
     """T-SAL02-13 / AC-9 — warn → warnings; block → 409; staff override refused; owner override
     → issued with the override audited as its own row."""
     item = make_item(price="1000.00", tax_code="GST0", stock="100")
@@ -155,8 +193,9 @@ def test_credit_limit_warn_block_and_override(owner: Any, make_item: Any, make_p
     assert warned.status_code == 200
     assert warned.json()["meta"]["warnings"][0]["code"] == "credit_limit_exceeded"
 
-    TenantSetting.objects.update_or_create(tenant=shop, key="ledger.credit_limit_mode",
-                                           defaults={"value": {"mode": "block"}})
+    TenantSetting.objects.update_or_create(
+        tenant=shop, key="ledger.credit_limit_mode", defaults={"value": {"mode": "block"}}
+    )
     staff, _ = api_as(shop, role="staff")
     second = draft(staff, party_id=str(party.id), lines=[line(item, "1")]).json()["data"]
     blocked = issue(staff, second["id"])
@@ -181,7 +220,9 @@ def test_idempotent_replay_and_conflict(owner: Any, make_item: Any, make_party: 
     assert again.json()["data"]["number"] == first.json()["data"]["number"]
     assert LedgerEntry.objects.filter(party=party).count() == 1
     conflict = issue(owner, doc["id"], key=key, override=True)
-    assert conflict.status_code == 409 and conflict.json()["error"]["code"] == "idempotency_conflict"
+    assert (
+        conflict.status_code == 409 and conflict.json()["error"]["code"] == "idempotency_conflict"
+    )
 
 
 def test_create_and_issue_in_one_call(owner: Any, make_item: Any) -> None:
@@ -195,7 +236,9 @@ def test_create_and_issue_in_one_call(owner: Any, make_item: Any) -> None:
     assert response.json()["data"]["status"] == "paid"
 
 
-def test_regular_tenant_without_gstin_cannot_issue_a_tax_invoice(owner: Any, shop: Any, make_item: Any) -> None:
+def test_regular_tenant_without_gstin_cannot_issue_a_tax_invoice(
+    owner: Any, shop: Any, make_item: Any
+) -> None:
     """AC-6 / FR-16 — Rule 46 hard failure: "Add your GSTIN in Business profile"."""
     shop.gstin = None
     shop.save()
@@ -206,7 +249,9 @@ def test_regular_tenant_without_gstin_cannot_issue_a_tax_invoice(owner: Any, sho
     assert response.json()["error"]["message"] == "Add your GSTIN in Business profile"
 
 
-def test_legacy_rate_after_reform_blocks_issue_but_not_the_draft(owner: Any, make_item: Any) -> None:
+def test_legacy_rate_after_reform_blocks_issue_but_not_the_draft(
+    owner: Any, make_item: Any
+) -> None:
     """FR-17 / T-SAL02-6 — GST12 dated after 2025-09-21: the draft saves with a warning, issue is 400
     naming the rate and suggesting current ones."""
     item = make_item(tax_code="GST5")
@@ -219,19 +264,29 @@ def test_legacy_rate_after_reform_blocks_issue_but_not_the_draft(owner: Any, mak
     assert message.startswith("Rate GST12 is not applicable on 2026-09-18")
 
 
-def test_previous_fy_backdate_uses_that_years_series(owner: Any, make_item: Any, make_party: Any) -> None:
+def test_previous_fy_backdate_uses_that_years_series(
+    owner: Any, make_item: Any, make_party: Any
+) -> None:
     """EC-10 / T-SAL02-7 — dated 31 Mar 2026 → `INV/25-26/0001`, ≤ 16 characters."""
-    doc = draft(owner, party_id=str(make_party().id), document_date="2026-03-31",
-                lines=[line(make_item())]).json()["data"]
+    doc = draft(
+        owner, party_id=str(make_party().id), document_date="2026-03-31", lines=[line(make_item())]
+    ).json()["data"]
     number = issue(owner, doc["id"]).json()["data"]["number"]
     assert number == "INV/25-26/0001" and len(number) <= 16
 
 
-def test_zero_value_invoice_is_paid_without_a_ledger_row(owner: Any, make_item: Any, make_party: Any) -> None:
+def test_zero_value_invoice_is_paid_without_a_ledger_row(
+    owner: Any, make_item: Any, make_party: Any
+) -> None:
     """EC-5 — a 100 % discount: grand 0, status paid, no ledger entry (amount must be > 0)."""
     party = make_party()
-    doc = draft(owner, party_id=str(party.id), discount_type="percent", discount_value="100",
-                lines=[line(make_item())]).json()["data"]
+    doc = draft(
+        owner,
+        party_id=str(party.id),
+        discount_type="percent",
+        discount_value="100",
+        lines=[line(make_item())],
+    ).json()["data"]
     data = issue(owner, doc["id"]).json()["data"]
     assert data["grand_total"] == "0.00" and data["status"] == "paid"
     assert not LedgerEntry.objects.filter(party=party).exists()
