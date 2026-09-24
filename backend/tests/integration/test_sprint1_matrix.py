@@ -233,6 +233,89 @@ EXPECTED: dict[tuple[str, str], dict[str, int]] = {
         "anon": 401,
         "other_tenant": 404,
     },
+    # ── Track T1: PLT-06, WLB-01, PLT-09 ─────────────────────────────────────
+    #
+    # Settings: owner/admin/accountant read, owner/admin write (PLT-06 §12).
+    # `other_tenant` meets its OWN business's settings, never this one's.
+    ("GET", "v1:tenant-settings"): {
+        "owner": 200,
+        "admin": 200,
+        "staff": 403,
+        "accountant": 200,
+        "anon": 401,
+        "other_tenant": 200,
+    },
+    ("PUT", "v1:tenant-settings"): {
+        "owner": 200,
+        "admin": 200,
+        "staff": 403,
+        "accountant": 403,
+        "anon": 401,
+        "other_tenant": 200,
+    },
+    ("GET", "v1:tenant-settings-defaults"): {
+        "owner": 200,
+        "admin": 200,
+        "staff": 403,
+        "accountant": 200,
+        "anon": 401,
+        "other_tenant": 200,
+    },
+    # Branding: everyone sees it, `platform.branding.manage` edits (WLB-01 §12).
+    ("GET", "v1:tenant-branding"): {
+        "owner": 200,
+        "admin": 200,
+        "staff": 200,
+        "accountant": 200,
+        "anon": 401,
+        "other_tenant": 200,
+    },
+    ("PUT", "v1:tenant-branding"): {
+        "owner": 200,
+        "admin": 200,
+        "staff": 403,
+        "accountant": 403,
+        "anon": 401,
+        "other_tenant": 200,
+    },
+    # Devices: every authenticated person, their own sessions only (PLT-09 §12).
+    ("GET", "v1:auth-sessions"): {
+        "owner": 200,
+        "admin": 200,
+        "staff": 200,
+        "accountant": 200,
+        "anon": 401,
+        "other_tenant": 200,
+    },
+    # The id belongs to nobody: 404 for everyone signed in, never a 403 that
+    # would say the session exists (§10).
+    ("PATCH", "v1:auth-session-detail"): {
+        "owner": 404,
+        "admin": 404,
+        "staff": 404,
+        "accountant": 404,
+        "anon": 401,
+        "other_tenant": 404,
+    },
+    ("DELETE", "v1:auth-session-detail"): {
+        "owner": 404,
+        "admin": 404,
+        "staff": 404,
+        "accountant": 404,
+        "anon": 401,
+        "other_tenant": 404,
+    },
+    # A manager revoking a member's devices (FR-4). The URL is the caller's own
+    # membership, so a permitted role meets the "not yourself" 400; the
+    # resident membership seen from another business is a 404.
+    ("POST", "v1:membership-revoke-sessions"): {
+        "owner": 400,
+        "admin": 400,
+        "staff": 403,
+        "accountant": 403,
+        "anon": 401,
+        "other_tenant": 404,
+    },
 }
 
 # Bodies that are valid enough to reach the view but never mutate anything.
@@ -273,8 +356,10 @@ def test_the_matrix_has_a_row_for_every_sprint_1_route() -> None:
 
 
 def _url(name: str, membership: Any) -> str:
-    if name == "v1:membership-detail":
+    if name in ("v1:membership-detail", "v1:membership-revoke-sessions"):
         return reverse(name, kwargs={"membership_id": membership.id})
+    if name == "v1:auth-session-detail":
+        return reverse(name, kwargs={"session_id": "0199c0a0-0000-7000-8000-00000000d1ed"})
     if name == "v1:invitation-accept":
         return reverse(name, kwargs={"token": "no-such-invitation-token"})
     if name == "v1:invitation-detail":

@@ -83,6 +83,24 @@ export interface SessionTenant {
   readonly membershipId?: string | null;
   /** PLT-03 FR-9 — `< 4` means this business's wizard is unfinished. */
   readonly onboardingStep?: number | null;
+  /**
+   * WLB-01 FR-2 — the RESOLVED branding (tenant → partner → default), active
+   * tenant only. `WhiteLabelSync` turns it into the theme and the app name.
+   */
+  readonly branding?: SessionBranding | null;
+  /** WLB-02 FR-5 — the partner is suspended: reads work, writes answer 403. */
+  readonly partnerSuspended?: boolean;
+}
+
+/** The branding the shell renders; `primarySource` says whose colour it is. */
+export interface SessionBranding {
+  readonly primaryHex: string;
+  readonly primarySource: 'tenant' | 'partner' | 'default';
+  readonly appName: string;
+  readonly logoUrl: string | null;
+  readonly docHeader: string;
+  readonly docFooter: string;
+  readonly legalFooter: string;
 }
 
 export interface SessionState {

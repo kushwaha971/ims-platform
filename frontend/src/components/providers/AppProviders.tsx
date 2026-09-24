@@ -9,6 +9,7 @@ import { IntlProviderShell } from 'src/components/providers/IntlProviderShell';
 import { NetworkProbe } from 'src/components/providers/NetworkProbe';
 import { PreferencesBootstrap } from 'src/components/providers/PreferencesBootstrap';
 import { ThemeProvider } from 'src/components/providers/ThemeProvider';
+import { WhiteLabelSync } from 'src/components/providers/WhiteLabelSync';
 import { store } from 'src/redux/store';
 
 /**
@@ -52,6 +53,8 @@ export function AppProviders({ children }: Readonly<{ children: ReactNode }>): R
             {children}
             <SnackbarHost />
             <NetworkProbe />
+            {/* WLB-01 FR-4 — the active tenant's brand ramp on <html>. */}
+            <WhiteLabelSync />
           </ThemeProvider>
         </IntlProviderShell>
       </PreferencesBootstrap>

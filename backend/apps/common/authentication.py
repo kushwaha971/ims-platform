@@ -65,7 +65,32 @@ class CookieOrBearerJWTAuthentication(JWTAuthentication):
         tenant = get_effective_tenant(request)
         if tenant is not None:
             _current_tenant.set(tenant)
+            self._assert_partner_active(request, tenant)
         return user, validated
+
+    @classmethod
+    def _assert_partner_active(cls, request: Any, tenant: Any) -> None:
+        """WLB-02 FR-5: a suspended partner's tenants are read-only.
+
+        Reads keep working so a merchant can still see what customers owe and
+        the banner can name who to call; every write answers 403
+        `partner_suspended`. Signing out is always allowed. The tenant is NOT
+        marked suspended (BR-4: reversible and non-destructive) — lifting the
+        partner's suspension restores every tenant at once. `tenant.partner` is
+        already loaded by tenancy's `select_related`, so this costs no query.
+        """
+        partner = getattr(tenant, "partner", None)
+        if getattr(partner, "status", None) != "suspended" or request.method in SAFE_METHODS:
+            return
+        if request.path in cls.PASSWORD_CHANGE_ALLOWED:
+            return
+        from apps.common.exceptions import BusinessRuleViolation
+
+        raise BusinessRuleViolation(
+            "partner_suspended",
+            "This service is paused. Contact your provider's support.",
+            details={"partner": partner.name},
+        )
 
     # Reachable while the account is on an owner-issued temporary password
     # (DEC-012). Everything else answers `password_change_required` until the

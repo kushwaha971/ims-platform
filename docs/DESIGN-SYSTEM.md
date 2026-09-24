@@ -109,6 +109,10 @@ the render props.
 | Toasts | dispatch to the snackbar; it renders top-centre |
 | A failure's request id | `UbRequestId` — "Reference 3f2b…", label from `common.error.reference`; `UbEmptyState` / `UbSnackbar` / `UbDataGrid` error copy take `requestId` + `requestIdLabel` (the type requires the label with the id); a banner's text uses `formatRequestReference` |
 | A phone number on screen | `formatPhoneForDisplay` ("+91 98123 45678"); `tel:` hrefs and Copy use `toDialableNumber` ("+919812345678"), both in `src/utils/share.ts` |
+| Multi-line text with a character counter | `UbTextArea` (`counterLabel` takes an ICU string with `{count}`/`{max}`; used by bill header/footer and reminder templates) |
+| Picking an image file | `UbFileUpload` (a styled button that IS the label of a hidden input; `accept`, `maxBytes` and `onReject('too_large' \| 'wrong_type')` refuse before upload — the server re-checks magic bytes) |
+| Showing an uploaded image or its empty slot | `UbImagePreview` (fixed box, `object-contain`, `emptyLabel` when there is none; logo and signature) |
+| A hex colour | `UbColorInput` (native swatch + hex text box kept in step); the branding page wraps it with preset swatches and the contrast check in `ColourField` |
 
 A dialog opened FROM another overlay (an item in a ⋯ sheet opening a share
 sheet, a drawer or a confirm) passes `returnFocusRef` — the control that opened

@@ -309,6 +309,10 @@ CORS_ALLOW_HEADERS = (
     "X-CSRF-Token",  # double-submit cookie guard (§20.4.6)
     "Idempotency-Key",  # replay-safe writes (§22.3)
     "X-Client",  # `web` | `api`, read by throttling and audit
+    # PLT-06 FR-8 / CR-011 — the settings PUT's optimistic lock. Without it the
+    # settings page's every save fails preflight in dev (the X-Request-Id
+    # defect above, again) and passes every Django-test-client test.
+    "If-Match",
 )
 
 # ── Jobs and scheduler (ADR-012, Part 20 §20.8) ──────────────────────────────

@@ -101,6 +101,12 @@ class Session(TimeStampedModel):
     ip = models.GenericIPAddressField(null=True, blank=True)
     expires_at = models.DateTimeField()
     revoked_at = models.DateTimeField(null=True, blank=True)
+    # PLT-09 FR-5 (CR-013). Written when the session is opened and on every
+    # refresh — which, with a fifteen-minute access token, is already "at most
+    # once per few minutes" without a per-request write. A rotated session hands
+    # the value on to its successor, so the live row of a family always carries
+    # the family's last use.
+    last_used_at = models.DateTimeField(null=True, blank=True)
     replaced_by = models.ForeignKey(
         "self", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
     )

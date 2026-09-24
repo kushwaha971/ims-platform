@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Any
 
 from django.utils.translation import gettext_lazy as _
+from rest_framework import exceptions as drf_exc
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 from apps.common.exceptions import NoActiveTenant
@@ -98,3 +99,86 @@ MembersManagePermission = HasPermission(
 )
 
 AuditReadPermission = HasPermission({"list": "platform.audit.read", "*": "platform.audit.read"})
+
+
+# ── Settings surfaces ─────────────────────────────────────────────────────────
+# Permission classes for the settings surfaces (PLT-06, PLT-07, WLB-01).
+#
+# Canon §0.9 has no `platform.settings.read`, and the FRD matrices draw the
+# line in a place no single codename does:
+#
+# | | owner | admin | staff | accountant |
+# |---|---|---|---|---|
+# | View settings / profile (PLT-06, PLT-07 §12) | ✅ | ✅ | ❌ | ✅ |
+# | Edit settings / profile | ✅ | ✅ | ❌ | ❌ |
+# | Edit branding (WLB-01 §12) | ✅ | ✅ | ❌ | ❌ |
+#
+# EDIT follows the precedent `TenantManagePermission` already set for the
+# profile: `platform.tenant.manage`, or the owner/admin role for the "(partial)"
+# half canon gives admin. VIEW is edit rights OR `platform.audit.read` — the
+# one platform codename canon gives the accountant and withholds from staff,
+# and the same reason the FRD gives for letting the accountant in ("needs to know
+# numbering/GST defaults for reconciliation") is why they read the audit log.
+# `CR-LOG` (CR-2026-09-24-T1-A) asks canon to name the read right.
+AUDIT_READ = "platform.audit.read"
+BRANDING_MANAGE = "platform.branding.manage"
+
+
+def _membership(request: Any) -> Any:
+    user = getattr(request, "user", None)
+    if not (user and user.is_authenticated and user.is_active):
+        return None
+    tenant = get_effective_tenant(request)
+    if tenant is None:
+        raise NoActiveTenant()
+    membership = getattr(tenant, "_ub_membership", None)
+    if membership is None:
+        return None
+    claims = getattr(request, "auth_claims", {}) or {}
+    claimed = claims.get("ver")
+    if claimed is not None and claimed != membership.permissions_version:
+        raise drf_exc.AuthenticationFailed("token_stale")
+    return membership
+
+
+def may_edit_settings(membership: Any) -> bool:
+    return TENANT_MANAGE in permissions_for(membership) or (
+        membership.status == "active" and membership.role.code in PROFILE_EDIT_ROLES
+    )
+
+
+def may_view_settings(membership: Any) -> bool:
+    return may_edit_settings(membership) or AUDIT_READ in permissions_for(membership)
+
+
+def _read_only_impersonation(request: Any) -> bool:
+    claims = getattr(request, "auth_claims", {}) or {}
+    return bool(claims.get("imp")) and request.method not in SAFE_METHODS
+
+
+class SettingsPermission(BasePermission):
+    """PLT-06 §12: GET owner/admin/accountant; writes owner/admin."""
+
+    message = _("You do not have permission to do this.")
+
+    def has_permission(self, request: Any, view: Any) -> bool:
+        membership = _membership(request)
+        if membership is None or _read_only_impersonation(request):
+            return False
+        if request.method in SAFE_METHODS:
+            return may_view_settings(membership)
+        return may_edit_settings(membership)
+
+
+class BrandingPermission(BasePermission):
+    """WLB-01 §12: everyone sees branding; `platform.branding.manage` edits it."""
+
+    message = _("You do not have permission to do this.")
+
+    def has_permission(self, request: Any, view: Any) -> bool:
+        membership = _membership(request)
+        if membership is None or _read_only_impersonation(request):
+            return False
+        if request.method in SAFE_METHODS:
+            return True
+        return BRANDING_MANAGE in permissions_for(membership)

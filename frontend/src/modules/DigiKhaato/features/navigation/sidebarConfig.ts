@@ -186,11 +186,14 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
   },
   {
     key: 'settings',
+    ready: true,
     icon: Settings,
     labelId: 'nav.settings',
     href: ROUTES.SETTINGS,
     module: 'platform',
-    permission: 'parties.party.read',
+    // The owner/admin/accountant gate: the three roles that may at least READ
+    // settings (PLT-06 §6). Staff open their own devices from the account menu.
+    permission: 'platform.audit.read',
     section: 'account',
     order: 2,
   },

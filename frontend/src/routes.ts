@@ -55,6 +55,13 @@ export const ROUTES = {
   SETTINGS: '/settings',
   SETTINGS_PLAN: '/settings/plan',
   SETTINGS_TEAM: '/settings/team',
+  // Track T1 — PLT-07, WLB-01, PLT-08, PLT-09. Under /settings rather than
+  // PLT-08's `/activity` and PLT-09's `/profile/devices`: one guarded prefix,
+  // one place a merchant goes to look after the business itself.
+  SETTINGS_PROFILE: '/settings/profile',
+  SETTINGS_BRANDING: '/settings/branding',
+  SETTINGS_ACTIVITY: '/settings/activity',
+  SETTINGS_DEVICES: '/settings/devices',
   SWITCH_TENANT: '/switch',
 } as const;
 

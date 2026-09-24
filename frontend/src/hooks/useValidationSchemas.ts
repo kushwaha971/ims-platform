@@ -142,6 +142,14 @@ export interface ValidationSchemas {
     values: readonly T[],
     messageId: string
   ) => Yup.MixedSchema<T>;
+  /** PLT-07 §10 — `name@bank`, optional. */
+  readonly upiVpaValidation: () => Yup.StringSchema<string | null | undefined>;
+  /** PLT-07 §10 — upper-cased, then `^[A-Z]{4}0[A-Z0-9]{6}$`, optional. */
+  readonly ifscValidation: () => Yup.StringSchema<string | null | undefined>;
+  /** PLT-07 §10 — 9–18 digits, optional. */
+  readonly bankAccountValidation: () => Yup.StringSchema<string | null | undefined>;
+  /** WLB-01 §10 — `#2B6BE0`, required; contrast is the server's (and the badge's) job. */
+  readonly hexColourValidation: () => Yup.StringSchema<string>;
 }
 
 export const useValidationSchemas = (): ValidationSchemas => {
@@ -346,6 +354,35 @@ export const useValidationSchemas = (): ValidationSchemas => {
     const hsnValidation = () =>
       Yup.string().nullable().notRequired().matches(REGEX.HSN, t('validation.hsn.format'));
 
+    /**
+     * Track T1 (PLT-07 §10, WLB-01 §10) — optional pattern fields. A blank
+     * becomes `null` BEFORE `.matches()`, for the reason `boundedText`'s note
+     * gives: Yup skips `undefined`, not `''`.
+     */
+    const optionalPattern = (pattern: RegExp, messageId: string, upper = false) =>
+      Yup.string()
+        .transform((value: unknown) => {
+          if (typeof value !== 'string') return value;
+          const trimmed = value.trim();
+          if (!trimmed) return null;
+          return upper ? trimmed.toUpperCase() : trimmed;
+        })
+        .nullable()
+        .notRequired()
+        .matches(pattern, { message: t(messageId), excludeEmptyString: true });
+
+    const upiVpaValidation = () => optionalPattern(REGEX.UPI_VPA, 'settings.validation.upiVpa');
+    const ifscValidation = () => optionalPattern(REGEX.IFSC, 'settings.validation.ifsc', true);
+    const bankAccountValidation = () =>
+      optionalPattern(REGEX.BANK_ACCOUNT, 'settings.validation.bankAccount');
+    const hexColourValidation = () =>
+      Yup.string()
+        .transform((value: unknown) =>
+          typeof value === 'string' ? value.trim().toUpperCase() : value
+        )
+        .matches(REGEX.HEX_COLOUR, t('branding.validation.hex'))
+        .required(t('branding.validation.hex'));
+
     const pincodeValidation = (required = false) => {
       const base = Yup.string();
       return required
@@ -489,6 +526,10 @@ export const useValidationSchemas = (): ValidationSchemas => {
       passwordConfirmValidation,
       stateCodeValidation,
       enumValidation,
+      upiVpaValidation,
+      ifscValidation,
+      bankAccountValidation,
+      hexColourValidation,
     };
   }, [t]);
 };

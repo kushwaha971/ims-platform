@@ -2,7 +2,7 @@ import { API_PATHS } from 'src/api/APIPaths';
 import { api } from 'src/api/AxiosInstances';
 import { forgetAdoptedTenant } from 'src/api/tenantTransition';
 import { DEFAULT_TENANT_TIMEZONE } from 'src/constants';
-import type { SessionPayload, SessionTenant } from 'src/redux/slice/sessionSlice';
+import type { SessionBranding, SessionPayload, SessionTenant } from 'src/redux/slice/sessionSlice';
 import type { TWriteClass } from 'src/types/api.types';
 import type { Locale, ModuleCode, PermissionCode } from 'src/types/domain.types';
 
@@ -77,7 +77,39 @@ interface ActiveTenantApiRow {
   readonly status?: string;
   readonly onboarding_step?: number | null;
   readonly enabled_modules?: readonly ModuleCode[];
+  /** WLB-01 FR-2 — resolved server-side; see `toSessionBranding`. */
+  readonly branding?: BrandingApiBlock | null;
+  readonly partner_suspended?: boolean;
 }
+
+interface BrandingApiBlock {
+  readonly primary_hex?: string | null;
+  readonly app_name?: string | null;
+  readonly logo_url?: string | null;
+  readonly doc_header?: string | null;
+  readonly doc_footer?: string | null;
+  readonly legal_footer?: string | null;
+  readonly sources?: Readonly<Record<string, string>>;
+}
+
+/**
+ * WLB-01 — the active tenant's resolved branding. `null` for an older server
+ * that sends the raw jsonb (no `sources`), so the shell keeps the product
+ * default rather than guessing which keys a merchant chose.
+ */
+const toSessionBranding = (raw: BrandingApiBlock | null | undefined): SessionBranding | null => {
+  if (!raw?.sources || !raw.primary_hex) return null;
+  const source = raw.sources.primary_hex;
+  return {
+    primaryHex: raw.primary_hex,
+    primarySource: source === 'tenant' || source === 'partner' ? source : 'default',
+    appName: raw.app_name ?? '',
+    logoUrl: raw.logo_url ?? null,
+    docHeader: raw.doc_header ?? '',
+    docFooter: raw.doc_footer ?? '',
+    legalFooter: raw.legal_footer ?? '',
+  };
+};
 
 interface AuthApiResponse {
   readonly data: {
@@ -300,6 +332,8 @@ export const getSession = async (signal?: AbortSignal): Promise<SessionPayload> 
         timezone: activeRow.timezone ?? membership?.timezone ?? DEFAULT_TENANT_TIMEZONE,
         status: activeRow.status ?? membership?.status ?? 'active',
         onboardingStep: activeRow.onboarding_step ?? membership?.onboardingStep ?? null,
+        branding: toSessionBranding(activeRow.branding),
+        partnerSuspended: activeRow.partner_suspended ?? false,
       }
     : null;
 

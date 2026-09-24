@@ -58,6 +58,9 @@ UPDATABLE_FIELDS = (
     "email",
     "locale",
     "onboarding_step",
+    # PLT-07 FR-1 — the profile's bank and UPI details.
+    "bank_details",
+    "upi_vpa",
 )
 
 
@@ -379,6 +382,8 @@ def update_tenant(
     step_before = int(tenant.onboarding_step)
 
     payload = {k: v for k, v in changes.items() if k in UPDATABLE_FIELDS}
+    gst_before = tenant.gst_type
+    _refuse_locked_gst_change(tenant=tenant, wanted=payload.get("gst_type", gst_before))
     _apply_gst(tenant=tenant, payload=payload, warnings=warnings)
     if "onboarding_step" in payload:
         payload["onboarding_step"] = _advance_step(step_before, payload["onboarding_step"])
@@ -426,8 +431,19 @@ def update_tenant(
                 action=AuditAction.TENANT_UPDATED,
                 entity_type="platform_tenant",
                 entity_id=tenant.id,
-                before=changed_before,
-                after=changed_after,
+                before=_mask_snapshot(changed_before),
+                after=_mask_snapshot(changed_after),
+            )
+        if tenant.gst_type != gst_before:
+            # PLT-07 §16: its own event, because "when did we become a GST
+            # business" is asked on its own and must not need a diff to find.
+            write_audit(
+                ctx=ctx,
+                action=AuditAction.TENANT_GST_TYPE_CHANGED,
+                entity_type="platform_tenant",
+                entity_id=tenant.id,
+                before={"gst_type": gst_before},
+                after={"gst_type": tenant.gst_type},
             )
         if completing:
             apply_preset(tenant=tenant, actor=actor, ctx=ctx)
@@ -581,6 +597,42 @@ def _seed_main_location(tenant: Any) -> int:
         defaults={"name": "Main", "is_default": True, "is_active": True},
     )
     return int(was_created)
+
+
+def _mask_snapshot(snapshot: dict) -> dict:
+    """PLT-07 §16: "bank account number stored masked in the snapshot: last 4 digits".
+
+    The audit log is read by accountants and kept for seven years; a full
+    account number in it would outlive every masking rule on the screen.
+    """
+    if isinstance(snapshot.get("bank_details"), dict):
+        bank = dict(snapshot["bank_details"])
+        if bank.get("account_number"):
+            bank["account_number"] = "••••" + str(bank["account_number"])[-4:]
+        snapshot = {**snapshot, "bank_details": bank}
+    return snapshot
+
+
+def _refuse_locked_gst_change(*, tenant: Any, wanted: str) -> None:
+    """PLT-07 FR-4: `regular → composition|unregistered` is refused while tax
+    invoices were issued this financial year (409 `gst_type_locked`).
+
+    The count comes from whichever app registered a counter
+    (`services.guards`) — `sales` owns invoices and does not exist yet, so
+    today nothing can lock the change, and nothing here invents a table to
+    pretend otherwise.
+    """
+    from apps.platform_app.services.guards import issued_tax_invoices_this_fy
+
+    if tenant.gst_type != GstType.REGULAR or wanted == GstType.REGULAR:
+        return
+    count = issued_tax_invoices_this_fy(tenant)
+    if count:
+        raise BusinessRuleViolation(
+            "gst_type_locked",
+            f"You issued {count} tax invoices this year. GST type can change from 1 April.",
+            details={"count": count},
+        )
 
 
 def _apply_gst(*, tenant: Any, payload: dict, warnings: list[dict]) -> None:

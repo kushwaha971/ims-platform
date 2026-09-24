@@ -99,6 +99,21 @@ class AuditAction:
     # parameters and the row count are written at the moment it left.
     LEDGER_STATEMENT_EXPORTED = "ledger.statement.exported"
     LEDGER_AGING_EXPORTED = "ledger.aging.exported"
+    # ── Track T1: PLT-06…PLT-09, WLB-01, WLB-02 (17-01 §16) ────────────────
+    SETTINGS_UPDATED = "settings.updated"
+    NUMBERING_UPDATED = "numbering.updated"
+    TENANT_MODULES_CHANGED = "tenant.modules_changed"
+    TENANT_GST_TYPE_CHANGED = "tenant.gst_type_changed"
+    BRANDING_UPDATED = "branding.updated"
+    BRANDING_SIGNATURE_UPDATED = "branding.signature_updated"
+    AUDIT_EXPORTED = "audit.exported"
+    SESSION_REVOKED = "auth.session_revoked"
+    SESSIONS_REVOKED_ALL = "auth.sessions_revoked_all"
+    SESSION_RENAMED = "auth.session_renamed"
+    PARTNER_CREATED = "admin.partner_created"
+    PARTNER_UPDATED = "admin.partner_updated"
+    PARTNER_SUSPENDED = "admin.partner_suspended"
+    PARTNER_REACTIVATED = "admin.partner_reactivated"
     JOB_REQUEUED = "job.requeued"
     REFERENCE_DATA_SEEDED = "platform.reference_data_seeded"
 
