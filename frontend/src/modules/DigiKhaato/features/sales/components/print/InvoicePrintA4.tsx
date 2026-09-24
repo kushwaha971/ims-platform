@@ -164,7 +164,7 @@ export function InvoicePrintA4({
       <section className="ub-print-closing mt-3 grid grid-cols-2 gap-6 text-xs">
         <div className="space-y-2">
           {columns !== 'none' && (
-            <table>
+            <table className="w-full">
               <thead>
                 <tr>
                   <th className="text-left">{t('sales.print.rate')}</th>
@@ -214,7 +214,7 @@ export function InvoicePrintA4({
           )}
         </div>
         <div>
-          <table>
+          <table className="w-full">
             <tbody>
               {totals.map(([label, value]) => (
                 <tr key={label}>

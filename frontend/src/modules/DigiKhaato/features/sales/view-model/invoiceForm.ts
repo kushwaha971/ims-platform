@@ -93,6 +93,16 @@ export const emptyInvoiceForm = (
 
 const isNumber = (value: string): boolean => /^\d+(\.\d+)?$/.test(value.trim());
 
+/**
+ * How many decimals a rate shows: two, unless it genuinely carries paise
+ * fractions. The server stores rates at four places, and "450.0000" at a
+ * counter reads as a typo; "12.3450" keeps its precision (SAL-02 §4.4).
+ */
+export const ratePlaces = (value: string): 2 | 4 => {
+  const fraction = value.split('.')[1] ?? '';
+  return fraction.replace(/0+$/, '').length > 2 ? 4 : 2;
+};
+
 /** Is this row part of the draft yet? (see the module note) */
 export const isCompleteLine = (line: InvoiceLineForm): boolean =>
   (!!line.itemId || line.description.trim() !== '') &&

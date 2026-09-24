@@ -80,7 +80,10 @@ export function InvoiceDetailPageContent({ id }: Readonly<{ id: string }>): Reac
         title={doc.number ?? t('sales.status.draft')}
         subtitle={partyLabel(doc) ?? t('sales.walkIn.customer')}
         controls={
-          <UbStatusBadge tone={STATUS_TONE[doc.status]} label={t(`sales.status.${doc.status}`)} />
+          // The controls row is full-width; the badge sizes to its label.
+          <UbStack direction="row">
+            <UbStatusBadge tone={STATUS_TONE[doc.status]} label={t(`sales.status.${doc.status}`)} />
+          </UbStack>
         }
         actions={
           <>
@@ -116,7 +119,7 @@ export function InvoiceDetailPageContent({ id }: Readonly<{ id: string }>): Reac
       />
       <UbStack gap={4}>
         <UbPanel className="ub-print-hide">
-          <UbStack gap={2}>
+          <UbStack gap={2} className="p-4">
             <UbText variant="body-sm">
               {t('sales.detail.summary', {
                 date: formatBusinessDate(doc.documentDate),
@@ -154,7 +157,7 @@ export function InvoiceDetailPageContent({ id }: Readonly<{ id: string }>): Reac
             )}
           </UbStack>
         </UbPanel>
-        <UbStack className="overflow-x-auto rounded-card border border-border-hairline bg-white">
+        <UbStack className="overflow-x-auto rounded-card border border-border-hairline bg-white print:overflow-visible print:rounded-none print:border-0">
           <PrintSheetLazy
             doc={doc}
             upi={detail.upi}

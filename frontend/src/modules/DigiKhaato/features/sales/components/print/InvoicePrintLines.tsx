@@ -28,7 +28,7 @@ export function InvoicePrintLines({
 }>): React.JSX.Element {
   const cess = hasCess(doc) && columns !== 'none';
   return (
-    <table className="mt-2 text-xs" data-testid="print-lines">
+    <table className="mt-2 w-full text-xs" data-testid="print-lines">
       <thead>
         <tr>
           <th className="text-left">#</th>

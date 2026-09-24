@@ -21,7 +21,12 @@ import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import { formatAmount } from 'src/utils/money';
 
 import { useItemSearch } from '../../inventory/hooks/useItemSearch';
-import { emptyLine, type InvoiceFormValues, type InvoiceLineForm } from '../view-model/invoiceForm';
+import {
+  emptyLine,
+  ratePlaces,
+  type InvoiceFormValues,
+  type InvoiceLineForm,
+} from '../view-model/invoiceForm';
 
 import type { ItemListRow } from '../../inventory/types/item.types';
 import type { EngineResult } from '../view-model/taxEngine';
@@ -177,7 +182,7 @@ export function InvoiceLinesSection({
               aria-label={label}
               value={(field?.value as string) ?? ''}
               onChange={(next) => field?.onChange(next)}
-              decimalPlaces={4}
+              decimalPlaces={ratePlaces((field?.value as string) ?? '')}
               invalid={invalid}
               placeholder={t('sales.line.ratePlaceholder')}
             />

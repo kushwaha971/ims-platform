@@ -54,7 +54,7 @@ export function InvoiceTotalsPanel({
 
   return (
     <UbPanel as="aside" className="lg:sticky lg:top-4">
-      <UbStack gap={3} data-testid="invoice-totals">
+      <UbStack gap={3} className="p-4" data-testid="invoice-totals">
         {row(t('sales.totals.subtotal'), formatInr(preview.subtotal))}
         <UbChoiceChips<DiscountType>
           ariaLabel={t('sales.totals.discountType')}

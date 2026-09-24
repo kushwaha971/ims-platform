@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
@@ -27,6 +27,7 @@ import { selectActiveRole } from 'src/redux/slice/sessionSlice';
 import { ROUTES } from 'src/routes';
 
 import { useDraftAutosave } from '../hooks/useDraftAutosave';
+import { useEditorWindowEffects } from '../hooks/useEditorWindowEffects';
 import { useInvoiceEditor } from '../hooks/useInvoiceEditor';
 import { conflictResolved } from '../redux/invoiceEditorSlice';
 import { deleteInvoiceDraft } from '../redux/salesThunk';
@@ -78,21 +79,6 @@ export function InvoiceEditorPageContent({
   const creditBlocked = server.error?.code === 'credit_limit_exceeded';
   const mayOverride = role === 'owner' || role === 'admin';
 
-  // SAL-06 — after the first server save, the address names the draft, so a reload reopens it.
-  useEffect(() => {
-    if (!documentId && server.documentId && typeof window !== 'undefined') {
-      window.history.replaceState(null, '', `${ROUTES.SALES_INVOICES}/${server.documentId}/edit`);
-    }
-  }, [documentId, server.documentId]);
-
-  // Dirty guard: closing the tab with unsaved typing asks first (the device copy still exists).
-  useEffect(() => {
-    if (!autosave.dirty) return undefined;
-    const guard = (event: BeforeUnloadEvent) => event.preventDefault();
-    window.addEventListener('beforeunload', guard);
-    return () => window.removeEventListener('beforeunload', guard);
-  }, [autosave.dirty]);
-
   const finishIssue = useCallback(
     async (payment: readonly PaymentRowForm[] | null, override = false) => {
       const result = await issue(payment, override);
@@ -109,23 +95,14 @@ export function InvoiceEditorPageContent({
     else void finishIssue(null);
   }, [hasLines, locked, walkIn, preview.grandTotal, finishIssue]);
 
-  // Ctrl+S saves, Ctrl+Enter issues, F8 opens the payment sheet (§7 keyboard map).
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
-        event.preventDefault();
-        void save(false);
-      } else if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
-        event.preventDefault();
-        startIssue();
-      } else if (event.key === 'F8') {
-        event.preventDefault();
-        startIssue();
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [save, startIssue]);
+  const saveNow = useCallback(() => void save(false), [save]);
+  useEditorWindowEffects({
+    documentId,
+    savedId: server.documentId,
+    dirty: autosave.dirty,
+    onSave: saveNow,
+    onIssue: startIssue,
+  });
 
   if (!canWrite) {
     return (

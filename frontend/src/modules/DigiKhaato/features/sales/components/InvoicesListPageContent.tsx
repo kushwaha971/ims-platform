@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { FileText, IndianRupee, Plus, Receipt } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 import {
   UbActionLink,
@@ -15,8 +15,6 @@ import {
   UbPageShell,
   UbSearchInput,
   UbStack,
-  UbStatCard,
-  UbStatGrid,
   UbTabs,
 } from 'src/design-system';
 import {
@@ -29,7 +27,6 @@ import {
 import { useDebounce } from 'src/hooks/useDebounce';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { ROUTES } from 'src/routes';
-import { formatInr } from 'src/utils/money';
 
 import {
   INVOICE_PRESETS,
@@ -41,6 +38,7 @@ import { useInvoiceList } from '../hooks/useInvoiceList';
 import { isNarrowed } from '../view-model/invoiceDisplay';
 
 import { createInvoiceColumns } from './InvoiceColumns';
+import { InvoiceListStats } from './InvoiceListStats';
 
 import type { InvoiceListRow, InvoiceTab } from '../types/sales.types';
 
@@ -237,25 +235,7 @@ export function InvoicesListPageContent(): React.JSX.Element {
             to: t('sales.period.to'),
           }}
         />
-        {totals && (
-          <UbStatGrid>
-            <UbStatCard
-              icon={<FileText className="h-4 w-4" aria-hidden />}
-              label={t('sales.total.count')}
-              value={String(totals.count)}
-            />
-            <UbStatCard
-              icon={<Receipt className="h-4 w-4" aria-hidden />}
-              label={t('sales.total.billed')}
-              value={formatInr(totals.grandTotal)}
-            />
-            <UbStatCard
-              icon={<IndianRupee className="h-4 w-4" aria-hidden />}
-              label={t('sales.total.due')}
-              value={formatInr(totals.amountDue)}
-            />
-          </UbStatGrid>
-        )}
+        {totals && <InvoiceListStats totals={totals} />}
         <UbTabs<InvoiceTab>
           value={filters.tab}
           onValueChange={list.setTab}

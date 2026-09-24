@@ -65,7 +65,7 @@ export function InvoicePartySection({
   );
 
   return (
-    <UbStack gap={3}>
+    <UbStack gap={3} className="p-4">
       <UbChoiceChips<BillingMode>
         ariaLabel={t('sales.editor.billTo')}
         value={mode}
