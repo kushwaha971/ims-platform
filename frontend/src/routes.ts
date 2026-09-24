@@ -71,7 +71,16 @@ export const ROUTES = {
   SETTINGS_BRANDING: '/settings/branding',
   SETTINGS_ACTIVITY: '/settings/activity',
   SETTINGS_DEVICES: '/settings/devices',
+  /** PLT-10 — "Your data": export, deletion, support consent. Owner only. */
+  SETTINGS_DATA: '/settings/data',
   SWITCH_TENANT: '/switch',
+
+  // ── (admin) — PLT-14's console. Needs a session, not a tenant: an operator
+  //    usually belongs to no business at all.
+  ADMIN: '/admin',
+  ADMIN_TENANTS: '/admin/tenants',
+  ADMIN_PARTNERS: '/admin/partners',
+  ADMIN_HEALTH: '/admin/health',
 } as const;
 
 export type RouteKey = keyof typeof ROUTES;
@@ -175,6 +184,9 @@ export const SESSION_ONLY_ROUTE_PREFIXES: readonly string[] = [
   // is the ordinary case, and the app list would bounce them away from the very
   // link that would give them one.
   ROUTES.ACCEPT_INVITE,
+  // PLT-14 — the console guards itself on `isSuperAdmin`; the proxy only needs
+  // to know a session is required.
+  ROUTES.ADMIN,
 ];
 
 export const APP_ROUTE_PREFIXES: readonly string[] = [
@@ -234,6 +246,10 @@ export const isPublicPath = (pathname: string): boolean =>
 export const RETIRED_ROUTES: Readonly<Record<string, string>> = {
   '/otp': ROUTES.LOGIN,
 };
+
+/** PLT-14 — one business in the console. */
+export const adminTenantPath = (id: string): string =>
+  `${ROUTES.ADMIN_TENANTS}/${encodeURIComponent(id)}`;
 
 /** INV-03's item page — `/items/{id}`, one encoded segment, like `partyPath`. */
 export const itemPath = (id: string): string => `${ROUTES.ITEMS}/${encodeURIComponent(id)}`;

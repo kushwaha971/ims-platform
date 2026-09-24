@@ -22,6 +22,8 @@ export interface SettingsAccess {
   readonly canEditBranding: boolean;
   readonly canReadAudit: boolean;
   readonly canManageTeam: boolean;
+  /** PLT-10 §12 — "Your data" is the OWNER's, by role (admins hold `platform.tenant.manage`). */
+  readonly isOwner: boolean;
 }
 
 const EDIT_ROLES: readonly string[] = ['owner', 'admin'];
@@ -37,6 +39,7 @@ export const useSettingsAccess = (): SettingsAccess => {
       canEditBranding: can('platform.branding.manage'),
       canReadAudit: can('platform.audit.read'),
       canManageTeam: can('platform.members.manage'),
+      isOwner: role === 'owner',
     };
   }, [can, role]);
 };

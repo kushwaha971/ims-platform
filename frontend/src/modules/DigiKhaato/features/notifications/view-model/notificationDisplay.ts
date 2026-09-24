@@ -15,6 +15,12 @@ export const KNOWN_TYPES: ReadonlySet<string> = new Set([
   'reminder_due',
   'reminder_failed',
   'low_stock',
+  // PLT-10 / PLT-14 — the owner-facing platform events.
+  'export_ready',
+  'deletion_requested',
+  'deletion_cancelled',
+  'support_access_request',
+  'support_session_started',
 ]);
 
 /**

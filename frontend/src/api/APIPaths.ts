@@ -168,6 +168,29 @@ export const API_PATHS = {
   TAX_HSN: '/taxes/hsn',
   SYSTEM_HEALTH: '/system/health',
   PUBLIC_DOCUMENT: (token: string) => `/public/d/${seg(token)}`,
+
+  // ── PLT-10 — "Your data" (owner only) ─────────────────────────────────────
+  TENANT_EXPORT: '/tenants/current/export',
+  TENANT_EXPORTS: '/tenants/current/exports',
+  TENANT_EXPORT_DETAIL: (id: string) => `/tenants/current/exports/${seg(id)}`,
+  TENANT_DELETION: '/tenants/current/deletion',
+  TENANT_DELETE_REQUEST: '/tenants/current/delete-request',
+  TENANT_DELETE_CANCEL: '/tenants/current/delete-cancel',
+  /** PLT-14 FR-6 (CCR-12) — the owner's side of support consent. */
+  SUPPORT_ACCESS_REQUESTS: '/support/access-requests',
+  SUPPORT_ACCESS_DECISION: (id: string, decision: 'allow' | 'deny' | 'revoke') =>
+    `/support/access-requests/${seg(id)}/${decision}`,
+
+  // ── PLT-14 — the super-admin console ──────────────────────────────────────
+  ADMIN_OVERVIEW: '/admin/overview',
+  ADMIN_TENANTS: '/admin/tenants',
+  ADMIN_TENANT: (id: string) => `/admin/tenants/${seg(id)}`,
+  ADMIN_TENANT_ACCESS_REQUEST: (id: string) => `/admin/tenants/${seg(id)}/access-requests`,
+  ADMIN_TENANT_IMPERSONATE: (id: string) => `/admin/tenants/${seg(id)}/impersonate`,
+  ADMIN_IMPERSONATION_END: '/admin/impersonation/end',
+  ADMIN_PARTNERS: '/admin/partners',
+  ADMIN_PLANS: '/admin/plans',
+  ADMIN_HEALTH: '/admin/health',
 } as const;
 
 /** POSTs that must carry an Idempotency-Key (canon §0.11 rule 5). */
@@ -226,7 +249,16 @@ export const IDEMPOTENT_POST_PATHS: readonly string[] = [
  * is a claim that the endpoint cannot double-write, and it belongs in the same
  * commit as the endpoint that makes the claim true.
  */
-export const IDEMPOTENCY_EXEMPT_PATHS: readonly string[] = [API_PATHS.PARTY_TAGS];
+export const IDEMPOTENCY_EXEMPT_PATHS: readonly string[] = [
+  API_PATHS.PARTY_TAGS,
+  /*
+   * PLT-10 — the three POSTs under `/tenants/current` are idempotent by
+   * construction: `export` returns the export already in flight instead of
+   * queueing a second, a repeated `delete-request` meets 409
+   * `tenant_pending_deletion`, and a repeated `delete-cancel` meets 412.
+   */
+  API_PATHS.TENANT_CURRENT,
+];
 
 /** True when a POST to this url is on the mandatory-idempotency list. */
 export const requiresIdempotency = (url: string | undefined): boolean => {
