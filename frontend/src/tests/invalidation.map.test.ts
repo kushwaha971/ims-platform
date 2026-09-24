@@ -21,6 +21,9 @@ import 'modules/DigiKhaato/features/sessions/redux/sessionsSlice';
 import 'modules/DigiKhaato/features/settings/redux/settingsSlice';
 import 'modules/DigiKhaato/features/notifications/redux/notificationSlice';
 import 'modules/DigiKhaato/features/reminders/redux/reminderSlice';
+import 'modules/DigiKhaato/features/sales/redux/invoiceDetailSlice';
+import 'modules/DigiKhaato/features/sales/redux/invoiceEditorSlice';
+import 'modules/DigiKhaato/features/sales/redux/invoiceListSlice';
 import partyListReducer, {
   type PartyListState,
 } from 'modules/DigiKhaato/features/parties/redux/partyListSlice';

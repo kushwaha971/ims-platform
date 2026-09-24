@@ -492,8 +492,9 @@ export const INVALIDATION: TInvalidationMap = {
   issueInvoice: {
     stale: ['invoiceList', ...EXPENSE_LEDGER_STALE, 'itemList', 'itemDetail', 'stockSummary'],
   },
-  // A share link changes nothing any other screen shows.
-  createInvoiceShareLink: {},
+  // A share link changes nothing any other screen shows; the detail slice
+  // holds the minted link itself (its fulfilled reducer, not a refetch).
+  createInvoiceShareLink: { patch: [['invoiceDetail', 'shareLink']] },
   // ── LED-06 — manual reminders ─────────────────────────────────────────────
   //
   // A reminder moves no money, so nothing about the khata, the list or the
