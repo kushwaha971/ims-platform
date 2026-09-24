@@ -91,7 +91,7 @@ class Command(BaseCommand):
                 if held:
                     created = materialise_due_schedules()
                     if created:
-                        logger.info("scheduler.materialised", extra={"created": created})
+                        logger.info("scheduler.materialised", extra={"materialised": created})
 
             jobs = claim_jobs(batch=batch, worker=worker, job_types=opts["job_types"])
             for job in jobs:
