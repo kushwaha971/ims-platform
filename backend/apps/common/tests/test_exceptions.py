@@ -46,7 +46,7 @@ def test_registry_is_closed_and_complete() -> None:
     expired temporary password: the password was right, the window was not, and
     telling the holder otherwise sends them to reset a password they never had.
     """
-    assert len(REGISTRY) == 156
+    assert len(REGISTRY) == 158
     assert "unauthenticated" in ERROR_CODES
     assert REGISTRY["password_change_required"] == (403, False)
     assert REGISTRY["password_expired"] == (401, False)

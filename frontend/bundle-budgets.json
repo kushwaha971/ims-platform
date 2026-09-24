@@ -434,7 +434,31 @@
   "  /parties/tags route        73 ->  75  (74.2); first 313 -> 319 (318.2)",
   "  /switch route              65 ->  68  (66.9); first 305 -> 312 (310.8)",
   "  /settings/plan route    64 (default) -> 67 (66.0); first 304 -> 311 (309.9)",
-  "  /dashboard route           61 ->  64  (63.0); first 301 -> 308 (307.0)"
+  "  /dashboard route           61 ->  64  (63.0); first 301 -> 308 (307.0)",
+  "── 24 Sep 2026 (W2-A): SAL-02/03/06/07/08 — the bills screens ─────────────",
+  "Four new routes, budgets at measured + ~1.5 KB. sharedApp is NOT raised by",
+  "this track: it measured 132.8 against 119 on this branch, and most of that",
+  "overshoot was already on main before sales landed. What sales adds to the",
+  "shell is estimated, not measured against a main build (building main would",
+  "mean touching the main checkout): ~2.0 KB is the 180 `sales.*` keys in",
+  "en.json (28.36 -> 26.37 KB gz with them removed, measured on the file), and",
+  "~1 KB is the nine thunk shells the invalidation registry imports. Their",
+  "services are imported inside each thunk, and the three sales slices are",
+  "injected lazily (CR-134), so neither is in the shell.",
+  "  /sales/invoices          route 94.8, first 354.5 ->  96 / 356. The grid,",
+  "                           period chips and date popover, tabs, search and",
+  "                           tiles: the same shape as /expenses (108.7).",
+  "  /sales/invoices/new      route 138.6, first 398.4 -> 140 / 400, against",
+  "  /sales/invoices/[id]/edit  §19.9.2's 110 for /new. The editor IS the form:",
+  "                           react-hook-form, UbLineItemsEditor (cmdk), the item",
+  "                           async combobox, the party field, date, the POS select",
+  "                           and the client tax engine with decimal. The payment",
+  "                           sheet, the success dialog and the print sheet are",
+  "                           dynamic() and not in this figure. 28.6 KB over the",
+  "                           spec line is a known debt: the next step is to split",
+  "                           the line editor's cmdk out of the first paint.",
+  "  /sales/invoices/[id]     route 74.2, first 333.9 ->  76 / 336. Detail and",
+  "                           share; the A4 and 80 mm sheets load on demand."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -830,8 +854,20 @@
    "firstLoad": 308
   },
   "/sales/invoices/new": {
-   "route": 110,
-   "firstLoad": 342
+   "route": 140,
+   "firstLoad": 400
+  },
+  "/sales/invoices/[id]/edit": {
+   "route": 140,
+   "firstLoad": 400
+  },
+  "/sales/invoices": {
+   "route": 96,
+   "firstLoad": 356
+  },
+  "/sales/invoices/[id]": {
+   "route": 76,
+   "firstLoad": 336
   },
   "/onboarding/step/[n]": {
    "route": 98,

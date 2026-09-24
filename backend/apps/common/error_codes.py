@@ -129,6 +129,10 @@ _REGISTRY: dict[str, tuple[int, bool]] = {
     "document_not_editable": (409, False),
     "document_already_void": (409, False),
     "document_not_shareable": (409, False),
+    # SAL-02 FR-16 — a Rule 46 hard failure (missing supplier GSTIN, description…).
+    "rule46_failed": (400, False),
+    # SAL-03 FR-4 — no valid `tenant.upi_vpa`, or `documents.show_upi_qr` off.
+    "upi_not_configured": (409, False),
     "has_dependent_documents": (409, False),
     "duplicate_supplier_invoice": (409, False),
     "duplicate_code": (400, False),

@@ -33,6 +33,8 @@ export interface ItemRowWire {
   readonly selling_price: string;
   readonly purchase_price: string;
   readonly tax_code: string;
+  readonly hsn_sac?: string | null;
+  readonly tax_inclusive_selling?: boolean;
   readonly track_stock: boolean;
   readonly on_hand: string | null;
   readonly avg_cost: string | null;
@@ -121,6 +123,8 @@ export const toItemRow = (row: ItemRowWire): ItemListRow => ({
   sellingPrice: row.selling_price,
   purchasePrice: row.purchase_price,
   taxCode: row.tax_code,
+  hsnSac: row.hsn_sac ?? null,
+  taxInclusiveSelling: row.tax_inclusive_selling ?? false,
   trackStock: row.track_stock,
   onHand: row.on_hand,
   avgCost: row.avg_cost,

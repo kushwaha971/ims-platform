@@ -214,6 +214,23 @@
       size: A4 portrait;
       margin: 14mm 12mm;
     }
+
+    /* SAL-03 FR-2 / FR-11 — the 80 mm counter slip prints onto its own named
+       page: 80 mm paper, 72 mm printable, as long as the bill is. Chrome and
+       Edge honour `page:`; the A4 sheet keeps the default page above. */
+    @page thermal80 {
+      size: 80mm auto;
+      margin: 4mm;
+    }
+
+    .ub-print-thermal {
+      page: thermal80;
+      font-size: 11px;
+    }
+
+    .ub-print-a4 {
+      padding: 0 !important;
+    }
   }
 }
 
@@ -374,18 +391,16 @@
     background-image:
       radial-gradient(60% 45% at 50% 45%, hsl(var(--primary-50)) 0%, transparent 70%),
       radial-gradient(hsl(var(--primary-200) / 0.55) 1px, transparent 1px);
-    background-size: 100% 100%, 20px 20px;
+    background-size:
+      100% 100%,
+      20px 20px;
   }
 
   :root[data-theme='dark'] .ub-auth-hero,
   .dark .ub-auth-hero {
     /* The same idea inverted: a near-black sheet, so the panel stays a tint of
        the brand rather than becoming a bright block in a dark room. */
-    background-image: linear-gradient(
-      0deg,
-      rgb(10 9 11 / 0.92) 0%,
-      rgb(10 9 11 / 0.92) 100%
-    );
+    background-image: linear-gradient(0deg, rgb(10 9 11 / 0.92) 0%, rgb(10 9 11 / 0.92) 100%);
   }
 
   .ub-native-select {

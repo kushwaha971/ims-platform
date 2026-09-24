@@ -479,6 +479,22 @@ export const INVALIDATION: TInvalidationMap = {
   // The new (or existing, for a duplicate name) row is added to the held list
   // by `expenseFormSlice`, and the picker selects it — no refetch.
   createExpenseCategory: { patch: [['expenseForm', 'categories']] },
+  // ── SAL-02 / SAL-03 / SAL-06 — invoices ──────────────────────────────────
+  //
+  // Autosave writes a draft every few seconds from the editor, where the list
+  // is not mounted: stale, re-read on the list's next mount. ISSUING is the
+  // write with consequences everywhere — the party's balance, khata, statement
+  // and aging move by the grand total, and stock moves on every tracked line —
+  // all stale for their next mount; nothing is patched, because every one of
+  // those figures is computed by the server.
+  saveInvoiceDraft: { stale: ['invoiceList'] },
+  deleteInvoiceDraft: { stale: ['invoiceList'] },
+  issueInvoice: {
+    stale: ['invoiceList', ...EXPENSE_LEDGER_STALE, 'itemList', 'itemDetail', 'stockSummary'],
+  },
+  // A share link changes nothing any other screen shows; the detail slice
+  // holds the minted link itself (its fulfilled reducer, not a refetch).
+  createInvoiceShareLink: { patch: [['invoiceDetail', 'shareLink']] },
   // ── LED-06 — manual reminders ─────────────────────────────────────────────
   //
   // A reminder moves no money, so nothing about the khata, the list or the

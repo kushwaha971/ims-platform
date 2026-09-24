@@ -134,6 +134,16 @@ class AuditAction:
     EXPENSE_RECORDED = "expense.recorded"
     EXPENSE_VOIDED = "expense.voided"
     EXPENSE_CATEGORY_CREATED = "expense_category.created"
+    # ── Sprint 7: SAL-02 / SAL-03 / SAL-06 (17-04 §16) ────────────────────
+    #
+    # `invoice.draft_updated` is throttled to one row per draft per 10 minutes
+    # (SAL-06 §15) with `changes_count` — autosave PATCHes every few seconds.
+    INVOICE_DRAFT_CREATED = "invoice.draft_created"
+    INVOICE_DRAFT_UPDATED = "invoice.draft_updated"
+    INVOICE_DRAFT_DELETED = "invoice.draft_deleted"
+    INVOICE_ISSUED = "invoice.issued"
+    INVOICE_SHARE_LINK_CREATED = "invoice.share_link_created"
+    INVOICE_SHARE_LINK_REGENERATED = "invoice.share_link_regenerated"
     # ── Sprint 5: LED-05 … LED-08 (17-02 §16) ──────────────────────────────
     #
     # LED-05 §16: the system clearing a collection date because the balance
