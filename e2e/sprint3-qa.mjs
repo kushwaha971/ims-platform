@@ -268,6 +268,16 @@ const EN_TEMPLATE = (party, amount, shop, date) =>
 const HI_TEMPLATE = (party, amount, shop, date) =>
   `नमस्ते ${party},\n${date} तक ${shop} का Rs ${amount} बकाया है।\nकृपया सुविधानुसार भुगतान करें। धन्यवाद।\n— ${shop}`;
 
+/* LED-06 (wave 1) moved the message to the server: the sheet shows
+   POST /reminders/preview's `text` (WhatsApp) and `sms_text` (SMS) verbatim, in
+   the shop's message language, whatever the UI language. The expected text is
+   read from that endpoint instead of being rebuilt from a client template. */
+const serverPreview = async (owner, partyId) => {
+  const token = await login(owner.email, owner.password);
+  const r = await api('POST', '/reminders/preview', { party_id: partyId }, token, { 'Idempotency-Key': `pv-${Date.now()}-${Math.random()}` });
+  return r.body?.data ?? { text: null, sms_text: null };
+};
+
 const openKhata = async (page, partyId, name) => {
   await page.goto(`${FRONTEND}/parties/${partyId}`, { waitUntil: 'domcontentloaded', timeout: 120000 });
   await page.getByRole('heading', { name }).first().waitFor({ timeout: 60000 });
@@ -355,7 +365,9 @@ async function phaseA(browser, state) {
   let sheet = await openReminder(page);
   const today = todayIst();
   let s = await readSheet(sheet);
-  const expected = EN_TEMPLATE('Ramesh Traders', '2,300.00', shop, today);
+  const rameshPreview = await serverPreview(state.owner, P.ramesh);
+  const expected = rameshPreview.text;
+  const expectedSms = rameshPreview.sms_text ?? expected;
   record('A2', 'dialog title is "Send reminder"', s.title === 'Send reminder', s.title);
   // O6: the recipient is shown normalised ("+91 98123 45678"), as the link dials it.
   record('A2', 'recipient line "To {name} · {mobile}"', s.description === 'To Ramesh Traders · +91 98123 45678', s.description);
@@ -366,7 +378,7 @@ async function phaseA(browser, state) {
     Boolean(wa) && wa.origin === 'https://wa.me' && wa.pathname === '/919812345678' && [...wa.searchParams.keys()].join() === 'text', s.waHref);
   record('A3', 'WhatsApp text decodes to exactly the preview', wa?.searchParams.get('text') === expected);
   record('A3', 'WhatsApp link opens a new tab with rel noopener', s.waTarget === '_blank' && /\bnoopener\b/.test(s.waRel ?? ''), `${s.waTarget} ${s.waRel}`);
-  const smsOk = s.smsHref?.startsWith('sms:+919812345678?&body=') && decodeURIComponent(s.smsHref.split('?&body=')[1] ?? '') === expected;
+  const smsOk = s.smsHref?.startsWith('sms:+919812345678?&body=') && decodeURIComponent(s.smsHref.split('?&body=')[1] ?? '') === expectedSms;
   record('A4', 'SMS href is sms:+919812345678?&body=<the same text>', Boolean(smsOk), s.smsHref?.slice(0, 80));
   record('A7', 'nothing in the sheet says "sent"', !/\bsent\b/i.test(s.text), s.text.replace(/\n/g, ' | '));
 
@@ -437,7 +449,7 @@ async function phaseA(browser, state) {
     sheet = await openReminder(page);
     s = await readSheet(sheet);
     const partyName = name.source.replace(/\\/g, '');
-    const exp = EN_TEMPLATE(partyName, amount, shop, todayIst());
+    const exp = (await serverPreview(state.owner, P[key])).text;
     if (digits === null) {
       record('A5', 'no mobile → WhatsApp href is https://wa.me/?text=…', s.waHref?.startsWith('https://wa.me/?text=') && new URL(s.waHref).searchParams.get('text') === exp, s.waHref?.slice(0, 40));
       record('A5', 'no mobile → SMS href is sms:?&body=…', Boolean(s.smsHref?.startsWith('sms:?&body=')), s.smsHref?.slice(0, 30));
@@ -463,7 +475,7 @@ async function phaseA(browser, state) {
     await sheet.locator('[data-ub-share-preview]').waitFor({ timeout: 20000 });
     await page.waitForTimeout(500);
     s = await readSheet(sheet);
-    const hiExp = HI_TEMPLATE('Ramesh Traders', '2,300.00', shop, todayIst());
+    const hiExp = expected; // the message language is the shop's, not the UI's
     record('A10', 'Hindi: title "रिमाइंडर भेजें"', s.title === 'रिमाइंडर भेजें', s.title);
     record('A10', 'Hindi: recipient line', s.description === 'Ramesh Traders · +91 98123 45678 को', s.description);
     record('A10', 'Hindi: preview is the Hindi template', s.preview === hiExp, JSON.stringify(s.preview));
@@ -492,7 +504,7 @@ async function phaseA(browser, state) {
       const sh = pg.getByRole('dialog').last();
       await sh.locator('[data-ub-share-preview]').waitFor({ timeout: 20000 });
       const ss = await readSheet(sh);
-      record('A1', 'accountant: the sheet carries the same message', ss.preview === EN_TEMPLATE('Ramesh Traders', '2,300.00', shop, todayIst()));
+      record('A1', 'accountant: the sheet carries the same message', ss.preview === expected);
     }
     await c.close();
   }
