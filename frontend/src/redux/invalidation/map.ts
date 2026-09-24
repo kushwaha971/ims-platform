@@ -504,4 +504,24 @@ export const INVALIDATION: TInvalidationMap = {
   // count beside them, from the response; nothing else caches notifications.
   readNotification: { patch: [['notifications', 'items']] },
   readAllNotifications: { patch: [['notifications', 'items']] },
+
+  // ── PLT-10 — "Your data" ──────────────────────────────────────────────────
+  // Every answer is the new state of the thing written, and `accountDataSlice`
+  // writes it in place. Requesting or cancelling a deletion also changes the
+  // session's tenant status (the shell's banner): `useAccountData` re-reads
+  // `/auth/me` after both, because the session is not a stale-able slice.
+  requestExport: { patch: [['accountData', 'exports']] },
+  requestDeletion: { patch: [['accountData', 'deletion']] },
+  cancelDeletion: { patch: [['accountData', 'deletion']] },
+  decideSupportAccess: { patch: [['accountData', 'support']] },
+
+  // ── PLT-14 — the console ──────────────────────────────────────────────────
+  // The saved tenant card is the response; `adminSlice` writes it in place.
+  updateTenant: { patch: [['admin', 'detail']] },
+  requestSupportAccess: { patch: [['admin', 'detail']] },
+  // Entering or leaving a support session moves the tab to a different
+  // tenant context, as a switch does, so both are `resetAll` — and a DOCUMENT
+  // load follows either way, which rebuilds every slice from `/auth/me`.
+  startImpersonation: { resetAll: true },
+  endImpersonation: { resetAll: true },
 };

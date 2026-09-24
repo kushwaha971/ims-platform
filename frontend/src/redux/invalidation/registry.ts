@@ -1,4 +1,25 @@
 import {
+  cancelDeletion,
+  decideSupportAccess,
+  fetchAccountData,
+  pollExport,
+  refreshDeletion,
+  requestDeletion,
+  requestExport,
+} from 'modules/DigiKhaato/features/account-data/redux/accountDataThunk';
+import {
+  endImpersonation,
+  fetchHealth,
+  fetchOverview,
+  fetchPartners,
+  fetchPlans,
+  fetchTenantDetail,
+  fetchTenants,
+  requestSupportAccess,
+  startImpersonation,
+  updateTenant,
+} from 'modules/DigiKhaato/features/admin/redux/adminThunk';
+import {
   fetchActors,
   fetchAuditRows,
 } from 'modules/DigiKhaato/features/audit-log/redux/auditLogThunk';
@@ -223,6 +244,17 @@ export const QUERIES = {
   // NTF-01 — the bell's count and the inbox panel
   fetchUnreadCount,
   fetchNotifications,
+  // PLT-10 — "Your data": the page, one export's poll, the gate's re-read
+  fetchAccountData,
+  pollExport,
+  refreshDeletion,
+  // PLT-14 — the console's reads
+  fetchOverview,
+  fetchTenants,
+  fetchTenantDetail,
+  fetchPartners,
+  fetchPlans,
+  fetchHealth,
 } as const;
 
 export const MUTATIONS = {
@@ -305,6 +337,16 @@ export const MUTATIONS = {
   // NTF-01 — read state
   readNotification,
   readAllNotifications,
+  // PLT-10 — export, deletion and its cancel, and the owner's consent
+  requestExport,
+  requestDeletion,
+  cancelDeletion,
+  decideSupportAccess,
+  // PLT-14 — the console's writes
+  updateTenant,
+  requestSupportAccess,
+  startImpersonation,
+  endImpersonation,
 } as const;
 
 export type TQueryName = keyof typeof QUERIES;
