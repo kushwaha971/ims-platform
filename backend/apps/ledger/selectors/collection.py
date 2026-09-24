@@ -55,3 +55,31 @@ def collection_buckets(*, tenant: Any, today: dt.date) -> dict[str, dict[str, An
     return {
         key: {"count": row[f"{key}__count"], "amount": row[f"{key}__amount"]} for key in BUCKETS
     }
+
+
+#: The reminders screen's tab names → the summary's bucket keys.
+DUE_TABS = {"today": "due_today", "overdue": "overdue", "upcoming": "upcoming_7d"}
+
+#: The order each tab is worked in: the biggest debt first today; the oldest
+#: promise first when overdue; the nearest date first when looking ahead.
+DUE_ORDERING = {
+    "today": ("-balance", "name", "id"),
+    "overdue": ("collection_date", "-balance", "id"),
+    "upcoming": ("collection_date", "-balance", "id"),
+}
+
+
+def due_parties(*, tenant: Any, today: dt.date, tab: str) -> Any:
+    """LED-05 FR-4 — the parties behind one bucket, with the SAME predicate the
+    figures are counted with, so the rows under a tab are the tab's count."""
+    from apps.parties.constants import PartyStatus
+    from apps.parties.models import Party
+
+    predicate = bucket_filters(today)[DUE_TABS[tab]]
+    return (
+        Party.objects.for_tenant(tenant)
+        .filter(status=PartyStatus.ACTIVE, balance__gt=ZERO, collection_date__isnull=False)
+        .filter(predicate)
+        .only("id", "name", "mobile", "balance", "collection_date")
+        .order_by(*DUE_ORDERING[tab])
+    )

@@ -10,6 +10,7 @@ from apps.ledger.views.entry import LedgerEntryViewSet, PartyLedgerEntryViewSet
 from apps.ledger.views.reminder import (
     ReminderBulkView,
     ReminderDetailView,
+    ReminderDueView,
     ReminderListCreateView,
     ReminderPreviewView,
     ReminderSendView,
@@ -42,6 +43,7 @@ urlpatterns = [
     # LED-06 / LED-07 — reminders. The literal routes come before the `<uuid>`
     # ones for the reader; the converter refuses anything that is not a UUID.
     path("reminders", ReminderListCreateView.as_view(), name="reminder-list"),
+    path("reminders/due", ReminderDueView.as_view(), name="reminder-due"),
     path("reminders/preview", ReminderPreviewView.as_view(), name="reminder-preview"),
     path("reminders/bulk", ReminderBulkView.as_view(), name="reminder-bulk"),
     path("reminders/settings", ReminderSettingsView.as_view(), name="reminder-settings"),

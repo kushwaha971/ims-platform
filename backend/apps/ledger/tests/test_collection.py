@@ -153,3 +153,52 @@ def test_a_partial_payment_keeps_the_date(tenant: Any, api_as: Any) -> None:
     )
     party.refresh_from_db()
     assert party.collection_date == tenant_today(tenant) and party.balance == Decimal("300.00")
+
+
+def test_each_bucket_lists_exactly_what_its_figure_counts(tenant: Any, api_as: Any) -> None:
+    """LED-05 FR-4 / AC-2 — the rows under a tab are the tab's count: the same
+    `balance > 0` predicate, the same tenant today, archived parties left out.
+    Protects against the reminders screen listing a paid-up customer whom the
+    tile above it did not count, and against a bucket in the wrong order."""
+    from apps.parties.constants import PartyStatus
+
+    client, _ = api_as(tenant)
+    today = tenant_today(tenant)
+    day = dt.timedelta(days=1)
+    big = PartyFactory(tenant=tenant, collection_date=today, balance=Decimal("3000.00"))
+    small = PartyFactory(tenant=tenant, collection_date=today, balance=Decimal("200.00"))
+    PartyFactory(tenant=tenant, collection_date=today, balance=Decimal("0.00"))
+    PartyFactory(
+        tenant=tenant, collection_date=today, balance=Decimal("50.00"), status=PartyStatus.ARCHIVED
+    )
+    oldest = PartyFactory(tenant=tenant, collection_date=today - 9 * day, balance=Decimal("10.00"))
+    recent = PartyFactory(tenant=tenant, collection_date=today - day, balance=Decimal("900.00"))
+    soon = PartyFactory(tenant=tenant, collection_date=today + day, balance=Decimal("5.00"))
+    PartyFactory(tenant=tenant, collection_date=today + 8 * day, balance=Decimal("5.00"))
+
+    summary = client.get(reverse("v1:ledger-summary")).json()["data"]
+    url = reverse("v1:reminder-due")
+
+    today_rows = client.get(url + "?bucket=today").json()
+    assert [r["id"] for r in today_rows["data"]] == [str(big.id), str(small.id)]
+    assert today_rows["meta"]["total"] == summary["due_today"]["count"]
+    assert today_rows["data"][0]["balance"] == "3000.00"
+
+    overdue = client.get(url + "?bucket=overdue").json()
+    assert [r["id"] for r in overdue["data"]] == [str(oldest.id), str(recent.id)]
+    assert overdue["meta"]["total"] == summary["overdue"]["count"]
+
+    upcoming = client.get(url + "?bucket=upcoming").json()
+    assert [r["id"] for r in upcoming["data"]] == [str(soon.id)]
+
+    assert client.get(url + "?bucket=someday").status_code == 400
+
+
+def test_due_list_is_the_tenants_own(tenant: Any, other_tenant: Any, api_as: Any) -> None:
+    """Canon tenancy rule — another business's customers never appear."""
+    client, _ = api_as(tenant)
+    PartyFactory(
+        tenant=other_tenant, collection_date=tenant_today(tenant), balance=Decimal("100.00")
+    )
+    body = client.get(reverse("v1:reminder-due") + "?bucket=today").json()
+    assert body["data"] == []

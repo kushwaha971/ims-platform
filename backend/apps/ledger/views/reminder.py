@@ -1,6 +1,7 @@
 """LED-06 / LED-07 §14 — the reminder endpoints. Thin (Part 26 §26.7 R7.1).
 
 GET   /reminders                 list, filters party_id/status/kind, meta.totals
+GET   /reminders/due?bucket=     LED-05 — the parties behind one bucket
 POST  /reminders                 create a scheduled manual reminder
 POST  /reminders/preview         the server-composed text; writes nothing (CR-LOG)
 POST  /reminders/bulk            one scheduled row + one link per party
@@ -116,6 +117,38 @@ class ReminderListCreateView(_ReminderBase):
     def post(self, request: Any) -> Any:
         reminder = create_reminder(ctx=self.ctx(), payload=dict(request.data or {}))
         return StandardResponse.created(serialize_reminder(reminder))
+
+
+class ReminderDueView(_ReminderBase):
+    """LED-05 FR-4 — who is due today, overdue, or due in the next seven days.
+
+    A read of its own rather than the party list's `collection=` filter: the
+    party list is the one party source the client may page through (§32.6.7),
+    and this screen needs exactly the bucket's rows in the bucket's order.
+    """
+
+    def get(self, request: Any) -> Any:
+        from apps.common.dates import tenant_today
+        from apps.ledger.selectors.collection import DUE_TABS, due_parties
+
+        tab = request.query_params.get("bucket") or "today"
+        if tab not in DUE_TABS:
+            raise ValidationFailed({"bucket": ["Choose today, overdue or upcoming."]})
+        tenant = self.get_tenant()
+        rows = due_parties(tenant=tenant, today=tenant_today(tenant), tab=tab)
+        paginator = PagePagination()
+        page = paginator.paginate_queryset(rows, request, view=self)
+        data = [
+            {
+                "id": str(p.id),
+                "name": p.name,
+                "mobile": p.mobile,
+                "balance": str(p.balance),
+                "collection_date": p.collection_date.isoformat() if p.collection_date else None,
+            }
+            for p in page
+        ]
+        return Response({"data": data, "meta": paginator.get_meta()})
 
 
 class ReminderPreviewView(_ReminderBase):
