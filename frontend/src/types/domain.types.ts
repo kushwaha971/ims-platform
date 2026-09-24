@@ -79,6 +79,13 @@ export const PERMISSION_CODES = [
   'reports.export',
   'platform.members.manage',
   'platform.settings.manage',
+  // Track T1 — the canon codenames the settings surfaces gate on (canon §0.9;
+  // `apps/common/permissions_registry.py`). `platform.settings.manage` above is
+  // not in the server's registry and nothing reads it; left in place rather
+  // than removed by a feature that does not own it.
+  'platform.tenant.manage',
+  'platform.branding.manage',
+  'platform.audit.read',
 ] as const;
 export type PermissionCode = (typeof PERMISSION_CODES)[number];
 

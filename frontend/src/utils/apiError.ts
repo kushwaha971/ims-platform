@@ -188,6 +188,15 @@ const LOCALLY_PRESENTED: ReadonlySet<ApiErrorCode> = new Set<ApiErrorCode>([
   'party_balance_nonzero',
   'balance_changed',
   'nothing_to_write_off',
+
+  // Track T1 — each is answered on the surface the merchant is looking at:
+  // `low_contrast` under the colour field WITH the darker shade to try (a
+  // toast cannot carry a button that applies it); `precondition_failed` as the
+  // settings page's "changed elsewhere — reload" dialog (PLT-06 FR-8); and
+  // `sequence_backwards` under the numbering row it refused.
+  'low_contrast',
+  'precondition_failed',
+  'sequence_backwards',
 ]);
 
 export const shouldToast = (error: ApiErrorShape): boolean => !LOCALLY_PRESENTED.has(error.code);

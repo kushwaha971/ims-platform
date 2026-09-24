@@ -59,6 +59,16 @@ export const API_PATHS = {
   INVITATION_ACCEPT: (token: string) => `/invitations/${seg(token)}/accept`,
   PERMISSIONS_ME: '/permissions/me',
   AUDIT_LOGS: '/audit-logs',
+  // ── Track T1: PLT-06, PLT-08, PLT-09 ──────────────────────────────────────
+  /** PLT-06 FR-10 — the business type's preset values, for "Reset to defaults". */
+  TENANT_SETTINGS_DEFAULTS: '/tenants/current/settings/defaults',
+  /** PLT-08 FR-3 — the "Who" filter's options, former members included. */
+  AUDIT_LOG_ACTORS: '/audit-logs/actors',
+  /** PLT-09 (CR-013) — the caller's own devices. */
+  AUTH_SESSIONS: '/auth/sessions',
+  AUTH_SESSION: (id: string) => `/auth/sessions/${seg(id)}`,
+  /** PLT-09 FR-4 — a manager logs a member out of THIS business. */
+  MEMBERSHIP_REVOKE_SESSIONS: (id: string) => `/memberships/${seg(id)}/revoke-sessions`,
 
   // ── parties ───────────────────────────────────────────────────────────────
   PARTIES: '/parties',

@@ -14,3 +14,22 @@ import { API_BASE_URL } from 'src/constants';
  */
 export const absoluteApiUrl = (path: string): string =>
   `${API_BASE_URL.replace(/\/+$/, '')}${path.startsWith('/') ? path : `/${path}`}`;
+
+/**
+ * WLB-01 / PLT-07 — a stored file's URL as the SERVER spells it
+ * (`/api/v1/files/{id}`, already carrying the API prefix) made absolute
+ * against the API's ORIGIN, for an image source.
+ *
+ * Not `absoluteApiUrl`: that joins onto the base URL, which already ends in
+ * `/api/v1`, and would produce `/api/v1/api/v1/files/…`. The image request is a
+ * plain GET, so the session cookie carries it the way it carries a download.
+ */
+export const absoluteFileUrl = (serverPath: string): string => {
+  if (/^https?:\/\//.test(serverPath)) return serverPath;
+  try {
+    return `${new URL(API_BASE_URL).origin}${serverPath}`;
+  } catch {
+    // A relative base URL (same-origin deployment): the path is already right.
+    return serverPath;
+  }
+};

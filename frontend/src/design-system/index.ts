@@ -204,6 +204,16 @@ export { UbSwitch } from './UbSwitch';
 export type { UbSwitchProps } from './UbSwitch';
 export { UbTextInput } from './UbTextInput';
 export type { UbTextInputProps } from './UbTextInput';
+// Track T1 (PLT-06, PLT-07, WLB-01) — multi-line text, one-file pick, a stored
+// image and the colour swatch. See docs/DESIGN-SYSTEM.md §4.
+export { UbTextArea } from './UbTextArea';
+export type { UbTextAreaProps } from './UbTextArea';
+export { UbFileUpload } from './UbFileUpload';
+export type { UbFileUploadProps } from './UbFileUpload';
+export { UbImagePreview } from './UbImagePreview';
+export type { UbImagePreviewProps } from './UbImagePreview';
+export { UbColorInput } from './UbColorInput';
+export type { UbColorInputProps } from './UbColorInput';
 
 /**
  * PTY-05 — a merchant's own labels. `UbTag` is the chip; `UbTagList` is the

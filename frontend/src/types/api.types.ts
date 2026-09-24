@@ -79,6 +79,15 @@ export type ApiErrorCode =
   // (BR-8). A role check rather than a codename one, so the client draws the
   // override from the session's role and the server decides again on write.
   | 'override_not_allowed'
+  // Track T1 — settings, branding, devices, partners (Part 22 §22.1.1 group C).
+  | 'sequence_backwards'
+  | 'module_has_data'
+  | 'kind_not_allowed'
+  | 'gst_type_locked'
+  | 'low_contrast'
+  | 'branding_locked'
+  | 'current_session'
+  | 'partner_suspended'
   // transport-level codes minted on the client, never sent by the server:
   | 'network_error'
   | 'timeout'
