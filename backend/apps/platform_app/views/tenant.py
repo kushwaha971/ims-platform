@@ -95,6 +95,14 @@ class TenantCreateView(APIView):
 
     The `Idempotency-Key` header is what makes EC-7 true: a retry after a lost
     response replays the created tenant instead of creating a second business.
+
+    Defect NEW-1: a caller who already owns an UNFINISHED business gets that
+    business back — updated with this step's three fields — rather than a
+    second one, because a browser refresh loses the client's key and a fresh
+    key is a fresh request. That answer is `200`, not `201`: nothing was
+    created. The body has the same shape either way, and the session is
+    re-issued for the resumed tenant, so the wizard's next step is scoped to it
+    whichever branch ran.
     """
 
     permission_classes = [IsAuthenticated]
@@ -106,7 +114,7 @@ class TenantCreateView(APIView):
         data = serializer.validated_data
         meta = _meta(request)
 
-        membership = onboarding_service.create_tenant(
+        membership, created = onboarding_service.start_tenant(
             user=request.user,
             name=data["name"],
             business_type=data["business_type"],
@@ -139,7 +147,7 @@ class TenantCreateView(APIView):
         }
         if expose:
             payload["access_token"] = issued.access
-        response = StandardResponse.created(payload)
+        response = StandardResponse.created(payload) if created else StandardResponse.ok(payload)
         response["X-Tenant-Id"] = str(membership.tenant_id)
         return self._with_session(response, issued)
 

@@ -862,3 +862,167 @@ def test_a_profile_edit_after_completion_does_not_re_apply_the_preset(
         AuditLog.objects.filter(tenant=new_tenant, action=AuditAction.TENANT_PRESET_APPLIED).count()
         == 1
     )
+
+
+# ── NEW-1: a refresh must not turn step 1 into a second business ─────────────
+
+
+def _owned_tenants(user: Any) -> Any:
+    from apps.platform_app.models import Tenant
+
+    return Tenant.objects.filter(memberships__user=user, memberships__role__code="owner")
+
+
+def test_a_step_one_resubmitted_under_a_new_key_resumes_the_unfinished_business(
+    api_as: Any, tenant: Any, onboarding_ready: Any
+) -> None:
+    """NEW-1: step 1 submitted, browser refreshed, step 1 submitted again.
+
+    The refresh loses the client's tenant id and its `Idempotency-Key`, so the
+    second submit arrives under a key the server has never seen. It used to
+    create a second tenant — two businesses with the same name under `/switch`,
+    permanently. It must resume the first: same id, the corrected fields
+    written, `200` because nothing was created, and a session scoped to it.
+    """
+    from apps.platform_app.tokens import ACCESS_COOKIE
+
+    client, member = api_as(tenant)
+    first = _create(client, name="Sharma Stores", idempotency_key="before-refresh")
+    assert first.status_code == 201
+    created_id = first.json()["data"]["tenant"]["id"]
+    owned_before = _owned_tenants(member.user).count()
+
+    again = _create(
+        client,
+        name="Sharma General Stores",
+        business_type="wholesale",
+        state_code="29",
+        idempotency_key="after-refresh",
+    )
+
+    assert again.status_code == 200, again.json()
+    data = again.json()["data"]
+    assert data["tenant"]["id"] == created_id
+    assert data["tenant"]["name"] == "Sharma General Stores"
+    assert data["tenant"]["business_type"] == "wholesale"
+    assert data["tenant"]["state_code"] == "29"
+    assert data["session"]["active_tenant_id"] == created_id
+    assert again["X-Tenant-Id"] == created_id
+    assert ACCESS_COOKIE in again.cookies
+    assert _owned_tenants(member.user).count() == owned_before
+
+
+def test_resuming_step_one_does_not_move_the_wizard_backwards(
+    api_as: Any, tenant: Any, onboarding_ready: Any
+) -> None:
+    """NEW-1: a merchant who reached step 3 and then re-submits step 1 (a
+    refresh on an old tab, say) keeps their progress — the resume writes the
+    three step-1 fields and leaves `onboarding_step` where it was, exactly as
+    the stepper's edit PATCH does (FR-9)."""
+    client, new_tenant, membership = _wizard(api_as, tenant)
+    client.patch(reverse(CURRENT_URL), {"onboarding_step": 2}, format="json")
+    client.patch(reverse(CURRENT_URL), {"onboarding_step": 3}, format="json")
+    owned_before = _owned_tenants(membership.user).count()
+
+    resumed = _create(client, name="Renamed Shop", idempotency_key="stale-tab")
+
+    assert resumed.status_code == 200
+    assert resumed.json()["data"]["tenant"]["id"] == str(new_tenant.id)
+    new_tenant.refresh_from_db()
+    assert new_tenant.onboarding_step == 3
+    assert new_tenant.name == "Renamed Shop"
+    assert _owned_tenants(membership.user).count() == owned_before
+
+
+def test_a_resume_is_audited_as_an_update_not_a_creation(
+    api_as: Any, tenant: Any, onboarding_ready: Any
+) -> None:
+    """NEW-1: the audit trail must say what happened — one business created,
+    then that business updated — not two creations of which one is phantom."""
+    from apps.common.audit import AuditAction
+    from apps.platform_app.models import AuditLog
+
+    client, _member = api_as(tenant)
+    created_id = _create(client, idempotency_key="k-a").json()["data"]["tenant"]["id"]
+    _create(client, name="Sharma Kirana", idempotency_key="k-b")
+
+    actions = list(
+        AuditLog.objects.filter(entity_type="platform_tenant", entity_id=created_id)
+        .order_by("created_at")
+        .values_list("action", flat=True)
+    )
+    assert actions.count(AuditAction.TENANT_CREATED) == 1
+    assert AuditAction.TENANT_UPDATED in actions
+
+
+def test_idempotency_still_replays_a_resumed_step_one(
+    api_as: Any, tenant: Any, onboarding_ready: Any
+) -> None:
+    """NEW-1 must not disturb EC-7: a retry of the RESUMING request with its own
+    key replays the stored `200` rather than running the step again."""
+    client, _member = api_as(tenant)
+    created_id = _create(client, idempotency_key="k-1").json()["data"]["tenant"]["id"]
+    resumed = _create(client, name="Sharma Kirana", idempotency_key="k-2")
+    replay = _create(client, name="Sharma Kirana", idempotency_key="k-2")
+
+    assert resumed.status_code == replay.status_code == 200
+    assert replay["Idempotent-Replayed"] == "true"
+    assert replay.json()["data"]["tenant"]["id"] == created_id
+
+
+def test_adding_a_business_after_finishing_the_first_still_creates_one(
+    api_as: Any, tenant: Any, onboarding_ready: Any
+) -> None:
+    """NEW-1's guard is "one UNFINISHED business at a time", not "one business".
+
+    PLT-04 FR-6 "Add a business" runs step 1 again from `/switch` for a merchant
+    whose first business is complete, and that must still create a second
+    tenant — a guard that resumed completed businesses would silently rename
+    the merchant's live shop instead.
+    """
+    client, first_tenant, membership = _wizard(api_as, tenant)
+    assert _complete(client).status_code == 200
+
+    second = _create(client, name="Sharma Wholesale", idempotency_key="add-business")
+
+    assert second.status_code == 201
+    assert second.json()["data"]["tenant"]["id"] != str(first_tenant.id)
+    first_tenant.refresh_from_db()
+    assert first_tenant.name == "Sharma General Store"
+    assert _owned_tenants(membership.user).filter(name="Sharma Wholesale").count() == 1
+
+
+def test_an_unfinished_business_someone_else_owns_is_not_resumed(
+    api_as: Any, tenant: Any, onboarding_ready: Any
+) -> None:
+    """NEW-1: only the caller's OWN unfinished business is resumed.
+
+    A staff member of an owner's half-built shop who starts a business of their
+    own must get a new tenant — resuming would let them rename somebody else's
+    business through the create endpoint, which needs no tenant permission.
+    """
+    tenant.onboarding_step = 1
+    tenant.save(update_fields=["onboarding_step"])
+    for role in ("staff", "admin"):
+        client, _member = api_as(tenant, role=role)
+        response = _create(client, name=f"{role} own shop", idempotency_key=f"own-{role}")
+        assert response.status_code == 201, role
+        assert response.json()["data"]["tenant"]["id"] != str(tenant.id)
+    tenant.refresh_from_db()
+    assert tenant.name != "staff own shop"
+
+
+def test_a_suspended_unfinished_business_is_not_resumed(
+    api_as: Any, tenant: Any, onboarding_ready: Any
+) -> None:
+    """NEW-1: the resume writes into a business, so it must be one that is live."""
+    from apps.platform_app.models import Tenant
+
+    client, _member = api_as(tenant)
+    first_id = _create(client, idempotency_key="k-s1").json()["data"]["tenant"]["id"]
+    Tenant.objects.filter(pk=first_id).update(status="suspended")
+
+    second = _create(client, name="Fresh Start", idempotency_key="k-s2")
+
+    assert second.status_code == 201
+    assert second.json()["data"]["tenant"]["id"] != first_id

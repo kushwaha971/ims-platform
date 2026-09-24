@@ -1,7 +1,9 @@
 """The onboarding wizard's server side (PLT-03).
 
-Three entry points: `create_tenant` (step 1), `update_tenant` (steps 2–4) and
-`apply_preset` (run on completion, and safe to run again). Everything is one
+Four entry points: `start_tenant` (step 1 — creates the business, or resumes
+the caller's unfinished one; see defect NEW-1 there), `create_tenant` (the
+create half of it), `update_tenant` (steps 2–4) and `apply_preset` (run on
+completion, and safe to run again). Everything is one
 transaction and everything is audited.
 
 **Idempotency.** PLT-03 EC-7 requires that a retried step 1 with the same
@@ -16,6 +18,11 @@ business. Two mechanisms hold that, and both are needed:
 
 The first mechanism fails open if a client forgets the header; the second does
 not depend on a client doing anything.
+
+A third rule sits beside them for the case neither covers (defect NEW-1): a
+client that has LOST its key — a browser refresh — sends a new one, which is a
+new request as far as idempotency is concerned. `start_tenant` therefore
+resumes the caller's unfinished business instead of creating a second one.
 """
 
 from __future__ import annotations
@@ -149,9 +156,7 @@ def create_tenant(
             is_default=not _has_default(user),
             joined_at=timezone.now(),
         )
-        if owner_name and not (user.full_name or "").strip():
-            user.full_name = owner_name.strip()[:120]
-            user.save(update_fields=["full_name", "updated_at"])
+        _fill_blank_full_name(user, owner_name)
 
         ctx = Ctx(
             tenant=tenant,
@@ -182,6 +187,120 @@ def create_tenant(
             after={"role": owner_role.code, "status": membership.status},
         )
     return membership
+
+
+def resumable_onboarding(*, user: Any) -> Any:
+    """The caller's own unfinished business, if they have one (defect NEW-1).
+
+    "Unfinished" means the wizard created it (`onboarding_step >= 1` — step 1 is
+    what `create_tenant` writes; nothing else in the product creates a tenant)
+    and has not completed it (`< WIZARD_LAST_STEP`). "Own" means an ACTIVE
+    `owner` membership in an ACTIVE tenant: a staff member of somebody else's
+    half-built business is not resuming anything, and a business that was
+    suspended or deleted is not one to write into.
+
+    The newest wins. There should never be two, but NEW-1 left production-like
+    data with duplicates, and resuming the latest is what the merchant was last
+    looking at.
+    """
+    from apps.platform_app.models import Membership
+
+    return (
+        Membership.objects.select_related("tenant", "role")
+        .filter(
+            user=user,
+            status=MembershipStatus.ACTIVE,
+            role__code=RoleCode.OWNER.value,
+            tenant__status=TenantStatus.ACTIVE,
+            tenant__onboarding_step__gte=1,
+            tenant__onboarding_step__lt=WIZARD_LAST_STEP,
+        )
+        .order_by("-tenant__created_at")
+        .first()
+    )
+
+
+def start_tenant(
+    *,
+    user: Any,
+    name: str,
+    business_type: str,
+    state_code: str,
+    locale: str = "en",
+    owner_name: str | None = None,
+    request_id: str | None = None,
+    ip: str | None = None,
+    user_agent: str | None = None,
+) -> tuple[Any, bool]:
+    """Step 1 submitted: create the business, or RESUME the unfinished one.
+
+    Returns `(membership, created)`.
+
+    **Defect NEW-1.** The wizard's only protection against a second business was
+    client memory — the Redux `tenantId` and the `Idempotency-Key` — and a
+    browser refresh loses both. The merchant then saw step 1 empty, submitted it
+    again under a fresh key, and this endpoint dutifully created a second
+    tenant; `/switch` listed two businesses with the same name, and there is no
+    delete-business path at MVP. The idempotency key cannot catch that: a new
+    key is, by definition, a new request.
+
+    So the rule lives here, where no client can forget it: **a user has at most
+    one unfinished business of their own.** While one exists, step 1 writes to
+    it — the same three fields `PATCH /tenants/current` would, audited the same
+    way, with `onboarding_step` left where it is — instead of creating another.
+
+    What is preserved:
+
+    * *Idempotency (EC-7).* The decorator runs before this, so a replay with the
+      same key still replays the stored response byte for byte.
+    * *"Add a business" (PLT-04 FR-6).* Once the first business has COMPLETED
+      the wizard it is no longer resumable, and step 1 creates a new tenant
+      exactly as before. The guard only refuses to start a second wizard while
+      the first is still open — the second attempt resumes the first.
+
+    The caller's user row is locked for the duration, so two step-1 submits
+    racing from two tabs cannot both see "nothing to resume" and both create.
+    """
+    from apps.platform_app.models import User
+
+    with transaction.atomic():
+        User.objects.select_for_update().filter(pk=user.pk).values_list("pk", flat=True).first()
+        existing = resumable_onboarding(user=user)
+        if existing is None:
+            membership = create_tenant(
+                user=user,
+                name=name,
+                business_type=business_type,
+                state_code=state_code,
+                locale=locale,
+                owner_name=owner_name,
+                request_id=request_id,
+                ip=ip,
+                user_agent=user_agent,
+            )
+            return membership, True
+
+        update_tenant(
+            tenant=existing.tenant,
+            actor=user,
+            changes={
+                "name": name.strip(),
+                "business_type": business_type,
+                "state_code": state_code,
+            },
+            request_id=request_id,
+            ip=ip,
+            user_agent=user_agent,
+        )
+        _fill_blank_full_name(user, owner_name)
+        return existing, False
+
+
+def _fill_blank_full_name(user: Any, owner_name: str | None) -> None:
+    """BR-7: `owner_name` fills `platform_user.full_name` only when it is blank."""
+    if owner_name and not (user.full_name or "").strip():
+        user.full_name = owner_name.strip()[:120]
+        user.save(update_fields=["full_name", "updated_at"])
 
 
 def update_tenant(
@@ -467,5 +586,7 @@ __all__ = [
     "create_tenant",
     "resolve_partner",
     "resolve_plan",
+    "resumable_onboarding",
+    "start_tenant",
     "update_tenant",
 ]

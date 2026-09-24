@@ -237,6 +237,21 @@ class MemberCreateSerializer(serializers.Serializer):
     role = serializers.CharField(max_length=32)
     mobile = serializers.CharField(max_length=15, required=False, allow_blank=True, allow_null=True)
 
+    def validate_mobile(self, value: str | None) -> str | None:
+        """Normalise to E.164 or refuse, as `InvitationCreateSerializer` does (NEW-2).
+
+        The "already used by another login" check in `credentials.create_member`
+        compares against the stored E.164 spelling, so an un-normalised
+        `9876543210` would slip past it and store a second spelling of a number
+        the platform already holds. "" and `null` are both "no number".
+        """
+        if value in (None, ""):
+            return None
+        try:
+            return normalise_mobile(value)
+        except InvalidMobile as exc:
+            raise serializers.ValidationError(str(exc)) from exc
+
     def validate_role(self, value: str) -> str:
         """`owner` is not invitable. A business has exactly one and it is transferred.
 

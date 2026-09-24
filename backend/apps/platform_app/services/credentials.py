@@ -35,7 +35,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from django.conf import settings
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from apps.common.audit import AuditAction, write_audit
@@ -58,6 +58,21 @@ _ALPHABET = _UPPER + _LOWER + _DIGITS
 
 GROUP_SIZE = 4
 GROUPS = 3  # 12 characters, ~2^69 -- grouped for reading, not for strength
+
+# The name of the partial unique index on `platform_user.mobile` (models/user.py).
+# Postgres names it in the IntegrityError text, which is how a lost race on the
+# number is told apart from a lost race on anything else.
+MOBILE_UNIQUE_CONSTRAINT = "uq_user_mobile_notnull"
+
+# NEW-2. Worded for the field it sits under: the number is OPTIONAL on this form,
+# so the way forward is to leave it out, and the owner should be told that
+# rather than left thinking the person cannot be added at all. It says a login
+# holds the number and nothing about whose, which is as little as a form that
+# must refuse the number can say.
+MOBILE_TAKEN_MESSAGE = (
+    "This mobile number is already used by another login. "
+    "Leave it blank or use a different number."
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -156,6 +171,43 @@ def _issued_here(*, user: Any, tenant: Any) -> bool:
     )
 
 
+def _refuse_taken_mobile(mobile: str) -> None:
+    """A field error on `mobile` when another `platform_user` already holds it (NEW-2).
+
+    The uniqueness rule itself is platform-wide and unchanged (`uq_user_mobile_notnull`):
+    invitation matching needs one account per number. What was wrong is that
+    only the index enforced it, so a taken number reached `INSERT` and the owner
+    got a 500 for what is a correctable, optional field.
+    """
+    from apps.platform_app.models import User
+
+    if User.objects.filter(mobile=mobile).exists():
+        raise ValidationFailed({"mobile": [MOBILE_TAKEN_MESSAGE]})
+
+
+def _create_user_or_refuse_mobile(*, email: str, full_name: str, mobile: str | None) -> Any:
+    """`create_user`, with a lost race on the number answered as the pre-check would (NEW-2).
+
+    Two businesses can each pass `_refuse_taken_mobile` for the same number in
+    the same instant -- the tenant lock serialises one business, not the
+    platform. The loser's INSERT then trips the index. The savepoint keeps the
+    enclosing transaction usable, and the caller's `atomic()` still rolls back
+    every row it wrote, so nothing is left half-made and the idempotency key is
+    released by the decorator on the way out.
+    """
+    from apps.platform_app.models import User
+
+    try:
+        with transaction.atomic():
+            return User.objects.create_user(
+                email=email, password=None, full_name=full_name, mobile=mobile
+            )
+    except IntegrityError as exc:
+        if MOBILE_UNIQUE_CONSTRAINT in str(exc):
+            raise ValidationFailed({"mobile": [MOBILE_TAKEN_MESSAGE]}) from exc
+        raise
+
+
 def create_member(
     *,
     tenant: Any,
@@ -207,6 +259,13 @@ def create_member(
                     "validation_error", "That person is already on this team."
                 )
 
+        # NEW-2: the number is only ever written for a NEW account (an existing
+        # one keeps its own profile), so it is only checked for one. Checked
+        # before the seat so the owner is told about the field they can fix,
+        # not about a plan limit they cannot.
+        if existing_user is None and mobile:
+            _refuse_taken_mobile(mobile)
+
         # "Everybody else, plus this person" — a seat already promised to the
         # address by an invitation is converted rather than bought twice.
         entitlements.assert_can_add_member(
@@ -214,8 +273,8 @@ def create_member(
         )
 
         if existing_user is None:
-            user = User.objects.create_user(
-                email=normalised, password=None, full_name=display_name, mobile=mobile or None
+            user = _create_user_or_refuse_mobile(
+                email=normalised, full_name=display_name, mobile=mobile or None
             )
             password = generate_temp_password()
             expires_at = _apply(user=user, password=password, tenant=locked)

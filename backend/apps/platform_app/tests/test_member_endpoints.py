@@ -271,3 +271,115 @@ def test_regenerating_throws_out_a_session_held_on_the_old_password(
 
     assert staff.get(reverse("v1:auth-me")).status_code == 401
     _login("ramesh@shop.test", again.json()["data"]["password"])
+
+
+# ── A mobile number another login already holds (NEW-2) ──────────────────────
+
+
+@pytest.mark.django_db
+def test_a_mobile_another_login_holds_is_a_400_on_the_field_not_a_500(
+    api_as: Any, tenant: Any
+) -> None:
+    """NEW-2: a taken number reached the INSERT and `uq_user_mobile_notnull` answered 500.
+
+    The number is optional on this form and a correctable input, so the owner
+    must be told which field to change — and that leaving it blank is fine —
+    rather than shown "Something went wrong" for a form they cannot fix. The
+    platform-wide rule itself (one account per number) stays exactly as it was.
+    """
+    from tests.factories.platform import UserFactory
+
+    holder = UserFactory(mobile="+919876543210")
+    client, _ = api_as(tenant)
+
+    response = _create(client, mobile="+919876543210")
+
+    assert response.status_code == 400, response.content
+    error = response.json()["error"]
+    assert error["code"] == "validation_error"
+    assert error["details"] == {
+        "mobile": [
+            "This mobile number is already used by another login. "
+            "Leave it blank or use a different number."
+        ]
+    }
+    # It says a login holds the number and nothing about whose.
+    assert holder.email not in response.content.decode()
+
+
+@pytest.mark.django_db
+def test_a_differently_spelt_taken_mobile_is_refused_the_same_way(api_as: Any, tenant: Any) -> None:
+    """NEW-2: `98765 43210` is the same number as `+919876543210`.
+
+    The serializer did not normalise, so any spelling but the stored E.164 one
+    walked past a uniqueness check and wrote a second spelling of a number the
+    platform already holds — the index cannot see that they are equal.
+    """
+    from tests.factories.platform import UserFactory
+
+    UserFactory(mobile="+919876543210")
+    client, _ = api_as(tenant)
+
+    response = _create(client, mobile="98765 43210")
+
+    assert response.status_code == 400, response.content
+    assert set(response.json()["error"]["details"]) == {"mobile"}
+
+
+@pytest.mark.django_db
+def test_a_refused_mobile_writes_nothing_and_releases_the_idempotency_key(
+    api_as: Any, tenant: Any
+) -> None:
+    """NEW-2: no half-made account, and the corrected retry is not met with a 409.
+
+    The dialog rotates its key on a validation error, but a client that retries
+    with the SAME key and the number removed is equally legitimate. A key left
+    `in_progress` — or a `platform_user` without its membership, or an audit
+    row for a member who does not exist — would each outlive the 400.
+    """
+    from tests.factories.platform import UserFactory
+
+    UserFactory(mobile="+919876543210")
+    client, _ = api_as(tenant)
+    User = django_apps.get_model("platform", "User")
+    Membership = django_apps.get_model("platform", "Membership")
+    IdempotencyKey = django_apps.get_model("platform", "IdempotencyKey")
+    AuditLog = django_apps.get_model("platform", "AuditLog")
+    members_before = Membership.objects.filter(tenant=tenant).count()
+    audits_before = AuditLog.objects.count()
+    key = {"HTTP_IDEMPOTENCY_KEY": "member-create-new2"}
+
+    refused = client.post(
+        reverse(LIST_URL), {**_body(), "mobile": "+919876543210"}, format="json", **key
+    )
+
+    assert refused.status_code == 400, refused.content
+    assert not User.objects.filter(email="ramesh@shop.test").exists()
+    assert Membership.objects.filter(tenant=tenant).count() == members_before
+    assert AuditLog.objects.count() == audits_before
+    assert not IdempotencyKey.objects.filter(key="member-create-new2").exists()
+
+    retried = client.post(reverse(LIST_URL), {**_body(), "mobile": ""}, format="json", **key)
+
+    assert retried.status_code == 201, retried.content
+    assert retried.json()["data"]["member"]["mobile"] is None
+
+
+@pytest.mark.django_db
+def test_an_existing_account_is_added_whatever_mobile_the_owner_typed(
+    api_as: Any, tenant: Any
+) -> None:
+    """NEW-2 must not over-reach: an existing account's profile is never rewritten.
+
+    Adding somebody who already has a login only grants access; the number
+    typed is not written, so it cannot collide and must not be refused — here
+    it is that person's own number, which the unique index already holds.
+    """
+    from tests.factories.platform import UserFactory
+
+    UserFactory(email="ramesh@shop.test", mobile="+919876543210")
+    client, _ = api_as(tenant)
+
+    own = _create(client, mobile="+919876543210")
+    assert own.status_code == 201, own.content
+    assert own.json()["data"]["created_user"] is False
