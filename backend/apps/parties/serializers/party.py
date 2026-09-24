@@ -78,6 +78,9 @@ class PartyListSerializer(serializers.ModelSerializer):
             "balance",
             "status",
             "last_activity_at",
+            # LED-05 FR-4 — the reminders screen lists a bucket's parties with
+            # their promise date; one column, no extra query.
+            "collection_date",
             # PTY-05 — the chips the row draws. Prefetched by the selector, so
             # this is not a query per row; `test_list_columns_cover_the_list_row`
             # and the query budget both hold that.

@@ -18,6 +18,9 @@ from apps.ledger.constants import (
     REFERENCE_MAX_LENGTH,
     EntryStatus,
     EntryType,
+    ReminderChannel,
+    ReminderKind,
+    ReminderStatus,
     SourceType,
 )
 
@@ -203,3 +206,61 @@ class LedgerEntry(TenantModel, ImmutableModel):
 
     def __str__(self) -> str:  # pragma: no cover - admin convenience
         return f"{self.direction} {self.amount} on {self.entry_date}"
+
+
+class Reminder(TenantModel):
+    """One nudge to one party about money owed (Part 21 §21.3.4, LED-06/07).
+
+    A manual reminder is written when the merchant opens WhatsApp, their SMS
+    app or the dialler from the reminder sheet; an automated one is written by
+    the 09:00 job for a collection date of tomorrow (D-1) or today (D0).
+
+    Mutable, unlike `LedgerEntry`: `status`, `sent_at`, `snapshot_balance` and
+    `message_log_id` move as the reminder goes out. A reminder is a record of
+    an ACTION, not of money, and the money it quoted is frozen in
+    `snapshot_balance` at the moment it went (BR-1) rather than recomputed.
+
+    `channel` is `varchar(16)` where §21.3.4 says 12: its own first value,
+    `whatsapp_manual`, is fifteen characters (CR-LOG).
+    """
+
+    party = models.ForeignKey("parties.Party", on_delete=models.RESTRICT, related_name="reminders")
+    due_on = models.DateField()
+    channel = models.CharField(max_length=16, choices=ReminderChannel.choices)
+    kind = models.CharField(
+        max_length=12, choices=ReminderKind.choices, default=ReminderKind.MANUAL
+    )
+    status = models.CharField(
+        max_length=12, choices=ReminderStatus.choices, default=ReminderStatus.SCHEDULED
+    )
+    #: The `notifications_message_log` row, when a message exists. A plain UUID
+    #: rather than a FK: Part 20 §20.1.4 does not let `ledger` import
+    #: `notifications`, and a call leaves no message row at all.
+    message_log_id = models.UUIDField(null=True, blank=True)
+    snapshot_balance = MoneyField(null=True, blank=True)
+    note = models.CharField(max_length=255, blank=True, default="")
+    scheduled_for = models.DateTimeField(null=True, blank=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "ledger_reminder"
+        verbose_name = "reminder"
+        verbose_name_plural = "reminders"
+        constraints = [
+            # §21.3.4 / LED-07 FR-7 — one automated reminder per kind per date.
+            # This is what makes the scheduler's double run harmless: the second
+            # INSERT … ON CONFLICT DO NOTHING writes nothing.
+            models.UniqueConstraint(
+                fields=["party", "due_on", "kind"],
+                condition=models.Q(kind__in=["auto_d1", "auto_d0"]),
+                name="uq_reminder_auto_per_day",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["tenant", "status", "due_on"], name="ix_reminder_status_due"),
+            # The party page's history strip, newest first (LED-06 FR-6).
+            models.Index(fields=["party", "-created_at"], name="ix_reminder_party_recent"),
+        ]
+
+    def __str__(self) -> str:  # pragma: no cover - admin convenience
+        return f"{self.kind}:{self.channel}:{self.status}"

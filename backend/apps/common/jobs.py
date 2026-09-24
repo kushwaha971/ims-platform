@@ -420,7 +420,7 @@ SCHEDULES: list[Schedule] = [
     Schedule("ops.check_certificates", period="daily", at_hour_ist=4, minute=0, grace_minutes=180),
     Schedule("ops.verify_backup", period="daily", at_hour_ist=4, minute=15, grace_minutes=180),
     Schedule(
-        "ledger.schedule_auto_reminders", period="daily", at_hour_ist=8, minute=0, grace_minutes=30
+        "ledger.schedule_auto_reminders", period="daily", at_hour_ist=9, minute=0, grace_minutes=30
     ),
     Schedule(
         "platform.purge_notifications",

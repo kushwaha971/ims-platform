@@ -19,7 +19,7 @@ calls the ledger.
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import Any
+from typing import Any, Callable
 
 from django.utils import timezone
 
@@ -85,4 +85,58 @@ def apply_entry(*, party: Party, direction: str, amount: Decimal) -> Decimal:
             "updated_at",
         ]
     )
+    clear_collection_date_if_settled(party=party)
     return party.balance
+
+
+# ── LED-05 BR-2 — a settled party has nothing left to collect ────────────────
+#
+# The ledger owns `ledger_reminder`, and Part 20 §20.1.4 does not let `parties`
+# import it. So the reminder half of BR-2 is a PORT the ledger fills in its
+# `AppConfig.ready()` — the same registry-in-`ready()` pattern the write-off
+# handler and the job handlers use — and this module calls whatever is
+# registered without knowing what a reminder is.
+_SETTLE_HANDLERS: list[Callable[..., Any]] = []
+
+
+def register_settle_handler(handler: Callable[..., Any]) -> None:
+    """Called once per handler at start-up; idempotent so a re-`ready()` is harmless."""
+    if handler not in _SETTLE_HANDLERS:
+        _SETTLE_HANDLERS.append(handler)
+
+
+def clear_collection_date_if_settled(*, party: Party) -> bool:
+    """BR-2 / FR-5 — after any posting, a balance ≤ 0 clears the collection date.
+
+    Called by BOTH writers of the balance cache (`apply_entry` here and the
+    correction's delta in the ledger), inside the posting's transaction, so a
+    payment that settles the khata and the date it settles are one atom. Also
+    runs the registered handlers, which cancel the party's `scheduled`
+    automated reminders — the first line of defence; the send job re-checks at
+    send time as the second (LED-07 BR-4).
+
+    Written by the SYSTEM (`actor_type='system'`, §16), because nobody chose to
+    clear it: the money did. Returns whether anything changed.
+    """
+    if party.balance is None or party.balance > ZERO:
+        return False
+    had_date = party.collection_date is not None
+    if had_date:
+        before = party.collection_date
+        party.collection_date = None
+        party.save(update_fields=["collection_date", "updated_at"])
+        from apps.common.audit import AuditAction, write_audit
+        from apps.common.context import Ctx
+
+        write_audit(
+            ctx=Ctx.system(party.tenant),
+            action=AuditAction.PARTY_COLLECTION_DATE_CLEARED,
+            entity_type="parties_party",
+            entity_id=party.id,
+            before={"collection_date": before.isoformat()},
+            after={"collection_date": None},
+            metadata={"trigger": "balance_settled"},
+        )
+    for handler in _SETTLE_HANDLERS:
+        handler(party=party)
+    return had_date

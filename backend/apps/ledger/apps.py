@@ -22,3 +22,11 @@ class LedgerConfig(AppConfig):
         # handlers above use. See `parties/services/write_off.py` for why a
         # port and not a signal.
         register_write_off_handler(write_off_party_balance)
+
+        # LED-05 BR-2 — the same port shape, the other way round: `parties`
+        # clears a settled party's collection date and calls whatever the
+        # ledger registered to cancel that party's scheduled reminders.
+        from apps.ledger.services.reminders import cancel_scheduled_reminders
+        from apps.parties.services.balance import register_settle_handler
+
+        register_settle_handler(cancel_scheduled_reminders)

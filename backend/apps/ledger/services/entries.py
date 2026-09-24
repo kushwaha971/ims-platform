@@ -14,13 +14,9 @@ column that can only ever be null, and a "Save without photo" path with no
 photo path beside it. The upload arrives with the `files` app; `source_id` is
 not it.
 
-**The transaction SMS (FR-9).** LED-08 owns the templates and
-`apps/notifications` has no template table. Enqueuing a job whose handler does
-not exist produces a dead-letter row per entry — a queue full of evidence that
-the product does not work. The condition that decides it (`sms_opt_in`, a
-mobile, and the tenant setting) is three lines and lands with the handler it
-feeds, in one place, where it can be tested against a message that is actually
-sent.
+**The transaction SMS (FR-9)** landed with LED-08: `post_entry` queues it
+through `entry_sms.maybe_enqueue_entry_sms`, which owns the three conditions
+(`sms_opt_in`, a mobile, the tenant setting) beside the handler they feed.
 
 **The outbox replay (FR-12).** The client keeps the draft and retries with the
 same idempotency key, which is what AC-6 describes and what `@idempotent` on the
@@ -58,6 +54,7 @@ from apps.ledger.constants import (
     SourceType,
 )
 from apps.ledger.models import LedgerEntry
+from apps.ledger.services.entry_sms import maybe_enqueue_entry_sms
 from apps.parties.constants import PartyStatus
 from apps.parties.services.balance import apply_entry, lock_party
 from apps.parties.services.credit import CREDIT_MODE_BLOCK, check_credit, credit_mode, may_override
@@ -375,6 +372,10 @@ def post_entry(*, ctx: Ctx, payload: dict) -> dict:
             after={"entry_id": str(entry.id), "balance_after": str(balance)},
             metadata={"limit": str(party.credit_limit), "amount": str(cleaned["amount"])},
         )
+
+    # LED-08 FR-2 — the customer's SMS, queued in this transaction (the outbox),
+    # sent 60 s later so rapid entries coalesce into one message.
+    maybe_enqueue_entry_sms(tenant=ctx.tenant, party=party, entry=entry)
 
     return {"entry": entry, "balance": balance, "warnings": warnings}
 

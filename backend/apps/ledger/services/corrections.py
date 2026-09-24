@@ -52,7 +52,7 @@ from apps.ledger.constants import (
 )
 from apps.ledger.models import LedgerEntry
 from apps.ledger.services.entries import _clean_text, validate_entry_payload
-from apps.parties.services.balance import lock_party
+from apps.parties.services.balance import clear_collection_date_if_settled, lock_party
 
 REASON_MIN_LENGTH = 3
 
@@ -199,6 +199,9 @@ def _apply_delta(*, party: Any, delta: Decimal) -> Decimal:
             "updated_at",
         ]
     )
+    # LED-05 BR-2 — "after any posting (…, correction)": a correction that
+    # takes the balance to zero clears the date exactly as a payment would.
+    clear_collection_date_if_settled(party=party)
     return party.balance
 
 

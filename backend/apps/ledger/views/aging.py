@@ -49,8 +49,25 @@ class LedgerSummaryView(TenantScopeMixin, APIView):
     throttle_classes = [ScopedUserRateThrottle]
 
     def get(self, request: Any, *args: Any, **kwargs: Any) -> Any:
-        totals = ledger_summary(tenant=self.get_tenant())
-        return StandardResponse.ok({key: str(value) for key, value in totals.items()})
+        from apps.common.dates import tenant_today
+        from apps.ledger.selectors.collection import collection_buckets
+
+        tenant = self.get_tenant()
+        totals = ledger_summary(tenant=tenant)
+        # LED-05 FR-3 — the three collection buckets ride on the same response,
+        # each `{count, amount}`, against the tenant's today (`as_of`).
+        today = tenant_today(tenant)
+        buckets = collection_buckets(tenant=tenant, today=today)
+        return StandardResponse.ok(
+            {
+                **{key: str(value) for key, value in totals.items()},
+                **{
+                    key: {"count": bucket["count"], "amount": str(bucket["amount"])}
+                    for key, bucket in buckets.items()
+                },
+                "as_of": today.isoformat(),
+            }
+        )
 
 
 class LedgerAgingView(TenantScopeMixin, APIView):
