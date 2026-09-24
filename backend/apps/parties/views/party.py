@@ -17,6 +17,7 @@ from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
 
 from apps.common.constants import ModuleCode
 from apps.common.context import Ctx
+from apps.common.exports import CsvExportMixin, ExportColumn, csv_date
 from apps.common.idempotency import idempotent
 from apps.common.permissions import ModuleEnabled
 from apps.common.responses import StandardResponse
@@ -51,7 +52,38 @@ from apps.parties.services.credit import check_credit, credit_mode, credit_snaps
 from apps.parties.services.crud import create_party, update_party
 
 
-class PartyViewSet(TenantScopedNoDeleteViewSet):
+def _party_type(party: Party) -> str:
+    if party.is_customer and party.is_supplier:
+        return "both"
+    return "supplier" if party.is_supplier else "customer"
+
+
+def _balance_type(party: Party) -> str:
+    """The direction as words, as the statement CSV writes it (LED-04 BR-4)."""
+    if party.balance > 0:
+        return "You will get"
+    if party.balance < 0:
+        return "You will give"
+    return "Settled"
+
+
+#: IMP-02 FR-2's `parties` resource. Every column is one `list_parties` already
+#: loads (or prefetches, for tags), so the export is not a query per row.
+PARTY_EXPORT_COLUMNS = (
+    ExportColumn("name", lambda p: p.name),
+    ExportColumn("display_code", lambda p: p.display_code or ""),
+    ExportColumn("mobile", lambda p: p.mobile or ""),
+    ExportColumn("type", _party_type),
+    ExportColumn("balance", lambda p: abs(p.balance), numeric=True),
+    ExportColumn("balance_type", _balance_type),
+    ExportColumn("collection_date", lambda p: csv_date(p.collection_date)),
+    ExportColumn("last_activity", lambda p: csv_date(p.last_activity_at)),
+    ExportColumn("status", lambda p: p.status),
+    ExportColumn("tags", lambda p: "; ".join(tag.name for tag in p.tags.all())),
+)
+
+
+class PartyViewSet(CsvExportMixin, TenantScopedNoDeleteViewSet):
     """`/parties` — list and retrieve.
 
     `get_queryset()` is scoped by `TenantScopeMixin`, so `retrieve` with another
@@ -77,6 +109,11 @@ class PartyViewSet(TenantScopedNoDeleteViewSet):
     # `throttle_scope`: a single scope on this class is what put every GET on
     # the write budget.
     throttle_classes = [ScopedUserRateThrottle]
+    # IMP-02 — `?format=csv` on the list, with the list's own filters. Parties
+    # have a dedicated export codename in canon §0.9, so it is that one.
+    export_resource = "parties"
+    export_codename = "parties.party.export"
+    export_columns = PARTY_EXPORT_COLUMNS
 
     # The base is `TenantScopedNoDeleteViewSet` rather than the full
     # `ModelViewSet` for exactly one reason: a party is archived, never
@@ -151,7 +188,9 @@ class PartyViewSet(TenantScopedNoDeleteViewSet):
         twenty-five rows that fit on this page — which is what it said before,
         honestly labelled and useless for the question it was being asked.
         """
-        queryset = self.filter_queryset(self.get_queryset())
+        if self.wants_csv(request):
+            return self.csv_export(request)
+        queryset = self.export_queryset()
         totals = party_totals(queryset)
         page = self.paginate_queryset(queryset)
         serializer = self.get_serializer(page, many=True)

@@ -13,35 +13,19 @@ from typing import Any, Mapping
 
 from apps.common.audit import write_audit
 from apps.common.context import Ctx
-from apps.common.exceptions import PermissionDenied
 
 # The cross-site refusal, the export budget and the permission probe moved to
 # `apps.common.exports` when PLT-08's audit export became the first CSV outside
 # the ledger; the names are re-exported so every caller here is unchanged.
+# `authorise_export` followed them there with IMP-02, when every list became
+# exportable and `parties`, `inventory` and `expenses` needed the same gate.
 from apps.common.exports import (  # noqa: F401
     CROSS_SITE,
+    authorise_export,
     charge_export_budget,
     refuse_cross_site,
     request_has,
 )
-
-
-def authorise_export(request: Any, view: Any, *, codename: str, refusal: str) -> None:
-    """Everything an export must pass before it reads a row, in this order.
-
-    1. Not started by another site (F-3) — first, so a hostile page can neither
-       learn what the victim may export nor spend their budget.
-    2. The export's own permission — a query parameter on a URL everybody may
-       read, so the permission class cannot see it.
-    3. The export budget — charged only for an export that is going to run.
-
-    The caller computes the report AFTER this, never before (I-5): a refused
-    export must not cost the server the whole walk over the book.
-    """
-    refuse_cross_site(request)
-    if not request_has(request, codename):
-        raise PermissionDenied(refusal)
-    charge_export_budget(request, view)
 
 
 def audit_export(

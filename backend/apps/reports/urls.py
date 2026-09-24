@@ -1,10 +1,19 @@
-"""URL routes for the reports app (canon §0.8).
+"""URL routes for the reports app (canon §0.8), mounted under `reports/`.
 
-Sprint 0 creates the package so the app label, the table prefix and the
-import matrix of Part 20 §20.1.4 are reserved. The models, services and
-views land in the sprint that owns the feature.
+IMP-02 adds the stored-export pair; the report projections land with RPT-*.
 """
 
 from __future__ import annotations
 
-urlpatterns: list = []
+from django.urls import path
+
+from apps.reports.views.exports import ExportDetailView, ExportDownloadView
+
+urlpatterns = [
+    path("exports/<uuid:export_id>", ExportDetailView.as_view(), name="report-export-detail"),
+    path(
+        "exports/<uuid:export_id>/download",
+        ExportDownloadView.as_view(),
+        name="report-export-download",
+    ),
+]
