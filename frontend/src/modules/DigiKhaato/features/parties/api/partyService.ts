@@ -95,6 +95,44 @@ const toParty = (row: PartyApiRow): Party => ({
 });
 
 /**
+ * The list's FILTERS as a query string — shared by the list request and its
+ * CSV export (IMP-02 BR-1: the file is the screen). Pagination is passed by
+ * the list alone, because an export is every matching row.
+ */
+const partyFilterQuery = (
+  params: PartyListParams
+): Record<string, string | number | undefined> => ({
+  q: params.q || undefined,
+  status: params.status,
+  // `|| undefined` on all three, because `toQueryString` drops undefined and
+  // the URL is this request's IDENTITY. `?balance=` and no `balance` are two
+  // spellings of one request: `partyListWarmup` claims a speculative fetch by
+  // comparing the arguments that produced it, and FR-15's cache keys a page
+  // by its filter signature — so two spellings mean a warm request that is
+  // never claimed and a cache that never hits itself.
+  //
+  // Not because the server refuses it. Checked against the running API:
+  // `?balance=` returns 200 and an unfiltered list, because django-filter
+  // treats an empty value as an absent one. An earlier version of this
+  // comment claimed a 400.
+  type: params.type || undefined,
+  balance: params.balance || undefined,
+  collection: params.collection || undefined,
+  tag: params.tag || undefined,
+  credit: params.credit || undefined,
+  ordering: params.ordering,
+});
+
+/**
+ * IMP-02 — the list's own path with its current filters, for the Export
+ * button. Built HERE because this module is the one allowed to name
+ * `API_PATHS.PARTIES` (the party-fetch lint rule), and a second copy of the
+ * filter mapping is how an export stops matching its screen.
+ */
+export const partyExportPath = (params: PartyListParams): string =>
+  `${API_PATHS.PARTIES}${toQueryString(partyFilterQuery(params))}`;
+
+/**
  * GET /parties — page-paginated list (Part 32 S0-70's read-only endpoint).
  *
  * CR-2026-09-19-E, DOCUMENTED EXCEPTION — a whole-page failure keeps its
@@ -111,25 +149,7 @@ export const listParties = async (
   signal?: AbortSignal
 ): Promise<PartyListResult> => {
   const query = toQueryString({
-    q: params.q || undefined,
-    status: params.status,
-    // `|| undefined` on all three, because `toQueryString` drops undefined and
-    // the URL is this request's IDENTITY. `?balance=` and no `balance` are two
-    // spellings of one request: `partyListWarmup` claims a speculative fetch by
-    // comparing the arguments that produced it, and FR-15's cache keys a page
-    // by its filter signature — so two spellings mean a warm request that is
-    // never claimed and a cache that never hits itself.
-    //
-    // Not because the server refuses it. Checked against the running API:
-    // `?balance=` returns 200 and an unfiltered list, because django-filter
-    // treats an empty value as an absent one. An earlier version of this
-    // comment claimed a 400.
-    type: params.type || undefined,
-    balance: params.balance || undefined,
-    collection: params.collection || undefined,
-    tag: params.tag || undefined,
-    credit: params.credit || undefined,
-    ordering: params.ordering,
+    ...partyFilterQuery(params),
     page: params.page,
     page_size: params.pageSize,
   });

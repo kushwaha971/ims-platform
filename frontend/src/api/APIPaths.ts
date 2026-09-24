@@ -155,6 +155,8 @@ export const API_PATHS = {
   REPORT_STOCK_SUMMARY: '/reports/stock-summary',
   REPORT_RECEIVABLES_AGING: '/reports/receivables-aging',
   REPORT_EXPORT: (id: string) => `/reports/exports/${seg(id)}`,
+  /** IMP-02 FR-8 — the stored file of an export too big to stream. */
+  REPORT_EXPORT_DOWNLOAD: (id: string) => `/reports/exports/${seg(id)}/download`,
   NOTIFICATIONS: '/notifications',
   NOTIFICATION_READ: (id: string) => `/notifications/${seg(id)}/read`,
   /** NTF-01 FR-8 — the bell's one number, and the catch-up. */
@@ -164,6 +166,11 @@ export const API_PATHS = {
   IMPORTS: '/imports',
   IMPORT: (id: string) => `/imports/${seg(id)}`,
   IMPORT_COMMIT: (id: string) => `/imports/${seg(id)}/commit`,
+  IMPORT_CANCEL: (id: string) => `/imports/${seg(id)}/cancel`,
+  /** IMP-01 FR-9 — the file with problems; a download link, not a fetch. */
+  IMPORT_ERRORS_CSV: (id: string) => `/imports/${seg(id)}/errors.csv`,
+  /** IMP-01 FR-2 — the template for a kind; a download link, not a fetch. */
+  IMPORT_TEMPLATE: (kind: string) => `/imports/templates/${seg(kind)}.csv`,
   TAX_RATES: '/taxes/rates',
   TAX_HSN: '/taxes/hsn',
   SYSTEM_HEALTH: '/system/health',

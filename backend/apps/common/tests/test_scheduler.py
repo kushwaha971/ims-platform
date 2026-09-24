@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from io import StringIO
 from typing import Any
 
@@ -25,6 +26,32 @@ def test_drain_mode_runs_the_queue_and_exits(tenant: Any, settings: Any) -> None
         .count()
         == 0
     )
+
+
+def test_the_first_tick_survives_info_logging_when_schedules_materialise(settings: Any) -> None:
+    """A fresh database has every schedule due, so the first tick materialises.
+
+    The runner logged that with `extra={"created": n}`, and `created` is a
+    reserved `LogRecord` attribute: with `ub.jobs` at INFO (local settings),
+    `makeRecord` raised KeyError and the scheduler died on its first tick, so
+    no job ever ran. The test suite logs at WARNING, which is why every other
+    test here passed straight through it; this one sets INFO.
+    """
+    settings.UB_JOBS_EAGER = False
+    jobs_logger = logging.getLogger("ub.jobs")  # does not propagate, so caplog is blind
+    seen: list[logging.LogRecord] = []
+    handler = logging.Handler(level=logging.INFO)
+    handler.emit = seen.append  # type: ignore[method-assign]
+    previous = jobs_logger.level
+    jobs_logger.addHandler(handler)
+    jobs_logger.setLevel(logging.INFO)
+    try:
+        call_command("run_scheduler", "--interval", "0", "--batch", "1", stdout=StringIO())
+    finally:
+        jobs_logger.removeHandler(handler)
+        jobs_logger.setLevel(previous)
+    assert any(r.getMessage() == "scheduler.materialised" for r in seen)
+    assert Job.objects.exclude(scheduled_key=None).exists()
 
 
 def test_eager_mode_executes_the_handler_after_commit(

@@ -838,7 +838,26 @@
   "measured + ~1 KB, the ratchet this file has always used. What is NOT here is",
   "a claim that this is the floor: the per-route +8 on non-date routes deserves a",
   "dedicated look (candidates: the Radix DismissableLayer now shared by the menu",
-  "in the app bar and the date popover)."
+  "in the app bar and the date popover).",
+  "",
+  "── 24 Sep 2026: IMP-01/IMP-02, the import wizard and the list exports ─────",
+  "/imports and /imports/[id] are new: the wizard (stepper, upload, the error",
+  "and preview grids, the summary). Measured 64.5 route on both — the wizard",
+  "is `dynamic()` inside the page, so this is the page shell, the grid and the",
+  "lazily injected `importJob` slice. The lines are measured + ~1.5, the",
+  "ratchet this file uses; firstLoad fails with every other route for as long",
+  "as sharedApp is over its budget, and this entry does not touch sharedApp.",
+  "",
+  "The list headers gained Import and Export. The first build put the",
+  "wizard's formatting module in /parties, /items and /expenses (+4.5 KB gz on",
+  "/parties for two buttons) because `useListExport` imported `pollDelay` from",
+  "it; `importAccess.ts` and `pollDelay.ts` import nothing now, and",
+  "`listHeaderWeight.test.ts` keeps it that way. What is left, measured:",
+  "  /parties  105.6 -> 106.3   /items  113.2 -> 114.0   /expenses  109.1 -> 110.6",
+  "(/expenses was already over its 107 before this change.) sharedApp moved",
+  "130.1 -> 133.0: ~2.3 of that is the 151 en.json keys the wizard's copy",
+  "needs (react-intl ships en.json in the shell), the rest the three thunks",
+  "and one action the invalidation registry must name. Not raised here."
  ],
  "default": {
   "route": 64,
@@ -956,6 +975,14 @@
   "/ledger/reminders": {
    "route": 80,
    "firstLoad": 324
+  },
+  "/imports": {
+   "route": 66,
+   "firstLoad": 326
+  },
+  "/imports/[id]": {
+   "route": 66,
+   "firstLoad": 326
   }
  },
  "//ignoreRoutes": [

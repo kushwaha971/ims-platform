@@ -31,6 +31,16 @@ import {
   voidExpense,
 } from 'modules/DigiKhaato/features/expenses/redux/expenseThunk';
 import {
+  exportListCsv,
+  fetchExportJob,
+} from 'modules/DigiKhaato/features/imports/redux/exportThunk';
+import {
+  cancelImportJob,
+  commitImportJob,
+  fetchImportJob,
+  uploadImportFile,
+} from 'modules/DigiKhaato/features/imports/redux/importThunk';
+import {
   archiveItem,
   fetchItemDetail,
   fetchItemList,
@@ -240,6 +250,10 @@ export const QUERIES = {
   fetchSalesContext,
   fetchUpiIntent,
   fetchPrintBranding,
+  // IMP-01 — the job the wizard polls; IMP-02 — a list's CSV and a stored export
+  fetchImportJob,
+  exportListCsv,
+  fetchExportJob,
 } as const;
 
 export const MUTATIONS = {
@@ -327,6 +341,10 @@ export const MUTATIONS = {
   issueInvoice,
   deleteInvoiceDraft,
   createInvoiceShareLink,
+  // IMP-01 — upload, commit and cancel an import
+  uploadImportFile,
+  commitImportJob,
+  cancelImportJob,
 } as const;
 
 export type TQueryName = keyof typeof QUERIES;

@@ -205,6 +205,10 @@ REST_FRAMEWORK = {
         # afternoon, one entry every few seconds, for an hour. What 120/min
         # stops is a loop, not a person.
         "ledger_write": env.str("UB_RATE_LIMIT_LEDGER_WRITE", "120/min"),
+        # IMP-01 §14 — "20 uploads per hour". An upload stores a file and
+        # queues a job that reads all of it; a loop of them is the one way a
+        # stolen token fills a tenant's disk.
+        "import_upload": "20/hour",
     },
     "UNAUTHENTICATED_USER": None,
     "COERCE_DECIMAL_TO_STRING": True,
@@ -280,6 +284,10 @@ CORS_EXPOSE_HEADERS = [
     "X-Tenant-Scope",
     "Idempotent-Replayed",
     "Retry-After",
+    # IMP-02 — a list export is FETCHED (it may answer 202 with a job instead
+    # of a file), so the browser must be allowed to read the file name the
+    # server chose; without it every export saves as the fallback name.
+    "Content-Disposition",
 ]
 
 # The same split, in the other direction — and this is the half that stops the

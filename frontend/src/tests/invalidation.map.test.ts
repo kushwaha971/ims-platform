@@ -15,6 +15,7 @@ import 'modules/DigiKhaato/features/inventory/redux/stockSummarySlice';
 import 'modules/DigiKhaato/features/expenses/redux/cashbookSlice';
 import 'modules/DigiKhaato/features/expenses/redux/expenseFormSlice';
 import 'modules/DigiKhaato/features/expenses/redux/expenseListSlice';
+import 'modules/DigiKhaato/features/imports/redux/importJobSlice';
 import 'modules/DigiKhaato/features/ledger/redux/agingSlice';
 import 'modules/DigiKhaato/features/ledger/redux/statementSlice';
 import 'modules/DigiKhaato/features/sessions/redux/sessionsSlice';

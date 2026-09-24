@@ -19,6 +19,7 @@ from apps.common.constants import ModuleCode
 from apps.common.context import Ctx
 from apps.common.dates import tenant_today
 from apps.common.exceptions import PermissionDenied, ValidationFailed
+from apps.common.exports import CsvExportMixin, ExportColumn, csv_date
 from apps.common.idempotency import idempotent
 from apps.common.permissions import ModuleEnabled
 from apps.common.permissions_registry import permissions_for
@@ -69,7 +70,24 @@ def _write_throttles(request: Any) -> list[Any]:
     return [ScopedUserRateThrottle("ledger_write")]
 
 
+#: IMP-02 FR-2's `expenses` resource — the list's three joins are selected, so
+#: nothing here is a query per row.
+EXPENSE_EXPORT_COLUMNS = (
+    ExportColumn("number", lambda e: e.number),
+    ExportColumn("date", lambda e: csv_date(e.expense_date)),
+    ExportColumn("category", lambda e: e.category.name if e.category_id else ""),
+    ExportColumn("party", lambda e: e.party.name if e.party_id else ""),
+    ExportColumn("paid", lambda e: "Yes" if e.paid else "No"),
+    ExportColumn("mode", lambda e: e.mode or ""),
+    ExportColumn("reference", lambda e: e.reference),
+    ExportColumn("amount", lambda e: e.amount, numeric=True),
+    ExportColumn("note", lambda e: e.note),
+    ExportColumn("status", lambda e: e.status),
+)
+
+
 class ExpenseViewSet(
+    CsvExportMixin,
     TenantScopeMixin,
     mixins.CreateModelMixin,
     mixins.ListModelMixin,
@@ -89,6 +107,8 @@ class ExpenseViewSet(
     ordering_fields = ("expense_date", "amount", "created_at")
     permission_classes = [IsAuthenticated, ModuleEnabled(ModuleCode.EXPENSES), ExpensePermissions]
     throttle_classes = [ScopedUserRateThrottle]
+    export_resource = "expenses"
+    export_columns = EXPENSE_EXPORT_COLUMNS
 
     def get_throttles(self) -> list[Any]:
         return _write_throttles(self.request)
@@ -111,14 +131,20 @@ class ExpenseViewSet(
         The totals run before the paginator slices, so "Total ₹41,230 · 62
         expenses" is the whole filtered set, not the 25 rows on screen.
         """
-        queryset = default_to_recorded(
-            self.filter_queryset(self.get_queryset()), request.query_params
-        )
+        if self.wants_csv(request):
+            return self.csv_export(request)
+        queryset = self.export_queryset()
         totals = expense_totals(queryset)
         page = self.paginate_queryset(queryset)
         data = ExpenseSerializer(page, many=True).data
         meta = {**self.paginator.get_meta(), "totals": ExpenseTotalsSerializer(totals).data}
         return StandardResponse.ok(data, meta=meta)
+
+    def export_queryset(self) -> Any:
+        """The filtered set the list pages over — and the one the CSV exports."""
+        return default_to_recorded(
+            self.filter_queryset(self.get_queryset()), self.request.query_params
+        )
 
     def retrieve(self, request: Any, *args: Any, **kwargs: Any) -> Any:
         expense = get_object_or_404(self.get_queryset(), pk=kwargs["pk"])

@@ -19,6 +19,7 @@ from apps.common.constants import ModuleCode
 from apps.common.context import Ctx
 from apps.common.dates import tenant_today
 from apps.common.exceptions import NotFound, ValidationFailed
+from apps.common.exports import CsvExportMixin, ExportColumn, csv_bool
 from apps.common.idempotency import idempotent
 from apps.common.pagination import CursorPagination, PagePagination
 from apps.common.permissions import ModuleEnabled
@@ -93,13 +94,52 @@ class _InventoryView:
         return default_location(self.get_tenant()).id
 
 
-class ItemViewSet(_InventoryView, viewsets.ViewSet):
+#: IMP-02 FR-2's `items` resource. Cost and value columns need
+#: `reports.financial.read` (BR-4), enforced server-side by the mixin.
+ITEM_EXPORT_COLUMNS = (
+    ExportColumn("name", lambda i: i.name),
+    ExportColumn("sku", lambda i: i.sku),
+    ExportColumn("barcode", lambda i: i.barcode or ""),
+    ExportColumn("item_type", lambda i: i.item_type),
+    ExportColumn("category", lambda i: i.category.name if i.category_id else ""),
+    ExportColumn("unit", lambda i: i.unit.code),
+    ExportColumn("hsn_sac", lambda i: i.hsn_sac or ""),
+    ExportColumn("tax_code", lambda i: i.tax_code),
+    ExportColumn(
+        "purchase_price",
+        lambda i: i.purchase_price,
+        permission="reports.financial.read",
+        numeric=True,
+    ),
+    ExportColumn("selling_price", lambda i: i.selling_price, numeric=True),
+    ExportColumn("mrp", lambda i: i.mrp, numeric=True),
+    ExportColumn("track_stock", lambda i: csv_bool(i.track_stock)),
+    ExportColumn("on_hand", lambda i: getattr(i, "on_hand", None), numeric=True),
+    ExportColumn("reorder_point", lambda i: i.reorder_point, numeric=True),
+    ExportColumn(
+        "stock_value",
+        lambda i: getattr(i, "stock_value", None),
+        permission="reports.financial.read",
+        numeric=True,
+    ),
+    ExportColumn("status", lambda i: i.status),
+)
+
+
+class ItemViewSet(CsvExportMixin, _InventoryView, viewsets.ViewSet):
     """No PUT and no DELETE: an item is edited by PATCH and archived, never deleted."""
 
     permission_classes = [IsAuthenticated, ModuleEnabled(ModuleCode.INVENTORY), ItemPermissions]
+    export_resource = "items"
+    export_columns = ITEM_EXPORT_COLUMNS
 
-    def list(self, request: Any) -> Any:
-        params = request.query_params
+    def _list_querysets(self) -> tuple[Any, Any, Any]:
+        """`(base, filtered, ordered)` — the list's three stages, shared with the CSV.
+
+        `base` has every filter but `stock` (the counts ignore it, FR-4),
+        `filtered` adds it, and `ordered` is what a page — or an export — reads.
+        """
+        params = self.request.query_params
         ordering = params.get("ordering") or "name"
         if ordering not in ITEM_ORDERINGS:
             raise ValidationFailed({"ordering": [f"Choose one of {', '.join(ITEM_ORDERINGS)}."]})
@@ -119,7 +159,16 @@ class ItemViewSet(_InventoryView, viewsets.ViewSet):
             if ordering.startswith("-")
             else F(field).asc(nulls_last=True)
         )
-        rows_qs = filtered.order_by(expr, "name", "id")
+        return base, filtered, filtered.order_by(expr, "name", "id")
+
+    def export_queryset(self) -> Any:
+        """IMP-02 BR-1 — the file is the screen: the list's own ordered set."""
+        return self._list_querysets()[2]
+
+    def list(self, request: Any) -> Any:
+        if self.wants_csv(request):
+            return self.csv_export(request)
+        base, filtered, rows_qs = self._list_querysets()
         paginator = PagePagination()
         page = paginator.paginate_queryset(rows_qs, request, view=self)
         meta = {**paginator.get_meta(), **item_selectors.list_meta(base, filtered)}

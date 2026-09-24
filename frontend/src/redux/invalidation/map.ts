@@ -520,4 +520,18 @@ export const INVALIDATION: TInvalidationMap = {
   // count beside them, from the response; nothing else caches notifications.
   readNotification: { patch: [['notifications', 'items']] },
   readAllNotifications: { patch: [['notifications', 'items']] },
+
+  // ── IMP-01 — imports ──────────────────────────────────────────────────────
+  // Upload and cancel change nothing but the job, which their own fulfilled
+  // cases write into `importJob`.
+  uploadImportFile: { patch: [['importJob', 'job']] },
+  cancelImportJob: { patch: [['importJob', 'job']] },
+  // The commit's 202 means the rows are ON THEIR WAY: the job runs in the
+  // scheduler and lands seconds or minutes later. `stale` (next mount) rather
+  // than `refetch`, because the merchant is on the wizard, not on the lists —
+  // and the completion card's "Go to customers" is the mount that re-reads.
+  commitImportJob: {
+    patch: [['importJob', 'job']],
+    stale: ['partyList', 'partyDetail', 'itemList'],
+  },
 };

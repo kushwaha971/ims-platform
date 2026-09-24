@@ -105,6 +105,45 @@ REGISTRY: dict[str, NotificationType] = {
             group_window=24 * 60,
             route=lambda _p: "/items?stock=low",
         ),
+        # IMP-01 §17 — to the member who uploaded, never broadcast. The route
+        # is the job page the wizard deep-links to.
+        NotificationType(
+            code="import_done",
+            category=NotificationCategory.SYSTEM,
+            severity=NotificationSeverity.SUCCESS,
+            required_permission="parties.party.read",
+            title_en="Import finished — {count} records created",
+            body_en="Tap to see what was imported",
+            route=lambda p: f"/imports/{p.get('job_id', '')}",
+        ),
+        NotificationType(
+            code="import_failed",
+            category=NotificationCategory.SYSTEM,
+            severity=NotificationSeverity.DANGER,
+            required_permission="parties.party.read",
+            title_en="Import failed — nothing was saved",
+            body_en="Tap to see why and try again",
+            route=lambda p: f"/imports/{p.get('job_id', '')}",
+        ),
+        # IMP-02 FR-7 / FR-14 — the big export the request could not stream.
+        NotificationType(
+            code="export_ready",
+            category=NotificationCategory.SYSTEM,
+            severity=NotificationSeverity.SUCCESS,
+            required_permission="reports.export",
+            title_en="Your export is ready — {count} rows",
+            body_en="The link works for 7 days",
+            route=lambda p: f"/imports?export={p.get('export_id', '')}",
+        ),
+        NotificationType(
+            code="export_failed",
+            category=NotificationCategory.SYSTEM,
+            severity=NotificationSeverity.DANGER,
+            required_permission="reports.export",
+            title_en="Your export could not be prepared",
+            body_en="Try a smaller set of filters",
+            route=lambda _p: "/imports",
+        ),
     )
 }
 

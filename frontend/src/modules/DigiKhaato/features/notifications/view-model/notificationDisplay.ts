@@ -15,6 +15,11 @@ export const KNOWN_TYPES: ReadonlySet<string> = new Set([
   'reminder_due',
   'reminder_failed',
   'low_stock',
+  // IMP-01 §17 / IMP-02 FR-14 — to the member who uploaded or exported.
+  'import_done',
+  'import_failed',
+  'export_ready',
+  'export_failed',
 ]);
 
 /**
