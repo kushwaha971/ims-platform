@@ -195,6 +195,19 @@ export { UbDrawer } from './UbDrawer';
 export type { UbDrawerProps } from './UbDrawer';
 export { UbMoneyInput, groupIndian, padDecimals, sanitiseAmount } from './UbMoneyInput';
 export type { UbMoneyInputProps } from './UbMoneyInput';
+// ── Sprint 6 (INV-01…INV-06): quantities, server-backed pickers, line items ──
+export { UbQuantityInput, sanitiseQuantity } from './UbQuantityInput';
+export type { UbQuantityInputProps } from './UbQuantityInput';
+export { UbAsyncCombobox } from './UbAsyncCombobox';
+export type { UbAsyncComboboxOption, UbAsyncComboboxProps } from './UbAsyncCombobox';
+export { UbLineItemsEditor } from './UbLineItemsEditor';
+export type {
+  UbLineCellContext,
+  UbLineCellLayout,
+  UbLineItemsColumn,
+  UbLineItemsEditorLabels,
+  UbLineItemsEditorProps,
+} from './UbLineItemsEditor';
 export { UbDateInput, isoFinancialYearStart, isoToday } from './UbDateInput';
 export type { UbDateInputProps, UbDateQuickChoice } from './UbDateInput';
 
