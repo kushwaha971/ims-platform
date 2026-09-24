@@ -61,6 +61,27 @@ def mint_access(
     return str(token)
 
 
+def mint_impersonation_access(
+    *, user: Any, session_id: Any, tenant_id: Any, impersonation_id: Any, lifetime: Any
+) -> tuple[str, str]:
+    """PLT-14 FR-5 — a support token: `rol='owner'`, `imp=<impersonation id>`, no `ver`.
+
+    Returns `(token, jti)`. The caller stores `hash_token(jti)` — never the token
+    — and the authentication layer refuses an `imp` token whose jti does not
+    hash to a live `platform_impersonation_session` row. There is no refresh
+    token: when this one lapses the client's refresh brings back the operator's
+    OWN session, which is the time limit working as intended.
+    """
+    token = AccessToken.for_user(user)
+    token.set_exp(lifetime=lifetime)
+    token["sid"] = str(session_id)
+    token["epo"] = int(user.token_epoch)
+    token["tid"] = str(tenant_id)
+    token["rol"] = "owner"
+    token["imp"] = str(impersonation_id)
+    return str(token), str(token["jti"])
+
+
 def mint_refresh(*, user: Any, session_id: Any, family_id: Any) -> str:
     """The 30-day refresh token. Its sha256 is what `platform_session` stores."""
     token = RefreshToken()
@@ -113,6 +134,25 @@ def set_auth_cookies(response: Any, *, access: str, refresh: str, csrf: str) -> 
         secure=secure,
         samesite="Lax",
         domain=domain,
+        path="/",
+    )
+    return response
+
+
+def set_access_cookie(response: Any, *, access: str, max_age: int) -> Any:
+    """Swap ONLY `ub_access` — entering and leaving a support session (PLT-14).
+
+    The refresh and CSRF cookies are the operator's own and stay untouched, so
+    the way back from a support token is the operator's own session.
+    """
+    response.set_cookie(
+        ACCESS_COOKIE,
+        access,
+        max_age=max(int(max_age), 1),
+        httponly=True,
+        secure=bool(settings.UB_COOKIE_SECURE),
+        samesite="Lax",
+        domain=settings.UB_COOKIE_DOMAIN,
         path="/",
     )
     return response

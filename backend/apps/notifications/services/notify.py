@@ -144,6 +144,52 @@ REGISTRY: dict[str, NotificationType] = {
             body_en="Try a smaller set of filters",
             route=lambda _p: "/imports",
         ),
+        # PLT-10 §17 / PLT-14 §17 — the owner-facing platform events. All gated
+        # on `platform.tenant.manage`, which admins also hold; the page they
+        # route to answers owner-only actions, so an admin reading "support
+        # asked for access" is informed, not empowered.
+        NotificationType(
+            code="data_export_ready",
+            category=NotificationCategory.SYSTEM,
+            severity=NotificationSeverity.SUCCESS,
+            required_permission="platform.tenant.manage",
+            title_en="Your data export is ready to download",
+            route=lambda _p: "/settings/data",
+        ),
+        NotificationType(
+            code="deletion_requested",
+            category=NotificationCategory.SYSTEM,
+            severity=NotificationSeverity.DANGER,
+            required_permission="platform.tenant.manage",
+            title_en="{actor} asked to delete this business on {date}",
+            body_en="Not you? Cancel it from Settings → Your data",
+            route=lambda _p: "/settings/data",
+        ),
+        NotificationType(
+            code="deletion_cancelled",
+            category=NotificationCategory.SYSTEM,
+            severity=NotificationSeverity.INFO,
+            required_permission="platform.tenant.manage",
+            title_en="{actor} cancelled the deletion of this business",
+            route=lambda _p: "/settings/data",
+        ),
+        NotificationType(
+            code="support_access_request",
+            category=NotificationCategory.SYSTEM,
+            severity=NotificationSeverity.WARNING,
+            required_permission="platform.tenant.manage",
+            title_en="Support ({admin}) asked to access your business",
+            body_en="{reason}",
+            route=lambda _p: "/settings/data",
+        ),
+        NotificationType(
+            code="support_session_started",
+            category=NotificationCategory.SYSTEM,
+            severity=NotificationSeverity.WARNING,
+            required_permission="platform.tenant.manage",
+            title_en="Support ({admin}) entered your business",
+            route=lambda _p: "/settings/data",
+        ),
     )
 }
 

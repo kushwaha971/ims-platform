@@ -22,6 +22,11 @@ from apps.platform_app.models.settings import (
     DocumentSequence,
     TenantSetting,
 )
+from apps.platform_app.models.support import (
+    ImpersonationSession,
+    SupportAccess,
+    SupportAccessStatus,
+)
 from apps.platform_app.models.tenant import Tenant
 from apps.platform_app.models.user import User
 
@@ -33,6 +38,7 @@ __all__ = [
     "DocumentSequence",
     "GstType",
     "IdempotencyKey",
+    "ImpersonationSession",
     "Invitation",
     "InvitationStatus",
     "Job",
@@ -46,6 +52,8 @@ __all__ = [
     "RateLimit",
     "Role",
     "Session",
+    "SupportAccess",
+    "SupportAccessStatus",
     "Tenant",
     "TenantSetting",
     "TenantStatus",

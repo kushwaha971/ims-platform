@@ -45,6 +45,10 @@ class Ctx:
             raise RuntimeError("Ctx.from_request called without a resolved tenant")
         user = getattr(request, "user", None)
         authenticated = bool(user is not None and getattr(user, "is_authenticated", False))
+        # PLT-14 FR-5: every row written under a support token says so, in the
+        # tenant's own activity log where the owner reads it.
+        support = getattr(tenant, "_ub_impersonation", None)
+        audit_meta = {"impersonation": True, "impersonation_id": str(support.id)} if support else {}
         return cls(
             tenant=tenant,
             actor=user if authenticated else None,
@@ -53,6 +57,7 @@ class Ctx:
             ip=getattr(request, "client_ip", None),
             user_agent=(request.META.get("HTTP_USER_AGENT", "")[:255] or None),
             idempotency_key=request.headers.get("Idempotency-Key"),
+            audit_meta=audit_meta,
         )
 
     @classmethod

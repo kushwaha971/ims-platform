@@ -4,14 +4,14 @@ import { useCallback } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { Check, ChevronDown, LogOut, MonitorSmartphone } from 'lucide-react';
+import { Check, ChevronDown, LogOut, MonitorSmartphone, ShieldCheck } from 'lucide-react';
 
 import { UbAvatar, UbBox, UbDivider, UbText } from 'src/design-system';
 import { MLMenu, MLMenuItem, MLMenuLabel } from 'src/design-system/primitives';
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useLocaleSwitch } from 'src/hooks/useLocaleSwitch';
 import { useTranslation } from 'src/hooks/useTranslation';
-import { selectSessionUser } from 'src/redux/slice/sessionSlice';
+import { selectImpersonation, selectSessionUser } from 'src/redux/slice/sessionSlice';
 import { ROUTES } from 'src/routes';
 import { cn } from 'src/utils/cn';
 
@@ -41,6 +41,7 @@ export function AccountMenu({
   const router = useRouter();
   const dispatch = useAppDispatch();
   const user = useAppSelector(selectSessionUser);
+  const impersonating = useAppSelector(selectImpersonation) !== null;
   const { locale, options, setLocale } = useLocaleSwitch();
 
   const signOut = useCallback(async () => {
@@ -104,6 +105,14 @@ export function AccountMenu({
         <MonitorSmartphone aria-hidden className="h-4 w-4" />
         {t('sessions.nav')}
       </MLMenuItem>
+      {/* PLT-14 FR-1 — the console link, for operators only and never from
+          inside a support session (the console refuses a support token). */}
+      {user?.isSuperAdmin && !impersonating ? (
+        <MLMenuItem onSelect={() => router.push(ROUTES.ADMIN_TENANTS)}>
+          <ShieldCheck aria-hidden className="h-4 w-4" />
+          {t('admin.nav.console')}
+        </MLMenuItem>
+      ) : null}
       <MLMenuItem onSelect={() => void signOut()}>
         <LogOut aria-hidden className="h-4 w-4" />
         {t('auth.logout.action')}

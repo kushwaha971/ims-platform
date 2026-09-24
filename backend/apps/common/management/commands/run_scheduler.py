@@ -29,6 +29,7 @@ from apps.common.jobs import (
     materialise_due_schedules,
     new_worker_id,
     reap_stuck_jobs,
+    record_heartbeat,
     run_job,
 )
 
@@ -85,6 +86,7 @@ class Command(BaseCommand):
 
         while not stop.is_set():
             reap_stuck_jobs(worker)  # visibility timeout (§20.8.8)
+            record_heartbeat(worker)  # PLT-14 FR-7: health reads the lag from this
 
             # S2: the ONLY serialised step. Non-blocking, released in the same tick.
             with advisory_lock(settings.UB_SCHEDULER_ENQUEUE_LOCK_ID, blocking=False) as held:

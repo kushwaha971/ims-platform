@@ -800,3 +800,105 @@ first tick that materialised a schedule — on a fresh database, the very first 
 per-tick error handling, so any transient database error (a cancelled statement, a
 connection timeout under load) also ends the process; deployment's cron restart covers it,
 a native `dev-backend.sh` session does not.
+## CR-2026-09-24-W2C-A — PLT-10 as built: password re-verification, the export as a job, the registry
+
+**Re-verification is the owner's password, not an OTP.** PLT-10 FR-3 and §14 require
+`{challenge_id, code}` from a fresh `purpose='verify'` OTP. DEC-010 removed the OTP identity,
+so `POST /tenants/current/delete-request` takes `{password, confirm_name, reason?}`. A wrong
+password or a mismatched name is 400 `validation_error` on the field — never 401, which the
+client's refresh interceptor would read as an expired session. The endpoint has its own
+throttle scope, `reverify` (10/hour per user), because it is a password oracle for anyone
+holding a stolen session.
+
+**The export is a `platform_job`, not a `reports_export` row.** RPT-08 has not built
+`reports_export`, so the job's `result` carries `storage_key`, `row_counts`, `size_bytes` and
+`expires_at` (7 days; 30 for the final export the deletion job makes, BR-4). Endpoints:
+`POST /tenants/current/export` (202), `GET /tenants/current/exports`,
+`GET /tenants/current/exports/{id}` and `GET /tenants/current/exports/{id}/download` instead of
+FR-2's `GET /reports/exports/{id}` and a signed URL — the download is an owner-only,
+tenant-checked, cross-site-refusing GET, which is what the signed URL was for. When
+`reports_export` lands the row moves and the four paths stay. The bundle is not stored as a
+`files_attachment` (`kind='export_file'`) either: deletion removes every attachment, and the
+retention copy must survive it. Three exports a day per tenant answer 429 `rate_limited`.
+
+**`GET /tenants/current/deletion`** is new: the page's whole state (status, `scheduled_for`,
+`export_fresh`, the latest export, the name to type) in one read. `/auth/me`'s
+`active_tenant` gains `deletion_scheduled_for` for the shell's banner.
+
+**The export gate reads the audit log.** "A fresh export exists" (FRD §10, EC-3) = a
+succeeded, unexpired export that finished after the newest audit row that is not itself
+about exporting, deleting, auth or support access. EC-6 (a tenant with no rows passes
+trivially with a synchronous empty export) is not built: such a tenant takes one export.
+
+**Read-only during the cool-off** is enforced in `CookieOrBearerJWTAuthentication`, not per
+view: every unsafe method answers 409 `tenant_pending_deletion` except export, delete-cancel,
+`/auth/*`, `/support/*` and notification reads.
+
+**Tables are declared per app** in `apps/<app>/tenant_data.py` (`apps.common.tenant_data`
+registry); the export writes one CSV per registered table with an `export_name`, and the
+deletion order is computed from the models' own foreign keys. The file list therefore
+exceeds FR-1's (tags, units, locations, categories, item stock, adjustments, expense
+categories, templates, tax rates, invitations, roles, attachments.csv); `sales_*`,
+`purchase_*`, `payments.csv` and `payment_allocations.csv` appear when those apps register.
+An installed tenant-FK model that nobody registered stops the deletion job before it removes
+anything (`sales`, `purchases`, `payments`, `imports`, `reports` are on a named pending list
+so the architecture test tolerates a merge that lands models first).
+
+**Deletion keeps** the tenant row as a tombstone (personal fields blanked, name
+"Deleted business", `status='deleted'`, GSTIN freed), anonymised audit rows (actor, before,
+after and metadata removed; one un-anonymised `tenant.deleted` row with per-table counts),
+the export and deletion job rows, and every user account (memberships go; users are CCR-10's
+`DELETE /auth/me`, not built here). The append-only triggers on `ledger_entry` and
+`inventory_stock_movement` are disabled by name inside the one transaction that deletes that
+table's rows, as ledger migration 0002 anticipated.
+
+**Not built:** `DELETE /auth/me` (CCR-10), `POST /parties/{id}/erase` (CCR-11), the privacy
+notice page (FR-9), consent capture at sign-up (FR-10), `export_affected_principals` (FR-11),
+the SMS to owners (no provider), per-session banner dismissal.
+
+Requested against Part 17-01 PLT-10 FR-1/FR-2/FR-3/§14, Part 22 §22.3.
+
+## CR-2026-09-24-W2C-B — PLT-14 as built, and a contradiction: support sessions are READ-ONLY
+
+**Contradiction.** PLT-14 FR-5 allows writes under impersonation ("needed to reproduce
+fixes") except deletion, ownership and bank details. Part 20 §20.4.8 rule 5 says support
+access is read-only, and the permission classes shipped in Sprint 1 already enforce rule 5.
+Built to Part 20 (the stricter, already-enforced rule); FR-5's forbidden list is enforced as
+well (403 `impersonation_forbidden` for `/admin/*` except `/admin/impersonation/end`,
+switch-tenant, delete-request/cancel, the full export, support decisions, members,
+memberships, invitations, password and sessions, and `bank_details`/`upi_vpa`/`pan` on
+`PATCH /tenants/current`). `Ctx.from_request` already stamps `metadata.impersonation=true`
+for the day rule 5 is relaxed. The owning chapter must choose; until it does, a support
+session reads.
+
+**Consent** is a new table, `platform_support_access` (requested → granted/denied/revoked/
+expired, 24 h either way), instead of FR-5's "a `notifications_notification` accepted by an
+owner whose audit row id is the consent_id": a notification row is broadcast read state, not
+a decision with an actor and an expiry. Its id is the `consent_id`. Owner endpoints
+`GET /support/access-requests` and `POST /support/access-requests/{id}/allow|deny|revoke`
+(CCR-12's allow/deny plus revoke, which also ends a live session). The owner answers on
+Settings → Your data; the inbox row links there.
+
+**Sessions** are `platform_impersonation_session`: the token's `imp` claim is the session id
+(not the tenant id §20.4.8 sketches), the row stores `sha256(jti)` and never the token, and
+the tenancy layer re-checks row, consent and jti on every request, so ending or revoking cuts
+the token at once. Lifetime `min(60 min, consent expiry)`, no refresh token; when it lapses the
+client's refresh restores the operator's own session. `POST /admin/impersonation/end` swaps the
+access cookie back.
+
+**Health** (FR-7): the scheduler touches one `platform_job` row (`scheduled_key =
+'platform.heartbeat'`, status `succeeded`, never claimed) every 30 s; red after 120 s.
+`otp_backend`/`sms_backend` are replaced by `email_backend` (DEC-010).
+
+**Other deltas.** `GET /admin/overview` is new (the console's status tiles). Owner search is
+by EMAIL (FR-2 said owner mobile; DEC-010). `entitlement_overrides` accepts only
+`max_users` and `storage_mb` (DEC-001) and is stored as `plan.overrides.limits`, the shape
+`entitlements.for_tenant` reads. Usage columns are live subqueries, not FRD §20's nightly
+`reports_snapshot` — switch when tenant count makes the list slow. `UB_SUPER_ADMIN_MOBILES` is
+not consulted: identity is email and `platform_user.is_super_admin` is the gate. Suspension
+still resolves no tenant (403 `no_active_tenant`) rather than FR-3's `tenant_suspended`.
+
+**Not built:** partner and plan create/edit (`POST/PATCH /admin/partners|plans`, WLB-02's form
+— Django admin at MVP), `/admin/users`, `/admin/audit-logs`, MFA.
+
+Requested against Part 17-01 PLT-14 FR-2…FR-8, Part 20 §20.4.8, Part 22 §22.13.

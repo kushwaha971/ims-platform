@@ -6,6 +6,7 @@ import { AccountMenu } from 'src/components/layout/AccountMenu';
 import { MobileNavDrawer } from 'src/components/layout/MobileNavDrawer';
 import { MobileQuickSearch } from 'src/components/layout/MobileQuickSearch';
 import { NetworkStrip } from 'src/components/layout/NetworkStrip';
+import { ShellNotices } from 'src/components/layout/ShellNotices';
 import { UbAppTopBar } from 'src/components/layout/UbAppTopBar';
 import { UbSidebar } from 'src/components/layout/UbSidebar';
 import { UbBox, UbLink, UbLogo, UbStack } from 'src/design-system';
@@ -113,6 +114,9 @@ export function UbAppShell({ children }: Readonly<{ children: ReactNode }>): Rea
         <UbAppTopBar />
 
         <NetworkStrip />
+
+        {/* PLT-14 / PLT-10 — the support-session and pending-deletion banners. */}
+        <ShellNotices />
 
         <UbBox as="main" id={APP_CONTENT_ID} tabIndex={-1} className="flex-1 outline-none">
           {children}

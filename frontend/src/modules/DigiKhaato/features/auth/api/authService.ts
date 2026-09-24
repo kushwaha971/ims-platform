@@ -80,6 +80,7 @@ interface ActiveTenantApiRow {
   /** WLB-01 FR-2 — resolved server-side; see `toSessionBranding`. */
   readonly branding?: BrandingApiBlock | null;
   readonly partner_suspended?: boolean;
+  readonly deletion_scheduled_for?: string | null;
 }
 
 interface BrandingApiBlock {
@@ -133,7 +134,17 @@ interface SessionApiResponse {
       /** DEC-012 — see `AuthUserApiRow` above for why these are optional. */
       readonly must_change_password?: boolean;
       readonly password_expires_at?: string | null;
+      readonly is_super_admin?: boolean;
     };
+    /** PLT-14 FR-5 — non-null only inside a support session. */
+    readonly impersonation?: {
+      readonly id: string;
+      readonly tenant_id: string;
+      readonly tenant_name: string;
+      readonly admin_name: string;
+      readonly started_at: string;
+      readonly expires_at: string;
+    } | null;
     readonly active_tenant: ActiveTenantApiRow | null;
     readonly tenants: readonly TenantApiRow[];
     readonly permissions: readonly PermissionCode[];
@@ -334,8 +345,10 @@ export const getSession = async (signal?: AbortSignal): Promise<SessionPayload> 
         onboardingStep: activeRow.onboarding_step ?? membership?.onboardingStep ?? null,
         branding: toSessionBranding(activeRow.branding),
         partnerSuspended: activeRow.partner_suspended ?? false,
+        deletionScheduledFor: activeRow.deletion_scheduled_for ?? null,
       }
     : null;
+  const support = data.impersonation;
 
   return {
     user: {
@@ -349,6 +362,7 @@ export const getSession = async (signal?: AbortSignal): Promise<SessionPayload> 
       // the change-password screen.
       mustChangePassword: data.user.must_change_password ?? false,
       passwordExpiresAt: data.user.password_expires_at ?? null,
+      isSuperAdmin: data.user.is_super_admin ?? false,
     },
     activeTenant,
     tenants,
@@ -361,6 +375,16 @@ export const getSession = async (signal?: AbortSignal): Promise<SessionPayload> 
     // legitimately has no modules, which is what `[]` says.
     enabledModules: activeRow?.enabled_modules ?? [],
     version: data.ver ?? null,
+    impersonation: support
+      ? {
+          id: support.id,
+          tenantId: support.tenant_id,
+          tenantName: support.tenant_name,
+          adminName: support.admin_name,
+          startedAt: support.started_at,
+          expiresAt: support.expires_at,
+        }
+      : null,
   };
 };
 

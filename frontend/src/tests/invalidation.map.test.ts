@@ -4,6 +4,8 @@ import { MUTATIONS } from 'src/redux/invalidation/registry';
 import type { TSliceKey } from 'src/redux/invalidation/types';
 import { store } from 'src/redux/store';
 
+import 'modules/DigiKhaato/features/account-data/redux/accountDataSlice';
+import 'modules/DigiKhaato/features/admin/redux/adminSlice';
 import 'modules/DigiKhaato/features/branding/redux/brandingSlice';
 import 'modules/DigiKhaato/features/business-profile/redux/businessProfileSlice';
 import 'modules/DigiKhaato/features/inventory/redux/inventoryMastersSlice';

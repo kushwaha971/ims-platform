@@ -20,6 +20,9 @@ describe('lazily registered slices', () => {
     expect(keys).not.toContain('cashbook');
     // LED-05/06/07: the reminders screen and the khata's strip bring it.
     expect(keys).not.toContain('reminders');
+    // PLT-10 / PLT-14 — "Your data" and the operator console ship with their routes.
+    expect(keys).not.toContain('accountData');
+    expect(keys).not.toContain('admin');
     // The shell's own slices are still there.
     expect(keys).toEqual(expect.arrayContaining(['session', 'partyList', 'ledgerForm']));
   });

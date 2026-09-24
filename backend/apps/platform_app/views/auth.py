@@ -23,6 +23,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 
 from apps.common.responses import StandardResponse
+from apps.common.tenancy import get_effective_tenant
 from apps.platform_app import tokens
 from apps.platform_app.selectors import session_payload
 from apps.platform_app.selectors.memberships import active_membership
@@ -223,11 +224,17 @@ class MeView(APIView):
 
     def get(self, request: Any) -> Any:
         claims = getattr(request, "auth_claims", {}) or {}
-        membership = (
-            active_membership(user=request.user, tenant_id=claims.get("tid"))
-            if claims.get("tid")
-            else None
-        )
+        if claims.get("imp"):
+            # PLT-14 FR-5: a support session has no membership row; the tenancy
+            # layer built an unsaved owner one, which is what this body describes.
+            tenant = get_effective_tenant(request)
+            membership = getattr(tenant, "_ub_membership", None) if tenant else None
+        else:
+            membership = (
+                active_membership(user=request.user, tenant_id=claims.get("tid"))
+                if claims.get("tid")
+                else None
+            )
         return StandardResponse.ok(session_payload.build(user=request.user, membership=membership))
 
 

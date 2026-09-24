@@ -61,6 +61,21 @@ export interface SessionUser {
   readonly mustChangePassword: boolean;
   /** ISO 8601, or `null` once they have chosen their own password. */
   readonly passwordExpiresAt: string | null;
+  /** PLT-14 — a Metis operator; the account menu links to the console. */
+  readonly isSuperAdmin?: boolean;
+}
+
+/**
+ * PLT-14 FR-5 — this tab is a support session: an operator acting in a
+ * business with its owner's consent. The shell shows the red banner while set.
+ */
+export interface SessionImpersonation {
+  readonly id: string;
+  readonly tenantId: string;
+  readonly tenantName: string;
+  readonly adminName: string;
+  readonly startedAt: string;
+  readonly expiresAt: string;
 }
 
 /**
@@ -90,6 +105,8 @@ export interface SessionTenant {
   readonly branding?: SessionBranding | null;
   /** WLB-02 FR-5 — the partner is suspended: reads work, writes answer 403. */
   readonly partnerSuspended?: boolean;
+  /** PLT-10 BR-1 — when a `pending_deletion` business is deleted (ISO), else null. */
+  readonly deletionScheduledFor?: string | null;
 }
 
 /** The branding the shell renders; `primarySource` says whose colour it is. */
@@ -110,6 +127,7 @@ export interface SessionState {
   tenants: SessionTenant[];
   permissions: PermissionCode[];
   enabledModules: ModuleCode[];
+  impersonation: SessionImpersonation | null;
   error: ApiErrorShape | null;
   /** The token's `ver` claim; a change forces a re-read (Part 22 §22.2). */
   version: number | null;
@@ -133,6 +151,7 @@ const initialState: SessionState = {
   tenants: [],
   permissions: [],
   enabledModules: [],
+  impersonation: null,
   error: null,
   version: null,
   lastFetchedAt: null,
@@ -157,6 +176,7 @@ export interface SessionPayload {
   readonly permissions: readonly PermissionCode[];
   readonly enabledModules: readonly ModuleCode[];
   readonly version: number | null;
+  readonly impersonation?: SessionImpersonation | null;
 }
 
 const sessionSlice = createSlice({
@@ -174,6 +194,7 @@ const sessionSlice = createSlice({
       state.tenants = [...payload.tenants];
       state.permissions = [...payload.permissions];
       state.enabledModules = [...payload.enabledModules];
+      state.impersonation = payload.impersonation ?? null;
       state.version = payload.version;
       state.lastFetchedAt = Date.now();
       state.error = null;
@@ -315,6 +336,11 @@ export const selectPermissions = (state: RootState): readonly PermissionCode[] =
   state.session.permissions;
 export const selectEnabledModules = (state: RootState): readonly ModuleCode[] =>
   state.session.enabledModules;
+/** PLT-14 FR-5 — the support session this tab is in, or null. */
+export const selectImpersonation = (state: RootState): SessionImpersonation | null =>
+  state.session.impersonation;
+export const selectIsSuperAdmin = (state: RootState): boolean =>
+  state.session.user?.isSuperAdmin ?? false;
 export const selectTenantTimezone = (state: RootState): string | null =>
   state.session.activeTenant?.timezone ?? null;
 /** PLT-04 FR-1 — every membership the switcher may list. */

@@ -6,6 +6,7 @@ import {
   Building2,
   ChevronRight,
   CreditCard,
+  DatabaseBackup,
   History,
   MonitorSmartphone,
   Palette,
@@ -71,6 +72,7 @@ export function SettingsPageContent(): React.JSX.Element {
       { key: 'plan', href: ROUTES.SETTINGS_PLAN, icon: CreditCard, show: access.canView },
       { key: 'activity', href: ROUTES.SETTINGS_ACTIVITY, icon: History, show: access.canReadAudit },
       { key: 'devices', href: ROUTES.SETTINGS_DEVICES, icon: MonitorSmartphone, show: true },
+      { key: 'data', href: ROUTES.SETTINGS_DATA, icon: DatabaseBackup, show: access.isOwner },
     ],
     [access]
   );

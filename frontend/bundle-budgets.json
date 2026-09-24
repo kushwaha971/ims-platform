@@ -857,7 +857,35 @@
   "(/expenses was already over its 107 before this change.) sharedApp moved",
   "130.1 -> 133.0: ~2.3 of that is the 151 en.json keys the wizard's copy",
   "needs (react-intl ships en.json in the shell), the rest the three thunks",
-  "and one action the invalidation registry must name. Not raised here."
+  "and one action the invalidation registry must name. Not raised here.",
+  "── 24 Sep 2026: PLT-10 \"Your data\" and PLT-14's console (Track W2-C) ─────",
+  "Measured against the wave-1 merge (7aabafe) built in the same worktree:",
+  "  sharedApp        130.1 -> 132.6  (+2.5)",
+  "  every (app) route  +1.1 on the route chunk, +3.6 on first load",
+  "  auth/public routes  +2.5 on first load (the shell only)",
+  "What the +2.5 on the shell is: the new shell-catalogue keys (the",
+  "pending-deletion banner, the five notification types, the audit labels, the",
+  "snackbar ids and the settings-hub row), the session's `impersonation` and",
+  "`deletionScheduledFor`, and eighteen API paths. The +1.1 on (app) routes is",
+  "`ShellNotices`: two selector reads and two `dynamic()` loaders — the support",
+  "banner and the pending-deletion banner are their own chunks, fetched only",
+  "when `/auth/me` says they apply.",
+  "What is deliberately NOT on those lines: the console's ~110 strings live in",
+  "`features/admin/i18n/adminMessages.ts` and the \"Your data\" page's ~60 (en +",
+  "hi) in `features/account-data/i18n/dataMessages.ts`, each laid over the",
+  "shell catalogue by a provider on its own route. Left in `locales/en.json`",
+  "they measured +4.8 KB on the shell — /login paying for deletion prose and",
+  "operator copy. Both route-local slices inject lazily (CR-134) and every",
+  "dialog is `dynamic()`.",
+  "The base commit already exceeds `sharedApp` (130.1 vs 119) and ~25 route",
+  "lines from the wave-1 merge; those numbers are not raised here, because",
+  "they are not this track's to explain. New lines, measured + ~1 KB:",
+  "  /settings/data        route 77.3   firstLoad 336.8",
+  "  /admin/tenants        route 26.6   firstLoad 286.1",
+  "  /admin/tenants/[id]   route 22.1   firstLoad 281.6",
+  "  /admin/partners       route 24.7   firstLoad 284.3",
+  "  /admin/health         route 17.9   firstLoad 277.4",
+  "  /admin                route  9.4   firstLoad 268.9 (a redirect)"
  ],
  "default": {
   "route": 64,
@@ -983,6 +1011,30 @@
   "/imports/[id]": {
    "route": 66,
    "firstLoad": 326
+  },
+  "/admin": {
+   "route": 10,
+   "firstLoad": 270
+  },
+  "/admin/partners": {
+   "route": 26,
+   "firstLoad": 286
+  },
+  "/admin/health": {
+   "route": 19,
+   "firstLoad": 279
+  },
+  "/admin/tenants/[id]": {
+   "route": 23,
+   "firstLoad": 283
+  },
+  "/admin/tenants": {
+   "route": 28,
+   "firstLoad": 288
+  },
+  "/settings/data": {
+   "route": 78,
+   "firstLoad": 338
   }
  },
  "//ignoreRoutes": [

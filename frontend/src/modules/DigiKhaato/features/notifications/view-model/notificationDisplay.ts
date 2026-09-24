@@ -20,6 +20,12 @@ export const KNOWN_TYPES: ReadonlySet<string> = new Set([
   'import_failed',
   'export_ready',
   'export_failed',
+  // PLT-10 / PLT-14 — the owner-facing platform events.
+  'data_export_ready',
+  'deletion_requested',
+  'deletion_cancelled',
+  'support_access_request',
+  'support_session_started',
 ]);
 
 /**

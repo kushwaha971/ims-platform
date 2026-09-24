@@ -188,6 +188,9 @@ REST_FRAMEWORK = {
         "otp_ip": "20/hour",
         "export": env.str("UB_RATE_LIMIT_EXPORT", "10/hour"),
         "public_link": "60/min",
+        # PLT-10 FR-3: re-typing the password to delete a business. A stolen
+        # session guessing the owner's password here gets ten tries an hour.
+        "reverify": "10/hour",
         # Party creation. Generous for a shopkeeper adding names from a paper
         # book, tight enough that a stolen token cannot enumerate mobile
         # numbers through the duplicate-mobile response or fill a tenant's
