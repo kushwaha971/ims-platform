@@ -4,7 +4,7 @@ import { useCallback } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { Check, ChevronDown, LogOut } from 'lucide-react';
+import { Check, ChevronDown, LogOut, MonitorSmartphone } from 'lucide-react';
 
 import { UbAvatar, UbBox, UbDivider, UbText } from 'src/design-system';
 import { MLMenu, MLMenuItem, MLMenuLabel } from 'src/design-system/primitives';
@@ -97,6 +97,13 @@ export function AccountMenu({
       ))}
 
       <UbDivider decorative className="my-1" />
+      {/* PLT-09 — every person's own devices, whatever their role (§12), so it
+          lives with the account rather than behind Settings, which staff do
+          not see. */}
+      <MLMenuItem onSelect={() => router.push(ROUTES.SETTINGS_DEVICES)}>
+        <MonitorSmartphone aria-hidden className="h-4 w-4" />
+        {t('sessions.nav')}
+      </MLMenuItem>
       <MLMenuItem onSelect={() => void signOut()}>
         <LogOut aria-hidden className="h-4 w-4" />
         {t('auth.logout.action')}
