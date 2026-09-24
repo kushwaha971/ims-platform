@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useDegradedNetwork } from 'src/hooks/useDegradedNetwork';
@@ -14,7 +14,13 @@ import {
   selectSessionUser,
 } from 'src/redux/slice/sessionSlice';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
-import { ONBOARDING_STEP_MAX, ROUTES, onboardingStepPath } from 'src/routes';
+import {
+  ONBOARDING_INTENT_ADD,
+  ONBOARDING_INTENT_PARAM,
+  ONBOARDING_STEP_MAX,
+  ROUTES,
+  onboardingStepPath,
+} from 'src/routes';
 import type { ApiErrorShape } from 'src/types/api.types';
 import type { ModuleCode } from 'src/types/domain.types';
 import { applyServerErrors } from 'src/utils/applyServerErrors';
@@ -183,6 +189,12 @@ export const useOnboarding = (routeStep: number): UseOnboardingResult => {
   const resumable = useAppSelector(selectOnboardingResumable);
   const resumableStatus = useAppSelector(selectOnboardingResumableStatus);
   const activeTenant = useAppSelector(selectActiveTenant);
+  /**
+   * M2 (residual) — "Add a business" says so in the URL (`addBusinessPath()`).
+   * It is the only thing that tells it apart from "carry on setting up the
+   * business I am in", and the two must never be confused: see below.
+   */
+  const isAddBusiness = useSearchParams().get(ONBOARDING_INTENT_PARAM) === ONBOARDING_INTENT_ADD;
 
   /**
    * EC-7 — ONE key for this wizard's `POST /tenants`, however many times the
@@ -214,8 +226,13 @@ export const useOnboarding = (routeStep: number): UseOnboardingResult => {
    * back before drawing a step, so step 1 shows what was saved and step 3 is
    * reachable by its own URL. Once the slice holds a tenant — from this read or
    * from a step write — there is nothing to resume.
+   *
+   * M2 (residual) — NEVER under "Add a business". The active business may be
+   * the owner's own unfinished one that already has staff or books, which the
+   * server refuses to resume; reading it back here made step 1 a PATCH of
+   * `/tenants/current`, and Continue renamed a live business.
    */
-  const needsResume = tenantId === null && shouldResumeFromServer(activeTenant);
+  const needsResume = tenantId === null && !isAddBusiness && shouldResumeFromServer(activeTenant);
   useEffect(() => {
     if (needsResume && resumeStatus === 'idle') void dispatch(resumeOnboarding({ routeStep }));
   }, [dispatch, needsResume, resumeStatus, routeStep]);
@@ -226,14 +243,17 @@ export const useOnboarding = (routeStep: number): UseOnboardingResult => {
    * server judges it an abandoned attempt. Ask which, before step 1 is drawn
    * (its form takes its values once, at mount), so step 1 can say so and show
    * that business's values instead of a blank form whose new name would
-   * rename it. Keyed off the session rather than a flag set by the switcher,
-   * so a reload of step 1 asks again.
+   * rename it. Asked whenever "Add a business" is the intent (it is in the
+   * URL, so a reload of step 1 asks again) — whatever the active business is:
+   * the owner's unfinished one, or (defect L, staff) someone else's unfinished
+   * one while the caller owns a resumable one. The server applies the same
+   * rule as `POST /tenants`, so the banner is exactly what Continue will do.
+   * Kept for a finished active business without the flag, as before.
    */
   const needsResumableCheck =
     tenantId === null &&
     !needsResume &&
-    activeTenant !== null &&
-    isOnboardingComplete(activeTenant.onboardingStep);
+    (isAddBusiness || (activeTenant !== null && isOnboardingComplete(activeTenant.onboardingStep)));
   useEffect(() => {
     if (needsResumableCheck && resumableStatus === 'idle') void dispatch(findResumableBusiness());
   }, [dispatch, needsResumableCheck, resumableStatus]);

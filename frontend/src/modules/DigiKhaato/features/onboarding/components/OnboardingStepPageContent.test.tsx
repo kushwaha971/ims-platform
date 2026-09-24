@@ -37,9 +37,11 @@ const authService = jest.requireMock('../../auth/api/authService') as { getSessi
 
 const push = jest.fn();
 const replace = jest.fn();
+/** The wizard's query string; M2 (residual) sets `intent=add` per test. */
+let mockSearch = '';
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push, replace, back: jest.fn(), prefetch: jest.fn() }),
-  useSearchParams: () => new URLSearchParams(''),
+  useSearchParams: () => new URLSearchParams(mockSearch),
   usePathname: () => '/onboarding/step/1',
 }));
 
@@ -62,6 +64,7 @@ const tenant = (over: Record<string, unknown> = {}) => ({
 });
 
 beforeEach(() => {
+  mockSearch = '';
   store.dispatch(resetOnboarding());
   // NEW-1 — step 1's idempotency key now outlives a reload in localStorage,
   // which jsdom keeps across tests; each test starts with none persisted.
@@ -886,6 +889,144 @@ describe('the wizard — "Add a business" with an unfinished business (M2)', () 
 
     expect(await screen.findByLabelText(/Business name/)).toHaveValue('');
     expect(screen.queryByText(/unfinished business/)).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Defect M2 (residual) — "Add a business" opened from /switch while the ACTIVE
+ * business was the owner's own unfinished one that already had staff or books.
+ * The server will not resume that one, but the wizard read it back
+ * (`shouldResumeFromServer`) and step 1's Continue PATCHed `/tenants/current`,
+ * renaming a live business. The switcher now says why the wizard is open
+ * (`?intent=add`), and under that intent the active business is never resumed:
+ * `GET /tenants/resumable` decides the banner, and Continue is a POST.
+ *
+ * Defect (Low) — the same banner check only ran from a FINISHED active
+ * business, so a staff member standing in someone else's unfinished business
+ * who owns a resumable one got no banner. Under the intent it always runs.
+ */
+describe('the wizard — "Add a business" from an unfinished active business (M2 residual)', () => {
+  const sessionWith = (activeTenant: Record<string, unknown>) => ({
+    user: { id: 'u1', name: 'Ramesh', mobile: '+919876543210', locale: 'en' },
+    activeTenant,
+    tenants: [activeTenant],
+    permissions: [],
+    enabledModules: [],
+    version: null,
+  });
+  const liveUnfinished = (role = 'owner') => ({
+    id: 't-live',
+    name: 'Live Shop',
+    timezone: 'Asia/Kolkata',
+    role,
+    onboardingStep: 2,
+  });
+  const openWith = async (activeTenant: Record<string, unknown>, search: string) => {
+    authService.getSession.mockResolvedValue(sessionWith(activeTenant));
+    await store.dispatch(fetchSession());
+    store.dispatch(resetOnboarding());
+    mockSearch = search;
+  };
+
+  afterEach(async () => {
+    cleanup();
+    authService.getSession.mockResolvedValue({
+      ...sessionWith(liveUnfinished()),
+      activeTenant: null,
+      tenants: [],
+    });
+    await store.dispatch(fetchSession());
+  });
+
+  it('never reads the active business back, and Continue POSTs — no rename of the live shop', async () => {
+    /** M2 residual: the owner's unfinished-but-live business is active; the
+     *  server has nothing resumable, so step 1 is blank and creates. */
+    const user = userEvent.setup();
+    await openWith(liveUnfinished(), 'intent=add');
+    onboardingService.fetchResumableTenant.mockResolvedValue(null);
+    onboardingService.createTenant.mockResolvedValue({
+      tenant: tenant({ id: 't-new', name: 'New Branch' }),
+      warnings: [],
+    });
+
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+
+    expect(await screen.findByLabelText(/Business name/)).toHaveValue('');
+    expect(onboardingService.fetchResumableTenant).toHaveBeenCalledTimes(1);
+    expect(onboardingService.fetchCurrentTenant).not.toHaveBeenCalled();
+    expect(screen.queryByText(/unfinished business/)).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText(/Business name/), 'New Branch');
+    await user.click(screen.getByRole('radio', { name: /Retail shop/ }));
+    await chooseOption(user, /^State/, /Maharashtra/);
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+
+    await waitFor(() => expect(onboardingService.createTenant).toHaveBeenCalledTimes(1));
+    expect(onboardingService.createTenant.mock.calls[0]?.[0]).toMatchObject({ name: 'New Branch' });
+    expect(onboardingService.updateBusinessStep).not.toHaveBeenCalled();
+  });
+
+  it('names the business the SERVER would resume, and continues it with a POST', async () => {
+    /** M2 residual: the banner comes from /tenants/resumable, not from the
+     *  active business, so it names what POST /tenants will really do. */
+    const user = userEvent.setup();
+    await openWith(liveUnfinished(), 'intent=add');
+    onboardingService.fetchResumableTenant.mockResolvedValue(
+      tenant({ id: 't-race', name: 'Race 4', onboardingStep: 1 })
+    );
+    onboardingService.createTenant.mockResolvedValue({
+      tenant: tenant({ id: 't-race', name: 'Race 4', onboardingStep: 1 }),
+      warnings: [],
+    });
+
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+
+    expect(await screen.findByText('You have an unfinished business, Race 4.')).toBeInTheDocument();
+    expect(screen.getByLabelText(/Business name/)).toHaveValue('Race 4');
+    expect(onboardingService.fetchCurrentTenant).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    await waitFor(() => expect(onboardingService.createTenant).toHaveBeenCalledTimes(1));
+    expect(onboardingService.updateBusinessStep).not.toHaveBeenCalled();
+  });
+
+  it("shows the banner to staff in someone else's unfinished business who own a resumable one", async () => {
+    /** Defect (Low): the check used to run only from a FINISHED active
+     *  business, so this caller got a blank form and a silent resume. */
+    await openWith(liveUnfinished('staff'), 'intent=add');
+    onboardingService.fetchResumableTenant.mockResolvedValue(
+      tenant({ id: 't-mine', name: 'My Own Shop' })
+    );
+
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+
+    expect(
+      await screen.findByText('You have an unfinished business, My Own Shop.')
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/Business name/)).toHaveValue('My Own Shop');
+    expect(onboardingService.fetchCurrentTenant).not.toHaveBeenCalled();
+  });
+
+  it("still resumes the owner's first business after a plain refresh (NEW-1 unchanged)", async () => {
+    /** Without the intent, a reload of the wizard is "carry on" — the active
+     *  business is read back and step 1 is an edit. */
+    const user = userEvent.setup();
+    await openWith(liveUnfinished(), '');
+    onboardingService.fetchCurrentTenant.mockResolvedValue(
+      tenant({ id: 't-live', name: 'Live Shop', onboardingStep: 2 })
+    );
+    onboardingService.updateBusinessStep.mockResolvedValue({
+      tenant: tenant({ id: 't-live', name: 'Live Shop', onboardingStep: 2 }),
+      warnings: [],
+    });
+
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+
+    await waitFor(() => expect(screen.getByLabelText(/Business name/)).toHaveValue('Live Shop'));
+    expect(onboardingService.fetchResumableTenant).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    await waitFor(() => expect(onboardingService.updateBusinessStep).toHaveBeenCalledTimes(1));
+    expect(onboardingService.createTenant).not.toHaveBeenCalled();
   });
 });
 

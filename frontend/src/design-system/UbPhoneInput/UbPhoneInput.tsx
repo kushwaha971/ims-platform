@@ -84,6 +84,39 @@ const cleanNational = (value: string | null | undefined): string => {
 export const toNationalDigits = (value: string | null | undefined): string =>
   cleanNational(value).slice(0, IN_MOBILE_DIGITS);
 
+/** An Indian mobile number's first digit — 6, 7, 8 or 9. */
+const IN_MOBILE_LEAD = /^[6-9]/;
+
+/**
+ * Defect (QA, Medium) — `+919845678901` typed KEY BY KEY.
+ *
+ * The field shows national digits, so the `+` is gone after the first key and
+ * the merchant is really typing `919845678901`. The first ten, `9198456789`,
+ * are a valid national number and are shown as such; the eleventh used to be
+ * refused as overflow before the `91` could be read as the dial code, and the
+ * field ended as `9198456789`. Paste and autofill never met this: they arrive
+ * whole, with all twelve digits, which `cleanNational` already recognises.
+ *
+ * So an overflowing keystroke is re-read: eleven digits that are `91` and the
+ * start of a mobile number (a 6–9 digit, never a trunk or a stray) become the
+ * nine national digits after the `91`, and the twelfth completes them. It is
+ * only done when the digits were APPENDED — a digit typed into the middle of a
+ * full number is still a stray, and still refused.
+ */
+const rereadTypedOverflow = (cleaned: string, previous: string): string => {
+  const appended = cleaned.startsWith(previous);
+  const rest = cleaned.slice(IN_COUNTRY_DIGITS.length);
+  if (
+    appended &&
+    cleaned.length === IN_MOBILE_DIGITS + 1 &&
+    cleaned.startsWith(IN_COUNTRY_DIGITS) &&
+    IN_MOBILE_LEAD.test(rest)
+  ) {
+    return rest;
+  }
+  return cleaned;
+};
+
 /** Ten digits → E.164. Fewer than ten stays partial so validation can speak. */
 export const toE164 = (national: string): string =>
   national.length === 0 ? '' : `${IN_DIAL_CODE}${national}`;
@@ -106,7 +139,9 @@ const UbPhoneInputInner = forwardRef<HTMLInputElement, UbPhoneInputProps>(
 
     const handleChange = useCallback(
       (event: React.ChangeEvent<HTMLInputElement>) => {
-        const cleaned = cleanNational(event.target.value);
+        // The dial code is recognised BEFORE the ten-digit cap, so the
+        // eleventh key of a typed `+91…` is read, not refused (see above).
+        const cleaned = rereadTypedOverflow(cleanNational(event.target.value), national);
         // A full field refuses an eleventh digit, as `maxLength` used to —
         // otherwise a stray keystroke mid-number silently shifts every digit
         // after it. React restores the controlled value on its own.

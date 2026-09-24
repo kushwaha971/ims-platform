@@ -139,6 +139,54 @@ describe('UbPhoneInput round trip (H1)', () => {
     expect(onValue).toHaveBeenLastCalledWith('+919845678901');
   });
 
+  // Defect (QA, Medium) — typed key by key, these ended as 9198456789: the
+  // first ten digits were kept and the eleventh refused before the `91` could
+  // be read as the dial code. The `+` and spaces are dropped as typed, and on
+  // the eleventh digit `91…` is re-read as +91.
+  it.each([['+919845678901'], ['919845678901'], ['+91 98456 78901']])(
+    'types %s key by key as 9845678901',
+    async (typed) => {
+      const user = userEvent.setup();
+      const onValue = jest.fn();
+      render(<Controlled onValue={onValue} />);
+      const input = screen.getByLabelText('Mobile');
+
+      await user.type(input, typed);
+
+      expect(input).toHaveValue('9845678901');
+      expect(onValue).toHaveBeenLastCalledWith('+919845678901');
+    }
+  );
+
+  // Same defect — the ten digits before the re-read ARE a valid national
+  // number, and are shown as one until the eleventh arrives.
+  it('shows 9198456789 as a national number until an eleventh digit re-reads it', async () => {
+    const user = userEvent.setup();
+    render(<Controlled />);
+    const input = screen.getByLabelText('Mobile');
+
+    await user.type(input, '9198456789');
+    expect(input).toHaveValue('9198456789');
+
+    await user.type(input, '0');
+    expect(input).toHaveValue('984567890');
+  });
+
+  // Same defect — the re-read must not turn a stray eleventh key on a full
+  // number that begins with 91 into a shifted number: `91` followed by a
+  // digit no mobile starts with is not a dial code, so the key is refused.
+  it('still refuses an eleventh digit on a full number beginning 91 that is not +91', async () => {
+    const user = userEvent.setup();
+    const onValue = jest.fn();
+    render(<Controlled initial="+919123456789" onValue={onValue} />);
+    const input = screen.getByLabelText('Mobile');
+
+    await user.type(input, '7');
+
+    expect(input).toHaveValue('9123456789');
+    expect(onValue).not.toHaveBeenCalled();
+  });
+
   // H1 — the 10-character `maxLength` truncated a paste BEFORE it was cleaned:
   // "+91 98456 78901" became "+91 98456 " and then "919198456".
   it.each([

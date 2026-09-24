@@ -69,8 +69,7 @@ export type RouteKey = keyof typeof ROUTES;
  * a path segment built by concatenation is a path segment somebody can put a
  * slash in.
  */
-export const partyPath = (id: string): string =>
-  `${ROUTES.PARTIES}/${encodeURIComponent(id)}`;
+export const partyPath = (id: string): string => `${ROUTES.PARTIES}/${encodeURIComponent(id)}`;
 
 /**
  * PTY-05 — the party list, filtered to one tag.
@@ -92,8 +91,7 @@ export const partiesByTagPath = (name: string): string =>
  * corrections toggle ride in the query string for the same reason (FR-8), which
  * is also what makes the browser's back button and a bookmark both work.
  */
-export const partyStatementPath = (id: string): string =>
-  `${partyPath(id)}/statement`;
+export const partyStatementPath = (id: string): string => `${partyPath(id)}/statement`;
 export type Route = (typeof ROUTES)[RouteKey];
 
 /**
@@ -108,6 +106,21 @@ export const onboardingStepPath = (step: number): string => {
   const clamped = Math.min(ONBOARDING_STEP_MAX, Math.max(ONBOARDING_STEP_MIN, Math.trunc(step)));
   return `${ROUTES.ONBOARDING}/step/${clamped}`;
 };
+
+/**
+ * Defect M2 (residual) — the wizard opened by "Add a business".
+ *
+ * The intent rides in the URL, not the slice, so a reload of step 1 keeps it.
+ * Without it the wizard cannot tell "Add a business" from "carry on setting up
+ * the business I am in", and when the active business was the owner's own
+ * unfinished one it read that business back and step 1 PATCHed it — renaming
+ * a live shop. With it, the wizard never resumes the active business and asks
+ * `GET /tenants/resumable` instead, which applies the server's own rule.
+ */
+export const ONBOARDING_INTENT_PARAM = 'intent';
+export const ONBOARDING_INTENT_ADD = 'add';
+export const addBusinessPath = (): string =>
+  `${onboardingStepPath(1)}?${ONBOARDING_INTENT_PARAM}=${ONBOARDING_INTENT_ADD}`;
 
 /**
  * §19.6.4 rule 2 — the login address carrying where the user was going. The
@@ -147,7 +160,6 @@ export const SESSION_ONLY_ROUTE_PREFIXES: readonly string[] = [
   // link that would give them one.
   ROUTES.ACCEPT_INVITE,
 ];
-
 
 export const APP_ROUTE_PREFIXES: readonly string[] = [
   ROUTES.DASHBOARD,
@@ -196,9 +208,7 @@ export const PUBLIC_ROUTE_PREFIXES: readonly string[] = [
 ];
 
 export const isPublicPath = (pathname: string): boolean =>
-  PUBLIC_ROUTE_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-  );
+  PUBLIC_ROUTE_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 
 /**
  * CR-2026-09-19-A — addresses that used to exist. `/otp` was the six-digit code

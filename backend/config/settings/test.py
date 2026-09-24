@@ -26,3 +26,9 @@ DATABASES["default"]["ATOMIC_REQUESTS"] = False  # noqa: F405
 DATABASES["default"]["OPTIONS"] = {"options": "-c lock_timeout=5000"}  # noqa: F405
 
 LOGGING = build_logging_config(level="CRITICAL", fmt="console")  # noqa: F405
+
+# Parallel worktrees each run pytest against their own throwaway database, so
+# two tracks testing at once never drop each other's test_<db> mid-run.
+DATABASES["default"]["TEST"] = {  # noqa: F405
+    "NAME": env.str("UB_TEST_DB_NAME", "test_udhaarbook")  # noqa: F405
+}
