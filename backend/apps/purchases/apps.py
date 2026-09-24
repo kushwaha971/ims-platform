@@ -13,3 +13,6 @@ class PurchasesConfig(AppConfig):
 
     def ready(self) -> None:
         from apps.purchases import tasks  # noqa: F401  (registers job handlers)
+        from apps.purchases.services.guards import register_guards
+
+        register_guards()
