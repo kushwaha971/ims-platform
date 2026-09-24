@@ -26,7 +26,14 @@ ORIGIN = "http://localhost:3000"
 #: Every custom request header the browser client sends. `AxiosInstances` mints
 #: `X-Request-Id` on every call and `Idempotency-Key` on writes; `X-CSRF-Token`
 #: is the double-submit guard. `X-Client` is read by throttling and audit.
-CLIENT_REQUEST_HEADERS = ("X-Request-Id", "X-CSRF-Token", "Idempotency-Key", "X-Client")
+#: `If-Match` is the settings page's optimistic lock (PLT-06 FR-8, CR-011).
+CLIENT_REQUEST_HEADERS = (
+    "X-Request-Id",
+    "X-CSRF-Token",
+    "Idempotency-Key",
+    "X-Client",
+    "If-Match",
+)
 
 
 def _preflight(client: Any, path: str, header: str) -> Any:
