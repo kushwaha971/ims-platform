@@ -17,8 +17,9 @@ topologically over their own foreign keys, so a registering app only says
 
 ── Why an unregistered table STOPS deletion ───────────────────────────────
 `unregistered_tenant_models()` lists every installed model with a foreign key
-to `platform.Tenant` that nobody registered. The deletion job refuses to start
-while that list is non-empty: deleting a business around a table nobody
+to `platform.Tenant` that nobody registered, and the deletion job refuses to
+start while one of them holds a row of the business being deleted
+(`unregistered_tables_holding`): deleting a business around a table nobody
 declared either fails half-way on a RESTRICT or leaves that table's rows
 behind, and both are worse than not starting. `tests/.../test_tenant_data.py`
 asserts the list is empty apart from apps that have not been built yet.
@@ -139,6 +140,29 @@ def unregistered_tenant_models(*, include_pending: bool = True) -> list[str]:
             continue
         missing.append(label)
     return sorted(missing)
+
+
+def unregistered_tables_holding(tenant: Any) -> list[str]:
+    """Unregistered tenant-FK models that hold at least one row of THIS tenant.
+
+    The deletion job's actual stop condition. A table on the pending list that
+    has no row for the business being deleted cannot be left behind or trip a
+    RESTRICT, so it must not block a deletion the owner asked for; one that DOES
+    hold a row stops the job before anything is removed.
+    """
+    tenant_model = apps.get_model(TENANT_MODEL)
+    holding = []
+    for label in unregistered_tenant_models():
+        model = apps.get_model(label)
+        for fk in model._meta.concrete_fields:
+            if (
+                fk.is_relation
+                and fk.related_model is tenant_model
+                and model._base_manager.filter(**{fk.name: tenant}).exists()
+            ):
+                holding.append(label)
+                break
+    return holding
 
 
 def deletion_order() -> list[TenantTable]:

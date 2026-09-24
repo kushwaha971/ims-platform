@@ -14,6 +14,7 @@ import { selectActiveRole } from 'src/redux/slice/sessionSlice';
 
 import { useAccountData } from '../hooks/useAccountData';
 
+import { AccountDataIntlProvider } from './AccountDataIntlProvider';
 import { DataExportPanel } from './DataExportPanel';
 import { DeleteBusinessPanel } from './DeleteBusinessPanel';
 import { SupportAccessPanel } from './SupportAccessPanel';
@@ -60,6 +61,14 @@ function OwnerDataPage(): React.JSX.Element {
  * too, this only spares them a page of 403s.
  */
 export function AccountDataPageContent(): React.JSX.Element {
+  return (
+    <AccountDataIntlProvider>
+      <AccountDataPage />
+    </AccountDataIntlProvider>
+  );
+}
+
+function AccountDataPage(): React.JSX.Element {
   const { t } = useTranslation();
   const role = useAppSelector(selectActiveRole);
   const header = <UbPageHeader title={t('data.title')} subtitle={t('data.subtitle')} />;

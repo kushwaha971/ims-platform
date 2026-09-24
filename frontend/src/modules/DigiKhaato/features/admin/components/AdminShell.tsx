@@ -9,6 +9,7 @@ import { useTranslation } from 'src/hooks/useTranslation';
 import { ROUTES } from 'src/routes';
 import { cn } from 'src/utils/cn';
 
+import { AdminIntlProvider } from './AdminIntlProvider';
 import { RequireSuperAdmin } from './RequireSuperAdmin';
 
 const NAV = [
@@ -25,6 +26,14 @@ const NAV = [
  * Same design system, dense desktop layout first (NFR), usable on a phone.
  */
 export function AdminShell({ children }: Readonly<{ children: ReactNode }>): React.JSX.Element {
+  return (
+    <AdminIntlProvider>
+      <AdminChrome>{children}</AdminChrome>
+    </AdminIntlProvider>
+  );
+}
+
+function AdminChrome({ children }: Readonly<{ children: ReactNode }>): React.JSX.Element {
   const { t } = useTranslation();
   const pathname = usePathname();
   return (

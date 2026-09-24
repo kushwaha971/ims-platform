@@ -308,7 +308,7 @@ def _purge_table(table: Any, tenant: Any) -> int:
 
 def execute_deletion(*, job: Any) -> dict:
     """FR-5. Resumable: `job.payload['progress']` records every finished table."""
-    from apps.common.tenant_data import deletion_order, unregistered_tenant_models
+    from apps.common.tenant_data import deletion_order, unregistered_tables_holding
     from apps.platform_app.models import Job, Tenant
     from apps.platform_app.services.tenant_export import JOB_TYPE as EXPORT_JOB
 
@@ -320,10 +320,12 @@ def execute_deletion(*, job: Any) -> dict:
     due = scheduled_for(tenant)
     if due is None or due > timezone.now():
         raise PermanentJobError("cool-off has not elapsed")
-    missing = unregistered_tenant_models()
+    missing = unregistered_tables_holding(tenant)
     if missing:
-        # Fail closed BEFORE anything is removed: a table nobody declared would
-        # either stop the job half-way on a RESTRICT or keep this tenant's rows.
+        # Fail closed BEFORE anything is removed: a table nobody declared that
+        # holds this tenant's rows would either stop the job half-way on a
+        # RESTRICT or keep them. One that holds none (an app on the pending list
+        # this business never used) blocks nothing.
         raise PermanentJobError(f"unregistered tenant tables: {', '.join(missing)}")
 
     payload = dict(job.payload or {})

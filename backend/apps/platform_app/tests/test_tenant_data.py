@@ -451,3 +451,42 @@ def test_dry_run_plans_every_table_with_counts(tenant: Any) -> None:
     assert steps["parties.Party"]["rows"] == 1
     assert steps["ledger.LedgerEntry"]["triggers"] == ["ledger_entry_forbid_update_delete"]
     assert steps["platform.AuditLog"]["action"] == "custom"
+
+
+def test_an_unregistered_table_holding_rows_stops_deletion_before_anything_goes(
+    tenant: Any, other_tenant: Any, monkeypatch: Any
+) -> None:
+    """A table nobody declared (sales before it registers, say) that holds this
+    tenant's rows must stop the job BEFORE the first delete; one that holds none
+    for this tenant must not block a deletion the owner asked for."""
+    from apps.common import tenant_data
+    from apps.common.jobs import run_job
+    from apps.parties.models import Party, Tag
+    from apps.platform_app.models import Job
+
+    tenant_data.ensure_loaded()
+    monkeypatch.delitem(tenant_data.REGISTRY, "parties.Tag")
+    monkeypatch.delitem(tenant_data.REGISTRY, "parties.PartyTag")
+    Tag.objects.create(tenant=other_tenant, name="Elsewhere")
+    assert tenant_data.unregistered_tables_holding(tenant) == []
+
+    Tag.objects.create(tenant=tenant, name="Route 2")
+    PartyFactory(tenant=tenant)
+    _pending(tenant, days_ago=31)
+    job = Job.objects.create(
+        tenant=tenant,
+        job_type="platform.delete_tenant",
+        payload={},
+        run_after=timezone.now(),
+        status=JobStatus.RUNNING,
+        attempts=1,
+    )
+
+    run_job(job, worker="test")
+
+    job.refresh_from_db()
+    assert job.status == JobStatus.DEAD_LETTER
+    assert "parties.Tag" in job.error
+    tenant.refresh_from_db()
+    assert tenant.status == "pending_deletion"
+    assert Party.all_objects.filter(tenant=tenant).count() == 1

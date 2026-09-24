@@ -7,6 +7,7 @@ import { renderWithProviders } from 'src/tests/renderWithProviders';
 
 import * as adminService from '../api/adminService';
 
+import { AdminIntlProvider } from './AdminIntlProvider';
 import { AdminTenantDetailPageContent } from './AdminTenantDetailPageContent';
 import { ImpersonationBanner } from './ImpersonationBanner';
 import { RequireSuperAdmin } from './RequireSuperAdmin';
@@ -93,9 +94,11 @@ describe('RequireSuperAdmin', () => {
   it('shows a merchant the refusal, not the console', () => {
     signIn(false);
     renderWithProviders(
-      <RequireSuperAdmin>
-        <>console</>
-      </RequireSuperAdmin>
+      <AdminIntlProvider>
+        <RequireSuperAdmin>
+          <>console</>
+        </RequireSuperAdmin>
+      </AdminIntlProvider>
     );
     expect(screen.getByText('This page is for platform operators')).toBeInTheDocument();
     expect(screen.queryByText('console')).not.toBeInTheDocument();
@@ -120,9 +123,11 @@ describe('RequireSuperAdmin', () => {
       expiresAt: '2026-09-24T11:00:00Z',
     });
     renderWithProviders(
-      <RequireSuperAdmin>
-        <>console</>
-      </RequireSuperAdmin>
+      <AdminIntlProvider>
+        <RequireSuperAdmin>
+          <>console</>
+        </RequireSuperAdmin>
+      </AdminIntlProvider>
     );
     expect(screen.getByText('You are in a support session')).toBeInTheDocument();
   });
@@ -132,7 +137,11 @@ describe('AdminTenantDetailPageContent', () => {
   it('offers Request access, never Enter, while no owner has said yes', async () => {
     signIn(true);
     service.getTenant.mockResolvedValue(tenant());
-    renderWithProviders(<AdminTenantDetailPageContent id="t1" />);
+    renderWithProviders(
+      <AdminIntlProvider>
+        <AdminTenantDetailPageContent id="t1" />
+      </AdminIntlProvider>
+    );
     expect(await screen.findByRole('button', { name: 'Request access' })).toBeEnabled();
     expect(screen.queryByRole('button', { name: 'Enter business' })).not.toBeInTheDocument();
   });
@@ -151,7 +160,11 @@ describe('AdminTenantDetailPageContent', () => {
       activeSessionEndsAt: null,
     };
     service.getTenant.mockResolvedValue(tenant({ supportAccess: access }));
-    const { unmount } = renderWithProviders(<AdminTenantDetailPageContent id="t1" />);
+    const { unmount } = renderWithProviders(
+      <AdminIntlProvider>
+        <AdminTenantDetailPageContent id="t1" />
+      </AdminIntlProvider>
+    );
     expect(await screen.findByRole('button', { name: 'Waiting for owner' })).toBeDisabled();
     unmount();
 
@@ -159,7 +172,11 @@ describe('AdminTenantDetailPageContent', () => {
       tenant({ supportAccess: { ...access, status: 'granted' } })
     );
     service.impersonate.mockResolvedValue(undefined);
-    renderWithProviders(<AdminTenantDetailPageContent id="t1" />);
+    renderWithProviders(
+      <AdminIntlProvider>
+        <AdminTenantDetailPageContent id="t1" />
+      </AdminIntlProvider>
+    );
     await userEvent.click(await screen.findByRole('button', { name: 'Enter business' }));
     await userEvent.type(
       await screen.findByPlaceholderText('e.g. Owner reported a wrong balance on 3 Sep'),
