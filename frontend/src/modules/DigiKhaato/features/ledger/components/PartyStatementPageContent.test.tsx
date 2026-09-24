@@ -416,7 +416,7 @@ describe('the opening row on a Hindi statement (D-L3)', () => {
     /* Prevents D-L3: the statement rendered the row's stored note first, so a
        Hindi statement — and the printed copy handed to the customer — opened
        with the English "Opening balance" while the khata above it said
-       "शुरुआती बाक़ी". The row is mapped by its entry type, never by
+       "शुरुआती बाकी". The row is mapped by its entry type, never by
        translating the server's string. */
     statementService.getStatement.mockResolvedValue(page({ rows: [OPENING_ROW, ...page().rows] }));
 
@@ -427,11 +427,11 @@ describe('the opening row on a Hindi statement (D-L3)', () => {
     const view = await onScreen();
     await view.findByText('Cement bags');
 
-    expect(view.getByText('शुरुआती बाक़ी')).toBeInTheDocument();
+    expect(view.getByText('शुरुआती बाकी')).toBeInTheDocument();
     expect(view.queryByText('Opening balance')).not.toBeInTheDocument();
     // The print sheet is the rest of the document: the screen and the sheet
     // together carry the Hindi label twice and the English one nowhere.
-    expect(screen.getAllByText('शुरुआती बाक़ी')).toHaveLength(2);
+    expect(screen.getAllByText('शुरुआती बाकी')).toHaveLength(2);
     expect(screen.queryByText('Opening balance')).not.toBeInTheDocument();
   });
 });

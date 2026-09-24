@@ -756,6 +756,27 @@ describe('archiving from the khata page', () => {
     expect(record).toHaveFocus();
   });
 
+  it('moves focus to the refusal when the dialog swaps to blocked, so Tab reaches Cancel first (M4)', async () => {
+    /**
+     * Prevents M4: pressing Archive unmounted the Archive button when the body
+     * swapped to "blocked", focus fell to <body>, and the first Tab landed on
+     * "Write off ₹…" — Enter then opened the write-off. Focus must land inside
+     * the dialog on the explanation of WHY it was refused, and the first Tab
+     * from there must be Cancel, never the destructive Write off.
+     */
+    blockOnce();
+    const user = userEvent.setup();
+    const dialog = await reachBlocked(user);
+
+    const explanation = within(dialog).getByText('Settle the balance before archiving.')
+      .parentElement as HTMLElement;
+    await waitFor(() => expect(explanation).toHaveFocus());
+    expect(document.body).not.toHaveFocus();
+
+    await user.tab();
+    expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveFocus();
+  });
+
   it('opens You got with the outstanding amount already in it', async () => {
     /**
      * Prevents the UAT finding: Record payment opened the drawer in the right

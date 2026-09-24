@@ -65,7 +65,7 @@ export function OnboardingStepPageContent({
   return (
     <OnboardingShell
       steps={steps}
-      current={onboarding.step}
+      current={onboarding.progressStep}
       completed={onboarding.completedStep}
       onStepSelect={onboarding.goToStep}
       title={t('onboarding.title')}
@@ -94,6 +94,18 @@ export function OnboardingStepPageContent({
             empty draft is exactly how step 1 came back blank and invited a
             second business. */}
         {onboarding.isResuming && <UbPageSkeleton variant="form" count={3} />}
+
+        {/* M2 — "Add a business" found an unfinished business that step 1
+            will CONTINUE (the server resumes an abandoned attempt rather than
+            create a second). Its values are already in the form below; this
+            says whose they are, so nothing is renamed by surprise. */}
+        {!onboarding.isResuming && onboarding.step <= 1 && onboarding.resumableBusiness && (
+          <UbStatusBanner
+            tone="info"
+            title={t('onboarding.resumable.title', { name: onboarding.resumableBusiness.name })}
+            description={t('onboarding.resumable.body')}
+          />
+        )}
 
         {!onboarding.isResuming && onboarding.step <= 1 && (
           <OnboardingBusinessStep onboarding={onboarding} />

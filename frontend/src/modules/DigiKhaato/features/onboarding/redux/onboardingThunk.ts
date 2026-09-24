@@ -3,6 +3,7 @@ import { createAsyncThunk } from '@reduxjs/toolkit';
 import type { SessionPayload } from 'src/redux/slice/sessionSlice';
 import type { ApiErrorShape } from 'src/types/api.types';
 import { toApiError } from 'src/utils/apiError';
+import { retryWhile } from 'src/utils/retry';
 
 import { getSession } from '../../auth/api/authService';
 import * as onboardingService from '../api/onboardingService';
@@ -68,6 +69,48 @@ export const resumeOnboarding = createAsyncThunk<
   }
 );
 
+/**
+ * QUERY — defect M2. Which unfinished business step 1 would continue, asked
+ * when "Add a business" opens the wizard from a finished one. `null` when
+ * there is none — including from a mocked or older server that answers
+ * nothing — so the wizard simply starts blank.
+ */
+export const findResumableBusiness = createAsyncThunk<
+  OnboardingTenant | null,
+  void,
+  { rejectValue: ApiErrorShape }
+>(
+  'onboarding/findResumable',
+  async (_arg, { rejectWithValue }) => {
+    try {
+      return (await onboardingService.fetchResumableTenant()) ?? null;
+    } catch (error) {
+      return rejectWithValue(toApiError(error, 'onboarding.error.resume'));
+    }
+  },
+  {
+    condition: (_arg, { getState }) =>
+      (getState() as { onboarding: { resumableStatus: string } }).onboarding.resumableStatus ===
+      'idle',
+  }
+);
+
+/**
+ * Defect L8 — how long step 1 waits for ANOTHER tab's identical submit.
+ *
+ * The persisted `Idempotency-Key` is device-wide, so two tabs submitting step
+ * 1 present the same key, and the second meets `409 idempotency_in_progress`
+ * while the first is still being served. That is not a failure: once the first
+ * finishes, the same key REPLAYS its answer — the same business, no duplicate.
+ * So the second tab waits and asks again, three times with backoff, and only
+ * then gives up with a message. It used to stop on step 1 with nothing said,
+ * because `createTenant` suppresses the global snackbar for its own reasons.
+ */
+export const CREATE_IN_PROGRESS_RETRY_DELAYS_MS: readonly number[] = [500, 1000, 2000];
+
+const isInProgress = (error: unknown): boolean =>
+  toApiError(error).code === 'idempotency_in_progress';
+
 /** MUTATION — PLT-03 FR-2. Creates the tenant and re-issues the token. */
 export const createTenant = createAsyncThunk<
   OnboardingResult,
@@ -75,7 +118,14 @@ export const createTenant = createAsyncThunk<
   { rejectValue: ApiErrorShape }
 >('onboarding/createTenant', async ({ idempotencyKey, ...input }, { rejectWithValue }) => {
   try {
-    return await onboardingService.createTenant(input, idempotencyKey);
+    // L8 — the SAME key every time: a retry is a replay request, never a
+    // second create. The status stays `loading` throughout, so Continue
+    // cannot be pressed again while it waits.
+    return await retryWhile(
+      () => onboardingService.createTenant(input, idempotencyKey),
+      isInProgress,
+      CREATE_IN_PROGRESS_RETRY_DELAYS_MS
+    );
   } catch (error) {
     return rejectWithValue(toApiError(error, 'onboarding.error.create'));
   }

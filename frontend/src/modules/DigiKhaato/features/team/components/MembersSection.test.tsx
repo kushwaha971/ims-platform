@@ -6,6 +6,8 @@ import { store } from 'src/redux/store';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
 import type { PermissionCode } from 'src/types/domain.types';
 
+import hi from 'locales/hi.json';
+
 import { resetMembers } from '../redux/memberSlice';
 
 import { MembersSection } from './MembersSection';
@@ -293,6 +295,51 @@ describe('MembersSection — a mobile another login already holds (NEW-2)', () =
     expect(screen.getByLabelText(/Email address/)).toHaveAttribute('aria-invalid', 'false');
     expect(screen.getByDisplayValue('ramesh@shop.test')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Create login' })).toBeInTheDocument();
+  });
+});
+
+describe('MembersSection — the taken-mobile refusal in Hindi (L6)', () => {
+  it('shows the NEW-2 field error in Hindi, by its code, not the server English', async () => {
+    /* Prevents L6: the field message arrived in English under a Hindi form,
+       because the client printed `details.mobile` verbatim and the server
+       does not localise it. The server now sends `field_codes.mobile =
+       "mobile_taken"`, and the dialog must say `errors.field.mobile_taken`
+       from hi.json instead. */
+    const english =
+      'This mobile number is already used by another login. Leave it blank or use a different number.';
+    memberService.createMember.mockRejectedValue({
+      code: 'validation_error',
+      message: 'Please check the highlighted fields.',
+      details: { mobile: [english], field_codes: { mobile: 'mobile_taken' } },
+      requestId: 'req-l6',
+      status: 400,
+      warnings: [],
+    });
+    const user = userEvent.setup();
+    const messages = hi as Record<string, string>;
+    renderWithProviders(<MembersSection />, { locale: 'hi', messages });
+
+    await user.click(
+      await screen.findByRole('button', { name: messages['team.member.add.action'] })
+    );
+    await user.type(
+      await screen.findByLabelText(new RegExp(messages['team.member.name.label'] ?? '')),
+      'Ramesh Kumar'
+    );
+    await user.type(
+      screen.getByLabelText(new RegExp(messages['team.member.email.label'] ?? '')),
+      'ramesh@shop.test'
+    );
+    const mobile = screen.getByLabelText(/मोबाइल नंबर/);
+    await user.type(mobile, '9876543210');
+    await user.click(screen.getByRole('button', { name: messages['team.member.add.submit'] }));
+
+    await waitFor(() => expect(mobile).toHaveAttribute('aria-invalid', 'true'));
+    expect(mobile).toHaveAccessibleDescription(
+      expect.stringContaining(messages['errors.field.mobile_taken'] ?? '__missing__')
+    );
+    expect(screen.queryByText(english)).not.toBeInTheDocument();
+    expect(screen.queryByText('mobile_taken')).not.toBeInTheDocument();
   });
 });
 

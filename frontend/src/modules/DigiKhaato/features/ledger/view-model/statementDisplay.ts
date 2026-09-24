@@ -42,7 +42,7 @@ export const isDebitRow = (row: StatementRow): boolean => row.direction === 'deb
  * can find it; that string is a record, not copy. The statement read the note
  * first, so a Hindi statement — on screen and on the printed sheet a customer
  * is handed — opened with an English row while the khata above it said
- * "शुरुआती बाक़ी". Server text is never translated here: the row is mapped by
+ * "शुरुआती बाकी". Server text is never translated here: the row is mapped by
  * its `entryType`, which is the thing the client actually knows.
  */
 export const rowTitleId = (row: StatementRow): string | null => {

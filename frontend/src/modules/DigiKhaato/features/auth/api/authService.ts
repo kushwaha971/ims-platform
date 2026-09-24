@@ -1,5 +1,6 @@
 import { API_PATHS } from 'src/api/APIPaths';
 import { api } from 'src/api/AxiosInstances';
+import { forgetAdoptedTenant } from 'src/api/tenantTransition';
 import { DEFAULT_TENANT_TIMEZONE } from 'src/constants';
 import type { SessionPayload, SessionTenant } from 'src/redux/slice/sessionSlice';
 import type { TWriteClass } from 'src/types/api.types';
@@ -184,18 +185,15 @@ const toAuthResult = (body: AuthApiResponse): AuthResult => {
  * gone; the exceptions are decided once, by code, in src/utils/apiError.ts.
  */
 export const register = async (input: RegisterInput): Promise<AuthResult> => {
-  const response = await api.post<AuthApiResponse>(
-    API_PATHS.AUTH_REGISTER,
-    {
-      email: input.email,
-      password: input.password,
-      ...(input.name ? { full_name: input.name } : {}),
-      // Sent only when the user gave one: the serializer takes `allow_blank`,
-      // but an empty string in the body would claim they answered.
-      ...(input.mobile ? { mobile: input.mobile } : {}),
-      ...(input.deviceLabel ? { device_label: input.deviceLabel } : {}),
-    }
-  );
+  const response = await api.post<AuthApiResponse>(API_PATHS.AUTH_REGISTER, {
+    email: input.email,
+    password: input.password,
+    ...(input.name ? { full_name: input.name } : {}),
+    // Sent only when the user gave one: the serializer takes `allow_blank`,
+    // but an empty string in the body would claim they answered.
+    ...(input.mobile ? { mobile: input.mobile } : {}),
+    ...(input.deviceLabel ? { device_label: input.deviceLabel } : {}),
+  });
   return toAuthResult(response.data);
 };
 export const registerWriteClass: TWriteClass = 'online-only';
@@ -214,14 +212,11 @@ export const registerWriteClass: TWriteClass = 'online-only';
  * holds for every screen that logs in, and a 500 here still reaches the user.
  */
 export const passwordLogin = async (input: PasswordLoginInput): Promise<AuthResult> => {
-  const response = await api.post<AuthApiResponse>(
-    API_PATHS.AUTH_LOGIN,
-    {
-      email: input.email,
-      password: input.password,
-      ...(input.deviceLabel ? { device_label: input.deviceLabel } : {}),
-    },
-  );
+  const response = await api.post<AuthApiResponse>(API_PATHS.AUTH_LOGIN, {
+    email: input.email,
+    password: input.password,
+    ...(input.deviceLabel ? { device_label: input.deviceLabel } : {}),
+  });
   return toAuthResult(response.data);
 };
 export const passwordLoginWriteClass: TWriteClass = 'online-only';
@@ -231,14 +226,11 @@ export const passwordLoginWriteClass: TWriteClass = 'online-only';
  * account has none; FR-9: other devices are revoked only on an explicit tick.
  */
 export const setPassword = async (input: PasswordSetInput): Promise<void> => {
-  await api.post(
-    API_PATHS.AUTH_PASSWORD_SET,
-    {
-      new_password: input.newPassword,
-      ...(input.currentPassword ? { current_password: input.currentPassword } : {}),
-      ...(input.logoutOtherDevices ? { logout_other_devices: true } : {}),
-    }
-  );
+  await api.post(API_PATHS.AUTH_PASSWORD_SET, {
+    new_password: input.newPassword,
+    ...(input.currentPassword ? { current_password: input.currentPassword } : {}),
+    ...(input.logoutOtherDevices ? { logout_other_devices: true } : {}),
+  });
 };
 export const setPasswordWriteClass: TWriteClass = 'online-only';
 
@@ -260,10 +252,10 @@ export const requestPasswordResetWriteClass: TWriteClass = 'online-only';
 export const confirmPasswordReset = async (
   input: PasswordResetConfirmInput
 ): Promise<AuthResult> => {
-  const response = await api.post<AuthApiResponse>(
-    API_PATHS.AUTH_PASSWORD_RESET_CONFIRM,
-    { token: input.token, new_password: input.newPassword }
-  );
+  const response = await api.post<AuthApiResponse>(API_PATHS.AUTH_PASSWORD_RESET_CONFIRM, {
+    token: input.token,
+    new_password: input.newPassword,
+  });
   return toAuthResult(response.data);
 };
 export const confirmPasswordResetWriteClass: TWriteClass = 'online-only';
@@ -344,7 +336,16 @@ export const getSession = async (signal?: AbortSignal): Promise<SessionPayload> 
  */
 export const switchTenant = async (tenantId: string): Promise<SessionPayload> => {
   await api.post(API_PATHS.AUTH_SWITCH_TENANT, { tenant_id: tenantId });
-  return getSession();
+  try {
+    return await getSession();
+  } catch (error) {
+    // M3 — the switch's answer made this tab adopt the new tenant, but the
+    // store can only follow with this re-read. Without it, keeping the
+    // adoption would let the new business's rows render under the old one's
+    // shell; dropping it lets the stale-tab guard reload into a consistent tab.
+    forgetAdoptedTenant();
+    throw error;
+  }
 };
 export const switchTenantWriteClass: TWriteClass = 'online-only';
 

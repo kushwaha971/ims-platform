@@ -18,7 +18,7 @@ import { mkdirSync } from 'node:fs';
 
 const FE = process.env.E2E_FRONTEND ?? 'http://localhost:3000';
 const BE = process.env.E2E_BACKEND ?? 'http://localhost:8000/api/v1';
-const SHOTS = '/tmp/e2e-shots/defects2';
+const SHOTS = process.env.E2E_SHOTS_DIR ?? '/tmp/e2e-shots/defects2';
 const arg = (n) => process.argv.find((a) => a.startsWith(`--${n}=`))?.split('=').slice(1).join('=');
 const PHASES = (arg('only') ?? 'O').split(',');
 const USER = arg('user');
@@ -463,8 +463,8 @@ async function phaseL(browser) {
     await page.emulateMedia({ media: 'screen' });
     if (!hi) record('D-L1', `${tag}: printed letterhead phone reads "+91 98765 43210"`, /\+91 98765 43210/.test(letter) && !/\+919876543210/.test(letter), letter.replace(/\s+/g, ' '));
     if (hi) {
-      record('D-L3', `${tag}: Hindi statement SCREEN opening row reads "शुरुआती बाक़ी", no "Opening balance"`, /शुरुआती बाक़ी/.test(screen) && !/Opening balance/i.test(screen), screen.replace(/\s+/g, ' ').slice(0, 400));
-      record('D-L3', `${tag}: Hindi statement PRINT opening row reads "शुरुआती बाक़ी", no "Opening balance"`, /शुरुआती बाक़ी/.test(sheet) && !/Opening balance/i.test(sheet), sheet.replace(/\s+/g, ' ').slice(0, 500));
+      record('D-L3', `${tag}: Hindi statement SCREEN opening row reads "शुरुआती बाकी", no "Opening balance"`, /शुरुआती बाकी/.test(screen) && !/Opening balance/i.test(screen), screen.replace(/\s+/g, ' ').slice(0, 400));
+      record('D-L3', `${tag}: Hindi statement PRINT opening row reads "शुरुआती बाकी", no "Opening balance"`, /शुरुआती बाकी/.test(sheet) && !/Opening balance/i.test(sheet), sheet.replace(/\s+/g, ' ').slice(0, 500));
       record('D-L1', `${tag}: Hindi print letterhead phone also grouped`, /\+91 98765 43210/.test(letter), letter.replace(/\s+/g, ' '));
     } else {
       record('D-L3', `${tag}: English control — opening row still "Opening balance"`, /Opening balance/.test(screen) && /Opening balance/.test(sheet), '');
@@ -499,7 +499,7 @@ async function phaseL(browser) {
     await page.goto(`${FE}/parties/${d.lakshmi}`, { waitUntil: 'networkidle' }); await page.waitForTimeout(1500);
     const more = page.getByRole('button', { name: hi ? /और|More/ : 'More actions', exact: !hi });
     if (await more.count()) { await more.first().click().catch(() => {}); await page.waitForTimeout(500); }
-    await page.getByRole('button', { name: hi ? /शुरुआती बाक़ी जोड़ें|शुरुआती/ : /Add opening balance/ }).last().click().catch(() => {});
+    await page.getByRole('button', { name: hi ? /शुरुआती बाकी जोड़ें|शुरुआती/ : /Add opening balance/ }).last().click().catch(() => {});
     await page.waitForTimeout(1200);
     const dlg = page.getByRole('dialog').last();
     const t = await dlg.innerText().catch(() => '');

@@ -36,6 +36,8 @@ export const API_PATHS = {
   /** PLT-03 FR-2 / CCR-1 — tenant creation; carries an Idempotency-Key. */
   TENANTS: '/tenants',
   TENANT_CURRENT: '/tenants/current',
+  /** Defect M2 — the unfinished business `POST /tenants` would resume, or null. */
+  TENANT_RESUMABLE: '/tenants/resumable',
   TENANT_SETTINGS: '/tenants/current/settings',
   TENANT_BRANDING: '/tenants/current/branding',
   MEMBERSHIPS: '/memberships',

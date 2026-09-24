@@ -30,6 +30,7 @@ import {
 import {
   completeOnboarding,
   createTenant,
+  findResumableBusiness,
   resumeOnboarding,
   saveAddressStep,
   saveBusinessStep,
@@ -109,6 +110,8 @@ export const QUERIES = {
   fetchLedgerSummary,
   // PLT-03 FR-9 / NEW-1 — the wizard reads its business back after a reload
   resumeOnboarding,
+  // M2 — which unfinished business "Add a business" would continue
+  findResumableBusiness,
 } as const;
 
 export const MUTATIONS = {

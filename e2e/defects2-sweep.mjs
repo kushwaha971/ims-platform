@@ -11,7 +11,7 @@ import { chromium } from 'playwright';
 const FE = 'http://localhost:3000', BE = 'http://localhost:8000/api/v1';
 const arg = (n) => process.argv.find((a) => a.startsWith(`--${n}=`))?.split('=').slice(1).join('=');
 const OWNER = arg('owner'), WIZ = arg('wizard'), WIZSHOP = arg('wizardShop'), PW = 'Dukaan2026x';
-const SHOTS = '/tmp/e2e-shots/defects2';
+const SHOTS = process.env.E2E_SHOTS_DIR ?? '/tmp/e2e-shots/defects2';
 const results = [];
 const record = (id, check, ok, detail = '') => { results.push({ ok }); console.log(`${ok ? 'ok  ' : 'FAIL'}  [${id}] ${check}${detail ? `\n        ${detail}` : ''}`); };
 const api = async (m, p, b, t) => { const r = await fetch(BE + p, { method: m, headers: { 'Content-Type': 'application/json', 'X-Client': 'api', ...(t ? { Authorization: `Bearer ${t}` } : {}) }, body: b ? JSON.stringify(b) : undefined }); return r.json(); };

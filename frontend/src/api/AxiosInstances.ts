@@ -22,6 +22,7 @@ import { readCsrfToken } from 'src/utils/cookieUtils';
 import { newRequestId } from 'src/utils/requestId';
 
 import { API_PATHS, isTenantTransitionPath, requiresIdempotency } from './APIPaths';
+import { __resetTenantTransition, adoptTenant, effectiveTenantId } from './tenantTransition';
 import { transportHost } from './transportBridge';
 
 /** Requests that must never trigger a refresh, or that carry no auth. */
@@ -48,6 +49,12 @@ export interface UbRequestConfig extends InternalAxiosRequestConfig {
   suppressErrorSnackbar?: boolean;
   /** §19.10.3 — only `interactive` and `probe` feed the network machine. */
   net?: TNetworkTag;
+  /**
+   * M3 — the tenant this tab was in when the request was SENT, so the
+   * stale-tab guard can tell a response this tab's own switch has superseded
+   * from one another tab's switch has redirected.
+   */
+  _tenantAtIssue?: string | null;
 }
 
 /**
@@ -100,6 +107,9 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 
   // 3. Locale — drives server-side message localisation.
   request.headers.set('Accept-Language', transportHost()?.getLocale() ?? 'en');
+
+  // 3b. M3 — which tenant this request was asked under (see the guard below).
+  request._tenantAtIssue = effectiveTenantId(transportHost()?.getActiveTenantId() ?? null);
 
   // 4. Idempotency key — required on every POST that creates a document,
   //    payment or ledger entry (canon §0.11 rule 5). The CALLER supplies it so
@@ -193,6 +203,7 @@ export const __resetTransportState = (): void => {
   refreshPromise = null;
   pendingQueue.length = 0;
   redirected = false;
+  __resetTenantTransition();
 };
 
 // ── Response interceptors ────────────────────────────────────────────────────
@@ -225,12 +236,37 @@ api.interceptors.response.use(
      * would reject the very switch it exists to protect. See
      * `TENANT_TRANSITION_PATHS` for why that exemption is a closed list rather
      * than a reading of which views happen to set the header.
+     *
+     * Defect M3 — the tab's OWN transition is not a foreign one. A successful
+     * transition ADOPTS the tenant it answered for (`tenantTransition.ts`), and
+     * everything after it is compared against that until the store catches up.
+     * Without it, `switchTenant`'s own `GET /auth/me` — sent after the switch,
+     * before the store had heard of it — was read as "switched in another tab"
+     * and `/switch` reloaded itself instead of opening the business.
+     *
+     * And a response to a request this tab sent BEFORE its own switch, echoing
+     * the tenant it was sent under, is superseded rather than foreign: it is
+     * still discarded (it is the old business's data), but quietly — no
+     * warning, no reload — because nothing happened that the user did not do.
      */
     const echoed = response.headers?.['x-tenant-id'];
-    if (typeof echoed === 'string' && echoed.length > 0 && !isTenantTransitionPath(config.url)) {
+    if (typeof echoed === 'string' && echoed.length > 0) {
       const host = transportHost();
-      const active = host?.getActiveTenantId() ?? null;
-      if (active !== null && active !== echoed) {
+      if (isTenantTransitionPath(config.url)) {
+        adoptTenant(echoed);
+        return response;
+      }
+      const expected = effectiveTenantId(host?.getActiveTenantId() ?? null);
+      if (expected !== null && expected !== echoed) {
+        const issuedUnder = config._tenantAtIssue ?? null;
+        if (issuedUnder !== null && issuedUnder === echoed) {
+          return Promise.reject(
+            toApiError(
+              new Error('This response belongs to the business you just left.'),
+              'tenant.switcher.superseded'
+            )
+          );
+        }
         host?.onTenantMismatch(echoed);
         return Promise.reject(
           toApiError(

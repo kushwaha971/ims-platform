@@ -152,6 +152,28 @@ export const fetchCurrentTenant = async (): Promise<OnboardingTenant> => {
 };
 
 /**
+ * GET /tenants/resumable — the business "Add a business" would CONTINUE rather
+ * than create (defect M2), or `null`.
+ *
+ * `POST /tenants` resumes the caller's unfinished business when it is still an
+ * abandoned attempt (no other people, no books), and used to do it silently:
+ * the merchant typed a new name on step 1 and an existing business was
+ * renamed. The wizard asks first, so step 1 can say which business Continue
+ * will finish and show its values instead of a blank form. The server answers
+ * with the same rule the create applies, so the two cannot disagree.
+ *
+ * A QUERY, so a failure reaches the global snackbar and the wizard falls back
+ * to a blank step 1 — no worse than before this read existed.
+ */
+export const fetchResumableTenant = async (): Promise<OnboardingTenant | null> => {
+  const response = await api.get<{ readonly data: { readonly tenant: TenantApiPayload | null } }>(
+    API_PATHS.TENANT_RESUMABLE
+  );
+  const row = response.data.data.tenant;
+  return row ? toTenant(row) : null;
+};
+
+/**
  * PATCH /tenants/current — step 1 again, for a business that already exists.
  *
  * PLT-03 FR-9 makes a completed step navigable "for edits", and step 1 is the

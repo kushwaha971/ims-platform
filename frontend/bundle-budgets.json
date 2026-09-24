@@ -329,7 +329,15 @@
   "createTailwindMerge. Budgets set to measured, rounded up.",
   "BACKLOG: vendor/ml-uikit bundles its own tailwind-merge 1.14 + clsx ≈ 6.7 KB",
   "on every (app) route; deduping is the largest available saving (needs a",
-  "visual check of ml-uikit's class merging on v2)."
+  "visual check of ml-uikit's class merging on v2).",
+  "",
+  "── 24 Sep 2026 (defect round 3): shared app 112.5 → 113.1 KB ─────────────",
+  "The own-switch adoption in the stale-tab guard (M3: switching business in",
+  "the same tab was treated as another tab's switch and reloaded) sits in the",
+  "axios interceptor every route loads; the server field-code mapping (NEW-2",
+  "message in Hindi) rides in the same layer. Both are correctness fixes with",
+  "no lazy seam — the guard must run on the first request. Shared budget 114,",
+  "first-load budgets on the listed routes +1. /parties/[id] route 97 → 98: the archive-blocked focus move (M4)."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -513,7 +521,7 @@
  ],
  "shared": {
   "framework": 128,
-  "sharedApp": 113
+  "sharedApp": 114
  },
  "//routes": [
   "The `route` figures are §19.9.2's, unchanged, and every route is comfortably",
@@ -718,11 +726,11 @@
  "routes": {
   "/parties": {
    "route": 103,
-   "firstLoad": 342
+   "firstLoad": 343
   },
   "/dashboard": {
    "route": 61,
-   "firstLoad": 300
+   "firstLoad": 301
   },
   "/sales/invoices/new": {
    "route": 110,
@@ -734,15 +742,15 @@
   },
   "/design-system": {
    "route": 99,
-   "firstLoad": 338
+   "firstLoad": 339
   },
   "/settings/team": {
    "route": 92,
-   "firstLoad": 331
+   "firstLoad": 332
   },
   "/parties/[id]": {
-   "route": 97,
-   "firstLoad": 337
+   "route": 98,
+   "firstLoad": 338
   },
   "/parties/tags": {
    "route": 73,
@@ -750,18 +758,18 @@
   },
   "/parties/[id]/statement": {
    "route": 91,
-   "firstLoad": 330
+   "firstLoad": 331
   },
   "/ledger/aging": {
    "route": 92,
-   "firstLoad": 331
+   "firstLoad": 332
   },
   "/switch": {
-   "firstLoad": 304,
+   "firstLoad": 305,
    "route": 65
   },
   "/settings/plan": {
-   "firstLoad": 303
+   "firstLoad": 304
   }
  },
  "//ignoreRoutes": [

@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useCallback, useMemo, useState, type RefObject } from 'react';
+import { memo, useCallback, useEffect, useId, useMemo, useState, type RefObject } from 'react';
 
 import {
   formatRequestReference,
@@ -124,10 +124,26 @@ function PartyArchiveDialogBase({
     [onClose, saving]
   );
 
-  if (stage === 'closed') return null;
+  const isBlocked = stage !== 'closed' && shown === 'blocked' && blocked !== null;
+  const isWriteOff = stage !== 'closed' && shown === 'writeOff' && blocked !== null;
 
-  const isBlocked = shown === 'blocked' && blocked !== null;
-  const isWriteOff = shown === 'writeOff' && blocked !== null;
+  /* M4 — focus is moved on purpose when the body swaps to "blocked".
+     The Archive button the merchant just pressed is unmounted by the swap, so
+     focus fell to <body>; the browser's sequential-focus starting point stayed
+     where that button had been — just after Cancel — and the first Tab landed
+     on "Write off ₹…", where Enter opens the write-off. Cancel's `autoFocus`
+     cannot help: Cancel was already mounted and does not mount again. So focus
+     goes to the explanation itself (`tabIndex={-1}`: focusable by script, not
+     a Tab stop). A screen reader reads why the archive was refused, and the
+     first Tab goes to the first action in reading order — Cancel — so the
+     destructive Write off is never the first thing reached. The same holds on
+     the way back from the write-off form, whose Back button unmounts too. */
+  const blockedBodyId = useId();
+  useEffect(() => {
+    if (isBlocked) document.getElementById(blockedBodyId)?.focus();
+  }, [isBlocked, blockedBodyId]);
+
+  if (stage === 'closed') return null;
   /* The magnitude, never the signed balance: every string this feeds already
      says the direction in words ("You owe", "what you owe {name}"), so a
      payable printed "Write off ₹-500.00" (FB-1). `UbAmount` below keeps the
@@ -241,7 +257,7 @@ function PartyArchiveDialogBase({
             onAcknowledgedChange={setAcknowledged}
           />
         ) : isBlocked ? (
-          <UbStack gap={3}>
+          <UbStack gap={3} id={blockedBodyId} tabIndex={-1} className="outline-none">
             <UbAmount
               value={blocked.amount}
               size="lg"

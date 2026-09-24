@@ -10,6 +10,7 @@ import { ONBOARDING_STEP_COUNT } from '../constants/onboardingSteps';
 import {
   completeOnboarding,
   createTenant,
+  findResumableBusiness,
   resumeOnboarding,
   saveAddressStep,
   saveBusinessStep,
@@ -86,6 +87,23 @@ export interface OnboardingState {
    * in a loop, and the server turns that step's submit into a resume.
    */
   resumeStatus: RequestStatus;
+  /**
+   * Defect M2 — the unfinished business "Add a business" will CONTINUE, as the
+   * server reported it (`GET /tenants/resumable`). Step 1 says so and shows its
+   * values: `POST /tenants` resumes it rather than creating another, and doing
+   * that behind a blank form renamed an existing business with no word on
+   * screen. `null` when there is none, or before the read.
+   */
+  resumable: ResumableBusiness | null;
+  /** The lifecycle of that read; `idle` until "Add a business" needs it. */
+  resumableStatus: RequestStatus;
+}
+
+/** Just enough of the business to name it on step 1. */
+export interface ResumableBusiness {
+  readonly id: string;
+  readonly name: string;
+  readonly onboardingStep: number;
 }
 
 const emptyAddress: OnboardingAddress = {
@@ -124,6 +142,8 @@ const initialState: OnboardingState = {
   completed: false,
   tenantCreateKey: null,
   resumeStatus: 'idle',
+  resumable: null,
+  resumableStatus: 'idle',
 };
 
 /** Fold a server tenant back into the draft, so a resume shows real values. */
@@ -218,6 +238,27 @@ const onboardingSlice = createSlice({
         state.resumeStatus = action.meta.aborted ? 'idle' : 'failed';
       })
 
+      // M2 — the business step 1 will continue. Its three step-1 values go
+      // into the draft so the form shows what Continue will write, and
+      // nothing is renamed by surprise. `tenantId` is deliberately NOT set:
+      // the session is still on the business "Add a business" was opened
+      // from, so a PATCH of `/tenants/current` would write into THAT one.
+      // Step 1 stays a `POST /tenants`, which the server turns into the resume.
+      .addCase(findResumableBusiness.pending, (state) => {
+        state.resumableStatus = 'loading';
+      })
+      .addCase(findResumableBusiness.fulfilled, (state, action) => {
+        state.resumableStatus = 'succeeded';
+        const found = action.payload;
+        if (!found) return;
+        state.resumable = { id: found.id, name: found.name, onboardingStep: found.onboardingStep };
+        state.draft.name = found.name;
+        state.draft.businessType = found.businessType;
+        state.draft.stateCode = found.stateCode;
+      })
+      .addCase(findResumableBusiness.rejected, (state, action) => {
+        state.resumableStatus = action.meta.aborted ? 'idle' : 'failed';
+      })
       .addCase(createTenant.pending, pending)
       .addCase(createTenant.fulfilled, (state, action) => {
         state.status = 'succeeded';
@@ -331,6 +372,11 @@ export const selectOnboardingTenantId = (state: RootState): string | null =>
 export const selectOnboardingCreateKey = (state: RootState): string | null =>
   state.onboarding.tenantCreateKey;
 export const selectOnboardingCompleted = (state: RootState): boolean => state.onboarding.completed;
+/** M2 — the unfinished business "Add a business" will continue, if any. */
+export const selectOnboardingResumable = (state: RootState): ResumableBusiness | null =>
+  state.onboarding.resumable;
+export const selectOnboardingResumableStatus = (state: RootState): RequestStatus =>
+  state.onboarding.resumableStatus;
 /** NEW-1 — the lifecycle of reading the resumed business back from the server. */
 export const selectOnboardingResumeStatus = (state: RootState): RequestStatus =>
   state.onboarding.resumeStatus;

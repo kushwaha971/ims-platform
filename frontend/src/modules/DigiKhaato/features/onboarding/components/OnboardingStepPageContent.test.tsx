@@ -1,4 +1,4 @@
-import { cleanup, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { store } from 'src/redux/store';
@@ -27,6 +27,7 @@ jest.mock('../../auth/api/authService');
 const onboardingService = jest.requireMock('../api/onboardingService') as {
   createTenant: jest.Mock;
   fetchCurrentTenant: jest.Mock;
+  fetchResumableTenant: jest.Mock;
   updateBusinessStep: jest.Mock;
   updateGstStep: jest.Mock;
   updateAddressStep: jest.Mock;
@@ -697,11 +698,15 @@ describe('the wizard — a reload mid-way (NEW-1)', () => {
 
   it('does not resume a FINISHED business — "Add a business" starts empty', async () => {
     await reloadWithSession(ownerTenant(4));
+    onboardingService.fetchResumableTenant.mockResolvedValue(null);
 
     renderWithProviders(<OnboardingStepPageContent step={1} />);
 
-    expect(screen.getByLabelText(/Business name/)).toHaveValue('');
+    // M2 asks the server first whether an unfinished business would be
+    // continued; with none, step 1 is blank.
+    expect(await screen.findByLabelText(/Business name/)).toHaveValue('');
     expect(onboardingService.fetchCurrentTenant).not.toHaveBeenCalled();
+    expect(screen.queryByText(/unfinished business/)).not.toBeInTheDocument();
   });
 
   it('does not resume a business the caller does not own', async () => {
@@ -792,5 +797,224 @@ describe('the wizard — a reload mid-way (NEW-1)', () => {
     expect(onboardingService.createTenant.mock.calls[0]?.[1]).toBe('spent-key');
     expect(onboardingService.createTenant.mock.calls[1]?.[1]).not.toBe('spent-key');
     await waitFor(() => expect(push).toHaveBeenCalledWith('/onboarding/step/2'));
+  });
+});
+
+/**
+ * Defect M2 (client half) — "Add a business" silently continued an existing
+ * unfinished business: the merchant typed "Brand New Branch" on a blank step 1
+ * and the server renamed their half-built "Race 4". The server now resumes
+ * only an abandoned attempt, and when it will, step 1 must SAY so and show that
+ * business's values rather than a blank form.
+ */
+describe('the wizard — "Add a business" with an unfinished business (M2)', () => {
+  const finishedSession = {
+    user: { id: 'u1', name: 'Ramesh', mobile: '+919876543210', locale: 'en' },
+    activeTenant: {
+      id: 't-live',
+      name: 'Live Shop',
+      timezone: 'Asia/Kolkata',
+      role: 'owner',
+      onboardingStep: 4,
+    },
+    tenants: [],
+    permissions: [],
+    enabledModules: [],
+    version: null,
+  };
+
+  beforeEach(async () => {
+    authService.getSession.mockResolvedValue(finishedSession);
+    await store.dispatch(fetchSession());
+    store.dispatch(resetOnboarding());
+  });
+
+  afterEach(async () => {
+    cleanup();
+    authService.getSession.mockResolvedValue({ ...finishedSession, activeTenant: null });
+    await store.dispatch(fetchSession());
+  });
+
+  it('names the unfinished business and shows its values instead of a blank step 1', async () => {
+    /** Prevents M2's "no message": the notice names the business Continue
+     *  will finish, and the form carries its name, so a new name typed here
+     *  is a deliberate rename rather than a surprise. */
+    onboardingService.fetchResumableTenant.mockResolvedValue(
+      tenant({ id: 't-race', name: 'Race 4', stateCode: '29' })
+    );
+
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+
+    expect(await screen.findByText('You have an unfinished business, Race 4.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Its details are filled in below. Continuing will finish setting it up.')
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/Business name/)).toHaveValue('Race 4');
+    expect(screen.getByRole('radio', { name: /Retail shop/ })).toBeChecked();
+  });
+
+  it('continues it through POST /tenants, never a PATCH of the business it was opened from', async () => {
+    /** The session is still on the LIVE shop; a PATCH of /tenants/current
+     *  would write Race 4's name into it. Step 1 stays a create, which the
+     *  server turns into the resume, and the wizard goes on from where Race 4
+     *  had got to. */
+    const user = userEvent.setup();
+    onboardingService.fetchResumableTenant.mockResolvedValue(
+      tenant({ id: 't-race', name: 'Race 4', onboardingStep: 2 })
+    );
+    onboardingService.createTenant.mockResolvedValue({
+      tenant: tenant({ id: 't-race', name: 'Race 4', onboardingStep: 2 }),
+      warnings: [],
+    });
+
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+    await screen.findByText('You have an unfinished business, Race 4.');
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+
+    await waitFor(() => expect(onboardingService.createTenant).toHaveBeenCalledTimes(1));
+    expect(onboardingService.createTenant.mock.calls[0]?.[0]).toMatchObject({ name: 'Race 4' });
+    expect(onboardingService.updateBusinessStep).not.toHaveBeenCalled();
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/onboarding/step/3'));
+  });
+
+  it('says nothing and starts blank when the server would create a new business', async () => {
+    /** An unfinished business with staff or books is not resumable (server
+     *  side of M2), so there is nothing to warn about. */
+    onboardingService.fetchResumableTenant.mockResolvedValue(null);
+
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+
+    expect(await screen.findByLabelText(/Business name/)).toHaveValue('');
+    expect(screen.queryByText(/unfinished business/)).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Defect L7 — while step 2 was being read back after a reload, the progress
+ * bar said "Step 1 of 4 · Tell us about your business" over step 2's skeleton,
+ * because the slice's step is clamped against a `completedStep` that is still
+ * empty until the read lands.
+ */
+describe('the wizard — the progress bar during a resume (L7)', () => {
+  afterEach(async () => {
+    cleanup();
+    authService.getSession.mockResolvedValue({
+      user: { id: 'u1', name: 'Ramesh', mobile: null, locale: 'en' },
+      activeTenant: null,
+      tenants: [],
+      permissions: [],
+      enabledModules: [],
+      version: null,
+    });
+    await store.dispatch(fetchSession());
+  });
+
+  it('names the step in the URL while the business is being read back', async () => {
+    const unfinished = {
+      id: 't1',
+      name: 'Sharma General Store',
+      timezone: 'Asia/Kolkata',
+      role: 'owner',
+      onboardingStep: 1,
+    };
+    authService.getSession.mockResolvedValue({
+      user: { id: 'u1', name: 'Ramesh', mobile: null, locale: 'en' },
+      activeTenant: unfinished,
+      tenants: [unfinished],
+      permissions: [],
+      enabledModules: [],
+      version: null,
+    });
+    await store.dispatch(fetchSession());
+    store.dispatch(resetOnboarding());
+    let answer: (value: unknown) => void = () => undefined;
+    onboardingService.fetchCurrentTenant.mockReturnValue(
+      new Promise((resolve) => {
+        answer = resolve;
+      })
+    );
+
+    renderWithProviders(<OnboardingStepPageContent step={2} />);
+
+    // Still reading: the skeleton is up and the bar already says step 2.
+    expect(screen.queryByLabelText(/Business name/)).not.toBeInTheDocument();
+    expect(screen.getByRole('progressbar')).toHaveAccessibleName(
+      `Step 2 of 4 — ${en['onboarding.step2.title'] as string}`
+    );
+    expect(screen.queryByText('Step 1 of 4')).not.toBeInTheDocument();
+
+    answer(tenant({ onboardingStep: 1 }));
+    expect(
+      await screen.findByRole('heading', { level: 2, name: en['onboarding.step2.title'] as string })
+    ).toBeInTheDocument();
+    expect(screen.getByRole('progressbar')).toHaveAccessibleName(
+      `Step 2 of 4 — ${en['onboarding.step2.title'] as string}`
+    );
+  });
+});
+
+/**
+ * Defect L8 — two tabs submit step 1 with identical values. They share the
+ * device-wide idempotency key, so the second meets `409
+ * idempotency_in_progress` while the first is being served — and it stayed on
+ * step 1 with nothing on screen, because `createTenant` suppresses the global
+ * toast. It must wait and ask again under the SAME key (which then replays the
+ * first tab's business — no duplicate), and say so if the wait runs out.
+ */
+describe('the wizard — step 1 submitted in two tabs at once (L8)', () => {
+  const inProgress = {
+    code: 'idempotency_in_progress',
+    message: 'A request with this key is still being processed.',
+    details: {},
+    requestId: 'req_ip',
+    status: 409,
+    warnings: [],
+  };
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  const submitStepOne = async () => {
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+    await user.type(screen.getByLabelText(/Business name/), 'Sharma General Store');
+    await user.click(screen.getByRole('radio', { name: /Retail shop/ }));
+    await chooseOption(user, /^State/, /Maharashtra/);
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+  };
+
+  it('waits for the other tab and carries on with the SAME business, under the same key', async () => {
+    onboardingService.createTenant
+      .mockRejectedValueOnce(inProgress)
+      .mockRejectedValueOnce(inProgress)
+      .mockResolvedValueOnce({ tenant: tenant(), warnings: [] });
+
+    await submitStepOne();
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(5000);
+    });
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/onboarding/step/2'));
+    expect(onboardingService.createTenant).toHaveBeenCalledTimes(3);
+    const keys = new Set(onboardingService.createTenant.mock.calls.map((call) => call[1]));
+    expect(keys.size).toBe(1);
+  });
+
+  it('gives up after three retries and asks the merchant to try again', async () => {
+    onboardingService.createTenant.mockRejectedValue(inProgress);
+
+    await submitStepOne();
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(5000);
+    });
+
+    await waitFor(() => expect(store.getState().snackbar.id).toBe('onboarding.error.inProgress'));
+    expect(onboardingService.createTenant).toHaveBeenCalledTimes(4); // 1 + 3 retries
+    expect(push).not.toHaveBeenCalledWith('/onboarding/step/2');
   });
 });

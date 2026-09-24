@@ -29,6 +29,8 @@ import {
   selectOnboardingCreateKey,
   selectOnboardingDraft,
   selectOnboardingError,
+  selectOnboardingResumable,
+  selectOnboardingResumableStatus,
   selectOnboardingResumeStatus,
   selectOnboardingStatus,
   selectOnboardingStep,
@@ -42,14 +44,15 @@ import {
 import {
   completeOnboarding,
   createTenant,
+  findResumableBusiness,
   resumeOnboarding,
   saveAddressStep,
   saveBusinessStep,
   saveGstStep,
 } from '../redux/onboardingThunk';
-import { shouldResumeFromServer } from '../view-model/onboardingDisplay';
+import { isOnboardingComplete, shouldResumeFromServer } from '../view-model/onboardingDisplay';
 
-import type { OnboardingDraft } from '../redux/onboardingSlice';
+import type { OnboardingDraft, ResumableBusiness } from '../redux/onboardingSlice';
 import type { OnboardingResult, OnboardingWarning } from '../types/onboarding.types';
 import type {
   AddressStepFormValues,
@@ -126,6 +129,18 @@ export interface UseOnboardingResult {
    * mount, and mounting it on an empty draft is how step 1 showed blank.
    */
   readonly isResuming: boolean;
+  /**
+   * L7 — the step the progress bar names. While the business is read back it
+   * is the step the URL asked for: the slice's `step` is still clamped against
+   * an empty `completedStep`, which put "Step 1 of 4 · Tell us about your
+   * business" over the skeleton of step 2.
+   */
+  readonly progressStep: number;
+  /**
+   * M2 — the unfinished business step 1 will continue, when "Add a business"
+   * found one. Step 1 names it and shows its values; Continue finishes it.
+   */
+  readonly resumableBusiness: ResumableBusiness | null;
   readonly formErrors: readonly string[];
   /** The owner's name, so step 1 only asks when it is genuinely blank (BR-7). */
   readonly needsOwnerName: boolean;
@@ -165,6 +180,8 @@ export const useOnboarding = (routeStep: number): UseOnboardingResult => {
   const { state: networkState, canWrite } = useDegradedNetwork();
   const tenantId = useAppSelector(selectOnboardingTenantId);
   const resumeStatus = useAppSelector(selectOnboardingResumeStatus);
+  const resumable = useAppSelector(selectOnboardingResumable);
+  const resumableStatus = useAppSelector(selectOnboardingResumableStatus);
   const activeTenant = useAppSelector(selectActiveTenant);
 
   /**
@@ -202,7 +219,28 @@ export const useOnboarding = (routeStep: number): UseOnboardingResult => {
   useEffect(() => {
     if (needsResume && resumeStatus === 'idle') void dispatch(resumeOnboarding({ routeStep }));
   }, [dispatch, needsResume, resumeStatus, routeStep]);
-  const isResuming = needsResume && resumeStatus !== 'failed';
+
+  /**
+   * M2 — "Add a business" opens this wizard from a FINISHED business, and
+   * `POST /tenants` will quietly continue the caller's unfinished one if the
+   * server judges it an abandoned attempt. Ask which, before step 1 is drawn
+   * (its form takes its values once, at mount), so step 1 can say so and show
+   * that business's values instead of a blank form whose new name would
+   * rename it. Keyed off the session rather than a flag set by the switcher,
+   * so a reload of step 1 asks again.
+   */
+  const needsResumableCheck =
+    tenantId === null &&
+    !needsResume &&
+    activeTenant !== null &&
+    isOnboardingComplete(activeTenant.onboardingStep);
+  useEffect(() => {
+    if (needsResumableCheck && resumableStatus === 'idle') void dispatch(findResumableBusiness());
+  }, [dispatch, needsResumableCheck, resumableStatus]);
+  const isCheckingResumable =
+    needsResumableCheck && (resumableStatus === 'idle' || resumableStatus === 'loading');
+
+  const isResuming = (needsResume && resumeStatus !== 'failed') || isCheckingResumable;
 
   const [formErrors, setFormErrors] = useState<readonly string[]>([]);
 
@@ -326,6 +364,15 @@ export const useOnboarding = (routeStep: number): UseOnboardingResult => {
         const apiError = thrown as ApiErrorShape;
         if (apiError.code === 'validation_error') {
           setFormErrors(applyServerErrors(apiError, setError, [...BUSINESS_FIELDS]));
+          return;
+        }
+        // L8 — another tab is still creating this very business under the
+        // same key, and the thunk has already waited for it three times. Say
+        // so: `createTenant` suppresses the global toast, so without this the
+        // merchant stayed on step 1 with nothing on screen. Pressing Continue
+        // again replays the other tab's business once it lands.
+        if (apiError.code === 'idempotency_in_progress') {
+          dispatch(showSnackbar({ severity: 'warning', id: 'onboarding.error.inProgress' }));
         }
         // `gstin_in_use` cannot occur on step 1; everything else is the banner.
       }
@@ -440,6 +487,8 @@ export const useOnboarding = (routeStep: number): UseOnboardingResult => {
     isOffline: networkState === 'offline',
     completed,
     isResuming,
+    progressStep: isResuming ? Math.min(ONBOARDING_STEP_MAX, Math.max(1, routeStep)) : step,
+    resumableBusiness: tenantId === null ? resumable : null,
     formErrors,
     needsOwnerName: !user?.name,
     goToStep,

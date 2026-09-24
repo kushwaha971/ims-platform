@@ -83,8 +83,32 @@ export const flattenErrorDetails = (
 ): readonly ErrorDetailEntry[] => {
   if (!details) return [];
   const out: ErrorDetailEntry[] = [];
-  Object.entries(details).forEach(([key, value]) => flattenInto(value, key, out));
+  Object.entries(details).forEach(([key, value]) => {
+    // Codes are DATA about the messages, not messages; printing them would put
+    // "mobile_taken" in red above the form.
+    if (key === FIELD_CODES_KEY) return;
+    flattenInto(value, key, out);
+  });
   return out;
+};
+
+/**
+ * L6 — the reserved `details` key carrying a stable code per field, beside the
+ * field's English message: `{mobile: ["…"], field_codes: {mobile: "mobile_taken"}}`.
+ * The message is the server's `en` copy; the code is what the client localises
+ * by, because `Accept-Language` does not reach a field message today.
+ */
+export const FIELD_CODES_KEY = 'field_codes';
+
+/** `details.field_codes` as a flat `{wire_path: code}`; `{}` for any other shape. */
+export const readFieldCodes = (
+  details: Readonly<Record<string, unknown>> | undefined
+): Readonly<Record<string, string>> => {
+  const raw = details?.[FIELD_CODES_KEY];
+  if (!isPlainObject(raw)) return {};
+  return Object.fromEntries(
+    Object.entries(raw).filter((entry): entry is [string, string] => typeof entry[1] === 'string')
+  );
 };
 
 /**
