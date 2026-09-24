@@ -1,8 +1,8 @@
 'use client';
 
-import { memo, useCallback, useSyncExternalStore, type RefObject } from 'react';
+import { memo, useCallback, useSyncExternalStore, type ReactNode, type RefObject } from 'react';
 
-import { Copy, MessageCircle, MessageSquare, Share2 } from 'lucide-react';
+import { Copy, MessageCircle, MessageSquare, Phone, Share2 } from 'lucide-react';
 
 import { mlButtonClasses } from 'src/design-system/primitives';
 import { UbButton } from 'src/design-system/UbButton';
@@ -49,7 +49,7 @@ import { buildSmsUrl, buildWhatsAppUrl, canUseNativeShare, isShareAbort } from '
  * check is a `useSyncExternalStore` snapshot with a `false` server snapshot, so
  * a server render and the first client render agree.
  */
-export type UbShareChannel = 'whatsapp' | 'sms' | 'copy' | 'native';
+export type UbShareChannel = 'whatsapp' | 'sms' | 'copy' | 'native' | 'call';
 
 export interface UbShareSheetLabels {
   readonly whatsapp: string;
@@ -60,6 +60,8 @@ export interface UbShareSheetLabels {
   readonly close: string;
   /** The caption over the message preview — "Message". */
   readonly preview: string;
+  /** The dial row, drawn only when `callHref` is given (LED-06 FR-4). */
+  readonly call?: string;
 }
 
 export interface UbShareSheetProps {
@@ -74,6 +76,26 @@ export interface UbShareSheetProps {
   readonly description?: string;
   /** Exactly what will be put in front of the customer; shown as a preview. */
   readonly message: string;
+  /**
+   * The SMS link's text when it differs from the WhatsApp message — an SMS is
+   * billed per segment, so the reminder's SMS words are shorter (LED-06 §17).
+   * Absent means the same text goes both ways.
+   */
+  readonly smsMessage?: string;
+  /**
+   * Something the merchant should read before they send — "You reminded
+   * Ramesh yesterday" (LED-06 FR-10). Rendered above the preview.
+   */
+  readonly notice?: ReactNode;
+  /** A `tel:` href; when present a Call row is drawn under SMS (LED-06 FR-4). */
+  readonly callHref?: string | null;
+  /**
+   * Drawn INSTEAD of the preview and the channels while the message is not
+   * ready — a skeleton while the server composes it, an error with Try again.
+   * The same dialog stays mounted across the swap, so focus and the return
+   * target survive it (QA D1).
+   */
+  readonly pending?: ReactNode;
   /** Any spelling; normalised by `toWhatsAppDigits`. Absent → pick the chat. */
   readonly phone?: string | null;
   readonly labels: UbShareSheetLabels;
@@ -101,6 +123,10 @@ function UbShareSheetBase({
   title,
   description,
   message,
+  smsMessage,
+  notice,
+  callHref,
+  pending,
   phone,
   labels,
   onShared,
@@ -157,69 +183,88 @@ function UbShareSheetBase({
       returnFocusRef={returnFocusRef}
       className={className}
     >
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1">
-          <span className="ds-body-s-medium text-text-tertiary">{labels.preview}</span>
-          {/* Read-only and selectable: it is also the fallback when the
+      {pending ? (
+        <div className="flex flex-col gap-4">{pending}</div>
+      ) : (
+        <div className="flex flex-col gap-4">
+          {notice}
+          <div className="flex flex-col gap-1">
+            <span className="ds-body-s-medium text-text-tertiary">{labels.preview}</span>
+            {/* Read-only and selectable: it is also the fallback when the
               clipboard refuses. `whitespace-pre-line` keeps the message's own
               line breaks, which are part of what the customer will read. */}
-          <p
-            data-ub-share-preview=""
-            className="ds-body-s-regular max-h-40 overflow-y-auto whitespace-pre-line break-words rounded-control bg-surface-sunken px-3 py-2 text-text-primary"
-          >
-            {message}
-          </p>
-        </div>
+            <p
+              data-ub-share-preview=""
+              className="ds-body-s-regular max-h-40 overflow-y-auto whitespace-pre-line break-words rounded-control bg-surface-sunken px-3 py-2 text-text-primary"
+            >
+              {message}
+            </p>
+          </div>
 
-        <div className="flex flex-col gap-1">
-          <a
-            href={buildWhatsAppUrl(message, phone)}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={openedVia('whatsapp')}
-            className={mlButtonClasses(
-              'primary',
-              'lg',
-              'w-full outline-none focus-visible:shadow-focus'
+          <div className="flex flex-col gap-1">
+            <a
+              href={buildWhatsAppUrl(message, phone)}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={openedVia('whatsapp')}
+              className={mlButtonClasses(
+                'primary',
+                'lg',
+                'w-full outline-none focus-visible:shadow-focus'
+              )}
+            >
+              <MessageCircle aria-hidden className="h-4 w-4" />
+              <span>{labels.whatsapp}</span>
+            </a>
+            <a
+              href={buildSmsUrl(smsMessage ?? message, phone)}
+              onClick={openedVia('sms')}
+              className={mlButtonClasses(
+                'ghost',
+                'lg',
+                cn(ROW, 'outline-none focus-visible:shadow-focus')
+              )}
+            >
+              <MessageSquare aria-hidden className="h-4 w-4" />
+              <span>{labels.sms}</span>
+            </a>
+            {callHref && labels.call && (
+              <a
+                href={callHref}
+                onClick={openedVia('call')}
+                className={mlButtonClasses(
+                  'ghost',
+                  'lg',
+                  cn(ROW, 'outline-none focus-visible:shadow-focus')
+                )}
+              >
+                <Phone aria-hidden className="h-4 w-4" />
+                <span>{labels.call}</span>
+              </a>
             )}
-          >
-            <MessageCircle aria-hidden className="h-4 w-4" />
-            <span>{labels.whatsapp}</span>
-          </a>
-          <a
-            href={buildSmsUrl(message, phone)}
-            onClick={openedVia('sms')}
-            className={mlButtonClasses(
-              'ghost',
-              'lg',
-              cn(ROW, 'outline-none focus-visible:shadow-focus')
-            )}
-          >
-            <MessageSquare aria-hidden className="h-4 w-4" />
-            <span>{labels.sms}</span>
-          </a>
-          <UbButton
-            variant="ghost"
-            size="lg"
-            className={ROW}
-            icon={<Copy aria-hidden className="h-4 w-4" />}
-            onClick={() => void handleCopy()}
-          >
-            {labels.copy}
-          </UbButton>
-          {nativeShare && (
             <UbButton
               variant="ghost"
               size="lg"
               className={ROW}
-              icon={<Share2 aria-hidden className="h-4 w-4" />}
-              onClick={() => void handleNative()}
+              icon={<Copy aria-hidden className="h-4 w-4" />}
+              onClick={() => void handleCopy()}
             >
-              {labels.more}
+              {labels.copy}
             </UbButton>
-          )}
+            {nativeShare && (
+              <UbButton
+                variant="ghost"
+                size="lg"
+                className={ROW}
+                icon={<Share2 aria-hidden className="h-4 w-4" />}
+                onClick={() => void handleNative()}
+              >
+                {labels.more}
+              </UbButton>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </UbDialog>
   );
 }
