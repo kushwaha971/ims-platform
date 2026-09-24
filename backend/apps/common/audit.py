@@ -99,6 +99,15 @@ class AuditAction:
     # parameters and the row count are written at the moment it left.
     LEDGER_STATEMENT_EXPORTED = "ledger.statement.exported"
     LEDGER_AGING_EXPORTED = "ledger.aging.exported"
+    # ── Sprint 6: INV-01 … INV-06 (17-03 §16) ──────────────────────────────
+    ITEM_CREATED = "item.created"
+    ITEM_UPDATED = "item.updated"
+    ITEM_ARCHIVED = "item.archived"
+    ITEM_RESTORED = "item.restored"
+    CATEGORY_CREATED = "category.created"
+    UNIT_CREATED = "unit.created"
+    STOCK_OPENING_POSTED = "stock.opening_posted"
+    STOCK_ADJUSTMENT_POSTED = "stock.adjustment_posted"
     JOB_REQUEUED = "job.requeued"
     REFERENCE_DATA_SEEDED = "platform.reference_data_seeded"
 
