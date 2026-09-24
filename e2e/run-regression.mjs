@@ -10,6 +10,9 @@
  *   node e2e/run-regression.mjs --list           # what would run, and the fixtures each gets
  *   node e2e/run-regression.mjs -j 4             # concurrency (default 6)
  *
+ *   Tuning: --timeout <s> per job (720) · --start-gap <ms> between starts (2500)
+ *   · --min-free-mb <MB> needed to start another job (600) · --no-retry
+ *
  * Output: /tmp/e2e-shots/regress-<timestamp>/ — one directory per job (its
  * screenshots and state), `<job>.log` (stdout+stderr), `summary.txt` and
  * `summary.json`. Prints a table at the end and exits 1 if any job failed,
@@ -346,12 +349,27 @@ const running = new Set();
 // sets hashing passwords in the same second is the one moment a 2-core box is
 // saturated, and it is when the harnesses' first sign-in waits run out.
 const START_GAP_MS = Number(opt('start-gap') ?? 2500);
+// …and a job starts only if the box has room for it. This machine is shared
+// with other worktrees' builds, and a harness plus its Chromium needs about
+// 400 MB; starting one into a box with less than that free is how a run turns
+// into a column of CRASHes. Two jobs always run, whatever the gauge says.
+const MIN_FREE_MB = Number(opt('min-free-mb') ?? 600);
+const memAvailableMb = () => {
+  try { return Number(/MemAvailable:\s+(\d+)/.exec(readFileSync('/proc/meminfo', 'utf8'))[1]) / 1024; } catch { return Infinity; }
+};
+let gatedSince = 0;
 let lastStart = 0;
 let pumpTimer = null;
 await new Promise((resolveAll) => {
   const pump = () => {
     while (running.size < CONCURRENCY && queue.length) {
-      const wait = lastStart + START_GAP_MS - Date.now();
+      let wait = lastStart + START_GAP_MS - Date.now();
+      if (wait <= 0 && running.size >= 2 && memAvailableMb() < MIN_FREE_MB) {
+        if (!gatedSince) { gatedSince = Date.now(); console.log(`${clock()}  (holding: ${Math.round(memAvailableMb())} MB free, ${running.size} running)`); }
+        wait = 2000;
+      } else if (wait <= 0 && gatedSince) {
+        gatedSince = 0;
+      }
       if (wait > 0) { if (!pumpTimer) pumpTimer = setTimeout(() => { pumpTimer = null; pump(); }, wait); return; }
       lastStart = Date.now();
       const { job, attempt } = queue.shift();
