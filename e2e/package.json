@@ -5,6 +5,8 @@
   "type": "module",
   "description": "End-to-end journeys run against the live stack. Separate from frontend/ because these drive a browser against a running backend, not a bundler.",
   "scripts": {
+    "regress": "node run-regression.mjs",
+    "regress:quick": "node run-regression.mjs --quick",
     "journey": "node journey.mjs",
     "journey:shots": "node journey.mjs --shots",
     "parties": "node parties.mjs",

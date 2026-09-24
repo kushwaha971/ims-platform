@@ -342,7 +342,12 @@ const signIn = async (page, who = OWNER) => {
     await page.fill('input[type="email"], input[name="email"]', who.email);
     await page.fill('input[type="password"], input[name="password"]', who.password);
     await page.click('button[type="submit"]');
-    await page.waitForTimeout(2500);
+    // Wait for the sign-in to LAND (the URL leaves /login), not a fixed 2.5 s:
+    // under a concurrent regression the password hash alone can outlast it,
+    // and navigating away mid-request abandons the sign-in. `commit`, because
+    // `load` is a state this app can legitimately never reach.
+    await page.waitForURL((u) => !u.pathname.startsWith('/login'), { waitUntil: 'commit', timeout: 45000 }).catch(() => {});
+    await page.waitForTimeout(600);
     await page.goto(`${FRONTEND}/parties`, { waitUntil: 'domcontentloaded', timeout: 45000 });
     try {
       await page.waitForSelector('[data-testid="ub-grid"]', { timeout: 20000 });

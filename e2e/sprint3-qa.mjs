@@ -18,6 +18,12 @@
  *   node e2e/sprint3-qa.mjs --only=A,B      # a subset (C is not re-runnable
  *                                           # against the same accounts)
  *   node e2e/sprint3-qa.mjs --fresh         # new accounts (2 registrations)
+ *   node e2e/sprint3-qa.mjs --only=A --joined   # seed the invitee as an accepted
+ *                                           # staff member (the state C leaves)
+ *
+ * `run-regression.mjs` runs each phase as its own job in its own directory
+ * (E2E_SPRINT3_DIR), with a fresh retest pair where one is read
+ * (E2E_RT_ACCOUNTS), so no phase depends on another phase or an earlier run.
  *   node e2e/sprint3-qa.mjs --only=R        # retest of 2b365b6 (D1–D4, O3–O6);
  *                                           # one owner sign-in at most, reused
  *   node e2e/sprint3-qa.mjs --only=N        # retest of 8ccd186 + 5d7b99e (NEW-1…3);
@@ -41,13 +47,24 @@ import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'no
 const FRONTEND = process.env.E2E_FRONTEND ?? 'http://localhost:3000';
 const BACKEND = process.env.E2E_BACKEND ?? 'http://localhost:8000/api/v1';
 const BACKEND_DIR = '/home/claude/repo/backend';
-const SHOT_ROOT = '/tmp/e2e-shots/sprint3-qa';
+// Every path below can be pointed elsewhere, which is what lets
+// `run-regression.mjs` run each phase in its own directory, against its own
+// freshly seeded accounts, concurrently with every other phase. The defaults
+// are the historical single-run locations.
+const SHOT_ROOT = process.env.E2E_SPRINT3_DIR ?? '/tmp/e2e-shots/sprint3-qa';
 const STATE_FILE = `${SHOT_ROOT}/state.json`;
-const BE_LOG = '/tmp/claude-0/be-run.log';
+const BE_LOG = process.env.E2E_BE_LOG ?? '/tmp/claude-0/be-run.log';
+const FE_LOG = process.env.E2E_FE_LOG ?? '/tmp/claude-0/fe-run.log';
 
 const argOnly = process.argv.find((a) => a.startsWith('--only='));
 const PHASES = argOnly ? argOnly.slice(7).split(',') : ['A', 'B', 'C'];
 const FRESH = process.argv.includes('--fresh');
+// `--joined`: seed the invitee as an ACTIVE staff member of the owner's
+// business (invite + accept through the API), which is the state phase C
+// leaves behind and the state A1's no-ledger-read role, R's "3 people ·
+// 1 invited" heading and N1's two-business control read. Without it those
+// checks only held on a rerun after C, against the same long-lived accounts.
+const JOINED = process.argv.includes('--joined');
 
 const SIZES = [
   { id: 'phone', width: 360, height: 780 },
@@ -58,6 +75,7 @@ const SIZES = [
 ];
 const PHONE = SIZES[0];
 const DESKTOP = SIZES[3];
+for (const size of SIZES) mkdirSync(`${SHOT_ROOT}/${size.id}`, { recursive: true });
 
 const results = [];
 const record = (id, check, ok, detail = '') => {
@@ -200,6 +218,15 @@ async function seed() {
       reg2.body.data.access_token, { 'Idempotency-Key': `t2-${state.stamp}` });
   });
   state.inviteeTenantId = psql(`select m.tenant_id from platform_membership m join platform_user u on u.id=m.user_id join platform_tenant t on t.id=m.tenant_id where u.email='${state.invitee.email}' and t.name='${state.inviteeShop}'`);
+  // 4 — (--joined only) the invitee accepts a staff invitation, as C11 does in the browser
+  if (JOINED) {
+    await step('joined', async () => {
+      const inv = await must('POST', '/invitations', { email: state.invitee.email, role: 'staff' }, token, { 'Idempotency-Key': `join-${state.stamp}` });
+      const inviteToken = inv.body.data.accept_url.split('/').pop();
+      await must('POST', `/invitations/${inviteToken}/accept`, {}, await login(state.invitee.email, state.invitee.password));
+      note(`FIXTURE (API): ${state.invitee.email} invited as staff to ${state.shop} and accepted`);
+    });
+  }
   saveState(state);
   return state;
 }
@@ -1036,7 +1063,7 @@ print('TOKEN', issued.access)
     record('C13', 'the API was not restarted during C, so the log covers the whole flow', sameServer, `${JSON.stringify(logBefore)} → ${JSON.stringify(logAfter)}`);
     record('C13', 'the log DID record the accept requests (so absence of the token means something)', acceptLines.length >= 2, acceptLines.slice(-2).join(' || ').slice(0, 300));
     record('C13', 'neither raw token appears anywhere in be-run.log', !log.includes(token1) && !log.includes(token2), `token1 hits=${log.split(token1).length - 1} token2 hits=${log.split(token2).length - 1}`);
-    const feLog = existsSync('/tmp/claude-0/fe-run.log') ? readFileSync('/tmp/claude-0/fe-run.log', 'utf8') : '';
+    const feLog = existsSync(FE_LOG) ? readFileSync(FE_LOG, 'utf8') : '';
     note(`(also checked) frontend log fe-run.log: token1 hits=${feLog.split(token1).length - 1}, token2 hits=${feLog.split(token2).length - 1}`);
     const auditHits = psql(`select count(*) from platform_audit_log where tenant_id='${state.tenantId}' and (metadata::text like '%${token2}%' or coalesce(after::text,'') like '%${token2}%' or coalesce(before::text,'') like '%${token2}%')`);
     note(`(also checked) platform_audit_log rows containing token2: ${auditHits}`);
@@ -1179,7 +1206,7 @@ async function phaseR(browser, state) {
   }
   // D4/O3: a pending invitation for an address that ALREADY has an account, so
   // the team shows both an invited member row and the invitation row.
-  const r2 = JSON.parse(readFileSync('/tmp/claude-0/retest/state.json', 'utf8')).R2.email;
+  const r2 = JSON.parse(readFileSync(RT_ACCOUNTS, 'utf8')).R2.email;
   const inv = await api('POST', '/invitations', { email: r2, role: 'staff' }, token, { 'Idempotency-Key': `rt-inv-${Date.now()}` });
   record('R', `FIXTURE: pending invitation for an existing account (${r2}) → 201`, inv.status === 201, `${inv.status} ${JSON.stringify(inv.body?.error ?? '').slice(0, 160)}`);
   const invitationId = inv.body?.data?.id;
@@ -1500,7 +1527,10 @@ const N_DIR = `${SHOT_ROOT}/retest2`;
 const N_STORAGE = `${N_DIR}/owner-storage.json`;
 const N_STATE = `${N_DIR}/state.json`;
 const nShot = (size, name) => `${N_DIR}/${size}/${name}.png`;
-const RT_ACCOUNTS = '/tmp/claude-0/retest/state.json';
+// The two retest accounts (R1 "Retest Budget Stores", R2 "Retest Browser
+// Traders"). `run-regression.mjs` seeds a fresh pair per run with
+// `lib/fixtures.mjs#seedRetestAccounts` and points this at them.
+const RT_ACCOUNTS = process.env.E2E_RT_ACCOUNTS ?? '/tmp/claude-0/retest/state.json';
 const RT_PASSWORD = 'Dukaan2026xRetest!';
 const IST_DATE = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date()); // yyyy-mm-dd
 const UTC_DATE = () => new Date().toISOString().slice(0, 10);

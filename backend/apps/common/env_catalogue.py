@@ -63,6 +63,7 @@ KNOWN_UB_VARIABLES: frozenset[str] = frozenset(
         "UB_FEATURE_FLAGS",
         "UB_VERSION",
         "UB_E2E_MODE",
+        "UB_E2E_RELAX_THROTTLES",
         "UB_ALLOW_PARTNER_HEADER",
         "UB_ALLOW_CONSOLE_SMS",
         "UB_ROLE",

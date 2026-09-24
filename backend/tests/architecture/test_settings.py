@@ -4,7 +4,11 @@ from __future__ import annotations
 
 import ast
 import importlib
+import json
+import os
 import pathlib
+import subprocess
+import sys
 
 import pytest
 from django.conf import settings
@@ -134,3 +138,81 @@ def test_the_custom_response_headers_are_exposed_cross_origin() -> None:
         "Idempotent-Replayed",
         "Retry-After",
     } <= exposed
+
+
+# ── UB_E2E_RELAX_THROTTLES: a local-only lever ──────────────────────────────
+# Each case imports a settings module in a FRESH interpreter, because the lever
+# works by rebinding module constants in `throttle.py` and importing `local` in
+# this process would leak the relaxed budgets into every later test.
+_PROD_LIKE_ENV = {
+    "UB_SECRET_KEY": "not-a-dev-key-" + "x" * 40,
+    "UB_DEBUG": "0",
+    "UB_ALLOWED_HOSTS": "shop.example.com",
+    "UB_CORS_ALLOWED_ORIGINS": "https://shop.example.com",
+    "POSTGRES_PASSWORD": "not-the-dev-password",
+    "UB_E2E_MODE": "0",
+    "UB_ALLOW_PARTNER_HEADER": "0",
+}
+_PROBE = """
+import json, sys, importlib
+mod = importlib.import_module(sys.argv[1])
+from apps.platform_app.services import throttle as t
+print(json.dumps({
+    "attr": getattr(mod, "UB_E2E_RELAX_THROTTLES", None),
+    "register_ip": t.REGISTRATIONS_PER_IP,
+    "login_ip_fail": t.LOGIN_FAILURES_PER_IP,
+    "reset_ip": t.RESET_REQUESTS_PER_IP,
+    "login_email": t.LOGIN_FAILURES_PER_IDENTIFIER,
+    "rates": mod.REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"],
+}))
+"""
+_SHIPPED = {"register_ip": 20, "login_ip_fail": 100, "reset_ip": 20, "login_email": 10}
+
+
+def _settings_probe(module: str, relax: str | None) -> dict:
+    env = {k: v for k, v in os.environ.items() if k != "UB_E2E_RELAX_THROTTLES"}
+    env.update(_PROD_LIKE_ENV)
+    env["DJANGO_SETTINGS_MODULE"] = module
+    if relax is not None:
+        env["UB_E2E_RELAX_THROTTLES"] = relax
+    out = subprocess.run(
+        [sys.executable, "-c", _PROBE, module],
+        cwd=SETTINGS_DIR.parents[1],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=True,
+    )
+    return json.loads(out.stdout.strip().splitlines()[-1])
+
+
+@pytest.mark.parametrize("module", ["config.settings.prod", "config.settings.staging"])
+def test_prod_and_staging_ignore_the_e2e_throttle_relaxation(module: str) -> None:
+    """`UB_E2E_RELAX_THROTTLES=1` must change nothing outside local settings."""
+    relaxed = _settings_probe(module, "1")
+    shipped = _settings_probe(module, None)
+    assert relaxed["attr"] is None, f"{module} reads UB_E2E_RELAX_THROTTLES"
+    assert {k: relaxed[k] for k in _SHIPPED} == _SHIPPED
+    assert relaxed["rates"] == shipped["rates"]
+
+
+def test_local_settings_relax_only_the_per_ip_auth_budgets() -> None:
+    """The positive control: the lever works in local, and only on the per-IP budgets."""
+    off = _settings_probe("config.settings.local", None)
+    on = _settings_probe("config.settings.local", "1")
+    assert off["attr"] is False and {k: off[k] for k in _SHIPPED} == _SHIPPED
+    assert on["attr"] is True
+    assert on["register_ip"] > 1000 and on["login_ip_fail"] > 1000 and on["reset_ip"] > 1000
+    # The per-account lockout and every DRF per-user rate are untouched.
+    assert on["login_email"] == _SHIPPED["login_email"]
+    assert on["rates"] == off["rates"]
+
+
+def test_only_the_local_settings_module_names_the_e2e_lever() -> None:
+    names = {
+        p.stem
+        for p in SETTINGS_DIR.glob("*.py")
+        if "UB_E2E_RELAX_THROTTLES" in p.read_text(encoding="utf-8")
+    }
+    assert names == {"local"}
