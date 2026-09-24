@@ -77,6 +77,61 @@ class LedgerEntrySerializer(serializers.ModelSerializer):
         }
 
 
+def entry_source(entry: LedgerEntry) -> dict | None:
+    """FR-4's document link — one function, so the statement and the timeline agree.
+
+    `null` for a manual row, which is every row a merchant types. A reversal's
+    source is the entry it undoes (`type='ledger_entry'`, the same id as
+    `reverses_id`) — unchanged from what the statement has always sent, so the
+    two screens describe one row one way. See `StatementRowSerializer.get_source`
+    for why the key exists before the documents do.
+    """
+    if entry.source_type == SourceType.MANUAL or entry.source_id is None:
+        return None
+    return {"type": entry.source_type, "id": str(entry.source_id), "number": None, "url": None}
+
+
+class TimelineEntrySerializer(LedgerEntrySerializer):
+    """A row of `GET /parties/{id}/ledger-entries` — CR-027's two additive keys.
+
+    `running_balance` is the balance AFTER this row (PTY-03 FR-5/FR-6), from the
+    window `selectors.statement.with_running_balance` puts on the page query
+    plus the page's carried figure (`context["carried"]`);
+    `source` is the statement's document link. A subclass for the LIST only:
+    the 201 of a create, a correction's 200 and the detail read are one row out
+    of its ordering, and a running balance there would be a number computed
+    over nothing. The header moves from `meta.party_balance` on those, and the
+    timeline refetches (NEW-2) — which is when the row gains its figure.
+
+    `null` when the queryset was not annotated or no carried figure was given,
+    rather than `"0.00"`: a zero this serializer cannot vouch for is
+    indistinguishable from a settled khata.
+    """
+
+    running_balance = serializers.SerializerMethodField()
+    source = serializers.SerializerMethodField()
+
+    class Meta(LedgerEntrySerializer.Meta):
+        fields = (*LedgerEntrySerializer.Meta.fields, "running_balance", "source")
+        read_only_fields = fields
+
+    def get_running_balance(self, entry: LedgerEntry) -> str | None:
+        """`carried − timeline_delta + timeline_own` — see `with_running_balance`.
+
+        `carried` is a property of the PAGE (it comes from the cursor), so the
+        view computes it once and hands it in, as the statement's view does.
+        """
+        carried = self.context.get("carried")
+        delta = getattr(entry, "timeline_delta", None)
+        own = getattr(entry, "timeline_own", None)
+        if carried is None or delta is None or own is None:
+            return None
+        return str(carried - delta + own)
+
+    def get_source(self, entry: LedgerEntry) -> dict | None:
+        return entry_source(entry)
+
+
 class LedgerEntryWriteSerializer(serializers.Serializer):
     """The shape a POST may take — an explicit allowlist, not a ModelSerializer.
 
@@ -321,9 +376,7 @@ class StatementRowSerializer(serializers.ModelSerializer):
         omits its unbuilt summary figures: a key that is always empty is a claim
         this code cannot verify, and the client cannot tell it from a real one.
         """
-        if entry.source_type == SourceType.MANUAL or entry.source_id is None:
-            return None
-        return {"type": entry.source_type, "id": str(entry.source_id), "number": None, "url": None}
+        return entry_source(entry)
 
 
 class StatementPartySerializer(serializers.Serializer):

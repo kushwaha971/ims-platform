@@ -605,6 +605,31 @@ def test_any_member_may_read_the_current_tenant(api_as: Any, tenant: Any) -> Non
         assert client.get(reverse(CURRENT_URL)).status_code == 200, role
 
 
+def test_the_current_tenant_carries_what_a_printed_statement_header_needs(
+    api_as: Any, tenant: Any
+) -> None:
+    """LED-04 §7.2's print header — the shop's address, phone and GSTIN — client-side.
+
+    A statement a merchant prints and hands across the counter is headed by the
+    shop's own details, and the print view reads them from `GET /tenants/current`,
+    which every member may read (a staff member prints statements too). This
+    pins the three keys and the address's shape so a serializer trim cannot
+    quietly print a header with no address on it; nothing is added for it.
+    """
+    tenant.address = {"line1": "12 Station Road", "city": "Nashik", "pincode": "422001"}
+    tenant.phone = "9876543210"
+    tenant.gstin = VALID_GSTIN
+    tenant.save(update_fields=["address", "phone", "gstin"])
+    client, _member = api_as(tenant, role="staff")
+
+    data = client.get(reverse(CURRENT_URL)).json()["data"]
+
+    assert data["name"] == tenant.name
+    assert data["address"] == {"line1": "12 Station Road", "city": "Nashik", "pincode": "422001"}
+    assert data["phone"] == "9876543210"
+    assert data["gstin"] == VALID_GSTIN
+
+
 def test_a_caller_with_no_tenant_gets_no_active_tenant(
     api_as: Any, tenant: Any, onboarding_ready: Any
 ) -> None:

@@ -386,3 +386,105 @@ above it did not.
 `write_off` rows, which are reported as `written_off`". LED-01/PTY-03 §14 summary gains
 `written_off`. Part 22 §22.5 both shapes. Part 43 in the Claude project is the authoritative
 register and needs the same entry (this file is a local carry).
+
+## CR-2026-09-24-B — an opening balance is dated today by default, not at the year start (UAT D6)
+
+**State:** `raised` (implemented; awaiting registration in Part 43). **Target:** Part 17-02
+LED-02 FR-1 ("`as_of` date (default first day of current FY, ≤ today)") and §7's
+`OpeningBalanceSection` chips; Part 17-01 PTY-01 FR-9 (which delegates to LED-02). **Gate:**
+immediate — UAT D6, P2.
+
+**Observed.** A merchant adds a customer on 24 September and types the ₹2,300 they already
+owe. The as-of date defaults to 1 April, so the opening entry is dated 1 April; aging counts
+it from that date (LED-02 FR-7, LED-09 BR-4, FIFO by `entry_date`), and on day one the whole
+balance sits in **90+ days** — on the aging report and in every "overdue" reading of it —
+while the party list's Overdue chip (a collection date that has passed) is empty. Two screens
+disagree about the same customer, and the alarming one is wrong.
+
+**Why the FRD chose the year start, and why it does not hold.** US-LED-02-1 is a merchant
+migrating a paper book "as of 1 April" — on that one day of the year the default and the
+truth coincide, and `ub.ledger.opening_posted.as_of_is_fy_start` measures it. On the other
+364 the default asserts an age the merchant never gave, and it fails in the costly
+direction: an overstated age is a collection call nobody owed and a 90+ bucket polluted by
+every new customer, which destroys the one signal aging exists to give. An understated age
+is recoverable — it ages honestly from today, and the merchant can say otherwise. The
+drawer's own comment argued the opposite ("an opening dated today is indistinguishable from
+an ordinary entry") and that premise is no longer true: the row carries the Opening badge and
+the "They owe me / I owe them" label (LED-02 §7) whatever its date.
+
+Option (b) — keep the year start and have aging treat an opening's age differently — is
+rejected: aging is FIFO by `entry_date` (LED-09 BR-2/BR-4), and a second age rule for one
+entry type is a second definition of "how old is this money".
+
+**Decision (BA).** Option (a):
+
+1. The as-of date **defaults to today** (the tenant's today in the khata drawer, whose `max`
+   it already is; the device's today in the party form, matching that form's existing
+   `max`).
+2. The field stays editable (≤ today, ≥ 2000-01-01, unchanged), and the **year start stays
+   one tap away** as the first quick-choice chip ("FY start" / "Year start").
+3. A hint under the field asks the question only the merchant can answer: **"When did they
+   start owing this?"** — or "When did you start owing this?" when the direction is "I owe
+   them". Copy: `ledger.opening.asOf.hint`, `parties.form.opening.asOf.hint` (ICU `select`
+   on `direction`), en + hi ("उन पर / आप पर यह कब से बाकी है?").
+4. **Unchanged:** the server (no default there — `as_of` is required on the drawer path and
+   the party form always sends one), aging, and the CSV importer's EC-7 default (tenant FY
+   start for an empty `opening_date`). The importer is the one path that really is the
+   migrating merchant FR-1 describes; whether it should follow is left to IMP-01's owner.
+
+**Amendments requested.** LED-02 FR-1: "`as_of` date (default **today**, ≤ today), with a
+quick choice for the first day of the current FY and the hint 'When did they start owing
+this?'". §7: chips "FY start" / "Today" keep their order. §17's
+`as_of_is_fy_start` stays meaningful (it now measures how often the chip is chosen).
+
+**Files.** `frontend/src/modules/DigiKhaato/features/ledger/components/OpeningBalanceDrawer.tsx`,
+`frontend/src/modules/DigiKhaato/features/parties/components/PartyFormDrawer.tsx` (default,
+one `useWatch`, the hint — nothing else), both locale files, and a test in each component's
+suite.
+
+## CR-2026-09-24-C — CR-027 implemented: `running_balance` and `source` on the timeline rows
+
+**State:** `raised` (CR-027 is Accepted in Part 43; this records how it was built and three
+decisions the FRD leaves open). **Target:** Part 17-01 PTY-03 FR-5/FR-6/BR-1–BR-3/§14,
+Part 22 §22.5. **Gate:** none — additive.
+
+**API (additive).** Every row of `GET /parties/{id}/ledger-entries` and
+`GET /ledger-entries?party=` now carries `running_balance` (decimal string, the balance
+AFTER the row, signed debit-positive exactly as the statement's) and `source` (`null` for a
+manual row; `{type, id, number: null, url: null}` otherwise — the statement's shape, from one
+shared function). The 201 of a create, the 200 of a reverse/correct and the detail read do
+NOT carry `running_balance`: one row out of its ordering has none, and the client refetches
+the timeline after every write (NEW-2).
+
+**Decision 1 — struck-through rows contribute zero and carry the balance as it stood**
+(not `null`). With `include_reversed=true` both halves of each reversal pair come back; each
+contributes nothing (canon §0.2) and shows the running balance at its position. This is the
+only rule under which PTY-03 BR-3 / T-PTY-03-15 hold ("Show corrections" changes no displayed
+running balance) AND BR-1 holds when the newest row is itself a reversal.
+
+**Decision 2 — the window runs newest-first, plus a carried scalar.** FR-6 writes the
+window ascending; that is the definition, and the figure equals it (a Python replay asserts
+every row). Computed literally on a page served newest-first, Postgres reads and sorts every
+row the party has to show twenty-five — `tests/performance/test_two_thousand_party_book.py
+::test_the_timeline_page_walks_the_party_date_index` caught that plan on the first attempt.
+So `running_balance(r) = carried − Σ(page rows from the top through r) + own(r)`, where
+`carried` is the live total at or older than the page's top: on page one it is read off the
+`meta.summary` aggregate the response already makes (no new query); on later pages it is one
+SUM over the rows older than the cursor, in the query the summary would have been. Page two
+without it is wrong by everything scrolled past — LED-04's `carried_forward` trap on the
+other cursor direction — and a test pages two rows at a time across a run of equal dates.
+
+**Decision 3 — a constraint for PTY-03 FR-7.** Its `date_from`/`date_to`/`type` filters are
+not built. When they are, each must be applied to BOTH the page and the carried sum, or be
+expressed as a zero contribution the way `include_reversed` is; applied to the page alone they
+would silently rebase every balance. Written into `with_running_balance`'s docstring.
+
+**Divergence recorded, not changed.** LED-04's statement with `include_corrections=true`
+sums both halves of a pair inside its window: the closing is right (the pair nets to zero),
+but a row posted between the original and its reversal reads a figure that includes the
+struck original. The timeline and the statement therefore disagree on such a row while
+corrections are shown. LED-04 should adopt Decision 1; left for its owner.
+
+**Not built.** CR-027's `format=csv` on this endpoint — the statement's CSV
+(`/parties/{id}/statement?format=csv`) already exports the same rows with running balances,
+and a second export of one book is a second audit trail to keep equal.

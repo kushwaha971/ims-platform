@@ -16,7 +16,7 @@ from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
 from apps.common.constants import ModuleCode
 from apps.common.context import Ctx
 from apps.common.idempotency import idempotent
-from apps.common.pagination import CursorPagination
+from apps.common.pagination import CursorPagination, decode_cursor
 from apps.common.permissions import ModuleEnabled
 from apps.common.responses import StandardResponse
 from apps.common.throttling import ScopedUserRateThrottle
@@ -25,6 +25,11 @@ from apps.ledger.constants import EntryType
 from apps.ledger.models import LedgerEntry
 from apps.ledger.permissions import LedgerEntryPermissions
 from apps.ledger.selectors.entry import TIMELINE_ORDERING, party_entries, party_ledger_summary
+from apps.ledger.selectors.statement import (
+    live_total_from_summary,
+    timeline_carried,
+    with_running_balance,
+)
 from apps.ledger.serializers.entry import (
     EntryCorrectSerializer,
     EntryReverseSerializer,
@@ -32,6 +37,7 @@ from apps.ledger.serializers.entry import (
     LedgerEntryWriteSerializer,
     LedgerSummarySerializer,
     PartyScopedEntryWriteSerializer,
+    TimelineEntrySerializer,
 )
 from apps.ledger.services.corrections import correct_entry, entry_history, reverse_entry
 from apps.ledger.services.entries import post_entry
@@ -94,6 +100,8 @@ class LedgerEntryViewSet(
             return EntryReverseSerializer
         if self.action == "correct":
             return EntryCorrectSerializer
+        if self.action == "list":
+            return TimelineEntrySerializer
         return LedgerEntrySerializer
 
     def _include_reversed(self) -> bool:
@@ -117,8 +125,10 @@ class LedgerEntryViewSet(
         party_id = self.request.query_params.get("party")
         if not party_id:
             return LedgerEntry.objects.none()
-        return party_entries(
-            tenant=tenant, party_id=party_id, include_reversed=self._include_reversed()
+        return with_running_balance(
+            party_entries(
+                tenant=tenant, party_id=party_id, include_reversed=self._include_reversed()
+            )
         )
 
     def _ctx(self, request: Any) -> Ctx:
@@ -151,13 +161,26 @@ class LedgerEntryViewSet(
         """
         queryset = self.filter_queryset(self.get_queryset())
         page = self.paginate_queryset(queryset)
-        serializer = self.get_serializer(page, many=True)
         meta = dict(self.paginator.get_meta())
         party_id = self._party_id()
-        if party_id and not request.query_params.get("cursor"):
-            meta["summary"] = LedgerSummarySerializer(
-                party_ledger_summary(tenant=self.get_tenant(), party_id=party_id)
-            ).data
+        cursor = request.query_params.get("cursor")
+        # CR-027 — the page's carried figure for each row's `running_balance`
+        # (see `with_running_balance`). Page one reads it off the summary this
+        # response already aggregates, so the khata's first paint costs no
+        # extra query; later pages sum what is older than the cursor, in the
+        # query the summary would have been.
+        carried = None
+        if party_id and not cursor:
+            summary = party_ledger_summary(tenant=self.get_tenant(), party_id=party_id)
+            meta["summary"] = LedgerSummarySerializer(summary).data
+            carried = live_total_from_summary(summary)
+        elif party_id:
+            carried = timeline_carried(
+                tenant=self.get_tenant(), party_id=party_id, position=decode_cursor(cursor)
+            )
+        serializer = self.get_serializer(
+            page, many=True, context={**self.get_serializer_context(), "carried": carried}
+        )
         return StandardResponse.ok(serializer.data, meta=meta)
 
     def _party_id(self) -> Any:
@@ -326,13 +349,19 @@ class PartyLedgerEntryViewSet(LedgerEntryViewSet):
     def get_serializer_class(self) -> Any:
         if self.action == "create":
             return PartyScopedEntryWriteSerializer
+        if self.action == "list":
+            return TimelineEntrySerializer
         return LedgerEntrySerializer
 
     def get_queryset(self) -> Any:
-        return party_entries(
-            tenant=self.get_tenant(),
-            party_id=self.kwargs.get("party_pk"),
-            include_reversed=self._include_reversed(),
+        # CR-027 — the window rides on the page query; `list` adds the carried
+        # figure. See `with_running_balance`.
+        return with_running_balance(
+            party_entries(
+                tenant=self.get_tenant(),
+                party_id=self.kwargs.get("party_pk"),
+                include_reversed=self._include_reversed(),
+            )
         )
 
     def _party_id(self) -> Any:

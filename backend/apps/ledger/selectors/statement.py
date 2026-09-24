@@ -29,14 +29,19 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
-from django.db.models import Case, DecimalField, F, Q, QuerySet, Sum, When, Window
+from django.db.models import Case, DecimalField, F, Q, QuerySet, RowRange, Sum, Value, When, Window
 from django.db.models.functions import Coalesce
 
 from apps.common.constants import Direction
 from apps.common.money import ZERO
 from apps.common.pagination import keyset_after
 from apps.ledger.models import LedgerEntry
-from apps.ledger.selectors.entry import LIVE_ENTRIES, split_total_expressions, split_totals
+from apps.ledger.selectors.entry import (
+    LIVE_ENTRIES,
+    TIMELINE_ORDERING,
+    split_total_expressions,
+    split_totals,
+)
 
 MONEY = DecimalField(max_digits=14, decimal_places=2)
 
@@ -248,6 +253,141 @@ def statement_totals(
     if date_to is not None:
         scoped = scoped.filter(entry_date__lte=date_to)
     return split_totals(scoped.aggregate(**split_total_expressions()))
+
+
+#: The signed amount of a row that COUNTS, and zero for one that does not.
+#:
+#: `SIGNED` filtered by `LIVE_ENTRIES` inside the expression rather than in the
+#: WHERE clause, because the timeline's "Show corrections" returns rows that do
+#: not count (both halves of every reversal pair) and each of them still needs
+#: a running balance. Canon §0.2 says neither half is in the balance, so each
+#: contributes nothing and carries the figure as it stood — see
+#: `with_running_balance` for why that, rather than `null`.
+#:
+#: `Value(0)` rather than no default: `SUM` over a run of NULLs is NULL, and a
+#: party whose first row is a struck-through one would start its timeline with
+#: a balance of nothing.
+LIVE_SIGNED = Case(
+    When(LIVE_ENTRIES & Q(direction=Direction.DEBIT), then=F("amount")),
+    When(LIVE_ENTRIES, then=-F("amount")),
+    default=Value(Decimal("0.00")),
+    output_field=MONEY,
+)
+
+
+def with_running_balance(queryset: QuerySet[LedgerEntry]) -> QuerySet[LedgerEntry]:
+    """CR-027 / PTY-03 FR-6 — the timeline's page, with what each row's running balance needs.
+
+    The running balance of a row is the balance AFTER it in the ledger's own
+    order — `STATEMENT_ORDERING`, ascending, the direction a balance
+    accumulates — in the statement's sign convention (debit positive). It is
+    assembled from three parts, exactly as the statement's is from a window
+    and a carried scalar:
+
+        running_balance(r) = carried − timeline_delta(r) + timeline_own(r)
+
+    · `carried` — `timeline_carried()`: the signed total of every counting row
+      at or older than the page's first row. Page one: the party's whole live
+      total. Page two onwards: everything older than the cursor.
+    · `timeline_delta` — a window over the page's rows, NEWEST first, summing
+      from the page's first row down to and including this one.
+    · `timeline_own` — this row's own contribution.
+
+    Subtracting what is newer than a row from what is at-or-older than the
+    page's top leaves precisely what is at-or-older than the row, which is the
+    ascending running balance. `test_the_newest_running_balance_is_the_party_
+    balance_on_a_fuzzed_book` replays it oldest-first in Python and compares
+    every row.
+
+    ── Why the window runs NEWEST first, when FR-6 describes it ascending ────
+    FR-6's window `SUM(...) OVER (ORDER BY entry_date, created_at, id)` is the
+    DEFINITION, and it is what the figure equals. Computed literally, on a page
+    served newest-first, Postgres must read every one of the party's rows,
+    window them ascending, then sort them back descending to find the first
+    twenty-five — `test_the_timeline_page_walks_the_party_date_index` caught
+    exactly that plan (Bitmap Heap Scan → Sort → WindowAgg → Sort → Limit) on
+    the first attempt, on the screen a merchant opens most. Ordered the way the
+    page is served, the window streams off `ix_ledger_party_date` and stops at
+    `LIMIT`; the one O(n) piece left is a plain SUM (`timeline_carried`), which
+    on page one is not even a query of its own.
+
+    ── The carried_forward trap, and why page two is where it bites ─────────
+    `.annotate(Window).filter(keyset)` computes the window over the rows the
+    keyset LEAVES (Django 5 does not wrap it in a subquery). Here that is the
+    point: the window restarts at the page's first row by design, and
+    `carried` is recomputed per page from the cursor. A page-two request that
+    reused page one's carried figure, or none, would be wrong by everything the
+    merchant had scrolled past — `test_page_boundaries_are_continuous_with_
+    ties_on_the_date` pages two rows at a time across a run of equal dates.
+
+    ── Struck-through rows ───────────────────────────────────────────────────
+    `LIVE_SIGNED` makes both halves of a reversal pair contribute zero, so with
+    `include_reversed=true` each carries the balance as it stood rather than
+    `null`. PTY-03 BR-3 and T-PTY-03-15 require that flipping "Show
+    corrections" changes no displayed running balance, and a zero contribution
+    is the only rule under which every standing row keeps its figure AND the
+    newest row still equals the header when the newest row is a reversal.
+
+    (The statement with `include_corrections=true` sums both halves inside its
+    window instead — the closing is identical because the pair nets to zero,
+    but a row posted between the two halves reads a figure that includes the
+    struck original. That divergence is recorded in CR-LOG, not changed here.)
+
+    ── What must never be added to this queryset's WHERE ────────────────────
+    `carried` is computed over the party's rows with only the cursor applied. A
+    display filter the page honours and `carried` does not — PTY-03 FR-7's
+    `date_from`, `date_to` or `type`, none of them built — would make the two
+    disagree about which rows exist. When one lands it has to be applied to
+    both, or expressed as a zero contribution the way `include_reversed` is.
+    """
+    return queryset.annotate(
+        timeline_own=LIVE_SIGNED,
+        timeline_delta=Window(
+            expression=Sum(LIVE_SIGNED),
+            order_by=[F("entry_date").desc(), F("created_at").desc(), F("id").desc()],
+            frame=RowRange(start=None, end=0),
+        ),
+    )
+
+
+def timeline_carried(*, tenant: Any, party_id: UUID | str, position: dict | None) -> Decimal:
+    """The signed total of every counting row at or older than a timeline page's top.
+
+    `keyset_after(position, TIMELINE_ORDERING)` is "strictly after the cursor
+    in newest-first order", which is strictly OLDER than the cursor row — the
+    rows the page starts from. The cursor row itself is excluded, correctly: it
+    was the last row of the previous page, and it is newer than everything
+    here. With no cursor it is the party's whole live balance, which is BR-1's
+    other side.
+
+    `LIVE_ENTRIES` whatever `include_reversed` says, because a row outside it
+    contributes zero on the page too (`LIVE_SIGNED`). One aggregate, on the
+    party's own rows.
+    """
+    if tenant is None:
+        return ZERO
+    scoped = LedgerEntry.objects.filter(tenant=tenant, party_id=party_id).filter(LIVE_ENTRIES)
+    if position:
+        scoped = scoped.filter(keyset_after(position, TIMELINE_ORDERING))
+    return _signed_total(scoped)
+
+
+def live_total_from_summary(summary: dict) -> Decimal:
+    """Page one's `carried`, read off the `meta.summary` aggregate already made.
+
+    `party_ledger_summary` splits the party's `LIVE_ENTRIES` into gave, got and
+    written-off by direction, and those four buckets are mutually exclusive and
+    exhaustive (`selectors/entry.py`), so their signed sum is exactly
+    `timeline_carried(position=None)`. Reusing it keeps the first page — the
+    one every khata opens on — at the query budget it had before CR-027.
+    """
+    written_off = summary["written_off"]
+    return (
+        summary["total_debit"]
+        - summary["total_credit"]
+        + written_off["debit"]
+        - written_off["credit"]
+    )
 
 
 def has_entries_before_opening(*, tenant: Any, party_id: UUID | str) -> bool:
