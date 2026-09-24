@@ -488,3 +488,88 @@ corrections are shown. LED-04 should adopt Decision 1; left for its owner.
 **Not built.** CR-027's `format=csv` on this endpoint — the statement's CSV
 (`/parties/{id}/statement?format=csv`) already exports the same rows with running balances,
 and a second export of one book is a second audit trail to keep equal.
+
+## CR-2026-09-24-T1-A — who may READ settings: `platform.audit.read` as the gate
+
+PLT-06 §6 gives settings read to owner, admin and accountant, and edit to owner and admin,
+but Part 20 §20.5 names no codename for "read settings". Rather than mint one (the registry
+is closed and a new codename is a migration of every role's grant), the read gate is "may
+edit settings OR holds `platform.audit.read`" — exactly the three roles FRD §6 names,
+because `platform.audit.read` is held by owner, admin and accountant and by no staff role.
+The sidebar's Settings item is gated on `platform.audit.read` for the same reason (it was
+`parties.party.read`, which every staff member holds). Edit (`may_edit_settings`) is
+`platform.tenant.manage` or an active owner/admin role — admin lacks `tenant.manage` by
+design (canon §0.9) but FRD §6 gives admin the edit; branding edit is
+`platform.branding.manage`.
+
+Requested against Part 20 §20.5.2 (one line naming the read rule) and Part 17-01 PLT-06 §6.
+
+## CR-2026-09-24-T1-B — revoking ONE own device is effective at the next refresh, not at once
+
+PLT-09 FR-4 says a revoked session "is signed out immediately". A single-session revoke
+marks its refresh family revoked; the device's access token (≤15 min) stays valid until it
+next refreshes, and the refresh is refused. Making it immediate needs a per-request session
+lookup on every authenticated call (the access token carries no session id today), which is
+a hot-path query this feature cannot justify alone. The two cases that matter most ARE
+immediate: "Log out everywhere" bumps `token_epoch`, and a manager's "log out their devices"
+bumps `permissions_version`, both of which every request already checks.
+
+Requested against Part 17-01 PLT-09 FR-4 / AC-2: "within 15 minutes, and at once for
+log-out-everywhere and for a manager's revoke".
+
+## CR-2026-09-24-T1-C — settings shapes as built, and reminder templates stay single-brace
+
+The settings catalogue (`apps/platform_app/settings_schema.py`) stores every value as a small
+JSON object with `schema_version`, and PLT-06 §14's key list is implemented with three
+changes the FRD should adopt:
+
+- `ledger.reminder_templates` keeps the seeded flat `{en, hi}` shape with `{amount}`-style
+  single-brace placeholders (`party_name`, `business_name`, `amount`, `due_date`,
+  `upi_link`; `{amount}` required; ≤500 chars; `{{…}}` refused). The FRD's
+  `manual/auto_d1/auto_d0` × `{{placeholder}}` shape would break the seeded rows and LED-08
+  (T2), which already reads the flat shape. Per-schedule templates are LED-08's to add, as
+  new keys.
+- `ledger.auto_sms` and `ledger.party_sms_on_entry` are stored and validated but have no
+  switch on screen: nothing sends SMS (DEC-010/adapter-only), and a switch that does
+  nothing is the "unbuilt feature" rule broken.
+- Documents/numbering, stock and party-label settings are served and saved by the API but
+  not on the Settings screen yet, because no screen consumes them (sales, inventory and the
+  party labels are other tracks' work). Numbering refuses a backwards `next_number` with
+  409 `sequence_backwards`.
+
+Optimistic concurrency is an `ETag` on `GET` and a required `If-Match` on `PUT`
+(412 `precondition_failed` when stale) — PLT-06 FR-9's "last write wins with a warning" is
+replaced by refusal, because two owners editing templates at once otherwise silently lose one.
+
+Requested against Part 17-01 PLT-06 §14 and Part 21 (tenant.settings shape).
+
+## CR-2026-09-24-T1-D — settings pages live under `/settings/*`
+
+PLT-08 names `/activity` and PLT-09 `/profile/devices`. They are built as
+`/settings/activity` and `/settings/devices` (with `/settings/profile` and
+`/settings/branding`), so the one Settings hub owns every tenant-administration screen and
+the sidebar needs one item rather than three. Devices is also reachable from the account
+menu for every role, because staff may manage their own sessions and do not see Settings.
+
+Requested against Part 19 §19.6 (route table) and Part 17-01 PLT-08/PLT-09 §9.
+
+## CR-2026-09-24-T1-E — module and GST-type guards are registries other apps fill
+
+PLT-06 FR-6 (a module with data cannot be switched off, 409 `module_has_data`) and PLT-07
+BR-4 (GST type locked once documents exist, 409 `gst_type_locked`) need counts from apps
+platform may not import (Part 20 import matrix). `apps/platform_app/services/guards.py`
+exposes `register_module_off_guard(module, counter)` and `register_gst_lock_counter(counter)`;
+inventory (T3) and sales must register theirs in their `AppConfig.ready()`. Until they do,
+the guards pass — correct today, since neither app has rows.
+
+Requested against Part 20 §20.3 (the import matrix's sanctioned inversion pattern).
+
+## CR-2026-09-24-T1-F — the FRD's contrast figure for the default blue is wrong
+
+WLB-01 quotes `#2B6BE0` on white as "≈4.6:1". The WCAG 2.1 relative-luminance formula gives
+4.90:1; tests pin 4.90 on both tiers. The server refuses a primary below 3:1 against white
+(`low_contrast`, with `details.suggested_hex` — the nearest darker shade that passes, in 1%
+lightness steps). Partner logo upload (WLB-02) is not built: it needs `files_attachment`
+rows with no tenant, which is Part 43 CR-018 / C2 and still undecided.
+
+Requested against Part 17-01 WLB-01 §8 and WLB-02 FR-3.
