@@ -93,6 +93,12 @@ export const API_PATHS = {
   REMINDER: (id: string) => `/reminders/${seg(id)}`,
   REMINDER_SEND: (id: string) => `/reminders/${seg(id)}/send`,
   REMINDERS_BULK: '/reminders/bulk',
+  /** LED-05 FR-4 — the parties behind one bucket (`?bucket=today|overdue|upcoming`). */
+  REMINDERS_DUE: '/reminders/due',
+  /** LED-06 — the server-composed text for the sheet; writes nothing (CR-LOG). */
+  REMINDER_PREVIEW: '/reminders/preview',
+  /** LED-07 / LED-08 — the two messaging switches and the provider status. */
+  REMINDER_SETTINGS: '/reminders/settings',
 
   // ── inventory ─────────────────────────────────────────────────────────────
   ITEMS: '/items',

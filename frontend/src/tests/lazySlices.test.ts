@@ -14,14 +14,15 @@ describe('lazily registered slices', () => {
 
     expect(keys).not.toContain('statement');
     expect(keys).not.toContain('ledgerAging');
+    // LED-05/06/07: the reminders screen and the khata's strip bring it.
+    expect(keys).not.toContain('reminders');
     // The shell's own slices are still there.
     expect(keys).toEqual(expect.arrayContaining(['session', 'partyList', 'ledgerForm']));
   });
 
   it('answer their initial state before the first action, then join the store', async () => {
-    const { selectStatementRows } = await import(
-      'modules/DigiKhaato/features/ledger/redux/statementSlice'
-    );
+    const { selectStatementRows } =
+      await import('modules/DigiKhaato/features/ledger/redux/statementSlice');
 
     // Injected but not yet dispatched through: the selector must not throw.
     expect(selectStatementRows(store.getState())).toEqual([]);

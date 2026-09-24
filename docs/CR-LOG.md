@@ -488,3 +488,42 @@ corrections are shown. LED-04 should adopt Decision 1; left for its owner.
 **Not built.** CR-027's `format=csv` on this endpoint — the statement's CSV
 (`/parties/{id}/statement?format=csv`) already exports the same rows with running balances,
 and a second export of one book is a second audit trail to keep equal.
+
+## CR-2026-09-24-D — LED-05…LED-08 / NTF-01…NTF-03: what was built beside the FRDs
+
+**State:** `raised`. **Target:** Part 17-02 LED-05/06/07/08, Part 17-05 NTF-01/02/03, Part 21
+§21.3.4. **Gate:** none — additive; migrations `ledger 0005_reminder`,
+`notifications 0002_inbox_and_templates`.
+
+**Endpoints beside §14.** `POST /reminders/preview` returns the server-composed text without
+writing a row, so a sheet opened and closed never reaches the log (FR-2 says "the tap" records).
+`GET /reminders/due?bucket=today|overdue|upcoming` lists a bucket's parties with the summary's
+own predicate; the party list's `collection=` chip is the one party source the client may page
+(§32.6.7), so the reminders screen does not reuse it. `GET/PATCH /reminders/settings` is a narrow
+writer for `ledger.auto_sms` and `ledger.party_sms_on_entry` until PLT-06's generic settings
+endpoint owns those keys.
+
+**Channel added: `sms_manual`.** §21.3.4 lists `sms` (a provider SMS). The merchant's own SMS
+app via an `sms:` link is a different act with a different cost (none) and is logged as
+`sms_manual`, so the Sent tab never claims a provider sent it.
+
+**Rules decided.** A new collection date must be today or later, within 365 days, and on a
+party who owes money (`collection_requires_receivable`, 409); an unchanged overdue date is
+accepted so an unrelated edit is never refused. All three buckets require `balance > 0`. The
+automated schedule runs at 09:00 IST as LED-07 FR-2 says (the `SCHEDULES` entry had 08:00).
+The `reminder_due` inbox row is ONE row per tenant per day carrying the count and linking to
+`/ledger/reminders?bucket=today`, not LED-05's one row per party: NTF-01's coalescing rule
+(FR-6) and a bell reading "40" every morning pointed the same way. With no
+SMS provider configured (`ConsoleSmsBackend` counts as none) an automated or entry SMS ends
+`failed` / `skipped` with `channel_not_configured` and one `reminder_failed` inbox row — never
+a green "sent".
+
+**Client composition removed.** The khata's reminder text was composed on the device since
+Sprint 3 (DEC-012). It is now the server's (NTF-03 BR-2), and "Send reminder" needs
+`ledger.reminder.write` — sending writes a row, so the accountant no longer sees it.
+`e2e/sprint3-qa.mjs` §A still asserts the old client-composed wording and should be re-pointed
+at the preview text.
+
+**Not built.** WhatsApp Business API sending (`whatsapp_api`, NTF-02) — no provider, per
+ADR-021; recurring reminders (`kind=recurring`); per-party locale for message language (the
+tenant's locale is used); the inbox's per-category mute settings.

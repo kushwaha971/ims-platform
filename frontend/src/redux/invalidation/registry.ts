@@ -63,6 +63,19 @@ import {
 } from 'modules/DigiKhaato/features/parties/redux/partyTagThunk';
 import { fetchPlanLimits } from 'modules/DigiKhaato/features/plan/redux/planThunk';
 import {
+  fetchCollectionSummary,
+  fetchDueParties,
+  fetchPartyReminders,
+  fetchReminderHistory,
+  fetchReminderPreview,
+  fetchReminderSettings,
+  markReminderStatus,
+  saveReminderSettings,
+  sendBulkStep,
+  sendManualReminder,
+  startBulkReminders,
+} from 'modules/DigiKhaato/features/reminders/redux/reminderThunk';
+import {
   fetchInvitations,
   inviteMember,
   revokeInvitation,
@@ -118,6 +131,13 @@ export const QUERIES = {
   resumeOnboarding,
   // M2 — which unfinished business "Add a business" would continue
   findResumableBusiness,
+  // LED-05/06/07 — the reminders screen, the khata's strip, the sheet's text
+  fetchCollectionSummary,
+  fetchDueParties,
+  fetchReminderHistory,
+  fetchPartyReminders,
+  fetchReminderPreview,
+  fetchReminderSettings,
   // NTF-01 — the bell's count and the inbox panel
   fetchUnreadCount,
   fetchNotifications,
@@ -170,6 +190,12 @@ export const MUTATIONS = {
   deletePartyTag,
   mergePartyTags,
   bulkTagPartiesThunk,
+  // LED-06/07/08 — reminders and the two SMS switches
+  sendManualReminder,
+  startBulkReminders,
+  sendBulkStep,
+  markReminderStatus,
+  saveReminderSettings,
   // NTF-01 — read state
   readNotification,
   readAllNotifications,

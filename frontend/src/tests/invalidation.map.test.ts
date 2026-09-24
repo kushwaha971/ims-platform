@@ -7,6 +7,7 @@ import { store } from 'src/redux/store';
 import 'modules/DigiKhaato/features/ledger/redux/agingSlice';
 import 'modules/DigiKhaato/features/ledger/redux/statementSlice';
 import 'modules/DigiKhaato/features/notifications/redux/notificationSlice';
+import 'modules/DigiKhaato/features/reminders/redux/reminderSlice';
 import partyListReducer, {
   type PartyListState,
 } from 'modules/DigiKhaato/features/parties/redux/partyListSlice';
