@@ -192,6 +192,31 @@ class TenantCreateView(APIView):
         )
 
 
+class TenantResumableView(APIView):
+    """`GET /tenants/resumable` — the business step 1 would resume (defect M2).
+
+    `POST /tenants` resumes the caller's unfinished business instead of creating
+    a second one (NEW-1), and only when that business is still an abandoned
+    attempt (M2). Both rules live in `onboarding.resumable_onboarding`, and this
+    read asks the same function, so the wizard's "you have an unfinished
+    business" notice can never disagree with what the create will actually do.
+    A client-side guess from the switcher list could: it cannot see members or
+    books, so it would promise to continue a business the server then declines
+    to touch.
+
+    `{"tenant": null}` when there is nothing to resume. Any authenticated user,
+    like the create itself — the answer is only ever about the caller's own
+    memberships, so there is nothing to scope and nothing to refuse.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request: Any) -> Any:
+        membership = onboarding_service.resumable_onboarding(user=request.user)
+        tenant = TenantReadSerializer(membership.tenant).data if membership is not None else None
+        return StandardResponse.ok({"tenant": tenant})
+
+
 class TenantCurrentView(APIView):
     """`GET`/`PATCH /tenants/current` (PLT-03 FR-3…FR-5; Part 22 §22.3).
 

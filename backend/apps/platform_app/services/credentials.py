@@ -74,6 +74,21 @@ MOBILE_TAKEN_MESSAGE = (
     "Leave it blank or use a different number."
 )
 
+# L6. The stable, machine-readable name of that refusal, so a client can show
+# it in the merchant's language (`errors.field.mobile_taken`) instead of the
+# English sentence above. It travels in `details.field_codes`, keyed by the
+# field it belongs to; it is NOT a top-level error code -- the envelope's code
+# stays `validation_error` (Part 22 §22.1.1) and the message stays the `en` copy.
+MOBILE_TAKEN_CODE = "mobile_taken"
+FIELD_CODES_KEY = "field_codes"
+
+
+def _mobile_taken() -> ValidationFailed:
+    """The one NEW-2 refusal, spelt once for both the pre-check and the lost race."""
+    return ValidationFailed(
+        {"mobile": [MOBILE_TAKEN_MESSAGE], FIELD_CODES_KEY: {"mobile": MOBILE_TAKEN_CODE}}
+    )
+
 
 @dataclass(frozen=True, slots=True)
 class IssuedCredentials:
@@ -182,7 +197,7 @@ def _refuse_taken_mobile(mobile: str) -> None:
     from apps.platform_app.models import User
 
     if User.objects.filter(mobile=mobile).exists():
-        raise ValidationFailed({"mobile": [MOBILE_TAKEN_MESSAGE]})
+        raise _mobile_taken()
 
 
 def _create_user_or_refuse_mobile(*, email: str, full_name: str, mobile: str | None) -> Any:
@@ -204,7 +219,7 @@ def _create_user_or_refuse_mobile(*, email: str, full_name: str, mobile: str | N
             )
     except IntegrityError as exc:
         if MOBILE_UNIQUE_CONSTRAINT in str(exc):
-            raise ValidationFailed({"mobile": [MOBILE_TAKEN_MESSAGE]}) from exc
+            raise _mobile_taken() from exc
         raise
 
 

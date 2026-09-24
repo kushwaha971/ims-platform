@@ -301,7 +301,10 @@ def test_a_mobile_another_login_holds_is_a_400_on_the_field_not_a_500(
         "mobile": [
             "This mobile number is already used by another login. "
             "Leave it blank or use a different number."
-        ]
+        ],
+        # L6 -- the stable code the client localises by; without it the Hindi
+        # UI could only show the English sentence above.
+        "field_codes": {"mobile": "mobile_taken"},
     }
     # It says a login holds the number and nothing about whose.
     assert holder.email not in response.content.decode()
@@ -323,7 +326,7 @@ def test_a_differently_spelt_taken_mobile_is_refused_the_same_way(api_as: Any, t
     response = _create(client, mobile="98765 43210")
 
     assert response.status_code == 400, response.content
-    assert set(response.json()["error"]["details"]) == {"mobile"}
+    assert set(response.json()["error"]["details"]) == {"mobile", "field_codes"}
 
 
 @pytest.mark.django_db

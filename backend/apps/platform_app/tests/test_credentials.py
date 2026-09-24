@@ -373,7 +373,11 @@ def test_a_lost_race_on_the_mobile_is_a_field_error_and_rolls_everything_back(
                 ctx=_ctx(user, tenant),
             )
 
-    assert refused.value.details == {"mobile": [credentials.MOBILE_TAKEN_MESSAGE]}
+    # L6 -- the lost race carries the same stable code as the pre-check.
+    assert refused.value.details == {
+        "mobile": [credentials.MOBILE_TAKEN_MESSAGE],
+        "field_codes": {"mobile": credentials.MOBILE_TAKEN_CODE},
+    }
     assert not User.objects.filter(email="racer@shop.test").exists()
     assert not Membership.objects.filter(tenant=tenant, user__email="racer@shop.test").exists()
     assert AuditLog.objects.count() == audits_before

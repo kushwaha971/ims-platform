@@ -199,6 +199,16 @@ def resumable_onboarding(*, user: Any) -> Any:
     half-built business is not resuming anything, and a business that was
     suspended or deleted is not one to write into.
 
+    **Defect M2 — and only one that is still an abandoned ATTEMPT.** Resuming
+    renames the business to whatever step 1 now says, so it is only safe when
+    the business is indistinguishable from the step-1 submit it came from. QA
+    found an owner's "Add a business → Brand New Branch" silently renaming an
+    unfinished "Race 4" that already had a staff member, which kept its staff
+    and anything they had written. A business is therefore resumable only while
+    nobody but the owner is attached to it and it holds no books — see
+    `_abandoned_attempt_filter`. Anything else is a real business that happens
+    to have an unfinished wizard, and step 1 creates a new tenant beside it.
+
     The newest wins. There should never be two, but NEW-1 left production-like
     data with duplicates, and resuming the latest is what the merchant was last
     looking at.
@@ -215,8 +225,51 @@ def resumable_onboarding(*, user: Any) -> Any:
             tenant__onboarding_step__gte=1,
             tenant__onboarding_step__lt=WIZARD_LAST_STEP,
         )
+        .exclude(_holds_more_than_an_attempt(user=user))
         .order_by("-tenant__created_at")
         .first()
+    )
+
+
+def _holds_more_than_an_attempt(*, user: Any) -> Any:
+    """Defect M2 — what makes an unfinished business NOT an abandoned step 1.
+
+    A `Q` over the candidate membership's tenant, true when any of these exist:
+
+    * **another person** — any membership of somebody else that has not been
+      removed (active, invited or suspended alike: each is a person the owner
+      has told about this business by its current name), or a pending
+      invitation;
+    * **books** — a live party, a tag, or a ledger entry. Soft-deleted
+      parties are read through `objects`, not `all_objects` (whose callers are
+      a closed list); a deleted party that ever carried an entry is still
+      caught by the ledger check, because entries are never deleted.
+
+    The list is explicit rather than "any tenant-scoped row", because step 1
+    itself writes rows (the membership, audit, idempotency and session rows)
+    and a generic test would stop resuming the very attempt NEW-1 is about. A
+    new table of merchant data belongs here the day a wizard-unfinished
+    business can reach it.
+    """
+    from django.db.models import Exists, OuterRef, Q
+
+    from apps.ledger.models import LedgerEntry
+    from apps.parties.models import Party, Tag
+    from apps.platform_app.models import Invitation, InvitationStatus, Membership
+
+    tenant = OuterRef("tenant_id")
+    others = (
+        Membership.objects.filter(tenant_id=tenant)
+        .exclude(user=user)
+        .exclude(status=MembershipStatus.REMOVED)
+    )
+    invitations = Invitation.objects.filter(tenant_id=tenant, status=InvitationStatus.PENDING)
+    return (
+        Q(Exists(others))
+        | Q(Exists(invitations))
+        | Q(Exists(Party.objects.filter(tenant_id=tenant)))
+        | Q(Exists(Tag.objects.filter(tenant_id=tenant)))
+        | Q(Exists(LedgerEntry.objects.filter(tenant_id=tenant)))
     )
 
 
@@ -257,6 +310,9 @@ def start_tenant(
       the wizard it is no longer resumable, and step 1 creates a new tenant
       exactly as before. The guard only refuses to start a second wizard while
       the first is still open — the second attempt resumes the first.
+    * *A real business with an unfinished wizard (defect M2).* One that already
+      has another person on it or any books is never resumed — renaming it
+      would rename somebody's live shop. `resumable_onboarding` says which.
 
     The caller's user row is locked for the duration, so two step-1 submits
     racing from two tabs cannot both see "nothing to resume" and both create.

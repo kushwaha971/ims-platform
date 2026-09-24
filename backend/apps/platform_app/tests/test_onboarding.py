@@ -1026,3 +1026,191 @@ def test_a_suspended_unfinished_business_is_not_resumed(
 
     assert second.status_code == 201
     assert second.json()["data"]["tenant"]["id"] != first_id
+
+
+# ── M2: only an abandoned ATTEMPT is resumed, never a real business ─────────
+
+RESUMABLE_URL = "v1:tenant-resumable"
+
+
+def _unfinished(client: Any, name: str, key: str) -> Any:
+    """Step 1 only, so the business is at `onboarding_step=1` and resumable."""
+    from apps.platform_app.models import Tenant
+
+    created = _create(client, name=name, idempotency_key=key)
+    assert created.status_code == 201, created.json()
+    return Tenant.objects.get(pk=created.json()["data"]["tenant"]["id"])
+
+
+def _give_it_a_staff_member(tenant: Any) -> Any:
+    from tests.factories.platform import MembershipFactory, RoleFactory
+
+    return MembershipFactory(
+        tenant=tenant, role=RoleFactory(code="staff", name="Staff"), is_default=False
+    )
+
+
+def _give_it_a_party(tenant: Any) -> None:
+    from tests.factories.parties import PartyFactory
+
+    PartyFactory(tenant=tenant, name="Ramesh")
+
+
+def _give_it_a_ledger_entry(tenant: Any) -> None:
+    import datetime as dt
+    from decimal import Decimal
+
+    from django.utils import timezone
+
+    from apps.common.constants import Direction
+    from apps.ledger.constants import EntryStatus, EntryType, SourceType
+    from apps.ledger.models import LedgerEntry
+    from apps.parties.models import Party
+    from tests.factories.parties import PartyFactory
+
+    party = PartyFactory(tenant=tenant, name="Suresh")
+    LedgerEntry.objects.create(
+        tenant=tenant,
+        party=party,
+        direction=Direction.DEBIT,
+        amount=Decimal("500.00"),
+        entry_date=dt.date(2026, 9, 1),
+        entry_type=EntryType.MANUAL_GAVE,
+        source_type=SourceType.MANUAL,
+        status=EntryStatus.POSTED,
+    )
+    # The party alone would already block the resume; archive-by-delete it so
+    # this case proves the LEDGER check, which is the one that survives a
+    # deleted party.
+    Party.objects.filter(pk=party.pk).update(deleted_at=timezone.now())
+
+
+def _give_it_a_tag(tenant: Any) -> None:
+    from apps.parties.models import Tag
+
+    Tag.objects.create(tenant=tenant, name="Camp Area", color="viz-1")
+
+
+def _give_it_a_pending_invitation(tenant: Any) -> None:
+    from tests.factories.platform import InvitationFactory
+
+    InvitationFactory(tenant=tenant, raw_token="m2-invite-token")
+
+
+def test_add_a_business_does_not_take_over_an_unfinished_business_with_staff(
+    api_as: Any, tenant: Any, onboarding_ready: Any
+) -> None:
+    """M2, exactly as QA found it: the owner has an unfinished "Race 4" that
+    already has a staff member, starts "Add a business" and names it "Brand New
+    Branch". The server used to answer 200 and RENAME Race 4 — which kept its
+    staff and any books — with nothing on screen to say so. A business somebody
+    else has been added to is a real business, not an abandoned step 1; the
+    create must create (201) and Race 4 must be exactly as it was."""
+    from apps.platform_app.models import Membership
+
+    client, member = api_as(tenant)
+    race_4 = _unfinished(client, "Race 4", "race-4")
+    staff = _give_it_a_staff_member(race_4)
+
+    response = _create(client, name="Brand New Branch", idempotency_key="add-business")
+
+    assert response.status_code == 201, response.json()
+    new_id = response.json()["data"]["tenant"]["id"]
+    assert new_id != str(race_4.id)
+    race_4.refresh_from_db()
+    assert race_4.name == "Race 4"
+    assert Membership.objects.filter(pk=staff.pk, tenant=race_4).exists()
+    assert not Membership.objects.filter(tenant_id=new_id).exclude(user=member.user).exists()
+
+
+@pytest.mark.parametrize(
+    "attach",
+    [_give_it_a_party, _give_it_a_ledger_entry, _give_it_a_tag, _give_it_a_pending_invitation],
+    ids=["party", "ledger-entry", "tag", "pending-invitation"],
+)
+def test_an_unfinished_business_with_books_or_people_is_not_resumed(
+    api_as: Any, tenant: Any, onboarding_ready: Any, attach: Any
+) -> None:
+    """M2: parties, tags, ledger entries and pending invitations each make an
+    unfinished business somebody's real shop. Resuming would rename it under
+    its books — so step 1 creates a new business and leaves it alone."""
+    client, _member = api_as(tenant)
+    unfinished = _unfinished(client, "Half Built", f"m2-{attach.__name__}")
+    attach(unfinished)
+
+    response = _create(client, name="Another Shop", idempotency_key=f"m2b-{attach.__name__}")
+
+    assert response.status_code == 201, response.json()
+    assert response.json()["data"]["tenant"]["id"] != str(unfinished.id)
+    unfinished.refresh_from_db()
+    assert unfinished.name == "Half Built"
+
+
+def test_a_removed_member_does_not_stop_the_resume(
+    api_as: Any, tenant: Any, onboarding_ready: Any
+) -> None:
+    """M2's guard must not undo NEW-1: somebody who was added and then REMOVED
+    is no longer attached to the business, so the refreshed step 1 still
+    resumes it rather than making the duplicate NEW-1 was about."""
+    from apps.platform_app.constants import MembershipStatus
+    from apps.platform_app.models import Membership
+
+    client, _member = api_as(tenant)
+    unfinished = _unfinished(client, "Sharma Stores", "m2-removed-a")
+    staff = _give_it_a_staff_member(unfinished)
+    Membership.objects.filter(pk=staff.pk).update(status=MembershipStatus.REMOVED)
+
+    response = _create(client, name="Sharma General Stores", idempotency_key="m2-removed-b")
+
+    assert response.status_code == 200, response.json()
+    assert response.json()["data"]["tenant"]["id"] == str(unfinished.id)
+
+
+def test_after_m2_creates_beside_a_real_business_a_refresh_resumes_the_new_attempt(
+    api_as: Any, tenant: Any, onboarding_ready: Any
+) -> None:
+    """M2 + NEW-1 together: once "Brand New Branch" has been created beside the
+    staffed Race 4, a refresh that re-submits step 1 must resume Brand New
+    Branch (the abandoned attempt) — not create a third business, and not fall
+    back to renaming Race 4."""
+    client, member = api_as(tenant)
+    race_4 = _unfinished(client, "Race 4", "m2-race")
+    _give_it_a_staff_member(race_4)
+    branch_id = _create(client, name="Brand New Branch", idempotency_key="m2-branch").json()[
+        "data"
+    ]["tenant"]["id"]
+    owned_before = _owned_tenants(member.user).count()
+
+    again = _create(client, name="Brand New Branch", idempotency_key="m2-after-refresh")
+
+    assert again.status_code == 200, again.json()
+    assert again.json()["data"]["tenant"]["id"] == branch_id
+    assert _owned_tenants(member.user).count() == owned_before
+    race_4.refresh_from_db()
+    assert race_4.name == "Race 4"
+
+
+def test_resumable_reports_the_business_step_one_would_resume(
+    api_as: Any, tenant: Any, onboarding_ready: Any
+) -> None:
+    """M2's client half: the wizard warns "you have an unfinished business,
+    <name>" before Add a business continues it. That notice must name exactly
+    the business `POST /tenants` will resume, so it asks the server — a guess
+    from the switcher list cannot see staff or books and would promise to
+    continue a business the create then leaves alone."""
+    client, _member = api_as(tenant)
+    assert client.get(reverse(RESUMABLE_URL)).json()["data"] == {"tenant": None}
+
+    unfinished = _unfinished(client, "Sharma Stores", "m2-report")
+    body = client.get(reverse(RESUMABLE_URL)).json()["data"]
+    assert body["tenant"]["id"] == str(unfinished.id)
+    assert body["tenant"]["name"] == "Sharma Stores"
+    assert body["tenant"]["onboarding_step"] == 1
+
+    _give_it_a_staff_member(unfinished)
+    assert client.get(reverse(RESUMABLE_URL)).json()["data"] == {"tenant": None}
+
+
+def test_resumable_needs_authentication(client: Any) -> None:
+    """M2: the read describes the caller's own memberships; anonymous is 401."""
+    assert client.get(reverse(RESUMABLE_URL)).status_code == 401

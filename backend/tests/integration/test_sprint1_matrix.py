@@ -151,6 +151,16 @@ EXPECTED: dict[tuple[str, str], dict[str, int]] = {
         "anon": 401,
         "other_tenant": 200,
     },
+    # Defect M2 — which business step 1 would resume. The caller's own
+    # memberships only, so any authenticated user, like the create.
+    ("GET", "v1:tenant-resumable"): {
+        "owner": 200,
+        "admin": 200,
+        "staff": 200,
+        "accountant": 200,
+        "anon": 401,
+        "other_tenant": 200,
+    },
     ("PATCH", "v1:tenant-current"): {
         "owner": 200,
         "admin": 200,

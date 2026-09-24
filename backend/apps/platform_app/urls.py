@@ -27,11 +27,13 @@ from apps.platform_app.views.tenant import (
     MembershipDetailView,
     TenantCreateView,
     TenantCurrentView,
+    TenantResumableView,
 )
 
 urlpatterns = [
     path("tenants", TenantCreateView.as_view(), name="tenant-create"),
     path("tenants/current", TenantCurrentView.as_view(), name="tenant-current"),
+    path("tenants/resumable", TenantResumableView.as_view(), name="tenant-resumable"),
     path(
         "memberships/<uuid:membership_id>",
         MembershipDetailView.as_view(),
