@@ -305,6 +305,66 @@ EXPECTED: dict[tuple[str, str], dict[str, int]] = {
         "anon": 401,
         "other_tenant": 404,
     },
+    # ── PLT-10 (Track W2-C): OWNER only, by role — an admin holds
+    # `platform.tenant.manage` and is still refused (FRD §12). An unknown
+    # export id is a 404 for the owner; the other tenant's owner acts on
+    # their OWN business, so they meet the same answers as the owner.
+    ("POST", "v1:tenant-export"): {
+        "owner": 202,
+        "admin": 403,
+        "staff": 403,
+        "accountant": 403,
+        "anon": 401,
+        "other_tenant": 202,
+    },
+    ("GET", "v1:tenant-export-list"): {
+        "owner": 200,
+        "admin": 403,
+        "staff": 403,
+        "accountant": 403,
+        "anon": 401,
+        "other_tenant": 200,
+    },
+    ("GET", "v1:tenant-export-detail"): {
+        "owner": 404,
+        "admin": 403,
+        "staff": 403,
+        "accountant": 403,
+        "anon": 401,
+        "other_tenant": 404,
+    },
+    ("GET", "v1:tenant-export-download"): {
+        "owner": 404,
+        "admin": 403,
+        "staff": 403,
+        "accountant": 403,
+        "anon": 401,
+        "other_tenant": 404,
+    },
+    ("GET", "v1:tenant-deletion"): {
+        "owner": 200,
+        "admin": 403,
+        "staff": 403,
+        "accountant": 403,
+        "anon": 401,
+        "other_tenant": 200,
+    },
+    ("POST", "v1:tenant-delete-request"): {
+        "owner": 400,
+        "admin": 403,
+        "staff": 403,
+        "accountant": 403,
+        "anon": 401,
+        "other_tenant": 400,
+    },
+    ("POST", "v1:tenant-delete-cancel"): {
+        "owner": 412,
+        "admin": 403,
+        "staff": 403,
+        "accountant": 403,
+        "anon": 401,
+        "other_tenant": 412,
+    },
     # A manager revoking a member's devices (FR-4). The URL is the caller's own
     # membership, so a permitted role meets the "not yourself" 400; the
     # resident membership seen from another business is a 404.
@@ -362,6 +422,8 @@ def _url(name: str, membership: Any) -> str:
         return reverse(name, kwargs={"session_id": "0199c0a0-0000-7000-8000-00000000d1ed"})
     if name == "v1:invitation-accept":
         return reverse(name, kwargs={"token": "no-such-invitation-token"})
+    if name in ("v1:tenant-export-detail", "v1:tenant-export-download"):
+        return reverse(name, kwargs={"export_id": "0199c0a0-0000-7000-8000-00000000d1ed"})
     if name == "v1:invitation-detail":
         return reverse(name, kwargs={"invitation_id": "0199c0a0-0000-7000-8000-00000000d1ed"})
     return reverse(name)

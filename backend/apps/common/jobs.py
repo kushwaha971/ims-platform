@@ -417,6 +417,21 @@ SCHEDULES: list[Schedule] = [
     Schedule("parties.recalc_balances", period="daily", at_hour_ist=3, minute=0, grace_minutes=120),
     Schedule("inventory.recalc_stock", period="daily", at_hour_ist=3, minute=10, grace_minutes=120),
     Schedule("reports.expire_exports", period="daily", at_hour_ist=3, minute=15, grace_minutes=120),
+    # PLT-10 — BR-1's daily deletion selection and FR-1's export expiry.
+    Schedule(
+        "platform.execute_tenant_deletions",
+        period="daily",
+        at_hour_ist=2,
+        minute=20,
+        grace_minutes=120,
+    ),
+    Schedule(
+        "platform.expire_tenant_exports",
+        period="daily",
+        at_hour_ist=3,
+        minute=20,
+        grace_minutes=120,
+    ),
     Schedule("ops.check_certificates", period="daily", at_hour_ist=4, minute=0, grace_minutes=180),
     Schedule("ops.verify_backup", period="daily", at_hour_ist=4, minute=15, grace_minutes=180),
     Schedule(
@@ -501,6 +516,50 @@ class advisory_lock:  # noqa: N801 — a context manager spelled like a verb
                 cursor.execute("SELECT pg_advisory_unlock(%s)", [self.lock_id])
             self.held = False
         return False
+
+
+HEARTBEAT_KEY = "platform.heartbeat"
+HEARTBEAT_EVERY_SECONDS = 30
+_last_heartbeat: list[float] = [0.0]
+
+
+def record_heartbeat(worker: str, *, force: bool = False) -> bool:
+    """PLT-14 FR-7 — one row, touched at most every 30 s by any live runner.
+
+    A `platform_job` row rather than a table of its own (the FRD's own choice):
+    `scheduled_key` is unique, so every runner updates the same row, and its
+    status is `succeeded` so the claim query never sees it. The console's health
+    view reads `updated_at` and turns red when it is older than two minutes —
+    the "scheduler is stopped" alarm AC-5 asks for, which a queue that happens
+    to be empty cannot give.
+    """
+    import time
+
+    now_mono = time.monotonic()
+    if not force and now_mono - _last_heartbeat[0] < HEARTBEAT_EVERY_SECONDS:
+        return False
+    _last_heartbeat[0] = now_mono
+    now = timezone.now()
+    model = _job_model()
+    updated = model.objects.filter(scheduled_key=HEARTBEAT_KEY).update(
+        updated_at=now, finished_at=now, locked_by=worker[:64]
+    )
+    if not updated:
+        try:
+            with transaction.atomic():
+                model.objects.create(
+                    job_type=HEARTBEAT_KEY,
+                    payload={},
+                    status=JobStatus.SUCCEEDED,
+                    run_after=now,
+                    finished_at=now,
+                    scheduled_key=HEARTBEAT_KEY,
+                    locked_by=worker[:64],
+                    priority=PRIORITY_MAINTENANCE,
+                )
+        except IntegrityError:
+            pass  # another runner created it first
+    return True
 
 
 def new_worker_id() -> str:

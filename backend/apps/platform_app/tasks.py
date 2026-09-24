@@ -31,13 +31,23 @@ def purge_jobs(job: Any, ctx: Any) -> dict:
     """
     import datetime as dt
 
+    from django.db.models import Q
+
     from apps.common.constants import JobStatus
     from apps.platform_app.models import Job
 
     now = timezone.now()
-    succeeded, _ = Job.objects.filter(
-        status=JobStatus.SUCCEEDED, finished_at__lt=now - dt.timedelta(days=14)
-    ).delete()
+    # A PLT-10 export row IS the export (its `result` holds the file's key), so
+    # it is kept until `expire_tenant_exports` has removed the bytes — else a
+    # final export kept 30 days (BR-4) would lose its row at 14 and its file
+    # would sit under MEDIA_ROOT with nothing pointing at it.
+    live_export = Q(job_type="platform.tenant_export") & ~Q(result__has_key="expired")
+    succeeded, _ = (
+        Job.objects.filter(status=JobStatus.SUCCEEDED, finished_at__lt=now - dt.timedelta(days=14))
+        .exclude(live_export)
+        .exclude(scheduled_key="platform.heartbeat")
+        .delete()
+    )
     dead, _ = Job.objects.filter(
         status=JobStatus.DEAD_LETTER, finished_at__lt=now - dt.timedelta(days=180)
     ).delete()
@@ -104,3 +114,38 @@ def reconcile_entitlements(job: Any, ctx: Any) -> dict:
     from apps.platform_app.management.commands.reconcile_entitlements import reconcile
 
     return {"tenants_trimmed": len(reconcile())}
+
+
+# ── PLT-10 — export and deletion ─────────────────────────────────────────────
+
+
+@job_handler("platform.tenant_export", max_attempts=3, timeout_seconds=900)
+def tenant_export(job: Any, ctx: Any) -> dict:
+    """FR-1: build the ZIP. A retry writes a new file; the failed attempt left none."""
+    from apps.platform_app.services.tenant_export import build_export
+
+    return build_export(job=job)
+
+
+@job_handler("platform.expire_tenant_exports", requires_tenant=False, timeout_seconds=300)
+def expire_tenant_exports(job: Any, ctx: Any) -> dict:
+    """FR-1's seven days (and BR-4's thirty): delete the bytes, mark the row. Idempotent."""
+    from apps.platform_app.services.tenant_export import expire_exports
+
+    return {"expired": expire_exports()}
+
+
+@job_handler("platform.execute_tenant_deletions", requires_tenant=False, timeout_seconds=300)
+def execute_tenant_deletions(job: Any, ctx: Any) -> dict:
+    """BR-1: the daily selection — one deduplicated deletion job per due tenant."""
+    from apps.platform_app.services.tenant_delete import enqueue_due
+
+    return {"enqueued": enqueue_due()}
+
+
+@job_handler("platform.delete_tenant", max_attempts=5, timeout_seconds=3600)
+def delete_tenant(job: Any, ctx: Any) -> dict:
+    """FR-5: resumable — progress per table lives in the job's payload."""
+    from apps.platform_app.services.tenant_delete import execute_deletion
+
+    return execute_deletion(job=job)

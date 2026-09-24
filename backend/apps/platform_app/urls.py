@@ -18,6 +18,28 @@ from __future__ import annotations
 
 from django.urls import path
 
+from apps.platform_app.views.admin import (
+    AdminAccessRequestView,
+    AdminHealthView,
+    AdminImpersonateView,
+    AdminImpersonationEndView,
+    AdminOverviewView,
+    AdminPartnerListView,
+    AdminPlanListView,
+    AdminTenantDetailView,
+    AdminTenantListView,
+)
+from apps.platform_app.views.data import (
+    DeleteCancelView,
+    DeleteRequestView,
+    DeletionView,
+    SupportAccessDecisionView,
+    SupportAccessListView,
+    TenantExportDetailView,
+    TenantExportDownloadView,
+    TenantExportListView,
+    TenantExportView,
+)
 from apps.platform_app.views.settings import (
     AuditActorsView,
     AuditLogListView,
@@ -50,6 +72,59 @@ urlpatterns = [
         name="tenant-settings-defaults",
     ),
     path("tenants/current/branding", TenantBrandingView.as_view(), name="tenant-branding"),
+    # PLT-10 (Track W2-C) — owner only.
+    path("tenants/current/export", TenantExportView.as_view(), name="tenant-export"),
+    path("tenants/current/exports", TenantExportListView.as_view(), name="tenant-export-list"),
+    path(
+        "tenants/current/exports/<uuid:export_id>",
+        TenantExportDetailView.as_view(),
+        name="tenant-export-detail",
+    ),
+    path(
+        "tenants/current/exports/<uuid:export_id>/download",
+        TenantExportDownloadView.as_view(),
+        name="tenant-export-download",
+    ),
+    path("tenants/current/deletion", DeletionView.as_view(), name="tenant-deletion"),
+    path(
+        "tenants/current/delete-request", DeleteRequestView.as_view(), name="tenant-delete-request"
+    ),
+    path("tenants/current/delete-cancel", DeleteCancelView.as_view(), name="tenant-delete-cancel"),
+    # PLT-14 FR-6 (CCR-12) — the owner's side of support consent.
+    path("support/access-requests", SupportAccessListView.as_view(), name="support-access-list"),
+    path(
+        "support/access-requests/<uuid:access_id>/allow",
+        SupportAccessDecisionView.as_view(decision="allow"),
+        name="support-access-allow",
+    ),
+    path(
+        "support/access-requests/<uuid:access_id>/deny",
+        SupportAccessDecisionView.as_view(decision="deny"),
+        name="support-access-deny",
+    ),
+    path(
+        "support/access-requests/<uuid:access_id>/revoke",
+        SupportAccessDecisionView.as_view(decision="revoke"),
+        name="support-access-revoke",
+    ),
+    # PLT-14 — the super-admin console (IsSuperAdmin on every view).
+    path("admin/overview", AdminOverviewView.as_view(), name="admin-overview"),
+    path("admin/tenants", AdminTenantListView.as_view(), name="admin-tenant-list"),
+    path("admin/tenants/<uuid:tenant_id>", AdminTenantDetailView.as_view(), name="admin-tenant"),
+    path(
+        "admin/tenants/<uuid:tenant_id>/access-requests",
+        AdminAccessRequestView.as_view(),
+        name="admin-tenant-access-request",
+    ),
+    path(
+        "admin/tenants/<uuid:tenant_id>/impersonate",
+        AdminImpersonateView.as_view(),
+        name="admin-tenant-impersonate",
+    ),
+    path("admin/impersonation/end", AdminImpersonationEndView.as_view(), name="admin-imp-end"),
+    path("admin/partners", AdminPartnerListView.as_view(), name="admin-partner-list"),
+    path("admin/plans", AdminPlanListView.as_view(), name="admin-plan-list"),
+    path("admin/health", AdminHealthView.as_view(), name="admin-health"),
     path("audit-logs", AuditLogListView.as_view(), name="audit-log-list"),
     path("audit-logs/actors", AuditActorsView.as_view(), name="audit-log-actors"),
     path(

@@ -48,7 +48,7 @@ def get_effective_tenant(request: Any) -> Any:
     if user is not None and getattr(user, "is_authenticated", False):
         impersonated = claims.get("imp")
         if impersonated and getattr(user, "is_super_admin", False):
-            tenant = _resolve_impersonation(user, impersonated)
+            tenant = _resolve_impersonation(user, claims)
         elif claims.get("tid"):
             tenant = _resolve_membership_tenant(user, claims["tid"])
 
@@ -79,15 +79,27 @@ def _resolve_membership_tenant(user: Any, tenant_id: Any) -> Any:
     return membership.tenant
 
 
-def _resolve_impersonation(user: Any, tenant_id: Any) -> Any:
-    """Super-admin impersonation (§20.4.8).
+def _resolve_impersonation(user: Any, claims: dict) -> Any:
+    """Super-admin impersonation (§20.4.8, PLT-14 FR-5).
 
-    At Sprint 0 there is no impersonation-grant table yet, so this resolves to
-    None: an impersonation claim grants nothing until `PLT` builds the grant.
-    Failing closed here is deliberate — an unimplemented grant must not become an
-    implicit one.
+    The `imp` claim names a `platform_impersonation_session`; it resolves only
+    while that row is live, the owner's consent behind it is still granted and
+    unexpired, and the token's `jti` hashes to the row's `jti_hash`. Anything
+    else resolves to None — an impersonation claim never falls through to the
+    `tid` claim, so a stale support token grants nothing at all.
+
+    The tenant carries an UNSAVED owner membership for the permission classes
+    and the session row for the audit trail and the scope guard.
     """
-    return None
+    from apps.platform_app.services.support_access import resolve, synthetic_membership
+
+    session = resolve(user=user, claims=claims)
+    if session is None:
+        return None
+    tenant = session.tenant
+    tenant._ub_membership = synthetic_membership(session=session)
+    tenant._ub_impersonation = session
+    return tenant
 
 
 def current_tenant() -> Any:
