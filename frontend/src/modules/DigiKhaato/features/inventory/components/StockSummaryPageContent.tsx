@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { TriangleAlert } from 'lucide-react';
+import { Package, TriangleAlert } from 'lucide-react';
 
 import {
   UbActionLink,
@@ -45,6 +45,9 @@ import { inventoryGridLabels } from '../view-model/gridLabels';
 import { StockBadge } from './StockBadge';
 
 import type { StockSummaryFilters, StockSummaryRow } from '../types/item.types';
+
+/** The phone card's disc: a package, not initials — an item is not a person. */
+const goodsIcon = (): React.ReactNode => <Package className="h-4 w-4" aria-hidden />;
 
 /** The summary's columns — a module-level factory, so no cell is a component
  * defined during render (react/no-unstable-nested-components). */
@@ -304,6 +307,7 @@ export function StockSummaryPageContent(): React.JSX.Element {
           }}
           caption={t('stock.summary.caption')}
           storageId="stock.summary"
+          cardAvatarIcon={goodsIcon}
           page={{
             page: summary?.page ?? 1,
             pageSize: summary?.pageSize ?? 25,
@@ -366,6 +370,7 @@ export function StockSummaryPageContent(): React.JSX.Element {
                 checked={filters.hideZero}
                 onCheckedChange={(hideZero) => update({ hideZero })}
                 label={t('stock.summary.hideZero')}
+                className="min-h-10 w-auto"
               />
             </UbStack>
           }

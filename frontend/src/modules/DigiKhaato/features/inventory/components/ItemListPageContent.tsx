@@ -5,7 +5,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 
-import { BarChart3, Boxes, PackageMinus, Plus, Tags, TriangleAlert } from 'lucide-react';
+import {
+  BarChart3,
+  Boxes,
+  Package,
+  PackageMinus,
+  Plus,
+  Tags,
+  TriangleAlert,
+  Wrench,
+} from 'lucide-react';
 
 import {
   UbActionLink,
@@ -57,6 +66,15 @@ const StockAdjustmentDrawer = dynamic(
   () => import('./StockAdjustmentDrawer').then((m) => m.StockAdjustmentDrawer),
   { ssr: false }
 );
+
+/** The phone card's disc: what KIND of item this is, not initials — an item
+ *  is not a person (the tag list learned this in PTY-05). */
+const itemIcon = (row: ItemListRow): React.ReactNode =>
+  row.itemType === 'service' ? (
+    <Wrench className="h-4 w-4" aria-hidden />
+  ) : (
+    <Package className="h-4 w-4" aria-hidden />
+  );
 
 /**
  * INV-02 — Items: find anything by name, SKU or scanned barcode, see stock
@@ -301,6 +319,9 @@ export function ItemListPageContent(): React.JSX.Element {
               icon={<Boxes className="h-4 w-4" aria-hidden />}
               label={t('items.list.stat.items')}
               value={String(list.totals.items)}
+              /* The phone fold (CR-130): the count is already on the "All"
+                 tab, and a third tile would sit alone on its own row. */
+              className="max-md:hidden"
             />
             <UbStatCard
               label={t('items.list.stat.value')}
@@ -337,6 +358,7 @@ export function ItemListPageContent(): React.JSX.Element {
             emptyStates={emptyStates}
             caption={t('items.list.caption')}
             storageId="items.list"
+            cardAvatarIcon={itemIcon}
             page={{
               page: list.page,
               pageSize: list.pageSize,
@@ -378,7 +400,7 @@ export function ItemListPageContent(): React.JSX.Element {
                     { value: 'goods', label: t('items.form.type.goods') },
                     { value: 'service', label: t('items.form.type.service') },
                   ]}
-                  className="w-36"
+                  className="w-44"
                 />
                 <UbCombobox
                   aria-label={t('items.list.filter.category')}

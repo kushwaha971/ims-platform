@@ -6,7 +6,6 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { useFieldArray, useForm, useWatch } from 'react-hook-form';
 
 import {
-  UbAmount,
   UbAsyncCombobox,
   UbButton,
   UbDateInput,
@@ -41,6 +40,8 @@ import {
   totalValueImpact,
   valueImpact,
 } from '../view-model/adjustmentMath';
+
+import { SignedAmount } from './SignedAmount';
 
 import type { AdjustmentFormLine, AdjustmentFormValues, ItemListRow } from '../types/item.types';
 
@@ -230,7 +231,7 @@ export function StockAdjustmentDrawer({
         id: 'item',
         header: t('stock.adjust.col.item'),
         field: 'itemId',
-        track: 'minmax(10rem,3fr)',
+        track: 'minmax(10rem,2.4fr)',
         card: 'title',
         render: ({ index, id, label, invalid }) => (
           <ItemCell
@@ -279,7 +280,7 @@ export function StockAdjustmentDrawer({
         id: 'qty',
         header: t('stock.adjust.col.qty'),
         field: 'qty',
-        track: 'minmax(6rem,1.3fr)',
+        track: 'minmax(7rem,1.5fr)',
         align: 'end',
         render: ({ field, id, label, invalid, index }) => {
           const line = lines?.[index];
@@ -307,7 +308,7 @@ export function StockAdjustmentDrawer({
         id: 'unitCost',
         header: t('stock.adjust.col.cost'),
         field: 'unitCost',
-        track: 'minmax(7rem,1.4fr)',
+        track: 'minmax(7.5rem,1.5fr)',
         align: 'end',
         render: ({ field, id, label, invalid, index }) => {
           const line = lines?.[index];
@@ -360,7 +361,12 @@ export function StockAdjustmentDrawer({
           const line = lines?.[index];
           const impact = line?.itemId ? valueImpact(line) : null;
           return impact ? (
-            <UbAmount value={impact} size="sm" tone="neutral" className="leading-10" />
+            <SignedAmount
+              value={impact}
+              size="sm"
+              label={t('stock.adjust.col.value')}
+              className="h-10 justify-center"
+            />
           ) : (
             <UbText as="span" variant="body-sm" tone="tertiary" className="leading-10">
               —
@@ -396,12 +402,12 @@ export function StockAdjustmentDrawer({
       description={t('stock.adjust.subtitle')}
       closeLabel={t('common.action.close')}
       dismissOnBackdrop={!formState.isDirty}
-      className="lg:w-[820px]"
+      className="lg:w-[960px]"
       footer={
         <>
           <UbText variant="body-sm" tone="secondary" className="mr-auto self-center">
             {t('stock.adjust.consequence', { count: filled })}{' '}
-            <UbAmount value={total} size="sm" tone="neutral" />
+            <SignedAmount value={total} size="sm" label={t('stock.adjust.valueImpact')} />
           </UbText>
           <UbButton variant="secondary" onClick={close} disabled={isPosting}>
             {t('common.action.cancel')}
@@ -480,7 +486,7 @@ export function StockAdjustmentDrawer({
             <UbInfoRow
               variant="total"
               label={t('stock.adjust.valueImpact')}
-              value={<UbAmount value={total} tone="neutral" />}
+              value={<SignedAmount value={total} label={t('stock.adjust.valueImpact')} />}
             />
           }
         />

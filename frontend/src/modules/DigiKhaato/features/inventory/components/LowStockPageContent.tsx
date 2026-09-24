@@ -5,6 +5,8 @@ import { useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 
+import { Package } from 'lucide-react';
+
 import {
   UbButton,
   UbEmptyState,
@@ -42,6 +44,9 @@ const StockAdjustmentDrawer = dynamic(
   { ssr: false }
 );
 
+/** The phone card's disc: a package, not initials — an item is not a person. */
+const goodsIcon = (): React.ReactNode => <Package className="h-4 w-4" aria-hidden />;
+
 /** Module-level, so no cell is a component defined during render. */
 const createLowStockColumns = ({
   t,
@@ -59,7 +64,7 @@ const createLowStockColumns = ({
     header: t('items.list.col.item'),
     priority: 1,
     cardSlot: 'title',
-    widthShare: 30,
+    widthShare: 26,
     cell: (row) =>
       tier === 'cards' ? (
         row.item.name
@@ -129,7 +134,7 @@ const createLowStockColumns = ({
           priority: 2 as const,
           align: 'end' as const,
           cardSlot: 'none' as const,
-          widthShare: 12,
+          widthShare: 16,
           cell: (row: LowStockRow) => (
             <UbButton variant="secondary" size="sm" onClick={() => onAdjust(row)}>
               {t('items.detail.adjust')}
@@ -240,6 +245,7 @@ export function LowStockPageContent(): React.JSX.Element {
           }}
           caption={t('stock.low.caption')}
           storageId="stock.low"
+          cardAvatarIcon={goodsIcon}
           page={{
             page: report.low?.page ?? 1,
             pageSize: report.low?.pageSize ?? 25,

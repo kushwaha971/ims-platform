@@ -313,7 +313,14 @@ export function UbLineItemsEditor<TForm extends FieldValues, TName extends Array
       data-layout={layout}
     >
       {layout === 'table' ? (
-        <div role="table" aria-rowcount={fields.length + 1} className="flex flex-col">
+        /* Scrolls sideways rather than clipping when the columns' minimum
+           widths exceed the space — a clipped last column hides the remove
+           button, which is how the first look at INV-06 found it. */
+        <div
+          role="table"
+          aria-rowcount={fields.length + 1}
+          className="flex min-w-0 flex-col overflow-x-auto"
+        >
           <div
             role="row"
             className="ds-body-s-medium grid items-center gap-3 border-b border-border-hairline bg-surface-sunken px-3 py-2 text-text-tertiary"

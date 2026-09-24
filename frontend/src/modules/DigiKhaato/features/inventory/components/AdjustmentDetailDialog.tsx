@@ -3,7 +3,6 @@
 import { useEffect } from 'react';
 
 import {
-  UbAmount,
   UbButton,
   UbDialog,
   UbDivider,
@@ -16,6 +15,7 @@ import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { formatBusinessDate } from 'src/utils/dates';
 import { formatInr } from 'src/utils/money';
+import { formatQuantity } from 'src/utils/quantity';
 
 import {
   adjustmentOpened,
@@ -27,11 +27,14 @@ import {
 import { fetchStockAdjustment } from '../redux/stockThunk';
 import { formatSignedQuantity } from '../view-model/itemDisplay';
 
+import { SignedAmount } from './SignedAmount';
+
 /**
  * INV-06 FR-8/FR-9 — one posted adjustment: number, date, reason, note, who
  * posted it and every line with its before/after. Immutable, so no edit
  * control; "Post opposite adjustment" opens the drawer with every quantity
- * negated and the reason `count`, which is how an adjustment is undone.
+ * negated, which is how an adjustment is undone. The merchant still picks the
+ * reason: why a correction happened is theirs to say, not the screen's.
  */
 export function AdjustmentDetailDialog({
   canAdjust,
@@ -109,8 +112,8 @@ export function AdjustmentDetailDialog({
               <UbText variant="caption" tone="tertiary" className="ds-num">
                 {t('stock.adjust.detail.line', {
                   qty: formatSignedQuantity(line.qty, line.item.unitCode),
-                  before: line.onHandBefore,
-                  after: line.onHandAfter,
+                  before: formatQuantity(line.onHandBefore, line.item.unitCode),
+                  after: formatQuantity(line.onHandAfter, line.item.unitCode),
                   cost: formatInr(line.unitCost ?? '0'),
                 })}
               </UbText>
@@ -120,7 +123,9 @@ export function AdjustmentDetailDialog({
           <UbInfoRow
             variant="total"
             label={t('stock.adjust.valueImpact')}
-            value={<UbAmount value={shown.valueImpactTotal} tone="neutral" />}
+            value={
+              <SignedAmount value={shown.valueImpactTotal} label={t('stock.adjust.valueImpact')} />
+            }
           />
         </UbStack>
       )}
