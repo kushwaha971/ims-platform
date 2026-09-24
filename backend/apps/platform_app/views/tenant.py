@@ -44,11 +44,13 @@ from apps.platform_app.serializers.tenant import (
     TenantCreateSerializer,
     TenantReadSerializer,
     TenantUpdateSerializer,
+    tenant_read_payload,
 )
 from apps.platform_app.services import credentials as credentials_service
 from apps.platform_app.services import memberships as membership_service
 from apps.platform_app.services import onboarding as onboarding_service
 from apps.platform_app.services import sessions as session_service
+from apps.platform_app.services import tenant_settings as settings_service
 
 
 def _meta(request: Any) -> dict:
@@ -70,6 +72,14 @@ def accept_link(raw_token: str) -> str:
     """
     base = (settings.UB_PUBLIC_BASE_URL or "").rstrip("/")
     return f"{base}/accept-invite/{raw_token}"
+
+
+def _sees_pii(tenant: Any) -> bool:
+    """PLT-07 §12: the bank account number and PAN, unmasked, to owner/admin only."""
+    from apps.platform_app.permissions import may_edit_settings
+
+    membership = getattr(tenant, "_ub_membership", None)
+    return membership is not None and may_edit_settings(membership)
 
 
 def _tenant_or_refuse(request: Any) -> Any:
@@ -231,7 +241,7 @@ class TenantCurrentView(APIView):
         tenant = get_effective_tenant(request)
         if tenant is None:
             raise NoActiveTenant()
-        return StandardResponse.ok(TenantReadSerializer(tenant).data)
+        return StandardResponse.ok(tenant_read_payload(tenant, unmasked=_sees_pii(tenant)))
 
     def patch(self, request: Any) -> Any:
         tenant = get_effective_tenant(request)
@@ -240,16 +250,30 @@ class TenantCurrentView(APIView):
         serializer = TenantUpdateSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         meta = _meta(request)
+        changes = dict(serializer.validated_data)
+        modules = changes.pop("enabled_modules", None)
 
-        tenant, warnings = onboarding_service.update_tenant(
-            tenant=tenant,
-            actor=request.user,
-            changes=dict(serializer.validated_data),
-            request_id=meta["request_id"],
-            ip=meta["ip"],
-            user_agent=meta["user_agent"],
+        warnings: list = []
+        # PLT-06 FR-4: the module switches have their own rules and their own
+        # audit event, so they go to their own service. A request carrying only
+        # `enabled_modules` never touches the profile (and never re-runs its GST
+        # validation against a half-filled wizard).
+        if modules is not None:
+            tenant = settings_service.update_enabled_modules(
+                tenant=tenant, modules=modules, ctx=Ctx.from_request(request)
+            )
+        if changes:
+            tenant, warnings = onboarding_service.update_tenant(
+                tenant=tenant,
+                actor=request.user,
+                changes=changes,
+                request_id=meta["request_id"],
+                ip=meta["ip"],
+                user_agent=meta["user_agent"],
+            )
+        return StandardResponse.ok(
+            tenant_read_payload(tenant, unmasked=_sees_pii(tenant)), meta={"warnings": warnings}
         )
-        return StandardResponse.ok(TenantReadSerializer(tenant).data, meta={"warnings": warnings})
 
 
 class MembershipDetailView(APIView):

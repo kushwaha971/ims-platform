@@ -35,11 +35,7 @@ from django.utils.translation import gettext_lazy as _
 
 from apps.common.exceptions import BusinessRuleViolation
 from apps.common.storage import tenant_media_path
-from apps.files.constants import (
-    BRANDING_IMAGE_MAX_BYTES,
-    BRANDING_IMAGE_MIN_PX,
-    MAX_WIDTH_BY_KIND,
-)
+from apps.files.constants import BRANDING_IMAGE_MAX_BYTES, BRANDING_IMAGE_MIN_PX, MAX_WIDTH_BY_KIND
 
 #: A decoded-size ceiling. A 2 MB PNG can decompress to gigabytes of pixels (a
 #: "decompression bomb"); the byte limit alone does not stop that.

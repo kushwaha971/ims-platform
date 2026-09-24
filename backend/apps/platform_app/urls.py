@@ -18,6 +18,14 @@ from __future__ import annotations
 
 from django.urls import path
 
+from apps.platform_app.views.settings import (
+    AuditActorsView,
+    AuditLogListView,
+    MemberRevokeSessionsView,
+    TenantBrandingView,
+    TenantSettingsDefaultsView,
+    TenantSettingsView,
+)
 from apps.platform_app.views.tenant import (
     InvitationAcceptView,
     InvitationDetailView,
@@ -34,6 +42,21 @@ urlpatterns = [
     path("tenants", TenantCreateView.as_view(), name="tenant-create"),
     path("tenants/current", TenantCurrentView.as_view(), name="tenant-current"),
     path("tenants/resumable", TenantResumableView.as_view(), name="tenant-resumable"),
+    # PLT-06, WLB-01, PLT-08, PLT-09 (Track T1).
+    path("tenants/current/settings", TenantSettingsView.as_view(), name="tenant-settings"),
+    path(
+        "tenants/current/settings/defaults",
+        TenantSettingsDefaultsView.as_view(),
+        name="tenant-settings-defaults",
+    ),
+    path("tenants/current/branding", TenantBrandingView.as_view(), name="tenant-branding"),
+    path("audit-logs", AuditLogListView.as_view(), name="audit-log-list"),
+    path("audit-logs/actors", AuditActorsView.as_view(), name="audit-log-actors"),
+    path(
+        "memberships/<uuid:membership_id>/revoke-sessions",
+        MemberRevokeSessionsView.as_view(),
+        name="membership-revoke-sessions",
+    ),
     path(
         "memberships/<uuid:membership_id>",
         MembershipDetailView.as_view(),

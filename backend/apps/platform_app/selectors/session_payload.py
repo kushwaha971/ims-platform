@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Any
 
 from apps.common.permissions_registry import permissions_for
+from apps.platform_app import branding as branding_rules
 from apps.platform_app.selectors.memberships import live_sessions_of, memberships_of
 
 
@@ -95,7 +96,13 @@ def active_tenant_block(tenant: Any) -> dict:
         "status": tenant.status,
         "onboarding_step": tenant.onboarding_step,
         "enabled_modules": sorted(effective_modules(tenant)),
-        "branding": tenant.branding or {},
+        # WLB-01 FR-2/FR-4: the RESOLVED branding (tenant → partner → default),
+        # which is what the theme and the header render. Zero extra queries —
+        # the partner rides on the membership's `select_related`.
+        "branding": branding_rules.resolve(tenant),
+        # WLB-02 FR-5: the client shows a read-only banner with the partner's
+        # support contact; the server refuses the writes.
+        "partner_suspended": tenant.partner.status == "suspended",
     }
 
 

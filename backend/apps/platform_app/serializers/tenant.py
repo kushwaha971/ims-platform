@@ -57,6 +57,46 @@ class AddressSerializer(serializers.Serializer):
     )
 
 
+UPI_VPA_RE = r"^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$"
+IFSC_RE = r"^[A-Z]{4}0[A-Z0-9]{6}$"
+ACCOUNT_NUMBER_RE = r"^\d{9,18}$"
+
+
+class BankDetailsSerializer(serializers.Serializer):
+    """`platform_tenant.bank_details` (PLT-07 FR-1, FR-6, §10) — a closed jsonb shape.
+
+    Blank and `null` both mean "not given", as on the address. The IFSC is
+    upper-cased before it is matched (EC-1's rule for the GSTIN applies to it
+    for the same reason: a phone keyboard offers lower case first).
+    """
+
+    account_name = serializers.CharField(
+        max_length=120, required=False, allow_blank=True, allow_null=True
+    )
+    account_number = serializers.RegexField(
+        ACCOUNT_NUMBER_RE,
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        error_messages={"invalid": "Enter 9–18 digits"},
+    )
+    ifsc = serializers.CharField(max_length=11, required=False, allow_blank=True, allow_null=True)
+    bank_name = serializers.CharField(
+        max_length=80, required=False, allow_blank=True, allow_null=True
+    )
+    branch = serializers.CharField(max_length=80, required=False, allow_blank=True, allow_null=True)
+
+    def validate_ifsc(self, value: str | None) -> str | None:
+        import re
+
+        if value in (None, ""):
+            return value
+        value = value.strip().upper()
+        if not re.match(IFSC_RE, value):
+            raise serializers.ValidationError("Enter a valid IFSC")
+        return value
+
+
 class TenantCreateSerializer(serializers.Serializer):
     """Step 1 — `POST /tenants` (FR-2, §10)."""
 
@@ -93,6 +133,22 @@ class TenantUpdateSerializer(serializers.Serializer):
     email = serializers.EmailField(required=False, allow_blank=True, allow_null=True)
     locale = serializers.ChoiceField(choices=["en", "hi"], required=False)
     onboarding_step = serializers.IntegerField(min_value=0, max_value=4, required=False)
+    # PLT-07 FR-1 — the rest of Part 22 §22.3's surface.
+    bank_details = BankDetailsSerializer(required=False, allow_null=True)
+    upi_vpa = serializers.RegexField(
+        UPI_VPA_RE,
+        max_length=80,
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        error_messages={"invalid": "Enter a valid UPI ID like name@bank"},
+    )
+    # PLT-06 FR-4 — handled by `tenant_settings.update_enabled_modules`, not by
+    # the profile update, because its rules (plan, data guards) and its audit
+    # event are different.
+    enabled_modules = serializers.ListField(
+        child=serializers.CharField(max_length=32), required=False
+    )
 
     def validate_phone(self, value: str | None) -> str:
         if value in (None, ""):
@@ -119,7 +175,12 @@ class TenantUpdateSerializer(serializers.Serializer):
         if "address" in attrs:
             address = attrs["address"] or {}
             attrs["address"] = {k: v for k, v in address.items() if v not in (None, "")}
-        for optional in ("legal_name", "email", "gstin", "pan"):
+        if "bank_details" in attrs:
+            bank = attrs["bank_details"] or {}
+            attrs["bank_details"] = {k: v for k, v in bank.items() if v not in (None, "")}
+        if "upi_vpa" in attrs and attrs["upi_vpa"] not in (None, ""):
+            attrs["upi_vpa"] = attrs["upi_vpa"].strip()
+        for optional in ("legal_name", "email", "gstin", "pan", "upi_vpa"):
             if attrs.get(optional) in ("", None) and optional in attrs:
                 attrs[optional] = None
         return attrs
@@ -156,6 +217,40 @@ class TenantReadSerializer(serializers.ModelSerializer):
             "updated_at",
         )
         read_only_fields = fields
+
+
+def mask_account_number(number: str | None) -> str | None:
+    """`••••1234` — PLT-07 §5 and §16: the last four digits and nothing else."""
+    if not number:
+        return number
+    return "••••" + str(number)[-4:]
+
+
+def masked_bank_details(bank: dict | None) -> dict:
+    bank = dict(bank or {})
+    if bank.get("account_number"):
+        bank["account_number"] = mask_account_number(bank["account_number"])
+    return bank
+
+
+def tenant_read_payload(tenant: Any, *, unmasked: bool) -> dict:
+    """`GET /tenants/current` with PLT-07 §12's masking applied.
+
+    The bank account number is unmasked only to owner/admin; everyone else who
+    may read the profile sees `••••1234`. PAN is masked the same way (§19:
+    "Bank details and PAN are PII: masked in reads for accountants").
+    `branding` is the RESOLVED branding (WLB-01 FR-2), not the raw jsonb.
+    """
+    from apps.platform_app import branding as branding_rules
+
+    data = dict(TenantReadSerializer(tenant).data)
+    data["branding"] = branding_rules.resolve(tenant)
+    data["bank_details_masked"] = not unmasked
+    if not unmasked:
+        data["bank_details"] = masked_bank_details(tenant.bank_details)
+        if data.get("pan"):
+            data["pan"] = "••••••" + data["pan"][-4:]
+    return data
 
 
 class MembershipReadSerializer(serializers.Serializer):
