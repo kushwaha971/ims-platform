@@ -3,10 +3,23 @@
 A handler is registered with `@job_handler`, takes `(job, ctx)`, returns a
 small JSON-serialisable dict or None, is idempotent, and calls services
 rather than reimplementing them.
-
-Sprint 0 creates the package so the app label, the table prefix and the
-import matrix of Part 20 §20.1.4 are reserved. The models, services and
-views land in the sprint that owns the feature.
 """
 
 from __future__ import annotations
+
+from typing import Any
+
+from apps.common.jobs import job_handler
+
+
+@job_handler("platform.purge_notifications", requires_tenant=False, max_attempts=3)
+def purge_notifications(job: Any, ctx: Any) -> dict:
+    """NTF-01 FR-10 — the weekly sweep `SCHEDULES` already names; 180 days and gone.
+
+    A second run in the same week deletes nothing, because the first deleted
+    everything past the cutoff — which is the double-run proof Part 12 §12.8
+    asks of every recurring job.
+    """
+    from apps.notifications.services.notify import purge_old
+
+    return {"deleted": purge_old()}

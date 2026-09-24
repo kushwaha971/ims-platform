@@ -36,6 +36,9 @@ KNOWN_UB_VARIABLES: frozenset[str] = frozenset(
         "UB_VERIFY_TOKEN_TTL_SECONDS",
         "UB_SMS_BACKEND",
         "UB_SMS_SENDER_ID",
+        # Per-worktree test database (scripts/worktree-bootstrap.sh), read by
+        # config/settings/test.py so parallel tracks never share one.
+        "UB_TEST_DB_NAME",
         "UB_WHATSAPP_BACKEND",
         "UB_EMAIL_BACKEND",
         "UB_EMAIL_ADAPTER",
