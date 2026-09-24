@@ -1,10 +1,12 @@
-"""URL routes for the tax app (canon §0.8).
-
-Sprint 0 creates the package so the app label, the table prefix and the
-import matrix of Part 20 §20.1.4 are reserved. The models, services and
-views land in the sprint that owns the feature.
-"""
+"""Tax routes (canon §0.8, Part 22 §22.12)."""
 
 from __future__ import annotations
 
-urlpatterns: list = []
+from django.urls import path
+
+from apps.tax.views.rates import HsnSearchView, TaxRateListView
+
+urlpatterns = [
+    path("taxes/rates", TaxRateListView.as_view(), name="tax-rates"),
+    path("taxes/hsn", HsnSearchView.as_view(), name="tax-hsn"),
+]

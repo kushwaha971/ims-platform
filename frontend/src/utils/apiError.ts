@@ -176,6 +176,9 @@ const LOCALLY_PRESENTED: ReadonlySet<ApiErrorCode> = new Set<ApiErrorCode>([
   // credit limit, the stock on hand, the version that moved.
   'credit_limit_exceeded',
   'insufficient_stock',
+  // INV-01 — both are drawn under the SKU / Barcode field that caused them.
+  'duplicate_sku',
+  'barcode_exists',
   'stale_version',
   'document_not_draft',
   'idempotency_conflict',

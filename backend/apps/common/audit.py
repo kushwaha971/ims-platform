@@ -114,6 +114,15 @@ class AuditAction:
     PARTNER_UPDATED = "admin.partner_updated"
     PARTNER_SUSPENDED = "admin.partner_suspended"
     PARTNER_REACTIVATED = "admin.partner_reactivated"
+    # ── Sprint 6: INV-01 … INV-06 (17-03 §16) ──────────────────────────────
+    ITEM_CREATED = "item.created"
+    ITEM_UPDATED = "item.updated"
+    ITEM_ARCHIVED = "item.archived"
+    ITEM_RESTORED = "item.restored"
+    CATEGORY_CREATED = "category.created"
+    UNIT_CREATED = "unit.created"
+    STOCK_OPENING_POSTED = "stock.opening_posted"
+    STOCK_ADJUSTMENT_POSTED = "stock.adjustment_posted"
     JOB_REQUEUED = "job.requeued"
     REFERENCE_DATA_SEEDED = "platform.reference_data_seeded"
 

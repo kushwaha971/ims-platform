@@ -47,6 +47,13 @@ export const ROUTES = {
   /** LED-09 — receivable and payable aging. */
   LEDGER_AGING: '/ledger/aging',
   ITEMS: '/items',
+  /** INV-04 — categories and units. A sibling of the list, as `/parties/tags`
+   *  is of parties: the masters are part of keeping the catalogue, not a
+   *  settings chore (and `/settings` is not built). */
+  ITEM_MASTERS: '/items/masters',
+  /** INV-08 / INV-07. */
+  STOCK_SUMMARY: '/stock/summary',
+  STOCK_LOW: '/stock/low',
   SALES_INVOICES: '/sales/invoices',
   PURCHASE_BILLS: '/purchases/bills',
   PAYMENTS: '/payments',
@@ -224,3 +231,6 @@ export const isPublicPath = (pathname: string): boolean =>
 export const RETIRED_ROUTES: Readonly<Record<string, string>> = {
   '/otp': ROUTES.LOGIN,
 };
+
+/** INV-03's item page — `/items/{id}`, one encoded segment, like `partyPath`. */
+export const itemPath = (id: string): string => `${ROUTES.ITEMS}/${encodeURIComponent(id)}`;

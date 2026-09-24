@@ -123,6 +123,8 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
   },
   {
     key: 'items',
+    // INV-01…INV-08 — items, adjustments, the stock summary and low stock.
+    ready: true,
     icon: Boxes,
     labelId: 'nav.items',
     href: ROUTES.ITEMS,

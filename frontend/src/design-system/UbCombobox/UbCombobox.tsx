@@ -2,7 +2,7 @@
 
 import { forwardRef, memo, useCallback, useState } from 'react';
 
-import { Check, ChevronDown } from 'lucide-react';
+import { Check, ChevronDown, Plus } from 'lucide-react';
 
 import {
   MLCommand,
@@ -59,6 +59,13 @@ export interface UbComboboxProps {
   readonly 'aria-required'?: boolean;
   readonly 'aria-describedby'?: string;
   readonly onBlur?: () => void;
+  /**
+   * INV-04 FR-5 — "+ Create '<typed text>'" as the last row. The caller posts
+   * the master and selects the new row itself; the confirmation is the
+   * selection (no toast). Omitted, the combobox is select-only as before.
+   */
+  readonly onCreate?: (text: string) => void;
+  readonly createLabel?: (text: string) => string;
 }
 
 const UbComboboxInner = forwardRef<HTMLButtonElement, UbComboboxProps>(function UbComboboxInner(
@@ -74,11 +81,17 @@ const UbComboboxInner = forwardRef<HTMLButtonElement, UbComboboxProps>(function 
     className,
     id,
     onBlur,
+    onCreate,
+    createLabel,
     ...aria
   },
   ref
 ) {
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const typed = search.trim();
+  const exact = options.some((option) => option.label.toLowerCase() === typed.toLowerCase());
+  const showCreate = Boolean(onCreate && createLabel && typed && !exact);
   const selected = options.find((option) => option.value === value);
 
   const handleSelect = useCallback(
@@ -166,7 +179,12 @@ const UbComboboxInner = forwardRef<HTMLButtonElement, UbComboboxProps>(function 
         className="w-[var(--radix-popover-trigger-width)] border-border-subtle bg-surface-card p-0"
       >
         <MLCommand>
-          <MLCommandInput placeholder={searchPlaceholder} className="ds-body-base-regular h-10" />
+          <MLCommandInput
+            value={search}
+            onValueChange={setSearch}
+            placeholder={searchPlaceholder}
+            className="ds-body-base-regular h-10"
+          />
           <MLCommandList className="max-h-[min(18rem,55dvh)]">
             <MLCommandEmpty className="ds-body-sm px-3 py-6 text-center text-text-tertiary">
               {emptyLabel}
@@ -190,6 +208,20 @@ const UbComboboxInner = forwardRef<HTMLButtonElement, UbComboboxProps>(function 
                   <span className="truncate">{option.label}</span>
                 </MLCommandItem>
               ))}
+              {showCreate && (
+                <MLCommandItem
+                  value={`__create__ ${typed}`}
+                  onSelect={() => {
+                    onCreate?.(typed);
+                    setSearch('');
+                    setOpen(false);
+                  }}
+                  className="ds-body gap-2 text-accent"
+                >
+                  <Plus aria-hidden className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{createLabel?.(typed)}</span>
+                </MLCommandItem>
+              )}
             </MLCommandGroup>
           </MLCommandList>
         </MLCommand>

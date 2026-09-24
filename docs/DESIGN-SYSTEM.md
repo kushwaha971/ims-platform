@@ -28,16 +28,16 @@ PR:
 Use the BrandHub class names directly in new code. They live in
 `src/design-system/typographyPlugin.js`.
 
-| Use | Class |
-|---|---|
-| Page title | `ds-body-xl-semibold` (via `UbPageHeader`) |
-| Page description | `ds-body-base-regular`, tertiary |
-| Section heading ("Transactions") | `ds-body-base-medium` (via `UbSectionHeading`) |
-| Card or panel title | `ds-body-base-medium` (via `UbPanelSection`) |
-| Body text, table cells, inputs | `ds-body-base-regular` |
-| Meta, captions, chips, labels in rows | `ds-body-s-regular` / `ds-body-s-medium` |
-| Sidebar rows / captions | `ds-nav-label-*` / `ds-nav-caption-*` (fixed 12 / 10 px) |
-| Money and numbers | `ds-num-*` (Inter), or `UbAmount` |
+| Use                                   | Class                                                    |
+| ------------------------------------- | -------------------------------------------------------- |
+| Page title                            | `ds-body-xl-semibold` (via `UbPageHeader`)               |
+| Page description                      | `ds-body-base-regular`, tertiary                         |
+| Section heading ("Transactions")      | `ds-body-base-medium` (via `UbSectionHeading`)           |
+| Card or panel title                   | `ds-body-base-medium` (via `UbPanelSection`)             |
+| Body text, table cells, inputs        | `ds-body-base-regular`                                   |
+| Meta, captions, chips, labels in rows | `ds-body-s-regular` / `ds-body-s-medium`                 |
+| Sidebar rows / captions               | `ds-nav-label-*` / `ds-nav-caption-*` (fixed 12 / 10 px) |
+| Money and numbers                     | `ds-num-*` (Inter), or `UbAmount`                        |
 
 Fonts are local files in `src/fonts` (SIL OFL): DM Sans for text, Inter for
 figures and for the rupee sign everywhere, Noto Sans Devanagari for Hindi,
@@ -45,16 +45,16 @@ Fraunces and Epilogue for the sign-in hero only. There is no font CDN.
 
 ## 3. Measurements
 
-| Thing | Value |
-|---|---|
+| Thing                                   | Value                                                                |
+| --------------------------------------- | -------------------------------------------------------------------- |
 | Every input, select, search, date field | 40 px (`h-10`), 8 px radius, `#E6E6E6` hairline, ink border on focus |
-| Buttons | `md` 40 px, `sm` 28 px, `lg` 44 px, 14 px medium text |
-| Filter chips | 32 px pills |
-| Cards and panels | 12 px radius, hairline border, 16 px padding |
-| Stat tiles | `UbStatCard` in `UbStatGrid`: up to five across, filling the row |
-| Table header | 48 px, `#FAFAFA`, 12 px medium; rows 14 px regular |
-| Page insets | 24 px sides on desktop, 16 px on phone |
-| Field spacing | label 4 px above the control; 24 px between fields |
+| Buttons                                 | `md` 40 px, `sm` 28 px, `lg` 44 px, 14 px medium text                |
+| Filter chips                            | 32 px pills                                                          |
+| Cards and panels                        | 12 px radius, hairline border, 16 px padding                         |
+| Stat tiles                              | `UbStatCard` in `UbStatGrid`: up to five across, filling the row     |
+| Table header                            | 48 px, `#FAFAFA`, 12 px medium; rows 14 px regular                   |
+| Page insets                             | 24 px sides on desktop, 16 px on phone                               |
+| Field spacing                           | label 4 px above the control; 24 px between fields                   |
 
 ### Page header and actions (owner, 23 Sep 2026)
 
@@ -106,6 +106,11 @@ the render props.
 | Status pill | `UbStatusBadge` |
 | Money | `UbAmount` |
 | Party picker source | `usePartySearch` (never a second debounced party fetch) |
+| Item picker source | `useItemSearch` from `features/inventory` (`{ trackedOnly }` for stock screens; `lookup(code)` for a scan) — never a second debounced item fetch |
+| A server-backed picker (search as you type, "Create …" row, scanner Enter) | `UbAsyncCombobox` (`shouldFilter={false}`; the caller owns the query). A fixed list stays `UbCombobox`, which now also takes `onCreate` |
+| A quantity with its unit | `UbQuantityInput` (`decimals` = `unit.allow_decimal ? 3 : 0`, `signed` for "Adjust by"; the value stays a string) |
+| Editable document lines — invoice, purchase, adjustment | `UbLineItemsEditor` (caller owns `useFieldArray({ keyName: 'key' })`; one `Controller` per cell; Enter/↑↓/Alt+N/Alt+Backspace/Ctrl+Enter; cards below `md`). Follows the BrandHub table row + mobile card form; INV-06 is the first caller |
+| A USB/Bluetooth barcode scanner outside a text field | `useScannerListener` in `src/hooks` |
 | Toasts | dispatch to the snackbar; it renders top-centre |
 | A failure's request id | `UbRequestId` — "Reference 3f2b…", label from `common.error.reference`; `UbEmptyState` / `UbSnackbar` / `UbDataGrid` error copy take `requestId` + `requestIdLabel` (the type requires the label with the id); a banner's text uses `formatRequestReference` |
 | A phone number on screen | `formatPhoneForDisplay` ("+91 98123 45678"); `tel:` hrefs and Copy use `toDialableNumber` ("+919812345678"), both in `src/utils/share.ts` |
@@ -182,12 +187,12 @@ There is no third source, and lint enforces it (Sprint 3 §32.6.7 — "party
 search becomes four different implementations in four features"). Outside
 those two hooks and the modules behind them, `npm run lint` fails on:
 
-| Spelling | Rule |
-|---|---|
+| Spelling                                                                                           | Rule                    |
+| -------------------------------------------------------------------------------------------------- | ----------------------- |
 | `import { listParties } from '…/parties/api/partyService'` (also `import *` of it, and re-exports) | `no-restricted-imports` |
-| `import { fetchPartyList } from '…/parties/redux/partyListThunk'` | `no-restricted-imports` |
-| `partyService.listParties(…)`, `x.fetchPartyList` | `no-restricted-syntax` |
-| `API_PATHS.PARTIES` — hand-rolling `GET /parties?q=` in another service | `no-restricted-syntax` |
+| `import { fetchPartyList } from '…/parties/redux/partyListThunk'`                                  | `no-restricted-imports` |
+| `partyService.listParties(…)`, `x.fetchPartyList`                                                  | `no-restricted-syntax`  |
+| `API_PATHS.PARTIES` — hand-rolling `GET /parties?q=` in another service                            | `no-restricted-syntax`  |
 
 Everything else in `partyService` (`getParty`, `createParty`, types) and the
 per-party paths (`API_PATHS.PARTY(id)`, `PARTY_TAGS`, …) stay importable:

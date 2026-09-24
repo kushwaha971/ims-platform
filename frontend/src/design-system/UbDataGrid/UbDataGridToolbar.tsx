@@ -89,9 +89,14 @@ function UbDataGridToolbarBase({
           is what it did: the status filter sat on line one and the Columns
           button hung underneath it, half outside the card. A group of two small
           controls does not wrap; the flexible field next to it gives way
-          instead, which is what `flex-1` is for. */}
+          instead, which is what `flex-1` is for.
+          `max-w-full flex-wrap` is the one exception, and it only ever fires
+          when the group is WIDER THAN THE CARD — three filters on a 360 px
+          phone, where the Columns button is not drawn at all. Without it the
+          group kept its one-line width and the last filter was painted
+          outside the card, unreachable (INV-02, found by the T3 look sweep). */}
       {(filters || columns) && (
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex max-w-full shrink-0 flex-wrap items-center gap-2">
           {filters}
           {columns}
         </div>

@@ -88,6 +88,18 @@ export type ApiErrorCode =
   | 'branding_locked'
   | 'current_session'
   | 'partner_suspended'
+  // INV-01…INV-06 — registry codes the item master and stock posts mint.
+  | 'duplicate_sku'
+  | 'barcode_exists'
+  | 'sku_generation_failed'
+  | 'stock_nonzero'
+  | 'item_archived'
+  | 'item_has_movements'
+  | 'item_type_locked'
+  | 'opening_stock_required'
+  | 'opening_exists'
+  | 'unit_locked'
+  | 'track_stock_not_allowed'
   // transport-level codes minted on the client, never sent by the server:
   | 'network_error'
   | 'timeout'

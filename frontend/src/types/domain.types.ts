@@ -64,6 +64,13 @@ export const PERMISSION_CODES = [
    */
   'ledger.statement.export',
   'inventory.item.read',
+  /* INV-01…INV-08 §12 — the item master, archive, stock reads and adjustments.
+     `inventory.stock.adjust` is off for staff unless granted by override. */
+  'inventory.item.write',
+  'inventory.item.delete',
+  'inventory.stock.read',
+  'inventory.stock.adjust',
+  'reports.financial.read',
   'sales.invoice.read',
   'purchases.bill.read',
   'payments.payment.read',

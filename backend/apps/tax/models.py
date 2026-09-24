@@ -8,7 +8,9 @@ custom cess share one table (Part 21 §21.9). Rate lookup is always by
 
 from __future__ import annotations
 
+from django.contrib.postgres.indexes import GinIndex, OpClass
 from django.db import models
+from django.db.models.functions import Upper
 
 from apps.common.db.fields import RateField, uuid7_pk
 from apps.common.models import TimeStampedModel
@@ -66,6 +68,15 @@ class HsnCode(TimeStampedModel):
         db_table = "tax_hsn"
         verbose_name = "HSN code"
         verbose_name_plural = "HSN codes"
+        indexes = [
+            # INV-01 FR-4 / NFR "results ≤ 200 ms server-side (trigram index)".
+            # On `UPPER(description)` because `icontains` compiles to UPPER(…)
+            # LIKE UPPER(…) — the bare-column index could never be used.
+            GinIndex(
+                OpClass(Upper("description"), name="gin_trgm_ops"),
+                name="ix_tax_hsn_description_trgm",
+            ),
+        ]
 
     def __str__(self) -> str:
         return self.code

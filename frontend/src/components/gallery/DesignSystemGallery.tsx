@@ -2,6 +2,8 @@
 
 import { useCallback, useState } from 'react';
 
+import dynamic from 'next/dynamic';
+
 import {
   UbAmount,
   UbAvatar,
@@ -32,6 +34,13 @@ import { useTranslation } from 'src/hooks/useTranslation';
 import { DesignSystemChartsGallery } from './DesignSystemChartsGallery';
 import { DesignSystemWave1Gallery } from './DesignSystemWave1Gallery';
 import { DesignSystemWave3Gallery } from './DesignSystemWave3Gallery';
+
+/* The line-items section carries react-hook-form and cmdk; lazy, so the rest
+   of the gallery does not wait for (or pay for) a form library it never uses. */
+const DesignSystemLineItemsGallery = dynamic(
+  () => import('./DesignSystemLineItemsGallery').then((m) => m.DesignSystemLineItemsGallery),
+  { ssr: false }
+);
 
 /**
  * Part 23 §23.4 — the live gallery. Storybook is not a dependency (ADR-021), so
@@ -183,8 +192,8 @@ export function DesignSystemGallery(): React.JSX.Element {
             <UbStack gap={2} className="p-4">
               <UbText variant="body-medium">Anchored panel</UbText>
               <UbText variant="body-sm" tone="secondary">
-                The frame is fixed and the body scrolls, with the page behind it held
-                still — `overscroll-contain`.
+                The frame is fixed and the body scrolls, with the page behind it held still —
+                `overscroll-contain`.
               </UbText>
             </UbStack>
           </UbPopover>
@@ -214,6 +223,11 @@ export function DesignSystemGallery(): React.JSX.Element {
           Wave 3 — Sprint 3
         </UbText>
         <DesignSystemWave3Gallery />
+
+        <UbText as="h2" variant="h3" className="mt-4">
+          Line items — Sprint 4
+        </UbText>
+        <DesignSystemLineItemsGallery />
 
         <DesignSystemChartsGallery />
 

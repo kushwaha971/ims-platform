@@ -6,6 +6,12 @@ import { store } from 'src/redux/store';
 
 import 'modules/DigiKhaato/features/branding/redux/brandingSlice';
 import 'modules/DigiKhaato/features/business-profile/redux/businessProfileSlice';
+import 'modules/DigiKhaato/features/inventory/redux/inventoryMastersSlice';
+import 'modules/DigiKhaato/features/inventory/redux/itemDetailSlice';
+import 'modules/DigiKhaato/features/inventory/redux/itemFormSlice';
+import 'modules/DigiKhaato/features/inventory/redux/itemListSlice';
+import 'modules/DigiKhaato/features/inventory/redux/stockAdjustmentSlice';
+import 'modules/DigiKhaato/features/inventory/redux/stockSummarySlice';
 import 'modules/DigiKhaato/features/ledger/redux/agingSlice';
 import 'modules/DigiKhaato/features/ledger/redux/statementSlice';
 import 'modules/DigiKhaato/features/sessions/redux/sessionsSlice';

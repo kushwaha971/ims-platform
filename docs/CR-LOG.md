@@ -573,3 +573,60 @@ lightness steps). Partner logo upload (WLB-02) is not built: it needs `files_att
 rows with no tenant, which is Part 43 CR-018 / C2 and still undecided.
 
 Requested against Part 17-01 WLB-01 §8 and WLB-02 FR-3.
+---
+
+## CR-2026-09-24-INV-A — the stock log is ordered by ARRIVAL, one order for cache, rows and replay
+
+**State:** `raised` (built; needs the schema owner's acceptance). **Target:** Part 21 §21.3.6
+"The weighted-average costing rule" (1), (3), (4), (6), (7) and the `inventory_item_stock` /
+`inventory_stock_movement` column lists (T-08); Part 17-03 §17.6.0 "Order is part of the rule"
+and "Backdating and recomputation", INV-03 BR-4/§20, INV-06 BR-9/T-INV-06-3a, INV-07 EC-4,
+INV-08 FR-2/BR-3; Part 20 §20.6.2. Resolves Part 41 BE-01 and Part 42's resolution of it.
+**Gate:** before PUR-01 (the next writer of `post_movements`).
+
+**The defect.** Part 41 BE-01: the incremental average was maintained in arrival order while
+the replay ran in `(movement_date, created_at, id)` order, so the two diverged permanently on
+the first backdated inbound. The corpus then resolved it the other way round — canonical
+order `(movement_date, sequence_no)`, a backdated insert writes NULL running columns, marks
+the cache `stale` and enqueues `inventory.recompute_item_cost`, which UPDATEs every later
+row. That design has three problems for this build: the trigger must permit UPDATEs of the
+running columns (the only immutable table in the product with a permitted rewrite of history
+by a background job); a plain outbound's `unit_cost` snapshot (COGS, "frozen at issue") is
+an immutable fact that the recompute cannot change, so after a backdated purchase the row's
+COGS and the recomputed average at that row disagree anyway; and every valuation surface
+needs a "recalculating" state and the drift job a stale-exclusion.
+
+**Decision.** ONE order: `sequence_no`, the gap-free per-`(item, location)` arrival counter
+already specified, allocated from `inventory_item_stock.last_sequence_no` under the stock-row
+lock. The incremental step, every row's `avg_cost_after` / `on_hand_after` (NOT NULL, written
+once), and `recalc_stock`'s replay all fold the same costing function over that order, so the
+cache equals the replay by construction — a backdated movement is simply the next arrival.
+Consequences, all built:
+
+- No `cost_state`, no `cost_stale_since`, no `inventory.recompute_item_cost` job.
+- `forbid_update_delete` on `inventory_stock_movement` refuses EVERY update and delete
+  (its own function name — `ledger` 0002 already owns `forbid_update_delete()`).
+- A void (PUR-04/SAL-05) posts reversal rows through the §21.3.6 (2) value-reversal cases,
+  which are implemented in `costing.apply_weighted_average`; no unconditional recompute.
+- `inventory_item_stock.max_movement_date` (new column) lets a row be labelled
+  `is_backdated` on the wire (INV-03 "Backdated" badge) without any recomputation.
+- Movement history lists newest ARRIVAL first (`sequence_no DESC`), cursor on `sequence_no`,
+  so the running figures read consistently down the page; the date filter still filters by
+  `movement_date`.
+- INV-08 `as_of`: on-hand = `SUM(qty) WHERE movement_date ≤ as_of` (exact under any arrival
+  order); average = `avg_cost_after` of the latest-ARRIVED movement dated ≤ `as_of`.
+
+**The trade, stated plainly.** A backdated purchase changes the average from the moment it is
+ENTERED onward, not retroactively for sales dated after it but entered before it. Those sales
+keep the COGS they were issued at — which is what "COGS frozen at issue" already promised.
+For a historical `as_of` inside a backdated window the average may include a cost that arrived
+later but is dated after `as_of`; quantities are always exact. Tests:
+`test_a_backdated_inbound_between_two_outbounds_matches_the_replay` (the BE-01 fixture) and a
+10,000-movement fuzzed book with random backdates, reversals and negatives at zero drift.
+
+**Also in this change (INV-07).** FR-4's "compare against MAX(created_at) above the reorder
+point" query is replaced by the stored crossing state Part 32 §32.9.4 asks for:
+`inventory_item_stock.alert_level` ∈ `ok|low|out`, plus `inventory_low_stock_alert` (one row
+per crossing). A notification is a transition to a WORSE level; a recovery re-arms silently.
+Delivery goes through `register_low_stock_sink()` — the notifications track wires its inbox in
+from its own `AppConfig.ready()`, so `inventory` never imports `notifications`.
