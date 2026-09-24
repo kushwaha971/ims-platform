@@ -385,4 +385,31 @@ export const INVALIDATION: TInvalidationMap = {
   // a `patch` this slice does not perform would be worse than no entry at all,
   // because the next reader would stop looking for the refetch.
   bulkTagPartiesThunk: { refetch: ['partyList'], stale: ['partyTag'] },
+
+  // INV-01 / INV-02 — the saved item is the response, so the detail slice
+  // writes it straight in (a real patch, performed in `itemDetailSlice`). The
+  // list refetches because a save can move a row between stock tabs; the
+  // summary is marked stale for its next mount, as the statement is for a
+  // ledger write.
+  saveItem: {
+    patch: [['itemDetail', 'item']],
+    refetch: ['itemList'],
+    stale: ['stockSummary'],
+  },
+  archiveItem: {
+    patch: [['itemDetail', 'item']],
+    refetch: ['itemList'],
+    stale: ['stockSummary'],
+  },
+  restoreItem: {
+    patch: [['itemDetail', 'item']],
+    refetch: ['itemList'],
+    stale: ['stockSummary'],
+  },
+  // INV-04 — the created master is appended by `inventoryMastersSlice`.
+  createUnit: { patch: [['inventoryMasters', 'units']] },
+  createCategory: { patch: [['inventoryMasters', 'categories']] },
+  // INV-06 — on-hand, average, badges and the movement list all move, on
+  // whichever of the three screens the merchant posted from.
+  postStockAdjustment: { refetch: ['itemDetail', 'itemList', 'stockSummary'] },
 };

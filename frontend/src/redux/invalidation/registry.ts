@@ -11,6 +11,27 @@ import {
   switchTenant,
 } from 'modules/DigiKhaato/features/auth/redux/sessionThunk';
 import {
+  archiveItem,
+  fetchItemDetail,
+  fetchItemList,
+  fetchItemMovements,
+  restoreItem,
+  saveItem,
+} from 'modules/DigiKhaato/features/inventory/redux/itemThunk';
+import {
+  createCategory,
+  createUnit,
+  fetchCategories,
+  fetchTaxRates,
+  fetchUnits,
+} from 'modules/DigiKhaato/features/inventory/redux/mastersThunk';
+import {
+  fetchLowStock,
+  fetchStockAdjustment,
+  fetchStockSummary,
+  postStockAdjustment,
+} from 'modules/DigiKhaato/features/inventory/redux/stockThunk';
+import {
   fetchLedgerAging,
   fetchLedgerSummary,
 } from 'modules/DigiKhaato/features/ledger/redux/agingThunk';
@@ -112,6 +133,18 @@ export const QUERIES = {
   resumeOnboarding,
   // M2 — which unfinished business "Add a business" would continue
   findResumableBusiness,
+  // INV-02 / INV-03 — the item list, one item, its movement history
+  fetchItemList,
+  fetchItemDetail,
+  fetchItemMovements,
+  // INV-04 — the masters, held once per session
+  fetchUnits,
+  fetchCategories,
+  fetchTaxRates,
+  // INV-06 / INV-07 / INV-08
+  fetchStockAdjustment,
+  fetchStockSummary,
+  fetchLowStock,
 } as const;
 
 export const MUTATIONS = {
@@ -161,6 +194,15 @@ export const MUTATIONS = {
   deletePartyTag,
   mergePartyTags,
   bulkTagPartiesThunk,
+  // INV-01 / INV-02 — the item master
+  saveItem,
+  archiveItem,
+  restoreItem,
+  // INV-04 — inline and settings-page creates
+  createUnit,
+  createCategory,
+  // INV-06 — the write every stock screen is downstream of
+  postStockAdjustment,
 } as const;
 
 export type TQueryName = keyof typeof QUERIES;

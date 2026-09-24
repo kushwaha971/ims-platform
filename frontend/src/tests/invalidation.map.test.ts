@@ -4,6 +4,12 @@ import { MUTATIONS } from 'src/redux/invalidation/registry';
 import type { TSliceKey } from 'src/redux/invalidation/types';
 import { store } from 'src/redux/store';
 
+import 'modules/DigiKhaato/features/inventory/redux/inventoryMastersSlice';
+import 'modules/DigiKhaato/features/inventory/redux/itemDetailSlice';
+import 'modules/DigiKhaato/features/inventory/redux/itemFormSlice';
+import 'modules/DigiKhaato/features/inventory/redux/itemListSlice';
+import 'modules/DigiKhaato/features/inventory/redux/stockAdjustmentSlice';
+import 'modules/DigiKhaato/features/inventory/redux/stockSummarySlice';
 import 'modules/DigiKhaato/features/ledger/redux/agingSlice';
 import 'modules/DigiKhaato/features/ledger/redux/statementSlice';
 import partyListReducer, {

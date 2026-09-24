@@ -99,9 +99,12 @@ export const API_PATHS = {
   ITEM: (id: string) => `/items/${seg(id)}`,
   ITEM_MOVEMENTS: (id: string) => `/items/${seg(id)}/movements`,
   ITEM_LOOKUP: '/items/lookup',
+  ITEM_ARCHIVE: (id: string) => `/items/${seg(id)}/archive`,
+  ITEM_RESTORE: (id: string) => `/items/${seg(id)}/restore`,
   CATEGORIES: '/categories',
   UNITS: '/units',
   STOCK_ADJUSTMENTS: '/stock-adjustments',
+  STOCK_ADJUSTMENT: (id: string) => `/stock-adjustments/${seg(id)}`,
   STOCK_SUMMARY: '/stock/summary',
   STOCK_LOW: '/stock/low',
 
@@ -153,6 +156,8 @@ export const IDEMPOTENT_POST_PATHS: readonly string[] = [
   API_PATHS.PURCHASE_BILLS,
   API_PATHS.PAYMENTS,
   API_PATHS.STOCK_ADJUSTMENTS,
+  // INV-01 — a retried item create must not mint a second SKU for one item.
+  API_PATHS.ITEMS,
   API_PATHS.EXPENSES,
   API_PATHS.PARTIES,
   /**
