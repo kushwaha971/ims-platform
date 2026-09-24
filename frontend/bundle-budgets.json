@@ -337,7 +337,41 @@
   "axios interceptor every route loads; the server field-code mapping (NEW-2",
   "message in Hindi) rides in the same layer. Both are correctness fixes with",
   "no lazy seam — the guard must run on the first request. Shared budget 114,",
-  "first-load budgets on the listed routes +1. /parties/[id] route 97 → 98: the archive-blocked focus move (M4)."
+  "first-load budgets on the listed routes +1. /parties/[id] route 97 → 98: the archive-blocked focus move (M4).",
+  "",
+  "── 24 Sep 2026: LED-05…08 / NTF-01…03 — reminders and the inbox (Track T2) ─",
+  "shared app 113.1 -> 117.0, so the budget moves 114 -> 118. Two causes, both",
+  "with no lazy seam today:",
+  "  · en.json gained ~125 keys (the reminders screen, the bulk flow, the sheet,",
+  "    the two SMS switches and the inbox's types). Copy rides with react-intl",
+  "    into every route; splitting catalogues per route group is the BACKLOG",
+  "    item recorded above, and this is the largest single argument for it yet.",
+  "  · the invalidation registry names every thunk, so reminderThunk,",
+  "    notificationThunk and their two services are in the shell — the same",
+  "    price the statement and aging thunks already pay for their lazy slices.",
+  "    The reminders SLICE is injected lazily (CR-134) and is not in the shell.",
+  "Every (app) route chunk also grows ~1.5-2 KB for the bell: a button, a count",
+  "and the notifications slice, because the bell is on every screen. The inbox",
+  "PANEL (rows, relative times, the read calls) is dynamic() and loads on the",
+  "first tap. /parties/[id] went DOWN (97 -> 95.5): the reminder sheet, its",
+  "strip and the reminders slice are dynamic() and the client composer is gone.",
+  "/ledger/reminders is new: UbDataGrid, UbTabs, UbChoiceChips, the columns and",
+  "the hook; the sheet, the bulk dialog and the settings dialog are dynamic().",
+  "Every line below is measured + ~1 KB.",
+  "  shared app                114 -> 118  (measured 117.0)",
+  "  /ledger/reminders route    new ->  80  (measured  78.8)",
+  "  /ledger/reminders first    new -> 324  (measured 322.7)",
+  "  /parties route            103 -> 105  (measured 104.4); first 343 -> 349 (348.3)",
+  "  /design-system first      339 -> 344  (measured 342.7)",
+  "  /parties/[id] first       338 -> 341  (measured 339.5)",
+  "  /onboarding/step/[n] first 334 -> 340 (measured 338.8)",
+  "  /settings/team route       92 ->  93  (92.3); first 332 -> 337 (336.2)",
+  "  /ledger/aging route        92 ->  93  (92.1); first 332 -> 337 (336.0)",
+  "  /parties/[id]/statement first 331 -> 336 (334.7)",
+  "  /parties/tags route        73 ->  75  (74.2); first 313 -> 319 (318.2)",
+  "  /switch route              65 ->  68  (66.9); first 305 -> 312 (310.8)",
+  "  /settings/plan route    64 (default) -> 67 (66.0); first 304 -> 311 (309.9)",
+  "  /dashboard route           61 ->  64  (63.0); first 301 -> 308 (307.0)"
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -521,7 +555,7 @@
  ],
  "shared": {
   "framework": 128,
-  "sharedApp": 114
+  "sharedApp": 118
  },
  "//routes": [
   "The `route` figures are §19.9.2's, unchanged, and every route is comfortably",
@@ -725,12 +759,12 @@
  },
  "routes": {
   "/parties": {
-   "route": 103,
-   "firstLoad": 343
+   "route": 105,
+   "firstLoad": 349
   },
   "/dashboard": {
-   "route": 61,
-   "firstLoad": 301
+   "route": 64,
+   "firstLoad": 308
   },
   "/sales/invoices/new": {
    "route": 110,
@@ -738,38 +772,43 @@
   },
   "/onboarding/step/[n]": {
    "route": 98,
-   "firstLoad": 334
+   "firstLoad": 340
   },
   "/design-system": {
    "route": 99,
-   "firstLoad": 339
+   "firstLoad": 344
   },
   "/settings/team": {
-   "route": 92,
-   "firstLoad": 332
+   "route": 93,
+   "firstLoad": 337
   },
   "/parties/[id]": {
    "route": 98,
-   "firstLoad": 338
+   "firstLoad": 341
   },
   "/parties/tags": {
-   "route": 73,
-   "firstLoad": 313
+   "route": 75,
+   "firstLoad": 319
   },
   "/parties/[id]/statement": {
    "route": 91,
-   "firstLoad": 331
+   "firstLoad": 336
   },
   "/ledger/aging": {
-   "route": 92,
-   "firstLoad": 332
+   "route": 93,
+   "firstLoad": 337
   },
   "/switch": {
-   "firstLoad": 305,
-   "route": 65
+   "firstLoad": 312,
+   "route": 68
   },
   "/settings/plan": {
-   "firstLoad": 304
+   "firstLoad": 311,
+   "route": 67
+  },
+  "/ledger/reminders": {
+   "route": 80,
+   "firstLoad": 324
   }
  },
  "//ignoreRoutes": [
