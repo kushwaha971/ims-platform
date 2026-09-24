@@ -668,3 +668,65 @@ at the preview text.
 **Not built.** WhatsApp Business API sending (`whatsapp_api`, NTF-02) — no provider, per
 ADR-021; recurring reminders (`kind=recurring`); per-party locale for message language (the
 tenant's locale is used); the inbox's per-category mute settings.
+
+## CR-2026-09-24-SAL-A — SAL-02/03/06/07/08: what was built beside the FRDs
+
+**State:** `raised`. **Target:** Part 17-04 SAL-02/03/06/07/08, Part 20 §20.7.3 and §20.11.4,
+Part 21 §21.3.7, Part 43 §43.4.6 C1. **Gate:** none — additive; migration
+`sales 0001_add_sales_document`.
+
+**Round-off range (BR-8 against itself).** BR-8 and §20.7.3 say `round(grand_raw, 0) − grand_raw`
+half-up, and that the result lies in [−0.50, +0.49]. It doesn't: half-up sends ₹472.50 to ₹473,
+a round-off of +0.50, so the formula's range is [−0.49, +0.50]. The engine follows the formula,
+because the formula is what every Indian billing counter does. The shared fixture
+`taxEngine.cases.json` has an "x.50 rounds up" case. §20.11.4's CHECK [−0.50, +0.50] admits the
+formula's range, but migration 0001 does not declare it yet; it is a follow-up.
+§20.7.3's stated range should be corrected; BE-14 in Part 41 flagged the neighbouring half of the
+same mismatch.
+
+**Columns beside §21.3.7.** `sales_document.round_off_enabled` records the round-off switch
+(SAL-02 FR-12) per document, so that recomputing a draft on save gives back what the merchant
+chose instead of the shop default as it stands today. `version` (optimistic concurrency, SAL-06
+FR-6) and `meta` (JSON: the walk-in payment until PAY-01, the share link's expiry) are also added.
+The item list row (`GET /items`) now carries `hsn_sac` and `tax_inclusive_selling`, so a picked
+item fills the bill line without a second request.
+
+**Share links use `sales_document.public_token_hash`.** C1 was decided on 23 Sep for a
+generalised `parties_share_link` table, which no app has built yet. Sales therefore stores the
+token's hash in the column §21.3.7 already declares, and puts the expiry in `meta.share_link`.
+Regenerating a link replaces the hash, which revokes the old token (T-SAL03-6). The day the
+generalised table lands, this becomes one migration and one resolver; the public URL shape
+`/public/d/<token>` stays the same.
+
+**Settings read with defaults, not registered.** `sales.round_off_default`,
+`sales.default_due_days`, `sales.allow_free_text_lines`, `sales.require_hsn_b2b`,
+`documents.terms` and `documents.show_upi_qr` (CR-SAL-2) are read through `services/settings.py` with the FRD's defaults. They are not added to PLT-06's
+catalogue, because that is a shared table this track does not own.
+
+**Error codes added.** `rule46_failed` (400: a hard Rule 46 failure at issue; `details.issues`
+lists the blocks) and `upi_not_configured` (409: `/upi-intent` without a valid tenant VPA).
+Share links on a draft reuse `document_not_shareable`.
+
+**The QR encoder lives in `apps/common/qr.py`, not in payments.** The import matrix forbids
+`sales → payments`, and SAL-03 needs the encoder at render time. `apps/common/upi.py` builds the
+`upi://pay` string. `GET /payments/qr.svg` is a thin view over the same encoder, for PAY-03.
+
+**Payment at issue: walk-in only (SAL-07), and a seam for PAY-01.** A walk-in bill must be paid
+in full at issue (400 `validation_failed` on `payment`: "Walk-in sale must be paid in full").
+Its `mode_breakup` is stored in `sales_document.meta.payment` and the document moves straight to `paid`. No `payments_payment`
+row is written, because PAY-01 does not exist and sales may not import payments. A party bill
+that includes a payment at issue is refused with a 400 until PAY-01 is in: a party bill issues
+on credit to the khata, and part-payment is recorded from Payments later. `services/payment_seam.py`
+is the one function PAY-01 replaces.
+
+**Local drafts survive logout.** SAL-06 §19 asks for device drafts to be cleared on sign-out.
+The existing `storage.clearLocalExceptDrafts` (logout and tenant switch) deliberately keeps the
+draft namespace. Its keys are per tenant, so another shop on the same device never sees them, and
+a bill lost to an accidental sign-out at the counter costs more than a stale draft does. This
+track follows the code, not §19, and §19 should be amended to match.
+
+**Not built.** Party payments at issue (PAY-01); the WhatsApp message-log row
+(`notifications_message_log`, T-SAL03-8), because sales may not import notifications; the public
+`/d/[token]` page render (the API answers, the page is still the stub); SAL-06 FR-5 duplicate;
+the stale-draft flag; print copies (original/duplicate/triplicate); a separate `/print` route
+(the detail page prints itself; the success sheet opens it with `?print=1`); void (SAL-05).
