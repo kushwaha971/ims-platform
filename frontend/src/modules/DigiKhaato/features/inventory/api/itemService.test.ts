@@ -1,9 +1,10 @@
 import { api } from 'src/api/AxiosInstances';
 
-import { listItems, lookupItemByBarcode, toItemBody, type ItemRowWire } from './itemService';
-import { toAdjustmentBody } from './stockService';
 import { filtersFromQuery, queryFromFilters } from '../hooks/useItemList';
 import { toShortLines } from '../hooks/useStockAdjustment';
+
+import { listItems, lookupItemByBarcode, toItemBody, type ItemRowWire } from './itemService';
+import { toAdjustmentBody } from './stockService';
 
 import type { ItemFormValues } from '../types/item.types';
 

@@ -438,7 +438,15 @@ class LowStockView(_InventoryView, APIView):
         page = paginator.paginate_queryset(qs, request, view=self)
         rows = [
             {
-                "item": {"id": str(i.id), "name": i.name, "sku": i.sku, "unit_code": i.unit.code},
+                "item": {
+                    "id": str(i.id),
+                    "name": i.name,
+                    "sku": i.sku,
+                    "unit_code": i.unit.code,
+                    # The "Adjust stock" action preselects this item; a
+                    # whole-number unit must refuse "1.5" at the keyboard.
+                    "allow_decimal": i.unit.allow_decimal,
+                },
                 "on_hand": str(i.on_hand),
                 "reorder_point": str(i.reorder_point) if i.reorder_point is not None else None,
                 "stock_status": i.stock_status,

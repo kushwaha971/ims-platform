@@ -35,7 +35,14 @@ const BARCODE = /^[A-Za-z0-9-]+$/;
 const QTY = (decimals: boolean) => (decimals ? /^\d+(\.\d{1,3})?$/ : /^\d+$/);
 const COST = /^\d+(\.\d{1,4})?$/;
 
-export const useInventorySchemas = (units: readonly Unit[]) => {
+export interface InventorySchemas {
+  readonly itemSchema: Yup.ObjectSchema<ItemFormValues>;
+  readonly adjustmentSchema: Yup.ObjectSchema<AdjustmentFormValues>;
+  readonly categorySchema: Yup.ObjectSchema<CategoryFormValues>;
+  readonly unitSchema: Yup.ObjectSchema<UnitFormValues>;
+}
+
+export const useInventorySchemas = (units: readonly Unit[]): InventorySchemas => {
   const v = useValidationSchemas();
   const { t } = useTranslation();
 

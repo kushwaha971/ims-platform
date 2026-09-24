@@ -297,7 +297,33 @@ export const getItem = async (id: string, signal?: AbortSignal): Promise<Item> =
 };
 
 /** The form's values → the POST/PATCH body. Blank optional fields travel as null. */
-export const toItemBody = (values: ItemFormValues, { withOpening }: { withOpening: boolean }) => {
+export interface ItemBody {
+  readonly name: string;
+  readonly item_type: ItemFormValues['itemType'];
+  readonly category_id: string | null;
+  readonly unit_id: string;
+  readonly sku: string | null;
+  readonly barcode: string | null;
+  readonly hsn_sac: string | null;
+  readonly tax_code: string;
+  readonly tax_inclusive_selling: boolean;
+  readonly selling_price: string;
+  readonly purchase_price: string;
+  readonly mrp: string | null;
+  readonly track_stock: boolean;
+  readonly reorder_point: string | null;
+  readonly description: string;
+  readonly opening_stock?: {
+    readonly qty: string;
+    readonly unit_cost: string | null;
+    readonly as_of: string | undefined;
+  };
+}
+
+export const toItemBody = (
+  values: ItemFormValues,
+  { withOpening }: { withOpening: boolean }
+): ItemBody => {
   const isService = values.itemType === 'service';
   const track = !isService && values.trackStock;
   return {

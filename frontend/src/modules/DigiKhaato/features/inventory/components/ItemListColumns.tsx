@@ -1,8 +1,8 @@
 import { UbLink, UbStack, UbText } from 'src/design-system';
 import type { UbDataGridColumn, UbGridTier } from 'src/design-system/UbDataGrid';
 import type { TranslateFn } from 'src/hooks/useTranslation';
-import { formatInr } from 'src/utils/money';
 import { itemPath } from 'src/routes';
+import { formatInr } from 'src/utils/money';
 
 import { onHandText } from '../view-model/itemDisplay';
 

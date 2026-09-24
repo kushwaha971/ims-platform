@@ -27,8 +27,8 @@ import {
 } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
 
-import { searchHsn } from '../api/mastersService';
 import { lookupItemByBarcode } from '../api/itemService';
+import { searchHsn } from '../api/mastersService';
 import { DEFAULT_TAX_CODE, DEFAULT_UNIT_CODE } from '../constants/inventoryConstants';
 import { useInventoryMasters } from '../hooks/useInventoryMasters';
 import { useInventorySchemas } from '../validation/inventorySchemas';

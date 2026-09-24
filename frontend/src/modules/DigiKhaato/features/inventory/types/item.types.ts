@@ -313,6 +313,7 @@ export interface LowStockRow {
     readonly name: string;
     readonly sku: string;
     readonly unitCode: string;
+    readonly allowDecimal: boolean;
   };
   readonly onHand: string;
   readonly reorderPoint: string | null;

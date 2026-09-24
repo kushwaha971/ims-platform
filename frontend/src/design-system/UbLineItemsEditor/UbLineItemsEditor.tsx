@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, type ReactNode } from 'react';
 
 import { Plus, Trash2 } from 'lucide-react';
 import {
@@ -98,7 +98,7 @@ export interface UbLineItemsEditorProps<TForm extends FieldValues, TName extends
   readonly labels: UbLineItemsEditorLabels;
   readonly maxLines?: number;
   /** A line-level note under the row: "Only 5 NOS available", a warning. */
-  readonly lineNote?: (index: number) => ReactNode;
+  readonly renderLineNote?: (index: number) => ReactNode;
   readonly lineInvalid?: (index: number) => boolean;
   readonly onSubmitShortcut?: () => void;
   readonly disabled?: boolean;
@@ -131,7 +131,7 @@ export function UbLineItemsEditor<TForm extends FieldValues, TName extends Array
   newLine,
   labels,
   maxLines = 100,
-  lineNote,
+  renderLineNote,
   lineInvalid,
   onSubmitShortcut,
   disabled = false,
@@ -144,7 +144,9 @@ export function UbLineItemsEditor<TForm extends FieldValues, TName extends Array
   const containerRef = useRef<HTMLDivElement>(null);
   const baseId = useId();
   const { fields, append, remove } = fieldArray;
-  const [pendingFocus, setPendingFocus] = useState<{ row: number; col: number } | null>(null);
+  /* Where the caret goes once the lines the last action changed are in the
+     DOM. A ref, not state: it is consumed by the next commit and never drawn. */
+  const pendingFocus = useRef<{ row: number; col: number } | null>(null);
   const editable = useMemo(() => columns.filter((column) => column.field), [columns]);
   const atMax = fields.length >= maxLines;
 
@@ -168,14 +170,14 @@ export function UbLineItemsEditor<TForm extends FieldValues, TName extends Array
   );
 
   useEffect(() => {
-    if (!pendingFocus) return;
-    if (focusCell(pendingFocus.row, pendingFocus.col)) setPendingFocus(null);
-  }, [pendingFocus, fields.length, focusCell]);
+    const pending = pendingFocus.current;
+    if (pending && focusCell(pending.row, pending.col)) pendingFocus.current = null;
+  });
 
   const addLine = useCallback(() => {
     if (atMax || disabled) return;
     append(newLine());
-    setPendingFocus({ row: fields.length, col: 0 });
+    pendingFocus.current = { row: fields.length, col: 0 };
   }, [append, newLine, atMax, disabled, fields.length]);
 
   const focusNextFrom = useCallback(
@@ -191,7 +193,7 @@ export function UbLineItemsEditor<TForm extends FieldValues, TName extends Array
   );
 
   const handleKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLDivElement>) => {
+    (event: KeyboardEvent) => {
       const target = event.target as HTMLElement;
       const cell = target.closest<HTMLElement>('[data-line-cell]');
       const isText = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
@@ -213,7 +215,7 @@ export function UbLineItemsEditor<TForm extends FieldValues, TName extends Array
       if (event.altKey && event.key === 'Backspace') {
         event.preventDefault();
         remove(row);
-        setPendingFocus({ row: Math.max(0, row - 1), col });
+        pendingFocus.current = { row: Math.max(0, row - 1), col };
         return;
       }
       if (!isText || event.altKey || event.shiftKey) return;
@@ -230,6 +232,15 @@ export function UbLineItemsEditor<TForm extends FieldValues, TName extends Array
     },
     [onSubmitShortcut, addLine, remove, focusNextFrom, focusCell, fields.length]
   );
+
+  /* One delegated listener for the whole grid, attached natively: the
+     container is not itself a control, so it carries no key handler prop. */
+  useEffect(() => {
+    const root = containerRef.current;
+    if (!root) return undefined;
+    root.addEventListener('keydown', handleKeyDown);
+    return () => root.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
 
   const template = [...columns.map((column) => column.track ?? 'minmax(0,1fr)'), '2.5rem'].join(
     ' '
@@ -297,7 +308,6 @@ export function UbLineItemsEditor<TForm extends FieldValues, TName extends Array
   return (
     <div
       ref={containerRef}
-      onKeyDown={handleKeyDown}
       className={cn('flex flex-col gap-3', className)}
       data-testid="line-items-editor"
       data-layout={layout}
@@ -357,7 +367,7 @@ export function UbLineItemsEditor<TForm extends FieldValues, TName extends Array
                   <Trash2 aria-hidden className="h-4 w-4" />
                 </button>
               </div>
-              {lineNote?.(index)}
+              {renderLineNote?.(index)}
             </div>
           ))}
         </div>
@@ -424,7 +434,7 @@ export function UbLineItemsEditor<TForm extends FieldValues, TName extends Array
                       </span>
                     </div>
                   ))}
-                {lineNote?.(index)}
+                {renderLineNote?.(index)}
               </section>
             );
           })}

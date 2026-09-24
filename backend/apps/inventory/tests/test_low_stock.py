@@ -182,3 +182,21 @@ def test_low_stock_endpoint_orders_out_first(
     assert [r["item"]["name"] for r in body["data"]] == ["Empty", "Tenth", "Half", "Nine"]
     assert body["meta"]["totals"] == {"low": 3, "out": 1}
     assert body["data"][1]["suggested_qty"] == "19.000"
+
+
+def test_low_stock_rows_say_whether_the_unit_takes_decimals(
+    api_as: Any, tenant: Any, make_item: Any
+) -> None:
+    """"Adjust stock" on a low-stock row preselects the item into the drawer,
+    whose quantity field refuses a decimal point for a whole-number unit.
+    Without `allow_decimal` on the row the drawer guessed "yes", and "1.5 NOS"
+    reached the server only to be refused as qty_must_be_whole."""
+    from django.urls import reverse
+
+    from apps.common.constants import RoleCode
+
+    make_item("Soap", opening=("1", "1"), reorder_point="10")
+    client = api_as(tenant, RoleCode.STAFF.value)[0]
+    row = client.get(reverse("v1:stock-low")).json()["data"][0]
+    assert row["item"]["unit_code"] == "NOS"
+    assert row["item"]["allow_decimal"] is False

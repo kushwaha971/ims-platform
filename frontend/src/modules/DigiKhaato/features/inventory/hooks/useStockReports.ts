@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { usePermissions } from 'src/hooks/usePermissions';
 import { selectNetworkImpaired } from 'src/redux/slice/networkSlice';
+import type { ApiErrorShape, RequestStatus } from 'src/types/api.types';
 
 import {
   selectLowStock,
@@ -18,7 +19,27 @@ import {
 } from '../redux/stockSummarySlice';
 import { fetchLowStock, fetchStockSummary } from '../redux/stockThunk';
 
-import type { StockSummaryFilters } from '../types/item.types';
+import type { LowStockResult, StockSummaryFilters, StockSummaryResult } from '../types/item.types';
+
+export interface UseStockSummaryResult {
+  readonly filters: StockSummaryFilters;
+  readonly update: (patch: Partial<StockSummaryFilters>) => void;
+  readonly summary: StockSummaryResult | null;
+  readonly status: RequestStatus;
+  readonly error: ApiErrorShape | null;
+  readonly canRead: boolean;
+  readonly refetch: () => void;
+}
+
+export interface UseLowStockResult {
+  readonly low: LowStockResult | null;
+  readonly status: RequestStatus;
+  readonly error: ApiErrorShape | null;
+  readonly canRead: boolean;
+  readonly page: number;
+  readonly setPage: (page: number) => void;
+  readonly refetch: () => void;
+}
 
 /** INV-08 — the stock summary's filters and data. */
 export const DEFAULT_SUMMARY_FILTERS: StockSummaryFilters = {
@@ -31,7 +52,7 @@ export const DEFAULT_SUMMARY_FILTERS: StockSummaryFilters = {
   page: 1,
 };
 
-export function useStockSummary() {
+export function useStockSummary(): UseStockSummaryResult {
   const dispatch = useAppDispatch();
   const { can, hasModule } = usePermissions();
   const canRead = hasModule('inventory') && can('inventory.stock.read');
@@ -69,7 +90,7 @@ export function useStockSummary() {
 }
 
 /** INV-07 — the low-stock list. */
-export function useLowStock() {
+export function useLowStock(): UseLowStockResult {
   const dispatch = useAppDispatch();
   const { can, hasModule } = usePermissions();
   const canRead = hasModule('inventory') && can('inventory.stock.read');

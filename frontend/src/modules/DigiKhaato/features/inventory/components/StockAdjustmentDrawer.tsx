@@ -24,10 +24,10 @@ import {
   isoToday,
   type UbLineItemsColumn,
 } from 'src/design-system';
+import { useAppDispatch } from 'src/hooks/useAppStore';
 import { useScannerListener } from 'src/hooks/useScannerListener';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
-import { useAppDispatch } from 'src/hooks/useAppStore';
 import { formatQuantity } from 'src/utils/quantity';
 
 import { ADJUSTMENT_MAX_LINES, ADJUSTMENT_REASONS } from '../constants/inventoryConstants';
@@ -459,7 +459,7 @@ export function StockAdjustmentDrawer({
           maxLines={ADJUSTMENT_MAX_LINES}
           onSubmitShortcut={() => void form.handleSubmit(handleSubmit)()}
           lineInvalid={(index) => Boolean(shortAt(index))}
-          lineNote={(index) => {
+          renderLineNote={(index) => {
             const short = shortAt(index);
             return short ? (
               <UbText variant="body-sm" tone="error" role="alert">

@@ -74,10 +74,22 @@ const toAdjustment = (row: AdjustmentWire): StockAdjustment => ({
  * POST /stock-adjustments. The lines carry the SIGNED quantity the editor
  * computed ("Set to" is resolved client-side, FR-5); a cost only for stock in.
  */
+export interface AdjustmentBody {
+  readonly adjustment_date: string;
+  readonly location_id: string | null;
+  readonly reason: string;
+  readonly note: string;
+  readonly lines: readonly {
+    readonly item_id: string;
+    readonly qty: string;
+    readonly unit_cost: string | null;
+  }[];
+}
+
 export const toAdjustmentBody = (
   values: AdjustmentFormValues,
   signedQty: (index: number) => string
-) => ({
+): AdjustmentBody => ({
   adjustment_date: values.adjustmentDate,
   location_id: null,
   reason: values.reason,
@@ -93,7 +105,7 @@ export const toAdjustmentBody = (
 });
 
 export const postAdjustment = async (
-  body: ReturnType<typeof toAdjustmentBody>,
+  body: AdjustmentBody,
   idempotencyKey: string
 ): Promise<StockAdjustment> => {
   /* The 409 `insufficient_stock` is drawn on the lines themselves, so it is
@@ -179,7 +191,7 @@ export const getStockSummary = async (
 export const getLowStock = async (page: number, signal?: AbortSignal): Promise<LowStockResult> => {
   const response = await api.get<{
     data: readonly {
-      item: { id: string; name: string; sku: string; unit_code: string };
+      item: { id: string; name: string; sku: string; unit_code: string; allow_decimal: boolean };
       on_hand: string;
       reorder_point: string | null;
       stock_status: 'low' | 'out';
@@ -200,6 +212,7 @@ export const getLowStock = async (page: number, signal?: AbortSignal): Promise<L
         name: row.item.name,
         sku: row.item.sku,
         unitCode: row.item.unit_code,
+        allowDecimal: row.item.allow_decimal,
       },
       onHand: row.on_hand,
       reorderPoint: row.reorder_point,

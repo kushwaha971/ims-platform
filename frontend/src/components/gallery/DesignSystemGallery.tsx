@@ -30,8 +30,8 @@ import {
 import { useTranslation } from 'src/hooks/useTranslation';
 
 import { DesignSystemChartsGallery } from './DesignSystemChartsGallery';
-import { DesignSystemWave1Gallery } from './DesignSystemWave1Gallery';
 import { DesignSystemLineItemsGallery } from './DesignSystemLineItemsGallery';
+import { DesignSystemWave1Gallery } from './DesignSystemWave1Gallery';
 import { DesignSystemWave3Gallery } from './DesignSystemWave3Gallery';
 
 /**

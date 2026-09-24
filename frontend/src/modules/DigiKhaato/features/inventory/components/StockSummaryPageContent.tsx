@@ -30,8 +30,9 @@ import {
   useGridTier,
   type UbDataGridColumn,
   type UbGridState,
+  type UbGridTier,
 } from 'src/design-system/UbDataGrid';
-import { useTranslation } from 'src/hooks/useTranslation';
+import { useTranslation, type TranslateFn } from 'src/hooks/useTranslation';
 import { ROUTES, itemPath } from 'src/routes';
 import { formatBusinessDate, formatTimestamp } from 'src/utils/dates';
 import { formatInr } from 'src/utils/money';
@@ -44,6 +45,123 @@ import { inventoryGridLabels } from '../view-model/gridLabels';
 import { StockBadge } from './StockBadge';
 
 import type { StockSummaryFilters, StockSummaryRow } from '../types/item.types';
+
+/** The summary's columns — a module-level factory, so no cell is a component
+ * defined during render (react/no-unstable-nested-components). */
+const createSummaryColumns = ({
+  t,
+  tier,
+  valuation,
+}: {
+  readonly t: TranslateFn;
+  readonly tier: UbGridTier;
+  readonly valuation: boolean;
+}): UbDataGridColumn<StockSummaryRow>[] => {
+  const isCards = tier === 'cards';
+  const base: UbDataGridColumn<StockSummaryRow>[] = [
+    {
+      id: 'item',
+      header: t('items.list.col.item'),
+      priority: 1,
+      cardSlot: 'title',
+      sortField: 'name',
+      widthShare: 30,
+      cell: (row) =>
+        isCards ? (
+          row.item.name
+        ) : (
+          <UbStack gap={0}>
+            <UbLink href={itemPath(row.item.id)} variant="body-sm-medium">
+              {row.item.name}
+            </UbLink>
+            <UbText as="span" variant="caption" tone="tertiary" className="ds-mono">
+              {row.item.sku}
+            </UbText>
+          </UbStack>
+        ),
+    },
+    {
+      id: 'category',
+      header: t('items.list.col.category'),
+      priority: 3,
+      cardSlot: 'meta',
+      widthShare: 14,
+      cell: (row) =>
+        isCards
+          ? [row.item.sku, row.category?.name].filter(Boolean).join(' · ')
+          : (row.category?.name ?? '—'),
+    },
+    {
+      id: 'onHand',
+      header: t('items.list.col.onHand'),
+      priority: 1,
+      align: 'end',
+      sortField: 'on_hand',
+      cardSlot: valuation ? 'meta' : 'trailing',
+      widthShare: 16,
+      cell: (row) => (
+        <UbStack gap={1} align="end">
+          <UbText
+            as="span"
+            variant="body-sm"
+            tone={row.onHand.startsWith('-') ? 'error' : 'primary'}
+            className="ds-num whitespace-nowrap"
+          >
+            {formatQuantity(row.onHand, row.item.unitCode)}
+          </UbText>
+          {!isCards && (
+            <StockBadge status={row.stockStatus} onHand={row.onHand} unitCode={row.item.unitCode} />
+          )}
+        </UbStack>
+      ),
+    },
+  ];
+  if (valuation) {
+    base.push(
+      {
+        id: 'avgCost',
+        header: t('stock.summary.col.avgCost'),
+        priority: 3,
+        align: 'end',
+        cardSlot: 'none',
+        widthShare: 12,
+        cell: (row) => (
+          <UbText as="span" variant="body-sm" className="ds-num">
+            {formatInr(row.avgCost)}
+          </UbText>
+        ),
+      },
+      {
+        id: 'value',
+        header: t('stock.summary.col.value'),
+        priority: 1,
+        align: 'end',
+        sortField: 'value',
+        cardSlot: 'trailing',
+        widthShare: 14,
+        cell: (row) => (
+          <UbText
+            as="span"
+            variant="body-sm-medium"
+            tone={row.value?.startsWith('-') ? 'error' : 'primary'}
+            className="ds-num whitespace-nowrap"
+          >
+            {formatInr(row.value)}
+          </UbText>
+        ),
+      }
+    );
+  }
+  base.push({
+    id: 'lastMovement',
+    header: t('stock.summary.col.lastMovement'),
+    priority: 4,
+    cardSlot: 'none',
+    widthShare: 14,
+    cell: (row) => (row.lastMovementAt ? formatTimestamp(row.lastMovementAt) : '—'),
+  });
+  return base;
+};
 
 /**
  * INV-08 — what the shop holds and what it is worth, at weighted-average cost,
@@ -61,116 +179,7 @@ export function StockSummaryPageContent(): React.JSX.Element {
   const { filters, update, summary } = report;
   const valuation = summary?.valuationVisible ?? false;
 
-  const columns = useMemo<readonly UbDataGridColumn<StockSummaryRow>[]>(() => {
-    const isCards = tier === 'cards';
-    const base: UbDataGridColumn<StockSummaryRow>[] = [
-      {
-        id: 'item',
-        header: t('items.list.col.item'),
-        priority: 1,
-        cardSlot: 'title',
-        sortField: 'name',
-        widthShare: 30,
-        cell: (row) =>
-          isCards ? (
-            row.item.name
-          ) : (
-            <UbStack gap={0}>
-              <UbLink href={itemPath(row.item.id)} variant="body-sm-medium">
-                {row.item.name}
-              </UbLink>
-              <UbText as="span" variant="caption" tone="tertiary" className="ds-mono">
-                {row.item.sku}
-              </UbText>
-            </UbStack>
-          ),
-      },
-      {
-        id: 'category',
-        header: t('items.list.col.category'),
-        priority: 3,
-        cardSlot: 'meta',
-        widthShare: 14,
-        cell: (row) =>
-          isCards
-            ? [row.item.sku, row.category?.name].filter(Boolean).join(' · ')
-            : (row.category?.name ?? '—'),
-      },
-      {
-        id: 'onHand',
-        header: t('items.list.col.onHand'),
-        priority: 1,
-        align: 'end',
-        sortField: 'on_hand',
-        cardSlot: valuation ? 'meta' : 'trailing',
-        widthShare: 16,
-        cell: (row) => (
-          <UbStack gap={1} align="end">
-            <UbText
-              as="span"
-              variant="body-sm"
-              tone={row.onHand.startsWith('-') ? 'error' : 'primary'}
-              className="ds-num whitespace-nowrap"
-            >
-              {formatQuantity(row.onHand, row.item.unitCode)}
-            </UbText>
-            {!isCards && (
-              <StockBadge
-                status={row.stockStatus}
-                onHand={row.onHand}
-                unitCode={row.item.unitCode}
-              />
-            )}
-          </UbStack>
-        ),
-      },
-    ];
-    if (valuation) {
-      base.push(
-        {
-          id: 'avgCost',
-          header: t('stock.summary.col.avgCost'),
-          priority: 3,
-          align: 'end',
-          cardSlot: 'none',
-          widthShare: 12,
-          cell: (row) => (
-            <UbText as="span" variant="body-sm" className="ds-num">
-              {formatInr(row.avgCost)}
-            </UbText>
-          ),
-        },
-        {
-          id: 'value',
-          header: t('stock.summary.col.value'),
-          priority: 1,
-          align: 'end',
-          sortField: 'value',
-          cardSlot: 'trailing',
-          widthShare: 14,
-          cell: (row) => (
-            <UbText
-              as="span"
-              variant="body-sm-medium"
-              tone={row.value?.startsWith('-') ? 'error' : 'primary'}
-              className="ds-num whitespace-nowrap"
-            >
-              {formatInr(row.value)}
-            </UbText>
-          ),
-        }
-      );
-    }
-    base.push({
-      id: 'lastMovement',
-      header: t('stock.summary.col.lastMovement'),
-      priority: 4,
-      cardSlot: 'none',
-      widthShare: 14,
-      cell: (row) => (row.lastMovementAt ? formatTimestamp(row.lastMovementAt) : '—'),
-    });
-    return base;
-  }, [t, tier, valuation]);
+  const columns = useMemo(() => createSummaryColumns({ t, tier, valuation }), [t, tier, valuation]);
 
   const labels = useMemo(
     () => inventoryGridLabels(t, 'stock.summary.loading', 'items.list.open'),

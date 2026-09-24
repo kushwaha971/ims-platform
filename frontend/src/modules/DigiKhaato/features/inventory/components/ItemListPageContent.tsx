@@ -43,7 +43,6 @@ import { useInventoryMasters } from '../hooks/useInventoryMasters';
 import { useItemForm } from '../hooks/useItemForm';
 import { useItemList } from '../hooks/useItemList';
 import { useStockAdjustment } from '../hooks/useStockAdjustment';
-
 import { inventoryGridLabels } from '../view-model/gridLabels';
 
 import { createItemColumns } from './ItemListColumns';
@@ -90,9 +89,14 @@ export function ItemListPageContent(): React.JSX.Element {
   useEffect(() => {
     if (settled !== latest.current.q) latest.current.update({ q: settled.slice(0, 80) });
   }, [settled]);
-  useEffect(() => {
-    setDraft((current) => (current.trim() === filters.q ? current : filters.q));
-  }, [filters.q]);
+  /* The URL's q changed from outside the box (Clear filters, Back): the box
+     follows. Adjusted during render rather than in an effect, React's
+     recommended way to derive state from a changing prop. */
+  const [syncedQ, setSyncedQ] = useState(filters.q);
+  if (syncedQ !== filters.q) {
+    setSyncedQ(filters.q);
+    if (draft.trim() !== filters.q) setDraft(filters.q);
+  }
 
   const openScan = useCallback(
     async (code: string) => {
