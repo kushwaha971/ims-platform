@@ -284,6 +284,10 @@ CORS_EXPOSE_HEADERS = [
     "X-Tenant-Scope",
     "Idempotent-Replayed",
     "Retry-After",
+    # IMP-02 — a list export is FETCHED (it may answer 202 with a job instead
+    # of a file), so the browser must be allowed to read the file name the
+    # server chose; without it every export saves as the fallback name.
+    "Content-Disposition",
 ]
 
 # The same split, in the other direction — and this is the half that stops the

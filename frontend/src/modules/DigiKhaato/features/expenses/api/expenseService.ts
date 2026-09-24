@@ -141,6 +141,10 @@ export const expenseListQuery = (filters: ExpenseFilters): string =>
     page: filters.page > 1 ? filters.page : undefined,
   });
 
+/** IMP-02 — the list's path with its filters and no page, for the Export button. */
+export const expenseExportPath = (filters: ExpenseFilters): string =>
+  `${API_PATHS.EXPENSES}${expenseListQuery({ ...filters, page: 1 })}`;
+
 // ── Endpoints ───────────────────────────────────────────────────────────────
 
 export const listExpenses = async (

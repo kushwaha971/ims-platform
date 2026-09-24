@@ -72,6 +72,8 @@ export const ROUTES = {
   SETTINGS_ACTIVITY: '/settings/activity',
   SETTINGS_DEVICES: '/settings/devices',
   SWITCH_TENANT: '/switch',
+  /** IMP-01 — the import wizard; `?kind=` skips the kind picker (FR-14). */
+  IMPORTS: '/imports',
 } as const;
 
 export type RouteKey = keyof typeof ROUTES;
@@ -192,6 +194,7 @@ export const APP_ROUTE_PREFIXES: readonly string[] = [
   ROUTES.SETTINGS,
   ROUTES.SWITCH_TENANT,
   '/notifications',
+  ROUTES.IMPORTS,
 ];
 
 /** Everything the proxy guards: a session is required for all of it. */
@@ -237,3 +240,12 @@ export const RETIRED_ROUTES: Readonly<Record<string, string>> = {
 
 /** INV-03's item page — `/items/{id}`, one encoded segment, like `partyPath`. */
 export const itemPath = (id: string): string => `${ROUTES.ITEMS}/${encodeURIComponent(id)}`;
+
+/**
+ * IMP-01 FR-14 — the wizard opened from a module page with its kind chosen,
+ * and one import's own page (the notification's deep link, and where the
+ * wizard lands after an upload so a reload keeps the job).
+ */
+export const importKindPath = (kind: string): string =>
+  `${ROUTES.IMPORTS}?kind=${encodeURIComponent(kind)}`;
+export const importJobPath = (id: string): string => `${ROUTES.IMPORTS}/${encodeURIComponent(id)}`;

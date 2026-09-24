@@ -36,6 +36,9 @@ import { ROUTES } from 'src/routes';
 import { PAYMENT_MODES, type PaymentMode } from 'src/types/domain.types';
 import { formatInr } from 'src/utils/money';
 
+import { ListExportButton } from 'modules/DigiKhaato/features/imports/components/ListHeaderActions';
+
+import { expenseExportPath } from '../api/expenseService';
 import { EXPENSE_PRESETS } from '../constants/expensePeriod';
 import { useExpenseForm } from '../hooks/useExpenseForm';
 import { useExpenseList } from '../hooks/useExpenseList';
@@ -217,6 +220,12 @@ export function ExpensesPageContent(): React.JSX.Element {
             >
               {t('cashbook.title')}
             </UbActionLink>
+            {/* IMP-02 — this period and these filters, as a CSV. */}
+            <ListExportButton
+              listPath={expenseExportPath(list.filters)}
+              permission="reports.export"
+              empty={list.status === 'succeeded' && list.total === 0}
+            />
             {/* Hidden rather than disabled for a role that cannot write (§19.7.5). */}
             {canWrite && (
               <UbButton

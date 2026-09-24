@@ -30,6 +30,12 @@ import { useTranslation } from 'src/hooks/useTranslation';
 import { ROUTES, partyPath } from 'src/routes';
 import type { PartyStatus } from 'src/types/domain.types';
 
+import {
+  ImportActionLink,
+  ListExportButton,
+} from 'modules/DigiKhaato/features/imports/components/ListHeaderActions';
+
+import { partyExportPath } from '../api/partyService';
 import { PAGE_SIZE_OPTIONS } from '../constants/partyListDefaults';
 import { TAG_CHIPS_PER_ROW } from '../constants/partyTags';
 import { useBulkArchive } from '../hooks/usePartyArchive';
@@ -451,6 +457,15 @@ export function PartyListPageContent(): React.JSX.Element {
               >
                 {t('parties.tags.filter.manage')}
               </UbActionLink>
+              {/* IMP-01 FR-14 / IMP-02 FR-13 — bring a sheet in, take this
+                  list out. Each hides itself for a role that may not use it,
+                  and the export carries the list's own filters (BR-1). */}
+              <ImportActionLink kind="parties" />
+              <ListExportButton
+                listPath={partyExportPath(filters)}
+                permission="parties.party.export"
+                empty={status === 'succeeded' && meta.total === 0}
+              />
               {/* Hidden rather than disabled when the role cannot write
                   (§19.7.5). A disabled Add button invites a support call; an
                   absent one says nothing a merchant has to interpret. */}

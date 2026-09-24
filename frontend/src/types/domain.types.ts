@@ -40,6 +40,8 @@ export const PERMISSION_CODES = [
    * what gates Archive, Restore and the bulk clean-up.
    */
   'parties.party.delete',
+  /** IMP-02 — canon §0.9's dedicated party-export codename (not staff). */
+  'parties.party.export',
   'ledger.entry.read',
   'ledger.entry.write',
   /**

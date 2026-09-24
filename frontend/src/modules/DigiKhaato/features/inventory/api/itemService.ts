@@ -202,6 +202,20 @@ const STOCK_PARAM: Readonly<Record<StockTab, string | undefined>> = {
   out: 'out',
 };
 
+/** The list's filters, shared with its CSV export (IMP-02 BR-1). */
+const itemFilterQuery = (filters: ItemListFilters): Record<string, string | undefined> => ({
+  q: filters.q || undefined,
+  stock: STOCK_PARAM[filters.tab],
+  type: filters.type || undefined,
+  category_id: filters.categoryId || undefined,
+  status: filters.status,
+  ordering: filters.ordering,
+});
+
+/** IMP-02 — `GET /items` with the screen's filters, for the Export button. */
+export const itemExportPath = (filters: ItemListFilters): string =>
+  `${API_PATHS.ITEMS}${toQueryString(itemFilterQuery(filters))}`;
+
 // ── Endpoints ───────────────────────────────────────────────────────────────
 
 /**
@@ -214,12 +228,7 @@ export const listItems = async (
   pageSize = 25
 ): Promise<ItemListResult> => {
   const query = toQueryString({
-    q: filters.q || undefined,
-    stock: STOCK_PARAM[filters.tab],
-    type: filters.type || undefined,
-    category_id: filters.categoryId || undefined,
-    status: filters.status,
-    ordering: filters.ordering,
+    ...itemFilterQuery(filters),
     page: filters.page,
     page_size: pageSize,
   });

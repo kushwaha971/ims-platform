@@ -668,3 +668,74 @@ at the preview text.
 **Not built.** WhatsApp Business API sending (`whatsapp_api`, NTF-02) — no provider, per
 ADR-021; recurring reminders (`kind=recurring`); per-party locale for message language (the
 tenant's locale is used); the inbox's per-category mute settings.
+
+## CR-2026-09-24-IMP-A — IMP-01 / PTY-10 / INV-09 / IMP-02: what was built beside the FRDs
+
+**State:** `raised`. **Target:** Part 17-01 PTY-10, Part 17-03 IMP-01/IMP-02/INV-09, Part 21
+§21.3.11, Part 22 §22.11/§22.12. **Gate:** none — additive; migrations `imports 0001_initial`,
+`reports 0001_initial`.
+
+**PTY-10 disagrees with IMP-01, and IMP-01 was followed.** PTY-10 was written before the import
+framework and specifies (a) a `duplicate_mode` of skip/update for a mobile already in the book,
+(b) a commit chunked into 200-row transactions that is "not all-or-nothing" (BR-7), and (c) a
+column-mapping screen with `PATCH /imports/{id} {column_map}`. IMP-01 says create-only (BR-3,
+EC-6: a re-upload reports the first import's rows as duplicates), one transaction (BR-1), and no
+mapping step. The sprint's exit criteria — "committing twice creates no duplicates; a cancelled
+import leaves no partial data" — and TSK-PTY-10-02/03 are written against IMP-01, so an existing
+mobile is the row error `duplicate_existing`, the commit is all-or-nothing, and headers are
+matched after case/space folding and through a synonym list (`Party Name`, `Phone`,
+`Outstanding`, `नाम` …). PTY-10 should be amended to cite IMP-01 for all three, and the upsert
+mode left to IMP-03 where Part 17-03 already puts it.
+
+**`imports_job` carries no configuration column.** CCR-17's `options` and CR-036's `column_map`
+are both blocked behind Part 43 §43.4.6 C5; nothing the MVP builds needs either, so neither
+exists. The error file is a `files_attachment` (`owner_type='imports_job_errors'`) found by owner
+rather than CCR-17's `error_file_attachment_id`, for the same reason.
+
+**Traceability without `source_type='import'`.** IMP-01 BR-8 and INV-09 BR-5 ask for ledger
+entries and stock movements with `source_type='import', source_id=job.id`. `import` is not a
+value of either `SourceType`/`MovementSource` enum and adding one is a change to two other
+apps' vocabularies; the importers call `create_party()` / `create_item()` unchanged instead, so
+openings post as `manual` / `item` exactly as the drawers do (BR-6: "every rule, cache update
+and audit row is identical to a manual create"). The job is recorded on EVERY audit row the
+commit writes — `metadata.import_job_id`, `via='import'`, `batch`, `runner` — through
+`Ctx.audit_meta`, which satisfies AC-8 and is what a support query starts from. The ledger
+row's own `metadata.via` still reads `party_create`, because `create_party` names its caller
+there; the `import_job_id` beside it is the discriminator.
+
+**Permissions are the kind's codenames (IMP-01 §12), so staff may import parties.** PTY-10 §12
+excludes staff "entirely at MVP", but staff hold `parties.party.write` and `ledger.entry.write`
+by default, and IMP-01 introduces no codename. Excluding them would be a role check; the
+precedent (LED-03, CR-124) is that an ordinary capability is a codename check and only a
+business ceiling is a role check. Decide which PTY-10 means.
+
+**Exports: one pipeline, not an `ExporterSpec` registry.** IMP-02 FR-2 specifies a resource
+registry with filtersets in `imports/exporters`. Built instead: `CsvExportMixin` in
+`apps/common/exports.py`, which the party, item and expense list viewsets use, and whose
+`export_queryset()` is the SAME method the JSON list pages over — so BR-1 ("the file is the
+screen") holds by construction, and the >5,000-row job replays that method on a synthetic
+request carrying the stored query string. `reports_export` is in the `reports` app (its table
+prefix) with CR-098's accepted columns. Stored exports are read at `GET /reports/exports/{id}`
+(§22.11, which PLT-08/PLT-10 already name) and downloaded at `/reports/exports/{id}/download`,
+not CCR-20's `/exports/{id}` — one address per object until CCR-20 is decided. Not built: XLSX
+(ADR-021/023 undecided), the column chooser (FR-5), the totals row (FR-10 — it breaks a paste
+into a pivot and a re-import), export history (FR-9) and cancel (FR-12). Dates in export files
+are dd/mm/yyyy (TSK-IMP-02-05) rather than FR-4's ISO, matching the statement CSV and what the
+importer reads back.
+
+**Not built, with reasons.** Import history UI (`GET /imports` exists); FR-12's reaper as a
+scheduler tick — a job stuck `validating` > 10 min or `importing` > 30 min is marked
+`interrupted` when it is next READ, and a runner that dies mid-commit is re-queued once by the
+platform reaper, whose transaction the database has already rolled back; the 30-day purge of
+import files (a cancelled job's file IS deleted); progress during the commit (EC-14 accepts an
+indeterminate bar — the transaction's writes are not visible until it commits); the
+`opening_stock` kind (INV-05's own feature).
+
+**Outside this track's apps, fixed because the look could not run without it.**
+`run_scheduler` logged `extra={"created": n}`; `created` is a reserved `LogRecord`
+attribute, so with `ub.jobs` at INFO (local settings) the runner died with KeyError on the
+first tick that materialised a schedule — on a fresh database, the very first tick — and no
+`platform_job` ran. One-word rename plus a test at INFO. Noted, not fixed: the loop has no
+per-tick error handling, so any transient database error (a cancelled statement, a
+connection timeout under load) also ends the process; deployment's cron restart covers it,
+a native `dev-backend.sh` session does not.

@@ -47,7 +47,12 @@ import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import { ROUTES, itemPath } from 'src/routes';
 import { formatInr } from 'src/utils/money';
 
-import { lookupItemByBarcode } from '../api/itemService';
+import {
+  ImportActionLink,
+  ListExportButton,
+} from 'modules/DigiKhaato/features/imports/components/ListHeaderActions';
+
+import { itemExportPath, lookupItemByBarcode } from '../api/itemService';
 import { useInventoryMasters } from '../hooks/useInventoryMasters';
 import { useItemForm } from '../hooks/useItemForm';
 import { useItemList } from '../hooks/useItemList';
@@ -267,6 +272,13 @@ export function ItemListPageContent(): React.JSX.Element {
             >
               {t('items.list.masters')}
             </UbActionLink>
+            {/* IMP-01 FR-14 / IMP-02 FR-13 — see the party list's header. */}
+            <ImportActionLink kind="items" />
+            <ListExportButton
+              listPath={itemExportPath(filters)}
+              permission="reports.export"
+              empty={list.status === 'succeeded' && list.total === 0}
+            />
             {canAdjust && (
               <UbButton
                 variant="secondary"
