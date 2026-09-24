@@ -38,6 +38,18 @@ export const removeLocal = (key: string): void => {
   }
 };
 
+/** The keys under `ub.<prefix>`, without the `ub.` — for a namespace that is enumerated (SAL-06). */
+export const listLocalKeys = (prefix: string): string[] => {
+  if (!available()) return [];
+  try {
+    return Object.keys(window.localStorage)
+      .filter((key) => key.startsWith(`${PREFIX}${prefix}`))
+      .map((key) => key.slice(PREFIX.length));
+  } catch {
+    return [];
+  }
+};
+
 /** Logout and tenant switch clear everything except the draft namespace. */
 export const clearLocalExceptDrafts = (): void => {
   if (!available()) return;

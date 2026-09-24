@@ -115,6 +115,8 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
   },
   {
     key: 'invoices',
+    // SAL-02/03/06/07/08 — bills, drafts, walk-in cash sales, print and share.
+    ready: true,
     icon: FileText,
     labelId: 'nav.invoices',
     href: ROUTES.SALES_INVOICES,

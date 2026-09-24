@@ -117,6 +117,17 @@ import {
   startBulkReminders,
 } from 'modules/DigiKhaato/features/reminders/redux/reminderThunk';
 import {
+  createInvoiceShareLink,
+  deleteInvoiceDraft,
+  fetchInvoice,
+  fetchInvoices,
+  fetchPrintBranding,
+  fetchSalesContext,
+  fetchUpiIntent,
+  issueInvoice,
+  saveInvoiceDraft,
+} from 'modules/DigiKhaato/features/sales/redux/salesThunk';
+import {
   fetchDevices,
   logoutEverywhere,
   renameDevice,
@@ -223,6 +234,12 @@ export const QUERIES = {
   // NTF-01 — the bell's count and the inbox panel
   fetchUnreadCount,
   fetchNotifications,
+  // SAL-02/03/06/08 — the bills list, the editor's context, the print sheet
+  fetchInvoices,
+  fetchInvoice,
+  fetchSalesContext,
+  fetchUpiIntent,
+  fetchPrintBranding,
 } as const;
 
 export const MUTATIONS = {
@@ -305,6 +322,11 @@ export const MUTATIONS = {
   // NTF-01 — read state
   readNotification,
   readAllNotifications,
+  // SAL-02/03/06 — drafts, the issue, the share link
+  saveInvoiceDraft,
+  issueInvoice,
+  deleteInvoiceDraft,
+  createInvoiceShareLink,
 } as const;
 
 export type TQueryName = keyof typeof QUERIES;

@@ -68,6 +68,9 @@ def item_row(item: Item) -> dict:
         "selling_price": str(item.selling_price),
         "purchase_price": str(item.purchase_price),
         "tax_code": item.tax_code,
+        # SAL-02 FR-2 — the invoice line defaults from the picked row itself.
+        "hsn_sac": item.hsn_sac,
+        "tax_inclusive_selling": item.tax_inclusive_selling,
         "track_stock": item.track_stock,
         "on_hand": _s(getattr(item, "on_hand", None)),
         "avg_cost": _s(getattr(item, "avg_cost", None)),

@@ -1,13 +1,55 @@
 {
   "about": "SAL-02 BR-1..BR-12 shared tax-engine fixture. Consumed by backend apps/sales/tests/test_tax_engine.py (compute_document_totals) AND frontend view-model/taxEngine.test.ts (the mirror). Written BEFORE either engine, from the FRD's business rules and the BR-10 worked example; every expected figure is hand-computed and the arithmetic is in each case's `note`. A divergence between the engines fails CI on both sides. Money is a string with 2 dp, qty 3 dp, price 4 dp, rate 3 dp. `rates` mirrors seed_reference_data's global slabs (the 2025-09-21 boundary) plus one tenant cess row used by the cess cases.",
   "rates": [
-    { "code": "GST0", "rate": "0.000", "cess_rate": "0.000", "effective_from": "2017-07-01", "effective_to": null },
-    { "code": "GST5", "rate": "5.000", "cess_rate": "0.000", "effective_from": "2017-07-01", "effective_to": null },
-    { "code": "GST12", "rate": "12.000", "cess_rate": "0.000", "effective_from": "2017-07-01", "effective_to": "2025-09-21" },
-    { "code": "GST18", "rate": "18.000", "cess_rate": "0.000", "effective_from": "2017-07-01", "effective_to": null },
-    { "code": "GST28", "rate": "28.000", "cess_rate": "0.000", "effective_from": "2017-07-01", "effective_to": "2025-09-21" },
-    { "code": "GST40", "rate": "40.000", "cess_rate": "0.000", "effective_from": "2025-09-22", "effective_to": null },
-    { "code": "GST28C12", "rate": "28.000", "cess_rate": "12.000", "effective_from": "2017-07-01", "effective_to": "2025-09-21" }
+    {
+      "code": "GST0",
+      "rate": "0.000",
+      "cess_rate": "0.000",
+      "effective_from": "2017-07-01",
+      "effective_to": null
+    },
+    {
+      "code": "GST5",
+      "rate": "5.000",
+      "cess_rate": "0.000",
+      "effective_from": "2017-07-01",
+      "effective_to": null
+    },
+    {
+      "code": "GST12",
+      "rate": "12.000",
+      "cess_rate": "0.000",
+      "effective_from": "2017-07-01",
+      "effective_to": "2025-09-21"
+    },
+    {
+      "code": "GST18",
+      "rate": "18.000",
+      "cess_rate": "0.000",
+      "effective_from": "2017-07-01",
+      "effective_to": null
+    },
+    {
+      "code": "GST28",
+      "rate": "28.000",
+      "cess_rate": "0.000",
+      "effective_from": "2017-07-01",
+      "effective_to": "2025-09-21"
+    },
+    {
+      "code": "GST40",
+      "rate": "40.000",
+      "cess_rate": "0.000",
+      "effective_from": "2025-09-22",
+      "effective_to": null
+    },
+    {
+      "code": "GST28C12",
+      "rate": "28.000",
+      "cess_rate": "12.000",
+      "effective_from": "2017-07-01",
+      "effective_to": "2025-09-21"
+    }
   ],
   "cases": [
     {
@@ -15,24 +57,95 @@
       "refs": ["BR-10", "T-SAL02-2", "AC-5"],
       "note": "The FRD worked example, Maharashtra -> Maharashtra, doc discount 50, round-off on. 480/1.05=457.142857->457.14; shares 25.26+13.51+11.23=50.00; 829.74x0.025=20.7435->20.74, x0.05=41.487->41.49, sgst=20.75.",
       "input": {
-        "document_date": "2026-09-18", "gst_type": "regular", "tenant_state": "27", "place_of_supply": "27",
-        "reverse_charge": false, "round_off_enabled": true, "discount_type": "amount", "discount_value": "50.00",
+        "document_date": "2026-09-18",
+        "gst_type": "regular",
+        "tenant_state": "27",
+        "place_of_supply": "27",
+        "reverse_charge": false,
+        "round_off_enabled": true,
+        "discount_type": "amount",
+        "discount_value": "50.00",
         "lines": [
-          { "qty": "2.000", "unit_price": "450.0000", "tax_inclusive": false, "discount_type": "percent", "discount_value": "5", "tax_code": "GST5" },
-          { "qty": "3.000", "unit_price": "160.0000", "tax_inclusive": true, "discount_type": null, "discount_value": null, "tax_code": "GST5" },
-          { "qty": "4.000", "unit_price": "95.0000", "tax_inclusive": false, "discount_type": null, "discount_value": null, "tax_code": "GST18" }
+          {
+            "qty": "2.000",
+            "unit_price": "450.0000",
+            "tax_inclusive": false,
+            "discount_type": "percent",
+            "discount_value": "5",
+            "tax_code": "GST5"
+          },
+          {
+            "qty": "3.000",
+            "unit_price": "160.0000",
+            "tax_inclusive": true,
+            "discount_type": null,
+            "discount_value": null,
+            "tax_code": "GST5"
+          },
+          {
+            "qty": "4.000",
+            "unit_price": "95.0000",
+            "tax_inclusive": false,
+            "discount_type": null,
+            "discount_value": null,
+            "tax_code": "GST18"
+          }
         ]
       },
       "expected": {
         "document": {
-          "is_inter_state": false, "subtotal": "1692.14", "discount_amount": "50.00", "taxable_total": "1642.14",
-          "cgst_total": "65.02", "sgst_total": "65.03", "igst_total": "0.00", "cess_total": "0.00",
-          "grand_raw": "1772.19", "round_off": "-0.19", "grand_total": "1772.00"
+          "is_inter_state": false,
+          "subtotal": "1692.14",
+          "discount_amount": "50.00",
+          "taxable_total": "1642.14",
+          "cgst_total": "65.02",
+          "sgst_total": "65.03",
+          "igst_total": "0.00",
+          "cess_total": "0.00",
+          "grand_raw": "1772.19",
+          "round_off": "-0.19",
+          "grand_total": "1772.00"
         },
         "lines": [
-          { "gross": "900.00", "discount_amount": "45.00", "taxable_line": "855.00", "doc_discount_share": "25.26", "taxable_value": "829.74", "tax_rate": "5.000", "cgst": "20.74", "sgst": "20.75", "igst": "0.00", "cess": "0.00", "line_total": "871.23" },
-          { "gross": "480.00", "discount_amount": "0.00", "taxable_line": "457.14", "doc_discount_share": "13.51", "taxable_value": "443.63", "tax_rate": "5.000", "cgst": "11.09", "sgst": "11.09", "igst": "0.00", "cess": "0.00", "line_total": "465.81" },
-          { "gross": "380.00", "discount_amount": "0.00", "taxable_line": "380.00", "doc_discount_share": "11.23", "taxable_value": "368.77", "tax_rate": "18.000", "cgst": "33.19", "sgst": "33.19", "igst": "0.00", "cess": "0.00", "line_total": "435.15" }
+          {
+            "gross": "900.00",
+            "discount_amount": "45.00",
+            "taxable_line": "855.00",
+            "doc_discount_share": "25.26",
+            "taxable_value": "829.74",
+            "tax_rate": "5.000",
+            "cgst": "20.74",
+            "sgst": "20.75",
+            "igst": "0.00",
+            "cess": "0.00",
+            "line_total": "871.23"
+          },
+          {
+            "gross": "480.00",
+            "discount_amount": "0.00",
+            "taxable_line": "457.14",
+            "doc_discount_share": "13.51",
+            "taxable_value": "443.63",
+            "tax_rate": "5.000",
+            "cgst": "11.09",
+            "sgst": "11.09",
+            "igst": "0.00",
+            "cess": "0.00",
+            "line_total": "465.81"
+          },
+          {
+            "gross": "380.00",
+            "discount_amount": "0.00",
+            "taxable_line": "380.00",
+            "doc_discount_share": "11.23",
+            "taxable_value": "368.77",
+            "tax_rate": "18.000",
+            "cgst": "33.19",
+            "sgst": "33.19",
+            "igst": "0.00",
+            "cess": "0.00",
+            "line_total": "435.15"
+          }
         ]
       }
     },
@@ -41,24 +154,95 @@
       "refs": ["BR-10", "BR-6", "T-SAL02-2", "T-SAL02-16", "AC-3"],
       "note": "The same invoice with POS Gujarat (24): IGST 41.49 / 22.18 / 66.38 = 130.05, same grand total.",
       "input": {
-        "document_date": "2026-09-18", "gst_type": "regular", "tenant_state": "27", "place_of_supply": "24",
-        "reverse_charge": false, "round_off_enabled": true, "discount_type": "amount", "discount_value": "50.00",
+        "document_date": "2026-09-18",
+        "gst_type": "regular",
+        "tenant_state": "27",
+        "place_of_supply": "24",
+        "reverse_charge": false,
+        "round_off_enabled": true,
+        "discount_type": "amount",
+        "discount_value": "50.00",
         "lines": [
-          { "qty": "2.000", "unit_price": "450.0000", "tax_inclusive": false, "discount_type": "percent", "discount_value": "5", "tax_code": "GST5" },
-          { "qty": "3.000", "unit_price": "160.0000", "tax_inclusive": true, "discount_type": null, "discount_value": null, "tax_code": "GST5" },
-          { "qty": "4.000", "unit_price": "95.0000", "tax_inclusive": false, "discount_type": null, "discount_value": null, "tax_code": "GST18" }
+          {
+            "qty": "2.000",
+            "unit_price": "450.0000",
+            "tax_inclusive": false,
+            "discount_type": "percent",
+            "discount_value": "5",
+            "tax_code": "GST5"
+          },
+          {
+            "qty": "3.000",
+            "unit_price": "160.0000",
+            "tax_inclusive": true,
+            "discount_type": null,
+            "discount_value": null,
+            "tax_code": "GST5"
+          },
+          {
+            "qty": "4.000",
+            "unit_price": "95.0000",
+            "tax_inclusive": false,
+            "discount_type": null,
+            "discount_value": null,
+            "tax_code": "GST18"
+          }
         ]
       },
       "expected": {
         "document": {
-          "is_inter_state": true, "subtotal": "1692.14", "discount_amount": "50.00", "taxable_total": "1642.14",
-          "cgst_total": "0.00", "sgst_total": "0.00", "igst_total": "130.05", "cess_total": "0.00",
-          "grand_raw": "1772.19", "round_off": "-0.19", "grand_total": "1772.00"
+          "is_inter_state": true,
+          "subtotal": "1692.14",
+          "discount_amount": "50.00",
+          "taxable_total": "1642.14",
+          "cgst_total": "0.00",
+          "sgst_total": "0.00",
+          "igst_total": "130.05",
+          "cess_total": "0.00",
+          "grand_raw": "1772.19",
+          "round_off": "-0.19",
+          "grand_total": "1772.00"
         },
         "lines": [
-          { "gross": "900.00", "discount_amount": "45.00", "taxable_line": "855.00", "doc_discount_share": "25.26", "taxable_value": "829.74", "tax_rate": "5.000", "cgst": "0.00", "sgst": "0.00", "igst": "41.49", "cess": "0.00", "line_total": "871.23" },
-          { "gross": "480.00", "discount_amount": "0.00", "taxable_line": "457.14", "doc_discount_share": "13.51", "taxable_value": "443.63", "tax_rate": "5.000", "cgst": "0.00", "sgst": "0.00", "igst": "22.18", "cess": "0.00", "line_total": "465.81" },
-          { "gross": "380.00", "discount_amount": "0.00", "taxable_line": "380.00", "doc_discount_share": "11.23", "taxable_value": "368.77", "tax_rate": "18.000", "cgst": "0.00", "sgst": "0.00", "igst": "66.38", "cess": "0.00", "line_total": "435.15" }
+          {
+            "gross": "900.00",
+            "discount_amount": "45.00",
+            "taxable_line": "855.00",
+            "doc_discount_share": "25.26",
+            "taxable_value": "829.74",
+            "tax_rate": "5.000",
+            "cgst": "0.00",
+            "sgst": "0.00",
+            "igst": "41.49",
+            "cess": "0.00",
+            "line_total": "871.23"
+          },
+          {
+            "gross": "480.00",
+            "discount_amount": "0.00",
+            "taxable_line": "457.14",
+            "doc_discount_share": "13.51",
+            "taxable_value": "443.63",
+            "tax_rate": "5.000",
+            "cgst": "0.00",
+            "sgst": "0.00",
+            "igst": "22.18",
+            "cess": "0.00",
+            "line_total": "465.81"
+          },
+          {
+            "gross": "380.00",
+            "discount_amount": "0.00",
+            "taxable_line": "380.00",
+            "doc_discount_share": "11.23",
+            "taxable_value": "368.77",
+            "tax_rate": "18.000",
+            "cgst": "0.00",
+            "sgst": "0.00",
+            "igst": "66.38",
+            "cess": "0.00",
+            "line_total": "435.15"
+          }
         ]
       }
     },
@@ -67,20 +251,53 @@
       "refs": ["BR-4", "T-SAL02-1", "AC-4"],
       "note": "118.00 incl @18: taxable q2(118/1.18)=100.00, CGST 9.00 + SGST 9.00, line total 118.00 - the shelf price to the paisa.",
       "input": {
-        "document_date": "2026-09-18", "gst_type": "regular", "tenant_state": "27", "place_of_supply": "27",
-        "reverse_charge": false, "round_off_enabled": true, "discount_type": null, "discount_value": null,
+        "document_date": "2026-09-18",
+        "gst_type": "regular",
+        "tenant_state": "27",
+        "place_of_supply": "27",
+        "reverse_charge": false,
+        "round_off_enabled": true,
+        "discount_type": null,
+        "discount_value": null,
         "lines": [
-          { "qty": "1.000", "unit_price": "118.0000", "tax_inclusive": true, "discount_type": null, "discount_value": null, "tax_code": "GST18" }
+          {
+            "qty": "1.000",
+            "unit_price": "118.0000",
+            "tax_inclusive": true,
+            "discount_type": null,
+            "discount_value": null,
+            "tax_code": "GST18"
+          }
         ]
       },
       "expected": {
         "document": {
-          "is_inter_state": false, "subtotal": "100.00", "discount_amount": "0.00", "taxable_total": "100.00",
-          "cgst_total": "9.00", "sgst_total": "9.00", "igst_total": "0.00", "cess_total": "0.00",
-          "grand_raw": "118.00", "round_off": "0.00", "grand_total": "118.00"
+          "is_inter_state": false,
+          "subtotal": "100.00",
+          "discount_amount": "0.00",
+          "taxable_total": "100.00",
+          "cgst_total": "9.00",
+          "sgst_total": "9.00",
+          "igst_total": "0.00",
+          "cess_total": "0.00",
+          "grand_raw": "118.00",
+          "round_off": "0.00",
+          "grand_total": "118.00"
         },
         "lines": [
-          { "gross": "118.00", "discount_amount": "0.00", "taxable_line": "100.00", "doc_discount_share": "0.00", "taxable_value": "100.00", "tax_rate": "18.000", "cgst": "9.00", "sgst": "9.00", "igst": "0.00", "cess": "0.00", "line_total": "118.00" }
+          {
+            "gross": "118.00",
+            "discount_amount": "0.00",
+            "taxable_line": "100.00",
+            "doc_discount_share": "0.00",
+            "taxable_value": "100.00",
+            "tax_rate": "18.000",
+            "cgst": "9.00",
+            "sgst": "9.00",
+            "igst": "0.00",
+            "cess": "0.00",
+            "line_total": "118.00"
+          }
         ]
       }
     },
@@ -89,20 +306,53 @@
       "refs": ["BR-4", "BR-6"],
       "note": "Inclusive, inter-state: taxable 100.00, IGST q2(100x0.18)=18.00.",
       "input": {
-        "document_date": "2026-09-18", "gst_type": "regular", "tenant_state": "27", "place_of_supply": "29",
-        "reverse_charge": false, "round_off_enabled": true, "discount_type": null, "discount_value": null,
+        "document_date": "2026-09-18",
+        "gst_type": "regular",
+        "tenant_state": "27",
+        "place_of_supply": "29",
+        "reverse_charge": false,
+        "round_off_enabled": true,
+        "discount_type": null,
+        "discount_value": null,
         "lines": [
-          { "qty": "1.000", "unit_price": "118.0000", "tax_inclusive": true, "discount_type": null, "discount_value": null, "tax_code": "GST18" }
+          {
+            "qty": "1.000",
+            "unit_price": "118.0000",
+            "tax_inclusive": true,
+            "discount_type": null,
+            "discount_value": null,
+            "tax_code": "GST18"
+          }
         ]
       },
       "expected": {
         "document": {
-          "is_inter_state": true, "subtotal": "100.00", "discount_amount": "0.00", "taxable_total": "100.00",
-          "cgst_total": "0.00", "sgst_total": "0.00", "igst_total": "18.00", "cess_total": "0.00",
-          "grand_raw": "118.00", "round_off": "0.00", "grand_total": "118.00"
+          "is_inter_state": true,
+          "subtotal": "100.00",
+          "discount_amount": "0.00",
+          "taxable_total": "100.00",
+          "cgst_total": "0.00",
+          "sgst_total": "0.00",
+          "igst_total": "18.00",
+          "cess_total": "0.00",
+          "grand_raw": "118.00",
+          "round_off": "0.00",
+          "grand_total": "118.00"
         },
         "lines": [
-          { "gross": "118.00", "discount_amount": "0.00", "taxable_line": "100.00", "doc_discount_share": "0.00", "taxable_value": "100.00", "tax_rate": "18.000", "cgst": "0.00", "sgst": "0.00", "igst": "18.00", "cess": "0.00", "line_total": "118.00" }
+          {
+            "gross": "118.00",
+            "discount_amount": "0.00",
+            "taxable_line": "100.00",
+            "doc_discount_share": "0.00",
+            "taxable_value": "100.00",
+            "tax_rate": "18.000",
+            "cgst": "0.00",
+            "sgst": "0.00",
+            "igst": "18.00",
+            "cess": "0.00",
+            "line_total": "118.00"
+          }
         ]
       }
     },
@@ -111,20 +361,53 @@
       "refs": ["BR-6", "T-SAL02-3"],
       "note": "855.00 @5 intra: tax 42.75, cgst q2(21.375)=21.38 half-up (banker's would give 21.38 too - the SGST remainder 21.37 is the proof), grand 897.75 -> 898, round-off +0.25.",
       "input": {
-        "document_date": "2026-09-18", "gst_type": "regular", "tenant_state": "27", "place_of_supply": "27",
-        "reverse_charge": false, "round_off_enabled": true, "discount_type": null, "discount_value": null,
+        "document_date": "2026-09-18",
+        "gst_type": "regular",
+        "tenant_state": "27",
+        "place_of_supply": "27",
+        "reverse_charge": false,
+        "round_off_enabled": true,
+        "discount_type": null,
+        "discount_value": null,
         "lines": [
-          { "qty": "1.000", "unit_price": "855.0000", "tax_inclusive": false, "discount_type": null, "discount_value": null, "tax_code": "GST5" }
+          {
+            "qty": "1.000",
+            "unit_price": "855.0000",
+            "tax_inclusive": false,
+            "discount_type": null,
+            "discount_value": null,
+            "tax_code": "GST5"
+          }
         ]
       },
       "expected": {
         "document": {
-          "is_inter_state": false, "subtotal": "855.00", "discount_amount": "0.00", "taxable_total": "855.00",
-          "cgst_total": "21.38", "sgst_total": "21.37", "igst_total": "0.00", "cess_total": "0.00",
-          "grand_raw": "897.75", "round_off": "0.25", "grand_total": "898.00"
+          "is_inter_state": false,
+          "subtotal": "855.00",
+          "discount_amount": "0.00",
+          "taxable_total": "855.00",
+          "cgst_total": "21.38",
+          "sgst_total": "21.37",
+          "igst_total": "0.00",
+          "cess_total": "0.00",
+          "grand_raw": "897.75",
+          "round_off": "0.25",
+          "grand_total": "898.00"
         },
         "lines": [
-          { "gross": "855.00", "discount_amount": "0.00", "taxable_line": "855.00", "doc_discount_share": "0.00", "taxable_value": "855.00", "tax_rate": "5.000", "cgst": "21.38", "sgst": "21.37", "igst": "0.00", "cess": "0.00", "line_total": "897.75" }
+          {
+            "gross": "855.00",
+            "discount_amount": "0.00",
+            "taxable_line": "855.00",
+            "doc_discount_share": "0.00",
+            "taxable_value": "855.00",
+            "tax_rate": "5.000",
+            "cgst": "21.38",
+            "sgst": "21.37",
+            "igst": "0.00",
+            "cess": "0.00",
+            "line_total": "897.75"
+          }
         ]
       }
     },
@@ -133,24 +416,95 @@
       "refs": ["BR-5", "T-SAL02-4"],
       "note": "Three equal lines of 100.00, doc discount 10.00: each share q2(3.333..)=3.33, sum 9.99, residual +0.01 goes to the LARGEST taxable_line, ties -> LOWEST line_no, so line 1 takes 3.34. 96.66x0.18=17.3988->17.40, x0.09=8.6994->8.70; 96.67x0.18=17.4006->17.40, x0.09=8.7003->8.70. Round-off off.",
       "input": {
-        "document_date": "2026-09-18", "gst_type": "regular", "tenant_state": "27", "place_of_supply": "27",
-        "reverse_charge": false, "round_off_enabled": false, "discount_type": "amount", "discount_value": "10.00",
+        "document_date": "2026-09-18",
+        "gst_type": "regular",
+        "tenant_state": "27",
+        "place_of_supply": "27",
+        "reverse_charge": false,
+        "round_off_enabled": false,
+        "discount_type": "amount",
+        "discount_value": "10.00",
         "lines": [
-          { "qty": "1.000", "unit_price": "100.0000", "tax_inclusive": false, "discount_type": null, "discount_value": null, "tax_code": "GST18" },
-          { "qty": "1.000", "unit_price": "100.0000", "tax_inclusive": false, "discount_type": null, "discount_value": null, "tax_code": "GST18" },
-          { "qty": "1.000", "unit_price": "100.0000", "tax_inclusive": false, "discount_type": null, "discount_value": null, "tax_code": "GST18" }
+          {
+            "qty": "1.000",
+            "unit_price": "100.0000",
+            "tax_inclusive": false,
+            "discount_type": null,
+            "discount_value": null,
+            "tax_code": "GST18"
+          },
+          {
+            "qty": "1.000",
+            "unit_price": "100.0000",
+            "tax_inclusive": false,
+            "discount_type": null,
+            "discount_value": null,
+            "tax_code": "GST18"
+          },
+          {
+            "qty": "1.000",
+            "unit_price": "100.0000",
+            "tax_inclusive": false,
+            "discount_type": null,
+            "discount_value": null,
+            "tax_code": "GST18"
+          }
         ]
       },
       "expected": {
         "document": {
-          "is_inter_state": false, "subtotal": "300.00", "discount_amount": "10.00", "taxable_total": "290.00",
-          "cgst_total": "26.10", "sgst_total": "26.10", "igst_total": "0.00", "cess_total": "0.00",
-          "grand_raw": "342.20", "round_off": "0.00", "grand_total": "342.20"
+          "is_inter_state": false,
+          "subtotal": "300.00",
+          "discount_amount": "10.00",
+          "taxable_total": "290.00",
+          "cgst_total": "26.10",
+          "sgst_total": "26.10",
+          "igst_total": "0.00",
+          "cess_total": "0.00",
+          "grand_raw": "342.20",
+          "round_off": "0.00",
+          "grand_total": "342.20"
         },
         "lines": [
-          { "gross": "100.00", "discount_amount": "0.00", "taxable_line": "100.00", "doc_discount_share": "3.34", "taxable_value": "96.66", "tax_rate": "18.000", "cgst": "8.70", "sgst": "8.70", "igst": "0.00", "cess": "0.00", "line_total": "114.06" },
-          { "gross": "100.00", "discount_amount": "0.00", "taxable_line": "100.00", "doc_discount_share": "3.33", "taxable_value": "96.67", "tax_rate": "18.000", "cgst": "8.70", "sgst": "8.70", "igst": "0.00", "cess": "0.00", "line_total": "114.07" },
-          { "gross": "100.00", "discount_amount": "0.00", "taxable_line": "100.00", "doc_discount_share": "3.33", "taxable_value": "96.67", "tax_rate": "18.000", "cgst": "8.70", "sgst": "8.70", "igst": "0.00", "cess": "0.00", "line_total": "114.07" }
+          {
+            "gross": "100.00",
+            "discount_amount": "0.00",
+            "taxable_line": "100.00",
+            "doc_discount_share": "3.34",
+            "taxable_value": "96.66",
+            "tax_rate": "18.000",
+            "cgst": "8.70",
+            "sgst": "8.70",
+            "igst": "0.00",
+            "cess": "0.00",
+            "line_total": "114.06"
+          },
+          {
+            "gross": "100.00",
+            "discount_amount": "0.00",
+            "taxable_line": "100.00",
+            "doc_discount_share": "3.33",
+            "taxable_value": "96.67",
+            "tax_rate": "18.000",
+            "cgst": "8.70",
+            "sgst": "8.70",
+            "igst": "0.00",
+            "cess": "0.00",
+            "line_total": "114.07"
+          },
+          {
+            "gross": "100.00",
+            "discount_amount": "0.00",
+            "taxable_line": "100.00",
+            "doc_discount_share": "3.33",
+            "taxable_value": "96.67",
+            "tax_rate": "18.000",
+            "cgst": "8.70",
+            "sgst": "8.70",
+            "igst": "0.00",
+            "cess": "0.00",
+            "line_total": "114.07"
+          }
         ]
       }
     },
@@ -159,24 +513,95 @@
       "refs": ["BR-5", "BR-8"],
       "note": "Three lines of 10.00, doc discount 0.02: shares q2(0.00667)=0.01 each, sum 0.03, residual -0.01 to line 1 -> 0.00. 9.99x0.05=0.4995->0.50, x0.025=0.24975->0.25. grand_raw 31.48 -> 31, round-off -0.48.",
       "input": {
-        "document_date": "2026-09-18", "gst_type": "regular", "tenant_state": "27", "place_of_supply": "27",
-        "reverse_charge": false, "round_off_enabled": true, "discount_type": "amount", "discount_value": "0.02",
+        "document_date": "2026-09-18",
+        "gst_type": "regular",
+        "tenant_state": "27",
+        "place_of_supply": "27",
+        "reverse_charge": false,
+        "round_off_enabled": true,
+        "discount_type": "amount",
+        "discount_value": "0.02",
         "lines": [
-          { "qty": "1.000", "unit_price": "10.0000", "tax_inclusive": false, "discount_type": null, "discount_value": null, "tax_code": "GST5" },
-          { "qty": "1.000", "unit_price": "10.0000", "tax_inclusive": false, "discount_type": null, "discount_value": null, "tax_code": "GST5" },
-          { "qty": "1.000", "unit_price": "10.0000", "tax_inclusive": false, "discount_type": null, "discount_value": null, "tax_code": "GST5" }
+          {
+            "qty": "1.000",
+            "unit_price": "10.0000",
+            "tax_inclusive": false,
+            "discount_type": null,
+            "discount_value": null,
+            "tax_code": "GST5"
+          },
+          {
+            "qty": "1.000",
+            "unit_price": "10.0000",
+            "tax_inclusive": false,
+            "discount_type": null,
+            "discount_value": null,
+            "tax_code": "GST5"
+          },
+          {
+            "qty": "1.000",
+            "unit_price": "10.0000",
+            "tax_inclusive": false,
+            "discount_type": null,
+            "discount_value": null,
+            "tax_code": "GST5"
+          }
         ]
       },
       "expected": {
         "document": {
-          "is_inter_state": false, "subtotal": "30.00", "discount_amount": "0.02", "taxable_total": "29.98",
-          "cgst_total": "0.75", "sgst_total": "0.75", "igst_total": "0.00", "cess_total": "0.00",
-          "grand_raw": "31.48", "round_off": "-0.48", "grand_total": "31.00"
+          "is_inter_state": false,
+          "subtotal": "30.00",
+          "discount_amount": "0.02",
+          "taxable_total": "29.98",
+          "cgst_total": "0.75",
+          "sgst_total": "0.75",
+          "igst_total": "0.00",
+          "cess_total": "0.00",
+          "grand_raw": "31.48",
+          "round_off": "-0.48",
+          "grand_total": "31.00"
         },
         "lines": [
-          { "gross": "10.00", "discount_amount": "0.00", "taxable_line": "10.00", "doc_discount_share": "0.00", "taxable_value": "10.00", "tax_rate": "5.000", "cgst": "0.25", "sgst": "0.25", "igst": "0.00", "cess": "0.00", "line_total": "10.50" },
-          { "gross": "10.00", "discount_amount": "0.00", "taxable_line": "10.00", "doc_discount_share": "0.01", "taxable_value": "9.99", "tax_rate": "5.000", "cgst": "0.25", "sgst": "0.25", "igst": "0.00", "cess": "0.00", "line_total": "10.49" },
-          { "gross": "10.00", "discount_amount": "0.00", "taxable_line": "10.00", "doc_discount_share": "0.01", "taxable_value": "9.99", "tax_rate": "5.000", "cgst": "0.25", "sgst": "0.25", "igst": "0.00", "cess": "0.00", "line_total": "10.49" }
+          {
+            "gross": "10.00",
+            "discount_amount": "0.00",
+            "taxable_line": "10.00",
+            "doc_discount_share": "0.00",
+            "taxable_value": "10.00",
+            "tax_rate": "5.000",
+            "cgst": "0.25",
+            "sgst": "0.25",
+            "igst": "0.00",
+            "cess": "0.00",
+            "line_total": "10.50"
+          },
+          {
+            "gross": "10.00",
+            "discount_amount": "0.00",
+            "taxable_line": "10.00",
+            "doc_discount_share": "0.01",
+            "taxable_value": "9.99",
+            "tax_rate": "5.000",
+            "cgst": "0.25",
+            "sgst": "0.25",
+            "igst": "0.00",
+            "cess": "0.00",
+            "line_total": "10.49"
+          },
+          {
+            "gross": "10.00",
+            "discount_amount": "0.00",
+            "taxable_line": "10.00",
+            "doc_discount_share": "0.01",
+            "taxable_value": "9.99",
+            "tax_rate": "5.000",
+            "cgst": "0.25",
+            "sgst": "0.25",
+            "igst": "0.00",
+            "cess": "0.00",
+            "line_total": "10.49"
+          }
         ]
       }
     },
@@ -185,22 +610,74 @@
       "refs": ["BR-5"],
       "note": "Percent doc discount 10 on 855.00 + 380.00 (subtotal 1235.00): discount q2(123.5)=123.50; shares q2(123.5x855/1235)=85.50, q2(123.5x380/1235)=38.00. 769.50@5: tax 38.475->38.48, cgst 19.2375->19.24, sgst 19.24; 342.00@18: tax 61.56, cgst 30.78. grand_raw 1211.54 -> 1212, +0.46.",
       "input": {
-        "document_date": "2026-09-18", "gst_type": "regular", "tenant_state": "27", "place_of_supply": "27",
-        "reverse_charge": false, "round_off_enabled": true, "discount_type": "percent", "discount_value": "10",
+        "document_date": "2026-09-18",
+        "gst_type": "regular",
+        "tenant_state": "27",
+        "place_of_supply": "27",
+        "reverse_charge": false,
+        "round_off_enabled": true,
+        "discount_type": "percent",
+        "discount_value": "10",
         "lines": [
-          { "qty": "1.000", "unit_price": "855.0000", "tax_inclusive": false, "discount_type": null, "discount_value": null, "tax_code": "GST5" },
-          { "qty": "1.000", "unit_price": "380.0000", "tax_inclusive": false, "discount_type": null, "discount_value": null, "tax_code": "GST18" }
+          {
+            "qty": "1.000",
+            "unit_price": "855.0000",
+            "tax_inclusive": false,
+            "discount_type": null,
+            "discount_value": null,
+            "tax_code": "GST5"
+          },
+          {
+            "qty": "1.000",
+            "unit_price": "380.0000",
+            "tax_inclusive": false,
+            "discount_type": null,
+            "discount_value": null,
+            "tax_code": "GST18"
+          }
         ]
       },
       "expected": {
         "document": {
-          "is_inter_state": false, "subtotal": "1235.00", "discount_amount": "123.50", "taxable_total": "1111.50",
-          "cgst_total": "50.02", "sgst_total": "50.02", "igst_total": "0.00", "cess_total": "0.00",
-          "grand_raw": "1211.54", "round_off": "0.46", "grand_total": "1212.00"
+          "is_inter_state": false,
+          "subtotal": "1235.00",
+          "discount_amount": "123.50",
+          "taxable_total": "1111.50",
+          "cgst_total": "50.02",
+          "sgst_total": "50.02",
+          "igst_total": "0.00",
+          "cess_total": "0.00",
+          "grand_raw": "1211.54",
+          "round_off": "0.46",
+          "grand_total": "1212.00"
         },
         "lines": [
-          { "gross": "855.00", "discount_amount": "0.00", "taxable_line": "855.00", "doc_discount_share": "85.50", "taxable_value": "769.50", "tax_rate": "5.000", "cgst": "19.24", "sgst": "19.24", "igst": "0.00", "cess": "0.00", "line_total": "807.98" },
-          { "gross": "380.00", "discount_amount": "0.00", "taxable_line": "380.00", "doc_discount_share": "38.00", "taxable_value": "342.00", "tax_rate": "18.000", "cgst": "30.78", "sgst": "30.78", "igst": "0.00", "cess": "0.00", "line_total": "403.56" }
+          {
+            "gross": "855.00",
+            "discount_amount": "0.00",
+            "taxable_line": "855.00",
+            "doc_discount_share": "85.50",
+            "taxable_value": "769.50",
+            "tax_rate": "5.000",
+            "cgst": "19.24",
+            "sgst": "19.24",
+            "igst": "0.00",
+            "cess": "0.00",
+            "line_total": "807.98"
+          },
+          {
+            "gross": "380.00",
+            "discount_amount": "0.00",
+            "taxable_line": "380.00",
+            "doc_discount_share": "38.00",
+            "taxable_value": "342.00",
+            "tax_rate": "18.000",
+            "cgst": "30.78",
+            "sgst": "30.78",
+            "igst": "0.00",
+            "cess": "0.00",
+            "line_total": "403.56"
+          }
         ]
       }
     },
@@ -209,20 +686,53 @@
       "refs": ["BR-8", "T-SAL02-5"],
       "note": "grand_raw 100.50 rounds HALF-UP to 101, round-off +0.50. (BR-8 states the range as [-0.50, +0.49]; that range is half-DOWN. Half-up - the rule the same BR names - gives [-0.49, +0.50]. Recorded as a finding; the rule wins.)",
       "input": {
-        "document_date": "2026-09-18", "gst_type": "regular", "tenant_state": "27", "place_of_supply": "27",
-        "reverse_charge": false, "round_off_enabled": true, "discount_type": null, "discount_value": null,
+        "document_date": "2026-09-18",
+        "gst_type": "regular",
+        "tenant_state": "27",
+        "place_of_supply": "27",
+        "reverse_charge": false,
+        "round_off_enabled": true,
+        "discount_type": null,
+        "discount_value": null,
         "lines": [
-          { "qty": "1.000", "unit_price": "100.5000", "tax_inclusive": false, "discount_type": null, "discount_value": null, "tax_code": "GST0" }
+          {
+            "qty": "1.000",
+            "unit_price": "100.5000",
+            "tax_inclusive": false,
+            "discount_type": null,
+            "discount_value": null,
+            "tax_code": "GST0"
+          }
         ]
       },
       "expected": {
         "document": {
-          "is_inter_state": false, "subtotal": "100.50", "discount_amount": "0.00", "taxable_total": "100.50",
-          "cgst_total": "0.00", "sgst_total": "0.00", "igst_total": "0.00", "cess_total": "0.00",
-          "grand_raw": "100.50", "round_off": "0.50", "grand_total": "101.00"
+          "is_inter_state": false,
+          "subtotal": "100.50",
+          "discount_amount": "0.00",
+          "taxable_total": "100.50",
+          "cgst_total": "0.00",
+          "sgst_total": "0.00",
+          "igst_total": "0.00",
+          "cess_total": "0.00",
+          "grand_raw": "100.50",
+          "round_off": "0.50",
+          "grand_total": "101.00"
         },
         "lines": [
-          { "gross": "100.50", "discount_amount": "0.00", "taxable_line": "100.50", "doc_discount_share": "0.00", "taxable_value": "100.50", "tax_rate": "0.000", "cgst": "0.00", "sgst": "0.00", "igst": "0.00", "cess": "0.00", "line_total": "100.50" }
+          {
+            "gross": "100.50",
+            "discount_amount": "0.00",
+            "taxable_line": "100.50",
+            "doc_discount_share": "0.00",
+            "taxable_value": "100.50",
+            "tax_rate": "0.000",
+            "cgst": "0.00",
+            "sgst": "0.00",
+            "igst": "0.00",
+            "cess": "0.00",
+            "line_total": "100.50"
+          }
         ]
       }
     },
@@ -231,20 +741,53 @@
       "refs": ["BR-2", "BR-8"],
       "note": "qty 0.500 x 0.2500 = 0.125 -> q2 HALF-UP 0.13 (banker's rounding would give 0.12). Round-off disabled -> 0.00 and grand = raw.",
       "input": {
-        "document_date": "2026-09-18", "gst_type": "regular", "tenant_state": "27", "place_of_supply": "27",
-        "reverse_charge": false, "round_off_enabled": false, "discount_type": null, "discount_value": null,
+        "document_date": "2026-09-18",
+        "gst_type": "regular",
+        "tenant_state": "27",
+        "place_of_supply": "27",
+        "reverse_charge": false,
+        "round_off_enabled": false,
+        "discount_type": null,
+        "discount_value": null,
         "lines": [
-          { "qty": "0.500", "unit_price": "0.2500", "tax_inclusive": false, "discount_type": null, "discount_value": null, "tax_code": "GST0" }
+          {
+            "qty": "0.500",
+            "unit_price": "0.2500",
+            "tax_inclusive": false,
+            "discount_type": null,
+            "discount_value": null,
+            "tax_code": "GST0"
+          }
         ]
       },
       "expected": {
         "document": {
-          "is_inter_state": false, "subtotal": "0.13", "discount_amount": "0.00", "taxable_total": "0.13",
-          "cgst_total": "0.00", "sgst_total": "0.00", "igst_total": "0.00", "cess_total": "0.00",
-          "grand_raw": "0.13", "round_off": "0.00", "grand_total": "0.13"
+          "is_inter_state": false,
+          "subtotal": "0.13",
+          "discount_amount": "0.00",
+          "taxable_total": "0.13",
+          "cgst_total": "0.00",
+          "sgst_total": "0.00",
+          "igst_total": "0.00",
+          "cess_total": "0.00",
+          "grand_raw": "0.13",
+          "round_off": "0.00",
+          "grand_total": "0.13"
         },
         "lines": [
-          { "gross": "0.13", "discount_amount": "0.00", "taxable_line": "0.13", "doc_discount_share": "0.00", "taxable_value": "0.13", "tax_rate": "0.000", "cgst": "0.00", "sgst": "0.00", "igst": "0.00", "cess": "0.00", "line_total": "0.13" }
+          {
+            "gross": "0.13",
+            "discount_amount": "0.00",
+            "taxable_line": "0.13",
+            "doc_discount_share": "0.00",
+            "taxable_value": "0.13",
+            "tax_rate": "0.000",
+            "cgst": "0.00",
+            "sgst": "0.00",
+            "igst": "0.00",
+            "cess": "0.00",
+            "line_total": "0.13"
+          }
         ]
       }
     },
@@ -253,20 +796,53 @@
       "refs": ["BR-2", "BR-6", "BR-8"],
       "note": "1.235 x 99.9900 = 123.48765 -> gross 123.49 (rounded ONCE). @5 intra: tax 6.1745->6.17, cgst 3.08725->3.09, sgst 6.17-3.09=3.08. grand_raw 129.66 -> 130, +0.34.",
       "input": {
-        "document_date": "2026-09-18", "gst_type": "regular", "tenant_state": "27", "place_of_supply": "27",
-        "reverse_charge": false, "round_off_enabled": true, "discount_type": null, "discount_value": null,
+        "document_date": "2026-09-18",
+        "gst_type": "regular",
+        "tenant_state": "27",
+        "place_of_supply": "27",
+        "reverse_charge": false,
+        "round_off_enabled": true,
+        "discount_type": null,
+        "discount_value": null,
         "lines": [
-          { "qty": "1.235", "unit_price": "99.9900", "tax_inclusive": false, "discount_type": null, "discount_value": null, "tax_code": "GST5" }
+          {
+            "qty": "1.235",
+            "unit_price": "99.9900",
+            "tax_inclusive": false,
+            "discount_type": null,
+            "discount_value": null,
+            "tax_code": "GST5"
+          }
         ]
       },
       "expected": {
         "document": {
-          "is_inter_state": false, "subtotal": "123.49", "discount_amount": "0.00", "taxable_total": "123.49",
-          "cgst_total": "3.09", "sgst_total": "3.08", "igst_total": "0.00", "cess_total": "0.00",
-          "grand_raw": "129.66", "round_off": "0.34", "grand_total": "130.00"
+          "is_inter_state": false,
+          "subtotal": "123.49",
+          "discount_amount": "0.00",
+          "taxable_total": "123.49",
+          "cgst_total": "3.09",
+          "sgst_total": "3.08",
+          "igst_total": "0.00",
+          "cess_total": "0.00",
+          "grand_raw": "129.66",
+          "round_off": "0.34",
+          "grand_total": "130.00"
         },
         "lines": [
-          { "gross": "123.49", "discount_amount": "0.00", "taxable_line": "123.49", "doc_discount_share": "0.00", "taxable_value": "123.49", "tax_rate": "5.000", "cgst": "3.09", "sgst": "3.08", "igst": "0.00", "cess": "0.00", "line_total": "129.66" }
+          {
+            "gross": "123.49",
+            "discount_amount": "0.00",
+            "taxable_line": "123.49",
+            "doc_discount_share": "0.00",
+            "taxable_value": "123.49",
+            "tax_rate": "5.000",
+            "cgst": "3.09",
+            "sgst": "3.08",
+            "igst": "0.00",
+            "cess": "0.00",
+            "line_total": "129.66"
+          }
         ]
       }
     },
@@ -275,20 +851,53 @@
       "refs": ["BR-3", "BR-4", "EC-1"],
       "note": "2 x 59.00 incl @18 = 118.00, 10% off = 11.80, net 106.20, taxable q2(106.20/1.18)=90.00, CGST 8.10 + SGST 8.10, total 106.20.",
       "input": {
-        "document_date": "2026-09-18", "gst_type": "regular", "tenant_state": "27", "place_of_supply": "27",
-        "reverse_charge": false, "round_off_enabled": false, "discount_type": null, "discount_value": null,
+        "document_date": "2026-09-18",
+        "gst_type": "regular",
+        "tenant_state": "27",
+        "place_of_supply": "27",
+        "reverse_charge": false,
+        "round_off_enabled": false,
+        "discount_type": null,
+        "discount_value": null,
         "lines": [
-          { "qty": "2.000", "unit_price": "59.0000", "tax_inclusive": true, "discount_type": "percent", "discount_value": "10", "tax_code": "GST18" }
+          {
+            "qty": "2.000",
+            "unit_price": "59.0000",
+            "tax_inclusive": true,
+            "discount_type": "percent",
+            "discount_value": "10",
+            "tax_code": "GST18"
+          }
         ]
       },
       "expected": {
         "document": {
-          "is_inter_state": false, "subtotal": "90.00", "discount_amount": "0.00", "taxable_total": "90.00",
-          "cgst_total": "8.10", "sgst_total": "8.10", "igst_total": "0.00", "cess_total": "0.00",
-          "grand_raw": "106.20", "round_off": "0.00", "grand_total": "106.20"
+          "is_inter_state": false,
+          "subtotal": "90.00",
+          "discount_amount": "0.00",
+          "taxable_total": "90.00",
+          "cgst_total": "8.10",
+          "sgst_total": "8.10",
+          "igst_total": "0.00",
+          "cess_total": "0.00",
+          "grand_raw": "106.20",
+          "round_off": "0.00",
+          "grand_total": "106.20"
         },
         "lines": [
-          { "gross": "118.00", "discount_amount": "11.80", "taxable_line": "90.00", "doc_discount_share": "0.00", "taxable_value": "90.00", "tax_rate": "18.000", "cgst": "8.10", "sgst": "8.10", "igst": "0.00", "cess": "0.00", "line_total": "106.20" }
+          {
+            "gross": "118.00",
+            "discount_amount": "11.80",
+            "taxable_line": "90.00",
+            "doc_discount_share": "0.00",
+            "taxable_value": "90.00",
+            "tax_rate": "18.000",
+            "cgst": "8.10",
+            "sgst": "8.10",
+            "igst": "0.00",
+            "cess": "0.00",
+            "line_total": "106.20"
+          }
         ]
       }
     },
@@ -297,22 +906,74 @@
       "refs": ["BR-3"],
       "note": "An amount discount of 80.00 on a 50.00 line is CAPPED at the gross (net 0.00). The API refuses it at validation ('Discount cannot exceed the line amount'); the engine itself never produces a negative taxable value.",
       "input": {
-        "document_date": "2026-09-18", "gst_type": "regular", "tenant_state": "27", "place_of_supply": "27",
-        "reverse_charge": false, "round_off_enabled": true, "discount_type": null, "discount_value": null,
+        "document_date": "2026-09-18",
+        "gst_type": "regular",
+        "tenant_state": "27",
+        "place_of_supply": "27",
+        "reverse_charge": false,
+        "round_off_enabled": true,
+        "discount_type": null,
+        "discount_value": null,
         "lines": [
-          { "qty": "1.000", "unit_price": "50.0000", "tax_inclusive": false, "discount_type": "amount", "discount_value": "80.00", "tax_code": "GST5" },
-          { "qty": "1.000", "unit_price": "100.0000", "tax_inclusive": false, "discount_type": null, "discount_value": null, "tax_code": "GST5" }
+          {
+            "qty": "1.000",
+            "unit_price": "50.0000",
+            "tax_inclusive": false,
+            "discount_type": "amount",
+            "discount_value": "80.00",
+            "tax_code": "GST5"
+          },
+          {
+            "qty": "1.000",
+            "unit_price": "100.0000",
+            "tax_inclusive": false,
+            "discount_type": null,
+            "discount_value": null,
+            "tax_code": "GST5"
+          }
         ]
       },
       "expected": {
         "document": {
-          "is_inter_state": false, "subtotal": "100.00", "discount_amount": "0.00", "taxable_total": "100.00",
-          "cgst_total": "2.50", "sgst_total": "2.50", "igst_total": "0.00", "cess_total": "0.00",
-          "grand_raw": "105.00", "round_off": "0.00", "grand_total": "105.00"
+          "is_inter_state": false,
+          "subtotal": "100.00",
+          "discount_amount": "0.00",
+          "taxable_total": "100.00",
+          "cgst_total": "2.50",
+          "sgst_total": "2.50",
+          "igst_total": "0.00",
+          "cess_total": "0.00",
+          "grand_raw": "105.00",
+          "round_off": "0.00",
+          "grand_total": "105.00"
         },
         "lines": [
-          { "gross": "50.00", "discount_amount": "50.00", "taxable_line": "0.00", "doc_discount_share": "0.00", "taxable_value": "0.00", "tax_rate": "5.000", "cgst": "0.00", "sgst": "0.00", "igst": "0.00", "cess": "0.00", "line_total": "0.00" },
-          { "gross": "100.00", "discount_amount": "0.00", "taxable_line": "100.00", "doc_discount_share": "0.00", "taxable_value": "100.00", "tax_rate": "5.000", "cgst": "2.50", "sgst": "2.50", "igst": "0.00", "cess": "0.00", "line_total": "105.00" }
+          {
+            "gross": "50.00",
+            "discount_amount": "50.00",
+            "taxable_line": "0.00",
+            "doc_discount_share": "0.00",
+            "taxable_value": "0.00",
+            "tax_rate": "5.000",
+            "cgst": "0.00",
+            "sgst": "0.00",
+            "igst": "0.00",
+            "cess": "0.00",
+            "line_total": "0.00"
+          },
+          {
+            "gross": "100.00",
+            "discount_amount": "0.00",
+            "taxable_line": "100.00",
+            "doc_discount_share": "0.00",
+            "taxable_value": "100.00",
+            "tax_rate": "5.000",
+            "cgst": "2.50",
+            "sgst": "2.50",
+            "igst": "0.00",
+            "cess": "0.00",
+            "line_total": "105.00"
+          }
         ]
       }
     },
@@ -321,20 +982,53 @@
       "refs": ["BR-5", "EC-5"],
       "note": "100% document discount: every taxable value 0, grand total 0.00 (issue allowed; no ledger entry because amount > 0 is required).",
       "input": {
-        "document_date": "2026-09-18", "gst_type": "regular", "tenant_state": "27", "place_of_supply": "27",
-        "reverse_charge": false, "round_off_enabled": true, "discount_type": "percent", "discount_value": "100",
+        "document_date": "2026-09-18",
+        "gst_type": "regular",
+        "tenant_state": "27",
+        "place_of_supply": "27",
+        "reverse_charge": false,
+        "round_off_enabled": true,
+        "discount_type": "percent",
+        "discount_value": "100",
         "lines": [
-          { "qty": "1.000", "unit_price": "100.0000", "tax_inclusive": false, "discount_type": null, "discount_value": null, "tax_code": "GST18" }
+          {
+            "qty": "1.000",
+            "unit_price": "100.0000",
+            "tax_inclusive": false,
+            "discount_type": null,
+            "discount_value": null,
+            "tax_code": "GST18"
+          }
         ]
       },
       "expected": {
         "document": {
-          "is_inter_state": false, "subtotal": "100.00", "discount_amount": "100.00", "taxable_total": "0.00",
-          "cgst_total": "0.00", "sgst_total": "0.00", "igst_total": "0.00", "cess_total": "0.00",
-          "grand_raw": "0.00", "round_off": "0.00", "grand_total": "0.00"
+          "is_inter_state": false,
+          "subtotal": "100.00",
+          "discount_amount": "100.00",
+          "taxable_total": "0.00",
+          "cgst_total": "0.00",
+          "sgst_total": "0.00",
+          "igst_total": "0.00",
+          "cess_total": "0.00",
+          "grand_raw": "0.00",
+          "round_off": "0.00",
+          "grand_total": "0.00"
         },
         "lines": [
-          { "gross": "100.00", "discount_amount": "0.00", "taxable_line": "100.00", "doc_discount_share": "100.00", "taxable_value": "0.00", "tax_rate": "18.000", "cgst": "0.00", "sgst": "0.00", "igst": "0.00", "cess": "0.00", "line_total": "0.00" }
+          {
+            "gross": "100.00",
+            "discount_amount": "0.00",
+            "taxable_line": "100.00",
+            "doc_discount_share": "100.00",
+            "taxable_value": "0.00",
+            "tax_rate": "18.000",
+            "cgst": "0.00",
+            "sgst": "0.00",
+            "igst": "0.00",
+            "cess": "0.00",
+            "line_total": "0.00"
+          }
         ]
       }
     },
@@ -343,22 +1037,74 @@
       "refs": ["BR-1", "FR-17", "EC-11", "T-SAL02-6"],
       "note": "A document dated 15 Sep 2025 - BEFORE the 2025-09-21 slab boundary - may use the legacy GST12 and GST28. 3 x 33.3333 = 99.9999 -> 100.00 @12: 12.00 = 6.00 + 6.00. 250.00 incl @28: q2(250/1.28=195.3125)=195.31, tax 54.6868->54.69, cgst 27.3434->27.34, sgst 27.35, total 250.00.",
       "input": {
-        "document_date": "2025-09-15", "gst_type": "regular", "tenant_state": "27", "place_of_supply": "27",
-        "reverse_charge": false, "round_off_enabled": true, "discount_type": null, "discount_value": null,
+        "document_date": "2025-09-15",
+        "gst_type": "regular",
+        "tenant_state": "27",
+        "place_of_supply": "27",
+        "reverse_charge": false,
+        "round_off_enabled": true,
+        "discount_type": null,
+        "discount_value": null,
         "lines": [
-          { "qty": "3.000", "unit_price": "33.3333", "tax_inclusive": false, "discount_type": null, "discount_value": null, "tax_code": "GST12" },
-          { "qty": "1.000", "unit_price": "250.0000", "tax_inclusive": true, "discount_type": null, "discount_value": null, "tax_code": "GST28" }
+          {
+            "qty": "3.000",
+            "unit_price": "33.3333",
+            "tax_inclusive": false,
+            "discount_type": null,
+            "discount_value": null,
+            "tax_code": "GST12"
+          },
+          {
+            "qty": "1.000",
+            "unit_price": "250.0000",
+            "tax_inclusive": true,
+            "discount_type": null,
+            "discount_value": null,
+            "tax_code": "GST28"
+          }
         ]
       },
       "expected": {
         "document": {
-          "is_inter_state": false, "subtotal": "295.31", "discount_amount": "0.00", "taxable_total": "295.31",
-          "cgst_total": "33.34", "sgst_total": "33.35", "igst_total": "0.00", "cess_total": "0.00",
-          "grand_raw": "362.00", "round_off": "0.00", "grand_total": "362.00"
+          "is_inter_state": false,
+          "subtotal": "295.31",
+          "discount_amount": "0.00",
+          "taxable_total": "295.31",
+          "cgst_total": "33.34",
+          "sgst_total": "33.35",
+          "igst_total": "0.00",
+          "cess_total": "0.00",
+          "grand_raw": "362.00",
+          "round_off": "0.00",
+          "grand_total": "362.00"
         },
         "lines": [
-          { "gross": "100.00", "discount_amount": "0.00", "taxable_line": "100.00", "doc_discount_share": "0.00", "taxable_value": "100.00", "tax_rate": "12.000", "cgst": "6.00", "sgst": "6.00", "igst": "0.00", "cess": "0.00", "line_total": "112.00" },
-          { "gross": "250.00", "discount_amount": "0.00", "taxable_line": "195.31", "doc_discount_share": "0.00", "taxable_value": "195.31", "tax_rate": "28.000", "cgst": "27.34", "sgst": "27.35", "igst": "0.00", "cess": "0.00", "line_total": "250.00" }
+          {
+            "gross": "100.00",
+            "discount_amount": "0.00",
+            "taxable_line": "100.00",
+            "doc_discount_share": "0.00",
+            "taxable_value": "100.00",
+            "tax_rate": "12.000",
+            "cgst": "6.00",
+            "sgst": "6.00",
+            "igst": "0.00",
+            "cess": "0.00",
+            "line_total": "112.00"
+          },
+          {
+            "gross": "250.00",
+            "discount_amount": "0.00",
+            "taxable_line": "195.31",
+            "doc_discount_share": "0.00",
+            "taxable_value": "195.31",
+            "tax_rate": "28.000",
+            "cgst": "27.34",
+            "sgst": "27.35",
+            "igst": "0.00",
+            "cess": "0.00",
+            "line_total": "250.00"
+          }
         ]
       }
     },
@@ -367,20 +1113,53 @@
       "refs": ["BR-1", "FR-17", "T-SAL02-6"],
       "note": "effective_to is INCLUSIVE: GST12 is still valid on 21 Sep 2025 itself. 100.00 @12 inter = IGST 12.00.",
       "input": {
-        "document_date": "2025-09-21", "gst_type": "regular", "tenant_state": "27", "place_of_supply": "24",
-        "reverse_charge": false, "round_off_enabled": true, "discount_type": null, "discount_value": null,
+        "document_date": "2025-09-21",
+        "gst_type": "regular",
+        "tenant_state": "27",
+        "place_of_supply": "24",
+        "reverse_charge": false,
+        "round_off_enabled": true,
+        "discount_type": null,
+        "discount_value": null,
         "lines": [
-          { "qty": "1.000", "unit_price": "100.0000", "tax_inclusive": false, "discount_type": null, "discount_value": null, "tax_code": "GST12" }
+          {
+            "qty": "1.000",
+            "unit_price": "100.0000",
+            "tax_inclusive": false,
+            "discount_type": null,
+            "discount_value": null,
+            "tax_code": "GST12"
+          }
         ]
       },
       "expected": {
         "document": {
-          "is_inter_state": true, "subtotal": "100.00", "discount_amount": "0.00", "taxable_total": "100.00",
-          "cgst_total": "0.00", "sgst_total": "0.00", "igst_total": "12.00", "cess_total": "0.00",
-          "grand_raw": "112.00", "round_off": "0.00", "grand_total": "112.00"
+          "is_inter_state": true,
+          "subtotal": "100.00",
+          "discount_amount": "0.00",
+          "taxable_total": "100.00",
+          "cgst_total": "0.00",
+          "sgst_total": "0.00",
+          "igst_total": "12.00",
+          "cess_total": "0.00",
+          "grand_raw": "112.00",
+          "round_off": "0.00",
+          "grand_total": "112.00"
         },
         "lines": [
-          { "gross": "100.00", "discount_amount": "0.00", "taxable_line": "100.00", "doc_discount_share": "0.00", "taxable_value": "100.00", "tax_rate": "12.000", "cgst": "0.00", "sgst": "0.00", "igst": "12.00", "cess": "0.00", "line_total": "112.00" }
+          {
+            "gross": "100.00",
+            "discount_amount": "0.00",
+            "taxable_line": "100.00",
+            "doc_discount_share": "0.00",
+            "taxable_value": "100.00",
+            "tax_rate": "12.000",
+            "cgst": "0.00",
+            "sgst": "0.00",
+            "igst": "12.00",
+            "cess": "0.00",
+            "line_total": "112.00"
+          }
         ]
       }
     },
@@ -389,11 +1168,31 @@
       "refs": ["FR-17", "T-SAL02-6", "EC-7 (SAL-06)"],
       "note": "The same GST12 on 22 Sep 2025 has no applicable rate row: rate resolution refuses, naming the line and the code.",
       "input": {
-        "document_date": "2025-09-22", "gst_type": "regular", "tenant_state": "27", "place_of_supply": "27",
-        "reverse_charge": false, "round_off_enabled": true, "discount_type": null, "discount_value": null,
+        "document_date": "2025-09-22",
+        "gst_type": "regular",
+        "tenant_state": "27",
+        "place_of_supply": "27",
+        "reverse_charge": false,
+        "round_off_enabled": true,
+        "discount_type": null,
+        "discount_value": null,
         "lines": [
-          { "qty": "1.000", "unit_price": "100.0000", "tax_inclusive": false, "discount_type": null, "discount_value": null, "tax_code": "GST5" },
-          { "qty": "1.000", "unit_price": "100.0000", "tax_inclusive": false, "discount_type": null, "discount_value": null, "tax_code": "GST12" }
+          {
+            "qty": "1.000",
+            "unit_price": "100.0000",
+            "tax_inclusive": false,
+            "discount_type": null,
+            "discount_value": null,
+            "tax_code": "GST5"
+          },
+          {
+            "qty": "1.000",
+            "unit_price": "100.0000",
+            "tax_inclusive": false,
+            "discount_type": null,
+            "discount_value": null,
+            "tax_code": "GST12"
+          }
         ]
       },
       "expected_error": { "code": "rate_not_applicable", "line_index": 1, "tax_code": "GST12" }
@@ -403,22 +1202,74 @@
       "refs": ["BR-4", "BR-6", "BR-7"],
       "note": "A tenant cess row (28% + 12% cess), dated before the boundary. 1000.00 excl: CGST 140.00, SGST 140.00, cess 120.00. 1400.00 incl: taxable q2(1400/1.40)=1000.00 (the divisor includes cess), same taxes. Totals 2000 + 280 + 280 + 240 = 2800.00.",
       "input": {
-        "document_date": "2025-06-30", "gst_type": "regular", "tenant_state": "27", "place_of_supply": "27",
-        "reverse_charge": false, "round_off_enabled": true, "discount_type": null, "discount_value": null,
+        "document_date": "2025-06-30",
+        "gst_type": "regular",
+        "tenant_state": "27",
+        "place_of_supply": "27",
+        "reverse_charge": false,
+        "round_off_enabled": true,
+        "discount_type": null,
+        "discount_value": null,
         "lines": [
-          { "qty": "1.000", "unit_price": "1000.0000", "tax_inclusive": false, "discount_type": null, "discount_value": null, "tax_code": "GST28C12" },
-          { "qty": "1.000", "unit_price": "1400.0000", "tax_inclusive": true, "discount_type": null, "discount_value": null, "tax_code": "GST28C12" }
+          {
+            "qty": "1.000",
+            "unit_price": "1000.0000",
+            "tax_inclusive": false,
+            "discount_type": null,
+            "discount_value": null,
+            "tax_code": "GST28C12"
+          },
+          {
+            "qty": "1.000",
+            "unit_price": "1400.0000",
+            "tax_inclusive": true,
+            "discount_type": null,
+            "discount_value": null,
+            "tax_code": "GST28C12"
+          }
         ]
       },
       "expected": {
         "document": {
-          "is_inter_state": false, "subtotal": "2000.00", "discount_amount": "0.00", "taxable_total": "2000.00",
-          "cgst_total": "280.00", "sgst_total": "280.00", "igst_total": "0.00", "cess_total": "240.00",
-          "grand_raw": "2800.00", "round_off": "0.00", "grand_total": "2800.00"
+          "is_inter_state": false,
+          "subtotal": "2000.00",
+          "discount_amount": "0.00",
+          "taxable_total": "2000.00",
+          "cgst_total": "280.00",
+          "sgst_total": "280.00",
+          "igst_total": "0.00",
+          "cess_total": "240.00",
+          "grand_raw": "2800.00",
+          "round_off": "0.00",
+          "grand_total": "2800.00"
         },
         "lines": [
-          { "gross": "1000.00", "discount_amount": "0.00", "taxable_line": "1000.00", "doc_discount_share": "0.00", "taxable_value": "1000.00", "tax_rate": "28.000", "cgst": "140.00", "sgst": "140.00", "igst": "0.00", "cess": "120.00", "line_total": "1400.00" },
-          { "gross": "1400.00", "discount_amount": "0.00", "taxable_line": "1000.00", "doc_discount_share": "0.00", "taxable_value": "1000.00", "tax_rate": "28.000", "cgst": "140.00", "sgst": "140.00", "igst": "0.00", "cess": "120.00", "line_total": "1400.00" }
+          {
+            "gross": "1000.00",
+            "discount_amount": "0.00",
+            "taxable_line": "1000.00",
+            "doc_discount_share": "0.00",
+            "taxable_value": "1000.00",
+            "tax_rate": "28.000",
+            "cgst": "140.00",
+            "sgst": "140.00",
+            "igst": "0.00",
+            "cess": "120.00",
+            "line_total": "1400.00"
+          },
+          {
+            "gross": "1400.00",
+            "discount_amount": "0.00",
+            "taxable_line": "1000.00",
+            "doc_discount_share": "0.00",
+            "taxable_value": "1000.00",
+            "tax_rate": "28.000",
+            "cgst": "140.00",
+            "sgst": "140.00",
+            "igst": "0.00",
+            "cess": "120.00",
+            "line_total": "1400.00"
+          }
         ]
       }
     },
@@ -427,20 +1278,53 @@
       "refs": ["BR-6"],
       "note": "Cess is charged the same way inter-state: 500.00 @28+12: IGST 140.00, cess 60.00, total 700.00.",
       "input": {
-        "document_date": "2025-06-30", "gst_type": "regular", "tenant_state": "27", "place_of_supply": "07",
-        "reverse_charge": false, "round_off_enabled": true, "discount_type": null, "discount_value": null,
+        "document_date": "2025-06-30",
+        "gst_type": "regular",
+        "tenant_state": "27",
+        "place_of_supply": "07",
+        "reverse_charge": false,
+        "round_off_enabled": true,
+        "discount_type": null,
+        "discount_value": null,
         "lines": [
-          { "qty": "1.000", "unit_price": "500.0000", "tax_inclusive": false, "discount_type": null, "discount_value": null, "tax_code": "GST28C12" }
+          {
+            "qty": "1.000",
+            "unit_price": "500.0000",
+            "tax_inclusive": false,
+            "discount_type": null,
+            "discount_value": null,
+            "tax_code": "GST28C12"
+          }
         ]
       },
       "expected": {
         "document": {
-          "is_inter_state": true, "subtotal": "500.00", "discount_amount": "0.00", "taxable_total": "500.00",
-          "cgst_total": "0.00", "sgst_total": "0.00", "igst_total": "140.00", "cess_total": "60.00",
-          "grand_raw": "700.00", "round_off": "0.00", "grand_total": "700.00"
+          "is_inter_state": true,
+          "subtotal": "500.00",
+          "discount_amount": "0.00",
+          "taxable_total": "500.00",
+          "cgst_total": "0.00",
+          "sgst_total": "0.00",
+          "igst_total": "140.00",
+          "cess_total": "60.00",
+          "grand_raw": "700.00",
+          "round_off": "0.00",
+          "grand_total": "700.00"
         },
         "lines": [
-          { "gross": "500.00", "discount_amount": "0.00", "taxable_line": "500.00", "doc_discount_share": "0.00", "taxable_value": "500.00", "tax_rate": "28.000", "cgst": "0.00", "sgst": "0.00", "igst": "140.00", "cess": "60.00", "line_total": "700.00" }
+          {
+            "gross": "500.00",
+            "discount_amount": "0.00",
+            "taxable_line": "500.00",
+            "doc_discount_share": "0.00",
+            "taxable_value": "500.00",
+            "tax_rate": "28.000",
+            "cgst": "0.00",
+            "sgst": "0.00",
+            "igst": "140.00",
+            "cess": "60.00",
+            "line_total": "700.00"
+          }
         ]
       }
     },
@@ -449,22 +1333,74 @@
       "refs": ["BR-1", "BR-12", "EC-18", "AC-7"],
       "note": "Composition tenant: every rate is forced to 0 whatever the item's code (the code is kept). 2 x 150 less 10% = 270.00; 118.00 'inclusive' GST18 at a forced 0 -> taxable = net = 118.00 (EC-4). Doc discount 8.00: shares q2(8x270/388=5.5670)=5.57, q2(8x118/388=2.4330)=2.43.",
       "input": {
-        "document_date": "2026-09-18", "gst_type": "composition", "tenant_state": "27", "place_of_supply": "27",
-        "reverse_charge": false, "round_off_enabled": true, "discount_type": "amount", "discount_value": "8.00",
+        "document_date": "2026-09-18",
+        "gst_type": "composition",
+        "tenant_state": "27",
+        "place_of_supply": "27",
+        "reverse_charge": false,
+        "round_off_enabled": true,
+        "discount_type": "amount",
+        "discount_value": "8.00",
         "lines": [
-          { "qty": "2.000", "unit_price": "150.0000", "tax_inclusive": false, "discount_type": "percent", "discount_value": "10", "tax_code": "GST18" },
-          { "qty": "1.000", "unit_price": "118.0000", "tax_inclusive": true, "discount_type": null, "discount_value": null, "tax_code": "GST18" }
+          {
+            "qty": "2.000",
+            "unit_price": "150.0000",
+            "tax_inclusive": false,
+            "discount_type": "percent",
+            "discount_value": "10",
+            "tax_code": "GST18"
+          },
+          {
+            "qty": "1.000",
+            "unit_price": "118.0000",
+            "tax_inclusive": true,
+            "discount_type": null,
+            "discount_value": null,
+            "tax_code": "GST18"
+          }
         ]
       },
       "expected": {
         "document": {
-          "is_inter_state": false, "subtotal": "388.00", "discount_amount": "8.00", "taxable_total": "380.00",
-          "cgst_total": "0.00", "sgst_total": "0.00", "igst_total": "0.00", "cess_total": "0.00",
-          "grand_raw": "380.00", "round_off": "0.00", "grand_total": "380.00"
+          "is_inter_state": false,
+          "subtotal": "388.00",
+          "discount_amount": "8.00",
+          "taxable_total": "380.00",
+          "cgst_total": "0.00",
+          "sgst_total": "0.00",
+          "igst_total": "0.00",
+          "cess_total": "0.00",
+          "grand_raw": "380.00",
+          "round_off": "0.00",
+          "grand_total": "380.00"
         },
         "lines": [
-          { "gross": "300.00", "discount_amount": "30.00", "taxable_line": "270.00", "doc_discount_share": "5.57", "taxable_value": "264.43", "tax_rate": "0.000", "cgst": "0.00", "sgst": "0.00", "igst": "0.00", "cess": "0.00", "line_total": "264.43" },
-          { "gross": "118.00", "discount_amount": "0.00", "taxable_line": "118.00", "doc_discount_share": "2.43", "taxable_value": "115.57", "tax_rate": "0.000", "cgst": "0.00", "sgst": "0.00", "igst": "0.00", "cess": "0.00", "line_total": "115.57" }
+          {
+            "gross": "300.00",
+            "discount_amount": "30.00",
+            "taxable_line": "270.00",
+            "doc_discount_share": "5.57",
+            "taxable_value": "264.43",
+            "tax_rate": "0.000",
+            "cgst": "0.00",
+            "sgst": "0.00",
+            "igst": "0.00",
+            "cess": "0.00",
+            "line_total": "264.43"
+          },
+          {
+            "gross": "118.00",
+            "discount_amount": "0.00",
+            "taxable_line": "118.00",
+            "doc_discount_share": "2.43",
+            "taxable_value": "115.57",
+            "tax_rate": "0.000",
+            "cgst": "0.00",
+            "sgst": "0.00",
+            "igst": "0.00",
+            "cess": "0.00",
+            "line_total": "115.57"
+          }
         ]
       }
     },
@@ -473,20 +1409,53 @@
       "refs": ["BR-1", "BR-12"],
       "note": "Unregistered tenant: no tax anywhere even inter-state; is_inter_state is still derived (27 vs 29). 1.5 KGS x 80 = 120.00.",
       "input": {
-        "document_date": "2026-09-18", "gst_type": "unregistered", "tenant_state": "27", "place_of_supply": "29",
-        "reverse_charge": false, "round_off_enabled": true, "discount_type": null, "discount_value": null,
+        "document_date": "2026-09-18",
+        "gst_type": "unregistered",
+        "tenant_state": "27",
+        "place_of_supply": "29",
+        "reverse_charge": false,
+        "round_off_enabled": true,
+        "discount_type": null,
+        "discount_value": null,
         "lines": [
-          { "qty": "1.500", "unit_price": "80.0000", "tax_inclusive": false, "discount_type": null, "discount_value": null, "tax_code": "GST5" }
+          {
+            "qty": "1.500",
+            "unit_price": "80.0000",
+            "tax_inclusive": false,
+            "discount_type": null,
+            "discount_value": null,
+            "tax_code": "GST5"
+          }
         ]
       },
       "expected": {
         "document": {
-          "is_inter_state": true, "subtotal": "120.00", "discount_amount": "0.00", "taxable_total": "120.00",
-          "cgst_total": "0.00", "sgst_total": "0.00", "igst_total": "0.00", "cess_total": "0.00",
-          "grand_raw": "120.00", "round_off": "0.00", "grand_total": "120.00"
+          "is_inter_state": true,
+          "subtotal": "120.00",
+          "discount_amount": "0.00",
+          "taxable_total": "120.00",
+          "cgst_total": "0.00",
+          "sgst_total": "0.00",
+          "igst_total": "0.00",
+          "cess_total": "0.00",
+          "grand_raw": "120.00",
+          "round_off": "0.00",
+          "grand_total": "120.00"
         },
         "lines": [
-          { "gross": "120.00", "discount_amount": "0.00", "taxable_line": "120.00", "doc_discount_share": "0.00", "taxable_value": "120.00", "tax_rate": "0.000", "cgst": "0.00", "sgst": "0.00", "igst": "0.00", "cess": "0.00", "line_total": "120.00" }
+          {
+            "gross": "120.00",
+            "discount_amount": "0.00",
+            "taxable_line": "120.00",
+            "doc_discount_share": "0.00",
+            "taxable_value": "120.00",
+            "tax_rate": "0.000",
+            "cgst": "0.00",
+            "sgst": "0.00",
+            "igst": "0.00",
+            "cess": "0.00",
+            "line_total": "120.00"
+          }
         ]
       }
     },
@@ -495,20 +1464,53 @@
       "refs": ["FR-12", "EC-19"],
       "note": "Reverse charge on: tax computed and printed as usual; the amounts are identical to the same invoice without the flag.",
       "input": {
-        "document_date": "2026-09-18", "gst_type": "regular", "tenant_state": "27", "place_of_supply": "27",
-        "reverse_charge": true, "round_off_enabled": true, "discount_type": null, "discount_value": null,
+        "document_date": "2026-09-18",
+        "gst_type": "regular",
+        "tenant_state": "27",
+        "place_of_supply": "27",
+        "reverse_charge": true,
+        "round_off_enabled": true,
+        "discount_type": null,
+        "discount_value": null,
         "lines": [
-          { "qty": "1.000", "unit_price": "855.0000", "tax_inclusive": false, "discount_type": null, "discount_value": null, "tax_code": "GST5" }
+          {
+            "qty": "1.000",
+            "unit_price": "855.0000",
+            "tax_inclusive": false,
+            "discount_type": null,
+            "discount_value": null,
+            "tax_code": "GST5"
+          }
         ]
       },
       "expected": {
         "document": {
-          "is_inter_state": false, "subtotal": "855.00", "discount_amount": "0.00", "taxable_total": "855.00",
-          "cgst_total": "21.38", "sgst_total": "21.37", "igst_total": "0.00", "cess_total": "0.00",
-          "grand_raw": "897.75", "round_off": "0.25", "grand_total": "898.00"
+          "is_inter_state": false,
+          "subtotal": "855.00",
+          "discount_amount": "0.00",
+          "taxable_total": "855.00",
+          "cgst_total": "21.38",
+          "sgst_total": "21.37",
+          "igst_total": "0.00",
+          "cess_total": "0.00",
+          "grand_raw": "897.75",
+          "round_off": "0.25",
+          "grand_total": "898.00"
         },
         "lines": [
-          { "gross": "855.00", "discount_amount": "0.00", "taxable_line": "855.00", "doc_discount_share": "0.00", "taxable_value": "855.00", "tax_rate": "5.000", "cgst": "21.38", "sgst": "21.37", "igst": "0.00", "cess": "0.00", "line_total": "897.75" }
+          {
+            "gross": "855.00",
+            "discount_amount": "0.00",
+            "taxable_line": "855.00",
+            "doc_discount_share": "0.00",
+            "taxable_value": "855.00",
+            "tax_rate": "5.000",
+            "cgst": "21.38",
+            "sgst": "21.37",
+            "igst": "0.00",
+            "cess": "0.00",
+            "line_total": "897.75"
+          }
         ]
       }
     },
@@ -517,20 +1519,53 @@
       "refs": ["BR-1"],
       "note": "GST40 exists only from 22 Sep 2025. 250.00 @40 intra: tax 100.00 = 50.00 + 50.00.",
       "input": {
-        "document_date": "2026-01-10", "gst_type": "regular", "tenant_state": "27", "place_of_supply": "27",
-        "reverse_charge": false, "round_off_enabled": true, "discount_type": null, "discount_value": null,
+        "document_date": "2026-01-10",
+        "gst_type": "regular",
+        "tenant_state": "27",
+        "place_of_supply": "27",
+        "reverse_charge": false,
+        "round_off_enabled": true,
+        "discount_type": null,
+        "discount_value": null,
         "lines": [
-          { "qty": "1.000", "unit_price": "250.0000", "tax_inclusive": false, "discount_type": null, "discount_value": null, "tax_code": "GST40" }
+          {
+            "qty": "1.000",
+            "unit_price": "250.0000",
+            "tax_inclusive": false,
+            "discount_type": null,
+            "discount_value": null,
+            "tax_code": "GST40"
+          }
         ]
       },
       "expected": {
         "document": {
-          "is_inter_state": false, "subtotal": "250.00", "discount_amount": "0.00", "taxable_total": "250.00",
-          "cgst_total": "50.00", "sgst_total": "50.00", "igst_total": "0.00", "cess_total": "0.00",
-          "grand_raw": "350.00", "round_off": "0.00", "grand_total": "350.00"
+          "is_inter_state": false,
+          "subtotal": "250.00",
+          "discount_amount": "0.00",
+          "taxable_total": "250.00",
+          "cgst_total": "50.00",
+          "sgst_total": "50.00",
+          "igst_total": "0.00",
+          "cess_total": "0.00",
+          "grand_raw": "350.00",
+          "round_off": "0.00",
+          "grand_total": "350.00"
         },
         "lines": [
-          { "gross": "250.00", "discount_amount": "0.00", "taxable_line": "250.00", "doc_discount_share": "0.00", "taxable_value": "250.00", "tax_rate": "40.000", "cgst": "50.00", "sgst": "50.00", "igst": "0.00", "cess": "0.00", "line_total": "350.00" }
+          {
+            "gross": "250.00",
+            "discount_amount": "0.00",
+            "taxable_line": "250.00",
+            "doc_discount_share": "0.00",
+            "taxable_value": "250.00",
+            "tax_rate": "40.000",
+            "cgst": "50.00",
+            "sgst": "50.00",
+            "igst": "0.00",
+            "cess": "0.00",
+            "line_total": "350.00"
+          }
         ]
       }
     },
@@ -539,10 +1574,23 @@
       "refs": ["BR-1", "FR-17"],
       "note": "GST40 on 15 Sep 2025 predates its effective_from: refused.",
       "input": {
-        "document_date": "2025-09-15", "gst_type": "regular", "tenant_state": "27", "place_of_supply": "27",
-        "reverse_charge": false, "round_off_enabled": true, "discount_type": null, "discount_value": null,
+        "document_date": "2025-09-15",
+        "gst_type": "regular",
+        "tenant_state": "27",
+        "place_of_supply": "27",
+        "reverse_charge": false,
+        "round_off_enabled": true,
+        "discount_type": null,
+        "discount_value": null,
         "lines": [
-          { "qty": "1.000", "unit_price": "250.0000", "tax_inclusive": false, "discount_type": null, "discount_value": null, "tax_code": "GST40" }
+          {
+            "qty": "1.000",
+            "unit_price": "250.0000",
+            "tax_inclusive": false,
+            "discount_type": null,
+            "discount_value": null,
+            "tax_code": "GST40"
+          }
         ]
       },
       "expected_error": { "code": "rate_not_applicable", "line_index": 0, "tax_code": "GST40" }
@@ -552,15 +1600,29 @@
       "refs": ["SAL-06 §10"],
       "note": "A draft may have no lines; its totals are all zero.",
       "input": {
-        "document_date": "2026-09-18", "gst_type": "regular", "tenant_state": "27", "place_of_supply": "27",
-        "reverse_charge": false, "round_off_enabled": true, "discount_type": "amount", "discount_value": "50.00",
+        "document_date": "2026-09-18",
+        "gst_type": "regular",
+        "tenant_state": "27",
+        "place_of_supply": "27",
+        "reverse_charge": false,
+        "round_off_enabled": true,
+        "discount_type": "amount",
+        "discount_value": "50.00",
         "lines": []
       },
       "expected": {
         "document": {
-          "is_inter_state": false, "subtotal": "0.00", "discount_amount": "0.00", "taxable_total": "0.00",
-          "cgst_total": "0.00", "sgst_total": "0.00", "igst_total": "0.00", "cess_total": "0.00",
-          "grand_raw": "0.00", "round_off": "0.00", "grand_total": "0.00"
+          "is_inter_state": false,
+          "subtotal": "0.00",
+          "discount_amount": "0.00",
+          "taxable_total": "0.00",
+          "cgst_total": "0.00",
+          "sgst_total": "0.00",
+          "igst_total": "0.00",
+          "cess_total": "0.00",
+          "grand_raw": "0.00",
+          "round_off": "0.00",
+          "grand_total": "0.00"
         },
         "lines": []
       }

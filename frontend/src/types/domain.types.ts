@@ -78,6 +78,8 @@ export const PERMISSION_CODES = [
   'inventory.stock.adjust',
   'reports.financial.read',
   'sales.invoice.read',
+  /** SAL-02 §12 — create, edit and issue a bill; the accountant never holds it. */
+  'sales.invoice.write',
   'purchases.bill.read',
   'payments.payment.read',
   'expenses.expense.read',

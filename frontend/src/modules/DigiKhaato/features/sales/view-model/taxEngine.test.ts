@@ -1,5 +1,5 @@
-import fixture from './taxEngine.cases.json';
 import { computeDocumentTotals, resolveRate, type EngineDiscountType } from './taxEngine';
+import fixture from './taxEngine.cases.json';
 
 /**
  * The shared GST fixture, run against the CLIENT mirror (Part 32 §32.10.4:
@@ -105,7 +105,7 @@ describe('taxEngine mirror × taxEngine.cases.json', () => {
     const result = run(c) as unknown as Record<string, unknown> & {
       lines: Record<string, string>[];
     };
-    const expected = c.expected!;
+    const expected = c.expected ?? { document: {}, lines: [] };
     Object.entries(expected.document).forEach(([key, value]) => {
       expect([key, result[CAMEL[key] as string]]).toEqual([key, value]);
     });

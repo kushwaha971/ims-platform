@@ -79,6 +79,9 @@ export interface ItemListRow {
   readonly sellingPrice: string;
   readonly purchasePrice: string;
   readonly taxCode: string;
+  /** SAL-02 FR-2 — the invoice line's HSN and inclusive-price defaults. */
+  readonly hsnSac?: string | null;
+  readonly taxInclusiveSelling?: boolean;
   readonly trackStock: boolean;
   readonly onHand: string | null;
   readonly avgCost: string | null;
