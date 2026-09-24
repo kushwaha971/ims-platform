@@ -341,8 +341,27 @@ describe('the wizard — step 4 (FR-5) and §9 Failed', () => {
     expect(screen.getByText('Retail shop')).toBeInTheDocument();
     expect(screen.getByText('7 days')).toBeInTheDocument();
     expect(screen.getByText('NOS, KGS, GMS, LTR, PAC')).toBeInTheDocument();
-    // FR-8 / canon §0.2 — defaults, never hard-wired behaviour.
-    expect(screen.getByText('You can change all of this in Settings.')).toBeInTheDocument();
+    // FR-8 / canon §0.2 — defaults, never hard-wired behaviour. No longer
+    // "change all of this in Settings": Settings is not built (UAT D8).
+    expect(screen.getByText('These are starting defaults, not rules.')).toBeInTheDocument();
+    expect(screen.queryByText(/Settings/)).not.toBeInTheDocument();
+  });
+
+  it('shows only what is built — no Stock row, no unbuilt modules (UAT D8)', async () => {
+    /* Prevents UAT D8: the card read "Stock: On" and "What you get: Stock,
+       Bills & estimates, Purchases, Payments, Expenses" on a product where
+       each of those is a "Soon" row. What a merchant can open today is listed;
+       the rest is not mentioned (owner rule: unbuilt features are not shown). */
+    await atSummary();
+    renderWithProviders(<OnboardingStepPageContent step={4} />);
+
+    expect(screen.getByText('Ready to use')).toBeInTheDocument();
+    expect(screen.getByText('Customers & suppliers')).toBeInTheDocument();
+    expect(screen.getByText('Udhaar khata')).toBeInTheDocument();
+    expect(screen.queryByText('What you get')).not.toBeInTheDocument();
+    expect(screen.queryByText('Stock')).not.toBeInTheDocument();
+    expect(screen.queryByText('Bills & estimates')).not.toBeInTheDocument();
+    expect(screen.queryByText('On')).not.toBeInTheDocument();
   });
 
   it('applies the preset and lands on the dashboard', async () => {

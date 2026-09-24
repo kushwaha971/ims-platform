@@ -134,6 +134,61 @@ describe('adding a party', () => {
     expect(within(drawer).queryByLabelText('Credit limit')).not.toBeInTheDocument();
   });
 
+  it('opens with the cursor in Name, not on the close button', async () => {
+    /**
+     * Prevents the UAT finding: the drawer opened with focus on ✕, so the first
+     * keystroke went nowhere and a phone showed no keyboard. `MLDialog` now
+     * leaves focus where `autoFocus` put it, and Name asks for it.
+     */
+    const user = userEvent.setup();
+    const drawer = await openForm(user);
+
+    await waitFor(() => expect(within(drawer).getByLabelText('Name')).toHaveFocus());
+    expect(within(drawer).getByRole('button', { name: 'Close' })).not.toHaveFocus();
+  });
+
+  it('says the opening balance goes into the khata on save (UAT D8)', async () => {
+    /**
+     * Prevents stale copy: the hint read "Saved with the party for now. It
+     * joins the khata balance when entries arrive." — written before LED-02,
+     * when the server stored the figure and posted nothing. It posts the
+     * opening entry in the same transaction now, so the sentence was telling
+     * the merchant their balance would be wrong when it would not.
+     */
+    const user = userEvent.setup();
+    const drawer = await openForm(user);
+
+    await user.click(within(drawer).getByRole('button', { name: /Opening balance/ }));
+
+    expect(
+      within(drawer).getByText('It goes into the khata as the first entry when you save.')
+    ).toBeInTheDocument();
+    expect(within(drawer).queryByText(/joins the khata balance/)).not.toBeInTheDocument();
+  });
+
+  it('dates a new opening balance today and asks when it began (UAT D6)', async () => {
+    /**
+     * Prevents a balance typed in today landing in the "90+ days" aging bucket
+     * on day one: the default was 1 April, and aging counts an opening from its
+     * date (LED-09 BR-4). Today claims no age; the hint asks for the real one,
+     * in the direction the merchant chose, and "Year start" stays a chip.
+     */
+    const user = userEvent.setup();
+    const drawer = await openForm(user);
+
+    await user.click(within(drawer).getByRole('button', { name: /Opening balance/ }));
+
+    expect(within(drawer).getByRole('button', { name: /As of/ })).not.toHaveTextContent(
+      /1 Apr \d{4}/
+    );
+    expect(within(drawer).getByText('When did they start owing this?')).toBeInTheDocument();
+    expect(within(drawer).getByRole('button', { name: 'Year start' })).toBeInTheDocument();
+
+    await user.click(within(drawer).getByRole('radio', { name: 'I owe them' }));
+
+    expect(within(drawer).getByText('When did you start owing this?')).toBeInTheDocument();
+  });
+
   it('sends what was typed and closes', async () => {
     const user = userEvent.setup();
     const drawer = await openForm(user);
@@ -397,9 +452,7 @@ describe('PTY-06 — the credit limit on the form', () => {
     await user.type(limit, '10000');
 
     expect(
-      await screen.findByText(
-        'They already owe ₹47,500.00 — this limit is already crossed'
-      )
+      await screen.findByText('They already owe ₹47,500.00 — this limit is already crossed')
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save changes' })).toBeEnabled();
   });

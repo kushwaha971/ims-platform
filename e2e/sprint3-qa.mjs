@@ -1679,12 +1679,13 @@ async function phaseN1(browser, state) {
     await ctx.clearCookies({ name: 'ub_access' });
     await ctx.clearCookies({ name: 'ub_refresh' });
     const l0 = docLoads; const v0 = navs.length; const n0 = net.length;
-    // Dashboard link — on the phone it may sit in a bottom nav or a menu.
-    let dash = page.getByRole('link', { name: 'Dashboard' });
-    if ((await dash.count()) === 0 || !(await dash.first().isVisible())) {
+    // Customers link (Dashboard was removed from the sidebar in the UAT-fix
+    // batch) — on the phone it sits in the navigation drawer.
+    let dash = page.getByRole('link', { name: /^Customers/ }).filter({ visible: true });
+    if ((await dash.count()) === 0) {
       const menu = page.getByRole('button', { name: /menu|navigation/i }).first();
       if (await menu.count()) { await menu.click(); await page.waitForTimeout(600); }
-      dash = page.getByRole('link', { name: 'Dashboard' });
+      dash = page.getByRole('link', { name: /^Customers/ }).filter({ visible: true });
     }
     armed = true;
     await dash.first().click();
@@ -1692,7 +1693,7 @@ async function phaseN1(browser, state) {
     await page.waitForTimeout(2500);
     const loginUrl = page.url().replace(FRONTEND, '');
     await page.screenshot({ path: nShot(size.id, 'N1-1-login-after-expiry') });
-    record('N1', `${size.id}: cookies deleted, Dashboard click → /login?next=%2Fdashboard in the same runtime`, loginUrl === '/login?next=%2Fdashboard' && docLoads === l0, `${loginUrl} docLoads+${docLoads - l0} navs=${JSON.stringify(navs.slice(v0))}`);
+    record('N1', `${size.id}: cookies deleted, Customers click → /login?next=%2Fparties in the same runtime`, loginUrl === '/login?next=%2Fparties' && docLoads === l0, `${loginUrl} docLoads+${docLoads - l0} navs=${JSON.stringify(navs.slice(v0))}`);
     // One sign-in as tenant A, slowed tenant reads so any stale frame is held on screen.
     await ctx.route(/\/api\/v1\/(ledger\/summary|ledger\/aging|parties(\?|$))/, async (route) => { await sleep(1500); await route.continue(); });
     const l1 = docLoads; const v1 = navs.length; const n1 = net.length;
@@ -1749,7 +1750,10 @@ async function phaseN1(browser, state) {
       await tab1.getByText(state.inviteeShop).first().click();
       await tab1.waitForURL((u) => !u.pathname.startsWith('/switch'), { timeout: 30000 });
     }
-    await tab1.goto(`${FRONTEND}/parties`, { waitUntil: 'domcontentloaded', timeout: 120000 });
+    // Starts on Aging so the sidebar Customers click below is a real navigation
+    // that fetches (Dashboard, the old trigger, left the sidebar in the UAT-fix
+    // batch; Customers clicked while already on /parties fetches nothing).
+    await tab1.goto(`${FRONTEND}/ledger/aging`, { waitUntil: 'domcontentloaded', timeout: 120000 });
     await tab1.waitForTimeout(3000);
     const meBefore = await whoAmI(tab1);
     const activeBefore = meBefore.data?.tenant?.name ?? meBefore.data?.active_tenant?.name ?? JSON.stringify(meBefore.data?.tenant ?? meBefore.data?.membership ?? '').slice(0, 80);
@@ -1765,7 +1769,7 @@ async function phaseN1(browser, state) {
     const l0 = docLoads;
     await tab1.bringToFront();
     // tab 1's next request carries the new tenant — trigger one the way a merchant would
-    await tab1.getByRole('link', { name: 'Dashboard' }).first().click().catch(() => {});
+    await tab1.getByRole('link', { name: /^Customers/ }).first().click().catch(() => {});
     await tab1.waitForTimeout(400);
     await tab1.screenshot({ path: nShot('desktop', 'N1-5-control-tab1-warning') });
     await tab1.waitForTimeout(3000);
@@ -2532,14 +2536,15 @@ async function phaseF3(browser, state) {
       `url=${page.url().replace(FRONTEND, '')} me=${me.email} shopA=${shopA} docs=${JSON.stringify(docs.slice(d2))} navs=${JSON.stringify(afterNavs)}`);
     record('F3', `${tag}: B's shop name / parties never rendered after expiry`, leaks.length === 0, JSON.stringify(leaks.slice(0, 3)));
 
-    // 4. Logo (or Dashboard link) afterwards stays signed in.
+    // 4. Logo (or the sidebar Customers link — Dashboard left the sidebar in
+    //    the UAT-fix batch) afterwards stays signed in.
     const v3 = navs.length;
     if (W.w < 1024) await page.getByRole('link', { name: /go to dashboard/ }).first().click();
-    else await page.locator('nav a[href="/dashboard"]').first().click();
+    else await page.locator('nav a[href="/parties"]').first().click();
     await page.waitForTimeout(3000);
     const me2 = await whoAmI(page);
     await page.screenshot({ path: fShot(W.dir, `F3-${tag}-3-logo-after`) });
-    record('F3', `${tag}: tapping the ${W.w < 1024 ? 'logo' : 'Dashboard link'} afterwards stays signed in as A`, !page.url().includes('/login') && me2.email === A.email && (await page.getByText(A.shop).filter({ visible: true }).count()) > 0, `url=${page.url().replace(FRONTEND, '')} me=${me2.email} navs=${JSON.stringify(navs.slice(v3))}`);
+    record('F3', `${tag}: tapping the ${W.w < 1024 ? 'logo' : 'sidebar Customers link'} afterwards stays signed in as A`, !page.url().includes('/login') && me2.email === A.email && (await page.getByText(A.shop).filter({ visible: true }).count()) > 0, `url=${page.url().replace(FRONTEND, '')} me=${me2.email} navs=${JSON.stringify(navs.slice(v3))}`);
 
     // 5. Sign-out control below lg (observation), then sign out and in again.
     if (W.w < 1024) {
@@ -2550,6 +2555,10 @@ async function phaseF3(browser, state) {
         found = await page.getByText(/^Sign out$/).filter({ visible: true }).count();
         await page.screenshot({ path: fShot(W.dir, `F3-${tag}-4-drawer`) });
         await page.keyboard.press('Escape'); await page.waitForTimeout(400);
+        // The drawer's close transition outlasts 400 ms; while it is still
+        // mounted the header behind it is inert and its account button is not
+        // "visible" to getByRole. Wait for it to go before counting.
+        await page.getByRole('dialog').first().waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
       }
       found += await page.getByRole('button', { name: /^Account menu for/ }).filter({ visible: true }).count();
       record('F3', `${tag}: a Sign out control is reachable below 1024 px (drawer or account menu)`, found > 0, `visible sign-out/account controls: ${found}`);

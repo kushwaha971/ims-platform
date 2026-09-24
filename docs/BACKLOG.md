@@ -149,3 +149,11 @@ statement's and the write-off's strings. Splitting the catalogue into a shell se
 (auth, navigation, errors, snackbar) and per-route-group sets loaded with their
 route chunk is the structural fix. Owner: frontend. Not blocking; every route is
 inside its recorded budget (`frontend/bundle-budgets.json`).
+
+## Dedupe ml-uikit's bundled tailwind-merge and clsx (raised 24 Sep 2026)
+
+`vendor/ml-uikit/node_modules` installs its own tailwind-merge 1.14 and clsx 1.x
+from the lockfile, about 6.7 KB gzip on every (app) route, duplicating the app's
+tailwind-merge 2.6. Aliasing or overriding to the app's copy is the largest
+bundle saving available; ml-uikit's class merging would then run on v2 and needs
+a visual check across the gallery before it lands.

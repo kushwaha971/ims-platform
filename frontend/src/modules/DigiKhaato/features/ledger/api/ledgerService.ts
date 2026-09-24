@@ -99,6 +99,9 @@ const toEntry = (row: LedgerEntryApiRow): LedgerEntry => ({
   reason: row.reason,
   createdBy: row.created_by ? { id: row.created_by.id, name: row.created_by.name } : null,
   createdAt: row.created_at,
+  /* CR-027. Spread only when present, so a row from a 201 (which carries no
+     running balance) has no key rather than a `null` that reads like a value. */
+  ...(row.running_balance != null ? { runningBalance: row.running_balance } : {}),
 });
 
 const toWarning = (warning: {

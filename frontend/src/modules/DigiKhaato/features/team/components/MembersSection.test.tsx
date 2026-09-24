@@ -235,6 +235,30 @@ describe('MembersSection — the optional mobile field', () => {
   });
 });
 
+describe('MembersSection — a ten-digit mobile (UAT D4)', () => {
+  it('accepts 9890011223 and submits +919890011223', async () => {
+    /* Prevents UAT D4: the field was a plain `type="tel"` box while the schema
+       demands E.164 (`+91XXXXXXXXXX`), so the ten digits every merchant types
+       were refused with "Enter a 10-digit Indian mobile number" — a message
+       that describes exactly what they had typed. The party form's
+       `UbPhoneInput` shows +91 and commits E.164; this form now uses it too. */
+    const user = userEvent.setup();
+    renderWithProviders(<MembersSection />);
+
+    await user.click(await screen.findByRole('button', { name: 'Add member' }));
+    await user.type(await screen.findByLabelText(/Full name/), 'Ramesh Kumar');
+    await user.type(screen.getByLabelText(/Email address/), 'ramesh@shop.test');
+    await user.type(screen.getByLabelText(/Mobile number/), '9890011223');
+    await user.click(screen.getByRole('button', { name: 'Create login' }));
+
+    await waitFor(() => expect(memberService.createMember).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText('Enter a 10-digit Indian mobile number.')).not.toBeInTheDocument();
+    expect(memberService.createMember.mock.calls[0][0]).toMatchObject({
+      mobile: '+919890011223',
+    });
+  });
+});
+
 describe('MembersSection — the heading count and the invited row’s disc (QA O3)', () => {
   const INVITED = {
     ...MEMBER,

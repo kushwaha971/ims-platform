@@ -13,15 +13,15 @@ import { presetSummary } from '../view-model/onboardingDisplay';
  * PLT-03 FR-5 / §7 — step 4's summary: what the preset is about to turn on,
  * shown BEFORE the button is pressed.
  *
- * FR-8 and canon §0.2 are the reason the copy ends with "You can change all of
- * this in Settings": a business type sets defaults, it never hard-wires
+ * FR-8 and canon §0.2 are the reason the copy ends with "These are starting
+ * defaults, not rules": a business type sets defaults, it never hard-wires
  * behaviour, and a merchant who believes otherwise will pick the wrong tile out
- * of fear rather than the right one.
+ * of fear rather than the right one. It used to say "You can change all of this
+ * in Settings", and Settings is not built (UAT D8).
  *
- * EC-6 — when the partner's plan has no `inventory`, the row says "not
- * available in your plan" instead of promising stock the preset will silently
- * drop. That is the ONLY plan-related surface in the wizard, and it is a
- * statement, not a meter (DEC-001).
+ * EC-6's "Stock: not available in your plan" row is withdrawn with the Stock
+ * row itself: stock is not built, so the card makes no claim about it either
+ * way (UAT D8). The module list is `readyModules` — what exists today.
  */
 export interface PresetSummaryCardProps {
   readonly businessType: BusinessType;
@@ -57,18 +57,10 @@ function PresetSummaryCardBase({
           </UbText>
         </UbStack>
 
-        <UbStack gap={0.5}>
-          <UbText as="dt" variant="label" tone="tertiary">
-            {t('onboarding.summary.stock')}
-          </UbText>
-          <UbText as="dd" variant="body-sm">
-            {summary.inventoryUnavailable ? (
-              <UbStatusBadge tone="warning" label={t('onboarding.summary.stock.unavailable')} />
-            ) : (
-              t(summary.inventoryEnabled ? 'onboarding.summary.on' : 'onboarding.summary.off')
-            )}
-          </UbText>
-        </UbStack>
+        {/* No Stock row. It read "Stock: On" (or EC-6's "not available in
+            your plan") for a module that is a "Soon" row in the sidebar —
+            a promise about an unbuilt feature (UAT D8). It comes back with
+            the Items screen. */}
 
         <UbStack gap={0.5}>
           <UbText as="dt" variant="label" tone="tertiary">
@@ -95,7 +87,7 @@ function PresetSummaryCardBase({
             {t('onboarding.summary.modules')}
           </UbText>
           <UbBox as="dd" className="flex flex-wrap gap-1.5">
-            {summary.modules.map((module) => (
+            {summary.readyModules.map((module) => (
               <UbStatusBadge key={module} tone="neutral" label={t(`nav.module.${module}`)} />
             ))}
           </UbBox>

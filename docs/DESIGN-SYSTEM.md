@@ -64,7 +64,17 @@ on a phone they are 32 px icon squares on the title's line. If even the icons
 do not fit, they wrap BELOW the title starting at the left — never right-aligned
 on a line of their own. A page's everyday pair (a khata's You gave / You got)
 goes in `primaryActions`: beside the title from `sm` up, an equal-width
-two-column row under the title on a phone.
+two-column row under the title on a phone. On a phone the khata also docks a
+copy of the pair at the bottom (`UbBottomBar`, `sm:hidden`) — but only once
+the header pair has scrolled up out of view (`useScrolledPast` on
+`UbPageHeader`'s `primaryActionsRef`), and never for an archived party or a
+role that cannot write. The header pair stays; the dock is not a second
+permanent copy.
+
+A list whose sort lives in table column headers gives the phone's card layout
+a sort control of its own: an icon button in the grid toolbar opening a
+single-choice sheet (`UbDialog` + `UbChoiceChips`) that writes the same
+`ordering` the headers do (party list, UAT D5).
 
 A screen's scope date sits on the right — in the header (`UbDateInput
 appearance="inline"`, read as text: "As of 23 Sep 2026") or in `UbFilterBar`'s
@@ -109,6 +119,12 @@ Skeleton bars are fluid (`w-full` or a fraction, the length in `max-w-*`), so
 no skeleton can be wider than the tile it sits in (QA D3). That includes the
 data grid's own loading rows: a phone card draws a card-shaped skeleton, and a
 table-tier bar is capped `max-w-full` by its cell (QA N1).
+
+`cn()` knows the custom radii (`xs`, `pill`, `card`, `control`), so a
+caller's `rounded-pill` genuinely replaces a primitive's `rounded-sm` (UAT
+D-1: the skeleton disc drew square). A new `borderRadius` name in
+`tailwind.config.js` is added to `CUSTOM_RADII` in `src/utils/cn.ts` in the
+same change.
 
 When none of these fits, add the new component to `src/design-system`, add it
 to this table in the same change, and write down which Figma node it follows.

@@ -1,16 +1,13 @@
 'use client';
 
-import { memo, useCallback } from 'react';
+import { memo } from 'react';
 
 import { Globe } from 'lucide-react';
 
 import { UbBox, UbNativeSelect } from 'src/design-system';
-import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
+import { useLocaleSwitch } from 'src/hooks/useLocaleSwitch';
 import { useTranslation } from 'src/hooks/useTranslation';
-import { localeChanged, selectLocale } from 'src/redux/slice/localeSlice';
-import { LOCALES, type Locale } from 'src/types/domain.types';
 import { cn } from 'src/utils/cn';
-import { LOCALE_COOKIE, writeCookie } from 'src/utils/cookieUtils';
 
 /**
  * CR-2026-09-19-D — the language control, moved.
@@ -39,23 +36,12 @@ import { LOCALE_COOKIE, writeCookie } from 'src/utils/cookieUtils';
  * 2 GB Android phone it renders as the platform picker, it is keyboard-operable
  * and type-ahead searchable for free, and it costs no JavaScript.
  */
-const LABELS: Readonly<Record<Locale, string>> = { en: 'English', hi: 'हिन्दी' };
-
-const OPTIONS = LOCALES.map((locale) => ({ value: locale, label: LABELS[locale] }));
-
+/* UAT D2 — the labels and the write (store + `ub_locale` cookie) now live in
+   `useLocaleSwitch`, shared with the account menu's switch, so the two controls
+   cannot persist the preference two different ways. */
 function LanguagePickerBase({ className }: Readonly<{ className?: string }>) {
-  const dispatch = useAppDispatch();
-  const locale = useAppSelector(selectLocale);
+  const { locale, options, setLocale } = useLocaleSwitch();
   const { t } = useTranslation();
-
-  const onChange = useCallback(
-    (next: string) => {
-      const value = (LOCALES as readonly string[]).includes(next) ? (next as Locale) : 'en';
-      dispatch(localeChanged(value));
-      writeCookie(LOCALE_COOKIE, value);
-    },
-    [dispatch]
-  );
 
   return (
     <UbBox className={cn('relative inline-flex items-center', className)}>
@@ -65,8 +51,8 @@ function LanguagePickerBase({ className }: Readonly<{ className?: string }>) {
       />
       <UbNativeSelect
         value={locale}
-        onChange={onChange}
-        options={OPTIONS}
+        onChange={setLocale}
+        options={options}
         aria-label={t('auth.language.change')}
         // Quiet by design: a transparent surface and the subtle border, not the
         // `--border-strong` a form field earns. 44 px tall regardless (R-A-3).

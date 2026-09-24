@@ -79,11 +79,29 @@ export interface PresetSummary {
   readonly defaultDueDays: number;
   readonly favouriteUnits: readonly string[];
   readonly modules: readonly ModuleCode[];
+  /**
+   * The subset of `modules` a merchant can open TODAY — what step 4 may list.
+   * `modules` stays what the preset turns on, because that is what the server
+   * stores; the card shows only this (UAT D8, owner rule: unbuilt is unshown).
+   */
+  readonly readyModules: readonly ModuleCode[];
   /** i18n keys for the extra expense categories this type seeds. */
   readonly extraExpenseCategoryIds: readonly string[];
   /** EC-6 — the partner's plan does not include stock; the summary says so. */
   readonly inventoryUnavailable: boolean;
 }
+
+/**
+ * The modules that have screens today, in the order step 4 lists them.
+ *
+ * Every other module is a "Soon" row in the sidebar (`ready` absent in
+ * `navigation/sidebarConfig.ts`), and step 4 used to promise them all under
+ * "What you get" — Stock, Bills & estimates, Purchases — beside a "Stock: On"
+ * row (UAT D8). Add a module here in the same change that marks its first
+ * sidebar item `ready`. `platform` is left out on purpose: its label is "Team
+ * & settings", and Settings is one of the "Soon" rows.
+ */
+export const READY_MODULES: readonly ModuleCode[] = ['parties', 'ledger'];
 
 /**
  * FR-5 — what step 4 shows before the button is pressed.
@@ -107,6 +125,7 @@ export const presetSummary = (
     defaultDueDays: config.defaultDueDays,
     favouriteUnits: config.favouriteUnits,
     modules: effective,
+    readyModules: READY_MODULES.filter((module) => effective.includes(module)),
     extraExpenseCategoryIds: config.extraExpenseCategoryIds,
     inventoryUnavailable: config.inventoryEnabled && !effective.includes('inventory'),
   };

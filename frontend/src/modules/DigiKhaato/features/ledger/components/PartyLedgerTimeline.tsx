@@ -29,6 +29,7 @@ import { usePartyLedger } from '../hooks/usePartyLedger';
 import {
   amountLabelRepeatsTitle,
   entryAmountView,
+  entryBalanceCaption,
   entryCaption,
   entryReason,
   entryTitle,
@@ -332,6 +333,7 @@ function EntryRow({
   );
   const caption = useMemo(() => entryCaption(entry, t, viewerId), [entry, t, viewerId]);
   const reason = entryReason(entry);
+  const balanceCaption = entryBalanceCaption(entry, t);
   const reversed = entry.status === 'reversed';
   const isOpening = isOpeningEntry(entry);
 
@@ -424,18 +426,35 @@ function EntryRow({
           </UbText>
         )}
       </UbStack>
-      <UbStack direction="row" align="center" className="gap-1">
-        <UbAmount
-          value={entry.amount}
-          tone={reversed ? 'neutral' : view.tone}
-          sign="none"
-          label={t(view.labelId)}
-          /* Hidden when the title on the left is already those same two words —
-           which it is on every entry without a note, so on most of them. The
-           label stays in the accessible name either way; see the view-model. */
-          labelHidden={amountLabelRepeatsTitle(entry)}
-          size="sm"
-        />
+      <UbStack direction="row" align="start" className="gap-1">
+        <UbStack gap={0} align="end">
+          <UbAmount
+            value={entry.amount}
+            tone={reversed ? 'neutral' : view.tone}
+            sign="none"
+            label={t(view.labelId)}
+            /* Hidden when the title on the left is already those same two words —
+             which it is on every entry without a note, so on most of them. The
+             label stays in the accessible name either way; see the view-model. */
+            labelHidden={amountLabelRepeatsTitle(entry)}
+            size="sm"
+          />
+          {/* CR-027 / PTY-03 FR-5 — the balance AFTER this row, under the amount
+              in caption grey: the amount is what happened, this is where it
+              left them, and both shouting is neither (the statement's rule).
+
+              Capped and right-aligned so it WRAPS at a space rather than
+              widening the column: the title owns its line, and a trailing slot
+              that grows to fit "Bal ₹12,34,567.00 (to give)" on one line would
+              take the width the title needs on a 360 px phone — the "Opening
+              bala…" defect, one field later. Not struck through on a reversed
+              row: the figure there is the balance as it stood, which is true. */}
+          {balanceCaption && (
+            <UbText variant="caption" tone="tertiary" className="max-w-[8rem] text-right">
+              {balanceCaption}
+            </UbText>
+          )}
+        </UbStack>
         {/* `iconOnly`, because the row is already at its width on a 360 px
             phone and a worded button would push the amount off the screen —
             which is the defect this feature's own sweep caught in the header.

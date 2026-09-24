@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, type ReactNode } from 'react';
+import { memo, type ReactNode, type Ref } from 'react';
 
 import { cn } from 'src/utils/cn';
 
@@ -53,6 +53,12 @@ export interface UbPageHeaderProps {
    * put two "You gave" buttons in the accessibility tree.
    */
   readonly primaryActions?: ReactNode;
+  /**
+   * The element wrapping `primaryActions`, for a screen that has to know when
+   * the pair has scrolled away — the khata docks a copy at the bottom of a
+   * phone once it has (see `useScrolledPast`).
+   */
+  readonly primaryActionsRef?: Ref<HTMLDivElement>;
   readonly className?: string;
 }
 
@@ -62,6 +68,7 @@ function UbPageHeaderBase({
   controls,
   actions,
   primaryActions,
+  primaryActionsRef,
   className,
 }: Readonly<UbPageHeaderProps>) {
   return (
@@ -117,7 +124,10 @@ function UbPageHeaderBase({
             )}
           >
             {primaryActions && (
-              <div className="flex items-center gap-2 max-sm:order-last max-sm:grid max-sm:basis-full max-sm:grid-cols-2 max-sm:[&>*]:w-full">
+              <div
+                ref={primaryActionsRef}
+                className="flex items-center gap-2 max-sm:order-last max-sm:grid max-sm:basis-full max-sm:grid-cols-2 max-sm:[&>*]:w-full"
+              >
                 {primaryActions}
               </div>
             )}

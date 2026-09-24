@@ -314,7 +314,22 @@
   "line in the shared ledger view-model).",
   "BACKLOG: the shell has grown ~1.8 KB this sprint, most of it en.json copy",
   "riding with react-intl. Splitting message catalogues per route group is the",
-  "structural fix; it is recorded in docs/BACKLOG.md rather than done here."
+  "structural fix; it is recorded in docs/BACKLOG.md rather than done here.",
+  "",
+  "── 24 Sep 2026: UAT fixes — measured per change in real builds ────────────",
+  "Phone header (UAT D2, P1: no Sign out, search or language below 1024 px):",
+  "+1.0–1.23 KB on every (app) route — it rides in the (app) layout, which auth",
+  "routes do not load. Making its search sheet lazy made every route BIGGER",
+  "(+0.5–1.0: the loader is not otherwise in the layout), so it stays eager.",
+  "Party-list phone sort + archived fix +0.56 on /parties (the sheet itself is",
+  "lazy). Khata dock + record-payment prefill +0.35, running-balance caption",
+  "+0.2 (the statement view-model it pulled in was split out: −0.54). Print",
+  "letterhead +0.16 on the statement, +0.20 in the shell via the invalidation",
+  "registry's static thunk imports. cn() radius config +0.11 after switching to",
+  "createTailwindMerge. Budgets set to measured, rounded up.",
+  "BACKLOG: vendor/ml-uikit bundles its own tailwind-merge 1.14 + clsx ≈ 6.7 KB",
+  "on every (app) route; deduping is the largest available saving (needs a",
+  "visual check of ml-uikit's class merging on v2)."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -702,12 +717,12 @@
  },
  "routes": {
   "/parties": {
-   "route": 101,
-   "firstLoad": 340
+   "route": 103,
+   "firstLoad": 342
   },
   "/dashboard": {
-   "route": 60,
-   "firstLoad": 298
+   "route": 61,
+   "firstLoad": 300
   },
   "/sales/invoices/new": {
    "route": 110,
@@ -722,30 +737,31 @@
    "firstLoad": 338
   },
   "/settings/team": {
-   "route": 90,
-   "firstLoad": 329
+   "route": 92,
+   "firstLoad": 331
   },
   "/parties/[id]": {
-   "route": 96,
-   "firstLoad": 335
+   "route": 97,
+   "firstLoad": 337
   },
   "/parties/tags": {
-   "route": 72,
-   "firstLoad": 311
+   "route": 73,
+   "firstLoad": 313
   },
   "/parties/[id]/statement": {
-   "route": 89,
-   "firstLoad": 328
-  },
-  "/ledger/aging": {
    "route": 91,
    "firstLoad": 330
   },
+  "/ledger/aging": {
+   "route": 92,
+   "firstLoad": 331
+  },
   "/switch": {
-   "firstLoad": 302
+   "firstLoad": 304,
+   "route": 65
   },
   "/settings/plan": {
-   "firstLoad": 301
+   "firstLoad": 303
   }
  },
  "//ignoreRoutes": [

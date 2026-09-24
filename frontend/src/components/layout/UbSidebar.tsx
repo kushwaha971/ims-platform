@@ -45,8 +45,11 @@ export function UbSidebar(): React.JSX.Element {
        32 px rows), DOCKED rather than floating: full height, flush to the
        left edge, a hairline on the right — the owner's call over the Figma's
        floating card. Sticky so it stays put while the page scrolls. */
+    /* UAT D3 — `data-print="hide"` as well as being a `nav`: the print sheet
+       must not depend on which element this happens to be rendered as. */
     <UbBox
       as="nav"
+      data-print="hide"
       aria-label={t('nav.primary')}
       className={cn(
         'sticky top-0 hidden h-dvh w-sidebar shrink-0 flex-col overflow-y-auto lg:flex',

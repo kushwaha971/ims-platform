@@ -570,11 +570,13 @@ describe('the approved responsive rules, on the real screen', () => {
     expect(await screen.findByRole('button', { name: 'Clear filters (1)' })).toBeInTheDocument();
   });
 
-  it('clears the chips but stays on the tab the merchant is reading', async () => {
+  it('counts Archived as a filter and clears it with the rest (UAT D7)', async () => {
     /**
-     * "Clear filters" on Archived must not silently move them back to Active.
-     * They would be looking at a different set of people, and the only thing
-     * that changed on screen is that the rows are different.
+     * Prevents UAT D7. "Clear filters" on Archived used to keep the merchant on
+     * Archived, on the theory that it was a tab. It is a select in the toolbar,
+     * nothing else on screen says it is on, and it was not in the "(n)" — so a
+     * merchant back on the list read ₹0 / ₹0 over one archived party with no
+     * visible way out. Archived now counts, and clearing takes it off.
      */
     partyService.listParties.mockResolvedValue(loaded([RAMESH]));
     const user = userEvent.setup();
@@ -587,13 +589,16 @@ describe('the approved responsive rules, on the real screen', () => {
     await user.click(screen.getByRole('combobox', { name: 'Show' }));
     await user.click(await screen.findByRole('option', { name: 'Archived' }));
     await waitFor(() => expect(lastParams()?.status).toBe('archived'));
+    expect(await screen.findByRole('button', { name: 'Clear filters (1)' })).toBeInTheDocument();
+
     await user.click(screen.getByRole('button', { name: 'Owes me' }));
     await waitFor(() => expect(lastParams()?.balance).toBe('owes_me'));
 
-    await user.click(screen.getByRole('button', { name: 'Clear filters (1)' }));
+    await user.click(screen.getByRole('button', { name: 'Clear filters (2)' }));
 
     await waitFor(() => expect(lastParams()?.balance).toBe(''));
-    expect(lastParams()?.status).toBe('archived');
+    expect(lastParams()?.status).toBe('active');
+    expect(screen.queryByRole('button', { name: /Clear filters/ })).not.toBeInTheDocument();
   });
 
   it('opens the khata page when a row is tapped', async () => {
@@ -1448,12 +1453,13 @@ describe('PTY-02 §9 — the ten states of the party list', () => {
 
   it('§9 Empty (Archived tab) — says nobody is archived, not "No customers yet"', async () => {
     /**
-     * Prevents the defect this block found: `status` is deliberately not
-     * counted as a filter (so a new tenant is never told to clear filters),
-     * which meant an empty ARCHIVED tab fell through to the first-use state —
-     * a merchant with three hundred active parties read "No customers yet"
-     * with an Add party button on a book full of them. Adding from there
-     * would create an ACTIVE party the tab cannot show.
+     * Prevents the defect this block found: an empty ARCHIVED tab fell
+     * through to the first-use state — a merchant with three hundred active
+     * parties read "No customers yet" with an Add party button on a book full
+     * of them. Adding from there would create an ACTIVE party the tab cannot
+     * show. Since UAT D7 Archived counts as a filter, so the way out is the
+     * same "Clear filters" every other narrowing offers — under the archived
+     * wording, not "No customers match these filters".
      */
     partyService.listParties.mockResolvedValue(loaded([RAMESH]));
     const user = userEvent.setup();
@@ -1469,8 +1475,10 @@ describe('PTY-02 §9 — the ten states of the party list', () => {
       screen.getByText('Customers you archive are kept here, with their khata.')
     ).toBeInTheDocument();
     expect(screen.queryByText('No customers yet')).not.toBeInTheDocument();
+    expect(screen.queryByText('No customers match these filters')).not.toBeInTheDocument();
     // Only the header's Add party remains; the empty state offers none.
     expect(screen.getAllByRole('button', { name: 'Add party' })).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Clear filters' })).toBeInTheDocument();
   });
 
   // ── Success ────────────────────────────────────────────────────────────────
@@ -1757,5 +1765,151 @@ describe('PTY-02 §9 — the ten states of the party list', () => {
 
     expect(await screen.findByText('Tagged 1 party')).toBeInTheDocument();
     expect(screen.getByText('Sunita Stores already carries 10 tags')).toBeInTheDocument();
+  });
+});
+
+describe('the list comes back on its default view (UAT D7)', () => {
+  const lastParams = () =>
+    partyService.listParties.mock.calls.at(-1)?.[0] as Record<string, unknown>;
+
+  beforeEach(() => {
+    store.dispatch(resetPartyList());
+    store.dispatch(resetPartyTags());
+    jest.clearAllMocks();
+    mockSearch = '';
+    tagService.listTags.mockResolvedValue([]);
+    setTier('cards');
+    partyService.listParties.mockResolvedValue(loaded([RAMESH]));
+  });
+
+  it('lands on Active when the sidebar opens a clean /parties after Archived', async () => {
+    /**
+     * Prevents UAT D7: the slice outlives the screen, and the URL seed applied
+     * only the axes a link NAMED — so Archived, then a khata, then the
+     * sidebar's "Customers" (a clean `/parties`) brought the Archived tab back
+     * and wrote `?status=archived` into the address bar again.
+     */
+    const user = userEvent.setup();
+    const first = renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+    await user.click(screen.getByRole('combobox', { name: 'Show' }));
+    await user.click(await screen.findByRole('option', { name: 'Archived' }));
+    await waitFor(() => expect(lastParams()?.status).toBe('archived'));
+    first.unmount();
+
+    mockReplace.mockClear();
+    mockSearch = '';
+    renderWithProviders(<PartyListPageContent />);
+
+    await waitFor(() => expect(lastParams()?.status).toBe('active'));
+    expect(screen.queryByRole('button', { name: /Clear filters/ })).not.toBeInTheDocument();
+    expect(mockReplace).not.toHaveBeenCalledWith('/parties?status=archived', expect.anything());
+  });
+
+  it('keeps the filters when Back returns to the URL that carries them', async () => {
+    /**
+     * The other half of the decision: filters persist across navigation
+     * THROUGH THE URL. Back to `/parties?status=archived` is still Archived,
+     * and — because nothing changed — the page the slice was on is kept.
+     */
+    const user = userEvent.setup();
+    const first = renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+    await user.click(screen.getByRole('combobox', { name: 'Show' }));
+    await user.click(await screen.findByRole('option', { name: 'Archived' }));
+    await waitFor(() => expect(lastParams()?.status).toBe('archived'));
+    first.unmount();
+
+    mockSearch = 'status=archived';
+    renderWithProviders(<PartyListPageContent />);
+
+    await waitFor(() => expect(lastParams()?.status).toBe('archived'));
+    expect(await screen.findByRole('button', { name: 'Clear filters (1)' })).toBeInTheDocument();
+  });
+
+  it('follows a clean /parties that arrives while the list is still mounted', async () => {
+    /**
+     * The sidebar tapped from the list itself: Next keeps the page mounted and
+     * only the search params change. The writer used to see a URL that
+     * disagreed with the slice and put `?status=archived` straight back.
+     */
+    mockSearch = 'status=archived';
+    const view = renderWithProviders(<PartyListPageContent />);
+    await waitFor(() => expect(lastParams()?.status).toBe('archived'));
+
+    mockReplace.mockClear();
+    mockSearch = '';
+    view.rerender(<PartyListPageContent />);
+
+    await waitFor(() => expect(lastParams()?.status).toBe('active'));
+    expect(mockReplace).not.toHaveBeenCalledWith('/parties?status=archived', expect.anything());
+  });
+});
+
+describe('sorting on a phone (UAT D5)', () => {
+  const lastParams = () =>
+    partyService.listParties.mock.calls.at(-1)?.[0] as Record<string, unknown>;
+
+  beforeEach(() => {
+    store.dispatch(resetPartyList());
+    store.dispatch(resetPartyTags());
+    jest.clearAllMocks();
+    mockSearch = '';
+    tagService.listTags.mockResolvedValue([]);
+    partyService.listParties.mockResolvedValue(loaded([RAMESH, SUNITA]));
+  });
+
+  it('offers a sort control on the card layout and applies the choice server-side', async () => {
+    /**
+     * Prevents UAT D5: balance and name sort existed only as the desktop
+     * table's column headers, so a phone — where the list is cards and there
+     * are no headers — could not sort at all. The sheet writes the same
+     * `ordering` the headers do, so the URL and the server agree.
+     */
+    setTier('cards');
+    const user = userEvent.setup();
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+
+    await user.click(screen.getByRole('button', { name: 'Sort' }));
+    const sheet = await screen.findByRole('dialog', { name: 'Sort by' });
+    const group = within(sheet).getByRole('radiogroup', { name: 'Sort by' });
+    // The default ordering is shown as the current choice.
+    expect(within(group).getByRole('radio', { name: 'Recent activity' })).toHaveAttribute(
+      'aria-checked',
+      'true'
+    );
+
+    await user.click(within(group).getByRole('radio', { name: 'Balance: high to low' }));
+
+    await waitFor(() => expect(lastParams()?.ordering).toBe('-balance'));
+    await waitFor(() =>
+      expect(mockReplace).toHaveBeenLastCalledWith('/parties?ordering=-balance', { scroll: false })
+    );
+    // One tap is the whole job: the sheet closes on the choice.
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it.each([
+    ['Balance: low to high', 'balance'],
+    ['Name: A to Z', 'name'],
+  ])('maps "%s" to ordering=%s', async (label, ordering) => {
+    setTier('cards');
+    const user = userEvent.setup();
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+
+    await user.click(screen.getByRole('button', { name: 'Sort' }));
+    await user.click(await screen.findByRole('radio', { name: label }));
+
+    await waitFor(() => expect(lastParams()?.ordering).toBe(ordering));
+  });
+
+  it('is not drawn where the table has sortable column headers', async () => {
+    setTier('full');
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findAllByText('Ramesh Traders');
+
+    expect(screen.queryByRole('button', { name: 'Sort' })).not.toBeInTheDocument();
   });
 });

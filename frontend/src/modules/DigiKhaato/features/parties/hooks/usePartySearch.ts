@@ -51,9 +51,19 @@ export interface UsePartySearchResult {
   readonly clear: () => void;
 }
 
-export function usePartySearch(options: UsePartySearchOptions = {}): UsePartySearchResult {
+/**
+ * Whether this session may search parties at all — the one rule, so a control
+ * that only OPENS a search (the phone header's search button, UAT D2) hides on
+ * exactly the condition the search itself renders nothing on, without mounting
+ * a second search source to ask.
+ */
+export function useCanSearchParties(): boolean {
   const { can, hasModule } = usePermissions();
-  const canSearch = hasModule('parties') && can('parties.party.read');
+  return hasModule('parties') && can('parties.party.read');
+}
+
+export function usePartySearch(options: UsePartySearchOptions = {}): UsePartySearchResult {
+  const canSearch = useCanSearchParties();
   const { type, limit = PARTY_SEARCH_LIMIT } = options;
 
   const [query, setQuery] = useState('');

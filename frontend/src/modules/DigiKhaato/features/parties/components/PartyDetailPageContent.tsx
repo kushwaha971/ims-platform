@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 
 import {
+  UbBottomBar,
   UbBox,
   UbButton,
   UbCard,
@@ -18,6 +19,7 @@ import {
   UbStatusBanner,
 } from 'src/design-system';
 import { usePermissions } from 'src/hooks/usePermissions';
+import { useScrolledPast } from 'src/hooks/useScrolledPast';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { ROUTES, partyStatementPath } from 'src/routes';
 import { copyText } from 'src/utils/clipboard';
@@ -157,6 +159,12 @@ export function PartyDetailPageContent({
   const { can, hasModule } = usePermissions();
   const canReadLedger = hasModule('ledger') && can('ledger.entry.read');
 
+  /* Whether the header's You gave / You got pair has scrolled up out of view.
+     Read on every width; the dock it drives is `sm:hidden`, because from `sm`
+     up the pair sits beside the title and a laptop's khata rarely scrolls it
+     away from a reachable place. */
+  const [pairRef, pairScrolledPast] = useScrolledPast<HTMLDivElement>();
+
   const [copied, setCopied] = useState(false);
   const handleCopyMobile = useCallback(async (mobile: string) => {
     setCopied(await copyText(mobile));
@@ -272,6 +280,20 @@ export function PartyDetailPageContent({
     <UbSkeleton variant="card" />
   );
 
+  /* The khata's everyday pair. Hidden rather than disabled when the role
+     cannot write (§19.7.5 / R-SEC-2), and absent for an archived party. */
+  const canRecord = Boolean(party) && !isArchived && entryForm.canWrite;
+  const entryPair = (
+    <>
+      <UbButton variant="primary" onClick={() => entryForm.openEntry(id, 'debit')}>
+        {t('ledger.entry.gaveAction')}
+      </UbButton>
+      <UbButton variant="secondary" onClick={() => entryForm.openEntry(id, 'credit')}>
+        {t('ledger.entry.gotAction')}
+      </UbButton>
+    </>
+  );
+
   return (
     <UbPageShell
       header={
@@ -287,18 +309,8 @@ export function PartyDetailPageContent({
 
              Hidden rather than disabled when the role cannot write (§19.7.5 /
              R-SEC-2): a greyed button with a tooltip is a support call. */
-          primaryActions={
-            party && !isArchived && entryForm.canWrite ? (
-              <>
-                <UbButton variant="primary" onClick={() => entryForm.openEntry(id, 'debit')}>
-                  {t('ledger.entry.gaveAction')}
-                </UbButton>
-                <UbButton variant="secondary" onClick={() => entryForm.openEntry(id, 'credit')}>
-                  {t('ledger.entry.gotAction')}
-                </UbButton>
-              </>
-            ) : undefined
-          }
+          primaryActions={canRecord ? entryPair : undefined}
+          primaryActionsRef={pairRef}
           actions={
             /* Edit, Add opening balance and Archive. All three are things done
                once a month or once in a party's life, and at five buttons the
@@ -390,6 +402,26 @@ export function PartyDetailPageContent({
             </UbBox>
           </UbBox>
         </UbBox>
+
+        {/* The same pair, docked to the bottom of a phone — but only once the
+            header's pair has scrolled up out of view. The header keeps its
+            pair (owner, 23 Sep: the tab-like row under the title); a merchant
+            twenty entries down a busy khata should not have to scroll back to
+            the top to record the twenty-first. Rendered only while needed, so
+            there are never two pairs on screen at once.
+
+            `UbBottomBar` because it is furniture at the bottom of the
+            viewport: it publishes its height so the snackbar lifts above it
+            (CR-2026-09-19-G). Sticky in the page column, edge to edge (`-mx-4`
+            undoes the column's inset) and clear of the iOS home indicator. */}
+        {canRecord && pairScrolledPast && (
+          <UbBottomBar
+            data-testid="khata-dock"
+            className="-mx-4 grid grid-cols-2 gap-2 border-t border-border-hairline bg-surface-card px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] pt-3 sm:hidden"
+          >
+            {entryPair}
+          </UbBottomBar>
+        )}
       </UbStack>
 
       {/* The drawer the Edit button opens.
@@ -466,8 +498,13 @@ export function PartyDetailPageContent({
                   /* The direction that SETTLES the balance: they owe you, so
                    money comes in (You got); you owe them, so it goes out. */
                   const direction = archive.blocked?.label === 'payable' ? 'debit' : 'credit';
+                  /* The magnitude the dialog just showed, prefilled and still
+                     editable — a part payment is the common case, but typing
+                     back a figure the merchant was shown a second ago is the
+                     uncommon kind of work (UAT). */
+                  const amount = archive.blocked?.magnitude ?? null;
                   archive.close();
-                  entryForm.openEntry(id, direction);
+                  entryForm.openEntry(id, direction, { amount });
                 }
               : undefined
           }

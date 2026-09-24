@@ -21,7 +21,30 @@ import { balanceView } from '../view-model/partyDisplay';
  * Nothing about it is clever — it is the one keyboard contract a merchant who
  * types fast already knows from every search box they have used.
  */
-function PartyQuickSearchBase({ className }: Readonly<{ className?: string }>) {
+export interface PartyQuickSearchProps {
+  readonly className?: string;
+  /**
+   * UAT D2 — the phone's search sheet. The sheet opens BECAUSE the merchant
+   * asked to search, so the field takes focus (and brings the keyboard up) at
+   * once; the desktop bar must not steal focus on every page load.
+   */
+  readonly autoFocus?: boolean;
+  /**
+   * UAT D2 — results in the flow of the page instead of a floating popover. A
+   * sheet is `overflow: hidden`, so an absolutely-positioned list inside one is
+   * clipped at the sheet's edge: the matches were there and could not be seen.
+   */
+  readonly inline?: boolean;
+  /** Called after a party is chosen — the sheet closes itself with it. */
+  readonly onNavigate?: () => void;
+}
+
+function PartyQuickSearchBase({
+  className,
+  autoFocus = false,
+  inline = false,
+  onNavigate,
+}: Readonly<PartyQuickSearchProps>) {
   const { t } = useTranslation();
   const router = useRouter();
   const search = usePartySearch();
@@ -34,8 +57,9 @@ function PartyQuickSearchBase({ className }: Readonly<{ className?: string }>) {
       setOpen(false);
       search.clear();
       router.push(partyPath(id));
+      onNavigate?.();
     },
-    [router, search]
+    [router, search, onNavigate]
   );
 
   const handleKey = useCallback(
@@ -77,8 +101,12 @@ function PartyQuickSearchBase({ className }: Readonly<{ className?: string }>) {
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}
-        onBlur={() => window.setTimeout(() => setOpen(false), 150)}
+        /* Inline, the list IS the sheet's content: a phone user who drops the
+           keyboard to read the matches blurs the field, and closing on that
+           would take the matches away at the moment they looked at them. */
+        onBlur={inline ? undefined : () => window.setTimeout(() => setOpen(false), 150)}
         onKeyDown={handleKey}
+        autoFocus={autoFocus}
         placeholder={t('parties.quickSearch.placeholder')}
         aria-label={t('parties.quickSearch.label')}
         role="combobox"
@@ -94,7 +122,10 @@ function PartyQuickSearchBase({ className }: Readonly<{ className?: string }>) {
           as="ul"
           id={listId}
           role="listbox"
-          className="absolute left-0 right-0 top-11 z-40 max-h-80 overflow-y-auto rounded-control border border-border-hairline bg-surface-card py-1 shadow-2"
+          className={cn(
+            'max-h-80 overflow-y-auto rounded-control border border-border-hairline bg-surface-card py-1',
+            inline ? 'mt-2' : 'absolute left-0 right-0 top-11 z-40 shadow-2'
+          )}
         >
           {search.isEmpty ? (
             <UbBox as="li" className="px-3 py-2">

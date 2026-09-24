@@ -167,7 +167,9 @@ describe('the statement a merchant reads', () => {
 
     /* `replace`, not `push`: a merchant trying five presets and hitting back
        expects the khata page, not four statements. */
-    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('?preset=allTime', { scroll: false }));
+    await waitFor(() =>
+      expect(mockReplace).toHaveBeenCalledWith('?preset=allTime', { scroll: false })
+    );
   });
 
   it('refuses a five-year-plus range before making a request', async () => {
@@ -343,5 +345,49 @@ describe('printing', () => {
 
     await waitFor(() => expect(statementService.getStatement).toHaveBeenCalled());
     await waitFor(() => expect(print).toHaveBeenCalled());
+  });
+});
+
+describe('the closing tile is painted by what the balance means (UAT)', () => {
+  const closingTile = (view: ReturnType<typeof within>): HTMLElement => {
+    const strip = within(view.getByTestId('ub-stat-grid'));
+    const label = strip.getByText('Closing balance');
+    // The label's row, then the tile's figure line beneath it.
+    const tile = label.parentElement?.parentElement as HTMLElement;
+    return within(tile).getByText(/^₹/);
+  };
+
+  it('paints a settled closing neutral, not in the receivable red', async () => {
+    /* Prevents the UAT finding: `tone = payable ? success : danger` put
+       every balance that was not payable in the debit red — so a khata the
+       merchant had just settled to ₹0.00 closed on a red figure, which reads
+       as money outstanding on the one statement that says there is none. */
+    statementService.getStatement.mockResolvedValue(
+      page({
+        summary: {
+          openingBalance: '2300.00',
+          closingBalance: '0.00',
+          totalDebit: '0.00',
+          totalCredit: '2300.00',
+          hasEntriesBeforeOpening: false,
+        },
+      })
+    );
+    renderWithProviders(<PartyStatementPageContent id={PARTY_ID} />);
+    const view = await onScreen();
+    await view.findByText('Cement bags');
+
+    const figure = closingTile(view);
+    expect(figure).toHaveTextContent('₹0.00');
+    expect(figure).toHaveClass('text-text-primary');
+    expect(figure).not.toHaveClass('text-error-bright');
+    expect(figure).not.toHaveClass('text-success');
+  });
+
+  it('still paints a receivable closing in the debit red', async () => {
+    renderWithProviders(<PartyStatementPageContent id={PARTY_ID} />);
+    const view = await onScreen();
+    await view.findByText('Cement bags');
+    expect(closingTile(view)).toHaveClass('text-error-bright');
   });
 });

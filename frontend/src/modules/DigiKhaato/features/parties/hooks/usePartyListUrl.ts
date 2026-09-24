@@ -29,6 +29,17 @@ import type { PartyListFilters } from '../types/party.types';
  * them; reading never would mean a link that works once and an address bar that
  * lies for the rest of the session.
  *
+ * ── On mount the URL is the WHOLE answer, not a patch (UAT D7) ──────────────
+ * The slice outlives the screen (it is app-wide Redux), and the seed used to
+ * apply only the axes the URL named. So a merchant who chose Archived, went to
+ * a khata and then tapped "Customers" in the sidebar — a clean `/parties` —
+ * got the Archived tab back, written into the address bar again, with ₹0 / ₹0
+ * over one archived party and no chip lit to say why. An axis the URL does not
+ * name now means its DEFAULT. Browser Back is unaffected: it returns to the
+ * URL that was written, which carries every non-default axis, so the seed finds
+ * nothing to change and the page number the slice kept survives too. The
+ * decision, recorded: filters persist across navigation ONLY through the URL.
+ *
  * ── `page` is deliberately absent ───────────────────────────────────────────
  * Every filter change resets pagination (§17.0.3), so a URL carrying both a
  * filter and a page number is a URL that is wrong the moment somebody opens it.
@@ -113,6 +124,26 @@ export const writeFilters = (filters: PartyListFilters, defaults: PartyListFilte
   return params.toString();
 };
 
+/**
+ * What the slice must change to show exactly what the URL says: every URL axis
+ * the link names takes its value, and every one it does NOT name falls back to
+ * its default (UAT D7). Only the axes that differ are returned, so a return to
+ * the same URL (browser Back) is an empty patch and keeps the page the slice
+ * was on — `filtersChanged` resets pagination for any non-empty one.
+ */
+export const seedPatch = (
+  fromUrl: Partial<PartyListFilters>,
+  current: PartyListFilters,
+  defaults: PartyListFilters
+): Partial<PartyListFilters> => {
+  const patch: Record<string, unknown> = {};
+  for (const key of URL_KEYS) {
+    const wanted = fromUrl[key] ?? defaults[key];
+    if (wanted !== current[key]) patch[key] = wanted;
+  }
+  return patch as Partial<PartyListFilters>;
+};
+
 export interface UsePartyListUrlOptions {
   readonly filters: PartyListFilters;
   readonly defaults: PartyListFilters;
@@ -123,27 +154,54 @@ export function usePartyListUrl({ filters, defaults, onSeed }: UsePartyListUrlOp
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const seeded = useRef(false);
+  /* The string, not the object: `useSearchParams()` may hand back a new
+     object on every render, and an effect keyed on it would re-run for a URL
+     that did not change. */
+  const current = searchParams?.toString() ?? '';
+  /** The query this hook last SAW in the address bar; null before the seed. */
+  const observed = useRef<string | null>(null);
+  /** Queries this hook asked the router for and has not yet seen arrive. */
+  const requested = useRef<string[]>([]);
 
   useEffect(() => {
-    if (seeded.current) return;
-    seeded.current = true;
-    const patch = readFilters(new URLSearchParams(searchParams?.toString() ?? ''));
-    if (Object.keys(patch).length > 0) onSeed(patch);
-  }, [searchParams, onSeed]);
+    /* Is this address the merchant's doing or ours?
+       - The first run is a mount: the URL is what was opened, so it is read.
+       - A later change to a query WE requested is our own `replace` arriving;
+         everything requested up to it is settled.
+       - A later change to anything else is a navigation from outside while
+         the screen stayed mounted — the sidebar's "Customers" (a clean
+         `/parties`) tapped while already on `/parties?status=archived`. It is
+         read like a mount, or the writer below would put the Archived tab
+         straight back over the default view the merchant asked for (UAT D7). */
+    let fromOutside = observed.current === null;
+    if (observed.current !== null && current !== observed.current) {
+      const index = requested.current.lastIndexOf(current);
+      if (index >= 0) requested.current.splice(0, index + 1);
+      else fromOutside = true;
+    }
+    observed.current = current;
 
-  useEffect(() => {
-    /* Not before the seed has run, or the first pass would write the DEFAULTS
-       over the very link that was being opened. */
-    if (!seeded.current) return;
+    if (fromOutside) {
+      requested.current = [];
+      const patch = seedPatch(readFilters(new URLSearchParams(current)), filters, defaults);
+      /* Nothing is written in this pass: `filters` here is still the
+         PRE-seed value, and writing it would `replace` the very link being
+         opened. The render the seed causes runs this again and writes the
+         canonical form (a dropped `type=wholesaler`, say). */
+      if (Object.keys(patch).length > 0) {
+        onSeed(patch);
+        return;
+      }
+    }
+
     const next = writeFilters(filters, defaults);
-    const current = searchParams?.toString() ?? '';
-    if (next === current) return;
+    if (next === current || requested.current.at(-1) === next) return;
+    requested.current.push(next);
     /* `replace`, not `push`: a chip tap is a refinement of the screen the
        merchant is on, not a place they navigated to. Pushing would make Back
        walk them through every chip they tried instead of returning them to
        wherever they came from. `scroll: false` keeps the list where they were
        reading it. */
     router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
-  }, [filters, defaults, pathname, router, searchParams]);
+  }, [current, filters, defaults, pathname, router, onSeed]);
 }

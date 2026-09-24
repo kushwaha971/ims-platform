@@ -1,6 +1,8 @@
 import type { UbAmountSign, UbAmountTone } from 'src/design-system';
 import type { TranslateFn } from 'src/hooks/useTranslation';
-import { isZeroAmount } from 'src/utils/money';
+import { formatInr, isZeroAmount } from 'src/utils/money';
+
+import { balanceDirection, unsigned } from './balanceSide';
 
 import type { LedgerDirection, LedgerEntry, WrittenOffTotals } from '../types/ledger.types';
 
@@ -325,4 +327,29 @@ export const writtenOffLines = (
   if (receivable) lines.push({ side: both ? 'receivable' : 'other', amount: writtenOff.credit });
   if (payable) lines.push({ side: both ? 'payable' : 'other', amount: writtenOff.debit });
   return lines;
+};
+
+/**
+ * CR-027 — the words under a timeline row's amount: "Bal ₹2,800.00".
+ *
+ * The figure is the server's `running_balance` (PTY-03 FR-6), never summed
+ * here. What this decides is how it is SAID, and it says it the statement's
+ * way so the two screens cannot disagree about one row: the magnitude through
+ * `formatInr` (the copy string carries no ₹ of its own — the ungrouped
+ * "₹2800.00" defect has shipped five times here), and the side as a word via
+ * `balanceDirection`, because a shopkeeper has no negative balance — a khata
+ * in advance reads "(to give)", never "−₹300".
+ *
+ * `null` when the row carries no figure, which is a row spliced in from a 201
+ * before the refetch lands; rendering "₹0.00" there would claim a settled khata.
+ * A struck-through row DOES carry one — the balance as it stood, since neither
+ * half of a reversal pair counts (canon §0.2) — and shows it like any other.
+ */
+export const entryBalanceCaption = (entry: LedgerEntry, t: TranslateFn): string | null => {
+  const balance = entry.runningBalance;
+  if (balance == null || balance.trim() === '') return null;
+  return t('ledger.timeline.balanceAfter', {
+    amount: formatInr(unsigned(balance)),
+    side: balanceDirection(balance),
+  });
 };

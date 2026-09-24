@@ -22,13 +22,18 @@ import {
   selectStatementPrintRows,
   selectStatementPrintStatus,
   selectStatementRows,
+  selectStatementShop,
   selectStatementStale,
   selectStatementStatus,
   selectStatementSummary,
   statementFiltersChanged,
   statementOpened,
 } from '../redux/statementSlice';
-import { fetchPartyStatement, fetchStatementAllRows } from '../redux/statementThunk';
+import {
+  fetchPartyStatement,
+  fetchStatementAllRows,
+  fetchStatementShop,
+} from '../redux/statementThunk';
 import {
   filtersFromQuery,
   queryFromFilters,
@@ -41,6 +46,7 @@ import type {
   StatementParty,
   StatementPreset,
   StatementRow,
+  StatementShop,
   StatementSummary,
 } from '../types/statement.types';
 
@@ -73,6 +79,8 @@ export interface UsePartyStatementResult {
   /** FR-8 — every row in the period, for print. `null` until asked for. */
   readonly printRows: readonly StatementRow[] | null;
   readonly printStatus: RequestStatus;
+  /** UAT D3 — the print sheet's letterhead; `null` until loaded or if it fails. */
+  readonly shop: StatementShop | null;
   readonly setPreset: (preset: StatementPreset) => void;
   readonly setCustomRange: (from: string | null, to: string | null) => void;
   readonly setIncludeCorrections: (next: boolean) => void;
@@ -102,6 +110,7 @@ export const usePartyStatement = (partyId: string): UsePartyStatementResult => {
   const printRows = useAppSelector(selectStatementPrintRows);
   const printStatus = useAppSelector(selectStatementPrintStatus);
   const isImpaired = useAppSelector(selectNetworkImpaired);
+  const shop = useAppSelector(selectStatementShop);
 
   const canRead = hasModule('ledger') && can('ledger.entry.read');
   /* §12 — reading a customer's history at the counter and walking out with the
@@ -136,6 +145,15 @@ export const usePartyStatement = (partyId: string): UsePartyStatementResult => {
     if (!canRead) return;
     dispatch(statementOpened(partyId));
   }, [dispatch, partyId, canRead]);
+
+  /* UAT D3 — the letterhead, once per statement page visit. Before Print is
+     pressed rather than after, because `window.print()` reads the DOM it is
+     given and cannot wait for a request. */
+  useEffect(() => {
+    if (!canRead) return undefined;
+    const promise = dispatch(fetchStatementShop());
+    return () => promise.abort();
+  }, [dispatch, canRead]);
 
   useEffect(() => {
     if (!canRead) return;
@@ -239,6 +257,7 @@ export const usePartyStatement = (partyId: string): UsePartyStatementResult => {
       rangeProblem: problem,
       printRows,
       printStatus,
+      shop,
       setPreset,
       setCustomRange,
       setIncludeCorrections,
@@ -261,6 +280,7 @@ export const usePartyStatement = (partyId: string): UsePartyStatementResult => {
       problem,
       printRows,
       printStatus,
+      shop,
       setPreset,
       setCustomRange,
       setIncludeCorrections,

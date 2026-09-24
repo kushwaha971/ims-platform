@@ -142,15 +142,21 @@ const partyListSlice = createSlice({
       if (action.payload.pageSize) state.filters.pageSize = action.payload.pageSize;
     },
     /**
-     * Everything except `status`, which survives on purpose.
+     * Everything back to the default view, the Archived tab included.
      *
-     * "Clear filters" on the Archived tab must not silently move the merchant
-     * back to Active — they would be looking at a different set of people and
-     * the only thing that changed on screen is that the rows are different.
-     * The tab is where they ARE; the chips are what they asked of it.
+     * `status` used to survive this on purpose ("the tab is where they ARE").
+     * UAT D7 showed the cost: Archived is a SELECT in the toolbar, not a tab
+     * strip, so nothing on screen said a filter was still on — the merchant
+     * read ₹0 / ₹0 over one archived party and "Clear filters" neither counted
+     * it nor took it off. It is now counted when it is not the default and
+     * cleared here with the rest.
+     *
+     * The sort order is kept: it is not a filter, it is not in the "(n)" the
+     * button counts, and a merchant who sorted by name from the phone's sort
+     * sheet should not find it undone by clearing a chip.
      */
     filtersCleared(state) {
-      state.filters = { ...DEFAULT_PARTY_FILTERS, status: state.filters.status };
+      state.filters = { ...DEFAULT_PARTY_FILTERS, ordering: state.filters.ordering };
       state.selectedIds = [];
     },
     selectionChanged(state, action: PayloadAction<string[]>) {

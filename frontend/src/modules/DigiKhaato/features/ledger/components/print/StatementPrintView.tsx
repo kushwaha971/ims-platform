@@ -16,6 +16,7 @@ import type {
   StatementParty,
   StatementPeriod,
   StatementRow,
+  StatementShop,
   StatementSummary,
 } from '../../types/statement.types';
 
@@ -36,13 +37,16 @@ import type {
  * fetch, and a branch that is wrong prints fifty rows of a two-hundred-row
  * dispute.
  *
- * ── What it deliberately omits ────────────────────────────────────────────
+ * ── The letterhead, and what it deliberately omits ────────────────────────
  * The header band §7.1 describes carries a logo, an address, a phone number and
- * a GSTIN, and PLT-07 — the screen where a merchant enters them — does not
- * exist. None of them are rendered as blanks or placeholders: EC-4's rule for a
- * missing logo is "trade name only; no broken image", and a statement with an
- * empty GSTIN line looks like a statement from a business that has not
- * registered. The UPI QR (§7.5) is absent for two reasons at once — no
+ * a GSTIN. UAT D3 found the sheet printing the shop's name alone although
+ * onboarding (PLT-03) collects the address, phone and GSTIN and
+ * `GET /tenants/current` returns them — so those three are printed now, each
+ * only when filled in (`shop`). Nothing is rendered as a blank or a placeholder:
+ * EC-4's rule for a missing logo is "trade name only; no broken image", and a
+ * statement with an empty GSTIN line looks like a statement from a business
+ * that has not registered. The logo stays absent — there is no upload for it.
+ * The UPI QR (§7.5) is absent for two reasons at once — no
  * `tenant.upi_vpa` to encode and no QR encoder, PAY-03's being blocked on the
  * ADR-021 contradiction C3 — and FR-7 already conditions it on the VPA being
  * set, so its absence is the specified behaviour rather than a gap.
@@ -53,6 +57,11 @@ export interface StatementPrintViewProps {
   readonly summary: StatementSummary;
   readonly rows: readonly StatementRow[];
   readonly shopName: string;
+  /**
+   * UAT D3 — address, phone and GSTIN, from `GET /tenants/current`. `null`
+   * until it loads (or if it fails): the sheet then names the shop alone.
+   */
+  readonly shop?: StatementShop | null;
   /** ISO timestamp. Passed in so the markup is a pure function of its props. */
   readonly generatedAt: string;
 }
@@ -63,6 +72,7 @@ export function StatementPrintView({
   summary,
   rows,
   shopName,
+  shop = null,
   generatedAt,
 }: Readonly<StatementPrintViewProps>): React.JSX.Element {
   const { t, d } = useTranslation();
@@ -80,8 +90,23 @@ export function StatementPrintView({
       <UbStack gap={4}>
         {/* §7.1 — who is sending it, and to whom, over what period. */}
         <UbStack direction="row" justify="between" align="start" className="gap-6">
-          <UbStack gap={1}>
+          <UbStack gap={1} data-testid="statement-letterhead">
             <UbText variant="h2">{shopName}</UbText>
+            {shop?.addressLines.map((line) => (
+              <UbText key={line} variant="caption" tone="secondary">
+                {line}
+              </UbText>
+            ))}
+            {shop?.phone && (
+              <UbText variant="caption" tone="secondary">
+                {t('ledger.statement.shop.phone', { phone: shop.phone })}
+              </UbText>
+            )}
+            {shop?.gstin && (
+              <UbText variant="caption" tone="secondary">
+                {t('ledger.statement.shop.gstin', { gstin: shop.gstin })}
+              </UbText>
+            )}
             <UbText variant="caption" tone="tertiary">
               {t('ledger.statement.title')}
             </UbText>
@@ -230,7 +255,9 @@ function StatementPrintTable({
                 rupees", and grouping is what makes a column of figures
                 scannable — which is the whole reason the columns exist. */}
             <td className="text-right">{row.direction === 'debit' ? formatInr(row.amount) : ''}</td>
-            <td className="text-right">{row.direction === 'credit' ? formatInr(row.amount) : ''}</td>
+            <td className="text-right">
+              {row.direction === 'credit' ? formatInr(row.amount) : ''}
+            </td>
             <td className="text-right">{formatInr(unsigned(row.runningBalance))}</td>
           </tr>
         ))}

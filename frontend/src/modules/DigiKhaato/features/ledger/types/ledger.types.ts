@@ -73,6 +73,19 @@ export interface LedgerEntryApiRow {
   readonly reason: string | null;
   readonly created_by: { readonly id: string; readonly name: string } | null;
   readonly created_at: string;
+  /**
+   * CR-027 — the balance AFTER this row, signed debit-positive like the
+   * statement's. On `GET /parties/{id}/ledger-entries` rows only: a 201, a
+   * correction's 200 and the detail read are one row out of its ordering and
+   * carry none. Optional so an older server reads as "not known".
+   */
+  readonly running_balance?: string | null;
+  /** CR-027 — the document link; `null` for every manual row. Not mapped yet: nothing links. */
+  readonly source?: {
+    readonly type: string;
+    readonly id: string;
+    readonly number: string | null;
+  } | null;
 }
 
 export interface LedgerEntry {
@@ -99,6 +112,16 @@ export interface LedgerEntry {
   readonly createdBy: LedgerEntryAuthor | null;
   /** ISO timestamp. Orders ties within a day, and dates the "Backdated" tag. */
   readonly createdAt: string;
+  /**
+   * CR-027 / PTY-03 FR-6 — the party's balance after this row, from the
+   * server's window function; never computed here (BR-10). Decimal string,
+   * signed debit-positive: negative means the merchant owes the party.
+   *
+   * ABSENT on a row the client spliced in from a 201 or a correction — those
+   * responses carry no running balance — until the refetch NEW-2 fires replaces
+   * it. Absent means "not known", which the row renders as no caption at all.
+   */
+  readonly runningBalance?: string | null;
 }
 
 /**

@@ -42,6 +42,7 @@ import { orderingFor, sortFromOrdering } from '../view-model/partyListSort';
 import { PartyBulkArchiveDialog } from './PartyBulkArchiveDialog';
 import { createPartyColumns } from './PartyListColumns';
 import { PartyListFilters } from './PartyListFilters';
+import { PartyListSortSheet } from './PartyListSortSheet';
 import { PartyListStats } from './PartyListStats';
 
 import type {
@@ -236,17 +237,21 @@ export function PartyListPageContent(): React.JSX.Element {
   );
 
   const isArchivedTab = filters.status === 'archived';
+  /** Archived is the ONLY narrowing applied — see the filtered empty state. */
+  const archivedOnly = isArchivedTab && activeFilterCount === 1;
 
   const emptyStates = useMemo<UbDataGridEmptyStates>(
     () => ({
-      /* The ARCHIVED tab reaches the grid's "empty" state too — `status` is not
-         counted as a filter, so that a new tenant is never told to clear
-         filters they never set — and it used to get the first-use copy: a
-         merchant with three hundred active parties opened Archived and read
-         "No customers yet", with an Add party button, on a book full of them.
-         Nobody archived is its own sentence, and it has no action: adding a
-         party from here would add an ACTIVE one to a tab that cannot show it.
-         (PTY-02 §9 Empty / FR-13 name three variants; the tab is FR-6's.) */
+      /* The ARCHIVED tab used to reach the grid's "empty" state — before UAT
+         D7 `status` was not counted as a filter at all — and it got the
+         first-use copy: a merchant with three hundred active parties opened
+         Archived and read "No customers yet", with an Add party button, on a
+         book full of them. Nobody archived is its own sentence, and it has no
+         Add action: adding a party from here would add an ACTIVE one to a tab
+         that cannot show it. While Archived counts as a filter the grid
+         reaches the `filtered` branch below instead; this stays as the
+         correct copy should that ever change. (PTY-02 §9 Empty / FR-13 name three
+         variants; the tab is FR-6's.) */
       firstUse: isArchivedTab
         ? {
             title: t('parties.list.empty.archived.title'),
@@ -265,39 +270,54 @@ export function PartyListPageContent(): React.JSX.Element {
               <UbButton onClick={openBlankCreate}>{t('parties.list.add')}</UbButton>
             ) : undefined,
           },
-      filtered: {
-        /* Two filtered-empty states, because there are two ways to reach it and
-           they need different words. "No customers match this search. Clear the
-           search to see everyone again." was the only copy, and the moment
-           `isFiltered` started counting the chips as well, a merchant who
-           tapped "Settled" with an empty search box was told to clear a search
-           they had not made. The search wording also gets to quote the term,
-           which is the thing they will want to check for a typo. */
-        title: searchTerm
-          ? t('parties.list.empty.filtered.searchTitle', { q: searchTerm })
-          : t('parties.list.empty.filtered.chipsTitle'),
-        description: searchTerm
-          ? t('parties.list.empty.filtered.searchBody')
-          : t('parties.list.empty.filtered.chipsBody'),
-        /* Two ways out, and the second one is the point (T-PTY-02-15). A
-           search that found nobody usually means the party is not in the book
-           yet, not that the merchant mistyped — so the primary move is to add
-           them, with the name they already typed. It is offered only when
-           there IS a name: a chip filter that matched nothing says nothing
-           about what to call anyone. */
-        action: (
-          <>
-            {partyForm.canWrite && searchTerm.length > 0 && (
-              <UbButton onClick={addSearchedName}>
-                {t('parties.list.empty.filtered.add', { name: searchTerm })}
+      filtered: archivedOnly
+        ? {
+            /* UAT D7 made Archived count as a filter, so an empty Archived
+               tab now arrives HERE rather than at first-use. It keeps its own
+               sentence — "No customers match these filters" would read as if
+               the merchant had narrowed something by mistake — and gains the
+               same way back every filter has. */
+            title: t('parties.list.empty.archived.title'),
+            description: t('parties.list.empty.archived.body'),
+            action: (
+              <UbButton variant="secondary" onClick={clearFilters}>
+                {t('common.action.clearFilters')}
               </UbButton>
-            )}
-            <UbButton variant="secondary" onClick={clearFilters}>
-              {t('common.action.clearFilters')}
-            </UbButton>
-          </>
-        ),
-      },
+            ),
+          }
+        : {
+            /* Two filtered-empty states, because there are two ways to reach it and
+               they need different words. "No customers match this search. Clear the
+               search to see everyone again." was the only copy, and the moment
+               `isFiltered` started counting the chips as well, a merchant who
+               tapped "Settled" with an empty search box was told to clear a search
+               they had not made. The search wording also gets to quote the term,
+               which is the thing they will want to check for a typo. */
+            title: searchTerm
+              ? t('parties.list.empty.filtered.searchTitle', { q: searchTerm })
+              : t('parties.list.empty.filtered.chipsTitle'),
+            description: searchTerm
+              ? t('parties.list.empty.filtered.searchBody')
+              : t('parties.list.empty.filtered.chipsBody'),
+            /* Two ways out, and the second one is the point (T-PTY-02-15). A
+               search that found nobody usually means the party is not in the book
+               yet, not that the merchant mistyped — so the primary move is to add
+               them, with the name they already typed. It is offered only when
+               there IS a name: a chip filter that matched nothing says nothing
+               about what to call anyone. */
+            action: (
+              <>
+                {partyForm.canWrite && searchTerm.length > 0 && (
+                  <UbButton onClick={addSearchedName}>
+                    {t('parties.list.empty.filtered.add', { name: searchTerm })}
+                  </UbButton>
+                )}
+                <UbButton variant="secondary" onClick={clearFilters}>
+                  {t('common.action.clearFilters')}
+                </UbButton>
+              </>
+            ),
+          },
       error: {
         title: t('parties.list.error.title'),
         description: error?.message ?? t('parties.list.error.body'),
@@ -320,6 +340,7 @@ export function PartyListPageContent(): React.JSX.Element {
       addSearchedName,
       searchTerm,
       isArchivedTab,
+      archivedOnly,
     ]
   );
 
@@ -594,15 +615,28 @@ export function PartyListPageContent(): React.JSX.Element {
             />
           }
           filters={
-            <UbSelect
-              value={filters.status}
-              onChange={handleStatus}
-              aria-label={t('parties.list.filter.status.label')}
-              options={STATUS_OPTIONS.map((value) => ({
-                value,
-                label: t(`parties.list.status.${value}`),
-              }))}
-            />
+            <>
+              <UbSelect
+                value={filters.status}
+                onChange={handleStatus}
+                aria-label={t('parties.list.filter.status.label')}
+                options={STATUS_OPTIONS.map((value) => ({
+                  value,
+                  label: t(`parties.list.status.${value}`),
+                }))}
+              />
+              {/* UAT D5 — the cards have no column headers to sort by, so the
+                  phone gets the same orderings from a sheet. Not drawn from
+                  `md` up, where the headers ARE the sort control and a second
+                  one would be the same action twice. */}
+              {tier === 'cards' && (
+                <PartyListSortSheet
+                  t={t}
+                  ordering={filters.ordering}
+                  onOrderingChange={setOrdering}
+                />
+              )}
+            </>
           }
         />
         {/* Loaded when the merchant asks for it, not when the list loads.

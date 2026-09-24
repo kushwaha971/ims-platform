@@ -2,7 +2,6 @@
 
 import { useCallback, useMemo, useState } from 'react';
 
-
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useDegradedNetwork } from 'src/hooks/useDegradedNetwork';
 import { useIdempotencyKey } from 'src/hooks/useIdempotencyKey';
@@ -25,15 +24,12 @@ import {
   selectEntryDirection,
   selectEntryDraft,
   selectEntryOpenFor,
+  selectEntryPrefillAmount,
   selectEntryStatus,
   selectEntryWarnings,
 } from '../redux/ledgerFormSlice';
 
-import type {
-  LedgerDirection,
-  LedgerEntryFormValues,
-  LedgerWarning,
-} from '../types/ledger.types';
+import type { LedgerDirection, LedgerEntryFormValues, LedgerWarning } from '../types/ledger.types';
 import type { UseFormSetError } from 'react-hook-form';
 
 /**
@@ -63,7 +59,13 @@ export interface UseLedgerEntryFormResult {
   /** What was typed when a save failed, so Retry has something to resend. */
   readonly draft: LedgerEntryFormValues | null;
   readonly status: RequestStatus;
-  readonly openEntry: (partyId: string, direction: LedgerDirection) => void;
+  /** An amount the drawer opens with, when the opener knows it (still editable). */
+  readonly prefillAmount: string | null;
+  readonly openEntry: (
+    partyId: string,
+    direction: LedgerDirection,
+    options?: { readonly amount?: string | null }
+  ) => void;
   readonly close: () => void;
   readonly discardDraft: () => void;
   readonly dismissBlock: () => void;
@@ -86,6 +88,7 @@ export const useLedgerEntryForm = (): UseLedgerEntryFormResult => {
   const blockedBy = useAppSelector(selectEntryBlockedBy);
   const warnings = useAppSelector(selectEntryWarnings);
   const draft = useAppSelector(selectEntryDraft);
+  const prefillAmount = useAppSelector(selectEntryPrefillAmount);
 
   const { key, rotate } = useIdempotencyKey();
   const [formErrors, setFormErrors] = useState<readonly string[]>([]);
@@ -106,9 +109,9 @@ export const useLedgerEntryForm = (): UseLedgerEntryFormResult => {
   const canOverride = role === 'owner' || role === 'admin';
 
   const openEntry = useCallback(
-    (partyId: string, next: LedgerDirection) => {
+    (partyId: string, next: LedgerDirection, options?: { readonly amount?: string | null }) => {
       setFormErrors([]);
-      dispatch(entryDrawerOpened({ partyId, direction: next }));
+      dispatch(entryDrawerOpened({ partyId, direction: next, amount: options?.amount ?? null }));
     },
     [dispatch]
   );
@@ -237,6 +240,7 @@ export const useLedgerEntryForm = (): UseLedgerEntryFormResult => {
       blockedBy,
       warnings,
       draft,
+      prefillAmount,
       status,
       openEntry,
       close,
@@ -255,6 +259,7 @@ export const useLedgerEntryForm = (): UseLedgerEntryFormResult => {
       blockedBy,
       warnings,
       draft,
+      prefillAmount,
       openEntry,
       close,
       discardDraft,

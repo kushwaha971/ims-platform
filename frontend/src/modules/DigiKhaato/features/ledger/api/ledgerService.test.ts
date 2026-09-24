@@ -322,6 +322,29 @@ describe('reading a khata', () => {
     });
   });
 
+  it("maps each row's running balance, and leaves it absent when the server sent none (CR-027)", async () => {
+    /**
+     * The balance AFTER the row, as the server's window computed it — never
+     * recomputed here (PTY-03 BR-10). A row without the key (an older server,
+     * or a 201 spliced in before the refetch) must read as "not known" rather
+     * than "₹0.00", which is a settled khata.
+     */
+    mockApi.get.mockResolvedValue({
+      data: {
+        data: [
+          { ...WIRE_ROW, id: 'e2', running_balance: '-300.00', source: null },
+          { ...WIRE_ROW, id: 'e1' },
+        ],
+        meta: { next_cursor: null, has_more: false },
+      },
+    });
+
+    const page = await listPartyEntries(PARTY);
+
+    expect(page.rows[0]?.runningBalance).toBe('-300.00');
+    expect(page.rows[1]).not.toHaveProperty('runningBalance');
+  });
+
   it('turns a missing note or reference into an empty string, not undefined', async () => {
     /** So nothing downstream has to ask whether absent means "none" or "unknown". */
     mockApi.get.mockResolvedValue({

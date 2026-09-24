@@ -8,6 +8,7 @@ import type {
   StatementPage,
   StatementRow,
   StatementRowApi,
+  StatementShop,
 } from '../types/statement.types';
 
 /**
@@ -21,7 +22,11 @@ import type {
 
 interface StatementApiResponse {
   readonly data: {
-    readonly party: { readonly id: string; readonly name: string; readonly mobile_masked: string | null };
+    readonly party: {
+      readonly id: string;
+      readonly name: string;
+      readonly mobile_masked: string | null;
+    };
     readonly period: { readonly from: string | null; readonly to: string | null };
     readonly opening_balance: string;
     readonly closing_balance: string;
@@ -49,7 +54,9 @@ const toRow = (row: StatementRowApi): StatementRow => ({
   note: row.note ?? '',
   status: row.status,
   runningBalance: row.running_balance,
-  source: row.source ? { type: row.source.type, id: row.source.id, number: row.source.number } : null,
+  source: row.source
+    ? { type: row.source.type, id: row.source.id, number: row.source.number }
+    : null,
   reversesId: row.reverses_id,
   supersedesId: row.supersedes_id,
   reason: row.reason,
@@ -131,4 +138,73 @@ export const statementCsvUrl = (partyId: string, filters: StatementFilters): str
   return absoluteApiUrl(
     `${API_PATHS.PARTY_STATEMENT(partyId)}${query}${query ? '&' : '?'}format=csv`
   );
+};
+
+// ── The letterhead (UAT D3) ─────────────────────────────────────────────────
+
+/** `platform_tenant.address` — a closed jsonb shape whose blank keys the server drops. */
+interface TenantAddressApi {
+  readonly line1?: string | null;
+  readonly line2?: string | null;
+  readonly city?: string | null;
+  readonly district?: string | null;
+  readonly state?: string | null;
+  readonly pincode?: string | null;
+}
+
+/** Only the three fields the letterhead reads; the serializer sends ~25. */
+interface TenantCurrentApiResponse {
+  readonly data: {
+    readonly gstin?: string | null;
+    readonly phone?: string | null;
+    readonly address?: TenantAddressApi | null;
+  };
+}
+
+const present = (value: string | null | undefined): string | null => {
+  const trimmed = value?.trim() ?? '';
+  return trimmed === '' ? null : trimmed;
+};
+
+/**
+ * "12 Station Road" / "Near Bus Stand" / "Nashik, Maharashtra 422001" — the way
+ * an Indian address is written on a bill. The district is dropped when it
+ * repeats the city, which for most towns it does.
+ */
+const addressLines = (address: TenantAddressApi | null | undefined): string[] => {
+  if (!address) return [];
+  const city = present(address.city);
+  const district = present(address.district);
+  const place = [city, district && district !== city ? district : null, present(address.state)]
+    .filter((part): part is string => part !== null)
+    .join(', ');
+  const locality = [place, present(address.pincode)].filter(Boolean).join(' ');
+  return [present(address.line1), present(address.line2), present(locality)].filter(
+    (line): line is string => line !== null
+  );
+};
+
+/**
+ * `GET /tenants/current` — the shop's address, phone and GSTIN for the printed
+ * statement's header (LED-04 §7.1).
+ *
+ * `/auth/me`'s active-tenant block has the GSTIN and the legal name but NOT the
+ * address or the phone, so the session cannot supply a letterhead on its own;
+ * this is the endpoint the shell is documented to read the business from, and
+ * any member may read it.
+ */
+export const getStatementShop = async (signal?: AbortSignal): Promise<StatementShop> => {
+  /* Quiet on failure: the sheet still names the shop without it, and a red
+     toast about an address over a statement the merchant is reading would say
+     the statement was wrong. */
+  const response = await api.get<TenantCurrentApiResponse>(
+    API_PATHS.TENANT_CURRENT,
+    ubConfig({ signal, suppressErrorSnackbar: true })
+  );
+  const tenant = response.data.data;
+  return {
+    addressLines: addressLines(tenant.address),
+    phone: present(tenant.phone),
+    gstin: present(tenant.gstin),
+  };
 };

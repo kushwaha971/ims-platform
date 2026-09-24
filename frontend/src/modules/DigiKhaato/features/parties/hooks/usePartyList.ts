@@ -204,10 +204,12 @@ export function usePartyList(mode: 'replace' | 'append' = 'replace'): UsePartyLi
    * The state was right about the rows and wrong about the reason, which is
    * the only thing an empty state is for.
    *
-   * `status` is excluded on purpose. It always has a value, so counting it
-   * would make the list permanently "filtered" and the first-use empty state
-   * unreachable — a brand-new tenant would be told to clear filters they never
-   * set.
+   * `status` counts only when it is NOT the default (UAT D7). It always has
+   * a value, so counting it unconditionally would make the list permanently
+   * "filtered" and the first-use empty state unreachable — a brand-new tenant
+   * would be told to clear filters they never set. But Archived IS a
+   * narrowing, and leaving it out meant "Clear filters" neither showed it in
+   * its count nor took it off, over a list reading ₹0 / ₹0.
    *
    * PTY-05's `tag` is counted here for exactly the reason the comment above
    * exists. A merchant who filters to "Camp Area" and finds nobody would
@@ -219,13 +221,22 @@ export function usePartyList(mode: 'replace' | 'append' = 'replace'): UsePartyLi
     () =>
       [
         filters.q,
+        filters.status !== DEFAULT_PARTY_FILTERS.status,
         filters.type,
         filters.balance,
         filters.collection,
         filters.tag,
         filters.credit,
       ].filter(Boolean).length,
-    [filters.q, filters.type, filters.balance, filters.collection, filters.tag, filters.credit]
+    [
+      filters.q,
+      filters.status,
+      filters.type,
+      filters.balance,
+      filters.collection,
+      filters.tag,
+      filters.credit,
+    ]
   );
 
   const setFilters = useCallback(

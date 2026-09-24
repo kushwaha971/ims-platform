@@ -3,9 +3,9 @@ import { createAsyncThunk } from '@reduxjs/toolkit';
 import type { ApiErrorShape } from 'src/types/api.types';
 import { toApiError } from 'src/utils/apiError';
 
-import { getStatement } from '../api/statementService';
+import { getStatement, getStatementShop } from '../api/statementService';
 
-import type { StatementFilters, StatementPage } from '../types/statement.types';
+import type { StatementFilters, StatementPage, StatementShop } from '../types/statement.types';
 
 /** Part 19 §19.3.3 — one service call, one catch that normalises. */
 
@@ -72,6 +72,23 @@ export const fetchStatementAllRows = createAsyncThunk<
       rows.push(...page.rows);
     }
     return { ...page, rows, hasMore: false, nextCursor: null };
+  } catch (error) {
+    return rejectWithValue(toApiError(error, 'ledger.statement.error.title'));
+  }
+});
+
+/**
+ * QUERY. UAT D3 — the shop's address, phone and GSTIN for the print sheet's
+ * letterhead. Fetched when the statement opens rather than when Print is
+ * pressed, so the sheet is complete by the time `window.print()` reads the DOM.
+ */
+export const fetchStatementShop = createAsyncThunk<
+  StatementShop | null,
+  void,
+  { rejectValue: ApiErrorShape }
+>('statement/fetchStatementShop', async (_arg, { signal, rejectWithValue }) => {
+  try {
+    return (await getStatementShop(signal)) ?? null;
   } catch (error) {
     return rejectWithValue(toApiError(error, 'ledger.statement.error.title'));
   }

@@ -54,7 +54,11 @@ export interface StatementRow {
    * the sign.
    */
   readonly runningBalance: string;
-  readonly source: { readonly type: string; readonly id: string; readonly number: string | null } | null;
+  readonly source: {
+    readonly type: string;
+    readonly id: string;
+    readonly number: string | null;
+  } | null;
   readonly reversesId: string | null;
   readonly supersedesId: string | null;
   readonly reason: string | null;
@@ -87,6 +91,20 @@ export interface StatementParty {
   readonly mobileMasked: string | null;
 }
 
+/**
+ * UAT D3 — the print sheet's letterhead, from `GET /tenants/current`.
+ *
+ * The shop's NAME is not here: the session already has it and it is on the
+ * sheet before this arrives. Each field is absent (`null` / `[]`) rather than
+ * blank when the merchant has not filled it in, so the sheet prints no line
+ * for it — an empty "GSTIN" line reads as an unregistered business.
+ */
+export interface StatementShop {
+  readonly addressLines: readonly string[];
+  readonly phone: string | null;
+  readonly gstin: string | null;
+}
+
 export interface StatementPeriod {
   /** ISO `YYYY-MM-DD`, or `null` for "from the beginning". */
   readonly from: string | null;
@@ -111,12 +129,7 @@ export interface StatementPage {
  * server would disagree across midnight.
  */
 export type StatementPreset =
-  | 'thisMonth'
-  | 'lastMonth'
-  | 'thisFy'
-  | 'lastFy'
-  | 'allTime'
-  | 'custom';
+  'thisMonth' | 'lastMonth' | 'thisFy' | 'lastFy' | 'allTime' | 'custom';
 
 export interface StatementFilters {
   readonly preset: StatementPreset;

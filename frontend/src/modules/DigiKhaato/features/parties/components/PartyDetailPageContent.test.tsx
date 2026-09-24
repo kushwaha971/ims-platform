@@ -708,6 +708,51 @@ describe('archiving from the khata page', () => {
     expect(within(dialog).getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
   });
 
+  it('puts Record payment first on a phone and the destructive Write off below it', async () => {
+    /**
+     * Prevents the UAT finding: the footer is `flex-col-reverse` below `sm`
+     * (the primary action goes under the thumb, last in the DOM and first on
+     * screen), and the DOM order was Cancel, Record payment, Write off — so on
+     * a phone the destructive Write off was the TOP button. The settling move
+     * is the one to offer first; Write off stays reachable, outlined red,
+     * beneath it. On a laptop the same order reads Cancel · Write off ·
+     * Record payment, with the primary at the right.
+     */
+    blockOnce();
+    const user = userEvent.setup();
+    const dialog = await reachBlocked(user);
+
+    const names = within(dialog)
+      .getAllByRole('button')
+      .map((button) => button.textContent ?? '')
+      .filter(
+        (name) => ['Cancel', 'Record payment'].includes(name) || name.startsWith('Write off')
+      );
+    expect(names).toEqual(['Cancel', 'Write off ₹2,300.00', 'Record payment']);
+  });
+
+  it('opens You got with the outstanding amount already in it', async () => {
+    /**
+     * Prevents the UAT finding: Record payment opened the drawer in the right
+     * direction but EMPTY, so the merchant had to read ₹2,300.00 off the
+     * dialog that had just closed and type it back in. The magnitude arrives
+     * prefilled — and stays editable, because a part payment is the common case.
+     */
+    blockOnce();
+    const user = userEvent.setup();
+    const dialog = await reachBlocked(user);
+
+    await user.click(within(dialog).getByRole('button', { name: 'Record payment' }));
+
+    const amount = await screen.findByLabelText('Amount');
+    expect(amount).toHaveValue('2300.00');
+    expect(screen.getByRole('radio', { name: /You got/ })).toBeChecked();
+
+    await user.clear(amount);
+    await user.type(amount, '500');
+    expect(amount).toHaveValue('500');
+  });
+
   it('waits for a reason and the acknowledgement before it writes anything off', async () => {
     /**
      * T-PTY-04-14. A write-off is a financial decision; the destructive button
@@ -1609,5 +1654,134 @@ describe('after an entry, the credit block and the totals follow the balance (NE
         expect.anything()
       )
     );
+  });
+});
+
+/**
+ * PRODUCT (owner-compatible): on a phone the header's You gave / You got pair
+ * scrolls away with a long khata, and the merchant had to scroll back to the
+ * top to record the next entry. The pair STAYS in the header — the owner's
+ * tab-like pair under the title — and a docked copy appears at the bottom only
+ * once the header pair is out of view.
+ *
+ * jsdom has no IntersectionObserver, so these install one the test drives:
+ * `scrollPast(true)` reports the observed pair as having gone above the top
+ * of the viewport, `scrollPast(false)` as back on screen.
+ */
+describe('the docked You gave / You got pair on a phone', () => {
+  let observed: { callback: IntersectionObserverCallback; target: Element | null }[] = [];
+
+  const scrollPast = (past: boolean): void => {
+    act(() => {
+      for (const entry of observed) {
+        if (!entry.target) continue;
+        entry.callback(
+          [
+            {
+              isIntersecting: !past,
+              target: entry.target,
+              boundingClientRect: { top: past ? -80 : 120, bottom: past ? -40 : 160 },
+              rootBounds: { top: 0, bottom: 640 },
+            } as unknown as IntersectionObserverEntry,
+          ],
+          {} as IntersectionObserver
+        );
+      }
+    });
+  };
+
+  beforeEach(() => {
+    observed = [];
+    class MockIntersectionObserver {
+      private readonly record: { callback: IntersectionObserverCallback; target: Element | null };
+      constructor(callback: IntersectionObserverCallback) {
+        this.record = { callback, target: null };
+        observed.push(this.record);
+      }
+      observe(target: Element): void {
+        this.record.target = target;
+      }
+      disconnect(): void {
+        this.record.target = null;
+      }
+      unobserve(): void {
+        this.record.target = null;
+      }
+      takeRecords(): IntersectionObserverEntry[] {
+        return [];
+      }
+    }
+    Object.defineProperty(window, 'IntersectionObserver', {
+      writable: true,
+      configurable: true,
+      value: MockIntersectionObserver,
+    });
+    Object.defineProperty(global, 'IntersectionObserver', {
+      writable: true,
+      configurable: true,
+      value: MockIntersectionObserver,
+    });
+  });
+
+  afterEach(() => {
+    // Leave jsdom as the rest of this file found it: no observer at all.
+    delete (window as { IntersectionObserver?: unknown }).IntersectionObserver;
+    delete (global as { IntersectionObserver?: unknown }).IntersectionObserver;
+  });
+
+  it('docks the pair at the bottom once the header pair has scrolled away, and not before', async () => {
+    renderWithProviders(<PartyDetailPageContent id={ID} />);
+    await screen.findByText('₹2,300.00');
+    await waitFor(() => expect(observed.some((entry) => entry.target)).toBe(true));
+
+    // On screen: one pair, in the header, and no dock.
+    expect(screen.queryByTestId('khata-dock')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /You gave/ })).toHaveLength(1);
+
+    scrollPast(true);
+    const dock = await screen.findByTestId('khata-dock');
+    expect(dock).toHaveAttribute('data-ub-bottom-bar');
+    // Phone only: from `sm` up the header pair sits beside the title.
+    expect(dock).toHaveClass('sm:hidden');
+    expect(within(dock).getByRole('button', { name: /You gave/ })).toBeInTheDocument();
+    expect(within(dock).getByRole('button', { name: /You got/ })).toBeInTheDocument();
+
+    scrollPast(false);
+    await waitFor(() => expect(screen.queryByTestId('khata-dock')).not.toBeInTheDocument());
+  });
+
+  it('opens the entry drawer in the direction of the docked button pressed', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<PartyDetailPageContent id={ID} />);
+    await screen.findByText('₹2,300.00');
+    await waitFor(() => expect(observed.some((entry) => entry.target)).toBe(true));
+    scrollPast(true);
+
+    const dock = await screen.findByTestId('khata-dock');
+    await user.click(within(dock).getByRole('button', { name: /You got/ }));
+
+    await screen.findByLabelText('Amount');
+    expect(screen.getByRole('radio', { name: /You got/ })).toBeChecked();
+  });
+
+  it('is not offered for an archived party', async () => {
+    partyService.getParty.mockResolvedValue({
+      ...RESULT,
+      party: { ...PARTY, status: 'archived' as const },
+    });
+    renderWithProviders(<PartyDetailPageContent id={ID} />);
+    await screen.findByText('Ramesh Traders');
+    scrollPast(true);
+
+    expect(screen.queryByTestId('khata-dock')).not.toBeInTheDocument();
+  });
+
+  it('is not offered to a role that cannot write entries', async () => {
+    signIn(['parties.party.read', 'ledger.entry.read']);
+    renderWithProviders(<PartyDetailPageContent id={ID} />);
+    await screen.findByText('Ramesh Traders');
+    scrollPast(true);
+
+    expect(screen.queryByTestId('khata-dock')).not.toBeInTheDocument();
   });
 });

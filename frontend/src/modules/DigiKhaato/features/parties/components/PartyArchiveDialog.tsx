@@ -181,14 +181,21 @@ function PartyArchiveDialogBase({
             <UbButton variant="secondary" onClick={onClose} disabled={saving} autoFocus>
               {t('common.action.cancel')}
             </UbButton>
-            {isBlocked && onRecordPayment && (
-              <UbButton variant="outlineNeutral" onClick={onRecordPayment}>
-                {t('parties.archive.recordPayment')}
-              </UbButton>
-            )}
+            {/* Write off BEFORE Record payment in the DOM, and the order is
+                the point. The footer is `flex-col-reverse` on a phone, so the
+                last button is the top one: Record payment — the move that
+                settles the balance — is first under the thumb, and the
+                destructive Write off sits below it, still outlined red. On a
+                laptop the row reads Cancel · Write off · Record payment, the
+                primary at the right (UAT). */}
             {isBlocked && canWriteOff && onStartWriteOff && (
               <UbButton variant="destructive" onClick={onStartWriteOff}>
                 {t('parties.writeOff.action', { amount: amountText })}
+              </UbButton>
+            )}
+            {isBlocked && onRecordPayment && (
+              <UbButton variant="primary" onClick={onRecordPayment}>
+                {t('parties.archive.recordPayment')}
               </UbButton>
             )}
             {!isBlocked && (

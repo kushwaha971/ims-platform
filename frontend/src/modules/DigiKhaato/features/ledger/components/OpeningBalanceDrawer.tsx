@@ -73,13 +73,19 @@ export function OpeningBalanceDrawer({
     () => ({
       amount: '',
       direction: defaultDirection,
-      /* FR-1's default: the first day of the current financial year, which is
-         when a shopkeeper's old book starts. Not today — an opening dated today
-         is indistinguishable from an ordinary entry and makes the aging figure
-         say the debt is one day old. */
-      asOf: isoFinancialYearStart(),
+      /* UAT D6 (CR-LOG), changing FR-1's default from the financial-year
+         start to TODAY. The year start is right for exactly one day a year;
+         on every other day it asserts an age the merchant never gave, and
+         aging counts an opening from its date (LED-09 BR-4, FIFO by
+         `entry_date`) — so a balance typed in today sat in "90+ days" on day
+         one while the Overdue chip was empty. Today claims nothing: the row is
+         still labelled Opening, the hint under the field asks when the debt
+         began, and the year start is one chip away for the merchant FR-1 was
+         written for. Understating an age until the merchant says otherwise is
+         the recoverable error; a false 90+ is a collection call nobody owed. */
+      asOf: today,
     }),
-    [defaultDirection]
+    [defaultDirection, today]
   );
 
   const form = useForm<OpeningBalanceValues>({
@@ -194,6 +200,7 @@ export function OpeningBalanceDrawer({
           name="asOf"
           label={t('ledger.opening.asOf')}
           placeholder={t('ledger.opening.asOf.placeholder')}
+          hint={t('ledger.opening.asOf.hint', { direction })}
           required
         >
           {(field) => (

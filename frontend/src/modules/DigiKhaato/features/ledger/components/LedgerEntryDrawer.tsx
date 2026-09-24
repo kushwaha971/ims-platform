@@ -66,6 +66,7 @@ export function LedgerEntryDrawer({
     formErrors,
     blockedBy,
     draft,
+    prefillAmount,
     close,
     dismissBlock,
     submit,
@@ -89,14 +90,16 @@ export function LedgerEntryDrawer({
     () =>
       draft ?? {
         direction,
-        amount: '',
+        // The opener's figure when it has one — Record payment on a blocked
+        // archive passes what is outstanding (UAT). Still an ordinary field.
+        amount: prefillAmount ?? '',
         entryDate: today,
         note: '',
         paymentMode: lastPaymentMode(),
         upiApp: lastUpiApp(),
         reference: '',
       },
-    [draft, direction, today]
+    [draft, direction, prefillAmount, today]
   );
 
   const form = useForm<LedgerEntryFormValues>({

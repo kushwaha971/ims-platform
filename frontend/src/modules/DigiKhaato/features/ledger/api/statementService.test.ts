@@ -1,7 +1,7 @@
 import { API_PATHS } from 'src/api/APIPaths';
 import { api } from 'src/api/AxiosInstances';
 
-import { getStatement, statementCsvUrl } from './statementService';
+import { getStatement, getStatementShop, statementCsvUrl } from './statementService';
 
 import type { StatementFilters } from '../types/statement.types';
 
@@ -168,5 +168,50 @@ describe('the CSV address', () => {
        path is the statement PAGE — the download saved HTML (found by
        e2e/aging.mjs, which clicks the link rather than fetching the API). */
     expect(statementCsvUrl(PARTY, filters())).toMatch(/^https?:\/\//);
+  });
+});
+
+describe('getStatementShop (UAT D3 — the print letterhead)', () => {
+  /* `/auth/me`'s active-tenant block carries the GSTIN but not the address or
+     the phone, so the letterhead reads `GET /tenants/current`, which carries
+     all three. The address is a jsonb object whose blank fields the server
+     drops, so the lines are assembled here and an empty one is never sent to
+     the page as a blank line. */
+  it('reads GET /tenants/current and maps address, phone and GSTIN', async () => {
+    mockApi.get.mockResolvedValue({
+      data: {
+        data: {
+          id: 't1',
+          name: 'Kumar Kirana Store',
+          gstin: '27ABCDE1234F1Z5',
+          phone: '9822012345',
+          address: {
+            line1: '12 Station Road',
+            line2: 'Near Bus Stand',
+            city: 'Nashik',
+            district: 'Nashik',
+            state: 'Maharashtra',
+            pincode: '422001',
+          },
+        },
+      },
+    });
+
+    const shop = await getStatementShop();
+
+    expect(mockApi.get).toHaveBeenCalledWith(API_PATHS.TENANT_CURRENT, expect.anything());
+    expect(shop).toEqual({
+      addressLines: ['12 Station Road', 'Near Bus Stand', 'Nashik, Maharashtra 422001'],
+      phone: '9822012345',
+      gstin: '27ABCDE1234F1Z5',
+    });
+  });
+
+  it('turns blanks and a missing address into absences, not empty strings', async () => {
+    mockApi.get.mockResolvedValue({
+      data: { data: { id: 't1', name: 'Kumar', gstin: null, phone: '', address: {} } },
+    });
+
+    expect(await getStatementShop()).toEqual({ addressLines: [], phone: null, gstin: null });
   });
 });

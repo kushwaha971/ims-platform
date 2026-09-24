@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { sessionLoaded } from 'src/redux/slice/sessionSlice';
 import { store } from 'src/redux/store';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
+import { todayInTenantTz } from 'src/utils/dates';
 
 import { useOpeningBalance } from '../hooks/useOpeningBalance';
 import { ledgerTimelineOpened, resetLedgerEntries } from '../redux/ledgerEntrySlice';
@@ -243,16 +244,34 @@ describe('the drawer', () => {
     return view;
   };
 
-  it('starts on the financial year, not on today', async () => {
+  it('starts on today and asks when the debt began, with the year start one tap away (UAT D6)', async () => {
     /**
-     * FR-1. An opening dated today is indistinguishable from an ordinary entry
-     * and makes the aging figure say the debt is one day old — on a khata whose
-     * whole purpose is to start from a true position.
+     * CR-LOG D6. FR-1's default was the first day of the financial year, and on
+     * any day but 1 April that ASSERTS an age the merchant never gave: aging
+     * counts an opening from its date (LED-09 BR-4, FIFO by `entry_date`), so a
+     * balance typed in today sat in "90+ days" on day one while the Overdue
+     * chip beside it was empty. Today claims nothing; the hint asks the
+     * question only the merchant can answer, and the year start stays a chip.
      */
     await open();
 
     const asOf = await screen.findByRole('button', { name: /As of/ });
-    expect(asOf).toHaveTextContent(/1 Apr \d{4}/);
+    expect(asOf).not.toHaveTextContent(/1 Apr \d{4}/);
+    expect(screen.getByText('When did they start owing this?')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'FY start' })).toBeInTheDocument();
+  });
+
+  it('still sends the year start when the merchant picks it', async () => {
+    /** The migrating merchant FR-1 was written for loses nothing: one tap. */
+    const user = userEvent.setup();
+    await open();
+
+    await user.type(screen.getByLabelText('Amount'), '2300');
+    await user.click(screen.getByRole('button', { name: 'FY start' }));
+    await user.click(screen.getByRole('button', { name: 'Save opening balance' }));
+
+    await waitFor(() => expect(ledgerService.postOpeningBalance).toHaveBeenCalled());
+    expect(ledgerService.postOpeningBalance.mock.calls[0][1].asOf).toMatch(/-04-01$/);
   });
 
   it('does not label a field with the name of the drawer it is in', async () => {
@@ -325,7 +344,8 @@ describe('the drawer', () => {
     const [partyId, values, key] = ledgerService.postOpeningBalance.mock.calls[0];
     expect(partyId).toBe(PARTY_ID);
     expect(values).toMatchObject({ amount: '2300.00', direction: 'debit' });
-    expect(values.asOf).toMatch(/-04-01$/);
+    // D6 — today in the TENANT's timezone, the drawer's own `max`.
+    expect(values.asOf).toBe(todayInTenantTz('Asia/Kolkata'));
     expect(key).toBeTruthy();
   });
 

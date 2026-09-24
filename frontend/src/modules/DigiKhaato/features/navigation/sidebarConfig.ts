@@ -69,17 +69,10 @@ export const NAV_SECTIONS: readonly { readonly key: NavSection; readonly labelId
 ];
 
 export const NAV_ITEMS: readonly NavItemConfig[] = [
-  {
-    key: 'dashboard',
-    ready: true,
-    icon: BarChart3,
-    labelId: 'nav.dashboard',
-    href: ROUTES.DASHBOARD,
-    module: 'reports',
-    permission: 'reports.basic.read',
-    section: 'daily',
-    order: 1,
-  },
+  /* No "Dashboard" row (UAT D8). `ROUTES.DASHBOARD` is a `redirect()` to the
+     party list — the post-login landing path, kept so links and bookmarks
+     resolve — and a menu item that silently lands on Customers is a control
+     for a feature that does not exist. Add it back, `ready`, with the page. */
   {
     key: 'parties',
     ready: true,

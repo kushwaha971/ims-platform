@@ -52,3 +52,18 @@ describe('UbSkeleton — no bar can be wider than its container (D3)', () => {
     }
   });
 });
+
+/**
+ * UAT D-1 — the list variant's avatar "disc" drew SQUARE: `MLSkeleton`'s
+ * default `rounded-sm` survived beside the caller's `rounded-pill` because
+ * tailwind-merge did not know `pill` was a radius. Fixed in `src/utils/cn.ts`.
+ */
+describe('UbSkeleton — the avatar disc is round (D-1)', () => {
+  it('carries rounded-pill and not the default rounded-sm', () => {
+    const { container } = render(<UbSkeleton variant="list" count={1} />);
+    const disc = container.querySelector<HTMLElement>('.animate-pulse.h-10.w-10');
+    expect(disc).not.toBeNull();
+    expect(disc).toHaveClass('rounded-pill');
+    expect(disc).not.toHaveClass('rounded-sm');
+  });
+});

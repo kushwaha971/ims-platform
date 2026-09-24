@@ -207,6 +207,7 @@ export function PartyStatementPageContent({ id }: Readonly<{ id: string }>): Rea
           summary={statement.summary}
           rows={statement.printRows ?? statement.rows}
           shopName={tenant?.name ?? ''}
+          shop={statement.shop}
           generatedAt={today}
         />
       )}
@@ -341,11 +342,26 @@ function StatementSummaryStrip({
         label={t('ledger.statement.closing')}
         value={formatInr(unsigned(closing))}
         subtext={t(balanceLabelId(closing))}
-        tone={balanceDirection(closing) === 'payable' ? 'success' : 'danger'}
+        tone={CLOSING_TONE[balanceDirection(closing)]}
       />
     </UbStatGrid>
   );
 }
+
+/**
+ * The closing tile's tone, by what the balance MEANS. It was
+ * `payable ? success : danger`, which painted a settled ₹0.00 in the debit
+ * red — the one statement that says nothing is owed, closing on the colour for
+ * money outstanding (UAT). Settled is neutral.
+ */
+const CLOSING_TONE: Record<
+  ReturnType<typeof balanceDirection>,
+  'success' | 'danger' | 'default'
+> = {
+  receivable: 'danger',
+  payable: 'success',
+  settled: 'default',
+};
 
 /**
  * One line of the statement.

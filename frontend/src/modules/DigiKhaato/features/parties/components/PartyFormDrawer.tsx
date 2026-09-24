@@ -113,7 +113,10 @@ export function PartyFormDrawer({
       tags: editing?.tags.map((tag) => tag.name) ?? [],
       openingAmount: '',
       openingDirection: 'debit',
-      openingAsOf: isoFinancialYearStart(),
+      /* UAT D6 (CR-LOG): today, not the year start — a default the merchant
+         did not choose must not claim an age (aging counts an opening from its
+         date). The hint asks for the real date; "Year start" is a chip. */
+      openingAsOf: isoToday(),
     }),
     [editing, prefillName]
   );
@@ -182,6 +185,8 @@ export function PartyFormDrawer({
    * codebase uses `useWatch` for the same reason.
    */
   const typedLimit = useWatch({ control: form.control, name: 'creditLimit' });
+  /* D6 — the as-of hint asks "when did THEY / YOU start owing this". */
+  const openingDirection = useWatch({ control: form.control, name: 'openingDirection' });
   const creditHint = useMemo(() => {
     /* `parseAmountInput` FIRST, and this is not tidiness.
  
@@ -271,8 +276,16 @@ export function PartyFormDrawer({
           placeholder={t('parties.form.name.placeholder')}
           required
         >
+          {/* `autoFocus`: the drawer used to open with focus on ✕, so the
+              first keystroke went nowhere and a phone raised no keyboard
+              (UAT). `MLDialog` leaves focus where `autoFocus` put it. */}
           {(field) => (
-            <UbTextInput {...field} autoComplete="off" placeholder={t('parties.form.name.hint')} />
+            <UbTextInput
+              {...field}
+              autoFocus
+              autoComplete="off"
+              placeholder={t('parties.form.name.hint')}
+            />
           )}
         </UbField>
 
@@ -370,6 +383,7 @@ export function PartyFormDrawer({
               name="openingAsOf"
               label={t('parties.form.opening.asOf')}
               placeholder={t('parties.form.opening.asOf.placeholder')}
+              hint={t('parties.form.opening.asOf.hint', { direction: openingDirection })}
             >
               {(field) => (
                 <UbDateInput
@@ -383,10 +397,12 @@ export function PartyFormDrawer({
                 />
               )}
             </UbField>
-            {/* The one sentence that keeps the screen honest about scope: the
-                server stores this and posts nothing until LED-02 lands. */}
+            {/* What happens to the figure: the server posts it as the khata's
+                first entry in the party's own transaction (LED-02 FR-2). The
+                old line promised it would "join the balance when entries
+                arrive", from before that was true (UAT D8). */}
             <UbText variant="caption" tone="tertiary">
-              {t('parties.form.opening.notPostedYet')}
+              {t('parties.form.opening.postedOnSave')}
             </UbText>
           </UbDisclosure>
         )}

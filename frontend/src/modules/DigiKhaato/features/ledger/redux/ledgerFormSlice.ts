@@ -40,6 +40,13 @@ export interface LedgerFormState {
   openFor: string | null;
   /** Which button opened it. The direction is switchable inside the drawer. */
   direction: LedgerDirection;
+  /**
+   * An amount the opener already knows — the archive dialog's Record payment
+   * passes the outstanding magnitude, so the merchant confirms a figure rather
+   * than retyping one they were just shown (UAT). Editable in the drawer; a
+   * failed save's `draft` still wins over it.
+   */
+  prefillAmount: string | null;
   status: RequestStatus;
   error: ApiErrorShape | null;
   /** Survives a failed post so Retry has something to resend (FR-12). */
@@ -84,6 +91,7 @@ export interface LedgerFormState {
 const initialState: LedgerFormState = {
   openFor: null,
   direction: 'debit',
+  prefillAmount: null,
   status: 'idle',
   error: null,
   draft: null,
@@ -99,6 +107,8 @@ const initialState: LedgerFormState = {
 export interface OpenEntryPayload {
   readonly partyId: string;
   readonly direction: LedgerDirection;
+  /** A plain decimal string (`"2300.00"`), or absent for an empty amount. */
+  readonly amount?: string | null;
 }
 
 const ledgerFormSlice = createSlice({
@@ -113,6 +123,7 @@ const ledgerFormSlice = createSlice({
       state.reversing = null;
       state.openFor = action.payload.partyId;
       state.direction = action.payload.direction;
+      state.prefillAmount = action.payload.amount ?? null;
       state.status = 'idle';
       state.error = null;
       state.blockedBy = null;
@@ -258,6 +269,8 @@ export const selectEntryStatus = (state: RootState): RequestStatus => state.ledg
 export const selectEntryError = (state: RootState): ApiErrorShape | null => state.ledgerForm.error;
 export const selectEntryDraft = (state: RootState): LedgerEntryFormValues | null =>
   state.ledgerForm.draft;
+export const selectEntryPrefillAmount = (state: RootState): string | null =>
+  state.ledgerForm.prefillAmount;
 export const selectEntryBlockedBy = (state: RootState): LedgerWarning | null =>
   state.ledgerForm.blockedBy;
 export const selectEntryWarnings = (state: RootState): readonly LedgerWarning[] =>

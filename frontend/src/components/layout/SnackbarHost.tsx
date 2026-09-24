@@ -50,6 +50,13 @@ export function SnackbarHost(): React.JSX.Element {
       requestIdLabel={t('common.error.reference')}
       onDismiss={onDismiss}
       dismissLabel={t('common.action.dismiss')}
+      /* UAT D3 — a toast still on screen when the merchant presses Print
+         ("Saved ₹500") is not part of the statement. `ub-print-hide` is the
+         print stylesheet's class hook (globals.css), set on the toaster's own
+         root: a `UbBox` wrapper carrying `data-print` did the same job but
+         pulled `UbBox` into the chunk EVERY route loads, auth pages included
+         (+0.16 KB gz on every first load, measured). */
+      className="ub-print-hide"
     />
   );
 }

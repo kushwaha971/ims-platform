@@ -10,13 +10,14 @@ import type { ApiErrorShape, RequestStatus } from 'src/types/api.types';
    2.2 KB of shell before the gate caught it. */
 import { DEFAULT_PRESET } from '../constants/statementPeriod';
 
-import { fetchPartyStatement, fetchStatementAllRows } from './statementThunk';
+import { fetchPartyStatement, fetchStatementAllRows, fetchStatementShop } from './statementThunk';
 
 import type {
   StatementFilters,
   StatementParty,
   StatementPeriod,
   StatementRow,
+  StatementShop,
   StatementSummary,
 } from '../types/statement.types';
 
@@ -64,6 +65,12 @@ export interface StatementState {
    */
   printRows: StatementRow[] | null;
   printStatus: RequestStatus;
+  /**
+   * UAT D3 — the letterhead (address, phone, GSTIN). The TENANT's, not the
+   * party's, so a change of party keeps it; a change of tenant clears it with
+   * everything else (`resetAllFeatureState`).
+   */
+  shop: StatementShop | null;
   filters: StatementFilters;
   stale: boolean;
   staleUrgency: 'now' | 'next-mount' | null;
@@ -82,6 +89,7 @@ const initialState: StatementState = {
   error: null,
   printRows: null,
   printStatus: 'idle',
+  shop: null,
   filters: {
     preset: DEFAULT_PRESET,
     dateFrom: null,
@@ -102,7 +110,11 @@ const statementSlice = createSlice({
         state.error = null;
         return;
       }
-      Object.assign(state, initialState, { partyId: action.payload, status: 'loading' });
+      Object.assign(state, initialState, {
+        partyId: action.payload,
+        status: 'loading',
+        shop: state.shop,
+      });
     },
     /**
      * The merchant changed the period or the corrections toggle.
@@ -149,7 +161,9 @@ const statementSlice = createSlice({
              position in an ordering, and an entry posted between two page
              requests shifts every later row by one. */
           const known = new Set(state.rows.map((row) => row.id));
-          state.rows.push(...(page.rows.filter((row) => !known.has(row.id)) as Draft<StatementRow>[]));
+          state.rows.push(
+            ...(page.rows.filter((row) => !known.has(row.id)) as Draft<StatementRow>[])
+          );
           state.moreStatus = 'succeeded';
         } else {
           state.rows = page.rows as Draft<StatementRow>[];
@@ -198,6 +212,11 @@ const statementSlice = createSlice({
         }
         state.printStatus = 'failed';
       })
+      .addCase(fetchStatementShop.fulfilled, (state, action) => {
+        // An older server, or an automocked service in a test, can answer
+        // nothing; the sheet then prints the shop's name alone.
+        state.shop = (action.payload ?? null) as Draft<StatementShop> | null;
+      })
       .addCase(resetAllFeatureState, () => initialState);
   },
 });
@@ -213,7 +232,6 @@ export const statementReducer = statementSlice.reducer;
 // answers the initial state until the first action lands.
 
 declare module 'src/redux/store' {
-   
   export interface LazyLoadedSlices extends WithSlice<typeof statementSlice> {}
 }
 
@@ -233,14 +251,13 @@ export const selectStatementSummary = (state: RootState): StatementSummary | nul
 export const selectStatementStatus = (state: RootState): RequestStatus => slice$(state).status;
 export const selectStatementMoreStatus = (state: RootState): RequestStatus =>
   slice$(state).moreStatus;
-export const selectStatementError = (state: RootState): ApiErrorShape | null =>
-  slice$(state).error;
+export const selectStatementError = (state: RootState): ApiErrorShape | null => slice$(state).error;
 export const selectStatementHasMore = (state: RootState): boolean => slice$(state).hasMore;
 export const selectStatementCursor = (state: RootState): string | null => slice$(state).cursor;
-export const selectStatementFilters = (state: RootState): StatementFilters =>
-  slice$(state).filters;
+export const selectStatementFilters = (state: RootState): StatementFilters => slice$(state).filters;
 export const selectStatementPrintRows = (state: RootState): readonly StatementRow[] | null =>
   slice$(state).printRows;
 export const selectStatementPrintStatus = (state: RootState): RequestStatus =>
   slice$(state).printStatus;
 export const selectStatementStale = (state: RootState): boolean => slice$(state).stale;
+export const selectStatementShop = (state: RootState): StatementShop | null => slice$(state).shop;

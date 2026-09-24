@@ -137,6 +137,22 @@ describe('presetSummary — FR-7 (T-PLT-03-2)', () => {
   });
 });
 
+describe('presetSummary — only what is built is shown (UAT D8)', () => {
+  it('lists the modules a merchant can open today, and nothing unbuilt', () => {
+    /* Prevents UAT D8: step 4's "What you get" listed every module the preset
+       enables — Stock, Bills & estimates, Purchases, Payments, Expenses — on a
+       product whose sidebar marks every one of them "Soon". `modules` is still
+       what the preset turns on; `readyModules` is what the card may show. */
+    const summary = presetSummary('retail', null);
+    expect(summary.modules).toContain('inventory');
+    expect(summary.readyModules).toEqual(['parties', 'ledger']);
+  });
+
+  it('still drops a built module the plan withholds', () => {
+    expect(presetSummary('retail', ['ledger']).readyModules).toEqual(['ledger']);
+  });
+});
+
 describe('resume — FR-9', () => {
   it('opens at the step after the one the server says is complete', () => {
     expect(resumeStep(0)).toBe(1);

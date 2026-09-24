@@ -1,5 +1,7 @@
 import { DEFAULT_PRESET, FY_START_MONTH, STATEMENT_PRESETS } from '../constants/statementPeriod';
 
+import { balanceDirection, unsigned, type BalanceDirection } from './balanceSide';
+
 import type { StatementFilters, StatementPreset, StatementRow } from '../types/statement.types';
 
 /**
@@ -10,35 +12,15 @@ import type { StatementFilters, StatementPreset, StatementRow } from '../types/s
  * screen and the print view cannot disagree about what a number means.
  */
 
-/** BR-4 — the balance carries no sign; the LABEL carries the direction. */
-export type BalanceDirection = 'receivable' | 'payable' | 'settled';
-
-/**
- * Which way a running balance points.
- *
- * The one place in this feature that reads the sign of a money value, which is
- * why it is a named function rather than a ternary at four call sites. A
- * shopkeeper has no concept of a negative balance — "minus two thousand" is not
- * something anyone says across a counter — so the sign becomes a sentence here
- * and the figure is shown without it.
- *
- * String comparison rather than `Number()`: money is a decimal string all the
- * way through (R-TS-7), and the only question is which side of zero it is on,
- * which the leading character answers exactly.
- */
-export const balanceDirection = (amount: string): BalanceDirection => {
-  const value = amount.trim();
-  if (!value || /^-?0*\.?0*$/.test(value)) return 'settled';
-  return value.startsWith('-') ? 'payable' : 'receivable';
-};
+/* `BalanceDirection`, `balanceDirection` and `unsigned` live in
+   `balanceSide.ts`, which imports nothing, so the khata timeline can use them
+   without carrying this module into `/parties/[id]`. Re-exported so this
+   module stays the one place a statement caller has to look. */
+export { balanceDirection, unsigned, type BalanceDirection };
 
 /** The message id for the words under a running balance. */
 export const balanceLabelId = (amount: string): string =>
   `ledger.statement.label.${balanceDirection(amount)}`;
-
-/** The magnitude, for a component that paints the sign itself (or not at all). */
-export const unsigned = (amount: string): string =>
-  amount.startsWith('-') ? amount.slice(1) : amount;
 
 /**
  * Which column a row's amount belongs in.

@@ -5,6 +5,8 @@ import { sessionLoaded } from 'src/redux/slice/sessionSlice';
 import { store } from 'src/redux/store';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
 
+import hi from 'locales/hi.json';
+
 import { resetLedgerEntries } from '../redux/ledgerEntrySlice';
 import { resetLedgerForm } from '../redux/ledgerFormSlice';
 
@@ -86,6 +88,50 @@ beforeEach(() => {
 });
 
 describe('the khata timeline', () => {
+  it('shows the balance after each row under its amount (CR-027)', async () => {
+    /**
+     * US-PTY-03-3 — "so that I can settle a dispute on the spot". The figure is
+     * the server's (`running_balance`), grouped the Indian way, quiet, and
+     * worded rather than signed: a khata in advance says "to give", never "−".
+     * A row with no figure (spliced in from a 201 before the refetch) shows no
+     * caption rather than a made-up ₹0.00.
+     */
+    ledgerService.listPartyEntries.mockResolvedValue(
+      page([
+        entry({
+          id: 'newest',
+          direction: 'credit',
+          paymentMode: 'cash',
+          amount: '3100.00',
+          runningBalance: '-300.00',
+        }),
+        entry({ id: 'middle', amount: '500.00', runningBalance: '2800.00' }),
+        entry({ id: 'fresh', amount: '40.00' }),
+      ])
+    );
+
+    renderWithProviders(<PartyLedgerTimeline partyId={PARTY_ID} />);
+
+    expect(await screen.findByText('Bal ₹2,800.00')).toBeInTheDocument();
+    expect(screen.getByText('Bal ₹300.00 (to give)')).toBeInTheDocument();
+    expect(screen.getAllByText(/^Bal /)).toHaveLength(2);
+  });
+
+  it('says it in Hindi on a Hindi khata', async () => {
+    /** The locale file carries both; a key missing from `hi` renders the id. */
+    ledgerService.listPartyEntries.mockResolvedValue(
+      page([entry({ runningBalance: '2800.00' }), entry({ runningBalance: '-50.00' })])
+    );
+
+    renderWithProviders(<PartyLedgerTimeline partyId={PARTY_ID} />, {
+      locale: 'hi',
+      messages: hi as Record<string, string>,
+    });
+
+    expect(await screen.findByText('बाकी ₹2,800.00')).toBeInTheDocument();
+    expect(screen.getByText('बाकी ₹50.00 (देने हैं)')).toBeInTheDocument();
+  });
+
   it('says which way each entry went, in words and not only in colour', async () => {
     /**
      * §23.2.6 rule 3 and WCAG 2.2 both. Red and green carry the direction at a
@@ -124,9 +170,7 @@ describe('the khata timeline', () => {
   });
 
   it('shows the merchant’s own note rather than a category word', async () => {
-    ledgerService.listPartyEntries.mockResolvedValue(
-      page([entry({ note: 'Sugar 10 kg' })])
-    );
+    ledgerService.listPartyEntries.mockResolvedValue(page([entry({ note: 'Sugar 10 kg' })]));
 
     renderWithProviders(<PartyLedgerTimeline partyId={PARTY_ID} />);
 

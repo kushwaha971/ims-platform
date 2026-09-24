@@ -1,6 +1,7 @@
 import {
   amountLabelRepeatsTitle,
   entryAmountView,
+  entryBalanceCaption,
   entryCaption,
   entryReason,
   entryTitle,
@@ -446,5 +447,41 @@ describe('writtenOffLines (CR-2026-09-24-A)', () => {
       { side: 'receivable', amount: '20.00' },
       { side: 'payable', amount: '35.00' },
     ]);
+  });
+});
+
+describe('the running balance under an amount (CR-027)', () => {
+  /**
+   * PTY-03 FR-5: "the running balance after that row in `ds-caption` grey".
+   * The figure is the server's; this decides only the WORDS — no sign ever
+   * reaches a shopkeeper, the side becomes words, and the ₹ comes from the
+   * formatter rather than the copy string (the ungrouped "₹2800.00" defect
+   * this codebase has shipped five times).
+   */
+  const captionT = ((id: string, values?: Record<string, string>) =>
+    `${id}|${values?.amount}|${values?.side}`) as never;
+
+  it('formats the figure with Indian grouping and names the side', () => {
+    expect(entryBalanceCaption(entry({ runningBalance: '2800.00' }), captionT)).toBe(
+      'ledger.timeline.balanceAfter|₹2,800.00|receivable'
+    );
+  });
+
+  it('turns a negative balance into words, never a minus', () => {
+    expect(entryBalanceCaption(entry({ runningBalance: '-1234567.50' }), captionT)).toBe(
+      'ledger.timeline.balanceAfter|₹12,34,567.50|payable'
+    );
+  });
+
+  it('calls a zero balance settled', () => {
+    expect(entryBalanceCaption(entry({ runningBalance: '0.00' }), captionT)).toBe(
+      'ledger.timeline.balanceAfter|₹0.00|settled'
+    );
+  });
+
+  it('shows nothing when the row carries no balance, rather than ₹0.00', () => {
+    /** A row spliced in from a 201 has none until the refetch lands. */
+    expect(entryBalanceCaption(entry(), captionT)).toBeNull();
+    expect(entryBalanceCaption(entry({ runningBalance: null }), captionT)).toBeNull();
   });
 });

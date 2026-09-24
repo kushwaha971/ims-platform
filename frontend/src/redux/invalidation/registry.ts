@@ -25,6 +25,7 @@ import {
 import {
   fetchPartyStatement,
   fetchStatementAllRows,
+  fetchStatementShop,
 } from 'modules/DigiKhaato/features/ledger/redux/statementThunk';
 import {
   completeOnboarding,
@@ -100,6 +101,8 @@ export const QUERIES = {
   // LED-04 — one page of a statement, and the whole period for print
   fetchPartyStatement,
   fetchStatementAllRows,
+  // UAT D3 — the print sheet's letterhead (GET /tenants/current)
+  fetchStatementShop,
   // LED-09 — the aging report, and the two figures above it
   fetchLedgerAging,
   fetchLedgerSummary,
