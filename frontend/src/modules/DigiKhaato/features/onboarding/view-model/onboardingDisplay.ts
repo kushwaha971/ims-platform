@@ -143,3 +143,27 @@ export const resumeStep = (onboardingStep: number | null | undefined): number =>
 
 export const isOnboardingComplete = (onboardingStep: number | null | undefined): boolean =>
   (onboardingStep ?? 0) >= 4;
+
+/**
+ * Defect NEW-1 — must the wizard read its business back from the server?
+ *
+ * Yes when the session's active business is one the wizard CREATED
+ * (`onboarding_step >= 1` — step 1's create writes 1, and nothing else makes a
+ * tenant) and has not finished, and the caller is its OWNER — the same test
+ * `postAuthDestination` uses to send anybody into the wizard at all, and the
+ * same one the server's resume guard applies to `POST /tenants`.
+ *
+ * Not for a finished business: "Add a business" (PLT-04 FR-6) opens the wizard
+ * from inside a completed one, and resuming THAT would put the live shop's
+ * name in step 1 and rename it on Continue.
+ */
+export const shouldResumeFromServer = (
+  tenant: {
+    readonly role?: string | null;
+    readonly onboardingStep?: number | null;
+  } | null
+): boolean =>
+  tenant !== null &&
+  tenant.role === 'owner' &&
+  (tenant.onboardingStep ?? 0) >= 1 &&
+  !isOnboardingComplete(tenant.onboardingStep);

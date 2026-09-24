@@ -6,10 +6,11 @@ import {
   queryFromFilters,
   rangeProblem,
   resolvePreset,
+  rowTitleId,
   unsigned,
 } from './statementDisplay';
 
-import type { StatementFilters } from '../types/statement.types';
+import type { StatementFilters, StatementRow } from '../types/statement.types';
 
 /**
  * LED-04's presentation rules, tested where they live.
@@ -123,10 +124,7 @@ describe('the filter and the address bar', () => {
     /* What a pasted link looks like. Falling back to the default preset would
        throw away the dates the sender chose and show the recipient a different
        statement under the same URL. */
-    const filters = filtersFromQuery(
-      new URLSearchParams('from=2026-05-01&to=2026-05-31'),
-      today
-    );
+    const filters = filtersFromQuery(new URLSearchParams('from=2026-05-01&to=2026-05-31'), today);
 
     expect(filters.preset).toBe('custom');
     expect(filters.dateFrom).toBe('2026-05-01');
@@ -189,14 +187,48 @@ describe('the range the client refuses before asking', () => {
     /* §10. The server refuses it too, and that is not duplication for its own
        sake: this one saves the merchant a round trip, and the server's stops a
        client bug from asking for a scan of a tenant's whole history. */
-    expect(rangeProblem({ ...base, dateFrom: '2015-01-01', dateTo: '2026-04-01' })).toBe(
-      'tooLong'
-    );
+    expect(rangeProblem({ ...base, dateFrom: '2015-01-01', dateTo: '2026-04-01' })).toBe('tooLong');
     expect(rangeProblem({ ...base, dateFrom: '2022-04-01', dateTo: '2026-04-01' })).toBeNull();
   });
 
   it('has nothing to say about an unbounded range', () => {
     expect(rangeProblem(base)).toBeNull();
     expect(rangeProblem({ ...base, dateFrom: '2026-04-01' })).toBeNull();
+  });
+});
+
+describe('the particulars a row is titled by (D-L3)', () => {
+  const row = (over: Partial<StatementRow>): StatementRow => ({
+    id: 'r1',
+    entryDate: '2026-04-01',
+    entryType: 'manual_gave',
+    direction: 'debit',
+    amount: '100.00',
+    note: '',
+    status: 'posted',
+    runningBalance: '100.00',
+    source: null,
+    reversesId: null,
+    supersedesId: null,
+    reason: null,
+    ...over,
+  });
+
+  it('titles an opening row by its type even though the server stored an English note', () => {
+    /* Prevents D-L3: the note "Opening balance" won over the type, so the row
+       was English on a Hindi statement. */
+    expect(rowTitleId(row({ entryType: 'opening', note: 'Opening balance' }))).toBe(
+      'ledger.entry.type.opening'
+    );
+  });
+
+  it('keeps the merchant’s own note as the title of any other row', () => {
+    expect(rowTitleId(row({ note: 'Cement bags' }))).toBeNull();
+  });
+
+  it('falls back to the type’s words when a row has no note', () => {
+    expect(rowTitleId(row({ entryType: 'manual_got', direction: 'credit' }))).toBe(
+      'ledger.entry.type.manual_got'
+    );
   });
 });

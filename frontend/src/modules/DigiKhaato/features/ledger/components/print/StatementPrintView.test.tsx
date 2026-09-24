@@ -38,7 +38,8 @@ describe('StatementPrintView letterhead (UAT D3)', () => {
         {...base}
         shop={{
           addressLines: ['12 Station Road', 'Near Bus Stand', 'Nashik, Nashik 422001'],
-          phone: '9822012345',
+          // Stored E.164, as `TenantUpdateSerializer.validate_phone` writes it.
+          phone: '+919822012345',
           gstin: '27ABCDE1234F1Z5',
         }}
       />
@@ -48,7 +49,8 @@ describe('StatementPrintView letterhead (UAT D3)', () => {
     expect(head.getByText('Kumar Kirana Store')).toBeInTheDocument();
     expect(head.getByText('12 Station Road')).toBeInTheDocument();
     expect(head.getByText('Nashik, Nashik 422001')).toBeInTheDocument();
-    expect(head.getByText('Phone 9822012345')).toBeInTheDocument();
+    // D-L1: grouped as every screen shows it, not the stored "+919822012345".
+    expect(head.getByText('Phone +91 98220 12345')).toBeInTheDocument();
     expect(head.getByText('GSTIN 27ABCDE1234F1Z5')).toBeInTheDocument();
   });
 
@@ -58,7 +60,7 @@ describe('StatementPrintView letterhead (UAT D3)', () => {
     );
 
     const head = within(letterhead());
-    expect(head.getByText('Phone 9822012345')).toBeInTheDocument();
+    expect(head.getByText('Phone +91 98220 12345')).toBeInTheDocument();
     expect(head.queryByText(/GSTIN/)).not.toBeInTheDocument();
   });
 

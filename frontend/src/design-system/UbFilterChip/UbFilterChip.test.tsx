@@ -81,11 +81,14 @@ describe('UbFilterChipGroup', () => {
 });
 
 describe('UbFilterBar', () => {
-  it('keeps the trailing control inside the track with the chips', () => {
+  it('pins the trailing control beside the scrolling chips, not inside them (D-L7)', () => {
     /**
-     * It scrolls WITH the chips rather than floating right, because it is about
-     * them — "Clear filters" across a gulf of empty row on a wide screen reads
-     * as belonging to the page.
+     * Prevents D-L7: "Clear filters (n)" scrolled WITH the chips, so at 360 px
+     * it was the one thing past the right edge of the track — the control that
+     * exists because applied chips can be scrolled out of sight was itself out
+     * of sight. jsdom lays nothing out, so what is pinned is the structure: the
+     * chips live in the scroll container and the trailing control does not,
+     * and the two share a row so it still follows the last chip on a laptop.
      */
     render(
       <UbFilterBar trailing={<button type="button">Clear filters (2)</button>}>
@@ -95,7 +98,13 @@ describe('UbFilterBar', () => {
       </UbFilterBar>
     );
 
-    expect(screen.getByRole('button', { name: 'Clear filters (2)' })).toBeInTheDocument();
-    expect(screen.getByRole('group', { name: 'Balance' })).toBeInTheDocument();
+    const clear = screen.getByRole('button', { name: 'Clear filters (2)' });
+    const group = screen.getByRole('group', { name: 'Balance' });
+    const scroller = group.closest('.overflow-x-auto') as HTMLElement;
+    expect(scroller).not.toBeNull();
+    expect(scroller).not.toContainElement(clear);
+    expect(clear.closest('.overflow-x-auto')).toBeNull();
+    expect(scroller.parentElement).toContainElement(clear);
+    expect(scroller).toHaveClass('min-w-0');
   });
 });

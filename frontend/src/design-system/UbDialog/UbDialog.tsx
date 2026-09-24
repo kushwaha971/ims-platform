@@ -12,6 +12,7 @@ import {
   MLDialogFooter,
   MLDialogTitle,
   MLIconButton,
+  type MLDialogFooterOrder,
 } from 'src/design-system/primitives';
 
 /**
@@ -41,6 +42,13 @@ export interface UbDialogProps {
   readonly children?: ReactNode;
   readonly footer?: ReactNode;
   /**
+   * How the footer stacks on a phone. The default keeps the convention above —
+   * reversed, primary on top. `as-written` stacks in DOM order so Tab follows
+   * the screen (D-L6); a footer with three actions should use it, and then
+   * writes them in the order a laptop reads them left to right.
+   */
+  readonly footerOrder?: MLDialogFooterOrder;
+  /**
    * Where focus returns on close if the element that opened this is no longer
    * in the document — e.g. an item in a menu sheet that closed as it opened
    * this one (QA D1, WCAG 2.4.3). Pass the control that opened the menu.
@@ -60,6 +68,7 @@ function UbDialogBase({
   icon,
   children,
   footer,
+  footerOrder,
   returnFocusRef,
   className,
 }: Readonly<UbDialogProps>) {
@@ -86,13 +95,17 @@ function UbDialogBase({
           )}
         </div>
         {showClose && (
-          <MLIconButton aria-label={closeLabel} onClick={() => onOpenChange(false)} className="-mr-2">
+          <MLIconButton
+            aria-label={closeLabel}
+            onClick={() => onOpenChange(false)}
+            className="-mr-2"
+          >
             <X aria-hidden className="h-4 w-4" />
           </MLIconButton>
         )}
       </MLDialogHeader>
       {children && <MLDialogBody>{children}</MLDialogBody>}
-      {footer && <MLDialogFooter>{footer}</MLDialogFooter>}
+      {footer && <MLDialogFooter order={footerOrder}>{footer}</MLDialogFooter>}
     </MLDialog>
   );
 }

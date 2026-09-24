@@ -8,6 +8,7 @@ import { UbAmount, UbBox, UbSearchInput, UbText } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { partyPath } from 'src/routes';
 import { cn } from 'src/utils/cn';
+import { formatPhoneForDisplay } from 'src/utils/share';
 
 import { usePartySearch } from '../hooks/usePartySearch';
 import { balanceView } from '../view-model/partyDisplay';
@@ -166,7 +167,9 @@ function PartyQuickSearchBase({
                         variant="inherit"
                         className="ds-num-s-regular text-text-tertiary"
                       >
-                        {party.mobile}
+                        {/* D-L2: the same "+91 98765 43210" as the party row and
+                            the khata header, not the stored E.164. */}
+                        {formatPhoneForDisplay(party.mobile)}
                       </UbText>
                     )}
                   </UbBox>

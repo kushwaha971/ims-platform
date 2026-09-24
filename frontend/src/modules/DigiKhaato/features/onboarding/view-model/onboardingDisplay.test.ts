@@ -10,6 +10,7 @@ import {
   panMismatchesGstin,
   presetSummary,
   resumeStep,
+  shouldResumeFromServer,
   stateCodeFromGstin,
 } from './onboardingDisplay';
 
@@ -170,5 +171,35 @@ describe('resume — FR-9', () => {
     expect(resumeStep(null)).toBe(1);
     expect(isOnboardingComplete(null)).toBe(false);
     expect(isOnboardingComplete(4)).toBe(true);
+  });
+});
+
+/**
+ * Defect NEW-1 — which wizards read their business back after a reload.
+ *
+ * Too narrow and a reload shows step 1 blank for a business that exists, which
+ * is how the duplicate was made. Too wide and "Add a business" opens with the
+ * merchant's LIVE shop in step 1, and Continue renames it.
+ */
+describe('shouldResumeFromServer — NEW-1', () => {
+  it('resumes the owner of a business the wizard created and did not finish', () => {
+    expect(shouldResumeFromServer({ role: 'owner', onboardingStep: 1 })).toBe(true);
+    expect(shouldResumeFromServer({ role: 'owner', onboardingStep: 3 })).toBe(true);
+  });
+
+  it('does not resume a finished business — "Add a business" starts empty', () => {
+    expect(shouldResumeFromServer({ role: 'owner', onboardingStep: 4 })).toBe(false);
+  });
+
+  it('does not resume for a non-owner, who cannot write the tenant anyway', () => {
+    for (const role of ['admin', 'staff', 'accountant', null]) {
+      expect(shouldResumeFromServer({ role, onboardingStep: 1 })).toBe(false);
+    }
+  });
+
+  it('does not resume without a business, or one the wizard never started', () => {
+    expect(shouldResumeFromServer(null)).toBe(false);
+    expect(shouldResumeFromServer({ role: 'owner', onboardingStep: 0 })).toBe(false);
+    expect(shouldResumeFromServer({ role: 'owner', onboardingStep: null })).toBe(false);
   });
 });

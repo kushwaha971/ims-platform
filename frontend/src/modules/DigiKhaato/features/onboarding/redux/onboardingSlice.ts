@@ -10,6 +10,7 @@ import { ONBOARDING_STEP_COUNT } from '../constants/onboardingSteps';
 import {
   completeOnboarding,
   createTenant,
+  resumeOnboarding,
   saveAddressStep,
   saveBusinessStep,
   saveGstStep,
@@ -75,6 +76,16 @@ export interface OnboardingState {
    * exists to prevent.
    */
   tenantCreateKey: string | null;
+  /**
+   * Defect NEW-1 — has this wizard read its business back from the server?
+   *
+   * `idle` until a resume is needed, then the read's lifecycle. It is separate
+   * from `status` because that one drives the step buttons' busy state, and a
+   * background read must not make "Continue" spin. `failed` is terminal for
+   * this mount: the wizard falls back to an empty step 1 rather than retrying
+   * in a loop, and the server turns that step's submit into a resume.
+   */
+  resumeStatus: RequestStatus;
 }
 
 const emptyAddress: OnboardingAddress = {
@@ -112,6 +123,7 @@ const initialState: OnboardingState = {
   error: null,
   completed: false,
   tenantCreateKey: null,
+  resumeStatus: 'idle',
 };
 
 /** Fold a server tenant back into the draft, so a resume shows real values. */
@@ -154,6 +166,15 @@ const onboardingSlice = createSlice({
     tenantCreateKeyMinted(state, action: PayloadAction<string>) {
       if (state.tenantCreateKey === null) state.tenantCreateKey = action.payload;
     },
+    /**
+     * The server refused the key as `idempotency_conflict`: it was spent on a
+     * create whose response never arrived, with different values. The only
+     * way forward is a new key; the server's NEW-1 guard then resumes that
+     * business rather than creating another, so rotating is safe.
+     */
+    tenantCreateKeyRotated(state, action: PayloadAction<string>) {
+      state.tenantCreateKey = action.payload;
+    },
     warningsDismissed(state) {
       state.warnings = [];
     },
@@ -177,6 +198,26 @@ const onboardingSlice = createSlice({
     };
 
     builder
+      // NEW-1 — the refresh-proof half of FR-9. The tenant is folded in exactly
+      // as a step write's response would be, and THEN the route's step is
+      // honoured: `stepChanged` ran on mount against `completedStep = 0` and
+      // clamped `/onboarding/step/3` to step 1, which is how a refresh used to
+      // throw a merchant back to the start.
+      .addCase(resumeOnboarding.pending, (state) => {
+        state.resumeStatus = 'loading';
+      })
+      .addCase(resumeOnboarding.fulfilled, (state, action) => {
+        state.resumeStatus = 'succeeded';
+        applyTenant(state, action.payload);
+        const target = Math.max(1, Math.min(ONBOARDING_STEP_COUNT, action.meta.arg.routeStep));
+        state.step = Math.min(target, state.completedStep + 1);
+      })
+      .addCase(resumeOnboarding.rejected, (state, action) => {
+        // An aborted read is not a failed one: back to `idle`, so the next
+        // mount asks again instead of waiting on a request nobody will answer.
+        state.resumeStatus = action.meta.aborted ? 'idle' : 'failed';
+      })
+
       .addCase(createTenant.pending, pending)
       .addCase(createTenant.fulfilled, (state, action) => {
         state.status = 'succeeded';
@@ -265,6 +306,7 @@ export const {
   draftChanged,
   stateCodeAdopted,
   tenantCreateKeyMinted,
+  tenantCreateKeyRotated,
   warningsDismissed,
   onboardingErrorCleared,
   resetOnboarding,
@@ -289,3 +331,6 @@ export const selectOnboardingTenantId = (state: RootState): string | null =>
 export const selectOnboardingCreateKey = (state: RootState): string | null =>
   state.onboarding.tenantCreateKey;
 export const selectOnboardingCompleted = (state: RootState): boolean => state.onboarding.completed;
+/** NEW-1 — the lifecycle of reading the resumed business back from the server. */
+export const selectOnboardingResumeStatus = (state: RootState): RequestStatus =>
+  state.onboarding.resumeStatus;

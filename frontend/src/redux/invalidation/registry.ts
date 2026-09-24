@@ -30,6 +30,7 @@ import {
 import {
   completeOnboarding,
   createTenant,
+  resumeOnboarding,
   saveAddressStep,
   saveBusinessStep,
   saveGstStep,
@@ -106,6 +107,8 @@ export const QUERIES = {
   // LED-09 — the aging report, and the two figures above it
   fetchLedgerAging,
   fetchLedgerSummary,
+  // PLT-03 FR-9 / NEW-1 — the wizard reads its business back after a reload
+  resumeOnboarding,
 } as const;
 
 export const MUTATIONS = {

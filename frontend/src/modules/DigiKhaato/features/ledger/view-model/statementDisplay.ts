@@ -32,6 +32,24 @@ export const balanceLabelId = (amount: string): string =>
  */
 export const isDebitRow = (row: StatementRow): boolean => row.direction === 'debit';
 
+/**
+ * The message id a row's Particulars is rendered from, or `null` when the
+ * merchant's own note is the title.
+ *
+ * D-L3 — the TYPE is checked before the note, exactly as `entryTitle` does on
+ * the khata (LED-02 BR-1). The server stamps every opening entry with the
+ * English note "Opening balance" on purpose, so reports, exports and support
+ * can find it; that string is a record, not copy. The statement read the note
+ * first, so a Hindi statement — on screen and on the printed sheet a customer
+ * is handed — opened with an English row while the khata above it said
+ * "शुरुआती बाक़ी". Server text is never translated here: the row is mapped by
+ * its `entryType`, which is the thing the client actually knows.
+ */
+export const rowTitleId = (row: StatementRow): string | null => {
+  if (row.entryType === 'opening') return 'ledger.entry.type.opening';
+  return row.note.trim() ? null : `ledger.entry.type.${row.entryType}`;
+};
+
 /** A row the merchant has undone, struck through when corrections are shown. */
 export const isStruckThrough = (row: StatementRow): boolean => row.status === 'reversed';
 

@@ -22,6 +22,10 @@ import { presetSummary } from '../view-model/onboardingDisplay';
  * EC-6's "Stock: not available in your plan" row is withdrawn with the Stock
  * row itself: stock is not built, so the card makes no claim about it either
  * way (UAT D8). The module list is `readyModules` — what exists today.
+ *
+ * D-L5 finished that job: the due-days, units and expense-category rows went
+ * the same way, for the same reason — each named a default for a screen that
+ * is not built.
  */
 export interface PresetSummaryCardProps {
   readonly businessType: BusinessType;
@@ -62,25 +66,11 @@ function PresetSummaryCardBase({
             a promise about an unbuilt feature (UAT D8). It comes back with
             the Items screen. */}
 
-        <UbStack gap={0.5}>
-          <UbText as="dt" variant="label" tone="tertiary">
-            {t('onboarding.summary.dueDays')}
-          </UbText>
-          <UbText as="dd" variant="body-sm">
-            {t('onboarding.summary.dueDays.value', { days: summary.defaultDueDays })}
-          </UbText>
-        </UbStack>
-
-        <UbStack gap={0.5}>
-          <UbText as="dt" variant="label" tone="tertiary">
-            {t('onboarding.summary.units')}
-          </UbText>
-          {/* UQC codes are statutory identifiers, not copy: they are the same
-              string in both locales and are rendered `ds-mono`, LTR. */}
-          <UbText as="dd" variant="mono" dir="ltr">
-            {summary.favouriteUnits.join(', ')}
-          </UbText>
-        </UbStack>
+        {/* No "Bill due in", "Favourite units" or "Extra expense categories"
+            rows either (D-L5). The preset still seeds all three server-side,
+            but bills, items and expenses are "Soon" rows in the sidebar, so
+            naming their defaults here described features the merchant cannot
+            open. They come back with the screens that use them. */}
 
         <UbStack gap={0.5} className="sm:col-span-2">
           <UbText as="dt" variant="label" tone="tertiary">
@@ -92,17 +82,6 @@ function PresetSummaryCardBase({
             ))}
           </UbBox>
         </UbStack>
-
-        {summary.extraExpenseCategoryIds.length > 0 && (
-          <UbStack gap={0.5} className="sm:col-span-2">
-            <UbText as="dt" variant="label" tone="tertiary">
-              {t('onboarding.summary.expenses')}
-            </UbText>
-            <UbText as="dd" variant="body-sm">
-              {summary.extraExpenseCategoryIds.map((id) => t(id)).join(', ')}
-            </UbText>
-          </UbStack>
-        )}
       </UbGrid>
 
       <UbText variant="caption" tone="tertiary" className="mt-4">

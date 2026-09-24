@@ -708,15 +708,13 @@ describe('archiving from the khata page', () => {
     expect(within(dialog).getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
   });
 
-  it('puts Record payment first on a phone and the destructive Write off below it', async () => {
+  it('keeps the destructive Write off off the top of a phone sheet (UAT)', async () => {
     /**
-     * Prevents the UAT finding: the footer is `flex-col-reverse` below `sm`
-     * (the primary action goes under the thumb, last in the DOM and first on
-     * screen), and the DOM order was Cancel, Record payment, Write off — so on
-     * a phone the destructive Write off was the TOP button. The settling move
-     * is the one to offer first; Write off stays reachable, outlined red,
-     * beneath it. On a laptop the same order reads Cancel · Write off ·
-     * Record payment, with the primary at the right.
+     * Prevents the UAT finding: the DOM order was Cancel, Record payment,
+     * Write off and the phone footer reversed it, so the destructive Write off
+     * was the TOP button. It sits between Cancel and Record payment, so on a
+     * laptop the row reads Cancel · Write off · Record payment with the
+     * primary at the right.
      */
     blockOnce();
     const user = userEvent.setup();
@@ -729,6 +727,33 @@ describe('archiving from the khata page', () => {
         (name) => ['Cancel', 'Record payment'].includes(name) || name.startsWith('Write off')
       );
     expect(names).toEqual(['Cancel', 'Write off ₹2,300.00', 'Record payment']);
+  });
+
+  it('tabs through the blocked actions in the order a phone shows them (D-L6)', async () => {
+    /**
+     * Prevents D-L6: the footer was `flex-col-reverse` below `sm`, so a phone
+     * showed Record payment · Write off · Cancel top to bottom while Tab went
+     * Cancel → Write off → Record payment — from the bottom button upwards.
+     * jsdom lays nothing out, so the stacking class is what can be pinned: the
+     * blocked footer stacks in DOM order, and Tab walks that order.
+     */
+    blockOnce();
+    const user = userEvent.setup();
+    const dialog = await reachBlocked(user);
+
+    const cancel = within(dialog).getByRole('button', { name: 'Cancel' });
+    const writeOff = within(dialog).getByRole('button', { name: 'Write off ₹2,300.00' });
+    const record = within(dialog).getByRole('button', { name: 'Record payment' });
+    const footer = cancel.parentElement as HTMLElement;
+    expect(footer).toContainElement(record);
+    expect(footer).toHaveClass('flex-col');
+    expect(footer).not.toHaveClass('flex-col-reverse');
+
+    cancel.focus();
+    await user.tab();
+    expect(writeOff).toHaveFocus();
+    await user.tab();
+    expect(record).toHaveFocus();
   });
 
   it('opens You got with the outstanding amount already in it', async () => {

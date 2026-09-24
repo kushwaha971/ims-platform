@@ -5,6 +5,8 @@ import { sessionLoaded } from 'src/redux/slice/sessionSlice';
 import { store } from 'src/redux/store';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
 
+import hi from 'locales/hi.json';
+
 import { resetStatement } from '../redux/statementSlice';
 
 import { PartyStatementPageContent } from './PartyStatementPageContent';
@@ -389,5 +391,47 @@ describe('the closing tile is painted by what the balance means (UAT)', () => {
     const view = await onScreen();
     await view.findByText('Cement bags');
     expect(closingTile(view)).toHaveClass('text-error-bright');
+  });
+});
+
+describe('the opening row on a Hindi statement (D-L3)', () => {
+  const OPENING_ROW = {
+    id: 'r0',
+    entryDate: '2026-04-01',
+    entryType: 'opening' as const,
+    direction: 'debit' as const,
+    amount: '2300.00',
+    // Exactly what the server stores on every opening entry, in English on
+    // purpose so reports and support can find it.
+    note: 'Opening balance',
+    status: 'posted' as const,
+    runningBalance: '2300.00',
+    source: null,
+    reversesId: null,
+    supersedesId: null,
+    reason: null,
+  };
+
+  it('labels the opening row in Hindi on screen and on the print sheet', async () => {
+    /* Prevents D-L3: the statement rendered the row's stored note first, so a
+       Hindi statement — and the printed copy handed to the customer — opened
+       with the English "Opening balance" while the khata above it said
+       "शुरुआती बाक़ी". The row is mapped by its entry type, never by
+       translating the server's string. */
+    statementService.getStatement.mockResolvedValue(page({ rows: [OPENING_ROW, ...page().rows] }));
+
+    renderWithProviders(<PartyStatementPageContent id={PARTY_ID} />, {
+      locale: 'hi',
+      messages: hi as Record<string, string>,
+    });
+    const view = await onScreen();
+    await view.findByText('Cement bags');
+
+    expect(view.getByText('शुरुआती बाक़ी')).toBeInTheDocument();
+    expect(view.queryByText('Opening balance')).not.toBeInTheDocument();
+    // The print sheet is the rest of the document: the screen and the sheet
+    // together carry the Hindi label twice and the English one nowhere.
+    expect(screen.getAllByText('शुरुआती बाक़ी')).toHaveLength(2);
+    expect(screen.queryByText('Opening balance')).not.toBeInTheDocument();
   });
 });

@@ -388,10 +388,27 @@ export function MLDialogDescription({
   );
 }
 
+/**
+ * How a footer's actions stack below `sm`.
+ *
+ * `reversed-on-mobile` (the default) is the convention described below: last
+ * in the DOM, first on screen. `as-written` stacks them top-to-bottom in DOM
+ * order, so the Tab order and the order on screen agree at every width. A
+ * footer of three actions needs it — reversed, Tab walks a phone sheet from
+ * the bottom button upwards (D-L6), which with two buttons is a flip and with
+ * three is a sequence nobody can predict.
+ */
+export type MLDialogFooterOrder = 'reversed-on-mobile' | 'as-written';
+
 export function MLDialogFooter({
   children,
   className,
-}: Readonly<{ readonly children: ReactNode; readonly className?: string }>): React.JSX.Element {
+  order = 'reversed-on-mobile',
+}: Readonly<{
+  readonly children: ReactNode;
+  readonly className?: string;
+  readonly order?: MLDialogFooterOrder;
+}>): React.JSX.Element {
   return (
     /* `border-t` and its own 24px, matching `MLDialogHeader`: BrandHub's
        footer is `flex items-center gap-4 border-t border-border p-6`. The
@@ -402,7 +419,8 @@ export function MLDialogFooter({
        and a 480 px dialog clipped the first one to "cel" rather than wrap. */
     <div
       className={cn(
-        'flex flex-col-reverse gap-3 border-t border-border-hairline p-6',
+        'flex gap-3 border-t border-border-hairline p-6',
+        order === 'as-written' ? 'flex-col' : 'flex-col-reverse',
         'sm:flex-row sm:flex-wrap sm:justify-end sm:gap-3',
         className
       )}

@@ -13,6 +13,7 @@ import type {
   OnboardingGstStep,
   OnboardingResult,
   OnboardingSummaryStep,
+  OnboardingTenant,
 } from '../types/onboarding.types';
 
 /**
@@ -29,6 +30,43 @@ export interface CreateTenantArg extends OnboardingBusinessStep {
    */
   readonly idempotencyKey: string;
 }
+
+export interface ResumeOnboardingArg {
+  /** The step the URL asked for, so the resumed wizard can honour it. */
+  readonly routeStep: number;
+}
+
+/**
+ * QUERY — PLT-03 FR-9, and the client half of defect NEW-1.
+ *
+ * A wizard reloaded mid-way has an empty slice: no draft, no `tenantId`, no
+ * `completedStep`. Step 1 then rendered blank for a business that already
+ * existed, and `/onboarding/step/3` clamped back to step 1 because nothing was
+ * "completed". This reads the tenant the session is scoped to and hands it to
+ * the slice, which folds it into the draft exactly as a successful step write
+ * would.
+ */
+export const resumeOnboarding = createAsyncThunk<
+  OnboardingTenant,
+  ResumeOnboardingArg,
+  { rejectValue: ApiErrorShape }
+>(
+  'onboarding/resume',
+  async (_arg, { rejectWithValue }) => {
+    try {
+      return await onboardingService.fetchCurrentTenant();
+    } catch (error) {
+      return rejectWithValue(toApiError(error, 'onboarding.error.resume'));
+    }
+  },
+  {
+    // One read per resume. Every step is its own route and Strict Mode runs
+    // effects twice, so without this each mount would ask again mid-flight.
+    condition: (_arg, { getState }) =>
+      (getState() as { onboarding: { resumeStatus: string } }).onboarding.resumeStatus !==
+      'loading',
+  }
+);
 
 /** MUTATION — PLT-03 FR-2. Creates the tenant and re-issues the token. */
 export const createTenant = createAsyncThunk<

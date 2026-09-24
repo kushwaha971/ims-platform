@@ -32,10 +32,17 @@ import { cn } from 'src/utils/cn';
  * because it says nothing that the group role does not already say.
  *
  * ── `trailing` ─────────────────────────────────────────────────────────────
- * Sticks to the end of the track rather than floating right, so "Clear filters"
- * sits immediately after the last chip instead of across a gulf of empty row on
- * a wide screen. It scrolls with the chips on a phone, which is correct: it is
- * about them.
+ * Sits immediately after the last chip rather than floating right, so "Clear
+ * filters" is not across a gulf of empty row on a wide screen: the scrolling
+ * track takes only the width its chips need.
+ *
+ * It is OUTSIDE that track, pinned beside it, and that is D-L7. It used to
+ * scroll with the chips, on the theory that it is about them — so at 360 px,
+ * with the credit, balance, type and collection groups ahead of it, "Clear
+ * filters (2)" was the one thing past the right edge, and the control that
+ * exists because applied chips can be scrolled out of sight was itself out of
+ * sight. Now the track gives way (`min-w-0`, scrolling within itself) and the
+ * trailing control keeps its width at every size.
  */
 export interface UbFilterBarProps {
   readonly children: ReactNode;
@@ -57,15 +64,15 @@ function UbFilterBarBase({ children, trailing, end, className }: Readonly<UbFilt
      side of it. */
   const groups = Children.toArray(children);
 
-  const track = (
+  const scroller = (
     <div
       className={cn(
-        'flex items-center gap-3 overflow-x-auto overscroll-x-contain',
+        'flex min-w-0 items-center gap-3 overflow-x-auto overscroll-x-contain',
         // The chips are 44px tall and their focus ring sits outside them, so
         // the track needs a little vertical room or a focused chip is clipped
         // by the scroll container it lives in.
         'py-0.5',
-        className
+        !trailing && className
       )}
     >
       {groups.map((group, index) => (
@@ -77,8 +84,20 @@ function UbFilterBarBase({ children, trailing, end, className }: Readonly<UbFilt
           {group}
         </Fragment>
       ))}
-      {trailing}
     </div>
+  );
+
+  /* D-L7 — the trailing control beside the scroller, never inside it. The
+     scroller is `flex: 0 1 auto`, so on a wide screen it is as wide as its
+     chips and the control follows the last one; on a phone it shrinks and
+     scrolls, and the control stays on screen. */
+  const track = trailing ? (
+    <div className={cn('flex min-w-0 items-center gap-3', className)}>
+      {scroller}
+      <div className="flex shrink-0 items-center">{trailing}</div>
+    </div>
+  ) : (
+    scroller
   );
 
   if (!end) return track;

@@ -3,6 +3,7 @@ import { api } from 'src/api/AxiosInstances';
 import {
   completeOnboarding,
   createTenant,
+  fetchCurrentTenant,
   updateAddressStep,
   updateBusinessStep,
   updateGstStep,
@@ -260,5 +261,48 @@ describe('onboardingService — the PATCH steps', () => {
 
     expect(patch.mock.calls[0]?.[1]).toEqual({ locale: 'hi', onboarding_step: 4 });
     expect(result.tenant.onboardingStep).toBe(4);
+  });
+});
+
+/**
+ * Defect NEW-1 — a reload emptied the wizard's draft, step 1 came back blank
+ * for a business that already existed, and re-submitting it created a second
+ * one. The resume reads the business back from `GET /tenants/current`; this
+ * pins the verb, the path and the mapping it relies on.
+ */
+describe('onboardingService.fetchCurrentTenant — NEW-1, resume after a reload', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('GETs the current tenant and maps it into the draft shape', async () => {
+    const get = jest.spyOn(api, 'get').mockResolvedValue({
+      data: { data: { ...TENANT, onboarding_step: 2, address: { city: 'Pune' } } },
+    });
+
+    const result = await fetchCurrentTenant();
+
+    expect(get.mock.calls[0]?.[0]).toBe('/tenants/current');
+    expect(result).toEqual(
+      expect.objectContaining({
+        id: 't1',
+        name: 'Sharma General Store',
+        businessType: 'retail',
+        stateCode: '27',
+        onboardingStep: 2,
+      })
+    );
+    expect(result.address).toEqual({
+      line1: null,
+      line2: null,
+      city: 'Pune',
+      district: null,
+      pincode: null,
+    });
+  });
+
+  it('does not suppress the error snackbar — a failed read is an ordinary failed read', async () => {
+    const get = jest.spyOn(api, 'get').mockResolvedValue({ data: { data: TENANT } });
+    await fetchCurrentTenant();
+    const config = get.mock.calls[0]?.[1] as { suppressErrorSnackbar?: boolean } | undefined;
+    expect(config?.suppressErrorSnackbar).toBeFalsy();
   });
 });

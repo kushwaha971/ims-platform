@@ -21,9 +21,12 @@ import {
  * roving tabindex is the real WAI-ARIA one — arrows move AND select, Home and
  * End jump, and only the chosen tile is in the tab order.
  *
- * §8 — each tile carries a one-line hint of what it turns on ("Stock, bills,
- * udhaar"), because "Wholesale" and "Trader / mandi" are not self-explanatory
- * to the person choosing between them.
+ * §8 — each tile carries a one-line hint describing the TRADE ("Walk-in
+ * customers, udhaar"), because "Wholesale" and "Trader / mandi" are not
+ * self-explanatory to the person choosing between them. D-L5: the hints used to
+ * say what each type turned on — "Stock, bills", "Bulk units" — and stock,
+ * bills and units are not built, so they now describe the merchant's business
+ * rather than features the product does not yet have.
  */
 export interface BusinessTypeGridProps {
   readonly value: BusinessType | '';

@@ -155,6 +155,15 @@ function PartyArchiveDialogBase({
          has to say yes or no, and a stray tap outside the box is neither. */
       dismissOnBackdrop={false}
       returnFocusRef={returnFocusRef}
+      /* D-L6 — three actions, so the footer stacks in DOM order on a phone.
+         Reversed, the sheet showed Record payment · Write off · Cancel top to
+         bottom while Tab went Cancel → Write off → Record payment: from the
+         bottom button upwards. As written it reads Cancel, Write off, Record
+         payment on both — top to bottom on a phone, left to right on a laptop
+         — and Record payment, the move that settles the balance, is the bottom
+         button of the sheet, the one under the thumb. The destructive Write
+         off is still never the first thing offered. */
+      footerOrder={isBlocked ? 'as-written' : undefined}
       footer={
         isWriteOff ? (
           <>
@@ -182,12 +191,13 @@ function PartyArchiveDialogBase({
               {t('common.action.cancel')}
             </UbButton>
             {/* Write off BEFORE Record payment in the DOM, and the order is
-                the point. The footer is `flex-col-reverse` on a phone, so the
-                last button is the top one: Record payment — the move that
-                settles the balance — is first under the thumb, and the
-                destructive Write off sits below it, still outlined red. On a
-                laptop the row reads Cancel · Write off · Record payment, the
-                primary at the right (UAT). */}
+                the point. The blocked footer stacks as written (D-L6), so the
+                DOM order is the order everywhere: on a laptop Cancel · Write
+                off · Record payment with the primary at the right (UAT), and
+                on a phone the same top to bottom, Record payment the bottom
+                button of the sheet, under the thumb, with the destructive
+                Write off above it, still outlined red — and Tab walks them in
+                the order they are seen. */}
             {isBlocked && canWriteOff && onStartWriteOff && (
               <UbButton variant="destructive" onClick={onStartWriteOff}>
                 {t('parties.writeOff.action', { amount: amountText })}

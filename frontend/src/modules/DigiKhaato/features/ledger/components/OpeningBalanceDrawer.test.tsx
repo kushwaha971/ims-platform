@@ -6,6 +6,9 @@ import { store } from 'src/redux/store';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
 import { todayInTenantTz } from 'src/utils/dates';
 
+import en from 'locales/en.json';
+import hi from 'locales/hi.json';
+
 import { useOpeningBalance } from '../hooks/useOpeningBalance';
 import { ledgerTimelineOpened, resetLedgerEntries } from '../redux/ledgerEntrySlice';
 import { fetchPartyEntries } from '../redux/ledgerEntryThunk';
@@ -258,7 +261,19 @@ describe('the drawer', () => {
     const asOf = await screen.findByRole('button', { name: /As of/ });
     expect(asOf).not.toHaveTextContent(/1 Apr \d{4}/);
     expect(screen.getByText('When did they start owing this?')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'FY start' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Year start' })).toBeInTheDocument();
+  });
+
+  it('names the year-start chip exactly as the party form does, in both languages (D-L4)', () => {
+    /* Prevents D-L4: the same chip — the same date, the same tap — read
+       "FY start" here and "Year start" on the party form's opening section,
+       so a merchant met two names for one thing a screen apart. The two keys
+       are separate because the screens are; this keeps their words in step. */
+    const messages = [en, hi] as ReadonlyArray<Record<string, string>>;
+    messages.forEach((locale) => {
+      expect(locale['ledger.opening.fyStart']).toBe(locale['parties.form.opening.fyStart']);
+    });
+    expect(en['ledger.opening.fyStart']).toBe('Year start');
   });
 
   it('still sends the year start when the merchant picks it', async () => {
@@ -267,7 +282,7 @@ describe('the drawer', () => {
     await open();
 
     await user.type(screen.getByLabelText('Amount'), '2300');
-    await user.click(screen.getByRole('button', { name: 'FY start' }));
+    await user.click(screen.getByRole('button', { name: 'Year start' }));
     await user.click(screen.getByRole('button', { name: 'Save opening balance' }));
 
     await waitFor(() => expect(ledgerService.postOpeningBalance).toHaveBeenCalled());

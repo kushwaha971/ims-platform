@@ -259,6 +259,43 @@ describe('MembersSection — a ten-digit mobile (UAT D4)', () => {
   });
 });
 
+describe('MembersSection — a mobile another login already holds (NEW-2)', () => {
+  it('puts the server’s refusal on the Mobile field and keeps the dialog open', async () => {
+    /* Prevents NEW-2: the server answered a taken number with a 500, which the
+       merchant saw as a generic toast over a form with nothing highlighted —
+       no clue that the OPTIONAL mobile was the problem or that leaving it
+       blank would get the person added. The server now sends a 400 with a
+       field error on `mobile`; this pins that it lands on that control, is
+       announced through its `aria-describedby`, and that the dialog stays up
+       with what the owner typed so they only have to clear the one field. */
+    const message =
+      'This mobile number is already used by another login. Leave it blank or use a different number.';
+    memberService.createMember.mockRejectedValue({
+      code: 'validation_error',
+      message: 'Please check the highlighted fields.',
+      details: { mobile: [message] },
+      requestId: 'req-new2',
+      status: 400,
+      warnings: [],
+    });
+    const user = userEvent.setup();
+    renderWithProviders(<MembersSection />);
+
+    await user.click(await screen.findByRole('button', { name: 'Add member' }));
+    await user.type(await screen.findByLabelText(/Full name/), 'Ramesh Kumar');
+    await user.type(screen.getByLabelText(/Email address/), 'ramesh@shop.test');
+    await user.type(screen.getByLabelText(/Mobile number/), '9876543210');
+    await user.click(screen.getByRole('button', { name: 'Create login' }));
+
+    const mobile = screen.getByLabelText(/Mobile number/);
+    await waitFor(() => expect(mobile).toHaveAttribute('aria-invalid', 'true'));
+    expect(mobile).toHaveAccessibleDescription(expect.stringContaining(message));
+    expect(screen.getByLabelText(/Email address/)).toHaveAttribute('aria-invalid', 'false');
+    expect(screen.getByDisplayValue('ramesh@shop.test')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create login' })).toBeInTheDocument();
+  });
+});
+
 describe('MembersSection — the heading count and the invited row’s disc (QA O3)', () => {
   const INVITED = {
     ...MEMBER,

@@ -187,7 +187,7 @@ async function seed() {
   });
   // 2 — the accountant, created by the owner (not a registration)
   await step('accountant', async () => {
-    const acct = await must('POST', '/members', { full_name: state.accountant.name, email: state.accountant.email, role: 'accountant', mobile: '9845678901' },
+    const acct = await must('POST', '/members', { full_name: state.accountant.name, email: state.accountant.email, role: 'accountant', mobile: `98${String(state.stamp).slice(-8)}` },
       token, { 'Idempotency-Key': `m-${state.stamp}` });
     const tmp = acct.body.data.password;
     const acctToken = await login(state.accountant.email, tmp);
@@ -2514,7 +2514,7 @@ async function phaseF3(browser, state) {
     armed = true;
     const d1 = docs.length; const v1 = navs.length;
     const how = W.w < 1024 ? 'logo' : 'sidebar Customers link';
-    if (W.w < 1024) await page.getByRole('link', { name: /go to dashboard/ }).first().click();
+    if (W.w < 1024) await page.getByRole('link', { name: /go to Customers/i }).first().click();
     else await page.locator('nav a[href="/parties"]').first().click();
     await page.waitForURL((u) => u.pathname.startsWith('/login'), { timeout: 30000 }).catch(() => {});
     await page.waitForTimeout(1500);
@@ -2539,7 +2539,7 @@ async function phaseF3(browser, state) {
     // 4. Logo (or the sidebar Customers link — Dashboard left the sidebar in
     //    the UAT-fix batch) afterwards stays signed in.
     const v3 = navs.length;
-    if (W.w < 1024) await page.getByRole('link', { name: /go to dashboard/ }).first().click();
+    if (W.w < 1024) await page.getByRole('link', { name: /go to Customers/i }).first().click();
     else await page.locator('nav a[href="/parties"]').first().click();
     await page.waitForTimeout(3000);
     const me2 = await whoAmI(page);

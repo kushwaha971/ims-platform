@@ -90,7 +90,25 @@ describe('the printed statement carries the shop letterhead (UAT D3)', () => {
     expect(head.getByText('Kumar Kirana Store')).toBeInTheDocument();
     expect(await head.findByText('GSTIN 27ABCDE1234F1Z5')).toBeInTheDocument();
     expect(head.getByText('12 Station Road')).toBeInTheDocument();
-    expect(head.getByText('Phone 9822012345')).toBeInTheDocument();
+    // D-L1: grouped as the party row and the khata header show it.
+    expect(head.getByText('Phone +91 98220 12345')).toBeInTheDocument();
+  });
+
+  it('groups a stored E.164 shop phone the way the rest of the app does (D-L1)', async () => {
+    /* Prevents D-L1: the letterhead printed the tenant phone as stored,
+       "+919876543210", on the one sheet the merchant hands to a customer, while
+       every screen in the product shows "+91 98765 43210". */
+    statementService.getStatementShop.mockResolvedValue({
+      addressLines: [],
+      phone: '+919876543210',
+      gstin: null,
+    });
+
+    renderWithProviders(<PartyStatementPageContent id={PARTY_ID} />);
+
+    const head = within(await screen.findByTestId('statement-letterhead'));
+    expect(await head.findByText('Phone +91 98765 43210')).toBeInTheDocument();
+    expect(head.queryByText(/\+919876543210/)).not.toBeInTheDocument();
   });
 
   it('keeps the shop name and raises nothing when the letterhead cannot load', async () => {

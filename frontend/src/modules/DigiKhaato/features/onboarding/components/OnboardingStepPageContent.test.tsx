@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { store } from 'src/redux/store';
@@ -8,6 +8,7 @@ import { chooseOption } from 'src/tests/selectHelper';
 import en from 'locales/en.json';
 import hi from 'locales/hi.json';
 
+import { fetchSession } from '../../auth/redux/sessionThunk';
 import { resetOnboarding } from '../redux/onboardingSlice';
 import { createTenant } from '../redux/onboardingThunk';
 
@@ -25,6 +26,7 @@ jest.mock('../../auth/api/authService');
 
 const onboardingService = jest.requireMock('../api/onboardingService') as {
   createTenant: jest.Mock;
+  fetchCurrentTenant: jest.Mock;
   updateBusinessStep: jest.Mock;
   updateGstStep: jest.Mock;
   updateAddressStep: jest.Mock;
@@ -60,6 +62,9 @@ const tenant = (over: Record<string, unknown> = {}) => ({
 
 beforeEach(() => {
   store.dispatch(resetOnboarding());
+  // NEW-1 — step 1's idempotency key now outlives a reload in localStorage,
+  // which jsdom keeps across tests; each test starts with none persisted.
+  window.localStorage.clear();
   jest.clearAllMocks();
   authService.getSession.mockResolvedValue({
     user: { id: 'u1', name: 'Ramesh', mobile: '+919876543210', locale: 'en' },
@@ -80,7 +85,7 @@ describe('the wizard — step 1 (FR-2)', () => {
     expect(grid).toBeInTheDocument();
     // The nine types of FR-7's table, each with its one-line hint (§8).
     expect(screen.getAllByRole('radio')).toHaveLength(9);
-    expect(screen.getByText('Stock, bills, udhaar')).toBeInTheDocument();
+    expect(screen.getByText('Walk-in customers, udhaar')).toBeInTheDocument();
   });
 
   it('creates the tenant and advances to step 2', async () => {
@@ -339,8 +344,13 @@ describe('the wizard — step 4 (FR-5) and §9 Failed', () => {
 
     expect(screen.getByText('What we will set up')).toBeInTheDocument();
     expect(screen.getByText('Retail shop')).toBeInTheDocument();
-    expect(screen.getByText('7 days')).toBeInTheDocument();
-    expect(screen.getByText('NOS, KGS, GMS, LTR, PAC')).toBeInTheDocument();
+    // D-L5 — no defaults for unbuilt screens: bills (due days), items (units)
+    // and expenses (categories) are all "Soon" in the sidebar.
+    expect(screen.queryByText('Bill due in')).not.toBeInTheDocument();
+    expect(screen.queryByText('7 days')).not.toBeInTheDocument();
+    expect(screen.queryByText('Favourite units')).not.toBeInTheDocument();
+    expect(screen.queryByText('NOS, KGS, GMS, LTR, PAC')).not.toBeInTheDocument();
+    expect(screen.queryByText('Extra expense categories')).not.toBeInTheDocument();
     // FR-8 / canon §0.2 — defaults, never hard-wired behaviour. No longer
     // "change all of this in Settings": Settings is not built (UAT D8).
     expect(screen.getByText('These are starting defaults, not rules.')).toBeInTheDocument();
@@ -364,7 +374,7 @@ describe('the wizard — step 4 (FR-5) and §9 Failed', () => {
     expect(screen.queryByText('On')).not.toBeInTheDocument();
   });
 
-  it('applies the preset and lands on the dashboard', async () => {
+  it('applies the preset and lands on the customer list (there is no dashboard)', async () => {
     const user = userEvent.setup();
     await atSummary();
     onboardingService.completeOnboarding.mockResolvedValue({
@@ -376,7 +386,7 @@ describe('the wizard — step 4 (FR-5) and §9 Failed', () => {
     await user.click(screen.getByRole('button', { name: /Start using/ }));
 
     await waitFor(() => expect(onboardingService.completeOnboarding).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(replace).toHaveBeenCalledWith('/dashboard'));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/parties'));
   });
 
   /**
@@ -407,7 +417,7 @@ describe('the wizard — step 4 (FR-5) and §9 Failed', () => {
     await user.click(screen.getByRole('button', { name: /Start using/ }));
 
     await waitFor(() => expect(onboardingService.completeOnboarding).toHaveBeenCalledTimes(1));
-    expect(replace).not.toHaveBeenCalledWith('/dashboard');
+    expect(replace).not.toHaveBeenCalledWith('/parties');
     // The step is still on screen and still submittable …
     expect(screen.getByRole('button', { name: /Start using/ })).toBeInTheDocument();
     // … and the screen itself reports nothing.
@@ -572,5 +582,215 @@ describe('the wizard — step 1 no longer belongs to its tiles', () => {
     for (const tile of screen.getAllByRole('radio')) {
       expect(tile.className).toContain('min-h-[88px]');
     }
+  });
+});
+
+/**
+ * Defect NEW-1 (High) — "after step 1 is submitted, a browser refresh shows
+ * step 1 empty again, and re-submitting creates a SECOND business".
+ *
+ * The wizard's only memory of the business it had created was the slice's
+ * `tenantId` and its idempotency key, and a reload loses both. These tests
+ * reproduce a reload the way the app experiences one: an empty onboarding
+ * slice, and a session (`GET /auth/me`) whose active business is the one step
+ * 1 created.
+ */
+describe('the wizard — a reload mid-way (NEW-1)', () => {
+  const sessionWith = (activeTenant: Record<string, unknown> | null) => ({
+    user: { id: 'u1', name: 'Ramesh', mobile: '+919876543210', locale: 'en' },
+    activeTenant,
+    tenants: activeTenant ? [activeTenant] : [],
+    permissions: [],
+    enabledModules: [],
+    version: null,
+  });
+  const ownerTenant = (onboardingStep: number, role = 'owner') => ({
+    id: 't1',
+    name: 'Sharma General Store',
+    timezone: 'Asia/Kolkata',
+    role,
+    onboardingStep,
+  });
+  const reloadWithSession = async (activeTenant: Record<string, unknown> | null) => {
+    authService.getSession.mockResolvedValue(sessionWith(activeTenant));
+    await store.dispatch(fetchSession());
+    // What a reload does to the wizard: nothing it held in memory survives.
+    store.dispatch(resetOnboarding());
+  };
+
+  afterEach(async () => {
+    // Unmount first: restoring the session re-renders anything still mounted.
+    cleanup();
+    authService.getSession.mockResolvedValue(sessionWith(null));
+    await store.dispatch(fetchSession());
+  });
+
+  it('shows the saved business on step 1 and PATCHes it — no second business', async () => {
+    const user = userEvent.setup();
+    await reloadWithSession(ownerTenant(1));
+    onboardingService.fetchCurrentTenant.mockResolvedValue(tenant());
+    onboardingService.updateBusinessStep.mockResolvedValue({ tenant: tenant(), warnings: [] });
+
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+
+    // The saved values, not an empty form.
+    await waitFor(() =>
+      expect(screen.getByLabelText(/Business name/)).toHaveValue('Sharma General Store')
+    );
+    expect(screen.getByRole('radio', { name: /Retail shop/ })).toBeChecked();
+
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+
+    await waitFor(() => expect(onboardingService.updateBusinessStep).toHaveBeenCalledTimes(1));
+    expect(onboardingService.createTenant).not.toHaveBeenCalled();
+    expect(push).toHaveBeenCalledWith('/onboarding/step/2');
+  });
+
+  it('keeps a reload on step 3 on step 3, instead of throwing the merchant back to step 1', async () => {
+    await reloadWithSession(ownerTenant(2));
+    onboardingService.fetchCurrentTenant.mockResolvedValue(tenant({ onboardingStep: 2 }));
+
+    renderWithProviders(<OnboardingStepPageContent step={3} />);
+
+    expect(
+      await screen.findByRole('heading', { level: 2, name: en['onboarding.step3.title'] as string })
+    ).toBeInTheDocument();
+    expect(store.getState().onboarding.step).toBe(3);
+    expect(store.getState().onboarding.completedStep).toBe(2);
+  });
+
+  it('does not draw a step until the saved business is back', async () => {
+    await reloadWithSession(ownerTenant(1));
+    let answer: (value: unknown) => void = () => undefined;
+    onboardingService.fetchCurrentTenant.mockReturnValue(
+      new Promise((resolve) => {
+        answer = resolve;
+      })
+    );
+
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+
+    // An empty form mounted now would keep its empty values after the read.
+    expect(screen.queryByLabelText(/Business name/)).not.toBeInTheDocument();
+    answer(tenant());
+    await waitFor(() =>
+      expect(screen.getByLabelText(/Business name/)).toHaveValue('Sharma General Store')
+    );
+  });
+
+  it('falls back to an empty step 1 when the read fails, rather than hanging', async () => {
+    await reloadWithSession(ownerTenant(1));
+    onboardingService.fetchCurrentTenant.mockRejectedValue({
+      code: 'server_error',
+      message: 'Something went wrong.',
+      details: {},
+      requestId: 'req_r',
+      status: 500,
+      warnings: [],
+    });
+
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+
+    expect(await screen.findByLabelText(/Business name/)).toHaveValue('');
+    expect(onboardingService.fetchCurrentTenant).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not resume a FINISHED business — "Add a business" starts empty', async () => {
+    await reloadWithSession(ownerTenant(4));
+
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+
+    expect(screen.getByLabelText(/Business name/)).toHaveValue('');
+    expect(onboardingService.fetchCurrentTenant).not.toHaveBeenCalled();
+  });
+
+  it('does not resume a business the caller does not own', async () => {
+    await reloadWithSession(ownerTenant(1, 'staff'));
+
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+
+    expect(screen.getByLabelText(/Business name/)).toHaveValue('');
+    expect(onboardingService.fetchCurrentTenant).not.toHaveBeenCalled();
+  });
+
+  const fillStepOne = async (user: ReturnType<typeof userEvent.setup>) => {
+    await user.type(screen.getByLabelText(/Business name/), 'Sharma General Store');
+    await user.click(screen.getByRole('radio', { name: /Retail shop/ }));
+    await chooseOption(user, /^State/, /Maharashtra/);
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+  };
+
+  it('presents the SAME idempotency key after a reload, so a lost 201 is replayed', async () => {
+    const user = userEvent.setup();
+    onboardingService.createTenant.mockRejectedValue(new Error('the 201 was lost'));
+
+    const first = renderWithProviders(<OnboardingStepPageContent step={1} />);
+    await fillStepOne(user);
+    await waitFor(() => expect(onboardingService.createTenant).toHaveBeenCalledTimes(1));
+    const keyBeforeReload = onboardingService.createTenant.mock.calls[0]?.[1] as string;
+    first.unmount();
+
+    // The reload: the slice — where the key used to live — is wiped.
+    store.dispatch(resetOnboarding());
+    expect(store.getState().onboarding.tenantCreateKey).toBeNull();
+
+    onboardingService.createTenant.mockResolvedValue({ tenant: tenant(), warnings: [] });
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+    await fillStepOne(user);
+    await waitFor(() => expect(onboardingService.createTenant).toHaveBeenCalledTimes(2));
+
+    expect(onboardingService.createTenant.mock.calls[1]?.[1]).toBe(keyBeforeReload);
+  });
+
+  it('forgets the key once the business exists, so "Add a business" cannot replay it', async () => {
+    const user = userEvent.setup();
+    onboardingService.createTenant.mockResolvedValue({ tenant: tenant(), warnings: [] });
+
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+    expect(window.localStorage.getItem('ub.onboarding.tenantCreateKey')).not.toBeNull();
+    await fillStepOne(user);
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/onboarding/step/2'));
+    const usedKey = JSON.stringify(onboardingService.createTenant.mock.calls[0]?.[1]);
+    expect(window.localStorage.getItem('ub.onboarding.tenantCreateKey')).not.toBe(usedKey);
+  });
+
+  it('goes on from where a business the SERVER resumed had got to, not back to step 2', async () => {
+    // The client could not resume (say the read failed) and POSTed step 1; the
+    // server's NEW-1 guard answered with the existing business, at step 3.
+    const user = userEvent.setup();
+    onboardingService.createTenant.mockResolvedValue({
+      tenant: tenant({ onboardingStep: 3 }),
+      warnings: [],
+    });
+
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+    await fillStepOne(user);
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/onboarding/step/4'));
+    expect(push).not.toHaveBeenCalledWith('/onboarding/step/2');
+  });
+
+  it('replaces a key the server calls spent (idempotency_conflict) and retries once', async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem('ub.onboarding.tenantCreateKey', JSON.stringify('spent-key'));
+    onboardingService.createTenant
+      .mockRejectedValueOnce({
+        code: 'idempotency_conflict',
+        message: 'This key was used with a different request.',
+        details: {},
+        requestId: 'req_c',
+        status: 409,
+        warnings: [],
+      })
+      .mockResolvedValueOnce({ tenant: tenant(), warnings: [] });
+
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+    await fillStepOne(user);
+
+    await waitFor(() => expect(onboardingService.createTenant).toHaveBeenCalledTimes(2));
+    expect(onboardingService.createTenant.mock.calls[0]?.[1]).toBe('spent-key');
+    expect(onboardingService.createTenant.mock.calls[1]?.[1]).not.toBe('spent-key');
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/onboarding/step/2'));
   });
 });

@@ -22,6 +22,10 @@ import { clearCookie, LOCALE_COOKIE, readCookie } from 'src/utils/cookieUtils';
  * element, so that is where these tests look.
  */
 jest.mock('modules/DigiKhaato/features/auth/api/authService');
+jest.mock('modules/DigiKhaato/features/parties/api/partyService', () => ({
+  ...jest.requireActual('modules/DigiKhaato/features/parties/api/partyService'),
+  listParties: jest.fn(),
+}));
 
 const mockReplace = jest.fn();
 const mockPush = jest.fn();
@@ -35,7 +39,13 @@ const authService = jest.requireMock('modules/DigiKhaato/features/auth/api/authS
   logout: jest.Mock;
 };
 
-const signIn = (): void => {
+const partyService = jest.requireMock('modules/DigiKhaato/features/parties/api/partyService') as {
+  listParties: jest.Mock;
+};
+
+const signIn = (
+  permissions: readonly string[] = ['parties.party.read', 'ledger.entry.read']
+): void => {
   store.dispatch(
     sessionLoaded({
       user: {
@@ -54,7 +64,7 @@ const signIn = (): void => {
         role: 'owner',
       },
       tenants: [{ id: 't1', name: 'Kumar Kirana Store', timezone: 'Asia/Kolkata', role: 'owner' }],
-      permissions: ['parties.party.read', 'ledger.entry.read'] as never,
+      permissions: [...permissions] as never,
       enabledModules: ['parties', 'ledger'],
       version: 1,
     })
@@ -123,6 +133,56 @@ describe('UAT D2 — the phone and tablet chrome', () => {
     const sheet = await screen.findByRole('dialog', { name: 'Search parties' });
     const input = within(sheet).getByRole('combobox', { name: 'Search parties' });
     expect(input).toHaveFocus();
+  });
+
+  it('has no search button for a role that cannot read parties', () => {
+    /* D2 test gap: the button is meant to be ABSENT — not disabled, not a sheet
+       that opens onto a 403 — for a role without `parties.party.read`, on the
+       same rule the search itself uses. Nothing pinned it, so a refactor that
+       dropped the `useCanSearchParties` guard would offer an accountant-style
+       role a search that can only ever fail. */
+    signIn(['ledger.entry.read']);
+    renderShell();
+
+    const header = within(mobileHeader());
+    expect(header.getByRole('button', { name: 'Open menu' })).toBeInTheDocument();
+    expect(header.queryByRole('button', { name: 'Search parties' })).not.toBeInTheDocument();
+    expect(partyService.listParties).not.toHaveBeenCalled();
+  });
+
+  it('shows a result’s mobile grouped as the party list does (D-L2)', async () => {
+    /* Prevents D-L2: the phone search sheet printed the stored E.164
+       "+919876543210" under the party's name, while the party row, the khata
+       header and the reminder sheet all show "+91 98765 43210" — three
+       spellings of one number on the screen a merchant uses to check they
+       have the right Ramesh. */
+    partyService.listParties.mockResolvedValue({
+      rows: [
+        {
+          id: 'p1',
+          name: 'Ramesh Traders',
+          displayCode: 'C-001',
+          mobile: '+919876543210',
+          isCustomer: true,
+          isSupplier: false,
+          balance: '1200.00',
+          status: 'active',
+          lastActivityAt: null,
+          tags: [],
+        },
+      ],
+      meta: { page: 1, pageSize: 8, total: 1, totalPages: 1 },
+    });
+    const user = userEvent.setup();
+    renderShell();
+
+    await user.click(within(mobileHeader()).getByRole('button', { name: 'Search parties' }));
+    const sheet = within(await screen.findByRole('dialog', { name: 'Search parties' }));
+    await user.type(sheet.getByRole('combobox', { name: 'Search parties' }), 'Ram');
+
+    const option = await sheet.findByRole('option', { name: /Ramesh Traders/ });
+    expect(within(option).getByText('+91 98765 43210')).toBeInTheDocument();
+    expect(within(option).queryByText('+919876543210')).not.toBeInTheDocument();
   });
 });
 

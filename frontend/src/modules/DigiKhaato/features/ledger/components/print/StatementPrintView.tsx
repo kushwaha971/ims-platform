@@ -3,12 +3,14 @@
 import { UbAmount, UbBox, UbStack, UbText } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { formatInr } from 'src/utils/money';
+import { formatPhoneForDisplay } from 'src/utils/share';
 
 import { writtenOffLines } from '../../view-model/entryDisplay';
 import {
   balanceDirection,
   balanceLabelId,
   isStruckThrough,
+  rowTitleId,
   unsigned,
 } from '../../view-model/statementDisplay';
 
@@ -99,7 +101,9 @@ export function StatementPrintView({
             ))}
             {shop?.phone && (
               <UbText variant="caption" tone="secondary">
-                {t('ledger.statement.shop.phone', { phone: shop.phone })}
+                {/* D-L1: grouped as everywhere else in the product, not the
+                    stored "+919876543210". */}
+                {t('ledger.statement.shop.phone', { phone: formatPhoneForDisplay(shop.phone) })}
               </UbText>
             )}
             {shop?.gstin && (
@@ -279,7 +283,8 @@ function StatementPrintTable({
  * not printed twice (CR-2026-09-24-A).
  */
 function printParticulars(row: StatementRow, t: (id: string) => string): string {
-  const title = row.note.trim() || t(`ledger.entry.type.${row.entryType}`);
+  const titleId = rowTitleId(row);
+  const title = titleId ? t(titleId) : row.note.trim();
   const reason = row.reason && row.reason.trim() !== row.note.trim() ? ` · ${row.reason}` : '';
   if (row.entryType === 'write_off') {
     const label = t('ledger.entry.type.write_off');

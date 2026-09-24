@@ -128,6 +128,7 @@ export {
 } from './mlOverlayPrimitives';
 
 export type {
+  MLDialogFooterOrder,
   MLDialogProps,
   MLDialogTitleProps,
   MLMenuItemProps,
