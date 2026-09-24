@@ -16,7 +16,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from apps.common.money import D, q2
-from apps.sales.services.tax_engine import EngineLine
+from apps.tax.services.tax_engine import EngineLine
 
 HSN_RE = re.compile(r"^(\d{4}|\d{6}|\d{8})$")
 ZERO_RATE = Decimal("0.000")

@@ -18,7 +18,7 @@ from apps.sales.constants import KIND_FOR_GST_TYPE, NOTES_MAX, WALK_IN_NAME_MAX
 from apps.sales.models import SalesDocument, SalesDocumentLine
 from apps.sales.services import settings as sales_settings
 from apps.sales.services.lines import build_lines
-from apps.sales.services.tax_engine import EngineDocument, compute_document_totals
+from apps.tax.services.tax_engine import EngineDocument, compute_document_totals
 
 HEADER_FIELDS = (
     "party_id",
