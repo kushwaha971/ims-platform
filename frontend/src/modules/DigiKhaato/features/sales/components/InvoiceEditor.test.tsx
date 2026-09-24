@@ -25,7 +25,14 @@ jest.mock('../../business-profile/api/businessProfileService', () => ({
 }));
 jest.mock('../../inventory/api/mastersService', () => ({
   listTaxRates: jest.fn(async () => [
-    { code: 'GST5', name: 'GST 5%', rate: '5.000', cessRate: '0.000', effectiveTo: null, isCurrent: true },
+    {
+      code: 'GST5',
+      name: 'GST 5%',
+      rate: '5.000',
+      cessRate: '0.000',
+      effectiveTo: null,
+      isCurrent: true,
+    },
   ]),
 }));
 jest.mock('next/navigation', () => ({

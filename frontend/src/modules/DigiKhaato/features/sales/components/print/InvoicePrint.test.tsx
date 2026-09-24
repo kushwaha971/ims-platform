@@ -107,9 +107,7 @@ it('prints the amount in words and the grand total', () => {
 it('T-SAL03-5: the thermal slip truncates a long name to its 28-character budget', () => {
   // A name that wraps on 80 mm paper pushes the amount onto a line of its own.
   const long = 'Premium Basmati Rice Extra Long Grain 5kg';
-  renderWithProviders(
-    <Thermal doc={makeDocument({ lines: [wireLine({ description: long })] })} />
-  );
+  renderWithProviders(<Thermal doc={makeDocument({ lines: [wireLine({ description: long })] })} />);
   const sheet = screen.getByTestId('print-thermal');
   expect(sheet).not.toHaveTextContent(long);
   expect(within(sheet).getByText(/^Premium Basmati Rice Extra …$/)).toBeInTheDocument();

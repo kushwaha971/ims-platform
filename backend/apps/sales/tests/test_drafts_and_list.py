@@ -137,12 +137,23 @@ def test_refresh_overdue_is_idempotent_and_never_touches_paid(owner: Any, make_i
     assert SalesDocument.objects.get(pk=paid["id"]).status == "paid"
 
 
-def test_module_off_guard_counts_drafts(owner: Any, shop: Any) -> None:
-    """PLT-06 FR-4 — the sales module cannot be switched off while drafts exist."""
-    from apps.platform_app.services.guards import blocking_rows_for_module_off
+def test_module_off_guard_counts_drafts(owner: Any, shop: Any, monkeypatch: Any) -> None:
+    """PLT-06 FR-4 — the sales module cannot be switched off while drafts exist.
 
+    The registry is module state that other suites reset, so this test gives
+    `register_guards()` a fresh registry and checks what IT wires, rather than
+    depending on what `ready()` left behind in whatever order the suite ran."""
+    from apps.platform_app.services import guards as platform_guards
+    from apps.sales.services import guards as sales_guards
+
+    monkeypatch.setattr(platform_guards, "_MODULE_OFF_GUARDS", {})
+    monkeypatch.setattr(platform_guards, "_GST_LOCK_COUNTERS", [])
+    monkeypatch.setattr(sales_guards, "_REGISTERED", False)
+    sales_guards.register_guards()
+
+    assert platform_guards.blocking_rows_for_module_off(shop, "sales") == 0
     draft(owner)
-    assert blocking_rows_for_module_off(shop, "sales") >= 1
+    assert platform_guards.blocking_rows_for_module_off(shop, "sales") == 1
 
 
 @pytest.mark.django_db(transaction=True)

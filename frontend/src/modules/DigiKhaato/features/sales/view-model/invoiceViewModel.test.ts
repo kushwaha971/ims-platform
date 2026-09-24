@@ -1,11 +1,7 @@
 import { invoiceListQuery } from '../api/salesService';
 import { makeDocument, wireLine } from '../testing/salesFixtures';
 
-import {
-  daysOverdue,
-  invoiceFiltersFromQuery,
-  invoiceQueryFromFilters,
-} from './invoiceDisplay';
+import { daysOverdue, invoiceFiltersFromQuery, invoiceQueryFromFilters } from './invoiceDisplay';
 import {
   emptyInvoiceForm,
   emptyLine,

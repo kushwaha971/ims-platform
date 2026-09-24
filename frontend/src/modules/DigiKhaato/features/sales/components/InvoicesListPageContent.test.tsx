@@ -35,7 +35,12 @@ jest.mock('next/navigation', () => {
   };
   const read = () => mockSearch;
   return {
-    useRouter: () => ({ push: jest.fn(), replace: mockReplace, back: jest.fn(), prefetch: jest.fn() }),
+    useRouter: () => ({
+      push: jest.fn(),
+      replace: mockReplace,
+      back: jest.fn(),
+      prefetch: jest.fn(),
+    }),
     useSearchParams: () => new URLSearchParams(useSyncExternalStore(subscribe, read, read)),
     usePathname: () => '/sales/invoices',
   };
