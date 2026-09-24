@@ -1,4 +1,8 @@
 import {
+  fetchActors,
+  fetchAuditRows,
+} from 'modules/DigiKhaato/features/audit-log/redux/auditLogThunk';
+import {
   confirmPasswordReset,
   passwordLogin,
   registerAccount,
@@ -10,6 +14,14 @@ import {
   logout,
   switchTenant,
 } from 'modules/DigiKhaato/features/auth/redux/sessionThunk';
+import {
+  fetchBranding,
+  saveBranding,
+} from 'modules/DigiKhaato/features/branding/redux/brandingThunk';
+import {
+  fetchBusinessProfile,
+  saveBusinessProfile,
+} from 'modules/DigiKhaato/features/business-profile/redux/businessProfileThunk';
 import {
   fetchLedgerAging,
   fetchLedgerSummary,
@@ -56,6 +68,18 @@ import {
   updatePartyTag,
 } from 'modules/DigiKhaato/features/parties/redux/partyTagThunk';
 import { fetchPlanLimits } from 'modules/DigiKhaato/features/plan/redux/planThunk';
+import {
+  fetchDevices,
+  logoutEverywhere,
+  renameDevice,
+  revokeDevice,
+} from 'modules/DigiKhaato/features/sessions/redux/sessionsThunk';
+import {
+  fetchSettings,
+  fetchSettingsDefaults,
+  saveSettingsSection,
+  toggleModules,
+} from 'modules/DigiKhaato/features/settings/redux/settingsThunk';
 import {
   fetchInvitations,
   inviteMember,
@@ -112,6 +136,18 @@ export const QUERIES = {
   resumeOnboarding,
   // M2 — which unfinished business "Add a business" would continue
   findResumableBusiness,
+  // PLT-06 — the settings screen, and the product defaults "Reset" offers
+  fetchSettings,
+  fetchSettingsDefaults,
+  // PLT-07 — the business profile (GET /tenants/current)
+  fetchBusinessProfile,
+  // WLB-01 — the resolved branding with each value's source
+  fetchBranding,
+  // PLT-08 — one page of the activity log, and its member filter
+  fetchAuditRows,
+  fetchActors,
+  // PLT-09 — the caller's own live sessions
+  fetchDevices,
 } as const;
 
 export const MUTATIONS = {
@@ -161,6 +197,17 @@ export const MUTATIONS = {
   deletePartyTag,
   mergePartyTags,
   bulkTagPartiesThunk,
+  // PLT-06 — a settings section, and the module switches
+  saveSettingsSection,
+  toggleModules,
+  // PLT-07 — the business profile
+  saveBusinessProfile,
+  // WLB-01 — branding, and PLT-07's signature through the same endpoint
+  saveBranding,
+  // PLT-09 — devices
+  renameDevice,
+  revokeDevice,
+  logoutEverywhere,
 } as const;
 
 export type TQueryName = keyof typeof QUERIES;

@@ -385,4 +385,30 @@ export const INVALIDATION: TInvalidationMap = {
   // a `patch` this slice does not perform would be worse than no entry at all,
   // because the next reader would stop looking for the refetch.
   bulkTagPartiesThunk: { refetch: ['partyList'], stale: ['partyTag'] },
+
+  // ── PLT-06 / PLT-07 / WLB-01 — settings, profile, branding ────────────────
+  // Each save answers with the whole resource, which its own slice writes in
+  // place. The session is re-read explicitly by the hook after each of these
+  // (`fetchSession`), because the tenant's name, branding and modules live in
+  // `active_tenant` and the session slice does not take the stale signal. The
+  // statement's letterhead needs nothing: it is fetched on every statement
+  // visit (UAT D3).
+  saveSettingsSection: { patch: [['settings', 'data']] },
+  // The module list is in the settings payload and gates the navigation; the
+  // hook re-reads both. What THIS action writes is the switch's own status.
+  toggleModules: { patch: [['settings', 'modulesStatus']] },
+  saveBusinessProfile: {
+    patch: [
+      ['businessProfile', 'data'],
+      ['businessProfile', 'warnings'],
+    ],
+  },
+  saveBranding: { patch: [['branding', 'data']] },
+
+  // ── PLT-09 — devices ──────────────────────────────────────────────────────
+  // The list the member is looking at, edited in place from the answer.
+  renameDevice: { patch: [['sessions', 'items']] },
+  revokeDevice: { patch: [['sessions', 'items']] },
+  // AC-3: this device is signed out too, so it is a logout.
+  logoutEverywhere: { resetAll: true },
 };

@@ -337,7 +337,23 @@
   "axios interceptor every route loads; the server field-code mapping (NEW-2",
   "message in Hindi) rides in the same layer. Both are correctness fixes with",
   "no lazy seam — the guard must run on the first request. Shared budget 114,",
-  "first-load budgets on the listed routes +1. /parties/[id] route 97 → 98: the archive-blocked focus move (M4)."
+  "first-load budgets on the listed routes +1. /parties/[id] route 97 → 98: the archive-blocked focus move (M4).",
+  "",
+  "── 24 Sep 2026: Track T1 — the five settings routes (PROVISIONAL) ─────────",
+  "/settings, /settings/profile, /settings/branding, /settings/activity and",
+  "/settings/devices are new. These five lines are NOT measured: `next build`",
+  "cannot run in the T1 worktree, because Turbopack refuses its symlinked",
+  "node_modules ('points out of the filesystem root'). Each is set by analogy",
+  "with the nearest measured route, and the first bundle:check after merge must",
+  "replace them with measured + ~1 KB, the ratchet this file uses:",
+  "  /settings           ~ /settings/team (RHF + Yup form, radio, confirm)",
+  "  /settings/profile   ~ /onboarding/step/[n] (two UbSelects, phone, GST)",
+  "  /settings/branding  ~ /settings/team (form, textareas, colour, file)",
+  "  /settings/activity  ~ /ledger/aging + the date range (grid, filters)",
+  "  /settings/devices   cards and a confirm; the rename form is dynamic()",
+  "Every route-local slice here is injected lazily (CR-134), so the shell",
+  "should move only by the five thunk modules the invalidation registry now",
+  "imports and their services — small, but also unmeasured."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -770,6 +786,26 @@
   },
   "/settings/plan": {
    "firstLoad": 304
+  },
+  "/settings": {
+   "route": 92,
+   "firstLoad": 332
+  },
+  "/settings/profile": {
+   "route": 100,
+   "firstLoad": 340
+  },
+  "/settings/branding": {
+   "route": 92,
+   "firstLoad": 332
+  },
+  "/settings/activity": {
+   "route": 98,
+   "firstLoad": 338
+  },
+  "/settings/devices": {
+   "route": 72,
+   "firstLoad": 312
   }
  },
  "//ignoreRoutes": [
