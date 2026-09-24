@@ -75,6 +75,68 @@ UNITS: tuple[tuple[str, str, bool], ...] = (
     ("ROL", "Rolls", False),
     ("TON", "Tonnes", True),
     ("HRS", "Hours", True),
+    # INV-04 FR-1 names three more UQC codes the Sprint 0 list did not carry.
+    ("BDL", "Bundles", False),
+    ("QTL", "Quintal", True),
+    ("CAN", "Cans", False),
+)
+
+# INV-01 FR-4 — a STARTER HSN/SAC master, so HSN search answers something on a
+# fresh install ("rice" → 1006 → GST5 is the Sprint 6 demo). Part 32 names a
+# `seed_hsn` loading the full public master; that file is a download this repo
+# does not carry, and FR-4 allows free typing of any code not in the master (with
+# the `hsn_unknown` warning), so a partial master degrades to a hint, not a block.
+# Default slabs are the GST-2.0 ones in force from 22 Sep 2025 — a suggestion the
+# merchant confirms, never a rate stored on the item (INV-01 BR-4).
+# (code, description, default_tax_code, is_service)
+HSN_STARTER: tuple[tuple[str, str, str, bool], ...] = (
+    ("0401", "Milk and cream, fresh, not concentrated", "EXEMPT", False),
+    ("0405", "Butter, ghee and other fats derived from milk", "GST5", False),
+    ("0406", "Cheese and paneer", "GST5", False),
+    ("0407", "Birds' eggs, in shell", "EXEMPT", False),
+    ("0701", "Potatoes, fresh or chilled", "EXEMPT", False),
+    ("0703", "Onions, garlic, fresh or chilled", "EXEMPT", False),
+    ("0713", "Dried leguminous vegetables (pulses, dal)", "GST5", False),
+    ("0801", "Coconuts, cashew nuts", "GST5", False),
+    ("0902", "Tea", "GST5", False),
+    ("0901", "Coffee", "GST5", False),
+    ("0904", "Pepper and chilli, dried or ground", "GST5", False),
+    ("0910", "Ginger, turmeric and other spices", "GST5", False),
+    ("1001", "Wheat and meslin", "EXEMPT", False),
+    ("1006", "Rice", "GST5", False),
+    ("1101", "Wheat or meslin flour (atta, maida)", "GST5", False),
+    ("1507", "Soya-bean oil", "GST5", False),
+    ("1508", "Groundnut oil", "GST5", False),
+    ("1514", "Rapeseed, colza or mustard oil", "GST5", False),
+    ("1701", "Cane or beet sugar", "GST5", False),
+    ("1704", "Sugar confectionery", "GST5", False),
+    ("1806", "Chocolate and food preparations containing cocoa", "GST5", False),
+    ("1902", "Pasta, noodles, vermicelli", "GST5", False),
+    ("1905", "Bread, biscuits, cakes and bakery products", "GST5", False),
+    ("2106", "Food preparations n.e.s. (namkeen, bhujia)", "GST5", False),
+    ("2201", "Waters, including mineral and aerated water, unsweetened", "GST5", False),
+    ("2202", "Aerated and sweetened beverages", "GST40", False),
+    ("2501", "Salt", "EXEMPT", False),
+    ("2523", "Portland cement", "GST18", False),
+    ("3305", "Hair preparations (shampoo, hair oil)", "GST5", False),
+    ("3306", "Oral hygiene preparations (toothpaste)", "GST5", False),
+    ("3401", "Soap, washing bars", "GST5", False),
+    ("3402", "Detergents and washing preparations", "GST18", False),
+    ("4820", "Registers, account books, notebooks", "EXEMPT", False),
+    ("6109", "T-shirts and vests, knitted", "GST5", False),
+    ("6403", "Footwear with outer soles of rubber or leather", "GST5", False),
+    ("8415", "Air-conditioning machines", "GST18", False),
+    ("8517", "Telephones, mobile phones", "GST18", False),
+    ("8528", "Monitors and television receivers", "GST18", False),
+    ("9608", "Ball-point pens, markers", "GST18", False),
+    ("9954", "Construction services", "GST18", True),
+    ("9963", "Accommodation, food and beverage services", "GST5", True),
+    ("9964", "Passenger transport services", "GST5", True),
+    ("9971", "Financial and related services", "GST18", True),
+    ("9983", "Other professional, technical and business services", "GST18", True),
+    ("9985", "Support services", "GST18", True),
+    ("9987", "Maintenance, repair and installation services", "GST18", True),
+    ("9997", "Other services", "GST18", True),
 )
 
 # Part 21 §21.3.10: the seeded expense categories.
@@ -107,6 +169,7 @@ class Command(BaseCommand):
             "roles": seed_roles(),
             "tax_rates": seed_tax_rates(),
             "units": seed_units(),
+            "hsn": seed_hsn(),
         }
         if opts["tenant"]:
             from apps.platform_app.models import Tenant
@@ -176,6 +239,24 @@ def seed_units() -> int:
             tenant=None,
             code=code,
             defaults={"name": name, "allow_decimal": allow_decimal, "is_system": True},
+        )
+        created += int(was_created)
+    return created
+
+
+def seed_hsn() -> int:
+    """The starter HSN/SAC master (INV-01 FR-4). Idempotent by code."""
+    from apps.tax.models import HsnCode
+
+    created = 0
+    for code, description, tax_code, is_service in HSN_STARTER:
+        _row, was_created = HsnCode.objects.get_or_create(
+            code=code,
+            defaults={
+                "description": description,
+                "default_tax_code": tax_code,
+                "is_service": is_service,
+            },
         )
         created += int(was_created)
     return created
