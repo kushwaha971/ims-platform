@@ -66,6 +66,26 @@ def test_the_party_export_is_the_filtered_list(owner: Any, tenant: Any) -> None:
     assert [r[0] for r in rows[1:11]] == [p["name"] for p in listed["data"]]
 
 
+def test_the_export_answers_the_accept_header_the_browser_client_sends(
+    owner: Any, tenant: Any
+) -> None:
+    """The web client FETCHES the export, and its shared axios instance says
+    `Accept: application/json`. DRF picks the renderer from `?format=csv` and
+    then checks it against Accept, so that request is 406 — which is what every
+    browser export answered on the look stack while the tests above, whose
+    client sends no Accept at all, passed. The client now sends
+    `text/csv, application/json` (exportService.EXPORT_ACCEPT); this pins both
+    halves of that contract, so neither side can drift alone.
+    """
+    PartyFactory(tenant=tenant, name="Kumar")
+    url = _parties("?format=csv")
+    ok = owner.get(url, HTTP_SEC_FETCH_SITE="same-origin", HTTP_ACCEPT="text/csv, application/json")
+    assert ok.status_code == 200
+    assert len(_csv(ok)) == 2
+    json_only = owner.get(url, HTTP_SEC_FETCH_SITE="same-origin", HTTP_ACCEPT="application/json")
+    assert json_only.status_code == 406
+
+
 def test_amounts_are_plain_numbers_and_formulas_are_neutralised(owner: Any, tenant: Any) -> None:
     """FR-4 / EC-4 — `2300.00`, not `₹2,300.00`; a party named `=SUM(...)` is text."""
     PartyFactory(tenant=tenant, name="=SUM(A1:A9)", balance=Decimal("-2300.00"))

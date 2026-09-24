@@ -167,14 +167,28 @@ TEMPLATE_ROWS = (
 )
 
 
+def _mobile_key(stored: str) -> str:
+    """A stored party mobile in the spelling `coerce.mobile` produces, or as-is."""
+    try:
+        return coerce.mobile(stored) or stored
+    except CoerceError:
+        return stored
+
+
 def preflight(tenant: Any) -> dict:
     """Everything a row needs to be judged without a query of its own (§20)."""
     from apps.common.dates import fy_bounds, tenant_today
     from apps.parties.models import Party, Tag
 
     today = tenant_today(tenant)
+    # Keyed by the NORMALISED number. The party API accepts `9811100000` as
+    # well as `+919811100000` and stores what it was sent, so a book written
+    # partly by an API client holds both spellings; keyed by the raw value, a
+    # sheet row (always E.164 after `coerce.mobile`) walked past the first
+    # kind and created the same person twice — the partial unique index
+    # cannot see it either, because the two strings differ.
     existing_mobiles = {
-        mobile: (str(pk), name)
+        _mobile_key(mobile): (str(pk), name)
         for pk, mobile, name in Party.objects.filter(tenant=tenant, mobile__isnull=False)
         .values_list("id", "mobile", "name")
         .iterator(chunk_size=2000)

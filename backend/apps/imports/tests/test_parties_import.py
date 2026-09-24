@@ -162,6 +162,22 @@ def test_re_uploading_the_same_file_reports_every_mobile_as_already_there(
     assert refused.json()["error"]["details"]["error_rows"] == again["error_rows"]
 
 
+def test_a_party_stored_with_a_ten_digit_mobile_is_still_already_there(
+    owner: Any, tenant: Any, django_capture_on_commit_callbacks: Any
+) -> None:
+    """The party API stores `9876543210` as sent, while a sheet row is E.164.
+
+    Found on the look stack: a party created through the API with a bare
+    ten-digit number was not reported, because preflight keyed the book by the
+    raw stored string and `+919876543210` is a different string — so the
+    import would have made the same person twice, and the partial unique index
+    cannot catch it for the same reason.
+    """
+    Party.objects.create(tenant=tenant, name="Already Here", mobile="9876543210")
+    job = _ready(owner, GOOD, django_capture_on_commit_callbacks)
+    assert (2, "duplicate_existing") in {(e["row"], e["code"]) for e in job["errors"]}
+
+
 def test_errors_carry_row_column_value_code_and_message(
     owner: Any, django_capture_on_commit_callbacks: Any
 ) -> None:
