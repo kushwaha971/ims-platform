@@ -28,6 +28,12 @@ import {
   fetchStatementShop,
 } from 'modules/DigiKhaato/features/ledger/redux/statementThunk';
 import {
+  fetchNotifications,
+  fetchUnreadCount,
+  readAllNotifications,
+  readNotification,
+} from 'modules/DigiKhaato/features/notifications/redux/notificationThunk';
+import {
   completeOnboarding,
   createTenant,
   findResumableBusiness,
@@ -112,6 +118,9 @@ export const QUERIES = {
   resumeOnboarding,
   // M2 — which unfinished business "Add a business" would continue
   findResumableBusiness,
+  // NTF-01 — the bell's count and the inbox panel
+  fetchUnreadCount,
+  fetchNotifications,
 } as const;
 
 export const MUTATIONS = {
@@ -161,6 +170,9 @@ export const MUTATIONS = {
   deletePartyTag,
   mergePartyTags,
   bulkTagPartiesThunk,
+  // NTF-01 — read state
+  readNotification,
+  readAllNotifications,
 } as const;
 
 export type TQueryName = keyof typeof QUERIES;

@@ -6,6 +6,7 @@ import { store } from 'src/redux/store';
 
 import 'modules/DigiKhaato/features/ledger/redux/agingSlice';
 import 'modules/DigiKhaato/features/ledger/redux/statementSlice';
+import 'modules/DigiKhaato/features/notifications/redux/notificationSlice';
 import partyListReducer, {
   type PartyListState,
 } from 'modules/DigiKhaato/features/parties/redux/partyListSlice';
@@ -43,7 +44,7 @@ describe('invalidation map', () => {
   );
 
   it('names only real store keys', () => {
-    /* The two lazy slices (CR-134) are imported above, which is what injects
+    /* The lazy slices (CR-134) are imported above, which is what injects
        them — a lazy slice is a real key from the moment its route's chunk
        loads, and before that a `stale` naming it is a no-op by design (the
        slice starts from its initial state when it arrives). Its key appears in

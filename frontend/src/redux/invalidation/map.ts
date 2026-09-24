@@ -385,4 +385,10 @@ export const INVALIDATION: TInvalidationMap = {
   // a `patch` this slice does not perform would be worse than no entry at all,
   // because the next reader would stop looking for the refetch.
   bulkTagPartiesThunk: { refetch: ['partyList'], stale: ['partyTag'] },
+
+  // ── NTF-01 — the inbox ────────────────────────────────────────────────────
+  // Both write the read state onto the rows the slice holds and the unread
+  // count beside them, from the response; nothing else caches notifications.
+  readNotification: { patch: [['notifications', 'items']] },
+  readAllNotifications: { patch: [['notifications', 'items']] },
 };

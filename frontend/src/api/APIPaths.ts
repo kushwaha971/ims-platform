@@ -134,6 +134,9 @@ export const API_PATHS = {
   REPORT_EXPORT: (id: string) => `/reports/exports/${seg(id)}`,
   NOTIFICATIONS: '/notifications',
   NOTIFICATION_READ: (id: string) => `/notifications/${seg(id)}/read`,
+  /** NTF-01 FR-8 — the bell's one number, and the catch-up. */
+  NOTIFICATIONS_UNREAD_COUNT: '/notifications/unread-count',
+  NOTIFICATIONS_READ_ALL: '/notifications/read-all',
   ATTACHMENTS: '/attachments',
   IMPORTS: '/imports',
   IMPORT: (id: string) => `/imports/${seg(id)}`,
