@@ -405,6 +405,19 @@ describe('where the reason shows on a corrected line', () => {
   });
 });
 
+describe("an unpaid expense's row (EXP-01 FR-4)", () => {
+  it('says the money is owed for an expense, not that it came in', () => {
+    /** An unpaid rent posts a credit on the landlord's khata. Labelled by
+     *  direction alone it read "You got ₹12,000" — a payment nobody made,
+     *  the write-off's defect one feature later. */
+    expect(entryAmountView('credit', 'expense')).toEqual({
+      tone: 'payable',
+      sign: 'none',
+      labelId: 'ledger.entry.expenseOwed',
+    });
+  });
+});
+
 describe('a write-off row', () => {
   it('says it was written off, not that money came in', () => {
     /** The first write-off sweep printed "You got ₹2,300" on a balance that

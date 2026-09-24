@@ -64,6 +64,9 @@ export interface PaymentMethodFieldProps {
   readonly invalid?: boolean;
   readonly describedBy?: string;
   readonly disabled?: boolean;
+  /** The chip row's accessible name. Defaults to the ledger's "Received via";
+   *  an expense passes "Paid by", because there the money went the other way. */
+  readonly ariaLabel?: string;
 }
 
 export function PaymentMethodField({
@@ -76,6 +79,7 @@ export function PaymentMethodField({
   invalid,
   describedBy,
   disabled,
+  ariaLabel,
 }: Readonly<PaymentMethodFieldProps>): React.JSX.Element {
   const options = useMemo(
     () =>
@@ -102,7 +106,7 @@ export function PaymentMethodField({
     <UbStack gap={2}>
       <UbChoiceChips<Choice>
         id={id}
-        ariaLabel={t('ledger.entry.mode')}
+        ariaLabel={ariaLabel ?? t('ledger.entry.mode')}
         value={selected}
         options={options}
         invalid={invalid}

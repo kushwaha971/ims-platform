@@ -137,7 +137,11 @@ export const API_PATHS = {
   PAYMENTS_UPI_INTENT: '/payments/upi-intent',
   PAYMENTS_QR: '/payments/qr.svg',
   EXPENSES: '/expenses',
+  EXPENSE: (id: string) => `/expenses/${seg(id)}`,
+  EXPENSE_VOID: (id: string) => `/expenses/${seg(id)}/void`,
   EXPENSE_CATEGORIES: '/expense-categories',
+  /** EXP-03 — served by the expenses app for now (see its urls.py). */
+  CASHBOOK: '/cashbook',
   REPORT_DASHBOARD: '/reports/dashboard',
   REPORT_DAY_BOOK: '/reports/day-book',
   REPORT_SALES_REGISTER: '/reports/sales-register',

@@ -28,6 +28,23 @@ import type { TInvalidationMap, TSliceKey } from './types';
 const LEDGER_WRITE_REFETCH: readonly TSliceKey[] = ['partyList', 'partyDetail', 'ledgerEntry'];
 
 /**
+ * EXP-01 — what an expense write leaves stale beyond its own screens.
+ *
+ * An UNPAID expense posts a ledger credit and a void reverses it, so the party
+ * list, the khata and the reports built on the ledger may all have moved.
+ * `stale`, not `refetch`: the merchant is on the expense list or the cashbook
+ * when they save, not on any of those — and a paid expense (the common case)
+ * moves none of them, so an immediate re-read would be traffic nobody reads.
+ */
+const EXPENSE_LEDGER_STALE: readonly TSliceKey[] = [
+  'partyList',
+  'partyDetail',
+  'ledgerEntry',
+  'statement',
+  'ledgerAging',
+];
+
+/**
  * Part 19 §19.3.6 — THE single normative statement of what a mutation
  * invalidates, as code rather than as a table nobody updates.
  *
@@ -221,7 +238,7 @@ export const INVALIDATION: TInvalidationMap = {
        a screen nobody has open is a request nobody reads. `stale` is the
        third answer: the statement refreshes the next time it is mounted, which
        is exactly when the number matters again. */
-    stale: ['statement', 'ledgerAging'],
+    stale: ['statement', 'ledgerAging', 'cashbook'],
     refetch: LEDGER_WRITE_REFETCH,
   },
 
@@ -247,7 +264,7 @@ export const INVALIDATION: TInvalidationMap = {
        a screen nobody has open is a request nobody reads. `stale` is the
        third answer: the statement refreshes the next time it is mounted, which
        is exactly when the number matters again. */
-    stale: ['statement', 'ledgerAging'],
+    stale: ['statement', 'ledgerAging', 'cashbook'],
     refetch: LEDGER_WRITE_REFETCH,
   },
 
@@ -277,7 +294,7 @@ export const INVALIDATION: TInvalidationMap = {
        a screen nobody has open is a request nobody reads. `stale` is the
        third answer: the statement refreshes the next time it is mounted, which
        is exactly when the number matters again. */
-    stale: ['statement', 'ledgerAging'],
+    stale: ['statement', 'ledgerAging', 'cashbook'],
     refetch: LEDGER_WRITE_REFETCH,
   },
   correctEntry: {
@@ -294,7 +311,7 @@ export const INVALIDATION: TInvalidationMap = {
        a screen nobody has open is a request nobody reads. `stale` is the
        third answer: the statement refreshes the next time it is mounted, which
        is exactly when the number matters again. */
-    stale: ['statement', 'ledgerAging'],
+    stale: ['statement', 'ledgerAging', 'cashbook'],
     refetch: LEDGER_WRITE_REFETCH,
   },
 
@@ -437,4 +454,24 @@ export const INVALIDATION: TInvalidationMap = {
   // INV-06 — on-hand, average, badges and the movement list all move, on
   // whichever of the three screens the merchant posted from.
   postStockAdjustment: { refetch: ['itemDetail', 'itemList', 'stockSummary'] },
+  // ── EXP-01 / EXP-02 / EXP-03 — expenses and the cashbook ──────────────────
+  //
+  // Recording and voiding change the list the merchant is looking at and the
+  // day's cash position, so both are re-read NOW. Neither is patched: the list
+  // is sorted and totalled by the server over the filtered set, and a cashbook
+  // is a chain in which one row moves every later opening.
+  createExpense: {
+    refetch: ['expenseList', 'cashbook'],
+    stale: EXPENSE_LEDGER_STALE,
+  },
+  // `expenseFormSlice` writes the voided expense onto the open detail sheet
+  // from this response, which is what the `patch` declares.
+  voidExpense: {
+    patch: [['expenseForm', 'detail']],
+    refetch: ['expenseList', 'cashbook'],
+    stale: EXPENSE_LEDGER_STALE,
+  },
+  // The new (or existing, for a duplicate name) row is added to the held list
+  // by `expenseFormSlice`, and the picker selects it — no refetch.
+  createExpenseCategory: { patch: [['expenseForm', 'categories']] },
 };

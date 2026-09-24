@@ -61,6 +61,13 @@ export const entryAmountView = (
   if (entryType === 'write_off') {
     return { tone: 'neutral', sign: 'none', labelId: 'ledger.entry.writtenOff' };
   }
+  /* An unpaid expense (EXP-01 FR-4) posts a credit: the shop owes the landlord
+     ₹12,000 more. "You got ₹12,000" under it would tell the merchant they
+     were paid, which is the write-off's defect again. Same tone as any credit
+     — money owed to the party — and words that say why. */
+  if (entryType === 'expense' && direction === 'credit') {
+    return { tone: 'payable', sign: 'none', labelId: 'ledger.entry.expenseOwed' };
+  }
   return direction === 'debit'
     ? { tone: 'receivable', sign: 'none', labelId: 'ledger.entry.gave' }
     : { tone: 'payable', sign: 'none', labelId: 'ledger.entry.got' };

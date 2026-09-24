@@ -14,6 +14,14 @@ import {
   logout,
   switchTenant,
 } from 'modules/DigiKhaato/features/auth/redux/sessionThunk';
+import { fetchCashbook } from 'modules/DigiKhaato/features/expenses/redux/cashbookThunk';
+import {
+  createExpense,
+  createExpenseCategory,
+  fetchExpenseCategories,
+  fetchExpenses,
+  voidExpense,
+} from 'modules/DigiKhaato/features/expenses/redux/expenseThunk';
 import {
   fetchBranding,
   saveBranding,
@@ -181,6 +189,11 @@ export const QUERIES = {
   fetchStockAdjustment,
   fetchStockSummary,
   fetchLowStock,
+  // EXP-01 / EXP-02 — the expense list and the category picker
+  fetchExpenses,
+  fetchExpenseCategories,
+  // EXP-03 — the cashbook
+  fetchCashbook,
 } as const;
 
 export const MUTATIONS = {
@@ -250,6 +263,10 @@ export const MUTATIONS = {
   createCategory,
   // INV-06 — the write every stock screen is downstream of
   postStockAdjustment,
+  // EXP-01 / EXP-02 — record, void, and the inline category create
+  createExpense,
+  voidExpense,
+  createExpenseCategory,
 } as const;
 
 export type TQueryName = keyof typeof QUERIES;

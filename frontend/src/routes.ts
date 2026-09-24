@@ -58,6 +58,8 @@ export const ROUTES = {
   PURCHASE_BILLS: '/purchases/bills',
   PAYMENTS: '/payments',
   EXPENSES: '/expenses',
+  /** EXP-03 — money in and out, day by day, beside Expenses in the menu. */
+  CASHBOOK: '/cashbook',
   REPORTS: '/reports',
   SETTINGS: '/settings',
   SETTINGS_PLAN: '/settings/plan',
@@ -185,6 +187,7 @@ export const APP_ROUTE_PREFIXES: readonly string[] = [
   '/purchases',
   ROUTES.PAYMENTS,
   ROUTES.EXPENSES,
+  ROUTES.CASHBOOK,
   ROUTES.REPORTS,
   ROUTES.SETTINGS,
   ROUTES.SWITCH_TENANT,

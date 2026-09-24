@@ -382,7 +382,26 @@
   "  +13.5 KB (react-hook-form and cmdk). /parties route 103 → 104 (measured",
   "  103.7; the UbCombobox inline create). Every other first-load line moves by",
   "  the shell's +5.0 with ~1 KB headroom.",
-  "MERGE NOTE: T4 raises the same shell line for expenses; the two increases add."
+  "MERGE NOTE: T4 raises the same shell line for expenses; the two increases add.",
+  "── 24 Sep 2026 (T4): EXP-01/02/03 — expenses and the cashbook ─────────────",
+  "shared app 113.1 → 115.0 KB (budget 114 → 116). Measured, and already cut once:",
+  "the first build was 115.8, because the invalidation registry imports every",
+  "thunk statically and the two expense thunks imported their SERVICES at the",
+  "top — mappers and all, on /legal/terms. The services are now imported inside",
+  "the thunks (-0.8 KB); nothing prefetches expenses, so the cost is one small",
+  "chunk on the first expense request of a session. What is left is honest:",
+  "~140 en.json keys (react-intl ships the catalogue with the shell), six thunk",
+  "shells in the registry, the sidebar's two live rows and one lucide glyph.",
+  "The three expense slices are lazily injected (CR-134) and are NOT in this.",
+  "/expenses (new)  route 105.6, first load 347.5 → budgets 107 / 349. Same",
+  "  shape as /parties (103): UbDataGrid, the period picker with its date",
+  "  popover, two Radix selects, tabs, search, stat tile and the money library",
+  "  for formatInr. The drawer and the detail sheet are dynamic() and not in it.",
+  "/cashbook (new)  route 89.8, first load 331.8 → budgets 91 / 333: the period",
+  "  picker, choice chips, stat tiles, disclosures, progress bars and the",
+  "  counted-cash money input. The expense drawer it opens is dynamic().",
+  "Every other first-load line moves by the shell's +1.9 (+1 KB headroom);",
+  "/parties route 103 → 104 (measured 103.1)."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -855,6 +874,14 @@
   "/stock/low": {
    "route": 77,
    "firstLoad": 322
+  },
+  "/expenses": {
+   "route": 107,
+   "firstLoad": 349
+  },
+  "/cashbook": {
+   "route": 91,
+   "firstLoad": 333
   }
  },
  "//ignoreRoutes": [
