@@ -99,6 +99,17 @@ class AuditAction:
     # parameters and the row count are written at the moment it left.
     LEDGER_STATEMENT_EXPORTED = "ledger.statement.exported"
     LEDGER_AGING_EXPORTED = "ledger.aging.exported"
+    # ── Sprint 10: EXP-01 / EXP-02 (17-02 §17.4, §16) ─────────────────────
+    #
+    # `expense.recorded` carries the full row; `expense.voided` carries the
+    # full row as `before` plus the reason and the reversal entry's id, so
+    # "who voided the ₹12,000 rent, when, and why" is answerable after the
+    # people involved have left. A category's creation is audited because a
+    # category is referenced, not snapshotted (EXP-02 BR-1): the audit row is
+    # what explains a label on a statement printed before a rename.
+    EXPENSE_RECORDED = "expense.recorded"
+    EXPENSE_VOIDED = "expense.voided"
+    EXPENSE_CATEGORY_CREATED = "expense_category.created"
     JOB_REQUEUED = "job.requeued"
     REFERENCE_DATA_SEEDED = "platform.reference_data_seeded"
 
