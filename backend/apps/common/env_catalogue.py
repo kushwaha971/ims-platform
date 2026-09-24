@@ -64,6 +64,7 @@ KNOWN_UB_VARIABLES: frozenset[str] = frozenset(
         "UB_VERSION",
         "UB_E2E_MODE",
         "UB_E2E_RELAX_THROTTLES",
+        "UB_TEST_DB_NAME",
         "UB_ALLOW_PARTNER_HEADER",
         "UB_ALLOW_CONSOLE_SMS",
         "UB_ROLE",
