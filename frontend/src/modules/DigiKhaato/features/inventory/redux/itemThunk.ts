@@ -3,16 +3,6 @@ import { createAsyncThunk } from '@reduxjs/toolkit';
 import type { ApiErrorShape } from 'src/types/api.types';
 import { toApiError } from 'src/utils/apiError';
 
-import {
-  archiveItem as archiveItemRequest,
-  createItem,
-  getItem,
-  listItems,
-  listMovements,
-  restoreItem as restoreItemRequest,
-  updateItem,
-} from '../api/itemService';
-
 import type {
   Item,
   ItemFormValues,
@@ -25,6 +15,13 @@ import type {
 
 /** Part 19 §19.3.3 — one service call each, and a catch that normalises. */
 
+/* The service is imported INSIDE each thunk: the invalidation registry imports
+   every thunk statically, so a top-level service import would put its mappers
+   in the chunk every route loads, /legal/terms included (bundle-budgets.json,
+   24 Sep 2026 T3). Nothing prefetches inventory, so the cost is one small chunk
+   on the first inventory request of a session. */
+const itemService = () => import('../api/itemService');
+
 type Reject = { rejectValue: ApiErrorShape };
 
 /** QUERY. One page of the item list for the filters in the address bar. */
@@ -32,7 +29,7 @@ export const fetchItemList = createAsyncThunk<ItemListResult, ItemListFilters, R
   'itemList/fetchItemList',
   async (filters, { signal, rejectWithValue }) => {
     try {
-      return await listItems(filters, signal);
+      return await (await itemService()).listItems(filters, signal);
     } catch (error) {
       return rejectWithValue(toApiError(error, 'items.list.error.title'));
     }
@@ -44,7 +41,7 @@ export const fetchItemDetail = createAsyncThunk<Item, string, Reject>(
   'itemDetail/fetchItemDetail',
   async (id, { signal, rejectWithValue }) => {
     try {
-      return await getItem(id, signal);
+      return await (await itemService()).getItem(id, signal);
     } catch (error) {
       return rejectWithValue(toApiError(error, 'items.detail.error.title'));
     }
@@ -58,7 +55,7 @@ export const fetchItemMovements = createAsyncThunk<
   Reject
 >('itemDetail/fetchItemMovements', async ({ id, filters, cursor }, { signal, rejectWithValue }) => {
   try {
-    const page = await listMovements(id, filters, cursor, signal);
+    const page = await (await itemService()).listMovements(id, filters, cursor, signal);
     return { ...page, append: cursor !== null };
   } catch (error) {
     return rejectWithValue(toApiError(error, 'items.movements.error'));
@@ -84,8 +81,8 @@ export const saveItem = createAsyncThunk<
   async ({ values, item, idempotencyKey, withOpening }, { rejectWithValue }) => {
     try {
       return item
-        ? await updateItem(item.id, values, item.version, { withOpening })
-        : await createItem(values, idempotencyKey);
+        ? await (await itemService()).updateItem(item.id, values, item.version, { withOpening })
+        : await (await itemService()).createItem(values, idempotencyKey);
     } catch (error) {
       return rejectWithValue(toApiError(error));
     }
@@ -97,7 +94,7 @@ export const archiveItem = createAsyncThunk<Item, string, Reject>(
   'itemForm/archiveItem',
   async (id, { rejectWithValue }) => {
     try {
-      return await archiveItemRequest(id);
+      return await (await itemService()).archiveItem(id);
     } catch (error) {
       return rejectWithValue(toApiError(error));
     }
@@ -109,7 +106,7 @@ export const restoreItem = createAsyncThunk<Item, string, Reject>(
   'itemForm/restoreItem',
   async (id, { rejectWithValue }) => {
     try {
-      return await restoreItemRequest(id);
+      return await (await itemService()).restoreItem(id);
     } catch (error) {
       return rejectWithValue(toApiError(error));
     }

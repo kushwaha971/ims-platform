@@ -3,15 +3,14 @@ import { createAsyncThunk } from '@reduxjs/toolkit';
 import type { ApiErrorShape } from 'src/types/api.types';
 import { toApiError } from 'src/utils/apiError';
 
-import {
-  createCategory as createCategoryRequest,
-  createUnit as createUnitRequest,
-  listCategories,
-  listTaxRates,
-  listUnits,
-} from '../api/mastersService';
-
 import type { Category, TaxRate, Unit } from '../types/item.types';
+
+/* The service is imported INSIDE each thunk: the invalidation registry imports
+   every thunk statically, so a top-level service import would put its mappers
+   in the chunk every route loads, /legal/terms included (bundle-budgets.json,
+   24 Sep 2026 T3). Nothing prefetches inventory, so the cost is one small chunk
+   on the first inventory request of a session. */
+const mastersService = () => import('../api/mastersService');
 
 type Reject = { rejectValue: ApiErrorShape };
 
@@ -24,7 +23,7 @@ export const fetchUnits = createAsyncThunk<readonly Unit[], void, Reject>(
   'inventoryMasters/fetchUnits',
   async (_arg, { signal, rejectWithValue }) => {
     try {
-      return await listUnits(signal);
+      return await (await mastersService()).listUnits(signal);
     } catch (error) {
       return rejectWithValue(toApiError(error));
     }
@@ -45,7 +44,7 @@ export const fetchCategories = createAsyncThunk<
   'inventoryMasters/fetchCategories',
   async (_arg, { signal, rejectWithValue }) => {
     try {
-      return await listCategories(signal);
+      return await (await mastersService()).listCategories(signal);
     } catch (error) {
       return rejectWithValue(toApiError(error));
     }
@@ -69,7 +68,7 @@ export const fetchTaxRates = createAsyncThunk<
   Reject
 >('inventoryMasters/fetchTaxRates', async ({ include }, { signal, rejectWithValue }) => {
   try {
-    return await listTaxRates(undefined, include, signal);
+    return await (await mastersService()).listTaxRates(undefined, include, signal);
   } catch (error) {
     return rejectWithValue(toApiError(error));
   }
@@ -82,7 +81,7 @@ export const createUnit = createAsyncThunk<
   Reject
 >('inventoryMasters/createUnit', async (input, { rejectWithValue }) => {
   try {
-    return await createUnitRequest(input);
+    return await (await mastersService()).createUnit(input);
   } catch (error) {
     return rejectWithValue(toApiError(error));
   }
@@ -95,7 +94,7 @@ export const createCategory = createAsyncThunk<
   Reject
 >('inventoryMasters/createCategory', async (input, { rejectWithValue }) => {
   try {
-    return await createCategoryRequest(input);
+    return await (await mastersService()).createCategory(input);
   } catch (error) {
     return rejectWithValue(toApiError(error));
   }

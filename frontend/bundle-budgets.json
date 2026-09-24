@@ -337,7 +337,38 @@
   "axios interceptor every route loads; the server field-code mapping (NEW-2",
   "message in Hindi) rides in the same layer. Both are correctness fixes with",
   "no lazy seam — the guard must run on the first request. Shared budget 114,",
-  "first-load budgets on the listed routes +1. /parties/[id] route 97 → 98: the archive-blocked focus move (M4)."
+  "first-load budgets on the listed routes +1. /parties/[id] route 97 → 98: the archive-blocked focus move (M4).",
+  "",
+  "── 24 Sep 2026 (T3): INV-01…INV-08 — items, stock adjustments, stock reports ─",
+  "shared app 113.1 → 118.1 KB (budget 114 → 119). Measured, and cut once before",
+  "this line was written: the first build was 120.1, because the invalidation",
+  "registry imports every thunk statically and the three inventory thunk modules",
+  "imported their SERVICES at the top, mappers and all. They import them inside",
+  "each thunk now (-2.0 KB); nothing prefetches inventory, so the cost is one small",
+  "chunk on the first inventory request of a session. What is left: 3.5 KB is the",
+  "en.json catalogue itself (284 keys, 15.7 → 19.2 KB gz measured on the file),",
+  "which react-intl ships with the shell — the per-route-group catalogue split",
+  "already in docs/BACKLOG.md is the structural fix, and inventory makes it more",
+  "urgent. The rest is sixteen thunk shells in the registry, the permission and",
+  "error-code unions, API paths and the sidebar row. The six inventory slices are",
+  "lazily injected (CR-134) and are NOT in this figure.",
+  "",
+  "New routes, budgets at measured + ~1.5 KB:",
+  "  /items           route 112.0, first load 357.0 → 114 / 359. /parties (103.7)",
+  "                   plus the stock tabs with counts, the category combobox and",
+  "                   the scan banner. The item form and the adjustment drawer",
+  "                   (react-hook-form, Yup, the line editor) are dynamic().",
+  "  /items/[id]      route  98.4, first load 343.4 → 100 / 345",
+  "  /stock/summary   route 111.4, first load 356.4 → 113 / 358: the grid, the",
+  "                   as-of date popover, a combobox and a select.",
+  "  /stock/low       route  75.5, first load 320.5 →  77 / 322",
+  "  /items/masters   route  65.8, first load 310.8 →  67 / 312",
+  "/design-system route 99 → 102 (measured 101.1): the new controls in the",
+  "  barrel. The line-items section itself is dynamic() — statically it cost",
+  "  +13.5 KB (react-hook-form and cmdk). /parties route 103 → 104 (measured",
+  "  103.7; the UbCombobox inline create). Every other first-load line moves by",
+  "  the shell's +5.0 with ~1 KB headroom.",
+  "MERGE NOTE: T4 raises the same shell line for expenses; the two increases add."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -521,7 +552,7 @@
  ],
  "shared": {
   "framework": 128,
-  "sharedApp": 114
+  "sharedApp": 119
  },
  "//routes": [
   "The `route` figures are §19.9.2's, unchanged, and every route is comfortably",
@@ -725,12 +756,12 @@
  },
  "routes": {
   "/parties": {
-   "route": 103,
-   "firstLoad": 343
+   "route": 104,
+   "firstLoad": 350
   },
   "/dashboard": {
    "route": 61,
-   "firstLoad": 301
+   "firstLoad": 306
   },
   "/sales/invoices/new": {
    "route": 110,
@@ -738,38 +769,58 @@
   },
   "/onboarding/step/[n]": {
    "route": 98,
-   "firstLoad": 334
+   "firstLoad": 342
   },
   "/design-system": {
-   "route": 99,
-   "firstLoad": 339
+   "route": 102,
+   "firstLoad": 347
   },
   "/settings/team": {
    "route": 92,
-   "firstLoad": 332
+   "firstLoad": 338
   },
   "/parties/[id]": {
    "route": 98,
-   "firstLoad": 338
+   "firstLoad": 343
   },
   "/parties/tags": {
    "route": 73,
-   "firstLoad": 313
+   "firstLoad": 319
   },
   "/parties/[id]/statement": {
    "route": 91,
-   "firstLoad": 331
+   "firstLoad": 337
   },
   "/ledger/aging": {
    "route": 92,
-   "firstLoad": 332
+   "firstLoad": 338
   },
   "/switch": {
-   "firstLoad": 305,
+   "firstLoad": 310,
    "route": 65
   },
   "/settings/plan": {
-   "firstLoad": 304
+   "firstLoad": 309
+  },
+  "/items": {
+   "route": 114,
+   "firstLoad": 359
+  },
+  "/items/[id]": {
+   "route": 100,
+   "firstLoad": 345
+  },
+  "/stock/summary": {
+   "route": 113,
+   "firstLoad": 358
+  },
+  "/stock/low": {
+   "route": 77,
+   "firstLoad": 322
+  },
+  "/items/masters": {
+   "route": 67,
+   "firstLoad": 312
   }
  },
  "//ignoreRoutes": [

@@ -3,14 +3,7 @@ import { createAsyncThunk } from '@reduxjs/toolkit';
 import type { ApiErrorShape } from 'src/types/api.types';
 import { toApiError } from 'src/utils/apiError';
 
-import {
-  getAdjustment,
-  getLowStock,
-  getStockSummary,
-  postAdjustment,
-  type toAdjustmentBody,
-} from '../api/stockService';
-
+import type { AdjustmentBody } from '../api/stockService';
 import type {
   LowStockResult,
   StockAdjustment,
@@ -18,16 +11,23 @@ import type {
   StockSummaryResult,
 } from '../types/item.types';
 
+/* The service is imported INSIDE each thunk: the invalidation registry imports
+   every thunk statically, so a top-level service import would put its mappers
+   in the chunk every route loads, /legal/terms included (bundle-budgets.json,
+   24 Sep 2026 T3). Nothing prefetches inventory, so the cost is one small chunk
+   on the first inventory request of a session. */
+const stockService = () => import('../api/stockService');
+
 type Reject = { rejectValue: ApiErrorShape };
 
 /** MUTATION. Post an adjustment; the key is minted once per logical post. */
 export const postStockAdjustment = createAsyncThunk<
   StockAdjustment,
-  { readonly body: ReturnType<typeof toAdjustmentBody>; readonly idempotencyKey: string },
+  { readonly body: AdjustmentBody; readonly idempotencyKey: string },
   Reject
 >('stockAdjustment/postStockAdjustment', async ({ body, idempotencyKey }, { rejectWithValue }) => {
   try {
-    return await postAdjustment(body, idempotencyKey);
+    return await (await stockService()).postAdjustment(body, idempotencyKey);
   } catch (error) {
     return rejectWithValue(toApiError(error));
   }
@@ -38,7 +38,7 @@ export const fetchStockAdjustment = createAsyncThunk<StockAdjustment, string, Re
   'stockAdjustment/fetchStockAdjustment',
   async (id, { signal, rejectWithValue }) => {
     try {
-      return await getAdjustment(id, signal);
+      return await (await stockService()).getAdjustment(id, signal);
     } catch (error) {
       return rejectWithValue(toApiError(error));
     }
@@ -50,7 +50,7 @@ export const fetchStockSummary = createAsyncThunk<StockSummaryResult, StockSumma
   'stockSummary/fetchStockSummary',
   async (filters, { signal, rejectWithValue }) => {
     try {
-      return await getStockSummary(filters, signal);
+      return await (await stockService()).getStockSummary(filters, signal);
     } catch (error) {
       return rejectWithValue(toApiError(error, 'stock.summary.error.title'));
     }
@@ -62,7 +62,7 @@ export const fetchLowStock = createAsyncThunk<LowStockResult, number, Reject>(
   'stockSummary/fetchLowStock',
   async (page, { signal, rejectWithValue }) => {
     try {
-      return await getLowStock(page, signal);
+      return await (await stockService()).getLowStock(page, signal);
     } catch (error) {
       return rejectWithValue(toApiError(error, 'stock.low.error.title'));
     }

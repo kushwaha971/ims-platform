@@ -2,6 +2,8 @@
 
 import { useCallback, useState } from 'react';
 
+import dynamic from 'next/dynamic';
+
 import {
   UbAmount,
   UbAvatar,
@@ -30,9 +32,15 @@ import {
 import { useTranslation } from 'src/hooks/useTranslation';
 
 import { DesignSystemChartsGallery } from './DesignSystemChartsGallery';
-import { DesignSystemLineItemsGallery } from './DesignSystemLineItemsGallery';
 import { DesignSystemWave1Gallery } from './DesignSystemWave1Gallery';
 import { DesignSystemWave3Gallery } from './DesignSystemWave3Gallery';
+
+/* The line-items section carries react-hook-form and cmdk; lazy, so the rest
+   of the gallery does not wait for (or pay for) a form library it never uses. */
+const DesignSystemLineItemsGallery = dynamic(
+  () => import('./DesignSystemLineItemsGallery').then((m) => m.DesignSystemLineItemsGallery),
+  { ssr: false }
+);
 
 /**
  * Part 23 §23.4 — the live gallery. Storybook is not a dependency (ADR-021), so
