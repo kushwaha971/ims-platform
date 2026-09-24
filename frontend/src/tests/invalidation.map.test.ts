@@ -4,6 +4,9 @@ import { MUTATIONS } from 'src/redux/invalidation/registry';
 import type { TSliceKey } from 'src/redux/invalidation/types';
 import { store } from 'src/redux/store';
 
+import 'modules/DigiKhaato/features/expenses/redux/cashbookSlice';
+import 'modules/DigiKhaato/features/expenses/redux/expenseFormSlice';
+import 'modules/DigiKhaato/features/expenses/redux/expenseListSlice';
 import 'modules/DigiKhaato/features/ledger/redux/agingSlice';
 import 'modules/DigiKhaato/features/ledger/redux/statementSlice';
 import partyListReducer, {

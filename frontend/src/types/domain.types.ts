@@ -68,7 +68,16 @@ export const PERMISSION_CODES = [
   'purchases.bill.read',
   'payments.payment.read',
   'expenses.expense.read',
+  /** EXP-01 §12 — record (owner, admin, staff) and void (owner, admin only). */
+  'expenses.expense.write',
+  'expenses.expense.void',
   'reports.basic.read',
+  /**
+   * EXP-03 FR-13 — the cashbook beyond today's till: any range, the bank
+   * bucket, the category breakdown. The server enforces it; the client only
+   * decides which controls to draw.
+   */
+  'reports.financial.read',
   /**
    * LED-09 §12 — taking a report away as a file.
    *

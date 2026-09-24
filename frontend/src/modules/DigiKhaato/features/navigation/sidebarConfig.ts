@@ -1,5 +1,6 @@
 import {
   BarChart3,
+  BookOpen,
   BookUser,
   Boxes,
   CreditCard,
@@ -154,7 +155,9 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
     order: 4,
   },
   {
+    // EXP-01 — ready as of the expenses wave: list, drawer, void.
     key: 'expenses',
+    ready: true,
     icon: Receipt,
     labelId: 'nav.expenses',
     href: ROUTES.EXPENSES,
@@ -162,6 +165,20 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
     permission: 'expenses.expense.read',
     section: 'business',
     order: 5,
+  },
+  {
+    // EXP-03 — beside Expenses (FRD FR-6 "under Money, beside Expenses").
+    // Staff with `expenses.expense.read` see it too: their view is today's
+    // till, which the server scopes (FR-13).
+    key: 'cashbook',
+    ready: true,
+    icon: BookOpen,
+    labelId: 'nav.cashbook',
+    href: ROUTES.CASHBOOK,
+    module: 'expenses',
+    permission: 'expenses.expense.read',
+    section: 'business',
+    order: 6,
   },
   {
     key: 'reports',
