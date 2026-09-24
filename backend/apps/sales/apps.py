@@ -13,3 +13,6 @@ class SalesConfig(AppConfig):
 
     def ready(self) -> None:
         from apps.sales import tasks  # noqa: F401  (registers job handlers)
+        from apps.sales.services.guards import register_guards
+
+        register_guards()
