@@ -197,6 +197,9 @@ export const INVALIDATION: TInvalidationMap = {
   saveCollectionDate: {
     patch: [['partyDetail', 'party']],
     refetch: ['partyList'],
+    /* LED-05 — the date moves a party between the reminders screen's buckets
+       and changes their counts; that screen refreshes when it next mounts. */
+    stale: ['reminders'],
   },
 
   // ── LED-01 — a posted ledger entry ────────────────────────────────────────
@@ -238,7 +241,7 @@ export const INVALIDATION: TInvalidationMap = {
        a screen nobody has open is a request nobody reads. `stale` is the
        third answer: the statement refreshes the next time it is mounted, which
        is exactly when the number matters again. */
-    stale: ['statement', 'ledgerAging', 'cashbook'],
+    stale: ['statement', 'ledgerAging', 'cashbook', 'reminders'],
     refetch: LEDGER_WRITE_REFETCH,
   },
 
@@ -264,7 +267,7 @@ export const INVALIDATION: TInvalidationMap = {
        a screen nobody has open is a request nobody reads. `stale` is the
        third answer: the statement refreshes the next time it is mounted, which
        is exactly when the number matters again. */
-    stale: ['statement', 'ledgerAging', 'cashbook'],
+    stale: ['statement', 'ledgerAging', 'cashbook', 'reminders'],
     refetch: LEDGER_WRITE_REFETCH,
   },
 
@@ -294,7 +297,7 @@ export const INVALIDATION: TInvalidationMap = {
        a screen nobody has open is a request nobody reads. `stale` is the
        third answer: the statement refreshes the next time it is mounted, which
        is exactly when the number matters again. */
-    stale: ['statement', 'ledgerAging', 'cashbook'],
+    stale: ['statement', 'ledgerAging', 'cashbook', 'reminders'],
     refetch: LEDGER_WRITE_REFETCH,
   },
   correctEntry: {
@@ -311,7 +314,7 @@ export const INVALIDATION: TInvalidationMap = {
        a screen nobody has open is a request nobody reads. `stale` is the
        third answer: the statement refreshes the next time it is mounted, which
        is exactly when the number matters again. */
-    stale: ['statement', 'ledgerAging', 'cashbook'],
+    stale: ['statement', 'ledgerAging', 'cashbook', 'reminders'],
     refetch: LEDGER_WRITE_REFETCH,
   },
 
@@ -340,7 +343,9 @@ export const INVALIDATION: TInvalidationMap = {
       ['partyDetail', 'summary'],
     ],
     refetch: ['partyList', 'partyDetail'],
-    stale: ['ledgerEntry', 'statement', 'ledgerAging'],
+    /* `reminders` too: a write-off settles the balance, which clears the
+       collection date and cancels the party's scheduled reminders (LED-05 FR-6). */
+    stale: ['ledgerEntry', 'statement', 'ledgerAging', 'reminders'],
   },
   restoreParty: { patch: [['partyDetail', 'party']], refetch: ['partyList'] },
   // No `patch` here: a bulk archive is about rows in a list and says nothing
@@ -474,4 +479,29 @@ export const INVALIDATION: TInvalidationMap = {
   // The new (or existing, for a duplicate name) row is added to the held list
   // by `expenseFormSlice`, and the picker selects it — no refetch.
   createExpenseCategory: { patch: [['expenseForm', 'categories']] },
+  // ── LED-06 — manual reminders ─────────────────────────────────────────────
+  //
+  // A reminder moves no money, so nothing about the khata, the list or the
+  // statement changes. What changes is the history: the khata's strip is
+  // PATCHED from the created row (`reminderSlice` prepends it and bumps the
+  // count on this action — "Reminded just now" before any read returns), and
+  // the reminders screen's Sent tab and bucket figures are marked stale for
+  // its next mount.
+  sendManualReminder: { patch: [['reminders', 'partyRows']], stale: ['reminders'] },
+  // The bulk flow's start writes scheduled rows and hands back one link each;
+  // the slice holds them as the flow's steps. Nothing is sent yet.
+  startBulkReminders: { patch: [['reminders', 'bulkItems']] },
+  // One tapped step: the slice ticks it off; the Sent tab is now out of date.
+  sendBulkStep: { patch: [['reminders', 'bulkDone']], stale: ['reminders'] },
+  // Done / dismissed / a skipped step — the row is replaced in place wherever
+  // the slice holds it.
+  markReminderStatus: { patch: [['reminders', 'historyRows']] },
+  // LED-07 FR-1 / LED-08 FR-1 — the switches; the response is the new state.
+  saveReminderSettings: { patch: [['reminders', 'settings']] },
+
+  // ── NTF-01 — the inbox ────────────────────────────────────────────────────
+  // Both write the read state onto the rows the slice holds and the unread
+  // count beside them, from the response; nothing else caches notifications.
+  readNotification: { patch: [['notifications', 'items']] },
+  readAllNotifications: { patch: [['notifications', 'items']] },
 };

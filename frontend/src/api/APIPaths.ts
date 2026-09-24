@@ -103,6 +103,12 @@ export const API_PATHS = {
   REMINDER: (id: string) => `/reminders/${seg(id)}`,
   REMINDER_SEND: (id: string) => `/reminders/${seg(id)}/send`,
   REMINDERS_BULK: '/reminders/bulk',
+  /** LED-05 FR-4 — the parties behind one bucket (`?bucket=today|overdue|upcoming`). */
+  REMINDERS_DUE: '/reminders/due',
+  /** LED-06 — the server-composed text for the sheet; writes nothing (CR-LOG). */
+  REMINDER_PREVIEW: '/reminders/preview',
+  /** LED-07 / LED-08 — the two messaging switches and the provider status. */
+  REMINDER_SETTINGS: '/reminders/settings',
 
   // ── inventory ─────────────────────────────────────────────────────────────
   ITEMS: '/items',
@@ -151,6 +157,9 @@ export const API_PATHS = {
   REPORT_EXPORT: (id: string) => `/reports/exports/${seg(id)}`,
   NOTIFICATIONS: '/notifications',
   NOTIFICATION_READ: (id: string) => `/notifications/${seg(id)}/read`,
+  /** NTF-01 FR-8 — the bell's one number, and the catch-up. */
+  NOTIFICATIONS_UNREAD_COUNT: '/notifications/unread-count',
+  NOTIFICATIONS_READ_ALL: '/notifications/read-all',
   ATTACHMENTS: '/attachments',
   IMPORTS: '/imports',
   IMPORT: (id: string) => `/imports/${seg(id)}`,

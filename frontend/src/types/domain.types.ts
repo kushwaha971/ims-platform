@@ -63,6 +63,12 @@ export const PERMISSION_CODES = [
    * export is a query parameter rather than a route of its own.
    */
   'ledger.statement.export',
+  /**
+   * LED-06 §12 — recording a reminder. Sending one from the khata writes a
+   * `ledger_reminder` row, so reading the khata is not enough; the accountant
+   * reads and does not chase.
+   */
+  'ledger.reminder.write',
   'inventory.item.read',
   /* INV-01…INV-08 §12 — the item master, archive, stock reads and adjustments.
      `inventory.stock.adjust` is off for staff unless granted by override. */
@@ -102,6 +108,8 @@ export const PERMISSION_CODES = [
   'platform.tenant.manage',
   'platform.branding.manage',
   'platform.audit.read',
+  /** LED-07 FR-1 / LED-08 FR-1 — the two SMS switches; owner and admin. */
+  'notifications.settings.manage',
 ] as const;
 export type PermissionCode = (typeof PERMISSION_CODES)[number];
 

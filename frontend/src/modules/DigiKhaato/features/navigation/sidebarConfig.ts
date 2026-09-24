@@ -110,6 +110,8 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
     section: 'daily',
     order: 4,
     badge: 'overdueReminders',
+    /* LED-05/06/07 — the buckets, manual and bulk reminders, and the history. */
+    ready: true,
   },
   {
     key: 'invoices',

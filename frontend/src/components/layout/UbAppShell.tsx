@@ -14,6 +14,8 @@ import { useTranslation } from 'src/hooks/useTranslation';
 import { selectAppName } from 'src/redux/slice/whiteLabelSlice';
 import { ROUTES } from 'src/routes';
 
+import { NotificationBell } from 'modules/DigiKhaato/features/notifications/components/NotificationBell';
+import { useNotificationPoll } from 'modules/DigiKhaato/features/notifications/hooks/useNotificationPoll';
 import { PlanLimitDialog } from 'modules/DigiKhaato/features/plan/components/PlanLimitDialog';
 import { TenantSwitcherMenu } from 'modules/DigiKhaato/features/tenant-switcher/components/TenantSwitcherMenu';
 
@@ -54,6 +56,8 @@ export const APP_CONTENT_ID = 'app-content';
  */
 export function UbAppShell({ children }: Readonly<{ children: ReactNode }>): React.JSX.Element {
   const { t } = useTranslation();
+  // NTF-01 FR-8 — one poll for the two bells (phone header, desktop bar).
+  useNotificationPoll();
   const appName = useAppSelector(selectAppName);
 
   return (
@@ -101,6 +105,8 @@ export function UbAppShell({ children }: Readonly<{ children: ReactNode }>): Rea
               only party search and the only Sign out. Both are here now, as
               44 px icons, reusing the same two components. */}
           <MobileQuickSearch />
+          {/* NTF-01 FR-4 — the bell sits beside search, before the account. */}
+          <NotificationBell />
           <AccountMenu compact />
         </UbStack>
 

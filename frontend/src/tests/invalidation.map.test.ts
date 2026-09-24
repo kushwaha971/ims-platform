@@ -19,6 +19,8 @@ import 'modules/DigiKhaato/features/ledger/redux/agingSlice';
 import 'modules/DigiKhaato/features/ledger/redux/statementSlice';
 import 'modules/DigiKhaato/features/sessions/redux/sessionsSlice';
 import 'modules/DigiKhaato/features/settings/redux/settingsSlice';
+import 'modules/DigiKhaato/features/notifications/redux/notificationSlice';
+import 'modules/DigiKhaato/features/reminders/redux/reminderSlice';
 import partyListReducer, {
   type PartyListState,
 } from 'modules/DigiKhaato/features/parties/redux/partyListSlice';

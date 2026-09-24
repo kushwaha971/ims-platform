@@ -197,14 +197,19 @@ class PartyFilterSet(BaseTenantFilterSet):
         it (BR-7).
         """
         today = self._today()
+        # LED-05 BR-1 puts `balance > 0` on ALL THREE buckets, and the ledger
+        # summary's tiles count with the same predicate (`ledger/selectors/
+        # collection.py`). Without it here, tapping "Due today · 3" listed a
+        # fourth party who had already paid (AC-2: "lists exactly those").
         if value == "today":
-            return queryset.filter(collection_date=today)
+            return queryset.filter(collection_date=today, balance__gt=0)
         if value == "overdue":
             return queryset.filter(collection_date__lt=today, balance__gt=0)
         if value == "upcoming":
             return queryset.filter(
                 collection_date__gt=today,
                 collection_date__lte=today + timedelta(days=UPCOMING_DAYS),
+                balance__gt=0,
             )
         return queryset
 

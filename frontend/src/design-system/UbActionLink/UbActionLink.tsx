@@ -71,8 +71,10 @@ function UbActionLinkBase({
     </span>
   );
   /* A download goes to the API origin and must not be intercepted by the
-     client router, so it is a plain anchor; a route is a `next/link`. */
-  if (rest.download !== undefined) {
+     client router, so it is a plain anchor; so is anything that leaves the app
+     — `https://wa.me/…`, `sms:`, `tel:` (NTF-03's deep links). A route is a
+     `next/link`. */
+  if (rest.download !== undefined || !href.startsWith('/')) {
     return (
       <a href={href} className={classes} {...rest}>
         {icon}

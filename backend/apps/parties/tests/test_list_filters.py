@@ -173,12 +173,41 @@ def test_the_overdue_chip_leaves_out_people_who_have_paid(tenant: Any, api_as: A
 def test_upcoming_is_the_week_ahead_and_not_today(tenant: Any, api_as: Any) -> None:
     client, _ = api_as(tenant)
     today = tenant_today(tenant)
-    PartyFactory(tenant=tenant, name="Due Today", collection_date=today)
-    PartyFactory(tenant=tenant, name="Due Friday", collection_date=today + timedelta(days=3))
-    PartyFactory(tenant=tenant, name="Due Next Month", collection_date=today + timedelta(days=30))
+    owes = Decimal("100.00")
+    PartyFactory(tenant=tenant, name="Due Today", collection_date=today, balance=owes)
+    PartyFactory(
+        tenant=tenant, name="Due Friday", collection_date=today + timedelta(days=3), balance=owes
+    )
+    PartyFactory(
+        tenant=tenant,
+        name="Due Next Month",
+        collection_date=today + timedelta(days=30),
+        balance=owes,
+    )
 
     assert [r["name"] for r in _get(client, "?collection=today")["data"]] == ["Due Today"]
     assert [r["name"] for r in _get(client, "?collection=upcoming")["data"]] == ["Due Friday"]
+
+
+def test_every_collection_chip_leaves_out_people_who_owe_nothing(tenant: Any, api_as: Any) -> None:
+    """LED-05 BR-1 / AC-2 — "Due today" and "Upcoming" need `balance > 0` too.
+
+    The ledger summary's tiles count with that predicate, so without it here a
+    tile reading "Due today · 1" opened a list of two: the one who owes and the
+    one who already paid. Tapping a bucket must list exactly what it counted.
+    """
+    client, _ = api_as(tenant)
+    today = tenant_today(tenant)
+    PartyFactory(tenant=tenant, name="Paid Today", collection_date=today, balance=Decimal("0.00"))
+    PartyFactory(
+        tenant=tenant,
+        name="Paid Friday",
+        collection_date=today + timedelta(days=3),
+        balance=Decimal("-50.00"),
+    )
+
+    assert _get(client, "?collection=today")["data"] == []
+    assert _get(client, "?collection=upcoming")["data"] == []
 
 
 def test_the_collection_chips_use_the_tenants_today_not_the_servers(
@@ -201,7 +230,12 @@ def test_the_collection_chips_use_the_tenants_today_not_the_servers(
     india_today = server_today + timedelta(days=1)
 
     client, _ = api_as(tenant)
-    PartyFactory(tenant=tenant, name="Due Today In India", collection_date=india_today)
+    PartyFactory(
+        tenant=tenant,
+        name="Due Today In India",
+        collection_date=india_today,
+        balance=Decimal("500.00"),
+    )
     PartyFactory(
         tenant=tenant,
         name="Due Yesterday In India",

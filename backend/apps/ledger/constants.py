@@ -95,3 +95,77 @@ MAX_ENTRY_AMOUNT = "99999999.99"
 #: BR-5's floor. A date before this is a mistyped year, not a business date —
 #: and an entry dated 0026 sorts above every real row in the statement for ever.
 MIN_ENTRY_DATE = "2000-01-01"
+
+
+# ── LED-05 … LED-08 — collection dates and reminders ────────────────────────
+
+
+class ReminderChannel(models.TextChoices):
+    """Part 21 §21.3.4 `ledger_reminder.channel`, plus `sms_manual`.
+
+    `sms_manual` is not in §21.3.4's list and is recorded in CR-LOG: it is the
+    native `sms:` link — the merchant's OWN phone sends the text, exactly as
+    `whatsapp_manual` is their own WhatsApp. Logging it as `sms` would make a
+    provider-sent SMS and a text the merchant typed indistinguishable in the
+    history, and the second is free and consent-exempt (NTF-03 BR-6).
+    """
+
+    WHATSAPP_MANUAL = "whatsapp_manual", _("WhatsApp")
+    SMS_MANUAL = "sms_manual", _("SMS from your phone")
+    SMS = "sms", _("SMS")
+    WHATSAPP_API = "whatsapp_api", _("WhatsApp (automatic)")
+    CALL = "call", _("Call")
+    IN_APP = "in_app", _("In app")
+
+
+class ReminderKind(models.TextChoices):
+    MANUAL = "manual", _("Manual")
+    AUTO_D1 = "auto_d1", _("Day before")
+    AUTO_D0 = "auto_d0", _("Due day")
+    RECURRING = "recurring", _("Recurring")
+
+
+class ReminderStatus(models.TextChoices):
+    SCHEDULED = "scheduled", _("Scheduled")
+    SENT = "sent", _("Sent")
+    FAILED = "failed", _("Failed")
+    DONE = "done", _("Done")
+    DISMISSED = "dismissed", _("Dismissed")
+    CANCELLED = "cancelled", _("Cancelled")
+
+
+#: LED-06 — the channels a person may choose on the sheet or in bulk.
+MANUAL_REMINDER_CHANNELS: tuple[str, ...] = (
+    ReminderChannel.WHATSAPP_MANUAL,
+    ReminderChannel.SMS_MANUAL,
+    ReminderChannel.SMS,
+    ReminderChannel.CALL,
+)
+#: LED-07 — the two kinds the daily job writes, and the partial unique index's set.
+AUTO_REMINDER_KINDS: tuple[str, ...] = (ReminderKind.AUTO_D1, ReminderKind.AUTO_D0)
+
+#: LED-06 §10 — one line, 120 characters.
+REMINDER_NOTE_MAX_LENGTH = 120
+#: LED-06 §10 — "Select up to 100 parties at a time".
+BULK_REMINDER_MAX = 100
+#: LED-06 BR-4 — "reminded recently" is within this many hours.
+REMINDED_RECENTLY_HOURS = 24
+#: LED-05 §10 — a collection date is at most a year out.
+COLLECTION_DATE_MAX_DAYS = 365
+#: LED-05 BR-1 — the "upcoming" bucket's width.
+UPCOMING_BUCKET_DAYS = 7
+#: LED-08 FR-2 — the coalescing window before a transaction SMS goes.
+ENTRY_SMS_DELAY_SECONDS = 60
+
+#: Tenant setting keys (Part 21 §21.3.1, already well-known).
+SETTING_AUTO_SMS = "ledger.auto_sms"
+SETTING_PARTY_SMS_ON_ENTRY = "ledger.party_sms_on_entry"
+
+#: Notes written onto reminder rows by the system (LED-07 FR-3 / BR-6).
+NOTE_PROVIDER_NOT_CONFIGURED = "provider not configured"
+NOTE_BALANCE_SETTLED = "balance settled"
+NOTE_OPTED_OUT = "opted out"
+NOTE_NO_MOBILE = "no mobile"
+NOTE_INVALID_MOBILE = "invalid mobile"
+NOTE_SETTING_OFF = "automated SMS turned off"
+NOTE_DATE_CHANGED = "collection date changed"

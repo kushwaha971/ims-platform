@@ -208,4 +208,8 @@ def write_off_party_balance(*, ctx: Ctx, party: Any, request: dict) -> dict:
             "balance_after": str(balance_after),
         },
     )
+    # LED-08 BR-1 — a write-off is written in the customer's khata too.
+    from apps.ledger.services.entry_sms import maybe_enqueue_entry_sms
+
+    maybe_enqueue_entry_sms(tenant=ctx.tenant, party=party, entry=entry)
     return {"entry_id": str(entry.id), "amount": str(entry.amount), "direction": entry.direction}

@@ -37,6 +37,7 @@ LIST_COLUMNS = (
     "balance",
     "status",
     "last_activity_at",
+    "collection_date",
 )
 
 

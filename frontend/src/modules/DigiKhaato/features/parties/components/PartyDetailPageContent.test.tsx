@@ -5,7 +5,6 @@ import { sessionLoaded } from 'src/redux/slice/sessionSlice';
 import { store } from 'src/redux/store';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
 import type { PermissionCode } from 'src/types/domain.types';
-import { formatBusinessDate, todayInTenantTz } from 'src/utils/dates';
 
 import { resetLedgerEntries } from 'modules/DigiKhaato/features/ledger/redux/ledgerEntrySlice';
 import { postEntry, reverseEntry } from 'modules/DigiKhaato/features/ledger/redux/ledgerEntryThunk';
@@ -40,6 +39,24 @@ const ledgerService = jest.requireMock('modules/DigiKhaato/features/ledger/api/l
   postLedgerEntry: jest.Mock;
   reverseLedgerEntry: jest.Mock;
 };
+
+/* LED-06 — the reminder sheet's text and the tap that records it are the
+   reminders feature's; stubbed at its service boundary like the other two. */
+jest.mock('modules/DigiKhaato/features/reminders/api/reminderService');
+
+const reminderService = jest.requireMock(
+  'modules/DigiKhaato/features/reminders/api/reminderService'
+) as {
+  previewReminder: jest.Mock;
+  listReminders: jest.Mock;
+  createReminder: jest.Mock;
+  sendReminder: jest.Mock;
+};
+
+/** What `POST /reminders/preview` answers: the server's words, not the client's. */
+const PREVIEW_TEXT =
+  'Namaste Ramesh Traders ji, Kumar Stores ka Rs 2,300 baaki hai. Kripya bhugtan karein.\n— Kumar Stores';
+const PREVIEW_SMS = 'Kumar Stores: Rs 2,300 is due. Please pay at the shop. -Kumar Stores';
 
 const partyService = jest.requireMock('../api/partyService') as {
   getParty: jest.Mock;
@@ -167,12 +184,43 @@ beforeEach(() => {
     hasMore: false,
     summary: { totalDebit: '0.00', totalCredit: '0.00', entryCount: 0 },
   });
+  reminderService.previewReminder.mockResolvedValue({
+    partyId: ID,
+    balance: '2300.00',
+    text: PREVIEW_TEXT,
+    smsText: PREVIEW_SMS,
+    hasMobile: true,
+    hasUpi: false,
+    warnings: [],
+  });
+  reminderService.listReminders.mockResolvedValue({
+    rows: [],
+    page: 1,
+    pageSize: 5,
+    total: 0,
+    totals: { sent: 0, failed: 0, lastSentAt: null, lastChannel: null },
+  });
+  reminderService.createReminder.mockResolvedValue({
+    id: 'r1',
+    partyId: ID,
+    partyName: 'Ramesh Traders',
+    dueOn: '2026-09-24',
+    channel: 'whatsapp_manual',
+    kind: 'manual',
+    status: 'scheduled',
+    snapshotBalance: null,
+    note: '',
+    sentAt: null,
+    createdAt: '2026-09-24T08:00:00Z',
+  });
+  reminderService.sendReminder.mockResolvedValue(undefined);
   signIn([
     'parties.party.read',
     'parties.party.write',
     'parties.party.delete',
     'ledger.entry.read',
     'ledger.entry.write',
+    'ledger.reminder.write',
   ]);
 });
 
@@ -571,17 +619,16 @@ describe('archiving from the khata page', () => {
     expect(screen.queryByRole('button', { name: 'More actions' })).not.toBeInTheDocument();
   });
 
-  it('offers the accountant the statement and the reminder, and nothing that writes', async () => {
+  it('offers the accountant the statement, and nothing that writes', async () => {
     /**
      * §12 of LED-04: everybody who may read the ledger may read a statement,
      * and the accountant is the role the export exists for. They still may not
      * edit a party, add an opening balance or archive anybody — so the menu is
      * short rather than absent, which is the honest shape.
      *
-     * LED-06's reminder is in it too, and that is a decision: nothing is
-     * written (no `ledger_reminder` row exists to write), the merchant sends
-     * the text from their own phone, and anybody who can read the balance
-     * could type it. `ledger.reminder.write` takes over the day it writes.
+     * The reminder left this menu with LED-06's table: sending one now WRITES
+     * a `ledger_reminder` row, so it needs `ledger.reminder.write` (§12), which
+     * the accountant does not hold.
      */
     signIn(['parties.party.read', 'ledger.entry.read']);
 
@@ -591,7 +638,7 @@ describe('archiving from the khata page', () => {
 
     const menu = await screen.findByRole('dialog');
     expect(within(menu).getByText('Statement')).toBeInTheDocument();
-    expect(within(menu).getByText('Send reminder')).toBeInTheDocument();
+    expect(within(menu).queryByText('Send reminder')).not.toBeInTheDocument();
     expect(within(menu).queryByText('Archive')).not.toBeInTheDocument();
     expect(within(menu).queryByText('Edit')).not.toBeInTheDocument();
   });
@@ -1165,6 +1212,10 @@ describe('sending a reminder from the khata page (LED-06)', () => {
   const swallowNavigation = (event: MouseEvent) => {
     if ((event.target as Element | null)?.closest('a')) event.preventDefault();
   };
+  // See the focus block below: the dynamic sheet's first import, paid outside a test.
+  beforeAll(async () => {
+    await import('modules/DigiKhaato/features/reminders/components/PartyReminderSheet');
+  }, 30_000);
   beforeEach(() => document.addEventListener('click', swallowNavigation));
   afterEach(() => document.removeEventListener('click', swallowNavigation));
 
@@ -1176,39 +1227,115 @@ describe('sending a reminder from the khata page (LED-06)', () => {
     return screen.findByRole('dialog', { name: 'Send reminder' });
   };
 
-  it('composes the message from the shop, the party, the header balance and today', async () => {
-    /* Prevents: a reminder whose figure differs from the one on the header
-       the merchant is looking at, one that names the wrong business, one that
-       prints "₹₹" or an ungrouped figure, and one dated from the last entry
-       rather than the day it is sent. */
+  it('shows the server’s words, and opens WhatsApp and SMS with exactly them', async () => {
+    /* Prevents: NTF-03 BR-2 — a figure composed on the device that can drift
+       from the one the server holds, and an SMS that carries the long
+       WhatsApp text (billed per segment) instead of its own short one. */
     const user = userEvent.setup();
     const sheet = await openReminder(user);
-    const today = formatBusinessDate(todayInTenantTz('Asia/Kolkata'));
-    const expected =
-      `Namaste Ramesh Traders,\nRs 2,300.00 is pending with Kumar Stores as of ${today}.\n` +
-      'Kindly pay at your convenience. Thank you.\n— Kumar Stores';
 
-    expect(sheet.querySelector('[data-ub-share-preview]')?.textContent).toBe(expected);
+    await waitFor(() =>
+      expect(sheet.querySelector('[data-ub-share-preview]')?.textContent).toBe(PREVIEW_TEXT)
+    );
+    expect(reminderService.previewReminder).toHaveBeenCalledWith(ID, expect.anything());
     // QA O6: the recipient's mobile is shown normalised, as the link dials it.
     expect(sheet).toHaveAccessibleDescription('To Ramesh Traders · +91 98765 43210');
-    const href = within(sheet).getByRole('link', { name: 'WhatsApp' }).getAttribute('href') ?? '';
-    expect(href.startsWith('https://wa.me/919876543210?text=')).toBe(true);
-    expect(new URL(href).searchParams.get('text')).toBe(expected);
+    const wa = within(sheet).getByRole('link', { name: 'WhatsApp' }).getAttribute('href') ?? '';
+    expect(wa.startsWith('https://wa.me/919876543210?text=')).toBe(true);
+    expect(new URL(wa).searchParams.get('text')).toBe(PREVIEW_TEXT);
+    const sms = within(sheet).getByRole('link', { name: 'SMS' }).getAttribute('href') ?? '';
+    expect(decodeURIComponent(sms)).toContain(PREVIEW_SMS);
+    expect(within(sheet).getByRole('link', { name: 'Call' })).toHaveAttribute(
+      'href',
+      'tel:+919876543210'
+    );
   });
 
-  it('says WhatsApp was OPENED — never that a reminder was sent', async () => {
-    /* Prevents: DEC-012 / NTF-03 BR-1 broken in the snackbar. Nothing is sent
-       by this product; the merchant still has to press send in WhatsApp. And
-       no request is made, because there is no reminder table to write. */
+  it('records the reminder from the tap, and says WhatsApp was OPENED — never sent', async () => {
+    /* Prevents: DEC-012 / NTF-03 BR-1 broken in the snackbar — the merchant
+       still has to press send in WhatsApp — and LED-06 FR-2's log missing the
+       tap: the row is created as a manual WhatsApp reminder and marked sent. */
     const user = userEvent.setup();
     const sheet = await openReminder(user);
+    await waitFor(() =>
+      expect(within(sheet).getByRole('link', { name: 'WhatsApp' })).toBeInTheDocument()
+    );
     await user.click(within(sheet).getByRole('link', { name: 'WhatsApp' }));
 
     const snackbar = store.getState().snackbar;
     expect(snackbar.id).toBe('share.opened.whatsapp');
     expect(snackbar.snackbarSeverity).toBe('info');
     expect(JSON.stringify(snackbar)).not.toMatch(/sent/i);
+    await waitFor(() =>
+      expect(reminderService.createReminder).toHaveBeenCalledWith(ID, 'whatsapp_manual', undefined)
+    );
+    await waitFor(() => expect(reminderService.sendReminder).toHaveBeenCalledWith('r1'));
     expect(ledgerService.postLedgerEntry).not.toHaveBeenCalled();
+  });
+
+  it('records nothing for a sheet that was opened and closed', async () => {
+    /* Prevents: a "Reminded 3 times" strip that counts looks rather than
+       sends — only a tap on WhatsApp, SMS or Call writes a row. */
+    const user = userEvent.setup();
+    const sheet = await openReminder(user);
+    await waitFor(() =>
+      expect(within(sheet).getByRole('link', { name: 'WhatsApp' })).toBeInTheDocument()
+    );
+    await user.click(within(sheet).getByRole('button', { name: 'Close' }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'Send reminder' })).not.toBeInTheDocument()
+    );
+    expect(reminderService.createReminder).not.toHaveBeenCalled();
+  });
+
+  it('warns before a second reminder inside a day', async () => {
+    /* Prevents: LED-06 FR-10 — chasing the same customer twice before lunch
+       without being told; the send is still allowed. */
+    reminderService.previewReminder.mockResolvedValue({
+      partyId: ID,
+      balance: '2300.00',
+      text: PREVIEW_TEXT,
+      smsText: PREVIEW_SMS,
+      hasMobile: true,
+      hasUpi: false,
+      warnings: [
+        {
+          code: 'reminded_recently',
+          lastSentAt: new Date().toISOString(),
+          channel: 'whatsapp_manual',
+        },
+      ],
+    });
+    const user = userEvent.setup();
+    const sheet = await openReminder(user);
+    expect(
+      await within(sheet).findByText('You reminded this customer just now on WhatsApp.')
+    ).toBeInTheDocument();
+    expect(within(sheet).getByRole('link', { name: 'WhatsApp' })).toBeInTheDocument();
+  });
+
+  it('says how often the customer has been reminded, under the balance', async () => {
+    /* Prevents: LED-06 FR-6 — the counter question "did I already ask?"
+       having no answer on the khata. The count is the server's total. */
+    reminderService.listReminders.mockResolvedValue({
+      rows: [],
+      page: 1,
+      pageSize: 5,
+      total: 3,
+      totals: {
+        sent: 3,
+        failed: 0,
+        lastSentAt: new Date(Date.now() - 2 * 86_400_000).toISOString(),
+        lastChannel: 'sms_manual',
+      },
+    });
+    renderWithProviders(<PartyDetailPageContent id={ID} />);
+    expect(await screen.findByText('Reminded 3 times · last 2 days ago (SMS)')).toBeInTheDocument();
+    expect(reminderService.listReminders).toHaveBeenCalledWith(
+      { partyId: ID, page: 1, pageSize: 5 },
+      expect.anything()
+    );
   });
 
   it.each([
@@ -1276,6 +1403,12 @@ describe('focus returns to ⋯ when a dialog opened from the header menu closes 
   beforeEach(() => {
     store.dispatch(resetPartyForm());
   });
+  /* The reminder sheet is `dynamic()`, and its first import transforms the
+     reminders feature — seconds on a loaded CI box, inside the first test's
+     five-second budget. Paid once here instead, outside any test. */
+  beforeAll(async () => {
+    await import('modules/DigiKhaato/features/reminders/components/PartyReminderSheet');
+  }, 30_000);
 
   const openFromMenu = async (user: ReturnType<typeof userEvent.setup>, item: string) => {
     renderWithProviders(<PartyDetailPageContent id={ID} />);

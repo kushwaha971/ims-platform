@@ -46,7 +46,7 @@ def test_registry_is_closed_and_complete() -> None:
     expired temporary password: the password was right, the window was not, and
     telling the holder otherwise sends them to reset a password they never had.
     """
-    assert len(REGISTRY) == 155
+    assert len(REGISTRY) == 156
     assert "unauthenticated" in ERROR_CODES
     assert REGISTRY["password_change_required"] == (403, False)
     assert REGISTRY["password_expired"] == (401, False)
@@ -58,6 +58,11 @@ def test_registry_is_closed_and_complete() -> None:
     # the figure the confirmation dialog has to redraw.
     assert REGISTRY["nothing_to_write_off"] == (400, False)
     assert REGISTRY["balance_changed"] == (409, False)
+    # LED-06 §14 names it (CCR-2) and Part 22 §22.1.1 does not list it yet:
+    # `/reminders/{id}/send` on a row that is no longer `scheduled`. Not
+    # `nothing_due` (the party may still owe) and not `stale_version` (the
+    # reminder has no version) — the row was simply already dealt with.
+    assert REGISTRY["reminder_not_sendable"] == (409, False)
 
 
 def test_every_retryable_code_is_one_the_spec_marks_retryable() -> None:

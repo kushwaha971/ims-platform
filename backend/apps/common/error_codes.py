@@ -97,6 +97,8 @@ _REGISTRY: dict[str, tuple[int, bool]] = {
     "tag_limit_reached": (400, False),
     "collection_requires_receivable": (409, False),
     "nothing_due": (409, False),
+    # LED-06 §14 CCR-2 — `/send` on a reminder that is no longer `scheduled`.
+    "reminder_not_sendable": (409, False),
     # E — inventory
     "insufficient_stock": (409, False),
     "stock_nonzero": (409, False),

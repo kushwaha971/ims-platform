@@ -134,6 +134,22 @@ class AuditAction:
     EXPENSE_RECORDED = "expense.recorded"
     EXPENSE_VOIDED = "expense.voided"
     EXPENSE_CATEGORY_CREATED = "expense_category.created"
+    # ── Sprint 5: LED-05 … LED-08 (17-02 §16) ──────────────────────────────
+    #
+    # LED-05 §16: the system clearing a collection date because the balance
+    # reached zero is its own action (with `actor_type='system'`), so "why did
+    # the date disappear" is answered by a row rather than by an inference.
+    PARTY_COLLECTION_DATE_CLEARED = "party.collection_date_cleared"
+    # LED-06 §16 / LED-07 §16 — minimal, per Part 21 §21.7. Individual message
+    # deliveries are NOT audited (NTF-02 §16); they are the message log.
+    REMINDER_SENT = "reminder.sent"
+    REMINDER_FAILED = "reminder.failed"
+    REMINDER_DONE = "reminder.done"
+    REMINDER_DISMISSED = "reminder.dismissed"
+    # LED-07 §16 — the two ledger messaging toggles. The string is Part 21's
+    # generic settings action, so a future `PUT /tenants/current/settings`
+    # writes the same word for the same event.
+    TENANT_SETTINGS_UPDATED = "tenant.settings.updated"
     JOB_REQUEUED = "job.requeued"
     REFERENCE_DATA_SEEDED = "platform.reference_data_seeded"
 

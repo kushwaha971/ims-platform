@@ -69,6 +69,12 @@ import {
   fetchStatementShop,
 } from 'modules/DigiKhaato/features/ledger/redux/statementThunk';
 import {
+  fetchNotifications,
+  fetchUnreadCount,
+  readAllNotifications,
+  readNotification,
+} from 'modules/DigiKhaato/features/notifications/redux/notificationThunk';
+import {
   completeOnboarding,
   createTenant,
   findResumableBusiness,
@@ -109,6 +115,19 @@ import {
   saveSettingsSection,
   toggleModules,
 } from 'modules/DigiKhaato/features/settings/redux/settingsThunk';
+import {
+  fetchCollectionSummary,
+  fetchDueParties,
+  fetchPartyReminders,
+  fetchReminderHistory,
+  fetchReminderPreview,
+  fetchReminderSettings,
+  markReminderStatus,
+  saveReminderSettings,
+  sendBulkStep,
+  sendManualReminder,
+  startBulkReminders,
+} from 'modules/DigiKhaato/features/reminders/redux/reminderThunk';
 import {
   fetchInvitations,
   inviteMember,
@@ -194,6 +213,16 @@ export const QUERIES = {
   fetchExpenseCategories,
   // EXP-03 — the cashbook
   fetchCashbook,
+  // LED-05/06/07 — the reminders screen, the khata's strip, the sheet's text
+  fetchCollectionSummary,
+  fetchDueParties,
+  fetchReminderHistory,
+  fetchPartyReminders,
+  fetchReminderPreview,
+  fetchReminderSettings,
+  // NTF-01 — the bell's count and the inbox panel
+  fetchUnreadCount,
+  fetchNotifications,
 } as const;
 
 export const MUTATIONS = {
@@ -267,6 +296,15 @@ export const MUTATIONS = {
   createExpense,
   voidExpense,
   createExpenseCategory,
+  // LED-06/07/08 — reminders and the two SMS switches
+  sendManualReminder,
+  startBulkReminders,
+  sendBulkStep,
+  markReminderStatus,
+  saveReminderSettings,
+  // NTF-01 — read state
+  readNotification,
+  readAllNotifications,
 } as const;
 
 export type TQueryName = keyof typeof QUERIES;

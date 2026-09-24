@@ -115,10 +115,18 @@ export interface PartyDetailPageContentProps {
    and LED-03's drawers. The write-off form (FR-3) made it the heaviest thing
    on the page that most visits never render: +3 KB on the route, statically. */
 /* The reminder sheet loads when it opens, like the archive dialog: carried
-   statically, the sheet, its link builders and the clipboard path cost the
-   khata route 3.6 KB on every visit to read a balance. */
-const UbShareSheetLazy = /* @__PURE__ */ dynamic(() =>
-  import('src/design-system/UbShareSheet').then((m) => m.UbShareSheet)
+   statically, the sheet, its link builders, the clipboard path and now the
+   reminders slice cost the khata route on every visit to read a balance. */
+const PartyReminderSheetLazy = /* @__PURE__ */ dynamic(() =>
+  import('modules/DigiKhaato/features/reminders/components/PartyReminderSheet').then(
+    (m) => m.PartyReminderSheet
+  )
+);
+
+const PartyReminderStripLazy = /* @__PURE__ */ dynamic(() =>
+  import('modules/DigiKhaato/features/reminders/components/PartyReminderStrip').then(
+    (m) => m.PartyReminderStrip
+  )
 );
 
 const PartyArchiveDialogLazy = /* @__PURE__ */ dynamic(() =>
@@ -204,6 +212,7 @@ export function PartyDetailPageContent({
   const reminder = usePartyReminder(
     party
       ? {
+          id,
           name: party.name,
           balance: summary?.balance ?? party.balance,
           mobile: party.mobile,
@@ -377,6 +386,14 @@ export function PartyDetailPageContent({
               onCopyMobile={handleCopyMobile}
               copied={copied}
             />
+            {/* LED-06 FR-6 — "did I already ask?", answered where the balance
+                is. Its own chunk: it carries the reminders slice, and a khata
+                that is only read should not wait on it to paint. */}
+            {party && canReadLedger && (
+              <UbBox className="mt-3 border-t border-border-hairline pt-3">
+                <PartyReminderStripLazy partyId={id} />
+              </UbBox>
+            )}
           </UbBox>
         </UbCard>
 
@@ -443,20 +460,17 @@ export function PartyDetailPageContent({
 
       {/* LED-06. The merchant sends it from their own WhatsApp or SMS app
           (DEC-012) — the feedback says "WhatsApp opened", never "Reminder
-          sent". Static rather than `dynamic()`: `UbDialog` is already on this
-          route for the menu and the archive dialog, and what this adds is a
-          few hundred bytes of link-building. */}
+          sent". The text is the server's, fetched when the sheet opens, and
+          the tap on WhatsApp, SMS or Call is what records the reminder. */}
       {reminder.canRemind && reminder.open && (
-        <UbShareSheetLazy
+        <PartyReminderSheetLazy
+          partyId={reminder.partyId}
           open={reminder.open}
           onOpenChange={reminder.setOpen}
           title={reminder.title}
           description={reminder.description}
-          message={reminder.message}
           phone={reminder.phone}
           labels={reminder.labels}
-          onShared={reminder.onShared}
-          onFailed={reminder.onFailed}
           returnFocusRef={moreRef}
         />
       )}

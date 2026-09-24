@@ -11,6 +11,7 @@ CSV import too, and a rule that lives in a serializer holds only for HTTP.
 from __future__ import annotations
 
 import unicodedata
+from datetime import date, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -19,6 +20,7 @@ from django.utils import timezone
 
 from apps.common.audit import AuditAction, diff_fields, write_audit
 from apps.common.context import Ctx
+from apps.common.dates import tenant_today
 from apps.common.exceptions import BusinessRuleViolation, ValidationFailed
 from apps.parties.constants import GstRegistration, PartyStatus
 from apps.parties.models import Party
@@ -239,6 +241,40 @@ def _raise_duplicate_mobile(existing: Party) -> None:
     )
 
 
+#: LED-05 §10 — a collection date is at most a year out.
+COLLECTION_DATE_MAX_DAYS = 365
+
+
+def _check_collection_date(*, ctx: Ctx, party: Party, data: dict) -> None:
+    """LED-05 §10 / FR-6 — a NEW promise is today-or-later, within a year, and receivable.
+
+    Checked only when the value CHANGES to a date. An edit that resends the
+    date the party already carries — the form sends every field — must not be
+    refused because that promise has since become overdue; and clearing is
+    always allowed, because "no promise" is where a paid-up party belongs.
+
+    `collection_requires_receivable` (CCR-2) is the rule that a merchant does
+    not chase a supplier they owe, nor a customer who owes nothing: the date
+    would sit in every bucket as a promise with nothing behind it.
+    """
+    if "collection_date" not in data:
+        return
+    value = data.get("collection_date")
+    if value in (None, "") or value == party.collection_date:
+        return
+    if isinstance(value, str):
+        value = date.fromisoformat(value)
+    today = tenant_today(ctx.tenant)
+    if value < today or value > today + timedelta(days=COLLECTION_DATE_MAX_DAYS):
+        raise ValidationFailed({"collection_date": ["Choose a date within the next year."]})
+    if (party.balance or Decimal("0")) <= 0:
+        raise BusinessRuleViolation(
+            "collection_requires_receivable",
+            "A collection date needs money owed to you.",
+            details={"balance": str(party.balance)},
+        )
+
+
 def _audit_snapshot(party: Party) -> dict:
     return {field: getattr(party, field) for field in WRITABLE_FIELDS}
 
@@ -358,6 +394,8 @@ def update_party(*, ctx: Ctx, party: Party, payload: dict) -> tuple[Party, list[
 
     if data.get("sms_opt_in") and not party.sms_opt_in and data.get("consent_source"):
         party.consent_at = timezone.now()
+
+    _check_collection_date(ctx=ctx, party=party, data=data)
 
     for field, value in data.items():
         if field in WRITABLE_FIELDS:

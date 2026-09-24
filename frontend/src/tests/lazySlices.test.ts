@@ -18,6 +18,8 @@ describe('lazily registered slices', () => {
     expect(keys).not.toContain('expenseList');
     expect(keys).not.toContain('expenseForm');
     expect(keys).not.toContain('cashbook');
+    // LED-05/06/07: the reminders screen and the khata's strip bring it.
+    expect(keys).not.toContain('reminders');
     // The shell's own slices are still there.
     expect(keys).toEqual(expect.arrayContaining(['session', 'partyList', 'ledgerForm']));
   });
