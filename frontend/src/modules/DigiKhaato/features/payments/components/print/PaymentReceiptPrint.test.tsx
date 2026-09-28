@@ -62,9 +62,21 @@ const payment = (over: Partial<Payment> = {}): Payment => ({
   ...over,
 });
 
-function Receipt({ value }: Readonly<{ value: Payment }>) {
+function Receipt({
+  value,
+  perspective,
+}: Readonly<{ value: Payment; perspective?: 'customer' | 'merchant' }>) {
   const { t } = useTranslation();
-  return <PaymentReceiptPrint payment={value} branding={null} staticQr={null} locale="en" t={t} />;
+  return (
+    <PaymentReceiptPrint
+      payment={value}
+      branding={null}
+      staticQr={null}
+      locale="en"
+      t={t}
+      perspective={perspective}
+    />
+  );
 }
 
 const css = readFileSync(join(__dirname, '../../../../../../../app/globals.css'), 'utf8');
@@ -111,4 +123,50 @@ it('P-D6: a voided receipt does not state a balance after the payment', () => {
 it('P-D6: a recorded receipt still states the balance after it', () => {
   renderWithProviders(<Receipt value={payment()} />);
   expect(screen.getByText(/Balance after this payment/)).toBeInTheDocument();
+});
+
+it('UAT-D8: the receipt letterhead prints the shop phone spaced, not raw E.164', () => {
+  /* Final UAT D8 — "+919876501234" was printed as stored. */
+  renderWithProviders(
+    <Receipt value={payment({ business: { ...payment().business, phone: '+919876501234' } })} />
+  );
+  expect(screen.getByText('+91 98765 01234')).toBeInTheDocument();
+});
+
+describe('UAT-D8: the balance line is worded for whoever is reading it', () => {
+  /* Final UAT D8 — the owner's own receipt page said "You will give", the
+     customer's sentence, as though the owner owed it. The paper keeps it. */
+  it('the customer copy (print, share) keeps "You will give" and no shop line', () => {
+    renderWithProviders(<Receipt value={payment()} />);
+    expect(screen.getByTestId('receipt-customer-balance')).toHaveTextContent('You will give');
+    expect(screen.getByTestId('receipt-customer-balance')).not.toHaveClass('hidden');
+    expect(screen.queryByTestId('receipt-shop-balance')).not.toBeInTheDocument();
+  });
+
+  it("the merchant's screen reads it from the shop side; the customer line is print-only", () => {
+    renderWithProviders(<Receipt value={payment()} perspective="merchant" />);
+    const shop = screen.getByTestId('receipt-shop-balance');
+    expect(shop).toHaveTextContent("Customer's balance · ₹1,084.00 to collect");
+    expect(shop).toHaveClass('print:hidden');
+    expect(screen.getByTestId('receipt-customer-balance')).toHaveClass('hidden', 'print:block');
+  });
+
+  it('a customer in advance reads "advance with you"; a supplier owed reads "to pay"', () => {
+    const { unmount } = renderWithProviders(
+      <Receipt value={payment({ partyBalanceAfter: '-300.00' })} perspective="merchant" />
+    );
+    expect(screen.getByTestId('receipt-shop-balance')).toHaveTextContent(
+      "Customer's balance · ₹300.00 advance with you"
+    );
+    unmount();
+    renderWithProviders(
+      <Receipt
+        value={payment({ direction: 'out', partyBalanceAfter: '-300.00' })}
+        perspective="merchant"
+      />
+    );
+    expect(screen.getByTestId('receipt-shop-balance')).toHaveTextContent(
+      "Supplier's balance · ₹300.00 to pay"
+    );
+  });
 });

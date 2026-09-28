@@ -3,6 +3,7 @@
 import type { TranslateFn } from 'src/hooks/useTranslation';
 import { formatBusinessDate } from 'src/utils/dates';
 import { formatAmount, formatInr } from 'src/utils/money';
+import { formatPhoneForDisplay } from 'src/utils/share';
 
 import { documentTitleId, sgstLabelId } from '../../view-model/invoiceDisplay';
 
@@ -58,7 +59,7 @@ export function InvoicePrintThermal80({
         )}
         <p className="font-bold">{supplier.legalName || supplier.name}</p>
         <p>{[supplier.address.line1, supplier.address.city].filter(Boolean).join(', ')}</p>
-        {supplier.phone && <p>{supplier.phone}</p>}
+        {supplier.phone && <p>{formatPhoneForDisplay(supplier.phone)}</p>}
         {supplier.gstin && <p>GSTIN {supplier.gstin}</p>}
         {branding?.docHeader && <p>{branding.docHeader}</p>}
       </header>

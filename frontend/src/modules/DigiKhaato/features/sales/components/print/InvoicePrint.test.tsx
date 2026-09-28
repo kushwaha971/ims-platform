@@ -7,6 +7,7 @@ import {
   billOfSupply,
   interStateDocument,
   makeDocument,
+  wireDocument,
   wireLine,
 } from '../../testing/salesFixtures';
 
@@ -152,4 +153,17 @@ it('UAT D2: on a phone screen each line is stacked with its total; paper keeps t
   expect(first).toHaveTextContent('CGST');
   expect(first).toHaveTextContent('SGST');
   expect(first).toHaveTextContent(line.lineTotal);
+});
+
+it('UAT-D8: the A4 and thermal letterheads print the shop phone spaced, not raw E.164', () => {
+  /* Final UAT D8 — the stored "+919876501234" was printed as-is on the bill. */
+  const doc = makeDocument({
+    supplier: { ...(wireDocument().supplier as Record<string, unknown>), phone: '+919876501234' },
+  });
+  const { unmount } = renderWithProviders(<A4 doc={doc} />);
+  expect(screen.getByText('+91 98765 01234')).toBeInTheDocument();
+  expect(screen.queryByText('+919876501234')).not.toBeInTheDocument();
+  unmount();
+  renderWithProviders(<Thermal doc={doc} />);
+  expect(screen.getByText('+91 98765 01234')).toBeInTheDocument();
 });

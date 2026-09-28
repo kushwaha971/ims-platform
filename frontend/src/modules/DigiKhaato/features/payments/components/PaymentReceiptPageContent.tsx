@@ -31,7 +31,7 @@ import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import { partyPath } from 'src/routes';
 import { copyText } from 'src/utils/clipboard';
 import { formatBusinessDate, formatTimestamp } from 'src/utils/dates';
-import { formatAmount } from 'src/utils/money';
+import { formatAmount, formatInr } from 'src/utils/money';
 
 import { usePaymentReceipt } from '../hooks/usePaymentReceipt';
 import { allocationHref } from '../view-model/allocationLinks';
@@ -249,7 +249,7 @@ export function PaymentReceiptPageContent({ id }: Readonly<{ id: string }>): Rea
                 label={t('payments.receipt.against')}
                 value={
                   <UbLink href={allocationHref(row)}>
-                    {`${row.number ?? '—'} · ${formatAmount(row.amount)}`}
+                    {`${row.number ?? '—'} · ${formatInr(row.amount)}`}
                   </UbLink>
                 }
               />
@@ -275,6 +275,7 @@ export function PaymentReceiptPageContent({ id }: Readonly<{ id: string }>): Rea
             staticQr={receipt.staticQr}
             locale={locale}
             t={t}
+            perspective="merchant"
           />
         </UbStack>
       </UbStack>

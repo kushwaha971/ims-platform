@@ -5,6 +5,7 @@ import type { Locale } from 'src/types/domain.types';
 import { amountInWords } from 'src/utils/amountInWords';
 import { formatBusinessDate } from 'src/utils/dates';
 import { formatAmount, formatInr } from 'src/utils/money';
+import { formatPhoneForDisplay } from 'src/utils/share';
 
 import { stateName } from 'modules/DigiKhaato/features/onboarding/constants/gstStates';
 
@@ -108,7 +109,7 @@ export function InvoicePrintA4({
                 (Sprint 12 a11y sweep). Paper has no outline to disturb. */}
             <h2 className="text-lg font-bold">{supplier.legalName || supplier.name}</h2>
             <p className="text-xs">{addressLines(supplier.address)}</p>
-            {supplier.phone && <p className="text-xs">{supplier.phone}</p>}
+            {supplier.phone && <p className="text-xs">{formatPhoneForDisplay(supplier.phone)}</p>}
             {supplier.gstin && <p className="font-mono text-xs">GSTIN {supplier.gstin}</p>}
             {branding?.docHeader && <p className="text-xs">{branding.docHeader}</p>}
           </div>

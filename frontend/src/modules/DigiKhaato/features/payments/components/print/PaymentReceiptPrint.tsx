@@ -3,8 +3,10 @@
 import type { TranslateFn } from 'src/hooks/useTranslation';
 import type { Locale } from 'src/types/domain.types';
 import { amountInWords } from 'src/utils/amountInWords';
+import { cn } from 'src/utils/cn';
 import { formatBusinessDate } from 'src/utils/dates';
 import { formatInr, isNegativeAmount, isZeroAmount, absMoney } from 'src/utils/money';
+import { formatPhoneForDisplay } from 'src/utils/share';
 
 import { UbQrCode } from 'modules/DigiKhaato/features/sales/components/print/UbQrCode';
 import type { PrintBranding } from 'modules/DigiKhaato/features/sales/redux/salesThunk';
@@ -40,6 +42,28 @@ import 'src/i18n/catalogues/payments';
  * "INV/26-27/000113/09/2026". A column gap on every cell, the first and last
  * flush with the sheet's edge.
  */
+export type ReceiptPerspective = 'customer' | 'merchant';
+
+/**
+ * UAT-D8 — the balance after this payment as the SHOP reads it: "Customer's
+ * balance · ₹2,703 to collect", "… · ₹300 advance with you", or for a
+ * supplier "Supplier's balance · ₹X to pay". Positive is owed to the shop.
+ */
+const shopBalanceLine = (balance: string, isIn: boolean, t: TranslateFn): string => {
+  const who = t(
+    isIn ? 'payments.receipt.shopBalance.customer' : 'payments.receipt.shopBalance.supplier'
+  );
+  const amount = formatInr(absMoney(balance));
+  const what = isZeroAmount(balance)
+    ? t('payments.receipt.shopBalance.settled')
+    : !isNegativeAmount(balance)
+      ? t('payments.receipt.shopBalance.toCollect', { amount })
+      : isIn
+        ? t('payments.receipt.shopBalance.advance', { amount })
+        : t('payments.receipt.shopBalance.toPay', { amount });
+  return `${who} · ${what}`;
+};
+
 const CELLS =
   'w-full [&_td]:px-2 [&_td]:py-1 [&_th]:px-2 [&_th]:py-1 [&_td:first-child]:pl-0 [&_th:first-child]:pl-0 [&_td:last-child]:pr-0 [&_th:last-child]:pr-0';
 
@@ -49,12 +73,20 @@ export function PaymentReceiptPrint({
   staticQr,
   locale,
   t,
+  perspective = 'customer',
 }: Readonly<{
   payment: Payment;
   branding: PrintBranding | null;
   staticQr: readonly string[] | null;
   locale: Locale;
   t: TranslateFn;
+  /**
+   * UAT-D8 — whose side the balance line is worded from ON SCREEN. The paper
+   * is always the customer's ("You will give"); on the merchant's own receipt
+   * page that sentence addressed the owner as the debtor, so `'merchant'`
+   * shows the shop's reading on screen and keeps the customer's for print.
+   */
+  perspective?: ReceiptPerspective;
 }>): React.JSX.Element {
   const business = payment.business;
   const isIn = payment.direction === 'in';
@@ -88,7 +120,7 @@ export function PaymentReceiptPrint({
           )}
           <p className="text-lg font-semibold">{business.legalName || business.name}</p>
           {address && <p>{address}</p>}
-          {business.phone && <p>{business.phone}</p>}
+          {business.phone && <p>{formatPhoneForDisplay(business.phone)}</p>}
           {business.gstin && <p className="font-mono">GSTIN {business.gstin}</p>}
         </section>
         <section className="text-right">
@@ -161,8 +193,19 @@ export function PaymentReceiptPrint({
         </table>
       )}
 
+      {showBalance && balance !== null && perspective === 'merchant' && (
+        <p className="mt-3 font-semibold print:hidden" data-testid="receipt-shop-balance">
+          {shopBalanceLine(balance, isIn, t)}
+        </p>
+      )}
       {showBalance && balance !== null && (
-        <p className="ub-print-closing mt-3 font-semibold">
+        <p
+          className={cn(
+            'ub-print-closing mt-3 font-semibold',
+            perspective === 'merchant' && 'hidden print:block'
+          )}
+          data-testid="receipt-customer-balance"
+        >
           {t('payments.receipt.balanceAfter')}: {formatInr(absMoney(balance))} —{' '}
           {isZeroAmount(balance)
             ? t('payments.receipt.settled')
