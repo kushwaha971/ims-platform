@@ -104,9 +104,15 @@ def void_bill(*, ctx: Ctx, document_id: Any, reason: Any) -> dict:
     """Void one bill. Returns `{document, party_balance, reversal_entry_id, reversal_movement_ids,
     released_payments}` (PUR-04 §14)."""
     from apps.parties.constants import PartyStatus
-    from apps.parties.services.balance import lock_party
+    from apps.parties.services.balance import lock_party_of
+    from apps.purchases.models import PurchaseDocument
 
     clean_reason = _validate_reason(reason)
+    # L1 before the bill (`parties.services.balance.lock_party_of`): bill void
+    # took bill → party while supplier-payment void takes party → bills.
+    party = lock_party_of(
+        tenant=ctx.tenant, rows=PurchaseDocument.objects.filter(tenant=ctx.tenant), pk=document_id
+    )
     document = lock_document(ctx.tenant, document_id)
     if document.status == DocumentStatus.VOID:
         raise BusinessRuleViolation(
@@ -123,7 +129,6 @@ def void_bill(*, ctx: Ctx, document_id: Any, reason: Any) -> dict:
 
     before = snapshot(document)
     original = standing_bill_entry(tenant=ctx.tenant, document_id=document.id)
-    party = lock_party(tenant=ctx.tenant, party_id=document.party_id)
     if party is not None and party.status == PartyStatus.ARCHIVED:
         raise BusinessRuleViolation(
             "party_archived",

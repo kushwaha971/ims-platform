@@ -151,10 +151,15 @@ def record_bill(
     payment}` — `payment` is `{payment_id, number, amount}` when "Paid now" was sent."""
     from apps.inventory.services.last_cost import set_last_purchase_cost
     from apps.parties.constants import PartyStatus
-    from apps.parties.services.balance import lock_party
+    from apps.parties.services.balance import lock_party_of, relock_if_moved
     from apps.platform_app.services.sequences import allocate_number
+    from apps.purchases.models import PurchaseDocument
 
     tenant = ctx.tenant
+    # L1 before the draft (`parties.services.balance.lock_party_of`).
+    early_party = lock_party_of(
+        tenant=tenant, rows=PurchaseDocument.objects.filter(tenant=tenant), pk=document_id
+    )
     document = lock_document(tenant, document_id)
     if document.status != DocumentStatus.DRAFT:
         raise BusinessRuleViolation(
@@ -170,7 +175,7 @@ def record_bill(
     _validate_recordable(ctx, document, rows)
     cleaned_payment = validate_payment(payment=payment)
 
-    party = lock_party(tenant=tenant, party_id=document.party_id)
+    party = relock_if_moved(tenant=tenant, party=early_party, party_id=document.party_id)
     if party is None or party.status == PartyStatus.ARCHIVED:
         raise BusinessRuleViolation(
             "party_archived",

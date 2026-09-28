@@ -41,7 +41,7 @@ from apps.common.exceptions import BusinessRuleViolation, NotFound
 from apps.ledger.constants import SourceType
 from apps.ledger.services.corrections import _validate_reason
 from apps.ledger.services.postings import reverse_source_entries
-from apps.parties.services.balance import lock_party
+from apps.parties.services.balance import lock_party_of
 from apps.payments.constants import PaymentStatus
 from apps.payments.models import Allocation, Payment
 from apps.payments.services.record import payment_snapshot
@@ -61,9 +61,44 @@ def _lock_payment(ctx: Ctx, payment_id: Any) -> Payment:
     return payment
 
 
+def _lock_allocated_documents(ctx: Ctx, payment_id: Any) -> dict[str, dict[str, Any]]:
+    """L2 — the documents this payment settles, locked BEFORE the payment row (L3).
+
+    Read from the allocations without a lock: under the party lock they cannot
+    change, and for a walk-in payment (no party) the one thing that can move
+    them — voiding that walk-in bill — takes the bill's lock first too, so this
+    waits for it rather than crossing it.
+    """
+    wanted: dict[str, set[Any]] = {}
+    for document_type, document_id in Allocation.objects.filter(
+        tenant=ctx.tenant, payment_id=payment_id
+    ).values_list("document_type", "document_id"):
+        wanted.setdefault(document_type, set()).add(document_id)
+    locked: dict[str, dict[str, Any]] = {}
+    for document_type in sorted(wanted):
+        target = target_for(document_type)
+        if target is None:  # pragma: no cover - a target unregistered after use
+            continue
+        locked[document_type] = {
+            str(document.id): document
+            for document in target.lock(tenant=ctx.tenant, ids=list(wanted[document_type]))
+        }
+    return locked
+
+
 @transaction.atomic
 def void_payment(*, ctx: Ctx, payment_id: Any, reason: Any) -> dict:
+    """Void one payment.
+
+    ── Lock order (`parties.services.balance.lock_party_of`) ──────────────────
+    party → the documents it settles → the payment → its allocations. This took
+    the PAYMENT first and the invoice last, while `void_invoice` took the
+    invoice first and the payment last (releasing its allocation): voiding an
+    invoice and its own payment at the same moment was a deadlock.
+    """
     clean_reason = _validate_reason(reason)
+    lock_party_of(tenant=ctx.tenant, rows=Payment.objects.for_tenant(ctx.tenant), pk=payment_id)
+    locked = _lock_allocated_documents(ctx, payment_id)
     payment = _lock_payment(ctx, payment_id)
     if payment.status == PaymentStatus.VOID:
         raise BusinessRuleViolation(
@@ -71,8 +106,6 @@ def void_payment(*, ctx: Ctx, payment_id: Any, reason: Any) -> dict:
             "This payment has already been voided.",
             details={"payment_id": str(payment.id), "number": payment.number},
         )
-    if payment.party_id is not None:
-        lock_party(tenant=ctx.tenant, party_id=payment.party_id)
 
     rows = list(payment.allocations.all())
     before = payment_snapshot(payment)
@@ -85,7 +118,12 @@ def void_payment(*, ctx: Ctx, payment_id: Any, reason: Any) -> dict:
         target = target_for(document_type)
         if target is None:  # pragma: no cover - a target unregistered after use
             continue
-        for document in target.lock(tenant=ctx.tenant, ids=list(allocations)):
+        held = locked.get(document_type, {})
+        missing = [pk for pk in allocations if pk not in held]
+        if missing:  # pragma: no cover - only a walk-in race can add one
+            held.update({str(d.id): d for d in target.lock(tenant=ctx.tenant, ids=missing)})
+        # `held` is in the target's lock order, `(document_date, number, id)`.
+        for document in [d for pk, d in held.items() if pk in allocations]:
             row = allocations[str(document.id)]
             was, now = target.unapply(document=document, amount=row.amount, today=today)
             summary = target.summary(document)

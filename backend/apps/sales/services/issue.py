@@ -68,10 +68,16 @@ def issue_invoice(
     version: Any = None,
 ) -> dict:
     """Issue a draft. Returns `{document, warnings, ledger_entry_id, party_balance}`."""
-    from apps.parties.services.balance import lock_party
+    from apps.parties.services.balance import lock_party_of, relock_if_moved
     from apps.platform_app.services.sequences import allocate_number
+    from apps.sales.models import SalesDocument
 
     tenant = ctx.tenant
+    # L1 before the draft (`parties.services.balance.lock_party_of`), the order
+    # every money path follows.
+    early_party = lock_party_of(
+        tenant=tenant, rows=SalesDocument.objects.filter(tenant=tenant), pk=document_id
+    )
     document = lock_document(tenant, document_id)
     if document.status != DocumentStatus.DRAFT:
         raise BusinessRuleViolation(
@@ -105,7 +111,7 @@ def issue_invoice(
 
     party = None
     if not walk_in:
-        party = lock_party(tenant=tenant, party_id=document.party_id)
+        party = relock_if_moved(tenant=tenant, party=early_party, party_id=document.party_id)
         if party is None or party.status == "archived":
             raise BusinessRuleViolation(
                 "party_archived",
