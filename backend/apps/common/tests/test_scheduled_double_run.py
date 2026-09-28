@@ -28,16 +28,7 @@ from django.urls import reverse
 
 from apps.common.constants import JobStatus
 from apps.common.jobs import REGISTRY, SCHEDULES, run_job
-from apps.sales.tests.conftest import (  # noqa: F401  (fixtures, re-exported)
-    draft,
-    issue,
-    line,
-    make_item,
-    make_party,
-    owner,
-    reference,
-    shop,
-)
+from apps.sales.tests.conftest import draft, issue, line
 
 pytestmark = pytest.mark.django_db
 

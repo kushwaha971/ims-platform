@@ -50,10 +50,7 @@ from apps.ledger.services.corrections import _validate_reason
 from apps.purchases.constants import VOIDABLE_STATUSES, DocumentStatus
 from apps.purchases.services.drafts import ENTITY, lock_document, snapshot
 from apps.purchases.services.ledger_link import reverse_bill_credit, standing_bill_entry
-from apps.purchases.services.payment_seam import (
-    release_payments_on_void,
-    released_payment_ids,
-)
+from apps.purchases.services.payment_seam import release_payments_on_void, released_payment_ids
 
 
 def _reverse_stock(ctx: Ctx, document: Any, reason: str) -> list[Any]:

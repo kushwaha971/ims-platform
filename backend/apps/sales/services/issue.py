@@ -38,11 +38,7 @@ from apps.sales.services.documents import check_version, lock_document, replace_
 from apps.sales.services.issue_parts import credit_check, party_snapshot, post_stock, rule46_for
 from apps.sales.services.ledger_link import post_invoice_debit
 from apps.sales.services.payload import apply_payload
-from apps.sales.services.payment_seam import (
-    paid_at_issue,
-    record_issue_payment,
-    validate_payment,
-)
+from apps.sales.services.payment_seam import paid_at_issue, record_issue_payment, validate_payment
 
 
 def _validate_issuable(ctx: Ctx, document: Any, rows: list[dict]) -> None:

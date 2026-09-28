@@ -21,11 +21,10 @@ from django.contrib.auth.hashers import get_hasher
 from django.db import connection
 from django.urls import reverse
 
-from apps.common.context import Ctx
 from apps.common.constants import RoleCode
+from apps.common.context import Ctx
 from apps.platform_app.services import credentials
 from tests.fixtures import login_via_password, register_via_api, reset_token_for
-
 
 pytestmark = pytest.mark.django_db
 
@@ -140,5 +139,7 @@ def test_a_refused_reset_password_leaves_the_link_unspent(
     assert refused.status_code == 400
     ok = anonymous_client.post(url, {"token": token, "new_password": "Almirah9876"}, format="json")
     assert ok.status_code == 200, ok.content
-    spent = anonymous_client.post(url, {"token": token, "new_password": "Other98765"}, format="json")
+    spent = anonymous_client.post(
+        url, {"token": token, "new_password": "Other98765"}, format="json"
+    )
     assert spent.status_code == 400

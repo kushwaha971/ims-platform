@@ -82,5 +82,5 @@ def test_production_turns_on_hsts_and_secure_cookies() -> None:
     result = _prod(f"-c\0{probe}")
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip().splitlines()[-1] == (
-        "[31536000, true, true, true, true, true, true, \"DENY\", true, false]"
+        '[31536000, true, true, true, true, true, true, "DENY", true, false]'
     )

@@ -47,9 +47,7 @@ class Command(BaseCommand):
                 f"avg_cost {row.cached_avg_cost}/{row.replay_avg_cost}  bad_rows {row.bad_rows}"
             )
         total = len(balances) + len(stock)
-        summary = (
-            f"check_invariants: {len(balances)} balance and {len(stock)} stock violation(s)."
-        )
+        summary = f"check_invariants: {len(balances)} balance and {len(stock)} stock violation(s)."
         if total:
             self.stdout.write(self.style.WARNING(summary))
             sys.exit(1)

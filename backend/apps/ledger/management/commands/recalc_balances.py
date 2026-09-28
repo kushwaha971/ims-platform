@@ -51,9 +51,7 @@ class Command(BaseCommand):
         # The replay is `ledger.selectors.drift` — one correlated subquery, shared
         # with the nightly `parties.recalc_balances` job so the two cannot disagree.
         checked = drifted = 0
-        for party, moved in iter_balance_drift(
-            tenant_id=opts["tenant"], chunk=int(opts["chunk"])
-        ):
+        for party, moved in iter_balance_drift(tenant_id=opts["tenant"], chunk=int(opts["chunk"])):
             checked += 1
             computed = party.computed or ZERO
             if not moved:

@@ -31,17 +31,7 @@ from django.urls import reverse
 from django.utils.module_loading import import_string
 
 from apps.common.logging import build_logging_config, redact_pii
-from apps.sales.tests.conftest import (  # noqa: F401  (fixtures, re-exported)
-    draft,
-    invoice_url,
-    issue,
-    line,
-    make_item,
-    make_party,
-    owner,
-    reference,
-    shop,
-)
+from apps.sales.tests.conftest import draft, invoice_url, issue, line
 from tests.fixtures import register_via_api, reset_token_for
 
 pytestmark = pytest.mark.django_db
@@ -106,7 +96,9 @@ def test_representative_flows_leave_no_pii_or_secret_in_the_logs(
         format="json",
     )
     anonymous_client.post(
-        reverse("v1:auth-login"), {"email": "sweep@example.com", "password": PASSWORD}, format="json"
+        reverse("v1:auth-login"),
+        {"email": "sweep@example.com", "password": PASSWORD},
+        format="json",
     )
     anonymous_client.post(
         reverse("v1:auth-password-reset-request"), {"email": "sweep@example.com"}, format="json"
