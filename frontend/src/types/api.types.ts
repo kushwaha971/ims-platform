@@ -52,6 +52,8 @@ export type ApiErrorCode =
   | 'self_change_forbidden'
   | 'tenant_suspended'
   | 'gstin_in_use'
+  // CR-2026-09-29-SEC-A — every write in a support session (view only).
+  | 'impersonation_forbidden'
   // business
   | 'party_balance_nonzero'
   // PTY-04 FR-3 — the write-off escape (Part 43 CR-135).

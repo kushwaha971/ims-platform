@@ -61,7 +61,13 @@ export function ImpersonationBanner(): React.JSX.Element | null {
             time: formatTimestamp(session.expiresAt),
           })}
         </UbText>
-        <UbButton size="sm" variant="destructive" busy={ending} onClick={() => void end()}>
+        <UbButton
+          size="sm"
+          variant="destructive"
+          viewOnlySafe
+          busy={ending}
+          onClick={() => void end()}
+        >
           {t('admin.banner.end')}
         </UbButton>
       </UbStack>

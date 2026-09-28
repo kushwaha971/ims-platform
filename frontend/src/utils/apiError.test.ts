@@ -102,4 +102,20 @@ describe('errorMessageId — the client-minted fallbacks resolve to a key', () =
     expect(errorMessageId(shape)).toBeNull();
     expect(shape.message).toBe('राशि दर्ज करें।');
   });
+
+  it('reads a support-session refusal as "view only", in the reader\'s language', () => {
+    /* CR-2026-09-29-SEC-A: the server has no Hindi catalogue, and a support
+       operator meets this on every write. It must not read as "ask your owner
+       for permission", which no owner can grant. */
+    const shape = toApiError(
+      reply(403, {
+        error: {
+          code: 'impersonation_forbidden',
+          message: 'This is a view-only support session. Nothing can be changed.',
+        },
+      })
+    );
+    expect(shape.code).toBe('impersonation_forbidden');
+    expect(errorMessageId(shape)).toBe('errors.impersonation_forbidden');
+  });
 });

@@ -1416,3 +1416,55 @@ don't keep the domain name in any place. Redesign my logo as well."
 **Not done, recorded.** Part 23 §23.2.6 and Part 24's default `app_name` in the Project SSOT
 still say DigiKhaato and need the same edit through `project_write`. `package.json`'s `name`
 (`digikhaato-frontend`) is internal and left.
+
+## CR-2026-09-29-SEC-A — a support session is VIEW ONLY, enforced at the one door
+
+**State:** `done`. **Target:** Part 17-01 PLT-14 FR-5, Part 20 §20.4.8 rule 5,
+CR-2026-09-24-W2C-B. **Found by** the video producer reading the code: the console
+("A read-only support session for up to 60 minutes") and the owner's consent both promise
+read-only, but `CookieOrBearerJWTAuthentication._assert_impersonation_scope` said "Writes
+are allowed" and refused only the console, switching, deletion, export, consent, the team
+routes and `bank_details`/`upi_vpa`/`pan`. Every other write was stopped only if the view's
+permission class happened to check `imp` — `HasPermission`, `TenantManagePermission` and the
+settings/branding classes did (with a generic 403 `permission_denied`); `IsTenantMember`, on
+the notification inbox's mark-read and read-all, did not, and nothing stopped the next view
+from forgetting.
+
+**Decision.** W2C-B's "until the owning chapter chooses, a support session reads" is now the
+rule rather than an accident of which permission class a view uses. The authentication class
+refuses EVERY unsafe method (POST/PUT/PATCH/DELETE) under an `imp` token with 403
+`impersonation_forbidden` ("This is a view-only support session. Nothing can be changed."),
+before any view or permission class runs. A lapsed/revoked session still answers 401
+`session_revoked` first, so the client's refresh hands the tab back to the operator.
+
+**The allow-list** (`IMPERSONATION_WRITE_ALLOWED`, shared with `HasPermission` through
+`support_write_allowed()`): `POST /admin/impersonation/end` (the way out), `POST /auth/logout`,
+and `POST /reminders/preview` — the only POST the frontend makes merely to SHOW something
+(the reminder sheet's text; `preview_reminder` writes nothing). Considered and left off:
+`POST /payments/upi-intent` (writes nothing, but it is opened from the Collect action, a
+payment flow), `POST /payments/{id}/share` (audited, idempotency row), share-link creation
+(mints a token), notification mark-read (the owner's inbox state). `/auth/refresh` and the
+other sign-in routes never authenticate (`authentication_classes = []`), so the support token
+never reaches them. Reads are unchanged: open, except the console, switching, the whole-book
+export, the business's own consent requests and the password/session screens.
+`Ctx.from_request` still stamps `metadata.impersonation=true` on anything audited in the session.
+
+**Frontend.** `UbViewOnlyProvider` (design system) wraps the shell's content region while
+`session.impersonation` is set; `UbButton` (`primary`, `destructive`, any `type="submit"`)
+and `UbFab` disable themselves with the title "Support session · view only. Changes are
+turned off." The banner reads "Support session · view only — …" and its End session is
+`viewOnlySafe`; the account menu (Sign out) is outside the region. `impersonation_forbidden`
+resolves to `errors.impersonation_forbidden` in the snackbar, so the refusal reads as view-only
+in Hindi too (the server has no Hindi catalogue).
+
+**Tests.** `backend/apps/platform_app/tests/test_support_session_view_only.py` walks the URL
+resolver: every route accepting an unsafe method (95 today, router `.json` twins excluded)
+answers 403 `impersonation_forbidden` under a support token, except the allow-list; the six
+unauthenticated routes are pinned by name; reads, the allow-list, the audit stamp and the
+owner's own writes (during a live support session) are asserted. Frontend:
+`UbAppShell.test.tsx` (view-only state and the owner's unaffected state), `apiError.test.ts`.
+
+**Not done, recorded.** Logout from a support session clears the cookie but does not end the
+`platform_impersonation_session` row (it lapses at its expiry, ≤ 60 min); ending it on logout
+is a small follow-up. FR-5's "writes needed to reproduce fixes" stays refused; relaxing it is
+the owning chapter's call and would need fresh owner consent copy.

@@ -151,6 +151,9 @@ export type { UbFilterBarProps, UbFilterChipGroupProps, UbFilterChipProps } from
 
 // ── Wave 1 — controls ────────────────────────────────────────────────────────
 export { UbButton } from './UbButton';
+// CR-2026-09-29-SEC-A — the support session's view-only region, read by UbButton/UbFab.
+export { UbViewOnlyProvider, useUbViewOnly } from './UbViewOnly';
+export type { UbViewOnlyProviderProps } from './UbViewOnly';
 export type { UbButtonProps, UbButtonSize, UbButtonVariant } from './UbButton';
 export { UbActionLink } from './UbActionLink';
 export type { UbActionLinkProps } from './UbActionLink';

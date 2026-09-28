@@ -14,6 +14,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import exceptions as drf_exc
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
+from apps.common.authentication import support_write_allowed
 from apps.common.exceptions import ModuleDisabled, PlanLimitReached
 from apps.common.permissions_registry import PERMISSIONS, permissions_for
 from apps.common.tenancy import get_effective_tenant
@@ -81,7 +82,11 @@ def HasPermission(mapping: str | dict[str, str]) -> type[BasePermission]:
             if tenant is None:
                 return False
             claims = getattr(request, "auth_claims", {}) or {}
-            if claims.get("imp") and request.method not in SAFE_METHODS:
+            if (
+                claims.get("imp")
+                and request.method not in SAFE_METHODS
+                and not support_write_allowed(request)
+            ):
                 self.message = _("Support access is read-only.")
                 return False  # §20.4.8 rule 5
             membership = getattr(tenant, "_ub_membership", None)

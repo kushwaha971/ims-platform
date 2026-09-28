@@ -8,7 +8,7 @@
   "admin.actor.system": "System",
   "admin.banner.end": "End session",
   "admin.banner.endError": "The support session could not be ended.",
-  "admin.banner.text": "Support session — {admin} acting in {tenant}. Ends {time}",
+  "admin.banner.text": "Support session · view only — {admin} acting in {tenant}. Ends {time}",
   "admin.detail.activity": "Recent activity",
   "admin.detail.activity.empty": "Nothing recorded yet.",
   "admin.detail.activity.line": "{who} · {when}",

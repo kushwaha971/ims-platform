@@ -217,6 +217,13 @@ const CLIENT_MINTED_MESSAGE_ID: Partial<Record<ApiErrorCode, string>> = {
   network_error: 'error.network',
   timeout: 'error.timeout',
   offline: 'common.network.offline',
+  /*
+   * CR-2026-09-29-SEC-A — not client-minted, but the server has no Hindi
+   * catalogue, and this refusal is the one a support operator WILL meet, in
+   * whichever language the business uses. It must read as "view only", not
+   * as a permission problem the owner could fix.
+   */
+  impersonation_forbidden: 'errors.impersonation_forbidden',
 };
 
 /**

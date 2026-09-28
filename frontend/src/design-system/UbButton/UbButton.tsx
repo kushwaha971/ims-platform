@@ -8,6 +8,7 @@ import {
   type MLButtonSize,
   type MLButtonVariant,
 } from 'src/design-system/primitives';
+import { useUbViewOnly } from 'src/design-system/UbViewOnly';
 import { cn } from 'src/utils/cn';
 
 /**
@@ -63,7 +64,15 @@ export interface UbButtonProps extends Omit<
   readonly iconOnly?: boolean | 'mobile';
   readonly children: ReactNode;
   readonly className?: string;
+  /**
+   * CR-2026-09-29-SEC-A — stays enabled inside a `UbViewOnlyProvider`. Only for
+   * the few actions the server allows in a support session (ending it).
+   */
+  readonly viewOnlySafe?: boolean;
 }
+
+/** The variants that read as "do something" — a write, in this product. */
+const WRITE_VARIANTS: ReadonlySet<UbButtonVariant> = new Set(['primary', 'destructive']);
 
 /** Below `sm`: a 32 px square (owner: the 40 px ones "look so large" beside a
  *  title), label kept for AT. Still inside the 44 px row the header gives it. */
@@ -82,18 +91,25 @@ const UbButtonInner = forwardRef<HTMLButtonElement, UbButtonProps>(function UbBu
     children,
     disabled,
     className,
+    viewOnlySafe = false,
+    title,
     ...rest
   },
   ref
 ) {
+  const viewOnly = useUbViewOnly();
+  const locked =
+    viewOnly !== null && !viewOnlySafe && (WRITE_VARIANTS.has(variant) || rest.type === 'submit');
   return (
     <MLButton
       ref={ref}
       variant={variant}
       size={size}
-      disabled={disabled || busy}
+      disabled={disabled || busy || locked}
       aria-busy={busy || undefined}
-      aria-disabled={disabled || busy || undefined}
+      aria-disabled={disabled || busy || locked || undefined}
+      title={locked ? viewOnly : title}
+      data-view-only={locked || undefined}
       className={cn(
         fullWidth && 'w-full',
         iconOnly === true && 'aspect-square px-0',

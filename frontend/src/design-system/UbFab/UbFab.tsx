@@ -4,6 +4,7 @@ import { forwardRef, memo, type ButtonHTMLAttributes, type ReactNode } from 'rea
 
 import { mlButtonClasses } from 'src/design-system/primitives';
 import { UbBottomBar } from 'src/design-system/UbBottomBar';
+import { useUbViewOnly } from 'src/design-system/UbViewOnly';
 import { cn } from 'src/utils/cn';
 
 /**
@@ -57,9 +58,12 @@ export interface UbFabProps extends Omit<
 }
 
 const UbFabInner = forwardRef<HTMLButtonElement, UbFabProps>(function UbFabInner(
-  { label, icon, mobileOnly = false, className, type = 'button', ...rest },
+  { label, icon, mobileOnly = false, className, type = 'button', disabled, title, ...rest },
   ref
 ) {
+  // CR-2026-09-29-SEC-A — a FAB is always a primary write ("Add party").
+  const viewOnly = useUbViewOnly();
+  const locked = viewOnly !== null;
   return (
     <UbBottomBar
       sticky={false}
@@ -79,10 +83,15 @@ const UbFabInner = forwardRef<HTMLButtonElement, UbFabProps>(function UbFabInner
           cn(
             'pointer-events-auto h-14 w-14 rounded-pill p-0 shadow-3',
             'outline-none focus-visible:shadow-focus',
+            locked && 'opacity-50',
             className
           )
         )}
         {...rest}
+        disabled={disabled || locked}
+        aria-disabled={disabled || locked || undefined}
+        title={locked ? viewOnly : title}
+        data-view-only={locked || undefined}
       >
         {icon}
         <span className="sr-only">{label}</span>

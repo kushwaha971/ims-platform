@@ -9,9 +9,10 @@ import { NetworkStrip } from 'src/components/layout/NetworkStrip';
 import { ShellNotices } from 'src/components/layout/ShellNotices';
 import { UbAppTopBar } from 'src/components/layout/UbAppTopBar';
 import { UbSidebar } from 'src/components/layout/UbSidebar';
-import { UbBox, UbLink, UbLogo, UbStack } from 'src/design-system';
+import { UbBox, UbLink, UbLogo, UbStack, UbViewOnlyProvider } from 'src/design-system';
 import { useAppSelector } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
+import { selectImpersonation } from 'src/redux/slice/sessionSlice';
 import { selectAppName } from 'src/redux/slice/whiteLabelSlice';
 import { ROUTES } from 'src/routes';
 
@@ -60,6 +61,7 @@ export function UbAppShell({ children }: Readonly<{ children: ReactNode }>): Rea
   // NTF-01 FR-8 — one poll for the two bells (phone header, desktop bar).
   useNotificationPoll();
   const appName = useAppSelector(selectAppName);
+  const impersonating = useAppSelector(selectImpersonation) !== null;
 
   return (
     <UbStack direction="row" className="min-h-dvh w-full bg-canvas">
@@ -123,9 +125,16 @@ export function UbAppShell({ children }: Readonly<{ children: ReactNode }>): Rea
         {/* PLT-14 / PLT-10 — the support-session and pending-deletion banners. */}
         <ShellNotices />
 
-        <UbBox as="main" id={APP_CONTENT_ID} tabIndex={-1} className="flex-1 outline-none">
-          {children}
-        </UbBox>
+        {/* CR-2026-09-29-SEC-A — a support session is VIEW ONLY (the owner
+            consented to exactly that, and the server refuses every write). The
+            content region's primary/destructive buttons, submits and FABs
+            disable themselves with this reason as their title. The banner and
+            the account menu sit outside it, so End session and Sign out stay. */}
+        <UbViewOnlyProvider reason={impersonating ? t('common.viewOnly.reason') : null}>
+          <UbBox as="main" id={APP_CONTENT_ID} tabIndex={-1} className="flex-1 outline-none">
+            {children}
+          </UbBox>
+        </UbViewOnlyProvider>
       </UbStack>
 
       {/* CR-2026-09-19-E — `SnackbarHost` used to be mounted here. It is in

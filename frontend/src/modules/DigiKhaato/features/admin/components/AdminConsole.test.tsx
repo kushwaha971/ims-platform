@@ -204,7 +204,7 @@ describe('ImpersonationBanner', () => {
     service.endImpersonation.mockResolvedValue('t1');
     renderWithProviders(<ImpersonationBanner />);
     expect(
-      screen.getByText(/Support session — Ops Person acting in Sharma Kirana/)
+      screen.getByText(/Support session · view only — Ops Person acting in Sharma Kirana/)
     ).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'End session' }));
     await waitFor(() =>

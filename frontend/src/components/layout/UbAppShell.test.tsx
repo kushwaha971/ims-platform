@@ -1,9 +1,10 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { Plus } from 'lucide-react';
 
 import { SnackbarHost } from 'src/components/layout/SnackbarHost';
 import { UbAppShell } from 'src/components/layout/UbAppShell';
-import { UbText } from 'src/design-system';
+import { UbButton, UbFab, UbText } from 'src/design-system';
 import { localeChanged } from 'src/redux/slice/localeSlice';
 import { browserCameOnline, browserWentOffline } from 'src/redux/slice/networkSlice';
 import { sessionLoaded } from 'src/redux/slice/sessionSlice';
@@ -259,5 +260,74 @@ describe('UAT D3 — app chrome is marked so print hides it', () => {
 
     // The page itself is not chrome and must still print.
     expect(hidden(screen.getByText('Page body'))).toBe(false);
+  });
+});
+
+describe('CR-2026-09-29-SEC-A — a support session is view only', () => {
+  const impersonate = (): void => {
+    const state = store.getState().session;
+    if (!state.user) throw new Error('signIn() runs in beforeEach');
+    store.dispatch(
+      sessionLoaded({
+        user: state.user,
+        activeTenant: state.activeTenant,
+        tenants: state.tenants,
+        permissions: state.permissions,
+        enabledModules: state.enabledModules,
+        version: state.version,
+        impersonation: {
+          id: 'imp1',
+          tenantId: 't1',
+          tenantName: 'Kumar Kirana Store',
+          adminName: 'Ops Person',
+          startedAt: '2026-09-29T10:00:00Z',
+          expiresAt: '2026-09-29T11:00:00Z',
+        },
+      })
+    );
+  };
+
+  const renderScreen = () =>
+    renderWithProviders(
+      <UbAppShell>
+        <UbButton>Save entry</UbButton>
+        <UbButton variant="destructive">Void bill</UbButton>
+        <UbButton variant="secondary" type="submit">
+          Submit form
+        </UbButton>
+        <UbButton variant="secondary">Filters</UbButton>
+        <UbFab label="Add party" icon={<Plus aria-hidden className="h-6 w-6" />} />
+      </UbAppShell>
+    );
+
+  it('disables every write action in the content, titled with the reason', async () => {
+    /* The defect: the owner consents to a READ-ONLY session and the console
+       says so, but the screens kept offering Save, Void and Add — each of which
+       the server now refuses. The operator is told why, on the control. */
+    impersonate();
+    renderScreen();
+
+    const reason = 'Support session · view only. Changes are turned off.';
+    for (const name of ['Save entry', 'Void bill', 'Submit form', 'Add party']) {
+      const button = screen.getByRole('button', { name });
+      expect(button).toBeDisabled();
+      expect(button).toHaveAttribute('title', reason);
+    }
+    // Reading is what the session is for: a non-write control still works.
+    expect(screen.getByRole('button', { name: 'Filters' })).toBeEnabled();
+    // The banner says it too, and its way out is never disabled.
+    expect(await screen.findByText(/Support session · view only/)).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'End session' })).toBeEnabled();
+  });
+
+  it("leaves the owner's own session untouched", () => {
+    /* The gate keys on the session flag, never on a role: the same screen in
+       the owner's own session offers every action. */
+    renderScreen();
+    for (const name of ['Save entry', 'Void bill', 'Submit form', 'Add party', 'Filters']) {
+      const button = screen.getByRole('button', { name });
+      expect(button).toBeEnabled();
+      expect(button).not.toHaveAttribute('title');
+    }
   });
 });
