@@ -1,6 +1,6 @@
 # DigiKhaato — Handoff / Continuation Prompt
 
-Last updated: 28 Sep 2026 (IST). Paste everything below the line into the next agent.
+Last updated: 28 Sep 2026, afternoon (IST) — after Wave 3 merge + integration; Wave 4 built on branches, not yet merged. Paste everything below the line into the next agent.
 
 ---
 
@@ -8,26 +8,13 @@ You are continuing development of **DigiKhaato**, a multi-tenant khata (credit l
 
 ## 1. Where the code is
 
-- **GitHub:** `https://github.com/kushwaha971/ims-platform` (branch `main`). On the owner's Mac it is at `~/Projects/ims-platform`.
-- **Latest complete state:** branch **`sync/main`** in the bundle `~/digikhaato/sync/digikhaato-cloud.bundle`. Its first parent is GitHub `main` (78804b3), so pushing it is a fast-forward. Its second parent carries all 99 later cloud commits. The owner pushes it by running `~/digikhaato/sync/SYNC-COMMANDS.md`.
-- **Work-in-progress branches** (all stopped mid-task on 25 Sep when the usage limit hit; they are unreviewed and no gates have been run on them):
-  - `wip/fix-wave1-defects`: partial FIX-1 and FIX-2 defect fixes (79 files).
-  - `track/w3a-payments`: PAY-01..05 and LED-10, partial.
-  - `track/w3b-purchases`: PUR-01, 03, 04. Two real commits (the GST engine moved to `apps/tax`; record and void bill), plus WIP.
-  - `track/w3c-sales-completion`: SAL-01, 04, 05, partial.
-- **Spec (single source of truth):** the Claude Project "DigiKhaato/IMS", docs under `udhaarbook-ssot/docs/`. The ones you will use most:
-  - 00-canon
-  - 12 MVP scope
-  - 17-01..17-04 FRDs
-  - 21 DB
-  - 22 API
-  - 23 design system
-  - 25/26 standards
-  - 28 testing
-  - 32 sprint plan
-  - 33 task breakdown
-  - 35 DoD
-  - 43 CR register (next free id **CR-136**; many CRs are only in `docs/CR-LOG.md` and still need registering there)
+- **GitHub:** `https://github.com/kushwaha971/ims-platform`. On the owner's Mac it is at `~/Projects/ims-platform`. Claude syncs it after every completed step, fast-forward only, via a bundle in `~/digikhaato/sync/`. The owner runs `git push origin --all`.
+- **`main`:** everything up to and including Wave 3 (payments, purchases, sales completion) plus the integration fixes. It fast-forwards from GitHub's 78804b3. Never rebase it: do not use VS Code "Sync" with rebase; set `git.rebaseWhenSync=false`.
+- **Built but NOT merged yet (Wave 4):**
+  - `track/w4a-reports-dashboard`: RPT-01 dashboard, RPT-02 day book, RPT-05/06/08, the report shell, the Reports hub.
+  - `track/w4b-reports-registers-gst`: RPT-03 sales register, RPT-04 purchase register, RPT-07 GST summary.
+  - `track/w4p-performance`: the per-feature locale catalogues split (`scripts/split-locales.mjs`), a lazy invalidation registry, deferred cmdk/vaul, ml-uikit tailwind-merge dedupe. The shared shell drops from 144.8 to 102.3 KB.
+- **Spec (single source of truth):** the Claude Project, docs under `udhaarbook-ssot/docs/`. The ones you will use most: 00-canon, 12 MVP scope, 17-01..17-04 FRDs, 21 DB, 22 API, 23 design system, 25/26 standards, 28 testing, 32 sprint plan, 33 tasks, 35 DoD, 43 CR register (next free id **CR-136**; many CRs are still only in `docs/CR-LOG.md`).
 
 ## 2. Stack and binding constraints (do not violate)
 
@@ -131,27 +118,23 @@ Serve for QA:
   - **W2-C (PLT-10, PLT-14):** "Your data" (`/settings/data`: export ZIP, delete with a 30-day cool-off), super-admin console `/admin/*` with consented read-only impersonation, and the tenant-data deletion registry.
   - **Merge fix:** the notification type `export_ready` collided between W2-B and W2-C; W2-C's was renamed `data_export_ready`.
 
-## 6. In progress (on WIP branches; review each diff before continuing)
+## 6. Done since the last handoff, and what is in progress
 
-1. **`wip/fix-wave1-defects`** (FIX-1 + FIX-2, partial; verify what is actually done):
-   - D1/D2/D3 High on the Business profile page: saved business type and State don't load into the form; an empty PAN blocks save; the State list shows "undefined (27)" because the full locale string is passed to `stateName`.
-   - D4 staff can open `/settings/activity`; D5 the activity log shows raw internal labels; D6–D8 Low polish items.
-   - Hide the sidebar "Soon" rows.
-   - UbAppShell test failures: the notification bell calls its API unmocked in tests.
-   - `hindiDirection` test: new hi strings for "They owe me" / "I owe them".
-   - Stock valuation visible to staff without `reports.financial.read`.
-   - Low-stock sink not yet wired to `notify('low_stock')` (`notifications/sinks.py`).
-   - `tenant_data.py` for sales, imports and reports.
-   - Register module-off and GST-lock guards for inventory and sales.
-   - Reminders tabs clip "Sent" at 390px; an empty band sits above the reminders grid.
-   - Items phone filters take 3 lines; "Last cost ₹0.00" should show "—"; the phone view lacks an Adjust action.
-   - Update phase A of `e2e/sprint3-qa.mjs` (by design, accountants no longer see "Send reminder", and a WhatsApp tap now records `POST /reminders`).
-2. **`track/w3a-payments`:**
-   - Build `record_payment()` (FIFO allocation, split modes, direction in/out for PUR-02 later), void, receipt print, UPI.
-   - Replace `apps/sales/services/payment_seam.py` and enable party payment at issue (CR-2026-09-24-SAL-A).
-   - LED-10 timeline links.
-3. **`track/w3b-purchases`:** bills with the `duplicate_supplier_invoice` constraint, `purchase_in` movements at cost, supplier ledger credit, list, void. PUR-02 is left as a seam for payments.
-4. **`track/w3c-sales-completion`:** estimates plus convert, credit notes (quantity guard, restock, apply), and invoice void keeping its number.
+- **Wave 1 defect fixes: done** (e0b53ee, 9473389).
+  - Business profile D1–D3.
+  - Settings gate D4; human-readable activity log D5; D6–D8.
+  - Sidebar "Soon" rows hidden.
+  - Staff can no longer see stock valuation.
+  - Low-stock sink wired to notifications.
+  - tenant_data registered for sales/imports/reports; module-off and GST-lock guards added.
+  - Reminders tab and grid fixes; items phone filters; low-stock "—" and Adjust action.
+  - sprint3-qa phase A updated.
+- **Wave 3: merged and integrated, NOT yet QA'd.**
+  - **Payments:** PAY-01..05; LED-10 through `ledger/services/postings.py` (`post_source_entry`, `reverse_source_entries`); sales take payment at issue through `record_payment`.
+  - **Purchases:** PUR-01/03/04. The tax engine moved to `apps/tax/services/tax_engine.py`. PUR-02 is still a seam in `apps/purchases/services/payment_seam.py`.
+  - **Sales completion:** SAL-01 estimates plus convert; SAL-04 credit notes with apply and refund (the refund goes through `record_payment` direction out); SAL-05 void, where payments are released as an advance.
+  - **Integration commit c23da5c:** one due formula, `sales.services.amounts.refresh_invoice_amounts`.
+- **Wave 4:** built on branches (see §1); merge next.
 
 ## 7. Known issues / blockers
 
@@ -181,13 +164,31 @@ Serve for QA:
 
 ## 9. Exact next steps
 
-1. The owner syncs git using `~/digikhaato/sync/SYNC-COMMANDS.md`, then pushes.
-2. Merge or complete `wip/fix-wave1-defects` onto main.
-   - Review the diff, finish anything missing from §6.1, run the targeted tests, commit with proper prose messages (replace the WIP message).
-   - Then run an independent QA retest of the Wave 1 defects.
-3. QA Wave 2 (sales, imports, data/admin): 2–3 QA agents, 30 minutes each, with screenshots. Then fix and retest.
-4. Resume the three W3 tracks from their branches, in worktrees, each told what its branch already contains.
-   - Merge order: payments, then purchases (add PUR-02 on top), then sales completion.
-   - Then run gates and QA with screenshots.
-5. Wave 4: Reports (RPT-01..08) as 2 tracks, and the performance / bundle split track. Then the hardening pass and final UAT.
-6. At session end: bundle and sync, update this file, and send a DSU plus screenshots.
+1. **Merge Wave 4** in this order: `track/w4p-performance` first, then `w4a`, then `w4b`.
+   - After each merge run `cd frontend && node scripts/split-locales.mjs && npm run i18n:check`, and add the catalogue imports it names.
+   - W4-A's report pages need `import 'src/i18n/catalogues/reports'`.
+   - Replace W4-B's `TaxReportLayout` with W4-A's `ReportPageShell`.
+   - Add W4-B's three routes to W4-A's `REPORT_CATALOGUE` (hub).
+   - Migration clash: `reports 0002_*` may exist in both reports tracks; renumber whichever lands second.
+   - Swap the hard-coded `/sales/credit-notes/{id}` for `ROUTES.SALES_CREDIT_NOTES`.
+   - Re-run `apps/reports/tests` now that SAL-04/05 are on main (one test is skipped until then).
+   - Tests that read `locales/en.json` must use `src/tests/allMessages`.
+2. **Build PUR-02** (supplier payment): add `apps/payments/services/targets/purchases.py` (document_type `purchase_document`, direction out) using `purchases.services.payment_seam` (`apply_payment`, `lock_payable_bills`, `register_void_listener`). Add "Pay supplier" and "Paid now" on the purchase bill screens.
+3. **Full gates, then build and serve.**
+   - Backend pytest (about 2,300 tests).
+   - tsc; full eslint in a quiet window; full jest `--maxWorkers=2`. There are 5 known flaky `PartyDetailPageContent` NEW-2 tests that fail only when the whole file runs, so investigate test isolation.
+   - check-locales, build, `bundle:check`.
+4. **QA with screenshots on phone 390 and desktop 1280, English plus Hindi.** Run parallel QA agents (30 minutes each):
+   - Wave 2: sales core, imports, "Your data" and admin.
+   - Wave 3: payments, purchases, estimates, credit notes, void.
+   - Wave 4: dashboard, day book, registers, GST.
+   - Then fix and run an independent retest. Full regression: `node e2e/run-regression.mjs -j 3`.
+5. **Hardening (Sprint 12):**
+   - Security pass.
+   - Accessibility: axe, 44px touch targets.
+   - Backup and restore rehearsal.
+   - Scheduler double-run proof.
+   - The known deadlock risk: invoice void locks document then party, while payments lock party then documents.
+   - Hash passwords before `atomic()`.
+6. **Final UAT**, then the Project STATUS and BOARD docs, and Part 43 CR registration.
+7. **Every session end:** bundle to `~/digikhaato/sync/`, fast-forward the Mac repo, update this file, and send a standup plus screenshots.
