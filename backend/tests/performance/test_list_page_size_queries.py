@@ -33,6 +33,8 @@ pytestmark = [pytest.mark.django_db, pytest.mark.slow]
 @pytest.fixture
 def book(db: Any, plan: Any, partner: Any, system_roles: dict) -> dict:
     """A seeded tenant: 60 parties, 40 items, 600 invoices, 3,000 khata lines."""
+    from django.db.models import Count
+
     from apps.common.management.commands.seed_reference_data import (
         seed_hsn,
         seed_tax_rates,
@@ -47,17 +49,26 @@ def book(db: Any, plan: Any, partner: Any, system_roles: dict) -> dict:
     seed_units()
     seed_hsn()
     result = seed_scale(
-        entries=3_000, parties=60, items=40, invoices=600, days=120, log=lambda _line: None
+        entries=3_000,
+        parties=60,
+        items=40,
+        invoices=600,
+        days=120,
+        heavy_party_entries=300,
+        log=lambda _line: None,
     )
     member = Membership.objects.select_related("user", "role", "tenant").get(
         tenant_id=result["tenant_id"]
     )
     client = APIClient()
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {_token(member)}")
+    # The heavy customer: a khata long enough that a page of 50 is full.
     busiest = (
         LedgerEntry.objects.filter(tenant_id=result["tenant_id"])
+        .values("party_id")
+        .annotate(n=Count("id"))
+        .order_by("-n")
         .values_list("party_id", flat=True)
-        .order_by("party_id")
         .first()
     )
     from apps.inventory.models import StockMovement

@@ -31,6 +31,12 @@ class Command(BaseCommand):
         parser.add_argument("--items", type=int, default=5_000)
         parser.add_argument("--invoices", type=int, default=20_000)
         parser.add_argument("--days", type=int, default=365, help="History length.")
+        parser.add_argument(
+            "--heavy-party-entries",
+            type=int,
+            default=5_000,
+            help="Manual lines on one customer, for the 5,000-entry statement budget.",
+        )
         parser.add_argument("--seed", type=int, default=20260928)
         parser.add_argument("--email", default="scale@digikhaato.test")
         parser.add_argument("--password", default="Scale-Run-2026!")
@@ -52,6 +58,7 @@ class Command(BaseCommand):
             items=opts["items"],
             invoices=opts["invoices"],
             days=opts["days"],
+            heavy_party_entries=opts["heavy_party_entries"],
             seed=opts["seed"],
             email=opts["email"],
             password=opts["password"],

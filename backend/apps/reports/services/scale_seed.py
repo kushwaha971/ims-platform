@@ -27,7 +27,8 @@ they leave behind, and derives every cache the same way the product does:
 
 The ledger lines are split: invoices, bills, payments and expenses post their
 own lines, and manual "You gave / You got" lines make up the remainder of
-`entries`. Shape: ~10 % suppliers, 1 bill per 8 invoices, 1 receipt per
+`entries`, about `heavy_party_entries` of them on one customer (§12.5's statement
+budget is named at 5,000 entries). Shape: ~10 % suppliers, 1 bill per 8 invoices, 1 receipt per
 3 invoices, 1 supplier payment per 3 bills, 1 expense per 20 invoices.
 """
 
@@ -132,6 +133,7 @@ def seed_scale(
     items: int,
     invoices: int,
     days: int = 365,
+    heavy_party_entries: int = 5_000,
     seed: int = 20260928,
     email: str = "scale@digikhaato.test",
     password: str = "Scale-Run-2026!",
@@ -304,6 +306,11 @@ def seed_scale(
     )
     doc_entries = invoices + n_bills + n_receipts + n_payouts
     manual = max(0, entries - doc_entries)
+    # §12.5's "statement with 5,000 entries": one customer carries that many
+    # manual lines (plus their documents), so the khata and the statement are
+    # measured at the size the budget names, not at the book's average of ~50.
+    anchor = customers[0] if customers else active[0]
+    heavy_share = min(1.0, heavy_party_entries / manual) if manual else 0.0
     expense_categories = [
         ExpenseCategory.objects.get_or_create(tenant=tenant, name=n)[0]
         for n in ("Rent", "Electricity", "Wages", "Transport")
@@ -516,7 +523,7 @@ def seed_scale(
             book.expenses.append(exp)
 
         for _ in range(share(manual, day)):
-            party = rng.choice(active)
+            party = anchor if rng.random() < heavy_share else rng.choice(active)
             got = rng.random() < 0.45
             post(
                 party,
