@@ -582,11 +582,15 @@ def test_each_invalid_parameter_has_its_frd_message(
     assert message in response.json()["error"]["details"][field][0]
 
 
-def test_a_year_to_date_period_is_clamped_to_today(owner: Any, br14: dict) -> None:
+def test_a_year_to_date_period_is_clamped_to_today(owner: Any, br14: dict, shop: Any) -> None:
     """EC-13 — `fy:2026-27` before the year ends is allowed and says so."""
     meta = _get(owner, "?period=fy:2026-27&section=rate").json()["meta"]
     assert meta["year_to_date"] is True
-    assert meta["date_to"] <= dt.date.today().isoformat()
+    # The clamp is the TENANT's today (Asia/Kolkata), which runs ahead of the
+    # server's UTC date for five and a half hours every night.
+    from apps.common.dates import tenant_today
+
+    assert meta["date_to"] <= tenant_today(shop).isoformat()
 
 
 def test_the_csv_export_is_one_zip_of_sheets_with_formulas_neutralised(
