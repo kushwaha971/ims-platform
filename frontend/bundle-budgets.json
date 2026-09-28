@@ -538,7 +538,10 @@
   "",
   "── 28 Sep 2026 (hardening): measured +1 KB — the .ub-hit 44 px hit areas and ARIA table cells (H2),",
   "document narration shown in Hindi on the khata/statement (H2), the Hindi calendar formatter, and the",
-  "customer share page /d/[token] (SAL-03, reuses InvoicePrintA4 + sales/money/publicDocument catalogues)."
+  "customer share page /d/[token] (SAL-03, reuses InvoicePrintA4 + sales/money/publicDocument catalogues).",
+  "",
+  "── 29 Sep 2026 (final UAT fixes + YourKhata rebrand): measured +1 KB — Reset link, stacked phone lines,",
+  "walk-in receipt void copy, merchant-perspective receipt line, new UbLogo artwork, formatted print phones."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -1068,7 +1071,7 @@
   },
   "/ledger/aging": {
    "route": 84,
-   "firstLoad": 313
+   "firstLoad": 315
   },
   "/switch": {
    "route": 43,
@@ -1092,7 +1095,7 @@
   },
   "/settings/activity": {
    "route": 95,
-   "firstLoad": 324
+   "firstLoad": 326
   },
   "/settings/devices": {
    "route": 48,
@@ -1108,7 +1111,7 @@
   },
   "/items": {
    "route": 102,
-   "firstLoad": 331
+   "firstLoad": 333
   },
   "/items/[id]": {
    "route": 92,
@@ -1116,11 +1119,11 @@
   },
   "/stock/low": {
    "route": 57,
-   "firstLoad": 286
+   "firstLoad": 287
   },
   "/expenses": {
    "route": 101,
-   "firstLoad": 330
+   "firstLoad": 332
   },
   "/cashbook": {
    "route": 84,
@@ -1168,7 +1171,7 @@
   },
   "/settings/data": {
    "route": 50,
-   "firstLoad": 279
+   "firstLoad": 280
   },
   "/purchases/bills/[id]": {
    "route": 55,
@@ -1176,7 +1179,7 @@
   },
   "/purchases/bills/[id]/edit": {
    "route": 136,
-   "firstLoad": 365
+   "firstLoad": 366
   },
   "/purchases/bills": {
    "route": 86,
@@ -1184,7 +1187,7 @@
   },
   "/purchases/bills/new": {
    "route": 136,
-   "firstLoad": 365
+   "firstLoad": 366
   },
   "/reports": {
    "route": 72,
