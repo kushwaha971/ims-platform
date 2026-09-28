@@ -4,7 +4,8 @@ import type { TranslateFn } from 'src/hooks/useTranslation';
 import { itemPath } from 'src/routes';
 import { formatInr } from 'src/utils/money';
 
-import { onHandText } from '../view-model/itemDisplay';
+import { hasPurchasePrice, onHandText } from '../view-model/itemDisplay';
+import { taxCodeLabel } from '../view-model/taxCodeLabel';
 
 import { StockBadge } from './StockBadge';
 
@@ -91,8 +92,13 @@ export const createItemColumns = ({
       cardSlot: 'none',
       widthShare: 12,
       cell: (row) => (
-        <UbText as="span" variant="body-sm" className="ds-num">
-          {formatInr(row.purchasePrice)}
+        <UbText
+          as="span"
+          variant="body-sm"
+          className="ds-num"
+          tone={hasPurchasePrice(row.purchasePrice) ? 'primary' : 'muted'}
+        >
+          {hasPurchasePrice(row.purchasePrice) ? formatInr(row.purchasePrice) : '—'}
         </UbText>
       ),
     },
@@ -102,7 +108,7 @@ export const createItemColumns = ({
       priority: 4,
       cardSlot: 'none',
       widthShare: 8,
-      cell: (row) => row.taxCode,
+      cell: (row) => taxCodeLabel(row.taxCode, t),
     },
     {
       id: 'onHand',

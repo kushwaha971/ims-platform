@@ -70,3 +70,11 @@ export const skuPrefix = (name: string): string => {
 
 /** INV-01 EC-3 — digits only and barcode-length: probably scanned into the wrong field. */
 export const looksLikeBarcode = (text: string): boolean => /^\d{8,14}$/.test(text.trim());
+
+/**
+ * UAT D7 — a purchase price nobody entered is "—", not "₹0.00". INV-01 §7
+ * keeps it optional (default 0) and makes the OPENING cost default FROM it,
+ * not the other way round, so the list must not imply a cost of nothing.
+ */
+export const hasPurchasePrice = (value: string | null): value is string =>
+  value !== null && Number(value) !== 0;

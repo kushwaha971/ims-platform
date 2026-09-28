@@ -12,6 +12,7 @@ import 'src/i18n/catalogues/itemPicker';
 import 'src/i18n/catalogues/items';
 import 'src/i18n/catalogues/movement';
 import 'src/i18n/catalogues/stock';
+import 'src/i18n/catalogues/money';
 
 /** INV-02 — `/items`. Suspense because the filters live in the URL (`useSearchParams`). */
 export default function ItemsPage(): React.JSX.Element {
