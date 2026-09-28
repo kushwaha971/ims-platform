@@ -19,16 +19,22 @@ import type { Locale } from 'src/types/domain.types';
 
 import { ExpensePartyField } from '../../expenses/components/ExpensePartyField';
 import { GST_STATES } from '../../onboarding/constants/gstStates';
-
-import type { BillingMode, InvoiceFormValues } from '../view-model/invoiceForm';
+import { getParty } from '../../parties/api/partyService';
+import {
+  defaultPlaceOfSupply,
+  type BillingMode,
+  type InvoiceFormValues,
+} from '../view-model/invoiceForm';
 
 /**
  * SAL-02 §7 / SAL-07 §7 — who the bill is for, when, and where it is supplied.
  *
  * Walk-in | Party is a segmented control (SAL-07 FR-1); walk-in name and mobile
  * are optional and never demanded before the items (speed first, §8). Picking
- * a party clears the place of supply so the server defaults it from the
- * party's state (FR-5); a walk-in bills at the shop's own state (BR-5).
+ * a party resolves the place of supply from the party's own record, in the
+ * server's order (FR-5, `defaultPlaceOfSupply`), so the preview's CGST+SGST or
+ * IGST is the split the issued bill will carry (QA S-D1); a walk-in bills at
+ * the shop's own state (BR-5).
  * Rendered inside the editor's `UbForm`, whose context every `UbField` reads.
  */
 export function InvoicePartySection({
@@ -98,6 +104,17 @@ export function InvoicePartySection({
                 field.onChange(id || null);
                 setValue('partyName', name);
                 setValue('placeOfSupplyState', '', { shouldDirty: true });
+                if (!id) return;
+                // A failed read leaves the field empty; the server then resolves it on save.
+                getParty(id)
+                  .then(({ party }) => {
+                    if (form.getValues('partyId') !== id) return;
+                    if (form.getValues('placeOfSupplyState')) return;
+                    setValue('placeOfSupplyState', defaultPlaceOfSupply(party, tenantState), {
+                      shouldDirty: true,
+                    });
+                  })
+                  .catch(() => undefined);
               }}
             />
           )}

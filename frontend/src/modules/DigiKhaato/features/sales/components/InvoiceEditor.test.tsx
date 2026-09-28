@@ -35,6 +35,32 @@ jest.mock('../../inventory/api/mastersService', () => ({
     },
   ]),
 }));
+jest.mock('../../parties/api/partyService', () => ({
+  ...jest.requireActual('../../parties/api/partyService'),
+  listParties: jest.fn(async () => ({
+    rows: [
+      {
+        id: 'p-ka',
+        name: 'Bengaluru Traders',
+        displayCode: null,
+        mobile: null,
+        isCustomer: true,
+        isSupplier: false,
+        balance: '0.00',
+        status: 'active',
+        lastActivityAt: null,
+        tags: [],
+      },
+    ],
+    meta: { page: 1, pageSize: 8, total: 1, totalPages: 1 },
+    totals: null,
+  })),
+  getParty: jest.fn(async () => ({
+    party: { id: 'p-ka', name: 'Bengaluru Traders', stateCode: '29', billingAddress: {} },
+    summary: { balance: '0.00' },
+    credit: null,
+  })),
+}));
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn(), prefetch: jest.fn() }),
   useSearchParams: () => new URLSearchParams(''),
@@ -93,6 +119,22 @@ describe('the bill editor', () => {
     renderWithProviders(<InvoiceEditorPageContent documentId={null} />);
     expect(screen.getByText('Bills are not available')).toBeInTheDocument();
     await act(() => new Promise<void>((resolve) => setTimeout(resolve, 50)));
+  });
+});
+
+describe('the place of supply for a picked party (QA S-D1)', () => {
+  it("previews IGST for a party in another state, not the shop's CGST + SGST", async () => {
+    // S-D1: an empty place of supply was previewed as the SHOP's state, so a
+    // Karnataka party of a Maharashtra shop saw CGST + SGST while the issued
+    // bill (resolved on the server from the party) carried IGST.
+    signIn(['sales.invoice.read', 'sales.invoice.write', 'parties.party.read']);
+    renderWithProviders(<InvoiceEditorPageContent documentId={null} />);
+    await screen.findByTestId('invoice-issue');
+    expect(screen.getByText('Intra-state supply — CGST + SGST')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('radio', { name: 'Party' }));
+    await userEvent.type(screen.getByLabelText('Party'), 'Beng');
+    await userEvent.click(await screen.findByText('Bengaluru Traders'));
+    expect(await screen.findByText('Inter-state supply — IGST')).toBeInTheDocument();
   });
 });
 

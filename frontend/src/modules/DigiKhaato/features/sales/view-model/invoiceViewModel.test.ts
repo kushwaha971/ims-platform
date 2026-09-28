@@ -3,6 +3,7 @@ import { makeDocument, wireLine } from '../testing/salesFixtures';
 
 import { daysOverdue, invoiceFiltersFromQuery, invoiceQueryFromFilters } from './invoiceDisplay';
 import {
+  defaultPlaceOfSupply,
   emptyInvoiceForm,
   emptyLine,
   fromDocument,
@@ -19,6 +20,18 @@ import {
  */
 
 const TODAY = '2026-09-24';
+
+describe('the place of supply a picked party defaults to (QA S-D1)', () => {
+  it("resolves in the server's order: party state, billing state, then the shop's", () => {
+    // S-D1: the preview used the shop's state for a party in another state.
+    expect(defaultPlaceOfSupply({ stateCode: '29', billingAddress: {} }, '27')).toBe('29');
+    expect(
+      defaultPlaceOfSupply({ stateCode: null, billingAddress: { state_code: '33' } }, '27')
+    ).toBe('33');
+    expect(defaultPlaceOfSupply({ stateCode: null, billingAddress: {} }, '27')).toBe('27');
+    expect(defaultPlaceOfSupply(null, '27')).toBe('27');
+  });
+});
 
 describe('invoice form → wire', () => {
   it('sends only complete lines, so an empty trailing row never becomes a ₹0 line', () => {

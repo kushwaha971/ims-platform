@@ -181,6 +181,29 @@ export interface RateLookup {
   readonly cessRate: string;
 }
 
+/**
+ * SAL-02 FR-5 — the place of supply a freshly picked party defaults to, in the
+ * SAME order the server's `default_pos` resolves it: the party's state, then
+ * its billing-address state, then the shop's own. The preview must never
+ * guess the shop's state for a party in another one (QA S-D1: the editor
+ * showed CGST + SGST for a Karnataka party of a Maharashtra shop while the
+ * issued bill, resolved on the server, correctly carried IGST).
+ */
+export const defaultPlaceOfSupply = (
+  party: Readonly<{
+    stateCode: string | null;
+    billingAddress: Readonly<Record<string, string>>;
+  }> | null,
+  tenantState: string
+): string => {
+  if (party) {
+    if (party.stateCode) return party.stateCode;
+    const billing = party.billingAddress?.state_code;
+    if (billing) return billing;
+  }
+  return tenantState;
+};
+
 /** The preview's input; an unknown code previews at 0 until the rates arrive. */
 export const previewInput = (
   values: InvoiceFormValues,
