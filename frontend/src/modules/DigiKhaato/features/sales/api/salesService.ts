@@ -274,6 +274,22 @@ export const createShareLink = async (
   return { url: response.data.data.url, expiresAt: response.data.data.expires_at };
 };
 
+/**
+ * UAT D1 — "Reset link" (owner/admin): the live link stops working. Sharing is
+ * otherwise idempotent (the server hands back the live link), so this is the
+ * only way to rotate one; the caller shares again for the new URL.
+ */
+export const revokeShareLink = async (
+  id: string,
+  kind: keyof typeof SHARE_PATH = 'invoice'
+): Promise<boolean> => {
+  const response = await api.post<{ data: { revoked: boolean } }>(
+    `${SHARE_PATH[kind](id)}/revoke`,
+    {}
+  );
+  return response.data.data.revoked;
+};
+
 /** SAL-03 FR-4 — quiet: a shop with no UPI ID simply prints no QR. */
 export const getUpiIntent = async (id: string): Promise<UpiIntent | null> => {
   try {

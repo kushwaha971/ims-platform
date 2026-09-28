@@ -222,6 +222,7 @@ export const MUTATIONS = {
   issueInvoice: 'invoiceEditor/issueInvoice',
   deleteInvoiceDraft: 'invoiceEditor/deleteInvoiceDraft',
   createInvoiceShareLink: 'invoice/createInvoiceShareLink',
+  revokeInvoiceShareLink: 'invoice/revokeInvoiceShareLink',
   recordPayment: 'paymentForm/recordPayment',
   voidPayment: 'paymentReceipt/voidPayment',
   shareReceipt: 'paymentReceipt/shareReceipt',

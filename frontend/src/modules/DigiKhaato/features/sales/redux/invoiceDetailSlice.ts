@@ -17,6 +17,7 @@ import {
   fetchInvoice,
   fetchPrintBranding,
   fetchUpiIntent,
+  revokeInvoiceShareLink,
   type PrintBranding,
 } from './salesThunk';
 
@@ -96,6 +97,9 @@ const invoiceDetailSlice = createSlice({
       })
       .addCase(createInvoiceShareLink.rejected, (state) => {
         state.sharing = false;
+      })
+      .addCase(revokeInvoiceShareLink.fulfilled, (state) => {
+        state.shareLink = null;
       })
       .addCase(fetchOpenInvoices.fulfilled, (state, action) => {
         state.openInvoices = action.payload.rows as Draft<InvoiceListRow>[];

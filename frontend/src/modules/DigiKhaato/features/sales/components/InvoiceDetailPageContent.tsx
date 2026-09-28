@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 
-import { Link2, MessageCircle, Pencil, Printer, ReceiptText } from 'lucide-react';
+import { Link2, MessageCircle, Pencil, Printer, ReceiptText, RotateCcw } from 'lucide-react';
 
 import {
   UbActionLink,
@@ -205,11 +205,27 @@ export function InvoiceDetailPageContent({
               </UbStack>
             )}
             {detail.shareLink && (
-              <UbText variant="caption" tone="tertiary">
-                {t('sales.share.validUntil', {
-                  date: formatBusinessDate(detail.shareLink.expiresAt.slice(0, 10)),
-                })}
-              </UbText>
+              <UbStack direction="row" gap={2} className="flex-wrap items-center">
+                <UbText variant="caption" tone="tertiary">
+                  {t('sales.share.validUntil', {
+                    date: formatBusinessDate(detail.shareLink.expiresAt.slice(0, 10)),
+                  })}
+                </UbText>
+                {/* UAT D1 — sharing again reuses the live link; rotating it is an
+                    explicit owner/admin act (the revoke permission), never a side
+                    effect of tapping Copy link. */}
+                {can('sales.invoice.void') && (
+                  <UbButton
+                    variant="ghost"
+                    size="sm"
+                    icon={<RotateCcw className="h-4 w-4" aria-hidden />}
+                    busy={detail.sharing}
+                    onClick={() => void detail.resetLink()}
+                  >
+                    {t('sales.share.reset')}
+                  </UbButton>
+                )}
+              </UbStack>
             )}
           </UbStack>
         </UbPanel>

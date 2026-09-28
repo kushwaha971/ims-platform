@@ -171,6 +171,19 @@ export const fetchPrintBranding = createAsyncThunk<PrintBranding, void, Reject>(
   }
 );
 
+/** UAT D1 — kill the live link so the next share mints a new one (owner/admin). */
+export const revokeInvoiceShareLink = createAsyncThunk<
+  boolean,
+  { readonly id: string; readonly kind?: 'invoice' | 'estimate' | 'credit_note' },
+  Reject
+>('invoice/revokeInvoiceShareLink', async ({ id, kind }, { rejectWithValue }) => {
+  try {
+    return await (await service()).revokeShareLink(id, kind);
+  } catch (error) {
+    return rejectWithValue(toApiError(error, 'sales.share.error'));
+  }
+});
+
 export const createInvoiceShareLink = createAsyncThunk<
   ShareLink,
   {

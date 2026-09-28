@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import datetime as dt
 from typing import Any
 
 import pytest
 from django.urls import reverse
+from django.utils import timezone
 
+from apps.platform_app.models import AuditLog
 from apps.sales.models import SalesDocument
 from apps.sales.tests.conftest import cash, draft, invoice_url, issue, line
 
@@ -22,7 +25,7 @@ def _issued_to_party(owner: Any, make_item: Any, make_party: Any) -> dict:
 def test_share_link_round_trip_and_regenerate(owner: Any, anonymous_client: Any, make_item: Any,
                                               make_party: Any) -> None:  # fmt: skip
     """T-SAL03-6 / T-SAL03-7 — 201 with a /d/ URL; only the hash is stored; the public GET masks
-    the mobile and carries no cost; regenerating kills the old token (404)."""
+    the mobile and carries no cost; regenerating (revoke, then share) kills the old token (404)."""
     doc = _issued_to_party(owner, make_item, make_party)
     first = owner.post(invoice_url(doc["id"], "share-links"), {}, format="json")
     assert first.status_code == 201, first.json()
@@ -40,8 +43,58 @@ def test_share_link_round_trip_and_regenerate(owner: Any, anonymous_client: Any,
     )
     assert all("unit_cost_snapshot" not in ln for ln in data["lines"])
 
-    owner.post(invoice_url(doc["id"], "share-links"), {"expires_in_days": 7}, format="json")
+    owner.post(invoice_url(doc["id"], "share-links/revoke"), {}, format="json")
+    fresh = owner.post(invoice_url(doc["id"], "share-links"), {"expires_in_days": 7}, format="json")
+    assert fresh.json()["data"]["url"].rsplit("/d/", 1)[1] != token
     assert anonymous_client.get(reverse("v1:public-document", args=[token])).status_code == 404
+
+
+def test_sharing_again_returns_the_same_live_link_uat_d1(
+    owner: Any, anonymous_client: Any, make_item: Any, make_party: Any
+) -> None:
+    """UAT D1 — every Copy link / Share on WhatsApp minted a new token and silently killed
+    the link the customer already had ("not available"). Sharing is idempotent while the
+    link is live, the URL is still not stored (only its hash), and no second audit row."""
+    doc = _issued_to_party(owner, make_item, make_party)
+    first = owner.post(invoice_url(doc["id"], "share-links"), {"channel": "link"}, format="json")
+    second = owner.post(
+        invoice_url(doc["id"], "share-links"), {"channel": "whatsapp"}, format="json"
+    )
+    url = first.json()["data"]["url"]
+    assert second.json()["data"]["url"] == url
+    assert second.json()["data"]["expires_at"] == first.json()["data"]["expires_at"]
+    assert second.json()["data"]["reused"] is True
+    token = url.rsplit("/d/", 1)[1]
+    assert anonymous_client.get(reverse("v1:public-document", args=[token])).status_code == 200
+    stored = SalesDocument.objects.get(pk=doc["id"])
+    assert token not in str(stored.meta) and token not in stored.public_token_hash
+    assert AuditLog.objects.filter(entity_id=doc["id"], action__startswith="invoice.share_link")\
+        .count() == 1  # fmt: skip
+
+
+def test_an_expired_or_legacy_link_is_replaced_not_reused_uat_d1(
+    owner: Any, anonymous_client: Any, make_item: Any, make_party: Any
+) -> None:
+    """UAT D1 — only a LIVE link is handed back: an expired one, or a legacy link minted
+    before tokens were derivable (no nonce), gets a fresh link rather than a dead URL."""
+    doc = _issued_to_party(owner, make_item, make_party)
+    first = owner.post(invoice_url(doc["id"], "share-links"), {}, format="json").json()["data"]
+    stored = SalesDocument.objects.get(pk=doc["id"])
+    link = dict(stored.meta["share_link"])
+    link["expires_at"] = (timezone.now() - dt.timedelta(seconds=1)).isoformat()
+    stored.meta = {**stored.meta, "share_link": link}
+    stored.save(update_fields=["meta"])
+    second = owner.post(invoice_url(doc["id"], "share-links"), {}, format="json").json()["data"]
+    assert second["url"] != first["url"] and second["reused"] is False
+
+    stored.refresh_from_db()
+    legacy = {k: v for k, v in stored.meta["share_link"].items() if k != "nonce"}
+    stored.meta = {**stored.meta, "share_link": legacy}
+    stored.save(update_fields=["meta"])
+    third = owner.post(invoice_url(doc["id"], "share-links"), {}, format="json").json()["data"]
+    assert third["url"] != second["url"]
+    token = third["url"].rsplit("/d/", 1)[1]
+    assert anonymous_client.get(reverse("v1:public-document", args=[token])).status_code == 200
 
 
 def test_share_link_refuses_drafts_and_bad_expiry(

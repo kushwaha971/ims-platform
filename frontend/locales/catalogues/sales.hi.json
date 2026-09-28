@@ -250,6 +250,8 @@
   "sales.search.placeholder": "नंबर, नाम या मोबाइल",
   "sales.share.copyLink": "लिंक कॉपी करें",
   "sales.share.error": "लिंक नहीं बना",
+  "sales.share.reset": "नया लिंक बनाएँ",
+  "sales.share.resetDone": "नया लिंक कॉपी हो गया। पुराना लिंक अब नहीं खुलेगा।",
   "sales.share.textDue": "नमस्ते {party}, {shop} का आपका बिल {number} {total} का है। बाकी {due}, {dueDate} तक। बिल देखें: {link}",
   "sales.share.textPaid": "नमस्ते {party}, {shop} से खरीदारी के लिए धन्यवाद। बिल {number} {total} का भुगतान हो गया। देखें: {link}",
   "sales.share.validUntil": "लिंक {date} तक मान्य",

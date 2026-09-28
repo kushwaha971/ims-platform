@@ -495,6 +495,8 @@ export const INVALIDATION: TInvalidationMap = {
   // A share link changes nothing any other screen shows; the detail slice
   // holds the minted link itself (its fulfilled reducer, not a refetch).
   createInvoiceShareLink: { patch: [['invoiceDetail', 'shareLink']] },
+  // UAT D1 — revoking clears the held link in its own fulfilled reducer.
+  revokeInvoiceShareLink: { patch: [['invoiceDetail', 'shareLink']] },
   // ── PAY-01 … PAY-05 — payments ───────────────────────────────────────────
   //
   // A payment moves the khata (the credit or debit line), the balance on the

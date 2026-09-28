@@ -16,6 +16,7 @@ import {
   fetchInvoice,
   fetchPrintBranding,
   fetchUpiIntent,
+  revokeInvoiceShareLink,
 } from '../redux/salesThunk';
 
 import type { PrintTemplate, SalesDocument } from '../types/sales.types';
@@ -66,6 +67,8 @@ export interface UseInvoiceDetailResult extends InvoiceDetailState {
   readonly setTemplate: (template: PrintTemplate) => void;
   readonly print: (template: PrintTemplate) => void;
   readonly share: (channel: 'link' | 'whatsapp') => Promise<void>;
+  /** UAT D1 — owner/admin: the old link stops working and a new one is copied. */
+  readonly resetLink: () => Promise<void>;
   /** PAY-01 — re-read the bill after a payment against it moved its status. */
   readonly reload: () => void;
 }
@@ -145,9 +148,24 @@ export const useInvoiceDetail = (
     [dispatch, detail.document, t, kind]
   );
 
+  const resetLink = useCallback(async () => {
+    const doc = detail.document;
+    if (!doc) return;
+    const revoked = await dispatch(revokeInvoiceShareLink({ id: doc.id, kind }));
+    if (!revokeInvoiceShareLink.fulfilled.match(revoked)) return;
+    const result = await dispatch(createInvoiceShareLink({ id: doc.id, channel: 'link', kind }));
+    if (!createInvoiceShareLink.fulfilled.match(result)) return;
+    try {
+      await navigator.clipboard.writeText(result.payload.url);
+      dispatch(showSnackbar({ severity: 'success', id: 'sales.share.resetDone' }));
+    } catch {
+      dispatch(showSnackbar({ severity: 'error', id: 'share.copyFailed' }));
+    }
+  }, [dispatch, detail.document, kind]);
+
   const reload = useCallback(() => {
     void dispatch(fetchInvoice(id));
   }, [dispatch, id]);
 
-  return { ...detail, template, setTemplate, print, share, reload };
+  return { ...detail, template, setTemplate, print, share, resetLink, reload };
 };

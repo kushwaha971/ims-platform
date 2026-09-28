@@ -250,6 +250,8 @@
   "sales.search.placeholder": "Number, name or mobile",
   "sales.share.copyLink": "Copy link",
   "sales.share.error": "Couldn't create the link",
+  "sales.share.reset": "Reset link",
+  "sales.share.resetDone": "New link copied. The old link no longer works.",
   "sales.share.textDue": "Namaste {party}, your bill {number} from {shop} is {total}. Balance due {due} by {dueDate}. View bill: {link}",
   "sales.share.textPaid": "Namaste {party}, thank you for your purchase at {shop}. Bill {number} for {total} is paid. View: {link}",
   "sales.share.validUntil": "Link valid till {date}",

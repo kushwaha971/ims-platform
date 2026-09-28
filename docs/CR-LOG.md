@@ -1336,3 +1336,29 @@ LED-04 "WhatsApp or link share") but the existing token lives on `sales_document
 and cannot name a statement; it needs the generalised `parties_share_link` (C1) migration, a
 statement public payload and a statement variant of the page. Part 17-02 NTF-03 FR-3 also puts
 statements at `/khata/<token>` while LED-04 FR-7 puts them at `/d/<token>` — to be settled with it.
+
+## CR-2026-09-29-UAT-D1 — sharing a document twice is the SAME link; rotation is "Reset link"
+
+SAL-03 FR-5 / BR-4, Part 27 §27.12. Final UAT D1 (High).
+
+**The defect.** `create_share_link` minted a fresh token on every "Copy link" and "Share on
+WhatsApp", replacing the hash — so the link a customer already had on WhatsApp opened as "not
+available" the moment the merchant shared the bill again (or just copied the link to paste it
+somewhere else). BR-4's "one active token per document" was being enforced by killing the one the
+customer holds.
+
+**Decision.** Sharing is idempotent while a link is live (hash set, not expired, not revoked): the
+same URL and expiry come back (`reused: true`) and nothing is written or audited. Showing a URL
+again without storing it: the token is DERIVED, `HMAC-SHA256(SECRET_KEY, "sales-share:<doc
+id>:<nonce>")` (`django.utils.crypto.salted_hmac`, no new dependency), with a random 16-byte
+nonce in `meta.share_link.nonce`. The column still holds only the SHA-256 of the token and lookup
+is still by hash, so a database dump alone yields no usable link — the property H1's hashing was
+bought for; the attacker would also need the server key. Rejected: storing the raw token (a dump
+becomes a list of live links) and a client-side cache of the last URL (lost on reload; a second
+device would still rotate). Rotation is explicit: **Reset link** on the document page (owner/admin
+— the existing revoke permission `sales.invoice.void`) revokes, then shares again with a new
+nonce, copies the new URL and says the old link no longer works. Revoke drops the nonce so a
+revoked link can never be re-derived. A legacy link (minted before this, no nonce) or one whose
+derivation no longer matches (SECRET_KEY rotated) cannot be shown again and is replaced, which is
+the previous behaviour. Tests: `test_sharing_again_returns_the_same_live_link_uat_d1`,
+`test_an_expired_or_legacy_link_is_replaced_not_reused_uat_d1`, `useInvoiceDetail.share.test.tsx`.
