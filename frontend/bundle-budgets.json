@@ -530,7 +530,11 @@
   "Measured + 1 KB. The three tax-report routes had provisional 56 KB lines copied from",
   "a smaller route before they were built; they now carry the register grid, ReportPageShell",
   "and the taxReports catalogue (~92 KB). Invoice and bill editors grew with the payment",
-  "sheet (Paid now / Full credit) and the credit-note hooks. Shell unchanged at 102.8 KB."
+  "sheet (Paid now / Full credit) and the credit-note hooks. Shell unchanged at 102.8 KB.",
+  "",
+  "── 28 Sep 2026 (final QA fixes): +1 KB lines — bill editor (supplier listbox, Paid-now UPI app),",
+  "/parties/[id] (Fill/Max allocation rows in the lazily-loaded drawer's shared view-model),",
+  "/design-system (UbMoneyInput/UbDateInput Hindi month table). Measured + 1."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -1040,7 +1044,7 @@
   },
   "/design-system": {
    "route": 102,
-   "firstLoad": 331
+   "firstLoad": 333
   },
   "/settings/team": {
    "route": 72,
@@ -1048,7 +1052,7 @@
   },
   "/parties/[id]": {
    "route": 92,
-   "firstLoad": 321
+   "firstLoad": 323
   },
   "/parties/tags": {
    "route": 55,
@@ -1167,7 +1171,7 @@
    "firstLoad": 284
   },
   "/purchases/bills/[id]/edit": {
-   "route": 134,
+   "route": 136,
    "firstLoad": 365
   },
   "/purchases/bills": {
@@ -1175,7 +1179,7 @@
    "firstLoad": 315
   },
   "/purchases/bills/new": {
-   "route": 134,
+   "route": 136,
    "firstLoad": 365
   },
   "/reports": {
