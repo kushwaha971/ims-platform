@@ -80,11 +80,13 @@ export interface LedgerEntryApiRow {
    * carry none. Optional so an older server reads as "not known".
    */
   readonly running_balance?: string | null;
-  /** CR-027 — the document link; `null` for every manual row. Not mapped yet: nothing links. */
+  /** CR-027 / LED-10 FR-5 — the document link; `null` for every manual row. */
   readonly source?: {
     readonly type: string;
     readonly id: string;
     readonly number: string | null;
+    readonly status?: string | null;
+    readonly kind?: string | null;
   } | null;
 }
 
@@ -122,6 +124,20 @@ export interface LedgerEntry {
    * it. Absent means "not known", which the row renders as no caption at all.
    */
   readonly runningBalance?: string | null;
+  /**
+   * LED-10 FR-5 — the document this line came from (an invoice, a receipt, an
+   * expense), resolved by the server with its number and current status.
+   * Absent on a manual line and on a row spliced in from a 201.
+   */
+  readonly source?: LedgerEntrySource;
+}
+
+export interface LedgerEntrySource {
+  readonly type: string;
+  readonly id: string;
+  readonly number: string | null;
+  readonly status: string | null;
+  readonly kind: string | null;
 }
 
 /**

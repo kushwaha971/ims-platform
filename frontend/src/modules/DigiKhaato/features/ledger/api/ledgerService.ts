@@ -102,6 +102,18 @@ const toEntry = (row: LedgerEntryApiRow): LedgerEntry => ({
   /* CR-027. Spread only when present, so a row from a 201 (which carries no
      running balance) has no key rather than a `null` that reads like a value. */
   ...(row.running_balance != null ? { runningBalance: row.running_balance } : {}),
+  /* LED-10 FR-5 — only a document-sourced row carries one. */
+  ...(row.source
+    ? {
+        source: {
+          type: row.source.type,
+          id: row.source.id,
+          number: row.source.number,
+          status: row.source.status ?? null,
+          kind: row.source.kind ?? null,
+        },
+      }
+    : {}),
 });
 
 const toWarning = (warning: {
