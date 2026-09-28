@@ -196,8 +196,11 @@ export function StatementPrintView({
           />
         </UbBox>
 
-        <UbText variant="caption" tone="tertiary">
-          {t('ledger.statement.generatedBy', { app: 'DigiKhaato' })}
+        {/* CR-2026-09-29-BRAND-A: the statement a customer is handed is the
+            shop's document. It is signed with the shop's name and carries no
+            product name or domain. */}
+        <UbText variant="caption" tone="tertiary" data-testid="statement-issued-by">
+          {t('ledger.statement.issuedBy', { business: shopName })}
         </UbText>
       </UbStack>
     </UbBox>

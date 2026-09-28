@@ -1,7 +1,6 @@
 import { API_PATHS } from 'src/api/APIPaths';
 import { absoluteFileUrl } from 'src/api/apiUrl';
 import { publicApi } from 'src/api/AxiosInstances';
-import { APP_NAME } from 'src/constants';
 
 import { toDocument } from './salesService';
 
@@ -42,7 +41,10 @@ export const toPublicDocument = (raw: Wire): PublicDocument => {
       signatureUrl: null,
       docHeader: str(branding.doc_header) ?? '',
       docFooter: str(branding.doc_footer) ?? '',
-      appName: str(branding.app_name) ?? APP_NAME,
+      // CR-2026-09-29-BRAND-A: never the product's name as a fallback. The
+      // customer's copy is the shop's document; only a name the shop chose for
+      // itself may appear, and no print sheet renders it today.
+      appName: str(branding.app_name) ?? '',
       primaryHex: str(branding.primary_hex),
     },
     locale: raw.locale === 'hi' ? 'hi' : 'en',

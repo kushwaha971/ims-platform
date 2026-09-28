@@ -82,7 +82,7 @@ export interface MemberDraft {
  * has cost the merchant a working login and the only way back is to regenerate.
  *
  * `password` is `null` when `createdUser` is false: that address already had a
- * DigiKhaato account and keeps the password its owner chose. Issuing a new one
+ * YourKhata account and keeps the password its owner chose. Issuing a new one
  * would be an account takeover wearing an onboarding costume, so the dialog has
  * to say the true thing instead of showing a credential that would not work.
  */

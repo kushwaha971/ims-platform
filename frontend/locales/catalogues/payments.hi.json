@@ -68,7 +68,7 @@
   "payments.receipt.billBalance": "बिल बाकी",
   "payments.receipt.error.body": "हो सकता है लिंक गलत हो।",
   "payments.receipt.error.title": "रसीद नहीं मिली",
-  "payments.receipt.generatedBy": "{app} से बनी",
+  "payments.receipt.issuedBy": "{business} द्वारा जारी",
   "payments.receipt.mode": "तरीका",
   "payments.receipt.paidTo": "को भुगतान",
   "payments.receipt.payNext": "अगली बार UPI से भुगतान करें",

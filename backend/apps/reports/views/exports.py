@@ -107,7 +107,7 @@ class ExportDownloadView(APIView):
             # synchronously (`day-book_2026-04-01_2026-09-30.csv`); a list's
             # keeps IMP-02's.
             filename=(export.params or {}).get("filename")
-            or f"digikhaato-{export.resource or 'export'}-{export.created_at:%Y%m%d-%H%M}.csv",
+            or f"yourkhata-{export.resource or 'export'}-{export.created_at:%Y%m%d-%H%M}.csv",
         )
         response["Cache-Control"] = "private, no-store"
         response["X-Content-Type-Options"] = "nosniff"

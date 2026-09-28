@@ -90,7 +90,7 @@ describe('ListExportButton', () => {
     service.requestListExport.mockResolvedValue({
       kind: 'file',
       blob: new Blob(['name\r\n']),
-      filename: 'digikhaato-parties-20260924-1142.csv',
+      filename: 'yourkhata-parties-20260924-1142.csv',
     });
     renderWithProviders(
       <ListExportButton

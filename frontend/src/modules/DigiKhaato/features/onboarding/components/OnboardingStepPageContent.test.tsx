@@ -475,7 +475,7 @@ describe('the wizard — the page is a rail and a form half (layout A)', () => {
 
     // The three things the rail carries: the mark, the four steps, the line of
     // reassurance that Zoho puts in an illustrated panel we do not have.
-    expect(within(rail).getByRole('img', { name: 'DigiKhaato' })).toBeInTheDocument();
+    expect(within(rail).getByRole('img', { name: 'YourKhata' })).toBeInTheDocument();
     expect(within(rail).getAllByRole('listitem')).toHaveLength(4);
     expect(within(rail).getByText(en['onboarding.rail.reassurance'] as string)).toBeInTheDocument();
   });

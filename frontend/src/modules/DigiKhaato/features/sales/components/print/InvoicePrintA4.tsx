@@ -297,8 +297,10 @@ export function InvoicePrintA4({
         {doc.notes && <p className="whitespace-pre-line">{doc.notes}</p>}
         {branding?.docFooter && <p>{branding.docFooter}</p>}
         <div className="flex items-end justify-between pt-6">
-          <p className="text-[10px] text-black/60">
-            {t('sales.print.generatedBy', { app: branding?.appName ?? '' })}
+          {/* CR-2026-09-29-BRAND-A: the sheet is signed by the business that
+              issued it. No product name, no domain, nothing of ours. */}
+          <p className="text-[10px] text-black/60" data-testid="print-issued-by">
+            {t('sales.print.issuedBy', { business: supplier.legalName || supplier.name })}
           </p>
           <div className="text-right">
             {branding?.signatureUrl && (

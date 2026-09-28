@@ -128,7 +128,7 @@ class TenantExportDownloadView(APIView):
         response = FileResponse(
             default_storage.open(key, "rb"),
             as_attachment=True,
-            filename=f"digikhaato-export-{stamp}.zip",
+            filename=f"yourkhata-export-{stamp}.zip",
             content_type="application/zip",
         )
         response["Cache-Control"] = "no-store"

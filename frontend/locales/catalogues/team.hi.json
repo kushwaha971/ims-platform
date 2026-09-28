@@ -13,7 +13,7 @@
   "team.credentials.done": "हो गया",
   "team.credentials.email.label": "ईमेल पता",
   "team.credentials.existing.body": "{name} इस व्यापार में जुड़ गए हैं और अपने मौजूदा पासवर्ड से साइन इन करेंगे। भेजने के लिए कुछ नहीं है।",
-  "team.credentials.existing.title": "उनका पहले से DigiKhaato खाता है",
+  "team.credentials.existing.title": "उनका पहले से YourKhata खाता है",
   "team.credentials.expires": "{date} को काम करना बंद कर देगा।",
   "team.credentials.forced": "पहली बार साइन इन करते समय उनसे अपना पासवर्ड चुनने को कहा जाएगा।",
   "team.credentials.once": "अभी कॉपी कर लें। हमारे पास पासवर्ड की सिर्फ़ गुप्त प्रति रहती है और हम इसे दोबारा नहीं दिखा सकते — पर आप नया हमेशा बना सकते हैं।",

@@ -864,7 +864,7 @@ RPO falls from 24 hours to the WAL archive interval (minutes). Nothing in the ap
 # ── On the build host (CI or the developer machine) ────────────────────────────
 git tag -a v1.4.2 -m "Release 1.4.2" && git push --tags
 docker compose -f docker-compose.yml -f docker-compose.prod.yml build \
-  --build-arg NEXT_PUBLIC_API_BASE_URL=https://app.udhaarbook.in/api/v1
+  --build-arg NEXT_PUBLIC_API_BASE_URL=https://yourkhata.com/api/v1
 docker tag udhaarbook-backend:latest  registry.example.com/ub-backend:v1.4.2
 docker tag udhaarbook-frontend:latest registry.example.com/ub-frontend:v1.4.2
 docker push registry.example.com/ub-backend:v1.4.2
@@ -882,7 +882,7 @@ export COMPOSE="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
 
 # 1. PRE-FLIGHT — never skipped
 $COMPOSE ps                                                   # everything healthy now?
-curl -sf https://app.udhaarbook.in/api/v1/system/health | jq -e '.data.status=="ok"'
+curl -sf https://yourkhata.com/api/v1/system/health | jq -e '.data.status=="ok"'
 ls -la /srv/udhaarbook/backups/daily | tail -3                # last night's dump exists and verified
 df -h /srv/udhaarbook                                         # > 20 % free
 git -C /srv/udhaarbook log --oneline -1                       # note the current commit for rollback
@@ -908,7 +908,7 @@ $COMPOSE up -d --no-deps frontend
 $COMPOSE up -d --no-deps nginx         # only if the nginx config changed
 
 # 7. SMOKE TEST (§29.6.3)
-./ops/smoke.sh https://app.udhaarbook.in
+./ops/smoke.sh https://yourkhata.com
 
 # 8. RECORD
 echo "$(date -uIs) v1.4.2 $(git rev-parse --short HEAD) deployed by $USER" >> ops/DEPLOY_LOG
@@ -932,7 +932,7 @@ curl -sf "$BASE/api/v1/system/health" | jq -e '.data.checks.scheduler.status=="o
 curl -sf "$BASE/api/v1/system/version" | jq -e --arg v "$EXPECTED_VERSION" '.data.version==$v' || fail version
 [ "$(curl -so /dev/null -w '%{http_code}' "$BASE/")" = "200" ]                || fail frontend
 [ "$(curl -so /dev/null -w '%{http_code}' "$BASE/login")" = "200" ]           || fail login-page
-curl -sf "$BASE/api/v1/public/branding?host=app.udhaarbook.in" | jq -e '.data.app_name' || fail branding
+curl -sf "$BASE/api/v1/public/branding?host=yourkhata.com" | jq -e '.data.app_name' || fail branding
 [ "$(curl -so /dev/null -w '%{http_code}' "$BASE/api/v1/parties")" = "401" ]  || fail auth-required
 curl -sfI "$BASE/static/$(cat ops/smoke-static-asset)" | grep -q '200'        || fail static
 curl -sf "$BASE/api/v1/system/health" -H 'X-Request-Id: smoke-1' -D- -o/dev/null \
@@ -949,7 +949,7 @@ Then a two-minute manual pass: log in as a test tenant, open the dashboard, open
 cd /srv/udhaarbook
 git checkout v1.4.1
 $COMPOSE up -d --no-deps backend scheduler frontend
-./ops/smoke.sh https://app.udhaarbook.in
+./ops/smoke.sh https://yourkhata.com
 ```
 
 **With a migration in the release**, the rollback is not symmetric, and this is the single most dangerous moment in the whole chapter. The decision tree:
@@ -1001,7 +1001,7 @@ Rules: the filename is the attachment UUID, so nothing user-supplied ever reache
 # ops/nginx/conf.d/app.conf (abridged to the rules that matter)
 server {
     listen 443 ssl http2;
-    server_name app.udhaarbook.in khata.examplebank.in;   # partner hosts appended by ops
+    server_name yourkhata.com www.yourkhata.com khata.examplebank.in;   # partner hosts appended by ops
     ssl_certificate     /etc/letsencrypt/live/$ssl_server_name/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/$ssl_server_name/privkey.pem;
 
@@ -1231,7 +1231,7 @@ Each runbook is numbered steps, executable by someone who did not write the syst
 
 ### 29.11.1 App down (users see 502 or a blank page)
 
-1. `curl -s -o /dev/null -w '%{http_code}' https://app.udhaarbook.in/` — note the code. 502/504 ⇒ a backend or frontend problem; connection refused ⇒ nginx or the host.
+1. `curl -s -o /dev/null -w '%{http_code}' https://yourkhata.com/` — note the code. 502/504 ⇒ a backend or frontend problem; connection refused ⇒ nginx or the host.
 2. `$COMPOSE ps` — which service is not `healthy`?
 3. `$COMPOSE logs --tail 200 <service>` — read the last error before the failure.
 4. If `backend` is unhealthy: `curl -s localhost:8000/api/v1/system/health` from the host. Database unreachable ⇒ §29.11.2. Migrations pending ⇒ §29.11.5.
@@ -1239,7 +1239,7 @@ Each runbook is numbered steps, executable by someone who did not write the syst
 6. Restart the single failing service: `$COMPOSE up -d --force-recreate --no-deps <service>`. Wait 60 s and re-check health.
 7. If still down and the last deploy was recent, roll back: §29.6.4.
 8. If the host itself is the problem (`df -h` full ⇒ §29.11.4; load average high ⇒ identify the process with `top`), address that first.
-9. When recovered, run `./ops/smoke.sh https://app.udhaarbook.in` and record the incident with the timeline in `ops/INCIDENTS.md`.
+9. When recovered, run `./ops/smoke.sh https://yourkhata.com` and record the incident with the timeline in `ops/INCIDENTS.md`.
 
 ### 29.11.2 Database down
 

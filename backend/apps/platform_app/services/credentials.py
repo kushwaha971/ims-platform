@@ -257,7 +257,7 @@ def create_member(
     their password because a stranger typed their address would be a takeover
     with a friendly name. They are added to the team and keep the password they
     already chose, and `created_user` says so, so the dialog can tell the owner
-    "they already have a DigiKhaato account -- they sign in with their existing
+    "they already have a YourKhata account -- they sign in with their existing
     password" instead of showing a credential that would not work.
 
     The seat is checked under the tenant lock (PLT-15 BR-7) before anything is

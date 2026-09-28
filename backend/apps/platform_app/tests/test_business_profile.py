@@ -123,5 +123,5 @@ def test_the_profile_read_carries_resolved_branding(api_as: Any, tenant: Any) ->
     """FR-7's header preview needs the logo and name from the same read."""
     client, _m = api_as(tenant)
     data = client.get(reverse(URL)).json()["data"]
-    assert data["branding"]["app_name"] == "DigiKhaato"
+    assert data["branding"]["app_name"] == "YourKhata"
     assert data["branding"]["sources"]["app_name"] == "default"

@@ -102,7 +102,7 @@ export const requestListExport = async (listPath: string): Promise<ListExportRes
       return { kind: 'queued', exportId: body.data.export_id, rowCount: body.data.row_count };
     }
     const disposition = String(response.headers['content-disposition'] ?? '');
-    const filename = FILENAME.exec(disposition)?.[1] ?? 'digikhaato-export.csv';
+    const filename = FILENAME.exec(disposition)?.[1] ?? 'yourkhata-export.csv';
     return { kind: 'file', blob: response.data, filename };
   } catch (error) {
     return unwrapBlobError(error);

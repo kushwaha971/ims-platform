@@ -132,7 +132,7 @@ describe('requestListExport (IMP-02 FR-6)', () => {
       status: 200,
       data: new Blob(['\ufeffname\r\n']),
       headers: {
-        'content-disposition': 'attachment; filename="digikhaato-parties-20260924-1142.csv"',
+        'content-disposition': 'attachment; filename="yourkhata-parties-20260924-1142.csv"',
       },
     });
     const result = await requestListExport('/parties?q=Kumar&status=active');
@@ -145,7 +145,7 @@ describe('requestListExport (IMP-02 FR-6)', () => {
     });
     expect(result).toMatchObject({
       kind: 'file',
-      filename: 'digikhaato-parties-20260924-1142.csv',
+      filename: 'yourkhata-parties-20260924-1142.csv',
     });
   });
 

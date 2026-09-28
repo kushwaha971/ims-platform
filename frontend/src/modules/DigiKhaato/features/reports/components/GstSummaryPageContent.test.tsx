@@ -185,7 +185,7 @@ it('opens on the last completed month, ready to file, with the GSTR-1 tables bad
   expect(screen.getByText('GSTR-1 · 13')).toBeInTheDocument();
   expect(screen.getByText('INV/26-27/0041')).toBeInTheDocument();
   expect(
-    screen.getByText('Not applicable — tax on advances is not recorded in DigiKhaato')
+    screen.getByText('Not applicable — tax on advances is not recorded in YourKhata')
   ).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /Export/ })).toBeInTheDocument();
 });
@@ -221,7 +221,7 @@ it('switches to the GSTR-3B view without asking the server again (T-RPT07-15)', 
   const calls = service.getGstSummary.mock.calls.length;
   await userEvent.click(screen.getByRole('tab', { name: 'GSTR-3B' }));
   expect(await screen.findByText('GSTR-3B · 3.1(a)')).toBeInTheDocument();
-  expect(screen.getByText(/Not recorded in DigiKhaato/)).toBeInTheDocument();
+  expect(screen.getByText(/Not recorded in YourKhata/)).toBeInTheDocument();
   expect(service.getGstSummary.mock.calls.length).toBe(calls);
 });
 

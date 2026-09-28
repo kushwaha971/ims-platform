@@ -81,7 +81,7 @@ def build_export(job: Any, ctx: Any) -> dict:
             kind=AttachmentKind.EXPORT_FILE,
             storage_key=stored,
             original_name=(export.params or {}).get("filename")
-            or f"digikhaato-{export.resource}.csv",
+            or f"yourkhata-{export.resource}.csv",
             content_type="text/csv",
             size_bytes=size,
             sha256=digest.hexdigest(),

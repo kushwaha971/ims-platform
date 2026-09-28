@@ -1,4 +1,13 @@
-# DigiKhaato — working notes for Claude
+# YourKhata — working notes for Claude
+
+**Product name: YourKhata** (one word, capital Y and K, Latin script in every
+locale — a brand name is not translated). **Domain: yourkhata.com.** It was
+DigiKhaato until 29 Sep 2026 (CR-2026-09-29-BRAND-A). The repo folder stays
+`ims-platform` and the code namespace stays `modules/DigiKhaato/…`, the `UB_`
+env prefix and the `ub_*` cookies — only user-visible surfaces carry the name.
+**Nothing a merchant's customer receives names the product or its domain**:
+prints, PDFs, the `/d/<token>` share page and message texts are signed with the
+tenant's business name only (`src/tests/customerDocumentsCarryNoProductName.test.tsx`).
 
 Read this before changing anything. It records decisions that have already been
 made and paid for; re-litigating them costs a rewrite.
@@ -47,8 +56,9 @@ if you write something twice, extract it.
 **Errors surface through the global snackbar**, mounted once in `AppProviders`,
 never per page.
 
-**Product name is DigiKhaato; the folder stays `ims-platform`** so the name can
-change later without a repo move.
+**Product name is YourKhata (yourkhata.com); the folder stays `ims-platform`**
+and the code namespace stays `DigiKhaato`, so the name can change again without
+a repo move. The mark and its rules are `docs/DESIGN-SYSTEM.md` §7.
 
 ## How to work here
 
