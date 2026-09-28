@@ -8,7 +8,9 @@ export default function PublicLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>): React.JSX.Element {
   return (
-    <UbBox as="main" className="min-h-dvh bg-canvas px-4 py-8">
+    // `print:` — the share page's Save as PDF puts only the A4 sheet on paper,
+    // so the page's own gutters must not become a second margin inside @page.
+    <UbBox as="main" className="min-h-dvh bg-canvas px-4 py-8 print:bg-white print:p-0">
       {children}
     </UbBox>
   );

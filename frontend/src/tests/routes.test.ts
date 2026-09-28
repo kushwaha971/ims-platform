@@ -169,6 +169,21 @@ describe('public routes and the login redirect loop', () => {
     expect(isPublicPath(`${ROUTES.RESET_PASSWORD}/abc123`)).toBe(true);
   });
 
+  it('treats the customer share page as public, so a customer is never sent to login', () => {
+    // Launch blocker: `/d/<token>` is opened by someone with no account. The
+    // root layout's session fetch 401s, the refresh 401s, and the handler sent
+    // them to `/login?next=/d/<token>` — no bill, and the token in a query.
+    expect(isPublicPath(`${ROUTES.PUBLIC_DOCUMENT}/AbC_123-xyz`)).toBe(true);
+    expect(isPublicPath('/dashboard')).toBe(false);
+  });
+
+  it('treats the legal pages as public, because sign-up links to them before an account exists', () => {
+    // Found by the same live probe: an anonymous visitor to /legal/terms was
+    // bounced to /login?next=/legal/terms.
+    expect(isPublicPath(ROUTES.LEGAL_TERMS)).toBe(true);
+    expect(isPublicPath(ROUTES.LEGAL_PRIVACY)).toBe(true);
+  });
+
   it('does not treat an app route as public', () => {
     expect(isPublicPath(ROUTES.DASHBOARD)).toBe(false);
     expect(isPublicPath(ROUTES.PARTIES)).toBe(false);

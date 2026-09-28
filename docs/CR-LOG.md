@@ -1302,3 +1302,37 @@ backfills the cache's value with the same product.
 on drift), `check_invariants` runs both, and the nightly callables are
 `apps.ledger.services.integrity.check_balances` and
 `apps.inventory.services.integrity.check_stock` (JSON summaries; party ids, never names).
+
+## CR-2026-09-28-SHARE-A — the customer share page, and what its payload needed
+
+**State:** `raised` (built; needs the API owner's acceptance). **Target:** Part 22 §22.12
+(`GET /public/d/{token}`), SAL-03 FR-5, Part 27 §27.12, Part 19 §19.6.4.
+
+**The defect (launch blocker).** `app/(public)/d/[token]/page.tsx` was the Sprint 0 stub: it
+rendered "This link has expired" for every token and never called the API, so every bill a
+merchant shared on WhatsApp opened as expired. A second defect sat behind it and was found by
+opening a link in a cookieless browser: `/d` was not in `PUBLIC_ROUTE_PREFIXES`, so the root
+layout's `GET /auth/me` 401'd, the refresh 401'd, and the customer was redirected to
+`/login?next=/d/<token>` — the credential moved from the path into a query string. `/legal/terms`
+and `/legal/privacy` (linked from sign-up before an account exists) had the same redirect.
+
+**Decision.** The page is a client fetch through `publicApi` (the durable per-IP budget would
+otherwise be spent from the Next server's one address) rendering the same `InvoicePrintA4` the
+merchant prints. The allow-listed payload gains three blocks, each allow-listed and tested key by
+key (`apps/sales/tests/test_share_public_page.py`):
+
+* `tenant_branding.logo_url` — `/api/v1/public/d/{token}/logo`, a new token-scoped route that
+  streams the TENANT's own logo under the same 404/expiry/revocation check and headers, because
+  `/files/{id}` needs a session. A partner's default logo is not streamed. The signature image is
+  deliberately NOT exposed on an open URL. nginx's log map redacts `/d/<token>/logo` too.
+* `upi` — `{upi_url, amount, qr}` from the paper's `upi_intent`, only for an invoice / bill of
+  supply that is issued, part paid or overdue with `amount_due > 0` and a valid VPA with the QR
+  setting on (EC-5, EC-6, EC-7); `null` otherwise.
+* `locale` — the shop's language; the page opens in Hindi when the shop or the phone's
+  Accept-Language says `hi`, unless the customer chose with the page's own switch.
+
+**Not done, recorded.** The ledger statement share (LED-04 FR-6/FR-7) is in MVP scope (Part 12
+LED-04 "WhatsApp or link share") but the existing token lives on `sales_document.public_token_hash`
+and cannot name a statement; it needs the generalised `parties_share_link` (C1) migration, a
+statement public payload and a statement variant of the page. Part 17-02 NTF-03 FR-3 also puts
+statements at `/khata/<token>` while LED-04 FR-7 puts them at `/d/<token>` — to be settled with it.

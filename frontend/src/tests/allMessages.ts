@@ -54,6 +54,8 @@ import periodEn from 'locales/catalogues/period.en.json';
 import periodHi from 'locales/catalogues/period.hi.json';
 import planEn from 'locales/catalogues/plan.en.json';
 import planHi from 'locales/catalogues/plan.hi.json';
+import publicDocumentEn from 'locales/catalogues/publicDocument.en.json';
+import publicDocumentHi from 'locales/catalogues/publicDocument.hi.json';
 import purchasesEn from 'locales/catalogues/purchases.en.json';
 import purchasesHi from 'locales/catalogues/purchases.hi.json';
 import remindersEn from 'locales/catalogues/reminders.en.json';
@@ -122,6 +124,7 @@ export const en: Readonly<Record<string, string>> = {
   ...paymentsEn,
   ...periodEn,
   ...planEn,
+  ...publicDocumentEn,
   ...purchasesEn,
   ...remindersEn,
   ...reportsEn,
@@ -165,6 +168,7 @@ export const hi: Readonly<Record<string, string>> = {
   ...paymentsHi,
   ...periodHi,
   ...planHi,
+  ...publicDocumentHi,
   ...purchasesHi,
   ...remindersHi,
   ...reportsHi,

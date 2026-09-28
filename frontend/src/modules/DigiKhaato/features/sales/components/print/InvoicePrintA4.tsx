@@ -211,15 +211,17 @@ export function InvoicePrintA4({
             </table>
           )}
           {upi && !mark && (
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <UbQrCode modules={upi.qr.modules} size="28mm" label={t('sales.print.scanToPay')} />
-              <div>
+              {/* min-w-0 + a breakable VPA: in a narrow column (the share page
+                  on a phone) the VPA ran into the totals beside it otherwise. */}
+              <div className="min-w-0 break-words">
                 <p className="font-semibold">
                   {upi.amount
                     ? t('sales.print.scanToPayAmount', { amount: formatInr(upi.amount) })
                     : t('sales.print.scanToPay')}
                 </p>
-                <p className="font-mono">{supplier.upiVpa}</p>
+                <p className="break-all font-mono">{supplier.upiVpa}</p>
               </div>
             </div>
           )}
