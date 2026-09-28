@@ -20,7 +20,13 @@ from django.contrib.postgres.indexes import GinIndex, OpClass
 from django.db import models
 from django.db.models.functions import Lower, Upper
 
-from apps.common.db.fields import MoneyField, QuantityField, UnitCostField, uuid7_pk
+from apps.common.db.fields import (
+    MoneyField,
+    QuantityField,
+    StockValueField,
+    UnitCostField,
+    uuid7_pk,
+)
 from apps.common.managers import AllObjectsManager, SoftDeleteManager
 from apps.common.models import ImmutableModel, SoftDeleteModel, TenantModel, TimeStampedModel
 from apps.inventory.constants import (
@@ -243,6 +249,9 @@ class ItemStock(TenantModel):
     location = models.ForeignKey(Location, on_delete=models.RESTRICT, related_name="+")
     on_hand = QuantityField(default=0)
     avg_cost = UnitCostField(default=0)
+    #: The exact value on hand, carried so the average can be derived from it
+    #: rather than rebuilt from its own rounding (H3; `services/costing.py`).
+    stock_value = StockValueField(default=0)
     last_movement_at = models.DateTimeField(null=True, blank=True)
     #: High-water mark that allocates `StockMovement.sequence_no`.
     last_sequence_no = models.IntegerField(default=0)
@@ -283,6 +292,9 @@ class StockMovement(TenantModel, ImmutableModel):
     unit_cost = UnitCostField(null=True, blank=True)
     avg_cost_after = UnitCostField()
     on_hand_after = QuantityField()
+    #: The exact stock value after this row. NULL only on rows written before
+    #: value carrying, which the replay folds with `on_hand × avg` as they were.
+    value_after = StockValueField(null=True, blank=True)
     reason = models.CharField(max_length=32, null=True, blank=True)
     source_type = models.CharField(max_length=32, choices=MovementSource.choices)
     source_id = models.UUIDField(null=True, blank=True)

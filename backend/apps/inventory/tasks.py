@@ -46,9 +46,6 @@ def recalc_stock(job: Any, ctx: Any) -> dict:
     justifies it — and quietly fixing the number destroys the evidence. The
     operator runs `manage.py recalc_stock --apply` after reading it.
     """
-    from apps.inventory.selectors.drift import stock_drift
+    from apps.inventory.services.integrity import check_stock
 
-    drift = stock_drift()
-    if drift:
-        logger.error("inventory.stock_drift", extra={"count": len(drift)})
-    return {"drifted": len(drift)}
+    return check_stock()

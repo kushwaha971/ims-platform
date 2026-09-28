@@ -165,6 +165,26 @@ def test_a_void_restores_the_average_by_arrival_order(
     assert_books_clean(shop, supplier)
 
 
+def test_a_void_restores_the_average_to_the_last_decimal(
+    shop: Any, owner: Any, make_item: Any, make_supplier: Any
+) -> None:
+    """QA final-pass Low (H3 item 1): 3 on hand at 140, a bill of 6 at 150 blends to
+    146.6667; voiding it showed 140.0001, because the reversal removed value from
+    `on_hand × avg` — a product of the ROUNDED average — instead of the value the
+    receipt actually added. The cache now carries the exact stock value and derives
+    the average from it, so a void with nothing in between restores it exactly."""
+    supplier = make_supplier()
+    ghee = make_item("Ghee", "140.00", stock="3", stock_cost="140.00")
+    bill = recorded_bill(owner, party_id=str(supplier.id), lines=[line(ghee, "6", "150")])
+    stock = ItemStock.objects.get(item=ghee)
+    assert (stock.on_hand, stock.avg_cost) == (Decimal("9.000"), Decimal("146.6667"))
+    assert void(owner, bill["id"]).status_code == 200
+    stock.refresh_from_db()
+    assert (stock.on_hand, stock.avg_cost) == (Decimal("3.000"), Decimal("140.0000"))
+    assert stock.stock_value == Decimal("420.0000000")
+    assert_books_clean(shop, supplier)
+
+
 def test_void_refuses_a_draft_a_second_void_and_the_counter(
     shop: Any, owner: Any, api_as: Any, make_item: Any, make_supplier: Any
 ) -> None:

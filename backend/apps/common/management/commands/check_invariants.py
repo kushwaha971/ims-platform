@@ -1,19 +1,21 @@
 """`manage.py check_invariants` — the read-only drift report (Part 20 §20.11.5).
 
 Compares the caches against their replays and *never writes a correction*: per
-`(item_id, location_id)` the cached `on_hand` against `SUM(qty)`, the cached
-`avg_cost` against the replay's final average, and every movement row's derived
-pair against the replay's value at that row; per party, `balance` against the
-ledger sum. Rows whose `cost_state = 'stale'` are excluded and counted
-separately, and a row stale for longer than fifteen minutes is itself a reported
-violation (Part 21 §21.3.6 (7)).
+`(item_id, location_id)` the cached `on_hand`, `avg_cost` and exact
+`stock_value` against a from-scratch replay, and every movement row's running
+figures against the replay's value at that row; per party, `balance` (and its
+receivable / payable split) against the ledger sum.
 
-Sprint 0 ships the command shell and the exit-code contract (0 = clean,
-1 = drift found) so CI and the nightly job can bind to it now.
+Exit code: 0 = clean, 1 = drift found — CI and the nightly job bind to it. The
+two checks are the callables the scheduler also uses,
+`apps.inventory.services.integrity.check_stock` and
+`apps.ledger.services.integrity.check_balances`. Imported inside `handle`,
+because `common` depends on nothing at module level (rule D1).
 """
 
 from __future__ import annotations
 
+import json
 import sys
 from typing import Any
 
@@ -25,12 +27,24 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser: Any) -> None:
         parser.add_argument("--tenant", default=None, help="Restrict to one tenant id.")
+        parser.add_argument("--json", action="store_true", help="Print the summaries as JSON.")
 
     def handle(self, *args: Any, **opts: Any) -> None:
-        violations: list[str] = []
-        self.stdout.write(
-            "check_invariants: the ledger and stock tables do not exist yet "
-            "(LED-01 Sprint 2, INV-06 Sprint 5). 0 violations."
-        )
-        if violations:
+        from apps.inventory.services.integrity import check_stock
+        from apps.ledger.services.integrity import check_balances
+
+        summaries = [
+            check_balances(tenant_id=opts["tenant"]),
+            check_stock(tenant_id=opts["tenant"]),
+        ]
+        if opts["json"]:
+            self.stdout.write(json.dumps(summaries, indent=2))
+        else:
+            for s in summaries:
+                line = (
+                    f"check_invariants: {s['check']}: {s['checked']} checked, "
+                    f"{s['drifted']} drifted ({s['ms']} ms)."
+                )
+                self.stdout.write(self.style.SUCCESS(line) if s["ok"] else self.style.WARNING(line))
+        if not all(s["ok"] for s in summaries):
             sys.exit(1)

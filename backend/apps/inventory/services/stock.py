@@ -48,7 +48,13 @@ from apps.inventory.constants import (
     MovementType,
 )
 from apps.inventory.models import Item, ItemStock, Location, StockMovement
-from apps.inventory.services.costing import ZERO3, ZERO4, apply_weighted_average
+from apps.inventory.services.costing import (
+    ZERO3,
+    ZERO4,
+    ZERO7,
+    apply_weighted_average,
+    exact_value,
+)
 
 
 @dataclass
@@ -220,6 +226,7 @@ def post_movements(
             unit_cost=line.unit_cost,
             reversed_qty=line.reverses.qty if line.reverses is not None else None,
             reversed_unit_cost=line.reverses.unit_cost if line.reverses is not None else None,
+            value=stock.stock_value,
         )
         stock.last_sequence_no += 1
         movement = StockMovement.objects.create(
@@ -233,6 +240,7 @@ def post_movements(
             unit_cost=step.unit_cost,
             avg_cost_after=step.avg_after,
             on_hand_after=step.on_hand_after,
+            value_after=step.value_after,
             reason=line.reason,
             source_type=line.source_type,
             source_id=line.source_id,
@@ -241,6 +249,7 @@ def post_movements(
         )
         stock.on_hand = step.on_hand_after
         stock.avg_cost = step.avg_after
+        stock.stock_value = step.value_after
         stock.last_movement_at = now
         if stock.max_movement_date is None or line.movement_date > stock.max_movement_date:
             stock.max_movement_date = line.movement_date
@@ -251,6 +260,7 @@ def post_movements(
         ItemStock.objects.filter(pk=stock.pk).update(
             on_hand=stock.on_hand,
             avg_cost=stock.avg_cost,
+            stock_value=stock.stock_value,
             last_movement_at=stock.last_movement_at,
             last_sequence_no=stock.last_sequence_no,
             max_movement_date=stock.max_movement_date,
@@ -279,7 +289,21 @@ def replay(movements: Iterable[StockMovement]) -> tuple[Decimal, Decimal, list[t
     `(movement, expected_on_hand_after, expected_avg_after)`. A pure function of
     the immutable columns — it never reads the caches it is checking.
     """
-    on_hand, avg = ZERO3, ZERO4
+    on_hand, avg, _value, per_row = replay_with_value(movements)
+    return on_hand, avg, [(m, oh, a) for m, oh, a, _v in per_row]
+
+
+def replay_with_value(
+    movements: Iterable[StockMovement],
+) -> tuple[Decimal, Decimal, Decimal, list[tuple]]:
+    """`replay`, also carrying the exact stock value (H3).
+
+    Returns `(on_hand, avg_cost, stock_value, per_row)`, `per_row` being
+    `(movement, on_hand_after, avg_after, value_after)`. A row written before
+    value carrying (`value_after` NULL) is folded as the old step folded it —
+    from `on_hand × avg` — so history that was right stays right.
+    """
+    on_hand, avg, value = ZERO3, ZERO4, ZERO7
     per_row: list[tuple] = []
     by_id: dict[Any, StockMovement] = {}
     for movement in movements:
@@ -291,11 +315,16 @@ def replay(movements: Iterable[StockMovement]) -> tuple[Decimal, Decimal, list[t
             unit_cost=movement.unit_cost if movement.qty > 0 else None,
             reversed_qty=reversed_row.qty if reversed_row is not None else None,
             reversed_unit_cost=reversed_row.unit_cost if reversed_row is not None else None,
+            value=None if movement.value_after is None else value,
         )
-        on_hand, avg = step.on_hand_after, step.avg_after
-        per_row.append((movement, on_hand, avg))
+        on_hand, avg, value = step.on_hand_after, step.avg_after, step.value_after
+        if movement.value_after is None:
+            # What the old step carried forward, and what migration 0005
+            # backfilled into the cache: the pair's own product.
+            value = exact_value(on_hand * avg)
+        per_row.append((movement, on_hand, avg, value))
         by_id[movement.id] = movement
-    return on_hand, avg, per_row
+    return on_hand, avg, value, per_row
 
 
 __all__ = [
@@ -307,4 +336,5 @@ __all__ = [
     "post_movement",
     "post_movements",
     "replay",
+    "replay_with_value",
 ]

@@ -297,3 +297,34 @@ def test_cost_columns_leave_with_the_permission(tenant: Any, api_as: Any) -> Non
     assert "stock_value" not in body["data"][0] and "stock_value" not in body["meta"]["totals"]
     past = (tenant_today(tenant) - dt.timedelta(days=30)).isoformat()
     assert staff.get(f"{url}?as_of={past}").status_code == 403
+
+
+@pytest.mark.parametrize("ordering", ["name", "-value"])
+def test_the_json_page_is_a_slice_of_the_file_and_its_totals_are_the_files(
+    tenant: Any, api_as: Any, ordering: str
+) -> None:
+    """H3 scale run: the JSON page used to build EVERY row in Python to show 25 —
+    1.8 s on a 5,000-item shop. It now slices in SQL and aggregates the totals in
+    one outer query; this proves the page is the file's rows `[25:50]` and the
+    totals (per-item rounded, BR-4; `MIXED` units, EC-6) are the file's TOTAL row."""
+    rng = random.Random(28)
+    for n in range(60):
+        _stock(
+            tenant,
+            f"Item {n:02d}",
+            rng.randint(0, 40),
+            f"{rng.randint(100, 99_999) / 100:.4f}",
+            f"{rng.randint(100, 99_999) / 100:.2f}",
+            unit="NOS" if n % 7 else "KGS",
+        )
+    owner, _ = api_as(tenant)
+    url = reverse("v1:report-stock-summary")
+    rows = _csv(owner.get(f"{url}?format=csv&ordering={ordering}"))
+    table = [dict(zip(STOCK_HEADER, row, strict=True)) for row in rows[1:]]
+    body = owner.get(f"{url}?ordering={ordering}&page=2&page_size=25").json()
+    assert [r["item_name"] for r in body["data"]] == [r["item_name"] for r in table[25:50]]
+    assert [r["stock_value"] for r in body["data"]] == [r["stock_value"] for r in table[25:50]]
+    totals, file_total = body["meta"]["totals"], table[-1]
+    assert body["meta"]["total"] == totals["item_count"] == len(table) - 1
+    for key in ("on_hand", "stock_value", "potential_sale_value", "unit"):
+        assert totals[key] == file_total[key], key

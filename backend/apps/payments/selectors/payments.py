@@ -5,7 +5,19 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import Any
 
-from django.db.models import Case, Count, DecimalField, F, Q, QuerySet, Sum, Value, When
+from django.db.models import (
+    Case,
+    Count,
+    DecimalField,
+    F,
+    OuterRef,
+    Q,
+    QuerySet,
+    Subquery,
+    Sum,
+    Value,
+    When,
+)
 from django.db.models.functions import Coalesce
 
 from apps.common.constants import Direction
@@ -20,11 +32,26 @@ LIST_ORDERING = ("-payment_date", "-created_at", "-id")
 
 
 def list_payments(*, tenant: Any) -> QuerySet:
-    """Every payment, newest first, with the two joins every row renders."""
+    """Every payment, newest first, with the two joins every row renders.
+
+    `allocated` is a correlated subquery, not `Sum("allocations__amount")`: the
+    join-and-GROUP-BY form aggregated EVERY payment of the tenant before the sort
+    and the LIMIT (H3 scale run: 7,499 payments × 19,112 allocations, 115 ms for a
+    page of 25), where the subquery runs for the rows on the page only and the
+    page itself walks `ix_payment_tenant_date`.
+    """
+    per_payment = (
+        Allocation.objects.filter(payment=OuterRef("pk"))
+        .order_by()
+        .values("payment")
+        .annotate(total=Sum("amount"))
+        .values("total")[:1]
+    )
+    money = DecimalField(max_digits=14, decimal_places=2)
     return (
         Payment.objects.for_tenant(tenant)
         .select_related("party", "created_by")
-        .annotate(allocated=Coalesce(Sum("allocations__amount"), Value(ZERO)))
+        .annotate(allocated=Coalesce(Subquery(per_payment, output_field=money), Value(ZERO)))
         .order_by(*LIST_ORDERING)
     )
 
