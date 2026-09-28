@@ -91,14 +91,26 @@ def _issued(owner: Any, item: Any, party: Any = None, **body: Any) -> dict:
     return issue(owner, doc["id"], payment=payment).json()["data"]
 
 
-def test_tabs_totals_and_search(owner: Any, make_item: Any, make_party: Any) -> None:
+def test_tabs_totals_and_search(owner: Any, shop: Any, make_item: Any, make_party: Any) -> None:
     """T-SAL08-1 / T-SAL08-2 / AC-1 / AC-2 / AC-3 — tabs map to statuses and are counted over the
     filters (not the tab); totals cover the filtered set; search finds number prefix, name, mobile.
+
+    The not-yet-due invoice is dated today with a due date a month out: a fixed
+    2026-09-10 fell overdue on its default term once the calendar passed it.
     """
+    from apps.common.dates import tenant_today
+
+    today = tenant_today(shop)
     item = make_item(price="100.00", tax_code="GST0", stock="50")
     ramesh = make_party(name="Ramesh Traders", mobile="+919876543210")
     _issued(owner, item, ramesh, document_date="2026-09-01", due_on="2026-09-05")
-    _issued(owner, item, ramesh, document_date="2026-09-10")
+    _issued(
+        owner,
+        item,
+        ramesh,
+        document_date=today.isoformat(),
+        due_on=(today + dt.timedelta(days=30)).isoformat(),
+    )
     _issued(owner, item)  # walk-in, paid
     draft(owner, lines=[line(item)])
 
