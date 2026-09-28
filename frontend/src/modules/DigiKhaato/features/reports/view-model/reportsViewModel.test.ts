@@ -261,11 +261,15 @@ describe('the reports hub catalogue', () => {
       (code) => code !== 'inventory.stock.read',
       () => true
     );
+    // Every codename but stock: the stock group goes, the registers and GST stay.
     expect(staffNoStock.map((entry) => entry.key)).toEqual([
       'dayBook',
       'cashbook',
       'receivablesAging',
       'payablesAging',
+      'salesRegister',
+      'purchaseRegister',
+      'gstSummary',
     ]);
     const inventoryOff = visibleReports(
       REPORT_CATALOGUE,
@@ -273,5 +277,50 @@ describe('the reports hub catalogue', () => {
       (module) => module !== 'inventory'
     );
     expect(inventoryOff.some((entry) => entry.group === 'stock')).toBe(false);
+  });
+
+  /**
+   * RPT-03/04/07 §12 — the three tax-document rows gate exactly as their pages
+   * do (useRegisterReport / useGstSummary), so a hub row is never a door to a
+   * refusal: staff hold the document reads but not `reports.financial.read`.
+   */
+  it('gates the registers and the GST summary on the codenames their pages check', () => {
+    const keys = (
+      can: (code: string) => boolean,
+      hasModule: (module: string) => boolean = () => true
+    ): string[] =>
+      visibleReports(REPORT_CATALOGUE, can, hasModule)
+        .filter((entry) => entry.group === 'sales')
+        .map((entry) => entry.key);
+
+    expect(keys(() => true)).toEqual(['salesRegister', 'purchaseRegister', 'gstSummary']);
+    expect(keys((code) => code !== 'reports.financial.read')).toEqual([
+      'salesRegister',
+      'purchaseRegister',
+    ]);
+    expect(keys((code) => code !== 'sales.invoice.read')).toEqual([
+      'purchaseRegister',
+      'gstSummary',
+    ]);
+    expect(keys((code) => code !== 'purchases.bill.read')).toEqual(['salesRegister', 'gstSummary']);
+    expect(keys((code) => code !== 'reports.basic.read')).toEqual(['gstSummary']);
+    expect(
+      keys(
+        () => true,
+        (module) => module !== 'sales'
+      )
+    ).toEqual(['purchaseRegister', 'gstSummary']);
+    expect(
+      keys(
+        () => true,
+        (module) => module !== 'purchases'
+      )
+    ).toEqual(['salesRegister', 'gstSummary']);
+    expect(
+      keys(
+        () => true,
+        (module) => module !== 'reports'
+      )
+    ).toEqual([]);
   });
 });

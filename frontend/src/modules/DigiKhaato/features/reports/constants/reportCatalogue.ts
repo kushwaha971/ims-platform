@@ -12,8 +12,10 @@ import type { ModuleCode, PermissionCode } from 'src/types/domain.types';
  * EXP-03's cashbook — the row opens THAT screen; RPT-05/06 are the same
  * selectors, and a second copy of a screen is a second thing to keep right.
  *
- * Track W4-B appends its registers and the GST summary here (a `sales`
- * group), additively.
+ * The registers and the GST summary (W4-B) are the `sales` group. Their
+ * gates mirror `useRegisterReport` / `useGstSummary` exactly — the reports
+ * module plus the document module, `reports.basic.read` plus the document
+ * read; the GST summary is `reports.financial.read`, which staff lack.
  */
 export type ReportGroup = 'money' | 'parties' | 'stock' | 'sales';
 
@@ -92,7 +94,7 @@ export const REPORT_CATALOGUE: readonly ReportCatalogueEntry[] = [
     key: 'salesRegister',
     group: 'sales',
     href: ROUTES.REPORTS_SALES_REGISTER,
-    modules: ['sales'],
+    modules: ['reports', 'sales'],
     permissions: ['reports.basic.read', 'sales.invoice.read'],
     icon: 'salesRegister',
   },
@@ -100,7 +102,7 @@ export const REPORT_CATALOGUE: readonly ReportCatalogueEntry[] = [
     key: 'purchaseRegister',
     group: 'sales',
     href: ROUTES.REPORTS_PURCHASE_REGISTER,
-    modules: ['purchases'],
+    modules: ['reports', 'purchases'],
     permissions: ['reports.basic.read', 'purchases.bill.read'],
     icon: 'purchaseRegister',
   },
