@@ -22,6 +22,19 @@ import { OnboardingStepPageContent } from './OnboardingStepPageContent';
 jest.mock('../api/onboardingService');
 jest.mock('../../auth/api/authService');
 
+/**
+ * NEW-1's three key tests failed in the full run and passed alone. The cause
+ * was time, not keys: filling step 1 drives the real Radix state select and
+ * the tile grid, about 1.6 s alone on the 2-CPU box, and the two tests that
+ * fill it TWICE (a remount, a reload) took 3.2 s. Two jest workers on two CPUs
+ * roughly double that, past jest's 5 s default, and a timed-out test is not
+ * stopped: its second fill kept typing and clicking into the NEXT test ("forgets
+ * the key…"), which then found the wrong listbox. `--testTimeout=2500` alone
+ * reproduces exactly those three failures. The budget below fits a test that
+ * fills real forms; every assertion is unchanged.
+ */
+jest.setTimeout(20_000);
+
 const onboardingService = jest.requireMock('../api/onboardingService') as {
   createTenant: jest.Mock;
   fetchCurrentTenant: jest.Mock;
