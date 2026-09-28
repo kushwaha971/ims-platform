@@ -1,6 +1,6 @@
 # DigiKhaato — Handoff / Continuation Prompt
 
-Last updated: 28 Sep 2026, evening (IST) — Waves 1–4 all merged on main; QA of Waves 2–4 and PUR-02 pending. Paste everything below the line into the next agent.
+Last updated: 28 Sep 2026, night (IST) — all MVP feature tracks merged (incl. PUR-02); post-merge test failures fixed; QA of Waves 2–4 + PUR-02 is next. Paste everything below the line into the next agent.
 
 ---
 
@@ -164,22 +164,27 @@ Serve for QA:
 
 ## 9. Exact next steps
 
-State at 06a9af0:
-- Backend: 2,399 passing. 1 failing: `apps/reports/tests/tax/test_gst_summary.py::test_the_br14_worked_example_to_the_paisa`, which needs re-checking now that SAL-04 credit notes are real on main.
-- Jest: 2,271 passing, 9 failing:
-  - 1 is the reports hub catalogue test, which needs the 3 new tax-report entries added;
-  - 3 are onboarding idempotency-key tests (NEW-1), to investigate;
-  - 5 are known order-dependent `PartyDetailPageContent` NEW-2 tests.
-- Locale catalogues are split and `check-locales` is green.
+State at b3d9603:
+- Every MVP feature track is merged: Waves 1–4 plus PUR-02 supplier payments.
+- The post-merge failures are fixed:
+  - GST fixture;
+  - hub test;
+  - onboarding timeouts;
+  - PartyDetail test isolation;
+  - ReportPageShell adopted;
+  - credit-note routes.
+- Backend full suite: green, about 2,400 tests.
+- Jest: 2,294 of 2,295 passed. The one failure was a Hindi wording fix, now done.
+- check-locales: green, 3,523 keys in 40 catalogues.
 
-After any merge touching locales, run:
-`node frontend/scripts/split-locales.mjs && python3 scripts/add-catalogue-imports.py && node frontend/scripts/check-locales.mjs`.
-For an invalidation registry conflict: `python3 scripts/registry-merge.py "<label>"`.
+Helper scripts:
+- After any merge touching locales: `node frontend/scripts/split-locales.mjs && python3 scripts/add-catalogue-imports.py && node frontend/scripts/check-locales.mjs`.
+- For an invalidation registry conflict: `python3 scripts/registry-merge.py "<label>"`.
 
-1. Fix the failures above.
+1. (DONE) Fix the failures above.
    - Swap W4-B's `TaxReportLayout` for `ReportPageShell`.
    - Replace the hard-coded credit-note URLs with `ROUTES.SALES_CREDIT_NOTES`.
-2. Build PUR-02 (supplier payment).
+2. (DONE, b0d… merge of worktree-agent-ae97c127) Build PUR-02 (supplier payment).
    - Add `apps/payments/services/targets/purchases.py` (document_type `purchase_document`, direction `out`).
    - Use `purchases.services.payment_seam` (`apply_payment`, `lock_payable_bills`, `register_void_listener`).
    - Add "Pay supplier" and "Paid now" to the bill screens.
