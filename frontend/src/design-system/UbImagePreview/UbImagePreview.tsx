@@ -51,9 +51,15 @@ export function UbImagePreview({
         // eslint-disable-next-line @next/next/no-img-element -- authenticated API file, see above
         <img src={src} alt={alt} className="max-h-full max-w-full object-contain" />
       ) : (
-        <span className="flex flex-col items-center gap-1 px-2 text-center text-text-tertiary">
+        <span
+          className="flex flex-col items-center gap-1 px-2 text-center text-text-tertiary"
+          title={size === 'sm' ? emptyLabel : undefined}
+        >
           <ImageOff aria-hidden className="h-4 w-4" />
-          <span className="ds-caption">{emptyLabel}</span>
+          {/* QA D8 — a 40px tile cannot hold "No logo" under the icon; it was
+              clipped mid-word in the profile's bill-header preview. At `sm`
+              the words stay in the accessible name and the tooltip only. */}
+          <span className={size === 'sm' ? 'sr-only' : 'ds-caption'}>{emptyLabel}</span>
         </span>
       )}
     </div>

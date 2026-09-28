@@ -1,5 +1,7 @@
 import { api } from 'src/api/AxiosInstances';
+import type { TranslateFn } from 'src/hooks/useTranslation';
 
+import { createItemColumns } from '../components/ItemListColumns';
 import { filtersFromQuery, queryFromFilters } from '../hooks/useItemList';
 import { toShortLines } from '../hooks/useStockAdjustment';
 
@@ -90,6 +92,60 @@ describe('listItems', () => {
     expect(result.totals.stockValue).toBe('220.00');
     expect(result.rows[0]?.onHand).toBe('5.000');
     expect(result.rows[0]?.matchField).toBe('barcode');
+  });
+});
+
+describe('valuation withheld (INV-08 EC-4, QA: stock value leaked to staff)', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('maps omitted cost keys and a null total to null — never to zero', async () => {
+    /* Protects the staff view: the server OMITS purchase_price, avg_cost and
+       stock_value without `reports.financial.read`; a mapper that read them as
+       "0.00" would print ₹0.00 where the screen must print nothing. */
+    const { purchase_price: _p, avg_cost: _a, stock_value: _v, ...withheld } = ROW;
+    jest.spyOn(api, 'get').mockResolvedValue({
+      data: {
+        data: [withheld],
+        meta: {
+          page: 1,
+          page_size: 25,
+          total: 1,
+          total_pages: 1,
+          totals: { items: 1, stock_value: null },
+          counts: { all: 1, in: 0, low: 1, out: 0 },
+          valuation_visible: false,
+        },
+      },
+    });
+    const result = await listItems({
+      q: '',
+      tab: 'all',
+      type: '',
+      categoryId: '',
+      status: 'active',
+      ordering: 'name',
+      page: 1,
+    });
+    expect(result.totals.stockValue).toBeNull();
+    expect(result.rows[0]?.purchasePrice).toBeNull();
+    expect(result.rows[0]?.avgCost).toBeNull();
+    expect(result.rows[0]?.stockValue).toBeNull();
+  });
+
+  it('leaves purchase_price out of a PATCH when the item was read without it', () => {
+    /* Protects the real price: the form never knew it, and "0" would wipe it. */
+    expect(toItemBody(FORM, { withOpening: false, omitPurchasePrice: true })).not.toHaveProperty(
+      'purchase_price'
+    );
+    expect(toItemBody(FORM, { withOpening: false })).toHaveProperty('purchase_price');
+  });
+
+  it('drops the Purchase column for a member who may not see costs', () => {
+    const t = ((key: string) => key) as TranslateFn;
+    const ids = (valuation: boolean): string[] =>
+      createItemColumns({ t, tier: 'full', valuation }).map((column) => column.id);
+    expect(ids(true)).toContain('purchasePrice');
+    expect(ids(false)).not.toContain('purchasePrice');
   });
 });
 

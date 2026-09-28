@@ -128,10 +128,16 @@ export function ItemMovementList({
                     tone="tertiary"
                     className="ds-num whitespace-nowrap"
                   >
-                    {t('items.movements.after', {
-                      qty: formatQuantity(movement.onHandAfter, unitCode),
-                      cost: formatInr(movement.avgCostAfter),
-                    })}
+                    {/* Without `reports.financial.read` the server omits the
+                        running average; the quantity alone is still useful. */}
+                    {movement.avgCostAfter === null
+                      ? t('items.movements.afterQty', {
+                          qty: formatQuantity(movement.onHandAfter, unitCode),
+                        })
+                      : t('items.movements.after', {
+                          qty: formatQuantity(movement.onHandAfter, unitCode),
+                          cost: formatInr(movement.avgCostAfter),
+                        })}
                   </UbText>
                 </UbStack>
               </UbStack>

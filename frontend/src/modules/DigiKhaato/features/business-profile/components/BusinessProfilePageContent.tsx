@@ -30,7 +30,6 @@ import {
 import { useAppDispatch } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
-import type { Locale } from 'src/types/domain.types';
 import { applyServerErrors } from 'src/utils/applyServerErrors';
 
 import { useBranding } from '../../branding/hooks/useBranding';
@@ -40,9 +39,9 @@ import {
   GST_TYPES,
   type GstType,
 } from '../../onboarding/constants/businessTypes';
-import { GST_STATES, stateName } from '../../onboarding/constants/gstStates';
+import { GST_STATES, stateName, toLanguage } from '../../onboarding/constants/gstStates';
 import { useSettingsAccess } from '../../settings/hooks/useSettingsAccess';
-import { useBusinessProfile } from '../hooks/useBusinessProfile';
+import { useBusinessProfile, type UseBusinessProfileResult } from '../hooks/useBusinessProfile';
 import {
   PROFILE_FIELDS,
   useBusinessProfileSchemas,
@@ -56,6 +55,9 @@ import {
 } from '../view-model/profileDisplay';
 
 import { DocumentHeaderPreview } from './DocumentHeaderPreview';
+
+import type { BusinessProfile } from '../types/businessProfile.types';
+
 
 const SIGNATURE_MAX_BYTES = 2 * 1024 * 1024;
 
@@ -72,23 +74,78 @@ const SIGNATURE_MAX_BYTES = 2 * 1024 * 1024;
  * scans. The VPA is validated to the server's pattern instead.
  */
 export function BusinessProfilePageContent(): React.JSX.Element {
-  const { t, locale } = useTranslation();
-  const dispatch = useAppDispatch();
-  const access = useSettingsAccess();
+  const { t } = useTranslation();
   const profile = useBusinessProfile();
-  const branding = useBranding();
-  const { businessProfileSchema } = useBusinessProfileSchemas();
   const { data, status, error, refetch } = profile;
 
-  const defaults = useMemo(() => (data ? profileToForm(data) : undefined), [data]);
+  const header = (
+    <UbPageHeader title={t('settings.profile.title')} subtitle={t('settings.profile.subtitle')} />
+  );
+
+  if (status === 'failed') {
+    return (
+      <UbPageShell header={header}>
+        <UbEmptyState
+          variant="error"
+          title={t('settings.profile.error.title')}
+          description={error?.message ?? t('settings.profile.error.body')}
+          requestId={error?.requestId ?? null}
+          requestIdLabel={t('common.error.reference')}
+          action={
+            <UbButton variant="secondary" onClick={refetch}>
+              {t('common.action.retry')}
+            </UbButton>
+          }
+        />
+      </UbPageShell>
+    );
+  }
+  if (!data) {
+    return (
+      <UbPageShell header={header}>
+        <UbSkeleton variant="form" count={6} />
+      </UbPageShell>
+    );
+  }
+  return <BusinessProfileEditor data={data} profile={profile} header={header} />;
+}
+
+interface BusinessProfileEditorProps {
+  readonly data: BusinessProfile;
+  readonly profile: UseBusinessProfileResult;
+  readonly header: React.JSX.Element;
+}
+
+/**
+ * QA D1 — the form is created only once the profile has loaded, with the
+ * profile as its `defaultValues`. It used to be created while the page was
+ * still loading and filled by a `reset()` after the fields had mounted, so
+ * each select's value changed from empty to the saved one after mount — and
+ * Radix's hidden native `<select>`, not yet holding that `<option>`, read it
+ * back as '' and reported it, wiping the loaded business type and state code.
+ */
+function BusinessProfileEditor({
+  data,
+  profile,
+  header,
+}: Readonly<BusinessProfileEditorProps>): React.JSX.Element {
+  const { t, locale } = useTranslation();
+  const language = toLanguage(locale);
+  const dispatch = useAppDispatch();
+  const access = useSettingsAccess();
+  const branding = useBranding();
+  const { businessProfileSchema } = useBusinessProfileSchemas();
+
+  const defaults = useMemo(() => profileToForm(data), [data]);
   const form = useForm<BusinessProfileFormValues>({
     resolver: yupResolver(businessProfileSchema),
     mode: 'onTouched',
     defaultValues: defaults,
   });
   const { reset, control, setError, formState } = form;
+  // A save (or a refetch) hands back a new profile; the form follows it.
   useEffect(() => {
-    if (defaults) reset(defaults);
+    reset(defaults);
   }, [defaults, reset]);
 
   const [formErrors, setFormErrors] = useState<readonly string[]>([]);
@@ -110,7 +167,7 @@ export function BusinessProfilePageContent(): React.JSX.Element {
   const submit = useCallback(
     async (values: BusinessProfileFormValues) => {
       // §8: a GST type change is the one edit here that is confirmed first.
-      if (data && values.gstType !== data.gstType) {
+      if (values.gstType !== data.gstType) {
         setPending(values);
         return;
       }
@@ -159,40 +216,10 @@ export function BusinessProfilePageContent(): React.JSX.Element {
     () =>
       GST_STATES.map((state) => ({
         value: state.code,
-        label: `${stateName(state.code, locale as Locale)} (${state.code})`,
+        label: `${stateName(state.code, language)} (${state.code})`,
       })),
-    [locale]
+    [language]
   );
-
-  const header = (
-    <UbPageHeader title={t('settings.profile.title')} subtitle={t('settings.profile.subtitle')} />
-  );
-
-  if (status === 'failed') {
-    return (
-      <UbPageShell header={header}>
-        <UbEmptyState
-          variant="error"
-          title={t('settings.profile.error.title')}
-          description={error?.message ?? t('settings.profile.error.body')}
-          requestId={error?.requestId ?? null}
-          requestIdLabel={t('common.error.reference')}
-          action={
-            <UbButton variant="secondary" onClick={refetch}>
-              {t('common.action.retry')}
-            </UbButton>
-          }
-        />
-      </UbPageShell>
-    );
-  }
-  if (!data || !defaults) {
-    return (
-      <UbPageShell header={header}>
-        <UbSkeleton variant="form" count={6} />
-      </UbPageShell>
-    );
-  }
 
   const disabled = !canEdit;
   const text = (
@@ -227,7 +254,7 @@ export function BusinessProfilePageContent(): React.JSX.Element {
             <UbStatusBanner
               tone="warning"
               title={t('onboarding.gstin.stateMismatch', {
-                state: stateName(mismatch.gstinStateCode, locale as Locale),
+                state: stateName(mismatch.gstinStateCode, language),
               })}
             />
           )}
@@ -360,7 +387,7 @@ export function BusinessProfilePageContent(): React.JSX.Element {
             logoSrc={branding.data?.logoUrl ?? null}
             name={watched.name ?? ''}
             legalName={watched.legalName ?? ''}
-            addressLines={headerAddressLines(watched, locale as Locale)}
+            addressLines={headerAddressLines(watched, language)}
             gstinLine={headerGstinLine(watched, t('onboarding.gstin.label'))}
             phone={watched.phone ?? ''}
             email={watched.email ?? ''}

@@ -195,8 +195,9 @@ export const getLowStock = async (page: number, signal?: AbortSignal): Promise<L
       on_hand: string;
       reorder_point: string | null;
       stock_status: 'low' | 'out';
-      avg_cost: string;
-      last_purchase_cost: string;
+      /** Both omitted without `reports.financial.read`; last cost null if never bought. */
+      avg_cost?: string;
+      last_purchase_cost?: string | null;
       suggested_qty: string;
     }[];
     meta: { page: number; page_size: number; total: number; totals: { low: number; out: number } };
@@ -217,8 +218,8 @@ export const getLowStock = async (page: number, signal?: AbortSignal): Promise<L
       onHand: row.on_hand,
       reorderPoint: row.reorder_point,
       stockStatus: row.stock_status,
-      avgCost: row.avg_cost,
-      lastPurchaseCost: row.last_purchase_cost,
+      avgCost: row.avg_cost ?? null,
+      lastPurchaseCost: row.last_purchase_cost ?? null,
       suggestedQty: row.suggested_qty,
     })),
     page: meta.page,

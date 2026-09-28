@@ -81,7 +81,12 @@ export const saveItem = createAsyncThunk<
   async ({ values, item, idempotencyKey, withOpening }, { rejectWithValue }) => {
     try {
       return item
-        ? await (await itemService()).updateItem(item.id, values, item.version, { withOpening })
+        ? await (
+            await itemService()
+          ).updateItem(item.id, values, item.version, {
+            withOpening,
+            omitPurchasePrice: item.purchasePrice === null,
+          })
         : await (await itemService()).createItem(values, idempotencyKey);
     } catch (error) {
       return rejectWithValue(toApiError(error));

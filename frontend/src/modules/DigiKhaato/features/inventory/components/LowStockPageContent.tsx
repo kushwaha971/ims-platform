@@ -5,7 +5,7 @@ import { useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 
-import { Package } from 'lucide-react';
+import { Package, SlidersHorizontal } from 'lucide-react';
 
 import {
   UbButton,
@@ -52,11 +52,14 @@ const createLowStockColumns = ({
   t,
   tier,
   canAdjust,
+  valuation,
   onAdjust,
 }: {
   readonly t: TranslateFn;
   readonly tier: UbGridTier;
   readonly canAdjust: boolean;
+  /** INV-08 EC-4 — the server omits costs without `reports.financial.read`. */
+  readonly valuation: boolean;
   readonly onAdjust: (row: LowStockRow) => void;
 }): UbDataGridColumn<LowStockRow>[] => [
   {
@@ -65,11 +68,17 @@ const createLowStockColumns = ({
     priority: 1,
     cardSlot: 'title',
     widthShare: 26,
+    /* A phone card with an Adjust button is not itself a button (a button
+       inside a button), so the name is the link to the item there too. */
     cell: (row) =>
-      tier === 'cards' ? (
+      tier === 'cards' && !canAdjust ? (
         row.item.name
       ) : (
-        <UbLink href={itemPath(row.item.id)} variant="body-sm-medium">
+        <UbLink
+          href={itemPath(row.item.id)}
+          variant="body-sm-medium"
+          className={tier === 'cards' ? 'block truncate' : undefined}
+        >
           {row.item.name}
         </UbLink>
       ),
@@ -81,19 +90,39 @@ const createLowStockColumns = ({
     align: 'end',
     cardSlot: 'trailing',
     widthShare: 18,
-    cell: (row) => (
-      <UbStack gap={1} align="end">
-        <UbText
-          as="span"
-          variant="body-sm"
-          className="ds-num whitespace-nowrap"
-          tone={row.stockStatus === 'out' ? 'error' : 'primary'}
-        >
-          {formatQuantity(row.onHand, row.item.unitCode)}
-        </UbText>
-        <StockBadge status={row.stockStatus} onHand={row.onHand} unitCode={row.item.unitCode} />
-      </UbStack>
-    ),
+    cell: (row) => {
+      const figure = (
+        <UbStack gap={1} align="end">
+          <UbText
+            as="span"
+            variant="body-sm"
+            className="ds-num whitespace-nowrap"
+            tone={row.stockStatus === 'out' ? 'error' : 'primary'}
+          >
+            {formatQuantity(row.onHand, row.item.unitCode)}
+          </UbText>
+          <StockBadge status={row.stockStatus} onHand={row.onHand} unitCode={row.item.unitCode} />
+        </UbStack>
+      );
+      /* QA: the phone had no per-row "Adjust stock" — the desktop column is
+         dropped on cards, so the action rides beside the figure, icon-only. */
+      if (tier !== 'cards' || !canAdjust) return figure;
+      return (
+        <UbStack direction="row" gap={2} align="center">
+          {figure}
+          <UbButton
+            variant="outlineNeutral"
+            size="sm"
+            iconOnly
+            icon={<SlidersHorizontal className="h-4 w-4" aria-hidden />}
+            onClick={() => onAdjust(row)}
+            aria-label={t('stock.low.adjustItem', { name: row.item.name })}
+          >
+            {t('items.detail.adjust')}
+          </UbButton>
+        </UbStack>
+      );
+    },
   },
   {
     id: 'reorder',
@@ -116,15 +145,21 @@ const createLowStockColumns = ({
     widthShare: 14,
     cell: (row) => formatQuantity(row.suggestedQty, row.item.unitCode),
   },
-  {
-    id: 'lastCost',
-    header: t('stock.low.col.lastCost'),
-    priority: 4,
-    align: 'end',
-    cardSlot: 'none',
-    widthShare: 12,
-    cell: (row) => formatInr(row.lastPurchaseCost),
-  },
+  ...(valuation
+    ? [
+        {
+          id: 'lastCost',
+          header: t('stock.low.col.lastCost'),
+          priority: 4 as const,
+          align: 'end' as const,
+          cardSlot: 'none' as const,
+          widthShare: 12,
+          /* Never purchased comes back null and reads "—", not "₹0.00" —
+             zero would claim the item was bought for nothing. */
+          cell: (row: LowStockRow) => formatInr(row.lastPurchaseCost),
+        },
+      ]
+    : []),
   ...(canAdjust && tier !== 'cards'
     ? [
         {
@@ -159,6 +194,7 @@ export function LowStockPageContent(): React.JSX.Element {
   const adjustment = useStockAdjustment();
   const { can } = usePermissions();
   const canAdjust = can('inventory.stock.adjust');
+  const valuation = can('reports.financial.read');
   const rows = report.low?.rows ?? [];
 
   const { openFor } = adjustment;
@@ -177,8 +213,8 @@ export function LowStockPageContent(): React.JSX.Element {
     [openFor]
   );
   const columns = useMemo(
-    () => createLowStockColumns({ t, tier, canAdjust, onAdjust }),
-    [t, tier, canAdjust, onAdjust]
+    () => createLowStockColumns({ t, tier, canAdjust, valuation, onAdjust }),
+    [t, tier, canAdjust, valuation, onAdjust]
   );
 
   const labels = useMemo(() => inventoryGridLabels(t, 'stock.low.loading', 'items.list.open'), [t]);
@@ -256,7 +292,9 @@ export function LowStockPageContent(): React.JSX.Element {
             ),
           }}
           onPageChange={report.setPage}
-          onRowOpen={tier === 'cards' ? (row) => router.push(itemPath(row.item.id)) : undefined}
+          onRowOpen={
+            tier === 'cards' && !canAdjust ? (row) => router.push(itemPath(row.item.id)) : undefined
+          }
         />
       </UbStack>
       {adjustment.open && <StockAdjustmentDrawer adjustment={adjustment} />}

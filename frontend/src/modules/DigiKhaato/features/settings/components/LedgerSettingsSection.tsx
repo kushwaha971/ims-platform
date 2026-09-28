@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useId, useMemo, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, useWatch } from 'react-hook-form';
@@ -18,7 +18,9 @@ import {
   UbText,
   UbTextArea,
 } from 'src/design-system';
+import { useAppSelector } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
+import { selectActiveTenant } from 'src/redux/slice/sessionSlice';
 import { formatInr } from 'src/utils/money';
 
 import {
@@ -74,15 +76,19 @@ export function LedgerSettingsSection({
 
   const [templateEn, templateHi] = useWatch({ control, name: ['templateEn', 'templateHi'] });
 
+  // QA D6 — the preview is the merchant's own message, so {business_name} is
+  // THEIR business, not the sample "Kirana Bhandar". The sample stays only as
+  // the fallback for a session that has not loaded a business yet.
+  const businessName = useAppSelector(selectActiveTenant)?.name;
   const sample = useMemo(
     () => ({
       party_name: t('settings.template.sample.party'),
-      business_name: t('settings.template.sample.business'),
+      business_name: businessName || t('settings.template.sample.business'),
       amount: formatInr('2300'),
       due_date: '30/09/2026',
       upi_link: 'upi://pay?pa=shop@okaxis',
     }),
-    [t]
+    [t, businessName]
   );
 
   const submit = useCallback(
@@ -97,12 +103,27 @@ export function LedgerSettingsSection({
     [settings, reset]
   );
 
+  // QA D7 — a chip inserts at the caret, not at the end. The textarea keeps its
+  // selection after it loses focus to the chip, so it is read at click time;
+  // afterwards the caret is put back just after the inserted placeholder.
+  const areas = useRef<Partial<Record<'templateEn' | 'templateHi', HTMLTextAreaElement | null>>>(
+    {}
+  );
   const insertInto = useCallback(
     (field: 'templateEn' | 'templateHi', current: string, placeholder: ReminderPlaceholder) => {
-      setValue(field, insertAt(current, placeholder, null).text, {
+      const area = areas.current[field];
+      const caret = area ? area.selectionStart : null;
+      const next = insertAt(current, placeholder, caret);
+      setValue(field, next.text, {
         shouldDirty: true,
         shouldValidate: true,
       });
+      if (area) {
+        requestAnimationFrame(() => {
+          area.focus();
+          area.setSelectionRange(next.caret, next.caret);
+        });
+      }
     },
     [setValue]
   );
@@ -148,6 +169,10 @@ export function LedgerSettingsSection({
         {(props) => (
           <UbTextArea
             {...props}
+            ref={(element: HTMLTextAreaElement | null) => {
+              props.ref(element);
+              areas.current[field] = element;
+            }}
             lang={lang}
             maxLength={REMINDER_MAX_CHARS}
             // `{count}`/`{max}` pass through as literal text for the control

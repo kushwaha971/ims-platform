@@ -18,7 +18,8 @@ import { isRemindable, reminderRecipient } from '../view-model/reminderMessage';
  * `ledger.reminder.write` (LED-06 §12). Sending now WRITES — the tap on
  * WhatsApp, SMS or Call records a `ledger_reminder` row, which is what feeds
  * the history strip and the Sent tab — so an accountant, who can read the
- * khata, no longer sees it.
+ * khata, no longer sees it. And `ledger.entry.read` as well: without it the
+ * khata's entries are hidden, and the reminder would read them out anyway.
  *
  * It is also hidden on an archived party (FR-14), when the ledger module is
  * off, and whenever the balance is not money owed TO the merchant (FR-8).
@@ -57,6 +58,11 @@ export const usePartyReminder = (party: PartyReminderSource | null): UsePartyRem
     party !== null &&
     !party.isArchived &&
     hasModule('ledger') &&
+    /* Both, as the Reminders page already asks: the message states the
+       balance and the entries behind it, so a member denied the khata's
+       entries (QA: staff with a `ledger.entry.read` deny override) must not
+       be handed the control that reads them out — whatever else they hold. */
+    can('ledger.entry.read') &&
     can('ledger.reminder.write') &&
     isRemindable(party.balance);
 

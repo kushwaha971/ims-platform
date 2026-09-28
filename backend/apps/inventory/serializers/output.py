@@ -49,8 +49,26 @@ def category_dict(category: Any) -> dict | None:
     }
 
 
-def item_row(item: Item) -> dict:
-    """INV-02 §14 — one list row (also the lookup response)."""
+#: Cost and valuation keys a member without `reports.financial.read` never
+#: receives (INV-08 EC-4, applied to every inventory read, not only the summary).
+ITEM_COST_KEYS = ("purchase_price", "avg_cost", "stock_value")
+MOVEMENT_COST_KEYS = ("unit_cost", "value", "avg_cost_after")
+
+
+def item_row(item: Item, *, valuation: bool = True) -> dict:
+    """INV-02 §14 — one list row (also the lookup response).
+
+    `valuation=False` OMITS the cost keys rather than nulling them, the same
+    contract `/stock/summary` has, so a client cannot mistake "hidden" for zero.
+    """
+    row = _item_row(item)
+    if not valuation:
+        for key in ITEM_COST_KEYS:
+            row.pop(key, None)
+    return row
+
+
+def _item_row(item: Item) -> dict:
     return {
         "id": str(item.id),
         "name": item.name,
@@ -83,7 +101,17 @@ def item_row(item: Item) -> dict:
     }
 
 
-def movement_dict(movement: StockMovement, *, numbers: dict[Any, str]) -> dict:
+def movement_dict(
+    movement: StockMovement, *, numbers: dict[Any, str], valuation: bool = True
+) -> dict:
+    row = _movement_dict(movement, numbers=numbers)
+    if not valuation:
+        for key in MOVEMENT_COST_KEYS:
+            row.pop(key, None)
+    return row
+
+
+def _movement_dict(movement: StockMovement, *, numbers: dict[Any, str]) -> dict:
     value = None
     if movement.unit_cost is not None:
         value = str(q2(movement.qty * movement.unit_cost))
@@ -118,9 +146,43 @@ def item_detail_dict(
     opening: StockMovement | None,
     recent: list[dict],
     has_movements: bool,
+    valuation: bool = True,
 ) -> dict:
-    """INV-01 §14 / INV-03 §14 — the full item."""
-    row = item_row(item)
+    """INV-01 §14 / INV-03 §14 — the full item.
+
+    `recent` arrives already shaped, so the caller passes the same `valuation`
+    to `movement_dict`; here it strips the item's own cost keys, the per-location
+    avg/value and the opening cost.
+    """
+    row = _item_detail(
+        item,
+        tax_rate=tax_rate,
+        stock=stock,
+        opening=opening,
+        recent=recent,
+        has_movements=has_movements,
+    )
+    if not valuation:
+        for key in ITEM_COST_KEYS:
+            row.pop(key, None)
+        for loc in row["stock"]:
+            loc.pop("avg_cost", None)
+            loc.pop("value", None)
+        if row["opening"] is not None:
+            row["opening"].pop("unit_cost", None)
+    return row
+
+
+def _item_detail(
+    item: Item,
+    *,
+    tax_rate: dict | None,
+    stock: list[ItemStock],
+    opening: StockMovement | None,
+    recent: list[dict],
+    has_movements: bool,
+) -> dict:
+    row = _item_row(item)
     row.update(
         {
             "category": category_dict(item.category),

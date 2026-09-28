@@ -12,4 +12,8 @@ class NotificationsConfig(AppConfig):
     verbose_name = "Notifications"
 
     def ready(self) -> None:
-        from apps.notifications import tasks  # noqa: F401  (registers job handlers)
+        from apps.notifications import sinks, tasks  # noqa: F401  (registers job handlers)
+
+        # INV-07 — low-stock crossings reach the inbox. Deferred: inventory is
+        # below notifications in the matrix and exposes a registry instead.
+        sinks.register()

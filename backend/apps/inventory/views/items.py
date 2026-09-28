@@ -63,6 +63,15 @@ def _has(request: Any, codename: str) -> bool:
     return bool(membership) and codename in permissions_for(membership)
 
 
+def _valuation_visible(request: Any) -> bool:
+    """INV-08 EC-4 — cost and stock value need `reports.financial.read`.
+
+    One gate for every inventory read (list, detail, movements, lookup, summary,
+    low stock), so no screen can show what the summary hides.
+    """
+    return _has(request, "reports.financial.read")
+
+
 def _date_param(request: Any, name: str, errors: dict) -> dt.date | None:
     raw = request.query_params.get(name)
     if not raw:
@@ -171,8 +180,14 @@ class ItemViewSet(CsvExportMixin, _InventoryView, viewsets.ViewSet):
         base, filtered, rows_qs = self._list_querysets()
         paginator = PagePagination()
         page = paginator.paginate_queryset(rows_qs, request, view=self)
+        valuation = _valuation_visible(request)
         meta = {**paginator.get_meta(), **item_selectors.list_meta(base, filtered)}
-        return StandardResponse.ok([item_row(item) for item in page], meta=meta)
+        if not valuation:
+            meta["totals"]["stock_value"] = None
+        meta["valuation_visible"] = valuation
+        return StandardResponse.ok(
+            [item_row(item, valuation=valuation) for item in page], meta=meta
+        )
 
     def _detail(self, item_id: Any) -> dict:
         from apps.tax.selectors.rates import latest_rate, rate_for, rate_summary
@@ -193,13 +208,15 @@ class ItemViewSet(CsvExportMixin, _InventoryView, viewsets.ViewSet):
         recent_rows = item_selectors.recent_movements(tenant=tenant, item=item)
         item_selectors.annotate_backdated(recent_rows)
         numbers = item_selectors.resolve_sources(recent_rows)
+        valuation = _valuation_visible(self.request)
         return item_detail_dict(
             item,
             tax_rate=tax_rate,
             stock=item_selectors.stock_rows(item=item),
             opening=item_selectors.opening_movement(item=item),
-            recent=[movement_dict(m, numbers=numbers) for m in recent_rows],
+            recent=[movement_dict(m, numbers=numbers, valuation=valuation) for m in recent_rows],
             has_movements=bool(recent_rows),
+            valuation=valuation,
         )
 
     def retrieve(self, request: Any, pk: Any = None) -> Any:
@@ -248,7 +265,7 @@ class ItemViewSet(CsvExportMixin, _InventoryView, viewsets.ViewSet):
         )
         if item is None:
             raise NotFound(f"No item with barcode {code}.")
-        return StandardResponse.ok(item_row(item))
+        return StandardResponse.ok(item_row(item, valuation=_valuation_visible(request)))
 
     @action(detail=True, methods=["get"], url_path="movements")
     def movements(self, request: Any, pk: Any = None) -> Any:
@@ -277,8 +294,10 @@ class ItemViewSet(CsvExportMixin, _InventoryView, viewsets.ViewSet):
         rows = paginator.paginate_queryset(qs, request, view=self)
         item_selectors.annotate_backdated(rows)
         numbers = item_selectors.resolve_sources(rows)
+        valuation = _valuation_visible(request)
         return StandardResponse.ok(
-            [movement_dict(m, numbers=numbers) for m in rows], meta=paginator.get_meta()
+            [movement_dict(m, numbers=numbers, valuation=valuation) for m in rows],
+            meta={**paginator.get_meta(), "valuation_visible": valuation},
         )
 
 
@@ -421,7 +440,7 @@ class StockSummaryView(_InventoryView, APIView):
             else F(field).asc(nulls_last=True)
         )
         qs = qs.order_by(expr, "name", "id")
-        valuation = _has(request, "reports.financial.read")
+        valuation = _valuation_visible(request)
         totals = stock_selectors.summary_totals(qs)
         paginator = PagePagination()
         page = paginator.paginate_queryset(qs, request, view=self)
@@ -485,6 +504,7 @@ class LowStockView(_InventoryView, APIView):
         )
         paginator = PagePagination()
         page = paginator.paginate_queryset(qs, request, view=self)
+        valuation = _valuation_visible(request)
         rows = [
             {
                 "item": {
@@ -499,12 +519,22 @@ class LowStockView(_InventoryView, APIView):
                 "on_hand": str(i.on_hand),
                 "reorder_point": str(i.reorder_point) if i.reorder_point is not None else None,
                 "stock_status": i.stock_status,
-                "avg_cost": str(i.avg_cost),
-                "last_purchase_cost": str(i.purchase_price),
+                **(
+                    {
+                        "avg_cost": str(i.avg_cost),
+                        # Never purchased is null, not "0.00" — the screen shows "—".
+                        "last_purchase_cost": str(i.purchase_price) if i.purchase_price else None,
+                    }
+                    if valuation
+                    else {}
+                ),
                 "suggested_qty": str(
                     stock_selectors.suggested_qty(on_hand=i.on_hand, reorder_point=i.reorder_point)
                 ),
             }
             for i in page
         ]
-        return StandardResponse.ok(rows, meta={**paginator.get_meta(), "totals": counts})
+        return StandardResponse.ok(
+            rows,
+            meta={**paginator.get_meta(), "totals": counts, "valuation_visible": valuation},
+        )

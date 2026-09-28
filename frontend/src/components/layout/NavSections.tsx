@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 
-import { UbBox, UbLink, UbStack, UbText } from 'src/design-system';
+import { UbLink, UbStack, UbText } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { cn } from 'src/utils/cn';
 
@@ -80,52 +80,9 @@ export function NavSections({
               'relative flex w-full items-center gap-2 rounded-xs border p-2 ' +
               'transition-colors duration-fast ease-standard';
 
-            /**
-             * An item whose page does not exist yet is NOT a link.
-             *
-             * `next/link` prefetches, and the sidebar renders on every app
-             * route, so eight links pointing at unbuilt pages meant eight
-             * `?_rsc=` requests on every screen, every one a 404, on the phone
-             * connection this product is designed around. A merchant who
-             * tapped one got a not-found page. Found while a browser journey
-             * hung — the prefetch traffic never let the page settle.
-             *
-             * The row stays visible and keeps its icon and label, because it is
-             * what tells a shopkeeper the product will eventually do stock and
-             * invoices. It is marked `Soon` and is inert: no href, no prefetch,
-             * `aria-disabled` so a screen reader does not offer it as a
-             * destination.
-             */
-            if (!item.ready) {
-              return (
-                <UbBox
-                  key={item.key}
-                  aria-disabled
-                  className={cn(
-                    row,
-                    'cursor-default border-transparent text-text-onNavMuted opacity-60'
-                  )}
-                >
-                  <Icon aria-hidden strokeWidth={1.75} className="h-4 w-4 shrink-0" />
-                  <UbText
-                    as="span"
-                    variant="inherit"
-                    truncate
-                    className="ds-nav-label-regular flex-1"
-                  >
-                    {t(item.labelId)}
-                  </UbText>
-                  <UbText
-                    as="span"
-                    variant="inherit"
-                    className="ds-nav-caption-regular shrink-0 p-0.5 text-text-muted"
-                  >
-                    {t('nav.soon')}
-                  </UbText>
-                </UbBox>
-              );
-            }
-
+            // Rows whose page does not exist yet never reach here:
+            // `useNavigation` leaves them out (owner rule — unbuilt features
+            // are not shown), so every row is a link.
             return (
               <UbLink
                 key={item.key}

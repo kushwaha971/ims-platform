@@ -77,7 +77,8 @@ export interface ItemListRow {
   readonly category: CategoryRef | null;
   readonly unit: UnitRef;
   readonly sellingPrice: string;
-  readonly purchasePrice: string;
+  /** Null when the server withheld it: no `reports.financial.read` (INV-08 EC-4). */
+  readonly purchasePrice: string | null;
   readonly taxCode: string;
   /** SAL-02 FR-2 — the invoice line's HSN and inclusive-price defaults. */
   readonly hsnSac?: string | null;
@@ -102,7 +103,7 @@ export interface StockMovement {
   readonly unitCost: string | null;
   readonly value: string | null;
   readonly onHandAfter: string;
-  readonly avgCostAfter: string;
+  readonly avgCostAfter: string | null;
   readonly reason: string | null;
   readonly source: {
     readonly type: string;
@@ -118,8 +119,9 @@ export interface StockMovement {
 export interface ItemStockRow {
   readonly location: { readonly id: string; readonly code: string; readonly name: string };
   readonly onHand: string;
-  readonly avgCost: string;
-  readonly value: string;
+  /** Null when valuation is withheld (no `reports.financial.read`). */
+  readonly avgCost: string | null;
+  readonly value: string | null;
   readonly lastMovementAt: string | null;
 }
 
@@ -170,7 +172,7 @@ export interface ItemListResult {
   readonly pageSize: number;
   readonly total: number;
   readonly totalPages: number;
-  readonly totals: { readonly items: number; readonly stockValue: string };
+  readonly totals: { readonly items: number; readonly stockValue: string | null };
   readonly counts: {
     readonly all: number;
     readonly in: number;
@@ -321,8 +323,8 @@ export interface LowStockRow {
   readonly onHand: string;
   readonly reorderPoint: string | null;
   readonly stockStatus: 'low' | 'out';
-  readonly avgCost: string;
-  readonly lastPurchaseCost: string;
+  readonly avgCost: string | null;
+  readonly lastPurchaseCost: string | null;
   readonly suggestedQty: string;
 }
 

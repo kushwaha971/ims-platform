@@ -342,15 +342,6 @@ export const useValidationSchemas = (): ValidationSchemas => {
             );
     };
 
-    const panValidation = () =>
-      Yup.string()
-        .nullable()
-        .notRequired()
-        .transform((value: unknown) =>
-          typeof value === 'string' ? value.trim().toUpperCase() : value
-        )
-        .matches(REGEX.PAN, t('validation.pan.format'));
-
     const hsnValidation = () =>
       Yup.string().nullable().notRequired().matches(REGEX.HSN, t('validation.hsn.format'));
 
@@ -373,6 +364,11 @@ export const useValidationSchemas = (): ValidationSchemas => {
 
     const upiVpaValidation = () => optionalPattern(REGEX.UPI_VPA, 'settings.validation.upiVpa');
     const ifscValidation = () => optionalPattern(REGEX.IFSC, 'settings.validation.ifsc', true);
+    // QA D2 — PAN is optional, and a blank box has to pass. The old chain
+    // trimmed '' to '' and ran `.matches()` on it (Yup skips `undefined`, not
+    // ''), so an empty PAN blocked the profile save. It is `optionalPattern`
+    // now, like IFSC: blank → null, typed → trimmed upper case.
+    const panValidation = () => optionalPattern(REGEX.PAN, 'validation.pan.format', true);
     const bankAccountValidation = () =>
       optionalPattern(REGEX.BANK_ACCOUNT, 'settings.validation.bankAccount');
     const hexColourValidation = () =>

@@ -208,4 +208,6 @@ second party source and wants the same review as a new design-system component.
 
 A control for a feature that is not built is not rendered: no notification
 bell until notifications exist, no "Forgot password?" until reset email has a
-delivery provider, "Soon" rows in the sidebar only for modules on the roadmap.
+delivery provider, and no sidebar row for a module whose page is not built — not
+even a greyed "Soon" row. `useNavigation` shows only items marked `ready` in
+`navigation/sidebarConfig.ts`; a roadmap module appears the day its page does.

@@ -349,7 +349,7 @@ describe('the wizard — step 4 (FR-5) and §9 Failed', () => {
     expect(screen.getByText('What we will set up')).toBeInTheDocument();
     expect(screen.getByText('Retail shop')).toBeInTheDocument();
     // D-L5 — no defaults for unbuilt screens: bills (due days), items (units)
-    // and expenses (categories) are all "Soon" in the sidebar.
+    // and expenses (categories) were all unbuilt when this was written.
     expect(screen.queryByText('Bill due in')).not.toBeInTheDocument();
     expect(screen.queryByText('7 days')).not.toBeInTheDocument();
     expect(screen.queryByText('Favourite units')).not.toBeInTheDocument();
@@ -364,7 +364,7 @@ describe('the wizard — step 4 (FR-5) and §9 Failed', () => {
   it('shows only what is built — no Stock row, no unbuilt modules (UAT D8)', async () => {
     /* Prevents UAT D8: the card read "Stock: On" and "What you get: Stock,
        Bills & estimates, Purchases, Payments, Expenses" on a product where
-       each of those is a "Soon" row. What a merchant can open today is listed;
+       none of those was built. What a merchant can open today is listed;
        the rest is not mentioned (owner rule: unbuilt features are not shown). */
     await atSummary();
     renderWithProviders(<OnboardingStepPageContent step={4} />);

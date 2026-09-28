@@ -140,7 +140,10 @@ export function ItemListPageContent(): React.JSX.Element {
     enabled: !itemForm.open && !adjustment.open,
   });
 
-  const columns = useMemo(() => createItemColumns({ t, tier }), [t, tier]);
+  const columns = useMemo(
+    () => createItemColumns({ t, tier, valuation: can('reports.financial.read') }),
+    [t, tier, can]
+  );
   const labels = useMemo(
     () => inventoryGridLabels(t, 'items.list.loading', 'items.list.open'),
     [t]
@@ -149,6 +152,9 @@ export function ItemListPageContent(): React.JSX.Element {
   const canWrite = can('inventory.item.write');
   const canAdjust = can('inventory.stock.adjust');
   const canReadStock = can('inventory.stock.read');
+  /* INV-08 EC-4 — the server omits valuation without this; the tile is not
+     rendered at all rather than reading "—". */
+  const canSeeValuation = can('reports.financial.read');
 
   const emptyStates = useMemo<UbDataGridEmptyStates>(
     () => ({
@@ -335,11 +341,13 @@ export function ItemListPageContent(): React.JSX.Element {
                  tab, and a third tile would sit alone on its own row. */
               className="max-md:hidden"
             />
-            <UbStatCard
-              label={t('items.list.stat.value')}
-              value={formatInr(list.totals.stockValue)}
-              subtext={t('items.list.stat.valueHint')}
-            />
+            {canSeeValuation && list.totals.stockValue !== null && (
+              <UbStatCard
+                label={t('items.list.stat.value')}
+                value={formatInr(list.totals.stockValue)}
+                subtext={t('items.list.stat.valueHint')}
+              />
+            )}
             {lowOut !== null && (
               <UbStatCard
                 icon={<TriangleAlert className="h-4 w-4" aria-hidden />}
@@ -400,7 +408,16 @@ export function ItemListPageContent(): React.JSX.Element {
               />
             }
             filters={
-              <UbStack direction="row" gap={2} wrap>
+              /* QA at 360–390 px: three fixed-width selects wrapped onto three
+                 lines above the list. On a phone they share ONE row as equal
+                 thirds (each label truncates rather than wraps); from `md` up
+                 they keep their natural widths. */
+              <UbStack
+                direction="row"
+                gap={2}
+                data-ub-filters="fill"
+                className="max-md:grid max-md:w-full max-md:grid-cols-3"
+              >
                 <UbSelect
                   aria-label={t('items.list.filter.type')}
                   value={filters.type || 'any'}
@@ -412,11 +429,14 @@ export function ItemListPageContent(): React.JSX.Element {
                     { value: 'goods', label: t('items.form.type.goods') },
                     { value: 'service', label: t('items.form.type.service') },
                   ]}
-                  className="w-44"
+                  className="w-44 max-md:w-full max-md:min-w-0"
                 />
                 <UbCombobox
                   aria-label={t('items.list.filter.category')}
-                  value={filters.categoryId || null}
+                  /* '' selects the "All categories" option itself, so it reads
+                     in the same ink as "All types" and "Active" beside it —
+                     null showed the grey placeholder instead. */
+                  value={filters.categoryId}
                   onChange={(value) => update({ categoryId: value })}
                   options={[
                     { value: '', label: t('items.list.filter.categoryAny') },
@@ -425,7 +445,7 @@ export function ItemListPageContent(): React.JSX.Element {
                   placeholder={t('items.list.filter.categoryAny')}
                   searchPlaceholder={t('items.form.category.search')}
                   emptyLabel={t('items.form.category.empty')}
-                  className="w-44"
+                  className="w-44 max-md:w-full max-md:min-w-0"
                 />
                 <UbSelect
                   aria-label={t('items.list.filter.status')}
@@ -435,7 +455,7 @@ export function ItemListPageContent(): React.JSX.Element {
                     { value: 'active', label: t('items.list.filter.active') },
                     { value: 'archived', label: t('items.list.filter.archived') },
                   ]}
-                  className="w-36"
+                  className="w-36 max-md:w-full max-md:min-w-0"
                 />
               </UbStack>
             }

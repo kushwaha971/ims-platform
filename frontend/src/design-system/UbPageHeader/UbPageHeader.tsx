@@ -113,7 +113,12 @@ function UbPageHeaderBase({
         <div className="flex min-w-[8rem] flex-1 flex-col gap-0.5">
           <h1 className="ds-body-xl-semibold truncate leading-8 text-text-primary">{title}</h1>
           {subtitle && (
-            <p className="ds-body-base-regular truncate leading-5 text-text-tertiary">{subtitle}</p>
+            // QA D8 — the subtitle is a sentence, and on a phone Branding's and
+            // Activity's were cut to an ellipsis mid-thought. It wraps; the
+            // title (a name) still truncates.
+            <p className="ds-body-base-regular break-words leading-5 text-text-tertiary">
+              {subtitle}
+            </p>
           )}
         </div>
         {(actions || primaryActions) && (

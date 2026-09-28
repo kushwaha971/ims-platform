@@ -94,12 +94,12 @@ export interface PresetSummary {
 /**
  * The modules that have screens today, in the order step 4 lists them.
  *
- * Every other module is a "Soon" row in the sidebar (`ready` absent in
- * `navigation/sidebarConfig.ts`), and step 4 used to promise them all under
+ * Every other module is unbuilt and has no sidebar row (`ready` absent in
+ * `navigation/sidebarConfig.ts`, which hides it), and step 4 used to promise them all under
  * "What you get" — Stock, Bills & estimates, Purchases — beside a "Stock: On"
  * row (UAT D8). Add a module here in the same change that marks its first
  * sidebar item `ready`. `platform` is left out on purpose: its label is "Team
- * & settings", and Settings is one of the "Soon" rows.
+ * & settings", and Settings was not built when this was written.
  */
 export const READY_MODULES: readonly ModuleCode[] = ['parties', 'ledger'];
 

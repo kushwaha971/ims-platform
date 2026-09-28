@@ -508,6 +508,19 @@ describe('UbDataGrid — selection and sort state', () => {
     expect(within(toolbar).queryByLabelText('Search')).not.toBeInTheDocument();
   });
 
+  it('draws no toolbar for a selectable grid with only bulk actions until a row is ticked', async () => {
+    /* Prevents QA's empty 24 px band above the desktop reminders header: the
+       bulk slot only ever shows in the selection bar, so on its own it is not
+       a reason to paint the toolbar. */
+    renderGrid('full', {
+      selectable: true,
+      selectedIds: [],
+      bulkActions: <button type="button">Archive</button>,
+    });
+    await screen.findByRole('table');
+    expect(screen.queryByTestId('ub-grid-toolbar')).not.toBeInTheDocument();
+  });
+
   it('marks the sorted column on the cell, where a screen reader reads it', async () => {
     renderGrid('full', {
       sort: { columnId: 'name', direction: 'asc' },

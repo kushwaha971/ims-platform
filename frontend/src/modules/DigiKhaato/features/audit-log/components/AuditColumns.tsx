@@ -48,7 +48,9 @@ export const createAuditColumns = (t: T): readonly UbDataGridColumn<AuditRow>[] 
     id: 'entity',
     header: t('audit.column.entity'),
     priority: 2,
-    cardSlot: 'meta',
+    // QA D8 — on a phone the card's caption line carries When and Who only;
+    // a third stacked cell crowded the date and the name together.
+    cardSlot: 'none',
     widthShare: 18,
     cell: (row) => (
       <AuditTextCell

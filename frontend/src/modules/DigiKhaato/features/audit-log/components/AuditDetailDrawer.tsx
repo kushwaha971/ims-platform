@@ -73,14 +73,17 @@ export function AuditDetailDrawer({
                   <UbInfoRow label={t('audit.detail.reason')} value={`“${row.reason}”`} />
                 )}
                 {row.requestId && (
-                  <UbInfoRow
-                    label={t('common.error.reference')}
-                    value={
-                      <UbText as="span" variant="mono">
-                        {row.requestId}
-                      </UbText>
-                    }
-                  />
+                  // QA D8 — a request id is one long unbreakable token, and in
+                  // `UbInfoRow`'s nowrap value slot it ran into its own label.
+                  // Stacked, with the id free to break, it cannot.
+                  <UbStack gap={0.5}>
+                    <UbText variant="caption" tone="tertiary">
+                      {t('common.error.reference')}
+                    </UbText>
+                    <UbText variant="mono" className="break-all">
+                      {row.requestId}
+                    </UbText>
+                  </UbStack>
                 )}
                 {row.ip && <UbInfoRow label={t('audit.detail.ip')} value={row.ip} />}
               </UbStack>
@@ -95,7 +98,7 @@ export function AuditDetailDrawer({
                   {diff.map((line) => (
                     <UbStack key={line.key} gap={0.5}>
                       <UbText variant="caption" tone="tertiary">
-                        {line.key}
+                        {line.label}
                       </UbText>
                       <UbText variant="body" className="break-words">
                         {t('audit.detail.beforeAfter', { before: line.before, after: line.after })}

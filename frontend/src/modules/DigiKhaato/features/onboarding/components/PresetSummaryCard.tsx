@@ -62,13 +62,13 @@ function PresetSummaryCardBase({
         </UbStack>
 
         {/* No Stock row. It read "Stock: On" (or EC-6's "not available in
-            your plan") for a module that is a "Soon" row in the sidebar —
+            your plan") for a module that had no screen yet —
             a promise about an unbuilt feature (UAT D8). It comes back with
             the Items screen. */}
 
         {/* No "Bill due in", "Favourite units" or "Extra expense categories"
             rows either (D-L5). The preset still seeds all three server-side,
-            but bills, items and expenses are "Soon" rows in the sidebar, so
+            but bills, items and expenses had no screens when this was written, so
             naming their defaults here described features the merchant cannot
             open. They come back with the screens that use them. */}
 
