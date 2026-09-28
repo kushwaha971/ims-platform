@@ -166,6 +166,8 @@ import {
   sendManualReminder,
   startBulkReminders,
 } from 'modules/DigiKhaato/features/reminders/redux/reminderThunk';
+import { fetchDashboard } from 'modules/DigiKhaato/features/reports/redux/dashboardThunk';
+import { fetchDayBook } from 'modules/DigiKhaato/features/reports/redux/dayBookThunk';
 import {
   createInvoiceShareLink,
   deleteInvoiceDraft,
@@ -274,6 +276,9 @@ export const QUERIES = {
   fetchExpenseCategories,
   // EXP-03 — the cashbook
   fetchCashbook,
+  // RPT-01 / RPT-02 — the dashboard and the day book (W4-A)
+  fetchDashboard,
+  fetchDayBook,
   // LED-05/06/07 — the reminders screen, the khata's strip, the sheet's text
   fetchCollectionSummary,
   fetchDueParties,

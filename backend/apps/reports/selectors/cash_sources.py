@@ -1,0 +1,85 @@
+"""EXP-03's third cashbook source: payments, one row per `mode_breakup` share (BR-3).
+
+The cashbook lives in `expenses`, which may not import `payments` (Part 20
+§20.1.4), and its own docstring always said the composition would move here
+when payments existed. Rather than move the whole screen, the source moves:
+this object is registered with `expenses.selectors.cashbook` from
+`ReportsConfig.ready()`, and the cashbook walks it beside its own two.
+
+A split payment (₹700 UPI + ₹300 cash, EC-1 of RPT-02) is TWO cashbook rows —
+the cashbook is a book of buckets, and each share lands in its own — while the
+day book shows it as one row with both effects. The drawer's figure is the
+same either way, which the reconciliation suite asserts.
+"""
+
+from __future__ import annotations
+
+import datetime as dt
+from collections import defaultdict
+from collections.abc import Iterable
+from decimal import Decimal
+from typing import Any
+
+from django.db import connection
+
+from apps.common.constants import PaymentMode
+from apps.common.money import ZERO
+from apps.expenses.selectors.cashbook import IN, OUT, CashRow, bucket_of
+
+_NET_SQL = """
+SELECT m ->> 'mode' AS mode, p.direction, SUM((m ->> 'amount')::numeric)
+  FROM payments_payment p
+  CROSS JOIN LATERAL jsonb_array_elements(p.mode_breakup) AS m
+ WHERE p.tenant_id = %(tenant)s AND p.status = 'recorded' AND p.payment_date < %(before)s
+ GROUP BY 1, 2
+"""
+
+
+class PaymentCashSource:
+    """Recorded payments in and out, by each mode's share."""
+
+    name = "payment"
+
+    def rows(self, *, tenant: Any, date_from: dt.date, date_to: dt.date) -> Iterable[CashRow]:
+        from apps.payments.models import Payment
+
+        queryset = Payment.objects.filter(
+            tenant=tenant,
+            status="recorded",
+            payment_date__gte=date_from,
+            payment_date__lte=date_to,
+        ).select_related("party")
+        for payment in queryset:
+            for index, part in enumerate(payment.mode_breakup or []):
+                yield CashRow(
+                    source_type="payment",
+                    # One id per share, so a split payment's two rows are two
+                    # rows to the client's keyed list, not one drawn twice.
+                    source_id=f"{payment.id}:{index}",
+                    date=payment.payment_date,
+                    at=payment.created_at,
+                    direction=IN if payment.direction == "in" else OUT,
+                    mode=part.get("mode") or PaymentMode.OTHER,
+                    upi_app=part.get("upi_app"),
+                    amount=Decimal(str(part.get("amount") or "0")),
+                    party=(
+                        {"id": str(payment.party_id), "name": payment.party.name}
+                        if payment.party_id
+                        else None
+                    ),
+                    category=None,
+                    number=payment.number,
+                    reference=part.get("reference") or payment.reference,
+                    note=payment.note,
+                )
+
+    def net_before(self, *, tenant: Any, before: dt.date) -> dict[str, Decimal]:
+        net: dict[str, Decimal] = defaultdict(lambda: ZERO)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                _NET_SQL, {"tenant": str(getattr(tenant, "id", tenant)), "before": before}
+            )
+            for mode, direction, total in cursor.fetchall():
+                signed = (total or ZERO) if direction == "in" else -(total or ZERO)
+                net[bucket_of(mode)] += signed
+        return net

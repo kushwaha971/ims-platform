@@ -320,3 +320,21 @@ def test_an_other_tenants_figures_never_reach_this_dashboard(
     assert payload["tiles"]["cash_in_hand"]["amount"] == "0.00"
     assert payload["tiles"]["low_stock"] == {"count": 0, "out_count": 0}
     assert payload["recent_activity"] == [] and payload["top_debtors"] == []
+
+
+def test_the_cashbook_the_day_book_and_the_tile_agree_on_the_drawer(tenant: Any) -> None:
+    """EXP-03 now walks the payments source the reports app registers: before
+    it, a recorded payment moved the day book's and the dashboard's cash and
+    left the cashbook's untouched — three screens, two answers."""
+    from apps.expenses.selectors.cashbook import build_cashbook
+    from apps.reports.tests.test_day_book_reconcile import _fuzzed_book
+
+    start = _fuzzed_book(tenant, 23)["start"]
+    cashbook = build_cashbook(tenant=tenant, date_from=start, date_to=TODAY)
+    book = day_book(
+        tenant=tenant, query=DayBookQuery(date_from=start, date_to=TODAY), page=1, page_size=5
+    )
+    tile = build_dashboard(tenant=tenant, today=TODAY)["tiles"]["cash_in_hand"]["amount"]
+    closing = str(book.closing["cash"].quantize(Decimal("0.01")))
+    assert cashbook["range"]["closing"]["cash"] == closing == tile
+    assert "payment" in cashbook["sources"]

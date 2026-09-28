@@ -61,6 +61,8 @@ export const ROUTES = {
   /** EXP-03 — money in and out, day by day, beside Expenses in the menu. */
   CASHBOOK: '/cashbook',
   REPORTS: '/reports',
+  /** RPT-02 — everything that happened, in order, with the drawer beside it. */
+  REPORT_DAY_BOOK: '/reports/day-book',
   SETTINGS: '/settings',
   SETTINGS_PLAN: '/settings/plan',
   SETTINGS_TEAM: '/settings/team',

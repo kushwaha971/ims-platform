@@ -32,7 +32,17 @@ from django.db.models import Max
 from apps.common.money import ZERO
 
 BUCKETS: tuple[str, ...] = ("0_30", "31_60", "61_90", "90_plus")
-ORDERINGS: tuple[str, ...] = ("-90_plus", "-total", "name", "-oldest_days")
+#: FR-1's four, plus the ascending twins LED-09's screen offers — the file is
+#: requested with the screen's own ordering, so it must accept every one.
+ORDERINGS: tuple[str, ...] = (
+    "-90_plus",
+    "90_plus",
+    "-total",
+    "total",
+    "name",
+    "-name",
+    "-oldest_days",
+)
 
 #: BR-5 — what counts as "a payment" on each side, manual khata lines included.
 _PAYMENT_SIDE: dict[str, tuple[str, tuple[str, ...]]] = {
@@ -123,7 +133,8 @@ def aging_report(
             }
         )
 
-    rows.sort(key=_sort_key(ordering))
+    key, descending = _sort_key(ordering)
+    rows.sort(key=key, reverse=descending)
     totals: dict[str, Any] = {name: ZERO for name in BUCKETS}
     totals["total"] = ZERO
     for row in rows:
@@ -134,12 +145,16 @@ def aging_report(
     return rows, totals
 
 
-def _sort_key(ordering: str) -> Any:
-    """FR-1's four orders, each with the party id last so the order is stable."""
-    if ordering == "name":
-        return lambda row: (row["party"]["name"].casefold(), row["party"]["id"])
-    if ordering == "-total":
-        return lambda row: (-row["total"], -row["buckets"]["90_plus"], row["party"]["id"])
-    if ordering == "-oldest_days":
-        return lambda row: (-(row["oldest_days"] or 0), -row["total"], row["party"]["id"])
-    return lambda row: (-row["buckets"]["90_plus"], -row["total"], row["party"]["id"])
+def _sort_key(ordering: str) -> tuple[Any, bool]:
+    """`(key, reverse)` for one of `ORDERINGS`; the party id last keeps it stable."""
+    field = ordering.lstrip("-")
+    descending = ordering.startswith("-")
+    if field == "name":
+        return (lambda row: (row["party"]["name"].casefold(), row["party"]["id"])), descending
+    if field == "total":
+        return (
+            lambda row: (row["total"], row["buckets"]["90_plus"], row["party"]["id"])
+        ), descending
+    if field == "oldest_days":
+        return (lambda row: (row["oldest_days"] or 0, row["total"], row["party"]["id"])), descending
+    return (lambda row: (row["buckets"]["90_plus"], row["total"], row["party"]["id"])), descending

@@ -161,6 +161,8 @@ export const API_PATHS = {
   REPORT_GST_SUMMARY: '/reports/gst-summary',
   REPORT_STOCK_SUMMARY: '/reports/stock-summary',
   REPORT_RECEIVABLES_AGING: '/reports/receivables-aging',
+  /** RPT-05 — the payable side of the same report (W4-A). */
+  REPORT_PAYABLES_AGING: '/reports/payables-aging',
   REPORT_EXPORT: (id: string) => `/reports/exports/${seg(id)}`,
   /** IMP-02 FR-8 — the stored file of an export too big to stream. */
   REPORT_EXPORT_DOWNLOAD: (id: string) => `/reports/exports/${seg(id)}/download`,

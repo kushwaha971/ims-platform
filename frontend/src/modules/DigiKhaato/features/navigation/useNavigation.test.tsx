@@ -42,11 +42,20 @@ describe('useNavigation', () => {
     }).result.current;
 
   it('lists no row whose page is not built (no "Soon" rows)', () => {
+    /* A row is listed exactly when it is `ready`. This used to assert only the
+       unbuilt half and to require at least one unbuilt row; RPT-01/02 made the
+       last two rows (Dashboard, Reports) real, so every row is checked both
+       ways instead — a built row that went missing fails here too. */
     const keys = listed().sections.flatMap((section) => section.items.map((item) => item.key));
-    const unbuilt = NAV_ITEMS.filter((item) => !item.ready).map((item) => item.key);
-    expect(unbuilt.length).toBeGreaterThan(0);
-    for (const key of unbuilt) expect(keys).not.toContain(key);
+    for (const item of NAV_ITEMS) {
+      expect({ key: item.key, listed: keys.includes(item.key) }).toEqual({
+        key: item.key,
+        listed: Boolean(item.ready),
+      });
+    }
     expect(keys).toContain('parties');
+    expect(keys).toContain('dashboard');
+    expect(keys).toContain('reports');
   });
 
   it('keeps unbuilt rows out of the bottom nav too', () => {

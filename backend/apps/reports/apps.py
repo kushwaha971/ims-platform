@@ -15,3 +15,9 @@ class ReportsConfig(AppConfig):
         from apps.reports import signals, tasks  # noqa: F401  (registers job handlers)
 
         signals.connect()
+
+        # EXP-03's payments source (see `selectors/cash_sources.py`).
+        from apps.expenses.selectors.cashbook import register_cashbook_source
+        from apps.reports.selectors.cash_sources import PaymentCashSource
+
+        register_cashbook_source(PaymentCashSource())
