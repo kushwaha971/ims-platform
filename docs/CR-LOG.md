@@ -1362,3 +1362,14 @@ revoked link can never be re-derived. A legacy link (minted before this, no nonc
 derivation no longer matches (SECRET_KEY rotated) cannot be shown again and is replaced, which is
 the previous behaviour. Tests: `test_sharing_again_returns_the_same_live_link_uat_d1`,
 `test_an_expired_or_legacy_link_is_replaced_not_reused_uat_d1`, `useInvoiceDetail.share.test.tsx`.
+
+## CR-2026-09-29-UAT-D10 — the GST summary opens on this month
+
+RPT-07 §6 ("opens on the last completed month, the one being filed"). Final UAT D10 (Low).
+In UAT the GST summary opened on last month, which hid today's bills from a busy shop and showed
+a new shop an empty screen. It now opens on this month (month to date), matching the sales and
+purchase registers (RPT-03 FR-7); the month being filed is one tap on "Last month". A data-dependent
+default (this month when it has documents, else last month) was rejected: it needs a request before
+first paint and makes the screen open on different periods for reasons the merchant cannot see.
+`GST_DEFAULT_PRESET` in `features/reports/constants/taxReportConstants.ts`. Part 17-04 RPT-07 §6
+should be amended when this is registered in Part 43.

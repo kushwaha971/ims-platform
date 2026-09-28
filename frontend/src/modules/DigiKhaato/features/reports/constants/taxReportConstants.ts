@@ -23,8 +23,17 @@ export const TAX_PERIOD_PRESETS: readonly TaxPeriodPreset[] = [
 ];
 /** RPT-03 FR-7 — a register opens on the current month. */
 export const REGISTER_DEFAULT_PRESET: TaxPeriodPreset = 'thisMonth';
-/** RPT-07 §6 — the GST summary opens on the last COMPLETED month (the one being filed). */
-export const GST_DEFAULT_PRESET: TaxPeriodPreset = 'lastMonth';
+/**
+ * UAT D10 — the GST summary opens on the CURRENT month, like the registers.
+ * RPT-07 §6 said the last completed month (the one being filed); in UAT that
+ * opened a busy shop's GST screen on a period without today's bills, and a new
+ * shop's on an empty one. The month being filed is one tap away ("Last month").
+ * A data-dependent default (this month if it has documents) was rejected: it
+ * costs a request before the first paint and makes the screen open on
+ * different periods on different days for no reason the merchant can see.
+ * CR-2026-09-29-UAT-D10.
+ */
+export const GST_DEFAULT_PRESET: TaxPeriodPreset = 'thisMonth';
 
 /** RPT-03 NFR — "server pagination 100 rows". */
 export const REGISTER_PAGE_SIZE = 100;

@@ -174,13 +174,16 @@ beforeEach(() => {
 
 const FINANCIAL: PermissionCode[] = ['reports.financial.read', 'reports.export'];
 
-it('opens on the last completed month, ready to file, with the GSTR-1 tables badged', async () => {
+it('UAT D10: opens on this month, ready to file, with the GSTR-1 tables badged', async () => {
   signIn(FINANCIAL);
   renderWithProviders(<GstSummaryPageContent />);
   expect(await screen.findByText('Ready to file')).toBeInTheDocument();
   const asked = lastAsked();
+  // It used to open on LAST month, which hid today's bills; now the month to date.
+  const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
   expect(asked.dateFrom.endsWith('-01')).toBe(true);
-  expect(asked.dateTo < new Date().toISOString().slice(0, 10)).toBe(true);
+  expect(asked.dateFrom.slice(0, 7)).toBe(asked.dateTo.slice(0, 7));
+  expect(asked.dateTo >= yesterday).toBe(true);
   expect(asked.rounding).toBe('paise');
   expect(screen.getByText('GSTR-1 · 13')).toBeInTheDocument();
   expect(screen.getByText('INV/26-27/0041')).toBeInTheDocument();
