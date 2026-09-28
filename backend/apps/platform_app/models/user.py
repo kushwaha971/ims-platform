@@ -40,13 +40,24 @@ class UserManager(BaseUserManager):
         """
         return (email or "").strip().lower()
 
-    def create_user(self, email: str, password: str | None = None, **extra: Any) -> "User":
+    def create_user(
+        self,
+        email: str,
+        password: str | None = None,
+        *,
+        encoded_password: str | None = None,
+        **extra: Any,
+    ) -> "User":
+        """`encoded_password` is a hash computed by the caller BEFORE its transaction
+        (`passwords.hash_outside_transaction`); `password` hashes here, inline."""
         email = self._normalise(email)
         if not email:
             raise ValueError("A user must have an email address.")
         mobile = extra.pop("mobile", None) or None
         user = self.model(email=email, mobile=mobile, **extra)
-        if password:
+        if encoded_password:
+            user.password = encoded_password
+        elif password:
             user.set_password(password)
         else:
             user.set_unusable_password()
