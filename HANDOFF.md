@@ -1,6 +1,6 @@
 # DigiKhaato — Handoff / Continuation Prompt
 
-Last updated: 29 Sep 2026 (IST) — all MVP features merged; QA + retest passed; Sprint 12 hardening (security/ops, a11y/i18n, data/perf) merged; customer share page built; FINAL UAT running.
+Last updated: 29 Sep 2026 (IST) — MVP complete; final UAT approved with issues and all fixed (D1–D8, D10); product renamed YourKhata (yourkhata.com, logo concept A applied, round-2 logo options awaiting owner choice); support sessions now truly view-only (SEC-A); demo videos: plan/scripts/pipeline done, recording paused.
 
 ---
 
@@ -202,6 +202,32 @@ Serve for QA:
   - `/system/health` has no checks block.
   - Run `nginx -t` on staging.
 - **Dev DB note:** the dev DB has 300 e2e "Kumar Stores" parties whose balances drift (they were seeded without entries), so a restore of the dev DB stops at verify.
+
+## 8c. 29 Sep: UAT close-out, rebrand, videos
+
+- **Final UAT: Approved with issues.** All the issues it raised are fixed on main:
+  - D1: sharing again reuses the live link (derived from HMAC + nonce; only the hash is stored). A "Reset link" button rotates it.
+  - D2: stacked invoice lines on phone.
+  - D3: voiding a paid walk-in bill also voids its counter receipt.
+  - D4: day-book wording.
+  - D5: onboarding lands on /dashboard.
+  - D6: per-mode references in the cashbook.
+  - D7: item list shows the GST % and "—" for a zero purchase price.
+  - D8: prints read like the shop wrote them (formatted phones, no possessive text, merchant-perspective receipt line on screen).
+  - D10: GST summary opens on this month.
+- **Rebrand (CR-2026-09-29-BRAND-A).**
+  - The user-visible name is **YourKhata** and the domain is yourkhata.com. The code namespace stays `DigiKhaato`; the repo stays `ims-platform`.
+  - **Customer-facing documents never show the product name or domain.** That covers every print, the share page, and export contents. "Issued by / Shared by <shop>" instead. A test guards this.
+  - **Local `.env.local` sets `NEXT_PUBLIC_APP_NAME`.** Set it to YourKhata on every machine: the owner's Mac `.env.local` may still say DigiKhaato.
+  - The logo is Concept A (`frontend/public/brand/`, `UbLogo`).
+  - Round-2 options are in `frontend/public/brand/concepts2/` (six directions plus a README). They are **untracked; the owner is choosing**. The designer recommends concept 3, "Hisaab Barabar".
+- **SEC-A (e5190a2):** during an impersonated support session every unsafe method is refused with 403 `impersonation_forbidden`. Allow-list: end session, logout, `/reminders/preview`. The UI goes view-only through the `UbViewOnly` context.
+- **Demo videos (owner request; work lives in /home/claude/video, NOT in the repo).**
+  - Done: plan, the Hinglish scripts (`scripts/{mobile,desktop,superadmin}.md`, `youtube.md`), and the pipeline (`pipeline/make.sh`). The pipeline uses Kokoro `hm_omega` TTS with Devanagari input, frame capture through Playwright/CDP, and an ffmpeg edit with captions, a cursor/tap overlay and loudnorm. Dry-run clips are in `out/`.
+  - **Paused: no final videos exist yet.**
+  - Next: after the logo decision, rehearse → record → review the mobile and desktop videos. The super-admin video needs a clean DB and a demo operator (`pipeline/make_operator.sh`).
+  - The voice is intelligible but not studio-grade; a human listen is required.
+- **Serving:** run `bash e2e/serve.sh` in its own shell call. Its `pkill -f` patterns kill any shell whose command line contains "standalone/server.js" or "next-server". Start the backend with `UB_E2E_RELAX_THROTTLES=1` for e2e and videos.
 
 ## 9. Exact next steps
 
