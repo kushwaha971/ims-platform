@@ -38,7 +38,11 @@ from apps.sales.services.documents import check_version, lock_document, replace_
 from apps.sales.services.issue_parts import credit_check, party_snapshot, post_stock, rule46_for
 from apps.sales.services.ledger_link import post_invoice_debit
 from apps.sales.services.payload import apply_payload
-from apps.sales.services.payment_seam import record_issue_payment, validate_payment
+from apps.sales.services.payment_seam import (
+    paid_at_issue,
+    record_issue_payment,
+    validate_payment,
+)
 
 
 def _validate_issuable(ctx: Ctx, document: Any, rows: list[dict]) -> None:
@@ -111,7 +115,11 @@ def issue_invoice(
 
     unit_costs = post_stock(ctx, document, rows)
 
-    amount_paid = record_issue_payment(document=document, payment=cleaned_payment)
+    # What the invoice will have received once the payment below is recorded.
+    # The credit check reads the part going on CREDIT (BR-13), so it is decided
+    # now, before anything is written; the payment itself is recorded after the
+    # invoice exists, through PAY-01 (see `payment_seam`).
+    amount_paid = paid_at_issue(cleaned_payment, document.grand_total)
     amount_due = document.grand_total - amount_paid
     warnings = list(outcome["warnings"])
     overridden = False
@@ -134,13 +142,13 @@ def issue_invoice(
     document.party_snapshot = party_snapshot(party, document)
     document.party_gstin_snapshot = (party.gstin if party is not None else None) or None
     document.supplier_gstin_snapshot = tenant.gstin or None
-    document.amount_paid = amount_paid
-    document.amount_due = amount_due
-    document.status = (
-        DocumentStatus.PAID
-        if amount_due == 0
-        else DocumentStatus.PARTIALLY_PAID if amount_paid > 0 else DocumentStatus.ISSUED
-    )
+    # Written as issued-with-nothing-paid; `record_issue_payment` below moves it
+    # to partially paid / paid through the payment's allocation. A walk-in
+    # bill's due is held at zero (`ck_sales_document_walk_in_paid`) — see the
+    # sales allocation target in `apps/payments/services/targets/sales.py`.
+    document.amount_paid = 0
+    document.amount_due = document.grand_total if not walk_in else 0
+    document.status = DocumentStatus.PAID if document.grand_total == 0 else DocumentStatus.ISSUED
     if amount_due == 0:
         document.due_on = None  # FR-11 / EC-12
     elif document.due_on is None and party is not None:
@@ -163,6 +171,12 @@ def issue_invoice(
         entry, balance = post_invoice_debit(ctx=ctx, document=document, party=party)
         ledger_entry_id = str(entry.id)
 
+    receipt = record_issue_payment(ctx=ctx, document=document, payment=cleaned_payment)
+    if receipt is not None:
+        document.refresh_from_db()
+        if receipt["party_balance"] is not None:
+            balance = receipt["party_balance"]
+
     write_audit(
         ctx=ctx,
         action=AuditAction.INVOICE_ISSUED,
@@ -175,6 +189,7 @@ def issue_invoice(
             "amount_paid": str(amount_paid),
             "amount_due": str(amount_due),
             "credit_limit_override": overridden,
+            "payment_id": receipt["payment_id"] if receipt else None,
             "warnings": [w["code"] for w in warnings],
         },
         metadata={

@@ -172,13 +172,16 @@ def test_walk_in_requires_full_payment_and_posts_no_ledger(owner: Any, make_item
     assert not LedgerEntry.objects.exists()
 
 
-def test_party_payment_at_issue_is_deferred_to_payments(
+def test_party_payment_at_issue_is_recorded_through_payments(
     owner: Any, make_item: Any, make_party: Any
 ) -> None:
-    """The PAY-01 seam — a party sale takes no payment at issue this wave (no second payment writer)."""
+    """PAY-01 replaced the seam — a party sale may take a payment at issue, and it becomes
+    a receipt (the payments suite covers the allocation and the khata in full)."""
     doc = draft(owner, party_id=str(make_party().id), lines=[line(make_item())]).json()["data"]
     response = issue(owner, doc["id"], payment=cash("472.50"))
-    assert response.status_code == 400 and "payment" in response.json()["error"]["details"]
+    assert response.status_code == 200, response.json()
+    assert response.json()["data"]["amount_paid"] == "472.50"
+    assert response.json()["data"]["payment"]["number"].startswith("RCT/")
 
 
 def test_credit_limit_warn_block_and_override(

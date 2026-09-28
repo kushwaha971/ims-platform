@@ -153,6 +153,7 @@ class DocumentReadSerializer(serializers.ModelSerializer):
     party_snapshot = serializers.SerializerMethodField()
     supplier = serializers.SerializerMethodField()
     payment = serializers.SerializerMethodField()
+    payments = serializers.SerializerMethodField()
     lines = LineReadSerializer(many=True, read_only=True)
     doc_discount_allocation = serializers.SerializerMethodField()
     created_by = serializers.SerializerMethodField()
@@ -191,6 +192,7 @@ class DocumentReadSerializer(serializers.ModelSerializer):
             "amount_paid",
             "amount_due",
             "payment",
+            "payments",
             "lines",
             "notes",
             "terms",
@@ -225,6 +227,16 @@ class DocumentReadSerializer(serializers.ModelSerializer):
 
     def get_payment(self, obj: SalesDocument) -> dict | None:
         return (obj.meta or {}).get("payment")
+
+    def get_payments(self, obj: SalesDocument) -> list[dict]:
+        """PAY-01 — the receipts allocated to this invoice (a deferred import: rule D5)."""
+        if obj.status == "draft":
+            return []
+        from apps.payments.selectors.payments import payments_for_document
+
+        return payments_for_document(
+            tenant=obj.tenant_id, document_type="sales_document", document_id=obj.id
+        )
 
     def get_doc_discount_allocation(self, obj: SalesDocument) -> dict:
         return (obj.meta or {}).get("doc_discount_allocation") or {}
