@@ -2,13 +2,24 @@
 
 import { useCallback, useState } from 'react';
 
+import dynamic from 'next/dynamic';
+
 import { Search } from 'lucide-react';
 
-import { UbButton, UbDrawer } from 'src/design-system';
+import { UbButton } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
 
 import { PartyQuickSearch } from 'modules/DigiKhaato/features/parties/components/PartyQuickSearch';
 import { useCanSearchParties } from 'modules/DigiKhaato/features/parties/hooks/usePartySearch';
+
+/**
+ * W4-P — the sheet (vaul, via `UbDrawer`) is fetched on the first tap rather
+ * than with every `(app)` route; see `MobileNavDrawer` for the measured reason.
+ */
+const UbDrawer = dynamic(
+  () => import('src/design-system/UbDrawer').then((module) => module.UbDrawer),
+  { ssr: false }
+);
 
 /**
  * UAT D2 (High/P1) — "find a khata" below 1024 px.
@@ -30,6 +41,7 @@ export function MobileQuickSearch(): React.JSX.Element | null {
   const { t } = useTranslation();
   const canSearch = useCanSearchParties();
   const [open, setOpen] = useState(false);
+  const [opened, setOpened] = useState(false);
   const close = useCallback(() => setOpen(false), []);
 
   if (!canSearch) return null;
@@ -39,21 +51,26 @@ export function MobileQuickSearch(): React.JSX.Element | null {
       <UbButton
         variant="ghost"
         iconOnly
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setOpened(true);
+          setOpen(true);
+        }}
         className="h-11 w-11 shrink-0 text-text-secondary"
         icon={<Search aria-hidden className="h-5 w-5" />}
       >
         {t('parties.quickSearch.label')}
       </UbButton>
-      <UbDrawer
-        open={open}
-        onOpenChange={setOpen}
-        title={t('parties.quickSearch.label')}
-        closeLabel={t('common.action.close')}
-        className="min-h-[60dvh]"
-      >
-        <PartyQuickSearch autoFocus inline onNavigate={close} />
-      </UbDrawer>
+      {opened && (
+        <UbDrawer
+          open={open}
+          onOpenChange={setOpen}
+          title={t('parties.quickSearch.label')}
+          closeLabel={t('common.action.close')}
+          className="min-h-[60dvh]"
+        >
+          <PartyQuickSearch autoFocus inline onNavigate={close} />
+        </UbDrawer>
+      )}
     </>
   );
 }

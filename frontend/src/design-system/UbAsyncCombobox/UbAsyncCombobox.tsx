@@ -2,19 +2,20 @@
 
 import { forwardRef, memo, useCallback, useState } from 'react';
 
-import { ChevronDown, Loader2, Plus } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 
-import {
-  MLCommand,
-  MLCommandGroup,
-  MLCommandInput,
-  MLCommandItem,
-  MLCommandList,
-  MLPopover,
-  MLPopoverContent,
-  MLPopoverTrigger,
-} from 'src/design-system/primitives';
+import { MLPopover, MLPopoverContent, MLPopoverTrigger } from 'src/design-system/primitives';
+import { deferredModule, useDeferredModule } from 'src/design-system/primitives/deferredModule';
 import { cn } from 'src/utils/cn';
+
+/**
+ * W4-P — the search list (cmdk) is fetched right after first paint, not in it:
+ * every line of the bill editors starts with this trigger, and none of them
+ * needs the list until it is opened. `primitives/deferredModule.ts` says why
+ * this is not `React.lazy` — this is the keyboard-first field a barcode
+ * scanner types into.
+ */
+const panelModule = deferredModule(() => import('./UbAsyncComboboxPanel'));
 
 /**
  * A combobox whose options come from the SERVER, as the query changes.
@@ -103,6 +104,7 @@ const UbAsyncComboboxInner = forwardRef<HTMLButtonElement, UbAsyncComboboxProps>
     const [open, setOpen] = useState(false);
     const trimmed = query.trim();
     const canCreate = Boolean(onCreate && createLabel && trimmed);
+    const panel = useDeferredModule(panelModule, open);
 
     const pick = useCallback(
       (option: UbAsyncComboboxOption) => {
@@ -179,58 +181,28 @@ const UbAsyncComboboxInner = forwardRef<HTMLButtonElement, UbAsyncComboboxProps>
           onKeyDownCapture={handleContentKey}
           className="w-[max(var(--radix-popover-trigger-width),18rem)] border-border-subtle bg-surface-card p-0"
         >
-          <MLCommand shouldFilter={false}>
-            <MLCommandInput
-              value={query}
-              onValueChange={onQueryChange}
-              placeholder={searchPlaceholder}
-              className="ds-body-base-regular h-10"
+          {panel ? (
+            <panel.UbAsyncComboboxPanel
+              query={query}
+              onQueryChange={onQueryChange}
+              options={options}
+              onPick={pick}
+              loading={loading}
+              searchPlaceholder={searchPlaceholder}
+              emptyLabel={emptyLabel}
+              loadingLabel={loadingLabel}
+              canCreate={canCreate}
+              trimmed={trimmed}
+              createLabel={createLabel}
+              onCreate={() => {
+                onCreate?.(trimmed);
+                setOpen(false);
+              }}
             />
-            <MLCommandList className="max-h-[min(18rem,55dvh)]">
-              {loading && (
-                <div className="ds-body-sm flex items-center gap-2 px-3 py-3 text-text-tertiary">
-                  <Loader2 aria-hidden className="h-4 w-4 animate-spin" />
-                  {loadingLabel}
-                </div>
-              )}
-              {!loading && options.length === 0 && !canCreate && (
-                <div className="ds-body-sm px-3 py-6 text-center text-text-tertiary">
-                  {emptyLabel}
-                </div>
-              )}
-              <MLCommandGroup>
-                {options.map((option) => (
-                  <MLCommandItem
-                    key={option.value}
-                    value={option.value}
-                    disabled={option.disabled}
-                    onSelect={() => pick(option)}
-                    className="ds-body flex-col items-start gap-0"
-                  >
-                    <span className="w-full truncate">{option.label}</span>
-                    {option.description && (
-                      <span className="ds-body-s-regular w-full truncate text-text-tertiary">
-                        {option.description}
-                      </span>
-                    )}
-                  </MLCommandItem>
-                ))}
-                {canCreate && (
-                  <MLCommandItem
-                    value={`__create__${trimmed}`}
-                    onSelect={() => {
-                      onCreate?.(trimmed);
-                      setOpen(false);
-                    }}
-                    className="ds-body gap-2 text-accent"
-                  >
-                    <Plus aria-hidden className="h-4 w-4 shrink-0" />
-                    <span className="truncate">{createLabel?.(trimmed)}</span>
-                  </MLCommandItem>
-                )}
-              </MLCommandGroup>
-            </MLCommandList>
-          </MLCommand>
+          ) : (
+            // The open that beat the chunk: a row the height of the search box.
+            <div aria-busy="true" className="h-10" />
+          )}
         </MLPopoverContent>
       </MLPopover>
     );
