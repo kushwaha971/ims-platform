@@ -33,5 +33,8 @@
   "ledger.upiApp.paytm": "Paytm",
   "ledger.upiApp.phonepe": "PhonePe",
   "ledger.upiApp.supermoney": "super.money",
-  "ledger.upiApp.whatsapp": "WhatsApp Pay"
+  "ledger.upiApp.whatsapp": "WhatsApp Pay",
+  "tax.rate.EXEMPT": "छूट प्राप्त",
+  "tax.rate.NIL": "शून्य दर",
+  "tax.rate.NONGST": "गैर-GST आपूर्ति"
 }

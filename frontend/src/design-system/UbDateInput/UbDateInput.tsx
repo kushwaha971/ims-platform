@@ -1,10 +1,11 @@
 'use client';
 
-import { forwardRef, memo, useCallback, useState, type ReactNode } from 'react';
+import { forwardRef, memo, useCallback, useContext, useState, type ReactNode } from 'react';
 
 import dynamic from 'next/dynamic';
 
 import { Calendar } from 'lucide-react';
+import { IntlContext } from 'react-intl';
 
 import { ML_CONTROL_TONE } from 'src/design-system/primitives/mlFormPrimitives';
 import { UbFilterChip, UbFilterChipGroup } from 'src/design-system/UbFilterChip';
@@ -133,12 +134,32 @@ const toIso = (date: Date): string => isoToday(date);
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+/** QA P-D6 — the same face in Hindi: "28 सित॰ 2026", not "28 Sep 2026" on a
+ *  Hindi screen. The abbreviations are CLDR's hi short months (what
+ *  `Intl` prints for hi-IN), written out for the same reason as `MONTHS`. */
+const MONTHS_HI = [
+  'जन॰',
+  'फ़र॰',
+  'मार्च',
+  'अप्रैल',
+  'मई',
+  'जून',
+  'जुल॰',
+  'अग॰',
+  'सित॰',
+  'अक्तू॰',
+  'नव॰',
+  'दिस॰',
+];
+
 /** "1 Apr 2026" — the owner confirmed this face on 23 Sep 2026. Written out
  *  rather than `Intl`: en-IN and en-GB both say "Sept", and the face must not
- *  follow the device's locale (04/01 on an en-US laptop is 1 April here). */
-const defaultFormat = (iso: string): string => {
+ *  follow the device's locale (04/01 on an en-US laptop is 1 April here). The
+ *  language is the APP's (react-intl's locale), never the device's. */
+export const formatDateFace = (iso: string, locale?: string): string => {
   const date = toDate(iso);
-  return date ? `${date.getDate()} ${MONTHS[date.getMonth()]} ${date.getFullYear()}` : iso;
+  const months = locale?.startsWith('hi') ? MONTHS_HI : MONTHS;
+  return date ? `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}` : iso;
 };
 
 const UbDateInputInner = forwardRef<HTMLButtonElement, UbDateInputProps>(function UbDateInputInner(
@@ -152,7 +173,7 @@ const UbDateInputInner = forwardRef<HTMLButtonElement, UbDateInputProps>(functio
     quickChoicesLabel,
     className,
     placeholder,
-    formatDate = defaultFormat,
+    formatDate,
     appearance = 'field',
     inlineLabel,
     disabled,
@@ -166,6 +187,10 @@ const UbDateInputInner = forwardRef<HTMLButtonElement, UbDateInputProps>(functio
   ref
 ) {
   const [open, setOpen] = useState(false);
+  // The context, not `useIntl()`: a control rendered outside a provider (a
+  // story, a bare test) falls back to English instead of throwing.
+  const intlLocale = useContext(IntlContext)?.locale;
+  const face = formatDate ?? ((iso: string) => formatDateFace(iso, intlLocale));
   const selected = toDate(value);
   const isInvalid = Boolean(invalid) || ariaInvalid === true;
 
@@ -234,7 +259,7 @@ const UbDateInputInner = forwardRef<HTMLButtonElement, UbDateInputProps>(functio
             <span className="ds-body-base-regular text-text-tertiary">{inlineLabel}</span>
           )}
           <span className={cn('ds-body-base-medium', !value && 'text-text-muted')}>
-            {value ? formatDate(value) : (placeholder ?? '')}
+            {value ? face(value) : (placeholder ?? '')}
           </span>
           <Calendar aria-hidden className="h-4 w-4 shrink-0 text-text-tertiary" />
         </>
@@ -242,7 +267,7 @@ const UbDateInputInner = forwardRef<HTMLButtonElement, UbDateInputProps>(functio
         <>
           <Calendar aria-hidden className="h-4 w-4 shrink-0 text-text-tertiary" />
           <span className={cn('min-w-0 flex-1 truncate', !value && 'text-text-muted')}>
-            {value ? formatDate(value) : (placeholder ?? '')}
+            {value ? face(value) : (placeholder ?? '')}
           </span>
         </>
       )}

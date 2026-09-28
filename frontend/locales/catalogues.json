@@ -88,6 +88,7 @@
     "settings.profile.": "businessProfile",
     "settings.noAccess.": "settingsGate",
     "settings.viewOnly": "settingsGate",
-    "settings.action.": "settingsGate"
+    "settings.action.": "settingsGate",
+    "tax.rate.": "money"
   }
 }

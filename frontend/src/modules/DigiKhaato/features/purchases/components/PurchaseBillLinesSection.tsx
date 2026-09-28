@@ -18,6 +18,7 @@ import { useAppDispatch } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import { formatAmount } from 'src/utils/money';
+import { taxRateLabel } from 'src/utils/taxRateLabel';
 
 import { useItemSearch } from '../../inventory/hooks/useItemSearch';
 import { ratePlaces } from '../../sales/view-model/invoiceForm';
@@ -135,8 +136,8 @@ export function PurchaseBillLinesSection({
   );
 
   const taxOptions = useMemo(
-    () => rateOptions.map((r) => ({ value: r.code, label: r.name })),
-    [rateOptions]
+    () => rateOptions.map((r) => ({ value: r.code, label: taxRateLabel(r, t) })),
+    [rateOptions, t]
   );
 
   const columns = useMemo<UbLineItemsColumn[]>(

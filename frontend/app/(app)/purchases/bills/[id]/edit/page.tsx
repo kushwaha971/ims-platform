@@ -9,6 +9,7 @@ import 'src/i18n/catalogues/itemPicker';
 import 'src/i18n/catalogues/movement';
 import 'src/i18n/catalogues/purchases';
 import 'src/i18n/catalogues/validation';
+import 'src/i18n/catalogues/money';
 
 /** PUR-01 FR-8 — `/purchases/bills/{id}/edit`: finish a draft. */
 export default function EditPurchaseBillPage({

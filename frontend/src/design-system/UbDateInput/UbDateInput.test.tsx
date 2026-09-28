@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { IntlProvider } from 'react-intl';
 
-import { isoFinancialYearStart, isoToday, UbDateInput } from './UbDateInput';
+import { formatDateFace, isoFinancialYearStart, isoToday, UbDateInput } from './UbDateInput';
 
 describe('the dates a merchant actually means', () => {
   it('puts the financial year start at 1 April, and last April before that', () => {
@@ -30,6 +31,19 @@ describe('the control', () => {
     render(<UbDateInput value="2026-04-01" onChange={jest.fn()} aria-label="As of" />);
 
     expect(screen.getByRole('button', { name: 'As of' })).toHaveTextContent('1 Apr 2026');
+  });
+
+  it('P-D6: on a Hindi screen the month is Hindi — "28 सित॰ 2026", not "28 Sep 2026"', () => {
+    /* QA P-D6 — the Hindi date control still read "28 Sep 2026". The face is the
+       owner's "1 Apr 2026" in the app's language (react-intl's), never the device's. */
+    render(
+      <IntlProvider locale="hi-IN" messages={{}}>
+        <UbDateInput value="2026-09-28" onChange={jest.fn()} aria-label="तारीख" />
+      </IntlProvider>
+    );
+    expect(screen.getByRole('button', { name: 'तारीख' })).toHaveTextContent('28 सित॰ 2026');
+    expect(formatDateFace('2026-04-01', 'hi-IN')).toBe('1 अप्रैल 2026');
+    expect(formatDateFace('2026-04-01', 'en-IN')).toBe('1 Apr 2026');
   });
 
   it('shows its placeholder, muted, when there is no date', () => {
