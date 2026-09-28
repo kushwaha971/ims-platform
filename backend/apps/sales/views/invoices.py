@@ -1,7 +1,9 @@
-"""`/sales/invoices` (SAL-02, SAL-03, SAL-06, SAL-07, SAL-08).
+"""`/sales/invoices` (SAL-02, SAL-03, SAL-05, SAL-06, SAL-07, SAL-08).
 
 Thin by construction (Part 26 §26.7 R7.1): authenticate, authorise, coerce,
-delegate to one service or selector, wrap in the envelope.
+delegate to one service or selector, wrap in the envelope. Only the tax kinds
+(`invoice`, `bill_of_supply`) are reachable here: an estimate's or a credit
+note's id is a 404 on every action, so no invoice write can land on either.
 """
 
 from __future__ import annotations
@@ -15,7 +17,6 @@ from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
 
 from apps.common.constants import ModuleCode
 from apps.common.context import Ctx
-from apps.common.dates import tenant_today
 from apps.common.exceptions import ValidationFailed
 from apps.common.idempotency import idempotent
 from apps.common.permissions import ModuleEnabled
@@ -26,25 +27,19 @@ from apps.sales.constants import TAB_STATUSES
 from apps.sales.filters import InvoiceFilterSet
 from apps.sales.models import SalesDocument
 from apps.sales.permissions import InvoicePermissions
-from apps.sales.selectors.documents import (
-    ORDERING_FIELDS,
-    apply_tab,
-    detail_queryset,
-    list_invoices,
-    list_totals,
-    tab_counts,
-)
+from apps.sales.selectors.documents import ORDERING_FIELDS, detail_queryset, list_invoices
 from apps.sales.serializers.document import (
     DocumentReadSerializer,
-    InvoiceListSerializer,
     InvoiceWriteSerializer,
     IssueSerializer,
     ShareLinkSerializer,
 )
+from apps.sales.serializers.flows import VoidSerializer
 from apps.sales.services import documents as drafts
 from apps.sales.services.issue import issue_invoice
-from apps.sales.services.issue_parts import rule46_for
 from apps.sales.services.share import create_share_link, upi_intent
+from apps.sales.services.void import void_invoice
+from apps.sales.views.common import created, envelope, ok, tabbed_list
 
 
 def _require_key(request: Any) -> None:
@@ -53,21 +48,6 @@ def _require_key(request: Any) -> None:
         raise ValidationFailed(
             {"idempotency_key": ["Idempotency-Key header is required to issue."]}
         )
-
-
-def _rule46(document: SalesDocument) -> dict:
-    rows = [
-        {"hsn_sac": line.hsn_sac, "description": line.description} for line in document.lines.all()
-    ]
-    return rule46_for(document.tenant, document, rows)
-
-
-def _envelope(
-    document: SalesDocument, *, warnings: list | None = None, extra: dict | None = None
-) -> dict:
-    document = detail_queryset(tenant=document.tenant).get(pk=document.pk)
-    meta = {"warnings": warnings or [], "rule46": _rule46(document), **(extra or {})}
-    return {"data": DocumentReadSerializer(document).data, "meta": meta}
 
 
 class InvoiceViewSet(
@@ -93,35 +73,10 @@ class InvoiceViewSet(
         return detail_queryset(tenant=self.get_tenant())
 
     def list(self, request: Any, *args: Any, **kwargs: Any) -> Any:
-        tab = request.query_params.get("tab") or "all"
-        if tab not in TAB_STATUSES:
-            raise ValidationFailed({"tab": ["Choose all, unpaid, overdue, paid, draft or void."]})
-        ordering = (request.query_params.get("ordering") or "").strip()
-        if ordering and ordering.lstrip("-") not in ORDERING_FIELDS:
-            raise ValidationFailed({"ordering": [f"Sort by one of {', '.join(ORDERING_FIELDS)}."]})
-        filtered = self.filter_queryset(self.get_queryset())
-        tabs = tab_counts(filtered)
-        queryset = apply_tab(filtered, tab)
-        totals = list_totals(queryset)
-        page = self.paginate_queryset(queryset)
-        data = InvoiceListSerializer(
-            page, many=True, context={"today": tenant_today(self.get_tenant())}
-        ).data
-        meta = {
-            **self.paginator.get_meta(),
-            "totals": {
-                "count": totals["count"],
-                "grand_total": str(totals["grand_total"]),
-                "amount_due": str(totals["amount_due"]),
-            },
-            "tabs": tabs,
-        }
-        return StandardResponse.ok(data, meta=meta)
+        return tabbed_list(self, request, TAB_STATUSES)
 
     def retrieve(self, request: Any, *args: Any, **kwargs: Any) -> Any:
-        document = get_object_or_404(self.get_queryset(), pk=kwargs["pk"])
-        body = _envelope(document)
-        return StandardResponse.ok(body["data"], meta=body["meta"])
+        return ok(get_object_or_404(self.get_queryset(), pk=kwargs["pk"]))
 
     def create(self, request: Any, *args: Any, **kwargs: Any) -> Any:
         if request.query_params.get("issue") == "true":
@@ -132,8 +87,7 @@ class InvoiceViewSet(
         result = drafts.create_draft(
             ctx=Ctx.from_request(request), payload=dict(serializer.validated_data)
         )
-        body = _envelope(result["document"], warnings=result["warnings"])
-        return StandardResponse.created(body["data"], meta=body["meta"])
+        return created(result["document"], warnings=result["warnings"])
 
     @idempotent("sales_invoice_issue")
     def _create_and_issue(self, request: Any) -> Any:
@@ -161,8 +115,7 @@ class InvoiceViewSet(
             document_id=kwargs["pk"],
             payload=dict(serializer.validated_data),
         )
-        body = _envelope(result["document"], warnings=result["warnings"])
-        return StandardResponse.ok(body["data"], meta=body["meta"])
+        return ok(result["document"], warnings=result["warnings"])
 
     def destroy(self, request: Any, *args: Any, **kwargs: Any) -> Any:
         drafts.delete_draft(ctx=Ctx.from_request(request), document_id=kwargs["pk"])
@@ -194,13 +147,33 @@ class InvoiceViewSet(
             extra["party_balance"] = str(result["party_balance"])
         if result["ledger_entry_id"]:
             extra["ledger_entry_id"] = result["ledger_entry_id"]
-        body = _envelope(result["document"], warnings=result["warnings"], extra=extra)
+        body = envelope(result["document"], warnings=result["warnings"], extra=extra)
         if created:
             return StandardResponse.created(body["data"], meta=body["meta"])
         return StandardResponse.ok(body["data"], meta=body["meta"])
 
+    @action(detail=True, methods=["post"], url_path="void")
+    def void(self, request: Any, *args: Any, **kwargs: Any) -> Any:
+        """SAL-05 — `{reason}` → the void document, its reversals and the payments left over."""
+        serializer = VoidSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        result = void_invoice(
+            ctx=Ctx.from_request(request),
+            document_id=kwargs["pk"],
+            reason=serializer.validated_data.get("reason"),
+        )
+        extra: dict[str, Any] = {
+            "reversals": result["reversals"],
+            "unallocated_payments": result["unallocated_payments"],
+            "released_credit": result["released_credit"],
+        }
+        if result["party_balance"] is not None:
+            extra["party_balance"] = str(result["party_balance"])
+        return ok(result["document"], extra=extra)
+
     @action(detail=True, methods=["post"], url_path="share-links")
     def share_links(self, request: Any, *args: Any, **kwargs: Any) -> Any:
+        get_object_or_404(self.get_queryset(), pk=kwargs["pk"])
         serializer = ShareLinkSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         link = create_share_link(

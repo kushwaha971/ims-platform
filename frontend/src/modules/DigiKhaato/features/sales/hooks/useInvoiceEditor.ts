@@ -15,6 +15,7 @@ import {
   selectInvoiceEditor,
   type InvoiceEditorState,
 } from '../redux/invoiceEditorSlice';
+import { fetchFlowDocument, moveEstimate, saveEstimateDraft } from '../redux/salesFlowThunk';
 import {
   fetchInvoice,
   fetchSalesContext,
@@ -42,7 +43,17 @@ import type { SalesDocumentEnvelope } from '../types/sales.types';
  * by the server's figures the moment a save returns — and at issue the server
  * recomputes everything regardless (FR-3).
  */
+/** SAL-01 TSK-SAL-01-07 — the kind drives the title, the fields and the actions; one editor. */
+export type EditorKind = 'invoice' | 'estimate';
+
+/** The draft body for the kind: an estimate adds its validity and never has a due date. */
+const wireBodyFor = (kind: EditorKind, values: InvoiceFormValues): Record<string, unknown> =>
+  kind === 'estimate'
+    ? { ...toWireBody(values), due_on: null, valid_until: values.validUntil || null }
+    : toWireBody(values);
+
 export interface UseInvoiceEditorResult {
+  readonly kind: EditorKind;
   readonly form: UseFormReturn<InvoiceFormValues>;
   readonly values: InvoiceFormValues;
   readonly preview: EngineResult;
@@ -57,13 +68,17 @@ export interface UseInvoiceEditorResult {
   readonly restart: () => void;
 }
 
-export const useInvoiceEditor = (documentId: string | null): UseInvoiceEditorResult => {
+export const useInvoiceEditor = (
+  documentId: string | null,
+  kind: EditorKind = 'invoice'
+): UseInvoiceEditorResult => {
   const dispatch = useAppDispatch();
   const editor = useAppSelector(selectInvoiceEditor);
   const timezone = useAppSelector(selectTenantTimezone);
   const { can, hasModule } = usePermissions();
   const today = useMemo(() => todayInTenantTz(timezone ?? undefined), [timezone]);
-  const canWrite = hasModule('sales') && can('sales.invoice.write');
+  const canWrite =
+    hasModule('sales') && can(kind === 'estimate' ? 'sales.estimate.write' : 'sales.invoice.write');
   const idempotency = useIdempotencyKey();
 
   const form = useForm<InvoiceFormValues>({
@@ -76,12 +91,16 @@ export const useInvoiceEditor = (documentId: string | null): UseInvoiceEditorRes
   useEffect(() => {
     dispatch(editorReset());
     const context = dispatch(fetchSalesContext(today));
-    const draft = documentId ? dispatch(fetchInvoice(documentId)) : null;
+    const draft = !documentId
+      ? null
+      : kind === 'estimate'
+        ? dispatch(fetchFlowDocument({ kind: 'estimate', id: documentId }))
+        : dispatch(fetchInvoice(documentId));
     return () => {
       context.abort();
       draft?.abort();
     };
-  }, [dispatch, documentId, today]);
+  }, [dispatch, documentId, today, kind]);
 
   // Seed the form ONCE per editor: from the draft, or from the shop's defaults.
   const seeded = useRef<string | null>(null);
@@ -126,23 +145,36 @@ export const useInvoiceEditor = (documentId: string | null): UseInvoiceEditorRes
   const { documentId: savedId, version } = editor;
   const save = useCallback(
     async (quiet: boolean): Promise<SalesDocumentEnvelope | null> => {
-      const result = await dispatch(
-        saveInvoiceDraft({ id: savedId, version, body: toWireBody(form.getValues()), quiet })
-      );
-      if (!saveInvoiceDraft.fulfilled.match(result)) return null;
+      const arg = { id: savedId, version, body: wireBodyFor(kind, form.getValues()), quiet };
+      const result =
+        kind === 'estimate'
+          ? await dispatch(saveEstimateDraft(arg))
+          : await dispatch(saveInvoiceDraft(arg));
+      if (!(
+        saveInvoiceDraft.fulfilled.match(result) || saveEstimateDraft.fulfilled.match(result)
+      )) {
+        return null;
+      }
       // FR-5 — the server resolved the place of supply for a freshly picked party.
       if (!form.getValues('placeOfSupplyState')) {
         form.setValue('placeOfSupplyState', result.payload.document.placeOfSupplyState);
       }
       return result.payload;
     },
-    [dispatch, savedId, version, form]
+    [dispatch, savedId, version, form, kind]
   );
 
   const issue = useCallback(
     async (payment: readonly PaymentRowForm[] | null, override = false) => {
       const saved = await save(false);
       if (!saved) return null;
+      if (kind === 'estimate') {
+        // SAL-01 FR-2 — an estimate's "issue" is `mark-sent`, which numbers it.
+        const sent = await dispatch(
+          moveEstimate({ id: saved.document.id, move: 'sent', version: saved.document.version })
+        );
+        return moveEstimate.fulfilled.match(sent) ? sent.payload : null;
+      }
       const body: Record<string, unknown> = { version: saved.document.version, override };
       if (payment) body.payment = paymentWireBody(payment, form.getValues('documentDate'));
       const result = await dispatch(
@@ -159,7 +191,7 @@ export const useInvoiceEditor = (documentId: string | null): UseInvoiceEditorRes
       }
       return null;
     },
-    [save, dispatch, form, idempotency]
+    [save, dispatch, form, idempotency, kind]
   );
 
   /** "New bill" after an issue on `/new`: a blank editor without a page load (Ctrl+N, §6). */
@@ -172,5 +204,5 @@ export const useInvoiceEditor = (documentId: string | null): UseInvoiceEditorRes
     idempotency.rotate();
   }, [dispatch, form, today, context, idempotency]);
 
-  return { form, values, preview, editor, today, canWrite, save, issue, restart };
+  return { kind, form, values, preview, editor, today, canWrite, save, issue, restart };
 };

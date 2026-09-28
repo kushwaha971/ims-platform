@@ -730,6 +730,61 @@ track follows the code, not §19, and §19 should be amended to match.
 `/d/[token]` page render (the API answers, the page is still the stub); SAL-06 FR-5 duplicate;
 the stale-draft flag; print copies (original/duplicate/triplicate); a separate `/print` route
 (the detail page prints itself; the success sheet opens it with `?print=1`); void (SAL-05).
+## CR-2026-09-28-SAL-B — SAL-01/04/05: estimates, credit notes and void, beside the FRDs
+
+**State:** `raised`. **Target:** Part 17-04 SAL-01, SAL-04, SAL-05; Part 21 §21.3.7; Part 20
+§20.1.4 (the payments seam); canon §0.9 (staff role). **Gate:** none — additive; migration
+`sales 0002_estimates_credit_notes`.
+
+**Columns beside §21.3.7.** `valid_until`, `against_id`, `converted_to_id` and
+`converted_from_id` are §21.3.7's. Added beside it: `sales_document_line.against_line_id`
+(a credit-note line → the invoice line it returns), because the cap and the `returned_qty`
+cache are per LINE — an invoice can carry the same item twice at two prices — and
+`IX(tenant_id, against_id)` (CR-SAL-3's optional index). `sales_credit_application` is Part
+21 §21.3.9's decided table with `U(credit_note_id, invoice_id)`; a second application of the
+same pair adds to `amount`. `converted_to` / `converted_from` are `SET NULL`, so discarding a
+converted DRAFT invoice frees the estimate to be converted again (the EC-9 relaxation of BR-6
+extends to a discarded draft as well as a voided invoice).
+
+**Where FR-12's reason lives.** In `meta.reason = {code, note}`, not prefixed into `notes`:
+`notes` prints, and "sales_return: two bottles leaked" on a customer's copy is a database
+code on paper. `restock`, `settlement` and the requested refund are in `meta` for the same
+no-column reason.
+
+**The payments seam.** `sales` may not import `payments`, and PAY-01 lands in parallel. Two
+functions are the whole of it and PAY-01 replaces their bodies, keeping callers and shapes:
+`services/refund_seam.record_refund` (a credit note's refund: the breakup in `meta.refund`,
+`amount_paid` as the cache, and the `payment_out` ledger debit BR-4 needs — to become
+`record_payment(direction='out')` allocated to the note) and `services/void_seam.
+release_invoice_payments` (SAL-05 FR-6 — today only a walk-in bill holds money, reported with
+`walk_in: true`; PAY-01 deletes the invoice's `payments_allocation` rows and reports each
+payment). Consequence stated plainly: until PAY-05 can void a refund, a refunded credit note
+cannot be voided (FR-10's rule, with no way yet to satisfy it). `services/amounts.
+refresh_invoice_amounts(invoice, amount_paid=…)` is the one recompute of `amount_due` and
+status from `grand_total − amount_paid − Σ applications` (BR-9); PAY-01's allocation should
+call it rather than keep a second formula.
+
+**Void of an invoice with credit notes.** FR-3 blocks while a non-void note stands AGAINST the
+invoice. Credit applied to it from OTHER notes (via `/apply`) is released back to those notes
+as open credit (BR-5), and the response's `meta.released_credit` names them.
+
+**Estimate status moves** are `POST …/mark-sent | mark-accepted | mark-rejected` (CR-SAL-1).
+Accept and reject start from `sent` only; `convert` from `sent | accepted | expired`. A second
+conversion is 409 `document_not_draft` "Estimate already converted". Expiry is the job
+`sales.expire_estimates` at 00:20 IST, by each tenant's own date, one `estimate.expired` audit
+row per estimate.
+
+**Staff hold `sales.credit_note.write`.** SAL-04 §12 and T-SAL04-10 give it to staff "per canon
+role"; the role table had omitted it. Void stays `sales.invoice.void` (owner, admin).
+
+**Not built, with reasons.** A standalone credit note in the UI (the API does it — FR-3 — but
+every counter return starts from a bill, and a party-and-lines editor for goodwill notes is a
+second editor); credit-note drafts in the UI (the return editor issues in one request with an
+Idempotency-Key; the API keeps drafts); "Duplicate & edit" (SAL-06 FR-5, not built for
+invoices either); the notification/SMS templates (NTF owns them); analytics events; restock or
+reversal onto an ARCHIVED item (`inventory.post_movements` refuses archived items and this track
+does not change the inventory writer — SAL-04 EC-2 / SAL-05 EC-1 surface as 409
+`item_archived`); the previous-FY warning for a void (SAL-05 EC-5).
 ## CR-2026-09-24-IMP-A — IMP-01 / PTY-10 / INV-09 / IMP-02: what was built beside the FRDs
 
 **State:** `raised`. **Target:** Part 17-01 PTY-10, Part 17-03 IMP-01/IMP-02/INV-09, Part 21
@@ -1026,3 +1081,42 @@ wave; supplier payment and pay-now (PUR-02); inline item and supplier creation f
 (FR-12, the PTY-01 quick form); scanner-driven lines; "Duplicate" and "Void and duplicate"
 (FR-9/FR-7 of PUR-04); `PurchaseBillPrint`; the purchase-register CSV (PUR-03 FR-8, RPT-04);
 bulk pay; `document_voided` notification to owners (PUR-04 §17); analytics events.
+
+## CR-2026-09-28-INT-A — W3 integration: payments × sales completion
+
+**One due formula.** An invoice's `amount_due` is `grand_total − amount_paid − Σ
+sales_credit_application` (SAL-02 BR-9) for every writer. PAY-01's sales allocation target now
+moves only `amount_paid` by the allocated delta and derives `amount_due` and the status through
+`sales.services.amounts.refresh_invoice_amounts`, so a credit note applied by SAL-04 is never
+clobbered by a payment and vice versa (test: ₹1000 invoice, ₹200 credit, ₹300 payment → ₹500 due;
+void the payment → ₹800; void the credit note → ₹1000). A walk-in bill keeps the target's own
+rule (`ck_sales_document_walk_in_paid` holds its due at zero).
+
+**LED-10 everywhere.** `sales/services/ledger_link.py` is now one-line calls into
+`ledger.services.postings`: `post_source_entry` for the invoice debit and the credit note credit,
+`reverse_source_entries` for a document void (C6 — dated today, sourced to the document). The
+posting matrix already allowed both entry types; it was not changed.
+
+**A credit note's refund is a PAY-01 voucher (SAL-04 FR-7 delta).** FR-7 says the refund payment
+is "allocated to the credit note". There is no credit-note allocation target (registering one with
+`direction='out'` would let PUR-02's FIFO auto-allocation settle customers' credit notes with
+supplier payments), so the refund is `record_payment(direction='out', allocations='none',
+meta={credit_note_id, credit_note_number})`. The PAYMENT posts the `payment_out` debit (sourced to
+the payment, not the note); the note's `amount_paid` still carries the refunded amount and
+`meta.refund` names the receipt (`payment_id`, `number`). FR-7 should be amended to match.
+
+**FR-10 is now reachable.** Voiding the refund voucher (`void_payment`) calls
+`sales.services.refund_seam.release_refund`, which gives the amount back to the note as open
+credit (audit `credit_note.refund_released`, `meta.refund.voided = true`); the note can then be
+voided. "Void the refund payment first" remains the refusal while the refund stands.
+
+**Invoice void releases real allocations (SAL-05 BR-4).** `void_seam.release_invoice_payments`
+calls PAY-05's `release_document_allocations`: the payments stay `recorded`, their
+`unallocated_amount` grows, and the response names each receipt (`payment_id`, `number`, `amount`,
+`walk_in`). The void dialog's follow-up lists and links those receipts: a party's money is an
+advance (given back, if at all, as a Paid-out payment); a walk-in's is handed back and the merchant
+voids the receipt.
+
+**Import rule.** Sales reaches payments only through deferred imports inside the two seams — the
+Part 20 §20.1.4 rule D5 pattern `payment_seam.py` already uses; payments imports sales at module
+level as the matrix allows.

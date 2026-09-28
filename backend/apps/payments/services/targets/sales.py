@@ -1,7 +1,11 @@
 """The sales invoice as an allocation target (PAY-01 BR-3/BR-4, PAY-05 FR-4/FR-5).
 
 ── Status after a move (BR-4) ───────────────────────────────────────────────
-`amount_due = 0` → `paid`; still due and `due_on` before the tenant's today →
+A party invoice's `amount_due` is recomputed by sales'
+`refresh_invoice_amounts` (SAL-02 BR-9: `grand_total − amount_paid −
+Σ credit applications`) after `amount_paid` moves by the allocated delta, and
+its status by the same module's `invoice_status_for` — one formula for every
+writer. `amount_due = 0` → `paid`; still due and `due_on` before the tenant's today →
 `overdue` (recomputed immediately, not left for the nightly job); still due and
 something paid or credited → `partially_paid`; otherwise `issued`.
 
@@ -27,6 +31,7 @@ from django.db.models import F
 from apps.common.audit import AuditAction
 from apps.common.money import ZERO
 from apps.sales.models import SalesDocument
+from apps.sales.services.amounts import refresh_invoice_amounts
 
 #: The kinds a payment may settle. Estimates and credit notes (SAL-01/SAL-04)
 #: share the table and are never allocation targets.
@@ -88,8 +93,14 @@ class SalesInvoiceTarget:
     def _move(self, document: SalesDocument, delta: Decimal, today: dt.date) -> tuple[str, str]:
         before = document.status
         document.amount_paid = document.amount_paid + delta
-        if document.party_id is not None:
-            document.amount_due = document.amount_due - delta
+        if document.party_id is not None and document.status not in ("void", "draft"):
+            # SAL-02 BR-9 — ONE formula for a party invoice's due, owned by sales:
+            # `grand_total − amount_paid − Σ credit applications`. Only
+            # `amount_paid` moves by the delta; the credit half is re-read from
+            # `sales_credit_application`, so a credit note applied by SAL-04 is
+            # never clobbered by a payment's move (and vice versa).
+            refresh_invoice_amounts(document, amount_paid=document.amount_paid)
+            return before, document.status
         document.status = self._status(document, today)
         SalesDocument.objects.filter(pk=document.pk).update(
             amount_paid=document.amount_paid,

@@ -18,9 +18,11 @@ here and neither document app imports payments at module level.
   criterion; Part 20 §20.11.2 L3), so two payments touching the same bills
   can never deadlock.
 * `outstanding()` is what the document can still take. `apply()` and
-  `unapply()` MOVE the document's paid caches by the allocated amount
-  (`amount_paid ± a`, `amount_due ∓ a`) and never recompute them from scratch,
-  so a credit applied by another feature (SAL-04's credit note) is preserved.
+  `unapply()` MOVE the document's `amount_paid` by the allocated amount and
+  then derive `amount_due` with the owning app's one formula (sales:
+  `refresh_invoice_amounts`, `grand_total − amount_paid − Σ credit
+  applications`), so a credit applied by another feature (SAL-04's credit
+  note) is preserved and no two writers keep their own arithmetic.
 * Status is recomputed by the target's own rule after every move — never
   toggled — so a bill another payment also settled stays paid (PAY-05 EC-2).
 """

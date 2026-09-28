@@ -9,7 +9,6 @@ import { Save, Send, Trash2 } from 'lucide-react';
 
 import {
   UbButton,
-  UbConfirmDialog,
   UbEmptyState,
   UbForm,
   UbGrid,
@@ -28,11 +27,12 @@ import { ROUTES } from 'src/routes';
 
 import { useDraftAutosave } from '../hooks/useDraftAutosave';
 import { useEditorWindowEffects } from '../hooks/useEditorWindowEffects';
-import { useInvoiceEditor } from '../hooks/useInvoiceEditor';
-import { conflictResolved } from '../redux/invoiceEditorSlice';
+import { useInvoiceEditor, type EditorKind } from '../hooks/useInvoiceEditor';
+import { deleteEstimateDraft } from '../redux/salesFlowThunk';
 import { deleteInvoiceDraft } from '../redux/salesThunk';
 import { documentTitleId } from '../view-model/invoiceDisplay';
 
+import { InvoiceEditorDialogs } from './InvoiceEditorDialogs';
 import { InvoiceLinesSection } from './InvoiceLinesSection';
 import { InvoicePartySection } from './InvoicePartySection';
 import { InvoiceSaveIndicator } from './InvoiceSaveIndicator';
@@ -56,20 +56,28 @@ const IssuedDialogLazy = dynamic(
  * grid; the totals panel sticky on the right; Save draft (Ctrl+S) and Issue
  * (Ctrl+Enter) in the header. A walk-in pays in full through the payment
  * sheet (F8); a party bill issues on credit to the khata.
+ *
+ * SAL-01 — `kind="estimate"` is the SAME editor (TSK-SAL-01-07): "Valid until"
+ * in place of the due date, "Estimated GST" in the totals, and "Save & send"
+ * in place of Issue — which numbers the estimate and opens it, never posting
+ * stock, ledger or a payment.
  */
 export function InvoiceEditorPageContent({
   documentId,
-}: Readonly<{ documentId: string | null }>): React.JSX.Element {
+  kind = 'invoice',
+}: Readonly<{ documentId: string | null; kind?: EditorKind }>): React.JSX.Element {
   const { t } = useTranslation();
   const router = useRouter();
   const dispatch = useAppDispatch();
   const locale = useAppSelector(selectLocale);
   const role = useAppSelector(selectActiveRole);
-  const editor = useInvoiceEditor(documentId);
+  const editor = useInvoiceEditor(documentId, kind);
   const autosave = useDraftAutosave(editor, documentId);
   const { form, preview, editor: server, canWrite, save, issue, values, today } = editor;
   const [paying, setPaying] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const estimate = kind === 'estimate';
+  const home = estimate ? ROUTES.SALES_ESTIMATES : ROUTES.SALES_INVOICES;
 
   const context = server.context;
   const taxFree = context ? context.gstType !== 'regular' : false;
@@ -85,17 +93,20 @@ export function InvoiceEditorPageContent({
       if (result) {
         setPaying(false);
         autosave.clearLocal();
+        // An estimate has no success sheet: it opens, numbered, to be shared.
+        if (estimate) router.push(`${ROUTES.SALES_ESTIMATES}/${result.document.id}`);
       }
     },
-    [issue, autosave]
+    [issue, autosave, estimate, router]
   );
   const startIssue = useCallback(() => {
     if (!hasLines || locked) return;
     // SAL-07 FR-3 / SAL-02 FR-10 — a walk-in pays in full; a party bill may
-    // take a payment at issue or go on "Full credit" from the same sheet.
-    if (preview.grandTotal !== '0.00') setPaying(true);
+    // take a payment at issue or go on "Full credit" from the same sheet. An
+    // estimate moves no money (SAL-01 FR-8): it is saved, never paid.
+    if (!estimate && preview.grandTotal !== '0.00') setPaying(true);
     else void finishIssue(null);
-  }, [hasLines, locked, preview.grandTotal, finishIssue]);
+  }, [hasLines, locked, estimate, preview.grandTotal, finishIssue]);
 
   const saveNow = useCallback(() => void save(false), [save]);
   useEditorWindowEffects({
@@ -105,6 +116,15 @@ export function InvoiceEditorPageContent({
     onSave: saveNow,
     onIssue: startIssue,
   });
+
+  const onDelete = useCallback(() => {
+    if (!server.documentId) return;
+    const thunk = estimate ? deleteEstimateDraft : deleteInvoiceDraft;
+    void dispatch(thunk(server.documentId)).then(() => {
+      autosave.clearLocal();
+      router.push(home);
+    });
+  }, [server.documentId, estimate, dispatch, autosave, router, home]);
 
   if (!canWrite) {
     return (
@@ -123,7 +143,7 @@ export function InvoiceEditorPageContent({
 
   const title = t(
     documentTitleId(
-      context.gstType === 'composition' ? 'bill_of_supply' : 'invoice',
+      estimate ? 'estimate' : context.gstType === 'composition' ? 'bill_of_supply' : 'invoice',
       context.gstType
     )
   );
@@ -167,11 +187,11 @@ export function InvoiceEditorPageContent({
               icon={<Send className="h-4 w-4" aria-hidden />}
               onClick={startIssue}
               busy={server.issuing}
-              busyLabel={t('sales.editor.issuing')}
+              busyLabel={t(estimate ? 'sales.estimate.sending' : 'sales.editor.issuing')}
               disabled={!hasLines || locked}
               data-testid="invoice-issue"
             >
-              {t('sales.editor.issue')}
+              {t(estimate ? 'sales.estimate.saveAndSend' : 'sales.editor.issue')}
             </UbButton>
           </>
         }
@@ -204,6 +224,7 @@ export function InvoiceEditorPageContent({
                 tenantState={context.stateCode}
                 locale={locale}
                 disabled={locked}
+                kind={kind}
               />
             </UbPanel>
             <InvoiceLinesSection
@@ -219,7 +240,8 @@ export function InvoiceEditorPageContent({
             form={form}
             preview={preview}
             taxFree={taxFree}
-            rule46={server.rule46}
+            estimated={estimate}
+            rule46={estimate ? null : server.rule46}
             warnings={server.warnings}
             disabled={locked}
           />
@@ -253,50 +275,12 @@ export function InvoiceEditorPageContent({
           }}
         />
       )}
-      <UbConfirmDialog
-        open={!!autosave.restore}
-        onOpenChange={(open) => !open && autosave.discardRestore()}
-        title={t('sales.draft.restoreTitle')}
-        description={t('sales.draft.restoreBody')}
-        confirmLabel={t('sales.draft.restore')}
-        cancelLabel={t('sales.draft.discard')}
-        closeLabel={t('common.action.close')}
-        onConfirm={autosave.acceptRestore}
-      />
-      <UbConfirmDialog
-        open={server.saveState === 'conflict'}
-        onOpenChange={(open) => {
-          // "Use server version": drop this device's copy and reopen the draft as saved.
-          if (open) return;
-          autosave.clearLocal();
-          window.location.reload();
-        }}
-        title={t('sales.draft.conflictTitle')}
-        description={t('sales.draft.conflictBody')}
-        confirmLabel={t('sales.draft.keepMine')}
-        cancelLabel={t('sales.draft.useServer')}
-        closeLabel={t('common.action.close')}
-        onConfirm={() => {
-          const current = Number(server.error?.details?.current_version ?? server.version);
-          dispatch(conflictResolved({ version: current }));
-        }}
-      />
-      <UbConfirmDialog
-        open={confirmDelete}
-        onOpenChange={setConfirmDelete}
-        title={t('sales.editor.deleteTitle')}
-        description={t('sales.editor.deleteBody')}
-        confirmLabel={t('sales.editor.delete')}
-        cancelLabel={t('common.action.cancel')}
-        closeLabel={t('common.action.close')}
-        destructive
-        onConfirm={() => {
-          if (!server.documentId) return;
-          void dispatch(deleteInvoiceDraft(server.documentId)).then(() => {
-            autosave.clearLocal();
-            router.push(ROUTES.SALES_INVOICES);
-          });
-        }}
+      <InvoiceEditorDialogs
+        autosave={autosave}
+        server={server}
+        confirmDelete={confirmDelete}
+        onConfirmDeleteChange={setConfirmDelete}
+        onDelete={onDelete}
       />
     </UbPageShell>
   );

@@ -82,6 +82,13 @@ export const PERMISSION_CODES = [
   'sales.invoice.read',
   /** SAL-02 §12 — create, edit and issue a bill; the accountant never holds it. */
   'sales.invoice.write',
+  /** SAL-05 §12 — void a bill or a credit note: owner and admin only. */
+  'sales.invoice.void',
+  /** SAL-01 §12 — estimates: the accountant reads them and writes none. */
+  'sales.estimate.read',
+  'sales.estimate.write',
+  /** SAL-04 §12 — returns; staff hold it (they start returns at the counter). */
+  'sales.credit_note.write',
   'purchases.bill.read',
   /** PUR-01 §12 / PUR-04 §12 — record a bill (not the accountant); void one (owner, admin). */
   'purchases.bill.write',

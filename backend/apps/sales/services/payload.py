@@ -17,7 +17,7 @@ from apps.common.money import D
 from apps.sales.constants import KIND_FOR_GST_TYPE, NOTES_MAX, WALK_IN_NAME_MAX
 from apps.sales.models import SalesDocument, SalesDocumentLine
 from apps.sales.services import settings as sales_settings
-from apps.sales.services.lines import build_lines
+from apps.sales.services.lines import BuiltLines, build_lines
 from apps.tax.services.tax_engine import EngineDocument, compute_document_totals
 
 HEADER_FIELDS = (
@@ -82,10 +82,20 @@ def _parse_date(raw: Any, name: str, errors: dict) -> dt.date | None:
         return None
 
 
-def apply_payload(ctx: Ctx, document: SalesDocument, payload: dict, *, strict: bool) -> dict:
+def apply_payload(
+    ctx: Ctx,
+    document: SalesDocument,
+    payload: dict,
+    *,
+    strict: bool,
+    built: BuiltLines | None = None,
+) -> dict:
     """Validate the header and lines, compute totals, write them onto `document`.
 
-    Returns `{rows, warnings, items}`. Raises 400 with every field error at once.
+    `built` is a caller's own lines (a credit note's return lines, priced at
+    the invoice's snapshot rates — SAL-04 BR-1); otherwise `payload["lines"]`
+    is built at the document date's rates. Returns `{rows, warnings, items}`.
+    Raises 400 with every field error at once.
     """
     tenant = ctx.tenant
     errors: dict[str, list[str]] = {}
@@ -133,17 +143,20 @@ def apply_payload(ctx: Ctx, document: SalesDocument, payload: dict, *, strict: b
     elif document.discount_type == "percent" and D(document.discount_value) > 100:
         errors["discount_value"] = ["Discount must be between 0 and 100 %."]
 
-    raw_lines = payload.get("lines")
-    if raw_lines is None:
-        raw_lines = [_line_as_payload(line) for line in document.lines.all()] if document.pk else []
-    built = build_lines(
-        tenant=tenant,
-        document_date=doc_date,
-        raw_lines=list(raw_lines),
-        strict=strict,
-        allow_free_text=sales_settings.allow_free_text_lines(tenant),
-        errors=errors,
-    )
+    if built is None:
+        raw_lines = payload.get("lines")
+        if raw_lines is None:
+            raw_lines = (
+                [_line_as_payload(line) for line in document.lines.all()] if document.pk else []
+            )
+        built = build_lines(
+            tenant=tenant,
+            document_date=doc_date,
+            raw_lines=list(raw_lines),
+            strict=strict,
+            allow_free_text=sales_settings.allow_free_text_lines(tenant),
+            errors=errors,
+        )
     if errors:
         raise ValidationFailed(errors)
 

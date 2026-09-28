@@ -510,10 +510,12 @@ export const INVALIDATION: TInvalidationMap = {
     stale: ['invoiceList', 'statement', 'ledgerAging'],
   },
   // The receipt page swaps to Void in place from the response (the `patch`).
+  // Voiding a credit note's refund voucher gives the note its credit back
+  // (SAL-04 FR-10), so the estimates / credit notes list is stale too.
   voidPayment: {
     patch: [['paymentReceipt', 'payment']],
     refetch: [...LEDGER_WRITE_REFETCH, 'paymentList'],
-    stale: ['invoiceList', 'statement', 'ledgerAging'],
+    stale: ['invoiceList', 'salesDocList', 'statement', 'ledgerAging'],
   },
   // A share is words handed to WhatsApp, and an audit row: no money moves, so
   // nothing else is stale. The receipt slice records the share's state.
@@ -542,6 +544,66 @@ export const INVALIDATION: TInvalidationMap = {
   voidPurchaseBill: {
     patch: [['purchaseBillDetail', 'bill']],
     stale: ['purchaseBillList', ...EXPENSE_LEDGER_STALE, 'itemList', 'itemDetail', 'stockSummary'],
+  },
+  // ── SAL-01 / SAL-04 / SAL-05 — estimates, credit notes, void ─────────────
+  //
+  // An estimate moves no money and no stock (FR-8), so its writes leave only
+  // the estimates list stale. The detail slice holds the moved estimate from
+  // the response (its fulfilled reducer). Converting writes a DRAFT invoice:
+  // the bills list is stale for its next mount, nothing else moved.
+  saveEstimateDraft: { stale: ['salesDocList'] },
+  deleteEstimateDraft: { stale: ['salesDocList'] },
+  moveEstimate: { patch: [['invoiceDetail', 'document']], stale: ['salesDocList'] },
+  convertEstimate: { stale: ['salesDocList', 'invoiceList'] },
+  // A credit note credits the khata, may restock, and settles the invoice's
+  // due — every one of those figures is the server's, so all are stale; the
+  // editor navigates to the new note, which it then reads. A refund at issue
+  // is a PAY-01 `payment_out` voucher: the payments list is stale too.
+  issueCreditNote: {
+    stale: [
+      'salesDocList',
+      'invoiceList',
+      'paymentList',
+      ...EXPENSE_LEDGER_STALE,
+      'itemList',
+      'itemDetail',
+      'stockSummary',
+    ],
+  },
+  // Apply moves no ledger line (the credit already did): two documents' dues.
+  applyCreditNote: {
+    patch: [['invoiceDetail', 'document']],
+    stale: ['salesDocList', 'invoiceList'],
+  },
+  // A void reverses stock and the khata line, dated today, and releases
+  // credit applications and payment allocations (the payments stay, as
+  // advances — PAY-05 `release_document_allocations`) — the same reach as the
+  // issue it undoes, plus the payments list whose unallocated figures moved.
+  voidInvoice: {
+    patch: [
+      ['invoiceDetail', 'document'],
+      ['invoiceDetail', 'voidResult'],
+    ],
+    stale: [
+      'invoiceList',
+      'salesDocList',
+      'paymentList',
+      ...EXPENSE_LEDGER_STALE,
+      'itemList',
+      'itemDetail',
+      'stockSummary',
+    ],
+  },
+  voidCreditNote: {
+    patch: [['invoiceDetail', 'document']],
+    stale: [
+      'invoiceList',
+      'salesDocList',
+      ...EXPENSE_LEDGER_STALE,
+      'itemList',
+      'itemDetail',
+      'stockSummary',
+    ],
   },
   // ── LED-06 — manual reminders ─────────────────────────────────────────────
   //

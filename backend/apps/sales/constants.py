@@ -7,14 +7,21 @@ from django.utils.translation import gettext_lazy as _
 
 
 class DocumentKind(models.TextChoices):
-    """Part 21 §21.3.7 — this wave issues the two tax-document kinds only."""
+    """Part 21 §21.3.7 — the four kinds the MVP writes (orders and challans are P2/P3)."""
 
     INVOICE = "invoice", _("Invoice")
     BILL_OF_SUPPLY = "bill_of_supply", _("Bill of supply")
+    ESTIMATE = "estimate", _("Estimate")
+    CREDIT_NOTE = "credit_note", _("Credit note")
 
 
 class DocumentStatus(models.TextChoices):
-    """Canon §0.7 for invoices. `overdue` is set only by the nightly job (BR-17)."""
+    """Canon §0.7, every kind in one column. `overdue` is set only by the nightly job (BR-17).
+
+    Invoice: draft, issued, partially_paid, paid, overdue, void.
+    Estimate (SAL-01): draft, sent, accepted, rejected, expired, converted.
+    Credit note (SAL-04): draft, issued, applied, void.
+    """
 
     DRAFT = "draft", _("Draft")
     ISSUED = "issued", _("Issued")
@@ -22,6 +29,23 @@ class DocumentStatus(models.TextChoices):
     PAID = "paid", _("Paid")
     OVERDUE = "overdue", _("Overdue")
     VOID = "void", _("Void")
+    SENT = "sent", _("Sent")
+    ACCEPTED = "accepted", _("Accepted")
+    REJECTED = "rejected", _("Rejected")
+    EXPIRED = "expired", _("Expired")
+    CONVERTED = "converted", _("Converted")
+    APPLIED = "applied", _("Applied")
+
+
+#: The tax-document kinds `/sales/invoices` serves; estimates and credit notes have their own routes.
+INVOICE_KINDS: tuple[str, ...] = ("invoice", "bill_of_supply")
+#: SAL-05 FR-1 — the statuses an invoice can be voided from.
+VOIDABLE_STATUSES: tuple[str, ...] = ("issued", "partially_paid", "paid", "overdue")
+#: SAL-04 §10 — the invoice statuses a credit note may be written against or applied to.
+CREDITABLE_STATUSES: tuple[str, ...] = ("issued", "partially_paid", "paid", "overdue")
+APPLICABLE_STATUSES: tuple[str, ...] = ("issued", "partially_paid", "overdue")
+#: SAL-01 §9 — the estimate statuses that may be converted.
+CONVERTIBLE_STATUSES: tuple[str, ...] = ("sent", "accepted", "expired")
 
 
 class DiscountType(models.TextChoices):
@@ -39,6 +63,52 @@ TAB_STATUSES: dict[str, tuple[str, ...]] = {
     "void": ("void",),
 }
 OPEN_STATUSES: tuple[str, ...] = ("issued", "partially_paid")
+
+#: SAL-01 FR-10 — the estimates list's tabs.
+ESTIMATE_TAB_STATUSES: dict[str, tuple[str, ...]] = {
+    "all": ("draft", "sent", "accepted", "rejected", "expired", "converted"),
+    "draft": ("draft",),
+    "sent": ("sent",),
+    "accepted": ("accepted",),
+    "expired": ("expired",),
+    "converted": ("converted",),
+    "rejected": ("rejected",),
+}
+#: SAL-04 §14 — the credit notes list's tabs (`open` = issued with credit left to use).
+CREDIT_NOTE_TAB_STATUSES: dict[str, tuple[str, ...]] = {
+    "all": ("issued", "applied"),
+    "open": ("issued",),
+    "applied": ("applied",),
+    "draft": ("draft",),
+    "void": ("void",),
+}
+
+
+class CreditNoteReason(models.TextChoices):
+    """SAL-04 FR-12 — why the credit note exists (stored in `meta.reason`)."""
+
+    SALES_RETURN = "sales_return", _("Sales return")
+    POST_SALE_DISCOUNT = "post_sale_discount", _("Post-sale discount")
+    RATE_CORRECTION = "rate_correction", _("Rate correction")
+    QTY_CORRECTION = "qty_correction", _("Quantity correction")
+    DEFICIENCY = "deficiency", _("Deficiency in service")
+    OTHER = "other", _("Other")
+
+
+class Settlement(models.TextChoices):
+    """SAL-04 FR-7 — what happens to the credit the invoice does not absorb."""
+
+    HOLD_ADVANCE = "hold_advance", _("Hold as advance")
+    REFUND = "refund", _("Refund now")
+
+
+#: SAL-01 FR-4 / BR-7 — default validity, and the setting a tenant may change it with.
+ESTIMATE_DEFAULT_VALIDITY_DAYS = 15
+ESTIMATE_VALIDITY_SETTING = "sales.estimate_validity_days"
+#: SAL-05 FR-8 / §10 — the void reason's length.
+VOID_REASON_MIN = 3
+VOID_REASON_MAX = 160
+REASON_NOTE_MAX = 160
 
 #: BR-12 — the document kind a tenant's GST type produces.
 KIND_FOR_GST_TYPE: dict[str, str] = {

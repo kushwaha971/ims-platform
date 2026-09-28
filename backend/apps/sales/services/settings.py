@@ -56,3 +56,11 @@ def default_terms(tenant: Any) -> str:
 
 def show_upi_qr(tenant: Any) -> bool:
     return bool(setting_field(tenant, SHOW_UPI_QR_SETTING, "value", True))
+
+
+def estimate_validity_days(tenant: Any) -> int:
+    """SAL-01 BR-7 — `sales.estimate_validity_days`, default 15, clamped to a year."""
+    from apps.sales.constants import ESTIMATE_DEFAULT_VALIDITY_DAYS, ESTIMATE_VALIDITY_SETTING
+
+    days = setting_field(tenant, ESTIMATE_VALIDITY_SETTING, "days", ESTIMATE_DEFAULT_VALIDITY_DAYS)
+    return days if 0 <= days <= 365 else ESTIMATE_DEFAULT_VALIDITY_DAYS

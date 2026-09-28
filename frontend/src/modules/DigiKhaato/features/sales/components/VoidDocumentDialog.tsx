@@ -1,0 +1,187 @@
+'use client';
+
+import { useCallback, useId, useState } from 'react';
+
+import { yupResolver } from '@hookform/resolvers/yup';
+import { BookOpen, Package, Wallet } from 'lucide-react';
+import { useForm, useWatch } from 'react-hook-form';
+
+import {
+  UbButton,
+  UbDialog,
+  UbField,
+  UbForm,
+  UbLink,
+  UbStack,
+  UbText,
+  UbTextArea,
+} from 'src/design-system';
+import { useAppDispatch } from 'src/hooks/useAppStore';
+import { useTranslation } from 'src/hooks/useTranslation';
+import { showSnackbar } from 'src/redux/slice/snackbarSlice';
+import { ROUTES } from 'src/routes';
+import { formatInr, sumMoney } from 'src/utils/money';
+
+import { voidCreditNote, voidInvoice } from '../redux/salesFlowThunk';
+import { useSalesFlowSchemas } from '../validation/salesFlowSchemas';
+import { voidConsequences } from '../view-model/voidConsequences';
+
+import type { SalesDocument } from '../types/sales.types';
+import type { UnallocatedPayment } from '../types/salesFlows.types';
+
+const ICONS = { stock: Package, ledger: BookOpen, payment: Wallet } as const;
+
+/**
+ * SAL-05 §7 / SAL-04 FR-10 — "Void invoice INV/26-27/0042?", the consequences
+ * said before the tap (FR-5), a reason of at least three characters (§10),
+ * and a destructive confirm. Never "delete": the number stays and the rows
+ * that undo it are new (BR-1).
+ *
+ * ── The payments step (FR-6 / FR-7) ──────────────────────────────────────────
+ * Shown only when the void reports payments it detached (PAY-05
+ * `release_document_allocations`): each receipt stays `recorded`, its amount
+ * now unallocated. A party's money is an advance in their khata (given back,
+ * if at all, as a "Paid out" payment); a walk-in's has no khata to sit in and
+ * goes back over the counter, which the merchant records by voiding the
+ * receipt. Each receipt is listed and linked, so both next steps are one tap.
+ */
+export function VoidDocumentDialog({
+  doc,
+  onClose,
+}: Readonly<{ doc: SalesDocument; onClose: () => void }>): React.JSX.Element {
+  const { t } = useTranslation();
+  const dispatch = useAppDispatch();
+  const { voidReasonSchema } = useSalesFlowSchemas();
+  const formId = useId();
+  const [busy, setBusy] = useState(false);
+  const [left, setLeft] = useState<readonly UnallocatedPayment[] | null>(null);
+  const rhf = useForm<{ reason: string }>({
+    resolver: yupResolver(voidReasonSchema),
+    mode: 'onTouched',
+    defaultValues: { reason: '' },
+  });
+  const credit = doc.kind === 'credit_note';
+  const reason = useWatch({ control: rhf.control, name: 'reason' }) ?? '';
+
+  const submit = useCallback(
+    async (values: { reason: string }) => {
+      setBusy(true);
+      const thunk = credit ? voidCreditNote : voidInvoice;
+      const result = await dispatch(thunk({ id: doc.id, reason: values.reason.trim() }));
+      setBusy(false);
+      if (!thunk.fulfilled.match(result)) {
+        // §9 — a second void (another device) is the state we wanted: say so and close.
+        if (result.payload?.code === 'document_already_void') onClose();
+        return;
+      }
+      dispatch(
+        showSnackbar({
+          severity: 'success',
+          id: 'sales.void.done',
+          params: { number: doc.number ?? '' },
+        })
+      );
+      const payments = result.payload.voidResult.unallocatedPayments;
+      if (payments.length) setLeft(payments);
+      else onClose();
+    },
+    [credit, dispatch, doc.id, doc.number, onClose]
+  );
+
+  if (left) {
+    const total = sumMoney(left.map((row) => row.amount));
+    const walkIn = left.some((row) => row.walkIn);
+    const party = doc.partySnapshot?.name ?? doc.party?.name ?? '';
+    return (
+      <UbDialog
+        open
+        onOpenChange={(next) => !next && onClose()}
+        title={t(walkIn ? 'sales.void.followUp.walkInTitle' : 'sales.void.followUp.advanceTitle', {
+          amount: formatInr(total),
+          party,
+        })}
+        closeLabel={t('common.action.close')}
+        footer={
+          <UbButton onClick={onClose} data-testid="void-follow-up-done">
+            {t(walkIn ? 'sales.void.followUp.done' : 'sales.void.followUp.keep')}
+          </UbButton>
+        }
+      >
+        <UbStack gap={3}>
+          <UbText variant="body-sm">
+            {t(walkIn ? 'sales.void.followUp.walkInBody' : 'sales.void.followUp.advanceBody', {
+              amount: formatInr(total),
+              party,
+            })}
+          </UbText>
+          <UbStack gap={1} data-testid="void-follow-up-receipts">
+            <UbText variant="caption" tone="secondary">
+              {t('sales.void.followUp.receipts')}
+            </UbText>
+            {left.map((row) => (
+              <UbText key={row.paymentId ?? row.number ?? row.amount} variant="body-sm">
+                {row.paymentId ? (
+                  <UbLink href={`${ROUTES.PAYMENTS}/${row.paymentId}`}>{row.number}</UbLink>
+                ) : (
+                  row.number
+                )}
+                {` · ${formatInr(row.amount)}`}
+              </UbText>
+            ))}
+          </UbStack>
+        </UbStack>
+      </UbDialog>
+    );
+  }
+
+  return (
+    <UbDialog
+      open
+      onOpenChange={(next) => !next && onClose()}
+      title={t(credit ? 'sales.void.titleCreditNote' : 'sales.void.title', {
+        number: doc.number ?? '',
+      })}
+      closeLabel={t('common.action.close')}
+      footer={
+        <>
+          <UbButton variant="secondary" onClick={onClose} disabled={busy}>
+            {t('common.action.cancel')}
+          </UbButton>
+          <UbButton
+            type="submit"
+            form={formId}
+            variant="destructive"
+            busy={busy}
+            busyLabel={t('sales.void.working')}
+            disabled={reason.trim().length < 3}
+            data-testid="void-confirm"
+          >
+            {t(credit ? 'sales.void.confirmCreditNote' : 'sales.void.confirm')}
+          </UbButton>
+        </>
+      }
+    >
+      <UbForm id={formId} form={rhf} onSubmit={submit}>
+        <UbStack gap={2} data-testid="void-consequences">
+          {voidConsequences(doc).map(({ key, id, values }) => {
+            const Icon = ICONS[key];
+            return (
+              <UbStack key={key} direction="row" gap={2} align="start">
+                <Icon className="mt-0.5 h-4 w-4 shrink-0 text-text-tertiary" aria-hidden />
+                <UbText variant="body-sm">{t(id, values)}</UbText>
+              </UbStack>
+            );
+          })}
+        </UbStack>
+        <UbField
+          name="reason"
+          label={t('sales.void.reason')}
+          placeholder={t('sales.void.reasonPlaceholder')}
+          required
+        >
+          {(field) => <UbTextArea {...field} maxLength={160} rows={2} />}
+        </UbField>
+      </UbForm>
+    </UbDialog>
+  );
+}

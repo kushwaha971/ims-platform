@@ -397,6 +397,8 @@ class Schedule:
 
 SCHEDULES: list[Schedule] = [
     Schedule("sales.refresh_overdue", period="daily", at_hour_ist=0, minute=15, grace_minutes=60),
+    # SAL-01 FR-5 — `sent → expired` once `valid_until` has passed (tenant date).
+    Schedule("sales.expire_estimates", period="daily", at_hour_ist=0, minute=20, grace_minutes=60),
     Schedule(
         "purchases.refresh_overdue", period="daily", at_hour_ist=0, minute=15, grace_minutes=60
     ),

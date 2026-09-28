@@ -10,6 +10,7 @@ import { formatInr } from 'src/utils/money';
 import { buildWhatsAppUrl } from 'src/utils/share';
 
 import { selectInvoiceDetail, type InvoiceDetailState } from '../redux/invoiceDetailSlice';
+import { fetchFlowDocument } from '../redux/salesFlowThunk';
 import {
   createInvoiceShareLink,
   fetchInvoice,
@@ -17,7 +18,42 @@ import {
   fetchUpiIntent,
 } from '../redux/salesThunk';
 
-import type { PrintTemplate } from '../types/sales.types';
+import type { PrintTemplate, SalesDocument } from '../types/sales.types';
+import type { FlowKind } from '../types/salesFlows.types';
+
+type DetailKind = 'invoice' | FlowKind;
+
+/** SAL-03 BR-3 / SAL-01 §17 / SAL-04 §17 — the WhatsApp text each kind sends. */
+const shareText = (
+  doc: SalesDocument,
+  link: string,
+  t: (id: string, values?: Record<string, string>) => string
+): string => {
+  const party = doc.partySnapshot?.name || doc.walkInName || t('sales.walkIn.customer');
+  const base = { party, shop: doc.supplier.name, number: doc.number ?? '', link };
+  if (doc.kind === 'estimate') {
+    return t('sales.estimate.shareText', {
+      ...base,
+      total: formatInr(doc.grandTotal),
+      validUntil: formatBusinessDate(doc.validUntil),
+    });
+  }
+  if (doc.kind === 'credit_note') {
+    return t('sales.creditNote.shareText', {
+      ...base,
+      total: formatInr(doc.grandTotal),
+      against: doc.links.against?.number ?? '',
+    });
+  }
+  return doc.amountDue !== '0.00'
+    ? t('sales.share.textDue', {
+        ...base,
+        total: formatInr(doc.grandTotal),
+        due: formatInr(doc.amountDue),
+        dueDate: formatBusinessDate(doc.dueOn),
+      })
+    : t('sales.share.textPaid', { ...base, total: formatInr(doc.grandTotal) });
+};
 
 /**
  * SAL-03 — the detail page's data and its three acts: print (either template,
@@ -34,7 +70,11 @@ export interface UseInvoiceDetailResult extends InvoiceDetailState {
   readonly reload: () => void;
 }
 
-export const useInvoiceDetail = (id: string, autoPrint: boolean): UseInvoiceDetailResult => {
+export const useInvoiceDetail = (
+  id: string,
+  autoPrint: boolean,
+  kind: DetailKind = 'invoice'
+): UseInvoiceDetailResult => {
   const dispatch = useAppDispatch();
   const { t } = useTranslation();
   const detail = useAppSelector(selectInvoiceDetail);
@@ -42,19 +82,21 @@ export const useInvoiceDetail = (id: string, autoPrint: boolean): UseInvoiceDeta
   const [printing, setPrinting] = useState(autoPrint);
 
   useEffect(() => {
-    const doc = dispatch(fetchInvoice(id));
+    const doc =
+      kind === 'invoice' ? dispatch(fetchInvoice(id)) : dispatch(fetchFlowDocument({ kind, id }));
     const branding = dispatch(fetchPrintBranding());
     return () => {
       doc.abort();
       branding.abort();
     };
-  }, [dispatch, id]);
+  }, [dispatch, id, kind]);
 
   const status = detail.document?.id === id ? detail.document.status : null;
   useEffect(() => {
     // FR-9 — a draft prints with a watermark and no QR; an issued bill carries one.
-    if (status && status !== 'draft') void dispatch(fetchUpiIntent(id));
-  }, [dispatch, id, status]);
+    // Only a bill asks to be paid: an estimate and a credit note carry no QR.
+    if (kind === 'invoice' && status && status !== 'draft') void dispatch(fetchUpiIntent(id));
+  }, [dispatch, id, status, kind]);
 
   const print = useCallback((next: PrintTemplate) => {
     setTemplate(next);
@@ -84,7 +126,7 @@ export const useInvoiceDetail = (id: string, autoPrint: boolean): UseInvoiceDeta
     async (channel: 'link' | 'whatsapp') => {
       const doc = detail.document;
       if (!doc) return;
-      const result = await dispatch(createInvoiceShareLink({ id: doc.id, channel }));
+      const result = await dispatch(createInvoiceShareLink({ id: doc.id, channel, kind }));
       if (!createInvoiceShareLink.fulfilled.match(result)) return;
       const link = result.payload.url;
       if (channel === 'link') {
@@ -96,29 +138,11 @@ export const useInvoiceDetail = (id: string, autoPrint: boolean): UseInvoiceDeta
         }
         return;
       }
-      const party = doc.partySnapshot?.name || doc.walkInName || t('sales.walkIn.customer');
-      const text =
-        doc.amountDue !== '0.00'
-          ? t('sales.share.textDue', {
-              party,
-              shop: doc.supplier.name,
-              number: doc.number ?? '',
-              total: formatInr(doc.grandTotal),
-              due: formatInr(doc.amountDue),
-              dueDate: formatBusinessDate(doc.dueOn),
-              link,
-            })
-          : t('sales.share.textPaid', {
-              party,
-              shop: doc.supplier.name,
-              number: doc.number ?? '',
-              total: formatInr(doc.grandTotal),
-              link,
-            });
+      const text = shareText(doc, link, t);
       const mobile = doc.partySnapshot?.mobile ?? doc.walkInMobile;
       window.open(buildWhatsAppUrl(text, mobile), '_blank', 'noopener');
     },
-    [dispatch, detail.document, t]
+    [dispatch, detail.document, t, kind]
   );
 
   const reload = useCallback(() => {

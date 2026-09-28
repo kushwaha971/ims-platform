@@ -79,6 +79,8 @@ _STAFF = {
     "sales.estimate.write",
     "sales.invoice.read",
     "sales.invoice.write",
+    # SAL-04 §12 / T-SAL04-10 — staff initiate returns at the counter (void stays owner/admin).
+    "sales.credit_note.write",
     "purchases.bill.read",
     "purchases.bill.write",
     "payments.payment.read",

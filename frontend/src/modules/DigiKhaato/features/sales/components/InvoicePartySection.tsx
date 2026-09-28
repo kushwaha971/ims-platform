@@ -37,12 +37,15 @@ export function InvoicePartySection({
   tenantState,
   locale,
   disabled,
+  kind = 'invoice',
 }: Readonly<{
   form: UseFormReturn<InvoiceFormValues>;
   today: string;
   tenantState: string;
   locale: Locale;
   disabled: boolean;
+  /** SAL-01 FR-4 — an estimate carries "Valid until" where a bill carries its due date. */
+  kind?: 'invoice' | 'estimate';
 }>): React.JSX.Element {
   const { t } = useTranslation();
   const { watch, setValue } = form;
@@ -131,7 +134,25 @@ export function InvoicePartySection({
             />
           )}
         </UbField>
-        {mode === 'party' && (
+        {kind === 'estimate' && (
+          <UbField
+            name="validUntil"
+            label={t('sales.estimate.validUntil')}
+            placeholder={t('sales.estimate.validUntilPlaceholder')}
+          >
+            {(field) => (
+              <UbDateInput
+                id={field.id}
+                value={(field.value as string) || null}
+                onChange={(next) => field.onChange(next ?? '')}
+                min={documentDate}
+                placeholder={field.placeholder}
+                disabled={disabled}
+              />
+            )}
+          </UbField>
+        )}
+        {kind === 'invoice' && mode === 'party' && (
           <UbField
             name="dueOn"
             label={t('sales.editor.dueOn')}

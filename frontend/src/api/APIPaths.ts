@@ -132,8 +132,17 @@ export const API_PATHS = {
   SALES_INVOICE_SHARE_LINKS: (id: string) => `/sales/invoices/${seg(id)}/share-links`,
   SALES_INVOICE_UPI_INTENT: (id: string) => `/sales/invoices/${seg(id)}/upi-intent`,
   SALES_ESTIMATES: '/sales/estimates',
+  SALES_ESTIMATE: (id: string) => `/sales/estimates/${seg(id)}`,
+  // SAL-01 §14 / CR-SAL-1 — the status moves are actions, never PATCH status.
+  SALES_ESTIMATE_MOVE: (id: string, move: 'sent' | 'accepted' | 'rejected') =>
+    `/sales/estimates/${seg(id)}/mark-${move}`,
   SALES_ESTIMATE_CONVERT: (id: string) => `/sales/estimates/${seg(id)}/convert`,
+  SALES_ESTIMATE_SHARE_LINKS: (id: string) => `/sales/estimates/${seg(id)}/share-links`,
   SALES_CREDIT_NOTES: '/sales/credit-notes',
+  SALES_CREDIT_NOTE: (id: string) => `/sales/credit-notes/${seg(id)}`,
+  SALES_CREDIT_NOTE_APPLY: (id: string) => `/sales/credit-notes/${seg(id)}/apply`,
+  SALES_CREDIT_NOTE_VOID: (id: string) => `/sales/credit-notes/${seg(id)}/void`,
+  SALES_CREDIT_NOTE_SHARE_LINKS: (id: string) => `/sales/credit-notes/${seg(id)}/share-links`,
 
   // ── purchases, payments, expenses, reports, misc ──────────────────────────
   PURCHASE_BILLS: '/purchases/bills',

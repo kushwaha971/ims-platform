@@ -137,8 +137,7 @@ def test_unknown_ordering_and_tab_are_400(owner: Any) -> None:
     assert owner.get(reverse(INVOICES), {"ordering": "-grand_total"}).status_code == 200
 
 
-def test_refresh_overdue_is_idempotent_and_never_touches_paid(owner: Any, make_item: Any,
-                                                              make_party: Any) -> None:  # fmt: skip
+def test_refresh_overdue_is_idempotent_and_never_touches_paid(owner: Any, make_item: Any,make_party: Any) -> None:  # fmt: skip
     """BR-17 — only open invoices past due move; a second run moves nothing."""
     item = make_item(price="100.00", tax_code="GST0")
     late = _issued(owner, item, make_party(), document_date="2026-09-01", due_on="2026-09-02")

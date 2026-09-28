@@ -33,6 +33,8 @@ import 'modules/DigiKhaato/features/sales/redux/invoiceListSlice';
 import 'modules/DigiKhaato/features/purchases/redux/purchaseBillDetailSlice';
 import 'modules/DigiKhaato/features/purchases/redux/purchaseBillEditorSlice';
 import 'modules/DigiKhaato/features/purchases/redux/purchaseBillListSlice';
+import 'modules/DigiKhaato/features/sales/redux/salesDocListSlice';
+import 'modules/DigiKhaato/features/sales/redux/creditNoteEditorSlice';
 import partyListReducer, {
   type PartyListState,
 } from 'modules/DigiKhaato/features/parties/redux/partyListSlice';

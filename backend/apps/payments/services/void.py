@@ -46,6 +46,7 @@ from apps.payments.constants import PaymentStatus
 from apps.payments.models import Allocation, Payment
 from apps.payments.services.record import payment_snapshot
 from apps.payments.services.targets import target_for
+from apps.sales.services.refund_seam import release_refund
 
 
 def _lock_payment(ctx: Ctx, payment_id: Any) -> Payment:
@@ -100,6 +101,29 @@ def void_payment(*, ctx: Ctx, payment_id: Any, reason: Any) -> dict:
                     metadata={"payment_id": str(payment.id), "number": payment.number},
                 )
     Allocation.objects.filter(payment=payment).delete()
+
+    # SAL-04 FR-10 — a credit note's refund voucher: voiding it gives the
+    # amount back to the note as open credit, which is what lets the note
+    # itself be voided afterwards ("Void the refund payment first").
+    credit_note_id = (payment.meta or {}).get("credit_note_id")
+    if credit_note_id:
+        note = release_refund(
+            ctx=ctx, credit_note_id=credit_note_id, payment_id=payment.id, amount=payment.amount
+        )
+        if note is not None:
+            documents.append(
+                {
+                    "document_type": "sales_document",
+                    "document_id": str(note.id),
+                    "kind": note.kind,
+                    "number": note.number,
+                    "document_date": note.document_date.isoformat(),
+                    "due_on": None,
+                    "grand_total": str(note.grand_total),
+                    "amount_due": str(note.amount_due),
+                    "status": note.status,
+                }
+            )
 
     payment.status = PaymentStatus.VOID
     payment.voided_at = timezone.now()

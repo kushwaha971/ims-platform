@@ -55,6 +55,9 @@ export const ROUTES = {
   STOCK_SUMMARY: '/stock/summary',
   STOCK_LOW: '/stock/low',
   SALES_INVOICES: '/sales/invoices',
+  /** SAL-01 — quotations (kachha bill); SAL-04 — returns against a bill. */
+  SALES_ESTIMATES: '/sales/estimates',
+  SALES_CREDIT_NOTES: '/sales/credit-notes',
   PURCHASE_BILLS: '/purchases/bills',
   PAYMENTS: '/payments',
   EXPENSES: '/expenses',

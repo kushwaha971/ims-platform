@@ -29,6 +29,14 @@ class PublicDocumentView(APIView):
         data = dict(DocumentReadSerializer(document).data)
         for private in ("created_by", "party"):
             data.pop(private, None)
+        # `links` names other documents by id; the customer's copy keeps only
+        # what prints — a credit note's "Against INV/… dated …" (SAL-04 FR-11).
+        against = (data.pop("links", None) or {}).get("against")
+        if against:
+            data["against"] = {
+                "number": against["number"],
+                "document_date": against["document_date"],
+            }
         data["walk_in_mobile"] = mask_mobile(data.get("walk_in_mobile"))
         snapshot = dict(data.get("party_snapshot") or {})
         snapshot["mobile"] = mask_mobile(snapshot.get("mobile"))

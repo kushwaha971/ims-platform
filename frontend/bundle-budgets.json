@@ -934,6 +934,34 @@
    "route": 76,
    "firstLoad": 336
   },
+  "/sales/estimates": {
+   "route": 96,
+   "firstLoad": 356
+  },
+  "/sales/estimates/new": {
+   "route": 140,
+   "firstLoad": 400
+  },
+  "/sales/estimates/[id]/edit": {
+   "route": 140,
+   "firstLoad": 400
+  },
+  "/sales/estimates/[id]": {
+   "route": 76,
+   "firstLoad": 336
+  },
+  "/sales/credit-notes": {
+   "route": 96,
+   "firstLoad": 356
+  },
+  "/sales/credit-notes/new": {
+   "route": 130,
+   "firstLoad": 390
+  },
+  "/sales/credit-notes/[id]": {
+   "route": 76,
+   "firstLoad": 336
+  },
   "/onboarding/step/[n]": {
    "route": 98,
    "firstLoad": 342

@@ -1,7 +1,7 @@
 """Sales documents and their lines (Part 21 §21.3.7, SAL-02).
 
-One table for every sales document kind; this wave writes `invoice` and
-`bill_of_supply`. Every money column is exactly what `compute_document_totals`
+One table for every sales document kind: `invoice` and `bill_of_supply`
+(SAL-02), `estimate` (SAL-01) and `credit_note` (SAL-04). Every money column is exactly what `compute_document_totals`
 produced — the server never stores a client figure (FR-3, canon §0.11-3).
 
 ── Columns beyond §21.3.7, and why ──────────────────────────────────────────
@@ -38,6 +38,24 @@ class SalesDocument(TenantModel):
     walk_in_mobile = models.CharField(max_length=15, null=True, blank=True)
     document_date = models.DateField()
     due_on = models.DateField(null=True, blank=True)
+    valid_until = models.DateField(null=True, blank=True)
+    # Credit note → the invoice it credits (SAL-04). RESTRICT: an invoice with
+    # a credit note is never deleted (only drafts are, and drafts have none).
+    against = models.ForeignKey(
+        "self",
+        on_delete=models.RESTRICT,
+        null=True,
+        blank=True,
+        related_name="credit_notes",
+    )
+    # Estimate ↔ invoice (SAL-01 FR-6). SET_NULL: discarding the converted
+    # DRAFT invoice frees the estimate to be converted again (SAL-05 EC-9).
+    converted_to = models.ForeignKey(
+        "self", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    converted_from = models.ForeignKey(
+        "self", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
     place_of_supply_state = models.CharField(max_length=2)
     is_inter_state = models.BooleanField(default=False)
     reverse_charge = models.BooleanField(default=False)
@@ -109,6 +127,12 @@ class SalesDocument(TenantModel):
                 name="ix_sales_doc_open_due",
             ),
             models.Index(fields=["tenant", "number"], name="ix_sales_doc_number"),
+            # SAL-04 §15 / CR-SAL-3 — "credit notes of this invoice".
+            models.Index(
+                fields=["tenant", "against"],
+                condition=models.Q(against__isnull=False),
+                name="ix_sales_doc_against",
+            ),
         ]
 
     def __str__(self) -> str:  # pragma: no cover - admin convenience
@@ -150,6 +174,11 @@ class SalesDocumentLine(models.Model):
     line_total = MoneyField(default=0)
     unit_cost_snapshot = UnitCostField(null=True, blank=True)
     returned_qty = QuantityField(default=0)
+    # A credit-note line → the invoice line it returns (SAL-04 FR-2), so the
+    # cap and the `returned_qty` cache are per line, not per item.
+    against_line = models.ForeignKey(
+        "self", on_delete=models.RESTRICT, null=True, blank=True, related_name="return_lines"
+    )
 
     class Meta:
         db_table = "sales_document_line"
@@ -165,3 +194,41 @@ class SalesDocumentLine(models.Model):
 
     def __str__(self) -> str:  # pragma: no cover
         return f"{self.line_no}: {self.description}"
+
+
+class SalesCreditApplication(TenantModel):
+    """Open credit from a credit note, used against an invoice (Part 21 §21.3.9 decision).
+
+    Its own table rather than a `payments_allocation` row with a NULL payment,
+    so a credit is never mistaken for money received. One row per pair; a
+    second application of the same note to the same invoice adds to `amount`.
+    A void deletes the row (SAL-04 FR-10, SAL-05 FR-2) and the audit log keeps
+    what it was.
+    """
+
+    credit_note = models.ForeignKey(
+        SalesDocument, on_delete=models.RESTRICT, related_name="applications"
+    )
+    invoice = models.ForeignKey(
+        SalesDocument, on_delete=models.RESTRICT, related_name="credit_applications"
+    )
+    amount = MoneyField()
+
+    class Meta:
+        db_table = "sales_credit_application"
+        verbose_name = "credit application"
+        verbose_name_plural = "credit applications"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["credit_note", "invoice"], name="uq_sales_credit_application_pair"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(amount__gt=0), name="ck_sales_credit_application_positive"
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["tenant", "invoice"], name="ix_sales_credit_app_invoice"),
+        ]
+
+    def __str__(self) -> str:  # pragma: no cover
+        return f"{self.credit_note_id} → {self.invoice_id}: {self.amount}"
