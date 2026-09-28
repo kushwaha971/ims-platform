@@ -534,7 +534,11 @@
   "",
   "── 28 Sep 2026 (final QA fixes): +1 KB lines — bill editor (supplier listbox, Paid-now UPI app),",
   "/parties/[id] (Fill/Max allocation rows in the lazily-loaded drawer's shared view-model),",
-  "/design-system (UbMoneyInput/UbDateInput Hindi month table). Measured + 1."
+  "/design-system (UbMoneyInput/UbDateInput Hindi month table). Measured + 1.",
+  "",
+  "── 28 Sep 2026 (hardening): measured +1 KB — the .ub-hit 44 px hit areas and ARIA table cells (H2),",
+  "document narration shown in Hindi on the khata/statement (H2), the Hindi calendar formatter, and the",
+  "customer share page /d/[token] (SAL-03, reuses InvoicePrintA4 + sales/money/publicDocument catalogues)."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -1051,7 +1055,7 @@
    "firstLoad": 301
   },
   "/parties/[id]": {
-   "route": 92,
+   "route": 94,
    "firstLoad": 323
   },
   "/parties/tags": {
@@ -1059,8 +1063,8 @@
    "firstLoad": 284
   },
   "/parties/[id]/statement": {
-   "route": 83,
-   "firstLoad": 312
+   "route": 85,
+   "firstLoad": 315
   },
   "/ledger/aging": {
    "route": 84,
@@ -1080,7 +1084,7 @@
   },
   "/settings/profile": {
    "route": 126,
-   "firstLoad": 355
+   "firstLoad": 357
   },
   "/settings/branding": {
    "route": 82,
