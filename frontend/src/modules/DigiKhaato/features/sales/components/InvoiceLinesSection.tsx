@@ -18,7 +18,7 @@ import {
 import { useAppDispatch } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
-import { formatAmount } from 'src/utils/money';
+import { formatAmount, formatInr } from 'src/utils/money';
 
 import { useItemSearch } from '../../inventory/hooks/useItemSearch';
 import {
@@ -249,10 +249,14 @@ export function InvoiceLinesSection({
         header: t('sales.line.total'),
         track: 'minmax(5.5rem,1fr)',
         align: 'end',
-        render: ({ index }) => (
+        // QA S-D8 — a phone card's total stands alone, so it carries its ₹; the
+        // table's column header already says what the figures are.
+        render: ({ index, layout }) => (
           <UbStack gap={0} className="items-end">
             <UbText as="span" variant="body-sm" className="ds-num leading-10">
-              {formatAmount(preview.lines[index]?.lineTotal ?? '0')}
+              {(layout === 'card' ? formatInr : formatAmount)(
+                preview.lines[index]?.lineTotal ?? '0'
+              )}
             </UbText>
             {!taxFree && (
               <UbText as="span" variant="caption" tone="tertiary" className="ds-num">

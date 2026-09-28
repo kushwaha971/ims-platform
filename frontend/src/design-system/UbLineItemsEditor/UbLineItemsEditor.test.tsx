@@ -193,6 +193,12 @@ describe('the phone layout', () => {
     expect(within(card).getByRole('button', { name: 'Remove line 2' })).toBeInTheDocument();
   });
 
+  it('QA S-D8: never names a "line 0"; remove buttons are 1-based', () => {
+    render(<Harness initial={[{ name: 'Rice', qty: '1' }]} />);
+    expect(screen.queryByText('Remove line 0')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove line 1' })).toBeInTheDocument();
+  });
+
   it('shows the empty message when there are no lines', () => {
     render(<Harness layout="card" initial={[]} />);
     expect(screen.getByText('No lines yet')).toBeInTheDocument();

@@ -148,6 +148,16 @@ describe('the line table at a 1280 desktop (QA S-D5)', () => {
   });
 });
 
+describe('the phone line card (QA S-D8)', () => {
+  it('shows the line total with its ₹, since the card has no column header', async () => {
+    signIn(['sales.invoice.read', 'sales.invoice.write']);
+    renderWithProviders(<InvoiceEditorPageContent documentId={null} />);
+    await screen.findByTestId('invoice-issue');
+    expect(screen.getByTestId('line-items-editor')).toHaveAttribute('data-layout', 'card');
+    expect(screen.getByTestId('line-items-editor')).toHaveTextContent('₹0.00');
+  });
+});
+
 describe('the place of supply for a picked party (QA S-D1)', () => {
   it("previews IGST for a party in another state, not the shop's CGST + SGST", async () => {
     // S-D1: an empty place of supply was previewed as the SHOP's state, so a

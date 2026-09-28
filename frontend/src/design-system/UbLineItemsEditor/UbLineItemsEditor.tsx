@@ -338,9 +338,10 @@ export function UbLineItemsEditor<TForm extends FieldValues, TName extends Array
                 {column.header}
               </span>
             ))}
-            <span role="columnheader" className="sr-only">
-              {labels.removeLine(0)}
-            </span>
+            {/* QA S-D8 — the remove column's header is unnamed: it used to read
+                `removeLine(0)`, "Remove line 0", a line that does not exist.
+                Each row's button carries its own 1-based name. */}
+            <span role="columnheader" className="sr-only" />
           </div>
           {fields.length === 0 && (
             <div className="ds-body-sm px-3 py-6 text-center text-text-tertiary">
