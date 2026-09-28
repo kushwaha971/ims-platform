@@ -1,17 +1,20 @@
 'use client';
 
+import { useId, useState } from 'react';
+
 import { X } from 'lucide-react';
 
 import {
+  UbBox,
   UbButton,
   UbListItemText,
-  UbPressable,
   UbStack,
   UbText,
   UbTextInput,
   type UbFieldRenderProps,
 } from 'src/design-system';
 import type { TranslateFn } from 'src/hooks/useTranslation';
+import { cn } from 'src/utils/cn';
 
 import { usePartySearch } from '../../parties/hooks/usePartySearch';
 
@@ -43,6 +46,8 @@ export function PurchaseSupplierField({
   const { query, setQuery, results, status, isEmpty, canSearch, clear } = usePartySearch({
     type: 'supplier',
   });
+  const listId = useId();
+  const [active, setActive] = useState(0);
 
   if (field.value) {
     return (
@@ -82,42 +87,82 @@ export function PurchaseSupplierField({
     );
   }
 
+  const pick = (index: number) => {
+    const party = results[index];
+    if (!party) return;
+    onPick(party.id, party.name);
+    clear();
+  };
+
+  /* QA P-D6 — the matches were a list of plain buttons: no `combobox` on the
+     input, no `listbox`/`option` on the matches, and no arrow keys. It is the
+     same combobox pattern as the party quick search now. */
+  const handleKey = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!results.length) return;
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setActive((index) => (index + 1) % results.length);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setActive((index) => (index - 1 + results.length) % results.length);
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      pick(active);
+    }
+  };
+
+  const open = results.length > 0;
   return (
     <UbStack gap={1}>
       <UbTextInput
         id={field.id}
         name={field.name}
         value={query}
-        onChange={setQuery}
+        onChange={(next) => {
+          setQuery(next);
+          setActive(0);
+        }}
         onBlur={field.onBlur}
+        onKeyDown={handleKey}
         placeholder={field.placeholder}
         invalid={field.invalid}
         aria-invalid={field['aria-invalid']}
         aria-describedby={field['aria-describedby']}
+        role="combobox"
+        aria-expanded={open}
+        aria-controls={listId}
+        aria-autocomplete="list"
+        aria-activedescendant={open && results[active] ? `${listId}-${active}` : undefined}
         autoComplete="off"
         disabled={disabled}
       />
-      {results.length > 0 && (
-        <UbStack
+      {open && (
+        <UbBox
           as="ul"
-          gap={0}
+          id={listId}
+          role="listbox"
           aria-label={t('purchases.supplier.results')}
-          className="border-border-default rounded-control border"
+          className="border-border-default rounded-control border py-1"
         >
-          {results.map((party) => (
-            <UbStack as="li" key={party.id} gap={0}>
-              <UbPressable
-                className="w-full px-3 py-2 text-left"
-                onClick={() => {
-                  onPick(party.id, party.name);
-                  clear();
-                }}
-              >
-                <UbListItemText primary={party.name} secondary={party.mobile ?? undefined} />
-              </UbPressable>
-            </UbStack>
+          {results.map((party, index) => (
+            <UbBox
+              as="li"
+              key={party.id}
+              id={`${listId}-${index}`}
+              role="option"
+              aria-selected={index === active}
+              onMouseDown={(event: React.MouseEvent) => event.preventDefault()}
+              onClick={() => pick(index)}
+              onMouseEnter={() => setActive(index)}
+              className={cn(
+                'w-full cursor-pointer px-3 py-2 text-left',
+                index === active && 'bg-surface-hover'
+              )}
+            >
+              <UbListItemText primary={party.name} secondary={party.mobile ?? undefined} />
+            </UbBox>
           ))}
-        </UbStack>
+        </UbBox>
       )}
       {isEmpty && status === 'succeeded' && (
         <UbText variant="caption" tone="tertiary">

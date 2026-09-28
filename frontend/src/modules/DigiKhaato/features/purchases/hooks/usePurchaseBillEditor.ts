@@ -14,7 +14,6 @@ import { selectTenantTimezone } from 'src/redux/slice/sessionSlice';
 import { applyServerErrors } from 'src/utils/applyServerErrors';
 import { todayInTenantTz } from 'src/utils/dates';
 
-import { paymentWireBody, type PaymentRowForm } from '../../sales/view-model/invoiceForm';
 import { computeDocumentTotals, type EngineResult } from '../../sales/view-model/taxEngine';
 import { PURCHASE_AUTOSAVE_MS } from '../constants/purchaseConstants';
 import {
@@ -34,9 +33,11 @@ import {
   emptyPurchaseForm,
   fromPurchaseBill,
   isCompletePurchaseLine,
+  purchasePaymentWireBody,
   purchasePreviewInput,
   toPurchaseWireBody,
   type PurchaseBillFormValues,
+  type PurchasePaymentRow,
 } from '../view-model/purchaseBillForm';
 
 import type { PurchaseBillEnvelope } from '../types/purchase.types';
@@ -75,7 +76,7 @@ export interface UsePurchaseBillEditorResult {
   readonly save: (quiet: boolean) => Promise<PurchaseBillEnvelope | null>;
   /** Record; `payment` is FR-6h's "Paid now" rows, absent or empty for a bill on credit. */
   readonly record: (
-    payment?: readonly PaymentRowForm[] | null
+    payment?: readonly PurchasePaymentRow[] | null
   ) => Promise<PurchaseBillEnvelope | null>;
   /** The header rules, run before the "Paid now" sheet opens so it never opens on a bad bill. */
   readonly validate: () => Promise<boolean>;
@@ -189,7 +190,9 @@ export const usePurchaseBillEditor = (documentId: string | null): UsePurchaseBil
   }, [purchaseBillSchema, form]);
 
   const record = useCallback(
-    async (payment?: readonly PaymentRowForm[] | null): Promise<PurchaseBillEnvelope | null> => {
+    async (
+      payment?: readonly PurchasePaymentRow[] | null
+    ): Promise<PurchaseBillEnvelope | null> => {
       if (!(await validate())) return null;
       const saved = await save(false);
       if (!saved) return null;
@@ -200,7 +203,7 @@ export const usePurchaseBillEditor = (documentId: string | null): UsePurchaseBil
           idempotencyKey: idempotency.key,
           // FR-6h — dated with the bill, as the invoice editor dates money taken at issue.
           payment: payment?.length
-            ? paymentWireBody(payment, form.getValues('documentDate'))
+            ? purchasePaymentWireBody(payment, form.getValues('documentDate'))
             : null,
         })
       );

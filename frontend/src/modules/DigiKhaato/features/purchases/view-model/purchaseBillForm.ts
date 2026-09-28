@@ -1,3 +1,6 @@
+import type { PaymentMode, UpiApp } from 'src/types/domain.types';
+import { compareMoney, toDecimal, toMoneyString } from 'src/utils/money';
+
 import type { EngineDocumentInput, EngineResult } from '../../sales/view-model/taxEngine';
 import type { PurchaseBill, PurchaseDiscountType } from '../types/purchase.types';
 
@@ -207,3 +210,59 @@ export const defaultDueOn = (documentDate: string, creditDays: number | null): s
   date.setUTCDate(date.getUTCDate() + (creditDays ?? 0));
   return date.toISOString().slice(0, 10);
 };
+
+// ── "Paid now" (PUR-01 FR-6h) ────────────────────────────────────────────────
+
+/**
+ * One "Paid now" line. It carries the UPI app beside the mode, in the value
+ * shape `PaymentMethodField` writes, because the server keeps `payment_mode`
+ * and `upi_app` apart. QA P-D4: the drawer used to pass `app=""` and drop the
+ * app the chip reported, so PhonePe was saved as "Other UPI".
+ */
+export interface PurchasePaymentRow {
+  mode: PaymentMode;
+  upiApp: UpiApp | '';
+  amount: string;
+  reference: string;
+}
+
+export const fullCashPurchasePayment = (grandTotal: string): PurchasePaymentRow[] => [
+  { mode: 'cash', upiApp: '', amount: grandTotal, reference: '' },
+];
+
+const positive = (amount: string): string | null => {
+  try {
+    const value = toMoneyString(toDecimal(amount.trim()));
+    return compareMoney(value, '0.00') > 0 ? value : null;
+  } catch {
+    return null;
+  }
+};
+
+/** The record call's `payment`: PAY-01's `mode_breakup`, with `upi_app` on a UPI line. */
+export const purchasePaymentWireBody = (
+  rows: readonly PurchasePaymentRow[],
+  date: string
+): {
+  readonly payment_date: string;
+  readonly mode_breakup: readonly {
+    mode: PaymentMode;
+    amount: string;
+    reference: string;
+    upi_app?: UpiApp;
+  }[];
+} => ({
+  payment_date: date,
+  mode_breakup: rows.flatMap((row) => {
+    const amount = positive(row.amount || '');
+    if (!amount) return [];
+    return [
+      {
+        mode: row.mode,
+        amount,
+        reference: row.reference.trim(),
+        ...(row.mode === 'upi' && row.upiApp ? { upi_app: row.upiApp } : {}),
+      },
+    ];
+  }),
+});

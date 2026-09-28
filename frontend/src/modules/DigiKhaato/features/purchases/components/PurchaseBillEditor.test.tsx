@@ -293,6 +293,29 @@ it('asks "Paid now?" at Record and sends the money with the record call (PUR-01 
   expect(mockPush).toHaveBeenCalledWith('/purchases/bills/b1');
 });
 
+it('P-D4: "Paid now" by PhonePe is sent as UPI with upi_app phonepe, not Other UPI', async () => {
+  /** QA P-D4 — the drawer passed `app=""` to the mode chips and dropped the app they
+   *  reported, so the voucher's `mode_breakup` had no `upi_app` and PhonePe read "Other UPI". */
+  signInPayer();
+  service.recordPurchaseBill.mockResolvedValue({
+    ...envelope({ ...RECORDED, status: 'paid' }, '0.00'),
+    payment: { paymentId: 'pay1', number: 'PAYOUT/26-27/0001', amount: '2921.00' },
+  });
+  renderWithProviders(<PurchaseBillEditorPageContent documentId="b1" />);
+  await userEvent.click(await screen.findByTestId('purchase-record'));
+  const confirm = await screen.findByTestId('purchase-paid-now-confirm');
+  const phonePe = screen.getByRole('radio', { name: 'PhonePe' });
+  await userEvent.click(phonePe);
+  expect(phonePe).toBeChecked();
+  await userEvent.click(confirm);
+  await waitFor(() => expect(service.recordPurchaseBill).toHaveBeenCalled());
+  const [, body] = service.recordPurchaseBill.mock.calls[0] as [string, Record<string, unknown>];
+  expect(body.payment).toEqual({
+    payment_date: '2026-09-18',
+    mode_breakup: [{ mode: 'upi', amount: '2921.00', reference: '', upi_app: 'phonepe' }],
+  });
+});
+
 it('"Pay later" records the bill on credit with no payment (PUR-01 FR-6h)', async () => {
   signInPayer();
   service.recordPurchaseBill.mockResolvedValue(envelope(RECORDED, '-2921.00'));

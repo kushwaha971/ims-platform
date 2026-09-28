@@ -6,11 +6,10 @@ import { Plus, Trash2 } from 'lucide-react';
 
 import { UbButton, UbDrawer, UbMoneyInput, UbStack, UbText, UbTextInput } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
-import type { PaymentMode } from 'src/types/domain.types';
 import { compareMoney, formatInr, subtractMoney, sumMoney } from 'src/utils/money';
 
 import { PaymentMethodField } from '../../ledger/components/PaymentMethodField';
-import { fullCashPayment, type PaymentRowForm } from '../../sales/view-model/invoiceForm';
+import { fullCashPurchasePayment, type PurchasePaymentRow } from '../view-model/purchaseBillForm';
 
 // Loaded with dynamic(), so its own words come with its own chunk rather than
 // with the screen that opens it (src/i18n/catalogueRegistry.ts).
@@ -42,18 +41,18 @@ export function PurchasePaidNowDrawer({
   grandTotal: string;
   busy: boolean;
   onClose: () => void;
-  onConfirm: (rows: readonly PaymentRowForm[]) => void;
+  onConfirm: (rows: readonly PurchasePaymentRow[]) => void;
   onPayLater: () => void;
 }>): React.JSX.Element {
   const { t } = useTranslation();
   const baseId = useId();
-  const [rows, setRows] = useState<PaymentRowForm[]>(() => fullCashPayment(grandTotal));
+  const [rows, setRows] = useState<PurchasePaymentRow[]>(() => fullCashPurchasePayment(grandTotal));
   const paid = useMemo(() => sumMoney(rows.map((r) => r.amount || '0')), [rows]);
   const nothing = compareMoney(paid, '0.00') <= 0;
   const advance = compareMoney(paid, grandTotal) > 0 ? subtractMoney(paid, grandTotal) : null;
   const needsReference = rows.some((r) => r.mode === 'cheque' && !r.reference.trim());
 
-  const update = (index: number, patch: Partial<PaymentRowForm>) =>
+  const update = (index: number, patch: Partial<PurchasePaymentRow>) =>
     setRows((current) => current.map((row, i) => (i === index ? { ...row, ...patch } : row)));
 
   return (
@@ -95,8 +94,8 @@ export function PurchasePaidNowDrawer({
             <PaymentMethodField
               id={`${baseId}-mode-${index}`}
               mode={row.mode}
-              app=""
-              onChange={(mode: PaymentMode) => update(index, { mode })}
+              app={row.upiApp}
+              onChange={(mode, upiApp) => update(index, { mode, upiApp })}
               t={t}
               ariaLabel={t('purchases.payment.mode')}
             />
@@ -137,7 +136,10 @@ export function PurchasePaidNowDrawer({
             variant="secondary"
             icon={<Plus className="h-4 w-4" aria-hidden />}
             onClick={() =>
-              setRows((current) => [...current, { mode: 'upi', amount: '', reference: '' }])
+              setRows((current) => [
+                ...current,
+                { mode: 'upi', upiApp: '', amount: '', reference: '' },
+              ])
             }
           >
             {t('purchases.payment.split')}

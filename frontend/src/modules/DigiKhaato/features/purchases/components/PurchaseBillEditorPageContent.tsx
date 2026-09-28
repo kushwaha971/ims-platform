@@ -32,14 +32,12 @@ import {
   purchaseDuplicateCleared,
 } from '../redux/purchaseBillEditorSlice';
 import { deletePurchaseBillDraft } from '../redux/purchaseBillThunk';
-import { hasRecordableLines } from '../view-model/purchaseBillForm';
+import { hasRecordableLines, type PurchasePaymentRow } from '../view-model/purchaseBillForm';
 import { recordedToast } from '../view-model/purchaseToasts';
 
 import { PurchaseBillHeaderSection } from './PurchaseBillHeaderSection';
 import { PurchaseBillLinesSection } from './PurchaseBillLinesSection';
 import { PurchaseBillTotalsPanel } from './PurchaseBillTotalsPanel';
-
-import type { PaymentRowForm } from '../../sales/view-model/invoiceForm';
 
 /* The "Paid now" sheet loads with the tap on Record, never with the editor. */
 const PaidNowDrawerLazy = dynamic(
@@ -79,7 +77,7 @@ export function PurchaseBillEditorPageContent({
   const claimable = regular && values.itcEligible;
 
   const finishRecord = useCallback(
-    async (payment: readonly PaymentRowForm[] | null) => {
+    async (payment: readonly PurchasePaymentRow[] | null) => {
       if (!hasLines || locked) return;
       const result = await record(payment);
       if (!result) return;

@@ -248,7 +248,12 @@ export type PurchaseBillWireBody = Record<string, unknown>;
 /** PUR-01 FR-6h — "Paid now" on the record call: PAY-01's `mode_breakup`, money as strings. */
 export interface PurchasePaymentWireBody {
   readonly payment_date: string;
-  readonly mode_breakup: readonly { mode: string; amount: string; reference: string }[];
+  readonly mode_breakup: readonly {
+    mode: string;
+    amount: string;
+    reference: string;
+    upi_app?: string;
+  }[];
 }
 
 export const createPurchaseBill = async (
