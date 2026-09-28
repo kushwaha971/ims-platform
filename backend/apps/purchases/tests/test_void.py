@@ -268,13 +268,22 @@ def test_apply_payment_moves_paid_due_and_status_by_the_br5_rule(
 
 
 def test_the_nightly_job_marks_past_due_bills_overdue(
-    shop: Any, owner: Any, make_item: Any, make_supplier: Any
+    shop: Any, owner: Any, make_item: Any, make_supplier: Any, monkeypatch: Any
 ) -> None:
     """FR-10 — `purchases.refresh_overdue` (scheduled since Sprint 0, handler new here) moves a
     recorded bill whose due date has passed to `overdue`, leaves a current one, and is
-    idempotent. The module-off guard counts open bills."""
-    from apps.platform_app.services.guards import blocking_rows_for_module_off
+    idempotent. The module-off guard counts open bills.
+
+    The guard registry is module state other suites reset, so this test gives
+    `register_guards()` a fresh one rather than depending on suite order."""
+    from apps.platform_app.services import guards as platform_guards
+    from apps.purchases.services import guards as purchase_guards
     from apps.purchases.services.overdue import refresh_overdue
+
+    monkeypatch.setattr(platform_guards, "_MODULE_OFF_GUARDS", {})
+    monkeypatch.setattr(purchase_guards, "_REGISTERED", False)
+    purchase_guards.register_guards()
+    blocking_rows_for_module_off = platform_guards.blocking_rows_for_module_off
 
     rice = make_item("Rice", "46.00")
     supplier = make_supplier()
