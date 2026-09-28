@@ -35,19 +35,10 @@ def recalc_balances(job: Any, ctx: Any) -> dict:
     decides; `--apply` stays a human act, because a quiet correction destroys
     the evidence. Read-only, so a second run is harmless.
     """
-    import logging
-
     from apps.ledger.services.integrity import check_balances
 
-    summary = check_balances()
-    if not summary.get("ok", True):
-        logging.getLogger("ub.ledger").error(
-            "ledger.balance_drift",
-            extra={"count": summary.get("drifted", 0), "tenants": ",".join(
-                sorted({str(s.get("tenant_id")) for s in summary.get("sample", []) if s.get("tenant_id")})[:20]
-            )},
-        )
-    return summary
+    # check_balances logs the one ERROR line itself when anything drifted.
+    return check_balances()
 
 
 @job_handler("ledger.schedule_auto_reminders", requires_tenant=False, max_attempts=3)

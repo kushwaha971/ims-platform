@@ -44,5 +44,16 @@ def check_balances(*, tenant_id: Any = None) -> dict:
         "ms": round((time.monotonic() - started) * 1000),
     }
     if drifted:
-        logger.error("ledger.balance_drift", extra={"drifted": len(drifted), "checked": checked})
+        # One alert line per run — the operator's MVP alert path (Part 27 §27.14):
+        # a count and tenant ids, never a party name or an amount.
+        tenants = sorted({str(d.tenant_id) for d in drifted})
+        logger.error(
+            "ledger.balance_drift",
+            extra={
+                "drifted": len(drifted),
+                "count": len(drifted),
+                "checked": checked,
+                "tenants": ",".join(tenants[:20]),
+            },
+        )
     return summary
