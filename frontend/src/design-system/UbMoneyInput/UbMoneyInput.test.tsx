@@ -102,6 +102,33 @@ describe('what the merchant sees while typing', () => {
     expect(field).toHaveValue('500.00');
   });
 
+  it('shows a value that arrives while the field is focused, raw (Record payment prefill)', async () => {
+    // Regression from the first S-D2 fix: the entry drawer autofocuses the
+    // amount and the amount owed lands a render later; the focused field must
+    // show it as "2300.00", editable, not keep its stale text.
+    function Prefill() {
+      const [value, setValue] = useState('');
+      return (
+        <>
+          <UbMoneyInput value={value} onChange={setValue} aria-label="Amount" />
+          <button type="button" onClick={() => setValue('2300.00')}>
+            Prefill
+          </button>
+        </>
+      );
+    }
+    const user = userEvent.setup();
+    render(<Prefill />);
+    const field = screen.getByLabelText('Amount');
+    act(() => field.focus());
+    act(() => screen.getByRole('button', { name: 'Prefill' }).click());
+    expect(field).toHaveFocus();
+    expect(field).toHaveValue('2300.00');
+    await user.clear(field);
+    await user.type(field, '500');
+    expect(field).toHaveValue('500');
+  });
+
   it('QA S-D2: pasting over a selected amount replaces it and parses a grouped paste', async () => {
     const user = userEvent.setup();
     const onValue = jest.fn();

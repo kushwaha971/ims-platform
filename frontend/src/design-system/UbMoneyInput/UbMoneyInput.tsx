@@ -16,19 +16,23 @@ import { cn } from 'src/utils/cn';
  * validate, not to format, not to compare. What the user types is text, what
  * leaves is text, and `decimal.js-light` does the arithmetic elsewhere.
  *
- * ── Grouped at rest, raw while editing ──────────────────────────────────────
+ * ── Grouped on blur, raw while focused ──────────────────────────────────────
  * Indian grouping is 2,2,3 — ₹12,34,567.89, not ₹1,234,567.89 — and a merchant
  * reading a figure wants to see it that way. But formatting WHILE someone types
  * fights them: the caret jumps every time a separator is inserted, and
- * backspacing over a comma does nothing visible. So the field shows exactly
- * what was typed from the first edit on, and groups it when focus leaves.
+ * backspacing over a comma does nothing visible. So the field shows the raw
+ * value while it has focus — including a value that ARRIVES while it has
+ * focus, like the amount owed prefilled into an autofocused drawer — and
+ * groups it when focus leaves.
  *
- * It does NOT switch to the raw text on FOCUS (QA S-D2). Tabbing in selects
- * the whole text, and so do select-all-then-type, paste-over and Playwright's
- * `fill`; swapping "1,392.00" for "1392.00" under that selection collapsed it
- * to the end, so "500" was appended — "1392.00500" — instead of replacing the
- * amount. The text only changes once the merchant has changed it, and the
- * first edit is parsed from whatever was shown (commas and ₹ are dropped).
+ * The swap to raw text happens IN the focus handler, on the DOM, before
+ * anything else can select (QA S-D2). Done by a re-render instead, it landed
+ * after the selection a tab-in, select-all-then-type, paste-over or
+ * Playwright's `fill` had just made, collapsed it to the end, and "500" was
+ * appended: "1392.00500". A selection covering the whole grouped text is
+ * carried over to the whole raw text; React then renders the same string and
+ * leaves the selection alone. Every edit is parsed from what was shown (commas
+ * and ₹ dropped) and truncated to the caller's decimal places.
  *
  * ── What it accepts ─────────────────────────────────────────────────────────
  * Digits, one decimal point, and nothing else. A `-` is not rejected with an
@@ -124,18 +128,15 @@ const UbMoneyInputInner = forwardRef<HTMLInputElement, UbMoneyInputProps>(
     },
     ref
   ) {
-    // True from the first edit until blur — not from focus (see "Grouped at rest").
-    const [editing, setEditing] = useState(false);
+    const [focused, setFocused] = useState(false);
 
     const handleChange = useCallback(
-      (event: React.ChangeEvent<HTMLInputElement>) => {
-        setEditing(true);
-        onChange(capDecimals(sanitiseAmount(event.target.value), decimalPlaces));
-      },
+      (event: React.ChangeEvent<HTMLInputElement>) =>
+        onChange(capDecimals(sanitiseAmount(event.target.value), decimalPlaces)),
       [onChange, decimalPlaces]
     );
 
-    const shown = editing || !value ? (value ?? '') : groupIndian(value, decimalPlaces);
+    const shown = focused || !value ? (value ?? '') : groupIndian(value, decimalPlaces);
 
     return (
       <div className={cn('relative flex w-full items-center', className)}>
@@ -157,9 +158,22 @@ const UbMoneyInputInner = forwardRef<HTMLInputElement, UbMoneyInputProps>(
           value={shown}
           onChange={handleChange}
           invalid={invalid}
-          onFocus={onFocus}
+          onFocus={(event) => {
+            const input = event.currentTarget;
+            const raw = value ?? '';
+            if (input.value !== raw) {
+              const all =
+                input.value.length > 0 &&
+                input.selectionStart === 0 &&
+                input.selectionEnd === input.value.length;
+              input.value = raw;
+              if (all) input.setSelectionRange(0, raw.length);
+            }
+            setFocused(true);
+            onFocus?.(event);
+          }}
           onBlur={(event) => {
-            setEditing(false);
+            setFocused(false);
             // Committed to the caller's precision on the way out, so the form
             // holds "2300.00" rather than "2300." or "2300".
             if (value) onChange(padDecimals(value, decimalPlaces));
