@@ -9,13 +9,18 @@
  * wave 1 (Part 32 §32.4.4) — the form anatomy, the auth-screen controls, the
  * overlays and the wizard's stepper. Waves 2–3 add lines here and nothing else.
  *
- * Wave 1, as shipped, differs from §32.4.4's list in two ways, both recorded in
- * the sprint report: `UbMoneyInput` and `UbDateInput` are deferred with
- * `UbFileUpload`, `UbPercentInput` and `UbQuantityInput`, because no Sprint 1
- * screen takes money or a date; and `UbDrawer` is deferred for the same reason
- * (PLT-02's change-password drawer lives on `/profile`, which is PLT-07's
- * screen in Sprint 2). `UbTextInput`, `UbOtpInput`, `UbSelect`, `UbRadioGroup`,
- * `UbCheckbox` and `UbProgress` are additions the Sprint 1 screens do need.
+ * Wave 1, as shipped, differed from §32.4.4's list in two ways, both recorded
+ * in the sprint report: `UbMoneyInput`, `UbDateInput` and `UbDrawer` were
+ * deferred with `UbFileUpload`, `UbPercentInput` and `UbQuantityInput`, because
+ * no Sprint 1 screen took money, a date or a form long enough to need a drawer.
+ * `UbTextInput`, `UbOtpInput`, `UbSelect`, `UbRadioGroup`, `UbCheckbox` and
+ * `UbProgress` are additions the Sprint 1 screens did need.
+ *
+ * **Sprint 3 / PTY-01 closes three of those deferrals.** The party form takes an
+ * opening balance, a collection date and twenty-odd fields, so `UbMoneyInput`,
+ * `UbDateInput` and `UbDrawer` are built below. `UbFileUpload`,
+ * `UbPercentInput` and `UbQuantityInput` stay deferred — nothing yet uploads a
+ * file, sets a rate or counts stock.
  */
 
 // ── Wave 2 — layout and typography (§23.3) ───────────────────────────────────
@@ -76,6 +81,8 @@ export { UbStack } from './UbStack';
 export type { UbStackAlign, UbStackDirection, UbStackJustify, UbStackProps } from './UbStack';
 
 export { UbText } from './UbText';
+export { UbTooltip } from './UbTooltip';
+export type { UbTooltipProps, UbTooltipPlacement } from './UbTooltip';
 export type { UbTextProps } from './UbText';
 
 /** The shared scales, so a feature names a tier rather than restating a class. */
@@ -92,6 +99,9 @@ export type { UbCardProps } from './UbCard';
 export { UbEmptyState } from './UbEmptyState';
 export type { UbEmptyStateProps, UbEmptyStateVariant } from './UbEmptyState';
 
+export { UbRequestId, formatRequestReference } from './UbRequestId';
+export type { UbRequestIdFields, UbRequestIdProps } from './UbRequestId';
+
 export { UbPageHeader } from './UbPageHeader';
 export type { UbPageHeaderProps, UbPageHeaderWidth } from './UbPageHeader';
 
@@ -107,6 +117,14 @@ export type { UbSnackbarProps, UbSnackbarSeverity } from './UbSnackbar';
 export { UbStatusBadge } from './UbStatusBadge';
 export type { UbStatusBadgeProps, UbStatusBadgeTone } from './UbStatusBadge';
 
+export { UbSearchInput } from './UbSearchInput';
+export type { UbSearchInputProps } from './UbSearchInput';
+export { UbSectionHeading } from './UbSectionHeading';
+export type { UbSectionHeadingProps } from './UbSectionHeading';
+export { UbPanel, UbPanelSection } from './UbPanel';
+export type { UbPanelProps, UbPanelSectionProps } from './UbPanel';
+export { UbInfoRow } from './UbInfoRow';
+export type { UbInfoRowProps, UbInfoRowVariant } from './UbInfoRow';
 export { UbStatusBanner } from './UbStatusBanner';
 export type { UbStatusBannerProps, UbStatusBannerTone } from './UbStatusBanner';
 
@@ -123,9 +141,21 @@ export type { UbFieldErrorProps } from './UbFieldError';
 export { UbInputHint } from './UbInputHint';
 export type { UbInputHintProps } from './UbInputHint';
 
+// ── PTY-02 — filter chips ────────────────────────────────────────────────────
+// A toggle that says something about the list below it, and the group that
+// gives a row of them a name. Extracted from the copy that was inline in
+// `UbDateInput`'s quick choices once PTY-02 needed the same pill three more
+// times.
+export { UbFilterBar, UbFilterChip, UbFilterChipGroup } from './UbFilterChip';
+export type { UbFilterBarProps, UbFilterChipGroupProps, UbFilterChipProps } from './UbFilterChip';
+
 // ── Wave 1 — controls ────────────────────────────────────────────────────────
 export { UbButton } from './UbButton';
 export type { UbButtonProps, UbButtonSize, UbButtonVariant } from './UbButton';
+export { UbActionLink } from './UbActionLink';
+export type { UbActionLinkProps } from './UbActionLink';
+export { UbChoiceChips } from './UbChoiceChips';
+export type { UbChoiceChipOption, UbChoiceChipsProps } from './UbChoiceChips';
 
 export { UbCheckbox } from './UbCheckbox';
 export type { UbCheckboxProps } from './UbCheckbox';
@@ -159,8 +189,54 @@ export type { UbNativeSelectProps } from './UbNativeSelect';
 export { UbSelect } from './UbSelect';
 export type { UbSelectOption, UbSelectProps } from './UbSelect';
 
+export { UbDisclosure } from './UbDisclosure';
+export type { UbDisclosureProps } from './UbDisclosure';
+export { UbDrawer } from './UbDrawer';
+export type { UbDrawerProps } from './UbDrawer';
+export { UbMoneyInput, groupIndian, padDecimals, sanitiseAmount } from './UbMoneyInput';
+export type { UbMoneyInputProps } from './UbMoneyInput';
+// ── Sprint 6 (INV-01…INV-06): quantities, server-backed pickers, line items ──
+export { UbQuantityInput, sanitiseQuantity } from './UbQuantityInput';
+export type { UbQuantityInputProps } from './UbQuantityInput';
+export { UbAsyncCombobox } from './UbAsyncCombobox';
+export type { UbAsyncComboboxOption, UbAsyncComboboxProps } from './UbAsyncCombobox';
+export { UbLineItemsEditor } from './UbLineItemsEditor';
+export type {
+  UbLineCellContext,
+  UbLineCellLayout,
+  UbLineItemsColumn,
+  UbLineItemsEditorLabels,
+  UbLineItemsEditorProps,
+} from './UbLineItemsEditor';
+export { UbDateInput, isoFinancialYearStart, isoToday } from './UbDateInput';
+export type { UbDateInputProps, UbDateQuickChoice } from './UbDateInput';
+
+export { UbPopover } from './UbPopover';
+export type { UbPopoverProps } from './UbPopover';
+export { UbSwitch } from './UbSwitch';
+export type { UbSwitchProps } from './UbSwitch';
 export { UbTextInput } from './UbTextInput';
 export type { UbTextInputProps } from './UbTextInput';
+// Track T1 (PLT-06, PLT-07, WLB-01) — multi-line text, one-file pick, a stored
+// image and the colour swatch. See docs/DESIGN-SYSTEM.md §4.
+export { UbTextArea } from './UbTextArea';
+export type { UbTextAreaProps } from './UbTextArea';
+export { UbFileUpload } from './UbFileUpload';
+export type { UbFileUploadProps } from './UbFileUpload';
+export { UbImagePreview } from './UbImagePreview';
+export type { UbImagePreviewProps } from './UbImagePreview';
+export { UbColorInput } from './UbColorInput';
+export type { UbColorInputProps } from './UbColorInput';
+
+/**
+ * PTY-05 — a merchant's own labels. `UbTag` is the chip; `UbTagList` is the
+ * fixed-height lane a list row reserves for it; `UbTokenInput` is the picker
+ * that adds one, including one that does not exist yet.
+ */
+export { isUbTagColor, UB_TAG_COLORS, UbTag, UbTagList } from './UbTag';
+export type { UbTagColor, UbTagListItem, UbTagListProps, UbTagProps } from './UbTag';
+export { UbTokenInput } from './UbTokenInput';
+export type { UbTokenInputOption, UbTokenInputProps } from './UbTokenInput';
 
 // ── Wave 1 — structure and overlays ──────────────────────────────────────────
 export { UbConfirmDialog } from './UbConfirmDialog';
@@ -168,6 +244,27 @@ export type { UbConfirmDialogProps } from './UbConfirmDialog';
 
 export { UbDialog } from './UbDialog';
 export type { UbDialogProps } from './UbDialog';
+
+// ── Wave 3 — Sprint 3 §32.6.4 ────────────────────────────────────────────────
+/**
+ * `UbShareSheet` — NTF-03's one share surface: WhatsApp, SMS, copy and the
+ * platform sheet, over `UbDialog` (no Radix popover — the khata route's bundle
+ * gate refused one). The links it opens are built in `src/utils/share.ts`.
+ * `UbDateRangePicker` — a period as presets plus a custom from/to, in a
+ * `UbFilterBar`. `UbFab` — the floating action button, which clears the toast
+ * through `useBottomInset`. `UbTimeline` and `UbPartyHeader` are NOT here, by
+ * decision: each would have one caller (docs/DESIGN-SYSTEM.md §4).
+ */
+export { UbShareSheet } from './UbShareSheet';
+export type { UbShareChannel, UbShareSheetLabels, UbShareSheetProps } from './UbShareSheet';
+export { UbDateRangePicker } from './UbDateRangePicker';
+export type {
+  UbDateRangePickerLabels,
+  UbDateRangePickerProps,
+  UbDateRangePreset,
+} from './UbDateRangePicker';
+export { UbFab } from './UbFab';
+export type { UbFabProps } from './UbFab';
 
 export { UbStepper } from './UbStepper';
 export type { UbStepperProps, UbStepperStep, UbStepperTone } from './UbStepper';
@@ -188,20 +285,29 @@ export type { MLRadioOption, MLTabDescriptor } from './primitives';
 export {
   cardModel,
   cardSlotOf,
+  columnWidths,
   COMPACT_PRIORITY_CUTOFF,
   describeHorizontalOverflow,
   dropOrder,
   fillTemplate,
   findHorizontalOverflow,
+  GRID_ROW_HEIGHT,
+  isHideable,
   LG_QUERY,
+  loadColumnVisibility,
   MAX_CARD_META,
   MD_QUERY,
   UbDataGrid,
   UbDataGridEmptyState,
   UbDataGridMobileList,
   UbDataGridPagination,
+  UbDataGridSkeletonRows,
+  UbDataGridStateRow,
+  UbDataGridStateTable,
   UbDataGridToolbar,
+  useColumnVisibility,
   useGridTier,
+  visibilityStorageKey,
   visibleColumns,
 } from './UbDataGrid';
 export type {
@@ -210,7 +316,10 @@ export type {
   UbCardSlot,
   UbColumnAlign,
   UbColumnPriority,
+  UbColumnVisibility,
+  UbColumnVisibilityApi,
   UbDataGridColumn,
+  UbDataGridColumnMenuProps,
   UbDataGridEmptyCopy,
   UbDataGridEmptyStateProps,
   UbDataGridEmptyStates,
@@ -218,6 +327,9 @@ export type {
   UbDataGridMobileListProps,
   UbDataGridPaginationProps,
   UbDataGridProps,
+  UbDataGridSkeletonRowsProps,
+  UbDataGridStateRowProps,
+  UbDataGridStateTableProps,
   UbDataGridTableProps,
   UbDataGridToolbarProps,
   UbGridPage,

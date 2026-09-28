@@ -49,6 +49,17 @@ export const formatTimestamp = (value: string | null | undefined): string => {
   return parsed.isValid() ? parsed.format(`${DISPLAY_DATE_FORMAT}, HH:mm`) : '—';
 };
 
+/**
+ * Milliseconds from now until an RFC 3339 instant, never negative — the cool-off
+ * countdown (PLT-10) and a support session's end (PLT-14) both read it. Lives
+ * here because this module is the one place that consults the clock.
+ */
+export const msUntil = (value: string | null | undefined): number => {
+  if (!value) return 0;
+  const parsed = dayjs(value);
+  return parsed.isValid() ? Math.max(0, parsed.diff(dayjs())) : 0;
+};
+
 export const isPastDate = (value: string, today: string = todayInTenantTz()): boolean =>
   dayjs(value).isBefore(dayjs(today), 'day');
 

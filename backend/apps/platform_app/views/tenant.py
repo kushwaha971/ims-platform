@@ -24,10 +24,10 @@ from apps.platform_app.permissions import MembersManagePermission, TenantManageP
 from apps.platform_app.selectors import session_payload
 from apps.platform_app.selectors.memberships import (
     active_membership,
-    member_of_tenant,
-    members_of,
     invitation_of_tenant,
     invitations_of,
+    member_of_tenant,
+    members_of,
     membership_of_user,
     role_by_code,
 )
@@ -44,11 +44,13 @@ from apps.platform_app.serializers.tenant import (
     TenantCreateSerializer,
     TenantReadSerializer,
     TenantUpdateSerializer,
+    tenant_read_payload,
 )
 from apps.platform_app.services import credentials as credentials_service
 from apps.platform_app.services import memberships as membership_service
 from apps.platform_app.services import onboarding as onboarding_service
 from apps.platform_app.services import sessions as session_service
+from apps.platform_app.services import tenant_settings as settings_service
 
 
 def _meta(request: Any) -> dict:
@@ -70,6 +72,14 @@ def accept_link(raw_token: str) -> str:
     """
     base = (settings.UB_PUBLIC_BASE_URL or "").rstrip("/")
     return f"{base}/accept-invite/{raw_token}"
+
+
+def _sees_pii(tenant: Any) -> bool:
+    """PLT-07 §12: the bank account number and PAN, unmasked, to owner/admin only."""
+    from apps.platform_app.permissions import may_edit_settings
+
+    membership = getattr(tenant, "_ub_membership", None)
+    return membership is not None and may_edit_settings(membership)
 
 
 def _tenant_or_refuse(request: Any) -> Any:
@@ -95,6 +105,14 @@ class TenantCreateView(APIView):
 
     The `Idempotency-Key` header is what makes EC-7 true: a retry after a lost
     response replays the created tenant instead of creating a second business.
+
+    Defect NEW-1: a caller who already owns an UNFINISHED business gets that
+    business back — updated with this step's three fields — rather than a
+    second one, because a browser refresh loses the client's key and a fresh
+    key is a fresh request. That answer is `200`, not `201`: nothing was
+    created. The body has the same shape either way, and the session is
+    re-issued for the resumed tenant, so the wizard's next step is scoped to it
+    whichever branch ran.
     """
 
     permission_classes = [IsAuthenticated]
@@ -106,7 +124,7 @@ class TenantCreateView(APIView):
         data = serializer.validated_data
         meta = _meta(request)
 
-        membership = onboarding_service.create_tenant(
+        membership, created = onboarding_service.start_tenant(
             user=request.user,
             name=data["name"],
             business_type=data["business_type"],
@@ -139,7 +157,7 @@ class TenantCreateView(APIView):
         }
         if expose:
             payload["access_token"] = issued.access
-        response = StandardResponse.created(payload)
+        response = StandardResponse.created(payload) if created else StandardResponse.ok(payload)
         response["X-Tenant-Id"] = str(membership.tenant_id)
         return self._with_session(response, issued)
 
@@ -184,6 +202,31 @@ class TenantCreateView(APIView):
         )
 
 
+class TenantResumableView(APIView):
+    """`GET /tenants/resumable` — the business step 1 would resume (defect M2).
+
+    `POST /tenants` resumes the caller's unfinished business instead of creating
+    a second one (NEW-1), and only when that business is still an abandoned
+    attempt (M2). Both rules live in `onboarding.resumable_onboarding`, and this
+    read asks the same function, so the wizard's "you have an unfinished
+    business" notice can never disagree with what the create will actually do.
+    A client-side guess from the switcher list could: it cannot see members or
+    books, so it would promise to continue a business the server then declines
+    to touch.
+
+    `{"tenant": null}` when there is nothing to resume. Any authenticated user,
+    like the create itself — the answer is only ever about the caller's own
+    memberships, so there is nothing to scope and nothing to refuse.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request: Any) -> Any:
+        membership = onboarding_service.resumable_onboarding(user=request.user)
+        tenant = TenantReadSerializer(membership.tenant).data if membership is not None else None
+        return StandardResponse.ok({"tenant": tenant})
+
+
 class TenantCurrentView(APIView):
     """`GET`/`PATCH /tenants/current` (PLT-03 FR-3…FR-5; Part 22 §22.3).
 
@@ -198,7 +241,7 @@ class TenantCurrentView(APIView):
         tenant = get_effective_tenant(request)
         if tenant is None:
             raise NoActiveTenant()
-        return StandardResponse.ok(TenantReadSerializer(tenant).data)
+        return StandardResponse.ok(tenant_read_payload(tenant, unmasked=_sees_pii(tenant)))
 
     def patch(self, request: Any) -> Any:
         tenant = get_effective_tenant(request)
@@ -207,16 +250,30 @@ class TenantCurrentView(APIView):
         serializer = TenantUpdateSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         meta = _meta(request)
+        changes = dict(serializer.validated_data)
+        modules = changes.pop("enabled_modules", None)
 
-        tenant, warnings = onboarding_service.update_tenant(
-            tenant=tenant,
-            actor=request.user,
-            changes=dict(serializer.validated_data),
-            request_id=meta["request_id"],
-            ip=meta["ip"],
-            user_agent=meta["user_agent"],
+        warnings: list = []
+        # PLT-06 FR-4: the module switches have their own rules and their own
+        # audit event, so they go to their own service. A request carrying only
+        # `enabled_modules` never touches the profile (and never re-runs its GST
+        # validation against a half-filled wizard).
+        if modules is not None:
+            tenant = settings_service.update_enabled_modules(
+                tenant=tenant, modules=modules, ctx=Ctx.from_request(request)
+            )
+        if changes:
+            tenant, warnings = onboarding_service.update_tenant(
+                tenant=tenant,
+                actor=request.user,
+                changes=changes,
+                request_id=meta["request_id"],
+                ip=meta["ip"],
+                user_agent=meta["user_agent"],
+            )
+        return StandardResponse.ok(
+            tenant_read_payload(tenant, unmasked=_sees_pii(tenant)), meta={"warnings": warnings}
         )
-        return StandardResponse.ok(TenantReadSerializer(tenant).data, meta={"warnings": warnings})
 
 
 class MembershipDetailView(APIView):

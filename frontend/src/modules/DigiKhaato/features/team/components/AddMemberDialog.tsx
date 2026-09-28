@@ -5,7 +5,15 @@ import { useCallback, useEffect, useId, useMemo } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm } from 'react-hook-form';
 
-import { UbButton, UbDialog, UbField, UbForm, UbSelect, UbTextInput } from 'src/design-system';
+import {
+  UbButton,
+  UbDialog,
+  UbField,
+  UbForm,
+  UbPhoneInput,
+  UbSelect,
+  UbTextInput,
+} from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
 
 import { DEFAULT_INVITE_ROLE, INVITABLE_ROLES } from '../constants/teamDefaults';
@@ -106,6 +114,7 @@ export function AddMemberDialog({
         <UbField
           name="fullName"
           label={t('team.member.name.label')}
+          placeholder={t('team.member.name.placeholder')}
           hint={t('team.member.name.hint')}
           required
         >
@@ -115,13 +124,19 @@ export function AddMemberDialog({
         <UbField
           name="email"
           label={t('team.member.email.label')}
+          placeholder={t('team.member.email.placeholder')}
           hint={t('team.member.email.hint')}
           required
         >
           {(field) => <UbTextInput {...field} type="email" autoComplete="off" />}
         </UbField>
 
-        <UbField name="role" label={t('team.member.role.label')} required>
+        <UbField
+          name="role"
+          label={t('team.member.role.label')}
+          placeholder={t('team.member.role.placeholder')}
+          required
+        >
           {(field) => (
             <UbSelect
               {...field}
@@ -131,12 +146,16 @@ export function AddMemberDialog({
           )}
         </UbField>
 
+        {/* `UbPhoneInput`, as on the party form: the merchant types ten digits
+            and the schema wants E.164, so a plain `type="tel"` box refused
+            "9890011223" with a format error (UAT D4). */}
         <UbField
           name="mobile"
           label={t('team.member.mobile.label')}
+          placeholder={t('team.member.mobile.placeholder')}
           hint={t('team.member.mobile.hint')}
         >
-          {(field) => <UbTextInput {...field} type="tel" inputMode="tel" autoComplete="off" />}
+          {(field) => <UbPhoneInput {...field} autoComplete="off" />}
         </UbField>
       </UbForm>
     </UbDialog>

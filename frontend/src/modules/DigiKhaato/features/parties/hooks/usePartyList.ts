@@ -9,6 +9,7 @@ import { selectNetworkImpaired } from 'src/redux/slice/networkSlice';
 import type { ApiErrorShape, PageMeta, RequestStatus } from 'src/types/api.types';
 
 import {
+  DEFAULT_PARTY_FILTERS,
   filtersChanged,
   filtersCleared,
   pageChanged,
@@ -16,10 +17,12 @@ import {
   selectPartyFilters,
   selectPartyListError,
   selectPartyListMeta,
+  selectPartyListShowingSaved,
   selectPartyListStale,
   selectPartyListStatus,
   selectPartyListTotals,
   selectPartyListTotalsScope,
+  selectPartyOverLimit,
   selectPartyRows,
   selectPartySelection,
 } from '../redux/partyListSlice';
@@ -27,9 +30,11 @@ import { fetchPartyList } from '../redux/partyListThunk';
 import { abortWarmPartyList, claimWarmPartyList } from '../redux/partyListWarmup';
 import { partyTotals } from '../view-model/partyDisplay';
 
+import { usePartyListUrl } from './usePartyListUrl';
+
+import type { PartyBalanceFilter } from '../constants/partyFilters';
 import type { Party, PartyListFilters } from '../types/party.types';
 import type { PartyListTotals } from '../view-model/partyDisplay';
-
 
 export interface UsePartyListResult {
   readonly rows: readonly Party[];
@@ -40,6 +45,8 @@ export interface UsePartyListResult {
   /** The two header figures, and which set they describe. */
   readonly totals: PartyListTotals;
   readonly totalsScope: 'filtered' | 'page';
+  /** PTY-06 FR-12 — how many matched parties are over their limit, or null. */
+  readonly overLimit: number | null;
   readonly selectedIds: readonly string[];
   readonly setSelectedIds: (ids: readonly string[]) => void;
   /** Sorting is SERVER-side: it changes `ordering` and resets to page 1. */
@@ -52,7 +59,17 @@ export interface UsePartyListResult {
   readonly refetch: () => void;
   readonly isLoading: boolean;
   readonly isRefreshing: boolean;
+  /**
+   * FR-15 — the last request failed and `rows` are the saved answer to that
+   * same query: show them under the "Showing saved list" banner, not the error.
+   */
+  readonly showingSaved: boolean;
+  /** Any narrowing at all is applied — the search box or any of the chips. */
   readonly isFiltered: boolean;
+  /** How many, for the "Clear filters (2)" affordance (§19.3.4's example). */
+  readonly activeFilterCount: number;
+  /** Applies a balance filter, or clears it when it is already the one applied. */
+  readonly toggleBalance: (value: PartyBalanceFilter) => void;
 }
 
 /**
@@ -69,8 +86,10 @@ export function usePartyList(mode: 'replace' | 'append' = 'replace'): UsePartyLi
   const status = useAppSelector(selectPartyListStatus);
   const error = useAppSelector(selectPartyListError);
   const stale = useAppSelector(selectPartyListStale);
+  const showingSaved = useAppSelector(selectPartyListShowingSaved);
   const serverTotals = useAppSelector(selectPartyListTotals);
   const totalsScope = useAppSelector(selectPartyListTotalsScope);
+  const overLimit = useAppSelector(selectPartyOverLimit);
 
   /**
    * The page-sum fallback, computed HERE rather than in the reducer.
@@ -86,10 +105,7 @@ export function usePartyList(mode: 'replace' | 'append' = 'replace'): UsePartyLi
    * merchant told "₹2,40,000 receivable" has to know whether that is their book
    * or the twenty-five rows in front of them.
    */
-  const totals = useMemo(
-    () => serverTotals ?? partyTotals(rows),
-    [serverTotals, rows]
-  );
+  const totals = useMemo(() => serverTotals ?? partyTotals(rows), [serverTotals, rows]);
   const selectedIds = useAppSelector(selectPartySelection);
   const isImpaired = useAppSelector(selectNetworkImpaired);
 
@@ -99,9 +115,47 @@ export function usePartyList(mode: 'replace' | 'append' = 'replace'): UsePartyLi
   const debouncedSearch = useDebounce(searchInput, SEARCH_DEBOUNCE_MS);
 
   useEffect(() => {
+    /* Only once the debounce has CAUGHT UP with the box.
+     *
+     * `debouncedSearch` trails `searchInput` by the debounce, so for a few
+     * hundred milliseconds after any change it holds the previous value. That
+     * was harmless while the box was the only writer. It stopped being harmless
+     * when the URL became a second one: a link carrying `?q=ramesh` seeded the
+     * slice and the box, and this effect then committed the stale empty
+     * `debouncedSearch` straight back over it — the list filtered correctly for
+     * one frame and then unfiltered itself, with "ramesh" still sitting in the
+     * search field.
+     *
+     * The guard also fixes the pre-existing version of the same race: a
+     * merchant who typed and then hit "Clear filters" within the debounce
+     * window had their cleared search re-applied a moment later. */
+    if (debouncedSearch !== searchInput) return;
     const committed = debouncedSearch.trim();
     if (committed !== filters.q) dispatch(filtersChanged({ q: committed }));
-  }, [debouncedSearch, filters.q, dispatch]);
+  }, [debouncedSearch, searchInput, filters.q, dispatch]);
+
+  /**
+   * A `q` that arrived from the URL has to appear in the SEARCH BOX.
+   *
+   * The effect above commits the box into the slice; this is the other
+   * direction, and it exists only for the seed and for "Clear filters".
+   * Without it a link carrying `?q=ramesh` filtered the list correctly over an
+   * EMPTY search field, so the merchant could see neither what was applied nor
+   * how to clear it — and the first keystroke would have silently replaced a
+   * filter they did not know was there.
+   *
+   * Adjusted DURING RENDER rather than in an effect, on a change of `filters.q`
+   * that this component did not cause. An effect here is a build failure
+   * (`react-hooks/set-state-in-effect`) and would also paint one frame of the
+   * stale box. `lastAppliedQ` is what makes "did I cause this" answerable: the
+   * box writes to the slice through the debounce, so seeing a `q` we have not
+   * recorded means somebody else set it.
+   */
+  const [lastAppliedQ, setLastAppliedQ] = useState(filters.q);
+  if (filters.q !== lastAppliedQ) {
+    setLastAppliedQ(filters.q);
+    if (filters.q !== searchInput.trim()) setSearchInput(filters.q);
+  }
 
   // One effect, one request. The promise is aborted when the filter set changes
   // mid-flight so a slow page 1 can never overwrite a fast page 2.
@@ -140,12 +194,67 @@ export function usePartyList(mode: 'replace' | 'append' = 'replace'): UsePartyLi
     return () => promise.abort();
   }, [stale, isImpaired, dispatch, filters]);
 
+  /**
+   * Every narrowing the merchant has applied, counted.
+   *
+   * `isFiltered` was `filters.q.length > 0`, and it decides which EMPTY STATE
+   * the grid shows. So a merchant with three hundred parties who tapped
+   * "Settled" and had none was told "No customers yet — add the first person
+   * you give udhaar to", with a button to create one, on a book full of them.
+   * The state was right about the rows and wrong about the reason, which is
+   * the only thing an empty state is for.
+   *
+   * `status` counts only when it is NOT the default (UAT D7). It always has
+   * a value, so counting it unconditionally would make the list permanently
+   * "filtered" and the first-use empty state unreachable — a brand-new tenant
+   * would be told to clear filters they never set. But Archived IS a
+   * narrowing, and leaving it out meant "Clear filters" neither showed it in
+   * its count nor took it off, over a list reading ₹0 / ₹0.
+   *
+   * PTY-05's `tag` is counted here for exactly the reason the comment above
+   * exists. A merchant who filters to "Camp Area" and finds nobody would
+   * otherwise be shown the first-use empty state — "No customers yet, add the
+   * first person you give udhaar to" — on a book with three hundred parties in
+   * it, and no Clear affordance to get back out.
+   */
+  const activeFilterCount = useMemo(
+    () =>
+      [
+        filters.q,
+        filters.status !== DEFAULT_PARTY_FILTERS.status,
+        filters.type,
+        filters.balance,
+        filters.collection,
+        filters.tag,
+        filters.credit,
+      ].filter(Boolean).length,
+    [
+      filters.q,
+      filters.status,
+      filters.type,
+      filters.balance,
+      filters.collection,
+      filters.tag,
+      filters.credit,
+    ]
+  );
+
   const setFilters = useCallback(
     (patch: Partial<PartyListFilters>) => {
       dispatch(filtersChanged(patch));
     },
     [dispatch]
   );
+
+  /**
+   * The filters travel in the address bar (see `usePartyListUrl`).
+   *
+   * It is wired here rather than in the screen because the URL and the slice
+   * are two representations of ONE thing, and the place that already owns the
+   * slice is the only place that can keep them from disagreeing. The hook seeds
+   * from the URL once and follows the slice afterwards.
+   */
+  usePartyListUrl({ filters, defaults: DEFAULT_PARTY_FILTERS, onSeed: setFilters });
   const setPage = useCallback(
     (page: number, pageSize?: number) => {
       dispatch(pageChanged({ page, pageSize }));
@@ -157,6 +266,21 @@ export function usePartyList(mode: 'replace' | 'append' = 'replace'): UsePartyLi
       dispatch(selectionChanged([...ids]));
     },
     [dispatch]
+  );
+  /**
+   * The money tiles and the balance chips are the SAME control in two places,
+   * so the toggle lives here rather than in either of them.
+   *
+   * Tapping the applied one clears it. A tile that only ever applied would
+   * leave a merchant who tapped "You will get" to go and find the chip to get
+   * their whole list back, and the tile gives no hint that the chip is where
+   * the way out is.
+   */
+  const toggleBalance = useCallback(
+    (value: PartyBalanceFilter) => {
+      dispatch(filtersChanged({ balance: filters.balance === value ? '' : value }));
+    },
+    [dispatch, filters.balance]
   );
   const setOrdering = useCallback(
     (ordering: string) => {
@@ -180,6 +304,7 @@ export function usePartyList(mode: 'replace' | 'append' = 'replace'): UsePartyLi
     error,
     totals,
     totalsScope,
+    overLimit,
     selectedIds,
     setSelectedIds,
     setOrdering,
@@ -189,8 +314,11 @@ export function usePartyList(mode: 'replace' | 'append' = 'replace'): UsePartyLi
     setPage,
     clearFilters,
     refetch,
+    toggleBalance,
     isLoading: status === 'loading',
     isRefreshing: status === 'refreshing',
-    isFiltered: filters.q.length > 0,
+    showingSaved,
+    isFiltered: activeFilterCount > 0,
+    activeFilterCount,
   };
 }

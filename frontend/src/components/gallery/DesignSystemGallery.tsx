@@ -2,31 +2,45 @@
 
 import { useCallback, useState } from 'react';
 
+import dynamic from 'next/dynamic';
+
 import {
   UbAmount,
   UbAvatar,
   UbBox,
+  UbButton,
   UbCard,
   UbDivider,
+  UbEmptyState,
   UbGrid,
   UbListItemText,
   UbLogo,
-  UbPressable,
-  UbEmptyState,
   UbPageHeader,
   UbPageShell,
+  UbPopover,
+  UbPressable,
   UbSkeleton,
   UbSnackbar,
   UbSpacer,
   UbStack,
   UbStatusBadge,
   UbStatusBanner,
+  UbSwitch,
   UbText,
+  UbTooltip,
 } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
 
 import { DesignSystemChartsGallery } from './DesignSystemChartsGallery';
 import { DesignSystemWave1Gallery } from './DesignSystemWave1Gallery';
+import { DesignSystemWave3Gallery } from './DesignSystemWave3Gallery';
+
+/* The line-items section carries react-hook-form and cmdk; lazy, so the rest
+   of the gallery does not wait for (or pay for) a form library it never uses. */
+const DesignSystemLineItemsGallery = dynamic(
+  () => import('./DesignSystemLineItemsGallery').then((m) => m.DesignSystemLineItemsGallery),
+  { ssr: false }
+);
 
 /**
  * Part 23 §23.4 — the live gallery. Storybook is not a dependency (ADR-021), so
@@ -43,6 +57,7 @@ export function DesignSystemGallery(): React.JSX.Element {
   const { t } = useTranslation();
   // CR-2026-09-19-E — `UbSnackbar` takes ONE message now, not a queue.
   const [message, setMessage] = useState<string | null>(DEMO_MESSAGE);
+  const [switchOn, setSwitchOn] = useState(true);
   const onDismiss = useCallback(() => setMessage(null), []);
 
   return (
@@ -137,6 +152,7 @@ export function DesignSystemGallery(): React.JSX.Element {
               title={t('parties.list.error.title')}
               description={t('parties.list.error.body')}
               requestId="req_7f3a91"
+              requestIdLabel={t('common.error.reference')}
             />
           </UbStack>
         </UbCard>
@@ -149,12 +165,69 @@ export function DesignSystemGallery(): React.JSX.Element {
           </UbStack>
         </UbCard>
 
+        {/* The three BrandHub components that had no counterpart here at all,
+            so the first screen that wants a settings toggle or an explanation
+            for a disabled control has something to render. */}
+        <UbCard title="UbTooltip" description="White card and arrow, like BrandHub's.">
+          <UbStack direction="row" gap={4} align="center">
+            <UbTooltip title="Needs signal — this write is online-only.">
+              <UbButton variant="secondary">Hover me</UbButton>
+            </UbTooltip>
+            <UbTooltip title="Below the trigger." placement="bottom">
+              <UbButton variant="ghost">Bottom</UbButton>
+            </UbTooltip>
+            {/* A blank title renders the child bare — the `disabled ? reason : ''`
+                call, which is most of what this component is for. */}
+            <UbTooltip title="">
+              <UbButton variant="outlineNeutral">No tooltip at all</UbButton>
+            </UbTooltip>
+          </UbStack>
+        </UbCard>
+
+        <UbCard title="UbPopover" description="Anchored panel, 300px, its content scrolls.">
+          <UbPopover
+            label="Demo popover"
+            trigger={<UbButton variant="secondary">Open popover</UbButton>}
+          >
+            <UbStack gap={2} className="p-4">
+              <UbText variant="body-medium">Anchored panel</UbText>
+              <UbText variant="body-sm" tone="secondary">
+                The frame is fixed and the body scrolls, with the page behind it held still —
+                `overscroll-contain`.
+              </UbText>
+            </UbStack>
+          </UbPopover>
+        </UbCard>
+
+        <UbCard title="UbSwitch" description="33×18 track, 44px target, label inside it.">
+          <UbStack gap={2}>
+            <UbSwitch
+              checked={switchOn}
+              onCheckedChange={setSwitchOn}
+              label="WhatsApp reminders"
+              description="Send a reminder when a khata goes past its due date."
+            />
+            <UbSwitch checked={false} onCheckedChange={() => undefined} label="Off" />
+            <UbSwitch checked disabled onCheckedChange={() => undefined} label="On, disabled" />
+          </UbStack>
+        </UbCard>
+
         {/* Part 32 §32.4.4 — wave 1, in its own file so the gallery stays
             readable as waves 2 and 3 land. */}
         <UbText as="h2" variant="h3" className="mt-4">
           Wave 1 — Sprint 1
         </UbText>
         <DesignSystemWave1Gallery />
+
+        <UbText as="h2" variant="h3" className="mt-4">
+          Wave 3 — Sprint 3
+        </UbText>
+        <DesignSystemWave3Gallery />
+
+        <UbText as="h2" variant="h3" className="mt-4">
+          Line items — Sprint 4
+        </UbText>
+        <DesignSystemLineItemsGallery />
 
         <DesignSystemChartsGallery />
 
@@ -239,6 +312,7 @@ export function DesignSystemGallery(): React.JSX.Element {
         message={message}
         severity="error"
         requestId="req_7f3a91"
+        requestIdLabel={t('common.error.reference')}
         onDismiss={onDismiss}
         dismissLabel={t('common.action.dismiss')}
       />

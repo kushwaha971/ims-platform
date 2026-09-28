@@ -2,8 +2,12 @@
 
 import { type ReactNode } from 'react';
 
+import { AccountMenu } from 'src/components/layout/AccountMenu';
 import { MobileNavDrawer } from 'src/components/layout/MobileNavDrawer';
+import { MobileQuickSearch } from 'src/components/layout/MobileQuickSearch';
 import { NetworkStrip } from 'src/components/layout/NetworkStrip';
+import { ShellNotices } from 'src/components/layout/ShellNotices';
+import { UbAppTopBar } from 'src/components/layout/UbAppTopBar';
 import { UbSidebar } from 'src/components/layout/UbSidebar';
 import { UbBox, UbLink, UbLogo, UbStack } from 'src/design-system';
 import { useAppSelector } from 'src/hooks/useAppStore';
@@ -11,6 +15,8 @@ import { useTranslation } from 'src/hooks/useTranslation';
 import { selectAppName } from 'src/redux/slice/whiteLabelSlice';
 import { ROUTES } from 'src/routes';
 
+import { NotificationBell } from 'modules/DigiKhaato/features/notifications/components/NotificationBell';
+import { useNotificationPoll } from 'modules/DigiKhaato/features/notifications/hooks/useNotificationPoll';
 import { PlanLimitDialog } from 'modules/DigiKhaato/features/plan/components/PlanLimitDialog';
 import { TenantSwitcherMenu } from 'modules/DigiKhaato/features/tenant-switcher/components/TenantSwitcherMenu';
 
@@ -51,6 +57,8 @@ export const APP_CONTENT_ID = 'app-content';
  */
 export function UbAppShell({ children }: Readonly<{ children: ReactNode }>): React.JSX.Element {
   const { t } = useTranslation();
+  // NTF-01 FR-8 — one poll for the two bells (phone header, desktop bar).
+  useNotificationPoll();
   const appName = useAppSelector(selectAppName);
 
   return (
@@ -71,11 +79,14 @@ export function UbAppShell({ children }: Readonly<{ children: ReactNode }>): Rea
       <UbStack className="min-w-0 flex-1">
         {/* The mobile header. Hidden from `lg`, where the rail carries both the
             brand and the switcher, so neither is ever in the tab order twice. */}
+        {/* UAT D3 — `data-print="hide"`: this header printed at the top of
+            every statement a phone user printed. */}
         <UbStack
           as="header"
           direction="row"
           align="center"
-          gap={3}
+          gap={2}
+          data-print="hide"
           className="h-14 shrink-0 border-b border-border-hairline bg-surface-card px-4 lg:hidden"
         >
           {/* First in the header and first in the tab order, because on a phone
@@ -91,9 +102,21 @@ export function UbAppShell({ children }: Readonly<{ children: ReactNode }>): Rea
             <UbLogo size="sm" />
           </UbLink>
           <TenantSwitcherMenu className="min-w-0 flex-1" />
+          {/* UAT D2 — below `lg` the top bar does not render, and it held the
+              only party search and the only Sign out. Both are here now, as
+              44 px icons, reusing the same two components. */}
+          <MobileQuickSearch />
+          {/* NTF-01 FR-4 — the bell sits beside search, before the account. */}
+          <NotificationBell />
+          <AccountMenu compact />
         </UbStack>
 
+        <UbAppTopBar />
+
         <NetworkStrip />
+
+        {/* PLT-14 / PLT-10 — the support-session and pending-deletion banners. */}
+        <ShellNotices />
 
         <UbBox as="main" id={APP_CONTENT_ID} tabIndex={-1} className="flex-1 outline-none">
           {children}

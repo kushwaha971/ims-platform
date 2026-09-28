@@ -33,6 +33,7 @@ import {
   useState,
   type KeyboardEvent,
   type ReactNode,
+  type RefObject,
 } from 'react';
 
 import { createPortal } from 'react-dom';
@@ -64,9 +65,44 @@ export interface MLDialogProps {
   readonly describedBy?: string;
   /** False for a destructive confirm: a stray backdrop tap must not dismiss. */
   readonly dismissOnBackdrop?: boolean;
+  /**
+   * `center` (the default) is the modal: a bottom sheet below `sm`, a centred
+   * card above. `drawer` is the long form: the same bottom sheet below `lg`,
+   * and a full-height right-hand panel above it.
+   *
+   * One primitive rather than two, because the hard parts — the portal, the
+   * focus trap, the scroll lock, restoring focus to the opener — are identical
+   * and are the parts that go subtly wrong when they are written twice. What
+   * differs between a modal and a drawer is where the panel is and how wide,
+   * which is a class name.
+   */
+  readonly placement?: 'center' | 'drawer';
+  /**
+   * Where focus goes on close when the element that opened the dialog is no
+   * longer in the document (WCAG 2.4.3). The case is a dialog opened from
+   * another overlay — an item in the khata's ⋯ sheet opens the reminder sheet,
+   * and the item is unmounted with its sheet — so the caller names the control
+   * that is still on the page, usually the ⋯ that opened the menu.
+   */
+  readonly returnFocusRef?: RefObject<HTMLElement | null>;
   readonly children: ReactNode;
   readonly className?: string;
 }
+
+/**
+ * The element focus should return to, in order of preference: the one that
+ * was remembered, if it is still in the document; else the caller's fallback.
+ * A node that has been removed accepts `.focus()` and does nothing, which is
+ * how focus used to land on <body> (QA D1).
+ */
+const restoreTarget = (
+  remembered: HTMLElement | null,
+  fallback: HTMLElement | null | undefined
+): HTMLElement | null => {
+  if (remembered?.isConnected) return remembered;
+  if (fallback?.isConnected) return fallback;
+  return null;
+};
 
 /**
  * A modal dialog: portalled to `document.body`, `aria-modal`, focus trapped,
@@ -79,31 +115,118 @@ export function MLDialog({
   labelledBy,
   describedBy,
   dismissOnBackdrop = true,
+  placement = 'center',
+  returnFocusRef,
   children,
   className,
 }: Readonly<MLDialogProps>): React.JSX.Element | null {
   const panelRef = useRef<HTMLDivElement | null>(null);
   const openerRef = useRef<HTMLElement | null>(null);
 
-  // Remember the opener, move focus in, lock scroll — and undo all three.
+  /* A dialog MOUNTED open never sees its opener take focus. Every lazily
+     loaded dialog in this product is rendered as `{open && <LazyDialog open />}`,
+     so the `focusin` listener below is registered after the click that opened
+     it — and, where the dialog has an `autoFocus` (the archive dialog's Cancel,
+     the entry drawer's amount), after focus has already moved inside. That
+     left the ref null and focus fell to <body> on close (QA D1).
+
+     So the element focused at the moment of the FIRST render is kept, which is
+     before React commits any `autoFocus`. Only for a dialog that mounts open:
+     for one mounted closed, whatever had focus at page load is stale, and the
+     listener is the right source. A lazy state initialiser runs once and reads
+     no ref, which is what `react-hooks/refs` asks. */
+  const [focusedAtMount] = useState<HTMLElement | null>(() =>
+    open && typeof document !== 'undefined' && document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null
+  );
+
+  /* The opener is remembered CONTINUOUSLY rather than read when the dialog
+     opens, and the ordering is the whole reason.
+ 
+     React applies `autoFocus` during commit, before this component's effects
+     run — so by the time an open-time read happened, `document.activeElement`
+     could already be a field INSIDE the dialog, and recording that as "the
+     element to restore focus to on close" means restoring focus to a node that
+     is about to be removed. Reading it during render would be early enough and
+     is what `react-hooks/refs` forbids, correctly.
+ 
+     A capture-phase `focusin` listener that ignores anything inside the panel
+     leaves the ref holding the last element focused OUTSIDE it, which is the
+     button the merchant pressed. Writing a ref from an event handler is exactly
+     what refs are for.
+ 
+     It stays null when the opener never took focus at all — a tap on iOS, where
+     buttons do not focus — and a null simply means no restoration, which is
+     what happened before. */
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+    const remember = (event: FocusEvent) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      if (panelRef.current?.contains(target)) return;
+      openerRef.current = target;
+    };
+    document.addEventListener('focusin', remember, true);
+    return () => document.removeEventListener('focusin', remember, true);
+  }, []);
+
+  // Move focus in, lock scroll — and undo both.
   useEffect(() => {
     if (!open || typeof document === 'undefined') return undefined;
-    openerRef.current =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
 
     const panel = panelRef.current;
+    /* Read once, on open: the caller's control (the khata's ⋯) is mounted by
+       then, and `restoreTarget` checks it is still in the document on close. */
+    const fallback = returnFocusRef?.current ?? null;
+    if (
+      !openerRef.current?.isConnected &&
+      focusedAtMount &&
+      focusedAtMount !== document.body &&
+      !panel?.contains(focusedAtMount)
+    ) {
+      openerRef.current = focusedAtMount;
+    }
     if (panel) {
-      const first = focusableWithin(panel)[0];
-      (first ?? panel).focus();
+      /* Move focus in ONLY if it is not already inside.
+ 
+         This used to move it unconditionally to the first focusable element,
+         which is the close button in the header — so `autoFocus` inside a
+         dialog did nothing at all, silently, and four callers had already
+         written it expecting otherwise: the ledger entry drawer's amount,
+         PTY-05's tag name, and the Cancel button in both archive dialogs, which
+         is there precisely so a destructive confirmation opens on the safe
+         choice.
+ 
+         On the ledger drawer it cost two things at once. The numeric keypad did
+         not come up on a phone, on the screen whose whole target is eight
+         seconds from tap to saved. And the BLUR this effect caused marked the
+         amount touched, so React Hook Form's `onTouched` mode ran the resolver
+         against an empty field and the drawer opened with "Enter an amount."
+         under it, in error red, before the merchant had touched anything.
+ 
+         The check is on where focus IS rather than on an `[autofocus]`
+         attribute, because React does not render one: it applies `autoFocus` by
+         focusing the node during commit and drops the attribute, so a
+         `querySelector('[autofocus]')` matches nothing. Asking the document
+         where focus went is the only reading that is true of what React
+         actually did. */
+      const active = document.activeElement;
+      const alreadyInside = active instanceof HTMLElement && panel.contains(active);
+      if (!alreadyInside) {
+        (focusableWithin(panel)[0] ?? panel).focus();
+      }
     }
 
     return () => {
       document.body.style.overflow = previousOverflow;
-      openerRef.current?.focus();
+      restoreTarget(openerRef.current, fallback)?.focus();
     };
-  }, [open]);
+    /* Both extra deps are stable for the dialog's life — a state value set
+       once and a ref object — and are listed so the rule can see them. */
+  }, [open, focusedAtMount, returnFocusRef]);
 
   const onKeyDown = useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {
@@ -141,8 +264,15 @@ export function MLDialog({
   // mismatch and no `mounted` flag is required to avoid one.
   if (!open || typeof document === 'undefined') return null;
 
+  const isDrawer = placement === 'drawer';
+
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+    <div
+      className={cn(
+        'fixed inset-0 z-50 flex items-end justify-center',
+        isDrawer ? 'lg:items-stretch lg:justify-end' : 'sm:items-center'
+      )}
+    >
       <div
         aria-hidden
         onPointerDown={dismissOnBackdrop ? () => onOpenChange(false) : undefined}
@@ -174,7 +304,15 @@ export function MLDialog({
              BrandHub centres a `max-w-[calc(100vw-2rem)]` panel at every width.
              A sheet anchored to the bottom edge is reachable with a thumb, and
              this product is used one-handed. */
-          'max-h-[90dvh] rounded-t-xl sm:w-[420px] sm:max-w-[calc(100vw-2rem)] sm:rounded-xl',
+          isDrawer
+            ? /* A form long enough to need a drawer is long enough to need
+                 room: 92dvh on a phone rather than 90, and the full height of
+                 the window on a desktop so the list stays visible beside it
+                 rather than behind it. `rounded-l-xl` only — the panel is
+                 flush with three edges, which is what makes it read as
+                 attached to the side rather than floating. */
+              'max-h-[92dvh] rounded-t-xl lg:h-full lg:max-h-none lg:w-[520px] lg:max-w-[calc(100vw-2rem)] lg:rounded-none lg:rounded-l-xl'
+            : 'max-h-[90dvh] rounded-t-xl sm:w-[420px] sm:max-w-[calc(100vw-2rem)] sm:rounded-xl',
           className
         )}
       >
@@ -250,20 +388,40 @@ export function MLDialogDescription({
   );
 }
 
+/**
+ * How a footer's actions stack below `sm`.
+ *
+ * `reversed-on-mobile` (the default) is the convention described below: last
+ * in the DOM, first on screen. `as-written` stacks them top-to-bottom in DOM
+ * order, so the Tab order and the order on screen agree at every width. A
+ * footer of three actions needs it — reversed, Tab walks a phone sheet from
+ * the bottom button upwards (D-L6), which with two buttons is a flip and with
+ * three is a sequence nobody can predict.
+ */
+export type MLDialogFooterOrder = 'reversed-on-mobile' | 'as-written';
+
 export function MLDialogFooter({
   children,
   className,
-}: Readonly<{ readonly children: ReactNode; readonly className?: string }>): React.JSX.Element {
+  order = 'reversed-on-mobile',
+}: Readonly<{
+  readonly children: ReactNode;
+  readonly className?: string;
+  readonly order?: MLDialogFooterOrder;
+}>): React.JSX.Element {
   return (
     /* `border-t` and its own 24px, matching `MLDialogHeader`: BrandHub's
        footer is `flex items-center gap-4 border-t border-border p-6`. The
        column-reverse below `sm` is kept and is not theirs — on a phone the
        primary action belongs under the thumb, which means last in the DOM and
-       first on screen. */
+       first on screen. `sm:flex-wrap` because a footer can carry three
+       actions (PTY-04's blocked archive: Cancel, Record payment, Write off)
+       and a 480 px dialog clipped the first one to "cel" rather than wrap. */
     <div
       className={cn(
-        'flex flex-col-reverse gap-3 border-t border-border-hairline p-6',
-        'sm:flex-row sm:justify-end sm:gap-4',
+        'flex gap-3 border-t border-border-hairline p-6',
+        order === 'as-written' ? 'flex-col' : 'flex-col-reverse',
+        'sm:flex-row sm:flex-wrap sm:justify-end sm:gap-3',
         className
       )}
     >
@@ -377,8 +535,13 @@ export function MLMenu({
           aria-labelledby={`${id}-trigger`}
           onKeyDown={onKeyDown}
           className={cn(
-            'absolute z-40 mt-1 flex w-[min(320px,calc(100vw-32px))] flex-col gap-0.5',
-            'rounded-card border border-border-hairline bg-surface-raised p-1.5 shadow-3',
+            /* `z-[60]` and `shadow-ub-popover`, so a menu matches every other
+               floating surface in the kit and can open inside a dialog. It was
+               `z-40` — BELOW the dialog's own `z-50` — so a menu opened from
+               inside a modal rendered behind it. Same class of bug as the Radix
+               popper wrapper, and fixed the same way. */
+            'absolute z-[60] mt-1 flex w-[min(320px,calc(100vw-32px))] flex-col gap-0.5',
+            'rounded-card border border-border-hairline bg-surface-raised p-1.5 shadow-ub-popover',
             align === 'end' ? 'right-0' : 'left-0'
           )}
         >
@@ -412,7 +575,7 @@ export function MLMenuItem({
       aria-current={selected ? 'true' : undefined}
       onClick={onSelect}
       className={cn(
-        'flex min-h-11 w-full items-center gap-3 rounded-control px-3 py-2 text-left',
+        'ds-body-base-regular flex min-h-9 w-full items-center gap-3 rounded-control px-3 py-2 text-left',
         'ds-body-sm text-text-primary transition-colors duration-fast ease-standard',
         'hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-45',
         selected && 'bg-accent-quiet',

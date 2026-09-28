@@ -382,6 +382,7 @@ One file per host, `chmod 600`, never committed. `.env.example` is this table, i
 | `UB_FEATURE_FLAGS` | `{}` | no | no | Global kill-switches, e.g. `{"public_links": false}` |
 | `UB_VERSION` | `dev` | yes | no | Build/commit id, returned by `/system/version` and stamped on logs |
 | `UB_E2E_MODE` | `0` | — | no | Enables the test-only OTP endpoint; asserted `0` in production |
+| `UB_E2E_RELAX_THROTTLES` | `0` | — | no | **Read by `config.settings.local` only.** `1` lifts the per-IP sign-up, failed-login and reset budgets so the concurrent e2e regression (`e2e/run-regression.mjs`) can run from one IP; per-account and per-user budgets, CSRF and auth are unchanged. Inert in staging and production |
 | `UB_ALLOW_PARTNER_HEADER` | `0` | — | no | `X-UB-Partner` acceptance; asserted `0` in production (Part 24 §24.3.1) |
 | `MSG91_<PARTNER>` / `WA_<PARTNER>` / `SMTP_<PARTNER>` | *(unset)* | — | **yes** | Per-partner credentials referenced by `credentials_ref` (Part 24 §24.7.1); absent ⇒ channel `skipped`. Exempt from the prefix rule because the suffix is partner data |
 

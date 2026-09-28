@@ -7,6 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { UbPageSkeleton } from 'src/design-system';
 import { useAppSelector } from 'src/hooks/useAppStore';
 import {
+  selectIsSuperAdmin,
   selectMustChangePassword,
   selectSessionStatus,
   selectSessionTenants,
@@ -53,6 +54,7 @@ export function RequireSession({
   const status = useAppSelector(selectSessionStatus);
   const tenants = useAppSelector(selectSessionTenants);
   const mustChangePassword = useAppSelector(selectMustChangePassword);
+  const isSuperAdmin = useAppSelector(selectIsSuperAdmin);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -73,11 +75,19 @@ export function RequireSession({
       return;
     }
     if (status === 'no_tenant' && !noTenantAllowed) {
+      // PLT-14 — an operator with no business of their own belongs in the
+      // console, not in the onboarding wizard. This is also where a support
+      // session lands when its token lapses and the refresh restores the
+      // operator's own, tenant-less session.
+      if (isSuperAdmin && tenants.length === 0) {
+        router.replace(ROUTES.ADMIN_TENANTS);
+        return;
+      }
       router.replace(
         noTenantDestination(tenants) === 'chooser' ? ROUTES.SWITCH_TENANT : ROUTES.ONBOARDING
       );
     }
-  }, [status, router, pathname, tenants, noTenantAllowed, mustChangePassword]);
+  }, [status, router, pathname, tenants, noTenantAllowed, mustChangePassword, isSuperAdmin]);
 
   if (status === 'loading' || status === 'idle') return <UbPageSkeleton variant="app" />;
   if (status === 'anonymous') return null;

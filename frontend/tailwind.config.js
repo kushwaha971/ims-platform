@@ -183,11 +183,14 @@ module.exports = {
           active: hsl('--surface-active'),
           nav: hsl('--surface-nav'),
           navHover: hsl('--surface-nav-hover'),
+          navActive: hsl('--surface-nav-active'),
+          subtle: hsl('--surface-subtle'),
         },
         border: {
           /* ml-uikit's `border-border`; ours stays the named scale below. */
           DEFAULT: hsl('--border-subtle'),
           hairline: hsl('--border-hairline'),
+          navActive: hsl('--border-nav-active'),
           subtle: hsl('--border-subtle'),
           strong: hsl('--border-strong'),
           focus: hsl('--border-focus'),
@@ -335,6 +338,8 @@ module.exports = {
         display: ['var(--font-display)'],
         ui: ['var(--font-ui)'],
         mono: ['var(--font-mono)'],
+        fraunces: ['var(--font-fraunces)', 'Georgia', 'serif'],
+        epilogue: ['var(--font-epilogue)', 'var(--font-ui)'],
       },
       maxWidth: {
         content: 'var(--content-max)',

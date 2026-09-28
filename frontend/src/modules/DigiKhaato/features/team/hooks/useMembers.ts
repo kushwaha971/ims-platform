@@ -6,6 +6,7 @@ import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useDegradedNetwork } from 'src/hooks/useDegradedNetwork';
 import { useIdempotencyKey } from 'src/hooks/useIdempotencyKey';
 import { usePermissions } from 'src/hooks/usePermissions';
+import { useTranslation } from 'src/hooks/useTranslation';
 import { selectNetworkImpaired } from 'src/redux/slice/networkSlice';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import type { ApiErrorShape, PageMeta, RequestStatus } from 'src/types/api.types';
@@ -89,6 +90,7 @@ export interface UseMembersResult {
 export function useMembers(): UseMembersResult {
   const dispatch = useAppDispatch();
   const { can } = usePermissions();
+  const { t } = useTranslation();
   const canManage = can('platform.members.manage');
 
   const rows = useAppSelector(selectMemberRows);
@@ -159,11 +161,13 @@ export function useMembers(): UseMembersResult {
           // A corrected address or a different role is a NEW logical write and
           // must not reuse a key the server has already seen with the old body.
           rotateAddKey();
-          setAddFormErrors(applyServerErrors(apiError, setError, [...ADD_MEMBER_FIELDS]));
+          // `t` so NEW-2's "already used by another login" is said in the UI's
+          // language, by its code, not in the server's English (L6).
+          setAddFormErrors(applyServerErrors(apiError, setError, [...ADD_MEMBER_FIELDS], t));
         }
       }
     },
-    [dispatch, addKey, rotateAddKey]
+    [dispatch, addKey, rotateAddKey, t]
   );
 
   const dismissCredentials = useCallback(() => {

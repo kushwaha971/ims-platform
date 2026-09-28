@@ -43,7 +43,11 @@ const tenant = (over: Partial<SessionTenant> = {}): SessionTenant => ({
 const loadSession = (
   tenants: readonly SessionTenant[],
   active: SessionTenant | null = null,
-  user: { mustChangePassword?: boolean; passwordExpiresAt?: string | null } = {}
+  user: {
+    mustChangePassword?: boolean;
+    passwordExpiresAt?: string | null;
+    isSuperAdmin?: boolean;
+  } = {}
 ) => {
   store.dispatch(
     sessionLoaded({
@@ -55,6 +59,7 @@ const loadSession = (
         locale: 'en',
         mustChangePassword: user.mustChangePassword ?? false,
         passwordExpiresAt: user.passwordExpiresAt ?? null,
+        isSuperAdmin: user.isSuperAdmin ?? false,
       },
       activeTenant: active,
       tenants,
@@ -77,7 +82,9 @@ describe('RequireSession — a session with no active tenant', () => {
 
     renderWithProviders(
       <RequireSession>
-        <UbText as="span" variant="body">the chooser</UbText>
+        <UbText as="span" variant="body">
+          the chooser
+        </UbText>
       </RequireSession>
     );
 
@@ -90,7 +97,9 @@ describe('RequireSession — a session with no active tenant', () => {
 
     renderWithProviders(
       <RequireSession>
-        <UbText as="span" variant="body">the chooser</UbText>
+        <UbText as="span" variant="body">
+          the chooser
+        </UbText>
       </RequireSession>
     );
 
@@ -103,12 +112,31 @@ describe('RequireSession — a session with no active tenant', () => {
 
     renderWithProviders(
       <RequireSession>
-        <UbText as="span" variant="body">the app</UbText>
+        <UbText as="span" variant="body">
+          the app
+        </UbText>
       </RequireSession>
     );
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/onboarding'));
     expect(screen.queryByText('the app')).not.toBeInTheDocument();
+  });
+
+  it('sends an operator with no business to the console, not the wizard (PLT-14)', async () => {
+    // Also where a lapsed support session lands: the refresh restores the
+    // operator's own, tenant-less session, and the wizard would be a dead end.
+    loadSession([], null, { isSuperAdmin: true });
+
+    renderWithProviders(
+      <RequireSession>
+        <UbText as="span" variant="body">
+          the app
+        </UbText>
+      </RequireSession>
+    );
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/admin/tenants'));
+    expect(replace).not.toHaveBeenCalledWith('/onboarding');
   });
 
   it('sends an invited-only user who lands on another (app) route TO the chooser', async () => {
@@ -117,7 +145,9 @@ describe('RequireSession — a session with no active tenant', () => {
 
     renderWithProviders(
       <RequireSession>
-        <UbText as="span" variant="body">the parties list</UbText>
+        <UbText as="span" variant="body">
+          the parties list
+        </UbText>
       </RequireSession>
     );
 
@@ -133,7 +163,9 @@ describe('RequireSession — a session with no active tenant', () => {
 
     renderWithProviders(
       <RequireSession>
-        <UbText as="span" variant="body">the parties list</UbText>
+        <UbText as="span" variant="body">
+          the parties list
+        </UbText>
       </RequireSession>
     );
 
@@ -147,14 +179,15 @@ describe('RequireSession — a session with no active tenant', () => {
 
     renderWithProviders(
       <RequireSession>
-        <UbText as="span" variant="body">the parties list</UbText>
+        <UbText as="span" variant="body">
+          the parties list
+        </UbText>
       </RequireSession>
     );
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/login?next=%2Fparties'));
   });
 });
-
 
 describe('RequireSession — the forced password change (DEC-012)', () => {
   it('sends a member on an owner-issued password to the change screen', async () => {

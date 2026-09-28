@@ -516,9 +516,19 @@ def test_an_unknown_invitation_token_is_refused(api_as: Any, tenant: Any) -> Non
     assert response.json()["error"]["code"] == "invitation_invalid"
 
 
-def test_an_invitation_cannot_be_accepted_twice(
+def test_an_invitation_accepted_twice_grants_once(
     api_as: Any, tenant: Any, other_tenant: Any, system_roles: dict
 ) -> None:
+    """BR-5 single use means one GRANT, not one HTTP request (CR-2026-09-23-B).
+
+    This test used to assert 400 on the second call. The accept screen fires on
+    mount, so that rule turned a refresh, a remount or a retry after a lost
+    response into "This invitation cannot be used" — shown to somebody who had
+    just joined. The replay now answers 200 with the SAME membership, and the
+    single-use property is asserted where it actually lives: one membership row,
+    one `member.accepted` audit row.
+    """
+    from apps.platform_app.models import AuditLog, Membership
     from tests.factories.platform import InvitationFactory
 
     client, member = api_as(tenant)
@@ -529,8 +539,12 @@ def test_an_invitation_cannot_be_accepted_twice(
         raw_token="tok-twice",
     )
     url = reverse("v1:invitation-accept", kwargs={"token": "tok-twice"})
-    assert client.post(url, {}, format="json").status_code == 200
-    assert client.post(url, {}, format="json").status_code == 400
+    first = client.post(url, {}, format="json")
+    second = client.post(url, {}, format="json")
+    assert (first.status_code, second.status_code) == (200, 200)
+    assert first.json()["data"]["id"] == second.json()["data"]["id"]
+    assert Membership.objects.filter(user=member.user, tenant=other_tenant).count() == 1
+    assert AuditLog.objects.filter(action="member.accepted", tenant=other_tenant).count() == 1
 
 
 # ── FR-5 / FR-7: the switcher acts on a membership id it has to be given ─────

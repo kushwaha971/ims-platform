@@ -86,3 +86,60 @@ export const fillTemplate = (
     (text, [key, value]) => text.split(`{${key}}`).join(String(value)),
     template
   );
+
+/**
+ * Whether the column menu may switch this column off.
+ *
+ * The default ties it to the priority list rather than inventing a second
+ * opinion: **priority 1 is the column the screen cannot be read without** —
+ * `visibleColumns` never drops it for width, so the menu does not drop it
+ * either. Every other column is the reader's to hide.
+ *
+ * `hideable` on the column overrides both directions, for the screen that knows
+ * something the priority number does not.
+ */
+export const isHideable = <TRow,>(column: UbDataGridColumn<TRow>): boolean =>
+  column.hideable ?? column.priority > 1;
+
+/**
+ * The rendered columns' widths, as CSS percentages that always total 100.
+ *
+ * ── Why the grid computes this instead of the screen writing it down ────────
+ * Because a column model is rendered at three tiers and now with a column menu
+ * on top of that, so the SET being painted is not the set the widths were
+ * written for. The party list declared 34/20/16/18/12 — correct for five
+ * columns — and then:
+ *
+ *  · at `compact` only three of them render, so the table claimed 70% of its
+ *    own width and stopped, leaving a quarter of the card empty to the right;
+ *  · with a column switched off, the same gap opened at `full`;
+ *  · and the selection checkbox, a fixed 48 px no percentage knows about, took
+ *    its width out of whichever column had been left unsized — which is how
+ *    "Code and mobile" came to be 36 px wide with its header overlapping the
+ *    next one.
+ *
+ * All three are the same defect: an arithmetic the screen cannot do, because
+ * the screen does not know what will be rendered. So the screen states a
+ * WEIGHT — "the name column is about twice the status column" — and the grid
+ * normalises the weights of the columns it is actually painting. A tier change
+ * and a hidden column then rescale the table instead of shrinking it.
+ *
+ * `table-fixed` resolves these against the table's width and scales them down
+ * to make room for the checkbox column, so the 48 px is spread across every
+ * column in proportion rather than taken out of one.
+ */
+export const columnWidths = <TRow,>(
+  columns: readonly UbDataGridColumn<TRow>[]
+): readonly string[] => {
+  const shares = columns.map((column) => column.widthShare ?? 0);
+  const total = shares.reduce((sum, share) => sum + share, 0);
+  // No weights at all is a legitimate model — an equal-width table — and
+  // `table-fixed` already does that, so nothing is stated.
+  if (total <= 0) return columns.map(() => '');
+  return shares.map((share) =>
+    // A column with no weight in a model that has them keeps `auto` and shares
+    // what the weighted ones leave. The guard test below prefers all-or-none,
+    // but a partial model must still render.
+    share > 0 ? `${((share / total) * 100).toFixed(4)}%` : ''
+  );
+};

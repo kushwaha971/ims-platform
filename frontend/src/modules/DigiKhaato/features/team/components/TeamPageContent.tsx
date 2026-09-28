@@ -11,9 +11,9 @@ import {
   UbConfirmDialog,
   UbPageHeader,
   UbPageShell,
+  UbSectionHeading,
   UbStack,
   UbStatusBanner,
-  UbText,
 } from 'src/design-system';
 import {
   UbDataGrid,
@@ -29,6 +29,7 @@ import { PAGE_SIZE_OPTIONS } from '../constants/teamDefaults';
 import { useInvitations } from '../hooks/useInvitations';
 
 import { createInvitationColumns } from './InvitationColumns';
+import { INVITE_AVATAR_ICON } from './InvitationRow';
 import { MembersSection } from './MembersSection';
 
 import type { Invitation } from '../types/invitation.types';
@@ -136,8 +137,19 @@ export function TeamPageContent(): React.JSX.Element {
       // thing that knows which page a button points at.
       goToPage: t('common.grid.goToPage', { page: '{page}' }),
       ofTotal: t('common.grid.ofTotal', { total: '{total}' }),
+      // This grid has no selection — `selectable` is never passed, because a
+      // team is read down a list rather than acted on in bulk — so nothing ever
+      // paints this. It is a required part of the grid's contract and is given
+      // an honest zero rather than a placeholder: `selectedCount` is an ICU
+      // PLURAL, and a plural resolved against the string `'{count}'` renders
+      // "NaN selected", which is what the party list was showing.
+      selectedCount: t('common.grid.selectedCount', { count: 0 }),
+
       selectAll: t('team.list.select.all'),
       selectRow: t('team.list.select.row', { name: '{name}' }),
+      showing: t('common.grid.showing'),
+      columns: t('common.grid.columns'),
+      showAllColumns: t('common.grid.showAllColumns'),
       sortBy: t('common.grid.sortBy', { column: '{column}' }),
       sortedAscending: t('common.grid.sortedAscending'),
       sortedDescending: t('common.grid.sortedDescending'),
@@ -167,6 +179,7 @@ export function TeamPageContent(): React.JSX.Element {
         title: t('team.list.error.title'),
         description: error?.message ?? t('team.list.error.body'),
         requestId: error?.requestId ?? null,
+        requestIdLabel: t('common.error.reference'),
         action: (
           <UbButton variant="secondary" onClick={refetch}>
             {t('common.action.retry')}
@@ -188,6 +201,9 @@ export function TeamPageContent(): React.JSX.Element {
 
   const rowId = useCallback((invitation: Invitation) => invitation.id, []);
   const rowName = useCallback((invitation: Invitation) => invitation.email, []);
+  /* Every invitation is somebody with no name yet: an invite icon, never a
+     letter cut from the address (QA O3). */
+  const inviteAvatar = useCallback(() => INVITE_AVATAR_ICON, []);
   const handlePageSize = useCallback((pageSize: number) => setPage(1, pageSize), [setPage]);
   const handleRevokeOpenChange = useCallback(
     (next: boolean) => {
@@ -227,7 +243,7 @@ export function TeamPageContent(): React.JSX.Element {
           />
         }
       >
-        <UbStack gap={6}>
+        <UbStack gap={4}>
           {!canWrite && (
             <UbStatusBanner
               tone="offline"
@@ -243,36 +259,37 @@ export function TeamPageContent(): React.JSX.Element {
           <MembersSection />
 
           <UbStack gap={2}>
-            <UbStack direction="row" justify="between" align="center" gap={2}>
-              <UbText variant="h4">{t('team.tab.invitations')}</UbText>
-              <Can permission="platform.members.manage">
-                <UbButton
-                  variant="secondary"
-                  onClick={openInvite}
-                  icon={<UserPlus aria-hidden className="h-4 w-4" />}
-                  // Class C, online only: disabled rather than hidden (§19.10.4).
-                  disabled={!canWrite}
-                >
-                  {t('team.invite.action')}
-                </UbButton>
-              </Can>
-            </UbStack>
-            <UbText variant="label" tone="tertiary">
-              {t('team.list.count', { count: meta.total })}
-            </UbText>
+            <UbSectionHeading
+              title={t('team.tab.invitations')}
+              meta={t('team.list.count', { count: meta.total })}
+              aside={
+                <Can permission="platform.members.manage">
+                  <UbButton
+                    variant="secondary"
+                    onClick={openInvite}
+                    icon={<UserPlus aria-hidden className="h-4 w-4" />}
+                    // Class C, online only: disabled rather than hidden (§19.10.4).
+                    disabled={!canWrite}
+                  >
+                    {t('team.invite.action')}
+                  </UbButton>
+                </Can>
+              }
+            />
 
-          <UbDataGrid
-            rows={rows}
-            columns={columns}
-            rowId={rowId}
-            rowName={rowName}
-            state={gridState}
-            labels={labels}
-            emptyStates={emptyStates}
-            caption={t('team.list.caption')}
-            page={meta}
-            onPageChange={setPage}
-            onPageSizeChange={handlePageSize}
+            <UbDataGrid
+              rows={rows}
+              columns={columns}
+              rowId={rowId}
+              rowName={rowName}
+              state={gridState}
+              labels={labels}
+              emptyStates={emptyStates}
+              caption={t('team.list.caption')}
+              cardAvatarIcon={inviteAvatar}
+              page={meta}
+              onPageChange={setPage}
+              onPageSizeChange={handlePageSize}
               pageSizeOptions={PAGE_SIZE_OPTIONS}
             />
           </UbStack>

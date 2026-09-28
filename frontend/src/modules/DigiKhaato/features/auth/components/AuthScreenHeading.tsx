@@ -41,22 +41,28 @@ export interface AuthScreenHeadingProps {
   readonly description?: ReactNode;
   /** Left-align on the wide screens whose content is not centred (the wizard). */
   readonly align?: 'center' | 'start';
+  /** Retained for call sites; every auth heading is now the one Figma tier. */
   readonly variant?: 'h1' | 'h2' | 'h3';
 }
 
 function AuthScreenHeadingBase({
   title,
   description,
-  align = 'center',
-  variant = 'h2',
+  align = 'start',
 }: Readonly<AuthScreenHeadingProps>) {
   return (
-    <UbStack gap={2} align={align === 'center' ? 'center' : 'start'}>
-      <UbText as="h1" variant={variant} align={align}>
+    <UbStack gap={1} align={align === 'center' ? 'center' : 'start'}>
+      {/* Figma: 20/32 medium, then 14/20 in the muted grey, 4 px apart. */}
+      <UbText
+        as="h1"
+        variant="inherit"
+        align={align}
+        className="ds-body-xl-medium text-text-primary"
+      >
         {title}
       </UbText>
       {description !== undefined && description !== null && description !== false && (
-        <UbText variant="body" tone="tertiary" align={align} className="max-w-prose text-balance">
+        <UbText variant="inherit" align={align} className="ds-body-base-regular text-text-tertiary">
           {description}
         </UbText>
       )}

@@ -2,7 +2,7 @@
 
 import { forwardRef, memo, useCallback, useState } from 'react';
 
-import { Check, ChevronDown } from 'lucide-react';
+import { Check, ChevronDown, Plus } from 'lucide-react';
 
 import {
   MLCommand,
@@ -59,6 +59,13 @@ export interface UbComboboxProps {
   readonly 'aria-required'?: boolean;
   readonly 'aria-describedby'?: string;
   readonly onBlur?: () => void;
+  /**
+   * INV-04 FR-5 — "+ Create '<typed text>'" as the last row. The caller posts
+   * the master and selects the new row itself; the confirmation is the
+   * selection (no toast). Omitted, the combobox is select-only as before.
+   */
+  readonly onCreate?: (text: string) => void;
+  readonly createLabel?: (text: string) => string;
 }
 
 const UbComboboxInner = forwardRef<HTMLButtonElement, UbComboboxProps>(function UbComboboxInner(
@@ -74,11 +81,17 @@ const UbComboboxInner = forwardRef<HTMLButtonElement, UbComboboxProps>(function 
     className,
     id,
     onBlur,
+    onCreate,
+    createLabel,
     ...aria
   },
   ref
 ) {
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const typed = search.trim();
+  const exact = options.some((option) => option.label.toLowerCase() === typed.toLowerCase());
+  const showCreate = Boolean(onCreate && createLabel && typed && !exact);
   const selected = options.find((option) => option.value === value);
 
   const handleSelect = useCallback(
@@ -89,21 +102,45 @@ const UbComboboxInner = forwardRef<HTMLButtonElement, UbComboboxProps>(function 
     [onChange]
   );
 
+  /**
+   * Escape closes THIS menu and stops there.
+   *
+   * Found on `UbTokenInput` first (see the long note there) and fixed here in
+   * the same pass, because the exposure is identical the moment a combobox is
+   * put inside an overlay — which PTY-05's merge dialog does. Radix portals the
+   * popover out of the overlay's subtree, so the overlay's Escape handler and
+   * this one are two listeners on the same document with no knowledge of each
+   * other, and the overlay's was registered first.
+   *
+   * The GST state picker, this component's original caller, sits on a page
+   * rather than in a dialog and was never affected — which is exactly why this
+   * would have gone unnoticed until somebody lost a half-filled form.
+   */
+  const handleEscape = useCallback((event: React.KeyboardEvent<HTMLElement>) => {
+    if (event.key !== 'Escape') return;
+    event.preventDefault();
+    event.stopPropagation();
+    // Native too: React's synthetic `stopPropagation` does not stop a listener
+    // attached directly to `document`, which is what the overlay's is.
+    event.nativeEvent.stopImmediatePropagation();
+    setOpen(false);
+  }, []);
+
   return (
     <MLPopover open={open} onOpenChange={setOpen}>
       {/* Not `asChild`.
-        *
-        * The first version wrapped a hand-written <button> in
-        * `<MLPopoverTrigger asChild>`, and the popover never opened: measured in
-        * a browser, `aria-expanded` stayed `false` after a click and no popper
-        * content was ever mounted. Radix's Slot clones the child to merge its
-        * props, and an explicit `ref` and `aria-expanded` on that child fight
-        * the ones Slot is trying to inject.
-        *
-        * Letting the trigger render its own button removes the whole
-        * interaction. It already carries `role="combobox"`, `aria-expanded` and
-        * `aria-controls` itself — correctly, and without anything to override
-        * — so the styling is all that has to come from here. */}
+       *
+       * The first version wrapped a hand-written <button> in
+       * `<MLPopoverTrigger asChild>`, and the popover never opened: measured in
+       * a browser, `aria-expanded` stayed `false` after a click and no popper
+       * content was ever mounted. Radix's Slot clones the child to merge its
+       * props, and an explicit `ref` and `aria-expanded` on that child fight
+       * the ones Slot is trying to inject.
+       *
+       * Letting the trigger render its own button removes the whole
+       * interaction. It already carries `role="combobox"`, `aria-expanded` and
+       * `aria-controls` itself — correctly, and without anything to override
+       * — so the styling is all that has to come from here. */}
       <MLPopoverTrigger
         ref={ref}
         id={id}
@@ -117,13 +154,13 @@ const UbComboboxInner = forwardRef<HTMLButtonElement, UbComboboxProps>(function 
         disabled={disabled}
         onBlur={onBlur}
         className={cn(
-          'flex h-11 w-full items-center justify-between gap-2 rounded-control border px-3',
+          'flex h-10 w-full items-center justify-between gap-2 rounded-control border px-3',
           'ds-body bg-surface-card text-left text-text-primary',
           'disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-text-muted',
           'focus-visible:outline-none focus-visible:ring-0',
           invalid
-            ? 'border-formError focus-visible:border-formError aria-invalid:border-formError aria-invalid:focus-visible:border-formError'
-            : 'border-border-strong hover:border-border-focus focus-visible:border-border-focus',
+            ? 'aria-invalid:border-formError aria-invalid:focus-visible:border-formError border-formError focus-visible:border-formError'
+            : 'border-border-hairline hover:border-border-subtle focus-visible:border-text-primary',
           className
         )}
         {...aria}
@@ -136,12 +173,18 @@ const UbComboboxInner = forwardRef<HTMLButtonElement, UbComboboxProps>(function 
 
       <MLPopoverContent
         align="start"
+        onKeyDownCapture={handleEscape}
         // Matched to the trigger so a long option cannot make the menu wider
         // than the field it belongs to — the same rule `UbSelect` follows.
         className="w-[var(--radix-popover-trigger-width)] border-border-subtle bg-surface-card p-0"
       >
         <MLCommand>
-          <MLCommandInput placeholder={searchPlaceholder} className="ds-body h-11" />
+          <MLCommandInput
+            value={search}
+            onValueChange={setSearch}
+            placeholder={searchPlaceholder}
+            className="ds-body-base-regular h-10"
+          />
           <MLCommandList className="max-h-[min(18rem,55dvh)]">
             <MLCommandEmpty className="ds-body-sm px-3 py-6 text-center text-text-tertiary">
               {emptyLabel}
@@ -165,6 +208,20 @@ const UbComboboxInner = forwardRef<HTMLButtonElement, UbComboboxProps>(function 
                   <span className="truncate">{option.label}</span>
                 </MLCommandItem>
               ))}
+              {showCreate && (
+                <MLCommandItem
+                  value={`__create__ ${typed}`}
+                  onSelect={() => {
+                    onCreate?.(typed);
+                    setSearch('');
+                    setOpen(false);
+                  }}
+                  className="ds-body gap-2 text-accent"
+                >
+                  <Plus aria-hidden className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{createLabel?.(typed)}</span>
+                </MLCommandItem>
+              )}
             </MLCommandGroup>
           </MLCommandList>
         </MLCommand>

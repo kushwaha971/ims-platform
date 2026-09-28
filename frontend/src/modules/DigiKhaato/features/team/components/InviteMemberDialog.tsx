@@ -100,22 +100,23 @@ export function InviteMemberDialog({
         </>
       }
     >
-      <UbForm
-        id={formId}
-        form={form}
-        onSubmit={submit}
-        formErrors={invitations.inviteFormErrors}
-      >
+      <UbForm id={formId} form={form} onSubmit={submit} formErrors={invitations.inviteFormErrors}>
         <UbField
           name="email"
           label={t('team.invite.email.label')}
+          placeholder={t('team.invite.email.placeholder')}
           hint={t('team.invite.email.hint')}
           required
         >
           {(field) => <UbTextInput {...field} type="email" autoComplete="email" />}
         </UbField>
 
-        <UbField name="role" label={t('team.invite.role.label')} required>
+        <UbField
+          name="role"
+          label={t('team.invite.role.label')}
+          placeholder={t('team.invite.role.placeholder')}
+          required
+        >
           {(field) => (
             <UbSelect
               {...field}

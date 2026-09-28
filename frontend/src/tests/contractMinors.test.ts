@@ -1,6 +1,5 @@
 import { AxiosError, AxiosHeaders } from 'axios';
 
-
 import { shouldToast, toApiError } from 'src/utils/apiError';
 import { snakeToCamelPath } from 'src/utils/caseMapper';
 import { REGEX } from 'src/utils/regexConstants';

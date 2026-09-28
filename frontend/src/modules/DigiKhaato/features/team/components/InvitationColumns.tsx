@@ -36,6 +36,14 @@ import type { Invitation } from '../types/invitation.types';
  * the address, two supporting words and the one control. Nothing at any width
  * has to be dragged sideways to read.
  *
+ * ── The actions column's width (QA D4) ─────────────────────────────────────
+ * It was a weight of 8 with a hidden header. At 1280 px that is a ~84 px cell,
+ * and a `sm` "Revoke" needs its cell padding, its own padding and the word —
+ * so a cell that `truncate`s painted "Revoke …". It is 16 now, the same weight
+ * the Members table directly above gives its actions column, and it shows the
+ * same "Actions" header, so the two tables on one screen line up.
+ * `InvitationColumns.test.tsx` does the arithmetic at 1280 and 768 px.
+ *
  * `sortField` is absent everywhere on purpose: the contract documents no
  * `ordering` for this collection, and a sort control that does not sort is
  * worse than no control (the grid's own rule).
@@ -64,7 +72,7 @@ export const createInvitationColumns = ({
     header: t('team.list.column.email'),
     priority: 1,
     cardSlot: 'title',
-    widthClassName: 'w-[32%]',
+    widthShare: 30,
     cell: (invitation) => <InvitationEmailCell email={invitation.email} />,
   },
   {
@@ -72,7 +80,7 @@ export const createInvitationColumns = ({
     header: t('team.list.column.status'),
     priority: 1,
     cardSlot: 'meta',
-    widthClassName: 'w-[16%]',
+    widthShare: 14,
     cell: (invitation) => {
       const status = effectiveStatus(invitation.status, invitation.expiresAt, nowMs);
       return <InvitationStatusCell status={status} label={t(`team.status.${status}`)} />;
@@ -83,7 +91,7 @@ export const createInvitationColumns = ({
     header: t('team.list.column.role'),
     priority: 2,
     cardSlot: 'meta',
-    widthClassName: 'w-[14%]',
+    widthShare: 12,
     cell: (invitation) => <InvitationMetaCell text={t(`tenant.role.${invitation.role}`)} />,
   },
   {
@@ -91,7 +99,7 @@ export const createInvitationColumns = ({
     header: t('team.list.column.expires'),
     priority: 3,
     cardSlot: 'none',
-    widthClassName: 'w-[16%]',
+    widthShare: 14,
     cell: (invitation) => <InvitationMetaCell text={d(invitation.expiresAt)} />,
   },
   {
@@ -99,19 +107,18 @@ export const createInvitationColumns = ({
     header: t('team.list.column.invitedBy'),
     priority: 4,
     cardSlot: 'none',
-    widthClassName: 'w-[14%]',
+    widthShare: 14,
     cell: (invitation) => <InvitationMetaCell text={invitation.invitedBy ?? '—'} />,
   },
   {
     id: 'actions',
     header: t('team.list.column.actions'),
-    // A column of controls: the `<th>` stays a real `<th scope="col">` and only
-    // its text is hidden, because "Actions" above a button reads as furniture.
-    headerHidden: true,
+    // Visible, like the Members table's "Actions" directly above (QA D4): two
+    // tables on one screen with different header rules read as a mistake.
     priority: 1,
     align: 'end',
     cardSlot: 'trailing',
-    widthClassName: 'w-[8%]',
+    widthShare: 16,
     cell: (invitation) => (
       <InvitationRevokeCell
         id={invitation.id}

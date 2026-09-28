@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 
 import { AppProviders } from 'src/components/providers/AppProviders';
 import { APP_NAME } from 'src/constants';
+import { dmSans, epilogue, fraunces, inter, notoDevanagari } from 'src/fonts';
 import { LOCALE_COOKIE, THEME_CHOICE_COOKIE } from 'src/utils/cookieUtils';
 
 import { SessionBootstrap } from 'modules/DigiKhaato/features/auth/components/SessionBootstrap';
@@ -47,6 +48,18 @@ import './globals.css';
  */
 const THEME_INIT = `(function(){try{var m=document.cookie.match(/(?:^|; )${THEME_CHOICE_COOKIE}=([^;]*)/);var t=m&&decodeURIComponent(m[1]);document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');}catch(e){document.documentElement.setAttribute('data-theme','light');}})();`;
 
+/**
+ * WLB-01 FR-4 — the tenant's brand ramp, before first paint.
+ *
+ * `WhiteLabelSync` writes the ramp it applied to `localStorage` (`ub.theme_cache`,
+ * `{tenantId, vars}`); this replays it before React exists, so a teal shop does
+ * not open in indigo and turn teal a moment later. The session that loads next
+ * corrects it if the active business changed (EC-6) — at worst one frame of the
+ * previous brand, never the previous business's data. Only `--primary-*` and
+ * the two accent aliases are ever in the cache; anything else is ignored.
+ */
+const BRAND_INIT = `(function(){try{var c=JSON.parse(localStorage.getItem('ub.theme_cache')||'null');if(!c||!c.vars)return;var s=document.documentElement.style;for(var k in c.vars){if(/^--(primary-[0-9]+|accent-quiet|accent-line)$/.test(k))s.setProperty(k,String(c.vars[k]));}}catch(e){}})();`;
+
 export const metadata: Metadata = {
   /**
    * CR-2026-09-19-D — a template rather than a bare name, so every route can
@@ -84,9 +97,15 @@ export default async function RootLayout({
   const theme = store.get(THEME_CHOICE_COOKIE)?.value === 'dark' ? 'dark' : 'light';
 
   return (
-    <html lang={locale} data-theme={theme} suppressHydrationWarning>
+    <html
+      lang={locale}
+      data-theme={theme}
+      className={`${dmSans.variable} ${inter.variable} ${fraunces.variable} ${epilogue.variable} ${notoDevanagari.variable}`}
+      suppressHydrationWarning
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
+        <script dangerouslySetInnerHTML={{ __html: BRAND_INIT }} />
       </head>
       <body>
         <AppProviders>

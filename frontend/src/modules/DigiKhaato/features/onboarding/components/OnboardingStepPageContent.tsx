@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo } from 'react';
 
-import { UbBottomBar, UbButton, UbStack, UbStatusBanner } from 'src/design-system';
+import { UbBottomBar, UbButton, UbPageSkeleton, UbStack, UbStatusBanner } from 'src/design-system';
 import { useAppSelector } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { selectAppName } from 'src/redux/slice/whiteLabelSlice';
@@ -65,7 +65,7 @@ export function OnboardingStepPageContent({
   return (
     <OnboardingShell
       steps={steps}
-      current={onboarding.step}
+      current={onboarding.progressStep}
       completed={onboarding.completedStep}
       onStepSelect={onboarding.goToStep}
       title={t('onboarding.title')}
@@ -89,10 +89,34 @@ export function OnboardingStepPageContent({
             second Retry inside a banner. A `validation_error` is still
             anchored on the field that caused it. */}
 
-        {onboarding.step <= 1 && <OnboardingBusinessStep onboarding={onboarding} />}
-        {onboarding.step === 2 && <OnboardingGstStep onboarding={onboarding} />}
-        {onboarding.step === 3 && <OnboardingAddressStep onboarding={onboarding} />}
-        {onboarding.step >= 4 && (
+        {/* NEW-1 — after a reload the saved business is read back first. Each
+            step's form takes its values once, at mount, so drawing it on the
+            empty draft is exactly how step 1 came back blank and invited a
+            second business. */}
+        {onboarding.isResuming && <UbPageSkeleton variant="form" count={3} />}
+
+        {/* M2 — "Add a business" found an unfinished business that step 1
+            will CONTINUE (the server resumes an abandoned attempt rather than
+            create a second). Its values are already in the form below; this
+            says whose they are, so nothing is renamed by surprise. */}
+        {!onboarding.isResuming && onboarding.step <= 1 && onboarding.resumableBusiness && (
+          <UbStatusBanner
+            tone="info"
+            title={t('onboarding.resumable.title', { name: onboarding.resumableBusiness.name })}
+            description={t('onboarding.resumable.body')}
+          />
+        )}
+
+        {!onboarding.isResuming && onboarding.step <= 1 && (
+          <OnboardingBusinessStep onboarding={onboarding} />
+        )}
+        {!onboarding.isResuming && onboarding.step === 2 && (
+          <OnboardingGstStep onboarding={onboarding} />
+        )}
+        {!onboarding.isResuming && onboarding.step === 3 && (
+          <OnboardingAddressStep onboarding={onboarding} />
+        )}
+        {!onboarding.isResuming && onboarding.step >= 4 && (
           <UbStack gap={4}>
             <PresetSummaryCard
               businessType={onboarding.draft.businessType ?? 'other'}

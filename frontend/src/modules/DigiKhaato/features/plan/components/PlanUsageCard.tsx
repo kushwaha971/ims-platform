@@ -48,6 +48,7 @@ export function PlanUsageCard(): React.JSX.Element {
         title={t('plan.card.error')}
         description={plan.error?.message}
         requestId={plan.error?.requestId ?? null}
+        requestIdLabel={t('common.error.reference')}
         action={
           <UbButton variant="secondary" onClick={plan.refetch}>
             {t('common.action.retry')}

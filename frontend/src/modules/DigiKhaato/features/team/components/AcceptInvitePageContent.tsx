@@ -39,9 +39,7 @@ import { acceptInvitation } from '../api/invitationService';
  */
 type Phase = 'working' | 'joined' | 'failed';
 
-export function AcceptInvitePageContent({
-  token,
-}: Readonly<{ token: string }>): React.JSX.Element {
+export function AcceptInvitePageContent({ token }: Readonly<{ token: string }>): React.JSX.Element {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
   const router = useRouter();
@@ -64,9 +62,12 @@ export function AcceptInvitePageContent({
    * fresh closure with a fresh flag. This ref survives both, keyed by the token
    * so a genuinely different link still works.
    *
-   * It is not only a development concern: accepting is not idempotent, so ANY
-   * double-fire — a fast refresh, a remount under Suspense — spends the link and
-   * reports failure. The guard is what makes the operation safe to mount.
+   * It is not only a development concern: any double-fire — a fast refresh, a
+   * remount under Suspense — used to spend the link and report failure. The
+   * server has since made the replay idempotent for the person who accepted
+   * (CR-2026-09-23-B: same membership back, 200, nothing written), so a full
+   * page reload after joining now also lands on "You have joined". The guard
+   * stays: one request per token is still the honest amount of traffic.
    */
   const attempted = useRef<string | null>(null);
 
@@ -89,7 +90,9 @@ export function AcceptInvitePageContent({
       try {
         await acceptInvitation(token);
         // The membership is new, so the cached session predates it.
-        await dispatch(fetchSession()).unwrap().catch(() => undefined);
+        await dispatch(fetchSession())
+          .unwrap()
+          .catch(() => undefined);
         setPhase('joined');
       } catch (error) {
         setMessage(toApiError(error, 'team.accept.failed').message);

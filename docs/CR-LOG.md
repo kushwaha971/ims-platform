@@ -230,3 +230,675 @@ right, the window was not, and telling the holder otherwise sends them to reset 
 they never had.
 
 Requested against Part 22 §22.1.1 table T-16.
+
+## CR-2026-09-23-A — two error codes beyond Part 22 §22.1.1, for PTY-04 FR-3
+
+The write-off escape on `POST /parties/{id}/archive` adds `nothing_to_write_off`
+(400, not retryable) and `balance_changed` (409, not retryable) to the closed registry in
+`apps/common/error_codes.py`. The count guard in `apps/common/tests/test_exceptions.py`
+moved 153 → 155 and names both.
+
+`nothing_to_write_off` answers a `write_off` sent for a party whose balance is already
+0.00. The FRD is silent on that case; quietly archiving was the alternative, and it hides
+the client bug (a dialog showing a balance the server does not have) that will next write
+off the wrong figure. It cannot be `validation_error`: no field of a well-formed write-off
+is wrong — the PARTY is in the wrong state.
+
+`balance_changed` answers a `write_off.amount` — the figure the merchant confirmed by
+ticking "I understand ₹2,300 is written off" — that differs from the balance read under
+`FOR UPDATE`. `details = { balance, balance_label, amount, confirmed_amount }`. It cannot
+be `stale_version`, which promises a `current_version` a party row does not carry. This
+also amends FRD PTY-04 EC-2, which accepts an over-credited archived party as the outcome
+of a write-off racing a payment: with the lock and the pin, that race produces a 409 and a
+redrawn dialog instead.
+
+Also requested against Part 17-01 PTY-04 §14: `write_off` gains the optional `amount`
+field, and `write_off.entry_date` becomes optional (defaulting to the tenant's today).
+
+Requested against Part 22 §22.1.1 table T-16. Part 43 in the Claude project is the
+authoritative register and needs the same entry (this file is a local carry).
+
+## CR-2026-09-23-B — PLT-05 is stale against what shipped, and against DEC-010/DEC-012
+
+**State:** `raised`. **Target:** Part 17-01 PLT-05 (§4, §10, §11, §13, §14, §16, §21, §22),
+Part 21 §21.3.1 (`platform_user`), PLT-15 FR-3. **Gate:** before the next platform sprint
+(it is the chapter the membership-management endpoints — FR-4/6/7/8 — will be built from).
+
+The FRD was written for the mobile-OTP identity and an SMS/WhatsApp share sheet. `DEC-010`
+made email the identity and `DEC-012` made "the owner creates the login" the primary way to
+add staff, keeping the token flow as the future email path. The chapter was never amended, so
+it now describes an API that does not exist and omits two that do. Where the two disagree
+`DEC-012` has been followed. The code changed on 23 Sep 2026 is listed last.
+
+**Chapter changes requested (the FRD must say what shipped):**
+
+| § | FRD says | Shipped / decided | Requested amendment |
+|---|---|---|---|
+| FR-1, §14 | `GET /memberships?status=`, tabs Active · Invited · Suspended, masked mobile, last active | `GET /members` (no status filter; `removed` excluded), two tabs Team · Invitations; an `invited` row shows as **Invited** with the invitee's profile withheld | Rename to `/members`; document the redaction; keep the three tabs as a later UI refinement |
+| FR-2, §14 | `POST /memberships/invite {mobile, role, name}` → `share_text`, `join_url` `/join/{token}` | `POST /invitations {email, role, mobile?}` → `accept_url` `/accept-invite/{token}`, returned once; `null` on idempotent replay; no `share_text` (nothing is sent — DEC-012) | Rewrite for email identity (closes `CR-140`); state the once-only link and the replay rule |
+| FR-2 | `invited` membership "so the invited tenant shows in `tenants[]`" | Now implemented **for an address that already has an account**. `platform_membership.user_id` is NOT NULL, so an address with no account has no membership; its invitation holds the seat alone and acceptance creates the membership (EC-1) | Say so; the FRD reads as if every invitation has a membership row |
+| — (new) | — | `POST /members` + `POST /members/{id}/credentials` (DEC-012) are the primary add-staff path | Add both to §4/§14 as FR-2a/FR-2b; the invitation path becomes "email delivery, when funded" |
+| FR-3, §12 | owner offered to owners | `owner` refused on BOTH create paths (`POST /members` already; `POST /invitations` now) — ownership is transferred, canon §0.7 | Remove `owner` from the invitable set; §12 row "Invite owner" → ❌ for all |
+| FR-9 | resend rotates the token on the same row | resend revokes the old invitation and inserts a new one; the `invited` membership is kept and takes the new role | Describe supersede-by-revoke; "no duplicate rows" → "one live invitation per address" |
+| FR-10, BR-6, US-5, AC-5 | OTP on the invited mobile; `GET /public/invitations/{token}` preview | Sign in with email/password, then accept; the caller's email must equal the invitation's. No preview endpoint | Rewrite for email; the preview is unbuilt — keep as backlog or drop |
+| FR-10, BR-5 | single use | single GRANT: the acceptor replaying gets 200 and the same membership, nothing written; anybody else, or the acceptor after suspension/removal, gets 400 | State the replay rule (the accept screen fires on mount) |
+| FR-10 | — | a pending invitation never lifts a suspension; an already-active member keeps their role | Add as BR-9/BR-10 |
+| FR-8 | removing an `invited` membership revokes the invitation | revoking the invitation (`DELETE /invitations/{id}`) removes the `invited` membership in the same transaction; lazy expiry does the same | Add the converse; name the endpoint |
+| FR-11 | `expire_invitations` scheduler | not built; expiry is marked lazily on an accept attempt, and a lapsed invitation stops holding a seat at `expires_at` | Keep FR-11 as backlog; document the interim rule |
+| FR-12, PLT-15 FR-3, §10 | seats = active + invited **memberships** | seats = active + invited memberships **+ live pending invitations to addresses with no such membership**, counted once per person. Checked on invite, accept, `POST /members` and activate; a conversion (accepting, or creating the login of somebody invited) is not charged twice | Amend both chapters: counting memberships alone let ten invitations go out against three seats |
+| §10 | mobile ≠ an active/suspended member | email; inviting a suspended member is refused ("restore their access instead") | Email; keep the suspended refusal |
+| §16 | `member.invited` with mobile **hashed** | `after.email` is stored in the clear; `member.invite_resent` is not a separate action (supersede count is metadata); revoke/invite rows carry `membership_id` | Rule whether the address must be hashed in audit (Part 27); record the metadata |
+| §17, §6 | SMS template, `UbShareSheet`, "Send" | nothing is sent (DEC-012); copy must not imply a message was sent | Strike the SMS/share-sheet flow until email is funded |
+| §19 | rate limit 30 invites/tenant/day | not built | Keep; backlog |
+| FR-4, FR-6, FR-7, FR-13, EC-3, EC-7, AC-3/4/6 | override switches, role change, suspend/reactivate, remove, self-change guard | not built (`PATCH/DELETE /memberships/{id}` act on the caller's own row only) | No change to the text; they are the next sprint's work |
+| Part 21 §21.3.1 | — | new column `platform_user.temp_password_tenant_id` (FK `platform_tenant`, NULL, `ON DELETE SET NULL`), migration `platform.0008` | Register the column (see below) |
+
+**Security defects found in the same area and fixed with this change** (code, not
+specification — listed so the chapter's §19 can absorb the rules):
+
+1. **Admin → owner escalation.** `POST /invitations` accepted `role: "owner"`; an admin could
+   invite an address they control and accept it. Now a `validation_error` on `role`.
+2. **Cross-tenant account takeover via "New password".** A person added to a *second* business
+   before choosing their own password still has `must_change_password` set, and
+   `POST /members/{id}/credentials` from that second business minted a password, showed it,
+   and let it sign in as them — into the first business too. Only the business recorded in
+   `temp_password_tenant` may reissue; legacy rows (NULL) may be reissued only where no other
+   live membership exists.
+3. **Raw invitation token in the logs.** `POST /invitations/{token}/accept` carries the token
+   in the path, which `AccessLogMiddleware` and `runserver` both logged. The path is scrubbed
+   at source and by a `SecretPathFilter` on every handler (including `django.server`).
+4. **Invited rows are inert by construction.** `permissions_for()` now returns the empty set
+   for any non-`active` membership, as a second lock behind `tenancy`, which already admitted
+   `active` only.
+
+Part 43 in the Claude project is the authoritative register and needs the same entry (this
+file is a local carry).
+
+## CR-2026-09-24-A — a write-off is neither "You gave" nor "You got" in any total
+
+**State:** `raised` (implemented; awaiting registration in Part 43). **Target:** Part 17-02
+LED-01 (khata header, PTY-03 §14 summary), LED-04 FR-1, §7.2, §8, §14, BR-5; LED-11 FR-4;
+Part 22 §22.5 (`meta.summary`, statement `totals`). **Gate:** immediate — QA found the
+screens contradicting LED-11 §8.
+
+**Observed.** After a write-off the khata read "You got in all ₹930.00" — a figure that
+included the written-off amount — over a row labelled "Written off" — and no money had been received. A
+payable write-off inflated "You gave in all" the same way; the statement's "You got" tile and
+its printed summary line did too. Both summaries summed every `credit`/`debit`, and a
+write-off is a credit (receivable forgiven) or a debit (payable forgiven).
+
+**Why that is wrong.** LED-11 BR-3 keeps write-offs out of every "collections" total, §8
+paints them "neither gave nor got", PTY-04 BR-5 calls them "a P&L event, not a cash event",
+and RPT-06/RPT-01 report them as their own line ("Bad debts written off", "Write-offs this
+period"). The row already said so (`entryAmountView` → "Written off", neutral); the totals
+above it did not.
+
+**Decision.**
+
+1. Every gave/got total the ledger reports is split into **three mutually exclusive
+   buckets over one set of rows**: `debit` = Σ debit rows with `entry_type ≠ 'write_off'`
+   ("You gave"), `credit` = the same for credit ("You got"), and
+   `written_off { debit, credit }` = the write-off rows by direction (`credit` = receivable
+   forgiven, `debit` = payable forgiven). Split rather than netted, because a party that is
+   both customer and supplier can carry one of each and a single signed figure would need a
+   label the client cannot choose.
+2. **Arithmetic integrity is preserved and made visible**:
+   `brought forward + gave − got + written_off.debit − written_off.credit = closing`. The
+   closing figure, the running balance and `parties_party.balance` are untouched, so LED-04
+   BR-3 (unbounded closing = party balance) holds by construction.
+3. **CR-125 holds**: the server carries components only — no `net_change`, no net
+   written-off — and the client subtracts.
+4. **Classification is by the row's own `entry_type`.** A correction's replacement keeps
+   `write_off` (LED-11 BR-4) and stays in the bucket; a reversal row is `entry_type =
+   'reversal'`, out of every live total with its original (canon §0.2), and — with
+   corrections shown on a statement — sits in gave/got like every reversal, i.e. in the
+   column it is printed in.
+5. **Opening entries are unchanged**: an `opening` debit counts in "You gave" and an
+   `opening` credit in "You got", as since LED-02. LED-02 says nothing to the contrary; the
+   row itself is labelled "They owe me" / "I owe them".
+6. **Presentation**: a "Written off" figure appears only when non-zero — as a full-width
+   third line under the khata's two-cell "You gave in all / You got in all" row, as a fifth
+   `UbStatCard` in the statement strip, and as a fifth figure on the printed summary line.
+   Neutral tone (LED-11 §8). When both directions are non-zero each says which ("to get" /
+   "to give"). Copy: `ledger.timeline.writtenOff`, `ledger.statement.writtenOff` (ICU
+   `select` on `side`), en + hi.
+7. **Rows stay where they are.** On the printed table and in the CSV a write-off's amount
+   stays in its direction's column, so an accountant can still add the columns down
+   (BR-8's columns are a contract; `entry_type` = `write_off` distinguishes the row). The
+   printed Particulars now reads "Write-off · {reason}" so the "You got" column never shows a
+   bare reason that reads like a payment, and the reason is no longer printed twice (it is
+   also the note, PTY-04 FR-3). The CSV has no totals row, so nothing else changes there.
+8. **Aging is unchanged and already right**: a write-off credit is on the paid side of the
+   FIFO CTE and retires the oldest debit first (test added).
+
+**API (additive; no key removed or renamed).**
+- `GET /parties/{id}/ledger-entries` first page `meta.summary`:
+  `{ total_debit, total_credit, written_off: { debit, credit }, entry_count }`.
+- `GET /parties/{id}/statement` `data.totals`: `{ debit, credit, written_off: { debit, credit } }`.
+- Semantics note: `total_debit`/`total_credit` and `totals.debit`/`totals.credit` now
+  EXCLUDE write-offs. A consumer that derived a net as `debit − credit` must add
+  `written_off.debit − written_off.credit`; the only consumer, this frontend, never did
+  (it reads `closing_balance`), and ships in the same change. `written_off` is always
+  present (zeros when none).
+
+**Amendments requested.** LED-04 FR-1/§7.2: the strip and summary line gain "Written off"
+(when non-zero); §14 `totals` gains `written_off`; BR-5 "debit_total, credit_total exclude
+`write_off` rows, which are reported as `written_off`". LED-01/PTY-03 §14 summary gains
+`written_off`. Part 22 §22.5 both shapes. Part 43 in the Claude project is the authoritative
+register and needs the same entry (this file is a local carry).
+
+## CR-2026-09-24-B — an opening balance is dated today by default, not at the year start (UAT D6)
+
+**State:** `raised` (implemented; awaiting registration in Part 43). **Target:** Part 17-02
+LED-02 FR-1 ("`as_of` date (default first day of current FY, ≤ today)") and §7's
+`OpeningBalanceSection` chips; Part 17-01 PTY-01 FR-9 (which delegates to LED-02). **Gate:**
+immediate — UAT D6, P2.
+
+**Observed.** A merchant adds a customer on 24 September and types the ₹2,300 they already
+owe. The as-of date defaults to 1 April, so the opening entry is dated 1 April; aging counts
+it from that date (LED-02 FR-7, LED-09 BR-4, FIFO by `entry_date`), and on day one the whole
+balance sits in **90+ days** — on the aging report and in every "overdue" reading of it —
+while the party list's Overdue chip (a collection date that has passed) is empty. Two screens
+disagree about the same customer, and the alarming one is wrong.
+
+**Why the FRD chose the year start, and why it does not hold.** US-LED-02-1 is a merchant
+migrating a paper book "as of 1 April" — on that one day of the year the default and the
+truth coincide, and `ub.ledger.opening_posted.as_of_is_fy_start` measures it. On the other
+364 the default asserts an age the merchant never gave, and it fails in the costly
+direction: an overstated age is a collection call nobody owed and a 90+ bucket polluted by
+every new customer, which destroys the one signal aging exists to give. An understated age
+is recoverable — it ages honestly from today, and the merchant can say otherwise. The
+drawer's own comment argued the opposite ("an opening dated today is indistinguishable from
+an ordinary entry") and that premise is no longer true: the row carries the Opening badge and
+the "They owe me / I owe them" label (LED-02 §7) whatever its date.
+
+Option (b) — keep the year start and have aging treat an opening's age differently — is
+rejected: aging is FIFO by `entry_date` (LED-09 BR-2/BR-4), and a second age rule for one
+entry type is a second definition of "how old is this money".
+
+**Decision (BA).** Option (a):
+
+1. The as-of date **defaults to today** (the tenant's today in the khata drawer, whose `max`
+   it already is; the device's today in the party form, matching that form's existing
+   `max`).
+2. The field stays editable (≤ today, ≥ 2000-01-01, unchanged), and the **year start stays
+   one tap away** as the first quick-choice chip ("FY start" / "Year start").
+3. A hint under the field asks the question only the merchant can answer: **"When did they
+   start owing this?"** — or "When did you start owing this?" when the direction is "I owe
+   them". Copy: `ledger.opening.asOf.hint`, `parties.form.opening.asOf.hint` (ICU `select`
+   on `direction`), en + hi ("उन पर / आप पर यह कब से बाकी है?").
+4. **Unchanged:** the server (no default there — `as_of` is required on the drawer path and
+   the party form always sends one), aging, and the CSV importer's EC-7 default (tenant FY
+   start for an empty `opening_date`). The importer is the one path that really is the
+   migrating merchant FR-1 describes; whether it should follow is left to IMP-01's owner.
+
+**Amendments requested.** LED-02 FR-1: "`as_of` date (default **today**, ≤ today), with a
+quick choice for the first day of the current FY and the hint 'When did they start owing
+this?'". §7: chips "FY start" / "Today" keep their order. §17's
+`as_of_is_fy_start` stays meaningful (it now measures how often the chip is chosen).
+
+**Files.** `frontend/src/modules/DigiKhaato/features/ledger/components/OpeningBalanceDrawer.tsx`,
+`frontend/src/modules/DigiKhaato/features/parties/components/PartyFormDrawer.tsx` (default,
+one `useWatch`, the hint — nothing else), both locale files, and a test in each component's
+suite.
+
+## CR-2026-09-24-C — CR-027 implemented: `running_balance` and `source` on the timeline rows
+
+**State:** `raised` (CR-027 is Accepted in Part 43; this records how it was built and three
+decisions the FRD leaves open). **Target:** Part 17-01 PTY-03 FR-5/FR-6/BR-1–BR-3/§14,
+Part 22 §22.5. **Gate:** none — additive.
+
+**API (additive).** Every row of `GET /parties/{id}/ledger-entries` and
+`GET /ledger-entries?party=` now carries `running_balance` (decimal string, the balance
+AFTER the row, signed debit-positive exactly as the statement's) and `source` (`null` for a
+manual row; `{type, id, number: null, url: null}` otherwise — the statement's shape, from one
+shared function). The 201 of a create, the 200 of a reverse/correct and the detail read do
+NOT carry `running_balance`: one row out of its ordering has none, and the client refetches
+the timeline after every write (NEW-2).
+
+**Decision 1 — struck-through rows contribute zero and carry the balance as it stood**
+(not `null`). With `include_reversed=true` both halves of each reversal pair come back; each
+contributes nothing (canon §0.2) and shows the running balance at its position. This is the
+only rule under which PTY-03 BR-3 / T-PTY-03-15 hold ("Show corrections" changes no displayed
+running balance) AND BR-1 holds when the newest row is itself a reversal.
+
+**Decision 2 — the window runs newest-first, plus a carried scalar.** FR-6 writes the
+window ascending; that is the definition, and the figure equals it (a Python replay asserts
+every row). Computed literally on a page served newest-first, Postgres reads and sorts every
+row the party has to show twenty-five — `tests/performance/test_two_thousand_party_book.py
+::test_the_timeline_page_walks_the_party_date_index` caught that plan on the first attempt.
+So `running_balance(r) = carried − Σ(page rows from the top through r) + own(r)`, where
+`carried` is the live total at or older than the page's top: on page one it is read off the
+`meta.summary` aggregate the response already makes (no new query); on later pages it is one
+SUM over the rows older than the cursor, in the query the summary would have been. Page two
+without it is wrong by everything scrolled past — LED-04's `carried_forward` trap on the
+other cursor direction — and a test pages two rows at a time across a run of equal dates.
+
+**Decision 3 — a constraint for PTY-03 FR-7.** Its `date_from`/`date_to`/`type` filters are
+not built. When they are, each must be applied to BOTH the page and the carried sum, or be
+expressed as a zero contribution the way `include_reversed` is; applied to the page alone they
+would silently rebase every balance. Written into `with_running_balance`'s docstring.
+
+**Divergence recorded, not changed.** LED-04's statement with `include_corrections=true`
+sums both halves of a pair inside its window: the closing is right (the pair nets to zero),
+but a row posted between the original and its reversal reads a figure that includes the
+struck original. The timeline and the statement therefore disagree on such a row while
+corrections are shown. LED-04 should adopt Decision 1; left for its owner.
+
+**Not built.** CR-027's `format=csv` on this endpoint — the statement's CSV
+(`/parties/{id}/statement?format=csv`) already exports the same rows with running balances,
+and a second export of one book is a second audit trail to keep equal.
+
+## CR-2026-09-24-T1-A — who may READ settings: `platform.audit.read` as the gate
+
+PLT-06 §6 gives settings read to owner, admin and accountant, and edit to owner and admin,
+but Part 20 §20.5 names no codename for "read settings". Rather than mint one (the registry
+is closed and a new codename is a migration of every role's grant), the read gate is "may
+edit settings OR holds `platform.audit.read`" — exactly the three roles FRD §6 names,
+because `platform.audit.read` is held by owner, admin and accountant and by no staff role.
+The sidebar's Settings item is gated on `platform.audit.read` for the same reason (it was
+`parties.party.read`, which every staff member holds). Edit (`may_edit_settings`) is
+`platform.tenant.manage` or an active owner/admin role — admin lacks `tenant.manage` by
+design (canon §0.9) but FRD §6 gives admin the edit; branding edit is
+`platform.branding.manage`.
+
+Requested against Part 20 §20.5.2 (one line naming the read rule) and Part 17-01 PLT-06 §6.
+
+## CR-2026-09-24-T1-B — revoking ONE own device is effective at the next refresh, not at once
+
+PLT-09 FR-4 says a revoked session "is signed out immediately". A single-session revoke
+marks its refresh family revoked; the device's access token (≤15 min) stays valid until it
+next refreshes, and the refresh is refused. Making it immediate needs a per-request session
+lookup on every authenticated call (the access token carries no session id today), which is
+a hot-path query this feature cannot justify alone. The two cases that matter most ARE
+immediate: "Log out everywhere" bumps `token_epoch`, and a manager's "log out their devices"
+bumps `permissions_version`, both of which every request already checks.
+
+Requested against Part 17-01 PLT-09 FR-4 / AC-2: "within 15 minutes, and at once for
+log-out-everywhere and for a manager's revoke".
+
+## CR-2026-09-24-T1-C — settings shapes as built, and reminder templates stay single-brace
+
+The settings catalogue (`apps/platform_app/settings_schema.py`) stores every value as a small
+JSON object with `schema_version`, and PLT-06 §14's key list is implemented with three
+changes the FRD should adopt:
+
+- `ledger.reminder_templates` keeps the seeded flat `{en, hi}` shape with `{amount}`-style
+  single-brace placeholders (`party_name`, `business_name`, `amount`, `due_date`,
+  `upi_link`; `{amount}` required; ≤500 chars; `{{…}}` refused). The FRD's
+  `manual/auto_d1/auto_d0` × `{{placeholder}}` shape would break the seeded rows and LED-08
+  (T2), which already reads the flat shape. Per-schedule templates are LED-08's to add, as
+  new keys.
+- `ledger.auto_sms` and `ledger.party_sms_on_entry` are stored and validated but have no
+  switch on screen: nothing sends SMS (DEC-010/adapter-only), and a switch that does
+  nothing is the "unbuilt feature" rule broken.
+- Documents/numbering, stock and party-label settings are served and saved by the API but
+  not on the Settings screen yet, because no screen consumes them (sales, inventory and the
+  party labels are other tracks' work). Numbering refuses a backwards `next_number` with
+  409 `sequence_backwards`.
+
+Optimistic concurrency is an `ETag` on `GET` and a required `If-Match` on `PUT`
+(412 `precondition_failed` when stale) — PLT-06 FR-9's "last write wins with a warning" is
+replaced by refusal, because two owners editing templates at once otherwise silently lose one.
+
+Requested against Part 17-01 PLT-06 §14 and Part 21 (tenant.settings shape).
+
+## CR-2026-09-24-T1-D — settings pages live under `/settings/*`
+
+PLT-08 names `/activity` and PLT-09 `/profile/devices`. They are built as
+`/settings/activity` and `/settings/devices` (with `/settings/profile` and
+`/settings/branding`), so the one Settings hub owns every tenant-administration screen and
+the sidebar needs one item rather than three. Devices is also reachable from the account
+menu for every role, because staff may manage their own sessions and do not see Settings.
+
+Requested against Part 19 §19.6 (route table) and Part 17-01 PLT-08/PLT-09 §9.
+
+## CR-2026-09-24-T1-E — module and GST-type guards are registries other apps fill
+
+PLT-06 FR-6 (a module with data cannot be switched off, 409 `module_has_data`) and PLT-07
+BR-4 (GST type locked once documents exist, 409 `gst_type_locked`) need counts from apps
+platform may not import (Part 20 import matrix). `apps/platform_app/services/guards.py`
+exposes `register_module_off_guard(module, counter)` and `register_gst_lock_counter(counter)`;
+inventory (T3) and sales must register theirs in their `AppConfig.ready()`. Until they do,
+the guards pass — correct today, since neither app has rows.
+
+Requested against Part 20 §20.3 (the import matrix's sanctioned inversion pattern).
+
+## CR-2026-09-24-T1-F — the FRD's contrast figure for the default blue is wrong
+
+WLB-01 quotes `#2B6BE0` on white as "≈4.6:1". The WCAG 2.1 relative-luminance formula gives
+4.90:1; tests pin 4.90 on both tiers. The server refuses a primary below 3:1 against white
+(`low_contrast`, with `details.suggested_hex` — the nearest darker shade that passes, in 1%
+lightness steps). Partner logo upload (WLB-02) is not built: it needs `files_attachment`
+rows with no tenant, which is Part 43 CR-018 / C2 and still undecided.
+
+Requested against Part 17-01 WLB-01 §8 and WLB-02 FR-3.
+---
+
+## CR-2026-09-24-INV-A — the stock log is ordered by ARRIVAL, one order for cache, rows and replay
+
+**State:** `raised` (built; needs the schema owner's acceptance). **Target:** Part 21 §21.3.6
+"The weighted-average costing rule" (1), (3), (4), (6), (7) and the `inventory_item_stock` /
+`inventory_stock_movement` column lists (T-08); Part 17-03 §17.6.0 "Order is part of the rule"
+and "Backdating and recomputation", INV-03 BR-4/§20, INV-06 BR-9/T-INV-06-3a, INV-07 EC-4,
+INV-08 FR-2/BR-3; Part 20 §20.6.2. Resolves Part 41 BE-01 and Part 42's resolution of it.
+**Gate:** before PUR-01 (the next writer of `post_movements`).
+
+**The defect.** Part 41 BE-01: the incremental average was maintained in arrival order while
+the replay ran in `(movement_date, created_at, id)` order, so the two diverged permanently on
+the first backdated inbound. The corpus then resolved it the other way round — canonical
+order `(movement_date, sequence_no)`, a backdated insert writes NULL running columns, marks
+the cache `stale` and enqueues `inventory.recompute_item_cost`, which UPDATEs every later
+row. That design has three problems for this build: the trigger must permit UPDATEs of the
+running columns (the only immutable table in the product with a permitted rewrite of history
+by a background job); a plain outbound's `unit_cost` snapshot (COGS, "frozen at issue") is
+an immutable fact that the recompute cannot change, so after a backdated purchase the row's
+COGS and the recomputed average at that row disagree anyway; and every valuation surface
+needs a "recalculating" state and the drift job a stale-exclusion.
+
+**Decision.** ONE order: `sequence_no`, the gap-free per-`(item, location)` arrival counter
+already specified, allocated from `inventory_item_stock.last_sequence_no` under the stock-row
+lock. The incremental step, every row's `avg_cost_after` / `on_hand_after` (NOT NULL, written
+once), and `recalc_stock`'s replay all fold the same costing function over that order, so the
+cache equals the replay by construction — a backdated movement is simply the next arrival.
+Consequences, all built:
+
+- No `cost_state`, no `cost_stale_since`, no `inventory.recompute_item_cost` job.
+- `forbid_update_delete` on `inventory_stock_movement` refuses EVERY update and delete
+  (its own function name — `ledger` 0002 already owns `forbid_update_delete()`).
+- A void (PUR-04/SAL-05) posts reversal rows through the §21.3.6 (2) value-reversal cases,
+  which are implemented in `costing.apply_weighted_average`; no unconditional recompute.
+- `inventory_item_stock.max_movement_date` (new column) lets a row be labelled
+  `is_backdated` on the wire (INV-03 "Backdated" badge) without any recomputation.
+- Movement history lists newest ARRIVAL first (`sequence_no DESC`), cursor on `sequence_no`,
+  so the running figures read consistently down the page; the date filter still filters by
+  `movement_date`.
+- INV-08 `as_of`: on-hand = `SUM(qty) WHERE movement_date ≤ as_of` (exact under any arrival
+  order); average = `avg_cost_after` of the latest-ARRIVED movement dated ≤ `as_of`.
+
+**The trade, stated plainly.** A backdated purchase changes the average from the moment it is
+ENTERED onward, not retroactively for sales dated after it but entered before it. Those sales
+keep the COGS they were issued at — which is what "COGS frozen at issue" already promised.
+For a historical `as_of` inside a backdated window the average may include a cost that arrived
+later but is dated after `as_of`; quantities are always exact. Tests:
+`test_a_backdated_inbound_between_two_outbounds_matches_the_replay` (the BE-01 fixture) and a
+10,000-movement fuzzed book with random backdates, reversals and negatives at zero drift.
+
+**Also in this change (INV-07).** FR-4's "compare against MAX(created_at) above the reorder
+point" query is replaced by the stored crossing state Part 32 §32.9.4 asks for:
+`inventory_item_stock.alert_level` ∈ `ok|low|out`, plus `inventory_low_stock_alert` (one row
+per crossing). A notification is a transition to a WORSE level; a recovery re-arms silently.
+Delivery goes through `register_low_stock_sink()` — the notifications track wires its inbox in
+from its own `AppConfig.ready()`, so `inventory` never imports `notifications`.
+## CR-2026-09-24-D — LED-05…LED-08 / NTF-01…NTF-03: what was built beside the FRDs
+
+**State:** `raised`. **Target:** Part 17-02 LED-05/06/07/08, Part 17-05 NTF-01/02/03, Part 21
+§21.3.4. **Gate:** none — additive; migrations `ledger 0005_reminder`,
+`notifications 0002_inbox_and_templates`.
+
+**Endpoints beside §14.** `POST /reminders/preview` returns the server-composed text without
+writing a row, so a sheet opened and closed never reaches the log (FR-2 says "the tap" records).
+`GET /reminders/due?bucket=today|overdue|upcoming` lists a bucket's parties with the summary's
+own predicate; the party list's `collection=` chip is the one party source the client may page
+(§32.6.7), so the reminders screen does not reuse it. `GET/PATCH /reminders/settings` is a narrow
+writer for `ledger.auto_sms` and `ledger.party_sms_on_entry` until PLT-06's generic settings
+endpoint owns those keys.
+
+**Channel added: `sms_manual`.** §21.3.4 lists `sms` (a provider SMS). The merchant's own SMS
+app via an `sms:` link is a different act with a different cost (none) and is logged as
+`sms_manual`, so the Sent tab never claims a provider sent it.
+
+**Rules decided.** A new collection date must be today or later, within 365 days, and on a
+party who owes money (`collection_requires_receivable`, 409); an unchanged overdue date is
+accepted so an unrelated edit is never refused. All three buckets require `balance > 0`. The
+automated schedule runs at 09:00 IST as LED-07 FR-2 says (the `SCHEDULES` entry had 08:00).
+The `reminder_due` inbox row is ONE row per tenant per day carrying the count and linking to
+`/ledger/reminders?bucket=today`, not LED-05's one row per party: NTF-01's coalescing rule
+(FR-6) and a bell reading "40" every morning pointed the same way. With no
+SMS provider configured (`ConsoleSmsBackend` counts as none) an automated or entry SMS ends
+`failed` / `skipped` with `channel_not_configured` and one `reminder_failed` inbox row — never
+a green "sent".
+
+**Client composition removed.** The khata's reminder text was composed on the device since
+Sprint 3 (DEC-012). It is now the server's (NTF-03 BR-2), and "Send reminder" needs
+`ledger.reminder.write` — sending writes a row, so the accountant no longer sees it.
+`e2e/sprint3-qa.mjs` §A still asserts the old client-composed wording and should be re-pointed
+at the preview text.
+
+**Not built.** WhatsApp Business API sending (`whatsapp_api`, NTF-02) — no provider, per
+ADR-021; recurring reminders (`kind=recurring`); per-party locale for message language (the
+tenant's locale is used); the inbox's per-category mute settings.
+
+## CR-2026-09-24-SAL-A — SAL-02/03/06/07/08: what was built beside the FRDs
+
+**State:** `raised`. **Target:** Part 17-04 SAL-02/03/06/07/08, Part 20 §20.7.3 and §20.11.4,
+Part 21 §21.3.7, Part 43 §43.4.6 C1. **Gate:** none — additive; migration
+`sales 0001_add_sales_document`.
+
+**Round-off range (BR-8 against itself).** BR-8 and §20.7.3 say `round(grand_raw, 0) − grand_raw`
+half-up, and that the result lies in [−0.50, +0.49]. It doesn't: half-up sends ₹472.50 to ₹473,
+a round-off of +0.50, so the formula's range is [−0.49, +0.50]. The engine follows the formula,
+because the formula is what every Indian billing counter does. The shared fixture
+`taxEngine.cases.json` has an "x.50 rounds up" case. §20.11.4's CHECK [−0.50, +0.50] admits the
+formula's range, but migration 0001 does not declare it yet; it is a follow-up.
+§20.7.3's stated range should be corrected; BE-14 in Part 41 flagged the neighbouring half of the
+same mismatch.
+
+**Columns beside §21.3.7.** `sales_document.round_off_enabled` records the round-off switch
+(SAL-02 FR-12) per document, so that recomputing a draft on save gives back what the merchant
+chose instead of the shop default as it stands today. `version` (optimistic concurrency, SAL-06
+FR-6) and `meta` (JSON: the walk-in payment until PAY-01, the share link's expiry) are also added.
+The item list row (`GET /items`) now carries `hsn_sac` and `tax_inclusive_selling`, so a picked
+item fills the bill line without a second request.
+
+**Share links use `sales_document.public_token_hash`.** C1 was decided on 23 Sep for a
+generalised `parties_share_link` table, which no app has built yet. Sales therefore stores the
+token's hash in the column §21.3.7 already declares, and puts the expiry in `meta.share_link`.
+Regenerating a link replaces the hash, which revokes the old token (T-SAL03-6). The day the
+generalised table lands, this becomes one migration and one resolver; the public URL shape
+`/public/d/<token>` stays the same.
+
+**Settings read with defaults, not registered.** `sales.round_off_default`,
+`sales.default_due_days`, `sales.allow_free_text_lines`, `sales.require_hsn_b2b`,
+`documents.terms` and `documents.show_upi_qr` (CR-SAL-2) are read through `services/settings.py` with the FRD's defaults. They are not added to PLT-06's
+catalogue, because that is a shared table this track does not own.
+
+**Error codes added.** `rule46_failed` (400: a hard Rule 46 failure at issue; `details.issues`
+lists the blocks) and `upi_not_configured` (409: `/upi-intent` without a valid tenant VPA).
+Share links on a draft reuse `document_not_shareable`.
+
+**The QR encoder lives in `apps/common/qr.py`, not in payments.** The import matrix forbids
+`sales → payments`, and SAL-03 needs the encoder at render time. `apps/common/upi.py` builds the
+`upi://pay` string. `GET /payments/qr.svg` is a thin view over the same encoder, for PAY-03.
+
+**Payment at issue: walk-in only (SAL-07), and a seam for PAY-01.** A walk-in bill must be paid
+in full at issue (400 `validation_failed` on `payment`: "Walk-in sale must be paid in full").
+Its `mode_breakup` is stored in `sales_document.meta.payment` and the document moves straight to `paid`. No `payments_payment`
+row is written, because PAY-01 does not exist and sales may not import payments. A party bill
+that includes a payment at issue is refused with a 400 until PAY-01 is in: a party bill issues
+on credit to the khata, and part-payment is recorded from Payments later. `services/payment_seam.py`
+is the one function PAY-01 replaces.
+
+**Local drafts survive logout.** SAL-06 §19 asks for device drafts to be cleared on sign-out.
+The existing `storage.clearLocalExceptDrafts` (logout and tenant switch) deliberately keeps the
+draft namespace. Its keys are per tenant, so another shop on the same device never sees them, and
+a bill lost to an accidental sign-out at the counter costs more than a stale draft does. This
+track follows the code, not §19, and §19 should be amended to match.
+
+**Not built.** Party payments at issue (PAY-01); the WhatsApp message-log row
+(`notifications_message_log`, T-SAL03-8), because sales may not import notifications; the public
+`/d/[token]` page render (the API answers, the page is still the stub); SAL-06 FR-5 duplicate;
+the stale-draft flag; print copies (original/duplicate/triplicate); a separate `/print` route
+(the detail page prints itself; the success sheet opens it with `?print=1`); void (SAL-05).
+## CR-2026-09-24-IMP-A — IMP-01 / PTY-10 / INV-09 / IMP-02: what was built beside the FRDs
+
+**State:** `raised`. **Target:** Part 17-01 PTY-10, Part 17-03 IMP-01/IMP-02/INV-09, Part 21
+§21.3.11, Part 22 §22.11/§22.12. **Gate:** none — additive; migrations `imports 0001_initial`,
+`reports 0001_initial`.
+
+**PTY-10 disagrees with IMP-01, and IMP-01 was followed.** PTY-10 was written before the import
+framework and specifies (a) a `duplicate_mode` of skip/update for a mobile already in the book,
+(b) a commit chunked into 200-row transactions that is "not all-or-nothing" (BR-7), and (c) a
+column-mapping screen with `PATCH /imports/{id} {column_map}`. IMP-01 says create-only (BR-3,
+EC-6: a re-upload reports the first import's rows as duplicates), one transaction (BR-1), and no
+mapping step. The sprint's exit criteria — "committing twice creates no duplicates; a cancelled
+import leaves no partial data" — and TSK-PTY-10-02/03 are written against IMP-01, so an existing
+mobile is the row error `duplicate_existing`, the commit is all-or-nothing, and headers are
+matched after case/space folding and through a synonym list (`Party Name`, `Phone`,
+`Outstanding`, `नाम` …). PTY-10 should be amended to cite IMP-01 for all three, and the upsert
+mode left to IMP-03 where Part 17-03 already puts it.
+
+**`imports_job` carries no configuration column.** CCR-17's `options` and CR-036's `column_map`
+are both blocked behind Part 43 §43.4.6 C5; nothing the MVP builds needs either, so neither
+exists. The error file is a `files_attachment` (`owner_type='imports_job_errors'`) found by owner
+rather than CCR-17's `error_file_attachment_id`, for the same reason.
+
+**Traceability without `source_type='import'`.** IMP-01 BR-8 and INV-09 BR-5 ask for ledger
+entries and stock movements with `source_type='import', source_id=job.id`. `import` is not a
+value of either `SourceType`/`MovementSource` enum and adding one is a change to two other
+apps' vocabularies; the importers call `create_party()` / `create_item()` unchanged instead, so
+openings post as `manual` / `item` exactly as the drawers do (BR-6: "every rule, cache update
+and audit row is identical to a manual create"). The job is recorded on EVERY audit row the
+commit writes — `metadata.import_job_id`, `via='import'`, `batch`, `runner` — through
+`Ctx.audit_meta`, which satisfies AC-8 and is what a support query starts from. The ledger
+row's own `metadata.via` still reads `party_create`, because `create_party` names its caller
+there; the `import_job_id` beside it is the discriminator.
+
+**Permissions are the kind's codenames (IMP-01 §12), so staff may import parties.** PTY-10 §12
+excludes staff "entirely at MVP", but staff hold `parties.party.write` and `ledger.entry.write`
+by default, and IMP-01 introduces no codename. Excluding them would be a role check; the
+precedent (LED-03, CR-124) is that an ordinary capability is a codename check and only a
+business ceiling is a role check. Decide which PTY-10 means.
+
+**Exports: one pipeline, not an `ExporterSpec` registry.** IMP-02 FR-2 specifies a resource
+registry with filtersets in `imports/exporters`. Built instead: `CsvExportMixin` in
+`apps/common/exports.py`, which the party, item and expense list viewsets use, and whose
+`export_queryset()` is the SAME method the JSON list pages over — so BR-1 ("the file is the
+screen") holds by construction, and the >5,000-row job replays that method on a synthetic
+request carrying the stored query string. `reports_export` is in the `reports` app (its table
+prefix) with CR-098's accepted columns. Stored exports are read at `GET /reports/exports/{id}`
+(§22.11, which PLT-08/PLT-10 already name) and downloaded at `/reports/exports/{id}/download`,
+not CCR-20's `/exports/{id}` — one address per object until CCR-20 is decided. Not built: XLSX
+(ADR-021/023 undecided), the column chooser (FR-5), the totals row (FR-10 — it breaks a paste
+into a pivot and a re-import), export history (FR-9) and cancel (FR-12). Dates in export files
+are dd/mm/yyyy (TSK-IMP-02-05) rather than FR-4's ISO, matching the statement CSV and what the
+importer reads back.
+
+**Not built, with reasons.** Import history UI (`GET /imports` exists); FR-12's reaper as a
+scheduler tick — a job stuck `validating` > 10 min or `importing` > 30 min is marked
+`interrupted` when it is next READ, and a runner that dies mid-commit is re-queued once by the
+platform reaper, whose transaction the database has already rolled back; the 30-day purge of
+import files (a cancelled job's file IS deleted); progress during the commit (EC-14 accepts an
+indeterminate bar — the transaction's writes are not visible until it commits); the
+`opening_stock` kind (INV-05's own feature).
+
+**Outside this track's apps, fixed because the look could not run without it.**
+`run_scheduler` logged `extra={"created": n}`; `created` is a reserved `LogRecord`
+attribute, so with `ub.jobs` at INFO (local settings) the runner died with KeyError on the
+first tick that materialised a schedule — on a fresh database, the very first tick — and no
+`platform_job` ran. One-word rename plus a test at INFO. Noted, not fixed: the loop has no
+per-tick error handling, so any transient database error (a cancelled statement, a
+connection timeout under load) also ends the process; deployment's cron restart covers it,
+a native `dev-backend.sh` session does not.
+## CR-2026-09-24-W2C-A — PLT-10 as built: password re-verification, the export as a job, the registry
+
+**Re-verification is the owner's password, not an OTP.** PLT-10 FR-3 and §14 require
+`{challenge_id, code}` from a fresh `purpose='verify'` OTP. DEC-010 removed the OTP identity,
+so `POST /tenants/current/delete-request` takes `{password, confirm_name, reason?}`. A wrong
+password or a mismatched name is 400 `validation_error` on the field — never 401, which the
+client's refresh interceptor would read as an expired session. The endpoint has its own
+throttle scope, `reverify` (10/hour per user), because it is a password oracle for anyone
+holding a stolen session.
+
+**The export is a `platform_job`, not a `reports_export` row.** RPT-08 has not built
+`reports_export`, so the job's `result` carries `storage_key`, `row_counts`, `size_bytes` and
+`expires_at` (7 days; 30 for the final export the deletion job makes, BR-4). Endpoints:
+`POST /tenants/current/export` (202), `GET /tenants/current/exports`,
+`GET /tenants/current/exports/{id}` and `GET /tenants/current/exports/{id}/download` instead of
+FR-2's `GET /reports/exports/{id}` and a signed URL — the download is an owner-only,
+tenant-checked, cross-site-refusing GET, which is what the signed URL was for. When
+`reports_export` lands the row moves and the four paths stay. The bundle is not stored as a
+`files_attachment` (`kind='export_file'`) either: deletion removes every attachment, and the
+retention copy must survive it. Three exports a day per tenant answer 429 `rate_limited`.
+
+**`GET /tenants/current/deletion`** is new: the page's whole state (status, `scheduled_for`,
+`export_fresh`, the latest export, the name to type) in one read. `/auth/me`'s
+`active_tenant` gains `deletion_scheduled_for` for the shell's banner.
+
+**The export gate reads the audit log.** "A fresh export exists" (FRD §10, EC-3) = a
+succeeded, unexpired export that finished after the newest audit row that is not itself
+about exporting, deleting, auth or support access. EC-6 (a tenant with no rows passes
+trivially with a synchronous empty export) is not built: such a tenant takes one export.
+
+**Read-only during the cool-off** is enforced in `CookieOrBearerJWTAuthentication`, not per
+view: every unsafe method answers 409 `tenant_pending_deletion` except export, delete-cancel,
+`/auth/*`, `/support/*` and notification reads.
+
+**Tables are declared per app** in `apps/<app>/tenant_data.py` (`apps.common.tenant_data`
+registry); the export writes one CSV per registered table with an `export_name`, and the
+deletion order is computed from the models' own foreign keys. The file list therefore
+exceeds FR-1's (tags, units, locations, categories, item stock, adjustments, expense
+categories, templates, tax rates, invitations, roles, attachments.csv); `sales_*`,
+`purchase_*`, `payments.csv` and `payment_allocations.csv` appear when those apps register.
+An installed tenant-FK model that nobody registered stops the deletion job before it removes
+anything (`sales`, `purchases`, `payments`, `imports`, `reports` are on a named pending list
+so the architecture test tolerates a merge that lands models first).
+
+**Deletion keeps** the tenant row as a tombstone (personal fields blanked, name
+"Deleted business", `status='deleted'`, GSTIN freed), anonymised audit rows (actor, before,
+after and metadata removed; one un-anonymised `tenant.deleted` row with per-table counts),
+the export and deletion job rows, and every user account (memberships go; users are CCR-10's
+`DELETE /auth/me`, not built here). The append-only triggers on `ledger_entry` and
+`inventory_stock_movement` are disabled by name inside the one transaction that deletes that
+table's rows, as ledger migration 0002 anticipated.
+
+**Not built:** `DELETE /auth/me` (CCR-10), `POST /parties/{id}/erase` (CCR-11), the privacy
+notice page (FR-9), consent capture at sign-up (FR-10), `export_affected_principals` (FR-11),
+the SMS to owners (no provider), per-session banner dismissal.
+
+Requested against Part 17-01 PLT-10 FR-1/FR-2/FR-3/§14, Part 22 §22.3.
+
+## CR-2026-09-24-W2C-B — PLT-14 as built, and a contradiction: support sessions are READ-ONLY
+
+**Contradiction.** PLT-14 FR-5 allows writes under impersonation ("needed to reproduce
+fixes") except deletion, ownership and bank details. Part 20 §20.4.8 rule 5 says support
+access is read-only, and the permission classes shipped in Sprint 1 already enforce rule 5.
+Built to Part 20 (the stricter, already-enforced rule); FR-5's forbidden list is enforced as
+well (403 `impersonation_forbidden` for `/admin/*` except `/admin/impersonation/end`,
+switch-tenant, delete-request/cancel, the full export, support decisions, members,
+memberships, invitations, password and sessions, and `bank_details`/`upi_vpa`/`pan` on
+`PATCH /tenants/current`). `Ctx.from_request` already stamps `metadata.impersonation=true`
+for the day rule 5 is relaxed. The owning chapter must choose; until it does, a support
+session reads.
+
+**Consent** is a new table, `platform_support_access` (requested → granted/denied/revoked/
+expired, 24 h either way), instead of FR-5's "a `notifications_notification` accepted by an
+owner whose audit row id is the consent_id": a notification row is broadcast read state, not
+a decision with an actor and an expiry. Its id is the `consent_id`. Owner endpoints
+`GET /support/access-requests` and `POST /support/access-requests/{id}/allow|deny|revoke`
+(CCR-12's allow/deny plus revoke, which also ends a live session). The owner answers on
+Settings → Your data; the inbox row links there.
+
+**Sessions** are `platform_impersonation_session`: the token's `imp` claim is the session id
+(not the tenant id §20.4.8 sketches), the row stores `sha256(jti)` and never the token, and
+the tenancy layer re-checks row, consent and jti on every request, so ending or revoking cuts
+the token at once. Lifetime `min(60 min, consent expiry)`, no refresh token; when it lapses the
+client's refresh restores the operator's own session. `POST /admin/impersonation/end` swaps the
+access cookie back.
+
+**Health** (FR-7): the scheduler touches one `platform_job` row (`scheduled_key =
+'platform.heartbeat'`, status `succeeded`, never claimed) every 30 s; red after 120 s.
+`otp_backend`/`sms_backend` are replaced by `email_backend` (DEC-010).
+
+**Other deltas.** `GET /admin/overview` is new (the console's status tiles). Owner search is
+by EMAIL (FR-2 said owner mobile; DEC-010). `entitlement_overrides` accepts only
+`max_users` and `storage_mb` (DEC-001) and is stored as `plan.overrides.limits`, the shape
+`entitlements.for_tenant` reads. Usage columns are live subqueries, not FRD §20's nightly
+`reports_snapshot` — switch when tenant count makes the list slow. `UB_SUPER_ADMIN_MOBILES` is
+not consulted: identity is email and `platform_user.is_super_admin` is the gate. Suspension
+still resolves no tenant (403 `no_active_tenant`) rather than FR-3's `tenant_suspended`.
+
+**Not built:** partner and plan create/edit (`POST/PATCH /admin/partners|plans`, WLB-02's form
+— Django admin at MVP), `/admin/users`, `/admin/audit-logs`, MFA.
+
+Requested against Part 17-01 PLT-14 FR-2…FR-8, Part 20 §20.4.8, Part 22 §22.13.

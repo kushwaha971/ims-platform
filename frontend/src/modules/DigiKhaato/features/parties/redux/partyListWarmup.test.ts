@@ -7,6 +7,7 @@ import {
   __resetPartyListWarmup,
   abortWarmPartyList,
   claimWarmPartyList,
+  partyListRequestKey,
   warmPartyList,
 } from './partyListWarmup';
 
@@ -112,5 +113,79 @@ describe('the party-list warm-up', () => {
     warmPartyList(store.dispatch, ARG);
     expect(get).toHaveBeenCalledTimes(2);
     expect(claimWarmPartyList(ARG)).toBe(true);
+  });
+
+  // ── The key must cover every parameter ───────────────────────────────────
+
+  it('does not treat a different FILTER as the same request', async () => {
+    /**
+     * The defect, and the reason this file needed a new kind of test at all.
+     *
+     * `partyListRequestKey` used to name its fields — `q`, `status`,
+     * `ordering`, `page`, `pageSize`. PTY-02 added `type`, `balance` and
+     * `collection` to the params and not to that list, so an arg carrying
+     * `balance: 'owes_me'` hashed to the same key as the unfiltered warm
+     * request. `claimWarmPartyList` answered "already in flight",
+     * `usePartyList` returned without dispatching, and tapping a chip set its
+     * pressed state, lit up "Clear filters (1)" and relabelled the count tile
+     * — while issuing no request at all. Because the claim is idempotent, the
+     * list then never filtered again for the life of the page.
+     *
+     * Every existing test here passed throughout, because they all key off the
+     * DEFAULT filters, which did not change. This one primes the warm-up with
+     * one filter set and claims with another, which is what the screen does.
+     */
+    const get = jest.spyOn(api, 'get').mockResolvedValue(EMPTY_PAGE);
+
+    warmPartyList(store.dispatch, ARG);
+    const filtered: FetchPartyListArg = {
+      ...ARG,
+      params: { ...ARG.params, balance: 'owes_me' },
+    };
+
+    expect(claimWarmPartyList(filtered)).toBe(false);
+
+    // And the screen then supersedes the warm request and issues its own, so
+    // the merchant's filter reaches the server.
+    abortWarmPartyList();
+    await store.dispatch(fetchPartyList(filtered));
+
+    expect(get).toHaveBeenCalledTimes(2);
+    expect(get.mock.calls.at(-1)?.[0]).toContain('balance=owes_me');
+  });
+
+  it.each(['type', 'balance', 'collection'] as const)(
+    'gives %s a key of its own, whatever is added to the params next',
+    (field) => {
+      /**
+       * Derived from the params rather than a list, so this holds for a filter
+       * nobody has written yet. A future `tag` (PTY-05) needs no edit here and
+       * no memory of this file.
+       */
+      const base = partyListRequestKey(ARG);
+      const changed = partyListRequestKey({
+        ...ARG,
+        params: { ...ARG.params, [field]: 'anything' },
+      } as FetchPartyListArg);
+
+      expect(changed).not.toBe(base);
+    }
+  );
+
+  it('is not confused by the ORDER of the keys in the params object', () => {
+    /**
+     * The one property the explicit field list genuinely bought, kept by
+     * sorting. Two objects with the same values and different insertion order
+     * are the same request.
+     */
+    const forwards = partyListRequestKey(ARG);
+    const backwards = partyListRequestKey({
+      ...ARG,
+      params: Object.fromEntries(
+        Object.entries(ARG.params).reverse()
+      ) as typeof ARG.params,
+    });
+
+    expect(backwards).toBe(forwards);
   });
 });

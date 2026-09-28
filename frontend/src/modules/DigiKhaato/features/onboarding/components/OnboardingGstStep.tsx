@@ -126,6 +126,7 @@ export function OnboardingGstStep({
             <UbField
               name="gstin"
               label={t('onboarding.gstin.label')}
+              placeholder={t('onboarding.gstin.placeholder')}
               hint={t('onboarding.gstin.hint')}
               required
             >
@@ -150,6 +151,7 @@ export function OnboardingGstStep({
             <UbField
               name="legalName"
               label={t('onboarding.legalName.label')}
+              placeholder={t('onboarding.legalName.placeholder')}
               optionalLabel={t('common.field.optional')}
             >
               {(field) => <UbTextInput {...field} />}
@@ -158,6 +160,7 @@ export function OnboardingGstStep({
             <UbField
               name="pan"
               label={t('onboarding.pan.label')}
+              placeholder={t('onboarding.pan.placeholder')}
               optionalLabel={t('common.field.optional')}
               hint={panMismatch ? t('onboarding.pan.mismatch') : undefined}
             >

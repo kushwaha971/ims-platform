@@ -169,7 +169,9 @@ describe('TeamPageContent — the list states', () => {
     // `getAllByRole(...)[0]` would keep passing if the invitation grid stopped
     // rendering its skeleton altogether.
     expect(screen.getAllByRole('status').length).toBeGreaterThan(0);
-    expect(await screen.findByText('Nobody has been invited yet')).toBeInTheDocument();
+    /* "No invite links yet", not "Nobody has been invited yet": DEC-012 —
+       nothing is sent, the owner creates a link and sends it (UAT D8). */
+    expect(await screen.findByText('No invite links yet')).toBeInTheDocument();
     expect(invitationService.listInvitations).toHaveBeenCalledTimes(1);
   });
 
@@ -181,7 +183,7 @@ describe('TeamPageContent — the list states', () => {
       messages: hi as Record<string, string>,
     });
 
-    expect(await screen.findByText('अभी किसी को नहीं बुलाया गया है')).toBeInTheDocument();
+    expect(await screen.findByText('अभी कोई जुड़ने का लिंक नहीं बना')).toBeInTheDocument();
   });
 
   /**
@@ -222,6 +224,18 @@ describe('TeamPageContent — the list states', () => {
     expect(within(cards).getByRole('button', { name: 'Revoke' })).toBeInTheDocument();
   });
 
+  it('fronts an invitation card with an invite icon, not a letter cut from the address (QA O3)', async () => {
+    /* Prevents QA O3: the disc read "s" for "sunita@example.com" — a lowercase
+       letter that looks like a person's initial and is not one. */
+    invitationService.listInvitations.mockResolvedValue(page([PENDING]));
+
+    renderWithProviders(<TeamPageContent />);
+
+    const cards = await screen.findByTestId('ub-grid-cards');
+    expect(within(cards).queryByText('s')).not.toBeInTheDocument();
+    expect(cards.querySelector('[aria-hidden] svg.lucide-mail')).not.toBeNull();
+  });
+
   /**
    * A `pending` row whose `expires_at` has passed is NOT pending: the server
    * will refuse the token. Showing "Waiting" beside a Revoke button invited the
@@ -255,13 +269,13 @@ describe('TeamPageContent — inviting', () => {
     });
 
     renderWithProviders(<TeamPageContent />);
-    await screen.findByText('Nobody has been invited yet');
+    await screen.findByText('No invite links yet');
 
     await user.click(screen.getByRole('button', { name: 'Invite member' }));
     const dialog = await screen.findByRole('dialog', { name: 'Invite a member' });
 
     await user.type(within(dialog).getByLabelText('Email address'), 'nita@example.com');
-    await user.click(within(dialog).getByRole('button', { name: 'Send invitation' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Create invite link' }));
 
     await waitFor(() => expect(invitationService.createInvitation).toHaveBeenCalledTimes(1));
     const [body, key] = invitationService.createInvitation.mock.calls[0];
@@ -289,13 +303,13 @@ describe('TeamPageContent — inviting', () => {
     invitationService.listInvitations.mockResolvedValue(page([]));
 
     renderWithProviders(<TeamPageContent />);
-    await screen.findByText('Nobody has been invited yet');
+    await screen.findByText('No invite links yet');
 
     await user.click(screen.getByRole('button', { name: 'Invite member' }));
     const dialog = await screen.findByRole('dialog', { name: 'Invite a member' });
 
     await user.type(within(dialog).getByLabelText('Email address'), 'not-an-address');
-    await user.click(within(dialog).getByRole('button', { name: 'Send invitation' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Create invite link' }));
 
     expect(
       await within(dialog).findByText('Enter a valid email address, like ramesh@example.com')
@@ -322,13 +336,13 @@ describe('TeamPageContent — inviting', () => {
     });
 
     renderWithProviders(<TeamPageContent />);
-    await screen.findByText('Nobody has been invited yet');
+    await screen.findByText('No invite links yet');
 
     await user.click(screen.getByRole('button', { name: 'Invite member' }));
     const dialog = await screen.findByRole('dialog', { name: 'Invite a member' });
 
     await user.type(within(dialog).getByLabelText('Email address'), 'sunita@example.com');
-    await user.click(within(dialog).getByRole('button', { name: 'Send invitation' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Create invite link' }));
 
     expect(
       await within(dialog).findByText('This person has already been invited.')

@@ -1,6 +1,11 @@
 import type { ApiErrorShape } from 'src/types/api.types';
 import { applyServerErrors } from 'src/utils/applyServerErrors';
-import { flattenErrorDetails, readDetail, readDetailNumber } from 'src/utils/errorDetails';
+import {
+  flattenErrorDetails,
+  readDetail,
+  readDetailNumber,
+  readFieldCodes,
+} from 'src/utils/errorDetails';
 
 /**
  * Part 19 §19.5.6 — reading a 400 without throwing on it.
@@ -32,7 +37,10 @@ const recorder = (): {
     setError,
     anchored: () =>
       Object.fromEntries(
-        setError.mock.calls.map((call) => [call[0] as string, (call[1] as { message: string }).message])
+        setError.mock.calls.map((call) => [
+          call[0] as string,
+          (call[1] as { message: string }).message,
+        ])
       ),
   };
 };
@@ -67,11 +75,10 @@ describe('applyServerErrors — DRF nests, and this must not throw on it', () =>
   it('anchors on the nested RHF path when the form is itself nested', () => {
     const { setError, anchored } = recorder();
 
-    applyServerErrors(
-      error({ address: { line1: ['Required.'] } }),
-      setError as never,
-      ['address', 'phone']
-    );
+    applyServerErrors(error({ address: { line1: ['Required.'] } }), setError as never, [
+      'address',
+      'phone',
+    ]);
 
     expect(anchored()).toEqual({ 'address.line1': 'Required.' });
   });
@@ -79,11 +86,11 @@ describe('applyServerErrors — DRF nests, and this must not throw on it', () =>
   it('focuses only the FIRST rejected field, not every one in turn', () => {
     const { setError } = recorder();
 
-    applyServerErrors(
-      error({ line1: ['a'], pincode: ['b'], phone: ['c'] }),
-      setError as never,
-      ['line1', 'pincode', 'phone']
-    );
+    applyServerErrors(error({ line1: ['a'], pincode: ['b'], phone: ['c'] }), setError as never, [
+      'line1',
+      'pincode',
+      'phone',
+    ]);
 
     const focusFlags = setError.mock.calls.map(
       (call) => (call[2] as { shouldFocus: boolean }).shouldFocus
@@ -115,11 +122,9 @@ describe('applyServerErrors — DRF nests, and this must not throw on it', () =>
   it('joins several messages for one field into one sentence', () => {
     const { setError, anchored } = recorder();
 
-    applyServerErrors(
-      error({ password: ['Too short.', 'Too common.'] }),
-      setError as never,
-      ['password']
-    );
+    applyServerErrors(error({ password: ['Too short.', 'Too common.'] }), setError as never, [
+      'password',
+    ]);
 
     expect(anchored()).toEqual({ password: 'Too short. Too common.' });
   });
@@ -174,5 +179,64 @@ describe('errorDetails — the one sanctioned reader for both envelopes', () => 
     });
 
     expect(entries.map((entry) => entry.path)).toEqual(['address.line1', 'phone']);
+  });
+});
+
+/**
+ * L6 — NEW-2's "already used by another login" rendered in English in the Hindi
+ * UI, because the client printed the server's message verbatim and the server
+ * does not localise field messages. The server now names the refusal with a
+ * stable code in `details.field_codes`; these pin that the code, not the English,
+ * decides what the merchant reads — and that the code itself is never printed.
+ */
+describe('applyServerErrors — field codes (L6)', () => {
+  const MOBILE_TAKEN = error({
+    mobile: ['This mobile number is already used by another login.'],
+    field_codes: { mobile: 'mobile_taken' },
+  });
+  const hindi = (id: string): string =>
+    id === 'errors.field.mobile_taken' ? 'यह मोबाइल नंबर पहले से इस्तेमाल हो रहा है।' : id;
+
+  it('says a coded field in the UI language when given a translator', () => {
+    const { setError, anchored } = recorder();
+    const unanchored = applyServerErrors(MOBILE_TAKEN, setError, ['mobile'], hindi);
+
+    expect(anchored()).toEqual({ mobile: 'यह मोबाइल नंबर पहले से इस्तेमाल हो रहा है।' });
+    expect(unanchored).toEqual([]);
+  });
+
+  it('never prints the codes themselves as a form-level message', () => {
+    const { setError } = recorder();
+    const unanchored = applyServerErrors(MOBILE_TAKEN, setError, ['mobile']);
+
+    expect(unanchored).toEqual([]);
+    expect(flattenErrorDetails(MOBILE_TAKEN.details).map((one) => one.path)).toEqual(['mobile']);
+  });
+
+  it('keeps the server message when no translator is passed', () => {
+    const { setError, anchored } = recorder();
+    applyServerErrors(MOBILE_TAKEN, setError, ['mobile']);
+
+    expect(anchored()).toEqual({ mobile: 'This mobile number is already used by another login.' });
+  });
+
+  it('keeps the server message for a code it has no key for', () => {
+    const { setError, anchored } = recorder();
+    applyServerErrors(
+      error({ mobile: ['Server words.'], field_codes: { mobile: 'constructor' } }),
+      setError,
+      ['mobile'],
+      hindi
+    );
+
+    expect(anchored()).toEqual({ mobile: 'Server words.' });
+  });
+
+  it('reads field codes defensively', () => {
+    expect(readFieldCodes(undefined)).toEqual({});
+    expect(readFieldCodes({ field_codes: ['mobile_taken'] })).toEqual({});
+    expect(readFieldCodes({ field_codes: { mobile: 'mobile_taken', email: 3 } })).toEqual({
+      mobile: 'mobile_taken',
+    });
   });
 });

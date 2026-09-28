@@ -3,7 +3,7 @@
 import { memo } from 'react';
 
 import { cn } from 'src/utils/cn';
-import { formatInr, isZeroAmount } from 'src/utils/money';
+import { absMoney, formatInr, isZeroAmount } from 'src/utils/money';
 
 /**
  * Part 23 §23.2.6 is the contract; Part 25 R-C-2 is this implementation.
@@ -49,9 +49,11 @@ const TONE: Record<UbAmountTone, string> = {
 };
 
 const SIZE: Record<NonNullable<UbAmountBaseProps['size']>, string> = {
-  sm: 'ds-body-sm',
-  md: 'ds-body-medium',
-  lg: 'ds-metric-sm',
+  /* BrandHub sets every figure in Inter (`ds-num-*`): 12/16 medium in a row,
+     16/24 medium in a total cell, 20/32 semibold as a headline balance. */
+  sm: 'ds-num-s-medium',
+  md: 'ds-num-l-medium',
+  lg: 'ds-num-xl-semibold',
 };
 
 /** U+2212 MINUS SIGN, not a hyphen, so it aligns with `ds-num`'s figures. */
@@ -73,7 +75,24 @@ function UbAmountBase({
   const isZero = isAbsent || isZeroAmount(value);
   const effectiveTone: UbAmountTone = isZero ? 'neutral' : tone;
   const effectiveSign: UbAmountSign = isZero ? 'none' : sign;
-  const formatted = formatInr(value); // en-IN, 2,2,3 grouping, always 2 dp
+  /**
+   * The MAGNITUDE. The sign is the slot below, and never the formatter's.
+   *
+   * This read `formatInr(value)`, and `formatInr` signs what it formats — so a
+   * party balance of `"-282.90"` came out as "−₹282.90 · You will give" on both
+   * the list and the khata page, which is §23.2.6 rule 3 broken in exactly the
+   * case the rule exists for: a negative balance is not a concept a shopkeeper
+   * has, they have "you will get" and "you will give", and the label already
+   * says which. The sign slot below was doing its job correctly and rendering
+   * nothing, which is why the defect survived — two mechanisms, one of them
+   * silently overruling the other.
+   *
+   * A caller that genuinely wants a signed figure — a ledger delta, "+₹500" —
+   * asks for it through `sign`, gets the glyph in the fixed slot, and keeps the
+   * decimal column aligned with the unsigned rows above and below it. That is
+   * the whole reason the slot exists.
+   */
+  const formatted = isAbsent ? formatInr(value) : formatInr(absMoney(value));
   const a11y = label ? `${label}, ${formatted}` : formatted;
 
   return (
@@ -82,7 +101,7 @@ function UbAmountBase({
         lang="en-IN"
         dir="ltr"
         aria-hidden
-        className={cn('ds-num whitespace-nowrap', SIZE[size], TONE[effectiveTone])}
+        className={cn('whitespace-nowrap', SIZE[size], TONE[effectiveTone])}
       >
         {/* fixed slot so signed and unsigned rows keep one decimal column */}
         <span className="inline-block min-w-[0.6em] text-right">{GLYPH[effectiveSign]}</span>

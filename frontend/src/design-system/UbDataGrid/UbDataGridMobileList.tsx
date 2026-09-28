@@ -45,6 +45,23 @@ export interface UbDataGridMobileListProps<TRow> {
   readonly labels: UbDataGridLabels;
   /** An accessible name for the list itself — "Customers". */
   readonly listLabel: string;
+  /**
+   * The initials disc on the left of each card. On by default, because most
+   * lists in this product are lists of PEOPLE and a disc of initials is how a
+   * merchant finds one at a glance.
+   *
+   * Off for a list of things. The tag manager is the case that asked for it: a
+   * card reading "CA" beside "Camp Area" invites the reader to look for a
+   * person, and the 40 px it costs is the difference between that row's three
+   * actions sitting on one line and stacking on three.
+   */
+  readonly avatar?: boolean;
+  /**
+   * A per-row icon drawn in the disc instead of initials, for a row with no
+   * name to take them from (an invitation, an invited member — QA O3).
+   * Return `null`/`undefined` to keep the initials.
+   */
+  readonly avatarIcon?: (row: TRow) => ReactNode;
   readonly className?: string;
 }
 
@@ -59,10 +76,12 @@ const CARD_BODY = 'flex min-h-[60px] w-full items-center gap-3 px-4 py-3 text-le
 const cardBody = <TRow,>(
   row: TRow,
   name: string,
-  model: UbCardModel<TRow>
+  model: UbCardModel<TRow>,
+  avatar: boolean,
+  avatarIcon?: (row: TRow) => ReactNode
 ): ReactNode => (
   <>
-    <UbAvatar name={name} />
+    {avatar && <UbAvatar name={name} icon={avatarIcon?.(row) ?? undefined} />}
     <span className="flex min-w-0 flex-1 flex-col">
       <span className="ds-body-sm-medium truncate text-text-primary">
         {model.title ? model.title.cell(row) : name}
@@ -89,6 +108,8 @@ function UbDataGridMobileListBase<TRow>({
   onRowOpen,
   labels,
   listLabel,
+  avatar = true,
+  avatarIcon,
   className,
 }: Readonly<UbDataGridMobileListProps<TRow>>): React.JSX.Element {
   const model = cardModel(columns);
@@ -107,7 +128,7 @@ function UbDataGridMobileListBase<TRow>({
     >
       {rows.map((row) => {
         const name = rowName(row);
-        const body = cardBody(row, name, model);
+        const body = cardBody(row, name, model, avatar, avatarIcon);
 
         return (
           <li

@@ -95,6 +95,7 @@ export function SetPasswordPageContent(): React.JSX.Element {
             <UbField
               name="name"
               label={t('auth.name.label')}
+              placeholder={t('auth.name.placeholder')}
               optionalLabel={t('common.field.optional')}
             >
               {(field) => <UbTextInput {...field} autoComplete="name" />}
@@ -103,6 +104,7 @@ export function SetPasswordPageContent(): React.JSX.Element {
             <UbField
               name="password"
               label={t('auth.password.label')}
+              placeholder={t('auth.password.placeholder')}
               hint={t('auth.password.rule')}
               required
             >

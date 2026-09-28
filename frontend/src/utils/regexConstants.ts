@@ -16,6 +16,12 @@ export const REGEX = {
   PAN: /^[A-Z]{5}\d{4}[A-Z]$/,
   HSN: /^\d{4}(\d{2})?(\d{2})?$/,
   PINCODE_IN: /^[1-9]\d{5}$/,
+  /** PLT-07 §10 — the server's patterns, character for character. */
+  UPI_VPA: /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/,
+  IFSC: /^[A-Z]{4}0[A-Z0-9]{6}$/,
+  BANK_ACCOUNT: /^\d{9,18}$/,
+  /** WLB-01 §10 — `#2B6BE0`. */
+  HEX_COLOUR: /^#[0-9A-Fa-f]{6}$/,
   UUID: /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/,
   ISO_DATE: /^\d{4}-\d{2}-\d{2}$/,
   /**

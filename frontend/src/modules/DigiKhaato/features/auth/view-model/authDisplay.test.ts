@@ -121,6 +121,57 @@ describe('safeNextPath — §19.6.4 rule 2', () => {
   });
 });
 
+/**
+ * F-2 (QA, 23 Sep 2026) — the open redirect the prefix deny-list let through.
+ *
+ * `/login?next=/%09/evil.test/x` was proven live: `searchParams.get` decodes
+ * `%09` to a tab, the old check saw `/` + tab and passed it, and the browser's
+ * URL parser deleted the tab, navigating to `//evil.test/x` on another host.
+ * The old helper returned every refused row below verbatim, except the UNC
+ * backslash and `javascript:`, which it already refused and which stay here as
+ * regression rows.
+ */
+describe('safeNextPath — F-2 parser-rewrite bypasses', () => {
+  it.each<readonly [string, string]>([
+    ['/\t/evil.com', 'a tab after the first slash'],
+    ['/\n/evil.com', 'a line feed after the first slash'],
+    ['/\r/evil.com', 'a carriage return after the first slash'],
+    ['/\u0000/evil.com', 'a NUL'],
+    ['/\u007F/evil.com', 'a DEL'],
+    ['/\t\t/evil.com', 'several stripped characters'],
+    ['/parties\\..\\..\\evil.com', 'a backslash later in the path'],
+    ['\\\\evil.com', 'a UNC-style double backslash'],
+    ['/.//evil.com', 'a dot segment that resolves to //evil.com'],
+    ['/a/../..//evil.com', 'dot-dot segments that resolve to //evil.com'],
+    ['/%2F/evil.com', 'an encoded slash that one stray decode turns into //'],
+    ['/%5C/evil.com', 'an encoded backslash'],
+    ['/%E0%A4', 'a malformed percent sequence'],
+    ['javascript:alert(1)', 'a javascript: URL'],
+  ])('refuses %j (%s)', (value: string) => {
+    expect(safeNextPath(value, '/dashboard')).toBe('/dashboard');
+  });
+
+  it('refuses the exact live payload once URLSearchParams has decoded it', () => {
+    const next = new URLSearchParams('next=/%09/evil.test/x').get('next');
+    expect(next).toBe('/\t/evil.test/x');
+    expect(safeNextPath(next, '/dashboard')).toBe('/dashboard');
+  });
+
+  it('allows a space, which the parser encodes into a same-origin path', () => {
+    // Decided: harmless. `/ /evil.com` is `/%20/evil.com` on our own host.
+    expect(safeNextPath('/ /evil.com', '/dashboard')).toBe('/%20/evil.com');
+  });
+
+  it.each<readonly [string, string]>([
+    ['/parties?x=1#y', '/parties?x=1#y'],
+    ['/parties/abc', '/parties/abc'],
+    ['/parties/3f2a9c1e-0000-4000-8000-000000000001/statement?from=2026-04-01', '/parties/3f2a9c1e-0000-4000-8000-000000000001/statement?from=2026-04-01'],
+    ['/parties?tag=Camp%20Area', '/parties?tag=Camp%20Area'],
+  ])('keeps the in-app address %s', (value: string, expected: string) => {
+    expect(safeNextPath(value, '/dashboard')).toBe(expected);
+  });
+});
+
 describe('countdown arithmetic', () => {
   it('never returns a negative number of seconds', () => {
     expect(secondsUntil(1_000, 5_000)).toBe(0);

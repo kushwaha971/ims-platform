@@ -1,10 +1,12 @@
-"""URL routes for the sales app (canon §0.8).
-
-Sprint 0 creates the package so the app label, the table prefix and the
-import matrix of Part 20 §20.1.4 are reserved. The models, services and
-views land in the sprint that owns the feature.
-"""
+"""Sales routes (canon §0.8) — mounted under `/sales/`."""
 
 from __future__ import annotations
 
-urlpatterns: list = []
+from rest_framework.routers import DefaultRouter
+
+from apps.sales.views.invoices import InvoiceViewSet
+
+router = DefaultRouter(trailing_slash=False)
+router.register("invoices", InvoiceViewSet, basename="sales-invoice")
+
+urlpatterns = [*router.urls]

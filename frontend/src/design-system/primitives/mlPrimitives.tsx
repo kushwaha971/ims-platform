@@ -39,14 +39,14 @@ export const MLCardHeader = forwardRef<HTMLDivElement, MLCardProps>(function MLC
   { className, ...rest },
   ref
 ) {
-  return <div ref={ref} className={cn('flex flex-col gap-1 p-6', className)} {...rest} />;
+  return <div ref={ref} className={cn('flex flex-col gap-1 p-4', className)} {...rest} />;
 });
 
 export const MLCardContent = forwardRef<HTMLDivElement, MLCardProps>(function MLCardContent(
   { className, ...rest },
   ref
 ) {
-  return <div ref={ref} className={cn('p-6', className)} {...rest} />;
+  return <div ref={ref} className={cn('p-4', className)} {...rest} />;
 });
 
 export type MLBadgeVariant = 'neutral' | 'success' | 'warning' | 'error' | 'info';
@@ -225,7 +225,7 @@ const BUTTON_VARIANT: Record<MLButtonVariant, string> = {
      exist under the names BrandHub gives them. */
   secondary: 'bg-surface-sunken text-text-primary hover:bg-surface-hover',
   outlineNeutral:
-    'border border-border-hairline bg-surface-card text-text-primary hover:bg-surface-hover',
+    'border border-border-subtle bg-surface-card text-text-primary hover:bg-surface-hover',
   /* `ghost` was `--text-accent` indigo, so every ghost button in the product
      read as a link. BrandHub's is plain ink. */
   ghost: 'text-text-primary hover:bg-surface-hover',
@@ -235,31 +235,39 @@ const BUTTON_VARIANT: Record<MLButtonVariant, string> = {
 };
 
 const BUTTON_SIZE: Record<MLButtonSize, string> = {
-  sm: 'h-[30px] px-3 ds-body-sm',
-  md: 'h-9 px-4 ds-body-sm-medium',
+  /* Figma "button": 12 px side padding, 14/20 text in a 36 px box; the
+     compact in-row variant is 28 px with 12/16 text. */
+  sm: 'h-7 px-3 ds-body-base-medium',
+  md: 'h-10 px-4 ds-body-base-medium',
   // 44px is the mobile touch-target floor (R-A-3).
-  lg: 'h-11 px-5 ds-body-medium',
+  lg: 'h-11 px-5 ds-body-base-medium',
 };
+
+/**
+ * The button's classes on their own, for the one element that must look like a
+ * button and cannot be one: a LINK — a download, or a route change placed among
+ * a header's actions. Same strings as `MLButton`, so the two cannot drift.
+ */
+export const mlButtonClasses = (
+  variant: MLButtonVariant = 'primary',
+  size: MLButtonSize = 'md',
+  className?: string
+): string =>
+  cn(
+    'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-control [&_svg]:shrink-0',
+    'transition-colors duration-fast ease-standard',
+    'disabled:cursor-not-allowed disabled:opacity-45',
+    BUTTON_VARIANT[variant],
+    BUTTON_SIZE[size],
+    className
+  );
 
 export const MLButton = forwardRef<HTMLButtonElement, MLButtonProps>(function MLButton(
   { variant = 'primary', size = 'md', type = 'button', className, ...rest },
   ref
 ) {
   return (
-    <button
-      ref={ref}
-
-      type={type}
-      className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-control',
-        'transition-colors duration-fast ease-standard',
-        'disabled:cursor-not-allowed disabled:opacity-45',
-        BUTTON_VARIANT[variant],
-        BUTTON_SIZE[size],
-        className
-      )}
-      {...rest}
-    />
+    <button ref={ref} type={type} className={mlButtonClasses(variant, size, className)} {...rest} />
   );
 });
 

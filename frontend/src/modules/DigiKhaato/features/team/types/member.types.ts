@@ -20,9 +20,15 @@ export interface MemberApiRow {
   readonly id: string;
   readonly user_id: string;
   readonly email: string;
-  readonly full_name: string;
+  /**
+   * `null` on an `invited` row (CR-2026-09-23-B): the person has an account but
+   * has not agreed to join, so the server repeats only what the inviter typed —
+   * the address and the role — and none of their profile.
+   */
+  readonly full_name: string | null;
   readonly mobile: string | null;
   readonly role: TenantRole;
+  /** `active | invited | suspended`. `removed` rows are never listed. */
   readonly status: string;
   readonly joined_at: string | null;
   readonly last_login_at: string | null;
@@ -34,6 +40,7 @@ export interface Member {
   readonly id: string;
   readonly userId: string;
   readonly email: string;
+  /** `''` for an invited row, whose profile the server withholds. */
   readonly fullName: string;
   readonly mobile: string | null;
   readonly role: TenantRole;

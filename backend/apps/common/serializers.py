@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from decimal import InvalidOperation
 from typing import Any
 
 from rest_framework import serializers
@@ -44,7 +45,18 @@ class MoneySerializerField(serializers.DecimalField):
     def to_internal_value(self, data: Any) -> Any:
         if isinstance(data, float):
             raise serializers.ValidationError("Send this amount as a string, not a number.")
-        return super().to_internal_value(D(data) if isinstance(data, (str, int)) else data)
+        if isinstance(data, (str, int)):
+            try:
+                data = D(data)
+            except InvalidOperation as exc:
+                # `D()` is `Decimal(str(value))` with no guard, so anything that
+                # is not a decimal literal raised `InvalidOperation` and escaped
+                # as a 500. The input that matters is not the fuzzer's: it is
+                # "1,000" — what a merchant gets from a phone keyboard, or from
+                # copying a figure off a printed bill. A reference number and
+                # "something went wrong" is the wrong answer to a comma.
+                raise serializers.ValidationError("Enter an amount, like 1500.00.") from exc
+        return super().to_internal_value(data)
 
 
 class QuantitySerializerField(serializers.DecimalField):

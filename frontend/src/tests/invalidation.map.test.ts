@@ -4,6 +4,29 @@ import { MUTATIONS } from 'src/redux/invalidation/registry';
 import type { TSliceKey } from 'src/redux/invalidation/types';
 import { store } from 'src/redux/store';
 
+import 'modules/DigiKhaato/features/account-data/redux/accountDataSlice';
+import 'modules/DigiKhaato/features/admin/redux/adminSlice';
+import 'modules/DigiKhaato/features/branding/redux/brandingSlice';
+import 'modules/DigiKhaato/features/business-profile/redux/businessProfileSlice';
+import 'modules/DigiKhaato/features/inventory/redux/inventoryMastersSlice';
+import 'modules/DigiKhaato/features/inventory/redux/itemDetailSlice';
+import 'modules/DigiKhaato/features/inventory/redux/itemFormSlice';
+import 'modules/DigiKhaato/features/inventory/redux/itemListSlice';
+import 'modules/DigiKhaato/features/inventory/redux/stockAdjustmentSlice';
+import 'modules/DigiKhaato/features/inventory/redux/stockSummarySlice';
+import 'modules/DigiKhaato/features/expenses/redux/cashbookSlice';
+import 'modules/DigiKhaato/features/expenses/redux/expenseFormSlice';
+import 'modules/DigiKhaato/features/expenses/redux/expenseListSlice';
+import 'modules/DigiKhaato/features/imports/redux/importJobSlice';
+import 'modules/DigiKhaato/features/ledger/redux/agingSlice';
+import 'modules/DigiKhaato/features/ledger/redux/statementSlice';
+import 'modules/DigiKhaato/features/sessions/redux/sessionsSlice';
+import 'modules/DigiKhaato/features/settings/redux/settingsSlice';
+import 'modules/DigiKhaato/features/notifications/redux/notificationSlice';
+import 'modules/DigiKhaato/features/reminders/redux/reminderSlice';
+import 'modules/DigiKhaato/features/sales/redux/invoiceDetailSlice';
+import 'modules/DigiKhaato/features/sales/redux/invoiceEditorSlice';
+import 'modules/DigiKhaato/features/sales/redux/invoiceListSlice';
 import partyListReducer, {
   type PartyListState,
 } from 'modules/DigiKhaato/features/parties/redux/partyListSlice';
@@ -41,6 +64,12 @@ describe('invalidation map', () => {
   );
 
   it('names only real store keys', () => {
+    /* The lazy slices (CR-134) are imported above, which is what injects
+       them — a lazy slice is a real key from the moment its route's chunk
+       loads, and before that a `stale` naming it is a no-op by design (the
+       slice starts from its initial state when it arrives). Its key appears in
+       the state on the next dispatch after injection, hence the no-op. */
+    store.dispatch({ type: 'test/touch' });
     const storeKeys = Object.keys(store.getState());
     const unknown = namedSlices.filter(([, slice]) => !storeKeys.includes(slice));
     expect(unknown).toEqual([]);

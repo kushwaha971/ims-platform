@@ -141,7 +141,12 @@ export function LoginPageContent(): React.JSX.Element {
             onSubmit={(values) => login.submitPasswordLogin(values, form.setError)}
             formErrors={login.formErrors}
           >
-            <UbField name="email" label={t('auth.email.label')} required>
+            <UbField
+              name="email"
+              label={t('auth.email.label')}
+              placeholder={t('auth.email.placeholder')}
+              required
+            >
               {(field) => (
                 <UbTextInput
                   {...field}
@@ -155,7 +160,12 @@ export function LoginPageContent(): React.JSX.Element {
               )}
             </UbField>
 
-            <UbField name="password" label={t('auth.password.label')} required>
+            <UbField
+              name="password"
+              label={t('auth.password.label')}
+              placeholder={t('auth.password.placeholder')}
+              required
+            >
               {(field) => (
                 <UbTextInput
                   {...field}
@@ -179,7 +189,7 @@ export function LoginPageContent(): React.JSX.Element {
 
             <UbButton
               type="submit"
-              size="lg"
+              size="md"
               fullWidth
               busy={login.isSubmitting}
               busyLabel={t('auth.password.loggingIn')}
@@ -189,11 +199,10 @@ export function LoginPageContent(): React.JSX.Element {
             </UbButton>
           </UbForm>
 
-          <UbStack direction="row" justify="center">
-            <UbLink href={ROUTES.FORGOT_PASSWORD} className="min-h-11 content-center">
-              {t('auth.password.forgot')}
-            </UbLink>
-          </UbStack>
+          {/* "Forgot password?" is not offered: the reset email has no
+              delivery provider yet (BACKLOG — email), so the link led to a
+              flow whose message never arrives. The route stays for the day
+              it does. */}
         </UbStack>
       </AuthPanel>
 

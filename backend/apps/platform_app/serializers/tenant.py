@@ -12,7 +12,7 @@ from typing import Any
 
 from rest_framework import serializers
 
-from apps.platform_app.constants import BusinessType, GstType, InvitationStatus
+from apps.platform_app.constants import BusinessType, GstType, InvitationStatus, MembershipStatus
 from apps.platform_app.mobile import InvalidMobile, normalise_mobile
 from apps.platform_app.models import Invitation, Tenant
 
@@ -57,6 +57,46 @@ class AddressSerializer(serializers.Serializer):
     )
 
 
+UPI_VPA_RE = r"^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$"
+IFSC_RE = r"^[A-Z]{4}0[A-Z0-9]{6}$"
+ACCOUNT_NUMBER_RE = r"^\d{9,18}$"
+
+
+class BankDetailsSerializer(serializers.Serializer):
+    """`platform_tenant.bank_details` (PLT-07 FR-1, FR-6, §10) — a closed jsonb shape.
+
+    Blank and `null` both mean "not given", as on the address. The IFSC is
+    upper-cased before it is matched (EC-1's rule for the GSTIN applies to it
+    for the same reason: a phone keyboard offers lower case first).
+    """
+
+    account_name = serializers.CharField(
+        max_length=120, required=False, allow_blank=True, allow_null=True
+    )
+    account_number = serializers.RegexField(
+        ACCOUNT_NUMBER_RE,
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        error_messages={"invalid": "Enter 9–18 digits"},
+    )
+    ifsc = serializers.CharField(max_length=11, required=False, allow_blank=True, allow_null=True)
+    bank_name = serializers.CharField(
+        max_length=80, required=False, allow_blank=True, allow_null=True
+    )
+    branch = serializers.CharField(max_length=80, required=False, allow_blank=True, allow_null=True)
+
+    def validate_ifsc(self, value: str | None) -> str | None:
+        import re
+
+        if value in (None, ""):
+            return value
+        value = value.strip().upper()
+        if not re.match(IFSC_RE, value):
+            raise serializers.ValidationError("Enter a valid IFSC")
+        return value
+
+
 class TenantCreateSerializer(serializers.Serializer):
     """Step 1 — `POST /tenants` (FR-2, §10)."""
 
@@ -93,6 +133,22 @@ class TenantUpdateSerializer(serializers.Serializer):
     email = serializers.EmailField(required=False, allow_blank=True, allow_null=True)
     locale = serializers.ChoiceField(choices=["en", "hi"], required=False)
     onboarding_step = serializers.IntegerField(min_value=0, max_value=4, required=False)
+    # PLT-07 FR-1 — the rest of Part 22 §22.3's surface.
+    bank_details = BankDetailsSerializer(required=False, allow_null=True)
+    upi_vpa = serializers.RegexField(
+        UPI_VPA_RE,
+        max_length=80,
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        error_messages={"invalid": "Enter a valid UPI ID like name@bank"},
+    )
+    # PLT-06 FR-4 — handled by `tenant_settings.update_enabled_modules`, not by
+    # the profile update, because its rules (plan, data guards) and its audit
+    # event are different.
+    enabled_modules = serializers.ListField(
+        child=serializers.CharField(max_length=32), required=False
+    )
 
     def validate_phone(self, value: str | None) -> str:
         if value in (None, ""):
@@ -119,7 +175,12 @@ class TenantUpdateSerializer(serializers.Serializer):
         if "address" in attrs:
             address = attrs["address"] or {}
             attrs["address"] = {k: v for k, v in address.items() if v not in (None, "")}
-        for optional in ("legal_name", "email", "gstin", "pan"):
+        if "bank_details" in attrs:
+            bank = attrs["bank_details"] or {}
+            attrs["bank_details"] = {k: v for k, v in bank.items() if v not in (None, "")}
+        if "upi_vpa" in attrs and attrs["upi_vpa"] not in (None, ""):
+            attrs["upi_vpa"] = attrs["upi_vpa"].strip()
+        for optional in ("legal_name", "email", "gstin", "pan", "upi_vpa"):
             if attrs.get(optional) in ("", None) and optional in attrs:
                 attrs[optional] = None
         return attrs
@@ -158,6 +219,40 @@ class TenantReadSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+def mask_account_number(number: str | None) -> str | None:
+    """`••••1234` — PLT-07 §5 and §16: the last four digits and nothing else."""
+    if not number:
+        return number
+    return "••••" + str(number)[-4:]
+
+
+def masked_bank_details(bank: dict | None) -> dict:
+    bank = dict(bank or {})
+    if bank.get("account_number"):
+        bank["account_number"] = mask_account_number(bank["account_number"])
+    return bank
+
+
+def tenant_read_payload(tenant: Any, *, unmasked: bool) -> dict:
+    """`GET /tenants/current` with PLT-07 §12's masking applied.
+
+    The bank account number is unmasked only to owner/admin; everyone else who
+    may read the profile sees `••••1234`. PAN is masked the same way (§19:
+    "Bank details and PAN are PII: masked in reads for accountants").
+    `branding` is the RESOLVED branding (WLB-01 FR-2), not the raw jsonb.
+    """
+    from apps.platform_app import branding as branding_rules
+
+    data = dict(TenantReadSerializer(tenant).data)
+    data["branding"] = branding_rules.resolve(tenant)
+    data["bank_details_masked"] = not unmasked
+    if not unmasked:
+        data["bank_details"] = masked_bank_details(tenant.bank_details)
+        if data.get("pan"):
+            data["pan"] = "••••••" + data["pan"][-4:]
+    return data
+
+
 class MembershipReadSerializer(serializers.Serializer):
     """The membership row returned beside a created tenant (PLT-03 §14)."""
 
@@ -185,7 +280,7 @@ class MemberReadSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     user_id = serializers.UUIDField(read_only=True)
     email = serializers.EmailField(source="user.email", read_only=True)
-    full_name = serializers.CharField(source="user.full_name", read_only=True)
+    full_name = serializers.CharField(source="user.full_name", read_only=True, allow_null=True)
     mobile = serializers.CharField(source="user.mobile", read_only=True, allow_null=True)
     role = serializers.CharField(source="role.code", read_only=True)
     status = serializers.CharField(read_only=True)
@@ -197,6 +292,27 @@ class MemberReadSerializer(serializers.Serializer):
     password_expires_at = serializers.DateTimeField(
         source="user.password_expires_at", read_only=True, allow_null=True
     )
+
+    #: What an `invited` row may NOT show. The person has an account — that is
+    #: the only reason the row exists (`platform_membership.user_id` is NOT
+    #: NULL) — but they have not agreed to join, and their profile is theirs:
+    #: their name as they spelt it, their phone number, when they last signed in
+    #: anywhere on the platform, and whether they are still on a password some
+    #: OTHER business issued. The inviting business knows the address it typed
+    #: and the role it chose; that is all this row repeats until acceptance.
+    INVITED_REDACTED: dict = {
+        "full_name": None,
+        "mobile": None,
+        "last_login_at": None,
+        "must_change_password": False,
+        "password_expires_at": None,
+    }
+
+    def to_representation(self, instance: Any) -> dict:
+        data = super().to_representation(instance)
+        if data.get("status") == MembershipStatus.INVITED:
+            data.update(self.INVITED_REDACTED)
+        return data
 
 
 class MemberCreateSerializer(serializers.Serializer):
@@ -215,6 +331,21 @@ class MemberCreateSerializer(serializers.Serializer):
     full_name = serializers.CharField(max_length=120, trim_whitespace=True)
     role = serializers.CharField(max_length=32)
     mobile = serializers.CharField(max_length=15, required=False, allow_blank=True, allow_null=True)
+
+    def validate_mobile(self, value: str | None) -> str | None:
+        """Normalise to E.164 or refuse, as `InvitationCreateSerializer` does (NEW-2).
+
+        The "already used by another login" check in `credentials.create_member`
+        compares against the stored E.164 spelling, so an un-normalised
+        `9876543210` would slip past it and store a second spelling of a number
+        the platform already holds. "" and `null` are both "no number".
+        """
+        if value in (None, ""):
+            return None
+        try:
+            return normalise_mobile(value)
+        except InvalidMobile as exc:
+            raise serializers.ValidationError(str(exc)) from exc
 
     def validate_role(self, value: str) -> str:
         """`owner` is not invitable. A business has exactly one and it is transferred.
@@ -286,7 +417,21 @@ class InvitationCreateSerializer(serializers.Serializer):
     mobile = serializers.CharField(max_length=20, required=False, allow_blank=True, allow_null=True)
 
     def validate_role(self, value: str) -> str:
-        return value.strip().lower()
+        """`owner` is refused here exactly as `MemberCreateSerializer` refuses it.
+
+        It was not, and the team screen's own comment (`INVITABLE_ROLES`) said
+        "the server is the authority and will refuse it". An admin holds
+        `platform.members.manage`, so an admin could invite an address they
+        control as `owner`, accept it, and outrank the person who hired them —
+        the privilege escalation PLT-05 §12 forbids ("Invite/promote owner:
+        admin ❌"). Ownership is transferred, never granted (canon §0.7).
+        """
+        code = (value or "").strip().lower()
+        if code == "owner":
+            raise serializers.ValidationError(
+                "Ownership is transferred, not granted. Choose admin, accountant or staff."
+            )
+        return code
 
     def validate_mobile(self, value: str | None) -> str | None:
         """Normalise to E.164 or refuse. `platform_invitation.mobile` is 15 chars.

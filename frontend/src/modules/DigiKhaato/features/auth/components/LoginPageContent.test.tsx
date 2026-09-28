@@ -1,6 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import { resetSession } from 'src/redux/slice/sessionSlice';
 import { store } from 'src/redux/store';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
 
@@ -31,9 +32,11 @@ const authService = jest.requireMock('../api/authService') as {
 
 const push = jest.fn();
 const replace = jest.fn();
+/** The login address's query string; F-2's tests set it, everything else leaves it empty. */
+let mockSearch = '';
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push, replace, back: jest.fn(), prefetch: jest.fn() }),
-  useSearchParams: () => new URLSearchParams(''),
+  useSearchParams: () => new URLSearchParams(mockSearch),
   usePathname: () => '/login',
 }));
 
@@ -74,7 +77,12 @@ const AUTH_RESULT = {
 };
 
 beforeEach(() => {
+  mockSearch = '';
   store.dispatch(resetAuth());
+  // Each test is a fresh load of /login: a sign-in after an earlier session in
+  // the same document finishes with a document load instead (N1-P1), which
+  // `useAuthRedirect.test.tsx` covers.
+  store.dispatch(resetSession());
   jest.clearAllMocks();
   window.localStorage.clear();
   authService.getSession.mockResolvedValue({
@@ -167,6 +175,31 @@ describe('LoginPageContent — PLT-02 log in', () => {
     );
     // FR-9 — one active tenant with a finished wizard opens the app.
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/dashboard'));
+  });
+
+  /**
+   * F-2 (QA, 23 Sep 2026) — proven live: `/login?next=/%09/evil.test/x` signed
+   * in and landed on evil.test, because the decoded tab passed the old prefix
+   * check and the browser deleted it, leaving `//evil.test/x`. The redirect
+   * hook is the only consumer of `next`, so this asserts the navigation it
+   * actually makes rather than the helper in isolation.
+   */
+  it.each<readonly [string, string]>([
+    ['next=/%09/evil.test/x', '/dashboard'],
+    ['next=/%0A/evil.test/x', '/dashboard'],
+    ['next=%2Fparties%3Fx%3D1%23y', '/parties?x=1#y'],
+  ])('routes ?%s after sign-in to %s', async (search: string, expected: string) => {
+    mockSearch = search;
+    const user = userEvent.setup();
+    authService.passwordLogin.mockResolvedValue(AUTH_RESULT);
+
+    renderWithProviders(<LoginPageContent />);
+    await user.type(screen.getByLabelText(/Email address/), 'ramesh@example.com');
+    await user.type(screen.getByLabelText(/^Password/, { selector: 'input' }), 'kirana2026');
+    await user.click(screen.getByRole('button', { name: 'Log in' }));
+
+    await waitFor(() => expect(replace).toHaveBeenCalledTimes(1));
+    expect(replace).toHaveBeenCalledWith(expected);
   });
 
   it('refuses a malformed address before it reaches the wire', async () => {

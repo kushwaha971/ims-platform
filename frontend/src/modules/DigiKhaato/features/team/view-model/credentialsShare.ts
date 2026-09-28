@@ -51,12 +51,25 @@ export const buildShareText = ({
  * owns both and a third column that could disagree with them is a bug waiting
  * for a clock skew.
  */
-export type MemberAccessState = 'active' | 'pending' | 'expired';
+export type MemberAccessState = 'invited' | 'active' | 'pending' | 'expired';
 
+/**
+ * `invited` comes first and overrides the password fields (CR-2026-09-23-B).
+ *
+ * An invited row is somebody with an account who was sent an invitation and
+ * has not accepted it. They hold no access to this business, and the server
+ * withholds their profile, so "Signed in" — what `mustChangePassword: false`
+ * would otherwise read as — would be a claim about access they do not have.
+ */
 export const accessStateOf = (
-  member: { readonly mustChangePassword: boolean; readonly passwordExpiresAt: string | null },
+  member: {
+    readonly status?: string;
+    readonly mustChangePassword: boolean;
+    readonly passwordExpiresAt: string | null;
+  },
   now: number = Date.now()
 ): MemberAccessState => {
+  if (member.status === 'invited') return 'invited';
   if (!member.mustChangePassword) return 'active';
   if (!member.passwordExpiresAt) return 'pending';
   const expiresAt = Date.parse(member.passwordExpiresAt);

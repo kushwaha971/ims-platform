@@ -70,16 +70,23 @@ export interface UbSelectProps {
 }
 
 const UbSelectInner = forwardRef<HTMLButtonElement, UbSelectProps>(function UbSelectInner(
-  { value, onChange, options, placeholder, invalid, disabled, className, name, id, onBlur, ...aria },
+  {
+    value,
+    onChange,
+    options,
+    placeholder,
+    invalid,
+    disabled,
+    className,
+    name,
+    id,
+    onBlur,
+    ...aria
+  },
   ref
 ) {
   return (
-    <MLSelect
-      value={value ?? undefined}
-      onValueChange={onChange}
-      disabled={disabled}
-      name={name}
-    >
+    <MLSelect value={value ?? undefined} onValueChange={onChange} disabled={disabled} name={name}>
       <MLSelectTrigger
         ref={ref}
         id={id}
@@ -87,7 +94,7 @@ const UbSelectInner = forwardRef<HTMLButtonElement, UbSelectProps>(function UbSe
         className={cn(
           // 44px, not shadcn's 40 — R-A-3's touch target, which the product's
           // own controls all meet and ml-uikit's default does not.
-          'h-11 w-full rounded-control bg-surface-card text-text-primary',
+          'h-10 w-full rounded-control bg-surface-card text-text-primary',
           'focus-visible:outline-none focus-visible:ring-0',
           // `aria-invalid:` is not decoration — ml-uikit's own trigger carries
           // `aria-invalid:border-[#ff3b30]` and `aria-invalid:focus-visible:border-[#ff3b30]`
@@ -98,8 +105,8 @@ const UbSelectInner = forwardRef<HTMLButtonElement, UbSelectProps>(function UbSe
           // screenshot. Restating the token under the same variants is what
           // actually overrides it.
           invalid
-            ? 'border-formError focus-visible:border-formError aria-invalid:border-formError aria-invalid:focus-visible:border-formError'
-            : 'border-border-strong focus-visible:border-border-focus',
+            ? 'aria-invalid:border-formError aria-invalid:focus-visible:border-formError border-formError focus-visible:border-formError'
+            : 'border-border-hairline hover:border-border-subtle focus-visible:border-text-primary',
           className
         )}
         {...aria}

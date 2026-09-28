@@ -8,7 +8,6 @@ import { useTranslation } from 'src/hooks/useTranslation';
 import { selectAppName } from 'src/redux/slice/whiteLabelSlice';
 import { cn } from 'src/utils/cn';
 
-import { AuthFooter } from '../../auth/components/AuthFooter';
 import { AuthScreenHeading } from '../../auth/components/AuthScreenHeading';
 import { ONBOARDING_STEP_COUNT } from '../constants/businessTypes';
 
@@ -192,9 +191,7 @@ function OnboardingShellBase({
           {children}
         </UbStack>
 
-        <UbBox className="mt-auto w-full">
-          <AuthFooter />
-        </UbBox>
+        <UbBox className="mt-auto w-full" />
       </UbStack>
     </UbStack>
   );

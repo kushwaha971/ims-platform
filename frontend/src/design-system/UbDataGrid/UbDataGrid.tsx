@@ -11,7 +11,13 @@ import { visibleColumns } from './columnModel';
 import { UbDataGridEmptyState, type UbDataGridEmptyStates } from './UbDataGridEmptyState';
 import { UbDataGridMobileList } from './UbDataGridMobileList';
 import { UbDataGridPagination } from './UbDataGridPagination';
+import {
+  UbDataGridSkeletonRows,
+  UbDataGridStateRow,
+  UbDataGridStateTable,
+} from './UbDataGridStateTable';
 import { UbDataGridToolbar } from './UbDataGridToolbar';
+import { useColumnVisibility } from './useColumnVisibility';
 import { useGridTier } from './useGridTier';
 
 import type {
@@ -23,6 +29,7 @@ import type {
   UbGridState,
   UbGridTier,
 } from './types';
+import type { UbDataGridColumnMenuProps } from './UbDataGridColumnMenu';
 import type { UbDataGridTableProps } from './UbDataGridTable';
 
 /**
@@ -89,14 +96,55 @@ export interface UbDataGridProps<TRow> {
 
   /** Cards only: the whole row becomes a 44 px tap target when this is given. */
   readonly onRowOpen?: (row: TRow) => void;
+  /**
+   * Cards only: the initials disc at the left of each card. On by default,
+   * because most lists here are lists of PEOPLE. A grid of THINGS turns it off —
+   * see `UbDataGridMobileList`.
+   */
+  readonly cardAvatar?: boolean;
+  /**
+   * Cards only: an icon for the disc in place of initials, per row — for a row
+   * with no name, such as an invitation (QA O3). `null` keeps the initials.
+   */
+  readonly cardAvatarIcon?: (row: TRow) => ReactNode;
 
   /** md–lg cutoff. Columns above it are dropped there. Default 2. */
   readonly compactCutoff?: UbColumnPriority;
   /** Accountant reports at `lg`+ only. A primary list never sets it. */
   readonly allowHorizontalScroll?: boolean;
+  /**
+   * BrandHub's `maxHeight`, passed straight through. `'fill'` (the default)
+   * lets the page do the scrolling; a CSS length caps the rows and scrolls
+   * them under a header that stays put.
+   */
+  readonly maxHeight?: 'fill' | string;
+  /** BrandHub's `rowHeight`. Defaults to 52 px. */
+  readonly rowHeight?: number;
+  /**
+   * The column menu. BrandHub's rule exactly: a grid that already has a toolbar
+   * gets one without asking, a grid with no toolbar does not grow one for this
+   * alone. Set it explicitly either way to override.
+   */
+  readonly columnMenu?: boolean;
+  /**
+   * Opts this grid's column choices into `sessionStorage` under this id.
+   * Without one the toggles last for the mount, which is the right default: an
+   * id is a promise that this grid is the same grid next time, and only the
+   * screen can make that promise.
+   */
+  readonly storageId?: string;
   /** Tests and the design-system gallery only. */
   readonly tier?: UbGridTier;
   readonly skeletonRows?: number;
+  /**
+   * A background load is in flight over rows ALREADY on screen — Part 17's
+   * "subsequent loads keep the previous rows at 60 % opacity with a top
+   * progress bar" (PTY-02 §9 Loading). The rows dim and are marked
+   * `aria-busy`; the toolbar does NOT, because the merchant is usually still
+   * typing in it. A first load or a page change is `state="loading"` instead —
+   * the skeleton — and this prop is ignored for every state but `rows`.
+   */
+  readonly busy?: boolean;
   readonly className?: string;
 }
 
@@ -120,25 +168,45 @@ const SkeletonRows = ({
 }) => (
   // R-P-6 — it reserves the real 60 px so the page does not jump when the rows
   // land, announced or not.
+  //
+  // Every bar is FLUID — `w-full` or a fraction, the length it would like in
+  // `max-w-*` — the rule `UbSkeleton` has followed since QA D3. This drew one
+  // fixed 80 px bar (`w-20 shrink-0`) per table COLUMN even in cards, so on a
+  // 360 px phone the third ended 17 px past the 328 px card and the name bars
+  // in the flex middle were squeezed to nothing (QA N1). A card now draws the
+  // card it is standing in for: disc, name, caption, amount.
   <div
     {...(label === null
       ? { 'aria-hidden': true }
       : { role: 'status', 'aria-busy': true, 'aria-label': label })}
-    className="w-full"
+    className="w-full min-w-0 overflow-hidden"
   >
     {Array.from({ length: count }, (_, index) => (
       <div
         key={index}
-        className="flex min-h-[60px] items-center gap-3 border-b border-border-hairline px-4 py-3 last:border-b-0"
+        data-testid={isCards ? 'ub-grid-skeleton-card' : 'ub-grid-skeleton-fallback-row'}
+        className="flex min-h-[60px] min-w-0 items-center gap-3 border-b border-border-hairline px-4 py-3 last:border-b-0"
       >
-        {isCards && <MLSkeleton className="h-10 w-10 shrink-0 rounded-pill" />}
-        <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <MLSkeleton className="h-4 w-1/3" />
-          {isCards && <MLSkeleton className="h-3 w-1/5" />}
-        </div>
-        {Array.from({ length: Math.max(columns - 1, 1) }, (_, cell) => (
-          <MLSkeleton key={cell} className="h-4 w-20 shrink-0" />
-        ))}
+        {isCards ? (
+          <>
+            <MLSkeleton className="h-10 w-10 max-w-full shrink-0 rounded-pill" />
+            <div className="flex min-w-0 flex-1 flex-col gap-2">
+              <MLSkeleton className="h-4 w-3/5 max-w-40" />
+              <MLSkeleton className="h-3 w-2/5 max-w-24" />
+            </div>
+            <MLSkeleton className="h-4 w-1/5 max-w-20" />
+          </>
+        ) : (
+          // The table-chunk fallback: one bar per column, each bounded by a
+          // flex "cell" of its own so no column count can push a bar out.
+          Array.from({ length: Math.max(columns, 1) }, (_, cell) => (
+            <div key={cell} className="flex min-w-0 flex-1">
+              <MLSkeleton
+                className={cell === 0 ? 'h-4 w-3/5 max-w-full' : 'h-4 w-4/5 max-w-full'}
+              />
+            </div>
+          ))
+        )}
       </div>
     ))}
   </div>
@@ -176,6 +244,22 @@ const UbDataGridTableLazy = dynamic(
 ) as <TRow>(props: UbDataGridTableProps<TRow>) => React.JSX.Element;
 
 /**
+ * The column menu is split for the same reason and by the same measurement:
+ * it is the only thing in the grid that reaches for `@radix-ui/react-popover`,
+ * and a static import would put the popover engine into the chunk every route
+ * shares — including `/legal/terms`, whose page is a paragraph — for a control
+ * that exists on table tiers only and is never rendered on a phone at all.
+ *
+ * `loading: () => null` rather than a placeholder: this is one 32 px button at
+ * the end of a toolbar row, so there is nothing to reserve and a grey ghost of
+ * it would be more noticeable than its absence for the frame it is missing.
+ */
+const UbDataGridColumnMenuLazy = dynamic(
+  () => import('./UbDataGridColumnMenu').then((m) => m.UbDataGridColumnMenu),
+  { ssr: false, loading: () => null }
+) as <TRow>(props: UbDataGridColumnMenuProps<TRow>) => React.JSX.Element;
+
+/**
  * §19.9.3's one reservation about splitting is that it "trades bytes for a
  * round trip, and on 3G the round trip is worse". This removes the trade: on a
  * viewport that will need the table, the chunk is requested as soon as the grid
@@ -208,10 +292,17 @@ export function UbDataGrid<TRow>({
   search,
   filters,
   onRowOpen,
+  cardAvatar,
+  cardAvatarIcon,
   compactCutoff,
   allowHorizontalScroll = false,
+  columnMenu,
+  storageId,
+  maxHeight,
+  rowHeight,
   tier: forcedTier,
   skeletonRows = 6,
+  busy = false,
   className,
 }: Readonly<UbDataGridProps<TRow>>): React.JSX.Element {
   const tier = useGridTier(forcedTier);
@@ -221,9 +312,26 @@ export function UbDataGrid<TRow>({
     if (needsTable) warmTableChunk();
   }, [needsTable]);
 
-  const shown = useMemo(
+  /**
+   * Two filters, in this order, and the order is the rule:
+   *
+   *  1. `tierColumns` — what this WIDTH can carry. Not negotiable; it is what
+   *     keeps a primary list off a horizontal scrollbar.
+   *  2. `shown` — what the READER still wants of those.
+   *
+   * The menu is offered `tierColumns`, never `columns`, so nobody can switch
+   * on a column the width has already refused and put the scrollbar back.
+   */
+  const tierColumns = useMemo(
     () => visibleColumns(columns, tier, compactCutoff),
     [columns, tier, compactCutoff]
+  );
+
+  const { visibility, setColumnVisible, showAllColumns } = useColumnVisibility(storageId);
+
+  const shown = useMemo(
+    () => tierColumns.filter((column) => visibility[column.id] !== false),
+    [tierColumns, visibility]
   );
 
   // Selection, bulk actions and the page-size control are >= lg affordances:
@@ -232,6 +340,12 @@ export function UbDataGrid<TRow>({
   const isFull = tier === 'full';
   const canSelect = selectable && isFull;
   const scrollX = allowHorizontalScroll && isFull;
+
+  // BrandHub's rule: a grid that already has a toolbar gets the menu without
+  // opting in; one with no toolbar does not sprout a row of chrome for it
+  // alone. And never on cards — a phone shows three facts chosen by `cardSlot`,
+  // which is a different model that this menu does not describe.
+  const showColumnMenu = (columnMenu ?? Boolean(search || filters)) && needsTable;
 
   return (
     <div
@@ -245,49 +359,120 @@ export function UbDataGrid<TRow>({
       <UbDataGridToolbar
         search={search}
         filters={filters}
-        bulk={canSelect && (selectedIds?.length ?? 0) > 0 ? bulkActions : undefined}
+        bulk={canSelect ? bulkActions : undefined}
+        selectedCount={canSelect ? (selectedIds?.length ?? 0) : 0}
+        /* Painted as given. `selectedCount` is an ICU plural and the FEATURE
+           resolved it — a plural cannot be deferred behind a `{count}`
+           placeholder the way `pageOf` and `selectRow` are, because ICU has to
+           see the number to choose the form. Substituting here as well is how
+           it came to read "NaN selected". */
+        selectionLabel={labels.selectedCount}
+        columns={
+          showColumnMenu ? (
+            <UbDataGridColumnMenuLazy
+              columns={tierColumns}
+              visibility={visibility}
+              onColumnVisibleChange={setColumnVisible}
+              onShowAll={showAllColumns}
+              labels={labels}
+            />
+          ) : undefined
+        }
       />
 
-      {state === 'loading' && (
-        <SkeletonRows
-          count={skeletonRows}
-          columns={Math.max(shown.length, 1)}
-          label={labels.loading}
-          isCards={tier === 'cards'}
-        />
-      )}
-
-      {state !== 'loading' && state !== 'rows' && (
-        <UbDataGridEmptyState state={state} copy={emptyStates} className="m-4" />
-      )}
-
-      {state === 'rows' &&
+      {/* Loading, empty, filtered-empty and error are drawn INSIDE the table on
+          a table tier — BrandHub's arrangement, and see `UbDataGridStateTable`
+          for the three reasons. `cards` keeps the stacked shapes and the plain
+          panel, because there is no table there to keep the reader's place in. */}
+      {state === 'loading' &&
         (tier === 'cards' ? (
-          <UbDataGridMobileList
-            rows={rows}
-            columns={shown}
-            rowId={rowId}
-            rowName={rowName}
-            onRowOpen={onRowOpen}
-            labels={labels}
-            listLabel={caption}
+          <SkeletonRows
+            count={skeletonRows}
+            columns={Math.max(shown.length, 1)}
+            label={labels.loading}
+            isCards
           />
         ) : (
-          <UbDataGridTableLazy
-            rows={rows}
-            columns={shown}
-            rowId={rowId}
-            rowName={rowName}
-            labels={labels}
-            caption={caption}
-            sort={sort}
-            onSortChange={onSortChange}
-            selectable={canSelect}
-            selectedIds={selectedIds}
-            onSelectionChange={onSelectionChange}
-            allowHorizontalScroll={scrollX}
-          />
+          // The live region wraps the table rather than living in it: `role` on
+          // a `<tbody>` would cost the table its own semantics, and a merchant
+          // navigating by table keys needs those more than the announcement
+          // needs a tidy home.
+          <div role="status" aria-busy aria-label={labels.loading}>
+            <UbDataGridStateTable columns={shown} caption={caption} selectable={canSelect}>
+              <UbDataGridSkeletonRows
+                columnCount={shown.length}
+                rowCount={skeletonRows}
+                selectable={canSelect}
+                rowHeight={rowHeight}
+              />
+            </UbDataGridStateTable>
+          </div>
         ))}
+
+      {state !== 'loading' &&
+        state !== 'rows' &&
+        (tier === 'cards' ? (
+          <UbDataGridEmptyState state={state} copy={emptyStates} className="m-4" />
+        ) : (
+          <UbDataGridStateTable columns={shown} caption={caption} selectable={canSelect}>
+            <UbDataGridStateRow colSpan={shown.length + (canSelect ? 1 : 0)}>
+              <UbDataGridEmptyState state={state} copy={emptyStates} className="m-4" />
+            </UbDataGridStateRow>
+          </UbDataGridStateTable>
+        ))}
+
+      {/* Indeterminate on purpose: a list request has no progress to report,
+          and a bar that crept to 90 % and waited would be a lie with a
+          percentage on it. No `aria-valuenow` is how ARIA says "indeterminate". */}
+      {state === 'rows' && busy && (
+        <div
+          role="progressbar"
+          aria-label={labels.loading}
+          data-testid="ub-grid-busy"
+          className="h-0.5 w-full overflow-hidden bg-surface-sunken"
+        >
+          <div className="h-full w-1/3 animate-pulse bg-accent motion-reduce:animate-none" />
+        </div>
+      )}
+
+      {state === 'rows' && (
+        <div
+          aria-busy={busy || undefined}
+          className={cn('transition-opacity duration-base', busy && 'opacity-60')}
+        >
+          {tier === 'cards' ? (
+            <UbDataGridMobileList
+              rows={rows}
+              columns={shown}
+              rowId={rowId}
+              rowName={rowName}
+              onRowOpen={onRowOpen}
+              labels={labels}
+              listLabel={caption}
+              avatar={cardAvatar}
+              avatarIcon={cardAvatarIcon}
+            />
+          ) : (
+            <UbDataGridTableLazy
+              rows={rows}
+              columns={shown}
+              rowId={rowId}
+              rowName={rowName}
+              onRowOpen={onRowOpen}
+              labels={labels}
+              caption={caption}
+              sort={sort}
+              onSortChange={onSortChange}
+              selectable={canSelect}
+              selectedIds={selectedIds}
+              onSelectionChange={onSelectionChange}
+              allowHorizontalScroll={scrollX}
+              maxHeight={maxHeight}
+              rowHeight={rowHeight}
+            />
+          )}
+        </div>
+      )}
 
       {state === 'rows' && (
         <UbDataGridPagination

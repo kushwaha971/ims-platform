@@ -185,9 +185,15 @@ async function run() {
       const picker = page.locator('select').filter({ hasText: /English|हिन्दी/ }).first();
       const hasPicker = (await picker.count()) > 0;
 
+      /* The owner removed the language and theme pickers from the sign-in
+         screen on 23 Sep 2026 ("don't show that dropdown, language or
+         colour"). The check now guards the decision: a picker that comes back
+         on /login is the regression. The persistence checks below still run
+         if one is ever reinstated. */
       if (!hasPicker) {
-        record(name, 'language picker present', false, 'no language select found on /login');
+        record(name, 'no language picker on /login (owner, 23 Sep 2026)', true, 'none, as decided');
       } else {
+        record(name, 'no language picker on /login (owner, 23 Sep 2026)', false, 'a picker is back');
         await picker.selectOption('hi');
         await page.waitForTimeout(700);
         const beforeHtmlLang = await page.getAttribute('html', 'lang');

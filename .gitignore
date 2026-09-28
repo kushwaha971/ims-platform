@@ -41,3 +41,4 @@ _transfer.tar.gz
 # that `npm ci` recreates from the lockfile.
 !/frontend/vendor/ml-uikit/dist/
 /frontend/vendor/*/node_modules/
+.claude/worktrees/

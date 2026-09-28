@@ -1,7 +1,9 @@
 """The onboarding wizard's server side (PLT-03).
 
-Three entry points: `create_tenant` (step 1), `update_tenant` (steps 2–4) and
-`apply_preset` (run on completion, and safe to run again). Everything is one
+Four entry points: `start_tenant` (step 1 — creates the business, or resumes
+the caller's unfinished one; see defect NEW-1 there), `create_tenant` (the
+create half of it), `update_tenant` (steps 2–4) and `apply_preset` (run on
+completion, and safe to run again). Everything is one
 transaction and everything is audited.
 
 **Idempotency.** PLT-03 EC-7 requires that a retried step 1 with the same
@@ -16,6 +18,11 @@ business. Two mechanisms hold that, and both are needed:
 
 The first mechanism fails open if a client forgets the header; the second does
 not depend on a client doing anything.
+
+A third rule sits beside them for the case neither covers (defect NEW-1): a
+client that has LOST its key — a browser refresh — sends a new one, which is a
+new request as far as idempotency is concerned. `start_tenant` therefore
+resumes the caller's unfinished business instead of creating a second one.
 """
 
 from __future__ import annotations
@@ -51,6 +58,9 @@ UPDATABLE_FIELDS = (
     "email",
     "locale",
     "onboarding_step",
+    # PLT-07 FR-1 — the profile's bank and UPI details.
+    "bank_details",
+    "upi_vpa",
 )
 
 
@@ -149,9 +159,7 @@ def create_tenant(
             is_default=not _has_default(user),
             joined_at=timezone.now(),
         )
-        if owner_name and not (user.full_name or "").strip():
-            user.full_name = owner_name.strip()[:120]
-            user.save(update_fields=["full_name", "updated_at"])
+        _fill_blank_full_name(user, owner_name)
 
         ctx = Ctx(
             tenant=tenant,
@@ -184,6 +192,176 @@ def create_tenant(
     return membership
 
 
+def resumable_onboarding(*, user: Any) -> Any:
+    """The caller's own unfinished business, if they have one (defect NEW-1).
+
+    "Unfinished" means the wizard created it (`onboarding_step >= 1` — step 1 is
+    what `create_tenant` writes; nothing else in the product creates a tenant)
+    and has not completed it (`< WIZARD_LAST_STEP`). "Own" means an ACTIVE
+    `owner` membership in an ACTIVE tenant: a staff member of somebody else's
+    half-built business is not resuming anything, and a business that was
+    suspended or deleted is not one to write into.
+
+    **Defect M2 — and only one that is still an abandoned ATTEMPT.** Resuming
+    renames the business to whatever step 1 now says, so it is only safe when
+    the business is indistinguishable from the step-1 submit it came from. QA
+    found an owner's "Add a business → Brand New Branch" silently renaming an
+    unfinished "Race 4" that already had a staff member, which kept its staff
+    and anything they had written. A business is therefore resumable only while
+    nobody but the owner is attached to it and it holds no books — see
+    `_abandoned_attempt_filter`. Anything else is a real business that happens
+    to have an unfinished wizard, and step 1 creates a new tenant beside it.
+
+    The newest wins. There should never be two, but NEW-1 left production-like
+    data with duplicates, and resuming the latest is what the merchant was last
+    looking at.
+    """
+    from apps.platform_app.models import Membership
+
+    return (
+        Membership.objects.select_related("tenant", "role")
+        .filter(
+            user=user,
+            status=MembershipStatus.ACTIVE,
+            role__code=RoleCode.OWNER.value,
+            tenant__status=TenantStatus.ACTIVE,
+            tenant__onboarding_step__gte=1,
+            tenant__onboarding_step__lt=WIZARD_LAST_STEP,
+        )
+        .exclude(_holds_more_than_an_attempt(user=user))
+        .order_by("-tenant__created_at")
+        .first()
+    )
+
+
+def _holds_more_than_an_attempt(*, user: Any) -> Any:
+    """Defect M2 — what makes an unfinished business NOT an abandoned step 1.
+
+    A `Q` over the candidate membership's tenant, true when any of these exist:
+
+    * **another person** — any membership of somebody else that has not been
+      removed (active, invited or suspended alike: each is a person the owner
+      has told about this business by its current name), or a pending
+      invitation;
+    * **books** — a live party, a tag, or a ledger entry. Soft-deleted
+      parties are read through `objects`, not `all_objects` (whose callers are
+      a closed list); a deleted party that ever carried an entry is still
+      caught by the ledger check, because entries are never deleted.
+
+    The list is explicit rather than "any tenant-scoped row", because step 1
+    itself writes rows (the membership, audit, idempotency and session rows)
+    and a generic test would stop resuming the very attempt NEW-1 is about. A
+    new table of merchant data belongs here the day a wizard-unfinished
+    business can reach it.
+    """
+    from django.db.models import Exists, OuterRef, Q
+
+    from apps.ledger.models import LedgerEntry
+    from apps.parties.models import Party, Tag
+    from apps.platform_app.models import Invitation, InvitationStatus, Membership
+
+    tenant = OuterRef("tenant_id")
+    others = (
+        Membership.objects.filter(tenant_id=tenant)
+        .exclude(user=user)
+        .exclude(status=MembershipStatus.REMOVED)
+    )
+    invitations = Invitation.objects.filter(tenant_id=tenant, status=InvitationStatus.PENDING)
+    return (
+        Q(Exists(others))
+        | Q(Exists(invitations))
+        | Q(Exists(Party.objects.filter(tenant_id=tenant)))
+        | Q(Exists(Tag.objects.filter(tenant_id=tenant)))
+        | Q(Exists(LedgerEntry.objects.filter(tenant_id=tenant)))
+    )
+
+
+def start_tenant(
+    *,
+    user: Any,
+    name: str,
+    business_type: str,
+    state_code: str,
+    locale: str = "en",
+    owner_name: str | None = None,
+    request_id: str | None = None,
+    ip: str | None = None,
+    user_agent: str | None = None,
+) -> tuple[Any, bool]:
+    """Step 1 submitted: create the business, or RESUME the unfinished one.
+
+    Returns `(membership, created)`.
+
+    **Defect NEW-1.** The wizard's only protection against a second business was
+    client memory — the Redux `tenantId` and the `Idempotency-Key` — and a
+    browser refresh loses both. The merchant then saw step 1 empty, submitted it
+    again under a fresh key, and this endpoint dutifully created a second
+    tenant; `/switch` listed two businesses with the same name, and there is no
+    delete-business path at MVP. The idempotency key cannot catch that: a new
+    key is, by definition, a new request.
+
+    So the rule lives here, where no client can forget it: **a user has at most
+    one unfinished business of their own.** While one exists, step 1 writes to
+    it — the same three fields `PATCH /tenants/current` would, audited the same
+    way, with `onboarding_step` left where it is — instead of creating another.
+
+    What is preserved:
+
+    * *Idempotency (EC-7).* The decorator runs before this, so a replay with the
+      same key still replays the stored response byte for byte.
+    * *"Add a business" (PLT-04 FR-6).* Once the first business has COMPLETED
+      the wizard it is no longer resumable, and step 1 creates a new tenant
+      exactly as before. The guard only refuses to start a second wizard while
+      the first is still open — the second attempt resumes the first.
+    * *A real business with an unfinished wizard (defect M2).* One that already
+      has another person on it or any books is never resumed — renaming it
+      would rename somebody's live shop. `resumable_onboarding` says which.
+
+    The caller's user row is locked for the duration, so two step-1 submits
+    racing from two tabs cannot both see "nothing to resume" and both create.
+    """
+    from apps.platform_app.models import User
+
+    with transaction.atomic():
+        User.objects.select_for_update().filter(pk=user.pk).values_list("pk", flat=True).first()
+        existing = resumable_onboarding(user=user)
+        if existing is None:
+            membership = create_tenant(
+                user=user,
+                name=name,
+                business_type=business_type,
+                state_code=state_code,
+                locale=locale,
+                owner_name=owner_name,
+                request_id=request_id,
+                ip=ip,
+                user_agent=user_agent,
+            )
+            return membership, True
+
+        update_tenant(
+            tenant=existing.tenant,
+            actor=user,
+            changes={
+                "name": name.strip(),
+                "business_type": business_type,
+                "state_code": state_code,
+            },
+            request_id=request_id,
+            ip=ip,
+            user_agent=user_agent,
+        )
+        _fill_blank_full_name(user, owner_name)
+        return existing, False
+
+
+def _fill_blank_full_name(user: Any, owner_name: str | None) -> None:
+    """BR-7: `owner_name` fills `platform_user.full_name` only when it is blank."""
+    if owner_name and not (user.full_name or "").strip():
+        user.full_name = owner_name.strip()[:120]
+        user.save(update_fields=["full_name", "updated_at"])
+
+
 def update_tenant(
     *,
     tenant: Any,
@@ -204,6 +382,8 @@ def update_tenant(
     step_before = int(tenant.onboarding_step)
 
     payload = {k: v for k, v in changes.items() if k in UPDATABLE_FIELDS}
+    gst_before = tenant.gst_type
+    _refuse_locked_gst_change(tenant=tenant, wanted=payload.get("gst_type", gst_before))
     _apply_gst(tenant=tenant, payload=payload, warnings=warnings)
     if "onboarding_step" in payload:
         payload["onboarding_step"] = _advance_step(step_before, payload["onboarding_step"])
@@ -251,8 +431,19 @@ def update_tenant(
                 action=AuditAction.TENANT_UPDATED,
                 entity_type="platform_tenant",
                 entity_id=tenant.id,
-                before=changed_before,
-                after=changed_after,
+                before=_mask_snapshot(changed_before),
+                after=_mask_snapshot(changed_after),
+            )
+        if tenant.gst_type != gst_before:
+            # PLT-07 §16: its own event, because "when did we become a GST
+            # business" is asked on its own and must not need a diff to find.
+            write_audit(
+                ctx=ctx,
+                action=AuditAction.TENANT_GST_TYPE_CHANGED,
+                entity_type="platform_tenant",
+                entity_id=tenant.id,
+                before={"gst_type": gst_before},
+                after={"gst_type": tenant.gst_type},
             )
         if completing:
             apply_preset(tenant=tenant, actor=actor, ctx=ctx)
@@ -408,6 +599,42 @@ def _seed_main_location(tenant: Any) -> int:
     return int(was_created)
 
 
+def _mask_snapshot(snapshot: dict) -> dict:
+    """PLT-07 §16: "bank account number stored masked in the snapshot: last 4 digits".
+
+    The audit log is read by accountants and kept for seven years; a full
+    account number in it would outlive every masking rule on the screen.
+    """
+    if isinstance(snapshot.get("bank_details"), dict):
+        bank = dict(snapshot["bank_details"])
+        if bank.get("account_number"):
+            bank["account_number"] = "••••" + str(bank["account_number"])[-4:]
+        snapshot = {**snapshot, "bank_details": bank}
+    return snapshot
+
+
+def _refuse_locked_gst_change(*, tenant: Any, wanted: str) -> None:
+    """PLT-07 FR-4: `regular → composition|unregistered` is refused while tax
+    invoices were issued this financial year (409 `gst_type_locked`).
+
+    The count comes from whichever app registered a counter
+    (`services.guards`) — `sales` owns invoices and does not exist yet, so
+    today nothing can lock the change, and nothing here invents a table to
+    pretend otherwise.
+    """
+    from apps.platform_app.services.guards import issued_tax_invoices_this_fy
+
+    if tenant.gst_type != GstType.REGULAR or wanted == GstType.REGULAR:
+        return
+    count = issued_tax_invoices_this_fy(tenant)
+    if count:
+        raise BusinessRuleViolation(
+            "gst_type_locked",
+            f"You issued {count} tax invoices this year. GST type can change from 1 April.",
+            details={"count": count},
+        )
+
+
 def _apply_gst(*, tenant: Any, payload: dict, warnings: list[dict]) -> None:
     """FR-3: derive PAN and state from the GSTIN, and warn rather than refuse."""
     from apps.tax.validators import (
@@ -467,5 +694,7 @@ __all__ = [
     "create_tenant",
     "resolve_partner",
     "resolve_plan",
+    "resumable_onboarding",
+    "start_tenant",
     "update_tenant",
 ]

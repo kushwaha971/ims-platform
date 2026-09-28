@@ -1,5 +1,4 @@
-import { screen, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { screen } from '@testing-library/react';
 
 import { UbText } from 'src/design-system';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
@@ -58,108 +57,43 @@ describe('AuthShell — the brand', () => {
   });
 });
 
-describe('AuthShell — the page, not a floating card', () => {
-  it('has both landmarks a page needs: a main and a contentinfo', () => {
+describe('AuthShell — the Figma page (13504:19266)', () => {
+  it('has a main landmark and no footer', () => {
+    /**
+     * The owner removed the footer: no theme picker, no language picker, no
+     * copyright — the form half is the form and nothing else. The terms line
+     * lives on the sign-up screen, where an account is actually opened.
+     */
     renderWithProviders(
       <AuthShell>
         <Child />
       </AuthShell>
     );
 
-    expect(screen.getByRole('main')).toBeInTheDocument();
-    expect(screen.getByRole('contentinfo')).toBeInTheDocument();
+    expect(screen.getByRole('main')).toContainElement(screen.getByText('the form'));
+    expect(screen.queryByRole('contentinfo')).not.toBeInTheDocument();
   });
 
-  it('carries a copyright line in the footer', () => {
+  it('offers no theme or language dropdown on the page', () => {
     renderWithProviders(
       <AuthShell>
         <Child />
       </AuthShell>
     );
 
-    const footer = screen.getByRole('contentinfo');
-    expect(within(footer).getByText(/©/)).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Change language' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /theme/i })).not.toBeInTheDocument();
   });
-});
 
-describe('AuthShell — the legal line has documents behind it', () => {
-  it('links "the terms" to a real route, and the privacy policy to another', () => {
+  it('puts the headline in the hero half, in both languages', () => {
     renderWithProviders(
       <AuthShell>
         <Child />
       </AuthShell>
     );
 
-    const footer = screen.getByRole('contentinfo');
-    expect(
-      within(footer).getByRole('link', { name: en['auth.legal.terms'] as string })
-    ).toHaveAttribute('href', '/legal/terms');
-    expect(
-      within(footer).getByRole('link', { name: en['auth.legal.privacy'] as string })
-    ).toHaveAttribute('href', '/legal/privacy');
-  });
-
-  it('still states the adult-use restriction (BR-7), once, in the footer', () => {
-    renderWithProviders(
-      <AuthShell>
-        <Child />
-      </AuthShell>
-    );
-
-    expect(screen.getAllByText(en['auth.adultUse'] as string)).toHaveLength(1);
-  });
-
-  /**
-   * Hindi puts its verb after the documents, which is why the sentence is five
-   * keys and not one. If someone ever concatenates them in code, this fails.
-   */
-  it('reads as one sentence in Hindi, with the verb after the two documents', () => {
-    renderWithProviders(
-      <AuthShell>
-        <Child />
-      </AuthShell>,
-      { locale: 'hi', messages: hi as Record<string, string> }
-    );
-
-    const footer = screen.getByRole('contentinfo');
-    expect(footer.textContent).toContain(
-      `${hi['auth.legal.privacy']}${hi['auth.legal.suffix']}`.trim()
-    );
-  });
-});
-
-describe('AuthShell — the language control', () => {
-  it('is at the BOTTOM of the page, not the top', () => {
-    renderWithProviders(
-      <AuthShell>
-        <Child />
-      </AuthShell>
-    );
-
-    const picker = screen.getByLabelText(en['auth.language.change'] as string);
-    expect(screen.getByRole('contentinfo')).toContainElement(picker);
-
-    // And after the content, which is the whole correction: it used to be the
-    // first element on the page, above the product's own name.
-    const form = screen.getByText('the form');
-    expect(form.compareDocumentPosition(picker) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  });
-
-  it('offers each language in its own script, and switches the page', async () => {
-    const user = userEvent.setup();
-    renderWithProviders(
-      <AuthShell>
-        <Child />
-      </AuthShell>
-    );
-
-    const picker = screen.getByLabelText(en['auth.language.change'] as string);
-    expect(within(picker).getByRole('option', { name: 'English' })).toBeInTheDocument();
-    // Never "Hindi": the only label a person who needs this control can read is
-    // the one in their own script.
-    expect(within(picker).getByRole('option', { name: 'हिन्दी' })).toBeInTheDocument();
-
-    await user.selectOptions(picker, 'hi');
-    expect(picker).toHaveValue('hi');
+    expect(en['auth.hero.title']).toBeTruthy();
+    expect(hi['auth.hero.title']).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 2, hidden: true })).toBeInTheDocument();
   });
 });

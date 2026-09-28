@@ -1,10 +1,15 @@
-import { createSlice, type Draft, type PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, type Draft, type PayloadAction, type UnknownAction } from '@reduxjs/toolkit';
 
 import { resetAllFeatureState } from 'src/redux/actions';
 import type { RootState } from 'src/redux/store';
 import type { ApiErrorShape } from 'src/types/api.types';
 import type { Locale, ModuleCode, PermissionCode } from 'src/types/domain.types';
 
+import {
+  confirmPasswordReset,
+  passwordLogin,
+  registerAccount,
+} from 'modules/DigiKhaato/features/auth/redux/authThunk';
 import {
   fetchSession,
   logout,
@@ -56,6 +61,21 @@ export interface SessionUser {
   readonly mustChangePassword: boolean;
   /** ISO 8601, or `null` once they have chosen their own password. */
   readonly passwordExpiresAt: string | null;
+  /** PLT-14 — a Metis operator; the account menu links to the console. */
+  readonly isSuperAdmin?: boolean;
+}
+
+/**
+ * PLT-14 FR-5 — this tab is a support session: an operator acting in a
+ * business with its owner's consent. The shell shows the red banner while set.
+ */
+export interface SessionImpersonation {
+  readonly id: string;
+  readonly tenantId: string;
+  readonly tenantName: string;
+  readonly adminName: string;
+  readonly startedAt: string;
+  readonly expiresAt: string;
 }
 
 /**
@@ -78,6 +98,26 @@ export interface SessionTenant {
   readonly membershipId?: string | null;
   /** PLT-03 FR-9 — `< 4` means this business's wizard is unfinished. */
   readonly onboardingStep?: number | null;
+  /**
+   * WLB-01 FR-2 — the RESOLVED branding (tenant → partner → default), active
+   * tenant only. `WhiteLabelSync` turns it into the theme and the app name.
+   */
+  readonly branding?: SessionBranding | null;
+  /** WLB-02 FR-5 — the partner is suspended: reads work, writes answer 403. */
+  readonly partnerSuspended?: boolean;
+  /** PLT-10 BR-1 — when a `pending_deletion` business is deleted (ISO), else null. */
+  readonly deletionScheduledFor?: string | null;
+}
+
+/** The branding the shell renders; `primarySource` says whose colour it is. */
+export interface SessionBranding {
+  readonly primaryHex: string;
+  readonly primarySource: 'tenant' | 'partner' | 'default';
+  readonly appName: string;
+  readonly logoUrl: string | null;
+  readonly docHeader: string;
+  readonly docFooter: string;
+  readonly legalFooter: string;
 }
 
 export interface SessionState {
@@ -87,10 +127,21 @@ export interface SessionState {
   tenants: SessionTenant[];
   permissions: PermissionCode[];
   enabledModules: ModuleCode[];
+  impersonation: SessionImpersonation | null;
   error: ApiErrorShape | null;
   /** The token's `ver` claim; a change forces a re-read (Part 22 §22.2). */
   version: number | null;
   lastFetchedAt: number | null;
+  /**
+   * N1-P1 — has THIS DOCUMENT (this JS runtime) held a session before?
+   *
+   * It survives every reset in this slice — logout, expiry, the login screen's
+   * teardown, a new sign-in — and is cleared only by a page load, which is the
+   * point: `useAuthRedirect` reads it to decide that a sign-in following an
+   * earlier session in the same runtime must finish with a DOCUMENT load, not
+   * a client navigation. See `useAuthRedirect` for why.
+   */
+  heldInThisDocument: boolean;
 }
 
 const initialState: SessionState = {
@@ -100,10 +151,23 @@ const initialState: SessionState = {
   tenants: [],
   permissions: [],
   enabledModules: [],
+  impersonation: null,
   error: null,
   version: null,
   lastFetchedAt: null,
+  heldInThisDocument: false,
 };
+
+/**
+ * A session that has just ended, or not yet begun: everything back to
+ * `initialState` and `anonymous` — except `heldInThisDocument`, which only a
+ * page load clears.
+ */
+const endedSession = (state: SessionState): SessionState => ({
+  ...initialState,
+  status: 'anonymous',
+  heldInThisDocument: state.heldInThisDocument,
+});
 
 export interface SessionPayload {
   readonly user: SessionUser;
@@ -112,6 +176,7 @@ export interface SessionPayload {
   readonly permissions: readonly PermissionCode[];
   readonly enabledModules: readonly ModuleCode[];
   readonly version: number | null;
+  readonly impersonation?: SessionImpersonation | null;
 }
 
 const sessionSlice = createSlice({
@@ -129,19 +194,27 @@ const sessionSlice = createSlice({
       state.tenants = [...payload.tenants];
       state.permissions = [...payload.permissions];
       state.enabledModules = [...payload.enabledModules];
+      state.impersonation = payload.impersonation ?? null;
       state.version = payload.version;
       state.lastFetchedAt = Date.now();
       state.error = null;
       state.status = payload.activeTenant ? 'authenticated' : 'no_tenant';
+      state.heldInThisDocument = true;
     },
     sessionAnonymous(state, action: PayloadAction<ApiErrorShape | null>) {
-      Object.assign(state, initialState);
-      state.status = 'anonymous';
+      Object.assign(state, endedSession(state));
       // See partyListSlice: a frozen, never-mutated ApiErrorShape in a draft.
       state.error = action.payload as Draft<ApiErrorShape> | null;
     },
     /** Dispatched by the transport layer when the refresh itself failed. */
-    sessionExpired: () => ({ ...initialState, status: 'anonymous' as const }),
+    sessionExpired: (state) => endedSession(state),
+    /**
+     * The session exactly as a freshly loaded document has it —
+     * `heldInThisDocument` included. Nothing in the product dispatches this:
+     * only a page load clears that flag. It is the test seam for the singleton
+     * store, as `resetAuth` is for the auth slice.
+     */
+    resetSession: () => initialState,
   },
   extraReducers: (builder) => {
     builder
@@ -158,8 +231,7 @@ const sessionSlice = createSlice({
       .addCase(fetchSession.rejected, (state, action) => {
         // An aborted bootstrap is a remount, not a logout.
         if (action.meta.aborted) return;
-        Object.assign(state, initialState);
-        state.status = 'anonymous';
+        Object.assign(state, endedSession(state));
         state.error = (action.payload ?? null) as Draft<ApiErrorShape> | null;
       })
       // PLT-04 FR-5 / FR-7 — both re-read `/auth/me` and hand back the whole
@@ -191,7 +263,28 @@ const sessionSlice = createSlice({
           payload: action.payload,
         });
       })
-      .addCase(logout.fulfilled, () => ({ ...initialState, status: 'anonymous' as const }))
+      .addCase(logout.fulfilled, (state) => endedSession(state))
+      /* NEW-1 — a successful sign-in, sign-up or reset-confirm is a NEW
+         session, and whatever summary the store held belongs to the previous
+         one. It is cleared here, on the fulfilled action itself, before
+         `useAuthRedirect` asks `/auth/me` who this is.
+
+         Leaving it was the second half of NEW-1: a session that ended by
+         cookie expiry was still in the store (tenant B), the new user signed
+         in to tenant A, and `/auth/me` answered with `X-Tenant-Id: A` — which
+         the stale-tab guard compared against B, took for "switched in another
+         tab", and answered with a hard reload back to /login. Meanwhile the
+         shell had painted B's business name for the new user. With no
+         `activeTenant` the guard has nothing to compare against, which is its
+         documented one-sided behaviour for "before `/auth/me` has said which
+         tenant this tab is in"; it is armed again the moment `/auth/me` lands.
+
+         `anonymous` rather than `loading`: nothing is being fetched yet, and
+         `fetchSession.pending` moves it to `loading` in the same tick
+         `useAuthRedirect` dispatches it. */
+      .addCase(passwordLogin.fulfilled, (state) => endedSession(state))
+      .addCase(registerAccount.fulfilled, (state) => endedSession(state))
+      .addCase(confirmPasswordReset.fulfilled, (state) => endedSession(state))
       // A tenant switch keeps the session and clears everything else; the
       // session itself is refetched immediately afterwards (§19.6.5 step 2).
       .addCase(resetAllFeatureState, (state) => {
@@ -200,14 +293,40 @@ const sessionSlice = createSlice({
   },
 });
 
-export const { sessionRequested, sessionLoaded, sessionAnonymous, sessionExpired } =
+export const { sessionRequested, sessionLoaded, sessionAnonymous, sessionExpired, resetSession } =
   sessionSlice.actions;
+
+/**
+ * FB-3 / NEW-1 — end the session on this device, as logout does, without a
+ * request: the session goes anonymous first (so `RequireSession` unmounts every
+ * screen in the same render and none of them can refetch into a 401), then the
+ * one teardown every feature slice answers.
+ *
+ * One function because there are two callers and the ORDER is the point: the
+ * transport host's `onSessionExpired` (the refresh itself 401'd) and the login
+ * screen finding a session in the store that the cookies no longer back.
+ */
+export const endSessionLocally = (dispatch: (action: UnknownAction) => unknown): void => {
+  dispatch(sessionExpired());
+  dispatch(resetAllFeatureState());
+};
+
+/**
+ * NEW-1 — does the store hold a session summary a login screen must not sit
+ * over? `authenticated` and `no_tenant` both carry a user; `idle` and `loading`
+ * are a bootstrap still deciding, and `anonymous` is already torn down.
+ */
+export const selectHoldsSession = (state: RootState): boolean =>
+  state.session.status === 'authenticated' || state.session.status === 'no_tenant';
 
 export default sessionSlice.reducer;
 
 // ── Selectors ────────────────────────────────────────────────────────────────
 
 export const selectSessionStatus = (state: RootState): SessionStatus => state.session.status;
+/** N1-P1 — see `SessionState.heldInThisDocument`. */
+export const selectSessionHeldInThisDocument = (state: RootState): boolean =>
+  state.session.heldInThisDocument;
 export const selectMustChangePassword = (state: RootState): boolean =>
   state.session.user?.mustChangePassword ?? false;
 export const selectSessionUser = (state: RootState): SessionUser | null => state.session.user;
@@ -217,8 +336,29 @@ export const selectPermissions = (state: RootState): readonly PermissionCode[] =
   state.session.permissions;
 export const selectEnabledModules = (state: RootState): readonly ModuleCode[] =>
   state.session.enabledModules;
+/** PLT-14 FR-5 — the support session this tab is in, or null. */
+export const selectImpersonation = (state: RootState): SessionImpersonation | null =>
+  state.session.impersonation;
+export const selectIsSuperAdmin = (state: RootState): boolean =>
+  state.session.user?.isSuperAdmin ?? false;
 export const selectTenantTimezone = (state: RootState): string | null =>
   state.session.activeTenant?.timezone ?? null;
 /** PLT-04 FR-1 — every membership the switcher may list. */
+/**
+ * The caller's role IN THE ACTIVE BUSINESS, or `null`.
+ *
+ * Added for LED-01's "Save anyway" (BR-8), which is the one place in this
+ * product where a decision turns on a role rather than a permission codename —
+ * a tenant that grants a staff member `ledger.entry.write`, which is the
+ * ordinary thing to do because staff work the counter, must not thereby hand
+ * them the power to lend past the cap the owner set.
+ *
+ * The client uses it only to decide which button to draw. The server checks the
+ * same thing again inside the transaction that writes, because a client that
+ * was told "you may override" a minute ago is repeating what it was told.
+ */
+export const selectActiveRole = (state: RootState): string | null =>
+  state.session.activeTenant?.role ?? null;
+
 export const selectSessionTenants = (state: RootState): readonly SessionTenant[] =>
   state.session.tenants;

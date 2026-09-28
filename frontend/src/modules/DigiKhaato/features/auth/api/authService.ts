@@ -1,7 +1,8 @@
 import { API_PATHS } from 'src/api/APIPaths';
 import { api } from 'src/api/AxiosInstances';
+import { forgetAdoptedTenant } from 'src/api/tenantTransition';
 import { DEFAULT_TENANT_TIMEZONE } from 'src/constants';
-import type { SessionPayload, SessionTenant } from 'src/redux/slice/sessionSlice';
+import type { SessionBranding, SessionPayload, SessionTenant } from 'src/redux/slice/sessionSlice';
 import type { TWriteClass } from 'src/types/api.types';
 import type { Locale, ModuleCode, PermissionCode } from 'src/types/domain.types';
 
@@ -76,7 +77,40 @@ interface ActiveTenantApiRow {
   readonly status?: string;
   readonly onboarding_step?: number | null;
   readonly enabled_modules?: readonly ModuleCode[];
+  /** WLB-01 FR-2 — resolved server-side; see `toSessionBranding`. */
+  readonly branding?: BrandingApiBlock | null;
+  readonly partner_suspended?: boolean;
+  readonly deletion_scheduled_for?: string | null;
 }
+
+interface BrandingApiBlock {
+  readonly primary_hex?: string | null;
+  readonly app_name?: string | null;
+  readonly logo_url?: string | null;
+  readonly doc_header?: string | null;
+  readonly doc_footer?: string | null;
+  readonly legal_footer?: string | null;
+  readonly sources?: Readonly<Record<string, string>>;
+}
+
+/**
+ * WLB-01 — the active tenant's resolved branding. `null` for an older server
+ * that sends the raw jsonb (no `sources`), so the shell keeps the product
+ * default rather than guessing which keys a merchant chose.
+ */
+const toSessionBranding = (raw: BrandingApiBlock | null | undefined): SessionBranding | null => {
+  if (!raw?.sources || !raw.primary_hex) return null;
+  const source = raw.sources.primary_hex;
+  return {
+    primaryHex: raw.primary_hex,
+    primarySource: source === 'tenant' || source === 'partner' ? source : 'default',
+    appName: raw.app_name ?? '',
+    logoUrl: raw.logo_url ?? null,
+    docHeader: raw.doc_header ?? '',
+    docFooter: raw.doc_footer ?? '',
+    legalFooter: raw.legal_footer ?? '',
+  };
+};
 
 interface AuthApiResponse {
   readonly data: {
@@ -100,7 +134,17 @@ interface SessionApiResponse {
       /** DEC-012 — see `AuthUserApiRow` above for why these are optional. */
       readonly must_change_password?: boolean;
       readonly password_expires_at?: string | null;
+      readonly is_super_admin?: boolean;
     };
+    /** PLT-14 FR-5 — non-null only inside a support session. */
+    readonly impersonation?: {
+      readonly id: string;
+      readonly tenant_id: string;
+      readonly tenant_name: string;
+      readonly admin_name: string;
+      readonly started_at: string;
+      readonly expires_at: string;
+    } | null;
     readonly active_tenant: ActiveTenantApiRow | null;
     readonly tenants: readonly TenantApiRow[];
     readonly permissions: readonly PermissionCode[];
@@ -184,18 +228,15 @@ const toAuthResult = (body: AuthApiResponse): AuthResult => {
  * gone; the exceptions are decided once, by code, in src/utils/apiError.ts.
  */
 export const register = async (input: RegisterInput): Promise<AuthResult> => {
-  const response = await api.post<AuthApiResponse>(
-    API_PATHS.AUTH_REGISTER,
-    {
-      email: input.email,
-      password: input.password,
-      ...(input.name ? { full_name: input.name } : {}),
-      // Sent only when the user gave one: the serializer takes `allow_blank`,
-      // but an empty string in the body would claim they answered.
-      ...(input.mobile ? { mobile: input.mobile } : {}),
-      ...(input.deviceLabel ? { device_label: input.deviceLabel } : {}),
-    }
-  );
+  const response = await api.post<AuthApiResponse>(API_PATHS.AUTH_REGISTER, {
+    email: input.email,
+    password: input.password,
+    ...(input.name ? { full_name: input.name } : {}),
+    // Sent only when the user gave one: the serializer takes `allow_blank`,
+    // but an empty string in the body would claim they answered.
+    ...(input.mobile ? { mobile: input.mobile } : {}),
+    ...(input.deviceLabel ? { device_label: input.deviceLabel } : {}),
+  });
   return toAuthResult(response.data);
 };
 export const registerWriteClass: TWriteClass = 'online-only';
@@ -214,14 +255,11 @@ export const registerWriteClass: TWriteClass = 'online-only';
  * holds for every screen that logs in, and a 500 here still reaches the user.
  */
 export const passwordLogin = async (input: PasswordLoginInput): Promise<AuthResult> => {
-  const response = await api.post<AuthApiResponse>(
-    API_PATHS.AUTH_LOGIN,
-    {
-      email: input.email,
-      password: input.password,
-      ...(input.deviceLabel ? { device_label: input.deviceLabel } : {}),
-    },
-  );
+  const response = await api.post<AuthApiResponse>(API_PATHS.AUTH_LOGIN, {
+    email: input.email,
+    password: input.password,
+    ...(input.deviceLabel ? { device_label: input.deviceLabel } : {}),
+  });
   return toAuthResult(response.data);
 };
 export const passwordLoginWriteClass: TWriteClass = 'online-only';
@@ -231,14 +269,11 @@ export const passwordLoginWriteClass: TWriteClass = 'online-only';
  * account has none; FR-9: other devices are revoked only on an explicit tick.
  */
 export const setPassword = async (input: PasswordSetInput): Promise<void> => {
-  await api.post(
-    API_PATHS.AUTH_PASSWORD_SET,
-    {
-      new_password: input.newPassword,
-      ...(input.currentPassword ? { current_password: input.currentPassword } : {}),
-      ...(input.logoutOtherDevices ? { logout_other_devices: true } : {}),
-    }
-  );
+  await api.post(API_PATHS.AUTH_PASSWORD_SET, {
+    new_password: input.newPassword,
+    ...(input.currentPassword ? { current_password: input.currentPassword } : {}),
+    ...(input.logoutOtherDevices ? { logout_other_devices: true } : {}),
+  });
 };
 export const setPasswordWriteClass: TWriteClass = 'online-only';
 
@@ -260,10 +295,10 @@ export const requestPasswordResetWriteClass: TWriteClass = 'online-only';
 export const confirmPasswordReset = async (
   input: PasswordResetConfirmInput
 ): Promise<AuthResult> => {
-  const response = await api.post<AuthApiResponse>(
-    API_PATHS.AUTH_PASSWORD_RESET_CONFIRM,
-    { token: input.token, new_password: input.newPassword }
-  );
+  const response = await api.post<AuthApiResponse>(API_PATHS.AUTH_PASSWORD_RESET_CONFIRM, {
+    token: input.token,
+    new_password: input.newPassword,
+  });
   return toAuthResult(response.data);
 };
 export const confirmPasswordResetWriteClass: TWriteClass = 'online-only';
@@ -308,8 +343,12 @@ export const getSession = async (signal?: AbortSignal): Promise<SessionPayload> 
         timezone: activeRow.timezone ?? membership?.timezone ?? DEFAULT_TENANT_TIMEZONE,
         status: activeRow.status ?? membership?.status ?? 'active',
         onboardingStep: activeRow.onboarding_step ?? membership?.onboardingStep ?? null,
+        branding: toSessionBranding(activeRow.branding),
+        partnerSuspended: activeRow.partner_suspended ?? false,
+        deletionScheduledFor: activeRow.deletion_scheduled_for ?? null,
       }
     : null;
+  const support = data.impersonation;
 
   return {
     user: {
@@ -323,6 +362,7 @@ export const getSession = async (signal?: AbortSignal): Promise<SessionPayload> 
       // the change-password screen.
       mustChangePassword: data.user.must_change_password ?? false,
       passwordExpiresAt: data.user.password_expires_at ?? null,
+      isSuperAdmin: data.user.is_super_admin ?? false,
     },
     activeTenant,
     tenants,
@@ -335,6 +375,16 @@ export const getSession = async (signal?: AbortSignal): Promise<SessionPayload> 
     // legitimately has no modules, which is what `[]` says.
     enabledModules: activeRow?.enabled_modules ?? [],
     version: data.ver ?? null,
+    impersonation: support
+      ? {
+          id: support.id,
+          tenantId: support.tenant_id,
+          tenantName: support.tenant_name,
+          adminName: support.admin_name,
+          startedAt: support.started_at,
+          expiresAt: support.expires_at,
+        }
+      : null,
   };
 };
 
@@ -344,7 +394,16 @@ export const getSession = async (signal?: AbortSignal): Promise<SessionPayload> 
  */
 export const switchTenant = async (tenantId: string): Promise<SessionPayload> => {
   await api.post(API_PATHS.AUTH_SWITCH_TENANT, { tenant_id: tenantId });
-  return getSession();
+  try {
+    return await getSession();
+  } catch (error) {
+    // M3 — the switch's answer made this tab adopt the new tenant, but the
+    // store can only follow with this re-read. Without it, keeping the
+    // adoption would let the new business's rows render under the old one's
+    // shell; dropping it lets the stale-tab guard reload into a consistent tab.
+    forgetAdoptedTenant();
+    throw error;
+  }
 };
 export const switchTenantWriteClass: TWriteClass = 'online-only';
 

@@ -35,13 +35,13 @@ from dataclasses import dataclass
 from typing import Any
 
 from django.conf import settings
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from apps.common.audit import AuditAction, write_audit
 from apps.common.context import Ctx
 from apps.common.exceptions import BusinessRuleViolation, ValidationFailed
-from apps.platform_app.constants import MembershipStatus
+from apps.platform_app.constants import InvitationStatus, MembershipStatus
 from apps.platform_app.services import entitlements
 from apps.platform_app.services import memberships as membership_service
 
@@ -58,6 +58,36 @@ _ALPHABET = _UPPER + _LOWER + _DIGITS
 
 GROUP_SIZE = 4
 GROUPS = 3  # 12 characters, ~2^69 -- grouped for reading, not for strength
+
+# The name of the partial unique index on `platform_user.mobile` (models/user.py).
+# Postgres names it in the IntegrityError text, which is how a lost race on the
+# number is told apart from a lost race on anything else.
+MOBILE_UNIQUE_CONSTRAINT = "uq_user_mobile_notnull"
+
+# NEW-2. Worded for the field it sits under: the number is OPTIONAL on this form,
+# so the way forward is to leave it out, and the owner should be told that
+# rather than left thinking the person cannot be added at all. It says a login
+# holds the number and nothing about whose, which is as little as a form that
+# must refuse the number can say.
+MOBILE_TAKEN_MESSAGE = (
+    "This mobile number is already used by another login. "
+    "Leave it blank or use a different number."
+)
+
+# L6. The stable, machine-readable name of that refusal, so a client can show
+# it in the merchant's language (`errors.field.mobile_taken`) instead of the
+# English sentence above. It travels in `details.field_codes`, keyed by the
+# field it belongs to; it is NOT a top-level error code -- the envelope's code
+# stays `validation_error` (Part 22 §22.1.1) and the message stays the `en` copy.
+MOBILE_TAKEN_CODE = "mobile_taken"
+FIELD_CODES_KEY = "field_codes"
+
+
+def _mobile_taken() -> ValidationFailed:
+    """The one NEW-2 refusal, spelt once for both the pre-check and the lost race."""
+    return ValidationFailed(
+        {"mobile": [MOBILE_TAKEN_MESSAGE], FIELD_CODES_KEY: {"mobile": MOBILE_TAKEN_CODE}}
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -105,16 +135,92 @@ def _expiry() -> dt.datetime:
     return timezone.now() + dt.timedelta(days=int(settings.UB_INVITATION_DAYS))
 
 
-def _apply(*, user: Any, password: str) -> dt.datetime:
-    """Set the hash, raise the gate, stamp the expiry. Never logs the plaintext."""
+def _apply(*, user: Any, password: str, tenant: Any) -> dt.datetime:
+    """Set the hash, raise the gate, stamp the expiry and the issuer. Never logs the plaintext."""
     expires_at = _expiry()
     user.set_password(password)
     user.must_change_password = True
     user.password_expires_at = expires_at
+    user.temp_password_tenant = tenant
     user.save(
-        update_fields=["password", "must_change_password", "password_expires_at", "updated_at"]
+        update_fields=[
+            "password",
+            "must_change_password",
+            "password_expires_at",
+            "temp_password_tenant",
+            "updated_at",
+        ]
     )
     return expires_at
+
+
+def _issued_here(*, user: Any, tenant: Any) -> bool:
+    """Whether `tenant` is the business that minted this person's temporary password.
+
+    The only business allowed to reissue it. A person added to a SECOND business
+    before choosing their own password still has `must_change_password` set, and
+    without this check that second business could press "New password", be shown
+    the result, and sign in as them — into the first business too, and every
+    other one they belong to. That is not a resend, it is an account takeover
+    across the tenancy boundary.
+
+    Rows written before `temp_password_tenant` existed carry `NULL`; for those
+    the rule falls back to "this is the only business they belong to", which is
+    the case where no other tenant's data sits behind the credential.
+    """
+    from apps.platform_app.models import Membership
+
+    if user.temp_password_tenant_id is not None:
+        return user.temp_password_tenant_id == tenant.id
+    return (
+        not Membership.objects.filter(
+            user=user,
+            status__in=(
+                MembershipStatus.ACTIVE,
+                MembershipStatus.SUSPENDED,
+                MembershipStatus.INVITED,
+            ),
+        )
+        .exclude(tenant=tenant)
+        .exists()
+    )
+
+
+def _refuse_taken_mobile(mobile: str) -> None:
+    """A field error on `mobile` when another `platform_user` already holds it (NEW-2).
+
+    The uniqueness rule itself is platform-wide and unchanged (`uq_user_mobile_notnull`):
+    invitation matching needs one account per number. What was wrong is that
+    only the index enforced it, so a taken number reached `INSERT` and the owner
+    got a 500 for what is a correctable, optional field.
+    """
+    from apps.platform_app.models import User
+
+    if User.objects.filter(mobile=mobile).exists():
+        raise _mobile_taken()
+
+
+def _create_user_or_refuse_mobile(*, email: str, full_name: str, mobile: str | None) -> Any:
+    """`create_user`, with a lost race on the number answered as the pre-check would (NEW-2).
+
+    Two businesses can each pass `_refuse_taken_mobile` for the same number in
+    the same instant -- the tenant lock serialises one business, not the
+    platform. The loser's INSERT then trips the index. The savepoint keeps the
+    enclosing transaction usable, and the caller's `atomic()` still rolls back
+    every row it wrote, so nothing is left half-made and the idempotency key is
+    released by the decorator on the way out.
+    """
+    from apps.platform_app.models import User
+
+    try:
+        with transaction.atomic():
+            return User.objects.create_user(
+                email=email, password=None, full_name=full_name, mobile=mobile
+            )
+    except IntegrityError as exc:
+        if MOBILE_UNIQUE_CONSTRAINT in str(exc):
+            raise _mobile_taken() from exc
+        raise
 
 
 def create_member(
@@ -139,8 +245,16 @@ def create_member(
 
     The seat is checked under the tenant lock (PLT-15 BR-7) before anything is
     created, so two owners cannot both spend the last one.
+
+    **Somebody already invited is converted, not double-charged.** This is the
+    primary path (DEC-012) and the invitation path is the future email one, so
+    an owner who invited an address and then, with no email to carry the link,
+    simply creates the login is the ordinary case. Their `invited` membership
+    becomes the active one and any live invitation to the address is revoked in
+    the same write: left pending, it would still be acceptable later, and
+    accepting it could re-apply a role the owner has since decided against.
     """
-    from apps.platform_app.models import Membership, User
+    from apps.platform_app.models import Invitation, Membership, User
 
     normalised = membership_service.normalise_email_or_none(email)
     if not normalised:
@@ -160,14 +274,25 @@ def create_member(
                     "validation_error", "That person is already on this team."
                 )
 
-        entitlements.assert_can_add_member(tenant=locked, adding=1)
+        # NEW-2: the number is only ever written for a NEW account (an existing
+        # one keeps its own profile), so it is only checked for one. Checked
+        # before the seat so the owner is told about the field they can fix,
+        # not about a plan limit they cannot.
+        if existing_user is None and mobile:
+            _refuse_taken_mobile(mobile)
+
+        # "Everybody else, plus this person" — a seat already promised to the
+        # address by an invitation is converted rather than bought twice.
+        entitlements.assert_can_add_member(
+            tenant=locked, adding=1, endpoint="members.create", excluding_email=normalised
+        )
 
         if existing_user is None:
-            user = User.objects.create_user(
-                email=normalised, password=None, full_name=display_name, mobile=mobile or None
+            user = _create_user_or_refuse_mobile(
+                email=normalised, full_name=display_name, mobile=mobile or None
             )
             password = generate_temp_password()
-            expires_at = _apply(user=user, password=password)
+            expires_at = _apply(user=user, password=password, tenant=locked)
             created_user = True
         else:
             # Their account, their password. We are only granting access.
@@ -187,6 +312,10 @@ def create_member(
         )
         membership_service._promote_default(user=user)
 
+        invitations_closed = Invitation.objects.filter(
+            tenant=locked, email=normalised, status=InvitationStatus.PENDING
+        ).update(status=InvitationStatus.REVOKED, updated_at=timezone.now())
+
         write_audit(
             ctx=ctx,
             action=AuditAction.MEMBER_CREDENTIALS_ISSUED,
@@ -200,6 +329,7 @@ def create_member(
             },
             # The password is not here and must never be. An audit row a support
             # engineer can read is an audit row that hands them the account.
+            metadata={"invitations_closed": invitations_closed or None},
         )
 
     return IssuedCredentials(
@@ -226,6 +356,14 @@ def regenerate(*, membership: Any, actor: Any, ctx: Ctx) -> IssuedCredentials:
     is the reset link, which only its owner can complete.
     """
     user = membership.user
+    # Checked FIRST, before anything about the person's password: an invited
+    # address has not joined, and telling this business whether a stranger has
+    # chosen their own password yet would be answering a question about another
+    # tenant's staff.
+    if membership.status == MembershipStatus.INVITED:
+        raise BusinessRuleViolation(
+            "validation_error", "That person has not joined this business yet."
+        )
     if not user.must_change_password:
         raise BusinessRuleViolation(
             "validation_error",
@@ -233,10 +371,16 @@ def regenerate(*, membership: Any, actor: Any, ctx: Ctx) -> IssuedCredentials:
         )
     if membership.status == MembershipStatus.REMOVED:
         raise BusinessRuleViolation("validation_error", "That person is no longer on this team.")
+    if not _issued_here(user=user, tenant=membership.tenant):
+        raise BusinessRuleViolation(
+            "validation_error",
+            "This login was created by another business, so only they can issue a new "
+            "password. Ask them, or ask the person to use ‘Forgot password’.",
+        )
 
     with transaction.atomic():
         password = generate_temp_password()
-        expires_at = _apply(user=user, password=password)
+        expires_at = _apply(user=user, password=password, tenant=membership.tenant)
         # Anything issued against the dead password goes with it (Part 27
         # §27.4.4 step 2): if the old one leaked, a live session is the hole
         # that changing the password on its own would leave open.
@@ -267,11 +411,19 @@ def clear_on_chosen_password(*, user: Any) -> None:
     the gate is down but the expiry still stands (which would lock the person
     out of the product the moment their own password aged past the window).
     """
-    if not (user.must_change_password or user.password_expires_at):
+    if not (user.must_change_password or user.password_expires_at or user.temp_password_tenant_id):
         return
     user.must_change_password = False
     user.password_expires_at = None
-    user.save(update_fields=["must_change_password", "password_expires_at", "updated_at"])
+    user.temp_password_tenant = None
+    user.save(
+        update_fields=[
+            "must_change_password",
+            "password_expires_at",
+            "temp_password_tenant",
+            "updated_at",
+        ]
+    )
 
 
 __all__ = [

@@ -1,14 +1,20 @@
-import { configureStore } from '@reduxjs/toolkit';
+import { combineSlices, configureStore } from '@reduxjs/toolkit';
 
 import { registerTransportHost } from 'src/api/transportBridge';
 import { errorMessageId } from 'src/utils/apiError';
 
 // ── auth (PLT-01, PLT-02) ────────────────────────────────────────────────────
 import authReducer from 'modules/DigiKhaato/features/auth/redux/authSlice';
+// ── ledger (LED-01) ──────────────────────────────────────────────────────────
+import ledgerEntryReducer from 'modules/DigiKhaato/features/ledger/redux/ledgerEntrySlice';
+import { ledgerFormReducer } from 'modules/DigiKhaato/features/ledger/redux/ledgerFormSlice';
 // ── onboarding (PLT-03) ──────────────────────────────────────────────────────
 import onboardingReducer from 'modules/DigiKhaato/features/onboarding/redux/onboardingSlice';
 // ── parties ──────────────────────────────────────────────────────────────────
+import partyDetailReducer from 'modules/DigiKhaato/features/parties/redux/partyDetailSlice';
+import { partyFormReducer } from 'modules/DigiKhaato/features/parties/redux/partyFormSlice';
 import partyListReducer from 'modules/DigiKhaato/features/parties/redux/partyListSlice';
+import partyTagReducer from 'modules/DigiKhaato/features/parties/redux/partyTagSlice';
 // ── plan entitlements (PLT-15) ───────────────────────────────────────────────
 import planReducer, { limitHit } from 'modules/DigiKhaato/features/plan/redux/planSlice';
 import { toPlanLimitHit } from 'modules/DigiKhaato/features/plan/view-model/planDisplay';
@@ -21,29 +27,33 @@ import { invalidationListener } from './invalidation/listener';
 import localeReducer from './slice/localeSlice';
 import networkReducer, { responseObserved, transportFailed } from './slice/networkSlice';
 import offlineQueueReducer from './slice/offlineQueueSlice';
-import sessionReducer, { sessionExpired } from './slice/sessionSlice';
+import sessionReducer, { endSessionLocally } from './slice/sessionSlice';
 import snackbarReducer, { showSnackbar } from './slice/snackbarSlice';
 import themeReducer from './slice/themeSlice';
 import whiteLabelReducer from './slice/whiteLabelSlice';
 
 /**
- * Part 19 §19.3.9 — a flat `configureStore` with one key per slice, grouped and
- * commented by module, exactly BrandHub's arrangement. No `combineReducers`
- * nesting, no dynamic reducer injection, no persistence middleware, and no
- * hand-written middleware: the one listener is RTK's own, carrying the
- * invalidation map of §19.3.6.
+ * Part 19 §19.3.9 — one key per slice, grouped and commented by module,
+ * BrandHub's arrangement. No persistence middleware and no hand-written
+ * middleware: the one listener is RTK's own, carrying the invalidation map of
+ * §19.3.6. Two deliberate absences: `redux-persist` (the store is rebuilt from
+ * the API on load) and TanStack Query (ADR-004 — one data-layer pattern only).
  *
- * Two deliberate absences: `redux-persist` (the store is rebuilt from the API
- * on load) and TanStack Query (ADR-004 — one data-layer pattern only).
+ * ── Static and lazy (CR-134, decided 23 Sep 2026) ───────────────────────────
+ * Every slice registered here ships to EVERY route, login screen included —
+ * nine measured data points, the last two provably route-local. So a slice
+ * that exactly one route reads is not registered here: it declares itself
+ * on `LazyLoadedSlices` by module augmentation and injects into
+ * `rootReducer` when its own module is imported, which is when that route's
+ * chunk loads. Its selectors read through the injected slice's `selectSlice`,
+ * which answers the initial state before the first action lands.
  *
- * Sprint 1 adds four keys and no mechanism: `auth`, `onboarding`, `plan`, and
- * PLT-04's state, which lives in the existing `session` key because a
- * membership list IS the session summary and a second copy of it would be a
- * second thing to keep true.
+ * What stays static is what more than one screen reads: the session, the
+ * party list (the nav's counts), the ledger form (opened from the khata and
+ * the list). `statement` and `ledgerAging` are the first two lazy slices.
+ * `combineSlices` is part of Redux Toolkit; no dependency was added.
  */
-export const store = configureStore({
-  reducer: {
-    snackbar: snackbarReducer,
+const staticReducers = {    snackbar: snackbarReducer,
     session: sessionReducer,
     whiteLabel: whiteLabelReducer,
     locale: localeReducer,
@@ -56,9 +66,23 @@ export const store = configureStore({
     plan: planReducer,
 
     partyList: partyListReducer,
+    partyForm: partyFormReducer,
+    partyDetail: partyDetailReducer,
+    partyTag: partyTagReducer,
+    ledgerEntry: ledgerEntryReducer,
+    ledgerForm: ledgerFormReducer,
     invitation: invitationReducer,
     member: memberReducer,
-  },
+};
+
+/** Route-local slices add themselves here with `declare module` (CR-134). */
+ 
+export interface LazyLoadedSlices {}
+
+export const rootReducer = combineSlices(staticReducers).withLazyLoadedSlices<LazyLoadedSlices>();
+
+export const store = configureStore({
+  reducer: rootReducer,
   middleware: (getDefault) =>
     getDefault({
       // Money is strings, dates are ISO strings, errors are plain objects.
@@ -82,8 +106,19 @@ registerTransportHost({
     store.dispatch(transportFailed());
   },
   isNetworkImpaired: () => store.getState().network.state !== 'online',
+  /**
+   * FB-3 — expiry is a logout the server decided, so it sends logout's two
+   * signals in logout's order: the session goes anonymous first (which makes
+   * `RequireSession` unmount every screen in the same render, so no feature
+   * page can see its slice go idle and refetch into another 401), then the
+   * one teardown every feature slice — the lazily injected statement and aging
+   * included — already answers. It used to reset the session alone, leaving
+   * the previous user's party list, khata and statement in memory behind the
+   * login screen. Locale and theme do not listen for it and survive, as they
+   * do a logout.
+   */
   onSessionExpired: () => {
-    store.dispatch(sessionExpired());
+    endSessionLocally(store.dispatch);
   },
   /**
    * §19.12.2 / CR-2026-09-19-E — THE global error channel, and the only place

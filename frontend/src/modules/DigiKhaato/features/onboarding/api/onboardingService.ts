@@ -105,6 +105,11 @@ const toResult = (body: TenantApiResponse): OnboardingResult => ({
  * every retry of the same logical action (§19.1.3 note 1) — a key generated
  * here would be a new one per attempt, which is the bug this header exists to
  * prevent.
+ *
+ * NEW-1: when the caller already owns an UNFINISHED business the server
+ * resumes it instead of creating another, and answers `200` rather than `201`
+ * with the same body. Nothing here branches on the status — the tenant in the
+ * body is the one the wizard continues with, either way.
  */
 export const createTenant = async (
   input: OnboardingBusinessStep,
@@ -126,6 +131,47 @@ export const createTenant = async (
   return toResult(response.data);
 };
 export const createTenantWriteClass: TWriteClass = 'online-only';
+
+/**
+ * GET /tenants/current — the business the wizard is RESUMING (defect NEW-1).
+ *
+ * The draft in the slice is memory, and a browser refresh empties it: step 1
+ * came back blank for a business that already existed, the merchant filled it
+ * in again, and the create call made a second business. The server is the
+ * only thing that survives a refresh, so a resumed wizard reads the tenant
+ * back from it and folds it into the draft before any step is drawn.
+ *
+ * A QUERY, so a failure is not suppressed: it reaches the global snackbar
+ * like any other failed read, and the wizard falls back to an empty step 1 —
+ * whose submit the server now turns into a resume rather than a duplicate.
+ * The body is the bare tenant (no `data.tenant` nesting), as for the PATCHes.
+ */
+export const fetchCurrentTenant = async (): Promise<OnboardingTenant> => {
+  const response = await api.get<TenantApiResponse>(API_PATHS.TENANT_CURRENT);
+  return toTenant(unwrapTenant(response.data.data));
+};
+
+/**
+ * GET /tenants/resumable — the business "Add a business" would CONTINUE rather
+ * than create (defect M2), or `null`.
+ *
+ * `POST /tenants` resumes the caller's unfinished business when it is still an
+ * abandoned attempt (no other people, no books), and used to do it silently:
+ * the merchant typed a new name on step 1 and an existing business was
+ * renamed. The wizard asks first, so step 1 can say which business Continue
+ * will finish and show its values instead of a blank form. The server answers
+ * with the same rule the create applies, so the two cannot disagree.
+ *
+ * A QUERY, so a failure reaches the global snackbar and the wizard falls back
+ * to a blank step 1 — no worse than before this read existed.
+ */
+export const fetchResumableTenant = async (): Promise<OnboardingTenant | null> => {
+  const response = await api.get<{ readonly data: { readonly tenant: TenantApiPayload | null } }>(
+    API_PATHS.TENANT_RESUMABLE
+  );
+  const row = response.data.data.tenant;
+  return row ? toTenant(row) : null;
+};
 
 /**
  * PATCH /tenants/current — step 1 again, for a business that already exists.

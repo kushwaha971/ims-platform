@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 
-import { UbBox, UbDivider, UbLink, UbStack, UbText } from 'src/design-system';
+import { UbBox, UbLink, UbStack, UbText } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { cn } from 'src/utils/cn';
 
@@ -32,13 +32,15 @@ export function NavSections({
   const { sections } = useNavigation();
 
   return (
-    <UbStack gap={5} as="div" className="min-h-0 flex-1">
-      {sections.map((section, index) => (
-        <UbStack key={section.key} gap={1}>
-          {index > 0 && (
-            <UbDivider decorative className="mb-3 border-surface-navHover opacity-80" />
-          )}
-          <UbText as="span" variant="label" tone="onNavMuted" className="px-2 pb-1">
+    <UbStack gap={0} as="div" className="min-h-0 flex-1">
+      {sections.map((section) => (
+        /* Figma "menu": 12 px padding, a 10 px section label, rows 2 px apart. */
+        <UbStack key={section.key} gap={0} className="gap-0.5 p-3">
+          <UbText
+            as="span"
+            variant="inherit"
+            className="ds-nav-caption-medium px-2 pb-0.5 text-text-muted"
+          >
             {t(section.labelId)}
           </UbText>
           {section.items.map((item) => {
@@ -49,19 +51,33 @@ export function NavSections({
               <>
                 {/* The accent edge, outside the row's own box so the label does
                     not move when the row becomes current. */}
-                {active && (
-                  <UbBox
-                    aria-hidden
-                    className="absolute inset-y-2 left-0 w-0.5 rounded-pill bg-accent"
-                  />
-                )}
-                <Icon aria-hidden className="h-4 w-4 shrink-0" />
-                {t(item.labelId)}
+                <Icon
+                  aria-hidden
+                  strokeWidth={active ? 2 : 1.75}
+                  className={cn(
+                    'h-4 w-4 shrink-0',
+                    active ? 'text-text-onNav' : 'text-text-onNavMuted'
+                  )}
+                />
+                <UbText
+                  as="span"
+                  variant="inherit"
+                  truncate
+                  className={cn('flex-1', active ? 'ds-nav-label-medium' : 'ds-nav-label-regular')}
+                >
+                  {t(item.labelId)}
+                </UbText>
               </>
             );
 
+            /* 32 px rows (8 px padding around a 16 px line), 4 px radius, a
+               12 px icon — Figma "menu item". The current row is the tinted
+               one with a hairline edge rather than an accent bar. */
+            /* BrandHubSidebarItem: 4 px radius, 8 px padding, a 16 px icon and a
+               12/16 label; the current row is neutral-grey-200 with a
+               neutral-grey-300 edge. */
             const row =
-              'relative flex min-h-11 items-center gap-3 rounded-control px-3 ' +
+              'relative flex w-full items-center gap-2 rounded-xs border p-2 ' +
               'transition-colors duration-fast ease-standard';
 
             /**
@@ -85,17 +101,24 @@ export function NavSections({
                 <UbBox
                   key={item.key}
                   aria-disabled
-                  className={cn(row, 'cursor-default text-text-onNavMuted opacity-60')}
+                  className={cn(
+                    row,
+                    'cursor-default border-transparent text-text-onNavMuted opacity-60'
+                  )}
                 >
-                  <Icon aria-hidden className="h-4 w-4 shrink-0" />
-                  <UbText as="span" variant="body-sm" tone="inherit">
+                  <Icon aria-hidden strokeWidth={1.75} className="h-4 w-4 shrink-0" />
+                  <UbText
+                    as="span"
+                    variant="inherit"
+                    truncate
+                    className="ds-nav-label-regular flex-1"
+                  >
                     {t(item.labelId)}
                   </UbText>
                   <UbText
                     as="span"
-                    variant="micro"
-                    tone="inherit"
-                    className="ml-auto rounded-pill bg-surface-navHover px-1.5 py-0.5"
+                    variant="inherit"
+                    className="ds-nav-caption-regular shrink-0 p-0.5 text-text-muted"
                   >
                     {t('nav.soon')}
                   </UbText>
@@ -107,7 +130,7 @@ export function NavSections({
               <UbLink
                 key={item.key}
                 href={item.href}
-                variant="body-sm"
+                variant="inherit"
                 tone="inherit"
                 underline={false}
                 aria-current={active ? 'page' : undefined}
@@ -115,8 +138,8 @@ export function NavSections({
                 className={cn(
                   row,
                   active
-                    ? 'bg-surface-navHover font-medium text-text-onNav'
-                    : 'text-text-onNavMuted hover:bg-surface-navHover hover:text-text-onNav'
+                    ? 'border-border-navActive bg-surface-navActive text-text-onNav'
+                    : 'border-transparent text-text-onNavMuted hover:bg-surface-navHover hover:text-text-onNav'
                 )}
               >
                 {inner}

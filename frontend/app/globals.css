@@ -16,6 +16,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* The rupee sign, from Inter. DM Sans draws U+20B9 with a shape that reads as
+   a stray letter beside Indian figures; this face covers ONLY that code point
+   and sits first in every stack, so "₹" is Inter's wherever it appears — in a
+   button label as much as in an amount. */
+@font-face {
+  font-family: 'DK Rupee';
+  src: url('/fonts/inter-rupee.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+  unicode-range: U+20B9;
+}
+
 @layer base {
   html {
     background-color: hsl(var(--canvas));
@@ -120,6 +132,104 @@
     :root {
       --canvas: 0 0% 100%;
       --surface-card: 0 0% 100%;
+    }
+
+    /**
+     * LED-04 §7 — what a printed statement is, and what it is not.
+     *
+     * The page a merchant hands a customer is one artefact and the application
+     * around it is another, so printing hides the second: the sidebar, the page
+     * header, the filter bar and every control. `.ub-print-only` is the
+     * statement itself, which is hidden on screen and is the only thing on
+     * paper, so the two never compete for the same markup.
+     *
+     * `window.print()` rather than a server-rendered PDF is ADR-021's choice
+     * and LED-04 FR-5's, and it is why this stylesheet is the whole print
+     * pipeline. It also means the layout below has to be right in every browser
+     * a merchant has, which is what the four-width screenshot sweep is for.
+     */
+    .ub-print-hide,
+    nav,
+    aside,
+    header[data-app-header],
+    [data-print='hide'] {
+      display: none !important;
+    }
+
+    .ub-print-only {
+      display: block !important;
+    }
+
+    /* A statement is a table of money and it is read by running a finger down a
+       column, so the figures have to line up: `tabular-nums` makes every digit
+       the same width, which a proportional font does not. */
+    .ub-print-sheet {
+      font-size: 11pt;
+      color: #000;
+      background: #fff;
+    }
+
+    .ub-print-sheet table {
+      width: 100%;
+      border-collapse: collapse;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* §7.6 — a row must not be split across a page break, and the header must
+       repeat on every page. A statement whose second page starts mid-row and
+       has no column headings is a statement a customer cannot read. */
+    .ub-print-sheet thead {
+      display: table-header-group;
+    }
+
+    /* §7.3's hairlines, and on paper they are not decoration. The table is wide
+       — "Cement bags" on the left and ₹2,800.00 on the right, with empty space
+       between — and without a rule the eye loses the row on the way across. A
+       printed statement is read by a customer who is looking for one line. */
+    .ub-print-sheet th,
+    .ub-print-sheet td {
+      border-bottom: 0.5pt solid #ccc;
+      padding: 4pt 6pt;
+      vertical-align: top;
+    }
+
+    .ub-print-sheet th {
+      border-bottom-width: 1pt;
+      border-bottom-color: #333;
+    }
+
+    .ub-print-sheet tr {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    /* The closing block is the sentence the whole page exists for; orphaning it
+       onto a page of its own is the one break that must not happen. */
+    .ub-print-closing {
+      break-before: avoid;
+      page-break-before: avoid;
+    }
+
+    @page {
+      size: A4 portrait;
+      margin: 14mm 12mm;
+    }
+
+    /* SAL-03 FR-2 / FR-11 — the 80 mm counter slip prints onto its own named
+       page: 80 mm paper, 72 mm printable, as long as the bill is. Chrome and
+       Edge honour `page:`; the A4 sheet keeps the default page above. */
+    @page thermal80 {
+      size: 80mm auto;
+      margin: 4mm;
+    }
+
+    .ub-print-thermal {
+      page: thermal80;
+      font-size: 11px;
+    }
+
+    .ub-print-a4 {
+      padding: 0 !important;
     }
   }
 }
@@ -274,23 +384,23 @@
    * re-checking.
    */
   .ub-auth-hero {
-    background-image: linear-gradient(
-      0deg,
-      rgb(255 255 255 / 0.95) 0%,
-      rgb(255 255 255 / 0.95) 100%
-    );
-    background-color: hsl(var(--color-primary));
+    /* Our own ground, not the Figma's 95 %-white-over-brand sheet: white,
+       a soft brand glow behind the drawing, and a faint dot grid — the ruled
+       paper of a khata, abstracted. */
+    background-color: hsl(var(--surface-card));
+    background-image:
+      radial-gradient(60% 45% at 50% 45%, hsl(var(--primary-50)) 0%, transparent 70%),
+      radial-gradient(hsl(var(--primary-200) / 0.55) 1px, transparent 1px);
+    background-size:
+      100% 100%,
+      20px 20px;
   }
 
   :root[data-theme='dark'] .ub-auth-hero,
   .dark .ub-auth-hero {
     /* The same idea inverted: a near-black sheet, so the panel stays a tint of
        the brand rather than becoming a bright block in a dark room. */
-    background-image: linear-gradient(
-      0deg,
-      rgb(10 9 11 / 0.92) 0%,
-      rgb(10 9 11 / 0.92) 100%
-    );
+    background-image: linear-gradient(0deg, rgb(10 9 11 / 0.92) 0%, rgb(10 9 11 / 0.92) 100%);
   }
 
   .ub-native-select {

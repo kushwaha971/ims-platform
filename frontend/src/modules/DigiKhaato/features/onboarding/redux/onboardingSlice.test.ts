@@ -7,7 +7,13 @@ import onboardingReducer, {
   stepChanged,
   type OnboardingState,
 } from './onboardingSlice';
-import { completeOnboarding, createTenant, saveAddressStep, saveGstStep } from './onboardingThunk';
+import {
+  completeOnboarding,
+  createTenant,
+  resumeOnboarding,
+  saveAddressStep,
+  saveGstStep,
+} from './onboardingThunk';
 
 import type { OnboardingTenant } from '../types/onboarding.types';
 
@@ -188,5 +194,64 @@ describe('onboardingSlice — failure (§9 "Failed")', () => {
     expect(afterTeardown.draft.name).toBe('Sharma General Store');
     // What IS previous-tenant state is gone all the same.
     expect(afterTeardown.error).toBeNull();
+  });
+});
+
+/**
+ * Defect NEW-1 — a reload emptied the slice. `stepChanged` on mount then
+ * clamped `/onboarding/step/3` to step 1 (nothing was "completed"), step 1 drew
+ * an empty form, and its submit created a second business.
+ */
+describe('resumeOnboarding — NEW-1', () => {
+  const resumed = (routeStep: number, over: Partial<OnboardingTenant> = {}) => ({
+    type: resumeOnboarding.fulfilled.type,
+    payload: tenant(over),
+    meta: { arg: { routeStep }, requestId: 'r', requestStatus: 'fulfilled' },
+  });
+
+  it('folds the saved business into the draft and records the tenant', () => {
+    const state = onboardingReducer(initial, resumed(1, { name: 'Kumar Stores' }));
+    expect(state.tenantId).toBe('t1');
+    expect(state.draft.name).toBe('Kumar Stores');
+    expect(state.draft.businessType).toBe('retail');
+    expect(state.draft.stateCode).toBe('27');
+    expect(state.resumeStatus).toBe('succeeded');
+  });
+
+  it('honours the route step the mount-time clamp threw away', () => {
+    const afterMount = onboardingReducer(initial, stepChanged(3));
+    expect(afterMount.step).toBe(1);
+
+    const state = onboardingReducer(afterMount, resumed(3, { onboardingStep: 2 }));
+    expect(state.completedStep).toBe(2);
+    expect(state.step).toBe(3);
+  });
+
+  it('still refuses a step whose prerequisites were never saved', () => {
+    const state = onboardingReducer(initial, resumed(4, { onboardingStep: 1 }));
+    expect(state.step).toBe(2);
+  });
+
+  it('does not make the step buttons spin while it reads', () => {
+    const state = onboardingReducer(initial, {
+      type: resumeOnboarding.pending.type,
+      meta: { arg: { routeStep: 1 }, requestId: 'r', requestStatus: 'pending' },
+    });
+    expect(state.resumeStatus).toBe('loading');
+    expect(state.status).toBe('idle');
+  });
+
+  it('marks a failed read terminal, but an aborted one as not yet tried', () => {
+    const failed = onboardingReducer(initial, {
+      type: resumeOnboarding.rejected.type,
+      meta: { arg: { routeStep: 1 }, aborted: false, requestId: 'r', requestStatus: 'rejected' },
+    });
+    expect(failed.resumeStatus).toBe('failed');
+
+    const aborted = onboardingReducer(initial, {
+      type: resumeOnboarding.rejected.type,
+      meta: { arg: { routeStep: 1 }, aborted: true, requestId: 'r', requestStatus: 'rejected' },
+    });
+    expect(aborted.resumeStatus).toBe('idle');
   });
 });

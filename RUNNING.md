@@ -224,6 +224,43 @@ Not built yet, so you will find these empty or absent:
 
 ---
 
+## The browser regression (e2e)
+
+`e2e/` holds Playwright harnesses that drive Chromium against the running stack
+(frontend on :3000 served by `e2e/serve.sh`, API on :8000). One command runs all
+of them, concurrently, each against its own freshly registered accounts:
+
+```bash
+# 1. The API, with the per-IP auth budgets lifted (local settings only):
+cd backend && UB_E2E_RELAX_THROTTLES=1 setsid nohup \
+  python manage.py runserver 0.0.0.0:8000 --noreload > /tmp/claude-0/be-serve.log 2>&1 &
+
+# 2. The regression:
+node e2e/run-regression.mjs            # all 35 jobs, 6 at a time
+node e2e/run-regression.mjs --quick    # 10-job smoke subset, under 3 minutes
+node e2e/run-regression.mjs --only s3-B,ledger   # ids, groups (core, s3, d2, d3) or prefix*
+node e2e/run-regression.mjs --list     # the jobs and the fixtures each one gets
+```
+
+Logs, screenshots and `summary.txt`/`summary.json` land in
+`/tmp/e2e-shots/regress-<timestamp>/`; the exit code is non-zero if any job
+failed. A job that dies before judging anything (almost always a sign-in wait
+lost to CPU contention) is re-run once and reported as retried; a failed
+assertion never is.
+
+**`UB_E2E_RELAX_THROTTLES=1`** is read by `config.settings.local` and nowhere
+else. It lifts exactly three budgets that every harness shares because they are
+keyed on the caller's IP — 20 sign-ups, 100 failed logins and 20 reset requests
+per hour — and leaves the per-account login lockout, every per-user API rate,
+CSRF and authentication as shipped. Staging and production never import the
+local module, and `tests/architecture/test_settings.py` asserts both ignore the
+variable. Without it, a full run stops at the preflight rather than at the
+twenty-first 429. Two harness modes are deliberately left out of the regression:
+`look.mjs` (screenshots, no assertions) and `sprint3-qa.mjs --only=N4`, which
+exists to lock the per-IP login budget and must run alone, without the variable.
+
+---
+
 ## If something goes wrong
 
 ```bash

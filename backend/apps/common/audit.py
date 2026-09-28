@@ -61,6 +61,105 @@ class AuditAction:
     PARTY_UPDATED = "party.updated"
     PARTY_ARCHIVED = "party.archived"
     PARTY_RESTORED = "party.restored"
+    # PTY-06 §16 — emitted IN ADDITION to `party.updated` when a credit limit or
+    # its payment terms change. A limit is a financial control rather than a
+    # field, and an auditor asking "when did this customer's cap move, and what
+    # did they owe at the time" should not have to read every party edit to find
+    # out. `balance_at_change` is in the metadata for exactly that question: it
+    # is not recoverable later, because the balance moves.
+    CREDIT_LIMIT_SET = "credit.limit.set"
+    # ── Sprint 4: LED-01 (17-02 §16) ───────────────────────────────────────
+    #
+    # `after` is the full row, which is what an append-only table's audit means:
+    # there is no `before`, because there was nothing before, and there will
+    # never be an update to diff against.
+    LEDGER_ENTRY_CREATED = "ledger.entry.created"
+    # Written IN ADDITION to the entry's own row when an owner posts past a
+    # blocking credit limit (LED-01 FR-7). Its own action rather than a flag on
+    # the create, because "who has ever lent past a limit" is a question about a
+    # rare deliberate act, and filtering every entry create by a metadata key
+    # makes the rare event as hard to find as the common one.
+    CREDIT_LIMIT_OVERRIDDEN = "ledger.credit_limit.overridden"
+    # ── Sprint 4: LED-03 (17-02 §16) ───────────────────────────────────────
+    #
+    # These two carry a `before` as well as an `after`, which nothing else in
+    # the ledger does — because they are the only events that CHANGE a posted
+    # line rather than adding one. §16 asks for 7 years of retention on them,
+    # which is the retention a financial correction needs: "who changed this
+    # number, when, and what did they say the reason was" is the question an
+    # auditor arrives with, and the answer has to outlive everyone involved.
+    LEDGER_ENTRY_REVERSED = "ledger.entry.reversed"
+    LEDGER_ENTRY_CORRECTED = "ledger.entry.corrected"
+    # ── Sprint 4: LED-04 / LED-09 (17-02 §16) ──────────────────────────────
+    #
+    # Reading a statement or the aging report is not audited — §16 rules it out
+    # on volume. Leaving with one in a file is: a statement is a customer's
+    # whole account with the shop and the aging export is the shop's debtor
+    # list, and "who took it, and which one" is answerable only if the
+    # parameters and the row count are written at the moment it left.
+    LEDGER_STATEMENT_EXPORTED = "ledger.statement.exported"
+    LEDGER_AGING_EXPORTED = "ledger.aging.exported"
+    # ── Track T1: PLT-06…PLT-09, WLB-01, WLB-02 (17-01 §16) ────────────────
+    SETTINGS_UPDATED = "settings.updated"
+    NUMBERING_UPDATED = "numbering.updated"
+    TENANT_MODULES_CHANGED = "tenant.modules_changed"
+    TENANT_GST_TYPE_CHANGED = "tenant.gst_type_changed"
+    BRANDING_UPDATED = "branding.updated"
+    BRANDING_SIGNATURE_UPDATED = "branding.signature_updated"
+    AUDIT_EXPORTED = "audit.exported"
+    SESSION_REVOKED = "auth.session_revoked"
+    SESSIONS_REVOKED_ALL = "auth.sessions_revoked_all"
+    SESSION_RENAMED = "auth.session_renamed"
+    PARTNER_CREATED = "admin.partner_created"
+    PARTNER_UPDATED = "admin.partner_updated"
+    PARTNER_SUSPENDED = "admin.partner_suspended"
+    PARTNER_REACTIVATED = "admin.partner_reactivated"
+    # ── Sprint 6: INV-01 … INV-06 (17-03 §16) ──────────────────────────────
+    ITEM_CREATED = "item.created"
+    ITEM_UPDATED = "item.updated"
+    ITEM_ARCHIVED = "item.archived"
+    ITEM_RESTORED = "item.restored"
+    CATEGORY_CREATED = "category.created"
+    UNIT_CREATED = "unit.created"
+    STOCK_OPENING_POSTED = "stock.opening_posted"
+    STOCK_ADJUSTMENT_POSTED = "stock.adjustment_posted"
+    # ── Sprint 10: EXP-01 / EXP-02 (17-02 §17.4, §16) ─────────────────────
+    #
+    # `expense.recorded` carries the full row; `expense.voided` carries the
+    # full row as `before` plus the reason and the reversal entry's id, so
+    # "who voided the ₹12,000 rent, when, and why" is answerable after the
+    # people involved have left. A category's creation is audited because a
+    # category is referenced, not snapshotted (EXP-02 BR-1): the audit row is
+    # what explains a label on a statement printed before a rename.
+    EXPENSE_RECORDED = "expense.recorded"
+    EXPENSE_VOIDED = "expense.voided"
+    EXPENSE_CATEGORY_CREATED = "expense_category.created"
+    # ── Sprint 7: SAL-02 / SAL-03 / SAL-06 (17-04 §16) ────────────────────
+    #
+    # `invoice.draft_updated` is throttled to one row per draft per 10 minutes
+    # (SAL-06 §15) with `changes_count` — autosave PATCHes every few seconds.
+    INVOICE_DRAFT_CREATED = "invoice.draft_created"
+    INVOICE_DRAFT_UPDATED = "invoice.draft_updated"
+    INVOICE_DRAFT_DELETED = "invoice.draft_deleted"
+    INVOICE_ISSUED = "invoice.issued"
+    INVOICE_SHARE_LINK_CREATED = "invoice.share_link_created"
+    INVOICE_SHARE_LINK_REGENERATED = "invoice.share_link_regenerated"
+    # ── Sprint 5: LED-05 … LED-08 (17-02 §16) ──────────────────────────────
+    #
+    # LED-05 §16: the system clearing a collection date because the balance
+    # reached zero is its own action (with `actor_type='system'`), so "why did
+    # the date disappear" is answered by a row rather than by an inference.
+    PARTY_COLLECTION_DATE_CLEARED = "party.collection_date_cleared"
+    # LED-06 §16 / LED-07 §16 — minimal, per Part 21 §21.7. Individual message
+    # deliveries are NOT audited (NTF-02 §16); they are the message log.
+    REMINDER_SENT = "reminder.sent"
+    REMINDER_FAILED = "reminder.failed"
+    REMINDER_DONE = "reminder.done"
+    REMINDER_DISMISSED = "reminder.dismissed"
+    # LED-07 §16 — the two ledger messaging toggles. The string is Part 21's
+    # generic settings action, so a future `PUT /tenants/current/settings`
+    # writes the same word for the same event.
+    TENANT_SETTINGS_UPDATED = "tenant.settings.updated"
     JOB_REQUEUED = "job.requeued"
     REFERENCE_DATA_SEEDED = "platform.reference_data_seeded"
 

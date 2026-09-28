@@ -94,8 +94,16 @@ const LABELS: UbDataGridLabels = {
   pageSize: 'Rows per page',
   goToPage: 'Go to page {page}',
   ofTotal: 'of {total}',
+  // Resolved, not a template: the feature owns the ICU plural (see
+  // `UbDataGridLabels.selectedCount`). A `'{count} selected'` fixture here is
+  // what let "NaN selected" ship — it substituted cleanly in the test and
+  // never went near `react-intl`.
+  selectedCount: '0 selected',
   selectAll: 'Select every customer on this page',
   selectRow: 'Select {name}',
+  showing: 'Showing',
+  columns: 'Columns',
+  showAllColumns: 'Show all columns',
   sortBy: 'Sort by {column}',
   sortedAscending: 'Sorted, smallest first',
   sortedDescending: 'Sorted, largest first',
@@ -105,10 +113,27 @@ const LABELS: UbDataGridLabels = {
 const EMPTY: UbDataGridEmptyStates = {
   firstUse: { title: 'No customers yet', description: 'Add your first one.' },
   filtered: { title: 'Nothing matches', description: 'Clear the search.' },
-  error: { title: 'We could not load this', description: 'Try again.', requestId: 'req_7f3a91' },
+  error: {
+    title: 'We could not load this',
+    description: 'Try again.',
+    requestId: 'req_7f3a91',
+    requestIdLabel: 'Reference',
+  },
 };
 
 const PAGE = { page: 1, pageSize: 25, total: 2, totalPages: 1 };
+
+/**
+ * `noUncheckedIndexedAccess` makes every index access `T | undefined`, and a
+ * `!` to silence that is a lie the compiler is entitled to believe. This is the
+ * honest version: when the element really is missing, the test says which index
+ * it wanted rather than failing later on `undefined` with no clue why.
+ */
+const at = <T,>(items: readonly T[], index: number): T => {
+  const item = items[index];
+  if (item === undefined) throw new Error(`expected an element at index ${index}`);
+  return item;
+};
 
 const renderGrid = (
   tier: UbGridTier,
@@ -205,6 +230,41 @@ describe('the three renderings', () => {
   });
 });
 
+describe('opening a record from the table', () => {
+  it('puts ONE named control in the row, in the first cell', async () => {
+    /**
+     * The defect: `onRowOpen` reached the card rendering and stopped there, so
+     * a party was openable on a phone and not on a laptop, and the parties list
+     * shipped with desktop rows that did nothing at all. Nothing failed,
+     * because every test that exercised row opening rendered the `cards` tier —
+     * the one tier where it worked.
+     *
+     * One control and not eight: wrapping every cell would put an identical
+     * "Open Ramesh Traders" in a screen reader's control list once per column,
+     * for a single row.
+     */
+    const onRowOpen = jest.fn();
+    await renderGridWithTable('full', { onRowOpen });
+
+    const opens = screen.getAllByRole('button', { name: 'Open Ramesh Traders' });
+    expect(opens).toHaveLength(1);
+
+    await userEvent.click(opens[0] as HTMLElement);
+    expect(onRowOpen).toHaveBeenCalledWith(ROWS[0]);
+  });
+
+  it('leaves the cells as plain text when there is nowhere to go', async () => {
+    /**
+     * A grid whose rows are not openable must not grow an affordance that does
+     * nothing — the parties list was in exactly that state for a sprint, and an
+     * underline on hover would have been a promise it could not keep.
+     */
+    await renderGridWithTable('full');
+
+    expect(screen.queryByRole('button', { name: /^Open / })).not.toBeInTheDocument();
+  });
+});
+
 describe('table semantics', () => {
   it('is a real <table> with scoped header cells and a caption', async () => {
     await renderGridWithTable('full');
@@ -292,9 +352,29 @@ describe('the states a list has', () => {
     expect(screen.getByText(title)).toBeInTheDocument();
   });
 
+  it('dims the rows and shows an indeterminate bar while busy, and leaves the toolbar alone', () => {
+    /**
+     * Prevents a background load that looks like nothing happened (PTY-02 §9
+     * Loading) — and a dim that swallowed the search box the merchant is
+     * typing into, which is why only the ROWS are marked busy.
+     */
+    renderGrid('cards', { state: 'rows', busy: true, search: <input aria-label="Search" /> });
+    const bar = screen.getByTestId('ub-grid-busy');
+    expect(bar).toHaveAttribute('role', 'progressbar');
+    expect(bar).not.toHaveAttribute('aria-valuenow');
+    expect(screen.getByRole('list').closest('[aria-busy="true"]')).not.toBeNull();
+    expect(screen.getByLabelText('Search').closest('[aria-busy="true"]')).toBeNull();
+  });
+
+  it('ignores busy on every state but rows — the skeleton already says it', () => {
+    renderGrid('cards', { state: 'loading', busy: true });
+    expect(screen.queryByTestId('ub-grid-busy')).not.toBeInTheDocument();
+  });
+
   it('carries the request id on the error state and nowhere else', () => {
     const { rerender } = renderGrid('cards', { state: 'error' });
-    expect(screen.getByTestId('request-id')).toHaveTextContent('req_7f3a91');
+    // Labelled, never a bare id (QA B5).
+    expect(screen.getByTestId('request-id')).toHaveTextContent('Reference req_7f3a91');
 
     rerender(
       <UbDataGrid<Row>
@@ -387,5 +467,418 @@ describe('UbDataGrid — pagination', () => {
     renderGrid('full');
     expect(await screen.findByRole('button', { name: 'Next page' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Go to page 1' })).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * The table apparatus around the rows: selection feedback and sort state.
+ *
+ * Both were invisible before, and in the same way — the grid KNEW which rows
+ * were selected and which column was sorted, and showed neither.
+ */
+describe('UbDataGrid — selection and sort state', () => {
+  it('tints a selected row, so a bulk action is not aimed blind', async () => {
+    // Without this a merchant reading a wide table, with the checkbox column
+    // scrolled out of view, has no way to see which rows Delete is about to
+    // apply to. BrandHub tints the row `bg-primary/5`.
+    renderGrid('full', { selectable: true, selectedIds: [at(ROWS, 0).id] });
+
+    const rows = await screen.findAllByTestId('ub-grid-row');
+    expect(rows[0]).toHaveClass('bg-accent-quiet');
+    expect(rows[1]).not.toHaveClass('bg-accent-quiet');
+  });
+
+  it('replaces the toolbar with a count once rows are selected', async () => {
+    // The count existed nowhere on screen — the only way to know how many rows
+    // were ticked was to count the ticks.
+    renderGrid('full', {
+      selectable: true,
+      selectedIds: [at(ROWS, 0).id, at(ROWS, 1).id],
+      search: <input aria-label="Search" />,
+      bulkActions: <button type="button">Archive</button>,
+      labels: { ...LABELS, selectedCount: '2 selected' },
+    });
+
+    const toolbar = await screen.findByTestId('ub-grid-toolbar');
+    expect(toolbar).toHaveAttribute('data-selecting', 'true');
+    expect(within(toolbar).getByText('2 selected')).toBeInTheDocument();
+    expect(within(toolbar).getByRole('button', { name: 'Archive' })).toBeInTheDocument();
+    // The search that produced the selection is not the thing to leave sitting
+    // beside a destructive bulk action.
+    expect(within(toolbar).queryByLabelText('Search')).not.toBeInTheDocument();
+  });
+
+  it('marks the sorted column on the cell, where a screen reader reads it', async () => {
+    renderGrid('full', {
+      sort: { columnId: 'name', direction: 'asc' },
+      onSortChange: jest.fn(),
+    });
+
+    const header = await screen.findByRole('columnheader', { name: /Customer/ });
+    expect(header).toHaveAttribute('aria-sort', 'ascending');
+  });
+});
+
+/**
+ * BrandHub draws the loading, empty and error states INSIDE the table — as
+ * skeleton `<td>`s and as one `<td colSpan>` — rather than replacing the table
+ * with a panel. These are what that buys, expressed as things a reader can
+ * observe rather than as class names.
+ */
+describe('the states are drawn inside the table', () => {
+  it('keeps the column headers up while the rows are still loading', () => {
+    renderGrid('full', { state: 'loading' });
+
+    // The header is the reader's promise of what is arriving. It used to
+    // disappear for the whole fetch and come back with the rows, taking the
+    // column widths with it.
+    const headers = screen.getAllByRole('columnheader').map((cell) => cell.textContent);
+    expect(headers).toEqual(['Customer', 'Balance', 'Last entry', 'Contact', 'Status']);
+    expect(screen.getByRole('status')).toHaveAttribute('aria-label', 'Loading customers');
+  });
+
+  it('draws one skeleton cell per column, so the shape matches what lands', () => {
+    renderGrid('full', { state: 'loading', skeletonRows: 3 });
+
+    const rows = screen.getAllByTestId('ub-grid-skeleton-row');
+    expect(rows).toHaveLength(3);
+    // Five columns, five cells — not a row of evenly spaced bars that owes the
+    // table nothing.
+    expect(within(at(rows, 0)).getAllByRole('cell')).toHaveLength(5);
+  });
+
+  it("follows BrandHub's long-first, short-last bar widths", () => {
+    renderGrid('full', { state: 'loading', skeletonRows: 1 });
+
+    const cells = within(at(screen.getAllByTestId('ub-grid-skeleton-row'), 0)).getAllByRole('cell');
+    const widths = cells.map((cell) => cell.firstElementChild?.className.match(/w-\d\/\d/)?.[0]);
+    // A name, some facts, a figure — which is what is actually coming.
+    expect(widths).toEqual(['w-3/5', 'w-4/5', 'w-4/5', 'w-4/5', 'w-2/5']);
+  });
+
+  it.each([
+    ['empty', 'No customers yet'],
+    ['filtered-empty', 'Nothing matches'],
+    ['error', 'We could not load this'],
+  ] as const)('puts the %s panel in ONE row that spans every column', (state, title) => {
+    renderGrid('full', { state });
+
+    const cell = within(screen.getByTestId('ub-grid-state-row')).getByRole('cell');
+    expect(cell).toHaveAttribute('colspan', '5');
+    expect(within(cell).getByText(title)).toBeInTheDocument();
+    // And the header is still there, so "nothing matches" is read against the
+    // columns it found nothing in.
+    expect(screen.getAllByRole('columnheader')).toHaveLength(5);
+  });
+
+  it('counts the checkbox column in the span, or the panel stops short', () => {
+    renderGrid('full', { state: 'empty', selectable: true });
+
+    expect(within(screen.getByTestId('ub-grid-state-row')).getByRole('cell')).toHaveAttribute(
+      'colspan',
+      '6'
+    );
+  });
+
+  it('leaves the card tier alone — there is no table there to keep a place in', () => {
+    renderGrid('cards', { state: 'empty' });
+
+    expect(screen.queryByTestId('ub-grid-state-table')).not.toBeInTheDocument();
+    expect(screen.getByText('No customers yet')).toBeInTheDocument();
+  });
+});
+
+describe('the column menu', () => {
+  const withToolbar = {
+    search: <input aria-label="Search" />,
+  };
+
+  const openMenu = async (user: ReturnType<typeof userEvent.setup>) => {
+    await user.click(await screen.findByTestId('ub-grid-column-menu-trigger'));
+    return screen.findByRole('listbox', { name: 'Columns' });
+  };
+
+  beforeEach(() => {
+    window.sessionStorage.clear();
+  });
+
+  it('appears on a grid that already has a toolbar, and not on one that does not', async () => {
+    const { unmount } = await renderGridWithTable('full', withToolbar);
+    expect(await screen.findByTestId('ub-grid-column-menu-trigger')).toBeInTheDocument();
+    unmount();
+
+    // No toolbar, no menu: a grid does not grow a row of chrome for this alone.
+    await renderGridWithTable('full');
+    expect(screen.queryByTestId('ub-grid-column-menu-trigger')).not.toBeInTheDocument();
+  });
+
+  it('is never offered on a phone, where columns are not the model', () => {
+    renderGrid('cards', withToolbar);
+    expect(screen.queryByTestId('ub-grid-column-menu-trigger')).not.toBeInTheDocument();
+  });
+
+  it('switches a column off and the table loses that header', async () => {
+    const user = userEvent.setup();
+    await renderGridWithTable('full', withToolbar);
+
+    const listbox = await openMenu(user);
+    await user.click(within(listbox).getByRole('option', { name: /Contact/ }));
+
+    expect(screen.getAllByRole('columnheader').map((cell) => cell.textContent)).not.toContain(
+      'Contact'
+    );
+    expect(screen.getAllByRole('columnheader')).toHaveLength(4);
+  });
+
+  it('locks the priority-1 columns on, visibly, rather than hiding the control', async () => {
+    const user = userEvent.setup();
+    await renderGridWithTable('full', withToolbar);
+
+    const listbox = await openMenu(user);
+    // `name` and `balance` are priority 1 — the columns this screen cannot be
+    // read without. They are listed, ticked, and disabled.
+    expect(within(listbox).getByRole('option', { name: /Customer/ })).toBeDisabled();
+    expect(within(listbox).getByRole('option', { name: /Balance/ })).toBeDisabled();
+    expect(within(listbox).getByRole('option', { name: /Contact/ })).toBeEnabled();
+  });
+
+  it('offers only what the WIDTH already allowed, so nothing can bring the scrollbar back', async () => {
+    const user = userEvent.setup();
+    await renderGridWithTable('compact', withToolbar);
+
+    const listbox = await openMenu(user);
+    // `compact` keeps priority <= 2. Contact (3) and Status (4) are not the
+    // reader's to switch on here; the table has no room for them.
+    expect(
+      within(listbox)
+        .getAllByRole('option')
+        .map((o) => o.textContent)
+    ).toEqual(['Customer', 'Balance', 'Last entry']);
+  });
+
+  it('puts every column back', async () => {
+    const user = userEvent.setup();
+    await renderGridWithTable('full', withToolbar);
+
+    const listbox = await openMenu(user);
+    await user.click(within(listbox).getByRole('option', { name: /Contact/ }));
+    expect(screen.getAllByRole('columnheader')).toHaveLength(4);
+
+    await user.click(screen.getByRole('button', { name: 'Show all columns' }));
+    expect(screen.getAllByRole('columnheader')).toHaveLength(5);
+  });
+
+  it('remembers the choice for the session, and only when the screen opted in', async () => {
+    const user = userEvent.setup();
+    const { unmount } = await renderGridWithTable('full', {
+      ...withToolbar,
+      storageId: 'customers',
+    });
+
+    await user.click(within(await openMenu(user)).getByRole('option', { name: /Contact/ }));
+    expect(window.sessionStorage.getItem('ub-grid-columns:customers')).toBe('{"contact":false}');
+    unmount();
+
+    // Back on the same screen: the column is still off.
+    await renderGridWithTable('full', { ...withToolbar, storageId: 'customers' });
+    expect(screen.getAllByRole('columnheader').map((cell) => cell.textContent)).not.toContain(
+      'Contact'
+    );
+  });
+
+  it('survives a stored value that is corrupt or hostile', async () => {
+    window.sessionStorage.setItem(
+      'ub-grid-columns:customers',
+      '{"contact":"yes","status":false,"ghost":true}'
+    );
+    await renderGridWithTable('full', { ...withToolbar, storageId: 'customers' });
+
+    // The non-boolean is ignored rather than trusted; the real one still
+    // applies; a column that no longer exists is simply not found.
+    const headers = screen.getAllByRole('columnheader').map((cell) => cell.textContent);
+    expect(headers).toContain('Contact');
+    expect(headers).not.toContain('Status');
+  });
+
+  it('does not remember anything when the screen did not opt in', async () => {
+    const user = userEvent.setup();
+    await renderGridWithTable('full', withToolbar);
+
+    await user.click(within(await openMenu(user)).getByRole('option', { name: /Contact/ }));
+    expect(window.sessionStorage.length).toBe(0);
+  });
+});
+
+describe('the paging bar', () => {
+  /**
+   * The page-size control is the one thing in this bar drawn at BrandHub's
+   * 32 px rather than this product's 44 px, and the exemption rests entirely on
+   * it never appearing on a touch screen (R-A-3 is scoped to mobile). If it
+   * ever renders below `full`, the box has to go back to `h-11` — so the tier
+   * is asserted rather than trusted.
+   */
+  it('offers the page size at `full` and at no smaller tier', async () => {
+    const props = {
+      onPageSizeChange: jest.fn(),
+      pageSizeOptions: [25, 50, 100],
+      page: { page: 1, pageSize: 25, total: 90, totalPages: 4 },
+    };
+
+    const { unmount } = await renderGridWithTable('full', props);
+    expect(screen.getByLabelText('Rows per page')).toBeInTheDocument();
+    unmount();
+
+    const compact = renderGrid('compact', props);
+    expect(screen.queryByLabelText('Rows per page')).not.toBeInTheDocument();
+    compact.unmount();
+
+    renderGrid('cards', props);
+    expect(screen.queryByLabelText('Rows per page')).not.toBeInTheDocument();
+  });
+
+  it('paints the selection label exactly as the feature resolved it', async () => {
+    // The grid must NOT substitute into this one. `selectedCount` is an ICU
+    // plural, the feature has already run it through `t()` with the real
+    // number, and a second pass here is how the bar came to read "NaN
+    // selected" — `#` evaluated against the string "{count}".
+    await renderGridWithTable('full', {
+      selectable: true,
+      selectedIds: [at(ROWS, 0).id],
+      search: <input aria-label="Search" />,
+      labels: { ...LABELS, selectedCount: '1 selected' },
+    });
+
+    const toolbar = await screen.findByTestId('ub-grid-toolbar');
+    expect(within(toolbar).getByText('1 selected')).toBeInTheDocument();
+    expect(within(toolbar).queryByText(/NaN|\{count\}/)).not.toBeInTheDocument();
+  });
+});
+
+describe("BrandHub's height logic", () => {
+  it('gives every row the same 52px, set as a height rather than a class', async () => {
+    await renderGridWithTable('full');
+
+    // BrandHub sets `style={{ height: rowHeight }}` on the `<tr>` so a screen
+    // can override it; ours was `h-14` baked into the class, which no caller
+    // could reach. 52 is BrandHub's default and this grid's.
+    for (const row of screen.getAllByTestId('ub-grid-row')) {
+      expect(row).toHaveStyle({ height: '52px' });
+    }
+  });
+
+  it('reserves the same height in the skeleton, or the rows would jump', () => {
+    renderGrid('full', { state: 'loading', skeletonRows: 2, rowHeight: 40 });
+
+    for (const row of screen.getAllByTestId('ub-grid-skeleton-row')) {
+      expect(row).toHaveStyle({ height: '40px' });
+    }
+  });
+
+  it('lets the PAGE scroll by default, and caps the body only when asked', async () => {
+    const { unmount } = await renderGridWithTable('full');
+    // 'fill': no cap, no internal scroll. A header that sticks to a box which
+    // never scrolls is a header that never sticks, so the box must not exist.
+    expect(screen.getByTestId('ub-grid-table-scroller')).toHaveAttribute('data-ub-scroll-y', 'off');
+    unmount();
+
+    await renderGridWithTable('full', { maxHeight: '320px' });
+    const scroller = screen.getByTestId('ub-grid-table-scroller');
+    expect(scroller).toHaveAttribute('data-ub-scroll-y', 'on');
+    expect(scroller).toHaveStyle({ maxHeight: '320px' });
+  });
+});
+
+describe('the card avatar', () => {
+  /**
+   * Most lists in this product are lists of PEOPLE, and a disc of initials is
+   * how a merchant finds one at a glance — so it is on by default and stays on.
+   *
+   * PTY-05's tag manager is the first list of THINGS. A card reading "CA"
+   * beside "Camp Area" invites the reader to look for somebody, and the 40 px
+   * it costs was the difference between that row's three actions sitting on one
+   * line and stacking on three — which is how a screenshot at 360 px found it.
+   */
+  it('is drawn by default, because most of these lists are people', () => {
+    renderGrid('cards');
+
+    expect(screen.getAllByText('RT').length).toBeGreaterThan(0);
+  });
+
+  it('draws a per-row icon in place of initials where the row has no name (QA O3)', () => {
+    /* Prevents QA O3: an invited team member's disc read a lowercase letter
+       cut from their email address. The grid lets a row swap the initials
+       for an icon, and leaves every other row's initials alone. */
+    renderGrid('cards', {
+      cardAvatarIcon: (row) =>
+        row.id === ROWS[0]?.id ? <svg data-testid="row-icon" aria-hidden /> : null,
+    });
+
+    const [first, ...rest] = screen.getAllByTestId('ub-grid-card');
+    expect(screen.getAllByTestId('row-icon')).toHaveLength(1);
+    expect(first?.querySelector('[data-testid="row-icon"]')).not.toBeNull();
+    expect(first?.textContent).not.toContain('RT');
+    for (const card of rest) expect(card.querySelector('[data-testid="row-icon"]')).toBeNull();
+  });
+
+  it('is absent when the grid says the rows are not people', () => {
+    renderGrid('cards', { cardAvatar: false });
+
+    expect(screen.queryByText('RT')).not.toBeInTheDocument();
+    /* And the row is still a row: the name and the figure survive. */
+    expect(screen.getByText('Ramesh Traders')).toBeInTheDocument();
+  });
+});
+
+/**
+ * QA defect N1 (Sprint 3): on a 360 px phone the party list's loading skeleton
+ * overran its 328 px card. The cards-tier skeleton drew one FIXED 80 px bar
+ * (`h-4 w-20 shrink-0`) per table column, so the third bar ended 17 px past the
+ * card and the name/caption bars in the flex middle were squeezed to 0 px.
+ * jsdom has no layout, so — like `UbSkeleton.test.tsx` for D3 — this asserts
+ * the rule that makes the overflow impossible: a bar is sized relative to its
+ * container (`w-full`, a fraction) and any fixed width is capped `max-w-full`.
+ */
+describe('the loading skeleton cannot be wider than its container (N1)', () => {
+  const FIXED_WIDTH = /^w-(\d+(\.\d+)?|px|\[[\d.]+(px|rem|em)\])$/;
+  const RELATIVE_WIDTH = /^w-(full|\d+\/\d+|\[\d+%\])$/;
+  const barsIn = (root: HTMLElement): HTMLElement[] =>
+    Array.from(root.querySelectorAll<HTMLElement>('.animate-pulse'));
+
+  it('cards: draws a card — disc, two fluid text bars, an amount — with no uncapped fixed bar', () => {
+    renderGrid('cards', { state: 'loading', skeletonRows: 1 });
+    const bars = barsIn(screen.getByRole('status'));
+
+    // One card-shaped row, not one bar per table column.
+    expect(bars).toHaveLength(4);
+    for (const bar of bars) {
+      const classes = Array.from(bar.classList);
+      const fixed = classes.filter((c) => FIXED_WIDTH.test(c));
+      const relative = classes.filter((c) => RELATIVE_WIDTH.test(c));
+      expect({
+        bar: bar.className,
+        ok: fixed.length === 0 || classes.includes('max-w-full'),
+      }).toEqual({
+        bar: bar.className,
+        ok: true,
+      });
+      expect({ bar: bar.className, sized: fixed.length + relative.length > 0 }).toEqual({
+        bar: bar.className,
+        sized: true,
+      });
+      // `shrink-0` on a text bar is what let the old bars push out of the card.
+      if (fixed.length === 0) expect(classes).not.toContain('shrink-0');
+    }
+  });
+
+  it('table tiers: every skeleton bar is bounded by its cell (max-w-full)', () => {
+    renderGrid('full', { state: 'loading', skeletonRows: 2, selectable: true });
+    const bars = barsIn(screen.getByRole('status'));
+    expect(bars.length).toBeGreaterThan(0);
+    for (const bar of bars) {
+      expect({ bar: bar.className, bounded: bar.classList.contains('max-w-full') }).toEqual({
+        bar: bar.className,
+        bounded: true,
+      });
+    }
   });
 });

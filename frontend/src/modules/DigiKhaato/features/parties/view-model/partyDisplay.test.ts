@@ -10,6 +10,7 @@ const party = (overrides: Partial<Party>): Party => ({
   mobile: '+919876543210',
   isCustomer: true,
   isSupplier: false,
+  tags: [],
   balance: '0.00',
   status: 'active',
   lastActivityAt: null,
@@ -81,7 +82,12 @@ describe('partyTotals — two sums, never one net figure', () => {
 
 describe('contactLine', () => {
   it('joins what the party has and omits what it does not', () => {
-    expect(contactLine(party({}))).toBe('C-001 · +919876543210');
+    // QA O6 follow-up: the mobile is shown as the reminder sheet shows it,
+    // not as stored ("+919876543210", "09812345678").
+    expect(contactLine(party({}))).toBe('C-001 · +91 98765 43210');
+    expect(contactLine(party({ displayCode: null, mobile: '09812345678' }))).toBe(
+      '+91 98123 45678'
+    );
     expect(contactLine(party({ mobile: null }))).toBe('C-001');
     expect(contactLine(party({ displayCode: null, mobile: null }))).toBe('');
   });

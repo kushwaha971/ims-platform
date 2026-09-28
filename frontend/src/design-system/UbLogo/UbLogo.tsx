@@ -47,7 +47,8 @@ import { cn } from 'src/utils/cn';
  * bare mark at the top of an auth screen — and it becomes `role="img"` with a
  * `<title>`. There is no third state: a graphic is either named or hidden.
  */
-export type UbLogoSize = 'sm' | 'md' | 'lg' | 'xl';
+/** `fill` takes its parent's width — the auth hero's fascia sign. */
+export type UbLogoSize = 'sm' | 'md' | 'lg' | 'xl' | 'fill';
 export type UbLogoVariant = 'mark' | 'full';
 /**
  * The wordmark's colour. `inherit` is for the dark navigation rail, which is
@@ -81,6 +82,7 @@ const MARK_SIZE: Readonly<Record<UbLogoSize, string>> = {
   md: 'h-8 w-8',
   lg: 'h-10 w-10',
   xl: 'h-12 w-12',
+  fill: 'block h-auto w-full',
 };
 
 /**
@@ -94,6 +96,7 @@ const WORD_SIZE: Readonly<Record<UbLogoSize, string>> = {
   md: 'ds-wordmark-md',
   lg: 'ds-wordmark-lg',
   xl: 'ds-wordmark-xl',
+  fill: 'ds-wordmark-xl',
 };
 
 const GAP: Readonly<Record<UbLogoSize, string>> = {
@@ -101,6 +104,7 @@ const GAP: Readonly<Record<UbLogoSize, string>> = {
   md: 'gap-2.5',
   lg: 'gap-3',
   xl: 'gap-3',
+  fill: 'gap-3',
 };
 
 function UbLogoBase({

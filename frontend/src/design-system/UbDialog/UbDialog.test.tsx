@@ -1,3 +1,5 @@
+import { useRef, useState } from 'react';
+
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -95,6 +97,37 @@ describe('UbDialog', () => {
     );
     expect(screen.queryByRole('button', { name: 'Dismiss' })).not.toBeInTheDocument();
   });
+
+  it('stacks the footer in DOM order when asked, so Tab follows the screen (D-L6)', () => {
+    /* Prevents D-L6: the only footer on offer reversed its actions below `sm`,
+       so a three-action sheet was tabbed bottom-up. The default keeps the
+       convention; `as-written` is the opt-out, and it must actually drop the
+       reversal rather than add a class that loses to it. */
+    const footer = (
+      <>
+        <UbButton variant="secondary">Cancel</UbButton>
+        <UbButton>Confirm</UbButton>
+      </>
+    );
+    const { rerender } = render(
+      <UbDialog open onOpenChange={jest.fn()} title="Order" closeLabel="Dismiss" footer={footer} />
+    );
+    const row = () => screen.getByRole('button', { name: 'Cancel' }).parentElement as HTMLElement;
+    expect(row()).toHaveClass('flex-col-reverse');
+
+    rerender(
+      <UbDialog
+        open
+        onOpenChange={jest.fn()}
+        title="Order"
+        closeLabel="Dismiss"
+        footer={footer}
+        footerOrder="as-written"
+      />
+    );
+    expect(row()).toHaveClass('flex-col');
+    expect(row()).not.toHaveClass('flex-col-reverse');
+  });
 });
 
 describe('UbConfirmDialog — PLT-04 FR-7', () => {
@@ -152,5 +185,90 @@ describe('UbConfirmDialog — PLT-04 FR-7', () => {
     render(<UbConfirmDialog {...props} busy busyLabel="Leaving…" />);
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Leaving…' })).toBeDisabled();
+  });
+});
+
+describe('UbDialog — returning focus when the opener is not there to receive it (QA D1)', () => {
+  /**
+   * Prevents QA defect D1: closing a dialog dropped focus on <body> (WCAG
+   * 2.4.3) in the two situations the khata's ⋯ menu produces. Neither is
+   * visible to a test that opens a dialog from a plain button that stays put.
+   */
+  function LazyMount({ autoFocusInside }: Readonly<{ autoFocusInside?: boolean }>) {
+    const [open, setOpen] = useState(false);
+    return (
+      <>
+        <UbButton onClick={() => setOpen(true)}>Open</UbButton>
+        {/* `{open && <Dialog open />}` — how every lazily loaded dialog is
+            rendered: the primitive MOUNTS already open. */}
+        {open && (
+          <UbDialog open onOpenChange={setOpen} title="Lazy" closeLabel="Dismiss">
+            <UbButton autoFocus={autoFocusInside}>Cancel</UbButton>
+          </UbDialog>
+        )}
+      </>
+    );
+  }
+
+  it.each([
+    ['without', false],
+    ['with', true],
+  ])(
+    'returns focus to the opener of a dialog that mounts open, %s an autoFocus inside',
+    async (_l, autoFocusInside) => {
+      const user = userEvent.setup();
+      render(<LazyMount autoFocusInside={autoFocusInside} />);
+      const opener = screen.getByRole('button', { name: 'Open' });
+      opener.focus();
+      await user.keyboard('{Enter}');
+      expect(screen.getByRole('dialog', { name: 'Lazy' })).toBeInTheDocument();
+
+      await user.keyboard('{Escape}');
+
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(opener).toHaveFocus();
+    }
+  );
+
+  function OpenerRemoved() {
+    const [menuOpen, setMenuOpen] = useState(true);
+    const [open, setOpen] = useState(false);
+    const fallbackRef = useRef<HTMLButtonElement | null>(null);
+    return (
+      <>
+        <UbButton ref={fallbackRef}>More</UbButton>
+        {/* A menu item that disappears as it opens the dialog. */}
+        {menuOpen && (
+          <UbButton
+            onClick={() => {
+              setOpen(true);
+              setMenuOpen(false);
+            }}
+          >
+            Send reminder
+          </UbButton>
+        )}
+        <UbDialog
+          open={open}
+          onOpenChange={setOpen}
+          title="Remind"
+          closeLabel="Dismiss"
+          returnFocusRef={fallbackRef}
+        />
+      </>
+    );
+  }
+
+  it('returns focus to returnFocusRef when the remembered opener has left the document', async () => {
+    const user = userEvent.setup();
+    render(<OpenerRemoved />);
+    screen.getByRole('button', { name: 'Send reminder' }).focus();
+    await user.keyboard('{Enter}');
+    expect(screen.queryByRole('button', { name: 'Send reminder' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Dismiss' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'More' })).toHaveFocus();
   });
 });

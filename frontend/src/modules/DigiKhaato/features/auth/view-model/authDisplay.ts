@@ -118,14 +118,70 @@ export const resolveActiveTenant = (
  * §19.6.4 rule 2 — `next` is validated against a same-origin, leading-slash
  * allow-list BEFORE use. An open redirect on a login screen is a real
  * vulnerability, and "it came from our own query string" is not a defence.
+ *
+ * F-2 (QA, 23 Sep 2026) — the first version refused `//`, `/\` and `://` by
+ * prefix and was bypassed live: `/login?next=/%09/evil.test/x` signed in and
+ * landed on evil.test. `searchParams.get` decodes `%09` to a TAB, the prefix
+ * test sees `/` + tab and passes it, and the browser's URL parser then DELETES
+ * every tab, LF and CR before parsing — so the string navigated to was
+ * `//evil.test/x`, a protocol-relative URL to another host. A deny-list of
+ * spellings cannot win against a parser that rewrites the input first, so this
+ * now asks the parser itself:
+ *
+ *  1. refuse any C0 control character, DEL or backslash ANYWHERE — no real
+ *     in-app address carries one, and each is something a browser strips or
+ *     reinterprets as `/`;
+ *  2. require one leading `/` not followed by another `/` or `\`;
+ *  3. resolve against a sentinel origin with `new URL` and require the result
+ *     to still be on that origin, returning only path + query + hash, so what
+ *     is navigated to is what the parser produced rather than what was typed;
+ *  4. re-apply rules 1 and 2 to the RESOLVED path, percent-decoded once. Dot
+ *     segments are where this bites: `/.//evil.com` and `/a/../..//evil.com`
+ *     pass rules 1-3 and resolve to the pathname `//evil.com`, which handed to
+ *     the router is protocol-relative again. Decoding once also refuses
+ *     `/%2F/evil.com` and `%5C`: nothing here decodes them today, and this is
+ *     so a single stray decode downstream cannot turn them into `//`.
+ *
+ * A space is allowed: the parser percent-encodes it inside a path, so
+ * `/ /evil.com` becomes the same-origin `/%20/evil.com`, a 404 on our own host.
+ * The sentinel origin is fixed rather than `window.location.origin` because the
+ * question is only "did resolution leave the origin it started from", which
+ * does not depend on which origin that is — and this stays callable on the
+ * server, where there is no window.
  */
+const UNSAFE_REDIRECT_CHARS = /[\u0000-\u001F\u007F\\]/;
+const SINGLE_LEADING_SLASH = /^\/(?![/\\])/;
+const REDIRECT_SENTINEL_ORIGIN = 'http://next-path.invalid';
+
+const decodeOnce = (value: string): string | null => {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return null;
+  }
+};
+
 export const safeNextPath = (next: string | null | undefined, fallback: string): string => {
   if (!next) return fallback;
-  // A protocol-relative `//evil.com` and a scheme `https://evil.com` both have
-  // to fail, and both start with something other than a single `/` + word char.
-  if (!next.startsWith('/') || next.startsWith('//') || next.startsWith('/\\')) return fallback;
-  if (next.includes('://')) return fallback;
-  return next;
+  if (UNSAFE_REDIRECT_CHARS.test(next) || !SINGLE_LEADING_SLASH.test(next)) return fallback;
+
+  let resolved: URL;
+  try {
+    resolved = new URL(next, REDIRECT_SENTINEL_ORIGIN);
+  } catch {
+    return fallback;
+  }
+  if (resolved.origin !== REDIRECT_SENTINEL_ORIGIN) return fallback;
+
+  const decodedPath = decodeOnce(resolved.pathname);
+  if (
+    decodedPath === null ||
+    UNSAFE_REDIRECT_CHARS.test(decodedPath) ||
+    !SINGLE_LEADING_SLASH.test(decodedPath)
+  ) {
+    return fallback;
+  }
+  return `${resolved.pathname}${resolved.search}${resolved.hash}`;
 };
 
 /** Seconds remaining until an absolute deadline; never negative. */

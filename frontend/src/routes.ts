@@ -38,20 +38,87 @@ export const ROUTES = {
   // ── (app) ─────────────────────────────────────────────────────────────────
   DASHBOARD: '/dashboard',
   PARTIES: '/parties',
+  /** PTY-05 FR-7 — the tag manager. A sibling of the list rather than a
+   *  settings page: tags are a way of working through the book, and a merchant
+   *  renaming one is in the middle of using the list, not configuring the
+   *  product. */
+  PARTY_TAGS: '/parties/tags',
   LEDGER_REMINDERS: '/ledger/reminders',
+  /** LED-09 — receivable and payable aging. */
+  LEDGER_AGING: '/ledger/aging',
   ITEMS: '/items',
+  /** INV-04 — categories and units. A sibling of the list, as `/parties/tags`
+   *  is of parties: the masters are part of keeping the catalogue, not a
+   *  settings chore (and `/settings` is not built). */
+  ITEM_MASTERS: '/items/masters',
+  /** INV-08 / INV-07. */
+  STOCK_SUMMARY: '/stock/summary',
+  STOCK_LOW: '/stock/low',
   SALES_INVOICES: '/sales/invoices',
   PURCHASE_BILLS: '/purchases/bills',
   PAYMENTS: '/payments',
   EXPENSES: '/expenses',
+  /** EXP-03 — money in and out, day by day, beside Expenses in the menu. */
+  CASHBOOK: '/cashbook',
   REPORTS: '/reports',
   SETTINGS: '/settings',
   SETTINGS_PLAN: '/settings/plan',
   SETTINGS_TEAM: '/settings/team',
+  // Track T1 — PLT-07, WLB-01, PLT-08, PLT-09. Under /settings rather than
+  // PLT-08's `/activity` and PLT-09's `/profile/devices`: one guarded prefix,
+  // one place a merchant goes to look after the business itself.
+  SETTINGS_PROFILE: '/settings/profile',
+  SETTINGS_BRANDING: '/settings/branding',
+  SETTINGS_ACTIVITY: '/settings/activity',
+  SETTINGS_DEVICES: '/settings/devices',
+  /** PLT-10 — "Your data": export, deletion, support consent. Owner only. */
+  SETTINGS_DATA: '/settings/data',
   SWITCH_TENANT: '/switch',
+  /** IMP-01 — the import wizard; `?kind=` skips the kind picker (FR-14). */
+  IMPORTS: '/imports',
+
+  // ── (admin) — PLT-14's console. Needs a session, not a tenant: an operator
+  //    usually belongs to no business at all.
+  ADMIN: '/admin',
+  ADMIN_TENANTS: '/admin/tenants',
+  ADMIN_PARTNERS: '/admin/partners',
+  ADMIN_HEALTH: '/admin/health',
 } as const;
 
 export type RouteKey = keyof typeof ROUTES;
+
+/**
+ * PTY-03's khata page — `/parties/{id}`.
+ *
+ * A function rather than a template literal at the call site, for the same
+ * reason `ROUTES` exists at all: the path is written once. `encodeURIComponent`
+ * because the id reaches this from a row, a notification payload or a URL, and
+ * a path segment built by concatenation is a path segment somebody can put a
+ * slash in.
+ */
+export const partyPath = (id: string): string => `${ROUTES.PARTIES}/${encodeURIComponent(id)}`;
+
+/**
+ * PTY-05 — the party list, filtered to one tag.
+ *
+ * The manager's party count links here, which is what turns "Camp Area · 34"
+ * from a statistic into a way in. By NAME, because that is what the filter
+ * takes and what a person reading the URL can check — see `PartyTagFilter` for
+ * why the parameter is names rather than ids.
+ */
+export const partiesByTagPath = (name: string): string =>
+  `${ROUTES.PARTIES}?tag=${encodeURIComponent(name)}`;
+
+/**
+ * LED-04 — the statement, `/parties/{id}/statement`.
+ *
+ * Its own address rather than a tab on the khata page, because that is what the
+ * feature is FOR: a statement is a document a merchant sends somebody, and a
+ * document needs a link you can put in a message. The period and the
+ * corrections toggle ride in the query string for the same reason (FR-8), which
+ * is also what makes the browser's back button and a bookmark both work.
+ */
+export const partyStatementPath = (id: string): string => `${partyPath(id)}/statement`;
 export type Route = (typeof ROUTES)[RouteKey];
 
 /**
@@ -66,6 +133,21 @@ export const onboardingStepPath = (step: number): string => {
   const clamped = Math.min(ONBOARDING_STEP_MAX, Math.max(ONBOARDING_STEP_MIN, Math.trunc(step)));
   return `${ROUTES.ONBOARDING}/step/${clamped}`;
 };
+
+/**
+ * Defect M2 (residual) — the wizard opened by "Add a business".
+ *
+ * The intent rides in the URL, not the slice, so a reload of step 1 keeps it.
+ * Without it the wizard cannot tell "Add a business" from "carry on setting up
+ * the business I am in", and when the active business was the owner's own
+ * unfinished one it read that business back and step 1 PATCHed it — renaming
+ * a live shop. With it, the wizard never resumes the active business and asks
+ * `GET /tenants/resumable` instead, which applies the server's own rule.
+ */
+export const ONBOARDING_INTENT_PARAM = 'intent';
+export const ONBOARDING_INTENT_ADD = 'add';
+export const addBusinessPath = (): string =>
+  `${onboardingStepPath(1)}?${ONBOARDING_INTENT_PARAM}=${ONBOARDING_INTENT_ADD}`;
 
 /**
  * §19.6.4 rule 2 — the login address carrying where the user was going. The
@@ -104,8 +186,10 @@ export const SESSION_ONLY_ROUTE_PREFIXES: readonly string[] = [
   // is the ordinary case, and the app list would bounce them away from the very
   // link that would give them one.
   ROUTES.ACCEPT_INVITE,
+  // PLT-14 — the console guards itself on `isSuperAdmin`; the proxy only needs
+  // to know a session is required.
+  ROUTES.ADMIN,
 ];
-
 
 export const APP_ROUTE_PREFIXES: readonly string[] = [
   ROUTES.DASHBOARD,
@@ -117,10 +201,12 @@ export const APP_ROUTE_PREFIXES: readonly string[] = [
   '/purchases',
   ROUTES.PAYMENTS,
   ROUTES.EXPENSES,
+  ROUTES.CASHBOOK,
   ROUTES.REPORTS,
   ROUTES.SETTINGS,
   ROUTES.SWITCH_TENANT,
   '/notifications',
+  ROUTES.IMPORTS,
 ];
 
 /** Everything the proxy guards: a session is required for all of it. */
@@ -154,9 +240,7 @@ export const PUBLIC_ROUTE_PREFIXES: readonly string[] = [
 ];
 
 export const isPublicPath = (pathname: string): boolean =>
-  PUBLIC_ROUTE_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-  );
+  PUBLIC_ROUTE_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 
 /**
  * CR-2026-09-19-A — addresses that used to exist. `/otp` was the six-digit code
@@ -165,3 +249,19 @@ export const isPublicPath = (pathname: string): boolean =>
 export const RETIRED_ROUTES: Readonly<Record<string, string>> = {
   '/otp': ROUTES.LOGIN,
 };
+
+/** PLT-14 — one business in the console. */
+export const adminTenantPath = (id: string): string =>
+  `${ROUTES.ADMIN_TENANTS}/${encodeURIComponent(id)}`;
+
+/** INV-03's item page — `/items/{id}`, one encoded segment, like `partyPath`. */
+export const itemPath = (id: string): string => `${ROUTES.ITEMS}/${encodeURIComponent(id)}`;
+
+/**
+ * IMP-01 FR-14 — the wizard opened from a module page with its kind chosen,
+ * and one import's own page (the notification's deep link, and where the
+ * wizard lands after an upload so a reload keeps the job).
+ */
+export const importKindPath = (kind: string): string =>
+  `${ROUTES.IMPORTS}?kind=${encodeURIComponent(kind)}`;
+export const importJobPath = (id: string): string => `${ROUTES.IMPORTS}/${encodeURIComponent(id)}`;

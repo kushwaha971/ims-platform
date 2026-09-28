@@ -74,6 +74,7 @@ markers = [
   "concurrency: spawns threads and needs a real transactional database",
   "postgres: requires PostgreSQL-specific features (arrays, SKIP LOCKED, partial indexes)",
   "slow: excluded from the pre-commit run",
+  "timing: asserts a wall-clock ceiling; deselect with -m 'not timing' on a loaded or shared runner",
 ]
 
 [tool.coverage.run]

@@ -338,3 +338,46 @@ def test_expiry_is_only_ever_true_for_a_temporary_password(
     # An ordinary account has no expiry and can never trip this, however old.
     assert user.password_expires_at is None
     assert user.is_temporary_password_expired is False
+
+
+@pytest.mark.django_db(transaction=True)
+def test_a_lost_race_on_the_mobile_is_a_field_error_and_rolls_everything_back(
+    tenant: Any, user: Any, system_roles: dict
+) -> None:
+    """NEW-2: two businesses can pass the pre-check for one number in the same instant.
+
+    The tenant lock serialises one business, not the platform, so the loser's
+    INSERT trips `uq_user_mobile_notnull`. Before the fix that IntegrityError
+    escaped as a 500. It must arrive as the same field error the pre-check
+    gives, with no `platform_user`, membership or audit row left behind.
+    """
+    from unittest import mock
+
+    from apps.common.exceptions import ValidationFailed
+    from apps.platform_app.models import Membership, User
+
+    taken = user.mobile
+    assert taken
+    audits_before = AuditLog.objects.count()
+
+    # Simulates the other business winning between the check and the INSERT.
+    with mock.patch.object(credentials, "_refuse_taken_mobile", lambda mobile: None):
+        with pytest.raises(ValidationFailed) as refused:
+            credentials.create_member(
+                tenant=tenant,
+                role=system_roles[RoleCode.STAFF.value],
+                email="racer@shop.test",
+                full_name="Racer",
+                mobile=taken,
+                actor=user,
+                ctx=_ctx(user, tenant),
+            )
+
+    # L6 -- the lost race carries the same stable code as the pre-check.
+    assert refused.value.details == {
+        "mobile": [credentials.MOBILE_TAKEN_MESSAGE],
+        "field_codes": {"mobile": credentials.MOBILE_TAKEN_CODE},
+    }
+    assert not User.objects.filter(email="racer@shop.test").exists()
+    assert not Membership.objects.filter(tenant=tenant, user__email="racer@shop.test").exists()
+    assert AuditLog.objects.count() == audits_before

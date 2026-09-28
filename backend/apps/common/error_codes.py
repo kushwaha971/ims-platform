@@ -77,6 +77,12 @@ _REGISTRY: dict[str, tuple[int, bool]] = {
     "party_already_archived": (409, False),
     "party_not_archived": (409, False),
     "party_balance_nonzero": (409, False),
+    # PTY-04 FR-3's write-off escape — beyond §22.1.1, carried in `CR-LOG`
+    # (CR-2026-09-23-A). `nothing_to_write_off` is a client bug made visible (a
+    # write-off sent for a party who owes nothing); `balance_changed` is the
+    # locked balance disagreeing with the amount the merchant confirmed.
+    "nothing_to_write_off": (400, False),
+    "balance_changed": (409, False),
     "party_deleted": (409, False),
     "credit_limit_exceeded": (409, False),
     "override_not_allowed": (403, False),
@@ -91,6 +97,8 @@ _REGISTRY: dict[str, tuple[int, bool]] = {
     "tag_limit_reached": (400, False),
     "collection_requires_receivable": (409, False),
     "nothing_due": (409, False),
+    # LED-06 §14 CCR-2 — `/send` on a reminder that is no longer `scheduled`.
+    "reminder_not_sendable": (409, False),
     # E — inventory
     "insufficient_stock": (409, False),
     "stock_nonzero": (409, False),
@@ -121,6 +129,10 @@ _REGISTRY: dict[str, tuple[int, bool]] = {
     "document_not_editable": (409, False),
     "document_already_void": (409, False),
     "document_not_shareable": (409, False),
+    # SAL-02 FR-16 — a Rule 46 hard failure (missing supplier GSTIN, description…).
+    "rule46_failed": (400, False),
+    # SAL-03 FR-4 — no valid `tenant.upi_vpa`, or `documents.show_upi_qr` off.
+    "upi_not_configured": (409, False),
     "has_dependent_documents": (409, False),
     "duplicate_supplier_invoice": (409, False),
     "duplicate_code": (400, False),

@@ -43,6 +43,8 @@ class AuditLog(ImmutableModel):
             models.Index(
                 fields=["tenant", "entity_type", "entity_id"], name="ix_audit_tenant_entity"
             ),
+            # PLT-08 §15 CCR-8: the viewer's "Who" filter.
+            models.Index(fields=["tenant", "actor", "-created_at"], name="ix_audit_tenant_actor"),
         ]
 
     def __str__(self) -> str:

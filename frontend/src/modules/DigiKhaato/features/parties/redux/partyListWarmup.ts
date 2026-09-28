@@ -51,12 +51,37 @@ const dispatchFetch = (dispatch: AppDispatch, arg: FetchPartyListArg) =>
 type PartyListRequest = ReturnType<typeof dispatchFetch>;
 
 /**
- * Identifies "the same request". The field list is explicit rather than a
- * `JSON.stringify` of the object so that a key change is a deliberate edit
- * here, and so that key order in the filters object cannot change the answer.
+ * Identifies "the same request" — over EVERY parameter, derived rather than
+ * listed.
+ *
+ * This used to name its fields: `q`, `status`, `ordering`, `page`, `pageSize`,
+ * on the reasoning that a key change should be a deliberate edit here. The
+ * reasoning was backwards. PTY-02 added `type`, `balance` and `collection` to
+ * the params and did not add them here, and the failure was silent and total:
+ * an arg with `balance: 'owes_me'` produced the same key as the warm request,
+ * `claimWarmPartyList` answered "already in flight", and `usePartyList`
+ * returned without dispatching. Tapping a chip set the pressed state, lit up
+ * "Clear filters (1)", relabelled the count tile "Matching your filters" — and
+ * issued no request. The list never filtered, and because the claim is
+ * idempotent it never filtered again for the life of the page.
+ *
+ * Nothing failed. The unit tests prime no warm-up, so `claimWarmPartyList`
+ * returns false in jsdom and the dispatch they assert really does happen; the
+ * warm-up's own tests key off the DEFAULT filters, which have not changed. It
+ * took opening the screen and watching the network panel stay empty.
+ *
+ * So the key now covers whatever `params` holds. Sorting the entries keeps the
+ * property the explicit list was actually there for — that key order in the
+ * object cannot change the answer — without the property that a new filter is
+ * invisible until someone remembers this file.
  */
 export const partyListRequestKey = ({ params, mode }: FetchPartyListArg): string =>
-  [mode, params.q, params.status, params.ordering, params.page, params.pageSize].join('\u0000');
+  [
+    mode,
+    ...Object.entries({ ...params } as Record<string, unknown>)
+      .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+      .map(([name, value]) => `${name}=${String(value)}`),
+  ].join('\u0000');
 
 let warmed: { key: string; request: PartyListRequest; claimed: boolean } | null = null;
 

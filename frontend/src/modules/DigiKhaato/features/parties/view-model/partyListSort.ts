@@ -31,3 +31,19 @@ export const sortFromOrdering = (ordering: string): UbGridSort | null => {
   const columnId = Object.keys(PARTY_SORT_FIELDS).find((id) => PARTY_SORT_FIELDS[id] === field);
   return columnId ? { columnId, direction } : null;
 };
+
+/**
+ * UAT D5 — the phone's sort sheet. The card layout has no column headers, so
+ * these are the four orders a merchant reaches for, each an `ordering` the
+ * headers already write. Balance is signed (positive = they owe me), so "high
+ * to low" puts the biggest receivable first. Kept here, beside the header
+ * mapping, so a new sortable field is added in one file.
+ */
+export const PHONE_SORT_CHOICES = [
+  { ordering: '-last_activity_at', labelKey: 'parties.list.sort.activity' },
+  { ordering: '-balance', labelKey: 'parties.list.sort.balanceDesc' },
+  { ordering: 'balance', labelKey: 'parties.list.sort.balanceAsc' },
+  { ordering: 'name', labelKey: 'parties.list.sort.name' },
+] as const;
+
+export type PhoneSortOrdering = (typeof PHONE_SORT_CHOICES)[number]['ordering'];

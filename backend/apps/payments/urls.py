@@ -1,10 +1,14 @@
 """URL routes for the payments app (canon §0.8).
 
-Sprint 0 creates the package so the app label, the table prefix and the
-import matrix of Part 20 §20.1.4 are reserved. The models, services and
-views land in the sprint that owns the feature.
+PAY-01's payment endpoints land next wave; SAL-03 needs the local QR now.
 """
 
 from __future__ import annotations
 
-urlpatterns: list = []
+from django.urls import path
+
+from apps.payments.views.qr import QrSvgView
+
+urlpatterns: list = [
+    path("payments/qr.svg", QrSvgView.as_view(), name="payments-qr-svg"),
+]

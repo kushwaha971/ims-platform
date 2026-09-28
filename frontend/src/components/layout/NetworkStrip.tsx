@@ -49,7 +49,9 @@ export function NetworkStrip(): React.JSX.Element | null {
   if (state === 'online') return null;
 
   return (
-    <UbBox data-testid="offline-banner" className="px-4 pt-3 md:px-page">
+    /* UAT D3 — "You are offline" is about this device, not about the
+       statement a merchant prints while offline. */
+    <UbBox data-testid="offline-banner" data-print="hide" className="px-4 pt-3 md:px-page">
       <UbStatusBanner
         tone={state === 'offline' ? 'offline' : 'warning'}
         title={state === 'offline' ? t('common.network.offline') : t('common.network.degraded')}

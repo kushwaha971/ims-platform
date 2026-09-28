@@ -369,6 +369,12 @@ def logout(
     session = sessions.session_for_claims(user=user, claims=claims)
     if everywhere:
         revoked = sessions.revoke_all(user=user)
+        # PLT-09 AC-3: "all my devices including this one are logged out" —
+        # now, not when each device's access token runs out. The epoch is what
+        # the authentication class compares on every request.
+        from apps.platform_app.services.devices import bump_token_epoch
+
+        bump_token_epoch(user=user)
     else:
         revoked = sessions.revoke(session=session) if session is not None else 0
     write_audit(

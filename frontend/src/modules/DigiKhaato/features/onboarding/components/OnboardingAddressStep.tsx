@@ -60,24 +60,44 @@ export function OnboardingAddressStep({
       description={t('onboarding.step3.body')}
     >
       <UbForm form={form} onSubmit={submit} formErrors={onboarding.formErrors}>
-        <UbField name="line1" label={t('onboarding.address.line1')}>
+        <UbField
+          name="line1"
+          label={t('onboarding.address.line1')}
+          placeholder={t('onboarding.address.line1.placeholder')}
+        >
           {(field) => <UbTextInput {...field} autoComplete="address-line1" />}
         </UbField>
 
-        <UbField name="line2" label={t('onboarding.address.line2')}>
+        <UbField
+          name="line2"
+          label={t('onboarding.address.line2')}
+          placeholder={t('onboarding.address.line2.placeholder')}
+        >
           {(field) => <UbTextInput {...field} autoComplete="address-line2" />}
         </UbField>
 
         <UbGrid columns={{ base: 1, sm: 2 }} gap={4}>
-          <UbField name="city" label={t('onboarding.address.city')}>
+          <UbField
+            name="city"
+            label={t('onboarding.address.city')}
+            placeholder={t('onboarding.address.city.placeholder')}
+          >
             {(field) => <UbTextInput {...field} autoComplete="address-level2" />}
           </UbField>
 
-          <UbField name="district" label={t('onboarding.address.district')}>
+          <UbField
+            name="district"
+            label={t('onboarding.address.district')}
+            placeholder={t('onboarding.address.district.placeholder')}
+          >
             {(field) => <UbTextInput {...field} />}
           </UbField>
 
-          <UbField name="pincode" label={t('onboarding.address.pincode')}>
+          <UbField
+            name="pincode"
+            label={t('onboarding.address.pincode')}
+            placeholder={t('onboarding.address.pincode.placeholder')}
+          >
             {(field) => (
               <UbTextInput
                 {...field}
@@ -93,13 +113,18 @@ export function OnboardingAddressStep({
           <UbField
             name="phone"
             label={t('onboarding.phone.label')}
+            placeholder={t('onboarding.phone.placeholder')}
             hint={t('onboarding.phone.hint')}
           >
             {(field) => <UbPhoneInput {...field} />}
           </UbField>
         </UbGrid>
 
-        <UbField name="email" label={t('onboarding.email.label')}>
+        <UbField
+          name="email"
+          label={t('onboarding.email.label')}
+          placeholder={t('onboarding.email.placeholder')}
+        >
           {(field) => <UbTextInput {...field} type="email" autoComplete="email" />}
         </UbField>
 

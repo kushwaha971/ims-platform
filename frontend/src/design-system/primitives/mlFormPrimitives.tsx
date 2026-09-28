@@ -59,7 +59,7 @@ export interface MLInputProps extends InputHTMLAttributes<HTMLInputElement> {
  * unavailable, not look broken.
  */
 export const ML_CONTROL_BASE =
-  'h-11 w-full rounded-control border bg-surface-card px-3 ds-body text-text-primary ' +
+  'h-10 w-full rounded-control border bg-surface-card px-3 ds-body-base-regular text-text-primary ' +
   'placeholder:text-text-muted transition-colors duration-fast ease-standard ' +
   'disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-text-muted ' +
   'disabled:opacity-100 read-only:bg-surface-sunken';
@@ -86,7 +86,8 @@ export const ML_CONTROL_BASE =
 export const ML_CONTROL_TONE = (invalid?: boolean): string =>
   invalid
     ? 'border-formError focus-visible:border-formError'
-    : 'border-border-strong hover:border-border-focus focus-visible:border-border-focus';
+    : // BrandHub: a #E6E6E6 hairline at rest, the ink colour on focus.
+      'border-border-hairline hover:border-border-subtle focus-visible:border-text-primary';
 
 export const MLInput = forwardRef<HTMLInputElement, MLInputProps>(function MLInput(
   { invalid, className, type = 'text', ...rest },
@@ -117,7 +118,12 @@ export const MLTextarea = forwardRef<HTMLTextAreaElement, MLTextareaProps>(funct
       ref={ref}
       rows={rows}
       aria-invalid={invalid || undefined}
-      className={cn(ML_CONTROL_BASE, ML_CONTROL_TONE(invalid), 'h-auto min-h-[120px] py-2', className)}
+      className={cn(
+        ML_CONTROL_BASE,
+        ML_CONTROL_TONE(invalid),
+        'h-auto min-h-[120px] py-2',
+        className
+      )}
       {...rest}
     />
   );
@@ -161,100 +167,6 @@ export const MLSelect = forwardRef<HTMLSelectElement, MLSelectProps>(function ML
 });
 
 // ── Choice controls ──────────────────────────────────────────────────────────
-
-export interface MLCheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
-  readonly label: ReactNode;
-  readonly className?: string;
-}
-
-export const MLCheckbox = forwardRef<HTMLInputElement, MLCheckboxProps>(function MLCheckbox(
-  { label, className, id, ...rest },
-  ref
-) {
-  const generated = useId();
-  const inputId = id ?? generated;
-  return (
-    <div className={cn('flex min-h-11 items-center gap-2', className)}>
-      <input
-        ref={ref}
-        id={inputId}
-        type="checkbox"
-        className="h-5 w-5 shrink-0 rounded-xs border border-border-strong accent-accent"
-        {...rest}
-      />
-      <label htmlFor={inputId} className="ds-body-sm text-text-primary">
-        {label}
-      </label>
-    </div>
-  );
-});
-
-export interface MLRadioOption<T extends string> {
-  readonly value: T;
-  readonly label: ReactNode;
-  readonly hint?: ReactNode;
-  readonly disabled?: boolean;
-}
-
-export interface MLRadioGroupProps<T extends string> {
-  readonly name: string;
-  readonly value: T | null;
-  readonly onValueChange: (value: T) => void;
-  readonly options: readonly MLRadioOption<T>[];
-  readonly ariaLabel?: string;
-  readonly ariaDescribedBy?: string;
-  readonly invalid?: boolean;
-  readonly className?: string;
-}
-
-export function MLRadioGroup<T extends string>({
-  name,
-  value,
-  onValueChange,
-  options,
-  ariaLabel,
-  ariaDescribedBy,
-  invalid,
-  className,
-}: Readonly<MLRadioGroupProps<T>>): React.JSX.Element {
-  return (
-    <div
-      role="radiogroup"
-      aria-label={ariaLabel}
-      aria-describedby={ariaDescribedBy}
-      aria-invalid={invalid || undefined}
-      className={cn('flex flex-col gap-2', className)}
-    >
-      {options.map((option) => (
-        <label
-          key={option.value}
-          className={cn(
-            'flex min-h-11 cursor-pointer items-start gap-3 rounded-control border px-3 py-2.5',
-            'transition-colors duration-fast ease-standard',
-            value === option.value
-              ? 'border-accent bg-accent-quiet'
-              : 'border-border-subtle hover:bg-surface-hover',
-            option.disabled && 'cursor-not-allowed opacity-60'
-          )}
-        >
-          <input
-            type="radio"
-            name={name}
-            value={option.value}
-            checked={value === option.value}
-            disabled={option.disabled}
-            onChange={() => onValueChange(option.value)}
-            className="mt-1 h-4 w-4 shrink-0 accent-accent"
-          />
-          <span className="flex min-w-0 flex-col gap-0.5">
-            <span className="ds-body-sm-medium text-text-primary">{option.label}</span>
-            {option.hint && <span className="ds-caption text-text-tertiary">{option.hint}</span>}
-          </span>
-        </label>
-      ))}
-    </div>
-  );
-}
 
 export interface MLToggleOption<T extends string> {
   readonly value: T;
@@ -323,6 +235,10 @@ export interface MLTabsProps<T extends string> {
   readonly children: ReactNode;
   readonly idPrefix?: string;
   readonly className?: string;
+  /** `fit`: tabs as wide as their labels, left-aligned. `fill` shares the row. */
+  readonly layout?: 'fill' | 'fit';
+  /** A control at the right end of the tab row — a filter that scopes every tab. */
+  readonly trailing?: ReactNode;
 }
 
 /**
@@ -337,6 +253,8 @@ export function MLTabs<T extends string>({
   children,
   idPrefix,
   className,
+  layout = 'fill',
+  trailing,
 }: Readonly<MLTabsProps<T>>): React.JSX.Element {
   const generated = useId();
   const prefix = idPrefix ?? generated;
@@ -362,36 +280,43 @@ export function MLTabs<T extends string>({
 
   return (
     <div className={cn('flex w-full flex-col gap-4', className)}>
-      <div
-        role="tablist"
-        aria-label={ariaLabel}
-        onKeyDown={onKeyDown}
-        className="flex w-full items-center gap-1 border-b border-border-hairline"
-      >
-        {tabs.map((tab) => {
-          const active = tab.value === value;
-          return (
-            <button
-              key={tab.value}
-              type="button"
-              role="tab"
-              id={`${prefix}-tab-${tab.value}`}
-              aria-selected={active}
-              aria-controls={`${prefix}-panel-${tab.value}`}
-              tabIndex={active ? 0 : -1}
-              onClick={() => onValueChange(tab.value)}
-              className={cn(
-                'ds-body-sm-medium min-h-11 flex-1 border-b-2 px-4 py-2',
-                'transition-colors duration-fast ease-standard',
-                active
-                  ? 'border-accent text-text-accent'
-                  : 'border-transparent text-text-tertiary hover:text-text-primary'
-              )}
-            >
-              {tab.label}
-            </button>
-          );
-        })}
+      <div className="flex w-full flex-wrap items-center gap-x-4 gap-y-2 border-b border-border-hairline">
+        <div
+          role="tablist"
+          aria-label={ariaLabel}
+          onKeyDown={onKeyDown}
+          className={cn(
+            '-mb-px flex items-center gap-1',
+            layout === 'fill' ? 'w-full' : 'max-w-full overflow-x-auto'
+          )}
+        >
+          {tabs.map((tab) => {
+            const active = tab.value === value;
+            return (
+              <button
+                key={tab.value}
+                type="button"
+                role="tab"
+                id={`${prefix}-tab-${tab.value}`}
+                aria-selected={active}
+                aria-controls={`${prefix}-panel-${tab.value}`}
+                tabIndex={active ? 0 : -1}
+                onClick={() => onValueChange(tab.value)}
+                className={cn(
+                  'ds-body-base-medium h-10 whitespace-nowrap border-b-2 px-4',
+                  layout === 'fill' ? 'flex-1' : 'flex-none',
+                  'transition-colors duration-fast ease-standard',
+                  active
+                    ? 'border-accent text-text-accent'
+                    : 'border-transparent text-text-tertiary hover:text-text-primary'
+                )}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+        {trailing && <div className="ml-auto flex items-center gap-2 pb-1">{trailing}</div>}
       </div>
       <div
         role="tabpanel"

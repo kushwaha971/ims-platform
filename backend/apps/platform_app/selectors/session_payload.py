@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Any
 
 from apps.common.permissions_registry import permissions_for
+from apps.platform_app import branding as branding_rules
 from apps.platform_app.selectors.memberships import live_sessions_of, memberships_of
 
 
@@ -93,9 +94,39 @@ def active_tenant_block(tenant: Any) -> dict:
         "locale": tenant.locale,
         "fy_start_month": tenant.fy_start_month,
         "status": tenant.status,
+        # PLT-10 BR-1: the shell's pending-deletion banner names the date.
+        "deletion_scheduled_for": _deletion_date(tenant),
         "onboarding_step": tenant.onboarding_step,
         "enabled_modules": sorted(effective_modules(tenant)),
-        "branding": tenant.branding or {},
+        # WLB-01 FR-2/FR-4: the RESOLVED branding (tenant → partner → default),
+        # which is what the theme and the header render. Zero extra queries —
+        # the partner rides on the membership's `select_related`.
+        "branding": branding_rules.resolve(tenant),
+        # WLB-02 FR-5: the client shows a read-only banner with the partner's
+        # support contact; the server refuses the writes.
+        "partner_suspended": tenant.partner.status == "suspended",
+    }
+
+
+def _deletion_date(tenant: Any) -> Any:
+    from apps.platform_app.services.tenant_delete import scheduled_for
+
+    return scheduled_for(tenant)
+
+
+def impersonation_block(membership: Any) -> dict | None:
+    """PLT-14 FR-5 — what the support banner shows, or None outside a support session."""
+    tenant = getattr(membership, "tenant", None)
+    session = getattr(tenant, "_ub_impersonation", None) if tenant is not None else None
+    if session is None:
+        return None
+    return {
+        "id": str(session.id),
+        "tenant_id": str(session.tenant_id),
+        "tenant_name": tenant.name,
+        "admin_name": session.admin.full_name,
+        "started_at": session.created_at,
+        "expires_at": session.expires_at,
     }
 
 
@@ -146,6 +177,7 @@ def build(
         # `enabled_modules` that used to throw out of the reducer. Sending it
         # costs one integer already loaded on the membership row.
         "ver": membership.permissions_version if membership is not None else None,
+        "impersonation": impersonation_block(membership),
     }
     if access_token is not None:
         payload["access_token"] = access_token

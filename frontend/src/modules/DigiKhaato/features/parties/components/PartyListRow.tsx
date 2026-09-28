@@ -2,9 +2,12 @@
 
 import { memo } from 'react';
 
-import { UbAmount, UbStatusBadge, UbText } from 'src/design-system';
+import { UbAmount, UbBox, UbStatusBadge, UbTagList, UbText } from 'src/design-system';
 
 import { balanceView } from '../view-model/partyDisplay';
+import { toTagListItems } from '../view-model/partyTagDisplay';
+
+import type { PartyTag } from '../types/party.types';
 
 /**
  * What a party row is MADE OF: the five cells, memoised, each taking exactly
@@ -27,13 +30,52 @@ import { balanceView } from '../view-model/partyDisplay';
 
 export interface PartyNameCellProps {
   readonly name: string;
+  /** PTY-05. Empty for an untagged party, which is most of them. */
+  readonly tags: readonly PartyTag[];
+  /**
+   * Reserve the chip lane even when THIS row has no tags.
+   *
+   * The screen decides, from whether the tenant uses tags at all. A book with
+   * none looks exactly as it did before PTY-05 — no lane, no taller rows, no
+   * cost for a feature that has not been adopted. A book with tags gets the
+   * lane on EVERY row, so rows are a uniform height and the list does not step
+   * up and down as it scrolls past the tagged ones. That stepping is what FRD
+   * §5's "fixed 24 px chip lane" is really about: the chips arrive with the row
+   * and never shift in, but rows of two different heights read as broken even
+   * though nothing moved.
+   */
+  readonly reserveTagLane: boolean;
+  /** Pre-translated, e.g. "Tags on Ramesh Traders". */
+  readonly tagsLabel: string;
+  /** `(count) => string`, e.g. "+3". */
+  readonly overflowLabel: (count: number) => string;
+  /** One on a phone card, two in a table — the screen knows which it is. */
+  readonly maxTags: number;
 }
 
-function PartyNameCellBase({ name }: Readonly<PartyNameCellProps>) {
+function PartyNameCellBase({
+  name,
+  tags,
+  reserveTagLane,
+  tagsLabel,
+  overflowLabel,
+  maxTags,
+}: Readonly<PartyNameCellProps>) {
   return (
-    <UbText as="span" variant="body-sm-medium" truncate>
-      {name}
-    </UbText>
+    <UbBox as="span" className="flex min-w-0 flex-col gap-1">
+      <UbText as="span" variant="body-sm-medium" truncate>
+        {name}
+      </UbText>
+      {reserveTagLane || tags.length > 0 ? (
+        <UbTagList
+          tags={toTagListItems(tags)}
+          label={tagsLabel}
+          max={maxTags}
+          overflowLabel={overflowLabel}
+          reserveSpace={reserveTagLane}
+        />
+      ) : null}
+    </UbBox>
   );
 }
 PartyNameCellBase.displayName = 'PartyNameCell';

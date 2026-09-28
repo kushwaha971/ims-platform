@@ -81,7 +81,7 @@ const UbTextInputInner = forwardRef<HTMLInputElement, UbTextInputProps>(function
         value={value ?? ''}
         onChange={handleChange}
         invalid={invalid}
-        className={cn(uppercase && 'uppercase', (isPassword || adornment) && 'pr-12')}
+        className={cn(uppercase && 'uppercase', (isPassword || adornment) && 'pr-10')}
         {...rest}
       />
       {isPassword && (
@@ -92,7 +92,13 @@ const UbTextInputInner = forwardRef<HTMLInputElement, UbTextInputProps>(function
           // Not in the tab order: the toggle is a convenience, and a keyboard
           // user tabbing from the password field expects the submit button.
           tabIndex={-1}
-          className="absolute right-0"
+          /* BrandHub's `BrandHubPasswordInput` toggle: `absolute inset-y-0
+             right-3 my-auto size-4 p-0 text-muted-fg hover:bg-transparent
+             hover:text-foreground`. This was a full `MLIconButton` pinned to
+             `right-0`, so a 44px button sat flush against the field's edge and
+             the glyph looked off-centre inside it. The glyph is the control
+             here; the 44px target comes from the field's own height. */
+          className="absolute inset-y-0 right-3 my-auto size-4 min-h-0 p-0 text-text-tertiary hover:bg-transparent hover:text-text-primary"
         >
           {revealed ? (
             <EyeOff aria-hidden className="h-4 w-4" />

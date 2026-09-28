@@ -63,9 +63,116 @@ class CookieOrBearerJWTAuthentication(JWTAuthentication):
         # Bind the tenant contextvar as early as the tenant is knowable (§20.4.3).
         request.user = user
         tenant = get_effective_tenant(request)
+        if validated.payload.get("imp"):
+            self._assert_impersonation_scope(request, tenant)
         if tenant is not None:
             _current_tenant.set(tenant)
+            self._assert_partner_active(request, tenant)
+            self._assert_tenant_writable(request, tenant)
         return user, validated
+
+    # ── PLT-10 FR-3 / BR-2: a business awaiting deletion is read-only ─────────
+    #
+    # Every write answers 409 `tenant_pending_deletion` except the four things
+    # the owner must still be able to do in the cool-off: take another export,
+    # cancel, answer a support request, and sign in or out. Reads all work, so
+    # the books stay visible for thirty days. Lives here for the reason the
+    # password gate does: one door, not a permission class every view must
+    # remember.
+    PENDING_DELETION_WRITABLE = (
+        "/api/v1/tenants/current/export",
+        "/api/v1/tenants/current/delete-cancel",
+        "/api/v1/auth/",
+        "/api/v1/support/",
+        "/api/v1/notifications",
+        "/api/v1/admin/impersonation/end",
+    )
+
+    @classmethod
+    def _assert_tenant_writable(cls, request: Any, tenant: Any) -> None:
+        if getattr(tenant, "status", None) != "pending_deletion":
+            return
+        if request.method in SAFE_METHODS:
+            return
+        if request.path.startswith(cls.PENDING_DELETION_WRITABLE):
+            return
+        from apps.common.exceptions import BusinessRuleViolation
+
+        raise BusinessRuleViolation(
+            "tenant_pending_deletion",
+            "This business is scheduled for deletion and is read-only. Cancel the deletion to make changes.",
+        )
+
+    # ── PLT-14 FR-5: what a support token may NOT do ─────────────────────────
+    #
+    # Writes are allowed — reproducing a fault needs them — except deleting the
+    # business, changing who owns or works in it, its bank details, taking the
+    # whole book away, answering its own consent request, and anything in the
+    # console. `/admin/impersonation/end` is the one console route it needs.
+    IMPERSONATION_FORBIDDEN_ANY = (
+        "/api/v1/admin/",
+        "/api/v1/auth/switch-tenant",
+        "/api/v1/auth/password/",
+        "/api/v1/auth/sessions",
+        "/api/v1/tenants/current/delete-",
+        "/api/v1/tenants/current/export",
+        "/api/v1/support/",
+    )
+    IMPERSONATION_FORBIDDEN_WRITES = (
+        "/api/v1/members",
+        "/api/v1/memberships/",
+        "/api/v1/invitations",
+    )
+    IMPERSONATION_FORBIDDEN_FIELDS = frozenset({"bank_details", "upi_vpa", "pan"})
+
+    @classmethod
+    def _assert_impersonation_scope(cls, request: Any, tenant: Any) -> None:
+        if tenant is None:
+            # Ended, revoked or expired: a 401 sends the client through refresh,
+            # which brings back the operator's OWN session. Never a fall-through
+            # to the `tid` claim.
+            raise exceptions.AuthenticationFailed("session_revoked")
+        path = request.path
+        if path == "/api/v1/admin/impersonation/end":
+            return
+        forbidden = path.startswith(cls.IMPERSONATION_FORBIDDEN_ANY)
+        if not forbidden and request.method not in SAFE_METHODS:
+            forbidden = path.startswith(cls.IMPERSONATION_FORBIDDEN_WRITES)
+            if not forbidden and path.rstrip("/") == "/api/v1/tenants/current":
+                body = getattr(request, "data", None)
+                forbidden = isinstance(body, dict) and bool(
+                    cls.IMPERSONATION_FORBIDDEN_FIELDS & set(body)
+                )
+        if forbidden:
+            from apps.common.exceptions import BusinessRuleViolation
+
+            raise BusinessRuleViolation(
+                "impersonation_forbidden", "Support sessions cannot do this."
+            )
+
+    @classmethod
+    def _assert_partner_active(cls, request: Any, tenant: Any) -> None:
+        """WLB-02 FR-5: a suspended partner's tenants are read-only.
+
+        Reads keep working so a merchant can still see what customers owe and
+        the banner can name who to call; every write answers 403
+        `partner_suspended`. Signing out is always allowed. The tenant is NOT
+        marked suspended (BR-4: reversible and non-destructive) — lifting the
+        partner's suspension restores every tenant at once. `tenant.partner` is
+        already loaded by tenancy's `select_related`, so this costs no query.
+        """
+        partner = getattr(tenant, "partner", None)
+        if getattr(partner, "status", None) != "suspended" or request.method in SAFE_METHODS:
+            return
+        if request.path in cls.PASSWORD_CHANGE_ALLOWED:
+            return
+        from apps.common.exceptions import BusinessRuleViolation
+
+        raise BusinessRuleViolation(
+            "partner_suspended",
+            "This service is paused. Contact your provider's support.",
+            details={"partner": partner.name},
+        )
 
     # Reachable while the account is on an owner-issued temporary password
     # (DEC-012). Everything else answers `password_change_required` until the

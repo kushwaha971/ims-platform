@@ -189,9 +189,17 @@ function UbOtpInputBase({
           onPaste={handlePaste}
           onFocus={(event) => event.target.select()}
           className={cn(
-            'ds-num h-12 w-11 rounded-control border bg-surface-card text-center text-[20px]',
+            /* `text-[20px]` was a literal, which R-S-5 forbids for exactly this
+               reason: nothing else in the product is 20px, so an OTP cell
+               belonged to no tier. `ds-num-base` is the numeric body tier — the
+               same face and size as a rupee amount — and it is what BrandHub
+               uses for its own slots (`ds-body-l-medium` on a `size-9` box).
+               The cell stays 48x44 rather than their 36x36: this is a six-cell
+               row a merchant types on a phone. */
+            'ds-num-base h-12 w-11 rounded-control border bg-surface-card text-center',
             'text-text-primary transition-colors duration-fast ease-standard',
-            'read-only:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-60',
+            'read-only:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-100',
+            'disabled:bg-surface-sunken disabled:text-text-muted',
             invalid ? 'border-formError' : 'border-border-strong focus:border-border-focus'
           )}
         />

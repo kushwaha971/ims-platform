@@ -10,6 +10,8 @@ import { ONBOARDING_STEP_COUNT } from '../constants/onboardingSteps';
 import {
   completeOnboarding,
   createTenant,
+  findResumableBusiness,
+  resumeOnboarding,
   saveAddressStep,
   saveBusinessStep,
   saveGstStep,
@@ -75,6 +77,33 @@ export interface OnboardingState {
    * exists to prevent.
    */
   tenantCreateKey: string | null;
+  /**
+   * Defect NEW-1 — has this wizard read its business back from the server?
+   *
+   * `idle` until a resume is needed, then the read's lifecycle. It is separate
+   * from `status` because that one drives the step buttons' busy state, and a
+   * background read must not make "Continue" spin. `failed` is terminal for
+   * this mount: the wizard falls back to an empty step 1 rather than retrying
+   * in a loop, and the server turns that step's submit into a resume.
+   */
+  resumeStatus: RequestStatus;
+  /**
+   * Defect M2 — the unfinished business "Add a business" will CONTINUE, as the
+   * server reported it (`GET /tenants/resumable`). Step 1 says so and shows its
+   * values: `POST /tenants` resumes it rather than creating another, and doing
+   * that behind a blank form renamed an existing business with no word on
+   * screen. `null` when there is none, or before the read.
+   */
+  resumable: ResumableBusiness | null;
+  /** The lifecycle of that read; `idle` until "Add a business" needs it. */
+  resumableStatus: RequestStatus;
+}
+
+/** Just enough of the business to name it on step 1. */
+export interface ResumableBusiness {
+  readonly id: string;
+  readonly name: string;
+  readonly onboardingStep: number;
 }
 
 const emptyAddress: OnboardingAddress = {
@@ -112,6 +141,9 @@ const initialState: OnboardingState = {
   error: null,
   completed: false,
   tenantCreateKey: null,
+  resumeStatus: 'idle',
+  resumable: null,
+  resumableStatus: 'idle',
 };
 
 /** Fold a server tenant back into the draft, so a resume shows real values. */
@@ -154,6 +186,15 @@ const onboardingSlice = createSlice({
     tenantCreateKeyMinted(state, action: PayloadAction<string>) {
       if (state.tenantCreateKey === null) state.tenantCreateKey = action.payload;
     },
+    /**
+     * The server refused the key as `idempotency_conflict`: it was spent on a
+     * create whose response never arrived, with different values. The only
+     * way forward is a new key; the server's NEW-1 guard then resumes that
+     * business rather than creating another, so rotating is safe.
+     */
+    tenantCreateKeyRotated(state, action: PayloadAction<string>) {
+      state.tenantCreateKey = action.payload;
+    },
     warningsDismissed(state) {
       state.warnings = [];
     },
@@ -177,6 +218,47 @@ const onboardingSlice = createSlice({
     };
 
     builder
+      // NEW-1 — the refresh-proof half of FR-9. The tenant is folded in exactly
+      // as a step write's response would be, and THEN the route's step is
+      // honoured: `stepChanged` ran on mount against `completedStep = 0` and
+      // clamped `/onboarding/step/3` to step 1, which is how a refresh used to
+      // throw a merchant back to the start.
+      .addCase(resumeOnboarding.pending, (state) => {
+        state.resumeStatus = 'loading';
+      })
+      .addCase(resumeOnboarding.fulfilled, (state, action) => {
+        state.resumeStatus = 'succeeded';
+        applyTenant(state, action.payload);
+        const target = Math.max(1, Math.min(ONBOARDING_STEP_COUNT, action.meta.arg.routeStep));
+        state.step = Math.min(target, state.completedStep + 1);
+      })
+      .addCase(resumeOnboarding.rejected, (state, action) => {
+        // An aborted read is not a failed one: back to `idle`, so the next
+        // mount asks again instead of waiting on a request nobody will answer.
+        state.resumeStatus = action.meta.aborted ? 'idle' : 'failed';
+      })
+
+      // M2 — the business step 1 will continue. Its three step-1 values go
+      // into the draft so the form shows what Continue will write, and
+      // nothing is renamed by surprise. `tenantId` is deliberately NOT set:
+      // the session is still on the business "Add a business" was opened
+      // from, so a PATCH of `/tenants/current` would write into THAT one.
+      // Step 1 stays a `POST /tenants`, which the server turns into the resume.
+      .addCase(findResumableBusiness.pending, (state) => {
+        state.resumableStatus = 'loading';
+      })
+      .addCase(findResumableBusiness.fulfilled, (state, action) => {
+        state.resumableStatus = 'succeeded';
+        const found = action.payload;
+        if (!found) return;
+        state.resumable = { id: found.id, name: found.name, onboardingStep: found.onboardingStep };
+        state.draft.name = found.name;
+        state.draft.businessType = found.businessType;
+        state.draft.stateCode = found.stateCode;
+      })
+      .addCase(findResumableBusiness.rejected, (state, action) => {
+        state.resumableStatus = action.meta.aborted ? 'idle' : 'failed';
+      })
       .addCase(createTenant.pending, pending)
       .addCase(createTenant.fulfilled, (state, action) => {
         state.status = 'succeeded';
@@ -265,6 +347,7 @@ export const {
   draftChanged,
   stateCodeAdopted,
   tenantCreateKeyMinted,
+  tenantCreateKeyRotated,
   warningsDismissed,
   onboardingErrorCleared,
   resetOnboarding,
@@ -289,3 +372,11 @@ export const selectOnboardingTenantId = (state: RootState): string | null =>
 export const selectOnboardingCreateKey = (state: RootState): string | null =>
   state.onboarding.tenantCreateKey;
 export const selectOnboardingCompleted = (state: RootState): boolean => state.onboarding.completed;
+/** M2 — the unfinished business "Add a business" will continue, if any. */
+export const selectOnboardingResumable = (state: RootState): ResumableBusiness | null =>
+  state.onboarding.resumable;
+export const selectOnboardingResumableStatus = (state: RootState): RequestStatus =>
+  state.onboarding.resumableStatus;
+/** NEW-1 — the lifecycle of reading the resumed business back from the server. */
+export const selectOnboardingResumeStatus = (state: RootState): RequestStatus =>
+  state.onboarding.resumeStatus;

@@ -12,7 +12,7 @@ import {
   type SessionTenant,
 } from 'src/redux/slice/sessionSlice';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
-import { ROUTES, onboardingStepPath } from 'src/routes';
+import { ROUTES, addBusinessPath } from 'src/routes';
 import type { ApiErrorShape } from 'src/types/api.types';
 import { clearLocalExceptDrafts } from 'src/utils/storage';
 
@@ -138,10 +138,13 @@ export const useTenantSwitcher = (): UseTenantSwitcherResult => {
    * The wizard's slice is cleared FIRST: it may still hold the draft of the
    * business this user created last time, and step 1 prefilled with another
    * shop's name is how a second business ends up called the same thing.
+   *
+   * M2 (residual) — and it says WHY the wizard is open (`?intent=add`), so the
+   * wizard never mistakes this for continuing the active business.
    */
   const addBusiness = useCallback(() => {
     dispatch(resetOnboarding());
-    router.push(onboardingStepPath(1));
+    router.push(addBusinessPath());
   }, [dispatch, router]);
 
   const clearError = useCallback(() => setError(null), []);

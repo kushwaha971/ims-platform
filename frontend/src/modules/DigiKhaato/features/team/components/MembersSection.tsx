@@ -6,12 +6,7 @@ import dynamic from 'next/dynamic';
 
 import { UserPlus } from 'lucide-react';
 
-import {
-  UbButton,
-  UbConfirmDialog,
-  UbStack,
-  UbText,
-} from 'src/design-system';
+import { UbButton, UbConfirmDialog, UbSectionHeading, UbStack } from 'src/design-system';
 import {
   UbDataGrid,
   type UbDataGridEmptyStates,
@@ -24,7 +19,9 @@ import { useTranslation } from 'src/hooks/useTranslation';
 import { Can } from '../../auth/components/Can';
 import { PAGE_SIZE_OPTIONS } from '../constants/teamDefaults';
 import { useMembers } from '../hooks/useMembers';
+import { memberCountOf } from '../view-model/memberCount';
 
+import { INVITE_AVATAR_ICON } from './InvitationRow';
 import { createMemberColumns } from './MemberColumns';
 
 import type { Member } from '../types/member.types';
@@ -111,8 +108,19 @@ export function MembersSection(): React.JSX.Element {
       // thing that knows which page a button points at.
       goToPage: t('common.grid.goToPage', { page: '{page}' }),
       ofTotal: t('common.grid.ofTotal', { total: '{total}' }),
+      // This grid has no selection — `selectable` is never passed, because a
+      // team is read down a list rather than acted on in bulk — so nothing ever
+      // paints this. It is a required part of the grid's contract and is given
+      // an honest zero rather than a placeholder: `selectedCount` is an ICU
+      // PLURAL, and a plural resolved against the string `'{count}'` renders
+      // "NaN selected", which is what the party list was showing.
+      selectedCount: t('common.grid.selectedCount', { count: 0 }),
+
       selectAll: t('team.list.select.all'),
       selectRow: t('team.list.select.row', { name: '{name}' }),
+      showing: t('common.grid.showing'),
+      columns: t('common.grid.columns'),
+      showAllColumns: t('common.grid.showAllColumns'),
       sortBy: t('common.grid.sortBy', { column: '{column}' }),
       sortedAscending: t('common.grid.sortedAscending'),
       sortedDescending: t('common.grid.sortedDescending'),
@@ -137,6 +145,7 @@ export function MembersSection(): React.JSX.Element {
         title: t('team.members.error.title'),
         description: error?.message ?? t('team.members.error.body'),
         requestId: error?.requestId ?? null,
+        requestIdLabel: t('common.error.reference'),
         action: (
           <UbButton variant="secondary" onClick={refetch}>
             {t('common.action.retry')}
@@ -158,6 +167,17 @@ export function MembersSection(): React.JSX.Element {
 
   const rowId = useCallback((member: Member) => member.id, []);
   const rowName = useCallback((member: Member) => member.fullName || member.email, []);
+  const avatarIcon = useCallback(
+    (member: Member) => (member.status === 'invited' ? INVITE_AVATAR_ICON : null),
+    []
+  );
+  /* QA O3 — people who have joined, and the invited apart: an invited row
+     holds no access, and "3 people" counted it as a colleague. */
+  const count = memberCountOf(rows, meta);
+  const countLabel =
+    count.invited
+      ? t('team.members.countWithInvited', { count: count.joined, invited: count.invited })
+      : t('team.members.count', { count: count.joined });
   const handlePageSize = useCallback((pageSize: number) => setPage(1, pageSize), [setPage]);
   const handleRegenerateOpenChange = useCallback(
     (next: boolean) => {
@@ -171,28 +191,25 @@ export function MembersSection(): React.JSX.Element {
 
   return (
     <UbStack gap={2}>
-      {/* There is no `UbSectionHeader` in the design system and this screen is
-          not the place to invent one: a section heading plus a trailing action
-          is a pattern the product will want in several places, and adding it
-          here would make the first version of it a team-screen shape. A row
-          composed from existing primitives is the honest interim. */}
-      <UbStack direction="row" justify="between" align="center" gap={2}>
-        <UbText variant="h4">{t('team.tab.members')}</UbText>
-        <Can permission="platform.members.manage">
-          <UbButton
-            onClick={openAdd}
-            icon={<UserPlus aria-hidden className="h-4 w-4" />}
-            // Class C, online only: disabled rather than hidden (§19.10.4).
-            disabled={!canWrite}
-          >
-            {t('team.member.add.action')}
-          </UbButton>
-        </Can>
-      </UbStack>
-
-      <UbText variant="label" tone="tertiary">
-        {t('team.members.count', { count: meta.total })}
-      </UbText>
+      {/* `UbSectionHeading` now exists (the BrandHub pass), so the title,
+          the count beside it and the action on the right are one line —
+          the count used to take a line of its own under the heading. */}
+      <UbSectionHeading
+        title={t('team.tab.members')}
+        meta={countLabel}
+        aside={
+          <Can permission="platform.members.manage">
+            <UbButton
+              onClick={openAdd}
+              icon={<UserPlus aria-hidden className="h-4 w-4" />}
+              // Class C, online only: disabled rather than hidden (§19.10.4).
+              disabled={!canWrite}
+            >
+              {t('team.member.add.action')}
+            </UbButton>
+          </Can>
+        }
+      />
 
       <UbDataGrid
         rows={rows}
@@ -203,6 +220,7 @@ export function MembersSection(): React.JSX.Element {
         labels={labels}
         emptyStates={emptyStates}
         caption={t('team.members.caption')}
+        cardAvatarIcon={avatarIcon}
         page={meta}
         onPageChange={setPage}
         onPageSizeChange={handlePageSize}

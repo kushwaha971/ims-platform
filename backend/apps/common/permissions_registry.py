@@ -116,7 +116,18 @@ def permissions_for(membership: Any) -> frozenset[str]:
     Deny always wins. Module gating is applied last, so a member can never hold a
     permission for a module the tenant has switched off — except `platform.*`,
     which is never module-gated because it is how a tenant switches modules on.
+
+    **Only an `active` membership holds any permission.** Every caller today is
+    handed an active row — `tenancy` resolves nothing else — so this is the
+    second of two locks rather than the only one. It exists because PLT-05 now
+    writes `invited` memberships that carry a real `role_id` (FR-2), and a role
+    is exactly what this function turns into codenames: the day somebody passes
+    a membership fetched without a status filter, an invitee who never accepted
+    would silently hold staff rights. An absent `status` (a hand-built object)
+    is read as active so the rule is about the database state, not attributes.
     """
+    if getattr(membership, "status", "active") != "active":
+        return frozenset()
     role = membership.role
     if role.is_system:
         base = set(ROLE_PERMISSIONS[role.code])

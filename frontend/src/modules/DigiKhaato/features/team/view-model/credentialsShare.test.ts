@@ -83,6 +83,25 @@ describe('accessStateOf', () => {
     ).toBe('expired');
   });
 
+  it('reads as invited for somebody who has not accepted, whatever the password fields say', () => {
+    // CR-2026-09-23-B. An invited row holds no access to this business, and the
+    // server withholds the person's profile (`mustChangePassword: false`), which
+    // on its own would read as "Signed in" — a claim about access they do not
+    // have. Invited wins over every password state.
+    expect(
+      accessStateOf({ status: 'invited', mustChangePassword: false, passwordExpiresAt: null }, now)
+    ).toBe('invited');
+    expect(
+      accessStateOf(
+        { status: 'invited', mustChangePassword: true, passwordExpiresAt: '2026-09-20T00:00:00Z' },
+        now
+      )
+    ).toBe('invited');
+    expect(
+      accessStateOf({ status: 'active', mustChangePassword: false, passwordExpiresAt: null }, now)
+    ).toBe('active');
+  });
+
   it('treats an unreadable date as pending rather than expired', () => {
     // Saying "expired" wrongly sends the owner to regenerate and re-send for
     // nothing, and this row is the only evidence they have to go on.

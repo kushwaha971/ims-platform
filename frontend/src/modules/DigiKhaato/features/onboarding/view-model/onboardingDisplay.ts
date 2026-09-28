@@ -79,11 +79,29 @@ export interface PresetSummary {
   readonly defaultDueDays: number;
   readonly favouriteUnits: readonly string[];
   readonly modules: readonly ModuleCode[];
+  /**
+   * The subset of `modules` a merchant can open TODAY — what step 4 may list.
+   * `modules` stays what the preset turns on, because that is what the server
+   * stores; the card shows only this (UAT D8, owner rule: unbuilt is unshown).
+   */
+  readonly readyModules: readonly ModuleCode[];
   /** i18n keys for the extra expense categories this type seeds. */
   readonly extraExpenseCategoryIds: readonly string[];
   /** EC-6 — the partner's plan does not include stock; the summary says so. */
   readonly inventoryUnavailable: boolean;
 }
+
+/**
+ * The modules that have screens today, in the order step 4 lists them.
+ *
+ * Every other module is a "Soon" row in the sidebar (`ready` absent in
+ * `navigation/sidebarConfig.ts`), and step 4 used to promise them all under
+ * "What you get" — Stock, Bills & estimates, Purchases — beside a "Stock: On"
+ * row (UAT D8). Add a module here in the same change that marks its first
+ * sidebar item `ready`. `platform` is left out on purpose: its label is "Team
+ * & settings", and Settings is one of the "Soon" rows.
+ */
+export const READY_MODULES: readonly ModuleCode[] = ['parties', 'ledger'];
 
 /**
  * FR-5 — what step 4 shows before the button is pressed.
@@ -107,6 +125,7 @@ export const presetSummary = (
     defaultDueDays: config.defaultDueDays,
     favouriteUnits: config.favouriteUnits,
     modules: effective,
+    readyModules: READY_MODULES.filter((module) => effective.includes(module)),
     extraExpenseCategoryIds: config.extraExpenseCategoryIds,
     inventoryUnavailable: config.inventoryEnabled && !effective.includes('inventory'),
   };
@@ -124,3 +143,27 @@ export const resumeStep = (onboardingStep: number | null | undefined): number =>
 
 export const isOnboardingComplete = (onboardingStep: number | null | undefined): boolean =>
   (onboardingStep ?? 0) >= 4;
+
+/**
+ * Defect NEW-1 — must the wizard read its business back from the server?
+ *
+ * Yes when the session's active business is one the wizard CREATED
+ * (`onboarding_step >= 1` — step 1's create writes 1, and nothing else makes a
+ * tenant) and has not finished, and the caller is its OWNER — the same test
+ * `postAuthDestination` uses to send anybody into the wizard at all, and the
+ * same one the server's resume guard applies to `POST /tenants`.
+ *
+ * Not for a finished business: "Add a business" (PLT-04 FR-6) opens the wizard
+ * from inside a completed one, and resuming THAT would put the live shop's
+ * name in step 1 and rename it on Continue.
+ */
+export const shouldResumeFromServer = (
+  tenant: {
+    readonly role?: string | null;
+    readonly onboardingStep?: number | null;
+  } | null
+): boolean =>
+  tenant !== null &&
+  tenant.role === 'owner' &&
+  (tenant.onboardingStep ?? 0) >= 1 &&
+  !isOnboardingComplete(tenant.onboardingStep);

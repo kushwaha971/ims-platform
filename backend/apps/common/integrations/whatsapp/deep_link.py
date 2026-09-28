@@ -11,5 +11,7 @@ class WaMeBackend:
     name = "wa_me"
 
     def build_share_url(self, *, to: str, body: str) -> str:
+        # `safe=''` (LED-06 BR-2): the default keeps `/`, and nothing in a
+        # message body may survive unencoded into a query string.
         digits = "".join(ch for ch in to if ch.isdigit())
-        return f"https://wa.me/{digits}?text={quote(body)}"
+        return f"https://wa.me/{digits}?text={quote(body, safe='')}"

@@ -1,13 +1,11 @@
 'use client';
 
 import { NavSections } from 'src/components/layout/NavSections';
-import { UbBox, UbLink, UbLogo } from 'src/design-system';
+import { UbBox } from 'src/design-system';
 import { useAppSelector } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { selectAppName } from 'src/redux/slice/whiteLabelSlice';
-import { ROUTES } from 'src/routes';
 import { cn } from 'src/utils/cn';
-
 
 import { TenantSwitcherMenu } from 'modules/DigiKhaato/features/tenant-switcher/components/TenantSwitcherMenu';
 
@@ -43,30 +41,23 @@ export function UbSidebar(): React.JSX.Element {
   const appName = useAppSelector(selectAppName);
 
   return (
+    /* BrandHub's sidebar contents (business block, divider, 12 px sections of
+       32 px rows), DOCKED rather than floating: full height, flush to the
+       left edge, a hairline on the right — the owner's call over the Figma's
+       floating card. Sticky so it stays put while the page scrolls. */
+    /* UAT D3 — `data-print="hide"` as well as being a `nav`: the print sheet
+       must not depend on which element this happens to be rendered as. */
     <UbBox
       as="nav"
+      data-print="hide"
       aria-label={t('nav.primary')}
       className={cn(
-        'hidden w-sidebar shrink-0 flex-col gap-5 overflow-y-auto',
-        'border-r border-surface-navHover bg-surface-nav px-3 py-5 text-text-onNav lg:flex'
+        'sticky top-0 hidden h-dvh w-sidebar shrink-0 flex-col overflow-y-auto lg:flex',
+        'border-r border-border-hairline bg-surface-nav text-text-onNav'
       )}
     >
-      <UbLink
-        href={ROUTES.DASHBOARD}
-        tone="inherit"
-        underline={false}
-        aria-label={t('nav.brandHome', { appName })}
-        className="flex min-h-11 items-center rounded-control px-2"
-      >
-        {/* `label` is on the link, not the lockup, so the destination is
-            announced once rather than as "DigiKhaato, DigiKhaato link". */}
-        <UbLogo variant="full" size="sm" wordmark={appName} tone="inherit" />
-      </UbLink>
-
-      {/* PLT-04 §7 — the switcher sits at the top-left of the rail, on the dark
-          `--surface-nav`, above the navigation it changes the contents of. */}
-      <TenantSwitcherMenu className="px-1" />
-
+      <TenantSwitcherMenu rail caption={appName} />
+      <UbBox aria-hidden className="h-px w-full shrink-0 bg-border-hairline" />
       <NavSections />
     </UbBox>
   );

@@ -30,7 +30,7 @@ function UbFieldErrorBase({ id, children, className }: Readonly<UbFieldErrorProp
       // first submit, and an assertive region would interrupt on each one.
       role="status"
       aria-live="polite"
-      className={cn('ds-caption text-formError', className)}
+      className={cn('ds-chip text-formError', className)}
     >
       {children}
     </p>

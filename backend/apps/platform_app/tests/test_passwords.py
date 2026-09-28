@@ -12,9 +12,14 @@ ones that prove nothing depends on it any more.
 from __future__ import annotations
 
 import datetime as dt
-from typing import Any
+import statistics
+import time
+from contextlib import contextmanager
+from typing import Any, Iterator
+from unittest import mock
 
 import pytest
+from django.contrib.auth.hashers import PBKDF2PasswordHasher
 from django.urls import reverse
 from django.utils import timezone
 
@@ -439,6 +444,371 @@ def test_the_throttle_key_is_a_hash_not_the_address(auth_client: Any, user: Any)
     stored = set(RateLimit.objects.values_list("key", flat=True))
     assert stored
     assert all(len(key) == 64 and user.email not in key for key in stored)
+
+
+# ── NEW-4: the per-IP budget counts FAILURES, not sign-ins ───────────────────
+#
+# Part 27 §27.4.2 "Throttle": "10 attempts per mobile per 10 min, then 15-minute
+# lockout; 100 per IP per hour", and §27.11 "Login | 10/mobile/10 min;
+# 100/IP/hour". The same cell's "On success" row clears "every failed-attempt
+# counter", PLT-02 FR-6 reads the per-identifier half as "10 FAILED attempts",
+# and the constant was always `LOGIN_FAILURES_PER_IP`. The IP half is the same
+# kind of budget: it exists for credential stuffing (Part 27 T4), and a
+# credential that works is not stuffing.
+
+
+def _fail_from_this_ip(auth_client: Any, count: int, *, start: int = 0) -> None:
+    """`count` wrong passwords, each for a DIFFERENT unknown address.
+
+    Different addresses so the per-account lock (10) never fires and the only
+    budget being spent is the per-IP one — the credential-stuffing shape.
+    """
+    for index in range(start, start + count):
+        response = auth_client.post(
+            reverse(LOGIN_URL),
+            {"email": f"stuffed{index}@example.com", "password": "Wrong12345"},
+            format="json",
+        )
+        assert response.status_code == 401, (index, response.json())
+
+
+def test_a_hundred_and_fifty_successful_logins_from_one_ip_all_succeed(
+    auth_client: Any, user: Any
+) -> None:
+    """NEW-4: `login_ip` was charged on EVERY attempt, successes included.
+
+    `throttle.consume` ran before the password was checked, so a shared NAT — a
+    market full of shops, one office — was locked out after its hundredth
+    *successful* sign-in of the hour, and so was an e2e run. The 101st correct
+    password answered 429 `login_throttled`.
+    """
+    from apps.platform_app.services import throttle
+
+    _with_password(user)
+    for index in range(150):
+        response = auth_client.post(
+            reverse(LOGIN_URL), {"email": user.email, "password": "Kirana123"}, format="json"
+        )
+        assert response.status_code == 200, (index, response.json())
+    assert throttle.LOGIN_FAILURES_PER_IP < 150
+
+
+def test_failures_from_one_ip_lock_it_at_the_documented_threshold(
+    auth_client: Any, user: Any
+) -> None:
+    """Part 27 §27.4.2 / §27.11 "100 per IP per hour": the 101st failure is refused."""
+    from apps.platform_app.services import throttle
+
+    _fail_from_this_ip(auth_client, throttle.LOGIN_FAILURES_PER_IP)
+
+    refused = auth_client.post(
+        reverse(LOGIN_URL),
+        {"email": "one-more@example.com", "password": "Wrong12345"},
+        format="json",
+    )
+    assert refused.status_code == 429
+    assert refused.json()["error"]["code"] == "login_throttled"
+    assert int(refused["Retry-After"]) > 0
+
+
+def test_a_locked_ip_is_refused_before_the_password_is_checked(
+    auth_client: Any, user: Any, monkeypatch: Any
+) -> None:
+    """NEW-4's guard rail: counting failures must not open a verification oracle.
+
+    If the IP lock were checked only AFTER the hash, a locked-out stuffer could
+    keep submitting and read 200-versus-429 as "right password". The lock is
+    read first and the password is never verified while it holds.
+    """
+    from apps.platform_app.models import User
+    from apps.platform_app.services import throttle
+
+    _with_password(user)
+    _fail_from_this_ip(auth_client, throttle.LOGIN_FAILURES_PER_IP)
+
+    checked: list[str] = []
+    original = User.check_password
+
+    def spy(self: Any, raw: str) -> bool:
+        checked.append(raw)
+        return original(self, raw)
+
+    monkeypatch.setattr(User, "check_password", spy)
+    refused = auth_client.post(
+        reverse(LOGIN_URL), {"email": user.email, "password": "Kirana123"}, format="json"
+    )
+    assert refused.status_code == 429
+    assert refused.json()["error"]["code"] == "login_throttled"
+    assert checked == []
+
+
+def test_a_success_does_not_refill_the_per_ip_failure_budget(auth_client: Any, user: Any) -> None:
+    """NEW-4: successes neither SPEND the IP budget nor REFILL it.
+
+    Clearing the IP counter on success would let a stuffer who owns one real
+    account reset their budget by signing into it every 99 guesses. Before the
+    fix the success below was the 100th charge, so the 100th failure after it
+    was refused as throttled instead of answered 401.
+    """
+    from apps.platform_app.services import throttle
+
+    _with_password(user)
+    _fail_from_this_ip(auth_client, throttle.LOGIN_FAILURES_PER_IP - 1)
+    ok = auth_client.post(
+        reverse(LOGIN_URL), {"email": user.email, "password": "Kirana123"}, format="json"
+    )
+    assert ok.status_code == 200
+
+    # The hundredth failure is still an answered attempt …
+    _fail_from_this_ip(auth_client, 1, start=500)
+    # … and after it the IP is closed, correct password or not.
+    locked = auth_client.post(
+        reverse(LOGIN_URL), {"email": user.email, "password": "Kirana123"}, format="json"
+    )
+    assert locked.status_code == 429
+
+
+def test_a_counter_left_by_the_old_every_attempt_rule_does_not_lock_anyone(
+    auth_client: Any, user: Any
+) -> None:
+    """NEW-4 deploy safety: pre-fix `login_ip` rows hold counts of SUCCESSES.
+
+    A row at 100 written by the old rule would otherwise make the very next
+    failure — or, before the fix, the next correct password — a lockout for
+    everybody behind that address. The failure budget lives under its own
+    scope, so those rows are inert.
+    """
+    from apps.platform_app.models import RateLimit
+    from apps.platform_app.services import throttle
+
+    _with_password(user)
+    RateLimit.objects.create(
+        scope="login_ip",
+        key=throttle.digest("127.0.0.1"),
+        window_start=timezone.now(),
+        count=throttle.LOGIN_FAILURES_PER_IP,
+        last_hit_at=timezone.now(),
+    )
+    ok = auth_client.post(
+        reverse(LOGIN_URL), {"email": user.email, "password": "Kirana123"}, format="json"
+    )
+    assert ok.status_code == 200
+    _fail_from_this_ip(auth_client, 1)
+
+
+def test_the_ip_lockout_says_nothing_about_the_address(auth_client: Any, user: Any) -> None:
+    """US-PLT-02-5 / BR-1: a known and an unknown address get the same 429."""
+    from apps.platform_app.services import throttle
+
+    _with_password(user)
+    _fail_from_this_ip(auth_client, throttle.LOGIN_FAILURES_PER_IP)
+
+    known = auth_client.post(
+        reverse(LOGIN_URL), {"email": user.email, "password": "Wrong12345"}, format="json"
+    )
+    unknown = auth_client.post(
+        reverse(LOGIN_URL),
+        {"email": "nobody-at-all@example.com", "password": "Wrong12345"},
+        format="json",
+    )
+    assert known.status_code == unknown.status_code == 429
+    known_error, unknown_error = known.json()["error"], unknown.json()["error"]
+    assert known_error["code"] == unknown_error["code"] == "login_throttled"
+    assert known_error["message"] == unknown_error["message"]
+    # The same one IP row answers both, so the wait differs by clock drift only.
+    assert set(known_error["details"]) == set(unknown_error["details"]) == {"retry_after"}
+    assert abs(known_error["details"]["retry_after"] - unknown_error["details"]["retry_after"]) <= 1
+
+
+# ── Timing: every login miss costs exactly one password hash ────────────────
+#
+# The 401 body never says whether an address has an account; the clock used to.
+# `authenticate` computed a hash only for an active user WITH a password, so an
+# unknown address, a deactivated account and a password-less one all answered
+# in the time of one indexed SELECT, while a wrong password on a real account
+# answered in the time of one PBKDF2 (1,000,000 iterations in production). The
+# tests below count calls to the default hasher's `encode` — the one method
+# every hash of every Django hasher goes through — so they hold under the MD5
+# hasher the suite runs with, where the wall-clock gap itself is invisible.
+
+
+class _FastPBKDF2(PBKDF2PasswordHasher):
+    """PBKDF2 at a test-sized work factor, so the timing test can afford real hashes."""
+
+    iterations = 60_000
+
+
+class _FasterPBKDF2(PBKDF2PasswordHasher):
+    """The same algorithm at a different work factor — a settings change, as it were."""
+
+    iterations = 2_000
+
+
+_THIS_MODULE = __name__
+
+
+@contextmanager
+def _count_hashes() -> Iterator[list[int]]:
+    """Count every hash the CURRENT default hasher computes inside the block."""
+    from django.contrib.auth.hashers import get_hasher
+
+    hasher_cls = type(get_hasher("default"))
+    original = hasher_cls.encode
+    calls: list[int] = []
+
+    def spy(self: Any, *args: Any, **kwargs: Any) -> str:
+        calls.append(1)
+        return original(self, *args, **kwargs)
+
+    with mock.patch.object(hasher_cls, "encode", spy):
+        yield calls
+
+
+def _login_target(kind: str, user: Any, passwordless_user: Any) -> str:
+    if kind == "unknown":
+        return "nobody-by-this-name@example.com"
+    if kind == "no_password":
+        return passwordless_user.email
+    _with_password(user)
+    if kind == "inactive":
+        user.is_active = False
+        user.save(update_fields=["is_active"])
+    return user.email
+
+
+@pytest.mark.parametrize("kind", ["wrong_password", "unknown", "inactive", "no_password"])
+def test_every_login_miss_computes_exactly_one_password_hash(
+    kind: str, user: Any, passwordless_user: Any, monkeypatch: Any
+) -> None:
+    """Enumeration by timing: every refusal pays for one hash, like a wrong password.
+
+    Before the fix the `unknown`, `inactive` and `no_password` cases returned
+    before `check_password` and computed ZERO hashes, so with PBKDF2 a fast 401
+    meant "no usable account at this address". Each case is run twice, from an
+    empty dummy cache, so both halves of `_burn_one_hash` are counted: the first
+    miss pays its hash making the dummy, the second verifying against it.
+    """
+    from apps.platform_app.services import passwords
+
+    monkeypatch.setattr(passwords, "_DUMMY_ENCODED", {})
+    email = _login_target(kind, user, passwordless_user)
+    for _ in range(2):
+        with _count_hashes() as calls:
+            with pytest.raises(passwords.InvalidCredentials):
+                passwords.authenticate(identifier=email, password="Wrong12345", ip="198.51.100.7")
+        assert len(calls) == 1, f"{kind}: {len(calls)} hashes"
+
+
+def test_a_right_password_still_logs_in_with_one_hash(user: Any) -> None:
+    """The success path is untouched: one verification, no dummy on top of it."""
+    from apps.platform_app.services import passwords
+
+    _with_password(user)
+    with _count_hashes() as calls:
+        assert passwords.authenticate(identifier=user.email, password="Kirana123") == user
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize("lock", ["email", "ip"])
+@pytest.mark.parametrize("kind", ["wrong_password", "unknown", "no_password"])
+def test_a_locked_caller_costs_the_server_no_hash_at_all(
+    lock: str, kind: str, user: Any, passwordless_user: Any
+) -> None:
+    """Both locks are read BEFORE any hashing — real or dummy.
+
+    Equalising the miss paths must not turn the lockout into a CPU sink: a
+    caller who is already refused gets its 429 without a single PBKDF2, whether
+    the address is known or not, so a locked stuffer cannot keep the server
+    hashing and the dummy cannot become an oracle of its own.
+    """
+    from apps.platform_app.services import passwords, throttle
+
+    email = _login_target(kind, user, passwordless_user)
+    ip = "203.0.113.9"
+    if lock == "email":
+        scope, identifier, threshold = (
+            throttle.SCOPE_LOGIN_EMAIL,
+            email,
+            throttle.LOGIN_FAILURES_PER_IDENTIFIER,
+        )
+        window, lockout = throttle.LOGIN_FAILURE_WINDOW_SECONDS, throttle.LOGIN_LOCKOUT_SECONDS
+    else:
+        scope, identifier, threshold = (
+            throttle.SCOPE_LOGIN_IP,
+            ip,
+            throttle.LOGIN_FAILURES_PER_IP,
+        )
+        window, lockout = throttle.LOGIN_IP_WINDOW_SECONDS, throttle.LOGIN_IP_LOCKOUT_SECONDS
+    for _ in range(threshold):
+        throttle.record_failure(
+            scope=scope,
+            identifier=identifier,
+            threshold=threshold,
+            window_seconds=window,
+            lockout_seconds=lockout,
+        )
+
+    with _count_hashes() as calls:
+        with pytest.raises(passwords.LoginThrottled):
+            passwords.authenticate(identifier=email, password="Kirana123", ip=ip)
+    assert calls == []
+
+
+def test_the_dummy_hash_follows_the_current_default_hasher(
+    user: Any, monkeypatch: Any, settings: Any
+) -> None:
+    """The dummy costs what a real verification costs NOW, not what it cost at start-up.
+
+    A raised iteration count or a swapped hasher must not leave the miss path
+    burning the old, cheaper work factor while real accounts pay the new one.
+    """
+    from apps.platform_app.services import passwords
+
+    monkeypatch.setattr(passwords, "_DUMMY_ENCODED", {})
+    for cls, iterations in ((_FastPBKDF2, 60_000), (_FasterPBKDF2, 2_000)):
+        settings.PASSWORD_HASHERS = [f"{_THIS_MODULE}.{cls.__name__}"]
+        with _count_hashes() as calls:
+            with pytest.raises(passwords.InvalidCredentials):
+                passwords.authenticate(identifier="ghost@example.com", password="Wrong12345")
+        assert len(calls) == 1
+        assert (
+            f"pbkdf2_sha256${iterations}$"
+            in passwords._DUMMY_ENCODED[("pbkdf2_sha256", iterations, None)]
+        )
+    assert len(passwords._DUMMY_ENCODED) == 2
+
+
+@pytest.mark.timing
+def test_an_unknown_address_takes_about_as_long_as_a_wrong_password(
+    user: Any, settings: Any
+) -> None:
+    """Coarse wall-clock check with a real PBKDF2, generous on purpose.
+
+    Before the fix the unknown-address median was a few percent of the
+    wrong-password one (a SELECT against a SELECT plus 60,000 iterations);
+    now both are dominated by one hash. The bound is a factor of two either
+    way, which a loaded runner does not reach but the old gap is far outside.
+    Deselect with `-m 'not timing'`.
+    """
+    from apps.platform_app.services import passwords
+
+    settings.PASSWORD_HASHERS = [f"{_THIS_MODULE}.{_FastPBKDF2.__name__}"]
+    _with_password(user)  # re-hashed under the PBKDF2 above
+
+    def median_seconds(identifier: str) -> float:
+        samples = []
+        for _ in range(7):  # under the 10-failure lockout, with the warm-up
+            started = time.perf_counter()
+            with pytest.raises(passwords.InvalidCredentials):
+                passwords.authenticate(identifier=identifier, password="Wrong12345")
+            samples.append(time.perf_counter() - started)
+        return statistics.median(samples)
+
+    with pytest.raises(passwords.InvalidCredentials):  # warm the dummy
+        passwords.authenticate(identifier="warm-up@example.com", password="Wrong12345")
+    wrong = median_seconds(user.email)
+    unknown = median_seconds("nobody-here@example.com")
+    assert 0.5 <= unknown / wrong <= 2.0, f"unknown {unknown:.4f}s vs wrong {wrong:.4f}s"
 
 
 # ── T-PLT-02-6 API: setting a password ───────────────────────────────────────

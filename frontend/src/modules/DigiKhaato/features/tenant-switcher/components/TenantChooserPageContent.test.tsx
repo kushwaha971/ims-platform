@@ -172,7 +172,8 @@ describe('TenantChooserPageContent — the three empty-state variants', () => {
     // is the one that closes the gap it is naming, so that is the one clicked.
     const actions = screen.getAllByRole('button', { name: 'Add a business' });
     await user.click(actions[actions.length - 1] as HTMLElement);
-    expect(push).toHaveBeenCalledWith('/onboarding/step/1');
+    // M2 (residual) — with the intent, so the wizard never resumes the active business.
+    expect(push).toHaveBeenCalledWith('/onboarding/step/1?intent=add');
   });
 
   it('filtered: the search matched nothing, and the action clears it', async () => {

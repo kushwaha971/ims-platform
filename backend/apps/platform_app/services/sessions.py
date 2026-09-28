@@ -76,6 +76,7 @@ def issue(
         user_agent=(user_agent or "")[:255] or None,
         ip=ip,
         expires_at=timezone.now() + dt.timedelta(days=settings.UB_REFRESH_TOKEN_DAYS),
+        last_used_at=timezone.now(),
     )
     access = tokens.mint_access(
         user=user,

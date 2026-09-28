@@ -188,6 +188,30 @@ REST_FRAMEWORK = {
         "otp_ip": "20/hour",
         "export": env.str("UB_RATE_LIMIT_EXPORT", "10/hour"),
         "public_link": "60/min",
+        # PLT-10 FR-3: re-typing the password to delete a business. A stolen
+        # session guessing the owner's password here gets ten tries an hour.
+        "reverify": "10/hour",
+        # Party creation. Generous for a shopkeeper adding names from a paper
+        # book, tight enough that a stolen token cannot enumerate mobile
+        # numbers through the duplicate-mobile response or fill a tenant's
+        # book with junk faster than anyone would notice.
+        "party_write": env.str("UB_RATE_LIMIT_PARTY_WRITE", "60/min"),
+        # PTY-02 §19's search guard, spent only by a list request that carries
+        # `?q=`, and ON TOP of the user budget rather than instead of it. The
+        # search is the one list query that reads indexes other than the
+        # ordering one, and it is typed a character at a time; 120/min is two a
+        # second, sustained, which a person at a counter does not do.
+        "party_search": env.str("UB_RATE_LIMIT_PARTY_SEARCH", "120/min"),
+        # Ledger entries. Higher than `party_write` because this is the most
+        # frequent write in the product and the ceiling has to clear the case it
+        # is built for: a merchant copying a month of a paper khata in on a slow
+        # afternoon, one entry every few seconds, for an hour. What 120/min
+        # stops is a loop, not a person.
+        "ledger_write": env.str("UB_RATE_LIMIT_LEDGER_WRITE", "120/min"),
+        # IMP-01 §14 — "20 uploads per hour". An upload stores a file and
+        # queues a job that reads all of it; a loop of them is the one way a
+        # stolen token fills a tenant's disk.
+        "import_upload": "20/hour",
     },
     "UNAUTHENTICATED_USER": None,
     "COERCE_DECIMAL_TO_STRING": True,
@@ -263,6 +287,10 @@ CORS_EXPOSE_HEADERS = [
     "X-Tenant-Scope",
     "Idempotent-Replayed",
     "Retry-After",
+    # IMP-02 — a list export is FETCHED (it may answer 202 with a job instead
+    # of a file), so the browser must be allowed to read the file name the
+    # server chose; without it every export saves as the fallback name.
+    "Content-Disposition",
 ]
 
 # The same split, in the other direction — and this is the half that stops the
@@ -292,6 +320,10 @@ CORS_ALLOW_HEADERS = (
     "X-CSRF-Token",  # double-submit cookie guard (§20.4.6)
     "Idempotency-Key",  # replay-safe writes (§22.3)
     "X-Client",  # `web` | `api`, read by throttling and audit
+    # PLT-06 FR-8 / CR-011 — the settings PUT's optimistic lock. Without it the
+    # settings page's every save fails preflight in dev (the X-Request-Id
+    # defect above, again) and passes every Django-test-client test.
+    "If-Match",
 )
 
 # ── Jobs and scheduler (ADR-012, Part 20 §20.8) ──────────────────────────────

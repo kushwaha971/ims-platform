@@ -1,5 +1,6 @@
 import type { ApiErrorShape } from 'src/types/api.types';
 import { readDetailNumber, readDetailString } from 'src/utils/errorDetails';
+import { buildWhatsAppUrl } from 'src/utils/share';
 
 import { PLAN_LIMIT_KEYS } from '../types/plan.types';
 
@@ -86,11 +87,10 @@ export const planContactAction = (
   prefilledText: string
 ): PlanContactAction | null => {
   if (contact.whatsapp) {
-    const digits = contact.whatsapp.replace(/\D/g, '');
-    return {
-      channel: 'whatsapp',
-      href: `https://wa.me/${digits}?text=${encodeURIComponent(prefilledText)}`,
-    };
+    /* The one `wa.me` builder (src/utils/share.ts): it also reads a national
+       ten-digit number as +91 and folds CRLF, which this used to do by hand
+       with a bare digit strip. */
+    return { channel: 'whatsapp', href: buildWhatsAppUrl(prefilledText, contact.whatsapp) };
   }
   if (contact.phone) return { channel: 'phone', href: `tel:${contact.phone.replace(/\s/g, '')}` };
   if (contact.email) {

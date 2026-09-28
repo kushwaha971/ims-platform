@@ -43,7 +43,7 @@
   --radius-card: var(--radius-lg);
   --radius-control: var(--radius-md);
 
-  --sidebar-width: 248px;
+  --sidebar-width: 180px;
   --sidebar-collapsed: 64px;
   --topbar-height: 60px;
   --content-max: 1440px;
@@ -79,22 +79,22 @@
   /* ── Typography (§23.2.2) ──────────────────────────────────────────────── */
   /* Clash Grotesk/Display carry no Devanagari; the roles are kept and the faces
      substituted with Inter + Noto Sans Devanagari (§23.2.2 font decision). */
-  --font-display: 'Inter', 'Noto Sans Devanagari', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-ui: 'Inter', 'Noto Sans Devanagari', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'DK Rupee', var(--font-dm-sans, 'DM Sans'), var(--font-inter, 'Inter'), var(--font-noto-devanagari, 'Noto Sans Devanagari'), system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-ui: 'DK Rupee', var(--font-dm-sans, 'DM Sans'), var(--font-inter, 'Inter'), var(--font-noto-devanagari, 'Noto Sans Devanagari'), system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', 'Menlo', monospace;
-  --font-metric: var(--font-display);
+  --font-metric: var(--font-inter, 'Inter'), var(--font-noto-devanagari, 'Noto Sans Devanagari'), system-ui, sans-serif;
 
   --size-display: 44px;
-  --size-h1: 32px;
-  --size-h2: 24px;
-  --size-h3: 19px;
-  --size-h4: 16px;
-  --size-body: 15px;
-  --size-body-sm: 13.5px;
-  --size-caption: 12.5px;
-  --size-label: 12.5px;
-  --size-label-caps: 11px;
-  --size-micro: 10.5px;
+  --size-h1: 20px;
+  --size-h2: 18px;
+  --size-h3: 16px;
+  --size-h4: 14px;
+  --size-body: 14px;
+  --size-body-sm: 12px;
+  --size-caption: 12px;
+  --size-label: 12px;
+  --size-label-caps: 10px;
+  --size-micro: 10px;
   /* The brand wordmark (§23.2.6, CR-2026-09-19-D). It is a NAME, not a heading,
      so it gets its own four tiers rather than borrowing `ds-h*` — a wordmark
      set in the page's heading tier competes with the page's heading. */
@@ -104,7 +104,7 @@
   --size-wordmark-xl: 26px;
   --size-metric-xl: 52px;
   --size-metric-lg: 38px;
-  --size-metric-md: 28px;
+  --size-metric-md: 24px;
   --size-metric-sm: 20px;
 
   --leading-tight: 1.05;
@@ -114,7 +114,7 @@
   --leading-label: 1.4;
   /* Devanagari matras clip below 1.5 — the Hindi label tier is taller (§23.2.2). */
   --leading-label-hi: 1.5;
-  --size-label-hi: 13px;
+  --size-label-hi: 12.5px;
 
   --track-display: -0.025em;
   --track-heading: -0.015em;

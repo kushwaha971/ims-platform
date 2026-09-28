@@ -109,8 +109,10 @@ def effective_modules(tenant: Any) -> frozenset[str]:
 # ── max_users — the one limit with an enforcement hook this sprint ───────────
 
 
-def member_usage(tenant: Any) -> int:
-    """PLT-15 FR-3: memberships with `status ∈ {active, invited}`.
+def member_usage(tenant: Any, *, excluding_email: str | None = None) -> int:
+    """PLT-15 FR-3: memberships with `status ∈ {active, invited}`, plus live
+    invitations to people with no such membership (PLT-05 FR-12 — see
+    `count_members` for why a pending invitation is a seat).
 
     BR-2: the owner counts. There is no "+1 for the owner" anywhere, because the
     owner is a membership like any other and counting it twice is how a free
@@ -118,10 +120,16 @@ def member_usage(tenant: Any) -> int:
     """
     from apps.platform_app.selectors.entitlements import count_members
 
-    return count_members(tenant=tenant)
+    return count_members(tenant=tenant, excluding_email=excluding_email)
 
 
-def assert_can_add_member(*, tenant: Any, adding: int = 1, endpoint: str = "") -> None:
+def assert_can_add_member(
+    *,
+    tenant: Any,
+    adding: int = 1,
+    endpoint: str = "",
+    excluding_email: str | None = None,
+) -> None:
     """Raise 403 `plan_limit_reached` when the seat would exceed the plan.
 
     Called at the two points PLT-15 FR-3 names that exist in Sprint 1 —
@@ -132,11 +140,15 @@ def assert_can_add_member(*, tenant: Any, adding: int = 1, endpoint: str = "") -
     two devices cannot both pass the check at `limit − 1`. The lock is taken by
     the caller's service, inside whose transaction this runs;
     `lock_tenant_for_write` is the helper that does it.
+
+    `excluding_email` turns the check into "everybody else, plus this person":
+    used when a seat already PROMISED to that address (an `invited` membership
+    or a live invitation) is being converted, so it is not charged twice.
     """
     cap = for_tenant(tenant).limit("max_users")
     if cap is None:
         return
-    used = member_usage(tenant)
+    used = member_usage(tenant, excluding_email=excluding_email)
     if used + adding > cap:
         raise_plan_limit(
             tenant=tenant, limit_key="max_users", used=used, cap=cap, endpoint=endpoint

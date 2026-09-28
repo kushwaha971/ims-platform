@@ -3,6 +3,7 @@
 import { memo, type ReactNode } from 'react';
 
 import { UbEmptyState, type UbEmptyStateVariant } from 'src/design-system/UbEmptyState';
+import type { UbRequestIdFields } from 'src/design-system/UbRequestId';
 
 import type { UbGridState } from './types';
 
@@ -15,13 +16,18 @@ import type { UbGridState } from './types';
  * merchant has just typed into is a lie, and "Clear filters" on a first-run
  * screen offers to clear filters that do not exist.
  */
-export interface UbDataGridEmptyCopy {
+/**
+ * `requestId` / `requestIdLabel` — error variant only: the "Reference <id>"
+ * line that joins a screenshot to a log (R-E-4). The label is required with
+ * the id (UbRequestIdFields), which is what keeps a bare UUID off the screen.
+ */
+export type UbDataGridEmptyCopy = UbDataGridEmptyCopyBase & UbRequestIdFields;
+
+interface UbDataGridEmptyCopyBase {
   readonly title: string;
   readonly description?: string;
   /** Exactly one action: the move that closes the gap. */
   readonly action?: ReactNode;
-  /** Error variant only — the line that joins a screenshot to a log (R-E-4). */
-  readonly requestId?: string | null;
 }
 
 export interface UbDataGridEmptyStates {
@@ -49,15 +55,20 @@ function UbDataGridEmptyStateBase({ state, copy, className }: Readonly<UbDataGri
   const chosen =
     state === 'error' ? copy.error : state === 'filtered-empty' ? copy.filtered : copy.firstUse;
 
-  return (
-    <UbEmptyState
-      variant={variant}
-      title={chosen.title}
-      description={chosen.description}
-      action={chosen.action}
-      requestId={state === 'error' ? chosen.requestId : undefined}
-      className={className}
-    />
+  const common = {
+    variant,
+    title: chosen.title,
+    description: chosen.description,
+    action: chosen.action,
+    className,
+  };
+  // The request id is the error variant's alone, and never without its label.
+  const idLabel = state === 'error' ? chosen.requestIdLabel : undefined;
+
+  return idLabel ? (
+    <UbEmptyState {...common} requestId={chosen.requestId} requestIdLabel={idLabel} />
+  ) : (
+    <UbEmptyState {...common} />
   );
 }
 

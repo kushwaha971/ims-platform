@@ -18,7 +18,7 @@ export interface UbInputHintProps {
 
 function UbInputHintBase({ id, children, className }: Readonly<UbInputHintProps>) {
   return (
-    <p id={id} className={cn('ds-caption text-text-tertiary', className)}>
+    <p id={id} className={cn('ds-chip text-text-tertiary', className)}>
       {children}
     </p>
   );
