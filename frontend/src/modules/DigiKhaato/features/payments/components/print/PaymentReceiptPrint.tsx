@@ -34,6 +34,15 @@ import 'src/i18n/catalogues/payments';
  * reason (FR-8). The raw elements are allowed here and only here: a printed
  * receipt needs a real `<table>` (the print directory's lint exemption).
  */
+/**
+ * QA P-D5 — the tables' cells had no padding on screen (print adds its own in
+ * globals.css), so neighbouring columns ran together: "PhonePe—",
+ * "INV/26-27/000113/09/2026". A column gap on every cell, the first and last
+ * flush with the sheet's edge.
+ */
+const CELLS =
+  'w-full [&_td]:px-2 [&_td]:py-1 [&_th]:px-2 [&_th]:py-1 [&_td:first-child]:pl-0 [&_th:first-child]:pl-0 [&_td:last-child]:pr-0 [&_th:last-child]:pr-0';
+
 export function PaymentReceiptPrint({
   payment,
   branding,
@@ -52,6 +61,8 @@ export function PaymentReceiptPrint({
   const isVoid = payment.status === 'void';
   const balance = payment.partyBalanceAfter;
   const modeIds = modeLabelIds(payment.modeBreakup);
+  /* QA P-D6 — a voided receipt settles nothing, so it states no balance after it. */
+  const showBalance = !isVoid;
   const address = [business.address.line1, business.address.line2, business.address.city]
     .filter(Boolean)
     .join(', ');
@@ -101,7 +112,7 @@ export function PaymentReceiptPrint({
         <p className="italic">{amountInWords(payment.amount, locale)}</p>
       </section>
 
-      <table className="mt-3">
+      <table className={`mt-3 ${CELLS}`}>
         <thead>
           <tr>
             <th className="text-left">{t('payments.receipt.mode')}</th>
@@ -121,7 +132,7 @@ export function PaymentReceiptPrint({
       </table>
 
       {(payment.allocations.length > 0 || hasAdvance(payment)) && (
-        <table className="mt-3">
+        <table className={`mt-3 ${CELLS}`}>
           <thead>
             <tr>
               <th className="text-left">{t('payments.receipt.against')}</th>
@@ -150,7 +161,7 @@ export function PaymentReceiptPrint({
         </table>
       )}
 
-      {balance !== null && (
+      {showBalance && balance !== null && (
         <p className="ub-print-closing mt-3 font-semibold">
           {t('payments.receipt.balanceAfter')}: {formatInr(absMoney(balance))} —{' '}
           {isZeroAmount(balance)

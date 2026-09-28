@@ -239,9 +239,46 @@
       margin: 10mm;
     }
 
+    /* QA P-D3 — the receipt printed as a blank A4 page and then an A5 page with
+       the receipt pushed right and clipped. Two causes:
+
+       1. The named page sat on the receipt alone. Its ancestors (body, the
+          shell, the page column) stayed on the default A4 page, and a change of
+          named page forces a break — so page 1 was those ancestors, empty.
+          Naming the page on `body` when it holds a receipt puts the whole flow
+          on A5: one page, no break.
+       2. On the A5 page the receipt kept its screen box — `max-w-[148mm]` and
+          `mx-auto` inside the shell's padded column — which is wider than A5's
+          128 mm printable width. Every wrapper between `body` and the receipt
+          drops its padding, margin and max-width in print, and the receipt
+          takes exactly the printable width. */
+    body:has(.ub-print-a5) {
+      page: a5;
+    }
+
+    body:has(.ub-print-a5),
+    body:has(.ub-print-a5) *:has(.ub-print-a5) {
+      margin: 0 !important;
+      padding: 0 !important;
+      max-width: none !important;
+      min-height: 0 !important;
+      border: 0 !important;
+      overflow: visible !important;
+      gap: 0 !important;
+    }
+
+    /* The phone bottom-nav spacer: A5 is narrower than `md`, so it would show. */
+    body:has(.ub-print-a5) main [aria-hidden].h-bottom-nav {
+      display: none !important;
+    }
+
     .ub-print-a5 {
       page: a5;
+      width: 100% !important;
+      max-width: none !important;
+      margin: 0 !important;
       padding: 0 !important;
+      break-inside: avoid;
     }
   }
 }
