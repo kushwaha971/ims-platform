@@ -1,0 +1,12 @@
+{
+  "data.export.status.expired": "समाप्त",
+  "data.export.status.failed": "विफल",
+  "data.export.status.queued": "प्रतीक्षा में",
+  "data.export.status.running": "तैयार हो रहा है",
+  "data.export.status.succeeded": "तैयार",
+  "data.support.status.denied": "मना किया",
+  "data.support.status.expired": "समाप्त",
+  "data.support.status.granted": "अनुमति दी",
+  "data.support.status.requested": "आपकी प्रतीक्षा",
+  "data.support.status.revoked": "बंद किया"
+}

@@ -77,6 +77,12 @@
     "ledger.upiApp.": "money",
     "reminders.sheet.": "share",
     "payments.record.title": "paymentActions",
-    "payments.upi.collect": "paymentActions"
+    "payments.upi.collect": "paymentActions",
+    "data.export.status.": "dataStatus",
+    "data.support.status.": "dataStatus",
+    "settings.profile.": "businessProfile",
+    "settings.noAccess.": "settingsGate",
+    "settings.viewOnly": "settingsGate",
+    "settings.action.": "settingsGate"
   }
 }

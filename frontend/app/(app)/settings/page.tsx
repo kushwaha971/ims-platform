@@ -8,6 +8,7 @@ import { SettingsPageContent } from 'modules/DigiKhaato/features/settings/compon
 
 // The words this screen renders arrive with its chunk (src/i18n/catalogueRegistry.ts).
 import 'src/i18n/catalogues/settings';
+import 'src/i18n/catalogues/settingsGate';
 import 'src/i18n/catalogues/validation';
 
 /** PLT-06 — Settings. Part 19 §19.1.4: a Suspense boundary and one import. */

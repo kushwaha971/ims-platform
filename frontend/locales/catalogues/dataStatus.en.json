@@ -1,0 +1,12 @@
+{
+  "data.export.status.expired": "Expired",
+  "data.export.status.failed": "Failed",
+  "data.export.status.queued": "Waiting",
+  "data.export.status.running": "Preparing",
+  "data.export.status.succeeded": "Ready",
+  "data.support.status.denied": "Denied",
+  "data.support.status.expired": "Expired",
+  "data.support.status.granted": "Allowed",
+  "data.support.status.requested": "Waiting for you",
+  "data.support.status.revoked": "Ended"
+}

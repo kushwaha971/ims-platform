@@ -10,10 +10,14 @@ import authEn from 'locales/catalogues/auth.en.json';
 import authHi from 'locales/catalogues/auth.hi.json';
 import brandingEn from 'locales/catalogues/branding.en.json';
 import brandingHi from 'locales/catalogues/branding.hi.json';
+import businessProfileEn from 'locales/catalogues/businessProfile.en.json';
+import businessProfileHi from 'locales/catalogues/businessProfile.hi.json';
 import cashbookEn from 'locales/catalogues/cashbook.en.json';
 import cashbookHi from 'locales/catalogues/cashbook.hi.json';
 import dataEn from 'locales/catalogues/data.en.json';
 import dataHi from 'locales/catalogues/data.hi.json';
+import dataStatusEn from 'locales/catalogues/dataStatus.en.json';
+import dataStatusHi from 'locales/catalogues/dataStatus.hi.json';
 import expensesEn from 'locales/catalogues/expenses.en.json';
 import expensesHi from 'locales/catalogues/expenses.hi.json';
 import exportsEn from 'locales/catalogues/exports.en.json';
@@ -62,6 +66,8 @@ import sessionsEn from 'locales/catalogues/sessions.en.json';
 import sessionsHi from 'locales/catalogues/sessions.hi.json';
 import settingsEn from 'locales/catalogues/settings.en.json';
 import settingsHi from 'locales/catalogues/settings.hi.json';
+import settingsGateEn from 'locales/catalogues/settingsGate.en.json';
+import settingsGateHi from 'locales/catalogues/settingsGate.hi.json';
 import shareEn from 'locales/catalogues/share.en.json';
 import shareHi from 'locales/catalogues/share.hi.json';
 import stockEn from 'locales/catalogues/stock.en.json';
@@ -92,8 +98,10 @@ export const en: Readonly<Record<string, string>> = {
   ...auditEn,
   ...authEn,
   ...brandingEn,
+  ...businessProfileEn,
   ...cashbookEn,
   ...dataEn,
+  ...dataStatusEn,
   ...expensesEn,
   ...exportsEn,
   ...importsEn,
@@ -118,6 +126,7 @@ export const en: Readonly<Record<string, string>> = {
   ...salesEn,
   ...sessionsEn,
   ...settingsEn,
+  ...settingsGateEn,
   ...shareEn,
   ...stockEn,
   ...teamEn,
@@ -131,8 +140,10 @@ export const hi: Readonly<Record<string, string>> = {
   ...auditHi,
   ...authHi,
   ...brandingHi,
+  ...businessProfileHi,
   ...cashbookHi,
   ...dataHi,
+  ...dataStatusHi,
   ...expensesHi,
   ...exportsHi,
   ...importsHi,
@@ -157,6 +168,7 @@ export const hi: Readonly<Record<string, string>> = {
   ...salesHi,
   ...sessionsHi,
   ...settingsHi,
+  ...settingsGateHi,
   ...shareHi,
   ...stockHi,
   ...teamHi,

@@ -1,0 +1,8 @@
+{
+  "settings.action.save": "बदलाव सेव करें",
+  "settings.action.saving": "सेव हो रहा है…",
+  "settings.noAccess.back": "सेटिंग्स पर वापस जाएँ",
+  "settings.noAccess.body": "आपकी भूमिका सेटिंग्स का यह हिस्सा नहीं खोल सकती। ज़रूरत हो तो मालिक से पूछें।",
+  "settings.noAccess.title": "यह सेटिंग उपलब्ध नहीं है",
+  "settings.viewOnly": "केवल देखें"
+}

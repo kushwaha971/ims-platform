@@ -6,6 +6,9 @@ import { UbPageSkeleton } from 'src/design-system';
 
 import { AccountDataPageContent } from 'modules/DigiKhaato/features/account-data/components/AccountDataPageContent';
 
+// The words this screen renders arrive with its chunk (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/dataStatus';
+
 /** PLT-10 — Settings → Your data. Part 19 §19.1.4: a Suspense boundary and one import. */
 export default function AccountDataPage(): React.JSX.Element {
   return (

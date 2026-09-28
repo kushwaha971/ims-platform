@@ -1,7 +1,12 @@
-import { screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
+import { Provider } from 'react-redux';
 
+import { IntlProviderShell } from 'src/components/providers/IntlProviderShell';
 import { UbText } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
+import 'src/i18n/catalogues/legal';
+import { localeChanged } from 'src/redux/slice/localeSlice';
+import { store } from 'src/redux/store';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
 
 /**
@@ -36,5 +41,54 @@ describe('the formatting locale', () => {
     // glance is the entire product.
     renderWithProviders(<Probe />);
     expect(screen.getByText('12,34,567')).toBeInTheDocument();
+  });
+});
+
+/**
+ * W4-P — the product's provider, not the test harness's. `renderWithProviders`
+ * hands IntlProvider every catalogue at once, so it cannot show that a screen's
+ * catalogue, registered by importing its module (`legal`, above), reaches the
+ * shell's provider, nor that Hindi arrives for the shell and the screen alike.
+ */
+describe('the shell provider with a route-local catalogue', () => {
+  function Words(): React.JSX.Element {
+    const { t } = useTranslation();
+    return (
+      <>
+        <UbText>{t('common.action.dismiss')}</UbText>
+        <UbText>{t('legal.terms.title')}</UbText>
+      </>
+    );
+  }
+
+  const renderShell = () =>
+    render(
+      <Provider store={store}>
+        <IntlProviderShell>
+          <Words />
+        </IntlProviderShell>
+      </Provider>
+    );
+
+  afterEach(() => {
+    act(() => {
+      store.dispatch(localeChanged('en'));
+    });
+  });
+
+  it('renders a registered catalogue’s words on the first render, in English', () => {
+    store.dispatch(localeChanged('en'));
+    renderShell();
+    expect(screen.getByText('Dismiss')).toBeInTheDocument();
+    expect(screen.getByText('Terms of Service')).toBeInTheDocument();
+  });
+
+  it('switches the shell and the screen to Hindi once their Hindi halves land', async () => {
+    store.dispatch(localeChanged('hi'));
+    renderShell();
+    // English stands in until the chunks land — never a raw id.
+    expect(screen.queryByText('legal.terms.title')).not.toBeInTheDocument();
+    expect(await screen.findByText('सेवा की शर्तें')).toBeInTheDocument();
+    expect(await screen.findByText('हटाएँ')).toBeInTheDocument();
   });
 });
