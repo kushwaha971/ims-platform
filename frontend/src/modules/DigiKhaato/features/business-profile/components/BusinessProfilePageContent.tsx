@@ -58,7 +58,6 @@ import { DocumentHeaderPreview } from './DocumentHeaderPreview';
 
 import type { BusinessProfile } from '../types/businessProfile.types';
 
-
 const SIGNATURE_MAX_BYTES = 2 * 1024 * 1024;
 
 /**
