@@ -123,8 +123,11 @@ export function PurchaseBillLinesSection({
       setValue(`${base}.description`, row.name);
       setValue(`${base}.unitCode`, row.unit.code);
       setValue(`${base}.allowDecimal`, row.unit.allowDecimal);
-      setValue(`${base}.unitCost`, row.purchasePrice === '0.00' ? '' : row.purchasePrice);
-      setValue(`${base}.lastCost`, row.purchasePrice);
+      // `purchasePrice` is null for a role without cost visibility (INV-01):
+      // the line starts empty rather than carrying "null" into the form.
+      const cost = row.purchasePrice ?? '';
+      setValue(`${base}.unitCost`, cost === '0.00' ? '' : cost);
+      setValue(`${base}.lastCost`, cost);
       setValue(`${base}.taxCode`, row.taxCode);
       setValue(`${base}.itemTaxCode`, row.taxCode);
     },
