@@ -21,6 +21,13 @@ describe('sourceDisplay (LED-10 §14, T-LED-10-8)', () => {
     ).toBe('/expenses?period=thisFy&q=EXP%2F26-27%2F0001');
   });
 
+  it('opens a credit note on its own route, not the invoice page (SAL-04)', () => {
+    /** A khata's credit-note line used to open /sales/invoices/{id}, which is not a note's page. */
+    expect(sourceRoute(source({ kind: 'credit_note', number: 'CN/26-27/0001' }))).toBe(
+      '/sales/credit-notes/abc'
+    );
+  });
+
   it('links nowhere when the resolver found no document (§9 "Document not found")', () => {
     expect(sourceRoute(source({ number: null }))).toBeNull();
     expect(sourceLabelId(source({ number: null, kind: null }))).toBe('ledger.source.invoice');

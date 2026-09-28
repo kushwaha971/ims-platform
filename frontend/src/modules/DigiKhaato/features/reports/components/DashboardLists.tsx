@@ -58,7 +58,7 @@ export function RecentActivityList({
               number: item.number ?? '',
               party: item.party?.name ?? '',
             });
-            const href = sourceHref(item.source, item.number);
+            const href = sourceHref(item.source, item.number, item.type);
             return (
               <UbStack as="li" key={item.id} gap={0}>
                 {index > 0 && <UbDivider />}

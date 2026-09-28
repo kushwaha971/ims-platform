@@ -249,6 +249,14 @@ describe('drill-through (RPT-02 AC-3)', () => {
     );
   });
 
+  it('opens a credit note row — live or void — on its own route, not the invoice page', () => {
+    /** The day book and the dashboard's activity sent a credit note to /sales/invoices/{id}. */
+    const note = { kind: 'sales_document', id: 'c1', partyId: 'p1' } as const;
+    expect(sourceHref(note, 'CN/1', 'credit_note')).toBe(`${ROUTES.SALES_CREDIT_NOTES}/c1`);
+    expect(sourceHref(note, 'CN/1', 'credit_note_void')).toBe(`${ROUTES.SALES_CREDIT_NOTES}/c1`);
+    expect(sourceHref(note, 'INV/1', 'sale')).toBe(`${ROUTES.SALES_INVOICES}/c1`);
+  });
+
   it('links a stock count nowhere rather than to a page that would 404', () => {
     expect(sourceHref({ kind: 'stock_adjustment', id: 'a1', partyId: null }, 'ADJ/1')).toBeNull();
   });

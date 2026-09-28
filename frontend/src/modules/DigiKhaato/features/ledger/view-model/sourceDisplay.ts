@@ -44,7 +44,11 @@ export const sourceRoute = (source: LedgerEntrySource): string | null => {
   const id = encodeURIComponent(source.id);
   switch (source.type) {
     case 'sales_document':
-      return `${ROUTES.SALES_INVOICES}/${id}`;
+      // SAL-04 — a credit note has its own detail route; every other sales
+      // kind (invoice, bill of supply) opens the invoice page.
+      return source.kind === 'credit_note'
+        ? `${ROUTES.SALES_CREDIT_NOTES}/${id}`
+        : `${ROUTES.SALES_INVOICES}/${id}`;
     case 'purchase_document':
       return `${ROUTES.PURCHASE_BILLS}/${id}`;
     case 'payment':

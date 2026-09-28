@@ -40,7 +40,7 @@ export function DayBookDayGroups({
             </UbText>
             <UbStack as="ul" gap={0}>
               {group.rows.map((row, index) => {
-                const href = sourceHref(row.source, row.number);
+                const href = sourceHref(row.source, row.number, row.type);
                 const name = rowPartyName(row);
                 const title = [row.number, name].filter(Boolean).join(' · ') || t(typeLabelId(row));
                 const figure = row.moneyIn ?? row.moneyOut;

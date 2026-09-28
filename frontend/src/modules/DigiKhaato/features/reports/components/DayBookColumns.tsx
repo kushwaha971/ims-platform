@@ -130,7 +130,7 @@ export const createDayBookColumns = ({
       cardSlot: 'none',
       widthShare: 11,
       cell: (row) => {
-        const href = sourceHref(row.source, row.number);
+        const href = sourceHref(row.source, row.number, row.type);
         const text = row.number ?? '—';
         return href && row.number ? (
           <UbLink href={href} variant="body-sm-medium">

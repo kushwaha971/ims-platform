@@ -81,7 +81,7 @@ export function GstReport(): React.JSX.Element {
     (row: GstException) =>
       router.push(
         row.documentKind === 'credit_note'
-          ? `/sales/credit-notes/${encodeURIComponent(row.documentId)}`
+          ? `${ROUTES.SALES_CREDIT_NOTES}/${encodeURIComponent(row.documentId)}`
           : `${ROUTES.SALES_INVOICES}/${encodeURIComponent(row.documentId)}`
       ),
     [router]

@@ -111,9 +111,8 @@ export const isVoidRow = (row: RegisterRow): boolean => row.status === 'void';
 export const documentHref = (book: RegisterBook, row: RegisterRow): string => {
   const id = encodeURIComponent(row.documentId);
   if (book === 'purchase') return `${ROUTES.PURCHASE_BILLS}/${id}`;
-  // SAL-04's route; `ROUTES.SALES_CREDIT_NOTES` arrives with it.
   return row.kind === 'credit_note'
-    ? `/sales/credit-notes/${id}`
+    ? `${ROUTES.SALES_CREDIT_NOTES}/${id}`
     : `${ROUTES.SALES_INVOICES}/${id}`;
 };
 
