@@ -1,6 +1,6 @@
 # DigiKhaato — Handoff / Continuation Prompt
 
-Last updated: 28 Sep 2026, late night (IST) — all MVP features merged, final QA + fixes + independent retest PASSED (ready for UAT). Next: hardening (Sprint 12) then final UAT.
+Last updated: 29 Sep 2026 (IST) — all MVP features merged; QA + retest passed; Sprint 12 hardening (security/ops, a11y/i18n, data/perf) merged; customer share page built; FINAL UAT running.
 
 ---
 
@@ -164,6 +164,44 @@ Serve for QA:
   - CSV export for every report. Every report needs a reconciliation test against a naive aggregate.
 - **Sprint 12 hardening:** performance budgets (the bundle work in §7), security pass (rate limits, share-link tokens, PII sweep), backup and restore rehearsal, scheduler double-run proof, accessibility (axe zero critical, 44px targets), i18n completion, 3× demo rehearsal, and the traceability matrix.
 - **Then:** final UAT on phone, tablet and desktop in en and hi, and update STATUS / BOARD docs in the Project.
+
+## 8b. Hardening results (merged 29 Sep)
+
+- **H1, security and operations.**
+  - Durable Postgres rate limits for export, public link and import.
+  - Share-link revoke endpoint. The public payload is an allow-list; noindex/no-referrer/CSP on every public response.
+  - PII-redacting log filter (the access log was leaking share tokens).
+  - Passwords are hashed outside transactions.
+  - One global lock order, `parties.services.balance.lock_party_of`: party → documents (date, number, id) → payments → stock → sequences. A deadlock test proves it.
+  - All 17 scheduled jobs are proven double-run safe. The nightly `parties.recalc_balances` drift check is live.
+  - backup.sh/restore.sh fixed and rehearsed (RTO ~10 s at dev size). Runbooks are in `docs/runbooks/`.
+  - Security headers in Django, nginx and next.config. nginx `/d/` was routed to the backend by mistake; fixed.
+- **H2, accessibility and i18n.**
+  - `.ub-hit` gives 44 px hit areas on phone while visuals stay 32 px (DESIGN-SYSTEM §5).
+  - Contrast fixes: stat tiles; the tertiary grey is one step darker.
+  - ARIA table fixes in UbLineItemsEditor.
+  - Hindi calendar popover; document narration shown in Hindi.
+  - `e2e/a11y-sweep.mjs` (uses axe-core from node_modules) is in the regression runner.
+- **H3, data integrity and performance.**
+  - Stock value is carried at 7 dp, so a bill void restores the average exactly. CR-2026-09-28-H3-A needs schema-owner sign-off: "stock value is stored".
+  - `recalc_* --check`; `check_invariants` is real.
+  - `seed_scale` plus `scale_probe`: every §12.5 budget is met at 100k entries (`docs/performance/2026-09-28-scale-run.md`).
+  - New date indexes for sales and purchases.
+- **SAL-03 customer share page `/d/<token>`: built.**
+  - It was a stub, and a cookieless visit redirected to /login.
+  - Public routes are now listed in `PUBLIC_ROUTE_PREFIXES`.
+  - `e2e/share-page.mjs` is in the regression runner.
+- **Open owner decisions:**
+  - Phone dialog footer order: primary on top, which makes Tab run bottom-up.
+  - Audit IPs truncated to /24 (Part 27) vs owners seeing the full IP.
+  - CR H3-A.
+  - LED-04 statement share links: MVP per Part 12, NOT built. They need the generalised `parties_share_link` table (C1), plus the URL conflict `/khata/` vs `/d/`.
+- **Operations gaps:**
+  - 7 scheduled jobs have no handler: ops.verify_backup, ops.check_certificates, files.gc_orphans, platform.check_invariants, reports.partner_usage, reports.refresh_snapshots, platform.verify_hostnames.
+  - No certbot in the prod compose.
+  - `/system/health` has no checks block.
+  - Run `nginx -t` on staging.
+- **Dev DB note:** the dev DB has 300 e2e "Kumar Stores" parties whose balances drift (they were seeded without entries), so a restore of the dev DB stops at verify.
 
 ## 9. Exact next steps
 
