@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>YourKhata, concept B: the Y that opens like a book</title>
+  <rect width="64" height="64" rx="15" fill="#4A47D6"/>
+  <!-- The Y's arms are two pages opening from one spine; the stem is the spine. -->
+  <path d="M13 15.5 H22.5 L32 29 L41.5 15.5 H51 L36.6 35.5 V48.5 H27.4 V35.5 Z" fill="#FFFFFF"/>
+  <!-- Page edges: one rule inside each arm, reading as leaves of paper. -->
+  <path d="M19 19.5 L28.8 33" fill="none" stroke="#C6C4F9" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M45 19.5 L35.2 33" fill="none" stroke="#C6C4F9" stroke-width="2.2" stroke-linecap="round"/>
+  <!-- The binding: a short band across the foot of the stem. -->
+  <rect x="27.4" y="43" width="9.2" height="2.4" fill="#2E2B93"/>
+</svg>

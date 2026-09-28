@@ -71,8 +71,16 @@ export const metadata: Metadata = {
   applicationName: APP_NAME,
   description: "Your shop's khata, bills and stock in one book.",
   manifest: '/manifest.webmanifest',
+  /**
+   * CR-2026-09-29-BRAND-A — the YourKhata open-khata mark. The SVG is the
+   * source; the PNGs are rendered from `public/brand/` by
+   * `scripts/render-brand.mjs`, and 16 px has its own cut with one rule
+   * instead of two so the tab icon does not smudge.
+   */
   icons: {
     icon: [
+      { url: '/brand/yourkhata-mark.svg', type: 'image/svg+xml' },
+      { url: '/icons/favicon-16.png', sizes: '16x16', type: 'image/png' },
       { url: '/icons/favicon-32.png', sizes: '32x32', type: 'image/png' },
       { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
     ],

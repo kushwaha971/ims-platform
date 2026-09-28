@@ -250,3 +250,69 @@ bell until notifications exist, no "Forgot password?" until reset email has a
 delivery provider, and no sidebar row for a module whose page is not built — not
 even a greyed "Soon" row. `useNavigation` shows only items marked `ready` in
 `navigation/sidebarConfig.ts`; a roadmap module appears the day its page does.
+
+## 7. Brand — the YourKhata mark (CR-2026-09-29-BRAND-A)
+
+The product is **YourKhata** — one word, capital Y and K, set in Latin script in
+English and in Hindi alike (a brand name is not translated). The domain is
+**yourkhata.com**. The code namespace (`modules/DigiKhaato/…`, `UB_`, `ub_*`) is
+not renamed; only what a person sees is.
+
+### The mark
+
+An **open khata on an indigo tile**: two white pages meeting at the spine with
+their top edges lifting, two ruled columns on the left page ("diya" and
+"liya"), and a bold tick on the right — the account squared. It is not a
+letterform, so it never contradicts a white-labelled tenant's name beside it.
+Three concepts were drawn (`frontend/public/brand/concepts/concept-{a,b,c}.svg`:
+A the open khata, B a Y that opens like a book, C a bound ledger with a rupee);
+**A is applied**. Previews: `node frontend/scripts/render-brand.mjs --preview`
+writes `/tmp/e2e-shots/brand/concepts.png`.
+
+| Asset | File | Notes |
+|---|---|---|
+| The mark in the app | `UbLogo` (`src/design-system/UbLogo`) | inline SVG, painted from `--brand-*`, so a tenant's primary ramp repaints it |
+| Master SVG | `public/brand/yourkhata-mark.svg` | 64 × 64 grid; also the SVG favicon |
+| 16 px cut | `public/brand/yourkhata-mark-16.svg` | on the pixel grid, ONE rule instead of two, 1.5 px tick |
+| Maskable / Apple | `public/brand/yourkhata-maskable.svg` | full-bleed tile, glyph at 72 % inside the 80 % safe zone |
+| Lockup | `public/brand/yourkhata-lockup.svg` | mark + "YourKhata" in DM Sans 600 |
+| Icons | `public/icons/{favicon-16,favicon-32,apple-touch-icon,icon-192,icon-512,maskable-512}.png` | rendered from the SVGs by `node frontend/scripts/render-brand.mjs` — never hand-exported |
+
+### Colours
+
+| Part | Token | Default |
+|---|---|---|
+| Tile | `--brand-mark` → `--primary-500` | `#4A47D6` |
+| Pages | `--brand-page` | `#FFFFFF` in every theme and brand |
+| Tick | `--brand-rule` → `--primary-700` | `#2E2B93` (≥ 4.5:1 on the page, tested) |
+| Ruled columns | `--brand-rule-soft` → `--primary-300` | `#9D9AF0` (decorative) |
+| Wordmark | `--text-primary` (or `tone="inherit"` on the dark rail) | `#0A090B` |
+
+The mark is the same in light and dark themes; only the wordmark follows the
+theme. The static PNG/SVG files carry the default hex values — a white-label
+tenant's ramp repaints the in-app mark, not the favicon.
+
+### Wordmark, clear space, minimum size
+
+- The wordmark is "YourKhata" in **DM Sans 600** (`ds-wordmark-*`), never
+  letter-spaced wider, never all caps, never split into two words or two weights.
+- **Clear space** around the mark is **¼ of the tile's edge** on every side
+  (16 units on the 64 grid); in the lockup the gap between tile and wordmark is
+  ¼ to ⅓ of the tile (the `GAP` tiers in `UbLogo`), never less.
+- **Minimum size:** 24 px for the full mark (`UbLogo size="sm"`); below that use
+  the 16 px cut. The tick is the one element that must survive every size.
+
+### Don'ts
+
+- Don't recolour parts independently, add a gradient, outline or shadow, or put
+  the mark on a photo; on a coloured ground use the tile as it is.
+- Don't rotate, stretch, or redraw the tick as a thin line.
+- Don't put the product's name, mark or domain on anything a merchant's
+  **customer** receives — A4/80 mm bills, estimates, credit notes, the A5
+  receipt, the party statement, the `/d/<token>` share page, CSV/ZIP contents,
+  WhatsApp/SMS texts. Those are signed "Issued by / Shared by <business>" with
+  the tenant's name and the tenant's own logo if it set one.
+  `src/tests/customerDocumentsCarryNoProductName.test.tsx` fails on any of
+  "DigiKhaato", "YourKhata", "yourkhata.com" in their rendered HTML.
+- Don't imitate another khata app's mark (green book tiles, a "K" monogram);
+  the open khata with a tick is ours.

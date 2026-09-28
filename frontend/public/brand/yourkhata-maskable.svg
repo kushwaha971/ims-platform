@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>YourKhata</title>
+  <!-- Full bleed: the platform masks the tile itself (circle, squircle, teardrop),
+       so the glyph sits inside the central 80 % safe zone at 72 % of the mark's size. -->
+  <rect width="64" height="64" fill="#4A47D6"/>
+  <g transform="translate(32 32) scale(0.72) translate(-32 -32)">
+    <path d="M9 20.5 C15.5 17 23.5 17 30.5 20.5 V47.5 C23.5 44 15.5 44 9 47 Z" fill="#FFFFFF"/>
+    <path d="M33.5 20.5 C40.5 17 48.5 17 55 20.5 V47 C48.5 44 40.5 44 33.5 47.5 Z" fill="#FFFFFF"/>
+    <rect x="14" y="27" width="11.5" height="3.4" rx="1.7" fill="#9D9AF0"/>
+    <rect x="14" y="34" width="7.5" height="3.4" rx="1.7" fill="#9D9AF0"/>
+    <path d="M38.5 33.5 L42.8 37.8 L50.2 28.2" fill="none" stroke="#2E2B93" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

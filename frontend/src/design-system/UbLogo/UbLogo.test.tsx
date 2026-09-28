@@ -18,33 +18,33 @@ import { UbLogo } from './UbLogo';
  */
 describe('UbLogo — what it draws', () => {
   /**
-   * CR-2026-09-19-D (rev.) — the mark is the SPINE D now, not the abstract
-   * four-rectangle book. These two assertions changed with the artwork: the
-   * bowl is a `<path>`, so there are four rects rather than six, and the page
-   * stepping out behind is gone. Everything else in this file is unchanged,
-   * because none of it was ever about the artwork.
+   * CR-2026-09-29-BRAND-A — the mark is YourKhata's OPEN KHATA now, not
+   * DigiKhaato's spine D. These two assertions changed with the artwork: two
+   * pages and a tick are paths, the tile and two rules are rects. Everything
+   * else in this file is unchanged, because none of it was ever about the
+   * artwork.
    */
-  it("draws the spine D: a tile, the bowl as a path, the stem, and two rules", () => {
+  it('draws the open khata: a tile, two pages, two rules and a tick', () => {
     const { container } = render(<UbLogo />);
 
-    expect(container.querySelectorAll('svg rect')).toHaveLength(4);
-    // The bowl is the only curve in the mark, and it is what makes it a D.
-    expect(container.querySelectorAll('svg path')).toHaveLength(1);
+    expect(container.querySelectorAll('svg rect')).toHaveLength(3);
+    expect(container.querySelectorAll('svg path')).toHaveLength(3);
     expect(container.querySelector('svg')).toHaveAttribute('viewBox', '0 0 64 64');
   });
 
   it('paints every part from a --brand-* token and never from a hex (R-S-2)', () => {
     const { container } = render(<UbLogo />);
-    const fills = [...container.querySelectorAll('svg rect, svg path')].map(
+    const parts = [...container.querySelectorAll('svg rect, svg path')].map(
       (shape) => shape.getAttribute('class') ?? ''
     );
 
-    expect(fills).toEqual([
+    expect(parts).toEqual([
       'fill-brand-mark',
       'fill-brand-page',
-      'fill-brand-pageBack',
-      'fill-brand-rule',
-      'fill-brand-ruleShort',
+      'fill-brand-page',
+      'fill-brand-ruleSoft',
+      'fill-brand-ruleSoft',
+      'fill-none stroke-brand-rule',
     ]);
     expect(container.innerHTML).not.toMatch(/#[0-9a-f]{3,8}\b/i);
   });
@@ -73,15 +73,15 @@ describe('UbLogo — how it is announced', () => {
   });
 
   it('becomes a named image when it is the only thing identifying its place', () => {
-    render(<UbLogo label="DigiKhaato" />);
-    const image = screen.getByRole('img', { name: 'DigiKhaato' });
+    render(<UbLogo label="YourKhata" />);
+    const image = screen.getByRole('img', { name: 'YourKhata' });
     expect(image.tagName.toLowerCase()).toBe('svg');
   });
 
   it('leaves the wordmark readable as text, and hides only the graphic beside it', () => {
-    const { container } = render(<UbLogo variant="full" wordmark="DigiKhaato" />);
+    const { container } = render(<UbLogo variant="full" wordmark="YourKhata" />);
 
-    expect(screen.getByText('DigiKhaato')).toBeInTheDocument();
+    expect(screen.getByText('YourKhata')).toBeInTheDocument();
     expect(container.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
     // Not `role="img"`: an unnamed lockup whose name is already on the screen
     // as text would otherwise be announced twice.
@@ -89,13 +89,13 @@ describe('UbLogo — how it is announced', () => {
   });
 
   it('announces the lockup once — as one image — when it is given a name', () => {
-    render(<UbLogo variant="full" wordmark="DigiKhaato" label="DigiKhaato home" />);
-    expect(screen.getByRole('img', { name: 'DigiKhaato home' })).toBeInTheDocument();
+    render(<UbLogo variant="full" wordmark="YourKhata" label="YourKhata home" />);
+    expect(screen.getByRole('img', { name: 'YourKhata home' })).toBeInTheDocument();
   });
 
   it('sets the wordmark in its own tier, not in a heading tier', () => {
-    render(<UbLogo variant="full" wordmark="DigiKhaato" size="lg" />);
-    const word = screen.getByText('DigiKhaato');
+    render(<UbLogo variant="full" wordmark="YourKhata" size="lg" />);
+    const word = screen.getByText('YourKhata');
 
     expect(word.className).toContain('ds-wordmark-lg');
     expect(word.className).not.toMatch(/\bds-h[1-4]\b/);
@@ -113,12 +113,12 @@ describe('UbLogo — the white-label contract (§19.8.3)', () => {
   it('lets the dark navigation rail keep its own text colour', () => {
     // The rail is dark in BOTH themes, so its wordmark must NOT follow
     // --text-primary — which is near-black in the light theme.
-    render(<UbLogo variant="full" wordmark="DigiKhaato" tone="inherit" />);
-    expect(screen.getByText('DigiKhaato').className).not.toContain('text-text-primary');
+    render(<UbLogo variant="full" wordmark="YourKhata" tone="inherit" />);
+    expect(screen.getByText('YourKhata').className).not.toContain('text-text-primary');
   });
 
   it('falls back to APP_NAME when no tenant name is supplied', () => {
     render(<UbLogo variant="full" />);
-    expect(screen.getByText('DigiKhaato')).toBeInTheDocument();
+    expect(screen.getByText('YourKhata')).toBeInTheDocument();
   });
 });

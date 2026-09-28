@@ -165,9 +165,8 @@ module.exports = {
         brand: {
           mark: hsl('--brand-mark'),
           page: hsl('--brand-page'),
-          pageBack: hsl('--brand-page-back'),
           rule: hsl('--brand-rule'),
-          ruleShort: hsl('--brand-rule-short'),
+          ruleSoft: hsl('--brand-rule-soft'),
         },
         canvas: hsl('--canvas'),
         /* ml-uikit's `bg-card` / `text-card-foreground`. */

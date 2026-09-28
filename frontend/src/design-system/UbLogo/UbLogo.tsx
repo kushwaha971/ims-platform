@@ -13,25 +13,28 @@ import { cn } from 'src/utils/cn';
  * product whose own name is set in `ds-h4` and whose only picture is the
  * browser-tab favicon reads as an internal tool, which is what the owner saw.
  *
- * WHAT IT DRAWS. The **D** of DigiKhaato, drawn as a bahi-khata — the tall
- * cloth-bound ledger a kirana counter actually has on it. The letter and the
- * book are the same shape, and that coincidence is the mark:
+ * WHAT IT DRAWS (CR-2026-09-29-BRAND-A, concept A of three in
+ * `public/brand/concepts/`). The YourKhata mark: an OPEN KHATA on the indigo
+ * tile, and the account on it settled.
  *
- *   · the letter's STEM is the khata's bound SPINE — the narrow bar on the
- *     left, stepped back a shade so the binding reads as behind the page;
- *   · the letter's BOWL is the PAGE it opens to — a rectangle closed by a
- *     half-circle, which is the D's counter and the book's fore-edge at once;
- *   · two RULES of different lengths lie on that page — the two columns every
- *     ledger in this market is ruled into, "diya" and "liya".
+ *   · two white PAGES meeting at the spine, their top edges lifting the way a
+ *     bound ledger's do when it lies open on a counter;
+ *   · on the left page, two RULES of different lengths — the two columns every
+ *     ledger in this market is ruled into, "diya" and "liya". They are the one
+ *     soft element (`--brand-rule-soft`) and the first thing allowed to vanish
+ *     at 16 px: the favicon has its own cut with a single rule;
+ *   · on the right page, a bold TICK in the deep indigo (`--brand-rule`) — the
+ *     khata squared, which is what the product is for. It is the element that
+ *     has to survive every size, so it is a stroke of constant weight rather
+ *     than a shape that thins as it scales.
  *
- * There is no abstract second page stepping out behind any more. A letterform
- * has to survive at 24 px, and a fourth element at that size is a smudge; the
- * D is now legible as a D at the sidebar's `sm` tier, which is the size the
- * mark is seen at most.
+ * It replaces the DigiKhaato "spine D": the product is YourKhata now and a D
+ * would be the wrong initial. It is deliberately not a letterform at all, so a
+ * white-labelled tenant's name beside it never contradicts the picture.
  *
  * WHY IT IS INLINE SVG. `next/image` on a PNG costs a request and a layout
  * shift for a 24 px graphic, cannot inherit a colour, and cannot follow a
- * white-label ramp. The five fills below are `--brand-*` tokens derived from
+ * white-label ramp. The four colours below are `--brand-*` tokens derived from
  * `--primary-*` (§23.2.4), so a tenant that rewrites the primary ramp gets its
  * mark repainted with everything else, and no icon package is added (ADR-021).
  *
@@ -128,15 +131,26 @@ function UbLogoBase({
       {named && variant === 'mark' && <title>{label}</title>}
       {/* The tile. `rx` is the squircle radius of §23.2.3. */}
       <rect width="64" height="64" rx="15" className="fill-brand-mark" />
-      {/* The bowl — the D's counter, and the page the khata opens to: a
-          rectangle closed by a right half-circle centred on (31, 32). */}
-      <path d="M20 16 h11 a16 16 0 0 1 0 32 h-11 z" className="fill-brand-page" />
-      {/* The stem — the D's upright, and the khata's bound spine. It is drawn
-          after the bowl so the binding laps the page's left edge. */}
-      <rect x="14.5" y="16" width="5.5" height="32" rx="2.4" className="fill-brand-pageBack" />
-      {/* The two ruled columns on that page, long and short. */}
-      <rect x="27" y="26" width="13" height="3.6" rx="1.8" className="fill-brand-rule" />
-      <rect x="27" y="34.5" width="7.5" height="3.6" rx="1.8" className="fill-brand-ruleShort" />
+      {/* The open khata: the left page, then the right, meeting at the spine. */}
+      <path
+        d="M9 20.5C15.5 17 23.5 17 30.5 20.5V47.5C23.5 44 15.5 44 9 47Z"
+        className="fill-brand-page"
+      />
+      <path
+        d="M33.5 20.5C40.5 17 48.5 17 55 20.5V47C48.5 44 40.5 44 33.5 47.5Z"
+        className="fill-brand-page"
+      />
+      {/* The two ruled columns on the left page, long and short. */}
+      <rect x="14" y="27" width="11.5" height="3.4" rx="1.7" className="fill-brand-ruleSoft" />
+      <rect x="14" y="34" width="7.5" height="3.4" rx="1.7" className="fill-brand-ruleSoft" />
+      {/* The tick on the right page: the account settled. */}
+      <path
+        d="M38.5 33.5L42.8 37.8L50.2 28.2"
+        className="fill-none stroke-brand-rule"
+        strokeWidth="4.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 

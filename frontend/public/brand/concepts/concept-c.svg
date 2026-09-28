@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>YourKhata, concept C: the bound ledger with a rupee</title>
+  <rect width="64" height="64" rx="15" fill="#4A47D6"/>
+  <!-- A bound ledger standing upright: cover, then the cloth spine. -->
+  <rect x="16" y="11" width="33" height="42" rx="4.5" fill="#FFFFFF"/>
+  <rect x="16" y="11" width="7" height="42" rx="3" fill="#C6C4F9"/>
+  <!-- The rupee on the cover, drawn as strokes so it keeps its weight at every size. -->
+  <path d="M28.5 22 H42 M28.5 28.5 H42 M31 22 C39 22 39 35 31 35 H28.5 L40 45.5" fill="none" stroke="#2E2B93" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
