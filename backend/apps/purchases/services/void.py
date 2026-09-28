@@ -11,8 +11,10 @@ and three sets of rows are ADDED:
   already sold refuse the void with 409 `insufficient_stock` naming every
   short line (FR-2b, EC-1, AC-4) unless the shop allows negative stock;
 * a debit `reversal` of the supplier credit, dated today (C6, BR-6);
-* whatever the payments app does to release allocations (FR-2d) — see
-  `payment_seam.py`; nothing today, because nothing can be allocated yet.
+* whatever the payments app does to release allocations (FR-2d, PUR-02
+  BR-4) — see `payment_seam.py`: each supplier payment stays recorded and
+  what it had put on this bill becomes advance on the khata. The bill's own
+  `amount_paid` returns to zero with it.
 
 ── The average cost after a void (CR-2026-09-24-INV-A) ──────────────────────
 PUR-04 FR-4 and BR-4 say the average is not recalculated on a void — "the
@@ -43,11 +45,15 @@ from apps.common.audit import AuditAction, write_audit
 from apps.common.context import Ctx
 from apps.common.dates import tenant_today
 from apps.common.exceptions import BusinessRuleViolation
+from apps.common.money import ZERO
 from apps.ledger.services.corrections import _validate_reason
 from apps.purchases.constants import VOIDABLE_STATUSES, DocumentStatus
 from apps.purchases.services.drafts import ENTITY, lock_document, snapshot
 from apps.purchases.services.ledger_link import reverse_bill_credit, standing_bill_entry
-from apps.purchases.services.payment_seam import release_payments_on_void
+from apps.purchases.services.payment_seam import (
+    release_payments_on_void,
+    released_payment_ids,
+)
 
 
 def _reverse_stock(ctx: Ctx, document: Any, reason: str) -> list[Any]:
@@ -141,9 +147,23 @@ def void_bill(*, ctx: Ctx, document_id: Any, reason: Any) -> dict:
     document.voided_at = timezone.now()
     document.voided_by = ctx.actor if ctx.actor_type == "user" else None
     document.void_reason = clean_reason
+    # PUR-02 BR-4 — the payments were released as advances, so the void bill is
+    # paid by nothing: Σ allocations (now none) = `amount_paid` (the PUR-02 §1
+    # invariant), and a paid-then-voided bill reads exactly like an unpaid void.
+    document.amount_paid = ZERO
+    document.amount_due = document.grand_total
     document.version += 1
     document.save(
-        update_fields=["status", "voided_at", "voided_by", "void_reason", "version", "updated_at"]
+        update_fields=[
+            "status",
+            "voided_at",
+            "voided_by",
+            "void_reason",
+            "amount_paid",
+            "amount_due",
+            "version",
+            "updated_at",
+        ]
     )
 
     movement_ids = [str(p.movement.id) for p in posted]
@@ -158,7 +178,7 @@ def void_bill(*, ctx: Ctx, document_id: Any, reason: Any) -> dict:
             "reason": clean_reason,
             "reversal_movement_ids": movement_ids,
             "reversal_ledger_entry_id": reversal_id,
-            "released_payment_ids": released,
+            "released_payment_ids": released_payment_ids(released),
             "idempotency_key": ctx.idempotency_key,
         },
     )

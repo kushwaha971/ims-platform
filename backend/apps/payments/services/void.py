@@ -200,3 +200,17 @@ def release_document_allocations(*, ctx: Ctx, document_type: str, document_id: A
         )
     Allocation.objects.filter(pk__in=[row.pk for row in rows]).delete()
     return released
+
+
+def release_purchase_bill(ctx: Ctx, document: Any) -> list[dict]:
+    """PUR-02 BR-4 / PUR-04 FR-2d — the void listener `PaymentsConfig.ready()` registers.
+
+    `void_bill` calls it inside its transaction after locking the bill; the
+    supplier payments stay `recorded` and what they had put on this bill
+    becomes advance on the supplier's khata, which the ledger already shows
+    (the payment's debit stands; only the bill's credit is reversed). Returns
+    `[{payment_id, number, amount}]` for the void's follow-up.
+    """
+    return release_document_allocations(
+        ctx=ctx, document_type="purchase_document", document_id=document.id
+    )

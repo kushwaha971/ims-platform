@@ -36,6 +36,25 @@ class BillLineInputSerializer(serializers.Serializer):
     tax_code = serializers.CharField(required=False, allow_null=True, max_length=16)
 
 
+class PaymentRowSerializer(serializers.Serializer):
+    """One `mode_breakup` line of "Paid now"; PAY-02's rules run in the service."""
+
+    mode = serializers.CharField(max_length=12)
+    amount = serializers.DecimalField(max_digits=14, decimal_places=2)
+    reference = serializers.CharField(required=False, allow_blank=True, max_length=64, default="")
+    upi_app = serializers.CharField(
+        required=False, allow_blank=True, allow_null=True, max_length=16
+    )
+
+
+class PaymentInputSerializer(serializers.Serializer):
+    """PUR-01 FR-6h — money handed to the supplier as the bill is recorded (PUR-02)."""
+
+    payment_date = serializers.DateField(required=False, allow_null=True)
+    mode_breakup = PaymentRowSerializer(many=True)
+    note = serializers.CharField(required=False, allow_blank=True, max_length=255, default="")
+
+
 class BillWriteSerializer(serializers.Serializer):
     party_id = serializers.UUIDField(required=False, allow_null=True)
     supplier_invoice_number = serializers.CharField(
@@ -56,6 +75,8 @@ class BillWriteSerializer(serializers.Serializer):
     notes = serializers.CharField(required=False, allow_blank=True)
     lines = BillLineInputSerializer(many=True, required=False)
     version = serializers.IntegerField(required=False)
+    # Read only by `?record=true` (create-and-record); a draft stores no payment.
+    payment = PaymentInputSerializer(required=False, allow_null=True)
 
     def validate_lines(self, value: list) -> list:
         if len(value) > LINES_MAX:
@@ -65,6 +86,7 @@ class BillWriteSerializer(serializers.Serializer):
 
 class RecordSerializer(serializers.Serializer):
     version = serializers.IntegerField(required=False)
+    payment = PaymentInputSerializer(required=False, allow_null=True)
 
 
 class VoidSerializer(serializers.Serializer):
@@ -124,6 +146,7 @@ class BillReadSerializer(serializers.ModelSerializer):
     created_by = serializers.SerializerMethodField()
     voided_by = serializers.SerializerMethodField()
     ledger_entry = serializers.SerializerMethodField()
+    payments = serializers.SerializerMethodField()
 
     class Meta:
         model = PurchaseDocument
@@ -162,6 +185,7 @@ class BillReadSerializer(serializers.ModelSerializer):
             "notes",
             "doc_discount_allocation",
             "ledger_entry",
+            "payments",
             "created_by",
             "recorded_at",
             "voided_at",
@@ -211,6 +235,21 @@ class BillReadSerializer(serializers.ModelSerializer):
 
         entry_id = ledger_entry_id_for(tenant=obj.tenant, document_id=obj.id)
         return {"id": entry_id} if entry_id else None
+
+    def get_payments(self, obj: PurchaseDocument) -> list[dict]:
+        """PUR-02 FR-6 — the supplier payments allocated to this bill, oldest first.
+
+        A deferred import (Part 20 §20.1.4 rule D5: purchases never imports
+        payments at module level). Empty for a draft, and for a void bill,
+        whose allocations the void released (BR-4).
+        """
+        if obj.status in ("draft", "void"):
+            return []
+        from apps.payments.selectors.payments import payments_for_document
+
+        return payments_for_document(
+            tenant=obj.tenant_id, document_type="purchase_document", document_id=obj.id
+        )
 
 
 class BillListSerializer(serializers.ModelSerializer):

@@ -25,9 +25,11 @@ touching the same items and the same party serialise instead of deadlocking.
 8. Ledger credit for the grand total (BR-3) — none for a ₹0 bill.
 9. Audit `purchase_bill.recorded` with the movement ids and the ledger id.
 
-There is no payment step. FR-6h (pay on the spot) belongs to PUR-02 and the
-payments app, which will call `payment_seam.apply_payment` after this returns,
-inside the same request transaction.
+10. FR-6h "Paid now" (PUR-02): when the request carries `payment`, a real
+    `PAYOUT` payment through PAY-01's `record_payment`, allocated to this bill
+    up to its total (anything above is advance), in the SAME transaction —
+    see `payment_seam.record_bill_payment`. Its mode lines are validated at
+    step 2, before anything is written.
 """
 
 from __future__ import annotations
@@ -51,6 +53,7 @@ from apps.purchases.services.costing import inbound_unit_cost
 from apps.purchases.services.drafts import ENTITY, check_version, lock_document, replace_lines
 from apps.purchases.services.ledger_link import post_bill_credit
 from apps.purchases.services.payload import apply_payload
+from apps.purchases.services.payment_seam import record_bill_payment, validate_payment
 
 DUPLICATE_INDEX = "uq_purchases_supplier_invoice"
 
@@ -141,8 +144,11 @@ def _save_recorded(document: PurchaseDocument) -> None:
 
 
 @transaction.atomic
-def record_bill(*, ctx: Ctx, document_id: Any, version: Any = None) -> dict:
-    """Record a draft. Returns `{document, warnings, ledger_entry_id, party_balance, movement_ids}`."""
+def record_bill(
+    *, ctx: Ctx, document_id: Any, version: Any = None, payment: dict | None = None
+) -> dict:
+    """Record a draft. Returns `{document, warnings, ledger_entry_id, party_balance, movement_ids,
+    payment}` — `payment` is `{payment_id, number, amount}` when "Paid now" was sent."""
     from apps.inventory.services.last_cost import set_last_purchase_cost
     from apps.parties.constants import PartyStatus
     from apps.parties.services.balance import lock_party
@@ -162,6 +168,7 @@ def record_bill(*, ctx: Ctx, document_id: Any, version: Any = None) -> dict:
     outcome = apply_payload(ctx, document, {}, strict=True)
     rows = outcome["rows"]
     _validate_recordable(ctx, document, rows)
+    cleaned_payment = validate_payment(payment=payment)
 
     party = lock_party(tenant=tenant, party_id=document.party_id)
     if party is None or party.status == PartyStatus.ARCHIVED:
@@ -213,6 +220,13 @@ def record_bill(*, ctx: Ctx, document_id: Any, version: Any = None) -> dict:
         entry, balance = post_bill_credit(ctx=ctx, document=document, party=party)
         ledger_entry_id = str(entry.id)
 
+    paid = record_bill_payment(ctx=ctx, document=document, payment=cleaned_payment)
+    if paid is not None:
+        document.refresh_from_db()
+        paid_balance = paid.pop("party_balance")
+        if paid_balance is not None:
+            balance = paid_balance
+
     movement_ids = [str(p.movement.id) for p in posted]
     write_audit(
         ctx=ctx,
@@ -229,6 +243,7 @@ def record_bill(*, ctx: Ctx, document_id: Any, version: Any = None) -> dict:
             "itc_eligible": document.itc_eligible,
             "movement_ids": movement_ids,
             "ledger_entry_id": ledger_entry_id,
+            "payment_id": paid["payment_id"] if paid else None,
         },
         metadata={"idempotency_key": ctx.idempotency_key},
     )
@@ -238,6 +253,7 @@ def record_bill(*, ctx: Ctx, document_id: Any, version: Any = None) -> dict:
         "ledger_entry_id": ledger_entry_id,
         "party_balance": balance,
         "movement_ids": movement_ids,
+        "payment": paid,
     }
 
 
