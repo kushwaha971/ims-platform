@@ -91,6 +91,28 @@ def test_the_cap_holds_across_two_partial_credit_notes(
     assert SalesDocumentLine.objects.get(pk=invoice["lines"][0]["id"]).returned_qty == 3
 
 
+def test_a_one_request_issue_above_the_line_cap_is_refused_and_writes_nothing(
+    owner: Any, make_item: Any, make_party: Any
+) -> None:
+    """QA S-D3 — the editor let 5 through against "Up to 3" and enabled Issue; the server is
+    the last line: `POST /credit-notes?issue=true` for 5 of 3 is a 400 on the line, and no
+    note, no restock and no returned quantity is written."""
+    item = make_item()
+    invoice = issued_invoice(owner, make_party(), [line(item, "3")])
+    stock_before = ItemStock.objects.get(item=item).on_hand
+    response = owner.post(
+        reverse(CREDIT_NOTES) + "?issue=true",
+        {"against_id": invoice["id"], "reason": "sales_return", "lines": returning(invoice, "5")},
+        format="json",
+        HTTP_IDEMPOTENCY_KEY="0b1c2d3e-4f50-4617-8899-aabbccddeef0",
+    )
+    assert response.status_code == 400, response.json()
+    assert response.json()["error"]["details"]["lines.0.qty"] == ["Only 3 NOS can be returned"]
+    assert not SalesDocument.objects.filter(kind="credit_note").exists()
+    assert SalesDocumentLine.objects.get(pk=invoice["lines"][0]["id"]).returned_qty == 0
+    assert ItemStock.objects.get(item=item).on_hand == stock_before
+
+
 def test_issuing_against_an_unpaid_invoice_applies_restocks_and_credits(
     owner: Any, make_item: Any, make_party: Any
 ) -> None:

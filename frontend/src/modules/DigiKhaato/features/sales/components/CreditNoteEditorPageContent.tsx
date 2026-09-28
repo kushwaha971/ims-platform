@@ -43,7 +43,7 @@ export function CreditNoteEditorPageContent({
 }: Readonly<{ againstId: string | null }>): React.JSX.Element {
   const { t } = useTranslation();
   const editor = useCreditNoteEditor(againstId);
-  const { state, form, values, preview, split, today, canWrite, issue } = editor;
+  const { state, form, values, preview, split, overCap, today, canWrite, issue } = editor;
   const invoice = state.source?.id === againstId ? state.source : null;
 
   if (!canWrite) {
@@ -90,7 +90,7 @@ export function CreditNoteEditorPageContent({
             onClick={() => void issue()}
             busy={state.issuing}
             busyLabel={t('sales.creditNote.issuing')}
-            disabled={nothing || state.issuing}
+            disabled={nothing || overCap || state.issuing}
             data-testid="credit-note-issue"
           >
             {t('sales.creditNote.issue')}

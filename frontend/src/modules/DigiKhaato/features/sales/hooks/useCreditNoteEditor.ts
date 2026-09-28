@@ -76,7 +76,10 @@ export const useCreditNoteEditor = (againstId: string | null): UseCreditNoteEdit
         : undefined,
     [source, creditNoteSchemaFor]
   );
-  const form = useForm<CreditNoteFormValues>({ resolver, mode: 'onTouched' });
+  // QA S-D3 — `onChange`, not `onTouched`: a return quantity over the line's cap
+  // must say "Only 3 can be returned" as it is typed (or filled), not after a blur
+  // the merchant may never make before reaching for Issue.
+  const form = useForm<CreditNoteFormValues>({ resolver, mode: 'onChange' });
   const values = useWatch({ control: form.control }) as CreditNoteFormValues;
   const { reset } = form;
   useEffect(() => {
@@ -87,13 +90,21 @@ export const useCreditNoteEditor = (againstId: string | null): UseCreditNoteEdit
     () => (source && values?.lines ? creditNotePreview(source, values) : null),
     [source, values]
   );
+  /** QA S-D3 — any line above what is left keeps Issue disabled. */
+  const overCap = useMemo(() => {
+    if (!source || !values?.lines) return false;
+    const { remaining } = returnCaps(source);
+    return values.lines.some(
+      (row) => !!row?.qty && Number(row.qty) > (remaining[row.againstLineId] ?? 0)
+    );
+  }, [source, values]);
   const split = useMemo(
     () => (source && preview ? settlementSplit(source, preview.grandTotal) : null),
     [source, preview]
   );
 
   const issue = useCallback(async () => {
-    if (!source || !preview || !split) return;
+    if (!source || !preview || !split || overCap) return;
     const valid = await form.trigger();
     if (!valid) return;
     const body = creditNoteWireBody(source, form.getValues(), split.left);
@@ -106,7 +117,7 @@ export const useCreditNoteEditor = (againstId: string | null): UseCreditNoteEdit
     if (result.payload?.code !== 'network_error' && result.payload?.code !== 'timeout') {
       idempotency.rotate();
     }
-  }, [source, preview, split, form, dispatch, idempotency, router]);
+  }, [source, preview, split, overCap, form, dispatch, idempotency, router]);
 
-  return { state, form, values, preview, split, today, canWrite, issue };
+  return { state, form, values, preview, split, overCap, today, canWrite, issue };
 };

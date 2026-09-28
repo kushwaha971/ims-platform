@@ -241,8 +241,11 @@ describe('the return editor (SAL-04 §7)', () => {
     const qty = await screen.findByLabelText('Return qty');
     expect(screen.getByText('Invoiced 5 NOS · Returned 2 · ₹450.00 each')).toBeInTheDocument();
     await userEvent.type(qty, '4');
-    await userEvent.click(screen.getByTestId('credit-note-issue'));
+    // QA S-D3 — the cap is said as it is typed, with no blur, and Issue stays
+    // disabled: "Up to 3" beside an accepted 4 and a live Issue was the defect.
     expect(await screen.findByText('Only 3 can be returned')).toBeInTheDocument();
+    expect(screen.getByTestId('credit-note-issue')).toBeDisabled();
+    await userEvent.click(screen.getByTestId('credit-note-issue'));
     expect(credits.createAndIssueCreditNote).not.toHaveBeenCalled();
 
     await userEvent.clear(qty);
