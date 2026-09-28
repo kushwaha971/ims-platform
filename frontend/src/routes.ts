@@ -66,6 +66,10 @@ export const ROUTES = {
   REPORTS: '/reports',
   /** RPT-02 — everything that happened, in order, with the drawer beside it. */
   REPORT_DAY_BOOK: '/reports/day-book',
+  /** RPT-03 / RPT-04 / RPT-07 — the tax-document reports (Track W4-B). */
+  REPORTS_SALES_REGISTER: '/reports/sales-register',
+  REPORTS_PURCHASE_REGISTER: '/reports/purchase-register',
+  REPORTS_GST_SUMMARY: '/reports/gst-summary',
   SETTINGS: '/settings',
   SETTINGS_PLAN: '/settings/plan',
   SETTINGS_TEAM: '/settings/team',

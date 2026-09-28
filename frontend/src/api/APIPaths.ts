@@ -167,6 +167,8 @@ export const API_PATHS = {
   REPORT_DASHBOARD: '/reports/dashboard',
   REPORT_DAY_BOOK: '/reports/day-book',
   REPORT_SALES_REGISTER: '/reports/sales-register',
+  /** RPT-04. */
+  REPORT_PURCHASE_REGISTER: '/reports/purchase-register',
   REPORT_GST_SUMMARY: '/reports/gst-summary',
   REPORT_STOCK_SUMMARY: '/reports/stock-summary',
   REPORT_RECEIVABLES_AGING: '/reports/receivables-aging',

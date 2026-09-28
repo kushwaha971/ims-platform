@@ -130,6 +130,9 @@ export const QUERIES = {
   // RPT-01/02/05/06/08 — dashboard, day book, reports
   fetchDashboard: 'reportDashboard/fetchDashboard',
   fetchDayBook: 'reportDayBook/fetchDayBook',
+  // RPT-03/04/07 — registers and GST summary
+  fetchGstSummary: 'taxReports/fetchGstSummary',
+  fetchRegister: 'taxReports/fetchRegister',
 } as const;
 
 export const MUTATIONS = {

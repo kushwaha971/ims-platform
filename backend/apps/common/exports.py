@@ -251,6 +251,11 @@ class CsvExportMixin:
         """The FILTERED set the list pages over. Override when `list()` does more."""
         return self.filter_queryset(self.get_queryset())  # type: ignore[attr-defined]
 
+    def export_file_name(self, tenant: Any) -> str:
+        """The download's name. Reports override it with RPT-08 FR-8's
+        `<slug>_<from>_<to>.csv`; lists keep the stamped default."""
+        return export_filename(self.export_resource, tenant)
+
     def allowed_export_columns(self, request: Any) -> tuple[ExportColumn, ...]:
         return tuple(
             column
@@ -313,9 +318,7 @@ class CsvExportMixin:
             ),
             content_type="text/csv; charset=utf-8",
         )
-        response["Content-Disposition"] = (
-            f'attachment; filename="{export_filename(self.export_resource, tenant)}"'
-        )
+        response["Content-Disposition"] = f'attachment; filename="{self.export_file_name(tenant)}"'
         response["X-Row-Count"] = str(count)
         return response
 

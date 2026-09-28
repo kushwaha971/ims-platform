@@ -10,6 +10,9 @@ import {
   PackageMinus,
   PackageSearch,
   type LucideIcon,
+  Landmark,
+  ReceiptText,
+  ShoppingCart,
 } from 'lucide-react';
 
 import {
@@ -40,6 +43,9 @@ const ICONS: Readonly<Record<ReportCatalogueEntry['icon'], LucideIcon>> = {
   payable: Hourglass,
   stock: PackageSearch,
   lowStock: PackageMinus,
+  salesRegister: ReceiptText,
+  purchaseRegister: ShoppingCart,
+  gst: Landmark,
 };
 
 /**

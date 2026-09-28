@@ -25,7 +25,16 @@ export interface ReportCatalogueEntry {
   readonly modules: readonly ModuleCode[];
   readonly permissions: readonly PermissionCode[];
   /** A lucide icon name the hub maps to a component (keeps icons out of this module). */
-  readonly icon: 'dayBook' | 'cashbook' | 'receivable' | 'payable' | 'stock' | 'lowStock';
+  readonly icon:
+    | 'dayBook'
+    | 'cashbook'
+    | 'receivable'
+    | 'payable'
+    | 'stock'
+    | 'lowStock'
+    | 'salesRegister'
+    | 'purchaseRegister'
+    | 'gst';
 }
 
 export const REPORT_GROUPS: readonly ReportGroup[] = ['money', 'parties', 'stock', 'sales'];
@@ -79,8 +88,31 @@ export const REPORT_CATALOGUE: readonly ReportCatalogueEntry[] = [
     permissions: ['inventory.stock.read'],
     icon: 'lowStock',
   },
+  {
+    key: 'salesRegister',
+    group: 'sales',
+    href: ROUTES.REPORTS_SALES_REGISTER,
+    modules: ['sales'],
+    permissions: ['reports.basic.read', 'sales.invoice.read'],
+    icon: 'salesRegister',
+  },
+  {
+    key: 'purchaseRegister',
+    group: 'sales',
+    href: ROUTES.REPORTS_PURCHASE_REGISTER,
+    modules: ['purchases'],
+    permissions: ['reports.basic.read', 'purchases.bill.read'],
+    icon: 'purchaseRegister',
+  },
+  {
+    key: 'gstSummary',
+    group: 'sales',
+    href: ROUTES.REPORTS_GST_SUMMARY,
+    modules: ['reports'],
+    permissions: ['reports.financial.read'],
+    icon: 'gst',
+  },
 ];
-
 /** The entries this reader can open, in catalogue order. */
 export const visibleReports = (
   entries: readonly ReportCatalogueEntry[],
