@@ -299,6 +299,7 @@ ACTION_LABELS: dict[str, str] = {
     "invoice.issued": "Issued bill",
     "invoice.share_link_created": "Shared a bill link",
     "invoice.share_link_regenerated": "Made a new bill link",
+    "invoice.share_link_revoked": "Turned off a bill link",
     "invoice.voided": "Cancelled bill",
     "item.archived": "Archived item",
     "item.created": "Added item",

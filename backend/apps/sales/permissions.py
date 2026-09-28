@@ -22,6 +22,9 @@ InvoicePermissions = HasPermission(
         "issue": "sales.invoice.write",
         "void": "sales.invoice.void",
         "share_links": "sales.invoice.read",
+        # FRD share-sheet §12: revoking is owner/admin only — the same people
+        # who may void, so it rides on the void codename.
+        "revoke_share_link": "sales.invoice.void",
         "upi_intent": "sales.invoice.read",
     }
 )
@@ -37,6 +40,7 @@ _ESTIMATE_ACTIONS = {
     "mark_rejected": "sales.estimate.write",
     "convert": "sales.estimate.write",
     "share_links": "sales.estimate.read",
+    "revoke_share_link": "sales.invoice.void",
 }
 EstimatePermissions = HasPermission(_ESTIMATE_ACTIONS)
 #: SAL-01 §12 — converting also writes an invoice, so it needs both codenames.
@@ -54,5 +58,6 @@ CreditNotePermissions = HasPermission(
         "apply": "sales.credit_note.write",
         "void": "sales.invoice.void",
         "share_links": "sales.invoice.read",
+        "revoke_share_link": "sales.invoice.void",
     }
 )

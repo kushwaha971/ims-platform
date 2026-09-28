@@ -35,3 +35,4 @@ if UB_E2E_RELAX_THROTTLES:
     _ub_throttle.REGISTRATIONS_PER_IP = 100_000
     _ub_throttle.LOGIN_FAILURES_PER_IP = 100_000
     _ub_throttle.RESET_REQUESTS_PER_IP = 100_000
+    _ub_throttle.RESET_CONFIRMS_PER_IP = 100_000

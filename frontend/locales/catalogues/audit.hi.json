@@ -41,6 +41,7 @@
   "audit.action.invoice.issued": "बिल जारी किया",
   "audit.action.invoice.share_link_created": "बिल का लिंक शेयर किया",
   "audit.action.invoice.share_link_regenerated": "बिल का नया लिंक बनाया",
+  "audit.action.invoice.share_link_revoked": "बिल का लिंक बंद किया",
   "audit.action.invoice.voided": "बिल रद्द किया",
   "audit.action.item.archived": "आइटम आर्काइव किया",
   "audit.action.item.created": "आइटम जोड़ा",

@@ -84,6 +84,40 @@ def create_share_link(
     return {"url": f"{base}/d/{token}", "expires_at": expires_at.isoformat()}
 
 
+@transaction.atomic
+def revoke_share_link(*, ctx: Ctx, document_id: Any) -> dict:
+    """Kill the document's link at once (Part 27 §27.12 "Revocation", SAL-03 BR-4).
+
+    Until this existed the only way to stop a link was to mint a NEW one — which
+    hands the merchant a second live link to a document they wanted to stop
+    sharing. The hash is cleared, so the old token now misses the unique index
+    exactly like a token that never existed (same 404, no oracle), and the
+    revocation is kept in `meta.share_link` for the activity log. Idempotent: a
+    document with no live link answers `revoked: false` rather than an error,
+    because "make sure nobody can open this" is satisfied either way.
+    """
+    document = (
+        SalesDocument.objects.select_for_update().filter(tenant=ctx.tenant, pk=document_id).first()
+    )
+    if document is None:
+        raise NotFound("No such document.")
+    if not document.public_token_hash:
+        return {"revoked": False}
+    now = timezone.now()
+    link = dict((document.meta or {}).get("share_link") or {})
+    document.public_token_hash = None
+    document.meta = {**(document.meta or {}), "share_link": {**link, "revoked_at": now.isoformat()}}
+    document.save(update_fields=["public_token_hash", "meta", "updated_at"])
+    write_audit(
+        ctx=ctx,
+        action=AuditAction.INVOICE_SHARE_LINK_REVOKED,
+        entity_type="sales_document",
+        entity_id=document.id,
+        metadata={"number": document.number, "expires_at": link.get("expires_at")},
+    )
+    return {"revoked": True}
+
+
 def public_document(token: str) -> SalesDocument:
     """`GET /public/d/{token}` — the document, or 404 for unknown and expired alike."""
     if not token or len(token) > 128:

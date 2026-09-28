@@ -34,7 +34,7 @@ from apps.common.permissions import ModuleEnabled
 from apps.common.renderers import EnvelopeJSONRenderer, PassthroughCsvRenderer
 from apps.common.responses import StandardResponse
 from apps.common.tenancy import get_effective_tenant
-from apps.common.throttling import ScopedUserRateThrottle
+from apps.common.throttling import ScopedUserRateThrottle, durable_throttle
 from apps.imports import registry
 from apps.imports.constants import AUDIT_IMPORT_ERROR_FILE, ImportStatus
 from apps.imports.models import ImportJob
@@ -84,6 +84,11 @@ def _can_commit(request: Any, job: ImportJob, spec: registry.ImporterSpec | None
     return job.status == ImportStatus.FAILED and error.get("at") == "commit"
 
 
+def _tenant_key(request: Any, view: Any) -> str | None:
+    tenant = get_effective_tenant(request)
+    return f"tenant:{tenant.id}" if tenant is not None else None
+
+
 class _ImportView(APIView):
     permission_classes = [IsAuthenticated, ModuleEnabled(ModuleCode.IMPORT_EXPORT)]
     throttle_classes = [ScopedUserRateThrottle]
@@ -96,7 +101,9 @@ class ImportJobListView(_ImportView):
 
     def get_throttles(self) -> list[Any]:
         if self.request.method == "POST":
-            return [ScopedUserRateThrottle(UPLOAD_SCOPE)]
+            # Durable (Part 27 §27.11): an upload stores a file, and a LocMem
+            # count per gunicorn worker was the budget times the worker count.
+            return [durable_throttle(UPLOAD_SCOPE)]
         return [ScopedUserRateThrottle("user")]
 
     def get(self, request: Any) -> Any:
@@ -135,7 +142,12 @@ class ImportCommitView(_ImportView):
     """`POST /imports/{id}/commit` → 202 (FR-6)."""
 
     def get_throttles(self) -> list[Any]:
-        return [ScopedUserRateThrottle("party_write")]
+        # Part 27 §27.11 "Import commit 5/hour/tenant" — a commit writes up to
+        # 10,000 rows in one job, so it is the tenant's budget, not a person's.
+        return [
+            ScopedUserRateThrottle("party_write"),
+            durable_throttle("import_commit", key=_tenant_key),
+        ]
 
     @idempotent("import_commit")
     def post(self, request: Any, job_id: Any) -> Any:

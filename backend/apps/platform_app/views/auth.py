@@ -42,6 +42,7 @@ from apps.platform_app.services import auth as auth_service
 from apps.platform_app.services import memberships as membership_service
 from apps.platform_app.services import passwords as password_service
 from apps.platform_app.services import sessions as session_service
+from apps.platform_app.services import throttle
 
 
 def _client_meta(request: Any) -> dict:
@@ -373,6 +374,17 @@ class PasswordResetConfirmView(APIView):
         data = serializer.validated_data
         meta = _client_meta(request)
 
+        if meta["ip"]:
+            per_ip = throttle.consume(
+                scope=throttle.SCOPE_RESET_CONFIRM_IP,
+                identifier=meta["ip"],
+                limit=throttle.RESET_CONFIRMS_PER_IP,
+                window_seconds=throttle.RESET_CONFIRM_IP_WINDOW_SECONDS,
+            )
+            if not per_ip.allowed:
+                raise password_service.RequestThrottled(
+                    per_ip.retry_after, throttle.RESET_CONFIRMS_PER_IP
+                )
         # The hash is computed HERE, with no transaction open (see
         # `passwords.hash_outside_transaction`); the atomic block below only
         # spends the link and writes the finished string.
