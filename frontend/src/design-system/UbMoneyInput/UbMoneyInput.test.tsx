@@ -1,17 +1,29 @@
 import { useState } from 'react';
 
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { groupIndian, padDecimals, sanitiseAmount, UbMoneyInput } from './UbMoneyInput';
+import {
+  capDecimals,
+  groupIndian,
+  padDecimals,
+  sanitiseAmount,
+  UbMoneyInput,
+} from './UbMoneyInput';
 
 /**
  * Controlled, because that is the only way the form ever uses it — React Hook
  * Form owns the value. A test that renders it with a fixed `value` is testing a
  * component nobody has.
  */
-function Harness({ onValue }: { readonly onValue: (value: string) => void }) {
-  const [value, setValue] = useState('');
+function Harness({
+  onValue,
+  initial = '',
+}: {
+  readonly onValue: (value: string) => void;
+  readonly initial?: string;
+}) {
+  const [value, setValue] = useState(initial);
   return (
     <UbMoneyInput
       value={value}
@@ -68,6 +80,49 @@ describe('what the merchant sees while typing', () => {
 
     await user.tab();
     expect(field).toHaveValue('12,34,567.00');
+  });
+
+  it('QA S-D2: focus-and-select-all then typing REPLACES a prefilled amount', async () => {
+    // "1,392.00" was swapped for "1392.00" on focus, which collapsed the
+    // selection a tab-in / select-all / Playwright `fill` had just made, so
+    // "500" was appended: "1392.00500".
+    const user = userEvent.setup();
+    const onValue = jest.fn();
+    render(<Harness onValue={onValue} initial="1392.00" />);
+    const field = screen.getByLabelText<HTMLInputElement>('Amount');
+    expect(field).toHaveValue('1,392.00');
+    act(() => {
+      field.focus();
+      field.select();
+    });
+    await user.keyboard('500');
+    expect(onValue).toHaveBeenLastCalledWith('500');
+    expect(field).toHaveValue('500');
+    await user.tab();
+    expect(field).toHaveValue('500.00');
+  });
+
+  it('QA S-D2: pasting over a selected amount replaces it and parses a grouped paste', async () => {
+    const user = userEvent.setup();
+    const onValue = jest.fn();
+    render(<Harness onValue={onValue} initial="1365.00" />);
+    const field = screen.getByLabelText<HTMLInputElement>('Amount');
+    act(() => {
+      field.focus();
+      field.select();
+    });
+    await user.paste('₹1,500.50');
+    expect(onValue).toHaveBeenLastCalledWith('1500.50');
+  });
+
+  it('QA S-D2: never holds more than two decimals, so the label and the record agree', async () => {
+    const user = userEvent.setup();
+    const onValue = jest.fn();
+    render(<Harness onValue={onValue} />);
+    await user.type(screen.getByLabelText('Amount'), '12.3456');
+    expect(onValue).toHaveBeenLastCalledWith('12.34');
+    expect(capDecimals('12.345', 2)).toBe('12.34');
+    expect(capDecimals('12.5', 0)).toBe('12');
   });
 
   it('asks a phone for the decimal keypad without asking for spinners', () => {

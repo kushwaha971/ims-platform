@@ -1,12 +1,6 @@
 'use client';
 
-import {
-  forwardRef,
-  memo,
-  useCallback,
-  useState,
-  type InputHTMLAttributes,
-} from 'react';
+import { forwardRef, memo, useCallback, useState, type InputHTMLAttributes } from 'react';
 
 import { MLInput } from 'src/design-system/primitives';
 import { cn } from 'src/utils/cn';
@@ -22,12 +16,19 @@ import { cn } from 'src/utils/cn';
  * validate, not to format, not to compare. What the user types is text, what
  * leaves is text, and `decimal.js-light` does the arithmetic elsewhere.
  *
- * ── Grouped on blur, raw while focused ──────────────────────────────────────
+ * ── Grouped at rest, raw while editing ──────────────────────────────────────
  * Indian grouping is 2,2,3 — ₹12,34,567.89, not ₹1,234,567.89 — and a merchant
  * reading a figure wants to see it that way. But formatting WHILE someone types
  * fights them: the caret jumps every time a separator is inserted, and
  * backspacing over a comma does nothing visible. So the field shows exactly
- * what was typed while it has focus and groups it when focus leaves.
+ * what was typed from the first edit on, and groups it when focus leaves.
+ *
+ * It does NOT switch to the raw text on FOCUS (QA S-D2). Tabbing in selects
+ * the whole text, and so do select-all-then-type, paste-over and Playwright's
+ * `fill`; swapping "1,392.00" for "1392.00" under that selection collapsed it
+ * to the end, so "500" was appended — "1392.00500" — instead of replacing the
+ * amount. The text only changes once the merchant has changed it, and the
+ * first edit is parsed from whatever was shown (commas and ₹ are dropped).
  *
  * ── What it accepts ─────────────────────────────────────────────────────────
  * Digits, one decimal point, and nothing else. A `-` is not rejected with an
@@ -36,8 +37,10 @@ import { cn } from 'src/utils/cn';
  * me" and "I owe them" are two buttons, not a minus sign a shopkeeper has to
  * decode.
  */
-export interface UbMoneyInputProps
-  extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'value' | 'onChange'> {
+export interface UbMoneyInputProps extends Omit<
+  InputHTMLAttributes<HTMLInputElement>,
+  'type' | 'value' | 'onChange'
+> {
   /** A decimal string, e.g. `"2300.00"`, or null/empty for no amount. */
   readonly value: string | null | undefined;
   /** Receives a plain decimal string — never grouped, never a number. */
@@ -54,6 +57,18 @@ export const sanitiseAmount = (raw: string): string => {
   const kept = raw.replace(/[^\d.]/g, '');
   const [whole = '', ...rest] = kept.split('.');
   return rest.length > 0 ? `${whole}.${rest.join('').replace(/\./g, '')}` : whole;
+};
+
+/**
+ * At most `decimalPlaces` after the point, by truncation (QA S-D2: a third
+ * decimal was accepted, so the form held "1392.005" while the confirm label
+ * read ₹1,392.00). `"12.345"` → `"12.34"`; with no places the point goes.
+ */
+export const capDecimals = (value: string, decimalPlaces: number): string => {
+  const point = value.indexOf('.');
+  if (point < 0) return value;
+  if (decimalPlaces <= 0) return value.slice(0, point);
+  return value.slice(0, point + 1 + decimalPlaces);
 };
 
 /**
@@ -109,15 +124,18 @@ const UbMoneyInputInner = forwardRef<HTMLInputElement, UbMoneyInputProps>(
     },
     ref
   ) {
-    const [focused, setFocused] = useState(false);
+    // True from the first edit until blur — not from focus (see "Grouped at rest").
+    const [editing, setEditing] = useState(false);
 
     const handleChange = useCallback(
-      (event: React.ChangeEvent<HTMLInputElement>) => onChange(sanitiseAmount(event.target.value)),
-      [onChange]
+      (event: React.ChangeEvent<HTMLInputElement>) => {
+        setEditing(true);
+        onChange(capDecimals(sanitiseAmount(event.target.value), decimalPlaces));
+      },
+      [onChange, decimalPlaces]
     );
 
-    const shown =
-      focused || !value ? (value ?? '') : groupIndian(value, decimalPlaces);
+    const shown = editing || !value ? (value ?? '') : groupIndian(value, decimalPlaces);
 
     return (
       <div className={cn('relative flex w-full items-center', className)}>
@@ -139,18 +157,15 @@ const UbMoneyInputInner = forwardRef<HTMLInputElement, UbMoneyInputProps>(
           value={shown}
           onChange={handleChange}
           invalid={invalid}
-          onFocus={(event) => {
-            setFocused(true);
-            onFocus?.(event);
-          }}
+          onFocus={onFocus}
           onBlur={(event) => {
-            setFocused(false);
+            setEditing(false);
             // Committed to the caller's precision on the way out, so the form
             // holds "2300.00" rather than "2300." or "2300".
             if (value) onChange(padDecimals(value, decimalPlaces));
             onBlur?.(event);
           }}
-          className={cn('pl-7 text-right ds-num', invalid && 'border-formError')}
+          className={cn('ds-num pl-7 text-right', invalid && 'border-formError')}
           {...rest}
         />
       </div>
