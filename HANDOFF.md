@@ -1,6 +1,6 @@
 # DigiKhaato — Handoff / Continuation Prompt
 
-Last updated: 28 Sep 2026, afternoon (IST) — after Wave 3 merge + integration; Wave 4 built on branches, not yet merged. Paste everything below the line into the next agent.
+Last updated: 28 Sep 2026, evening (IST) — Waves 1–4 all merged on main; QA of Waves 2–4 and PUR-02 pending. Paste everything below the line into the next agent.
 
 ---
 
@@ -10,7 +10,7 @@ You are continuing development of **DigiKhaato**, a multi-tenant khata (credit l
 
 - **GitHub:** `https://github.com/kushwaha971/ims-platform`. On the owner's Mac it is at `~/Projects/ims-platform`. Claude syncs it after every completed step, fast-forward only, via a bundle in `~/digikhaato/sync/`. The owner runs `git push origin --all`.
 - **`main`:** everything up to and including Wave 3 (payments, purchases, sales completion) plus the integration fixes. It fast-forwards from GitHub's 78804b3. Never rebase it: do not use VS Code "Sync" with rebase; set `git.rebaseWhenSync=false`.
-- **Built but NOT merged yet (Wave 4):**
+- **Wave 4 is MERGED on main as of 06a9af0** (branches kept for reference):
   - `track/w4a-reports-dashboard`: RPT-01 dashboard, RPT-02 day book, RPT-05/06/08, the report shell, the Reports hub.
   - `track/w4b-reports-registers-gst`: RPT-03 sales register, RPT-04 purchase register, RPT-07 GST summary.
   - `track/w4p-performance`: the per-feature locale catalogues split (`scripts/split-locales.mjs`), a lazy invalidation registry, deferred cmdk/vaul, ml-uikit tailwind-merge dedupe. The shared shell drops from 144.8 to 102.3 KB.
@@ -164,31 +164,41 @@ Serve for QA:
 
 ## 9. Exact next steps
 
-1. **Merge Wave 4** in this order: `track/w4p-performance` first, then `w4a`, then `w4b`.
-   - After each merge run `cd frontend && node scripts/split-locales.mjs && npm run i18n:check`, and add the catalogue imports it names.
-   - W4-A's report pages need `import 'src/i18n/catalogues/reports'`.
-   - Replace W4-B's `TaxReportLayout` with W4-A's `ReportPageShell`.
-   - Add W4-B's three routes to W4-A's `REPORT_CATALOGUE` (hub).
-   - Migration clash: `reports 0002_*` may exist in both reports tracks; renumber whichever lands second.
-   - Swap the hard-coded `/sales/credit-notes/{id}` for `ROUTES.SALES_CREDIT_NOTES`.
-   - Re-run `apps/reports/tests` now that SAL-04/05 are on main (one test is skipped until then).
-   - Tests that read `locales/en.json` must use `src/tests/allMessages`.
-2. **Build PUR-02** (supplier payment): add `apps/payments/services/targets/purchases.py` (document_type `purchase_document`, direction out) using `purchases.services.payment_seam` (`apply_payment`, `lock_payable_bills`, `register_void_listener`). Add "Pay supplier" and "Paid now" on the purchase bill screens.
-3. **Full gates, then build and serve.**
-   - Backend pytest (about 2,300 tests).
-   - tsc; full eslint in a quiet window; full jest `--maxWorkers=2`. There are 5 known flaky `PartyDetailPageContent` NEW-2 tests that fail only when the whole file runs, so investigate test isolation.
-   - check-locales, build, `bundle:check`.
-4. **QA with screenshots on phone 390 and desktop 1280, English plus Hindi.** Run parallel QA agents (30 minutes each):
-   - Wave 2: sales core, imports, "Your data" and admin.
+State at 06a9af0:
+- Backend: 2,399 passing. 1 failing: `apps/reports/tests/tax/test_gst_summary.py::test_the_br14_worked_example_to_the_paisa`, which needs re-checking now that SAL-04 credit notes are real on main.
+- Jest: 2,271 passing, 9 failing:
+  - 1 is the reports hub catalogue test, which needs the 3 new tax-report entries added;
+  - 3 are onboarding idempotency-key tests (NEW-1), to investigate;
+  - 5 are known order-dependent `PartyDetailPageContent` NEW-2 tests.
+- Locale catalogues are split and `check-locales` is green.
+
+After any merge touching locales, run:
+`node frontend/scripts/split-locales.mjs && python3 scripts/add-catalogue-imports.py && node frontend/scripts/check-locales.mjs`.
+For an invalidation registry conflict: `python3 scripts/registry-merge.py "<label>"`.
+
+1. Fix the failures above.
+   - Swap W4-B's `TaxReportLayout` for `ReportPageShell`.
+   - Replace the hard-coded credit-note URLs with `ROUTES.SALES_CREDIT_NOTES`.
+2. Build PUR-02 (supplier payment).
+   - Add `apps/payments/services/targets/purchases.py` (document_type `purchase_document`, direction `out`).
+   - Use `purchases.services.payment_seam` (`apply_payment`, `lock_payable_bills`, `register_void_listener`).
+   - Add "Pay supplier" and "Paid now" to the bill screens.
+3. Build, run `bundle:check` and re-baseline the PROVISIONAL budgets, then serve.
+4. QA with screenshots on phone 390 and desktop 1280, English plus Hindi, for:
+   - Wave 2: sales core, imports, data/admin.
    - Wave 3: payments, purchases, estimates, credit notes, void.
    - Wave 4: dashboard, day book, registers, GST.
-   - Then fix and run an independent retest. Full regression: `node e2e/run-regression.mjs -j 3`.
-5. **Hardening (Sprint 12):**
+   Then fix, retest, and run the full regression: `node e2e/run-regression.mjs -j 3`.
+5. Hardening.
    - Security pass.
    - Accessibility: axe, 44px touch targets.
    - Backup and restore rehearsal.
    - Scheduler double-run proof.
-   - The known deadlock risk: invoice void locks document then party, while payments lock party then documents.
+   - Deadlock risk between invoice void and payment void.
    - Hash passwords before `atomic()`.
-6. **Final UAT**, then the Project STATUS and BOARD docs, and Part 43 CR registration.
-7. **Every session end:** bundle to `~/digikhaato/sync/`, fast-forward the Mac repo, update this file, and send a standup plus screenshots.
+6. Final UAT, then update the STATUS and BOARD Project docs and register the Part 43 CRs.
+7. At every session end:
+   - bundle to `~/digikhaato/sync/`;
+   - fast-forward the Mac repo;
+   - update this file;
+   - send a standup plus screenshots.
