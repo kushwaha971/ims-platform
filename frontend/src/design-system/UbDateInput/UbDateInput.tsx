@@ -189,7 +189,15 @@ const UbDateInputInner = forwardRef<HTMLButtonElement, UbDateInputProps>(functio
   const [open, setOpen] = useState(false);
   // The context, not `useIntl()`: a control rendered outside a provider (a
   // story, a bare test) falls back to English instead of throwing.
-  const intlLocale = useContext(IntlContext)?.locale;
+  const intl = useContext(IntlContext);
+  const intlLocale = intl?.locale;
+  /* The popover's month arrows, in the app's language (Sprint 12 i18n sweep).
+     Read from the shell catalogue through the context rather than `t()`, so a
+     bare test or story without a provider still renders — in English. */
+  const message = (id: string, fallback: string): string => {
+    const found = intl?.messages?.[id];
+    return typeof found === 'string' ? found : fallback;
+  };
   const face = formatDate ?? ((iso: string) => formatDateFace(iso, intlLocale));
   const selected = toDate(value);
   const isInvalid = Boolean(invalid) || ariaInvalid === true;
@@ -240,13 +248,13 @@ const UbDateInputInner = forwardRef<HTMLButtonElement, UbDateInputProps>(functio
       className={
         appearance === 'inline'
           ? cn(
-              'ds-body-base-medium inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-control px-2 text-left text-text-primary',
+              'ub-hit ds-body-base-medium inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-control px-2 text-left text-text-primary',
               'outline-none transition-colors duration-fast ease-standard hover:bg-surface-hover focus-visible:shadow-focus',
               'disabled:cursor-not-allowed disabled:text-text-muted',
               isInvalid && 'text-formError'
             )
           : cn(
-              'ds-body-base-regular flex h-10 w-full items-center gap-2 rounded-control border bg-surface-card px-3 text-left',
+              'ub-hit ds-body-base-regular flex h-10 w-full items-center gap-2 rounded-control border bg-surface-card px-3 text-left',
               'outline-none transition-colors duration-fast ease-standard',
               'disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-text-muted',
               ML_CONTROL_TONE(isInvalid)
@@ -296,6 +304,9 @@ const UbDateInputInner = forwardRef<HTMLButtonElement, UbDateInputProps>(functio
             onSelect={handleSelect}
             min={toDate(min)}
             max={toDate(max)}
+            locale={intlLocale}
+            previousMonthLabel={message('common.calendar.previousMonth', 'Previous month')}
+            nextMonthLabel={message('common.calendar.nextMonth', 'Next month')}
           />
         )}
       </UbPopover>

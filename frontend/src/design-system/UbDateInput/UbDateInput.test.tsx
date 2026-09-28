@@ -2,7 +2,41 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { IntlProvider } from 'react-intl';
 
+import { UbDateCalendar } from './UbDateCalendar';
 import { formatDateFace, isoFinancialYearStart, isoToday, UbDateInput } from './UbDateInput';
+
+/**
+ * Sprint 12 i18n sweep: the field read "28 सित॰ 2026" but the popover it opens
+ * still spoke English — "September 2026" over the grid, "Su Mo Tu" under it,
+ * "Go to the Next Month" on the arrow — because react-day-picker formats with
+ * date-fns' en-US default. The Hindi grid is `Intl`'s hi-IN; English is left
+ * exactly as it was.
+ */
+describe('the calendar popover in the app language', () => {
+  const sep28 = new Date(2026, 8, 28);
+
+  it('titles the month, the weekdays and the arrows in Hindi on a Hindi screen', () => {
+    render(
+      <UbDateCalendar
+        selected={sep28}
+        onSelect={jest.fn()}
+        locale="hi-IN"
+        previousMonthLabel="पिछला महीना"
+        nextMonthLabel="अगला महीना"
+      />
+    );
+    expect(screen.getByText('सितंबर 2026')).toBeInTheDocument();
+    expect(screen.queryByText('September 2026')).toBeNull();
+    expect(screen.getByRole('button', { name: 'अगला महीना' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'पिछला महीना' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /28 सितंबर 2026/ })).toBeInTheDocument();
+  });
+
+  it('keeps the English grid as it was', () => {
+    render(<UbDateCalendar selected={sep28} onSelect={jest.fn()} locale="en-IN" />);
+    expect(screen.getByText('September 2026')).toBeInTheDocument();
+  });
+});
 
 describe('the dates a merchant actually means', () => {
   it('puts the financial year start at 1 April, and last April before that', () => {

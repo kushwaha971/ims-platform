@@ -125,6 +125,7 @@
   "ledger.source.payment_in": "भुगतान मिला",
   "ledger.source.payment_out": "भुगतान दिया",
   "ledger.source.purchase_bill": "खरीद बिल",
+  "ledger.source.receipt": "रसीद",
   "ledger.source.void": "रद्द",
   "ledger.statement.backToKhata": "खाते पर वापस",
   "ledger.statement.balance": "बाकी",

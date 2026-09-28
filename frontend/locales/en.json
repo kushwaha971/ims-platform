@@ -28,6 +28,8 @@
   "common.action.goToDashboard": "Go to Dashboard",
   "common.action.retry": "Try again",
   "common.action.sendNow": "Send now",
+  "common.calendar.nextMonth": "Next month",
+  "common.calendar.previousMonth": "Previous month",
   "common.error.body": "Check your connection and try again. Quote the reference below to support.",
   "common.error.generic": "Something went wrong.",
   "common.error.reference": "Reference",

@@ -6,11 +6,11 @@ import { formatInr } from 'src/utils/money';
 import { formatPhoneForDisplay } from 'src/utils/share';
 
 import { writtenOffLines } from '../../view-model/entryDisplay';
+import { statementRowTitle } from '../../view-model/narration';
 import {
   balanceDirection,
   balanceLabelId,
   isStruckThrough,
-  rowTitleId,
   unsigned,
 } from '../../view-model/statementDisplay';
 
@@ -283,8 +283,7 @@ function StatementPrintTable({
  * not printed twice (CR-2026-09-24-A).
  */
 function printParticulars(row: StatementRow, t: (id: string) => string): string {
-  const titleId = rowTitleId(row);
-  const title = titleId ? t(titleId) : row.note.trim();
+  const title = statementRowTitle(row, t);
   const reason = row.reason && row.reason.trim() !== row.note.trim() ? ` · ${row.reason}` : '';
   if (row.entryType === 'write_off') {
     const label = t('ledger.entry.type.write_off');

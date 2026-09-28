@@ -7,7 +7,7 @@ import { Pencil, Undo2 } from 'lucide-react';
 import { UbButton, UbDialog, UbStack, UbText } from 'src/design-system';
 import type { TranslateFn } from 'src/hooks/useTranslation';
 
-import { entryTitle } from '../view-model/entryDisplay';
+import { khataEntryTitle } from '../view-model/narration';
 
 import type { LedgerEntry } from '../types/ledger.types';
 
@@ -73,7 +73,7 @@ export function EntryActionsMenu({
     <UbDialog
       open
       onOpenChange={handleOpenChange}
-      title={entryTitle(entry, t)}
+      title={khataEntryTitle(entry, t)}
       closeLabel={t('common.action.close')}
     >
       <UbStack gap={1}>

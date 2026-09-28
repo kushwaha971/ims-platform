@@ -70,8 +70,10 @@ const mapStatusToCode = (status: number): ApiErrorCode => {
   }
 };
 
+const SERVER_FAILURE_FALLBACK = 'Something went wrong. Quote this reference to support.';
+const REQUEST_FAILURE_FALLBACK = 'Request failed.';
 const defaultMessageFor = (status: number): string =>
-  status >= 500 ? 'Something went wrong. Quote this reference to support.' : 'Request failed.';
+  status >= 500 ? SERVER_FAILURE_FALLBACK : REQUEST_FAILURE_FALLBACK;
 
 /**
  * Normalises anything thrown by the transport into one shape.
@@ -217,8 +219,18 @@ const CLIENT_MINTED_MESSAGE_ID: Partial<Record<ApiErrorCode, string>> = {
   offline: 'common.network.offline',
 };
 
+/**
+ * Sprint 12 i18n sweep — a response with no error BODY (a proxy's 502 page, an
+ * HTML 404) also gets a client-minted English sentence from `defaultMessageFor`,
+ * and it reached a Hindi merchant's snackbar as English because only the
+ * transport codes above were mapped. Those two strings are ours, not the
+ * server's, so they resolve to the generic key too.
+ */
+const CLIENT_MINTED_FALLBACKS = new Set([SERVER_FAILURE_FALLBACK, REQUEST_FAILURE_FALLBACK]);
+
 export const errorMessageId = (error: ApiErrorShape): string | null =>
-  CLIENT_MINTED_MESSAGE_ID[error.code] ?? (error.message ? null : 'error.generic');
+  CLIENT_MINTED_MESSAGE_ID[error.code] ??
+  (!error.message || CLIENT_MINTED_FALLBACKS.has(error.message) ? 'error.generic' : null);
 
 /**
  * §19.4.4 — `details` feeds `setError`; snake_case keys become RHF paths.

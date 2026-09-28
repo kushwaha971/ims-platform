@@ -32,13 +32,13 @@ import {
   entryBalanceCaption,
   entryCaption,
   entryReason,
-  entryTitle,
   isBackdated,
   isCorrectable,
   isOpeningEntry,
   isReversalRow,
   writtenOffLines,
 } from '../view-model/entryDisplay';
+import { khataEntryTitle } from '../view-model/narration';
 
 import { EntryActionsMenu } from './EntryActionsMenu';
 import { EntrySourceLink } from './EntrySourceLink';
@@ -364,7 +364,7 @@ function EntryRow({
               : 'line-clamp-2 break-words'
           }
         >
-          {entryTitle(entry, t)}
+          {khataEntryTitle(entry, t)}
         </UbText>
 
         {/* Every badge lives on the CAPTION line, and wraps there.
@@ -474,7 +474,7 @@ function EntryRow({
             icon={<MoreHorizontal className="h-4 w-4" aria-hidden />}
             onClick={() => onOpenMenu(entry)}
           >
-            {t('ledger.correction.rowActions', { title: entryTitle(entry, t) })}
+            {t('ledger.correction.rowActions', { title: khataEntryTitle(entry, t) })}
           </UbButton>
         )}
       </UbStack>

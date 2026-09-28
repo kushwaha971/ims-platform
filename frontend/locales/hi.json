@@ -28,6 +28,8 @@
   "common.action.goToDashboard": "डैशबोर्ड पर जाएँ",
   "common.action.retry": "फिर कोशिश करें",
   "common.action.sendNow": "अभी भेजें",
+  "common.calendar.nextMonth": "अगला महीना",
+  "common.calendar.previousMonth": "पिछला महीना",
   "common.error.body": "कनेक्शन जाँचकर फिर कोशिश करें। सहायता के लिए नीचे दिया रेफरेंस बताएँ।",
   "common.error.generic": "कुछ गड़बड़ हो गई।",
   "common.error.reference": "संदर्भ",

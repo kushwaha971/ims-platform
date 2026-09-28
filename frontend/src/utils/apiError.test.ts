@@ -1,6 +1,6 @@
 import { AxiosError, AxiosHeaders, type InternalAxiosRequestConfig } from 'axios';
 
-import { toApiError } from './apiError';
+import { errorMessageId, toApiError } from './apiError';
 
 /**
  * QA defect D2 (Sprint 3): a failure with no response at all — the server is
@@ -70,5 +70,36 @@ describe('toApiError — the request id when the server did not answer (D2)', ()
   it('is still null when nothing minted an id', () => {
     const error = new AxiosError('Network Error', 'ERR_NETWORK', configWith({}));
     expect(toApiError(error).requestId).toBeNull();
+  });
+});
+
+/**
+ * Sprint 12 i18n sweep: a response with no error body (a proxy's 502 page, an
+ * HTML 404) carried the client's own English fallback sentence as its
+ * `message`, and `errorMessageId` passed it through as though the server had
+ * localised it — so a Hindi merchant's snackbar read "Request failed." A
+ * server-sent sentence still passes through untouched.
+ */
+describe('errorMessageId — the client-minted fallbacks resolve to a key', () => {
+  const config = configWith({});
+  const reply = (status: number, data: unknown) =>
+    new AxiosError('x', 'ERR_BAD_RESPONSE', config, undefined, {
+      status,
+      statusText: '',
+      headers: {},
+      config,
+      data,
+    });
+
+  it.each([502, 404])('maps a body-less %i to error.generic', (status) => {
+    expect(errorMessageId(toApiError(reply(status, '<html></html>')))).toBe('error.generic');
+  });
+
+  it("keeps the server's own (already localised) sentence", () => {
+    const shape = toApiError(
+      reply(400, { error: { code: 'validation_failed', message: 'राशि दर्ज करें।' } })
+    );
+    expect(errorMessageId(shape)).toBeNull();
+    expect(shape.message).toBe('राशि दर्ज करें।');
   });
 });
