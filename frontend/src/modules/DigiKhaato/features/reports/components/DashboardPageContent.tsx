@@ -111,7 +111,10 @@ export function DashboardPageContent(): React.JSX.Element {
                   direction="row"
                   // QA R-D4 — the chips wrap on a phone rather than scrolling
                   // "Send reminders" half off the edge of a 390 px screen.
-                  className="flex-wrap gap-2"
+                  // 16 px between wrapped rows on a phone: each 28 px action's
+                  // 44 px hit area (`.ub-hit`) overhangs 8 px above and below,
+                  // and at 8 px the second row covered the first (Sprint 12).
+                  className="flex-wrap gap-2 max-sm:gap-y-4"
                   aria-label={t('reports.dashboard.quick.label')}
                   role="group"
                 >

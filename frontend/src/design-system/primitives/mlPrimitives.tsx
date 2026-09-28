@@ -255,6 +255,9 @@ export const mlButtonClasses = (
 ): string =>
   cn(
     'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-control [&_svg]:shrink-0',
+    // R-A-3: a 44 × 44 hit area on a phone around every size — the 32 px
+    // icon-only header square, the 40 px `md`, the 28 px `sm` (globals.css).
+    'ub-hit',
     'transition-colors duration-fast ease-standard',
     'disabled:cursor-not-allowed disabled:opacity-45',
     BUTTON_VARIANT[variant],

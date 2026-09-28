@@ -233,6 +233,7 @@
   "sales.print.number": "Invoice no.",
   "sales.print.original": "Original for recipient",
   "sales.print.paid": "Paid",
+  "sales.print.preview": "Document preview",
   "sales.print.rate": "Rate",
   "sales.print.reverseCharge": "Tax payable on reverse charge",
   "sales.print.scanToPay": "Scan to pay",

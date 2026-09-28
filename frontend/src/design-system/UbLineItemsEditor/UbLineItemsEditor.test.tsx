@@ -204,3 +204,35 @@ describe('the phone layout', () => {
     expect(screen.getByText('No lines yet')).toBeInTheDocument();
   });
 });
+
+/**
+ * Sprint 12 a11y sweep (axe aria-required-children, critical): the table
+ * layout's remove button sat directly in its `row`, beside the cells, and the
+ * empty message directly in the `table`. An ARIA row owns only cells and a
+ * table only rows, so a screen reader's table navigation skipped the button and
+ * mis-counted the columns on every invoice, estimate and bill editor.
+ */
+describe('ARIA table ownership in the table layout', () => {
+  it('puts every control in a cell and every row under the table', () => {
+    render(<Harness initial={[{ name: 'Rice', qty: '2' }]} />);
+    const table = screen.getByRole('table');
+    const rows = within(table).getAllByRole('row');
+    expect(rows).toHaveLength(2);
+    const line = rows[1] as HTMLElement;
+    for (const control of [
+      ...within(line).getAllByRole('button'),
+      ...within(line).getAllByRole('textbox'),
+    ]) {
+      expect(control.closest('[role="cell"]')).not.toBeNull();
+    }
+    const remove = within(line).getByRole('button', { name: 'Remove line 1' });
+    expect(remove.closest('[role="row"]')).toBe(line);
+  });
+
+  it('wraps the empty message in a row and a cell', () => {
+    render(<Harness initial={[]} />);
+    const message = screen.getByText('No lines yet');
+    expect(message.closest('[role="cell"]')).not.toBeNull();
+    expect(message.closest('[role="row"]')?.parentElement).toBe(screen.getByRole('table'));
+  });
+});

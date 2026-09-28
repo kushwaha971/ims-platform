@@ -343,9 +343,18 @@ export function UbLineItemsEditor<TForm extends FieldValues, TName extends Array
                 Each row's button carries its own 1-based name. */}
             <span role="columnheader" className="sr-only" />
           </div>
+          {/* ARIA table ownership (axe aria-required-children, Sprint 12): a
+              `table` owns only `row`s and a `row` only cells, so the empty
+              message, the remove button and the line note each sit in a cell. */}
           {fields.length === 0 && (
-            <div className="ds-body-sm px-3 py-6 text-center text-text-tertiary">
-              {labels.empty}
+            <div role="row">
+              <div
+                role="cell"
+                aria-colspan={columns.length + 1}
+                className="ds-body-sm px-3 py-6 text-center text-text-tertiary"
+              >
+                {labels.empty}
+              </div>
             </div>
           )}
           {fields.map((line, index) => (
@@ -368,17 +377,19 @@ export function UbLineItemsEditor<TForm extends FieldValues, TName extends Array
                     {renderCell(column, index, 'table')}
                   </div>
                 ))}
-                <button
-                  type="button"
-                  onClick={() => remove(index)}
-                  disabled={disabled}
-                  aria-label={labels.removeLine(index + 1)}
-                  className="flex h-10 w-10 items-center justify-center rounded-control text-text-tertiary hover:bg-surface-sunken hover:text-formError disabled:opacity-50"
-                >
-                  <Trash2 aria-hidden className="h-4 w-4" />
-                </button>
+                <div role="cell">
+                  <button
+                    type="button"
+                    onClick={() => remove(index)}
+                    disabled={disabled}
+                    aria-label={labels.removeLine(index + 1)}
+                    className="ub-hit flex h-10 w-10 items-center justify-center rounded-control text-text-tertiary hover:bg-surface-sunken hover:text-formError disabled:opacity-50"
+                  >
+                    <Trash2 aria-hidden className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
-              {renderLineNote?.(index)}
+              <LineNoteCell note={renderLineNote?.(index)} span={columns.length + 1} />
             </div>
           ))}
         </div>
@@ -407,7 +418,7 @@ export function UbLineItemsEditor<TForm extends FieldValues, TName extends Array
                     onClick={() => remove(index)}
                     disabled={disabled}
                     aria-label={labels.removeLine(index + 1)}
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control text-text-tertiary hover:bg-surface-sunken hover:text-formError disabled:opacity-50"
+                    className="ub-hit flex h-10 w-10 shrink-0 items-center justify-center rounded-control text-text-tertiary hover:bg-surface-sunken hover:text-formError disabled:opacity-50"
                   >
                     <Trash2 aria-hidden className="h-4 w-4" />
                   </button>
@@ -457,7 +468,7 @@ export function UbLineItemsEditor<TForm extends FieldValues, TName extends Array
           type="button"
           onClick={addLine}
           disabled={atMax || disabled}
-          className="ds-body-sm-medium inline-flex h-10 items-center gap-2 rounded-control border border-border-hairline px-3 text-accent hover:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-50"
+          className="ub-hit ds-body-sm-medium inline-flex h-10 items-center gap-2 rounded-control border border-border-hairline px-3 text-accent hover:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Plus aria-hidden className="h-4 w-4" />
           {labels.addLine}
@@ -467,6 +478,26 @@ export function UbLineItemsEditor<TForm extends FieldValues, TName extends Array
         )}
       </div>
       {footer}
+    </div>
+  );
+}
+
+/**
+ * A line's note (stock left, a price warning) under its cells. A `row` may own
+ * only cells, so the note is one spanning the row; `empty:hidden` keeps a line
+ * with no note from gaining the row's 4 px gap for an empty box.
+ */
+function LineNoteCell({
+  note,
+  span,
+}: {
+  readonly note: ReactNode;
+  readonly span: number;
+}): React.JSX.Element | null {
+  if (note === null || note === undefined || note === false) return null;
+  return (
+    <div role="cell" aria-colspan={span} className="empty:hidden">
+      {note}
     </div>
   );
 }

@@ -5,7 +5,7 @@
  *
  *   node e2e/run-regression.mjs                  # everything (≈10 min on a 2-core box)
  *   node e2e/run-regression.mjs --quick          # smoke subset (≤3 min)
- *   node e2e/run-regression.mjs --only s3-B,ledger   # by id, group (s3, d2, d3, core) or prefix*
+ *   node e2e/run-regression.mjs --only s3-B,ledger   # by id, group (s3, d2, d3, core, a11y) or prefix*
  *   node e2e/run-regression.mjs --skip journey   # everything but
  *   node e2e/run-regression.mjs --list           # what would run, and the fixtures each gets
  *   node e2e/run-regression.mjs -j 4             # concurrency (default 6)
@@ -105,7 +105,19 @@ const d3 = (phase, est, make, { quick = false } = {}) => ({
   setup: async () => ({ args: [`--only=${phase}`, ...(await make())] }),
 });
 
+// Sprint 12 accessibility sweep (TSK-CHS-CI-21): axe-core + names, landmarks,
+// 44 px hit areas, Devanagari clipping and three keyboard flows. Split by width
+// so neither half nears the job timeout; the Hindi 360 pass rides with phone.
+const a11y = (id, est, args, { quick = false } = {}) => ({
+  id, group: 'a11y', script: 'a11y-sweep.mjs', est, quick,
+  note: `a11y-sweep ${args.join(' ')}: seeds its own GST shop + an un-onboarded user`,
+  setup: async () => ({ args }),
+});
+
 const JOBS = [
+  a11y('a11y-phone', 480, ['--viewport=phone']),
+  a11y('a11y-desktop', 360, ['--viewport=desktop', '--no-hi']),
+
   // Harnesses that always seeded themselves.
   plain('journey', 90, { quick: true, quickArgs: ['--viewport', 'laptop'] }),
   plain('parties', 60, { quick: true }),

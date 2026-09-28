@@ -72,6 +72,7 @@
   "payments.receipt.mode": "तरीका",
   "payments.receipt.paidTo": "को भुगतान",
   "payments.receipt.payNext": "अगली बार UPI से भुगतान करें",
+  "payments.receipt.preview": "रसीद का पूर्वावलोकन",
   "payments.receipt.print": "प्रिंट",
   "payments.receipt.receivedFrom": "से प्राप्त",
   "payments.receipt.settled": "बराबर",

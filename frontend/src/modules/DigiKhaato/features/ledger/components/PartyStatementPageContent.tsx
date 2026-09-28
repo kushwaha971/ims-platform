@@ -33,11 +33,11 @@ import { formatInr } from 'src/utils/money';
 import { statementCsvUrl } from '../api/statementService';
 import { usePartyStatement } from '../hooks/usePartyStatement';
 import { entryAmountView, writtenOffLines } from '../view-model/entryDisplay';
+import { statementRowTitle } from '../view-model/narration';
 import {
   balanceDirection,
   balanceLabelId,
   isStruckThrough,
-  rowTitleId,
   unsigned,
 } from '../view-model/statementDisplay';
 
@@ -382,7 +382,6 @@ function StatementRowView({
 }>): React.JSX.Element {
   const struck = isStruckThrough(row);
   const view = entryAmountView(row.direction, row.entryType);
-  const titleId = rowTitleId(row);
   /* A write-off stores its reason as its note too (PTY-04 FR-3), so the title
      already says it — the timeline's `entryReason` drops the echo, and so does
      this row. */
@@ -415,7 +414,7 @@ function StatementRowView({
                 : 'line-clamp-2 break-words'
             }
           >
-            {titleId ? t(titleId) : row.note.trim()}
+            {statementRowTitle(row, t)}
           </UbText>
           {/* The badges and the reason sit under the title, on their own line —
             the rule LED-03 arrived at after the ⋯ squeezed a khata row's note

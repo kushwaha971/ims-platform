@@ -94,7 +94,7 @@ export function MLRadioGroup<T extends string>({
             value={option.value}
             disabled={option.disabled}
             className={cn(
-              'relative mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-pill border',
+              'ub-hit relative mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-pill border',
               'border-border-subtle bg-surface-card text-accent',
               'transition-colors duration-fast ease-standard',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
@@ -106,7 +106,18 @@ export function MLRadioGroup<T extends string>({
           </RadioGroupPrimitive.Item>
           <span className="flex min-w-0 flex-col gap-0.5">
             <span className="ds-body-sm-medium text-text-primary">{option.label}</span>
-            {option.hint && <span className="ds-caption text-text-tertiary">{option.hint}</span>}
+            {option.hint && (
+              // On the selected card's accent tint the tertiary grey is 4.46:1
+              // — under 4.5 (axe, Sprint 12). Text on a tint is secondary.
+              <span
+                className={cn(
+                  'ds-caption',
+                  card && value === option.value ? 'text-text-secondary' : 'text-text-tertiary'
+                )}
+              >
+                {option.hint}
+              </span>
+            )}
           </span>
         </label>
       ))}

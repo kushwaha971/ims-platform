@@ -193,7 +193,9 @@
       vertical-align: top;
     }
 
-    .ub-print-sheet th {
+    /* Column headings only: a totals block's ROW headers (`th scope="row"`)
+       keep the ordinary hairline of the cells beside them. */
+    .ub-print-sheet thead th {
       border-bottom-width: 1pt;
       border-bottom-color: #333;
     }
@@ -389,6 +391,50 @@
 }
 
 @layer components {
+  /**
+   * R-A-3 / Part 23 §23.6 — a 44 × 44 HIT AREA on a phone, whatever the visual.
+   *
+   * The owner's page-header rule makes a phone's actions 32 px icon squares
+   * (UbButton `iconOnly="mobile"`), filter chips are 32 px pills, `md` buttons
+   * and every input are 40 px, and a checkbox is a 16 px box. None of those
+   * visuals change. What changes is where a thumb lands: `::after` is a
+   * transparent box centred on the control and never smaller than 44 × 44.
+   * `min(0px, (100% - 44px) / 2)` is negative exactly when the control is
+   * smaller than 44 px on that axis, and 0 when it is already bigger, so one
+   * rule serves a 16 px box, a 32 px icon and a 340 px full-width button.
+   * Percentages on `top`/`bottom` resolve against the control's height and on
+   * `left`/`right` against its width, which is what makes the arithmetic work.
+   *
+   * Phone widths only (below `sm`, the breakpoint the icon-only rule uses): on
+   * a desktop a pointer is precise and a 28 px row button beside another one
+   * must not steal its neighbour's edge. Two consequences the callers own:
+   *   - neighbours need 12 px between them (6 px of overhang each) or the later
+   *     one's hit box covers the earlier one's edge — UbPageHeader's actions
+   *     and the chip rows open to `gap-3` below `sm` for exactly this;
+   *   - an `overflow` ancestor clips the overhang (a sideways-scrolling chip
+   *     track), so such a track carries 6 px of vertical padding.
+   * A positioning utility on the control (`absolute`, `sticky`) still wins:
+   * this sits in `components`, below `utilities`, and any positioned element
+   * contains its own `::after`.
+   *
+   * `e2e/a11y-sweep.mjs` measures the result with `elementFromPoint` at the
+   * centre ±21 px, so a hit box that is clipped or overlapped fails there.
+   */
+  @media (max-width: 639px) {
+    .ub-hit {
+      position: relative;
+    }
+
+    .ub-hit::after {
+      content: '';
+      position: absolute;
+      top: min(0px, calc((100% - 44px) / 2));
+      bottom: min(0px, calc((100% - 44px) / 2));
+      left: min(0px, calc((100% - 44px) / 2));
+      right: min(0px, calc((100% - 44px) / 2));
+    }
+  }
+
   /**
    * The native `<select>` chevron.
    *

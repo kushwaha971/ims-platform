@@ -18,7 +18,8 @@ import {
 import { useTranslation } from 'src/hooks/useTranslation';
 
 import { useLedgerSchemas } from '../validation/ledgerSchemas';
-import { entryAmountView, entryTitle } from '../view-model/entryDisplay';
+import { entryAmountView } from '../view-model/entryDisplay';
+import { khataEntryTitle } from '../view-model/narration';
 
 import type { UseEntryCorrectionResult } from '../hooks/useEntryCorrection';
 
@@ -129,7 +130,7 @@ export function ReverseEntryDialog({
         <UbStack direction="row" justify="between" align="start" className="gap-3">
           <UbStack gap={1} className="min-w-0 flex-1">
             <UbText variant="body" className="truncate">
-              {entryTitle(reversing, t)}
+              {khataEntryTitle(reversing, t)}
             </UbText>
             <UbText variant="caption" tone="tertiary">
               {d(reversing.entryDate)}

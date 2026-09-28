@@ -12,7 +12,7 @@
  * Node standard library only (ADR-021). Run with --print to regenerate the
  * chapter's table.
  */
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const root = process.cwd();
@@ -38,6 +38,12 @@ const resolve = (raw, value, seen = 0) => {
   const hsl = value.match(/^([\d.]+)\s+([\d.]+)%\s+([\d.]+)%$/);
   if (!hsl) return null;
   return [Number(hsl[1]), Number(hsl[2]), Number(hsl[3])];
+};
+
+/** `rgba(r, g, b, a)` → [r, g, b, a], for the two alpha tints. */
+const parseRgba = (value) => {
+  const m = value?.match(/^rgba\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*\)$/);
+  return m ? m.slice(1).map(Number) : null;
 };
 
 // ── Colour maths (WCAG 2.2, sRGB relative luminance) ─────────────────────────
@@ -201,6 +207,74 @@ check('border-strong', 'surface-card', 3.0, 'dark', darkRaw);
 check('accent', 'surface-card', 3.0, 'dark', darkRaw);
 DARK_SEPARATION.forEach(([fg, bg, floor]) => check(fg, bg, floor, 'dark', darkRaw));
 
+/**
+ * Sprint 12 a11y sweep — text on the SELECTED tint. A selected row, card or
+ * chip is `--accent-quiet` (an rgba wash) over the card, and its caption kept
+ * the tertiary grey: 4.46:1 on #EDEDFB, which axe failed on /switch and on the
+ * reminder-rule cards while every pairing above passed, because none of them
+ * looked at a tint. The wash is composited over `--surface-card` here exactly
+ * as the browser does.
+ */
+const TEXT_ON_TINT = ['text-primary', 'text-secondary', 'text-tertiary', 'text-accent'];
+const luminanceRgb = (rgb) => relativeLuminance(rgb);
+const checkOnTint = (theme, raw) => {
+  const tint = parseRgba(raw['accent-quiet']);
+  const card = get(raw, 'surface-card', theme);
+  if (!tint || !card) {
+    console.error(`✗ low_contrast: --accent-quiet (${theme}) is not an rgba() over a card.`);
+    process.exitCode = 1;
+    return;
+  }
+  const base = hslToRgb(card);
+  const wash = base.map((c, i) => tint[i] * tint[3] + c * (1 - tint[3]));
+  TEXT_ON_TINT.forEach((fgName) => {
+    const fg = get(raw, fgName, theme);
+    if (!fg) return;
+    const [hi, lo] = [luminanceRgb(hslToRgb(fg)), luminanceRgb(wash)].sort((a, b) => b - a);
+    const ratio = (hi + 0.05) / (lo + 0.05);
+    const pass = ratio + 1e-9 >= 4.5;
+    rows.push({ theme, fg: fgName, bg: 'accent-quiet', ratio: ratio.toFixed(2), floor: 4.5, pass });
+    if (!pass) {
+      failures += 1;
+      console.error(
+        `✗ low_contrast: --${fgName} on --accent-quiet over --surface-card (${theme}) is ${ratio.toFixed(2)}:1, floor 4.5:1`
+      );
+    }
+  });
+};
+checkOnTint('light', lightRaw);
+checkOnTint('dark', darkRaw);
+
+/**
+ * Sprint 12 a11y sweep — the `-bright` steps are FILL colours. #E73F3F is
+ * 4.05:1 and #E49614 2.39:1 on white, and UbStatCard painted its label and
+ * figure in them: every "To collect", "Low or out" and "To pay" tile failed
+ * WCAG 1.4.3. A token table cannot see a class name, so the sources are
+ * scanned: `text-<tone>-bright` is refused anywhere in `src/` unless the line
+ * says `contrast: decorative` — an icon beside words that carry the meaning.
+ */
+const BRIGHT_TEXT = /\btext-(success|warning|error|info|form-error|formError)-bright\b/;
+const walk = (dir) =>
+  readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) return entry.name === 'node_modules' ? [] : walk(path);
+    return /\.(tsx?|css)$/.test(entry.name) && !/\.test\./.test(entry.name) ? [path] : [];
+  });
+let brightScanned = 0;
+for (const file of walk(join(root, 'src'))) {
+  brightScanned += 1;
+  readFileSync(file, 'utf8')
+    .split('\n')
+    .forEach((line, index) => {
+      if (BRIGHT_TEXT.test(line) && !/contrast: decorative/.test(line)) {
+        failures += 1;
+        console.error(
+          `✗ low_contrast: ${file.slice(root.length + 1)}:${index + 1} paints text in a -bright fill step (${line.trim().slice(0, 80)})`
+        );
+      }
+    });
+}
+
 if (process.argv.includes('--print')) {
   rows.forEach((row) =>
     console.log(
@@ -214,4 +288,6 @@ if (failures > 0 || process.exitCode === 1) {
   process.exit(1);
 }
 
-console.log(`✓ contrast — ${rows.length} pairings checked, all above their floor`);
+console.log(
+  `✓ contrast — ${rows.length} pairings checked, all above their floor; ${brightScanned} source files free of -bright text`
+);

@@ -125,6 +125,7 @@
   "ledger.source.payment_in": "Payment received",
   "ledger.source.payment_out": "Payment made",
   "ledger.source.purchase_bill": "Purchase bill",
+  "ledger.source.receipt": "Receipt",
   "ledger.source.void": "Void",
   "ledger.statement.backToKhata": "Back to khata",
   "ledger.statement.balance": "Balance",

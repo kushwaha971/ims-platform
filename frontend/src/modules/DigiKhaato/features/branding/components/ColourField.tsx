@@ -58,7 +58,9 @@ function ColourFieldInner({
               onClick={() => field.onChange(hex)}
               aria-label={t('branding.colour.swatch', { hex })}
               className={cn(
-                'flex h-9 w-9 items-center justify-center rounded-control border border-border-subtle',
+                // 36 px swatches, 8 px apart: `.ub-hit`'s 4 px overhang a side makes each
+                // a 44 px target that meets its neighbour's (R-A-3, Sprint 12).
+                'ub-hit flex h-9 w-9 items-center justify-center rounded-control border border-border-subtle',
                 selected && 'ring-2 ring-text-primary ring-offset-2'
               )}
               style={{ backgroundColor: hex }}

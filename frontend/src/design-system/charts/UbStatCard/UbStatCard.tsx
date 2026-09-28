@@ -92,21 +92,37 @@ export interface UbStatCardProps {
   readonly className?: string;
 }
 
+/* §23.2.4: `--error` is the LEDGER debit family — overdue, receivable, out of
+   stock. Validation errors are `--form-error` and never appear on a tile.
+
+   Sprint 12 a11y sweep: the figure and the label were `--error-bright` /
+   `--warning-bright` — #E73F3F is 4.05:1 and #E49614 2.39:1 on the white card,
+   so "To collect ₹1,807.00" on the dashboard, "Low or out" on items and every
+   report's "To pay" failed WCAG 1.4.3. The `-bright` steps are FILL colours;
+   they stay only on the aria-hidden icon beside the worded label, which carries
+   the meaning. TEXT takes the 4.5:1 step, and `scripts/check-contrast.mjs`
+   refuses a `text-*-bright` anywhere else. */
 const TONE: Record<UbStatCardTone, string> = {
   default: 'text-text-primary',
   success: 'text-success',
   warning: 'text-warning',
-  /* §23.2.4: `--error` is the LEDGER debit family — overdue, receivable, out of
-     stock. Validation errors are `--form-error` and never appear on a tile. */
-  danger: 'text-error-bright',
+  danger: 'text-error',
 };
 
-/** BrandHub `TONE_ACCENT` — the icon and the label carry the tone too. */
+/** BrandHub `TONE_ACCENT` — the label carries the tone too, at text contrast. */
 const ACCENT: Record<UbStatCardTone, string> = {
   default: 'text-text-tertiary',
   success: 'text-success',
-  warning: 'text-warning-bright',
-  danger: 'text-error-bright',
+  warning: 'text-warning',
+  danger: 'text-error',
+};
+
+/** The 12 px aria-hidden glyph beside the label: decoration, so the fill step is allowed. */
+const ICON_ACCENT: Record<UbStatCardTone, string> = {
+  default: 'text-text-tertiary',
+  success: 'text-success',
+  warning: 'text-warning-bright', // contrast: decorative — aria-hidden icon beside the label
+  danger: 'text-error-bright', // contrast: decorative — aria-hidden icon beside the label
 };
 
 const DELTA_TONE: Record<NonNullable<UbStatCardDelta['tone']>, string> = {
@@ -148,7 +164,7 @@ function UbStatCardBase({
             aria-hidden
             className={cn(
               'flex h-3 w-3 shrink-0 items-center justify-center [&>svg]:h-3 [&>svg]:w-3',
-              ACCENT[tone]
+              ICON_ACCENT[tone]
             )}
           >
             {icon}

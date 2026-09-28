@@ -233,6 +233,7 @@
   "sales.print.number": "बिल नं.",
   "sales.print.original": "प्राप्तकर्ता के लिए मूल",
   "sales.print.paid": "भुगतान",
+  "sales.print.preview": "दस्तावेज़ का पूर्वावलोकन",
   "sales.print.rate": "दर",
   "sales.print.reverseCharge": "रिवर्स चार्ज पर देय कर",
   "sales.print.scanToPay": "भुगतान के लिए स्कैन करें",

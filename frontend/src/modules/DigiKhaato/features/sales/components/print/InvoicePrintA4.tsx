@@ -102,7 +102,11 @@ export function InvoicePrintA4({
             />
           )}
           <div>
-            <h1 className="text-lg font-bold">{supplier.legalName || supplier.name}</h1>
+            {/* h2, not h1: on screen this sheet is the preview INSIDE the
+                document page, whose h1 is the document number — two h1s made
+                the outline read the business name as a second page title
+                (Sprint 12 a11y sweep). Paper has no outline to disturb. */}
+            <h2 className="text-lg font-bold">{supplier.legalName || supplier.name}</h2>
             <p className="text-xs">{addressLines(supplier.address)}</p>
             {supplier.phone && <p className="text-xs">{supplier.phone}</p>}
             {supplier.gstin && <p className="font-mono text-xs">GSTIN {supplier.gstin}</p>}
@@ -229,14 +233,21 @@ export function InvoicePrintA4({
         <div>
           <table className="w-full">
             <tbody>
+              {/* Label ↔ figure rows: the label cell is the ROW HEADER, so the
+                  table has headers and a screen reader says "CGST, ₹20.25"
+                  rather than two unrelated cells (WCAG 1.3.1, Sprint 12). */}
               {totals.map(([label, value]) => (
                 <tr key={label}>
-                  <td>{label}</td>
+                  <th scope="row" className="text-left font-normal">
+                    {label}
+                  </th>
                   <td className="text-right">{value}</td>
                 </tr>
               ))}
               <tr>
-                <td className="font-bold">{t('sales.totals.grand')}</td>
+                <th scope="row" className="text-left font-bold">
+                  {t('sales.totals.grand')}
+                </th>
                 <td className="text-right text-base font-bold" data-testid="print-grand-total">
                   {formatInr(doc.grandTotal)}
                 </td>
@@ -244,11 +255,15 @@ export function InvoicePrintA4({
               {doc.status !== 'draft' && doc.kind !== 'estimate' && (
                 <>
                   <tr>
-                    <td>{t('sales.print.paid')}</td>
+                    <th scope="row" className="text-left font-normal">
+                      {t('sales.print.paid')}
+                    </th>
                     <td className="text-right">{formatInr(doc.amountPaid)}</td>
                   </tr>
                   <tr>
-                    <td>{t('sales.print.balance')}</td>
+                    <th scope="row" className="text-left font-normal">
+                      {t('sales.print.balance')}
+                    </th>
                     <td className="text-right">{formatInr(doc.amountDue)}</td>
                   </tr>
                 </>

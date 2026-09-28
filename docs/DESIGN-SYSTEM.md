@@ -204,7 +204,46 @@ rule id. If a picker needs something the hook does not do (a `type` filter is
 already there), extend the hook; adding a file to the allowlist is adding a
 second party source and wants the same review as a new design-system component.
 
-## 5. What is deliberately not shown
+## 5. Accessibility rules (Sprint 12 sweep, 28 Sep 2026)
+
+`node e2e/a11y-sweep.mjs` (in `run-regression.mjs` as `a11y-phone` and
+`a11y-desktop`) checks every MVP screen at 390 and 1280 with axe-core plus the
+rules below, a Hindi pass at 360, and the khata-entry, invoice-editor and
+payment-drawer flows by keyboard. What it enforces, and what a new control has
+to do to pass:
+
+- **Touch targets: 44 × 44 on a phone, visuals unchanged.** The owner's 32 px
+  icon-only header buttons, 32 px chips, 40 px `md` buttons and 16 px boxes keep
+  their size; `.ub-hit` (in `app/globals.css`, below `sm` only) gives each a
+  transparent `::after` that is never smaller than 44 × 44, centred on the
+  control. Every `mlButtonClasses` button and action link, `UbFilterChip`,
+  `UbChoiceChips`, the select/combobox/date triggers, the checkbox, radio and
+  switch, and the password eye carry it. Tabs are 44 px tall on a phone instead
+  (a sideways-scrolling tab list would clip an overhang). Two consequences for
+  a caller: neighbouring small targets need **12 px** between them on a phone
+  (`UbPageHeader` actions and chip rows open to `gap-3` below `sm`; two rows of
+  28 px `sm` buttons need 16 px), and an `overflow` ancestor clips the
+  overhang, so a scrolling chip track carries 6 px of vertical padding
+  (`UbFilterBar`). Underlined TEXT links in rows are held to WCAG 2.5.8's 24 px
+  (axe `target-size`), not 44.
+- **The `-bright` tones are fills, never text.** `--error-bright` is 4.05:1 and
+  `--warning-bright` 2.39:1 on white. `scripts/check-contrast.mjs` scans `src/`
+  and fails on `text-<tone>-bright` unless the line says `contrast: decorative`
+  (an aria-hidden icon beside words that carry the meaning).
+- **Text on the selected tint** (`--accent-quiet` over the card) is checked
+  too: `--text-tertiary` was darkened one step (#6B696F) so a selected row's
+  caption clears 4.5:1; the checker composites the rgba wash as the browser does.
+- **An invalid field still shows focus**: `ML_CONTROL_TONE(true)` thickens the
+  error border to 2 px on focus rather than keeping it unchanged.
+- **ARIA tables own only rows and cells** (`UbLineItemsEditor`): a control or
+  message beside the cells goes in a cell of its own.
+- **A sideways-scrolling preview is a focusable, named region** (`tabIndex=0`,
+  `role="region"`, `aria-label`) — the invoice and receipt sheets.
+- **Known and left for the owner:** below `sm`, `MLDialogFooter` stacks actions
+  reversed (primary on top), so Tab walks a phone footer bottom-up. The sweep
+  prints it as a NOTE; `order="as-written"` is the one-line switch.
+
+## 6. What is deliberately not shown
 
 A control for a feature that is not built is not rendered: no notification
 bell until notifications exist, no "Forgot password?" until reset email has a

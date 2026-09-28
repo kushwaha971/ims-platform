@@ -97,7 +97,12 @@ export function UbAppShell({ children }: Readonly<{ children: ReactNode }>): Rea
             tone="inherit"
             underline={false}
             aria-label={t('nav.brandHome', { appName })}
-            className="flex shrink-0 items-center rounded-control"
+            // A 24 px mark with a 44 px hit area (R-A-3): 10 px of overhang a
+            // side, so `mx-0.5` opens the 8 px gaps to the menu button and the
+            // switcher to exactly 10 — the overhang fills the gap and never
+            // covers a neighbour, at a cost of 4 px of the switcher's width on
+            // a 360 px phone (Sprint 12 sweep).
+            className="ub-hit mx-0.5 flex shrink-0 items-center rounded-control"
           >
             <UbLogo size="sm" />
           </UbLink>

@@ -90,7 +90,9 @@ export function UbChoiceChips<T extends string>({
         // Blur of the GROUP, not of each chip, so `onTouched` fires once.
         if (!event.currentTarget.contains(event.relatedTarget as Node | null)) onBlur?.();
       }}
-      className={cn('flex flex-wrap gap-2', className)}
+      // 12 px between chips on a phone, across and between wrapped rows, so their
+      // 44 px hit areas (`.ub-hit`) meet rather than overlap (R-A-3, Sprint 12).
+      className={cn('flex flex-wrap gap-2 max-sm:gap-3', className)}
     >
       {options.map((option, index) => {
         const checked = index === checkedIndex;
@@ -107,7 +109,7 @@ export function UbChoiceChips<T extends string>({
             disabled={disabled}
             onClick={() => onChange(option.value)}
             className={cn(
-              'ds-body-s-medium inline-flex h-8 items-center gap-1.5 rounded-pill border px-3',
+              'ub-hit ds-body-s-medium inline-flex h-8 items-center gap-1.5 rounded-pill border px-3',
               'outline-none transition-colors duration-fast ease-standard focus-visible:shadow-focus',
               'disabled:cursor-not-allowed disabled:opacity-60',
               checked

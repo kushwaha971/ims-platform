@@ -84,14 +84,17 @@
   /* ── Text ─────────────────────────────────────────────────────────────── */
   --text-primary: 270 10% 3.92%; /* #0A090B — BrandHub foreground */
   --text-secondary: 255 4.8% 31.76%; /* #4F4D55 — label-strong */
-  --text-tertiary: 260.00 2.70% 43.53%; /* #6E6C72 — BrandHub #7F7D83 one step darker: 4.07:1 → 5.2:1 on white (§23.6 floor) */
-  --text-muted: 260.00 2.70% 43.53%; /* #6E6C72 — placeholders and captions; BrandHub #ADACB0 is 2.3:1 and fails §23.6 */
+  /* #6B696F — BrandHub #7F7D83 darkened to clear §23.6 on white (5.4:1) AND on the
+     selected-row accent tint (#EDEDFB, 4.67:1): #6E6C72 was 4.46:1 there, which
+     failed the switcher and the reminder-rule cards (Sprint 12 a11y sweep). */
+  --text-tertiary: 260 2.78% 42.35%;
+  --text-muted: 260 2.78% 42.35%; /* #6B696F — placeholders and captions; BrandHub #ADACB0 is 2.3:1 and fails §23.6 */
   --text-inverse: 0 0% 100%; /* #FFFFFF */
   --text-accent: var(--primary-600); /* links: primary-500 fails on sunken */
   /* The rail is dark in both themes, so its text does NOT follow --text-*.
      #F4F6F8 on #1B2128 is 14.97:1 (§23.6). */
   --text-on-nav: 270 10% 3.92%; /* #0A090B */
-  --text-on-nav-muted: 260.00 2.70% 43.53%; /* #6E6C72 — as text-tertiary */
+  --text-on-nav-muted: 260 2.78% 42.35%; /* #6B696F — as text-tertiary */
 
   /* ── Semantic — ledger credit (§23.2.4 semantic mapping) ──────────────── */
   --success: 139.73 45.91% 31.18%; /* #2B7443 — BrandHub #307F4A one step darker so it holds 4.5:1 on grey fills */

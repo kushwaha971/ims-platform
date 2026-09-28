@@ -182,7 +182,15 @@ export function LedgerSettingsSection({
           />
         )}
       </UbField>
-      <UbStack direction="row" gap={1} wrap aria-label={t('settings.template.insert')}>
+      {/* 16 px between wrapped rows on a phone: each 28 px insert button's 44 px
+          hit area (`.ub-hit`) overhangs 8 px above and below (R-A-3, Sprint 12). */}
+      <UbStack
+        direction="row"
+        gap={1}
+        wrap
+        aria-label={t('settings.template.insert')}
+        className="max-sm:gap-y-4"
+      >
         {REMINDER_PLACEHOLDERS.map((placeholder) => (
           <UbButton
             key={placeholder}
