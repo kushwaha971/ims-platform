@@ -14,6 +14,7 @@ import {
   UbEmptyState,
   UbGrid,
   UbInfoRow,
+  UbLink,
   UbPageHeader,
   UbPageShell,
   UbPageSkeleton,
@@ -28,6 +29,7 @@ import { ROUTES } from 'src/routes';
 import { formatBusinessDate, formatTimestamp } from 'src/utils/dates';
 import { formatInr } from 'src/utils/money';
 
+import { RecordPaymentButton } from '../../payments/components/RecordPaymentButton';
 import { usePurchaseBillDetail } from '../hooks/usePurchaseBillDetail';
 import { PURCHASE_STATUS_TONE, supplierName, trimQty } from '../view-model/purchaseBillDisplay';
 
@@ -38,15 +40,19 @@ const VoidDialogLazy = dynamic(
 );
 
 const VOIDABLE = new Set(['recorded', 'partially_paid', 'paid', 'overdue']);
+/** PUR-02 FR-3 — the statuses a supplier payment may be allocated to. */
+const PAYABLE = new Set(['recorded', 'partially_paid', 'overdue']);
 
 /**
  * PUR-01 FR-9 / PUR-04 FR-5 — `/purchases/bills/{id}`: header, lines with the
- * cost each put into stock, the totals, and Void. A voided bill says so in a
- * banner with the reason, who and when (AC-3), and keeps its number.
+ * cost each put into stock, the totals, Pay supplier (PUR-02) and Void. A
+ * voided bill says so in a banner with the reason, who and when (AC-3), and
+ * keeps its number. The totals panel lists the supplier payments allocated to
+ * the bill, each linked to its voucher (PUR-02 FR-6).
  *
- * Not here yet, each for a reason: Pay (PUR-02, the payments track), the bill
- * photo (no attachment wiring this wave), Duplicate and Print (FR-9's
- * `PurchaseBillPrint`) — no control for an unbuilt feature.
+ * Not here yet, each for a reason: the bill photo (no attachment wiring this
+ * wave), Duplicate and Print (FR-9's `PurchaseBillPrint`) — no control for an
+ * unbuilt feature.
  */
 export function PurchaseBillDetailPageContent({ id }: Readonly<{ id: string }>): React.JSX.Element {
   const { t } = useTranslation();
@@ -106,6 +112,23 @@ export function PurchaseBillDetailPageContent({ id }: Readonly<{ id: string }>):
               >
                 {t('purchases.detail.edit')}
               </UbActionLink>
+            )}
+            {/* PUR-02 FR-4 / AC-3 — a bill still owing takes a supplier payment
+                from here, pre-allocated to THIS bill with its due as the
+                amount. The bill re-reads itself on save (the invalidation map:
+                `recordPayment` refetches `purchaseBillDetail`). */}
+            {bill.party && PAYABLE.has(bill.status) && (
+              <RecordPaymentButton
+                context={{
+                  direction: 'out',
+                  partyId: bill.party.id,
+                  partyName: supplierName(bill),
+                  documentId: bill.id,
+                  documentNumber: bill.number ?? undefined,
+                  documentDue: bill.amountDue,
+                  entry: 'bill',
+                }}
+              />
             )}
             {VOIDABLE.has(bill.status) && detail.canVoid && (
               <UbButton
@@ -207,7 +230,22 @@ export function PurchaseBillDetailPageContent({ id }: Readonly<{ id: string }>):
               {row(t('purchases.totals.grand'), formatInr(bill.grandTotal))}
               {!draft &&
                 bill.status !== 'void' &&
+                bill.amountPaid !== '0.00' &&
+                row(t('purchases.detail.paid'), formatInr(bill.amountPaid))}
+              {!draft &&
+                bill.status !== 'void' &&
                 row(t('purchases.total.toPay'), formatInr(bill.amountDue))}
+              {bill.payments.length > 0 && (
+                <UbStack gap={1} className="pt-2" data-testid="purchase-payments">
+                  <UbText variant="body-sm-medium">{t('purchases.detail.payments')}</UbText>
+                  {bill.payments.map((payment) => (
+                    <UbText key={payment.id} variant="caption" tone="secondary" className="ds-num">
+                      <UbLink href={`${ROUTES.PAYMENTS}/${payment.id}`}>{payment.number}</UbLink>
+                      {` · ${formatBusinessDate(payment.paymentDate)} · ${formatInr(payment.amount)}`}
+                    </UbText>
+                  ))}
+                </UbStack>
+              )}
             </UbStack>
           </UbPanel>
         </UbGrid>

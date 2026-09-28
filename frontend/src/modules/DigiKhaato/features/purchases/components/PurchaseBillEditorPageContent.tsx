@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from 'react';
 
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 
 import { Save, Send, Trash2 } from 'lucide-react';
@@ -24,7 +25,6 @@ import { useTranslation } from 'src/hooks/useTranslation';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import { ROUTES } from 'src/routes';
 import { formatTimestamp } from 'src/utils/dates';
-import { formatInr } from 'src/utils/money';
 
 import { usePurchaseBillEditor } from '../hooks/usePurchaseBillEditor';
 import {
@@ -33,10 +33,19 @@ import {
 } from '../redux/purchaseBillEditorSlice';
 import { deletePurchaseBillDraft } from '../redux/purchaseBillThunk';
 import { hasRecordableLines } from '../view-model/purchaseBillForm';
+import { recordedToast } from '../view-model/purchaseToasts';
 
 import { PurchaseBillHeaderSection } from './PurchaseBillHeaderSection';
 import { PurchaseBillLinesSection } from './PurchaseBillLinesSection';
 import { PurchaseBillTotalsPanel } from './PurchaseBillTotalsPanel';
+
+import type { PaymentRowForm } from '../../sales/view-model/invoiceForm';
+
+/* The "Paid now" sheet loads with the tap on Record, never with the editor. */
+const PaidNowDrawerLazy = dynamic(
+  () => import('./PurchasePaidNowDrawer').then((m) => m.PurchasePaidNowDrawer),
+  { ssr: false }
+);
 
 /**
  * PUR-01 — `/purchases/bills/new` and `/[id]/edit`: the supplier and dates on
@@ -46,8 +55,11 @@ import { PurchaseBillTotalsPanel } from './PurchaseBillTotalsPanel';
  * transaction on the server; the toast says the khata effect in the
  * supplier's terms (§8) and the bill opens.
  *
- * The seam PUR-02 plugs into is deliberately empty here: no "Paid now"
- * section and no Pay action until supplier payments exist.
+ * PUR-02 / FR-6h — Record asks one more question when the role may pay
+ * suppliers: "Paid now?" (`PurchasePaidNowDrawer`, loaded with the tap). The
+ * money goes to the server with the record call and becomes a PAYOUT voucher
+ * allocated to this bill in the same transaction; "Pay later" records it on
+ * credit. A role that may not pay suppliers, or a ₹0 bill, records at once.
  */
 export function PurchaseBillEditorPageContent({
   documentId,
@@ -57,31 +69,37 @@ export function PurchaseBillEditorPageContent({
   const dispatch = useAppDispatch();
   const editor = usePurchaseBillEditor(documentId);
   const { form, preview, editor: server, canWrite, save, record, values, today, regular } = editor;
+  const { validate, canPayNow } = editor;
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [paying, setPaying] = useState(false);
 
   const context = server.context;
   const hasLines = hasRecordableLines(values, preview);
   const locked = server.recording || !!server.recorded;
   const claimable = regular && values.itcEligible;
 
-  const finishRecord = useCallback(async () => {
+  const finishRecord = useCallback(
+    async (payment: readonly PaymentRowForm[] | null) => {
+      if (!hasLines || locked) return;
+      const result = await record(payment);
+      if (!result) return;
+      setPaying(false);
+      dispatch(showSnackbar(recordedToast(result, values.partyName)));
+      router.push(`${ROUTES.PURCHASE_BILLS}/${result.bill.id}`);
+    },
+    [hasLines, locked, record, dispatch, router, values.partyName]
+  );
+
+  /* The header rules run BEFORE the sheet opens: asking "Paid now?" about a
+     bill that is then refused for a missing supplier is a question wasted. */
+  const startRecord = useCallback(async () => {
     if (!hasLines || locked) return;
-    const result = await record();
-    if (!result) return;
-    const owed = (result.partyBalance ?? '0').replace('-', '');
-    dispatch(
-      showSnackbar({
-        severity: 'success',
-        id: 'purchases.editor.recorded',
-        params: {
-          number: result.bill.number ?? '',
-          amount: formatInr(owed),
-          name: result.bill.partySnapshot?.name ?? values.partyName,
-        },
-      })
-    );
-    router.push(`${ROUTES.PURCHASE_BILLS}/${result.bill.id}`);
-  }, [hasLines, locked, record, dispatch, router, values.partyName]);
+    if (!canPayNow || preview.grandTotal === '0.00') {
+      void finishRecord(null);
+      return;
+    }
+    if (await validate()) setPaying(true);
+  }, [hasLines, locked, canPayNow, preview.grandTotal, validate, finishRecord]);
 
   const onPickSupplier = useCallback(
     (id: string, name: string) => {
@@ -170,7 +188,7 @@ export function PurchaseBillEditorPageContent({
             <UbButton
               iconOnly="mobile"
               icon={<Send className="h-4 w-4" aria-hidden />}
-              onClick={() => void finishRecord()}
+              onClick={() => void startRecord()}
               busy={server.recording}
               busyLabel={t('purchases.editor.recording')}
               disabled={!hasLines || locked}
@@ -181,7 +199,7 @@ export function PurchaseBillEditorPageContent({
           </>
         }
       />
-      <UbForm form={form} onSubmit={() => void finishRecord()}>
+      <UbForm form={form} onSubmit={() => void startRecord()}>
         <UbGrid columns={{ base: 1, lg: 3 }} gap={4}>
           <UbStack gap={4} className="lg:col-span-2">
             <UbPanel>
@@ -201,7 +219,7 @@ export function PurchaseBillEditorPageContent({
               preview={preview}
               rateOptions={context.rateOptions}
               disabled={locked}
-              onSubmitShortcut={() => void finishRecord()}
+              onSubmitShortcut={() => void startRecord()}
             />
           </UbStack>
           <PurchaseBillTotalsPanel
@@ -213,6 +231,16 @@ export function PurchaseBillEditorPageContent({
           />
         </UbGrid>
       </UbForm>
+
+      {paying && (
+        <PaidNowDrawerLazy
+          grandTotal={preview.grandTotal}
+          busy={server.recording}
+          onClose={() => setPaying(false)}
+          onConfirm={(rows) => void finishRecord(rows)}
+          onPayLater={() => void finishRecord(null)}
+        />
+      )}
 
       <UbConfirmDialog
         open={server.saveState === 'conflict'}

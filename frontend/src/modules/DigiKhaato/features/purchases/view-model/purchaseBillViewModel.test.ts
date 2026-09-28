@@ -16,6 +16,7 @@ import {
   toPurchaseWireBody,
   type PurchaseBillFormValues,
 } from './purchaseBillForm';
+import { recordedToast, releasedTotal } from './purchaseToasts';
 
 import type { PurchaseBill } from '../types/purchase.types';
 
@@ -160,6 +161,59 @@ describe('the void dialog', () => {
         lines: [{ item_name: 'Rice', requested: '20.000', available: '12.000', unit_code: 'NOS' }],
       })
     ).toEqual([{ name: 'Rice', after: '−8', unit: 'NOS' }]);
+  });
+});
+
+describe('the record toast after "Paid now" (PUR-02 FR-8)', () => {
+  /** Protects the words the merchant reads: a payment can leave the supplier owed less,
+   *  settled, or holding OUR advance — and "You will give ₹200" about a supplier who owes
+   *  us ₹200 is the wrong way round. */
+  const envelope = (
+    partyBalance: string,
+    paid: string | null
+  ): Parameters<typeof recordedToast>[0] => ({
+    bill: {
+      number: 'PB/26-27/0001',
+      partySnapshot: { name: 'Agro Traders' },
+    } as unknown as PurchaseBill,
+    warnings: [],
+    partyBalance,
+    payment: paid ? { paymentId: 'p', number: 'PAYOUT/26-27/0001', amount: paid } : null,
+    releasedPayments: [],
+  });
+
+  it('names the balance still owed when nothing or part was paid', () => {
+    expect(recordedToast(envelope('-2921.00', null), '')).toEqual({
+      severity: 'success',
+      id: 'purchases.editor.recorded',
+      params: { number: 'PB/26-27/0001', name: 'Agro Traders', amount: '₹2,921.00' },
+    });
+    expect(recordedToast(envelope('-1921.00', '1000.00'), '').id).toBe(
+      'purchases.editor.recordedPaid'
+    );
+  });
+
+  it('says settled at zero and advance above it', () => {
+    expect(recordedToast(envelope('0.00', '2921.00'), '').id).toBe(
+      'purchases.editor.recordedSettled'
+    );
+    const advance = recordedToast(envelope('200.00', '3121.00'), '');
+    expect(advance.id).toBe('purchases.editor.recordedAdvance');
+    expect(advance.params).toMatchObject({ amount: '₹200.00', paid: '₹3,121.00' });
+  });
+
+  it('sums what a void left as advance, or says nothing when there was none', () => {
+    const base = envelope('0.00', null);
+    expect(releasedTotal(base)).toBeNull();
+    expect(
+      releasedTotal({
+        ...base,
+        releasedPayments: [
+          { paymentId: 'a', number: 'PAYOUT/1', amount: '400.00' },
+          { paymentId: 'b', number: 'PAYOUT/2', amount: '200.50' },
+        ],
+      })
+    ).toBe('600.50');
   });
 });
 

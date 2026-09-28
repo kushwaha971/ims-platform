@@ -17,7 +17,8 @@ from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
 from apps.common.constants import ModuleCode
 from apps.common.context import Ctx
 from apps.common.dates import tenant_today
-from apps.common.exceptions import ValidationFailed
+from apps.common.exceptions import PermissionDenied, ValidationFailed
+from apps.common.exports import request_has
 from apps.common.idempotency import idempotent
 from apps.common.permissions import ModuleEnabled
 from apps.common.responses import StandardResponse
@@ -53,6 +54,26 @@ def _require_key(request: Any) -> None:
         raise ValidationFailed(
             {"idempotency_key": ["Idempotency-Key header is required to record."]}
         )
+
+
+def _payment_allowed(request: Any, payment: Any) -> Any:
+    """T-PUR-01-11 — "Paid now" is a supplier payment, so it needs `payments.payment.write`.
+
+    Recording the bill needs only `purchases.bill.write`; a role that may record
+    bills but not pay suppliers is refused the WHOLE request (403, naming
+    `details.payment`) rather than having the payment silently dropped — a bill
+    recorded as unpaid when the clerk handed over cash is a wrong khata.
+    `request_has` resolves through the same function the permission classes
+    use, which already applies the payments module switch.
+    """
+    if not payment or not (payment.get("mode_breakup") or []):
+        return None
+    if not request_has(request, "payments.payment.write"):
+        raise PermissionDenied(
+            "You can record this bill, but not a payment to the supplier.",
+            details={"payment": ["payments.payment.write"]},
+        )
+    return payment
 
 
 def _envelope(
@@ -142,10 +163,12 @@ class PurchaseBillViewSet(
 
         serializer = BillWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        payload = dict(serializer.validated_data)
+        payment = _payment_allowed(request, payload.pop("payment", None))
         ctx = Ctx.from_request(request)
         with transaction.atomic():
-            draft = drafts.create_draft(ctx=ctx, payload=dict(serializer.validated_data))
-            result = record_bill(ctx=ctx, document_id=draft["document"].id)
+            draft = drafts.create_draft(ctx=ctx, payload=payload)
+            result = record_bill(ctx=ctx, document_id=draft["document"].id, payment=payment)
         return self._recorded_response(result, created=True)
 
     def partial_update(self, request: Any, *args: Any, **kwargs: Any) -> Any:
@@ -173,15 +196,20 @@ class PurchaseBillViewSet(
     def _record(self, request: Any, pk: Any) -> Any:
         serializer = RecordSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        payment = _payment_allowed(request, serializer.validated_data.get("payment"))
         result = record_bill(
             ctx=Ctx.from_request(request),
             document_id=pk,
             version=serializer.validated_data.get("version"),
+            payment=payment,
         )
         return self._recorded_response(result, created=False)
 
     def _recorded_response(self, result: dict, *, created: bool) -> Any:
         extra: dict[str, Any] = {"movement_ids": result["movement_ids"]}
+        if result.get("payment"):
+            # "Paid now" — the PAYOUT voucher, for the toast and its link.
+            extra["payment"] = result["payment"]
         if result["party_balance"] is not None:
             extra["party_balance"] = str(result["party_balance"])
         if result["ledger_entry_id"]:

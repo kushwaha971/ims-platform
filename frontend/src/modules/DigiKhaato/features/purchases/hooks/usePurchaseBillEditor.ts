@@ -14,6 +14,7 @@ import { selectTenantTimezone } from 'src/redux/slice/sessionSlice';
 import { applyServerErrors } from 'src/utils/applyServerErrors';
 import { todayInTenantTz } from 'src/utils/dates';
 
+import { paymentWireBody, type PaymentRowForm } from '../../sales/view-model/invoiceForm';
 import { computeDocumentTotals, type EngineResult } from '../../sales/view-model/taxEngine';
 import { PURCHASE_AUTOSAVE_MS } from '../constants/purchaseConstants';
 import {
@@ -72,7 +73,14 @@ export interface UsePurchaseBillEditorResult {
   readonly canWrite: boolean;
   readonly regular: boolean;
   readonly save: (quiet: boolean) => Promise<PurchaseBillEnvelope | null>;
-  readonly record: () => Promise<PurchaseBillEnvelope | null>;
+  /** Record; `payment` is FR-6h's "Paid now" rows, absent or empty for a bill on credit. */
+  readonly record: (
+    payment?: readonly PaymentRowForm[] | null
+  ) => Promise<PurchaseBillEnvelope | null>;
+  /** The header rules, run before the "Paid now" sheet opens so it never opens on a bad bill. */
+  readonly validate: () => Promise<boolean>;
+  /** PUR-02 — "Paid now" is a supplier payment: the payments module and its write codename. */
+  readonly canPayNow: boolean;
   readonly checkDuplicate: () => void;
   readonly restart: () => void;
 }
@@ -161,10 +169,11 @@ export const usePurchaseBillEditor = (documentId: string | null): UsePurchaseBil
     [dispatch, savedId, version, form]
   );
 
-  const record = useCallback(async (): Promise<PurchaseBillEnvelope | null> => {
-    // §10 — the header rules at Record only; a draft is saved half-entered (FR-8).
+  /** §10 — the header rules at Record only; a draft is saved half-entered (FR-8). */
+  const validate = useCallback(async (): Promise<boolean> => {
     try {
       await purchaseBillSchema.validate(form.getValues(), { abortEarly: false });
+      return true;
     } catch (error) {
       if (error instanceof ValidationError) {
         error.inner.forEach((issue) => {
@@ -175,31 +184,42 @@ export const usePurchaseBillEditor = (documentId: string | null): UsePurchaseBil
             });
         });
       }
+      return false;
+    }
+  }, [purchaseBillSchema, form]);
+
+  const record = useCallback(
+    async (payment?: readonly PaymentRowForm[] | null): Promise<PurchaseBillEnvelope | null> => {
+      if (!(await validate())) return null;
+      const saved = await save(false);
+      if (!saved) return null;
+      const result = await dispatch(
+        recordPurchaseBill({
+          id: saved.bill.id,
+          version: saved.bill.version,
+          idempotencyKey: idempotency.key,
+          // FR-6h — dated with the bill, as the invoice editor dates money taken at issue.
+          payment: payment?.length
+            ? paymentWireBody(payment, form.getValues('documentDate'))
+            : null,
+        })
+      );
+      if (recordPurchaseBill.fulfilled.match(result)) {
+        idempotency.rotate();
+        form.reset(form.getValues());
+        return result.payload;
+      }
+      // A network failure keeps the key for the retry (EC-11); anything the
+      // server answered is a new attempt next time.
+      const code = result.payload?.code;
+      if (code !== 'network_error' && code !== 'timeout') idempotency.rotate();
+      if (code === 'validation_error' && result.payload) {
+        applyServerErrors(result.payload, form.setError, FORM_FIELDS, t);
+      }
       return null;
-    }
-    const saved = await save(false);
-    if (!saved) return null;
-    const result = await dispatch(
-      recordPurchaseBill({
-        id: saved.bill.id,
-        version: saved.bill.version,
-        idempotencyKey: idempotency.key,
-      })
-    );
-    if (recordPurchaseBill.fulfilled.match(result)) {
-      idempotency.rotate();
-      form.reset(form.getValues());
-      return result.payload;
-    }
-    // A network failure keeps the key for the retry (EC-11); anything the
-    // server answered is a new attempt next time.
-    const code = result.payload?.code;
-    if (code !== 'network_error' && code !== 'timeout') idempotency.rotate();
-    if (code === 'validation_error' && result.payload) {
-      applyServerErrors(result.payload, form.setError, FORM_FIELDS, t);
-    }
-    return null;
-  }, [purchaseBillSchema, form, save, dispatch, idempotency, t]);
+    },
+    [validate, form, save, dispatch, idempotency, t]
+  );
 
   /** FR-7 — on blur of the supplier invoice number. */
   const checkDuplicate = useCallback(() => {
@@ -247,6 +267,8 @@ export const usePurchaseBillEditor = (documentId: string | null): UsePurchaseBil
     regular: (context?.gstType ?? 'regular') === 'regular',
     save,
     record,
+    validate,
+    canPayNow: hasModule('payments') && can('payments.payment.write'),
     checkDuplicate,
     restart,
   };

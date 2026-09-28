@@ -1,3 +1,4 @@
+import { allocationHref } from './allocationLinks';
 import {
   allocationRowsFor,
   defaultAmount,
@@ -147,5 +148,18 @@ describe('voidConsequences (PAY-05 FR-2)', () => {
       { kind: 'document', number: 'INV/1', amount: '898.00' },
       { kind: 'advance', amount: '102.00' },
     ]);
+  });
+});
+
+describe('where a receipt row links (PUR-02)', () => {
+  it('sends a supplier payment to the purchase bill, a receipt to the invoice', () => {
+    /** Protects the voucher page: every "Against" row linked to /sales/invoices, so a
+     *  PAYOUT's bill opened as a missing invoice. */
+    expect(allocationHref({ documentType: 'purchase_document', documentId: 'b7' })).toBe(
+      '/purchases/bills/b7'
+    );
+    expect(allocationHref({ documentType: 'sales_document', documentId: 'd1' })).toBe(
+      '/sales/invoices/d1'
+    );
   });
 });

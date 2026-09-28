@@ -54,7 +54,7 @@
   "payments.noAccess.title": "भुगतान आपके लिए उपलब्ध नहीं हैं",
   "payments.note": "नोट",
   "payments.note.placeholder": "जैसे दुकान पर दिया",
-  "payments.out.hint": "सप्लायर को दिया पैसा। सप्लायर के बिल खरीद के साथ आएँगे; तब तक यह उनके खाते में एडवांस रहेगा।",
+  "payments.out.hint": "सप्लायर को दिया पैसा। पहले जिन बिलों की तारीख पहले है वे चुकते हैं; ज़्यादा रकम उनके खाते में एडवांस रहेगी।",
   "payments.party.from": "से प्राप्त",
   "payments.party.required": "पार्टी चुनें",
   "payments.party.to": "को भुगतान",

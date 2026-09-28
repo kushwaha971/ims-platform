@@ -28,12 +28,13 @@ import { useShareFeedback } from 'src/hooks/useShareFeedback';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { selectLocale } from 'src/redux/slice/localeSlice';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
-import { ROUTES, partyPath } from 'src/routes';
+import { partyPath } from 'src/routes';
 import { copyText } from 'src/utils/clipboard';
 import { formatBusinessDate, formatTimestamp } from 'src/utils/dates';
 import { formatAmount } from 'src/utils/money';
 
 import { usePaymentReceipt } from '../hooks/usePaymentReceipt';
+import { allocationHref } from '../view-model/allocationLinks';
 
 import type { PaymentContext } from '../types/payment.types';
 
@@ -244,7 +245,7 @@ export function PaymentReceiptPageContent({ id }: Readonly<{ id: string }>): Rea
                 key={row.documentId}
                 label={t('payments.receipt.against')}
                 value={
-                  <UbLink href={`${ROUTES.SALES_INVOICES}/${row.documentId}`}>
+                  <UbLink href={allocationHref(row)}>
                     {`${row.number ?? '—'} · ${formatAmount(row.amount)}`}
                   </UbLink>
                 }

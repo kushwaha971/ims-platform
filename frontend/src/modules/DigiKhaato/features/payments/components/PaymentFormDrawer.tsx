@@ -111,7 +111,7 @@ export function PaymentFormDrawer({
       partyName: context.partyName ?? '',
       paymentDate: today,
       lines,
-      // An invoice page pays THAT bill; everywhere else FIFO is the default (FR-5).
+      // An invoice or bill page pays THAT bill; everywhere else FIFO is the default (FR-5).
       autoAllocate: !context.documentId,
       allocations: [],
       note: '',
@@ -167,9 +167,11 @@ export function PaymentFormDrawer({
     [t]
   );
 
+  /* PUR-02 — money out is "Pay supplier", in the words of the button that opened it. */
+  const out = direction === 'out';
   const title = partyName
-    ? t('payments.record.titleFor', { name: partyName })
-    : t('payments.record.title');
+    ? t(out ? 'payments.record.titleOutFor' : 'payments.record.titleFor', { name: partyName })
+    : t(out ? 'payments.record.titleOut' : 'payments.record.title');
 
   if (saved) {
     return (

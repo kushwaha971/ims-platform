@@ -123,3 +123,56 @@ it('posts only the typed rows and shows the advance before saving', async () => 
   expect(sent?.allocations.filter((r) => r.amount).map((r) => r.documentId)).toEqual(['d42']);
   expect(await screen.findByTestId('payment-saved')).toHaveTextContent('RCT/26-27/0017');
 });
+
+it('opens from a purchase bill as "Pay supplier", money out, preset to that bill', async () => {
+  /** PUR-02 AC-3 / FR-4 — the bill page's Pay: the supplier's OPEN BILLS are asked for
+   *  with direction out (never customers' invoices), the drawer says "Pay supplier", and
+   *  the bill it came from is pre-allocated its due while the older bill is left alone. */
+  const user = userEvent.setup();
+  const bills: OpenDocument[] = [
+    { ...bill('b6', 'PB/26-27/0006', '500.00', '2026-09-01'), documentType: 'purchase_document' },
+    { ...bill('b7', 'PB/26-27/0007', '1921.00', '2026-09-18'), documentType: 'purchase_document' },
+  ];
+  jest.mocked(service.listOpenDocuments).mockClear().mockResolvedValue(bills);
+  jest
+    .mocked(service.recordPayment)
+    .mockClear()
+    .mockResolvedValue({
+      payment: {
+        id: 'pay2',
+        number: 'PAYOUT/26-27/0004',
+        direction: 'out',
+        amount: '1921.00',
+        unallocatedAmount: '0.00',
+      } as never,
+      partyBalance: '-500.00',
+      documents: [],
+    });
+  renderWithProviders(
+    <PaymentFormDrawer
+      context={{
+        direction: 'out',
+        partyId: 'p9',
+        partyName: 'Agro Traders',
+        documentId: 'b7',
+        documentNumber: 'PB/26-27/0007',
+        documentDue: '1921.00',
+        entry: 'bill',
+      }}
+      onClose={jest.fn()}
+    />
+  );
+  expect(await screen.findByText('Pay supplier · Agro Traders')).toBeInTheDocument();
+  await screen.findByTestId('alloc-picker');
+  expect(service.listOpenDocuments).toHaveBeenCalledWith('p9', 'out', expect.anything());
+  await user.click(screen.getByTestId('payment-save'));
+  await waitFor(() => expect(service.recordPayment).toHaveBeenCalledTimes(1));
+  const [sent, , entry] = jest.mocked(service.recordPayment).mock.calls[0] ?? [];
+  expect(sent?.direction).toBe('out');
+  expect(entry).toBe('bill');
+  expect(sent?.autoAllocate).toBe(false);
+  expect(sent?.allocations.filter((r) => r.amount).map((r) => [r.documentId, r.amount])).toEqual([
+    ['b7', '1921.00'],
+  ]);
+  expect(await screen.findByTestId('payment-saved')).toHaveTextContent('Paid ₹1,921.00');
+});

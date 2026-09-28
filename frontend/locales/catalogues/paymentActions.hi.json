@@ -1,6 +1,8 @@
 {
   "payments.record.title": "भुगतान दर्ज करें",
   "payments.record.titleFor": "भुगतान दर्ज करें · {name}",
+  "payments.record.titleOut": "सप्लायर को भुगतान",
+  "payments.record.titleOutFor": "सप्लायर को भुगतान · {name}",
   "payments.upi.collect": "UPI से लें",
   "payments.upi.collectFrom": "{name} से लें"
 }

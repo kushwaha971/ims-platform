@@ -201,13 +201,18 @@ def test_the_same_supplier_invoice_can_be_entered_again_after_a_void(
 
 
 def test_void_calls_the_payments_seam_inside_its_transaction(
-    shop: Any, owner: Any, make_item: Any, make_supplier: Any
+    shop: Any, owner: Any, make_item: Any, make_supplier: Any, monkeypatch: Any
 ) -> None:
     """FR-2d seam — a listener the payments app registers is called with the bill being voided
     and its released payment ids are returned in `meta.released_payments`; a listener that
-    fails rolls the whole void back."""
+    fails rolls the whole void back.
+
+    The listener list is swapped for a private one rather than cleared afterwards: clearing
+    it also removed the payments app's own listener (registered in `ready()`), so every void
+    later in the same run silently stopped releasing supplier payments (PUR-02)."""
     from apps.purchases.services import payment_seam
 
+    monkeypatch.setattr(payment_seam, "_VOID_LISTENERS", [])
     seen: list[str] = []
 
     def release(ctx: Any, document: Any) -> list:
@@ -215,25 +220,22 @@ def test_void_calls_the_payments_seam_inside_its_transaction(
         return ["pay-1"]
 
     payment_seam.register_void_listener(release)
-    try:
-        supplier = make_supplier()
-        rice = make_item("Rice", "46.00")
-        data = recorded_bill(owner, party_id=str(supplier.id), lines=[line(rice, "1")])
-        response = void(owner, data["id"])
-        assert response.json()["meta"]["released_payments"] == ["pay-1"]
-        assert seen == [data["number"]]
+    supplier = make_supplier()
+    rice = make_item("Rice", "46.00")
+    data = recorded_bill(owner, party_id=str(supplier.id), lines=[line(rice, "1")])
+    response = void(owner, data["id"])
+    assert response.json()["meta"]["released_payments"] == ["pay-1"]
+    assert seen == [data["number"]]
 
-        def explode(ctx: Any, document: Any) -> list:
-            raise RuntimeError("payments down")
+    def explode(ctx: Any, document: Any) -> list:
+        raise RuntimeError("payments down")
 
-        payment_seam.register_void_listener(explode)
-        other = recorded_bill(owner, party_id=str(supplier.id), lines=[line(rice, "1")])
-        owner.raise_request_exception = False
-        assert void(owner, other["id"]).status_code == 500
-        assert PurchaseDocument.objects.get(pk=other["id"]).status == "recorded"
-        assert StockMovement.objects.filter(movement_type="reversal").count() == 1
-    finally:
-        payment_seam._reset_for_tests()
+    payment_seam.register_void_listener(explode)
+    other = recorded_bill(owner, party_id=str(supplier.id), lines=[line(rice, "1")])
+    owner.raise_request_exception = False
+    assert void(owner, other["id"]).status_code == 500
+    assert PurchaseDocument.objects.get(pk=other["id"]).status == "recorded"
+    assert StockMovement.objects.filter(movement_type="reversal").count() == 1
 
 
 def test_apply_payment_moves_paid_due_and_status_by_the_br5_rule(

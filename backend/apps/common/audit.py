@@ -158,6 +158,8 @@ class AuditAction:
     PURCHASE_BILL_DELETED = "purchase_bill.deleted"
     PURCHASE_BILL_RECORDED = "purchase_bill.recorded"
     PURCHASE_BILL_VOIDED = "purchase_bill.voided"
+    # PUR-02 §16 — a supplier payment (or its void) moved a bill's status.
+    PURCHASE_BILL_STATUS_CHANGED = "purchase_bill.status_changed"
     # ── Sprint 7: SAL-02 / SAL-03 / SAL-06 (17-04 §16) ────────────────────
     #
     # `invoice.draft_updated` is throttled to one row per draft per 10 minutes

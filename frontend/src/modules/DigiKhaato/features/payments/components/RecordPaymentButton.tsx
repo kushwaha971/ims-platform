@@ -21,7 +21,8 @@ const PaymentFormDrawerLazy = dynamic(
 
 /**
  * PAY-01 FR-1 — "Record payment" on another feature's screen (the invoice
- * page), with the drawer preset to that bill. Imports nothing heavier than a
+ * page), with the drawer preset to that bill; PUR-02 FR-4 — "Pay supplier"
+ * on a purchase bill, the same drawer with money going out. Imports nothing heavier than a
  * button, so the host screen's chunk carries none of the payments feature.
  * Hidden rather than disabled for a role that cannot record (§19.7.5).
  */
@@ -44,7 +45,8 @@ export function RecordPaymentButton({
         onClick={() => setOpen(true)}
         data-testid="record-payment-action"
       >
-        {t('payments.record.title')}
+        {/* PUR-02 FR-4 — on a purchase bill the same drawer is "Pay supplier". */}
+        {t(context.direction === 'out' ? 'payments.record.titleOut' : 'payments.record.title')}
       </UbButton>
       {open && (
         <PaymentFormDrawerLazy context={context} onClose={() => setOpen(false)} onSaved={onSaved} />

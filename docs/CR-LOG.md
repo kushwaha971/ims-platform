@@ -1239,3 +1239,35 @@ filing-reminder job and notifications (§17); `metadata.figures_hash` (§16); re
 analytics events; the `sales_document_line_doc_tax_idx` index (§15, needs an `atomic=False`
 migration and an EXPLAIN test); RPT-08's export history, retry and 10-minute polling cap beyond
 what IMP-02's button already does.
+## CR-2026-09-28-PUR-B — PUR-02 supplier payment: what was built beside the FRD
+
+**State:** `raised`. **Target:** Part 17-03 PUR-02, PUR-01 FR-6h, PUR-04 FR-2d; Part 17-02 PAY-01.
+**Gate:** none — no migration.
+
+**No `SupplierPaymentDrawer`, no `supplierPaymentSlice`.** FR-1 says supplier payments are PAY-01's
+engine; §7 then specifies a second drawer, slice and schema. The PAY-01 `PaymentFormDrawer` already
+has direction, the mode lines, the allocation picker with Auto and per-row caps, and the advance
+line, so "Pay supplier" (bill page, khata ⋯ for a supplier, Payments list) opens it with
+`direction: 'out'`. One drawer, one set of rules. The server side is one allocation target,
+`payments/services/targets/purchases.py`, the only target for money out (CR-2026-09-28-INT-A).
+
+**FIFO order.** FR-3 orders by `due_on` then `document_date`; PAY-01 FR-5 and the lock order are
+`(document_date, number, id)`. Bills are LOCKED in the canonical order and SORTED by `(due_on,
+document_date, number, id)` for allocation; `open-documents` returns the same order so the drawer's
+preview matches.
+
+**A void bill's `amount_paid` returns to zero.** BR-4 releases the payments as advances; the bill
+then keeps no paid figure, so Σ allocations = `amount_paid` holds on every bill (§1's invariant).
+The void response's `released_payments` is now `[{payment_id, number, amount}]` (was ids) and the
+toast says how much stays as advance.
+
+**"Paid now" is on the record call.** `POST /purchases/bills/{id}/record` and `?record=true` accept
+`payment: {payment_date, mode_breakup, note}`, validated before anything is written and recorded
+as a PAYOUT allocated to the bill in the same transaction (T-PUR-01-5). A member without
+`payments.payment.write` gets 403 `permission_denied` with `details.payment` for the whole request
+(T-PUR-01-11). The editor asks "Paid now?" only for such a role and a non-zero bill.
+
+**Also:** `GET /purchases/bills/{id}` carries `payments[]` (FR-6's list on the bill); purchases
+registers a LED-10 source resolver so the khata names the bill by number; audit
+`purchase_bill.status_changed` per moved bill (§16). **Not built:** Purchases list "Pay selected"
+(FR-4), the `payment_out_by_staff` notification (§17), analytics (§18).

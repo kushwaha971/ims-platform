@@ -5,7 +5,7 @@ import { resetAllFeatureState } from 'src/redux/actions';
 import { sessionLoaded } from 'src/redux/slice/sessionSlice';
 import { store } from 'src/redux/store';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
-import type { PermissionCode } from 'src/types/domain.types';
+import type { ModuleCode, PermissionCode } from 'src/types/domain.types';
 
 import { PurchaseBillEditorPageContent } from './PurchaseBillEditorPageContent';
 
@@ -127,6 +127,7 @@ const DRAFT: PurchaseBill = {
   ],
   notes: '',
   ledgerEntryId: null,
+  payments: [],
   createdBy: null,
   recordedAt: null,
   voidedAt: null,
@@ -142,9 +143,14 @@ const envelope = (
   bill,
   warnings: [],
   partyBalance,
+  payment: null,
+  releasedPayments: [],
 });
 
-const signIn = (permissions: readonly PermissionCode[]): void => {
+const signIn = (
+  permissions: readonly PermissionCode[],
+  modules: readonly ModuleCode[] = ['purchases', 'parties', 'inventory']
+): void => {
   store.dispatch(
     sessionLoaded({
       user: {
@@ -159,7 +165,7 @@ const signIn = (permissions: readonly PermissionCode[]): void => {
       activeTenant: { id: 't1', name: 'Sharma General Store', timezone: 'Asia/Kolkata' },
       tenants: [{ id: 't1', name: 'Sharma General Store', timezone: 'Asia/Kolkata' }],
       permissions: [...permissions],
-      enabledModules: ['purchases', 'parties', 'inventory'],
+      enabledModules: [...modules],
       version: 1,
     })
   );
@@ -234,6 +240,78 @@ it('puts the duplicate supplier invoice under the number, with a link to the bil
     '/purchases/bills/b0'
   );
   expect(mockPush).not.toHaveBeenCalled();
+});
+
+const RECORDED = {
+  ...DRAFT,
+  number: 'PB/26-27/0001',
+  status: 'recorded' as const,
+  version: 5,
+  partySnapshot: { name: 'Agro Traders', gstin: null, stateCode: '27', mobile: null },
+};
+
+const signInPayer = (): void =>
+  signIn(
+    [
+      'purchases.bill.read',
+      'purchases.bill.write',
+      'parties.party.read',
+      'inventory.item.read',
+      'payments.payment.read',
+      'payments.payment.write',
+    ],
+    ['purchases', 'parties', 'inventory', 'payments']
+  );
+
+it('asks "Paid now?" at Record and sends the money with the record call (PUR-01 FR-6h)', async () => {
+  /** PUR-02 AC-3 path — the sheet defaults to the whole bill in cash; confirming sends
+   *  PAY-01's `mode_breakup` dated with the bill ON the record call (one transaction on the
+   *  server), and the toast names what was paid. */
+  signInPayer();
+  service.recordPurchaseBill.mockResolvedValue({
+    ...envelope({ ...RECORDED, status: 'paid' }, '0.00'),
+    payment: { paymentId: 'pay1', number: 'PAYOUT/26-27/0001', amount: '2921.00' },
+  });
+  renderWithProviders(<PurchaseBillEditorPageContent documentId="b1" />);
+  await userEvent.click(await screen.findByTestId('purchase-record'));
+  const confirm = await screen.findByTestId('purchase-paid-now-confirm');
+  expect(confirm).toHaveTextContent('Paid ₹2,921.00 · Record');
+  expect(service.recordPurchaseBill).not.toHaveBeenCalled();
+  await userEvent.click(confirm);
+  await waitFor(() => expect(service.recordPurchaseBill).toHaveBeenCalled());
+  const [, body] = service.recordPurchaseBill.mock.calls[0] as [string, Record<string, unknown>];
+  expect(body).toEqual({
+    version: 4,
+    payment: {
+      payment_date: '2026-09-18',
+      mode_breakup: [{ mode: 'cash', amount: '2921.00', reference: '' }],
+    },
+  });
+  await waitFor(() =>
+    expect(store.getState().snackbar.id).toBe('purchases.editor.recordedSettled')
+  );
+  expect(mockPush).toHaveBeenCalledWith('/purchases/bills/b1');
+});
+
+it('"Pay later" records the bill on credit with no payment (PUR-01 FR-6h)', async () => {
+  signInPayer();
+  service.recordPurchaseBill.mockResolvedValue(envelope(RECORDED, '-2921.00'));
+  renderWithProviders(<PurchaseBillEditorPageContent documentId="b1" />);
+  await userEvent.click(await screen.findByTestId('purchase-record'));
+  await userEvent.click(await screen.findByTestId('purchase-pay-later'));
+  await waitFor(() => expect(service.recordPurchaseBill).toHaveBeenCalled());
+  expect(service.recordPurchaseBill.mock.calls[0]?.[1]).toEqual({ version: 4 });
+  await waitFor(() => expect(store.getState().snackbar.id).toBe('purchases.editor.recorded'));
+});
+
+it('never opens the "Paid now" sheet for a role that cannot pay suppliers', async () => {
+  /** The default sign-in has no payments write: Record goes straight to the server, and the
+   *  test above ('saves, then records…') is the proof that the body carries no payment. */
+  service.recordPurchaseBill.mockResolvedValue(envelope(RECORDED, '-2921.00'));
+  renderWithProviders(<PurchaseBillEditorPageContent documentId="b1" />);
+  await userEvent.click(await screen.findByTestId('purchase-record'));
+  await waitFor(() => expect(service.recordPurchaseBill).toHaveBeenCalled());
+  expect(screen.queryByTestId('purchase-paid-now-confirm')).not.toBeInTheDocument();
 });
 
 it('never offers input tax credit to a composition shop (FR-11)', async () => {
