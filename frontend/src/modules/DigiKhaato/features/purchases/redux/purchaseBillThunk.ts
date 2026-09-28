@@ -3,7 +3,11 @@ import { createAsyncThunk } from '@reduxjs/toolkit';
 import type { ApiErrorShape } from 'src/types/api.types';
 import { toApiError } from 'src/utils/apiError';
 
-import type { PurchaseBillListQuery, PurchaseBillWireBody } from '../api/purchaseBillService';
+import type {
+  PurchaseBillListQuery,
+  PurchaseBillWireBody,
+  PurchasePaymentWireBody,
+} from '../api/purchaseBillService';
 import type {
   DuplicateSupplierInvoice,
   PurchaseBillEnvelope,
@@ -74,6 +78,8 @@ export interface RecordPurchaseBillArg {
   readonly id: string;
   readonly version: number;
   readonly idempotencyKey: string;
+  /** PUR-01 FR-6h "Paid now" — PAY-01's `mode_breakup`; absent, the bill goes on credit. */
+  readonly payment?: PurchasePaymentWireBody | null;
 }
 
 /** MUTATION. FR-6 — the key is reused on a retry and rotated only on a new attempt (BR-13). */
@@ -81,13 +87,17 @@ export const recordPurchaseBill = createAsyncThunk<
   PurchaseBillEnvelope,
   RecordPurchaseBillArg,
   Reject
->('purchaseBillEditor/recordPurchaseBill', async ({ id, version, idempotencyKey }, api) => {
-  try {
-    return await (await service()).recordPurchaseBill(id, { version }, idempotencyKey);
-  } catch (error) {
-    return api.rejectWithValue(toApiError(error, 'purchases.editor.error.record'));
+>(
+  'purchaseBillEditor/recordPurchaseBill',
+  async ({ id, version, idempotencyKey, payment }, api) => {
+    try {
+      const body: PurchaseBillWireBody = payment ? { version, payment } : { version };
+      return await (await service()).recordPurchaseBill(id, body, idempotencyKey);
+    } catch (error) {
+      return api.rejectWithValue(toApiError(error, 'purchases.editor.error.record'));
+    }
   }
-});
+);
 
 /** MUTATION. FR-8 — drafts only; a recorded bill is voided. */
 export const deletePurchaseBillDraft = createAsyncThunk<string, string, Reject>(

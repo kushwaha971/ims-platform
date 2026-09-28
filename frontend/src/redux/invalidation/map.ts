@@ -505,17 +505,29 @@ export const INVALIDATION: TInvalidationMap = {
   // and takes no invalidation signal. The list and the ledger reports are
   // stale for their next mount. Nothing is patched: the balance, the running
   // totals and each bill's status are the server's arithmetic.
+  //
+  // PUR-02 — a supplier payment settles purchase bills the same way, and it is
+  // recorded FROM the bill page: `purchaseBillDetail` is re-read now (its hook
+  // refetches whenever the slice is stale), the bills list on its next mount.
   recordPayment: {
-    refetch: [...LEDGER_WRITE_REFETCH, 'paymentList'],
-    stale: ['invoiceList', 'statement', 'ledgerAging'],
+    refetch: [...LEDGER_WRITE_REFETCH, 'paymentList', 'purchaseBillDetail'],
+    stale: ['invoiceList', 'purchaseBillList', 'statement', 'ledgerAging'],
   },
   // The receipt page swaps to Void in place from the response (the `patch`).
   // Voiding a credit note's refund voucher gives the note its credit back
   // (SAL-04 FR-10), so the estimates / credit notes list is stale too.
+  // Voiding a supplier payment reopens its purchase bills (PUR-02 FR-7).
   voidPayment: {
     patch: [['paymentReceipt', 'payment']],
     refetch: [...LEDGER_WRITE_REFETCH, 'paymentList'],
-    stale: ['invoiceList', 'salesDocList', 'statement', 'ledgerAging'],
+    stale: [
+      'invoiceList',
+      'salesDocList',
+      'purchaseBillList',
+      'purchaseBillDetail',
+      'statement',
+      'ledgerAging',
+    ],
   },
   // A share is words handed to WhatsApp, and an audit row: no money moves, so
   // nothing else is stale. The receipt slice records the share's state.
@@ -531,10 +543,13 @@ export const INVALIDATION: TInvalidationMap = {
   // reducer), which is the one `patch`.
   savePurchaseBillDraft: { stale: ['purchaseBillList'] },
   deletePurchaseBillDraft: { stale: ['purchaseBillList'] },
+  // "Paid now" (PUR-02) writes a PAYOUT voucher with the record, and a void
+  // releases supplier payments as advances: the payments list is stale for both.
   recordPurchaseBill: {
     stale: [
       'purchaseBillList',
       'purchaseBillDetail',
+      'paymentList',
       ...EXPENSE_LEDGER_STALE,
       'itemList',
       'itemDetail',
@@ -543,7 +558,14 @@ export const INVALIDATION: TInvalidationMap = {
   },
   voidPurchaseBill: {
     patch: [['purchaseBillDetail', 'bill']],
-    stale: ['purchaseBillList', ...EXPENSE_LEDGER_STALE, 'itemList', 'itemDetail', 'stockSummary'],
+    stale: [
+      'purchaseBillList',
+      'paymentList',
+      ...EXPENSE_LEDGER_STALE,
+      'itemList',
+      'itemDetail',
+      'stockSummary',
+    ],
   },
   // ── SAL-01 / SAL-04 / SAL-05 — estimates, credit notes, void ─────────────
   //

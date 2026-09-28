@@ -9,6 +9,7 @@ import {
   BellRing,
   BookOpen,
   FileText,
+  HandCoins,
   MoreHorizontal,
   Pencil,
   QrCode,
@@ -76,6 +77,11 @@ export interface PartyHeaderMenuProps {
   readonly onRemind?: () => void;
   /** PAY-01 FR-1 — record a payment against this party's bills (the drawer). */
   readonly onRecordPayment?: () => void;
+  /**
+   * PUR-02 FR-4 — pay this SUPPLIER against their purchase bills: the same
+   * drawer, money out. Passed only for a party marked as a supplier.
+   */
+  readonly onPaySupplier?: () => void;
   /** PAY-03 FR-7 — show the shop's UPI QR for this party's amount. */
   readonly onCollect?: () => void;
   /**
@@ -95,6 +101,7 @@ export function PartyHeaderMenu({
   statementHref,
   onRemind,
   onRecordPayment,
+  onPaySupplier,
   onCollect,
   triggerRef,
 }: Readonly<PartyHeaderMenuProps>): React.JSX.Element | null {
@@ -133,6 +140,13 @@ export function PartyHeaderMenu({
       label: t('payments.record.title'),
       icon: Wallet,
       action: onRecordPayment,
+    },
+    /* PUR-02 — money OUT against a supplier's purchase bills, beside money in. */
+    {
+      key: 'paySupplier',
+      label: t('payments.record.titleOut'),
+      icon: HandCoins,
+      action: onPaySupplier,
     },
     { key: 'collect', label: t('payments.upi.collect'), icon: QrCode, action: onCollect },
     { key: 'edit', label: t('parties.detail.edit'), icon: Pencil, action: onEdit },

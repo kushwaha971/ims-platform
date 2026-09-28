@@ -6,6 +6,7 @@ import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { usePermissions } from 'src/hooks/usePermissions';
 import { selectNetworkImpaired } from 'src/redux/slice/networkSlice';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
+import { formatInr } from 'src/utils/money';
 
 import {
   purchaseVoidErrorCleared,
@@ -13,6 +14,7 @@ import {
   type PurchaseBillDetailState,
 } from '../redux/purchaseBillDetailSlice';
 import { fetchPurchaseBill, voidPurchaseBill } from '../redux/purchaseBillThunk';
+import { releasedTotal } from '../view-model/purchaseToasts';
 
 /**
  * PUR-01 FR-9 / PUR-04 — the detail page's data and its one act, the void.
@@ -52,11 +54,17 @@ export const usePurchaseBillDetail = (id: string): UsePurchaseBillDetailResult =
     async (reason: string): Promise<boolean> => {
       const result = await dispatch(voidPurchaseBill({ id, reason }));
       if (!voidPurchaseBill.fulfilled.match(result)) return false;
+      /* PUR-02 BR-4 — money already paid on the bill is not lost: it stays with
+         the supplier as an advance, and the toast says how much. */
+      const advance = releasedTotal(result.payload);
       dispatch(
         showSnackbar({
           severity: 'success',
-          id: 'purchases.void.done',
-          params: { number: result.payload.bill.number ?? '' },
+          id: advance ? 'purchases.void.doneAdvance' : 'purchases.void.done',
+          params: {
+            number: result.payload.bill.number ?? '',
+            ...(advance ? { amount: formatInr(advance) } : {}),
+          },
         })
       );
       return true;

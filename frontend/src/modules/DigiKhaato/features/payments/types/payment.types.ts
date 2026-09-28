@@ -106,9 +106,12 @@ export interface PaymentContext {
   readonly direction: PaymentDirection;
   readonly partyId?: string;
   readonly partyName?: string;
-  /** The party's receivable, the default amount from a khata (capped by it). */
+  /**
+   * The default amount from a khata: what the party owes the shop for money
+   * in, what the shop owes the supplier for money out (PUR-02), as a magnitude.
+   */
   readonly receivable?: string;
-  /** An invoice page: this bill is allocated first, with its due as the amount. */
+  /** An invoice or purchase bill page: this bill is allocated first, with its due as the amount. */
   readonly documentId?: string;
   readonly documentNumber?: string;
   readonly documentDue?: string;
@@ -117,7 +120,7 @@ export interface PaymentContext {
   readonly presetAmount?: string;
   /** PAY-05 FR-7 "Record again": the voided payment's lines. */
   readonly presetLines?: readonly PaymentModeLine[];
-  readonly entry: 'party' | 'invoice' | 'list' | 'collect' | 'again';
+  readonly entry: 'party' | 'invoice' | 'bill' | 'list' | 'collect' | 'again';
 }
 
 export interface PaymentLineForm {

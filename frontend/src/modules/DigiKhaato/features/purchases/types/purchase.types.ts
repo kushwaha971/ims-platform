@@ -68,6 +68,31 @@ export interface PurchaseBillLine {
   readonly trackStock: boolean;
 }
 
+/** PUR-02 FR-6 — a supplier payment allocated to this bill (the bill page's "Payments"). */
+export interface PurchaseBillPayment {
+  readonly id: string;
+  readonly number: string;
+  readonly paymentDate: string;
+  readonly primaryMode: string;
+  /** What THIS bill received from the payment, not the payment's total. */
+  readonly amount: string;
+  readonly status: string;
+}
+
+/** PUR-01 FR-6h — the PAYOUT voucher "Paid now" wrote at record. */
+export interface PurchaseBillPaidNow {
+  readonly paymentId: string;
+  readonly number: string;
+  readonly amount: string;
+}
+
+/** PUR-02 BR-4 — a payment a bill void left as advance. */
+export interface PurchaseReleasedPayment {
+  readonly paymentId: string;
+  readonly number: string;
+  readonly amount: string;
+}
+
 export interface PurchaseBill {
   readonly id: string;
   readonly number: string | null;
@@ -100,6 +125,7 @@ export interface PurchaseBill {
   readonly lines: readonly PurchaseBillLine[];
   readonly notes: string;
   readonly ledgerEntryId: string | null;
+  readonly payments: readonly PurchaseBillPayment[];
   readonly createdBy: PurchasePerson | null;
   readonly recordedAt: string | null;
   readonly voidedAt: string | null;
@@ -118,6 +144,10 @@ export interface PurchaseBillEnvelope {
   readonly bill: PurchaseBill;
   readonly warnings: readonly PurchaseWarning[];
   readonly partyBalance: string | null;
+  /** Present only after a record with "Paid now". */
+  readonly payment: PurchaseBillPaidNow | null;
+  /** Present only after a void that released supplier payments. */
+  readonly releasedPayments: readonly PurchaseReleasedPayment[];
 }
 
 export interface PurchaseBillListRow {

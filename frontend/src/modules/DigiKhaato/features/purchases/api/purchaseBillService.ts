@@ -107,6 +107,14 @@ export const toBill = (row: Wire): PurchaseBill => {
     lines: ((row.lines ?? []) as Wire[]).map(toLine),
     notes: s(row.notes),
     ledgerEntryId: ledger ? sn(ledger.id) : null,
+    payments: ((row.payments ?? []) as Wire[]).map((p) => ({
+      id: s(p.id),
+      number: s(p.number),
+      paymentDate: s(p.payment_date),
+      primaryMode: s(p.primary_mode),
+      amount: s(p.amount),
+      status: s(p.status),
+    })),
     createdBy: toPerson(row.created_by),
     recordedAt: sn(row.recorded_at),
     voidedAt: sn(row.voided_at),
@@ -123,10 +131,23 @@ interface EnvelopeWire {
 
 export const toEnvelope = (body: EnvelopeWire): PurchaseBillEnvelope => {
   const meta = body.meta ?? {};
+  const paid = meta.payment as Wire | null | undefined;
   return {
     bill: toBill(body.data),
     warnings: (meta.warnings ?? []) as PurchaseBillEnvelope['warnings'],
     partyBalance: sn(meta.party_balance),
+    payment: paid
+      ? { paymentId: s(paid.payment_id), number: s(paid.number), amount: s(paid.amount) }
+      : null,
+    /* The payments listener answers objects; anything else (a bare id) is not
+       a payment this screen can name, so it is dropped rather than shown raw. */
+    releasedPayments: ((meta.released_payments ?? []) as unknown[])
+      .filter((row): row is Wire => !!row && typeof row === 'object')
+      .map((row) => ({
+        paymentId: s(row.payment_id),
+        number: s(row.number),
+        amount: s(row.amount),
+      })),
   };
 };
 
@@ -223,6 +244,12 @@ export const getPurchaseBill = async (
 
 /** The draft body (snake_case) — built by `view-model/purchaseBillForm.toWireBody`. */
 export type PurchaseBillWireBody = Record<string, unknown>;
+
+/** PUR-01 FR-6h — "Paid now" on the record call: PAY-01's `mode_breakup`, money as strings. */
+export interface PurchasePaymentWireBody {
+  readonly payment_date: string;
+  readonly mode_breakup: readonly { mode: string; amount: string; reference: string }[];
+}
 
 export const createPurchaseBill = async (
   body: PurchaseBillWireBody,

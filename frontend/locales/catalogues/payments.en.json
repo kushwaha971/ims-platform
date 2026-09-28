@@ -54,7 +54,7 @@
   "payments.noAccess.title": "Payments are not available to you",
   "payments.note": "Note",
   "payments.note.placeholder": "e.g. Paid at the shop",
-  "payments.out.hint": "Money paid to a supplier. Bills from suppliers arrive with purchases; until then it is kept as an advance on their khata.",
+  "payments.out.hint": "Money paid to a supplier. It settles their bills that are due first; anything more stays as an advance on their khata.",
   "payments.party.from": "Received from",
   "payments.party.required": "Choose who paid",
   "payments.party.to": "Paid to",

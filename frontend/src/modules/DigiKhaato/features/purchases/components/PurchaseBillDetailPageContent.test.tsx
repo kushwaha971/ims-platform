@@ -5,7 +5,7 @@ import { resetAllFeatureState } from 'src/redux/actions';
 import { sessionLoaded } from 'src/redux/slice/sessionSlice';
 import { store } from 'src/redux/store';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
-import type { PermissionCode } from 'src/types/domain.types';
+import type { ModuleCode, PermissionCode } from 'src/types/domain.types';
 
 import { PurchaseBillDetailPageContent } from './PurchaseBillDetailPageContent';
 
@@ -93,6 +93,7 @@ const BILL: PurchaseBill = {
   ],
   notes: '',
   ledgerEntryId: 'e1',
+  payments: [],
   createdBy: { id: 'u1', name: 'Owner' },
   recordedAt: '2026-09-18T10:00:00Z',
   voidedAt: null,
@@ -101,13 +102,22 @@ const BILL: PurchaseBill = {
   updatedAt: '2026-09-18T10:00:00Z',
 };
 
-const envelope = (bill: PurchaseBill): PurchaseBillEnvelope => ({
+const envelope = (
+  bill: PurchaseBill,
+  over: Partial<PurchaseBillEnvelope> = {}
+): PurchaseBillEnvelope => ({
   bill,
   warnings: [],
   partyBalance: null,
+  payment: null,
+  releasedPayments: [],
+  ...over,
 });
 
-const signIn = (permissions: readonly PermissionCode[]): void => {
+const signIn = (
+  permissions: readonly PermissionCode[],
+  modules: readonly ModuleCode[] = ['purchases']
+): void => {
   store.dispatch(
     sessionLoaded({
       user: {
@@ -122,7 +132,7 @@ const signIn = (permissions: readonly PermissionCode[]): void => {
       activeTenant: { id: 't1', name: 'Sharma General Store', timezone: 'Asia/Kolkata' },
       tenants: [{ id: 't1', name: 'Sharma General Store', timezone: 'Asia/Kolkata' }],
       permissions: [...permissions],
-      enabledModules: ['purchases'],
+      enabledModules: [...modules],
       version: 1,
     })
   );
@@ -197,4 +207,82 @@ it('never offers Void to staff (PUR-04 §12)', async () => {
   renderWithProviders(<PurchaseBillDetailPageContent id="b1" />);
   expect(await screen.findByText('Rice')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /Void bill/ })).not.toBeInTheDocument();
+});
+
+const PAYER: PermissionCode[] = [...OWNER, 'payments.payment.read', 'payments.payment.write'];
+
+it('offers Pay supplier on a bill still owing, and only there (PUR-02 FR-4 / AC-3)', async () => {
+  /** Protects the entry point: shown for an unpaid bill to a role that may pay suppliers;
+   *  hidden (never disabled) on a PAID bill and for a role without payments write. */
+  signIn(PAYER, ['purchases', 'payments']);
+  const { unmount } = renderWithProviders(<PurchaseBillDetailPageContent id="b1" />);
+  expect(await screen.findByRole('button', { name: /Pay supplier/ })).toBeInTheDocument();
+  unmount();
+
+  store.dispatch(resetAllFeatureState());
+  service.getPurchaseBill.mockResolvedValue(
+    envelope({ ...BILL, status: 'paid', amountPaid: '2921.00', amountDue: '0.00' })
+  );
+  signIn(PAYER, ['purchases', 'payments']);
+  const paid = renderWithProviders(<PurchaseBillDetailPageContent id="b1" />);
+  expect(await screen.findByText('Rice')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /Pay supplier/ })).not.toBeInTheDocument();
+  paid.unmount();
+
+  store.dispatch(resetAllFeatureState());
+  service.getPurchaseBill.mockResolvedValue(envelope(BILL));
+  signIn(OWNER, ['purchases']);
+  renderWithProviders(<PurchaseBillDetailPageContent id="b1" />);
+  expect(await screen.findByText('Rice')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /Pay supplier/ })).not.toBeInTheDocument();
+});
+
+it('lists the supplier payments on the bill, each linked to its voucher (PUR-02 FR-6)', async () => {
+  signIn(PAYER, ['purchases', 'payments']);
+  service.getPurchaseBill.mockResolvedValue(
+    envelope({
+      ...BILL,
+      status: 'partially_paid',
+      amountPaid: '1000.00',
+      amountDue: '1921.00',
+      payments: [
+        {
+          id: 'pay1',
+          number: 'PAYOUT/26-27/0001',
+          paymentDate: '2026-09-18',
+          primaryMode: 'cash',
+          amount: '1000.00',
+          status: 'recorded',
+        },
+      ],
+    })
+  );
+  renderWithProviders(<PurchaseBillDetailPageContent id="b1" />);
+  const list = await screen.findByTestId('purchase-payments');
+  expect(list).toHaveTextContent('PAYOUT/26-27/0001 · 18/09/2026 · ₹1,000.00');
+  expect(screen.getByRole('link', { name: 'PAYOUT/26-27/0001' })).toHaveAttribute(
+    'href',
+    '/payments/pay1'
+  );
+});
+
+it('says how much stays as advance when a paid bill is voided (PUR-02 BR-4)', async () => {
+  /** The void releases the bill's supplier payments; the toast must not read as if the
+   *  money vanished with the bill. */
+  signIn(OWNER);
+  service.voidPurchaseBill.mockResolvedValue(
+    envelope(
+      { ...BILL, status: 'void', voidReason: 'Entered twice' },
+      { releasedPayments: [{ paymentId: 'pay1', number: 'PAYOUT/26-27/0001', amount: '600.00' }] }
+    )
+  );
+  renderWithProviders(<PurchaseBillDetailPageContent id="b1" />);
+  await userEvent.click(await screen.findByRole('button', { name: /Void bill/ }));
+  await userEvent.type(screen.getByLabelText(/Reason/), 'Entered twice');
+  await userEvent.click(screen.getByTestId('purchase-void-confirm'));
+  await waitFor(() => expect(store.getState().snackbar.id).toBe('purchases.void.doneAdvance'));
+  expect(store.getState().snackbar.params).toEqual({
+    number: 'PB/26-27/0007',
+    amount: '₹600.00',
+  });
 });

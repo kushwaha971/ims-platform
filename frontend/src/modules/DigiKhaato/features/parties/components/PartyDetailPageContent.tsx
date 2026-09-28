@@ -151,6 +151,8 @@ const CollectQrSheetLazy = /* @__PURE__ */ dynamic(() =>
 interface KhataPaymentPreset {
   readonly presetMode?: 'upi';
   readonly presetAmount?: string;
+  /** PUR-02 — "Pay supplier": money out against the supplier's purchase bills. */
+  readonly direction?: 'out';
 }
 
 export function PartyDetailPageContent({
@@ -320,6 +322,9 @@ export function PartyDetailPageContent({
     Boolean(party) && !isArchived && hasModule('payments') && can('payments.payment.write');
   const balanceNow = summary?.balance ?? shown.balance;
   const receivable = balanceNow && !balanceNow.startsWith('-') ? balanceNow : '';
+  /* PUR-02 — what the shop owes this supplier, as a magnitude: the default
+     amount of "Pay supplier". A negative balance is "You will give". */
+  const payable = balanceNow?.startsWith('-') ? balanceNow.slice(1) : '';
   const canCollect =
     Boolean(party) && !isArchived && hasModule('payments') && can('payments.payment.read');
   const entryPair = (
@@ -364,7 +369,16 @@ export function PartyDetailPageContent({
                 triggerRef={moreRef}
                 statementHref={canReadLedger ? partyStatementPath(id) : undefined}
                 onRemind={reminder.canRemind ? reminder.openSheet : undefined}
-                onRecordPayment={canPay ? () => setPaying({}) : undefined}
+                /* Money in for a customer (or a party marked as neither);
+                   money out for a supplier. A party that is both gets both. */
+                onRecordPayment={
+                  canPay && (shown.isCustomer || !shown.isSupplier)
+                    ? () => setPaying({})
+                    : undefined
+                }
+                onPaySupplier={
+                  canPay && shown.isSupplier ? () => setPaying({ direction: 'out' }) : undefined
+                }
                 onCollect={canCollect ? () => setCollecting(true) : undefined}
                 onEdit={partyForm.canWrite ? openEdit : undefined}
                 onAddOpening={opening.canAdd ? opening.openDrawer : undefined}
@@ -493,12 +507,13 @@ export function PartyDetailPageContent({
       {paying && (
         <PaymentFormDrawerLazy
           context={{
-            direction: 'in',
+            direction: paying.direction ?? 'in',
             partyId: id,
             partyName: shown.name,
-            receivable,
+            receivable: paying.direction === 'out' ? payable : receivable,
             entry: paying.presetMode ? 'collect' : 'party',
-            ...paying,
+            presetMode: paying.presetMode,
+            presetAmount: paying.presetAmount,
           }}
           onClose={() => setPaying(null)}
         />
