@@ -7,6 +7,10 @@ import type { TranslateFn } from 'src/hooks/useTranslation';
 
 import { PHONE_SORT_CHOICES, type PhoneSortOrdering } from '../view-model/partyListSort';
 
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/parties';
+
 /**
  * `PartyListSortSheet`'s body — the sheet and its one single choice — in its
  * own module so it loads when the sort button is pressed.

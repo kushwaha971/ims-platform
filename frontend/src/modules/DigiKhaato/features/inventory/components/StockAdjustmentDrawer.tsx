@@ -45,6 +45,15 @@ import { SignedAmount } from './SignedAmount';
 
 import type { AdjustmentFormLine, AdjustmentFormValues, ItemListRow } from '../types/item.types';
 
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/inventory';
+import 'src/i18n/catalogues/itemPicker';
+import 'src/i18n/catalogues/items';
+import 'src/i18n/catalogues/movement';
+import 'src/i18n/catalogues/stock';
+import 'src/i18n/catalogues/validation';
+
 /**
  * INV-06 — post a stock adjustment: a reason, a date, and lines in the
  * line-items editor's adjustment subset (Item · On hand · Mode · Qty · Unit

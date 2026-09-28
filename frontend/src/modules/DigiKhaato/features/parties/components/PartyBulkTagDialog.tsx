@@ -19,6 +19,10 @@ import { PartyTagField } from './PartyTagField';
 import type { BulkTagMode, BulkTagResult } from '../api/tagService';
 import type { PartyTagWithCount } from '../types/party.types';
 
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/parties';
+
 /**
  * PTY-05 FR-8 — tag a selection from the list's selection bar.
  *
@@ -171,11 +175,7 @@ function PartyBulkTagDialogBase({
                 ? t('parties.tags.bulk.undone')
                 : nothingChanged
                   ? t('parties.tags.bulk.noChangeBody')
-                  : t(
-                      removing
-                        ? 'parties.tags.bulk.doneBodyRemove'
-                        : 'parties.tags.bulk.doneBody'
-                    )}
+                  : t(removing ? 'parties.tags.bulk.doneBodyRemove' : 'parties.tags.bulk.doneBody')}
             </UbText>
           ) : (
             <>

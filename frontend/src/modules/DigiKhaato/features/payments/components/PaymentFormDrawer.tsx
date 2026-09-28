@@ -43,6 +43,17 @@ import type {
   PaymentSaveResult,
 } from '../types/payment.types';
 
+// The words this screen renders arrive with its chunk (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/ledger';
+import 'src/i18n/catalogues/money';
+import 'src/i18n/catalogues/partyPicker';
+import 'src/i18n/catalogues/paymentActions';
+import 'src/i18n/catalogues/payments';
+import 'src/i18n/catalogues/validation';
+
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+
 const DAY_MS = 86_400_000;
 
 /**

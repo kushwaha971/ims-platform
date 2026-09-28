@@ -26,6 +26,8 @@ import { applyCreditNote, fetchOpenInvoices } from '../redux/salesFlowThunk';
 import { useSalesFlowSchemas } from '../validation/salesFlowSchemas';
 
 import type { SalesDocument } from '../types/sales.types';
+import 'src/i18n/catalogues/sales';
+import 'src/i18n/catalogues/validation';
 
 const lesser = (a: string, b: string): string => (Number(a) <= Number(b) ? a : b);
 

@@ -1,0 +1,8 @@
+{
+  "expenses.paidTo.clear": "{name} हटाएँ",
+  "expenses.paidTo.noAccess": "आप पार्टियाँ नहीं खोज सकते",
+  "expenses.paidTo.noMatch": "कोई पार्टी नहीं मिली",
+  "expenses.paidTo.placeholder": "ग्राहक या सप्लायर खोजें",
+  "expenses.paidTo.required": "चुनें कि यह किसे देना है",
+  "expenses.paidTo.results": "मिलती पार्टियाँ"
+}

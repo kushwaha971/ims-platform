@@ -19,6 +19,11 @@ const config: Config = {
     // cannot parse. Its own CommonJS build is the same icons (R-P-5 still
     // applies: application code imports icons individually).
     '^lucide-react$': '<rootDir>/node_modules/lucide-react/dist/cjs/lucide-react.js',
+    // W4-P — the same dedupe `next.config.js` applies with `resolveAlias`:
+    // ml-uikit's own tailwind-merge 1.14 / clsx 1.2 are replaced by the app's,
+    // so a component test merges classes exactly as the built app does.
+    '^tailwind-merge$': '<rootDir>/node_modules/tailwind-merge/dist/bundle-cjs.js',
+    '^clsx$': '<rootDir>/node_modules/clsx/dist/clsx.js',
     '^src/(.*)$': '<rootDir>/src/$1',
     '^modules/(.*)$': '<rootDir>/src/modules/$1',
     '^app/(.*)$': '<rootDir>/app/$1',

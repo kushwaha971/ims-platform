@@ -7,6 +7,9 @@ import { useSearchParams } from 'next/navigation';
 import { UbPageSkeleton } from 'src/design-system';
 
 import { CreditNoteEditorPageContent } from 'modules/DigiKhaato/features/sales/components/CreditNoteEditorPageContent';
+import 'src/i18n/catalogues/money';
+import 'src/i18n/catalogues/sales';
+import 'src/i18n/catalogues/validation';
 
 function NewCreditNote(): React.JSX.Element {
   const search = useSearchParams();

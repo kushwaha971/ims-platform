@@ -1,0 +1,21 @@
+{
+  "plan.card.atLimit": "Limit reached",
+  "plan.card.loading": "Loading your plan",
+  "plan.card.nearLimit": "Nearly full",
+  "plan.card.noLimits": "No limits on this business.",
+  "plan.card.title": "Your plan",
+  "plan.card.unlimited": "Unlimited",
+  "plan.ledgerNote": "Udhaar entries are never limited.",
+  "plan.limit.body": "You have used {used} of {limit} {noun} on the {plan} plan.",
+  "plan.limit.contact": "Contact {partner}",
+  "plan.limit.contactText": "I need a higher limit for {noun} on the {plan} plan.",
+  "plan.limit.noContact": "Contact your provider",
+  "plan.limit.provider": "your provider",
+  "plan.limit.title": "Plan limit reached",
+  "plan.module.locked.body": "{module} is not part of your plan. Ask your provider to switch it on.",
+  "plan.module.locked.title": "This is switched off for your business",
+  "plan.near.atBody": "Contact {partner} to add more.",
+  "plan.near.body": "{used} of {limit} {noun} used",
+  "plan.near.nearBody": "You are close to the limit for this plan.",
+  "plan.page.subtitle": "What this business can use."
+}

@@ -1,5 +1,4 @@
-import en from 'locales/en.json';
-import hi from 'locales/hi.json';
+import { en, hi } from 'src/tests/allMessages';
 
 /**
  * QA O5 (Sprint 3): the Hindi share sheet read "व्हाट्सएप" and "एसएमएस". Indian

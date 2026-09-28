@@ -1,0 +1,18 @@
+{
+  "exports.action": "एक्सपोर्ट",
+  "exports.empty": "एक्सपोर्ट करने को कुछ नहीं — कोई फ़िल्टर हटाएँ",
+  "exports.error": "एक्सपोर्ट तैयार नहीं हो सका",
+  "exports.failed": "एक्सपोर्ट तैयार नहीं हो सका। कम पंक्तियों के साथ कोशिश करें।",
+  "exports.page.check": "फिर देखें",
+  "exports.page.download": "CSV डाउनलोड करें",
+  "exports.page.expired": "यह फ़ाइल पुरानी हो गई — सूची फिर से एक्सपोर्ट करें",
+  "exports.page.expires": "लिंक {when} तक चलेगा।",
+  "exports.page.missing": "यह एक्सपोर्ट नहीं मिला",
+  "exports.page.preparing": "आपकी फ़ाइल अभी तैयार हो रही है",
+  "exports.page.ready": "{count, plural, one {# पंक्ति की आपकी फ़ाइल तैयार है} other {# पंक्तियों की आपकी फ़ाइल तैयार है}}",
+  "exports.page.title": "आपका एक्सपोर्ट",
+  "exports.preparing": "तैयार हो रहा है…",
+  "exports.queued": "{count, plural, one {# पंक्ति की आपकी फ़ाइल तैयार हो रही है — तैयार होते ही डाउनलोड होगी।} other {# पंक्तियों की आपकी फ़ाइल तैयार हो रही है — तैयार होते ही डाउनलोड होगी।}}",
+  "exports.ready": "आपका एक्सपोर्ट तैयार है और डाउनलोड हो रहा है।",
+  "imports.action.import": "इम्पोर्ट"
+}

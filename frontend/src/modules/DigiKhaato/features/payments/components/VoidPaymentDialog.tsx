@@ -26,6 +26,12 @@ import { voidConsequences } from '../view-model/paymentDisplay';
 
 import type { Payment } from '../types/payment.types';
 
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/money';
+import 'src/i18n/catalogues/payments';
+import 'src/i18n/catalogues/validation';
+
 /**
  * PAY-05 FR-2 — "Void RCT/26-27/0017?", with a reason, quick-reason chips, and
  * what will change said BEFORE it happens: the khata line reversed today, each

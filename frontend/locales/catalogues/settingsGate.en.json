@@ -1,0 +1,8 @@
+{
+  "settings.action.save": "Save changes",
+  "settings.action.saving": "Saving…",
+  "settings.noAccess.back": "Back to Settings",
+  "settings.noAccess.body": "Your role cannot open this part of Settings. Ask the owner if you need it.",
+  "settings.noAccess.title": "This setting is not available",
+  "settings.viewOnly": "View only"
+}

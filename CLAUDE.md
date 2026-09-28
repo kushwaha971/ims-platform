@@ -87,7 +87,8 @@ There is no seeded merchant — sign up at `/signup`.
 ```bash
 cd backend  && python3 -m pytest -q          # 1121 passing
 cd frontend && npm run type-check && npm run lint && npm test   # 1235 passing
-cd frontend && npm run build && npm run bundle:check            # 235.5 KB gz baseline
+cd frontend && npm run build && npm run bundle:check            # 229.2 KB gz baseline
+cd frontend && npm run i18n:split && npm run i18n:check         # after any merge touching locales/
 
 # The e2e harnesses run against a LIVE stack, which has to be served the way
 # `output: standalone` requires — `next start` cannot serve this build and

@@ -30,6 +30,12 @@ import { PaymentMethodField } from './PaymentMethodField';
 import type { UseLedgerEntryFormResult } from '../hooks/useLedgerEntryForm';
 import type { LedgerDirection, LedgerEntryFormValues } from '../types/ledger.types';
 
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/ledger';
+import 'src/i18n/catalogues/money';
+import 'src/i18n/catalogues/validation';
+
 /**
  * LED-01 — the drawer a merchant records a sale or a payment in.
  *

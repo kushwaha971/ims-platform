@@ -1,0 +1,6 @@
+{
+  "payments.record.title": "Record payment",
+  "payments.record.titleFor": "Record payment · {name}",
+  "payments.upi.collect": "Collect by UPI",
+  "payments.upi.collectFrom": "Collect from {name}"
+}

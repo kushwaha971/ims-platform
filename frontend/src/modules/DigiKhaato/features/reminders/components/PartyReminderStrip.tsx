@@ -14,6 +14,10 @@ import { selectPartyReminderId, selectPartyReminderTotals } from '../redux/remin
 import { fetchPartyReminders } from '../redux/reminderThunk';
 import { channelLabelId } from '../view-model/reminderDisplay';
 
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/reminders';
+
 /**
  * LED-06 FR-6 — the khata's one line of reminder history: "Reminded 3 times ·
  * last 2 days ago (WhatsApp)", or "Not reminded yet".

@@ -5,6 +5,11 @@ import { Suspense, use } from 'react';
 import { UbPageSkeleton } from 'src/design-system';
 
 import { InvoiceDetailPageContent } from 'modules/DigiKhaato/features/sales/components/InvoiceDetailPageContent';
+import 'src/i18n/catalogues/money';
+import 'src/i18n/catalogues/paymentActions';
+import 'src/i18n/catalogues/payments';
+import 'src/i18n/catalogues/sales';
+import 'src/i18n/catalogues/share';
 
 /** SAL-04 §9 — `/sales/credit-notes/{id}`: the note, its print sheet, apply and void. */
 export default function CreditNoteDetailPage({

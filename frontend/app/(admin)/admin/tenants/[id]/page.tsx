@@ -6,6 +6,9 @@ import { UbPageSkeleton } from 'src/design-system';
 
 import { AdminTenantDetailPageContent } from 'modules/DigiKhaato/features/admin/components/AdminTenantDetailPageContent';
 
+// The words this screen renders arrive with its chunk (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/dataStatus';
+
 /** PLT-14 FR-3 — one business's card. `params` is a promise in Next 16; `use()` unwraps it. */
 export default function AdminTenantDetailPage({
   params,

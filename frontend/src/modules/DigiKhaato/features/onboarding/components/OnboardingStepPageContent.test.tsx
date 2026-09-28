@@ -2,11 +2,9 @@ import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { store } from 'src/redux/store';
+import { en, hi } from 'src/tests/allMessages';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
 import { chooseOption } from 'src/tests/selectHelper';
-
-import en from 'locales/en.json';
-import hi from 'locales/hi.json';
 
 import { fetchSession } from '../../auth/redux/sessionThunk';
 import { resetOnboarding } from '../redux/onboardingSlice';

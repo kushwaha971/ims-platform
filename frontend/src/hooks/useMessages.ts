@@ -1,40 +1,39 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 
+import {
+  catalogueVersion,
+  ensureLocaleLoaded,
+  liveMessages,
+  subscribeCatalogues,
+  type Messages,
+} from 'src/i18n/catalogueRegistry';
+import 'src/i18n/catalogues/shell';
 import type { Locale } from 'src/types/domain.types';
 
-import en from 'locales/en.json';
-
 /**
- * Part 19 §19.11.2 — `en.json` is imported statically (it is the fallback and
- * must always be present); `hi.json` is imported on demand and cached in a
- * module-level map, so switching to Hindi costs one small chunk, not a reload.
+ * Part 19 §19.11.2 — the shell catalogue (`locales/en.json`) is imported
+ * statically, through `src/i18n/catalogues/shell`: it is the fallback and must
+ * always be present. Everything else a screen renders arrives with that
+ * screen's chunk (W4-P, see `src/i18n/catalogueRegistry.ts`), and every Hindi
+ * half — the shell's included — is fetched on demand, so switching to Hindi
+ * costs one small chunk per catalogue in use, not a reload.
  *
- * The cache is read during RENDER and the effect only bumps a counter once the
- * chunk has landed: calling `setState` synchronously inside an effect is a
- * cascading render, and `react-hooks/set-state-in-effect` fails it.
+ * The map returned is the registry's LIVE map for the locale: a catalogue that
+ * registers later writes into it, so a screen whose chunk has just loaded finds
+ * its words without this provider re-rendering first. The subscription is for
+ * the other case — a Hindi half landing, which replaces the map so the text
+ * already on screen re-renders.
  */
-type Messages = Record<string, string>;
-
-const CACHE = new Map<Locale, Messages>([['en', en as Messages]]);
-
 export const useMessages = (locale: Locale): Messages => {
-  const [, setLoadedCount] = useState(0);
+  const version = useSyncExternalStore(subscribeCatalogues, catalogueVersion, catalogueVersion);
 
   useEffect(() => {
-    if (CACHE.has(locale)) return undefined;
-    let cancelled = false;
-    void import('locales/hi.json').then((module) => {
-      CACHE.set(locale, module.default as Messages);
-      if (!cancelled) setLoadedCount((count) => count + 1);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [locale]);
+    ensureLocaleLoaded(locale);
+  }, [locale, version]);
 
-  // Until the chunk lands, English is rendered — which is the documented
-  // fallback, not a blank screen.
-  return CACHE.get(locale) ?? (en as Messages);
+  // Until a Hindi half lands its English strings stand in — the documented
+  // fallback, never a blank screen or a raw id.
+  return liveMessages(locale);
 };

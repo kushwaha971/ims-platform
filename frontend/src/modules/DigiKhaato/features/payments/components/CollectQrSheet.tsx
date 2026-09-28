@@ -26,6 +26,13 @@ import {
 } from '../redux/paymentFormSlice';
 import { fetchCollectQr } from '../redux/paymentThunk';
 
+// The words this screen renders arrive with its chunk (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/paymentActions';
+import 'src/i18n/catalogues/payments';
+
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+
 /** PAY-03 §10 — the NPCI P2P cap is a caption, not a refusal (EC-2). */
 const UPI_P2P_CAP = '100000.00';
 

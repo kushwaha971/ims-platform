@@ -8,6 +8,11 @@ import { formatInr } from 'src/utils/money';
 
 import type { SalesDocumentEnvelope } from '../types/sales.types';
 
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/money';
+import 'src/i18n/catalogues/sales';
+
 /**
  * SAL-02 §8 — the success sheet, the only modal after issue: the number, the
  * ledger effect ("₹1,772 added to Ramesh's khata", in the receivable tone) or

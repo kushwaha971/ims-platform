@@ -1,6 +1,6 @@
 import { createIntl } from 'react-intl';
 
-import en from 'locales/en.json';
+import { en } from 'src/tests/allMessages';
 
 import {
   REMINDER_TABS,

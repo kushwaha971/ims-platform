@@ -1,0 +1,15 @@
+{
+  "inventory.movement.type.adjust_in": "स्टॉक जोड़ा",
+  "inventory.movement.type.adjust_out": "स्टॉक घटाया",
+  "inventory.movement.type.opening": "शुरुआती स्टॉक",
+  "inventory.movement.type.purchase_in": "खरीद",
+  "inventory.movement.type.purchase_return_out": "खरीद वापसी",
+  "inventory.movement.type.reversal": "उलटी एंट्री",
+  "inventory.movement.type.sale_out": "बिक्री",
+  "inventory.movement.type.sale_return_in": "बिक्री वापसी",
+  "inventory.movement.type.stocktake_in": "स्टॉक गिनती, जोड़ा",
+  "inventory.movement.type.stocktake_out": "स्टॉक गिनती, घटाया",
+  "inventory.movement.type.transfer_in": "ट्रांसफ़र आया",
+  "inventory.movement.type.transfer_out": "ट्रांसफ़र गया",
+  "inventory.movement.type.unknown": "हलचल"
+}

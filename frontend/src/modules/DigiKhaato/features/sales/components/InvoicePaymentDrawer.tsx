@@ -12,6 +12,12 @@ import { formatInr, sumMoney } from 'src/utils/money';
 import { PaymentMethodField } from '../../ledger/components/PaymentMethodField';
 import { fullCashPayment, type PaymentRowForm } from '../view-model/invoiceForm';
 
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/ledger';
+import 'src/i18n/catalogues/money';
+import 'src/i18n/catalogues/sales';
+
 /**
  * SAL-07 FR-3 — the walk-in payment sheet: defaults to the full amount in
  * cash, lets the merchant split it (₹700 UPI + ₹300 cash), and cannot be

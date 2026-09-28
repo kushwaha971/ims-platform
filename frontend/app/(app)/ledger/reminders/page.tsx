@@ -6,6 +6,11 @@ import { UbPageSkeleton } from 'src/design-system';
 
 import { RemindersPageContent } from 'modules/DigiKhaato/features/reminders/components/RemindersPageContent';
 
+// The words this screen renders arrive with its chunk (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/ledger';
+import 'src/i18n/catalogues/reminders';
+import 'src/i18n/catalogues/share';
+
 /**
  * LED-05/06/07 — `/ledger/reminders`.
  *

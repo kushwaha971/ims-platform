@@ -28,6 +28,8 @@ import { voidConsequences } from '../view-model/voidConsequences';
 
 import type { SalesDocument } from '../types/sales.types';
 import type { UnallocatedPayment } from '../types/salesFlows.types';
+import 'src/i18n/catalogues/sales';
+import 'src/i18n/catalogues/validation';
 
 const ICONS = { stock: Package, ledger: BookOpen, payment: Wallet } as const;
 

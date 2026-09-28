@@ -5,6 +5,14 @@ import { UbAppShell } from 'src/components/layout/UbAppShell';
 
 import { RequireSession } from 'modules/DigiKhaato/features/auth/components/RequireSession';
 
+// The inbox, the business switcher and the plan dialog are the signed-in
+// shell's own words: every `(app)` screen needs them and /login needs none of
+// them, so they load here rather than in the shell catalogue
+// (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/notifications';
+import 'src/i18n/catalogues/plan';
+import 'src/i18n/catalogues/tenant';
+
 /**
  * Part 19 §19.6.1 — the app shell plus one guard, and one thing that paints
  * nothing.

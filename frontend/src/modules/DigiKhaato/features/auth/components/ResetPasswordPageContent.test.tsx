@@ -2,9 +2,8 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { store } from 'src/redux/store';
+import { en } from 'src/tests/allMessages';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
-
-import en from 'locales/en.json';
 
 import { resetAuth } from '../redux/authSlice';
 

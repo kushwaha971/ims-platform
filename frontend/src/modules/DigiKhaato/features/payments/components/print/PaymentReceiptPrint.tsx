@@ -13,6 +13,11 @@ import { hasAdvance, modeLabelIds } from '../../view-model/paymentDisplay';
 
 import type { Payment } from '../../types/payment.types';
 
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/money';
+import 'src/i18n/catalogues/payments';
+
 /**
  * PAY-04 §7 `ReceiptPrintA5` — the paper a customer leaves the counter with.
  *

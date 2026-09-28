@@ -4,10 +4,9 @@ import userEvent from '@testing-library/user-event';
 import type { UbGridTier } from 'src/design-system/UbDataGrid';
 import { sessionLoaded } from 'src/redux/slice/sessionSlice';
 import { store } from 'src/redux/store';
+import { hi } from 'src/tests/allMessages';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
 import type { PermissionCode } from 'src/types/domain.types';
-
-import hi from 'locales/hi.json';
 
 import { resetInvitations } from '../redux/invitationSlice';
 import { resetMembers } from '../redux/memberSlice';

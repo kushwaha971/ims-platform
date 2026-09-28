@@ -2,18 +2,15 @@
 
 import { memo, useCallback, useMemo, useState } from 'react';
 
-import {
-  UbButton,
-  UbCombobox,
-  UbDialog,
-  UbStack,
-  UbStatusBanner,
-  UbText,
-} from 'src/design-system';
+import { UbButton, UbCombobox, UbDialog, UbStack, UbStatusBanner, UbText } from 'src/design-system';
 import type { TranslateFn } from 'src/hooks/useTranslation';
 import type { ApiErrorShape } from 'src/types/api.types';
 
 import type { PartyTagWithCount } from '../types/party.types';
+
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/parties';
 
 /**
  * PTY-05 FR-10 — fold one tag into another.

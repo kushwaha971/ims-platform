@@ -1,11 +1,9 @@
 import { AxiosError, AxiosHeaders } from 'axios';
 
+import { en, hi } from 'src/tests/allMessages';
 import { shouldToast, toApiError } from 'src/utils/apiError';
 import { snakeToCamelPath } from 'src/utils/caseMapper';
 import { REGEX } from 'src/utils/regexConstants';
-
-import en from 'locales/en.json';
-import hi from 'locales/hi.json';
 
 import { GST_STATE_CODES } from 'modules/DigiKhaato/features/onboarding/constants/gstStates';
 import { PLAN_LIMIT_KEYS } from 'modules/DigiKhaato/features/plan/types/plan.types';

@@ -1,5 +1,4 @@
-import en from 'locales/en.json';
-import hi from 'locales/hi.json';
+import { en, hi } from 'src/tests/allMessages';
 
 /**
  * UAT D8 — copy that promised features the product does not have, or described

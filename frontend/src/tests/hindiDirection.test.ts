@@ -1,5 +1,4 @@
-import en from 'locales/en.json';
-import hi from 'locales/hi.json';
+import { en, hi } from 'src/tests/allMessages';
 
 /**
  * UAT D1 (High/P1) — Hindi flipped the direction of money.

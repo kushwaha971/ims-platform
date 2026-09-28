@@ -1,38 +1,21 @@
 'use client';
 
-import { useMemo, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
-import { IntlProvider, useIntl } from 'react-intl';
-
-import { useAppSelector } from 'src/hooks/useAppStore';
-import { selectLocale } from 'src/redux/slice/localeSlice';
-
-import { DATA_MESSAGES } from '../i18n/dataMessages';
+import 'src/i18n/catalogues/data';
 
 /**
- * PLT-10 — lays the "Your data" page's own words (both languages) over the
- * shell catalogue, for `/settings/data` only. Same locale and error handling as
- * the shell's provider; see `dataMessages.ts` for why these strings are not in
- * `locales/*.json`.
+ * PLT-10 — the "Your data" page's own words (both languages) load with
+ * `/settings/data` only.
+ *
+ * This used to lay a second `IntlProvider` over the shell's; since W4-P the
+ * import above registers `locales/catalogues/data.{en,hi}.json` into the
+ * shell's live message map when this chunk loads, the same mechanism every
+ * feature's catalogue uses (`src/i18n/catalogueRegistry.ts`). The component
+ * stays as the page's one obvious "these words load here" line.
  */
 export function AccountDataIntlProvider({
   children,
 }: Readonly<{ children: ReactNode }>): React.JSX.Element {
-  const intl = useIntl();
-  const locale = useAppSelector(selectLocale);
-  // The shell's catalogue is plain ICU strings (`useMessages`), never pre-parsed ASTs.
-  const messages = useMemo<Record<string, string>>(
-    () => ({ ...(intl.messages as Record<string, string>), ...DATA_MESSAGES[locale] }),
-    [intl.messages, locale]
-  );
-  return (
-    <IntlProvider
-      locale={intl.locale}
-      defaultLocale={intl.defaultLocale}
-      messages={messages}
-      onError={intl.onError}
-    >
-      {children}
-    </IntlProvider>
-  );
+  return <>{children}</>;
 }

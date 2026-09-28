@@ -5,6 +5,8 @@ import { Suspense } from 'react';
 import { UbPageSkeleton } from 'src/design-system';
 
 import { SalesFlowListPageContent } from 'modules/DigiKhaato/features/sales/components/SalesFlowListPageContent';
+import 'src/i18n/catalogues/money';
+import 'src/i18n/catalogues/sales';
 
 /** SAL-01 FR-10 — `/sales/estimates`. Suspense because the tab and dates live in the URL. */
 export default function EstimatesPage(): React.JSX.Element {

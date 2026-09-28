@@ -22,6 +22,10 @@ import { toTenantPatch } from '../view-model/adminDisplay';
 
 import type { AdminPlan, AdminTenantDetail, AdminTenantPatch } from '../types/admin.types';
 
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/validation';
+
 /**
  * PLT-14 FR-3 — plan, suspension and the two limit overrides DEC-001 left
  * enforceable (`max_users`, `storage_mb`), with a reason. Only what CHANGED is

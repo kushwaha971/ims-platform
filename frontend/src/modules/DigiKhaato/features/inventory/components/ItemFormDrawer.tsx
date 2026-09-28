@@ -37,6 +37,14 @@ import { looksLikeBarcode, skuPrefix } from '../view-model/itemDisplay';
 import type { UseItemFormResult } from '../hooks/useItemForm';
 import type { HsnCode, ItemFormValues } from '../types/item.types';
 
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/inventory';
+import 'src/i18n/catalogues/items';
+import 'src/i18n/catalogues/movement';
+import 'src/i18n/catalogues/stock';
+import 'src/i18n/catalogues/validation';
+
 /**
  * INV-01 — create and edit an item, in a drawer (`dynamic()` from the pages
  * that open it: react-hook-form, Yup and a dozen controls belong in the chunk

@@ -7,9 +7,8 @@ import { Provider } from 'react-redux';
 import { formattingLocale } from 'src/i18n/formattingLocale';
 import { localeChanged } from 'src/redux/slice/localeSlice';
 import { store } from 'src/redux/store';
+import { ALL_MESSAGES } from 'src/tests/allMessages';
 import type { Locale } from 'src/types/domain.types';
-
-import en from 'locales/en.json';
 
 /**
  * R-T-3 — component tests render through the real providers, so a test that
@@ -47,7 +46,13 @@ export const renderWithProviders = (
            with each other and both disagreed with the intent. */
         locale={formattingLocale(locale)}
         defaultLocale="en"
-        messages={messages ?? (en as Record<string, string>)}
+        /* Every catalogue at once (W4-P). The product loads each screen's
+           words with its chunk; whether every screen loads the ones it renders
+           is proved over the import graph by `scripts/check-locales.mjs`, so a
+           test does not have to know which screen loads what. A key that is in
+           NO catalogue still renders raw here, and the assertion on its text
+           fails — the loud part is kept. */
+        messages={messages ?? ALL_MESSAGES[locale]}
       >
         {children}
       </IntlProvider>

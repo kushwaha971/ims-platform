@@ -3,9 +3,8 @@ import userEvent from '@testing-library/user-event';
 
 import { sessionLoaded } from 'src/redux/slice/sessionSlice';
 import { store } from 'src/redux/store';
+import { hi } from 'src/tests/allMessages';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
-
-import hi from 'locales/hi.json';
 
 import { resetLedgerEntries } from '../redux/ledgerEntrySlice';
 import { resetLedgerForm } from '../redux/ledgerFormSlice';

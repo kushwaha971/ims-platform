@@ -6,6 +6,9 @@ import { UbPageSkeleton } from 'src/design-system';
 
 import { AcceptInvitePageContent } from 'modules/DigiKhaato/features/team/components/AcceptInvitePageContent';
 
+// The words this screen renders arrive with its chunk (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/team';
+
 /**
  * PLT-05 FR-10 — where an invitation link lands.
  *

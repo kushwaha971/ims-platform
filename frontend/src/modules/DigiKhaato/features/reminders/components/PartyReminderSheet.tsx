@@ -27,6 +27,11 @@ import { channelLabelId } from '../view-model/reminderDisplay';
 
 import type { SendManualReminderArg } from '../types/reminder.types';
 
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/reminders';
+import 'src/i18n/catalogues/share';
+
 /**
  * LED-06 — the reminder sheet, with the SERVER's words in it.
  *

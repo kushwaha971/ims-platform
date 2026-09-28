@@ -13,6 +13,11 @@ import { deviceTitle } from '../view-model/deviceDisplay';
 
 import type { UseDevicesResult } from '../hooks/useDevices';
 
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/sessions';
+import 'src/i18n/catalogues/validation';
+
 /**
  * PLT-09 FR-7 — naming a device. `dynamic()`-loaded by the page: the form,
  * its resolver and the schema belong in the chunk that OPENS them, not in the

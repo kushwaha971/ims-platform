@@ -2,21 +2,19 @@
 
 import { forwardRef, memo, useCallback, useState } from 'react';
 
-import { Check, ChevronDown, Plus } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 
-import {
-  MLCommand,
-  MLCommandEmpty,
-  MLCommandGroup,
-  MLCommandInput,
-  MLCommandItem,
-  MLCommandList,
-  MLPopover,
-  MLPopoverContent,
-  MLPopoverTrigger,
-} from 'src/design-system/primitives';
+import { MLPopover, MLPopoverContent, MLPopoverTrigger } from 'src/design-system/primitives';
+import { deferredModule, useDeferredModule } from 'src/design-system/primitives/deferredModule';
 import type { UbSelectOption } from 'src/design-system/UbSelect/UbSelect';
 import { cn } from 'src/utils/cn';
+
+/**
+ * W4-P — the search list (cmdk) is fetched after first paint, not in it: a
+ * screen paints the trigger, and the list appears only when somebody opens it.
+ * See `primitives/deferredModule.ts` for why this is not `React.lazy`.
+ */
+const panelModule = deferredModule(() => import('./UbComboboxPanel'));
 
 /**
  * A single choice from a list long enough to need searching.
@@ -93,6 +91,7 @@ const UbComboboxInner = forwardRef<HTMLButtonElement, UbComboboxProps>(function 
   const exact = options.some((option) => option.label.toLowerCase() === typed.toLowerCase());
   const showCreate = Boolean(onCreate && createLabel && typed && !exact);
   const selected = options.find((option) => option.value === value);
+  const panel = useDeferredModule(panelModule, open);
 
   const handleSelect = useCallback(
     (next: string) => {
@@ -178,53 +177,28 @@ const UbComboboxInner = forwardRef<HTMLButtonElement, UbComboboxProps>(function 
         // than the field it belongs to — the same rule `UbSelect` follows.
         className="w-[var(--radix-popover-trigger-width)] border-border-subtle bg-surface-card p-0"
       >
-        <MLCommand>
-          <MLCommandInput
-            value={search}
-            onValueChange={setSearch}
-            placeholder={searchPlaceholder}
-            className="ds-body-base-regular h-10"
+        {panel ? (
+          <panel.UbComboboxPanel
+            value={value}
+            options={options}
+            search={search}
+            onSearchChange={setSearch}
+            searchPlaceholder={searchPlaceholder}
+            emptyLabel={emptyLabel}
+            onSelect={handleSelect}
+            showCreate={showCreate}
+            typed={typed}
+            createLabel={createLabel}
+            onCreate={() => {
+              onCreate?.(typed);
+              setSearch('');
+              setOpen(false);
+            }}
           />
-          <MLCommandList className="max-h-[min(18rem,55dvh)]">
-            <MLCommandEmpty className="ds-body-sm px-3 py-6 text-center text-text-tertiary">
-              {emptyLabel}
-            </MLCommandEmpty>
-            <MLCommandGroup>
-              {options.map((option) => (
-                <MLCommandItem
-                  key={option.value}
-                  value={option.label}
-                  disabled={option.disabled}
-                  onSelect={() => handleSelect(option.value)}
-                  className="ds-body gap-2"
-                >
-                  <Check
-                    aria-hidden
-                    className={cn(
-                      'h-4 w-4 shrink-0 text-accent',
-                      option.value === value ? 'opacity-100' : 'opacity-0'
-                    )}
-                  />
-                  <span className="truncate">{option.label}</span>
-                </MLCommandItem>
-              ))}
-              {showCreate && (
-                <MLCommandItem
-                  value={`__create__ ${typed}`}
-                  onSelect={() => {
-                    onCreate?.(typed);
-                    setSearch('');
-                    setOpen(false);
-                  }}
-                  className="ds-body gap-2 text-accent"
-                >
-                  <Plus aria-hidden className="h-4 w-4 shrink-0" />
-                  <span className="truncate">{createLabel?.(typed)}</span>
-                </MLCommandItem>
-              )}
-            </MLCommandGroup>
-          </MLCommandList>
-        </MLCommand>
+        ) : (
+          // The open that beat the chunk: a row the height of the search box.
+          <div aria-busy="true" className="h-10" />
+        )}
       </MLPopoverContent>
     </MLPopover>
   );
