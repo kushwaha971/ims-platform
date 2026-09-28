@@ -1,5 +1,7 @@
-import en from 'locales/catalogues/reports.en.json';
-import hi from 'locales/catalogues/reports.hi.json';
+import reportsEn from 'locales/catalogues/reports.en.json';
+import reportsHi from 'locales/catalogues/reports.hi.json';
+import taxEn from 'locales/catalogues/taxReports.en.json';
+import taxHi from 'locales/catalogues/taxReports.hi.json';
 
 import {
   ITC_FILTERS,
@@ -10,7 +12,8 @@ import {
 } from '../constants/taxReportConstants';
 
 /**
- * The three tax reports' words live in the `reports` catalogue now (they were
+ * The three tax reports' words live in the `taxReports` catalogue now, with
+ * the few they share with the other reports in `reports` (they were
  * a route-local TypeScript catalogue behind `TaxReportsIntlProvider` until the
  * W4-P catalogue split made that mechanism general). `check-locales.mjs`
  * already keeps en/hi in step and proves each screen loads its catalogue; what
@@ -18,8 +21,8 @@ import {
  * an exception code, a GSTR-3B box), because a missing one renders its raw id
  * — the statement's `ledger.entry.type.manual_got` defect. That is this file.
  */
-const EN = en as Record<string, string>;
-const HI = hi as Record<string, string>;
+const EN: Record<string, string> = { ...reportsEn, ...taxEn };
+const HI: Record<string, string> = { ...reportsHi, ...taxHi };
 
 it('has the same keys in English and Hindi, none empty', () => {
   expect(Object.keys(HI).sort()).toEqual(Object.keys(EN).sort());

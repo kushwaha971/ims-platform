@@ -72,6 +72,8 @@ import shareEn from 'locales/catalogues/share.en.json';
 import shareHi from 'locales/catalogues/share.hi.json';
 import stockEn from 'locales/catalogues/stock.en.json';
 import stockHi from 'locales/catalogues/stock.hi.json';
+import taxReportsEn from 'locales/catalogues/taxReports.en.json';
+import taxReportsHi from 'locales/catalogues/taxReports.hi.json';
 import teamEn from 'locales/catalogues/team.en.json';
 import teamHi from 'locales/catalogues/team.hi.json';
 import tenantEn from 'locales/catalogues/tenant.en.json';
@@ -129,6 +131,7 @@ export const en: Readonly<Record<string, string>> = {
   ...settingsGateEn,
   ...shareEn,
   ...stockEn,
+  ...taxReportsEn,
   ...teamEn,
   ...tenantEn,
   ...validationEn,
@@ -171,6 +174,7 @@ export const hi: Readonly<Record<string, string>> = {
   ...settingsGateHi,
   ...shareHi,
   ...stockHi,
+  ...taxReportsHi,
   ...teamHi,
   ...tenantHi,
   ...validationHi,

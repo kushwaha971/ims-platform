@@ -7,6 +7,7 @@ import { UbPageSkeleton } from 'src/design-system';
 import { PurchaseRegisterPageContent } from 'modules/DigiKhaato/features/reports/components/PurchaseRegisterPageContent';
 import 'src/i18n/catalogues/exports';
 import 'src/i18n/catalogues/reports';
+import 'src/i18n/catalogues/taxReports';
 
 /** RPT-04 — `/reports/purchase-register`; the filters live in the URL, hence the Suspense. */
 export default function PurchaseRegisterPage(): React.JSX.Element {
