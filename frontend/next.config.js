@@ -60,6 +60,22 @@ const nextConfig = {
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           // camera=(self) because the invoice/entry photo capture uses it.
           { key: 'Permissions-Policy', value: 'camera=(self), geolocation=(), microphone=()' },
+          { key: 'X-Frame-Options', value: 'DENY' },
+        ],
+      },
+      /**
+       * Part 27 §27.12 / Sprint 12 — the customer's share page. The token in
+       * the path IS the credential: never indexed, never cached, never sent
+       * onward in a Referer. Listed after the catch-all so its Referrer-Policy
+       * overrides the one above (Next: the last matching key wins). nginx sets
+       * the same on /d/ in production; this covers every other topology.
+       */
+      {
+        source: '/d/:token*',
+        headers: [
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
+          { key: 'Cache-Control', value: 'private, no-store' },
         ],
       },
     ];

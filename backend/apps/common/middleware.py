@@ -16,6 +16,33 @@ _REQUEST_ID_RE = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
 access_logger = logging.getLogger("ub.access")
 
 
+#: Part 27 §27.6.4 — an API response is JSON and must never be rendered as a
+#: page: nothing on it may load, run or frame anything, whatever a browser is
+#: tricked into doing with it. The Next.js pages get their CSP from nginx.
+API_CONTENT_SECURITY_POLICY = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
+
+
+class ApiSecurityHeadersMiddleware:
+    """A CSP on every `/api/` response (Django 5 has no CSP of its own).
+
+    `SecurityMiddleware` already sends `nosniff`, the referrer policy and, in
+    production, HSTS; `XFrameOptionsMiddleware` sends `DENY`. A view that set its
+    own CSP (the public share route) keeps it.
+    """
+
+    def __init__(self, get_response: Callable) -> None:
+        from django.conf import settings
+
+        self.get_response = get_response
+        self.prefix = str(getattr(settings, "UB_API_BASE_PATH", "/api/v1")).rstrip("/") + "/"
+
+    def __call__(self, request: Any) -> Any:
+        response = self.get_response(request)
+        if request.path.startswith(self.prefix) and "Content-Security-Policy" not in response:
+            response["Content-Security-Policy"] = API_CONTENT_SECURITY_POLICY
+        return response
+
+
 class RequestIdMiddleware:
     """Accept or mint `X-Request-Id`, bind it, and echo it on every response.
 

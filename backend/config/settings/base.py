@@ -67,6 +67,9 @@ AUTH_USER_MODEL = "platform.User"
 MIDDLEWARE = [
     "apps.common.middleware.RequestIdMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    # Sprint 12 — a `default-src 'none'` CSP on every /api/ response (Part 27
+    # §27.6.4). Beside SecurityMiddleware, whose headers it complements.
+    "apps.common.middleware.ApiSecurityHeadersMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
