@@ -315,7 +315,10 @@ export function UbLineItemsEditor<TForm extends FieldValues, TName extends Array
       {layout === 'table' ? (
         /* Scrolls sideways rather than clipping when the columns' minimum
            widths exceed the space — a clipped last column hides the remove
-           button, which is how the first look at INV-06 found it. */
+           button, which is how the first look at INV-06 found it. That is the
+           last resort: callers size their tracks to fit (QA S-D5), and the
+           gap is 0.5rem so six tracks and the remove button fit a bill editor
+           at 1280. */
         <div
           role="table"
           aria-rowcount={fields.length + 1}
@@ -323,7 +326,7 @@ export function UbLineItemsEditor<TForm extends FieldValues, TName extends Array
         >
           <div
             role="row"
-            className="ds-body-s-medium grid items-center gap-3 border-b border-border-hairline bg-surface-sunken px-3 py-2 text-text-tertiary"
+            className="ds-body-s-medium grid items-center gap-2 border-b border-border-hairline bg-surface-sunken px-3 py-2 text-text-tertiary"
             style={{ gridTemplateColumns: template }}
           >
             {columns.map((column) => (
@@ -354,7 +357,7 @@ export function UbLineItemsEditor<TForm extends FieldValues, TName extends Array
                 lineInvalid?.(index) && 'bg-formError-dim'
               )}
             >
-              <div className="grid items-start gap-3" style={{ gridTemplateColumns: template }}>
+              <div className="grid items-start gap-2" style={{ gridTemplateColumns: template }}>
                 {columns.map((column) => (
                   <div
                     key={column.id}

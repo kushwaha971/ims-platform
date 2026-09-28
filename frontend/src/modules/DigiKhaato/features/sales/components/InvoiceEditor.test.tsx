@@ -122,6 +122,32 @@ describe('the bill editor', () => {
   });
 });
 
+describe('the line table at a 1280 desktop (QA S-D5)', () => {
+  it("fits every column's minimum in the editor column, so Total is never clipped", async () => {
+    // S-D5: the tracks' minimums summed to 52rem against 43.5rem (696 px) of
+    // editor column at 1280, so the last "Total" column was cut off in en and hi.
+    const original = window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      ...original(query),
+      matches: /min-width/.test(query),
+    })) as typeof window.matchMedia;
+    signIn(['sales.invoice.read', 'sales.invoice.write']);
+    renderWithProviders(<InvoiceEditorPageContent documentId={null} />);
+    await screen.findByTestId('invoice-issue');
+    window.matchMedia = original;
+    const header = screen.getAllByRole('columnheader')[0].parentElement as HTMLElement;
+    const tracks = header.style.gridTemplateColumns.match(/minmax\([^)]*\)|[\d.]+rem/g) ?? [];
+    const rem = (track: string): number => Number(/([\d.]+)rem/.exec(track)?.[1] ?? 0);
+    const gaps = (tracks.length - 1) * 0.5;
+    const padding = 1.5;
+    expect(header).toHaveClass('gap-2'); // the 0.5rem gap counted below
+    expect(tracks.length).toBe(7); // item, qty, rate, disc, GST, total, remove
+    expect(tracks.reduce((sum, track) => sum + rem(track), 0) + gaps + padding).toBeLessThanOrEqual(
+      43.5
+    );
+  });
+});
+
 describe('the place of supply for a picked party (QA S-D1)', () => {
   it("previews IGST for a party in another state, not the shop's CGST + SGST", async () => {
     // S-D1: an empty place of supply was previewed as the SHOP's state, so a

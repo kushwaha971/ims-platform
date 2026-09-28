@@ -90,6 +90,11 @@ function ItemCell({
  * requirement in INV-06): item, qty, rate with Incl./Excl. GST, discount, GST
  * code, and the computed taxable value and line total from the preview. Enter
  * moves cell to cell, Alt+N adds a line, Ctrl+Enter issues; a phone gets cards.
+ *
+ * The tracks' minimums add up to what the editor column has at a 1280 desktop
+ * (696 px: 36.5rem of tracks + six 0.5rem gaps + the 2.5rem remove button +
+ * the row's padding) — above them the table clipped its Total column (QA S-D5).
+ * A test sums them; widen one only by narrowing another.
  */
 export function InvoiceLinesSection({
   form,
@@ -138,7 +143,7 @@ export function InvoiceLinesSection({
         id: 'item',
         header: t('sales.line.item'),
         field: 'itemId',
-        track: 'minmax(11rem,2.6fr)',
+        track: 'minmax(9rem,2.6fr)',
         card: 'title',
         render: ({ index, id, label, invalid }) => (
           <ItemCell
@@ -155,7 +160,7 @@ export function InvoiceLinesSection({
         id: 'qty',
         header: t('sales.line.qty'),
         field: 'qty',
-        track: 'minmax(6rem,1fr)',
+        track: 'minmax(5.25rem,1fr)',
         align: 'end',
         render: ({ field, id, label, invalid, index }) => (
           <UbQuantityInput
@@ -173,7 +178,7 @@ export function InvoiceLinesSection({
         id: 'rate',
         header: t('sales.line.rate'),
         field: 'unitPrice',
-        track: 'minmax(8rem,1.3fr)',
+        track: 'minmax(6.25rem,1.3fr)',
         align: 'end',
         render: ({ field, id, label, invalid, index }) => (
           <UbStack gap={1}>
@@ -202,7 +207,7 @@ export function InvoiceLinesSection({
         id: 'discount',
         header: t('sales.line.discountPct'),
         field: 'discountValue',
-        track: 'minmax(5.5rem,0.9fr)',
+        track: 'minmax(4.5rem,0.9fr)',
         align: 'end',
         render: ({ field, id, label, index }) => (
           <UbMoneyInput
@@ -226,7 +231,7 @@ export function InvoiceLinesSection({
               id: 'tax',
               header: t('sales.line.gst'),
               field: 'taxCode',
-              track: 'minmax(6.5rem,1fr)',
+              track: 'minmax(6rem,1fr)',
               render: ({ field, id, label }) => (
                 <UbSelect
                   id={id}
@@ -242,7 +247,7 @@ export function InvoiceLinesSection({
       {
         id: 'total',
         header: t('sales.line.total'),
-        track: 'minmax(6.5rem,1fr)',
+        track: 'minmax(5.5rem,1fr)',
         align: 'end',
         render: ({ index }) => (
           <UbStack gap={0} className="items-end">
