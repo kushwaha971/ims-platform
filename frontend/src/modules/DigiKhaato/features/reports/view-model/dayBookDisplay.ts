@@ -100,6 +100,17 @@ export const typeTone = (
 export const rowPartyName = (row: Pick<DayBookRow, 'party' | 'walkInName'>): string | null =>
   row.party?.name || row.walkInName || null;
 
+const COUNTER_TYPES = ['sale', 'credit_note', 'payment_in', 'payment_out'];
+
+/**
+ * QA R-D4 — a counter sale or receipt with no party and no name typed is a
+ * walk-in, and says so ("Walk-in") rather than "—": the receipt of a walk-in
+ * sale read "—" one row below the sale it paid for. An expense or a stock
+ * adjustment with no party keeps "—", because it has no customer at all.
+ */
+export const isWalkInRow = (row: Pick<DayBookRow, 'party' | 'walkInName' | 'type'>): boolean =>
+  !rowPartyName(row) && COUNTER_TYPES.includes(baseType(row));
+
 /** The rows grouped by business date, in the order they came (FR: mobile timeline). */
 export const groupByDate = (
   rows: readonly DayBookRow[]

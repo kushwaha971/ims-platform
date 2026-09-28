@@ -109,7 +109,9 @@ export function DashboardPageContent(): React.JSX.Element {
               {(canBill || canBuy || canRemind) && (
                 <UbStack
                   direction="row"
-                  className="gap-2 overflow-x-auto"
+                  // QA R-D4 — the chips wrap on a phone rather than scrolling
+                  // "Send reminders" half off the edge of a 390 px screen.
+                  className="flex-wrap gap-2"
                   aria-label={t('reports.dashboard.quick.label')}
                   role="group"
                 >

@@ -24,7 +24,7 @@ import { formatInr } from 'src/utils/money';
 
 import { usePartyReminder } from 'modules/DigiKhaato/features/ledger/hooks/usePartyReminder';
 
-import { activityLabelId } from '../view-model/dashboardDisplay';
+import { activityTitle } from '../view-model/dashboardDisplay';
 import { sourceHref } from '../view-model/drillThrough';
 
 import type { ActivityItem, FirstUse, LowStockRow, TopDebtor } from '../types/reports.types';
@@ -54,10 +54,7 @@ export function RecentActivityList({
       ) : (
         <UbStack as="ul" gap={0} aria-label={t('reports.dashboard.activity.title')}>
           {items.map((item, index) => {
-            const title = t(activityLabelId(item), {
-              number: item.number ?? '',
-              party: item.party?.name ?? '',
-            });
+            const title = activityTitle(item, t);
             const href = sourceHref(item.source, item.number, item.type);
             return (
               <UbStack as="li" key={item.id} gap={0}>
@@ -67,7 +64,11 @@ export function RecentActivityList({
                     className="min-w-0"
                     primary={
                       href ? (
-                        <UbLink href={href} variant="body-sm-medium" className="line-clamp-2">
+                        <UbLink
+                          href={href}
+                          variant="body-sm-medium"
+                          className="line-clamp-2 whitespace-normal break-words"
+                        >
                           {title}
                         </UbLink>
                       ) : (

@@ -1,9 +1,12 @@
+import { columnWidths } from 'src/design-system/UbDataGrid/columnModel';
 import { ROUTES } from 'src/routes';
 
+import { createDayBookColumns } from '../components/DayBookColumns';
 import { REPORT_CATALOGUE, visibleReports } from '../constants/reportCatalogue';
 
 import {
   activityLabelId,
+  activityTitle,
   isFirstUse,
   salesDelta,
   secondsSince,
@@ -15,6 +18,7 @@ import {
   dayBookFiltersFromQuery,
   dayBookQueryFromFilters,
   groupByDate,
+  isWalkInRow,
   typeLabelId,
   typesForFilters,
   typeTone,
@@ -26,6 +30,36 @@ import type { DayBookRow } from '../types/reports.types';
 
 const UNITS = { lakh: 'L', crore: 'Cr' };
 const TODAY = '2026-09-18';
+
+describe('the dashboard activity title (QA R-D3)', () => {
+  const t = (id: string, values: Record<string, string> = {}): string =>
+    ({
+      'reports.dashboard.activity.sale': `Bill ${values.number} · ${values.party}`,
+      'reports.dashboard.activity.expense': `Expense ${values.number}`,
+      'reports.dashboard.activity.manual_gave': `You gave · ${values.party}`,
+      'reports.daybook.walkIn': 'Walk-in',
+    })[id] ?? id;
+  const item = (over: Record<string, unknown>) =>
+    ({
+      id: 'a',
+      type: 'sale',
+      number: 'INV/1',
+      party: null,
+      at: '',
+      amount: '1.00',
+      source: null,
+      ...over,
+    }) as never;
+
+  it('says Walk-in for a partyless bill instead of ending in a stray " · "', () => {
+    expect(activityTitle(item({}), t)).toBe('Bill INV/1 · Walk-in');
+    expect(activityTitle(item({ party: { id: 'p', name: 'Ramesh' } }), t)).toBe(
+      'Bill INV/1 · Ramesh'
+    );
+    expect(activityTitle(item({ type: 'manual_gave' }), t)).toBe('You gave');
+    expect(activityTitle(item({ type: 'expense', number: 'EXP/1' }), t)).toBe('Expense EXP/1');
+  });
+});
 
 describe('shortInr (RPT-01 NFR — "₹1.2 L / ₹3.4 Cr above 5 digits")', () => {
   it('leaves a figure under a lakh whole, with its paise', () => {
@@ -214,6 +248,28 @@ describe('the day book view-model', () => {
     reference: '',
     createdBy: null,
     ...over,
+  });
+
+  it('QA R-D4: a partyless receipt or sale says Walk-in; a partyless expense does not', () => {
+    // The walk-in sale's receipt read "—" one row below the sale it paid for.
+    expect(isWalkInRow(row({}))).toBe(true);
+    expect(isWalkInRow(row({ type: 'sale' }))).toBe(true);
+    expect(isWalkInRow(row({ walkInName: 'Anil' }))).toBe(false);
+    expect(isWalkInRow(row({ type: 'expense' }))).toBe(false);
+  });
+
+  it('QA R-D1: at 1280 (≈1050 px of table) Time and Number have room for "16:49" and "INV/26-27/0001"', () => {
+    // Time rendered "16:…" and Number "INV/26-27/…" at 1280 with every column shown.
+    const columns = createDayBookColumns({
+      t: (id: string) => id,
+      balances: true,
+      multiDay: false,
+    });
+    const widths = columnWidths(columns).map((w) => (Number.parseFloat(w) / 100) * 1050);
+    const px = (id: string) => widths[columns.findIndex((column) => column.id === id)];
+    expect(px('time')).toBeGreaterThanOrEqual(66); // 42 px of text + 24 px padding
+    expect(px('number')).toBeGreaterThanOrEqual(130); // ~106 px of text + padding
+    expect(px('type')).toBeGreaterThanOrEqual(110); // the "Payment in" / "Credit note" badge
   });
 
   it('labels a void row by the type it voids, in a neutral tone (FR-7)', () => {

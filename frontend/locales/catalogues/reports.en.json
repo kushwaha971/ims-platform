@@ -177,6 +177,7 @@
   "reports.daybook.type.stock_adjustment": "Stock adjustment",
   "reports.daybook.type.write_off": "Write-off",
   "reports.daybook.void": "Void",
+  "reports.daybook.walkIn": "Walk-in",
   "reports.debtors.column.owes": "You will get",
   "reports.debtors.column.party": "Customer",
   "reports.debtors.description": "The five biggest balances. Open the table for everyone else.",

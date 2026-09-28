@@ -177,6 +177,7 @@
   "reports.daybook.type.stock_adjustment": "स्टॉक सुधार",
   "reports.daybook.type.write_off": "बट्टे खाते",
   "reports.daybook.void": "रद्द",
+  "reports.daybook.walkIn": "काउंटर",
   "reports.debtors.column.owes": "आपको मिलने हैं",
   "reports.debtors.column.party": "ग्राहक",
   "reports.debtors.description": "सबसे बड़े पाँच बकाया। बाकी सबके लिए तालिका खोलें।",

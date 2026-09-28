@@ -5,7 +5,13 @@ import type { TranslateFn } from 'src/hooks/useTranslation';
 import { formatBusinessDate } from 'src/utils/dates';
 import { formatInr } from 'src/utils/money';
 
-import { groupByDate, rowPartyName, typeLabelId, typeTone } from '../view-model/dayBookDisplay';
+import {
+  groupByDate,
+  isWalkInRow,
+  rowPartyName,
+  typeLabelId,
+  typeTone,
+} from '../view-model/dayBookDisplay';
 import { sourceHref } from '../view-model/drillThrough';
 
 import { describeModes, describeRow } from './DayBookColumns';
@@ -41,7 +47,8 @@ export function DayBookDayGroups({
             <UbStack as="ul" gap={0}>
               {group.rows.map((row, index) => {
                 const href = sourceHref(row.source, row.number, row.type);
-                const name = rowPartyName(row);
+                const name =
+                  rowPartyName(row) ?? (isWalkInRow(row) ? t('reports.daybook.walkIn') : null);
                 const title = [row.number, name].filter(Boolean).join(' · ') || t(typeLabelId(row));
                 const figure = row.moneyIn ?? row.moneyOut;
                 const tone = row.void

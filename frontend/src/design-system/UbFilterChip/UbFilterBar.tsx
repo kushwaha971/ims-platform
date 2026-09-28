@@ -68,6 +68,10 @@ function UbFilterBarBase({ children, trailing, end, className }: Readonly<UbFilt
     <div
       className={cn(
         'flex min-w-0 items-center gap-3 overflow-x-auto overscroll-x-contain',
+        // QA R-D1 — on a desktop the chips WRAP: a track scrolled sideways under
+        // a mouse hid the day book's last chip ("Khata") behind "Show voided",
+        // with nothing to say it was there. The phone keeps its scrolling track.
+        'lg:flex-wrap lg:gap-y-2 lg:overflow-x-visible',
         // The chips are 44px tall and their focus ring sits outside them, so
         // the track needs a little vertical room or a focused chip is clipped
         // by the scroll container it lives in.

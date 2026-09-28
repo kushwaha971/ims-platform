@@ -155,3 +155,24 @@ export const isFirstUse = (firstUse: {
   readonly hasParty: boolean;
   readonly hasDocument: boolean;
 }): boolean => !firstUse.hasParty && !firstUse.hasDocument;
+
+const COUNTER_TYPES = ['sale', 'credit_note', 'payment_in', 'payment_out'];
+
+/**
+ * FR-3 — the feed row's words. QA R-D3: a walk-in bill has no party, and
+ * "Bill {number} · {party}" rendered "Bill INV/26-27/0006 · " with a stray
+ * separator. A counter document (bill, credit note, receipt) with no party
+ * says "Walk-in", as the day book does; anything else drops the dangling " · ".
+ */
+export const activityTitle = (
+  item: ActivityItem,
+  t: (id: string, values?: Record<string, string>) => string
+): string => {
+  const base = item.type.replace(/_void$/, '');
+  const party =
+    item.party?.name || (COUNTER_TYPES.includes(base) ? t('reports.daybook.walkIn') : '');
+  return t(activityLabelId(item), { number: item.number ?? '', party })
+    .replace(/\s*·\s*$/, '')
+    .replace(/\s*·\s*·\s*/g, ' · ')
+    .trim();
+};
