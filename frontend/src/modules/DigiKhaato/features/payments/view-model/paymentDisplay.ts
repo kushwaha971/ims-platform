@@ -132,6 +132,32 @@ export const manualTotals = (
 export const exceedsDue = (row: Pick<AllocationRowForm, 'amount' | 'due'>): boolean =>
   compareMoney(clean(row.amount), clean(row.due)) > 0;
 
+/**
+ * P-D1 — "Fill ₹…" on a manual row: what the row would hold if the rest of the
+ * payment went to it, capped at the bill's due. `null` when that is no more
+ * than the row already holds (nothing left to put there).
+ */
+export const fillFor = (
+  amount: string,
+  rows: readonly Pick<AllocationRowForm, 'amount' | 'due'>[],
+  index: number
+): string | null => {
+  const row = rows[index];
+  if (!row) return null;
+  const others = sumMoney(rows.filter((_, i) => i !== index).map((r) => clean(r.amount)));
+  const rest = subtractMoney(clean(amount), others);
+  const due = clean(row.due);
+  const take = compareMoney(rest, due) > 0 ? due : rest;
+  return compareMoney(take, clean(row.amount)) > 0 ? take : null;
+};
+
+/**
+ * P-D2 — the preset bill's row when a payment starts from a document: it
+ * follows the amount (min(amount, due)) until the merchant sets it by hand.
+ */
+export const presetAllocation = (amount: string, due: string): string =>
+  compareMoney(clean(amount), clean(due)) > 0 ? clean(due) : clean(amount);
+
 /** The allocation rows the panel edits, from the open bills (and a preset bill first). */
 export const allocationRowsFor = (
   documents: readonly OpenDocument[],

@@ -5,6 +5,8 @@
   "payments.alloc.autoHint": "सबसे पुराने बिल पहले चुकाए जाते हैं",
   "payments.alloc.error": "बाकी बिल लोड नहीं हो सके।",
   "payments.alloc.exceeds": "बिलों में लगाई राशि भुगतान से ज़्यादा है",
+  "payments.alloc.fill": "₹{amount} भरें",
+  "payments.alloc.fillFor": "{number} में ₹{amount} भरें",
   "payments.alloc.heading": "बिलों के विरुद्ध",
   "payments.alloc.loading": "बाकी बिल लोड हो रहे हैं",
   "payments.alloc.max": "अधिकतम ₹{amount}",

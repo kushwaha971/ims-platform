@@ -5,6 +5,8 @@
   "payments.alloc.autoHint": "Settles the oldest bills first",
   "payments.alloc.error": "The open bills could not be loaded.",
   "payments.alloc.exceeds": "Allocations exceed the payment",
+  "payments.alloc.fill": "Fill ₹{amount}",
+  "payments.alloc.fillFor": "Fill ₹{amount} against {number}",
   "payments.alloc.heading": "Against bills",
   "payments.alloc.loading": "Loading open bills",
   "payments.alloc.max": "Max ₹{amount}",

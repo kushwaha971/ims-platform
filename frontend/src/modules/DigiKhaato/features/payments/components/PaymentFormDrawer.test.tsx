@@ -91,7 +91,10 @@ it('refuses a manual row over its bill with "Max ₹898.00" and saves nothing', 
   const row = screen.getByRole('textbox', { name: 'Amount against INV/26-27/0042' });
   await user.type(row, '950');
   await user.click(screen.getByTestId('payment-save'));
-  expect(await screen.findByText('Max ₹898.00')).toBeInTheDocument();
+  // Every row carries "Max ₹898.00" as its hint (P-D1); on the wrong row it becomes the error.
+  await waitFor(() =>
+    expect(document.getElementById('allocations.1.amount-error')).toHaveTextContent('Max ₹898.00')
+  );
   expect(service.recordPayment).not.toHaveBeenCalled();
 });
 
@@ -175,4 +178,100 @@ it('opens from a purchase bill as "Pay supplier", money out, preset to that bill
     ['b7', '1921.00'],
   ]);
   expect(await screen.findByTestId('payment-saved')).toHaveTextContent('Paid ₹1,921.00');
+});
+
+const fromInvoice: PaymentContext = {
+  direction: 'in',
+  partyId: 'p1',
+  partyName: 'Ramesh Traders',
+  documentId: 'd42',
+  documentNumber: 'INV/26-27/0042',
+  documentDue: '898.00',
+  entry: 'invoice',
+};
+
+const savedAs = (amount: string) => ({
+  payment: {
+    id: 'pay3',
+    number: 'RCT/26-27/0018',
+    direction: 'in' as const,
+    amount,
+    unallocatedAmount: '0.00',
+  } as never,
+  partyBalance: '0.00',
+  documents: [],
+});
+
+it('P-D2: a part payment from an invoice allocates what is paid, not the full due', async () => {
+  /** QA P-D2 — Record payment on a ₹898 invoice, amount changed to ₹500: the
+   *  invoice's row used to stay at ₹898, the footer said "Allocations exceed the
+   *  payment" and Save did nothing. The preset row now follows min(amount, due). */
+  const user = userEvent.setup();
+  jest.mocked(service.recordPayment).mockClear().mockResolvedValue(savedAs('500.00'));
+  renderWithProviders(<PaymentFormDrawer context={fromInvoice} onClose={jest.fn()} />);
+  await screen.findByTestId('alloc-picker');
+  const amount = screen.getByRole('textbox', { name: 'Amount' });
+  await user.clear(amount);
+  await user.type(amount, '500');
+  expect(screen.queryByText('Allocations exceed the payment')).not.toBeInTheDocument();
+  await user.click(screen.getByTestId('payment-save'));
+  await waitFor(() => expect(service.recordPayment).toHaveBeenCalledTimes(1));
+  const [sent] = jest.mocked(service.recordPayment).mock.calls[0] ?? [];
+  expect(sent?.allocations.filter((r) => r.amount).map((r) => [r.documentId, r.amount])).toEqual([
+    ['d42', '500.00'],
+  ]);
+});
+
+it('P-D2: once the merchant sets a row by hand, the amount no longer moves it', async () => {
+  /** QA P-D2 — "unless the user edited the allocation manually": a typed row is theirs. */
+  const user = userEvent.setup();
+  renderWithProviders(<PaymentFormDrawer context={fromInvoice} onClose={jest.fn()} />);
+  await screen.findByTestId('alloc-picker');
+  const row = screen.getByRole('textbox', { name: 'Amount against INV/26-27/0042' });
+  await user.clear(row);
+  await user.type(row, '300');
+  const amount = screen.getByRole('textbox', { name: 'Amount' });
+  await user.clear(amount);
+  await user.type(amount, '400');
+  expect(row).toHaveValue('300.00');
+});
+
+it('P-D1: manual rows show "Max ₹…" and a Fill that puts the rest on that bill', async () => {
+  /** QA P-D1 — with Auto off every row read ₹0.00 and nothing said what it could
+   *  take: `payments.alloc.max` existed and was never rendered. */
+  const user = userEvent.setup();
+  renderWithProviders(<PaymentFormDrawer context={context} onClose={jest.fn()} />);
+  await screen.findByTestId('alloc-picker');
+  await user.click(screen.getByRole('switch', { name: /Auto — oldest first/ }));
+  expect(screen.getAllByText('Max ₹898.00')).toHaveLength(2);
+  await user.click(screen.getByRole('button', { name: 'Fill ₹898.00 against INV/26-27/0040' }));
+  expect(screen.getByRole('textbox', { name: 'Amount against INV/26-27/0040' })).toHaveValue(
+    '898.00'
+  );
+  // ₹1,000 − ₹898 leaves ₹102 for the newer bill.
+  await user.click(screen.getByRole('button', { name: 'Fill ₹102.00 against INV/26-27/0042' }));
+  expect(screen.getByRole('textbox', { name: 'Amount against INV/26-27/0042' })).toHaveValue(
+    '102.00'
+  );
+  expect(screen.queryByRole('button', { name: /^Fill ₹/ })).not.toBeInTheDocument();
+});
+
+it('P-D6: "Fill remaining" on a split works to the amount set, not the receivable', async () => {
+  /** QA P-D6 — ₹700 typed against a ₹1,000 receivable, then "Add mode" and ₹500
+   *  on PhonePe: line 1's "Fill remaining" offered ₹500 (the receivable less ₹500)
+   *  instead of ₹200 (the ₹700 being split, less ₹500). */
+  const user = userEvent.setup();
+  renderWithProviders(<PaymentFormDrawer context={context} onClose={jest.fn()} />);
+  await screen.findByTestId('alloc-picker');
+  const first = document.querySelector<HTMLInputElement>('input[name="lines.0.amount"]');
+  if (!first) throw new Error('no first line');
+  await user.clear(first);
+  await user.type(first, '700');
+  await user.click(screen.getByRole('button', { name: 'Add mode' }));
+  const second = document.querySelector<HTMLInputElement>('input[name="lines.1.amount"]');
+  if (!second) throw new Error('no second line');
+  expect(second).toHaveValue('');
+  await user.type(second, '500');
+  await user.click(screen.getByRole('button', { name: 'Fill remaining ₹200.00' }));
+  expect(first).toHaveValue('200.00');
 });

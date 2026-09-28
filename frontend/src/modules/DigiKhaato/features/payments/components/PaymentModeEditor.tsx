@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+
 import { Plus, Trash2 } from 'lucide-react';
 import { useFieldArray, useWatch, type UseFormReturn } from 'react-hook-form';
 
@@ -15,7 +17,7 @@ import {
 } from 'src/design-system';
 import type { TranslateFn } from 'src/hooks/useTranslation';
 import { PAYMENT_MODES, type PaymentMode } from 'src/types/domain.types';
-import { formatAmount } from 'src/utils/money';
+import { compareMoney, formatAmount } from 'src/utils/money';
 
 import { PaymentMethodField } from '../../ledger/components/PaymentMethodField';
 import { MAX_MODE_LINES } from '../constants/paymentConstants';
@@ -68,8 +70,20 @@ export function PaymentModeEditor({
   const duplicate = hasDuplicateModes(lines);
   const unused = PAYMENT_MODES.find((mode) => !lines.some((line) => line.mode === mode));
 
+  /* P-D6 — splitting a payment splits the amount the merchant has set: ₹700
+     typed, then "Add mode", is ₹700 in two parts, so "Fill remaining" works to
+     ₹700 — not to the bill's original due (or the khata's receivable) it used to. */
+  const [splitTarget, setSplitTarget] = useState<string | null>(null);
+  const fillTarget = splitTarget ?? target;
+
   const addLine = () => {
-    const rest = remainingFor([...lines, { amount: '' }], lines.length, target);
+    let base = fillTarget;
+    if (fields.length === 1) {
+      const current = compareMoney(total, '0.00') > 0 ? total : null;
+      setSplitTarget(current);
+      base = current ?? target;
+    }
+    const rest = remainingFor([...lines, { amount: '' }], lines.length, base);
     append({ mode: unused ?? 'cash', upiApp: '', amount: rest ?? '', reference: '' });
   };
 
@@ -77,7 +91,7 @@ export function PaymentModeEditor({
     <UbStack gap={3} className="rounded-card border border-border-hairline bg-surface-sunken p-3">
       {fields.map((item, index) => {
         const line = lines[index];
-        const rest = remainingFor(lines, index, target);
+        const rest = remainingFor(lines, index, fillTarget);
         const placeholder = line?.mode ? REFERENCE_PLACEHOLDER[line.mode] : undefined;
         return (
           <UbStack key={item.key} gap={2} data-testid={`payment-line-${index}`}>

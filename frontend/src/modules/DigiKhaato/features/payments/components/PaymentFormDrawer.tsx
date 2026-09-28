@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useId, useMemo, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, useWatch } from 'react-hook-form';
@@ -31,7 +31,12 @@ import { ExpensePartyField } from '../../expenses/components/ExpensePartyField';
 import { LAST_MODE_KEY } from '../constants/paymentConstants';
 import { usePaymentForm } from '../hooks/usePaymentForm';
 import { usePaymentSchemas } from '../validation/paymentSchemas';
-import { allocationRowsFor, defaultAmount, linesTotal } from '../view-model/paymentDisplay';
+import {
+  allocationRowsFor,
+  defaultAmount,
+  linesTotal,
+  presetAllocation,
+} from '../view-model/paymentDisplay';
 
 import { PaymentAllocationPicker } from './PaymentAllocationPicker';
 import { PaymentModeEditor } from './PaymentModeEditor';
@@ -131,20 +136,36 @@ export function PaymentFormDrawer({
   const total = linesTotal(lines ?? []);
 
   /* The rows the manual panel edits follow the open bills the server listed,
-     with the invoice page's own bill preset to its due (FR-1). */
+     with the invoice page's own bill preset to what is being paid, capped at
+     its due (FR-1). */
+  const allocationEdited = useRef(false);
   useEffect(() => {
+    allocationEdited.current = false;
     setValue(
       'allocations',
       allocationRowsFor(
         openDocuments,
-        context.documentId
-          ? { documentId: context.documentId, amount: context.documentDue ?? total }
-          : undefined
+        context.documentId ? { documentId: context.documentId, amount: total } : undefined
       )
     );
-    // `total` deliberately excluded: re-seeding on every keystroke would erase typed rows.
+    // `total` deliberately excluded: re-seeding every row on each keystroke would
+    // erase typed rows. The effect below moves only the preset bill's row.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openDocuments, context.documentId, context.documentDue, setValue]);
+  }, [openDocuments, context.documentId, setValue]);
+
+  /* P-D2 — a part payment from an invoice (or "Pay supplier" from a bill): the
+     preset bill's row follows the amount, min(amount, due), until the merchant
+     sets a row by hand. It used to stay at the full due, so ₹500 against a ₹945
+     bill read "Allocations exceed the payment" and Save did nothing. */
+  useEffect(() => {
+    if (!context.documentId || allocationEdited.current) return;
+    const rows = form.getValues('allocations') ?? [];
+    const index = rows.findIndex((row) => row.documentId === context.documentId);
+    const row = rows[index];
+    if (!row) return;
+    const next = presetAllocation(total, row.due);
+    if (next !== row.amount) setValue(`allocations.${index}.amount`, next);
+  }, [total, context.documentId, form, setValue]);
 
   const handleSubmit = useCallback(
     async (values: PaymentFormValues) => {
@@ -304,6 +325,9 @@ export function PaymentFormDrawer({
               status={openStatus}
               t={t}
               disabled={!canWrite}
+              onEdit={() => {
+                allocationEdited.current = true;
+              }}
             />
           </UbStack>
         )}

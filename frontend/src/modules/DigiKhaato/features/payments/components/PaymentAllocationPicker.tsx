@@ -6,6 +6,7 @@ import { useWatch, type UseFormReturn } from 'react-hook-form';
 
 import {
   UbAmount,
+  UbButton,
   UbField,
   UbFieldError,
   UbMoneyInput,
@@ -19,7 +20,7 @@ import type { RequestStatus } from 'src/types/api.types';
 import { formatBusinessDate } from 'src/utils/dates';
 import { compareMoney, formatAmount, subtractMoney } from 'src/utils/money';
 
-import { fifoPreview, linesTotal, manualTotals } from '../view-model/paymentDisplay';
+import { fifoPreview, fillFor, linesTotal, manualTotals } from '../view-model/paymentDisplay';
 
 import type { OpenDocument, PaymentFormValues } from '../types/payment.types';
 
@@ -42,12 +43,16 @@ export function PaymentAllocationPicker({
   status,
   t,
   disabled,
+  onEdit,
 }: Readonly<{
   form: UseFormReturn<PaymentFormValues>;
   documents: readonly OpenDocument[];
   status: RequestStatus;
   t: TranslateFn;
   disabled?: boolean;
+  /** Told when the merchant sets a row by hand (typing or Fill), so the drawer
+   *  stops moving a preset bill's row with the amount (P-D2). */
+  onEdit?: () => void;
 }>): React.JSX.Element | null {
   const auto = useWatch({ control: form.control, name: 'autoAllocate' });
   const lines = useWatch({ control: form.control, name: 'lines' }) ?? [];
@@ -109,22 +114,15 @@ export function PaymentAllocationPicker({
             {auto ? (
               <UbAmount value={preview.allocations[doc.documentId] ?? '0.00'} size="sm" />
             ) : (
-              <UbField
-                name={`allocations.${index}.amount`}
-                label={t('payments.alloc.rowLabel', { number: doc.number })}
-                labelHidden
-                placeholder="0.00"
-                className="w-32 shrink-0"
-              >
-                {(field) => (
-                  <UbMoneyInput
-                    {...field}
-                    value={field.value as string}
-                    inputMode="decimal"
-                    disabled={disabled}
-                  />
-                )}
-              </UbField>
+              <ManualRow
+                index={index}
+                doc={doc}
+                fill={fillFor(total, rows, index)}
+                form={form}
+                t={t}
+                disabled={disabled}
+                onEdit={onEdit}
+              />
             )}
           </UbStack>
         ))}
@@ -148,6 +146,77 @@ export function PaymentAllocationPicker({
           )
         )}
       </UbStack>
+    </UbStack>
+  );
+}
+
+/**
+ * One editable row: the input with its cap underneath ("Max ₹898.00" — the
+ * bill's due, PAY-01 AC-3) and a "Fill ₹…" that puts what is still unallocated
+ * on this bill in one tap, so turning Auto off never leaves a merchant facing a
+ * column of ₹0.00 with no hint of what each row may take (P-D1).
+ */
+function ManualRow({
+  index,
+  doc,
+  fill,
+  form,
+  t,
+  disabled,
+  onEdit,
+}: Readonly<{
+  index: number;
+  doc: OpenDocument;
+  fill: string | null;
+  form: UseFormReturn<PaymentFormValues>;
+  t: TranslateFn;
+  disabled?: boolean;
+  onEdit?: () => void;
+}>): React.JSX.Element {
+  return (
+    <UbStack direction="row" align="start" className="shrink-0 gap-2">
+      {fill && (
+        <UbButton
+          variant="ghost"
+          size="sm"
+          disabled={disabled}
+          aria-label={t('payments.alloc.fillFor', {
+            amount: formatAmount(fill),
+            number: doc.number,
+          })}
+          onClick={() => {
+            onEdit?.();
+            form.setValue(`allocations.${index}.amount`, fill, {
+              shouldDirty: true,
+              shouldValidate: true,
+            });
+          }}
+        >
+          {t('payments.alloc.fill', { amount: formatAmount(fill) })}
+        </UbButton>
+      )}
+      <UbField
+        name={`allocations.${index}.amount`}
+        label={t('payments.alloc.rowLabel', { number: doc.number })}
+        labelHidden
+        placeholder="0.00"
+        hint={t('payments.alloc.max', { amount: formatAmount(doc.amountDue) })}
+        className="w-32"
+      >
+        {(field) => (
+          <UbMoneyInput
+            {...field}
+            value={field.value as string}
+            onChange={(next) => {
+              // The blur pad ("945" → "945.00") is not an edit.
+              if (next !== field.value) onEdit?.();
+              field.onChange(next);
+            }}
+            inputMode="decimal"
+            disabled={disabled}
+          />
+        )}
+      </UbField>
     </UbStack>
   );
 }
