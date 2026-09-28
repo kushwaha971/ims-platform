@@ -209,7 +209,8 @@ for (const [path, entry] of entries) {
   );
   for (const name of direct) {
     if (name === 'shell') continue;
-    if (!used.has(name)) unused.push(`imports a catalogue it never renders — ${rel(root, path)}: ${name}`);
+    if (!used.has(name))
+      unused.push(`imports a catalogue it never renders — ${rel(root, path)}: ${name}`);
     else if (!usedHere.has(name)) {
       unused.push(
         `only its dynamic() children render ${name}; importing it there keeps it out of ` +
