@@ -26,6 +26,8 @@
  *           a neighbour whose hit area overlaps it fails.
  *   clip    (Hindi, phone 360) no button / tab / chip clips its Devanagari
  *           text vertically — scrollHeight against clientHeight.
+ *   format  (every pass, en and hi) no wire ISO date and no ungrouped "₹2800"
+ *           in the page text: rows are dd/mm/yyyy, money is en-IN grouped.
  *
  * Then three flows by keyboard only — the khata entry drawer, the invoice
  * editor and the payment drawer: every Tab stop shows a focus indicator,
@@ -243,8 +245,14 @@ function domAudit({ phone, hindi }) {
       }
     }
   }
+  // i18n (TSK-CHS-I18N-09): rows print dd/mm/yyyy and money groups the
+  // Indian way in both locales — a wire ISO date or "₹2800.00" on screen is
+  // a raw value that skipped its formatter.
+  const text = document.body.innerText;
+  const isoDates = [...new Set(text.match(/\b20\d\d-\d\d-\d\d\b/g) ?? [])];
+  const ungrouped = [...new Set(text.match(/₹\s?\d{4,}(?:\.\d+)?/g) ?? [])];
   return {
-    unnamed, mains, navs, h1, skips, tables, targets, clipped,
+    unnamed, mains, navs, h1, skips, tables, targets, clipped, isoDates, ungrouped,
     overflow: document.documentElement.scrollWidth - window.innerWidth,
   };
 }
@@ -310,6 +318,7 @@ async function auditScreen(page, path, size, { app = true, hindi = false } = {})
   } else {
     c('no Devanagari clipped in buttons/tabs/chips', dom.clipped.length === 0, dom.clipped.slice(0, 5).join('; '));
   }
+  c('no raw ISO date or ungrouped ₹ amount on screen', dom.isoDates.length === 0 && dom.ungrouped.length === 0, [...dom.isoDates, ...dom.ungrouped].slice(0, 5).join('; '));
   if (bad) await page.screenshot({ path: join(OUT, `${size}${hindi ? '-hi' : ''}-${slug(path)}.png`), fullPage: true }).catch(() => {});
 }
 
