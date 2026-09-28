@@ -455,3 +455,27 @@ def test_money_position_is_one_definition_for_the_book_and_the_dashboard(tenant:
     start = _fuzzed_book(tenant, 17)["start"]
     closing = _book(tenant, date_from=start).closing
     assert money_position(tenant=tenant, before=TODAY + dt.timedelta(days=1)) == closing
+
+
+def test_a_split_receipts_cash_share_shows_no_upi_reference_uat_d6(tenant: Any) -> None:
+    """UAT D6 — the cashbook's CASH row of a split receipt read "UTR 5566", the UPI
+    share's reference, because every share fell back to the payment-level reference.
+    Each share now shows its own; a single-mode payment still falls back."""
+    from apps.reports.selectors.cash_sources import PaymentCashSource
+
+    split = b.payment(tenant, TODAY, {"cash": 1000, "upi": 772})
+    split.mode_breakup = [
+        {"mode": "cash", "amount": "1000.00"},
+        {"mode": "upi", "amount": "772.00", "reference": "5566"},
+    ]
+    split.reference = "5566"
+    split.save(update_fields=["mode_breakup", "reference"])
+    single = b.payment(tenant, TODAY, {"upi": 300})
+    single.reference = "7788"
+    single.save(update_fields=["reference"])
+
+    rows = list(PaymentCashSource().rows(tenant=tenant, date_from=TODAY, date_to=TODAY))
+    by_id = {row.source_id: row.reference for row in rows}
+    assert by_id[f"{split.id}:0"] == ""
+    assert by_id[f"{split.id}:1"] == "5566"
+    assert by_id[f"{single.id}:0"] == "7788"

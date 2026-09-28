@@ -50,7 +50,8 @@ class PaymentCashSource:
             payment_date__lte=date_to,
         ).select_related("party")
         for payment in queryset:
-            for index, part in enumerate(payment.mode_breakup or []):
+            parts = payment.mode_breakup or []
+            for index, part in enumerate(parts):
                 yield CashRow(
                     source_type="payment",
                     # One id per share, so a split payment's two rows are two
@@ -69,7 +70,14 @@ class PaymentCashSource:
                     ),
                     category=None,
                     number=payment.number,
-                    reference=part.get("reference") or payment.reference,
+                    # UAT D6 — each share shows ITS OWN reference: the payment-level
+                    # one (the UPI part's UTR on a split) only stands in for a
+                    # single-mode payment, never for the cash half of a split.
+                    reference=(
+                        part.get("reference")
+                        or (payment.reference if len(parts) == 1 else "")
+                        or ""
+                    ),
                     note=payment.note,
                 )
 
