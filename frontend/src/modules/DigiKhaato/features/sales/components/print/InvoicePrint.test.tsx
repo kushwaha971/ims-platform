@@ -122,3 +122,17 @@ it('UbQrCode paints one square per dark module inside a four-module quiet zone',
   expect(path.match(/M/g)).toHaveLength(5);
   expect(path.startsWith('M4,4h1v1h-1z')).toBe(true);
 });
+
+/**
+ * Sprint 12 a11y sweep: on screen the A4 sheet is the preview INSIDE the
+ * document page, whose h1 is the document number — the sheet's own h1 (the
+ * business name) made two page titles. And the totals block was a table of
+ * bare cells with no header at all, so a screen reader read "₹1,169.00" with
+ * nothing to say what it was the total of.
+ */
+it('has no page title of its own and names every total by a row header', () => {
+  renderWithProviders(<A4 doc={makeDocument()} />);
+  expect(screen.queryByRole('heading', { level: 1 })).toBeNull();
+  const grand = screen.getByRole('rowheader', { name: 'Grand total' });
+  expect(grand.closest('tr')).toContainElement(screen.getByTestId('print-grand-total'));
+});

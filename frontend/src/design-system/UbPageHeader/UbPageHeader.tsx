@@ -124,7 +124,10 @@ function UbPageHeaderBase({
         {(actions || primaryActions) && (
           <div
             className={cn(
-              'flex shrink-0 flex-wrap items-center gap-2',
+              // 12 px between a phone's 32 px icon actions, so each one's
+              // 44 px hit area (`.ub-hit`, 6 px of overhang a side) meets its
+              // neighbour's instead of covering it (R-A-3, Sprint 12).
+              'flex shrink-0 flex-wrap items-center gap-2 max-sm:gap-3',
               primaryActions && 'max-sm:contents'
             )}
           >

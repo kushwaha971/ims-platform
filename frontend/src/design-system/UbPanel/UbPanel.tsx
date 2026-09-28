@@ -100,7 +100,8 @@ function UbPanelSectionBase({
           type="button"
           aria-expanded={open}
           onClick={() => setOpen((value) => !value)}
-          className="group flex min-w-0 flex-1 items-center gap-2 rounded-xs text-left outline-none focus-visible:shadow-focus"
+          // An 18 px heading row; `.ub-hit` gives it a 44 px target on a phone (R-A-3).
+          className="ub-hit group flex min-w-0 flex-1 items-center gap-2 rounded-xs text-left outline-none focus-visible:shadow-focus"
         >
           {heading}
           {badge}

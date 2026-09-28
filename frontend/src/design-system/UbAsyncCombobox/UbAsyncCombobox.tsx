@@ -159,7 +159,7 @@ const UbAsyncComboboxInner = forwardRef<HTMLButtonElement, UbAsyncComboboxProps>
           onBlur={onBlur}
           onKeyDown={handleTriggerKey}
           className={cn(
-            'flex h-10 w-full items-center justify-between gap-2 rounded-control border px-3',
+            'ub-hit flex h-10 w-full items-center justify-between gap-2 rounded-control border px-3',
             'ds-body bg-surface-card text-left text-text-primary',
             'disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-text-muted',
             'focus-visible:outline-none focus-visible:ring-0',

@@ -11,6 +11,26 @@ describe('UbStatCard — the form most of a ledger dashboard takes', () => {
     expect(value.className).toContain('text-error');
   });
 
+  /**
+   * Sprint 12 a11y sweep: the danger and warning tiles painted their TEXT in the
+   * `-bright` fill steps — #E73F3F (4.05:1) and #E49614 (2.39:1) on white — so
+   * "To collect" on the dashboard and "Low or out" on items failed WCAG 1.4.3.
+   * Text takes the 4.5:1 step; only the icon may stay bright.
+   */
+  it.each([
+    ['danger', 'text-error'],
+    ['warning', 'text-warning'],
+  ] as const)(
+    'paints %s label and figure at text contrast, never in a -bright fill',
+    (tone, cls) => {
+      render(<UbStatCard label="To collect" value="₹1,807.00" tone={tone} />);
+      for (const el of [screen.getByText('To collect'), screen.getByText('₹1,807.00')]) {
+        expect(el).toHaveClass(cls);
+        expect(el.className).not.toMatch(/-bright\b/);
+      }
+    }
+  );
+
   it('paints a plain figure in the text tone, not in a semantic one', () => {
     render(<UbStatCard label="Cash in hand" value="₹8,420.00" />);
     expect(screen.getByText('₹8,420.00').className).toContain('text-text-primary');

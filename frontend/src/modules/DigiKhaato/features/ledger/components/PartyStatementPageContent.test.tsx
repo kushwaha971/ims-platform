@@ -381,7 +381,7 @@ describe('the closing tile is painted by what the balance means (UAT)', () => {
     const figure = closingTile(view);
     expect(figure).toHaveTextContent('₹0.00');
     expect(figure).toHaveClass('text-text-primary');
-    expect(figure).not.toHaveClass('text-error-bright');
+    expect(figure).not.toHaveClass('text-error');
     expect(figure).not.toHaveClass('text-success');
   });
 
@@ -389,7 +389,7 @@ describe('the closing tile is painted by what the balance means (UAT)', () => {
     renderWithProviders(<PartyStatementPageContent id={PARTY_ID} />);
     const view = await onScreen();
     await view.findByText('Cement bags');
-    expect(closingTile(view)).toHaveClass('text-error-bright');
+    expect(closingTile(view)).toHaveClass('text-error');
   });
 });
 

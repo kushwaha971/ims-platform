@@ -63,7 +63,8 @@ function UbFilterChipBase({
       aria-pressed={pressed}
       onClick={() => onToggle(!pressed)}
       className={cn(
-        'ds-body-s-regular inline-flex h-8 shrink-0 items-center gap-1.5 rounded-pill px-3',
+        // 32 px pill; `.ub-hit` makes the tap target 44 px on a phone (R-A-3).
+        'ub-hit ds-body-s-regular inline-flex h-8 shrink-0 items-center gap-1.5 rounded-pill px-3',
         'border transition-colors duration-fast ease-standard motion-reduce:transition-none',
         'outline-none focus-visible:shadow-focus',
         'disabled:cursor-not-allowed disabled:opacity-60',

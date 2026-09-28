@@ -73,7 +73,9 @@ export const MLCheckbox = forwardRef<HTMLButtonElement, MLCheckboxProps>(functio
         onCheckedChange={(next) => onCheckedChange?.(next === true)}
         disabled={disabled}
         className={cn(
-          'group grid h-4 w-4 shrink-0 place-content-center rounded-xs border',
+          // The box is 16 px; on a phone `.ub-hit` makes the tap target 44 px
+          // around it (R-A-3) — the label beside it is the rest of the row.
+          'ub-hit group grid h-4 w-4 shrink-0 place-content-center rounded-xs border',
           'border-border-subtle bg-surface-card text-text-inverse',
           'transition-colors duration-fast ease-standard',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',

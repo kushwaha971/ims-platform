@@ -102,8 +102,10 @@ const UbTextInputInner = forwardRef<HTMLInputElement, UbTextInputProps>(function
              hover:text-foreground`. This was a full `MLIconButton` pinned to
              `right-0`, so a 44px button sat flush against the field's edge and
              the glyph looked off-centre inside it. The glyph is the control
-             here; the 44px target comes from the field's own height. */
-          className="absolute inset-y-0 right-3 my-auto size-4 min-h-0 p-0 text-text-tertiary hover:bg-transparent hover:text-text-primary"
+             here. The 44px target is `.ub-hit`'s: on a phone a transparent
+             44 × 44 box centred on the glyph, inside the field's `pr-10`
+             (Sprint 12 sweep — the glyph alone was a 16 × 16 target). */
+          className="ub-hit absolute inset-y-0 right-3 my-auto size-4 min-h-0 p-0 text-text-tertiary hover:bg-transparent hover:text-text-primary"
         >
           {revealed ? (
             <EyeOff aria-hidden className="h-4 w-4" />

@@ -88,11 +88,19 @@ export function ReportsHubPageContent(): React.JSX.Element {
                   {entries.map((entry) => {
                     const Icon = ICONS[entry.icon];
                     return (
-                      <UbCard key={entry.key} padded>
+                      // The card carries a chevron and reads as one target, so it
+                      // is one: the title link's `::after` covers the card (a
+                      // stretched link). It was an 18 px line of text inside a
+                      // 90 px card that did nothing when tapped (Sprint 12, R-A-3).
+                      <UbCard key={entry.key} padded className="relative">
                         <UbStack direction="row" align="start" className="gap-3">
                           <Icon className="mt-0.5 h-5 w-5 shrink-0 text-text-accent" aria-hidden />
                           <UbStack gap={1} className="min-w-0 flex-1">
-                            <UbLink href={entry.href} variant="body-medium">
+                            <UbLink
+                              href={entry.href}
+                              variant="body-medium"
+                              className="after:absolute after:inset-0 after:rounded-card after:content-['']"
+                            >
                               {t(`reports.shell.hub.${entry.key}.title`)}
                             </UbLink>
                             <UbText variant="body-sm" tone="tertiary">

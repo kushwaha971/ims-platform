@@ -213,7 +213,15 @@ export function InvoiceDetailPageContent({
             )}
           </UbStack>
         </UbPanel>
-        <UbStack className="overflow-x-auto rounded-card border border-border-hairline bg-white print:overflow-visible print:rounded-none print:border-0">
+        {/* A region that scrolls sideways on a phone must be reachable by
+            keyboard, and named, or its right half is unreadable without a
+            pointer (axe scrollable-region-focusable, Sprint 12 sweep). */}
+        <UbStack
+          role="region"
+          aria-label={t('sales.print.preview')}
+          tabIndex={0}
+          className="overflow-x-auto rounded-card border border-border-hairline bg-white print:overflow-visible print:rounded-none print:border-0"
+        >
           <PrintSheetLazy
             doc={doc}
             upi={detail.upi}

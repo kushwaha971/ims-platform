@@ -72,6 +72,7 @@
   "payments.receipt.mode": "Mode",
   "payments.receipt.paidTo": "Paid to",
   "payments.receipt.payNext": "Pay next time via UPI",
+  "payments.receipt.preview": "Receipt preview",
   "payments.receipt.print": "Print",
   "payments.receipt.receivedFrom": "Received from",
   "payments.receipt.settled": "settled",

@@ -232,7 +232,10 @@ export function PaymentReceiptPageContent({ id }: Readonly<{ id: string }>): Rea
           />
         )}
         <UbPanel className="ub-print-hide">
-          <UbStack gap={0} className="p-4">
+          {/* 8 px between rows: the party and "against" values are links, and
+              stacked flush they were 14 px targets 16 px apart — under WCAG
+              2.5.8's 24 px spacing floor (axe target-size, Sprint 12 sweep). */}
+          <UbStack gap={2} className="p-4">
             <UbInfoRow label={t('payments.date')} value={formatBusinessDate(payment.paymentDate)} />
             {payment.party && (
               <UbInfoRow
@@ -257,7 +260,15 @@ export function PaymentReceiptPageContent({ id }: Readonly<{ id: string }>): Rea
             )}
           </UbStack>
         </UbPanel>
-        <UbStack className="overflow-x-auto rounded-card border border-border-hairline bg-white print:overflow-visible print:rounded-none print:border-0">
+        {/* A region that scrolls sideways on a phone must be reachable by
+            keyboard, and named, or its right half is unreadable without a
+            pointer (axe scrollable-region-focusable, Sprint 12 sweep). */}
+        <UbStack
+          role="region"
+          aria-label={t('payments.receipt.preview')}
+          tabIndex={0}
+          className="overflow-x-auto rounded-card border border-border-hairline bg-white print:overflow-visible print:rounded-none print:border-0"
+        >
           <ReceiptPrintLazy
             payment={payment}
             branding={receipt.branding}

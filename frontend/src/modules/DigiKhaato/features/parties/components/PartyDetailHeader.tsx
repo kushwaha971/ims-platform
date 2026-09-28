@@ -143,14 +143,16 @@ function PartyDetailHeaderBase({
         </UbBox>
 
         {mobile && (
-          <UbBox className="flex items-center gap-1">
+          // 12 px on a phone so the call link's and the copy button's 44 px hit
+          // areas (`.ub-hit`) meet instead of overlapping (R-A-3, Sprint 12).
+          <UbBox className="flex items-center gap-1 max-sm:gap-3">
             {/* A `tel:` link and not a button: on a phone this is the action the
                 merchant came for, and the platform's own handler is better than
                 anything this screen could do with the number. */}
             <UbLink
               href={`tel:${dialMobile}`}
               variant="inherit"
-              className="ds-num-base-regular inline-flex items-center gap-2"
+              className="ub-hit ds-num-base-regular inline-flex items-center gap-2"
             >
               <Phone className="h-3.5 w-3.5" aria-hidden />
               {shownMobile}

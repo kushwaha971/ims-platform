@@ -78,7 +78,9 @@ function UbSwitchBase({
         disabled={disabled}
         aria-describedby={descriptionId}
         className={cn(
-          'peer inline-flex h-[18px] w-[33px] shrink-0 items-center rounded-pill border-0',
+          // The row is the target where the switch has one (`min-h-11` label);
+          // `.ub-hit` covers a caller that tightens the row (a toolbar toggle).
+          'ub-hit peer inline-flex h-[18px] w-[33px] shrink-0 items-center rounded-pill border-0',
           'transition-colors duration-fast ease-standard',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
           'disabled:cursor-not-allowed',
