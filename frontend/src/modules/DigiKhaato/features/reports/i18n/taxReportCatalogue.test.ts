@@ -1,4 +1,5 @@
-import en from 'locales/en.json';
+import en from 'locales/catalogues/reports.en.json';
+import hi from 'locales/catalogues/reports.hi.json';
 
 import {
   ITC_FILTERS,
@@ -8,25 +9,23 @@ import {
   TAX_PERIOD_PRESETS,
 } from '../constants/taxReportConstants';
 
-import { TAX_REPORT_MESSAGES } from './taxReportMessages';
-
 /**
- * The route-local tax-report catalogue gets the guarantee `check-locales.mjs`
- * gives the shell one: every key in both languages, no empty string, no key
- * the shell also defines — and every key a screen BUILDS from data (a period,
- * a GSTR-1 nature, an exception code, a GSTR-3B box) exists, because a
- * missing one renders its raw id, which is the statement's
- * `ledger.entry.type.manual_got` defect.
+ * The three tax reports' words live in the `reports` catalogue now (they were
+ * a route-local TypeScript catalogue behind `TaxReportsIntlProvider` until the
+ * W4-P catalogue split made that mechanism general). `check-locales.mjs`
+ * already keeps en/hi in step and proves each screen loads its catalogue; what
+ * it cannot see is a key a screen BUILDS from data (a period, a GSTR-1 nature,
+ * an exception code, a GSTR-3B box), because a missing one renders its raw id
+ * — the statement's `ledger.entry.type.manual_got` defect. That is this file.
  */
-const { en: EN, hi: HI } = TAX_REPORT_MESSAGES;
+const EN = en as Record<string, string>;
+const HI = hi as Record<string, string>;
 
-it('has the same keys in English and Hindi, none empty, none in the shell', () => {
+it('has the same keys in English and Hindi, none empty', () => {
   expect(Object.keys(HI).sort()).toEqual(Object.keys(EN).sort());
-  const shell = en as Record<string, string>;
   for (const [key, value] of Object.entries(EN)) {
     expect(value.trim()).not.toBe('');
     expect(HI[key]?.trim()).not.toBe('');
-    expect(shell[key]).toBeUndefined();
   }
 });
 

@@ -20,12 +20,12 @@ import {
 } from 'src/design-system/UbDataGrid';
 import { useTranslation } from 'src/hooks/useTranslation';
 
-import { ListExportButton } from '../../imports/components/ListHeaderActions';
 import {
   ITC_FILTERS,
   REGISTER_PARTY_FILTERS,
   REGISTER_STATUS_FILTERS,
   SALES_KIND_FILTERS,
+  TAX_PERIOD_PRESETS,
 } from '../constants/taxReportConstants';
 import { useRegisterReport } from '../hooks/useRegisterReport';
 import { useReportGridLabels } from '../hooks/useReportGridLabels';
@@ -33,13 +33,14 @@ import { documentHref, isRegisterNarrowed } from '../view-model/registerDisplay'
 
 import { createRegisterColumns } from './RegisterColumns';
 import { RegisterTotals } from './RegisterTotals';
-import { TaxReportLayout } from './TaxReportLayout';
+import { ReportPageShell } from './ReportPageShell';
 
 import type {
   RegisterBook,
   RegisterFilters,
   RegisterLevel,
   RegisterRow,
+  TaxPeriodPreset,
 } from '../types/taxReports.types';
 
 /**
@@ -145,22 +146,37 @@ export function RegisterReport({ book }: Readonly<{ book: RegisterBook }>): Reac
   const levels: readonly RegisterLevel[] = ['document', 'line'];
 
   return (
-    <TaxReportLayout
+    <ReportPageShell<TaxPeriodPreset>
       title={t(`${ns}.title`)}
       testId={`${book}-register`}
-      preset={filters.preset}
-      dateFrom={filters.dateFrom}
-      dateTo={filters.dateTo}
-      today={report.today}
-      onPresetChange={report.setPreset}
-      onRangeChange={report.setRange}
-      actions={
-        <ListExportButton
-          listPath={report.exportPath}
-          permission="reports.export"
-          empty={report.data !== null && report.data.total === 0}
-        />
-      }
+      period={{
+        presets: TAX_PERIOD_PRESETS.map((value) => ({
+          value,
+          label: t(`reports.period.${value}`),
+        })),
+        preset: filters.preset,
+        onPresetChange: report.setPreset,
+        customPreset: 'custom',
+        from: filters.dateFrom,
+        to: filters.dateTo,
+        onRangeChange: report.setRange,
+        max: report.today,
+        name: `${book}-register-period`,
+        labels: {
+          presets: t('reports.period.label'),
+          from: t('reports.period.from'),
+          to: t('reports.period.to'),
+        },
+      }}
+      exportAction={{
+        path: report.exportPath,
+        empty: report.data !== null && report.data.total === 0,
+      }}
+      /* The grid draws its own loading, error and empty states (it keeps the
+         columns and the pager steady across a refetch), so the shell's body
+         is always `ready` here. */
+      state="ready"
+      loadingLabel={t('reports.grid.loading')}
       filters={
         <>
           {chips('level', levels, t('reports.register.level.label'), (v) =>
@@ -201,7 +217,7 @@ export function RegisterReport({ book }: Readonly<{ book: RegisterBook }>): Reac
           )}
         </>
       }
-      scope={
+      filterEnd={
         <UbSwitch
           checked={filters.includeVoid}
           onCheckedChange={(checked) => update({ includeVoid: checked })}
@@ -236,6 +252,6 @@ export function RegisterReport({ book }: Readonly<{ book: RegisterBook }>): Reac
         cardAvatar={false}
         allowHorizontalScroll
       />
-    </TaxReportLayout>
+    </ReportPageShell>
   );
 }

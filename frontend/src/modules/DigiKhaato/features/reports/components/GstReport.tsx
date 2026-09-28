@@ -9,7 +9,6 @@ import {
   UbButton,
   UbEmptyState,
   UbPageShell,
-  UbSkeleton,
   UbStack,
   UbStatCard,
   UbStatGrid,
@@ -22,7 +21,7 @@ import { ROUTES } from 'src/routes';
 import { formatBusinessDate } from 'src/utils/dates';
 import { absMoney, formatInr, isZeroAmount } from 'src/utils/money';
 
-import { ListExportButton } from '../../imports/components/ListHeaderActions';
+import { TAX_PERIOD_PRESETS } from '../constants/taxReportConstants';
 import { useGstSummary } from '../hooks/useGstSummary';
 import { gstDrillHref } from '../view-model/gstDisplay';
 
@@ -36,7 +35,7 @@ import {
 } from './GstColumns';
 import { Gstr3bBoxes } from './Gstr3bBoxes';
 import { GstSection, GstTable } from './GstSection';
-import { TaxReportLayout } from './TaxReportLayout';
+import { ReportPageShell, type ReportState } from './ReportPageShell';
 
 import type {
   GstB2csRow,
@@ -47,6 +46,7 @@ import type {
   GstRateRow,
   GstSummary,
   GstView,
+  TaxPeriodPreset,
 } from '../types/taxReports.types';
 
 const VIEWS: readonly GstView[] = ['gstr1', 'gstr3b', 'details'];
@@ -115,60 +115,62 @@ export function GstReport(): React.JSX.Element {
     );
   }
 
+  const isEmpty = data !== null && data.meta.documentCount === 0 && !data.inwardByRate?.rows.length;
+  const state: ReportState =
+    report.status === 'failed' && !data ? 'error' : !data ? 'loading' : isEmpty ? 'empty' : 'ready';
+
   return (
-    <TaxReportLayout
+    <ReportPageShell<TaxPeriodPreset>
       title={t('reports.gst.title')}
       testId="gst-summary"
-      preset={report.preset}
-      dateFrom={query.dateFrom}
-      dateTo={query.dateTo}
-      today={report.today}
-      onPresetChange={report.setPreset}
-      onRangeChange={report.setRange}
-      actions={
-        <ListExportButton
-          listPath={report.exportPath}
-          permission="reports.export"
-          empty={data !== null && data.meta.documentCount === 0}
-        />
-      }
-      scope={
+      period={{
+        presets: TAX_PERIOD_PRESETS.map((value) => ({
+          value,
+          label: t(`reports.period.${value}`),
+        })),
+        preset: report.preset,
+        onPresetChange: report.setPreset,
+        customPreset: 'custom',
+        from: query.dateFrom,
+        to: query.dateTo,
+        onRangeChange: report.setRange,
+        max: report.today,
+        name: 'gst-summary-period',
+        labels: {
+          presets: t('reports.period.label'),
+          from: t('reports.period.from'),
+          to: t('reports.period.to'),
+        },
+      }}
+      exportAction={{
+        path: report.exportPath,
+        empty: data !== null && data.meta.documentCount === 0,
+      }}
+      filterEnd={
         <UbSwitch
           checked={query.rounding === 'rupee'}
           onCheckedChange={(checked) => report.setRounding(checked ? 'rupee' : 'paise')}
           label={t('reports.gst.rounding.label')}
         />
       }
+      state={state}
+      error={report.error}
+      onRetry={report.refetch}
+      loadingLabel={t('reports.grid.loading')}
+      empty={
+        data
+          ? {
+              variant: 'firstUse',
+              title: t('reports.gst.empty.title'),
+              description: t('reports.gst.empty.body', {
+                from: formatBusinessDate(data.meta.dateFrom),
+                to: formatBusinessDate(data.meta.dateTo),
+              }),
+            }
+          : undefined
+      }
     >
-      {report.status === 'failed' && !data ? (
-        <UbEmptyState
-          variant="error"
-          title={t('reports.gst.error.title')}
-          description={report.error?.message ?? t('reports.gst.error.body')}
-          requestId={report.error?.requestId ?? null}
-          requestIdLabel={t('common.error.reference')}
-          action={
-            <UbButton variant="secondary" onClick={report.refetch}>
-              {t('common.action.retry')}
-            </UbButton>
-          }
-        />
-      ) : !data ? (
-        <UbStack gap={4} aria-busy="true" aria-label={t('reports.grid.loading')}>
-          <UbSkeleton className="h-24 w-full" />
-          <UbSkeleton className="h-48 w-full" />
-          <UbSkeleton className="h-48 w-full" />
-        </UbStack>
-      ) : data.meta.documentCount === 0 && !data.inwardByRate?.rows.length ? (
-        <UbEmptyState
-          variant="firstUse"
-          title={t('reports.gst.empty.title')}
-          description={t('reports.gst.empty.body', {
-            from: formatBusinessDate(data.meta.dateFrom),
-            to: formatBusinessDate(data.meta.dateTo),
-          })}
-        />
-      ) : (
+      {data && (
         <GstBody
           data={data}
           view={view}
@@ -179,7 +181,7 @@ export function GstReport(): React.JSX.Element {
           openException={openException}
         />
       )}
-    </TaxReportLayout>
+    </ReportPageShell>
   );
 }
 
