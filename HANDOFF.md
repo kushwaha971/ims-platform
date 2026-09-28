@@ -1,6 +1,6 @@
 # DigiKhaato — Handoff / Continuation Prompt
 
-Last updated: 28 Sep 2026, night (IST) — all MVP feature tracks merged (incl. PUR-02); post-merge test failures fixed; QA of Waves 2–4 + PUR-02 is next. Paste everything below the line into the next agent.
+Last updated: 28 Sep 2026, late night (IST) — all MVP features merged; final QA of Waves 2–4 done; all High/Medium defects fixed (FIX-A/FIX-B); independent retest in progress.
 
 ---
 
@@ -164,18 +164,18 @@ Serve for QA:
 
 ## 9. Exact next steps
 
-State at b3d9603:
-- Every MVP feature track is merged: Waves 1–4 plus PUR-02 supplier payments.
-- The post-merge failures are fixed:
-  - GST fixture;
-  - hub test;
-  - onboarding timeouts;
-  - PartyDetail test isolation;
-  - ReportPageShell adopted;
-  - credit-note routes.
-- Backend full suite: green, about 2,400 tests.
-- Jest: 2,294 of 2,295 passed. The one failure was a Hindi wording fix, now done.
-- check-locales: green, 3,523 keys in 40 catalogues.
+State at 9864c2a:
+- Final QA of Waves 2–4 was done by 3 QA agents, with screenshots in /tmp/e2e-shots/qa-final/.
+  - Reports passed.
+  - Sales and payments had 4 High defects: the IGST preview, the credit-note quantity cap, A5 receipt print, and part payment from a document. All 4 are fixed, along with about 20 Medium and Low items (commits after b3d9603).
+- Gates:
+  - Backend: full suite green.
+  - Jest: 2,322 tests, all green after the UbMoneyInput prefill fix (ed32180).
+  - check-locales: green.
+  - Build and `bundle:check`: green. The shared shell is 102.8 KB.
+- Open (Low): average cost shows 140.0001 instead of 140.0000 after a purchase-bill void (4-decimal drift in the inventory void path).
+- Open: PLT-14 admin console is untested; creating a super-admin needs `manage.py createsuperuser` / the `is_super_admin` flag.
+- Open: the full regression runner has not been confirmed green since the harness updates (6bc0c7c).
 
 Helper scripts:
 - After any merge touching locales: `node frontend/scripts/split-locales.mjs && python3 scripts/add-catalogue-imports.py && node frontend/scripts/check-locales.mjs`.
@@ -188,8 +188,8 @@ Helper scripts:
    - Add `apps/payments/services/targets/purchases.py` (document_type `purchase_document`, direction `out`).
    - Use `purchases.services.payment_seam` (`apply_payment`, `lock_payable_bills`, `register_void_listener`).
    - Add "Pay supplier" and "Paid now" to the bill screens.
-3. Build, run `bundle:check` and re-baseline the PROVISIONAL budgets, then serve.
-4. QA with screenshots on phone 390 and desktop 1280, English plus Hindi, for:
+3. (DONE) Build, run `bundle:check` and re-baseline the PROVISIONAL budgets, then serve.
+4. (DONE; a retest of the fixes is running) QA with screenshots on phone 390 and desktop 1280, English plus Hindi, for:
    - Wave 2: sales core, imports, data/admin.
    - Wave 3: payments, purchases, estimates, credit notes, void.
    - Wave 4: dashboard, day book, registers, GST.
