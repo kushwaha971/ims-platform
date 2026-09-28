@@ -79,7 +79,9 @@ def test_itc_totals_exclude_ineligible_bills_and_hold_rcm_apart(
         "sgst": "450.00",
         "igst": "0.00",
         "cess": "0.00",
+        "total": "900.00",
     }
+    assert totals["tax"] == "1310.00"
     assert totals["rcm_tax"] == "50.00"
     assert totals["not_claimable_tax"] == "360.00"
     assert totals["taxable_total"] == "8000.00"
@@ -101,7 +103,7 @@ def test_a_composition_buyer_claims_no_itc(owner: Any, shop: Any, supplier: Any)
     bill(shop, "PB/1", on=SEP, supplier=supplier, lines=[{"taxable": "1000.00", "rate": "18"}])
     body = _get(owner).json()
     assert body["data"][0]["itc_eligible"] == "false"
-    assert set(body["meta"]["totals"]["itc_eligible"].values()) == {"0.00"}
+    assert set(body["meta"]["totals"]["itc_eligible"].values()) == {"0.00"}  # total included
     assert body["meta"]["totals"]["not_claimable_tax"] == "180.00"
     assert _get(owner, SEPTEMBER + "&itc=true").json()["data"] == []
     assert len(_get(owner, SEPTEMBER + "&itc=false").json()["data"]) == 1
@@ -161,7 +163,7 @@ def test_totals_reconcile_with_raw_sql_and_with_every_row(owner: Any, shop: Any)
     assert totals["count"] == count == len(body["data"])
     assert Decimal(totals["taxable_total"]) == taxable
     assert Decimal(totals["grand_total"]) == grand
-    assert sum(Decimal(v) for v in totals["itc_eligible"].values()) == itc
+    assert Decimal(totals["itc_eligible"]["total"]) == itc
     assert Decimal(totals["rcm_tax"]) == rcm
     assert sum(Decimal(r["grand_total"]) for r in body["data"]) == grand
 

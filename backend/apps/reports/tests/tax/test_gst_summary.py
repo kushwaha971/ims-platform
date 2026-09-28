@@ -602,3 +602,27 @@ def test_staff_may_not_export_the_gst_summary(shop: Any, api_as: Any) -> None:
     """RPT-08 §12 — refused before anything is computed."""
     staff, _ = api_as(shop, role="staff")
     assert _get(staff, "?period=2026-09&format=csv").status_code == 403
+
+
+def test_a_rate_row_drills_into_register_lines_that_sum_to_it(owner: Any, shop: Any) -> None:
+    """FR-13 via CR-RPT-2 — the register at line level, filtered by the row's keys, IS the row."""
+    sale(
+        shop,
+        "INV/1",
+        on=SEP,
+        walk_in="A",
+        lines=[{"taxable": "100.00"}, {"taxable": "40.00", "rate": "18", "code": "GST18"}],
+    )
+    sale(shop, "INV/2", on=SEP, walk_in="B", lines=[{"taxable": "60.00"}])
+    sale(
+        shop, "CN/1", kind="credit_note", on=SEP, customer=party(shop), lines=[{"taxable": "10.00"}]
+    )
+    rows = _get(owner).json()["data"]["outward"]["by_rate"]["rows"]
+    five = next(r for r in rows if r["tax_code"] == "GST5")
+    lines = owner.get(
+        reverse("v1:report-sales-register")
+        + "?date_from=2026-09-01&date_to=2026-09-27&level=line&tax_code=GST5&inter_state=false"
+    ).json()["data"]
+    assert {line["tax_rate"] for line in lines} == {"5.000"}
+    assert sum(_d(line["taxable_value"]) for line in lines) == _d(five["taxable_value"])
+    assert sum(_d(line["cgst"]) for line in lines) == _d(five["cgst"])

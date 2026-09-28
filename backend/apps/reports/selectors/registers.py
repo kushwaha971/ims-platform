@@ -188,6 +188,8 @@ def sales_register_totals(*, tenant: Any, params: Any) -> dict:
         "count": sums["count"],
         "count_by_kind": {kind: by_kind.get(kind, 0) for kind in SALES_REGISTER_KINDS},
         **{_total_key(name): sums[name] for name in DOC_MONEY},
+        # The one "GST" figure a tile shows — summed here so the client never re-adds.
+        "tax": sums["cgst_total"] + sums["sgst_total"] + sums["igst_total"] + sums["cess_total"],
         "b2b": {"count": sums["b2b_count"], "taxable": sums["b2b_taxable"], "tax": sums["b2b_tax"]},
         "b2c": {"count": sums["b2c_count"], "taxable": sums["b2c_taxable"], "tax": sums["b2c_tax"]},
     }
@@ -212,6 +214,9 @@ def sales_register_lines(*, tenant: Any, params: Any) -> QuerySet:
     """
     documents = _sales_base(tenant=tenant, params=params)
     queryset = SalesDocumentLine.objects.filter(document__in=documents).select_related("document")
+    if params.tax_code:
+        # RPT-07's drill-down: the LINES at that code, so they sum to the GST row.
+        queryset = queryset.filter(tax_code=params.tax_code)
     queryset = _annotate_signed(queryset, LINE_MONEY, prefix="document__")
     queryset = queryset.annotate(
         s_qty=Case(
@@ -315,7 +320,11 @@ def purchase_register_totals(*, tenant: Any, params: Any) -> dict:
         "count": sums["count"],
         "count_by_kind": {"purchase_bill": sums["count"]},
         **{_total_key(name): sums[name] for name in DOC_MONEY},
-        "itc_eligible": {_total_key(name): sums[f"itc_{name}"] for name in heads},
+        "tax": sums["cgst_total"] + sums["sgst_total"] + sums["igst_total"] + sums["cess_total"],
+        "itc_eligible": {
+            **{_total_key(name): sums[f"itc_{name}"] for name in heads},
+            "total": sum((sums[f"itc_{name}"] for name in heads), ZERO),
+        },
         "rcm_tax": sums["rcm_tax"],
         "not_claimable_tax": sums["not_claimable"],
     }
@@ -327,6 +336,8 @@ def purchase_register_lines(*, tenant: Any, params: Any) -> QuerySet:
     queryset = PurchaseDocumentLine.objects.filter(document__in=documents).select_related(
         "document"
     )
+    if params.tax_code:
+        queryset = queryset.filter(tax_code=params.tax_code)
     queryset = _annotate_signed(queryset, LINE_MONEY, prefix="document__")
     queryset = queryset.annotate(
         s_qty=Case(

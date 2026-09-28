@@ -228,8 +228,7 @@ def test_totals_reconcile_with_raw_sql_and_with_every_page_of_rows(owner: Any, s
     naive = _naive_totals(shop, "2026-09-01", "2026-09-27")
     assert totals["count"] == naive["count"] == body["meta"]["total"]
     assert Decimal(totals["taxable_total"]) == naive["taxable"]
-    tax = sum(Decimal(totals[h]) for h in ("cgst", "sgst", "igst", "cess"))
-    assert tax == naive["tax"]
+    assert Decimal(totals["tax"]) == naive["tax"]
     assert Decimal(totals["grand_total"]) == naive["grand"]
     assert Decimal(totals["amount_due"]) == naive["due"]
     assert Decimal(totals["round_off"]) == naive["round_off"]
