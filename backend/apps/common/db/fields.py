@@ -102,6 +102,16 @@ class UnitCostField(models.DecimalField):
         super().__init__(**kwargs)
 
 
+class StockValueField(models.DecimalField):
+    """numeric(24,7) — an exact carried stock value: a sum of 3-dp qty × 4-dp cost
+    products, which is exact at 7 dp and never needs rounding (H3)."""
+
+    def __init__(self, **kwargs: object) -> None:
+        kwargs.setdefault("max_digits", 24)
+        kwargs.setdefault("decimal_places", 7)
+        super().__init__(**kwargs)
+
+
 class RateField(models.DecimalField):
     """numeric(6,3) — tax and discount percentages (0.000 … 999.999)."""
 

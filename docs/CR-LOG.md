@@ -1271,3 +1271,34 @@ as a PAYOUT allocated to the bill in the same transaction (T-PUR-01-5). A member
 registers a LED-10 source resolver so the khata names the bill by number; audit
 `purchase_bill.status_changed` per moved bill (§16). **Not built:** Purchases list "Pay selected"
 (FR-4), the `payment_out_by_staff` notification (§17), analytics (§18).
+
+## CR-2026-09-28-H3-A — the stock value is carried, and the average derived from it
+
+**State:** `raised` (built; needs the schema owner's acceptance). **Target:** Part 21 §21.3.6
+(2) "Rounding" ("Stock value is … at display time, never stored") and the
+`inventory_item_stock` / `inventory_stock_movement` column lists; Part 20 §20.6.2. Follows
+CR-2026-09-24-INV-A.
+
+**The defect.** QA final pass (Low): after voiding a purchase bill an item's average read
+140.0001 instead of 140.0000. The value-removing reversal of §21.3.6 (2) computes
+`on_hand × avg − |qty| × c`, and `on_hand × avg` is a product of the ROUNDED 4-dp average:
+3 @ 140, +6 @ 150 → 146.6667, so the stock is "worth" 9 × 146.6667 = 1320.0003 when 1320 was
+paid, and the void leaves 420.0003 / 3 = 140.0001.
+
+**Decision.** `inventory_item_stock.stock_value` numeric(24,7) carries the exact value and
+`inventory_stock_movement.value_after` numeric(24,7) records it per row (NULL on rows written
+before this change). The step (`apps/inventory/services/costing.py`) moves the value by exactly
+`qty × cost` for inbounds and value-removing reversals — exact at 7 dp, 3-dp qty × 4-dp cost —
+and derives the average as `q4(value / on_hand)` exactly where §21.3.6 (2) says it changes. A
+plain outbound leaves the average untouched (as the spec says) and takes its proportional share
+of value, so `q4(value / on_hand) == avg` holds after every step; stock ≤ 0 carries
+`on_hand × avg`. Consequence: a void with nothing in between restores on-hand, average and value
+exactly. The displayed stock value is unchanged — RPT-06 / INV-08 still show
+`ROUND(on_hand × avg_cost, 2)` per BR-4. Existing rows replay with `value = on_hand × avg`,
+which is what the old step computed, so a pre-existing book reports no drift; migration 0005
+backfills the cache's value with the same product.
+
+**Also (H3 item 2).** `recalc_balances --check` / `recalc_stock --check` (never write, exit 1
+on drift), `check_invariants` runs both, and the nightly callables are
+`apps.ledger.services.integrity.check_balances` and
+`apps.inventory.services.integrity.check_stock` (JSON summaries; party ids, never names).

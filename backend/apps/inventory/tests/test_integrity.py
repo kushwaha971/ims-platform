@@ -192,6 +192,109 @@ def test_recalc_stock_reports_and_repairs_a_tampered_cache(ctx: Any, make_item: 
     assert stock_drift() == []
 
 
+def test_check_exits_non_zero_on_a_drifted_value_and_writes_nothing(
+    ctx: Any, make_item: Any
+) -> None:
+    """H3 item 2: `recalc_stock --check` is the CI / cron gate. A cache whose
+    carried stock value alone disagrees (on-hand and average intact) is a drift
+    too — it is the figure the next average is derived from."""
+    rice = make_item("Rice", opening=("10", "40"))
+    ItemStock.objects.filter(item=rice).update(stock_value=Decimal("400.0001"))
+    out = StringIO()
+    with pytest.raises(SystemExit) as exited:
+        call_command("recalc_stock", "--check", stdout=out)
+    assert exited.value.code == 1
+    assert "1 drifted found" in out.getvalue()
+    assert ItemStock.objects.get(item=rice).stock_value == Decimal("400.0001000")
+    call_command("recalc_stock", "--apply", stdout=StringIO())
+    assert ItemStock.objects.get(item=rice).stock_value == Decimal("400.0000000")
+    call_command("recalc_stock", "--check", stdout=StringIO())  # clean: no SystemExit
+
+
+def test_check_invariants_runs_both_checks_and_exits_on_drift(ctx: Any, make_item: Any) -> None:
+    """`check_invariants` was a Sprint 0 shell printing "the tables do not exist
+    yet"; it now runs the two nightly callables and exits 1 on any drift."""
+    import json
+
+    from apps.inventory.services.integrity import check_stock
+
+    rice = make_item("Rice", opening=("10", "40"))
+    out = StringIO()
+    call_command("check_invariants", "--json", stdout=out)
+    checks = {s["check"]: s for s in json.loads(out.getvalue())}
+    assert checks["stock"]["ok"] and checks["balances"]["ok"]
+    ItemStock.objects.filter(item=rice).update(avg_cost=Decimal("41"))
+    with pytest.raises(SystemExit):
+        call_command("check_invariants", stdout=StringIO())
+    summary = check_stock()
+    assert (summary["ok"], summary["drifted"]) == (False, 1)
+    assert summary["sample"][0]["cached"][1] == "41.0000"
+
+
+def test_history_written_before_value_carrying_still_replays_clean(
+    ctx: Any, make_item: Any, tenant: Any, main: Any
+) -> None:
+    """Migration 0005 cannot backfill `value_after` (the log refuses UPDATEs), so
+    rows the old step wrote carry NULL and the cache's value is backfilled as
+    on_hand × avg. The replay folds a NULL row exactly as the old step did, so an
+    existing book reports no drift, and the first new movement continues from
+    precisely where the old one stood — old rounding and all (140.0001 here,
+    honestly: that is what the old rows say)."""
+    from apps.inventory.constants import MovementSource, MovementType
+    from apps.inventory.services.costing import apply_weighted_average
+
+    ghee = make_item("Ghee")
+    on_hand, avg, legacy = Decimal("0"), Decimal("0"), []
+    for seq, (qty, cost) in enumerate([("3", "140"), ("6", "150")], start=1):
+        step = apply_weighted_average(
+            on_hand=on_hand, avg_cost=avg, qty=Decimal(qty), unit_cost=Decimal(cost)
+        )
+        on_hand, avg = step.on_hand_after, step.avg_after
+        legacy.append(
+            StockMovement.objects.create(
+                tenant=tenant,
+                item=ghee,
+                location=main,
+                sequence_no=seq,
+                movement_type=MovementType.ADJUST_IN,
+                qty=Decimal(qty),
+                unit_cost=step.unit_cost,
+                avg_cost_after=avg,
+                on_hand_after=on_hand,
+                value_after=None,
+                source_type=MovementSource.STOCK_ADJUSTMENT,
+                movement_date=dt.date.today(),
+            )
+        )
+    ItemStock.objects.update_or_create(
+        item=ghee,
+        location=main,
+        defaults={
+            "tenant": tenant,
+            "on_hand": on_hand,
+            "avg_cost": avg,
+            "stock_value": on_hand * avg,  # what 0005's backfill writes
+            "last_sequence_no": 2,
+        },
+    )
+    assert stock_drift() == []
+    post_movements(
+        ctx=ctx,
+        lines=[
+            MovementLine(
+                item=ghee,
+                qty=Decimal("-6"),
+                movement_type=MovementType.REVERSAL,
+                movement_date=dt.date.today(),
+                source_type=MovementSource.STOCK_ADJUSTMENT,
+                reverses=legacy[1],
+            )
+        ],
+    )
+    assert ItemStock.objects.get(item=ghee).avg_cost == Decimal("140.0001")
+    assert stock_drift() == []
+
+
 def test_zero_drift_on_a_ten_thousand_movement_fuzzed_book(
     ctx: Any, make_item: Any, tenant: Any
 ) -> None:

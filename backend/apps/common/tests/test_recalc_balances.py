@@ -199,3 +199,47 @@ def test_a_corrected_party_still_matches_a_full_replay(tenant: Any, api_as: Any)
     output = run(tenant=str(tenant.id))
     assert "drift" not in output, output
     assert "0 found" in output
+
+
+# ── --check and the nightly callable (H3 item 2) ───────────────────────────
+
+
+def test_check_exits_non_zero_on_drift_and_writes_nothing(tenant: Any) -> None:
+    """`--check` is the CI / cron gate: the same report, never a write, and exit 1
+    so a pipeline cannot read a drift as success."""
+    party = PartyFactory(tenant=tenant, balance="9999.00")
+    entry(party, Direction.DEBIT, "500.00")
+    out = StringIO()
+    with pytest.raises(SystemExit) as exited:
+        call_command("recalc_balances", "--check", tenant=str(tenant.id), stdout=out)
+    assert exited.value.code == 1
+    assert "1 found" in out.getvalue()
+    party.refresh_from_db()
+    assert party.balance == Decimal("9999.00")
+
+
+def test_check_exits_zero_when_clean_and_refuses_apply(tenant: Any) -> None:
+    from django.core.management.base import CommandError
+
+    party = PartyFactory(tenant=tenant, balance="500.00")
+    entry(party, Direction.DEBIT, "500.00")
+    assert "0 found" in run(tenant=str(tenant.id), check=True)  # no SystemExit
+    with pytest.raises(CommandError):
+        run(check=True, apply=True)
+
+
+def test_the_nightly_callable_summarises_without_names(tenant: Any) -> None:
+    """`check_balances()` is what the scheduler binds to. Its summary lists party
+    ids, never names — it lands in a job row and a log line (§12.8 PII rule)."""
+    from apps.ledger.services.integrity import check_balances
+
+    clean = PartyFactory(tenant=tenant, balance="100.00", name="Clean Kirana")
+    entry(clean, Direction.DEBIT, "100.00")
+    bad = PartyFactory(tenant=tenant, balance="7.00", name="Drifted Traders")
+    entry(bad, Direction.CREDIT, "3.00")
+    summary = check_balances(tenant_id=tenant.id)
+    assert (summary["ok"], summary["checked"], summary["drifted"]) == (False, 2, 1)
+    assert summary["sample"] == [
+        {"tenant_id": str(tenant.id), "party_id": str(bad.id), "cached": "7.00", "ledger": "-3.00"}
+    ]
+    assert "Drifted" not in repr(summary)
