@@ -216,7 +216,13 @@ export const listPayments = async (
       page: number;
       page_size: number;
       total: number;
-      totals: { count: number; amount_in: string; amount_out: string };
+      totals: {
+        count: number;
+        count_in?: number;
+        count_out?: number;
+        amount_in: string;
+        amount_out: string;
+      };
     };
   }>(`${API_PATHS.PAYMENTS}${paymentListQuery(filters)}`, ubConfig({ signal }));
   const { data, meta } = response.data;
@@ -224,6 +230,8 @@ export const listPayments = async (
     rows: data.map(toPaymentRow),
     totals: {
       count: meta.totals.count,
+      countIn: meta.totals.count_in ?? 0,
+      countOut: meta.totals.count_out ?? 0,
       amountIn: meta.totals.amount_in,
       amountOut: meta.totals.amount_out,
     },

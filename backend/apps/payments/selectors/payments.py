@@ -43,6 +43,9 @@ def payment_totals(queryset: QuerySet) -> dict:
     recorded = Q(status=PaymentStatus.RECORDED)
     row = queryset.order_by().aggregate(
         count=Count("id", distinct=True),
+        # QA P-D6 — each money card counts its own payments: recorded, one direction.
+        count_in=Count("id", filter=recorded & Q(direction=PaymentDirection.IN), distinct=True),
+        count_out=Count("id", filter=recorded & Q(direction=PaymentDirection.OUT), distinct=True),
         amount_in=Coalesce(
             Sum(
                 Case(
@@ -64,6 +67,8 @@ def payment_totals(queryset: QuerySet) -> dict:
     )
     return {
         "count": row["count"],
+        "count_in": row["count_in"],
+        "count_out": row["count_out"],
         "amount_in": str(row["amount_in"]),
         "amount_out": str(row["amount_out"]),
     }

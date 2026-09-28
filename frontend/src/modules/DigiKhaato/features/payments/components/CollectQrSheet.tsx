@@ -16,6 +16,7 @@ import {
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { usePermissions } from 'src/hooks/usePermissions';
 import { useTranslation } from 'src/hooks/useTranslation';
+import { ROUTES } from 'src/routes';
 import { compareMoney, formatAmount, formatInr } from 'src/utils/money';
 
 import { UbQrCode } from '../../sales/components/print/UbQrCode';
@@ -123,7 +124,18 @@ export function CollectQrSheet({
             {t('payments.upi.limit', { amount: formatInr(UPI_P2P_CAP) })}
           </UbText>
         )}
-        {missingVpa && <UbStatusBanner tone="info" title={t('payments.upi.missing')} />}
+        {/* QA P-D6 — the guidance named the screen and gave no way to it. */}
+        {missingVpa && (
+          <UbStatusBanner
+            tone="info"
+            title={t('payments.upi.missing')}
+            action={
+              <UbActionLink href={ROUTES.SETTINGS_PROFILE} size="sm" data-testid="upi-open-profile">
+                {t('payments.upi.openProfile')}
+              </UbActionLink>
+            }
+          />
+        )}
         {status === 'failed' && !missingVpa && (
           <UbStatusBanner tone="error" title={t('payments.upi.error')} />
         )}

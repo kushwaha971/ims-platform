@@ -114,6 +114,7 @@
   "payments.upi.markReceived": "भुगतान मिल गया",
   "payments.upi.missing": "QR दिखाने के लिए बिज़नेस प्रोफ़ाइल में अपना UPI ID जोड़ें",
   "payments.upi.openApp": "UPI ऐप खोलें",
+  "payments.upi.openProfile": "बिज़नेस प्रोफ़ाइल खोलें",
   "payments.upi.qrLabel": "{shop} को ₹{amount} देने का UPI QR",
   "payments.upi.scanAny": "किसी भी UPI ऐप से स्कैन करें",
   "payments.upi.showQr": "QR दिखाएँ",

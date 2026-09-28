@@ -240,12 +240,13 @@ export function PaymentsPageContent(): React.JSX.Element {
               icon={<ArrowDownLeft className="h-4 w-4" aria-hidden />}
               label={t('payments.total.in')}
               value={formatInr(totals.amountIn)}
-              subtext={t('payments.total.count', { count: totals.count })}
+              subtext={t('payments.total.count', { count: totals.countIn })}
             />
             <UbStatCard
               icon={<ArrowUpRight className="h-4 w-4" aria-hidden />}
               label={t('payments.total.out')}
               value={formatInr(totals.amountOut)}
+              subtext={t('payments.total.count', { count: totals.countOut })}
             />
           </UbStatGrid>
         )}

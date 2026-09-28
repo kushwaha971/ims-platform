@@ -114,6 +114,7 @@
   "payments.upi.markReceived": "Mark received",
   "payments.upi.missing": "Add your UPI ID in Business profile to show a QR",
   "payments.upi.openApp": "Open UPI app",
+  "payments.upi.openProfile": "Open Business profile",
   "payments.upi.qrLabel": "UPI QR to pay ₹{amount} to {shop}",
   "payments.upi.scanAny": "Scan with any UPI app",
   "payments.upi.showQr": "Show QR",

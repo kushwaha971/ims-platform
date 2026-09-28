@@ -176,6 +176,9 @@ export interface PaymentFilters {
 
 export interface PaymentTotals {
   readonly count: number;
+  /** Recorded payments of each direction — what each money card counts (QA P-D6). */
+  readonly countIn: number;
+  readonly countOut: number;
   readonly amountIn: string;
   readonly amountOut: string;
 }

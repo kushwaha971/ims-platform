@@ -16,7 +16,7 @@ from apps.ledger.constants import EntryType, SourceType
 from apps.ledger.models import LedgerEntry
 from apps.parties.models import Party
 from apps.payments.models import Allocation, Payment
-from apps.payments.tests.conftest import cash_lines, pay, payment_url, upi
+from apps.payments.tests.conftest import cash_lines, pay, payment_url, upi, void
 from apps.platform_app.models import AuditLog
 from apps.sales.models import SalesDocument
 
@@ -353,6 +353,8 @@ def test_the_list_filters_and_totals_the_filtered_set(owner: Any, make_party: An
     everything = owner.get("/api/v1/payments").json()
     assert everything["meta"]["totals"] == {
         "count": 3,
+        "count_in": 2,
+        "count_out": 1,
         "amount_in": "200.00",
         "amount_out": "40.00",
     }
@@ -360,6 +362,20 @@ def test_the_list_filters_and_totals_the_filtered_set(owner: Any, make_party: An
     assert upi_only["meta"]["totals"]["count"] == 2
     received = owner.get("/api/v1/payments?direction=in").json()
     assert [row["direction"] for row in received["data"]] == ["in", "in"]
+
+
+def test_each_money_card_counts_its_own_recorded_payments(owner: Any, make_party: Any) -> None:
+    """QA P-D6 — the header's "6 payments" sat under the Received card and counted
+    every row, voids and money paid out included. `count_in` / `count_out` count the
+    recorded payments of one direction, so each card states its own number."""
+    a = make_party()
+    kept = pay(owner, party_id=str(a.id), mode_breakup=cash_lines("100.00")).json()["data"]
+    voided = pay(owner, party_id=str(a.id), mode_breakup=cash_lines("50.00")).json()["data"]
+    pay(owner, direction="out", party_id=str(a.id), mode_breakup=upi("40.00"))
+    assert void(owner, voided["id"]).status_code == 200
+    totals = owner.get("/api/v1/payments").json()["meta"]["totals"]
+    assert (totals["count_in"], totals["count_out"]) == (1, 1)
+    assert totals["amount_in"] == "100.00" and kept["id"] != voided["id"]
 
 
 def test_open_documents_are_listed_oldest_first(
