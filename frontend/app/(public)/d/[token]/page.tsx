@@ -1,38 +1,26 @@
-import { APP_NAME } from 'src/constants';
-import { UbStack, UbText } from 'src/design-system';
+import { PublicDocumentPageContent } from 'modules/DigiKhaato/features/sales/components/public/PublicDocumentPageContent';
+
+import type { Metadata } from 'next';
 
 /**
- * Part 19 §19.7.6 — the unauthenticated share view. It is a genuine server
- * component: no session, no store, no client bundle.
+ * Part 19 §19.7.6 / SAL-03 FR-5 — the customer's copy of a shared bill,
+ * opened from WhatsApp with no session.
  *
- * Sprint 0 ships the ROUTE and its shape only; the document render arrives with
- * SAL-07 (Sprint 7), which is also when `publicApi` gets its first caller. A
- * token that resolves to nothing renders the expired page, which is already the
- * correct behaviour for every token today.
+ * The document is fetched in the BROWSER rather than here: the API's budgets
+ * are per client IP (60/min) as well as per token, and a server-side fetch
+ * would spend every customer's budget from the Next server's one address.
+ * The token in the path IS the credential, so the page is never indexed and
+ * never sends its address onward (the same headers are set by next.config
+ * and nginx on `/d/*`; these are the in-document copies).
  */
+export const metadata: Metadata = {
+  robots: { index: false, follow: false, nocache: true },
+  referrer: 'no-referrer',
+};
+
 export default async function PublicDocumentPage({
   params,
 }: Readonly<{ params: Promise<{ token: string }> }>): Promise<React.JSX.Element> {
   const { token } = await params;
-
-  return (
-    <UbStack
-      as="article"
-      gap={3}
-      className="mx-auto max-w-md rounded-card border border-border-hairline bg-surface-card p-6"
-    >
-      <UbText as="h1" variant="h3">
-        This link has expired
-      </UbText>
-      <UbText variant="body-sm" tone="tertiary">
-        Ask the shop to share the document again.
-      </UbText>
-      <UbText variant="mono" tone="muted">
-        {token.slice(0, 8)}
-      </UbText>
-      <UbText variant="caption" tone="muted">
-        Powered by {APP_NAME}
-      </UbText>
-    </UbStack>
-  );
+  return <PublicDocumentPageContent token={token} />;
 }

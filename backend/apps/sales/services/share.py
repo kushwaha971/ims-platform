@@ -140,6 +140,51 @@ def public_document(token: str) -> SalesDocument:
     return document
 
 
+#: The kinds a customer can pay FROM. An estimate is a quotation (nothing is
+#: owed yet) and a credit note is money the shop owes the customer.
+PAYABLE_KINDS: frozenset[str] = frozenset({"invoice", "bill_of_supply"})
+
+#: Statuses with money still owed on them (canon §0.7).
+PAYABLE_STATUSES: frozenset[str] = frozenset({"issued", "partially_paid", "overdue"})
+
+
+def public_pay_intent(document: SalesDocument) -> dict | None:
+    """The customer page's "Pay ₹X" — the paper's dynamic QR, or nothing (SAL-03 FR-4/FR-5).
+
+    Only when money is actually owed on a payable kind: a paid bill has
+    nothing to pay (the paper's STATIC QR is a merchant convenience a
+    customer page has no use for), a void one must never invite a payment
+    (EC-6), and an estimate or a credit note is not a bill. Nothing when the
+    shop has not set a valid UPI ID or has turned the QR off, rather than an
+    error — the page simply shows no pay block (SAL-14 EC-5).
+    """
+    if document.kind not in PAYABLE_KINDS or document.status not in PAYABLE_STATUSES:
+        return None
+    if document.amount_due is None or document.amount_due <= Decimal("0"):
+        return None
+    try:
+        intent = upi_intent(document)
+    except BusinessRuleViolation:
+        return None
+    return intent if intent.get("amount") else None
+
+
+def public_logo(document: SalesDocument) -> Any:
+    """The shop's own logo attachment for the customer page, or `None`.
+
+    Resolved through WLB-01's branding (so a partner-locked key behaves as it
+    does on the merchant's print), then matched INSIDE the document's tenant:
+    a partner's default logo belongs to no tenant and is not streamed here.
+    """
+    from apps.files.selectors.attachments import attachment_of_tenant
+    from apps.platform_app.branding import resolve
+
+    attachment_id = resolve(document.tenant).get("logo_attachment_id")
+    if not attachment_id:
+        return None
+    return attachment_of_tenant(tenant=document.tenant, attachment_id=attachment_id)
+
+
 def upi_intent(document: SalesDocument) -> dict:
     """FR-4 — dynamic with the amount due, static (no `am`) when nothing is due."""
     tenant = document.tenant

@@ -127,6 +127,8 @@ const JOBS = [
   plain('ledger', 240),
   plain('statement', 150, { quick: true }),
   plain('writeoff', 60, { quick: true }),
+  // SAL-03 FR-5 — a shared bill opened the way a customer opens it (launch blocker).
+  plain('share-page', 60, { quick: true }),
   plain('credentials', 60, { quick: true }),
   plain('security', 30, { quick: true }),
 

@@ -34,6 +34,8 @@ export const ROUTES = {
   //    be four words of prose with nothing behind them.
   LEGAL_TERMS: '/legal/terms',
   LEGAL_PRIVACY: '/legal/privacy',
+  /** SAL-03 FR-5 — the customer's copy of a shared bill, `/d/<token>`. */
+  PUBLIC_DOCUMENT: '/d',
 
   // ── (app) ─────────────────────────────────────────────────────────────────
   DASHBOARD: '/dashboard',
@@ -246,6 +248,15 @@ export const PUBLIC_ROUTE_PREFIXES: readonly string[] = [
   ROUTES.FORGOT_PASSWORD,
   ROUTES.RESET_PASSWORD,
   ROUTES.SET_PASSWORD,
+  // The share page is opened by a CUSTOMER, who has no account: the root
+  // layout's `GET /auth/me` 401s for them too, and without this entry the
+  // failed refresh sent them to `/login?next=/d/<token>` — the bill never
+  // showed, and the credential in the path moved into a query string.
+  ROUTES.PUBLIC_DOCUMENT,
+  // The same trap, found by the same probe: the sign-up screen links to these
+  // BEFORE an account exists, and an anonymous visitor was bounced to login.
+  ROUTES.LEGAL_TERMS,
+  ROUTES.LEGAL_PRIVACY,
 ];
 
 export const isPublicPath = (pathname: string): boolean =>

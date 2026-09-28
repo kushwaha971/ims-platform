@@ -125,3 +125,46 @@ export const billOfSupply = (): SalesDocument =>
       }),
     ],
   });
+
+/** SAL-03 FR-5 — the pay block `GET /public/d/{token}` carries while money is owed. */
+export const PUBLIC_UPI_WIRE = {
+  upi_url: 'upi://pay?pa=sharma%40okhdfc&pn=Sharma&am=473.00&cu=INR&tn=INV%2F26-27%2F0001',
+  amount: '473.00',
+  qr: { size: 3, modules: ['101', '010', '101'] },
+} as const;
+
+/** Keys the public payload's allow-list never sends (`serializers/public.py`). */
+const PRIVATE_DOCUMENT_KEYS: readonly string[] = [
+  'id',
+  'version',
+  'party',
+  'created_by',
+  'created_at',
+  'updated_at',
+  'doc_discount_allocation',
+  'payment',
+];
+
+const without = (row: Wire, keys: readonly string[]): Wire =>
+  Object.fromEntries(Object.entries(row).filter(([key]) => !keys.includes(key)));
+
+/**
+ * The customer's copy as the public endpoint sends it: the default document
+ * with every private key removed, a masked mobile, the letterhead branding,
+ * the shop's language and the pay block.
+ */
+export const publicWire = (over: Wire = {}): Wire => ({
+  ...without(wireDocument(), PRIVATE_DOCUMENT_KEYS),
+  lines: [without(wireLine(), ['id', 'item_id'])],
+  party_snapshot: { name: 'Ramesh Traders', mobile: '••••••3210', address: {} },
+  tenant_branding: {
+    app_name: 'DigiKhaato',
+    primary_hex: '#4A47D6',
+    doc_header: '',
+    doc_footer: '',
+    logo_url: null,
+  },
+  locale: 'en',
+  upi: PUBLIC_UPI_WIRE,
+  ...over,
+});

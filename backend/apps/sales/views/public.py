@@ -21,13 +21,16 @@ from __future__ import annotations
 
 from typing import Any
 
+from django.core.files.storage import default_storage
+from django.http import FileResponse
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 
+from apps.common.exceptions import NotFound
 from apps.common.responses import StandardResponse
 from apps.common.throttling import durable_throttle
 from apps.sales.serializers.public import public_document_payload
-from apps.sales.services.share import public_document
+from apps.sales.services.share import public_document, public_logo
 
 #: Headers every public-link response carries, success or failure.
 PUBLIC_HEADERS: dict[str, str] = {
@@ -46,7 +49,10 @@ def _token_key(request: Any, view: Any) -> str | None:
     return f"token:{token[:128]}" if token else None
 
 
-class PublicDocumentView(APIView):
+class _PublicLinkView(APIView):
+    """What every route under a share token shares: no session, the durable
+    budgets, and the headers on every response."""
+
     permission_classes = [AllowAny]
     authentication_classes: list = []
 
@@ -62,6 +68,29 @@ class PublicDocumentView(APIView):
             response[name] = value
         return response
 
+
+class PublicDocumentView(_PublicLinkView):
     def get(self, request: Any, token: str) -> Any:
         document = public_document(token)
-        return StandardResponse.ok(public_document_payload(document))
+        return StandardResponse.ok(public_document_payload(document, token=token))
+
+
+class PublicDocumentLogoView(_PublicLinkView):
+    """`GET /public/d/{token}/logo` — the shop's logo on the customer's page.
+
+    The letterhead's one image, and the customer has no session for
+    `/files/{id}`. Scoped by the SAME token check as the document (unknown,
+    expired and revoked all 404), so the logo is readable exactly as long as
+    the bill is, and nothing else of the tenant's files is reachable.
+    """
+
+    def get(self, request: Any, token: str) -> Any:
+        attachment = public_logo(public_document(token))
+        if attachment is None or not default_storage.exists(attachment.storage_key):
+            raise NotFound("This link has expired.")
+        response = FileResponse(
+            default_storage.open(attachment.storage_key, "rb"),
+            content_type=attachment.content_type,
+        )
+        response["Content-Disposition"] = "inline"
+        return response

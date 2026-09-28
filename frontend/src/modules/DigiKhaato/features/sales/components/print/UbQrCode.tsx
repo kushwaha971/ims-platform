@@ -35,6 +35,10 @@ function UbQrCodeBase({ modules, size, label }: UbQrCodeProps): React.JSX.Elemen
       height={size}
       viewBox={`0 0 ${count} ${count}`}
       shapeRendering="crispEdges"
+      // A flex item by default may shrink below its size: in the A4 sheet's
+      // narrow payment column the 28 mm QR was squeezed to an unscannable
+      // few millimetres (seen on the share page's phone print).
+      className="shrink-0"
       data-testid="upi-qr"
     >
       <rect width={count} height={count} fill="#fff" />

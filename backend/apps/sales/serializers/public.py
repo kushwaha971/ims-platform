@@ -15,9 +15,12 @@ from __future__ import annotations
 
 from typing import Any
 
+from django.urls import reverse
+
 from apps.sales.models import SalesDocument
 from apps.sales.serializers.common import mask_mobile
 from apps.sales.serializers.document import DocumentReadSerializer
+from apps.sales.services.share import public_logo, public_pay_intent
 
 #: The document fields a printed invoice, estimate or credit note carries.
 DOCUMENT_FIELDS: tuple[str, ...] = (
@@ -107,7 +110,38 @@ def _pick(source: dict, fields: tuple[str, ...]) -> dict:
     return {key: source[key] for key in fields if key in source}
 
 
-def public_document_payload(document: SalesDocument) -> dict[str, Any]:
+#: The keys the customer's copy carries beyond `DOCUMENT_FIELDS` — each a
+#: nested block with its own allow-list. The backend test holds the payload's
+#: top level to exactly this set plus `DOCUMENT_FIELDS`.
+EXTRA_KEYS: tuple[str, ...] = (
+    "kind_label",
+    "walk_in_mobile",
+    "party_snapshot",
+    "supplier",
+    "lines",
+    "payments",
+    "against",
+    "tenant_branding",
+    "locale",
+    "upi",
+)
+
+#: The letterhead's look — no attachment ids, no partner configuration.
+BRANDING_FIELDS: tuple[str, ...] = (
+    "app_name",
+    "primary_hex",
+    "doc_header",
+    "doc_footer",
+    "logo_url",
+)
+
+#: The pay block: the URL a UPI app opens and the matrix the page paints.
+UPI_FIELDS: tuple[str, ...] = ("upi_url", "amount", "qr")
+
+
+def public_document_payload(document: SalesDocument, *, token: str) -> dict[str, Any]:
+    """The customer's copy. `token` is the one the caller already holds; it only
+    builds the logo's token-scoped URL, because `/files/{id}` needs a session."""
     full = dict(DocumentReadSerializer(document).data)
     data = _pick(full, DOCUMENT_FIELDS)
     data["kind_label"] = document.kind
@@ -132,5 +166,13 @@ def public_document_payload(document: SalesDocument) -> dict[str, Any]:
         "primary_hex": branding.get("primary_hex"),
         "doc_header": branding.get("doc_header"),
         "doc_footer": branding.get("doc_footer"),
+        # Token-scoped, because the customer has no session for `/files/{id}`.
+        "logo_url": (
+            reverse("v1:public-document-logo", args=[token]) if public_logo(document) else None
+        ),
     }
+    # The page's language when the customer has not chosen one: the shop's.
+    data["locale"] = "hi" if str(document.tenant.locale or "").startswith("hi") else "en"
+    intent = public_pay_intent(document)
+    data["upi"] = _pick(intent, UPI_FIELDS) if intent else None
     return data
