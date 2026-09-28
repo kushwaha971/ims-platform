@@ -196,7 +196,7 @@ def test_the_balance_drift_check_is_scheduled_and_alerts(
         ledger_logger.setLevel(previous)
 
     assert job.status == JobStatus.SUCCEEDED
-    assert job.result == {"drifted": 1}
+    assert job.result["drifted"] == 1 and job.result["ok"] is False
     assert [r.getMessage() for r in records] == ["ledger.balance_drift"]
     assert records[0].count == 1 and str(shop.id) in records[0].tenants
     assert "Drift Traders" not in str(records[0].__dict__)
