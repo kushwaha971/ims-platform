@@ -28,6 +28,7 @@ import { useTranslation } from 'src/hooks/useTranslation';
 import { ROUTES } from 'src/routes';
 import { formatBusinessDate, formatTimestamp } from 'src/utils/dates';
 import { formatInr } from 'src/utils/money';
+import { taxRateLabel } from 'src/utils/taxRateLabel';
 
 import { RecordPaymentButton } from '../../payments/components/RecordPaymentButton';
 import { usePurchaseBillDetail } from '../hooks/usePurchaseBillDetail';
@@ -193,7 +194,12 @@ export function PurchaseBillDetailPageContent({ id }: Readonly<{ id: string }>):
                             qty: trimQty(line.qty),
                             unit: line.unitCode,
                             cost: formatInr(line.unitCost),
-                            code: line.taxCode,
+                            // QA retest P-D6: the zero-rate codes read as words in the
+                            // reader's language; a rate reads "GST 5%", never "GST5".
+                            code: taxRateLabel(
+                              { code: line.taxCode, name: `GST ${Number(line.taxRate)}%` },
+                              t
+                            ),
                           })}
                         </UbText>
                         {line.inboundUnitCost && line.trackStock && (

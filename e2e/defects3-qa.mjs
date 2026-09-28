@@ -205,7 +205,7 @@ async function phaseR4(browser, hi = false) {
   await page.getByRole('button', { name: new RegExp(complete.name) }).last().click();
   await page.waitForURL((u) => !u.pathname.startsWith('/switch'), { timeout: 10000 }).catch(() => {});
   await page.waitForTimeout(1500);
-  record('M3', `${hi ? 'hi ' : ''}/switch → ${complete.name}: lands on /parties, no "another tab" message`, new URL(page.url()).pathname === '/parties' && !snacks.seen.some((s) => /another tab|दूसरे टैब/.test(s)), `url=${page.url()} snacks=${JSON.stringify(snacks.seen)}`);
+  record('M3', `${hi ? 'hi ' : ''}/switch → ${complete.name}: lands on the landing page, no "another tab" message`, ['/dashboard', '/parties'].includes(new URL(page.url()).pathname) && !snacks.seen.some((s) => /another tab|दूसरे टैब/.test(s)), `url=${page.url()} snacks=${JSON.stringify(snacks.seen)}`);
   const res2 = await resumableOf(owner);
   record(id, 'GET /tenants/resumable now names the business just created (owner only, no books)', res2.body?.data?.tenant?.id === created?.id, JSON.stringify(res2.body?.data?.tenant?.name ?? null));
   await page.goto(`${FE}/switch`, { waitUntil: 'networkidle' }); await page.waitForTimeout(1000);
@@ -274,7 +274,7 @@ async function phaseSW(browser) {
       await page.waitForURL((u) => !u.pathname.startsWith('/switch'), { timeout: 8000 }).catch(() => {});
       await page.waitForTimeout(1500);
       await shot(page, `m3-switch-${target.name.replace(/\W+/g, '-')}`, false);
-      record('M3', `${vp.width}: /switch → "${target.name}" lands on /parties with no "another tab" warning and no reload`, new URL(page.url()).pathname === '/parties' && !snacks.seen.some((s) => /another tab/.test(s)) && docs.length === d0, `url=${page.url()} snacks=${JSON.stringify(snacks.seen)} docLoads=${JSON.stringify(docs.slice(d0))} me=${me}`);
+      record('M3', `${vp.width}: /switch → "${target.name}" lands on the landing page with no "another tab" warning and no reload`, ['/dashboard', '/parties'].includes(new URL(page.url()).pathname) && !snacks.seen.some((s) => /another tab/.test(s)) && docs.length === d0, `url=${page.url()} snacks=${JSON.stringify(snacks.seen)} docLoads=${JSON.stringify(docs.slice(d0))} me=${me}`);
     }
     snacks.stop();
     await ctx.close();

@@ -235,9 +235,9 @@ async function phaseO(browser) {
   // ── Finish ────────────────────────────────────────────────────────────────
   const finish = page.getByRole('button', { name: T[LANG].finish });
   await finish.click();
-  await page.waitForURL(/\/parties/, { timeout: 30000 }).catch(() => {});
+  await page.waitForURL(/\/(dashboard|parties)/, { timeout: 30000 }).catch(() => {});
   await page.waitForTimeout(2500);
-  record(id, 'finishing lands on /parties', new URL(page.url()).pathname === '/parties', page.url());
+  record(id, 'finishing lands on /dashboard (RPT-01 landing) or /parties', ['/dashboard', '/parties'].includes(new URL(page.url()).pathname), page.url());
   await shot(page, `onb-${LANG}-landed-parties`);
 
   await page.goto(`${FE}/switch`, { waitUntil: 'networkidle' }); await page.waitForTimeout(2000);

@@ -150,7 +150,14 @@ export const createDayBookColumns = ({
         const href = sourceHref(row.source, row.number, row.type);
         const text = row.number ?? '—';
         return href && row.number ? (
-          <UbLink href={href} variant="body-sm-medium">
+          // QA retest R-D1: "PAYOUT/26-27/0004" is wider than the column at
+          // 1280; the number is the column people read, so it wraps at its
+          // slashes instead of ending in "…".
+          <UbLink
+            href={href}
+            variant="body-sm-medium"
+            className="whitespace-normal [overflow-wrap:anywhere]"
+          >
             {text}
           </UbLink>
         ) : (
