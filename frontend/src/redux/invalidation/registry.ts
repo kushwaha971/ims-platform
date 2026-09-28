@@ -167,6 +167,10 @@ import {
   startBulkReminders,
 } from 'modules/DigiKhaato/features/reminders/redux/reminderThunk';
 import {
+  fetchGstSummary,
+  fetchRegister,
+} from 'modules/DigiKhaato/features/reports/redux/taxReportsThunk';
+import {
   createInvoiceShareLink,
   deleteInvoiceDraft,
   fetchInvoice,
@@ -295,6 +299,9 @@ export const QUERIES = {
   fetchPurchaseBill,
   fetchPurchaseContext,
   checkDuplicateSupplierInvoice,
+  // RPT-03/04/07 — the registers and the GST summary (read-only reports)
+  fetchRegister,
+  fetchGstSummary,
   // IMP-01 — the job the wizard polls; IMP-02 — a list's CSV and a stored export
   // PAY-01 … PAY-05 — the list, the receipt, the open bills, the Collect QR
   fetchPayments,

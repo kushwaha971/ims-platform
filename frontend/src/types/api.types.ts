@@ -105,6 +105,8 @@ export type ApiErrorCode =
   | 'opening_exists'
   | 'unit_locked'
   | 'track_stock_not_allowed'
+  // RPT-07 FR-11 — GST reports for a business with no GSTIN (an empty state).
+  | 'gst_not_registered'
   // transport-level codes minted on the client, never sent by the server:
   | 'network_error'
   | 'timeout'

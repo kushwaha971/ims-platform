@@ -61,6 +61,10 @@ export const ROUTES = {
   /** EXP-03 — money in and out, day by day, beside Expenses in the menu. */
   CASHBOOK: '/cashbook',
   REPORTS: '/reports',
+  /** RPT-03 / RPT-04 / RPT-07 — the tax-document reports (Track W4-B). */
+  REPORTS_SALES_REGISTER: '/reports/sales-register',
+  REPORTS_PURCHASE_REGISTER: '/reports/purchase-register',
+  REPORTS_GST_SUMMARY: '/reports/gst-summary',
   SETTINGS: '/settings',
   SETTINGS_PLAN: '/settings/plan',
   SETTINGS_TEAM: '/settings/team',
