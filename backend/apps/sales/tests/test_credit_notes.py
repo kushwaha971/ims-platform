@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 from decimal import Decimal
 from typing import Any
 
@@ -10,6 +11,9 @@ from django.urls import reverse
 
 from apps.inventory.models import ItemStock, StockMovement
 from apps.ledger.models import LedgerEntry
+from apps.reports.selectors.dashboard import document_tiles
+from apps.reports.selectors.day_book import DayBookQuery, day_book, summarise
+from apps.reports.selectors.gst_checks import gst_exceptions
 from apps.sales.models import SalesCreditApplication, SalesDocument, SalesDocumentLine
 from apps.sales.tests.conftest import (
     CREDIT_NOTES,
@@ -308,3 +312,52 @@ def test_permissions_staff_issue_accountant_reads_staff_cannot_void(
     assert note.status_code == 200
     denied = staff.post(credit_note_url(note.json()["data"]["id"], "void"), {"reason": "No"})
     assert denied.status_code == 403
+
+
+def test_the_reports_read_real_credit_notes_as_their_track_assumed(
+    owner: Any, shop: Any, make_item: Any, make_party: Any
+) -> None:
+    """RPT-01/02/07 against SAL-04's REAL rows — the reports track was built on row
+    builders that assumed `kind='credit_note'`, statuses issued/applied/void, `against`
+    and the refund as a `payment_out`. This issues the documents through the services
+    and reads them back: the day book lists both notes and the refund, only the refund
+    moves the drawer; the dashboard nets both notes out of today's sales; the GST
+    checklist flags the standalone note alone (FR-9 `cn_without_original`)."""
+    party, item = make_party(), make_item()
+    service = make_item(
+        "Repair visit", "200.00", "GST0", stock=None, item_type="service", hsn_sac="9987"
+    )
+    invoice = issued_invoice(owner, party, [line(item, "4")])
+    against = note_draft(owner, against_id=invoice["id"], lines=returning(invoice, "2")).json()
+    applied = issue_note(owner, against["data"]["id"]).json()["data"]
+    standalone = note_draft(
+        owner,
+        party_id=str(party.id),
+        reason="deficiency",
+        settlement="refund",
+        refund={"mode_breakup": [{"mode": "cash", "amount": "200.00"}]},
+        lines=[line(service, "1")],
+    ).json()
+    refunded = issue_note(owner, standalone["data"]["id"]).json()["data"]
+    assert (applied["status"], refunded["status"]) == ("applied", "applied")
+    on = dt.date.fromisoformat(invoice["document_date"])
+    assert applied["document_date"] == refunded["document_date"] == invoice["document_date"]
+
+    book = day_book(tenant=shop, query=DayBookQuery(date_from=on, date_to=on), page=1, page_size=50)
+    assert sorted(row.type for row in book.rows) == [
+        "credit_note",
+        "credit_note",
+        "payment_out",
+        "sale",
+    ]
+    assert book.closing["cash"] == Decimal("-200.00")
+    assert summarise(book.totals)["credit_notes"] == Decimal("1145.00")
+
+    tiles = document_tiles(tenant=shop, today=on)
+    expected = Decimal(invoice["grand_total"]) - Decimal("1145.00")
+    assert Decimal(tiles["today_sales"]["amount"]) == expected
+
+    checks = gst_exceptions(tenant=shop, date_from=on.replace(day=1), date_to=on)
+    flagged = {(r["number"], r["issue_code"]) for r in checks["rows"]}
+    assert (refunded["number"], "cn_without_original") in flagged
+    assert not any(number == applied["number"] for number, _ in flagged)

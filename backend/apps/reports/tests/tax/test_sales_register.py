@@ -19,14 +19,12 @@ from django.urls import reverse
 
 from apps.common import exports
 from apps.reports.models import Export
-from apps.reports.selectors.registers import has_field
 from apps.reports.tests.tax.builders import (
     RAMESH_GSTIN,
     csv_rows,
     party,
     sale,
 )
-from apps.sales.models import SalesDocument
 
 pytestmark = pytest.mark.django_db
 
@@ -61,6 +59,7 @@ def worked(shop: Any) -> dict:
         customer=ramesh,
         lines=[{"taxable": "443.63"}],
         round_off="0.00",
+        against=invoice,
     )
     return {"ramesh": ramesh, "invoice": invoice, "walk_in": walk_in, "note": note}
 
@@ -357,13 +356,9 @@ def test_a_bad_parameter_is_a_400_naming_it(owner: Any, query: str, field: str) 
     assert field in response.json()["error"]["details"]
 
 
-@pytest.mark.skipif(
-    not has_field(SalesDocument, "against"), reason="SAL-04's `against` is not on this branch"
-)
 def test_a_credit_note_names_its_invoice(owner: Any, worked: dict) -> None:
-    """FR-2 `against_number` — once SAL-04 has merged."""
-    note = worked["note"]
-    note.against = worked["invoice"]
-    note.save()
-    row = next(r for r in _get(owner).json()["data"] if r["number"] == note.number)
-    assert row["against_number"] == "INV/26-27/0041"
+    """FR-2 `against_number` — the note row names the invoice SAL-04's `against` points at,
+    and an invoice row names nothing (was skipped until SAL-04 merged)."""
+    rows = {r["number"]: r for r in _get(owner).json()["data"]}
+    assert rows[worked["note"].number]["against_number"] == "INV/26-27/0041"
+    assert rows["INV/26-27/0041"]["against_number"] in (None, "")

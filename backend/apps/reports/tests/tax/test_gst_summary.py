@@ -64,6 +64,7 @@ def br14(shop: Any) -> dict:
         customer=ramesh,
         lines=[{"taxable": "443.63"}],
         round_off="0.00",
+        against=invoice,
     )
     return {"ramesh": ramesh, "invoice": invoice, "note": note}
 
@@ -123,6 +124,27 @@ def test_the_br14_worked_example_to_the_paisa(owner: Any, br14: dict) -> None:
     assert meta["date_from"] == "2026-09-01"
     assert meta["filing_due_dates"] == {"gstr1": "2026-10-11", "gstr3b": "2026-10-20"}
     assert meta["exception_count"] == 0 and meta["is_ready"] is True
+
+
+def test_a_credit_note_with_no_invoice_behind_it_is_the_one_exception(
+    owner: Any, shop: Any, br14: dict
+) -> None:
+    """FR-9 `cn_without_original` — SAL-04 allows a standalone note, and the checklist
+    flags it; BR-14's note is written against INV/26-27/0041 and is not flagged. The
+    BR-14 test failed after SAL-04 merged because its fixture had left `against` unset."""
+    sale(
+        shop,
+        "CN/26-27/0002",
+        kind="credit_note",
+        on=dt.date(2026, 9, 14),
+        customer=br14["ramesh"],
+        lines=[{"taxable": "100.00"}],
+        round_off="0.00",
+    )
+    body = _get(owner).json()
+    assert body["meta"]["exception_count"] == 1 and body["meta"]["is_ready"] is False
+    (row,) = body["data"]["exceptions"]
+    assert (row["number"], row["issue_code"]) == ("CN/26-27/0002", "cn_without_original")
 
 
 def _register_taxable(client: Any, url: str, date_from: str, date_to: str) -> Decimal:

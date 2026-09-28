@@ -1,9 +1,9 @@
 """Fixtures for the RPT-03/04/07 tests: documents built as ROWS, not through services.
 
 Why rows. The registers and the GST summary read what SAL-02/SAL-04/SAL-05
-and PUR-01/PUR-04 WRITE; credit notes and invoice void (SAL-04/SAL-05) are
-merged separately from this track, so their services are not importable here.
-Constructing the rows directly — with the tax columns the engine would have
+and PUR-01/PUR-04 WRITE. The track was built before SAL-04/SAL-05 merged;
+they have since, and `apps/sales/tests/test_credit_notes.py` reads real notes
+through these reports to prove the assumptions below. Constructing the rows directly — with the tax columns the engine would have
 stored (CGST = q2(t·r/200), SGST = q2(t·r/100) − CGST; IGST = q2(t·r/100)) —
 tests the reports against the storage contract rather than against a second
 copy of the issue flow. Assumptions about SAL-04's rows, stated once:
