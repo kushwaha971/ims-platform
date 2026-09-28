@@ -1026,3 +1026,61 @@ wave; supplier payment and pay-now (PUR-02); inline item and supplier creation f
 (FR-12, the PTY-01 quick form); scanner-driven lines; "Duplicate" and "Void and duplicate"
 (FR-9/FR-7 of PUR-04); `PurchaseBillPrint`; the purchase-register CSV (PUR-03 FR-8, RPT-04);
 bulk pay; `document_voided` notification to owners (PUR-04 §17); analytics events.
+
+## CR-2026-09-28-RPT-B — RPT-03 / RPT-04 / RPT-07: what was built beside the FRDs
+
+**State:** `raised`. **Target:** Part 17-04 RPT-03, RPT-04, RPT-07, RPT-08; Part 22 §22.11.
+**Gate:** none — additive; no migration.
+
+**Permissions follow the FRDs' §12.** The registers are `reports.basic.read` plus the module's own
+read (`sales.invoice.read` / `purchases.bill.read`), so staff may VIEW them; export is
+`reports.export`. The one cost column (a purchase line's `unit_cost`) needs
+`reports.financial.read` and is absent, not blank, without it. The GST summary is
+`reports.financial.read` throughout. (The wave brief said "gate on reports.financial.read"; RPT-03
+§12 says financial is "not required (no cost columns)". The FRD was followed; the codename is one
+`HasPermission` line per view if the owner wants it tighter.)
+
+**Sign convention.** A credit note negates EVERY money column in the register, `amount_paid` and
+`amount_due` included (refund out, open credit), not only the three FR-2 names; Σ due is then the
+receivable net of open credit. A void row (`include_void=true`) is zero in every money column.
+
+**CR-RPT-2 is implemented** (`tax_code`, `inter_state`, `b2b` on RPT-03, and `series`, `created_by`,
+`ordering`). With `level=line`, `tax_code` filters the LINES as well as the documents, so the
+GST summary's rate row drills into register lines that sum to it. That link replaces FR-13's
+`GstDrilldownDrawer`.
+
+**Export.** Registers go through IMP-02's `CsvExportMixin` (sync ≤ 5,000 rows, queued above), with
+RPT-08's cell rules (ISO dates, `true`/`false`, signed plain amounts) and FR-8's file name on the
+synchronous path. Inherited from IMP-02 and not changed here: zero rows is 400
+`nothing_to_export` (RPT-08 EC-2 wants a headers-only file); the async download keeps IMP-02's
+`digikhaato-<resource>-<stamp>.csv` name; the audit action is IMP-02's `export.requested`
+(RPT-08 §16 names `report.export_requested`). Resources: `sales-register`, `sales-register-lines`,
+`purchase-register`, `purchase-register-lines`. The GST summary exports ONE ZIP of per-section
+CSVs (BR-9), always synchronously: its output is aggregates whatever the document count, and the
+async job only replays a list queryset. No XLSX (FR-14, RPT-08 FR-10/11) — the in-house writer
+is not built.
+
+**`period`.** `YYYY-Qn` is the n-th quarter of the FINANCIAL year starting in April of YYYY
+(Q1 = April–June), the QRMP quarter. A period running past today is clamped (EC-13); an explicit
+`date_to` in the future is 400.
+
+**Rows and boxes.** `outward.by_rate` includes reverse-charge SALES (so it reconciles with the
+register); `gstr3b["3.1(a)"]` excludes them (EC-14). `3.2` is B2C inter-state taxable supply by
+place of supply; composition and UIN recipients are not modelled. Net payable is the labelled
+simple head-wise figure (BR-10): output = 3.1(a) + 3.1(d), credit = 4(A)(3) + 4(A)(5). Nature
+rows beyond FRD's table: `b2b_rcm` (4B) and `cdnur` appear only when present; `outward.b2cs[]`
+(state × rate) and `outward.nil_exempt[]` (table 8, registered × inter/intra) are extra keys.
+
+**`gst_registration` (RPT-03 FR-2) is not in `party_snapshot`** — SAL-02's snapshot freezes name,
+GSTIN, state, mobile and address only. The column reads the snapshot key when present, else
+`regular` with a GSTIN and `unregistered` without. SAL-02 FR-7 should freeze it at issue.
+
+**Exceptions (FR-9):** eight codes; `missing_party_gstin` is not limited to unfiled periods
+because filing is not recorded; `cn_without_original` runs only once SAL-04's `against` exists.
+
+**Not built:** XLSX; the desktop section rail (§8); `UbHelpHint` (a caption line instead); the
+filing-reminder job and notifications (§17); `metadata.figures_hash` (§16); report caching and
+`Cache-Control` (§14/§20); per-figure `aria-describedby` (the coordinate is a visible badge);
+analytics events; the `sales_document_line_doc_tax_idx` index (§15, needs an `atomic=False`
+migration and an EXPLAIN test); RPT-08's export history, retry and 10-minute polling cap beyond
+what IMP-02's button already does.

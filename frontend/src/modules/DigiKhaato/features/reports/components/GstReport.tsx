@@ -201,6 +201,19 @@ function GstBody({
   openException: (row: GstException) => void;
 }>): React.JSX.Element {
   const { t } = useTranslation();
+  // §19.9.4 — column models are memoised, never rebuilt inline on every render.
+  const columns = useMemo(
+    () => ({
+      nature: natureColumns(t),
+      b2cs: b2csColumns(t),
+      hsn: hsnColumns(t),
+      docs: docsColumns(t),
+      outward: rateColumns(t),
+      inward: rateColumns(t, true),
+      exceptions: exceptionColumns(t),
+    }),
+    [t]
+  );
   const net = data.gstr3b?.net;
   const netNegative = !!net && net.total.startsWith('-');
   const issues = data.meta.exceptionCount;
@@ -279,7 +292,7 @@ function GstBody({
               >
                 <GstTable<GstNatureRow>
                   rows={data.byNature}
-                  columns={natureColumns(t)}
+                  columns={columns.nature}
                   rowId={(row) => row.nature}
                   rowName={(row) => row.nature}
                   caption={t('reports.gst.section.nature')}
@@ -292,7 +305,7 @@ function GstBody({
               >
                 <GstTable<GstB2csRow>
                   rows={data.b2cs}
-                  columns={b2csColumns(t)}
+                  columns={columns.b2cs}
                   rowId={(row) => `${row.posState}-${row.taxRate}-${row.isInterState}`}
                   rowName={(row) => row.posState}
                   caption={t('reports.gst.section.b2cs')}
@@ -305,7 +318,7 @@ function GstBody({
               >
                 <GstTable<GstHsnRow>
                   rows={data.hsn?.rows ?? []}
-                  columns={hsnColumns(t)}
+                  columns={columns.hsn}
                   rowId={(row) => `${row.hsnSac}-${row.uqc}-${row.taxRate}-${row.supplyType}`}
                   rowName={(row) => row.hsnSac}
                   caption={t('reports.gst.section.hsn')}
@@ -318,7 +331,7 @@ function GstBody({
               >
                 <GstTable<GstDocsRow>
                   rows={data.docs}
-                  columns={docsColumns(t)}
+                  columns={columns.docs}
                   rowId={(row) => `${row.nature}-${row.seriesPrefix}`}
                   rowName={(row) => row.seriesPrefix}
                   caption={t('reports.gst.section.docs')}
@@ -336,7 +349,7 @@ function GstBody({
               >
                 <GstTable<GstRateRow>
                   rows={data.outwardByRate?.rows ?? []}
-                  columns={rateColumns(t)}
+                  columns={columns.outward}
                   rowId={rateId}
                   rowName={rateName}
                   caption={t('reports.gst.section.outward')}
@@ -357,7 +370,7 @@ function GstBody({
                 >
                   <GstTable<GstRateRow>
                     rows={data.inwardByRate.rows}
-                    columns={rateColumns(t, true)}
+                    columns={columns.inward}
                     rowId={rateId}
                     rowName={rateName}
                     caption={t('reports.gst.section.inward')}
@@ -371,7 +384,7 @@ function GstBody({
               >
                 <GstTable<GstException>
                   rows={data.exceptions}
-                  columns={exceptionColumns(t)}
+                  columns={columns.exceptions}
                   rowId={(row) => `${row.documentId}-${row.issueCode}`}
                   rowName={(row) => row.number}
                   caption={t('reports.gst.section.exceptions')}
