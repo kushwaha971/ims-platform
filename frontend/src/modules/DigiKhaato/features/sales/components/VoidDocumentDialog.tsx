@@ -45,8 +45,9 @@ const ICONS = { stock: Package, ledger: BookOpen, payment: Wallet } as const;
  * `release_document_allocations`): each receipt stays `recorded`, its amount
  * now unallocated. A party's money is an advance in their khata (given back,
  * if at all, as a "Paid out" payment); a walk-in's has no khata to sit in and
- * goes back over the counter, which the merchant records by voiding the
- * receipt. Each receipt is listed and linked, so both next steps are one tap.
+ * goes back over the counter, so the server voids that counter receipt with
+ * the bill (UAT D3) and the cash book, day book and cash in hand drop it. Each
+ * receipt is listed and linked, so the next step is one tap.
  *
  * ── A live credit note blocks the void (QA S-D4) ─────────────────────────────
  * The server refuses an invoice with an issued credit note against it ("Void

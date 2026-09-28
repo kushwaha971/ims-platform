@@ -13,7 +13,9 @@
 5. Ledger: the invoice debit reversed by a credit dated today, sourced to the
    invoice (C6 document-void rule, BR-3, BR-6).
 6. Credit applications from OTHER credit notes are removed and those notes
-   return to open credit (BR-5); payments are detached, never voided (BR-4).
+   return to open credit (BR-5); a party's payments are detached, never voided
+   (BR-4) — a WALK-IN bill's counter receipt is voided with it (UAT D3,
+   `void_seam`), because the money goes back over the counter.
 7. The number is kept (BR-1) — the sequence is not touched — and the document
    becomes `void` with its reason; audit `invoice.voided`.
 """
@@ -116,7 +118,10 @@ def void_invoice(*, ctx: Ctx, document_id: Any, reason: Any) -> dict:
         reversal_id = str(reversals_written[-1].id) if reversals_written else None
 
     released_credit = _release_credit_applications(ctx, document)
-    unallocated = release_invoice_payments(ctx=ctx, document=document)
+    unallocated = release_invoice_payments(ctx=ctx, document=document, reason=reason)
+    # `void_payment` un-applied the walk-in receipt on the bill's row itself;
+    # re-read so this save does not write back the stale in-memory figures.
+    document.refresh_from_db()
     before = {
         "status": document.status,
         "amount_paid": str(document.amount_paid),

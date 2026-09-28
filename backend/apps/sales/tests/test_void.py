@@ -83,19 +83,22 @@ def test_a_voided_number_is_never_reissued(owner: Any, make_item: Any, make_part
     assert SalesDocument.objects.get(pk=first["id"]).number == "INV/26-27/0001"
 
 
-def test_a_paid_walk_in_bill_reports_its_payment_for_the_follow_up(
-    owner: Any, make_item: Any
-) -> None:
-    """T-SAL05-2 / FR-6 / FR-7 — the payment is never voided by the void; the response names
-    the real receipt (`walk_in: true`) so the client can offer the money back over the
-    counter, and the receipt stays `recorded` with its amount now unallocated."""
+def test_a_paid_walk_in_bill_voids_its_counter_receipt_uat_d3(owner: Any, make_item: Any) -> None:
+    """UAT D3 (lead decision; supersedes T-SAL05-2's "payment is never voided" for WALK-INS) —
+    the money goes back over the counter, so the receipt is voided with the bill, in the same
+    transaction, reason "Walk-in bill voided: <reason>"; the response still names the receipt
+    (`walk_in: true, voided: true`) and cash in hand / the cashbook no longer count it."""
+    from apps.expenses.selectors.cashbook import build_cashbook
     from apps.payments.models import Allocation, Payment
+    from apps.reports.selectors.dashboard import cash_in_hand
 
     item = make_item()
     created = draft(owner, walk_in_name="Counter", lines=[line(item, "1")]).json()["data"]
     paid = issue(owner, created["id"], payment=cash(created["grand_total"])).json()["data"]
     assert paid["status"] == "paid"
     receipt = Payment.objects.get(pk=paid["payment"]["payment_id"])
+    tenant, today = receipt.tenant, tenant_today(receipt.tenant)
+    assert cash_in_hand(tenant=tenant, today=today) == Decimal(paid["grand_total"])
     response = void(owner, paid["id"])
     assert response.status_code == 200, response.json()
     payments = response.json()["meta"]["unallocated_payments"]
@@ -105,12 +108,38 @@ def test_a_paid_walk_in_bill_reports_its_payment_for_the_follow_up(
             "number": receipt.number,
             "amount": paid["grand_total"],
             "walk_in": True,
+            "voided": True,
         }
     ]
     receipt.refresh_from_db()
-    assert receipt.status == "recorded" and receipt.unallocated_amount == receipt.amount
+    assert receipt.status == "void"
+    assert receipt.void_reason == "Walk-in bill voided: Duplicate bill"
     assert not Allocation.objects.filter(document_id=paid["id"]).exists()
+    document = SalesDocument.objects.get(pk=paid["id"])
+    assert document.status == "void" and document.amount_paid == Decimal("0.00")
     assert response.json()["data"]["payment"]["mode_breakup"][0]["mode"] == "cash"
+    assert cash_in_hand(tenant=tenant, today=today) == Decimal("0.00")
+    book = build_cashbook(tenant=tenant, date_from=today, date_to=today)
+    assert book["range"]["in"]["cash"] == "0.00"
+
+
+def test_a_party_invoice_payment_still_stays_as_advance_uat_d3(
+    owner: Any, make_item: Any, make_party: Any
+) -> None:
+    """UAT D3 — only the WALK-IN receipt is voided; a party's payment stays `recorded` as an
+    advance (BR-4), reported with `voided: false`."""
+    from apps.payments.models import Payment
+
+    party = make_party()
+    created = draft(owner, party_id=str(party.id), lines=[line(make_item(), "1")]).json()["data"]
+    paid = issue(owner, created["id"], payment=cash(created["grand_total"])).json()["data"]
+    receipt = Payment.objects.get(pk=paid["payment"]["payment_id"])
+    response = void(owner, paid["id"])
+    assert response.status_code == 200, response.json()
+    [row] = response.json()["meta"]["unallocated_payments"]
+    assert row["walk_in"] is False and row["voided"] is False
+    receipt.refresh_from_db()
+    assert receipt.status == "recorded" and receipt.unallocated_amount == receipt.amount
 
 
 def test_void_is_refused_while_a_credit_note_stands_against_the_invoice(

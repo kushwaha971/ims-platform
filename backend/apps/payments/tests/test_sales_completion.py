@@ -118,7 +118,13 @@ def test_an_invoice_void_leaves_its_party_payment_as_an_advance(
     response = owner.post(invoice_url(invoice["id"], "void"), {"reason": "Duplicate bill"})
     assert response.status_code == 200, response.json()
     assert response.json()["meta"]["unallocated_payments"] == [
-        {"payment_id": paid["id"], "number": paid["number"], "amount": "300.00", "walk_in": False}
+        {
+            "payment_id": paid["id"],
+            "number": paid["number"],
+            "amount": "300.00",
+            "walk_in": False,
+            "voided": False,  # UAT D3 — only a walk-in's counter receipt is voided
+        }
     ]
     payment = Payment.objects.get(pk=paid["id"])
     assert payment.status == "recorded" and payment.unallocated_amount == Decimal("300.00")

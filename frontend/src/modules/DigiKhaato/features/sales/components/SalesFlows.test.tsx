@@ -159,6 +159,13 @@ describe('the void dialog (SAL-05 §7)', () => {
     await userEvent.type(screen.getByLabelText('Reason'), 'Duplicate bill');
     await userEvent.click(screen.getByTestId('void-confirm'));
     expect(await screen.findByText('Return ₹473.00 to the customer')).toBeInTheDocument();
+    // UAT D3 — the server voids the counter receipt with the bill; the copy says so and no
+    // longer asks the merchant to void it by hand.
+    expect(
+      screen.getByText(
+        'The bill and its counter receipt are void, so the ₹473.00 leaves your cash book. Hand it back to the customer.'
+      )
+    ).toBeInTheDocument();
     expect(credits.voidInvoice).toHaveBeenCalledWith('d1', 'Duplicate bill');
     // PAY-05 integration — the counter receipt is real now, and one tap from its void.
     expect(screen.getByRole('link', { name: 'RCT/26-27/0007' })).toHaveAttribute(
