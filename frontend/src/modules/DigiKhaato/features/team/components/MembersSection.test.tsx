@@ -136,7 +136,7 @@ describe('MembersSection — adding somebody', () => {
     await user.type(screen.getByLabelText(/Email address/), 'ramesh@shop.test');
     await user.click(screen.getByRole('button', { name: 'Create login' }));
 
-    expect(await screen.findByText('They already have a DigiKhaato account')).toBeInTheDocument();
+    expect(await screen.findByText('They already have a YourKhata account')).toBeInTheDocument();
     expect(screen.queryByDisplayValue('Gtde-R9mz-F2NA')).not.toBeInTheDocument();
   });
 });

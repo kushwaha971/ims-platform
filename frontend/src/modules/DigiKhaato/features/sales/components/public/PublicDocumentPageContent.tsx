@@ -1,6 +1,5 @@
 'use client';
 
-import { APP_NAME } from 'src/constants';
 import {
   UbButton,
   UbChoiceChips,
@@ -58,6 +57,12 @@ const FAILURE_COPY: Readonly<
  *
  * An unknown, an expired and a revoked link are ONE screen with one sentence
  * (§19: the page is not an oracle for which tokens once existed).
+ *
+ * CR-2026-09-29-BRAND-A — this is the SHOP's page, not ours. It carries no
+ * product name, no product logo and no product domain: the footer that read
+ * "Powered by DigiKhaato" says who sent the bill instead. The tab carries no
+ * product title before the bill loads (the route switches the layout's off)
+ * and the document number after (`usePublicDocument`, SAL-03 FR-7's PDF name).
  */
 export function PublicDocumentPageContent({
   token,
@@ -65,6 +70,7 @@ export function PublicDocumentPageContent({
   const { t } = useTranslation();
   const { locale, options, setLocale } = useLocaleSwitch();
   const { status, data, failure, retry, print } = usePublicDocument(token);
+  const shopName = data ? data.document.supplier.legalName || data.document.supplier.name : '';
 
   let body: React.ReactNode;
   if (data) {
@@ -123,15 +129,17 @@ export function PublicDocumentPageContent({
         />
       </UbStack>
       {body}
-      <UbText
-        variant="caption"
-        tone="tertiary"
-        align="center"
-        className="ub-print-hide"
-        data-testid="public-powered-by"
-      >
-        {t('publicDocument.poweredBy', { app: APP_NAME })}
-      </UbText>
+      {shopName && (
+        <UbText
+          variant="caption"
+          tone="tertiary"
+          align="center"
+          className="ub-print-hide"
+          data-testid="public-shared-by"
+        >
+          {t('publicDocument.sharedBy', { business: shopName })}
+        </UbText>
+      )}
     </UbStack>
   );
 }

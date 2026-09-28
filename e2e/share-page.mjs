@@ -299,14 +299,33 @@ async function main() {
       overflow <= 1,
       `overflow ${overflow}px`,
     );
+    // CR-2026-09-29-BRAND-A: the customer's page is the shop's. The footer
+    // names who shared it, and nothing on the page, in the tab title or in the
+    // head names the product or its domain.
     record(
-      "the footer says Powered by DigiKhaato",
-      /Powered by DigiKhaato/.test(
+      "the footer names the shop that shared it",
+      /^Shared by \S/.test(
         await page
-          .getByTestId("public-powered-by")
+          .getByTestId("public-shared-by")
           .innerText()
           .catch(() => ""),
       ),
+    );
+    // What a person can see or be offered: the text, the tab title, the
+    // head's meta/link tags (application name, manifest, icons) and every
+    // href/src/alt. Script payloads are left out: chunk paths are code, not copy.
+    const productMentions = await page.evaluate(() => {
+      const attrs = [...document.querySelectorAll("[href],[src],[alt],meta[content]")]
+        .flatMap((el) => ["href", "src", "alt", "content"].map((a) => el.getAttribute(a) ?? ""))
+        .filter((value) => !value.startsWith("/_next/"))
+        .join(" ");
+      const seen = `${document.body.innerText} ${document.title} ${attrs}`;
+      return (seen.match(/digikhaato|yourkhata/gi) ?? []).length;
+    });
+    record(
+      "no product name or domain anywhere in the page",
+      productMentions === 0,
+      `${productMentions} mention(s)`,
     );
 
     await page.getByTestId("public-print").click();

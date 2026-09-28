@@ -80,7 +80,7 @@ export function CredentialsDialog({
   const { member, email, password, passwordExpiresAt } = lastCredentials;
 
   /**
-   * They already had a DigiKhaato account, so there is no password to send and
+   * They already had a YourKhata account, so there is no password to send and
    * there must not be one: issuing a new password for an existing account would
    * be a takeover wearing an onboarding costume. The dialog says what actually
    * happened instead of showing an empty field.

@@ -205,7 +205,7 @@ class ImportErrorFileView(_ImportView):
             default_storage.open(attachment.storage_key, "rb"),
             content_type="text/csv; charset=utf-8",
             as_attachment=True,
-            filename=f"digikhaato-{job.kind}-problems.csv",
+            filename=f"yourkhata-{job.kind}-problems.csv",
         )
         response["Cache-Control"] = "private, no-store"
         return response
@@ -225,6 +225,6 @@ class ImportTemplateView(_ImportView):
         response = HttpResponse(
             engine.template_csv(spec).encode("utf-8"), content_type="text/csv; charset=utf-8"
         )
-        response["Content-Disposition"] = f'attachment; filename="digikhaato-{kind}-template.csv"'
+        response["Content-Disposition"] = f'attachment; filename="yourkhata-{kind}-template.csv"'
         response["Cache-Control"] = "private, max-age=300"
         return response

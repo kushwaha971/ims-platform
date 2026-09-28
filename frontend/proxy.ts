@@ -50,5 +50,8 @@ export function proxy(request: NextRequest): NextResponse {
 }
 
 export const config = {
-  matcher: ['/((?!_next|api|icons|fonts|favicon.ico|manifest.webmanifest|sw.js).*)'],
+  // `brand` (CR-2026-09-29-BRAND-A): the SVG favicon lives in `public/brand/`,
+  // and a signed-out tab asking for it must get the file, not a redirect to
+  // /login — the sign-in page's own tab icon would otherwise be blank.
+  matcher: ['/((?!_next|api|icons|brand|fonts|favicon.ico|manifest.webmanifest|sw.js).*)'],
 };

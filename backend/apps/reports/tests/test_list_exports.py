@@ -59,7 +59,7 @@ def test_the_party_export_is_the_filtered_list(owner: Any, tenant: Any) -> None:
     listed = owner.get(_parties(query)).json()
     exported = owner.get(_parties(query + "&format=csv"), HTTP_SEC_FETCH_SITE="same-origin")
     assert exported.status_code == 200
-    assert exported["Content-Disposition"].startswith('attachment; filename="digikhaato-parties-')
+    assert exported["Content-Disposition"].startswith('attachment; filename="yourkhata-parties-')
     rows = _csv(exported)
     assert rows[0][:4] == ["name", "display_code", "mobile", "type"]
     assert len(rows) - 1 == listed["meta"]["total"] == 30

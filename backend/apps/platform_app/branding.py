@@ -29,7 +29,7 @@ WHITE = "#FFFFFF"
 PRODUCT_DEFAULTS: dict[str, Any] = {
     "primary_hex": "#4A47D6",
     "secondary_hex": None,
-    "app_name": "DigiKhaato",
+    "app_name": "YourKhata",
     "doc_header": "",
     "doc_footer": "",
     "logo_attachment_id": None,

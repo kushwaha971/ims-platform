@@ -3,7 +3,7 @@
 # any failure. Automated checks prove the stack is up; the two-minute manual pass
 # below proves it is right.
 #
-#   scripts/smoke.sh https://app.udhaarbook.in                 # production: one origin behind nginx
+#   scripts/smoke.sh https://yourkhata.com                     # production: one origin behind nginx
 #   scripts/smoke.sh http://localhost:3000 http://localhost:8000   # local: frontend, then API origin
 #
 # Sprint 12 runbook walk: this script could not pass against the product. It

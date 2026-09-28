@@ -161,7 +161,7 @@ describe('the brand mark is themed by tokens, not by a theme', () => {
   it('defines every --brand-* value once, in the light column', () => {
     const darkOnly = parse('dark.css', ':root[data-theme=');
     expect(Object.keys(darkOnly).filter((name) => name.startsWith('brand-'))).toEqual([]);
-    for (const name of ['brand-mark', 'brand-page', 'brand-page-back', 'brand-rule']) {
+    for (const name of ['brand-mark', 'brand-page', 'brand-rule', 'brand-rule-soft']) {
       expect(() => resolve(light, name)).not.toThrow();
       expect(() => resolve(dark, name)).not.toThrow();
     }

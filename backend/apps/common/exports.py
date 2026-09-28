@@ -209,13 +209,13 @@ def csv_lines(columns: Iterable[ExportColumn], rows: Iterable[Any]) -> Iterator[
 
 
 def export_filename(resource: str, tenant: Any) -> str:
-    """`digikhaato-parties-20260918-1142.csv` in the tenant's own clock (FR-6)."""
+    """`yourkhata-parties-20260918-1142.csv` in the tenant's own clock (FR-6)."""
     from django.utils import timezone
 
     from apps.common.dates import tenant_timezone
 
     stamp = timezone.localtime(timezone.now(), tenant_timezone(tenant)).strftime("%Y%m%d-%H%M")
-    return f"digikhaato-{resource}-{stamp}.csv"
+    return f"yourkhata-{resource}-{stamp}.csv"
 
 
 def export_params(request: Any) -> dict[str, str]:

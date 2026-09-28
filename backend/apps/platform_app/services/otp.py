@@ -276,7 +276,7 @@ def _looks_like_uuid(value: Any) -> bool:
 
 
 def _app_name() -> str:
-    return "DigiKhaato"
+    return "YourKhata"
 
 
 def _audit(

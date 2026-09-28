@@ -2,7 +2,8 @@ import { UbBox } from 'src/design-system';
 
 /**
  * Part 19 §19.6.1 — the `(public)` group: bare, server-rendered, no store, no
- * shell and no navigation into the app beyond one "Powered by" line.
+ * shell and no navigation into the app. It is the shop's page: nothing on it
+ * names the product (CR-2026-09-29-BRAND-A).
  */
 export default function PublicLayout({
   children,

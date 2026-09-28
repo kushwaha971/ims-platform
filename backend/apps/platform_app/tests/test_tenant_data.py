@@ -163,6 +163,28 @@ def test_export_produces_a_zip_of_every_listed_file(
     assert "Ramesh Traders" in parties_csv
 
 
+def test_the_export_names_the_business_and_never_the_product(
+    tenant: Any, api_as: Any, django_capture_on_commit_callbacks: Any
+) -> None:
+    """CR-2026-09-29-BRAND-A: the ZIP a merchant hands to their accountant is the
+    business's own books. Its README used to sign itself "Generated ... by
+    DigiKhaato"; the owner asked that nothing a merchant passes on carries the
+    product's name or domain, only the tenant's. The download's FILENAME is the
+    merchant's own and may say YourKhata; the contents may not."""
+    client, _ = _owner(api_as, tenant)
+    _post_party(client)
+
+    export = _export(client, django_capture_on_commit_callbacks)
+    archive = _zip(client, export)
+    readme = archive.read("README.txt").decode("utf-8")
+
+    assert tenant.name in readme
+    for text in [readme, archive.read("tenant.csv").decode("utf-8-sig")]:
+        lowered = text.lower()
+        for forbidden in ("digikhaato", "yourkhata", "udhaarbook"):
+            assert forbidden not in lowered, forbidden
+
+
 def test_the_export_holds_only_this_tenants_rows(
     two_tenants_full: dict, django_capture_on_commit_callbacks: Any
 ) -> None:

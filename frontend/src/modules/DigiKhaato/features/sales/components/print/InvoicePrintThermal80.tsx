@@ -132,7 +132,10 @@ export function InvoicePrintThermal80({
         <p>{t('sales.print.thanks')}</p>
         {doc.kind === 'bill_of_supply' && <p>{COMPOSITION_FOOTER}</p>}
         {doc.terms && <p className="line-clamp-2">{doc.terms}</p>}
-        {branding?.appName && <p>{branding.appName}</p>}
+        {/* CR-2026-09-29-BRAND-A: signed by the shop, never by the product. */}
+        <p data-testid="print-issued-by">
+          {t('sales.print.issuedBy', { business: supplier.legalName || supplier.name })}
+        </p>
       </footer>
     </article>
   );

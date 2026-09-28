@@ -1,4 +1,4 @@
-# Running DigiKhaato locally
+# Running YourKhata locally
 
 Two ways. Docker is the one the repository is built around and the one that
 gives you a database pgAdmin can connect to. The native path is there for when

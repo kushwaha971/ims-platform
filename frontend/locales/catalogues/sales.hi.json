@@ -227,7 +227,7 @@
   "sales.print.bank": "बैंक",
   "sales.print.billTo": "बिल प्राप्तकर्ता",
   "sales.print.draftMark": "ड्राफ्ट — मान्य नहीं",
-  "sales.print.generatedBy": "{app} से बना",
+  "sales.print.issuedBy": "{business} द्वारा जारी",
   "sales.print.no": "नं",
   "sales.print.no.value": "नहीं",
   "sales.print.number": "बिल नं.",

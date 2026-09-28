@@ -29,7 +29,6 @@ import zipfile
 from collections.abc import Iterable
 from typing import Any
 
-from django.conf import settings
 from django.core.files import File
 from django.core.files.storage import default_storage
 from django.db import transaction
@@ -211,7 +210,11 @@ def _write_csv(zf: zipfile.ZipFile, name: str, header: list[str], rows: Iterable
 def _readme(files: dict[str, list[str]], tenant: Any, generated_at: dt.datetime) -> str:
     lines = [
         f"{tenant.name} — full data export",
-        f"Generated {generated_at.isoformat()} by {getattr(settings, 'UB_APP_NAME', 'DigiKhaato')}.",
+        # CR-2026-09-29-BRAND-A: the merchant's export names the merchant and
+        # nothing else. No product name and no domain: this file is handed to
+        # an accountant, and a copy of the business's own books is not an
+        # advertisement.
+        f"Generated {generated_at.isoformat()} for {tenant.name}.",
         "",
         "Every file is UTF-8. Amounts are rupees with two decimals; dates are ISO 8601.",
         "Invoices, bills and ledger entries are records GST law requires you to keep",

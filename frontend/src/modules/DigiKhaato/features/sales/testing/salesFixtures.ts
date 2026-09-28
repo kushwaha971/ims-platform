@@ -158,7 +158,7 @@ export const publicWire = (over: Wire = {}): Wire => ({
   lines: [without(wireLine(), ['id', 'item_id'])],
   party_snapshot: { name: 'Ramesh Traders', mobile: '••••••3210', address: {} },
   tenant_branding: {
-    app_name: 'DigiKhaato',
+    app_name: 'YourKhata',
     primary_hex: '#4A47D6',
     doc_header: '',
     doc_footer: '',

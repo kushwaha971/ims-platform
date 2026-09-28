@@ -6,12 +6,12 @@ import { UbBox, UbLogo } from 'src/design-system';
  * 648 × 435 canvas, the brand ramp for the subject on soft brand tiles.
  *
  * ── Why a book and a screen, not a shop ─────────────────────────────────────
- * The owner's call: DigiKhaato is a SaaS for keeping the book, not a shop, so
+ * The owner's call: YourKhata is a SaaS for keeping the book, not a shop, so
  * the picture is the book. A red-bound khata lies open in front with its two
  * columns — what was given, what was got — and behind it the same book as the
  * product shows it: a laptop with the balance, the totals and a ledger list,
  * and a phone carrying a reminder. A statement with a "paid" tick and a stack
- * of coins sit either side. The DigiKhaato mark is on the laptop's screen.
+ * of coins sit either side. The YourKhata mark is on the laptop's screen.
  *
  * ── White-label ───────────────────────────────────────────────────────────
  * The brand-coloured parts are `fill-primary-*`, so a tenant who rewrites the

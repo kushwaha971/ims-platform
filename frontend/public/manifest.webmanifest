@@ -1,6 +1,6 @@
 {
-  "name": "DigiKhaato",
-  "short_name": "DigiKhaato",
+  "name": "YourKhata",
+  "short_name": "YourKhata",
   "description": "Your shop's khata, bills and stock in one book.",
   "start_url": "/dashboard?src=pwa",
   "scope": "/",

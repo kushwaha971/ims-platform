@@ -89,7 +89,11 @@ it('renders an unpaid tax invoice with the shop letterhead, amount due and a UPI
   expect(within(screen.getByTestId('public-pay-block')).getByTestId('upi-qr')).toBeInTheDocument();
   // The same A4 sheet the merchant prints is on the page.
   expect(within(screen.getByTestId('public-document')).getByTestId('print-a4')).toBeInTheDocument();
-  expect(screen.getByTestId('public-powered-by')).toHaveTextContent('Powered by DigiKhaato');
+  // CR-2026-09-29-BRAND-A: signed by the shop; no "Powered by" the product.
+  expect(screen.getByTestId('public-shared-by')).toHaveTextContent(
+    'Shared by Sharma General Store'
+  );
+  expect(screen.queryByTestId('public-powered-by')).not.toBeInTheDocument();
   expectNoAppLinks();
 });
 
@@ -275,7 +279,7 @@ it("shows the shop's logo through the token-scoped URL", async () => {
   respond(
     publicWire({
       tenant_branding: {
-        app_name: 'DigiKhaato',
+        app_name: 'YourKhata',
         primary_hex: null,
         doc_header: '',
         doc_footer: '',

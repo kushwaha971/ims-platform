@@ -455,7 +455,7 @@ def test_the_template_has_the_columns_a_comment_line_and_examples(owner: Any) ->
     """AC-1 — header, `#` comment, examples, BOM, CRLF — and it re-imports."""
     response = owner.get(reverse("v1:import-template", args=["parties"]))
     assert response.status_code == 200
-    assert response["Content-Disposition"].endswith('digikhaato-parties-template.csv"')
+    assert response["Content-Disposition"].endswith('yourkhata-parties-template.csv"')
     body = response.content.decode("utf-8")
     assert body.startswith("\ufeff")
     lines = body.lstrip("\ufeff").split("\r\n")
