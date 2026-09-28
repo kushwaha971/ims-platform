@@ -74,9 +74,10 @@ const agingService = jest.requireMock('../api/agingService') as {
   getLedgerAging: jest.Mock;
   getLedgerSummary: jest.Mock;
   agingCsvUrl: jest.Mock;
+  agingReportCsvUrl: jest.Mock;
 };
 const tagService = jest.requireMock('../../parties/api/tagService') as { listTags: jest.Mock };
-const { agingCsvUrl: realAgingCsvUrl } =
+const { agingCsvUrl: realAgingCsvUrl, agingReportCsvUrl: realAgingReportCsvUrl } =
   jest.requireActual<typeof AgingServiceModule>('../api/agingService');
 
 /**
@@ -415,6 +416,21 @@ describe('the export', () => {
       ordering: '-90_plus',
       page: 1,
     });
+  });
+
+  it("is the REPORT's file when Reports is on (RPT-05 FR-9)", async () => {
+    /* FR-5's collection-sheet columns and TOTAL row come from
+       /reports/payables-aging; LED-09's own file stays for a tenant with the
+       reports module off (the test above). Same side, date, tag and order. */
+    agingService.agingReportCsvUrl.mockImplementation(realAgingReportCsvUrl);
+    signIn([...OWNER_PERMISSIONS, 'reports.basic.read'], ['parties', 'ledger', 'reports']);
+    mockSearch = 'type=payable&as_of=2026-03-31&tag=Camp Area';
+    renderWithProviders(<AgingPageContent />);
+
+    const link = await screen.findByTestId('aging-export');
+    expect(link.getAttribute('href')).toMatch(
+      /^https?:\/\/[^/]+\/.*\/reports\/payables-aging\?as_of=2026-03-31&tag=Camp\+Area&ordering=-90_plus&format=csv$/
+    );
   });
 
   it('is absent, not disabled, for a role that may not export', async () => {

@@ -1120,3 +1120,65 @@ voids the receipt.
 **Import rule.** Sales reaches payments only through deferred imports inside the two seams — the
 Part 20 §20.1.4 rule D5 pattern `payment_seam.py` already uses; payments imports sales at module
 level as the matrix allows.
+## CR-2026-09-28-RPT-A — RPT-01 / RPT-02 / RPT-05 / RPT-06 / RPT-08: what was built beside the FRDs
+
+**State:** `raised`. **Target:** Part 17-04 RPT-01, RPT-02, RPT-05, RPT-06, RPT-08; Part 19
+§19.6.2 (landing route); Part 21 (`reports_snapshot`). **Gate:** none — additive; migration
+`reports 0002_snapshot`.
+
+**Written against a sales app without credit notes or void.** SAL-01/04/05 were merging to main in
+parallel. The selectors assume `sales_document.kind='credit_note'` with statuses
+`issued`/`applied`/`void`, and `status='void'` on any document. Today's sales is invoices plus
+bills of supply net of credit notes by `document_date`; a refund is a `payment_out`. If SAL-04
+lands with other kind or status names, `apps/reports/constants.py` is the one place to change.
+
+**The dashboard is the landing page.** RPT-01 says it is the first screen, so `/dashboard` is in the
+sidebar (order 1) and "Go to dashboard" means it again. A reader without `reports.basic.read` is
+redirected to `/parties`, so staff with a narrow role still land somewhere they can use.
+
+**The snapshot is a table, not LocMemCache.** `reports_snapshot` (CR-106's columns) is shared
+across worker processes, ≤60 s old, and dropped `on_commit` by post_save/post_delete receivers on
+every model a tile reads. It is used for every tenant, not only those over 5,000 ledger entries —
+one code path is cheaper to keep right than two. The response is `Cache-Control: private,
+no-store` instead of FR's `max-age=60`: a browser-cached dashboard cannot be invalidated by a
+write, the server snapshot can.
+
+**Permissions follow the §12 table, not FR-6's parenthetical.** Staff see every tile except Cash in
+hand, which needs `reports.financial.read` and both the payments and expenses modules. The day
+book's running cash/bank columns and opening/closing need `reports.financial.read` too, as EXP-03
+does; without it they are absent from the JSON and from the CSV header, not zeroed. Each day-book
+source is gated on its own module's read codename and is left out of the query entirely when the
+reader lacks it.
+
+**Day book semantics.** Voided documents and reversed ledger lines are hidden by default; with
+`include_void=true` they appear typed `<type>_void` and move no balance. Only the ledger's OWN lines
+(`source_type` manual or ledger_entry) appear as ledger rows — a document's ledger posting would
+double the document. Pagination is page-numbered (100, max 200), not a cursor; the running
+balance is a window computed BEFORE the page is cut, so page two does not restart from zero. The
+totals card sits under the table instead of a sticky footer, and the phone view groups by date
+(there is no `UbTimeline`).
+
+**Cash in hand equals the day book's closing cash** and includes manual cash ledger entries, as the
+cashbook does. The cashbook (EXP-03) now includes payments: `expenses.selectors.cashbook` gained a
+`register_cashbook_source` registry and `apps.reports` registers a payments source from
+`ready()`, since `expenses` may not import `payments`. A split payment is two cashbook rows and one
+day-book row; a test asserts cashbook, day book and tile agree.
+
+**RPT-05 / RPT-06 reuse LED-09 and INV-08.** No second screen. The API adds
+`/reports/receivables-aging`, `/reports/payables-aging` and `/reports/stock-summary` (JSON + CSV);
+the existing screens export the reports file when the reports module is on. Payables aging is
+LED-09's screen with `?type=payable`. `cached_at` on aging is always null (no RPT-05 snapshot);
+an unknown `tag=` matches nothing rather than 400; a past `as_of` on stock without financial read
+is 403. `inventory.selectors.stock.filtered_summary` was extracted so both views share one filter.
+
+**RPT-08.** CSV only (no XLSX, no PDF — `format=pdf` is a 400 pointing at Print). Up to 5,000 rows
+stream; above that a `reports.build_export` job, 7-day expiry, through `apps/common/exports.py`.
+ISO dates, plain decimals, formula neutralisation (a mobile number exports as `'+91…`), a
+header-only file for an empty period. Reports register an `Exporter` in
+`apps/reports/exporting.py`; the job replays the query from `params`.
+
+**Not built.** Dashboard quick actions You gave / You got / Add item and per-debtor Bill (only New
+bill, New purchase, Send reminders); the short-form rupee has its exact figure in the accessible
+name rather than a tooltip; the first-use checklist shows only when there is no party AND no
+document; recent activity also lists purchases; charts (none required); RPT-05/06 XLSX; the
+aging CSV answers 202 JSON above 5,000 parties, which the anchor-based download does not follow.

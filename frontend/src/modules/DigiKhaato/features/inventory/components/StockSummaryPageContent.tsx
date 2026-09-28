@@ -32,12 +32,16 @@ import {
   type UbGridState,
   type UbGridTier,
 } from 'src/design-system/UbDataGrid';
+import { usePermissions } from 'src/hooks/usePermissions';
 import { useTranslation, type TranslateFn } from 'src/hooks/useTranslation';
 import { ROUTES, itemPath } from 'src/routes';
 import { formatBusinessDate, formatTimestamp } from 'src/utils/dates';
 import { formatInr } from 'src/utils/money';
 import { formatQuantity } from 'src/utils/quantity';
 
+import { ListExportButton } from 'modules/DigiKhaato/features/imports/components/ListHeaderActions';
+
+import { stockSummaryExportPath } from '../api/stockService';
 import { useInventoryMasters } from '../hooks/useInventoryMasters';
 import { useStockSummary } from '../hooks/useStockReports';
 import { inventoryGridLabels } from '../view-model/gridLabels';
@@ -181,6 +185,10 @@ export function StockSummaryPageContent(): React.JSX.Element {
   const masters = useInventoryMasters();
   const { filters, update, summary } = report;
   const valuation = summary?.valuationVisible ?? false;
+  /* RPT-06 — the report's file of exactly this view, under Reports' own
+     permission (the button itself checks `reports.export`). */
+  const { can, hasModule } = usePermissions();
+  const canExport = hasModule('reports') && can('reports.basic.read');
 
   const columns = useMemo(() => createSummaryColumns({ t, tier, valuation }), [t, tier, valuation]);
 
@@ -242,6 +250,13 @@ export function StockSummaryPageContent(): React.JSX.Element {
             >
               {t('stock.low.title')}
             </UbActionLink>
+            {canExport && (
+              <ListExportButton
+                listPath={stockSummaryExportPath(filters)}
+                permission="reports.export"
+                empty={summary ? summary.total === 0 : true}
+              />
+            )}
           </>
         }
       />

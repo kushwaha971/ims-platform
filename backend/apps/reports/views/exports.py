@@ -103,7 +103,11 @@ class ExportDownloadView(APIView):
             default_storage.open(attachment.storage_key, "rb"),
             content_type="text/csv; charset=utf-8",
             as_attachment=True,
-            filename=f"digikhaato-{export.resource or 'export'}-{export.created_at:%Y%m%d-%H%M}.csv",
+            # RPT-08 FR-8 — a report's file keeps the name it would have had
+            # synchronously (`day-book_2026-04-01_2026-09-30.csv`); a list's
+            # keeps IMP-02's.
+            filename=(export.params or {}).get("filename")
+            or f"digikhaato-{export.resource or 'export'}-{export.created_at:%Y%m%d-%H%M}.csv",
         )
         response["Cache-Control"] = "private, no-store"
         response["X-Content-Type-Options"] = "nosniff"

@@ -162,24 +162,10 @@ const STALE: readonly {
     en: /units/i,
     hi: /इकाइयाँ/u,
   },
-  {
-    key: 'common.action.goToDashboard',
-    why: 'D-L5: there is no dashboard; the landing page is the customer list',
-    en: /dashboard/i,
-    hi: /डैशबोर्ड/u,
-  },
-  {
-    key: 'team.accept.goToDashboard',
-    why: 'D-L5: there is no dashboard; the landing page is the customer list',
-    en: /dashboard/i,
-    hi: /डैशबोर्ड/u,
-  },
-  {
-    key: 'nav.brandHome',
-    why: 'D-L5: there is no dashboard; the logo goes to the customer list',
-    en: /dashboard/i,
-    hi: /डैशबोर्ड/u,
-  },
+  /* RPT-01 — the three "go to Customers" lines D-L5 wrote while `/dashboard`
+     was a redirect now say Dashboard, because that is where they lead. Their
+     guard is the reverse one below: they must not go back to promising the
+     customer list. */
 ];
 
 describe('no copy for unbuilt features or retired behaviour (UAT D8)', () => {
@@ -225,6 +211,14 @@ describe('no copy for unbuilt features or retired behaviour (UAT D8)', () => {
     expect(enMessages[key]).toBeUndefined();
     expect(hiMessages[key]).toBeUndefined();
   });
+
+  it.each(['common.action.goToDashboard', 'team.accept.goToDashboard', 'nav.brandHome'])(
+    '%s names the dashboard it links to, now that it exists (RPT-01)',
+    (key) => {
+      expect(enMessages[key]).toMatch(/dashboard/i);
+      expect(hiMessages[key]).toMatch(/डैशबोर्ड/u);
+    }
+  );
 
   it('retires the old opening-balance key rather than leaving it to be reused', () => {
     expect(enMessages['parties.form.opening.notPostedYet']).toBeUndefined();

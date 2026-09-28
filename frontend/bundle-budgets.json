@@ -502,7 +502,29 @@
   "the routes that read them.",
   "",
   "When a merge adds keys: `node scripts/split-locales.mjs`, then",
-  "`npm run i18n:check`, then rebuild — see locales/catalogues.json."
+  "`npm run i18n:check`, then rebuild — see locales/catalogues.json.",
+  "── 28 Sep 2026: RPT-01/02/05/06 — dashboard, day book, reports hub (Track W4-A, PROVISIONAL) ─",
+  "UNMEASURED: this track may not run `next build` (shared machine). Estimated",
+  "from the routes of the same shape; the lead measures after merge and",
+  "tightens these lines.",
+  "  /dashboard          64 -> 88 route, 308 -> 336 first load. It was a",
+  "                      redirect; it is now the landing page: stat tiles, three",
+  "                      cards, the dashboard slice/hook, and the khata's",
+  "                      usePartyReminder for Remind (the sheet itself is",
+  "                      dynamic()). It deliberately does NOT use",
+  "                      ReportPageShell, only ReportStateBody, so the landing",
+  "                      page does not ship the period picker's calendar or the",
+  "                      export button.",
+  "  /reports            new -> 72 / 320. The hub: cards, links, icons.",
+  "  /reports/day-book   new -> 110 / 352. The shape of /expenses (107/349):",
+  "                      UbDataGrid, UbDateRangePicker, chips, a switch, tiles,",
+  "                      and ListExportButton through ReportPageShell.",
+  "  /stock/summary      113 -> 115 route, 358 -> 360: RPT-06's Export button.",
+  "sharedApp is NOT raised here, following W2-A: ~194 `reports.*` keys in",
+  "locales/*.json add an estimated ~2.2 KB gz to every route, and the two",
+  "thunk shells the registry names ~0.3 KB. Track W4-P is moving feature",
+  "namespaces out of the shell catalogue; `reports.dashboard.*`,",
+  "`reports.daybook.*` and `reports.shell.*` are self-contained for that."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -959,8 +981,8 @@
    "firstLoad": 329
   },
   "/dashboard": {
-   "route": 39,
-   "firstLoad": 268
+   "route": 88,
+   "firstLoad": 336
   },
   "/sales/invoices/new": {
    "route": 124,
@@ -1063,8 +1085,8 @@
    "firstLoad": 278
   },
   "/stock/summary": {
-   "route": 100,
-   "firstLoad": 329
+   "route": 115,
+   "firstLoad": 360
   },
   "/items/masters": {
    "route": 44,
@@ -1149,6 +1171,14 @@
   "/purchases/bills/new": {
    "route": 134,
    "firstLoad": 363
+  },
+  "/reports": {
+   "route": 72,
+   "firstLoad": 320
+  },
+  "/reports/day-book": {
+   "route": 110,
+   "firstLoad": 352
   }
  },
  "//ignoreRoutes": [

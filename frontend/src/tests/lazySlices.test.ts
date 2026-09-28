@@ -27,6 +27,9 @@ describe('lazily registered slices', () => {
     expect(keys).not.toContain('purchaseBillList');
     expect(keys).not.toContain('purchaseBillEditor');
     expect(keys).not.toContain('purchaseBillDetail');
+    // RPT-01 / RPT-02 — the dashboard and the day book ship with their routes.
+    expect(keys).not.toContain('reportDashboard');
+    expect(keys).not.toContain('reportDayBook');
     // The shell's own slices are still there.
     expect(keys).toEqual(expect.arrayContaining(['session', 'partyList', 'ledgerForm']));
   });

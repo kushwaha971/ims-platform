@@ -104,3 +104,24 @@ export const agingCsvUrl = (filters: AgingFilters): string => {
   });
   return absoluteApiUrl(`${API_PATHS.LEDGER_AGING}${query}${query ? '&' : '?'}format=csv`);
 };
+
+/**
+ * RPT-05 FR-9 — the same view as the REPORT's file: FR-5's collection-sheet
+ * columns (mobile, tags, collection date, oldest entry, last payment) and a
+ * TOTAL row, from `/reports/receivables-aging` or `/payables-aging`. The
+ * screen offers it when the reports module is on and the reader may read
+ * reports; otherwise it keeps LED-09's own file above.
+ */
+export const agingReportCsvUrl = (filters: AgingFilters): string => {
+  const query = toQueryString({
+    as_of: filters.asOf || undefined,
+    tag: filters.tag || undefined,
+    ordering: filters.ordering || undefined,
+    format: 'csv',
+  });
+  const path =
+    filters.kind === 'payable'
+      ? API_PATHS.REPORT_PAYABLES_AGING
+      : API_PATHS.REPORT_RECEIVABLES_AGING;
+  return absoluteApiUrl(`${path}${query}`);
+};

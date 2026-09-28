@@ -1,14 +1,15 @@
 'use client';
 
-import { redirect } from 'next/navigation';
-
-import { ROUTES } from 'src/routes';
+import { DashboardPageContent } from 'modules/DigiKhaato/features/reports/components/DashboardPageContent';
+import 'src/i18n/catalogues/ledger';
+import 'src/i18n/catalogues/reports';
+import 'src/i18n/catalogues/share';
 
 /**
- * Sprint 0 has no dashboard: RPT-01 is Sprint 11. The route exists because
- * §19.6.5 step 5 and the PWA `start_url` both point at it, and a 404 there
- * would read to the user as data loss after a tenant switch.
+ * RPT-01 — `/dashboard`, the post-login landing screen (§1: "the first screen
+ * for ≥ 90 % of sessions"). Until RPT-01 it was a `redirect()` to the party
+ * list; a member who may not read reports is still sent there, by the page.
  */
-export default function DashboardPage(): never {
-  redirect(ROUTES.PARTIES);
+export default function DashboardPage(): React.JSX.Element {
+  return <DashboardPageContent />;
 }

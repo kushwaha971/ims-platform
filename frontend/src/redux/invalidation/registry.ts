@@ -127,6 +127,9 @@ export const QUERIES = {
   fetchFlowDocument: 'invoice/fetchFlowDocument',
   fetchCreditSource: 'creditNoteEditor/fetchCreditSource',
   fetchOpenInvoices: 'invoice/fetchOpenInvoices',
+  // RPT-01/02/05/06/08 — dashboard, day book, reports
+  fetchDashboard: 'reportDashboard/fetchDashboard',
+  fetchDayBook: 'reportDayBook/fetchDayBook',
 } as const;
 
 export const MUTATIONS = {

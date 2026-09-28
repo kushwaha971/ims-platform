@@ -30,11 +30,12 @@ import {
   type UbGridSort,
   type UbGridState,
 } from 'src/design-system/UbDataGrid';
+import { usePermissions } from 'src/hooks/usePermissions';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { formatInr } from 'src/utils/money';
 
 import { usePartyTags } from '../../parties/hooks/usePartyTags';
-import { agingCsvUrl } from '../api/agingService';
+import { agingCsvUrl, agingReportCsvUrl } from '../api/agingService';
 import { useLedgerAging } from '../hooks/useLedgerAging';
 import { AGING_BUCKETS } from '../types/aging.types';
 import {
@@ -82,6 +83,10 @@ export function AgingPageContent(): React.JSX.Element {
   const tier = useGridTier();
   const aging = useLedgerAging();
   const { tags } = usePartyTags();
+  /* RPT-05 FR-9 — with Reports on, Export is the REPORT's file (FR-5's
+     collection-sheet columns and a TOTAL row); without it, LED-09's own. */
+  const { can, hasModule } = usePermissions();
+  const reportFile = hasModule('reports') && can('reports.basic.read');
 
   const columns = useMemo(
     () => createAgingColumns({ t, kind: aging.filters.kind, asOf: aging.filters.asOf, tier }),
@@ -231,7 +236,7 @@ export function AgingPageContent(): React.JSX.Element {
             />
             {aging.canExport && (
               <UbActionLink
-                href={agingCsvUrl(aging.filters)}
+                href={reportFile ? agingReportCsvUrl(aging.filters) : agingCsvUrl(aging.filters)}
                 download
                 icon={<Download className="h-4 w-4" aria-hidden />}
                 iconOnly="mobile"

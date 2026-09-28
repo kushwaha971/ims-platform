@@ -6,6 +6,7 @@ import {
   CreditCard,
   FileText,
   Hourglass,
+  LayoutDashboard,
   Receipt,
   Settings,
   ShoppingCart,
@@ -66,10 +67,19 @@ export const NAV_SECTIONS: readonly { readonly key: NavSection; readonly labelId
 ];
 
 export const NAV_ITEMS: readonly NavItemConfig[] = [
-  /* No "Dashboard" row (UAT D8). `ROUTES.DASHBOARD` is a `redirect()` to the
-     party list — the post-login landing path, kept so links and bookmarks
-     resolve — and a menu item that silently lands on Customers is a control
-     for a feature that does not exist. Add it back, `ready`, with the page. */
+  {
+    // RPT-01 — the landing screen, first in the menu. UAT D8 removed the row
+    // while `/dashboard` was a redirect to Customers; the page is built now.
+    key: 'dashboard',
+    ready: true,
+    icon: LayoutDashboard,
+    labelId: 'nav.dashboard',
+    href: ROUTES.DASHBOARD,
+    module: 'reports',
+    permission: 'reports.basic.read',
+    section: 'daily',
+    order: 1,
+  },
   {
     key: 'parties',
     ready: true,
@@ -187,7 +197,9 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
     order: 6,
   },
   {
+    // RPT-02/05/06 — the hub lists only the reports that are built.
     key: 'reports',
+    ready: true,
     icon: BarChart3,
     labelId: 'nav.reports',
     href: ROUTES.REPORTS,

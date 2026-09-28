@@ -94,7 +94,7 @@ owed AS (
     FROM scoped WHERE direction = %(owed_side)s
 ),
 still_open AS (
-    SELECT o.party_id,
+    SELECT o.party_id, o.entry_date,
            (%(as_of)s::date - o.entry_date) AS age_days,
            GREATEST(0::numeric, LEAST(o.amount, o.cum - COALESCE(p.total, 0))) AS open_amt
     FROM owed o LEFT JOIN paid p ON p.party_id = o.party_id
@@ -104,7 +104,8 @@ SELECT party_id,
        SUM(CASE WHEN age_days > 30 AND age_days <= 60 THEN open_amt ELSE 0 END) AS b_31_60,
        SUM(CASE WHEN age_days > 60 AND age_days <= 90 THEN open_amt ELSE 0 END) AS b_61_90,
        SUM(CASE WHEN age_days > 90 THEN open_amt ELSE 0 END) AS b_90_plus,
-       SUM(open_amt) AS total
+       SUM(open_amt) AS total,
+       MIN(entry_date) AS oldest_entry_date
 FROM still_open
 WHERE open_amt > 0
 GROUP BY party_id
@@ -149,6 +150,9 @@ def aging_rows(
             "61_90": row[3] or ZERO,
             "90_plus": row[4] or ZERO,
             "total": row[5] or ZERO,
+            # RPT-05 FR-2 — the date of the oldest entry still (partly) open,
+            # which the FIFO walk already knows; the report prints it and its age.
+            "oldest_entry_date": row[6],
         }
         for row in rows
     }

@@ -11,6 +11,7 @@ import 'src/i18n/catalogues/itemPicker';
 import 'src/i18n/catalogues/items';
 import 'src/i18n/catalogues/movement';
 import 'src/i18n/catalogues/stock';
+import 'src/i18n/catalogues/exports';
 
 /** INV-08 — `/stock/summary`: stock value at weighted-average cost. */
 export default function StockSummaryPage(): React.JSX.Element {

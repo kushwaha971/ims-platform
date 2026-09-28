@@ -12,4 +12,12 @@ class ReportsConfig(AppConfig):
     verbose_name = "Reports"
 
     def ready(self) -> None:
-        from apps.reports import tasks  # noqa: F401  (registers job handlers)
+        from apps.reports import signals, tasks  # noqa: F401  (registers job handlers)
+
+        signals.connect()
+
+        # EXP-03's payments source (see `selectors/cash_sources.py`).
+        from apps.expenses.selectors.cashbook import register_cashbook_source
+        from apps.reports.selectors.cash_sources import PaymentCashSource
+
+        register_cashbook_source(PaymentCashSource())

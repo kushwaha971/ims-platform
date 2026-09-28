@@ -126,6 +126,21 @@ export const getAdjustment = async (id: string, signal?: AbortSignal): Promise<S
   return toAdjustment(response.data.data);
 };
 
+/**
+ * RPT-06 — the screen's own filters as the REPORT's file (`/reports/stock-
+ * summary`, RPT-06 §14's columns and a TOTAL row), with no paging: the file is
+ * the screen (RPT-08 BR-1). `ListExportButton` appends `format=csv`.
+ */
+export const stockSummaryExportPath = (filters: StockSummaryFilters): string =>
+  `${API_PATHS.REPORT_STOCK_SUMMARY}${toQueryString({
+    q: filters.q || undefined,
+    category_id: filters.categoryId || undefined,
+    status: filters.status || undefined,
+    hide_zero: filters.hideZero ? undefined : 'false',
+    as_of: filters.asOf ?? undefined,
+    ordering: filters.ordering,
+  })}`;
+
 export const getStockSummary = async (
   filters: StockSummaryFilters,
   signal?: AbortSignal
