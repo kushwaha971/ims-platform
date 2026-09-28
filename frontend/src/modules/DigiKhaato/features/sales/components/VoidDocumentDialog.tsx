@@ -92,7 +92,9 @@ export function VoidDocumentDialog({
           onClose();
           return;
         }
-        const details = result.payload?.details ?? {};
+        const details = (result.payload?.details ?? {}) as Readonly<
+          Record<string, readonly string[] | undefined>
+        >;
         setRefusal(
           details.nonFieldErrors?.[0] ??
             details.non_field_errors?.[0] ??

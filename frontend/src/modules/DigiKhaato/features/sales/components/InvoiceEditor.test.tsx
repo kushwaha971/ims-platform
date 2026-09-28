@@ -135,7 +135,7 @@ describe('the line table at a 1280 desktop (QA S-D5)', () => {
     renderWithProviders(<InvoiceEditorPageContent documentId={null} />);
     await screen.findByTestId('invoice-issue');
     window.matchMedia = original;
-    const header = screen.getAllByRole('columnheader')[0].parentElement as HTMLElement;
+    const header = screen.getAllByRole('columnheader')[0]?.parentElement as HTMLElement;
     const tracks = header.style.gridTemplateColumns.match(/minmax\([^)]*\)|[\d.]+rem/g) ?? [];
     const rem = (track: string): number => Number(/([\d.]+)rem/.exec(track)?.[1] ?? 0);
     const gaps = (tracks.length - 1) * 0.5;

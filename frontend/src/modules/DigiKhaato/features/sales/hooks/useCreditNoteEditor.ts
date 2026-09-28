@@ -45,6 +45,8 @@ export interface UseCreditNoteEditorResult {
   readonly values: CreditNoteFormValues;
   readonly preview: EngineResult | null;
   readonly split: { readonly applied: string; readonly left: string } | null;
+  /** QA S-D3 — a return quantity above what is left on its line; Issue stays disabled. */
+  readonly overCap: boolean;
   readonly today: string;
   readonly canWrite: boolean;
   readonly issue: () => Promise<void>;
