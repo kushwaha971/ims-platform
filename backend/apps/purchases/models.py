@@ -138,6 +138,15 @@ class PurchaseDocument(TenantModel):
                 name="ix_purch_doc_open_due",
             ),
             models.Index(fields=["tenant", "number"], name="ix_purch_doc_number"),
+            # H3 scale run: the list's own order, and the date range every register,
+            # the GST summary and the day book read. Without it a page of 25 read and
+            # top-N sorted every document of the tenant (the kind/status index cannot
+            # give one order across IN-lists), and a month's register filtered the
+            # tenant's whole history through the bare tenant_id index.
+            models.Index(
+                fields=["tenant", "-document_date", "-created_at", "-id"],
+                name="ix_purch_doc_tenant_date",
+            ),
         ]
 
     def __str__(self) -> str:  # pragma: no cover - admin convenience

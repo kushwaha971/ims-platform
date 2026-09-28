@@ -89,8 +89,47 @@ def _potential(item: Any) -> Decimal:
     )
 
 
+def _row(item: Any, tz: Any) -> dict:
+    return {
+        "item_name": item.name,
+        "sku": item.sku,
+        "barcode": item.barcode or "",
+        "category": item.category.name if item.category_id else "",
+        "unit": item.unit.code,
+        "hsn_sac": item.hsn_sac or "",
+        "tax_code": item.tax_code,
+        "on_hand": _qty(item.on_hand),
+        "avg_cost": str(Decimal(item.avg_cost).quantize(Decimal("0.0001"))),
+        "stock_value": cell_money(item.stock_value),
+        "reorder_point": _qty(item.reorder_point),
+        "stock_status": item.stock_status,
+        "selling_price": cell_money(item.selling_price),
+        "potential_sale_value": cell_money(_potential(item)),
+        "last_movement_date": (
+            timezone.localtime(item.last_movement_at, tz).date().isoformat()
+            if item.last_movement_at
+            else ""
+        ),
+    }
+
+
+def _total_row(*, on_hand: Any, stock_value: Any, potential: Any, units: set[str]) -> dict:
+    return {
+        "item_name": "TOTAL",
+        "unit": "MIXED" if len(units) > 1 else (next(iter(units)) if units else ""),
+        "on_hand": _qty(on_hand),
+        "stock_value": cell_money(stock_value),
+        "potential_sale_value": cell_money(potential),
+    }
+
+
 def stock_rows(tenant: Any, params: dict) -> Any:
-    """Every item as a row, then RPT-06's TOTAL row (EC-6: `MIXED` for many units)."""
+    """Every item as a row, then RPT-06's TOTAL row (EC-6: `MIXED` for many units).
+
+    The CSV's generator. The screen's JSON page does NOT call it: building all
+    5,000 rows of a real shop in Python to show 25 of them was 1.8 s (H3 scale
+    run); `page_and_totals` slices in SQL and aggregates the totals there.
+    """
     tz = tenant_timezone(tenant)
     on_hand = stock_value = potential = Decimal("0")
     units: set[str] = set()
@@ -99,34 +138,46 @@ def stock_rows(tenant: Any, params: dict) -> Any:
         on_hand += item.on_hand or 0
         stock_value += item.stock_value or 0
         potential += _potential(item)
-        yield {
-            "item_name": item.name,
-            "sku": item.sku,
-            "barcode": item.barcode or "",
-            "category": item.category.name if item.category_id else "",
-            "unit": item.unit.code,
-            "hsn_sac": item.hsn_sac or "",
-            "tax_code": item.tax_code,
-            "on_hand": _qty(item.on_hand),
-            "avg_cost": str(Decimal(item.avg_cost).quantize(Decimal("0.0001"))),
-            "stock_value": cell_money(item.stock_value),
-            "reorder_point": _qty(item.reorder_point),
-            "stock_status": item.stock_status,
-            "selling_price": cell_money(item.selling_price),
-            "potential_sale_value": cell_money(_potential(item)),
-            "last_movement_date": (
-                timezone.localtime(item.last_movement_at, tz).date().isoformat()
-                if item.last_movement_at
-                else ""
-            ),
-        }
-    yield {
-        "item_name": "TOTAL",
-        "unit": "MIXED" if len(units) > 1 else (next(iter(units)) if units else ""),
-        "on_hand": _qty(on_hand),
-        "stock_value": cell_money(stock_value),
-        "potential_sale_value": cell_money(potential),
-    }
+        yield _row(item, tz)
+    yield _total_row(on_hand=on_hand, stock_value=stock_value, potential=potential, units=units)
+
+
+def page_and_totals(tenant: Any, params: dict, *, page: int, page_size: int) -> tuple:
+    """`(rows_on_this_page, total_row, item_count)` — the same figures `stock_rows`
+    yields (BR-4: the total is the SUM of the per-item ROUNDED values, and the
+    potential value is rounded per item the same half-up way), in two queries."""
+    from django.db import connection
+
+    qs = _queryset(tenant, params)
+    # An outer query over the annotated rows, as `inventory.selectors.items.
+    # aggregate_values` does and for its reason: `qs.aggregate(Sum("on_hand"))`
+    # compiles the annotation's alias against the base table (or refuses it as
+    # an aggregate), never its expression.
+    inner, sql_params = (
+        qs.order_by()
+        .values("id", "on_hand", "stock_value", "selling_price", "unit__code")
+        .query.sql_with_params()
+    )
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT COUNT(*), COALESCE(SUM(sub.on_hand), 0), COALESCE(SUM(sub.stock_value), 0), "
+            "COALESCE(SUM(ROUND(sub.on_hand * sub.selling_price, 2)), 0), "
+            "COUNT(DISTINCT sub.code), MAX(sub.code) "
+            f"FROM ({inner}) sub(id, on_hand, stock_value, selling_price, code)",  # noqa: S608
+            sql_params,
+        )
+        count, on_hand, stock_value, potential, unit_count, one_unit = cursor.fetchone()
+    units = set() if not count else ({one_unit} if unit_count == 1 else {"", "MIXED"})
+    total = _total_row(
+        on_hand=Decimal(on_hand),
+        stock_value=Decimal(stock_value),
+        potential=Decimal(potential),
+        units=units,
+    )
+    tz = tenant_timezone(tenant)
+    start = (page - 1) * page_size
+    rows = [_row(item, tz) for item in qs[start : start + page_size]]
+    return rows, total, count
 
 
 _HEADER: tuple[tuple[str, bool], ...] = (
@@ -235,26 +286,24 @@ class StockSummaryReportView(ReportFormatMixin, TenantScopeMixin, APIView):
 
         page = positive_int(request, "page", default=1, cap=10**6)
         page_size = positive_int(request, "page_size", default=25, cap=100)
-        rows = list(stock_rows(tenant, params))
-        total = rows.pop()
+        rows, total, count = page_and_totals(tenant, params, page=page, page_size=page_size)
         if not params["cost_visible"]:
             # FR-8 — omitted, not zeroed, so the payload cannot leak a margin.
             for row in (*rows, total):
                 for name in _COST_COLUMNS:
                     row.pop(name, None)
-        start = (page - 1) * page_size
         return StandardResponse.ok(
-            rows[start : start + page_size],
+            rows,
             meta={
                 "as_of": params["as_of"] or params["today"],
                 "totals": {
                     **{key: value for key, value in total.items() if key != "item_name"},
-                    "item_count": len(rows),
+                    "item_count": count,
                 },
                 "cost_visible": params["cost_visible"],
                 "page": page,
                 "page_size": page_size,
-                "total": len(rows),
-                "total_pages": max(1, math.ceil(len(rows) / page_size)),
+                "total": count,
+                "total_pages": max(1, math.ceil(count / page_size)),
             },
         )
