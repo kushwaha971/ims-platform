@@ -1,6 +1,6 @@
 # DigiKhaato — Handoff / Continuation Prompt
 
-Last updated: 28 Sep 2026, late night (IST) — all MVP features merged; final QA of Waves 2–4 done; all High/Medium defects fixed (FIX-A/FIX-B); independent retest in progress.
+Last updated: 28 Sep 2026, late night (IST) — all MVP features merged, final QA + fixes + independent retest PASSED (ready for UAT). Next: hardening (Sprint 12) then final UAT.
 
 ---
 
@@ -72,7 +72,10 @@ You are continuing development of **DigiKhaato**, a multi-tenant khata (credit l
   - Merge with `scripts/merge-json.py` (locales / bundle-budgets, `--sort` for locales) and `scripts/union-conflicts.py` (append-style code conflicts; then fix the import blocks by hand).
 - **End of every session:** sync the code to git (bundle to `~/digikhaato/sync/` when there is no push access) and update this HANDOFF.md. This step is mandatory.
 
-## 4. Gates (the lead runs these on main after each merge)
+## 4. Gates
+
+**Serving for QA/UAT — use the repo scripts, not ad-hoc kills:** `./e2e/serve-api.sh && ./e2e/serve.sh` (they kill stale `next-server`/runserver processes; a stale next-server on :3000 silently serves the OLD build — this bit the retest once). After serving, confirm a JS chunk returns 200 and the backend process started after the last backend commit.
+ (the lead runs these on main after each merge)
 
 Backend:
 ```
@@ -164,7 +167,9 @@ Serve for QA:
 
 ## 9. Exact next steps
 
-State at 9864c2a:
+State at e1ad11d (retest verdict: READY FOR UAT; all 4 High, 7/7 Medium, 12/12 Low fixed after e1ad11d; regression 894/899 with the 5 remaining harness-only landing checks fixed in e1ad11d):
+
+Previous state at 9864c2a:
 - Final QA of Waves 2–4 was done by 3 QA agents, with screenshots in /tmp/e2e-shots/qa-final/.
   - Reports passed.
   - Sales and payments had 4 High defects: the IGST preview, the credit-note quantity cap, A5 receipt print, and part payment from a document. All 4 are fixed, along with about 20 Medium and Low items (commits after b3d9603).
@@ -189,7 +194,7 @@ Helper scripts:
    - Use `purchases.services.payment_seam` (`apply_payment`, `lock_payable_bills`, `register_void_listener`).
    - Add "Pay supplier" and "Paid now" to the bill screens.
 3. (DONE) Build, run `bundle:check` and re-baseline the PROVISIONAL budgets, then serve.
-4. (DONE; a retest of the fixes is running) QA with screenshots on phone 390 and desktop 1280, English plus Hindi, for:
+4. (DONE — retest PASSED, screenshots /tmp/e2e-shots/qa-retest/) QA with screenshots on phone 390 and desktop 1280, English plus Hindi, for:
    - Wave 2: sales core, imports, data/admin.
    - Wave 3: payments, purchases, estimates, credit notes, void.
    - Wave 4: dashboard, day book, registers, GST.
