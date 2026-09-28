@@ -98,7 +98,15 @@ def test_tabs_totals_and_search(owner: Any, make_item: Any, make_party: Any) -> 
     item = make_item(price="100.00", tax_code="GST0", stock="50")
     ramesh = make_party(name="Ramesh Traders", mobile="+919876543210")
     _issued(owner, item, ramesh, document_date="2026-09-01", due_on="2026-09-05")
-    _issued(owner, item, ramesh, document_date="2026-09-10")
+    # Due a month from TODAY, not the preset 15 days from the 10th — the default
+    # made this bill overdue by the calendar alone from 26 Sep 2026 on.
+    _issued(
+        owner,
+        item,
+        ramesh,
+        document_date="2026-09-10",
+        due_on=(dt.date.today() + dt.timedelta(days=30)).isoformat(),
+    )
     _issued(owner, item)  # walk-in, paid
     draft(owner, lines=[line(item)])
 

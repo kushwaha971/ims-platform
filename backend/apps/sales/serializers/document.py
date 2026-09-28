@@ -7,11 +7,14 @@ the issue's strict one are one code path with one switch.
 
 from __future__ import annotations
 
-from typing import Any
 
 from rest_framework import serializers
 
 from apps.sales.models import SalesDocument, SalesDocumentLine
+from apps.sales.serializers.common import mask_mobile, person
+from apps.sales.serializers.links import document_links
+
+__all__ = ["DocumentReadSerializer", "mask_mobile"]
 
 
 class LineInputSerializer(serializers.Serializer):
@@ -95,15 +98,6 @@ class ShareLinkSerializer(serializers.Serializer):
     channel = serializers.ChoiceField(choices=("link", "whatsapp"), required=False, default="link")
 
 
-def _person(user: Any) -> dict | None:
-    if user is None:
-        return None
-    return {
-        "id": str(user.id),
-        "name": getattr(user, "full_name", "") or getattr(user, "email", ""),
-    }
-
-
 class LineReadSerializer(serializers.ModelSerializer):
     class Meta:
         model = SalesDocumentLine
@@ -129,6 +123,8 @@ class LineReadSerializer(serializers.ModelSerializer):
             "igst",
             "cess",
             "line_total",
+            "returned_qty",
+            "against_line_id",
         )
 
 
@@ -156,6 +152,7 @@ class DocumentReadSerializer(serializers.ModelSerializer):
     lines = LineReadSerializer(many=True, read_only=True)
     doc_discount_allocation = serializers.SerializerMethodField()
     created_by = serializers.SerializerMethodField()
+    links = serializers.SerializerMethodField()
 
     class Meta:
         model = SalesDocument
@@ -173,6 +170,7 @@ class DocumentReadSerializer(serializers.ModelSerializer):
             "supplier",
             "document_date",
             "due_on",
+            "valid_until",
             "place_of_supply_state",
             "is_inter_state",
             "reverse_charge",
@@ -197,6 +195,9 @@ class DocumentReadSerializer(serializers.ModelSerializer):
             "doc_discount_allocation",
             "created_by",
             "issued_at",
+            "voided_at",
+            "void_reason",
+            "links",
             "created_at",
             "updated_at",
         )
@@ -230,62 +231,8 @@ class DocumentReadSerializer(serializers.ModelSerializer):
         return (obj.meta or {}).get("doc_discount_allocation") or {}
 
     def get_created_by(self, obj: SalesDocument) -> dict | None:
-        return _person(obj.created_by)
+        return person(obj.created_by)
 
-
-def mask_mobile(value: str | None) -> str | None:
-    """SAL-02 §19 — `+91 98••• ••210` in lists."""
-    if not value:
-        return None
-    digits = value[-10:]
-    return f"+91 {digits[:2]}••• ••{digits[-3:]}"
-
-
-class InvoiceListSerializer(serializers.ModelSerializer):
-    party = serializers.SerializerMethodField()
-    walk_in_mobile_masked = serializers.SerializerMethodField()
-    is_overdue = serializers.SerializerMethodField()
-    created_by = serializers.SerializerMethodField()
-
-    class Meta:
-        model = SalesDocument
-        fields = (
-            "id",
-            "kind",
-            "number",
-            "status",
-            "party",
-            "walk_in_name",
-            "walk_in_mobile_masked",
-            "document_date",
-            "due_on",
-            "grand_total",
-            "amount_paid",
-            "amount_due",
-            "is_overdue",
-            "created_by",
-        )
-
-    def get_party(self, obj: SalesDocument) -> dict | None:
-        if obj.party_id is None:
-            return None
-        name = (obj.party_snapshot or {}).get("name") or (obj.party.name if obj.party else "")
-        return {"id": str(obj.party_id), "name": name}
-
-    def get_walk_in_mobile_masked(self, obj: SalesDocument) -> str | None:
-        return mask_mobile(obj.walk_in_mobile)
-
-    def get_is_overdue(self, obj: SalesDocument) -> bool:
-        """BR-2 — same-day accuracy for the badge; the TAB uses the stored status."""
-        today = self.context.get("today")
-        if obj.status == "overdue":
-            return True
-        return bool(
-            today
-            and obj.due_on
-            and obj.due_on < today
-            and obj.status in ("issued", "partially_paid")
-        )
-
-    def get_created_by(self, obj: SalesDocument) -> dict | None:
-        return _person(obj.created_by)
+    def get_links(self, obj: SalesDocument) -> dict:
+        """SAL-01/04/05 — the documents this one is tied to, and a note's settlement."""
+        return document_links(obj)

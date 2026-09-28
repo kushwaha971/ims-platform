@@ -15,7 +15,7 @@ from typing import Any
 from django.db.models import F
 
 from apps.common.dates import tenant_today
-from apps.sales.constants import OPEN_STATUSES, DocumentStatus
+from apps.sales.constants import INVOICE_KINDS, OPEN_STATUSES, DocumentStatus
 from apps.sales.models import SalesDocument
 
 logger = logging.getLogger("ub.sales")
@@ -24,7 +24,9 @@ logger = logging.getLogger("ub.sales")
 def refresh_overdue(*, tenant: Any = None) -> dict:
     from apps.platform_app.models import Tenant
 
-    open_docs = SalesDocument.objects.filter(status__in=OPEN_STATUSES, due_on__isnull=False)
+    open_docs = SalesDocument.objects.filter(
+        kind__in=INVOICE_KINDS, status__in=OPEN_STATUSES, due_on__isnull=False
+    )
     if tenant is not None:
         open_docs = open_docs.filter(tenant=tenant)
     tenant_ids = open_docs.values_list("tenant_id", flat=True).distinct()
@@ -32,6 +34,7 @@ def refresh_overdue(*, tenant: Any = None) -> dict:
     for row in Tenant.objects.filter(pk__in=list(tenant_ids)):
         moved += SalesDocument.objects.filter(
             tenant=row,
+            kind__in=INVOICE_KINDS,
             status__in=OPEN_STATUSES,
             due_on__lt=tenant_today(row),
         ).update(status=DocumentStatus.OVERDUE, version=F("version") + 1)

@@ -144,6 +144,26 @@ class AuditAction:
     INVOICE_ISSUED = "invoice.issued"
     INVOICE_SHARE_LINK_CREATED = "invoice.share_link_created"
     INVOICE_SHARE_LINK_REGENERATED = "invoice.share_link_regenerated"
+    # ── Sprint 9: SAL-01 / SAL-04 / SAL-05 (17-04 §16) ────────────────────
+    #
+    # `estimate.expired` is written by the nightly job (actor_type `system`).
+    # `invoice.voided` carries the reversal ids and the payments left as
+    # advances; `credit_note.applied` names the invoice and the amount.
+    ESTIMATE_CREATED = "estimate.created"
+    ESTIMATE_UPDATED = "estimate.updated"
+    ESTIMATE_DELETED = "estimate.deleted"
+    ESTIMATE_SENT = "estimate.sent"
+    ESTIMATE_ACCEPTED = "estimate.accepted"
+    ESTIMATE_REJECTED = "estimate.rejected"
+    ESTIMATE_EXPIRED = "estimate.expired"
+    ESTIMATE_CONVERTED = "estimate.converted"
+    CREDIT_NOTE_DRAFT_CREATED = "credit_note.draft_created"
+    CREDIT_NOTE_DRAFT_UPDATED = "credit_note.draft_updated"
+    CREDIT_NOTE_DRAFT_DELETED = "credit_note.draft_deleted"
+    CREDIT_NOTE_ISSUED = "credit_note.issued"
+    CREDIT_NOTE_APPLIED = "credit_note.applied"
+    CREDIT_NOTE_VOIDED = "credit_note.voided"
+    INVOICE_VOIDED = "invoice.voided"
     # ── Sprint 5: LED-05 … LED-08 (17-02 §16) ──────────────────────────────
     #
     # LED-05 §16: the system clearing a collection date because the balance

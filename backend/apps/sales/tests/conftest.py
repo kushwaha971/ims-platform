@@ -123,3 +123,47 @@ def cash(amount: str) -> dict:
 
 def money(value: Any) -> Decimal:
     return Decimal(str(value))
+
+
+ESTIMATES = "v1:sales-estimate-list"
+CREDIT_NOTES = "v1:sales-credit-note-list"
+
+
+def estimate_url(document_id: Any, suffix: str = "") -> str:
+    base = reverse("v1:sales-estimate-detail", args=[document_id])
+    return f"{base}/{suffix}" if suffix else base
+
+
+def credit_note_url(document_id: Any, suffix: str = "") -> str:
+    base = reverse("v1:sales-credit-note-detail", args=[document_id])
+    return f"{base}/{suffix}" if suffix else base
+
+
+def issued_invoice(client: Any, party: Any, lines: list[dict], **body: Any) -> dict:
+    """Draft and issue an invoice for `party`; returns the issued document."""
+    created = draft(client, party_id=str(party.id), lines=lines, **body).json()["data"]
+    response = issue(client, created["id"], version=created["version"])
+    assert response.status_code == 200, response.json()
+    return response.json()["data"]
+
+
+def issue_note(client: Any, document_id: Any, **body: Any) -> Any:
+    return client.post(
+        credit_note_url(document_id, "issue"),
+        body,
+        format="json",
+        HTTP_IDEMPOTENCY_KEY=str(uuid.uuid4()),
+    )
+
+
+def recalc_clean() -> None:
+    """`recalc_balances` and `recalc_stock` both find the caches equal to a full replay."""
+    from io import StringIO
+
+    from django.core.management import call_command
+
+    balances, stock = StringIO(), StringIO()
+    call_command("recalc_balances", stdout=balances)
+    call_command("recalc_stock", stdout=stock)
+    assert "0 found" in balances.getvalue(), balances.getvalue()
+    assert "0 drifted" in stock.getvalue(), stock.getvalue()

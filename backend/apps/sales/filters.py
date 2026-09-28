@@ -27,6 +27,8 @@ class InvoiceFilterSet(BaseTenantFilterSet):
     amount_min = django_filters.NumberFilter(field_name="grand_total", lookup_expr="gte")
     amount_max = django_filters.NumberFilter(field_name="grand_total", lookup_expr="lte")
     kind = django_filters.CharFilter(field_name="kind")
+    # SAL-04 §14 — "credit notes of this invoice".
+    against_id = django_filters.UUIDFilter(field_name="against_id")
     created_by = django_filters.UUIDFilter(field_name="created_by_id")
     q = django_filters.CharFilter(method="filter_search")
 

@@ -13,3 +13,11 @@ def refresh_overdue(job: Any, ctx: Any) -> dict:
     from apps.sales.services.overdue import refresh_overdue as refresh
 
     return refresh()
+
+
+@job_handler("sales.expire_estimates", requires_tenant=False, timeout_seconds=600)
+def expire_estimates(job: Any, ctx: Any) -> dict:
+    """SAL-01 FR-5 — the nightly `sent → expired` (00:20 IST, `SCHEDULES`)."""
+    from apps.sales.services.expiry import expire_estimates as expire
+
+    return expire()
