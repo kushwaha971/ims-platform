@@ -142,6 +142,8 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
   },
   {
     key: 'purchases',
+    // PUR-01/03/04 — bills, drafts, record and void. Supplier payments are PUR-02.
+    ready: true,
     icon: ShoppingCart,
     labelId: 'nav.purchases',
     href: ROUTES.PURCHASE_BILLS,
