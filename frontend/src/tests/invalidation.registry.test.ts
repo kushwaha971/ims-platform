@@ -60,4 +60,39 @@ describe('invalidation registry', () => {
   it('registers no thunk twice', () => {
     expect(new Set(REGISTERED_THUNK_NAMES).size).toBe(REGISTERED_THUNK_NAMES.length);
   });
+
+  /**
+   * W4-P — the registry names each thunk by its `typePrefix` STRING, so that
+   * the store's listener can recognise `${typePrefix}/fulfilled` without
+   * importing 145 thunks into the app shell (see `registry.ts`). A string can
+   * drift from the thunk it stands for — a renamed prefix would make a mutation
+   * silently stop invalidating anything — so this imports every thunk module
+   * and holds each entry to the real thunk's `typePrefix`, by name.
+   */
+  it("holds every entry to its thunk's real typePrefix", () => {
+    const registry: Record<string, string> = { ...QUERIES, ...MUTATIONS };
+    const actual = new Map<string, string>();
+    thunkFiles.forEach((path) => {
+      const exported = require(path) as Record<string, unknown>;
+      for (const [name, value] of Object.entries(exported)) {
+        const prefix = (value as { typePrefix?: unknown } | null)?.typePrefix;
+        if (typeof value === 'function' && typeof prefix === 'string') actual.set(name, prefix);
+      }
+    });
+
+    expect(actual.size).toBeGreaterThan(100);
+    const drifted = Object.entries(registry)
+      .filter(([name, prefix]) => actual.get(name) !== prefix)
+      .map(
+        ([name, prefix]) => `${name}: registry says '${prefix}', thunk says '${actual.get(name)}'`
+      );
+    expect(drifted).toEqual([]);
+    const unregistered = [...actual.keys()].filter((name) => !(name in registry));
+    expect(unregistered).toEqual([]);
+  });
+
+  it('gives no two thunks the same typePrefix', () => {
+    const prefixes = Object.values({ ...QUERIES, ...MUTATIONS });
+    expect(new Set(prefixes).size).toBe(prefixes.length);
+  });
 });

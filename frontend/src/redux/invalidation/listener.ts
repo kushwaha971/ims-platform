@@ -29,9 +29,14 @@ export const cacheInvalidated = createAction<{
   readonly urgency: 'now' | 'next-mount';
 }>('cache/invalidated');
 
+/**
+ * `${typePrefix}/fulfilled` is exactly `thunk.fulfilled.type` (RTK's own
+ * convention), so the listener can recognise a mutation without importing it
+ * — see `registry.ts` for why that matters.
+ */
 const FULFILLED = new Map<string, TMutationName>(
   Object.entries(MUTATIONS).map(
-    ([name, thunk]) => [thunk.fulfilled.type, name as TMutationName] as const
+    ([name, typePrefix]) => [`${typePrefix}/fulfilled`, name as TMutationName] as const
   )
 );
 
