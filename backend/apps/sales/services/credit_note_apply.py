@@ -47,8 +47,16 @@ def _amount(raw: Any) -> Decimal:
 @transaction.atomic
 def apply_credit_note(*, ctx: Ctx, document_id: Any, invoice_id: Any, amount: Any) -> dict:
     """Returns `{document: <note>, invoice}`."""
+    from apps.parties.services.balance import lock_party_of
     from apps.sales.models import SalesDocument
 
+    # L1 first, then the note and the invoice. Applying took the note and then
+    # the invoice with no party lock at all, while invoice void takes party →
+    # invoice → the notes applied to it: the two could each hold the document
+    # the other wanted.
+    lock_party_of(
+        tenant=ctx.tenant, rows=SalesDocument.objects.filter(tenant=ctx.tenant), pk=document_id
+    )
     note = drafts.lock_document(ctx.tenant, document_id, CREDIT_NOTE_KINDS)
     if note.status != DocumentStatus.ISSUED or note.amount_due <= 0:
         raise BusinessRuleViolation(
@@ -120,9 +128,15 @@ def _give_back_quantities(note: Any) -> None:
 @transaction.atomic
 def void_credit_note(*, ctx: Ctx, document_id: Any, reason: Any) -> dict:
     """Returns `{document, reversals, released}`."""
-    from apps.parties.services.balance import lock_party
+    from apps.parties.services.balance import lock_party_of
+    from apps.sales.models import SalesDocument
 
     reason = clean_void_reason(reason)
+    # L1 before the note, not after it (`lock_party_of`): the note's invoice
+    # is released below, and invoice void takes party → invoice → notes.
+    lock_party_of(
+        tenant=ctx.tenant, rows=SalesDocument.objects.filter(tenant=ctx.tenant), pk=document_id
+    )
     note = drafts.lock_document(ctx.tenant, document_id, CREDIT_NOTE_KINDS)
     refuse_unless_voidable(note)
     if note.amount_paid > 0:
@@ -130,7 +144,6 @@ def void_credit_note(*, ctx: Ctx, document_id: Any, reason: Any) -> dict:
             {"non_field_errors": ["Void the refund payment first"]},
             message="Void the refund payment first",
         )
-    lock_party(tenant=ctx.tenant, party_id=note.party_id)  # L1 before stock and ledger
     movement_ids = reverse_document_stock(ctx, note)
     reversals_written, _balance = reverse_document_entries(ctx=ctx, document=note, reason=reason)
     reversal_id = str(reversals_written[-1].id) if reversals_written else None

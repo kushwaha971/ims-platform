@@ -56,3 +56,25 @@ class OtpRateThrottle(SimpleRateThrottle):
         if not mobile:
             return None
         return self.cache_format % {"scope": self.scope, "ident": mobile}
+
+
+# ── Durable throttles, by registration (Part 27 §27.11) ───────────────────────
+#
+# The counter table lives in `platform_app`, which `common` may not import
+# (rule D1), so the durable implementation registers itself here at start-up
+# (`PlatformConfig.ready()`) and `common`'s callers — the export budget — reach
+# it through `durable_throttle()`. Until something registers, the LocMem
+# throttle is returned, which is what a bare `common` test would get.
+_registry: dict[str, Any] = {}
+
+
+def register_durable_throttle(factory: Any) -> None:
+    _registry["factory"] = factory
+
+
+def durable_throttle(scope: str, **kwargs: Any) -> Any:
+    """A throttle for `scope` whose counter is in PostgreSQL when one is registered."""
+    factory = _registry.get("factory")
+    if factory is not None:
+        return factory(scope, **kwargs)
+    return ScopedUserRateThrottle(scope)

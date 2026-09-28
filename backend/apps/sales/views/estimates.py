@@ -34,7 +34,7 @@ from apps.sales.serializers.flows import (
 from apps.sales.services import documents as drafts
 from apps.sales.services import estimates as service
 from apps.sales.services.estimate_convert import convert_estimate
-from apps.sales.services.share import create_share_link
+from apps.sales.services.share import create_share_link, revoke_share_link
 from apps.sales.views.common import created, ok, tabbed_list
 
 KINDS = service.ESTIMATE_KINDS
@@ -144,3 +144,11 @@ class EstimateViewSet(
             channel=serializer.validated_data.get("channel"),
         )
         return StandardResponse.created(link)
+
+    @action(detail=True, methods=["post"], url_path="share-links/revoke")
+    def revoke_share_link(self, request: Any, *args: Any, **kwargs: Any) -> Any:
+        """Part 27 §27.12 — the live link stops working now (404 like any unknown token)."""
+        get_object_or_404(self.get_queryset(), pk=kwargs["pk"])
+        return StandardResponse.ok(
+            revoke_share_link(ctx=Ctx.from_request(request), document_id=kwargs["pk"])
+        )

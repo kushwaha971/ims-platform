@@ -5,7 +5,9 @@
    `document_already_void`, which the client treats as success (§9).
 2. Refuse while a non-void credit note stands against it (FR-3) — the note's
    returned quantities, restock and credit all hang off this invoice.
-3. Lock the party (L1) before anything moves its balance.
+3. The party (L1) is locked FIRST, before the invoice itself — see
+   `parties.services.balance.lock_party_of` for the order and the deadlock it
+   removed.
 4. Stock: one `reversal` per `sale_out` the issue wrote, dated today, at the
    snapshot cost (BR-2) — through `inventory.post_movements` (L2).
 5. Ledger: the invoice debit reversed by a credit dated today, sourced to the
@@ -75,10 +77,17 @@ def _release_credit_applications(ctx: Ctx, invoice: Any) -> list[dict]:
 @transaction.atomic
 def void_invoice(*, ctx: Ctx, document_id: Any, reason: Any) -> dict:
     """Void an issued invoice. Returns `{document, reversals, unallocated_payments, party_balance}`."""
-    from apps.parties.services.balance import lock_party
+    from apps.parties.services.balance import lock_party_of
     from apps.sales.models import SalesDocument
 
     reason = clean_void_reason(reason)
+    # L1 before the document (`parties.services.balance.lock_party_of`): the
+    # order was document → party here and payment → party → document in
+    # `void_payment`, which deadlocked when an invoice and its payment were
+    # voided at the same moment.
+    party = lock_party_of(
+        tenant=ctx.tenant, rows=SalesDocument.objects.filter(tenant=ctx.tenant), pk=document_id
+    )
     document = lock_document(ctx.tenant, document_id)
     refuse_unless_voidable(document)
     if document.status not in VOIDABLE_STATUSES:  # pragma: no cover - statuses are closed
@@ -96,10 +105,6 @@ def void_invoice(*, ctx: Ctx, document_id: Any, reason: Any) -> dict:
             {"non_field_errors": [f"Void credit note {blocking.number} first."]},
             message=f"Void credit note {blocking.number} first.",
         )
-
-    party = None
-    if document.party_id is not None:
-        party = lock_party(tenant=ctx.tenant, party_id=document.party_id)
 
     movement_ids = reverse_document_stock(ctx, document)
     reversal_id = None

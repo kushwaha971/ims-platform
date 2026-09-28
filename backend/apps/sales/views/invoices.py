@@ -37,7 +37,7 @@ from apps.sales.serializers.document import (
 from apps.sales.serializers.flows import VoidSerializer
 from apps.sales.services import documents as drafts
 from apps.sales.services.issue import issue_invoice
-from apps.sales.services.share import create_share_link, upi_intent
+from apps.sales.services.share import create_share_link, revoke_share_link, upi_intent
 from apps.sales.services.void import void_invoice
 from apps.sales.views.common import created, envelope, ok, tabbed_list
 
@@ -183,6 +183,14 @@ class InvoiceViewSet(
             channel=serializer.validated_data.get("channel"),
         )
         return StandardResponse.created(link)
+
+    @action(detail=True, methods=["post"], url_path="share-links/revoke")
+    def revoke_share_link(self, request: Any, *args: Any, **kwargs: Any) -> Any:
+        """Part 27 §27.12 — the live link stops working now (404 like any unknown token)."""
+        get_object_or_404(self.get_queryset(), pk=kwargs["pk"])
+        return StandardResponse.ok(
+            revoke_share_link(ctx=Ctx.from_request(request), document_id=kwargs["pk"])
+        )
 
     @action(detail=True, methods=["get"], url_path="upi-intent")
     def upi_intent(self, request: Any, *args: Any, **kwargs: Any) -> Any:

@@ -39,6 +39,7 @@ SCOPE_LOGIN_IP = "login_ip_fail"  # 100 failures per IP per hour → locked for 
 SCOPE_RESET_EMAIL = "reset_email"  # 5 per address per hour, 60 s apart
 SCOPE_RESET_IP = "reset_ip"  # 20 per IP per hour
 SCOPE_REGISTER_IP = "register_ip"  # 20 sign-ups per IP per hour
+SCOPE_RESET_CONFIRM_IP = "reset_confirm_ip"  # 30 link confirmations per IP per hour
 SCOPE_VERIFY_USER = "verify_user"  # 5 verification links per user per hour, 60 s apart
 
 # Reachable only when `UB_AUTH_OTP_ENABLED=1` (DEC-010).
@@ -71,6 +72,13 @@ RESET_IP_WINDOW_SECONDS = 3600
 
 REGISTRATIONS_PER_IP = 20
 REGISTER_IP_WINDOW_SECONDS = 3600
+
+# `POST /auth/password/reset/confirm` was the one unauthenticated auth route
+# with no budget. A 256-bit link is not guessable, so this is not about
+# guessing: each accepted confirm costs a full password hash, and each refused
+# one a token lookup, so it bounds what one address can make the server do.
+RESET_CONFIRMS_PER_IP = 30
+RESET_CONFIRM_IP_WINDOW_SECONDS = 3600
 
 # `POST /auth/email/verify/request` mints a link and invalidates the previous
 # one, so an unthrottled loop is both a mail amplifier and a way to keep a

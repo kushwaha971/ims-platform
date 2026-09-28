@@ -97,9 +97,14 @@ def issue_credit_note(
     *, ctx: Ctx, document_id: Any, version: Any = None, refund: dict | None = None
 ) -> dict:
     """Issue a draft note. Returns `{document, invoice, warnings, ledger_entry_id, party_balance}`."""
-    from apps.parties.services.balance import lock_party
+    from apps.parties.services.balance import lock_party_of, relock_if_moved
     from apps.platform_app.services.sequences import allocate_number
+    from apps.sales.models import SalesDocument
 
+    # L1 before the note and its invoice (`lock_party_of`).
+    party = lock_party_of(
+        tenant=ctx.tenant, rows=SalesDocument.objects.filter(tenant=ctx.tenant), pk=document_id
+    )
     note = drafts.lock_document(ctx.tenant, document_id, CREDIT_NOTE_KINDS)
     if note.status != DocumentStatus.DRAFT:
         raise BusinessRuleViolation(
@@ -129,7 +134,7 @@ def issue_credit_note(
     if settlement == Settlement.REFUND and not requested_refund:
         raise ValidationFailed({"refund": ["Enter how the money was refunded."]})
 
-    party = lock_party(tenant=ctx.tenant, party_id=note.party_id)
+    party = relock_if_moved(tenant=ctx.tenant, party=party, party_id=note.party_id)
     if invoice is not None:
         _take_quantities(invoice, rows)
     movement_ids = restock_rows(ctx, note, rows) if meta.get("restock", True) else []

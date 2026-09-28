@@ -135,10 +135,27 @@ def _expiry() -> dt.datetime:
     return timezone.now() + dt.timedelta(days=int(settings.UB_INVITATION_DAYS))
 
 
-def _apply(*, user: Any, password: str, tenant: Any) -> dt.datetime:
+def _mint() -> tuple[str, str]:
+    """A fresh temporary password and its hash, computed OUTSIDE any transaction.
+
+    `create_member` holds the tenant row lock (the seat check) and `regenerate`
+    a transaction of its own; PBKDF2 inside either stalled every other write to
+    the business for the length of the hash and, on a starved CPU, tripped the
+    30 s idle-in-transaction timeout as a 500 (see
+    `passwords.hash_outside_transaction`).
+    """
+    from apps.platform_app.services.passwords import hash_outside_transaction
+
+    password = generate_temp_password()
+    return password, hash_outside_transaction(password)
+
+
+def _apply(*, user: Any, encoded: str, tenant: Any) -> dt.datetime:
     """Set the hash, raise the gate, stamp the expiry and the issuer. Never logs the plaintext."""
+    from apps.platform_app.services.passwords import apply_encoded
+
     expires_at = _expiry()
-    user.set_password(password)
+    apply_encoded(user, encoded)
     user.must_change_password = True
     user.password_expires_at = expires_at
     user.temp_password_tenant = tenant
@@ -263,6 +280,12 @@ def create_member(
     if not display_name:
         raise ValidationFailed({"full_name": ["A name is required."]})
 
+    # Minted before the lock, and only when the address is new: an existing
+    # account keeps its own password, so hashing one for it would be wasted work.
+    # The rare race (someone registers this address between here and the lock)
+    # falls back to hashing inside, which is correct if slower.
+    minted = None if User.objects.filter(email=normalised).exists() else _mint()
+
     with transaction.atomic():
         locked = entitlements.lock_tenant_for_write(tenant)
         existing_user = User.objects.filter(email=normalised).first()
@@ -291,8 +314,8 @@ def create_member(
             user = _create_user_or_refuse_mobile(
                 email=normalised, full_name=display_name, mobile=mobile or None
             )
-            password = generate_temp_password()
-            expires_at = _apply(user=user, password=password, tenant=locked)
+            password, encoded = minted or _mint()
+            expires_at = _apply(user=user, encoded=encoded, tenant=locked)
             created_user = True
         else:
             # Their account, their password. We are only granting access.
@@ -378,9 +401,9 @@ def regenerate(*, membership: Any, actor: Any, ctx: Ctx) -> IssuedCredentials:
             "password. Ask them, or ask the person to use ‘Forgot password’.",
         )
 
+    password, encoded = _mint()
     with transaction.atomic():
-        password = generate_temp_password()
-        expires_at = _apply(user=user, password=password, tenant=membership.tenant)
+        expires_at = _apply(user=user, encoded=encoded, tenant=membership.tenant)
         # Anything issued against the dead password goes with it (Part 27
         # §27.4.4 step 2): if the old one leaked, a live session is the hole
         # that changing the password on its own would leave open.

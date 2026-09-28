@@ -20,7 +20,7 @@ from typing import Any
 from rest_framework.exceptions import Throttled
 
 from apps.common.exceptions import PermissionDenied
-from apps.common.throttling import ScopedUserRateThrottle
+from apps.common.throttling import durable_throttle
 
 #: The one `Sec-Fetch-Site` value an export refuses. `same-origin` and
 #: `same-site` are our own pages (the SPA and the API are one site, which the
@@ -79,8 +79,12 @@ def charge_export_budget(request: Any, view: Any) -> None:
     assign `.scope = "export"` afterwards, and `get_cache_key` then replaced it
     with the statement view's `throttle_scope = "user"` — so statement exports
     ran on 600/min (F-1). Aging escaped only because its view has no scope.
+
+    The counter is DURABLE (`durable_throttle`, Part 27 §27.11): it was DRF's
+    LocMem counter, one per gunicorn worker, so ten an hour was ten per worker
+    per hour and a restart refilled it.
     """
-    throttle = ScopedUserRateThrottle("export")
+    throttle = durable_throttle("export")
     if not throttle.allow_request(request, view):
         raise Throttled(wait=throttle.wait())
 

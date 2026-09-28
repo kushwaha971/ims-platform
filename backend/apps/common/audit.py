@@ -170,6 +170,7 @@ class AuditAction:
     INVOICE_ISSUED = "invoice.issued"
     INVOICE_SHARE_LINK_CREATED = "invoice.share_link_created"
     INVOICE_SHARE_LINK_REGENERATED = "invoice.share_link_regenerated"
+    INVOICE_SHARE_LINK_REVOKED = "invoice.share_link_revoked"
     # ── Sprint 9: SAL-01 / SAL-04 / SAL-05 (17-04 §16) ────────────────────
     #
     # `estimate.expired` is written by the nightly job (actor_type `system`).

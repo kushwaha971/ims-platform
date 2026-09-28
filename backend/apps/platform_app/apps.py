@@ -19,7 +19,11 @@ class PlatformConfig(AppConfig):
     verbose_name = "Platform"
 
     def ready(self) -> None:
+        from apps.common.throttling import register_durable_throttle
         from apps.platform_app import signals, tasks  # noqa: F401
+        from apps.platform_app.throttling import durable_factory
+
+        register_durable_throttle(durable_factory)
 
         register(Tags.security, deploy=True)(check_console_sms_backend)
 

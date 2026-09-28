@@ -136,6 +136,29 @@ def validate(*, user: Any, password: str) -> str:
     return value
 
 
+def hash_outside_transaction(value: str) -> str:
+    """The encoded hash of an already-validated password, computed BEFORE any `atomic()`.
+
+    PBKDF2 at Django 5.2's default is a million iterations — a quarter of a
+    second on an idle core and several seconds on a starved one. Computed inside
+    `transaction.atomic()` it holds the connection open and idle while the CPU
+    grinds, and on the 2-vCPU box under load QA saw sign-ups and team-member
+    creation die with `IdleInTransactionSessionTimeout` (the 30 s
+    `idle_in_transaction_session_timeout` in `settings/base.py`) as 500s. Worse,
+    `create_member` held the TENANT row lock for the whole hash, stalling every
+    other write to the business behind one password. The hash is a pure
+    function of the value, so nothing is lost by computing it first and handing
+    the transaction only the finished string.
+    """
+    return make_password(value)
+
+
+def apply_encoded(user: Any, encoded: str) -> None:
+    """Put a pre-computed hash on `user` (no hashing here — see above)."""
+    user.password = encoded
+    user._password = None  # nothing for `password_changed()` validators to see
+
+
 def _is_the_identifier(*, user: Any, value: str) -> bool:
     """§10's "≠ the identifier", read against email as well as mobile.
 
@@ -184,11 +207,12 @@ def set_password(
         raise InvalidCredentials()
 
     value = validate(user=user, password=new_password)
+    encoded = hash_outside_transaction(value)
 
     with transaction.atomic():
         from apps.platform_app.services import credentials
 
-        user.set_password(value)
+        apply_encoded(user, encoded)
         user.save(update_fields=["password", "updated_at"])
         # DEC-012: this is the moment an owner-issued temporary password stops
         # being one. Inside the same transaction as the hash, so there is no
@@ -213,6 +237,7 @@ def reset_password(
     *,
     user: Any,
     new_password: str,
+    encoded_password: str | None = None,
     request_id: str | None = None,
     ip: str | None = None,
     user_agent: str | None = None,
@@ -222,14 +247,19 @@ def reset_password(
     Revokes **all** existing sessions. The caller then issues a fresh one, so the
     person who completed the reset stays logged in and everybody else does not.
     `permissions_version` is untouched (BR-2: permissions are unaffected).
+
+    `encoded_password` is the already-validated, already-hashed value from
+    `prepare_reset`, for a caller that holds a transaction of its own (the
+    confirm view): the hash must not be computed inside it.
     """
     from apps.platform_app.services import sessions as session_service
 
-    value = validate(user=user, password=new_password)
+    if encoded_password is None:
+        encoded_password = hash_outside_transaction(validate(user=user, password=new_password))
     with transaction.atomic():
         from apps.platform_app.services import credentials
 
-        user.set_password(value)
+        apply_encoded(user, encoded_password)
         user.save(update_fields=["password", "updated_at"])
         # A reset is equally a chosen password, so it lowers the DEC-012 gate
         # too. Without this, someone who used "Forgot password" rather than the
@@ -502,6 +532,35 @@ def reset_link(raw: str) -> str:
     """The URL the merchant clicks. `UB_PUBLIC_BASE_URL` is the frontend origin."""
     base = (settings.UB_PUBLIC_BASE_URL or "").rstrip("/")
     return f"{base}/reset-password?token={raw}"
+
+
+def prepare_reset(*, token: str, new_password: str) -> tuple[Any, str]:
+    """Validate and HASH the new password for a reset link, before any transaction.
+
+    Reads the link without locking or spending it, with the same refusal for
+    every reason `consume_reset_token` has. The confirm view then spends the
+    link under its lock and writes this hash — so the million-iteration PBKDF2
+    runs with no transaction open (`hash_outside_transaction`), and a refused
+    password still leaves the link unspent, which is FR-5's rule.
+    """
+    from apps.platform_app.models import AuthToken, AuthTokenPurpose
+
+    invalid = ValidationFailed({"token": ["This reset link is no longer valid."]})
+    if not token or not isinstance(token, str):
+        raise invalid
+    row = (
+        AuthToken.objects.select_related("user").filter(token_hash=hash_reset_token(token)).first()
+    )
+    if (
+        row is None
+        or row.purpose != AuthTokenPurpose.PASSWORD_RESET
+        or row.used_at is not None
+        or row.expires_at <= timezone.now()
+        or not row.user.is_active
+    ):
+        raise invalid
+    value = validate(user=row.user, password=new_password)
+    return row.user, hash_outside_transaction(value)
 
 
 def consume_reset_token(*, token: str) -> Any:

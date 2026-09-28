@@ -67,6 +67,9 @@ AUTH_USER_MODEL = "platform.User"
 MIDDLEWARE = [
     "apps.common.middleware.RequestIdMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    # Sprint 12 — a `default-src 'none'` CSP on every /api/ response (Part 27
+    # §27.6.4). Beside SecurityMiddleware, whose headers it complements.
+    "apps.common.middleware.ApiSecurityHeadersMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -187,7 +190,10 @@ REST_FRAMEWORK = {
         "otp": env.str("UB_RATE_LIMIT_OTP", "5/10min"),
         "otp_ip": "20/hour",
         "export": env.str("UB_RATE_LIMIT_EXPORT", "10/hour"),
+        # Part 27 §27.12: per IP, and per TOKEN a day — both durable
+        # (`apps.platform_app.throttling`), both on `GET /public/d/{token}`.
         "public_link": "60/min",
+        "public_link_token": "600/day",
         # PLT-10 FR-3: re-typing the password to delete a business. A stolen
         # session guessing the owner's password here gets ten tries an hour.
         "reverify": "10/hour",
@@ -212,6 +218,8 @@ REST_FRAMEWORK = {
         # queues a job that reads all of it; a loop of them is the one way a
         # stolen token fills a tenant's disk.
         "import_upload": "20/hour",
+        # Part 27 §27.11 — per TENANT, durable (`imports.views.job`).
+        "import_commit": "5/hour",
     },
     "UNAUTHENTICATED_USER": None,
     "COERCE_DECIMAL_TO_STRING": True,

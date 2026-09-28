@@ -22,6 +22,7 @@ from django.db import transaction
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 
+from apps.common.exceptions import ValidationFailed
 from apps.common.responses import StandardResponse
 from apps.common.tenancy import get_effective_tenant
 from apps.platform_app import tokens
@@ -41,6 +42,7 @@ from apps.platform_app.services import auth as auth_service
 from apps.platform_app.services import memberships as membership_service
 from apps.platform_app.services import passwords as password_service
 from apps.platform_app.services import sessions as session_service
+from apps.platform_app.services import throttle
 
 
 def _client_meta(request: Any) -> dict:
@@ -372,11 +374,31 @@ class PasswordResetConfirmView(APIView):
         data = serializer.validated_data
         meta = _client_meta(request)
 
+        if meta["ip"]:
+            per_ip = throttle.consume(
+                scope=throttle.SCOPE_RESET_CONFIRM_IP,
+                identifier=meta["ip"],
+                limit=throttle.RESET_CONFIRMS_PER_IP,
+                window_seconds=throttle.RESET_CONFIRM_IP_WINDOW_SECONDS,
+            )
+            if not per_ip.allowed:
+                raise password_service.RequestThrottled(
+                    per_ip.retry_after, throttle.RESET_CONFIRMS_PER_IP
+                )
+        # The hash is computed HERE, with no transaction open (see
+        # `passwords.hash_outside_transaction`); the atomic block below only
+        # spends the link and writes the finished string.
+        prepared_user, encoded = password_service.prepare_reset(
+            token=data["token"], new_password=data["new_password"]
+        )
         with transaction.atomic():
             user = password_service.consume_reset_token(token=data["token"])
+            if user.pk != prepared_user.pk:  # pragma: no cover - one token, one user
+                raise ValidationFailed({"token": ["This reset link is no longer valid."]})
             revoked = password_service.reset_password(
                 user=user,
                 new_password=data["new_password"],
+                encoded_password=encoded,
                 request_id=meta["request_id"],
                 ip=meta["ip"],
                 user_agent=meta["user_agent"],

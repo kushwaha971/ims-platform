@@ -94,12 +94,16 @@ def register(
     # rule must see the address being registered.
     candidate = User(email=email, mobile=mobile or None, full_name=full_name.strip()[:120])
     value = passwords.validate(user=candidate, password=password)
+    # Hashed before the transaction opens (`passwords.hash_outside_transaction`):
+    # a sign-up on a starved CPU used to sit idle-in-transaction through the
+    # whole PBKDF2 and be killed by the 30 s timeout as a 500.
+    encoded = passwords.hash_outside_transaction(value)
 
     try:
         with transaction.atomic():
             user = User.objects.create_user(
                 email=email,
-                password=value,
+                encoded_password=encoded,
                 mobile=mobile or None,
                 full_name=full_name.strip()[:120],
                 locale=locale or "en",

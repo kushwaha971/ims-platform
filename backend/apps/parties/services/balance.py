@@ -21,6 +21,7 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import Any, Callable
 
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils import timezone
 
 from apps.common.constants import Direction
@@ -48,6 +49,52 @@ def lock_party(*, tenant: Any, party_id: Any) -> Party | None:
     if tenant is None:
         return None
     return Party.objects.for_tenant(tenant).select_for_update().filter(pk=party_id).first()
+
+
+def lock_party_of(*, tenant: Any, rows: Any, pk: Any) -> Party | None:
+    """Lock the party a document (or payment) belongs to BEFORE locking the row itself.
+
+    ── The lock order every money path follows ───────────────────────────────
+    1. the party (`lock_party`);
+    2. documents, several at once in `(document_date, number, id)` order;
+    3. payments and their allocations;
+    4. stock rows by `item_id` (`inventory.services.stock`);
+    5. number sequences (`allocate_number`).
+
+    Invoice void used to lock the INVOICE and then the party, while payment
+    void locked the PAYMENT, then the party, then the invoice. Voiding an
+    invoice and its payment at the same moment held one lock each and waited on
+    the other's: a PostgreSQL deadlock, answered as a 500 on one side. With the
+    party first in both, the second transaction waits at step 1 holding
+    nothing, and the two simply run one after the other.
+
+    `rows` is the model's tenant-scoped queryset; the party id is read without a
+    lock (it cannot change on an issued document or a payment, and a draft's
+    caller re-checks it after locking the document). Returns `None` for a row
+    with no party — a walk-in bill — or an id this tenant cannot see; the
+    caller's own document lock then produces the 404.
+    """
+    try:
+        party_id = rows.filter(pk=pk).values_list("party_id", flat=True).first()
+    except (ValueError, TypeError, DjangoValidationError):
+        return None
+    if party_id is None:
+        return None
+    return lock_party(tenant=tenant, party_id=party_id)
+
+
+def relock_if_moved(*, tenant: Any, party: Party | None, party_id: Any) -> Party | None:
+    """After the document lock: the party that document ACTUALLY has, locked.
+
+    Only a draft can change party between the unlocked read and the lock, and
+    nothing that locks drafts also holds another party's documents, so taking
+    the second party here cannot close a cycle.
+    """
+    if party_id is None:
+        return None
+    if party is not None and party.pk == party_id:
+        return party
+    return lock_party(tenant=tenant, party_id=party_id)
 
 
 def apply_entry(*, party: Party, direction: str, amount: Decimal) -> Decimal:

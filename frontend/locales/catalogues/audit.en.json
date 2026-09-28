@@ -41,6 +41,7 @@
   "audit.action.invoice.issued": "Issued bill",
   "audit.action.invoice.share_link_created": "Shared a bill link",
   "audit.action.invoice.share_link_regenerated": "Made a new bill link",
+  "audit.action.invoice.share_link_revoked": "Turned off a bill link",
   "audit.action.invoice.voided": "Cancelled bill",
   "audit.action.item.archived": "Archived item",
   "audit.action.item.created": "Added item",
