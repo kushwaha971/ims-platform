@@ -389,7 +389,7 @@ describe('the wizard — step 4 (FR-5) and §9 Failed', () => {
     expect(screen.queryByText('On')).not.toBeInTheDocument();
   });
 
-  it('applies the preset and lands on the customer list (there is no dashboard)', async () => {
+  it('UAT D5: applies the preset and lands on the dashboard, like sign-in', async () => {
     const user = userEvent.setup();
     await atSummary();
     onboardingService.completeOnboarding.mockResolvedValue({
@@ -401,7 +401,7 @@ describe('the wizard — step 4 (FR-5) and §9 Failed', () => {
     await user.click(screen.getByRole('button', { name: /Start using/ }));
 
     await waitFor(() => expect(onboardingService.completeOnboarding).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(replace).toHaveBeenCalledWith('/parties'));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/dashboard'));
   });
 
   /**
@@ -432,7 +432,7 @@ describe('the wizard — step 4 (FR-5) and §9 Failed', () => {
     await user.click(screen.getByRole('button', { name: /Start using/ }));
 
     await waitFor(() => expect(onboardingService.completeOnboarding).toHaveBeenCalledTimes(1));
-    expect(replace).not.toHaveBeenCalledWith('/parties');
+    expect(replace).not.toHaveBeenCalledWith('/dashboard');
     // The step is still on screen and still submittable …
     expect(screen.getByRole('button', { name: /Start using/ })).toBeInTheDocument();
     // … and the screen itself reports nothing.

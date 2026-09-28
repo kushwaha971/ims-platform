@@ -303,7 +303,8 @@ async function phaseS(browser) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const page = await ctx.newPage();
   await signIn(page, staffEmail);
-  record(id, 'staff member signs in to the employer\'s /parties (not the wizard)', /\/parties/.test(page.url()), page.url());
+  // UAT D5 — sign-in and finished onboarding both land on /dashboard (RPT-01).
+  record(id, 'staff member signs in to the employer\'s app (/dashboard or /parties, not the wizard)', /\/(dashboard|parties)/.test(page.url()), page.url());
   await page.goto(`${FE}/switch`, { waitUntil: 'networkidle' }); await page.waitForTimeout(1500);
   const add = page.getByRole('button', { name: /Add a business|Add business/i }).first();
   record(id, '/switch offers "Add a business" to staff', (await add.count()) > 0);
@@ -336,10 +337,10 @@ async function phaseS(browser) {
     const btn = page.getByRole('button', { name: /Skip for now|Continue|Start using/ }).last();
     await btn.click().catch(() => {});
     await page.waitForTimeout(1800);
-    if (/\/parties/.test(page.url())) break;
+    if (/\/(dashboard|parties)/.test(page.url())) break;
   }
-  if (!/\/parties/.test(page.url())) { await page.getByRole('button', { name: /Start using/ }).click().catch(() => {}); await page.waitForTimeout(2500); }
-  record(id, 'staff finishes own onboarding → /parties', /\/parties/.test(page.url()), page.url());
+  if (!/\/(dashboard|parties)/.test(page.url())) { await page.getByRole('button', { name: /Start using/ }).click().catch(() => {}); await page.waitForTimeout(2500); }
+  record(id, 'staff finishes own onboarding → /dashboard', /\/(dashboard|parties)/.test(page.url()), page.url());
 
   // "Add a business" after completion → creates a SECOND own business, step 1 empty.
   await page.goto(`${FE}/switch`, { waitUntil: 'networkidle' }); await page.waitForTimeout(1500);

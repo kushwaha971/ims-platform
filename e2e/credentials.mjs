@@ -156,7 +156,11 @@ async function run() {
     page.on('console', (m) => m.type() === 'error' && keep(m.text()) && consoleErrors.push(m.text()));
 
     await signIn(page, STAFF.email, issuedPassword);
-    await page.waitForTimeout(1500);
+    // UAT harness fix — sign-in lands on /dashboard first and the forced
+    // change redirects from there; reading the URL after a fixed 1.5 s raced
+    // that redirect. Wait for it (bounded), then assert.
+    await page.waitForURL(/\/set-password/, { timeout: 15000 }).catch(() => {});
+    await page.waitForTimeout(500);
     await shot(page, '04-forced-change');
 
     record(

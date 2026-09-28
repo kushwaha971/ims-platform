@@ -270,12 +270,12 @@ export const useOnboarding = (routeStep: number): UseOnboardingResult => {
     dispatch(stepChanged(routeStep));
   }, [dispatch, routeStep]);
 
-  // §9 "Completed" — the preset has been applied; the customer list's
-  // first-use state (FR-11) is where the merchant belongs, not a wizard they
-  // finished. Straight to it: there is no dashboard in the product (RPT-01 is
-  // unbuilt), and `/dashboard` survives only as a redirect for old links.
+  // §9 "Completed" — the preset has been applied; the merchant lands where
+  // sign-in lands them (UAT D5): RPT-01's dashboard is built and is the app's
+  // landing page (auth's `DEFAULT_POST_LOGIN_PATH`), so finishing the wizard and
+  // signing in next morning open the same screen.
   useEffect(() => {
-    if (completed) router.replace(ROUTES.PARTIES);
+    if (completed) router.replace(ROUTES.DASHBOARD);
   }, [completed, router]);
 
   const goToStep = useCallback(
