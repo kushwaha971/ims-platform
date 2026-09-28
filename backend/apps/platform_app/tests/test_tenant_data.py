@@ -99,6 +99,29 @@ def test_deletion_order_puts_children_before_their_parents() -> None:
     assert order.index("inventory.StockMovement") < order.index("inventory.Item")
     assert order.index("platform.Membership") < order.index("platform.Role")
     assert order.index("expenses.Expense") < order.index("ledger.LedgerEntry")
+    # Integration gap QA found: sales/imports/reports were on PENDING_APPS, so
+    # none of their rows was planned. A line's RESTRICT FK to the item is what
+    # must put sales ahead of inventory.
+    assert order.index("sales.SalesDocumentLine") < order.index("inventory.Item")
+    assert order.index("sales.SalesDocumentLine") < order.index("sales.SalesDocument")
+    assert order.index("sales.SalesDocument") < order.index("parties.Party")
+    assert order.index("imports.ImportJob") < order.index("files.Attachment")
+    assert order.index("reports.Export") < order.index("files.Attachment")
+
+
+def test_sales_imports_and_reports_are_no_longer_pending() -> None:
+    """Their owners declared their tables; the stop-gap list must not hide them."""
+    from apps.common.tenant_data import PENDING_APPS, REGISTRY, ensure_loaded
+
+    ensure_loaded()
+    assert not {"sales", "imports", "reports"} & PENDING_APPS
+    for label in (
+        "sales.SalesDocument",
+        "sales.SalesDocumentLine",
+        "imports.ImportJob",
+        "reports.Export",
+    ):
+        assert label in REGISTRY
 
 
 # ── Export ──────────────────────────────────────────────────────────────────
@@ -414,6 +437,64 @@ def test_after_thirty_days_the_children_go_and_a_tombstone_stays(
     # And the owner's account itself was not deleted.
     owner.user.refresh_from_db()
     assert owner.user.is_active
+
+
+def test_deletion_removes_sales_imports_and_reports_rows(
+    tenant: Any, other_tenant: Any, django_capture_on_commit_callbacks: Any
+) -> None:
+    """Protects the deletion job's coverage of the apps that left PENDING_APPS:
+    an invoice (with a line pointing at an item), an import job and an export
+    record all go, and the job is not stopped by an unregistered table."""
+    from apps.common.management.commands.seed_reference_data import seed_units
+    from apps.imports.models import ImportJob
+    from apps.inventory.models import Item, Unit
+    from apps.platform_app.models import Job
+    from apps.platform_app.services.tenant_delete import enqueue_due
+    from apps.reports.models import Export
+    from apps.sales.models import SalesDocument, SalesDocumentLine
+
+    seed_units()
+    nos = Unit.objects.get(tenant__isnull=True, code="NOS")
+
+    def _book(t: Any) -> None:
+        item = Item.objects.create(tenant=t, name="Rice", sku=f"RICE-{t.pk.hex[:4]}", unit=nos)
+        doc = SalesDocument.objects.create(
+            tenant=t,
+            kind="invoice",
+            fy_label="2026-27",
+            document_date=dt.date(2026, 9, 1),
+            place_of_supply_state="27",
+        )
+        SalesDocumentLine.objects.create(
+            document=doc,
+            line_no=1,
+            description="Rice",
+            qty=1,
+            unit_code="NOS",
+            tax_code="GST0",
+            item=item,
+        )
+        ImportJob.objects.create(tenant=t, kind="parties")
+        Export.objects.create(tenant=t, report_name="list:parties")
+
+    _book(tenant)
+    _book(other_tenant)
+    _pending(tenant, days_ago=31)
+    with django_capture_on_commit_callbacks(execute=True):
+        assert enqueue_due() == 1
+
+    job = Job.objects.get(tenant=tenant, job_type="platform.delete_tenant")
+    assert job.status == JobStatus.SUCCEEDED, job.error
+    assert not SalesDocument.objects.filter(tenant=tenant).exists()
+    assert not SalesDocumentLine.objects.filter(document__tenant=tenant).exists()
+    assert not ImportJob.objects.filter(tenant=tenant).exists()
+    assert not Export.objects.filter(tenant=tenant).exists()
+    assert not Item.objects.filter(tenant=tenant).exists()
+    # The other business keeps all four.
+    assert SalesDocument.objects.filter(tenant=other_tenant).count() == 1
+    assert SalesDocumentLine.objects.filter(document__tenant=other_tenant).count() == 1
+    assert ImportJob.objects.filter(tenant=other_tenant).count() == 1
+    assert Export.objects.filter(tenant=other_tenant).count() == 1
 
 
 def test_a_cancelled_request_is_never_executed(tenant: Any) -> None:

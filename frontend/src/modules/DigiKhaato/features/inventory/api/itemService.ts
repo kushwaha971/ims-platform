@@ -31,16 +31,18 @@ export interface ItemRowWire {
   readonly category: { readonly id: string; readonly name: string } | null;
   readonly unit: { readonly id: string; readonly code: string; readonly allow_decimal: boolean };
   readonly selling_price: string;
-  readonly purchase_price: string;
+  /** Cost and valuation keys are OMITTED for a member without
+   *  `reports.financial.read` (INV-08 EC-4) — absent, never zero. */
+  readonly purchase_price?: string;
   readonly tax_code: string;
   readonly hsn_sac?: string | null;
   readonly tax_inclusive_selling?: boolean;
   readonly track_stock: boolean;
   readonly on_hand: string | null;
-  readonly avg_cost: string | null;
+  readonly avg_cost?: string | null;
   readonly reorder_point: string | null;
   readonly stock_status: 'ok' | 'low' | 'out' | null;
-  readonly stock_value: string | null;
+  readonly stock_value?: string | null;
   readonly status: 'active' | 'archived';
   readonly match_field?: 'name' | 'sku' | 'barcode' | null;
   readonly updated_at: string;
@@ -52,10 +54,10 @@ export interface MovementWire {
   readonly movement_date: string;
   readonly movement_type: StockMovement['movementType'];
   readonly qty: string;
-  readonly unit_cost: string | null;
-  readonly value: string | null;
+  readonly unit_cost?: string | null;
+  readonly value?: string | null;
   readonly on_hand_after: string;
-  readonly avg_cost_after: string;
+  readonly avg_cost_after?: string;
   readonly reason: string | null;
   readonly source: {
     readonly type: string;
@@ -97,13 +99,13 @@ interface ItemDetailWire extends Omit<ItemRowWire, 'category' | 'unit'> {
   readonly stock: readonly {
     readonly location: { readonly id: string; readonly code: string; readonly name: string };
     readonly on_hand: string;
-    readonly avg_cost: string;
-    readonly value: string;
+    readonly avg_cost?: string;
+    readonly value?: string;
     readonly last_movement_at: string | null;
   }[];
   readonly opening: {
     readonly qty: string;
-    readonly unit_cost: string | null;
+    readonly unit_cost?: string | null;
     readonly movement_date: string;
   } | null;
   readonly has_movements: boolean;
@@ -121,16 +123,16 @@ export const toItemRow = (row: ItemRowWire): ItemListRow => ({
   category: row.category ? { id: row.category.id, name: row.category.name } : null,
   unit: { id: row.unit.id, code: row.unit.code, allowDecimal: row.unit.allow_decimal },
   sellingPrice: row.selling_price,
-  purchasePrice: row.purchase_price,
+  purchasePrice: row.purchase_price ?? null,
   taxCode: row.tax_code,
   hsnSac: row.hsn_sac ?? null,
   taxInclusiveSelling: row.tax_inclusive_selling ?? false,
   trackStock: row.track_stock,
   onHand: row.on_hand,
-  avgCost: row.avg_cost,
+  avgCost: row.avg_cost ?? null,
   reorderPoint: row.reorder_point,
   stockStatus: row.stock_status,
-  stockValue: row.stock_value,
+  stockValue: row.stock_value ?? null,
   status: row.status,
   matchField: row.match_field ?? null,
   updatedAt: row.updated_at,
@@ -142,10 +144,10 @@ export const toMovement = (row: MovementWire): StockMovement => ({
   movementDate: row.movement_date,
   movementType: row.movement_type,
   qty: row.qty,
-  unitCost: row.unit_cost,
-  value: row.value,
+  unitCost: row.unit_cost ?? null,
+  value: row.value ?? null,
   onHandAfter: row.on_hand_after,
-  avgCostAfter: row.avg_cost_after,
+  avgCostAfter: row.avg_cost_after ?? null,
   reason: row.reason,
   source: row.source,
   reversesId: row.reverses_id,
@@ -184,14 +186,14 @@ export const toItem = (row: ItemDetailWire): Item => ({
   stock: row.stock.map((s) => ({
     location: s.location,
     onHand: s.on_hand,
-    avgCost: s.avg_cost,
-    value: s.value,
+    avgCost: s.avg_cost ?? null,
+    value: s.value ?? null,
     lastMovementAt: s.last_movement_at,
   })),
   opening: row.opening
     ? {
         qty: row.opening.qty,
-        unitCost: row.opening.unit_cost,
+        unitCost: row.opening.unit_cost ?? null,
         movementDate: row.opening.movement_date,
       }
     : null,
@@ -243,7 +245,8 @@ export const listItems = async (
       page_size: number;
       total: number;
       total_pages: number;
-      totals: { items: number; stock_value: string };
+      /** `stock_value` is null for a member without `reports.financial.read`. */
+      totals: { items: number; stock_value: string | null };
       counts: { all: number; in: number; low: number; out: number };
     };
   }>(`${API_PATHS.ITEMS}${query}`, ubConfig({ signal, suppressErrorSnackbar: true }));
@@ -321,7 +324,7 @@ export interface ItemBody {
   readonly tax_code: string;
   readonly tax_inclusive_selling: boolean;
   readonly selling_price: string;
-  readonly purchase_price: string;
+  readonly purchase_price?: string;
   readonly mrp: string | null;
   readonly track_stock: boolean;
   readonly reorder_point: string | null;
@@ -333,9 +336,15 @@ export interface ItemBody {
   };
 }
 
+/**
+ * `omitPurchasePrice` — the item was read WITHOUT its purchase price (no
+ * `reports.financial.read`, INV-08 EC-4), so the form never knew it; sending
+ * the empty field as "0" would wipe the real price. A PATCH carries only the
+ * fields it sends, so leaving the key out keeps it.
+ */
 export const toItemBody = (
   values: ItemFormValues,
-  { withOpening }: { withOpening: boolean }
+  { withOpening, omitPurchasePrice = false }: { withOpening: boolean; omitPurchasePrice?: boolean }
 ): ItemBody => {
   const isService = values.itemType === 'service';
   const track = !isService && values.trackStock;
@@ -350,7 +359,7 @@ export const toItemBody = (
     tax_code: values.taxCode,
     tax_inclusive_selling: values.taxInclusiveSelling,
     selling_price: values.sellingPrice || '0',
-    purchase_price: values.purchasePrice || '0',
+    ...(omitPurchasePrice ? {} : { purchase_price: values.purchasePrice || '0' }),
     mrp: isService ? null : values.mrp || null,
     track_stock: track,
     reorder_point: track ? values.reorderPoint || null : null,
@@ -397,10 +406,10 @@ export const updateItem = async (
   id: string,
   values: ItemFormValues,
   version: number,
-  { withOpening }: { withOpening: boolean }
+  { withOpening, omitPurchasePrice = false }: { withOpening: boolean; omitPurchasePrice?: boolean }
 ): Promise<ItemSaveResult> => {
   const response = await api.patch<SaveWire>(API_PATHS.ITEM(id), {
-    ...toItemBody(values, { withOpening }),
+    ...toItemBody(values, { withOpening, omitPurchasePrice }),
     version,
   });
   return toSaveResult(response.data);

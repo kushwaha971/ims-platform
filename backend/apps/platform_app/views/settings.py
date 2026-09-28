@@ -249,7 +249,12 @@ class AuditLogListView(APIView):
             return "'" + text if text[:1] in ("=", "+", "-", "@") else text
 
         def rows() -> Any:
-            yield writer.writerow(["When", "Who", "Action", "Entity", "Label", "Changed", "Reason"])
+            # QA D5 — human columns: the action and the kind of record in
+            # words, the changed fields by name, never `audit.exported` or
+            # `platform_audit_log`.
+            yield writer.writerow(
+                ["When", "Who", "Action", "Type", "About", "What changed", "Reason"]
+            )
             chunk: list[Any] = []
             for row in queryset.iterator(chunk_size=500):
                 chunk.append(row)
@@ -267,10 +272,12 @@ class AuditLogListView(APIView):
                     [
                         when,
                         _neutral(who),
-                        item["action"],
-                        item["entity_type"],
+                        _neutral(audit_selectors.action_label(item["action"])),
+                        _neutral(audit_selectors.entity_type_label(item["entity_type"])),
                         _neutral(item["entity_label"]),
-                        " ".join(item["changed_keys"]),
+                        _neutral(
+                            ", ".join(audit_selectors.field_label(k) for k in item["changed_keys"])
+                        ),
                         _neutral(item["metadata"].get("reason")),
                     ]
                 )

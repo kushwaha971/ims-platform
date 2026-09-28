@@ -44,20 +44,16 @@ export interface NavItemConfig {
    * Does `href` actually resolve to a page yet?
    *
    * Absent means no, which is the safe default: a new entry added here before
-   * its route exists is inert rather than a 404 waiting for a merchant to tap
-   * it. `tests/routes.test.ts` asserts every `ready` item has a page, so this
-   * cannot drift the other way either.
+   * its route exists is not shown rather than a 404 waiting for a merchant to
+   * tap it. `tests/routes.test.ts` asserts every `ready` item has a page, so
+   * this cannot drift the other way either.
    *
-   * It exists because `next/link` PREFETCHES. The sidebar renders on every app
-   * route, so eight links pointing at unbuilt pages meant eight `?_rsc=` fetches
-   * on every screen, all 404, on a phone connection this product is explicitly
-   * designed around — and then a merchant who tapped one landed on a
-   * not-found. Found while a browser journey hung: the prefetch traffic never
-   * let the page reach network-idle.
-   *
-   * The rows stay VISIBLE. They are what tells a shopkeeper the product will
-   * eventually do stock and invoices, and hiding them would make the app look
-   * smaller than the plan. They are simply not links yet.
+   * A row that is not ready is NOT RENDERED at all (`useNavigation` drops it).
+   * It used to stay visible as an inert "Soon" row, on the theory that it told
+   * a shopkeeper what the product would eventually do; the owner's binding
+   * rule is "don't show unbuilt features", so Bills, Purchases, Payments and
+   * Reports appear the day their pages do and not before. Never rendering them
+   * also keeps `next/link` from prefetching pages that 404.
    */
   readonly ready?: boolean;
 }

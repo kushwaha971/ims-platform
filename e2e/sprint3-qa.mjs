@@ -400,7 +400,12 @@ async function phaseA(browser, state) {
   record('A9', 'Escape closes the sheet', sheetsLeft === 0, `dialogs=${sheetsLeft}`);
   record('A9', 'focus returns to the ⋯ (More actions) button', focusInfo.label === 'More actions', JSON.stringify(focusInfo));
 
-  // ── A7 opening a channel makes no API request, and never says sent ────────
+  // ── A7 opening a channel records the reminder, and never says sent ────────
+  // By design since LED-06's history strip: the tap on WhatsApp/SMS WRITES a
+  // `ledger_reminder` row (POST /reminders) and marks it sent (POST
+  // /reminders/{id}/send), which is what feeds the Sent tab. The harness now
+  // asserts exactly those two writes and nothing else — no message provider
+  // call, no second reminder.
   page.on('request', onRequest);
   sheet = await openReminder(page);
   apiRequests.length = 0;
@@ -410,7 +415,13 @@ async function phaseA(browser, state) {
   await page.waitForTimeout(1500);
   const snackWa = await page.locator('[role="status"], [role="alert"]').allInnerTexts();
   record('A7', 'WhatsApp click opens a new tab at the wa.me URL', Boolean(popup) && (popup?.url() ?? '').startsWith('https://wa.me/919812345678?text='), popup?.url()?.slice(0, 60));
-  record('A7', 'WhatsApp click makes no request to the API', apiRequests.length === 0, apiRequests.join(' ; '));
+  const recordsOnce = (reqs) => {
+    const writes = reqs.filter((r) => !r.startsWith('GET '));
+    const created = writes.filter((r) => /^POST \S*\/reminders\/?$/.test(r));
+    const sent = writes.filter((r) => /^POST \S*\/reminders\/[^/]+\/send\/?$/.test(r));
+    return created.length === 1 && sent.length === 1 && writes.length === 2;
+  };
+  record('A7', 'WhatsApp click records the reminder: one POST /reminders + one POST /reminders/{id}/send, nothing else', recordsOnce(apiRequests), apiRequests.join(' ; '));
   record('A7', 'feedback says "WhatsApp opened", never "sent"',
     snackWa.some((t) => t.includes('WhatsApp opened')) && !snackWa.some((t) => /\bsent\b/i.test(t)), JSON.stringify(snackWa));
   record('A7', 'the sheet closes after WhatsApp', (await page.getByRole('dialog').count()) === 0);
@@ -421,7 +432,7 @@ async function phaseA(browser, state) {
   await sheet.getByRole('link', { name: 'SMS' }).click().catch(() => {});
   await page.waitForTimeout(1500);
   const snackSms = await page.locator('[role="status"], [role="alert"]').allInnerTexts();
-  record('A7', 'SMS click makes no request to the API', apiRequests.length === 0, apiRequests.join(' ; '));
+  record('A7', 'SMS click records the reminder: one POST /reminders + one POST /reminders/{id}/send, nothing else', recordsOnce(apiRequests), apiRequests.join(' ; '));
   record('A7', 'SMS feedback never says "sent"', !snackSms.some((t) => /\bsent\b/i.test(t)), JSON.stringify(snackSms));
 
   // ── A8 Copy text ──────────────────────────────────────────────────────────
@@ -487,7 +498,9 @@ async function phaseA(browser, state) {
   record('A', 'no console errors on the owner khata/sheet pages', consoleErrors.filter((t) => !/401|Unauthorized/.test(t)).length === 0, consoleErrors.join(' ; ').slice(0, 400));
   await ctx.close();
 
-  // ── A1 accountant: visible by design ───────────────────────────────────────
+  // ── A1 accountant: hidden by design ────────────────────────────────────────
+  // Sending now writes a `ledger_reminder` row, so it needs
+  // `ledger.reminder.write` (LED-06 §12), which the accountant does not hold.
   {
     const c = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     const pg = await c.newPage();
@@ -498,14 +511,8 @@ async function phaseA(browser, state) {
       who.email === state.accountant.email && perms.includes('ledger.entry.read') && !perms.includes('ledger.entry.write'), who.email);
     await openKhata(pg, P.ramesh, /Ramesh Traders/);
     const items = await menuItems(pg);
-    record('A1', 'accountant: "Send reminder" shown on a receivable party (by design)', Boolean(items?.includes('Send reminder')), JSON.stringify(items));
-    if (items?.includes('Send reminder')) {
-      await pg.getByRole('dialog').last().getByRole('button', { name: 'Send reminder' }).click();
-      const sh = pg.getByRole('dialog').last();
-      await sh.locator('[data-ub-share-preview]').waitFor({ timeout: 20000 });
-      const ss = await readSheet(sh);
-      record('A1', 'accountant: the sheet carries the same message', ss.preview === expected);
-    }
+    record('A1', 'accountant: "Send reminder" NOT shown (no ledger.reminder.write, by design)',
+      !perms.includes('ledger.reminder.write') && !items?.includes('Send reminder'), JSON.stringify(items));
     await c.close();
   }
 

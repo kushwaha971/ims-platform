@@ -19,8 +19,10 @@
 import {
   forwardRef,
   useCallback,
+  useEffect,
   useId,
   useMemo,
+  useRef,
   type ButtonHTMLAttributes,
   type HTMLAttributes,
   type InputHTMLAttributes,
@@ -259,6 +261,16 @@ export function MLTabs<T extends string>({
   const generated = useId();
   const prefix = idPrefix ?? generated;
   const values = useMemo(() => tabs.map((tab) => tab.value), [tabs]);
+  /* `fit` scrolls sideways when its labels outgrow a phone. The selected tab
+     must never be the one scrolled out of sight — QA found "Sent" clipped at
+     390 px with nothing saying it was there — so a change of `value` brings it
+     into view. `nearest` on both axes: no page jump when it is already shown. */
+  const listRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (layout !== 'fit') return;
+    const active = listRef.current?.querySelector<HTMLElement>('[aria-selected="true"]');
+    active?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+  }, [layout, value]);
 
   const onKeyDown = useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {
@@ -282,6 +294,7 @@ export function MLTabs<T extends string>({
     <div className={cn('flex w-full flex-col gap-4', className)}>
       <div className="flex w-full flex-wrap items-center gap-x-4 gap-y-2 border-b border-border-hairline">
         <div
+          ref={listRef}
           role="tablist"
           aria-label={ariaLabel}
           onKeyDown={onKeyDown}
@@ -304,7 +317,9 @@ export function MLTabs<T extends string>({
                 onClick={() => onValueChange(tab.value)}
                 className={cn(
                   'ds-body-base-medium h-10 whitespace-nowrap border-b-2 px-4',
-                  layout === 'fill' ? 'flex-1' : 'flex-none',
+                  /* A phone gets 8 px back per tab side in `fit`: four
+                     labelled tabs with counts fit 360 px instead of scrolling. */
+                  layout === 'fill' ? 'flex-1' : 'flex-none max-sm:px-3',
                   'transition-colors duration-fast ease-standard',
                   active
                     ? 'border-accent text-text-accent'

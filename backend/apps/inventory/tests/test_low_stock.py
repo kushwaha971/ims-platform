@@ -119,10 +119,14 @@ def test_the_scan_is_idempotent(ctx: Any, make_item: Any) -> None:
 
 
 def test_the_notify_job_hands_the_alert_to_registered_sinks_once(
-    ctx: Any, make_item: Any, settings: Any
+    ctx: Any, make_item: Any, settings: Any, monkeypatch: Any
 ) -> None:
     """The hand-off seam for the notifications track: no sink → recorded, not
-    delivered; a sink registered later receives it exactly once."""
+    delivered; a sink registered later receives it exactly once.
+
+    The notifications app registers its inbox sink at start-up, so the "no sink"
+    half runs against an emptied registry."""
+    monkeypatch.setattr(low_stock, "_SINKS", [])
     received: list[low_stock.LowStockEvent] = []
 
     def sink(event: low_stock.LowStockEvent) -> None:
@@ -187,7 +191,7 @@ def test_low_stock_endpoint_orders_out_first(
 def test_low_stock_rows_say_whether_the_unit_takes_decimals(
     api_as: Any, tenant: Any, make_item: Any
 ) -> None:
-    """"Adjust stock" on a low-stock row preselects the item into the drawer,
+    """ "Adjust stock" on a low-stock row preselects the item into the drawer,
     whose quantity field refuses a decimal point for a whole-number unit.
     Without `allow_decimal` on the row the drawer guessed "yes", and "1.5 NOS"
     reached the server only to be refused as qty_must_be_whole."""

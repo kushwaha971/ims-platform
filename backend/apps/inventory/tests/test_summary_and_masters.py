@@ -134,3 +134,65 @@ def test_hsn_search_by_code_prefix_and_by_word(owner: Any) -> None:
     } in rice
     assert [r["code"] for r in owner.get(url, {"q": "100"}).json()["data"]] == ["1001", "1006"]
     assert owner.get(url, {"q": ""}).json()["data"] == []
+
+
+# ── EC-4 across every inventory read (QA defect: valuation leaked to staff) ──
+
+
+def test_staff_item_reads_omit_every_cost_key(
+    api_as: Any, tenant: Any, make_item: Any, main: Any, reference: Any
+) -> None:
+    """Protects INV-08 EC-4 beyond the summary: staff (no `reports.financial.read`)
+    got the /items "Stock value" tile and the detail page's average cost because
+    the list, detail, movements and lookup reads returned cost keys ungated."""
+    item = make_item("Rice", opening=("3", "46.625"), purchase_price="40", barcode="12345678")
+    staff = api_as(tenant, RoleCode.STAFF.value)[0]
+
+    listing = staff.get(reverse("v1:item-list")).json()
+    row = listing["data"][0]
+    for key in ("purchase_price", "avg_cost", "stock_value"):
+        assert key not in row
+    assert row["on_hand"] == "3.000" or row["on_hand"].startswith("3")
+    assert listing["meta"]["totals"]["stock_value"] is None
+    assert listing["meta"]["valuation_visible"] is False
+
+    detail = staff.get(reverse("v1:item-detail", args=[item.id])).json()["data"]
+    for key in ("purchase_price", "avg_cost", "stock_value"):
+        assert key not in detail
+    assert "avg_cost" not in detail["stock"][0] and "value" not in detail["stock"][0]
+    assert "unit_cost" not in detail["opening"]
+    for movement in detail["movements_recent"]:
+        assert not {"unit_cost", "value", "avg_cost_after"} & movement.keys()
+
+    movements = staff.get(reverse("v1:item-movements", args=[item.id])).json()
+    assert movements["data"] and "unit_cost" not in movements["data"][0]
+    assert movements["meta"]["valuation_visible"] is False
+
+    found = staff.get(reverse("v1:item-lookup"), {"barcode": "12345678"})
+    if found.status_code == 200:
+        assert "purchase_price" not in found.json()["data"]
+
+
+def test_owner_item_reads_keep_cost_keys(owner: Any, make_item: Any) -> None:
+    """The gate must not strip valuation from those allowed to see it."""
+    item = make_item("Rice", opening=("3", "46.625"))
+    listing = owner.get(reverse("v1:item-list")).json()
+    assert listing["data"][0]["stock_value"] == "139.88"
+    assert listing["meta"]["totals"]["stock_value"] == "139.88"
+    assert listing["meta"]["valuation_visible"] is True
+    detail = owner.get(reverse("v1:item-detail", args=[item.id])).json()["data"]
+    assert detail["avg_cost"] and detail["stock"][0]["value"] == "139.88"
+    assert detail["movements_recent"][0]["unit_cost"] is not None
+
+
+def test_low_stock_costs_gated_and_never_purchased_is_null(
+    api_as: Any, tenant: Any, owner: Any, make_item: Any
+) -> None:
+    """Protects the /stock/low row: staff get no costs, and an item never bought
+    returns `last_purchase_cost: null` (the screen prints "—", not "₹0.00")."""
+    make_item("Salt", opening=("1", "0"), reorder_point="5")
+    row = owner.get(reverse("v1:stock-low")).json()["data"][0]
+    assert row["last_purchase_cost"] is None
+    staff = api_as(tenant, RoleCode.STAFF.value)[0]
+    staff_row = staff.get(reverse("v1:stock-low")).json()["data"][0]
+    assert "avg_cost" not in staff_row and "last_purchase_cost" not in staff_row

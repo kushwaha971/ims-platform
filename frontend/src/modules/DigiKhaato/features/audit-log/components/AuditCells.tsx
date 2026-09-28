@@ -19,7 +19,7 @@ export const AuditDiffCell = memo(function AuditDiffCell({
     <UbStack gap={0.5} className="min-w-0">
       {lines.map((line) => (
         <UbText key={line.key} variant="caption" tone="secondary" className="break-words">
-          {line.key}: {line.before} → {line.after}
+          {line.label}: {line.before} → {line.after}
         </UbText>
       ))}
       {moreLabel && (

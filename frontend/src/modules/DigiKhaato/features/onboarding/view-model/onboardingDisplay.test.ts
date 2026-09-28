@@ -142,7 +142,7 @@ describe('presetSummary — only what is built is shown (UAT D8)', () => {
   it('lists the modules a merchant can open today, and nothing unbuilt', () => {
     /* Prevents UAT D8: step 4's "What you get" listed every module the preset
        enables — Stock, Bills & estimates, Purchases, Payments, Expenses — on a
-       product whose sidebar marks every one of them "Soon". `modules` is still
+       product that had built none of them. `modules` is still
        what the preset turns on; `readyModules` is what the card may show. */
     const summary = presetSummary('retail', null);
     expect(summary.modules).toContain('inventory');

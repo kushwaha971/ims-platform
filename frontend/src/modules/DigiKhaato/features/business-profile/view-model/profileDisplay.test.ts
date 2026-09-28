@@ -1,3 +1,4 @@
+import { stateName } from '../../onboarding/constants/gstStates';
 import { toPatch, toProfile } from '../api/businessProfileService';
 
 import {
@@ -58,5 +59,14 @@ describe('business profile', () => {
     const form = profileToForm(toProfile(ROW));
     expect(headerGstinLine(form, 'GSTIN')).toBe('GSTIN 27AAPFU0939F1ZV');
     expect(headerGstinLine({ ...form, gstType: 'unregistered' }, 'GSTIN')).toBeNull();
+  });
+
+  it('names the state from a full formatting locale, never "undefined (27)" (QA D3)', () => {
+    // useTranslation() hands out "en-IN" / "hi-IN"; the state table is keyed en/hi.
+    const form = profileToForm(toProfile(ROW));
+    expect(headerAddressLines(form, 'en-IN')).toContain('Maharashtra (27)');
+    expect(headerAddressLines(form, 'hi-IN')).toContain('महाराष्ट्र (27)');
+    expect(stateName('27', 'en-IN')).toBe('Maharashtra');
+    expect(stateName('27', 'hi')).toBe('महाराष्ट्र');
   });
 });

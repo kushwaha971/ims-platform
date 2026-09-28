@@ -40,7 +40,11 @@ function UbDataGridToolbarBase({
   className,
 }: Readonly<UbDataGridToolbarProps>) {
   const selecting = selectedCount > 0;
-  if (!search && !filters && !bulk && !columns && !selecting) return null;
+  /* Bulk actions are drawn only in the selection bar, so a grid that is
+     merely `selectable` (no search, filters or column menu) has nothing to
+     show until a row is ticked. Counting `bulk` here painted an empty 24 px
+     band above the header row (QA, desktop reminders). */
+  if (!selecting && !search && !filters && !columns) return null;
 
   /**
    * With rows selected, the toolbar BECOMES the selection bar — BrandHub swaps
@@ -94,9 +98,12 @@ function UbDataGridToolbarBase({
           when the group is WIDER THAN THE CARD — three filters on a 360 px
           phone, where the Columns button is not drawn at all. Without it the
           group kept its one-line width and the last filter was painted
-          outside the card, unreachable (INV-02, found by the T3 look sweep). */}
+          outside the card, unreachable (INV-02, found by the T3 look sweep).
+          A filter row marked `data-ub-filters="fill"` opts in to taking the
+          whole width below `md`, so it can lay its controls out as one row of
+          equal parts instead of wrapping them one per line (the item list). */}
       {(filters || columns) && (
-        <div className="flex max-w-full shrink-0 flex-wrap items-center gap-2">
+        <div className="flex max-w-full shrink-0 flex-wrap items-center gap-2 max-md:has-[[data-ub-filters=fill]]:w-full">
           {filters}
           {columns}
         </div>

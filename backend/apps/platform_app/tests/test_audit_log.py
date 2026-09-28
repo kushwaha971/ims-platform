@@ -7,14 +7,23 @@ business's log is a data breach.
 
 from __future__ import annotations
 
+import csv
 import datetime as dt
+import io
 from typing import Any
 
 import pytest
 from django.urls import reverse
 from django.utils import timezone
 
-from apps.platform_app.selectors.audit import changed_keys, flatten
+from apps.platform_app.selectors.audit import (
+    FIELD_SEPARATOR,
+    action_label,
+    changed_keys,
+    entity_type_label,
+    field_label,
+    flatten,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -150,7 +159,7 @@ def test_csv_export_streams_the_filtered_rows_and_is_itself_audited(
     response = client.get(reverse(URL), {"format": "csv", "group": "parties"})
     assert response.status_code == 200
     body = b"".join(response.streaming_content).decode()
-    assert "party.created" in body and "settings.updated" not in body
+    assert "Added party" in body and "Changed settings" not in body
     assert "'=HYPERLINK" in body  # CSV injection neutralised
     exported = AuditLog.objects.get(action="audit.exported", tenant=tenant)
     assert exported.metadata["row_count"] == 1
@@ -171,3 +180,37 @@ def test_the_actor_list_includes_former_members(api_as: Any, tenant: Any) -> Non
     staff.save(update_fields=["status"])
     actors = client.get(reverse("v1:audit-log-actors")).json()["data"]
     assert any(a["id"] == str(staff.user_id) and a["is_former_member"] for a in actors)
+
+
+def test_csv_export_uses_words_not_codes(api_as: Any, tenant: Any) -> None:
+    """QA D5: the CSV's Action and Type columns read `audit.exported` and
+    `platform_audit_log`, and "Changed" listed raw keys. Every column is words."""
+    _row(
+        tenant,
+        action="tenant.updated",
+        entity_type="platform_tenant",
+        before={"bank_details": {"ifsc": "HDFC0000001"}, "address": {}},
+        after={"bank_details": {"ifsc": "HDFC0000002"}, "address": None},
+    )
+    _row(tenant, action="auth.login_succeeded", entity_type="platform_user")
+    client, _m = api_as(tenant)
+    response = client.get(reverse(URL), {"format": "csv"})
+    rows = list(csv.reader(io.StringIO(b"".join(response.streaming_content).decode())))
+    assert rows[0] == ["When", "Who", "Action", "Type", "About", "What changed", "Reason"]
+    by_action = {row[2]: row for row in rows[1:]}
+    assert by_action["Changed business profile"][3] == "Business"
+    # The empty-object "address" is not a change; the nested key is named.
+    assert by_action["Changed business profile"][5] == f"Bank details{FIELD_SEPARATOR}IFSC"
+    assert "Logged in" in by_action
+    body = "\n".join(",".join(row) for row in rows)
+    assert "platform_" not in body and "auth.login" not in body
+
+
+def test_helpers_fall_back_to_words_for_unknown_codes() -> None:
+    """QA D5: a code with no label still reads as words, without its prefix."""
+    assert action_label("auth.some_new_thing") == "Some new thing"
+    assert action_label("audit.exported") == "Exported the activity log"
+    assert entity_type_label("platform_brand_new") == "Brand new"
+    assert field_label("bank_details.ifsc") == f"Bank details{FIELD_SEPARATOR}IFSC"
+    assert field_label("created_user") == "New person"
+    assert changed_keys({"address": {}}, {"address": None}) == []

@@ -81,7 +81,12 @@ const UbTextInputInner = forwardRef<HTMLInputElement, UbTextInputProps>(function
         value={value ?? ''}
         onChange={handleChange}
         invalid={invalid}
-        className={cn(uppercase && 'uppercase', (isPassword || adornment) && 'pr-10')}
+        className={cn(
+          // QA D8 — the typed value is upper-cased; the placeholder ("e.g. ABCDE1234F")
+          // is copy and keeps its own case.
+          uppercase && 'uppercase placeholder:normal-case',
+          (isPassword || adornment) && 'pr-10'
+        )}
         {...rest}
       />
       {isPassword && (

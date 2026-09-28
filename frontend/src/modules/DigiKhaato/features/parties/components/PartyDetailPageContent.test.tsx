@@ -1372,6 +1372,21 @@ describe('sending a reminder from the khata page (LED-06)', () => {
     expect(screen.queryByRole('button', { name: 'Send reminder' })).not.toBeInTheDocument();
   });
 
+  it('is not offered to staff who hold ledger.reminder.write but are denied ledger.entry.read', async () => {
+    /* Prevents QA's Sprint 3 finding: a staff member with a
+       `deny: ledger.entry.read` override still held `ledger.reminder.write`,
+       could open the khata (parties.party.read) and was offered "Send
+       reminder" — a message that reads out the entries they may not see. */
+    signIn(['parties.party.read', 'parties.party.write', 'ledger.reminder.write']);
+    const user = userEvent.setup();
+    renderWithProviders(<PartyDetailPageContent id={ID} />);
+    await screen.findByText('Ramesh Traders');
+    await openMenu(user);
+
+    expect(await screen.findByRole('button', { name: 'Edit' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Send reminder' })).not.toBeInTheDocument();
+  });
+
   it('is not offered on an archived party', async () => {
     /* Prevents: FR-14 — chasing a party the merchant has filed away, from a
        page that is read-only. */

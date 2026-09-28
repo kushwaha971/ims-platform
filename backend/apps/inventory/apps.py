@@ -13,3 +13,7 @@ class InventoryConfig(AppConfig):
 
     def ready(self) -> None:
         from apps.inventory import tasks  # noqa: F401  (registers job handlers)
+        from apps.inventory.services.guards import register_guards
+
+        # PLT-06 FR-4 — "Stock" cannot be switched off while any item has stock.
+        register_guards()

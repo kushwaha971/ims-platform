@@ -18,12 +18,15 @@ import type { ItemListRow } from '../types/item.types';
 export const createItemColumns = ({
   t,
   tier,
+  valuation = true,
 }: {
   readonly t: TranslateFn;
   readonly tier: UbGridTier;
+  /** INV-08 EC-4 — without `reports.financial.read` the Purchase column goes. */
+  readonly valuation?: boolean;
 }): readonly UbDataGridColumn<ItemListRow>[] => {
   const isCards = tier === 'cards';
-  return [
+  const columns: UbDataGridColumn<ItemListRow>[] = [
     {
       id: 'item',
       header: t('items.list.col.item'),
@@ -124,4 +127,5 @@ export const createItemColumns = ({
       ),
     },
   ];
+  return valuation ? columns : columns.filter((column) => column.id !== 'purchasePrice');
 };

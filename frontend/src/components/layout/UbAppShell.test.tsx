@@ -27,6 +27,19 @@ jest.mock('modules/DigiKhaato/features/parties/api/partyService', () => ({
   listParties: jest.fn(),
 }));
 
+// The shell mounts the notification bell, which polls `getUnreadCount`. Left
+// unmocked it went to the network, answered 401 and tore the session down
+// mid-test — the three "quick search" / "account menu" tests failed on main
+// for that reason, not for anything they assert.
+jest.mock('modules/DigiKhaato/features/notifications/api/notificationService', () => ({
+  getUnreadCount: jest.fn().mockResolvedValue(0),
+  listNotifications: jest
+    .fn()
+    .mockResolvedValue({ rows: [], nextCursor: null, hasMore: false, unreadCount: 0 }),
+  markNotificationRead: jest.fn().mockResolvedValue(undefined),
+  markAllNotificationsRead: jest.fn().mockResolvedValue(0),
+}));
+
 const mockReplace = jest.fn();
 const mockPush = jest.fn();
 jest.mock('next/navigation', () => ({

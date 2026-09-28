@@ -70,9 +70,18 @@ export const GST_STATES: readonly GstState[] = [
 
 export const GST_STATE_CODES: readonly string[] = GST_STATES.map((state) => state.code);
 
+/**
+ * QA D3 — the table is keyed by LANGUAGE ('en' | 'hi'), but `useTranslation()`
+ * hands out the formatting locale ("en-IN", "hi-IN"). Indexing the table with
+ * that printed "undefined (27)" in the state list and the bill header. Every
+ * lookup goes through this, so a full locale tag can never reach the table.
+ */
+export const toLanguage = (locale: string | null | undefined): Locale =>
+  locale?.toLowerCase().startsWith('hi') ? 'hi' : 'en';
+
 /** The label in the active locale; the code itself when it is not a known one. */
-export const stateName = (code: string | null | undefined, locale: Locale): string => {
+export const stateName = (code: string | null | undefined, locale: string): string => {
   if (!code) return '';
   const found = GST_STATES.find((state) => state.code === code);
-  return found ? found[locale] : code;
+  return found ? found[toLanguage(locale)] : code;
 };

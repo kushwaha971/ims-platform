@@ -85,8 +85,14 @@ const UbSelectInner = forwardRef<HTMLButtonElement, UbSelectProps>(function UbSe
   },
   ref
 ) {
+  // QA D1 — no option can carry the value '' (Radix refuses one), so an empty
+  // report only ever comes from Radix's hidden native `<select>` being handed a
+  // value before it holds that `<option>`. Passing it on wiped a loaded value.
+  const report = (next: string) => {
+    if (next !== '') onChange(next);
+  };
   return (
-    <MLSelect value={value ?? undefined} onValueChange={onChange} disabled={disabled} name={name}>
+    <MLSelect value={value ?? undefined} onValueChange={report} disabled={disabled} name={name}>
       <MLSelectTrigger
         ref={ref}
         id={id}

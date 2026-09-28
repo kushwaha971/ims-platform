@@ -28,6 +28,7 @@ import {
   type AuditPeriod,
   type AuditRow,
 } from '../types/audit.types';
+import { actionLabel } from '../view-model/auditDisplay';
 
 import { createAuditColumns } from './AuditColumns';
 
@@ -162,7 +163,13 @@ export function AuditLogPageContent(): React.JSX.Element {
   const handlePeriod = useCallback((value: AuditPeriod) => log.setPeriod(value), [log]);
   const handlePageSize = useCallback((size: number) => log.setPage(1, size), [log]);
   const rowId = useCallback((row: AuditRow) => row.id, []);
-  const rowName = useCallback((row: AuditRow) => row.entityLabel ?? row.action, []);
+  // QA D5 — the row's name (the card's accessible name and "Select …") is the
+  // action in words, never the raw code; its lowercase first letter was what
+  // the card's initials disc used to show.
+  const rowName = useCallback(
+    (row: AuditRow) => row.entityLabel ?? actionLabel(row.action, t),
+    [t]
+  );
 
   const header = (
     <UbPageHeader
@@ -233,6 +240,7 @@ export function AuditLogPageContent(): React.JSX.Element {
           onPageSizeChange={handlePageSize}
           pageSizeOptions={PAGE_SIZE_OPTIONS}
           onRowOpen={log.openRow}
+          cardAvatar={false}
           busy={status === 'refreshing'}
           search={
             <UbSearchInput

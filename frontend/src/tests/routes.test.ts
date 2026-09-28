@@ -233,7 +233,7 @@ describe('the onboarding guard', () => {
  * journey stopped reaching network-idle, which is a roundabout way to discover
  * a navigation bug and exactly why this assertion now exists.
  *
- * `ready` is opt-in, so a row added before its route defaults to inert. This
+ * `ready` is opt-in, so a row added before its route defaults to hidden. This
  * checks the other direction: nothing may claim `ready: true` without a page.
  */
 describe('the sidebar only links to pages that exist', () => {
@@ -255,10 +255,10 @@ describe('the sidebar only links to pages that exist', () => {
     }
   );
 
-  it('leaves every other row inert rather than linking it', () => {
-    // Not a style rule: an inert row renders no `<Link>`, so it prefetches
-    // nothing. The row stays visible — it is what tells a shopkeeper the
-    // product will eventually do stock and invoices.
+  it('has no page behind any row that is not ready (those rows are not shown)', () => {
+    // `useNavigation` drops a row that is not `ready` — owner rule: unbuilt
+    // features are not shown, not even as an inert "Soon" row. So a row whose
+    // page now exists but is still not `ready` would be a built feature hidden.
     const notReady = NAV_ITEMS.filter((item) => !item.ready).map((item) => item.href);
     for (const href of notReady) {
       expect(pageDirs).not.toContain(href);

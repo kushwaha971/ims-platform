@@ -417,14 +417,18 @@ export function ItemFormDrawer({
         </UbDisclosure>
 
         <UbDisclosure label={t('items.form.section.pricing')}>
-          <UbField
-            name="purchasePrice"
-            label={t('items.form.purchasePrice.label')}
-            placeholder={t('items.form.price.placeholder')}
-            hint={t('items.form.purchasePrice.hint')}
-          >
-            {(field) => <UbMoneyInput {...field} />}
-          </UbField>
+          {/* Withheld from this member (INV-08 EC-4): an empty box would read
+              as "no purchase price" and the save leaves it untouched anyway. */}
+          {editing?.purchasePrice !== null && (
+            <UbField
+              name="purchasePrice"
+              label={t('items.form.purchasePrice.label')}
+              placeholder={t('items.form.price.placeholder')}
+              hint={t('items.form.purchasePrice.hint')}
+            >
+              {(field) => <UbMoneyInput {...field} />}
+            </UbField>
+          )}
           {!isService && (
             <UbField
               name="mrp"

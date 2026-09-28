@@ -41,6 +41,9 @@ export interface UseItemDetailResult {
     readonly adjust: boolean;
     readonly archive: boolean;
     readonly stock: boolean;
+    /** INV-08 EC-4 — average cost, stock value and purchase price. The server
+     *  omits them without it; this only keeps the rows from rendering "—". */
+    readonly valuation: boolean;
   };
 }
 
@@ -140,6 +143,7 @@ export function useItemDetail(id: string): UseItemDetailResult {
         adjust: can('inventory.stock.adjust'),
         archive: can('inventory.item.delete'),
         stock: canStock,
+        valuation: can('reports.financial.read'),
       },
     }),
     [

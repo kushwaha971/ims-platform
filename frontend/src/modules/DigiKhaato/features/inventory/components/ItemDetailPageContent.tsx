@@ -185,7 +185,7 @@ export function ItemDetailPageContent({ id }: Readonly<{ id: string }>): React.J
                   >
                     {formatQuantity(stock.onHand, unit)}
                   </UbText>
-                  {can.stock && (
+                  {can.stock && can.valuation && stock.avgCost !== null && (
                     <>
                       <UbInfoRow
                         label={t('items.detail.avgCost')}
@@ -210,11 +210,16 @@ export function ItemDetailPageContent({ id }: Readonly<{ id: string }>): React.J
                   />
                   {item.opening && (
                     <UbText variant="caption" tone="tertiary">
-                      {t('items.detail.opening', {
-                        qty: formatQuantity(item.opening.qty, unit),
-                        cost: formatInr(item.opening.unitCost ?? '0'),
-                        date: formatBusinessDate(item.opening.movementDate),
-                      })}
+                      {can.valuation
+                        ? t('items.detail.opening', {
+                            qty: formatQuantity(item.opening.qty, unit),
+                            cost: formatInr(item.opening.unitCost ?? '0'),
+                            date: formatBusinessDate(item.opening.movementDate),
+                          })
+                        : t('items.detail.openingQty', {
+                            qty: formatQuantity(item.opening.qty, unit),
+                            date: formatBusinessDate(item.opening.movementDate),
+                          })}
                     </UbText>
                   )}
                 </UbStack>
@@ -240,10 +245,12 @@ export function ItemDetailPageContent({ id }: Readonly<{ id: string }>): React.J
                   label={t('items.form.sellingPrice.label')}
                   value={formatInr(item.sellingPrice)}
                 />
-                <UbInfoRow
-                  label={t('items.form.purchasePrice.label')}
-                  value={formatInr(item.purchasePrice)}
-                />
+                {can.valuation && item.purchasePrice !== null && (
+                  <UbInfoRow
+                    label={t('items.form.purchasePrice.label')}
+                    value={formatInr(item.purchasePrice)}
+                  />
+                )}
                 {item.mrp && (
                   <UbInfoRow label={t('items.form.mrp.label')} value={formatInr(item.mrp)} />
                 )}

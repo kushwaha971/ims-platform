@@ -161,23 +161,37 @@ def event_for(alert: LowStockAlert) -> LowStockEvent:
 
 
 def deliver_alert(alert_id: Any) -> dict:
-    """The job body: hand one alert to every sink, once."""
-    alert = LowStockAlert.objects.select_related("item", "item__unit").filter(pk=alert_id).first()
-    if alert is None:
-        return {"delivered": 0, "reason": "missing"}
-    if alert.notified_at is not None:
-        return {"delivered": 0, "reason": "already_notified"}
-    sinks = registered_sinks()
-    if not sinks:
-        # Not an error: the crossing is recorded, and a sink wired later finds
-        # every alert with `notified_at IS NULL`.
-        return {"delivered": 0, "reason": "no_sink"}
-    event = event_for(alert)
-    for sink in sinks:
-        sink(event)
-    LowStockAlert.objects.filter(pk=alert.pk, notified_at__isnull=True).update(
-        notified_at=timezone.now(), sinks_delivered=len(sinks)
-    )
+    """The job body: hand one alert to every sink, exactly once.
+
+    Idempotent on the alert (the job's own token is `low_stock:<alert id>`):
+    the row is locked, the sinks run and `notified_at` is stamped in ONE
+    transaction. A sink writes inside that transaction (`notify()` does), so a
+    retried or duplicated job either sees `notified_at` set and returns, or
+    finds the whole earlier attempt rolled back — never a delivered-but-
+    unstamped alert that would notify twice.
+    """
+    with transaction.atomic():
+        alert = (
+            LowStockAlert.objects.select_for_update(of=("self",))
+            .select_related("item", "item__unit")
+            .filter(pk=alert_id)
+            .first()
+        )
+        if alert is None:
+            return {"delivered": 0, "reason": "missing"}
+        if alert.notified_at is not None:
+            return {"delivered": 0, "reason": "already_notified"}
+        sinks = registered_sinks()
+        if not sinks:
+            # Not an error: the crossing is recorded, and a sink wired later finds
+            # every alert with `notified_at IS NULL`.
+            return {"delivered": 0, "reason": "no_sink"}
+        event = event_for(alert)
+        for sink in sinks:
+            sink(event)
+        LowStockAlert.objects.filter(pk=alert.pk, notified_at__isnull=True).update(
+            notified_at=timezone.now(), sinks_delivered=len(sinks)
+        )
     return {"delivered": len(sinks)}
 
 

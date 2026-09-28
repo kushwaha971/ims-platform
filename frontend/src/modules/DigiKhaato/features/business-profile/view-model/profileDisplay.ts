@@ -1,5 +1,3 @@
-import type { Locale } from 'src/types/domain.types';
-
 import { stateName } from '../../onboarding/constants/gstStates';
 
 import type { BusinessProfile } from '../types/businessProfile.types';
@@ -62,7 +60,7 @@ export const formToProfile = (values: BusinessProfileFormValues): BusinessProfil
  */
 export const headerAddressLines = (
   values: Partial<BusinessProfileFormValues>,
-  locale: Locale
+  locale: string
 ): readonly string[] => {
   const lines: string[] = [];
   if (values.addressLine1) lines.push(values.addressLine1);

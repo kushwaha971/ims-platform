@@ -29,8 +29,13 @@ export function useNavigation(): UseNavigationResult {
   const permissions = useAppSelector(selectPermissions);
 
   return useMemo(() => {
+    // Owner rule: an unbuilt feature is not shown. A row whose page does not
+    // exist yet (`ready` absent) is left out, not rendered as an inert "Soon".
     const visible = NAV_ITEMS.filter(
-      (item) => enabledModules.includes(item.module) && permissions.includes(item.permission)
+      (item) =>
+        item.ready === true &&
+        enabledModules.includes(item.module) &&
+        permissions.includes(item.permission)
     );
     const sections = NAV_SECTIONS.map((section) => ({
       ...section,

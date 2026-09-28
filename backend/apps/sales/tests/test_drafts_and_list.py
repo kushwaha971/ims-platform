@@ -156,6 +156,34 @@ def test_module_off_guard_counts_drafts(owner: Any, shop: Any, monkeypatch: Any)
     assert platform_guards.blocking_rows_for_module_off(shop, "sales") == 1
 
 
+def test_gst_lock_counts_issued_tax_invoices_and_refuses_over_http(
+    owner: Any, shop: Any, make_item: Any, monkeypatch: Any
+) -> None:
+    """PLT-07 FR-4 — leaving `regular` is refused (409 `gst_type_locked`) while tax
+    invoices were issued this FY; a draft does not lock. Protects the sales side
+    of the platform's GST-lock registry, end to end through the profile PATCH."""
+    from apps.platform_app.services import guards as platform_guards
+    from apps.sales.services import guards as sales_guards
+
+    monkeypatch.setattr(platform_guards, "_MODULE_OFF_GUARDS", {})
+    monkeypatch.setattr(platform_guards, "_GST_LOCK_COUNTERS", [])
+    monkeypatch.setattr(sales_guards, "_REGISTERED", False)
+    sales_guards.register_guards()
+
+    item = make_item(price="10.00", tax_code="GST0")
+    doc = draft(owner, lines=[line(item)]).json()["data"]
+    assert platform_guards.issued_tax_invoices_this_fy(shop) == 0
+    assert issue(owner, doc["id"], payment=cash("10.00")).status_code in (200, 201)
+    assert platform_guards.issued_tax_invoices_this_fy(shop) == 1
+
+    response = owner.patch(
+        reverse("v1:tenant-current"), {"gst_type": "unregistered"}, format="json"
+    )
+    assert response.status_code == 409, response.content
+    assert response.json()["error"]["code"] == "gst_type_locked"
+    assert response.json()["error"]["details"]["count"] == 1
+
+
 @pytest.mark.django_db(transaction=True)
 def test_concurrent_allocation_has_no_gaps_and_no_duplicates(shop: Any) -> None:
     """T-SAL02 numbering / EC-7 — ten threads allocating at once get 0001..0010 exactly once

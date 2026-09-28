@@ -192,8 +192,16 @@ export function RemindersPageContent(): React.JSX.Element {
           value,
           label: (
             <UbBox as="span" className="inline-flex items-baseline gap-2">
-              <UbText as="span" variant="inherit" tone="inherit">
+              {/* QA at 360–390 px: four full labels with counts outran the
+                  row and "Sent" / "भेजे गए" scrolled out of sight. A phone
+                  SHOWS the short form, but the full label stays the tab's
+                  accessible name at every width (visually hidden, not
+                  removed), and the short one is hidden from assistive tech. */}
+              <UbText as="span" variant="inherit" tone="inherit" className="max-sm:sr-only">
                 {t(`reminders.tab.${value}`)}
+              </UbText>
+              <UbText as="span" variant="inherit" tone="inherit" className="sm:hidden" aria-hidden>
+                {t(`reminders.tabShort.${value}`)}
               </UbText>
               {figure && (
                 <UbText as="span" variant="inherit" tone="inherit" className="ds-num-base-semibold">

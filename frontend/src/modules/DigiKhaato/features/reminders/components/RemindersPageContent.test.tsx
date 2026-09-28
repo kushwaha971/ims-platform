@@ -231,6 +231,13 @@ describe('the reminders screen (LED-05)', () => {
       'aria-selected',
       'true'
     );
+    /* QA: "Sent" clipped at 390 px. A phone shows the short word, but it is
+       aria-hidden — the tab's name stays the full label at every width. */
+    const sent = within(tabs).getByRole('tab', { name: 'Sent' });
+    expect(within(sent).getByText('Sent', { selector: '[aria-hidden="true"]' })).toHaveClass(
+      'sm:hidden'
+    );
+    expect(within(tabs).getByRole('tab', { name: /^Upcoming/ })).toHaveTextContent('Next');
     expect(await screen.findByText('Ramesh Traders')).toBeInTheDocument();
     expect(screen.getByTestId('bucket-caption')).toHaveTextContent('₹3,200.00 from 2 customers');
     expect(service.listDueParties).toHaveBeenCalledWith('today', 1, 25, expect.anything());

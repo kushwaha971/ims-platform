@@ -32,13 +32,13 @@ const STALE: readonly {
   },
   {
     key: 'onboarding.rail.reassurance',
-    why: 'Settings is not built ("Soon" in the sidebar)',
+    why: 'Settings was not built when this copy was written',
     en: /settings/i,
     hi: /सेटिंग्स/u,
   },
   {
     key: 'onboarding.summary.changeable',
-    why: 'Settings is not built ("Soon" in the sidebar)',
+    why: 'Settings was not built when this copy was written',
     en: /settings/i,
     hi: /सेटिंग्स/u,
   },
