@@ -519,7 +519,11 @@ const main = async () => {
   // Any export the browser gets through to the API spends the same budget.
   context.on('response', (response) => {
     const url = new URL(response.url());
-    if (`${url.origin}${url.pathname}` === `${BACKEND}/ledger/aging` && url.searchParams.get('format') === 'csv' &&
+    // RPT-05: with Reports enabled the button downloads /reports/receivables-aging
+    // (or payables-aging) instead. It is charged to the same "export" scope, so it
+    // is counted here too, or the 429 check below lands one export late.
+    const exportPaths = [`${BACKEND}/ledger/aging`, `${BACKEND}/reports/receivables-aging`, `${BACKEND}/reports/payables-aging`];
+    if (exportPaths.includes(`${url.origin}${url.pathname}`) && url.searchParams.get('format') === 'csv' &&
         response.status() === 200) exportsSpent += 1;
   });
   const page = await context.newPage();
@@ -608,8 +612,12 @@ const main = async () => {
     const file = await download;
     let content = '';
     if (file) content = readFileSync(await file.path(), 'utf8');
+    // RPT-05 / RPT-08: the button now downloads the Reports file: FR-5's columns,
+    // starting party_name,mobile,party_type,tags, with a UTF-8 BOM so Excel reads ₹.
+    const REPORT_HEADER = 'party_name,mobile,party_type,tags,collection_date,credit_limit,';
+    const firstLine = content.split(/\r?\n/)[0] ?? '';
     record('browser: Export CSV downloads the CSV (header row first)',
-      Boolean(file) && content.split(/\r?\n/)[0] === 'party,0_30,31_60,61_90,90_plus,total',
+      Boolean(file) && firstLine.startsWith(`\uFEFF${REPORT_HEADER}`),
       file
         ? `href ${href} → saved "${file.suggestedFilename()}" from ${file.url()}, starts "${content.slice(0, 60).replace(/\n/g, '\\n')}"`
         : `href ${href}; no download`);

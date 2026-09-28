@@ -808,13 +808,16 @@ async function phaseB(browser, state) {
       const tiles = await page.locator('[data-testid="ub-stat-grid"]').count();
       const gridAdd = await page.locator('[data-testid="ub-grid"]').getByRole('button', { name: /Add/ }).allInnerTexts();
       const pageAdd = await page.getByRole('button', { name: 'Add party' }).evaluateAll((els) => els.filter((e) => e.getBoundingClientRect().width > 0).length);
-      const importish = await page.getByText(/Import|Contacts|CSV/i).count();
+      // The parties list now carries Import / Export (IMP-01, EXP-01) for every
+      // tenant, so the old "no Import" rule is gone. What must still be absent on
+      // an empty book is a phone-contacts import, which this product does not have.
+      const importish = await page.getByText(/Contacts/i).count();
       const body = await page.locator('[data-testid="ub-grid"]').innerText().catch(() => '');
       await page.screenshot({ path: shotPath(tag, 'B3-new-tenant-empty') });
       record('B3', `${tag}: new tenant — no money tiles`, tiles === 0, `tiles=${tiles}`);
       record('B3', `${tag}: new tenant — the empty state offers a single "Add party"`, gridAdd.length === 1 && gridAdd[0].trim() === 'Add party', JSON.stringify(gridAdd));
       note(`${tag}: visible "Add party" controls on the whole page = ${pageAdd} (header + empty state)`);
-      record('B3', `${tag}: new tenant — no Import / Contacts`, importish === 0, `matches=${importish}`);
+      record('B3', `${tag}: new tenant — no phone-contacts import`, importish === 0, `matches=${importish}`);
       record('B3', `${tag}: new tenant — first-use copy "No customers yet"`, /No customers yet/i.test(body), body.replace(/\n/g, ' | ').slice(-160));
       record('B7', `${tag}: new-tenant state fits the viewport`, (await overflowPx(page)) <= 0, `overflow ${await overflowPx(page)}px`);
       await ctx.close();
@@ -2563,7 +2566,7 @@ async function phaseF3(browser, state) {
     armed = true;
     const d1 = docs.length; const v1 = navs.length;
     const how = W.w < 1024 ? 'logo' : 'sidebar Customers link';
-    if (W.w < 1024) await page.getByRole('link', { name: /go to Customers/i }).first().click();
+    if (W.w < 1024) await page.getByRole('link', { name: /go to Dashboard/i }).first().click();
     else await page.locator('nav a[href="/parties"]').first().click();
     await page.waitForURL((u) => u.pathname.startsWith('/login'), { timeout: 30000 }).catch(() => {});
     await page.waitForTimeout(1500);
@@ -2580,15 +2583,17 @@ async function phaseF3(browser, state) {
     const shopA = await page.getByText(A.shop).filter({ visible: true }).count();
     await page.screenshot({ path: fShot(W.dir, `F3-${tag}-2-landed-as-A`) });
     const afterNavs = navs.slice(v2);
-    record('F3', `${tag}: ONE submit as A lands on A's /parties — exactly one document load, never back to /login`,
-      new URL(page.url()).pathname === '/parties' && me.email === A.email && shopA > 0 && docs.slice(d2).length === 1 && !docs.slice(d2)[0].startsWith('/login') && !afterNavs.slice(1).some((u) => u.startsWith('/login')),
+    // The phone path now goes through the logo, which is "Go to Dashboard" (the
+    // landing page is /dashboard), so A may land on either of A's own pages.
+    record('F3', `${tag}: ONE submit as A lands on A's /parties or /dashboard — exactly one document load, never back to /login`,
+      ['/parties', '/dashboard'].includes(new URL(page.url()).pathname) && me.email === A.email && shopA > 0 && docs.slice(d2).length === 1 && !docs.slice(d2)[0].startsWith('/login') && !afterNavs.slice(1).some((u) => u.startsWith('/login')),
       `url=${page.url().replace(FRONTEND, '')} me=${me.email} shopA=${shopA} docs=${JSON.stringify(docs.slice(d2))} navs=${JSON.stringify(afterNavs)}`);
     record('F3', `${tag}: B's shop name / parties never rendered after expiry`, leaks.length === 0, JSON.stringify(leaks.slice(0, 3)));
 
     // 4. Logo (or the sidebar Customers link — Dashboard left the sidebar in
     //    the UAT-fix batch) afterwards stays signed in.
     const v3 = navs.length;
-    if (W.w < 1024) await page.getByRole('link', { name: /go to Customers/i }).first().click();
+    if (W.w < 1024) await page.getByRole('link', { name: /go to Dashboard/i }).first().click();
     else await page.locator('nav a[href="/parties"]').first().click();
     await page.waitForTimeout(3000);
     const me2 = await whoAmI(page);
