@@ -77,18 +77,29 @@ class LedgerEntrySerializer(serializers.ModelSerializer):
         }
 
 
-def entry_source(entry: LedgerEntry) -> dict | None:
+def entry_source(entry: LedgerEntry, sources: dict | None = None) -> dict | None:
     """FR-4's document link — one function, so the statement and the timeline agree.
 
     `null` for a manual row, which is every row a merchant types. A reversal's
     source is the entry it undoes (`type='ledger_entry'`, the same id as
-    `reverses_id`) — unchanged from what the statement has always sent, so the
-    two screens describe one row one way. See `StatementRowSerializer.get_source`
-    for why the key exists before the documents do.
+    `reverses_id`); a DOCUMENT void's reversal names the document itself
+    (LED-10 BR-5), so it links to the same invoice or receipt as the row it
+    undid. `number`, `status` and `kind` come from `resolve_sources`, which the
+    view runs once per page and hands in as `sources` (LED-10 FR-5); they stay
+    `null` for a document the resolver could not find (§9 "Document not
+    found") and for a manual reversal, which has no document.
     """
     if entry.source_type == SourceType.MANUAL or entry.source_id is None:
         return None
-    return {"type": entry.source_type, "id": str(entry.source_id), "number": None, "url": None}
+    found = (sources or {}).get(str(entry.source_id)) or {}
+    return {
+        "type": entry.source_type,
+        "id": str(entry.source_id),
+        "number": found.get("number"),
+        "status": found.get("status"),
+        "kind": found.get("kind"),
+        "url": None,
+    }
 
 
 class TimelineEntrySerializer(LedgerEntrySerializer):
@@ -129,7 +140,7 @@ class TimelineEntrySerializer(LedgerEntrySerializer):
         return str(carried - delta + own)
 
     def get_source(self, entry: LedgerEntry) -> dict | None:
-        return entry_source(entry)
+        return entry_source(entry, self.context.get("sources"))
 
 
 class LedgerEntryWriteSerializer(serializers.Serializer):
@@ -376,7 +387,7 @@ class StatementRowSerializer(serializers.ModelSerializer):
         omits its unbuilt summary figures: a key that is always empty is a claim
         this code cannot verify, and the client cannot tell it from a real one.
         """
-        return entry_source(entry)
+        return entry_source(entry, self.context.get("sources"))
 
 
 class StatementPartySerializer(serializers.Serializer):

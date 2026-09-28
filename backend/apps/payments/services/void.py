@@ -1,0 +1,178 @@
+"""PAY-05 — `void_payment()`, and releasing a voided document's allocations.
+
+── void_payment(*, ctx, payment_id, reason) -> dict ─────────────────────────
+One transaction (FR-4): lock the payment; refuse a second void (409
+`payment_already_void`); lock its party (L1) and its documents (L3, the same
+`(document_date, number, id)` order `record_payment` uses, so a void and a new
+payment on one bill serialise instead of deadlocking); un-apply each
+allocation and DELETE it (BR-2 — the audit row keeps them); mark the payment
+void with `unallocated_amount = 0`; reverse its ledger line through LED-10
+(`reversal`, opposite direction, dated today, sourced to the payment — BR-3).
+Returns `{payment, party_balance, documents: [summary…], reversal_entry_id}`.
+
+An archived party does NOT block a void (EC-5): `party_archived` guards new
+entries, and refusing to undo a wrong payment because the khata was filed away
+would leave the wrong balance standing.
+
+── release_document_allocations(*, ctx, document_type, document_id) ─────────
+For SAL-05 / PUR-04 (a DOCUMENT void, LED-10 BR-7): the payments stay, their
+allocations to that document are deleted, and each payment's
+`unallocated_amount` grows by what it had put there — the money is now an
+advance on the khata, which the ledger already shows. The document's own paid
+caches are the voiding feature's business (the document is void). Returns
+`[{payment_id, number, amount}]` for the "₹500 payment stays as advance"
+snackbar. Call it inside the document void's transaction, AFTER locking the
+document.
+"""
+
+from __future__ import annotations
+
+from decimal import Decimal
+from typing import Any
+
+from django.db import transaction
+from django.db.models import F
+from django.utils import timezone
+
+from apps.common.audit import AuditAction, write_audit
+from apps.common.context import Ctx
+from apps.common.dates import tenant_today
+from apps.common.exceptions import BusinessRuleViolation, NotFound
+from apps.ledger.constants import SourceType
+from apps.ledger.services.corrections import _validate_reason
+from apps.ledger.services.postings import reverse_source_entries
+from apps.parties.services.balance import lock_party
+from apps.payments.constants import PaymentStatus
+from apps.payments.models import Allocation, Payment
+from apps.payments.services.record import payment_snapshot
+from apps.payments.services.targets import target_for
+
+
+def _lock_payment(ctx: Ctx, payment_id: Any) -> Payment:
+    try:
+        payment = (
+            Payment.objects.for_tenant(ctx.tenant).select_for_update().filter(pk=payment_id).first()
+        )
+    except (ValueError, TypeError):
+        payment = None
+    if payment is None:
+        raise NotFound("No such payment.")
+    return payment
+
+
+@transaction.atomic
+def void_payment(*, ctx: Ctx, payment_id: Any, reason: Any) -> dict:
+    clean_reason = _validate_reason(reason)
+    payment = _lock_payment(ctx, payment_id)
+    if payment.status == PaymentStatus.VOID:
+        raise BusinessRuleViolation(
+            "payment_already_void",
+            "This payment has already been voided.",
+            details={"payment_id": str(payment.id), "number": payment.number},
+        )
+    if payment.party_id is not None:
+        lock_party(tenant=ctx.tenant, party_id=payment.party_id)
+
+    rows = list(payment.allocations.all())
+    before = payment_snapshot(payment)
+    today = tenant_today(ctx.tenant)
+    documents: list[dict] = []
+    by_type: dict[str, dict[str, Allocation]] = {}
+    for row in rows:
+        by_type.setdefault(row.document_type, {})[str(row.document_id)] = row
+    for document_type, allocations in by_type.items():
+        target = target_for(document_type)
+        if target is None:  # pragma: no cover - a target unregistered after use
+            continue
+        for document in target.lock(tenant=ctx.tenant, ids=list(allocations)):
+            row = allocations[str(document.id)]
+            was, now = target.unapply(document=document, amount=row.amount, today=today)
+            summary = target.summary(document)
+            documents.append(summary)
+            if was != now:
+                write_audit(
+                    ctx=ctx,
+                    action=target.audit_action(),
+                    entity_type=document_type,
+                    entity_id=document.id,
+                    before={"status": was},
+                    after={"status": now, "amount_due": summary["amount_due"]},
+                    metadata={"payment_id": str(payment.id), "number": payment.number},
+                )
+    Allocation.objects.filter(payment=payment).delete()
+
+    payment.status = PaymentStatus.VOID
+    payment.voided_at = timezone.now()
+    payment.voided_by = ctx.actor if ctx.actor_type == "user" else None
+    payment.void_reason = clean_reason
+    payment.unallocated_amount = Decimal("0.00")
+    payment.save(
+        update_fields=[
+            "status",
+            "voided_at",
+            "voided_by",
+            "void_reason",
+            "unallocated_amount",
+            "updated_at",
+        ]
+    )
+
+    reversals, balance = reverse_source_entries(
+        ctx=ctx, source_type=SourceType.PAYMENT, source_id=payment.id, reason=clean_reason
+    )
+    reversal_id = str(reversals[0].id) if reversals else None
+    write_audit(
+        ctx=ctx,
+        action=AuditAction.PAYMENT_VOIDED,
+        entity_type="payments_payment",
+        entity_id=payment.id,
+        before=before,
+        after={"status": payment.status, "void_reason": clean_reason, "unallocated_amount": "0.00"},
+        metadata={
+            "reason": clean_reason,
+            **({"reversal_entry_id": reversal_id} if reversal_id else {}),
+        },
+    )
+    return {
+        "payment": payment,
+        "party_balance": balance,
+        "documents": documents,
+        "reversal_entry_id": reversal_id,
+    }
+
+
+def release_document_allocations(*, ctx: Ctx, document_type: str, document_id: Any) -> list[dict]:
+    """See the module docstring. Must run inside the caller's transaction."""
+    rows = list(
+        Allocation.objects.select_for_update()
+        .filter(tenant=ctx.tenant, document_type=document_type, document_id=document_id)
+        .select_related("payment")
+        .order_by("payment_id")
+    )
+    released: list[dict] = []
+    for row in rows:
+        Payment.objects.filter(pk=row.payment_id).update(
+            unallocated_amount=F("unallocated_amount") + row.amount
+        )
+        released.append(
+            {
+                "payment_id": str(row.payment_id),
+                "number": row.payment.number,
+                "amount": str(row.amount),
+            }
+        )
+        write_audit(
+            ctx=ctx,
+            action=AuditAction.PAYMENT_ALLOCATION_RELEASED,
+            entity_type="payments_payment",
+            entity_id=row.payment_id,
+            before={
+                "document_type": document_type,
+                "document_id": str(document_id),
+                "amount": str(row.amount),
+            },
+            after=None,
+            metadata={"reason": "document_void"},
+        )
+    Allocation.objects.filter(pk__in=[row.pk for row in rows]).delete()
+    return released

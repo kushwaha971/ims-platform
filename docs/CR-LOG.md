@@ -902,3 +902,73 @@ still resolves no tenant (403 `no_active_tenant`) rather than FR-3's `tenant_sus
 — Django admin at MVP), `/admin/users`, `/admin/audit-logs`, MFA.
 
 Requested against Part 17-01 PLT-14 FR-2…FR-8, Part 20 §20.4.8, Part 22 §22.13.
+
+## CR-2026-09-25-PAY-A — PAY-01…05 and LED-10: what was built beside the FRDs
+
+**State:** `raised`. **Target:** Part 17-02 PAY-01…PAY-05 and LED-10, Part 21 §21.3.9, Part 22
+§22.9, CR-2026-09-24-SAL-A. **Gate:** migrations `payments 0001_initial`,
+`payments 0002_money_invariants` (a CHECK over `mode_breakup` through an immutable SQL
+function, and a deferred constraint trigger for Σ allocations ≤ amount).
+
+**LED-10's service exists and the two stand-ins call it.** `ledger/services/postings.py`
+(`post_source_entry`, `reverse_source_entries`) replaces the bodies of
+`sales/services/ledger_link.post_invoice_debit` and `expenses/services/ledger_link.post_expense_payable`.
+It returns `(entry, balance)` rather than FR-1's bare `LedgerEntry`, because every caller needs
+the balance the posting produced. `reverse_source_entries` returns `(reversals, balance)`.
+`resolve_sources` is a registry each document app fills in `ready()` — the ledger may not import
+sales, payments or expenses — so `source` on the timeline and statement now carries `number`,
+`status` and `kind`; `url` stays null and the client routes by `type`.
+
+**The allocation target is an interface.** `payments/services/targets/` holds a protocol and a
+registry; the sales invoice target is registered by `PaymentsConfig.ready()`, and PUR-02 adds a
+purchase-bill target (direction `out`) beside it. A target MOVES a bill's caches by the allocated
+amount (`amount_paid ± a`, `amount_due ∓ a`) rather than recomputing `grand_total − paid −
+credits`, so SAL-04's credit applications survive a payment and a void without payments knowing
+about them. Status is recomputed by rule after every move, and `overdue` is decided at once
+(BR-4) rather than by the nightly job.
+
+**Walk-in bills hold `amount_due` at 0.** `ck_sales_document_walk_in_paid` (an issued walk-in bill
+is never a receivable) is a CHECK and cannot be deferred, and a walk-in payment is recorded
+against an already-issued bill. So a walk-in bill's `amount_due` stays 0 and what it can still take
+is `grand_total − amount_paid`. PAY-05 FR-5's walk-in void therefore leaves the bill `issued` with
+`amount_paid = 0` and `amount_due = 0`, not `amount_due = grand_total` as FR-5 says.
+
+**`payment_out` lines carry no mode.** BR-6 says the ledger entry carries `payment_mode =
+primary_mode`; `ck_ledger_entry_debit_has_no_mode` forbids a mode on any debit, and a payment out
+is a debit. Money in carries its mode (and UPI app) as FR-6 says; money out keeps its modes on
+the payment row only.
+
+**`mode_breakup` lines may carry `upi_app`.** PAY-02 §19 whitelists `mode`, `amount`, `reference`;
+the flattened UPI chips the ledger and expenses already use ("PhonePe kiya") write the app too,
+so the whitelist is those three plus `upi_app` (UPI lines only). The primary UPI line's app is
+copied onto the ledger credit.
+
+**Void does not refuse an archived party** (EC-5), unlike EXP-01's expense void, which does.
+
+**Party payments at issue are in** (closing CR-2026-09-24-SAL-A's refusal). The invoice is written
+issued-with-nothing-paid, its debit posted, then `record_payment` allocates up to the grand total
+and keeps the rest as advance; the khata shows the bill and the receipt as two lines (LED-10
+BR-4). `meta.payment` is still written (with `payment_id` and `number`) because the printed invoice
+reads it. The editor now opens the payment sheet for a party bill too, with "Full credit" beside
+the confirm (SAL-07 §9's state table) — one more tap for a pure credit sale.
+
+**API additions.** `GET /payments/open-documents?party_id&direction` (the allocation panel's rows,
+from the target registry, instead of FR-2's `GET /sales/invoices?...`, so the panel works for
+purchase bills unchanged); `POST /payments/{id}/share` → `{text, mobile}` (PAY-04 BR-4's
+server-rendered text, audited `payment.receipt_shared`, under `payments.payment.write`);
+`POST /payments/upi-intent {amount?, party_id?, note?}` → `{upi_url, amount, vpa, payee, qr}`
+(QR as module rows, the shape SAL-03's `UbQrCode` already draws, not FR-6's `{path, modules}`);
+`GET /payments/{id}` carries `business` (the receipt's header band) and `party_balance_after`
+(every ledger row up to this payment's, reversed rows included, so a later void does not rewrite
+history). Invoice detail carries `payments[]`.
+
+**Not built.** Share LINKS and the public `/d/<token>` receipt page (they need
+`parties_share_link`, and the public page is still a stub — the share text omits the link line);
+the receipt SMS and the void SMS (FR-6, BR-5/BR-7); the thermal-80 receipt template (A5 only);
+auto-print after save (`payments.auto_print_receipt`); the in-app owner notifications (§17);
+the cashbook's payments source (expenses may not import payments — the composition moves to
+`reports`, EXP-03); `ledger.check_integrity` (LED-10 FR-8); the counter-QR print view and the
+Settings UPI card (PAY-03 FR-1/FR-8, PLT-07's screen); the statement page's source links (the
+timeline has them).
+
+Requested against Part 17-02 PAY-01…PAY-05 and LED-10, Part 21 §21.3.9, Part 22 §22.9.

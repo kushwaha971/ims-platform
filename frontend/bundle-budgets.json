@@ -885,7 +885,16 @@
   "  /admin/tenants/[id]   route 22.1   firstLoad 281.6",
   "  /admin/partners       route 24.7   firstLoad 284.3",
   "  /admin/health         route 17.9   firstLoad 277.4",
-  "  /admin                route  9.4   firstLoad 268.9 (a redirect)"
+  "  /admin                route  9.4   firstLoad 268.9 (a redirect)",
+  "── 25 Sep 2026 (W3-A): PAY-01 … PAY-05 — payments ──────────────────────────",
+  "UNMEASURED: this track may not run `next build` (shared machine). The two",
+  "new routes are budgeted by their nearest twins and must be re-measured on",
+  "the integrated build: /payments is the expense list's shape (grid, period,",
+  "tiles, a dynamic drawer) -> 107 / 349; /payments/[id] is the invoice detail's",
+  "shape (a dynamic A5 print sheet, a dynamic void dialog) -> 80 / 340. The",
+  "drawer, the Collect sheet and the three payments slices are dynamic() on",
+  "every opener (/parties/[id], /sales/invoices/[id]), so those routes should",
+  "move by the button and the menu items only."
  ],
  "default": {
   "route": 64,
@@ -999,6 +1008,14 @@
   "/cashbook": {
    "route": 91,
    "firstLoad": 333
+  },
+  "/payments": {
+   "route": 107,
+   "firstLoad": 349
+  },
+  "/payments/[id]": {
+   "route": 80,
+   "firstLoad": 340
   },
   "/ledger/reminders": {
    "route": 80,

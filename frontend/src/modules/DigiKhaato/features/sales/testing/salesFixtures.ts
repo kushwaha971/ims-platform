@@ -79,6 +79,7 @@ export const wireDocument = (over: Wire = {}): Wire => ({
   amount_paid: '0.00',
   amount_due: '473.00',
   payment: null,
+  payments: [],
   lines: [wireLine()],
   notes: '',
   terms: '',

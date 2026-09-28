@@ -41,6 +41,7 @@ import {
 } from '../view-model/entryDisplay';
 
 import { EntryActionsMenu } from './EntryActionsMenu';
+import { EntrySourceLink } from './EntrySourceLink';
 
 import type { LedgerEntry } from '../types/ledger.types';
 
@@ -407,6 +408,11 @@ function EntryRow({
               transaction — nothing changed hands on that date, it is the
               position the book started from. */}
           {isOpening && <UbStatusBadge label={t('ledger.opening.badge')} tone="info" />}
+          {/* LED-10 FR-4 / §7 — a document's line names the document and links
+              back to it ("Invoice · INV/26-27/0042"), on the caption line with
+              the other badges so the title keeps its own. A document voided
+              since carries "Void" beside its number (§9). */}
+          {entry.source && <EntrySourceLink source={entry.source} t={t} />}
           {caption && (
             <UbText variant="caption" tone="tertiary" className="min-w-0 truncate">
               {caption}

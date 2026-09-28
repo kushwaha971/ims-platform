@@ -133,6 +133,26 @@ const PartyArchiveDialogLazy = /* @__PURE__ */ dynamic(() =>
   import('./PartyArchiveDialog').then((m) => m.PartyArchiveDialog)
 );
 
+/* PAY-01 / PAY-03 — the payments drawer and the Collect QR, each in its own
+   chunk with the payments slices inside it: a khata opened to READ a balance
+   downloads neither. */
+const PaymentFormDrawerLazy = /* @__PURE__ */ dynamic(() =>
+  import('modules/DigiKhaato/features/payments/components/PaymentFormDrawer').then(
+    (m) => m.PaymentFormDrawer
+  )
+);
+const CollectQrSheetLazy = /* @__PURE__ */ dynamic(() =>
+  import('modules/DigiKhaato/features/payments/components/CollectQrSheet').then(
+    (m) => m.CollectQrSheet
+  )
+);
+
+/** PAY-01 FR-1 — the drawer's preset from the khata (a local mirror of `PaymentContext`). */
+interface KhataPaymentPreset {
+  readonly presetMode?: 'upi';
+  readonly presetAmount?: string;
+}
+
 export function PartyDetailPageContent({
   id,
 }: Readonly<PartyDetailPageContentProps>): React.JSX.Element {
@@ -174,6 +194,8 @@ export function PartyDetailPageContent({
   const [pairRef, pairScrolledPast] = useScrolledPast<HTMLDivElement>();
 
   const [copied, setCopied] = useState(false);
+  const [paying, setPaying] = useState<KhataPaymentPreset | null>(null);
+  const [collecting, setCollecting] = useState(false);
   const handleCopyMobile = useCallback(async (mobile: string) => {
     setCopied(await copyText(mobile));
   }, []);
@@ -292,6 +314,14 @@ export function PartyDetailPageContent({
   /* The khata's everyday pair. Hidden rather than disabled when the role
      cannot write (§19.7.5 / R-SEC-2), and absent for an archived party. */
   const canRecord = Boolean(party) && !isArchived && entryForm.canWrite;
+  /* PAY-01 — against bills, for a role that records payments; PAY-03's QR is a
+     read (§12), offered while the party owes the shop something. */
+  const canPay =
+    Boolean(party) && !isArchived && hasModule('payments') && can('payments.payment.write');
+  const balanceNow = summary?.balance ?? shown.balance;
+  const receivable = balanceNow && !balanceNow.startsWith('-') ? balanceNow : '';
+  const canCollect =
+    Boolean(party) && !isArchived && hasModule('payments') && can('payments.payment.read');
   const entryPair = (
     <>
       <UbButton variant="primary" onClick={() => entryForm.openEntry(id, 'debit')}>
@@ -334,6 +364,8 @@ export function PartyDetailPageContent({
                 triggerRef={moreRef}
                 statementHref={canReadLedger ? partyStatementPath(id) : undefined}
                 onRemind={reminder.canRemind ? reminder.openSheet : undefined}
+                onRecordPayment={canPay ? () => setPaying({}) : undefined}
+                onCollect={canCollect ? () => setCollecting(true) : undefined}
                 onEdit={partyForm.canWrite ? openEdit : undefined}
                 onAddOpening={opening.canAdd ? opening.openDrawer : undefined}
                 onArchive={archive.canArchive ? archive.open : undefined}
@@ -457,6 +489,32 @@ export function PartyDetailPageContent({
       {partyForm.open && <PartyFormDrawerLazy form={partyForm} returnFocusRef={moreRef} />}
 
       {entryForm.open && <LedgerEntryDrawerLazy form={entryForm} partyName={shown.name} />}
+
+      {paying && (
+        <PaymentFormDrawerLazy
+          context={{
+            direction: 'in',
+            partyId: id,
+            partyName: shown.name,
+            receivable,
+            entry: paying.presetMode ? 'collect' : 'party',
+            ...paying,
+          }}
+          onClose={() => setPaying(null)}
+        />
+      )}
+      {collecting && (
+        <CollectQrSheetLazy
+          partyId={id}
+          partyName={shown.name}
+          receivable={receivable}
+          onClose={() => setCollecting(false)}
+          onMarkReceived={(amount) => {
+            setCollecting(false);
+            setPaying({ presetMode: 'upi', presetAmount: amount });
+          }}
+        />
+      )}
 
       {/* LED-06. The merchant sends it from their own WhatsApp or SMS app
           (DEC-012) — the feedback says "WhatsApp opened", never "Reminder

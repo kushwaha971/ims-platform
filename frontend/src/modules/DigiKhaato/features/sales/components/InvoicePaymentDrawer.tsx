@@ -18,8 +18,10 @@ import { fullCashPayment, type PaymentRowForm } from '../view-model/invoiceForm'
  * confirmed until the modes add up to the bill (§10: "Split amounts must add
  * up to ₹{amount}"). No "Full credit" — a walk-in is never a receivable.
  *
- * Recorded on the invoice itself until PAY-01's payments module exists; the
- * sheet is the seam, and its rows are exactly PAY-01's `mode_breakup`.
+ * A PARTY bill opens the same sheet (SAL-02 FR-10): any amount — part, all,
+ * or more, the rest kept as advance — or "Full credit" to issue with nothing
+ * received. Either way the rows are PAY-01's `mode_breakup`, and the server
+ * records them as a real receipt allocated to the bill.
  */
 export function InvoicePaymentDrawer({
   open,
@@ -27,18 +29,22 @@ export function InvoicePaymentDrawer({
   busy,
   onClose,
   onConfirm,
+  onCredit,
 }: Readonly<{
   open: boolean;
   grandTotal: string;
   busy: boolean;
   onClose: () => void;
   onConfirm: (rows: readonly PaymentRowForm[]) => void;
+  /** Present for a party bill: issue on credit with nothing received. */
+  onCredit?: () => void;
 }>): React.JSX.Element {
   const { t } = useTranslation();
   const baseId = useId();
   const [rows, setRows] = useState<PaymentRowForm[]>(() => fullCashPayment(grandTotal));
   const paid = useMemo(() => sumMoney(rows.map((r) => r.amount || '0')), [rows]);
-  const balanced = paid === grandTotal;
+  const party = onCredit !== undefined;
+  const balanced = party ? paid !== '0.00' : paid === grandTotal;
   const needsReference = rows.some((r) => r.mode === 'cheque' && !r.reference.trim());
 
   const update = (index: number, patch: Partial<PaymentRowForm>) =>
@@ -49,19 +55,26 @@ export function InvoicePaymentDrawer({
       open={open}
       onOpenChange={(next) => !next && onClose()}
       title={t('sales.payment.title')}
-      description={t('sales.payment.walkInHint')}
+      description={t(party ? 'sales.payment.partyHint' : 'sales.payment.walkInHint')}
       closeLabel={t('common.action.close')}
       footer={
-        <UbButton
-          fullWidth
-          busy={busy}
-          busyLabel={t('sales.editor.issuing')}
-          disabled={!balanced || needsReference}
-          onClick={() => onConfirm(rows)}
-          data-testid="invoice-payment-confirm"
-        >
-          {t('sales.payment.confirm', { amount: formatInr(grandTotal) })}
-        </UbButton>
+        <>
+          {party && (
+            <UbButton variant="secondary" disabled={busy} onClick={onCredit}>
+              {t('sales.payment.fullCredit')}
+            </UbButton>
+          )}
+          <UbButton
+            fullWidth={!party}
+            busy={busy}
+            busyLabel={t('sales.editor.issuing')}
+            disabled={!balanced || needsReference}
+            onClick={() => onConfirm(rows)}
+            data-testid="invoice-payment-confirm"
+          >
+            {t('sales.payment.confirm', { amount: formatInr(party ? paid : grandTotal) })}
+          </UbButton>
+        </>
       }
     >
       <UbStack gap={4}>
@@ -119,7 +132,7 @@ export function InvoicePaymentDrawer({
         >
           {t('sales.payment.split')}
         </UbButton>
-        {!balanced && (
+        {!balanced && !party && (
           <UbText variant="body-sm" tone="formError" role="alert">
             {t('sales.payment.mustBalance', { amount: formatInr(grandTotal) })}
           </UbText>

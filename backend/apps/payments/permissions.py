@@ -1,8 +1,26 @@
 """Permission maps for the payments app (canon §0.9, Part 20 §20.5.5).
 
-Sprint 0 creates the package so the app label, the table prefix and the
-import matrix of Part 20 §20.1.4 are reserved. The models, services and
-views land in the sprint that owns the feature.
+`HasPermission` is fail-closed: an action missing from a map is denied.
+
+PAY-01 §12 / PAY-05 §12: everybody reads (the accountant included); owner,
+admin and staff record; only owner and admin void — the registry grants
+`payments.payment.void` to those two and nobody else.
 """
 
 from __future__ import annotations
+
+from apps.common.permissions import HasPermission
+
+PaymentPermissions = HasPermission(
+    {
+        "list": "payments.payment.read",
+        "retrieve": "payments.payment.read",
+        "open_documents": "payments.payment.read",
+        "create": "payments.payment.write",
+        "share": "payments.payment.write",
+        "void": "payments.payment.void",
+    }
+)
+
+#: PAY-03 §12 — showing a Collect QR is a read.
+UpiPermissions = HasPermission("payments.payment.read")

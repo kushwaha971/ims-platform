@@ -13,3 +13,10 @@ class ExpensesConfig(AppConfig):
 
     def ready(self) -> None:
         from apps.expenses import tasks  # noqa: F401  (registers job handlers)
+
+        # LED-10 FR-5 — the khata names an unpaid expense by its number.
+        from apps.expenses.selectors.ledger_sources import resolve_expenses
+        from apps.ledger.constants import SourceType
+        from apps.ledger.selectors.sources import register_source_resolver
+
+        register_source_resolver(SourceType.EXPENSE, resolve_expenses)

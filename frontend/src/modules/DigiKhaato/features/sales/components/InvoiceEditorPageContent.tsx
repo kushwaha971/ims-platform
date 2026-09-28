@@ -91,9 +91,11 @@ export function InvoiceEditorPageContent({
   );
   const startIssue = useCallback(() => {
     if (!hasLines || locked) return;
-    if (walkIn && preview.grandTotal !== '0.00') setPaying(true);
+    // SAL-07 FR-3 / SAL-02 FR-10 — a walk-in pays in full; a party bill may
+    // take a payment at issue or go on "Full credit" from the same sheet.
+    if (preview.grandTotal !== '0.00') setPaying(true);
     else void finishIssue(null);
-  }, [hasLines, locked, walkIn, preview.grandTotal, finishIssue]);
+  }, [hasLines, locked, preview.grandTotal, finishIssue]);
 
   const saveNow = useCallback(() => void save(false), [save]);
   useEditorWindowEffects({
@@ -231,6 +233,7 @@ export function InvoiceEditorPageContent({
           busy={server.issuing}
           onClose={() => setPaying(false)}
           onConfirm={(rows) => void finishIssue(rows)}
+          onCredit={walkIn ? undefined : () => void finishIssue(null)}
         />
       )}
       {server.issued && (

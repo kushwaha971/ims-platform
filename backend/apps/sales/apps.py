@@ -16,3 +16,10 @@ class SalesConfig(AppConfig):
         from apps.sales.services.guards import register_guards
 
         register_guards()
+
+        # LED-10 FR-5 — the khata names an invoice by its number.
+        from apps.ledger.constants import SourceType
+        from apps.ledger.selectors.sources import register_source_resolver
+        from apps.sales.selectors.ledger_sources import resolve_sales_documents
+
+        register_source_resolver(SourceType.SALES_DOCUMENT, resolve_sales_documents)

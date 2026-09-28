@@ -139,7 +139,12 @@ export const API_PATHS = {
   PURCHASE_BILLS: '/purchases/bills',
   PURCHASE_BILL_RECORD: (id: string) => `/purchases/bills/${seg(id)}/record`,
   PAYMENTS: '/payments',
+  PAYMENT: (id: string) => `/payments/${seg(id)}`,
   PAYMENT_VOID: (id: string) => `/payments/${seg(id)}/void`,
+  /** PAY-04 BR-4 — the receipt's WhatsApp text, rendered by the server. */
+  PAYMENT_SHARE: (id: string) => `/payments/${seg(id)}/share`,
+  /** PAY-01 FR-2 — the allocation panel's open bills, oldest first. */
+  PAYMENTS_OPEN_DOCUMENTS: '/payments/open-documents',
   PAYMENTS_UPI_INTENT: '/payments/upi-intent',
   PAYMENTS_QR: '/payments/qr.svg',
   EXPENSES: '/expenses',
@@ -265,6 +270,12 @@ export const IDEMPOTENCY_EXEMPT_PATHS: readonly string[] = [
    * `tenant_pending_deletion`, and a repeated `delete-cancel` meets 412.
    */
   API_PATHS.TENANT_CURRENT,
+  /*
+   * PAY-03 — `upi-intent` computes a QR and writes nothing. (The receipt's
+   * `/share` is a POST under `/payments/{id}`, which the prefix rule covers;
+   * its caller mints the key itself.)
+   */
+  API_PATHS.PAYMENTS_UPI_INTENT,
 ];
 
 /** True when a POST to this url is on the mandatory-idempotency list. */

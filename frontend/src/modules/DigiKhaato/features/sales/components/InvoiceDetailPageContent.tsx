@@ -9,6 +9,7 @@ import {
   UbActionLink,
   UbButton,
   UbEmptyState,
+  UbLink,
   UbPageHeader,
   UbPageShell,
   UbPageSkeleton,
@@ -25,6 +26,7 @@ import { ROUTES } from 'src/routes';
 import { formatBusinessDate } from 'src/utils/dates';
 import { formatInr } from 'src/utils/money';
 
+import { RecordPaymentButton } from '../../payments/components/RecordPaymentButton';
 import { useInvoiceDetail } from '../hooks/useInvoiceDetail';
 import { STATUS_TONE, partyLabel } from '../view-model/invoiceDisplay';
 
@@ -97,6 +99,22 @@ export function InvoiceDetailPageContent({ id }: Readonly<{ id: string }>): Reac
                 {t('sales.detail.edit')}
               </UbActionLink>
             )}
+            {/* PAY-01 FR-1 — a party bill still owing takes a payment from here,
+                allocated to THIS bill first; the page re-reads it on save. */}
+            {doc.party && ['issued', 'partially_paid', 'overdue'].includes(doc.status) && (
+              <RecordPaymentButton
+                context={{
+                  direction: 'in',
+                  partyId: doc.party.id,
+                  partyName: doc.partySnapshot?.name || doc.party.name,
+                  documentId: doc.id,
+                  documentNumber: doc.number ?? undefined,
+                  documentDue: doc.amountDue,
+                  entry: 'invoice',
+                }}
+                onSaved={detail.reload}
+              />
+            )}
             <UbButton
               variant="secondary"
               iconOnly="mobile"
@@ -146,6 +164,17 @@ export function InvoiceDetailPageContent({ id }: Readonly<{ id: string }>): Reac
                 >
                   {t('sales.share.copyLink')}
                 </UbButton>
+              </UbStack>
+            )}
+            {doc.payments.length > 0 && (
+              <UbStack gap={1} data-testid="invoice-payments">
+                {doc.payments.map((row) => (
+                  <UbText key={row.id} variant="caption" tone="secondary">
+                    <UbLink href={`${ROUTES.PAYMENTS}/${row.id}`}>{row.number}</UbLink>
+                    {` · ${formatBusinessDate(row.paymentDate)} · ${formatInr(row.amount)}`}
+                    {row.status === 'void' ? ` · ${t('payments.status.void')}` : ''}
+                  </UbText>
+                ))}
               </UbStack>
             )}
             {detail.shareLink && (

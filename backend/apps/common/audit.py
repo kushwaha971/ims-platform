@@ -134,6 +134,19 @@ class AuditAction:
     EXPENSE_RECORDED = "expense.recorded"
     EXPENSE_VOIDED = "expense.voided"
     EXPENSE_CATEGORY_CREATED = "expense_category.created"
+    # ── Sprint 8: PAY-01 … PAY-05 (17-02 §17.3, §16) ──────────────────────
+    #
+    # `payment.recorded` carries the full row and its allocations in `after`;
+    # `payment.voided` carries them as `before` (the allocations are DELETED by
+    # a void, so this row is the only place they survive) plus the reason and
+    # the reversal entry. Each document a payment moves is audited under its
+    # own `*.status_changed` with `metadata.payment_id`.
+    PAYMENT_RECORDED = "payment.recorded"
+    PAYMENT_VOIDED = "payment.voided"
+    PAYMENT_RECEIPT_SHARED = "payment.receipt_shared"
+    #: LED-10 BR-7 — a document void deletes its allocations; the payment stays.
+    PAYMENT_ALLOCATION_RELEASED = "payment.allocation_released"
+    INVOICE_STATUS_CHANGED = "invoice.status_changed"
     # ── Sprint 7: SAL-02 / SAL-03 / SAL-06 (17-04 §16) ────────────────────
     #
     # `invoice.draft_updated` is throttled to one row per draft per 10 minutes

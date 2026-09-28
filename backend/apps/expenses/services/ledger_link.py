@@ -7,10 +7,9 @@
 line is not manual — FR-4 and AC-3 require `entry_type='expense'`,
 `source_type='expense'` and `source_id=<the expense>`, which is what lets
 LED-03 refuse to correct it directly (`use_document_void`) and what lets the
-void below find it again. The ledger has no document-posting service yet —
-that is LED-10's `post_source_entry` / `reverse_source_entries` — so this
-module is the smallest honest stand-in, built from the ledger's own parts so
-that no rule is restated:
+void below find it again. The post now goes through LED-10's
+`post_source_entry`; the reversal below keeps its own two writes (C6's rules
+are the same ones `reverse_source_entries` applies). No rule is restated:
 
 * the row goes through `validate_entry_payload` (amount, date, note) exactly
   as a write-off and an opening do;
@@ -43,6 +42,7 @@ from apps.common.dates import tenant_today
 from apps.ledger.constants import EntryStatus, EntryType, SourceType
 from apps.ledger.models import LedgerEntry
 from apps.ledger.services.entries import _audit_snapshot, validate_entry_payload
+from apps.ledger.services.postings import post_source_entry
 from apps.parties.services.balance import apply_entry
 
 
@@ -69,7 +69,8 @@ def post_expense_payable(*, ctx: Ctx, expense: Any, party: Any) -> tuple[LedgerE
 
     A credit: the business owes the party more (canon §0.2 — a supplier
     document is a credit). No credit-limit check, for the reason LED-01 FR-6
-    gives: a credit only ever reduces what the party owes the shop.
+    gives: a credit only ever reduces what the party owes the shop. The amount
+    and date go through the ledger's own validator first (they become a row).
     Returns `(entry, balance_after)`.
     """
     row = validate_entry_payload(
@@ -82,34 +83,17 @@ def post_expense_payable(*, ctx: Ctx, expense: Any, party: Any) -> tuple[LedgerE
         tenant=ctx.tenant,
         needs_mode=False,
     )
-    entry = LedgerEntry.objects.create(
-        tenant=ctx.tenant,
-        created_by=_actor(ctx),
+    return post_source_entry(
+        ctx=ctx,
         party=party,
-        direction=row["direction"],
         amount=row["amount"],
         entry_date=row["entry_date"],
         entry_type=EntryType.EXPENSE,
         source_type=SourceType.EXPENSE,
         source_id=expense.id,
         note=row["note"],
-        status=EntryStatus.POSTED,
+        source_number=expense.number,
     )
-    balance = apply_entry(party=party, direction=row["direction"], amount=row["amount"])
-    write_audit(
-        ctx=ctx,
-        action=AuditAction.LEDGER_ENTRY_CREATED,
-        entity_type="ledger_entry",
-        entity_id=entry.id,
-        after=_audit_snapshot(entry),
-        metadata={
-            "via": "expense",
-            "expense_id": str(expense.id),
-            "party_id": str(party.id),
-            "balance_after": str(balance),
-        },
-    )
-    return entry, balance
 
 
 def standing_expense_entry(*, tenant: Any, expense_id: Any) -> LedgerEntry | None:

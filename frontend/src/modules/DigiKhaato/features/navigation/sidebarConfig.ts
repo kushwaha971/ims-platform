@@ -147,7 +147,9 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
     order: 3,
   },
   {
+    // PAY-01 … PAY-05 — ready as of the payments wave: list, record, receipt, void.
     key: 'payments',
+    ready: true,
     icon: CreditCard,
     labelId: 'nav.payments',
     href: ROUTES.PAYMENTS,

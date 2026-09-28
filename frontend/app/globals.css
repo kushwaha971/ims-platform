@@ -231,6 +231,18 @@
     .ub-print-a4 {
       padding: 0 !important;
     }
+
+    /* PAY-04 FR-1 — the payment receipt prints onto an A5 named page: half an
+       A4 sheet, which is what a receipt book is. */
+    @page a5 {
+      size: A5 portrait;
+      margin: 10mm;
+    }
+
+    .ub-print-a5 {
+      page: a5;
+      padding: 0 !important;
+    }
   }
 }
 
