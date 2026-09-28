@@ -469,7 +469,7 @@
   "  sharedApp        144.8 -> 102.3   (budget 119 -> 104)",
   "  (app) shell       66.0 ->  37.2   (/dashboard's route figure: the chunks",
   "                                     every signed-in route loads)",
-  "  first load        -40 to -70 KB on every route; /login 324.4 -> 284.1",
+  "  first load        -38 to -70 KB on every route; /login 324.4 -> 284.1",
   "What bought it — two builds (registry + catalogues: sharedApp 144.8 ->",
   "102.3; drawers, comboboxes and the tailwind-merge alias: the (app) shell",
   "66.0 -> 37.2), attributed within each from the built chunks' contents:",
