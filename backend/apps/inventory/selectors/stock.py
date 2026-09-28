@@ -108,6 +108,46 @@ SUMMARY_STATUS = {
 }
 
 
+def filtered_summary(
+    *,
+    tenant: Any,
+    location_id: Any,
+    as_of: dt.date | None,
+    today: dt.date,
+    q: str = "",
+    category_id: Any = None,
+    status: str | None = None,
+    hide_zero: bool = True,
+    ordering: str = "name",
+) -> tuple[QuerySet, bool]:
+    """INV-08's list exactly as `/stock/summary` shows it: filtered and ordered.
+
+    Returns `(queryset, historical)`. One function for both entry points — the
+    screen (`StockSummaryView`) and RPT-06's file (`/reports/stock-summary`) —
+    so the export is the screen (RPT-08 BR-1) by construction rather than by
+    two copies of the same six filters agreeing.
+    """
+    historical = as_of is not None and as_of < today
+    qs = summary_queryset(
+        tenant=tenant,
+        location_id=location_id,
+        as_of=as_of if historical else None,
+        q=q,
+        category_id=category_id,
+    )
+    if status in SUMMARY_STATUS:
+        qs = qs.filter(SUMMARY_STATUS[status])
+    if hide_zero:
+        qs = qs.exclude(on_hand=0)
+    field = {"value": "stock_value"}.get(ordering.lstrip("-"), ordering.lstrip("-"))
+    expr = (
+        F(field).desc(nulls_last=True)
+        if ordering.startswith("-")
+        else F(field).asc(nulls_last=True)
+    )
+    return qs.order_by(expr, "name", "id"), historical
+
+
 def summary_totals(qs: QuerySet) -> dict:
     """FR-8 — the total is the sum of ROUNDED rows, so it equals the rows displayed."""
     from apps.inventory.selectors.items import aggregate_values

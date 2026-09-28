@@ -12,4 +12,6 @@ class ReportsConfig(AppConfig):
     verbose_name = "Reports"
 
     def ready(self) -> None:
-        from apps.reports import tasks  # noqa: F401  (registers job handlers)
+        from apps.reports import signals, tasks  # noqa: F401  (registers job handlers)
+
+        signals.connect()

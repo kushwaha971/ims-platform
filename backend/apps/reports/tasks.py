@@ -49,12 +49,21 @@ def build_export(job: Any, ctx: Any) -> dict:
         status=ExportStatus.RUNNING, updated_at=timezone.now()
     )
     try:
-        queryset, columns = replay_export_queryset(export)
+        if (export.params or {}).get("report"):
+            # RPT-08 — a report registers an exporter instead of a list view
+            # (`apps.reports.exporting`); its rows are replayed from the params
+            # and grants stored with the row, exactly as the request would have.
+            from apps.reports.exporting import replay
+
+            columns, source = replay(export)
+        else:
+            queryset, columns = replay_export_queryset(export)
+            source = queryset.iterator(chunk_size=2000)
         digest = hashlib.sha256()
         rows = 0
         with tempfile.NamedTemporaryFile("wb", delete=False, suffix=".csv") as handle:
             temp_path = handle.name
-            for index, line in enumerate(csv_lines(columns, queryset.iterator(chunk_size=2000))):
+            for index, line in enumerate(csv_lines(columns, source)):
                 data = line.encode("utf-8")
                 digest.update(data)
                 handle.write(data)
@@ -71,7 +80,8 @@ def build_export(job: Any, ctx: Any) -> dict:
             owner_id=export.id,
             kind=AttachmentKind.EXPORT_FILE,
             storage_key=stored,
-            original_name=f"digikhaato-{export.resource}.csv",
+            original_name=(export.params or {}).get("filename")
+            or f"digikhaato-{export.resource}.csv",
             content_type="text/csv",
             size_bytes=size,
             sha256=digest.hexdigest(),

@@ -420,26 +420,18 @@ class StockSummaryView(_InventoryView, APIView):
             errors["ordering"] = [f"Choose one of {', '.join(SUMMARY_ORDERINGS)}."]
         if errors:
             raise ValidationFailed(errors)
-        historical = as_of is not None and as_of < today
-        qs = stock_selectors.summary_queryset(
+        # The filters live in the selector so RPT-06's export reads the same ones.
+        qs, historical = stock_selectors.filtered_summary(
             tenant=self.get_tenant(),
             location_id=self.location_id(),
-            as_of=as_of if historical else None,
+            as_of=as_of,
+            today=today,
             q=params.get("q", ""),
             category_id=params.get("category_id") or None,
+            status=params.get("status"),
+            hide_zero=params.get("hide_zero", "true").lower() != "false",
+            ordering=ordering,
         )
-        status = params.get("status")
-        if status in stock_selectors.SUMMARY_STATUS:
-            qs = qs.filter(stock_selectors.SUMMARY_STATUS[status])
-        if params.get("hide_zero", "true").lower() != "false":
-            qs = qs.exclude(on_hand=0)
-        field = {"value": "stock_value"}.get(ordering.lstrip("-"), ordering.lstrip("-"))
-        expr = (
-            F(field).desc(nulls_last=True)
-            if ordering.startswith("-")
-            else F(field).asc(nulls_last=True)
-        )
-        qs = qs.order_by(expr, "name", "id")
         valuation = _valuation_visible(request)
         totals = stock_selectors.summary_totals(qs)
         paginator = PagePagination()

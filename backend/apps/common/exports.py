@@ -342,6 +342,11 @@ def _audit_export_request(
     )
 
 
+#: The public name, for RPT-08's report exports (`apps.reports.views.export_support`):
+#: a report file is audited exactly as a list file is, through the same row.
+audit_export_request = _audit_export_request
+
+
 def queue_export(
     *,
     tenant: Any,
