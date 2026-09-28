@@ -23,6 +23,32 @@ def _final(job: Any, default: int = SEND_ATTEMPTS) -> bool:
     return job.attempts >= (job.max_attempts or default)
 
 
+@job_handler("parties.recalc_balances", requires_tenant=False, timeout_seconds=1800)
+def recalc_balances(job: Any, ctx: Any) -> dict:
+    """The nightly balance-drift CHECK (03:00 IST, Part 42 BE-03). Report-only.
+
+    It was in `SCHEDULES` with no handler registered, so the scheduler skipped
+    it every night and the launch checklist's "balance-drift job clean" had
+    nothing behind it. A drift is logged at ERROR — the operator's alert path at
+    MVP (Part 27 §27.14) — naming the tenants and a count, never a party name
+    or an amount. The operator then reads `manage.py recalc_balances` and
+    decides; `--apply` stays a human act, because a quiet correction destroys
+    the evidence. Read-only, so a second run is harmless.
+    """
+    import logging
+
+    from apps.ledger.selectors.drift import balance_drift
+
+    drift = balance_drift()
+    if drift:
+        tenants = sorted({str(row.tenant_id) for row in drift})
+        logging.getLogger("ub.ledger").error(
+            "ledger.balance_drift",
+            extra={"count": len(drift), "tenants": ",".join(tenants[:20])},
+        )
+    return {"drifted": len(drift)}
+
+
 @job_handler("ledger.schedule_auto_reminders", requires_tenant=False, max_attempts=3)
 def schedule_auto_reminders(job: Any, ctx: Any) -> dict:
     """FR-2 — daily at 09:00 IST (`SCHEDULES`): one child job per active tenant (rule S3).

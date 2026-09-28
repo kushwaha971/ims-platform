@@ -414,6 +414,9 @@ SCHEDULES: list[Schedule] = [
     ),
     Schedule("platform.purge_jobs", period="daily", at_hour_ist=2, minute=30, grace_minutes=120),
     Schedule(
+        "platform.purge_rate_limits", period="daily", at_hour_ist=2, minute=35, grace_minutes=120
+    ),
+    Schedule(
         "platform.check_invariants", period="daily", at_hour_ist=2, minute=45, grace_minutes=60
     ),
     Schedule("parties.recalc_balances", period="daily", at_hour_ist=3, minute=0, grace_minutes=120),

@@ -54,6 +54,31 @@ def purge_jobs(job: Any, ctx: Any) -> dict:
     return {"succeeded_deleted": succeeded, "dead_letter_deleted": dead}
 
 
+@job_handler("platform.purge_rate_limits", requires_tenant=False, timeout_seconds=120)
+def purge_rate_limits(job: Any, ctx: Any) -> dict:
+    """Delete `platform_rate_limit` rows whose window ended long ago (Sprint 12).
+
+    The durable budgets write one row per (scope, identifier), and the public
+    share link's per-token budget writes one for every token anybody tries —
+    including made-up ones — so without a sweep the table grows with every
+    probe. The longest window is a day; a row two days past its window start and
+    not inside a lockout counts nothing. Idempotent: deletion by predicate.
+    """
+    import datetime as dt
+
+    from django.db.models import Q
+
+    from apps.platform_app.models import RateLimit
+
+    now = timezone.now()
+    deleted, _ = (
+        RateLimit.objects.filter(window_start__lt=now - dt.timedelta(days=2))
+        .filter(Q(locked_until__isnull=True) | Q(locked_until__lt=now))
+        .delete()
+    )
+    return {"deleted": deleted}
+
+
 @job_handler("platform.purge_otp_challenges", requires_tenant=False, timeout_seconds=120)
 def purge_otp_challenges(job: Any, ctx: Any) -> dict:
     """OTP rows are purged after 24 h (Part 21 §21.3.1). Idempotent by predicate.
@@ -90,7 +115,17 @@ def check_expected_runs(job: Any, ctx: Any) -> dict:
     log = logging.getLogger("ub.jobs")
     now = timezone.now()
     missing = []
+    from apps.common.jobs import REGISTRY
+
+    unbuilt = []
     for schedule in SCHEDULES:
+        if schedule.job_type not in REGISTRY:
+            # The scheduler never materialises a type nobody registered
+            # (`materialise_due_schedules`), so its run can never succeed —
+            # reporting it as MISSING every hour buried the real alerts under
+            # the same eight names. It is reported as unbuilt instead.
+            unbuilt.append(schedule.job_type)
+            continue
         due_at = schedule.due_at(now).astimezone(dt.timezone.utc)
         if now < due_at + dt.timedelta(minutes=schedule.grace_minutes):
             continue
@@ -100,7 +135,7 @@ def check_expected_runs(job: Any, ctx: Any) -> dict:
         if not ok:
             missing.append(schedule.job_type)
             log.error("job.expected_run_missing", extra={"job_type": schedule.job_type})
-    return {"checked": len(SCHEDULES), "missing": missing}
+    return {"checked": len(SCHEDULES), "missing": missing, "unbuilt": unbuilt}
 
 
 @job_handler("platform.reconcile_entitlements", requires_tenant=False, timeout_seconds=600)

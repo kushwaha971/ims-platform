@@ -29,12 +29,9 @@ from typing import Any
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from django.db.models import OuterRef, Subquery
-from django.db.models.functions import Coalesce
 
 from apps.common.money import ZERO
-from apps.ledger.models import LedgerEntry
-from apps.ledger.selectors.entry import SIGNED_AMOUNT
+from apps.ledger.selectors.drift import iter_balance_drift
 from apps.parties.models import Party
 
 
@@ -51,27 +48,15 @@ class Command(BaseCommand):
         parser.add_argument("--chunk", type=int, default=1000)
 
     def handle(self, *args: Any, **opts: Any) -> None:
-        parties = Party.all_objects.all().order_by("id")
-        if opts["tenant"]:
-            parties = parties.filter(tenant_id=opts["tenant"])
-
-        # One correlated subquery rather than a query per party. A tenant with
-        # 100,000 parties would otherwise be 100,000 round trips, which is the
-        # difference between a nightly job and a nightly outage.
-        ledger_total = (
-            LedgerEntry.objects.filter(party=OuterRef("pk"))
-            .values("party")
-            .annotate(total=SIGNED_AMOUNT)
-            .values("total")[:1]
-        )
-        parties = parties.annotate(computed=Coalesce(Subquery(ledger_total), ZERO))
-
+        # The replay is `ledger.selectors.drift` — one correlated subquery, shared
+        # with the nightly `parties.recalc_balances` job so the two cannot disagree.
         checked = drifted = 0
-        chunk = max(1, int(opts["chunk"]))
-        for party in parties.iterator(chunk_size=chunk):
+        for party, moved in iter_balance_drift(
+            tenant_id=opts["tenant"], chunk=int(opts["chunk"])
+        ):
             checked += 1
             computed = party.computed or ZERO
-            if computed == (party.balance or ZERO):
+            if not moved:
                 continue
             drifted += 1
             self.stdout.write(
