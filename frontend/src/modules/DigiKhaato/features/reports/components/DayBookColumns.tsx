@@ -3,7 +3,7 @@ import type { UbDataGridColumn } from 'src/design-system/UbDataGrid';
 import type { TranslateFn } from 'src/hooks/useTranslation';
 import { partyPath } from 'src/routes';
 import { formatBusinessDate } from 'src/utils/dates';
-import { formatAmount, formatInr } from 'src/utils/money';
+import { formatAmount, formatInr, subtractMoney } from 'src/utils/money';
 
 import {
   baseType,
@@ -48,11 +48,23 @@ export const describeRow = (row: DayBookRow, t: TranslateFn): string => {
   const base = baseType(row);
   const parts: string[] = [];
   if (base === 'sale') {
-    parts.push(
-      row.amountDue && Number(row.amountDue) > 0
-        ? t('reports.daybook.describe.saleCredit', { amount: formatInr(row.amount) })
-        : t('reports.daybook.describe.salePaid', { amount: formatInr(row.amount) })
-    );
+    // UAT D4 — a sale row's `amountDue` is the due AT ISSUE (the server's day
+    // book subtracts the take-payment), so a credit bill paid off later still
+    // reads "on credit" on the day it was issued, and a part-paid one says both.
+    const due = Number(row.amountDue ?? 0);
+    const total = Number(row.amount ?? 0);
+    if (due <= 0) {
+      parts.push(t('reports.daybook.describe.salePaid', { amount: formatInr(row.amount) }));
+    } else if (due >= total) {
+      parts.push(t('reports.daybook.describe.saleCredit', { amount: formatInr(row.amount) }));
+    } else {
+      parts.push(
+        t('reports.daybook.describe.salePart', {
+          paid: formatInr(subtractMoney(row.amount ?? '0.00', row.amountDue ?? '0.00')),
+          due: formatInr(row.amountDue ?? '0.00'),
+        })
+      );
+    }
   } else if (['credit_note', 'purchase', 'opening', 'write_off', 'reversal'].includes(base)) {
     parts.push(formatInr(row.amount));
   } else if (base === 'expense') {

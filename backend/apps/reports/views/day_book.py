@@ -143,8 +143,16 @@ def describe(row: DayBookRow) -> str:
     word = _TYPE_WORDS.get(base, base)
     parts: list[str] = []
     if base == "sale":
+        # UAT D4 — `amount_due` on a sale row is the due AT ISSUE.
         due = row.amount_due or 0
-        parts.append(f"{word} {inr(row.amount)} {'credit' if due > 0 else 'paid'}")
+        if due <= 0:
+            parts.append(f"{word} {inr(row.amount)} paid")
+        elif due >= row.amount:
+            parts.append(f"{word} {inr(row.amount)} credit")
+        else:
+            parts.append(
+                f"{word} {inr(row.amount)}: {inr(row.amount - due)} paid, {inr(due)} credit"
+            )
     elif base in ("credit_note", "purchase", "opening", "write_off", "reversal", "correction"):
         parts.append(f"{word} {inr(row.amount)}")
     elif base == "expense":

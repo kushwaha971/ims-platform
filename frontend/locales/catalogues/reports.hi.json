@@ -124,6 +124,7 @@
   "reports.daybook.describe.payable": "देना है {amount}",
   "reports.daybook.describe.saleCredit": "{amount} उधार",
   "reports.daybook.describe.salePaid": "{amount} चुकाया",
+  "reports.daybook.describe.salePart": "{paid} चुकाया · {due} उधार",
   "reports.daybook.description": "हर बिल, भुगतान, खर्च और खाते की एंट्री, क्रम से।",
   "reports.daybook.empty.body": "इस अवधि में कुछ दर्ज नहीं हुआ।",
   "reports.daybook.empty.filtered": "इस अवधि में इन प्रकारों का कुछ नहीं।",

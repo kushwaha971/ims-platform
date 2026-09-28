@@ -124,6 +124,7 @@
   "reports.daybook.describe.payable": "Payable {amount}",
   "reports.daybook.describe.saleCredit": "{amount} on credit",
   "reports.daybook.describe.salePaid": "{amount} paid",
+  "reports.daybook.describe.salePart": "{paid} paid · {due} on credit",
   "reports.daybook.description": "Every bill, payment, expense and khata entry, in order.",
   "reports.daybook.empty.body": "Nothing was recorded in this period.",
   "reports.daybook.empty.filtered": "Nothing of these types in this period.",

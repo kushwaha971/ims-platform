@@ -118,7 +118,18 @@ SELECT CASE WHEN d.kind = %(credit_note_kind)s THEN 2 ELSE 1 END AS ord,
        'sales_document'::text AS source_kind, d.id AS source_id, d.document_date AS bdate,
        COALESCE(d.issued_at, d.created_at) AS at, d.number::text AS number,
        d.party_id, COALESCE(pp.name, d.walk_in_name)::text AS party_name,
-       d.grand_total AS amount, d.amount_due AS amount_due,
+       d.grand_total AS amount,
+       -- UAT D4: a day book row is the EVENT, so a sale's due is what was left
+       -- on credit AT ISSUE (grand total less the take-payment in meta.payment),
+       -- not today's figure — a credit bill paid off next week read "paid".
+       CASE WHEN d.kind = %(credit_note_kind)s THEN d.amount_due
+            ELSE d.grand_total - COALESCE((
+              SELECT SUM((m->>'amount')::numeric)
+                FROM jsonb_array_elements(
+                  CASE WHEN jsonb_typeof(d.meta->'payment'->'mode_breakup') = 'array'
+                       THEN d.meta->'payment'->'mode_breakup' ELSE '[]'::jsonb END) m
+            ), 0)
+       END AS amount_due,
        NULL::numeric AS money_in, NULL::numeric AS money_out,
        0::numeric AS cash, 0::numeric AS bank, NULL::jsonb AS modes,
        ''::text AS note, NULL::text AS detail, NULL::integer AS lines, NULL::boolean AS paid,
@@ -517,9 +528,7 @@ def _query_params(tenant: Any, query: DayBookQuery) -> dict:
 
 def count_rows(*, tenant: Any, query: DayBookQuery) -> int:
     """The filtered row count — the export's sync/async decision (RPT-08 BR-3)."""
-    sql = (
-        f"WITH {_cte(query.sources)} SELECT COUNT(*) FROM rows WHERE {_OUTER_FILTERS}"  # noqa: S608
-    )
+    sql = f"WITH {_cte(query.sources)} SELECT COUNT(*) FROM rows WHERE {_OUTER_FILTERS}"  # noqa: S608
     return int(_fetch(sql, _query_params(tenant, query))[0][0])
 
 
