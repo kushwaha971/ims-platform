@@ -216,7 +216,7 @@ def contributing_documents(*, tenant: Any, date_from: dt.date, date_to: dt.date)
             document_date__gte=date_from,
             document_date__lte=date_to,
         )
-        .exclude(status=DRAFT)
+        .exclude(status__in=(DRAFT, VOID))
         .count()
     )
 

@@ -648,3 +648,15 @@ def test_a_rate_row_drills_into_register_lines_that_sum_to_it(owner: Any, shop: 
     assert {line["tax_rate"] for line in lines} == {"5.000"}
     assert sum(_d(line["taxable_value"]) for line in lines) == _d(five["taxable_value"])
     assert sum(_d(line["cgst"]) for line in lines) == _d(five["cgst"])
+
+
+def test_the_document_count_leaves_out_a_voided_invoice(owner: Any, shop: Any) -> None:
+    """QA R-D2 — the tile read "in 7 documents" for six: the count excluded drafts but
+    not a voided invoice, whose lines every section already leaves out."""
+    mohan = party(shop, gstin=RAMESH_GSTIN, gst_registration="regular")
+    sale(shop, "INV/1", on=SEP, customer=mohan, lines=[{"taxable": "100.00"}])
+    sale(shop, "INV/2", on=SEP, walk_in="Sita", lines=[{"taxable": "200.00"}])
+    sale(shop, "INV/3", on=SEP, customer=mohan, status="void", lines=[{"taxable": "5000"}])
+    response = _get(owner)
+    assert response.status_code == 200, response.json()
+    assert response.json()["meta"]["document_count"] == 2
