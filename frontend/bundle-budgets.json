@@ -524,7 +524,13 @@
   "locales/*.json add an estimated ~2.2 KB gz to every route, and the two",
   "thunk shells the registry names ~0.3 KB. Track W4-P is moving feature",
   "namespaces out of the shell catalogue; `reports.dashboard.*`,",
-  "`reports.daybook.*` and `reports.shell.*` are self-contained for that."
+  "`reports.daybook.*` and `reports.shell.*` are self-contained for that.",
+  "",
+  "── 28 Sep 2026: re-baselined after SAL-01/04/05, PUR-02 and the tax reports landed on the catalogue split ──",
+  "Measured + 1 KB. The three tax-report routes had provisional 56 KB lines copied from",
+  "a smaller route before they were built; they now carry the register grid, ReportPageShell",
+  "and the taxReports catalogue (~92 KB). Invoice and bill editors grew with the payment",
+  "sheet (Paid now / Full credit) and the credit-note hooks. Shell unchanged at 102.8 KB."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -985,20 +991,20 @@
    "firstLoad": 336
   },
   "/sales/invoices/new": {
-   "route": 124,
-   "firstLoad": 354
+   "route": 128,
+   "firstLoad": 358
   },
   "/sales/invoices/[id]/edit": {
-   "route": 124,
-   "firstLoad": 354
+   "route": 128,
+   "firstLoad": 358
   },
   "/sales/invoices": {
-   "route": 85,
-   "firstLoad": 315
+   "route": 88,
+   "firstLoad": 318
   },
   "/sales/invoices/[id]": {
-   "route": 56,
-   "firstLoad": 285
+   "route": 62,
+   "firstLoad": 291
   },
   "/sales/estimates": {
    "route": 96,
@@ -1074,7 +1080,7 @@
   },
   "/settings/branding": {
    "route": 82,
-   "firstLoad": 311
+   "firstLoad": 313
   },
   "/settings/activity": {
    "route": 95,
@@ -1117,8 +1123,8 @@
    "firstLoad": 327
   },
   "/payments/[id]": {
-   "route": 55,
-   "firstLoad": 284
+   "route": 57,
+   "firstLoad": 287
   },
   "/ledger/reminders": {
    "route": 61,
@@ -1157,12 +1163,12 @@
    "firstLoad": 279
   },
   "/purchases/bills/[id]": {
-   "route": 53,
-   "firstLoad": 282
+   "route": 55,
+   "firstLoad": 284
   },
   "/purchases/bills/[id]/edit": {
    "route": 134,
-   "firstLoad": 363
+   "firstLoad": 365
   },
   "/purchases/bills": {
    "route": 86,
@@ -1170,7 +1176,7 @@
   },
   "/purchases/bills/new": {
    "route": 134,
-   "firstLoad": 363
+   "firstLoad": 365
   },
   "/reports": {
    "route": 72,
@@ -1179,6 +1185,18 @@
   "/reports/day-book": {
    "route": 110,
    "firstLoad": 352
+  },
+  "/reports/gst-summary": {
+   "route": 94,
+   "firstLoad": 324
+  },
+  "/reports/purchase-register": {
+   "route": 93,
+   "firstLoad": 323
+  },
+  "/reports/sales-register": {
+   "route": 93,
+   "firstLoad": 323
   }
  },
  "//ignoreRoutes": [
