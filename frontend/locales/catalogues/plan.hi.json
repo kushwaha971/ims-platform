@@ -1,0 +1,21 @@
+{
+  "plan.card.atLimit": "सीमा पूरी",
+  "plan.card.loading": "आपका प्लान लोड हो रहा है",
+  "plan.card.nearLimit": "लगभग भर गया",
+  "plan.card.noLimits": "इस व्यापार पर कोई सीमा नहीं।",
+  "plan.card.title": "आपका प्लान",
+  "plan.card.unlimited": "असीमित",
+  "plan.ledgerNote": "उधार एंट्री पर कोई सीमा नहीं।",
+  "plan.limit.body": "आपने {plan} प्लान में {limit} में से {used} {noun} इस्तेमाल कर लिए हैं।",
+  "plan.limit.contact": "{partner} से संपर्क करें",
+  "plan.limit.contactText": "मुझे {plan} प्लान में {noun} के लिए ज़्यादा सीमा चाहिए।",
+  "plan.limit.noContact": "अपने प्रदाता से संपर्क करें",
+  "plan.limit.provider": "आपका प्रदाता",
+  "plan.limit.title": "प्लान की सीमा पूरी हुई",
+  "plan.module.locked.body": "{module} आपके प्लान में नहीं है। इसे चालू करने के लिए अपने प्रदाता से कहें।",
+  "plan.module.locked.title": "यह आपके व्यापार के लिए बंद है",
+  "plan.near.atBody": "और जोड़ने के लिए {partner} से संपर्क करें।",
+  "plan.near.body": "{limit} में से {used} {noun} इस्तेमाल हुए",
+  "plan.near.nearBody": "आप इस प्लान की सीमा के पास हैं।",
+  "plan.page.subtitle": "यह व्यापार क्या इस्तेमाल कर सकता है।"
+}

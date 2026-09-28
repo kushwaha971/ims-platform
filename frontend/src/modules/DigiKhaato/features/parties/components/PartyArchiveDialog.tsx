@@ -23,6 +23,11 @@ import { PartyWriteOffForm } from './PartyWriteOffForm';
 
 import type { ArchiveStage, BlockedBalance } from '../hooks/usePartyArchive';
 
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/ledger';
+import 'src/i18n/catalogues/parties';
+
 /**
  * PTY-04's confirmation, and the state the server puts it in when the party
  * still owes something.

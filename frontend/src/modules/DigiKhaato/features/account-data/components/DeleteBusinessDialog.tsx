@@ -26,6 +26,11 @@ import {
 
 import type { UseAccountDataResult } from '../hooks/useAccountData';
 
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/auth';
+import 'src/i18n/catalogues/validation';
+
 const FIELDS: readonly string[] = ['password', 'confirmName', 'reason'];
 
 /**

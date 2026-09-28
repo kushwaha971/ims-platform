@@ -7,6 +7,10 @@ import type { TranslateFn } from 'src/hooks/useTranslation';
 
 import type { PartyTagWithCount } from '../types/party.types';
 
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/parties';
+
 /**
  * PTY-05 FR-6 — the tag filter on the party list.
  *

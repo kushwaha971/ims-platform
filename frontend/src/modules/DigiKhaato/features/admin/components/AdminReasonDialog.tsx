@@ -18,6 +18,10 @@ import { useTranslation } from 'src/hooks/useTranslation';
 
 import { REASON_MAX, useAdminSchemas, type ReasonFormValues } from '../validation/adminSchemas';
 
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/validation';
+
 /**
  * PLT-14 FR-10 — the one question every console write asks: why. Used for
  * "Request access" (FR-6) and "Enter business" (FR-5); `dynamic()`-loaded by

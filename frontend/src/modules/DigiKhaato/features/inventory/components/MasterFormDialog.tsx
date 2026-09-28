@@ -26,6 +26,13 @@ import {
   type UnitFormValues,
 } from '../validation/inventorySchemas';
 
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/inventory';
+import 'src/i18n/catalogues/items';
+import 'src/i18n/catalogues/stock';
+import 'src/i18n/catalogues/validation';
+
 /**
  * INV-04 — "Add category" and "Add unit" (create-only at MVP: FR-6). One
  * dialog, two small forms. A unit code outside the GST list is allowed with a

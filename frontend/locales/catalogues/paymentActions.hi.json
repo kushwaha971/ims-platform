@@ -1,0 +1,6 @@
+{
+  "payments.record.title": "भुगतान दर्ज करें",
+  "payments.record.titleFor": "भुगतान दर्ज करें · {name}",
+  "payments.upi.collect": "UPI से लें",
+  "payments.upi.collectFrom": "{name} से लें"
+}

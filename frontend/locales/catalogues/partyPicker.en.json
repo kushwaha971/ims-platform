@@ -1,0 +1,8 @@
+{
+  "expenses.paidTo.clear": "Remove {name}",
+  "expenses.paidTo.noAccess": "You cannot look up parties",
+  "expenses.paidTo.noMatch": "No party matches",
+  "expenses.paidTo.placeholder": "Search a customer or supplier",
+  "expenses.paidTo.required": "Choose who you owe this to",
+  "expenses.paidTo.results": "Matching parties"
+}

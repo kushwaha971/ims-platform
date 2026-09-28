@@ -9,6 +9,11 @@ import { selectMustChangePassword } from 'src/redux/slice/sessionSlice';
 import { ForcePasswordChangePageContent } from 'modules/DigiKhaato/features/auth/components/ForcePasswordChangePageContent';
 import { SetPasswordPageContent } from 'modules/DigiKhaato/features/auth/components/SetPasswordPageContent';
 
+// The words this screen renders arrive with its chunk (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/auth';
+import 'src/i18n/catalogues/team';
+import 'src/i18n/catalogues/validation';
+
 /**
  * One address, two situations, and they are genuinely different screens.
  *

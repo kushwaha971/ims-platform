@@ -22,6 +22,13 @@ import { VoidExpenseDialog } from './VoidExpenseDialog';
 
 import type { UseExpenseFormResult } from '../hooks/useExpenseForm';
 
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/expenses';
+import 'src/i18n/catalogues/money';
+import 'src/i18n/catalogues/partyPicker';
+import 'src/i18n/catalogues/validation';
+
 /**
  * EXP-01 FR-10 — one expense, and the one thing that can be done to it here.
  *

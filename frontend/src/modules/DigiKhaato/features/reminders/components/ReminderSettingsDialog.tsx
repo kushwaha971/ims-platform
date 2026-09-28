@@ -11,6 +11,10 @@ import { saveReminderSettings } from '../redux/reminderThunk';
 
 import type { ReminderSettingsPatch } from '../types/reminder.types';
 
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/reminders';
+
 /**
  * LED-07 FR-1 and LED-08 FR-1 — the two SMS switches, owner and admin only.
  *

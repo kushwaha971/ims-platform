@@ -28,6 +28,11 @@ import { useLedgerSchemas } from '../validation/ledgerSchemas';
 import type { OpeningBalanceValues, UseOpeningBalanceResult } from '../hooks/useOpeningBalance';
 import type { LedgerDirection } from '../types/ledger.types';
 
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/ledger';
+import 'src/i18n/catalogues/validation';
+
 /**
  * LED-02 — the balance a merchant is carrying over from paper.
  *

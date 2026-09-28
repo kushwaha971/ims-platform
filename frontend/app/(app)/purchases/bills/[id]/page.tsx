@@ -4,6 +4,10 @@ import { use } from 'react';
 
 import { PurchaseBillDetailPageContent } from 'modules/DigiKhaato/features/purchases/components/PurchaseBillDetailPageContent';
 
+// The words this screen renders arrive with its chunk (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/money';
+import 'src/i18n/catalogues/purchases';
+
 /** PUR-01 FR-9 / PUR-04 — `/purchases/bills/{id}`: the bill, and its void. */
 export default function PurchaseBillDetailPage({
   params,

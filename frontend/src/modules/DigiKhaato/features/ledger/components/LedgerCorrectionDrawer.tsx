@@ -28,6 +28,12 @@ import { PaymentMethodField } from './PaymentMethodField';
 import type { UseEntryCorrectionResult } from '../hooks/useEntryCorrection';
 import type { LedgerCorrectionFormValues, LedgerDirection } from '../types/ledger.types';
 
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/ledger';
+import 'src/i18n/catalogues/money';
+import 'src/i18n/catalogues/validation';
+
 /**
  * LED-03 FR-3 — the drawer a merchant fixes a wrong entry in.
  *

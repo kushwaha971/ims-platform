@@ -8,6 +8,10 @@ import { UbPageSkeleton } from 'src/design-system';
 
 import { OnboardingStepPageContent } from 'modules/DigiKhaato/features/onboarding/components/OnboardingStepPageContent';
 
+// The words this screen renders arrive with its chunk (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/onboarding';
+import 'src/i18n/catalogues/validation';
+
 /**
  * PLT-03 §7 / FR-9 — the wizard's step is the URL, so a resume is a redirect
  * and a Back gesture is a step back.

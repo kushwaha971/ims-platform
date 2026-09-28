@@ -1,0 +1,16 @@
+{
+  "reminders.sheet.call": "कॉल करें",
+  "reminders.sheet.error": "मैसेज तैयार नहीं हो सका।",
+  "reminders.sheet.loading": "मैसेज तैयार हो रहा है",
+  "reminders.sheet.recent": "आपने इस ग्राहक को {when} {channel} पर याद दिलाया था।",
+  "share.copied": "संदेश कॉपी हो गया",
+  "share.copyFailed": "कॉपी नहीं हो सका। संदेश चुनकर खुद कॉपी करें।",
+  "share.copyText": "टेक्स्ट कॉपी करें",
+  "share.failed": "शेयर मेनू नहीं खुला। WhatsApp या टेक्स्ट कॉपी करें आज़माएँ।",
+  "share.more": "और…",
+  "share.opened.sms": "SMS ऐप खुल गया",
+  "share.opened.whatsapp": "WhatsApp खुल गया",
+  "share.preview": "संदेश",
+  "share.sms": "SMS",
+  "share.whatsapp": "WhatsApp"
+}

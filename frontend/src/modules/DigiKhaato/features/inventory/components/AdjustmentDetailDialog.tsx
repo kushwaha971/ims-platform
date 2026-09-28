@@ -29,6 +29,12 @@ import { formatSignedQuantity } from '../view-model/itemDisplay';
 
 import { SignedAmount } from './SignedAmount';
 
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/items';
+import 'src/i18n/catalogues/movement';
+import 'src/i18n/catalogues/stock';
+
 /**
  * INV-06 FR-8/FR-9 — one posted adjustment: number, date, reason, note, who
  * posted it and every line with its before/after. Immutable, so no edit

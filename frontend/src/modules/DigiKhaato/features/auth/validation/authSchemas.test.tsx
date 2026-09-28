@@ -2,8 +2,7 @@ import { renderHook } from '@testing-library/react';
 import { IntlProvider } from 'react-intl';
 
 import { PASSWORD_MIN_LENGTH_PRIVILEGED } from 'src/constants';
-
-import en from 'locales/en.json';
+import { en } from 'src/tests/allMessages';
 
 import { useAuthSchemas } from './authSchemas';
 

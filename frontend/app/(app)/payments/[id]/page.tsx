@@ -6,6 +6,11 @@ import { UbPageSkeleton } from 'src/design-system';
 
 import { PaymentReceiptPageContent } from 'modules/DigiKhaato/features/payments/components/PaymentReceiptPageContent';
 
+// The words this screen renders arrive with its chunk (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/payments';
+import 'src/i18n/catalogues/sales';
+import 'src/i18n/catalogues/share';
+
 /** PAY-04 — `/payments/{id}`: the receipt, its print sheet, share and void. */
 export default function PaymentReceiptPage({
   params,

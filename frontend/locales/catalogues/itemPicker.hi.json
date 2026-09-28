@@ -1,0 +1,5 @@
+{
+  "items.list.searchPlaceholder": "नाम, SKU खोजें या बारकोड स्कैन करें",
+  "items.scan.create": "आइटम बनाएँ",
+  "items.scan.notFound": "बारकोड {code} का कोई आइटम नहीं"
+}

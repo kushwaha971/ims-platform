@@ -1,0 +1,5 @@
+{
+  "items.list.searchPlaceholder": "Search name, SKU or scan barcode",
+  "items.scan.create": "Create item",
+  "items.scan.notFound": "No item with barcode {code}"
+}

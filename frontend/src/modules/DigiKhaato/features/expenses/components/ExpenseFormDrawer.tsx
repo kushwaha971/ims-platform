@@ -31,6 +31,14 @@ import { ExpensePartyField } from './ExpensePartyField';
 import type { UseExpenseFormResult } from '../hooks/useExpenseForm';
 import type { ExpenseFormValues } from '../types/expense.types';
 
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/expenses';
+import 'src/i18n/catalogues/ledger';
+import 'src/i18n/catalogues/money';
+import 'src/i18n/catalogues/partyPicker';
+import 'src/i18n/catalogues/validation';
+
 /**
  * EXP-01 FR-2 — "₹500 tea and snacks, cash, today" in three taps.
  *

@@ -1,10 +1,8 @@
 import { screen } from '@testing-library/react';
 
 import { UbText } from 'src/design-system';
+import { en, hi } from 'src/tests/allMessages';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
-
-import en from 'locales/en.json';
-import hi from 'locales/hi.json';
 
 import { AuthShell } from './AuthShell';
 

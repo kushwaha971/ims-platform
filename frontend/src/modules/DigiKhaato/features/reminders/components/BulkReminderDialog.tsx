@@ -28,6 +28,10 @@ import {
 import { markReminderStatus, sendBulkStep } from '../redux/reminderThunk';
 import { skipReasonId } from '../view-model/reminderDisplay';
 
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/reminders';
+
 /**
  * LED-06 FR-7 — "Remind all", one customer at a time.
  *

@@ -20,6 +20,10 @@ import { buildShareText } from '../view-model/credentialsShare';
 
 import type { UseMembersResult } from '../hooks/useMembers';
 
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/team';
+
 /**
  * The one-time credentials (DEC-012).
  *

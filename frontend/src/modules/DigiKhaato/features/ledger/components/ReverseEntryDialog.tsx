@@ -22,6 +22,12 @@ import { entryAmountView, entryTitle } from '../view-model/entryDisplay';
 
 import type { UseEntryCorrectionResult } from '../hooks/useEntryCorrection';
 
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/ledger';
+import 'src/i18n/catalogues/money';
+import 'src/i18n/catalogues/validation';
+
 /**
  * LED-03 FR-2 — "Reverse this entry", and the one question it asks.
  *

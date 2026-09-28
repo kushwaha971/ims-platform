@@ -22,11 +22,18 @@
     "",
     "`*.css` stays listed because `app/layout.tsx` imports `./globals.css` for",
     "its side effect and nothing imports a binding from it. Anything else added",
-    "here must be a real load-time side effect, not a convenience."
+    "here must be a real load-time side effect, not a convenience.",
+    "",
+    "`./src/i18n/catalogues/*.ts` (W4-P) is a real load-time side effect: each",
+    "module registers its message catalogue into the live map `IntlProvider`",
+    "reads (src/i18n/catalogueRegistry.ts), and a screen imports it for exactly",
+    "that and nothing else — `import 'src/i18n/catalogues/parties'`. Without",
+    "this line the bundler may drop the import and the screen renders raw ids."
   ],
   "sideEffects": [
     "*.css",
-    "*.scss"
+    "*.scss",
+    "./src/i18n/catalogues/*.ts"
   ],
   "engines": {
     "node": ">=22"
@@ -42,6 +49,7 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "i18n:check": "node scripts/check-locales.mjs",
+    "i18n:split": "node scripts/split-locales.mjs",
     "check:contrast": "node scripts/check-contrast.mjs",
     "verify": "npm run type-check && npm run lint && npm run i18n:check && npm run check:contrast && npm run test && npm run build && npm run bundle:check",
     "bundle:check": "node scripts/check-bundle.mjs"

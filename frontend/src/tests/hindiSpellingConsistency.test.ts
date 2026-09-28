@@ -1,4 +1,4 @@
-import hi from 'locales/hi.json';
+import { hi } from 'src/tests/allMessages';
 
 /**
  * L9 — one word, one spelling, across the Hindi copy.

@@ -24,6 +24,12 @@ import { shortLines, supplierName, voidConsequences } from '../view-model/purcha
 
 import type { PurchaseBill } from '../types/purchase.types';
 
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/money';
+import 'src/i18n/catalogues/purchases';
+import 'src/i18n/catalogues/validation';
+
 /**
  * PUR-04 FR-3 / §7 — "Void PB/26-27/0007?", with the consequences listed
  * BEFORE the reason is typed (AC-2): the stock each line takes back out, the

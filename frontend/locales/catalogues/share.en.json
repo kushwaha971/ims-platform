@@ -1,0 +1,16 @@
+{
+  "reminders.sheet.call": "Call",
+  "reminders.sheet.error": "Couldn't prepare the message.",
+  "reminders.sheet.loading": "Preparing the message",
+  "reminders.sheet.recent": "You reminded this customer {when} on {channel}.",
+  "share.copied": "Message copied",
+  "share.copyFailed": "Could not copy. Select the message and copy it yourself.",
+  "share.copyText": "Copy text",
+  "share.failed": "Could not open the share menu. Try WhatsApp or Copy text.",
+  "share.more": "More…",
+  "share.opened.sms": "SMS app opened",
+  "share.opened.whatsapp": "WhatsApp opened",
+  "share.preview": "Message",
+  "share.sms": "SMS",
+  "share.whatsapp": "WhatsApp"
+}

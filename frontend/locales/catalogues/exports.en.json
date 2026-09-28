@@ -1,0 +1,18 @@
+{
+  "exports.action": "Export",
+  "exports.empty": "Nothing to export — clear a filter",
+  "exports.error": "The export could not be prepared",
+  "exports.failed": "The export could not be prepared. Try fewer rows.",
+  "exports.page.check": "Check again",
+  "exports.page.download": "Download CSV",
+  "exports.page.expired": "This file has expired — export the list again",
+  "exports.page.expires": "The link works until {when}.",
+  "exports.page.missing": "We could not find this export",
+  "exports.page.preparing": "Your file is still being prepared",
+  "exports.page.ready": "{count, plural, one {Your file of # row is ready} other {Your file of # rows is ready}}",
+  "exports.page.title": "Your export",
+  "exports.preparing": "Preparing…",
+  "exports.queued": "{count, plural, one {Preparing your file of # row — we will download it when it is ready.} other {Preparing your file of # rows — we will download it when it is ready.}}",
+  "exports.ready": "Your export is ready and downloading.",
+  "imports.action.import": "Import"
+}

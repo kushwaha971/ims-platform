@@ -1,7 +1,6 @@
 import { createIntl } from 'react-intl';
 
-import en from 'locales/en.json';
-import hi from 'locales/hi.json';
+import { en, hi } from 'src/tests/allMessages';
 
 import { isRemindable, reminderRecipient } from './reminderMessage';
 

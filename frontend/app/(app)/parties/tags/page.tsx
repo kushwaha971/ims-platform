@@ -6,6 +6,9 @@ import { UbPageSkeleton } from 'src/design-system';
 
 import { PartyTagsPageContent } from 'modules/DigiKhaato/features/parties/components/PartyTagsPageContent';
 
+// The words this screen renders arrive with its chunk (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/parties';
+
 /**
  * PTY-05 FR-7 — `/parties/tags`.
  *

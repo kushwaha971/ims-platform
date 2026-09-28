@@ -21,6 +21,10 @@ import { actionLabel, actorLabel, entityTypeLabel, fullDiff } from '../view-mode
 
 import type { UseAuditLogResult } from '../hooks/useAuditLog';
 
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/audit';
+
 /**
  * PLT-08 FR-2 / FR-5 — one row in full: every changed field before and after,
  * the reason quoted, the request id for support, and "Open" to the entity when

@@ -14,6 +14,11 @@ import { useInvitationSchemas } from '../validation/invitationSchemas';
 import type { UseInvitationsResult } from '../hooks/useInvitations';
 import type { InviteFormValues } from '../validation/invitationSchemas';
 
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/team';
+import 'src/i18n/catalogues/validation';
+
 /**
  * The invite form, in a `UbDialog` — a 480 px card on a desktop and a bottom
  * sheet on a phone, which is what `UbDialog` is for and why this is not a page.

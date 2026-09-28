@@ -36,6 +36,11 @@ import { PartyTagField } from './PartyTagField';
 import type { UsePartyFormResult } from '../hooks/usePartyForm';
 import type { PartyFormValues } from '../types/party.types';
 
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/parties';
+import 'src/i18n/catalogues/validation';
+
 /**
  * PTY-01 — add or edit a party.
  *

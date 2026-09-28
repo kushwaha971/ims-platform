@@ -14,6 +14,11 @@ import { ImportUploadStep } from './ImportUploadStep';
 
 import type { ImportKind } from '../types/import.types';
 
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/exports';
+import 'src/i18n/catalogues/imports';
+
 /**
  * IMP-01 §7 — three linear steps: choose what to import, upload, review and
  * import. The stepper is a map of where the merchant is, never a way to skip

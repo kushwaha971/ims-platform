@@ -6,6 +6,9 @@ import { UbPageSkeleton } from 'src/design-system';
 
 import { AgingPageContent } from 'modules/DigiKhaato/features/ledger/components/AgingPageContent';
 
+// The words this screen renders arrive with its chunk (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/ledger';
+
 /**
  * LED-09 FR-3 — `/ledger/aging`.
  *

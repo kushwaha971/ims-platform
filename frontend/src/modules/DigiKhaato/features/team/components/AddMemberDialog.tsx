@@ -22,6 +22,11 @@ import { useMemberSchemas } from '../validation/memberSchemas';
 import type { UseMembersResult } from '../hooks/useMembers';
 import type { AddMemberFormValues } from '../validation/memberSchemas';
 
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/team';
+import 'src/i18n/catalogues/validation';
+
 /**
  * The add-member form (DEC-012).
  *

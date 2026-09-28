@@ -19,6 +19,10 @@ import type { ApiErrorShape } from 'src/types/api.types';
 
 import type { TagFormDraft } from '../hooks/usePartyTagManager';
 
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/parties';
+
 /**
  * PTY-05 — create a tag, rename one, or change its colour.
  *
@@ -126,7 +130,9 @@ function PartyTagFormDialogBase({
     <UbDialog
       open
       onOpenChange={handleOpenChange}
-      title={draft.id === null ? t('parties.tags.form.createTitle') : t('parties.tags.form.editTitle')}
+      title={
+        draft.id === null ? t('parties.tags.form.createTitle') : t('parties.tags.form.editTitle')
+      }
       closeLabel={t('common.action.close')}
       footer={
         <>

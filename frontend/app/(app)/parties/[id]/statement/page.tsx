@@ -6,6 +6,10 @@ import { UbPageSkeleton } from 'src/design-system';
 
 import { PartyStatementPageContent } from 'modules/DigiKhaato/features/ledger/components/PartyStatementPageContent';
 
+// The words this screen renders arrive with its chunk (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/ledger';
+import 'src/i18n/catalogues/money';
+
 /**
  * LED-04 FR-1 — `/parties/{id}/statement`.
  *

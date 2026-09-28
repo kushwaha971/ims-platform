@@ -7,6 +7,10 @@ import { selectActiveRole, selectActiveTenant } from 'src/redux/slice/sessionSli
 import { ROUTES } from 'src/routes';
 import { formatBusinessDate } from 'src/utils/dates';
 
+// Loaded with dynamic(), so its own words come with its own chunk rather than
+// with the screen that opens it (src/i18n/catalogueRegistry.ts).
+import 'src/i18n/catalogues/data';
+
 /**
  * PLT-10 FRD §7 — "This business will be deleted on {date}. Cancel", on every
  * page of a business in its cool-off, read from the session so it needs no

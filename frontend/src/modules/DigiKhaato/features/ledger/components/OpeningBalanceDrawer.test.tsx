@@ -3,11 +3,9 @@ import userEvent from '@testing-library/user-event';
 
 import { sessionLoaded } from 'src/redux/slice/sessionSlice';
 import { store } from 'src/redux/store';
+import { en, hi } from 'src/tests/allMessages';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
 import { todayInTenantTz } from 'src/utils/dates';
-
-import en from 'locales/en.json';
-import hi from 'locales/hi.json';
 
 import { useOpeningBalance } from '../hooks/useOpeningBalance';
 import { ledgerTimelineOpened, resetLedgerEntries } from '../redux/ledgerEntrySlice';
