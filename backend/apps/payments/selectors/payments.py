@@ -32,7 +32,7 @@ def list_payments(*, tenant: Any) -> QuerySet:
 def detail_queryset(*, tenant: Any) -> QuerySet:
     return (
         Payment.objects.for_tenant(tenant)
-        .select_related("party", "created_by", "voided_by")
+        .select_related("party", "created_by", "voided_by", "tenant")
         .prefetch_related("allocations")
     )
 

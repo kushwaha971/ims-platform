@@ -30,6 +30,8 @@ export interface UseInvoiceDetailResult extends InvoiceDetailState {
   readonly setTemplate: (template: PrintTemplate) => void;
   readonly print: (template: PrintTemplate) => void;
   readonly share: (channel: 'link' | 'whatsapp') => Promise<void>;
+  /** PAY-01 — re-read the bill after a payment against it moved its status. */
+  readonly reload: () => void;
 }
 
 export const useInvoiceDetail = (id: string, autoPrint: boolean): UseInvoiceDetailResult => {
@@ -119,5 +121,9 @@ export const useInvoiceDetail = (id: string, autoPrint: boolean): UseInvoiceDeta
     [dispatch, detail.document, t]
   );
 
-  return { ...detail, template, setTemplate, print, share };
+  const reload = useCallback(() => {
+    void dispatch(fetchInvoice(id));
+  }, [dispatch, id]);
+
+  return { ...detail, template, setTemplate, print, share, reload };
 };

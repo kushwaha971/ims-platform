@@ -125,6 +125,14 @@ export const toDocument = (row: Wire): SalesDocument => {
           note: s(payment.note),
         }
       : null,
+    payments: ((row.payments ?? []) as Wire[]).map((r) => ({
+      id: s(r.id),
+      number: s(r.number),
+      paymentDate: s(r.payment_date),
+      primaryMode: r.primary_mode as PaymentBreakupRow['mode'],
+      amount: s(r.amount),
+      status: r.status === 'void' ? ('void' as const) : ('recorded' as const),
+    })),
     lines: ((row.lines ?? []) as Wire[]).map(toLine),
     notes: s(row.notes),
     terms: s(row.terms),

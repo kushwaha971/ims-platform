@@ -61,6 +61,11 @@ export type ApiErrorCode =
   | 'insufficient_stock'
   | 'document_not_draft'
   | 'document_already_void'
+  // PAY-01 §9 / PAY-05 §10 — a listed bill was settled meanwhile (the drawer
+  // re-reads the bills); a second void of one payment.
+  | 'document_not_open'
+  | 'payment_already_void'
+  | 'upi_vpa_missing'
   | 'credit_limit_exceeded'
   | 'duplicate_supplier_invoice'
   // PTY-05 — tags. Both are closed-registry codes the server mints

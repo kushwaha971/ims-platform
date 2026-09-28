@@ -84,6 +84,9 @@ export const PERMISSION_CODES = [
   'sales.invoice.write',
   'purchases.bill.read',
   'payments.payment.read',
+  /** PAY-01 / PAY-05 §12 — record (owner, admin, staff) and void (owner, admin only). */
+  'payments.payment.write',
+  'payments.payment.void',
   'expenses.expense.read',
   /** EXP-01 §12 — record (owner, admin, staff) and void (owner, admin only). */
   'expenses.expense.write',

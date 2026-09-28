@@ -147,6 +147,8 @@ export interface SalesDocument extends SalesDocumentTotals {
   readonly amountPaid: string;
   readonly amountDue: string;
   readonly payment: IssuePayment | null;
+  /** PAY-01 — the receipts allocated to this bill, oldest first. */
+  readonly payments: readonly InvoicePaymentRef[];
   readonly lines: readonly SalesDocumentLine[];
   readonly notes: string;
   readonly terms: string;
@@ -232,3 +234,13 @@ export interface ShareLink {
 }
 
 export type PrintTemplate = 'a4' | 'thermal80';
+
+/** PAY-01 — a receipt that settled (part of) a bill, as the invoice page lists it. */
+export interface InvoicePaymentRef {
+  readonly id: string;
+  readonly number: string;
+  readonly paymentDate: string;
+  readonly primaryMode: PaymentBreakupRow['mode'];
+  readonly amount: string;
+  readonly status: 'recorded' | 'void';
+}

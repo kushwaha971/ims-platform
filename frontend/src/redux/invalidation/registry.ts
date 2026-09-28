@@ -133,6 +133,15 @@ import {
   mergePartyTags,
   updatePartyTag,
 } from 'modules/DigiKhaato/features/parties/redux/partyTagThunk';
+import {
+  fetchCollectQr,
+  fetchOpenDocuments,
+  fetchPayment,
+  fetchPayments,
+  recordPayment,
+  shareReceipt,
+  voidPayment,
+} from 'modules/DigiKhaato/features/payments/redux/paymentThunk';
 import { fetchPlanLimits } from 'modules/DigiKhaato/features/plan/redux/planThunk';
 import {
   fetchCollectionSummary,
@@ -272,6 +281,11 @@ export const QUERIES = {
   fetchUpiIntent,
   fetchPrintBranding,
   // IMP-01 — the job the wizard polls; IMP-02 — a list's CSV and a stored export
+  // PAY-01 … PAY-05 — the list, the receipt, the open bills, the Collect QR
+  fetchPayments,
+  fetchPayment,
+  fetchOpenDocuments,
+  fetchCollectQr,
   fetchImportJob,
   exportListCsv,
   fetchExportJob,
@@ -373,6 +387,9 @@ export const MUTATIONS = {
   issueInvoice,
   deleteInvoiceDraft,
   createInvoiceShareLink,
+  recordPayment,
+  voidPayment,
+  shareReceipt,
   // IMP-01 — upload, commit and cancel an import
   uploadImportFile,
   commitImportJob,

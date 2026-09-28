@@ -495,6 +495,29 @@ export const INVALIDATION: TInvalidationMap = {
   // A share link changes nothing any other screen shows; the detail slice
   // holds the minted link itself (its fulfilled reducer, not a refetch).
   createInvoiceShareLink: { patch: [['invoiceDetail', 'shareLink']] },
+  // ── PAY-01 … PAY-05 — payments ───────────────────────────────────────────
+  //
+  // A payment moves the khata (the credit or debit line), the balance on the
+  // list, and every bill it settled. The merchant records it FROM the khata or
+  // the invoice page, so the khata's three figures are re-read now (the same
+  // list every ledger write refetches); the invoice page re-reads its bill in
+  // the drawer's `onSaved`, because `invoiceDetail` holds one document by id
+  // and takes no invalidation signal. The list and the ledger reports are
+  // stale for their next mount. Nothing is patched: the balance, the running
+  // totals and each bill's status are the server's arithmetic.
+  recordPayment: {
+    refetch: [...LEDGER_WRITE_REFETCH, 'paymentList'],
+    stale: ['invoiceList', 'statement', 'ledgerAging'],
+  },
+  // The receipt page swaps to Void in place from the response (the `patch`).
+  voidPayment: {
+    patch: [['paymentReceipt', 'payment']],
+    refetch: [...LEDGER_WRITE_REFETCH, 'paymentList'],
+    stale: ['invoiceList', 'statement', 'ledgerAging'],
+  },
+  // A share is words handed to WhatsApp, and an audit row: no money moves, so
+  // nothing else is stale. The receipt slice records the share's state.
+  shareReceipt: { patch: [['paymentReceipt', 'shareStatus']] },
   // ── LED-06 — manual reminders ─────────────────────────────────────────────
   //
   // A reminder moves no money, so nothing about the khata, the list or the

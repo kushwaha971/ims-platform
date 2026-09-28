@@ -4,7 +4,16 @@ import { useCallback, useState, type Ref } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { Archive, BellRing, BookOpen, FileText, MoreHorizontal, Pencil } from 'lucide-react';
+import {
+  Archive,
+  BellRing,
+  BookOpen,
+  FileText,
+  MoreHorizontal,
+  Pencil,
+  QrCode,
+  Wallet,
+} from 'lucide-react';
 
 import { UbButton, UbDialog, UbStack } from 'src/design-system';
 import type { TranslateFn } from 'src/hooks/useTranslation';
@@ -65,6 +74,10 @@ export interface PartyHeaderMenuProps {
    * (`usePartyReminder` decides); absent, the item is not drawn.
    */
   readonly onRemind?: () => void;
+  /** PAY-01 FR-1 — record a payment against this party's bills (the drawer). */
+  readonly onRecordPayment?: () => void;
+  /** PAY-03 FR-7 — show the shop's UPI QR for this party's amount. */
+  readonly onCollect?: () => void;
   /**
    * The ⋯ button, for the page to hand to every dialog this menu opens as its
    * `returnFocusRef`. Each item closes this sheet as it opens the next one, so
@@ -81,6 +94,8 @@ export function PartyHeaderMenu({
   onArchive,
   statementHref,
   onRemind,
+  onRecordPayment,
+  onCollect,
   triggerRef,
 }: Readonly<PartyHeaderMenuProps>): React.JSX.Element | null {
   const [open, setOpen] = useState(false);
@@ -110,6 +125,16 @@ export function PartyHeaderMenu({
        than on the header row, because the row is You gave / You got and at
        five buttons it ran off a 360 px phone (see above). */
     { key: 'remind', label: t('ledger.remind.action'), icon: BellRing, action: onRemind },
+    /* PAY-01 / PAY-03 — money against BILLS, beside the reminder that asks for
+       it. The plain "You got" stays on the header row for ledger-only shops
+       (FR-1); these two open the payments drawer and the Collect QR. */
+    {
+      key: 'payment',
+      label: t('payments.record.title'),
+      icon: Wallet,
+      action: onRecordPayment,
+    },
+    { key: 'collect', label: t('payments.upi.collect'), icon: QrCode, action: onCollect },
     { key: 'edit', label: t('parties.detail.edit'), icon: Pencil, action: onEdit },
     { key: 'opening', label: t('ledger.opening.action'), icon: BookOpen, action: onAddOpening },
     { key: 'archive', label: t('parties.archive.action'), icon: Archive, action: onArchive },

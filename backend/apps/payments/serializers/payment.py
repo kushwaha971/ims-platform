@@ -101,6 +101,7 @@ class PaymentDetailSerializer(serializers.ModelSerializer):
     voided_by = serializers.SerializerMethodField()
     party_balance_after = serializers.SerializerMethodField()
     context = serializers.SerializerMethodField()
+    business = serializers.SerializerMethodField()
 
     class Meta:
         model = Payment
@@ -120,6 +121,7 @@ class PaymentDetailSerializer(serializers.ModelSerializer):
             "allocations",
             "party_balance_after",
             "context",
+            "business",
             "void_reason",
             "voided_at",
             "voided_by",
@@ -145,3 +147,15 @@ class PaymentDetailSerializer(serializers.ModelSerializer):
 
     def get_context(self, payment: Payment) -> str | None:
         return (payment.meta or {}).get("context")
+
+    def get_business(self, payment: Payment) -> dict:
+        """PAY-04 §7's header band — who issued the receipt (the print needs no second call)."""
+        tenant = payment.tenant
+        return {
+            "name": tenant.name,
+            "legal_name": tenant.legal_name,
+            "gstin": tenant.gstin,
+            "phone": tenant.phone,
+            "address": dict(tenant.address or {}),
+            "upi_vpa": tenant.upi_vpa,
+        }
