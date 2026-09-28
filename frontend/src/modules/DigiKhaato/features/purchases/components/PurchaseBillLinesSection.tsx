@@ -123,8 +123,11 @@ export function PurchaseBillLinesSection({
       setValue(`${base}.description`, row.name);
       setValue(`${base}.unitCode`, row.unit.code);
       setValue(`${base}.allowDecimal`, row.unit.allowDecimal);
-      setValue(`${base}.unitCost`, row.purchasePrice === '0.00' ? '' : row.purchasePrice);
-      setValue(`${base}.lastCost`, row.purchasePrice);
+      // A withheld cost (INV-08 EC-4: no `reports.financial.read`) is `null`,
+      // and fills nothing — the same as a zero cost.
+      const cost = row.purchasePrice ?? '';
+      setValue(`${base}.unitCost`, cost === '0.00' ? '' : cost);
+      setValue(`${base}.lastCost`, cost);
       setValue(`${base}.taxCode`, row.taxCode);
       setValue(`${base}.itemTaxCode`, row.taxCode);
     },
