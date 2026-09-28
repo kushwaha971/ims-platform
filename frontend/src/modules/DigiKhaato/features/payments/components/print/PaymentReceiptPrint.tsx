@@ -144,7 +144,7 @@ export function PaymentReceiptPrint({
           <tbody>
             {payment.allocations.map((row) => (
               <tr key={row.documentId}>
-                <td className="font-mono">{row.number ?? '—'}</td>
+                <td className="break-all font-mono">{row.number ?? '—'}</td>
                 <td>{formatBusinessDate(row.documentDate)}</td>
                 <td className="text-right">{formatInr(row.amount)}</td>
                 <td className="text-right">{formatInr(row.amountDue)}</td>

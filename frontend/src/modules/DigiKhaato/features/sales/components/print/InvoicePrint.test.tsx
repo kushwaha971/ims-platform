@@ -136,3 +136,20 @@ it('has no page title of its own and names every total by a row header', () => {
   const grand = screen.getByRole('rowheader', { name: 'Grand total' });
   expect(grand.closest('tr')).toContainElement(screen.getByTestId('print-grand-total'));
 });
+
+it('UAT D2: on a phone screen each line is stacked with its total; paper keeps the A4 table', () => {
+  // At 390 px the 13-column table was cut off at SGST on the share page and the
+  // detail page, hiding the line total. The stacked copy is screen-only below
+  // `sm`; the table is hidden there on screen but forced back for print.
+  renderWithProviders(<A4 doc={makeDocument()} />);
+  const stacked = screen.getByTestId('print-lines-stacked');
+  expect(stacked).toHaveClass('sm:hidden', 'print:hidden');
+  expect(screen.getByTestId('print-lines')).toHaveClass('hidden', 'sm:table', 'print:table');
+  const line = makeDocument().lines[0];
+  const first = within(stacked).getAllByRole('listitem')[0];
+  if (!line || !first) throw new Error('fixture has a line');
+  expect(first).toHaveTextContent(line.description);
+  expect(first).toHaveTextContent('CGST');
+  expect(first).toHaveTextContent('SGST');
+  expect(first).toHaveTextContent(line.lineTotal);
+});
