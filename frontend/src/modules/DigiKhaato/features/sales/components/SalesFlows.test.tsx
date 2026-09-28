@@ -203,6 +203,59 @@ describe('the void dialog (SAL-05 §7)', () => {
   });
 });
 
+describe('the void dialog on an invoice with a credit note (QA S-D4)', () => {
+  it('says the credit note must be voided first, links it, and keeps Void disabled', async () => {
+    // S-D4: the dialog listed un-netted consequences and Void failed silently
+    // on the server's 400 "Void credit note CN/… first.".
+    signIn(['sales.invoice.read', 'sales.invoice.void']);
+    const doc = makeDocument({
+      links: {
+        credit_notes: [
+          {
+            id: 'cn1',
+            kind: 'credit_note',
+            number: 'CN/26-27/0001',
+            document_date: '2026-09-28',
+            status: 'applied',
+            grand_total: '165.00',
+          },
+        ],
+      },
+    });
+    renderWithProviders(<VoidDocumentDialog doc={doc} onClose={jest.fn()} />);
+    expect(screen.getByTestId('void-blocked')).toHaveTextContent(
+      'Void credit note CN/26-27/0001 first'
+    );
+    expect(screen.getByRole('link', { name: 'Open CN/26-27/0001' })).toHaveAttribute(
+      'href',
+      '/sales/credit-notes/cn1'
+    );
+    expect(screen.queryByTestId('void-consequences')).not.toBeInTheDocument();
+    expect(screen.getByTestId('void-confirm')).toBeDisabled();
+  });
+
+  it("shows the server's refusal in the dialog instead of failing silently", async () => {
+    signIn(['sales.invoice.read', 'sales.invoice.void']);
+    const doc = makeDocument();
+    credits.voidInvoice.mockRejectedValue({
+      code: 'validation_failed',
+      message: 'Void credit note CN/26-27/0002 first.',
+      details: { nonFieldErrors: ['Void credit note CN/26-27/0002 first.'] },
+      requestId: null,
+      status: 400,
+      warnings: [],
+    });
+    const onClose = jest.fn();
+    renderWithProviders(<VoidDocumentDialog doc={doc} onClose={onClose} />);
+    await userEvent.type(screen.getByLabelText('Reason'), 'Duplicate bill');
+    await userEvent.click(screen.getByTestId('void-confirm'));
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Void credit note CN/26-27/0002 first.'
+    );
+    expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
 describe('the return editor (SAL-04 §7)', () => {
   const invoice = () =>
     makeDocument({

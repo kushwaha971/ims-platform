@@ -13,6 +13,7 @@ import {
   UbForm,
   UbLink,
   UbStack,
+  UbStatusBanner,
   UbText,
   UbTextArea,
 } from 'src/design-system';
@@ -46,7 +47,18 @@ const ICONS = { stock: Package, ledger: BookOpen, payment: Wallet } as const;
  * if at all, as a "Paid out" payment); a walk-in's has no khata to sit in and
  * goes back over the counter, which the merchant records by voiding the
  * receipt. Each receipt is listed and linked, so both next steps are one tap.
+ *
+ * ── A live credit note blocks the void (QA S-D4) ─────────────────────────────
+ * The server refuses an invoice with an issued credit note against it ("Void
+ * credit note CN/… first.") because the note's return and credit are still on
+ * it. The rule is said up front, with a link to the note, and Void is
+ * disabled — the consequence list would otherwise promise stock and khata
+ * moves that ignore what the note already took back. Any other refusal is
+ * shown in the dialog: a 400 is a field-level error the global snackbar
+ * leaves to the screen, and this dialog has no field to hang it on.
  */
+const LIVE_NOTE = (status: string): boolean => status !== 'void' && status !== 'draft';
+
 export function VoidDocumentDialog({
   doc,
   onClose,
@@ -57,6 +69,7 @@ export function VoidDocumentDialog({
   const formId = useId();
   const [busy, setBusy] = useState(false);
   const [left, setLeft] = useState<readonly UnallocatedPayment[] | null>(null);
+  const [refusal, setRefusal] = useState<string | null>(null);
   const rhf = useForm<{ reason: string }>({
     resolver: yupResolver(voidReasonSchema),
     mode: 'onTouched',
@@ -64,16 +77,29 @@ export function VoidDocumentDialog({
   });
   const credit = doc.kind === 'credit_note';
   const reason = useWatch({ control: rhf.control, name: 'reason' }) ?? '';
+  const blocking = credit ? undefined : doc.links.creditNotes.find((n) => LIVE_NOTE(n.status));
 
   const submit = useCallback(
     async (values: { reason: string }) => {
       setBusy(true);
+      setRefusal(null);
       const thunk = credit ? voidCreditNote : voidInvoice;
       const result = await dispatch(thunk({ id: doc.id, reason: values.reason.trim() }));
       setBusy(false);
       if (!thunk.fulfilled.match(result)) {
         // §9 — a second void (another device) is the state we wanted: say so and close.
-        if (result.payload?.code === 'document_already_void') onClose();
+        if (result.payload?.code === 'document_already_void') {
+          onClose();
+          return;
+        }
+        const details = result.payload?.details ?? {};
+        setRefusal(
+          details.nonFieldErrors?.[0] ??
+            details.non_field_errors?.[0] ??
+            details.reason?.[0] ??
+            result.payload?.message ??
+            t('sales.void.error')
+        );
         return;
       }
       dispatch(
@@ -87,7 +113,7 @@ export function VoidDocumentDialog({
       if (payments.length) setLeft(payments);
       else onClose();
     },
-    [credit, dispatch, doc.id, doc.number, onClose]
+    [credit, dispatch, doc.id, doc.number, onClose, t]
   );
 
   if (left) {
@@ -155,7 +181,7 @@ export function VoidDocumentDialog({
             variant="destructive"
             busy={busy}
             busyLabel={t('sales.void.working')}
-            disabled={reason.trim().length < 3}
+            disabled={!!blocking || reason.trim().length < 3}
             data-testid="void-confirm"
           >
             {t(credit ? 'sales.void.confirmCreditNote' : 'sales.void.confirm')}
@@ -163,27 +189,41 @@ export function VoidDocumentDialog({
         </>
       }
     >
-      <UbForm id={formId} form={rhf} onSubmit={submit}>
-        <UbStack gap={2} data-testid="void-consequences">
-          {voidConsequences(doc).map(({ key, id, values }) => {
-            const Icon = ICONS[key];
-            return (
-              <UbStack key={key} direction="row" gap={2} align="start">
-                <Icon className="mt-0.5 h-4 w-4 shrink-0 text-text-tertiary" aria-hidden />
-                <UbText variant="body-sm">{t(id, values)}</UbText>
-              </UbStack>
-            );
-          })}
+      {blocking ? (
+        <UbStack gap={2} data-testid="void-blocked">
+          <UbStatusBanner
+            tone="warning"
+            title={t('sales.void.blockedByCreditNote', { number: blocking.number ?? '' })}
+            description={t('sales.void.blockedByCreditNoteBody')}
+          />
+          <UbLink href={`${ROUTES.SALES_CREDIT_NOTES}/${blocking.id}`}>
+            {t('sales.void.openCreditNote', { number: blocking.number ?? '' })}
+          </UbLink>
         </UbStack>
-        <UbField
-          name="reason"
-          label={t('sales.void.reason')}
-          placeholder={t('sales.void.reasonPlaceholder')}
-          required
-        >
-          {(field) => <UbTextArea {...field} maxLength={160} rows={2} />}
-        </UbField>
-      </UbForm>
+      ) : (
+        <UbForm id={formId} form={rhf} onSubmit={submit}>
+          {refusal && <UbStatusBanner tone="error" title={refusal} />}
+          <UbStack gap={2} data-testid="void-consequences">
+            {voidConsequences(doc).map(({ key, id, values }) => {
+              const Icon = ICONS[key];
+              return (
+                <UbStack key={key} direction="row" gap={2} align="start">
+                  <Icon className="mt-0.5 h-4 w-4 shrink-0 text-text-tertiary" aria-hidden />
+                  <UbText variant="body-sm">{t(id, values)}</UbText>
+                </UbStack>
+              );
+            })}
+          </UbStack>
+          <UbField
+            name="reason"
+            label={t('sales.void.reason')}
+            placeholder={t('sales.void.reasonPlaceholder')}
+            required
+          >
+            {(field) => <UbTextArea {...field} maxLength={160} rows={2} />}
+          </UbField>
+        </UbForm>
+      )}
     </UbDialog>
   );
 }
