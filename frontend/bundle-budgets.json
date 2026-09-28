@@ -458,7 +458,51 @@
   "                           spec line is a known debt: the next step is to split",
   "                           the line editor's cmdk out of the first paint.",
   "  /sales/invoices/[id]     route 74.2, first 333.9 ->  76 / 336. Detail and",
-  "                           share; the A4 and 80 mm sheets load on demand."
+  "                           share; the A4 and 80 mm sheets load on demand.",
+  "── 28 Sep 2026 (W4-P): the shell back under budget, and every line MEASURED ─",
+  "Every number in this file is now a measurement + 1 KB (rounded up), taken",
+  "from one `next build` of the W4-P branch on top of the w3a/w3b merge. That",
+  "replaces the PROVISIONAL lines above (W3-A's /payments pair, W3-B's four",
+  "/purchases/bills routes) and the ~50 lines the wave-2/3 merges had left",
+  "failing. Base measured first, same worktree: sharedApp 144.8, 69 budgets",
+  "exceeded. After:",
+  "  sharedApp        144.8 -> 102.3   (budget 119 -> 104)",
+  "  (app) shell       66.0 ->  37.2   (/dashboard's route figure: the chunks",
+  "                                     every signed-in route loads)",
+  "  first load        -40 to -70 KB on every route; /login 324.4 -> 284.1",
+  "What bought it — two builds (registry + catalogues: sharedApp 144.8 ->",
+  "102.3; drawers, comboboxes and the tailwind-merge alias: the (app) shell",
+  "66.0 -> 37.2), attributed within each from the built chunks' contents:",
+  "  · the invalidation registry names thunks by typePrefix STRING instead of",
+  "    importing them: ~20 KB of thunk chunks off the shell",
+  "    (src/redux/invalidation/registry.ts);",
+  "  · locale catalogues per feature: en.json was 36.6 KB gz on every route;",
+  "    the shell now keeps 183 keys and each screen imports the catalogues it",
+  "    renders (src/i18n/catalogueRegistry.ts, locales/catalogues.json);",
+  "  · vaul (the phone nav drawer and quick-search sheet) and cmdk (both",
+  "    comboboxes) fetched after first paint instead of in it;",
+  "  · ml-uikit's private tailwind-merge 1.14 + clsx aliased to the app's",
+  "    (next.config.js `turbopack.resolveAlias`): 6.7 KB on every (app) route.",
+  "Route chunks moved both ways, and that is the design: each screen now",
+  "carries its own words (/login +2.2 for the auth and validation catalogues,",
+  "the (admin) pages +0.3-1.0), while every (app) route lost the vaul, cmdk and",
+  "tailwind-merge weight and most lost more than they gained.",
+  "",
+  "Route lines RAISED: /settings and the five (admin) pages by 1 KB each (their",
+  "catalogues now ride with them; their first loads still fell 42-63 KB), and",
+  "/settings/profile 100 -> 126. 100 was never met there (133.1 measured",
+  "at base), and 124.6 is the form it is — react-hook-form 13.2, Yup and the",
+  "shared schemas 14.9, Radix Select + floating-ui 18.7 for the state picker,",
+  "the radio group, remove-scroll 7.6. The next lever there is UbSelect's menu",
+  "deferred the way the comboboxes' are (primitives/deferredModule.ts).",
+  "",
+  "The rest of sharedApp is the §19.3.9 static slices (partyTag, ledgerEntry,",
+  "auth, team, onboarding) and the thunks THEY import: the three shared chunks",
+  "that carry them measure 22.8 KB, which CR-134's lazy injection would move to",
+  "the routes that read them.",
+  "",
+  "When a merge adds keys: `node scripts/split-locales.mjs`, then",
+  "`npm run i18n:check`, then rebuild — see locales/catalogues.json."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -642,7 +686,7 @@
  ],
  "shared": {
   "framework": 128,
-  "sharedApp": 119
+  "sharedApp": 104
  },
  "//routes": [
   "The `route` figures are §19.9.2's, unchanged, and every route is comfortably",
@@ -906,177 +950,177 @@
   "a route-local catalogue as W2-C did."
  ],
  "default": {
-  "route": 64,
-  "firstLoad": 300
+  "route": 56,
+  "firstLoad": 286
  },
  "routes": {
   "/parties": {
-   "route": 105,
-   "firstLoad": 350
+   "route": 99,
+   "firstLoad": 329
   },
   "/dashboard": {
-   "route": 64,
-   "firstLoad": 308
+   "route": 39,
+   "firstLoad": 268
   },
   "/sales/invoices/new": {
-   "route": 140,
-   "firstLoad": 400
+   "route": 124,
+   "firstLoad": 354
   },
   "/sales/invoices/[id]/edit": {
-   "route": 140,
-   "firstLoad": 400
+   "route": 124,
+   "firstLoad": 354
   },
   "/sales/invoices": {
-   "route": 96,
-   "firstLoad": 356
+   "route": 85,
+   "firstLoad": 315
   },
   "/sales/invoices/[id]": {
-   "route": 76,
-   "firstLoad": 336
+   "route": 56,
+   "firstLoad": 285
   },
   "/onboarding/step/[n]": {
-   "route": 98,
-   "firstLoad": 342
+   "route": 86,
+   "firstLoad": 316
   },
   "/design-system": {
    "route": 102,
-   "firstLoad": 347
+   "firstLoad": 331
   },
   "/settings/team": {
-   "route": 93,
-   "firstLoad": 338
+   "route": 72,
+   "firstLoad": 301
   },
   "/parties/[id]": {
-   "route": 98,
-   "firstLoad": 343
+   "route": 92,
+   "firstLoad": 321
   },
   "/parties/tags": {
-   "route": 75,
-   "firstLoad": 319
+   "route": 55,
+   "firstLoad": 284
   },
   "/parties/[id]/statement": {
-   "route": 91,
-   "firstLoad": 337
+   "route": 83,
+   "firstLoad": 312
   },
   "/ledger/aging": {
-   "route": 93,
-   "firstLoad": 338
+   "route": 84,
+   "firstLoad": 313
   },
   "/switch": {
-   "firstLoad": 312,
-   "route": 68
+   "route": 43,
+   "firstLoad": 272
   },
   "/settings/plan": {
-   "firstLoad": 311,
-   "route": 67
+   "route": 42,
+   "firstLoad": 271
   },
   "/settings": {
-   "route": 92,
-   "firstLoad": 332
-  },
-  "/settings/profile": {
-   "route": 100,
-   "firstLoad": 340
-  },
-  "/settings/branding": {
-   "route": 92,
-   "firstLoad": 332
-  },
-  "/settings/activity": {
-   "route": 98,
-   "firstLoad": 338
-  },
-  "/settings/devices": {
-   "route": 72,
-   "firstLoad": 312
-  },
-  "/stock/summary": {
-   "route": 113,
-   "firstLoad": 358
-  },
-  "/items/masters": {
-   "route": 67,
-   "firstLoad": 312
-  },
-  "/items": {
-   "route": 114,
-   "firstLoad": 359
-  },
-  "/items/[id]": {
-   "route": 100,
-   "firstLoad": 345
-  },
-  "/stock/low": {
-   "route": 77,
+   "route": 93,
    "firstLoad": 322
   },
-  "/expenses": {
-   "route": 107,
-   "firstLoad": 349
+  "/settings/profile": {
+   "route": 126,
+   "firstLoad": 355
   },
-  "/cashbook": {
-   "route": 91,
-   "firstLoad": 333
+  "/settings/branding": {
+   "route": 82,
+   "firstLoad": 311
   },
-  "/payments": {
-   "route": 107,
-   "firstLoad": 349
-  },
-  "/payments/[id]": {
-   "route": 80,
-   "firstLoad": 340
-  },
-  "/ledger/reminders": {
-   "route": 80,
+  "/settings/activity": {
+   "route": 95,
    "firstLoad": 324
   },
-  "/imports": {
-   "route": 66,
-   "firstLoad": 326
+  "/settings/devices": {
+   "route": 48,
+   "firstLoad": 278
   },
-  "/imports/[id]": {
-   "route": 66,
-   "firstLoad": 326
+  "/stock/summary": {
+   "route": 100,
+   "firstLoad": 329
   },
-  "/admin": {
-   "route": 10,
-   "firstLoad": 270
+  "/items/masters": {
+   "route": 44,
+   "firstLoad": 273
   },
-  "/admin/partners": {
-   "route": 26,
+  "/items": {
+   "route": 102,
+   "firstLoad": 331
+  },
+  "/items/[id]": {
+   "route": 92,
+   "firstLoad": 321
+  },
+  "/stock/low": {
+   "route": 57,
    "firstLoad": 286
   },
+  "/expenses": {
+   "route": 101,
+   "firstLoad": 330
+  },
+  "/cashbook": {
+   "route": 84,
+   "firstLoad": 313
+  },
+  "/payments": {
+   "route": 97,
+   "firstLoad": 327
+  },
+  "/payments/[id]": {
+   "route": 55,
+   "firstLoad": 284
+  },
+  "/ledger/reminders": {
+   "route": 61,
+   "firstLoad": 290
+  },
+  "/imports": {
+   "route": 43,
+   "firstLoad": 272
+  },
+  "/imports/[id]": {
+   "route": 43,
+   "firstLoad": 272
+  },
+  "/admin": {
+   "route": 11,
+   "firstLoad": 240
+  },
+  "/admin/partners": {
+   "route": 27,
+   "firstLoad": 256
+  },
   "/admin/health": {
-   "route": 19,
-   "firstLoad": 279
+   "route": 20,
+   "firstLoad": 249
   },
   "/admin/tenants/[id]": {
-   "route": 23,
-   "firstLoad": 283
+   "route": 24,
+   "firstLoad": 253
   },
   "/admin/tenants": {
-   "route": 28,
-   "firstLoad": 288
+   "route": 29,
+   "firstLoad": 258
   },
   "/settings/data": {
-   "route": 78,
-   "firstLoad": 338
+   "route": 50,
+   "firstLoad": 279
   },
   "/purchases/bills/[id]": {
-   "route": 76,
-   "firstLoad": 336
+   "route": 53,
+   "firstLoad": 282
   },
   "/purchases/bills/[id]/edit": {
-   "route": 140,
-   "firstLoad": 400
+   "route": 134,
+   "firstLoad": 363
   },
   "/purchases/bills": {
-   "route": 96,
-   "firstLoad": 356
+   "route": 86,
+   "firstLoad": 315
   },
   "/purchases/bills/new": {
-   "route": 140,
-   "firstLoad": 400
+   "route": 134,
+   "firstLoad": 363
   }
  },
  "//ignoreRoutes": [
