@@ -133,6 +133,8 @@ export const QUERIES = {
   // RPT-03/04/07 — registers and GST summary
   fetchGstSummary: 'taxReports/fetchGstSummary',
   fetchRegister: 'taxReports/fetchRegister',
+  // SAL-03 FR-5 — the customer share page's one read (no session)
+  fetchPublicDocument: 'publicDocument/fetch',
 } as const;
 
 export const MUTATIONS = {
