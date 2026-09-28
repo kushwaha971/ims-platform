@@ -1,6 +1,7 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import { responseObserved } from 'src/redux/slice/networkSlice';
 import { sessionLoaded } from 'src/redux/slice/sessionSlice';
 import { store } from 'src/redux/store';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
@@ -43,6 +44,17 @@ const ledgerService = jest.requireMock('modules/DigiKhaato/features/ledger/api/l
 /* LED-06 — the reminder sheet's text and the tap that records it are the
    reminders feature's; stubbed at its service boundary like the other two. */
 jest.mock('modules/DigiKhaato/features/reminders/api/reminderService');
+
+/* PTY-05's tag service, because the Edit drawer's tag picker lists the
+   tenant's tags when it opens. Unmocked, that request left the module boundary,
+   failed in jsdom as a network error, and `transportFailed` put the singleton
+   store's network state at `degraded` for every later test in the file — so
+   the NEW-2 block's refetches were suppressed (`usePartyDetail` does not
+   refetch while the link is impaired) and its five tests failed whenever the
+   "Escape on the edit drawer" test ran first. */
+jest.mock('../api/tagService');
+
+const tagService = jest.requireMock('../api/tagService') as { listTags: jest.Mock };
 
 const reminderService = jest.requireMock(
   'modules/DigiKhaato/features/reminders/api/reminderService'
@@ -173,7 +185,13 @@ beforeEach(() => {
      tests, two describes away, and reads as a bug in archiving. */
   store.dispatch(resetLedgerForm());
   store.dispatch(resetLedgerEntries());
+  /* The network slice is a singleton too and nothing resets it: a test whose
+     request fails as a transport error leaves the link `degraded`, and every
+     refetch after it is withheld. A completed response is what puts it back
+     to `online`, exactly as in the product. */
+  store.dispatch(responseObserved());
   jest.clearAllMocks();
+  tagService.listTags.mockResolvedValue([]);
   partyService.getParty.mockResolvedValue(RESULT);
   partyService.setCollectionDate.mockResolvedValue(PARTY);
   partyService.archiveParty.mockResolvedValue({ ...PARTY, status: 'archived' as const });
