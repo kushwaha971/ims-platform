@@ -54,10 +54,11 @@ export const useDraftAutosave = (
 ): UseDraftAutosaveResult => {
   const tenant = useAppSelector(selectActiveTenant);
   const offline = useAppSelector(selectNetworkImpaired);
-  const { form, values, save, editor: server } = editor;
+  const { form, values, save, editor: server, kind } = editor;
   const tenantId = tenant?.id ?? 'none';
   const slot = server.documentId ?? documentId ?? 'new';
-  const key = localDraftKey(tenantId, 'invoice', slot);
+  // Per kind: an estimate's device copy must never be offered to a bill.
+  const key = localDraftKey(tenantId, kind, slot);
   const dirty = form.formState.isDirty;
   const [restore, setRestore] = useState<LocalDraft<InvoiceFormValues> | null>(null);
   const saving = useRef(false);
@@ -83,10 +84,10 @@ export const useDraftAutosave = (
     if (!dirty) return undefined;
     const timer = window.setTimeout(() => {
       writeLocalDraft(key, form.getValues(), server.version);
-      if (slot !== 'new') removeLocalDraft(localDraftKey(tenantId, 'invoice', 'new'));
+      if (slot !== 'new') removeLocalDraft(localDraftKey(tenantId, kind, 'new'));
     }, LOCAL_AUTOSAVE_MS);
     return () => window.clearTimeout(timer);
-  }, [values, dirty, key, form, server.version, slot, tenantId]);
+  }, [values, dirty, key, form, server.version, slot, tenantId, kind]);
 
   // FR-2 — the server copy, 3 s after the last change, while dirty and meaningful.
   const blocked = offline || server.saveState === 'conflict' || server.issuing || !!server.issued;
@@ -115,8 +116,8 @@ export const useDraftAutosave = (
   /** FR-10 / §6 — issued or deleted: the device copy has done its job. */
   const clearLocal = useCallback(() => {
     removeLocalDraft(key);
-    removeLocalDraft(localDraftKey(tenantId, 'invoice', 'new'));
-  }, [key, tenantId]);
+    removeLocalDraft(localDraftKey(tenantId, kind, 'new'));
+  }, [key, tenantId, kind]);
 
   const indicator: AutosaveIndicator = offline
     ? dirty

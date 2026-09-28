@@ -1,5 +1,7 @@
 import type { PaymentMode } from 'src/types/domain.types';
 
+import type { SalesDocumentLinks } from './salesFlows.types';
+
 /**
  * SAL-02/03/06/07/08 — the sales document as the client holds it, camelCased
  * from the §22.7 common shape by `api/salesService.ts`. Money is a STRING
@@ -7,7 +9,7 @@ import type { PaymentMode } from 'src/types/domain.types';
  * and never stores its own figure; the server's is the one that is printed.
  */
 
-export const SALES_KINDS = ['invoice', 'bill_of_supply'] as const;
+export const SALES_KINDS = ['invoice', 'bill_of_supply', 'estimate', 'credit_note'] as const;
 export type SalesKind = (typeof SALES_KINDS)[number];
 
 export const SALES_STATUSES = [
@@ -17,6 +19,14 @@ export const SALES_STATUSES = [
   'paid',
   'overdue',
   'void',
+  // SAL-01 — estimates
+  'sent',
+  'accepted',
+  'rejected',
+  'expired',
+  'converted',
+  // SAL-04 — credit notes
+  'applied',
 ] as const;
 export type SalesStatus = (typeof SALES_STATUSES)[number];
 
@@ -110,6 +120,9 @@ export interface SalesDocumentLine {
   readonly igst: string;
   readonly cess: string;
   readonly lineTotal: string;
+  /** SAL-04 — on an invoice line, how much credit notes returned; on a note's line, its source. */
+  readonly returnedQty: string;
+  readonly againstLineId: string | null;
 }
 
 export interface SalesDocumentTotals {
@@ -138,6 +151,7 @@ export interface SalesDocument extends SalesDocumentTotals {
   readonly supplier: SalesSupplier;
   readonly documentDate: string;
   readonly dueOn: string | null;
+  readonly validUntil: string | null;
   readonly placeOfSupplyState: string;
   readonly isInterState: boolean;
   readonly reverseCharge: boolean;
@@ -153,6 +167,9 @@ export interface SalesDocument extends SalesDocumentTotals {
   readonly docDiscountAllocation: Readonly<Record<string, string>>;
   readonly createdBy: SalesPerson | null;
   readonly issuedAt: string | null;
+  readonly voidedAt: string | null;
+  readonly voidReason: string | null;
+  readonly links: SalesDocumentLinks;
   readonly createdAt: string;
   readonly updatedAt: string;
 }
@@ -195,10 +212,12 @@ export interface InvoiceListRow {
   readonly walkInMobileMasked: string | null;
   readonly documentDate: string;
   readonly dueOn: string | null;
+  readonly validUntil: string | null;
   readonly grandTotal: string;
   readonly amountPaid: string;
   readonly amountDue: string;
   readonly isOverdue: boolean;
+  readonly voidReason: string | null;
   readonly createdBy: SalesPerson | null;
 }
 

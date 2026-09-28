@@ -21,7 +21,6 @@ import {
   UbDataGrid,
   useGridTier,
   type UbDataGridEmptyStates,
-  type UbDataGridLabels,
   type UbGridState,
 } from 'src/design-system/UbDataGrid';
 import { useDebounce } from 'src/hooks/useDebounce';
@@ -35,10 +34,12 @@ import {
   type InvoicePreset,
 } from '../constants/salesConstants';
 import { useInvoiceList } from '../hooks/useInvoiceList';
+import { useSalesGridLabels } from '../hooks/useSalesGridLabels';
 import { isNarrowed } from '../view-model/invoiceDisplay';
 
 import { createInvoiceColumns } from './InvoiceColumns';
 import { InvoiceListStats } from './InvoiceListStats';
+import { SalesSectionLinks } from './SalesSectionLinks';
 
 import type { InvoiceListRow, InvoiceTab } from '../types/sales.types';
 
@@ -87,28 +88,7 @@ export function InvoicesListPageContent(): React.JSX.Element {
     () => createInvoiceColumns({ t, today: list.today, isCards: tier === 'cards' }),
     [t, list.today, tier]
   );
-  const labels = useMemo<UbDataGridLabels>(
-    () => ({
-      loading: t('sales.list.loading'),
-      pageOf: t('common.grid.pageOf', { page: '{page}', pages: '{pages}' }),
-      previousPage: t('common.grid.previousPage'),
-      nextPage: t('common.grid.nextPage'),
-      pageSize: t('common.grid.pageSize'),
-      goToPage: t('common.grid.goToPage', { page: '{page}' }),
-      ofTotal: t('common.grid.ofTotal', { total: '{total}' }),
-      selectedCount: t('common.grid.selectedCount', { count: 0 }),
-      selectAll: t('sales.list.selectAll'),
-      selectRow: t('sales.list.selectRow', { name: '{name}' }),
-      showing: t('common.grid.showing'),
-      columns: t('common.grid.columns'),
-      showAllColumns: t('common.grid.showAllColumns'),
-      sortBy: t('common.grid.sortBy', { column: '{column}' }),
-      sortedAscending: t('common.grid.sortedAscending'),
-      sortedDescending: t('common.grid.sortedDescending'),
-      openRow: t('sales.list.open', { name: '{name}' }),
-    }),
-    [t]
-  );
+  const labels = useSalesGridLabels();
 
   const { refetch, clearFilters, error } = list;
   const newBill = useCallback(() => router.push(NEW_BILL), [router]);
@@ -205,17 +185,20 @@ export function InvoicesListPageContent(): React.JSX.Element {
       <UbPageHeader
         title={t('sales.list.title')}
         actions={
-          canWrite ? (
-            <UbActionLink
-              href={NEW_BILL}
-              variant="primary"
-              icon={<Plus className="h-4 w-4" aria-hidden />}
-              iconOnly="mobile"
-              data-testid="invoice-new"
-            >
-              {t('sales.newBill')}
-            </UbActionLink>
-          ) : undefined
+          <>
+            <SalesSectionLinks current="invoice" />
+            {canWrite && (
+              <UbActionLink
+                href={NEW_BILL}
+                variant="primary"
+                icon={<Plus className="h-4 w-4" aria-hidden />}
+                iconOnly="mobile"
+                data-testid="invoice-new"
+              >
+                {t('sales.newBill')}
+              </UbActionLink>
+            )}
+          </>
         }
       />
       <UbStack gap={4} data-testid="invoices-screen">

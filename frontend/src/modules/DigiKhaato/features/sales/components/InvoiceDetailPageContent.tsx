@@ -28,27 +28,49 @@ import { formatInr } from 'src/utils/money';
 import { useInvoiceDetail } from '../hooks/useInvoiceDetail';
 import { STATUS_TONE, partyLabel } from '../view-model/invoiceDisplay';
 
+import { DocumentActions } from './DocumentActions';
+import { DocumentLinksPanel } from './DocumentLinksPanel';
+
+import type { FlowKind } from '../types/salesFlows.types';
+
 /* The print layouts load with the bill, not with the list or the editor. */
 const PrintSheetLazy = dynamic(
   () => import('./print/InvoicePrintSheet').then((m) => m.InvoicePrintSheet),
   { ssr: false, loading: () => <UbPageSkeleton variant="card" /> }
 );
 
+type DetailKind = 'invoice' | FlowKind;
+
+/** What reading each kind needs (SAL-01 §12: estimates have their own read codename). */
+const READ_PERMISSION = {
+  invoice: 'sales.invoice.read',
+  estimate: 'sales.estimate.read',
+  credit_note: 'sales.invoice.read',
+} as const;
+
 /**
  * SAL-03 — `/sales/invoices/{id}`: the bill as it will print (A4 preview, or
  * the 80 mm slip), with Print A4 / Print 80 mm / Copy link / WhatsApp. The
  * page chrome carries `ub-print-hide`, so paper gets only the sheet. `?print=1`
  * (from the success sheet) opens the print dialog on arrival (SAL-03 US-1).
+ *
+ * The same page is `/sales/estimates/{id}` and `/sales/credit-notes/{id}`
+ * (SAL-01 FR-9, SAL-04 FR-11 reuse the print components): `kind` picks the
+ * read, the title on paper and the actions — estimate moves and convert, a
+ * bill's return and void, a note's apply and void (`DocumentActions`).
  */
-export function InvoiceDetailPageContent({ id }: Readonly<{ id: string }>): React.JSX.Element {
+export function InvoiceDetailPageContent({
+  id,
+  kind = 'invoice',
+}: Readonly<{ id: string; kind?: DetailKind }>): React.JSX.Element {
   const { t } = useTranslation();
   const search = useSearchParams();
   const locale = useAppSelector(selectLocale);
   const { can, hasModule } = usePermissions();
-  const detail = useInvoiceDetail(id, search?.get('print') === '1');
+  const detail = useInvoiceDetail(id, search?.get('print') === '1', kind);
   const doc = detail.document?.id === id ? detail.document : null;
 
-  if (!(hasModule('sales') && can('sales.invoice.read'))) {
+  if (!(hasModule('sales') && can(READ_PERMISSION[kind]))) {
     return (
       <UbPageShell>
         <UbEmptyState
@@ -73,6 +95,7 @@ export function InvoiceDetailPageContent({ id }: Readonly<{ id: string }>): Reac
   if (!doc) return <UbPageSkeleton variant="card" />;
 
   const draft = doc.status === 'draft';
+  const invoice = kind === 'invoice';
   return (
     <UbPageShell>
       <UbPageHeader
@@ -87,7 +110,7 @@ export function InvoiceDetailPageContent({ id }: Readonly<{ id: string }>): Reac
         }
         actions={
           <>
-            {draft && can('sales.invoice.write') && (
+            {invoice && draft && can('sales.invoice.write') && (
               <UbActionLink
                 href={`${ROUTES.SALES_INVOICES}/${doc.id}/edit`}
                 variant="secondary"
@@ -97,6 +120,7 @@ export function InvoiceDetailPageContent({ id }: Readonly<{ id: string }>): Reac
                 {t('sales.detail.edit')}
               </UbActionLink>
             )}
+            <DocumentActions doc={doc} />
             <UbButton
               variant="secondary"
               iconOnly="mobile"
@@ -119,15 +143,16 @@ export function InvoiceDetailPageContent({ id }: Readonly<{ id: string }>): Reac
       />
       <UbStack gap={4}>
         <UbPanel className="ub-print-hide">
-          <UbStack gap={2} className="p-4">
+          <UbStack gap={3} className="p-4">
             <UbText variant="body-sm">
-              {t('sales.detail.summary', {
+              {t(invoice ? 'sales.detail.summary' : 'sales.detail.summaryTotal', {
                 date: formatBusinessDate(doc.documentDate),
                 total: formatInr(doc.grandTotal),
                 due: formatInr(doc.amountDue),
               })}
             </UbText>
-            {!draft && (
+            <DocumentLinksPanel doc={doc} />
+            {!draft && doc.status !== 'void' && (
               <UbStack direction="row" gap={2} className="flex-wrap">
                 <UbButton
                   variant="secondary"

@@ -148,6 +148,20 @@ import {
   startBulkReminders,
 } from 'modules/DigiKhaato/features/reminders/redux/reminderThunk';
 import {
+  applyCreditNote,
+  convertEstimate,
+  fetchCreditSource,
+  fetchFlowDocument,
+  fetchFlowDocuments,
+  fetchOpenInvoices,
+  issueCreditNote,
+  moveEstimate,
+  saveEstimateDraft,
+  deleteEstimateDraft,
+  voidCreditNote,
+  voidInvoice,
+} from 'modules/DigiKhaato/features/sales/redux/salesFlowThunk';
+import {
   createInvoiceShareLink,
   deleteInvoiceDraft,
   fetchInvoice,
@@ -271,6 +285,12 @@ export const QUERIES = {
   fetchSalesContext,
   fetchUpiIntent,
   fetchPrintBranding,
+  // SAL-01 / SAL-04 — the estimates and credit notes lists, one of either, a
+  // return's source invoice and the apply dialog's open bills
+  fetchFlowDocuments,
+  fetchFlowDocument,
+  fetchCreditSource,
+  fetchOpenInvoices,
   // IMP-01 — the job the wizard polls; IMP-02 — a list's CSV and a stored export
   fetchImportJob,
   exportListCsv,
@@ -373,6 +393,16 @@ export const MUTATIONS = {
   issueInvoice,
   deleteInvoiceDraft,
   createInvoiceShareLink,
+  // SAL-01 — estimate drafts, status moves, conversion; SAL-04 — issue and
+  // apply a credit note; SAL-05 — void a bill or a note
+  saveEstimateDraft,
+  deleteEstimateDraft,
+  moveEstimate,
+  convertEstimate,
+  issueCreditNote,
+  applyCreditNote,
+  voidInvoice,
+  voidCreditNote,
   // IMP-01 — upload, commit and cancel an import
   uploadImportFile,
   commitImportJob,

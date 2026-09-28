@@ -145,6 +145,19 @@ export function InvoicePrintA4({
             {t('sales.editor.dueOn')}: {formatBusinessDate(doc.dueOn)}
           </p>
         )}
+        {doc.kind === 'estimate' && doc.validUntil && (
+          <p>
+            {t('sales.estimate.validUntil')}: {formatBusinessDate(doc.validUntil)}
+          </p>
+        )}
+        {doc.links.against && (
+          <p data-testid="print-against">
+            {t('sales.creditNote.printAgainst', {
+              number: doc.links.against.number ?? '',
+              date: formatBusinessDate(doc.links.against.documentDate),
+            })}
+          </p>
+        )}
       </section>
 
       <section className="border-y py-2 text-xs">
@@ -228,7 +241,7 @@ export function InvoicePrintA4({
                   {formatInr(doc.grandTotal)}
                 </td>
               </tr>
-              {doc.status !== 'draft' && (
+              {doc.status !== 'draft' && doc.kind !== 'estimate' && (
                 <>
                   <tr>
                     <td>{t('sales.print.paid')}</td>
@@ -250,6 +263,19 @@ export function InvoicePrintA4({
 
       <footer className="mt-4 space-y-1 border-t pt-2 text-xs">
         {doc.kind === 'bill_of_supply' && <p className="font-semibold">{COMPOSITION_FOOTER}</p>}
+        {doc.kind === 'estimate' && (
+          <p className="font-semibold" data-testid="print-not-tax-invoice">
+            {t('sales.estimate.notTaxInvoice')}
+          </p>
+        )}
+        {doc.kind === 'credit_note' && doc.links.against && (
+          <p data-testid="print-sec34">
+            {t('sales.creditNote.sec34', {
+              number: doc.links.against.number ?? '',
+              date: formatBusinessDate(doc.links.against.documentDate),
+            })}
+          </p>
+        )}
         {doc.terms && <p className="whitespace-pre-line">{doc.terms}</p>}
         {doc.notes && <p className="whitespace-pre-line">{doc.notes}</p>}
         {branding?.docFooter && <p>{branding.docFooter}</p>}

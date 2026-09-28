@@ -2,9 +2,10 @@ import { API_PATHS } from 'src/api/APIPaths';
 import { api, ubConfig } from 'src/api/AxiosInstances';
 import { toQueryString } from 'src/utils/queryString';
 
+import { toFlowFields, toListPage } from './salesMapping';
+
 import type {
   InvoiceListPage,
-  InvoiceListRow,
   InvoiceTab,
   PaymentBreakupRow,
   SalesDocument,
@@ -47,6 +48,8 @@ const toLine = (row: Wire): SalesDocumentLine => ({
   igst: s(row.igst),
   cess: s(row.cess),
   lineTotal: s(row.line_total),
+  returnedQty: s(row.returned_qty ?? '0'),
+  againstLineId: sn(row.against_line_id),
 });
 
 const toAddress = (raw: unknown) => (raw && typeof raw === 'object' ? (raw as Wire) : {});
@@ -131,6 +134,7 @@ export const toDocument = (row: Wire): SalesDocument => {
     docDiscountAllocation: (row.doc_discount_allocation ?? {}) as Record<string, string>,
     createdBy: (row.created_by as SalesDocument['createdBy']) ?? null,
     issuedAt: sn(row.issued_at),
+    ...toFlowFields(row),
     createdAt: s(row.created_at),
     updatedAt: s(row.updated_at),
   };
@@ -151,23 +155,6 @@ export const toEnvelope = (body: EnvelopeWire): SalesDocumentEnvelope => {
     ledgerEntryId: sn(meta.ledger_entry_id),
   };
 };
-
-const toListRow = (row: Wire): InvoiceListRow => ({
-  id: s(row.id),
-  kind: row.kind as InvoiceListRow['kind'],
-  number: sn(row.number),
-  status: row.status as InvoiceListRow['status'],
-  party: (row.party as InvoiceListRow['party']) ?? null,
-  walkInName: sn(row.walk_in_name),
-  walkInMobileMasked: sn(row.walk_in_mobile_masked),
-  documentDate: s(row.document_date),
-  dueOn: sn(row.due_on),
-  grandTotal: s(row.grand_total),
-  amountPaid: s(row.amount_paid),
-  amountDue: s(row.amount_due),
-  isOverdue: Boolean(row.is_overdue),
-  createdBy: (row.created_by as InvoiceListRow['createdBy']) ?? null,
-});
 
 // ── Endpoints ───────────────────────────────────────────────────────────────
 
@@ -198,20 +185,7 @@ export const listInvoices = async (
     `${API_PATHS.SALES_INVOICES}${invoiceListQuery(filters)}`,
     ubConfig({ signal })
   );
-  const { data, meta } = response.data;
-  const totals = (meta.totals ?? {}) as Wire;
-  return {
-    rows: data.map(toListRow),
-    page: Number(meta.page ?? 1),
-    pageSize: Number(meta.page_size ?? 25),
-    total: Number(meta.total ?? data.length),
-    totals: {
-      count: Number(totals.count ?? 0),
-      grandTotal: s(totals.grand_total ?? '0.00'),
-      amountDue: s(totals.amount_due ?? '0.00'),
-    },
-    tabs: meta.tabs as InvoiceListPage['tabs'],
-  };
+  return toListPage<InvoiceListPage['tabs']>(response.data.data, response.data.meta);
 };
 
 export const getInvoice = async (
@@ -273,12 +247,20 @@ export const issueInvoice = async (
     ).data
   );
 
+const SHARE_PATH = {
+  invoice: API_PATHS.SALES_INVOICE_SHARE_LINKS,
+  estimate: API_PATHS.SALES_ESTIMATE_SHARE_LINKS,
+  credit_note: API_PATHS.SALES_CREDIT_NOTE_SHARE_LINKS,
+} as const;
+
+/** SAL-03 FR-5 — one link per document; each kind has its own route (CR-SAL-1). */
 export const createShareLink = async (
   id: string,
-  channel: 'link' | 'whatsapp'
+  channel: 'link' | 'whatsapp',
+  kind: keyof typeof SHARE_PATH = 'invoice'
 ): Promise<ShareLink> => {
   const response = await api.post<{ data: { url: string; expires_at: string } }>(
-    API_PATHS.SALES_INVOICE_SHARE_LINKS(id),
+    SHARE_PATH[kind](id),
     { channel }
   );
   return { url: response.data.data.url, expiresAt: response.data.data.expires_at };

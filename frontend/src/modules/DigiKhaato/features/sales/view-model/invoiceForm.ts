@@ -38,6 +38,8 @@ export interface InvoiceFormValues {
   walkInMobile: string;
   documentDate: string;
   dueOn: string;
+  /** SAL-01 FR-4 — estimates only; empty means "the default, counted by the server". */
+  validUntil: string;
   placeOfSupplyState: string;
   reverseCharge: boolean;
   roundOffEnabled: boolean;
@@ -81,6 +83,7 @@ export const emptyInvoiceForm = (
   walkInMobile: '',
   documentDate: today,
   dueOn: '',
+  validUntil: '',
   placeOfSupplyState: tenantState,
   reverseCharge: false,
   roundOffEnabled: true,
@@ -148,6 +151,7 @@ export const fromDocument = (doc: SalesDocument): InvoiceFormValues => ({
   walkInMobile: doc.walkInMobile ?? '',
   documentDate: doc.documentDate,
   dueOn: doc.dueOn ?? '',
+  validUntil: doc.validUntil ?? '',
   placeOfSupplyState: doc.placeOfSupplyState,
   reverseCharge: doc.reverseCharge,
   roundOffEnabled: doc.roundOffEnabled,

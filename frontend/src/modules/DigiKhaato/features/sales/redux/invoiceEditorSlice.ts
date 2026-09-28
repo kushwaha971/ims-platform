@@ -1,9 +1,16 @@
-import { createSlice, type Draft, type PayloadAction, type WithSlice } from '@reduxjs/toolkit';
+import {
+  createSlice,
+  isAnyOf,
+  type Draft,
+  type PayloadAction,
+  type WithSlice,
+} from '@reduxjs/toolkit';
 
 import { resetAllFeatureState } from 'src/redux/actions';
 import { rootReducer, type RootState } from 'src/redux/store';
 import type { ApiErrorShape, RequestStatus } from 'src/types/api.types';
 
+import { fetchFlowDocument, moveEstimate, saveEstimateDraft } from './salesFlowThunk';
 import {
   deleteInvoiceDraft,
   fetchInvoice,
@@ -89,32 +96,6 @@ const invoiceEditorSlice = createSlice({
       .addCase(fetchSalesContext.fulfilled, (state, action) => {
         state.context = action.payload as Draft<SalesContext>;
       })
-      .addCase(fetchInvoice.pending, (state) => {
-        state.loadStatus = 'loading';
-        state.error = null;
-      })
-      .addCase(fetchInvoice.fulfilled, (state, action) => {
-        accept(state, action.payload);
-        state.loadStatus = 'succeeded';
-      })
-      .addCase(fetchInvoice.rejected, (state, action) => {
-        if (action.meta.aborted) return;
-        state.loadStatus = 'failed';
-        state.error = (action.payload ?? null) as Draft<ApiErrorShape> | null;
-      })
-      .addCase(saveInvoiceDraft.pending, (state) => {
-        state.saveState = 'saving';
-      })
-      .addCase(saveInvoiceDraft.fulfilled, (state, action) => {
-        accept(state, action.payload);
-        state.saveState = 'saved';
-        state.savedAt = action.payload.document.updatedAt;
-      })
-      .addCase(saveInvoiceDraft.rejected, (state, action) => {
-        const code = action.payload?.code;
-        state.saveState = code === 'stale_version' ? 'conflict' : 'error';
-        state.error = (action.payload ?? null) as Draft<ApiErrorShape> | null;
-      })
       .addCase(issueInvoice.pending, (state) => {
         state.issuing = true;
         state.error = null;
@@ -132,7 +113,53 @@ const invoiceEditorSlice = createSlice({
         ...initialState,
         context: state.context,
       }))
-      .addCase(resetAllFeatureState, () => initialState);
+      .addCase(resetAllFeatureState, () => initialState)
+      // SAL-01 — the estimate editor is this editor with another kind: the
+      // same load, the same save states, and `mark-sent` as its "issue".
+      .addCase(moveEstimate.pending, (state) => {
+        state.issuing = true;
+        state.error = null;
+      })
+      .addCase(moveEstimate.fulfilled, (state, action) => {
+        accept(state, action.payload);
+        state.issuing = false;
+      })
+      .addCase(moveEstimate.rejected, (state, action) => {
+        state.issuing = false;
+        state.error = (action.payload ?? null) as Draft<ApiErrorShape> | null;
+      })
+      .addMatcher(isAnyOf(fetchInvoice.pending, fetchFlowDocument.pending), (state) => {
+        state.loadStatus = 'loading';
+        state.error = null;
+      })
+      .addMatcher(isAnyOf(fetchInvoice.fulfilled, fetchFlowDocument.fulfilled), (state, action) => {
+        accept(state, action.payload);
+        state.loadStatus = 'succeeded';
+      })
+      .addMatcher(isAnyOf(fetchInvoice.rejected, fetchFlowDocument.rejected), (state, action) => {
+        if (action.meta.aborted) return;
+        state.loadStatus = 'failed';
+        state.error = (action.payload ?? null) as Draft<ApiErrorShape> | null;
+      })
+      .addMatcher(isAnyOf(saveInvoiceDraft.pending, saveEstimateDraft.pending), (state) => {
+        state.saveState = 'saving';
+      })
+      .addMatcher(
+        isAnyOf(saveInvoiceDraft.fulfilled, saveEstimateDraft.fulfilled),
+        (state, action) => {
+          accept(state, action.payload);
+          state.saveState = 'saved';
+          state.savedAt = action.payload.document.updatedAt;
+        }
+      )
+      .addMatcher(
+        isAnyOf(saveInvoiceDraft.rejected, saveEstimateDraft.rejected),
+        (state, action) => {
+          const code = action.payload?.code;
+          state.saveState = code === 'stale_version' ? 'conflict' : 'error';
+          state.error = (action.payload ?? null) as Draft<ApiErrorShape> | null;
+        }
+      );
   },
 });
 

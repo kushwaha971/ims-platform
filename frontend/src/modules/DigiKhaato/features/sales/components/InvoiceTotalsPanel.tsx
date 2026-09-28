@@ -32,6 +32,7 @@ export function InvoiceTotalsPanel({
   form,
   preview,
   taxFree,
+  estimated = false,
   rule46,
   warnings,
   disabled,
@@ -39,6 +40,8 @@ export function InvoiceTotalsPanel({
   form: UseFormReturn<InvoiceFormValues>;
   preview: EngineResult;
   taxFree: boolean;
+  /** SAL-01 §8 — an estimate's tax is labelled "Estimated GST (final on invoice)". */
+  estimated?: boolean;
   rule46: Rule46Check | null;
   warnings: readonly SalesWarning[];
   disabled: boolean;
@@ -88,6 +91,11 @@ export function InvoiceTotalsPanel({
         {preview.discountAmount !== '0.00' &&
           row(t('sales.totals.discount'), `−${formatInr(preview.discountAmount)}`)}
         {row(t('sales.totals.taxable'), formatInr(preview.taxableTotal))}
+        {estimated && !taxFree && (
+          <UbText variant="caption" tone="tertiary" data-testid="estimated-gst">
+            {t('sales.estimate.taxPreview')}
+          </UbText>
+        )}
         {!taxFree &&
           preview.igstTotal !== '0.00' &&
           row(t('sales.tax.igst'), formatInr(preview.igstTotal))}

@@ -104,7 +104,10 @@ export function InvoicePrintThermal80({
       {row(t('sales.totals.roundOff'), formatAmount(doc.roundOff))}
       {row(t('sales.print.total'), formatInr(doc.grandTotal), true)}
       {doc.status !== 'draft' && row(t('sales.print.paid'), formatAmount(doc.amountPaid))}
-      {doc.status !== 'draft' && row(t('sales.print.balance'), formatAmount(doc.amountDue))}
+      {doc.status !== 'draft' &&
+        doc.kind !== 'estimate' &&
+        row(t('sales.print.balance'), formatAmount(doc.amountDue))}
+      {doc.kind === 'estimate' && <p>{t('sales.estimate.notTaxInvoice')}</p>}
       {columns !== 'none' &&
         taxSummary(doc.lines).map((s) => (
           <p key={s.rate}>

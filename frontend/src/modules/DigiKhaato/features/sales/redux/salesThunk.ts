@@ -173,11 +173,16 @@ export const fetchPrintBranding = createAsyncThunk<PrintBranding, void, Reject>(
 
 export const createInvoiceShareLink = createAsyncThunk<
   ShareLink,
-  { readonly id: string; readonly channel: 'link' | 'whatsapp' },
+  {
+    readonly id: string;
+    readonly channel: 'link' | 'whatsapp';
+    /** SAL-01 / SAL-04 — estimates and credit notes share through their own routes. */
+    readonly kind?: 'invoice' | 'estimate' | 'credit_note';
+  },
   Reject
->('invoice/createInvoiceShareLink', async ({ id, channel }, { rejectWithValue }) => {
+>('invoice/createInvoiceShareLink', async ({ id, channel, kind }, { rejectWithValue }) => {
   try {
-    return await (await service()).createShareLink(id, channel);
+    return await (await service()).createShareLink(id, channel, kind);
   } catch (error) {
     return rejectWithValue(toApiError(error, 'sales.share.error'));
   }

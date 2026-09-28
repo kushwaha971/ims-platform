@@ -27,11 +27,21 @@ export const STATUS_TONE: Record<SalesStatus, UbStatusBadgeTone> = {
   paid: 'success',
   overdue: 'error',
   void: 'neutral',
+  // SAL-01 §8 — sent info, accepted success, rejected error, expired warning.
+  sent: 'info',
+  accepted: 'success',
+  rejected: 'error',
+  expired: 'warning',
+  converted: 'neutral',
+  // SAL-04 §9 — open credit is `issued` (info); fully used is `applied`.
+  applied: 'success',
 };
 
 /** SAL-02 §8 / BR-12 — the document title a merchant's registration gives it. */
 export const documentTitleId = (kind: SalesKind, gstType: GstType): string => {
   if (kind === 'bill_of_supply') return 'sales.title.billOfSupply';
+  if (kind === 'estimate') return 'sales.estimate.title';
+  if (kind === 'credit_note') return 'sales.creditNote.title';
   return gstType === 'regular' ? 'sales.title.taxInvoice' : 'sales.title.invoice';
 };
 
@@ -39,8 +49,9 @@ export const documentTitleId = (kind: SalesKind, gstType: GstType): string => {
 export const sgstLabelId = (placeOfSupply: string, interState: boolean): string =>
   !interState && UTGST_STATE_CODES.includes(placeOfSupply) ? 'sales.tax.utgst' : 'sales.tax.sgst';
 
+/** A regular tenant's invoice, estimate (as "Estimated GST") and credit note carry tax. */
 export const showsTax = (doc: Pick<SalesDocument, 'kind' | 'supplier'>): boolean =>
-  doc.kind === 'invoice' && doc.supplier.gstType === 'regular';
+  doc.kind !== 'bill_of_supply' && doc.supplier.gstType === 'regular';
 
 export const partyLabel = (doc: {
   readonly party: { readonly name: string } | null;

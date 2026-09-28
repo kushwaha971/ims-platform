@@ -495,6 +495,61 @@ export const INVALIDATION: TInvalidationMap = {
   // A share link changes nothing any other screen shows; the detail slice
   // holds the minted link itself (its fulfilled reducer, not a refetch).
   createInvoiceShareLink: { patch: [['invoiceDetail', 'shareLink']] },
+  // ── SAL-01 / SAL-04 / SAL-05 — estimates, credit notes, void ─────────────
+  //
+  // An estimate moves no money and no stock (FR-8), so its writes leave only
+  // the estimates list stale. The detail slice holds the moved estimate from
+  // the response (its fulfilled reducer). Converting writes a DRAFT invoice:
+  // the bills list is stale for its next mount, nothing else moved.
+  saveEstimateDraft: { stale: ['salesDocList'] },
+  deleteEstimateDraft: { stale: ['salesDocList'] },
+  moveEstimate: { patch: [['invoiceDetail', 'document']], stale: ['salesDocList'] },
+  convertEstimate: { stale: ['salesDocList', 'invoiceList'] },
+  // A credit note credits the khata, may restock, and settles the invoice's
+  // due — every one of those figures is the server's, so all are stale; the
+  // editor navigates to the new note, which it then reads.
+  issueCreditNote: {
+    stale: [
+      'salesDocList',
+      'invoiceList',
+      ...EXPENSE_LEDGER_STALE,
+      'itemList',
+      'itemDetail',
+      'stockSummary',
+    ],
+  },
+  // Apply moves no ledger line (the credit already did): two documents' dues.
+  applyCreditNote: {
+    patch: [['invoiceDetail', 'document']],
+    stale: ['salesDocList', 'invoiceList'],
+  },
+  // A void reverses stock and the khata line, dated today, and releases
+  // credit applications — the same reach as the issue it undoes.
+  voidInvoice: {
+    patch: [
+      ['invoiceDetail', 'document'],
+      ['invoiceDetail', 'voidResult'],
+    ],
+    stale: [
+      'invoiceList',
+      'salesDocList',
+      ...EXPENSE_LEDGER_STALE,
+      'itemList',
+      'itemDetail',
+      'stockSummary',
+    ],
+  },
+  voidCreditNote: {
+    patch: [['invoiceDetail', 'document']],
+    stale: [
+      'invoiceList',
+      'salesDocList',
+      ...EXPENSE_LEDGER_STALE,
+      'itemList',
+      'itemDetail',
+      'stockSummary',
+    ],
+  },
   // ── LED-06 — manual reminders ─────────────────────────────────────────────
   //
   // A reminder moves no money, so nothing about the khata, the list or the
