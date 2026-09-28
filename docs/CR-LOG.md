@@ -972,3 +972,57 @@ Settings UPI card (PAY-03 FR-1/FR-8, PLT-07's screen); the statement page's sour
 timeline has them).
 
 Requested against Part 17-02 PAY-01…PAY-05 and LED-10, Part 21 §21.3.9, Part 22 §22.9.
+## CR-2026-09-25-PUR-A — PUR-01 / PUR-03 / PUR-04: what was built beside the FRDs
+
+**State:** `raised`. **Target:** Part 17-03 §17.7.0, PUR-01, PUR-03, PUR-04; Part 21 §21.3.8;
+Part 20 §20.1.4. **Gate:** none — additive; migration `purchases 0001_add_purchases_document`.
+
+**The GST engine moved to `apps/tax/services/tax_engine.py`.** §17.7.0 says purchases use "the
+same engine as sales" and the import matrix forbids `purchases → sales`. The engine imports only
+`apps.common.money`, so it moved; `apps/sales/services/tax_engine.py` re-exports it until the
+parallel branches merge. A bill calls it with `gst_type="regular"` whatever the tenant is (the
+supplier charges GST to a composition shop too, FR-11). Two consequences of reusing it rather than
+writing §17.7.0's text a second time: the document-discount rounding residual goes to the LARGEST
+line, ties to the lowest line number (SAL-02 BR-5), not "remainder to the last line"; and SGST is
+`round2(t × r/100) − CGST` rather than a second `round2(t × r/200)`, so an odd paisa lands on SGST
+instead of vanishing. The §17.7.0 worked example is unchanged by either (T-PUR-01-1 passes to the
+paisa).
+
+**Duplicate index excludes drafts as well as voids.** §21.3.8 declares
+`U(tenant, party, supplier_invoice_number) WHERE … status <> 'void'`. Built as
+`UNIQUE (tenant, party, UPPER(supplier_invoice_number)) WHERE supplier_invoice_number IS NOT NULL
+AND status NOT IN ('void','draft')`. Drafts autosave: with them in the index a clerk who types an
+already-used number could not save the lines they were typing. The refusal is at RECORD (409
+`duplicate_supplier_invoice`, `details.existing`), the index still makes two recorded bills with
+one number impossible under any interleaving (a threaded test proves it), and `UPPER` because the
+number is typed by hand from paper. The number is trimmed and inner whitespace folded before
+storing.
+
+**Void changes the average cost.** PUR-04 FR-4/BR-4 ("avg cost is not recalculated — the dialog
+states 'Average cost unchanged'") predate CR-2026-09-24-INV-A, which this follows: the reversal
+movement is folded through the §21.3.6 (2) "reversal of an inbound" case in arrival order, so the
+average LOSES the value the bill blended in, and `recalc_stock` agrees by construction. The void
+dialog therefore does not print "Average cost unchanged". PUR-04 FR-4/BR-4 should be amended.
+
+**No payments in this change.** PUR-02 and FR-5/FR-6h (pay on the spot) are the payments track's.
+The seam is `apps/purchases/services/payment_seam.py`: `apply_payment(document, ±amount, today)` is
+the one writer of `amount_paid`/`amount_due`/`status` (BR-5), `lock_payable_bills` locks in
+`(document_date, number, id)` order, and `register_void_listener(fn)` lets payments release
+allocations inside `void_bill`'s transaction (FR-2d). The client renders no Pay action and no
+"Paid now" section until payments ships them.
+
+**Smaller deltas.** Recorded-bill PATCH accepts `notes` only (BR-7's text wavers on
+`attachment_id`, which is not built). `due_on` defaults at record to `document_date +
+party.credit_days` (0 when unset), matching FR-2. An archived item on a line is a 400 on
+`lines.N.item_id` at record, not a 409 `item_archived` (the same strict line validation sales
+uses). Void on an archived supplier is 409 `party_archived` (as the expense void). The list's
+counts are `meta.counts`; `all` literally includes drafts and voids (FR-1) while `meta.totals`
+excludes both from the money (BR-1). `purchases.refresh_overdue` was scheduled since Sprint 0
+with no handler and dead-lettered nightly; it now has one. Module-off guard for `purchases`
+counts drafts plus unpaid bills.
+
+**Not built.** Bill photo (`attachment_id`, FR-2/AC-6) — no `files_attachment` wiring in this
+wave; supplier payment and pay-now (PUR-02); inline item and supplier creation from the editor
+(FR-12, the PTY-01 quick form); scanner-driven lines; "Duplicate" and "Void and duplicate"
+(FR-9/FR-7 of PUR-04); `PurchaseBillPrint`; the purchase-register CSV (PUR-03 FR-8, RPT-04);
+bulk pay; `document_voided` notification to owners (PUR-04 §17); analytics events.

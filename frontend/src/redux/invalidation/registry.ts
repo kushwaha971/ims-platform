@@ -144,6 +144,16 @@ import {
 } from 'modules/DigiKhaato/features/payments/redux/paymentThunk';
 import { fetchPlanLimits } from 'modules/DigiKhaato/features/plan/redux/planThunk';
 import {
+  checkDuplicateSupplierInvoice,
+  deletePurchaseBillDraft,
+  fetchPurchaseBill,
+  fetchPurchaseBillList,
+  fetchPurchaseContext,
+  recordPurchaseBill,
+  savePurchaseBillDraft,
+  voidPurchaseBill,
+} from 'modules/DigiKhaato/features/purchases/redux/purchaseBillThunk';
+import {
   fetchCollectionSummary,
   fetchDueParties,
   fetchPartyReminders,
@@ -280,6 +290,11 @@ export const QUERIES = {
   fetchSalesContext,
   fetchUpiIntent,
   fetchPrintBranding,
+  // PUR-01/03 — the bills list, one bill, the editor's context, the duplicate pre-check
+  fetchPurchaseBillList,
+  fetchPurchaseBill,
+  fetchPurchaseContext,
+  checkDuplicateSupplierInvoice,
   // IMP-01 — the job the wizard polls; IMP-02 — a list's CSV and a stored export
   // PAY-01 … PAY-05 — the list, the receipt, the open bills, the Collect QR
   fetchPayments,
@@ -390,6 +405,11 @@ export const MUTATIONS = {
   recordPayment,
   voidPayment,
   shareReceipt,
+  // PUR-01/04 — bill drafts, record and void
+  savePurchaseBillDraft,
+  deletePurchaseBillDraft,
+  recordPurchaseBill,
+  voidPurchaseBill,
   // IMP-01 — upload, commit and cancel an import
   uploadImportFile,
   commitImportJob,

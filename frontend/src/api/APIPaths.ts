@@ -137,7 +137,9 @@ export const API_PATHS = {
 
   // ── purchases, payments, expenses, reports, misc ──────────────────────────
   PURCHASE_BILLS: '/purchases/bills',
+  PURCHASE_BILL: (id: string) => `/purchases/bills/${seg(id)}`,
   PURCHASE_BILL_RECORD: (id: string) => `/purchases/bills/${seg(id)}/record`,
+  PURCHASE_BILL_VOID: (id: string) => `/purchases/bills/${seg(id)}/void`,
   PAYMENTS: '/payments',
   PAYMENT: (id: string) => `/payments/${seg(id)}`,
   PAYMENT_VOID: (id: string) => `/payments/${seg(id)}/void`,

@@ -1,10 +1,12 @@
-"""URL routes for the purchases app (canon §0.8).
-
-Sprint 0 creates the package so the app label, the table prefix and the
-import matrix of Part 20 §20.1.4 are reserved. The models, services and
-views land in the sprint that owns the feature.
-"""
+"""Purchases routes (canon §0.8) — mounted under `/purchases/`."""
 
 from __future__ import annotations
 
-urlpatterns: list = []
+from rest_framework.routers import DefaultRouter
+
+from apps.purchases.views.bills import PurchaseBillViewSet
+
+router = DefaultRouter(trailing_slash=False)
+router.register("bills", PurchaseBillViewSet, basename="purchase-bill")
+
+urlpatterns = [*router.urls]

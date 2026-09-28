@@ -518,6 +518,31 @@ export const INVALIDATION: TInvalidationMap = {
   // A share is words handed to WhatsApp, and an audit row: no money moves, so
   // nothing else is stale. The receipt slice records the share's state.
   shareReceipt: { patch: [['paymentReceipt', 'shareStatus']] },
+  // ── PUR-01 / PUR-04 — purchase bills ─────────────────────────────────────
+  //
+  // Autosave writes a draft from the editor, where the list is not mounted:
+  // stale. RECORDING moves the supplier's balance, khata, statement and aging
+  // by the grand total, stock and the average on every tracked line, and each
+  // item's last cost — all stale for their next mount, nothing patched,
+  // because every figure is the server's. A VOID is the same set reversed;
+  // the detail slice writes the voided bill from the 200 (its fulfilled
+  // reducer), which is the one `patch`.
+  savePurchaseBillDraft: { stale: ['purchaseBillList'] },
+  deletePurchaseBillDraft: { stale: ['purchaseBillList'] },
+  recordPurchaseBill: {
+    stale: [
+      'purchaseBillList',
+      'purchaseBillDetail',
+      ...EXPENSE_LEDGER_STALE,
+      'itemList',
+      'itemDetail',
+      'stockSummary',
+    ],
+  },
+  voidPurchaseBill: {
+    patch: [['purchaseBillDetail', 'bill']],
+    stale: ['purchaseBillList', ...EXPENSE_LEDGER_STALE, 'itemList', 'itemDetail', 'stockSummary'],
+  },
   // ── LED-06 — manual reminders ─────────────────────────────────────────────
   //
   // A reminder moves no money, so nothing about the khata, the list or the

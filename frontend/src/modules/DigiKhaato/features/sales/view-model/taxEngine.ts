@@ -1,7 +1,7 @@
 import Decimal from 'decimal.js-light';
 
 /**
- * SAL-02 BR-1…BR-12 — the client MIRROR of `backend/apps/sales/services/
+ * SAL-02 BR-1…BR-12 — the client MIRROR of `backend/apps/tax/services/
  * tax_engine.py`, for the totals a merchant watches change as they type.
  *
  * It is a PREVIEW. The server recomputes every figure at save and at issue

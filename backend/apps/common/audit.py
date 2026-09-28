@@ -147,6 +147,17 @@ class AuditAction:
     #: LED-10 BR-7 — a document void deletes its allocations; the payment stays.
     PAYMENT_ALLOCATION_RELEASED = "payment.allocation_released"
     INVOICE_STATUS_CHANGED = "invoice.status_changed"
+    # ── Sprint 9: PUR-01 / PUR-04 (17-03 §16) ─────────────────────────────
+    #
+    # `purchase_bill.updated` is throttled like the invoice draft's (one row per
+    # draft per 10 minutes, with `changes_count`) — the editor autosaves.
+    # `recorded` carries the totals, number, movement ids and ledger id;
+    # `voided` the reason and every reversal id (PUR-04 §16).
+    PURCHASE_BILL_DRAFT_CREATED = "purchase_bill.draft_created"
+    PURCHASE_BILL_UPDATED = "purchase_bill.updated"
+    PURCHASE_BILL_DELETED = "purchase_bill.deleted"
+    PURCHASE_BILL_RECORDED = "purchase_bill.recorded"
+    PURCHASE_BILL_VOIDED = "purchase_bill.voided"
     # ── Sprint 7: SAL-02 / SAL-03 / SAL-06 (17-04 §16) ────────────────────
     #
     # `invoice.draft_updated` is throttled to one row per draft per 10 minutes

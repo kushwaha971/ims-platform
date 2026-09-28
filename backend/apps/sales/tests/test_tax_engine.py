@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-from apps.sales.services.tax_engine import (
+from apps.tax.services.tax_engine import (
     EngineDocument,
     EngineLine,
     RateNotApplicable,

@@ -894,7 +894,16 @@
   "shape (a dynamic A5 print sheet, a dynamic void dialog) -> 80 / 340. The",
   "drawer, the Collect sheet and the three payments slices are dynamic() on",
   "every opener (/parties/[id], /sales/invoices/[id]), so those routes should",
-  "move by the button and the menu items only."
+  "move by the button and the menu items only.",
+  "── 25 Sep 2026: PUR-01/03/04 purchase bills (Track W3-B, PROVISIONAL) ─────",
+  "The four /purchases/bills routes carry the sales invoice routes' budgets,",
+  "UNMEASURED: this track may not run `next build` (shared machine). They are",
+  "the same shape — the list, an editor on UbLineItemsEditor with the shared",
+  "tax engine, a detail — and the void form is `dynamic()`. The three purchase",
+  "slices inject lazily (CR-134). The ~156 `purchases.*` keys are in",
+  "`locales/*.json`, as sales' are, so the shell grows by their share; the lead",
+  "measures after merge and either tightens these lines or moves the strings to",
+  "a route-local catalogue as W2-C did."
  ],
  "default": {
   "route": 64,
@@ -1052,6 +1061,22 @@
   "/settings/data": {
    "route": 78,
    "firstLoad": 338
+  },
+  "/purchases/bills/[id]": {
+   "route": 76,
+   "firstLoad": 336
+  },
+  "/purchases/bills/[id]/edit": {
+   "route": 140,
+   "firstLoad": 400
+  },
+  "/purchases/bills": {
+   "route": 96,
+   "firstLoad": 356
+  },
+  "/purchases/bills/new": {
+   "route": 140,
+   "firstLoad": 400
   }
  },
  "//ignoreRoutes": [

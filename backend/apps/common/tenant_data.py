@@ -91,7 +91,7 @@ REGISTRY: dict[str, TenantTable] = {}
 #: `unregistered_tenant_models`); this set only stops the architecture test from
 #: failing on a merge that lands models before their `tenant_data.py`. Remove an
 #: app from here in the same change that adds its registrations.
-PENDING_APPS: frozenset[str] = frozenset({"purchases"})
+PENDING_APPS: frozenset[str] = frozenset()
 
 
 def register(*tables: TenantTable) -> None:
