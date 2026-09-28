@@ -25,6 +25,7 @@ from apps.common.renderers import EnvelopeJSONRenderer, PassthroughCsvRenderer
 from apps.common.responses import StandardResponse
 from apps.common.throttling import ScopedUserRateThrottle
 from apps.common.viewsets import TenantScopeMixin
+from apps.ledger.selectors.sources import resolve_sources
 from apps.ledger.selectors.statement import (
     STATEMENT_ORDERING,
     carried_forward,
@@ -166,7 +167,9 @@ class PartyStatementView(TenantScopeMixin, APIView):
             date_from=date_from,
             position=decode_cursor(request.query_params.get(paginator.cursor_query_param)),
         )
-        serializer = StatementRowSerializer(page, many=True, context={"carried": carried})
+        serializer = StatementRowSerializer(
+            page, many=True, context={"carried": carried, "sources": resolve_sources(page or [])}
+        )
 
         opening = opening_balance(**scope, date_from=date_from)
         closing = self._closing(scope, date_from, date_to, opening)

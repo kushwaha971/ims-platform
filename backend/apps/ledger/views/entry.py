@@ -25,6 +25,7 @@ from apps.ledger.constants import EntryType
 from apps.ledger.models import LedgerEntry
 from apps.ledger.permissions import LedgerEntryPermissions
 from apps.ledger.selectors.entry import TIMELINE_ORDERING, party_entries, party_ledger_summary
+from apps.ledger.selectors.sources import resolve_sources
 from apps.ledger.selectors.statement import (
     live_total_from_summary,
     timeline_carried,
@@ -179,7 +180,14 @@ class LedgerEntryViewSet(
                 tenant=self.get_tenant(), party_id=party_id, position=decode_cursor(cursor)
             )
         serializer = self.get_serializer(
-            page, many=True, context={**self.get_serializer_context(), "carried": carried}
+            page,
+            many=True,
+            context={
+                **self.get_serializer_context(),
+                "carried": carried,
+                # LED-10 FR-5 — the page's document numbers, one query per type.
+                "sources": resolve_sources(page or []),
+            },
         )
         return StandardResponse.ok(serializer.data, meta=meta)
 
