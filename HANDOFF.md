@@ -247,6 +247,52 @@ Serve for QA:
     - the dev stack runs no `run_scheduler`.
 - **Serving:** run `bash e2e/serve.sh` in its own shell call. Its `pkill -f` patterns kill any shell whose command line contains "standalone/server.js" or "next-server". Start the backend with `UB_E2E_RELAX_THROTTLES=1` for e2e and videos.
 
+## 8d. 29 Sep: public landing page at `/` (a1c8140…a7c5414)
+
+**Routing**
+- A visitor with no session sees the landing page at `/`.
+- A browser carrying `ub_access` or `ub_refresh` is redirected to `/dashboard` by `proxy.ts`. The check is in `src/utils/sessionCookies.ts`, the single place for session logic.
+- `/` is in `PUBLIC_ROUTE_PREFIXES`, but it matches only the root.
+
+**Code**
+- The page is in `app/(marketing)/` and `src/modules/DigiKhaato/features/landing/`. It must not go in `(public)`: that group is guaranteed to carry no product name, because customers see it.
+- New design-system components: UbVideo, UbDeviceFrame, UbReveal, UbRotatingText, UbChipTabs, UbAmbientGlow.
+
+**Design**
+- The reference is takeuforward.org, inspected in the owner's Chrome. From it we borrowed the pattern and the quality bar only: the Fraunces-italic lead line over a bold sans line, a floating pill header, a tilted framed demo in the hero, a chip-tab use-case explorer, and ambient glow blobs.
+- Everything is CSS plus one IntersectionObserver hook. No new dependencies.
+
+**Media**
+- Loops live in `frontend/public/media/landing/` (57 files, about 11 MB, tracked in git). Only the right device's variant is downloaded, and off-screen clips load lazily.
+- The narrated films `demo-*` are **ignored by git**. The owner does not want demo videos in git. The modal reads `NEXT_PUBLIC_DEMO_VIDEO_URL_DESKTOP`/`_MOBILE`; production hosting still has to be decided.
+- The loops themselves are small product videos in git. **Confirm with the owner before pushing if they should instead be hosted outside git.**
+
+**Pricing**
+- The prices are PROPOSED. The page shows a notice while `features/landing/config/pricing.ts` has `status: 'proposed'`; set it to `'approved'` once the owner signs off.
+- Plans:
+
+  | Plan | Monthly | Yearly |
+  |---|---|---|
+  | Free | ₹0 | ₹0 |
+  | Starter | ₹149 | ₹1,490 |
+  | Business | ₹349 | ₹3,490 |
+  | Wholesale | ₹699 | ₹6,990 |
+
+- Prices exclude GST. No billing exists, so every CTA is "Start free".
+
+**Tests and performance**
+- Gates: 2,487 jest tests, e2e `e2e/landing.mjs` 102/102, and the bundle budget for `/` (30.3 KB of its own code).
+- LCP is about 0.7–1.3 s unthrottled and about 2.5 s throttled. CLS is 0.
+
+**Open**
+- Put a long cache header on `/media`.
+- Dark mode still shows light-theme recordings inside the frames.
+- Owner decisions:
+  - approve the prices and set the per-plan item caps;
+  - choose where the demo films are hosted;
+  - confirm the Hindi headline line ("हिसाब रखें: {word}") and the upright (not italic) Hindi lead line;
+  - say whether the demo film should autoplay with sound.
+
 ## 9. Exact next steps
 
 State at e1ad11d (retest verdict: READY FOR UAT; all 4 High, 7/7 Medium, 12/12 Low fixed after e1ad11d; regression 894/899 with the 5 remaining harness-only landing checks fixed in e1ad11d):
