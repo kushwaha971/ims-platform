@@ -5,7 +5,7 @@ Owner direction of 29 Sep 2026: [00-platform-vision.md](00-platform-vision.md). 
 | # | Phase | Status | Output |
 |---|---|---|---|
 | 1 | Analyse the application; update the landing page to the platform vision | **DONE 29 Sep**; synced to the owner's Mac | `01-current-capabilities.md`; landing page (`features/landing`); `config/modules.ts` |
-| 2 | Research the modules: lending, library, gym, hospitality, candidates | **Next** | `research/*.md` |
+| 2 | Research the modules: lending, library, gym, hospitality, candidates | **Done 29 Sep**, except coaching & tuition (in progress) | `research/*.md` |
 | 3 | Module documentation (FRDs) | Not started | `frd/*.md` |
 | 4 | Architecture review and reuse map | Not started | `10-architecture.md`, ADRs |
 | 5 | Implementation | Not started | |
@@ -57,3 +57,17 @@ and CLS were compared before and after with Playwright and are unchanged within 
 against the live stack.
 
 - **29 Sep, Phase 1 closed.** Videos and landing loops re-recorded on "Sharma General Store". Remaining jargon removed from app strings (67f7106). Gates green: landing e2e 150/150, SEO e2e 96/96. Phase gate: work committed, HANDOFF §8e updated, owner's Mac fast-forwarded.
+- **29 Sep, Phase 2 research.** Committed: `research/{lending,library,gym,hospitality,candidates-and-competitors,shared-engines}.md` (267aa82, 4d798a8, e19ede2, 42e4732, 601973f). Findings:
+  - The shared engines are confirmed: recurring dues (two modes), bookings/resources and check-ins.
+  - Blocking cross-module questions for architecture: held deposits, taxable dues raising sales documents, party roles per module, and allocating payments to dues.
+- **29 Sep, owner decisions (CR-2026-09-29-PLATFORM-D):**
+  - Coaching & tuition is added as a module.
+  - The landing page presents all modules with no Live/Planned labels.
+  - Pricing is hidden on the landing page for now.
+
+## Pre-launch checklist (before yourkhata.com is public)
+
+- [ ] Every module shown on the landing page is live, or the owner re-confirms the page.
+- [ ] Pricing decided and approved (`pricing.ts` status plus the landing flag).
+- [ ] Demo films hosted (`NEXT_PUBLIC_DEMO_VIDEO_URL_*`).
+- [ ] Staging kept out of search indexes (BACKLOG).

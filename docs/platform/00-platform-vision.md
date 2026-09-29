@@ -23,7 +23,8 @@ Each tenant (a business or organisation) turns on the modules it needs. Every mo
 | **Library** | library: catalogue, copies, members, issue and return, fines | **Planned** |
 | **Gym & fitness** | gym: members, plans, memberships, renewals, attendance | **Planned** |
 | **Hotel & stays** | hospitality: rooms, bookings, check-in/out, guest folio, billing | **Planned** |
-| **Candidates** | For example coaching/tuition fees and rent collection. They come in only if Phase 2 research shows they reuse the shared engines. | Under research |
+| **Coaching & tuition** | coaching: students, guardians, batches, fee plans, fee collection, attendance, refunds on leaving | **Planned**; added by the owner on 29 Sep (CR-2026-09-29-PLATFORM-D) |
+| **Candidates** | Rent & property is next in line (research: `research/candidates-and-competitors.md`). Clinics and chit funds are rejected; housing societies are deferred. | Not in scope yet |
 
 A module's status changes only through a CR. It moves from planned to in development to live.
 
@@ -43,7 +44,12 @@ A module's status changes only through a CR. It moves from planned to in develop
 
 ## 4. Product rules
 
-- **Honest landing page.** Only live modules get demos, screenshots and "Start free". Planned modules are shown as planned, with no dates, no invented features and no fake screenshots. Module status comes from one config file, so a module switches to live in one line.
+- **Landing page presents the whole platform (owner decision, 29 Sep, CR-2026-09-29-PLATFORM-D).**
+  - The site is not public yet. The owner wants a page that doesn't need reworking each time a module ships, so every module is presented the same way, as part of the product. There is no Live/Planned labelling on the page.
+  - Module status is still kept in `features/landing/config/modules.ts`, for the build plan and for the pre-launch check. It is not shown.
+  - Modules without recordings are shown with text and icons only. There are **no invented screenshots or fake UI**; when a module ships, its real recordings are added through the config.
+  - **Pre-launch gate:** before yourkhata.com is made public, every module shown must be live, or the owner must re-confirm the page. This is a checklist item in `STATUS.md`.
+  - **Pricing** is hidden on the landing page for now (owner, 29 Sep). The section is kept behind a flag and will be decided later.
 - **In-app UI rule** (owner rule, unchanged): the app never shows an unbuilt feature or a "Soon" label. A planned module is simply absent from the app until it's built.
 - **Terminology.** Plain product words: shop, store, business, organisation, member, customer, supplier, borrower, lender, guest, room.
   - **No regional or specialised jargon** in documentation, planning or new copy. This includes "kirana", which is removed from the landing page and from new documentation.
