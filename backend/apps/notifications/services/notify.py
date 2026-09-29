@@ -29,10 +29,12 @@ from __future__ import annotations
 
 import datetime as dt
 import logging
+import re
 from dataclasses import dataclass
 from typing import Any, Callable, Iterable, Mapping
 
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
 from django.db.models import Q, QuerySet
 from django.utils import timezone
@@ -192,6 +194,40 @@ REGISTRY: dict[str, NotificationType] = {
         ),
     )
 }
+
+
+# ── A10 ── `register_notification_type` (ADR-042, contracts §1.9, R16) ───────
+#
+# The literal dict above is core's own types, whose codes predate the module
+# convention and keep their names. A module's types are registered from its
+# `AppConfig.ready()` with a `<module>.<event>` code (PLT-X13 BR-3) — which is
+# also what keeps a module from ever claiming a core code. Idempotent for the
+# same (or an equal) spec; a different spec under a used code raises.
+
+_MODULE_TYPE_CODE = re.compile(r"^[a-z][a-z0-9_]*\.[a-z0-9][a-z0-9_]*$")
+_REGISTRY_BASELINE: dict[str, NotificationType] | None = None
+
+
+def register_notification_type(code: str, spec: NotificationType) -> None:
+    if spec.code != code:
+        raise ImproperlyConfigured(f"notification type {code!r} carries the spec of {spec.code!r}")
+    if not _MODULE_TYPE_CODE.match(code):
+        raise ImproperlyConfigured(
+            f"notification type {code!r} must be '<module>.<event>' (PLT-X13 BR-3)"
+        )
+    existing = REGISTRY.get(code)
+    if existing is not None and existing != spec:
+        raise ImproperlyConfigured(f"notification type {code!r} is registered twice")
+    REGISTRY[code] = spec
+
+
+def _reset_for_tests() -> None:  # pragma: no cover - test helper
+    """Back to the start-up types (core's literal plus every `ready()`)."""
+    global _REGISTRY_BASELINE
+    if _REGISTRY_BASELINE is None:
+        _REGISTRY_BASELINE = dict(REGISTRY)
+    REGISTRY.clear()
+    REGISTRY.update(_REGISTRY_BASELINE)
 
 
 def _strict() -> bool:

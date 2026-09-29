@@ -309,6 +309,95 @@ SETTINGS: dict[str, SettingSpec] = {
 NUMBERING_KEY = "numbering"
 
 
+# ── A10 ── `register_setting_spec` (R43, contracts §1.9) ─────────────────────
+#
+# `SETTINGS` above is core's catalogue and stays a literal. A module registers
+# its `<module>.*` keys from its own `AppConfig.ready()`; its section is its
+# module code, its validators are pure, and its keys exist for a tenant only
+# while that module is effectively on — `specs_for(tenant)` is the catalogue a
+# settings read shows and `spec_for(tenant, key)` the one a write validates
+# against, so a switched-off module's key is neither shown nor writable.
+#
+# A module may claim only its own namespace: not a core key, not a core
+# section, and not a prefix any core key already uses (`ledger.*` is core's).
+# Idempotent for an equal spec; a different spec under a used key raises.
+
+_MODULE_KEY = re.compile(r"^(?P<module>[a-z][a-z0-9_]*)\.[a-z0-9][a-z0-9_.]*$")
+_MODULE_SETTINGS: dict[str, SettingSpec] = {}
+_MODULE_SETTINGS_BASELINE: dict[str, SettingSpec] | None = None
+
+
+def _core_prefixes() -> frozenset[str]:
+    return frozenset(key.split(".", 1)[0] for key in SETTINGS) | {NUMBERING_KEY}
+
+
+def module_of(key: str) -> str | None:
+    """The module a registered key belongs to; `None` for a core key."""
+    if key in _MODULE_SETTINGS:
+        return key.split(".", 1)[0]
+    return None
+
+
+def register_setting_spec(spec: SettingSpec) -> None:
+    from django.core.exceptions import ImproperlyConfigured
+
+    match = _MODULE_KEY.match(spec.key)
+    if match is None:
+        raise ImproperlyConfigured(f"setting {spec.key!r} must be '<module>.<name>' (R43)")
+    module = match.group("module")
+    if module in _core_prefixes() or spec.key in SETTINGS:
+        raise ImproperlyConfigured(f"setting {spec.key!r} is in a core namespace")
+    if spec.section != module:
+        raise ImproperlyConfigured(
+            f"setting {spec.key!r} must be in its module's own section {module!r}"
+        )
+    existing = _MODULE_SETTINGS.get(spec.key)
+    if existing is not None and existing != spec:
+        raise ImproperlyConfigured(f"setting {spec.key!r} is registered twice")
+    _MODULE_SETTINGS[spec.key] = spec
+
+
+def _enabled_modules(tenant: Any) -> frozenset[str]:
+    from apps.platform_app.services.entitlements import effective_modules
+
+    return effective_modules(tenant)
+
+
+def specs_for(tenant: Any) -> dict[str, SettingSpec]:
+    """Core's catalogue plus the keys of every module this tenant has on."""
+    if not _MODULE_SETTINGS:
+        return dict(SETTINGS)
+    modules = _enabled_modules(tenant)
+    return {
+        **SETTINGS,
+        **{
+            key: spec
+            for key, spec in _MODULE_SETTINGS.items()
+            if key.split(".", 1)[0] in modules
+        },
+    }
+
+
+def spec_for(tenant: Any, key: str) -> SettingSpec | None:
+    """The spec a write of `key` validates against, or `None` if it is not a
+    setting for THIS tenant (unknown, or its module is off)."""
+    if key in SETTINGS:
+        return SETTINGS[key]
+    spec = _MODULE_SETTINGS.get(key)
+    if spec is None or key.split(".", 1)[0] not in _enabled_modules(tenant):
+        return None
+    return spec
+
+
+def _reset_for_tests() -> None:  # pragma: no cover - test helper
+    """Back to the start-up registrations (every `ready()` has run by the first call)."""
+    global _MODULE_SETTINGS_BASELINE
+    if _MODULE_SETTINGS_BASELINE is None:
+        _MODULE_SETTINGS_BASELINE = dict(_MODULE_SETTINGS)
+    _MODULE_SETTINGS.clear()
+    _MODULE_SETTINGS.update(_MODULE_SETTINGS_BASELINE)
+
+
 def migrate_value(key: str, value: Any, schema_version: int) -> Any:
     """BR-7: bring an older stored version up to date. Every key is at v1 today."""
     return value

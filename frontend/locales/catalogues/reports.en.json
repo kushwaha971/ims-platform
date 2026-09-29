@@ -70,6 +70,7 @@
   "reports.dashboard.quick.remind": "Send reminders",
   "reports.dashboard.refresh": "Refresh",
   "reports.dashboard.refreshing": "Refreshing…",
+  "reports.dashboard.section.unavailable": "This section could not load.",
   "reports.dashboard.short.crore": "Cr",
   "reports.dashboard.short.lakh": "L",
   "reports.dashboard.tile.cashInHand": "Cash in hand",

@@ -8,7 +8,14 @@ import { store } from 'src/redux/store';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
 import type { ModuleCode, PermissionCode } from 'src/types/domain.types';
 
+import {
+  registerDashboardSection,
+  resetDashboardSectionsForTests,
+  type DashboardSectionProps,
+} from '../dashboardSections';
+
 import { DashboardPageContent } from './DashboardPageContent';
+
 
 import type { DashboardData } from '../types/reports.types';
 
@@ -80,6 +87,7 @@ const DATA = (over: Partial<DashboardData> = {}): DashboardData => ({
     },
   ],
   firstUse: { hasParty: true, hasItem: true, hasDocument: true, hasUpi: false },
+  sections: [],
   ...over,
 });
 
@@ -121,6 +129,7 @@ const signIn = (
 beforeEach(() => {
   jest.clearAllMocks();
   store.dispatch(resetAllFeatureState());
+  resetDashboardSectionsForTests();
 });
 
 it('draws exactly the tiles the server sent, each opening its list', async () => {
@@ -215,4 +224,101 @@ it('re-reads after any write the invalidation map signals (TSK-RPT-01-06)', asyn
     store.dispatch(cacheInvalidated({ slices: ['partyList'], urgency: 'next-mount' }));
   });
   await waitFor(() => expect(service.getDashboard.mock.calls.length).toBe(before + 1));
+});
+
+// ── A10 — module sections (FRD 00 PLT-X13 §7–§8) ────────────────────────────
+
+function ProbeSection({ data }: DashboardSectionProps): React.JSX.Element {
+  const { count } = data as { count: number };
+  return <>{`Probe members: ${count}`}</>;
+}
+function OtherSection(): React.JSX.Element {
+  return <>Other module section</>;
+}
+const loadProbe = (): Promise<typeof ProbeSection> => Promise.resolve(ProbeSection);
+const loadOther = (): Promise<typeof OtherSection> => Promise.resolve(OtherSection);
+
+it('draws a module section the server returned and a module registered, below the core', async () => {
+  registerDashboardSection('inventory.probe', { module: 'inventory', load: loadProbe });
+  service.getDashboard.mockResolvedValue(
+    DATA({
+      sections: [
+        {
+          key: 'inventory.probe',
+          module: 'inventory',
+          order: 1,
+          data: { count: 3 },
+          unavailable: false,
+        },
+        // The server knows this one; no client component — skipped, not an empty box.
+        { key: 'inventory.unknown', module: 'inventory', order: 2, data: {}, unavailable: false },
+      ],
+    })
+  );
+  signIn(OWNER);
+  renderWithProviders(<DashboardPageContent />);
+  expect(await screen.findByText('Probe members: 3')).toBeInTheDocument();
+  const block = screen.getByTestId('dashboard-module-sections');
+  // One module contributes: no heading (10-architecture §6 item 2).
+  expect(within(block).queryByRole('heading')).not.toBeInTheDocument();
+});
+
+it('never draws a registered section the server did not return', async () => {
+  registerDashboardSection('inventory.probe', { module: 'inventory', load: loadProbe });
+  service.getDashboard.mockResolvedValue(DATA());
+  signIn(OWNER);
+  renderWithProviders(<DashboardPageContent />);
+  expect(await screen.findByText('To collect')).toBeInTheDocument();
+  expect(screen.queryByTestId('dashboard-module-sections')).not.toBeInTheDocument();
+  expect(screen.queryByText(/Probe members/)).not.toBeInTheDocument();
+});
+
+it('shows an unavailable section as one line with a retry, never a blank', async () => {
+  registerDashboardSection('inventory.probe', { module: 'inventory', load: loadProbe });
+  service.getDashboard.mockResolvedValue(
+    DATA({
+      sections: [
+        { key: 'inventory.probe', module: 'inventory', order: 1, data: null, unavailable: true },
+      ],
+    })
+  );
+  signIn(OWNER);
+  renderWithProviders(<DashboardPageContent />);
+  expect(await screen.findByText('This section could not load.')).toBeInTheDocument();
+  service.getDashboard.mockClear();
+  await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
+  await waitFor(() =>
+    expect(service.getDashboard).toHaveBeenCalledWith(
+      expect.objectContaining({ refresh: true }),
+      expect.anything()
+    )
+  );
+});
+
+it('groups sections under module headings only when two modules contribute', async () => {
+  registerDashboardSection('inventory.probe', { module: 'inventory', load: loadProbe });
+  registerDashboardSection('ledger.other', { module: 'ledger', load: loadOther });
+  service.getDashboard.mockResolvedValue(
+    DATA({
+      sections: [
+        {
+          key: 'inventory.probe',
+          module: 'inventory',
+          order: 1,
+          data: { count: 1 },
+          unavailable: false,
+        },
+        { key: 'ledger.other', module: 'ledger', order: 2, data: {}, unavailable: false },
+      ],
+    })
+  );
+  signIn(OWNER);
+  renderWithProviders(<DashboardPageContent />);
+  expect(await screen.findByText('Other module section')).toBeInTheDocument();
+  const block = screen.getByTestId('dashboard-module-sections');
+  const headings = within(block)
+    .getAllByRole('heading')
+    .map((h) => h.textContent);
+  expect(headings).toHaveLength(2);
+  expect(headings.every((text) => text && !text.startsWith('nav.module.'))).toBe(true);
 });

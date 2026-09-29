@@ -85,6 +85,19 @@ export interface FirstUse {
   readonly hasUpi: boolean;
 }
 
+/**
+ * A10 — one module's block below the core dashboard, as the server returned it
+ * (`apps.reports.registry`). `unavailable` means its selector failed on the
+ * server; `data` is then absent and the block shows a retry line.
+ */
+export interface DashboardSection {
+  readonly key: string;
+  readonly module: string;
+  readonly order: number;
+  readonly data: unknown;
+  readonly unavailable: boolean;
+}
+
 export interface DashboardData {
   readonly asOf: string;
   readonly generatedAt: string;
@@ -94,6 +107,7 @@ export interface DashboardData {
   readonly topDebtors: readonly TopDebtor[];
   readonly lowStockItems: readonly LowStockRow[];
   readonly firstUse: FirstUse;
+  readonly sections: readonly DashboardSection[];
 }
 
 // ── RPT-02 — the day book ───────────────────────────────────────────────────

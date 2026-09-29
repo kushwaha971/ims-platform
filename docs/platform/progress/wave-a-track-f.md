@@ -169,3 +169,115 @@ No defects found. Dates are plain `date`s throughout, so IST's lack of DST is no
 2. `period_label` has no tenant argument (contracts §1.8), so quarter and fy labels assume an April
    financial year. Every tenant has `fy_start_month = 4` today; if a tenant ever may change it, the
    signature needs an optional `fy_start_month` (additive, a v1.1 amendment).
+
+---
+
+## A10 — registries
+
+Status: **done, merged** (commit `A10:` on main), except the settings wiring, which is in a file
+Track P owns (see "Handed to Track P" below).
+
+### Design note (review step)
+
+Inputs: FRD 00 PLT-X13, contracts §1.9, R8–R10, R12, R16, R27–R29, R43, ADR-042, 10-arch §4 and §6.8.
+
+- **`register_schedule`** (`common/jobs.py`): appended to `SCHEDULES`, so `enqueue_scheduled`,
+  `check_expected_runs` and the double-run proof see a module's schedule exactly like a core one.
+  Idempotent by `job_type` for an equal schedule, and a different one under a used type (a core one
+  included) raises. A core entry with no handler is still skipped (Sprint 0's rule); a *registered*
+  one with no handler makes `materialise_due_schedules` raise `ImproperlyConfigured` (T-PLT-X13-4:
+  "fails loudly").
+- **`apps/reports/registry.py`** (new): `register_dashboard_section`, `register_report`, readers,
+  `_reset_for_tests`, `SECTION_QUERY_BUDGET = 3`. Keys are `<module>.<name>` with the registrant's
+  prefix (BR-2). It imports only stdlib, Django and common, which A11's purity test now enforces
+  (it stopped being a skip). The report `csv` contract: `csv(tenant, params)` yields the header row,
+  then rows (numbers as Decimal/int, the rest text). A vertical cannot import `reports.exporting`
+  (R27), so the registry defines its own contract.
+- **Dashboard** (`reports/views/dashboard.py`): `sections: [{key, module, order, data}]` filtered by
+  `effective_modules` and the reader's codenames. Computed **per request, not in the 60 s snapshot**,
+  because the snapshot is dropped only by core writes and a vertical's save could not drop it. Each
+  selector runs in a savepoint; a failure is logged and returned as `{…, error: "unavailable"}`. With
+  nothing registered it reads nothing (adversarial finding, below).
+- **`GET /api/v1/reports`** (`reports/urls_root.py`, one line in `config/urls.py` in an `A10` block,
+  because the `reports/` include cannot produce a bare collection path) and
+  **`GET /api/v1/reports/<module>.<name>`** (`views/module_reports.py`). The detail route matches
+  dotted keys only, so no core report path can reach it. It refuses exactly what the list hides
+  (404, 403 `module_disabled`, 403). CSV goes through `authorise_export` (cross-site, `reports.export`,
+  budget spent on the file only), the audit row, BOM + CRLF, numbers as decimals and text
+  neutralised. Registered-report files are streamed synchronously and capped at `MAX_EXPORT_ROWS`;
+  the async >5,000-row path stays with the core exporters (it replays a source the job can find
+  again). The core hub keeps its static catalogue, so `GET /reports` is `[]` for every tenant today.
+- **`register_notification_type`** (`notifications/services/notify.py`): `<module>.<event>` codes
+  only (BR-3, which also means a core code can never be re-registered); idempotent; reset.
+- **`register_default_templates`** (`notifications/services/templates.py`): `<module>_<purpose>`
+  (≤ 48), channel × locale, `en` required per channel (the resolver's fallback), never replaces an
+  existing body, and the whole mapping is validated before anything is stored.
+- **Imports** (`imports/registry.py`): `register` is idempotent for the same or an equal spec, and a
+  different spec under a used kind still raises; `ImporterSpec.example_key` (default `name`) drives
+  `is_example`; `_reset_for_tests`.
+- **Settings** (`platform_app/settings_schema.py`): `register_setting_spec` accepts a module's own
+  namespace only (not a core key, core prefix or core section; section = module code); plus
+  `specs_for(tenant)`, `spec_for(tenant, key)` (module keys only while the module is effectively
+  on), `module_of`, `_reset_for_tests`.
+- **Frontend**: `features/reports/dashboardSections.ts` (keyed registry, each entry `dynamic()`),
+  `components/DashboardModuleSections.tsx` (drawn only when the server returned the key AND a module
+  registered a component; unavailable is a one-line card with Retry; module headings only when two
+  or more modules contribute, titled `nav.module.<code>`). Dashboard types and service map
+  `sections`. `features/reports/reportsRegistry.ts` + `api/moduleReportsService.ts` give the
+  server∩client intersection (EC-2). **Hub rendering of module reports is deferred to the first
+  vertical's reports task (library B15/F11)**, because there is nothing to lay out until then. One
+  catalogue key was added in both languages (`reports.dashboard.section.unavailable`).
+
+### Handed to Track P: settings wiring in `platform_app/services/tenant_settings.py`
+
+That file is owned by A1/A12 (Track P), which is editing it now, so I did not touch it. The lead was
+told by message. Until the patch below lands, a registered module key is neither shown nor writable,
+which fails safe. No module registers one in Wave A.
+
+```python
+# _values_view(tenant, rows):   for key, spec in schema.specs_for(tenant).items():
+# settings_payload(tenant):     "sections": {k: s.section for k, s in schema.specs_for(tenant).items()},
+# preset_payload(tenant):       values = {k: s.default(tenant.business_type)
+#                                         for k, s in schema.specs_for(tenant).items()}
+# _validate_values(tenant, …):  spec = schema.spec_for(tenant, key)
+# save_settings(…):             "schema_version": schema.spec_for(tenant, key).schema_version
+```
+The acceptance test for whoever applies it: register a probe spec for an enabled module and assert
+it appears in `GET /tenants/current/settings` and is accepted by `PUT`; switch the module off and
+assert it disappears and a `PUT` of it is 400 "This is not a setting." The schema half is tested in
+`apps/platform_app/tests/test_setting_spec_registry.py`.
+
+### Tests
+
+Backend: `reports/tests/test_registry.py` 24, `common/tests/test_schedule_registry.py` 6,
+`notifications/tests/test_module_registries.py` 17, `imports/tests/test_registry_idempotent.py` 5,
+`platform_app/tests/test_setting_spec_registry.py` 11. Related suites (reports, notifications,
+imports, platform_app, common, tests/): **1753 passed, 7 skipped**. Frontend: reports feature jest
+**91 → 102** (dashboardSections 7 including parametrised cases, DashboardPageContent +4) plus
+reportsRegistry 2; `tsc`, eslint, prettier and i18n:check are clean.
+
+### Adversarial pass (self, no Agent tool)
+
+- **Found and fixed:** the dashboard read `effective_modules` (plan and partner rows) on every
+  request even with no section registered, which added queries to every merchant's landing screen
+  today. A test that fails first proves zero queries now.
+- Probed: a failing section that runs broken SQL (savepoint keeps the request alive); a section of a
+  disabled module or without the codename; cached tiles with fresh sections; a core URL
+  (`/reports/day-book`) against the generic route; CSV with a formula-leading cell and a negative
+  Decimal; staff reading JSON but refused the CSV; template registration trying to overwrite a core
+  body; a Hindi-only template; notification codes without a module prefix; a setting in `ledger.*`;
+  a re-imported importer spec.
+- Not built on purpose: the frontend wiring that makes a vertical's `register*` calls run (the first
+  vertical's frontend shell decides where its registrations are imported; no core-to-vertical
+  import is written ahead of it).
+
+### Questions for the architecture owner
+
+3. Where do verticals' frontend registrations (`registerDashboardSection`, `registerModuleReport`,
+   A6's `registerPartyPanel`) get imported from? A core file importing each vertical's
+   `register.ts` breaks the no-core-to-vertical direction; a build-time generated list, or
+   `src/modules/registrations.ts` as the one sanctioned exception, both work. This needs deciding
+   before library F01.
+4. Registered-report CSVs are synchronous with the 1,00,000-row cap. If a module report can pass
+   5,000 rows, the async path needs the registry's `csv` to be replayable by the export job
+   (key → spec lookup), which is additive.

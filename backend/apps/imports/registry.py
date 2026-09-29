@@ -90,6 +90,9 @@ class ImporterSpec:
     #: `totals(ctx) -> dict` after validation — figures the review step shows
     #: over the whole file (PTY-10 FR-7's opening totals, INV-09's categories).
     totals: Callable[[dict], dict] | None = None
+    #: R28 — the column `is_example` compares against the template rows. A
+    #: library copy has no `name`; its example row is known by its accession.
+    example_key: str = "name"
 
     @property
     def column_names(self) -> tuple[str, ...]:
@@ -101,9 +104,10 @@ class ImporterSpec:
 
     def is_example(self, row: Mapping[str, str]) -> bool:
         """FR-2 — an untouched template row is flagged, never silently created."""
-        name = (row.get("name") or "").strip().lower()
-        return bool(name) and any(
-            name == (example.get("name") or "").strip().lower() for example in self.template_rows
+        key = self.example_key
+        value = (row.get(key) or "").strip().lower()
+        return bool(value) and any(
+            value == (example.get(key) or "").strip().lower() for example in self.template_rows
         )
 
 
@@ -112,7 +116,14 @@ _LOADED = False
 
 
 def register(spec: ImporterSpec) -> ImporterSpec:
-    if spec.kind in _REGISTRY:
+    """Add an importer kind (R28). Idempotent by `kind`: the same spec, or an
+    equal one, is a no-op and returns the registered spec (a second `ready()`
+    or a re-imported mapper is harmless); a DIFFERENT spec under a used kind
+    still raises — two modules must never share one."""
+    existing = _REGISTRY.get(spec.kind)
+    if existing is not None:
+        if existing == spec:
+            return existing
         raise ImproperlyConfigured(f"Importer {spec.kind!r} registered twice")
     _REGISTRY[spec.kind] = spec
     return spec
@@ -126,6 +137,19 @@ def get(kind: str) -> ImporterSpec | None:
 def kinds() -> tuple[str, ...]:
     _ensure_loaded()
     return tuple(_REGISTRY)
+
+
+_BASELINE: dict[str, ImporterSpec] | None = None
+
+
+def _reset_for_tests() -> None:  # pragma: no cover - test helper
+    """Back to the start-up kinds (the MVP mappers plus every `ready()`)."""
+    global _BASELINE
+    _ensure_loaded()
+    if _BASELINE is None:
+        _BASELINE = dict(_REGISTRY)
+    _REGISTRY.clear()
+    _REGISTRY.update(_BASELINE)
 
 
 def _ensure_loaded() -> None:

@@ -22,6 +22,7 @@ api_v1 = [
     path("", include("apps.payments.urls")),
     path("", include("apps.expenses.urls")),
     path("reports/", include("apps.reports.urls")),
+    path("", include("apps.reports.urls_root")),  # ── A10 ── GET /reports
     path("", include("apps.notifications.urls")),
     path("", include("apps.imports.urls")),
     path("", include("apps.files.urls")),

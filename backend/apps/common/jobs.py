@@ -458,6 +458,47 @@ SCHEDULES: list[Schedule] = [
 ]
 
 
+# ── A10 ── `register_schedule` (ADR-042, contracts §1.9, FRD 00 PLT-X13) ─────
+#
+# The literal list above is core's own work. Engines and verticals add theirs
+# from `AppConfig.ready()` instead of editing it. A registered schedule is
+# appended to `SCHEDULES`, so `enqueue_scheduled`, `check_expected_runs` and
+# the double-run proof see it exactly as they see a core entry.
+#
+# One difference, on purpose: a core entry with no handler is skipped (it names
+# work that has not been built yet, Sprint 0's rule), but a REGISTERED one has
+# been built by the module that registered it, so a missing handler is a wiring
+# defect and `materialise_due_schedules` raises rather than never running it.
+
+_REGISTERED_SCHEDULES: set[str] = set()
+_SCHEDULES_BASELINE: tuple[list[Schedule], set[str]] | None = None
+
+
+def register_schedule(schedule: Schedule) -> None:
+    """Add a module's recurring job. Idempotent by `job_type` for an equal
+    schedule; a different schedule under a used job type (a core one
+    included) raises `ImproperlyConfigured` (EC-1)."""
+    existing = next((s for s in SCHEDULES if s.job_type == schedule.job_type), None)
+    if existing is not None:
+        if existing == schedule:
+            return
+        raise ImproperlyConfigured(
+            f"Schedule {schedule.job_type!r} is already registered with a different period"
+        )
+    SCHEDULES.append(schedule)
+    _REGISTERED_SCHEDULES.add(schedule.job_type)
+
+
+def _reset_for_tests() -> None:  # pragma: no cover - test helper
+    """Back to the start-up list (every `ready()` has run by the first call)."""
+    global _SCHEDULES_BASELINE
+    if _SCHEDULES_BASELINE is None:
+        _SCHEDULES_BASELINE = (list(SCHEDULES), set(_REGISTERED_SCHEDULES))
+    SCHEDULES[:] = _SCHEDULES_BASELINE[0]
+    _REGISTERED_SCHEDULES.clear()
+    _REGISTERED_SCHEDULES.update(_SCHEDULES_BASELINE[1])
+
+
 def materialise_due_schedules(now: dt.datetime | None = None) -> int:
     """Insert one job row per (schedule, period) that is due and not yet created.
 
@@ -465,11 +506,17 @@ def materialise_due_schedules(now: dt.datetime | None = None) -> int:
     every runner on every tick: the second caller's INSERT fails and is swallowed.
     That is the entire distributed-cron implementation.
     """
+    unwired = sorted(_REGISTERED_SCHEDULES - set(REGISTRY))
+    if unwired:
+        raise ImproperlyConfigured(
+            f"Registered schedules with no job_handler: {', '.join(unwired)} — "
+            f"import the module's tasks in its AppConfig.ready()"
+        )
     model = _job_model()
     created = 0
     for schedule in SCHEDULES:
         if schedule.job_type not in REGISTRY:
-            continue  # the owning app has not been built yet (Sprint 0)
+            continue  # a core entry whose owning work has not been built yet (Sprint 0)
         if not schedule.is_due(now):
             continue
         try:

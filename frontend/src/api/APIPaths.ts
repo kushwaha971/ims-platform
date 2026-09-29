@@ -165,6 +165,8 @@ export const API_PATHS = {
   /** EXP-03 — served by the expenses app for now (see its urls.py). */
   CASHBOOK: '/cashbook',
   REPORT_DASHBOARD: '/reports/dashboard',
+  /** A10 — the reports modules registered (`apps.reports.registry`). */
+  REPORTS: '/reports',
   REPORT_DAY_BOOK: '/reports/day-book',
   REPORT_SALES_REGISTER: '/reports/sales-register',
   /** RPT-04. */

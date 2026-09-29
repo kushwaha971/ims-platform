@@ -6,6 +6,7 @@ import type {
   ActivityItem,
   CountAmount,
   DashboardData,
+  DashboardSection,
   DashboardTiles,
   SourceRef,
 } from '../types/reports.types';
@@ -71,6 +72,14 @@ interface DashboardWire {
       readonly has_document: boolean;
       readonly has_upi: boolean;
     };
+    /** A10 — absent from a server older than the module registries. */
+    readonly sections?: readonly {
+      readonly key: string;
+      readonly module: string;
+      readonly order: number;
+      readonly data?: unknown;
+      readonly error?: 'unavailable';
+    }[];
   };
   readonly meta?: { readonly cached?: boolean };
 }
@@ -108,6 +117,16 @@ const toTiles = (wire: DashboardWire['data']['tiles']): DashboardTiles => ({
   ...(wire.low_stock
     ? { lowStock: { count: wire.low_stock.count, outCount: wire.low_stock.out_count } }
     : {}),
+});
+
+const toSection = (
+  wire: NonNullable<DashboardWire['data']['sections']>[number]
+): DashboardSection => ({
+  key: wire.key,
+  module: wire.module,
+  order: wire.order,
+  data: wire.data ?? null,
+  unavailable: wire.error === 'unavailable',
 });
 
 const toActivity = (row: DashboardWire['data']['recent_activity'][number]): ActivityItem => ({
@@ -163,5 +182,6 @@ export const getDashboard = async (
       hasDocument: data.first_use.has_document,
       hasUpi: data.first_use.has_upi,
     },
+    sections: (data.sections ?? []).map(toSection),
   };
 };

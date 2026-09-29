@@ -28,6 +28,7 @@ import {
   RecentActivityList,
   TopDebtorsCard,
 } from './DashboardLists';
+import { DashboardModuleSections } from './DashboardModuleSections';
 import { DashboardTiles } from './DashboardTiles';
 import { ReportStateBody } from './ReportStateBody';
 
@@ -173,6 +174,9 @@ export function DashboardPageContent(): React.JSX.Element {
                   {data.tiles.lowStock && <LowStockCard items={data.lowStockItems} t={t} />}
                 </UbStack>
               </UbGrid>
+
+              {/* A10 — the modules' sections, below the core tiles and lists. */}
+              <DashboardModuleSections sections={data.sections} onRetry={dash.refresh} t={t} />
             </UbStack>
           )}
         </ReportStateBody>
