@@ -384,3 +384,34 @@ export type {
   UbRankedParty,
   UbTrendPoint,
 } from './charts/chartTypes';
+
+// ── The public landing page (`/`) — motion and media ─────────────────────────
+/**
+ * Built for the landing page and kept general: a silent product loop that
+ * costs nothing until it is near the viewport (`UbVideo`), the device it sits
+ * in (`UbDeviceFrame`), a below-the-fold entrance that never hides content from
+ * a visitor without JavaScript (`UbReveal`), a rotating word that is decoration
+ * over a complete accessible sentence (`UbRotatingText`) and a pill tab row
+ * with a sliding indicator (`UbChipTabs`). The hooks under them are exported so
+ * a feature never writes a second IntersectionObserver or matchMedia listener.
+ * See docs/DESIGN-SYSTEM.md §4.
+ */
+export { UbVideo } from './UbVideo';
+export type { UbVideoLabels, UbVideoPoster, UbVideoProps, UbVideoSource } from './UbVideo';
+export { UbDeviceFrame } from './UbDeviceFrame';
+export type { UbDeviceFrameProps, UbDeviceFrameVariant } from './UbDeviceFrame';
+export { UbAmbientGlow } from './UbAmbientGlow';
+export { UbReveal } from './UbReveal';
+export type { UbRevealProps } from './UbReveal';
+export { UbRotatingText } from './UbRotatingText';
+export type { UbRotatingTextProps } from './UbRotatingText';
+export { UbChipTabs } from './UbChipTabs';
+export type { UbChipTab, UbChipTabsProps } from './UbChipTabs';
+export {
+  matchesNow,
+  REDUCED_MOTION_QUERY,
+  useInView,
+  useMediaQuery,
+  usePrefersReducedMotion,
+} from './motion';
+export type { UseInViewOptions } from './motion';

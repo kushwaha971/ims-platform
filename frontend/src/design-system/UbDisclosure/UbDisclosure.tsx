@@ -37,6 +37,12 @@ export interface UbDisclosureProps {
   readonly onOpenChange?: (open: boolean) => void;
   readonly children: ReactNode;
   readonly className?: string;
+  /**
+   * `md` (default) is the in-form disclosure. `lg` is a question on a public
+   * page — the landing page's FAQ — where the question is the content and a
+   * 12 px label would read as a footnote.
+   */
+  readonly size?: 'md' | 'lg';
 }
 
 function UbDisclosureBase({
@@ -47,7 +53,9 @@ function UbDisclosureBase({
   onOpenChange,
   children,
   className,
+  size = 'md',
 }: Readonly<UbDisclosureProps>) {
+  const large = size === 'lg';
   const id = useId();
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
   const isOpen = open ?? internalOpen;
@@ -68,12 +76,20 @@ function UbDisclosureBase({
         id={`${id}-trigger`}
         className={cn(
           'flex min-h-11 w-full items-center justify-between gap-3 rounded-card px-4 py-3',
+          large && 'min-h-14 px-5 py-4',
           'text-left transition-colors hover:bg-surface-hover',
           'focus-visible:shadow-focus focus-visible:outline-none'
         )}
       >
         <span className="flex min-w-0 flex-col">
-          <span className="ds-body-sm-medium text-text-primary">{label}</span>
+          <span
+            className={cn(
+              large ? 'ds-body-l-medium' : 'ds-body-sm-medium',
+              'text-text-primary'
+            )}
+          >
+            {label}
+          </span>
           {hint && <span className="ds-caption text-text-tertiary">{hint}</span>}
         </span>
         <ChevronDown
@@ -89,7 +105,10 @@ function UbDisclosureBase({
           id={`${id}-panel`}
           role="region"
           aria-labelledby={`${id}-trigger`}
-          className="flex flex-col gap-4 border-t border-border-hairline px-4 py-4"
+          className={cn(
+            'flex flex-col gap-4 border-t border-border-hairline px-4 py-4',
+            large && 'px-5 pb-5'
+          )}
         >
           {children}
         </div>

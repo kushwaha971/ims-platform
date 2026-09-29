@@ -118,6 +118,13 @@ the render props.
 | Picking an image file | `UbFileUpload` (a styled button that IS the label of a hidden input; `accept`, `maxBytes` and `onReject('too_large' \| 'wrong_type')` refuse before upload — the server re-checks magic bytes) |
 | Showing an uploaded image or its empty slot | `UbImagePreview` (fixed box, `object-contain`, `emptyLabel` when there is none; logo and signature) |
 | A hex colour | `UbColorInput` (native swatch + hex text box kept in step); the branding page wraps it with preset swatches and the contrast check in `ColourField` |
+| A silent product loop (the landing page) | `UbVideo` — poster first with the box sized by `aspect-ratio` (zero CLS), no `<source>` until within 200 px of the viewport, webm then mp4, `media` so only the visible device variant downloads, pauses offscreen and in a hidden tab, no autoplay under reduced motion, a pause control always (WCAG 2.2.2), the poster and a file link on failure. `priority` preloads the LCP poster (a `Link` header with `media`) |
+| A device around a recording | `UbDeviceFrame` `variant="browser"` (dots + URL pill) or `"phone"` (ink bezel, speaker in its own band); `tilt` leans it ≈ −2° in 3D and straightens on hover, fine pointers only |
+| A section that enters on scroll | `UbReveal` (`stagger` for its children). Hidden state only after hydration and only below the fold — never around a hero's text |
+| A word that rotates in a headline | `UbRotatingText` — `aria-hidden`, widest word reserves the width; the caller puts the full sentence in an `sr-only` node |
+| Pill tabs with a sliding indicator | `UbChipTabs` — automatic activation, arrows move selection AND focus. `UbTabs` stays the in-page underlined row |
+| Ambient light behind a hero | `UbAmbientGlow` — blurred `--landing-blob*` blobs, transform-only loops, clipped, paused offscreen, off under reduced motion |
+| One IntersectionObserver / media query | `useInView` (a shared observer per `rootMargin`), `useMediaQuery`, `usePrefersReducedMotion`, `matchesNow` — never a second listener in a feature |
 
 A dialog opened FROM another overlay (an item in a ⋯ sheet opening a share
 sheet, a drawer or a confirm) passes `returnFocusRef` — the control that opened

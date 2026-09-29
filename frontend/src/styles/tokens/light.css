@@ -142,4 +142,20 @@
 
   /* Never removed (§23.5). */
   --focus-ring: 0 0 0 2px hsl(var(--surface-card)), 0 0 0 4px hsl(var(--accent));
+
+  /* ── The public landing page (`/`) — DECORATIVE only, never text ─────────
+     The ambient blobs are the primary ramp, so a white-label build repaints
+     them; the third is a warm violet so the light is not one flat hue. In
+     light mode they are a whisper on white (12 %); dark mode richer (below).
+     The phone bezel is ink in both themes: a device is a device.
+     check-contrast.mjs lists them as decorative pairings. */
+  --landing-blob: var(--primary-300); /* #9D9AF0 */
+  --landing-blob-2: var(--primary-200); /* #C6C4F9 */
+  --landing-blob-3: 262 83% 78%; /* #C4A7F7 */
+  --landing-blob-alpha: 0.28;
+  --device-bezel: 250 10% 9%; /* #15141A */
+  --device-glow: rgba(74, 71, 214, 0.18);
+  /* Type on the closing band (primary-700 → primary-900), white in BOTH themes
+     — `--text-inverse` turns to ink in dark mode. Checked on every stop. */
+  --landing-band-text: 0 0% 100%; /* #FFFFFF */
 }

@@ -110,4 +110,12 @@
   --overlay-scrim: rgba(8, 10, 12, 0.72);
 
   --focus-ring: 0 0 0 2px hsl(var(--canvas)), 0 0 0 4px hsl(var(--accent));
+
+  /* The landing page's ambient light is richer on ink: the same ramp, more of it. */
+  --landing-blob: var(--primary-500); /* #4A47D6 */
+  --landing-blob-2: var(--primary-700); /* #2E2B93 */
+  --landing-blob-3: 262 60% 45%; /* #6B2EB8 */
+  --landing-blob-alpha: 0.42;
+  --device-bezel: 216 18% 18%; /* #262D38 — lifted so the phone reads on the canvas */
+  --device-glow: rgba(113, 109, 228, 0.28);
 }

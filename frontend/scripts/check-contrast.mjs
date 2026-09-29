@@ -243,6 +243,38 @@ const BRAND_DECORATIVE = [
 );
 
 /**
+ * The landing page (`/`). Its closing band is primary-700 → primary-900 in both
+ * themes with `--landing-band-text` on it, and its white "Start free" there
+ * carries primary-800 type. The blobs, the phone bezel and the device glow are
+ * decorative and listed with floor 1.0 so the table shows them and a text use
+ * of any of them would be a visible review question.
+ */
+const LANDING = [
+  ['landing-band-text', 'primary-700', 4.5, 'light'],
+  ['landing-band-text', 'primary-700', 4.5, 'dark'],
+  ['landing-band-text', 'primary-800', 4.5, 'light'],
+  ['landing-band-text', 'primary-900', 4.5, 'dark'],
+  ['primary-800', 'landing-band-text', 4.5, 'light'],
+  ['primary-800', 'landing-band-text', 4.5, 'dark'],
+  ['primary-800', 'primary-50', 4.5, 'light'],
+  // The rotating hero word is `--text-accent` at display size, already held
+  // to 4.5 on every surface above; the key line sits on the canvas.
+  ['text-accent', 'canvas', 4.5, 'light'],
+  ['text-accent', 'canvas', 4.5, 'dark'],
+];
+const LANDING_DECORATIVE = [
+  ['landing-blob', 'canvas', 1.0, 'light'],
+  ['landing-blob', 'canvas', 1.0, 'dark'],
+  ['landing-blob-2', 'canvas', 1.0, 'light'],
+  ['landing-blob-3', 'canvas', 1.0, 'dark'],
+  ['device-bezel', 'canvas', 1.0, 'light'],
+  ['device-bezel', 'canvas', 1.2, 'dark'],
+];
+[...LANDING, ...LANDING_DECORATIVE].forEach(([fg, bg, floor, theme]) =>
+  check(fg, bg, floor, theme, theme === 'light' ? lightRaw : darkRaw)
+);
+
+/**
  * Sprint 12 a11y sweep — text on the SELECTED tint. A selected row, card or
  * chip is `--accent-quiet` (an rgba wash) over the card, and its caption kept
  * the tertiary grey: 4.46:1 on #EDEDFB, which axe failed on /switch and on the

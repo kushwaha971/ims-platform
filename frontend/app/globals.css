@@ -511,3 +511,142 @@
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23adacb0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   }
 }
+
+/*
+ * Motion for the public pages (the landing page at `/`), in `components` so a
+ * utility on the same element still wins. Every duration is a TOKEN, and every
+ * token here is 0 under `prefers-reduced-motion` (primitives.css) — the looping
+ * ones are also switched off outright below, because a zero-length infinite
+ * animation is still an animation `document.getAnimations()` reports.
+ */
+@layer components {
+  /* UbReveal. The hidden state exists only once JavaScript has put
+     `data-reveal="pending"` on an element that is still below the fold, so the
+     server's HTML is always fully visible. */
+  .ub-reveal:not(.ub-reveal-stagger),
+  .ub-reveal-stagger > * {
+    transition:
+      opacity var(--dur-section) var(--ease-entrance),
+      transform var(--dur-section) var(--ease-entrance);
+  }
+
+  .ub-reveal:not(.ub-reveal-stagger)[data-reveal='pending'],
+  .ub-reveal-stagger[data-reveal='pending'] > * {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  .ub-reveal-stagger > :nth-child(2) { transition-delay: calc(var(--dur-stagger) * 1); }
+  .ub-reveal-stagger > :nth-child(3) { transition-delay: calc(var(--dur-stagger) * 2); }
+  .ub-reveal-stagger > :nth-child(4) { transition-delay: calc(var(--dur-stagger) * 3); }
+  .ub-reveal-stagger > :nth-child(5) { transition-delay: calc(var(--dur-stagger) * 4); }
+  .ub-reveal-stagger > :nth-child(6) { transition-delay: calc(var(--dur-stagger) * 5); }
+  .ub-reveal-stagger > :nth-child(7) { transition-delay: calc(var(--dur-stagger) * 6); }
+  .ub-reveal-stagger > :nth-child(n + 8) { transition-delay: calc(var(--dur-stagger) * 7); }
+
+  /* UbRotatingText — every word sits in the same grid cell, so the widest one
+     reserves the width and nothing beside it moves when the word changes. */
+  .ub-rotator {
+    display: inline-grid;
+    vertical-align: bottom;
+    overflow: clip;
+    overflow-clip-margin: 0.2em;
+  }
+
+  .ub-rotator > * {
+    grid-area: 1 / 1;
+    white-space: nowrap;
+    transition:
+      opacity var(--dur-rotate) var(--ease-entrance),
+      transform var(--dur-rotate) var(--ease-entrance);
+  }
+
+  .ub-rotator > [data-state='wait'] {
+    opacity: 0;
+    transform: translateY(0.45em);
+  }
+
+  .ub-rotator > [data-state='out'] {
+    opacity: 0;
+    transform: translateY(-0.45em);
+  }
+
+  /* The landing page's ambient light: blurred indigo blobs that drift on a
+     transform-only loop. The container clips them (`overflow: clip`), so they
+     can never widen the page. */
+  .ub-blob {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(72px);
+    background: hsl(var(--landing-blob) / var(--landing-blob-alpha));
+    will-change: transform;
+    animation: ub-blob-drift var(--ub-blob-period, 18s) linear infinite;
+  }
+
+  .ub-blob-b {
+    background: hsl(var(--landing-blob-2) / var(--landing-blob-alpha));
+    animation-direction: reverse;
+  }
+
+  .ub-blob-c {
+    background: hsl(var(--landing-blob-3) / var(--landing-blob-alpha));
+  }
+
+  [data-ambient='paused'] .ub-blob {
+    animation-play-state: paused;
+  }
+
+  @keyframes ub-blob-drift {
+    0% { transform: translate3d(0, 0, 0) scale(1); }
+    25% { transform: translate3d(6%, -4%, 0) scale(1.06); }
+    50% { transform: translate3d(-3%, 5%, 0) scale(0.96); }
+    75% { transform: translate3d(-6%, -2%, 0) scale(1.04); }
+    100% { transform: translate3d(0, 0, 0) scale(1); }
+  }
+
+  @keyframes ub-panel-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  .ub-panel-in {
+    animation: ub-panel-in var(--dur-panel) var(--ease-entrance) both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ub-blob,
+    .ub-panel-in {
+      animation: none;
+    }
+  }
+}
+
+/*
+ * `.ub-lift` — the public pages' primary buttons: a 1 px lift on hover and a
+ * 0.98 press. Outside any layer on purpose, so it composes with (rather than
+ * being replaced by) the button's own `transition-colors` utility. Durations
+ * are tokens, so reduced motion keeps the colour change and drops the motion.
+ */
+.ub-lift {
+  transition-property: color, background-color, border-color, box-shadow, transform;
+  transition-duration: var(--dur-fast);
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ub-lift:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px -12px var(--device-glow);
+  }
+}
+
+.ub-lift:active {
+  transform: scale(0.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ub-lift:hover,
+  .ub-lift:active {
+    transform: none;
+  }
+}

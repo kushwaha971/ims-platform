@@ -138,6 +138,14 @@
   --dur-base: 220ms;
   --dur-slow: 360ms;
   --dur-reveal: 640ms;
+  /* The public pages (`/`): a section's entrance, the step between staggered
+     children, the hero's rotating word, a tab panel's crossfade and a device
+     frame straightening on hover. */
+  --dur-section: 500ms;
+  --dur-stagger: 60ms;
+  --dur-rotate: 450ms;
+  --dur-panel: 250ms;
+  --dur-tilt: 600ms;
   --transition-control:
     background-color var(--dur-fast) var(--ease-standard),
     border-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
@@ -150,6 +158,11 @@
     --dur-base: 0ms;
     --dur-slow: 0ms;
     --dur-reveal: 0ms;
+    --dur-section: 0ms;
+    --dur-stagger: 0ms;
+    --dur-rotate: 0ms;
+    --dur-panel: 0ms;
+    --dur-tilt: 0ms;
   }
 }
 
