@@ -111,3 +111,61 @@ zone for its route folder (the parentheses in `(app)` need checking against mini
    `import/no-restricted-paths` zones (reasons in the design note). Same boundary, stronger check. If
    the rule name was meant literally, say so and a per-folder `no-restricted-imports` block can be
    added alongside.
+
+---
+
+## A9a — recurrence, periods, rounding primitives
+
+Status: **done, merged** (commit `A9a:` on main)
+
+### Design note (review step)
+
+Inputs: FRD 00 PLT-X09, contracts §1.8, ADR-055, R13, shared-engines research §1.1–1.3.
+
+- `apps/common/recurrence.py` — `Recurrence` (`frozen=True, kw_only=True`), `occurrences`,
+  `next_occurrence`, `period_after`, `validate_recurrence`, `weekday_mask`/`mask_weekdays`. Every
+  occurrence is computed from the anchor by index (no stepping from the previous date, so no drift).
+  Semantics decided where the FRD is silent, all documented in the module docstring:
+  occurrences are never before the anchor (a rule "on the 5th" anchored on the 12th starts next
+  month); `count` counts from the anchor, not from the read window; `until` is inclusive; `count`
+  and `until` also bound `explicit_dates`; `period_after` uses the rule without `count`/`until` (the
+  last month of a 3-month plan is still a month) and raises for `once`/last explicit date.
+  `validate_recurrence` also refuses `by_weekday` on a non-weekly rule and `by_month_day` on a
+  non-monthly/yearly one (a rule meaning something other than what was chosen).
+- `apps/common/periods.py` — `Period` `[start, end)` (+ `days`, `last_day`), `period_label` with
+  the five styles in `en` and `hi`. Hindi months are CLDR `hi-IN` abbreviations without the "॰"
+  mark (matches the FRD's "अक्टू 2026"); quarter "तिमाही 3, वित्त वर्ष 2026-27", fy "वित्त वर्ष …",
+  following the existing catalogue's words. Unknown language falls back to English; unknown style
+  raises.
+- `apps/common/money.py` — `round_amount`, `split_total` (+ `ROUNDING_RULES`). `split_total` refuses
+  a negative total, a sub-paisa total, no parts, negative/all-zero weights and a negative last share.
+- `RecurrenceFields` lives in **`apps/common/db/recurrence.py`** (FRD 00 X09 §4), not
+  `common/models.py` as the plan's Owns column guessed; `common/models.py` is untouched. It carries
+  the six CHECKs with `%(app_label)s_%(class)s_` names, `.recurrence` and `.set_recurrence()`, and a
+  guard test that fails for any installed model whose child `Meta.constraints` replaced them.
+- **Not built, deliberately:** FRD 00 X09 §7's frontend `src/utils/recurrence.ts`
+  (`describeRecurrence`). It is not in A9a's plan row, it has no caller until the first engine UI
+  (Wave B), and it needs catalogue copy in both languages. Recorded for DUE-01/ATT-01's frontend.
+
+### Tests
+
+`apps/common/tests/test_recurrence.py` 28 (worked examples, BR-1…6, EC-1…5, validation, R13, three
+seeded fuzz loops against a direct-from-anchor oracle, purity/no-clock), `test_periods.py` 15,
+`test_money.py` +17 (worked examples, edges, 5,000-case exact-sum fuzz), `test_recurrence_fields.py`
+14 (each CHECK on a throwaway table in an isolated registry, round trip, names, the lost-constraints
+guard). `apps/common` + `tests/architecture`: 393 passed, 8 skipped before the oracle test was added.
+
+### Adversarial pass (self, no Agent tool)
+
+Added a fourth fuzz loop with a genuinely independent oracle — a day-by-day membership predicate
+over every calendar day — for all four frequencies with count/until and windows before, at and long
+after the anchor (1,500 rules). It agreed. Probed by hand: leap-year yearly on 29 Feb and on
+`by_month_day=-1`, fortnightly anchored on a Sunday, monthly `by_month_day` before the anchor day,
+`ten_up` splits that go negative (refused), a zero-weight last share (refused, honestly), `hi-IN` tags.
+No defects found. Dates are plain `date`s throughout, so IST's lack of DST is not a variable here.
+
+### Questions for the architecture owner
+
+2. `period_label` has no tenant argument (contracts §1.8), so quarter and fy labels assume an April
+   financial year. Every tenant has `fy_start_month = 4` today; if a tenant ever may change it, the
+   signature needs an optional `fy_start_month` (additive, a v1.1 amendment).

@@ -8,7 +8,7 @@ always explicit at the quantise call.
 
 from __future__ import annotations
 
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import ROUND_CEILING, ROUND_HALF_UP, Decimal
 from typing import Iterable, Sequence
 
 TWO = Decimal("0.01")
@@ -87,3 +87,69 @@ def sum_money(values: Iterable[object]) -> Decimal:
     for value in values:
         total += D(value)
     return q2(total)
+
+
+# ── A9a ── rounding rules and exact splits (ADR-055, contracts §1.8) ──────────
+
+#: The rules a module may name. `paise` and `rupee` are half-up (ADR-010);
+#: `rupee_up` and `ten_up` round up to the next rupee / ten rupees unless the
+#: value is already there (FRD 00 PLT-X09 BR-7).
+ROUNDING_RULES = ("paise", "rupee", "rupee_up", "ten_up")
+TEN = Decimal("10")
+
+
+def round_amount(value: object, rule: str) -> Decimal:
+    """`value` rounded by `rule`, always returned at 2 dp."""
+    amount = D(value)
+    if rule == "paise":
+        return q2(amount)
+    if rule == "rupee":
+        return q2(half_up(amount, ONE))
+    if rule == "rupee_up":
+        return q2(amount.to_integral_value(rounding=ROUND_CEILING))
+    if rule == "ten_up":
+        return q2((amount / TEN).to_integral_value(rounding=ROUND_CEILING) * TEN)
+    raise ValueError(f"unknown rounding rule {rule!r}; one of {', '.join(ROUNDING_RULES)}")
+
+
+def split_total(total: object, parts: int | Sequence[object], *, rule: str) -> list[Decimal]:
+    """Split `total` into `parts` equal shares, or shares weighted by `parts`.
+
+    Every share but the last is `round_amount(total × w / Σw, rule)`; the last
+    is `total − Σ others`, so the shares add back to the total EXACTLY, always
+    (BR-8). That is the whole point: ₹10,000 in three is 3,333 + 3,333 + 3,334,
+    never 3,333.33 × 3 = 9,999.99 and a paisa nobody owes.
+
+    Refused with `ValueError` rather than "fixed": a negative total, a total
+    finer than a paisa, no parts, a negative weight or all-zero weights, an
+    unknown rule, and a last share that would be negative (`ten_up` over too
+    many parts). A zero total is all zeros (EC-3).
+    """
+    amount = D(total)
+    if amount != q2(amount):
+        raise ValueError(f"total {amount} is finer than a paisa")
+    if amount < 0:
+        raise ValueError("a total to split cannot be negative")
+    if rule not in ROUNDING_RULES:
+        raise ValueError(f"unknown rounding rule {rule!r}; one of {', '.join(ROUNDING_RULES)}")
+    if isinstance(parts, int):
+        if parts < 1:
+            raise ValueError("split into at least one part")
+        weights = [ONE] * parts
+    else:
+        weights = [D(w) for w in parts]
+        if not weights:
+            raise ValueError("split into at least one part")
+        if any(w < 0 for w in weights):
+            raise ValueError("a weight cannot be negative")
+    weight_total = sum(weights, Decimal("0"))
+    if weight_total == 0:
+        raise ValueError("the weights add up to zero")
+    if amount == 0:
+        return [ZERO for _ in weights]
+
+    shares = [round_amount(amount * w / weight_total, rule) for w in weights[:-1]]
+    last = q2(amount - sum(shares, Decimal("0")))
+    if last < 0:
+        raise ValueError(f"rounding by {rule!r} leaves the last part negative ({last})")
+    return [*shares, last]
