@@ -1573,3 +1573,84 @@ rest is the three new components. It was re-baselined with a dated note in
   and the narrated demo's captions say it. Re-recording against a neutrally named demo business
   is an owner decision (it needs the recording pipeline and new narration).
 * Part 43 in the Project should register this CR. The coordinator owns that sync.
+
+## CR-2026-09-29-PLATFORM-C — search: metadata, crawl rules, structured data, cache headers
+
+**State:** `built`. Part of Phase 1 (the landing page). Owner review: the title and description
+wording, and the cache-policy choice below.
+**Target:** `app/page.tsx`, `app/robots.ts`, `app/sitemap.ts`, the root and group layouts,
+`features/landing/config/{seo,faq}.ts`, `utils/landingJsonLd.ts`, `src/utils/seo.ts`,
+`UbJsonLd`, `UbDisclosure`, `next.config.js`, `nginx/conf.d/app.conf`; Part 19 §19.9.1
+(Lighthouse SEO ≥ 90).
+
+**Owner direction.** Make the site SEO-friendly, positioned as the platform, with no jargon and
+no claims about planned modules, and never let a customer's document be indexed.
+
+**What changed.**
+
+* **Metadata for `/`** (Next Metadata API). Title (57 characters) and description (155) from
+  `features/landing/config/seo.ts`, platform-positioned and naming only live capabilities. An
+  absolute canonical `https://yourkhata.com/` from one `SITE_URL` (`NEXT_PUBLIC_SITE_URL`,
+  default `https://yourkhata.com`, a build arg in the Dockerfile and compose); `metadataBase` on
+  the root layout; Open Graph and a `summary_large_image` Twitter card; `robots: index, follow,
+  max-image-preview:large`. The root layout's inherited description lost "Your shop's khata".
+* **The preview card is a static PNG, not `app/opengraph-image.tsx`.** Two findings, both
+  against Next 16.3: a file-convention OG image at the app root is merged into the ROOT
+  segment's metadata and inherited by every route that does not override it, including
+  `/d/<token>`, which must never show the product (BRAND-A); and `next/og` reads TTF/OTF/WOFF,
+  while every brand face here is WOFF2. So `public/brand/yourkhata-og.png` (1200 × 630) is
+  rendered by `scripts/render-brand.mjs --og` from the K-c lockup and the hero headline (read
+  from the catalogue), on the closing band's indigo, and referenced from `/`'s metadata only.
+  No dependency: the script drives the Playwright Chromium the e2e harness already has.
+* **Crawling.** `app/robots.ts` allows `/`, `/legal/`, `/login`, `/signup` and disallows every
+  prefix in `GUARDED_ROUTE_PREFIXES` (so a new app section is disallowed automatically), the
+  password flows, `/d/` (with the slash), `/api/` and `/design-system`. `app/sitemap.ts` lists
+  the five public pages. `noindex, nofollow, noarchive` meta on the `(app)` and `(admin)`
+  layouts (now server components; their client bodies moved to `AppGroupShell` and
+  `AdminShell`) and on onboarding, accept-invite and the three password pages, as defence in
+  depth. `/d/<token>` already had the meta and `X-Robots-Tag`; kept.
+* **Structured data.** One server-rendered `<script type="application/ld+json">` via the new
+  `UbJsonLd` (which escapes `<`, `>`, `&`, U+2028/9): Organization, WebSite,
+  SoftwareApplication (BusinessApplication, Web) and FAQPage. `offers` is the free plan at
+  0 INR only while `PRICING.status === 'proposed'`; approving pricing emits the paid plans. The
+  FAQPage is built from the same ids (`config/faq.ts`, moved out of the client component so
+  the server can read the array) and the same English strings the page renders. No rating,
+  review or count, and a test walks the graph for them.
+* **On-page.** Two defects found in the server HTML with curl:
+  1. **The FAQ answers were not in the HTML at all.** `UbDisclosure` unmounts a closed panel (the
+     right rule for form fields), so crawlers saw ten questions and no answers. It now takes
+     `keepMounted`: the FAQ's panels render with `hidden`, upgraded after hydration to
+     `hidden="until-found"` so find-in-page opens them. Forms keep the unmount.
+     A second, quieter defect was waiting inside the fix: the panel's `flex` class beats the
+     `[hidden]` rule, so a naive `hidden` would have left every answer on screen.
+  2. **A skipped heading level.** The desktop use-case explorer put h4s straight under the
+     section's h2, because its job titles are tabs, not headings. They are h3 there now.
+  Otherwise the page already had one h1, header/nav/main/footer, labelled media (`role="img"`
+  plus `aria-label` around decorative videos) and descriptive links, all now asserted.
+* **Cache headers.** `public, max-age=86400, stale-while-revalidate=604800` on
+  `/media/landing/*` and `/brand/*`, identically in `next.config.js` and nginx (a jest test
+  compares the two). Not `immutable`: the names are unhashed and are re-cut in place. Next was
+  serving them `max-age=0`. **And nginx never served the landing media in production at all**:
+  `/media/` is Django's `internal` X-Accel location, so every loop and poster would have been a
+  404 there. The new `location /media/landing/` is the longer prefix and proxies to the
+  frontend.
+* **Fonts** were already `next/font/local` with `display: swap` and preload on the faces the
+  first paint uses; unchanged.
+
+**i18n and SEO — the trade-off, recorded.** The locale is a cookie, so there is one URL per page
+and crawlers, which send no cookie, index the English page only. There is no `hreflang`, because
+there is no second URL to point at, and no `/hi` route was invented. Per-locale URLs + hreflang
+is in `docs/BACKLOG.md`, together with a finding from the same check: with the Hindi cookie the
+server sends `lang="hi"` over English HTML, because the Hindi catalogues arrive after hydration.
+
+**Measured.** Lighthouse 13.5 (run from a scratch directory through `npx`, no project
+dependency), mobile, same machine, before → after: SEO **92 → 100** (the one failing audit was the
+relative canonical), accessibility 100 → 100, best practices 96 → 96. Performance read 48 → 51,
+on a box at load average 13 from a parallel video render, so it is not a real figure; LCP and CLS
+were also measured with Playwright at 390 and 1440 px, cold and throttled, and are unchanged
+within noise (CLS 0.000–0.005 both). The server HTML grew 3.6 KB gzip (the FAQ answers and the
+JSON-LD). `e2e/seo.mjs`: 96/96 against the live stack.
+
+**Not done, recorded in `docs/BACKLOG.md`:** versioned media URLs (for `immutable`), staging
+noindex, Lighthouse in CI and a performance score on a quiet machine, titles for `/login` and `/signup`, the
+`/d/` disallow-vs-noindex residue, and a stale `NEXT_PUBLIC_APP_NAME` in root `.env` files.
