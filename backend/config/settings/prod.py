@@ -38,3 +38,15 @@ assert (
 assert "*" not in CORS_ALLOWED_ORIGINS, "UB_CORS_ALLOWED_ORIGINS must not be '*' in production."
 assert not UB_E2E_MODE, "UB_E2E_MODE must be 0 in production."  # noqa: F405
 assert not UB_ALLOW_PARTNER_HEADER, "UB_ALLOW_PARTNER_HEADER must be 0 in production."  # noqa: F405
+
+# A1 (PLT-X11 BR-3): an unreleased module must never reach a merchant. The flag
+# that shows them is for development, CI and the e2e stack; a production (or
+# staging) process that boots with it outside those environments refuses to
+# start. Raised rather than asserted so `python -O` cannot strip it.
+if UB_UNRELEASED_MODULES and ENV_NAME not in ("ci", "e2e"):  # noqa: F405
+    from django.core.exceptions import ImproperlyConfigured
+
+    raise ImproperlyConfigured(
+        "UB_UNRELEASED_MODULES must be 0 outside development, CI and e2e "
+        f"(UB_ENV_NAME={ENV_NAME!r})."
+    )

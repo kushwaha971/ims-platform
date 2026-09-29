@@ -71,5 +71,7 @@ KNOWN_UB_VARIABLES: frozenset[str] = frozenset(
         "UB_ALLOW_PARTNER_HEADER",
         "UB_ALLOW_CONSOLE_SMS",
         "UB_ROLE",
+        # A1 (PLT-X11) — show modules that are built but not yet released.
+        "UB_UNRELEASED_MODULES",
     }
 )

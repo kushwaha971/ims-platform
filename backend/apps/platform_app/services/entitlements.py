@@ -101,9 +101,47 @@ def effective_modules(tenant: Any) -> frozenset[str]:
     BR-6: "Module gating is by `enabled_modules` (owner choice) ∩ effective
     modules; both must be true." `platform` is never gated, because it is the
     module through which a tenant switches the others on.
+
+    R11 (A1): an unreleased module is removed HERE, so `/auth/me`,
+    `plan_limits.modules`, `ModuleEnabled` and `EngineEnabled` — every reader of
+    this one answer — agree that it does not exist. It is deliberately not
+    removed in `for_tenant`: see `hidden_modules`.
     """
     enabled = set(tenant.enabled_modules or []) | {"platform"}
-    return frozenset(for_tenant(tenant).modules & enabled) | {"platform"}
+    return frozenset(for_tenant(tenant).modules & enabled - hidden_modules()) | {"platform"}
+
+
+# ── A1 ── the release gate (PLT-X11) ─────────────────────────────────────────
+
+
+def hidden_modules() -> frozenset[str]:
+    """Module codes no response may name and no API may enable, right now.
+
+    `UNRELEASED_MODULES`, unless `settings.UB_UNRELEASED_MODULES` is on. Read at
+    CALL time — a value captured at import would outlive `override_settings`
+    in tests and, worse, look right in the process that set it.
+
+    The filter is applied by the readers (`effective_modules`, `modules_view`,
+    `permissions_for`), never to the stored data or to `for_tenant`: the nightly
+    `reconcile_entitlements` switches off whatever the ENTITLEMENT lacks, so
+    filtering there would strip gym from a developer's `enabled_modules` the
+    first night the flag was off, and PLT-X11 EC-1 says the data stays and the
+    flag brings it back.
+    """
+    from django.conf import settings
+
+    from apps.platform_app.constants import UNRELEASED_MODULES
+
+    if getattr(settings, "UB_UNRELEASED_MODULES", False):
+        return frozenset()
+    return UNRELEASED_MODULES
+
+
+def released_modules() -> frozenset[str]:
+    """Every `ModuleCode` value a merchant may see today (PLT-X11 §6)."""
+    from apps.common.constants import ModuleCode
+
+    return frozenset(m.value for m in ModuleCode) - hidden_modules()
 
 
 # ── max_users — the one limit with an enforcement hook this sprint ───────────

@@ -218,6 +218,18 @@ class TenantReadSerializer(serializers.ModelSerializer):
         )
         read_only_fields = fields
 
+    def to_representation(self, instance: Any) -> dict:
+        """A1 (PLT-X11 BR-1): the stored switches are kept (EC-1), but an
+        unreleased module is named in no response — this serializer is what
+        `GET`/`PATCH /tenants/current`, tenant creation and the onboarding
+        resume all return."""
+        from apps.platform_app.services.entitlements import hidden_modules
+
+        data = super().to_representation(instance)
+        hidden = hidden_modules()
+        data["enabled_modules"] = [m for m in data.get("enabled_modules") or [] if m not in hidden]
+        return data
+
 
 def mask_account_number(number: str | None) -> str | None:
     """`••••1234` — PLT-07 §5 and §16: the last four digits and nothing else."""

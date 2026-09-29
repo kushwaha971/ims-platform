@@ -139,10 +139,13 @@ def modules_view(tenant: Any) -> dict:
     your plan", never offered.
     """
     from apps.common.constants import ModuleCode
-    from apps.platform_app.services.entitlements import for_tenant
+    from apps.platform_app.services.entitlements import for_tenant, hidden_modules
 
-    available = set(for_tenant(tenant).modules)
-    universe = [m.value for m in ModuleCode if m.value not in ("help",)]
+    # A1 (PLT-X11 BR-1): an unreleased module is neither available nor locked —
+    # a locked "Gym" row is still an unbuilt feature on screen (vision §4).
+    hidden = hidden_modules()
+    available = set(for_tenant(tenant).modules) - hidden
+    universe = [m.value for m in ModuleCode if m.value not in ("help",) and m.value not in hidden]
     return {
         "enabled": sorted(set(tenant.enabled_modules or []) & available | {"platform"}),
         "available": [m for m in universe if m in available],
@@ -398,6 +401,13 @@ def update_enabled_modules(*, tenant: Any, modules: Any, ctx: Ctx) -> Any:
             )
 
     before = sorted(set(tenant.enabled_modules or []))
+    # A1 (PLT-X11 EC-1): a hidden module the tenant row already carries (a dev
+    # database from a flagged run) is carried through untouched. The client
+    # cannot send what it was never shown, so without this every ordinary
+    # switch flip would silently switch that module off for good.
+    from apps.platform_app.services.entitlements import hidden_modules
+
+    wanted |= set(before) & hidden_modules()
     turning_off = sorted(set(before) - wanted)
     for module in turning_off:
         count = blocking_rows_for_module_off(tenant, module)

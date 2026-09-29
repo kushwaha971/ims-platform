@@ -6,7 +6,16 @@
 export const LOCALES = ['en', 'hi'] as const;
 export type Locale = (typeof LOCALES)[number];
 
-/** Canon §0.3 module map. A module the tenant has not enabled does not exist. */
+/**
+ * The server's module codes, exactly: `ModuleCode` in
+ * `backend/apps/common/constants.py`, in the same order. `moduleCodes.test.ts`
+ * reads that file and fails when the two lists differ (A1, PLT-X11 §7).
+ *
+ * `lending`, `library`, `gym` and `hospitality` are listed although no
+ * merchant can have them yet: the server hides every unreleased module from
+ * every response (`UNRELEASED_MODULES`), so the client needs no gate of its
+ * own, and a type that lacked them would need editing on each release day.
+ */
 export const MODULE_CODES = [
   'platform',
   'parties',
@@ -20,8 +29,12 @@ export const MODULE_CODES = [
   'notifications',
   'import_export',
   'help',
-  'loans',
-  'accounting',
+  'team',
+  // ── A1 ── platform verticals, unreleased until each module's release CR
+  'lending',
+  'library',
+  'gym',
+  'hospitality',
 ] as const;
 export type ModuleCode = (typeof MODULE_CODES)[number];
 

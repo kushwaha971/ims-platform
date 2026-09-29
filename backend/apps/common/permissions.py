@@ -132,12 +132,15 @@ def ModuleEnabled(module: str) -> type[BasePermission]:
         def has_permission(self, request: Any, view: Any) -> bool:
             if _method_has_no_handler(request, view):
                 return True  # 405 is the truthful answer; see _method_has_no_handler
-            from apps.platform_app.services.entitlements import effective_modules
+            from apps.platform_app.services.entitlements import effective_modules, hidden_modules
 
             tenant = get_effective_tenant(request)
             if tenant is None:
                 return False
-            if module not in effective_modules(tenant):
+            # A1 (PLT-X11 BR-2): an unreleased module is refused before the
+            # tenant's data is consulted, so the gate does not depend on how
+            # `effective_modules` evolves.
+            if module in hidden_modules() or module not in effective_modules(tenant):
                 raise ModuleDisabled(self.message, details={"module": module})
             return True
 

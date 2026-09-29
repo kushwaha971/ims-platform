@@ -139,6 +139,12 @@ def permissions_for(membership: Any) -> frozenset[str]:
     base |= set(override.get("allow", []))
     base -= set(override.get("deny", []))
     enabled = set(membership.tenant.enabled_modules or [])
+    # A1 (PLT-X11 §10): a module's codenames land with its first commit; while
+    # the module is unreleased nobody holds them. Deferred import (rule D1), and
+    # no database read — this runs on every permission check.
+    from apps.platform_app.services.entitlements import hidden_modules
+
+    enabled -= hidden_modules()
     return frozenset(
         p
         for p in base

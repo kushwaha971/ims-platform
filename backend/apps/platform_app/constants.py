@@ -80,3 +80,17 @@ class AuthTokenPurpose(models.TextChoices):
 
     PASSWORD_RESET = "password_reset", _("Password reset")
     EMAIL_VERIFY = "email_verify", _("Email verification")
+
+
+# ── A1 ── The release gate (ADR-041, contracts §1.1, FRD 00 PLT-X11) ─────────
+#: Module codes that exist in `ModuleCode` but are not yet released to
+#: merchants. A module code lands with its app's first migration, long before
+#: the module is built; while it is listed here no server response names it,
+#: no API accepts it and `ModuleEnabled` refuses it — unless the environment
+#: sets `UB_UNRELEASED_MODULES=1` (development, CI and the e2e stack only; the
+#: production settings refuse the flag at start-up).
+#:
+#: A module leaves this set only through its release CR, in the same commit as
+#: its plan/partner data migration and its `seed_plans.MVP_MODULES` line
+#: (PLT-X11 BR-4), so a fresh database and an old one converge.
+UNRELEASED_MODULES: frozenset[str] = frozenset({"lending", "library", "gym", "hospitality"})

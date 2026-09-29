@@ -26,6 +26,13 @@ class ModuleCode(models.TextChoices):
     IMPORT_EXPORT = "import_export", _("Import / export")
     HELP = "help", _("Help")
     TEAM = "team", _("Team")
+    # ── A1 ── Platform verticals (ADR-041, contracts §1.1). Each is listed in
+    # `apps.platform_app.constants.UNRELEASED_MODULES` until its release CR, so
+    # no merchant sees, enables or reaches one before it is built (vision §4).
+    LENDING = "lending", _("Lending & collections")
+    LIBRARY = "library", _("Library")
+    GYM = "gym", _("Gym & fitness")
+    HOSPITALITY = "hospitality", _("Hotel & stays")
 
 
 class RoleCode(models.TextChoices):

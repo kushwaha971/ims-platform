@@ -216,3 +216,44 @@ def test_only_the_local_settings_module_names_the_e2e_lever() -> None:
         if "UB_E2E_RELAX_THROTTLES" in p.read_text(encoding="utf-8")
     }
     assert names == {"local"}
+
+
+# ── A1: UB_UNRELEASED_MODULES is refused in production (PLT-X11 BR-3) ────────
+
+
+def _boot(module: str, extra: dict[str, str]) -> subprocess.CompletedProcess:
+    env = {k: v for k, v in os.environ.items() if k != "UB_UNRELEASED_MODULES"}
+    env.update(_PROD_LIKE_ENV)
+    env.update(extra)
+    env["DJANGO_SETTINGS_MODULE"] = module
+    return subprocess.run(
+        [sys.executable, "-c", f"import importlib; importlib.import_module({module!r})"],
+        cwd=SETTINGS_DIR.parents[1],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+
+
+@pytest.mark.parametrize("module", ["config.settings.prod", "config.settings.staging"])
+def test_production_refuses_to_boot_with_unreleased_modules_shown(module: str) -> None:
+    """T-PLT-X11-3: a production process started with the development flag would
+    show every merchant a module that is not built. It must fail to start."""
+    refused = _boot(module, {"UB_UNRELEASED_MODULES": "1", "UB_ENV_NAME": "production"})
+    assert refused.returncode != 0
+    assert "UB_UNRELEASED_MODULES" in refused.stderr
+    assert _boot(module, {"UB_UNRELEASED_MODULES": "0"}).returncode == 0
+
+
+@pytest.mark.parametrize("env_name", ["ci", "e2e"])
+def test_the_ci_and_e2e_environments_may_show_unreleased_modules(env_name: str) -> None:
+    """The positive control: the e2e stack runs with production posture and the
+    flag on, or no module could be tested end to end before release."""
+    booted = _boot("config.settings.prod", {"UB_UNRELEASED_MODULES": "1", "UB_ENV_NAME": env_name})
+    assert booted.returncode == 0, booted.stderr
+
+
+def test_the_unreleased_flag_defaults_off() -> None:
+    """The suite itself runs without it, so every other test sees what a merchant sees."""
+    assert settings.UB_UNRELEASED_MODULES is False

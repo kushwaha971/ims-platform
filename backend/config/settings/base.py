@@ -361,6 +361,11 @@ UB_SUPER_ADMIN_MOBILES = env.list("UB_SUPER_ADMIN_MOBILES", [])
 UB_FEATURE_FLAGS = env.json("UB_FEATURE_FLAGS", "{}")
 UB_E2E_MODE = env.bool("UB_E2E_MODE", False)
 UB_ALLOW_PARTNER_HEADER = env.bool("UB_ALLOW_PARTNER_HEADER", False)
+# A1 (ADR-041, PLT-X11): show modules that are built but not yet released. For
+# development, CI and the e2e stack only — `prod.py` refuses it at start-up
+# outside the `ci` and `e2e` environments. Read at call time by
+# `apps.platform_app.services.entitlements.hidden_modules`.
+UB_UNRELEASED_MODULES = env.bool("UB_UNRELEASED_MODULES", False)
 # PLT-01 EC-6: `ConsoleSmsBackend` with DEBUG=False is a deployment defect
 # unless the operator says otherwise (the single-user local deployment).
 UB_ALLOW_CONSOLE_SMS = env.bool("UB_ALLOW_CONSOLE_SMS", False)
