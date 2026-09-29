@@ -6,11 +6,13 @@ table: they ask the target registered for a `document_type` to list, lock,
 apply and un-apply, and every money rule about a payment stays in one place.
 
 ── Registering a target ──────────────────────────────────────────────────────
-Implement `AllocationTarget` and call `register_target(...)` from the owning
-side's start-up — `apps/payments/apps.py` registers the sales target, and
-PUR-02 adds `targets/purchases.py` and one line beside it. Part 20 §20.1.4
-lets `payments` import both `sales` and `purchases`, so the adapters live
-here and neither document app imports payments at module level.
+Implement `AllocationTarget` in the app that OWNS the documents and call
+`register_target(...)` from that app's `AppConfig.ready()`, importing this
+registry there (a deferred import, rule D5's pattern): sales registers
+`sales/services/payment_target.py`, purchases `purchases/services/payment_target.py`
+(A14, ADR-056). This package holds the protocol and the registry only; core
+`payments` imports no document app, and every new target (dues, library,
+lending, deposits) is registered the same way by its owner.
 
 ── The contract every target keeps ──────────────────────────────────────────
 * `lock()` takes `SELECT … FOR UPDATE` in `(document_date, number, id)` order —

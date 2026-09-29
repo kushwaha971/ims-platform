@@ -1,14 +1,14 @@
 """The seam PUR-02 plugs into — supplier payments are recorded by the payments app.
 
 PUR-02 (supplier payment) is `payments.services.record.record_payment` with
-`direction='out'` — "no second implementation" (Part 32 §32.12.3). The
-import matrix points one way: `payments` may import `purchases` at module
-level, never the reverse (Part 20 §20.1.4). So this module offers the payments
-app its doors and owns nothing about a payment itself:
+`direction='out'` — "no second implementation" (Part 32 §32.12.3). Neither
+app imports the other at module level (Part 20 §20.1.4; since A14, ADR-056,
+`payments` no longer imports `purchases` either). So this module offers the
+payments app its doors and owns nothing about a payment itself:
 
 1. `apply_payment(document=…, amount=±x, today=…)` — the ONE function that moves
-   `amount_paid` / `amount_due` / `status` on a bill. The payments app's
-   purchase target (`payments/services/targets/purchases.py`) calls it with a
+   `amount_paid` / `amount_due` / `status` on a bill. The purchase target
+   (`purchases/services/payment_target.py`) calls it with a
    positive amount for each allocation (after locking the bills with
    `lock_payable_bills`, in `(document_date, number, id)` order — Part 32
    §32.11.4); a payment VOID calls it with the negative. The status rule lives
@@ -18,10 +18,10 @@ app its doors and owns nothing about a payment itself:
 
 2. `register_void_listener(fn)` — PUR-04 FR-2d / PUR-02 BR-4: voiding a bill
    deletes its `payments_allocation` rows so the payments become unallocated
-   advances on the supplier's khata. The payments app registers
-   `fn(ctx, document) -> [{payment_id, number, amount}]` from its
-   `AppConfig.ready()`; `void_bill` calls every listener inside its own
-   transaction.
+   advances on the supplier's khata. `PurchasesConfig.ready()` registers
+   payments' `release_purchase_bill`, `fn(ctx, document) -> [{payment_id,
+   number, amount}]` (a deferred import, A14); `void_bill` calls every
+   listener inside its own transaction.
 
 3. `validate_payment` / `record_bill_payment` — PUR-01 FR-6h "Paid now": the
    money handed over at the counter when the bill is recorded, as a real

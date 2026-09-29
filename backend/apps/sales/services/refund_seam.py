@@ -14,6 +14,9 @@ amount back to the note as open credit; after that the note voids normally.
 
 Sales may not import payments at module level (Part 20 §20.1.4, rule D5), so
 the call into it is a deferred import — the same pattern as `payment_seam.py`.
+And payments may not import sales at all (A14, ADR-056), so `void_payment`
+reaches `release_refund` through `on_payment_voided` below, which
+`SalesConfig.ready()` registers on `payments.services.void_seam`.
 """
 
 from __future__ import annotations
@@ -153,3 +156,33 @@ def release_refund(*, ctx: Ctx, credit_note_id: Any, payment_id: Any, amount: De
         metadata={"payment_id": str(payment_id), "amount": str(amount)},
     )
     return note
+
+
+def on_payment_voided(*, ctx: Ctx, payment: Any) -> list[dict]:
+    """The payment void listener (A14): a refund voucher's void re-opens its note's credit.
+
+    Called by `void_payment` inside its transaction (`payments.services.void_seam`). Returns the
+    note's summary row for the void's response, or `[]` for any other payment — exactly the row
+    `void_payment` used to build itself before payments stopped importing sales.
+    """
+    credit_note_id = (payment.meta or {}).get("credit_note_id")
+    if not credit_note_id:
+        return []
+    note = release_refund(
+        ctx=ctx, credit_note_id=credit_note_id, payment_id=payment.id, amount=payment.amount
+    )
+    if note is None:
+        return []
+    return [
+        {
+            "document_type": "sales_document",
+            "document_id": str(note.id),
+            "kind": note.kind,
+            "number": note.number,
+            "document_date": note.document_date.isoformat(),
+            "due_on": None,
+            "grand_total": str(note.grand_total),
+            "amount_due": str(note.amount_due),
+            "status": note.status,
+        }
+    ]

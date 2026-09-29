@@ -1,5 +1,12 @@
 """The sales invoice as an allocation target (PAY-01 BR-3/BR-4, PAY-05 FR-4/FR-5).
 
+── Owned by sales, registered by sales (A14, ADR-056) ────────────────────────
+This adapter lived in `apps/payments/services/targets/sales.py` until Wave A,
+which made core `payments` import the sales app. Sales now owns it and
+registers it from `SalesConfig.ready()` through a deferred import of the
+payments registry (rule D5's pattern). This module imports nothing from
+payments, so the matrix line `sales ↛ payments` still holds at module level.
+
 ── Status after a move (BR-4) ───────────────────────────────────────────────
 A party invoice's `amount_due` is recomputed by sales'
 `refresh_invoice_amounts` (SAL-02 BR-9: `grand_total − amount_paid −

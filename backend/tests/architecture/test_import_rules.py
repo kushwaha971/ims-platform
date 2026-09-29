@@ -113,7 +113,9 @@ ALLOWED: dict[str, frozenset[str] | set[str]] = {
     "inventory": {"common", "platform_app", "tax", "files"},
     "sales": {"common", "platform_app", "tax", "files", "parties", "ledger", "inventory"},
     "purchases": {"common", "platform_app", "tax", "files", "parties", "ledger", "inventory"},
-    "payments": {"common", "platform_app", "parties", "ledger", "sales", "purchases"},
+    # ── A14 ── R72, ADR-056: core `payments` imports no Shop & billing app; the
+    # sales and purchase targets are registered by their owners' `ready()`.
+    "payments": {"common", "platform_app", "parties", "ledger"},
     "expenses": {"common", "platform_app", "tax", "parties", "ledger", "files"},
     "notifications": {"common", "platform_app", "parties"},
     "imports": {"common", "platform_app", "files", "parties", "inventory", "ledger"},

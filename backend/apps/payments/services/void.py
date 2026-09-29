@@ -46,7 +46,7 @@ from apps.payments.constants import PaymentStatus
 from apps.payments.models import Allocation, Payment
 from apps.payments.services.record import payment_snapshot
 from apps.payments.services.targets import target_for
-from apps.sales.services.refund_seam import release_refund
+from apps.payments.services.void_seam import notify_payment_voided
 
 
 def _lock_payment(ctx: Ctx, payment_id: Any) -> Payment:
@@ -142,26 +142,9 @@ def void_payment(*, ctx: Ctx, payment_id: Any, reason: Any) -> dict:
 
     # SAL-04 FR-10 — a credit note's refund voucher: voiding it gives the
     # amount back to the note as open credit, which is what lets the note
-    # itself be voided afterwards ("Void the refund payment first").
-    credit_note_id = (payment.meta or {}).get("credit_note_id")
-    if credit_note_id:
-        note = release_refund(
-            ctx=ctx, credit_note_id=credit_note_id, payment_id=payment.id, amount=payment.amount
-        )
-        if note is not None:
-            documents.append(
-                {
-                    "document_type": "sales_document",
-                    "document_id": str(note.id),
-                    "kind": note.kind,
-                    "number": note.number,
-                    "document_date": note.document_date.isoformat(),
-                    "due_on": None,
-                    "grand_total": str(note.grand_total),
-                    "amount_due": str(note.amount_due),
-                    "status": note.status,
-                }
-            )
+    # itself be voided afterwards ("Void the refund payment first"). Sales
+    # registers that listener (A14: payments imports no document app).
+    documents.extend(notify_payment_voided(ctx=ctx, payment=payment))
 
     payment.status = PaymentStatus.VOID
     payment.voided_at = timezone.now()
@@ -241,7 +224,7 @@ def release_document_allocations(*, ctx: Ctx, document_type: str, document_id: A
 
 
 def release_purchase_bill(ctx: Ctx, document: Any) -> list[dict]:
-    """PUR-02 BR-4 / PUR-04 FR-2d — the void listener `PaymentsConfig.ready()` registers.
+    """PUR-02 BR-4 / PUR-04 FR-2d — the void listener `PurchasesConfig.ready()` registers (A14).
 
     `void_bill` calls it inside its transaction after locking the bill; the
     supplier payments stay `recorded` and what they had put on this bill

@@ -2,8 +2,12 @@
 
 PUR-02 FR-1 says supplier payments are PAY-01's `record_payment` with
 `direction='out'`: no second payment service. This adapter is the whole of
-PUR-02's server side inside payments. Everything that moves a bill's money
-lives in `apps/purchases/services/payment_seam.py`, which purchases owns:
+PUR-02's server side that payments calls. It lived in
+`apps/payments/services/targets/purchases.py` until Wave A task A14 (ADR-056)
+moved it here: purchases owns it and registers it from `PurchasesConfig.ready()`
+through a deferred import of the payments registry, so core `payments` imports
+no Shop & billing app. Everything that moves a bill's money lives in
+`apps/purchases/services/payment_seam.py`, which purchases owns:
 
 * `lock_payable_bills` takes `SELECT … FOR UPDATE` in `(document_date, number,
   id)` order — the one global lock order recording and voiding both use, so a

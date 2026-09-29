@@ -23,3 +23,16 @@ class SalesConfig(AppConfig):
         from apps.sales.selectors.ledger_sources import resolve_sales_documents
 
         register_source_resolver(SourceType.SALES_DOCUMENT, resolve_sales_documents)
+
+        # PAY-01 — a payment IN settles sales invoices. Sales owns the target
+        # and registers it itself (A14, ADR-056); the import of the payments
+        # registry is deferred, rule D5's pattern, so the matrix still has
+        # sales below payments at module level.
+        from apps.payments.services.targets import register_target
+        from apps.payments.services.void_seam import register_payment_void_listener
+        from apps.sales.services.payment_target import SalesInvoiceTarget
+        from apps.sales.services.refund_seam import on_payment_voided
+
+        register_target(SalesInvoiceTarget())
+        # SAL-04 FR-10 — voiding a refund voucher gives the note its credit back.
+        register_payment_void_listener("sales.credit_note_refund", on_payment_voided)

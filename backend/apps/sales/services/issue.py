@@ -147,7 +147,7 @@ def issue_invoice(
     # Written as issued-with-nothing-paid; `record_issue_payment` below moves it
     # to partially paid / paid through the payment's allocation. A walk-in
     # bill's due is held at zero (`ck_sales_document_walk_in_paid`) — see the
-    # sales allocation target in `apps/payments/services/targets/sales.py`.
+    # sales allocation target in `apps/sales/services/payment_target.py`.
     document.amount_paid = 0
     document.amount_due = document.grand_total if not walk_in else 0
     document.status = DocumentStatus.PAID if document.grand_total == 0 else DocumentStatus.ISSUED
