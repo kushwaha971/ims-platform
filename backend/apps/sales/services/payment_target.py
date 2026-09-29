@@ -50,6 +50,9 @@ LOCK_ORDER: tuple[str, ...] = ("document_date", "number", "id")
 class SalesInvoiceTarget:
     document_type = "sales_document"
     direction = "in"
+    #: A4a (contracts §1.4) — the shop khata, and FIFO may choose it, as it always has.
+    bucket = "main"
+    auto = True
 
     def _base(self, tenant: Any) -> Any:
         return SalesDocument.objects.filter(tenant=tenant, kind__in=PAYABLE_KINDS)
@@ -117,11 +120,27 @@ class SalesInvoiceTarget:
         )
         return before, document.status
 
-    def apply(self, *, document: SalesDocument, amount: Decimal, today: dt.date) -> tuple[str, str]:
+    def apply(
+        self,
+        *,
+        document: SalesDocument,
+        amount: Decimal,
+        today: dt.date,
+        payment_id: Any = None,
+        ctx: Any = None,
+    ) -> tuple[str, str]:
+        """`payment_id` and `ctx` (protocol v2) are accepted; the invoice's own formula needs
+        neither — A5 hands `ctx` on to `refresh_invoice_amounts` for its origin listener (R1)."""
         return self._move(document, amount, today)
 
     def unapply(
-        self, *, document: SalesDocument, amount: Decimal, today: dt.date
+        self,
+        *,
+        document: SalesDocument,
+        amount: Decimal,
+        today: dt.date,
+        payment_id: Any = None,
+        ctx: Any = None,
     ) -> tuple[str, str]:
         return self._move(document, -amount, today)
 

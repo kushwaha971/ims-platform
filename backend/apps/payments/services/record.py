@@ -32,18 +32,43 @@ unique), `amount` (optional; must equal Σ modes when sent), `reference`
 
 Returns `{payment, party_balance, documents: [summary…], ledger_entry_id,
 allocation_mode}`.
+
+── One bucket per payment (A4a, R5, ADR-043) ─────────────────────────────────
+A payment settles ONE kind of balance. Its allocations' targets must share a
+bucket, or the request is 400 `validation_error` (`allocations: One payment
+settles one kind of balance.`) before any row or receipt number exists; the
+payment's one khata line posts in that bucket and `payments_payment.bucket`
+records it, once. A payment that settles nothing is `main`.
+
+── `"auto"` is global oldest-first (R6) ──────────────────────────────────────
+Across every `auto=True` target of the direction in the `main` bucket: each
+target's open documents are locked in its canonical order, target by target in
+registration order, then MERGED by `(document_date, number, id, document_type)`
+(`merge_oldest_first`). A merge keeps each target's own FIFO — PUR-02 FR-3's
+due-date order for a supplier's bills is exactly what it was — while an older
+document of one target is settled before a newer one of another.
+
+── Earmarks (R61) ────────────────────────────────────────────────────────────
+A service caller may pass `meta.earmark = {module, subject_type, subject_id}`:
+the money is reserved for one subject (a booking's advance). An earmarked
+payment recorded with `"auto"` stays unallocated, and no automatic use
+(`open_advances`, the dues run) ever reaches it; only an explicit allocation
+does. The public API accepts no `meta`.
 """
 
 from __future__ import annotations
 
+import heapq
+import uuid
 from collections import OrderedDict
+from collections.abc import Iterable
 from decimal import Decimal
 from typing import Any
 
 from django.db import transaction
 
 from apps.common.audit import AuditAction, write_audit
-from apps.common.constants import PaymentMode, UpiApp
+from apps.common.constants import LedgerBucket, PaymentMode, UpiApp
 from apps.common.context import Ctx
 from apps.common.dates import tenant_today
 from apps.common.exceptions import BusinessRuleViolation, NotFound, ValidationFailed
@@ -173,6 +198,12 @@ def _validate(payload: dict, *, tenant: Any) -> dict:
     if allocations not in ("auto", "none") and not isinstance(allocations, list):
         details["allocations"] = ['Send "auto" or a list of allocations.']
 
+    earmark = None
+    try:
+        earmark = clean_earmark((payload.get("meta") or {}).get("earmark"))
+    except ValidationFailed as exc:
+        details.update(exc.details or {})
+
     if details:
         raise ValidationFailed(details)
 
@@ -186,7 +217,40 @@ def _validate(payload: dict, *, tenant: Any) -> dict:
         "note": note,
         "reference": reference,
         "allocations": allocations,
+        "earmark": earmark,
     }
+
+
+# ── Earmarks (R61) ──────────────────────────────────────────────────────────
+
+EARMARK_KEYS: tuple[str, ...] = ("module", "subject_type", "subject_id")
+
+
+def clean_earmark(raw: Any) -> dict | None:
+    """`{module, subject_type, subject_id}` or None; half an earmark is refused.
+
+    Half of one would hide a payment from every automatic use while naming nothing it is
+    reserved for. `subject_id` is a UUID, `module` ≤ 32 and `subject_type` ≤ 48 characters —
+    the widths every engine row uses for the same pair (10-architecture §5 rule 3).
+    """
+    if raw in (None, {}):
+        return None
+    if not isinstance(raw, dict) or set(raw) != set(EARMARK_KEYS):
+        raise ValidationFailed({"meta.earmark": ["Name the module, subject type and subject."]})
+    module, subject_type = str(raw["module"] or ""), str(raw["subject_type"] or "")
+    try:
+        subject_id = str(uuid.UUID(str(raw["subject_id"])))
+    except (TypeError, ValueError):
+        raise ValidationFailed({"meta.earmark": ["The subject id is not valid."]}) from None
+    if not module or len(module) > 32 or not subject_type or len(subject_type) > 48:
+        raise ValidationFailed({"meta.earmark": ["Name the module, subject type and subject."]})
+    return {"module": module, "subject_type": subject_type, "subject_id": subject_id}
+
+
+def earmark_of(payment: Any) -> dict | None:
+    """The payment's earmark, or None — what every automatic allocation checks first."""
+    earmark = (getattr(payment, "meta", None) or {}).get("earmark")
+    return earmark if isinstance(earmark, dict) and earmark else None
 
 
 # ── Allocation ──────────────────────────────────────────────────────────────
@@ -220,21 +284,76 @@ def _lock_party_for(ctx: Ctx, party_id: Any) -> Any:
     return party
 
 
-def _auto(ctx: Ctx, *, direction: str, party_id: Any, amount: Decimal) -> list[_Chosen]:
-    """FR-5 — oldest first by `(document_date, number)`; the remainder is the advance."""
+def _oldest_first_key(pair: tuple[Any, Any]) -> tuple:
+    target, document = pair
+    return (document.document_date, document.number or "", str(document.id), target.document_type)
+
+
+def merge_oldest_first(
+    per_target: Iterable[list[tuple[Any, Any]]],
+) -> list[tuple[Any, Any]]:
+    """R6 — the candidates of several targets, globally oldest first, each target's order kept.
+
+    Each list is one target's open documents in ITS canonical order; the lists are merged by
+    `(document_date, number, id, document_type)`. One list comes back exactly as given.
+    """
+    return list(heapq.merge(*per_target, key=_oldest_first_key))
+
+
+def auto_candidates(
+    ctx: Ctx, *, direction: str, party_id: Any, bucket: str = LedgerBucket.MAIN
+) -> list[tuple[Any, Any]]:
+    """Every open document FIFO may settle for this party, LOCKED, globally oldest first.
+
+    Locked target by target in registration order, each in its canonical order (the lock order
+    record and void share), and only then merged — so two payments take the same locks in the
+    same order whatever they end up choosing.
+    """
+    per_target = [
+        [
+            (target, document)
+            for document in target.lock_open_for_party(tenant=ctx.tenant, party_id=party_id)
+        ]
+        for target in targets_for_direction(direction, auto_only=True, bucket=bucket)
+    ]
+    return merge_oldest_first(per_target)
+
+
+def choose_oldest_first(candidates: list[tuple[Any, Any]], amount: Decimal) -> list[_Chosen]:
+    """Take from each candidate in turn until `amount` is used up; the remainder is advance."""
     remaining = amount
     chosen: list[_Chosen] = []
-    for target in targets_for_direction(direction):
-        for document in target.lock_open_for_party(tenant=ctx.tenant, party_id=party_id):
-            if remaining <= ZERO:
-                return chosen
-            due = target.outstanding(document)
-            if due <= ZERO:
-                continue
-            take = min(remaining, due)
-            chosen.append(_Chosen(target, document, take))
-            remaining -= take
+    for target, document in candidates:
+        if remaining <= ZERO:
+            break
+        due = target.outstanding(document)
+        if due <= ZERO:
+            continue
+        take = min(remaining, due)
+        chosen.append(_Chosen(target, document, take))
+        remaining -= take
     return chosen
+
+
+def _auto(ctx: Ctx, *, direction: str, party_id: Any, amount: Decimal) -> list[_Chosen]:
+    """FR-5, R6 — globally oldest first across the auto targets; the remainder is the advance.
+
+    `main` only: an unallocated payment is a shop advance (R5), and every `auto=True` target the
+    contracts register is in the `main` bucket.
+    """
+    candidates = auto_candidates(ctx, direction=direction, party_id=party_id)
+    return choose_oldest_first(candidates, amount)
+
+
+ONE_BUCKET_MESSAGE = "One payment settles one kind of balance."
+
+
+def single_bucket(targets: Iterable[Any]) -> str:
+    """The one bucket these targets share (`main` for none), or 400 (R5)."""
+    buckets = {target.bucket for target in targets}
+    if len(buckets) > 1:
+        raise ValidationFailed({"allocations": [ONE_BUCKET_MESSAGE]})
+    return next(iter(buckets), LedgerBucket.MAIN.value)
 
 
 def _manual(
@@ -266,6 +385,8 @@ def _manual(
         wanted[pair] = (index, value)
     if details:
         raise ValidationFailed(details)
+    # R5 — before any lock: a request naming two buckets is refused on its face.
+    single_bucket(target_for(document_type) for document_type, _ in wanted)
     if sum((value for _, value in wanted.values()), ZERO) > amount:
         raise ValidationFailed({"allocations": ["Allocations exceed the payment."]})
 
@@ -376,7 +497,10 @@ def record_payment(*, ctx: Ctx, payload: dict, walk_in_document_id: Any = None) 
             raise ValidationFailed({"party_id": ["Choose who paid."]})
         party = _lock_party_for(ctx, payload.get("party_id"))
         allocations = cleaned["allocations"]
-        if allocations == "auto":
+        if allocations == "auto" and cleaned["earmark"] is not None:
+            # R61 — reserved money is never applied by FIFO; it waits for its subject.
+            chosen, mode = [], AllocationMode.NONE
+        elif allocations == "auto":
             chosen = _auto(ctx, direction=direction, party_id=party.id, amount=amount)
             mode = AllocationMode.AUTO
         elif allocations == "none" or allocations == []:
@@ -388,6 +512,7 @@ def record_payment(*, ctx: Ctx, payload: dict, walk_in_document_id: Any = None) 
             mode = AllocationMode.MANUAL
 
     allocated = sum((c.amount for c in chosen), ZERO)
+    bucket = single_bucket(c.target for c in chosen)
     number = allocate_number(
         tenant=ctx.tenant,
         kind=SEQUENCE_KIND_FOR_DIRECTION[direction],
@@ -395,6 +520,10 @@ def record_payment(*, ctx: Ctx, payload: dict, walk_in_document_id: Any = None) 
     )
     primary = primary_line(cleaned["lines"])
     meta = dict(payload.get("meta") or {})
+    if cleaned["earmark"] is not None:
+        meta["earmark"] = cleaned["earmark"]
+    else:
+        meta.pop("earmark", None)
     if payload.get("context"):
         meta["context"] = str(payload["context"])[:24]
     payment = Payment.objects.create(
@@ -412,6 +541,7 @@ def record_payment(*, ctx: Ctx, payload: dict, walk_in_document_id: Any = None) 
         status=PaymentStatus.RECORDED,
         unallocated_amount=amount - allocated,
         meta=meta,
+        bucket=bucket,
     )
 
     documents: list[dict] = []
@@ -425,7 +555,13 @@ def record_payment(*, ctx: Ctx, payload: dict, walk_in_document_id: Any = None) 
             document_id=pick.document.id,
             amount=pick.amount,
         )
-        before, after = pick.target.apply(document=pick.document, amount=pick.amount, today=today)
+        before, after = pick.target.apply(
+            document=pick.document,
+            amount=pick.amount,
+            today=today,
+            payment_id=payment.id,
+            ctx=ctx,
+        )
         summary = pick.target.summary(pick.document)
         documents.append(summary)
         allocation_rows.append(
@@ -465,6 +601,7 @@ def record_payment(*, ctx: Ctx, payload: dict, walk_in_document_id: Any = None) 
             upi_app=primary.get("upi_app"),
             reference=payment.reference,
             source_number=payment.number,
+            bucket=bucket,
         )
         entry_id = str(entry.id)
 

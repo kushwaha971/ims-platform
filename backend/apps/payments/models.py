@@ -30,7 +30,7 @@ from __future__ import annotations
 
 from django.db import models
 
-from apps.common.constants import PaymentMode
+from apps.common.constants import LedgerBucket, PaymentMode
 from apps.common.db.fields import MoneyField, uuid7_pk
 from apps.common.models import TenantModel
 from apps.payments.constants import (
@@ -83,6 +83,18 @@ class Payment(TenantModel):
     #: and, for a payment taken at issue, the document — analytics and the
     #: receipt's "this is the bill's own receipt" line (PAY-04 FR-10).
     meta = models.JSONField(default=dict, blank=True)
+    #: A4a (R5, ADR-043) — the ledger bucket this payment's one khata line posted in:
+    #: the bucket of what it settles (`main` for the shop, `loan` for lending,
+    #: `deposit` for a held deposit), `main` when it settled nothing. Written ONCE by
+    #: `record_payment` and never changed by any service — what stays unallocated
+    #: after a document void is still an advance in that bucket. A reconciliation
+    #: test asserts it equals the payment's `payment_in`/`payment_out` line.
+    bucket = models.CharField(
+        max_length=8,
+        choices=LedgerBucket.choices,
+        default=LedgerBucket.MAIN,
+        db_default=LedgerBucket.MAIN.value,
+    )
 
     class Meta:
         db_table = "payments_payment"
@@ -108,6 +120,11 @@ class Payment(TenantModel):
             models.CheckConstraint(
                 condition=models.Q(direction=PaymentDirection.IN) | models.Q(party__isnull=False),
                 name="ck_payment_out_has_party",
+            ),
+            # A4a (R5) — the ledger's CHECK, the ledger's three buckets.
+            models.CheckConstraint(
+                condition=models.Q(bucket__in=[choice.value for choice in LedgerBucket]),
+                name="ck_payment_bucket",
             ),
         ]
         indexes = [

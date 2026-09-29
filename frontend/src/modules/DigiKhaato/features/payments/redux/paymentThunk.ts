@@ -4,9 +4,11 @@ import type { ApiErrorShape } from 'src/types/api.types';
 import { toApiError } from 'src/utils/apiError';
 
 import type {
+  AllocateResult,
   CollectQr,
   OpenDocument,
   Payment,
+  PaymentBucket,
   PaymentDirection,
   PaymentFilters,
   PaymentFormValues,
@@ -117,5 +119,46 @@ export const shareReceipt = createAsyncThunk<
     return await (await service()).shareReceipt(id, locale, idempotencyKey);
   } catch (error) {
     return rejectWithValue(toApiError(error, 'payments.share.error'));
+  }
+});
+
+/** QUERY. A4a — the open documents Apply to bills offers: the payment's direction and bucket. */
+export const fetchApplyCandidates = createAsyncThunk<
+  readonly OpenDocument[],
+  {
+    readonly partyId: string;
+    readonly direction: PaymentDirection;
+    readonly bucket: PaymentBucket;
+  },
+  Reject
+>(
+  'paymentReceipt/fetchApplyCandidates',
+  async ({ partyId, direction, bucket }, { signal, rejectWithValue }) => {
+    try {
+      return await (await service()).listOpenDocuments(partyId, direction, signal, bucket);
+    } catch (error) {
+      return rejectWithValue(toApiError(error, 'payments.alloc.error'));
+    }
+  }
+);
+
+/** MUTATION. A4a (PLT-X03) — apply part of an advance to open bills; no khata line moves. */
+export const allocateExistingPayment = createAsyncThunk<
+  AllocateResult,
+  {
+    readonly id: string;
+    readonly rows: readonly {
+      readonly documentType: string;
+      readonly documentId: string;
+      readonly amount: string;
+    }[];
+    readonly idempotencyKey: string;
+  },
+  Reject
+>('paymentReceipt/allocateExisting', async ({ id, rows, idempotencyKey }, { rejectWithValue }) => {
+  try {
+    return await (await service()).allocateExisting(id, { allocations: rows }, idempotencyKey);
+  } catch (error) {
+    return rejectWithValue(toApiError(error, 'payments.apply.error'));
   }
 });

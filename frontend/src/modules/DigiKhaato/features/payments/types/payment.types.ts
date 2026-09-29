@@ -35,6 +35,44 @@ export interface PaymentAllocation {
   readonly status: string | null;
   readonly amountDue: string | null;
   readonly amount: string;
+  /**
+   * A4a (PLT-X03 §8) — ISO date this allocation was applied AFTER the payment was
+   * recorded (Apply to bills); `null` for one made when it was recorded. The receipt
+   * prints "Applied later: INV/… on …".
+   */
+  readonly appliedLaterOn?: string | null;
+  /** R30 — a module document's own line under its number, when it sends one. */
+  readonly label?: string | null;
+}
+
+/** A4a (R5) — which kind of balance a payment settles (the ledger's bucket). */
+export type PaymentBucket = 'main' | 'loan' | 'deposit';
+
+/** One row of Apply to bills, as the dialog edits it. Money is a string (R-TS-7). */
+export interface ApplyRowForm {
+  readonly documentType: string;
+  readonly documentId: string;
+  readonly number: string;
+  readonly documentDate: string;
+  /** What the document can still take — the row's cap. */
+  readonly due: string;
+  readonly amount: string;
+}
+
+export interface ApplyFormValues {
+  readonly rows: ApplyRowForm[];
+}
+
+/** `POST /payments/{id}/allocations` — what the server applied, and the payment after it. */
+export interface AllocateResult {
+  readonly payment: Payment;
+  readonly applied: readonly {
+    readonly documentType: string;
+    readonly documentId: string;
+    readonly number: string | null;
+    readonly amount: string;
+  }[];
+  readonly partyBalance: string | null;
 }
 
 export interface PaymentBusiness {
@@ -76,6 +114,8 @@ export interface Payment {
   readonly note: string;
   readonly status: PaymentStatus;
   readonly unallocatedAmount: string;
+  /** A4a (R5) — absent from an older server (or a fixture), which reads as `main`. */
+  readonly bucket?: PaymentBucket;
   readonly allocations: readonly PaymentAllocation[];
   /** The khata as of this payment's line; null for a walk-in sale. */
   readonly partyBalanceAfter: string | null;

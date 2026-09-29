@@ -35,6 +35,14 @@ class PaymentVoidSerializer(serializers.Serializer):
     reason = serializers.CharField(required=False, allow_blank=True, default="")
 
 
+class PaymentAllocateSerializer(serializers.Serializer):
+    """`POST /payments/{id}/allocations` (A4a). The rows pass through as JSON for the service to
+    judge, exactly as `PaymentWriteSerializer.allocations` does — `"auto"` or a list."""
+
+    allocations = serializers.JSONField(required=False)
+    reason = serializers.CharField(required=False, allow_blank=True, default="")
+
+
 class UpiIntentSerializer(serializers.Serializer):
     amount = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     note = serializers.CharField(required=False, allow_blank=True, default="", max_length=50)
@@ -127,6 +135,8 @@ class PaymentDetailSerializer(serializers.ModelSerializer):
             "voided_by",
             "created_by",
             "created_at",
+            # A4a (R5) — which balance this payment settles; Apply to bills lists that bucket.
+            "bucket",
         )
 
     def get_party(self, payment: Payment) -> dict | None:

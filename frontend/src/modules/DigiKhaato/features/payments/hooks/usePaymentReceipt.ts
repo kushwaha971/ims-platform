@@ -10,9 +10,20 @@ import { usePrintBranding } from 'src/print/usePrintBranding';
 import { selectLocale } from 'src/redux/slice/localeSlice';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import type { ApiErrorShape } from 'src/types/api.types';
+import { formatAmount } from 'src/utils/money';
 
 import { selectPaymentReceipt, type PaymentReceiptState } from '../redux/paymentReceiptSlice';
-import { fetchCollectQr, fetchPayment, shareReceipt, voidPayment } from '../redux/paymentThunk';
+import {
+  allocateExistingPayment,
+  fetchApplyCandidates,
+  fetchCollectQr,
+  fetchPayment,
+  shareReceipt,
+  voidPayment,
+} from '../redux/paymentThunk';
+import { applyRequestRows, canApplyAdvance } from '../view-model/applyGate';
+
+import type { ApplyRowForm } from '../types/payment.types';
 
 /**
  * PAY-04 / PAY-05 — the receipt page's data and its acts: print
@@ -28,9 +39,15 @@ export interface UsePaymentReceiptResult extends PaymentReceiptState {
   readonly shareText: string | null;
   readonly shareMobile: string | null;
   readonly voidErrors: readonly string[];
+  /** A4a — may this receipt's advance be applied to later bills, by this member? */
+  readonly canApply: boolean;
+  readonly applyErrors: readonly string[];
   readonly print: () => void;
   readonly startShare: () => Promise<boolean>;
   readonly submitVoid: (reason: string) => Promise<boolean>;
+  /** A4a — load what Apply to bills offers (the payment's direction and bucket). */
+  readonly loadApplyCandidates: () => void;
+  readonly submitApply: (rows: readonly ApplyRowForm[]) => Promise<boolean>;
 }
 
 export const usePaymentReceipt = (id: string, autoPrint: boolean): UsePaymentReceiptResult => {
@@ -41,6 +58,8 @@ export const usePaymentReceipt = (id: string, autoPrint: boolean): UsePaymentRec
   const { can, hasModule } = usePermissions();
   const voidKey = useIdempotencyKey();
   const shareKey = useIdempotencyKey();
+  const applyKey = useIdempotencyKey();
+  const [applyErrors, setApplyErrors] = useState<readonly string[]>([]);
   const [printing, setPrinting] = useState(autoPrint);
   const [shareText, setShareText] = useState<string | null>(null);
   const [shareMobile, setShareMobile] = useState<string | null>(null);
@@ -127,6 +146,61 @@ export const usePaymentReceipt = (id: string, autoPrint: boolean): UsePaymentRec
     [dispatch, id, voidIdem, rotateVoid]
   );
 
+  const payment = state.payment?.id === id ? state.payment : null;
+  const loadApplyCandidates = useCallback(() => {
+    if (!payment?.party) return;
+    setApplyErrors([]);
+    void dispatch(
+      fetchApplyCandidates({
+        partyId: payment.party.id,
+        direction: payment.direction,
+        bucket: payment.bucket ?? 'main',
+      })
+    );
+  }, [dispatch, payment]);
+
+  const { key: applyIdem, rotate: rotateApply } = applyKey;
+  const submitApply = useCallback(
+    async (rows: readonly ApplyRowForm[]): Promise<boolean> => {
+      setApplyErrors([]);
+      try {
+        const result = await dispatch(
+          allocateExistingPayment({ id, rows: applyRequestRows(rows), idempotencyKey: applyIdem })
+        ).unwrap();
+        rotateApply();
+        dispatch(
+          showSnackbar({
+            severity: 'success',
+            id: 'payments.apply.done',
+            params: {
+              count: String(result.applied.length),
+              amount: formatAmount(result.payment.unallocatedAmount),
+            },
+          })
+        );
+        return true;
+      } catch (thrown) {
+        const apiError = thrown as ApiErrorShape;
+        if (
+          [
+            'over_allocated',
+            'validation_error',
+            'document_not_open',
+            'payment_already_void',
+          ].includes(apiError.code)
+        ) {
+          /* The server's answer is the truth (a bill paid on another counter, an advance
+             applied elsewhere): say why here and re-read the receipt behind the dialog. */
+          rotateApply();
+          void dispatch(fetchPayment(id));
+          setApplyErrors([apiError.message]);
+        }
+        return false;
+      }
+    },
+    [dispatch, id, applyIdem, rotateApply]
+  );
+
   const enabled = hasModule('payments');
   return useMemo(
     () => ({
@@ -137,21 +211,29 @@ export const usePaymentReceipt = (id: string, autoPrint: boolean): UsePaymentRec
       shareText,
       shareMobile,
       voidErrors,
+      canApply: enabled && can('payments.payment.write') && !!payment && canApplyAdvance(payment),
+      applyErrors,
       print,
       startShare,
       submitVoid,
+      loadApplyCandidates,
+      submitApply,
     }),
     [
       state,
       branding,
       enabled,
       can,
+      payment,
       shareText,
       shareMobile,
       voidErrors,
+      applyErrors,
       print,
       startShare,
       submitVoid,
+      loadApplyCandidates,
+      submitApply,
     ]
   );
 };

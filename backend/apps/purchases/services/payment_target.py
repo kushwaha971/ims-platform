@@ -70,6 +70,9 @@ def fifo_key(document: PurchaseDocument) -> tuple:
 class PurchaseBillTarget:
     document_type = "purchase_document"
     direction = "out"
+    #: A4a (contracts §1.4) — the shop khata, and FIFO may choose it, as it always has.
+    bucket = "main"
+    auto = True
 
     def _base(self, tenant: Any) -> Any:
         return PurchaseDocument.objects.filter(tenant=tenant, kind=DocumentKind.PURCHASE_BILL)
@@ -116,12 +119,25 @@ class PurchaseBillTarget:
         return before, document.status
 
     def apply(
-        self, *, document: PurchaseDocument, amount: Decimal, today: dt.date
+        self,
+        *,
+        document: PurchaseDocument,
+        amount: Decimal,
+        today: dt.date,
+        payment_id: Any = None,
+        ctx: Any = None,
     ) -> tuple[str, str]:
+        """`payment_id` and `ctx` (protocol v2) are accepted and not needed by a bill."""
         return self._move(document, amount, today)
 
     def unapply(
-        self, *, document: PurchaseDocument, amount: Decimal, today: dt.date
+        self,
+        *,
+        document: PurchaseDocument,
+        amount: Decimal,
+        today: dt.date,
+        payment_id: Any = None,
+        ctx: Any = None,
     ) -> tuple[str, str]:
         return self._move(document, -amount, today)
 

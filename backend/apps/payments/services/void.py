@@ -125,7 +125,13 @@ def void_payment(*, ctx: Ctx, payment_id: Any, reason: Any) -> dict:
         # `held` is in the target's lock order, `(document_date, number, id)`.
         for document in [d for pk, d in held.items() if pk in allocations]:
             row = allocations[str(document.id)]
-            was, now = target.unapply(document=document, amount=row.amount, today=today)
+            was, now = target.unapply(
+                document=document,
+                amount=row.amount,
+                today=today,
+                payment_id=payment.id,
+                ctx=ctx,
+            )
             summary = target.summary(document)
             documents.append(summary)
             if was != now:

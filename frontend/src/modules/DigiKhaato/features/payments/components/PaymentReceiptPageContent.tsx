@@ -5,7 +5,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 
-import { Ban, Copy, MessageCircle, Printer, RotateCcw } from 'lucide-react';
+import { Ban, Copy, MessageCircle, Printer, RotateCcw, Split } from 'lucide-react';
 
 import {
   UbButton,
@@ -51,6 +51,11 @@ const PaymentFormDrawerLazy = dynamic(
   () => import('./PaymentFormDrawer').then((m) => m.PaymentFormDrawer),
   { ssr: false }
 );
+/* A4a — Apply to bills loads with the tap, like the void dialog. */
+const ApplyAdvanceDialogLazy = dynamic(
+  () => import('./ApplyAdvanceDialog').then((m) => m.ApplyAdvanceDialog),
+  { ssr: false }
+);
 
 /**
  * PAY-04 / PAY-05 — `/payments/{id}`: the receipt as it will print (A5), with
@@ -68,7 +73,9 @@ export function PaymentReceiptPageContent({ id }: Readonly<{ id: string }>): Rea
   const receipt = usePaymentReceipt(id, search?.get('print') === '1');
   const feedback = useShareFeedback();
   const voidButton = useRef<HTMLButtonElement | null>(null);
+  const applyButton = useRef<HTMLButtonElement | null>(null);
   const [voiding, setVoiding] = useState(false);
+  const [applying, setApplying] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [again, setAgain] = useState<PaymentContext | null>(null);
   const payment = receipt.payment?.id === id ? receipt.payment : null;
@@ -85,7 +92,13 @@ export function PaymentReceiptPageContent({ id }: Readonly<{ id: string }>): Rea
     [t]
   );
 
-  const { startShare, submitVoid } = receipt;
+  const { startShare, submitVoid, submitApply } = receipt;
+  const confirmApply = useCallback(
+    async (rows: Parameters<typeof submitApply>[0]) => {
+      if (await submitApply(rows)) setApplying(false);
+    },
+    [submitApply]
+  );
   const openShare = useCallback(async () => {
     if (await startShare()) setSharing(true);
   }, [startShare]);
@@ -246,7 +259,15 @@ export function PaymentReceiptPageContent({ id }: Readonly<{ id: string }>): Rea
             {payment.allocations.map((row) => (
               <UbInfoRow
                 key={row.documentId}
-                label={t('payments.receipt.against')}
+                /* A4a — an allocation made after the receipt was recorded says so, with
+                   the day it was applied ("Applied later … on 12 Oct"). */
+                label={
+                  row.appliedLaterOn
+                    ? t('payments.receipt.appliedLater', {
+                        date: formatBusinessDate(row.appliedLaterOn),
+                      })
+                    : t('payments.receipt.against')
+                }
                 value={
                   <UbLink href={allocationHref(row)}>
                     {`${row.number ?? '—'} · ${formatInr(row.amount)}`}
@@ -254,6 +275,28 @@ export function PaymentReceiptPageContent({ id }: Readonly<{ id: string }>): Rea
                 }
               />
             ))}
+            {/* A4a (PLT-X03 §7) — money not yet applied, and the way to apply it. Only
+                where it can work (recorded, a party's, not a refund voucher) and for a
+                member who may record payments. */}
+            {receipt.canApply && (
+              <UbInfoRow
+                label={t('payments.apply.notYet', {
+                  amount: formatAmount(payment.unallocatedAmount),
+                })}
+                value={
+                  <UbButton
+                    ref={applyButton}
+                    variant="secondary"
+                    size="sm"
+                    icon={<Split className="h-4 w-4" aria-hidden />}
+                    onClick={() => setApplying(true)}
+                    data-testid="payment-apply"
+                  >
+                    {t('payments.apply.action')}
+                  </UbButton>
+                }
+              />
+            )}
             {payment.note && <UbInfoRow label={t('payments.note')} value={payment.note} />}
             {payment.createdBy?.name && (
               <UbInfoRow label={t('payments.recordedBy')} value={payment.createdBy.name} />
@@ -288,6 +331,19 @@ export function PaymentReceiptPageContent({ id }: Readonly<{ id: string }>): Rea
           onClose={() => setVoiding(false)}
           onConfirm={(reason) => void confirmVoid(reason)}
           returnFocusRef={voidButton}
+        />
+      )}
+      {applying && (
+        <ApplyAdvanceDialogLazy
+          payment={payment}
+          documents={receipt.applyCandidates}
+          status={receipt.applyCandidatesStatus}
+          busy={receipt.applyStatus === 'loading'}
+          errors={receipt.applyErrors}
+          onLoad={receipt.loadApplyCandidates}
+          onClose={() => setApplying(false)}
+          onConfirm={(rows) => void confirmApply(rows)}
+          returnFocusRef={applyButton}
         />
       )}
       {sharing && receipt.shareText && (

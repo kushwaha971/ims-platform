@@ -34,12 +34,14 @@ from apps.payments.selectors.payments import (
     payment_totals,
 )
 from apps.payments.serializers.payment import (
+    PaymentAllocateSerializer,
     PaymentDetailSerializer,
     PaymentListSerializer,
     PaymentVoidSerializer,
     PaymentWriteSerializer,
     UpiIntentSerializer,
 )
+from apps.payments.services.allocate import allocate_existing
 from apps.payments.services.receipt import receipt_share_text, record_receipt_share
 from apps.payments.services.record import record_payment
 from apps.payments.services.upi import upi_intent
@@ -127,6 +129,35 @@ class PaymentViewSet(
             meta["reversal_entry_id"] = result["reversal_entry_id"]
         return StandardResponse.ok(PaymentDetailSerializer(payment).data, meta=meta)
 
+    @action(detail=True, methods=["post"], url_path="allocations")
+    @idempotent("payment_allocate")
+    def allocations(self, request: Any, *args: Any, **kwargs: Any) -> Any:
+        """A4a (PLT-X03 §6) — apply what is not yet applied to open documents.
+
+        Posts no ledger line: the money was on the khata as an advance already (BR-3). 200 with
+        the payment, the rows applied and each moved document; `meta.party_balance` unchanged.
+        """
+        serializer = PaymentAllocateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        result = allocate_existing(
+            ctx=Ctx.from_request(request),
+            payment_id=kwargs["pk"],
+            allocations=serializer.validated_data.get("allocations"),
+            reason=serializer.validated_data.get("reason") or "",
+        )
+        payment = detail_queryset(tenant=self.get_tenant()).get(pk=result["payment"].pk)
+        meta: dict[str, Any] = {}
+        if result["party_balance"] is not None:
+            meta["party_balance"] = str(result["party_balance"])
+        return StandardResponse.ok(
+            {
+                "payment": PaymentDetailSerializer(payment).data,
+                "allocations": result["allocations"],
+                "documents": result["documents"],
+            },
+            meta=meta,
+        )
+
     @action(detail=False, methods=["get"], url_path="open-documents")
     def open_documents(self, request: Any, *args: Any, **kwargs: Any) -> Any:
         """FR-2 — the allocation panel's rows for one party, oldest first."""
@@ -140,7 +171,13 @@ class PaymentViewSet(
             uuid.UUID(str(party_id))
         except ValueError:
             raise ValidationFailed({"party_id": ["Choose a party."]}) from None
-        rows = open_documents(tenant=self.get_tenant(), party_id=party_id, direction=direction)
+        # A4a — Apply to bills asks for the payment's bucket; the record panel sends none.
+        bucket = request.query_params.get("bucket") or None
+        if bucket is not None and bucket not in ("main", "loan", "deposit"):
+            raise ValidationFailed({"bucket": ["Choose main, loan or deposit."]})
+        rows = open_documents(
+            tenant=self.get_tenant(), party_id=party_id, direction=direction, bucket=bucket
+        )
         return StandardResponse.ok(rows)
 
     @action(detail=True, methods=["post"], url_path="share")

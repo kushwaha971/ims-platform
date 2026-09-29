@@ -2,6 +2,13 @@ import { paymentListQuery, toWireBody } from './paymentService';
 
 import type { PaymentFormValues } from '../types/payment.types';
 
+/* The endpoint functions are tested on what they SEND (the statement service's rule); the
+   pure mappers above need no network either way. */
+jest.mock('src/api/AxiosInstances', () => ({
+  api: { get: jest.fn(), post: jest.fn() },
+  ubConfig: (extras: unknown) => extras,
+}));
+
 const values = (overrides: Partial<PaymentFormValues> = {}): PaymentFormValues => ({
   direction: 'in',
   partyId: 'p1',
@@ -74,5 +81,77 @@ describe('paymentListQuery', () => {
     expect(paymentListQuery({ ...base, tab: 'in' })).toContain('direction=in');
     expect(paymentListQuery({ ...base, tab: 'void' })).toContain('status=void');
     expect(paymentListQuery({ ...base, tab: 'all' })).not.toContain('direction');
+  });
+});
+
+describe('A4a — allocateExisting', () => {
+  it('posts the rows in the wire shape with the key, and maps what was applied', async () => {
+    const { api } = jest.requireMock('src/api/AxiosInstances') as {
+      api: { post: jest.Mock };
+    };
+    api.post.mockResolvedValue({
+      data: {
+        data: {
+          payment: {
+            id: 'pay1',
+            number: 'RCT/26-27/0090',
+            direction: 'in',
+            party: null,
+            payment_date: '2026-09-03',
+            amount: '3000.00',
+            mode_breakup: [],
+            primary_mode: 'cash',
+            reference: '',
+            note: '',
+            status: 'recorded',
+            unallocated_amount: '1230.00',
+            allocations: [],
+            party_balance_after: null,
+            context: null,
+            business: {},
+            void_reason: null,
+            voided_at: null,
+            voided_by: null,
+            created_by: null,
+            created_at: '2026-09-03T10:00:00Z',
+            bucket: 'main',
+          },
+          allocations: [
+            {
+              document_type: 'sales_document',
+              document_id: 'inv1',
+              number: 'INV/26-27/0311',
+              amount: '1770.00',
+            },
+          ],
+          documents: [],
+        },
+        meta: { party_balance: '-1230.00' },
+      },
+    });
+    const { allocateExisting } = await import('./paymentService');
+    const result = await allocateExisting(
+      'pay1',
+      { allocations: [{ documentType: 'sales_document', documentId: 'inv1', amount: '1770.00' }] },
+      'key-1'
+    );
+    const [url, body, config] = api.post.mock.calls[0] as [string, unknown, { headers: unknown }];
+    expect(url).toBe('/payments/pay1/allocations');
+    expect(body).toEqual({
+      allocations: [{ document_type: 'sales_document', document_id: 'inv1', amount: '1770.00' }],
+      reason: '',
+    });
+    expect(config.headers).toEqual({ 'Idempotency-Key': 'key-1' });
+    expect(result.payment.unallocatedAmount).toBe('1230.00');
+    expect(result.payment.bucket).toBe('main');
+    expect(result.applied).toEqual([
+      {
+        documentType: 'sales_document',
+        documentId: 'inv1',
+        number: 'INV/26-27/0311',
+        amount: '1770.00',
+      },
+    ]);
+    expect(result.partyBalance).toBe('-1230.00');
   });
 });

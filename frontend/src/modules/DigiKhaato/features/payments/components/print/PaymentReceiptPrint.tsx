@@ -175,7 +175,19 @@ export function PaymentReceiptPrint({
           <tbody>
             {payment.allocations.map((row) => (
               <tr key={row.documentId}>
-                <td className="break-all font-mono">{row.number ?? '—'}</td>
+                <td className="break-all font-mono">
+                  {row.number ?? '—'}
+                  {/* R30 — a module document's own line under its number. */}
+                  {row.label && <span className="block font-sans">{row.label}</span>}
+                  {/* A4a (PLT-X03 §8) — applied after the receipt was recorded, and when. */}
+                  {row.appliedLaterOn && (
+                    <span className="block font-sans" data-testid="receipt-applied-later">
+                      {t('payments.receipt.appliedLater', {
+                        date: formatBusinessDate(row.appliedLaterOn),
+                      })}
+                    </span>
+                  )}
+                </td>
                 <td>{formatBusinessDate(row.documentDate)}</td>
                 <td className="text-right">{formatInr(row.amount)}</td>
                 <td className="text-right">{formatInr(row.amountDue)}</td>

@@ -115,6 +115,11 @@ def allocation_details(payment: Payment) -> list[dict]:
             continue
         for document in target.find(tenant=payment.tenant_id, ids=ids):
             documents[str(document.id)] = target.summary(document)
+    later = {
+        (entry.get("document_type"), entry.get("document_id")): entry.get("on")
+        for entry in (payment.meta or {}).get("applied_later") or []
+        if isinstance(entry, dict)
+    }
     out = []
     for row in rows:
         summary = documents.get(str(row.document_id), {})
@@ -128,21 +133,68 @@ def allocation_details(payment: Payment) -> list[dict]:
                 "status": summary.get("status"),
                 "amount_due": summary.get("amount_due"),
                 "amount": str(row.amount),
+                # A4a (PLT-X03 §8) — the date `allocate_existing` applied this, when it was
+                # applied after the payment was recorded; `null` for an allocation made at
+                # record time. The receipt prints "Applied later: INV/… on …".
+                "applied_later_on": later.get((row.document_type, str(row.document_id))),
+                # R30 — a target's own line under the number (a module's charge), if any.
+                **({"label": summary["label"]} if summary.get("label") else {}),
             }
         )
     return out
 
 
-def open_documents(*, tenant: Any, party_id: Any, direction: str) -> list[dict]:
-    """PAY-01 FR-2 — the allocation panel's rows, oldest first (FIFO order)."""
+def open_documents(
+    *, tenant: Any, party_id: Any, direction: str, bucket: str | None = None
+) -> list[dict]:
+    """PAY-01 FR-2 — the allocation panel's rows, oldest first (FIFO order).
+
+    Without `bucket` (the record-payment panel): the `auto` targets of the `main` bucket, which is
+    what a new payment may settle by default and what the panel always listed. With `bucket`
+    (A4a, Apply to bills): every target of that bucket, explicit-only ones included — a loan
+    advance is applied to instalments, which FIFO never chooses (PLT-X03 EC-3).
+    """
+    if bucket is None:
+        chosen = targets_for_direction(direction, auto_only=True, bucket="main")
+    else:
+        chosen = targets_for_direction(direction, bucket=bucket)
     rows: list[dict] = []
-    for target in targets_for_direction(direction):
+    for target in chosen:
         rows.extend(
             target.summary(document)
             for document in target.open_documents(tenant=tenant, party_id=party_id)
             if target.outstanding(document) > ZERO
         )
     return rows
+
+
+def open_advances(
+    *, tenant: Any, party_id: Any, direction: str = "in", bucket: str = "main"
+) -> QuerySet:
+    """The advances an AUTOMATIC use may apply (R61): the document port's `apply_open_advances`
+    and the dues run. Oldest payment first.
+
+    Recorded, money left, the given bucket and direction, and none of: an earmark (money
+    reserved for one subject, applied only by an explicit allocation), a credit note's refund
+    voucher (its money went back to the customer), a module refund (`meta.context`
+    `<module>_refund`, R36).
+    """
+    return (
+        Payment.objects.filter(
+            tenant=tenant,
+            party_id=party_id,
+            direction=direction,
+            bucket=bucket,
+            status=PaymentStatus.RECORDED,
+            unallocated_amount__gt=ZERO,
+        )
+        .exclude(meta__has_key="earmark")
+        .exclude(meta__has_key="credit_note_id")
+        # `has_key` first: a missing key is NULL in SQL, and `NOT (NULL LIKE …)` would drop
+        # every payment that has no `context` at all.
+        .exclude(Q(meta__has_key="context") & Q(meta__context__endswith="_refund"))
+        .order_by("payment_date", "created_at", "id")
+    )
 
 
 def payments_for_document(*, tenant: Any, document_type: str, document_id: Any) -> list[dict]:

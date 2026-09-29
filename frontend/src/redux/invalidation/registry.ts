@@ -136,6 +136,8 @@ export const QUERIES = {
   fetchPublicDocument: 'publicDocument/fetch',
   // ── A16 ── R33: the print letterhead moved to `src/print` (was sales').
   fetchPrintBranding: 'printBranding/fetchPrintBranding',
+  // ── A4a ── Apply to bills: the payment's own bucket's open documents
+  fetchApplyCandidates: 'paymentReceipt/fetchApplyCandidates',
 } as const;
 
 export const MUTATIONS = {
@@ -255,6 +257,8 @@ export const MUTATIONS = {
   applyCreditNote: 'invoice/applyCreditNote',
   voidInvoice: 'invoice/voidInvoice',
   voidCreditNote: 'invoice/voidCreditNote',
+  // ── A4a ── apply an advance to later bills (POST /payments/{id}/allocations)
+  allocateExistingPayment: 'paymentReceipt/allocateExisting',
 } as const;
 
 export type TQueryName = keyof typeof QUERIES;

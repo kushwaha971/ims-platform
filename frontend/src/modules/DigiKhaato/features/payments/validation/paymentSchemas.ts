@@ -15,7 +15,7 @@ import {
   manualTotals,
 } from '../view-model/paymentDisplay';
 
-import type { PaymentFormValues } from '../types/payment.types';
+import type { ApplyFormValues, PaymentFormValues } from '../types/payment.types';
 
 /**
  * PAY-01 §10 / PAY-02 §10 — the payment form's rules, composed from the
@@ -32,6 +32,11 @@ import type { PaymentFormValues } from '../types/payment.types';
 export interface PaymentSchemas {
   readonly paymentSchema: Yup.ObjectSchema<PaymentFormValues>;
   readonly voidReasonSchema: Yup.ObjectSchema<{ reason: string }>;
+  /**
+   * A4a — Apply to bills: each row ≤ its bill's due ("Max ₹…"), Σ ≤ what is not yet applied,
+   * and at least one row. Built for the payment's figure, because the cap is the payment's.
+   */
+  readonly applySchemaFor: (unallocated: string) => Yup.ObjectSchema<ApplyFormValues>;
 }
 
 export const usePaymentSchemas = (): PaymentSchemas => {
@@ -97,6 +102,39 @@ export const usePaymentSchemas = (): PaymentSchemas => {
       reason: v.requiredBoundedText(160, 3, 'payments.void.reason.required'),
     }) as Yup.ObjectSchema<{ reason: string }>;
 
-    return { paymentSchema, voidReasonSchema };
+    const applySchemaFor = (unallocated: string): Yup.ObjectSchema<ApplyFormValues> =>
+      Yup.object({
+        rows: Yup.array(
+          Yup.object({
+            documentType: Yup.string().defined().default(''),
+            documentId: Yup.string().defined().default(''),
+            number: Yup.string().defined().default(''),
+            documentDate: Yup.string().defined().default(''),
+            due: Yup.string().defined().default(''),
+            amount: v.optionalAmountValidation().defined().default(''),
+          })
+        )
+          .defined()
+          .default([]),
+      }).test('within-the-advance', '', function check(values) {
+        const rows = values.rows as ApplyFormValues['rows'];
+        const over = rows.findIndex((row) => row.amount && exceedsDue(row));
+        if (over >= 0) {
+          return this.createError({
+            path: `rows.${over}.amount`,
+            message: t('payments.alloc.max', { amount: formatAmount(rows[over]?.due ?? '0') }),
+          });
+        }
+        const { allocated, advance } = manualTotals(unallocated, rows);
+        if (advance.startsWith('-')) {
+          return this.createError({ path: 'rows', message: t('payments.apply.exceeds') });
+        }
+        if (!allocated || /^0*(\.0*)?$/.test(allocated)) {
+          return this.createError({ path: 'rows', message: t('payments.apply.none') });
+        }
+        return true;
+      }) as unknown as Yup.ObjectSchema<ApplyFormValues>;
+
+    return { paymentSchema, voidReasonSchema, applySchemaFor };
   }, [v, t]);
 };

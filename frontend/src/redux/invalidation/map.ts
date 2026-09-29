@@ -519,6 +519,16 @@ export const INVALIDATION: TInvalidationMap = {
   // Voiding a credit note's refund voucher gives the note its credit back
   // (SAL-04 FR-10), so the estimates / credit notes list is stale too.
   // Voiding a supplier payment reopens its purchase bills (PUR-02 FR-7).
+  // ── A4a ── Apply to bills. The receipt swaps in place from the response (the
+  // `patch`). No khata line moves — the money was on the khata already (PLT-X03
+  // BR-3) — so the ledger's three are NOT re-read; the bills it settled changed
+  // status, so the lists that show them are stale, and the payment list's
+  // "allocated" column is re-read now.
+  allocateExistingPayment: {
+    patch: [['paymentReceipt', 'payment']],
+    refetch: ['paymentList'],
+    stale: ['invoiceList', 'salesDocList', 'purchaseBillList', 'purchaseBillDetail'],
+  },
   voidPayment: {
     patch: [['paymentReceipt', 'payment']],
     refetch: [...LEDGER_WRITE_REFETCH, 'paymentList'],

@@ -5,9 +5,16 @@ import { acceptInvalidation } from 'src/redux/invalidation/listener';
 import { rootReducer, type RootState } from 'src/redux/store';
 import type { ApiErrorShape, RequestStatus } from 'src/types/api.types';
 
-import { fetchCollectQr, fetchPayment, shareReceipt, voidPayment } from './paymentThunk';
+import {
+  allocateExistingPayment,
+  fetchApplyCandidates,
+  fetchCollectQr,
+  fetchPayment,
+  shareReceipt,
+  voidPayment,
+} from './paymentThunk';
 
-import type { Payment } from '../types/payment.types';
+import type { OpenDocument, Payment } from '../types/payment.types';
 
 /**
  * PAY-04 / PAY-05 — the receipt page: the payment, the "Pay next time" static
@@ -23,6 +30,10 @@ export interface PaymentReceiptState {
   staticQr: readonly string[] | null;
   voidStatus: RequestStatus;
   shareStatus: RequestStatus;
+  /** A4a — Apply to bills: the documents it offers, and the apply itself. */
+  applyCandidates: readonly OpenDocument[];
+  applyCandidatesStatus: RequestStatus;
+  applyStatus: RequestStatus;
   stale: boolean;
   staleUrgency: 'now' | 'next-mount' | null;
 }
@@ -34,6 +45,9 @@ const initialState: PaymentReceiptState = {
   staticQr: null,
   voidStatus: 'idle',
   shareStatus: 'idle',
+  applyCandidates: [],
+  applyCandidatesStatus: 'idle',
+  applyStatus: 'idle',
   stale: false,
   staleUrgency: null,
 };
@@ -74,6 +88,28 @@ const paymentReceiptSlice = createSlice({
       })
       .addCase(voidPayment.rejected, (state) => {
         state.voidStatus = 'failed';
+      })
+      .addCase(fetchApplyCandidates.pending, (state) => {
+        state.applyCandidatesStatus = 'loading';
+      })
+      .addCase(fetchApplyCandidates.fulfilled, (state, action) => {
+        state.applyCandidates = action.payload as Draft<OpenDocument>[];
+        state.applyCandidatesStatus = 'succeeded';
+      })
+      .addCase(fetchApplyCandidates.rejected, (state, action) => {
+        if (action.meta.aborted) return;
+        state.applyCandidatesStatus = 'failed';
+      })
+      .addCase(allocateExistingPayment.pending, (state) => {
+        state.applyStatus = 'loading';
+      })
+      .addCase(allocateExistingPayment.fulfilled, (state, action) => {
+        state.applyStatus = 'succeeded';
+        // The receipt shows what was applied, in place, from the server's answer.
+        state.payment = action.payload.payment as Draft<Payment>;
+      })
+      .addCase(allocateExistingPayment.rejected, (state) => {
+        state.applyStatus = 'failed';
       })
       .addCase(shareReceipt.pending, (state) => {
         state.shareStatus = 'loading';

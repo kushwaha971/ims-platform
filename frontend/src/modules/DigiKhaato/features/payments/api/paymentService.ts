@@ -4,10 +4,12 @@ import type { PaymentMode, UpiApp } from 'src/types/domain.types';
 import { toQueryString } from 'src/utils/queryString';
 
 import type {
+  AllocateResult,
   CollectQr,
   OpenDocument,
   Payment,
   PaymentAllocation,
+  PaymentBucket,
   PaymentDirection,
   PaymentFilters,
   PaymentFormValues,
@@ -73,6 +75,8 @@ interface PaymentApi {
   readonly voided_by: PaymentPerson | null;
   readonly created_by: PaymentPerson | null;
   readonly created_at: string;
+  /** A4a — additive; absent from an older server. */
+  readonly bucket?: PaymentBucket;
 }
 
 interface WriteResponse {
@@ -104,6 +108,8 @@ const toAllocation = (row: Wire): PaymentAllocation => ({
   status: sn(row.status),
   amountDue: sn(row.amount_due),
   amount: s(row.amount),
+  appliedLaterOn: sn(row.applied_later_on),
+  label: sn(row.label),
 });
 
 export const toPaymentRow = (row: PaymentRowApi): PaymentRow => ({
@@ -150,6 +156,7 @@ export const toPayment = (row: PaymentApi): Payment => ({
   voidedBy: row.voided_by,
   createdBy: row.created_by,
   createdAt: row.created_at,
+  bucket: row.bucket ?? 'main',
 });
 
 const toSaveResult = (body: WriteResponse): PaymentSaveResult => ({
@@ -249,10 +256,12 @@ export const getPayment = async (id: string, signal?: AbortSignal): Promise<Paym
 export const listOpenDocuments = async (
   partyId: string,
   direction: PaymentDirection,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  /** A4a — Apply to bills asks for the payment's bucket; the record panel sends none. */
+  bucket?: PaymentBucket
 ): Promise<readonly OpenDocument[]> => {
   const response = await api.get<{ data: readonly Wire[] }>(
-    `${API_PATHS.PAYMENTS_OPEN_DOCUMENTS}${toQueryString({ party_id: partyId, direction })}`,
+    `${API_PATHS.PAYMENTS_OPEN_DOCUMENTS}${toQueryString({ party_id: partyId, direction, bucket })}`,
     ubConfig({ signal })
   );
   return response.data.data.map((row) => ({
@@ -282,6 +291,60 @@ export const recordPayment = async (
     ubConfig({ headers: { 'Idempotency-Key': idempotencyKey } })
   );
   return toSaveResult(response.data);
+};
+
+/**
+ * A4a (PLT-X03) — apply part of a payment's advance to open documents. Posts no khata line: the
+ * money was on the khata already. `idempotencyKey` is minted per logical apply and reused on a
+ * retry, so a slow first attempt never applies twice.
+ */
+export const allocateExisting = async (
+  id: string,
+  body: {
+    readonly allocations:
+      | 'auto'
+      | readonly {
+          readonly documentType: string;
+          readonly documentId: string;
+          readonly amount: string;
+        }[];
+    readonly reason?: string;
+  },
+  idempotencyKey: string
+): Promise<AllocateResult> => {
+  const response = await api.post<{
+    data: {
+      payment: PaymentApi;
+      allocations: readonly Wire[];
+      documents: readonly Wire[];
+    };
+    meta?: { party_balance?: string } | null;
+  }>(
+    API_PATHS.PAYMENT_ALLOCATIONS(id),
+    {
+      allocations:
+        body.allocations === 'auto'
+          ? 'auto'
+          : body.allocations.map((row) => ({
+              document_type: row.documentType,
+              document_id: row.documentId,
+              amount: row.amount,
+            })),
+      reason: body.reason ?? '',
+    },
+    ubConfig({ headers: { 'Idempotency-Key': idempotencyKey } })
+  );
+  const { data, meta } = response.data;
+  return {
+    payment: toPayment(data.payment),
+    applied: data.allocations.map((row) => ({
+      documentType: s(row.document_type),
+      documentId: s(row.document_id),
+      number: sn(row.number),
+      amount: s(row.amount),
+    })),
+    partyBalance: meta?.party_balance ?? null,
+  };
 };
 
 export const voidPayment = async (

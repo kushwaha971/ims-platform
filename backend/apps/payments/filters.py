@@ -12,7 +12,7 @@ from typing import Any
 import django_filters
 from django.db.models import Q, QuerySet
 
-from apps.common.constants import PaymentMode
+from apps.common.constants import LedgerBucket, PaymentMode
 from apps.common.filters import BaseTenantFilterSet
 from apps.payments.constants import PaymentDirection, PaymentStatus
 from apps.payments.models import Payment
@@ -30,6 +30,10 @@ class PaymentFilterSet(BaseTenantFilterSet):
     #: `?status=recorded,void` (CCR-6).
     status = django_filters.CharFilter(method="filter_status")
     q = django_filters.CharFilter(method="filter_search")
+    #: A4a (PLT-X03 §11) — "Advances": recorded payments with money not yet applied, and which
+    #: kind of balance they sit in (`?unallocated=true&bucket=main`).
+    unallocated = django_filters.BooleanFilter(method="filter_unallocated")
+    bucket = django_filters.ChoiceFilter(field_name="bucket", choices=LedgerBucket.choices)
 
     class Meta:
         model = Payment
@@ -56,3 +60,12 @@ class PaymentFilterSet(BaseTenantFilterSet):
             | Q(party__name__icontains=term)
             | Q(reference__icontains=term)
         )
+
+    def filter_unallocated(self, queryset: QuerySet, name: str, value: Any) -> QuerySet:
+        """`true` — the open advances; `false` — every payment fully applied (voids excluded)."""
+        if value is None:
+            return queryset
+        recorded = queryset.filter(status=PaymentStatus.RECORDED)
+        if value:
+            return recorded.filter(unallocated_amount__gt=0)
+        return recorded.filter(unallocated_amount=0)

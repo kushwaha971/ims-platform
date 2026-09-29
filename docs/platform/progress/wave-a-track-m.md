@@ -9,8 +9,8 @@ Owner: Backend/Django lead, Track M. Sequence: **A14 → A2 (+A3) → A4a → A5
 | Task | State | Commit on main | Notes |
 |---|---|---|---|
 | A14 | **merged** | `4b964a8` | A11 landed as 45aa070 |
-| A2 (+A3) | done — merging | (see below) | |
-| A4a | not started | — | after A2 |
+| A2 (+A3) | **merged** | `472cb21` | |
+| A4a | done — merging | (see below) | |
 | A5 | not started | — | after A4a and A15 (Track F) |
 
 ## A14 — decouple payments from sales and purchases (ADR-056, R72)
@@ -171,6 +171,84 @@ were pinned to the shell catalogue — moved to their own module.
   rows and payments' cash, so no deposit line reaches it through the ledger; the cash side is
   A4b's `cash_sources.py` exclusion.
 
+## A4a — payments v2 (PLT-X03)
+
+### Design note (review step)
+
+Read at `c2134c2`. `record_payment` locks party → documents (per target, canonical order) →
+number → inserts; `void_payment` party → documents → payment. Targets are registered by their
+owners since A14.
+
+- **Protocol v2** (`targets/__init__.py`): `bucket`, `auto`; `apply/unapply(..., payment_id=None,
+  ctx=None)`; `summary` may carry `label`. `register_target` refuses a `document_type` > 32, a
+  bucket outside the three, a direction outside in/out, and a re-registration with a different
+  direction/bucket/auto (`ImproperlyConfigured`); `_reset_for_tests`. `targets_for_direction(
+  direction, *, auto_only=False, bucket=None)`. Sales and purchases declare `main`, `auto=True`.
+  Every caller passes `ctx` and `payment_id` (an AST test walks the payments services).
+- **`payments_payment.bucket`** (`payments 0003_payment_bucket`): column + CHECK, written once by
+  `record_payment` from its allocations' targets (`main` when none), never changed. Mixed buckets
+  → 400 `validation_error` `allocations: One payment settles one kind of balance.`, before the
+  number is allocated. The ledger line posts in that bucket; a reconciliation test asserts the
+  column equals the payment's `payment_in/out` line.
+- **Auto FIFO (R6)**: `"auto"` in `record_payment` walks the `auto=True` targets of the payment's
+  direction in the `main` bucket (an unallocated payment is `main`; every auto target in the
+  contract table is `main`), locks each target's candidates in its canonical order, then MERGES
+  the per-target lists by `(document_date, number, id, document_type)`. A merge rather than a
+  re-sort keeps each target's own FIFO — PUR-02 FR-3 orders a supplier's bills by `due_on` first,
+  and re-sorting by bill date would change today's supplier payments (question Q-M3).
+- **Earmarks (R61)**: `meta.earmark = {module, subject_type, subject_id}` is validated where a
+  service caller passes it (the public API accepts no `meta`); an earmarked payment recorded with
+  `"auto"` is left unallocated; `open_advances(...)` (the selector A5's `apply_open_advances` and
+  the dues run will use) excludes earmarked payments, refund vouchers and voids.
+- **`allocate_existing`** (`services/allocate.py`) + `POST /payments/{id}/allocations`
+  (`payments.payment.write`, idempotent): locks party → documents (targets in `document_type`
+  order) → payment; explicit rows or `"auto"` (the payment's direction and bucket, auto targets);
+  BR-2…BR-7 and EC-1…EC-5; no ledger line; `payment.allocated` audit + per-document status
+  audits; the application is remembered in `meta.applied_later` (document and date only — the
+  allocation row stays the money) so the receipt can print "Applied later: … on …".
+- **Contract suite**: `tests/contracts/test_allocation_targets.py`, parametrised over every
+  registered target through a per-document-type fixture registry.
+- **UI**: `allocateExisting` service + thunk (MUTATION, invalidations), `ApplyAdvanceDialog`
+  (`dynamic()`), the receipt's "₹… not yet applied · Apply to bills" line, "Applied later" rows.
+
+### Result
+
+- Backend: protocol v2 in `targets/__init__.py` (`bucket`, `auto`, `payment_id`/`ctx` keywords,
+  `registered_targets`, `targets_for_direction(auto_only, bucket)`, `_reset_for_tests`, the
+  refusals); the two shop targets declare `main`/`auto`; `payments 0003_payment_bucket`;
+  `record_payment` (one-bucket rule before the number, merged FIFO, earmarks, ctx/payment_id);
+  `void_payment` passes ctx/payment_id; `selectors.open_advances`; `open_documents(bucket=)`;
+  `services/allocate.py`; `POST /payments/{id}/allocations`; detail rows gain `applied_later_on`
+  (and `label` when a target sends one), the detail gains `bucket`; the list gains
+  `?unallocated=&bucket=`; `AuditAction.PAYMENT_ALLOCATED` (A4a block).
+- Frontend: `allocateExisting` service, `fetchApplyCandidates` (QUERY) and
+  `allocateExistingPayment` (MUTATION) with their registry and map entries (A4a blocks),
+  `paymentReceiptSlice` state, `usePaymentReceipt` (`canApply`, `loadApplyCandidates`,
+  `submitApply`), `ApplyAdvanceDialog` (`dynamic()`), the receipt's "₹… not yet applied · Apply to
+  bills" row, "Applied later · date" on the receipt page and print, `view-model/applyGate.ts` (no
+  imports that pull another catalogue into the receipt route) and `applyAdvance.ts` (the dialog's).
+  13 new `payments.*` keys, en and hi. The dialog has its own small form rather than reusing
+  `PaymentAllocationPicker`, which is bound to the record form's fields (lines, auto switch); it
+  reuses the picker's view-model (`fifoPreview`, `manualTotals`, `exceedsDue`) and its row design.
+- Tests: `test_payments_v2.py` (16), `test_allocate_existing.py` (25, two concurrency), the
+  contract suite `tests/contracts/test_allocation_targets.py` (11, sales and purchases), frontend
+  `ApplyAdvanceDialog.test.tsx`, `applyAdvance.test.ts`, additions to `paymentService.test.ts` and
+  `PaymentReceiptPrint.test.tsx`. Backend regression (payments, sales, purchases, expenses, ledger,
+  reports, architecture, contracts) 930 passed / 7 skipped before the last additions.
+
+### Independent QA
+
+No Agent tool; adversarial self-review. Checked: the merge keeps PUR-02's due-date FIFO (the
+existing supplier suites pass unchanged); FIFO still locks every candidate before choosing, so two
+payments lock in one order; the one-bucket refusal happens before `allocate_number`; an earmarked
+`"auto"` payment stays unallocated but an explicit `allocate_existing` may apply it; the void race
+re-reads the payment under its lock and answers `payment_already_void`; a second application of
+one advance waits on the party lock and answers `over_allocated`; the dialog's load effect does not
+loop (its callback depends on the payment row only). Found and fixed: `open_advances` excluded
+every payment without a `context` key (`NOT (NULL LIKE …)`), caught by its own test; the receipt
+route started loading the money catalogue's ids through the hook's import of `paymentDisplay.ts`
+(`i18n:check`), fixed by `applyGate.ts`; the contract suite's bill factory needed a supplier.
+
 ## Decisions
 
 - (A14) The refund-release call becomes a payments void seam (see Q-M1).
@@ -180,8 +258,19 @@ were pinned to the shell catalogue — moved to their own module.
 - (A2) The party detail's bucket keys are decided by `BUCKET_WRITER_MODULES`
   (`loan`: lending; `deposit`: library, gym, hospitality) against `effective_modules`.
 - (A2) Owner Q3 default applied: LED-11's write-off is capped at the trade figure.
+- (A4a) `"auto"` in `record_payment` is the `main` bucket's auto targets; `open_documents` without
+  `bucket` lists exactly those (today's panel); with `bucket` every target of that bucket.
+- (A4a) "Applied later" is remembered in `payment.meta.applied_later` (document and date; the
+  allocation row stays the money) rather than a new column — no schema beyond the reservation.
+- (A4a) `open_advances` excludes earmarked payments, credit-note refund vouchers and
+  `<module>_refund` payments (R36, R61).
 
 ## Questions for the architecture owner
+
+- **Q-M3 (A4a):** R6 says `"auto"` is global oldest-first by `(document_date, number, id)`. Applied
+  literally it re-sorts a supplier's bills by bill date, but PUR-02 FR-3 (shipped) settles them by
+  `due_on` first. Implemented as a merge of each target's canonical FIFO list by that key, which is
+  R6 across targets and leaves PUR-02 unchanged. Confirm.
 
 - **Q-M2 (A2):** the statement CSV (`?format=csv`) exports the running-balance rows only. Should
   deposit lines be appended as a separate section (they cannot be in the running-balance column)?

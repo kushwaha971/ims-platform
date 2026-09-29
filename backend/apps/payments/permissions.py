@@ -19,6 +19,8 @@ PaymentPermissions = HasPermission(
         "create": "payments.payment.write",
         "share": "payments.payment.write",
         "void": "payments.payment.void",
+        # A4a (PLT-X03 §10) — applying an advance is a payment write: owner, admin, staff.
+        "allocations": "payments.payment.write",
     }
 )
 

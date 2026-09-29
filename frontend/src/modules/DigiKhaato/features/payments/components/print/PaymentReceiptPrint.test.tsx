@@ -170,3 +170,30 @@ describe('UAT-D8: the balance line is worded for whoever is reading it', () => {
     );
   });
 });
+
+it('A4a: an allocation applied after the receipt was recorded says so, with the date', () => {
+  /* PLT-X03 §8 — the receipt prints what the payment settled at print time; a bill it was
+     applied to later (Apply to bills) must not read as if it was paid at the counter that day. */
+  const later = payment({
+    allocations: [
+      {
+        documentType: 'sales_document',
+        documentId: 'd2',
+        number: 'INV/26-27/0311',
+        kind: 'invoice',
+        documentDate: '2026-10-12',
+        status: 'paid',
+        amountDue: '0.00',
+        amount: '1770.00',
+        appliedLaterOn: '2026-10-12',
+      },
+    ],
+  });
+  renderWithProviders(<Receipt value={later} />);
+  expect(screen.getByTestId('receipt-applied-later')).toHaveTextContent(/Applied later/);
+});
+
+it('A4a: an allocation made when the receipt was recorded carries no "Applied later" line', () => {
+  renderWithProviders(<Receipt value={payment()} />);
+  expect(screen.queryByTestId('receipt-applied-later')).not.toBeInTheDocument();
+});

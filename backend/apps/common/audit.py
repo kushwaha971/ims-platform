@@ -214,6 +214,12 @@ class AuditAction:
     # ── A8 ── perpetual counters (ADR-051, contracts §5) ──────────────────
     COUNTER_RAISED = "counter.raised"
 
+    # ── A4a ── payments v2 (contracts §1.4, PLT-X03 §6) ───────────────────
+    #
+    # `allocate_existing` — money already received applied to later documents. Its
+    # `before`/`after` are the payment's allocations; `metadata.reason` is the caller's.
+    PAYMENT_ALLOCATED = "payment.allocated"
+
 
 def diff_fields(
     before: Mapping[str, Any] | None,
