@@ -23,6 +23,12 @@
  *   - reduced motion: no running animation, the rotator frozen, the hero loop
  *     not playing;
  *   - Hindi renders the Hindi hero.
+ *   - the module map and cards (CR-2026-09-29-PLATFORM-B), at every width:
+ *     a planned module's tile, card and row hold no video, image or frame
+ *     and cause no media request; every module element's chip matches its
+ *     status; no module element is wider than its own box; and from `lg` each
+ *     map tile's connector stub sits under the tile's centre (MEASURED — a
+ *     connector that drifts off its tile reads as the wrong relationship).
  *
  * `--perf` additionally measures LCP, CLS, JS transferred and media bytes on
  * the first view at 390 and 1440, unthrottled and on a throttled profile.
@@ -127,7 +133,10 @@ for (const [width, height] of WIDTHS) {
     const after = await heroVideoState(page);
     record(
       `${tag}: the hero loop plays (currentTime advances)`,
-      after.found && after.time > (before.time ?? 0) + 0.5 && !after.paused,
+      // A loop that wrapped inside the window (11.4 s → 0.0 on a 12 s clip)
+      // is playing too; only a paused or frozen clip fails.
+      after.found && !after.paused &&
+        (after.time > (before.time ?? 0) + 0.5 || after.time < (before.time ?? 0)),
       `${before.time?.toFixed?.(2)} → ${after.time?.toFixed?.(2)} ${after.src ?? ""}`,
     );
 
@@ -143,6 +152,48 @@ for (const [width, height] of WIDTHS) {
     );
 
     await sweep(page, height);
+
+    const modules = await page.evaluate(() => {
+      const els = [...document.querySelectorAll("[data-module-card][data-module-status]")];
+      const planned = els.filter((el) => el.getAttribute("data-module-status") !== "live");
+      const media = planned.flatMap((el) =>
+        [...el.querySelectorAll("video, img, picture, source, iframe, canvas, svg")]
+          .filter((node) => !node.closest('[aria-hidden="true"]'))
+          .map((node) => `${el.id || el.getAttribute("data-module-card")}:${node.tagName}`),
+      );
+      const chipMismatch = els
+        .filter((el) => !el.querySelector(`[data-testid="landing-status-${el.getAttribute("data-module-status")}"]`))
+        .map((el) => el.id || el.getAttribute("href"));
+      const overflowing = els
+        .filter((el) => el.scrollWidth > el.clientWidth + 1)
+        .map((el) => `${el.id || el.getAttribute("href")} ${el.scrollWidth}>${el.clientWidth}`);
+      return { count: els.length, planned: planned.length, media, chipMismatch, overflowing };
+    });
+    record(
+      `${tag}: planned modules hold no media, every chip matches, nothing overflows its card`,
+      modules.count === 15 && modules.planned === 12 && modules.media.length === 0 &&
+        modules.chipMismatch.length === 0 && modules.overflowing.length === 0,
+      JSON.stringify(modules),
+    );
+    const plannedMedia = media.filter((p) => !/\/(hero|feat|demo)-/.test(p));
+    record(`${tag}: no media is requested for a planned module`, plannedMedia.length === 0, plannedMedia.join(", "));
+
+    if (width >= 1024) {
+      const drift = await page.evaluate(() => {
+        const map = document.querySelector('[data-testid="landing-module-map"]');
+        const tiles = [...map.querySelectorAll('a[data-module-card="map"]')].map((a) => a.getBoundingClientRect());
+        const stubs = [...map.querySelectorAll('[data-testid="landing-map-stubs"] > *')].map((d) => d.getBoundingClientRect());
+        return tiles.map((tile, i) =>
+          Math.abs(tile.left + tile.width / 2 - ((stubs[i]?.left ?? -999) + (stubs[i]?.width ?? 0) / 2)),
+        );
+      });
+      record(
+        `${tag}: each map tile's connector sits under its centre`,
+        drift.length === 5 && drift.every((d) => d <= 2),
+        drift.map((d) => d.toFixed(1)).join(", "),
+      );
+    }
+
     const [scrollWidth, innerWidth] = await page.evaluate(() => [
       document.documentElement.scrollWidth,
       window.innerWidth,
@@ -151,6 +202,13 @@ for (const [width, height] of WIDTHS) {
 
     if ([390, 1440, 3840].includes(width)) {
       await page.screenshot({ path: `${SHOT_DIR}/full-${width}-${theme}.png`, fullPage: true });
+    }
+    if ([390, 1024, 1440, 3840].includes(width)) {
+      for (const [id, name] of [["platform", "map"], ["modules", "modules"]]) {
+        await page.locator(`#${id}`).scrollIntoViewIfNeeded();
+        await page.waitForTimeout(700);
+        await page.locator(`#${id}`).screenshot({ path: `${SHOT_DIR}/${name}-${width}-${theme}.png` });
+      }
     }
     await ctx.close();
   }
@@ -186,7 +244,7 @@ for (const [width, height] of WIDTHS) {
   const h1 = await page.locator("h1").innerText();
   record(
     "signed-out / shows the landing page",
-    response?.status() === 200 && new URL(page.url()).pathname === "/" && /One khata/.test(h1),
+    response?.status() === 200 && new URL(page.url()).pathname === "/" && /All your records/.test(h1),
     `${response?.status()} ${page.url()}`,
   );
 
@@ -332,7 +390,13 @@ for (const [width, height] of WIDTHS) {
   await page.goto(`${FRONTEND}/`, { waitUntil: "networkidle" });
   await page.waitForTimeout(800);
   const h1 = await page.locator("h1").innerText();
-  record("Hindi renders the Hindi hero, brand in Latin", /पूरी दुकान का एक खाता/.test(h1), h1.replace(/\n/g, " / "));
+  record("Hindi renders the Hindi hero", /सारा हिसाब-किताब/.test(h1), h1.replace(/\n/g, " / "));
+  await page.locator("#platform").scrollIntoViewIfNeeded();
+  await page.waitForTimeout(700);
+  await page.locator("#platform").screenshot({ path: `${SHOT_DIR}/map-390-hi.png` });
+  await page.locator("#modules").scrollIntoViewIfNeeded();
+  await page.waitForTimeout(700);
+  await page.locator("#modules").screenshot({ path: `${SHOT_DIR}/modules-390-hi.png` });
   await page.screenshot({ path: `${SHOT_DIR}/view-390-hi.png` });
   await sweep(page, 844);
   const [sw, iw] = await page.evaluate(() => [document.documentElement.scrollWidth, window.innerWidth]);
