@@ -6,7 +6,7 @@
   "inventory.masters.category.name": "श्रेणी का नाम",
   "inventory.masters.category.name.required": "श्रेणी का नाम लिखें।",
   "inventory.masters.category.parent": "किसके अंदर",
-  "inventory.masters.category.placeholder": "जैसे किराना",
+  "inventory.masters.category.placeholder": "जैसे राशन",
   "inventory.masters.category.topLevel": "सबसे ऊपर",
   "inventory.masters.itemCount": "{count, plural, one {# आइटम} other {# आइटम}}",
   "inventory.masters.title": "श्रेणियाँ और इकाइयाँ",

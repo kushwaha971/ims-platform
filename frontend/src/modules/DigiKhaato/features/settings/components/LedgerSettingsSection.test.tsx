@@ -28,7 +28,7 @@ beforeAll(() => {
       user: {
         id: 'u1',
         name: 'Suresh',
-        email: 's@kirana.test',
+        email: 's@store.test',
         mobile: null,
         locale: 'en',
         mustChangePassword: false,
@@ -49,7 +49,7 @@ describe('LedgerSettingsSection reminder template', () => {
       <LedgerSettingsSection settings={settings('From {business_name}')} canEdit />
     );
     expect(screen.getAllByText('From Sharma Stores').length).toBeGreaterThan(0);
-    expect(screen.queryByText(/Kirana Bhandar/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Sharma General Store/)).not.toBeInTheDocument();
   });
 
   it('inserts a placeholder chip at the caret, not at the end (QA D7)', () => {

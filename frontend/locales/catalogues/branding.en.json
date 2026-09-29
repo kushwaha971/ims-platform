@@ -1,7 +1,7 @@
 {
   "branding.appName.hint": "Shown in the header instead of the product name. 2–30 characters.",
   "branding.appName.label": "App name",
-  "branding.appName.placeholder": "e.g. Kirana Bhandar",
+  "branding.appName.placeholder": "e.g. Sharma General Store",
   "branding.appName.required": "Enter an app name of 2–30 characters.",
   "branding.colour.contrastOk": "Readable ✓ {ratio}:1",
   "branding.colour.hex": "Colour code",

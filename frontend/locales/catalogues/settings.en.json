@@ -63,7 +63,7 @@
   "settings.template.placeholder.upi_link": "UPI link",
   "settings.template.preview": "Preview",
   "settings.template.previewEmpty": "The standard message will be used.",
-  "settings.template.sample.business": "Kirana Bhandar",
+  "settings.template.sample.business": "Sharma General Store",
   "settings.template.sample.party": "Ramesh",
   "settings.template.tooLong": "Keep the message under {max} characters.",
   "settings.template.unknown": "Unknown placeholder {name}",

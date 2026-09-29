@@ -2,7 +2,7 @@ import { insertAt, renderTemplatePreview, templateProblems } from './settingsDis
 
 const SAMPLE = {
   party_name: 'Ramesh',
-  business_name: 'Kirana Bhandar',
+  business_name: 'Sharma General Store',
   amount: '₹2,300.00',
   due_date: '30/09/2026',
   upi_link: 'upi://pay?pa=shop@okaxis',

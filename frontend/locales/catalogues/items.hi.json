@@ -29,7 +29,7 @@
   "items.form.barcode.taken": "पहले से {name} में इस्तेमाल",
   "items.form.category.empty": "कोई श्रेणी नहीं मिली",
   "items.form.category.label": "श्रेणी",
-  "items.form.category.placeholder": "जैसे किराना",
+  "items.form.category.placeholder": "जैसे राशन",
   "items.form.category.search": "श्रेणी खोजें",
   "items.form.createInline": "+ “{text}” बनाएँ",
   "items.form.date.placeholder": "1 अप्रैल 2026",

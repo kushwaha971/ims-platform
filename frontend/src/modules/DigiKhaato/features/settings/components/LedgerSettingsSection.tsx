@@ -77,7 +77,7 @@ export function LedgerSettingsSection({
   const [templateEn, templateHi] = useWatch({ control, name: ['templateEn', 'templateHi'] });
 
   // QA D6 — the preview is the merchant's own message, so {business_name} is
-  // THEIR business, not the sample "Kirana Bhandar". The sample stays only as
+  // THEIR business, not the sample "Sharma General Store". The sample stays only as
   // the fallback for a session that has not loaded a business yet.
   const businessName = useAppSelector(selectActiveTenant)?.name;
   const sample = useMemo(

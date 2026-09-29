@@ -1,7 +1,7 @@
 {
   "branding.appName.hint": "हेडर में उत्पाद के नाम की जगह दिखता है। 2–30 अक्षर।",
   "branding.appName.label": "ऐप का नाम",
-  "branding.appName.placeholder": "जैसे: किराना भंडार",
+  "branding.appName.placeholder": "जैसे: शर्मा जनरल स्टोर",
   "branding.appName.required": "2–30 अक्षरों का ऐप नाम लिखें।",
   "branding.colour.contrastOk": "पढ़ने योग्य ✓ {ratio}:1",
   "branding.colour.hex": "रंग कोड",
