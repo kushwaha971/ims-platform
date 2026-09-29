@@ -12,6 +12,8 @@ import brandingEn from 'locales/catalogues/branding.en.json';
 import brandingHi from 'locales/catalogues/branding.hi.json';
 import businessProfileEn from 'locales/catalogues/businessProfile.en.json';
 import businessProfileHi from 'locales/catalogues/businessProfile.hi.json';
+import calendarEn from 'locales/catalogues/calendar.en.json';
+import calendarHi from 'locales/catalogues/calendar.hi.json';
 import cashbookEn from 'locales/catalogues/cashbook.en.json';
 import cashbookHi from 'locales/catalogues/cashbook.hi.json';
 import dataEn from 'locales/catalogues/data.en.json';
@@ -107,6 +109,7 @@ export const en: Readonly<Record<string, string>> = {
   ...authEn,
   ...brandingEn,
   ...businessProfileEn,
+  ...calendarEn,
   ...cashbookEn,
   ...dataEn,
   ...dataStatusEn,
@@ -153,6 +156,7 @@ export const hi: Readonly<Record<string, string>> = {
   ...authHi,
   ...brandingHi,
   ...businessProfileHi,
+  ...calendarHi,
   ...cashbookHi,
   ...dataHi,
   ...dataStatusHi,

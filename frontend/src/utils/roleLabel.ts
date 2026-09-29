@@ -1,5 +1,7 @@
 import { TENANT_ROLES, type TenantRole } from 'src/types/domain.types';
 
+import { loadedMessage } from './loadedMessage';
+
 type Translate = (id: string, values?: Record<string, string | number | Date>) => string;
 
 /**
@@ -23,8 +25,8 @@ export const roleLabel = (t: Translate, code: string, labelId?: string | null): 
     if (split > 0) candidates.push(`${code.slice(0, split)}.role.${code.slice(split + 1)}`);
   }
   for (const id of candidates) {
-    const text = t(id);
-    if (text && text !== id) return text;
+    const text = loadedMessage(t, id);
+    if (text) return text;
   }
   return t('tenant.role.moduleFallback');
 };

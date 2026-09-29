@@ -16,6 +16,8 @@
   "settings.hub.activity.description": "Who changed what, and when",
   "settings.hub.branding": "Branding",
   "settings.hub.branding.description": "Logo, brand colour and the lines on your bills",
+  "settings.hub.businessDays": "Business days",
+  "settings.hub.businessDays.description": "Closed weekdays and holidays",
   "settings.hub.data": "Your data",
   "settings.hub.data.description": "Download everything, support access, delete the business",
   "settings.hub.devices": "Devices",

@@ -60,6 +60,8 @@ CANON_PERMISSIONS = {
     "reports.financial.read",
     "reports.export",
     "notifications.settings.manage",
+    # A9b — R26, owner Q2; canon §0.9 amended by the module-roles CR.
+    "platform.calendar.manage",
 }
 
 

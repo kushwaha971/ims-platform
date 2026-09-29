@@ -17,9 +17,9 @@ and `reset_fy` from the settings screen.
 | A1 release gate | done | `910d961` |
 | A12 engine enablement | done | `3e67449` |
 | A13 scoping, module roles | done | `03fcbda` |
-| A8 perpetual counters | done | pending merge |
-| A9b closed-day calendar | waits for A8, A9a | — |
-| A6 party roles, relations | waits for A2 | — |
+| A8 perpetual counters | done | `daa289a` |
+| A9b closed-day calendar | done | `d5efcaf` |
+| A6 party roles, relations | in progress (A2 merged `472cb21`) | — |
 | A7 reminders | waits for A2, A6, A10 | — |
 
 ## A1 — release gate (FRD 00 PLT-X11, R11)
@@ -325,6 +325,71 @@ split and checked (3900 keys).
 3. Verified — the settings path writes the `'*'` row for a perpetual kind that has none yet, and a
    perpetual `next_number` past 2^31 is a 400, not a DataError.
 4. The tests-first run failed on every new test (no functions, no CHECK) before the code existed.
+
+## A9b — the closed-day calendar (FRD 00 PLT-X08, ADR-055, R26, R32)
+
+### Design note
+
+- `platform 0013_closed_day`: `platform_closed_day (TenantModel, date, reason ≤ 60, module NULL)`,
+  `uq_closed_day UNIQUE NULLS NOT DISTINCT (tenant, date, module)`, `ix_closed_day_range (tenant,
+  date)`; registered in `platform_app/tenant_data.py` (exported as `closed_days.csv`).
+- **Weekday storage follows contracts v1 (R32), not FRD §5's single nested key**:
+  `calendar.closed_weekdays` → `{"value": [6]}` and `calendar.closed_weekdays.<module>` →
+  `{"value": [0, 6]}`. The `{"value": …}` object follows the settings rows' convention.
+- `services/calendar.py`: `is_open`, `next_open_day` (≤ 366-day horizon, one query),
+  `closed_days_between` (inclusive, **one query** — the weekday rows and the closures in a single
+  `UNION ALL`), `register_calendar_reader`/`readers_for`, `set_closed_weekdays` (BR-2 refuses a
+  list closing all seven days for the tenant or any module; `None` drops an override; one audit row
+  per real change), `add_closed_days` (≤ 31 days, reason 1–60, module must be an effective reader;
+  BR-3 skips and counts existing days; one audit row), `delete_closed_day` (hard delete, audited).
+  Audit actions `calendar.closed_day.created|deleted`, `calendar.weekdays.updated`.
+- API: `GET /calendar/closed-days?from&to&module` (any active member, ≤ 400 days; meta carries
+  `closed_weekdays`, `module_weekdays` and **`readers`** — additive, the screen's overrides and
+  "Applies to" choices); `POST` (201 with `meta.skipped_existing`); `DELETE /{id}` (cross-tenant
+  404); `PUT /calendar/weekdays`. Writes: `platform.calendar.manage` (new codename, owner + admin,
+  owner Q2), or for a module's own row/override that module's `<module>.settings.manage` (R26). A
+  support session cannot write.
+- **Weekdays are written only through `PUT /calendar/weekdays`**, not also through the generic
+  `PUT /tenants/current/settings` the FRD offers as an alternative: one write path, one validator.
+- `calendar_readers` is in `/auth/me`'s active tenant (FRD §7) **and** in the settings payload. The
+  client reads it from the settings payload for the hub link, because the session slice is static
+  and a new field there would grow the app shell for one link.
+- Frontend `features/calendar` (R33): `calendarService`, lazily injected `calendarSlice`,
+  `useBusinessDays` (weekday changes save at once, like the Features switches), pure
+  `calendarDisplay`, `WeekdayChips` (the last open day's chip is disabled — BR-2), the
+  `ClosedDayDialog` loaded with `dynamic()`, the page at `/settings/business-days`, and a
+  "Business days" hub link only while `calendar_readers` is non-empty. Past dates may be added
+  (BR-4). Copy in a new `calendar` catalogue, English and Hindi. `src/utils/loadedMessage.ts` is
+  the one "key or null" check now shared by roleLabel, roleDisplay and the calendar.
+
+### A9b QA (adversarial self-review plus the look pass)
+
+Look pass (`/tmp/e2e-shots/trackp-calendar/`), same stack as A13's plus
+`register_calendar_reader("lending")`:
+
+1. **Fixed (found by looking)** — at 390 px the seven weekday chips did not fit and "Sun" / "रवि"
+   was cut in half: `UbFilterChipGroup` is built not to wrap (filter bars scroll). `WeekdayChips`
+   tells it to wrap; a class guard failed first; the re-shoot shows the row wrapping.
+2. **Fixed (found by looking)** — a module without a name on the screen read "When on, This
+   feature is closed…", a fallback word spliced mid-sentence. `moduleName` now returns `null` and
+   callers use whole generic sentences ("A feature uses different days", "One feature only").
+3. **Fixed** — the list's `module_weekdays` read every stored override, naming a switched-off (or,
+   on a flagged dev database, unreleased) module in the response; now only effective readers, and
+   the stored row is kept for the module's return (test failed first).
+4. **Fixed while writing** — `UbEmptyState` without its required `variant` crashed the render
+   (caught by the component test before tsc).
+5. **Fixed (A13 miss, found by the full `src/tests` run)** — A13's `fetchRoles` thunk was never
+   listed in the invalidation registry, so `invalidation.registry.test.ts` has been red on main
+   since `03fcbda` (the A13 gate ran the team suites, not `src/tests`). It and the three calendar
+   mutations (`calendar/saveWeekdays`, `calendar/add`, `calendar/delete`, each patching
+   `calendar.data`) are registered now, and the map test injects `calendarSlice`. The track's
+   jest gate is `src/tests` plus the feature suites from here on.
+6. Verified on the re-shoot — the hub link appears only with a reader on; the staff view is read-only
+   (no add, no remove, every chip disabled, "View only"); no page overflow at 390 or 1280 in either
+   language; `0013` round-trips in the reversibility suite and on the scratch database.
+
+Gates: platform_app, common, architecture, integration and the 0013 round trip green; calendar,
+settings, team, utils and `src/tests` (463) jest green; `tsc`, eslint, prettier clean; locales 3964 keys checked.
 
 ## Decisions log
 

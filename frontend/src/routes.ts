@@ -92,6 +92,9 @@ export const ROUTES = {
   SETTINGS_DEVICES: '/settings/devices',
   /** PLT-10 — "Your data": export, deletion, support consent. Owner only. */
   SETTINGS_DATA: '/settings/data',
+  // ── A9b ── PLT-X08: the business-days calendar (closed weekdays, holidays).
+  // Reached from Settings only while an enabled module reads the calendar.
+  SETTINGS_BUSINESS_DAYS: '/settings/business-days',
   SWITCH_TENANT: '/switch',
   /** IMP-01 — the import wizard; `?kind=` skips the kind picker (FR-14). */
   IMPORTS: '/imports',

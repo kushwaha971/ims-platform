@@ -11,6 +11,7 @@ from apps.platform_app.constants import (
     TenantStatus,
 )
 from apps.platform_app.models.audit import AuditLog
+from apps.platform_app.models.calendar import ClosedDay
 from apps.platform_app.models.auth import AuthToken, OtpChallenge, Session
 from apps.platform_app.models.idempotency import IdempotencyKey
 from apps.platform_app.models.job import Job
@@ -32,6 +33,7 @@ from apps.platform_app.models.user import User
 
 __all__ = [
     "AuditLog",
+    "ClosedDay",
     "AuthToken",
     "AuthTokenPurpose",
     "BusinessType",

@@ -1,5 +1,6 @@
 import type { TranslateFn } from 'src/hooks/useTranslation';
 import type { TenantRole } from 'src/types/domain.types';
+import { loadedMessage } from 'src/utils/loadedMessage';
 import { roleLabel } from 'src/utils/roleLabel';
 
 import type { RoleOption, RoleView } from '../types/role.types';
@@ -17,11 +18,7 @@ import type { RoleOption, RoleView } from '../types/role.types';
 
 const OWNER: TenantRole = 'owner';
 
-/** `t(id)`, or null when the id has no copy loaded here. */
-const loaded = (t: TranslateFn, id: string, values?: Record<string, string>): string | null => {
-  const text = t(id, values);
-  return text && text !== id ? text : null;
-};
+const loaded = loadedMessage;
 
 /**
  * What the add and invite dialogs offer: the server's assignable roles, never

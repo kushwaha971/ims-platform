@@ -213,6 +213,10 @@ class AuditAction:
     REFERENCE_DATA_SEEDED = "platform.reference_data_seeded"
     # ── A8 ── perpetual counters (ADR-051, contracts §5) ──────────────────
     COUNTER_RAISED = "counter.raised"
+    # ── A9b ── the closed-day calendar (ADR-055, FRD 00 PLT-X08 §5) ──────────
+    CALENDAR_CLOSED_DAY_CREATED = "calendar.closed_day.created"
+    CALENDAR_CLOSED_DAY_DELETED = "calendar.closed_day.deleted"
+    CALENDAR_WEEKDAYS_UPDATED = "calendar.weekdays.updated"
 
     # ── A4a ── payments v2 (contracts §1.4, PLT-X03 §6) ───────────────────
     #

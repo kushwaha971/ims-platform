@@ -29,6 +29,11 @@ from apps.platform_app.views.admin import (
     AdminTenantDetailView,
     AdminTenantListView,
 )
+from apps.platform_app.views.calendar import (
+    ClosedDayDetailView,
+    ClosedDayListView,
+    WeekdaysView,
+)
 from apps.platform_app.views.data import (
     DeleteCancelView,
     DeleteRequestView,
@@ -141,6 +146,14 @@ urlpatterns = [
     path("members", MemberListCreateView.as_view(), name="member-list"),
     # A13 (PLT-X12) — canon roles plus the module roles of enabled modules.
     path("roles", RoleListView.as_view(), name="role-list"),
+    # A9b (PLT-X08) — the tenant's closed-day calendar.
+    path("calendar/closed-days", ClosedDayListView.as_view(), name="calendar-closed-days"),
+    path(
+        "calendar/closed-days/<uuid:closed_day_id>",
+        ClosedDayDetailView.as_view(),
+        name="calendar-closed-day",
+    ),
+    path("calendar/weekdays", WeekdaysView.as_view(), name="calendar-weekdays"),
     path(
         "members/<uuid:membership_id>/credentials",
         MemberCredentialsView.as_view(),

@@ -58,6 +58,9 @@ PERMISSIONS: frozenset[str] = frozenset(
         "reports.financial.read",
         "reports.export",
         "notifications.settings.manage",
+        # ── A9b ── R26, owner Q2 (canon §0.9 CR drafted in the Track P progress
+        # file): owner and admin write tenant-wide closed days and weekdays.
+        "platform.calendar.manage",
     }
 )
 

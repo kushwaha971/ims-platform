@@ -1,3 +1,5 @@
+import type { ModuleCode } from 'src/types/domain.types';
+
 /**
  * PLT-06 — the tenant settings object, as `GET /tenants/current/settings`
  * returns it. `values` are the server's stored shapes (small objects, not bare
@@ -48,6 +50,11 @@ export interface TenantSettings {
   readonly numbering: Readonly<Record<string, NumberingRow>>;
   readonly fyLabel: string;
   readonly modules: SettingsModules;
+  /**
+   * A9b (PLT-X08 §7): the enabled modules that read the business-days calendar.
+   * "Business days" appears in the hub only when this is non-empty.
+   */
+  readonly calendarReaders: readonly ModuleCode[];
   readonly etag: string;
 }
 

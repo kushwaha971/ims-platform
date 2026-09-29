@@ -140,6 +140,8 @@ export const PERMISSION_CODES = [
   'platform.audit.read',
   /** LED-07 FR-1 / LED-08 FR-1 — the two SMS switches; owner and admin. */
   'notifications.settings.manage',
+  // ── A9b ── R26, owner Q2: tenant-wide closed days and weekdays; owner, admin.
+  'platform.calendar.manage',
 ] as const;
 export type PermissionCode = (typeof PERMISSION_CODES)[number];
 

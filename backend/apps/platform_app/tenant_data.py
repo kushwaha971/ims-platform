@@ -87,4 +87,7 @@ register(
     TenantTable("platform.AuditLog", export_name="audit_log.csv", purge=_anonymise_audit),
     TenantTable("platform.ImpersonationSession"),
     TenantTable("platform.SupportAccess"),
+    # A9b (PLT-X08): the calendar's dated closures — configuration the merchant
+    # keyed in, so it travels with the export.
+    TenantTable("platform.ClosedDay", export_name="closed_days.csv"),
 )

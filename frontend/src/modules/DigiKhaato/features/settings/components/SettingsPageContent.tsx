@@ -4,6 +4,7 @@ import { useCallback, useMemo } from 'react';
 
 import {
   Building2,
+  CalendarDays,
   ChevronRight,
   CreditCard,
   DatabaseBackup,
@@ -73,8 +74,17 @@ export function SettingsPageContent(): React.JSX.Element {
       { key: 'activity', href: ROUTES.SETTINGS_ACTIVITY, icon: History, show: access.canReadAudit },
       { key: 'devices', href: ROUTES.SETTINGS_DEVICES, icon: MonitorSmartphone, show: true },
       { key: 'data', href: ROUTES.SETTINGS_DATA, icon: DatabaseBackup, show: access.isOwner },
+      // A9b (PLT-X08 §7) — only while an enabled feature reads the calendar:
+      // business days for a shop with nothing that counts days would be a
+      // setting whose effect nobody can see.
+      {
+        key: 'businessDays',
+        href: ROUTES.SETTINGS_BUSINESS_DAYS,
+        icon: CalendarDays,
+        show: access.canView && (data?.calendarReaders.length ?? 0) > 0,
+      },
     ],
-    [access]
+    [access, data?.calendarReaders]
   );
 
   const handleConflictOpenChange = useCallback(

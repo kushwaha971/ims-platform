@@ -1,5 +1,6 @@
 import { API_PATHS } from 'src/api/APIPaths';
 import { api, ubConfig } from 'src/api/AxiosInstances';
+import type { ModuleCode } from 'src/types/domain.types';
 
 import type {
   NumberingRow,
@@ -20,6 +21,8 @@ interface SettingsApiResponse {
     readonly numbering: Readonly<Record<string, NumberingRow>>;
     readonly fy_label: string;
     readonly modules: SettingsModules;
+    /** A9b: the enabled modules that read the business-days calendar. */
+    readonly calendar_readers?: readonly ModuleCode[];
     readonly etag: string;
   };
 }
@@ -29,6 +32,7 @@ const toSettings = (data: SettingsApiResponse['data']): TenantSettings => ({
   numbering: data.numbering,
   fyLabel: data.fy_label,
   modules: data.modules,
+  calendarReaders: data.calendar_readers ?? [],
   etag: data.etag,
 });
 

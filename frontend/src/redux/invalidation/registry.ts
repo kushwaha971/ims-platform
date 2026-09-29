@@ -138,6 +138,10 @@ export const QUERIES = {
   fetchPrintBranding: 'printBranding/fetchPrintBranding',
   // ── A4a ── Apply to bills: the payment's own bucket's open documents
   fetchApplyCandidates: 'paymentReceipt/fetchApplyCandidates',
+  // ── A13 ── PLT-X12: the roles the team dialogs offer (GET /roles).
+  fetchRoles: 'role/fetchRoles',
+  // ── A9b ── PLT-X08: the Business days screen.
+  fetchBusinessDays: 'calendar/fetch',
 } as const;
 
 export const MUTATIONS = {
@@ -259,6 +263,10 @@ export const MUTATIONS = {
   voidCreditNote: 'invoice/voidCreditNote',
   // ── A4a ── apply an advance to later bills (POST /payments/{id}/allocations)
   allocateExistingPayment: 'paymentReceipt/allocateExisting',
+  // ── A9b ── PLT-X08: weekday rules and closures.
+  saveWeekdays: 'calendar/saveWeekdays',
+  addClosedDays: 'calendar/add',
+  deleteClosedDay: 'calendar/delete',
 } as const;
 
 export type TQueryName = keyof typeof QUERIES;

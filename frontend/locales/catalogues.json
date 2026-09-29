@@ -92,6 +92,7 @@
     "settings.action.": "settingsGate",
     "tax.rate.": "money",
     "landing.": "landing",
-    "landing.pricing.": "landingPricing"
+    "landing.pricing.": "landingPricing",
+    "calendar.": "calendar"
   }
 }

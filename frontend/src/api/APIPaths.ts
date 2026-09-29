@@ -62,6 +62,10 @@ export const API_PATHS = {
    * the module roles of the modules that are on right now.
    */
   ROLES: '/roles',
+  // ── A9b ── PLT-X08: the tenant's business-days calendar.
+  CALENDAR_CLOSED_DAYS: '/calendar/closed-days',
+  CALENDAR_CLOSED_DAY: (id: string) => `/calendar/closed-days/${seg(id)}`,
+  CALENDAR_WEEKDAYS: '/calendar/weekdays',
   PERMISSIONS_ME: '/permissions/me',
   AUDIT_LOGS: '/audit-logs',
   // ── Track T1: PLT-06, PLT-08, PLT-09 ──────────────────────────────────────

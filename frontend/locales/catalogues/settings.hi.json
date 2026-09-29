@@ -16,6 +16,8 @@
   "settings.hub.activity.description": "किसने क्या बदला, और कब",
   "settings.hub.branding": "ब्रांडिंग",
   "settings.hub.branding.description": "लोगो, ब्रांड रंग और बिल की लाइनें",
+  "settings.hub.businessDays": "कामकाज के दिन",
+  "settings.hub.businessDays.description": "हफ़्ते के बंद दिन और छुट्टियाँ",
   "settings.hub.data": "आपका डेटा",
   "settings.hub.data.description": "सब कुछ डाउनलोड करें, सपोर्ट एक्सेस, बिज़नेस हटाएँ",
   "settings.hub.devices": "डिवाइस",

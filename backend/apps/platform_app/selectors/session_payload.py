@@ -98,6 +98,9 @@ def active_tenant_block(tenant: Any) -> dict:
         "deletion_scheduled_for": _deletion_date(tenant),
         "onboarding_step": tenant.onboarding_step,
         "enabled_modules": sorted(effective_modules(tenant)),
+        # A9b (PLT-X08 §7): the enabled modules that read the business-days
+        # calendar; the Business days screen is shown only when this is non-empty.
+        "calendar_readers": calendar_readers_of(tenant),
         # WLB-01 FR-2/FR-4: the RESOLVED branding (tenant → partner → default),
         # which is what the theme and the header render. Zero extra queries —
         # the partner rides on the membership's `select_related`.
@@ -106,6 +109,12 @@ def active_tenant_block(tenant: Any) -> dict:
         # support contact; the server refuses the writes.
         "partner_suspended": tenant.partner.status == "suspended",
     }
+
+
+def calendar_readers_of(tenant: Any) -> list[str]:
+    from apps.platform_app.services.calendar import readers_for
+
+    return readers_for(tenant)
 
 
 def _deletion_date(tenant: Any) -> Any:

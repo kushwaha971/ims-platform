@@ -697,4 +697,11 @@ export const INVALIDATION: TInvalidationMap = {
   // load follows either way, which rebuilds every slice from `/auth/me`.
   startImpersonation: { resetAll: true },
   endImpersonation: { resetAll: true },
+
+  // ── A9b ── PLT-X08: the Business days screen. Each write's answer is written
+  // into `calendar.data` by `calendarSlice` itself (weekdays replaced, closures
+  // appended or removed); nothing else in the product reads the calendar yet.
+  saveWeekdays: { patch: [['calendar', 'data']] },
+  addClosedDays: { patch: [['calendar', 'data']] },
+  deleteClosedDay: { patch: [['calendar', 'data']] },
 };

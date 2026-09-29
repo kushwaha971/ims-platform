@@ -226,6 +226,12 @@ def modules_view(tenant: Any) -> dict:
     }
 
 
+def _calendar_readers(tenant: Any) -> list[str]:
+    from apps.platform_app.services.calendar import readers_for
+
+    return readers_for(tenant)
+
+
 def settings_payload(tenant: Any) -> dict:
     """`GET /tenants/current/settings` — FR-2."""
     rows = _setting_rows(tenant)
@@ -239,6 +245,9 @@ def settings_payload(tenant: Any) -> dict:
         "fy_label": fy,
         "sections": {key: spec.section for key, spec in _shown_specs(tenant).items()},
         "modules": modules_view(tenant),
+        # A9b (PLT-X08 §7): the enabled modules that read the business-days
+        # calendar — the Settings hub shows "Business days" only when non-empty.
+        "calendar_readers": _calendar_readers(tenant),
         "etag": compute_etag(values, numbering),
     }
 
