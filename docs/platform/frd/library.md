@@ -11,9 +11,9 @@ ADR-041 to ADR-055 in [Part 38](../../38-architecture-decision-records.md),
 (`docs/17-00-frd-template.md`, `docs/17-02-frd-ledger-payments.md`), condensed to the 14-section
 template of vision §7.
 
-Where this FRD needs something 11-contracts does not provide, or finds the contracts disagreeing
-with each other or with the code, it does **not** change the contracts: the item is listed in §0.7
-*Contract questions*, and the text below states the assumption it builds on.
+Where this FRD needed something 11-contracts did not provide, the item is listed in §0.7 *Contract
+questions*. All thirteen were **resolved on 30 Sep 2026** by the architecture owner (10-architecture
+§17; 11-contracts v1); the "Resolved →" column gives each answer and the text below follows it.
 
 Every claim about existing code carries a `file:line` reference, read at commit `30798d2`. Paths are
 relative to `backend/` or `frontend/` unless they start with `docs/` or `e2e/`.
@@ -161,24 +161,24 @@ with the recommended default. Changing one is a setting change or a small CR, no
 
 ### 0.7 Contract questions
 
-Found while writing this FRD. None changes 11-contracts; each states the assumption the FRD builds
-on, for the architecture owner to confirm or correct.
+Found while writing this FRD; **resolved on 30 Sep 2026** (10-architecture §17). Every proposal was
+accepted; the "Resolved →" column names the resolution and where it is built.
 
-| # | Where | The question | Assumption in this FRD |
-|---|---|---|---|
-| C1 | 10-architecture §10.1 vs §4.2 (R8, R9, R12) | Library must call `apps.reports.registry.register_dashboard_section` / `register_report` and `apps.imports.registry.register`, but the matrix gives verticals `CORE ∪ engines`, and `CORE` excludes `reports` and `imports` (`tests/architecture/test_import_rules.py:37-61`). As written, registering is an import-rule failure | The matrix gains `reports.registry` and `imports.registry` (the registry modules only) as permitted targets for verticals; the library imports nothing else from either app |
-| C2 | 10-architecture §4.1 (idempotent registration) vs `apps/imports/registry.py:114-118` | `imports.registry.register` raises `ImproperlyConfigured` on a second registration, so a second `ready()` is not harmless, and `is_example` detects template rows by a `name` column (`registry.py:102-107`) that a copy import does not have (`title`) | The core track makes `register` idempotent by `kind` and lets a spec name its example key; until then the library's specs register once, guarded by a module flag |
-| C3 | 11-contracts §1.6 | A reminder candidate carries one `subject_label` (≤ 120) and one `amount`; it has no template parameters and no way to group several sources into one message. A librarian sends **one** text per member listing every overdue copy, and there is no public service for a vertical to record reminder rows with a source (`create_reminder` writes manual party reminders only, `apps/ledger/services/reminders.py:156-177`) | Core adds `record_source_reminders(*, ctx, party_id, recipient_party_id, module, kind, channel, sources: [{source_type, source_id, subject_label, amount}], text) -> list[Reminder]`, which calls `check_reminder_allowed`, writes one row per source sharing one `message_log_id`; the library composes the text itself. Kind is `notice` when `amount is None` |
-| C4 | 11-contracts §1.6, `apps/notifications/services/templates.py:53` | `DEFAULT_TEMPLATES` is a literal dict; there is no registry for a vertical's default message templates (R16 covers in-app notification types only) | Core adds `register_default_templates(mapping)` in `notifications/services/templates.py` (ADR-042 pattern); library registers `library_overdue`, `library_hold_ready`, `library_issue_slip` bodies for `whatsapp`/`sms` × `en`/`hi` |
-| C5 | 11-contracts §1.4 `AllocationTarget.summary()` | The summary has `number` and amounts but no line text, so the core receipt cannot print "Overdue fine – Wings of Fire (Acc. 10231), 3 days" (research §9.2) | `summary()` gains an optional `label` key the receipt prints under the number; absent for existing targets |
-| C6 | 10-architecture §5 vs 11-contracts §1.4 | §5 lists *refund* among business ceilings that are role checks, not codenames; §1.4 says the vertical's codename (for example `library.member.close`) applies to deposit endpoints | Both: the endpoint needs `library.member.close`; the refund step additionally requires `owner` or `admin` by role (D28) |
-| C7 | 11-contracts §1.8 | `closed_days_between` does not say whether its bounds are inclusive; the per-module weekday override's setting key is not named | Inclusive of both ends; the override key is `calendar.closed_weekdays.<module>`; the library calls `closed_days_between(tenant, due_on + 1, returned_on, module="library")` |
-| C8 | 10-architecture §7 (`/api/v1/calendar/closed-days`) | The codename that guards writes to the core calendar is not named; a librarian (admin) must be able to add a holiday, an assistant must not | A row with `module = "library"` may be written by a member holding `library.settings.manage`; a tenant-wide row (`module` null) needs `platform.tenant.manage` or admin role |
-| C9 | 10-architecture §6 item 7 | The library may import only `features/{dues,bookings,attendance,parties,payments,ledger,reminders,reports}` and `src/`. It needs `UbQrCode` (today `features/sales/components/print/UbQrCode.tsx`) and `PrintBranding` (today `features/sales/redux/salesThunk`), which payments already reaches across into sales for (`features/payments/components/print/PaymentReceiptPrint.tsx:11-12`); and a closed-days editor with no core feature home | `UbQrCode` moves to `src/design-system/UbQrCode`; `PrintBranding` and its fetch move to `src/api/brandingPrint.ts`; the closed-days editor is a new core folder `features/calendar`, added to the allowed list (core task A9-FE) |
-| C10 | ADR-046 / 10-architecture §5 rule 2 vs research §4.7 | The research lets a party hold several memberships over time; the contracts make the profile 1:1 with the party | 1:1 (contracts win). Re-joining re-opens the same `library_membership` row; each enrolment, renewal and re-join is an immutable `library_membership_period` row |
-| C11 | 11-contracts §1.4 held deposits | `payments_held_deposit` has no `version`; a membership type change that changes the deposit amount must adjust `expected_amount` | Core adds `adjust_expected(*, ctx, deposit_id, expected_amount, reason)`; until then a type change never changes the expected deposit (the difference is taken or refunded explicitly) |
-| C12 | `record_payment` refund voucher precedent | Refunding a paid lost charge when the copy is found is an `ADJUSTMENT_CREDIT` plus an unallocated payment OUT (the SAL-04 refund-voucher shape, `apps/payments/services/record.py:28-29`). An unallocated payment out is an "advance" that a later explicit `allocate_existing` could apply to a purchase bill of the same party | Accepted: `allocate_existing` is explicit only (11-contracts §1.4), and the payment's `meta.context = "library_refund"` lets the payments list label it |
-| C13 | 11-contracts §1.4 `receive_deposit` | A library going live holds deposits taken on paper years ago. Recording them through `receive_deposit` today puts paper-era cash in today's cashbook; there is no opening path like LED-02's opening entry | Core adds `receive_deposit(..., opening=True)` that the cashbook and collection reports exclude; until then deposits are not imported (LIB-03 EC-6) and are recorded one by one with mode `other`, reference "Opening" |
+| # | Where | The question | Assumption in this FRD | Resolved → |
+|---|---|---|---|---|
+| C1 | 10-architecture §10.1 vs §4.2 (R8, R9, R12) | Library must call `apps.reports.registry.register_dashboard_section` / `register_report` and `apps.imports.registry.register`, but the matrix gives verticals `CORE ∪ engines`, and `CORE` excludes `reports` and `imports` (`tests/architecture/test_import_rules.py:37-61`). As written, registering is an import-rule failure | The matrix gains `reports.registry` and `imports.registry` (the registry modules only) as permitted targets for verticals; the library imports nothing else from either app | **R27** — the two registry modules allowed; matrix amended (A11) |
+| C2 | 10-architecture §4.1 (idempotent registration) vs `apps/imports/registry.py:114-118` | `imports.registry.register` raises `ImproperlyConfigured` on a second registration, so a second `ready()` is not harmless, and `is_example` detects template rows by a `name` column (`registry.py:102-107`) that a copy import does not have (`title`) | The core track makes `register` idempotent by `kind` and lets a spec name its example key; until then the library's specs register once, guarded by a module flag | **R28** — idempotent `register`, `example_key` (A10) |
+| C3 | 11-contracts §1.6 | A reminder candidate carries one `subject_label` (≤ 120) and one `amount`; it has no template parameters and no way to group several sources into one message. A librarian sends **one** text per member listing every overdue copy, and there is no public service for a vertical to record reminder rows with a source (`create_reminder` writes manual party reminders only, `apps/ledger/services/reminders.py:156-177`) | Core adds `record_source_reminders(*, ctx, party_id, recipient_party_id, module, kind, channel, sources: [{source_type, source_id, subject_label, amount}], text) -> list[Reminder]`, which calls `check_reminder_allowed`, writes one row per source sharing one `message_group_id`; the library composes the text itself. Kind is `notice` when `amount is None` | **R10** — `record_source_reminders`, rows share `message_group_id` |
+| C4 | 11-contracts §1.6, `apps/notifications/services/templates.py:53` | `DEFAULT_TEMPLATES` is a literal dict; there is no registry for a vertical's default message templates (R16 covers in-app notification types only) | Core adds `register_default_templates(mapping)` in `notifications/services/templates.py` (ADR-042 pattern); library registers `library_overdue`, `library_hold_ready`, `library_issue_slip` bodies for `whatsapp`/`sms` × `en`/`hi` | **R29** — `register_default_templates` (A10) |
+| C5 | 11-contracts §1.4 `AllocationTarget.summary()` | The summary has `number` and amounts but no line text, so the core receipt cannot print "Overdue fine – Wings of Fire (Acc. 10231), 3 days" (research §9.2) | `summary()` gains an optional `label` key the receipt prints under the number; absent for existing targets | **R30** — `summary()["label"]` |
+| C6 | 10-architecture §5 vs 11-contracts §1.4 | §5 lists *refund* among business ceilings that are role checks, not codenames; §1.4 says the vertical's codename (for example `library.member.close`) applies to deposit endpoints | Both: the endpoint needs `library.member.close`; the refund step additionally requires `owner` or `admin` by role (D28) | **R31** — both: codename and role check |
+| C7 | 11-contracts §1.8 | `closed_days_between` does not say whether its bounds are inclusive; the per-module weekday override's setting key is not named | Inclusive of both ends; the override key is `calendar.closed_weekdays.<module>`; the library calls `closed_days_between(tenant, due_on + 1, returned_on, module="library")` | **R32** — inclusive; key `calendar.closed_weekdays.<module>` |
+| C8 | 10-architecture §7 (`/api/v1/calendar/closed-days`) | The codename that guards writes to the core calendar is not named; a librarian (admin) must be able to add a holiday, an assistant must not | A row with `module = "library"` may be written by a member holding `library.settings.manage`; a tenant-wide row (`module` null) needs `platform.tenant.manage` or admin role | **R26** — `platform.calendar.manage` for tenant-wide rows; module rows by `library.settings.manage` |
+| C9 | 10-architecture §6 item 7 | The library may import only `features/{dues,bookings,attendance,parties,payments,ledger,reminders,reports}` and `src/`. It needs `UbQrCode` (today `features/sales/components/print/UbQrCode.tsx`) and `PrintBranding` (today `features/sales/redux/salesThunk`), which payments already reaches across into sales for (`features/payments/components/print/PaymentReceiptPrint.tsx:11-12`); and a closed-days editor with no core feature home | `UbQrCode` moves to `src/design-system/UbQrCode`; `PrintBranding` and its fetch move to `src/api/brandingPrint.ts`; the closed-days editor is a new core folder `features/calendar`, added to the allowed list (core task A9-FE) | **R33** — `UbQrCode`, `src/print/`, `features/calendar` in Wave A task A16 |
+| C10 | ADR-046 / 10-architecture §5 rule 2 vs research §4.7 | The research lets a party hold several memberships over time; the contracts make the profile 1:1 with the party | 1:1 (contracts win). Re-joining re-opens the same `library_membership` row; each enrolment, renewal and re-join is an immutable `library_membership_period` row | **R34** — accepted (1:1 plus period rows) |
+| C11 | 11-contracts §1.4 held deposits | `payments_held_deposit` has no `version`; a membership type change that changes the deposit amount must adjust `expected_amount` | Core adds `adjust_expected(*, ctx, deposit_id, expected_amount, reason)`; until then a type change never changes the expected deposit (the difference is taken or refunded explicitly) | **R35** — `adjust_expected` (A4) |
+| C12 | `record_payment` refund voucher precedent | Refunding a paid lost charge when the copy is found is an `ADJUSTMENT_CREDIT` plus an unallocated payment OUT (the SAL-04 refund-voucher shape, `apps/payments/services/record.py:28-29`). An unallocated payment out is an "advance" that a later explicit `allocate_existing` could apply to a purchase bill of the same party | Accepted: `allocate_existing` is explicit only (11-contracts §1.4), and the payment's `meta.context = "library_refund"` lets the payments list label it | **R36** — accepted, with an earmark |
+| C13 | 11-contracts §1.4 `receive_deposit` | A library going live holds deposits taken on paper years ago. Recording them through `receive_deposit` today puts paper-era cash in today's cashbook; there is no opening path like LED-02's opening entry | Core adds `receive_deposit(..., opening=True)` that the cashbook and collection reports exclude; until then deposits are not imported (LIB-03 EC-6) and are recorded one by one with mode `other`, reference "Opening" | **R37** — `receive_deposit(opening=True)` in mode `adjustment`; bulk import stays Later |
 
 ### 0.8 Reading rooms and seats (future, not built)
 
@@ -732,7 +732,8 @@ imports with every rejected row explained in the errors file and none silently d
   on), imported after copies and members. The copy becomes `on_loan`, a loan is written with an
   `imported` event, and **no fine is charged** for the past; a loan already past its due date shows
   as overdue from its due date onwards like any other.
-- FR-7 Deposits and unpaid paper fines are **not imported** (§13 EC-6; §0.7 C13).
+- FR-7 Deposits and unpaid paper fines are **not imported** in the MVP (§13 EC-6); deposits held on
+  paper are recorded one by one as opening deposits (LIB-04 FR-12, C13 → R37).
 
 ### 2. User flows
 Books → ⋯ → **Import from a sheet** → `/imports/new?kind=library_copies` → **Download template**
@@ -745,8 +746,8 @@ imported**. Members and books-out follow the same path from Members → ⋯ → 
 ### 3. Features
 **MVP:** the three kinds; grouping and matching; on-the-fly categories and locations; counter raise;
 errors file; the totals card.
-**Later:** MARC and Koha/e-Granthalaya exports (research §16); held deposits and paper fines once
-core has an opening-deposit path (C13); photos.
+**Later:** MARC and Koha/e-Granthalaya exports (research §16); importing held deposits in bulk
+through the opening-deposit path (R37) and paper fines; photos.
 
 ### 4. Entities and relationships
 Writes `library_title`, `library_copy`, `library_copy_event` (`reason_code = imported`,
@@ -855,16 +856,16 @@ imported copies with source "imported" in the event history.
 - EC-4 A books-out row for a copy imported as `lost`: `copy_not_available`.
 - EC-5 Re-running the same file: every row fails `accession_taken` / `already_member`; nothing is
   duplicated.
-- EC-6 Deposits held on paper: not imported. A deposit is money, and recording it as a payment today
-  would put paper-era cash in today's cashbook. **C13** (§0.7): core needs an opening path
-  for held deposits (a `receive_deposit(..., opening=True)` that the cashbook excludes, as LED-02's
-  opening entry is). Until then the librarian records each with **Record deposit already held**
-  (LIB-04), mode `other`, reference "Opening".
+- EC-6 Deposits held on paper: not imported. A deposit is money, and recording it as an ordinary
+  payment today would put paper-era cash in today's cashbook, so the librarian records each with
+  **Record deposit already held** (LIB-04 FR-12), which calls core
+  `receive_deposit(..., opening=True)`: mode `adjustment`, excluded from the cashbook and the
+  collection reports (C13 → R37).
 - EC-7 Unpaid paper fines: entered as the party's opening balance (LED-02) or a manual charge
   (LIB-07), not imported.
 
 ### 14. Future
-Opening deposits (C13); MARC import/export; photo import; a Koha CSV preset mapping.
+Bulk import of opening deposits (R37); MARC import/export; photo import; a Koha CSV preset mapping.
 
 ---
 
@@ -913,8 +914,8 @@ zero deposits counted as income (a report invariant, T-LIB-04-6).
 - FR-11 The party page shows a **Library** panel (membership, books held, dues, deposit, link to the
   member page) through `features/parties/modulePanels.ts`, and `GET /parties?role=library_member`
   lists members (`register_party_role`).
-- FR-12 **Record deposit already held** (for go-live, LIB-03 EC-6): receives a deposit with mode
-  `other` and a reference.
+- FR-12 **Record deposit already held** (for go-live, LIB-03 EC-6): `receive_deposit(...,
+  opening=True, payment_date=<go-live date>)`; the receipt prints "Opening deposit" (C13 → R37).
 
 ### 2. User flows
 **Enrol with payment (staff, phone at the counter).** Members → **Add member** → party picker
@@ -1183,7 +1184,7 @@ Member activity and never-borrowed lists are later.
 Recurring monthly plans through the dues engine (subject `library_membership`, `register_subject`
 with the membership label and `reminder_template_key = "library_fee_due"`); family memberships; photo
 on the card (`files_attachment`); member self-view through a share link (D11); pro-rata on type
-change; opening deposits (C13).
+change; bulk import of opening deposits (R37).
 
 ---
 
@@ -1318,7 +1319,7 @@ Worked due-date examples (Sunday closed; Diwali 8–10 Nov 2026 closed):
 |---|---|---|---|---|---|
 | View rules and calendar | any `library.*.read` | ✅ | ✅ | ✅ | ✅ |
 | Edit rules, weekly days, library holidays, move due dates | `library.settings.manage` | ✅ | ✅ | ❌ | ❌ |
-| Tenant-wide holidays | `platform.tenant.manage` or admin role (C8) | ✅ | ✅ | ❌ | ❌ |
+| Tenant-wide holidays | core `platform.calendar.manage` (owner, admin; C8 → R26) | ✅ | ✅ | ❌ | ❌ |
 
 ### 11. Reports
 None of its own; the circulation register shows moved due dates through the loan events.
@@ -2290,8 +2291,8 @@ fee dues (the dues engine's own source); a printed overdue list per class.
 
 ### 4. Entities and relationships
 Core `ledger_reminder` rows with `module = 'library'`, `source_type ∈ {'library_loan',
-'library_hold'}`, `source_id`, `subject_label`, `kind = 'notice'`; `message_log_id` shared by the
-rows of one text. Core `notifications_notification` rows for the two bell types. No library table.
+'library_hold'}`, `source_id`, `subject_label`, `kind = 'notice'`; `message_group_id` shared by the
+rows of one text, written by core `record_source_reminders` (C3 → R10). Core `notifications_notification` rows for the two bell types. No library table.
 
 ### 5. Database
 No new table. Uses the ADR-054 columns on `ledger_reminder` (`module`, `source_type`, `source_id`,
@@ -2385,7 +2386,7 @@ filtered by `module = library`.
 - T-LIB-09-3 (unit) the composed text for two books, one guardian, fine ₹12, in en and hi; the
   signature is the tenant name; the text contains neither "YourKhata" nor the domain (extends the
   no-product-name rule to message texts).
-- T-LIB-09-4 (unit) remind records one reminder per loan with one `message_log_id`, kind `notice`,
+- T-LIB-09-4 (unit) remind records one reminder per loan with one `message_group_id`, kind `notice`,
   `module = library`; a second tap the same day for the same loans → 409 `reminder_cap_reached`.
 - T-LIB-09-5 (contract) the reminder source contract: candidates are idempotent per date; unknown
   tenant → empty.
@@ -3145,7 +3146,7 @@ dependency.
 | **A11** import test (10-architecture §10.1) | the `library` row, the whole-AST test; plus **C1** (`reports.registry`, `imports.registry`) | B01 |
 | imports registry fixes (**C2**) | idempotent `register`, example key per spec | B17 |
 | target `summary().label` (**C5**) | receipt lines | B10, F12 |
-| FE moves (**C9**) | `UbQrCode` to the design system, `PrintBranding` to `src/api/brandingPrint.ts`, `features/parties/modulePanels.ts`, `features/reports/dashboardSections.ts` | F00 |
+| FE moves (**C9**) | `UbQrCode` to the design system, `PrintBranding` to `src/print/` (Wave A task A16, R33), `features/parties/modulePanels.ts`, `features/reports/dashboardSections.ts` | F00 |
 
 ### Backend
 
@@ -3174,7 +3175,7 @@ dependency.
 
 | # | Task | Size | Depends on |
 |---|---|---|---|
-| F00 | Core-track moves consumed by the library (C9): `UbQrCode` → design system, `PrintBranding` → `src/api/brandingPrint.ts`, `features/calendar` `ClosedDaysEditor`, the two frontend registries; `MODULE_CODES` replaced by the server's list with an equality test (10-architecture §6 item 3) | M | A6, A9, A10 (FE parts) |
+| F00 | Core-track moves consumed by the library (C9 → R33, **Wave A task A16**): `UbQrCode` → design system, `PrintBranding` → `src/print/`, `features/calendar` `ClosedDaysEditor`, the two frontend registries; `MODULE_CODES` replaced by the server's list with an equality test (10-architecture §6 item 3) | M | A6, A9, A10 (FE parts) |
 | F01 | `features/library` skeleton: types, `api/libraryMapping.ts`, `ROUTES.library`, guarded prefix, `CRAWL_DISALLOW`, eight nav rows, `library.{en,hi}.json` catalogue and `catalogues.json` entry, the ESLint `no-restricted-imports` zone, `useLibraryListUrl` | S | F00, B01 |
 | F02 | Library settings page: five tabs, types editor, loan rules table, weekly days and holidays with the move-due dialog, fines and lost, holds and reminders; `librarySettingsSlice`; schemas (LIB-01, LIB-04, LIB-05) | M | F01, B03, B06, B08 |
 | F03 | Catalogue: titles list, title page, copies list, copy page, add-book and add-copies drawers (`dynamic()`), withdraw dialog, categories and locations managers; slices; invalidations (LIB-02) | L | F01, B05 |

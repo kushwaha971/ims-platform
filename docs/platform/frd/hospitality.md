@@ -64,10 +64,10 @@ type-level (unassigned) holds, restaurant POS, multiple properties.
 |---|---|---|
 | Rooms, nights, holds, conflicts | bookings engine (`apps/bookings`, 11-contracts §2.2) | `bookings_resource_type` (`time_mode='nights'`, `capacity_mode='exclusive'`), `bookings_resource` (one per room or bed), `bookings_booking` + `bookings_booking_unit` + `bookings_slot` (one row per room per night). Hospitality calls the engine's services; it never writes engine tables directly |
 | People | parties (core) | the booker, primary guest and bill-to company or agent are parties; co-guests are register rows (ADR-046) |
-| Money in and out | payments (core) | advances are payments with no allocation; applied later with `allocate_existing` (ADR-047); refunds are payments out; security deposits are held deposits (ADR-044) |
+| Money in and out | payments (core) | advances are payments with no allocation; earmarked to their booking and applied at check-out through the port's `apply_payment_ids` (ADR-047, R61); refunds are payments out; security deposits are held deposits (ADR-044) |
 | Tax invoice | sales, behind the document port (`common/seams/documents.py`, ADR-045) | check-out and cancellation charges become one sales invoice each; hospitality never imports `apps.sales` |
 | Tax arithmetic | tax (core) | the folio preview runs `tax_engine.compute_document_totals` itself, so the preview and the invoice are the same function; the dated room-slab table lives in `tax` |
-| Extras | inventory items when inventory is on (read through a port, see C5), else item-less lines with SAC | |
+| Extras | inventory items when inventory is on (read through the item port `common/seams/items.py`, C5 → R63), else item-less lines with SAC | |
 | Numbers | `allocate_number` with kind `booking` (fy, `BKG`, 11-contracts §1.7) | `BKG/26-27/0001` |
 | Background work | `platform_job` + `register_schedule` (hourly at the finest) | hold expiry (engine), Form III sweep, stay-over cleaning, retention purge |
 | In-app bell | notifications + `register_notification_type` | `hospitality.form_iii_due`, `hospitality.form_iii_overdue` |
@@ -124,9 +124,9 @@ any writer.
 **R4 Lock order.** Every hospitality write that touches money follows the global order
 (11-contracts notation): **party → hospitality rows (reservation, folio, stay; in id order) → engine
 rows (resource rows in resource-id order, then units) → documents (inside the port) → payments →
-stock → sequence**. The one step that does not fit — applying advances after the invoice number is
-allocated — is safe because every writer of those payments first locks the same party; it is still
-raised as contract question C3.
+stock → sequence**. The booking's advances are applied **inside** the port, before the invoice
+number is allocated (`IssueRequest.apply_payment_ids`, C3 → R61), so the order holds without
+exception.
 
 **R5 Money.** Rates are `numeric(14,2)`, entered at two decimals. Hospitality prices nights, decides
 each night's GST slab, and hands lines to the port with their final rate and their own discount;
@@ -135,8 +135,8 @@ CGST, grand total to the rupee, `apps/tax/services/tax_engine.py:174-243`). The 
 document-level discount (HTL-13 BR-6).
 
 **R6 Place of supply** for accommodation is the hotel's state (IGST Act §12(3)), so every hospitality
-invoice is CGST + SGST at the tenant's state, whatever the bill-to party's state (HTL-13 BR-3,
-contract question C1).
+invoice is CGST + SGST at the tenant's state, whatever the bill-to party's state (HTL-13 BR-3);
+the port request carries `place_of_supply_state` (C1 → R60).
 
 **R7 Identity documents** are stored as type plus last four characters only, never an image
 (ADR-053, binding). The server keeps only the last four of whatever it is sent; a database CHECK
@@ -536,7 +536,7 @@ Constraints: `uq_hospitality_rate_plan_name` UNIQUE `(tenant, room_type_id, lowe
 
 Index `ix_hospitality_season_plan_dates (tenant, rate_plan_id, start_on, end_on)`.
 
-**Core table (owned by `tax`, ADR-045; shape proposed here, contract question C12)** —
+**Core table (owned by `tax`, ADR-045; shape confirmed by C12 → R67, built as a Wave D core task)** —
 `tax_room_slab`: `id`, `tenant` null (global rows), `effective_from date`, `effective_to date null`
 (inclusive), `up_to numeric(14,2) null` (inclusive upper bound; null = no bound), `tax_code
 varchar(16)` (a `tax_rate.code`). Seed rows:
@@ -673,7 +673,7 @@ Per-person rates, child bands, length-of-stay discounts, packages, a rate calend
   taps **Mark clean** on 104 → the card turns to "Clean" with the time.
 - Supervisor: ⋯ on 206 → **Out of order** → from, to, reason "Leaking tap" → Save; refused if 206
   is booked on 14 Oct: "Move these bookings first: BKG/26-27/0042 (14–16 Oct)".
-- Return early: ⋯ → **Back in service** (contract question C7).
+- Return early: ⋯ → **Back in service** (engine `end_out_of_service`, C7 → R65).
 
 #### 3. Features (MVP vs later)
 MVP: four statuses, maintenance note, out-of-order dates, history, stay-over rule, board with
@@ -708,7 +708,7 @@ Index `ix_hospitality_room_status_event_room (tenant, room_id, created_at DESC)`
 | `GET /housekeeping/board?floor&status` | `room.read` | `[{room_id, label, floor, room_type, housekeeping_status, maintenance_note, occupancy: "vacant"|"occupied", due_out_today: bool, arriving_today: bool, status_changed_at}]` — **no** guest, booking or money field, for any caller |
 | `POST /rooms/{id}/status` | `housekeeping.update` | `{status: clean|dirty|inspected, version}`; `inspected` also needs `housekeeping.block` |
 | `POST /rooms/{id}/out-of-order` | `housekeeping.block` | `{from_on, to_on, reason}` → engine `set_out_of_service`; 409 `resource_booked` with `booking_ids` |
-| `POST /rooms/{id}/return-to-service` | `housekeeping.block` | ends the current period today (C7) |
+| `POST /rooms/{id}/return-to-service` | `housekeeping.block` | ends the current period today (engine `end_out_of_service`, R65) |
 | `GET /rooms/{id}/status-history` | `room.read` | paged |
 
 #### 7. Frontend
@@ -1060,7 +1060,7 @@ declared (the LED-01 lesson).
 - BR-7 The booking's status is the engine's (`hold`, `confirmed`, `checked_in`, `completed`,
   `cancelled`, `expired`, `no_show`), shown as Tentative, Confirmed, In house, Checked out, Cancelled,
   Hold expired, No-show. A multi-room booking is In house when any room is, Checked out when all are
-  (C10).
+  — the engine's roll-up (C10 → R19).
 - BR-8 The number is allocated even for a tentative booking; an expired hold keeps its number. Gaps in
   the BKG series are acceptable: it is not a tax document.
 
@@ -1251,9 +1251,10 @@ screen names the missing codename before submitting.
   "₹2,000 advance is on Ramesh's account, not ABC Travels'" with a Refund action.
 - EC-2 A hold expires with an advance taken (setting off). The booking shows "Hold expired · advance
   ₹2,000 held" in the advances report until it is refunded.
-- EC-3 Another module (gym dues) auto-applies the same party's open advances, so the hotel advance
-  could be consumed (contract question C3). Until that is answered, the booking page shows the document
-  the advance went to, so the clerk can see where it went.
+- EC-3 Another module (gym dues) auto-applies the same party's open advances. A booking advance
+  carries `meta.earmark = {module: "hospitality", subject_type: "hospitality_reservation",
+  subject_id}`, which every automatic applier skips (C3 → R61); only this booking's check-out applies
+  it.
 
 #### 14. Future
 A GST receipt voucher with tax particulars (after the CA's answer); advance transfer between parties
@@ -1314,7 +1315,9 @@ the invoice, the advance applied, and the refund or hold; no-show with the same 
 #### 5. Database
 No new table: this feature uses HTL-05's columns and HTL-11's folio tables. The tiers are a setting,
 `hospitality.cancellation_tiers`: a list of `{hours_before, charge_kind: "nights"|"percent", value}`
-ordered by `hours_before` descending. Contract question C8 asks where the engine keeps tiers.
+ordered by `hours_before` descending. The engine keeps no tiers: hospitality passes these to the
+engine's pure `cancellation_fee(..., tiers=…)` and prices the returned rule itself (C8 → R19,
+ADR-060).
 
 #### 6. API
 | Method, path | Codename | Notes |
@@ -1678,7 +1681,7 @@ table.
   - by owner or admin, or by the member who checked the guest in;
   - when the folio has no charge, the booking has no payment since check-in, and there is no invoice.
 
-  The engine unit goes back to confirmed through the inverse of `bookings.check_in` (C10). The audit row
+  The engine unit goes back to booked through `bookings.undo_check_in(unit_id)` (C10 → R19). The audit row
   keeps the deleted occupants, minus the ID fields.
 
 #### 10. Permissions
@@ -1943,7 +1946,7 @@ Constraints: CHECK (`status = 'open'` AND `invoice_id IS NULL`) OR (`status = 'i
 | `kind` | varchar(16) | CHECK in (`extra`,`early_check_in`,`late_check_out`,`cancellation`,`no_show`) |
 | `service_on` | date | the date the charge belongs to (HTL-12 BR-3) |
 | `description` | varchar(255) | |
-| `item_id` | uuid | null — an inventory item through the item port (C5); no FK |
+| `item_id` | uuid | null — an inventory item through the item port (C5 → R63); no FK |
 | `hsn_sac` | varchar(8) | null; `^(\d{4}|\d{6}|\d{8})$` |
 | `qty` | numeric(14,3) | CHECK `> 0` |
 | `unit_code` | varchar(8) | default `NOS` |
@@ -1988,7 +1991,7 @@ Index `ix_hospitality_invoice_line_period (tenant, first_night_on)`.
 #### 7. Frontend
 Stay page Folio tab (`/hospitality/stays/[id]`); slice `stayDetail`; `api/folioService.ts`;
 `FolioLines`, `NightSlabTable`, `AddExtraDrawer` (`dynamic()`; item search through the item port's
-endpoint, C5), `VoidChargeDialog`.
+endpoint over the item port, R63), `VoidChargeDialog`.
 
 #### 8. UI/UX
 - Lines grouped as the invoice will be ("Room 104 · 12–14 Oct · 2 nights × ₹3,200"), extras by date;
@@ -2059,7 +2062,7 @@ Split by payer, transfer between rooms, POS and room-service orders, interim inv
   transaction; the MVP charges nothing for them (research §6.4).
 - FR-5 **Extension**: a later departure re-checks availability and prices the new nights from the plan.
 - FR-6 **Room move mid-stay** splits the stay at a date, each part keeping its own price (research
-  EC-5); it needs an engine service the contract does not list (C6).
+  EC-5), through the engine's `split_unit(unit_id, on, resource_id)` (C6 → R64).
 
 #### 2. User flows
 - Check-in at 07:30 for a 12:00 check-in: banner "Early check-in 4 h 30 min: 50% of the night,
@@ -2070,8 +2073,8 @@ Split by payer, transfer between rooms, POS and room-service orders, interim inv
 
 #### 3. Features (MVP vs later)
 MVP: bands, date belonging, full-night bands, early check-out release, extension, shorten. Later:
-retention charge for early check-out, 24-hour check-out mode (research §6.3), mid-stay move if C6 is
-not answered in time.
+retention charge for early check-out, 24-hour check-out mode (research §6.3). The mid-stay move is
+MVP (C6 → R64).
 
 #### 4. Entities and relationships
 `hospitality_folio_charge(kind='early_check_in'|'late_check_out', service_on)`; nights added or
@@ -2147,7 +2150,7 @@ the clerk checks out at the actual time and leaves the balance on the party's ac
 charge that pushes the departure day above ₹7,500 → that day is 18% (it stands alone).
 
 #### 14. Future
-24-hour mode, retention charges, mid-stay move without C6.
+24-hour mode, retention charges.
 
 ---
 
@@ -2158,7 +2161,7 @@ charge that pushes the departure day above ₹7,500 → that day is 18% (it stan
   (ADR-045), with `origin_type="hospitality_folio"`, the folio's grouped lines, a **stay block**, and
   the bill-to party. The number comes from the tenant's invoice series (sales' own numbering).
 - FR-2 **GST is always CGST + SGST at the hotel's state** (R6): the request carries the tenant's state
-  as the place of supply whatever the bill-to party's state (C1).
+  as `place_of_supply_state` whatever the bill-to party's state (C1 → R60).
 - FR-3 **Per room, per night slab**: each night's value (room + extra bed + that date's early charge −
   that night's discount) ≤ ₹7,500 is 5% without ITC, above is 18% (research §6.5); lines carry their
   final tax code.
@@ -2166,8 +2169,8 @@ charge that pushes the departure day above ₹7,500 → that day is 18% (it stan
   document-level discount.
 - FR-5 **A tax-inclusive night value from ₹7,875.01 to ₹8,850.00 is refused** (HTL-02 BR-7), at
   pricing and again at check-out.
-- FR-6 After issue, the booking's **advances are applied with `allocate_existing`**, oldest first, up
-  to the invoice's amount due; the balance is collected at issue (the port's `payment`) or left on the
+- FR-6 The booking's **advances are applied by the port**, oldest first, up to the invoice's amount
+  due, through `apply_payment_ids` (C3 → R61), before the number is allocated; the balance is collected at issue (the port's `payment`) or left on the
   bill-to party's account (subject to its credit limit).
 - FR-7 The room becomes Needs cleaning; foreign occupants get their departure Form III rows; occupant
   retention dates are set (HTL-19).
@@ -2190,7 +2193,7 @@ first (MVP: separate the folio first, HTL-11), e-invoice (IRN).
 #### 4. Entities and relationships
 Folio → `IssueRequest` → `sales_document` (origin columns) ← `payments_allocation` (advances via
 `allocate_existing`, the balance via the port's payment). `hospitality_invoice_line` records what was
-sent. `FolioOriginListener` (`on_void`, `on_settlement_changed`, `blocks_void`).
+sent. `FolioOriginListener` (`on_void`, `on_settlement_changed`, `check_void`).
 
 #### 5. Database
 No new table (HTL-11's). Writes: folio `status`, `invoice_*`; nights and charges `invoiced`,
@@ -2220,16 +2223,18 @@ IssueRequest(
     lines=[DocumentLine(description="Room 104 · Deluxe · 12–14 Oct 2026 · 2 nights",
                         hsn_sac="996311", qty=Decimal("2"), unit_code="NOS",
                         unit_price=Decimal("3200.00"), tax_inclusive=False,
-                        gst_rate=Decimal("5"),            # C2: a tax code is what sales stores
+                        tax_code="GST5",                  # C2 → R2: from tax_room_slab for that night
                         item_id=None, discount_amount=Decimal("0.00")), ...],
     notes="Booking BKG/26-27/0042",
     meta_block={"stay": {"booking_number": "BKG/26-27/0042", "arrival_at": "…", "departure_at": "…",
                          "rooms": [{"label": "104", "type": "Deluxe", "nights": 2}],
                          "guests": 2, "guest_name": "Ramesh Kumar"}},
     payment={...} or None,               # the balance collected now
-    apply_open_advances=False,           # hospitality applies this booking's advances itself (C3)
+    apply_payment_ids=[…],               # this booking's earmarked advances, oldest first (C3 → R61)
+    apply_open_advances=False,           # never another module's advances
     credit_check="enforce",              # leaving money on account is a credit sale
-    # place_of_supply_state=tenant.state_code   ← needed, not in the contract (C1)
+    override=False,                      # owner/admin may set it (C4 → R62)
+    place_of_supply_state=tenant.state_code,   # C1 → R60
 )
 ```
 
@@ -2237,8 +2242,8 @@ IssueRequest(
 party (and the guest party if different, in id order) → lock the folio and its stays (id order) and
 check `version` → evaluate the late band, post the late charge → engine `change_unit` for early
 check-out, then `check_out(unit)` per stay → build nights and lines, decide slabs, refuse the gap →
-`issue_document(...)` (documents → stock → invoice sequence, inside sales) → `allocate_existing` for
-each advance of this booking with party = bill-to, oldest first, until `amount_due = 0` → deposit
+`issue_document(...)` (inside sales: document → stock → the booking's advances allocated →
+invoice sequence) → deposit
 refund or application → write snapshots, statuses, room events, Form III rows → audit
 `hospitality.folio.invoiced` and `hospitality.stay.checked_out`.
 
@@ -2276,13 +2281,14 @@ print route by URL (a page, not an import).
 - BR-7 Inclusive plans send inclusive lines (`tax_inclusive=True`) so the guest pays exactly what was
   quoted. Checked: ₹2,099 inclusive × 3 as one inclusive line → taxable ₹5,997.14, total ₹6,297.00; the
   same converted to an exclusive ₹1,999.05 × 3 → ₹6,297.01, rounded to ₹6,297 with −₹0.01 round-off.
-- BR-8 Advances: only this booking's advances on the invoice's party; `allocate_existing` moves at most
-  `unallocated_amount` of each; what remains stays as advance (refund from HTL-06).
+- BR-8 Advances: only this booking's earmarked advances on the invoice's party, sent as
+  `apply_payment_ids`; the issuer moves at most `unallocated_amount` of each; what remains stays as
+  advance (refund from HTL-06).
 - BR-9 Credit limit: the port runs sales' check on the amount left on credit (the party's balance
   already nets the advances); `block` mode refuses unless owner/admin override (C4).
 - BR-10 **Origin listener.** `on_void`: the folio returns to `open`, its nights and charges to `open`,
   the invoice id moves to `previous_invoice_ids`, the allocations released by sales make the advances
-  unallocated again, and an audit row `hospitality.folio.reopened`; `blocks_void` returns None;
+  unallocated again, and an audit row `hospitality.folio.reopened`; `check_void` returns neither `block` nor `confirm`;
   `on_settlement_changed` refreshes `invoice_amount_due`.
 - BR-11 Unregistered or composition tenant: kind and tax are sales' (`kind_for`); lines still carry
   their codes and the engine zeroes them.
@@ -2332,7 +2338,7 @@ read `hospitality_invoice_line` and reconcile totals with `document_summaries` (
   invoice and re-applies them (`previous_invoice_ids` has the first).
 - T-HTL13-9 an origin listener that raises rolls the void back (contract test, 10-architecture §11).
 - T-HTL13-10 lock order: a check-out and a counter sale to the same party with payment at issue, run
-  concurrently 50 times, never deadlock (R4, C3).
+  concurrently 50 times, never deadlock (R4; the port allocates before the sequence, R61).
 - T-HTL13-11 unregistered tenant → no tax on any line; composition → bill of supply.
 
 #### 13. Edge cases
@@ -2982,15 +2988,15 @@ this module's.
 
 | # | Task | Depends on | Done when |
 |---|---|---|---|
-| HTL-T01 | Architecture owner answers C1–C6 (C1, C2, C3 and C5 block HTL-13 and HTL-11) | — | answers recorded in 11-contracts |
+| HTL-T01 | ~~Architecture owner answers C1–C6~~ **Done 30 Sep** (10-architecture §17; 11-contracts v1). Wave D core tasks: item read port (R63) and `tax_room_slab` (R67) | — | answers recorded in 11-contracts |
 | — | **Core A1** release gate: `ModuleCode.HOSPITALITY`, `UNRELEASED_MODULES`, `MODULE_DEPENDENCIES` and `ENGINES_USED_BY` lines | — | (core) |
 | — | **Core A4** payments: target protocol v2, **`allocate_existing`**, held deposits, `adjustment` mode | — | (core) |
-| — | **Core A5** document port + sales issuer: origin columns, `on_void`/`on_settlement_changed`/`blocks_void`, `credit_check`, **`meta_block` rendered by the invoice print (A4 and 80 mm)**, and the dated **`tax_room_slab`** table with its seed | C1, C2, C12 | (core) |
+| — | **Core A5** document port + sales issuer: origin columns, `on_void`/`on_settlement_changed`/`check_void`, `credit_check`, **`meta_block` rendered by the invoice print (A4 and 80 mm)**, and the dated **`tax_room_slab`** table with its seed | C1, C2, C12 | (core) |
 | — | **Core A6** party roles (`register_party_role`) and archive guards | — | (core) |
 | — | **Core A8** number kinds (`register_number_kind`, kind `booking`) | — | (core) |
 | — | **Core A10** registries: schedules, dashboard sections, reports, notification types | — | (core) |
 | — | **Core A11** import test over the whole AST | — | (core) |
-| — | **ADR-052 module roles** (`platform_role` system rows, `common/scoping.py`, `RestrictedFieldsMixin`) | C11 | (core) |
+| — | **Wave A task A13** module roles (`platform_role` system rows, `common/scoping.py`, `RestrictedFieldsMixin`) | R66 | (core) |
 | — | **Engine: bookings** (`apps/bookings`): tables, `availability`, `hold`, `book`, `confirm`, `change_unit`, `check_in`, `check_out`, `cancel`, `mark_no_show`, `expire_holds`, `set_out_of_service`, `check_integrity`, `register_booking_subject`, read API with `EngineEnabled`, the engine test subject; plus the C6/C7/C8 answers | A1, A10, A11 | (engine, Wave D) |
 | HTL-T02 | App skeleton: `apps/hospitality`, `AppConfig.ready()` registrations, codenames, error codes, audit actions, `tenant_data.py`, the ESLint zone and the client `MODULE_CODES` change | A1, A10, A11 | import test and route-coverage test green |
 | HTL-T03 | HTL-01 rooms, types, beds (migration `0001` depends on `bookings.0001`) | T02, bookings engine | T-HTL01-* |
@@ -2999,13 +3005,13 @@ this module's.
 | HTL-T06 | HTL-05 reservations, nights, duplicate check, `booking` numbers, guest role profile | T05, A6, A8, bookings engine | T-HTL05-1…12 incl. concurrency |
 | HTL-T07 | HTL-04 calendar and availability endpoints | T06 | T-HTL04-1 EXPLAIN |
 | HTL-T08 | HTL-06 advances, refunds, deposits | T06, A4 | T-HTL06-* incl. replay |
-| HTL-T09 | HTL-11 folio tables, charges, grouping, server-side preview | T06, A5 (port line shape), C5 | T-HTL11-1 preview equals invoice |
+| HTL-T09 | HTL-11 folio tables, charges, grouping, server-side preview | T06, A5 (port line shape), item port (R63) | T-HTL11-1 preview equals invoice |
 | HTL-T10 | HTL-09 check-in, occupants, police marks, undo | T09 | T-HTL09-* incl. ADR-053 |
 | HTL-T11 | HTL-10 foreign guests, Form III, sweep and notifications | T10, A10 | T-HTL10-* |
 | HTL-T12 | HTL-08 walk-in | T10 | T-HTL08-* |
-| HTL-T13 | HTL-12 early/late bands, extension, shorten, move (move behind C6) | T10, C6 | T-HTL12-* |
-| HTL-T14 | HTL-13 check-out through the port, origin listener, advances via `allocate_existing` | T08, T09, T13, A4, A5, C1–C4 | T-HTL13-1 (the twelve examples) … 11 |
-| HTL-T15 | HTL-07 cancellation and no-show | T14, C8 | T-HTL07-* |
+| HTL-T13 | HTL-12 early/late bands, extension, shorten, move (`split_unit`, R64) | T10, bookings engine | T-HTL12-* |
+| HTL-T14 | HTL-13 check-out through the port, origin listener, advances via `allocate_existing` | T08, T09, T13, A4, A5 (with R60–R62) | T-HTL13-1 (the twelve examples) … 11 |
+| HTL-T15 | HTL-07 cancellation and no-show | T14 | T-HTL07-* |
 | HTL-T16 | HTL-14 day close | T14 | T-HTL14-* |
 | HTL-T17 | HTL-15 dashboard section and Today page | T14, A10 | T-HTL15-* |
 | HTL-T18 | HTL-16 reports (nine) | T14, T15, A10 | T-HTL16-* incl. reconciliation |
@@ -3024,28 +3030,29 @@ this module's.
 
 ## Contract questions
 
-None of these changes 11-contracts; each needs the architecture owner. "Blocks" names what cannot be
-built as specified without an answer, and "Meanwhile" what this FRD assumes.
+**Resolved on 30 Sep 2026** by the architecture owner (10-architecture §17; 11-contracts v1). The
+"Resolved →" column gives each answer; the body follows it. "Blocks" and "Meanwhile" record what the
+question was.
 
-| # | Question | Evidence | Blocks | Proposal / meanwhile |
-|---|---|---|---|---|
-| C1 | `IssueRequest` has no **place of supply**. Sales defaults it to the party's state (`default_pos`, `apps/sales/services/payload.py`), which makes an out-of-state company's hotel invoice IGST — wrong for accommodation (IGST Act §12(3)); engine-checked: IGST ₹160 instead of CGST ₹80 + SGST ₹80 | 11-contracts §1.5 `IssueRequest` | HTL-13 | Add `place_of_supply_state: str | None` to `IssueRequest`; hospitality always sends the tenant's state |
-| C2 | `DocumentLine.gst_rate` is a number, but a sales line stores a `tax_code` resolved by date (`sales_document_line.tax_code`, `apps/sales/services/lines.py`), and several codes share a rate (GST0, EXEMPT, NIL, NONGST at 0%) | §1.5 `DocumentLine` | HTL-13, HTL-11 | Add `tax_code: str | None` to `DocumentLine` (the slab table already stores codes); meanwhile the issuer maps 5 → GST5, 18 → GST18 on the document date |
-| C3 | `apply_open_advances: bool` applies **every** open advance of the party, but a hotel must apply only this booking's advances; and other callers of `allocate_existing` (the dues run's auto-apply) could consume a hotel booking's advance for a party who is also a gym member. Separately, applying advances after the port has taken the invoice sequence lock puts payments after a sequence in lock order | §1.4 `allocate_existing` callers; §1.5; the notation's lock order | HTL-13, HTL-06 | Either `IssueRequest.apply_payments: list[UUID]` (allocated by the issuer before it allocates the number, which also fixes the lock order), or an earmark on payments (`meta.earmark = {module, subject_id}`) that auto-apply skips; meanwhile hospitality calls `allocate_existing` after issue, safe because every writer of those payments locks the same party first |
-| C4 | No way to pass an owner's **credit-limit override** through the port when `credit_check="enforce"` in block mode (sales' `issue_invoice(override=...)`) | §1.5 | HTL-13 | Add `override: bool` to `IssueRequest`, honoured only for owner/admin (sales' `may_override`) |
-| C5 | No **item read port**: hospitality may not import inventory, yet 10-architecture §2.3 lets a folio extra name an inventory item; the folio preview needs its name, price, HSN/SAC, tax code and type before any document exists | 10-architecture §2.3, §3 L1 | HTL-11 | `common/seams/items.py`: `search_items(tenant, q, limit)`, `item_summaries(tenant, ids)`, registered by inventory; meanwhile extras are item-less lines with SAC |
-| C6 | The bookings engine has no **add a unit to an existing booking** and no **split a unit at a date** (mid-stay room move); `change_unit` re-rooms the whole unit, slept nights included | §2.2 services | HTL-05 (add room), HTL-12 (move) | `add_unit(booking_id, unit)` and `split_unit(unit_id, on, resource_id)` |
-| C7 | No engine service to **end or shorten** an out-of-service period (room back in service early) | §2.2 `set_out_of_service` only | HTL-03 | `end_out_of_service(oos_id, on)` |
-| C8 | Where do **cancellation tiers** live? `cancel()` returns "a fee from policy tiers" and `cancellation_fee(tenant, booking_id, at)` exists, but no engine table holds tiers | §2.2 | HTL-07 | Tiers passed by the vertical (`cancellation_fee(..., tiers=...)`), since the price is the vertical's; meanwhile hospitality computes from its setting |
-| C9 | `hold()`/`book()` do not take a `number`, so `bookings_booking.number` would stay null while the hotel's BKG number lives on `hospitality_reservation` | §2.2 | — | Accept `number` in `hold`/`book`, or drop the engine column |
-| C10 | Unit statuses and the booking roll-up (in house if any unit is, completed when all are) are not stated; nor the inverse of `check_in` needed by undo | §2.2 | HTL-05 BR-7, HTL-09 FR-6 | State the roll-up; add `undo_check_in(unit_id)` |
-| C11 | Housekeeping's scope: 11-contracts §3 says "rooms and today's arrivals and departures"; this module's brief says room status only. The FRD serves a room board with per-room "due out today"/"arriving today" flags and no names, which satisfies both. Also: module roles (ADR-052) are not one of Wave A's A1–A11 | §3; 10-architecture §13 | HTL-03 | Confirm the projection; name the wave item for module roles |
-| C12 | The dated **room-slab table** is decided (ADR-045: in `tax`) but its shape is not in the contracts | ADR-045; 10-architecture §12 | HTL-02, A5 | `tax_room_slab(effective_from, effective_to, up_to, tax_code)` as in HTL-02 §5 |
-| C13 | Origin type: 11-contracts' example is `hospitality_stay`; the FRD uses **`hospitality_folio`**, because one invoice can cover several rooms and a cancellation charge has no stay | §1.5 example | — | Confirm `hospitality_folio` |
-| C14 | 10-architecture §9 names hospitality's blocking statuses "tentative, confirmed or checked_in"; the engine's status is `hold`, not `tentative` | §9 vs §2.2 | HTL-18 | Read "tentative" as engine `hold` |
-| C15 | Engine read endpoints check "`<module>.<resource>.read`" of a consuming module; which one for hospitality? | 10-architecture §5, §8 | HTL-04 | `hospitality.booking.read` |
-| C16 | The accountant role is "every `.read` codename" (`permissions_registry.py:96`), so any module's ID-bearing `.read` codename reaches accountants automatically, against ADR-053's minimisation | ADR-053; registry | HTL-09 | The FRD names it `hospitality.guest_id.reveal`; a rule for all modules would be better |
-| C17 | `DocumentLine.qty` for nights uses unit `NOS`; there is no UQC for a night in the seeded units | seed units | HTL-13 | Accept `NOS` with the nights in the description, or seed `OTH` |
+| # | Question | Evidence | Blocks | Proposal / meanwhile | Resolved → |
+|---|---|---|---|---|---|
+| C1 | `IssueRequest` has no **place of supply**. Sales defaults it to the party's state (`default_pos`, `apps/sales/services/payload.py`), which makes an out-of-state company's hotel invoice IGST — wrong for accommodation (IGST Act §12(3)); engine-checked: IGST ₹160 instead of CGST ₹80 + SGST ₹80 | 11-contracts §1.5 `IssueRequest` | HTL-13 | Add `place_of_supply_state: str | None` to `IssueRequest`; hospitality always sends the tenant's state | **R60** — `IssueRequest.place_of_supply_state` |
+| C2 | `DocumentLine.gst_rate` is a number, but a sales line stores a `tax_code` resolved by date (`sales_document_line.tax_code`, `apps/sales/services/lines.py`), and several codes share a rate (GST0, EXEMPT, NIL, NONGST at 0%) | §1.5 `DocumentLine` | HTL-13, HTL-11 | Add `tax_code: str | None` to `DocumentLine` (the slab table already stores codes); meanwhile the issuer maps 5 → GST5, 18 → GST18 on the document date | **R2** — `DocumentLine.tax_code`; the slab table stores codes |
+| C3 | `apply_open_advances: bool` applies **every** open advance of the party, but a hotel must apply only this booking's advances; and other callers of `allocate_existing` (the dues run's auto-apply) could consume a hotel booking's advance for a party who is also a gym member. Separately, applying advances after the port has taken the invoice sequence lock puts payments after a sequence in lock order | §1.4 `allocate_existing` callers; §1.5; the notation's lock order | HTL-13, HTL-06 | Either `IssueRequest.apply_payments: list[UUID]` (allocated by the issuer before it allocates the number, which also fixes the lock order), or an earmark on payments (`meta.earmark = {module, subject_id}`) that auto-apply skips; meanwhile hospitality calls `allocate_existing` after issue, safe because every writer of those payments locks the same party first | **R61** — `apply_payment_ids` (before the number) + payment earmarks |
+| C4 | No way to pass an owner's **credit-limit override** through the port when `credit_check="enforce"` in block mode (sales' `issue_invoice(override=...)`) | §1.5 | HTL-13 | Add `override: bool` to `IssueRequest`, honoured only for owner/admin (sales' `may_override`) | **R62** — `IssueRequest.override`, owner/admin only |
+| C5 | No **item read port**: hospitality may not import inventory, yet 10-architecture §2.3 lets a folio extra name an inventory item; the folio preview needs its name, price, HSN/SAC, tax code and type before any document exists | 10-architecture §2.3, §3 L1 | HTL-11 | `common/seams/items.py`: `search_items(tenant, q, limit)`, `item_summaries(tenant, ids)`, registered by inventory; meanwhile extras are item-less lines with SAC | **R63** — item read port `common/seams/items.py`, a Wave D core task |
+| C6 | The bookings engine has no **add a unit to an existing booking** and no **split a unit at a date** (mid-stay room move); `change_unit` re-rooms the whole unit, slept nights included | §2.2 services | HTL-05 (add room), HTL-12 (move) | `add_unit(booking_id, unit)` and `split_unit(unit_id, on, resource_id)` | **R64** — `add_unit`, `split_unit` |
+| C7 | No engine service to **end or shorten** an out-of-service period (room back in service early) | §2.2 `set_out_of_service` only | HTL-03 | `end_out_of_service(oos_id, on)` | **R65** — `end_out_of_service` |
+| C8 | Where do **cancellation tiers** live? `cancel()` returns "a fee from policy tiers" and `cancellation_fee(tenant, booking_id, at)` exists, but no engine table holds tiers | §2.2 | HTL-07 | Tiers passed by the vertical (`cancellation_fee(..., tiers=...)`), since the price is the vertical's; meanwhile hospitality computes from its setting | **R19** — tiers passed by the vertical; pure `cancellation_fee(tiers=…)` (ADR-060) |
+| C9 | `hold()`/`book()` do not take a `number`, so `bookings_booking.number` would stay null while the hotel's BKG number lives on `hospitality_reservation` | §2.2 | — | Accept `number` in `hold`/`book`, or drop the engine column | **R20** — the vertical passes `number=` |
+| C10 | Unit statuses and the booking roll-up (in house if any unit is, completed when all are) are not stated; nor the inverse of `check_in` needed by undo | §2.2 | HTL-05 BR-7, HTL-09 FR-6 | State the roll-up; add `undo_check_in(unit_id)` | **R19** — unit statuses, roll-up and `undo_check_in` stated |
+| C11 | Housekeeping's scope: 11-contracts §3 says "rooms and today's arrivals and departures"; this module's brief says room status only. The FRD serves a room board with per-room "due out today"/"arriving today" flags and no names, which satisfies both. Also: module roles (ADR-052) are not one of Wave A's A1–A11 | §3; 10-architecture §13 | HTL-03 | Confirm the projection; name the wave item for module roles | **R66** — projection confirmed; module roles are Wave A task A13 |
+| C12 | The dated **room-slab table** is decided (ADR-045: in `tax`) but its shape is not in the contracts | ADR-045; 10-architecture §12 | HTL-02, A5 | `tax_room_slab(effective_from, effective_to, up_to, tax_code)` as in HTL-02 §5 | **R67** — `tax_room_slab` as proposed, a Wave D core task |
+| C13 | Origin type: 11-contracts' example is `hospitality_stay`; the FRD uses **`hospitality_folio`**, because one invoice can cover several rooms and a cancellation charge has no stay | §1.5 example | — | Confirm `hospitality_folio` | **R68** — `hospitality_folio` confirmed |
+| C14 | 10-architecture §9 names hospitality's blocking statuses "tentative, confirmed or checked_in"; the engine's status is `hold`, not `tentative` | §9 vs §2.2 | HTL-18 | Read "tentative" as engine `hold` | **R69** — "tentative" means engine `hold`; §9 corrected |
+| C15 | Engine read endpoints check "`<module>.<resource>.read`" of a consuming module; which one for hospitality? | 10-architecture §5, §8 | HTL-04 | `hospitality.booking.read` | **R25** — `hospitality.booking.read`; housekeeping does not hold it |
+| C16 | The accountant role is "every `.read` codename" (`permissions_registry.py:96`), so any module's ID-bearing `.read` codename reaches accountants automatically, against ADR-053's minimisation | ADR-053; registry | HTL-09 | The FRD names it `hospitality.guest_id.reveal`; a rule for all modules would be better | **R70** — `.reveal` rule for all modules (ADR-058) |
+| C17 | `DocumentLine.qty` for nights uses unit `NOS`; there is no UQC for a night in the seeded units | seed units | HTL-13 | Accept `NOS` with the nights in the description, or seed `OTH` | **R71** — `NOS` with nights in the description; UQC to the CA |
 
 ---
 

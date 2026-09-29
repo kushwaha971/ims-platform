@@ -26,9 +26,10 @@ illustrations; the gym's codenames are this FRD's §0.7, and its engine-read ent
 C3, the preset seed, C10 and C13, and are cross-referenced there.
 
 **What this FRD may and may not do.** It adds fields to the gym's **own** tables. It does not change
-anything in 11-contracts: wherever the contracts cannot express what the gym needs, the need is
-recorded under [Contract questions](#contract-questions) with the fallback this FRD uses until the
-architecture owner answers. Nothing in the body assumes an answer.
+anything in 11-contracts. Its contract questions were **resolved on 30 Sep 2026** by the architecture
+owner (10-architecture §17, 11-contracts v1); the table under
+[Contract questions](#contract-questions) records each answer, and the body below follows the
+answers, not the fallbacks it carried before.
 
 ---
 
@@ -105,7 +106,7 @@ Every upward call is a registry (ADR-042). The gym registers exactly these; each
 | # | Registry (10-architecture §4.2) | What gym registers | Feature |
 |---|---|---|---|
 | R4 | `register_module_off_guard` | Counters: memberships active, upcoming or frozen today; open visits of `module="gym"` are the attendance engine's own counter | GYM-01 |
-| R5 | `register_origin("gym_membership", module="gym", listener=GymMembershipOrigin())` | `on_void`, `on_settlement_changed`, `blocks_void` | GYM-06 |
+| R5 | `register_origin("gym_membership", module="gym", listener=GymMembershipOrigin())` | `on_void`, `on_settlement_changed`, `check_void` | GYM-06 |
 | R6 | `register_party_role("gym_member", …)`, `register_party_role("gym_trainer", …)`, `register_archive_guard("gym", …)` | Role filters and badges; archive refused while a party is the member or payer of an open term | GYM-02, GYM-18 |
 | R7 | `register_reminder_source("gym_membership", module="gym", candidates=…)`, `register_reminder_policy("gym", …)` | Expiry and renewal notices | GYM-17 |
 | R8 | `register_dashboard_section("gym.today", …)`, `("gym.money", …)` | Dashboard tiles | GYM-19 |
@@ -1136,7 +1137,7 @@ transaction** through the origin listener, so a voided sale can never leave a li
 - **F-4 Void a sale from the membership** (`gym.membership.cancel` + `sales.invoice.void`): "Void this
   sale" shows what happens ("Membership ends today. 6 visits stay in history. ₹4,700 comes off
   Rahul's khata.") and asks for a reason; it calls `documents.void_document`.
-- **F-5 Void from the Invoices screen** (sales' own flow): allowed unless `blocks_void` says why not;
+- **F-5 Void from the Invoices screen** (sales' own flow): allowed unless `check_void` says why not;
   `on_void` ends the membership in the same transaction.
 
 ### 3. Features
@@ -1176,7 +1177,7 @@ with `documents.document_summaries` over a fuzzed history (the ADR-031 replay ru
   freshness (`gym.membership.money_read`).
 - `POST /api/v1/gym/memberships/{id}/void-sale` `{reason}` (Idempotency-Key) → 200
   `{data: {membership, voided: [{document_id, number}]}}`; errors `document_origin_locked` (from
-  `blocks_void`, D `origin_type`, `reason`), `document_already_void`, `validation_error` (reason 3–160),
+  `check_void`, D `origin_type`, `reason`), `document_already_void`, `validation_error` (reason 3–160),
   `permission_denied`.
 - No gym endpoint issues or voids a credit note directly; GYM-11 and GYM-13 call the port.
 
@@ -1211,7 +1212,7 @@ ends today" / "सदस्यता आज खत्म हो जाएगी"
     which is true). Audit `gym.membership.voided`.
   - role `freeze_fee`, `transfer_fee`: nothing but the projection (the fee is gone; the freeze or
     transfer stands).
-- BR-3 **`blocks_void(origin_id)`** returns a reason (→ 409 `document_origin_locked`) when:
+- BR-3 **`check_void(origin_id)`** returns `block` with a reason (→ 409 `document_origin_locked`) when:
   - the sale's term is `changed` or `transferred` ("This membership was changed to Yearly on 16 Oct.
     Its credit note depends on this invoice.");
   - the document is a gym credit note (`change_credit`, `refund_credit`): "Made by a membership change
@@ -1221,9 +1222,11 @@ ends today" / "सदस्यता आज खत्म हो जाएगी"
   `amount_due`, `synced_at` for that `document_id`. Nothing else: dues on a membership are the
   document's, and the term's validity never depends on payment (research E8: a voided payment makes
   the balance reappear as a due; the term stays).
-- BR-5 The gym's void action (F-4) shows the check-in count before confirming (research E7 wanted a
-  confirmation when a term has check-ins); a void started from the Invoices screen cannot ask it,
-  because `blocks_void` has no "confirm" answer ([C9](#contract-questions)).
+- BR-5 A term with check-ins asks for confirmation before its invoice is voided (research E7). The
+  gym's origin listener answers `check_void` with `confirm: "This membership has {n} visits. Void the
+  invoice and cancel the membership?"`; sales' void endpoint then answers 409
+  `document_origin_confirm` until the request carries `confirm_origin: true`, so the question is asked
+  from the Invoices screen and from the gym's own void action alike (C9 → R55).
 - BR-6 The `meta_block` printed on the document names the member and the period; the member's
   mobile is never printed on a document whose party is the payer (a parent's invoice does not carry
   the child's number).
@@ -1243,7 +1246,7 @@ register can filter `origin_module=gym` (the new column).
   `on_settlement_changed` are called inside the transaction, and a listener that raises rolls the void
   back.
 - T-GYM-06-2 `test_void_sale_cancels_term_and_schedule`.
-- T-GYM-06-3 `test_blocks_void_of_changed_term` and `test_blocks_void_of_gym_credit_note`.
+- T-GYM-06-3 `test_check_void_of_changed_term` and `test_check_void_of_gym_credit_note`.
 - T-GYM-06-4 `test_document_projection_replays` (fuzzed).
 - T-GYM-06-5 `test_bill_of_supply_for_composition_tenant` — same sale, `kind='bill_of_supply'`, zero
   tax.
@@ -1393,8 +1396,8 @@ Set parts at sale: `gym.membership.sell`. Reschedule: `gym.membership.override`.
   schedule; nothing is raised.
 
 ### 14. Future
-One invoice with expected dates instead of an invoice per part, if the architecture owner adds a
-"expectation against a document" variant ([C5](#contract-questions)) and the CA prefers it (T7);
+One invoice with expected dates instead of an invoice per part: decided against for now (C5 → R53,
+ADR-059); it is reconsidered if the CA's answer to T7 requires the whole term to be invoiced at sale;
 penalties for late parts; standing instructions (needs a gateway, never claimed).
 
 ---
@@ -1610,9 +1613,10 @@ small line: "12 of 30 freeze days used · 1 of 2 freezes". Over a limit: the lin
 - BR-8 **Check-in during a freeze** is blocked by the policy (GYM-14). With an override, the mark
   listener sets `actual_end_on = mark.on_date − 1` (or removes the freeze if it started that day) —
   the member is back.
-- BR-9 Session packs: the freeze extends validity only (the entitlement's `valid_to` must follow the
-  new `end_on`; see [C10](#contract-questions) — until answered, the gym policy is the authority for
-  dates and the engine's `valid_to` is informational).
+- BR-9 Session packs: the freeze extends validity only. The same transaction calls
+  `attendance.extend_entitlement(entitlement_id, valid_to=<new end_on>, reason="freeze")`, so the
+  engine's `valid_to` always equals the term's `end_on` (C10 → R18); a resume that shortens the freeze
+  calls it again with the earlier date.
 - BR-10 Freeze fee: when `charge_fee` and the snapshot fee > 0, one document through the port, line
   "Freeze fee, {from} – {to}", the term's tax code and SAC, `credit_check="enforce"`, role
   `freeze_fee`. Waiving it needs no permission beyond `gym.membership.freeze` (it is optional by
@@ -1845,19 +1849,16 @@ will check it"). The credit note's line on print reads "Unused Quarterly members
 - BR-4 **Credit note(s).** `documents.issue_credit_note(against_id=<invoice>, origin_type=
   "gym_membership", origin_id=<old term>, lines=[…], settlement="hold_advance", reason="Plan changed to
   {new plan}")`, one per invoice credited, **newest invoice first**, each capped by that invoice's
-  uncredited value on the term's line. The line is a value credit against the membership line
-  ([C2](#contract-questions)); until C2 is answered the fallback is a quantity credit of
-  `qty = ratio` rounded half-up to 3 decimals (sales' own against-invoice rule), and the quote shows
-  the figure sales will compute.
+  uncredited value on the term's line. The line is a **value credit** (`CreditLine{against_line_id,
+  taxable_value}`, exact paise, tax copied from the invoice line; C2 → R51, ADR-057), so the credit
+  equals the quote to the paisa and the invoice line's `returned_qty` does not move.
 - BR-5 Sales applies each credit note to its own invoice's open amount first (SAL-04 BR-3: an
   unpaid part is cleared before anything is held); the rest is open credit — an advance.
 - BR-6 **New term** from `change_on`, full current price (or an override), no joining fee (not a first
   term, no gap), issued as in GYM-05 with `apply_open_advances: True` **and the open credit notes from
-  BR-4 applied to it** ([C1](#contract-questions)); the payment covers the remainder. Until C1 is
-  answered: the credit notes' ledger credits already net the payer's balance to the right figure, and
-  the new invoice shows the credit as unapplied; the membership page shows "Apply credit ₹3,515.22" as
-  a link to the sales credit-note screen (a route, no import), and `check_integrity` lists gym credit
-  notes left unapplied for more than a day.
+  BR-4 applied to it** through `IssueRequest.apply_credit_note_ids=[…]` (C1 → R50); the issuer
+  applies them before it allocates payments, and the payment covers the remainder. `check_integrity`
+  still lists any gym credit note left open for more than a day, as a guard.
 - BR-7 **Old term**: `state='changed'`, `ended_on = change_on − 1`; its schedule ends (GYM-07 BR-6);
   its batch enrolment ends; a running freeze is resumed first (`actual_end_on = change_on − 1`).
 - BR-8 **Chain**: an upcoming access term after the old term is moved to start after the new term's
@@ -1882,8 +1883,7 @@ will check it"). The credit note's line on print reads "Unused Quarterly members
   CGST ₹285.69, SGST ₹285.69).
 - Apply the credit: the member pays **₹8,483.78** with round-off off, or **₹8,484.00** with the
   tenant's default round-off (credit note ₹3,515.00).
-- Fallback before C2 (quantity 0.837 of the ₹4,200 line): the credit note would be ₹3,515.40
-  (taxable ₹3,348.00) before round-off, ₹3,515.00 after; the quote shows whichever sales will issue.
+- (The quantity-credit fallback, ₹3,515.40, is withdrawn: value credits are exact, R51.)
 
 **Worked example — downgrade.** Yearly ₹11,999.00 (taxable ₹11,427.62), 1 Oct 2026 – 30 Sep 2027,
 365 days, paid. Downgrade to Monthly ₹1,500.00 on 1 Nov 2026: used 31, remaining 334. Credit taxable
@@ -2005,7 +2005,7 @@ nor a renewal.
 ### 13. Edge cases
 - EC-1 Transfer to a family member who is a minor: the recipient needs a guardian (GYM-02 BR-4).
 - EC-2 The old term is frozen: resume it first (the drawer offers it).
-- EC-3 Voiding the old sale invoice after a transfer: refused by `blocks_void` (GYM-06 BR-3).
+- EC-3 Voiding the old sale invoice after a transfer: refused by `check_void` (GYM-06 BR-3).
 
 ### 14. Future
 Transfer limits and windows; branch transfers.
@@ -2037,7 +2037,8 @@ from the desk (a notification) — until then the desk tells the owner.
 
 ### 4. Entities and relationships
 Term `state='cancelled'`, `ended_on`; credit note `role='refund_credit'`; the refund payment is
-payments' (`direction='out'`, `context='refund'`, `meta.credit_note_id`), created by sales' refund seam.
+payments' (`direction='out'`, `context='refund'`, `meta.credit_note_id`), created by sales' refund seam
+and returned to gym as `IssuedDocument.refund_payment` (C4 → R52).
 
 ### 5. Database
 No new table. Setting `gym.cancellation_charge` (`{type: "amount" | "percent", value}`, default
@@ -2594,8 +2595,8 @@ For a minor the greeting names the guardian: "Hi {guardian}, {name}'s {plan} mem
   terminal, **with no later access term in its chain** (not already renewed), whose `end_on − d` is
   in `−offsets` (i.e. `d = end_on + offset` for each offset). Candidate: `party_id = member`,
   `source_type='gym_membership'`, `source_id = term`, `due_on = end_on`, `amount = None` (notice),
-  `subject_label = "{plan} {price} · ends {end}"` (≤ 120; the price rides here because a candidate
-  has no template parameters, [C8](#contract-questions)), `template_key` `gym.reminder.before |
+  `subject_label = "{plan} · ends {end}"` (≤ 120), `params = {"plan", "price", "ends_on"}` for the
+  template (C8 → R10), `template_key` `gym.reminder.before |
   today | after`, `recipient_party_id` = the guardian with `receives_messages` for a minor, else
   `None` (the member).
 - BR-2 **Policy** `register_reminder_policy("gym", {"daily_cap_per_source": 1})` — at most one
@@ -3209,7 +3210,7 @@ mode and the attendance engine.
 |---|---|---|
 | P1 | **A1** (PLT-X11) release gate (`UNRELEASED_MODULES`, `UB_UNRELEASED_MODULES`) | GYM-01 |
 | P2 | **A4** (PLT-X03) payments: target protocol v2, **`allocate_existing`** | `apply_open_advances` on every gym document |
-| P3 | **A5** (PLT-X05) document port + sales issuer (`common/seams/documents.py`, origin columns, `blocks_void`/`on_void`/`on_settlement_changed`, `credit_check="skip"`), **with answers to C1–C4, C14 (and core CQ-1, CQ-2)** | GYM-05, GYM-06, GYM-11, GYM-13 |
+| P3 | **A5** (PLT-X05) document port + sales issuer (`common/seams/documents.py`, origin columns, `check_void`/`on_void`/`on_settlement_changed`, `credit_check="skip"`), **with answers to C1–C4, C14 (and core CQ-1, CQ-2)** | GYM-05, GYM-06, GYM-11, GYM-13 |
 | P4 | **A6** (PLT-X04) party roles, relations (`parties_relation`), archive guards | GYM-02 |
 | P5 | **A7** (PLT-X06) reminders: source link, `notice` kind, policy (`register_reminder_source`, `register_reminder_policy`) | GYM-17 |
 | P6 | **A8** (PLT-X07) counters + number kinds (`register_number_kind`, `allocate_counter`) | member codes |
@@ -3233,7 +3234,7 @@ mode and the attendance engine.
 | TSK-GYM-06 | Privacy fields and guards: consent block, guardian consent CHECK, ID-number text guard, erase, export | TSK-GYM-05 | GYM-21 |
 | TSK-GYM-07 | Enquiries + follow-ups + convert + daily purge (`register_schedule`, `job_handler`) | TSK-GYM-05, P8 | GYM-03 |
 | TSK-GYM-08 | Plans (CRUD, retire, tax-code picker) | TSK-GYM-03 | GYM-04 |
-| TSK-GYM-09 | Sale: quote, sell through the port, `gym_membership_document` projection, origin listener (`on_void`, `on_settlement_changed`, `blocks_void`), void-sale action, `check_integrity` | TSK-GYM-04, TSK-GYM-08, P2, P3 | GYM-05, GYM-06 |
+| TSK-GYM-09 | Sale: quote, sell through the port, `gym_membership_document` projection, origin listener (`on_void`, `on_settlement_changed`, `check_void`), void-sale action, `check_integrity` | TSK-GYM-04, TSK-GYM-08, P2, P3 | GYM-05, GYM-06 |
 | TSK-GYM-10 | Renewal and rejoin: quote, start rules, renewals list | TSK-GYM-09 | GYM-08 |
 | TSK-GYM-11 | Instalments: tenant instalment dues plans, schedule at sale, reschedule, Money tab | TSK-GYM-09, P10 | GYM-07 |
 | TSK-GYM-12 | Freeze and resume, freeze fee document, chain move | TSK-GYM-09 | GYM-09 |
@@ -3261,23 +3262,23 @@ Places where this FRD needs something 11-contracts does not provide, or where th
 contract disagree. **Nothing here changes the contracts**; each has the fallback this FRD uses until
 the architecture owner answers (vision §3 rule 5).
 
-| # | Question | Where it bites | What 11-contracts / the code says | Proposal | Fallback used in this FRD |
-|---|---|---|---|---|---|
-| C1 | **Applying an open credit note to a new invoice through the port.** | GYM-11 BR-6 | `IssueRequest.apply_open_advances` allocates open **payments** (`allocate_existing`); a credit note held as advance is open credit on a `sales_document`, applied only by sales' `apply_credit_note` (`credit_note_apply.py:48`), which the port does not expose | Either `apply_open_advances` also applies the party's open credit notes, oldest first, or `IssueRequest.apply_credit_note_ids: list[UUID]` | The party's ledger balance is already right; the new invoice shows the credit unapplied; the membership page links to the sales credit-note screen; `check_integrity` lists gym credit notes left open over a day |
-| C2 | **Value credits against an invoice line.** | GYM-11 BR-4, GYM-13 BR-4 | The port's `issue_credit_note(…, lines: list[DocumentLine])` carries prices; sales' against-invoice mode prices **only by quantity** of the invoice line, ≤ 3 decimals (`credit_note_lines.py`), so 77/92 of a line cannot be expressed exactly and every return moves `returned_qty` | A value line: `against_line_id` + `taxable_value` (or inclusive amount), tax copied from the invoice line, capped by Σ credited value ≤ the line's taxable value, not touching `returned_qty` | `qty = ratio` rounded to 3 decimals; the quote shows sales' figure (₹3,515.40 instead of ₹3,515.22 before round-off in the worked example) |
-| C3 | **Tax code, not only a rate, on a port line and a dues plan.** Same finding as 00-core-and-engines CQ-2 (port line); this adds the dues plan | GYM-04 BR-3, GYM-07 | `DocumentLine.gst_rate` and `dues_plan.gst_rate` carry a rate; sales lines store a `tax_code` resolved by `(code, document_date)` (`lines.py:98`, `rate_for`), which is how a rate change on a date works | Add `tax_code: str | None` to `DocumentLine` and `dues_plan`, preferred when given (the rate stays for hospitality's slab) | Gym resolves the rate from `tax` for the document date and passes `gst_rate`; the issuer maps it to the active code with that rate (ambiguous if two codes share a rate) |
-| C4 | **The refund payment in the credit-note result.** | GYM-13 F-2 (receipt for the payment out) | `issue_credit_note` returns `IssuedDocument`, which has no payment fields; the refund payment id and number are in the note's `meta.refund` (`refund_seam.py`) | `IssuedDocument.refund_payment: {id, number, amount} | None` | Gym reads the payment through `payments` selectors by `meta.credit_note_id` |
-| C5 | **Instalments against one invoice.** | GYM-07 | Dues modes are `charge` (each due raises a document or a charge) and `expectation` (for loans: `loan` bucket, principal never posts, settled through `dues_instalment`). Research §6.10 wanted one invoice with expected dates that drive reminders only | An `expectation`-like variant in the `main` bucket whose settlement follows an existing document | Split invoicing: part 1 on the sale invoice, later parts as `charge`/`document` dues (tax question T7) |
-| C6 | **Line description of a document raised by a due.** | GYM-07 BR-4 | `register_subject` supplies a `label` and `amount_hook`, not a line description; the engine's description for a document-posting due is unspecified | A `line_hook(tenant, due) -> DocumentLine` override, or at least `description` | Subject label + period label ("Quarterly membership, 1 Oct – 31 Dec 2026 · Rahul Sharma (M-0142) · part 2 of 2") |
-| C7 | **Unregistered tenants and "bill of supply".** | GYM-06 BR-1 | The brief asks for a bill of supply for businesses below the threshold; 11-contracts §1.5 fixes the kind as `kind_for(tenant)`, which gives `bill_of_supply` only for `composition` and a tax-free `invoice` for `unregistered` (`apps/sales/constants.py:114-118`) | A sales decision after the CA's answer (T4) | Gym follows `kind_for` |
-| C8 | **Template parameters on a reminder candidate.** | GYM-17 BR-1 | `ReminderCandidate` has `subject_label` and `amount` (None for a notice) but no parameters, so the renewal price cannot reach the template except through the label | `params: dict[str, str]` on the candidate | The price is part of `subject_label` ("Quarterly ₹4,200 · ends 5 Oct") |
-| C9 | **A void that needs confirmation rather than refusal.** | GYM-06 BR-5 | `blocks_void` returns a reason or `None`; research E7 wanted a confirmation when the term has visits | A soft answer (`{confirm: "6 visits…"}`) that sales' void dialog shows | Gym's own void action confirms; a void from the Invoices screen does not ask |
-| C10 | **Changing an entitlement's validity.** Raised also as 00-core-and-engines CQ-17 (`extend_entitlement`) | GYM-09 BR-9, GYM-10, GYM-11 | The attendance engine has `grant_entitlement` only; freezes and extensions move a pack's end | `extend_entitlement(entitlement_id, valid_to, reason)` (and an `end_entitlement` for changes, transfers and cancellations) | The gym policy is the authority for pack dates; the engine's `valid_to` is informational |
-| C11 | **Open visits and switching the module off.** | GYM-01 BR-4 | 10-architecture §9 counts "open check-ins (not checked out)" as blocking; the gym MVP records no check-outs, so every visit of the day is open until the engine's close job runs | Count only visits of earlier days left open, or exempt `visit` groups with no check-out | Accepted as written: the module can be switched off after the nightly close |
-| C12 | **Roll-call through `check_in` with a session.** | GYM-15 BR-4 | `roll_call(session_id, marks)` takes no context per mark, so it cannot run the policy or consume a pack; `check_in` accepts `session_id` | Confirm `check_in(session_id=…)` on a presence group writes `present` and honours the unique `(session, party)` | As proposed: present via `check_in`, absent via `roll_call` |
-| C13 | **Engine read endpoints and scoped roles.** 00-core-and-engines CQ-24 proposes `ENGINE_READ_PERMISSIONS` and asks each vertical FRD for its codename | GYM-18 BR-6 | 10-architecture §5: engine reads pass on "`<module>.<resource>.read` of any consuming module"; a trainer holds `gym.member.read` and would read every mark and every due of the tenant through `/api/v1/attendance/` and `/api/v1/dues/`, which apply no vertical scope | State in 10-architecture §5 that a vertical with a scoped role names an **unscoped** codename there. Gym's entries: `ENGINE_READ_PERMISSIONS["attendance"]["gym"] = "gym.member.read_all"`, `["dues"]["gym"] = "gym.membership.money_read"` | As proposed; a test proves a trainer gets 403 on both |
-| C14 | **Origin listener on credit-note voids.** | GYM-06 BR-3 | 11-contracts §1.5 says `void_invoice` calls `blocks_void`/`on_void`; credit notes are voided by `void_credit_note` (`credit_note_apply.py:129`), which the contract does not mention | `void_credit_note` calls the origin listener the same way | Until then a gym credit note can be voided from the Invoices screen; `check_integrity` reports a gym credit note voided while its term is `changed` |
-| C15 | **Dedupe for desk visits.** | GYM-01 §5, GYM-14 BR-4 | 11-contracts puts `dedupe_minutes` on `attendance_group`, and 00-core-and-engines ATT-02 describes desk visits with **no** group, which leaves the window of a group-less visit unspecified | A per-module dedupe setting for group-less visits, or confirm that verticals pass a desk group | Gym passes its seeded "Front desk" group (`group_id`, visit kind) on every desk check-in, so the group's `dedupe_minutes` applies |
+| # | Question | Where it bites | What 11-contracts / the code says | Proposal | Fallback used in this FRD | Resolved → |
+|---|---|---|---|---|---|---|
+| C1 | **Applying an open credit note to a new invoice through the port.** | GYM-11 BR-6 | `IssueRequest.apply_open_advances` allocates open **payments** (`allocate_existing`); a credit note held as advance is open credit on a `sales_document`, applied only by sales' `apply_credit_note` (`credit_note_apply.py:48`), which the port does not expose | Either `apply_open_advances` also applies the party's open credit notes, oldest first, or `IssueRequest.apply_credit_note_ids: list[UUID]` | The party's ledger balance is already right; the new invoice shows the credit unapplied; the membership page links to the sales credit-note screen; `check_integrity` lists gym credit notes left open over a day | **R50** — `IssueRequest.apply_credit_note_ids`, explicit; body BR-6 updated |
+| C2 | **Value credits against an invoice line.** | GYM-11 BR-4, GYM-13 BR-4 | The port's `issue_credit_note(…, lines: list[DocumentLine])` carries prices; sales' against-invoice mode prices **only by quantity** of the invoice line, ≤ 3 decimals (`credit_note_lines.py`), so 77/92 of a line cannot be expressed exactly and every return moves `returned_qty` | A value line: `against_line_id` + `taxable_value` (or inclusive amount), tax copied from the invoice line, capped by Σ credited value ≤ the line's taxable value, not touching `returned_qty` | `qty = ratio` rounded to 3 decimals; the quote shows sales' figure (₹3,515.40 instead of ₹3,515.22 before round-off in the worked example) | **R51** — value credit lines (ADR-057, Wave A task A15); fallback withdrawn |
+| C3 | **Tax code, not only a rate, on a port line and a dues plan.** Same finding as 00-core-and-engines CQ-2 (port line); this adds the dues plan | GYM-04 BR-3, GYM-07 | `DocumentLine.gst_rate` and `dues_plan.gst_rate` carry a rate; sales lines store a `tax_code` resolved by `(code, document_date)` (`lines.py:98`, `rate_for`), which is how a rate change on a date works | Add `tax_code: str | None` to `DocumentLine` and `dues_plan`, preferred when given (the rate stays for hospitality's slab) | Gym resolves the rate from `tax` for the document date and passes `gst_rate`; the issuer maps it to the active code with that rate (ambiguous if two codes share a rate) | **R2** — `tax_code` on `DocumentLine` and `dues_plan` (ADR-057) |
+| C4 | **The refund payment in the credit-note result.** | GYM-13 F-2 (receipt for the payment out) | `issue_credit_note` returns `IssuedDocument`, which has no payment fields; the refund payment id and number are in the note's `meta.refund` (`refund_seam.py`) | `IssuedDocument.refund_payment: {id, number, amount} | None` | Gym reads the payment through `payments` selectors by `meta.credit_note_id` | **R52** — `IssuedDocument.refund_payment` |
+| C5 | **Instalments against one invoice.** | GYM-07 | Dues modes are `charge` (each due raises a document or a charge) and `expectation` (for loans: `loan` bucket, principal never posts, settled through `dues_instalment`). Research §6.10 wanted one invoice with expected dates that drive reminders only | An `expectation`-like variant in the `main` bucket whose settlement follows an existing document | Split invoicing: part 1 on the sale invoice, later parts as `charge`/`document` dues (tax question T7) | **R53** — no new mode; split invoicing is the design (ADR-059); revisit on CA T7 |
+| C6 | **Line description of a document raised by a due.** | GYM-07 BR-4 | `register_subject` supplies a `label` and `amount_hook`, not a line description; the engine's description for a document-posting due is unspecified | A `line_hook(tenant, due) -> DocumentLine` override, or at least `description` | Subject label + period label ("Quarterly membership, 1 Oct – 31 Dec 2026 · Rahul Sharma (M-0142) · part 2 of 2") | **R54** — `register_subject(line_hook=…)` |
+| C7 | **Unregistered tenants and "bill of supply".** | GYM-06 BR-1 | The brief asks for a bill of supply for businesses below the threshold; 11-contracts §1.5 fixes the kind as `kind_for(tenant)`, which gives `bill_of_supply` only for `composition` and a tax-free `invoice` for `unregistered` (`apps/sales/constants.py:114-118`) | A sales decision after the CA's answer (T4) | Gym follows `kind_for` | **R3** — `kind_for(tenant, None)`; title question to the CA (owner Q17) |
+| C8 | **Template parameters on a reminder candidate.** | GYM-17 BR-1 | `ReminderCandidate` has `subject_label` and `amount` (None for a notice) but no parameters, so the renewal price cannot reach the template except through the label | `params: dict[str, str]` on the candidate | The price is part of `subject_label` ("Quarterly ₹4,200 · ends 5 Oct") | **R10** — `ReminderCandidate.params` |
+| C9 | **A void that needs confirmation rather than refusal.** | GYM-06 BR-5 | `blocks_void` returns a reason or `None`; research E7 wanted a confirmation when the term has visits | A soft answer (`{confirm: "6 visits…"}`) that sales' void dialog shows | Gym's own void action confirms; a void from the Invoices screen does not ask | **R55** — `check_void` returns `confirm`; 409 `document_origin_confirm` |
+| C10 | **Changing an entitlement's validity.** Raised also as 00-core-and-engines CQ-17 (`extend_entitlement`) | GYM-09 BR-9, GYM-10, GYM-11 | The attendance engine has `grant_entitlement` only; freezes and extensions move a pack's end | `extend_entitlement(entitlement_id, valid_to, reason)` (and an `end_entitlement` for changes, transfers and cancellations) | The gym policy is the authority for pack dates; the engine's `valid_to` is informational | **R18** — `extend_entitlement`, `end_entitlement` |
+| C11 | **Open visits and switching the module off.** | GYM-01 BR-4 | 10-architecture §9 counts "open check-ins (not checked out)" as blocking; the gym MVP records no check-outs, so every visit of the day is open until the engine's close job runs | Count only visits of earlier days left open, or exempt `visit` groups with no check-out | Accepted as written: the module can be switched off after the nightly close | **R56** — only earlier days' open visits block switch-off |
+| C12 | **Roll-call through `check_in` with a session.** | GYM-15 BR-4 | `roll_call(session_id, marks)` takes no context per mark, so it cannot run the policy or consume a pack; `check_in` accepts `session_id` | Confirm `check_in(session_id=…)` on a presence group writes `present` and honours the unique `(session, party)` | As proposed: present via `check_in`, absent via `roll_call` | **R57** — accepted as proposed |
+| C13 | **Engine read endpoints and scoped roles.** 00-core-and-engines CQ-24 proposes `ENGINE_READ_PERMISSIONS` and asks each vertical FRD for its codename | GYM-18 BR-6 | 10-architecture §5: engine reads pass on "`<module>.<resource>.read` of any consuming module"; a trainer holds `gym.member.read` and would read every mark and every due of the tenant through `/api/v1/attendance/` and `/api/v1/dues/`, which apply no vertical scope | State in 10-architecture §5 that a vertical with a scoped role names an **unscoped** codename there. Gym's entries: `ENGINE_READ_PERMISSIONS["attendance"]["gym"] = "gym.member.read_all"`, `["dues"]["gym"] = "gym.membership.money_read"` | As proposed; a test proves a trainer gets 403 on both | **R25** — accepted; values in 11-contracts §3 (ADR-058) |
+| C14 | **Origin listener on credit-note voids.** | GYM-06 BR-3 | 11-contracts §1.5 says `void_invoice` calls `blocks_void`/`on_void`; credit notes are voided by `void_credit_note` (`credit_note_apply.py:129`), which the contract does not mention | `void_credit_note` calls the origin listener the same way | Until then a gym credit note can be voided from the Invoices screen; `check_integrity` reports a gym credit note voided while its term is `changed` | **R58** — `void_credit_note` calls the listener |
+| C15 | **Dedupe for desk visits.** | GYM-01 §5, GYM-14 BR-4 | 11-contracts puts `dedupe_minutes` on `attendance_group`, and 00-core-and-engines ATT-02 describes desk visits with **no** group, which leaves the window of a group-less visit unspecified | A per-module dedupe setting for group-less visits, or confirm that verticals pass a desk group | Gym passes its seeded "Front desk" group (`group_id`, visit kind) on every desk check-in, so the group's `dedupe_minutes` applies | **R59** — desk group passed; a group-less visit has no dedupe |
 
 ---
 

@@ -10,9 +10,11 @@ passed.
 ADR-041 to ADR-055 (Part 38), `10-architecture.md`, `11-contracts.md`, `CLAUDE.md`. This FRD
 **adds** detail inside those decisions; it changes none of them. Where the contracts and the code
 disagree, or the contracts are silent where an implementer must choose, the point is listed in
-[§C Contract questions](#c-contract-questions-for-the-architecture-owner) with a proposed answer,
-and the body of this FRD follows the proposed answer marked **(pending CQ-n)** so that nobody
-builds against a guess that is not written down.
+[§C Contract questions](#c-contract-questions-for-the-architecture-owner). All twenty-five were
+**resolved on 30 Sep 2026** by the architecture owner (10-architecture §17, 11-contracts v1). Each
+place the body depends on one is marked **(CQ-n → Rk)**; where the resolution differs from the
+proposal this FRD first made (CQ-5, CQ-15, CQ-18, CQ-24's values), the body has been rewritten to
+the resolution.
 
 Every claim about existing code carries a path (relative to `backend/` or `frontend/`), read at
 commit `30798d2`.
@@ -185,7 +187,7 @@ The `ADD COLUMN … DEFAULT` is metadata-only on PostgreSQL 16 (no rewrite). The
 `ix_ledger_party_date`, `ix_ledger_source` and `ix_ledger_tenant_date` are unchanged.
 `entry_type` stays `varchar(24)` (`adjustment_credit` is 17). `source_type` stays `varchar(32)`;
 its Django `choices=SourceType.choices` is removed in the same migration (state-only
-`AlterField`, no SQL) because registered sources are not enum members (pending CQ-8).
+`AlterField`, no SQL) because registered sources are not enum members (CQ-8 → R8).
 
 **Migration `parties/0009_party_loan_and_deposit_caches.py`:**
 
@@ -361,7 +363,7 @@ module roles of PLT-X12 do not hold either, so they never see these figures thro
 6. EC-6 LED-03 correction of a manual entry → `main` always; `_apply_delta` unchanged.
 7. EC-7 `write_off` (LED-11) on a party with a loan → writes `main`; the write-off amount is capped at
    the trade figure, so a shop write-off cannot silently forgive a loan (LED-11 amended: its
-   amount defaults to `trade_balance`, not `balance`; pending CQ-22).
+   amount defaults to `trade_balance`, not `balance`; CQ-22 → R23).
 
 #### 14. Future
 A fourth bucket (for example `rent_deposit` if rent needs a separate liability) is one CHECK change
@@ -533,7 +535,7 @@ Python (contracts §1.4) with these precise semantics:
 - **BR-5** Both deposit targets are `auto = False`; FIFO never picks them (T-PLT-X03 contract).
 - **BR-6** `adjustment` is accepted only from `_record_adjustment_pair`; `record_payment`'s
   `validate_mode_breakup`, LED-01's entry validation and expenses' validation refuse it (400;
-  pending CQ-23).
+  CQ-23 → R24).
 - **BR-7** Voiding either adjustment payment voids its partner in the same transaction and stamps
   the application `voided_at`; `applied_amount` drops by the application's amount.
 - **BR-8** Voiding a **receipt** is refused when it would make `held_amount < 0`
@@ -543,9 +545,9 @@ Python (contracts §1.4) with these precise semantics:
   `payment_in`, credit, `main`.
 - **BR-10** Cashbook (`apps/reports/selectors/cash_sources.py`, `PaymentCashSource.rows` and
   `_NET_SQL`) skips mode-breakup parts with `mode = 'adjustment'`; deposit receipts and refunds in
-  real modes are cash like any other (pending CQ-4).
+  real modes are cash like any other (CQ-4 → R4).
 - **BR-11** Numbering: the adjustment pair takes numbers from the normal `payment_out` and
-  `payment_in` series (pending CQ-11).
+  `payment_in` series (CQ-11 → R12).
 
 **Worked example (library):**
 | Step | Act | Payments written | held | deposit_held | balance |
@@ -652,11 +654,13 @@ in one act); SAL credit application through the same path.
 #### 4. Entities and relationships
 No new table. `payments_allocation (payment, document_type, document_id, amount)` is unchanged,
 including `uq_allocation_target` (`apps/payments/models.py:148-150`). The payment's bucket is a
-property derived from its ledger line (pending CQ-5): `ledger_entry` where `source_type='payment'`,
-`source_id=payment.id`, `entry_type in (payment_in, payment_out)`, `reverses IS NULL`.
+**column** (CQ-5 → R5): `payments_payment.bucket`, written once when the payment is recorded and
+never changed; a reconciliation test asserts it equals the bucket of the payment's
+`payment_in`/`payment_out` ledger line.
 
 #### 5. Database
-No schema change. One index already serves the bucket lookup (`ix_ledger_source`). The deferred
+`payments/0003_payment_bucket`: `payments_payment.bucket varchar(8) NOT NULL DEFAULT 'main'`, CHECK
+`bucket IN ('main','loan','deposit')`; existing rows are `main`. The deferred
 Σ-allocations trigger (`payments/migrations/0001`) is unchanged and is what makes a concurrent
 `allocate_existing` over-allocation fail at commit.
 
@@ -736,7 +740,7 @@ locks party → target documents (each target's `lock`, targets in `document_typ
   (they are ordinary `payments_allocation` rows).
 - **BR-5** Auto allocation order across several `auto` targets (sales invoices, `dues_due`,
   `library_charge`): global oldest first by `(document_date, number, id)`; ties across targets by
-  `document_type` (pending CQ-6).
+  `document_type` (CQ-6 → R6).
 - **BR-6** An existing row for the same `(payment, document_type, document_id)` is **increased**
   rather than duplicated (the unique constraint forbids two), and the audit says so.
 - **BR-7** A payment OUT's advance (supplier advance) can be applied to purchase bills the same way;
@@ -974,7 +978,7 @@ or paid.
    sales series, the origin shown as "From Gym · Membership M-0042".
 2. **Pay** at issue (`payment` in the request) or later through the normal payment flows; the
    origin hears `on_settlement_changed` and updates (for example the due becomes `paid`).
-3. **Void**: from the invoice page. If the origin refuses (`blocks_void`), the void dialog shows
+3. **Void**: from the invoice page. If the origin refuses (`check_void`), the void dialog shows
    the origin's reason ("End the membership first"); otherwise the void cascades to the origin
    (`on_void`) in one transaction.
 4. **Credit note** from the module (a pro-rata refund on leaving): the module calls
@@ -983,7 +987,7 @@ or paid.
 #### 3. Features
 Minimum: the port module; `SalesIssuer` registered by `sales`; origin columns on `sales_document`;
 `kind_for` and never an estimate; `credit_check="skip"`; `apply_open_advances`; per-line tax;
-`blocks_void` / `on_void` in `void_invoice`; `on_settlement_changed` after `refresh_invoice_amounts`;
+`check_void` / `on_void` in `void_invoice`; `on_settlement_changed` after `refresh_invoice_amounts`;
 origin badge and filter in the invoice list. Later: port methods for receipt vouchers with tax on
 advances (ADR-045 trigger); estimates from modules.
 
@@ -1014,20 +1018,28 @@ Python, exactly contracts §1.5. Implementation notes that bind the implementer:
   in the caller's transaction; the origin columns are set on the draft before issue.
 - Line mapping: `description`, `hsn_sac`, `qty`, `unit_code` (default `NOS`), `unit_price`,
   `tax_inclusive`, `discount_amount` → the sales line; `item_id` → `item` only when inventory is on
-  (else refused, 400); `gst_rate` → a `tax_code` by the tax master for the document date (pending
-  CQ-2); `gst_rate=None` → the item's code, else the tenant default code.
+  (else refused, 400); `tax_code` → the line's code, resolved by sales for the document date
+  (CQ-2 → R2); a `gst_rate` without a code is mapped by `tax.selectors.code_for_rate(tenant, rate,
+  on_date)`, and a rate shared by two active codes is 400; neither → the item's code, else the tenant
+  default code.
 - `issue_invoice` gains keyword `credit_check: str = "enforce"`; `"skip"` bypasses
   `credit_check()` (`issue_parts.py:66`) and returns a warning `credit_limit_exceeded` if the limit
   is crossed, never a 409.
-- `apply_open_advances=True` → after issue, `allocate_existing` of the party's open **main** advances,
-  oldest payment first, up to `amount_due` (PLT-X03); the result's `amount_due` reflects it.
-- `void_invoice` (`void.py:80`): after `refuse_unless_voidable`, if `origin_type` is set, call
-  `blocks_void(tenant, origin_id)`; a reason → 409 `document_origin_locked`
-  `{origin_type, reason}`; else proceed, and call `on_void(ctx, origin_id, document, reason)` last,
+- Inside the issue, **before the number is allocated** (R61): apply `apply_credit_note_ids` (R50),
+  then allocate `apply_payment_ids` in the order given, then — when `apply_open_advances=True` — the
+  party's open, **un-earmarked** main advances, oldest payment first, up to `amount_due` (PLT-X03).
+  `place_of_supply_state` overrides `default_pos` (R60); `override` is honoured for owner/admin with
+  `credit_check="enforce"` (R62). The result carries `refund_payment` for a refunding credit note
+  (R52).
+- `void_invoice` (`void.py:80`) **and `void_credit_note`** (`credit_note_apply.py:129`, R58): after
+  `refuse_unless_voidable`, if `origin_type` is set, call `check_void(tenant, origin_id) ->
+  VoidCheck`; `block` → 409 `document_origin_locked` `{origin_type, reason}`; `confirm` without
+  `confirm_origin: true` in the request → 409 `document_origin_confirm` `{origin_type, message}`
+  (R55); else proceed, and call `on_void(ctx, origin_id, document, reason)` last,
   inside the transaction. A listener that raises rolls the void back.
 - `refresh_invoice_amounts` (`amounts.py:56`): after save, if `origin_type` is set and
   `amount_due` or `status` changed, call `on_settlement_changed(ctx, origin_id, document)`
-  (pending CQ-1 for the `ctx`).
+  (CQ-1 → R1 for the `ctx`).
 - `document_summaries(tenant, ids)` → `{id: IssuedDocument}` in one query.
 - `issuer_available(tenant)` is `issuer registered and "sales" in effective_modules(tenant)`.
 
@@ -1066,8 +1078,10 @@ The void refusal reason is the module's words.
   rows (engine rows sit after documents).
 - **BR-6** One document per origin issue: the port is idempotent by `(origin_type, origin_id)` for a
   non-void document — a second `issue_document` for the same origin returns the standing document.
-- **BR-7** A per-line `gst_rate` must resolve to a tax code valid on the document date, else 400
-  `validation_error` `{lines.N.gst_rate: ["No tax code for 18% on 01/10/2026."]}`.
+- **BR-7** A per-line `tax_code` must be valid on the document date; a `gst_rate` sent instead must
+  resolve to exactly one such code, else 400 `validation_error`
+  `{lines.N.gst_rate: ["No tax code for 18% on 01/10/2026."]}` or `["Several tax codes are 0%; send
+  tax_code."]` (R2).
 
 **Worked example (gym, regular tenant, intra-state):** one line "Quarterly membership" ₹2,500.00
 (250000 p) exclusive, 18% (GST18): CGST 22500 p, SGST 22500 p, grand total **295000 p (₹2,950.00)**.
@@ -1097,7 +1111,7 @@ Sales register and GST summary include module invoices (they are invoices); the 
 - T-PLT-X05-3 (unit) `credit_check="skip"` over limit → issued + warning; `"enforce"` → 409.
 - T-PLT-X05-4 (contract) every registered origin listener: `on_void` called once inside the
   transaction; a raising listener rolls the void back (document still issued, ledger unchanged);
-  `blocks_void` reason → 409 `document_origin_locked`.
+  `check_void` reason → 409 `document_origin_locked`.
 - T-PLT-X05-5 (contract) `on_settlement_changed` called after a payment, a payment void, a credit
   application and `allocate_existing`; not called when neither `amount_due` nor `status` changed.
 - T-PLT-X05-6 (unit) BR-6 idempotency; BR-7 unresolvable rate → 400.
@@ -1154,7 +1168,7 @@ window if the owner decides (10-architecture §16 item 4).
 
 #### 4. Entities and relationships
 `ledger_reminder` (existing) gains a polymorphic pointer `(module, source_type, source_id)` and
-`subject_label`, plus the recipient (pending CQ-9). A reminder source and a policy are registry
+`subject_label`, plus the recipient (CQ-9 → R9). A reminder source and a policy are registry
 entries keyed by `source_type` and by module.
 
 #### 5. Database
@@ -1166,7 +1180,7 @@ entries keyed by `source_type` and by module.
 | `source_type` | `varchar(48) NULL` | `dues_due`, `library_loan`, `library_hold` … |
 | `source_id` | `uuid NULL` | |
 | `subject_label` | `varchar(120) NOT NULL DEFAULT ''` | printed in the list and the text |
-| `recipient_party_id` | `uuid NULL` FK `parties_party` RESTRICT | the guardian or payer (pending CQ-9) |
+| `recipient_party_id` | `uuid NULL` FK `parties_party` RESTRICT | the guardian or payer (CQ-9 → R9) |
 
 `kind` is `varchar(12)`; `due` and `notice` fit. Constraints:
 `ck_reminder_source_complete CHECK ((source_type IS NULL) = (source_id IS NULL))`;
@@ -1184,7 +1198,7 @@ CREATE INDEX ix_reminder_module_sent ON ledger_reminder (tenant_id, module, sour
 ```
 `due`/`notice` rows are the ones the **auto job** writes; a merchant's manual send about a module
 due is `kind = 'manual'` with the source columns set, which the unique index does not cover and the
-cap governs (pending CQ-9).
+cap governs (CQ-9 → R9).
 
 #### 6. API
 Python, contracts §1.6, plus:
@@ -1507,7 +1521,7 @@ Worked example: Sundays closed (`value: [6]`) and a tenant-wide closure on Mon 1
 calendar input it reads.
 
 #### 10. Permissions
-`platform.calendar.manage` is a **new** core codename (owner, admin; pending CQ-25), declared in
+`platform.calendar.manage` is a **new** core codename (owner, admin; CQ-25 → R26), declared in
 `permissions_registry.py` and added to canon §0.9 by CR (with the module codenames).
 
 | Action | Codename | owner | admin | staff | accountant |
@@ -1574,7 +1588,7 @@ The CHECKs are declared on the mixin so every including table gets them (constra
 by the table). Never JSON.
 
 #### 6. API
-Python, contracts §1.8, with `@dataclass(frozen=True, kw_only=True)` (pending CQ-12):
+Python, contracts §1.8, with `@dataclass(frozen=True, kw_only=True)` (CQ-12 → R13):
 ```python
 occurrences(rule, *, start, end, limit=1000) -> list[date]   # dates d with start <= d < end, ascending
 next_occurrence(rule, *, after: date) -> date | None          # first d > after
@@ -1676,7 +1690,7 @@ rule for every module: this overrides lending research EC-13.
 Minimum: `MODULE_DEPENDENCIES` entries; `ENGINES_USED_BY`; `engine_enabled`,
 `enabled_modules_using`; `EngineEnabled`; idempotent, labelled module-off counters; one counter per
 (engine, consuming module); a held-deposit counter per module; the breakdown in the 409; an
-enable hook for presets (pending CQ-14). Later: the onboarding checklist that switches dependencies
+enable hook for presets (CQ-14 → R15). Later: the onboarding checklist that switches dependencies
 on automatically (ships with the first released vertical, 10-architecture §13.2).
 
 #### 4. Entities and relationships
@@ -1788,7 +1802,7 @@ and ships the plan/partner migration; the module appears in Features the next de
 #### 3. Features
 Minimum: the four `ModuleCode` values; `UNRELEASED_MODULES`; `released_modules()`; the env flag in
 `env_catalogue.py` and `.env.example`; the gates in `modules_view`, `update_enabled_modules`,
-`ModuleEnabled` and `effective_modules` (pending CQ-10); the frontend `MODULE_CODES` replacement and
+`ModuleEnabled` and `effective_modules` (CQ-10 → R11); the frontend `MODULE_CODES` replacement and
 its equality test; the release data-migration template. Later: nothing.
 
 #### 4. Entities and relationships
@@ -2197,7 +2211,6 @@ Migration `dues/0001_initial.py` depends on the Wave A migrations of `ledger`, `
 | `amount` | `numeric(14,2) NULL` | fixed: per due, ≥ 0 |
 | `total` | `numeric(14,2) NULL` | total_split: > 0 |
 | `split_weights` | `numeric(9,4)[] NOT NULL DEFAULT '{}'` | empty = equal parts |
-| `heads` | `jsonb NOT NULL DEFAULT '[]'` | `[{label, amount}]`, amounts as strings (pending CQ-15) |
 | `join_policy` | `varchar(14) NOT NULL DEFAULT 'full'` | `full`\|`by_days`\|`half_rule`\|`next_period`\|`align_to_join` |
 | `leave_policy` | `varchar(12) NOT NULL DEFAULT 'no_refund'` | `no_refund`\|`by_days`\|`by_sessions`\|`custom` |
 | `grace_days` | `smallint NOT NULL DEFAULT 0` | 0–365 |
@@ -2206,7 +2219,7 @@ Migration `dues/0001_initial.py` depends on the Wave A migrations of `ledger`, `
 | `penalty_cap` | `numeric(14,2) NULL` | per due |
 | `pause_max_days`, `pause_min_days`, `pause_max_count` | `smallint NULL` | per schedule year |
 | `hsn_sac` | `varchar(8) NULL` | |
-| `gst_rate` | `numeric(5,2) NULL` | |
+| `tax_code` | `varchar(16) NULL` | a `tax_rate.code` (CQ-2 → R2) |
 | `tax_inclusive` | `boolean NOT NULL DEFAULT false` | document posting only |
 | `rounding_rule` | `varchar(8) NOT NULL DEFAULT 'rupee'` | PLT-X09 rules |
 | `allocation_order` | `varchar(12) NOT NULL DEFAULT 'oldest_first'` | `oldest_first`\|`fees_first`\|`fees_last` |
@@ -2216,10 +2229,15 @@ Migration `dues/0001_initial.py` depends on the Wave A migrations of `ledger`, `
 | `version` | `integer NOT NULL DEFAULT 1` | |
 
 CHECKs: `(mode='charge' AND posting IN ('document','ledger')) OR (mode='expectation' AND posting='none')`;
-`(gst_rate IS NULL AND hsn_sac IS NULL) OR posting='document'` (taxable ⇒ document);
+`(tax_code IS NULL AND hsn_sac IS NULL) OR posting='document'` (taxable ⇒ document);
 `amount_rule<>'fixed' OR amount IS NOT NULL`; `amount_rule<>'total_split' OR total IS NOT NULL`;
 `(penalty_kind='none') = (penalty_value IS NULL)`; `amount >= 0`, `total > 0`, `penalty_cap >= 0`.
 Unique `uq_dues_plan_name (tenant_id, module, lower(name)) WHERE is_active`.
+
+**`dues_plan_head`** (CQ-15 → R16; no money in jsonb): `plan_id` FK CASCADE, `seq smallint`, `label
+varchar(60)`, `amount numeric(14,2) NOT NULL CHECK (amount >= 0)`; unique `(plan_id, seq)`. The
+service checks Σ heads = `amount` for a fixed plan. **`dues_schedule_head`** has the same shape under
+`schedule_id` and is copied at schedule creation.
 Index `ix_dues_plan_module (tenant_id, module, is_active)`.
 
 **`dues_schedule`**
@@ -2227,8 +2245,9 @@ Index `ix_dues_plan_module (tenant_id, module, is_active)`.
 |---|---|---|
 | `module` | `varchar(32) NOT NULL` | |
 | `plan_id` | FK `dues_plan` RESTRICT | |
-| recurrence columns | `RecurrenceFields` | copied from the plan at creation (pending CQ-15) |
-| `terms` | `jsonb NOT NULL` | snapshot of every other plan field, money as strings |
+| recurrence columns | `RecurrenceFields` | copied from the plan at creation (CQ-15 → R16) |
+| money and rule terms | typed columns: `amount`, `total`, `grace_days`, `penalty_kind`, `penalty_value`, `penalty_cap`, `allocation_order`, `closed_day_rule`, `rounding_rule` | copied from the plan at creation (R16) |
+| `terms` | `jsonb NOT NULL DEFAULT '{}'` | non-money policy strings only (join and leave policies, pause rules) |
 | `party_id` | FK `parties_party` RESTRICT | payer |
 | `beneficiary_party_id` | FK `parties_party` RESTRICT NULL | the member when a parent pays |
 | `subject_type` | `varchar(48) NOT NULL` | |
@@ -2260,7 +2279,7 @@ CHECK `end_on IS NULL OR end_on > start_on`.
 | `status` | `varchar(10) NOT NULL DEFAULT 'scheduled'` | `scheduled`\|`due`\|`overdue`\|`paid`\|`skipped`\|`cancelled` |
 | `settled_amount` | `numeric(14,2) NOT NULL DEFAULT 0` | cache |
 | `waived_amount` | `numeric(14,2) NOT NULL DEFAULT 0` | cache: live waiver, discount, proration |
-| `penalty_amount` | `numeric(14,2) NOT NULL DEFAULT 0` | cache: live penalties (pending CQ-16) |
+| `penalty_amount` | `numeric(14,2) NOT NULL DEFAULT 0` | cache: live penalties (CQ-16 → R17) |
 | `penalty_exempt_days` | `smallint NOT NULL DEFAULT 0` | days a later-voided payment stood (DUE-03 BR-8) |
 | `paid_on` | `date NULL` | |
 | `document_id` | `uuid NULL` | document posting |
@@ -2377,9 +2396,10 @@ in 3 parts, `rupee` → 333300, 333300, 333400 p. **`by_days` join** on 12 Oct: 
 
 #### 10. Permissions
 Writes are the vertical's codenames (for example `gym.membership.write`); the engine checks none.
-Read endpoints (pending CQ-24): `ENGINE_READ_PERMISSIONS["dues"] = {"lending": "lending.loan.read", "library":
-"library.member.read", "gym": "gym.membership.read"}` in `permissions_registry.py` (strings; each
-vertical FRD confirms its codename); a member sees rows of the modules whose codename they hold.
+Read endpoints (CQ-24 → R25): `ENGINE_READ_PERMISSIONS["dues"] = {"lending": "lending.loan.read_all",
+"library": "library.member.read", "gym": "gym.membership.money_read"}` in `permissions_registry.py`
+(strings; each is a codename no scoped module role holds, ADR-058); a member sees rows of the modules
+whose codename they hold.
 
 | Action | Where checked | owner | admin | staff | accountant |
 |---|---|---|---|---|---|
@@ -2594,7 +2614,7 @@ payoff(*, tenant, schedule_id, on) -> {"principal", "interest", "fee", "charge",
 # the OriginListener registered for "dues_due" and "dues_adjustment" (document mode):
 on_settlement_changed(ctx, origin_id, document)  # settled := grand_total − amount_due, status re-derived
 on_void(ctx, origin_id, document, reason)        # due → cancelled, cancel_reason "Invoice voided: …"
-blocks_void(tenant, origin_id) -> None           # never blocks; a vertical that must refuse a void issues
+check_void(tenant, origin_id) -> VoidCheck      # {block: None, confirm: None}: never blocks; a vertical that must refuse a void issues
                                                  # under its own origin type (e.g. gym_membership), not dues_due
 ```
 HTTP: the engine adds none; `POST /payments` (existing) accepts `dues_due` rows in `allocations`,
@@ -2625,7 +2645,7 @@ split by component. "Paid from advance of 3 Sep" appears on a due settled by `al
   amount_due` of its invoice (document); replayed by `manage.py recalc_dues --check`.
 - **BR-6** A remainder after all open dues stays unallocated on the payment (an advance in that
   bucket) — DUE-02 step 6 applies it to the next due in `main`; lending decides for `loan`.
-- **BR-7** Auto FIFO across targets is global oldest-first by date (PLT-X03 BR-5, pending CQ-6).
+- **BR-7** Auto FIFO across targets is global oldest-first by date (PLT-X03 BR-5, CQ-6 → R6).
 - **BR-8** A penalty is never charged for the days a payment stood before it was voided
   (`penalty_exempt_days`).
 
@@ -2719,7 +2739,7 @@ Python, contracts §2.1: `add_penalty`, `waive`, `end_schedule`, `cancel_schedul
 
 | Adjustment | charge/ledger | charge/document | expectation |
 |---|---|---|---|
-| penalty | `CHARGE`, `dues_adjustment`, main | a new document via the port, origin `dues_adjustment` (pending CQ-21) | `CHARGE`, `dues_adjustment`, loan, component `fee` |
+| penalty | `CHARGE`, `dues_adjustment`, main | a new document via the port, origin `dues_adjustment` (CQ-21 → R22) | `CHARGE`, `dues_adjustment`, loan, component `fee` |
 | waiver / discount / proration | `ADJUSTMENT_CREDIT`, main | `issue_credit_note(against=document, settlement="hold_advance")` | `ADJUSTMENT_CREDIT`, loan, on the named component |
 
 Settlement slip returned by `end_schedule`: `{end_on, cancelled_dues: [...], credits: [{due_id,
@@ -3014,7 +3034,7 @@ Migration `attendance/0001_initial.py` (all six tables; depends on Wave A only).
 **`attendance_group`**: `module varchar(32)`, `name varchar(80)`, `subject_type varchar(48)`,
 `subject_id uuid NULL`, `mark_kind varchar(8)` (`visit`\|`presence`), optional recurrence columns
 (`OptionalRecurrenceFields`: the PLT-X09 columns with `freq`/`anchor` nullable, all-or-none CHECK),
-`session_start time NULL`, `session_minutes smallint NULL` (pending CQ-17), `default_mark
+`session_start time NULL`, `session_minutes smallint NULL` (CQ-17 → R18), `default_mark
 varchar(8) DEFAULT 'present'`, `one_per_day boolean DEFAULT false`, `dedupe_minutes smallint
 DEFAULT 5`, `edit_window_hours smallint DEFAULT 24`, `is_active boolean DEFAULT true`.
 CHECK `mark_kind='visit' OR freq IS NOT NULL` is **not** imposed (a presence group may be marked
@@ -3065,7 +3085,7 @@ a closed day shows no session and, in the register grid, a "Closed" cell.
 
 #### 10. Permissions
 Vertical codenames for writes (`gym.batch.write`); reads via `ENGINE_READ_PERMISSIONS["attendance"]
-= {"gym": "gym.attendance.read"}`.
+= {"gym": "gym.member.read_all"}` (R25; a trainer does not hold it).
 
 #### 11. Reports
 Feeds ATT-05.
@@ -3114,9 +3134,9 @@ vertical's membership) N:1 party; optional N:1 entitlement through `attendance_e
 
 #### 5. Database
 **`attendance_mark`**: `group_id` FK NULL, `session_id` FK NULL, `party_id` FK RESTRICT,
-`module varchar(32) NOT NULL` (pending CQ-17), `on_date date`, `status varchar(8)`
+`module varchar(32) NOT NULL` (CQ-17 → R18), `on_date date`, `status varchar(8)`
 (`present`\|`absent`\|`late`\|`excused`\|`visit`), `check_in_at timestamptz NULL`, `check_out_at
-timestamptz NULL`, `auto_closed boolean DEFAULT false` (pending CQ-17), `method varchar(10)`
+timestamptz NULL`, `auto_closed boolean DEFAULT false` (CQ-17 → R18), `method varchar(10)`
 (`desk`\|`roll_call`\|`qr`), `context_type varchar(48) DEFAULT ''`, `context_id uuid NULL`,
 `override_reason varchar(160) NULL`, `voided_at timestamptz NULL`, `void_reason varchar(160) NULL`,
 `marked_by_id` FK user SET NULL.
@@ -3301,15 +3321,15 @@ come back when a mark is voided. The count is a cache with a replay test (ADR-05
 
 #### 3. Features
 Minimum: `grant_entitlement`, consumption at mark (named by the policy), give-back on void,
-validity, `extend_entitlement(valid_to)` for freezes (pending CQ-17), replay command. Later:
+validity, `extend_entitlement(valid_to)` for freezes (CQ-17 → R18), replay command. Later:
 top-ups merging into one pack.
 
 #### 4. Entities and relationships
 `attendance_entitlement 1—* attendance_entitlement_use *—1 attendance_mark`.
 
 #### 5. Database
-**`attendance_entitlement`**: `party_id` FK RESTRICT, `module varchar(32) NOT NULL` (pending
-CQ-17), `subject_type varchar(48)`, `subject_id uuid`, `total integer`, `used integer DEFAULT 0`
+**`attendance_entitlement`**: `party_id` FK RESTRICT, `module varchar(32) NOT NULL` (CQ-17
+→ R18), `subject_type varchar(48)`, `subject_id uuid`, `total integer`, `used integer DEFAULT 0`
 (cache), `valid_from date`, `valid_to date`; CHECKs `total > 0`, `used >= 0 AND used <= total`,
 `valid_to >= valid_from`; index `(tenant_id, party_id, valid_to)`, `(tenant_id, subject_type,
 subject_id)`.
@@ -3471,14 +3491,12 @@ Migration `bookings/0001_initial.py`.
 `time_mode varchar(8)` (`nights`\|`days`\|`shifts`\|`slots`), `capacity_mode varchar(16)`
 (`exclusive`\|`shared`\|`pooled_by_type`), `default_capacity smallint DEFAULT 1`, `check_in_time
 time NULL`, `check_out_time time NULL`, `slot_minutes smallint NULL`, `hold_minutes smallint
-DEFAULT 30`, `no_show_after_minutes smallint NULL` (pending CQ-18), `is_active`, `sort_order`.
+DEFAULT 30`, `no_show_after_minutes smallint NULL` (CQ-18 → R19), `is_active`, `sort_order`.
 Unique `(tenant_id, module, code)`; CHECKs `time_mode <> 'slots' OR slot_minutes BETWEEN 5 AND 480`,
 `time_mode <> 'nights' OR (check_in_time IS NOT NULL AND check_out_time IS NOT NULL)`.
 
-**`bookings_cancellation_tier`** (pending CQ-18): `resource_type_id` FK RESTRICT, `hours_before
-integer` (tier applies when cancelling at least this many hours before start), `fee_percent
-numeric(5,2)` (0–100), `basis varchar(12)` (`first_unit`\|`total`); unique `(resource_type_id,
-hours_before)`.
+**No tier table** (CQ-18 → R19, ADR-060): cancellation tiers are the vertical's setting and are
+passed to the engine's pure calculator.
 
 **`bookings_shift`**: `resource_type_id` FK RESTRICT, `code varchar(8)`, `name varchar(40)`,
 `start_time time`, `end_time time`; unique `(resource_type_id, code)`; CHECK `end_time >
@@ -3624,7 +3642,7 @@ takes 20 and refuses the 21st (ADR-049).
 
 #### 3. Features
 Minimum: `hold`, `book`, `confirm`, slot-row writes, capacity counting for shared and pooled,
-lazy expiry, `expire_holds` job, booking numbers (pending CQ-19). Later: overbooking allowance
+lazy expiry, `expire_holds` job, booking numbers (CQ-19 → R20). Later: overbooking allowance
 (default no), series bookings (weekly class).
 
 #### 4. Entities and relationships
@@ -3642,16 +3660,16 @@ lazy expiry, `expire_holds` job, booking numbers (pending CQ-19). Later: overboo
 
 **`bookings_booking_unit`**: `booking_id` FK RESTRICT, `resource_type_id` FK RESTRICT,
 `resource_id` FK RESTRICT NULL (pooled until assigned), `start_on date`, `end_on date` (exclusive),
-`shift_id` FK NULL, `start_time time NULL`, `slot_count smallint DEFAULT 1` (slots mode; pending
-CQ-18), `quantity smallint DEFAULT 1`, `status varchar(10)` (`booked`\|`checked_in`\|
-`checked_out`\|`released`; pending CQ-18), `checked_in_at`, `checked_out_at` `timestamptz NULL`.
+`shift_id` FK NULL, `start_time time NULL`, `slot_count smallint DEFAULT 1` (slots mode; CQ-18
+→ R19), `quantity smallint DEFAULT 1`, `status varchar(10)` (`booked`\|`checked_in`\|
+`checked_out`\|`released`; CQ-18 → R19), `checked_in_at`, `checked_out_at` `timestamptz NULL`.
 CHECKs `end_on > start_on`, `quantity >= 1`; index `(tenant_id, resource_id, start_on)`,
 `(tenant_id, resource_type_id, start_on) WHERE resource_id IS NULL AND status='booked'`.
 
-**`bookings_slot`**: `resource_id` FK RESTRICT, `slot_key varchar(24)`, `unit_id` FK RESTRICT,
+**`bookings_slot`**: `resource_id` FK RESTRICT, `slot_key varchar(32)` (R21), `unit_id` FK RESTRICT,
 `created_at`; **`UNIQUE (tenant_id, resource_id, slot_key)`** (contracts). For `shared` resources the
 key carries a seat ordinal suffix `#nn` (1…capacity) so the same unique index bounds capacity
-(pending CQ-20). Index `(tenant_id, slot_key)`, `(tenant_id, unit_id)`. Rows are **deleted** on
+(CQ-20 → R21). Index `(tenant_id, slot_key)`, `(tenant_id, unit_id)`. Rows are **deleted** on
 release (ADR-049); the booking and audit rows keep history.
 
 #### 6. API
@@ -3659,7 +3677,7 @@ Python (contracts §2.2): `hold`, `book`, `confirm`, `expire_holds(tenant, now) 
 `register_booking_subject(subject_type, *, module, label, on_status_changed=None)`.
 `UnitRequest = {resource_type_id, resource_id?, start_on, end_on, shift_id?, start_time?,
 slot_count?, quantity?}`. `hold`/`book` accept `number: str | None` allocated by the vertical
-(pending CQ-19).
+(CQ-19 → R20).
 Algorithm (one transaction): lock the resource rows (or the type row for `pooled_by_type`) in id
 order → delete slot rows of expired holds on them (and mark those bookings `expired`) → check out of
 service → exclusive: insert slot rows (the unique index refuses a second writer) → shared: pick free
@@ -3754,10 +3772,12 @@ No new table; uses BKG-03's.
 
 #### 6. API
 Python (contracts §2.2): `change_unit`, `check_in`, `check_out`, `cancel -> CancelResult`,
-`mark_no_show`, `cancellation_fee(*, tenant, booking_id, at) -> Fee`.
+`mark_no_show`, `cancellation_fee(*, tenant, booking_id, at, tiers) -> Fee`, where `tiers` is the
+vertical's list `[{hours_before, fee_percent, basis}]` (CQ-18 → R19).
 `Fee = {tier_hours_before: int | None, fee_percent: "50.00", basis: "first_unit" | "total",
-hours_before_start: 30}` — **a rule, not rupees**: the engine holds no prices; the vertical applies
-it to its own quote and posts through the port or payments (pending CQ-18).
+hours_before_start: 30}` — **a rule, not rupees**: the engine holds no prices and no tiers; the
+vertical applies it to its own quote and posts through the port or payments. Also `add_unit`,
+`split_unit` (R64), `undo_check_in` (R19) and `end_out_of_service` (R65), per 11-contracts §2.2.
 `CancelResult = {booking, fee: Fee, released_slot_keys: [...]}`.
 Errors: 409 `booking_not_open {status}`, `booking_slot_taken`, `booking_capacity_reached`,
 `stale_version`; 400 `validation_error` (check-in before `start_on`, check-out before check-in,
@@ -4013,36 +4033,36 @@ why; tests carry docstrings naming the defect they prevent.
 
 # C. Contract questions for the architecture owner
 
-Found while writing this FRD against the code at `30798d2`. None has been changed in
-`11-contracts.md`; each has a proposed answer that the body above follows, marked "pending CQ-n".
-**Blocking** means the named task (§I) must not start until it is answered.
+Found while writing this FRD against the code at `30798d2`; **resolved on 30 Sep 2026**
+(10-architecture §17). The "Resolved →" column names the resolution; the body above follows it.
+"Blocking" records which task each question used to block; none blocks any more.
 
-| # | Where | The contradiction or gap | Proposed answer | Blocking |
-|---|---|---|---|---|
-| CQ-1 | contracts §1.5; `apps/sales/services/amounts.py:56`; `payments/services/targets/sales.py:102` | `OriginListener.on_settlement_changed(*, ctx, …)` needs a `ctx`, but `refresh_invoice_amounts(invoice, *, amount_paid=None)` takes none, and it is called from the sales target's `apply()`, whose protocol (even v2) passes no `ctx`. | Add an optional `ctx=None` keyword to `refresh_invoice_amounts` and to `AllocationTarget.apply/unapply` (v2 already adds `payment_id`); callers pass theirs; `None` falls back to `Ctx.system(invoice.tenant)` so audit rows are never unattributed silently. | Task 8 |
-| CQ-2 | contracts §1.5 `DocumentLine.gst_rate`; `apps/sales/services/lines.py:98-130` | Sales lines are taxed by `tax_code` resolved per date (`rate_for(tenant, code, on_date)`), not by a rate. The port line carries a `Decimal` rate. | The issuer maps `gst_rate` to the tenant's tax code for that rate on the document date through a `tax` selector `code_for_rate(tenant, rate, on_date)`; no match → 400 on `lines.N.gst_rate`. Optionally allow `tax_code` on `DocumentLine` too, preferred when given. | Task 8 |
-| CQ-3 | contracts §1.5 "Kind is `kind_for(tenant)`" | The real signature is `kind_for(tenant, requested)` (`payload.py:39`). | Call `kind_for(tenant, None)`; wording only. | No |
-| CQ-4 | contracts §1.4 "the cashbook's `bucket_of` excludes it (`apps/reports/selectors/cash_sources.py`)" | `bucket_of` lives in `apps/expenses/selectors/cashbook.py:63` and maps a mode to cash/bank; the exclusion belongs in `PaymentCashSource.rows` and `_NET_SQL` in `reports/selectors/cash_sources.py`. "Bucket" now also names the ledger bucket. | Exclude `adjustment` parts in `PaymentCashSource` (both the rows and the net SQL); leave `bucket_of` alone; in code call the ledger one `bucket` and the cashbook one `cash_bucket` in new identifiers. | No |
-| CQ-5 | contracts §1.4 ("an unallocated payment is `main`"; `allocate_existing` must match "the payment's direction and bucket") | `payments_payment` has no bucket column, so the payment's bucket must be derived from its ledger line; and a payment whose allocations were partly released (document void) or which exceeded its dues keeps its **original** bucket as an advance, so "unallocated ⇒ main" holds only for payments recorded with no allocation. | Derive the bucket from the payment's `payment_in/out` ledger line (one indexed lookup); state that a payment's bucket is fixed at record time. Alternative: add `payments_payment.bucket varchar(8)` (denormalised, frozen) — cheaper reads, one more migration. | Task 6 |
-| CQ-6 | contracts §1.4 ("`targets_for_direction` used by `auto` returns only `auto=True` targets") | `_auto` (`record.py:223-237`) walks targets in **registration order**, FIFO within each; with `sales_document`, `dues_due` and `library_charge` all auto, a later invoice would be paid before an older fee. | Global oldest-first across auto targets by `(document_date, number, id)`, ties by `document_type`; lock all candidates per target in target order first (still party → documents), then choose. | Task 6 |
-| CQ-7 | contracts §1.4 registered targets; `payments_allocation.document_type varchar(32)` | Subject and origin types are `varchar(48)` elsewhere; allocation document types must stay ≤ 32. | `register_target` refuses longer names; all names in contracts fit. | No |
-| CQ-8 | contracts §1.2 posting registry; `apps/ledger/models.py` `source_type` has `choices=SourceType.choices` | Registered source types are not members of the `SourceType` enum; model validation and admin forms would reject them. | Remove `choices` from `ledger_entry.source_type` (state-only migration); validity is the posting registry's job. | Task 5 |
-| CQ-9 | contracts §1.6 | `ReminderCandidate.recipient_party_id` has no column on `ledger_reminder`; and it is not said which kinds the widened partial unique index covers, nor whether a merchant's manual send about a module due is `kind='due'` or `'manual'`. | Add `recipient_party_id uuid NULL` FK; auto-job rows use `due`/`notice` and the index predicate becomes `kind IN ('auto_d1','auto_d0','due','notice')`; manual sends stay `kind='manual'` with the source columns (governed by the policy's caps, not the index). | Task 10 |
-| CQ-10 | contracts §1.1 lists `modules_view`, `update_enabled_modules`, `ModuleEnabled` | `GET /auth/me`, `permissions_for` module gating and `EngineEnabled` read `effective_modules`, which would still report an unreleased code if one were in `enabled_modules`. | Filter `UNRELEASED_MODULES` inside `effective_modules` too (the single answer, `entitlements.py:98-106`). | Task 1 |
-| CQ-11 | contracts §1.4 `apply_deposit` | Which number series the two `adjustment` payments take is not stated; they would consume RCT/PAYOUT numbers and print as receipts. | Use the ordinary `payment_in`/`payment_out` series (a gap-free legal series is not required for internal adjustments, but a separate series would be a new settings row for every tenant); print "Adjustment · deposit". Alternative: a new `adjustment` number kind. | Task 7 |
-| CQ-12 | contracts §1.8 `Recurrence` | As written the dataclass is invalid Python: `anchor: date` (no default) follows fields with defaults. | `@dataclass(frozen=True, kw_only=True)`. | Task 3 |
-| CQ-13 | contracts §4.2 R4 (exists) | A useful refusal needs per-counter labels, and today's `register_module_off_guard` appends (not idempotent, `guards.py:33-35`) against the registry rule. | Add optional `label_id=` to `register_module_off_guard`, dedupe by counter identity, and add `details.breakdown` to `module_has_data` (additive). | No |
-| CQ-14 | 10-architecture §9 ("switching on runs the module's preset seed") | No registry for it in §4.2. | `register_module_enable_hook(module, hook)` in `platform_app/services/guards.py`, run inside `update_enabled_modules`' transaction for newly enabled modules. | Task 13 |
-| CQ-15 | contracts §2.1 `dues_plan.heads jsonb [{label, amount}]`, `dues_schedule.terms jsonb` | Money inside jsonb breaks canon rule 3 (the reason the party opening balance is three typed columns); and a plan snapshot in `terms` puts the recurrence in JSON, which ADR-055 forbids. | Store the schedule's recurrence as typed `RecurrenceFields` copied from the plan; keep `terms` for the rest with money as 2-dp strings (the `mode_breakup` precedent, `payments/models.py`) and a CHECK that Σ `heads[].amount` = `amount` through an immutable SQL function as `payments/0001` does. Or move heads to a `dues_plan_head` table. | Task 16 |
-| CQ-16 | contracts §2.1 `dues_due` | Outstanding needs posted penalties, and a voided payment's standing days must be excluded from late fees; neither has a column. Charge-mode dues also need `dues_settlement` rows for a uniform replay. | Add `penalty_amount` (cache) and `penalty_exempt_days` to `dues_due`; use `dues_settlement` for every mode with `component='charge'` when a due has no components. | Task 16 |
-| CQ-17 | contracts §2.3; 10-architecture §5 rule 3 ("every engine row also carries `module`") | `attendance_mark` (open visits have no group) and `attendance_entitlement` have no `module`, so the module-off guard and module filters would need joins that do not exist for visits; groups have no session time; "auto-closed" visits have no flag; gym freezes need entitlement validity extension. | Add `module` to `attendance_mark` and `attendance_entitlement`; `session_start time`, `session_minutes smallint` to `attendance_group` (recurrence optional there); `auto_closed boolean` to `attendance_mark`; service `extend_entitlement(valid_to, reason)`. | Task 15 |
-| CQ-18 | contracts §2.2 | `cancel` returns "fee from policy tiers" but no table stores tiers, the engine holds no prices (so a fee cannot be rupees), `no_show_after` is absent, `bookings_booking_unit.status` values are unlisted, and `slots` mode has no start time on the unit. | Add `bookings_cancellation_tier` (hours_before, fee_percent, basis); `Fee` is a rule (percent + basis) the vertical applies to its quote; add `no_show_after_minutes` to the type; unit statuses `booked`\|`checked_in`\|`checked_out`\|`released`; unit `start_time`, `slot_count` for slots. | Task 24 |
-| CQ-19 | contracts §2.2 `bookings_booking.number`; §1.7 kind `booking` (hospitality) | Who allocates the engine row's number is not said; the engine cannot know the vertical's kind. | The vertical allocates (`allocate_number(kind="booking")`) and passes `number=` to `hold`/`book`. | Task 24 |
-| CQ-20 | contracts §2.2 and ADR-049 ("a count of rows per slot key" for shared capacity) | `UNIQUE (tenant, resource, slot_key)` allows only one row per key, so shared capacity cannot be "a count of rows per key". | For `shared` resources the key carries a seat ordinal (`2026-10-12T07:00#07`, 1…capacity), so the same unique index bounds capacity; pooled types count under the type lock as contracts say. `varchar(24)` fits if shift codes are ≤ 8 characters. | Task 24 |
-| CQ-21 | contracts §1.2 (`dues_adjustment` posts `charge`/`adjustment_credit` in main/loan) | In document mode a late fee on a taxable supply is itself taxable and a waiver reduces an invoice; a ledger line cannot do either. | Document-mode penalties issue their own document through the port with origin `dues_adjustment`; waivers, discounts and proration issue credit notes against the due's document; register `dues_adjustment` as an origin type. | Task 19 |
-| CQ-22 | ADR-043 consequences; LED-11 | ADR-043 says a loan must not be forgiven by the shop's flows; LED-11's write-off defaults to the whole `balance`. | LED-11's amount defaults to and is capped at `trade_balance`; forgiving a loan is lending's waiver. A CR amends LED-11. | Task 5 |
-| CQ-23 | contracts §1.4 (`PaymentMode.ADJUSTMENT` "accepted only from `apply_deposit`") | `PaymentMode` lives in `apps/common/constants.py` and is shared with manual ledger entries and expenses, whose validators accept any member. | Refuse `adjustment` in LED-01's, expenses' and `record_payment`'s public validation, with one test per path. | Task 7 |
-| CQ-24 | 10-architecture §5 ("engine read endpoints check a codename of each consuming module") | Which codename per module is not recorded anywhere code can read. | `ENGINE_READ_PERMISSIONS: dict[engine, dict[module, codename]]` in `permissions_registry.py` (strings, L4); each vertical FRD names its codename. | Task 13 |
-| CQ-25 | canon §0.9; PLT-X08 | Closures are an admin task at a library or gym, but settings writes need `platform.tenant.manage` (owner only). | New core codename `platform.calendar.manage` (owner, admin), added by the same CR that adds the module codenames and module roles. | Task 12 |
+| # | Where | The contradiction or gap | Proposed answer | Blocking | Resolved → |
+|---|---|---|---|---|---|
+| CQ-1 | contracts §1.5; `apps/sales/services/amounts.py:56`; `payments/services/targets/sales.py:102` | `OriginListener.on_settlement_changed(*, ctx, …)` needs a `ctx`, but `refresh_invoice_amounts(invoice, *, amount_paid=None)` takes none, and it is called from the sales target's `apply()`, whose protocol (even v2) passes no `ctx`. | Add an optional `ctx=None` keyword to `refresh_invoice_amounts` and to `AllocationTarget.apply/unapply` (v2 already adds `payment_id`); callers pass theirs; `None` falls back to `Ctx.system(invoice.tenant)` so audit rows are never unattributed silently. | Task 8 | **R1** |
+| CQ-2 | contracts §1.5 `DocumentLine.gst_rate`; `apps/sales/services/lines.py:98-130` | Sales lines are taxed by `tax_code` resolved per date (`rate_for(tenant, code, on_date)`), not by a rate. The port line carries a `Decimal` rate. | The issuer maps `gst_rate` to the tenant's tax code for that rate on the document date through a `tax` selector `code_for_rate(tenant, rate, on_date)`; no match → 400 on `lines.N.gst_rate`. Optionally allow `tax_code` on `DocumentLine` too, preferred when given. | Task 8 | **R2** |
+| CQ-3 | contracts §1.5 "Kind is `kind_for(tenant)`" | The real signature is `kind_for(tenant, requested)` (`payload.py:39`). | Call `kind_for(tenant, None)`; wording only. | No | **R3** |
+| CQ-4 | contracts §1.4 "the cashbook's `bucket_of` excludes it (`apps/reports/selectors/cash_sources.py`)" | `bucket_of` lives in `apps/expenses/selectors/cashbook.py:63` and maps a mode to cash/bank; the exclusion belongs in `PaymentCashSource.rows` and `_NET_SQL` in `reports/selectors/cash_sources.py`. "Bucket" now also names the ledger bucket. | Exclude `adjustment` parts in `PaymentCashSource` (both the rows and the net SQL); leave `bucket_of` alone; in code call the ledger one `bucket` and the cashbook one `cash_bucket` in new identifiers. | No | **R4** |
+| CQ-5 | contracts §1.4 ("an unallocated payment is `main`"; `allocate_existing` must match "the payment's direction and bucket") | `payments_payment` has no bucket column, so the payment's bucket must be derived from its ledger line; and a payment whose allocations were partly released (document void) or which exceeded its dues keeps its **original** bucket as an advance, so "unallocated ⇒ main" holds only for payments recorded with no allocation. | Derive the bucket from the payment's `payment_in/out` ledger line (one indexed lookup); state that a payment's bucket is fixed at record time. Alternative: add `payments_payment.bucket varchar(8)` (denormalised, frozen) — cheaper reads, one more migration. | Task 6 | **R5** — a column, not derivation |
+| CQ-6 | contracts §1.4 ("`targets_for_direction` used by `auto` returns only `auto=True` targets") | `_auto` (`record.py:223-237`) walks targets in **registration order**, FIFO within each; with `sales_document`, `dues_due` and `library_charge` all auto, a later invoice would be paid before an older fee. | Global oldest-first across auto targets by `(document_date, number, id)`, ties by `document_type`; lock all candidates per target in target order first (still party → documents), then choose. | Task 6 | **R6** |
+| CQ-7 | contracts §1.4 registered targets; `payments_allocation.document_type varchar(32)` | Subject and origin types are `varchar(48)` elsewhere; allocation document types must stay ≤ 32. | `register_target` refuses longer names; all names in contracts fit. | No | **R7** |
+| CQ-8 | contracts §1.2 posting registry; `apps/ledger/models.py` `source_type` has `choices=SourceType.choices` | Registered source types are not members of the `SourceType` enum; model validation and admin forms would reject them. | Remove `choices` from `ledger_entry.source_type` (state-only migration); validity is the posting registry's job. | Task 5 | **R8** |
+| CQ-9 | contracts §1.6 | `ReminderCandidate.recipient_party_id` has no column on `ledger_reminder`; and it is not said which kinds the widened partial unique index covers, nor whether a merchant's manual send about a module due is `kind='due'` or `'manual'`. | Add `recipient_party_id uuid NULL` FK; auto-job rows use `due`/`notice` and the index predicate becomes `kind IN ('auto_d1','auto_d0','due','notice')`; manual sends stay `kind='manual'` with the source columns (governed by the policy's caps, not the index). | Task 10 | **R9** |
+| CQ-10 | contracts §1.1 lists `modules_view`, `update_enabled_modules`, `ModuleEnabled` | `GET /auth/me`, `permissions_for` module gating and `EngineEnabled` read `effective_modules`, which would still report an unreleased code if one were in `enabled_modules`. | Filter `UNRELEASED_MODULES` inside `effective_modules` too (the single answer, `entitlements.py:98-106`). | Task 1 | **R11** |
+| CQ-11 | contracts §1.4 `apply_deposit` | Which number series the two `adjustment` payments take is not stated; they would consume RCT/PAYOUT numbers and print as receipts. | Use the ordinary `payment_in`/`payment_out` series (a gap-free legal series is not required for internal adjustments, but a separate series would be a new settings row for every tenant); print "Adjustment · deposit". Alternative: a new `adjustment` number kind. | Task 7 | **R12** |
+| CQ-12 | contracts §1.8 `Recurrence` | As written the dataclass is invalid Python: `anchor: date` (no default) follows fields with defaults. | `@dataclass(frozen=True, kw_only=True)`. | Task 3 | **R13** |
+| CQ-13 | contracts §4.2 R4 (exists) | A useful refusal needs per-counter labels, and today's `register_module_off_guard` appends (not idempotent, `guards.py:33-35`) against the registry rule. | Add optional `label_id=` to `register_module_off_guard`, dedupe by counter identity, and add `details.breakdown` to `module_has_data` (additive). | No | **R14** |
+| CQ-14 | 10-architecture §9 ("switching on runs the module's preset seed") | No registry for it in §4.2. | `register_module_enable_hook(module, hook)` in `platform_app/services/guards.py`, run inside `update_enabled_modules`' transaction for newly enabled modules. | Task 13 | **R15** |
+| CQ-15 | contracts §2.1 `dues_plan.heads jsonb [{label, amount}]`, `dues_schedule.terms jsonb` | Money inside jsonb breaks canon rule 3 (the reason the party opening balance is three typed columns); and a plan snapshot in `terms` puts the recurrence in JSON, which ADR-055 forbids. | Store the schedule's recurrence as typed `RecurrenceFields` copied from the plan; keep `terms` for the rest with money as 2-dp strings (the `mode_breakup` precedent, `payments/models.py`) and a CHECK that Σ `heads[].amount` = `amount` through an immutable SQL function as `payments/0001` does. Or move heads to a `dues_plan_head` table. | Task 16 | **R16** — tables, not jsonb |
+| CQ-16 | contracts §2.1 `dues_due` | Outstanding needs posted penalties, and a voided payment's standing days must be excluded from late fees; neither has a column. Charge-mode dues also need `dues_settlement` rows for a uniform replay. | Add `penalty_amount` (cache) and `penalty_exempt_days` to `dues_due`; use `dues_settlement` for every mode with `component='charge'` when a due has no components. | Task 16 | **R17** |
+| CQ-17 | contracts §2.3; 10-architecture §5 rule 3 ("every engine row also carries `module`") | `attendance_mark` (open visits have no group) and `attendance_entitlement` have no `module`, so the module-off guard and module filters would need joins that do not exist for visits; groups have no session time; "auto-closed" visits have no flag; gym freezes need entitlement validity extension. | Add `module` to `attendance_mark` and `attendance_entitlement`; `session_start time`, `session_minutes smallint` to `attendance_group` (recurrence optional there); `auto_closed boolean` to `attendance_mark`; service `extend_entitlement(valid_to, reason)`. | Task 15 | **R18** |
+| CQ-18 | contracts §2.2 | `cancel` returns "fee from policy tiers" but no table stores tiers, the engine holds no prices (so a fee cannot be rupees), `no_show_after` is absent, `bookings_booking_unit.status` values are unlisted, and `slots` mode has no start time on the unit. | Add `bookings_cancellation_tier` (hours_before, fee_percent, basis); `Fee` is a rule (percent + basis) the vertical applies to its quote; add `no_show_after_minutes` to the type; unit statuses `booked`\|`checked_in`\|`checked_out`\|`released`; unit `start_time`, `slot_count` for slots. | Task 24 | **R19** — tiers in the vertical, no engine table |
+| CQ-19 | contracts §2.2 `bookings_booking.number`; §1.7 kind `booking` (hospitality) | Who allocates the engine row's number is not said; the engine cannot know the vertical's kind. | The vertical allocates (`allocate_number(kind="booking")`) and passes `number=` to `hold`/`book`. | Task 24 | **R20** |
+| CQ-20 | contracts §2.2 and ADR-049 ("a count of rows per slot key" for shared capacity) | `UNIQUE (tenant, resource, slot_key)` allows only one row per key, so shared capacity cannot be "a count of rows per key". | For `shared` resources the key carries a seat ordinal (`2026-10-12T07:00#07`, 1…capacity), so the same unique index bounds capacity; pooled types count under the type lock as contracts say. `varchar(24)` fits if shift codes are ≤ 8 characters. | Task 24 | **R21** — and `varchar(32)` |
+| CQ-21 | contracts §1.2 (`dues_adjustment` posts `charge`/`adjustment_credit` in main/loan) | In document mode a late fee on a taxable supply is itself taxable and a waiver reduces an invoice; a ledger line cannot do either. | Document-mode penalties issue their own document through the port with origin `dues_adjustment`; waivers, discounts and proration issue credit notes against the due's document; register `dues_adjustment` as an origin type. | Task 19 | **R22** |
+| CQ-22 | ADR-043 consequences; LED-11 | ADR-043 says a loan must not be forgiven by the shop's flows; LED-11's write-off defaults to the whole `balance`. | LED-11's amount defaults to and is capped at `trade_balance`; forgiving a loan is lending's waiver. A CR amends LED-11. | Task 5 | **R23** |
+| CQ-23 | contracts §1.4 (`PaymentMode.ADJUSTMENT` "accepted only from `apply_deposit`") | `PaymentMode` lives in `apps/common/constants.py` and is shared with manual ledger entries and expenses, whose validators accept any member. | Refuse `adjustment` in LED-01's, expenses' and `record_payment`'s public validation, with one test per path. | Task 7 | **R24** |
+| CQ-24 | 10-architecture §5 ("engine read endpoints check a codename of each consuming module") | Which codename per module is not recorded anywhere code can read. | `ENGINE_READ_PERMISSIONS: dict[engine, dict[module, codename]]` in `permissions_registry.py` (strings, L4); each vertical FRD names its codename. | Task 13 | **R25** |
+| CQ-25 | canon §0.9; PLT-X08 | Closures are an admin task at a library or gym, but settings writes need `platform.tenant.manage` (owner only). | New core codename `platform.calendar.manage` (owner, admin), added by the same CR that adds the module codenames and module roles. | Task 12 | **R26** |
 
 **End of FRD 00.**

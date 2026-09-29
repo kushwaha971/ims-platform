@@ -210,7 +210,7 @@ off.
 
 `lending.loan.read`, `lending.loan.read_all`, `lending.loan.terms_read`, `lending.loan.create`,
 `lending.loan.write`, `lending.loan.close`, `lending.loan.cancel`, `lending.borrower.read`,
-`lending.borrower.write`, `lending.borrower.id_read`, `lending.collection.create`,
+`lending.borrower.write`, `lending.borrower.reveal`, `lending.collection.create`,
 `lending.collection.read`, `lending.collection.void`, `lending.collection.void_own`,
 `lending.visit.write`, `lending.charge.create`, `lending.waiver.create`, `lending.route.read`,
 `lending.route.manage`, `lending.today.read`, `lending.myday.read`, `lending.reminder.send`,
@@ -433,7 +433,7 @@ whatever else they do with the business (a shop customer who borrows is one part
   (`features/parties/modulePanels.ts`, 10-architecture §6 item 8): loans as borrower and as guarantor,
   owed now, next due, and *New loan*.
 - FR-8 ID fields are **restricted fields** (`RestrictedFieldsMixin`, 11-contracts §3): they appear only
-  to members holding `lending.borrower.id_read` (owner, admin), never in lists, exports, share links,
+  to members holding `lending.borrower.reveal` (owner, admin), never in lists, exports, share links,
   documents or to agents.
 
 ### 2. User flows
@@ -488,7 +488,7 @@ delete: the profile lives as long as the party.
 |---|---|---|---|
 | `GET /lending/borrowers?q&has_active&route_id&page` | `lending.borrower.read` (scoped for agents to borrowers of their routes' loans) | `{data: [{party_id, name, mobile_masked, active_loans, owed_now, next_due_on}], meta: {page, totals}}` | — |
 | `POST /lending/borrowers` | `lending.borrower.write` | `{party_id}` **or** `{party: {name, mobile, billing_address}}`, plus `{occupation, collection_address, id_proof_kind, id_proof_last4, document_language, notes}` → 201 `Borrower` | 400 `validation_error`; 404 party; the existing PTY-01 duplicate-mobile warning is returned in `meta.warnings` exactly as the party form does today |
-| `GET /lending/borrowers/{party_id}` | `lending.borrower.read` | `Borrower` (ID fields only with `lending.borrower.id_read`) | 404 (cross-tenant or out of scope) |
+| `GET /lending/borrowers/{party_id}` | `lending.borrower.read` | `Borrower` (ID fields only with `lending.borrower.reveal`) | 404 (cross-tenant or out of scope) |
 | `PATCH /lending/borrowers/{party_id}` | `lending.borrower.write` | any profile field | 400 |
 | `GET /parties?role=lending_borrower` | existing `parties.party.read` | the core list filtered (A6) | — |
 
@@ -537,7 +537,7 @@ logging.
 |---|---|---|---|---|---|---|
 | Read borrower | `lending.borrower.read` | yes | yes | yes | own routes: name, mobile, collection address only | yes |
 | Create / edit profile | `lending.borrower.write` | yes | yes | yes | no | no |
-| Read ID fields | `lending.borrower.id_read` | yes | yes | no | no | no |
+| Read ID fields | `lending.borrower.reveal` | yes | yes | no | no | no |
 
 ### 11. Reports
 
@@ -969,8 +969,8 @@ the principal from day 0.
   - `register_target(LendingLoanTarget)` — `document_type="lending_loan"`, `direction="out"`,
     `bucket="loan"`, `auto=False` (R1, 11-contracts §1.4);
   - `register_posting_source("lending_deduction", module="lending", entry_types={"charge": "debit"},
-    buckets={"loan"})`, likewise `lending_waiver` (`adjustment_credit` → credit) and `lending_charge`
-    (§C CQ-5) (R3);
+    buckets={"loan"})`, likewise `lending_waiver` (`adjustment_credit` → credit); no `lending_charge`
+    source — every collectible charge sits on a due (§C CQ-5 → R40) (R3);
   - `register_source_resolver` for `lending_deduction` and `lending_waiver`, so the khata names the loan
     ("LN/26-27/0042 · Processing fee") (R2);
   - `dues.register_subject("lending_loan", module="lending", label=loan numbers,
@@ -1870,7 +1870,7 @@ that forgets `scope_filter()` raises `NotImplementedError` in tests (fail closed
   collections stay theirs in the register.
 - BR-4 **Restricted fields** (serializer `RestrictedFieldsMixin`): `principal`, `rate`, `rate_unit`,
   `effective_annual_rate`, `total_interest`, `deductions`, `guarantor`, `late_fee`, `foreclosure`,
-  `note`, `agreement_ref` need `lending.loan.terms_read`; ID fields need `lending.borrower.id_read`.
+  `note`, `agreement_ref` need `lending.loan.terms_read`; ID fields need `lending.borrower.reveal`.
   An absent field is absent, not `null`.
 - BR-5 **Audit**: `lending.route.created|updated|archived`, `lending.route.agents_changed {added,
   removed}`, `lending.route.stops_reordered {count}`.
@@ -2128,8 +2128,10 @@ Offline Today; loan-level promises feeding reminders; agent handover; route day 
   an instalment's **interest**, **fee / late fee** or **principal**, with a required reason, through
   `dues.waive(due_id, amount, reason, component)`: an `adjustment_credit` line in bucket `loan`, shown
   on the statement as "Waiver — <reason>" (R§3 W5.2).
-- FR-6 A late fee added by mistake is removed by **waiving it** with a reason (the ledger keeps both
-  lines, LED-03 spirit). A dedicated reversal is §C CQ-10.
+- FR-6 A late fee added by mistake is removed by **reversing it** with a reason through
+  `dues.reverse_adjustment(adjustment_id, reason)` (§C CQ-10 → R45): the ledger keeps both lines
+  (LED-03 spirit) and the statement shows "Late fee reversed — <reason>". A late fee that was right but
+  is forgiven is **waived** (FR-5).
 
 ### 2. User flows
 
@@ -2683,7 +2685,8 @@ product sends nothing** (DEC-012).
   `lending.guarantor_overdue`, in the LED-08 template registry. The lender may **not** edit them; the
   tenant's business name is the only signature.
 - FR-6 **Recipients**: the borrower's own mobile; or, when the loan names a guarantor and the member
-  chooses it, the guarantor's own mobile (owner and admin only; §C CQ-2). No other contact, no typed
+  chooses it, the guarantor's own mobile (owner and admin only), recorded as `recipient_party_id`
+  (§C CQ-2 → R9; in the MVP). No other contact, no typed
   number, no group message, no contact import (R§15.4).
 - FR-7 **Suppression**: no candidate and no send for a loan that is not `active` (written off, closed,
   cancelled) — a written-off borrower's reminders stop at once (R§13 EC-11).
@@ -2775,7 +2778,7 @@ rows with a *Lending* module chip (the reminders feature is core; lending adds o
   whose `created_at` falls on the same tenant-local date; allowed iff 0. `next_allowed_at` = the next
   day's `window_start`.
 - BR-3 **Recipient check** (lending's, before the core check): `borrower`, or `guarantor` when the
-  loan names one, the member is owner or admin, and §C CQ-2 is accepted; anything else is 400.
+  loan names one and the member is owner or admin; anything else is 400.
 - BR-4 **Templates** are fixed strings with placeholders; a template test asserts that no template in
   either language contains a word of `LENDING_FORBIDDEN_WORDS`:
   en — police, court, legal, lawyer, advocate, case, FIR, jail, arrest, warrant, notice, final,
@@ -3177,27 +3180,27 @@ This FRD records what the product does; these items need a professional's view *
 
 ## C. Contract questions
 
-Contradictions or gaps against [11-contracts.md](../11-contracts.md) and the ADRs. This FRD does
-**not** change the contracts; each item is for the architecture owner, with what the FRD assumes
-meanwhile.
+Contradictions or gaps against [11-contracts.md](../11-contracts.md) and the ADRs, **resolved on
+30 Sep 2026** by the architecture owner (10-architecture §17; 11-contracts v1). The "Resolved →"
+column gives each answer; the body follows it. The third column records what the FRD assumed before.
 
-| # | Contract says | Lending needs | FRD assumes until answered |
-|---|---|---|---|
-| CQ-1 | §2.1: the dues engine registers `register_reminder_source("dues_due", …)`, one candidate **per due**; §1.6: lending registers `daily_cap_per_source=1` | ADR-054 and R§15.4 say **one reminder per loan per day**. With per-due sources a loan with three overdue instalments yields three reminders a day, and the cap is per due | Lending registers its own source `lending_loan` (one candidate per loan); the dues engine's `dues_due` source **skips subjects whose module registered its own source** (a flag on `register_subject`, e.g. `own_reminder_source=True`). Cap per source = per loan |
-| CQ-2 | §1.6: `ReminderCandidate.recipient_party_id` exists, but `ledger_reminder` gains no recipient column; the reminder's `party` is the one reminded | A reminder to the **guarantor** about the borrower's loan must record both: whose loan, and who was contacted | Add `recipient_party_id uuid null` to `ledger_reminder` (null = the party). Until then guarantor reminders are **not built** and LEN-12 FR-6's guarantor arm moves to Later |
-| CQ-3 | §2.1: `end_schedule(on, reason, leave_policy, custom_amount) -> Settlement` is shaped for memberships (refunds, credits); `cancel_schedule` reverses postings | A **write-off** must stop an expectation-mode schedule — scheduled dues cancelled, open dues closed — **without reversing** posted interest and fees (the vertical posts one offsetting `lending_waiver` credit) | `end_schedule(…, reason="written_off")` on an expectation schedule cancels scheduled dues, sets open dues `cancelled` with `cancel_reason`, posts nothing and reverses nothing. Fallback if refused: `dues.waive` every open component of every due (many ledger lines) then `end_schedule` |
-| CQ-4 | §2.1: `reschedule(schedule_id, from_seq, supplied, reason)`; nothing on settlements of replaced dues or on posting a supplied due dated today | **Early closure** replaces future dues with one closure due dated today; it must (a) post the closure due's interest and fee **in the same transaction** (it is due now), and (b) **carry** settlements already made on replaced dues (paid in advance) onto it, interest → principal → fee, capped per component, re-pointing `dues_settlement` and `payments_allocation` | Both, as LEN-10 BR-2 and example P3 describe. Without (b), early closure is refused while any replaced due holds a settlement |
-| CQ-5 | §1.2 registers `lending_charge` (`charge`, bucket `loan`) | Every collectible lending charge must sit **on a due**, because collections allocate only to `dues_instalment` targets and an unallocated payment is `main` bucket (§1.4). A loan-level `lending_charge` could never be collected into the `loan` bucket | MVP late fees are `dues.add_penalty`; foreclosure charges are the closure due's `fee` component. `lending_charge` is registered but unused; drop it, or give it a collectible target |
-| CQ-6 | §2.1: `arrears(...) -> {overdue_amount, oldest_due_on, days_past_due}` | Under `fees_last`, a due whose only remainder is a late fee must **not** set days past due, or the default order does not deliver its purpose (LEN-06 C2, C3) | `arrears()` computes DPD from the oldest due with unpaid **principal or interest** components, and reports fee-only remainders as `fees_overdue` |
-| CQ-7 | §3: the agent scope is "loans on the agent's routes (`lending_route.agent_user_ids`)" | Referential integrity for agents (a removed member) and an index for the scope filter | A join table `lending_route_agent (route, user)`; the scope semantics are identical |
-| CQ-8 | §1.6 names the setting `reminders.<module>.window`; no contract says how a module's settings keys register (`settings_schema.SETTINGS` is a literal in `platform_app`) | Lending's nine `lending.*` keys with validators | A `register_setting_spec(spec)` registry in `platform_app` (validators are pure functions owned by the module), or the keys added to the core catalogue by the lending CR if the owner prefers literals |
-| CQ-9 | §2.1: `closed_day_rule ('move'\|'skip'\|'ignore')`; `skip` is undefined for count-based plans | A daily plan of 100 collections over a closed day must still have **100** collections (LEN-03 BR-7, D1) | `skip` on a plan with `count` keeps the count (the occurrence is dropped and the schedule extends) |
-| CQ-10 | §2.1 lists `add_penalty` and `waive`, and the audit action `dues.adjustment.reversed`, but no reversal service | Removing a late fee added by mistake reads better as a reversal than as a waiver | `dues.reverse_adjustment(ctx, adjustment_id, reason)`; until then a mistaken fee is waived (LEN-09 FR-6) |
-| CQ-11 | §2.1: `add_penalty` "checks plan cap"; lending plans use `penalty_kind='none'` so the engine never auto-posts | Lending owns late-fee rules and caps (the engine "does not know the law", ADR-048) | `add_penalty` is permitted on a `penalty_kind='none'` plan with no engine cap; the daily run never posts penalties for such plans |
-| CQ-12 | §3 lists the module role; canon §0.9's `staff` set is fixed in `permissions_registry.py` | Office staff should record collections and read loans without being agents | The lending CR adds the LEN-07 §10 codenames to `_STAFF` (a canon amendment alongside the module role) |
-| CQ-13 | §1.2: "Statement shows every bucket"; LED-04's statement is per party | A **per-loan** statement over `loan_ledger(loan)`, with LED-04's carried-forward paging | Lending builds its own selector over the ledger (read-only, allowed: `lending` may import `ledger` selectors); asks whether the core statement selector should accept a source filter instead |
-| CQ-14 | 10-architecture §6 item 7: a vertical may not import `features/sales`; `features/payments/…/PaymentReceiptPrint.tsx` imports `UbQrCode` and `PrintBranding` from `features/sales` | Lending's receipt needs both | Move them to the design system and `src/print` (TSK-LEN-05) before lending's print work |
-| CQ-15 | ADR-052: an agent's role holds no `reports.*`; the post-login landing today is the dashboard | An agent must land on Today | The core routes a member to the first nav item they can see when they lack the dashboard's permission |
+| # | Contract says | Lending needs | FRD assumed before | Resolved → |
+|---|---|---|---|---|
+| CQ-1 | §2.1: the dues engine registers `register_reminder_source("dues_due", …)`, one candidate **per due**; §1.6: lending registers `daily_cap_per_source=1` | ADR-054 and R§15.4 say **one reminder per loan per day**. With per-due sources a loan with three overdue instalments yields three reminders a day, and the cap is per due | Lending registers its own source `lending_loan` (one candidate per loan); the dues engine's `dues_due` source **skips subjects whose module registered its own source** (a flag on `register_subject`, e.g. `own_reminder_source=True`). Cap per source = per loan | **R10** — `own_reminder_source=True`; one reminder per loan |
+| CQ-2 | §1.6: `ReminderCandidate.recipient_party_id` exists, but `ledger_reminder` gains no recipient column; the reminder's `party` is the one reminded | A reminder to the **guarantor** about the borrower's loan must record both: whose loan, and who was contacted | Add `recipient_party_id uuid null` to `ledger_reminder` (null = the party). Until then guarantor reminders are **not built** and LEN-12 FR-6's guarantor arm moves to Later | **R9** — `recipient_party_id` column in A7; the guarantor arm stays in the MVP |
+| CQ-3 | §2.1: `end_schedule(on, reason, leave_policy, custom_amount) -> Settlement` is shaped for memberships (refunds, credits); `cancel_schedule` reverses postings | A **write-off** must stop an expectation-mode schedule — scheduled dues cancelled, open dues closed — **without reversing** posted interest and fees (the vertical posts one offsetting `lending_waiver` credit) | `end_schedule(…, reason="written_off")` on an expectation schedule cancels scheduled dues, sets open dues `cancelled` with `cancel_reason`, posts nothing and reverses nothing. Fallback if refused: `dues.waive` every open component of every due (many ledger lines) then `end_schedule` | **R38** — accepted as proposed |
+| CQ-4 | §2.1: `reschedule(schedule_id, from_seq, supplied, reason)`; nothing on settlements of replaced dues or on posting a supplied due dated today | **Early closure** replaces future dues with one closure due dated today; it must (a) post the closure due's interest and fee **in the same transaction** (it is due now), and (b) **carry** settlements already made on replaced dues (paid in advance) onto it, interest → principal → fee, capped per component, re-pointing `dues_settlement` and `payments_allocation` | Both, as LEN-10 BR-2 and example P3 describe. Without (b), early closure is refused while any replaced due holds a settlement | **R39** — `reschedule(post_now=True, carry_settlements=True)` |
+| CQ-5 | §1.2 registers `lending_charge` (`charge`, bucket `loan`) | Every collectible lending charge must sit **on a due**, because collections allocate only to `dues_instalment` targets and an unallocated payment is `main` bucket (§1.4). A loan-level `lending_charge` could never be collected into the `loan` bucket | MVP late fees are `dues.add_penalty`; foreclosure charges are the closure due's `fee` component. `lending_charge` is registered but unused; drop it, or give it a collectible target | **R40** — `lending_charge` source dropped |
+| CQ-6 | §2.1: `arrears(...) -> {overdue_amount, oldest_due_on, days_past_due}` | Under `fees_last`, a due whose only remainder is a late fee must **not** set days past due, or the default order does not deliver its purpose (LEN-06 C2, C3) | `arrears()` computes DPD from the oldest due with unpaid **principal or interest** components, and reports fee-only remainders as `fees_overdue` | **R41** — accepted; `fees_overdue` |
+| CQ-7 | §3: the agent scope is "loans on the agent's routes (`lending_route.agent_user_ids`)" | Referential integrity for agents (a removed member) and an index for the scope filter | A join table `lending_route_agent (route, user)`; the scope semantics are identical | **R42** — `lending_route_agent` join table |
+| CQ-8 | §1.6 names the setting `reminders.<module>.window`; no contract says how a module's settings keys register (`settings_schema.SETTINGS` is a literal in `platform_app`) | Lending's nine `lending.*` keys with validators | A `register_setting_spec(spec)` registry in `platform_app` (validators are pure functions owned by the module), or the keys added to the core catalogue by the lending CR if the owner prefers literals | **R43** — `register_setting_spec` in A10 |
+| CQ-9 | §2.1: `closed_day_rule ('move'\|'skip'\|'ignore')`; `skip` is undefined for count-based plans | A daily plan of 100 collections over a closed day must still have **100** collections (LEN-03 BR-7, D1) | `skip` on a plan with `count` keeps the count (the occurrence is dropped and the schedule extends) | **R44** — accepted |
+| CQ-10 | §2.1 lists `add_penalty` and `waive`, and the audit action `dues.adjustment.reversed`, but no reversal service | Removing a late fee added by mistake reads better as a reversal than as a waiver | `dues.reverse_adjustment(ctx, adjustment_id, reason)`; until then a mistaken fee is waived (LEN-09 FR-6) | **R45** — `reverse_adjustment` added |
+| CQ-11 | §2.1: `add_penalty` "checks plan cap"; lending plans use `penalty_kind='none'` so the engine never auto-posts | Lending owns late-fee rules and caps (the engine "does not know the law", ADR-048) | `add_penalty` is permitted on a `penalty_kind='none'` plan with no engine cap; the daily run never posts penalties for such plans | **R46** — accepted |
+| CQ-12 | §3 lists the module role; canon §0.9's `staff` set is fixed in `permissions_registry.py` | Office staff should record collections and read loans without being agents | The lending CR adds the LEN-07 §10 codenames to `_STAFF` (a canon amendment alongside the module role) | **R47** — by the one canon §0.9 CR (owner Q1) |
+| CQ-13 | §1.2: "Statement shows every bucket"; LED-04's statement is per party | A **per-loan** statement over `loan_ledger(loan)`, with LED-04's carried-forward paging | Lending builds its own selector over the ledger (read-only, allowed: `lending` may import `ledger` selectors); asks whether the core statement selector should accept a source filter instead | **R48** — lending builds `loan_ledger`; ledger helpers made public; no core source filter |
+| CQ-14 | 10-architecture §6 item 7: a vertical may not import `features/sales`; `features/payments/…/PaymentReceiptPrint.tsx` imports `UbQrCode` and `PrintBranding` from `features/sales` | Lending's receipt needs both | Move them to the design system and `src/print` (TSK-LEN-05) before lending's print work | **R33** — moved by Wave A task A16; TSK-LEN-05 is absorbed |
+| CQ-15 | ADR-052: an agent's role holds no `reports.*`; the post-login landing today is the dashboard | An agent must land on Today | The core routes a member to the first nav item they can see when they lack the dashboard's permission | **R49** — landing on the first visible nav item (A16) |
 
 ---
 
@@ -3213,7 +3216,7 @@ them.
 | TSK-LEN-02 | `lending_agent` module role and `ScopedViewSetMixin` use; `lending.*` codenames on `staff` and `accountant` (CR) | M | 11-contracts §3 (`apps/common/scoping.py`); CQ-12; owner's confirmation of module roles |
 | TSK-LEN-03 | Settings keys and the settings screen; licence notice; module intro panel | S | CQ-8 (settings registration); A7 policy setting `reminders.lending.window` |
 | TSK-LEN-04 | `lending_borrower`, party roles, archive guard, party page panel | M | A6 (`register_party_role`, `register_archive_guard`, frontend `modulePanels.ts`) |
-| TSK-LEN-05 | Move `UbQrCode` and `PrintBranding` out of `features/sales` (design system and `src/print`) | S | — (frontend refactor; CQ-14) |
+| TSK-LEN-05 | ~~Move `UbQrCode` and `PrintBranding` out of `features/sales`~~ — absorbed by Wave A task **A16** (R33) | — | A16 |
 | TSK-LEN-06 | The calculator: four plans, rounding, invariants, effective yearly rate (Decimal bisection), late-fee calculator; the property tests T-LEN-03-2, T-LEN-09-2 | L | A9 (`split_total`, `round_amount`, `Recurrence`, calendar); dues `preview_schedule` |
 | TSK-LEN-07 | `POST /lending/loans/preview` and the Terms step UI | M | TSK-LEN-06 |
 | TSK-LEN-08 | Loan create: `lending_loan`, deductions, per-loan dues plan and schedule (expectation), deduction postings, disbursal payment, loan number; `LendingLoanTarget`; posting sources; source resolvers; subject registration; the stepper UI | L | A2 (bucket, `register_posting_source`, `CHARGE`), A3 (`loan_balance`), A4 (target protocol v2), A8 (`register_number_kind`), **dues engine expectation mode with components**; TSK-LEN-04, -07 |
@@ -3222,7 +3225,7 @@ them.
 | TSK-LEN-11 | The replay property test (T-LEN-06-2) and the `recalc_balances` check for `loan_balance` | M | A3 replay; TSK-LEN-10 |
 | TSK-LEN-12 | Routes, route agents, stops, scoping on every lending viewset, reduced serializers | M | TSK-LEN-02, -08 |
 | TSK-LEN-13 | Today, My day, Arrears, visit notes; the `EXPLAIN` tests | M | TSK-LEN-10, -12 |
-| TSK-LEN-14 | Late fees and waivers | M | dues `add_penalty`, `waive`; CQ-11 (CQ-10 optional) |
+| TSK-LEN-14 | Late fees, reversals and waivers | M | dues `add_penalty`, `reverse_adjustment`, `waive` (R45, R46) |
 | TSK-LEN-15 | Closure: normal (hook), early (payoff, `reschedule` into a closure due, carried settlements), write-off, cancel, reopen | L | dues `payoff`, `reschedule`, `end_schedule`, `cancel_schedule`; CQ-3, CQ-4; TSK-LEN-10, -14 |
 | TSK-LEN-16 | Documents: loan summary, receipt (A5, 80 mm, share text), statement (JSON, CSV, print), closure letter; the no-product-name and effective-rate tests | L | TSK-LEN-05, -10, -15; CQ-13 |
 | TSK-LEN-17 | Reminders: `lending_loan` source, policy, templates en/hi, forbidden-words test, the lending reminder endpoints and sheet; guardrail tests T-LEN-12-1 … 7 | M | A7 (source link, `DUE` kind, `register_reminder_source`, `register_reminder_policy`, `check_reminder_allowed`); CQ-1; CQ-2 for the guarantor arm |
