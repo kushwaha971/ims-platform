@@ -293,6 +293,44 @@ Serve for QA:
   - confirm the Hindi headline line ("हिसाब रखें: {word}") and the upright (not italic) Hindi lead line;
   - say whether the demo film should autoplay with sound.
 
+## 8e. 29 Sep: platform expansion, Phase 1 DONE (15ffe67…67f7106)
+
+**Owner direction.** YourKhata becomes one all-in-one records platform with separate modules. The binding rules are in `docs/platform/00-platform-vision.md`: the module map, no imports between verticals, shared engines, the honesty and terminology rules, the phase gates, and the source-of-truth table. Progress is tracked in `docs/platform/STATUS.md`.
+
+**Phase 1 delivered**
+- **Capability inventory.** `docs/platform/01-current-capabilities.md` lists what is live and is the source of truth for landing-page claims.
+- **Landing page repositioned.** Hero, then a module map on the shared core, then module cards, then the Shop & billing explorer, then who it's for, extras, how it works, pricing and the FAQ.
+  - Module statuses come from `features/landing/config/modules.ts` and are tested against the vision doc.
+  - Shop & billing is LIVE. Lending & collections, Library, Gym & fitness and Hotel & stays are PLANNED: text only, with no media, dates or CTA.
+- **SEO.**
+  - Metadata comes from a single `SITE_URL` (`NEXT_PUBLIC_SITE_URL`).
+  - OG image is `public/brand/yourkhata-og.png`.
+  - `app/robots.ts` and `app/sitemap.ts` are in place. noindex covers the app, admin, onboarding, password pages and `/d/`.
+  - JSON-LD covers Organization, WebSite, SoftwareApplication (free offer only while pricing is proposed) and FAQPage.
+  - FAQ answers are in the SSR HTML (`UbDisclosure keepMounted`).
+  - Cache headers for `/media/landing` and `/brand` are set in `next.config` and nginx.
+  - **Production fix:** nginx now has a dedicated `location /media/landing/`. Before it, the landing media returned 404 in prod.
+- **Videos.** Re-recorded on the neutral demo business "Sharma General Store", with a platform intro and a closing line that names the planned modules as planned.
+  - Narrated finals: `/mnt/user-data/outputs/videos/`.
+  - Landing loops (tracked) and demo films (git-ignored): `frontend/public/media/landing/`.
+- **Jargon removed.** "kirana" is gone from all user-visible strings in English and Hindi. It survives only as fixture names in unit tests, which is harmless and can be cleaned up later.
+
+**Gates (29 Sep)**
+- jest: 2,561 tests.
+- Lint: clean on the full run.
+- i18n: 3,867 keys in step.
+- Build and bundle:check: green. `/` is 35.2 KB against its budget, re-baselined to 36.
+- e2e: `landing.mjs` 150/150, `seo.mjs` 96/96.
+- Lighthouse SEO: 100.
+
+**Open (owner)**
+- Review the positioning copy.
+- Accept the `/` budget re-baseline.
+- Carried over: approve prices, choose where the demo films are hosted, and the Hindi headline treatment.
+- SEO backlog is in `docs/BACKLOG.md`: per-locale URLs and hreflang, keeping staging out of the index, and versioned media URLs.
+
+**Next: Phase 2 (research).** One research doc per module in `docs/platform/research/`: lending & collections, library, gym, hospitality, plus candidate modules. No module code before Phases 2 and 3 are done.
+
 ## 9. Exact next steps
 
 State at e1ad11d (retest verdict: READY FOR UAT; all 4 High, 7/7 Medium, 12/12 Low fixed after e1ad11d; regression 894/899 with the 5 remaining harness-only landing checks fixed in e1ad11d):

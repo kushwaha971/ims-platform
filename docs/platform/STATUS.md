@@ -4,8 +4,8 @@ Owner direction of 29 Sep 2026: [00-platform-vision.md](00-platform-vision.md). 
 
 | # | Phase | Status | Output |
 |---|---|---|---|
-| 1 | Analyse the application; update the landing page to the platform vision | **Built, awaiting owner review** | `01-current-capabilities.md`; landing page (`features/landing`); `config/modules.ts` |
-| 2 | Research the modules: lending, library, gym, hospitality, candidates | Not started | `research/*.md` |
+| 1 | Analyse the application; update the landing page to the platform vision | **DONE 29 Sep**; synced to the owner's Mac | `01-current-capabilities.md`; landing page (`features/landing`); `config/modules.ts` |
+| 2 | Research the modules: lending, library, gym, hospitality, candidates | **Next** | `research/*.md` |
 | 3 | Module documentation (FRDs) | Not started | `frd/*.md` |
 | 4 | Architecture review and reuse map | Not started | `10-architecture.md`, ADRs |
 | 5 | Implementation | Not started | |
@@ -55,3 +55,5 @@ the relative canonical. Performance is not a real figure on a machine at load av
 and CLS were compared before and after with Playwright and are unchanged within noise (CLS
 0.000–0.005). `e2e/seo.mjs` runs the same SEO checklist on every run without Lighthouse: 96/96
 against the live stack.
+
+- **29 Sep, Phase 1 closed.** Videos and landing loops re-recorded on "Sharma General Store". Remaining jargon removed from app strings (67f7106). Gates green: landing e2e 150/150, SEO e2e 96/96. Phase gate: work committed, HANDOFF §8e updated, owner's Mac fast-forwarded.
