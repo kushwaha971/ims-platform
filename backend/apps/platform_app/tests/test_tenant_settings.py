@@ -292,7 +292,12 @@ def test_a_module_with_live_data_cannot_be_switched_off(
     assert response.status_code == 409
     body = response.json()["error"]
     assert body["code"] == "module_has_data"
-    assert body["details"] == {"module": "inventory", "count": 12}
+    # A12 (R14) added `breakdown` beside the unchanged `module` and `count`.
+    assert body["details"] == {
+        "module": "inventory",
+        "count": 12,
+        "breakdown": [{"label_id": None, "count": 12}],
+    }
 
 
 def test_core_modules_stay_on_whatever_is_sent(owner: Any, tenant: Any) -> None:

@@ -144,6 +144,31 @@ def released_modules() -> frozenset[str]:
     return frozenset(m.value for m in ModuleCode) - hidden_modules()
 
 
+# ── A12 ── engine enablement (ADR-041, PLT-X10) ──────────────────────────────
+
+
+def enabled_modules_using(tenant: Any, engine: str) -> frozenset[str]:
+    """The effective modules that use `engine` (`ENGINES_USED_BY` ∩ effective).
+
+    Engine read endpoints filter their rows to `module IN` this set, so a
+    switched-off (or unreleased) module's dues, marks or bookings never appear
+    in a cross-module list (BR-2).
+    """
+    from apps.platform_app.services import tenant_settings
+
+    effective = effective_modules(tenant)
+    return frozenset(
+        module
+        for module, engines in tenant_settings.ENGINES_USED_BY.items()
+        if engine in engines and module in effective
+    )
+
+
+def engine_enabled(tenant: Any, engine: str) -> bool:
+    """BR-1: an engine is on ⇔ some effective module lists it. No switch."""
+    return bool(enabled_modules_using(tenant, engine))
+
+
 # ── max_users — the one limit with an enforcement hook this sprint ───────────
 
 

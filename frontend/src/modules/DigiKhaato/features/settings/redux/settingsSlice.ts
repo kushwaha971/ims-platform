@@ -4,9 +4,11 @@ import { resetAllFeatureState } from 'src/redux/actions';
 import { rootReducer, type RootState } from 'src/redux/store';
 import type { ApiErrorShape, RequestStatus } from 'src/types/api.types';
 
+import { moduleRefusalFrom } from '../view-model/moduleRefusal';
+
 import { fetchSettings, saveSettingsSection, toggleModules } from './settingsThunk';
 
-import type { SettingsSection, TenantSettings } from '../types/settings.types';
+import type { ModuleRefusal, SettingsSection, TenantSettings } from '../types/settings.types';
 
 /**
  * Part 19 §19.3.2 — PLT-06's slice (`values`, `etag`, `status`), lazily
@@ -23,6 +25,8 @@ export interface SettingsState {
   savingSection: SettingsSection | null;
   conflict: boolean;
   modulesStatus: RequestStatus;
+  /** A12 (R14): what the last refused "switch off" said is still open. */
+  moduleRefusal: ModuleRefusal | null;
 }
 
 const initialState: SettingsState = {
@@ -32,6 +36,7 @@ const initialState: SettingsState = {
   savingSection: null,
   conflict: false,
   modulesStatus: 'idle',
+  moduleRefusal: null,
 };
 
 const settingsSlice = createSlice({
@@ -47,6 +52,8 @@ const settingsSlice = createSlice({
       .addCase(fetchSettings.pending, (state) => {
         state.status = state.data ? 'refreshing' : 'loading';
         state.error = null;
+        // A12: a refusal is about the visit it happened in; the slice outlives it.
+        state.moduleRefusal = null;
       })
       .addCase(fetchSettings.fulfilled, (state, action) => {
         state.status = 'succeeded';
@@ -71,12 +78,14 @@ const settingsSlice = createSlice({
       })
       .addCase(toggleModules.pending, (state) => {
         state.modulesStatus = 'loading';
+        state.moduleRefusal = null;
       })
       .addCase(toggleModules.fulfilled, (state) => {
         state.modulesStatus = 'succeeded';
       })
-      .addCase(toggleModules.rejected, (state) => {
+      .addCase(toggleModules.rejected, (state, action) => {
         state.modulesStatus = 'failed';
+        state.moduleRefusal = moduleRefusalFrom(action.payload) as Draft<ModuleRefusal> | null;
       })
       .addCase(resetAllFeatureState, () => initialState);
   },
@@ -99,3 +108,5 @@ export const selectSavingSection = (state: RootState): SettingsSection | null =>
   slice$(state).savingSection;
 export const selectSettingsConflict = (state: RootState): boolean => slice$(state).conflict;
 export const selectModulesStatus = (state: RootState): RequestStatus => slice$(state).modulesStatus;
+export const selectModuleRefusal = (state: RootState): ModuleRefusal | null =>
+  slice$(state).moduleRefusal;

@@ -27,6 +27,8 @@
   "settings.hub.team": "Team",
   "settings.hub.team.description": "Who can use this business, and what they can do",
   "settings.hub.title": "Your business",
+  "settings.module.blocker": "{count, plural, one {# record is still open} other {# records are still open}}",
+  "settings.module.closeFirst": "Close them first, then turn this off.",
   "settings.module.error": "We could not change that feature.",
   "settings.module.expenses.description": "Shop expenses like rent and electricity.",
   "settings.module.import_export.description": "Bring in parties and items from a spreadsheet.",

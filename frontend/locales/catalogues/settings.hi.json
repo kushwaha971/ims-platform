@@ -27,6 +27,8 @@
   "settings.hub.team": "टीम",
   "settings.hub.team.description": "कौन इस व्यापार का उपयोग कर सकता है, और क्या कर सकता है",
   "settings.hub.title": "आपका व्यापार",
+  "settings.module.blocker": "{count, plural, one {# रिकॉर्ड अभी खुला है} other {# रिकॉर्ड अभी खुले हैं}}",
+  "settings.module.closeFirst": "पहले इन्हें पूरा करें, फिर इसे बंद करें।",
   "settings.module.error": "वह फ़ीचर नहीं बदल सके।",
   "settings.module.expenses.description": "दुकान के खर्च, जैसे किराया और बिजली।",
   "settings.module.import_export.description": "स्प्रेडशीट से पार्टियाँ और सामान लाएँ।",

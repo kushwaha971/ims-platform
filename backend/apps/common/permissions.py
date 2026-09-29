@@ -48,6 +48,30 @@ def _method_has_no_handler(request: Any, view: Any) -> bool:
     return request.method.lower() not in action_map
 
 
+def _authenticated_membership(request: Any) -> Any:
+    """The signed-in member's active membership of the resolved tenant, or None.
+
+    Raises `token_stale` when the token's `ver` claim is behind the
+    membership's `permissions_version`, so a demoted member's old token stops
+    working at once. Shared by `HasPermission` and `HasEngineReadPermission`
+    so the two can never disagree about who is asking.
+    """
+    user = getattr(request, "user", None)
+    if not (user and user.is_authenticated and user.is_active):
+        return None
+    tenant = get_effective_tenant(request)
+    if tenant is None:
+        return None
+    membership = getattr(tenant, "_ub_membership", None)
+    if membership is None:
+        return None
+    claims = getattr(request, "auth_claims", {}) or {}
+    claimed_version = claims.get("ver")
+    if claimed_version is not None and claimed_version != membership.permissions_version:
+        raise drf_exc.AuthenticationFailed("token_stale")
+    return membership
+
+
 def HasPermission(mapping: str | dict[str, str]) -> type[BasePermission]:
     """Declarative per-action permission gate.
 
@@ -89,12 +113,9 @@ def HasPermission(mapping: str | dict[str, str]) -> type[BasePermission]:
             ):
                 self.message = _("Support access is read-only.")
                 return False  # §20.4.8 rule 5
-            membership = getattr(tenant, "_ub_membership", None)
+            membership = _authenticated_membership(request)
             if membership is None:
                 return False
-            claimed_version = claims.get("ver")
-            if claimed_version is not None and claimed_version != membership.permissions_version:
-                raise drf_exc.AuthenticationFailed("token_stale")
             codename = required.get(getattr(view, "action", None) or "*") or required.get("*")
             if codename is None:
                 return False  # unmapped action → denied
@@ -146,6 +167,88 @@ def ModuleEnabled(module: str) -> type[BasePermission]:
 
     _ModuleEnabled.__name__ = f"ModuleEnabled_{module}"
     return _ModuleEnabled
+
+
+def EngineEnabled(engine: str) -> type[BasePermission]:
+    """A12 (ADR-041, contracts §1.1) — 403 `module_disabled` for an engine.
+
+    An engine has no module code and no switch: it is on while any effective
+    module lists it in `ENGINES_USED_BY` (`entitlements.engine_enabled`). The
+    refusal names the ENGINE in `details.module`, so a client is told which
+    thing is off. Sits where `ModuleEnabled` sits in the check order.
+    """
+
+    class _EngineEnabled(BasePermission):
+        message = f"The '{engine}' records are not in use for this business."
+
+        def has_permission(self, request: Any, view: Any) -> bool:
+            if _method_has_no_handler(request, view):
+                return True
+            from apps.platform_app.services.entitlements import engine_enabled
+
+            tenant = get_effective_tenant(request)
+            if tenant is None:
+                return False
+            if not engine_enabled(tenant, engine):
+                raise ModuleDisabled(self.message, details={"module": engine})
+            return True
+
+    _EngineEnabled.__name__ = f"EngineEnabled_{engine}"
+    return _EngineEnabled
+
+
+def readable_engine_modules(request: Any, engine: str) -> frozenset[str]:
+    """A12 (R25) — the consuming modules whose engine rows this member may read.
+
+    `enabled_modules_using(tenant, engine)` narrowed to the modules whose
+    `ENGINE_READ_PERMISSIONS[engine][module]` codename the member holds. An
+    engine read viewset filters `module__in=` this set; it is stricter than
+    "enabled" alone, so a member granted library's reader never sees gym's
+    marks through the shared endpoint. Empty when nothing resolves (fail closed).
+    """
+    from apps.common.permissions_registry import ENGINE_READ_PERMISSIONS
+    from apps.platform_app.services.entitlements import enabled_modules_using
+
+    tenant = get_effective_tenant(request)
+    membership = getattr(tenant, "_ub_membership", None) if tenant is not None else None
+    if membership is None:
+        return frozenset()
+    codenames = ENGINE_READ_PERMISSIONS.get(engine, {})
+    # `permissions_for`, so module gating, the release gate and inactive
+    # memberships apply exactly as for every other check — and a codename a
+    # module has not registered yet cannot be held (fail closed).
+    held = permissions_for(membership)
+    return frozenset(
+        module
+        for module in enabled_modules_using(tenant, engine)
+        if codenames.get(module) and codenames[module] in held
+    )
+
+
+def HasEngineReadPermission(engine: str) -> type[BasePermission]:
+    """A12 (10-architecture §5, R25) — engine reads pass on ANY consumer's codename.
+
+    Engine read endpoints are GET only (writes go through the vertical). The
+    member passes when they hold the read codename a consuming, effective
+    module named in `ENGINE_READ_PERMISSIONS`; `readable_engine_modules` then
+    narrows the rows. Those codenames are ones no scoped module role holds
+    (ADR-058), because an engine read applies no vertical scope.
+    """
+
+    class _HasEngineReadPermission(BasePermission):
+        message = _("You do not have permission to do this.")
+
+        def has_permission(self, request: Any, view: Any) -> bool:
+            if _method_has_no_handler(request, view):
+                return True
+            if request.method not in SAFE_METHODS:
+                return False  # engines have no write endpoints (ADR-041)
+            if _authenticated_membership(request) is None:
+                return False
+            return bool(readable_engine_modules(request, engine))
+
+    _HasEngineReadPermission.__name__ = f"HasEngineReadPermission_{engine}"
+    return _HasEngineReadPermission
 
 
 def PlanLimit(limit_key: str, counter: Callable[[Any], int]) -> type[BasePermission]:

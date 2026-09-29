@@ -57,7 +57,12 @@ def test_switching_stock_off_with_stock_is_refused_over_http(
         reverse("v1:tenant-current"), {"enabled_modules": modules}, format="json"
     )
     assert response.status_code == 409, response.content
-    assert response.json()["error"]["details"] == {"module": "inventory", "count": 1}
+    # A12 (R14) added `breakdown` beside the unchanged `module` and `count`.
+    assert response.json()["error"]["details"] == {
+        "module": "inventory",
+        "count": 1,
+        "breakdown": [{"label_id": None, "count": 1}],
+    }
 
 
 def test_ready_registered_the_inventory_guard() -> None:

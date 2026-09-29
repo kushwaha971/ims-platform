@@ -58,6 +58,22 @@ PERMISSIONS: frozenset[str] = frozenset(
     }
 )
 
+# ── A12 ── engine read codenames (R25, ADR-058; contracts §3) ───────────────
+# engine -> consuming module -> the codename that module names for reading the
+# engine's rows. Strings only (L4): a codename here is held only once its
+# module registers it in PERMISSIONS, so until then the engine read fails
+# closed. RULE: a codename here is held by NO scoped module role, because an
+# engine read applies no vertical scope (A13's architecture test proves it).
+ENGINE_READ_PERMISSIONS: dict[str, dict[str, str]] = {
+    "dues": {
+        "lending": "lending.loan.read_all",
+        "library": "library.member.read",
+        "gym": "gym.membership.money_read",
+    },
+    "attendance": {"gym": "gym.member.read_all"},
+    "bookings": {"hospitality": "hospitality.booking.read"},
+}
+
 # Which module each codename belongs to — used by ModuleEnabled and by the
 # entitlement filter in GET /permissions/me.
 MODULE_OF: dict[str, str] = {p: p.split(".", 1)[0] for p in PERMISSIONS}

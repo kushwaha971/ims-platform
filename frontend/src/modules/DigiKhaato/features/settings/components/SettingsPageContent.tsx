@@ -119,6 +119,7 @@ export function SettingsPageContent(): React.JSX.Element {
           canEdit={access.canEdit}
           busy={settings.isTogglingModules || !settings.canWrite}
           onChange={handleModules}
+          refusal={settings.moduleRefusal}
         />
       </UbStack>
     );

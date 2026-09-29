@@ -48,3 +48,18 @@ export interface SettingsDefaults {
 
 /** The sections this client renders (PLT-06 FR-1). */
 export type SettingsSection = 'ledger' | 'modules';
+
+/**
+ * A12 (PLT-X10, R14) — what a refused "switch off" says is still open, read
+ * from the 409's `details.breakdown` by `moduleRefusalFrom`.
+ */
+export interface ModuleRefusalLine {
+  /** A catalogue key taking `{count}`, or null for an unlabelled counter. */
+  readonly labelId: string | null;
+  readonly count: number;
+}
+
+export interface ModuleRefusal {
+  readonly module: string;
+  readonly lines: readonly ModuleRefusalLine[];
+}

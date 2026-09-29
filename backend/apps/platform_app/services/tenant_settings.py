@@ -43,7 +43,26 @@ CORE_MODULES: frozenset[str] = frozenset({"platform", "parties", "ledger"})
 #: PLT-06 §10: "dependency `sales` requires `parties`,`ledger`". Both are core,
 #: so the rule can never fire today; it is stated so a future non-core
 #: dependency is one line here rather than an `if` in the service.
-MODULE_DEPENDENCIES: dict[str, frozenset[str]] = {"sales": frozenset({"parties", "ledger"})}
+MODULE_DEPENDENCIES: dict[str, frozenset[str]] = {
+    "sales": frozenset({"parties", "ledger"}),
+    # ── A12 ── 10-architecture §2.3. Gym and hospitality need the sales MODULE
+    # because their money is tax invoices — a runtime dependency, not an import.
+    "lending": frozenset({"parties", "ledger", "payments"}),
+    "library": frozenset({"parties", "ledger", "payments"}),
+    "gym": frozenset({"parties", "ledger", "payments", "sales"}),
+    "hospitality": frozenset({"parties", "ledger", "payments", "sales"}),
+}
+
+#: A12 (ADR-041, contracts §1.1) — which shared engines each module uses.
+#: Engines have no module code and no switch: an engine is on exactly when an
+#: effective module lists it here (`entitlements.engine_enabled`). Strings only
+#: (L4); the engines' apps are never imported from here.
+ENGINES_USED_BY: dict[str, frozenset[str]] = {
+    "lending": frozenset({"dues"}),
+    "library": frozenset({"dues"}),  # recurring fees; seats and visits come later
+    "gym": frozenset({"dues", "attendance"}),
+    "hospitality": frozenset({"bookings", "dues"}),  # dues only for long stays (later)
+}
 
 PUT_TOP_LEVEL_KEYS = frozenset({"values", "numbering"})
 
@@ -383,7 +402,7 @@ def update_enabled_modules(*, tenant: Any, modules: Any, ctx: Ctx) -> Any:
     module with live data cannot be switched off (409 `module_has_data`, with
     the count). Switching off deletes nothing (BR-4).
     """
-    from apps.platform_app.services.guards import blocking_rows_for_module_off
+    from apps.platform_app.services.guards import module_off_blockers, run_module_enable_hooks
 
     if not isinstance(modules, list) or not all(isinstance(m, str) for m in modules):
         raise ValidationFailed({"enabled_modules": ["Expected a list of features."]})
@@ -410,7 +429,11 @@ def update_enabled_modules(*, tenant: Any, modules: Any, ctx: Ctx) -> Any:
     wanted |= set(before) & hidden_modules()
     turning_off = sorted(set(before) - wanted)
     for module in turning_off:
-        count = blocking_rows_for_module_off(tenant, module)
+        # A12 (R14): the breakdown names each open thing and its count, so the
+        # screen can say "3 books out and 2 deposits held" rather than "still
+        # has records". `count` stays the sum, as it always was.
+        breakdown = module_off_blockers(tenant, module)
+        count = sum(row["count"] for row in breakdown)
         if count:
             raise BusinessRuleViolation(
                 "module_has_data",
@@ -419,15 +442,24 @@ def update_enabled_modules(*, tenant: Any, modules: Any, ctx: Ctx) -> Any:
                     if module == "inventory"
                     else str(_("This feature still has records that need attention."))
                 ),
-                details={"module": module, "count": count},
+                details={"module": module, "count": count, "breakdown": breakdown},
             )
 
     after = sorted(wanted)
     if after == before:
         return tenant
+    turning_on = sorted(set(after) - set(before))
     with transaction.atomic():
         tenant.enabled_modules = after
         tenant.save(update_fields=["enabled_modules", "updated_at"])
+        # The entitlement cache on the instance is keyed to the old switches,
+        # and an enable hook may well ask `effective_modules` about the new one.
+        if hasattr(tenant, "_ub_entitlement"):
+            delattr(tenant, "_ub_entitlement")
+        # A12 (R15, BR-6): each newly enabled module seeds its presets inside
+        # this transaction, after the dependency check, so a failing seed
+        # leaves the module off rather than on and half-seeded.
+        run_module_enable_hooks(ctx=ctx, tenant=tenant, modules=turning_on)
         write_audit(
             ctx=ctx,
             action=AuditAction.TENANT_MODULES_CHANGED,

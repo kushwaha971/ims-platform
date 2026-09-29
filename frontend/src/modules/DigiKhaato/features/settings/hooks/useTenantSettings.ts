@@ -10,6 +10,7 @@ import type { ApiErrorShape, RequestStatus } from 'src/types/api.types';
 import { fetchSession } from '../../auth/redux/sessionThunk';
 import {
   conflictDismissed,
+  selectModuleRefusal,
   selectModulesStatus,
   selectSavingSection,
   selectSettings,
@@ -24,7 +25,12 @@ import {
   toggleModules,
 } from '../redux/settingsThunk';
 
-import type { SettingsSection, SettingsValues, TenantSettings } from '../types/settings.types';
+import type {
+  ModuleRefusal,
+  SettingsSection,
+  SettingsValues,
+  TenantSettings,
+} from '../types/settings.types';
 
 /**
  * Part 19 §19.1.1 layer 4 — the only door into Redux for PLT-06.
@@ -40,6 +46,8 @@ export interface UseTenantSettingsResult {
   readonly savingSection: SettingsSection | null;
   readonly conflict: boolean;
   readonly isTogglingModules: boolean;
+  /** A12 (R14): what the last refused "switch off" said is still open. */
+  readonly moduleRefusal: ModuleRefusal | null;
   readonly canWrite: boolean;
   readonly refetch: () => void;
   readonly saveSection: (section: SettingsSection, patch: SettingsValues) => Promise<boolean>;
@@ -56,6 +64,7 @@ export function useTenantSettings(enabled: boolean): UseTenantSettingsResult {
   const savingSection = useAppSelector(selectSavingSection);
   const conflict = useAppSelector(selectSettingsConflict);
   const modulesStatus = useAppSelector(selectModulesStatus);
+  const moduleRefusal = useAppSelector(selectModuleRefusal);
   const { canWrite } = useDegradedNetwork();
 
   useEffect(() => {
@@ -119,6 +128,7 @@ export function useTenantSettings(enabled: boolean): UseTenantSettingsResult {
     savingSection,
     conflict,
     isTogglingModules: modulesStatus === 'loading',
+    moduleRefusal,
     canWrite: canWrite('online-only'),
     refetch,
     saveSection,
