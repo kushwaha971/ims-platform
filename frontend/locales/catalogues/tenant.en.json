@@ -9,6 +9,7 @@
   "tenant.chooser.suspended.body": "Contact your provider to use these again.",
   "tenant.role.accountant": "Accountant",
   "tenant.role.admin": "Admin",
+  "tenant.role.moduleFallback": "Feature role",
   "tenant.role.owner": "Owner",
   "tenant.role.staff": "Staff",
   "tenant.status.invited": "Invited",

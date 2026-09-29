@@ -1,5 +1,7 @@
 import type { PageMeta } from 'src/types/api.types';
-import type { TenantRole } from 'src/types/domain.types';
+import type { ModuleCode } from 'src/types/domain.types';
+
+import type { MemberRoleCode } from './role.types';
 
 /**
  * Part 19 §19.2.3 — the team feature's member types (DEC-012).
@@ -27,7 +29,13 @@ export interface MemberApiRow {
    */
   readonly full_name: string | null;
   readonly mobile: string | null;
-  readonly role: TenantRole;
+  readonly role: MemberRoleCode;
+  /** A13 (PLT-X12 BR-6): a module role's module, or null for the canon roles. */
+  readonly role_module?: ModuleCode | null;
+  /** A13: false while that module is switched off. */
+  readonly role_active?: boolean;
+  /** A13: the catalogue key the role's name is drawn with. */
+  readonly role_label_id?: string;
   /** `active | invited | suspended`. `removed` rows are never listed. */
   readonly status: string;
   readonly joined_at: string | null;
@@ -43,7 +51,10 @@ export interface Member {
   /** `''` for an invited row, whose profile the server withholds. */
   readonly fullName: string;
   readonly mobile: string | null;
-  readonly role: TenantRole;
+  readonly role: MemberRoleCode;
+  readonly roleLabelId: string;
+  readonly roleModule: ModuleCode | null;
+  readonly roleActive: boolean;
   readonly status: string;
   readonly joinedAt: string | null;
   readonly lastLoginAt: string | null;
@@ -71,7 +82,7 @@ export interface MemberListResult {
 export interface MemberDraft {
   readonly email: string;
   readonly fullName: string;
-  readonly role: TenantRole;
+  readonly role: MemberRoleCode;
   readonly mobile?: string | null;
 }
 

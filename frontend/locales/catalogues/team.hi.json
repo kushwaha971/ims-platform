@@ -115,6 +115,8 @@
   "team.revoke.confirm": "निमंत्रण वापस लें",
   "team.revoke.success": "निमंत्रण वापस ले लिया गया।",
   "team.revoke.title": "यह निमंत्रण वापस लें?",
+  "team.role.inactive": "{module} बंद होने तक यह भूमिका काम नहीं करेगी",
+  "team.role.inactiveFeature": "इसका फ़ीचर बंद होने तक यह भूमिका काम नहीं करेगी",
   "team.status.accepted": "जुड़ गए",
   "team.status.expired": "समय समाप्त",
   "team.status.pending": "प्रतीक्षा में",

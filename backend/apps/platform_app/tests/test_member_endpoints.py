@@ -109,6 +109,11 @@ def test_the_password_never_appears_in_any_other_response(api_as: Any, tenant: A
         "last_login_at",
         "must_change_password",
         "password_expires_at",
+        # A13 (PLT-X12 BR-6): which module a module role belongs to, whether it
+        # is on, and the key its name is drawn with.
+        "role_module",
+        "role_active",
+        "role_label_id",
     }
 
 

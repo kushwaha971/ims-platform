@@ -57,6 +57,11 @@ export const API_PATHS = {
   INVITATION: (id: string) => `/invitations/${seg(id)}`,
   /** PLT-05 FR-10 — the seat-consuming accept. */
   INVITATION_ACCEPT: (token: string) => `/invitations/${seg(token)}/accept`,
+  /**
+   * A13 (PLT-X12) — the roles the team screen may offer: the canon four, then
+   * the module roles of the modules that are on right now.
+   */
+  ROLES: '/roles',
   PERMISSIONS_ME: '/permissions/me',
   AUDIT_LOGS: '/audit-logs',
   // ── Track T1: PLT-06, PLT-08, PLT-09 ──────────────────────────────────────

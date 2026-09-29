@@ -67,6 +67,7 @@ def test_creating_an_invitation_returns_the_row_and_the_only_copy_of_the_link(
         "id",
         "email",
         "role",
+        "role_label_id",  # A13: the key a module role's name is drawn with
         "status",
         "expires_at",
         "created_at",
@@ -231,6 +232,7 @@ def test_the_list_is_this_tenant_pending_newest_first(
         "id",
         "email",
         "role",
+        "role_label_id",  # A13: the key a module role's name is drawn with
         "status",
         "expires_at",
         "created_at",

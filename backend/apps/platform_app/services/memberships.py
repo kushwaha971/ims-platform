@@ -672,3 +672,115 @@ def revoke_invitation(*, invitation: Any, ctx: Ctx) -> Any:
             metadata={"membership_id": str(cancelled.id) if cancelled is not None else None},
         )
     return Invitation.objects.get(pk=invitation.pk)
+
+
+# ── A13 ── module roles (ADR-052, FRD 00 PLT-X12) ────────────────────────────
+
+
+def role_module(role: Any) -> str | None:
+    """The vertical a system role belongs to, or None for canon and custom roles."""
+    from apps.common.permissions_registry import module_role
+
+    if role is None or not getattr(role, "is_system", False):
+        return None
+    spec = module_role(role.code)
+    return spec.module if spec is not None else None
+
+
+def role_label_id(role: Any) -> str:
+    """The catalogue key a role is named with: `tenant.role.<code>` for the
+    canon four (and custom roles), the registered `label_id` for a module role."""
+    from apps.common.permissions_registry import module_role
+
+    spec = module_role(role.code) if getattr(role, "is_system", False) else None
+    return spec.label_id if spec is not None else f"tenant.role.{role.code}"
+
+
+def role_assignment_error(*, tenant: Any, role: Any) -> str | None:
+    """Why `role` may not be given to a member of `tenant` right now, or None.
+
+    A module role is assignable only while its module is effective (FRD §6):
+    the team screen never offers it otherwise, and a hand-made request is
+    refused with the same words. A system role code that is neither canon nor
+    registered (its module's app is gone) is refused too — it would grant
+    nothing, and a member who can do nothing is a support call.
+    """
+    from apps.common.permissions_registry import ROLE_PERMISSIONS, module_role
+
+    if role is None or not role.is_system or role.code in ROLE_PERMISSIONS:
+        return None
+    spec = module_role(role.code)
+    if spec is None or spec.module not in entitlements.effective_modules(tenant):
+        return "This role belongs to a feature that is off."
+    return None
+
+
+def roles_payload(tenant: Any) -> list[dict]:
+    """`GET /roles` — the canon four, then the module roles of effective modules.
+
+    `label_id` is the catalogue key the client draws the name with: canon roles
+    use the existing `tenant.role.<code>`, module roles their registered label
+    (and, by convention, `<label_id>.caption` for "what this role cannot see").
+    `assignable` is false for `owner`, which is transferred, never granted.
+    """
+    from apps.common.constants import RoleCode
+    from apps.common.permissions_registry import module_roles
+
+    rows: list[dict] = [
+        {
+            "code": code.value,
+            "module": None,
+            "label_id": f"tenant.role.{code.value}",
+            "assignable": code != RoleCode.OWNER,
+            "is_module_role": False,
+        }
+        for code in RoleCode
+    ]
+    effective = entitlements.effective_modules(tenant)
+    rows.extend(
+        {
+            "code": spec.code,
+            "module": spec.module,
+            "label_id": spec.label_id,
+            "assignable": True,
+            "is_module_role": True,
+        }
+        for spec in module_roles()
+        if spec.module in effective
+    )
+    return rows
+
+
+def module_role_migration(code: str, *, name: str, codenames: Any) -> tuple[Any, Any]:
+    """`(forwards, backwards)` for a vertical's data migration writing its role row.
+
+    Usage in `apps/<vertical>/migrations/00NN_role.py`::
+
+        forwards, backwards = module_role_migration(
+            "gym_trainer", name="Trainer", codenames=GYM_TRAINER_CODENAMES
+        )
+        operations = [migrations.RunPython(forwards, backwards)]
+
+    Upserts by `code` where `tenant IS NULL` (idempotent), writes the codename
+    set so `GET /roles` and the drift test agree with the registry, and the
+    reverse deletes the row only while no membership uses it (RESTRICT would
+    refuse anyway; this says why). `apps.get_model` only, never a model import.
+    """
+    permissions = sorted(codenames)
+
+    def forwards(apps: Any, schema_editor: Any) -> None:
+        Role = apps.get_model("platform", "Role")
+        Role.objects.update_or_create(
+            tenant=None,
+            code=code,
+            defaults={"name": name, "is_system": True, "permissions": permissions},
+        )
+
+    def backwards(apps: Any, schema_editor: Any) -> None:
+        Role = apps.get_model("platform", "Role")
+        Membership = apps.get_model("platform", "Membership")
+        if Membership.objects.filter(role__tenant=None, role__code=code).exists():
+            raise RuntimeError(f"Role {code!r} is still held by a member; reassign them first.")
+        Role.objects.filter(tenant=None, code=code).delete()
+
+    return forwards, backwards

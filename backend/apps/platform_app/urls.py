@@ -55,6 +55,7 @@ from apps.platform_app.views.tenant import (
     MemberCredentialsView,
     MemberListCreateView,
     MembershipDetailView,
+    RoleListView,
     TenantCreateView,
     TenantCurrentView,
     TenantResumableView,
@@ -138,6 +139,8 @@ urlpatterns = [
         name="membership-detail",
     ),
     path("members", MemberListCreateView.as_view(), name="member-list"),
+    # A13 (PLT-X12) — canon roles plus the module roles of enabled modules.
+    path("roles", RoleListView.as_view(), name="role-list"),
     path(
         "members/<uuid:membership_id>/credentials",
         MemberCredentialsView.as_view(),

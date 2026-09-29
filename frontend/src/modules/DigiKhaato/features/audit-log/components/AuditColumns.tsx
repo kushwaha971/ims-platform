@@ -1,5 +1,6 @@
 import type { UbDataGridColumn } from 'src/design-system/UbDataGrid';
 import { formatTimestamp } from 'src/utils/dates';
+import { roleLabel } from 'src/utils/roleLabel';
 
 import { actionLabel, actorLabel, diffLines, entityTypeLabel } from '../view-model/auditDisplay';
 
@@ -39,7 +40,7 @@ export const createAuditColumns = (t: T): readonly UbDataGridColumn<AuditRow>[] 
     cell: (row) => (
       <AuditActorCell
         name={actorLabel(row, t)}
-        role={row.actor?.role ? t(`tenant.role.${row.actor.role}`) : null}
+        role={row.actor?.role ? roleLabel(t, row.actor.role) : null}
         formerLabel={row.actor?.isFormerMember ? t('audit.actor.former') : null}
       />
     ),

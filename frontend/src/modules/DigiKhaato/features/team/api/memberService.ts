@@ -49,6 +49,13 @@ const toMember = (row: MemberApiRow): Member => ({
   fullName: row.full_name ?? '',
   mobile: row.mobile ?? null,
   role: row.role,
+  // A13: servers before module roles sent none of these; "active" is what
+  // those rows always meant, and an empty label id is resolved to the canon
+  // key by `roleDisplay` (never here: this module is in the app shell's import
+  // graph, and a `tenant.role.*` template here pins those words to every route).
+  roleLabelId: row.role_label_id ?? '',
+  roleModule: row.role_module ?? null,
+  roleActive: row.role_active ?? true,
   status: row.status,
   joinedAt: row.joined_at ?? null,
   lastLoginAt: row.last_login_at ?? null,

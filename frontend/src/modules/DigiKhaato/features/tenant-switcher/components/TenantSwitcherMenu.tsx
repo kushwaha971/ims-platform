@@ -19,6 +19,7 @@ import { MLMenu, MLMenuItem, MLMenuLabel, MLSpinner } from 'src/design-system/pr
 import { useTranslation } from 'src/hooks/useTranslation';
 import { ROUTES } from 'src/routes';
 import { cn } from 'src/utils/cn';
+import { roleLabel } from 'src/utils/roleLabel';
 
 import { useTenantSwitcher } from '../hooks/useTenantSwitcher';
 import {
@@ -153,7 +154,7 @@ export function TenantSwitcherMenu({
                 primaryVariant="inherit"
                 primaryTone="inherit"
                 title={name.truncated ? tenant.name : undefined}
-                secondary={tenant.role ? t(`tenant.role.${tenant.role}`) : undefined}
+                secondary={tenant.role ? roleLabel(t, tenant.role) : undefined}
               />
               {tenant.isDefault && (
                 <Star

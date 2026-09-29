@@ -1,6 +1,7 @@
 import type { UbDataGridColumn } from 'src/design-system/UbDataGrid';
 
 import { effectiveStatus, isRevocable } from '../view-model/invitationDisplay';
+import { roleText } from '../view-model/roleDisplay';
 
 import {
   InvitationEmailCell,
@@ -92,7 +93,18 @@ export const createInvitationColumns = ({
     priority: 2,
     cardSlot: 'meta',
     widthShare: 12,
-    cell: (invitation) => <InvitationMetaCell text={t(`tenant.role.${invitation.role}`)} />,
+    cell: (invitation) => (
+      <InvitationMetaCell
+        text={
+          roleText(t, {
+            code: invitation.role,
+            labelId: invitation.roleLabelId,
+            module: null,
+            active: true,
+          }).label
+        }
+      />
+    ),
   },
   {
     id: 'expires',

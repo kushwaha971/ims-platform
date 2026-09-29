@@ -1,10 +1,12 @@
 import type { UbDataGridColumn } from 'src/design-system/UbDataGrid';
 
 import { accessStateOf } from '../view-model/credentialsShare';
+import { roleText } from '../view-model/roleDisplay';
 
 import {
   MemberAccessCell,
   MemberMetaCell,
+  MemberRoleCell,
   MemberNameCell,
   MemberRegenerateCell,
 } from './MemberRow';
@@ -88,7 +90,17 @@ export const createMemberColumns = ({
     priority: 2,
     cardSlot: 'meta',
     widthShare: 14,
-    cell: (member) => <MemberMetaCell text={t(`tenant.role.${member.role}`)} />,
+    cell: (member) => {
+      const text = roleText(t, {
+        code: member.role,
+        labelId: member.roleLabelId,
+        module: member.roleModule,
+        active: member.roleActive,
+      });
+      return (
+        <MemberRoleCell label={text.label} caption={text.caption} inactive={!member.roleActive} />
+      );
+    },
   },
   {
     id: 'lastLogin',

@@ -54,6 +54,7 @@ const toInvitation = (row: InvitationApiRow): Invitation => ({
   id: row.id,
   email: row.email,
   role: row.role,
+  roleLabelId: row.role_label_id ?? '', // resolved by `roleDisplay` (see memberService)
   status: row.status,
   expiresAt: row.expires_at,
   createdAt: row.created_at,

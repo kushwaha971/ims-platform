@@ -1,5 +1,7 @@
 import type { PageMeta } from 'src/types/api.types';
-import type { InvitationStatus, TenantRole } from 'src/types/domain.types';
+import type { InvitationStatus } from 'src/types/domain.types';
+
+import type { MemberRoleCode } from './role.types';
 
 /**
  * Part 19 §19.2.3 — the team feature's own types.
@@ -15,7 +17,9 @@ import type { InvitationStatus, TenantRole } from 'src/types/domain.types';
 export interface InvitationApiRow {
   readonly id: string;
   readonly email: string;
-  readonly role: TenantRole;
+  readonly role: MemberRoleCode;
+  /** A13: the catalogue key the role's name is drawn with. */
+  readonly role_label_id?: string;
   readonly status: InvitationStatus;
   readonly expires_at: string;
   readonly created_at: string;
@@ -33,7 +37,8 @@ export interface InvitationApiRow {
 export interface Invitation {
   readonly id: string;
   readonly email: string;
-  readonly role: TenantRole;
+  readonly role: MemberRoleCode;
+  readonly roleLabelId: string;
   readonly status: InvitationStatus;
   /** ISO 8601. */
   readonly expiresAt: string;
@@ -55,7 +60,7 @@ export interface InvitationListResult {
 /** What the invite form collects. `mobile` is a channel, never an identity. */
 export interface InvitationDraft {
   readonly email: string;
-  readonly role: TenantRole;
+  readonly role: MemberRoleCode;
   readonly mobile?: string | null;
 }
 

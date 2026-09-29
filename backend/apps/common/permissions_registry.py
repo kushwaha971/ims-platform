@@ -7,8 +7,11 @@ registry equals canon §0.9 string for string.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Any
+
+from django.core.exceptions import ImproperlyConfigured
 
 from apps.common.constants import RoleCode
 
@@ -148,11 +151,23 @@ def permissions_for(membership: Any) -> frozenset[str]:
         return frozenset()
     role = membership.role
     if role.is_system:
-        base = set(ROLE_PERMISSIONS[role.code])
+        # A13: a system role is a canon role or a registered module role; an
+        # unknown code grants nothing (it used to raise KeyError — a 500 on
+        # every request a module role's member made).
+        base = set(system_role_permissions(role.code))
     else:
         base = set(role.permissions or [])
     override = membership.permissions_override or {}
-    base |= set(override.get("allow", []))
+    allow = set(override.get("allow", []))
+    spec = _MODULE_ROLES.get(role.code) if role.is_system else None
+    if spec is not None:
+        # A13 (BR-3): a module role's grants stay inside its own module and
+        # never lift its scope, however the override was written — or an agent
+        # allowed `parties.party.read` would read every balance via /parties.
+        allow = {
+            c for c in allow if MODULE_OF.get(c) == spec.module and not c.endswith(".read_all")
+        }
+    base |= allow
     base -= set(override.get("deny", []))
     enabled = set(membership.tenant.enabled_modules or [])
     # A1 (PLT-X11 §10): a module's codenames land with its first commit; while
@@ -166,3 +181,113 @@ def permissions_for(membership: Any) -> frozenset[str]:
         for p in base
         if p in PERMISSIONS and (MODULE_OF[p] in enabled or MODULE_OF[p] == "platform")
     )
+
+
+# ── A13 ── module roles (ADR-052, contracts §3, FRD 00 PLT-X12) ──────────────
+#
+# A module role is a system `platform_role` row (`tenant` NULL, `is_system`)
+# owned by ONE vertical — `lending_agent`, `gym_trainer`,
+# `hospitality_housekeeping` — registered here from the vertical's
+# `AppConfig.ready()`. Its codenames are only its own module's: a scope the
+# vertical applies to its own tables is worthless if the scoped person also
+# holds `parties.party.read` and can open every balance through `/parties`
+# (ADR-052). So a module role reaches parties, reminders and receipts only
+# through its vertical's endpoints, which serve a scoped projection.
+
+#: The verticals that may own module roles. Every other module code is core or
+#: shop-and-billing, and a role "owned" by `parties` would be a way around the
+#: rule above.
+VERTICAL_MODULES: frozenset[str] = frozenset({"lending", "library", "gym", "hospitality"})
+
+
+@dataclass(frozen=True, slots=True)
+class ModuleRole:
+    code: str
+    module: str
+    codenames: frozenset[str]
+    label_id: str
+
+
+_MODULE_ROLES: dict[str, ModuleRole] = {}
+_MODULE_ROLES_BASELINE: dict[str, ModuleRole] | None = None
+
+
+def _non_vertical_modules() -> frozenset[str]:
+    from apps.common.constants import ModuleCode
+
+    return frozenset(m.value for m in ModuleCode) - VERTICAL_MODULES
+
+
+def register_module_role(
+    code: str, *, module: str, codenames: frozenset[str], label_id: str
+) -> None:
+    """Register `code` as a module role holding exactly `codenames`.
+
+    Refused (ImproperlyConfigured, i.e. at start-up) unless:
+    * `code` is `"<module>_<role>"`, fits `platform_role.code` (32) and is not
+      a canon role code;
+    * `module` is a vertical, never a core or shop module;
+    * every codename exists in `PERMISSIONS`, belongs to `module`
+      (`MODULE_OF[c] == module`) and is not a `read_all` — the codename that
+      LIFTS a scope (BR-3). No core codename, not even `ledger.reminder.write`.
+
+    Idempotent for an equal spec (ADR-042); a different spec under a used code
+    raises, because two definitions of one role is a bug, not an update.
+    The role's `platform_role` row is written by the vertical's own data
+    migration (`platform_app.services.memberships.module_role_migration`).
+    """
+    codenames = frozenset(codenames)
+    problems: list[str] = []
+    if (
+        not code.startswith(f"{module}_")
+        or len(code) <= len(module) + 1
+        or len(code) > 32
+        or code in {r.value for r in RoleCode}
+    ):
+        problems.append(f"code {code!r} must be '<module>_<role>', at most 32 characters")
+    if module in _non_vertical_modules():
+        problems.append(f"module {module!r} is not a vertical")
+    for codename in sorted(codenames):
+        if codename not in PERMISSIONS:
+            problems.append(f"unknown codename {codename!r}")
+        elif MODULE_OF.get(codename) != module:
+            problems.append(f"{codename!r} is not a {module} codename")
+        elif codename.endswith(".read_all"):
+            problems.append(f"{codename!r}: a scoped role may not hold a read_all")
+    if problems:
+        raise ImproperlyConfigured(f"Module role {code!r}: " + "; ".join(problems))
+    spec = ModuleRole(code=code, module=module, codenames=codenames, label_id=label_id)
+    existing = _MODULE_ROLES.get(code)
+    if existing is not None and existing != spec:
+        raise ImproperlyConfigured(f"Module role {code!r} is already registered differently.")
+    _MODULE_ROLES[code] = spec
+
+
+def module_role(code: str) -> ModuleRole | None:
+    return _MODULE_ROLES.get(code)
+
+
+def module_roles() -> tuple[ModuleRole, ...]:
+    """Every registered module role, in registration order."""
+    return tuple(_MODULE_ROLES.values())
+
+
+def system_role_permissions(code: str) -> frozenset[str]:
+    """A system role's codenames: canon (`ROLE_PERMISSIONS`) or module role.
+
+    Unknown → empty (fail closed): a system row whose module never registered
+    it grants nothing, whatever its `permissions` column says.
+    """
+    if code in ROLE_PERMISSIONS:
+        return ROLE_PERMISSIONS[code]
+    spec = _MODULE_ROLES.get(code)
+    return spec.codenames if spec is not None else frozenset()
+
+
+def _reset_module_roles_for_tests() -> None:  # pragma: no cover - test helper
+    """Back to what the apps' `ready()` registered (the guards.py pattern)."""
+    global _MODULE_ROLES_BASELINE
+    if _MODULE_ROLES_BASELINE is None:
+        _MODULE_ROLES_BASELINE = dict(_MODULE_ROLES)
+    _MODULE_ROLES.clear()
+    _MODULE_ROLES.update(_MODULE_ROLES_BASELINE)

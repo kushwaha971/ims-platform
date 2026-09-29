@@ -321,10 +321,32 @@ class MemberReadSerializer(serializers.Serializer):
     }
 
     def to_representation(self, instance: Any) -> dict:
+        from apps.platform_app.services.memberships import role_label_id, role_module
+
         data = super().to_representation(instance)
         if data.get("status") == MembershipStatus.INVITED:
             data.update(self.INVITED_REDACTED)
+        # A13 (PLT-X12 BR-6): a module role's module, and whether it is on —
+        # so the team screen can say "Role inactive while Gym is off" instead
+        # of listing a member who silently can do nothing. `effective_modules`
+        # arrives in the context from the list view (one computation per page).
+        module = role_module(instance.role)
+        data["role_module"] = module
+        data["role_label_id"] = role_label_id(instance.role)
+        if module is None:
+            data["role_active"] = True
+        else:
+            effective = self.context.get("effective_modules")
+            if effective is None:
+                effective = entitlements_effective(instance.tenant)
+            data["role_active"] = module in effective
         return data
+
+
+def entitlements_effective(tenant: Any) -> frozenset[str]:
+    from apps.platform_app.services.entitlements import effective_modules
+
+    return effective_modules(tenant)
 
 
 class MemberCreateSerializer(serializers.Serializer):
@@ -471,6 +493,8 @@ class InvitationReadSerializer(serializers.ModelSerializer):
     """
 
     role = serializers.CharField(source="role.code", read_only=True)
+    # A13: the catalogue key the client names the role with (a module role's own).
+    role_label_id = serializers.SerializerMethodField()
     invited_by = serializers.SerializerMethodField()
 
     class Meta:
@@ -479,12 +503,18 @@ class InvitationReadSerializer(serializers.ModelSerializer):
             "id",
             "email",
             "role",
+            "role_label_id",
             "status",
             "expires_at",
             "created_at",
             "invited_by",
         )
         read_only_fields = fields
+
+    def get_role_label_id(self, obj: Invitation) -> str:
+        from apps.platform_app.services.memberships import role_label_id
+
+        return role_label_id(obj.role)
 
     def get_invited_by(self, obj: Invitation) -> str | None:
         """The inviter's name, or `null` — never their id or address.

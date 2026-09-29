@@ -47,6 +47,7 @@ from apps.platform_app.serializers.tenant import (
     tenant_read_payload,
 )
 from apps.platform_app.services import credentials as credentials_service
+from apps.platform_app.services import entitlements
 from apps.platform_app.services import memberships as membership_service
 from apps.platform_app.services import onboarding as onboarding_service
 from apps.platform_app.services import sessions as session_service
@@ -393,6 +394,10 @@ class InvitationListCreateView(APIView):
             # A typo in a client is a bad field, not a server fault. Letting the
             # lookup raise would answer 500 to `{"role": "stafff"}`.
             raise ValidationFailed({"role": ["That is not a role in this business."]})
+        # A13 (PLT-X12 §6): a module role only while its module is on.
+        refusal = membership_service.role_assignment_error(tenant=tenant, role=role)
+        if refusal:
+            raise ValidationFailed({"role": [refusal]})
 
         invitation, raw_token = membership_service.invite(
             tenant=tenant,
@@ -488,10 +493,15 @@ class MemberListCreateView(APIView):
     permission_classes = [IsAuthenticated, MembersManagePermission]
 
     def get(self, request: Any) -> Any:
-        queryset = members_of(tenant=_tenant_or_refuse(request))
+        tenant = _tenant_or_refuse(request)
+        queryset = members_of(tenant=tenant)
         paginator = PagePagination()
         page = paginator.paginate_queryset(queryset, request, view=self)
-        return StandardResponse.paginated(paginator, MemberReadSerializer(page, many=True).data)
+        # A13: one `effective_modules` per page, not per row (`role_active`).
+        context = {"effective_modules": entitlements.effective_modules(tenant)}
+        return StandardResponse.paginated(
+            paginator, MemberReadSerializer(page, many=True, context=context).data
+        )
 
     @idempotent("member_create")
     def post(self, request: Any) -> Any:
@@ -504,6 +514,10 @@ class MemberListCreateView(APIView):
         role = role_by_code(tenant=tenant, code=data["role"])
         if role is None:
             raise ValidationFailed({"role": ["That is not a role in this business."]})
+        # A13 (PLT-X12 §6): a module role only while its module is on.
+        refusal = membership_service.role_assignment_error(tenant=tenant, role=role)
+        if refusal:
+            raise ValidationFailed({"role": [refusal]})
 
         issued = credentials_service.create_member(
             tenant=tenant,
@@ -557,3 +571,18 @@ class MemberCredentialsView(APIView):
             membership=membership, actor=request.user, ctx=Ctx.from_request(request)
         )
         return StandardResponse.ok(_credentials_payload(issued))
+
+
+class RoleListView(APIView):
+    """`GET /roles` (A13, FRD 00 PLT-X12 §6-§7) — what the team screen offers.
+
+    The four canon roles, then the module roles of the modules that are
+    effective right now, so a role for a switched-off (or unreleased) feature
+    is never offered. `platform.members.manage`: only the people who hand
+    roles out need the list.
+    """
+
+    permission_classes = [IsAuthenticated, MembersManagePermission]
+
+    def get(self, request: Any) -> Any:
+        return StandardResponse.ok(membership_service.roles_payload(_tenant_or_refuse(request)))

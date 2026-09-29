@@ -23,6 +23,7 @@ import {
 import { MLSpinner } from 'src/design-system/primitives';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { cn } from 'src/utils/cn';
+import { roleLabel } from 'src/utils/roleLabel';
 
 import { useTenantSwitcher } from '../hooks/useTenantSwitcher';
 import { filterTenants, needsChooserSearch } from '../view-model/tenantDisplay';
@@ -145,7 +146,7 @@ export function TenantChooserPageContent(): React.JSX.Element {
                       <UbAvatar name={tenant.name} />
                       <UbListItemText
                         primary={tenant.name}
-                        secondary={tenant.role ? t(`tenant.role.${tenant.role}`) : undefined}
+                        secondary={tenant.role ? roleLabel(t, tenant.role) : undefined}
                       />
                       {tenant.isDefault && (
                         <Star

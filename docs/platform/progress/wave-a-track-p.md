@@ -14,9 +14,9 @@ and `reset_fy` from the settings screen.
 
 | Task | State | Commit on main |
 |---|---|---|
-| A1 release gate | done | pending merge |
-| A12 engine enablement | done | pending merge |
-| A13 scoping, module roles | in progress (backend done) | — |
+| A1 release gate | done | `910d961` |
+| A12 engine enablement | done | `3e67449` |
+| A13 scoping, module roles | done | pending merge |
 | A8 perpetual counters | waits for A10 | — |
 | A9b closed-day calendar | waits for A8, A9a | — |
 | A6 party roles, relations | waits for A2 | — |
@@ -150,6 +150,137 @@ the lead instead, recorded here. A1 findings:
 
 Gates run: full backend suite on the A1+A12 tree, **2624 passed, 0 failed**; frontend settings
 jest 20 passed; `tsc`, eslint and prettier clean on the changed files; locales split and checked.
+
+## A13 — row scoping and module roles (FRD 00 PLT-X12, R66, R70, R47)
+
+### Design note
+
+- `apps/common/scoping.py`: `ScopedViewSetMixin` (put before the tenant base viewset). Its
+  `get_queryset` refuses at the first request, for everybody including the owner, when
+  `scope_filter` is not overridden (checked before the `read_all` bypass so the owner's first visit
+  finds it) or `scope_all_permission` is empty; otherwise narrows the tenant queryset unless the
+  member holds `scope_all_permission`. No resolvable member → no rows. Out-of-scope ids are 404
+  because the filter is on the queryset. `scoped_queryset(...)` is the same rule for plain APIViews.
+- `RestrictedFieldsMixin` in `apps/common/serializers.py`: the KEY is dropped without the codename;
+  codenames from `context["permissions"]` (exports, jobs) or the request's member; neither → every
+  restricted field dropped (fail closed).
+- `permissions_registry.py` (append-only `# ── A13 ──` block): `register_module_role(code, *,
+  module, codenames, label_id)` per contracts §3 (the FRD's `permissions=` keyword is the contract's
+  `codenames=`). Refused at start-up unless the code is `<module>_<role>` ≤ 32 and not canon, the
+  module is one of the four verticals (a role "owned" by parties would be a way around the rule),
+  and every codename exists, belongs to that module and is not a `read_all`. Idempotent for an equal
+  spec; a different spec under a used code raises. `system_role_permissions(code)` resolves canon
+  or module roles and returns ∅ for an unknown system code — `permissions_for` used to raise
+  `KeyError` there. Module gating in `permissions_for` already removes a switched-off module's
+  codenames (BR-6).
+- `GET /api/v1/roles` (`RoleListView`, `platform.members.manage`): the canon four (owner not
+  assignable) then module roles of effective modules, each `{code, module, label_id, assignable,
+  is_module_role}`.
+- `POST /members` and `POST /invitations` refuse a module role whose module is not effective (or a
+  system code nobody registered): 400 `{role: ["This role belongs to a feature that is off."]}`.
+- Member rows gain `role_module`, `role_active`, `role_label_id`; invitation rows `role_label_id`.
+  The member list computes `effective_modules` once per page (serializer context).
+- `module_role_migration(code, *, name, codenames)` returns the `(forwards, backwards)` pair a
+  vertical's data migration runs to upsert its `platform_role` row (idempotent; the reverse refuses
+  while a member holds the role).
+- Architecture test `tests/architecture/test_module_scoping.py`: every view in a vertical app is
+  scoped or declares `scope_exempt = "<reason>"` (proven on a planted module), no module role holds
+  a core read / `read_all` / `reports.*` / another module's codename, no module role holds an
+  engine-read codename (R25), every `read_all` is held by owner, admin and accountant (BR-4), no
+  `.reveal` reaches the accountant (ADR-058).
+- Frontend `features/team`: `roleService` + lazily injected `roleSlice` + `useRoles` (fetched when a
+  dialog opens); the add and invite dialogs offer `GET /roles`' assignable roles (fallback: the
+  canon three, never an empty picker, never owner) and the schemas take the offered codes;
+  `MemberRoleCell` shows the role and, for a module role, a wrapping caption: what it cannot see
+  (`<label_id>.caption`), the module's name, or "Inactive while <module> is off". A label or module
+  name with no copy on the screen falls back to plain words ("Feature role"), never a message id
+  or a raw module code. `MemberRoleCode = TenantRole | \`${ModuleCode}_${string}\``.
+- **Convention for the verticals** (for the lead): module role labels are `<module>.role.<name>`
+  and `<module>.role.<name>.caption`; the vertical's catalogue line routes `"<module>.role."` to
+  the `team` catalogue in `locales/catalogues.json`, or the team screen shows "Feature role".
+- Found while wiring it: a `tenant.role.${…}` template inside `memberService` pins every
+  `tenant.role.*` key to the app shell, because the member slice is statically registered and
+  `split-locales` follows the shell's import graph. The canon fallback key is therefore built in
+  the view-model, not in the service.
+
+### Canon §0.9 CR draft (owner Q1 and Q2 defaults adopted) — for the lead to file in CR-LOG / Part 43
+
+> **CR-2026-09-30-PLATFORM-ROLES — canon §0.9: module roles, the widened action set, and
+> `platform.calendar.manage`.**
+>
+> *Change.* Canon §0.9 fixes four system roles and a closed action set. It is amended to:
+> 1. **Module roles.** A module may own system roles, `platform_role` rows with `tenant` NULL,
+>    `is_system` true and `code = "<module>_<role>"`, registered through
+>    `permissions_registry.register_module_role` and seeded by the module's own data migration. Three
+>    are adopted (owner Q1): `lending_agent` (collection agent — loans on the agent's routes),
+>    `gym_trainer` (trainer — members whose term or batch names the trainer; no fees, dues or
+>    mobiles unless granted) and `hospitality_housekeeping` (housekeeping — the room board, no
+>    guest contact or ID fields, no folio, no money). A module role holds ONLY its module's
+>    codenames: never `parties.party.read`, `ledger.entry.read`, `payments.payment.read`,
+>    `reports.*`, `ledger.reminder.write` or any `read_all`. It is assignable only while its module
+>    is enabled; while the module is off its codenames vanish and the membership remains.
+> 2. **Action set.** The closed set `read | write | delete | export | void | correct | manage |
+>    adjust` widens to the actions the registry and the FRDs use: `read_all` (reads beyond a row
+>    scope; owner and admin by default and **explicitly** accountant, whose automatic set matches
+>    only `.read`), `reveal` (identity fields, ADR-053/058; never implied by `*.read`, so never the
+>    accountant's automatically), `void_own`, `money_read`, and the per-module verbs each FRD lists.
+>    Lending's `lending.borrower.id_read` is renamed `lending.borrower.reveal` (ADR-058).
+> 3. **Staff and accountant sets.** Each module's release CR adds its codenames to `_STAFF` and
+>    `_ACCOUNTANT` as its FRD's permission matrix says (R47).
+> 4. **`platform.calendar.manage`** (owner Q2) — a new core codename held by owner and admin, to
+>    write tenant-wide closed days without the owner-only `platform.tenant.manage`; a closed day
+>    with `module = X` may also be written by X's settings codename (R26). (Implemented by A9b.)
+>
+> *Why.* Row scoping cannot be made safe with the canon roles: `staff` holds tenant-wide core reads,
+> so a scope applied only to a vertical's tables would leak through `/parties` (ADR-052). And the
+> accountant's `*.read` rule would hand identity fields to accountants automatically (ADR-058).
+>
+> *Implemented by.* Wave A task A13 (mechanism: `ScopedViewSetMixin`, `RestrictedFieldsMixin`,
+> `register_module_role`, `GET /roles`, the team screen, the architecture test). Each role row ships
+> with its vertical. *Reversal.* Remove the roles' registrations and rows; no core table changes.
+
+### A13 QA (adversarial self-review plus the look pass)
+
+Look pass: a local production build of the worktree on :3100 against the worktree API on :8100
+(scratch database `ub_trackp_dev`, `UB_UNRELEASED_MODULES=1`, a stand-in `lending_agent` role over
+two stand-in lending codenames, a switchable labelled off-guard on expenses). Team list with module
+roles active and inactive, the add-member picker, the Settings refusal banner, and the agent signing
+in; 390 and 1280 px, English and Hindi; `scrollWidth` and per-element clipping measured
+(`/tmp/e2e-shots/trackp/`). Findings:
+
+1. **Fixed (found by looking)** — the inactive caption rendered "Inactive while its featu", cut
+   mid-word with no ellipsis, at both widths: grid cells and card meta slots are `truncate`, which
+   defeats `line-clamp-2`. The caption opts out (`whitespace-normal break-words`); a class guard in
+   `ModuleRoles.test.tsx` failed first; the re-shoot measures no clipping.
+2. **Fixed** — the tenant switcher, the business chooser and the activity log each built
+   `tenant.role.<code>` themselves, so a collection agent would read "tenant.role.lending_agent"
+   under their business. One `src/utils/roleLabel.ts` now names every role (canon key, sent label,
+   `<module>.role.<name>` by convention, else "Feature role"); `roleLabel.test.ts` failed first.
+3. **Fixed** — a raw module code ("lending") leaked into the caption and the picker label when the
+   module's name had no copy; now plain words (`roleDisplay.test.ts`).
+4. **Fixed** — `permissions_override.allow` was applied after the role's set, so an agent row edited
+   in the admin to allow `parties.party.read` would read every balance: a module role's grants are
+   now confined to its own module and never include a `read_all`
+   (`test_an_override_cannot_hand_a_module_role_a_core_read` failed first).
+5. **Fixed during build** — a `tenant.role.*` template in `memberService` pinned those keys to the
+   app shell (see the design note).
+6. Verified — the agent's `/auth/me` holds exactly the two lending codenames and none of the core
+   reads; every business-ceiling check in the code tests canon role codes, so a module role can
+   never reach one (BR-5); `seed_reference_data` touches only the canon rows.
+7. **For the lead** — with the dev flag on, the Features screen shows raw ids for the unreleased
+   modules (`nav.module.lending`, `settings.module.lending.description`, locked `nav.module.gym`…).
+   Merchants never see it (A1), but each vertical's first commit must add `nav.module.<code>` and
+   `settings.module.<code>.description`, or its own `--shots` sweep will photograph raw ids.
+8. **For A16 (Track F)** — a scoped member without `reports.basic.read` currently lands on
+   `/set-password` then `/dashboard`; R49's first-visible-item landing is A16's.
+9. Harness lesson (not product): a click before hydration submits the login form natively as a GET
+   (`/login?email=…&password=…`); and a restarted `next-server` whose standalone directory was
+   rebuilt keeps its port with a deleted cwd, serving old HTML over new chunks (500 text/plain) —
+   find it by its listening socket, not by its cwd.
+
+Gates: platform_app, common, architecture and integration suites green; frontend team, settings,
+audit-log, tenant-switcher, utils and api jest 117 passed; `tsc`, eslint, prettier clean; locales
+split and checked (3900 keys).
 
 ## Decisions log
 

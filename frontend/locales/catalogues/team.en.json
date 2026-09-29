@@ -115,6 +115,8 @@
   "team.revoke.confirm": "Revoke invitation",
   "team.revoke.success": "Invitation revoked.",
   "team.revoke.title": "Revoke this invitation?",
+  "team.role.inactive": "Inactive while {module} is off",
+  "team.role.inactiveFeature": "Inactive while its feature is off",
   "team.status.accepted": "Joined",
   "team.status.expired": "Expired",
   "team.status.pending": "Waiting",

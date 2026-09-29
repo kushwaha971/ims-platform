@@ -16,8 +16,10 @@ import {
 } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
 
-import { DEFAULT_INVITE_ROLE, INVITABLE_ROLES } from '../constants/teamDefaults';
+import { DEFAULT_INVITE_ROLE } from '../constants/teamDefaults';
+import { useRoles } from '../hooks/useRoles';
 import { useMemberSchemas } from '../validation/memberSchemas';
+import { roleOptionLabel } from '../view-model/roleDisplay';
 
 import type { UseMembersResult } from '../hooks/useMembers';
 import type { AddMemberFormValues } from '../validation/memberSchemas';
@@ -48,7 +50,11 @@ export function AddMemberDialog({
   members,
 }: Readonly<{ members: UseMembersResult }>): React.JSX.Element {
   const { t } = useTranslation();
-  const { addMemberSchema } = useMemberSchemas();
+  // A13: roles from `GET /roles` (module roles of enabled modules included),
+  // fetched when the dialog first opens.
+  const roles = useRoles(members.addOpen);
+  const roleCodes = useMemo(() => roles.assignable.map((role) => role.code), [roles.assignable]);
+  const { addMemberSchema } = useMemberSchemas(roleCodes);
   const formId = useId();
 
   const defaults = useMemo(
@@ -80,8 +86,8 @@ export function AddMemberDialog({
   );
 
   const roleOptions = useMemo(
-    () => INVITABLE_ROLES.map((role) => ({ value: role, label: t(`tenant.role.${role}`) })),
-    [t]
+    () => roles.assignable.map((role) => ({ value: role.code, label: roleOptionLabel(t, role) })),
+    [roles.assignable, t]
   );
 
   const handleOpenChange = useCallback(

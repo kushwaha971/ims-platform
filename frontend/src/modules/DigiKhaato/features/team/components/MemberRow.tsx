@@ -45,6 +45,36 @@ export const MemberNameCell = memo(function MemberNameCell({
   );
 });
 
+/**
+ * A13 (PLT-X12 §7, BR-6) — the role, and for a module role the line under it:
+ * what the role cannot see, or that it is inactive while its module is off.
+ * The caption WRAPS rather than truncating — it is a sentence, and "Inactive
+ * while Lending is o…" hides exactly the word that says why.
+ */
+export const MemberRoleCell = memo(function MemberRoleCell({
+  label,
+  caption,
+  inactive,
+}: Readonly<{ label: string; caption: string | null; inactive: boolean }>) {
+  return (
+    <UbStack gap={0}>
+      <UbText as="span" variant="body-sm" tone="tertiary" truncate>
+        {label}
+      </UbText>
+      {caption && (
+        <UbText
+          as="span"
+          variant="caption"
+          tone={inactive ? 'warning' : 'tertiary'}
+          className="line-clamp-2 whitespace-normal break-words"
+        >
+          {caption}
+        </UbText>
+      )}
+    </UbStack>
+  );
+});
+
 export const MemberMetaCell = memo(function MemberMetaCell({ text }: Readonly<{ text: string }>) {
   return (
     <UbText as="span" variant="body-sm" tone="tertiary" truncate>

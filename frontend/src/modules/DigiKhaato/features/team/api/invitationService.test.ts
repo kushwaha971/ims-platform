@@ -50,6 +50,9 @@ describe('invitationService.listInvitations', () => {
       id: '11111111-1111-4111-8111-111111111111',
       email: 'sunita@example.com',
       role: 'staff',
+      // A13: a row without `role_label_id` (a server before module roles) keeps
+      // an empty id, which `roleDisplay` resolves to `tenant.role.staff`.
+      roleLabelId: '',
       status: 'pending',
       expiresAt: '2026-09-28T10:00:00Z',
       createdAt: '2026-09-21T10:00:00Z',

@@ -9,6 +9,7 @@
   "tenant.chooser.suspended.body": "इन्हें दोबारा इस्तेमाल करने के लिए अपने प्रदाता से संपर्क करें।",
   "tenant.role.accountant": "लेखाकार",
   "tenant.role.admin": "प्रबंधक",
+  "tenant.role.moduleFallback": "फ़ीचर की भूमिका",
   "tenant.role.owner": "मालिक",
   "tenant.role.staff": "कर्मचारी",
   "tenant.status.invited": "आमंत्रित",
