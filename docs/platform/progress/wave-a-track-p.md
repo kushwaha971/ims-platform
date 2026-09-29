@@ -16,8 +16,8 @@ and `reset_fy` from the settings screen.
 |---|---|---|
 | A1 release gate | done | `910d961` |
 | A12 engine enablement | done | `3e67449` |
-| A13 scoping, module roles | done | pending merge |
-| A8 perpetual counters | waits for A10 | — |
+| A13 scoping, module roles | done | `03fcbda` |
+| A8 perpetual counters | done | pending merge |
 | A9b closed-day calendar | waits for A8, A9a | — |
 | A6 party roles, relations | waits for A2 | — |
 | A7 reminders | waits for A2, A6, A10 | — |
@@ -281,6 +281,50 @@ in; 390 and 1280 px, English and Hindi; `scrollWidth` and per-element clipping m
 Gates: platform_app, common, architecture and integration suites green; frontend team, settings,
 audit-log, tenant-switcher, utils and api jest 117 passed; `tsc`, eslint, prettier clean; locales
 split and checked (3900 keys).
+
+## A8 — number kinds and the perpetual counter (FRD 00 PLT-X07, ADR-051) + owner Q14
+
+### Design note
+
+- `sequences.py`: `register_number_kind(kind, *, module, mode, default_prefix, padding, label_id)`
+  (fits the row or refused at start-up: kind ≤ 24, prefix ≤ 12, padding 0–10, mode `fy`|`perpetual`,
+  not a core series; idempotent; conflicting spec raises). `allocate_counter` takes the `'*'` row
+  (race-safe get-or-create then `FOR UPDATE`) and prints `prefix + zfill(padding)`;
+  `peek_counter` creates and locks nothing; `raise_counter(*, ctx, kind, next_number, via="import")`
+  refuses lower (409 `sequence_backwards {current, requested}`), is a no-op when equal, and writes
+  `counter.raised {kind, before, after, via}`. **One additive keyword beyond contracts §1.7:**
+  `via`, because FRD §6's audit row names it. `allocate_number` refuses a perpetual kind and a
+  registered FY kind takes its registered prefix and padding.
+- Migration `platform 0012_sequence_perpetual`: `ck_sequence_fy_label CHECK (fy_label = '*' OR
+  fy_label ~ '^[0-9]{4}-[0-9]{2}$')`. Round-tripped by the reversibility suite and forward/back on a
+  scratch database holding 96 real `2026-27` rows.
+- Settings numbering payload: every row gains `mode`; a registered kind of an effective module adds
+  `kind`, `module`, `label_id` and a mode-correct preview (`M-0001`, `1024`, `LN/26-27/0001`).
+  PUT accepts those kinds (perpetual rows validated without the year, padding 0 allowed), writes
+  the `'*'` row, and lowering is 409. A switched-off module's series is "not a document series".
+- **Owner Q14 (default adopted), which overrides FRD X07 BR-6** ("keep showing `reset_fy`"): the
+  question postdates the FRD and the task instructions name it. `reset_fy` is gone from the
+  numbering rows and ignored on PUT; `sales.default_kind` is gone from `values`, `sections` and the
+  defaults endpoint and ignored on PUT (an old client is not refused). The stored rows stay where
+  onboarding wrote them. The `kind_not_allowed` rule of that key's validator is still pinned by a
+  direct test, ready for the day it is wired.
+- **A10's handover applied** (Track F progress, "Handed to Track P"): `_values_view`,
+  `settings_payload.sections`, `preset_payload`, `_validate_values` and the save's
+  `schema_version` now use `specs_for` / `spec_for`, with A10's acceptance test
+  (`test_a_module_setting_is_shown_and_writable_only_while_its_module_is_on`).
+- Frontend: there is no numbering table on the Settings screen yet (the page defers Documents and
+  numbering until they have a consumer on screen), so A8 changes only `NumberingRow`'s type. The
+  "Never resets" caption and the lower-bound schema land with that screen.
+
+### A8 QA (adversarial self-review)
+
+1. Accepted — every numbering row gains `mode`, so each tenant's settings ETag changes once at
+   deploy; a client holding the old one gets the existing 412 "changed elsewhere" once and reloads.
+2. Verified — 20 threads allocating a fresh perpetual kind (the first allocation races to CREATE the
+   row) get `M-0001…M-0020`, no IntegrityError; a rolled-back transaction returns its number.
+3. Verified — the settings path writes the `'*'` row for a perpetual kind that has none yet, and a
+   perpetual `next_number` past 2^31 is a 400, not a DataError.
+4. The tests-first run failed on every new test (no functions, no CHECK) before the code existed.
 
 ## Decisions log
 

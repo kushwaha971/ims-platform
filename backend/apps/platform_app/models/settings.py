@@ -85,6 +85,13 @@ class DocumentSequence(TimeStampedModel):
             models.CheckConstraint(
                 condition=models.Q(next_number__gte=1), name="ck_sequence_next_number"
             ),
+            # A8 (ADR-051): a perpetual kind's one row is `'*'`; every other row
+            # is a financial year. The sentinel lives in a column named for
+            # years, so the database is what stops a typo becoming a series.
+            models.CheckConstraint(
+                condition=models.Q(fy_label="*") | models.Q(fy_label__regex=r"^[0-9]{4}-[0-9]{2}$"),
+                name="ck_sequence_fy_label",
+            ),
         ]
 
     def __str__(self) -> str:

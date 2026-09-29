@@ -211,6 +211,8 @@ class AuditAction:
     TENANT_SETTINGS_UPDATED = "tenant.settings.updated"
     JOB_REQUEUED = "job.requeued"
     REFERENCE_DATA_SEEDED = "platform.reference_data_seeded"
+    # ── A8 ── perpetual counters (ADR-051, contracts §5) ──────────────────
+    COUNTER_RAISED = "counter.raised"
 
 
 def diff_fields(

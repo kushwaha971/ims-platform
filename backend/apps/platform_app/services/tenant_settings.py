@@ -66,6 +66,21 @@ ENGINES_USED_BY: dict[str, frozenset[str]] = {
 
 PUT_TOP_LEVEL_KEYS = frozenset({"values", "numbering"})
 
+#: ── A8 ── owner Q14 (default adopted): settings the code stores but never reads
+#: are removed from the settings payload until they are wired — a switch whose
+#: effect nobody can see teaches a merchant the product is broken. The rows
+#: stay where onboarding wrote them; a PUT still carrying one (an old client)
+#: leaves it alone rather than refusing the whole save. `reset_fy` on the
+#: numbering rows is the other half: every series resets each year whatever it
+#: says (ADR-051), so it is neither shown nor written.
+UNWIRED_KEYS: frozenset[str] = frozenset({"sales.default_kind"})
+
+
+def _shown_specs(tenant: Any) -> dict[str, Any]:
+    """Core keys and the keys of the tenant's effective modules (A10's
+    `specs_for`), minus the unwired ones."""
+    return {k: s for k, s in schema.specs_for(tenant).items() if k not in UNWIRED_KEYS}
+
 
 class PreconditionFailed(BusinessRuleViolation):
     def __init__(self) -> None:
@@ -89,25 +104,40 @@ def _current_fy(tenant: Any) -> str:
 
 
 def _sequences(tenant: Any, fy_label: str, *, lock: bool = False) -> dict[str, Any]:
-    from apps.platform_app.models import DocumentSequence
+    """The current year's rows, and (A8) the perpetual `'*'` rows, by kind.
 
-    qs = DocumentSequence.objects.filter(tenant=tenant, fy_label=fy_label)
+    A kind is either `fy` or `perpetual`, never both, so one key per kind holds.
+    """
+    from apps.platform_app.models import DocumentSequence
+    from apps.platform_app.services.sequences import PERPETUAL, number_kind
+
+    qs = DocumentSequence.objects.filter(tenant=tenant, fy_label__in=(fy_label, PERPETUAL))
     if lock:
         qs = qs.select_for_update()
-    return {row.kind: row for row in qs}
+    rows: dict[str, Any] = {}
+    for row in qs:
+        spec = number_kind(row.kind)
+        perpetual = spec is not None and spec.mode == "perpetual"
+        if (row.fy_label == PERPETUAL) == perpetual:
+            rows[row.kind] = row
+    return rows
 
 
-def _reset_fy_map(rows: dict[str, Any]) -> dict[str, bool]:
-    row = rows.get(schema.NUMBERING_KEY)
-    stored = row.value if row is not None and isinstance(row.value, dict) else {}
-    return {
-        kind: bool((stored.get(kind) or {}).get("reset_fy", True))
-        for kind in schema.NUMBERING_KINDS
-    }
+def _shown_kinds(tenant: Any) -> list[Any]:
+    """A8 (FRD §2 flow 1): the registered number kinds of effective modules."""
+    from apps.platform_app.services.entitlements import effective_modules
+    from apps.platform_app.services.sequences import number_kinds
+
+    kinds = number_kinds()
+    if not kinds:
+        return []
+    effective = effective_modules(tenant)
+    return [spec for spec in kinds if spec.module in effective]
 
 
 def _numbering_view(tenant: Any, rows: dict[str, Any], sequences: dict[str, Any], fy: str) -> dict:
-    reset = _reset_fy_map(rows)
+    from apps.platform_app.services.sequences import format_counter
+
     default_prefix = dict(presets.NUMBERING_PREFIXES)
     view: dict[str, dict] = {}
     for kind in schema.NUMBERING_KINDS:
@@ -116,13 +146,36 @@ def _numbering_view(tenant: Any, rows: dict[str, Any], sequences: dict[str, Any]
         padding = seq.padding if seq is not None else presets.NUMBER_PADDING
         next_number = seq.next_number if seq is not None else 1
         view[kind] = {
+            "mode": "fy",
             "prefix": prefix,
             "next_number": next_number,
             "padding": padding,
-            "reset_fy": reset[kind],
             "preview": schema.format_number(
                 prefix=prefix, fy_label=fy, number=next_number, padding=padding
             ),
+        }
+    # A8: a module's kinds, only while the module is on (FRD §6).
+    for spec in _shown_kinds(tenant):
+        seq = sequences.get(spec.kind)
+        prefix = seq.prefix if seq is not None else spec.default_prefix
+        padding = seq.padding if seq is not None else spec.padding
+        next_number = seq.next_number if seq is not None else 1
+        preview = (
+            format_counter(prefix=prefix, number=next_number, padding=padding)
+            if spec.mode == "perpetual"
+            else schema.format_number(
+                prefix=prefix, fy_label=fy, number=next_number, padding=padding
+            )
+        )
+        view[spec.kind] = {
+            "kind": spec.kind,
+            "module": spec.module,
+            "mode": spec.mode,
+            "label_id": spec.label_id,
+            "prefix": prefix,
+            "padding": padding,
+            "next_number": next_number,
+            "preview": preview,
         }
     return view
 
@@ -130,7 +183,7 @@ def _numbering_view(tenant: Any, rows: dict[str, Any], sequences: dict[str, Any]
 def _values_view(tenant: Any, rows: dict[str, Any]) -> tuple[dict, dict]:
     values: dict[str, Any] = {}
     versions: dict[str, int] = {}
-    for key, spec in schema.SETTINGS.items():
+    for key, spec in _shown_specs(tenant).items():
         row = rows.get(key)
         if row is None:
             values[key] = spec.default(tenant.business_type)
@@ -184,7 +237,7 @@ def settings_payload(tenant: Any) -> dict:
         "schema_versions": versions,
         "numbering": numbering,
         "fy_label": fy,
-        "sections": {key: spec.section for key, spec in schema.SETTINGS.items()},
+        "sections": {key: spec.section for key, spec in _shown_specs(tenant).items()},
         "modules": modules_view(tenant),
         "etag": compute_etag(values, numbering),
     }
@@ -198,9 +251,9 @@ def preset_payload(tenant: Any) -> dict:
     Numbering's preset is the prefix, padding and `reset_fy`; the next number
     is never "reset", because that would be BR-1's forbidden renumbering.
     """
-    values = {key: spec.default(tenant.business_type) for key, spec in schema.SETTINGS.items()}
+    values = {key: spec.default(tenant.business_type) for key, spec in _shown_specs(tenant).items()}
     numbering = {
-        kind: {"prefix": prefix, "padding": presets.NUMBER_PADDING, "reset_fy": True}
+        kind: {"prefix": prefix, "padding": presets.NUMBER_PADDING}
         for kind, prefix in presets.NUMBERING_PREFIXES
     }
     return {"values": values, "numbering": numbering, "business_type": tenant.business_type}
@@ -216,7 +269,9 @@ def _validate_values(tenant: Any, incoming: Any) -> dict[str, Any]:
     cleaned: dict[str, Any] = {}
     kind_refused: str | None = None
     for key, value in incoming.items():
-        spec = schema.SETTINGS.get(key)
+        if key in UNWIRED_KEYS:
+            continue  # owner Q14: not shown, so not written; an old client is not refused
+        spec = schema.spec_for(tenant, key)
         if spec is None:
             errors[key] = ["This is not a setting."]
             continue
@@ -237,7 +292,34 @@ def _validate_values(tenant: Any, incoming: Any) -> dict[str, Any]:
     return cleaned
 
 
+def _numbering_row_errors(*, kind: str, row: dict, fy: str) -> list[str]:
+    """FR-3's rules for an FY series; A8's for a perpetual one (no year, so no
+    Rule 46 length, and padding may be 0 — an accession number is `1024`)."""
+    from apps.platform_app.services.sequences import MAX_NEXT_NUMBER, number_kind
+
+    spec = number_kind(kind)
+    if spec is None or spec.mode == "fy":
+        return schema.numbering_row_errors(
+            fy_label=fy, **{k: row[k] for k in ("prefix", "padding", "next_number")}
+        )
+    prefix, padding, next_number = row["prefix"], row["padding"], row["next_number"]
+    if not isinstance(prefix, str) or not schema.NUMBERING_PREFIX_RE.match(prefix):
+        return ["Use capital letters, numbers, / or - (max 12)."]
+    if isinstance(padding, bool) or not isinstance(padding, int) or not 0 <= padding <= 10:
+        return ["Choose 0–10 digits."]
+    if (
+        isinstance(next_number, bool)
+        or not isinstance(next_number, int)
+        or not 1 <= next_number <= MAX_NEXT_NUMBER
+    ):
+        return ["Enter a whole number of 1 or more."]
+    return []
+
+
 def _validate_numbering(incoming: Any, current: dict, fy: str) -> dict[str, dict]:
+    """`current` is the numbering view: the core series plus the registered kinds
+    of effective modules (A8), so a switched-off module's series is refused as
+    "not a document series" like any unknown one. `reset_fy` is ignored (Q14)."""
     if not isinstance(incoming, dict):
         raise ValidationFailed({"numbering": ["Expected an object keyed by document kind."]})
     errors: dict[str, list[str]] = {}
@@ -245,7 +327,7 @@ def _validate_numbering(incoming: Any, current: dict, fy: str) -> dict[str, dict
     backwards: dict[str, int] = {}
     for kind, row in incoming.items():
         field = f"numbering.{kind}"
-        if kind not in schema.NUMBERING_KINDS or not isinstance(row, dict):
+        if kind not in current or not isinstance(row, dict):
             errors[field] = ["This is not a document series."]
             continue
         now = current[kind]
@@ -253,19 +335,13 @@ def _validate_numbering(incoming: Any, current: dict, fy: str) -> dict[str, dict
             "prefix": str(row.get("prefix", now["prefix"]) or "").strip().upper(),
             "next_number": row.get("next_number", now["next_number"]),
             "padding": row.get("padding", now["padding"]),
-            "reset_fy": row.get("reset_fy", now["reset_fy"]),
         }
-        if not isinstance(wanted["reset_fy"], bool):
-            errors[field] = ["Choose on or off for the yearly restart."]
-            continue
         changed = any(wanted[k] != now[k] for k in ("prefix", "next_number", "padding"))
         if changed:
             # A row is re-validated only when it changes: a preset that already
             # breaks the 16-character rule (PAYOUT/26-27/0001) must not make every
             # unrelated save of the page fail.
-            row_errors = schema.numbering_row_errors(
-                fy_label=fy, **{k: wanted[k] for k in ("prefix", "padding", "next_number")}
-            )
+            row_errors = _numbering_row_errors(kind=kind, row=wanted, fy=fy)
             if row_errors:
                 errors[field] = row_errors
                 continue
@@ -327,48 +403,40 @@ def save_settings(*, tenant: Any, body: Any, if_match: str | None, ctx: Ctx) -> 
             TenantSetting.objects.update_or_create(
                 tenant=tenant,
                 key=key,
-                defaults={"value": value, "schema_version": schema.SETTINGS[key].schema_version},
+                defaults={
+                    "value": value,
+                    "schema_version": schema.spec_for(tenant, key).schema_version,
+                },
             )
 
         numbering_changed_before: dict[str, Any] = {}
         numbering_changed_after: dict[str, Any] = {}
-        reset_map = _reset_fy_map(rows)
-        reset_dirty = False
+        from apps.platform_app.services.sequences import PERPETUAL
+
         for kind, wanted in cleaned_numbering.items():
             now = numbering_before[kind]
-            if all(wanted[k] == now[k] for k in ("prefix", "next_number", "padding", "reset_fy")):
+            if all(wanted[k] == now[k] for k in ("prefix", "next_number", "padding")):
                 continue
-            numbering_changed_before[kind] = {k: v for k, v in now.items() if k != "preview"}
+            numbering_changed_before[kind] = {
+                k: now[k] for k in ("prefix", "next_number", "padding")
+            }
             numbering_changed_after[kind] = dict(wanted)
-            if any(wanted[k] != now[k] for k in ("prefix", "next_number", "padding")):
-                seq = sequences.get(kind)
-                if seq is None:
-                    DocumentSequence.objects.create(
-                        tenant=tenant,
-                        kind=kind,
-                        fy_label=fy,
-                        prefix=wanted["prefix"],
-                        next_number=wanted["next_number"],
-                        padding=wanted["padding"],
-                    )
-                else:
-                    seq.prefix = wanted["prefix"]
-                    seq.next_number = wanted["next_number"]
-                    seq.padding = wanted["padding"]
-                    seq.save(update_fields=["prefix", "next_number", "padding", "updated_at"])
-            if wanted["reset_fy"] != reset_map[kind]:
-                reset_map[kind] = wanted["reset_fy"]
-                reset_dirty = True
-        if reset_dirty:
-            row = rows.get(schema.NUMBERING_KEY)
-            stored = dict(row.value) if row is not None and isinstance(row.value, dict) else {}
-            for kind, flag in reset_map.items():
-                entry = dict(stored.get(kind) or {})
-                entry["reset_fy"] = flag
-                stored[kind] = entry
-            TenantSetting.objects.update_or_create(
-                tenant=tenant, key=schema.NUMBERING_KEY, defaults={"value": stored}
-            )
+            seq = sequences.get(kind)
+            if seq is None:
+                DocumentSequence.objects.create(
+                    tenant=tenant,
+                    kind=kind,
+                    # A8: a perpetual kind's one row is `'*'`, never the year.
+                    fy_label=PERPETUAL if now["mode"] == "perpetual" else fy,
+                    prefix=wanted["prefix"],
+                    next_number=wanted["next_number"],
+                    padding=wanted["padding"],
+                )
+            else:
+                seq.prefix = wanted["prefix"]
+                seq.next_number = wanted["next_number"]
+                seq.padding = wanted["padding"]
+                seq.save(update_fields=["prefix", "next_number", "padding", "updated_at"])
 
         if changed_after:
             write_audit(

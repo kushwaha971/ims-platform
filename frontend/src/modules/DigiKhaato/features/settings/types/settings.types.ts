@@ -18,11 +18,21 @@ export interface SettingsValues {
   readonly [key: string]: unknown;
 }
 
+/**
+ * One series in the numbering block. A8 (ADR-051): `mode` is `fy` (restarts
+ * each financial year, `INV/26-27/0042`) or `perpetual` (never resets, `M-0007`,
+ * `1024`); a module's registered kinds also carry `kind`, `module` and the
+ * catalogue key they are named with. `reset_fy` is gone (owner Q14): every
+ * series resets each year whatever it said, so it is not shown until it is wired.
+ */
 export interface NumberingRow {
+  readonly mode: 'fy' | 'perpetual';
+  readonly kind?: string;
+  readonly module?: string;
+  readonly label_id?: string;
   readonly prefix: string;
   readonly next_number: number;
   readonly padding: number;
-  readonly reset_fy: boolean;
   readonly preview: string;
 }
 
