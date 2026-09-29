@@ -1510,3 +1510,66 @@ are committed as the record.
 **Not done, recorded.** Part 23 §23.2.6 in the Project SSOT still describes the round-1 mark.
 `theme_color` (manifest and `viewport.themeColor`) stays `#4A47D6`, the app's accent, not the
 cover's `#3A36B8`.
+
+## CR-2026-09-29-PLATFORM-B — the landing page is repositioned: one platform, many modules, a shared core
+
+**State:** `built`. It needs owner review of the copy, and the module statuses follow CR-2026-09-29-PLATFORM-A.
+**Target:** `/` (`features/landing`), `docs/platform/01-current-capabilities.md`, vision §4 (honest landing page).
+
+**Owner direction.** YourKhata becomes one all-in-one platform where different businesses and
+organisations keep their records, documents, transactions and collections, each module kept
+separate. Phase 1 is only the landing page. Planned modules are shown as planned, with no
+screenshots, demo, dates or "available now" call to action. Drop "kirana" and all regional jargon.
+
+**What changed.**
+
+* **Inventory first.** `docs/platform/01-current-capabilities.md` lists what is live, read from
+  the routes, pages and ready navigation entries. It is the page's source of truth. Compiling it
+  found a false claim on the old page: "share a link" for **statements**. Statement share links
+  need `parties_share_link` (PTY-09), which has no table. Share links exist for sales documents
+  only, and the card now says so.
+* **One config, `features/landing/config/modules.ts`.** It holds five modules, each with
+  `status: 'live' | 'in_development' | 'planned'` and the core pieces it builds on. The hero
+  badge, the module map, the module cards, "Who it's for" and the FAQ all read it. Its statuses
+  must equal the vision doc's §2 table, and a test parses that table.
+* **The new order:**
+  1. the hero, still the live shop module's real recordings;
+  2. the **module map** (#platform): the modules drawn as tiles on top of one shared-core slab,
+     with measured connectors, solid for live and dashed for planned;
+  3. **one card per module** (#modules): the live card has Start free and "See it in use"; the
+     planned cards are text only;
+  4. the use-case explorer (#features), as the live module's deep dive;
+  5. **Who it's for**, one row per module;
+  6. also included;
+  7. how it works;
+  8. pricing, with a line saying that pricing for other modules is decided when they launch;
+  9. the FAQ, with "Which modules can I use today?" and "Is the lending module available?"
+     added, each answered "Not yet… planned";
+  10. the closing band.
+* **The honesty rules are tests.**
+  * A planned card, tile or row holds no video, image or frame, no demo and no sign-up link, and
+    always carries the Planned chip. This is checked in jsdom and again in the browser at nine
+    widths, together with the requests the page makes.
+  * A planned module's words (lender, library, gym, room…) may appear only in
+    `landing.module.<planned id>.*` keys and the two FAQ answers, which must say "planned" and
+    "not". The rendered page is checked by ancestor as well.
+  * No "kirana", "udhaar" or "khata" as an English common noun, in either language, in text,
+    readable attributes or the metadata.
+  * "One module today. Four more planned." is checked against the config's counts.
+  * The lending card and FAQ both say it will not lend or move money (vision §4).
+* **Terminology.**
+  * English copy now says ledger, account, dues and money owed. "Ledger" replaces the
+    explorer's "Khata" tab. The media file ids keep `khata`, because they are code.
+  * Hindi keeps the everyday words उधार and खाता.
+  * The brand name is unchanged.
+
+**Budget.** The `/` route grew from 30.3 KB to about 35 KB: +1.5 KB of English strings, and the
+rest is the three new components. It was re-baselined with a dated note in
+`bundle-budgets.json`.
+
+**Not done, recorded.**
+
+* The recordings still show the seeded demo business "Sharma Kirana Store" in the app's sidebar,
+  and the narrated demo's captions say it. Re-recording against a neutrally named demo business
+  is an owner decision (it needs the recording pipeline and new narration).
+* Part 43 in the Project should register this CR. The coordinator owns that sync.

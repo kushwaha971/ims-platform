@@ -145,6 +145,26 @@ same change.
 When none of these fits, add the new component to `src/design-system`, add it
 to this table in the same change, and write down which Figma node it follows.
 
+### The landing page's module pieces (feature-local, CR-2026-09-29-PLATFORM-B)
+
+Three pieces in `features/landing/components/LandingModuleParts.tsx` are deliberately NOT `Ub*`,
+because only the landing page shows modules that are not built (the app never does, §6):
+
+- `ModuleStatusChip` is `UbStatusBadge` with a word and a dot. Live has a filled dot and the
+  success tone. Planned has a hollow ring and the neutral tone. In development has the warning
+  tone. The label is never "Soon".
+- `ModuleIconTile`: a live module is a filled accent tile; any other module is a dashed outline
+  with a muted icon. The dashed line is the whole "not built yet" illustration.
+- `CoreChip`: `md` uses the full core name in the map's core slab, and `sm` uses the short name
+  in a card's "Built on" row, so the rows stay even.
+
+The module map (`PlatformMap.tsx`) is a stack: module tiles on top, the core slab under them,
+and connectors between. From `lg` the bus runs `calc((100% - 4rem) / 10)` in from each edge,
+which is exact for five columns at `gap-4`, and `e2e/landing.mjs` measures that every stub sits
+under its tile's centre. Anything that represents a module carries `data-module-card` and
+`data-module-status`. A planned one must hold the chip and no media or sign-up link, and a test
+checks it.
+
 ### Wave 3 (Sprint 3, §32.6.4) — what was built and what was not
 
 Part 23 §23.3 lists six wave-3 components. Four exist; two were considered and
