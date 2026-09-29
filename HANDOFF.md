@@ -377,6 +377,43 @@ Serve for QA:
 
 No module code before the FRDs are finished.
 
+## 8g. 30 Sep: Phase 3 (documentation and architecture) DONE (a9a01d6…8801d2b)
+
+**Read these, in this order, before any module work:**
+1. `docs/platform/00-platform-vision.md`: rules and the module map.
+2. `docs/platform/10-architecture.md`: boundaries, registries and the reuse map. §17 holds all 72 contract resolutions.
+3. `docs/platform/11-contracts.md`: **v1, FINAL FOR IMPLEMENTATION**. Any change goes through the architecture owner.
+4. ADR-041…060 in `docs/38-architecture-decision-records.md`.
+5. The FRDs in `docs/platform/frd/`:
+
+   | File | Features |
+   |---|---|
+   | `00-core-and-engines.md` | Wave A core items PLT-X01…X14, plus the dues, attendance and bookings engines |
+   | `library.md` | LIB-01…14 |
+   | `lending.md` | LEN-01…14 |
+   | `gym.md` | GYM-01…21 |
+   | `hospitality.md` | HTL-01…19 |
+
+6. `docs/platform/12-implementation-plan.md`: waves, tracks, file ownership, migration reservations and gates.
+7. `docs/platform/13-owner-questions.md`: 24 questions, each with the **default the build uses if unanswered**.
+
+**Key architecture decisions:**
+- Structure: verticals → engines (`apps/dues`, `apps/attendance`, `apps/bookings`) → core, never sideways; calls go through registries filled in `AppConfig.ready()`.
+- One party balance, split into `bucket` lines (main, loan, deposit). Held deposits are a core table.
+- Taxable dues raise sales documents through a core document port.
+- Module profile tables serve as roles.
+- Allocation reuses `payments_allocation`.
+- Bookings are one row per resource per night.
+- Row scoping gives module roles (agent, trainer, housekeeping) access only to their own records.
+- IDs are stored as type plus last 4 characters only.
+- Reminder guardrails live in core.
+
+**Build order:**
+- **Wave A**: core foundations, 16 tasks across 3 tracks (M: A14→A2→A4a→A5; P: A1→A12→A13→A8→A9b→A6→A7; F: A11→A9a→A10→A16→A15→A4b).
+- **Wave B**: Library first, plus the dues and attendance engines.
+- **Wave C**: Gym, then Lending.
+- **Wave D**: bookings engine, then Hospitality.
+
 ## 9. Exact next steps
 
 State at e1ad11d (retest verdict: READY FOR UAT; all 4 High, 7/7 Medium, 12/12 Low fixed after e1ad11d; regression 894/899 with the 5 remaining harness-only landing checks fixed in e1ad11d):

@@ -6,9 +6,9 @@ Owner direction of 29 Sep 2026: [00-platform-vision.md](00-platform-vision.md). 
 |---|---|---|---|
 | 1 | Analyse the application; update the landing page to the platform vision | **DONE 29 Sep**; synced to the owner's Mac | `01-current-capabilities.md`; landing page (`features/landing`); `config/modules.ts` |
 | 2 | Research the modules: lending, library, gym, hospitality, candidates | **Done 29 Sep**. Coaching & tuition was researched, then declined by the owner (not in scope) | `research/*.md` |
-| 3 | Module documentation (FRDs) | **In progress.** Step 1, the cross-module architecture decisions, done 29 Sep; the FRDs are next | `10-architecture.md`, `11-contracts.md`, ADR-041–055; then `frd/*.md` |
-| 4 | Architecture review and reuse map | Decisions and reuse map written in Phase 3 step 1 (so the FRDs can cite them); the review of the finished FRDs is still to do | `10-architecture.md` §12, ADRs |
-| 5 | Implementation | Not started | |
+| 3 | Module documentation (FRDs) | **DONE 30 Sep** | `frd/00-core-and-engines.md`, `frd/{library,lending,gym,hospitality}.md`; `10-architecture.md` §17 (72 resolutions); `11-contracts.md` v1 FINAL; `12-implementation-plan.md`; `13-owner-questions.md` |
+| 4 | Architecture review and reuse map | **DONE 30 Sep** (ADR-041…060; reuse map in 10-architecture) | `10-architecture.md`, ADRs |
+| 5 | Implementation | **Next: Wave A (core foundations)**, then B (Library + dues + attendance), C (Gym, Lending), D (Bookings, Hospitality) | `12-implementation-plan.md` |
 | 6 | QA, fixes, integration | Not started | |
 | 7 | Final sync and handoff | Not started | |
 
@@ -90,3 +90,5 @@ against the live stack.
 - [ ] Pricing decided and approved (`pricing.ts` status plus the landing flag).
 - [ ] Demo films hosted (`NEXT_PUBLIC_DEMO_VIDEO_URL_*`).
 - [ ] Staging kept out of search indexes (BACKLOG).
+
+- **30 Sep, Phase 3 closed.** Committed: FRDs 22122f0 (core and engines, 30 features), 58a0ee6 (Library LIB-01…14), fb24d04 (Lending LEN-01…14), 80f39ec (Gym GYM-01…21), db8fc74 (Hotel HTL-01…19). The architecture owner resolved all 85 contract questions (R1–R72, aae1e74), froze contracts v1, added ADR-056…060, amended the FRDs (914a3e3), and wrote the implementation plan and owner questions (8801d2b). Owner questions have build defaults, so nothing blocks Wave A.
