@@ -45,7 +45,7 @@ export const splitAroundWord = (message: string): readonly [string, string] => {
  * The rotating word names what businesses across the modules keep track of
  * (CR-2026-09-29-PLATFORM-D): a shop's dues, bills and stock, and the fees and
  * collections other modules keep. Only words that belong to no single module —
- * "fees" is a gym's, a library's and a coaching centre's alike — so the hero
+ * "fees" is a gym's and a library's alike — so the hero
  * never speaks for one module outside its own card (`moduleVocabulary.ts`).
  */
 export const ROTATING_WORD_KEYS = [

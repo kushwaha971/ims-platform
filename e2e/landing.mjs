@@ -24,7 +24,8 @@
  *     not playing;
  *   - Hindi renders the Hindi hero.
  *   - the module map and cards (CR-2026-09-29-PLATFORM-D), at every width:
- *     all six modules in the map, the cards and "Who it's for"; NO status
+ *     the five modules in the map, the cards and "Who it's for" (coaching,
+ *     withdrawn by the owner, named nowhere); NO status
  *     chip, attribute or word anywhere on the page; a module without media
  *     holds no video, image or frame and causes no media request; no module
  *     element is wider than its own box; and from `lg` each map tile's
@@ -178,11 +179,13 @@ for (const [width, height] of WIDTHS) {
         /\blive\b|\bplanned\b|in development|coming soon|\bsoon\b|not yet available|cannot be used yet/gi,
       );
       const withMedia = els.filter((el) => el.querySelector('[data-module-stage="media"]')).map((el) => el.id);
-      return { count: els.length, ids, withMedia, media, overflowing, statusMarks, statusWords };
+      // Coaching & tuition was withdrawn by the owner on 29 Sep: named nowhere.
+      const coaching = /coaching|tuition/i.test(document.body.innerText);
+      return { count: els.length, ids, withMedia, media, overflowing, statusMarks, statusWords, coaching };
     });
     record(
-      `${tag}: six modules, no status chip or word, no media without recordings, nothing overflows its card`,
-      modules.count === 18 && modules.ids.length === 6 && modules.ids.includes("coaching") &&
+      `${tag}: five modules (no coaching), no status chip or word, no media without recordings, nothing overflows its card`,
+      modules.count === 15 && modules.ids.length === 5 && !modules.ids.includes("coaching") && !modules.coaching &&
         JSON.stringify(modules.withMedia) === JSON.stringify(["module-shop"]) &&
         modules.media.length === 0 && modules.overflowing.length === 0 &&
         modules.statusMarks === 0 && !modules.statusWords,
@@ -226,7 +229,7 @@ for (const [width, height] of WIDTHS) {
       });
       record(
         `${tag}: each map tile's connector sits under its centre`,
-        drift.length === 6 && drift.every((d) => d <= 2),
+        drift.length === 5 && drift.every((d) => d <= 2),
         drift.map((d) => d.toFixed(1)).join(", "),
       );
     }

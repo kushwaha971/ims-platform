@@ -9,9 +9,10 @@
  *    neither is cut off in a result;
  *  - both describe the WHOLE platform, because the page presents every module
  *    as part of the product (CR-2026-09-29-PLATFORM-D). The title reaches all
- *    six in four words — bills (shop), fees (library, gym, coaching),
- *    collections (lending), bookings (hotel) — and the description names each
- *    one. Plain words only: a result says "loan collections" and "room
+ *    five in four words — bills (shop), fees (library, gym), collections
+ *    (lending), bookings (hotel) — and the description names each one.
+ *    Coaching & tuition was withdrawn by the owner on 29 Sep and is named
+ *    nowhere. Plain words only: a result says "loan collections" and "room
  *    bookings", not the trade's shorthand;
  *  - no jargon ("kirana", English "udhaar" / "khata"), vision §4.
  *
@@ -28,12 +29,12 @@ export const BRAND_NAME = 'YourKhata';
 export const LANDING_TITLE = 'YourKhata: bills, fees, collections and bookings in one app';
 
 export const LANDING_DESCRIPTION =
-  'GST bills and stock, loan collections, library and gym members, room bookings and student fees: all your records in one place, in Hindi or English.';
+  'GST bills and stock, loan collections, library and gym members and their fees, and room bookings: all your records in one place, in Hindi or English.';
 
 export const LANDING_SHARE_TITLE = 'YourKhata — one place for all your business records';
 
 export const LANDING_SHARE_DESCRIPTION =
-  'Shop bills and stock, loan collections, library and gym members, room bookings and student fees, on one shared core. Hindi or English.';
+  'Shop bills and stock, loan collections, library and gym members, and room bookings, on one shared core. Hindi or English.';
 
 /**
  * The link-preview card: 1200 × 630, rendered from the brand SVGs and the hero

@@ -620,7 +620,14 @@
   "below-the-fold dynamic() refused above, this moves bytes nobody sees out of",
   "the route rather than into a second request. Measured: route 37.1 KB,",
   "firstLoad 268.3 KB. Route-local; the shell and every other route unchanged.",
-  "  /                            route 36 -> 38, firstLoad 267 -> 269"
+  "  /                            route 36 -> 38, firstLoad 267 -> 269",
+  "",
+  "── 29 Sep 2026: Coaching & tuition withdrawn by the owner (PLATFORM-D amendment) ──",
+  "The sixth module's card, map tile, audience row, icon and copy came back out.",
+  "Measured: route 37.1 -> 36.8 KB, firstLoad 268.3 -> 268.0 KB. The route is",
+  "tightened; firstLoad stays at 269, because 268.0 sits on the line and a",
+  "centred last row of cards (four class names) was enough to tip it.",
+  "  /                            route 38 -> 37, firstLoad 269 (unchanged)"
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -1308,7 +1315,7 @@
    "firstLoad": 288
   },
   "/": {
-   "route": 38,
+   "route": 37,
    "firstLoad": 269
   }
  },

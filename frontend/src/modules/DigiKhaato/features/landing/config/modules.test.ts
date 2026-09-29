@@ -59,20 +59,16 @@ describe('the landing page module config', () => {
     });
   });
 
-  /** Owner, 29 Sep: this order, and coaching is the sixth module. */
-  it('lists the six modules in the owner\'s order', () => {
-    expect(LANDING_MODULES.map((module) => module.id)).toEqual([
-      'shop',
-      'lending',
-      'library',
-      'gym',
-      'hotel',
-      'coaching',
-    ]);
-    expect(LANDING_MODULES.find((module) => module.id === 'coaching')).toMatchObject({
-      visionGroup: 'Coaching & tuition',
-      status: 'planned',
-    });
+  /**
+   * Owner, 29 Sep: these five, in this order. Coaching & tuition was added
+   * and then withdrawn the same day ("I need library mgmt system, not
+   * coaching"); it is on neither the vision map nor the page.
+   */
+  it('lists the five modules in the owner\'s order, and no coaching', () => {
+    expect(LANDING_MODULES.map((module) => module.id)).toEqual(['shop', 'lending', 'library', 'gym', 'hotel']);
+    expect(LANDING_MODULES.map((module) => module.visionGroup)).not.toContain('Coaching & tuition');
+    expect(Object.keys(enMessages).filter((key) => key.startsWith('landing.module.coaching.'))).toEqual([]);
+    expect(Object.keys(hiMessages).filter((key) => key.startsWith('landing.module.coaching.'))).toEqual([]);
   });
 
   it('has every module and core piece named in both languages, with the same lines each', () => {
@@ -109,12 +105,6 @@ describe('the landing page module config', () => {
       expect(enMessages[module.media.altKey]).toBeTruthy();
       expect(hiMessages[module.media.altKey]).toBeTruthy();
     });
-  });
-
-  /** Hindi names use ordinary words (vision §4). */
-  it('names coaching in ordinary Hindi', () => {
-    expect(enMessages['landing.module.coaching.name']).toBe('Coaching & tuition');
-    expect(hiMessages['landing.module.coaching.name']).toBe('कोचिंग और ट्यूशन');
   });
 
   /** The FAQ's "which modules are there" names every module, in both languages. */

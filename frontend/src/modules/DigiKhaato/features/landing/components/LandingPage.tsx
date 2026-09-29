@@ -49,7 +49,7 @@ const PricingSection = dynamic(() => import('./PricingSection').then((module) =>
  * the product, from `config/modules.ts` — no Live / Planned label anywhere. A
  * module with recordings shows them; one without shows text and an icon
  * illustration, never an invented screen. A module's own words (borrower,
- * library, guest, student…) render only inside that module's elements
+ * library, guest…) render only inside that module's elements
  * (`data-module-id`) or the FAQ answer that names every module
  * (`data-module-summary`); `src/tests/moduleVocabulary.ts` is the list.
  *

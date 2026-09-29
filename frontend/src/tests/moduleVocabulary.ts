@@ -5,8 +5,8 @@ import type { LandingModuleId } from 'modules/DigiKhaato/features/landing/config
  * languages. The landing page presents every module as part of the product,
  * so the guard is no longer "planned words stay in planned places" but a
  * simpler one: a module's own words stay in that module's own places. A
- * borrower belongs on the lending card, a guest on the hotel card, a student
- * on the coaching card — the same word on the shop's explorer, in the hero or
+ * borrower belongs on the lending card, a guest on the hotel card, a book
+ * on the library card — the same word on the shop's explorer, in the hero or
  * on the gym's card would describe something that module does not do.
  *
  * Two tests read this list. `unbuiltFeatureCopy.test.ts` checks the catalogue
@@ -16,8 +16,8 @@ import type { LandingModuleId } from 'modules/DigiKhaato/features/landing/config
  * `[data-module-summary]`), which also catches a hard-coded string.
  *
  * Only words unique to one module are listed. Words two modules share —
- * member (gym and library), fees, attendance (gym and coaching), instalments
- * (lending and coaching), refunds, collect/वसूली (a shop collects too) — are
+ * member (gym and library), fees, attendance, instalments, refunds,
+ * collect/वसूली (a shop collects too) — are
  * nobody's, and are not. Shop & billing has no list: it is the platform's
  * first module and its words (bill, stock, GST) are the page's everyday
  * vocabulary. "हिसाब-किताब" is the everyday Hindi for "accounts" and is
@@ -40,11 +40,17 @@ export const MODULE_WORDS: Readonly<Record<Exclude<LandingModuleId, 'shop'>, { e
     en: /hotel|\bguests?\b|\brooms?\b|booking|\bbooked\b|check-?(in|out)\b/i,
     hi: /होटल|गेस्ट हाउस|कमर[ाे]|बुकिंग|बुक |चेक-इन|चेक-आउट|मेहमान/u,
   },
-  coaching: {
-    en: /coaching|tuition|\btutors?\b|\bstudents?\b|guardian|\bbatch(es)?\b|\bclass(es)?\b/i,
-    hi: /कोचिंग|ट्यूशन|ट्यूटर|छात्र|अभिभावक|बैच|क्लास/u,
-  },
 };
+
+/**
+ * Coaching & tuition: added and withdrawn by the owner on 29 Sep 2026 ("I need
+ * library mgmt system, not coaching"). Kept as a list so the page cannot
+ * name it again by accident; `research/coaching.md` stays for reference.
+ */
+export const WITHDRAWN_MODULE_WORDS = {
+  en: /coaching|tuition|\btutors?\b|\bstudents?\b|guardian/i,
+  hi: /कोचिंग|ट्यूशन|ट्यूटर|छात्र|अभिभावक/u,
+} as const;
 
 /** Keys that name EVERY module at once, and may therefore use any module's words. */
 export const SUMMARY_KEYS: readonly string[] = ['landing.faq.modules.q', 'landing.faq.modules.a'];

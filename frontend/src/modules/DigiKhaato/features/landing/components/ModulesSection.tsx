@@ -22,7 +22,7 @@ import { LANDING_CONTAINER, LANDING_SECTION, LandingSectionHeading } from './Lan
  * There is no status on it and nothing that differs by status, so the day a
  * module ships its recordings the change is `media` in the config and this
  * file is untouched. The grid is 1 → 2 → 3 columns and does not care how many
- * modules there are.
+ * modules there are; a short last row is centred (`CARD_CELL`).
  *
  * A card without media holds no `<video>`, `<img>` or frame — the owner's rule
  * that nothing is invented — and `LandingPage.test.tsx` checks it on the DOM.
@@ -104,6 +104,16 @@ function ModuleCard({
   );
 }
 
+/**
+ * Two cards a row from `md`, three from `xl`, each card two tracks of a
+ * 4- / 6-track grid so a SHORT last row is centred rather than leaving a hole:
+ * a lone last card starts at track 2 of 4; a last pair starts at track 2 of 6.
+ * Written against the count, not for five, so a module added or removed in
+ * the config still lays out evenly.
+ */
+const CARD_CELL =
+  'md:col-span-2 md:[&:last-child:nth-child(odd)]:col-start-2 xl:[&:last-child:nth-child(odd)]:col-start-auto xl:[&:nth-last-child(2):nth-child(3n+1)]:col-start-2 xl:[&:last-child:nth-child(3n+1)]:col-start-3';
+
 function ModulesSectionBase() {
   const { t } = useTranslation();
   const videoLabels = {
@@ -125,9 +135,9 @@ function ModulesSectionBase() {
           lead={t('landing.modules.lead')}
           keyLine={t('landing.modules.key')}
         />
-        <UbReveal as="ul" stagger className="mt-12 grid gap-4 md:grid-cols-2 md:gap-5 xl:grid-cols-3">
+        <UbReveal as="ul" stagger className="mt-12 grid gap-4 md:grid-cols-4 md:gap-5 xl:grid-cols-6">
           {LANDING_MODULES.map((module) => (
-            <UbBox as="li" key={module.id}>
+            <UbBox as="li" key={module.id} className={CARD_CELL}>
               <ModuleCard module={module} t={t} videoLabels={videoLabels} />
             </UbBox>
           ))}

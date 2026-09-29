@@ -73,11 +73,12 @@ describe('the landing page metadata', () => {
 
   /**
    * CR-2026-09-29-PLATFORM-D: the result describes the WHOLE platform. The
-   * title reaches all six modules — bills (shop), fees (library, gym,
-   * coaching), collections (lending), bookings (hotel) — and the description
-   * names every module in plain words, not the shop alone.
+   * title reaches all five modules — bills (shop), fees (library, gym),
+   * collections (lending), bookings (hotel) — and the description names every
+   * module in plain words, not the shop alone. Coaching, withdrawn by the
+   * owner, is named nowhere.
    */
-  it('describes the whole platform: all six modules, in the title and the description', () => {
+  it('describes the whole platform: all five modules, in the title and the description', () => {
     for (const word of [/bills/, /fees/, /collections/, /bookings/]) expect(LANDING_TITLE).toMatch(word);
     for (const [module, word] of [
       ['shop', /GST bills|stock/],
@@ -85,13 +86,18 @@ describe('the landing page metadata', () => {
       ['library', /library/],
       ['gym', /gym/],
       ['hotel', /room bookings/],
-      ['coaching', /student fees/],
     ] as const) {
       expect({ module, description: word.test(LANDING_DESCRIPTION), share: word.test(LANDING_SHARE_DESCRIPTION) }).toEqual({
         module,
         description: true,
         share: true,
       });
+    }
+  });
+
+  it('names the withdrawn coaching module in no metadata', () => {
+    for (const text of [LANDING_TITLE, LANDING_DESCRIPTION, LANDING_SHARE_TITLE, LANDING_SHARE_DESCRIPTION]) {
+      expect(text).not.toMatch(/coaching|tuition|student/i);
     }
   });
 

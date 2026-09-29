@@ -181,15 +181,15 @@ describe('the module story', () => {
       (node) => !node.closest('[aria-hidden="true"]')
     );
 
-  /** The map tile, the card and the audience row — three places for every module, coaching included. */
-  it('shows every configured module, coaching included, in the map, the cards and "Who it\'s for"', () => {
+  /** The map tile, the card and the audience row — three places for each of the five modules. */
+  it('shows the five configured modules in the map, the cards and "Who it\'s for", and no coaching', () => {
     const { container } = renderPage();
     const elements = moduleElements(container);
 
     expect(elements.map((el) => `${el.dataset.moduleCard}:${el.dataset.moduleId}`).sort()).toEqual(
       LANDING_MODULES.flatMap((module) => ['audience', 'card', 'map'].map((where) => `${where}:${module.id}`)).sort()
     );
-    expect(LANDING_MODULES.map((module) => module.id)).toContain('coaching');
+    expect(LANDING_MODULES).toHaveLength(5);
     const map = screen.getByTestId('landing-module-map');
     expect(within(map).getAllByRole('link').map((link) => link.textContent)).toEqual([
       'Shop & billing',
@@ -197,11 +197,9 @@ describe('the module story', () => {
       'Library',
       'Gym & fitness',
       'Hotel & stays',
-      'Coaching & tuition',
     ]);
-    expect(within(container.querySelector('#module-coaching') as HTMLElement).getByRole('heading', { level: 3 })).toHaveTextContent(
-      'Coaching & tuition'
-    );
+    expect(container.querySelector('#module-coaching, [data-module-id="coaching"]')).toBeNull();
+    expect(container.textContent).not.toMatch(/coaching|tuition/i);
   });
 
   /**
@@ -227,7 +225,7 @@ describe('the module story', () => {
   it('gives a module without media no video or image, only its illustration and its words', () => {
     const { container } = renderPage();
     const withoutMedia = LANDING_MODULES.filter((module) => !module.media);
-    expect(withoutMedia.map((module) => module.id)).toEqual(['lending', 'library', 'gym', 'hotel', 'coaching']);
+    expect(withoutMedia.map((module) => module.id)).toEqual(['lending', 'library', 'gym', 'hotel']);
 
     moduleElements(container)
       .filter((el) => withoutMedia.some((module) => module.id === el.dataset.moduleId))
@@ -265,13 +263,13 @@ describe('the module story', () => {
   it('turns any module\'s illustration into its recording when the config gives it media', () => {
     const labels = { play: 'Play video', pause: 'Pause video', fallback: 'Open the video' };
     const t = (key: string) => key;
-    const { container, rerender } = renderWithProviders(<ModuleStage id="coaching" t={t} videoLabels={labels} />);
+    const { container, rerender } = renderWithProviders(<ModuleStage id="library" t={t} videoLabels={labels} />);
     expect(container.querySelector('[data-module-illustration]')).not.toBeNull();
     expect(container.querySelector('video, [data-device]')).toBeNull();
 
     rerender(
       <ModuleStage
-        id="coaching"
+        id="library"
         media={{ clip: FEATURE_CLIPS.khata.desktop, altKey: 'landing.uc.khata.alt' }}
         t={t}
         videoLabels={labels}

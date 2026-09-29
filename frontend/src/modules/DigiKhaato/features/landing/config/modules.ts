@@ -42,7 +42,7 @@ export const CORE_IDS = [
 ] as const;
 export type CoreId = (typeof CORE_IDS)[number];
 
-export type LandingModuleId = 'shop' | 'lending' | 'library' | 'gym' | 'hotel' | 'coaching';
+export type LandingModuleId = 'shop' | 'lending' | 'library' | 'gym' | 'hotel';
 
 /**
  * A module's recording: a DESKTOP loop (16:10) shown in a browser frame on
@@ -97,12 +97,6 @@ export const LANDING_MODULES: readonly LandingModule[] = [
     visionGroup: 'Hotel & stays',
     status: 'planned',
     buildsOn: ['people', 'money', 'payments', 'documents', 'reports', 'team'],
-  },
-  {
-    id: 'coaching',
-    visionGroup: 'Coaching & tuition',
-    status: 'planned',
-    buildsOn: ['people', 'money', 'payments', 'reminders', 'documents', 'reports'],
   },
 ];
 

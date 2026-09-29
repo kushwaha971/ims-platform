@@ -21,7 +21,7 @@
  *     review, carries NO offers while pricing is hidden (CR-2026-09-29-
  *     PLATFORM-D; the free plan only once it is shown but proposed), and its
  *     FAQ questions are exactly the ones the page renders;
- *   - the title and description reach all six modules; the SSR HTML carries
+ *   - the title and description reach all five modules, and name no coaching; the SSR HTML carries
  *     no status word, no #pricing while the flag is off, and the eight
  *     "Why YourKhata" points;
  *   - `/d/<token>` answers noindex in the meta AND the header, and carries no
@@ -118,12 +118,13 @@ record("/ answers 200 (Lighthouse http-status-code)", landing.status === 200, St
   record(`meta description is present and under 160 chars (${description.length})`, description.length > 50 && description.length < 160, description);
   record("title and description carry no jargon", !/kirana|udhaa?r|\bkhata\b/i.test(`${title} ${description}`.replace(/YourKhata/g, "")));
   record(
-    "title reaches all six modules (bills, fees, collections, bookings)",
+    "title reaches all five modules (bills, fees, collections, bookings)",
     [/bills/, /fees/, /collections/, /bookings/].every((word) => word.test(title)),
     title,
   );
-  const sixInDescription = [/GST bills|stock/, /loan collections/, /library/, /gym/, /room bookings/, /student fees/];
-  record("description names every module", sixInDescription.every((word) => word.test(description)), description);
+  const fiveInDescription = [/GST bills|stock/, /loan collections/, /library/, /gym/, /room bookings/];
+  record("description names every module", fiveInDescription.every((word) => word.test(description)), description);
+  record("title and description name no coaching (withdrawn 29 Sep)", !/coaching|tuition|student/i.test(`${title} ${description}`), `${title} ${description}`);
   record("title and description carry no status word", !/\blive\b|\bplanned\b|in development|\bsoon\b/i.test(`${title} ${description}`));
   const canonical = [...h.matchAll(/<link\b[^>]*rel="canonical"[^>]*>/g)].map((m) => attr(m[0], "href"));
   // Next renders the root URL without its slash ("https://yourkhata.com");

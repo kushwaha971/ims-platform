@@ -15,7 +15,6 @@ import {
   Dumbbell,
   FileSpreadsheet,
   FileText,
-  GraduationCap,
   HandCoins,
   Hourglass,
   IdCard,
@@ -57,7 +56,6 @@ export const MODULE_ICON: Readonly<Record<LandingModuleId, LucideIcon>> = {
   library: LibraryBig,
   gym: Dumbbell,
   hotel: BedDouble,
-  coaching: GraduationCap,
 };
 
 /**
@@ -71,7 +69,6 @@ export const MODULE_SCENE: Readonly<Record<LandingModuleId, readonly [LucideIcon
   library: [BookCopy, IdCard, Undo2, Hourglass],
   gym: [IdCard, RefreshCw, CalendarCheck, ReceiptText],
   hotel: [CalendarRange, KeyRound, ConciergeBell, ReceiptText],
-  coaching: [Users, CalendarCheck, Wallet, Undo2],
 };
 
 export const CORE_ICON: Readonly<Record<CoreId, LucideIcon>> = {

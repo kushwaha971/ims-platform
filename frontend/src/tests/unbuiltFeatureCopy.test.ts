@@ -6,6 +6,7 @@ import {
   namesACompetitor,
   STATUS_WORDS,
   SUMMARY_KEYS,
+  WITHDRAWN_MODULE_WORDS,
   ownsKey,
   withoutBrand,
 } from 'src/tests/moduleVocabulary';
@@ -420,16 +421,16 @@ describe('each module speaks only in its own place', () => {
   });
 
   /**
-   * The coaching refund is what the product WORKS OUT, not a claim about the
-   * guidelines (research/candidates-and-competitors.md §4: no regulatory
-   * claims in copy).
+   * Coaching & tuition was withdrawn by the owner on 29 Sep ("I need library
+   * mgmt system, not coaching"): no landing string names it, in either
+   * language.
    */
-  it('describes the coaching refund as a calculation, with no compliance claim', () => {
-    const coaching = landingKeys.filter((key) => ownsKey('coaching', key));
-    expect(coaching.some((key) => /refund/.test(enMessages[key] ?? ''))).toBe(true);
-    coaching.forEach((key) => {
-      expect(enMessages[key]).not.toMatch(/complian|guideline|regulat|approved|certified/i);
-    });
+  it('names the withdrawn coaching module nowhere', () => {
+    const offending = landingKeys.flatMap((key) => [
+      ...(WITHDRAWN_MODULE_WORDS.en.test(enMessages[key] ?? '') ? [`${key} (en): ${enMessages[key]}`] : []),
+      ...(WITHDRAWN_MODULE_WORDS.hi.test(hiMessages[key] ?? '') ? [`${key} (hi): ${hiMessages[key]}`] : []),
+    ]);
+    expect(offending).toEqual([]);
   });
 
   /** Vision §4 — no "kirana", no regional jargon: shop, store, business, organisation. */
