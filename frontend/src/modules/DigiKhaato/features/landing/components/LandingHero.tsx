@@ -42,16 +42,19 @@ export const splitAroundWord = (message: string): readonly [string, string] => {
 };
 
 /**
- * The rotating word names only things a business can track TODAY
- * (docs/platform/01-current-capabilities.md). A planned module's words never
- * go here: a headline that cycles "loans" would say it works.
+ * The rotating word names what businesses across the modules keep track of
+ * (CR-2026-09-29-PLATFORM-D): a shop's dues, bills and stock, and the fees and
+ * collections other modules keep. Only words that belong to no single module —
+ * "fees" is a gym's, a library's and a coaching centre's alike — so the hero
+ * never speaks for one module outside its own card (`moduleVocabulary.ts`).
  */
 export const ROTATING_WORD_KEYS = [
   'landing.hero.word.dues',
   'landing.hero.word.bills',
   'landing.hero.word.stock',
+  'landing.hero.word.fees',
+  'landing.hero.word.collections',
   'landing.hero.word.payments',
-  'landing.hero.word.expenses',
 ] as const;
 
 /**
@@ -59,7 +62,7 @@ export const ROTATING_WORD_KEYS = [
  * script: the h1, the body and both buttons are in the server's HTML exactly as
  * they render, and the only thing that moves after hydration is the one
  * rotating word — which is `aria-hidden`, beside an `sr-only` sentence that
- * says all five, so the heading's accessible name is static and complete.
+ * says every word, so the heading's accessible name is static and complete.
  *
  * On the right, a recording: the desktop loop in a tilted browser frame from
  * `lg`, the PHONE loop in a phone frame below it — a different recording, not
@@ -90,7 +93,7 @@ function LandingHeroBase() {
             variant="inherit"
             className="inline-flex items-center gap-2 rounded-pill border border-border-hairline bg-surface-card/80 px-3 py-1.5 ds-body-s-medium text-text-secondary shadow-sm backdrop-blur"
           >
-            <UbBox as="span" aria-hidden className="h-2 w-2 rounded-full bg-success-bright" />
+            <UbBox as="span" aria-hidden className="h-2 w-2 rounded-full bg-accent" />
             {t('landing.hero.badge')}
           </UbText>
 

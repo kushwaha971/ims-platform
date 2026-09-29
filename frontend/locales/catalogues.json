@@ -91,6 +91,7 @@
     "settings.viewOnly": "settingsGate",
     "settings.action.": "settingsGate",
     "tax.rate.": "money",
-    "landing.": "landing"
+    "landing.": "landing",
+    "landing.pricing.": "landingPricing"
   }
 }

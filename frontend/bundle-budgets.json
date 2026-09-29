@@ -607,7 +607,20 @@
   "shell and every other route are unchanged. Below-the-fold dynamic() was",
   "considered and refused: it would move the same bytes into a second request",
   "while the content has to be server-rendered anyway.",
-  "  /                            route 32 -> 36, firstLoad 263 -> 267"
+  "  /                            route 32 -> 36, firstLoad 263 -> 267",
+  "",
+  "── 29 Sep 2026: every module as part of the product (CR-2026-09-29-PLATFORM-D) ──",
+  "The landing page gained a sixth module (Coaching & tuition: copy, icon and",
+  "scene) and the owner's 'Why YourKhata' section (#why: eight points, eight",
+  "lucide icons, their copy); 'Also included' swapped three items for three",
+  "others. Two things were taken back out first, so the rise is only the new",
+  "content: the hidden pricing section is now dynamic() and never fetched while",
+  "SHOW_PRICING is off (39.1 -> 37.8), and its 44 strings moved to their own",
+  "`landingPricing` catalogue loaded with that chunk (37.8 -> 37.1). Unlike the",
+  "below-the-fold dynamic() refused above, this moves bytes nobody sees out of",
+  "the route rather than into a second request. Measured: route 37.1 KB,",
+  "firstLoad 268.3 KB. Route-local; the shell and every other route unchanged.",
+  "  /                            route 36 -> 38, firstLoad 267 -> 269"
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -1295,8 +1308,8 @@
    "firstLoad": 288
   },
   "/": {
-   "route": 36,
-   "firstLoad": 267
+   "route": 38,
+   "firstLoad": 269
   }
  },
  "//ignoreRoutes": [

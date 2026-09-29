@@ -1,4 +1,4 @@
-import { FAQ_IDS, faqAnswerKey, faqQuestionKey } from '../config/faq';
+import { faqAnswerKey, faqIds, faqQuestionKey } from '../config/faq';
 import { LANDING_DESCRIPTION, LOGO_IMAGE } from '../config/seo';
 
 import type { Pricing } from '../config/pricing';
@@ -9,14 +9,15 @@ import type { Pricing } from '../config/pricing';
  *
  *  - `Organization` — name, url, logo.
  *  - `WebSite` — the site, in both languages it is written in.
- *  - `SoftwareApplication` — a web app for businesses. Its `offers` are the
- *    FREE plan only while `pricing.status` is `'proposed'`: the paid figures
- *    are a proposal the owner has not approved and nothing is charged, and an
- *    `Offer` in structured data is a statement of a price anyone can pay
- *    today. Flipping the status to `'approved'` is what emits them.
- *  - `FAQPage` — built from the SAME ids (`config/faq.ts`) and the same English
- *    strings the FAQ section renders, so the markup can never describe an
- *    answer the page does not show.
+ *  - `SoftwareApplication` — a web app for businesses. While pricing is hidden
+ *    (`showPricing` false, CR-2026-09-29-PLATFORM-D) it has NO `offers` key at
+ *    all: a price in structured data the page does not show is a claim made
+ *    only to search engines. With pricing shown, `offers` is the FREE plan
+ *    only while `pricing.status` is `'proposed'` — an `Offer` is a price
+ *    anyone can pay today — and every plan once it is `'approved'`.
+ *  - `FAQPage` — built from the SAME ids (`config/faq.ts`, for the same flag)
+ *    and the same English strings the FAQ section renders, so the markup can
+ *    never describe an answer the page does not show.
  *
  * What it deliberately never carries: `aggregateRating`, `review`, a user
  * count or any other figure nobody has measured. `seo.test.ts` walks the whole
@@ -34,6 +35,8 @@ export interface LandingJsonLdInput {
   /** The English landing catalogue: `landing.faq.<id>.{q,a}` at least. */
   readonly messages: Readonly<Record<string, string>>;
   readonly pricing: Pricing;
+  /** `SHOW_PRICING`, passed in so a test can build both states. */
+  readonly showPricing: boolean;
 }
 
 const message = (messages: Readonly<Record<string, string>>, key: string): string => {
@@ -47,6 +50,7 @@ export const buildLandingJsonLd = ({
   appName,
   messages,
   pricing,
+  showPricing,
 }: LandingJsonLdInput): JsonLdNode => {
   const home = `${siteUrl}/`;
   const organizationId = `${home}#organization`;
@@ -105,12 +109,12 @@ export const buildLandingJsonLd = ({
         operatingSystem: 'Web',
         inLanguage: ['en', 'hi'],
         publisher: { '@id': organizationId },
-        offers,
+        ...(showPricing ? { offers } : {}),
       },
       {
         '@type': 'FAQPage',
         '@id': `${home}#faq`,
-        mainEntity: FAQ_IDS.map((id) => ({
+        mainEntity: faqIds(showPricing).map((id) => ({
           '@type': 'Question',
           name: message(messages, faqQuestionKey(id)),
           acceptedAnswer: { '@type': 'Answer', text: message(messages, faqAnswerKey(id)) },

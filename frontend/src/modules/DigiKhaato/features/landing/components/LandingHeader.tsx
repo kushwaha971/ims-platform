@@ -9,16 +9,27 @@ import { useTranslation } from 'src/hooks/useTranslation';
 import { ROUTES } from 'src/routes';
 import { cn } from 'src/utils/cn';
 
+import { SHOW_PRICING } from '../config/pricing';
+
 import { LANDING_CONTAINER } from './LandingPrimitives';
 import { LanguageToggle, ThemeToggle } from './LandingToggles';
 
-/** In-page anchors, in reading order. The ids are the sections' own. */
-export const LANDING_ANCHORS = [
+const ANCHORS = [
   { href: '#platform', key: 'landing.nav.platform' },
   { href: '#modules', key: 'landing.nav.modules' },
+  { href: '#why', key: 'landing.nav.why' },
   { href: '#pricing', key: 'landing.nav.pricing' },
   { href: '#faq', key: 'landing.nav.faq' },
 ] as const;
+
+/**
+ * In-page anchors, in reading order. The ids are the sections' own. Pricing is
+ * listed only while `SHOW_PRICING` is on (CR-2026-09-29-PLATFORM-D) — a link
+ * to a section that is not rendered is a dead anchor. A function, read at
+ * render, so the flag is never frozen into a module constant.
+ */
+export const landingAnchors = (): readonly (typeof ANCHORS)[number][] =>
+  SHOW_PRICING ? ANCHORS : ANCHORS.filter((anchor) => anchor.href !== '#pricing');
 
 /**
  * A floating pill: sticky 12 px from the top, translucent canvas with a
@@ -35,6 +46,7 @@ function LandingHeaderBase() {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
+  const anchors = landingAnchors();
 
   return (
     <UbBox as="header" className="sticky top-0 z-40 pt-3">
@@ -55,7 +67,7 @@ function LandingHeaderBase() {
 
           <UbBox as="nav" aria-label={t('landing.nav.label')} className="hidden lg:block">
             <UbStack as="ul" direction="row" gap={1}>
-              {LANDING_ANCHORS.map((anchor) => (
+              {anchors.map((anchor) => (
                 <UbBox as="li" key={anchor.href}>
                   <UbLink
                     href={anchor.href}
@@ -115,7 +127,7 @@ function LandingHeaderBase() {
         <UbStack gap={6}>
           <UbBox as="nav" aria-label={t('landing.nav.label')}>
             <UbStack as="ul" gap={1}>
-              {LANDING_ANCHORS.map((anchor) => (
+              {anchors.map((anchor) => (
                 <UbBox as="li" key={anchor.href}>
                   <UbLink
                     href={anchor.href}

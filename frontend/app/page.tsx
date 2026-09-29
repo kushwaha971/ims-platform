@@ -7,7 +7,7 @@ import { absoluteUrl } from 'src/utils/seo';
 import en from 'locales/catalogues/landing.en.json';
 
 import { LandingPage } from 'modules/DigiKhaato/features/landing/components/LandingPage';
-import { PRICING } from 'modules/DigiKhaato/features/landing/config/pricing';
+import { PRICING, SHOW_PRICING } from 'modules/DigiKhaato/features/landing/config/pricing';
 import {
   BRAND_NAME,
   LANDING_DESCRIPTION,
@@ -81,7 +81,13 @@ export const metadata: Metadata = {
  * crawlers send no locale cookie, so the English page is the one indexed, and
  * the FAQ markup quotes the answers the English page renders.
  */
-const JSON_LD = buildLandingJsonLd({ siteUrl: SITE_URL, appName: BRAND_NAME, messages: en, pricing: PRICING });
+const JSON_LD = buildLandingJsonLd({
+  siteUrl: SITE_URL,
+  appName: BRAND_NAME,
+  messages: en,
+  pricing: PRICING,
+  showPricing: SHOW_PRICING,
+});
 
 export default function HomePage(): React.JSX.Element {
   return (

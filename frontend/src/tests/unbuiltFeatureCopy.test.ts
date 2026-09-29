@@ -1,7 +1,17 @@
 import { en, hi } from 'src/tests/allMessages';
-import { LANDING_JARGON, PLANNED_MODULE_WORDS, withoutBrand } from 'src/tests/plannedModuleVocabulary';
+import {
+  COMPARATIVE_CLAIMS,
+  LANDING_JARGON,
+  MODULE_WORDS,
+  namesACompetitor,
+  STATUS_WORDS,
+  SUMMARY_KEYS,
+  ownsKey,
+  withoutBrand,
+} from 'src/tests/moduleVocabulary';
 
-import { UPCOMING_MODULES } from 'modules/DigiKhaato/features/landing/config/modules';
+import { LANDING_MODULES } from 'modules/DigiKhaato/features/landing/config/modules';
+import { WHY_PARTS, WHY_POINTS, whyKey } from 'modules/DigiKhaato/features/landing/config/why';
 
 /**
  * UAT D8 — copy that promised features the product does not have, or described
@@ -332,62 +342,93 @@ describe('the landing page promises only what is built', () => {
 });
 
 /**
- * CR-2026-09-29-PLATFORM-B — the landing page now names four modules that are
- * not built (lending, library, gym, hotel). Owner rule (vision §4): they are
- * shown as planned and nothing more. So a planned module's words — lender,
- * borrower, interest, library, gym, member, hotel, room, booking… — may appear
- * in exactly two kinds of place:
- *   1. its own card, tile or row, whose copy is `landing.module.<id>.*` for an
- *      id `config/modules.ts` marks as not live; and
- *   2. the two FAQ answers that exist to say those modules cannot be used yet,
- *      which are required to say "planned" and "not".
- * Anywhere else — the hero, the rotating word, a live feature card, the
- * pricing — the same word would read as a promise. `LandingPage.test.tsx`
- * checks the rendered page against the same list by ancestor.
+ * CR-2026-09-29-PLATFORM-D — every module is presented as part of the product
+ * (vision §4), so the old rule ("planned words only in planned places") gives
+ * way to a simpler one: a module's own words appear only in that module's own
+ * keys, or in the one FAQ answer that names every module. And a module's card
+ * carries no figure at all — no invented count, price or percentage — and no
+ * status word. `LandingPage.test.tsx` checks the rendered page the same way.
  */
-describe('planned modules are spoken of only from a planned card', () => {
+describe('each module speaks only in its own place', () => {
   const enMessages = en as Record<string, string>;
   const hiMessages = hi as Record<string, string>;
   const landingKeys = Object.keys(enMessages).filter((key) => key.startsWith('landing.'));
-  const PLANNED_PREFIXES = UPCOMING_MODULES.map((module) => `landing.module.${module.id}.`);
-  const PLANNED_SCOPE_FAQ = ['landing.faq.modules.q', 'landing.faq.modules.a', 'landing.faq.lending.q', 'landing.faq.lending.a'];
-  const allowed = (key: string) =>
-    PLANNED_PREFIXES.some((prefix) => key.startsWith(prefix)) || PLANNED_SCOPE_FAQ.includes(key);
+  const modulesWithWords = Object.keys(MODULE_WORDS) as (keyof typeof MODULE_WORDS)[];
 
-  it('has planned-module copy to check, in both languages', () => {
-    expect(UPCOMING_MODULES.length).toBeGreaterThan(0);
-    PLANNED_PREFIXES.forEach((prefix) => {
-      expect(landingKeys.filter((key) => key.startsWith(prefix)).length).toBeGreaterThan(4);
+  it('has a word list for every module but the shop, and copy for each to check', () => {
+    expect([...modulesWithWords].sort()).toEqual(
+      LANDING_MODULES.map((module) => module.id)
+        .filter((id) => id !== 'shop')
+        .sort()
+    );
+    modulesWithWords.forEach((id) => {
+      expect(landingKeys.filter((key) => ownsKey(id, key)).length).toBeGreaterThan(6);
     });
   });
 
-  it.each([
-    ['en', PLANNED_MODULE_WORDS.en],
-    ['hi', PLANNED_MODULE_WORDS.hi],
-  ] as const)('uses planned-module words only in planned-module keys (%s)', (lang, pattern) => {
-    const messages = lang === 'en' ? enMessages : hiMessages;
+  it.each(modulesWithWords.flatMap((id) => [[id, 'en'] as const, [id, 'hi'] as const]))(
+    "uses %s's words only in its own keys (%s)",
+    (id, lang) => {
+      const messages = lang === 'en' ? enMessages : hiMessages;
+      const offending = landingKeys
+        .filter((key) => MODULE_WORDS[id][lang].test(messages[key] ?? ''))
+        .filter((key) => !ownsKey(id, key) && !SUMMARY_KEYS.includes(key))
+        .map((key) => `${key}: ${messages[key]}`);
+      expect(offending).toEqual([]);
+    }
+  );
+
+  /** Nothing is invented on a card: no count, price, percentage or year. */
+  it('puts no figure in any module copy, in either language', () => {
     const offending = landingKeys
-      .filter((key) => pattern.test(messages[key] ?? '') && !allowed(key))
+      .filter((key) => key.startsWith('landing.module.'))
+      .flatMap((key) => [
+        ...(/[\d₹%]/.test(enMessages[key] ?? '') ? [`${key} (en): ${enMessages[key]}`] : []),
+        ...(/[\d₹%०-९]/u.test(hiMessages[key] ?? '') ? [`${key} (hi): ${hiMessages[key]}`] : []),
+      ]);
+    expect(offending).toEqual([]);
+  });
+
+  /** No Live / Planned / In development, and no "not yet available", anywhere on the page. */
+  it.each([
+    ['en', STATUS_WORDS.en],
+    ['hi', STATUS_WORDS.hi],
+  ] as const)('uses no status word in any landing string that renders (%s)', (lang, pattern) => {
+    const messages = lang === 'en' ? enMessages : hiMessages;
+    // The demo dialog's failure line ("…cannot be played right now") is about
+    // a video file, not a module, and renders only when the film 404s.
+    const offending = landingKeys
+      .filter((key) => key !== 'landing.demo.unavailable')
+      .filter((key) => pattern.test(messages[key] ?? ''))
       .map((key) => `${key}: ${messages[key]}`);
     expect(offending).toEqual([]);
   });
 
-  it('makes the two planned-scope FAQ answers say "planned" and "not"', () => {
-    ['landing.faq.modules.a', 'landing.faq.lending.a'].forEach((key) => {
-      expect(enMessages[key]).toMatch(/\bplanned\b/);
-      expect(enMessages[key]).toMatch(/\bnot\b|cannot/);
-      expect(hiMessages[key]).toMatch(/योजना/u);
-      expect(hiMessages[key]).toMatch(/नहीं/u);
-    });
-    expect(enMessages['landing.faq.lending.a']).toMatch(/^Not yet\./);
-    expect(hiMessages['landing.faq.lending.a']).toMatch(/^अभी नहीं।/u);
+  it('retires the status labels and the planned-module lines, in both languages', () => {
+    const retired = /^landing\.module\.status\.|\.problem\.\d$|^landing\.modules\.(note|problems|willBuildOn|seeInUse|included|key\.planned)$/;
+    expect(Object.keys(enMessages).filter((key) => retired.test(key))).toEqual([]);
+    expect(Object.keys(hiMessages).filter((key) => retired.test(key))).toEqual([]);
   });
 
   /** Vision §4: record-keeping, not lending. The card and the FAQ both say so. */
-  it('says the lending module will keep records and will not lend or move money', () => {
+  it('says the lending module keeps records and does not lend or move money', () => {
     ['landing.module.lending.purpose', 'landing.faq.lending.a'].forEach((key) => {
       expect(enMessages[key]).toMatch(/not lend/);
       expect(enMessages[key]).toMatch(/move money/);
+      expect(hiMessages[key]).toMatch(/न कर्ज़ देता/u);
+    });
+  });
+
+  /**
+   * The coaching refund is what the product WORKS OUT, not a claim about the
+   * guidelines (research/candidates-and-competitors.md §4: no regulatory
+   * claims in copy).
+   */
+  it('describes the coaching refund as a calculation, with no compliance claim', () => {
+    const coaching = landingKeys.filter((key) => ownsKey('coaching', key));
+    expect(coaching.some((key) => /refund/.test(enMessages[key] ?? ''))).toBe(true);
+    coaching.forEach((key) => {
+      expect(enMessages[key]).not.toMatch(/complian|guideline|regulat|approved|certified/i);
     });
   });
 
@@ -401,5 +442,47 @@ describe('planned modules are spoken of only from a planned card', () => {
       .filter((key) => pattern.test(withoutBrand(messages[key] ?? '')))
       .map((key) => `${key}: ${messages[key]}`);
     expect(offending).toEqual([]);
+  });
+});
+
+/**
+ * "Why YourKhata" (owner, 29 Sep 2026): what other apps commonly miss, and
+ * what YourKhata does instead — generic, true, and unranked. Each `get` line
+ * rests on a live capability or a binding rule; `config/why.ts` has the
+ * evidence table.
+ */
+describe('"Why YourKhata" names nobody and ranks nothing', () => {
+  const enMessages = en as Record<string, string>;
+  const hiMessages = hi as Record<string, string>;
+  const landingKeys = Object.keys(enMessages).filter((key) => key.startsWith('landing.'));
+
+  it('has every point in both languages, and nothing left over', () => {
+    expect(WHY_POINTS.length).toBeGreaterThanOrEqual(6);
+    expect(WHY_POINTS.length).toBeLessThanOrEqual(8);
+    WHY_POINTS.forEach((id) =>
+      WHY_PARTS.forEach((part) => {
+        const key = whyKey(id, part);
+        expect({ key, en: !!enMessages[key], hi: !!hiMessages[key] }).toEqual({ key, en: true, hi: true });
+      })
+    );
+    const pointKeys = new Set(WHY_POINTS.flatMap((id) => WHY_PARTS.map((part) => whyKey(id, part))));
+    const shared = new Set(['eyebrow', 'lead', 'key', 'body', 'missLabel'].map((part) => `landing.why.${part}`));
+    expect(landingKeys.filter((key) => key.startsWith('landing.why.') && !pointKeys.has(key) && !shared.has(key))).toEqual([]);
+  });
+
+  it.each(['en', 'hi'] as const)('names no competitor in any landing string (%s)', (lang) => {
+    const messages = lang === 'en' ? enMessages : hiMessages;
+    expect(landingKeys.filter((key) => namesACompetitor(messages[key] ?? '', lang))).toEqual([]);
+  });
+
+  it.each(['en', 'hi'] as const)('makes no comparative claim nobody has measured (%s)', (lang) => {
+    const messages = lang === 'en' ? enMessages : hiMessages;
+    expect(landingKeys.filter((key) => COMPARATIVE_CLAIMS[lang].test(messages[key] ?? ''))).toEqual([]);
+  });
+
+  /** The payments point is about where the money goes, never a gateway (DEC-012, capabilities). */
+  it('says the money goes straight to the business and never through YourKhata', () => {
+    expect(enMessages['landing.why.payments.get']).toMatch(/never passes through YourKhata/);
+    expect(hiMessages['landing.why.payments.get']).toMatch(/YourKhata से होकर नहीं/u);
   });
 });

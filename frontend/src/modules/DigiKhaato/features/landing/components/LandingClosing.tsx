@@ -17,9 +17,10 @@ import {
 import { useTranslation } from 'src/hooks/useTranslation';
 import { ROUTES } from 'src/routes';
 
-import { FAQ_IDS, PLANNED_SCOPE_FAQ_IDS, faqAnswerKey, faqQuestionKey } from '../config/faq';
+import { FAQ_MODULE_SCOPE, faqAnswerKey, faqIds, faqQuestionKey } from '../config/faq';
+import { SHOW_PRICING } from '../config/pricing';
 
-import { LANDING_ANCHORS } from './LandingHeader';
+import { landingAnchors } from './LandingHeader';
 import {
   LANDING_CONTAINER,
   LANDING_SECTION,
@@ -29,8 +30,10 @@ import {
 } from './LandingPrimitives';
 
 /**
- * The FAQ. The ids, their order and the planned-scope pair are in
- * `config/faq.ts`, which the server also reads to build the FAQPage JSON-LD.
+ * The FAQ. The ids and their order are in `config/faq.ts`, which the server
+ * also reads to build the FAQPage JSON-LD, from the same `SHOW_PRICING`. An
+ * answer about one module carries `data-module-id`, and the one that names
+ * every module `data-module-summary` (the module-vocabulary guard's marks).
  *
  * `keepMounted`: every answer is in the server's HTML, hidden until its
  * question is opened (CR-2026-09-29-PLATFORM-C). A collapsed answer that is
@@ -53,8 +56,13 @@ function FaqSectionBase() {
           className="lg:sticky lg:top-28 lg:self-start"
         />
         <UbReveal as="ul" stagger className="flex flex-col gap-3">
-          {FAQ_IDS.map((id) => (
-            <UbBox as="li" key={id} data-planned-scope={PLANNED_SCOPE_FAQ_IDS.has(id) || undefined}>
+          {faqIds(SHOW_PRICING).map((id) => (
+            <UbBox
+              as="li"
+              key={id}
+              data-module-id={FAQ_MODULE_SCOPE[id] === 'summary' ? undefined : FAQ_MODULE_SCOPE[id]}
+              data-module-summary={FAQ_MODULE_SCOPE[id] === 'summary' || undefined}
+            >
               <UbDisclosure
                 size="lg"
                 keepMounted
@@ -172,7 +180,7 @@ function LandingFooterBase() {
             {t('landing.footer.product')}
           </UbText>
           <UbStack as="ul" gap={2}>
-            {LANDING_ANCHORS.map((anchor) => (
+            {landingAnchors().map((anchor) => (
               <FooterLink key={anchor.href} href={anchor.href}>
                 {t(anchor.key)}
               </FooterLink>

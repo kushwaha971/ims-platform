@@ -7,7 +7,7 @@ import { fireEvent, screen } from '@testing-library/react';
 import { SITE_URL } from 'src/constants';
 import { serializeJsonLd, UbDisclosure } from 'src/design-system';
 import { APP_ROUTE_PREFIXES, GUARDED_ROUTE_PREFIXES, ROUTES } from 'src/routes';
-import { LANDING_JARGON, PLANNED_MODULE_WORDS, withoutBrand } from 'src/tests/plannedModuleVocabulary';
+import { LANDING_JARGON, STATUS_WORDS, withoutBrand } from 'src/tests/moduleVocabulary';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
 import { CRAWL_DISALLOW, NOINDEX_ROBOTS, SITEMAP_PATHS } from 'src/utils/seo';
 
@@ -24,8 +24,8 @@ import sitemap from 'app/sitemap';
 import en from 'locales/catalogues/landing.en.json';
 
 import { FaqSection } from 'modules/DigiKhaato/features/landing/components/LandingClosing';
-import { FAQ_IDS, faqAnswerKey, faqQuestionKey } from 'modules/DigiKhaato/features/landing/config/faq';
-import { PRICING, type Pricing } from 'modules/DigiKhaato/features/landing/config/pricing';
+import { faqAnswerKey, faqIds, faqQuestionKey } from 'modules/DigiKhaato/features/landing/config/faq';
+import { PRICING, SHOW_PRICING, type Pricing } from 'modules/DigiKhaato/features/landing/config/pricing';
 import {
   LANDING_DESCRIPTION,
   LANDING_SHARE_DESCRIPTION,
@@ -58,10 +58,7 @@ describe('the landing page metadata', () => {
     expect(LANDING_TITLE).toMatch(/^YourKhata\b/);
   });
 
-  /**
-   * Vision §4 twice over: no jargon, and no planned module named in a search
-   * result, where there is no "planned" chip beside it to say it is not built.
-   */
+  /** Vision §4: no jargon, and no status word — the page carries none either. */
   it.each([
     ['title', LANDING_TITLE],
     ['description', LANDING_DESCRIPTION],
@@ -69,10 +66,33 @@ describe('the landing page metadata', () => {
     ['share description', LANDING_SHARE_DESCRIPTION],
     ['image alt', OG_IMAGE.alt],
     ['root description', String(rootMetadata.description)],
-  ])('the %s carries no jargon and no planned module', (_, text) => {
+  ])('the %s carries no jargon and no status word', (_, text) => {
     expect(withoutBrand(text)).not.toMatch(LANDING_JARGON.en);
-    expect(text).not.toMatch(PLANNED_MODULE_WORDS.en);
-    expect(text).not.toMatch(/\bplanned\b|coming soon/i);
+    expect(text).not.toMatch(STATUS_WORDS.en);
+  });
+
+  /**
+   * CR-2026-09-29-PLATFORM-D: the result describes the WHOLE platform. The
+   * title reaches all six modules — bills (shop), fees (library, gym,
+   * coaching), collections (lending), bookings (hotel) — and the description
+   * names every module in plain words, not the shop alone.
+   */
+  it('describes the whole platform: all six modules, in the title and the description', () => {
+    for (const word of [/bills/, /fees/, /collections/, /bookings/]) expect(LANDING_TITLE).toMatch(word);
+    for (const [module, word] of [
+      ['shop', /GST bills|stock/],
+      ['lending', /loan collections/],
+      ['library', /library/],
+      ['gym', /gym/],
+      ['hotel', /room bookings/],
+      ['coaching', /student fees/],
+    ] as const) {
+      expect({ module, description: word.test(LANDING_DESCRIPTION), share: word.test(LANDING_SHARE_DESCRIPTION) }).toEqual({
+        module,
+        description: true,
+        share: true,
+      });
+    }
   });
 
   it('is canonical at the configured origin, which defaults to yourkhata.com', () => {
@@ -209,13 +229,15 @@ describe('sitemap.xml', () => {
 });
 
 describe('the landing page JSON-LD', () => {
-  const build = (pricing: Pricing = PRICING) =>
-    JSON.parse(serializeJsonLd(buildLandingJsonLd({ siteUrl: SITE_URL, appName: 'YourKhata', messages: en, pricing }))) as {
+  const build = (pricing: Pricing = PRICING, showPricing: boolean = SHOW_PRICING) =>
+    JSON.parse(
+      serializeJsonLd(buildLandingJsonLd({ siteUrl: SITE_URL, appName: 'YourKhata', messages: en, pricing, showPricing }))
+    ) as {
       '@context': string;
       '@graph': Record<string, unknown>[];
     };
-  const node = (type: string, pricing?: Pricing) =>
-    build(pricing)['@graph'].find((entry) => entry['@type'] === type) as Record<string, unknown>;
+  const node = (type: string, pricing?: Pricing, showPricing?: boolean) =>
+    build(pricing, showPricing)['@graph'].find((entry) => entry['@type'] === type) as Record<string, unknown>;
 
   const keysDeep = (value: unknown): string[] =>
     value && typeof value === 'object'
@@ -259,33 +281,47 @@ describe('the landing page JSON-LD', () => {
   });
 
   /**
-   * The paid prices are a PROPOSAL (config/pricing.ts). An Offer in structured
-   * data is a price anybody can pay today, and search engines show it as one.
+   * CR-2026-09-29-PLATFORM-D: while the page shows no pricing, structured data
+   * carries no price at all — not even the free plan. A price only a search
+   * engine is told is a claim the page itself does not make.
    */
-  it('offers the free plan only, at 0 INR, while pricing is proposed', () => {
+  it('has no offers at all while pricing is hidden', () => {
+    expect(SHOW_PRICING).toBe(false);
+    expect(node('SoftwareApplication')).not.toHaveProperty('offers');
+    expect(JSON.stringify(build())).not.toMatch(/"Offer"|priceCurrency|"price"|#pricing/);
+    expect(node('SoftwareApplication', { ...PRICING, status: 'approved' })).not.toHaveProperty('offers');
+  });
+
+  /**
+   * With pricing shown, the paid prices are still a PROPOSAL (config/pricing.ts).
+   * An Offer in structured data is a price anybody can pay today, and search
+   * engines show it as one.
+   */
+  it('offers the free plan only, at 0 INR, when pricing is shown but proposed', () => {
     expect(PRICING.status).toBe('proposed');
-    const offers = node('SoftwareApplication').offers as Record<string, unknown>[];
+    const offers = node('SoftwareApplication', PRICING, true).offers as Record<string, unknown>[];
     expect(offers).toEqual([expect.objectContaining({ '@type': 'Offer', price: '0', priceCurrency: 'INR' })]);
     for (const plan of PRICING.plans.filter((p) => p.monthly > 0)) {
-      expect(JSON.stringify(build())).not.toContain(`"${plan.monthly}"`);
+      expect(JSON.stringify(build(PRICING, true))).not.toContain(`"${plan.monthly}"`);
     }
   });
 
-  it('emits the paid plans the moment pricing is approved, and not before', () => {
-    const offers = node('SoftwareApplication', { ...PRICING, status: 'approved' }).offers as Record<string, unknown>[];
+  it('emits the paid plans once pricing is shown and approved, and not before', () => {
+    const offers = node('SoftwareApplication', { ...PRICING, status: 'approved' }, true).offers as Record<string, unknown>[];
     expect(offers.map((offer) => offer.price)).toEqual(PRICING.plans.map((plan) => String(plan.monthly)));
   });
 
-  it('builds the FAQPage from the same questions and answers the page renders', () => {
-    const faq = node('FAQPage').mainEntity as { name: string; acceptedAnswer: { text: string } }[];
+  it.each([false, true])('builds the FAQPage from the same questions the page renders (pricing shown: %s)', (shown) => {
+    const faq = node('FAQPage', PRICING, shown).mainEntity as { name: string; acceptedAnswer: { text: string } }[];
     const messages = en as Record<string, string>;
     expect(faq).toEqual(
-      FAQ_IDS.map((id) => ({
+      faqIds(shown).map((id) => ({
         '@type': 'Question',
         name: messages[faqQuestionKey(id)],
         acceptedAnswer: { '@type': 'Answer', text: messages[faqAnswerKey(id)] },
       }))
     );
+    expect(faq.some((q) => q.name === 'What does it cost?')).toBe(shown);
   });
 
   /** A `</script>` inside a string would end the element and spill the rest as markup. */
@@ -305,7 +341,7 @@ describe('the FAQ keeps its answers in the HTML', () => {
   it('renders every answer while closed, hidden, and shows it on open', () => {
     const { container } = renderWithProviders(<FaqSection />);
     const messages = en as Record<string, string>;
-    for (const id of FAQ_IDS) expect(container.textContent).toContain(messages[faqAnswerKey(id)]);
+    for (const id of faqIds(SHOW_PRICING)) expect(container.textContent).toContain(messages[faqAnswerKey(id)]);
 
     const trigger = screen.getByRole('button', { name: messages[faqQuestionKey('hindi')] });
     const panel = container.querySelector(`#${CSS.escape(trigger.getAttribute('aria-controls') ?? '')}`);

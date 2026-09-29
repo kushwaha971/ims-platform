@@ -4,13 +4,15 @@
  * there is one of each and crawlers do not send the locale cookie: what a
  * search result or a WhatsApp preview shows is the English page.
  *
- * Rules, each held by `seo.test.ts`:
+ * Rules, each held by `seo.test.tsx`:
  *  - the title is under 60 characters and the description under 160, so
  *    neither is cut off in a result;
- *  - both describe the PLATFORM and only what is live
- *    (docs/platform/01-current-capabilities.md). No planned module is named:
- *    a result that says "lending" sends people looking for a module that does
- *    not exist. The page itself says what is planned, in context;
+ *  - both describe the WHOLE platform, because the page presents every module
+ *    as part of the product (CR-2026-09-29-PLATFORM-D). The title reaches all
+ *    six in four words — bills (shop), fees (library, gym, coaching),
+ *    collections (lending), bookings (hotel) — and the description names each
+ *    one. Plain words only: a result says "loan collections" and "room
+ *    bookings", not the trade's shorthand;
  *  - no jargon ("kirana", English "udhaar" / "khata"), vision §4.
  *
  * Imports nothing, so a test can read it without a renderer.
@@ -23,15 +25,15 @@
  */
 export const BRAND_NAME = 'YourKhata';
 
-export const LANDING_TITLE = 'YourKhata: business records, money and bills in one place';
+export const LANDING_TITLE = 'YourKhata: bills, fees, collections and bookings in one app';
 
 export const LANDING_DESCRIPTION =
-  'Keep customers, money in and out, GST bills, stock and payments in one place, with every balance up to date. In Hindi or English, on any phone or computer.';
+  'GST bills and stock, loan collections, library and gym members, room bookings and student fees: all your records in one place, in Hindi or English.';
 
-export const LANDING_SHARE_TITLE = 'YourKhata — all your business records in one place';
+export const LANDING_SHARE_TITLE = 'YourKhata — one place for all your business records';
 
 export const LANDING_SHARE_DESCRIPTION =
-  'Customers, money in and out, GST bills, stock and payments for your business, in one place. Hindi or English, on phone or computer.';
+  'Shop bills and stock, loan collections, library and gym members, room bookings and student fees, on one shared core. Hindi or English.';
 
 /**
  * The link-preview card: 1200 × 630, rendered from the brand SVGs and the hero

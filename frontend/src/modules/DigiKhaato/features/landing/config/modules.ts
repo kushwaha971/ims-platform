@@ -1,29 +1,30 @@
+import { FEATURE_CLIPS, type LandingClip } from './media';
+
 /**
- * The platform's modules as the landing page shows them. This is the ONE place
- * a module's public status is written down (00-platform-vision.md §4, "module
- * status comes from one config file, so a module switches to live in one
- * line").
+ * The platform's modules as the landing page shows them. Every surface that
+ * names a module reads it from here — the module map, the module cards, "Who
+ * it's for" and the FAQ's list — so adding a module, or giving one its
+ * recordings, is a change to this table and the catalogue, never to a
+ * component (CR-2026-09-29-PLATFORM-D).
  *
- * Every surface that names a module reads it from here: the hero's badge, the
- * module map, the module cards, "Who it's for" and the FAQ. So a status that
- * changes here changes everywhere, and a surface cannot drift.
- *
- * The rules each status carries, enforced by `LandingPage.test.tsx` and
+ * The owner's rules (docs/platform/00-platform-vision.md §4), each held by a
+ * test in `LandingPage.test.tsx`, `modules.test.ts` or
  * `unbuiltFeatureCopy.test.ts`:
- *  - `live`: the module's real screens exist (docs/platform/01-current-capabilities.md).
- *    Only a live module gets recordings, a demo and "Start free".
- *  - `in_development` and `planned`: a status chip, what the module is for,
- *    the problems it is planned to address and the core it builds on. No
- *    screenshot, video, demo, date or CTA. Its words (lender, library,
- *    gym, room…) may render only inside an element marked
- *    `data-module-status` with that status.
- *  - The statuses here must equal the module map in
- *    `docs/platform/00-platform-vision.md` §2, where a status changes only
- *    through a CR. A test reads that table.
+ *  - Every module is presented the same way, as part of the product. There is
+ *    NO Live / Planned / In development label anywhere on the page.
+ *  - `status` stays here for the build plan and for the pre-launch check
+ *    (docs/platform/STATUS.md: before yourkhata.com is public, every module
+ *    shown is live or the owner re-confirms the page). It must equal the
+ *    module map in the vision doc §2, where it changes only through a CR, and
+ *    the page renders NOTHING from it — no chip, no class, no attribute.
+ *  - `media` is optional. With it, the card shows that recording in a browser
+ *    frame; without it, the card shows an illustration drawn from our own
+ *    icons. Never an invented screenshot, a mock UI or fake data: a module
+ *    gets `media` when it has real recordings of its real screens, and that
+ *    one line is the whole change.
  *
- * Copy lives in the landing catalogue under `landing.module.<id>.*`. Icons are
- * chosen in the component, so this file imports nothing and costs the route
- * nothing but the table.
+ * Copy lives in the landing catalogue under `landing.module.<id>.*`; icons are
+ * chosen in `LandingModuleParts.tsx`.
  */
 export type ModuleStatus = 'live' | 'in_development' | 'planned';
 
@@ -41,15 +42,28 @@ export const CORE_IDS = [
 ] as const;
 export type CoreId = (typeof CORE_IDS)[number];
 
-export type LandingModuleId = 'shop' | 'lending' | 'library' | 'gym' | 'hotel';
+export type LandingModuleId = 'shop' | 'lending' | 'library' | 'gym' | 'hotel' | 'coaching';
+
+/**
+ * A module's recording: a DESKTOP loop (16:10) shown in a browser frame on
+ * every width. One variant only, so a card never downloads two, and its alt
+ * text is a catalogue key because it has to be in Hindi too.
+ */
+export interface ModuleMedia {
+  readonly clip: LandingClip;
+  readonly altKey: string;
+}
 
 export interface LandingModule {
   readonly id: LandingModuleId;
   /** The row this module is in the vision doc's §2 table, by its group name. */
   readonly visionGroup: string;
+  /** Internal only (see the header). Never rendered. */
   readonly status: ModuleStatus;
-  /** The core pieces the module is built on (live) or planned to build on. */
+  /** The core pieces the module uses. */
   readonly buildsOn: readonly CoreId[];
+  /** Real recordings of the module's screens, when it has them. */
+  readonly media?: ModuleMedia;
 }
 
 export const LANDING_MODULES: readonly LandingModule[] = [
@@ -58,6 +72,7 @@ export const LANDING_MODULES: readonly LandingModule[] = [
     visionGroup: 'Shop & billing',
     status: 'live',
     buildsOn: ['people', 'money', 'payments', 'documents', 'reminders', 'reports', 'team', 'csv'],
+    media: { clip: FEATURE_CLIPS.bill.desktop, altKey: 'landing.uc.bill.alt' },
   },
   {
     id: 'lending',
@@ -83,19 +98,13 @@ export const LANDING_MODULES: readonly LandingModule[] = [
     status: 'planned',
     buildsOn: ['people', 'money', 'payments', 'documents', 'reports', 'team'],
   },
+  {
+    id: 'coaching',
+    visionGroup: 'Coaching & tuition',
+    status: 'planned',
+    buildsOn: ['people', 'money', 'payments', 'reminders', 'documents', 'reports'],
+  },
 ];
 
-export const isAvailable = (module: LandingModule): boolean => module.status === 'live';
-
-export const LIVE_MODULES = LANDING_MODULES.filter(isAvailable);
-export const UPCOMING_MODULES = LANDING_MODULES.filter((module) => !isAvailable(module));
-
-/** Message id of a status's chip label. */
-export const STATUS_LABEL_KEY: Readonly<Record<ModuleStatus, string>> = {
-  live: 'landing.module.status.live',
-  in_development: 'landing.module.status.in_development',
-  planned: 'landing.module.status.planned',
-};
-
-/** The number of problem lines each upcoming module's card carries. */
-export const PROBLEM_LINES = [1, 2, 3] as const;
+/** The "What you can do" lines every module's card carries: `landing.module.<id>.i.<n>`. */
+export const CAN_DO_LINES = [1, 2, 3, 4] as const;

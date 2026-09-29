@@ -29,6 +29,11 @@ import {
 
 import { LANDING_CONTAINER, LANDING_SECTION, LandingSectionHeading } from './LandingPrimitives';
 
+// The plans' words are their own catalogue (`landing.pricing.*` →
+// `landingPricing`), loaded with this section's chunk: while pricing is hidden
+// (`SHOW_PRICING`, CR-2026-09-29-PLATFORM-D) the `/` route carries none of them.
+import 'src/i18n/catalogues/landingPricing';
+
 const limitLine = (limit: PlanLimit, t: TranslateFn, n: (v: number) => string): string => {
   switch (limit.kind) {
     case 'logins':
@@ -104,14 +109,14 @@ function PlanCard({
 
       <UbStack gap={3} className="flex-1">
         <UbText variant="inherit" tone="tertiary" className="ds-body-s-medium">
-          {t(plan.includesKey)}
+          {t(`landing.pricing.${plan.includes}`)}
         </UbText>
         <UbStack as="ul" gap={2.5}>
-          {plan.featureKeys.map((featureKey) => (
-            <UbStack as="li" key={featureKey} direction="row" gap={2.5} align="start">
+          {plan.features.map((feature) => (
+            <UbStack as="li" key={feature} direction="row" gap={2.5} align="start">
               <Check aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-text-accent" />
               <UbText variant="inherit" tone="secondary" className="ds-body-base-regular">
-                {t(featureKey)}
+                {t(`landing.pricing.f.${feature}`)}
               </UbText>
             </UbStack>
           ))}

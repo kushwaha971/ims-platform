@@ -6,24 +6,18 @@ import { join } from 'node:path';
 
 import { en, hi } from 'src/tests/allMessages';
 
-import {
-  CORE_IDS,
-  LANDING_MODULES,
-  LIVE_MODULES,
-  PROBLEM_LINES,
-  STATUS_LABEL_KEY,
-  UPCOMING_MODULES,
-  type ModuleStatus,
-} from './modules';
+import { faqIds } from './faq';
+import { FEATURE_CLIPS } from './media';
+import { CAN_DO_LINES, CORE_IDS, LANDING_MODULES, type ModuleStatus } from './modules';
 
 /**
- * `modules.ts` is the one switch for what the landing page says about each
- * module. These tests keep the switch honest in both directions:
- *  - it may not disagree with the vision doc's module map, where a status
- *    changes only through a CR; and
- *  - the copy may not disagree with it. A module flipped to live whose card
- *    still says "planned", or a count line that still says "four more
- *    planned" after one launches, fails here.
+ * `modules.ts` is the one table the landing page's modules come from. These
+ * tests keep it honest (CR-2026-09-29-PLATFORM-D):
+ *  - its internal `status` may not disagree with the vision doc's module map,
+ *    where a status changes only through a CR — the pre-launch check reads it;
+ *  - every module has the same copy, in both languages, so every card is the
+ *    same card; and
+ *  - the order is the owner's.
  */
 const enMessages = en as Record<string, string>;
 const hiMessages = hi as Record<string, string>;
@@ -65,75 +59,67 @@ describe('the landing page module config', () => {
     });
   });
 
-  it('has every module and core piece named in both languages', () => {
+  /** Owner, 29 Sep: this order, and coaching is the sixth module. */
+  it('lists the six modules in the owner\'s order', () => {
+    expect(LANDING_MODULES.map((module) => module.id)).toEqual([
+      'shop',
+      'lending',
+      'library',
+      'gym',
+      'hotel',
+      'coaching',
+    ]);
+    expect(LANDING_MODULES.find((module) => module.id === 'coaching')).toMatchObject({
+      visionGroup: 'Coaching & tuition',
+      status: 'planned',
+    });
+  });
+
+  it('has every module and core piece named in both languages, with the same lines each', () => {
     const keys = [
-      ...Object.values(STATUS_LABEL_KEY),
+      'landing.modules.canDo',
+      'landing.modules.buildsOn',
       ...CORE_IDS.flatMap((id) => [`landing.core.${id}`, `landing.core.${id}.short`]),
-      ...LANDING_MODULES.flatMap((module) =>
-        ['name', 'audience', 'purpose', 'keeps'].map((part) => `landing.module.${module.id}.${part}`)
-      ),
-      ...UPCOMING_MODULES.flatMap((module) =>
-        PROBLEM_LINES.map((n) => `landing.module.${module.id}.problem.${n}`)
-      ),
+      ...LANDING_MODULES.flatMap((module) => [
+        ...['name', 'audience', 'purpose', 'keeps'].map((part) => `landing.module.${module.id}.${part}`),
+        ...CAN_DO_LINES.map((n) => `landing.module.${module.id}.i.${n}`),
+      ]),
     ];
     keys.forEach((key) => {
       expect({ key, en: !!enMessages[key], hi: !!hiMessages[key] }).toEqual({ key, en: true, hi: true });
     });
-  });
-
-  /** The status chip says the config's word, never a synonym for "available". */
-  it('labels the statuses Live, In development and Planned — no "Soon"', () => {
-    expect(enMessages[STATUS_LABEL_KEY.live]).toBe('Live');
-    expect(enMessages[STATUS_LABEL_KEY.in_development]).toBe('In development');
-    expect(enMessages[STATUS_LABEL_KEY.planned]).toBe('Planned');
-    Object.values(STATUS_LABEL_KEY).forEach((key) => {
-      expect(enMessages[key]).not.toMatch(/soon|coming/i);
-      expect(hiMessages[key]).not.toMatch(/जल्द/u);
+    LANDING_MODULES.forEach((module) => {
+      expect(enMessages[`landing.module.${module.id}.i.${CAN_DO_LINES.length + 1}`]).toBeUndefined();
     });
   });
 
-  it('never describes an upcoming module as available', () => {
-    UPCOMING_MODULES.forEach((module) => {
-      Object.keys(enMessages)
-        .filter((key) => key.startsWith(`landing.module.${module.id}.`))
-        .forEach((key) => {
-          expect({ key, text: enMessages[key] }).not.toEqual({
-            key,
-            text: expect.stringMatching(/\b(live|available|now|today|start free|sign up)\b/i),
-          });
-          expect({ key, text: hiMessages[key] }).not.toEqual({
-            key,
-            text: expect.stringMatching(/चालू|उपलब्ध|अभी शुरू|आज से/u),
-          });
-        });
+  /**
+   * `media` is the one switch that gives a module its recordings. Today only
+   * Shop & billing has real ones, and it uses a clip the page already ships
+   * (with its alt text in both languages); a clip that is not one of ours
+   * would be an invented screen.
+   */
+  it('gives media only to a module with real recordings, from the landing manifest', () => {
+    const known = Object.values(FEATURE_CLIPS).flatMap((clips) => [clips.desktop, clips.mobile]);
+    expect(LANDING_MODULES.filter((module) => module.media).map((module) => module.id)).toEqual(['shop']);
+    LANDING_MODULES.forEach((module) => {
+      if (!module.media) return;
+      expect(module.status).toBe('live');
+      expect(known).toContain(module.media.clip);
+      expect(enMessages[module.media.altKey]).toBeTruthy();
+      expect(hiMessages[module.media.altKey]).toBeTruthy();
     });
   });
 
-  /** A live module lists what is in it; an upcoming one lists the problems instead. */
-  it('gives a live module its feature lines and an upcoming one none', () => {
-    LIVE_MODULES.forEach((module) => {
-      expect(enMessages[`landing.module.${module.id}.i.1`]).toBeTruthy();
-    });
-    UPCOMING_MODULES.forEach((module) => {
-      expect(enMessages[`landing.module.${module.id}.i.1`]).toBeUndefined();
-    });
+  /** Hindi names use ordinary words (vision §4). */
+  it('names coaching in ordinary Hindi', () => {
+    expect(enMessages['landing.module.coaching.name']).toBe('Coaching & tuition');
+    expect(hiMessages['landing.module.coaching.name']).toBe('कोचिंग और ट्यूशन');
   });
 
-  /** "One module today. Four more planned." is a COUNT of this file's rows. */
-  it('counts the live and upcoming modules in the section heading correctly', () => {
-    const EN = ['no', 'one', 'two', 'three', 'four', 'five', 'six'];
-    const HI = ['कोई', 'एक', 'दो', 'तीन', 'चार', 'पाँच', 'छह'];
-    const enLine = enMessages['landing.modules.key']?.toLowerCase() ?? '';
-    const hiLine = hiMessages['landing.modules.key'] ?? '';
-
-    expect(enLine).toContain(`${EN[LIVE_MODULES.length]} module`);
-    expect(enLine).toContain(`${EN[UPCOMING_MODULES.length]} more planned`);
-    expect(hiLine).toContain(`${HI[LIVE_MODULES.length]} मॉड्यूल`);
-    expect(hiLine).toContain(`${HI[UPCOMING_MODULES.length]} और योजना में`);
-  });
-
-  /** The FAQ's "which modules can I use today" names every module, and says which are planned. */
-  it('names every module in the "which modules today" answer, in both languages', () => {
+  /** The FAQ's "which modules are there" names every module, in both languages. */
+  it('names every module in the "which modules" answer, in both languages', () => {
+    expect(faqIds(false)).toContain('modules');
     LANDING_MODULES.forEach((module) => {
       expect(enMessages['landing.faq.modules.a']).toContain(enMessages[`landing.module.${module.id}.name`]);
       expect(hiMessages['landing.faq.modules.a']).toContain(hiMessages[`landing.module.${module.id}.name`]);

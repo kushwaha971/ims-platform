@@ -4,12 +4,12 @@ import { memo } from 'react';
 
 import {
   ArrowRight,
+  BellRing,
+  BookOpenText,
   FileDown,
-  FileSpreadsheet,
   Gauge,
-  Languages,
+  History,
   MoonStar,
-  UserCog,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -40,13 +40,19 @@ function IconTile({ icon: Icon }: Readonly<{ icon: LucideIcon }>) {
   );
 }
 
+/**
+ * Staff roles, Hindi and English, and CSV used to be here; they are reasons in
+ * "Why YourKhata" now (`WhySection.tsx`), so this grid carries three other
+ * live pieces of the core instead of saying the same thing twice
+ * (docs/platform/01-current-capabilities.md: Reminders, Reports, Platform).
+ */
 const ALSO: readonly { readonly id: string; readonly icon: LucideIcon }[] = [
-  { id: 'staff', icon: UserCog },
-  { id: 'language', icon: Languages },
-  { id: 'theme', icon: MoonStar },
-  { id: 'csv', icon: FileSpreadsheet },
+  { id: 'reminders', icon: BellRing },
   { id: 'statements', icon: FileDown },
+  { id: 'reports', icon: BookOpenText },
   { id: 'credit', icon: Gauge },
+  { id: 'activity', icon: History },
+  { id: 'theme', icon: MoonStar },
 ];
 
 function AlsoIncludedSectionBase() {

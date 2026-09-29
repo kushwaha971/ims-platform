@@ -18,6 +18,20 @@
  * This module imports nothing, so the pricing section's chunk does not pull a
  * formatter or a slice in to read four numbers.
  */
+/**
+ * CR-2026-09-29-PLATFORM-D — the owner has hidden pricing on the landing page
+ * for now, to be decided later. This is the ONE switch. While it is `false`:
+ * no #pricing section, no Pricing link in the header, the phone menu or the
+ * footer, no "What does it cost?" in the FAQ (a neutral "Do I need a card?"
+ * stands in, which says nothing about prices), and no `offers` in the JSON-LD.
+ * "Start free" stays, because nothing is charged today and that is true.
+ *
+ * Read at RENDER time, never folded into a module-level constant, so a test can
+ * flip it (`LandingPage.pricingFlag.test.tsx`). The section, its figures and
+ * their tests are kept exactly as they were.
+ */
+export const SHOW_PRICING: boolean = false;
+
 export type PricingStatus = 'proposed' | 'approved';
 export type BillingCycle = 'monthly' | 'yearly';
 export type PlanId = 'free' | 'starter' | 'business' | 'wholesale';
@@ -34,10 +48,10 @@ export interface Plan {
   /** INR per month, before GST. */
   readonly monthly: number;
   readonly limits: readonly PlanLimit[];
-  /** Message id of the "Everything in … plus" line, when it builds on another plan. */
-  readonly includesKey: string;
-  /** Message ids of the feature lines this plan adds. */
-  readonly featureKeys: readonly string[];
+  /** The "Everything in … plus" line, by its id in the pricing catalogue. */
+  readonly includes: 'includes' | 'includesFree';
+  /** The feature lines this plan adds, by short id (see PlanFeature). */
+  readonly features: readonly PlanFeature[];
   /** Carries a quiet badge. Never "most popular" — see the header. */
   readonly highlight?: boolean;
 }
@@ -56,25 +70,40 @@ export const yearlyPrice = (monthly: number): number => monthly * YEARLY_BILLED_
 export const priceFor = (plan: Plan, cycle: BillingCycle): number =>
   cycle === 'yearly' ? yearlyPrice(plan.monthly) : plan.monthly;
 
-const FREE_FEATURES = [
-  'landing.pricing.f.khata',
-  'landing.pricing.f.statements',
-  'landing.pricing.f.reminders',
-  'landing.pricing.f.invoices',
-  'landing.pricing.f.dashboard',
-  'landing.pricing.f.export',
-  'landing.pricing.f.languages',
-] as const;
+/**
+ * Feature lines by SHORT id, not message id. This file is imported by the
+ * page's client components for `SHOW_PRICING`, and the checker
+ * (`scripts/check-locales.mjs`) counts every full message id a module spells
+ * out as words that module renders — so full ids here would make `/` load the
+ * `landingPricing` catalogue it never shows. `PricingSection` builds the ids.
+ */
+export type PlanFeature =
+  | 'khata'
+  | 'statements'
+  | 'reminders'
+  | 'invoices'
+  | 'dashboard'
+  | 'export'
+  | 'languages'
+  | 'estimates'
+  | 'stock'
+  | 'expenses'
+  | 'reports'
+  | 'import'
+  | 'roles'
+  | 'credit';
 
-const PAID_FEATURES = [
-  'landing.pricing.f.estimates',
-  'landing.pricing.f.stock',
-  'landing.pricing.f.expenses',
-  'landing.pricing.f.reports',
-  'landing.pricing.f.import',
-  'landing.pricing.f.roles',
-  'landing.pricing.f.credit',
-] as const;
+const FREE_FEATURES: readonly PlanFeature[] = [
+  'khata',
+  'statements',
+  'reminders',
+  'invoices',
+  'dashboard',
+  'export',
+  'languages',
+];
+
+const PAID_FEATURES: readonly PlanFeature[] = ['estimates', 'stock', 'expenses', 'reports', 'import', 'roles', 'credit'];
 
 export const PRICING: Pricing = {
   status: 'proposed',
@@ -89,8 +118,8 @@ export const PRICING: Pricing = {
         { kind: 'invoices', count: 30 },
         { kind: 'items', count: 100 },
       ],
-      includesKey: 'landing.pricing.includes',
-      featureKeys: FREE_FEATURES,
+      includes: 'includes',
+      features: FREE_FEATURES,
     },
     {
       id: 'starter',
@@ -100,8 +129,8 @@ export const PRICING: Pricing = {
         { kind: 'devices', count: 4 },
         { kind: 'invoices', count: 300 },
       ],
-      includesKey: 'landing.pricing.includesFree',
-      featureKeys: PAID_FEATURES,
+      includes: 'includesFree',
+      features: PAID_FEATURES,
     },
     {
       id: 'business',
@@ -111,8 +140,8 @@ export const PRICING: Pricing = {
         { kind: 'devices', count: 10 },
         { kind: 'invoices', count: null },
       ],
-      includesKey: 'landing.pricing.includesFree',
-      featureKeys: PAID_FEATURES,
+      includes: 'includesFree',
+      features: PAID_FEATURES,
       highlight: true,
     },
     {
@@ -123,8 +152,8 @@ export const PRICING: Pricing = {
         { kind: 'devices', count: null },
         { kind: 'invoices', count: null },
       ],
-      includesKey: 'landing.pricing.includesFree',
-      featureKeys: PAID_FEATURES,
+      includes: 'includesFree',
+      features: PAID_FEATURES,
     },
   ],
 };
