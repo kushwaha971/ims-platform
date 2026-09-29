@@ -53,6 +53,7 @@ from apps.reports.constants_tax import (
     PURCHASE_REGISTER_KINDS,
     REGISTER_ORDERINGS,
     SALES_REGISTER_KINDS,
+    VALUE_CREDIT,
     VOID,
 )
 from apps.sales.models import SalesDocument, SalesDocumentLine
@@ -221,6 +222,8 @@ def sales_register_lines(*, tenant: Any, params: Any) -> QuerySet:
     queryset = queryset.annotate(
         s_qty=Case(
             When(document__status=VOID, then=Value(Decimal("0.000"))),
+            # ── A15 ── a value credit (R51) moves value, never quantity.
+            When(credit_mode=VALUE_CREDIT, then=Value(Decimal("0.000"))),
             When(document__kind=CREDIT_NOTE, then=-F("qty")),
             default=F("qty"),
             output_field=QTY,

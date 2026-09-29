@@ -19,6 +19,8 @@ from decimal import Decimal
 #: or not that enum member exists on this branch.
 SALES_REGISTER_KINDS: tuple[str, ...] = ("invoice", "bill_of_supply", "credit_note")
 CREDIT_NOTE = "credit_note"
+# ── A15 ── `sales_document_line.credit_mode` of a value credit (R51, ADR-057).
+VALUE_CREDIT = "value"
 #: RPT-04 BR-3 — only bills (debit notes are PUR-07, Phase 2).
 PURCHASE_REGISTER_KINDS: tuple[str, ...] = ("purchase_bill",)
 

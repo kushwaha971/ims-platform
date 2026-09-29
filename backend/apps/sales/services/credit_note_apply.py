@@ -24,7 +24,7 @@ from apps.common.audit import AuditAction, write_audit
 from apps.common.context import Ctx
 from apps.common.exceptions import BusinessRuleViolation, ValidationFailed
 from apps.common.money import D, q2
-from apps.sales.constants import APPLICABLE_STATUSES, INVOICE_KINDS, DocumentStatus
+from apps.sales.constants import APPLICABLE_STATUSES, INVOICE_KINDS, CreditMode, DocumentStatus
 from apps.sales.services import documents as drafts
 from apps.sales.services.amounts import ZERO, refresh_credit_note, refresh_invoice_amounts
 from apps.sales.services.credit_note_issue import apply_credit
@@ -111,10 +111,11 @@ def _give_back_quantities(note: Any) -> None:
     """BR-7 — `returned_qty` loses this note's quantities, on locked invoice lines."""
     from apps.sales.models import SalesDocumentLine
 
+    # ── A15 ── a value credit (R51) returned no quantity, so it gives none back.
     returned = {
         line.against_line_id: Decimal(line.qty)
         for line in note.lines.all()
-        if line.against_line_id is not None
+        if line.against_line_id is not None and line.credit_mode != CreditMode.VALUE
     }
     if not returned:
         return

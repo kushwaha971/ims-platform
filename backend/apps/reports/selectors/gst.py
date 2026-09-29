@@ -66,6 +66,7 @@ from apps.reports.constants_tax import (
     NIL_EXEMPT_CODES,
     NON_GST_CODES,
     SALES_REGISTER_KINDS,
+    VALUE_CREDIT,
     VOID,
 )
 from apps.reports.selectors.registers import has_field, itc_claimable, signed
@@ -402,6 +403,9 @@ def hsn_summary(lines: QuerySet) -> dict:
             total_qty=Coalesce(
                 Sum(
                     Case(
+                        # A15 / R51: a value credit changed the value of a
+                        # supply, not its quantity — it adds no UQC quantity.
+                        When(credit_mode=VALUE_CREDIT, then=Value(Decimal("0.000"))),
                         When(document__kind=CREDIT_NOTE, then=-F("qty")),
                         default=F("qty"),
                         output_field=QTY,

@@ -95,6 +95,19 @@ class CreditNoteReason(models.TextChoices):
     OTHER = "other", _("Other")
 
 
+class CreditMode(models.TextChoices):
+    """R51 / ADR-057 (A15) — how a credit-note line credits its invoice line.
+
+    `qty` is SAL-04's return: a quantity of the line, priced at its snapshot,
+    moving `returned_qty` and (for goods) stock. `value` is a value credit: an
+    exact taxable value against the line, tax copied from it, moving neither —
+    a gym upgrade's 77/92 of a membership, or a price correction on a service.
+    Invoice and standalone lines are `qty` (the column's default)."""
+
+    QTY = "qty", _("Quantity")
+    VALUE = "value", _("Value")
+
+
 class Settlement(models.TextChoices):
     """SAL-04 FR-7 — what happens to the credit the invoice does not absorb."""
 

@@ -17,7 +17,7 @@ from django.db import models
 
 from apps.common.db.fields import MoneyField, QuantityField, RateField, UnitCostField, uuid7_pk
 from apps.common.models import TenantModel
-from apps.sales.constants import DiscountType, DocumentKind, DocumentStatus
+from apps.sales.constants import CreditMode, DiscountType, DocumentKind, DocumentStatus
 
 
 class SalesDocument(TenantModel):
@@ -188,6 +188,11 @@ class SalesDocumentLine(models.Model):
     against_line = models.ForeignKey(
         "self", on_delete=models.RESTRICT, null=True, blank=True, related_name="return_lines"
     )
+    # R51 / ADR-057 (A15): a `value` line credits `taxable_value` of its
+    # `against_line` exactly, with the invoice line's tax, and moves neither
+    # `returned_qty` nor stock. Its `qty` is 1 (the line is one credit); the
+    # GST summary and the register count it as no quantity.
+    credit_mode = models.CharField(max_length=8, choices=CreditMode.choices, default=CreditMode.QTY)
 
     class Meta:
         db_table = "sales_document_line"
@@ -198,6 +203,12 @@ class SalesDocumentLine(models.Model):
             models.UniqueConstraint(fields=["document", "line_no"], name="uq_sales_line_no"),
             models.CheckConstraint(
                 condition=models.Q(qty__gt=0), name="ck_sales_line_qty_positive"
+            ),
+            # ── A15 ── a value credit is always against an invoice line.
+            models.CheckConstraint(
+                condition=models.Q(credit_mode="qty")
+                | models.Q(credit_mode="value", against_line__isnull=False),
+                name="ck_sales_line_value_credit_against",
             ),
         ]
 

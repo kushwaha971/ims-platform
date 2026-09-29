@@ -337,3 +337,88 @@ Inputs: R33, R49, contracts §1.9 (frontend primitives), 10-architecture §6 ite
   from the same components with the same props) plus the landing redirect, which the component
   test drives through the router. The Wave A gate's QA pass at 390 and 1280 px should include a
   billing-only login landing on Bills and an invoice print with a logo.
+
+---
+
+## A15 — sales value credit lines (R51, ADR-057)
+
+Status: **done, merged** (commit `A15:` on main)
+
+### Design note (review step)
+
+Inputs: contracts §1.5 (`CreditLine`, "Sales changes behind it"), R51, ADR-057, gym.md GYM-11 BR-3 to
+BR-10 and the worked examples, and the real code: `credit_note_lines.py`, `credit_note_issue.py`,
+`credit_notes.recompute`, `payload.apply_payload`, `tax_engine`, `credit_note_apply` (void),
+`stock_link.restock_rows`, `reports/selectors/{gst,registers}.py`.
+
+- **Schema** (`sales 0004_credit_value_lines`): `sales_document_line.credit_mode varchar(8)
+  default 'qty'` + CHECK `credit_mode='qty' OR (credit_mode='value' AND against_line IS NOT NULL)`.
+  `against_line_id` and the exact `taxable_value` (numeric(14,2)) already existed, so no other
+  column is needed. The table is tenant-scoped through `document`, as before.
+- **A value line** (`{"against_line_id", "taxable_value", "description"?}`) is built as ONE engine
+  line: qty 1, exclusive, no discount, at the value, with the source line's tax code and
+  snapshotted `tax_rate`/`cess_rate`. The engine therefore returns that taxable value to the
+  paisa and the invoice line's tax on it, and the place of supply and reverse charge come from the
+  invoice as for any note. The stored row has `qty = 1` and `unit_price = value`, which the print
+  sheet renders as-is.
+- **The cap** is by value across both modes: Σ `taxable_value` of issued, non-void credit lines
+  against the line ≤ its taxable value. It is checked on the draft (advisory) and again on the
+  LOCKED invoice lines at issue, the EC-9 pattern. A value line moves no `returned_qty` and no
+  stock (restock gets quantity rows only), and on void it gives no quantity back
+  (`_give_back_quantities` filter).
+- **Refinement found while designing:** the value cap binds a *quantity* return only on a line a
+  value credit has already touched. Separate partial returns each round to the paisa (SAL-04 EC-3,
+  accepted), so their sum can pass the invoice figure by a paisa. A cap on every quantity return
+  would have refused the counter's last unit, which is a behaviour change (see the adversarial
+  pass).
+- **One mode per note.** A quantity return carries a share of the invoice's document discount,
+  which the engine spreads over every line of the note, so a mixed note would shave a value line's
+  paise. This is refused with a message.
+- **Reports:** a value credit reduces taxable and tax everywhere (rate-wise, HSN, CDNR, GSTR-3B
+  3.1(a), register) but adds **no quantity** (HSN `total_qty`, register `s_qty`), because it changed
+  the value of a supply, not the quantity supplied (`VALUE_CREDIT` in `reports/constants_tax.py`).
+- **HTTP unchanged:** the counter's `CreditNoteLineSerializer` has no `taxable_value`, so value
+  lines are service-level only, for the document port (A5). A test holds this.
+
+### Files outside A15's Owns column (each minimal, labelled `A15`)
+
+- `sales/services/credit_note_apply.py` (`_give_back_quantities` filter, 2 lines). A5 owns this
+  file but has not started (it waits on A15); A5 rebases onto it.
+- `sales/constants.py` (`CreditMode`), `reports/constants_tax.py` (`VALUE_CREDIT`),
+  `reports/selectors/registers.py` (the line `s_qty` When). These three are in no task's Owns.
+
+### Tests
+
+`apps/sales/tests/test_value_credits.py`, 20 tests:
+- gym.md's worked example to the paisa: 3,347.83 / 83.70 / 83.69 / 3,515.22 → 3,515.00 with
+  round-off −0.22;
+- no `returned_qty` and no stock; IGST inter-state;
+- the cap on the draft, on the locked line, value-after-quantity and quantity-after-value;
+- void frees the value and leaves `returned_qty`;
+- validation (5 cases); one mode per note; no document discount on a value note; header-only
+  PATCH round-trips a value line; the counter API stays quantity-only;
+- **the reconciliation**: rate-wise = HSN = GSTR-3B 3.1(a) = register taxable (5,000.00 −
+  3,347.83), tax heads equal, CDNR row exact, value line qty 0 in HSN and the register;
+- two adversarial tests (below).
+
+`apps/sales`, `apps/reports`, `apps/payments` and `tests/architecture`: **491 passed, 7 skipped**
+before the two adversarial additions. The GST summary suite and every existing sales test are
+green. `makemigrations --check` is clean.
+
+### Adversarial pass (self, no Agent tool)
+
+- Fuzzed the property the design rests on: 5,000 random values across every GST rate, with and
+  without cess, intra- and inter-state. A one-unit exclusive line keeps its taxable value exactly
+  and gets exactly the engine's documented heads.
+- **Found and fixed (in design, locked by a test):** a naive value cap on quantity returns refuses
+  unit-by-unit returns whose paise overshoot. The concrete case: 2 × ₹15.00 incl. 5% is ₹28.57 on
+  the invoice and 2 × ₹14.29 = ₹28.58 returned. The test fails under the naive rule (verified by
+  swapping it in) and passes under the real one.
+- Concurrency: two notes for one line serialise on the party lock, then on the invoice-line lock;
+  the credited sum is read after the lock, so the second sees the first.
+
+### Questions for the architecture owner
+
+5. A value line is stored as `qty 1 × taxable_value` and prints that way. Whether a CA wants the
+   quantity column blank on a value credit note is a print question (gym T13's neighbour); the
+   data would not change.

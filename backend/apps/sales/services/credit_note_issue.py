@@ -7,8 +7,11 @@
 3. Lock the party (L1).
 4. Lock the invoice's lines and re-check every cap on the LOCKED rows, then
    move `returned_qty` (BR-2, EC-9) — two notes racing for the last unit
-   serialise here and the second one is refused.
-5. Restock through `inventory.post_movements` when asked (L2, FR-5).
+   serialise here and the second one is refused. A15: the value cap (R51) is
+   re-checked here too, on the same locks, and a VALUE line moves no
+   `returned_qty` — it returned nothing.
+5. Restock through `inventory.post_movements` when asked (L2, FR-5) — quantity
+   lines only; a value credit never moves stock.
 6. Allocate the number last of the locks (L4, BR-8).
 7. Ledger credit for the grand total (FR-6); apply it to the invoice's due
    first (BR-3); refund what is left if asked (FR-7, refund_seam.py); the
@@ -28,10 +31,17 @@ from apps.common.audit import AuditAction, write_audit
 from apps.common.context import Ctx
 from apps.common.dates import fy_bounds, tenant_today
 from apps.common.exceptions import BusinessRuleViolation, ValidationFailed
-from apps.sales.constants import DocumentKind, DocumentStatus, Settlement
+from apps.sales.constants import CreditMode, DocumentKind, DocumentStatus, Settlement
 from apps.sales.services import documents as drafts
 from apps.sales.services.amounts import ZERO, refresh_credit_note, refresh_invoice_amounts
-from apps.sales.services.credit_note_lines import cap_message, remaining
+from apps.sales.services.credit_note_lines import (
+    cap_message,
+    credited,
+    quantity_value,
+    remaining,
+    value_cap_message,
+    value_left,
+)
 from apps.sales.services.credit_notes import CREDIT_NOTE_KINDS, invoice_for_credit, recompute
 from apps.sales.services.issue_parts import party_snapshot
 from apps.sales.services.ledger_link import post_credit_note_credit
@@ -39,8 +49,13 @@ from apps.sales.services.refund_seam import clean_refund, record_refund
 from apps.sales.services.stock_link import restock_rows
 
 
+def _is_value(row: dict) -> bool:
+    return row.get("credit_mode") == CreditMode.VALUE
+
+
 def _take_quantities(invoice: Any, rows: list[dict]) -> None:
-    """BR-2 on LOCKED invoice lines: refuse every over-cap line at once, then move the cache."""
+    """BR-2 and R51 on LOCKED invoice lines: refuse every over-cap line at
+    once, then move the cache for the quantity lines."""
     from apps.sales.models import SalesDocumentLine
 
     locked = {
@@ -49,14 +64,26 @@ def _take_quantities(invoice: Any, rows: list[dict]) -> None:
         .filter(document=invoice)
         .order_by("line_no")
     }
+    # Read AFTER the lock: a note that issued while this one waited is counted.
+    done = credited(locked.values())
     errors: dict[str, list[str]] = {}
     for index, row in enumerate(rows):
         line = locked[row["against_line"].id]
+        if _is_value(row):
+            if Decimal(row["taxable_value"]) > value_left(line, done):
+                errors[f"lines.{index}.taxable_value"] = [value_cap_message(value_left(line, done))]
+            continue
         if Decimal(row["qty"]) > remaining(line):
             errors[f"lines.{index}.qty"] = [cap_message(line)]
+        elif line.id in done.by_value and quantity_value(line, row["qty"]) > value_left(
+            line, done
+        ):
+            errors[f"lines.{index}.qty"] = [value_cap_message(value_left(line, done))]
     if errors:
         raise ValidationFailed(errors)
     for row in rows:
+        if _is_value(row):
+            continue
         line = locked[row["against_line"].id]
         line.returned_qty = Decimal(line.returned_qty) + Decimal(row["qty"])
         line.save(update_fields=["returned_qty"])
@@ -137,7 +164,8 @@ def issue_credit_note(
     party = relock_if_moved(tenant=ctx.tenant, party=party, party_id=note.party_id)
     if invoice is not None:
         _take_quantities(invoice, rows)
-    movement_ids = restock_rows(ctx, note, rows) if meta.get("restock", True) else []
+    quantity_rows = [row for row in rows if not _is_value(row)]
+    movement_ids = restock_rows(ctx, note, quantity_rows) if meta.get("restock", True) else []
 
     note.number = allocate_number(
         tenant=ctx.tenant, kind=DocumentKind.CREDIT_NOTE, on_date=note.document_date
