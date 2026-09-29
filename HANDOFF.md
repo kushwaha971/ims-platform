@@ -219,14 +219,32 @@ Serve for QA:
   - The user-visible name is **YourKhata** and the domain is yourkhata.com. The code namespace stays `DigiKhaato`; the repo stays `ims-platform`.
   - **Customer-facing documents never show the product name or domain.** That covers every print, the share page, and export contents. "Issued by / Shared by <shop>" instead. A test guards this.
   - **Local `.env.local` sets `NEXT_PUBLIC_APP_NAME`.** Set it to YourKhata on every machine: the owner's Mac `.env.local` may still say DigiKhaato.
-  - The logo is Concept A (`frontend/public/brand/`, `UbLogo`).
-  - Round-2 options are in `frontend/public/brand/concepts2/` (six directions plus a README). They are **untracked; the owner is choosing**. The designer recommends concept 3, "Hisaab Barabar".
+  - **Logo is K-c "Bandhan", chosen by the owner (CR-2026-09-29-BRAND-C, c159f69).** It supersedes Concept A.
+    - The Concept 1 K sits on a tied bahi-khata cover, and the K's sweep becomes the tie band, closed by a bahi-red knot.
+    - Tokens: `--brand-cover`, `--brand-hem`, `--brand-figure`, and `--brand-knot` (the only fixed hex, and decorative only).
+    - At 24 px and below the hem is dropped and the knot becomes a dot. The 16 px favicon is a hand-cut SVG.
+    - The rules are in `docs/DESIGN-SYSTEM.md` §7.
+    - All concept rounds are committed in `frontend/public/brand/concepts{,2,3}/`.
+    - The owner rejected "Joined YK"; that abandoned patch is not applied.
 - **SEC-A (e5190a2):** during an impersonated support session every unsafe method is refused with 403 `impersonation_forbidden`. Allow-list: end session, logout, `/reminders/preview`. The UI goes view-only through the `UbViewOnly` context.
 - **Demo videos (owner request; work lives in /home/claude/video, NOT in the repo).**
   - Done: plan, the Hinglish scripts (`scripts/{mobile,desktop,superadmin}.md`, `youtube.md`), and the pipeline (`pipeline/make.sh`). The pipeline uses Kokoro `hm_omega` TTS with Devanagari input, frame capture through Playwright/CDP, and an ffmpeg edit with captions, a cursor/tap overlay and loudnorm. Dry-run clips are in `out/`.
-  - **Paused: no final videos exist yet.**
-  - Next: after the logo decision, rehearse → record → review the mobile and desktop videos. The super-admin video needs a clean DB and a demo operator (`pipeline/make_operator.sh`).
-  - The voice is intelligible but not studio-grade; a human listen is required.
+  - **DONE (29 Sep, on the K-c build).** The finals are in `/mnt/user-data/outputs/videos/` and `/home/claude/video/out/`. Each has an `.srt` and `.chapters.txt`, plus `youtube.md` and a README listing the limitations:
+    - `mobile.mp4`: 8:49, 1080×1920, 15 chapters
+    - `desktop.mp4`: 11:56, 1920×1080, 16 chapters
+    - `superadmin.mp4`: **PRIVATE**, 5:45, 8 chapters
+  - Review results for all three:
+    - captions land within 250 ms of the speech;
+    - loudness is −16 LUFS;
+    - there are no black frames;
+    - the privacy review passed.
+  - The demo operator was deactivated after recording.
+  - The voice is synthetic: clear, but flat. The owner should listen before uploading.
+  - Uploading to YouTube, and setting the super-admin video to private, is the owner's job.
+  - **Product findings from the recording:**
+    - a suspended business shows "The 'reports' module is not enabled" instead of a suspension message;
+    - in a view-only support session, "New password" and "Invite member" on Team still look clickable;
+    - the dev stack runs no `run_scheduler`.
 - **Serving:** run `bash e2e/serve.sh` in its own shell call. Its `pkill -f` patterns kill any shell whose command line contains "standalone/server.js" or "next-server". Start the backend with `UB_E2E_RELAX_THROTTLES=1` for e2e and videos.
 
 ## 9. Exact next steps
