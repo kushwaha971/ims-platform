@@ -1,4 +1,7 @@
 import { en, hi } from 'src/tests/allMessages';
+import { LANDING_JARGON, PLANNED_MODULE_WORDS, withoutBrand } from 'src/tests/plannedModuleVocabulary';
+
+import { UPCOMING_MODULES } from 'modules/DigiKhaato/features/landing/config/modules';
 
 /**
  * UAT D8 — copy that promised features the product does not have, or described
@@ -325,5 +328,78 @@ describe('the landing page promises only what is built', () => {
     expect(hindiWithBrand.length).toBeGreaterThan(0);
     hindiWithBrand.forEach((key) => expect(hiMessages[key]).toContain('YourKhata'));
     landingKeys.forEach((key) => expect(hiMessages[key]).not.toMatch(/योरखाता|यॉरखाता/u));
+  });
+});
+
+/**
+ * CR-2026-09-29-PLATFORM-B — the landing page now names four modules that are
+ * not built (lending, library, gym, hotel). Owner rule (vision §4): they are
+ * shown as planned and nothing more. So a planned module's words — lender,
+ * borrower, interest, library, gym, member, hotel, room, booking… — may appear
+ * in exactly two kinds of place:
+ *   1. its own card, tile or row, whose copy is `landing.module.<id>.*` for an
+ *      id `config/modules.ts` marks as not live; and
+ *   2. the two FAQ answers that exist to say those modules cannot be used yet,
+ *      which are required to say "planned" and "not".
+ * Anywhere else — the hero, the rotating word, a live feature card, the
+ * pricing — the same word would read as a promise. `LandingPage.test.tsx`
+ * checks the rendered page against the same list by ancestor.
+ */
+describe('planned modules are spoken of only from a planned card', () => {
+  const enMessages = en as Record<string, string>;
+  const hiMessages = hi as Record<string, string>;
+  const landingKeys = Object.keys(enMessages).filter((key) => key.startsWith('landing.'));
+  const PLANNED_PREFIXES = UPCOMING_MODULES.map((module) => `landing.module.${module.id}.`);
+  const PLANNED_SCOPE_FAQ = ['landing.faq.modules.q', 'landing.faq.modules.a', 'landing.faq.lending.q', 'landing.faq.lending.a'];
+  const allowed = (key: string) =>
+    PLANNED_PREFIXES.some((prefix) => key.startsWith(prefix)) || PLANNED_SCOPE_FAQ.includes(key);
+
+  it('has planned-module copy to check, in both languages', () => {
+    expect(UPCOMING_MODULES.length).toBeGreaterThan(0);
+    PLANNED_PREFIXES.forEach((prefix) => {
+      expect(landingKeys.filter((key) => key.startsWith(prefix)).length).toBeGreaterThan(4);
+    });
+  });
+
+  it.each([
+    ['en', PLANNED_MODULE_WORDS.en],
+    ['hi', PLANNED_MODULE_WORDS.hi],
+  ] as const)('uses planned-module words only in planned-module keys (%s)', (lang, pattern) => {
+    const messages = lang === 'en' ? enMessages : hiMessages;
+    const offending = landingKeys
+      .filter((key) => pattern.test(messages[key] ?? '') && !allowed(key))
+      .map((key) => `${key}: ${messages[key]}`);
+    expect(offending).toEqual([]);
+  });
+
+  it('makes the two planned-scope FAQ answers say "planned" and "not"', () => {
+    ['landing.faq.modules.a', 'landing.faq.lending.a'].forEach((key) => {
+      expect(enMessages[key]).toMatch(/\bplanned\b/);
+      expect(enMessages[key]).toMatch(/\bnot\b|cannot/);
+      expect(hiMessages[key]).toMatch(/योजना/u);
+      expect(hiMessages[key]).toMatch(/नहीं/u);
+    });
+    expect(enMessages['landing.faq.lending.a']).toMatch(/^Not yet\./);
+    expect(hiMessages['landing.faq.lending.a']).toMatch(/^अभी नहीं।/u);
+  });
+
+  /** Vision §4: record-keeping, not lending. The card and the FAQ both say so. */
+  it('says the lending module will keep records and will not lend or move money', () => {
+    ['landing.module.lending.purpose', 'landing.faq.lending.a'].forEach((key) => {
+      expect(enMessages[key]).toMatch(/not lend/);
+      expect(enMessages[key]).toMatch(/move money/);
+    });
+  });
+
+  /** Vision §4 — no "kirana", no regional jargon: shop, store, business, organisation. */
+  it.each([
+    ['en', LANDING_JARGON.en],
+    ['hi', LANDING_JARGON.hi],
+  ] as const)('uses no regional jargon in any landing string (%s)', (lang, pattern) => {
+    const messages = lang === 'en' ? enMessages : hiMessages;
+    const offending = landingKeys
+      .filter((key) => pattern.test(withoutBrand(messages[key] ?? '')))
+      .map((key) => `${key}: ${messages[key]}`);
+    expect(offending).toEqual([]);
   });
 });

@@ -10,7 +10,9 @@ import { FaqSection, FinalCta, LandingFooter } from './LandingClosing';
 import { LandingHeader } from './LandingHeader';
 import { LandingHero } from './LandingHero';
 import { LANDING_SCALE } from './LandingPrimitives';
-import { AlsoIncludedSection, HowItWorksSection, SegmentsSection } from './LandingSections';
+import { AlsoIncludedSection, HowItWorksSection } from './LandingSections';
+import { AudienceSection, ModulesSection } from './ModulesSection';
+import { PlatformMapSection } from './PlatformMap';
 import { PricingSection } from './PricingSection';
 import { UseCaseExplorer } from './UseCaseExplorer';
 
@@ -20,13 +22,22 @@ import { UseCaseExplorer } from './UseCaseExplorer';
 import 'src/i18n/catalogues/landing';
 
 /**
- * The public front page, `/` — what a shopkeeper sees before they have an
- * account. Signed-in browsers never get here (`proxy.ts` sends them to the
- * dashboard), so nothing on it reads the session.
+ * The public front page, `/` — what a business sees before it has an account.
+ * Signed-in browsers never get here (`proxy.ts` sends them to the dashboard),
+ * so nothing on it reads the session.
  *
- * Order: header · hero · who it is for · the use-case explorer (#features) ·
- * also included · how it works (#how) · pricing (#pricing) · FAQ (#faq) · the
- * closing band · footer.
+ * The story is "one platform, many modules, shared core" (CR-2026-09-29-
+ * PLATFORM-B), in this order: header · hero (the live shop module's real UI) ·
+ * the module map (#platform) · one card per module (#modules) · the live
+ * module's use-case explorer (#features) · who it's for · also included · how
+ * it works (#how) · pricing (#pricing) · FAQ (#faq) · the closing band ·
+ * footer. Every module's name and status comes from `config/modules.ts`.
+ *
+ * Planned modules are shown as planned and nothing more: a chip, what they are
+ * for, the problems they will address, the core they will build on. No media,
+ * demo, date or CTA, and their words render only inside an element marked
+ * `data-module-status="planned"` or `data-planned-scope` (the two FAQ answers
+ * that exist to say they are not built).
  *
  * Copy rules (and a test for each, `LandingPage.test.tsx` and
  * `unbuiltFeatureCopy.test.ts`): nothing that is not built — no offline mode,
@@ -56,8 +67,10 @@ function LandingPageBase({ className }: Readonly<{ className?: string }>) {
       <LandingHeader />
       <UbBox as="main" id="main" tabIndex={-1} className="outline-none">
         <LandingHero />
-        <SegmentsSection />
+        <PlatformMapSection />
+        <ModulesSection />
         <UseCaseExplorer />
+        <AudienceSection />
         <AlsoIncludedSection />
         <HowItWorksSection />
         <PricingSection />

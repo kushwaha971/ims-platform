@@ -191,9 +191,14 @@ function PricingSectionBase({ pricing = PRICING }: Readonly<{ pricing?: Pricing 
           ))}
         </UbReveal>
 
-        <UbText variant="body-sm" tone="tertiary" align="center" className="mt-6">
-          {t('landing.pricing.exGst')}
-        </UbText>
+        <UbStack gap={1} align="center" className="mt-6 text-center">
+          <UbText variant="body-sm" tone="tertiary" align="center">
+            {t('landing.pricing.exGst')}
+          </UbText>
+          <UbText variant="body-sm" tone="tertiary" align="center" data-testid="landing-pricing-modules">
+            {t('landing.pricing.modules')}
+          </UbText>
+        </UbStack>
       </UbBox>
     </UbBox>
   );

@@ -3,18 +3,14 @@
 import { memo } from 'react';
 
 import {
-  Check,
+  ArrowRight,
   FileDown,
+  FileSpreadsheet,
   Gauge,
   Languages,
   MoonStar,
-  ShoppingBasket,
-  Store,
-  Truck,
   UserCog,
   type LucideIcon,
-  ArrowRight,
-  FileSpreadsheet,
 } from 'lucide-react';
 
 import { UbActionLink, UbBox, UbReveal, UbStack, UbText } from 'src/design-system';
@@ -24,8 +20,10 @@ import { ROUTES } from 'src/routes';
 import { LANDING_CONTAINER, LANDING_SECTION, LandingSectionHeading } from './LandingPrimitives';
 
 /**
- * The page's three quieter sections: who it is for, what else is in the box,
- * and the three steps to start. Each card lifts its border and glows on hover
+ * The page's two quieter sections: what else the shared core gives every
+ * business, and the three steps to start. ("Who it's for" moved to
+ * `ModulesSection.tsx`, because it is now one row per module and reads the
+ * module config.) Each card lifts its border and glows on hover
  * (`LANDING_CARD`), which is the only motion in them beyond the reveal.
  */
 export const LANDING_CARD =
@@ -41,53 +39,6 @@ function IconTile({ icon: Icon }: Readonly<{ icon: LucideIcon }>) {
     </UbBox>
   );
 }
-
-const SEGMENTS: readonly { readonly id: string; readonly icon: LucideIcon }[] = [
-  { id: 'kirana', icon: ShoppingBasket },
-  { id: 'wholesale', icon: Truck },
-  { id: 'retail', icon: Store },
-];
-
-function SegmentsSectionBase() {
-  const { t } = useTranslation();
-  return (
-    <UbBox as="section" aria-labelledby="landing-segments-title" className={LANDING_SECTION}>
-      <UbBox className={LANDING_CONTAINER}>
-        <LandingSectionHeading
-          id="landing-segments-title"
-          eyebrow={t('landing.segments.eyebrow')}
-          lead={t('landing.segments.lead')}
-          keyLine={t('landing.segments.key')}
-        />
-        <UbReveal as="ul" stagger className="mt-12 grid gap-4 md:grid-cols-3 md:gap-5">
-          {SEGMENTS.map(({ id, icon }) => (
-            <UbBox as="li" key={id}>
-              <UbStack gap={5} className={LANDING_CARD}>
-                <IconTile icon={icon} />
-                <UbText as="h3" variant="inherit" className="ds-body-xl-semibold text-text-primary">
-                  {t(`landing.segments.${id}.title`)}
-                </UbText>
-                <UbStack as="ul" gap={3}>
-                  {[1, 2, 3].map((n) => (
-                    <UbStack as="li" key={n} direction="row" gap={3} align="start">
-                      <Check aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-success" />
-                      <UbText variant="inherit" tone="secondary" className="ds-body-base-regular">
-                        {t(`landing.segments.${id}.${n}`)}
-                      </UbText>
-                    </UbStack>
-                  ))}
-                </UbStack>
-              </UbStack>
-            </UbBox>
-          ))}
-        </UbReveal>
-      </UbBox>
-    </UbBox>
-  );
-}
-
-SegmentsSectionBase.displayName = 'SegmentsSection';
-export const SegmentsSection = memo(SegmentsSectionBase);
 
 const ALSO: readonly { readonly id: string; readonly icon: LucideIcon }[] = [
   { id: 'staff', icon: UserCog },

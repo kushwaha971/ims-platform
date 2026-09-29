@@ -22,16 +22,16 @@ import type { Metadata } from 'next';
  * this route alone (src/fonts/landing.ts).
  */
 export const metadata: Metadata = {
-  title: { absolute: 'YourKhata — khata, GST bills and stock for your shop' },
+  title: { absolute: 'YourKhata — records, money and documents for your business, in one place' },
   description:
-    'Record udhaar, make GST invoices with CGST and SGST worked out, and keep stock — for kirana, wholesale and retail shops. Works in any browser, on phone or computer, in Hindi or English.',
+    'Keep customers, money owed, GST bills, stock and payments together, with every balance up to date. Live today for retail and wholesale shops; modules for lending, libraries, gyms and hotels are planned. Works in any browser, in Hindi or English.',
   alternates: { canonical: '/' },
   openGraph: {
     type: 'website',
     siteName: 'YourKhata',
-    title: 'YourKhata — one khata for your whole shop',
+    title: 'YourKhata — one platform for your business records',
     description:
-      'Udhaar, GST bills, stock and payments for Indian shops. In Hindi or English, on phone or computer.',
+      'Customers, money in and out, GST bills, stock and payments for shops and businesses. In Hindi or English, on phone or computer.',
     images: [{ url: '/media/landing/hero-desktop-poster.jpg', width: 1280, height: 800 }],
   },
 };

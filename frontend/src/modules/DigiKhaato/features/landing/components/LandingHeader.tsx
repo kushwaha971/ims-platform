@@ -14,8 +14,8 @@ import { LanguageToggle, ThemeToggle } from './LandingToggles';
 
 /** In-page anchors, in reading order. The ids are the sections' own. */
 export const LANDING_ANCHORS = [
-  { href: '#features', key: 'landing.nav.features' },
-  { href: '#how', key: 'landing.nav.how' },
+  { href: '#platform', key: 'landing.nav.platform' },
+  { href: '#modules', key: 'landing.nav.modules' },
   { href: '#pricing', key: 'landing.nav.pricing' },
   { href: '#faq', key: 'landing.nav.faq' },
 ] as const;

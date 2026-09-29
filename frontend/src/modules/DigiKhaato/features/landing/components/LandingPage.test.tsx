@@ -1,11 +1,22 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { act, fireEvent, screen, within } from '@testing-library/react';
 
 import { ThemeProvider } from 'src/components/providers/ThemeProvider';
 import { themeRestored } from 'src/redux/slice/themeSlice';
 import { store } from 'src/redux/store';
+import {
+  LANDING_JARGON,
+  PLANNED_MODULE_WORDS,
+  withoutBrand,
+} from 'src/tests/plannedModuleVocabulary';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
 import { THEME_CHOICE_COOKIE } from 'src/utils/cookieUtils';
 
+
+
+import { LANDING_MODULES, UPCOMING_MODULES } from '../config/modules';
 import { PRICING, YEARLY_BILLED_MONTHS, priceFor, yearlyPrice } from '../config/pricing';
 
 import { splitAroundWord } from './LandingHero';
@@ -40,7 +51,7 @@ describe('LandingPage', () => {
 
     const h1 = screen.getByRole('heading', { level: 1 });
     expect(h1).toHaveAccessibleName(
-      'One khata for your whole shop. Track udhaar, GST bills, stock and payments.'
+      'All your records, in one place. Track dues, GST bills, stock, payments and expenses.'
     );
     expect(within(h1).getByTestId('ub-rotator')).toHaveAttribute('aria-hidden', 'true');
   });
@@ -48,7 +59,7 @@ describe('LandingPage', () => {
   it('shows the badge, the support copy and the micro-copy under the CTAs', () => {
     renderPage();
 
-    expect(screen.getByText('For kirana, wholesale and retail shops')).toBeInTheDocument();
+    expect(screen.getByText('Live for shops today · more modules planned')).toBeInTheDocument();
     expect(screen.getByText('Sign up with email. No card needed.')).toBeInTheDocument();
   });
 
@@ -57,7 +68,8 @@ describe('LandingPage', () => {
     renderPage();
 
     const starts = screen.getAllByRole('link', { name: /^Start free/ });
-    expect(starts.length).toBeGreaterThanOrEqual(7); // header, hero, how, four plans, closing band
+    // header, hero, the live module's card, how, four plans, closing band
+    expect(starts.length).toBeGreaterThanOrEqual(9);
     starts.forEach((link) => expect(link).toHaveAttribute('href', '/signup'));
     screen
       .getAllByRole('link', { name: 'Log in' })
@@ -73,7 +85,7 @@ describe('LandingPage', () => {
     const hrefs = within(nav)
       .getAllByRole('link')
       .map((link) => link.getAttribute('href'));
-    expect(hrefs).toEqual(['#features', '#how', '#pricing', '#faq']);
+    expect(hrefs).toEqual(['#platform', '#modules', '#pricing', '#faq']);
     hrefs.forEach((href) => expect(container.querySelector(href as string)).not.toBeNull());
   });
 
@@ -82,7 +94,7 @@ describe('LandingPage', () => {
 
     const tablist = screen.getByRole('tablist', { name: 'Use cases' });
     expect(within(tablist).getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
-      'Khata',
+      'Ledger',
       'Reminders',
       'GST bill',
       'Stock',
@@ -95,14 +107,16 @@ describe('LandingPage', () => {
     );
   });
 
-  it('answers eight questions in the FAQ, e-invoicing honestly', () => {
+  it('answers ten questions in the FAQ, e-invoicing and the lending module honestly', () => {
     renderPage();
     const faq = document.getElementById('faq') as HTMLElement;
 
     const questions = within(faq).getAllByRole('button');
-    expect(questions).toHaveLength(8);
+    expect(questions).toHaveLength(10);
     fireEvent.click(within(faq).getByRole('button', { name: 'Does it support e-invoicing?' }));
     expect(within(faq).getByText(/^Not today\./)).toBeInTheDocument();
+    fireEvent.click(within(faq).getByRole('button', { name: 'Is the lending module available?' }));
+    expect(within(faq).getByText(/^Not yet\. Lending & collections is planned/)).toBeInTheDocument();
   });
 
   /**
@@ -140,6 +154,121 @@ describe('LandingPage', () => {
 
     fireEvent.keyDown(dialog, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * CR-2026-09-29-PLATFORM-B — one platform, many modules, and the rule that
+ * makes showing planned modules honest: they are named, described and marked
+ * Planned, and nothing more.
+ */
+describe('the module story', () => {
+  const moduleElements = (container: HTMLElement) =>
+    [...container.querySelectorAll<HTMLElement>('[data-module-card][data-module-status]')];
+
+  /** The map tile, the card and the audience row — three places, one status each. */
+  it('shows every configured module in the map, the cards and "Who it\'s for", each with its status chip', () => {
+    const { container } = renderPage();
+    const elements = moduleElements(container);
+
+    expect(elements.map((el) => el.dataset.moduleCard).sort()).toEqual(
+      [...LANDING_MODULES.flatMap(() => ['audience', 'card', 'map'])].sort()
+    );
+    elements.forEach((el) => {
+      const status = el.dataset.moduleStatus as string;
+      expect({ card: el.dataset.moduleCard, status, chips: el.querySelectorAll(`[data-testid="landing-status-${status}"]`).length }).toEqual({
+        card: el.dataset.moduleCard,
+        status,
+        chips: 1,
+      });
+    });
+    LANDING_MODULES.forEach((module) => {
+      expect(container.querySelector(`#module-${module.id}`)).toHaveAttribute('data-module-status', module.status);
+    });
+  });
+
+  /**
+   * The owner's rule for a planned module: no screenshot, no video, no demo,
+   * no fake UI, and no "available now" CTA. Checked on the DOM, so a poster
+   * image or a Start free added to the card later fails here.
+   */
+  it('gives a planned module a Planned chip and never media, a demo or a sign-up link', () => {
+    const { container } = renderPage();
+    const planned = moduleElements(container).filter((el) => el.dataset.moduleStatus !== 'live');
+
+    expect(planned.length).toBe(UPCOMING_MODULES.length * 3);
+    planned.forEach((el) => {
+      expect(within(el).getByText('Planned')).toBeInTheDocument();
+      // An icon inside an aria-hidden tile is decoration drawn from our own
+      // set, which the brief allows; anything else visual is not.
+      const media = [...el.querySelectorAll('video, img, picture, source, iframe, canvas, svg')].filter(
+        (node) => !node.closest('[aria-hidden="true"]')
+      );
+      expect(media).toHaveLength(0);
+      expect(el.querySelector('[data-testid="landing-demo-open"], a[href="/signup"], button')).toBeNull();
+      expect(el.textContent).not.toMatch(/\bsoon\b|coming|available now|today|₹/i);
+    });
+  });
+
+  it('gives the live module its Start free and a way down to its recordings', () => {
+    const { container } = renderPage();
+    const shop = container.querySelector('#module-shop') as HTMLElement;
+
+    expect(within(shop).getByText('Live')).toBeInTheDocument();
+    expect(within(shop).getByRole('link', { name: 'Start free' })).toHaveAttribute('href', '/signup');
+    expect(within(shop).getByRole('link', { name: 'See it in use' })).toHaveAttribute('href', '#features');
+    expect(container.querySelector('#features video, #features [data-testid="ub-video"]')).not.toBeNull();
+  });
+
+  /**
+   * A planned module's words render only where the page says it is planned —
+   * the rendered form of the catalogue rule in `unbuiltFeatureCopy.test.ts`,
+   * so a hard-coded string cannot slip past it. In both languages.
+   */
+  it.each(['en', 'hi'] as const)('renders planned-module words only inside a planned scope (%s)', (locale) => {
+    const { container } = renderWithProviders(<LandingPage />, { locale });
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+    const outside: string[] = [];
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const text = node.textContent ?? '';
+      if (!PLANNED_MODULE_WORDS[locale].test(text)) continue;
+      if (!node.parentElement?.closest('[data-module-status="planned"], [data-planned-scope]')) {
+        outside.push(text);
+      }
+    }
+    expect(outside).toEqual([]);
+  });
+
+  /** Vision §4: no "kirana" and no regional jargon, in the text or any attribute. */
+  it.each(['en', 'hi'] as const)('uses no regional jargon, in text or attributes (%s)', (locale) => {
+    const { container } = renderWithProviders(<LandingPage />, { locale });
+    const pattern = locale === 'en' ? LANDING_JARGON.en : LANDING_JARGON.hi;
+    // The attributes a person reads or hears. Ids and file paths such as
+    // `feat-khata-desktop.webm` are code, and the recordings keep their names.
+    const READABLE = ['alt', 'aria-label', 'title', 'placeholder', 'aria-description'];
+    const attributes = [...container.querySelectorAll('*')].flatMap((el) =>
+      READABLE.map((name) => el.getAttribute(name)).filter((value): value is string => !!value)
+    );
+
+    expect(withoutBrand(container.textContent ?? '')).not.toMatch(pattern);
+    expect(attributes.filter((value) => pattern.test(withoutBrand(value)))).toEqual([]);
+  });
+
+  /** The page's `<title>` and description are copy too, and are not in the catalogue. */
+  it('keeps "kirana" and jargon out of the metadata', () => {
+    const source = readFileSync(join(process.cwd(), 'app/page.tsx'), 'utf8');
+    const metadata = source.slice(source.indexOf('export const metadata'), source.indexOf('export default'));
+
+    expect(metadata).toMatch(/title:/);
+    expect(withoutBrand(metadata)).not.toMatch(LANDING_JARGON.en);
+  });
+
+  it('says under the plans that other modules are priced when they launch', () => {
+    renderWithProviders(<PricingSection />);
+
+    expect(screen.getByTestId('landing-pricing-modules')).toHaveTextContent(
+      'Pricing for other modules will be decided when they launch.'
+    );
   });
 });
 

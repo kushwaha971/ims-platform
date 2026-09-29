@@ -41,11 +41,17 @@ export const splitAroundWord = (message: string): readonly [string, string] => {
   return [before, after];
 };
 
+/**
+ * The rotating word names only things a business can track TODAY
+ * (docs/platform/01-current-capabilities.md). A planned module's words never
+ * go here: a headline that cycles "loans" would say it works.
+ */
 export const ROTATING_WORD_KEYS = [
-  'landing.hero.word.udhaar',
+  'landing.hero.word.dues',
   'landing.hero.word.bills',
   'landing.hero.word.stock',
   'landing.hero.word.payments',
+  'landing.hero.word.expenses',
 ] as const;
 
 /**
@@ -53,7 +59,7 @@ export const ROTATING_WORD_KEYS = [
  * script: the h1, the body and both buttons are in the server's HTML exactly as
  * they render, and the only thing that moves after hydration is the one
  * rotating word — which is `aria-hidden`, beside an `sr-only` sentence that
- * says all four, so the heading's accessible name is static and complete.
+ * says all five, so the heading's accessible name is static and complete.
  *
  * On the right, a recording: the desktop loop in a tilted browser frame from
  * `lg`, the PHONE loop in a phone frame below it — a different recording, not
@@ -95,7 +101,7 @@ function LandingHeroBase() {
             tone="primary"
             className="text-[clamp(2.375rem,1.45rem+3.4vw,3.875rem)] leading-[1.08]"
           >
-            <UbText as="span" variant="inherit" tone="secondary" className={SERIF_LEAD}>
+            <UbText as="span" variant="inherit" tone="secondary" className={`${SERIF_LEAD} text-balance`}>
               {t('landing.hero.lead')}
             </UbText>
             <UbText as="span" variant="inherit" className="sr-only">

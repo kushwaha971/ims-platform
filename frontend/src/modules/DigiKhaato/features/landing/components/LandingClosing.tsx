@@ -26,8 +26,31 @@ import {
   SERIF_LEAD,
 } from './LandingPrimitives';
 
-/** The FAQ, in the order a shopkeeper asks. Every answer is checked against what is built. */
-export const FAQ_IDS = ['phone', 'hindi', 'gst', 'staff', 'export', 'cost', 'brand', 'einvoice'] as const;
+/**
+ * The FAQ, in the order people ask. Every answer is checked against what is
+ * built (docs/platform/01-current-capabilities.md).
+ *
+ * `modules` and `lending` are the two answers that exist to say, in words,
+ * that the planned modules cannot be used yet. They are the only places
+ * outside a planned module's own card where its words may appear, so their
+ * items carry `data-planned-scope` — the marker `LandingPage.test.tsx` looks
+ * for — and `unbuiltFeatureCopy.test.ts` requires each to say "planned" and
+ * "not".
+ */
+export const FAQ_IDS = [
+  'modules',
+  'lending',
+  'phone',
+  'hindi',
+  'gst',
+  'staff',
+  'export',
+  'cost',
+  'brand',
+  'einvoice',
+] as const;
+
+export const PLANNED_SCOPE_FAQ_IDS: ReadonlySet<string> = new Set(['modules', 'lending']);
 
 function FaqSectionBase() {
   const { t } = useTranslation();
@@ -44,7 +67,7 @@ function FaqSectionBase() {
         />
         <UbReveal as="ul" stagger className="flex flex-col gap-3">
           {FAQ_IDS.map((id) => (
-            <UbBox as="li" key={id}>
+            <UbBox as="li" key={id} data-planned-scope={PLANNED_SCOPE_FAQ_IDS.has(id) || undefined}>
               <UbDisclosure
                 size="lg"
                 label={t(`landing.faq.${id}.q`)}

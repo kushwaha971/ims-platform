@@ -595,7 +595,19 @@
   "  /admin/tenants/[id]          firstLoad 253 -> 256 (measured 254.5)",
   "  /admin/health                firstLoad 249 -> 251 (measured 250.0)",
   "  /admin                       firstLoad 240 -> 242 (measured 241.4)",
-  "  /reports/gst-summary         route 94 -> 95 (measured 94.04, printed 94.0)"
+  "  /reports/gst-summary         route 94 -> 95 (measured 94.04, printed 94.0)",
+  "",
+  "── 29 Sep 2026: / repositioned as a platform (CR-2026-09-29-PLATFORM-B) ─────",
+  "The landing page gained the module map, one card per module, 'Who it's for'",
+  "rows and two FAQ answers, all driven by features/landing/config/modules.ts.",
+  "Measured: route 30.3 -> 35.0 KB, firstLoad 261.4 -> 266.2 KB. Of the +4.7 KB,",
+  "about 1.5 KB is the English strings (landing.en.json ships with the chunk;",
+  "Hindi is lazy) and the rest is PlatformMap, ModulesSection and",
+  "LandingModuleParts with their ten lucide icons. All of it is route-local: the",
+  "shell and every other route are unchanged. Below-the-fold dynamic() was",
+  "considered and refused: it would move the same bytes into a second request",
+  "while the content has to be server-rendered anyway.",
+  "  /                            route 32 -> 36, firstLoad 263 -> 267"
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -1283,8 +1295,8 @@
    "firstLoad": 288
   },
   "/": {
-   "route": 32,
-   "firstLoad": 263
+   "route": 36,
+   "firstLoad": 267
   }
  },
  "//ignoreRoutes": [
