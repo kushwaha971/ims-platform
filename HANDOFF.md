@@ -331,6 +331,52 @@ Serve for QA:
 
 **Next: Phase 2 (research).** One research doc per module in `docs/platform/research/`: lending & collections, library, gym, hospitality, plus candidate modules. No module code before Phases 2 and 3 are done.
 
+## 8f. 29 Sep: Phase 1 revision and Phase 2 research DONE (267aa82…b358c26)
+
+**Owner decisions (CR-2026-09-29-PLATFORM-D, with its amendment):**
+- The landing page presents every module alike, with no Live/Planned labels. Status lives only in `config/modules.ts` and the pre-launch checklist in `docs/platform/STATUS.md`.
+- Pricing is hidden via `SHOW_PRICING` in `config/pricing.ts`.
+- A "Why YourKhata" section (`#why`) makes eight points that are true of the product. It names no competitor and makes no comparative claims.
+- The module set is **Shop & billing (built), Lending & collections, Library, Gym & fitness, Hotel & stays.** Coaching was researched and then **declined by the owner** ("I need library, not coaching"); `research/coaching.md` is kept, marked NOT IN SCOPE.
+
+**Phase 2 research** is in `docs/platform/research/`: `lending.md`, `library.md`, `gym.md`, `hospitality.md`, `candidates-and-competitors.md` and `shared-engines.md` (PROPOSED). Main findings:
+- **Three shared engines**:
+  - **Recurring dues**, in two modes: charge-on-due and expectation. Loans use expectation mode, so their principal isn't counted twice.
+  - **Bookings/resources**: one row per room-night with a unique constraint.
+  - **Check-ins/attendance.**
+- **Cross-module questions the architecture agent must decide before any FRD database section:**
+  - held deposits (library, gym, hotel, rent);
+  - how a taxable due raises a sales document without core importing sales;
+  - party roles and profiles per module;
+  - how payments are allocated to dues (lending wants a principal/interest/fee split);
+  - a numbering counter that doesn't reset each year (library accession numbers);
+  - refusing to switch a module off while it has open records.
+- **Legal guardrails (lending):**
+  - record-keeping only;
+  - fixed polite reminder wording, sent 08:00–19:00, at most once a day;
+  - show the effective annual rate;
+  - no funders/deposits in the MVP (BUDS Act);
+  - store only the last 4 characters of ID numbers.
+- **GST findings:**
+  - gym: 5% without ITC (SAC 999723);
+  - rooms: 5% up to ₹7,500 per night, 18% above;
+  - public libraries are exempt.
+
+  These need a CA to confirm.
+
+**Gates at b358c26:**
+- jest 2,589;
+- lint, i18n (3,895 keys) and build all green;
+- `/` bundle 36.8 KB (budget 37);
+- e2e: `landing.mjs` 169/169, `seo.mjs` 105/105.
+
+**Next: Phase 3 (documentation).**
+1. The architecture agent writes `docs/platform/10-architecture.md` plus ADRs deciding the cross-module questions above, marked for owner review. It is the only agent that decides architecture.
+2. Then one FRD per module in `docs/platform/frd/`, all in parallel and using the 14-section template (vision §7), citing those ADRs.
+3. Then a cross-FRD review.
+
+No module code before the FRDs are finished.
+
 ## 9. Exact next steps
 
 State at e1ad11d (retest verdict: READY FOR UAT; all 4 High, 7/7 Medium, 12/12 Low fixed after e1ad11d; regression 894/899 with the 5 remaining harness-only landing checks fixed in e1ad11d):
