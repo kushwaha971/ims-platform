@@ -28,6 +28,7 @@ import { useEntryCorrection } from '../hooks/useEntryCorrection';
 import { usePartyLedger } from '../hooks/usePartyLedger';
 import {
   amountLabelRepeatsTitle,
+  bucketBadgeId,
   entryAmountView,
   entryBalanceCaption,
   entryCaption,
@@ -329,9 +330,10 @@ function EntryRow({
   onOpenMenu?: (entry: LedgerEntry) => void;
 }>): React.JSX.Element {
   const view = useMemo(
-    () => entryAmountView(entry.direction, entry.entryType),
-    [entry.direction, entry.entryType]
+    () => entryAmountView(entry.direction, entry.entryType, entry.bucket),
+    [entry.direction, entry.entryType, entry.bucket]
   );
+  const bucketBadge = bucketBadgeId(entry.bucket);
   const caption = useMemo(() => entryCaption(entry, t, viewerId), [entry, t, viewerId]);
   const reason = entryReason(entry);
   const balanceCaption = entryBalanceCaption(entry, t);
@@ -408,6 +410,9 @@ function EntryRow({
               transaction — nothing changed hands on that date, it is the
               position the book started from. */}
           {isOpening && <UbStatusBadge label={t('ledger.opening.badge')} tone="info" />}
+          {/* A2 — a loan or deposit line says which it is, on the caption line with the
+              other badges (the title owns its line). Absent on every shop line. */}
+          {bucketBadge && <UbStatusBadge label={t(bucketBadge)} tone="neutral" />}
           {/* LED-10 FR-4 / §7 — a document's line names the document and links
               back to it ("Invoice · INV/26-27/0042"), on the caption line with
               the other badges so the title keeps its own. A document voided

@@ -20,3 +20,12 @@ class ExpensesConfig(AppConfig):
         from apps.ledger.selectors.sources import register_source_resolver
 
         register_source_resolver(SourceType.EXPENSE, resolve_expenses)
+
+        # A2 (ADR-042, contracts §1.2) — an unpaid party expense posts one credit, `main`.
+        from apps.common.constants import Direction
+        from apps.ledger.constants import EntryType
+        from apps.ledger.services.postings import register_posting_source
+
+        register_posting_source(
+            SourceType.EXPENSE, module="expenses", entry_types={EntryType.EXPENSE: Direction.CREDIT}
+        )

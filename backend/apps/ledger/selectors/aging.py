@@ -31,7 +31,7 @@ from typing import Any
 
 from django.db import connection
 
-from apps.common.constants import Direction
+from apps.common.constants import Direction, LedgerBucket
 from apps.common.money import ZERO
 
 #: The four buckets, their upper edges in days, and the order they are read in.
@@ -76,6 +76,7 @@ WITH scoped AS (
     FROM ledger_entry
     WHERE tenant_id = %(tenant)s
       AND entry_date <= %(as_of)s
+      AND bucket = %(bucket)s
       AND status = 'posted'
       AND reversed_by_id IS NULL
       AND reverses_id IS NULL
@@ -118,8 +119,13 @@ def aging_rows(
     tenant: Any,
     as_of: dt.date,
     kind: str = "receivable",
+    bucket: str = LedgerBucket.MAIN,
 ) -> dict[str, dict[str, Decimal]]:
     """Every party with something outstanding, bucketed. Keyed by party id.
+
+    `bucket` (A2, BR-6) is a bound parameter and `main` by default: a disbursal is not trade
+    credit that ages, a loan collection is not a payment that settles the oldest invoice, and
+    a deposit is neither. Lending's arrears come from the dues engine, not from here.
 
     Returns the raw arithmetic and nothing about presentation — no names, no
     ordering, no paging. The view joins the names and the caller decides the
@@ -140,6 +146,7 @@ def aging_rows(
                 "as_of": as_of,
                 "owed_side": owed_side,
                 "paid_side": paid_side,
+                "bucket": str(bucket),
             },
         )
         rows = cursor.fetchall()

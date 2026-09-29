@@ -53,7 +53,10 @@ export const localiseNarration = (
 
 /** A statement row's Particulars as shown: its type's words, or its note with
  *  the server's narration worded in the app's language. */
-export const statementRowTitle = (row: StatementRow, t: TranslateFn): string => {
+export const statementRowTitle = (
+  row: Pick<StatementRow, 'entryType' | 'note' | 'source'>,
+  t: TranslateFn
+): string => {
   const id = rowTitleId(row);
   return id ? t(id) : localiseNarration(row.note.trim(), row.source?.number, t);
 };

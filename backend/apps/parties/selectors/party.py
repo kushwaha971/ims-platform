@@ -162,9 +162,13 @@ def party_totals(queryset: QuerySet[Party]) -> dict:
         # says: on the default unfiltered list that is the whole book, which is
         # the case the number is for, and on a narrowed one it answers the
         # narrower question the merchant just asked.
+        # A2 (BR-5) — over the TRADE figure, as `filter_credit` and `limit_status` are.
         over_limit=Count(
             "id",
-            filter=Q(credit_limit__isnull=False, balance__gt=F("credit_limit")),
+            filter=Q(
+                credit_limit__isnull=False,
+                credit_limit__lt=F("balance") - F("loan_balance"),
+            ),
         ),
     )
     return {

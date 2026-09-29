@@ -24,6 +24,7 @@ from apps.common.constants import Direction
 from apps.common.money import ZERO
 from apps.ledger.constants import EntryType, SourceType
 from apps.ledger.models import LedgerEntry
+from apps.ledger.selectors.entry import BALANCE_BUCKETS
 from apps.payments.constants import PaymentDirection, PaymentStatus
 from apps.payments.models import Allocation, Payment
 from apps.payments.services.targets import target_for, targets_for_direction
@@ -214,6 +215,8 @@ def party_balance_after(payment: Payment) -> Decimal | None:
     total = (
         LedgerEntry.objects.filter(tenant_id=payment.tenant_id, party_id=payment.party_id)
         .filter(upto)
+        # A2 — the balance is Σ main + Σ loan; a deposit line was never in it (ADR-043).
+        .filter(BALANCE_BUCKETS)
         .aggregate(total=Coalesce(Sum(signed), Value(ZERO)))["total"]
     )
     return total

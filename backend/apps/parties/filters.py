@@ -308,16 +308,21 @@ class PartyFilterSet(BaseTenantFilterSet):
         `credit_usage` column for tenants above ten thousand parties are
         proposed in CCR-28.
         """
-        has_limit = queryset.filter(credit_limit__isnull=False)
+        # A2 (BR-5) — the TRADE figure `balance − loan_balance`, which is what
+        # `credit_exposure` and `limit_status` compare: a loan is not shop credit.
+        # Identical to `balance` for every party without a loan.
+        has_limit = queryset.filter(credit_limit__isnull=False).alias(
+            trade=F("balance") - F("loan_balance")
+        )
         if value == "over":
-            return has_limit.filter(balance__gt=F("credit_limit"))
+            return has_limit.filter(trade__gt=F("credit_limit"))
         if value == "near":
             return has_limit.filter(
-                balance__gte=F("credit_limit") * NEAR_LIMIT_RATIO,
-                balance__lte=F("credit_limit"),
+                trade__gte=F("credit_limit") * NEAR_LIMIT_RATIO,
+                trade__lte=F("credit_limit"),
             )
         if value == "ok":
-            return has_limit.filter(balance__lt=F("credit_limit") * NEAR_LIMIT_RATIO)
+            return has_limit.filter(trade__lt=F("credit_limit") * NEAR_LIMIT_RATIO)
         return queryset
 
     def _today(self) -> date:

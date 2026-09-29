@@ -38,6 +38,9 @@ def check_balances(*, tenant_id: Any = None) -> dict:
                 "party_id": str(d.party_id),
                 "cached": str(d.cached_balance),
                 "ledger": str(d.ledger_balance),
+                # A2 — named only when a loan or deposit cache is among those that
+                # disagree, so a shop's drift row keeps the shape it always had.
+                **({"figures": list(d.figures)} if set(d.figures) - {"balance"} else {}),
             }
             for d in drifted[:SAMPLE]
         ],

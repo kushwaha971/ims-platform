@@ -41,6 +41,7 @@ import {
   unsigned,
 } from '../view-model/statementDisplay';
 
+import { DepositHeldBlock } from './DepositHeldBlock';
 import { StatementPrintView } from './print/StatementPrintView';
 import { StatementFilterBar } from './StatementFilterBar';
 
@@ -196,6 +197,13 @@ export function PartyStatementPageContent({ id }: Readonly<{ id: string }>): Rea
               )}
             </UbStack>
           </UbCard>
+
+          {/* A2 — money held for the party, beneath the passbook and outside it. */}
+          {statement.summary?.deposit && (
+            <UbCard>
+              <DepositHeldBlock deposit={statement.summary.deposit} />
+            </UbCard>
+          )}
         </UbStack>
       </UbBox>
 
@@ -381,7 +389,7 @@ function StatementRowView({
   d: (value: string) => string;
 }>): React.JSX.Element {
   const struck = isStruckThrough(row);
-  const view = entryAmountView(row.direction, row.entryType);
+  const view = entryAmountView(row.direction, row.entryType, row.bucket);
   /* A write-off stores its reason as its note too (PTY-04 FR-3), so the title
      already says it — the timeline's `entryReason` drops the echo, and so does
      this row. */

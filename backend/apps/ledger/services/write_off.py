@@ -38,6 +38,15 @@ This is a deliberate departure from FRD EC-2, which accepts an over-credited
 archived party as the outcome of that race; with the lock and the pin, the race
 cannot produce one.
 
+── The TRADE figure, never a loan (A2, R23, owner Q3's default) ─────────────
+The amount defaults to, and is capped at, `balance − loan_balance`: what the
+party owes the SHOP. A loan is forgiven only through lending's own write-off
+(ADR-043), so one tap on a shop screen can never forgive one. With a loan
+outstanding the balance after the write-off is the loan, and the archive that
+follows is refused by PTY-04's ordinary non-zero balance guard (EC-7). A party
+with nothing but a loan has nothing for a shop write-off to do. For every party
+without a loan the trade figure IS the balance, so nothing changes for them.
+
 ── What is deliberately not here ────────────────────────────────────────────
 The credit-limit check (PTY-06 BR-7 / FRD EC-14): a write-off only ever moves
 the balance TO zero, so it cannot take a party past any limit, and the block
@@ -66,7 +75,7 @@ from apps.ledger.services.entries import (
     _parse_date,
     validate_entry_payload,
 )
-from apps.parties.services.balance import apply_entry
+from apps.parties.services.balance import apply_entry, trade_balance
 
 #: The key every field error is nested under, so the client finds it where FRD
 #: §10 says it is — `details.write_off.reason`, `details.write_off.entry_date`.
@@ -136,7 +145,8 @@ def write_off_party_balance(*, ctx: Ctx, party: Any, request: dict) -> dict:
     """
     cleaned = _clean_request(ctx=ctx, party=party, request=request)
 
-    balance = party.balance or ZERO
+    # R23 — the trade figure, not the whole balance (the module docstring says why).
+    balance = trade_balance(party)
     if balance == ZERO:
         raise BusinessRuleViolation(
             "nothing_to_write_off",

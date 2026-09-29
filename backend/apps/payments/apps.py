@@ -23,3 +23,20 @@ class PaymentsConfig(AppConfig):
         from apps.payments.selectors.payments import resolve_payments
 
         register_source_resolver(SourceType.PAYMENT, resolve_payments)
+
+        # A2 (ADR-042, ADR-043, contracts §1.2) — a payment posts its one khata line in the
+        # bucket of what it settles: `main` for the shop, `loan` for lending, `deposit` for
+        # a held deposit. The only core source registered in all three.
+        from apps.common.constants import Direction, LedgerBucket
+        from apps.ledger.constants import EntryType
+        from apps.ledger.services.postings import register_posting_source
+
+        register_posting_source(
+            SourceType.PAYMENT,
+            module="payments",
+            entry_types={
+                EntryType.PAYMENT_IN: Direction.CREDIT,
+                EntryType.PAYMENT_OUT: Direction.DEBIT,
+            },
+            buckets=frozenset(LedgerBucket.values),
+        )

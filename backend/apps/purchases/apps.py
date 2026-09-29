@@ -37,3 +37,17 @@ class PurchasesConfig(AppConfig):
         from apps.purchases.services.payment_seam import register_void_listener
 
         register_void_listener(release_purchase_bill)
+
+        # A2 (ADR-042, contracts §1.2) — what a purchase document posts, `main` only.
+        from apps.common.constants import Direction
+        from apps.ledger.constants import EntryType
+        from apps.ledger.services.postings import register_posting_source
+
+        register_posting_source(
+            SourceType.PURCHASE_DOCUMENT,
+            module="purchases",
+            entry_types={
+                EntryType.PURCHASE_BILL: Direction.CREDIT,
+                EntryType.DEBIT_NOTE: Direction.DEBIT,
+            },
+        )

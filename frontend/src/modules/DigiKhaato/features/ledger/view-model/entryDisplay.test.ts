@@ -1,5 +1,6 @@
 import {
   amountLabelRepeatsTitle,
+  bucketBadgeId,
   entryAmountView,
   entryBalanceCaption,
   entryCaption,
@@ -496,5 +497,50 @@ describe('the running balance under an amount (CR-027)', () => {
     /** A row spliced in from a 201 has none until the refetch lands. */
     expect(entryBalanceCaption(entry(), captionT)).toBeNull();
     expect(entryBalanceCaption(entry({ runningBalance: null }), captionT)).toBeNull();
+  });
+});
+
+describe('A2 — the two new entry types and the buckets', () => {
+  /* The LED-04 sweep's first finding was a statement row printing the raw id
+     `ledger.entry.type.manual_got`: every entry type needs a label. A charge is owed
+     (not "given"), a credit reduces what is owed (not "got"). */
+  it('labels a charge as a charge, in the receivable tone', () => {
+    expect(entryAmountView('debit', 'charge')).toEqual({
+      tone: 'receivable',
+      sign: 'none',
+      labelId: 'ledger.entry.type.charge',
+    });
+  });
+
+  it('labels an adjustment credit as a credit, in the payable tone', () => {
+    expect(entryAmountView('credit', 'adjustment_credit')).toEqual({
+      tone: 'payable',
+      sign: 'none',
+      labelId: 'ledger.entry.type.adjustment_credit',
+    });
+  });
+
+  it('keeps a deposit neutral, received or returned, whatever its entry type', () => {
+    /* PLT-X01 §8 — a deposit is neither "you gave" nor "you got": painting a deposit
+       receipt green tells the merchant the party paid. */
+    expect(entryAmountView('credit', 'payment_in', 'deposit')).toEqual({
+      tone: 'neutral',
+      sign: 'none',
+      labelId: 'ledger.entry.depositIn',
+    });
+    expect(entryAmountView('debit', 'payment_out', 'deposit').labelId).toBe(
+      'ledger.entry.depositOut'
+    );
+  });
+
+  it('reads a loan line like any line, and badges it', () => {
+    expect(entryAmountView('debit', 'payment_out', 'loan').labelId).toBe('ledger.entry.gave');
+    expect(bucketBadgeId('loan')).toBe('ledger.bucket.loan');
+    expect(bucketBadgeId('deposit')).toBe('ledger.bucket.deposit');
+  });
+
+  it('badges nothing on the shop khata — every line a shop has ever written', () => {
+    expect(bucketBadgeId('main')).toBeNull();
+    expect(bucketBadgeId(undefined)).toBeNull();
   });
 });

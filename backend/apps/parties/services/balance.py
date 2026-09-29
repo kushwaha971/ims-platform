@@ -24,7 +24,7 @@ from typing import Any, Callable
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils import timezone
 
-from apps.common.constants import Direction
+from apps.common.constants import Direction, LedgerBucket
 from apps.common.money import ZERO
 from apps.parties.models import Party
 
@@ -97,8 +97,10 @@ def relock_if_moved(*, tenant: Any, party: Party | None, party_id: Any) -> Party
     return lock_party(tenant=tenant, party_id=party_id)
 
 
-def apply_entry(*, party: Party, direction: str, amount: Decimal) -> Decimal:
-    """Move the cache by one entry and write the row. Returns the new balance.
+def apply_entry(
+    *, party: Party, direction: str, amount: Decimal, bucket: str = LedgerBucket.MAIN
+) -> Decimal:
+    """Move the caches by one entry and write the row. Returns the new balance.
 
     Called with the party ALREADY LOCKED by `lock_party`. It does not lock, and
     it does not open a transaction: both belong to the caller, because the
@@ -110,9 +112,30 @@ def apply_entry(*, party: Party, direction: str, amount: Decimal) -> Decimal:
     make every new entry cost a scan of all of them. `recalc_balances` is the
     aggregate, run nightly, and the drift between the two is the thing it
     reports.
+
+    ── By bucket (A2, ADR-043, contracts §1.2) ──────────────────────────────
+    `main` moves `balance` (and its receivable/payable split). `loan` moves
+    `balance` AND `loan_balance` by the same signed amount, so `balance` stays
+    the one net figure and `balance − loan_balance` is the trade figure. A
+    `deposit` moves ONLY `deposit_held`, in the opposite sense — a deposit
+    received is a credit and INCREASES what is held — and neither the balance
+    nor the collection date (BR-3: the balance did not move, so nothing was
+    settled). `last_activity_at` moves for every bucket: something happened on
+    this khata. Callers written before buckets pass none and get `main` (EC-4).
     """
+    if bucket not in LedgerBucket.values:
+        raise ValueError(f"unknown ledger bucket {bucket!r}")
     delta = amount if direction == Direction.DEBIT else -amount
+    party.last_activity_at = timezone.now()
+    if bucket == LedgerBucket.DEPOSIT:
+        party.deposit_held = (party.deposit_held or ZERO) - delta
+        party.save(update_fields=["deposit_held", "last_activity_at", "updated_at"])
+        return party.balance
     party.balance = (party.balance or ZERO) + delta
+    fields = ["balance", "receivable_total", "payable_total", "last_activity_at", "updated_at"]
+    if bucket == LedgerBucket.LOAN:
+        party.loan_balance = (party.loan_balance or ZERO) + delta
+        fields.append("loan_balance")
     # BR-3. Two caches of one number, kept here rather than computed on read,
     # because the reports that want them want them summed across parties.
     party.receivable_total = max(party.balance, ZERO)
@@ -122,18 +145,73 @@ def apply_entry(*, party: Party, direction: str, amount: Decimal) -> Decimal:
     # is something happening. Sorting the list by the business date of the
     # oldest thing somebody remembered would put the party they just touched at
     # the bottom.
-    party.last_activity_at = timezone.now()
-    party.save(
-        update_fields=[
-            "balance",
-            "receivable_total",
-            "payable_total",
-            "last_activity_at",
-            "updated_at",
-        ]
-    )
+    party.save(update_fields=fields)
     clear_collection_date_if_settled(party=party)
     return party.balance
+
+
+def trade_balance(party: Party) -> Decimal:
+    """BR-5 — what the party owes the SHOP: `balance − loan_balance` (ADR-043).
+
+    What the credit limit, aging and a shop write-off read. A loan is not trade credit, so a
+    borrower's principal must neither consume their shop limit nor be forgiven by one tap on
+    a shop screen (R23). For every party without a loan it IS the balance.
+    """
+    return (party.balance or ZERO) - (party.loan_balance or ZERO)
+
+
+#: Which modules can write a line in a bucket other than `main` (contracts §1.2 and §1.4: the
+#: `loan` sources and targets are lending's; the deposit targets serve library, gym and
+#: hospitality). Module CODES, not imports (10-architecture §3 rule L4). The party detail uses
+#: it to decide whether a zero figure is worth sending (PTY-03's rule, below).
+BUCKET_WRITER_MODULES: dict[str, frozenset[str]] = {
+    LedgerBucket.LOAN: frozenset({"lending"}),
+    LedgerBucket.DEPOSIT: frozenset({"library", "gym", "hospitality"}),
+}
+
+
+def _tenant_of(party: Party) -> Any:
+    """The party's tenant, from the request context when it is the same one (no query)."""
+    from apps.common.tenancy import current_tenant
+
+    bound = current_tenant()
+    if bound is not None and getattr(bound, "pk", None) == party.tenant_id:
+        return bound
+    return party.tenant
+
+
+def bucket_figures(party: Party) -> dict[str, str]:
+    """PLT-X01 §6 — `loan_balance`, `trade_balance` and `deposit_held` for the party detail.
+
+    A key is sent when its figure is not zero, OR when a module that can write that bucket is
+    switched on (so a zero there is a verified zero). Otherwise it is omitted — the PTY-03
+    rule CLAUDE.md records: a key that is always empty is a claim the code cannot verify, and
+    the client cannot tell it apart from a real zero. So a tenant with only the shop sees
+    exactly the payload it saw before buckets existed.
+    """
+    loan = party.loan_balance or ZERO
+    held = party.deposit_held or ZERO
+
+    def module_on(bucket: str) -> bool:
+        # Zero queries for a tenant that has not switched such a module on — every tenant
+        # today — so the khata page keeps PTY-03's query budget: the request's own tenant
+        # (bound at authentication, its entitlement already cached by `ModuleEnabled`) is
+        # used when it is this party's, and `enabled_modules` is on that row.
+        tenant = _tenant_of(party)
+        writers = BUCKET_WRITER_MODULES[bucket]
+        if not writers & set(tenant.enabled_modules or []):
+            return False
+        from apps.platform_app.services.entitlements import effective_modules
+
+        return bool(writers & effective_modules(tenant))
+
+    figures: dict[str, str] = {}
+    if loan != ZERO or module_on(LedgerBucket.LOAN):
+        figures["loan_balance"] = str(loan)
+        figures["trade_balance"] = str(trade_balance(party))
+    if held != ZERO or module_on(LedgerBucket.DEPOSIT):
+        figures["deposit_held"] = str(held)
+    return figures
 
 
 # ── LED-05 BR-2 — a settled party has nothing left to collect ────────────────

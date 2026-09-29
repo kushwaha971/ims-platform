@@ -13,6 +13,7 @@ import {
   isStruckThrough,
   unsigned,
 } from '../../view-model/statementDisplay';
+import { DepositHeldBlock } from '../DepositHeldBlock';
 
 import type {
   StatementParty,
@@ -195,6 +196,9 @@ export function StatementPrintView({
             size="lg"
           />
         </UbBox>
+
+        {/* A2 — the "Deposit held" block, after the closing it is not part of. */}
+        {summary.deposit && <DepositHeldBlock deposit={summary.deposit} />}
 
         {/* CR-2026-09-29-BRAND-A: the statement a customer is handed is the
             shop's document. It is signed with the shop's name and carries no

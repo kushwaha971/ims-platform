@@ -36,3 +36,18 @@ class SalesConfig(AppConfig):
         register_target(SalesInvoiceTarget())
         # SAL-04 FR-10 — voiding a refund voucher gives the note its credit back.
         register_payment_void_listener("sales.credit_note_refund", on_payment_voided)
+
+        # A2 (ADR-042, contracts §1.2) — what a sales document posts to the khata, in the
+        # `main` bucket only. The matrix this replaces was a literal in the ledger.
+        from apps.common.constants import Direction
+        from apps.ledger.constants import EntryType
+        from apps.ledger.services.postings import register_posting_source
+
+        register_posting_source(
+            SourceType.SALES_DOCUMENT,
+            module="sales",
+            entry_types={
+                EntryType.INVOICE: Direction.DEBIT,
+                EntryType.CREDIT_NOTE: Direction.CREDIT,
+            },
+        )

@@ -37,7 +37,19 @@ export type LedgerEntryType =
   | 'write_off'
   | 'interest'
   | 'reversal'
-  | 'correction';
+  | 'correction'
+  /* A2 (ADR-048) — posted by the engines and verticals: a non-document amount owed
+     (a fine, a fee, a due in ledger mode), and a reduction of what is owed with no
+     money moving (a waiver, a discount). */
+  | 'charge'
+  | 'adjustment_credit';
+
+/**
+ * A2 (ADR-043) — which kind of money a line is. `main` is the trade khata and every
+ * line a shop writes; `loan` is lending's, and is in the balance; `deposit` is money
+ * HELD for the party and returnable, and is never in the balance.
+ */
+export type LedgerBucket = 'main' | 'loan' | 'deposit';
 
 export type LedgerSourceType =
   'manual' | 'sales_document' | 'purchase_document' | 'payment' | 'expense' | 'ledger_entry';
@@ -80,6 +92,8 @@ export interface LedgerEntryApiRow {
    * carry none. Optional so an older server reads as "not known".
    */
   readonly running_balance?: string | null;
+  /** A2 — additive; absent from an older server, which reads as `main`. */
+  readonly bucket?: LedgerBucket;
   /** CR-027 / LED-10 FR-5 — the document link; `null` for every manual row. */
   readonly source?: {
     readonly type: string;
@@ -130,6 +144,8 @@ export interface LedgerEntry {
    * Absent on a manual line and on a row spliced in from a 201.
    */
   readonly source?: LedgerEntrySource;
+  /** A2 — absent reads as `main` (an older server, a fixture, a row spliced from a 201). */
+  readonly bucket?: LedgerBucket;
 }
 
 export interface LedgerEntrySource {

@@ -29,12 +29,17 @@ from apps.ledger.selectors.sources import resolve_sources
 from apps.ledger.selectors.statement import (
     STATEMENT_ORDERING,
     carried_forward,
+    deposit_block,
     has_entries_before_opening,
     opening_balance,
     statement_rows,
     statement_totals,
 )
-from apps.ledger.serializers.entry import StatementRowSerializer, StatementTotalsSerializer
+from apps.ledger.serializers.entry import (
+    StatementDepositRowSerializer,
+    StatementRowSerializer,
+    StatementTotalsSerializer,
+)
 from apps.ledger.services.statement_csv import statement_csv_rows
 from apps.ledger.views.exports import audit_export, authorise_export
 
@@ -173,6 +178,19 @@ class PartyStatementView(TenantScopeMixin, APIView):
 
         opening = opening_balance(**scope, date_from=date_from)
         closing = self._closing(scope, date_from, date_to, opening)
+        meta = paginator.get_meta()
+        # A2 (PLT-X01 §6) — the "Deposit held" block, outside the running balance, and
+        # only when the period has a deposit line: every other statement is unchanged.
+        deposits = deposit_block(**scope, date_from=date_from, date_to=date_to)
+        if deposits is not None:
+            meta["deposit"] = {
+                "rows": StatementDepositRowSerializer(
+                    deposits["rows"],
+                    many=True,
+                    context={"sources": resolve_sources(deposits["rows"])},
+                ).data,
+                "held": str(deposits["held"]),
+            }
         return StandardResponse.ok(
             {
                 "party": {
@@ -194,7 +212,7 @@ class PartyStatementView(TenantScopeMixin, APIView):
                     tenant=scope["tenant"], party_id=party.id
                 ),
             },
-            meta=paginator.get_meta(),
+            meta=meta,
         )
 
     def _closing(
@@ -213,14 +231,14 @@ class PartyStatementView(TenantScopeMixin, APIView):
         papered over. It is NOT corrected here: a read that repairs data is a
         read that hides how often the repair was needed.
         """
-        from apps.ledger.selectors.statement import _scoped, _signed_total
+        from apps.ledger.selectors.statement import scoped_rows, signed_total
 
-        scoped = _scoped(**scope)
+        scoped = scoped_rows(**scope)
         if date_from is not None:
             scoped = scoped.filter(entry_date__gte=date_from)
         if date_to is not None:
             scoped = scoped.filter(entry_date__lte=date_to)
-        closing = opening + _signed_total(scoped)
+        closing = opening + signed_total(scoped)
 
         if date_from is None and date_to is None:
             party = self._party()

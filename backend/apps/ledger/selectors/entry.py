@@ -13,7 +13,7 @@ from uuid import UUID
 from django.db.models import Case, Count, DecimalField, F, Q, QuerySet, Sum, When
 from django.db.models.functions import Coalesce
 
-from apps.common.constants import Direction
+from apps.common.constants import BALANCE_BUCKET_VALUES, Direction, LedgerBucket
 from apps.common.money import ZERO
 from apps.ledger.constants import EntryType
 from apps.ledger.models import LedgerEntry
@@ -54,16 +54,40 @@ MONEY = DecimalField(max_digits=14, decimal_places=2)
 #: cannot drift apart.
 LIVE_ENTRIES = Q(status="posted", reversed_by__isnull=True, reverses__isnull=True)
 
-#: `Σ debit − Σ credit`, as a database expression over `LIVE_ENTRIES`.
-SIGNED_AMOUNT = Sum(
-    Case(
-        When(direction=Direction.DEBIT, then=F("amount")),
-        When(direction=Direction.CREDIT, then=-F("amount")),
-        default=Decimal("0.00"),
-        output_field=MONEY,
-    ),
-    filter=LIVE_ENTRIES,
+# ── Buckets (A2, ADR-043, FRD 00 PLT-X01 BR-1 and BR-4) ──────────────────────
+#
+# `party.balance` is Σ signed over the `main` and `loan` buckets; a `deposit` line is
+# money HELD for the party and is never in it. Every reader of the balance — this
+# module's aggregates, the statement's window and carry, the timeline's running
+# balance, the drift check and `recalc_balances` — narrows by the ONE constant below,
+# imported rather than restated (the LED-04 rule: a replay written from the same prose
+# is not a check). For a tenant whose every row is `main` the narrowing changes no row.
+
+#: The rows `party.balance` is summed over, beside `LIVE_ENTRIES`.
+BALANCE_BUCKETS = Q(bucket__in=BALANCE_BUCKET_VALUES)
+#: The loan part of the balance (`party.loan_balance`).
+LOAN_BUCKET = Q(bucket=LedgerBucket.LOAN)
+#: Deposits held (`party.deposit_held`), outside the balance.
+DEPOSIT_BUCKET = Q(bucket=LedgerBucket.DEPOSIT)
+
+_SIGNED = Case(
+    When(direction=Direction.DEBIT, then=F("amount")),
+    When(direction=Direction.CREDIT, then=-F("amount")),
+    default=Decimal("0.00"),
+    output_field=MONEY,
 )
+
+#: `Σ debit − Σ credit`, as a database expression over `LIVE_ENTRIES` in the balance
+#: buckets — `party.balance`.
+SIGNED_AMOUNT = Sum(_SIGNED, filter=LIVE_ENTRIES & BALANCE_BUCKETS)
+
+#: The same over the `loan` bucket alone — `party.loan_balance`.
+LOAN_SIGNED_AMOUNT = Sum(_SIGNED, filter=LIVE_ENTRIES & LOAN_BUCKET)
+
+#: `Σ credit − Σ debit` over the `deposit` bucket — `party.deposit_held`. The opposite
+#: sign to the balance on purpose: a deposit received is a credit, and it INCREASES
+#: what is held (BR-1).
+DEPOSIT_HELD_AMOUNT = Sum(-_SIGNED, filter=LIVE_ENTRIES & DEPOSIT_BUCKET)
 
 
 def computed_balance(*, tenant: Any, party_id: Any) -> Decimal:
@@ -77,6 +101,22 @@ def computed_balance(*, tenant: Any, party_id: Any) -> Decimal:
     total = LedgerEntry.objects.filter(tenant=tenant, party_id=party_id).aggregate(
         balance=Coalesce(SIGNED_AMOUNT, Decimal("0.00"), output_field=MONEY)
     )["balance"]
+    return total or ZERO
+
+
+def computed_loan_balance(*, tenant: Any, party_id: Any) -> Decimal:
+    """`party.loan_balance` re-derived from the ledger — the loan bucket's ground truth."""
+    total = LedgerEntry.objects.filter(tenant=tenant, party_id=party_id).aggregate(
+        loan=Coalesce(LOAN_SIGNED_AMOUNT, Decimal("0.00"), output_field=MONEY)
+    )["loan"]
+    return total or ZERO
+
+
+def computed_deposit_held(*, tenant: Any, party_id: Any) -> Decimal:
+    """`party.deposit_held` re-derived from the ledger — the deposit bucket's ground truth."""
+    total = LedgerEntry.objects.filter(tenant=tenant, party_id=party_id).aggregate(
+        held=Coalesce(DEPOSIT_HELD_AMOUNT, Decimal("0.00"), output_field=MONEY)
+    )["held"]
     return total or ZERO
 
 
@@ -186,7 +226,10 @@ def split_total_expressions(within: Q | None = None) -> dict[str, Coalesce]:
     result so a caller can add its own aggregate — `entry_count` — to the SAME
     query instead of making a second trip.
     """
-    base = within if within is not None else Q()
+    # A2 BR-4 — gave, got and written-off are figures about what is OWED, so a deposit
+    # line is in none of them; it is reported in its own block (the statement's
+    # "Deposit held") and by `party.deposit_held`.
+    base = (within if within is not None else Q()) & BALANCE_BUCKETS
     debit, credit = Q(direction=Direction.DEBIT), Q(direction=Direction.CREDIT)
     return {
         "debit": _money_sum(base & debit & ~WRITE_OFF_ENTRIES),
@@ -232,6 +275,8 @@ def party_ledger_summary(*, tenant: Any, party_id: UUID | str) -> dict:
         }
     aggregate = LedgerEntry.objects.filter(tenant=tenant, party_id=party_id).aggregate(
         **split_total_expressions(LIVE_ENTRIES),
+        # Every live line, deposits included: the count decides whether the khata shows a
+        # timeline or a first-use empty state, and the timeline lists a deposit line.
         entry_count=Count("id", filter=LIVE_ENTRIES),
     )
     totals = split_totals(aggregate)

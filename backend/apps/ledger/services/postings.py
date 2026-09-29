@@ -26,21 +26,49 @@ undoes (`source_type='ledger_entry'`). A document void is a new business event:
 the reversal carries the void date in the tenant's timezone and the document's
 own `(source_type, source_id)`, so `reverse_source_entries` and the statement
 can group a document's rows, and a closed period is never re-opened by a void.
+
+── The posting registry (A2, ADR-042, contracts §1.2) ────────────────────────
+FR-3's matrix was a literal dict here, which core would have had to edit for
+every engine and vertical. It is `register_posting_source` now: each OWNER
+registers its source from its own `AppConfig.ready()` — sales
+`sales_document`, purchases `purchase_document`, payments `payment` (in all
+three buckets), expenses `expense`, and later dues, library and lending theirs.
+A source declares its entry types (each with the one direction that type always
+carries, `POSTABLE_ENTRY_DIRECTIONS`) and the buckets it may post in; a posting
+outside its registration is `LedgerPostingError` before anything is written.
+Registration is idempotent by `source_type`, and a second owner disagreeing
+about one is a start-up error rather than whichever imported last (BR-10).
+
+── Buckets (ADR-043) ─────────────────────────────────────────────────────────
+`post_source_entry(bucket=…)` writes the line in that bucket and moves the
+party's caches for it (`apply_entry(bucket=…)`); `reverse_source_entries`
+writes each reversal in its original's bucket, so a void of a loan collection
+restores the loan and not the shop balance.
 """
 
 from __future__ import annotations
 
 import datetime as dt
+from collections.abc import Mapping
+from dataclasses import dataclass
 from decimal import Decimal
+from types import MappingProxyType
 from typing import Any
 
+from django.core.exceptions import ImproperlyConfigured
 from django.db import connection
 
 from apps.common.audit import AuditAction, write_audit
-from apps.common.constants import Direction, PaymentMode, UpiApp
+from apps.common.constants import Direction, LedgerBucket, PaymentMode, UpiApp
 from apps.common.context import Ctx
 from apps.common.dates import tenant_today
-from apps.ledger.constants import NOTE_MAX_LENGTH, EntryStatus, EntryType, SourceType
+from apps.ledger.constants import (
+    NOTE_MAX_LENGTH,
+    POSTABLE_ENTRY_DIRECTIONS,
+    SOURCE_TYPE_MAX_LENGTH,
+    EntryStatus,
+    EntryType,
+)
 from apps.ledger.models import LedgerEntry
 from apps.ledger.services.entries import _audit_snapshot
 from apps.parties.services.balance import apply_entry, lock_party
@@ -50,26 +78,101 @@ class LedgerPostingError(RuntimeError):
     """§10 — a programming error, not user input. The handler maps it to a 500."""
 
 
-#: FR-3's posting matrix: which entry types a source may post, and the
-#: direction each one always carries (BR-2). A caller passing anything else is
-#: a defect this refuses loudly rather than a row that confuses a statement.
-POSTING_MATRIX: dict[str, dict[str, str]] = {
-    SourceType.SALES_DOCUMENT: {
-        EntryType.INVOICE: Direction.DEBIT,
-        EntryType.CREDIT_NOTE: Direction.CREDIT,
-    },
-    SourceType.PURCHASE_DOCUMENT: {
-        EntryType.PURCHASE_BILL: Direction.CREDIT,
-        EntryType.DEBIT_NOTE: Direction.DEBIT,
-    },
-    SourceType.PAYMENT: {
-        EntryType.PAYMENT_IN: Direction.CREDIT,
-        EntryType.PAYMENT_OUT: Direction.DEBIT,
-    },
-    SourceType.EXPENSE: {
-        EntryType.EXPENSE: Direction.CREDIT,
-    },
-}
+@dataclass(frozen=True)
+class PostingSource:
+    """One registered source: who owns it, what it posts, and in which buckets."""
+
+    source_type: str
+    module: str
+    #: entry_type -> the direction it always carries (read-only).
+    entry_types: Mapping[str, str]
+    buckets: frozenset[str]
+
+
+_SOURCES: dict[str, PostingSource] = {}
+_BASELINE: dict[str, PostingSource] | None = None
+
+
+def register_posting_source(
+    source_type: str,
+    *,
+    module: str,
+    entry_types: Mapping[str, str],
+    buckets: frozenset[str] = frozenset({LedgerBucket.MAIN.value}),
+) -> None:
+    """Register what `source_type` may post (contracts §1.2). Called from the owner's `ready()`.
+
+    Refused with `ImproperlyConfigured` — a start-up error, never a request's — when the name
+    does not fit `ledger_entry.source_type` (32), when an entry type is not a postable one or
+    is declared with a direction other than the one it always carries (BR-8: `charge` is a
+    debit), when a bucket is not one of the three, and when the source is already registered
+    with a different shape (BR-10). The same registration twice is a no-op.
+    """
+    if not source_type or len(source_type) > SOURCE_TYPE_MAX_LENGTH:
+        raise ImproperlyConfigured(
+            f"posting source {source_type!r} must be 1–{SOURCE_TYPE_MAX_LENGTH} characters"
+        )
+    if not entry_types:
+        raise ImproperlyConfigured(f"posting source {source_type!r} posts no entry type")
+    for entry_type, direction in entry_types.items():
+        fixed = POSTABLE_ENTRY_DIRECTIONS.get(entry_type)
+        if fixed is None:
+            raise ImproperlyConfigured(
+                f"{entry_type!r} is not an entry type a source may post ({source_type!r})"
+            )
+        if direction != fixed:
+            raise ImproperlyConfigured(
+                f"{entry_type!r} is always a {fixed}; {source_type!r} declared {direction!r}"
+            )
+    wanted = frozenset(str(bucket) for bucket in buckets)
+    if not wanted or not wanted <= frozenset(LedgerBucket.values):
+        raise ImproperlyConfigured(
+            f"posting source {source_type!r} buckets must be a non-empty subset of "
+            f"{sorted(LedgerBucket.values)}, not {sorted(wanted)}"
+        )
+    source = PostingSource(
+        source_type=source_type,
+        module=module,
+        entry_types=MappingProxyType({str(k): str(v) for k, v in entry_types.items()}),
+        buckets=wanted,
+    )
+    existing = _SOURCES.get(source_type)
+    if existing is not None:
+        if (existing.module, dict(existing.entry_types), existing.buckets) != (
+            source.module,
+            dict(source.entry_types),
+            source.buckets,
+        ):
+            raise ImproperlyConfigured(
+                f"posting source {source_type!r} is already registered differently "
+                f"(by {existing.module!r})"
+            )
+        return
+    _SOURCES[source_type] = source
+
+
+def posting_source(source_type: str) -> PostingSource | None:
+    """The registration for `source_type`, or None."""
+    return _SOURCES.get(source_type)
+
+
+def registered_posting_sources() -> dict[str, PostingSource]:
+    """Every registered source, by `source_type` (a copy)."""
+    return dict(_SOURCES)
+
+
+def _reset_for_tests() -> None:  # pragma: no cover - test helper
+    """Back to what the apps' `ready()` registered — `guards._reset_for_tests`' rule.
+
+    Call it before AND after a test that registers a fake source. The first call snapshots
+    the start-up registrations; later calls restore them, so a test's `test_charge` source
+    never outlives the test and the real four are never stripped.
+    """
+    global _BASELINE
+    if _BASELINE is None:
+        _BASELINE = dict(_SOURCES)
+    _SOURCES.clear()
+    _SOURCES.update(_BASELINE)
 
 
 def _actor(ctx: Ctx) -> Any:
@@ -113,17 +216,20 @@ def post_source_entry(
     upi_app: str | None = None,
     reference: str = "",
     source_number: str | None = None,
+    bucket: str = LedgerBucket.MAIN,
 ) -> tuple[LedgerEntry, Decimal]:
     """Write one document's ledger line against `party` (LOCKED by the caller).
 
     Returns `(entry, balance_after)`. The direction is not a parameter: it is
     a function of `entry_type` (BR-2), and a caller that could pass it could
-    pass the wrong one.
+    pass the wrong one. `bucket` must be one the source registered (BR-7).
     """
     _assert_atomic()
-    allowed = POSTING_MATRIX.get(source_type)
-    if allowed is None or entry_type not in allowed:
+    source = _SOURCES.get(source_type)
+    if source is None or entry_type not in source.entry_types:
         raise LedgerPostingError(f"{entry_type!r} is not posted by {source_type!r}")
+    if bucket not in source.buckets:
+        raise LedgerPostingError(f"{source_type!r} does not post in the {bucket!r} bucket")
     if source_id is None:
         raise LedgerPostingError("a document posting needs its source_id")
     if party is None or party.tenant_id != ctx.tenant.id:
@@ -137,7 +243,7 @@ def post_source_entry(
     if existing is not None:
         return existing, party.balance
 
-    direction = allowed[entry_type]
+    direction = source.entry_types[entry_type]
     # A debit carries no mode (`ck_ledger_entry_debit_has_no_mode`): a payment
     # OUT keeps its modes on the payment row, not on the khata line.
     if direction != Direction.CREDIT or payment_mode not in PaymentMode.values:
@@ -159,8 +265,9 @@ def post_source_entry(
         upi_app=upi_app,
         reference=(reference or "")[:64] if payment_mode else "",
         status=EntryStatus.POSTED,
+        bucket=bucket,
     )
-    balance = apply_entry(party=party, direction=direction, amount=entry.amount)
+    balance = apply_entry(party=party, direction=direction, amount=entry.amount, bucket=bucket)
     write_audit(
         ctx=ctx,
         action=AuditAction.LEDGER_ENTRY_CREATED,
@@ -228,11 +335,15 @@ def reverse_source_entries(
             note=f"Reversal of {original.note}"[:NOTE_MAX_LENGTH] if original.note else "",
             reason=reason,
             status=EntryStatus.POSTED,
+            # In the ORIGINAL's bucket: a void of a loan collection restores the loan.
+            bucket=original.bucket,
         )
         original.status = EntryStatus.REVERSED
         original.reversed_by = reversal
         original.save(update_fields=["status", "reversed_by"])
-        balance = apply_entry(party=party, direction=direction, amount=original.amount)
+        balance = apply_entry(
+            party=party, direction=direction, amount=original.amount, bucket=original.bucket
+        )
         write_audit(
             ctx=ctx,
             action=AuditAction.LEDGER_ENTRY_REVERSED,

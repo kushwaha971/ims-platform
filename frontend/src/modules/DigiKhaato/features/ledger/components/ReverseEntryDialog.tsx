@@ -96,7 +96,7 @@ export function ReverseEntryDialog({
 
   if (!reversing) return null;
 
-  const view = entryAmountView(reversing.direction, reversing.entryType);
+  const view = entryAmountView(reversing.direction, reversing.entryType, reversing.bucket);
 
   return (
     <UbDialog

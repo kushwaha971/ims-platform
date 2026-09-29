@@ -4,7 +4,12 @@ import { formatInr, isZeroAmount } from 'src/utils/money';
 
 import { balanceDirection, unsigned } from './balanceSide';
 
-import type { LedgerDirection, LedgerEntry, WrittenOffTotals } from '../types/ledger.types';
+import type {
+  LedgerBucket,
+  LedgerDirection,
+  LedgerEntry,
+  WrittenOffTotals,
+} from '../types/ledger.types';
 
 /**
  * Part 19 §19.2.5 — pure presentation decisions, shared by every surface that
@@ -38,8 +43,20 @@ export interface EntryAmountView {
  */
 export const entryAmountView = (
   direction: LedgerDirection,
-  entryType?: LedgerEntry['entryType']
+  entryType?: LedgerEntry['entryType'],
+  bucket?: LedgerBucket
 ): EntryAmountView => {
+  /* A2 (PLT-X01 §8) — a deposit is neither "you gave" nor "you got" in the khata
+     sense: it is money HELD for the party and returnable, outside the balance. So it
+     is neutral in tone, never red or green, and says what it is. Checked first,
+     because a deposit is a `payment_in` / `payment_out` like any other receipt. */
+  if (bucket === 'deposit') {
+    return {
+      tone: 'neutral',
+      sign: 'none',
+      labelId: direction === 'credit' ? 'ledger.entry.depositIn' : 'ledger.entry.depositOut',
+    };
+  }
   /* An opening balance is not something that happened today, so "You gave" is
      the wrong tense and the wrong claim: nothing was given, the party already
      owed it when the book started. The opening FORM asks the question in the
@@ -67,6 +84,16 @@ export const entryAmountView = (
      — money owed to the party — and words that say why. */
   if (entryType === 'expense' && direction === 'credit') {
     return { tone: 'payable', sign: 'none', labelId: 'ledger.entry.expenseOwed' };
+  }
+  /* A2 (ADR-048) — every entry type has a label, or a row prints a raw message id
+     (the LED-04 sweep's first finding). A charge is money owed — a fine, a fee —
+     and was not "given"; a credit reduces what is owed with no money moving, and
+     was not "got". Their tones are their directions'. */
+  if (entryType === 'charge') {
+    return { tone: 'receivable', sign: 'none', labelId: 'ledger.entry.type.charge' };
+  }
+  if (entryType === 'adjustment_credit') {
+    return { tone: 'payable', sign: 'none', labelId: 'ledger.entry.type.adjustment_credit' };
   }
   return direction === 'debit'
     ? { tone: 'receivable', sign: 'none', labelId: 'ledger.entry.gave' }
@@ -110,8 +137,18 @@ export const entryTitle = (entry: LedgerEntry, t: TranslateFn): string => {
     return entry.reason?.trim() || t('ledger.entry.type.reversal');
   }
   if (entry.note.trim()) return entry.note.trim();
-  return t(entryAmountView(entry.direction, entry.entryType).labelId);
+  return t(entryAmountView(entry.direction, entry.entryType, entry.bucket).labelId);
 };
+
+/**
+ * A2 — the badge a line in another bucket wears on the khata: "Loan" or "Deposit".
+ *
+ * `null` for the trade khata, which is every line a shop writes, so today's khata is
+ * unchanged. A loan line reads "You gave ₹50,000" like any disbursal and the badge
+ * says it was a loan; a deposit line is neutral and the badge says it is held.
+ */
+export const bucketBadgeId = (bucket: LedgerBucket | undefined): string | null =>
+  bucket === 'loan' || bucket === 'deposit' ? `ledger.bucket.${bucket}` : null;
 
 /**
  * Does the row's title already say what the amount's label would say?

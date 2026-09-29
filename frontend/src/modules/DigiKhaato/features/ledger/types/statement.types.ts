@@ -1,4 +1,5 @@
 import type {
+  LedgerBucket,
   LedgerDirection,
   LedgerEntryStatus,
   LedgerEntryType,
@@ -35,6 +36,21 @@ export interface StatementRowApi {
   readonly reverses_id: string | null;
   readonly supersedes_id: string | null;
   readonly reason: string | null;
+  /** A2 — additive; absent from an older server, which reads as `main`. */
+  readonly bucket?: LedgerBucket;
+}
+
+/**
+ * A2 (PLT-X01 §6) — one line of the statement's "Deposit held" block. A statement row
+ * without a running balance: a deposit is outside the running balance by definition.
+ */
+export type StatementDepositRowApi = Omit<StatementRowApi, 'running_balance'>;
+
+/** `meta.deposit` — present only when the period has a deposit line. */
+export interface StatementDepositApi {
+  readonly rows: readonly StatementDepositRowApi[];
+  /** Decimal string: what was held at the period's end. */
+  readonly held: string;
 }
 
 export interface StatementRow {
@@ -62,6 +78,20 @@ export interface StatementRow {
   readonly reversesId: string | null;
   readonly supersedesId: string | null;
   readonly reason: string | null;
+  /** A2 — absent reads as `main`. */
+  readonly bucket?: LedgerBucket;
+}
+
+/** A deposit line: a statement row with no running balance (A2). */
+export type StatementDepositRow = Omit<StatementRow, 'runningBalance'>;
+
+/**
+ * A2 — the "Deposit held" block beneath the table: the period's deposit lines and what
+ * was held at its end. Never part of the running balance or the closing above it.
+ */
+export interface StatementDeposit {
+  readonly rows: readonly StatementDepositRow[];
+  readonly held: string;
 }
 
 /** The three figures above the table, and the two the totals row carries. */
@@ -82,6 +112,11 @@ export interface StatementSummary {
    * arithmetic can tell them so: both numbers are right.
    */
   readonly hasEntriesBeforeOpening: boolean;
+  /**
+   * A2 — the "Deposit held" block. Absent when the period has no deposit line, which
+   * is every statement a shop without deposits has ever printed.
+   */
+  readonly deposit?: StatementDeposit;
 }
 
 /** BR-6 — who the statement is about, with the mobile already masked server-side. */

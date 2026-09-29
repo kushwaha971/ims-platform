@@ -15,6 +15,11 @@ The formula is `ledger.selectors.entry.SIGNED_AMOUNT`, imported rather than
 restated. A replay written from the same prose as the thing it checks is not a
 check; it is a second chance to make the same mistake.
 
+Since A2 (ADR-043) it replays all THREE party caches — `balance` (the `main` and
+`loan` buckets), `loan_balance` and `deposit_held` — through
+`ledger.selectors.drift`, so a party whose balance agrees but whose loan or
+deposit figure does not is still reported, and `--apply` writes all three.
+
 ── Why this command lives in `ledger` and not in `parties` ──────────────────
 It was in `common` while there was nothing to replay, which was fine for a shell
 and wrong the moment it had a body: `common` depends on nothing (rule D1) and
@@ -73,10 +78,15 @@ class Command(BaseCommand):
             if drift is None:
                 continue
             drifted += 1
-            self.stdout.write(
+            line = (
                 f"drift  {party.id}  {party.name[:40]:<40}  "
-                f"cached {party.balance}  ledger {computed}"
+                f"cached {party.balance}  ledger {computed.balance}"
             )
+            if "loan_balance" in drift.figures:
+                line += f"  loan cached {party.loan_balance} ledger {computed.loan_balance}"
+            if "deposit_held" in drift.figures:
+                line += f"  deposit cached {party.deposit_held} ledger {computed.deposit_held}"
+            self.stdout.write(line)
             if not apply:
                 continue
             with transaction.atomic():
@@ -84,14 +94,18 @@ class Command(BaseCommand):
                 # party that took an entry between the read and this write would
                 # otherwise be "corrected" to a figure that is already stale.
                 locked = Party.all_objects.select_for_update().get(pk=party.pk)
-                locked.balance = computed
-                locked.receivable_total = max(computed, ZERO)
-                locked.payable_total = max(-computed, ZERO)
+                locked.balance = computed.balance
+                locked.receivable_total = max(computed.balance, ZERO)
+                locked.payable_total = max(-computed.balance, ZERO)
+                locked.loan_balance = computed.loan_balance
+                locked.deposit_held = computed.deposit_held
                 locked.save(
                     update_fields=[
                         "balance",
                         "receivable_total",
                         "payable_total",
+                        "loan_balance",
+                        "deposit_held",
                         "updated_at",
                     ]
                 )

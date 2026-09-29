@@ -102,6 +102,8 @@ const toEntry = (row: LedgerEntryApiRow): LedgerEntry => ({
   /* CR-027. Spread only when present, so a row from a 201 (which carries no
      running balance) has no key rather than a `null` that reads like a value. */
   ...(row.running_balance != null ? { runningBalance: row.running_balance } : {}),
+  /* A2 — only when the server sent one; absent reads as `main`. */
+  ...(row.bucket ? { bucket: row.bucket } : {}),
   /* LED-10 FR-5 — only a document-sourced row carries one. */
   ...(row.source
     ? {

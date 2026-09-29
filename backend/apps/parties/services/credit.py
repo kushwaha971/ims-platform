@@ -41,6 +41,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
 from apps.parties.models import Party
+from apps.parties.services.balance import trade_balance
 
 #: FR-2. `warn` is the default because a merchant who has not thought about
 #: this yet should be told, not stopped: a rule nobody chose should never cost
@@ -110,8 +111,15 @@ def credit_exposure(party: Party) -> Decimal:
     Phase-2 sales orders post nothing and will have to be added. Drafts are
     excluded at MVP by BR-4, which is also why the check runs at ISSUE rather
     than at draft save.
+
+    ── The TRADE figure, not the whole balance (A2, PLT-X01 BR-5, ADR-043) ───
+    `balance − loan_balance`: a loan is not shop credit, so a borrower's
+    principal must not consume the limit the owner set for their shopping.
+    Compared against the whole balance, a customer who owes the shop ₹2,300 and
+    has a ₹46,625 loan would be blocked from a ₹2,000 bill under a ₹5,000 limit.
+    For every party without a loan the two are the same number.
     """
-    return max(party.balance, ZERO)
+    return max(trade_balance(party), ZERO)
 
 
 def usage_pct(exposure: Decimal, limit: Decimal | None) -> int | None:

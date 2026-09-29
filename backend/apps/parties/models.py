@@ -43,6 +43,17 @@ class Party(TenantModel, SoftDeleteModel):
     balance = MoneyField(default=0)
     receivable_total = MoneyField(default=0)
     payable_total = MoneyField(default=0)
+    # ── A2 — the bucket caches (ADR-043, ADR-044, contracts §1.3) ───────────
+    #
+    # Two more caches, with the same one writer as `balance`
+    # (`parties.services.balance.apply_entry`) and the same replay
+    # (`manage.py recalc_balances`). `balance` stays "what this party owes, net"
+    # and is Σ main + Σ loan; `loan_balance` is the loan part of it, so the TRADE
+    # figure — what aging, the credit limit and a shop write-off read — is
+    # `balance − loan_balance`. `deposit_held` is money held for the party and
+    # returnable: a liability kept entirely OUTSIDE the balance, never negative.
+    loan_balance = MoneyField(default=0, db_default=0)
+    deposit_held = MoneyField(default=0, db_default=0)
     last_activity_at = models.DateTimeField(null=True, blank=True)
 
     # ── The opening balance, STORED AND UNAPPLIED (TSK-PTY-01-05) ───────────
@@ -98,6 +109,12 @@ class Party(TenantModel, SoftDeleteModel):
                 fields=["tenant", "mobile"],
                 condition=models.Q(mobile__isnull=False) & models.Q(deleted_at__isnull=True),
                 name="uq_party_tenant_mobile",
+            ),
+            # A2 — a deposit is never handed back beyond what is held. The deposits
+            # service refuses first (`deposit_insufficient`); this is the last line.
+            models.CheckConstraint(
+                condition=models.Q(deposit_held__gte=0),
+                name="ck_party_deposit_held_non_negative",
             ),
         ]
         indexes = [

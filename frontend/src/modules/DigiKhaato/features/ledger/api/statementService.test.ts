@@ -215,3 +215,64 @@ describe('getStatementShop (UAT D3 — the print letterhead)', () => {
     expect(await getStatementShop()).toEqual({ addressLines: [], phone: null, gstin: null });
   });
 });
+
+describe('A2 — the deposit block', () => {
+  it('maps meta.deposit onto the summary, rows and held, with no running balance', async () => {
+    mockApi.get.mockResolvedValue({
+      data: {
+        ...WIRE,
+        meta: {
+          ...WIRE.meta,
+          deposit: {
+            held: '1500.00',
+            rows: [
+              {
+                id: 'd1',
+                entry_date: '2026-04-02',
+                entry_type: 'payment_in',
+                direction: 'credit',
+                amount: '1500.00',
+                note: '',
+                status: 'posted',
+                source: null,
+                reverses_id: null,
+                supersedes_id: null,
+                reason: null,
+                bucket: 'deposit',
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    const page = await getStatement(PARTY, filters());
+
+    expect(page.summary.deposit).toEqual({
+      held: '1500.00',
+      rows: [
+        {
+          id: 'd1',
+          entryDate: '2026-04-02',
+          entryType: 'payment_in',
+          direction: 'credit',
+          amount: '1500.00',
+          note: '',
+          status: 'posted',
+          source: null,
+          reversesId: null,
+          supersedesId: null,
+          reason: null,
+          bucket: 'deposit',
+        },
+      ],
+    });
+  });
+
+  it('leaves the summary without a deposit key when the server sends none', async () => {
+    /* Every statement a shop has printed: absent, not an empty block. */
+    const page = await getStatement(PARTY, filters());
+
+    expect('deposit' in page.summary).toBe(false);
+  });
+});

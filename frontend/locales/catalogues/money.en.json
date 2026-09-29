@@ -1,4 +1,6 @@
 {
+  "ledger.entry.type.adjustment_credit": "Credit",
+  "ledger.entry.type.charge": "Charge",
   "ledger.entry.type.correction": "Correction",
   "ledger.entry.type.credit_note": "Credit note",
   "ledger.entry.type.debit_note": "Debit note",

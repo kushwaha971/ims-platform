@@ -8,8 +8,8 @@ Owner: Backend/Django lead, Track M. Sequence: **A14 → A2 (+A3) → A4a → A5
 
 | Task | State | Commit on main | Notes |
 |---|---|---|---|
-| A14 | done — merging | (see below) | A11 landed as 45aa070 |
-| A2 (+A3) | not started | — | after A14 |
+| A14 | **merged** | `4b964a8` | A11 landed as 45aa070 |
+| A2 (+A3) | done — merging | (see below) | |
 | A4a | not started | — | after A2 |
 | A5 | not started | — | after A4a and A15 (Track F) |
 
@@ -86,19 +86,121 @@ PUR-02's `test_void.py` swaps `_VOID_LISTENERS` with monkeypatch and still passe
 frontend path referenced the old module paths (one stale comment in `sales/services/issue.py`
 fixed). No defects found.
 
+## A2 (+A3) — ledger buckets, party caches, posting registry, two entry types (PLT-X01)
+
+### Design note (review step)
+
+Read at `4b964a8`. The balance rule lives in one place (`ledger/selectors/entry.py`:
+`LIVE_ENTRIES`, `SIGNED_AMOUNT`) and every reader imports it — so the bucket rule is one more
+constant beside it, `BALANCE_BUCKETS = Q(bucket__in=('main','loan'))`, and every reader narrows by
+it: `SIGNED_AMOUNT`, `split_total_expressions` (gave/got/written-off), the statement's scope
+(opening, carry, window, totals, closing), `LIVE_SIGNED` and `timeline_carried` (the timeline's
+running balance), `has_entries_before_opening`, the receipt's balance-at-the-time
+(`payments/selectors/payments.py`). Deposit rows stay on the timeline (with their `bucket`, a zero
+running-balance contribution, counted in `entry_count`) and leave the statement's table for a
+`meta.deposit` block. Aging binds `bucket=main`; the aging report's "last paid" follows it.
+
+The vocabulary `LedgerBucket` goes to `common/constants.py` (A2 block), because `parties` and
+`payments` need it and may not import the ledger (the `Direction` precedent). `POSTING_MATRIX`
+becomes `register_posting_source` with `POSTABLE_ENTRY_DIRECTIONS` as the one direction table;
+sales, purchases, payments (all three buckets) and expenses register from their own `ready()`.
+Purchases and expenses write their own rows through `ledger_link.py` (not `post_source_entry`) and
+stay `main` by default; their registration is for the contract.
+
+Party caches: `apply_entry(bucket=)` is still the one writer. `deposit` moves only `deposit_held`
+(credit increases it) and `last_activity_at`, and does not clear the collection date (BR-3).
+`trade_balance(party)` is the trade figure; `credit_exposure`, the list's credit chips
+(`filters.py`, `selectors/party.py`) and LED-11's write-off read it. The party detail's
+`loan_balance`/`trade_balance`/`deposit_held` keys come from `bucket_figures(party)` in the
+detail serializer: present when non-zero or when a module that writes the bucket is effective
+(`BUCKET_WRITER_MODULES`, module codes only — L4), omitted otherwise.
+
+`recalc_balances`, `check_invariants` and the nightly integrity job replay all three caches
+through `ledger/selectors/drift.py` (`LedgerFigures`; `BalanceDrift.figures`).
+
+Frontend: `bucket` on the timeline and statement types (optional, absent reads `main`);
+`entryAmountView(direction, type, bucket)` labels `charge`/`adjustment_credit` and paints deposits
+neutral ("Deposit received/returned"); a "Loan"/"Deposit" badge on non-main timeline rows;
+`DepositHeldBlock` under the statement table and on the print sheet (carried on `summary.deposit`,
+so the slice's write-every-page rule covers it and no slice changed); the info panel's "Balances"
+section from `view-model/partyBuckets.ts` (a module of its own so its message ids are not pinned
+to the shell catalogue by `split-locales.mjs`).
+
+### Result
+
+- Migrations: `ledger 0006_entry_bucket` (column with DB default, `entry_type` choices, `source_type`
+  loses choices, `ix_ledger_party_bucket` partial, `ck_ledger_entry_bucket`, trigger re-created
+  with `bucket` frozen; reverse restores 0004's body, asserted by a test) and
+  `parties 0009_party_bucket_caches` (two `numeric(14,2) NOT NULL DEFAULT 0`, deposit CHECK ≥ 0).
+  Verified by hand on a scratch database seeded with the pre-A2 code: forward, back, forward, data
+  intact, `UPDATE … SET bucket` refused by the trigger, `check_invariants` and
+  `recalc_balances --check` clean.
+- Tests: `apps/ledger/tests/test_buckets.py` (40: T-1…T-5, T-7…T-11, registry shape/refusals,
+  write-off cap, statement deposit block and period, timeline, detail keys, public helpers,
+  migration reverse), `test_bucket_golden.py` (T-6, 14 reads captured on the pre-A2 code with
+  `UB_UPDATE_GOLDEN=1`, unchanged after A2). Frontend: `DepositHeldBlock.test.tsx`,
+  `PartyInfoPanel.test.tsx`, `partyBuckets.test.ts`, additions to `entryDisplay.test.ts` and
+  `statementService.test.ts`. Backend: related suites 1135 passed / 8 skipped, the rest 1725 passed
+  (after the two fixes below), parties+ledger+common+performance rerun 985 passed; frontend ledger +
+  parties + `src/tests` 59 suites / 1001 tests; `tsc` clean; eslint/prettier clean on changed files;
+  `i18n:check` clean with the shell catalogue unchanged (14 new keys in ledger/money/parties).
+
+### Independent QA
+
+No Agent tool in this session; an adversarial self-review was done instead (recorded as
+required). Checked and found sound: the idempotent re-post returns the standing row without
+moving any cache; corrections (LED-03) only ever touch manual rows, which are `main`; opening,
+write-off, purchases and expenses writers default to `main`; `live_total_from_summary` and
+`timeline_carried` still agree (both narrow to the balance buckets); archive with a loan rolls the
+capped write-off back with the refused archive (EC-7); the idempotent 201 of a manual entry gains
+only an additive `bucket` key. Found and fixed during the pass: the deposit block titled a
+receipt "Payment received" (entry-type words) and printed "Deposit received" twice — now titled by
+the deposit words with the amount label hidden, as the timeline does; the bucket rows' message ids
+were pinned to the shell catalogue — moved to their own module.
+
+### Open items (not A2's to build, recorded so nobody assumes they exist)
+
+- **Archive with only a held deposit** passes PTY-04's `balance ≠ 0` guard; ADR-043 says the
+  deposit guard (A4b/A6 `register_archive_guard`) refuses it. Until A4b lands no deposit exists.
+- **Reminders quoting the trade figure** (ADR-043 "Reminders") is A7's ("trade figure" in its row).
+- **Statement CSV**: exports the running-balance table only; deposit lines are not in it. FRD 00 is
+  silent on the CSV. Question Q-M2 below.
+- **e2e**: T-PLT-X01-13's deposit condition in `e2e/statement.mjs` needs a way to post a deposit,
+  which is A4b's `receive_deposit`; the lead's e2e run after the wave covers the unchanged sweep.
+- **Day book** (PLT-X01 §11): `reports/selectors/day_book.py` reads only `manual`/`ledger_entry`
+  rows and payments' cash, so no deposit line reaches it through the ledger; the cash side is
+  A4b's `cash_sources.py` exclusion.
+
 ## Decisions
 
 - (A14) The refund-release call becomes a payments void seam (see Q-M1).
+- (A2) `LedgerBucket` lives in `common/constants.py` (shared vocabulary, `Direction`'s reason).
+- (A2) Deposit rows are listed on the khata timeline (with a zero running-balance contribution)
+  and move to `meta.deposit` on the statement; `entry_count` counts them.
+- (A2) The party detail's bucket keys are decided by `BUCKET_WRITER_MODULES`
+  (`loan`: lending; `deposit`: library, gym, hospitality) against `effective_modules`.
+- (A2) Owner Q3 default applied: LED-11's write-off is capped at the trade figure.
 
 ## Questions for the architecture owner
 
+- **Q-M2 (A2):** the statement CSV (`?format=csv`) exports the running-balance rows only. Should
+  deposit lines be appended as a separate section (they cannot be in the running-balance column)?
+  FRD 00 PLT-X01 is silent. Default kept: not exported.
 - **Q-M1 (A14):** `payments/services/void.py` imported `apps.sales.services.refund_seam.release_refund`
   at module level; ADR-056 does not name it. Implemented as a payments-owned void seam that sales
   registers into (ADR-042 pattern). Confirm.
 
 ## CR drafts
 
-(none yet)
+**CR draft (A2, R23, owner Q3) — LED-11 write-off amount is the trade figure.** *Change:* LED-11's
+"write off a small balance" (PTY-04 FR-3 in the archive flow) defaults to, and is capped at, the
+party's trade figure `balance − loan_balance` instead of `balance`. *Why:* ADR-043 keeps a loan in
+the party's one balance; without the cap one tap on a shop screen would forgive a loan, which only
+lending's own write-off (R38) may do. *Effect today:* none — no party has a loan, so the trade
+figure is the balance. *With a loan:* the write-off posts the trade figure (a `main` line), the loan
+stands, and archive is refused by the ordinary non-zero balance guard (EC-7); a confirmed amount
+other than the trade figure answers 409 `balance_changed` with `amount` = the trade figure.
+*Implemented in:* `apps/ledger/services/write_off.py`.
 
 ## Next steps
 

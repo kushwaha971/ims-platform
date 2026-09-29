@@ -13,6 +13,8 @@ from __future__ import annotations
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from apps.common.constants import Direction
+
 
 class EntryType(models.TextChoices):
     """Part 21 §21.3.4 — what KIND of ledger line this is.
@@ -25,6 +27,13 @@ class EntryType(models.TextChoices):
 
     LED-01 writes exactly two of them (`MANUAL_GAVE`, `MANUAL_GOT`) and LED-02
     writes `OPENING`. `INTEREST` is Phase 3 and is here for the same reason.
+
+    A2 (ADR-048) adds the two the engines and verticals post: `CHARGE`, a
+    non-document amount owed (a due in ledger mode, a library fine, a lending
+    fee), always a debit; and `ADJUSTMENT_CREDIT`, a reduction of what is owed
+    with no money moving (a waiver, a discount, a pro-rata credit), always a
+    credit, labelled "Credit". There is no refund type and no deposit type:
+    money going back is `PAYMENT_OUT`, and deposits move through payments.
     """
 
     OPENING = "opening", _("Opening balance")
@@ -41,6 +50,8 @@ class EntryType(models.TextChoices):
     INTEREST = "interest", _("Interest")
     REVERSAL = "reversal", _("Reversal")
     CORRECTION = "correction", _("Correction")
+    CHARGE = "charge", _("Charge")
+    ADJUSTMENT_CREDIT = "adjustment_credit", _("Credit")
 
 
 class SourceType(models.TextChoices):
@@ -50,6 +61,11 @@ class SourceType(models.TextChoices):
     document kind post to the ledger without a schema change. `MANUAL` is the
     only value LED-01 writes, and `source_id` is null for it: a manual entry is
     its own source.
+
+    Since A2 (R8) this is the vocabulary of the CORE's own source types, not the
+    set of valid values: `ledger_entry.source_type` has no `choices`, and a
+    source an engine or vertical registers with `register_posting_source`
+    (`dues_due`, `library_charge`) is valid because the registry says so.
     """
 
     MANUAL = "manual", _("Manual")
@@ -58,6 +74,29 @@ class SourceType(models.TextChoices):
     PAYMENT = "payment", _("Payment")
     EXPENSE = "expense", _("Expense")
     LEDGER_ENTRY = "ledger_entry", _("Ledger entry")
+
+
+#: BR-2 of LED-10, BR-8 of PLT-X01 — the direction each POSTABLE entry type always
+#: carries. A posting source registers entry types from this table only, and the
+#: direction it declares must be the one here: `charge` is a debit wherever it is
+#: posted from, so a statement can read a row without asking who wrote it. The
+#: manual, opening, write-off, reversal and correction types are not postable by a
+#: source (LED-01/02/03 and LED-11 write them), so they are not listed.
+POSTABLE_ENTRY_DIRECTIONS: dict[str, str] = {
+    EntryType.INVOICE: Direction.DEBIT,
+    EntryType.CREDIT_NOTE: Direction.CREDIT,
+    EntryType.PURCHASE_BILL: Direction.CREDIT,
+    EntryType.DEBIT_NOTE: Direction.DEBIT,
+    EntryType.PAYMENT_IN: Direction.CREDIT,
+    EntryType.PAYMENT_OUT: Direction.DEBIT,
+    EntryType.EXPENSE: Direction.CREDIT,
+    EntryType.INTEREST: Direction.DEBIT,
+    EntryType.CHARGE: Direction.DEBIT,
+    EntryType.ADJUSTMENT_CREDIT: Direction.CREDIT,
+}
+
+#: `ledger_entry.source_type varchar(32)` — a registered source's name must fit.
+SOURCE_TYPE_MAX_LENGTH = 32
 
 
 class EntryStatus(models.TextChoices):

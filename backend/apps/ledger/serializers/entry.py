@@ -61,6 +61,8 @@ class LedgerEntrySerializer(serializers.ModelSerializer):
             "reason",
             "created_by",
             "created_at",
+            # A2 — which kind of money the line is (`main`, `loan`, `deposit`).
+            "bucket",
         )
         read_only_fields = fields
 
@@ -359,6 +361,8 @@ class StatementRowSerializer(serializers.ModelSerializer):
             "reverses_id",
             "supersedes_id",
             "reason",
+            # A2 — a row's bucket; the running balance is over `main` and `loan`.
+            "bucket",
         )
         read_only_fields = fields
 
@@ -387,6 +391,40 @@ class StatementRowSerializer(serializers.ModelSerializer):
         omits its unbuilt summary figures: a key that is always empty is a claim
         this code cannot verify, and the client cannot tell it from a real one.
         """
+        return entry_source(entry, self.context.get("sources"))
+
+
+class StatementDepositRowSerializer(serializers.ModelSerializer):
+    """One line of the statement's "Deposit held" block (A2, PLT-X01 §6).
+
+    The statement row's shape without `running_balance`: a deposit line is outside the
+    running balance by definition (ADR-044), so a figure there would be a balance it did not
+    move. The same customer-facing restraint as `StatementRowSerializer` — no mode, no
+    reference, no author.
+    """
+
+    amount = MoneySerializerField(read_only=True)
+    source = serializers.SerializerMethodField()
+
+    class Meta:
+        model = LedgerEntry
+        fields = (
+            "id",
+            "entry_date",
+            "entry_type",
+            "direction",
+            "amount",
+            "note",
+            "status",
+            "source",
+            "reverses_id",
+            "supersedes_id",
+            "reason",
+            "bucket",
+        )
+        read_only_fields = fields
+
+    def get_source(self, entry: LedgerEntry) -> dict | None:
         return entry_source(entry, self.context.get("sources"))
 
 

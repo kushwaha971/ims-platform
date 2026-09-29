@@ -276,6 +276,16 @@ class PartyDetailSerializer(serializers.ModelSerializer):
         )
         read_only_fields = fields
 
+    def to_representation(self, instance: Party) -> dict:
+        """A2 (PLT-X01 §6) — `loan_balance`, `trade_balance`, `deposit_held`, when they mean
+        something: present when non-zero or when a module that writes that bucket is on,
+        omitted otherwise, so today's tenants read exactly the payload they read before."""
+        from apps.parties.services.balance import bucket_figures
+
+        data = super().to_representation(instance)
+        data.update(bucket_figures(instance))
+        return data
+
 
 class PartySummarySerializer(serializers.Serializer):
     """`summary` on the detail response — what the khata page's header answers.

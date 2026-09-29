@@ -150,3 +150,31 @@ PAGE_SIZE_DEFAULT = 25
 PAGE_SIZE_MAX = 100
 CURSOR_LIMIT_DEFAULT = 50
 CURSOR_LIMIT_MAX = 200
+
+
+# ── A2 ── ledger buckets (ADR-043, contracts §1.2) ─────────────────────────────
+
+
+class LedgerBucket(models.TextChoices):
+    """Which kind of money a ledger line is — `ledger_entry.bucket`, `payments_payment.bucket`.
+
+    Here rather than in `apps.ledger` for `Direction`'s reason: the ledger is not its only
+    reader. `parties` moves a different cache per bucket and may not import the ledger, and
+    `payments` stores the bucket its payment posted in.
+
+    * `main` — the trade khata: sales, purchases, fees, fines, charges, manual entries. Moves
+      `party.balance`, and is the only bucket aging reads.
+    * `loan` — lending: disbursal, interest, loan charges, collections, waivers. Moves
+      `party.balance` AND `party.loan_balance`; never in aging.
+    * `deposit` — money held for the party and returnable. Moves `party.deposit_held` only,
+      never the balance.
+    """
+
+    MAIN = "main", _("Shop")
+    LOAN = "loan", _("Loan")
+    DEPOSIT = "deposit", _("Deposit")
+
+
+#: The buckets `party.balance` is the sum of (BR-1): what the party owes, net. A deposit is a
+#: liability kept entirely outside it.
+BALANCE_BUCKET_VALUES: tuple[str, ...] = (LedgerBucket.MAIN.value, LedgerBucket.LOAN.value)

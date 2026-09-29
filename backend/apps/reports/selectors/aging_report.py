@@ -96,6 +96,8 @@ def aging_report(
             direction=direction,
             entry_type__in=payment_types,
             entry_date__lte=as_of,
+            # A2 — the last TRADE payment, like the aging it sits beside (`main` only).
+            bucket="main",
         )
         .values("party_id")
         .annotate(last=Max("entry_date"))

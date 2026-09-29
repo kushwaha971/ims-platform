@@ -2,10 +2,12 @@
 
 import { memo, type ReactNode } from 'react';
 
-import { UbInfoRow, UbPanel, UbPanelSection, UbStack, UbText } from 'src/design-system';
+import { UbAmount, UbInfoRow, UbPanel, UbPanelSection, UbStack, UbText } from 'src/design-system';
 import type { TranslateFn } from 'src/hooks/useTranslation';
 import { formatInr } from 'src/utils/money';
 import { formatPhoneForDisplay } from 'src/utils/share';
+
+import { partyBucketRows } from '../view-model/partyBuckets';
 
 import type { PartyDetail } from '../types/party.types';
 
@@ -89,6 +91,40 @@ const addressLine = (address: Record<string, string> | null | undefined): string
   return parts.length ? parts.join(', ') : null;
 };
 
+/**
+ * A2 — "Loan outstanding · Shop balance" and "Deposit held", only for a party that has
+ * them (the view-model decides). Absent for every shop party, section and all.
+ */
+function BucketSection({
+  t,
+  party,
+}: Readonly<{ t: TranslateFn; party: PartyDetail }>): React.JSX.Element | null {
+  const rows = partyBucketRows(party);
+  if (rows.length === 0) return null;
+  return (
+    <UbPanelSection title={t('parties.detail.section.balances')}>
+      <UbStack gap={2}>
+        {rows.map((row) => (
+          <UbInfoRow
+            key={row.key}
+            label={t(row.labelId)}
+            value={
+              <UbAmount
+                value={row.amount}
+                tone={row.tone}
+                sign="none"
+                size="sm"
+                label={t(row.labelId)}
+                labelHidden
+              />
+            }
+          />
+        ))}
+      </UbStack>
+    </UbPanelSection>
+  );
+}
+
 function PartyInfoPanelBase({
   t,
   party,
@@ -122,6 +158,8 @@ function PartyInfoPanelBase({
           { label: t('parties.detail.address.billing'), value: addressLine(party.billingAddress) },
         ]}
       />
+
+      <BucketSection t={t} party={party} />
 
       {/* Terms always renders, because it holds the collection-date control —
           the one thing on this panel a merchant can change, and a control that

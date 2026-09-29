@@ -1,0 +1,1447 @@
+{
+ "advance_detail": {
+  "data": {
+   "alt_phone": null,
+   "balance": "-800.00",
+   "billing_address": {},
+   "collection_date": null,
+   "consent_source": null,
+   "credit_days": null,
+   "credit_limit": null,
+   "display_code": null,
+   "email": null,
+   "gst_registration": "unregistered",
+   "gstin": null,
+   "id": "<id-1>",
+   "is_customer": true,
+   "is_supplier": false,
+   "mobile": "+919700033333",
+   "name": "Sunita Advance",
+   "notes": "",
+   "opening_balance_amount": null,
+   "opening_balance_as_of": null,
+   "opening_balance_direction": null,
+   "shipping_address": {},
+   "sms_opt_in": true,
+   "state_code": null,
+   "status": "active",
+   "summary": {
+    "balance": "-800.00",
+    "payable": "800.00",
+    "receivable": "0.00"
+   },
+   "tags": []
+  }
+ },
+ "aging_payable": {
+  "data": [
+   {
+    "0_30": "0.00",
+    "31_60": "0.00",
+    "61_90": "0.00",
+    "90_plus": "3000.00",
+    "party": {
+     "id": "<id-2>",
+     "name": "Gupta Wholesale"
+    },
+    "total": "3000.00"
+   },
+   {
+    "0_30": "0.00",
+    "31_60": "800.00",
+    "61_90": "0.00",
+    "90_plus": "0.00",
+    "party": {
+     "id": "<id-1>",
+     "name": "Sunita Advance"
+    },
+    "total": "800.00"
+   }
+  ],
+  "meta": {
+   "as_of": "2026-09-01",
+   "page": 1,
+   "page_size": 25,
+   "total": 2,
+   "totals": {
+    "0_30": "0.00",
+    "31_60": "800.00",
+    "61_90": "0.00",
+    "90_plus": "3000.00",
+    "total": "3800.00"
+   },
+   "type": "payable"
+  }
+ },
+ "aging_receivable": {
+  "data": [
+   {
+    "0_30": "0.00",
+    "31_60": "0.00",
+    "61_90": "0.00",
+    "90_plus": "3030.00",
+    "party": {
+     "id": "<id-3>",
+     "name": "Ramesh Traders"
+    },
+    "total": "3030.00"
+   }
+  ],
+  "meta": {
+   "as_of": "2026-09-01",
+   "page": 1,
+   "page_size": 25,
+   "total": 1,
+   "totals": {
+    "0_30": "0.00",
+    "31_60": "0.00",
+    "61_90": "0.00",
+    "90_plus": "3030.00",
+    "total": "3030.00"
+   },
+   "type": "receivable"
+  }
+ },
+ "dashboard": {
+  "data": {
+   "as_of": "2026-09-01",
+   "first_use": {
+    "has_document": false,
+    "has_item": false,
+    "has_party": true,
+    "has_upi": false
+   },
+   "low_stock_items": [],
+   "recent_activity": [
+    {
+     "amount": "800.00",
+     "direction": "credit",
+     "id": "manual_got:<id-4>",
+     "number": null,
+     "party": {
+      "id": "<id-1>",
+      "name": "Sunita Advance"
+     },
+     "source": {
+      "id": "<id-4>",
+      "kind": "ledger_entry",
+      "party_id": "<id-1>"
+     },
+     "type": "manual_got"
+    },
+    {
+     "amount": "100.00",
+     "direction": "credit",
+     "id": "write_off:<id-5>",
+     "number": null,
+     "party": {
+      "id": "<id-3>",
+      "name": "Ramesh Traders"
+     },
+     "source": {
+      "id": "<id-5>",
+      "kind": "ledger_entry",
+      "party_id": "<id-3>"
+     },
+     "type": "write_off"
+    },
+    {
+     "amount": "450.00",
+     "direction": "debit",
+     "id": "manual_gave:<id-6>",
+     "number": null,
+     "party": {
+      "id": "<id-3>",
+      "name": "Ramesh Traders"
+     },
+     "source": {
+      "id": "<id-6>",
+      "kind": "ledger_entry",
+      "party_id": "<id-3>"
+     },
+     "type": "manual_gave"
+    },
+    {
+     "amount": "400.00",
+     "direction": "credit",
+     "id": "reversal:<id-7>",
+     "number": null,
+     "party": {
+      "id": "<id-3>",
+      "name": "Ramesh Traders"
+     },
+     "source": {
+      "id": "<id-7>",
+      "kind": "ledger_entry",
+      "party_id": "<id-3>"
+     },
+     "type": "reversal"
+    },
+    {
+     "amount": "400.00",
+     "direction": "debit",
+     "id": "manual_gave:<id-8>",
+     "number": null,
+     "party": {
+      "id": "<id-3>",
+      "name": "Ramesh Traders"
+     },
+     "source": {
+      "id": "<id-8>",
+      "kind": "ledger_entry",
+      "party_id": "<id-3>"
+     },
+     "type": "manual_gave"
+    },
+    {
+     "amount": "700.00",
+     "direction": "credit",
+     "id": "reversal:<id-9>",
+     "number": null,
+     "party": {
+      "id": "<id-3>",
+      "name": "Ramesh Traders"
+     },
+     "source": {
+      "id": "<id-9>",
+      "kind": "ledger_entry",
+      "party_id": "<id-3>"
+     },
+     "type": "reversal"
+    },
+    {
+     "amount": "700.00",
+     "direction": "debit",
+     "id": "manual_gave:<id-10>",
+     "number": null,
+     "party": {
+      "id": "<id-3>",
+      "name": "Ramesh Traders"
+     },
+     "source": {
+      "id": "<id-10>",
+      "kind": "ledger_entry",
+      "party_id": "<id-3>"
+     },
+     "type": "manual_gave"
+    },
+    {
+     "amount": "300.00",
+     "direction": "credit",
+     "id": "manual_got:<id-11>",
+     "number": null,
+     "party": {
+      "id": "<id-3>",
+      "name": "Ramesh Traders"
+     },
+     "source": {
+      "id": "<id-11>",
+      "kind": "ledger_entry",
+      "party_id": "<id-3>"
+     },
+     "type": "manual_got"
+    },
+    {
+     "amount": "500.00",
+     "direction": "debit",
+     "id": "manual_gave:<id-12>",
+     "number": null,
+     "party": {
+      "id": "<id-3>",
+      "name": "Ramesh Traders"
+     },
+     "source": {
+      "id": "<id-12>",
+      "kind": "ledger_entry",
+      "party_id": "<id-3>"
+     },
+     "type": "manual_gave"
+    },
+    {
+     "amount": "2300.00",
+     "direction": "debit",
+     "id": "opening:<id-13>",
+     "number": null,
+     "party": {
+      "id": "<id-3>",
+      "name": "Ramesh Traders"
+     },
+     "source": {
+      "id": "<id-13>",
+      "kind": "ledger_entry",
+      "party_id": "<id-3>"
+     },
+     "type": "opening"
+    }
+   ],
+   "tiles": {
+    "cash_in_hand": {
+     "amount": "1100.00"
+    },
+    "due_today": {
+     "amount": "0.00",
+     "count": 0
+    },
+    "low_stock": {
+     "count": 0,
+     "out_count": 0
+    },
+    "overdue": {
+     "amount": "0.00",
+     "count": 0,
+     "invoices": {
+      "amount": "0.00",
+      "count": 0
+     }
+    },
+    "to_collect": {
+     "amount": "3030.00"
+    },
+    "to_pay": {
+     "amount": "3800.00"
+    },
+    "today_sales": {
+     "amount": "0.00",
+     "count": 0,
+     "yesterday_amount": "0.00"
+    },
+    "upcoming_7d": {
+     "amount": "0.00",
+     "count": 0
+    }
+   },
+   "top_debtors": [
+    {
+     "balance": "3030.00",
+     "collection_date": null,
+     "id": "<id-3>",
+     "mobile": "+919700011111",
+     "mobile_masked": "+91 97\u2022\u2022\u2022 \u2022\u2022111",
+     "name": "Ramesh Traders"
+    }
+   ]
+  },
+  "meta": {
+   "cached": false,
+   "max_age_seconds": 60
+  }
+ },
+ "ledger_summary": {
+  "data": {
+   "as_of": "2026-09-30",
+   "due_today": {
+    "amount": "0.00",
+    "count": 0
+   },
+   "overdue": {
+    "amount": "0.00",
+    "count": 0
+   },
+   "payable": "3800.00",
+   "receivable": "3030.00",
+   "upcoming_7d": {
+    "amount": "0.00",
+    "count": 0
+   }
+  }
+ },
+ "party_detail": {
+  "data": {
+   "alt_phone": null,
+   "balance": "3030.00",
+   "billing_address": {},
+   "collection_date": null,
+   "consent_source": null,
+   "credit": {
+    "available": "1970.00",
+    "days": null,
+    "exposure": "3030.00",
+    "limit": "5000.00",
+    "mode": "warn",
+    "over_by": "0.00",
+    "status": "ok",
+    "usage_pct": 61
+   },
+   "credit_days": null,
+   "credit_limit": "5000.00",
+   "display_code": null,
+   "email": null,
+   "gst_registration": "unregistered",
+   "gstin": null,
+   "id": "<id-3>",
+   "is_customer": true,
+   "is_supplier": false,
+   "mobile": "+919700011111",
+   "name": "Ramesh Traders",
+   "notes": "",
+   "opening_balance_amount": null,
+   "opening_balance_as_of": null,
+   "opening_balance_direction": null,
+   "shipping_address": {},
+   "sms_opt_in": true,
+   "state_code": null,
+   "status": "active",
+   "summary": {
+    "balance": "3030.00",
+    "payable": "0.00",
+    "receivable": "3030.00"
+   },
+   "tags": []
+  }
+ },
+ "report_payables_aging": {
+  "data": [
+   {
+    "buckets": {
+     "0_30": "0.00",
+     "31_60": "0.00",
+     "61_90": "0.00",
+     "90_plus": "3000.00"
+    },
+    "collection_date": null,
+    "credit_limit": null,
+    "last_payment_date": "2026-04-10",
+    "oldest_days": 175,
+    "oldest_entry_date": "2026-03-10",
+    "party": {
+     "id": "<id-2>",
+     "is_customer": false,
+     "is_supplier": true,
+     "mobile": "+919700022222",
+     "name": "Gupta Wholesale",
+     "tags": [],
+     "type": "supplier"
+    },
+    "total": "3000.00"
+   },
+   {
+    "buckets": {
+     "0_30": "0.00",
+     "31_60": "800.00",
+     "61_90": "0.00",
+     "90_plus": "0.00"
+    },
+    "collection_date": null,
+    "credit_limit": null,
+    "last_payment_date": null,
+    "oldest_days": 31,
+    "oldest_entry_date": "2026-08-01",
+    "party": {
+     "id": "<id-1>",
+     "is_customer": true,
+     "is_supplier": false,
+     "mobile": "+919700033333",
+     "name": "Sunita Advance",
+     "tags": [],
+     "type": "customer"
+    },
+    "total": "800.00"
+   }
+  ],
+  "meta": {
+   "as_of": "2026-09-01",
+   "page": 1,
+   "page_size": 25,
+   "total": 2,
+   "total_pages": 1,
+   "totals": {
+    "0_30": "0.00",
+    "31_60": "800.00",
+    "61_90": "0.00",
+    "90_plus": "3000.00",
+    "party_count": 2,
+    "total": "3800.00"
+   },
+   "type": "payable"
+  }
+ },
+ "report_receivables_aging": {
+  "data": [
+   {
+    "buckets": {
+     "0_30": "0.00",
+     "31_60": "0.00",
+     "61_90": "0.00",
+     "90_plus": "3030.00"
+    },
+    "collection_date": null,
+    "credit_limit": "5000.00",
+    "last_payment_date": "2026-06-15",
+    "oldest_days": 153,
+    "oldest_entry_date": "2026-04-01",
+    "party": {
+     "id": "<id-3>",
+     "is_customer": true,
+     "is_supplier": false,
+     "mobile": "+919700011111",
+     "name": "Ramesh Traders",
+     "tags": [],
+     "type": "customer"
+    },
+    "total": "3030.00"
+   }
+  ],
+  "meta": {
+   "as_of": "2026-09-01",
+   "page": 1,
+   "page_size": 25,
+   "total": 1,
+   "total_pages": 1,
+   "totals": {
+    "0_30": "0.00",
+    "31_60": "0.00",
+    "61_90": "0.00",
+    "90_plus": "3030.00",
+    "party_count": 1,
+    "total": "3030.00"
+   },
+   "type": "receivable"
+  }
+ },
+ "statement": {
+  "data": {
+   "closing_balance": "3030.00",
+   "has_entries_before_opening": false,
+   "opening_balance": "0.00",
+   "party": {
+    "id": "<id-3>",
+    "mobile_masked": "91\u2022\u2022\u2022 \u2022\u2022111",
+    "name": "Ramesh Traders"
+   },
+   "period": {
+    "from": null,
+    "to": null
+   },
+   "rows": [
+    {
+     "amount": "2300.00",
+     "direction": "debit",
+     "entry_date": "2026-04-01",
+     "entry_type": "opening",
+     "id": "<id-13>",
+     "note": "",
+     "reason": null,
+     "reverses_id": null,
+     "running_balance": "2300.00",
+     "source": null,
+     "status": "posted",
+     "supersedes_id": null
+    },
+    {
+     "amount": "500.00",
+     "direction": "debit",
+     "entry_date": "2026-04-18",
+     "entry_type": "manual_gave",
+     "id": "<id-12>",
+     "note": "Cement bags",
+     "reason": null,
+     "reverses_id": null,
+     "running_balance": "2800.00",
+     "source": null,
+     "status": "posted",
+     "supersedes_id": null
+    },
+    {
+     "amount": "300.00",
+     "direction": "credit",
+     "entry_date": "2026-04-18",
+     "entry_type": "manual_got",
+     "id": "<id-11>",
+     "note": "",
+     "reason": null,
+     "reverses_id": null,
+     "running_balance": "2500.00",
+     "source": null,
+     "status": "posted",
+     "supersedes_id": null
+    },
+    {
+     "amount": "450.00",
+     "direction": "debit",
+     "entry_date": "2026-05-10",
+     "entry_type": "manual_gave",
+     "id": "<id-6>",
+     "note": "Paint",
+     "reason": null,
+     "reverses_id": null,
+     "running_balance": "2950.00",
+     "source": null,
+     "status": "posted",
+     "supersedes_id": "<id-8>"
+    },
+    {
+     "amount": "1180.00",
+     "direction": "debit",
+     "entry_date": "2026-06-01",
+     "entry_type": "invoice",
+     "id": "<id-14>",
+     "note": "",
+     "reason": null,
+     "reverses_id": null,
+     "running_balance": "4130.00",
+     "source": {
+      "id": "<id-15>",
+      "kind": null,
+      "number": null,
+      "status": null,
+      "type": "sales_document",
+      "url": null
+     },
+     "status": "posted",
+     "supersedes_id": null
+    },
+    {
+     "amount": "1000.00",
+     "direction": "credit",
+     "entry_date": "2026-06-15",
+     "entry_type": "payment_in",
+     "id": "<id-16>",
+     "note": "",
+     "reason": null,
+     "reverses_id": null,
+     "running_balance": "3130.00",
+     "source": {
+      "id": "<id-17>",
+      "kind": null,
+      "number": null,
+      "status": null,
+      "type": "payment",
+      "url": null
+     },
+     "status": "posted",
+     "supersedes_id": null
+    },
+    {
+     "amount": "100.00",
+     "direction": "credit",
+     "entry_date": "2026-07-01",
+     "entry_type": "write_off",
+     "id": "<id-5>",
+     "note": "Rounding",
+     "reason": "Rounding",
+     "reverses_id": null,
+     "running_balance": "3030.00",
+     "source": null,
+     "status": "posted",
+     "supersedes_id": null
+    }
+   ],
+   "totals": {
+    "credit": "1300.00",
+    "debit": "4430.00",
+    "written_off": {
+     "credit": "100.00",
+     "debit": "0.00"
+    }
+   }
+  },
+  "meta": {
+   "has_more": false,
+   "next_cursor": null
+  }
+ },
+ "statement_corrections": {
+  "data": {
+   "closing_balance": "3030.00",
+   "has_entries_before_opening": false,
+   "opening_balance": "0.00",
+   "party": {
+    "id": "<id-3>",
+    "mobile_masked": "91\u2022\u2022\u2022 \u2022\u2022111",
+    "name": "Ramesh Traders"
+   },
+   "period": {
+    "from": null,
+    "to": null
+   },
+   "rows": [
+    {
+     "amount": "2300.00",
+     "direction": "debit",
+     "entry_date": "2026-04-01",
+     "entry_type": "opening",
+     "id": "<id-13>",
+     "note": "",
+     "reason": null,
+     "reverses_id": null,
+     "running_balance": "2300.00",
+     "source": null,
+     "status": "posted",
+     "supersedes_id": null
+    },
+    {
+     "amount": "500.00",
+     "direction": "debit",
+     "entry_date": "2026-04-18",
+     "entry_type": "manual_gave",
+     "id": "<id-12>",
+     "note": "Cement bags",
+     "reason": null,
+     "reverses_id": null,
+     "running_balance": "2800.00",
+     "source": null,
+     "status": "posted",
+     "supersedes_id": null
+    },
+    {
+     "amount": "300.00",
+     "direction": "credit",
+     "entry_date": "2026-04-18",
+     "entry_type": "manual_got",
+     "id": "<id-11>",
+     "note": "",
+     "reason": null,
+     "reverses_id": null,
+     "running_balance": "2500.00",
+     "source": null,
+     "status": "posted",
+     "supersedes_id": null
+    },
+    {
+     "amount": "700.00",
+     "direction": "debit",
+     "entry_date": "2026-05-02",
+     "entry_type": "manual_gave",
+     "id": "<id-10>",
+     "note": "Typo",
+     "reason": null,
+     "reverses_id": null,
+     "running_balance": "3200.00",
+     "source": null,
+     "status": "reversed",
+     "supersedes_id": null
+    },
+    {
+     "amount": "700.00",
+     "direction": "credit",
+     "entry_date": "2026-05-02",
+     "entry_type": "reversal",
+     "id": "<id-9>",
+     "note": "",
+     "reason": "Entered twice",
+     "reverses_id": "<id-10>",
+     "running_balance": "2500.00",
+     "source": {
+      "id": "<id-10>",
+      "kind": null,
+      "number": null,
+      "status": null,
+      "type": "ledger_entry",
+      "url": null
+     },
+     "status": "posted",
+     "supersedes_id": null
+    },
+    {
+     "amount": "400.00",
+     "direction": "debit",
+     "entry_date": "2026-05-10",
+     "entry_type": "manual_gave",
+     "id": "<id-8>",
+     "note": "Paint",
+     "reason": null,
+     "reverses_id": null,
+     "running_balance": "2900.00",
+     "source": null,
+     "status": "reversed",
+     "supersedes_id": null
+    },
+    {
+     "amount": "400.00",
+     "direction": "credit",
+     "entry_date": "2026-05-10",
+     "entry_type": "reversal",
+     "id": "<id-7>",
+     "note": "",
+     "reason": "Wrong amount",
+     "reverses_id": "<id-8>",
+     "running_balance": "2500.00",
+     "source": {
+      "id": "<id-8>",
+      "kind": null,
+      "number": null,
+      "status": null,
+      "type": "ledger_entry",
+      "url": null
+     },
+     "status": "posted",
+     "supersedes_id": null
+    },
+    {
+     "amount": "450.00",
+     "direction": "debit",
+     "entry_date": "2026-05-10",
+     "entry_type": "manual_gave",
+     "id": "<id-6>",
+     "note": "Paint",
+     "reason": null,
+     "reverses_id": null,
+     "running_balance": "2950.00",
+     "source": null,
+     "status": "posted",
+     "supersedes_id": "<id-8>"
+    },
+    {
+     "amount": "1180.00",
+     "direction": "debit",
+     "entry_date": "2026-06-01",
+     "entry_type": "invoice",
+     "id": "<id-14>",
+     "note": "",
+     "reason": null,
+     "reverses_id": null,
+     "running_balance": "4130.00",
+     "source": {
+      "id": "<id-15>",
+      "kind": null,
+      "number": null,
+      "status": null,
+      "type": "sales_document",
+      "url": null
+     },
+     "status": "posted",
+     "supersedes_id": null
+    },
+    {
+     "amount": "1000.00",
+     "direction": "credit",
+     "entry_date": "2026-06-15",
+     "entry_type": "payment_in",
+     "id": "<id-16>",
+     "note": "",
+     "reason": null,
+     "reverses_id": null,
+     "running_balance": "3130.00",
+     "source": {
+      "id": "<id-17>",
+      "kind": null,
+      "number": null,
+      "status": null,
+      "type": "payment",
+      "url": null
+     },
+     "status": "posted",
+     "supersedes_id": null
+    },
+    {
+     "amount": "100.00",
+     "direction": "credit",
+     "entry_date": "2026-07-01",
+     "entry_type": "write_off",
+     "id": "<id-5>",
+     "note": "Rounding",
+     "reason": "Rounding",
+     "reverses_id": null,
+     "running_balance": "3030.00",
+     "source": null,
+     "status": "posted",
+     "supersedes_id": null
+    }
+   ],
+   "totals": {
+    "credit": "2400.00",
+    "debit": "5530.00",
+    "written_off": {
+     "credit": "100.00",
+     "debit": "0.00"
+    }
+   }
+  },
+  "meta": {
+   "has_more": false,
+   "next_cursor": null
+  }
+ },
+ "statement_period": {
+  "data": {
+   "closing_balance": "3130.00",
+   "has_entries_before_opening": false,
+   "opening_balance": "2500.00",
+   "party": {
+    "id": "<id-3>",
+    "mobile_masked": "91\u2022\u2022\u2022 \u2022\u2022111",
+    "name": "Ramesh Traders"
+   },
+   "period": {
+    "from": "2026-05-01",
+    "to": "2026-06-30"
+   },
+   "rows": [
+    {
+     "amount": "450.00",
+     "direction": "debit",
+     "entry_date": "2026-05-10",
+     "entry_type": "manual_gave",
+     "id": "<id-6>",
+     "note": "Paint",
+     "reason": null,
+     "reverses_id": null,
+     "running_balance": "2950.00",
+     "source": null,
+     "status": "posted",
+     "supersedes_id": "<id-8>"
+    },
+    {
+     "amount": "1180.00",
+     "direction": "debit",
+     "entry_date": "2026-06-01",
+     "entry_type": "invoice",
+     "id": "<id-14>",
+     "note": "",
+     "reason": null,
+     "reverses_id": null,
+     "running_balance": "4130.00",
+     "source": {
+      "id": "<id-15>",
+      "kind": null,
+      "number": null,
+      "status": null,
+      "type": "sales_document",
+      "url": null
+     },
+     "status": "posted",
+     "supersedes_id": null
+    },
+    {
+     "amount": "1000.00",
+     "direction": "credit",
+     "entry_date": "2026-06-15",
+     "entry_type": "payment_in",
+     "id": "<id-16>",
+     "note": "",
+     "reason": null,
+     "reverses_id": null,
+     "running_balance": "3130.00",
+     "source": {
+      "id": "<id-17>",
+      "kind": null,
+      "number": null,
+      "status": null,
+      "type": "payment",
+      "url": null
+     },
+     "status": "posted",
+     "supersedes_id": null
+    }
+   ],
+   "totals": {
+    "credit": "1000.00",
+    "debit": "1630.00",
+    "written_off": {
+     "credit": "0.00",
+     "debit": "0.00"
+    }
+   }
+  },
+  "meta": {
+   "has_more": false,
+   "next_cursor": null
+  }
+ },
+ "supplier_detail": {
+  "data": {
+   "alt_phone": null,
+   "balance": "-3000.00",
+   "billing_address": {},
+   "collection_date": null,
+   "consent_source": null,
+   "credit_days": null,
+   "credit_limit": null,
+   "display_code": null,
+   "email": null,
+   "gst_registration": "unregistered",
+   "gstin": null,
+   "id": "<id-2>",
+   "is_customer": false,
+   "is_supplier": true,
+   "mobile": "+919700022222",
+   "name": "Gupta Wholesale",
+   "notes": "",
+   "opening_balance_amount": null,
+   "opening_balance_as_of": null,
+   "opening_balance_direction": null,
+   "shipping_address": {},
+   "sms_opt_in": true,
+   "state_code": null,
+   "status": "active",
+   "summary": {
+    "balance": "-3000.00",
+    "payable": "3000.00",
+    "receivable": "0.00"
+   },
+   "tags": []
+  }
+ },
+ "timeline": {
+  "data": [
+   {
+    "amount": "100.00",
+    "created_by": null,
+    "direction": "credit",
+    "entry_date": "2026-07-01",
+    "entry_type": "write_off",
+    "id": "<id-5>",
+    "note": "Rounding",
+    "party_id": "<id-3>",
+    "payment_mode": null,
+    "reason": "Rounding",
+    "reference": "",
+    "reversed_by_id": null,
+    "reverses_id": null,
+    "running_balance": "3030.00",
+    "source": null,
+    "source_id": null,
+    "source_type": "manual",
+    "status": "posted",
+    "supersedes_id": null,
+    "upi_app": null
+   },
+   {
+    "amount": "1000.00",
+    "created_by": null,
+    "direction": "credit",
+    "entry_date": "2026-06-15",
+    "entry_type": "payment_in",
+    "id": "<id-16>",
+    "note": "",
+    "party_id": "<id-3>",
+    "payment_mode": "upi",
+    "reason": null,
+    "reference": "",
+    "reversed_by_id": null,
+    "reverses_id": null,
+    "running_balance": "3130.00",
+    "source": {
+     "id": "<id-17>",
+     "kind": null,
+     "number": null,
+     "status": null,
+     "type": "payment",
+     "url": null
+    },
+    "source_id": "<id-17>",
+    "source_type": "payment",
+    "status": "posted",
+    "supersedes_id": null,
+    "upi_app": null
+   },
+   {
+    "amount": "1180.00",
+    "created_by": null,
+    "direction": "debit",
+    "entry_date": "2026-06-01",
+    "entry_type": "invoice",
+    "id": "<id-14>",
+    "note": "",
+    "party_id": "<id-3>",
+    "payment_mode": null,
+    "reason": null,
+    "reference": "",
+    "reversed_by_id": null,
+    "reverses_id": null,
+    "running_balance": "4130.00",
+    "source": {
+     "id": "<id-15>",
+     "kind": null,
+     "number": null,
+     "status": null,
+     "type": "sales_document",
+     "url": null
+    },
+    "source_id": "<id-15>",
+    "source_type": "sales_document",
+    "status": "posted",
+    "supersedes_id": null,
+    "upi_app": null
+   },
+   {
+    "amount": "450.00",
+    "created_by": null,
+    "direction": "debit",
+    "entry_date": "2026-05-10",
+    "entry_type": "manual_gave",
+    "id": "<id-6>",
+    "note": "Paint",
+    "party_id": "<id-3>",
+    "payment_mode": null,
+    "reason": null,
+    "reference": "",
+    "reversed_by_id": null,
+    "reverses_id": null,
+    "running_balance": "2950.00",
+    "source": null,
+    "source_id": null,
+    "source_type": "manual",
+    "status": "posted",
+    "supersedes_id": "<id-8>",
+    "upi_app": null
+   },
+   {
+    "amount": "300.00",
+    "created_by": null,
+    "direction": "credit",
+    "entry_date": "2026-04-18",
+    "entry_type": "manual_got",
+    "id": "<id-11>",
+    "note": "",
+    "party_id": "<id-3>",
+    "payment_mode": "cash",
+    "reason": null,
+    "reference": "",
+    "reversed_by_id": null,
+    "reverses_id": null,
+    "running_balance": "2500.00",
+    "source": null,
+    "source_id": null,
+    "source_type": "manual",
+    "status": "posted",
+    "supersedes_id": null,
+    "upi_app": null
+   },
+   {
+    "amount": "500.00",
+    "created_by": null,
+    "direction": "debit",
+    "entry_date": "2026-04-18",
+    "entry_type": "manual_gave",
+    "id": "<id-12>",
+    "note": "Cement bags",
+    "party_id": "<id-3>",
+    "payment_mode": null,
+    "reason": null,
+    "reference": "",
+    "reversed_by_id": null,
+    "reverses_id": null,
+    "running_balance": "2800.00",
+    "source": null,
+    "source_id": null,
+    "source_type": "manual",
+    "status": "posted",
+    "supersedes_id": null,
+    "upi_app": null
+   },
+   {
+    "amount": "2300.00",
+    "created_by": null,
+    "direction": "debit",
+    "entry_date": "2026-04-01",
+    "entry_type": "opening",
+    "id": "<id-13>",
+    "note": "",
+    "party_id": "<id-3>",
+    "payment_mode": null,
+    "reason": null,
+    "reference": "",
+    "reversed_by_id": null,
+    "reverses_id": null,
+    "running_balance": "2300.00",
+    "source": null,
+    "source_id": null,
+    "source_type": "manual",
+    "status": "posted",
+    "supersedes_id": null,
+    "upi_app": null
+   }
+  ],
+  "meta": {
+   "has_more": false,
+   "next_cursor": null,
+   "summary": {
+    "entry_count": 7,
+    "total_credit": "1300.00",
+    "total_debit": "4430.00",
+    "written_off": {
+     "credit": "100.00",
+     "debit": "0.00"
+    }
+   }
+  }
+ },
+ "timeline_reversed": {
+  "data": [
+   {
+    "amount": "100.00",
+    "created_by": null,
+    "direction": "credit",
+    "entry_date": "2026-07-01",
+    "entry_type": "write_off",
+    "id": "<id-5>",
+    "note": "Rounding",
+    "party_id": "<id-3>",
+    "payment_mode": null,
+    "reason": "Rounding",
+    "reference": "",
+    "reversed_by_id": null,
+    "reverses_id": null,
+    "running_balance": "3030.00",
+    "source": null,
+    "source_id": null,
+    "source_type": "manual",
+    "status": "posted",
+    "supersedes_id": null,
+    "upi_app": null
+   },
+   {
+    "amount": "1000.00",
+    "created_by": null,
+    "direction": "credit",
+    "entry_date": "2026-06-15",
+    "entry_type": "payment_in",
+    "id": "<id-16>",
+    "note": "",
+    "party_id": "<id-3>",
+    "payment_mode": "upi",
+    "reason": null,
+    "reference": "",
+    "reversed_by_id": null,
+    "reverses_id": null,
+    "running_balance": "3130.00",
+    "source": {
+     "id": "<id-17>",
+     "kind": null,
+     "number": null,
+     "status": null,
+     "type": "payment",
+     "url": null
+    },
+    "source_id": "<id-17>",
+    "source_type": "payment",
+    "status": "posted",
+    "supersedes_id": null,
+    "upi_app": null
+   },
+   {
+    "amount": "1180.00",
+    "created_by": null,
+    "direction": "debit",
+    "entry_date": "2026-06-01",
+    "entry_type": "invoice",
+    "id": "<id-14>",
+    "note": "",
+    "party_id": "<id-3>",
+    "payment_mode": null,
+    "reason": null,
+    "reference": "",
+    "reversed_by_id": null,
+    "reverses_id": null,
+    "running_balance": "4130.00",
+    "source": {
+     "id": "<id-15>",
+     "kind": null,
+     "number": null,
+     "status": null,
+     "type": "sales_document",
+     "url": null
+    },
+    "source_id": "<id-15>",
+    "source_type": "sales_document",
+    "status": "posted",
+    "supersedes_id": null,
+    "upi_app": null
+   },
+   {
+    "amount": "450.00",
+    "created_by": null,
+    "direction": "debit",
+    "entry_date": "2026-05-10",
+    "entry_type": "manual_gave",
+    "id": "<id-6>",
+    "note": "Paint",
+    "party_id": "<id-3>",
+    "payment_mode": null,
+    "reason": null,
+    "reference": "",
+    "reversed_by_id": null,
+    "reverses_id": null,
+    "running_balance": "2950.00",
+    "source": null,
+    "source_id": null,
+    "source_type": "manual",
+    "status": "posted",
+    "supersedes_id": "<id-8>",
+    "upi_app": null
+   },
+   {
+    "amount": "400.00",
+    "created_by": null,
+    "direction": "credit",
+    "entry_date": "2026-05-10",
+    "entry_type": "reversal",
+    "id": "<id-7>",
+    "note": "",
+    "party_id": "<id-3>",
+    "payment_mode": null,
+    "reason": "Wrong amount",
+    "reference": "",
+    "reversed_by_id": null,
+    "reverses_id": "<id-8>",
+    "running_balance": "2500.00",
+    "source": {
+     "id": "<id-8>",
+     "kind": null,
+     "number": null,
+     "status": null,
+     "type": "ledger_entry",
+     "url": null
+    },
+    "source_id": "<id-8>",
+    "source_type": "ledger_entry",
+    "status": "posted",
+    "supersedes_id": null,
+    "upi_app": null
+   },
+   {
+    "amount": "400.00",
+    "created_by": null,
+    "direction": "debit",
+    "entry_date": "2026-05-10",
+    "entry_type": "manual_gave",
+    "id": "<id-8>",
+    "note": "Paint",
+    "party_id": "<id-3>",
+    "payment_mode": null,
+    "reason": null,
+    "reference": "",
+    "reversed_by_id": "<id-7>",
+    "reverses_id": null,
+    "running_balance": "2500.00",
+    "source": null,
+    "source_id": null,
+    "source_type": "manual",
+    "status": "reversed",
+    "supersedes_id": null,
+    "upi_app": null
+   },
+   {
+    "amount": "700.00",
+    "created_by": null,
+    "direction": "credit",
+    "entry_date": "2026-05-02",
+    "entry_type": "reversal",
+    "id": "<id-9>",
+    "note": "",
+    "party_id": "<id-3>",
+    "payment_mode": null,
+    "reason": "Entered twice",
+    "reference": "",
+    "reversed_by_id": null,
+    "reverses_id": "<id-10>",
+    "running_balance": "2500.00",
+    "source": {
+     "id": "<id-10>",
+     "kind": null,
+     "number": null,
+     "status": null,
+     "type": "ledger_entry",
+     "url": null
+    },
+    "source_id": "<id-10>",
+    "source_type": "ledger_entry",
+    "status": "posted",
+    "supersedes_id": null,
+    "upi_app": null
+   },
+   {
+    "amount": "700.00",
+    "created_by": null,
+    "direction": "debit",
+    "entry_date": "2026-05-02",
+    "entry_type": "manual_gave",
+    "id": "<id-10>",
+    "note": "Typo",
+    "party_id": "<id-3>",
+    "payment_mode": null,
+    "reason": null,
+    "reference": "",
+    "reversed_by_id": "<id-9>",
+    "reverses_id": null,
+    "running_balance": "2500.00",
+    "source": null,
+    "source_id": null,
+    "source_type": "manual",
+    "status": "reversed",
+    "supersedes_id": null,
+    "upi_app": null
+   },
+   {
+    "amount": "300.00",
+    "created_by": null,
+    "direction": "credit",
+    "entry_date": "2026-04-18",
+    "entry_type": "manual_got",
+    "id": "<id-11>",
+    "note": "",
+    "party_id": "<id-3>",
+    "payment_mode": "cash",
+    "reason": null,
+    "reference": "",
+    "reversed_by_id": null,
+    "reverses_id": null,
+    "running_balance": "2500.00",
+    "source": null,
+    "source_id": null,
+    "source_type": "manual",
+    "status": "posted",
+    "supersedes_id": null,
+    "upi_app": null
+   },
+   {
+    "amount": "500.00",
+    "created_by": null,
+    "direction": "debit",
+    "entry_date": "2026-04-18",
+    "entry_type": "manual_gave",
+    "id": "<id-12>",
+    "note": "Cement bags",
+    "party_id": "<id-3>",
+    "payment_mode": null,
+    "reason": null,
+    "reference": "",
+    "reversed_by_id": null,
+    "reverses_id": null,
+    "running_balance": "2800.00",
+    "source": null,
+    "source_id": null,
+    "source_type": "manual",
+    "status": "posted",
+    "supersedes_id": null,
+    "upi_app": null
+   },
+   {
+    "amount": "2300.00",
+    "created_by": null,
+    "direction": "debit",
+    "entry_date": "2026-04-01",
+    "entry_type": "opening",
+    "id": "<id-13>",
+    "note": "",
+    "party_id": "<id-3>",
+    "payment_mode": null,
+    "reason": null,
+    "reference": "",
+    "reversed_by_id": null,
+    "reverses_id": null,
+    "running_balance": "2300.00",
+    "source": null,
+    "source_id": null,
+    "source_type": "manual",
+    "status": "posted",
+    "supersedes_id": null,
+    "upi_app": null
+   }
+  ],
+  "meta": {
+   "has_more": false,
+   "next_cursor": null,
+   "summary": {
+    "entry_count": 7,
+    "total_credit": "1300.00",
+    "total_debit": "4430.00",
+    "written_off": {
+     "credit": "100.00",
+     "debit": "0.00"
+    }
+   }
+  }
+ }
+}

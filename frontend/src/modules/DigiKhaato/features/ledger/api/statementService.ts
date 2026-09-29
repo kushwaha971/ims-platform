@@ -4,6 +4,10 @@ import { api, ubConfig } from 'src/api/AxiosInstances';
 import { toQueryString } from 'src/utils/queryString';
 
 import type {
+  StatementDeposit,
+  StatementDepositApi,
+  StatementDepositRow,
+  StatementDepositRowApi,
   StatementFilters,
   StatementPage,
   StatementRow,
@@ -39,8 +43,35 @@ interface StatementApiResponse {
     readonly has_entries_before_opening: boolean;
     readonly rows: readonly StatementRowApi[];
   };
-  readonly meta?: { readonly next_cursor: string | null; readonly has_more: boolean };
+  readonly meta?: {
+    readonly next_cursor: string | null;
+    readonly has_more: boolean;
+    /** A2 — the "Deposit held" block; present only when the period has a deposit line. */
+    readonly deposit?: StatementDepositApi;
+  };
 }
+
+const toDepositRow = (row: StatementDepositRowApi): StatementDepositRow => ({
+  id: row.id,
+  entryDate: row.entry_date,
+  entryType: row.entry_type,
+  direction: row.direction,
+  amount: row.amount,
+  note: row.note ?? '',
+  status: row.status,
+  source: row.source
+    ? { type: row.source.type, id: row.source.id, number: row.source.number }
+    : null,
+  reversesId: row.reverses_id,
+  supersedesId: row.supersedes_id,
+  reason: row.reason,
+  ...(row.bucket ? { bucket: row.bucket } : {}),
+});
+
+const toDeposit = (deposit: StatementDepositApi): StatementDeposit => ({
+  rows: deposit.rows.map(toDepositRow),
+  held: deposit.held,
+});
 
 const toRow = (row: StatementRowApi): StatementRow => ({
   id: row.id,
@@ -60,6 +91,7 @@ const toRow = (row: StatementRowApi): StatementRow => ({
   reversesId: row.reverses_id,
   supersedesId: row.supersedes_id,
   reason: row.reason,
+  ...(row.bucket ? { bucket: row.bucket } : {}),
 });
 
 /**
@@ -115,6 +147,10 @@ export const getStatement = async (
           }
         : {}),
       hasEntriesBeforeOpening: data.has_entries_before_opening,
+      /* A2 — on the summary rather than beside it: it is a figure about the whole
+         period, sent on every page exactly as the opening and closing are, so the
+         slice's "write the header from every page" rule carries it too. */
+      ...(meta?.deposit ? { deposit: toDeposit(meta.deposit) } : {}),
     },
     rows: data.rows.map(toRow),
     nextCursor: meta?.next_cursor ?? null,

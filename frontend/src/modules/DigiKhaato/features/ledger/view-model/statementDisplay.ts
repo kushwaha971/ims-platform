@@ -45,13 +45,14 @@ export const isDebitRow = (row: StatementRow): boolean => row.direction === 'deb
  * "शुरुआती बाकी". Server text is never translated here: the row is mapped by
  * its `entryType`, which is the thing the client actually knows.
  */
-export const rowTitleId = (row: StatementRow): string | null => {
+export const rowTitleId = (row: Pick<StatementRow, 'entryType' | 'note'>): string | null => {
   if (row.entryType === 'opening') return 'ledger.entry.type.opening';
   return row.note.trim() ? null : `ledger.entry.type.${row.entryType}`;
 };
 
 /** A row the merchant has undone, struck through when corrections are shown. */
-export const isStruckThrough = (row: StatementRow): boolean => row.status === 'reversed';
+export const isStruckThrough = (row: Pick<StatementRow, 'status'>): boolean =>
+  row.status === 'reversed';
 
 // ── The period ───────────────────────────────────────────────────────────────
 

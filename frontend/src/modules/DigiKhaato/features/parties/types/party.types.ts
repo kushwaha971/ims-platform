@@ -35,7 +35,11 @@ export interface PartyApiRow {
    * and `toParty` turns that into an empty array so nothing downstream has to
    * ask whether the absence means "untagged" or "unknown". It means untagged.
    */
-  readonly tags?: readonly { readonly id: string; readonly name: string; readonly color: string | null }[];
+  readonly tags?: readonly {
+    readonly id: string;
+    readonly name: string;
+    readonly color: string | null;
+  }[];
 }
 
 /**
@@ -223,6 +227,16 @@ export interface PartyDetail extends Party {
   readonly openingAsOf: string | null;
   /** ISO timestamp. PTY-03 FR-11's "added on" in the info panel's Meta block. */
   readonly createdAt: string;
+  /**
+   * A2 (PLT-X01 §6) — the loan part of the balance, and the shop part beside it
+   * (`balance − loanBalance`). Decimal strings, SIGNED like the balance. ABSENT — not
+   * "0.00" — unless there is a loan or a module that lends is switched on: a figure
+   * that is always zero is a claim the server cannot verify (the PTY-03 rule).
+   */
+  readonly loanBalance?: string;
+  readonly tradeBalance?: string;
+  /** A2 — money held for the party and returnable; never part of the balance. */
+  readonly depositHeld?: string;
 }
 
 /**
@@ -243,7 +257,6 @@ export interface PartySaveResult {
   readonly party: PartyDetail;
   readonly warnings: readonly PartyWarning[];
 }
-
 
 // ── PTY-03 — the khata page ─────────────────────────────────────────────────
 
@@ -328,4 +341,3 @@ export interface PartyDetailResult {
   readonly summary: PartySummary;
   readonly credit: PartyCredit | null;
 }
-

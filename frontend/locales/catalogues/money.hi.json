@@ -1,4 +1,6 @@
 {
+  "ledger.entry.type.adjustment_credit": "छूट",
+  "ledger.entry.type.charge": "शुल्क",
   "ledger.entry.type.correction": "सुधार",
   "ledger.entry.type.credit_note": "क्रेडिट नोट",
   "ledger.entry.type.debit_note": "डेबिट नोट",
