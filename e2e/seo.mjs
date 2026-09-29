@@ -18,8 +18,12 @@
  *     descriptive, anchors crawlable;
  *   - og:image answers 200 image/png and is 1200 × 630 (read from the IHDR);
  *   - the JSON-LD parses, is the four expected nodes, carries no rating or
- *     review, offers only the free plan while pricing is proposed, and its FAQ
- *     answers are the ones on the page;
+ *     review, carries NO offers while pricing is hidden (CR-2026-09-29-
+ *     PLATFORM-D; the free plan only once it is shown but proposed), and its
+ *     FAQ questions are exactly the ones the page renders;
+ *   - the title and description reach all six modules; the SSR HTML carries
+ *     no status word, no #pricing while the flag is off, and the eight
+ *     "Why YourKhata" points;
  *   - `/d/<token>` answers noindex in the meta AND the header, and carries no
  *     card and no canonical; the `(app)` shell and the auth flows say noindex;
  *   - Cache-Control on /media/landing/* and /brand/*;
@@ -33,6 +37,17 @@ import { chromium } from "playwright";
 const FRONTEND = process.env.E2E_FRONTEND ?? "http://localhost:3000";
 const SITE_URL = (process.env.E2E_SITE_URL ?? "https://yourkhata.com").replace(/\/+$/, "");
 const ASSET_CACHE = "public, max-age=86400, stale-while-revalidate=604800";
+
+/**
+ * `SHOW_PRICING` as the build has it, read from the source the build was made
+ * from, so this harness checks whichever state is shipped rather than
+ * assuming one.
+ */
+const PRICING_SOURCE = await (await import("node:fs/promises")).readFile(
+  new URL("../frontend/src/modules/DigiKhaato/features/landing/config/pricing.ts", import.meta.url),
+  "utf8",
+);
+const SHOW_PRICING = /export const SHOW_PRICING: boolean = true;/.test(PRICING_SOURCE);
 
 const results = [];
 const record = (check, ok, detail = "") => {
@@ -102,6 +117,14 @@ record("/ answers 200 (Lighthouse http-status-code)", landing.status === 200, St
   const description = meta(h, "name", "description")[0] ?? "";
   record(`meta description is present and under 160 chars (${description.length})`, description.length > 50 && description.length < 160, description);
   record("title and description carry no jargon", !/kirana|udhaa?r|\bkhata\b/i.test(`${title} ${description}`.replace(/YourKhata/g, "")));
+  record(
+    "title reaches all six modules (bills, fees, collections, bookings)",
+    [/bills/, /fees/, /collections/, /bookings/].every((word) => word.test(title)),
+    title,
+  );
+  const sixInDescription = [/GST bills|stock/, /loan collections/, /library/, /gym/, /room bookings/, /student fees/];
+  record("description names every module", sixInDescription.every((word) => word.test(description)), description);
+  record("title and description carry no status word", !/\blive\b|\bplanned\b|in development|\bsoon\b/i.test(`${title} ${description}`));
   const canonical = [...h.matchAll(/<link\b[^>]*rel="canonical"[^>]*>/g)].map((m) => attr(m[0], "href"));
   // Next renders the root URL without its slash ("https://yourkhata.com");
   // for an origin that is the same URL as ".../" (RFC 3986 §6.2.3), so both
@@ -158,10 +181,16 @@ record("/ answers 200 (Lighthouse http-status-code)", landing.status === 200, St
   const en = JSON.parse(
     await (await import("node:fs/promises")).readFile(new URL("../frontend/locales/catalogues/landing.en.json", import.meta.url), "utf8")
   );
-  const faqIds = Object.keys(en).filter((k) => /^landing\.faq\.\w+\.a$/.test(k));
+  // The rendered FAQ: "What does it cost?" only while pricing is shown, and
+  // the neutral "Do I need a card?" in its place while it is hidden.
+  const faqIds = Object.keys(en)
+    .filter((k) => /^landing\.faq\.\w+\.a$/.test(k))
+    .filter((k) => k !== (SHOW_PRICING ? "landing.faq.card.a" : "landing.faq.cost.a"));
+  const hiddenId = SHOW_PRICING ? "landing.faq.card.a" : "landing.faq.cost.a";
   const decodedBody = decode(b);
   const missing = faqIds.filter((k) => !decodedBody.includes(en[k]));
   record(`every FAQ answer (${faqIds.length}) is in the server HTML`, faqIds.length >= 10 && missing.length === 0, missing.join(", "));
+  record(`the ${hiddenId.split(".")[2]} answer is not in the HTML`, !decodedBody.includes(en[hiddenId]));
   const hiddenPanels = (b.match(/role="region"[^>]*hidden=""/g) ?? []).length;
   record("the FAQ answers are hidden until opened, not absent", hiddenPanels >= faqIds.length, String(hiddenPanels));
 
@@ -205,12 +234,16 @@ record("/ answers 200 (Lighthouse http-status-code)", landing.status === 200, St
     record("JSON-LD carries no rating or review", invented.length === 0, invented.join(" "));
     const app = graph.find((n) => n["@type"] === "SoftwareApplication") ?? {};
     record("SoftwareApplication: BusinessApplication on Web", app.applicationCategory === "BusinessApplication" && app.operatingSystem === "Web");
-    const offers = app.offers ?? [];
-    record(
-      "offers: the free plan only, 0 INR (paid prices are proposed)",
-      offers.length === 1 && offers[0].price === "0" && offers[0].priceCurrency === "INR",
-      JSON.stringify(offers)
-    );
+    if (SHOW_PRICING) {
+      const offers = app.offers ?? [];
+      record(
+        "offers: the free plan only, 0 INR (paid prices are proposed)",
+        offers.length === 1 && offers[0].price === "0" && offers[0].priceCurrency === "INR",
+        JSON.stringify(offers)
+      );
+    } else {
+      record("no offers while pricing is hidden", !("offers" in app) && !/"Offer"|priceCurrency/.test(JSON.stringify(data)), JSON.stringify(app.offers));
+    }
     const org = graph.find((n) => n["@type"] === "Organization") ?? {};
     record("Organization has name, url and logo at SITE_URL", org.name === "YourKhata" && org.url === `${SITE_URL}/` && org.logo?.url?.startsWith(SITE_URL));
     const logo = await get(new URL(org.logo?.url ?? `${SITE_URL}/x`).pathname);
@@ -218,7 +251,25 @@ record("/ answers 200 (Lighthouse http-status-code)", landing.status === 200, St
     const faq = graph.find((n) => n["@type"] === "FAQPage")?.mainEntity ?? [];
     const offPage = faq.filter((q) => !decodedBody.includes(q.name) || !decodedBody.includes(q.acceptedAnswer?.text));
     record(`FAQPage (${faq.length} questions) quotes only what the page shows`, faq.length === faqIds.length && offPage.length === 0, offPage.map((q) => q.name).join(" | "));
+    const rendered = faqIds.map((k) => en[k.replace(/\.a$/, ".q")]);
+    // The catalogue is sorted by key, so compare as sets; the ORDER is held by
+    // seo.test.tsx, which builds both from config/faq.ts.
+    record(
+      "FAQPage asks exactly the rendered questions",
+      JSON.stringify(faq.map((q) => q.name).sort()) === JSON.stringify([...rendered].sort()),
+      faq.map((q) => q.name).join(" | "),
+    );
   }
+
+  // CR-2026-09-29-PLATFORM-D, on the wire: no status word, pricing per the flag, Why in the HTML.
+  const pageText = text(b.replace(/<script[\s\S]*?<\/script>/g, " "));
+  const status = pageText.match(/\blive\b|\bplanned\b|in development|coming soon|not yet available|cannot be used yet/gi);
+  record("the server HTML carries no status word", !status, (status ?? []).join(", "));
+  record(
+    SHOW_PRICING ? "#pricing is in the HTML (flag on)" : "no #pricing section and no link to it (flag off)",
+    SHOW_PRICING ? /id="pricing"/.test(b) : !/id="pricing"|href="#pricing"/.test(b),
+  );
+  record('"Why YourKhata" (#why) is in the HTML with eight points', /id="why"/.test(b) && (b.match(/data-why-id="/g) ?? []).length === 8);
 }
 
 // ── noindex where it must be ─────────────────────────────────────────────────

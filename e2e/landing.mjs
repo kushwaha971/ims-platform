@@ -23,12 +23,16 @@
  *   - reduced motion: no running animation, the rotator frozen, the hero loop
  *     not playing;
  *   - Hindi renders the Hindi hero.
- *   - the module map and cards (CR-2026-09-29-PLATFORM-B), at every width:
- *     a planned module's tile, card and row hold no video, image or frame
- *     and cause no media request; every module element's chip matches its
- *     status; no module element is wider than its own box; and from `lg` each
- *     map tile's connector stub sits under the tile's centre (MEASURED — a
- *     connector that drifts off its tile reads as the wrong relationship).
+ *   - the module map and cards (CR-2026-09-29-PLATFORM-D), at every width:
+ *     all six modules in the map, the cards and "Who it's for"; NO status
+ *     chip, attribute or word anywhere on the page; a module without media
+ *     holds no video, image or frame and causes no media request; no module
+ *     element is wider than its own box; and from `lg` each map tile's
+ *     connector stub sits under the tile's centre (MEASURED — a connector that
+ *     drifts off its tile reads as the wrong relationship).
+ *   - pricing is hidden (`SHOW_PRICING` off): no #pricing and no link to it.
+ *   - "Why YourKhata" (#why): eight points, none wider than its box, no
+ *     competitor named, in English and in Hindi.
  *
  * `--perf` additionally measures LCP, CLS, JS transferred and media bytes on
  * the first view at 390 and 1440, unthrottled and on a throttled profile.
@@ -154,29 +158,62 @@ for (const [width, height] of WIDTHS) {
     await sweep(page, height);
 
     const modules = await page.evaluate(() => {
-      const els = [...document.querySelectorAll("[data-module-card][data-module-status]")];
-      const planned = els.filter((el) => el.getAttribute("data-module-status") !== "live");
-      const media = planned.flatMap((el) =>
-        [...el.querySelectorAll("video, img, picture, source, iframe, canvas, svg")]
+      const els = [...document.querySelectorAll("[data-module-card][data-module-id]")];
+      const ids = [...new Set(els.map((el) => el.getAttribute("data-module-id")))];
+      // A card without media is the illustration stage; the map tile and the
+      // audience row never carry media at all.
+      const withoutMedia = els.filter(
+        (el) => el.getAttribute("data-module-card") !== "card" || !el.querySelector('[data-module-stage="media"]'),
+      );
+      const media = withoutMedia.flatMap((el) =>
+        [...el.querySelectorAll("video, img, picture, source, iframe, canvas, svg, [data-device]")]
           .filter((node) => !node.closest('[aria-hidden="true"]'))
           .map((node) => `${el.id || el.getAttribute("data-module-card")}:${node.tagName}`),
       );
-      const chipMismatch = els
-        .filter((el) => !el.querySelector(`[data-testid="landing-status-${el.getAttribute("data-module-status")}"]`))
-        .map((el) => el.id || el.getAttribute("href"));
       const overflowing = els
         .filter((el) => el.scrollWidth > el.clientWidth + 1)
         .map((el) => `${el.id || el.getAttribute("href")} ${el.scrollWidth}>${el.clientWidth}`);
-      return { count: els.length, planned: planned.length, media, chipMismatch, overflowing };
+      const statusMarks = document.querySelectorAll('[data-module-status], [data-testid^="landing-status-"]').length;
+      const statusWords = (document.querySelector("main")?.innerText ?? "").match(
+        /\blive\b|\bplanned\b|in development|coming soon|\bsoon\b|not yet available|cannot be used yet/gi,
+      );
+      const withMedia = els.filter((el) => el.querySelector('[data-module-stage="media"]')).map((el) => el.id);
+      return { count: els.length, ids, withMedia, media, overflowing, statusMarks, statusWords };
     });
     record(
-      `${tag}: planned modules hold no media, every chip matches, nothing overflows its card`,
-      modules.count === 15 && modules.planned === 12 && modules.media.length === 0 &&
-        modules.chipMismatch.length === 0 && modules.overflowing.length === 0,
+      `${tag}: six modules, no status chip or word, no media without recordings, nothing overflows its card`,
+      modules.count === 18 && modules.ids.length === 6 && modules.ids.includes("coaching") &&
+        JSON.stringify(modules.withMedia) === JSON.stringify(["module-shop"]) &&
+        modules.media.length === 0 && modules.overflowing.length === 0 &&
+        modules.statusMarks === 0 && !modules.statusWords,
       JSON.stringify(modules),
     );
     const plannedMedia = media.filter((p) => !/\/(hero|feat|demo)-/.test(p));
-    record(`${tag}: no media is requested for a planned module`, plannedMedia.length === 0, plannedMedia.join(", "));
+    record(`${tag}: no media is requested beyond the recordings we have`, plannedMedia.length === 0, plannedMedia.join(", "));
+
+    const extras = await page.evaluate(() => {
+      const why = document.querySelector("#why");
+      const cards = [...(why?.querySelectorAll("article[data-why-id]") ?? [])];
+      const text = why?.innerText ?? "";
+      return {
+        pricing: !!document.querySelector("#pricing"),
+        pricingLinks: document.querySelectorAll('a[href="#pricing"]').length,
+        whyCards: cards.length,
+        whyOverflow: cards
+          .filter((el) => el.scrollWidth > el.clientWidth + 1)
+          .map((el) => `${el.getAttribute("data-why-id")} ${el.scrollWidth}>${el.clientWidth}`),
+        competitor: /zoho|odoo|vyapar|mybillbook|khatabook|okcredit|mindbody|glofox|pushpress|gymdesk/i.test(
+          document.body.innerText,
+        ),
+        ranked: /cheapest|\bbest\b|#1|number one|better than/i.test(text),
+      };
+    });
+    record(
+      `${tag}: pricing hidden; Why YourKhata has 8 points, none overflowing, no competitor named`,
+      !extras.pricing && extras.pricingLinks === 0 && extras.whyCards === 8 && extras.whyOverflow.length === 0 &&
+        !extras.competitor && !extras.ranked,
+      JSON.stringify(extras),
+    );
 
     if (width >= 1024) {
       const drift = await page.evaluate(() => {
@@ -189,7 +226,7 @@ for (const [width, height] of WIDTHS) {
       });
       record(
         `${tag}: each map tile's connector sits under its centre`,
-        drift.length === 5 && drift.every((d) => d <= 2),
+        drift.length === 6 && drift.every((d) => d <= 2),
         drift.map((d) => d.toFixed(1)).join(", "),
       );
     }
@@ -204,7 +241,7 @@ for (const [width, height] of WIDTHS) {
       await page.screenshot({ path: `${SHOT_DIR}/full-${width}-${theme}.png`, fullPage: true });
     }
     if ([390, 1024, 1440, 3840].includes(width)) {
-      for (const [id, name] of [["platform", "map"], ["modules", "modules"]]) {
+      for (const [id, name] of [["platform", "map"], ["modules", "modules"], ["why", "why"]]) {
         await page.locator(`#${id}`).scrollIntoViewIfNeeded();
         await page.waitForTimeout(700);
         await page.locator(`#${id}`).screenshot({ path: `${SHOT_DIR}/${name}-${width}-${theme}.png` });
@@ -397,6 +434,15 @@ for (const [width, height] of WIDTHS) {
   await page.locator("#modules").scrollIntoViewIfNeeded();
   await page.waitForTimeout(700);
   await page.locator("#modules").screenshot({ path: `${SHOT_DIR}/modules-390-hi.png` });
+  await page.locator("#why").scrollIntoViewIfNeeded();
+  await page.waitForTimeout(700);
+  await page.locator("#why").screenshot({ path: `${SHOT_DIR}/why-390-hi.png` });
+  const whyHi = await page.evaluate(() => ({
+    cards: document.querySelectorAll("#why article[data-why-id]").length,
+    label: document.querySelector("#why")?.innerText.includes("अक्सर दूसरी जगह"),
+    nav: [...document.querySelectorAll('a[href="#why"]')].map((a) => a.textContent.trim()),
+  }));
+  record("Hindi: Why YourKhata renders its eight points in Hindi", whyHi.cards === 8 && whyHi.label, JSON.stringify(whyHi));
   await page.screenshot({ path: `${SHOT_DIR}/view-390-hi.png` });
   await sweep(page, 844);
   const [sw, iw] = await page.evaluate(() => [document.documentElement.scrollWidth, window.innerWidth]);
