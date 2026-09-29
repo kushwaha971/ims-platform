@@ -6,8 +6,8 @@ Owner direction of 29 Sep 2026: [00-platform-vision.md](00-platform-vision.md). 
 |---|---|---|---|
 | 1 | Analyse the application; update the landing page to the platform vision | **DONE 29 Sep**; synced to the owner's Mac | `01-current-capabilities.md`; landing page (`features/landing`); `config/modules.ts` |
 | 2 | Research the modules: lending, library, gym, hospitality, candidates | **Done 29 Sep**. Coaching & tuition was researched, then declined by the owner (not in scope) | `research/*.md` |
-| 3 | Module documentation (FRDs) | Not started | `frd/*.md` |
-| 4 | Architecture review and reuse map | Not started | `10-architecture.md`, ADRs |
+| 3 | Module documentation (FRDs) | **In progress.** Step 1, the cross-module architecture decisions, done 29 Sep; the FRDs are next | `10-architecture.md`, `11-contracts.md`, ADR-041–055; then `frd/*.md` |
+| 4 | Architecture review and reuse map | Decisions and reuse map written in Phase 3 step 1 (so the FRDs can cite them); the review of the finished FRDs is still to do | `10-architecture.md` §12, ADRs |
 | 5 | Implementation | Not started | |
 | 6 | QA, fixes, integration | Not started | |
 | 7 | Final sync and handoff | Not started | |
@@ -78,6 +78,11 @@ against the live stack.
   - The landing page shows five modules: Shop & billing, Lending & collections, Library, Gym & fitness, Hotel & stays. A test guards that no landing string or metadata names coaching again.
   - `research/coaching.md` is kept for reference, with a NOT IN SCOPE banner.
   - The pre-launch gate still applies: four of the five modules shown are not built.
+- **29 Sep, Phase 3 step 1 (architecture owner):** `10-architecture.md`, `11-contracts.md` and ADR-041 to ADR-055 in Part 38 decide the cross-module questions before any FRD is written. All eleven shared-engines questions are decided; none is deferred.
+  - Layering: verticals (`apps/lending`, `library`, `gym`, `hospitality`) over engines (`apps/dues`, `bookings`, `attendance`) over core, never sideways. Engines have no ModuleCode; new codes stay hidden behind `UNRELEASED_MODULES` until released.
+  - Money: one party balance with a `loan` bucket (aging reads `main` only); held deposits in a `deposit` bucket that never touches the balance; dues allocate through `payments_allocation`; taxable dues and module sales raise sales documents through a core document port.
+  - Build order: Wave A core foundations → Wave B Library, dues and attendance engines → Wave C Gym, Lending → Wave D bookings engine, Hospitality.
+  - Open for the owner: module roles (agent, trainer, housekeeping), the ID last-4 rule's effect on Form III, lending's allocation default, a reminder window for other modules (`10-architecture.md` §16).
 
 ## Pre-launch checklist (before yourkhata.com is public)
 
