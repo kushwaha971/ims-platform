@@ -68,6 +68,14 @@ export type { UbLinkProps } from './UbLink';
 export { UbLogo } from './UbLogo';
 export type { UbLogoProps, UbLogoSize, UbLogoTone, UbLogoVariant } from './UbLogo';
 
+/**
+ * CR-2026-09-29-PLATFORM-C — structured data. A server-rendered
+ * `<script type="application/ld+json">` with the escaping written once; the
+ * landing page is its only caller.
+ */
+export { UbJsonLd, serializeJsonLd } from './UbJsonLd';
+export type { UbJsonLdProps } from './UbJsonLd';
+
 export { UbListItemText } from './UbListItemText';
 export type { UbListItemTextProps } from './UbListItemText';
 

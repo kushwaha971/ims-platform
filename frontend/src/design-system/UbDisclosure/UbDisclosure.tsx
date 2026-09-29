@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useId, useState, type ReactNode } from 'react';
+import { memo, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 
 import { ChevronDown } from 'lucide-react';
 
@@ -23,6 +23,20 @@ import { cn } from 'src/utils/cn';
  * a section they cannot see, types into it and has no idea where the text went.
  * Unmounting costs the fields' local state — which is fine, because React Hook
  * Form holds the values, not the inputs.
+ *
+ * ── Unless it is CONTENT: `keepMounted` ─────────────────────────────────────
+ * A public page's FAQ is the opposite case (CR-2026-09-29-PLATFORM-C). Its
+ * answers are the page's copy, and an unrendered answer is one that no search
+ * engine, no find-in-page and no reader-mode can see. With `keepMounted` the
+ * panel is always rendered and carries the `hidden` attribute while closed —
+ * `display: none`, so it is out of the tab order and the accessibility tree
+ * exactly as an unmounted one is, which is the property the rule above is for.
+ *
+ * After hydration the attribute is upgraded to `hidden="until-found"` where the
+ * browser supports it: Ctrl-F then finds text inside a closed answer, and the
+ * browser's `beforematch` opens it. React 19 renders `hidden` as a boolean
+ * only, so the upgrade is done on the element, and redone whenever React
+ * writes the boolean back (every close).
  */
 export interface UbDisclosureProps {
   readonly label: string;
@@ -43,6 +57,11 @@ export interface UbDisclosureProps {
    * 12 px label would read as a footnote.
    */
   readonly size?: 'md' | 'lg';
+  /**
+   * Render the panel while closed, `hidden`, instead of not at all. For
+   * content (an FAQ answer), never for form fields — see the header.
+   */
+  readonly keepMounted?: boolean;
 }
 
 function UbDisclosureBase({
@@ -54,6 +73,7 @@ function UbDisclosureBase({
   children,
   className,
   size = 'md',
+  keepMounted = false,
 }: Readonly<UbDisclosureProps>) {
   const large = size === 'lg';
   const id = useId();
@@ -65,6 +85,20 @@ function UbDisclosureBase({
     setInternalOpen(next);
     onOpenChange?.(next);
   };
+
+  const panelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const panel = panelRef.current;
+    if (!keepMounted || isOpen || !panel || !('onbeforematch' in document.body)) return undefined;
+    panel.setAttribute('hidden', 'until-found');
+    const reveal = () => {
+      setInternalOpen(true);
+      onOpenChange?.(true);
+    };
+    panel.addEventListener('beforematch', reveal);
+    return () => panel.removeEventListener('beforematch', reveal);
+  }, [keepMounted, isOpen, onOpenChange]);
 
   return (
     <div className={cn('flex flex-col rounded-card border border-border-hairline', className)}>
@@ -100,13 +134,19 @@ function UbDisclosureBase({
           )}
         />
       </button>
-      {isOpen && (
+      {(isOpen || keepMounted) && (
         <div
+          ref={panelRef}
           id={`${id}-panel`}
           role="region"
           aria-labelledby={`${id}-trigger`}
+          hidden={!isOpen}
+          // `flex` only while open: an author `display` beats the `[hidden]`
+          // rule (same specificity, later layer), and the closed panel would
+          // simply stay on screen.
           className={cn(
-            'flex flex-col gap-4 border-t border-border-hairline px-4 py-4',
+            isOpen && 'flex flex-col gap-4',
+            'border-t border-border-hairline px-4 py-4',
             large && 'px-5 pb-5'
           )}
         >

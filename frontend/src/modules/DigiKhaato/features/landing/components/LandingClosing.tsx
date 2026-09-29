@@ -17,6 +17,8 @@ import {
 import { useTranslation } from 'src/hooks/useTranslation';
 import { ROUTES } from 'src/routes';
 
+import { FAQ_IDS, PLANNED_SCOPE_FAQ_IDS, faqAnswerKey, faqQuestionKey } from '../config/faq';
+
 import { LANDING_ANCHORS } from './LandingHeader';
 import {
   LANDING_CONTAINER,
@@ -27,30 +29,15 @@ import {
 } from './LandingPrimitives';
 
 /**
- * The FAQ, in the order people ask. Every answer is checked against what is
- * built (docs/platform/01-current-capabilities.md).
+ * The FAQ. The ids, their order and the planned-scope pair are in
+ * `config/faq.ts`, which the server also reads to build the FAQPage JSON-LD.
  *
- * `modules` and `lending` are the two answers that exist to say, in words,
- * that the planned modules cannot be used yet. They are the only places
- * outside a planned module's own card where its words may appear, so their
- * items carry `data-planned-scope` — the marker `LandingPage.test.tsx` looks
- * for — and `unbuiltFeatureCopy.test.ts` requires each to say "planned" and
- * "not".
+ * `keepMounted`: every answer is in the server's HTML, hidden until its
+ * question is opened (CR-2026-09-29-PLATFORM-C). A collapsed answer that is
+ * not rendered at all is an answer no crawler and no find-in-page can see —
+ * and the FAQPage structured data would then describe text the page does not
+ * contain, which is what search engines call cloaking.
  */
-export const FAQ_IDS = [
-  'modules',
-  'lending',
-  'phone',
-  'hindi',
-  'gst',
-  'staff',
-  'export',
-  'cost',
-  'brand',
-  'einvoice',
-] as const;
-
-export const PLANNED_SCOPE_FAQ_IDS: ReadonlySet<string> = new Set(['modules', 'lending']);
 
 function FaqSectionBase() {
   const { t } = useTranslation();
@@ -70,11 +57,12 @@ function FaqSectionBase() {
             <UbBox as="li" key={id} data-planned-scope={PLANNED_SCOPE_FAQ_IDS.has(id) || undefined}>
               <UbDisclosure
                 size="lg"
-                label={t(`landing.faq.${id}.q`)}
+                keepMounted
+                label={t(faqQuestionKey(id))}
                 className="rounded-[18px] bg-surface-card"
               >
                 <UbText variant="inherit" tone="secondary" className="ds-body-base-regular">
-                  {t(`landing.faq.${id}.a`)}
+                  {t(faqAnswerKey(id))}
                 </UbText>
               </UbDisclosure>
             </UbBox>

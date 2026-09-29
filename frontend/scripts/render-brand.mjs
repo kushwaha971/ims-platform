@@ -5,6 +5,7 @@
  *
  *   node scripts/render-brand.mjs            # icons into public/icons + preview sheets
  *   node scripts/render-brand.mjs --preview  # preview sheets only
+ *   node scripts/render-brand.mjs --og       # the 1200×630 link-preview card only
  *
  * The SVGs in `public/brand/` are the source; every PNG in `public/icons/` is
  * derived from them here, so a change to the mark is one SVG edit and one run
@@ -24,6 +25,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const pub = join(root, 'public');
 const shots = process.env.BRAND_SHOTS_DIR ?? '/tmp/e2e-shots/brand';
 const previewOnly = process.argv.includes('--preview');
+const ogOnly = process.argv.includes('--og');
 
 const fallbackChrome = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const executablePath =
@@ -95,10 +97,79 @@ function conceptSheet(tiny) {
   </body></html>`;
 }
 
+/**
+ * CR-2026-09-29-PLATFORM-C — the link-preview card, `public/brand/yourkhata-og.png`
+ * (1200 × 630, the size every preview surface crops from). Built from the
+ * K-c lockup and the hero's own headline, read from the landing catalogue so
+ * the card and the page say the same sentence; indigo from the closing band's
+ * primary-700 → primary-900. No screenshot and no demo data: a preview card is
+ * a sign, and a screenshot shrunk to 600 px wide is a grey smear.
+ *
+ * `features/landing/config/seo.ts` (`OG_IMAGE`) is what points at it, and
+ * `seo.test.ts` checks the file's PNG header says 1200 × 630.
+ */
+async function renderOg(browser) {
+  const messages = JSON.parse(readFileSync(join(root, 'locales/catalogues/landing.en.json'), 'utf8'));
+  const lead = messages['landing.hero.lead'];
+  const line = messages['landing.hero.srLine'];
+  const footer = 'Works in any browser · Hindi or English';
+  if (!lead || !line) throw new Error('landing.hero.lead / landing.hero.srLine missing from the catalogue');
+  const italic = readFileSync(join(root, 'src/fonts/fraunces-latin-wght-italic.woff2')).toString('base64');
+  // The lockup's wordmark on a dark ground, by DESIGN-SYSTEM.md §7's table:
+  // the letters white (the rail's `tone="inherit"`), the K and sweep
+  // primary-300, the sweep's knot its dark step. The MARK is unchanged — it is
+  // the same in every theme. Same outlines; only the wordmark group recoloured.
+  const [markPart, wordPart] = svg('brand/yourkhata-lockup.svg').split('<!-- Wordmark');
+  if (!wordPart) throw new Error('yourkhata-lockup.svg: no "<!-- Wordmark" marker to split on');
+  const lockup =
+    markPart +
+    '<!-- Wordmark' +
+    wordPart
+      .replaceAll('fill="#0A090B"', 'fill="#FFFFFF"')
+      .replaceAll('fill="#3A36B8"', 'fill="#9D9AF0"')
+      .replaceAll('fill="#4A47D6"', 'fill="#9D9AF0"')
+      .replaceAll('fill="#C8322B"', 'fill="#D9453D"');
+  const esc = (text) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const page = await browser.newPage({ viewport: { width: 1200, height: 630 }, deviceScaleFactor: 1 });
+  await page.setContent(`<!doctype html><html><head><meta charset="utf-8"><style>${FONT_FACE}
+    @font-face{font-family:'Fraunces';font-style:italic;font-weight:100 900;src:url(data:font/woff2;base64,${italic}) format('woff2');}
+    html,body{margin:0;width:1200px;height:630px;overflow:hidden}
+    body{position:relative;font-family:'DM Sans',sans-serif;color:#fff;
+      background:linear-gradient(135deg,#2E2B93 0%,#211F69 58%,#151340 100%)}
+    .glow{position:absolute;border-radius:50%;filter:blur(90px)}
+    .g1{width:520px;height:520px;right:-140px;top:-180px;background:rgba(113,109,228,.45)}
+    .g2{width:460px;height:460px;left:-160px;bottom:-220px;background:rgba(74,71,214,.40)}
+    .wrap{position:relative;height:100%;box-sizing:border-box;padding:72px 80px 64px;display:flex;flex-direction:column}
+    .lockup{height:72px;width:auto;display:block;align-self:flex-start}
+    h1{margin:auto 0 0;font-family:'Fraunces',serif;font-style:italic;font-weight:600;font-size:78px;line-height:1.04;letter-spacing:-0.015em;max-width:1040px}
+    .line{margin:22px 0 0;font-weight:600;font-size:38px;line-height:1.2;color:#E1E0FC;max-width:980px}
+    .foot{margin-top:auto;padding-top:40px;display:flex;justify-content:space-between;align-items:center;font-size:26px;font-weight:500;color:#C7C6F7}
+    .domain{color:#fff;font-weight:600}
+    .knot{display:inline-block;width:12px;height:12px;border-radius:50%;background:#C8322B;margin-right:12px;vertical-align:2px}
+  </style></head><body>
+    <div class="glow g1"></div><div class="glow g2"></div>
+    <div class="wrap">
+      <img class="lockup" src="${dataUri(lockup)}" alt="">
+      <h1>${esc(lead)}</h1>
+      <p class="line">${esc(line)}</p>
+      <div class="foot"><span>${esc(footer)}</span><span class="domain"><span class="knot"></span>yourkhata.com</span></div>
+    </div>
+  </body></html>`);
+  await page.evaluate(() => document.fonts.ready);
+  const out = join(pub, 'brand/yourkhata-og.png');
+  await page.screenshot({ path: out, clip: { x: 0, y: 0, width: 1200, height: 630 } });
+  await page.close();
+  console.log(`wrote public/brand/yourkhata-og.png`);
+}
+
 async function main() {
   mkdirSync(shots, { recursive: true });
   const browser = await chromium.launch(executablePath ? { executablePath } : {});
   try {
+    if (ogOnly) {
+      await renderOg(browser);
+      return;
+    }
     const page = await browser.newPage({ viewport: { width: 1480, height: 540 } });
     const tiny = {};
     for (const [id, file, , , cut16] of concepts) {

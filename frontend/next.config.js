@@ -5,6 +5,9 @@
  *
  * @type {import('next').NextConfig}
  */
+/** Cache policy for unhashed public assets — see `headers()` below. */
+const PUBLIC_ASSET_CACHE = 'public, max-age=86400, stale-while-revalidate=604800';
+
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
@@ -70,6 +73,30 @@ const nextConfig = {
        * overrides the one above (Next: the last matching key wins). nginx sets
        * the same on /d/ in production; this covers every other topology.
        */
+      /**
+       * CR-2026-09-29-PLATFORM-C — the landing page's recordings and posters,
+       * and the brand files (favicon SVG, the link-preview card). Without this
+       * Next serves `public/` with `max-age=0`, so every repeat visit
+       * revalidated ~2 MB of posters and loops before the hero could paint.
+       *
+       * NOT `max-age=31536000, immutable`, because these names are not hashed:
+       * `hero-desktop.webm` is re-cut under the same name (it is being re-cut
+       * as this is written), and an immutable year would pin the old cut in
+       * every returning browser with no way to evict it. A day fresh, then a
+       * week in which the cached copy is served at once while it revalidates
+       * in the background: a repeat visit never waits, and a re-cut reaches
+       * everybody within a day. Versioned URLs (a `?v=` from the manifest)
+       * would earn `immutable` and are in docs/BACKLOG.md. nginx sets the same
+       * value for production (nginx/conf.d/app.conf); `e2e/seo.mjs` checks it.
+       */
+      {
+        source: '/media/landing/:path*',
+        headers: [{ key: 'Cache-Control', value: PUBLIC_ASSET_CACHE }],
+      },
+      {
+        source: '/brand/:path*',
+        headers: [{ key: 'Cache-Control', value: PUBLIC_ASSET_CACHE }],
+      },
       {
         source: '/d/:token*',
         headers: [

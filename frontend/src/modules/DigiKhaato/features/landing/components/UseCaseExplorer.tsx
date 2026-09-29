@@ -61,7 +61,17 @@ const ICONS: Readonly<Record<UseCaseId, LucideIcon>> = {
 
 const key = (id: UseCaseId, part: string): string => `landing.uc.${id}.${part}`;
 
-function UseCaseDetails({ id, t }: Readonly<{ id: UseCaseId; t: TranslateFn }>) {
+/**
+ * `headingAs`: the stacked cards (below `lg`) title each job with an h3, so
+ * their sub-headings are h4. The desktop explorer's job title is a TAB, not a
+ * heading, so there the same sub-headings are h3 — an h4 straight under the
+ * section's h2 is a skipped level (CR-2026-09-29-PLATFORM-C).
+ */
+function UseCaseDetails({
+  id,
+  t,
+  headingAs = 'h4',
+}: Readonly<{ id: UseCaseId; t: TranslateFn; headingAs?: 'h3' | 'h4' }>) {
   const features = t(key(id, 'features')).split(' · ');
   return (
     <UbStack gap={6}>
@@ -75,7 +85,7 @@ function UseCaseDetails({ id, t }: Readonly<{ id: UseCaseId; t: TranslateFn }>) 
       </UbStack>
 
       <UbStack gap={3}>
-        <UbText as="h4" variant="inherit" className="ds-body-s-medium text-text-tertiary">
+        <UbText as={headingAs} variant="inherit" className="ds-body-s-medium text-text-tertiary">
           {t('landing.features.steps')}
         </UbText>
         <UbStack as="ol" gap={3}>
@@ -98,7 +108,7 @@ function UseCaseDetails({ id, t }: Readonly<{ id: UseCaseId; t: TranslateFn }>) 
       </UbStack>
 
       <UbStack gap={2}>
-        <UbText as="h4" variant="inherit" className="ds-body-s-medium text-text-tertiary">
+        <UbText as={headingAs} variant="inherit" className="ds-body-s-medium text-text-tertiary">
           {t('landing.features.used')}
         </UbText>
         <UbStack as="ul" direction="row" wrap gap={2}>
@@ -171,7 +181,7 @@ function UseCaseExplorerBase() {
           >
             <UbBox className="grid w-full grid-cols-[minmax(0,5fr)_minmax(0,8fr)] items-center gap-8 xl:gap-12">
               <UbBox className="rounded-[24px] border border-border-hairline bg-surface-card p-7 shadow-[0_18px_50px_-30px_rgb(10_9_11/0.25)] xl:p-8">
-                <UseCaseDetails id={active} t={t} />
+                <UseCaseDetails id={active} t={t} headingAs="h3" />
               </UbBox>
               <UbDeviceFrame variant="browser" url="yourkhata.com">
                 <UbVideo

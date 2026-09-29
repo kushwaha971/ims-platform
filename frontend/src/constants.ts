@@ -25,6 +25,22 @@ export const ANALYTICS_ENABLED: boolean = process.env.NEXT_PUBLIC_ANALYTICS_ENAB
 export const COMMIT_SHA: string = process.env.NEXT_PUBLIC_COMMIT_SHA ?? 'dev';
 
 /**
+ * CR-2026-09-29-PLATFORM-C — the public origin the site is KNOWN by: the
+ * canonical link, `metadataBase` (so og:image is absolute), robots.txt's
+ * `Sitemap:` line, every sitemap `<loc>` and the JSON-LD `url`s. One value, so a
+ * staging deployment or a partner host changes it in one place (a build arg,
+ * like every `NEXT_PUBLIC_*`). No trailing slash; paths are appended to it.
+ *
+ * It is deliberately NOT the address the request came in on: a canonical that
+ * follows the Host header lets anyone who points a domain at the server tell
+ * search engines that their domain is the original.
+ */
+export const SITE_URL: string = (process.env.NEXT_PUBLIC_SITE_URL || 'https://yourkhata.com').replace(
+  /\/+$/,
+  ''
+);
+
+/**
  * The landing page's narrated demo films. They are not in git (owner: too big,
  * re-cut too often), so a deployment points these at wherever it hosts them;
  * the defaults are the files a local checkout keeps untracked under

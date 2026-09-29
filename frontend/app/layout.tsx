@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 
 import { AppProviders } from 'src/components/providers/AppProviders';
-import { APP_NAME } from 'src/constants';
+import { APP_NAME, SITE_URL } from 'src/constants';
 import { dmSans, epilogue, fraunces, inter, notoDevanagari } from 'src/fonts';
 import { BRAND_INIT, THEME_INIT } from 'src/utils/bootScripts';
 import { LOCALE_COOKIE, THEME_CHOICE_COOKIE } from 'src/utils/cookieUtils';
@@ -49,7 +49,16 @@ export const metadata: Metadata = {
    */
   title: { default: APP_NAME, template: `%s · ${APP_NAME}` },
   applicationName: APP_NAME,
-  description: "Your shop's khata, bills and stock in one book.",
+  /**
+   * CR-2026-09-29-PLATFORM-C — relative metadata URLs (a canonical, an
+   * og:image) resolve against the public origin, not the request's Host, so a
+   * preview fetched from any address points at yourkhata.com. The default
+   * description is what /login, /signup and the legal pages inherit; it is the
+   * platform line, with none of the old shop-only jargon (vision §4).
+   */
+  metadataBase: new URL(SITE_URL),
+  description:
+    'Customers, money in and out, GST bills, stock and payments for your business, in one place.',
   manifest: '/manifest.webmanifest',
   /**
    * CR-2026-09-29-BRAND-C — K-c "Bandhan", the tied bahi cover. The PNGs are

@@ -1,6 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-
 import { act, fireEvent, screen, within } from '@testing-library/react';
 
 import { ThemeProvider } from 'src/components/providers/ThemeProvider';
@@ -18,6 +15,12 @@ import { THEME_CHOICE_COOKIE } from 'src/utils/cookieUtils';
 
 import { LANDING_MODULES, UPCOMING_MODULES } from '../config/modules';
 import { PRICING, YEARLY_BILLED_MONTHS, priceFor, yearlyPrice } from '../config/pricing';
+import {
+  LANDING_DESCRIPTION,
+  LANDING_SHARE_DESCRIPTION,
+  LANDING_SHARE_TITLE,
+  LANDING_TITLE,
+} from '../config/seo';
 
 import { splitAroundWord } from './LandingHero';
 import { LandingPage } from './LandingPage';
@@ -254,13 +257,17 @@ describe('the module story', () => {
     expect(attributes.filter((value) => pattern.test(withoutBrand(value)))).toEqual([]);
   });
 
-  /** The page's `<title>` and description are copy too, and are not in the catalogue. */
+  /**
+   * The page's `<title>` and description are copy too, and are not in the
+   * catalogue. They live in `config/seo.ts` now (CR-2026-09-29-PLATFORM-C), so
+   * this reads the VALUES rather than slicing `app/page.tsx`'s source, which
+   * would pass on a file that only names the constants. `src/tests/seo.test.tsx`
+   * has the lengths and the planned-module rule.
+   */
   it('keeps "kirana" and jargon out of the metadata', () => {
-    const source = readFileSync(join(process.cwd(), 'app/page.tsx'), 'utf8');
-    const metadata = source.slice(source.indexOf('export const metadata'), source.indexOf('export default'));
-
-    expect(metadata).toMatch(/title:/);
-    expect(withoutBrand(metadata)).not.toMatch(LANDING_JARGON.en);
+    for (const text of [LANDING_TITLE, LANDING_DESCRIPTION, LANDING_SHARE_TITLE, LANDING_SHARE_DESCRIPTION]) {
+      expect(withoutBrand(text)).not.toMatch(LANDING_JARGON.en);
+    }
   });
 
   it('says under the plans that other modules are priced when they launch', () => {

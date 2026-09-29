@@ -1,6 +1,22 @@
+
+import { SITE_URL } from 'src/constants';
+import { UbJsonLd } from 'src/design-system';
 import { frauncesItalic } from 'src/fonts/landing';
+import { absoluteUrl } from 'src/utils/seo';
+
+import en from 'locales/catalogues/landing.en.json';
 
 import { LandingPage } from 'modules/DigiKhaato/features/landing/components/LandingPage';
+import { PRICING } from 'modules/DigiKhaato/features/landing/config/pricing';
+import {
+  BRAND_NAME,
+  LANDING_DESCRIPTION,
+  LANDING_SHARE_DESCRIPTION,
+  LANDING_SHARE_TITLE,
+  LANDING_TITLE,
+  OG_IMAGE,
+} from 'modules/DigiKhaato/features/landing/config/seo';
+import { buildLandingJsonLd } from 'modules/DigiKhaato/features/landing/utils/landingJsonLd';
 
 import type { Metadata } from 'next';
 
@@ -20,22 +36,58 @@ import type { Metadata } from 'next';
  *
  * `frauncesItalic.variable` is applied here so the italic face is preloaded on
  * this route alone (src/fonts/landing.ts).
+ *
+ * CR-2026-09-29-PLATFORM-C — search. The words are in `config/seo.ts` (and the
+ * rules they follow); the canonical and every absolute URL come from
+ * `SITE_URL`; the link-preview card is a static PNG referenced from HERE only,
+ * for the reason `OG_IMAGE` records. The Open Graph and Twitter blocks are on
+ * this page and not in the root layout, so no other route inherits a card that
+ * names the product — the customer's `/d/<token>` above all.
  */
 export const metadata: Metadata = {
-  title: { absolute: 'YourKhata — records, money and documents for your business, in one place' },
-  description:
-    'Keep customers, money owed, GST bills, stock and payments together, with every balance up to date. Live today for retail and wholesale shops; modules for lending, libraries, gyms and hotels are planned. Works in any browser, in Hindi or English.',
-  alternates: { canonical: '/' },
+  title: { absolute: LANDING_TITLE },
+  description: LANDING_DESCRIPTION,
+  alternates: { canonical: absoluteUrl('/') },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+      'max-video-preview': -1,
+    },
+  },
   openGraph: {
     type: 'website',
-    siteName: 'YourKhata',
-    title: 'YourKhata — one platform for your business records',
-    description:
-      'Customers, money in and out, GST bills, stock and payments for shops and businesses. In Hindi or English, on phone or computer.',
-    images: [{ url: '/media/landing/hero-desktop-poster.jpg', width: 1280, height: 800 }],
+    url: absoluteUrl('/'),
+    siteName: BRAND_NAME,
+    locale: 'en_IN',
+    title: LANDING_SHARE_TITLE,
+    description: LANDING_SHARE_DESCRIPTION,
+    images: [{ ...OG_IMAGE }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: LANDING_SHARE_TITLE,
+    description: LANDING_SHARE_DESCRIPTION,
+    images: [{ url: OG_IMAGE.url, alt: OG_IMAGE.alt, width: OG_IMAGE.width, height: OG_IMAGE.height }],
   },
 };
 
+/**
+ * Structured data is built here, on the server, from the English catalogue:
+ * crawlers send no locale cookie, so the English page is the one indexed, and
+ * the FAQ markup quotes the answers the English page renders.
+ */
+const JSON_LD = buildLandingJsonLd({ siteUrl: SITE_URL, appName: BRAND_NAME, messages: en, pricing: PRICING });
+
 export default function HomePage(): React.JSX.Element {
-  return <LandingPage className={frauncesItalic.variable} />;
+  return (
+    <>
+      <UbJsonLd data={JSON_LD} data-testid="landing-jsonld" />
+      <LandingPage className={frauncesItalic.variable} />
+    </>
+  );
 }
