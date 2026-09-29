@@ -181,7 +181,7 @@ that has `allowed_modules ⊇ MVP_MODULES` of the day before. Without it the mod
 5. **L5 — a module dependency is not an import dependency.** `gym` needs the sales module switched
    on, and never imports `apps.sales`.
 
-**The existing exception, recorded and not extended.** `payments` imports `sales` and `purchases`
+**The existing exception, recorded and not extended** — and removed by Wave A task A14 (R72, ADR-056). `payments` imports `sales` and `purchases`
 at module level (`apps/payments/apps.py:21-35`, `apps/payments/services/targets/purchases.py:44-46`;
 allowed by the matrix, `test_import_rules.py` `ALLOWED["payments"]`). The vision counts sales and
 purchases as the Shop & billing vertical and `payments` as core, so this is core importing a vertical.
@@ -397,8 +397,8 @@ follows it. What counts as open:
 |---|---|
 | lending | loans `active`; held deposits (none in MVP) |
 | library | open loans (copies out); charges with `amount_due > 0`; held deposits; waiting or ready holds |
-| gym | memberships active, upcoming or frozen; open check-ins (not checked out); held deposits |
-| hospitality | bookings `tentative`, `confirmed` or `checked_in`; folio charges not invoiced; held deposits |
+| gym | memberships active, upcoming or frozen; visits of earlier days left open (R56); held deposits |
+| hospitality | bookings `hold` ("tentative" to the merchant), `confirmed` or `checked_in`; folio charges not invoiced; held deposits (R69) |
 | engines (per consuming module) | dues: schedules `active`/`paused` and dues `due`/`overdue` with that `module`; bookings: active bookings; attendance: open visits |
 
 Each vertical registers its own counters; each engine registers one counter per module in
@@ -443,6 +443,9 @@ ALLOWED |= {
 }
 # CORE = {"common", "platform_app", "tax", "files", "parties", "ledger", "payments", "notifications"}
 # "reports" keeps its current set; it gains no vertical and no engine.
+# R27: verticals may also import the two registry modules apps.reports.registry and
+#      apps.imports.registry, and nothing else from those apps.
+# R72 (A14): ALLOWED["payments"] loses "sales" and "purchases".
 ```
 
 Plus a new test, `test_new_apps_never_import_sideways_even_deferred`, that walks every node
@@ -690,3 +693,139 @@ makes room for but does not make:
    or 08:00–21:00 for every module.
 5. The unread `sales.default_kind` setting (§14 item 1) and the ignored `reset_fy=false` (item 4):
    fix, or remove from the settings screen.
+
+The owner questions from all five FRDs, ranked and each with the default the build uses, are in
+[13-owner-questions.md](13-owner-questions.md), which supersedes this list.
+
+---
+
+## 17. Contract resolutions (Phase 3 step 3, 30 Sep 2026)
+
+The five FRDs in `frd/` raised **85** contract questions: FRD 00 CQ-1…25, library C1…C13, lending
+CQ-1…15, gym C1…C15, hospitality C1…C17. Duplicates are merged here into **72 resolutions** (R1–R72;
+R72 was raised by the review itself, not by an FRD). Every question has exactly one row. The FRDs'
+question tables carry a "Resolved →" column pointing at the row; [11-contracts.md](11-contracts.md)
+v1 carries the resulting interfaces. **Wave A** task names (A1–A16) are those of
+[12-implementation-plan.md](12-implementation-plan.md) §2: A1–A11 keep the meanings of §13.1 above,
+A12–A16 are new; A4 and A9 are split in the plan into A4a/A4b (payments v2, deposits) and A9a/A9b
+(primitives, calendar).
+
+"Accepted" means the FRD's proposal is the decision as written.
+
+### 17.1 Core: ledger, payments, deposits
+
+| R | Questions | Decision | What changes |
+|---|---|---|---|
+| R1 | 00 CQ-1 | Accepted: `refresh_invoice_amounts(invoice, *, amount_paid=None, ctx=None)` and `AllocationTarget.apply/unapply(..., ctx=None)`. Every existing caller passes its `ctx`; `None` means `Ctx.system(invoice.tenant)` (`apps/common/context.py:64`) and is allowed only from jobs, which a test asserts | contracts §1.4, §1.5; A4, A5 |
+| R4 | 00 CQ-4 | Accepted: `adjustment` parts are excluded in `PaymentCashSource.rows` and `_NET_SQL` (`apps/reports/selectors/cash_sources.py`); `bucket_of` (`apps/expenses/selectors/cashbook.py:63`) is untouched; new identifiers say `cash_bucket` for the cashbook's and `bucket` for the ledger's | contracts §1.4; A4 |
+| R5 | 00 CQ-5 | **Column, not derivation**: `payments_payment.bucket varchar(8) NOT NULL DEFAULT 'main'` with the ledger's CHECK, written once at record time and never changed by any service; a reconciliation test asserts it equals the payment's ledger line. A payment's bucket is fixed at record time, including what remains unallocated after a document void | contracts §1.4; A4, migration `payments/0003` |
+| R6 | 00 CQ-6 | Accepted: `"auto"` allocation is **global oldest-first** across `auto=True` targets by `(document_date, number, id)`, ties by `document_type`. Candidates are locked per target in registration order, each in its canonical order, then sorted; two payments therefore lock in the same order | contracts §1.4; A4 |
+| R7 | 00 CQ-7 | Accepted: `register_target` refuses a `document_type` longer than 32 characters | contracts §1.4 |
+| R8 | 00 CQ-8 | Accepted: `ledger_entry.source_type` loses `choices` (state-only `AlterField`); `SourceType` stays as the vocabulary of core types; validity is the posting registry's | contracts §1.2; A2, in `ledger/0006` |
+| R12 | 00 CQ-11 | Accepted: the two `adjustment` payments of `apply_deposit` take the ordinary `payment_in` / `payment_out` series and print "Adjustment · deposit"; no new number kind | contracts §1.4 |
+| R23 | 00 CQ-22 | Accepted: LED-11's write-off amount defaults to, and is capped at, the **trade figure** (`balance − loan_balance`); a loan is forgiven only by lending's write-off (R38). A CR amends LED-11; owner question Q4 | contracts §1.3; A2 |
+| R24 | 00 CQ-23 | Accepted: `adjustment` is refused by LED-01's entry validator, the expenses validator and `record_payment`'s public validation, one test per path | contracts §1.4; A4 |
+| R30 | lib C5 | Accepted: `AllocationTarget.summary()` may return `label` (≤ 120), printed under the number on the receipt; absent for sales and purchases | contracts §1.4; A4 |
+| R35 | lib C11 | Accepted: `adjust_expected(*, ctx, deposit_id, expected_amount, reason)`; refused below `received_amount` | contracts §1.4; A4 |
+| R36 | lib C12 | Accepted: a refund of a paid charge is `ADJUSTMENT_CREDIT` plus an unallocated payment OUT with `meta.context = "<module>_refund"`; `allocate_existing` never applies it automatically (it is explicit only, and R61's earmark keeps it out of `apply_open_advances`) | contracts §1.4 |
+| R37 | lib C13 | **Opening deposits**: `receive_deposit(..., opening=True, payment_date=<go-live date>)` records the payment in mode `adjustment`, so the cashbook and the collection reports exclude it by R4 and no paper-era cash appears as today's; the receipt prints "Opening deposit" | contracts §1.4; A4 |
+| R72 | review (coordinator) | **`payments` stops importing `sales` and `purchases`** (ADR-056). `targets/sales.py` and `targets/purchases.py` move to `apps/sales/services/payment_target.py` and `apps/purchases/services/payment_target.py`; the owners register them, the void listener and the source resolver in their own `ready()` (a deferred import of the payments registry inside `ready()`, rule D5's pattern); `ALLOWED["payments"]` loses both apps. Moved code, no behaviour change; the existing suites are the proof | contracts §1.4; **A14** |
+
+### 17.2 Core: the document port and sales
+
+| R | Questions | Decision | What changes |
+|---|---|---|---|
+| R2 | 00 CQ-2, gym C3, hosp C2, hosp C12 (codes) | **Tax codes, not rates** (ADR-057). `DocumentLine.tax_code` is the field; `gst_rate` is kept only as a convenience the issuer maps with `tax.selectors.code_for_rate(tenant, rate, on_date)`, and a rate two active codes share (0% is GST0, EXEMPT, NIL, NONGST) is 400 `validation_error` on `lines.N.gst_rate` ("send a tax code"). `dues_plan` stores `tax_code`, not a rate; `tax_room_slab` stores codes | contracts §1.5, §2.1; A5 |
+| R3 | 00 CQ-3, gym C7 | Accepted: `kind_for(tenant, None)`. Unregistered tenants keep sales' tax-free invoice; whether its title should be "Bill of supply" is a CA question (owner Q17), and any change is sales' | contracts §1.5 |
+| R22 | 00 CQ-21 | Accepted: in document mode a penalty issues its own document through the port with origin `dues_adjustment`; a waiver, discount or pro-rata credit issues a **credit note** against the due's document. `dues_adjustment` is a registered origin type | contracts §1.5, §2.1 |
+| R50 | gym C1 | `IssueRequest.apply_credit_note_ids: list[UUID]` — explicit, never automatic; the issuer applies them through sales' `apply_credit_note` (`apps/sales/services/credit_note_apply.py:48`) before allocating payments | contracts §1.5; A5 |
+| R51 | gym C2 | **Value credit lines** (ADR-057): a credit-note line may carry `against_line_id` + `taxable_value` (exact paise) with tax copied from the invoice line, capped so Σ credited value ≤ the line's taxable value, **without** moving `returned_qty` or stock. The port's `issue_credit_note` sends these; the counter's quantity returns are unchanged | contracts §1.5; **A15** (sales), migration `sales/0004` |
+| R52 | gym C4 | Accepted: `IssuedDocument.refund_payment: {id, number, amount} \| None` | contracts §1.5; A5 |
+| R54 | gym C6 | Accepted: `register_subject(..., line_hook=None)`: `(tenant, due) -> DocumentLine` overrides for description, `hsn_sac`, `tax_code`; the engine's default description is "<subject label> · <period label>" | contracts §2.1 |
+| R55 | gym C9 | `blocks_void` becomes `check_void(*, tenant, origin_id) -> VoidCheck{block: str \| None, confirm: str \| None}`. A `confirm` text makes sales' void endpoint answer 409 `document_origin_confirm` (D `origin_type`, `message`) unless the request carries `confirm_origin: true`; sales' void dialog shows the text and resends | contracts §1.5, §4; A5 |
+| R58 | gym C14 | Accepted: `void_credit_note` (`credit_note_apply.py:129`) calls the origin listener exactly as `void_invoice` does | contracts §1.5; A5 |
+| R60 | hosp C1 | Accepted: `IssueRequest.place_of_supply_state: str \| None`; when set it overrides `default_pos` | contracts §1.5; A5 |
+| R61 | hosp C3 | `IssueRequest.apply_payment_ids: list[UUID]` — the issuer allocates exactly these payments **before** it allocates the number, so the lock order stays party → documents → payments → sequence. Payments may carry an **earmark** (`meta.earmark = {module, subject_type, subject_id}`); `apply_open_advances` and the dues run skip earmarked payments. Hospitality earmarks booking advances and sends their ids | contracts §1.4, §1.5; A4, A5 |
+| R62 | hosp C4 | Accepted: `IssueRequest.override: bool`, honoured only when the actor is owner or admin (sales' `may_override`); requires `credit_check="enforce"` | contracts §1.5; A5 |
+| R68 | hosp C13 | Accepted: origin type `hospitality_folio` | contracts §1.5 |
+| R71 | hosp C17 | Accepted: nights are `NOS` with the nights in the description; a UQC change is a CA question (owner Q18) | contracts §1.5 |
+
+### 17.3 Core: parties, reminders, numbering, calendar, platform
+
+| R | Questions | Decision | What changes |
+|---|---|---|---|
+| R9 | 00 CQ-9, lend CQ-2 | Accepted: `ledger_reminder.recipient_party_id uuid NULL` FK RESTRICT (null = the party); the auto partial index covers `kind IN ('auto_d1','auto_d0','due','notice')`; a merchant's manual send about a module due stays `kind='manual'` with the source columns and is governed by the policy caps. Lending's guarantor arm (LEN-12 FR-6) is **in** the MVP | contracts §1.6; A7, migration `ledger/0007` |
+| R10 | lib C3, lend CQ-1, gym C8 | **Grouped reminders.** `record_source_reminders(*, ctx, party_id, recipient_party_id, module, kind, channel, sources: list[{source_type, source_id, subject_label, amount}], text) -> list[Reminder]` writes one row per source sharing one `message_group_id` (new column) and calls `check_reminder_allowed` once per source. `ReminderCandidate` gains `params: dict[str, str]`. `register_subject(..., own_reminder_source=True)` stops the dues engine's `dues_due` candidates for that subject type, so lending's `lending_loan` source gives **one reminder per loan** and its cap is per loan | contracts §1.6, §2.1; A7 |
+| R11 | 00 CQ-10 | Accepted: `effective_modules` filters `UNRELEASED_MODULES` too, so `/auth/me`, `permissions_for` and `EngineEnabled` agree | contracts §1.1; A1 |
+| R13 | 00 CQ-12 | Accepted: `@dataclass(frozen=True, kw_only=True)` | contracts §1.8; A9 |
+| R14 | 00 CQ-13 | Accepted: `register_module_off_guard(module, counter, *, label_id=None)`, deduplicated by counter identity; `module_has_data` gains `details.breakdown: [{label_id, count}]` (additive) | contracts §1.1; A12 |
+| R15 | 00 CQ-14 | Accepted: `register_module_enable_hook(module, hook)` in `platform_app/services/guards.py`, run inside `update_enabled_modules`' transaction for newly enabled modules | contracts §1.1; A12 |
+| R26 | 00 CQ-25, lib C8 | New core codename **`platform.calendar.manage`** (owner, admin) for tenant-wide closed days; a row with `module = X` may also be written by a member holding X's settings codename (`library.settings.manage`, `gym.settings.manage`). In the canon CR (owner Q2) | contracts §1.8; A9 |
+| R32 | lib C7 | Accepted: `closed_days_between` is inclusive of both ends; the per-module weekday key is `calendar.closed_weekdays.<module>` | contracts §1.8; A9 |
+| R34 | lib C10 | Accepted: the profile stays 1:1 with the party (contracts win); re-joining reopens the same row and history is the vertical's own period rows | — (library-internal) |
+| R43 | lend CQ-8 | `register_setting_spec(spec)` in `apps/platform_app/settings_schema.py`: a module registers its `<module>.*` keys with pure validators and defaults in `ready()`; `settings_payload` shows a module's keys only while it is enabled. Library's own `library_settings` model is allowed (it has typed columns) | contracts §1.9; A10 |
+| R49 | lend CQ-15 | Accepted: after sign-in a member lands on the dashboard if they hold `reports.basic.read`, else on the first navigation item they can see | contracts §1.9; A16 |
+
+### 17.4 Core: architecture, registries, frontend, permissions
+
+| R | Questions | Decision | What changes |
+|---|---|---|---|
+| R25 | 00 CQ-24, gym C13, hosp C15 | `ENGINE_READ_PERMISSIONS` in `permissions_registry.py` (strings, L4). **Rule:** the codename a module names must be one **no scoped module role holds**, because engine reads apply no vertical scope. Values: dues — lending `lending.loan.read_all`, library `library.member.read`, gym `gym.membership.money_read`; attendance — gym `gym.member.read_all`; bookings — hospitality `hospitality.booking.read` (housekeeping does not hold it). A test proves each scoped role gets 403 | contracts §3; A12 |
+| R27 | lib C1 | Verticals may import exactly two modules of otherwise-forbidden apps: `apps.reports.registry` and `apps.imports.registry`. Both registries import nothing but `common` and Django at module level, which the test also asserts. The matrix in §10.1 is amended | §10.1; A11 |
+| R28 | lib C2 | Accepted: `imports.registry.register` is idempotent by `kind` (same spec object, or an equal one, is a no-op; a different spec under a used kind still raises); `ImporterSpec.example_key` names the column `is_example` reads (default `name`) | contracts §1.9; A10 |
+| R29 | lib C4 | Accepted: `register_default_templates(mapping)` in `apps/notifications/services/templates.py`; keys `<module>_<purpose>`, bodies per channel × locale | contracts §1.9; A10 |
+| R33 | lib C9, lend CQ-14 | **Shared print primitives leave `features/sales`**: `UbQrCode` → `src/design-system/UbQrCode/`; `PrintBranding`, `fetchPrintBranding` and its state → `src/print/` (`brandingPrintService.ts`, a lazily injected `printBrandingSlice.ts`, `usePrintBranding()`); sales and payments are re-pointed. The closed-days editor is a new core feature folder `features/calendar`, added to the verticals' allowed list | contracts §1.9; **A16** |
+| R47 | lend CQ-12 (and gym TSK-GYM-02, lib B02) | Accepted: each module's CR adds its codenames to `_STAFF` and `_ACCOUNTANT` as its FRD's permission matrix says; the canon §0.9 amendment is one CR for all four modules and the module roles (owner Q1) | contracts §3 |
+| R66 | hosp C11 | Accepted: housekeeping's projection is the room board (status and "arriving/due out today" flags, no names). Module roles are Wave A task **A13** (scoping, `RestrictedFieldsMixin`, `register_module_role`); each vertical seeds its own role row | contracts §3; A13 |
+| R70 | hosp C16 (and lending's `id_read`) | **Identity reads are `.reveal`** (ADR-058): a codename exposing identity fields uses the action `reveal` (`lending.borrower.reveal`, `hospitality.guest_id.reveal`), which the accountant's automatic `*.read` set never includes; unscoped reads use `read_all`. Lending's `lending.borrower.id_read` is renamed. The canon CR widens the action set to what the registry and FRDs use | contracts §3; A13 |
+
+### 17.5 Engines: dues
+
+| R | Questions | Decision | What changes |
+|---|---|---|---|
+| R16 | 00 CQ-15 | **No money in jsonb.** Heads are a table `dues_plan_head (plan, seq, label, amount)`, copied to `dues_schedule_head` at creation; the schedule's recurrence and money terms are typed columns copied from the plan (`RecurrenceFields`, amount, total, penalty value and cap, grace); `terms jsonb` keeps only non-money policy strings | contracts §2.1; DUE-01 |
+| R17 | 00 CQ-16 | Accepted: `dues_due.penalty_amount` (cache) and `penalty_exempt_days`; `dues_settlement` rows for every mode (`component='charge'` for a due without components) | contracts §2.1; DUE-01 |
+| R38 | lend CQ-3 | Accepted: `end_schedule(..., reason="written_off")` on an expectation schedule cancels scheduled dues and closes open dues as `cancelled` with `cancel_reason`, posting and reversing nothing; lending posts its one offsetting `lending_waiver` credit | contracts §2.1; DUE-04 |
+| R39 | lend CQ-4 | Accepted: `reschedule(..., post_now=True, carry_settlements=True)`: supplied dues dated today post in the same transaction; settlements on replaced dues are re-pointed (interest → principal → fee, capped per component), moving `dues_settlement` and `payments_allocation` rows together | contracts §2.1; DUE-05 |
+| R40 | lend CQ-5 | Accepted: `lending_charge` is **dropped** from the posting sources; every collectible lending charge sits on a due (`add_penalty`, or the closure due's `fee` component) | contracts §1.2 |
+| R41 | lend CQ-6 | Accepted: `arrears()` counts days past due from the oldest due with unpaid **principal or interest**; fee-only remainders are reported as `fees_overdue` | contracts §2.1; DUE-06 |
+| R44 | lend CQ-9 | Accepted: `closed_day_rule='skip'` on a count-based plan drops the occurrence and extends the schedule, so the count holds | contracts §2.1; DUE-01 |
+| R45 | lend CQ-10 | Accepted: `reverse_adjustment(*, ctx, adjustment_id, reason)`; reverses the posting (or voids the document in document mode) and marks the adjustment `reversed_by` | contracts §2.1; DUE-04 |
+| R46 | lend CQ-11 | Accepted: `add_penalty` is allowed on a `penalty_kind='none'` plan with no engine cap; the daily run never posts penalties for such plans | contracts §2.1; DUE-04 |
+| R53 | gym C5 | **No new mode** (ADR-059). Gym instalments stay split invoicing: part 1 on the sale invoice, later parts as `charge`/`document` dues. An "expected dates against one invoice" variant waits for the CA's answer to gym T7 (owner Q16), which is its trigger | contracts §2.1 |
+
+### 17.6 Engines: attendance and bookings
+
+| R | Questions | Decision | What changes |
+|---|---|---|---|
+| R18 | 00 CQ-17, gym C10 | Accepted: `module` on `attendance_mark` and `attendance_entitlement`; `session_start`, `session_minutes` on `attendance_group`; `auto_closed` on `attendance_mark`; `extend_entitlement(*, ctx, entitlement_id, valid_to, reason)` and `end_entitlement(*, ctx, entitlement_id, on, reason)` | contracts §2.3; ATT-01 |
+| R56 | gym C11 | Accepted: attendance's module-off counter counts only **visits of earlier days** left open; today's open visits never block | §9; contracts §2.3 |
+| R57 | gym C12 | Accepted: `check_in(session_id=…)` on a presence group writes `present`, runs the policy and consumes an entitlement, honouring `(session, party)` uniqueness; `roll_call` records absences and bulk marks without a policy | contracts §2.3 |
+| R59 | gym C15 | A visit without a group has **no dedupe**; a vertical that wants a window passes its seeded desk group (gym's "Front desk"). `group_id` stays optional | contracts §2.3 |
+| R19 | 00 CQ-18, hosp C8, hosp C10 | **Tiers belong to the vertical** (ADR-060): no engine tier table; `cancellation_fee(*, tenant, booking_id, at, tiers)` is a pure calculator returning `FeeRule{tier, percent, basis}` the vertical applies to its own quote. Types gain `no_show_after_minutes`; unit statuses are `booked`, `checked_in`, `checked_out`, `released`; units in `slots` mode carry `start_time`, `slot_count`; the booking rolls up (in house if any unit is checked in, completed when all are out); `undo_check_in(*, ctx, unit_id)` | contracts §2.2; BKG-01…04 |
+| R20 | 00 CQ-19, hosp C9 | Accepted: the vertical allocates the number (`allocate_number(kind="booking")`) and passes `number=` to `hold`/`book` | contracts §2.2 |
+| R21 | 00 CQ-20 | Accepted, and `slot_key` widens to `varchar(32)`: a `shared` resource's key carries a seat ordinal (`2026-10-12T07:00#07`, 1…capacity), so the unique index bounds capacity in the database; pooled types still count under the type lock (ADR-060) | contracts §2.2 |
+| R64 | hosp C6 | Accepted: `add_unit(*, ctx, booking_id, unit)` and `split_unit(*, ctx, unit_id, on, resource_id)`; nights before `on` keep their slots | contracts §2.2 |
+| R65 | hosp C7 | Accepted: `end_out_of_service(*, ctx, oos_id, on)` | contracts §2.2 |
+| R69 | hosp C14 | Accepted: "tentative" in §9 means the engine's `hold`; §9 corrected | §9 |
+
+### 17.7 Vertical-local and later
+
+| R | Questions | Decision | What changes |
+|---|---|---|---|
+| R31 | lib C6 | Both: deposit endpoints need the module codename, and the refund step is also a role check (owner or admin) | — |
+| R42 | lend CQ-7 | Accepted: `lending_route_agent (route, user)` join table; scope semantics unchanged | contracts §3 |
+| R48 | lend CQ-13 | Lending builds `loan_ledger(loan)` over the ledger's selectors; the ledger exposes its window-and-carry helpers (`carried_forward`) as public selector functions. The core statement gains no source filter | contracts §1.2 |
+| R63 | hosp C5 | Accepted: an **item read port** `common/seams/items.py` (`search_items`, `item_summaries`), registered by inventory. Only hospitality needs it, so it is a Wave D core task (plan §5), not Wave A | contracts §1.5 |
+| R67 | hosp C12 | Accepted: `tax_room_slab (tenant null, effective_from, effective_to null, up_to null, tax_code)` in `tax` as HTL-02 §5 proposes, seeded per CA answer TL-1; a Wave D core task | contracts §1.5 |
+
+### 17.8 Counts
+
+| FRD | Questions | Resolved | Of which changed from the FRD's proposal |
+|---|---|---|---|
+| 00 core and engines | 25 | 25 | CQ-5 (column, not derivation), CQ-15 (tables, not jsonb), CQ-18 (tiers in the vertical) |
+| library | 13 | 13 | none |
+| lending | 15 | 15 | CQ-2 (guarantor arm stays in the MVP), CQ-13 (no core source filter) |
+| gym | 15 | 15 | C5 (split invoicing kept), C9 (409 confirm shape), C15 (no dedupe without a group) |
+| hospitality | 17 | 17 | C3 (explicit payment ids plus earmark), C5 and C12 (Wave D, not A) |
+| **Total** | **85** | **85** | 72 resolution rows |

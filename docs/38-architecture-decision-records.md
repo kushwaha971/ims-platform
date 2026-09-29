@@ -33,7 +33,7 @@ Beyond ADR-021, the architecture and FRD chapters requested new records **withou
 | ADR-022 | JavaScript barcode decoder fallback (`@zxing/browser`) | Part 17-03 (`INV-10`) — 3 references | **ADR-025** | Part 17-03's three references to ADR-022 must be corrected to ADR-025. Note that the decision is to **decline** the dependency, so the record is `Proposed`, not `Accepted`. |
 | ADR-023 | `cryptography` for RFC 8291 Web Push | Part 17-02 (`NTF-04`) — 2 references | **ADR-024** | Part 17-02's two references to ADR-023 must be corrected to ADR-024. |
 
-The remaining new records, ADR-026 to ADR-040, were not numbered anywhere and are assigned here. ADR-041 to ADR-055 (29 September 2026) are the platform-expansion records written by the architecture owner under `docs/platform/00-platform-vision.md` §3 rule 5; their status "Accepted (architecture owner)" means in force for the FRDs and implementation, open to the owner's revision. Several of them record decisions that were made and enforced across the specification without ever being written as decisions — immutability, tenant scoping, the permission registry, cached balances with recompute. They are the most load-bearing records in this part and their absence until now was a genuine gap.
+The remaining new records, ADR-026 to ADR-040, were not numbered anywhere and are assigned here. ADR-041 to ADR-055 (29 September 2026) and ADR-056 to ADR-060 (30 September 2026, the cross-FRD review) are the platform-expansion records written by the architecture owner under `docs/platform/00-platform-vision.md` §3 rule 5; their status "Accepted (architecture owner)" means in force for the FRDs and implementation, open to the owner's revision. Several of them record decisions that were made and enforced across the specification without ever being written as decisions — immutability, tenant scoping, the permission registry, cached balances with recompute. They are the most load-bearing records in this part and their absence until now was a genuine gap.
 
 ## 38.3 Index
 
@@ -95,6 +95,11 @@ The remaining new records, ADR-026 to ADR-040, were not numbered anywhere and ar
 | ADR-053 | Identity documents: the type and the last four characters only, and no images | Accepted (architecture owner) | Security |
 | ADR-054 | Reminder guardrails are a core feature: time windows, daily caps and fixed templates per module | Accepted (architecture owner) | Backend |
 | ADR-055 | Shared primitives: recurrence, periods and rounding in `common`; the closed-day calendar in `platform` | Accepted (architecture owner) | Backend |
+| ADR-056 | `payments` stops importing `sales` and `purchases`; document targets are registered by their owners | Accepted (architecture owner) | Backend |
+| ADR-057 | Module documents are priced by tax code, and can be credited by value | Accepted (architecture owner) | Backend |
+| ADR-058 | Identity reads are `reveal` codenames, and engine reads name codenames no scoped role holds | Accepted (architecture owner) | Security |
+| ADR-059 | Gym instalments stay separate invoices; no "expected dates against one invoice" dues mode yet | Accepted (architecture owner) | Backend |
+| ADR-060 | Bookings: shared capacity is a seat ordinal in the slot key, and cancellation tiers belong to the vertical | Accepted (architecture owner) | Data |
 
 ---
 
@@ -1208,6 +1213,98 @@ Lending registers 08:00–19:00, one per loan per day, fixed templates, and a te
 **Reversal cost and trigger.** Low. Trigger: none.
 
 **Related.** ADR-010, ADR-021; shared-engines §1, Q10; lending.md §16.4 item 6; library.md §4.12; `11-contracts.md` §1.8.
+
+---
+
+## ADR-056 — `payments` stops importing `sales` and `purchases`; document targets are registered by their owners
+
+**Status:** Accepted (architecture owner), owner may revisit · **Date:** 30 September 2026
+
+**Context.** ADR-041 recorded that `payments` (core) imports `sales` and `purchases` at module level (`apps/payments/apps.py:21-35`, `apps/payments/services/targets/sales.py`, `targets/purchases.py`) and grandfathered it. The cross-FRD review (Phase 3 step 3) found that the grandfathered import is now the only thing keeping `payments` above the Shop & billing apps in the import matrix, while every new target (dues, library, lending, deposits) is registered by its owner. It also makes the rule "core never imports a vertical" untestable for `payments`, the app every vertical depends on.
+
+**Decision.** The sales and purchase-bill targets, the purchase void listener wiring and the payment source resolver registration move to the owning apps (`apps/sales/services/payment_target.py`, `apps/purchases/services/payment_target.py`), registered from their own `AppConfig.ready()` through a deferred import of the payments registry; `ALLOWED["payments"]` loses `sales` and `purchases`.
+
+This is Wave A task A14 and changes no behaviour: the target contract suite, PAY-01…05 and PUR-02 tests are the proof. Rule D5's one cycle is unchanged in shape (sales still reaches `record_payment` by a deferred import).
+
+**Options considered.** *Move the adapters (chosen):* the import matrix states the architecture for every app; the move is mechanical and covered. *Keep the grandfathered import:* no work; the exception stays in the one core app all verticals use, and every future reader must learn it. *Move `payments` above sales in the DAG:* renames the problem.
+
+**Consequences.** *Positive:* core imports no vertical anywhere; the matrix can assert it. *Negative:* a change to two working, QA'd apps before any module work; `ready()` order now matters for sales and purchases targets as it does for every other. *Neutral:* `payments/services/targets/__init__.py` keeps the protocol and registry only.
+
+**Reversal cost and trigger.** Trivial (move the files back). Trigger: none.
+
+**Related.** ADR-041, ADR-042, ADR-047; `10-architecture.md` §3, §17 R72; `12-implementation-plan.md` A14.
+
+---
+
+## ADR-057 — Module documents are priced by tax code, and can be credited by value
+
+**Status:** Accepted (architecture owner), owner may revisit · **Date:** 30 September 2026
+
+**Context.** ADR-045 gave the document port a per-line `gst_rate`. Sales lines are taxed by a `tax_code` resolved for the document date (`apps/sales/services/lines.py:98-130`), several codes share a rate (0%: GST0, EXEMPT, NIL, NONGST), and a rate change on a date works only through codes. Separately, sales' credit notes against an invoice are priced **by quantity** of the invoice line, at most three decimals, and every credit moves `returned_qty` (`apps/sales/services/credit_note_lines.py:46-117`). A gym upgrade credits 77/92 of a membership line, which quantity cannot express exactly (₹3,515.40 instead of ₹3,515.22 in gym.md's worked example), and a service credit has nothing to "return".
+
+**Decision.** `DocumentLine.tax_code` is the port's tax field (a rate is accepted only when exactly one active code carries it on that date), `dues_plan` and `tax_room_slab` store codes; and sales gains **value credit lines** — `against_line_id` plus an exact `taxable_value`, tax copied from the invoice line, capped at the line's remaining taxable value, moving neither `returned_qty` nor stock — used by the port's `issue_credit_note` (Wave A task A15).
+
+**Options considered.** *Codes and value lines (chosen):* one tax path that follows dated rate changes; exact paise on the credit a customer checks. *Rates mapped silently to codes:* ambiguous at 0%, wrong the day two codes share 5%. *Quantity credits with a ratio:* no sales change; a rounding error printed on a customer document, and a service "returned" into stock logic. *A separate credit instrument for modules:* a second GST path.
+
+**Consequences.** *Positive:* gym, hospitality and dues credits are exact and reportable in the GST summary as credit notes. *Negative:* a new line mode in sales' credit-note code and its register; a cap rule to test (Σ value ≤ taxable value, with quantity credits on the same line counted by their value). *Neutral:* counter returns keep the quantity mode.
+
+**Reversal cost and trigger.** Low before use. Trigger: a CA ruling that value credits need a different instrument (gym T8).
+
+**Related.** ADR-045, ADR-048; gym.md C2, C3; hospitality.md C2, C12; `10-architecture.md` §17 R2, R51.
+
+---
+
+## ADR-058 — Identity reads are `reveal` codenames, and engine reads name codenames no scoped role holds
+
+**Status:** Accepted (architecture owner), owner may revisit · **Date:** 30 September 2026
+
+**Context.** The accountant role holds every codename ending `.read` (`apps/common/permissions_registry.py:96`), so a module codename such as `hospitality.guest_id.read` would give accountants full identity fields automatically, against ADR-053's minimisation. Engine read endpoints (ADR-041) apply no vertical scope, so if a module named a codename that a scoped role holds (a trainer's `gym.member.read`), that role would read every mark and due of the tenant through `/api/v1/attendance/` and `/api/v1/dues/`. The FRDs also use actions outside canon §0.9's closed set (`read_all`, `void_own`, `id_read`, `money_read`).
+
+**Decision.** A codename that exposes identity fields uses the action **`reveal`** and is never implied by `*.read`; a codename that reads beyond a scope uses **`read_all`**; `ENGINE_READ_PERMISSIONS` may name only codenames that no scoped module role holds; and the canon §0.9 CR widens the action set to the actions the registry and the FRDs actually use.
+
+**Options considered.** *Distinct actions (chosen):* the accountant rule stays one line; a scope leak through engine reads is a failing test. *Exclude identity codenames from the accountant set by name:* works until the next module forgets. *Scope engine read endpoints per vertical:* engines would have to know vertical scopes, against ADR-050's independence.
+
+**Consequences.** *Positive:* minimisation and scoping hold structurally. *Negative:* lending renames `lending.borrower.id_read`; canon §0.9 changes (it is changing anyway for module roles). *Neutral:* `reveal` reads are audited as ADR-053 requires.
+
+**Reversal cost and trigger.** Low. Trigger: none.
+
+**Related.** ADR-033, ADR-052, ADR-053; hospitality.md C15, C16; gym.md C13; `10-architecture.md` §17 R25, R70.
+
+---
+
+## ADR-059 — Gym instalments stay separate invoices; no "expected dates against one invoice" dues mode yet
+
+**Status:** Accepted (architecture owner), owner may revisit · **Date:** 30 September 2026
+
+**Context.** Gym research (§6.10) described instalments as expected dates against one sale invoice, driving reminders only. The dues engine (ADR-048) has `charge` mode, where each due raises its own document, and `expectation` mode, built for loans in the `loan` bucket with principal that never posts. Gym FRD C5 asked for an expectation-like variant in the `main` bucket whose settlement follows an existing document. Whether a prepaid term paid in parts must be invoiced whole at sale or part by part is a tax question for a CA (gym T7).
+
+**Decision.** Gym instalments use the existing `charge` mode with document posting — part 1 on the sale invoice, each later part invoiced on its due date — and the engine gains no third settlement path until the CA's answer to T7 requires one.
+
+**Options considered.** *Split invoicing on charge mode (chosen):* no new engine path; each part is a real receivable in reminders and aging; a member who stops paying is not left with a whole-term invoice to credit. *Expectation over one invoice:* matches the research's wording; adds a derived-settlement path (the invoice's paid amount spread over dues) to an engine whose fork is already documented, for one consumer, and puts the whole term's tax on the sale date.
+
+**Consequences.** *Positive:* gym uses the engine as built. *Negative:* several invoices per term; if the CA says the whole term must be invoiced at sale, GYM-07 changes. *Neutral:* the variant stays a known, recorded option.
+
+**Reversal cost and trigger.** Moderate: a new settlement path in dues and a GYM-07 revision. Trigger: CA answer T7 (owner question Q16).
+
+**Related.** ADR-048; gym.md GYM-07, C5, T7; `10-architecture.md` §17 R53.
+
+---
+
+## ADR-060 — Bookings: shared capacity is a seat ordinal in the slot key, and cancellation tiers belong to the vertical
+
+**Status:** Accepted (architecture owner), owner may revisit · **Date:** 30 September 2026
+
+**Context.** ADR-049 guarantees exclusive resources by `UNIQUE (tenant, resource, slot_key)` and described shared capacity as "a count of rows per slot key" under a lock — which that very unique index forbids, since it allows one row per key. It also left cancellation "fee from policy tiers" with no table, while the engine holds no prices (ADR-049, shared-engines §3.6), and hospitality already stores its tiers as settings.
+
+**Decision.** For a `shared` resource the slot key carries a **seat ordinal** (`<key>#NN`, 1…capacity), so the same unique index bounds capacity in the database and `slot_key` widens to `varchar(32)`; `pooled_by_type` keeps the count under the type lock; and the engine keeps no cancellation tiers — `cancellation_fee(..., tiers)` is a pure calculator over tiers the vertical passes, returning a percent-and-basis rule the vertical applies to its own quote.
+
+**Options considered.** *Ordinals and vertical tiers (chosen):* shared capacity gets the same database guarantee as exclusive; tiers live beside the prices they apply to. *Count under a lock for shared:* no guarantee against a second writer — what ADR-049 exists to avoid. *An engine tier table:* a policy table for a price the engine cannot see.
+
+**Consequences.** *Positive:* one database rule for exclusive and shared; the engine stays price-free. *Negative:* releasing a shared seat frees a specific ordinal, and a capacity reduction must refuse while higher ordinals are held. *Neutral:* ADR-049 stands; this refines its capacity sentence.
+
+**Reversal cost and trigger.** Low before bookings is built. Trigger: none.
+
+**Related.** ADR-049; FRD 00 CQ-18, CQ-20; hospitality.md C8; `10-architecture.md` §17 R19, R21.
 
 ---
 
