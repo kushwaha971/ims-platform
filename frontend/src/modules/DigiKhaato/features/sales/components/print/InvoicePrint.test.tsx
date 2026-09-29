@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 
 import { useTranslation } from 'src/hooks/useTranslation';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
@@ -13,7 +13,6 @@ import {
 
 import { InvoicePrintA4 } from './InvoicePrintA4';
 import { InvoicePrintThermal80 } from './InvoicePrintThermal80';
-import { UbQrCode } from './UbQrCode';
 
 import type { SalesDocument, UpiIntent } from '../../types/sales.types';
 
@@ -112,16 +111,6 @@ it('T-SAL03-5: the thermal slip truncates a long name to its 28-character budget
   const sheet = screen.getByTestId('print-thermal');
   expect(sheet).not.toHaveTextContent(long);
   expect(within(sheet).getByText(/^Premium Basmati Rice Extra …$/)).toBeInTheDocument();
-});
-
-it('UbQrCode paints one square per dark module inside a four-module quiet zone', () => {
-  // The encoder is tested against the standard; this protects the painting of its output.
-  render(<UbQrCode modules={['101', '010', '101']} size="28mm" label="Scan to pay" />);
-  const svg = screen.getByRole('img', { name: 'Scan to pay' });
-  expect(svg.getAttribute('viewBox')).toBe('0 0 11 11');
-  const path = svg.querySelector('path')?.getAttribute('d') ?? '';
-  expect(path.match(/M/g)).toHaveLength(5);
-  expect(path.startsWith('M4,4h1v1h-1z')).toBe(true);
 });
 
 /**

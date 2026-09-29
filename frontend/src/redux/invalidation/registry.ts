@@ -96,7 +96,6 @@ export const QUERIES = {
   fetchInvoice: 'invoice/fetchInvoice',
   fetchSalesContext: 'invoiceEditor/fetchSalesContext',
   fetchUpiIntent: 'invoice/fetchUpiIntent',
-  fetchPrintBranding: 'invoice/fetchPrintBranding',
   // PUR-01/03 — the bills list, one bill, the editor's context, the duplicate pre-check
   fetchPurchaseBillList: 'purchaseBillList/fetchPurchaseBillList',
   fetchPurchaseBill: 'purchaseBill/fetchPurchaseBill',
@@ -135,6 +134,8 @@ export const QUERIES = {
   fetchRegister: 'taxReports/fetchRegister',
   // SAL-03 FR-5 — the customer share page's one read (no session)
   fetchPublicDocument: 'publicDocument/fetch',
+  // ── A16 ── R33: the print letterhead moved to `src/print` (was sales').
+  fetchPrintBranding: 'printBranding/fetchPrintBranding',
 } as const;
 
 export const MUTATIONS = {

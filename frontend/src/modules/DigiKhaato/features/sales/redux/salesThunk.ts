@@ -141,36 +141,6 @@ export const fetchUpiIntent = createAsyncThunk<UpiIntent | null, string, Reject>
   async (id) => (await service()).getUpiIntent(id)
 );
 
-export interface PrintBranding {
-  readonly logoUrl: string | null;
-  readonly signatureUrl: string | null;
-  readonly docHeader: string;
-  readonly docFooter: string;
-  readonly appName: string;
-  readonly primaryHex: string | null;
-}
-
-/** QUERY. T1's `GET /tenants/current/branding`, for the A4 letterhead (FR-12). */
-export const fetchPrintBranding = createAsyncThunk<PrintBranding, void, Reject>(
-  'invoice/fetchPrintBranding',
-  async (_arg, { signal, rejectWithValue }) => {
-    try {
-      const { fetchBranding } = await import('../../branding/api/brandingService');
-      const branding = await fetchBranding(signal);
-      return {
-        logoUrl: branding.logoUrl,
-        signatureUrl: branding.signatureUrl,
-        docHeader: branding.docHeader,
-        docFooter: branding.docFooter,
-        appName: branding.appName,
-        primaryHex: branding.primaryHex,
-      };
-    } catch (error) {
-      return rejectWithValue(toApiError(error, 'sales.detail.error.title'));
-    }
-  }
-);
-
 /** UAT D1 — kill the live link so the next share mints a new one (owner/admin). */
 export const revokeInvoiceShareLink = createAsyncThunk<
   boolean,

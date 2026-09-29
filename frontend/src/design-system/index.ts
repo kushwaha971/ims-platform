@@ -236,6 +236,9 @@ export { UbFileUpload } from './UbFileUpload';
 export type { UbFileUploadProps } from './UbFileUpload';
 export { UbImagePreview } from './UbImagePreview';
 export type { UbImagePreviewProps } from './UbImagePreview';
+// A16 / R33 — the UPI QR, shared by every printed and on-screen document.
+export { UbQrCode } from './UbQrCode';
+export type { UbQrCodeProps } from './UbQrCode';
 export { UbColorInput } from './UbColorInput';
 export type { UbColorInputProps } from './UbColorInput';
 

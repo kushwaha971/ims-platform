@@ -1,6 +1,8 @@
 'use client';
 
+import { UbQrCode } from 'src/design-system';
 import type { TranslateFn } from 'src/hooks/useTranslation';
+import type { PrintBranding } from 'src/print/brandingPrintService';
 import { formatBusinessDate } from 'src/utils/dates';
 import { formatAmount, formatInr } from 'src/utils/money';
 import { formatPhoneForDisplay } from 'src/utils/share';
@@ -8,9 +10,7 @@ import { formatPhoneForDisplay } from 'src/utils/share';
 import { documentTitleId, sgstLabelId } from '../../view-model/invoiceDisplay';
 
 import { pct, taxColumns, taxSummary, thermalName, trimQty, watermark } from './printModel';
-import { UbQrCode } from './UbQrCode';
 
-import type { PrintBranding } from '../../redux/salesThunk';
 import type { SalesDocument, UpiIntent } from '../../types/sales.types';
 
 const COMPOSITION_FOOTER = 'Composition taxable person, not eligible to collect tax on supplies';

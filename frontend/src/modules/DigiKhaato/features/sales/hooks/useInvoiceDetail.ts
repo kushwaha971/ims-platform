@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
+import type { PrintBranding } from 'src/print/brandingPrintService';
+import { usePrintBranding } from 'src/print/usePrintBranding';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import { formatBusinessDate } from 'src/utils/dates';
 import { formatInr } from 'src/utils/money';
@@ -14,7 +16,6 @@ import { fetchFlowDocument } from '../redux/salesFlowThunk';
 import {
   createInvoiceShareLink,
   fetchInvoice,
-  fetchPrintBranding,
   fetchUpiIntent,
   revokeInvoiceShareLink,
 } from '../redux/salesThunk';
@@ -63,6 +64,8 @@ const shareText = (
  * document — no refetch at print time (§5).
  */
 export interface UseInvoiceDetailResult extends InvoiceDetailState {
+  /** The letterhead (R33, A16 — `src/print`); `null` until it arrives. */
+  readonly branding: PrintBranding | null;
   readonly template: PrintTemplate;
   readonly setTemplate: (template: PrintTemplate) => void;
   readonly print: (template: PrintTemplate) => void;
@@ -81,16 +84,15 @@ export const useInvoiceDetail = (
   const dispatch = useAppDispatch();
   const { t } = useTranslation();
   const detail = useAppSelector(selectInvoiceDetail);
+  const branding = usePrintBranding();
   const [template, setTemplate] = useState<PrintTemplate>('a4');
   const [printing, setPrinting] = useState(autoPrint);
 
   useEffect(() => {
     const doc =
       kind === 'invoice' ? dispatch(fetchInvoice(id)) : dispatch(fetchFlowDocument({ kind, id }));
-    const branding = dispatch(fetchPrintBranding());
     return () => {
       doc.abort();
-      branding.abort();
     };
   }, [dispatch, id, kind]);
 
@@ -167,5 +169,5 @@ export const useInvoiceDetail = (
     void dispatch(fetchInvoice(id));
   }, [dispatch, id]);
 
-  return { ...detail, template, setTemplate, print, share, resetLink, reload };
+  return { ...detail, branding, template, setTemplate, print, share, resetLink, reload };
 };

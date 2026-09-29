@@ -281,3 +281,59 @@ reportsRegistry 2; `tsc`, eslint, prettier and i18n:check are clean.
 4. Registered-report CSVs are synchronous with the 1,00,000-row cap. If a module report can pass
    5,000 rows, the async path needs the registry's `csv` to be replayable by the export job
    (key → spec lookup), which is additive.
+
+---
+
+## A16 — frontend shared primitives
+
+Status: **done, merged** (commit `A16:` on main)
+
+### Design note (review step)
+
+Inputs: R33, R49, contracts §1.9 (frontend primitives), 10-architecture §6 items 4 and 6.
+
+- `UbQrCode` moved (git rename) from `features/sales/components/print/` to
+  `src/design-system/UbQrCode/`, exported from the barrel. Its test moved with it. Invoice A4 and
+  80 mm, the public share page, the Collect sheet and the receipt import it from `src/design-system`.
+- `src/print/` (new): `brandingPrintService.ts` (`PrintBranding` plus `getPrintBranding`, which reads
+  through the branding feature's service inside the call), `printBrandingThunk.ts`
+  (`printBranding/fetchPrintBranding`), `printBrandingSlice.ts` (lazily injected, reset by
+  `resetAllFeatureState`), `usePrintBranding()` (fetch on mount, abort on unmount, the same
+  lifecycle each screen had before).
+- The two duplicated `branding` fields (`invoiceDetail`, `paymentReceipt`) and sales'
+  `fetchPrintBranding`/`PrintBranding` are gone. `useInvoiceDetail` and `usePaymentReceipt` return
+  `branding` from `usePrintBranding()`, so no component changed its props.
+- The invalidation registry entry moved from the sales block to an `A16` block with the new
+  prefix. `invalidation.registry.test.ts` now also walks `src/print/*Thunk.ts`, so the "every thunk
+  registered, every prefix real" guarantee still covers the moved thunk.
+- R49: `navigation/landing.ts` + `useLandingPath()`. The rule "dashboard with
+  `reports.basic.read`, else the first nav item you can see" is exactly the navigation's order,
+  because the dashboard row is first and is gated on that codename. `/dashboard` (every sign-in's
+  address) now sends a non-reader to the first visible item instead of always to Customers, with a
+  loop guard and Customers as the fallback when nothing is visible.
+
+### Gates
+
+- Full frontend jest (maxWorkers=1): **225 suites, 2631 tests, all green** (run before the last two
+  test additions; `src/print` +3, the UbQrCode test moved, not added).
+- `tsc`, eslint and prettier are clean on every changed file.
+- Bundle, main vs branch, both built with hard-linked `node_modules` (the `vendor/ml-uikit`
+  symlink also had to become a hard-linked copy: Turbopack will not follow a symlink out of the
+  project root). **`sharedApp` 104.2 → 104.2 KB.** Routes: `/payments/[id]` 57.0 → 56.6,
+  `/sales/invoices/[id]` 61.4 → 61.5, `/dashboard` 58.3 → 58.4, `/payments` 96.7 → 97.3, all within
+  budget; `bundle:check` passes. No change to `bundle-budgets.json`, which stays the lead's.
+
+### Adversarial pass (self, no Agent tool)
+
+- The R49 test was run against the old page and fails there (it sends a billing-only member to
+  `/parties`, which they cannot read).
+- Added `src/print/usePrintBranding.test.tsx` for three risks: another business's letterhead
+  surviving a sign-in (a reset clears it), a read landing after unmount, and extra wire fields
+  leaking into what a sheet prints.
+- No stale reference to `print/UbQrCode`, `salesThunk`'s `PrintBranding` or
+  `invoice/fetchPrintBranding` remains anywhere (grep over ts, tsx, mjs and md).
+- **Not done: the "look" step against a live stack.** The shared servers on :3000 and :8000 serve
+  main and must not be restarted. The visible changes are none (the QR and the letterhead render
+  from the same components with the same props) plus the landing redirect, which the component
+  test drives through the router. The Wave A gate's QA pass at 390 and 1280 px should include a
+  billing-only login landing on Bills and an invoice print with a logo.

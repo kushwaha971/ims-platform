@@ -19,6 +19,8 @@ import { usePermissions } from 'src/hooks/usePermissions';
 import { useTranslation, type TranslateFn } from 'src/hooks/useTranslation';
 import { ROUTES } from 'src/routes';
 
+import { LANDING_FALLBACK } from '../../navigation/landing';
+import { useLandingPath } from '../../navigation/useLandingPath';
 import { useDashboard } from '../hooks/useDashboard';
 import { isFirstUse } from '../view-model/dashboardDisplay';
 
@@ -40,8 +42,8 @@ import { ReportStateBody } from './ReportStateBody';
  * ── Who lands here ────────────────────────────────────────────────────────
  * Every member with `reports.basic.read` and the reports module on (§12 —
  * staff included, with the tiles their permissions allow). Anyone else is
- * sent on to the customer list, which is where the product landed before
- * the dashboard existed; the route is the post-login address either way.
+ * sent on to the first navigation item they can see (R49, A16 —
+ * `navigation/landing.ts`); the route is the post-login address either way.
  *
  * ── What is deliberately not here ─────────────────────────────────────────
  * FR-7's quick actions are the ones that DO something from this screen: a new
@@ -61,10 +63,13 @@ export function DashboardPageContent(): React.JSX.Element {
   const router = useRouter();
   const { can, hasModule } = usePermissions();
   const dash = useDashboard();
+  const landing = useLandingPath();
 
   useEffect(() => {
-    if (!dash.canRead) router.replace(ROUTES.PARTIES);
-  }, [dash.canRead, router]);
+    // Never back to this page: were the two gates ever to disagree, a loop on
+    // the first screen after signing in is the worst place to find out.
+    if (!dash.canRead) router.replace(landing === ROUTES.DASHBOARD ? LANDING_FALLBACK : landing);
+  }, [dash.canRead, landing, router]);
 
   if (!dash.canRead) return <UbPageSkeleton variant="card" />;
 

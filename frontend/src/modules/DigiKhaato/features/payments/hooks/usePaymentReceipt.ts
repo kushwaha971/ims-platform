@@ -5,11 +5,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useIdempotencyKey } from 'src/hooks/useIdempotencyKey';
 import { usePermissions } from 'src/hooks/usePermissions';
+import type { PrintBranding } from 'src/print/brandingPrintService';
+import { usePrintBranding } from 'src/print/usePrintBranding';
 import { selectLocale } from 'src/redux/slice/localeSlice';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import type { ApiErrorShape } from 'src/types/api.types';
 
-import { fetchPrintBranding } from '../../sales/redux/salesThunk';
 import { selectPaymentReceipt, type PaymentReceiptState } from '../redux/paymentReceiptSlice';
 import { fetchCollectQr, fetchPayment, shareReceipt, voidPayment } from '../redux/paymentThunk';
 
@@ -20,6 +21,8 @@ import { fetchCollectQr, fetchPayment, shareReceipt, voidPayment } from '../redu
  * sends them — DEC-012), and void with a reason.
  */
 export interface UsePaymentReceiptResult extends PaymentReceiptState {
+  /** The letterhead (R33, A16 — `src/print`); `null` until it arrives. */
+  readonly branding: PrintBranding | null;
   readonly canVoid: boolean;
   readonly canShare: boolean;
   readonly shareText: string | null;
@@ -33,6 +36,7 @@ export interface UsePaymentReceiptResult extends PaymentReceiptState {
 export const usePaymentReceipt = (id: string, autoPrint: boolean): UsePaymentReceiptResult => {
   const dispatch = useAppDispatch();
   const state = useAppSelector(selectPaymentReceipt);
+  const branding = usePrintBranding();
   const locale = useAppSelector(selectLocale);
   const { can, hasModule } = usePermissions();
   const voidKey = useIdempotencyKey();
@@ -44,10 +48,8 @@ export const usePaymentReceipt = (id: string, autoPrint: boolean): UsePaymentRec
 
   useEffect(() => {
     const payment = dispatch(fetchPayment(id));
-    const branding = dispatch(fetchPrintBranding());
     return () => {
       payment.abort();
-      branding.abort();
     };
   }, [dispatch, id]);
 
@@ -129,6 +131,7 @@ export const usePaymentReceipt = (id: string, autoPrint: boolean): UsePaymentRec
   return useMemo(
     () => ({
       ...state,
+      branding,
       canVoid: enabled && can('payments.payment.void'),
       canShare: enabled && can('payments.payment.write'),
       shareText,
@@ -138,6 +141,17 @@ export const usePaymentReceipt = (id: string, autoPrint: boolean): UsePaymentRec
       startShare,
       submitVoid,
     }),
-    [state, enabled, can, shareText, shareMobile, voidErrors, print, startShare, submitVoid]
+    [
+      state,
+      branding,
+      enabled,
+      can,
+      shareText,
+      shareMobile,
+      voidErrors,
+      print,
+      startShare,
+      submitVoid,
+    ]
   );
 };

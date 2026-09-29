@@ -9,6 +9,7 @@ import {
   UbButton,
   UbDrawer,
   UbMoneyInput,
+  UbQrCode,
   UbStack,
   UbStatusBanner,
   UbText,
@@ -19,7 +20,6 @@ import { useTranslation } from 'src/hooks/useTranslation';
 import { ROUTES } from 'src/routes';
 import { compareMoney, formatAmount, formatInr } from 'src/utils/money';
 
-import { UbQrCode } from '../../sales/components/print/UbQrCode';
 import {
   selectCollectQr,
   selectCollectQrError,

@@ -15,10 +15,8 @@ import {
 import {
   createInvoiceShareLink,
   fetchInvoice,
-  fetchPrintBranding,
   fetchUpiIntent,
   revokeInvoiceShareLink,
-  type PrintBranding,
 } from './salesThunk';
 
 import type {
@@ -32,8 +30,8 @@ import type { VoidResult } from '../types/salesFlows.types';
 
 /**
  * SAL-03 — the detail page and the print sheet read from here: the document
- * (an invoice, an estimate or a credit note), the UPI intent (QR matrix), the
- * branding for the letterhead and the share link. The print route renders
+ * (an invoice, an estimate or a credit note), the UPI intent (QR matrix) and
+ * the share link. The letterhead is `src/print` (R33, A16), shared with payments. The print route renders
  * from this cache without a refetch (§5). The document-level acts — an
  * estimate's status moves, apply, void — replace the held document with the
  * server's answer, so the page never shows a status the server did not send.
@@ -44,7 +42,6 @@ export interface InvoiceDetailState {
   status: RequestStatus;
   error: ApiErrorShape | null;
   upi: UpiIntent | null;
-  branding: PrintBranding | null;
   shareLink: ShareLink | null;
   sharing: boolean;
   /** An estimate move, an apply or a void is in flight. */
@@ -61,7 +58,6 @@ const initialState: InvoiceDetailState = {
   status: 'idle',
   error: null,
   upi: null,
-  branding: null,
   shareLink: null,
   sharing: false,
   acting: false,
@@ -84,9 +80,6 @@ const invoiceDetailSlice = createSlice({
     builder
       .addCase(fetchUpiIntent.fulfilled, (state, action) => {
         state.upi = action.payload as Draft<UpiIntent> | null;
-      })
-      .addCase(fetchPrintBranding.fulfilled, (state, action) => {
-        state.branding = action.payload;
       })
       .addCase(createInvoiceShareLink.pending, (state) => {
         state.sharing = true;

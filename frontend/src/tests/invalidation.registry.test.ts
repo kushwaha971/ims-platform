@@ -26,7 +26,14 @@ const walk = (dir: string): readonly string[] => {
   });
 };
 
-const thunkFiles = walk(FEATURES_ROOT).filter((path) => /redux[/\\][^/\\]*Thunk\.ts$/.test(path));
+// A16 / R33 — `src/print` holds the shared print letterhead's thunk; it is
+// policed exactly like a feature's, so moving it out of sales lost no check.
+const PRINT_ROOT = join(process.cwd(), 'src/print');
+
+const thunkFiles = [
+  ...walk(FEATURES_ROOT).filter((path) => /redux[/\\][^/\\]*Thunk\.ts$/.test(path)),
+  ...walk(PRINT_ROOT).filter((path) => /[^/\\]*Thunk\.ts$/.test(path)),
+];
 
 const THUNK_DECLARATION = /export const (\w+)\s*=\s*createAsyncThunk</g;
 

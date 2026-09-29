@@ -5,15 +5,13 @@ import { acceptInvalidation } from 'src/redux/invalidation/listener';
 import { rootReducer, type RootState } from 'src/redux/store';
 import type { ApiErrorShape, RequestStatus } from 'src/types/api.types';
 
-import { fetchPrintBranding, type PrintBranding } from '../../sales/redux/salesThunk';
-
 import { fetchCollectQr, fetchPayment, shareReceipt, voidPayment } from './paymentThunk';
 
 import type { Payment } from '../types/payment.types';
 
 /**
- * PAY-04 / PAY-05 — the receipt page: the payment, the letterhead it prints
- * under (SAL-03's branding read, reused), the "Pay next time" static QR, and
+ * PAY-04 / PAY-05 — the receipt page: the payment, the "Pay next time" static
+ * QR, and
  * the void and share states. `paymentDetailSlice` in the FRD, split from the
  * list so the page and its print sheet share one copy.
  */
@@ -21,7 +19,6 @@ export interface PaymentReceiptState {
   payment: Payment | null;
   status: RequestStatus;
   error: ApiErrorShape | null;
-  branding: PrintBranding | null;
   /** The static QR's modules (no amount — PAY-03 BR-3), or null when there is no VPA. */
   staticQr: readonly string[] | null;
   voidStatus: RequestStatus;
@@ -34,7 +31,6 @@ const initialState: PaymentReceiptState = {
   payment: null,
   status: 'idle',
   error: null,
-  branding: null,
   staticQr: null,
   voidStatus: 'idle',
   shareStatus: 'idle',
@@ -63,9 +59,6 @@ const paymentReceiptSlice = createSlice({
         if (action.meta.aborted) return;
         state.status = 'failed';
         state.error = (action.payload ?? null) as Draft<ApiErrorShape> | null;
-      })
-      .addCase(fetchPrintBranding.fulfilled, (state, action) => {
-        state.branding = action.payload;
       })
       .addCase(fetchCollectQr.fulfilled, (state, action) => {
         // Only the amount-less intent is the receipt's; the Collect sheet asks with one.

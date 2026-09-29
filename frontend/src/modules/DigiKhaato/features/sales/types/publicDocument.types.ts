@@ -1,7 +1,7 @@
+import type { PrintBranding } from 'src/print/brandingPrintService';
 import type { Locale } from 'src/types/domain.types';
 
 import type { SalesDocument, UpiIntent } from './sales.types';
-import type { PrintBranding } from '../redux/salesThunk';
 
 /**
  * SAL-03 FR-5 — the customer's copy of a shared document, from the

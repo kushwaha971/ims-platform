@@ -16,7 +16,6 @@ import {
 
 import { DashboardPageContent } from './DashboardPageContent';
 
-
 import type { DashboardData } from '../types/reports.types';
 
 /**
@@ -321,4 +320,12 @@ it('groups sections under module headings only when two modules contribute', asy
     .map((h) => h.textContent);
   expect(headings).toHaveLength(2);
   expect(headings.every((text) => text && !text.startsWith('nav.module.'))).toBe(true);
+});
+
+it('sends a member who may read neither reports nor Customers to the first menu item they can see (R49)', () => {
+  service.getDashboard.mockResolvedValue(DATA());
+  signIn(['sales.invoice.read'], ['reports', 'sales', 'parties']);
+  renderWithProviders(<DashboardPageContent />);
+  expect(mockReplace).toHaveBeenCalledWith('/sales/invoices');
+  expect(service.getDashboard).not.toHaveBeenCalled();
 });

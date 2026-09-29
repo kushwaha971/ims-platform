@@ -8,7 +8,11 @@ import { memo } from 'react';
  * library on either side (ADR-021): the one encoder is `apps/common/qr.py`,
  * tested against the standard's vectors, and this only paints its output — one
  * `<path>` of unit squares with a four-module quiet zone, crisp at any size.
- * Lives in the print directory, the one place raw SVG elements are allowed.
+ *
+ * R33 / A16 — in the design system since Wave A: the invoice, the receipt, the
+ * Collect sheet and the share page draw it today, and library cards and gym
+ * check-in cards are next. A component two modules need belongs here, never in
+ * one of them (10-architecture §6 item 6).
  */
 export interface UbQrCodeProps {
   readonly modules: readonly string[];

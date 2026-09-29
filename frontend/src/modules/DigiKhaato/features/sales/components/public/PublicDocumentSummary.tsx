@@ -9,6 +9,7 @@ import {
   UbCard,
   UbDivider,
   UbImagePreview,
+  UbQrCode,
   UbStack,
   UbStatusBadge,
   UbStatusBanner,
@@ -25,7 +26,6 @@ import {
   kindNoteId,
   publicStatus,
 } from '../../view-model/publicDocumentView';
-import { UbQrCode } from '../print/UbQrCode';
 
 import type { PublicDocument } from '../../types/publicDocument.types';
 import type { SalesAddress } from '../../types/sales.types';

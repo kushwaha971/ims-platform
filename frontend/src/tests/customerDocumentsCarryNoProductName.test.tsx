@@ -1,6 +1,7 @@
 import { screen } from '@testing-library/react';
 
 import { useTranslation } from 'src/hooks/useTranslation';
+import type { PrintBranding } from 'src/print/brandingPrintService';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
 
 import { StatementPrintView } from 'modules/DigiKhaato/features/ledger/components/print/StatementPrintView';
@@ -9,7 +10,6 @@ import type { Payment } from 'modules/DigiKhaato/features/payments/types/payment
 import { InvoicePrintA4 } from 'modules/DigiKhaato/features/sales/components/print/InvoicePrintA4';
 import { InvoicePrintThermal80 } from 'modules/DigiKhaato/features/sales/components/print/InvoicePrintThermal80';
 import { PublicDocumentPageContent } from 'modules/DigiKhaato/features/sales/components/public/PublicDocumentPageContent';
-import type { PrintBranding } from 'modules/DigiKhaato/features/sales/redux/salesThunk';
 import {
   billOfSupply,
   makeDocument,

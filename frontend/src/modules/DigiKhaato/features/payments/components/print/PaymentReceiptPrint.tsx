@@ -1,15 +1,14 @@
 'use client';
 
+import { UbQrCode } from 'src/design-system';
 import type { TranslateFn } from 'src/hooks/useTranslation';
+import type { PrintBranding } from 'src/print/brandingPrintService';
 import type { Locale } from 'src/types/domain.types';
 import { amountInWords } from 'src/utils/amountInWords';
 import { cn } from 'src/utils/cn';
 import { formatBusinessDate } from 'src/utils/dates';
 import { formatInr, isNegativeAmount, isZeroAmount, absMoney } from 'src/utils/money';
 import { formatPhoneForDisplay } from 'src/utils/share';
-
-import { UbQrCode } from 'modules/DigiKhaato/features/sales/components/print/UbQrCode';
-import type { PrintBranding } from 'modules/DigiKhaato/features/sales/redux/salesThunk';
 
 import { hasAdvance, modeLabelIds } from '../../view-model/paymentDisplay';
 
