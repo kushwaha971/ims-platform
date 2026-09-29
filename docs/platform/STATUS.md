@@ -31,11 +31,11 @@ What search engines and link previews are told, and how it is checked. Detail an
 
 | Area | What is there | Checked by |
 |---|---|---|
-| Metadata for `/` | Title 57 chars, description 155, platform-positioned, live capabilities only, no jargon. Absolute canonical `https://yourkhata.com/` from `SITE_URL` (`NEXT_PUBLIC_SITE_URL`); `metadataBase`; Open Graph; Twitter `summary_large_image`; `robots: index, follow, max-image-preview:large` | `src/tests/seo.test.tsx`, `e2e/seo.mjs` |
+| Metadata for `/` | Title 59 chars, description 147, reaching all six modules (CR-2026-09-29-PLATFORM-D), no status word, no jargon. Absolute canonical `https://yourkhata.com/` from `SITE_URL` (`NEXT_PUBLIC_SITE_URL`); `metadataBase`; Open Graph; Twitter `summary_large_image`; `robots: index, follow, max-image-preview:large` | `src/tests/seo.test.tsx`, `e2e/seo.mjs` |
 | Preview card | `public/brand/yourkhata-og.png`, 1200 × 630, K-c lockup + hero headline on indigo, rendered by `scripts/render-brand.mjs --og`. Static on purpose: a root `opengraph-image.tsx` would be inherited by `/d/<token>`, and `next/og` cannot read WOFF2 | both |
 | Crawl rules | `robots.txt` allows `/`, `/legal/`, `/login`, `/signup`; disallows every guarded app prefix, admin, `/api/`, `/d/`, onboarding, accept-invite, the password flows, `/design-system`. `sitemap.xml` lists the five public pages | both |
 | noindex | Meta on `(app)`, `(admin)`, onboarding, accept-invite, forgot/reset/set-password; `/d/<token>` meta + `X-Robots-Tag` (existing) | both |
-| Structured data | One JSON-LD graph: Organization, WebSite, SoftwareApplication (free plan only while pricing is proposed), FAQPage from the rendered FAQ strings. No ratings or reviews | both |
+| Structured data | One JSON-LD graph: Organization, WebSite, SoftwareApplication (**no offers** while pricing is hidden; the free plan only once shown but proposed), FAQPage from the rendered FAQ strings. No ratings or reviews | both |
 | On-page | One h1, no skipped heading level (the desktop explorer's h4s fixed), header/nav/main/footer, labelled media, descriptive links; **every FAQ answer now in the server HTML** (it was absent) | both |
 | Cache | `/media/landing/*` and `/brand/*`: `public, max-age=86400, stale-while-revalidate=604800` in Next and nginx; nginx now actually serves `/media/landing/` (it 404'd behind Django's internal `/media/`) | both |
 
@@ -64,6 +64,15 @@ against the live stack.
   - Coaching & tuition is added as a module.
   - The landing page presents all modules with no Live/Planned labels.
   - Pricing is hidden on the landing page for now.
+- **29 Sep, Phase 1 revision (CR-2026-09-29-PLATFORM-D), landing page rebuilt to those decisions:**
+  - Six modules, every one the same card, with no status chip or wording anywhere (the cards, FAQ, metadata and JSON-LD). `status` stays in `config/modules.ts` and is not rendered.
+  - Shop & billing shows its real recording through `media`. The other five show an illustration made from our own icons, with no invented screens. Giving a module its recordings is one config line.
+  - Coaching & tuition is the sixth module, with copy from `research/coaching.md`.
+  - Pricing is hidden (`SHOW_PRICING` off). There is no section, no nav or footer link, no "What does it cost?" and no JSON-LD offers. The section is a `dynamic()` chunk and its strings are a separate catalogue, so `/` does not carry them.
+  - New **"Why YourKhata"** section (#why, in the nav): eight "often elsewhere → with YourKhata" points drawn from the competitor research. It names no competitor and makes no ranking claim, and each point is backed by a live capability or a binding rule (`config/why.ts`). "Also included" was reshuffled so it does not repeat the Why points.
+  - The title now reaches all six modules: "YourKhata: bills, fees, collections and bookings in one app".
+  - Gates: unit tests 2591/2591; landing e2e 169/169; SEO e2e 104/104; contrast OK; i18n in step. The `/` budget was re-baselined 36 → 38 KB (measured 37.1), with a dated note.
+  - Open for the owner: the Why and coaching copy need review. The pre-launch gate below now matters, because five of the six modules shown are not built.
 
 ## Pre-launch checklist (before yourkhata.com is public)
 

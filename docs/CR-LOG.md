@@ -1654,3 +1654,106 @@ JSON-LD). `e2e/seo.mjs`: 96/96 against the live stack.
 **Not done, recorded in `docs/BACKLOG.md`:** versioned media URLs (for `immutable`), staging
 noindex, Lighthouse in CI and a performance score on a quiet machine, titles for `/login` and `/signup`, the
 `/d/` disallow-vs-noindex residue, and a stale `NEXT_PUBLIC_APP_NAME` in root `.env` files.
+
+## CR-2026-09-29-PLATFORM-D — every module presented as part of the product; coaching joins; pricing hidden; "Why YourKhata"
+
+**State:** `built` (landing page). Owner decisions of 29 Sep 2026, recorded in
+`docs/platform/00-platform-vision.md` §2 and §4, which replace the "honest landing page" rule of
+CR-2026-09-29-PLATFORM-B.
+**Target:** `/` (`features/landing`), its metadata and JSON-LD, the landing tests and the two
+landing e2e harnesses.
+
+**Owner direction.** The site is not public yet, and the page should not need reworking each time
+a module ships. So:
+
+1. **No status labels.** Every module is presented the same way, as part of the product. No
+   Live, Planned or In development chip or wording anywhere: the cards, the FAQ, the metadata or
+   the JSON-LD. `status` stays in `config/modules.ts` for the build plan and the pre-launch check,
+   and nothing renders it. A module with real recordings shows them through `media` in the config;
+   a module without shows an illustration made from our own icons. No invented screenshots and no
+   fake UI.
+2. **Coaching & tuition is the sixth module**, after Shop & billing, Lending & collections,
+   Library, Gym & fitness and Hotel & stays. Its copy comes from `research/coaching.md`: students
+   and guardians, batches, fee plans, attendance, and the refund for unused months described as a
+   calculation, with no compliance claim.
+3. **Pricing is hidden** behind `SHOW_PRICING` in `config/pricing.ts`. While it is off there is
+   no #pricing section and no Pricing link in the header, the phone menu or the footer. "What does
+   it cost?" gives way to a neutral "Do I need a card to sign up?". The JSON-LD carries **no
+   offers at all**, not even the free plan, because a price only a search engine is told is a
+   claim the page does not make. "Start free" stays, because nothing is charged today.
+4. **Adding recordings is a config change.** Every card is the same card. `media` on a module
+   swaps the illustration for its framed recording, and no component changes (tested with the
+   same stage given media for coaching).
+
+**Added on the owner's request: "Why YourKhata"** (#why, after the Shop & billing explorer, in the
+header nav). "What other apps miss. What you get with YourKhata." Eight cards, each read top to
+bottom as a contrast: the common failing ("Often elsewhere") and then what YourKhata does. They
+are drawn from `research/candidates-and-competitors.md` §5–6. No competitor is named and nothing
+is ranked. Each point rests on a live capability or a binding rule, and the evidence table is in
+`config/why.ts`:
+
+| Point | Evidence |
+|---|---|
+| One app, one set of records | Vision §1 and §3 rule 3; `enabled_modules` switches per business |
+| Your name on your bills, not ours | `customerDocumentsCarryNoProductName.test.tsx`; vision §4 |
+| Mistakes are corrected, never erased | Ledger corrections (capabilities); Canon §0.11 rule 1, model plus DB trigger |
+| Payments come straight to you | Local UPI QR, no gateway, the money never passes through the product |
+| Each person sees only their part | Four roles with per-permission checks |
+| Your data stays yours | CSV import/export; full data export at `/settings/data` |
+| Any phone or computer, in Hindi or English | Platform: both languages on every screen; browser only |
+| No ads | `docs/02-product-vision.md`: advertising in any tier, "Never" |
+
+Left out: "we never store full ID numbers". It is a design in the lending and hospitality
+*research*, not a binding rule. The hospitality design keeps full non-Aadhaar numbers behind an
+opt-in, and the business's own PAN is stored in full today (it is masked only on display).
+
+"Also included" dropped staff roles, Hindi and English, and CSV, which are now Why points, and
+took in three other live pieces of the core instead: reminders with the exact amount, the day book
+and GST summary, and the activity log.
+
+**Metadata.** The title is "YourKhata: bills, fees, collections and bookings in one app" (59
+characters). It reaches all six modules: bills for the shop; fees for the library, gym and
+coaching; collections for lending; bookings for the hotel. The description (147 characters) names
+each module. The `FAQPage` is built from the same `faqIds(SHOW_PRICING)` as the rendered FAQ, and
+`e2e/seo.mjs` now checks that the two match on the wire.
+
+**Tests changed, and why some were removed.** The old rule was: planned modules are labelled, have
+no media, and their words appear only inside planned scopes. The owner replaced it, so the tests
+that enforced it were removed:
+
+- the status chip and label tests;
+- the "planned-only scope" vocabulary guard (`plannedModuleVocabulary.ts`, now
+  `moduleVocabulary.ts`);
+- the "One module today. Four more planned." count test;
+- the live-versus-upcoming feature-line split.
+
+Kept, in their new form:
+
+- a module's own words appear only in that module's places;
+- no figures on a module card;
+- lending "does not lend or move money".
+
+New checks:
+
+- no status chip, attribute or word is rendered, in English and in Hindi, in jsdom and on the
+  live page at nine widths;
+- cards without media hold no video, image or frame;
+- pricing and its links are absent while the flag is off, and come back when it is on;
+- the Why section renders its eight points in both languages;
+- no competitor name and no comparative claim appears in any landing string;
+- six modules are shown, and the map connectors are measured for six columns.
+
+**Budget.** `/` rose from 35.0 to 37.1 KB (first load 268.3). Two savings came first. The hidden
+pricing section is now `dynamic()` and never fetched while the flag is off (−1.3 KB). Its 44
+strings moved to their own `landingPricing` catalogue (−0.7 KB); for this, plan features became
+short ids in `pricing.ts`. The budget was re-baselined to 38 / 269 with a dated note.
+
+**Gates.** Unit tests 2591/2591; landing e2e 169/169; SEO e2e 104/104; contrast 146 pairings;
+i18n in step; bundle inside budget.
+
+**Open for the owner.**
+
+- The pre-launch gate in `docs/platform/STATUS.md` now matters: five of the six modules shown
+  are not built.
+- The Why copy and the coaching copy need review.
+- Part 43 in the Project should register this CR. The coordinator owns that sync.

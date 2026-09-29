@@ -175,10 +175,16 @@ entries or bills.
 | Library | Planned | nothing |
 | Gym and fitness | Planned | nothing |
 | Hotel and stays | Planned | nothing |
+| Coaching and tuition | Planned (CR-2026-09-29-PLATFORM-D) | nothing |
 
-The landing page shows these only as **Planned**. It shows no screenshots, demos, dates, "Start
-free" or invented features for them. Their status lives in one place:
-`frontend/src/modules/DigiKhaato/features/landing/config/modules.ts`.
+**Landing page (changed by CR-2026-09-29-PLATFORM-D).** The owner decided that the pre-launch
+page presents every module the same way, as part of the product, with no Live or Planned label.
+These modules are still **not built**. On the page they have text and an icon illustration only:
+no screenshots, demos, dates or invented screens. Their status lives in one place,
+`frontend/src/modules/DigiKhaato/features/landing/config/modules.ts`, which is not rendered.
+Before yourkhata.com is public, every module shown must be live, or the owner must re-confirm the
+page (the pre-launch gate in `STATUS.md`). **In the app** a planned module stays absent until it
+is built.
 
 ---
 
@@ -212,3 +218,4 @@ free" or invented features for them. Their status lives in one place:
 | Core: Hindi and English | Platform |
 | Core: CSV import and export | Import and export |
 | Shop and billing: live | Sales, Purchases, Inventory, Expenses |
+| "Why YourKhata" points | Each is mapped to a line above, or to a binding rule, in `features/landing/config/why.ts` |
