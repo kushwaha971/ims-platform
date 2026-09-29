@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>YourKhata, concept 2: Joined YK</title>
+  <rect width="64" height="64" rx="15" fill="#0B6763"/><defs><clipPath id="clip2_5"><rect x="0" y="14" width="64" height="36"/></clipPath></defs>
+  <g clip-path="url(#clip2_5)" fill="none" stroke-width="7" stroke-linejoin="miter">
+    <path stroke="#FFFFFF" d="M10.3 10L25 32V56M25 32L39.7 10M37 10V56M37 36L54.7 10"/>
+    <path stroke="#8FE0D2" d="M42.2 27.8L54.8 56"/>
+  </g>
+</svg>

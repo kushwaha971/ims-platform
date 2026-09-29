@@ -35,18 +35,19 @@
   --secondary-700: 173.48 60.53% 14.9%; /* #0F3D38 */
   --secondary-800: 173.79 59.18% 9.61%; /* #0A2724 */
 
-  /* ── Brand mark — the YourKhata open-khata mark's own four values ────────
-     `UbLogo` paints in these and nothing else, which is why it is identical in
-     both themes: a logo that inverts is two logos. They are DERIVED from the
-     primary ramp, so a white-label tenant that rewrites --primary-* gets a mark
-     in its own colour for free (§19.8.3 step 3) — the one exception being
-     --brand-page, the paper, which is white in every theme and every brand
-     because paper is what the mark is a picture of. The static files in
+  /* ── Brand mark — K-c "Bandhan", the tied bahi cover (CR-2026-09-29-BRAND-C)
+     `UbLogo` paints in these and nothing else. Three are DERIVED from the
+     primary ramp, so a white-label tenant that rewrites --primary-* gets the
+     default mark in its own colour for free (§19.8.3 step 3). Two are fixed:
+     --brand-figure, the K and its tie band, white in every theme and brand;
+     and --brand-knot, the bahi-red knot, the ONE raw colour the mark may use.
+     It is decorative and never text: it sits beside the app's debit red
+     (--error) and must never be read as one. The static files in
      `public/brand/` and `public/icons/` carry the same values as hex. */
-  --brand-mark: var(--primary-500); /* #4A47D6 — the tile */
-  --brand-page: 0 0% 100%; /* #FFFFFF — the two open pages */
-  --brand-rule: var(--primary-700); /* #2E2B93 — the tick, the one stroke that must read */
-  --brand-rule-soft: var(--primary-300); /* #9D9AF0 — the two ruled columns, decorative */
+  --brand-cover: var(--primary-600); /* #3A36B8 — the cloth cover; white on it 8.75:1 */
+  --brand-hem: var(--primary-400); /* #716DE4 — the stitched hem, decorative (2.09:1) */
+  --brand-figure: 0 0% 100%; /* #FFFFFF — the K and the tie band */
+  --brand-knot: 2.68 64.61% 47.65%; /* #C8322B — bahi red, decorative; 5.32:1 on the band */
 
   --accent: var(--primary-500);
   --accent-hover: var(--primary-600);

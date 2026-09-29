@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Render the YourKhata brand artwork (CR-2026-09-29-BRAND-A).
+ * Render the YourKhata brand artwork (CR-2026-09-29-BRAND-C: K-c "Bandhan",
+ * the tied bahi cover, replacing BRAND-A's open khata).
  *
  *   node scripts/render-brand.mjs            # icons into public/icons + preview sheets
  *   node scripts/render-brand.mjs --preview  # preview sheets only
@@ -36,10 +37,12 @@ const font = readFileSync(join(root, 'src/fonts/dm-sans-latin-wght-normal.woff2'
 
 const FONT_FACE = `@font-face{font-family:'DM Sans';font-weight:100 1000;src:url(data:font/woff2;base64,${font}) format('woff2');}`;
 
+// [id, file under public/brand/, name, applied, its own 16 px cut]
 const concepts = [
-  ['A', 'concept-a.svg', 'Open khata, ticked', 'applied'],
-  ['B', 'concept-b.svg', 'The Y that opens like a book', ''],
-  ['C', 'concept-c.svg', 'Bound ledger with a rupee', ''],
+  ['K-c', 'yourkhata-mark.svg', 'Bandhan, the tied bahi cover', 'applied', 'yourkhata-mark-16.svg'],
+  ['K-a', 'concepts3/k-a-mark.svg', 'Likhai, the written page', '', 'concepts3/k-a-mark-16.svg'],
+  ['1', 'concepts2/concept-1-mark.svg', 'Signature K (round 2)', '', ''],
+  ['A', 'concepts/concept-a.svg', 'Open khata, ticked (round 1)', '', 'concepts/concept-a-16.svg'],
 ];
 
 /** Rasterise an SVG at `px` exactly, the way a browser tab would. */
@@ -56,7 +59,7 @@ async function raster(browser, text, px) {
 function conceptSheet(tiny) {
   const cards = concepts
     .map(([id, file, name, applied]) => {
-      const uri = dataUri(svg(`brand/concepts/${file}`));
+      const uri = dataUri(svg(`brand/${file}`));
       const sizes = [16, 32, 48]
         .map(
           (s) =>
@@ -64,7 +67,7 @@ function conceptSheet(tiny) {
         )
         .join('');
       return `<section class="card">
-        <header><b>Concept ${id}</b> · ${name}${applied ? ' <em>applied</em>' : ''}</header>
+        <header><b>${id}</b> · ${name}${applied ? ' <em>applied</em>' : ''}</header>
         <div class="lockup"><img src="${uri}" width="72" height="72"><span class="word">YourKhata</span></div>
         <div class="sizes">${sizes}<figure><img class="zoom" src="${tiny[id]}" width="64" height="64"><figcaption>16px, pixels x4</figcaption></figure></div>
         <div class="dark"><img src="${uri}" width="40" height="40"><span class="word sm">YourKhata</span></div>
@@ -87,7 +90,7 @@ function conceptSheet(tiny) {
     .zoom{image-rendering:pixelated}
   </style></head><body>
     <h1>YourKhata — logo concepts</h1>
-    <p class="sub">Tile in primary-500 #4A47D6 · wordmark DM Sans 600 · each shown at 72, 48, 32 and 16 px and on the dark rail</p>
+    <p class="sub">K-c cover in primary-600 #3A36B8, knot bahi red #C8322B · wordmark DM Sans 600 · each shown at 72, 48, 32 and 16 px and on the dark rail</p>
     <div class="row">${cards}</div>
   </body></html>`;
 }
@@ -96,11 +99,11 @@ async function main() {
   mkdirSync(shots, { recursive: true });
   const browser = await chromium.launch(executablePath ? { executablePath } : {});
   try {
-    const page = await browser.newPage({ viewport: { width: 1200, height: 800 } });
+    const page = await browser.newPage({ viewport: { width: 1480, height: 540 } });
     const tiny = {};
-    for (const [id, file] of concepts) {
-      // Concept A ships with its own 16 px cut; B and C are shown as drawn.
-      const art = id === 'A' ? svg('brand/yourkhata-mark-16.svg') : svg(`brand/concepts/${file}`);
+    for (const [id, file, , , cut16] of concepts) {
+      // A mark with its own 16 px cut is shown in it; the others as drawn.
+      const art = svg(`brand/${cut16 || file}`);
       tiny[id] = await raster(browser, art, 16);
     }
     await page.setContent(conceptSheet(tiny));

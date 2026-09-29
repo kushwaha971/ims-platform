@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>YourKhata, concept 4: Dukaan</title>
+  <rect width="64" height="64" rx="15" fill="#EF7A12"/><defs><clipPath id="clip4_17"><rect x="8" y="12" width="48" height="20" rx="4"/></clipPath></defs>
+  <g clip-path="url(#clip4_17)"><path fill="#FFFFFF" d="M8 12H17.6V24A4.8 4.8 0 0 1 8 24Z"/><path fill="#8A3403" d="M17.6 12H27.2V24A4.8 4.8 0 0 1 17.6 24Z"/><path fill="#FFFFFF" d="M27.2 12H36.8V24A4.8 4.8 0 0 1 27.2 24Z"/><path fill="#8A3403" d="M36.8 12H46.4V24A4.8 4.8 0 0 1 36.8 24Z"/><path fill="#FFFFFF" d="M46.4 12H56V24A4.8 4.8 0 0 1 46.4 24Z"/></g>
+  <path fill="#FFFFFF" d="M12 32H52V52H12Z"/>
+  <rect x="32" y="36" width="12" height="16" fill="#8A3403"/>
+</svg>

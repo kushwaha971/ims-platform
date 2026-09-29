@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>YourKhata, concept 5: The Nudge</title>
+  <rect width="64" height="64" rx="15" fill="#4A47D6"/>
+  <path fill="#FFFFFF" d="M23 16H40A11 11 0 0 1 51 27V34A11 11 0 0 1 40 45H23L12 53V27A11 11 0 0 1 23 16Z"/>
+  <circle cx="49" cy="17" r="9.5" fill="#4A47D6"/>
+  <circle cx="49" cy="17" r="6.5" fill="#FF9F1C"/>
+</svg>

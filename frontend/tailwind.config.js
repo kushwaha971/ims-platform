@@ -163,10 +163,10 @@ module.exports = {
         },
         /* The brand mark's own values — `UbLogo` and nothing else (§23.2.4). */
         brand: {
-          mark: hsl('--brand-mark'),
-          page: hsl('--brand-page'),
-          rule: hsl('--brand-rule'),
-          ruleSoft: hsl('--brand-rule-soft'),
+          cover: hsl('--brand-cover'),
+          hem: hsl('--brand-hem'),
+          figure: hsl('--brand-figure'),
+          knot: hsl('--brand-knot'),
         },
         canvas: hsl('--canvas'),
         /* ml-uikit's `bg-card` / `text-card-foreground`. */

@@ -208,6 +208,41 @@ check('accent', 'surface-card', 3.0, 'dark', darkRaw);
 DARK_SEPARATION.forEach(([fg, bg, floor]) => check(fg, bg, floor, 'dark', darkRaw));
 
 /**
+ * CR-2026-09-29-BRAND-C — the K-c "Bandhan" mark. The white K is a LETTER, so
+ * it takes the text floor on its own cover, in both themes (the cover does not
+ * change with the theme, but the dark column is checked so that it never
+ * does by accident). The hem and the knot are DECORATIVE: listed here so the
+ * table shows them, with the floor they actually need — none for the hem,
+ * which is meant to be quiet, and 3:1 for the knot against the white band it
+ * is tied on and, in the dark column, the surfaces the wordmark's dot sits on.
+ */
+const BRAND = [
+  ['brand-figure', 'brand-cover', 4.5, 'light'],
+  ['brand-figure', 'brand-cover', 4.5, 'dark'],
+  ['brand-cover', 'canvas', 3.0, 'light'],
+  // On the dark rail the deep cover is 2.02:1. A logo's own colours are
+  // outside WCAG 1.4.11, and what identifies the mark there is the white K,
+  // checked against the rail itself on the next line; 2.0 is the line under
+  // which the cover stops reading as a tile at all, so a darker primary step
+  // cannot be adopted without somebody looking at the sidebar in dark mode.
+  ['brand-cover', 'surface-nav', 2.0, 'dark'],
+  ['brand-figure', 'surface-nav', 4.5, 'dark'],
+];
+const BRAND_DECORATIVE = [
+  ['brand-hem', 'brand-cover', 1.0, 'light'],
+  ['brand-hem', 'brand-cover', 1.0, 'dark'],
+  ['brand-knot', 'brand-figure', 3.0, 'light'],
+  ['brand-knot', 'brand-figure', 3.0, 'dark'],
+  ['brand-knot', 'canvas', 3.0, 'light'],
+  ['brand-knot', 'canvas', 3.0, 'dark'],
+  ['brand-knot', 'surface-card', 3.0, 'dark'],
+  ['brand-knot', 'surface-nav', 3.0, 'dark'],
+];
+[...BRAND, ...BRAND_DECORATIVE].forEach(([fg, bg, floor, theme]) =>
+  check(fg, bg, floor, theme, theme === 'light' ? lightRaw : darkRaw)
+);
+
+/**
  * Sprint 12 a11y sweep — text on the SELECTED tint. A selected row, card or
  * chip is `--accent-quiet` (an rgba wash) over the card, and its caption kept
  * the tertiary grey: 4.46:1 on #EDEDFB, which axe failed on /switch and on the

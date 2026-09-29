@@ -13,36 +13,46 @@ import { cn } from 'src/utils/cn';
  * product whose own name is set in `ds-h4` and whose only picture is the
  * browser-tab favicon reads as an internal tool, which is what the owner saw.
  *
- * WHAT IT DRAWS (CR-2026-09-29-BRAND-A, concept A of three in
- * `public/brand/concepts/`). The YourKhata mark: an OPEN KHATA on the indigo
- * tile, and the account on it settled.
+ * WHAT IT DRAWS (CR-2026-09-29-BRAND-C, K-c "Bandhan" from the third round in
+ * `public/brand/concepts3/`). The YourKhata mark is a TIED BAHI COVER:
  *
- *   · two white PAGES meeting at the spine, their top edges lifting the way a
- *     bound ledger's do when it lies open on a counter;
- *   · on the left page, two RULES of different lengths — the two columns every
- *     ledger in this market is ruled into, "diya" and "liya". They are the one
- *     soft element (`--brand-rule-soft`) and the first thing allowed to vanish
- *     at 16 px: the favicon has its own cut with a single rule;
- *   · on the right page, a bold TICK in the deep indigo (`--brand-rule`) — the
- *     khata squared, which is what the product is for. It is the element that
- *     has to survive every size, so it is a stroke of constant weight rather
- *     than a shape that thins as it scales.
+ *   · the tile is the cloth COVER of a bahi-khata, in the deep indigo
+ *     (`--brand-cover`, primary-600), with a stitched HEM inset along its edge
+ *     (`--brand-hem`, primary-400, decorative);
+ *   · on it, a white K — the round-1 "signature K", DM Sans 600 — whose leg
+ *     does not stop at the baseline but sweeps on across the whole cover as
+ *     the TIE BAND (`--brand-figure`), the string a bahi is bound shut with;
+ *   · where the band is tied, a bahi-red KNOT (`--brand-knot`) with two white
+ *     string ends hanging from it. It is the one raw colour the mark carries
+ *     and it is never text: it sits too near the debit red to mean anything.
  *
- * It replaces the DigiKhaato "spine D": the product is YourKhata now and a D
- * would be the wrong initial. It is deliberately not a letterform at all, so a
- * white-labelled tenant's name beside it never contradicts the picture.
+ * SMALL SIZES. At 24 px and below (`size="sm"`) the hem is dropped and the
+ * knot is a single dot, because a 1.5-unit stroke and two string ends are
+ * 0.6 px there and read as noise. The favicon has its own hand-cut 16 px file
+ * (`public/brand/yourkhata-mark-16.svg`) on the pixel grid.
+ *
+ * WHY A K IS WHITE-LABEL SAFE. Round 1 chose a picture over a letter so a
+ * tenant's name beside it could never be contradicted. That concern is met a
+ * different way: a tenant with its OWN logo replaces this mark wholesale
+ * (`branding.logo_attachment_id`, §19.8.3), and a tenant without one is, by
+ * definition, showing the product's default — YourKhata's K. And the
+ * signature treatment of the wordmark (an indigo K whose sweep ends in the
+ * knot) is applied only to the product's own name, never to a tenant's.
  *
  * WHY IT IS INLINE SVG. `next/image` on a PNG costs a request and a layout
  * shift for a 24 px graphic, cannot inherit a colour, and cannot follow a
- * white-label ramp. The four colours below are `--brand-*` tokens derived from
+ * white-label ramp. The colours are `--brand-*` tokens derived from
  * `--primary-*` (§23.2.4), so a tenant that rewrites the primary ramp gets its
  * mark repainted with everything else, and no icon package is added (ADR-021).
+ * There is no clipPath and no `id` anywhere in it: two logos on one page (the
+ * rail and the phone drawer) would otherwise share, and fight over, an id.
  *
  * WHY IT DOES NOT INVERT. The mark is the same in both themes on purpose: the
- * tile carries its own contrast with the page inside it, so it needs no help
- * from the surface behind it, and a logo that changes colour with the theme is
- * two logos to maintain and recognise. Only the WORDMARK is theme-aware —
- * `--text-primary`, because it is type.
+ * cover carries its own contrast with the K on it, so it needs no help from
+ * the surface behind it, and a logo that changes colour with the theme is two
+ * logos to maintain and recognise. Only the WORDMARK is theme-aware —
+ * `--text-primary`, because it is type — and with it the knot token, whose
+ * dot ends the wordmark's sweep on the theme's own surface.
  *
  * ACCESSIBILITY. It is decorative by default (`aria-hidden`), which is right
  * everywhere it sits beside the product's name in text. Pass `label` where the
@@ -110,6 +120,28 @@ const GAP: Readonly<Record<UbLogoSize, string>> = {
   fill: 'gap-3',
 };
 
+/**
+ * The K and the tie band on the 64 grid, flattened from the DM Sans 600 K of
+ * `concepts3/k-c-mark.svg` (translate 10.6 38.5, scale 0.04) and trimmed at the
+ * tile's edge — the band runs x 0 → 64 at y 41.9 → 46.4, which is inside the
+ * straight part of the squircle, so it needs no clip.
+ */
+const FIGURE =
+  'M13.43 38.5V10.5H18.23V22.05L28.82 10.5H34.77L24.43 21.61L34.52 37.7Q37.16 41.9 41.4 41.9H64V46.38H38.6Q34 46.38 30.6 40.9L21.01 25.32L18.23 28.29V38.5ZM0 41.9H20V46.38H0Z';
+
+/**
+ * The wordmark's signature K, in DM Sans font units (y up): the K whose leg
+ * sweeps under "hata" and stops short of the knot, which is drawn at the end
+ * of the ink of the final "a" — the same geometry as `yourkhata-lockup.svg`,
+ * where the knot sits in a white ring; here the ring is a gap in the sweep,
+ * because the wordmark does not know what surface it is on.
+ */
+const SIGNATURE_K =
+  'M70.86 0V700H190.86V411.14L455.55 700H604.18L345.83 422.24L598 20Q664 -85 770 -85H2546V-197H700Q585 -197 500 -60L260.17 329.52L190.86 255.21V0Z';
+
+/** Only the product's own name carries the signature K — never a tenant's. */
+const PRODUCT_WORDMARK = 'YourKhata';
+
 function UbLogoBase({
   variant = 'mark',
   size = 'md',
@@ -119,6 +151,7 @@ function UbLogoBase({
   className,
 }: Readonly<UbLogoProps>) {
   const named = typeof label === 'string' && label.length > 0;
+  const detailed = size !== 'sm';
 
   const mark = (
     <svg
@@ -129,28 +162,36 @@ function UbLogoBase({
       focusable="false"
     >
       {named && variant === 'mark' && <title>{label}</title>}
-      {/* The tile. `rx` is the squircle radius of §23.2.3. */}
-      <rect width="64" height="64" rx="15" className="fill-brand-mark" />
-      {/* The open khata: the left page, then the right, meeting at the spine. */}
-      <path
-        d="M9 20.5C15.5 17 23.5 17 30.5 20.5V47.5C23.5 44 15.5 44 9 47Z"
-        className="fill-brand-page"
-      />
-      <path
-        d="M33.5 20.5C40.5 17 48.5 17 55 20.5V47C48.5 44 40.5 44 33.5 47.5Z"
-        className="fill-brand-page"
-      />
-      {/* The two ruled columns on the left page, long and short. */}
-      <rect x="14" y="27" width="11.5" height="3.4" rx="1.7" className="fill-brand-ruleSoft" />
-      <rect x="14" y="34" width="7.5" height="3.4" rx="1.7" className="fill-brand-ruleSoft" />
-      {/* The tick on the right page: the account settled. */}
-      <path
-        d="M38.5 33.5L42.8 37.8L50.2 28.2"
-        className="fill-none stroke-brand-rule"
-        strokeWidth="4.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      {/* The cover. `rx` is the squircle radius of §23.2.3. */}
+      <rect width="64" height="64" rx="15" className="fill-brand-cover" />
+      {detailed && (
+        <rect
+          x="4.75"
+          y="4.75"
+          width="54.5"
+          height="54.5"
+          rx="11"
+          className="fill-none stroke-brand-hem"
+          strokeWidth="1.5"
+        />
+      )}
+      {/* The K, its leg sweeping on as the tie band, and the band's left end. */}
+      <path d={FIGURE} className="fill-brand-figure" />
+      {detailed ? (
+        <>
+          <path
+            d="M48 46L45 55M48 46L52 55"
+            className="fill-none stroke-brand-figure"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+          />
+          {/* A ring of cover between the band and the knot, so the red reads as tied ON. */}
+          <circle cx="48" cy="44.1" r="4.6" className="fill-brand-cover" />
+          <circle cx="48" cy="44.1" r="3.2" className="fill-brand-knot" />
+        </>
+      ) : (
+        <circle cx="48" cy="44.1" r="4" className="fill-brand-knot" />
+      )}
     </svg>
   );
 
@@ -178,9 +219,38 @@ function UbLogoBase({
           WORD_SIZE[size]
         )}
       >
-        {wordmark}
+        {wordmark === PRODUCT_WORDMARK ? <SignatureWordmark /> : wordmark}
       </span>
     </span>
+  );
+}
+
+/**
+ * "YourKhata" with the lockup's signature: the K in the accent, its sweep
+ * running under "hata" into the knot. The name stays ONE text node for a
+ * screen reader (and for `getByText`); the drawn version beside it is hidden.
+ * The K is an inline SVG sized in `em`, so it scales with the wordmark tier
+ * and sits on the text's baseline (`-0.197em` is the sweep's depth below it).
+ */
+function SignatureWordmark() {
+  return (
+    <>
+      <span className="sr-only">{PRODUCT_WORDMARK}</span>
+      <span aria-hidden="true">
+        Your
+        <svg
+          viewBox="0 -700 623 897"
+          className="inline-block h-[0.897em] w-[0.623em] overflow-visible align-[-0.197em] text-text-accent"
+          focusable="false"
+        >
+          <g transform="scale(1 -1)">
+            <path d={SIGNATURE_K} className="fill-current" />
+            <circle cx="2638" cy="-141" r="62" className="fill-brand-knot" />
+          </g>
+        </svg>
+        hata
+      </span>
+    </>
   );
 }
 

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>YourKhata, K-a — Likhai (the written page)</title>
+  <rect width="64" height="64" rx="15" fill="#F1F0FE"/><defs><clipPath id="ca0"><rect width="64" height="64" rx="15"/></clipPath></defs>
+  <g clip-path="url(#ca0)"><rect x="0" y="22" width="64" height="1.5" fill="#C6C4F9"/><rect x="0" y="32" width="64" height="1.5" fill="#C6C4F9"/><rect x="0" y="54" width="64" height="1.5" fill="#C6C4F9"/><rect x="10" y="0" width="2" height="64" fill="#C8322B"/></g>
+  <rect x="0.5" y="0.5" width="63" height="63" rx="14.5" fill="none" stroke="#C6C4F9" stroke-width="1"/>
+  <g transform="translate(13.4 42.06) scale(0.04 -0.04)"><path fill="#3A36B8" d="M70.86 0V700H190.86V411.14L455.55 700H604.18L345.83 422.24L598 20Q664 -85 770 -85H1000V-197H700Q585 -197 500 -60L260.17 329.52L190.86 255.21V0Z"/></g>
+</svg>

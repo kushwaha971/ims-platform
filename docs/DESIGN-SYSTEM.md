@@ -251,62 +251,121 @@ delivery provider, and no sidebar row for a module whose page is not built — n
 even a greyed "Soon" row. `useNavigation` shows only items marked `ready` in
 `navigation/sidebarConfig.ts`; a roadmap module appears the day its page does.
 
-## 7. Brand — the YourKhata mark (CR-2026-09-29-BRAND-A)
+## 7. Brand — the YourKhata mark (CR-2026-09-29-BRAND-C)
 
 The product is **YourKhata** — one word, capital Y and K, set in Latin script in
 English and in Hindi alike (a brand name is not translated). The domain is
 **yourkhata.com**. The code namespace (`modules/DigiKhaato/…`, `UB_`, `ub_*`) is
 not renamed; only what a person sees is.
 
-### The mark
+### The mark — K-c "Bandhan", the tied bahi cover
 
-An **open khata on an indigo tile**: two white pages meeting at the spine with
-their top edges lifting, two ruled columns on the left page ("diya" and
-"liya"), and a bold tick on the right — the account squared. It is not a
-letterform, so it never contradicts a white-labelled tenant's name beside it.
-Three concepts were drawn (`frontend/public/brand/concepts/concept-{a,b,c}.svg`:
-A the open khata, B a Y that opens like a book, C a bound ledger with a rupee);
-**A is applied**. Previews: `node frontend/scripts/render-brand.mjs --preview`
-writes `/tmp/e2e-shots/brand/concepts.png`.
+The tile is the **cloth cover of a bahi-khata** in deep indigo, with a stitched
+**hem** inset along its edge. On it is a white **K** (the round-2 "signature K",
+DM Sans 600) whose leg does not stop at the baseline: it **sweeps on across the
+whole cover as the tie band**, the string a bahi is bound shut with. Where the
+band is tied sits a small **bahi-red knot** with two white string ends.
+
+It was chosen by the owner from round 3 (`frontend/public/brand/concepts3/`,
+four variants of the K with khata styling), after round 1 (`concepts/`, Concept
+A the open khata, applied then replaced) and round 2 (`concepts2/`, Concepts 1
+the signature K and 2 the joined YK). All three rounds are kept as the record.
+Previews: `node frontend/scripts/render-brand.mjs --preview` writes
+`/tmp/e2e-shots/brand/concepts.png`.
+
+**Construction** (64 × 64 grid, `concepts3/k-c-mark.svg`):
+
+- Cover: `rect 64 × 64, rx 15` (the §23.2.3 squircle).
+- Hem: a 1.5-unit stroke, inset 4.75, `rx 11`.
+- K: DM Sans 600 K at scale 0.04, origin (10.6, 38.5); cap height 28 units.
+- Tie band: y 41.9 → 46.4, from the tile's left edge to x 20 under the stem,
+  then from the K's swept leg to the right edge. It lies wholly inside the
+  straight part of the squircle, so the mark needs **no clipPath** — and it has
+  **no `id`**, so two logos on one page never collide.
+- Knot: centre (48, 44.1), red r 3.2 inside a cover-coloured ring r 4.6 (so it
+  reads as tied ON the band), string ends from (48, 46) to (45, 55) and (52, 55)
+  at 2.4 units, round caps.
 
 | Asset | File | Notes |
 |---|---|---|
 | The mark in the app | `UbLogo` (`src/design-system/UbLogo`) | inline SVG, painted from `--brand-*`, so a tenant's primary ramp repaints it |
-| Master SVG | `public/brand/yourkhata-mark.svg` | 64 × 64 grid; also the SVG favicon |
-| 16 px cut | `public/brand/yourkhata-mark-16.svg` | on the pixel grid, ONE rule instead of two, 1.5 px tick |
-| Maskable / Apple | `public/brand/yourkhata-maskable.svg` | full-bleed tile, glyph at 72 % inside the 80 % safe zone |
-| Lockup | `public/brand/yourkhata-lockup.svg` | mark + "YourKhata" in DM Sans 600 |
+| Master SVG | `public/brand/yourkhata-mark.svg` | 64 × 64 grid |
+| 16 px cut | `public/brand/yourkhata-mark-16.svg` | hand-cut on the pixel grid; also the SVG favicon |
+| Maskable / Apple | `public/brand/yourkhata-maskable.svg` | full-bleed cover, figure at 72 % inside the 80 % safe zone, band edge to edge, no hem |
+| Lockup | `public/brand/yourkhata-lockup.svg` | mark + "YourKhata" in DM Sans 600, outlined; indigo K whose sweep ends in the knot |
 | Icons | `public/icons/{favicon-16,favicon-32,apple-touch-icon,icon-192,icon-512,maskable-512}.png` | rendered from the SVGs by `node frontend/scripts/render-brand.mjs` — never hand-exported |
 
-### Colours
+### Small sizes
 
-| Part | Token | Default |
-|---|---|---|
-| Tile | `--brand-mark` → `--primary-500` | `#4A47D6` |
-| Pages | `--brand-page` | `#FFFFFF` in every theme and brand |
-| Tick | `--brand-rule` → `--primary-700` | `#2E2B93` (≥ 4.5:1 on the page, tested) |
-| Ruled columns | `--brand-rule-soft` → `--primary-300` | `#9D9AF0` (decorative) |
-| Wordmark | `--text-primary` (or `tone="inherit"` on the dark rail) | `#0A090B` |
+- **≥ 32 px:** the full mark — hem, strings, ring and knot.
+- **≤ 24 px** (`UbLogo size="sm"`): the hem is dropped and the knot is a single
+  dot (r 4), no ring, no strings. A 1.5-unit hem is 0.6 px at 24 px and reads as
+  a smudge.
+- **16 px:** the hand-cut file only. Stem x 3 → 5 and band y 9 → 11 on whole
+  pixels, the band runs edge to edge, the knot is one 4 × 4 dot (x 11 → 15,
+  y 8 → 12), no hem, no strings. Never scale the master to 16.
+
+### Colours and contrast
+
+| Part | Token | Default | Contrast |
+|---|---|---|---|
+| Cover | `--brand-cover` → `--primary-600` | `#3A36B8` | 8.75:1 on white; 2.02:1 on the dark rail (floor 2.0, see below) |
+| K and tie band | `--brand-figure` | `#FFFFFF` in every theme and brand | **8.75:1 on the cover, held to the 4.5 text floor in both themes** |
+| Hem | `--brand-hem` → `--primary-400` | `#716DE4` | 2.09:1 — decorative |
+| Knot | `--brand-knot` (fixed) | `#C8322B`; dark `#D9453D` | 5.32:1 / 4.31:1 on the band — decorative, never text |
+| Wordmark | `--text-primary` (or `tone="inherit"` on the rail) | `#0A090B` | 19.9:1 |
+| Wordmark's K and sweep | `--text-accent` | primary-600 light, primary-300 dark | ≥ 4.5 (text table) |
+
+`--brand-knot` is **the one raw colour** the mark may carry (a test fails on any
+other hex, and on any other non-ramp `--brand-*` value). It is the one `--brand-*`
+value with a dark step, because it is also the full stop of the wordmark's sweep
+and sits on the theme's surface there. It sits close to the debit red `--error`,
+so it is decorative only — never a label, never a figure. The cover on the dark
+rail is below 3:1; a logo's own colours are outside WCAG 1.4.11 and the white K
+(17:1 on the rail) is what identifies the mark there, so the pairing is checked
+against an explicit 2.0 floor rather than none. `node scripts/check-contrast.mjs`
+and `src/tests/darkTheme.contrast.test.ts` check all of it from the token values.
 
 The mark is the same in light and dark themes; only the wordmark follows the
 theme. The static PNG/SVG files carry the default hex values — a white-label
 tenant's ramp repaints the in-app mark, not the favicon.
 
+### Why a K is white-label safe
+
+A tenant with its own logo replaces the mark wholesale
+(`branding.logo_attachment_id`); a tenant without one is, by definition, showing
+the product's default — YourKhata's K. The **signature wordmark** (indigo K with
+the sweep and the knot) is applied only when the name is "YourKhata"; a tenant's
+name beside the mark is plain text.
+
 ### Wordmark, clear space, minimum size
 
 - The wordmark is "YourKhata" in **DM Sans 600** (`ds-wordmark-*`), never
   letter-spaced wider, never all caps, never split into two words or two weights.
+  The K is in the accent and its leg sweeps under "hata" into the knot dot. For a
+  screen reader it is one word (an `sr-only` text node; the drawn copy is hidden).
 - **Clear space** around the mark is **¼ of the tile's edge** on every side
   (16 units on the 64 grid); in the lockup the gap between tile and wordmark is
   ¼ to ⅓ of the tile (the `GAP` tiers in `UbLogo`), never less.
-- **Minimum size:** 24 px for the full mark (`UbLogo size="sm"`); below that use
-  the 16 px cut. The tick is the one element that must survive every size.
+- **Minimum size:** 24 px for the in-app mark (`size="sm"`, simplified as above);
+  below that, the 16 px cut.
+
+### Do
+
+- Use `UbLogo` in the app and the files in `public/brand/` everywhere else.
+- Regenerate every PNG with `render-brand.mjs` after any SVG change.
+- On a coloured or photographic ground, use the tile as it is — the cover is its
+  own ground.
 
 ### Don'ts
 
-- Don't recolour parts independently, add a gradient, outline or shadow, or put
-  the mark on a photo; on a coloured ground use the tile as it is.
-- Don't rotate, stretch, or redraw the tick as a thin line.
+- Don't recolour parts independently, add a gradient, outline or shadow; don't
+  move the knot off the band or make it any colour but `--brand-knot`.
+- Don't use the knot red for text, a status, or a debit figure.
+- Don't draw the hem or the strings below 32 px, or scale the master to 16 px.
+- Don't give a tenant's name the signature K, and don't set the K alone as a
+  monogram without the cover and band.
+- Don't rotate, stretch, or break the band — it runs the full width of the cover.
 - Don't put the product's name, mark or domain on anything a merchant's
   **customer** receives — A4/80 mm bills, estimates, credit notes, the A5
   receipt, the party statement, the `/d/<token>` share page, CSV/ZIP contents,
@@ -314,5 +373,5 @@ tenant's ramp repaints the in-app mark, not the favicon.
   the tenant's name and the tenant's own logo if it set one.
   `src/tests/customerDocumentsCarryNoProductName.test.tsx` fails on any of
   "DigiKhaato", "YourKhata", "yourkhata.com" in their rendered HTML.
-- Don't imitate another khata app's mark (green book tiles, a "K" monogram);
-  the open khata with a tick is ours.
+- Don't imitate another khata app's mark (green book tiles, a plain "K" in a
+  circle); the K on a tied indigo cover is ours.

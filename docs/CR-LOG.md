@@ -1376,7 +1376,8 @@ should be amended when this is registered in Part 43.
 ## CR-2026-09-29-BRAND-A — DigiKhaato becomes YourKhata (yourkhata.com); customer documents carry no product name
 
 **State:** `raised` (built on `worktree-agent-adebf556cb3dc896a`; needs owner sign-off on the
-logo concept). **Target:** Part 23 §23.2.6 (brand mark), Part 24 (white-label defaults),
+logo concept). **The mark is superseded by CR-2026-09-29-BRAND-C** (K-c "Bandhan"); the rename
+and the customer-document rule below stand. **Target:** Part 23 §23.2.6 (brand mark), Part 24 (white-label defaults),
 SAL-03 FR-5/FR-12 (print footer, share page), PAY-04, LED-04 §7, PLT-10 (export README).
 
 **Owner request.** "I have changed my domain from digikhaato to yourkhata.com. Update
@@ -1468,3 +1469,44 @@ owner's own writes (during a live support session) are asserted. Frontend:
 `platform_impersonation_session` row (it lapses at its expiry, ≤ 60 min); ending it on logout
 is a small follow-up. FR-5's "writes needed to reproduce fixes" stays refused; relaxing it is
 the owning chapter's call and would need fresh owner consent copy.
+
+## CR-2026-09-29-BRAND-C — the YourKhata mark is K-c "Bandhan", the tied bahi cover
+
+**State:** `done`. **Supersedes** the mark half of CR-2026-09-29-BRAND-A (the rename and the
+"customer documents carry no product name" rule in BRAND-A stand unchanged). **Target:**
+Part 23 §23.2.6 (brand mark), `docs/DESIGN-SYSTEM.md` §7.
+
+**How it was chosen.** Round 1 drew three pictures (`frontend/public/brand/concepts/`); Concept A,
+the open khata with a tick, was applied under BRAND-A. The owner asked for a K instead. Round 2
+(`concepts2/`, six marks) produced Concept 1, the "signature K" whose leg sweeps into a ruled
+line, and Concept 2, a joined YK; a partial apply of the joined YK was abandoned unshipped.
+The owner then asked to "keep the K like the 1st logo, but with some khata styling". Round 3
+(`concepts3/`, four variants of that K) was drawn, and **the owner chose K-c, "Bandhan"**: the
+tile is the cloth cover of a bahi-khata with a stitched hem; the K's sweep carries on across the
+cover as the tie band; a bahi-red knot with two white string ends closes it. Both concept rounds
+are committed as the record.
+
+**Decisions.**
+
+* Colours: cover `--brand-cover` → `--primary-600` (#3A36B8), hem `--brand-hem` → `--primary-400`
+  (decorative), K and band `--brand-figure` white, knot `--brand-knot` #C8322B — the ONE fixed
+  colour the mark may use, decorative, never text, and restated in the dark column as #D9453D
+  because it also ends the wordmark's sweep on the theme's surface. `--brand-mark`, `--brand-page`,
+  `--brand-rule` and `--brand-rule-soft` are removed.
+* White K on the cover is 8.75:1 and is held to the TEXT floor in both themes
+  (`scripts/check-contrast.mjs`, `darkTheme.contrast.test.ts`). The cover on the dark rail is
+  2.02:1; a logo's own colours are outside WCAG 1.4.11 and the white K identifies it there
+  (17:1 on the rail), so that pairing has an explicit 2.0 floor rather than none.
+* At 24 px and below (`UbLogo size="sm"`) the hem is dropped and the knot is one dot. The 16 px
+  favicon is the hand-cut `yourkhata-mark-16.svg`, now also the SVG favicon in `app/layout.tsx`
+  (a browser paints the SVG favicon at tab size whatever the master was drawn for); its knot was
+  re-cut as a 4 px dot on the pixel grid and its string ends dropped.
+* The in-app mark has no clipPath and no `id`, so two logos on one page cannot collide. The lockup
+  sets "YourKhata" with the signature K (indigo, `--text-accent`) whose sweep ends in the knot dot —
+  ONLY for the product's own name; a tenant's name is plain text.
+* A K no longer conflicts with white-labelling: a tenant with its own logo replaces the mark
+  through `branding.logo_attachment_id`, and a tenant without one is showing the product's default.
+
+**Not done, recorded.** Part 23 §23.2.6 in the Project SSOT still describes the round-1 mark.
+`theme_color` (manifest and `viewport.themeColor`) stays `#4A47D6`, the app's accent, not the
+cover's `#3A36B8`.

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>YourKhata, K-b — Silaai (the stitched spine)</title>
+  <rect width="64" height="64" rx="15" fill="#4A47D6"/>
+  <path d="M24 30.5L42 11M24 34L50 16.5" stroke="#9D9AF0" stroke-width="2" fill="none"/>
+  <g transform="translate(12.4 42.06) scale(0.04 -0.04)"><path fill="#FFFFFF" d="M70.86 0V700H190.86V411.14L455.55 700H604.18L345.83 422.24L598 20Q664 -85 770 -85H1000V-197H700Q585 -197 500 -60L260.17 329.52L190.86 255.21V0Z"/></g><rect x="13.2" y="9" width="9" height="46" rx="1.5" fill="#FFFFFF"/><circle cx="17.7" cy="14" r="1.35" fill="#4A47D6"/><circle cx="17.7" cy="22" r="1.35" fill="#4A47D6"/><circle cx="17.7" cy="30" r="1.35" fill="#4A47D6"/><circle cx="17.7" cy="38" r="1.35" fill="#4A47D6"/><circle cx="17.7" cy="46" r="1.35" fill="#4A47D6"/>
+</svg>

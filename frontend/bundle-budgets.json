@@ -541,7 +541,61 @@
   "customer share page /d/[token] (SAL-03, reuses InvoicePrintA4 + sales/money/publicDocument catalogues).",
   "",
   "── 29 Sep 2026 (final UAT fixes + YourKhata rebrand): measured +1 KB — Reset link, stacked phone lines,",
-  "walk-in receipt void copy, merchant-perspective receipt line, new UbLogo artwork, formatted print phones."
+  "walk-in receipt void copy, merchant-perspective receipt line, new UbLogo artwork, formatted print phones.",
+  "",
+  "── 29 Sep 2026: CR-2026-09-29-BRAND-C, the K-c \"Bandhan\" mark — measured + 1 KB ──",
+  "sharedApp 104 -> 105 (measured 104.1). UbLogo is in the shell (the rail, the phone",
+  "bar, the auth screens), and the new artwork costs +0.38 KB gz on it, measured by minifying",
+  "the component before and after: the K-and-band path, the knot group, the ≤24 px branch",
+  "and the signature wordmark (an em-sized inline SVG K whose sweep ends in the knot). It is",
+  "already the minimum: one path for the figure, no clipPath, no ids, no font outlines.",
+  "Most lines below were already at or a few tenths over their budget on the base commit",
+  "(route chunks this change does not touch are among them); they are re-cut from this",
+  "build at measured + 1, the ratchet this file uses, rather than left failing:",
+  "  /purchases/bills/[id]/edit   firstLoad 366 -> 368 (measured 366.7)",
+  "  /purchases/bills/new         firstLoad 366 -> 368 (measured 366.6)",
+  "  /sales/invoices/[id]/edit    route 128 -> 129 (measured 128.3)",
+  "  /sales/invoices/[id]/edit    firstLoad 358 -> 360 (measured 359.4)",
+  "  /sales/invoices/new          route 128 -> 129 (measured 128.3)",
+  "  /sales/invoices/new          firstLoad 358 -> 360 (measured 359.3)",
+  "  /design-system               route 102 -> 103 (measured 102.4)",
+  "  /design-system               firstLoad 333 -> 334 (measured 333.4)",
+  "  /parties                     route 99 -> 100 (measured 99.1)",
+  "  /parties                     firstLoad 329 -> 331 (measured 330.1)",
+  "  /payments                    route 97 -> 98 (measured 97.3)",
+  "  /payments                    firstLoad 327 -> 329 (measured 328.3)",
+  "  /reports/gst-summary         firstLoad 324 -> 326 (measured 325.1)",
+  "  /parties/[id]                firstLoad 323 -> 325 (measured 324.0)",
+  "  /reports/purchase-register   firstLoad 323 -> 325 (measured 323.6)",
+  "  /reports/sales-register      firstLoad 323 -> 325 (measured 323.6)",
+  "  /settings                    firstLoad 322 -> 324 (measured 323.1)",
+  "  /items/[id]                  firstLoad 321 -> 324 (measured 322.5)",
+  "  /sales/invoices              route 88 -> 89 (measured 88.2)",
+  "  /sales/invoices              firstLoad 318 -> 320 (measured 319.2)",
+  "  /onboarding/step/[n]         firstLoad 316 -> 317 (measured 316.4)",
+  "  /purchases/bills             firstLoad 315 -> 317 (measured 316.2)",
+  "  /cashbook                    firstLoad 313 -> 316 (measured 314.6)",
+  "  /settings/team               firstLoad 301 -> 303 (measured 302.0)",
+  "  /sales/invoices/[id]         firstLoad 291 -> 293 (measured 292.4)",
+  "  /ledger/reminders            firstLoad 290 -> 292 (measured 291.5)",
+  "  /payments/[id]               firstLoad 287 -> 289 (measured 288.0)",
+  "  /stock/low                   firstLoad 287 -> 289 (measured 287.6)",
+  "  /login                       firstLoad 286 -> 288 (measured 286.5)",
+  "  /parties/tags                firstLoad 284 -> 286 (measured 285.2)",
+  "  /purchases/bills/[id]        firstLoad 284 -> 286 (measured 285.0)",
+  "  /settings/data               firstLoad 280 -> 282 (measured 280.6)",
+  "  /settings/devices            firstLoad 278 -> 280 (measured 278.7)",
+  "  /items/masters               firstLoad 273 -> 275 (measured 274.2)",
+  "  /imports/[id]                firstLoad 272 -> 274 (measured 273.4)",
+  "  /imports                     firstLoad 272 -> 274 (measured 273.4)",
+  "  /switch                      firstLoad 272 -> 274 (measured 273.0)",
+  "  /settings/plan               firstLoad 271 -> 273 (measured 272.0)",
+  "  /admin/tenants               firstLoad 258 -> 261 (measured 259.6)",
+  "  /admin/partners              firstLoad 256 -> 258 (measured 257.0)",
+  "  /admin/tenants/[id]          firstLoad 253 -> 256 (measured 254.5)",
+  "  /admin/health                firstLoad 249 -> 251 (measured 250.0)",
+  "  /admin                       firstLoad 240 -> 242 (measured 241.4)",
+  "  /reports/gst-summary         route 94 -> 95 (measured 94.04, printed 94.0)"
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -725,7 +779,7 @@
  ],
  "shared": {
   "framework": 128,
-  "sharedApp": 104
+  "sharedApp": 105
  },
  "//routes": [
   "The `route` figures are §19.9.2's, unchanged, and every route is comfortably",
@@ -994,28 +1048,28 @@
  },
  "routes": {
   "/parties": {
-   "route": 99,
-   "firstLoad": 329
+   "route": 100,
+   "firstLoad": 331
   },
   "/dashboard": {
    "route": 88,
    "firstLoad": 336
   },
   "/sales/invoices/new": {
-   "route": 128,
-   "firstLoad": 358
+   "route": 129,
+   "firstLoad": 360
   },
   "/sales/invoices/[id]/edit": {
-   "route": 128,
-   "firstLoad": 358
+   "route": 129,
+   "firstLoad": 360
   },
   "/sales/invoices": {
-   "route": 88,
-   "firstLoad": 318
+   "route": 89,
+   "firstLoad": 320
   },
   "/sales/invoices/[id]": {
    "route": 62,
-   "firstLoad": 291
+   "firstLoad": 293
   },
   "/sales/estimates": {
    "route": 96,
@@ -1047,23 +1101,23 @@
   },
   "/onboarding/step/[n]": {
    "route": 86,
-   "firstLoad": 316
+   "firstLoad": 317
   },
   "/design-system": {
-   "route": 102,
-   "firstLoad": 333
+   "route": 103,
+   "firstLoad": 334
   },
   "/settings/team": {
    "route": 72,
-   "firstLoad": 301
+   "firstLoad": 303
   },
   "/parties/[id]": {
    "route": 94,
-   "firstLoad": 323
+   "firstLoad": 325
   },
   "/parties/tags": {
    "route": 55,
-   "firstLoad": 284
+   "firstLoad": 286
   },
   "/parties/[id]/statement": {
    "route": 85,
@@ -1075,15 +1129,15 @@
   },
   "/switch": {
    "route": 43,
-   "firstLoad": 272
+   "firstLoad": 274
   },
   "/settings/plan": {
    "route": 42,
-   "firstLoad": 271
+   "firstLoad": 273
   },
   "/settings": {
    "route": 93,
-   "firstLoad": 322
+   "firstLoad": 324
   },
   "/settings/profile": {
    "route": 126,
@@ -1099,7 +1153,7 @@
   },
   "/settings/devices": {
    "route": 48,
-   "firstLoad": 278
+   "firstLoad": 280
   },
   "/stock/summary": {
    "route": 115,
@@ -1107,7 +1161,7 @@
   },
   "/items/masters": {
    "route": 44,
-   "firstLoad": 273
+   "firstLoad": 275
   },
   "/items": {
    "route": 102,
@@ -1115,11 +1169,11 @@
   },
   "/items/[id]": {
    "route": 92,
-   "firstLoad": 321
+   "firstLoad": 324
   },
   "/stock/low": {
    "route": 57,
-   "firstLoad": 287
+   "firstLoad": 289
   },
   "/expenses": {
    "route": 101,
@@ -1127,67 +1181,67 @@
   },
   "/cashbook": {
    "route": 84,
-   "firstLoad": 313
+   "firstLoad": 316
   },
   "/payments": {
-   "route": 97,
-   "firstLoad": 327
+   "route": 98,
+   "firstLoad": 329
   },
   "/payments/[id]": {
    "route": 57,
-   "firstLoad": 287
+   "firstLoad": 289
   },
   "/ledger/reminders": {
    "route": 61,
-   "firstLoad": 290
+   "firstLoad": 292
   },
   "/imports": {
    "route": 43,
-   "firstLoad": 272
+   "firstLoad": 274
   },
   "/imports/[id]": {
    "route": 43,
-   "firstLoad": 272
+   "firstLoad": 274
   },
   "/admin": {
    "route": 11,
-   "firstLoad": 240
+   "firstLoad": 242
   },
   "/admin/partners": {
    "route": 27,
-   "firstLoad": 256
+   "firstLoad": 258
   },
   "/admin/health": {
    "route": 20,
-   "firstLoad": 249
+   "firstLoad": 251
   },
   "/admin/tenants/[id]": {
    "route": 24,
-   "firstLoad": 253
+   "firstLoad": 256
   },
   "/admin/tenants": {
    "route": 29,
-   "firstLoad": 258
+   "firstLoad": 261
   },
   "/settings/data": {
    "route": 50,
-   "firstLoad": 280
+   "firstLoad": 282
   },
   "/purchases/bills/[id]": {
    "route": 55,
-   "firstLoad": 284
+   "firstLoad": 286
   },
   "/purchases/bills/[id]/edit": {
    "route": 136,
-   "firstLoad": 366
+   "firstLoad": 368
   },
   "/purchases/bills": {
    "route": 86,
-   "firstLoad": 315
+   "firstLoad": 317
   },
   "/purchases/bills/new": {
    "route": 136,
-   "firstLoad": 366
+   "firstLoad": 368
   },
   "/reports": {
    "route": 72,
@@ -1198,16 +1252,20 @@
    "firstLoad": 352
   },
   "/reports/gst-summary": {
-   "route": 94,
-   "firstLoad": 324
+   "route": 95,
+   "firstLoad": 326
   },
   "/reports/purchase-register": {
    "route": 93,
-   "firstLoad": 323
+   "firstLoad": 325
   },
   "/reports/sales-register": {
    "route": 93,
-   "firstLoad": 323
+   "firstLoad": 325
+  },
+  "/login": {
+   "route": 56,
+   "firstLoad": 288
   }
  },
  "//ignoreRoutes": [

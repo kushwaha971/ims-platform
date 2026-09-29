@@ -155,22 +155,42 @@ describe('the dark theme — text clears 4.5:1 wherever it lands', () => {
 describe('the brand mark is themed by tokens, not by a theme', () => {
   /**
    * §23.2.6 — the mark is identical in both themes on purpose. That is only
-   * true while the dark column leaves --brand-* alone, which is a thing a later
-   * "dark mode polish" would undo without noticing.
+   * true while the dark column leaves the mark's --brand-* values alone, which
+   * is a thing a later "dark mode polish" would undo without noticing. The one
+   * exception (CR-2026-09-29-BRAND-C) is --brand-knot, which is also the dot
+   * at the end of the wordmark's sweep and so sits on the theme's surface.
    */
-  it('defines every --brand-* value once, in the light column', () => {
+  it('defines the mark once, in the light column; dark restates only the knot', () => {
     const darkOnly = parse('dark.css', ':root[data-theme=');
-    expect(Object.keys(darkOnly).filter((name) => name.startsWith('brand-'))).toEqual([]);
-    for (const name of ['brand-mark', 'brand-page', 'brand-rule', 'brand-rule-soft']) {
+    expect(Object.keys(darkOnly).filter((name) => name.startsWith('brand-'))).toEqual([
+      'brand-knot',
+    ]);
+    for (const name of ['brand-cover', 'brand-hem', 'brand-figure', 'brand-knot']) {
       expect(() => resolve(light, name)).not.toThrow();
       expect(() => resolve(dark, name)).not.toThrow();
     }
   });
 
-  it('keeps the mark legible against its own paper in both themes', () => {
+  it('keeps the white K legible on its cover in both themes', () => {
+    // The K is a letter, so it takes the TEXT floor, not the 3:1 of a graphic.
     for (const raw of [light, dark]) {
-      expect(ratio(raw, 'brand-page', 'brand-mark')).toBeGreaterThanOrEqual(3);
-      expect(ratio(raw, 'brand-rule', 'brand-page')).toBeGreaterThanOrEqual(4.5);
+      expect(ratio(raw, 'brand-figure', 'brand-cover')).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  /**
+   * Decorative, and pinned only so a change is deliberate: the hem is meant
+   * to be quiet on the cover (it is dropped below 24 px), and the knot is
+   * never text — but it must stay visible on the white band it is tied on,
+   * and, as the wordmark's full stop, on the dark surfaces.
+   */
+  it('keeps the decorative hem quiet and the knot visible where it sits', () => {
+    for (const raw of [light, dark]) {
+      expect(ratio(raw, 'brand-hem', 'brand-cover')).toBeLessThan(3);
+      expect(ratio(raw, 'brand-knot', 'brand-figure')).toBeGreaterThanOrEqual(3);
+    }
+    for (const surface of ['canvas', 'surface-card', 'surface-nav']) {
+      expect(ratio(dark, 'brand-knot', surface)).toBeGreaterThanOrEqual(3);
     }
   });
 });

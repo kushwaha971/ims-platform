@@ -72,6 +72,14 @@
   --text-inverse: 214.29 30.43% 4.51%; /* ink-900 */
   --text-accent: var(--primary-300);
 
+  /* CR-2026-09-29-BRAND-C — the ONE --brand-* value with a dark step. The mark
+     itself does not change with the theme (its cover carries its own ground),
+     but the knot is also the full stop at the end of the wordmark's sweep, and
+     that dot sits on the theme's surface: #C8322B is 2.98:1 on a dark card.
+     Lifted, it is 4.57:1 on the canvas, 3.67:1 on a card, 4.10:1 on the rail
+     and still 4.31:1 on the mark's white band. Decorative, never text. */
+  --brand-knot: 3.08 67.24% 54.51%; /* #D9453D */
+
   --success: 150.85 60.68% 54.12%; /* #43D18C */
   --success-bright: 151.65 57.47% 43.33%; /* #2FAE72 */
   --success-dim: 158.33 54.55% 12.94%; /* #0F3326 */

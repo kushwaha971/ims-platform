@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>YourKhata, K-c — Bandhan (the tied bahi cover)</title>
+  <rect width="64" height="64" rx="15" fill="#3A36B8"/><defs><clipPath id="cc6"><rect width="64" height="64" rx="15"/></clipPath></defs>
+  <rect x="4.75" y="4.75" width="54.5" height="54.5" rx="11" fill="none" stroke="#716DE4" stroke-width="1.5"/>
+  <g clip-path="url(#cc6)"><g transform="translate(10.6 38.5) scale(0.04 -0.04)"><path fill="#FFFFFF" d="M70.86 0V700H190.86V411.14L455.55 700H604.18L345.83 422.24L598 20Q664 -85 770 -85H1400V-197H700Q585 -197 500 -60L260.17 329.52L190.86 255.21V0Z"/></g><rect x="0" y="41.9" width="20" height="4.48" fill="#FFFFFF"/>
+   <path d="M48 46L45 55M48 46L52 55" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+  <circle cx="48" cy="44.1" r="4.6" fill="#3A36B8"/><circle cx="48" cy="44.1" r="3.2" fill="#C8322B"/></g>
+</svg>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>YourKhata, K-d — Barabar (built from ledger rules)</title>
+  <rect width="64" height="64" rx="15" fill="#4A47D6"/>
+  <path fill="#FFFFFF" d="M24.5 27.2L43.3 10H51L28.4 30.6Z"/>
+  <path fill="#C6C4F9" d="M28.4 25.4L51 46H43.3L24.5 28.8Z"/>
+  <rect x="19" y="10" width="5.5" height="46" fill="#FFFFFF"/>
+  <rect x="12" y="46" width="40" height="3.5" fill="#FFFFFF"/><rect x="12" y="52.5" width="40" height="3.5" fill="#FFFFFF"/>
+</svg>
