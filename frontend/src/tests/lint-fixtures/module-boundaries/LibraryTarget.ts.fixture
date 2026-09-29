@@ -1,0 +1,4 @@
+// @lint-at: library/__lint_probe_boundaries__/target.ts
+// @expect: none
+export const PROBE_LIBRARY = 'library';
+export type ProbeLibraryCopy = { readonly id: string };

@@ -1,0 +1,6 @@
+// @lint-at: hospitality/__lint_probe_boundaries__/verticalImportsVerticalType.ts
+// @expect: fire
+// A type-only import is still a dependency on the other module's shape.
+import type { ProbeLibraryCopy } from 'modules/DigiKhaato/features/library/__lint_probe_boundaries__/target';
+
+export const probe = (copy: ProbeLibraryCopy): string => copy.id;

@@ -1,0 +1,11 @@
+// @lint-at: gym/__lint_probe_boundaries__/allowedImports.ts
+// @expect: none
+// The control: gym uses all three engines, and core features and src/ are open to it.
+import { formatAmount } from 'src/utils/money';
+
+import { TYPE_FILTERS } from 'modules/DigiKhaato/features/parties/constants/partyFilters';
+
+import { PROBE_BOOKINGS } from '../../bookings/__lint_probe_boundaries__/target';
+import { PROBE_DUES } from '../../dues/__lint_probe_boundaries__/target';
+
+export const probe = [PROBE_DUES, PROBE_BOOKINGS, TYPE_FILTERS.length, formatAmount];

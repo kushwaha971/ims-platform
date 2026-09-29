@@ -1,0 +1,3 @@
+// @lint-at: bookings/__lint_probe_boundaries__/target.ts
+// @expect: none
+export const PROBE_BOOKINGS = 'bookings';

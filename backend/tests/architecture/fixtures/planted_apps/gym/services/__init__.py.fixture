@@ -1,0 +1,1 @@
+from . import members  # allowed: the app's own package, relatively

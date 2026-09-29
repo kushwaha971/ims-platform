@@ -1,0 +1,6 @@
+// @lint-at: hospitality/__lint_probe_boundaries__/dynamicImportsInventory.ts
+// @expect: fire
+// The dynamic() spelling: a lazily loaded chunk from Shop & billing. no-restricted-imports
+// would not see this; the zone must.
+export const loadProbe = (): Promise<unknown> =>
+  import('modules/DigiKhaato/features/inventory/constants/inventoryConstants');

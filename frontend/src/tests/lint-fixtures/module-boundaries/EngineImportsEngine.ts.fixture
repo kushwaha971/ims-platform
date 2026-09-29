@@ -1,0 +1,6 @@
+// @lint-at: bookings/__lint_probe_boundaries__/engineImportsEngine.ts
+// @expect: fire
+// Engine to engine, spelt with the src/ alias.
+import { PROBE_DUES } from 'src/modules/DigiKhaato/features/dues/__lint_probe_boundaries__/target';
+
+export const probe = PROBE_DUES;

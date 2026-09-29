@@ -122,6 +122,64 @@ const PARTY_FETCH_ALLOWED = [
   'src/tests/**',
 ];
 
+// ── A11 ── module boundaries (ADR-041, 10-architecture §3 and §6.7, FRD 00 PLT-X14) ──
+//
+// Verticals over shared engines over core, never sideways — the frontend half
+// of `backend/tests/architecture/test_import_rules.py`, with the same matrix:
+//
+//  - an engine folder never imports another engine, a vertical, or Shop &
+//    billing (`sales`, `purchases`, `inventory`, `expenses`);
+//  - a vertical never imports another vertical, Shop & billing, or an engine it
+//    does not use. It may import the engines it uses, core features and `src/`.
+//
+// Written as `import/no-restricted-paths` zones rather than per-folder
+// `no-restricted-imports` patterns, deliberately. This rule matches the
+// RESOLVED file, so `modules/…`, `src/modules/…` and `../../library/…` are one
+// zone instead of three spellings to keep in step; it sees the `import()` inside
+// `dynamic()`, which `no-restricted-imports` does not — and a lazily loaded
+// panel is exactly how one module would reach into another; and its zones sit
+// in the one main block, where no later `files` block (the party-fetch
+// allowlist covers every test file) can quietly replace them.
+//
+// Proven by src/tests/moduleBoundaryLintRule.test.ts, which plants a bad import
+// of each kind and expects this rule to fire on it.
+const FEATURES_DIR = './src/modules/DigiKhaato/features';
+const ENGINE_FEATURES = ['dues', 'bookings', 'attendance'];
+const SHOP_AND_BILLING_FEATURES = ['sales', 'purchases', 'inventory', 'expenses'];
+/** vertical -> the engines it may import (the backend matrix, 10-architecture §10.1). */
+const VERTICAL_ENGINES = {
+  lending: ['dues'],
+  library: ['dues', 'bookings', 'attendance'],
+  gym: ['dues', 'attendance', 'bookings'],
+  hospitality: ['bookings', 'dues'],
+};
+const VERTICAL_FEATURES = Object.keys(VERTICAL_ENGINES);
+const MODULE_BOUNDARY_MESSAGE =
+  'Module boundary (ADR-041): verticals import engines they use and core; engines import core; nobody imports sideways or Shop & billing. Go through a core registry instead.';
+
+const boundaryZone = (target, from) => ({
+  target: `${FEATURES_DIR}/${target}`,
+  from: `${FEATURES_DIR}/${from}`,
+  message: MODULE_BOUNDARY_MESSAGE,
+});
+
+const MODULE_BOUNDARY_ZONES = [
+  ...ENGINE_FEATURES.flatMap((engine) =>
+    [
+      ...ENGINE_FEATURES.filter((other) => other !== engine),
+      ...VERTICAL_FEATURES,
+      ...SHOP_AND_BILLING_FEATURES,
+    ].map((from) => boundaryZone(engine, from))
+  ),
+  ...VERTICAL_FEATURES.flatMap((vertical) =>
+    [
+      ...VERTICAL_FEATURES.filter((other) => other !== vertical),
+      ...SHOP_AND_BILLING_FEATURES,
+      ...ENGINE_FEATURES.filter((engine) => !VERTICAL_ENGINES[vertical].includes(engine)),
+    ].map((from) => boundaryZone(vertical, from))
+  ),
+];
+
 const config = [
   {
     ignores: [
@@ -139,6 +197,9 @@ const config = [
       // Ignored so that an `npm run lint` running at the same moment neither
       // reports them nor crashes on a file deleted mid-walk.
       'src/modules/DigiKhaato/features/__lint_probe_*/**',
+      // src/tests/moduleBoundaryLintRule.test.ts plants its probes INSIDE the
+      // engine and vertical folders, because the zones key on those folders.
+      'src/modules/DigiKhaato/features/*/__lint_probe_*/**',
     ],
   },
   ...next,
@@ -229,6 +290,7 @@ const config = [
               from: './src/api',
               message: 'Route files are thin (Part 19 §19.1.4).',
             },
+            ...MODULE_BOUNDARY_ZONES,
           ],
         },
       ],

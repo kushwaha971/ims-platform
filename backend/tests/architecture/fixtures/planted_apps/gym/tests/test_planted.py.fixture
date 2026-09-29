@@ -1,0 +1,2 @@
+# Tests are excluded (BR-1): a test may build a fake of another app freely.
+from apps.library.models import Copy  # not reported

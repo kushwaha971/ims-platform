@@ -1,0 +1,7 @@
+// @lint-at: dues/__lint_probe_boundaries__/engineImportsSales.ts
+// @expect: fire
+// An engine reaching into Shop & billing: dues must get a tax invoice through the
+// document port, never by importing sales.
+import { INVOICE_PRESETS } from 'modules/DigiKhaato/features/sales/constants/salesConstants';
+
+export const probe = INVOICE_PRESETS.length;

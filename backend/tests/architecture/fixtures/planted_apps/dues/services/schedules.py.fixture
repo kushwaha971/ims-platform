@@ -1,0 +1,16 @@
+"""Planted: a fake dues engine. Never imported; parsed by the A11 test."""
+
+from apps.payments.services.targets import register_target  # allowed: core
+from apps.reports.registry import register_report  # REFUSED: R27 is for verticals only
+
+
+def name_subject():
+    from apps.gym.selectors.members import member_label  # REFUSED: engine -> vertical
+
+    return member_label
+
+
+def count_marks():
+    from apps.attendance import services  # REFUSED: engine -> engine
+
+    return services

@@ -1,0 +1,39 @@
+"""Planted: a fake gym vertical. Never imported; parsed by the A11 test."""
+
+from __future__ import annotations
+
+import importlib
+from typing import TYPE_CHECKING
+
+from apps.ledger.services.postings import post_source_entry  # allowed: core
+from apps.reports.registry import register_report  # allowed: R27
+from apps.reports import registry  # allowed: R27, the other spelling
+import apps.imports.registry  # allowed: R27
+from apps.dues.services.schedules import create_schedule  # allowed: an engine gym uses
+from apps.reports import selectors  # REFUSED: reports, but not its registry
+from apps.reports import *  # REFUSED: a star import is the whole app
+
+from ...sales import models  # REFUSED: relative, resolves to apps.sales
+
+if TYPE_CHECKING:
+    from apps.hospitality.models import Stay  # REFUSED: TYPE_CHECKING still counts (EC-1)
+
+
+def sell_membership():
+    from apps.library.services.loans import issue_loan  # REFUSED: deferred sideways import
+
+    return issue_loan
+
+
+def load_items():
+    return importlib.import_module("apps.inventory.models")  # REFUSED: string import
+
+
+def load_lending():
+    return __import__("apps.lending")  # REFUSED: string import
+
+
+def run_import():
+    from apps.imports.services.engine import run  # REFUSED: imports, but not its registry
+
+    return run

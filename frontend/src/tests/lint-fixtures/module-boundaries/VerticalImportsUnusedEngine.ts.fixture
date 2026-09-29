@@ -1,0 +1,6 @@
+// @lint-at: lending/__lint_probe_boundaries__/verticalImportsUnusedEngine.ts
+// @expect: fire
+// Lending uses the dues engine only (10-architecture §10.1); bookings is not its.
+import { PROBE_BOOKINGS } from 'modules/DigiKhaato/features/bookings/__lint_probe_boundaries__/target';
+
+export const probe = PROBE_BOOKINGS;

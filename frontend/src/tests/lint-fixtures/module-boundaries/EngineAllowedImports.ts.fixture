@@ -1,0 +1,6 @@
+// @lint-at: attendance/__lint_probe_boundaries__/allowedImports.ts
+// @expect: none
+// The control: an engine may import core features and its own folder.
+import { TYPE_FILTERS } from 'modules/DigiKhaato/features/parties/constants/partyFilters';
+
+export const probe = TYPE_FILTERS.length;

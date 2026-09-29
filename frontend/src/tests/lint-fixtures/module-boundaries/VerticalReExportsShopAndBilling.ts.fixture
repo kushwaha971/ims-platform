@@ -1,0 +1,4 @@
+// @lint-at: library/__lint_probe_boundaries__/reExportsSales.ts
+// @expect: fire
+// A re-export is an import wearing a different keyword.
+export { DEFAULT_INVOICE_PRESET } from 'modules/DigiKhaato/features/sales/constants/salesConstants';

@@ -1,0 +1,6 @@
+// @lint-at: gym/__lint_probe_boundaries__/verticalImportsVertical.ts
+// @expect: fire
+// Vertical to vertical by a RELATIVE path — the spelling a pattern list would miss.
+import { PROBE_LIBRARY } from '../../library/__lint_probe_boundaries__/target';
+
+export const probe = PROBE_LIBRARY;
