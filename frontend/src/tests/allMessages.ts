@@ -30,6 +30,8 @@ import itemPickerEn from 'locales/catalogues/itemPicker.en.json';
 import itemPickerHi from 'locales/catalogues/itemPicker.hi.json';
 import itemsEn from 'locales/catalogues/items.en.json';
 import itemsHi from 'locales/catalogues/items.hi.json';
+import landingEn from 'locales/catalogues/landing.en.json';
+import landingHi from 'locales/catalogues/landing.hi.json';
 import ledgerEn from 'locales/catalogues/ledger.en.json';
 import ledgerHi from 'locales/catalogues/ledger.hi.json';
 import legalEn from 'locales/catalogues/legal.en.json';
@@ -112,6 +114,7 @@ export const en: Readonly<Record<string, string>> = {
   ...inventoryEn,
   ...itemPickerEn,
   ...itemsEn,
+  ...landingEn,
   ...ledgerEn,
   ...legalEn,
   ...moneyEn,
@@ -156,6 +159,7 @@ export const hi: Readonly<Record<string, string>> = {
   ...inventoryHi,
   ...itemPickerHi,
   ...itemsHi,
+  ...landingHi,
   ...ledgerHi,
   ...legalHi,
   ...moneyHi,

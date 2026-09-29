@@ -339,6 +339,11 @@ module.exports = {
         mono: ['var(--font-mono)'],
         fraunces: ['var(--font-fraunces)', 'Georgia', 'serif'],
         epilogue: ['var(--font-epilogue)', 'var(--font-ui)'],
+        /* The landing page's italic lead lines — Fraunces italic, a separate
+           face loaded (and preloaded) by `/` alone (src/fonts/landing.ts). The
+           upright Fraunces is the fallback, so a missing file degrades to the
+           browser's oblique rather than to Georgia. */
+        'serif-display': ['var(--font-fraunces-italic)', 'var(--font-fraunces)', 'Georgia', 'serif'],
       },
       maxWidth: {
         content: 'var(--content-max)',

@@ -1040,7 +1040,22 @@
   "slices inject lazily (CR-134). The ~156 `purchases.*` keys are in",
   "`locales/*.json`, as sales' are, so the shell grows by their share; the lead",
   "measures after merge and either tightens these lines or moves the strings to",
-  "a route-local catalogue as W2-C did."
+  "a route-local catalogue as W2-C did.",
+  "── 29 Sep 2026: the public landing page at / ─────────────────────────────",
+  "`/` used to be a redirect (0.0 KB). It is now the landing page, and all of",
+  "it is route-local: the page tree, its 205 `landing.*` strings (their own",
+  "catalogue, never in the shell), and the new design-system primitives it uses",
+  "(UbVideo, UbDeviceFrame, UbReveal, UbRotatingText, UbChipTabs, UbAmbientGlow)",
+  "— the barrel's `sideEffects` line keeps them out of every other route. No",
+  "slice, no new dependency. The narrated-demo dialog is `dynamic()` and fetched",
+  "on the first 'Watch the demo' click. Measured: route 30.3, firstLoad 261.4.",
+  "  /                      route 56 (default) -> 32    firstLoad 286 -> 263",
+  "The shell moved 104.1 -> 104.2: `/` joined PUBLIC_ROUTE_PREFIXES with an",
+  "exact-match rule in `isPublicPath`, which every route carries. Two routes sat",
+  "at exactly their tripwire before this change and moved by that 0.1 plus",
+  "UbDisclosure's new `size` prop (both render a disclosure):",
+  "  /settings/profile      firstLoad 357 -> 358  (measured 357.1)",
+  "  /parties/[id]/statement firstLoad 315 -> 316 (measured 315.1)"
  ],
  "default": {
   "route": 56,
@@ -1121,7 +1136,7 @@
   },
   "/parties/[id]/statement": {
    "route": 85,
-   "firstLoad": 315
+   "firstLoad": 316
   },
   "/ledger/aging": {
    "route": 84,
@@ -1141,7 +1156,7 @@
   },
   "/settings/profile": {
    "route": 126,
-   "firstLoad": 357
+   "firstLoad": 358
   },
   "/settings/branding": {
    "route": 82,
@@ -1266,6 +1281,10 @@
   "/login": {
    "route": 56,
    "firstLoad": 288
+  },
+  "/": {
+   "route": 32,
+   "firstLoad": 263
   }
  },
  "//ignoreRoutes": [

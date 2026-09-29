@@ -90,6 +90,7 @@
     "settings.noAccess.": "settingsGate",
     "settings.viewOnly": "settingsGate",
     "settings.action.": "settingsGate",
-    "tax.rate.": "money"
+    "tax.rate.": "money",
+    "landing.": "landing"
   }
 }

@@ -24,6 +24,18 @@ export const SW_ENABLED: boolean = process.env.NEXT_PUBLIC_SW_ENABLED === 'true'
 export const ANALYTICS_ENABLED: boolean = process.env.NEXT_PUBLIC_ANALYTICS_ENABLED === 'true';
 export const COMMIT_SHA: string = process.env.NEXT_PUBLIC_COMMIT_SHA ?? 'dev';
 
+/**
+ * The landing page's narrated demo films. They are not in git (owner: too big,
+ * re-cut too often), so a deployment points these at wherever it hosts them;
+ * the defaults are the files a local checkout keeps untracked under
+ * `public/media/landing/`. The dialog shows a message and a sign-up link when
+ * the file is not there, so an unset variable is a degraded page, not a broken one.
+ */
+export const DEMO_VIDEO_URL_DESKTOP: string =
+  process.env.NEXT_PUBLIC_DEMO_VIDEO_URL_DESKTOP || '/media/landing/demo-desktop-720.mp4';
+export const DEMO_VIDEO_URL_MOBILE: string =
+  process.env.NEXT_PUBLIC_DEMO_VIDEO_URL_MOBILE || '/media/landing/demo-mobile.mp4';
+
 /** Money and quantity ceilings; strings, because money is a string end to end. */
 export const MAX_AMOUNT = '99999999.99';
 export const MAX_QTY = '9999999.999';

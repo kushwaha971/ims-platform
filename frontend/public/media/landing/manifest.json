@@ -1,0 +1,553 @@
+{
+  "version": 1,
+  "generated": "2026-09-29",
+  "note": "Silent loops cut from real YourKhata UI recordings (K-c logo build). Posters equal each loop's first frame. Emails are blurred in source; the UPI handle sharmakirana.demo@example is seeded demo data.",
+  "assets": [
+    {
+      "id": "hero-desktop",
+      "kind": "hero",
+      "device": "desktop",
+      "width": 1280,
+      "height": 800,
+      "duration": 13.47,
+      "fps": 30,
+      "loop": true,
+      "audio": false,
+      "sources": [
+        {
+          "src": "/media/landing/hero-desktop.webm",
+          "type": "video/webm; codecs=vp9",
+          "bytes": 614940
+        },
+        {
+          "src": "/media/landing/hero-desktop.mp4",
+          "type": "video/mp4; codecs=avc1.4D4020",
+          "bytes": 522880
+        }
+      ],
+      "bytes": 1137820,
+      "poster": {
+        "webp": "/media/landing/hero-desktop-poster.webp",
+        "jpg": "/media/landing/hero-desktop-poster.jpg",
+        "bytes": {
+          "webp": 48176,
+          "jpg": 78175
+        }
+      },
+      "alt": "YourKhata desktop app: dashboard with To collect and To pay totals, then Ramesh Traders' khata where a 'You gave' entry of ₹1,200 is saved, then a GST tax invoice being filled in, then the issued invoice INV/26-27/0011.",
+      "caption": "Dashboard, udhaar entry, GST bill and finished invoice in one loop: ₹1,200 'You gave' updates the khata balance, and a 2-item bill totals ₹1,465 with CGST/SGST split automatically."
+    },
+    {
+      "id": "hero-mobile",
+      "kind": "hero",
+      "device": "mobile",
+      "width": 780,
+      "height": 1688,
+      "duration": 10.5,
+      "fps": 30,
+      "loop": true,
+      "audio": false,
+      "sources": [
+        {
+          "src": "/media/landing/hero-mobile.webm",
+          "type": "video/webm; codecs=vp9",
+          "bytes": 808670
+        },
+        {
+          "src": "/media/landing/hero-mobile.mp4",
+          "type": "video/mp4; codecs=avc1.4D4028",
+          "bytes": 599170
+        }
+      ],
+      "bytes": 1407840,
+      "poster": {
+        "webp": "/media/landing/hero-mobile-poster.webp",
+        "jpg": "/media/landing/hero-mobile-poster.jpg",
+        "bytes": {
+          "webp": 59464,
+          "jpg": 56908
+        }
+      },
+      "alt": "YourKhata on a phone: the dashboard, then a ₹1,200 'You gave' entry saved to Ramesh Traders' khata, then the GST bill totals and the issued invoice.",
+      "caption": "The same khata and GST billing on mobile: record udhaar in a few taps and issue a ₹1,465 tax invoice with CGST and SGST shown."
+    },
+    {
+      "id": "feat-khata-desktop",
+      "kind": "feature",
+      "device": "desktop",
+      "width": 1280,
+      "height": 800,
+      "duration": 8.03,
+      "fps": 30,
+      "loop": true,
+      "audio": false,
+      "sources": [
+        {
+          "src": "/media/landing/feat-khata-desktop.webm",
+          "type": "video/webm; codecs=vp9",
+          "bytes": 243678
+        },
+        {
+          "src": "/media/landing/feat-khata-desktop.mp4",
+          "type": "video/mp4; codecs=avc1.4D4020",
+          "bytes": 196446
+        }
+      ],
+      "bytes": 440124,
+      "poster": {
+        "webp": "/media/landing/feat-khata-desktop-poster.webp",
+        "jpg": "/media/landing/feat-khata-desktop-poster.jpg",
+        "bytes": {
+          "webp": 38318,
+          "jpg": 73907
+        }
+      },
+      "alt": "Opening Ramesh Traders from the customer list and recording 'You gave ₹1,200' with a note; the khata balance updates to ₹1,200.",
+      "caption": "Record udhaar in seconds; the running balance updates the moment you save."
+    },
+    {
+      "id": "feat-khata-mobile",
+      "kind": "feature",
+      "device": "mobile",
+      "width": 584,
+      "height": 1264,
+      "duration": 8.67,
+      "fps": 30,
+      "loop": true,
+      "audio": false,
+      "sources": [
+        {
+          "src": "/media/landing/feat-khata-mobile.webm",
+          "type": "video/webm; codecs=vp9",
+          "bytes": 282013
+        },
+        {
+          "src": "/media/landing/feat-khata-mobile.mp4",
+          "type": "video/mp4; codecs=avc1.4D401F",
+          "bytes": 187508
+        }
+      ],
+      "bytes": 469521,
+      "poster": {
+        "webp": "/media/landing/feat-khata-mobile-poster.webp",
+        "jpg": "/media/landing/feat-khata-mobile-poster.jpg",
+        "bytes": {
+          "webp": 21322,
+          "jpg": 52844
+        }
+      },
+      "alt": "Opening Ramesh Traders on a phone and recording 'You gave ₹1,200', then 'You got ₹500'; the running balance goes to ₹1,200 and then ₹700.",
+      "caption": "Record udhaar in seconds; the running balance updates the moment you save."
+    },
+    {
+      "id": "feat-reminder-desktop",
+      "kind": "feature",
+      "device": "desktop",
+      "width": 1280,
+      "height": 800,
+      "duration": 8.43,
+      "fps": 30,
+      "loop": true,
+      "audio": false,
+      "sources": [
+        {
+          "src": "/media/landing/feat-reminder-desktop.webm",
+          "type": "video/webm; codecs=vp9",
+          "bytes": 343579
+        },
+        {
+          "src": "/media/landing/feat-reminder-desktop.mp4",
+          "type": "video/mp4; codecs=avc1.4D4020",
+          "bytes": 250262
+        }
+      ],
+      "bytes": 593841,
+      "poster": {
+        "webp": "/media/landing/feat-reminder-desktop-poster.webp",
+        "jpg": "/media/landing/feat-reminder-desktop-poster.jpg",
+        "bytes": {
+          "webp": 27460,
+          "jpg": 72692
+        }
+      },
+      "alt": "A customer statement, the Send reminder dialog with a ready WhatsApp message, and the Aging report bucketing dues by 0-30, 31-60, 61-90 and 90+ days.",
+      "caption": "Send a statement or WhatsApp reminder from the khata and see who owes what, by age, on the Aging report."
+    },
+    {
+      "id": "feat-reminder-mobile",
+      "kind": "feature",
+      "device": "mobile",
+      "width": 584,
+      "height": 1264,
+      "duration": 7.6,
+      "fps": 30,
+      "loop": true,
+      "audio": false,
+      "sources": [
+        {
+          "src": "/media/landing/feat-reminder-mobile.webm",
+          "type": "video/webm; codecs=vp9",
+          "bytes": 253054
+        },
+        {
+          "src": "/media/landing/feat-reminder-mobile.mp4",
+          "type": "video/mp4; codecs=avc1.4D401F",
+          "bytes": 204427
+        }
+      ],
+      "bytes": 457481,
+      "poster": {
+        "webp": "/media/landing/feat-reminder-mobile-poster.webp",
+        "jpg": "/media/landing/feat-reminder-mobile-poster.jpg",
+        "bytes": {
+          "webp": 22688,
+          "jpg": 57718
+        }
+      },
+      "alt": "On a phone: More actions, then Send reminder with a prefilled WhatsApp message, then the Aging report of dues by age.",
+      "caption": "Send a statement or WhatsApp reminder from the khata and see who owes what, by age, on the Aging report."
+    },
+    {
+      "id": "feat-bill-desktop",
+      "kind": "feature",
+      "device": "desktop",
+      "width": 1280,
+      "height": 800,
+      "duration": 8.47,
+      "fps": 30,
+      "loop": true,
+      "audio": false,
+      "sources": [
+        {
+          "src": "/media/landing/feat-bill-desktop.webm",
+          "type": "video/webm; codecs=vp9",
+          "bytes": 297455
+        },
+        {
+          "src": "/media/landing/feat-bill-desktop.mp4",
+          "type": "video/mp4; codecs=avc1.4D4020",
+          "bytes": 257787
+        }
+      ],
+      "bytes": 555242,
+      "poster": {
+        "webp": "/media/landing/feat-bill-desktop-poster.webp",
+        "jpg": "/media/landing/feat-bill-desktop-poster.jpg",
+        "bytes": {
+          "webp": 30708,
+          "jpg": 71005
+        }
+      },
+      "alt": "Filling a GST tax invoice for Ramesh Traders with two items; CGST and SGST are calculated automatically to a ₹1,465 grand total, then the issued invoice with Share on WhatsApp and Print options.",
+      "caption": "GST invoices with CGST/SGST worked out for you, ready to print or share on WhatsApp."
+    },
+    {
+      "id": "feat-bill-mobile",
+      "kind": "feature",
+      "device": "mobile",
+      "width": 584,
+      "height": 1264,
+      "duration": 6.57,
+      "fps": 30,
+      "loop": true,
+      "audio": false,
+      "sources": [
+        {
+          "src": "/media/landing/feat-bill-mobile.webm",
+          "type": "video/webm; codecs=vp9",
+          "bytes": 574472
+        },
+        {
+          "src": "/media/landing/feat-bill-mobile.mp4",
+          "type": "video/mp4; codecs=avc1.4D401F",
+          "bytes": 369643
+        }
+      ],
+      "bytes": 944115,
+      "poster": {
+        "webp": "/media/landing/feat-bill-mobile-poster.webp",
+        "jpg": "/media/landing/feat-bill-mobile-poster.jpg",
+        "bytes": {
+          "webp": 19896,
+          "jpg": 57742
+        }
+      },
+      "alt": "Adding items to a GST bill on a phone; CGST and SGST fill in automatically to a ₹1,465 total, then the issued invoice with Share on WhatsApp.",
+      "caption": "GST invoices with CGST/SGST worked out for you, ready to print or share on WhatsApp."
+    },
+    {
+      "id": "feat-stock-desktop",
+      "kind": "feature",
+      "device": "desktop",
+      "width": 1280,
+      "height": 800,
+      "duration": 7.33,
+      "fps": 30,
+      "loop": true,
+      "audio": false,
+      "sources": [
+        {
+          "src": "/media/landing/feat-stock-desktop.webm",
+          "type": "video/webm; codecs=vp9",
+          "bytes": 309956
+        },
+        {
+          "src": "/media/landing/feat-stock-desktop.mp4",
+          "type": "video/mp4; codecs=avc1.4D4020",
+          "bytes": 248867
+        }
+      ],
+      "bytes": 558823,
+      "poster": {
+        "webp": "/media/landing/feat-stock-desktop-poster.webp",
+        "jpg": "/media/landing/feat-stock-desktop-poster.jpg",
+        "bytes": {
+          "webp": 39744,
+          "jpg": 73138
+        }
+      },
+      "alt": "The Items list with a low-stock filter, an item's stock card and movements, and a stock adjustment for damaged goods.",
+      "caption": "Track items and stock levels, spot low stock, and post stock adjustments."
+    },
+    {
+      "id": "feat-stock-mobile",
+      "kind": "feature",
+      "device": "mobile",
+      "width": 584,
+      "height": 1264,
+      "duration": 6.3,
+      "fps": 30,
+      "loop": true,
+      "audio": false,
+      "sources": [
+        {
+          "src": "/media/landing/feat-stock-mobile.webm",
+          "type": "video/webm; codecs=vp9",
+          "bytes": 192096
+        },
+        {
+          "src": "/media/landing/feat-stock-mobile.mp4",
+          "type": "video/mp4; codecs=avc1.4D401F",
+          "bytes": 180275
+        }
+      ],
+      "bytes": 372371,
+      "poster": {
+        "webp": "/media/landing/feat-stock-mobile-poster.webp",
+        "jpg": "/media/landing/feat-stock-mobile-poster.jpg",
+        "bytes": {
+          "webp": 32636,
+          "jpg": 55956
+        }
+      },
+      "alt": "The Items list on a phone, filtered to low stock, then the Sugar 1kg stock card with reorder point and stock movements.",
+      "caption": "See stock levels and low-stock items on your phone."
+    },
+    {
+      "id": "feat-purchase-desktop",
+      "kind": "feature",
+      "device": "desktop",
+      "width": 1280,
+      "height": 800,
+      "duration": 7.5,
+      "fps": 30,
+      "loop": true,
+      "audio": false,
+      "sources": [
+        {
+          "src": "/media/landing/feat-purchase-desktop.webm",
+          "type": "video/webm; codecs=vp9",
+          "bytes": 308335
+        },
+        {
+          "src": "/media/landing/feat-purchase-desktop.mp4",
+          "type": "video/mp4; codecs=avc1.4D4020",
+          "bytes": 244223
+        }
+      ],
+      "bytes": 552558,
+      "poster": {
+        "webp": "/media/landing/feat-purchase-desktop-poster.webp",
+        "jpg": "/media/landing/feat-purchase-desktop-poster.jpg",
+        "bytes": {
+          "webp": 33642,
+          "jpg": 79566
+        }
+      },
+      "alt": "Recording a purchase bill from Gupta Wholesale with GST, marking it paid, and paying the supplier against an open bill.",
+      "caption": "Enter purchase bills with input GST and record supplier payments against them."
+    },
+    {
+      "id": "feat-purchase-mobile",
+      "kind": "feature",
+      "device": "mobile",
+      "width": 584,
+      "height": 1264,
+      "duration": 6.67,
+      "fps": 30,
+      "loop": true,
+      "audio": false,
+      "sources": [
+        {
+          "src": "/media/landing/feat-purchase-mobile.webm",
+          "type": "video/webm; codecs=vp9",
+          "bytes": 323237
+        },
+        {
+          "src": "/media/landing/feat-purchase-mobile.mp4",
+          "type": "video/mp4; codecs=avc1.4D401F",
+          "bytes": 264903
+        }
+      ],
+      "bytes": 588140,
+      "poster": {
+        "webp": "/media/landing/feat-purchase-mobile-poster.webp",
+        "jpg": "/media/landing/feat-purchase-mobile-poster.jpg",
+        "bytes": {
+          "webp": 23806,
+          "jpg": 57205
+        }
+      },
+      "alt": "Entering a purchase bill from Gupta Wholesale on a phone, then marking ₹2,100 paid to the supplier with the Paid now sheet.",
+      "caption": "Record purchase bills and supplier payments from your phone."
+    },
+    {
+      "id": "feat-reports-desktop",
+      "kind": "feature",
+      "device": "desktop",
+      "width": 1280,
+      "height": 800,
+      "duration": 6.63,
+      "fps": 30,
+      "loop": true,
+      "audio": false,
+      "sources": [
+        {
+          "src": "/media/landing/feat-reports-desktop.webm",
+          "type": "video/webm; codecs=vp9",
+          "bytes": 413507
+        },
+        {
+          "src": "/media/landing/feat-reports-desktop.mp4",
+          "type": "video/mp4; codecs=avc1.4D4020",
+          "bytes": 398329
+        }
+      ],
+      "bytes": 811836,
+      "poster": {
+        "webp": "/media/landing/feat-reports-desktop-poster.webp",
+        "jpg": "/media/landing/feat-reports-desktop-poster.jpg",
+        "bytes": {
+          "webp": 31838,
+          "jpg": 79717
+        }
+      },
+      "alt": "The Reports hub, the Day book listing every entry with running cash and bank, and the GST summary with output tax, ITC and net GST payable.",
+      "caption": "Day book and GST summary built from your everyday entries."
+    },
+    {
+      "id": "feat-reports-mobile",
+      "kind": "feature",
+      "device": "mobile",
+      "width": 584,
+      "height": 1264,
+      "duration": 6.4,
+      "fps": 30,
+      "loop": true,
+      "audio": false,
+      "sources": [
+        {
+          "src": "/media/landing/feat-reports-mobile.webm",
+          "type": "video/webm; codecs=vp9",
+          "bytes": 587290
+        },
+        {
+          "src": "/media/landing/feat-reports-mobile.mp4",
+          "type": "video/mp4; codecs=avc1.4D401F",
+          "bytes": 362310
+        }
+      ],
+      "bytes": 949600,
+      "poster": {
+        "webp": "/media/landing/feat-reports-mobile-poster.webp",
+        "jpg": "/media/landing/feat-reports-mobile-poster.jpg",
+        "bytes": {
+          "webp": 33218,
+          "jpg": 59985
+        }
+      },
+      "alt": "On a phone: the Reports hub, the Day book with opening and closing cash, and the GST summary.",
+      "caption": "Day book and GST summary built from your everyday entries."
+    },
+    {
+      "id": "demo-desktop-720",
+      "kind": "demo",
+      "device": "desktop",
+      "width": 1280,
+      "height": 720,
+      "duration": 716.14,
+      "fps": 30,
+      "loop": false,
+      "audio": true,
+      "sources": [
+        {
+          "src": "/media/landing/demo-desktop-720.mp4",
+          "type": "video/mp4; codecs=avc1.4D401F, mp4a.40.2",
+          "bytes": 15845976
+        }
+      ],
+      "bytes": 15845976,
+      "poster": {
+        "webp": "/media/landing/demo-desktop-720-poster.webp",
+        "jpg": "/media/landing/demo-desktop-720-poster.jpg",
+        "bytes": {
+          "webp": 33812,
+          "jpg": 71119
+        }
+      },
+      "captions": {
+        "src": "/media/landing/demo-desktop-720.vtt",
+        "srclang": "hi-Latn",
+        "label": "Hinglish",
+        "burnedIn": true
+      },
+      "alt": "Full narrated walkthrough of YourKhata on desktop, in Hinglish with burned-in captions: login, khata, reminders, stock, GST billing, purchases, expenses, reports, import and team.",
+      "caption": "About 12-minute guided tour of every YourKhata desktop workflow."
+    },
+    {
+      "id": "demo-mobile",
+      "kind": "demo",
+      "device": "mobile",
+      "width": 540,
+      "height": 960,
+      "duration": 529.07,
+      "fps": 30,
+      "loop": false,
+      "audio": true,
+      "sources": [
+        {
+          "src": "/media/landing/demo-mobile.mp4",
+          "type": "video/mp4; codecs=avc1.4D401F, mp4a.40.2",
+          "bytes": 10163262
+        }
+      ],
+      "bytes": 10163262,
+      "poster": {
+        "webp": "/media/landing/demo-mobile-poster.webp",
+        "jpg": "/media/landing/demo-mobile-poster.jpg",
+        "bytes": {
+          "webp": 22436,
+          "jpg": 45999
+        }
+      },
+      "captions": {
+        "src": "/media/landing/demo-mobile.vtt",
+        "srclang": "hi-Latn",
+        "label": "Hinglish",
+        "burnedIn": true
+      },
+      "alt": "Full narrated walkthrough of YourKhata on a phone, in Hinglish with burned-in captions: sign-up, shop setup, khata, reminders, payments, stock, GST bill, purchases, expenses and reports.",
+      "caption": "About 9-minute guided tour of YourKhata on mobile."
+    }
+  ]
+}

@@ -225,3 +225,105 @@ describe('no copy for unbuilt features or retired behaviour (UAT D8)', () => {
     expect(hiMessages['parties.form.opening.notPostedYet']).toBeUndefined();
   });
 });
+
+/**
+ * The landing page (`/`) is the one surface whose whole job is to make claims,
+ * so it gets the whole list rather than one row per key. Owner, verbatim in
+ * substance: never mention a feature that is not built — offline mode, SMS or
+ * email sending, e-invoice or e-way bill, GST return filing, bank sync, a
+ * payment gateway, barcode, P&L or balance sheet, multiple branches, a native
+ * app — and no testimonials, user counts, ratings or invented figures.
+ *
+ * Every `landing.*` string in both languages is checked. The one exception is
+ * the FAQ answer about e-invoicing, which exists to say plainly that it is NOT
+ * supported; it is allowed the word, and is required to carry the "not".
+ */
+describe('the landing page promises only what is built', () => {
+  const enMessages = en as Record<string, string>;
+  const hiMessages = hi as Record<string, string>;
+  const landingKeys = Object.keys(enMessages).filter((key) => key.startsWith('landing.'));
+  const E_INVOICE_FAQ = new Set(['landing.faq.einvoice.q', 'landing.faq.einvoice.a']);
+
+  const UNBUILT: readonly { readonly what: string; readonly en: RegExp; readonly hi: RegExp }[] = [
+    { what: 'offline mode', en: /off-?line/i, hi: /ऑफ़?लाइन/u },
+    { what: 'SMS sending', en: /\bSMS\b|text message/i, hi: /SMS|एसएमएस/u },
+    {
+      what: 'email sending (DEC-012)',
+      en: /(send|sent|sends|by)\s+(an\s+)?e-?mail|e-?mail(ed|s)?\s+(to|reminders?|invoices?|bills?|statements?)/i,
+      hi: /ई-?मेल\s*(से|पर)\s*(भेज|रिमाइंडर|बिल)/u,
+    },
+    { what: 'e-invoice', en: /e-?invoic/i, hi: /ई-?इनवॉइस/u },
+    { what: 'e-way bill', en: /e-?way/i, hi: /ई-?वे/u },
+    { what: 'GST return filing', en: /GSTR|file (your )?(GST )?returns?|return filing/i, hi: /GSTR|रिटर्न/u },
+    { what: 'bank sync', en: /\bbank\b/i, hi: /बैंक/u },
+    { what: 'a payment gateway', en: /gateway|pay online|accept (online |card |UPI )?payments/i, hi: /गेटवे|ऑनलाइन पेमेंट/u },
+    { what: 'barcode', en: /barcode|\bscan/i, hi: /बारकोड|स्कैन/u },
+    { what: 'P&L and balance sheet', en: /profit|P&L|balance sheet/i, hi: /लाभ|मुनाफ़ा|बैलेंस शीट/u },
+    { what: 'multiple branches', en: /branch|multi-?(store|shop|location)/i, hi: /ब्रांच|शाखा/u },
+    {
+      what: 'a native app',
+      en: /app store|play store|google play|download the app|install the app|mobile app|android app|ios app|\bapk\b/i,
+      hi: /ऐप स्टोर|प्ले स्टोर|ऐप डाउनलोड|मोबाइल ऐप/u,
+    },
+    {
+      what: 'something sent on the merchant\'s behalf (DEC-012)',
+      en: /we send|sent automatically|automatic(ally)? (send|remind)|auto-?remind/i,
+      hi: /अपने-आप भेज|हम भेज/u,
+    },
+  ];
+
+  const CLAIMS: readonly { readonly what: string; readonly en: RegExp; readonly hi: RegExp }[] = [
+    {
+      what: 'a user count',
+      en: /\d[\d,.]*\s*(\+|k\b|lakh|crore)?\s*(users|shops|merchants|businesses|customers|downloads|shopkeepers)\b/i,
+      hi: /\d[\d,.]*\s*\+?\s*(दुकानें|दुकानदार|यूज़र|व्यापारी)/u,
+    },
+    { what: 'a rating or testimonial', en: /\brated\b|rating|★|\bstars?\b|testimonial|review/i, hi: /रेटिंग|समीक्षा/u },
+    {
+      what: 'a popularity claim',
+      en: /most popular|trusted by|loved by|thousands|lakhs|millions|#1|number one|best-selling/i,
+      hi: /सबसे लोकप्रिय|हज़ारों|लाखों|करोड़ों|नंबर 1/u,
+    },
+    { what: 'an invented percentage', en: /\d\s*%/, hi: /\d\s*%/u },
+  ];
+
+  it('has landing copy in both languages to check', () => {
+    expect(landingKeys.length).toBeGreaterThan(100);
+    landingKeys.forEach((key) => expect(hiMessages[key]).toBeTruthy());
+  });
+
+  it.each(UNBUILT.map((row) => [row.what, row]))('never mentions %s', (_what, row) => {
+    const offending = landingKeys
+      .filter((key) => !(row.what === 'e-invoice' && E_INVOICE_FAQ.has(key)))
+      .flatMap((key) => [
+        ...(row.en.test(enMessages[key] ?? '') ? [`${key} (en): ${enMessages[key]}`] : []),
+        ...(row.hi.test(hiMessages[key] ?? '') ? [`${key} (hi): ${hiMessages[key]}`] : []),
+      ]);
+    expect(offending).toEqual([]);
+  });
+
+  it.each(CLAIMS.map((row) => [row.what, row]))('makes no %s', (_what, row) => {
+    const offending = landingKeys.flatMap((key) => [
+      ...(row.en.test(enMessages[key] ?? '') ? [`${key} (en): ${enMessages[key]}`] : []),
+      ...(row.hi.test(hiMessages[key] ?? '') ? [`${key} (hi): ${hiMessages[key]}`] : []),
+    ]);
+    expect(offending).toEqual([]);
+  });
+
+  it('answers the e-invoice question with a plain "not today", never a "soon"', () => {
+    expect(enMessages['landing.faq.einvoice.a']).toMatch(/^Not today\./);
+    expect(enMessages['landing.faq.einvoice.a']).toMatch(/does not/);
+    expect(hiMessages['landing.faq.einvoice.a']).toMatch(/^आज नहीं।/u);
+    landingKeys.forEach((key) => {
+      expect(enMessages[key]).not.toMatch(/\bsoon\b|coming/i);
+      expect(hiMessages[key]).not.toMatch(/जल्द/u);
+    });
+  });
+
+  it('keeps the brand name in Latin script in Hindi', () => {
+    const hindiWithBrand = landingKeys.filter((key) => /YourKhata/.test(enMessages[key] ?? ''));
+    expect(hindiWithBrand.length).toBeGreaterThan(0);
+    hindiWithBrand.forEach((key) => expect(hiMessages[key]).toContain('YourKhata'));
+    landingKeys.forEach((key) => expect(hiMessages[key]).not.toMatch(/योरखाता|यॉरखाता/u));
+  });
+});
