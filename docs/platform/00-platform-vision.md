@@ -23,8 +23,7 @@ Each tenant (a business or organisation) turns on the modules it needs. Every mo
 | **Library** | library: catalogue, copies, members, issue and return, fines | **Planned** |
 | **Gym & fitness** | gym: members, plans, memberships, renewals, attendance | **Planned** |
 | **Hotel & stays** | hospitality: rooms, bookings, check-in/out, guest folio, billing | **Planned** |
-| **Coaching & tuition** | coaching: students, guardians, batches, fee plans, fee collection, attendance, refunds on leaving | **Planned**; added by the owner on 29 Sep (CR-2026-09-29-PLATFORM-D) |
-| **Candidates** | Rent & property is next in line (research: `research/candidates-and-competitors.md`). Clinics and chit funds are rejected; housing societies are deferred. | Not in scope yet |
+| **Candidates** | Rent & property is next in line (research: `research/candidates-and-competitors.md`). Clinics and chit funds are rejected; housing societies are deferred. Coaching & tuition: researched (`research/coaching.md`), owner declined 29 Sep; not in scope. | Not in scope yet |
 
 A module's status changes only through a CR. It moves from planned to in development to live.
 
@@ -35,7 +34,7 @@ A module's status changes only through a CR. It moves from planned to in develop
 3. **Build shared engines once and let the verticals configure them.** The Phase 2 research must confirm these candidates:
    - **Recurring dues and schedules:** instalments, memberships, fees, rent, and lender collection plans.
    - **Bookings and resources:** hotel rooms, and possibly gym slots and library holds.
-   - **Check-ins and attendance:** gym members, and possibly coaching students.
+   - **Check-ins and attendance:** gym members (coaching students were the other candidate until the owner declined coaching on 29 Sep).
    - **Money** always goes through the ledger and payments. No module keeps its own balance arithmetic.
    - **People** are always `parties`, with a role or type per module. No module keeps a second contacts table.
    - **Documents** always use the existing print and share pipeline.

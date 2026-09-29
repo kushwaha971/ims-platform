@@ -1,5 +1,11 @@
 # Coaching & tuition: domain research
 
+> **NOT IN SCOPE: owner declined 29 Sep 2026; kept for reference.** The owner withdrew the
+> module the same day it was added ("I need library mgmt system, not coaching"; amendment to
+> CR-2026-09-29-PLATFORM-D). It is on neither the vision module map nor the landing page. The
+> cross-module findings below (recurring dues, attendance) remain useful input to the shared
+> engines.
+
 Status: **Phase 2 research, 29 Sep 2026.** Written by the Product and Domain Research agent for the
 module the owner added on 29 Sep (CR-2026-09-29-PLATFORM-D). This is research, not a decision
 record. Where it recommends a table, a seam or a rule, the recommendation goes to the architecture

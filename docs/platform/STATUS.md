@@ -5,7 +5,7 @@ Owner direction of 29 Sep 2026: [00-platform-vision.md](00-platform-vision.md). 
 | # | Phase | Status | Output |
 |---|---|---|---|
 | 1 | Analyse the application; update the landing page to the platform vision | **DONE 29 Sep**; synced to the owner's Mac | `01-current-capabilities.md`; landing page (`features/landing`); `config/modules.ts` |
-| 2 | Research the modules: lending, library, gym, hospitality, candidates | **Done 29 Sep**, except coaching & tuition (in progress) | `research/*.md` |
+| 2 | Research the modules: lending, library, gym, hospitality, candidates | **Done 29 Sep**. Coaching & tuition was researched, then declined by the owner (not in scope) | `research/*.md` |
 | 3 | Module documentation (FRDs) | Not started | `frd/*.md` |
 | 4 | Architecture review and reuse map | Not started | `10-architecture.md`, ADRs |
 | 5 | Implementation | Not started | |
@@ -73,6 +73,11 @@ against the live stack.
   - The title now reaches all six modules: "YourKhata: bills, fees, collections and bookings in one app".
   - Gates: unit tests 2591/2591; landing e2e 169/169; SEO e2e 104/104; contrast OK; i18n in step. The `/` budget was re-baselined 36 → 38 KB (measured 37.1), with a dated note.
   - Open for the owner: the Why and coaching copy need review. The pre-launch gate below now matters, because five of the six modules shown are not built.
+- **29 Sep, owner correction (amendment to CR-2026-09-29-PLATFORM-D): Coaching & tuition removed.** The owner said "I need library mgmt system, not coaching". Library stays, as it always has.
+  - The module is gone from the vision map (§2, where it is noted under Candidates as declined), `config/modules.ts`, the landing copy (en and hi), the map, cards and FAQ, the SEO title and description, and the JSON-LD.
+  - The landing page shows five modules: Shop & billing, Lending & collections, Library, Gym & fitness, Hotel & stays. A test guards that no landing string or metadata names coaching again.
+  - `research/coaching.md` is kept for reference, with a NOT IN SCOPE banner.
+  - The pre-launch gate still applies: four of the five modules shown are not built.
 
 ## Pre-launch checklist (before yourkhata.com is public)
 

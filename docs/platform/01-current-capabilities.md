@@ -175,7 +175,6 @@ entries or bills.
 | Library | Planned | nothing |
 | Gym and fitness | Planned | nothing |
 | Hotel and stays | Planned | nothing |
-| Coaching and tuition | Planned (CR-2026-09-29-PLATFORM-D) | nothing |
 
 **Landing page (changed by CR-2026-09-29-PLATFORM-D).** The owner decided that the pre-launch
 page presents every module the same way, as part of the product, with no Live or Planned label.

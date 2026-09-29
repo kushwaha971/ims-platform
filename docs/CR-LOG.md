@@ -1757,3 +1757,33 @@ i18n in step; bundle inside budget.
   are not built.
 - The Why copy and the coaching copy need review.
 - Part 43 in the Project should register this CR. The coordinator owns that sync.
+
+### Amendment, 29 Sep 2026: Coaching & tuition withdrawn
+
+**Owner correction:** "I need library mgmt system, not coaching". Library stays, as it always
+has. Coaching & tuition is removed everywhere it had been added:
+
+- the vision module map (§2). The Candidates row now notes it as researched and declined, not
+  in scope;
+- `config/modules.ts` and its icons;
+- the landing copy in English and Hindi (the card, and the FAQ's "Which modules are there?");
+- the module map, cards and "Who it's for";
+- the SEO description, which no longer says "student fees". The title keeps "fees", which now
+  means library and gym fees.
+
+The landing page shows five modules: Shop & billing, Lending & collections, Library, Gym &
+fitness, Hotel & stays. The tests that counted six now count five. The coaching-refund copy test
+is replaced by a guard that no landing string or metadata names coaching (`WITHDRAWN_MODULE_WORDS`
+in `src/tests/moduleVocabulary.ts`), in jsdom and on the live page. `research/coaching.md` is kept
+for reference under a NOT IN SCOPE banner.
+
+**Budget.** `/` fell from 37.1 to 36.8 KB (first load 268.3 → 268.0). The route budget was
+tightened from 38 to 37; first load stays at 269.
+
+**Layout.** Five cards in a three-column grid left a hole at the bottom right. A short last row
+is now centred, keyed on the card count rather than written for five.
+
+**Gates.** Unit tests 2589/2589; landing e2e 169/169; SEO e2e 105/105; lint clean; contrast OK;
+i18n in step; bundle inside budget.
+
+Everything else in this CR stands: no status labels, hidden pricing, and "Why YourKhata".
