@@ -422,3 +422,45 @@ green. `makemigrations --check` is clean.
 5. A value line is stored as `qty 1 × taxable_value` and prints that way. Whether a CA wants the
    quantity column blank on a value credit note is a print question (gym T13's neighbour); the
    data would not change.
+
+---
+
+## A4b — held deposits (PLT-X02; R4, R12, R24, R35, R36, R37)
+
+Status: **waiting for A4a on main** (Track M; in progress in `/home/claude/wt/track-m`). A15 is
+merged.
+
+### Design note (review step, drafted while waiting)
+
+Inputs: FRD 00 PLT-X02 (all 14 sections), contracts §1.4, ADR-044, R4/R12/R24/R35/R36/R37, A2's
+buckets (`apply_entry` moves only `deposit_held` for bucket `deposit`, in the opposite sense) and
+the A4a protocol v2 (`bucket`, `auto`, `payment_id`, `ctx`, one bucket per payment).
+
+- **Migration** `payments 0004_held_deposit`, not the FRD's `0003_held_deposits` (plan §1.4
+  reserves 0003 for A4a). Tables `payments_held_deposit` and `payments_deposit_application`
+  exactly as FRD §5, including CHECKs, indexes and `tenant_data` registration. Also the payment
+  CHECK `ck_payment_adjustment_is_whole`.
+- `PaymentMode.ADJUSTMENT` goes in the `PaymentMode` block of `common/constants.py` (A4b owns it).
+  It is refused by `record_payment`'s public validation, LED-01's entry validator and the expenses
+  validator (R24), with one test each.
+- `payments/services/deposits.py`: `open_deposit` (idempotent by module, subject and purpose while
+  not released), `receive_deposit(opening=…)` (R37: mode forced to `adjustment`, receipt "Opening
+  deposit"), `adjust_expected` (R35), `apply_deposit` (`_record_adjustment_pair`: OUT
+  `held_deposit_refund`/deposit plus IN caller allocations/main, then the application row),
+  `refund_deposit`, `deposits_for`, `cancel_expected_deposit` (EC-5). Locks: party → deposit →
+  payments.
+- Targets `held_deposit` (in, deposit, auto=False) and `held_deposit_refund` (out, deposit,
+  auto=False), registered by payments itself.
+- **Void pairing**: voiding either adjustment voids its partner and stamps `voided_at`; voiding a
+  receipt that would push `held` below zero gives 409 `deposit_insufficient`.
+- **Cashbook** (R4): `PaymentCashSource.rows` and `_NET_SQL` skip `adjustment` parts; the name is
+  `cash_bucket` for the cashbook's notion.
+- **API**: `GET /deposits`, `GET /deposits/{id}`, `POST /deposits/{id}/receive|apply|refund`.
+- **Guards**: a per-module off-guard counter (`status <> 'released'`), via A12's
+  `register_module_off_guard(label_id=…)`. The party archive guard (EC-4) goes through A6's
+  `register_archive_guard` if A6 is merged by then; otherwise it is left as a note for A6.
+- **Report**: "Deposits held" through A10's `register_report` (`payments.deposits_held`,
+  `reports.financial.read`, CSV).
+- **Frontend**: `features/payments/deposits/*`, i.e. the service, lazily injected slice and thunks,
+  invalidations, `DepositPanel`, `ReceiveDepositDrawer`, `ApplyDepositDialog`,
+  `RefundDepositDrawer`, `DepositSlipPrint`, and the void dialog's consequence line.
