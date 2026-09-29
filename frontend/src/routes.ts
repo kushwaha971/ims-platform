@@ -19,6 +19,14 @@
  */
 
 export const ROUTES = {
+  /**
+   * The public front page — the landing page for a visitor with no session.
+   * A browser that carries a session cookie never sees it: `proxy.ts` sends
+   * it straight to the dashboard, so a merchant's bookmark of the bare domain
+   * still opens their book.
+   */
+  HOME: '/',
+
   // ── (auth) ────────────────────────────────────────────────────────────────
   LOGIN: '/login',
   SIGNUP: '/signup',
@@ -243,6 +251,11 @@ export const GUARDED_ROUTE_PREFIXES: readonly string[] = [
  * is: so there is one list, not one per guard.
  */
 export const PUBLIC_ROUTE_PREFIXES: readonly string[] = [
+  // The landing page. A signed-out visitor is the whole audience, and without
+  // this entry the bootstrap's `/auth/me` 401 sent them to `/login?next=/`
+  // before they had read a word. It matches ONLY itself — see `isPublicPath`:
+  // as a prefix, `/` would make every address in the product public.
+  ROUTES.HOME,
   ROUTES.LOGIN,
   ROUTES.SIGNUP,
   ROUTES.FORGOT_PASSWORD,
@@ -260,7 +273,11 @@ export const PUBLIC_ROUTE_PREFIXES: readonly string[] = [
 ];
 
 export const isPublicPath = (pathname: string): boolean =>
-  PUBLIC_ROUTE_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+  PUBLIC_ROUTE_PREFIXES.some((prefix) =>
+    prefix === ROUTES.HOME
+      ? pathname === prefix
+      : pathname === prefix || pathname.startsWith(`${prefix}/`)
+  );
 
 /**
  * CR-2026-09-19-A — addresses that used to exist. `/otp` was the six-digit code

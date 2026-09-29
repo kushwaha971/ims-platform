@@ -44,7 +44,8 @@ describe('ROUTES', () => {
   it('gives every address a leading slash and no trailing one', () => {
     for (const path of Object.values(ROUTES)) {
       expect(path.startsWith('/')).toBe(true);
-      expect(path.endsWith('/')).toBe(false);
+      // The root is the one address that IS its slash.
+      if (path !== ROUTES.HOME) expect(path.endsWith('/')).toBe(false);
     }
   });
 

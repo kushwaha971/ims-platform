@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { AppProviders } from 'src/components/providers/AppProviders';
 import { APP_NAME } from 'src/constants';
 import { dmSans, epilogue, fraunces, inter, notoDevanagari } from 'src/fonts';
+import { BRAND_INIT, THEME_INIT } from 'src/utils/bootScripts';
 import { LOCALE_COOKIE, THEME_CHOICE_COOKIE } from 'src/utils/cookieUtils';
 
 import { SessionBootstrap } from 'modules/DigiKhaato/features/auth/components/SessionBootstrap';
@@ -35,31 +36,10 @@ import './globals.css';
  */
 
 /**
- * Resolve the theme before first paint.
- *
- * The fallback is `light`, not `prefers-color-scheme`. It used to be the media
- * query, which is why a merchant on a Mac set to Dark got a dark khata: the OS
- * decided, the specification said light, and the specification lost. §19.8.4's
- * reason for light is that the product is used in bright shops on cheap screens
- * — the operating system of the phone or laptop knows nothing about that.
- *
- * Only an explicit choice is read, and `ub_theme_choice` only ever holds one —
- * see `cookieUtils` for why it is not the old `ub_theme`.
+ * THEME_INIT and BRAND_INIT — the theme and the tenant's brand ramp, resolved
+ * before first paint. Built in `src/utils/bootScripts.ts` from the same cookie
+ * name and storage key their writers use, and executed by a test there.
  */
-const THEME_INIT = `(function(){try{var m=document.cookie.match(/(?:^|; )${THEME_CHOICE_COOKIE}=([^;]*)/);var t=m&&decodeURIComponent(m[1]);document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');}catch(e){document.documentElement.setAttribute('data-theme','light');}})();`;
-
-/**
- * WLB-01 FR-4 — the tenant's brand ramp, before first paint.
- *
- * `WhiteLabelSync` writes the ramp it applied to `localStorage` (`ub.theme_cache`,
- * `{tenantId, vars}`); this replays it before React exists, so a teal shop does
- * not open in indigo and turn teal a moment later. The session that loads next
- * corrects it if the active business changed (EC-6) — at worst one frame of the
- * previous brand, never the previous business's data. Only `--primary-*` and
- * the two accent aliases are ever in the cache; anything else is ignored.
- */
-const BRAND_INIT = `(function(){try{var c=JSON.parse(localStorage.getItem('ub.theme_cache')||'null');if(!c||!c.vars)return;var s=document.documentElement.style;for(var k in c.vars){if(/^--(primary-[0-9]+|accent-quiet|accent-line)$/.test(k))s.setProperty(k,String(c.vars[k]));}}catch(e){}})();`;
-
 export const metadata: Metadata = {
   /**
    * CR-2026-09-19-D — a template rather than a bare name, so every route can

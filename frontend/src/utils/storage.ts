@@ -8,6 +8,15 @@
  */
 const PREFIX = 'ub.';
 
+/**
+ * The key `writeLocal(key)` actually writes. Exported for the one reader that
+ * cannot call `readLocal`: the pre-paint script in `app/layout.tsx`, which runs
+ * before any module exists and so has to be handed the finished string. It used
+ * to spell the key by hand — `ub.theme_cache` against the `ub.ub_theme_cache`
+ * this module writes — and a tenant's brand never survived a reload.
+ */
+export const localStorageKey = (key: string): string => `${PREFIX}${key}`;
+
 const available = (): boolean => typeof window !== 'undefined' && !!window.localStorage;
 
 export const readLocal = <T>(key: string, fallback: T): T => {

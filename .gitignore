@@ -21,6 +21,18 @@ htmlcov/
 # Local media & backups
 media/
 backups/
+
+# The landing page's silent loops, their posters and manifest.json are part of
+# the page and ARE tracked, so `media/` above is undone for exactly that one
+# folder (git cannot re-include a file under an excluded directory, hence the
+# three steps: the folder, nothing else in it, then landing/).
+!/frontend/public/media/
+/frontend/public/media/*
+!/frontend/public/media/landing/
+# The narrated demo films (and their captions and posters) stay OUT of git, by
+# the owner's decision: they are 10-16 MB each, re-cut often, and served from
+# NEXT_PUBLIC_DEMO_VIDEO_URL_* in production. The modal copes with their absence.
+/frontend/public/media/landing/demo-*
 *.dump
 
 # OS / editor
