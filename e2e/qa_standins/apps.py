@@ -1,7 +1,7 @@
 """Stand-ins for the gate's look pass. Each registers through the PUBLIC seam a module will use:
 an origin listener that asks before a void and labels its documents; a calendar reader, so the
-Business days hub link and "Applies to" appear; and a reminder policy with a window, so the
-reminder-hours rows appear. The module codes are released ones (`inventory`, `sales`) or an
+Business days hub link and "Applies to" appear; and a reminder policy with a window and a (recordless)
+reminder source, so the reminder-hours rows appear. The module codes are released ones (`inventory`, `sales`) or an
 engine name (`dues`), so no unreleased-module flag is needed."""
 from django.apps import AppConfig
 
@@ -31,7 +31,10 @@ class QaStandinsConfig(AppConfig):
 
     def ready(self):
         from apps.common.seams.documents import register_origin
-        from apps.ledger.services.reminder_seam import register_reminder_policy
+        from apps.ledger.services.reminder_seam import (
+            register_reminder_policy,
+            register_reminder_source,
+        )
         from apps.platform_app.services.calendar import register_calendar_reader
 
         register_origin("dues_charge", module="dues", listener=StandIn())
@@ -41,3 +44,9 @@ class QaStandinsConfig(AppConfig):
         register_reminder_policy(
             "sales", {"window": (dt.time(9, 0), dt.time(19, 0)), "daily_cap_per_source": 1}
         )
+        # The hours rows are drawn for modules with a reminder SOURCE and a windowed policy.
+        register_reminder_source("qa_sales_charge", module="sales", candidates=_no_candidates)
+
+
+def _no_candidates(*_args, **_kwargs):
+    return []
