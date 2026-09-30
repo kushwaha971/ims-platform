@@ -414,6 +414,44 @@ No module code before the FRDs are finished.
 - **Wave C**: Gym, then Lending.
 - **Wave D**: bookings engine, then Hospitality.
 
+## 8h. 30 Sep, 01:30 UTC: Wave A in progress, stopped at a usage limit (RESUME HERE)
+
+**To continue, use `CONTINUE-PROMPT.md` in the repo root.** It is a ready prompt for a new agent.
+
+**Merged on main (13 of 16 Wave A tasks):**
+
+| Commit | Task |
+|---|---|
+| 45aa070 | A11 import matrix |
+| 1a048e8 | A9a primitives |
+| 4b964a8 | A14 payments decoupled |
+| 910d961 | A1 release gate |
+| 3e67449 | A12 engine enablement |
+| c2134c2 | A10 registries |
+| 03fcbda | A13 row scoping and module roles |
+| 3238706 | A16 shared QR and print |
+| 472cb21 | A2 ledger buckets |
+| daa289a | A8 perpetual counters |
+| 98c4d1c | A15 value credit notes |
+| ba2be39 | A4a payments v2 |
+| 4ef1484 | A9b closed-day calendar |
+
+**Unfinished, on track branches** (each ends in a `WIP (track x)` commit; not merged, not gated):
+
+| Branch | Commit | Task | Status |
+|---|---|---|---|
+| `wave-a/track-m` | 8e0a9b7 | **A5**, the document port | 51 files, tests first |
+| `wave-a/track-p` | 58f10ab | **A6**, party roles and relations; then **A7**, reminders | |
+| `wave-a/track-f` | 9d73cb0 | **A4b**, held deposits | A4a is on main now, so it can proceed |
+
+Each branch's `docs/platform/progress/wave-a-track-<x>.md` holds the task state, decisions, QA notes, CR drafts, questions for the architecture owner and exact next steps.
+
+**Known loose ends:**
+- `tenant_settings.py` still needs the `specs_for`/`spec_for` wiring. It was handed from Track F to Track P, and the patch is in the track-f progress file.
+- `invalidation.registry.test.ts` was red after A13 and reported fixed in A9b. Verify it on main.
+- The full Wave A gate has not been run yet.
+- The CR drafts (the LED-11 write-off cap and the canon §0.9 module roles) are still in the progress files, waiting to be moved to CR-LOG.
+
 ## 9. Exact next steps
 
 State at e1ad11d (retest verdict: READY FOR UAT; all 4 High, 7/7 Medium, 12/12 Low fixed after e1ad11d; regression 894/899 with the 5 remaining harness-only landing checks fixed in e1ad11d):
