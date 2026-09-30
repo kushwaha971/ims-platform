@@ -414,7 +414,14 @@ No module code before the FRDs are finished.
 - **Wave C**: Gym, then Lending.
 - **Wave D**: bookings engine, then Hospitality.
 
-## 8i. 30 Sep, 07:45 UTC: WAVE A DONE, Wave B next (RESUME HERE)
+## 8j. 30 Sep: all work now lives on branch `dev` (owner decision)
+
+- The owner does not want this work on `main`. Everything, old and new, is on **`dev`**; `main` is left equal to GitHub's `main` (9473389).
+- **Work only on `dev`** (or branches cut from it), merge into `dev`, and sync `dev` to the Mac. Never commit, merge or push to `main`.
+- The owner publishes with `git push -u origin dev`.
+- The Mac also has old local branches that are all merged into `dev` (`local-main-2026-09-29`, `track/w3*`, `track/w4*`, `wip/fix-wave1-defects`). `wave-a/track-{m,p,f}` on the Mac hold stale WIP commits that were redone and merged; ignore them.
+
+## 8i. 30 Sep, 07:45 UTC: WAVE A DONE, Wave B next (RESUME HERE, on `dev`)
 
 **Colleague or new agent: start with `CONTINUE-PROMPT.md`.** The repo on the owner's Mac is the single source of truth.
 
