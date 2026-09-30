@@ -427,8 +427,8 @@ green. `makemigrations --check` is clean.
 
 ## A4b — held deposits (PLT-X02; R4, R12, R24, R35, R36, R37)
 
-Status: **in progress** — A4a (ba2be39), A5, A6 and A7 are on main and the branch is rebased onto
-them. The session was cut off by a usage limit once; the coordinator saved the work as a WIP commit
+Status: **merged** — 51ec3df, fast-forwarded onto main at 2d5bccd (A4a ba2be39, A5, A6 and A7 were
+already on main). The session was cut off by a usage limit once; the coordinator saved the work as a WIP commit
 (9d73cb0), which was soft-reset and continued.
 
 Checkpoint log:
