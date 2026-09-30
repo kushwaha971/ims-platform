@@ -40,6 +40,7 @@ from apps.sales.constants import (
 from apps.sales.services.amounts import ZERO, refresh_credit_note
 from apps.sales.services.documents import lock_document
 from apps.sales.services.ledger_link import reverse_document_entries
+from apps.sales.services.origins import guard_origin_void, notify_origin_void
 from apps.sales.services.stock_link import reverse_document_stock
 from apps.sales.services.void_seam import release_invoice_payments
 
@@ -77,8 +78,22 @@ def _release_credit_applications(ctx: Ctx, invoice: Any) -> list[dict]:
 
 
 @transaction.atomic
-def void_invoice(*, ctx: Ctx, document_id: Any, reason: Any) -> dict:
-    """Void an issued invoice. Returns `{document, reversals, unallocated_payments, party_balance}`."""
+def void_invoice(
+    *,
+    ctx: Ctx,
+    document_id: Any,
+    reason: Any,
+    confirm_origin: bool = False,
+    from_origin: bool = False,
+) -> dict:
+    """Void an issued invoice. Returns `{document, reversals, unallocated_payments, party_balance}`.
+
+    ── A5 ── (R55, FRD 00 PLT-X05 §6) an invoice the document port issued asks its origin's
+    `check_void` after `refuse_unless_voidable` — a block or an unconfirmed question is a 409
+    before anything is reversed — and calls `on_void` last, inside this transaction, so a
+    listener that raises rolls the whole void back. `from_origin=True` is the port's own
+    `void_document`: the module asked, so it is not called back (`services/origins.py`).
+    """
     from apps.parties.services.balance import lock_party_of
     from apps.sales.models import SalesDocument
 
@@ -92,6 +107,8 @@ def void_invoice(*, ctx: Ctx, document_id: Any, reason: Any) -> dict:
     )
     document = lock_document(ctx.tenant, document_id)
     refuse_unless_voidable(document)
+    if not from_origin:
+        guard_origin_void(tenant=ctx.tenant, document=document, confirm_origin=confirm_origin)
     if document.status not in VOIDABLE_STATUSES:  # pragma: no cover - statuses are closed
         raise ValidationFailed({"non_field_errors": ["This invoice cannot be voided."]})
     blocking = (
@@ -149,6 +166,8 @@ def void_invoice(*, ctx: Ctx, document_id: Any, reason: Any) -> dict:
             "unallocated_payments": unallocated,
         },
     )
+    if not from_origin:
+        notify_origin_void(ctx=ctx, document=document, reason=reason)
     return {
         "document": document,
         "reversals": reversals,

@@ -8,8 +8,10 @@ import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { usePermissions } from 'src/hooks/usePermissions';
 import { selectNetworkImpaired } from 'src/redux/slice/networkSlice';
 import { selectTenantTimezone } from 'src/redux/slice/sessionSlice';
+import type { ModuleCode } from 'src/types/domain.types';
 import { todayInTenantTz } from 'src/utils/dates';
 
+import { originFilterModules } from '../originLinks';
 import {
   invoiceFiltersChanged,
   selectInvoiceList,
@@ -22,6 +24,7 @@ import {
   resolveInvoicePreset,
   type InvoiceListFilters,
 } from '../view-model/invoiceDisplay';
+
 
 import type { InvoiceListQuery } from '../api/salesService';
 import type { InvoicePreset } from '../constants/salesConstants';
@@ -43,6 +46,8 @@ export interface UseInvoiceListResult extends Omit<InvoiceListState, 'filters'> 
   readonly setQuery: (q: string) => void;
   readonly setPage: (page: number) => void;
   readonly clearFilters: () => void;
+  readonly originModules: readonly string[];
+  readonly setOriginModule: (originModule: string | null) => void;
   readonly refetch: () => void;
 }
 
@@ -73,6 +78,7 @@ export const useInvoiceList = (): UseInvoiceListResult => {
       partyId: null,
       q: filters.q,
       page: filters.page,
+      originModule: filters.originModule ?? null,
     }),
     [filters]
   );
@@ -129,7 +135,16 @@ export const useInvoiceList = (): UseInvoiceListResult => {
   const setQuery = useCallback((q: string) => push({ ...filters, q, page: 1 }), [push, filters]);
   const setPage = useCallback((page: number) => push({ ...filters, page }), [push, filters]);
   const clearFilters = useCallback(
-    () => push({ ...filters, tab: 'all', q: '', page: 1 }),
+    () => push({ ...filters, tab: 'all', q: '', page: 1, originModule: null }),
+    [push, filters]
+  );
+  // A5 (PLT-X05 §7) — the origin chip: modules with a registered origin link that are on.
+  const originModules = useMemo(
+    () => originFilterModules((module) => hasModule(module as ModuleCode)),
+    [hasModule]
+  );
+  const setOriginModule = useCallback(
+    (originModule: string | null) => push({ ...filters, originModule, page: 1 }),
     [push, filters]
   );
   const refetch = useCallback(() => {
@@ -149,5 +164,7 @@ export const useInvoiceList = (): UseInvoiceListResult => {
     setPage,
     clearFilters,
     refetch,
+    originModules,
+    setOriginModule,
   };
 };

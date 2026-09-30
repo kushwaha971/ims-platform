@@ -4,6 +4,9 @@ import type { TranslateFn } from 'src/hooks/useTranslation';
 import { formatBusinessDate } from 'src/utils/dates';
 
 import { STATUS_TONE, daysOverdue } from '../view-model/invoiceDisplay';
+import { originWords } from '../view-model/originDisplay';
+
+import { OriginBadge } from './OriginBadge';
 
 import type { InvoiceListRow } from '../types/sales.types';
 
@@ -17,6 +20,9 @@ import type { InvoiceListRow } from '../types/sales.types';
  * | Date   | 1 | meta     | dd/mm/yyyy (owner's rule). |
  * | Status | 1 | meta     | Draft / Issued / Part paid / Paid / Overdue / Void. |
  * | Due    | 2 | none     | Amount still owed; "Overdue 3 d" in error tone (§8). |
+ *
+ * A5 (PLT-X05 §7) — a document another module issued says so under its number
+ * ("From Gym · Membership M-0042"); on a card, after the date.
  */
 export const createInvoiceColumns = ({
   t,
@@ -51,6 +57,7 @@ export const createInvoiceColumns = ({
           <UbText as="span" variant="caption" tone="tertiary" className="ds-num">
             {number}
           </UbText>
+          {row.origin && <OriginBadge origin={row.origin} />}
         </UbStack>
       );
     },
@@ -61,7 +68,16 @@ export const createInvoiceColumns = ({
     priority: 1,
     cardSlot: 'meta',
     widthShare: 12,
-    cell: (row) => formatBusinessDate(row.documentDate),
+    cell: (row) => {
+      const date = formatBusinessDate(row.documentDate);
+      if (!isCards || !row.origin) return date;
+      const words = originWords(row.origin);
+      const from = t(words.id, {
+        module: words.moduleId ? t(words.moduleId) : words.module,
+        label: words.label ?? '',
+      });
+      return `${date} · ${from}`;
+    },
   },
   {
     id: 'status',

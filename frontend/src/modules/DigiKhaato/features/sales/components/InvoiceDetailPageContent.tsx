@@ -32,6 +32,7 @@ import { STATUS_TONE, partyLabel } from '../view-model/invoiceDisplay';
 
 import { DocumentActions } from './DocumentActions';
 import { DocumentLinksPanel } from './DocumentLinksPanel';
+import { OriginBadge } from './OriginBadge';
 
 import type { FlowKind } from '../types/salesFlows.types';
 
@@ -171,6 +172,7 @@ export function InvoiceDetailPageContent({
                 due: formatInr(doc.amountDue),
               })}
             </UbText>
+            {doc.origin && <OriginBadge origin={doc.origin} />}
             <DocumentLinksPanel doc={doc} />
             {!draft && doc.status !== 'void' && (
               <UbStack direction="row" gap={2} className="flex-wrap">

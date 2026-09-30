@@ -18,6 +18,12 @@
 7. Snapshot the party and supplier GSTIN, set amounts and status (BR-17).
 8. Ledger debit for a party sale with a non-zero total (BR-18, EC-5).
 9. Audit `invoice.issued`, and the override as its own row.
+
+── A5 ── the document port's keywords (FRD 00 PLT-X05 §6; all default to the counter's
+behaviour): `credit_check="skip"` (ADR-048) warns and never refuses; `apply_credit_note_ids`,
+`apply_payment_ids` and `apply_open_advances` are LOCKED between step 5 and the number (R61:
+party → documents → payments → sequence) and applied after the payment taken at issue
+(`issue_apply.py`).
 """
 
 from __future__ import annotations
@@ -35,7 +41,8 @@ from apps.common.exceptions import BusinessRuleViolation, ValidationFailed
 from apps.sales.constants import B2C_LARGE_THRESHOLD, DocumentStatus
 from apps.sales.services import settings as sales_settings
 from apps.sales.services.documents import check_version, lock_document, replace_lines
-from apps.sales.services.issue_parts import credit_check, party_snapshot, post_stock, rule46_for
+from apps.sales.services.issue_parts import credit_check as check_party_credit
+from apps.sales.services.issue_parts import party_snapshot, post_stock, rule46_for
 from apps.sales.services.ledger_link import post_invoice_debit
 from apps.sales.services.payload import apply_payload
 from apps.sales.services.payment_seam import paid_at_issue, record_issue_payment, validate_payment
@@ -62,12 +69,19 @@ def issue_invoice(
     payment: dict | None = None,
     override: bool = False,
     version: Any = None,
+    credit_check: str = "enforce",
+    apply_credit_note_ids: Any = (),
+    apply_payment_ids: Any = (),
+    apply_open_advances: bool = False,
 ) -> dict:
-    """Issue a draft. Returns `{document, warnings, ledger_entry_id, party_balance}`."""
+    """Issue a draft. Returns `{document, warnings, ledger_entry_id, party_balance, applied}`."""
     from apps.parties.services.balance import lock_party_of, relock_if_moved
     from apps.platform_app.services.sequences import allocate_number
     from apps.sales.models import SalesDocument
+    from apps.sales.services.issue_apply import apply_held_money, lock_held_money
 
+    if credit_check not in ("enforce", "skip"):
+        raise ValueError(f"credit_check must be 'enforce' or 'skip', not {credit_check!r}")
     tenant = ctx.tenant
     # L1 before the draft (`parties.services.balance.lock_party_of`), the order
     # every money path follows.
@@ -126,7 +140,9 @@ def issue_invoice(
     warnings = list(outcome["warnings"])
     overridden = False
     if party is not None and amount_due > 0:
-        warning, overridden = credit_check(ctx, party, amount_due, override=override)
+        warning, overridden = check_party_credit(
+            ctx, party, amount_due, override=override, enforce=credit_check == "enforce"
+        )
         if warning:
             warnings.append(warning)
     if walk_in and document.is_inter_state and document.grand_total > _dec(B2C_LARGE_THRESHOLD):
@@ -137,6 +153,15 @@ def issue_invoice(
                 "details": {},
             }
         )
+
+    # R61 — every credit note and payment applied below is locked BEFORE the sequence row.
+    held = lock_held_money(
+        ctx,
+        document,
+        credit_note_ids=apply_credit_note_ids,
+        payment_ids=apply_payment_ids,
+        open_advances=apply_open_advances,
+    )
 
     document.number = allocate_number(
         tenant=tenant, kind=document.kind, on_date=document.document_date
@@ -178,6 +203,7 @@ def issue_invoice(
         document.refresh_from_db()
         if receipt["party_balance"] is not None:
             balance = receipt["party_balance"]
+    applied = apply_held_money(ctx, document, held)
 
     write_audit(
         ctx=ctx,
@@ -193,6 +219,7 @@ def issue_invoice(
             "credit_limit_override": overridden,
             "payment_id": receipt["payment_id"] if receipt else None,
             "warnings": [w["code"] for w in warnings],
+            **({"applied": applied} if applied else {}),
         },
         metadata={
             "idempotency_key": ctx.idempotency_key,
@@ -214,6 +241,7 @@ def issue_invoice(
         "warnings": warnings,
         "ledger_entry_id": ledger_entry_id,
         "party_balance": balance,
+        "applied": applied,
     }
 
 

@@ -100,7 +100,9 @@ class SalesInvoiceTarget:
             return "partially_paid"
         return "issued"
 
-    def _move(self, document: SalesDocument, delta: Decimal, today: dt.date) -> tuple[str, str]:
+    def _move(
+        self, document: SalesDocument, delta: Decimal, today: dt.date, ctx: Any = None
+    ) -> tuple[str, str]:
         before = document.status
         document.amount_paid = document.amount_paid + delta
         if document.party_id is not None and document.status not in ("void", "draft"):
@@ -109,7 +111,7 @@ class SalesInvoiceTarget:
             # `amount_paid` moves by the delta; the credit half is re-read from
             # `sales_credit_application`, so a credit note applied by SAL-04 is
             # never clobbered by a payment's move (and vice versa).
-            refresh_invoice_amounts(document, amount_paid=document.amount_paid)
+            refresh_invoice_amounts(document, amount_paid=document.amount_paid, ctx=ctx)
             return before, document.status
         document.status = self._status(document, today)
         SalesDocument.objects.filter(pk=document.pk).update(
@@ -130,8 +132,9 @@ class SalesInvoiceTarget:
         ctx: Any = None,
     ) -> tuple[str, str]:
         """`payment_id` and `ctx` (protocol v2) are accepted; the invoice's own formula needs
-        neither — A5 hands `ctx` on to `refresh_invoice_amounts` for its origin listener (R1)."""
-        return self._move(document, amount, today)
+        neither — `ctx` is handed on to `refresh_invoice_amounts` for its origin listener (A5, R1).
+        """
+        return self._move(document, amount, today, ctx)
 
     def unapply(
         self,
@@ -142,7 +145,7 @@ class SalesInvoiceTarget:
         payment_id: Any = None,
         ctx: Any = None,
     ) -> tuple[str, str]:
-        return self._move(document, -amount, today)
+        return self._move(document, -amount, today, ctx)
 
     def summary(self, document: SalesDocument) -> dict:
         return {

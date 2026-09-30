@@ -161,6 +161,7 @@ class InvoiceViewSet(
             ctx=Ctx.from_request(request),
             document_id=kwargs["pk"],
             reason=serializer.validated_data.get("reason"),
+            confirm_origin=serializer.validated_data.get("confirm_origin", False),  # ── A5 ── R55
         )
         extra: dict[str, Any] = {
             "reversals": result["reversals"],

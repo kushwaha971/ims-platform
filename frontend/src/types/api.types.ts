@@ -63,6 +63,10 @@ export type ApiErrorCode =
   | 'insufficient_stock'
   | 'document_not_draft'
   | 'document_already_void'
+  // ── A5 ── R55: a document another module issued — its origin refuses the void,
+  // or asks first (the void dialog resends with `confirm_origin`).
+  | 'document_origin_locked'
+  | 'document_origin_confirm'
   // PAY-01 §9 / PAY-05 §10 — a listed bill was settled meanwhile (the drawer
   // re-reads the bills); a second void of one payment.
   | 'document_not_open'

@@ -167,3 +167,91 @@ def recalc_clean() -> None:
     call_command("recalc_stock", stdout=stock)
     assert "0 found" in balances.getvalue(), balances.getvalue()
     assert "0 drifted" in stock.getvalue(), stock.getvalue()
+
+
+# ── A5 ── the document port's fake origin (PLT-X05, T-PLT-X05-1…10) ──────────
+
+PORT_ORIGIN = "test_membership"
+
+
+class FakeOrigin:
+    """An origin listener that records every call, and can block, ask or raise on demand.
+
+    `in_atomic` is recorded with each call because BR-5 is that the listener runs INSIDE the
+    sales transaction: a listener told after commit could not roll the void back.
+    """
+
+    def __init__(self) -> None:
+        self.calls: list[tuple] = []
+        self.block: str | None = None
+        self.confirm: str | None = None
+        self.raise_on_void = False
+        self.names: dict[str, str] = {}
+
+    def _in_atomic(self) -> bool:
+        from django.db import connection
+
+        return connection.in_atomic_block
+
+    def on_void(self, *, ctx: Any, origin_id: Any, document: dict, reason: str) -> None:
+        self.calls.append(("void", str(origin_id), dict(document), reason, self._in_atomic()))
+        if self.raise_on_void:
+            raise RuntimeError("the module refuses to let go")
+
+    def on_settlement_changed(self, *, ctx: Any, origin_id: Any, document: dict) -> None:
+        self.calls.append(("settlement", str(origin_id), dict(document), self._in_atomic()))
+
+    def check_void(self, *, tenant: Any, origin_id: Any) -> dict:
+        return {"block": self.block, "confirm": self.confirm}
+
+    def labels(self, *, tenant: Any, ids: Any) -> dict:
+        return {i: self.names.get(str(i)) for i in ids}
+
+    def of(self, kind: str) -> list[tuple]:
+        return [call for call in self.calls if call[0] == kind]
+
+
+@pytest.fixture
+def fake_origin(db: Any) -> Any:
+    """A registered `test_membership` origin of module `gym`, removed again afterwards."""
+    from apps.common.seams import documents
+
+    documents._reset_for_tests()
+    listener = FakeOrigin()
+    documents.register_origin(PORT_ORIGIN, module="gym", listener=listener)
+    yield listener
+    documents._reset_for_tests()
+
+
+@pytest.fixture
+def port_ctx(shop: Any, api_as: Any) -> Any:
+    """A Ctx for the shop's owner — the actor a vertical endpoint would hand the port."""
+    _client, member = api_as(shop)
+    return Ctx(tenant=shop, actor=member.user, actor_type="user")
+
+
+def membership_line(**extra: Any) -> dict:
+    """The gym worked example's line: ₹2,500.00 exclusive at 18% (GST18)."""
+    return {
+        "description": "Quarterly membership, 1 Oct – 31 Dec 2026",
+        "hsn_sac": "999723",
+        "qty": Decimal("1"),
+        "unit_price": Decimal("2500.00"),
+        "tax_inclusive": False,
+        "tax_code": "GST18",
+        **extra,
+    }
+
+
+def port_request(party: Any, **extra: Any) -> dict:
+    from apps.common.dates import tenant_today
+
+    return {
+        "origin_type": PORT_ORIGIN,
+        "origin_id": extra.pop("origin_id", None) or uuid.uuid4(),
+        "party_id": party.id,
+        "document_date": tenant_today(party.tenant),
+        "lines": [membership_line()],
+        "credit_check": "skip",
+        **extra,
+    }

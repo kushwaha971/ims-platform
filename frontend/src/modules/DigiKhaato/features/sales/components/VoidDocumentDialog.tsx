@@ -23,6 +23,7 @@ import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import { ROUTES } from 'src/routes';
 import { formatInr, sumMoney } from 'src/utils/money';
 
+import { originHref } from '../originLinks';
 import { voidCreditNote, voidInvoice } from '../redux/salesFlowThunk';
 import { useSalesFlowSchemas } from '../validation/salesFlowSchemas';
 import { voidConsequences } from '../view-model/voidConsequences';
@@ -57,6 +58,14 @@ const ICONS = { stock: Package, ledger: BookOpen, payment: Wallet } as const;
  * moves that ignore what the note already took back. Any other refusal is
  * shown in the dialog: a 400 is a field-level error the global snackbar
  * leaves to the screen, and this dialog has no field to hang it on.
+ *
+ * ── A document another module issued (A5, R55, FRD 00 PLT-X05 §7) ────────────
+ * The module decides whether its document may be voided here. A refusal
+ * (409 `document_origin_locked`) shows the module's own reason in place, with a
+ * link to its record when the module registered one, and Void stays disabled —
+ * the answer will not change until something changes over there. A question
+ * (409 `document_origin_confirm`) shows the module's words and turns the button
+ * into "Void anyway", which resends with `confirm_origin: true`.
  */
 const LIVE_NOTE = (status: string): boolean => status !== 'void' && status !== 'draft';
 
@@ -71,6 +80,8 @@ export function VoidDocumentDialog({
   const [busy, setBusy] = useState(false);
   const [left, setLeft] = useState<readonly UnallocatedPayment[] | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
+  const [originLock, setOriginLock] = useState<string | null>(null);
+  const [originQuestion, setOriginQuestion] = useState<string | null>(null);
   const rhf = useForm<{ reason: string }>({
     resolver: yupResolver(voidReasonSchema),
     mode: 'onTouched',
@@ -85,12 +96,28 @@ export function VoidDocumentDialog({
       setBusy(true);
       setRefusal(null);
       const thunk = credit ? voidCreditNote : voidInvoice;
-      const result = await dispatch(thunk({ id: doc.id, reason: values.reason.trim() }));
+      const result = await dispatch(
+        thunk({
+          id: doc.id,
+          reason: values.reason.trim(),
+          ...(originQuestion ? { confirmOrigin: true } : {}),
+        })
+      );
       setBusy(false);
       if (!thunk.fulfilled.match(result)) {
         // §9 — a second void (another device) is the state we wanted: say so and close.
         if (result.payload?.code === 'document_already_void') {
           onClose();
+          return;
+        }
+        const said = (result.payload?.details ?? {}) as Readonly<Record<string, unknown>>;
+        if (result.payload?.code === 'document_origin_locked') {
+          setOriginQuestion(null);
+          setOriginLock(String(said.reason ?? result.payload.message ?? ''));
+          return;
+        }
+        if (result.payload?.code === 'document_origin_confirm') {
+          setOriginQuestion(String(said.message ?? result.payload.message ?? ''));
           return;
         }
         const details = (result.payload?.details ?? {}) as Readonly<
@@ -116,8 +143,9 @@ export function VoidDocumentDialog({
       if (payments.length) setLeft(payments);
       else onClose();
     },
-    [credit, dispatch, doc.id, doc.number, onClose, t]
+    [credit, dispatch, doc.id, doc.number, onClose, originQuestion, t]
   );
+  const originLink = doc.origin ? originHref(doc.origin) : null;
 
   if (left) {
     const total = sumMoney(left.map((row) => row.amount));
@@ -184,10 +212,12 @@ export function VoidDocumentDialog({
             variant="destructive"
             busy={busy}
             busyLabel={t('sales.void.working')}
-            disabled={!!blocking || reason.trim().length < 3}
+            disabled={!!blocking || !!originLock || reason.trim().length < 3}
             data-testid="void-confirm"
           >
-            {t(credit ? 'sales.void.confirmCreditNote' : 'sales.void.confirm')}
+            {originQuestion
+              ? t('sales.void.confirmAnyway')
+              : t(credit ? 'sales.void.confirmCreditNote' : 'sales.void.confirm')}
           </UbButton>
         </>
       }
@@ -206,6 +236,25 @@ export function VoidDocumentDialog({
       ) : (
         <UbForm id={formId} form={rhf} onSubmit={submit}>
           {refusal && <UbStatusBanner tone="error" title={refusal} />}
+          {originLock && (
+            <UbStack gap={2} data-testid="void-origin-locked">
+              <UbStatusBanner
+                tone="warning"
+                title={originLock}
+                description={t('sales.void.originLockedBody')}
+                action={
+                  originLink ? (
+                    <UbLink href={originLink}>{t('sales.void.openOrigin')}</UbLink>
+                  ) : undefined
+                }
+              />
+            </UbStack>
+          )}
+          {originQuestion && (
+            <UbStack gap={2} data-testid="void-origin-confirm">
+              <UbStatusBanner tone="warning" title={originQuestion} />
+            </UbStack>
+          )}
           <UbStack gap={2} data-testid="void-consequences">
             {voidConsequences(doc).map(({ key, id, values }) => {
               const Icon = ICONS[key];

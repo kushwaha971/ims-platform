@@ -61,8 +61,17 @@ def tabbed_list(view: Any, request: Any, tabs: dict[str, tuple[str, ...]]) -> An
     queryset = apply_tab(filtered, tab, tabs)
     totals = list_totals(queryset)
     page = view.paginate_queryset(queryset)
+    from apps.sales.services.origins import page_labels
+
+    rows = list(page)
     data = InvoiceListSerializer(
-        page, many=True, context={"today": tenant_today(view.get_tenant())}
+        rows,
+        many=True,
+        context={
+            "today": tenant_today(view.get_tenant()),
+            # ── A5 ── one label call per origin type for the page, never one per row.
+            "origin_labels": page_labels(view.get_tenant(), rows),
+        },
     ).data
     meta = {
         **view.paginator.get_meta(),

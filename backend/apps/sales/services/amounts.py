@@ -53,12 +53,23 @@ def invoice_status_for(
     return DocumentStatus.PARTIALLY_PAID if settled > ZERO else DocumentStatus.ISSUED
 
 
-def refresh_invoice_amounts(invoice: Any, *, amount_paid: Decimal | None = None) -> None:
-    """Recompute `amount_due` and the status of a LOCKED, non-void invoice, and save them."""
+def refresh_invoice_amounts(
+    invoice: Any, *, amount_paid: Decimal | None = None, ctx: Any = None
+) -> None:
+    """Recompute `amount_due` and the status of a LOCKED, non-void invoice, and save them.
+
+    ── A5 ── (R1, FRD 00 PLT-X05 §6) a document the port issued tells its origin when
+    `amount_due` or `status` moved (`on_settlement_changed`, inside this transaction), so the
+    gym's due becomes `paid` when its invoice does. Every caller hands on its `ctx`
+    (`test_every_caller_of_refresh_invoice_amounts_hands_on_its_ctx`); a document with an
+    origin refreshed without one raises rather than leave the module's state behind.
+    """
     from apps.common.dates import tenant_today
+    from apps.sales.services.origins import has_origin, notify_settlement_changed
 
     if invoice.status in (DocumentStatus.VOID, DocumentStatus.DRAFT):
         return
+    before = (invoice.amount_due, invoice.status)
     if amount_paid is not None:
         invoice.amount_paid = amount_paid
     credits = credits_applied(invoice)
@@ -70,8 +81,15 @@ def refresh_invoice_amounts(invoice: Any, *, amount_paid: Decimal | None = None)
         due_on=invoice.due_on,
         today=tenant_today(invoice.tenant),
     )
+    changed = (invoice.amount_due, invoice.status) != before
+    if changed and has_origin(invoice) and ctx is None:
+        raise RuntimeError(
+            "refresh_invoice_amounts needs the caller's ctx for a document with an origin (R1)"
+        )
     invoice.version += 1
     invoice.save(update_fields=["amount_paid", "amount_due", "status", "version", "updated_at"])
+    if changed:
+        notify_settlement_changed(ctx=ctx, document=invoice)
 
 
 def refresh_credit_note(credit_note: Any) -> None:

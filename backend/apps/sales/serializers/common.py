@@ -34,3 +34,24 @@ def doc_ref(document: Any) -> dict | None:
         "status": document.status,
         "grand_total": str(document.grand_total),
     }
+
+
+# ── A5 ── BR-4 (FRD 00 PLT-X05 §9): the origin columns are written once, by the document port.
+ORIGIN_KEYS = ("origin_module", "origin_type", "origin_id")
+
+
+def refuse_origin_keys(data: Any) -> None:
+    """400 on any origin key in a sales request body — DRF would otherwise drop it silently,
+    and a client would believe it had set something it had not."""
+    from rest_framework import serializers
+
+    if not hasattr(data, "keys"):
+        return
+    sent = [key for key in ORIGIN_KEYS if key in data]
+    if sent:
+        raise serializers.ValidationError(
+            {
+                key: ["Set by the module that issued the document, never by a request."]
+                for key in sent
+            }
+        )

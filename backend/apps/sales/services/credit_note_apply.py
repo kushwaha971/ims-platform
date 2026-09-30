@@ -30,6 +30,7 @@ from apps.sales.services.amounts import ZERO, refresh_credit_note, refresh_invoi
 from apps.sales.services.credit_note_issue import apply_credit
 from apps.sales.services.credit_notes import CREDIT_NOTE_KINDS
 from apps.sales.services.ledger_link import reverse_document_entries
+from apps.sales.services.origins import guard_origin_void, notify_origin_void
 from apps.sales.services.stock_link import reverse_document_stock
 from apps.sales.services.void import clean_void_reason, refuse_unless_voidable
 
@@ -80,7 +81,7 @@ def apply_credit_note(*, ctx: Ctx, document_id: Any, invoice_id: Any, amount: An
     if value > ceiling:
         raise ValidationFailed({"amount": [f"Apply at most ₹{ceiling}"]})
     apply_credit(note, invoice, value)
-    refresh_invoice_amounts(invoice)
+    refresh_invoice_amounts(invoice, ctx=ctx)
     refresh_credit_note(note)
     write_audit(
         ctx=ctx,
@@ -93,7 +94,7 @@ def apply_credit_note(*, ctx: Ctx, document_id: Any, invoice_id: Any, amount: An
     return {"document": note, "invoice": invoice}
 
 
-def _release_applications(note: Any) -> list[dict]:
+def _release_applications(ctx: Ctx, note: Any) -> list[dict]:
     from apps.sales.models import SalesCreditApplication, SalesDocument
 
     rows = list(SalesCreditApplication.objects.filter(credit_note=note))
@@ -103,7 +104,7 @@ def _release_applications(note: Any) -> list[dict]:
     for invoice in (
         SalesDocument.objects.select_for_update().filter(pk__in=invoice_ids).order_by("id")
     ):
-        refresh_invoice_amounts(invoice)
+        refresh_invoice_amounts(invoice, ctx=ctx)
     return released
 
 
@@ -127,8 +128,19 @@ def _give_back_quantities(note: Any) -> None:
 
 
 @transaction.atomic
-def void_credit_note(*, ctx: Ctx, document_id: Any, reason: Any) -> dict:
-    """Returns `{document, reversals, released}`."""
+def void_credit_note(
+    *,
+    ctx: Ctx,
+    document_id: Any,
+    reason: Any,
+    confirm_origin: bool = False,
+    from_origin: bool = False,
+) -> dict:
+    """Returns `{document, reversals, released}`.
+
+    ── A5 ── (R58) a note the document port issued asks its origin first and tells it last,
+    exactly as `void_invoice` does (`services/origins.py`); `from_origin` is the port's own void.
+    """
     from apps.parties.services.balance import lock_party_of
     from apps.sales.models import SalesDocument
 
@@ -140,6 +152,8 @@ def void_credit_note(*, ctx: Ctx, document_id: Any, reason: Any) -> dict:
     )
     note = drafts.lock_document(ctx.tenant, document_id, CREDIT_NOTE_KINDS)
     refuse_unless_voidable(note)
+    if not from_origin:
+        guard_origin_void(tenant=ctx.tenant, document=note, confirm_origin=confirm_origin)
     if note.amount_paid > 0:
         raise ValidationFailed(
             {"non_field_errors": ["Void the refund payment first"]},
@@ -148,7 +162,7 @@ def void_credit_note(*, ctx: Ctx, document_id: Any, reason: Any) -> dict:
     movement_ids = reverse_document_stock(ctx, note)
     reversals_written, _balance = reverse_document_entries(ctx=ctx, document=note, reason=reason)
     reversal_id = str(reversals_written[-1].id) if reversals_written else None
-    released = _release_applications(note)
+    released = _release_applications(ctx, note)
     _give_back_quantities(note)
     before = {"status": note.status, "open_credit": str(note.amount_due)}
     note.status = DocumentStatus.VOID
@@ -167,4 +181,6 @@ def void_credit_note(*, ctx: Ctx, document_id: Any, reason: Any) -> dict:
         after={"status": DocumentStatus.VOID, "void_reason": reason},
         metadata={"reversal_ids": reversals, "released": released},
     )
+    if not from_origin:
+        notify_origin_void(ctx=ctx, document=note, reason=reason)
     return {"document": note, "reversals": reversals, "released": released}

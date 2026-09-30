@@ -137,7 +137,21 @@ export interface SalesDocumentTotals {
   readonly grandTotal: string;
 }
 
+/**
+ * A5 (FRD 00 PLT-X05 §6) — the module record a document was issued for, through the document
+ * port: "From Gym · Membership M-0042". `null` for every counter document. `label` is the
+ * module's own words (null when it gives none; "Record not found" when the module is gone).
+ */
+export interface DocumentOrigin {
+  readonly module: string;
+  readonly type: string;
+  readonly id: string;
+  readonly label: string | null;
+}
+
 export interface SalesDocument extends SalesDocumentTotals {
+  /** A5 — optional so fixtures written before the port stay valid; the API always sends it. */
+  readonly origin?: DocumentOrigin | null;
   readonly id: string;
   readonly kind: SalesKind;
   readonly number: string | null;
@@ -205,6 +219,7 @@ export interface SalesDocumentEnvelope {
 }
 
 export interface InvoiceListRow {
+  readonly origin?: DocumentOrigin | null; // A5
   readonly id: string;
   readonly kind: SalesKind;
   readonly number: string | null;

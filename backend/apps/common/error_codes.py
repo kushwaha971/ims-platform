@@ -188,6 +188,9 @@ _REGISTRY: dict[str, tuple[int, bool]] = {
     "gstr1_warnings_unacknowledged": (409, False),
     "schema_validation_failed": (400, False),
     "confirmation_required": (409, False),
+    # ── A5 ── contracts §4, R55: a module document's origin refuses its void, or asks first.
+    "document_origin_locked": (409, False),
+    "document_origin_confirm": (409, False),
 }
 
 # `unauthenticated` is emitted by the exception handler for DRF's

@@ -8,9 +8,12 @@ one code path.
 
 from __future__ import annotations
 
+from typing import Any
+
 from rest_framework import serializers
 
 from apps.sales.constants import LINES_MAX, REASON_NOTE_MAX, VOID_REASON_MAX
+from apps.sales.serializers.common import refuse_origin_keys
 from apps.sales.serializers.document import (
     InvoiceWriteSerializer,
     LineInputSerializer,
@@ -21,6 +24,8 @@ from apps.sales.serializers.document import (
 class VoidSerializer(serializers.Serializer):
     # Length is the service's rule (3–160 after trimming); this only bounds the input.
     reason = serializers.CharField(required=False, allow_blank=True, max_length=VOID_REASON_MAX * 2)
+    # ── A5 ── R55: the answer to an origin's `document_origin_confirm` question.
+    confirm_origin = serializers.BooleanField(required=False, default=False)
 
 
 class EstimateWriteSerializer(InvoiceWriteSerializer):
@@ -62,6 +67,10 @@ class CreditNoteWriteSerializer(serializers.Serializer):
         if len(value) > LINES_MAX:
             raise serializers.ValidationError(f"At most {LINES_MAX} lines.")
         return value
+
+    def to_internal_value(self, data: Any) -> Any:
+        refuse_origin_keys(data)  # ── A5 ── BR-4
+        return super().to_internal_value(data)
 
 
 class CreditNoteIssueSerializer(serializers.Serializer):

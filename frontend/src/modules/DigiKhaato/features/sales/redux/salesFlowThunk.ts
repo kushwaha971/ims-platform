@@ -173,11 +173,15 @@ export const applyCreditNote = createAsyncThunk<
 /** MUTATION. SAL-05 — the bill voided with a reason; payments it held are reported back. */
 export const voidInvoice = createAsyncThunk<
   VoidedEnvelope,
-  { readonly id: string; readonly reason: string },
+  { readonly id: string; readonly reason: string; readonly confirmOrigin?: boolean },
   Reject
->('invoice/voidInvoice', async ({ id, reason }, { rejectWithValue }) => {
+>('invoice/voidInvoice', async ({ id, reason, confirmOrigin }, { rejectWithValue }) => {
   try {
-    return await (await credits()).voidInvoice(id, reason);
+    const service = await credits();
+    // A5 — the third argument only when answering an origin's question (R55).
+    return await (confirmOrigin
+      ? service.voidInvoice(id, reason, true)
+      : service.voidInvoice(id, reason));
   } catch (error) {
     return rejectWithValue(toApiError(error, 'sales.void.error'));
   }
@@ -186,11 +190,15 @@ export const voidInvoice = createAsyncThunk<
 /** MUTATION. SAL-04 FR-10 — stock, ledger, applications and returned quantities undone. */
 export const voidCreditNote = createAsyncThunk<
   VoidedEnvelope,
-  { readonly id: string; readonly reason: string },
+  { readonly id: string; readonly reason: string; readonly confirmOrigin?: boolean },
   Reject
->('invoice/voidCreditNote', async ({ id, reason }, { rejectWithValue }) => {
+>('invoice/voidCreditNote', async ({ id, reason, confirmOrigin }, { rejectWithValue }) => {
   try {
-    return await (await credits()).voidCreditNote(id, reason);
+    const service = await credits();
+    // A5 — the third argument only when answering an origin's question (R55).
+    return await (confirmOrigin
+      ? service.voidCreditNote(id, reason, true)
+      : service.voidCreditNote(id, reason));
   } catch (error) {
     return rejectWithValue(toApiError(error, 'sales.void.error'));
   }

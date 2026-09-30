@@ -7,11 +7,12 @@ the issue's strict one are one code path with one switch.
 
 from __future__ import annotations
 
+from typing import Any
 
 from rest_framework import serializers
 
 from apps.sales.models import SalesDocument, SalesDocumentLine
-from apps.sales.serializers.common import mask_mobile, person
+from apps.sales.serializers.common import mask_mobile, person, refuse_origin_keys
 from apps.sales.serializers.links import document_links
 
 __all__ = ["DocumentReadSerializer", "mask_mobile"]
@@ -86,6 +87,10 @@ class InvoiceWriteSerializer(serializers.Serializer):
             raise serializers.ValidationError(f"At most {LINES_MAX} lines.")
         return value
 
+    def to_internal_value(self, data: Any) -> Any:
+        refuse_origin_keys(data)  # ── A5 ── BR-4
+        return super().to_internal_value(data)
+
 
 class IssueSerializer(serializers.Serializer):
     payment = PaymentInputSerializer(required=False, allow_null=True)
@@ -154,6 +159,7 @@ class DocumentReadSerializer(serializers.ModelSerializer):
     doc_discount_allocation = serializers.SerializerMethodField()
     created_by = serializers.SerializerMethodField()
     links = serializers.SerializerMethodField()
+    origin = serializers.SerializerMethodField()  # ── A5 ── PLT-X05 §6
 
     class Meta:
         model = SalesDocument
@@ -200,6 +206,7 @@ class DocumentReadSerializer(serializers.ModelSerializer):
             "voided_at",
             "void_reason",
             "links",
+            "origin",
             "created_at",
             "updated_at",
         )
@@ -244,6 +251,12 @@ class DocumentReadSerializer(serializers.ModelSerializer):
 
     def get_created_by(self, obj: SalesDocument) -> dict | None:
         return person(obj.created_by)
+
+    def get_origin(self, obj: SalesDocument) -> dict | None:
+        """`{module, type, id, label} | null` — the module row this document was issued for."""
+        from apps.sales.services.origins import origin_view
+
+        return origin_view(obj)
 
     def get_links(self, obj: SalesDocument) -> dict:
         """SAL-01/04/05 — the documents this one is tied to, and a note's settlement."""

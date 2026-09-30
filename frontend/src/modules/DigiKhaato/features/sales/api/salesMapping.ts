@@ -1,4 +1,5 @@
 import type {
+  DocumentOrigin,
   InvoiceListPage,
   InvoiceListRow,
   PaymentBreakupRow,
@@ -24,7 +25,15 @@ type Wire = Record<string, unknown>;
 const s = (v: unknown): string => (v === null || v === undefined ? '' : String(v));
 const sn = (v: unknown): string | null => (v === null || v === undefined ? null : String(v));
 
+/** A5 — `origin: {module, type, id, label} | null`. */
+export const toOrigin = (raw: unknown): DocumentOrigin | null => {
+  if (!raw || typeof raw !== 'object') return null;
+  const row = raw as Wire;
+  return { module: s(row.module), type: s(row.type), id: s(row.id), label: sn(row.label) };
+};
+
 export const toListRow = (row: Wire): InvoiceListRow => ({
+  origin: toOrigin(row.origin),
   id: s(row.id),
   kind: row.kind as InvoiceListRow['kind'],
   number: sn(row.number),
@@ -115,7 +124,8 @@ export const toLinks = (raw: unknown): SalesDocumentLinks => {
 /** SAL-01/04/05 — the document fields the invoice core did not carry. */
 export const toFlowFields = (
   row: Wire
-): Pick<SalesDocument, 'validUntil' | 'voidedAt' | 'voidReason' | 'links'> => ({
+): Pick<SalesDocument, 'validUntil' | 'voidedAt' | 'voidReason' | 'links' | 'origin'> => ({
+  origin: toOrigin(row.origin),
   validUntil: sn(row.valid_until),
   voidedAt: sn(row.voided_at),
   voidReason: sn(row.void_reason),

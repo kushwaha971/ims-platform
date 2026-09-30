@@ -13,6 +13,7 @@ class InvoiceListSerializer(serializers.ModelSerializer):
     walk_in_mobile_masked = serializers.SerializerMethodField()
     is_overdue = serializers.SerializerMethodField()
     created_by = serializers.SerializerMethodField()
+    origin = serializers.SerializerMethodField()  # ── A5 ── PLT-X05 §6
 
     class Meta:
         model = SalesDocument
@@ -35,6 +36,7 @@ class InvoiceListSerializer(serializers.ModelSerializer):
             "against_id",
             "converted_to_id",
             "created_by",
+            "origin",
         )
 
     def get_party(self, obj: SalesDocument) -> dict | None:
@@ -60,3 +62,9 @@ class InvoiceListSerializer(serializers.ModelSerializer):
 
     def get_created_by(self, obj: SalesDocument) -> dict | None:
         return person(obj.created_by)
+
+    def get_origin(self, obj: SalesDocument) -> dict | None:
+        """Labelled from the page's one call per origin type (`views.common.tabbed_list`)."""
+        from apps.sales.services.origins import origin_view
+
+        return origin_view(obj, self.context.get("origin_labels"))

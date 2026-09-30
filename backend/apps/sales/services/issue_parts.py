@@ -64,9 +64,14 @@ def post_stock(ctx: Ctx, document: Any, rows: list[dict]) -> dict[int, Decimal |
 
 
 def credit_check(
-    ctx: Ctx, party: Any, amount: Decimal, *, override: bool
+    ctx: Ctx, party: Any, amount: Decimal, *, override: bool, enforce: bool = True
 ) -> tuple[dict | None, bool]:
-    """BR-13 on the LOCKED party. Returns `(warning or None, overridden)`."""
+    """BR-13 on the LOCKED party. Returns `(warning or None, overridden)`.
+
+    ── A5 ── `enforce=False` is the document port's `credit_check="skip"` (ADR-048, BR-3): an
+    engine charge is owed whether or not the party is over their shop limit, so a crossed limit
+    is only ever the warning — never a 409, and no override is needed or recorded.
+    """
     from apps.parties.services.credit import (
         CREDIT_MODE_BLOCK,
         check_credit,
@@ -81,7 +86,7 @@ def credit_check(
         "over_by": str(decision["over_by"]),
     }
     overridden = False
-    if decision["status"] == CREDIT_MODE_BLOCK:
+    if decision["status"] == CREDIT_MODE_BLOCK and enforce:
         if not override:
             raise BusinessRuleViolation(
                 "credit_limit_exceeded",

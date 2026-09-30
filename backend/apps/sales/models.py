@@ -86,6 +86,12 @@ class SalesDocument(TenantModel):
     public_token_hash = models.CharField(max_length=64, null=True, blank=True, unique=True)
     version = models.IntegerField(default=1)
     meta = models.JSONField(default=dict, blank=True)
+    # ── A5 ── PLT-X05 §5: the module row a document was issued for, through the document port
+    # (`apps/common/seams/documents.py`). A polymorphic pointer, never an FK: sales never imports
+    # the module. Written once by the port (BR-4); null for every counter document.
+    origin_module = models.CharField(max_length=32, null=True, blank=True)
+    origin_type = models.CharField(max_length=48, null=True, blank=True)
+    origin_id = models.UUIDField(null=True, blank=True)
 
     class Meta:
         db_table = "sales_document"
@@ -114,6 +120,20 @@ class SalesDocument(TenantModel):
                 condition=models.Q(amount_paid__gte=0) & models.Q(amount_due__gte=0),
                 name="ck_sales_document_amounts_non_negative",
             ),
+            # ── A5 ── all three origin columns or none.
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        origin_type__isnull=True, origin_id__isnull=True, origin_module__isnull=True
+                    )
+                    | models.Q(
+                        origin_type__isnull=False,
+                        origin_id__isnull=False,
+                        origin_module__isnull=False,
+                    )
+                ),
+                name="ck_sales_document_origin_complete",
+            ),
         ]
         indexes = [
             models.Index(
@@ -141,6 +161,12 @@ class SalesDocument(TenantModel):
                 fields=["tenant", "against"],
                 condition=models.Q(against__isnull=False),
                 name="ix_sales_doc_against",
+            ),
+            # ── A5 ── BR-6's lookup and a module reading its own invoices back.
+            models.Index(
+                fields=["tenant", "origin_type", "origin_id"],
+                condition=models.Q(origin_type__isnull=False),
+                name="ix_sales_doc_origin",
             ),
         ]
 

@@ -10,8 +10,8 @@ Owner: Backend/Django lead, Track M. Sequence: **A14 → A2 (+A3) → A4a → A5
 |---|---|---|---|
 | A14 | **merged** | `4b964a8` | A11 landed as 45aa070 |
 | A2 (+A3) | **merged** | `472cb21` | |
-| A4a | done — merging | (see below) | |
-| A5 | not started | — | after A4a and A15 (Track F) |
+| A4a | **merged** | `ba2be39` | |
+| A5 | done — merging | (see below) | A15 `98c4d1c` and A4a are on main |
 
 ## A14 — decouple payments from sales and purchases (ADR-056, R72)
 
@@ -249,6 +249,140 @@ every payment without a `context` key (`NOT (NULL LIKE …)`), caught by its own
 route started loading the money catalogue's ids through the hook's import of `paymentDisplay.ts`
 (`i18n:check`), fixed by `applyGate.ts`; the contract suite's bill factory needed a supplier.
 
+## A5 — the document port and the sales issuer (PLT-X05)
+
+### Design note (review step)
+
+Read: contracts §1.5, FRD 00 PLT-X05, 10-architecture §4.3 and §17.2 (R1–R3, R50, R52, R55, R58,
+R60–R62), and on main `sales/services/{issue,issue_parts,documents,payload,lines,void,amounts,
+credit_note_issue,credit_note_apply,credit_notes,payment_target,refund_seam}.py`, the invoice and
+credit-note views, serializers and filters, `tax/selectors/rates.py`, and A4a's `allocate_existing`
+and `open_advances`.
+
+**The port** `apps/common/seams/documents.py` (A11's rule: only `apps.common` and Django):
+the contract's TypedDicts and Protocols, `register_issuer`, `issuer_available`, `issue_document`,
+`issue_credit_note`, `void_document`, `document_summaries`, `register_origin`, `origin_for`,
+`origin_labels`, `_reset_for_tests`. The seam cannot import `platform_app`, so `issuer_available`
+asks the issuer (`available(tenant)`: sales answers from `effective_modules`), and
+`issue_document` raises `ModuleDisabled(details={"module": "sales"})` itself (Q-M4).
+
+**`SalesIssuer`** (`sales/services/port_issuer.py`, registered in `SalesConfig.ready()`):
+1. `issue`: party required (BR-2); the origin type must be registered (its module fills
+   `origin_module`; an unregistered type is a programming error). Lock the party, then look for a
+   non-void invoice-kind document with this `(origin_type, origin_id)` and return it (BR-6; the
+   party lock serialises two racing issues for one origin). Map the lines (below), `create_draft(
+   kind=kind_for(tenant, None))` (BR-1), stamp the origin columns, and `issue_invoice(...)`.
+2. Lines: `discount_amount` becomes an amount discount; `unit_code` defaults to `NOS`; `item_id`
+   with inventory off is 400 `lines.N.item_id` (EC-5); `tax_code` wins; a `gst_rate` alone maps
+   through `tax.selectors.codes.code_for_rate`, and zero or several codes is 400 on
+   `lines.N.gst_rate` (BR-7); neither falls to sales' own default (the item's code, else `GST0`).
+3. `issue_credit_note`: `create_credit_note` against the invoice with value lines (A15), reason code
+   `other` with the port's reason as its note, restock off, the settlement; origin columns stamped;
+   `issue_credit_note`. `refund_payment` comes from the note's `meta.refund`. A `refund` payload
+   is optional: without one a `"refund"` settlement refunds the open credit in cash (Q-M5).
+   Credit notes are not idempotent by origin (a membership may take several; the caller's HTTP
+   idempotency key covers a retry).
+4. `void`: `void_invoice` / `void_credit_note` with `from_origin=True` — the module asked for it,
+   so its own `check_void` / `on_void` are not called back.
+5. `summaries`: one query, plus one for the ledger entry ids.
+
+**`issue_invoice` keywords** (all default to today's behaviour): `credit_check="enforce"|"skip"`
+(skip never raises; a crossed limit is a warning), `apply_credit_note_ids`, `apply_payment_ids`,
+`apply_open_advances`. Order: party → draft → stock → credit check → **lock** the named credit
+notes, the named payments and the open advances → number → save → ledger debit → the payment
+taken at issue → **apply** credit notes (`apply_credit_note`), then the named payments in the
+order given, then open advances oldest first (`allocate_existing`), each capped at what is still
+due. A draft cannot take an allocation (the targets and `apply_credit_note` want an open,
+numbered document), so R61's "before the number" is honoured as the LOCK order: every row is held
+before the sequence row is. The payment taken at issue goes first because the caller validated it
+against the grand total. Credit notes and payments must be the party's, open, `in`, `main`,
+not void; an explicit payment may be earmarked (R61). Walk-in drafts refuse all three.
+
+**Origin columns** `sales/0005_document_origin`: `origin_module varchar(32)`, `origin_type
+varchar(48)`, `origin_id uuid`, all null, `ck_sales_document_origin_complete`, partial index
+`ix_sales_doc_origin`. The FRD names the migration `0004`; A15 took `0004`, the plan says `0005`.
+The sales write serializers refuse the three keys (BR-4).
+
+**Voids**: `void_invoice` and `void_credit_note` gain `confirm_origin=False` and
+`from_origin=False`. After `refuse_unless_voidable`, a document with an origin asks
+`check_void`: `block` → 409 `document_origin_locked {origin_type, reason}`; `confirm` without
+`confirm_origin` → 409 `document_origin_confirm {origin_type, message}`. `on_void` is called last,
+inside the transaction; a raising listener rolls the void back. An unregistered origin type logs a
+warning and voids (EC-4).
+
+**Settlement**: `refresh_invoice_amounts(invoice, *, amount_paid=None, ctx=None)` calls
+`on_settlement_changed` when `amount_due` or `status` moved and the document has an origin. Every
+caller passes `ctx` (the sales target's `_move`, credit-note issue/apply/void); a document with an
+origin and no `ctx` raises rather than lose the module's update. An AST test holds the callers.
+
+**Reads**: list rows and the detail gain `origin: {module, type, id, label} | null`. The label comes
+from an optional listener method `labels(*, tenant, ids) -> {id: str}` (batched per page; the
+contract names a label function but no signature — Q-M6); an unregistered type reads "Record not
+found" (EC-4). Filters `origin_module`, `origin_type`, `origin_id`.
+
+**Errors**: `document_origin_locked`, `document_origin_confirm` (409) in an A5 block of
+`error_codes.py`, docs/22 §22.1.1 and the locales.
+
+**Frontend**: `VoidDocumentDialog` shows a lock's reason in place (Void disabled) and a confirm's
+question with "Void anyway", which resends with `confirm_origin: true`; `OriginBadge` on list
+rows and the invoice page, linking through `features/sales/originLinks.ts` (path builders keyed by
+origin type, empty until a module registers one); the list's origin chip shows only modules in
+that map that are enabled.
+
+### Result
+
+Backend: `apps/common/seams/{__init__,documents}.py`; `sales/services/{port_issuer,origins,
+issue_apply}.py` (new), `issue`, `issue_parts` (`enforce`), `payload` (free text for a port
+document), `amounts` (`ctx`, settlement listener), `void`, `credit_note_apply`,
+`credit_note_issue`, `payment_target` (`ctx` handed on); `sales/0005_document_origin`; the
+origin on list rows and the detail, the three filters, `confirm_origin` on both void bodies, the
+origin keys refused in write bodies; `tax/selectors/codes.py`; two error codes (A5 blocks in
+`error_codes.py`, `test_exceptions.py`, docs/22 table F). Tests (all new, 70):
+`apps/common/tests/test_document_seam.py` (6), `apps/sales/tests/test_document_port.py` (26),
+`apps/sales/tests/test_document_origin_api.py` (9, incl. the AST test over
+`refresh_invoice_amounts` callers), `apps/tax/tests/test_code_for_rate.py` (5),
+`tests/contracts/test_document_port.py` (13, incl. T-PLT-X05-10's race) with a new
+`tests/contracts/conftest.py`. Gates: sales, payments, common, tax, purchases, reports and
+`tests/` — 1327 passed, 7 skipped; `makemigrations --check` clean.
+
+Frontend: `DocumentOrigin` type and mapping; `originLinks.ts` (empty map + `originHref`,
+`originFilterModules`); `view-model/originDisplay.ts`; `OriginBadge` on list rows (and a card's
+date line) and the invoice page; the origin chip in the list (`?origin=`, only modules in the map
+that are enabled); `VoidDocumentDialog` shows a lock in place (Void disabled, the module's link
+as the banner's action) and a question with "Void anyway" resending `confirm_origin: true`; the
+two codes in `api.types.ts`; 12 `sales.*` keys (en, hi). Tests: `originDisplay.test.ts` (5),
+`OriginBadge.test.tsx` (2), two dialog tests in `SalesFlows.test.tsx`. `tsc` clean, eslint and
+prettier clean on changed files, `i18n:split` + `i18n:check` in step, full jest 2689 passed —
+the 3 failures (`invalidation.registry` `fetchRoles`, `TeamPageContent` revoke) fail the same on
+the base without A5 (A13's).
+
+Environment note: after the usage-limit restart PostgreSQL 16 was down with a stale pid file; I
+started it (`pg_ctlcluster 16 main start`). The :3000/:8000 servers were not touched.
+
+### Independent QA
+
+No Agent tool; adversarial self-review. Checked: the void guard runs after the party and document
+locks and before any reversal, `on_void` runs last inside the transaction and a raising listener
+leaves the invoice issued and the khata unchanged (test); a block wins over `confirm_origin`
+(test); every writer of `amount_due` passes `ctx` (AST test) and a document with an origin
+refreshed without one raises; the port's R61 locks are all taken before the sequence row; a
+second issue for one origin serialises on the party lock (BR-6); the sales list's query budget is
+unchanged (the performance suite passes: no origins, no label call); a draft never persists
+between create and issue in the port (one transaction), so BR-4 has no PATCH hole. Found and
+fixed: a port document was refused at issue by the counter's free-text switch ("Choose an item
+from your list"), fixed in `payload.py`; the contract test's API void of a raising listener comes
+back as a 500 rather than a raised error; the contract suite's fixture imports (F811) moved into
+`tests/contracts/conftest.py`.
+
+### Open items (not A5's to build)
+
+- The print template does not render `meta.origin_block` yet (DEC-002 document rendering).
+- FRD §11: the sales register's "Origin" column and filter (reports).
+- `overdue.py` moves a status to `overdue` without `refresh_invoice_amounts`, so an origin is
+  not told of that move; the FRD binds the listener to `refresh_invoice_amounts` only.
+- `void_document` trusts the calling module (it skips `check_void` for any document); a module
+  voiding another module's document is not refused.
+
 ## Decisions
 
 - (A14) The refund-release call becomes a payments void seam (see Q-M1).
@@ -264,8 +398,27 @@ route started loading the money catalogue's ids through the hook's import of `pa
   allocation row stays the money) rather than a new column — no schema beyond the reservation.
 - (A4a) `open_advances` excludes earmarked payments, credit-note refund vouchers and
   `<module>_refund` payments (R36, R61).
+- (A5) R61's "before the number" is kept as LOCK order: credit notes and payments are locked
+  before `allocate_number` and applied after the save (a draft cannot take an allocation).
+- (A5) The payment taken at issue is recorded before credit notes and advances are applied.
+- (A5) A port document always allows free-text lines, whatever the counter's switch says.
+- (A5) A port credit note is not idempotent by origin; issue is (BR-6).
+- (A5) A void through the port (`from_origin`) does not call the module's listener back.
+- (A5) A document with an origin refreshed without `ctx` raises instead of skipping the listener.
 
 ## Questions for the architecture owner
+
+- **Q-M4 (A5):** `common/seams/documents.py` may not import `platform_app`, so
+  `issuer_available` asks the issuer (`Issuer.available(tenant)`, sales answering from
+  `effective_modules`) — a method the contract's `Issuer` protocol does not list. Confirm.
+- **Q-M5 (A5):** the port's `issue_credit_note(settlement="refund")` has no way to say how the
+  money went back. Added an optional `refund` (sales' `mode_breakup` payload); without it the open
+  credit is refunded in cash. Confirm, or name the field.
+- **Q-M6 (A5):** "label via the origin's registered label function" has no signature. Implemented
+  as an optional listener method `labels(*, tenant, ids) -> {id: str}`, called once per origin
+  type per page. Confirm.
+- **Q-M7 (A5):** `IssuedDocument` has nowhere for BR-3's warning. Added `warnings` (and
+  `existing` for BR-6) as `NotRequired` keys. Confirm.
 
 - **Q-M3 (A4a):** R6 says `"auto"` is global oldest-first by `(document_date, number, id)`. Applied
   literally it re-sorts a supplier's bills by bill date, but PUR-02 FR-3 (shipped) settles them by
@@ -293,5 +446,5 @@ other than the trade figure answers 409 `balance_changed` with `amount` = the tr
 
 ## Next steps
 
-1. Implement A14; run payments/sales/purchases/ledger/parties/reports + architecture suites.
-2. When A11 is on main: rebase, change the one `ALLOWED["payments"]` line, rerun, QA pass, merge.
+1. A5: commit, rebase onto main (262a121), rerun the targeted gates, merge ff-only.
+2. Track M's Wave A tasks are then all merged (A14, A2+A3, A4a, A5); report the DSU.

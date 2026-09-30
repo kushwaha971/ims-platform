@@ -188,6 +188,10 @@ Ownership is recorded as **T-16** in Part 0 §0.12.2. No other chapter may carry
 | `nothing_to_return` | 409 | E | A credit or debit note was raised where nothing remains returnable on the source document. | "There is nothing left to return." | `errors.nothing_to_return` | no |
 | `refund_exists` | 409 | D `payment_id` | A credit note with a refund already recorded was voided or re-settled. | "A refund was already paid against this note." | `errors.refund_exists` | no |
 | `gst_not_registered` | 409 | E | A tax invoice or a GST report was requested for an unregistered tenant. | "Your business is not registered for GST." | `errors.gst_not_registered` | no |
+| `document_origin_locked` | 409 | D `origin_type`, `reason` | A document the document port issued (it has an origin) was voided and the origin's listener refused it (`check_void` → `block`, R55). `reason` is the module's own words. | "This document belongs to another module and cannot be voided here." | `errors.document_origin_locked` | no |
+| `document_origin_confirm` | 409 | D `origin_type`, `message` | As above, the origin asked for confirmation (`check_void` → `confirm`) and the void request did not carry `confirm_origin: true`. Resend with it to proceed. | "Voiding this also changes a record in another module. Confirm to continue." | `errors.document_origin_confirm` | no |
+
+<!-- ── A5 ── the last two rows of table F (`document_origin_locked`, `document_origin_confirm`), contracts §4 -->
 
 **G — Payments and expenses**
 

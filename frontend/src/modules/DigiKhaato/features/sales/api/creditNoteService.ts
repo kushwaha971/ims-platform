@@ -81,9 +81,37 @@ const toVoided = (body: EnvelopeWire): VoidedEnvelope => {
   };
 };
 
-/** SAL-05 — 409 `document_already_void` is the answer to a second tap. */
-export const voidInvoice = async (id: string, reason: string): Promise<VoidedEnvelope> =>
-  toVoided((await api.post<EnvelopeWire>(API_PATHS.SALES_INVOICE_VOID(id), { reason })).data);
+/**
+ * SAL-05 — 409 `document_already_void` is the answer to a second tap.
+ * A5 (R55) — `confirmOrigin` answers an origin's `document_origin_confirm` question.
+ */
+const voidBody = (reason: string, confirmOrigin?: boolean): Record<string, unknown> =>
+  confirmOrigin ? { reason, confirm_origin: true } : { reason };
 
-export const voidCreditNote = async (id: string, reason: string): Promise<VoidedEnvelope> =>
-  toVoided((await api.post<EnvelopeWire>(API_PATHS.SALES_CREDIT_NOTE_VOID(id), { reason })).data);
+export const voidInvoice = async (
+  id: string,
+  reason: string,
+  confirmOrigin?: boolean
+): Promise<VoidedEnvelope> =>
+  toVoided(
+    (
+      await api.post<EnvelopeWire>(
+        API_PATHS.SALES_INVOICE_VOID(id),
+        voidBody(reason, confirmOrigin)
+      )
+    ).data
+  );
+
+export const voidCreditNote = async (
+  id: string,
+  reason: string,
+  confirmOrigin?: boolean
+): Promise<VoidedEnvelope> =>
+  toVoided(
+    (
+      await api.post<EnvelopeWire>(
+        API_PATHS.SALES_CREDIT_NOTE_VOID(id),
+        voidBody(reason, confirmOrigin)
+      )
+    ).data
+  );

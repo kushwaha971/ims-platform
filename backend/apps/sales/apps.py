@@ -51,3 +51,10 @@ class SalesConfig(AppConfig):
                 EntryType.CREDIT_NOTE: Direction.CREDIT,
             },
         )
+
+        # ── A5 ── ADR-045, contracts §1.5 — sales is the document port's issuer: a module gets
+        # a tax invoice through `apps.common.seams.documents` without importing sales.
+        from apps.common.seams.documents import register_issuer
+        from apps.sales.services.port_issuer import SalesIssuer
+
+        register_issuer(SalesIssuer())

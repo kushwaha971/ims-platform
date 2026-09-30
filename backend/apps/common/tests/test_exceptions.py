@@ -46,7 +46,7 @@ def test_registry_is_closed_and_complete() -> None:
     expired temporary password: the password was right, the window was not, and
     telling the holder otherwise sends them to reset a password they never had.
     """
-    assert len(REGISTRY) == 158
+    assert len(REGISTRY) == 160  # ── A5 ── +2, below
     assert "unauthenticated" in ERROR_CODES
     assert REGISTRY["password_change_required"] == (403, False)
     assert REGISTRY["password_expired"] == (401, False)
@@ -63,6 +63,12 @@ def test_registry_is_closed_and_complete() -> None:
     # `nothing_due` (the party may still owe) and not `stale_version` (the
     # reminder has no version) — the row was simply already dealt with.
     assert REGISTRY["reminder_not_sendable"] == (409, False)
+    # ── A5 ── contracts §4 (R55): the document port's origin listener refuses a void
+    # (`document_origin_locked`, D `origin_type`, `reason`) or asks for confirmation first
+    # (`document_origin_confirm`, D `origin_type`, `message`). Not `has_dependent_documents`:
+    # nothing references the invoice — the module's own row forbids it, in its own words.
+    assert REGISTRY["document_origin_locked"] == (409, False)
+    assert REGISTRY["document_origin_confirm"] == (409, False)
 
 
 def test_every_retryable_code_is_one_the_spec_marks_retryable() -> None:

@@ -173,6 +173,8 @@ export interface InvoiceListQuery {
   readonly partyId: string | null;
   readonly q: string;
   readonly page: number;
+  /** A5 — `?origin_module=` for the list's origin chip. */
+  readonly originModule?: string | null;
 }
 
 export const invoiceListQuery = (filters: InvoiceListQuery): string =>
@@ -182,6 +184,7 @@ export const invoiceListQuery = (filters: InvoiceListQuery): string =>
     date_to: filters.dateTo || undefined,
     party_id: filters.partyId || undefined,
     q: filters.q.trim() || undefined,
+    origin_module: filters.originModule || undefined,
     page: filters.page > 1 ? filters.page : undefined,
   });
 

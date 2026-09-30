@@ -75,9 +75,7 @@ def _take_quantities(invoice: Any, rows: list[dict]) -> None:
             continue
         if Decimal(row["qty"]) > remaining(line):
             errors[f"lines.{index}.qty"] = [cap_message(line)]
-        elif line.id in done.by_value and quantity_value(line, row["qty"]) > value_left(
-            line, done
-        ):
+        elif line.id in done.by_value and quantity_value(line, row["qty"]) > value_left(line, done):
             errors[f"lines.{index}.qty"] = [value_cap_message(value_left(line, done))]
     if errors:
         raise ValidationFailed(errors)
@@ -193,7 +191,7 @@ def issue_credit_note(
     if invoice is not None and invoice.amount_due > 0 and note.grand_total > 0:
         applied = min(note.grand_total, invoice.amount_due)
         apply_credit(note, invoice, applied)
-        refresh_invoice_amounts(invoice)
+        refresh_invoice_amounts(invoice, ctx=ctx)
     refunded = ZERO
     if settlement == Settlement.REFUND and requested_refund:
         refunded, _entry, balance = record_refund(

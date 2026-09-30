@@ -31,6 +31,10 @@ class InvoiceFilterSet(BaseTenantFilterSet):
     against_id = django_filters.UUIDFilter(field_name="against_id")
     created_by = django_filters.UUIDFilter(field_name="created_by_id")
     q = django_filters.CharFilter(method="filter_search")
+    # ── A5 ── PLT-X05 §6/§7: the list's origin chip, and a module reading its own invoices back.
+    origin_module = django_filters.CharFilter(field_name="origin_module")
+    origin_type = django_filters.CharFilter(field_name="origin_type")
+    origin_id = django_filters.UUIDFilter(field_name="origin_id")
 
     class Meta:
         model = SalesDocument

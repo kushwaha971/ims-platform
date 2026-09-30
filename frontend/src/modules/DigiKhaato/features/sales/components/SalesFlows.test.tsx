@@ -327,3 +327,65 @@ describe('the return editor (SAL-04 §7)', () => {
     await waitFor(() => expect(push).toHaveBeenCalledWith('/sales/credit-notes/cn1'));
   });
 });
+
+describe('the void of a document another module issued (A5, R55)', () => {
+  const moduleDoc = () =>
+    makeDocument({ origin: { module: 'gym', type: 'gym_membership', id: 'm1', label: 'M-0042' } });
+  const refusal = (code: string, details: Record<string, string>) => ({
+    code,
+    message: details.reason ?? details.message,
+    details,
+    requestId: null,
+    status: 409,
+    warnings: [],
+  });
+
+  it("shows the module's reason in place and keeps Void disabled when the origin refuses", async () => {
+    signIn(['sales.invoice.read', 'sales.invoice.void']);
+    credits.voidInvoice.mockRejectedValue(
+      refusal('document_origin_locked', {
+        origin_type: 'gym_membership',
+        reason: 'End the membership first',
+      })
+    );
+    renderWithProviders(<VoidDocumentDialog doc={moduleDoc()} onClose={jest.fn()} />);
+    await userEvent.type(screen.getByLabelText('Reason'), 'Wrong member');
+    await userEvent.click(screen.getByTestId('void-confirm'));
+    const locked = await screen.findByTestId('void-origin-locked');
+    expect(locked).toHaveTextContent('End the membership first');
+    expect(screen.getByTestId('void-confirm')).toBeDisabled();
+  });
+
+  it('asks the origin\'s question, then resends with confirm_origin on "Void anyway"', async () => {
+    signIn(['sales.invoice.read', 'sales.invoice.void']);
+    const doc = moduleDoc();
+    credits.voidInvoice.mockReset();
+    credits.voidInvoice
+      .mockRejectedValueOnce(
+        refusal('document_origin_confirm', {
+          origin_type: 'gym_membership',
+          message: 'This also ends membership M-0042.',
+        })
+      )
+      .mockResolvedValueOnce({
+        document: { ...doc, status: 'void' },
+        warnings: [],
+        rule46: null,
+        partyBalance: null,
+        ledgerEntryId: null,
+        voidResult: { documentId: doc.id, partyBalance: null, unallocatedPayments: [] },
+      });
+    const onClose = jest.fn();
+    renderWithProviders(<VoidDocumentDialog doc={doc} onClose={onClose} />);
+    await userEvent.type(screen.getByLabelText('Reason'), 'Wrong member');
+    await userEvent.click(screen.getByTestId('void-confirm'));
+    expect(await screen.findByTestId('void-origin-confirm')).toHaveTextContent(
+      'This also ends membership M-0042.'
+    );
+    expect(screen.getByTestId('void-confirm')).toHaveTextContent('Void anyway');
+    await userEvent.click(screen.getByTestId('void-confirm'));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(credits.voidInvoice).toHaveBeenNthCalledWith(1, doc.id, 'Wrong member');
+    expect(credits.voidInvoice).toHaveBeenNthCalledWith(2, doc.id, 'Wrong member', true);
+  });
+});

@@ -70,6 +70,8 @@ export interface InvoiceListFilters {
   readonly tab: InvoiceTab;
   readonly q: string;
   readonly page: number;
+  /** A5 — `?origin=gym`: only documents another module issued (the list's origin chip). */
+  readonly originModule?: string | null;
 }
 
 export const resolveInvoicePreset = (
@@ -107,6 +109,7 @@ export const invoiceFiltersFromQuery = (
     tab: tab && INVOICE_TABS_ORDER.includes(tab) ? tab : 'all',
     q: query.get('q') ?? '',
     page: Number.isInteger(page) && page > 1 ? page : 1,
+    originModule: query.get('origin') || null,
   };
 };
 
@@ -120,12 +123,13 @@ export const invoiceQueryFromFilters = (filters: InvoiceListFilters): string => 
   }
   if (filters.tab !== 'all') search.set('tab', filters.tab);
   if (filters.q.trim()) search.set('q', filters.q.trim());
+  if (filters.originModule) search.set('origin', filters.originModule);
   if (filters.page > 1) search.set('page', String(filters.page));
   return search.toString();
 };
 
 export const isNarrowed = (filters: InvoiceListFilters): boolean =>
-  filters.tab !== 'all' || !!filters.q.trim();
+  filters.tab !== 'all' || !!filters.q.trim() || !!filters.originModule;
 
 /** SAL-08 §8 — days past due for the "Overdue 3 d" caption (same-day accuracy, BR-2). */
 export const daysOverdue = (dueOn: string | null, today: string): number => {

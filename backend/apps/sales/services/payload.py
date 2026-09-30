@@ -154,7 +154,11 @@ def apply_payload(
             document_date=doc_date,
             raw_lines=list(raw_lines),
             strict=strict,
-            allow_free_text=sales_settings.allow_free_text_lines(tenant),
+            # ── A5 ── a module's document describes its supply ("Quarterly membership, 1 Oct –
+            # 31 Dec 2026", PLT-X05 §8): the counter's free-text switch does not apply to it.
+            allow_free_text=(
+                sales_settings.allow_free_text_lines(tenant) or bool(document.origin_type)
+            ),
             errors=errors,
         )
     if errors:

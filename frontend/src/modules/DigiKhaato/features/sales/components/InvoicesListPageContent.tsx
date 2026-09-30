@@ -8,6 +8,7 @@ import { Plus } from 'lucide-react';
 
 import {
   UbActionLink,
+  UbChoiceChips,
   UbButton,
   UbDateRangePicker,
   UbEmptyState,
@@ -36,6 +37,7 @@ import {
 import { useInvoiceList } from '../hooks/useInvoiceList';
 import { useSalesGridLabels } from '../hooks/useSalesGridLabels';
 import { isNarrowed } from '../view-model/invoiceDisplay';
+import { ORIGIN_MODULE_IDS } from '../view-model/originDisplay';
 
 import { createInvoiceColumns } from './InvoiceColumns';
 import { InvoiceListStats } from './InvoiceListStats';
@@ -50,6 +52,9 @@ const NEW_BILL = `${ROUTES.SALES_INVOICES}/new`;
  * and search filters, FR-2), with count / total / due over the filtered set
  * (FR-5). Rows open the bill; `N` starts a new one (FR-12).
  */
+/** A5 — the origin chip's "every source" choice (no `?origin=`). */
+const ORIGIN_ALL = 'all';
+
 export function InvoicesListPageContent(): React.JSX.Element {
   const { t } = useTranslation();
   const router = useRouter();
@@ -218,6 +223,21 @@ export function InvoicesListPageContent(): React.JSX.Element {
             to: t('sales.period.to'),
           }}
         />
+        {list.originModules.length > 0 && (
+          <UbChoiceChips<string>
+            value={filters.originModule ?? ORIGIN_ALL}
+            onChange={(next) => list.setOriginModule(next === ORIGIN_ALL ? null : next)}
+            options={[
+              { value: ORIGIN_ALL, label: t('sales.origin.filterAll') },
+              ...list.originModules.map((module) => {
+                const id = ORIGIN_MODULE_IDS[module];
+                return { value: module, label: id ? t(id) : module };
+              }),
+            ]}
+            ariaLabel={t('sales.origin.filterLabel')}
+            className="flex-wrap"
+          />
+        )}
         {totals && <InvoiceListStats totals={totals} />}
         <UbTabs<InvoiceTab>
           value={filters.tab}
