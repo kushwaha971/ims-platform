@@ -48,7 +48,7 @@ delivered** (DEC-012, console backend). The landing page must not offer reset by
 |---|---|
 | Owner adds a member by creating the account. The server shows a temporary password once, and the owner sends it by hand (DEC-012). | `/settings/team`; `/members` |
 | Invite links the owner copies and shares; the member accepts at `/accept-invite/[token]`. | `/invitations` |
-| Four roles: owner, admin, staff, accountant, with per-permission checks. | `permissions_registry.py` |
+| Four roles: owner, admin, staff, accountant, with per-permission checks. Module roles are built (Wave A, below) and none is registered yet. | `permissions_registry.py` |
 
 ### People and contacts (`parties`)
 
@@ -124,6 +124,39 @@ entries or bills.
 **Not live.** The app package is reserved and has no models or views.
 
 ---
+
+## Core foundations built in Wave A (30 Sep 2026)
+
+Wave A (the platform expansion's core, [12-implementation-plan.md](12-implementation-plan.md) §2)
+added machinery the modules will use. The three rules at the top of this file apply to each line:
+a line is **live** only where a merchant can reach it today. Most of this wave is reachable only
+through a module, and no module has been released (`UNRELEASED_MODULES`), so the landing page may
+not claim the second table.
+
+**Live for every tenant:**
+
+| Capability | Where |
+|---|---|
+| Apply a payment's unapplied amount to open bills later ("₹… not yet applied · Apply to bills"); the receipt then shows "Applied later · date". | `/payments/[id]`; `POST /payments/{id}/allocations` |
+| Business days: the weekdays the business is closed, and closed dates (holidays) with a reason, for the whole business; owner and admin may edit, others read. | `/settings/business-days`; `/calendar/closed-days`, `/calendar/weekdays` |
+| Team: the role picker offers what `GET /roles` returns (the canon three; never owner). | `/settings/team`; `/roles` |
+| A write-off can never forgive a loan (capped at the trade figure, CR-2026-09-30-LED-11). Today every party's trade figure is its balance, so nothing a merchant sees changed. | `/parties/[id]` archive flow |
+| Switching a module off that still has open records is refused with a list of what is open ("Close them first, then turn this off."). | `/settings` |
+
+The Business days screen is reached by its address; its link on the Settings hub appears only
+while a module that reads the calendar is on, which is none today.
+
+**Built, and reachable only through a module (none released):**
+
+| Capability | Core piece | Reached when |
+|---|---|---|
+| Held deposits: take, return, adjust against a charge, a deposit slip; kept out of the balance and the cashbook; a party holding a deposit cannot be archived, and payments cannot be switched off while any deposit holds money. Statement shows a "Deposit held" block. | `payments_held_deposit`; `/deposits`; the khata's deposit panel | a module opens a deposit (library, gym, hotel) |
+| Module roles (collection agent, trainer, housekeeping) with row scoping, shown on the team screen with what they cannot see (CR-2026-09-30-PLATFORM-ROLES). | `register_module_role`, `ScopedViewSetMixin` | the owning module ships its role |
+| Party roles (Member, Borrower, Guest…) as list chips and khata badges; guardian and payer links between parties. | `register_party_role`; `/parties/roles`; `/parties/{id}/relations` | a module registers a role |
+| Loan and deposit buckets on the party (`loan_balance`, `deposit_held`), aging on the trade balance only. | `ledger_entry.bucket` | lending or a deposit-taking module |
+| Reminders for a module's records (an instalment, a book) with a module's sending window and daily cap; reminder hours in Settings. | `register_reminder_source` / `_policy` | a module registers a source |
+| Sales invoices raised by a module (a membership, a stay) through the document port, with an origin badge, and a void that asks the module first. Value credit notes (credit a line's value, not a quantity). | `common/seams/documents.py`, `SalesIssuer` | a module issues a document |
+| Perpetual number series (M-0001…), recurrence and period helpers, module settings, dashboard sections, module reports, module importers. | `register_number_kind`, `recurrence.py`, `register_setting_spec`, `reports/registry.py` | a module registers one |
 
 ## Shop and billing
 

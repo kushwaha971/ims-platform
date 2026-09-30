@@ -1787,3 +1787,107 @@ is now centred, keyed on the card count rather than written for five.
 i18n in step; bundle inside budget.
 
 Everything else in this CR stands: no status labels, hidden pricing, and "Why YourKhata".
+
+## CR-2026-09-30-PLATFORM-ROLES — canon §0.9: module roles, the widened action set, and `platform.calendar.manage`
+
+**State:** `raised` (built by Wave A; filed at the Wave A gate, 30 Sep 2026). Owner defaults **Q1
+and Q2** of `docs/platform/13-owner-questions.md` adopted by the build. Drafted by Track P (A13) in
+`docs/platform/progress/wave-a-track-p.md`; moved here verbatim by the gate.
+**Target:** Part 0 §0.9 (canon roles and actions; approver: holder, with a `DEC-` entry), Part 20
+§20.5 (permission checks), `apps/common/permissions_registry.py`.
+
+*Change.* Canon §0.9 fixes four system roles and a closed action set. It is amended to:
+
+1. **Module roles.** A module may own system roles, `platform_role` rows with `tenant` NULL,
+   `is_system` true and `code = "<module>_<role>"`, registered through
+   `permissions_registry.register_module_role` and seeded by the module's own data migration. Three
+   are adopted (owner Q1): `lending_agent` (collection agent — loans on the agent's routes),
+   `gym_trainer` (trainer — members whose term or batch names the trainer; no fees, dues or
+   mobiles unless granted) and `hospitality_housekeeping` (housekeeping — the room board, no guest
+   contact or ID fields, no folio, no money). A module role holds ONLY its module's codenames:
+   never `parties.party.read`, `ledger.entry.read`, `payments.payment.read`, `reports.*`,
+   `ledger.reminder.write` or any `read_all`. It is assignable only while its module is enabled;
+   while the module is off its codenames vanish and the membership remains.
+2. **Action set.** The closed set `read | write | delete | export | void | correct | manage |
+   adjust` widens to the actions the registry and the FRDs use: `read_all` (reads beyond a row
+   scope; owner and admin by default and **explicitly** accountant, whose automatic set matches only
+   `.read`), `reveal` (identity fields, ADR-053/058; never implied by `*.read`, so never the
+   accountant's automatically), `void_own`, `money_read`, and the per-module verbs each FRD lists.
+   Lending's `lending.borrower.id_read` is renamed `lending.borrower.reveal` (ADR-058).
+3. **Staff and accountant sets.** Each module's release CR adds its codenames to `_STAFF` and
+   `_ACCOUNTANT` as its FRD's permission matrix says (R47).
+4. **`platform.calendar.manage`** (owner Q2) — a new core codename held by owner and admin, to
+   write tenant-wide closed days without the owner-only `platform.tenant.manage`; a closed day with
+   `module = X` may also be written by X's settings codename (R26). (Implemented by A9b.)
+
+*Why.* Row scoping cannot be made safe with the canon roles: `staff` holds tenant-wide core reads,
+so a scope applied only to a vertical's tables would leak through `/parties` (ADR-052). And the
+accountant's `*.read` rule would hand identity fields to accountants automatically (ADR-058).
+
+*Implemented by.* Wave A task A13 (mechanism: `ScopedViewSetMixin`, `RestrictedFieldsMixin`,
+`register_module_role`, `GET /roles`, the team screen, `tests/architecture/test_module_scoping.py`)
+and A9b (the codename). Each role row ships with its vertical: in Wave A no module role is
+registered, so no tenant can assign one yet. One hardening found in A13's QA is part of the rule:
+`permissions_override.allow` cannot hand a module role a core read or a `read_all`
+(`test_an_override_cannot_hand_a_module_role_a_core_read`). *Reversal.* Remove the roles'
+registrations and rows; no core table changes.
+
+## CR-2026-09-30-LED-11 — the shop write-off is capped at the trade figure
+
+**State:** `raised` (built by Wave A task A2; filed at the gate). Owner default **Q3** adopted.
+Drafted by Track M in `docs/platform/progress/wave-a-track-m.md`.
+**Target:** Part 17-02 LED-11 and PTY-04 FR-3 (the write-off escape in the archive flow);
+ADR-043 (one balance with a `loan` bucket).
+
+*Change.* LED-11's "write off a small balance" (PTY-04 FR-3 in the archive flow) defaults to, and is
+capped at, the party's **trade figure** `balance − loan_balance` instead of `balance`.
+
+*Why.* ADR-043 keeps a loan in the party's one balance; without the cap one tap on a shop screen
+would forgive a loan, which only lending's own write-off (R38) may do.
+
+*Effect today:* none — no party has a loan, so the trade figure is the balance (proved at the gate:
+1,290 reads of 300 real dev-database parties are byte-identical before and after Wave A). *With a
+loan:* the write-off posts the trade figure (a `main` line), the loan stands, and archive is
+refused by the ordinary non-zero balance guard (EC-7); a confirmed amount other than the trade
+figure answers 409 `balance_changed` with `amount` = the trade figure.
+
+*Implemented in:* `apps/ledger/services/write_off.py`; tests in `apps/ledger/tests/test_buckets.py`.
+
+*Added at the gate (the look pass).* The archive dialog offered "Write off ₹2,300.00" for a party
+owing ₹300 to the shop and ₹2,000 on a loan: it offers the refusal's `balance`. The server's cap
+held, but the offer was the thing the cap exists to prevent, and with a loan open no shop
+write-off lets the archive through (EC-7). So the 409 `party_balance_nonzero` gains, **only while
+`loan_balance ≠ 0`**, `can_write_off: false`, `amount` (the trade figure) and `suggestion:
+"collect"`; the dialog then offers Record payment only and says "Part of this is a loan, and a
+loan cannot be written off here" (`test_the_archive_refusal_does_not_offer_to_write_off_a_loan`,
+`PartyArchiveDialogLoan.test.tsx`). Every other refusal's payload is unchanged.
+
+## CR-2026-09-30-WAVE-A — Wave A: what was built beside the FRDs and contracts v1
+
+**State:** `raised` (the gate's summary of interface-level decisions the three tracks recorded).
+Every item is additive or narrows a surface; none changes a figure an existing tenant reads (the
+gate's golden and replay proofs). The questions each one leaves are answered, as proposals, in
+`docs/platform/10-architecture.md` §18.
+**Target:** FRD 00 (`docs/platform/frd/00-core-and-engines.md`), `docs/platform/11-contracts.md` v1,
+Part 22 §22.1.1.
+
+| # | What was built | Beside what it says | Task | §18 |
+|---|---|---|---|---|
+| 1 | `sales.default_kind` and `reset_fy` removed from the settings payload and ignored on PUT (owner Q14 default) | FRD X07 BR-6 "keep showing `reset_fy`" | A8 | — |
+| 2 | `raise_counter(..., via=)` keyword, for the audit row FRD §6 names | contracts §1.7 has no `via` | A8 | W-P2 |
+| 3 | Weekdays stored as `calendar.closed_weekdays[.<module>] = {"value": [...]}` and written only through `PUT /calendar/weekdays`; `readers` added to the list's `meta` | FRD X08 §5 (one nested key; generic settings PUT as an alternative) | A9b | W-P3 |
+| 4 | Engine reads narrowed to modules that are enabled AND whose codename the member holds | contracts' minimum (any consuming module) | A12 | W-P4 |
+| 5 | Off-guard `label_id` convention `<module>.off.<thing>` routed to the `settings` catalogue; module role labels `<module>.role.<name>[.caption]` routed to `team` | not in the FRDs | A12, A13 | W-P5 |
+| 6 | A payments-owned void seam (`payments/services/void_seam.py`) replaces `void.py`'s import of `sales.refund_seam` | ADR-056 names the targets and the void listener, not this import | A14 | W-M1 |
+| 7 | `"auto"` FIFO merges each target's own FIFO by `(document_date, number, id, document_type)` | R6 "global oldest-first" read literally re-sorts PUR-02's due-date order | A4a | W-M3 |
+| 8 | "Applied later" kept in `payment.meta.applied_later` (document, date) | no column reserved | A4a | — |
+| 9 | `Issuer.available(tenant)`, `IssuedDocument.warnings` / `existing`, the origin `labels(*, tenant, ids)` listener method, the port's optional `refund` payload | contracts §1.5 lists none of them | A5 | W-M4…W-M7 |
+| 10 | Two error codes `document_origin_locked`, `document_origin_confirm` (409); `party_has_open_records` (409) | new rows in §22.1.1 table F | A5, A6 | — |
+| 11 | Deposit panel key `payments.deposits` (A6's registry wants `<module>.<name>`) | FRD X02 §7 "the core key `deposits`" | A4b | W-F6 |
+| 12 | Migration numbers `payments 0004_held_deposit`, `sales 0005_document_origin` | FRDs say `0003_held_deposits`, `0004` | A4b, A5 | — |
+| 13 | ESLint boundary zones through `import/no-restricted-paths` | FRD X14 §7 names `no-restricted-imports` | A11 | W-F1 |
+| 14 | A value credit line stored as `qty 1 × taxable_value` | print shape unstated | A15 | W-F5 |
+| 15 | The statement CSV exports the running-balance rows only; deposit lines are not in it | FRD X01 silent | A2 | W-M2 |
+| 16 | A payment's ledger `source` carries `adjustment: true` on the lines of a deposit adjustment (absent otherwise), so the out line reads "Adjusted from deposit", not "Deposit returned", on the khata and the customer's statement | FRD X02 §8 names the words by direction only | gate (A4b) | — |
+| 17 | `party_balance_nonzero` carries `can_write_off: false` + `amount` while a loan is open (see CR-2026-09-30-LED-11) | LED-11 / PTY-04 FR-3 | gate (A2) | — |
+| 18 | The khata's module panels are mounted for every party (not only while a module with party roles is on) and a registered panel may say which parties it is for (`appliesTo`); a registration module imported bare must be in `package.json` `sideEffects` | FRD X04 §7 | gate (A6, A4b) | W-F3 |

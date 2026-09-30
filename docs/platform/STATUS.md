@@ -8,7 +8,7 @@ Owner direction of 29 Sep 2026: [00-platform-vision.md](00-platform-vision.md). 
 | 2 | Research the modules: lending, library, gym, hospitality, candidates | **Done 29 Sep**. Coaching & tuition was researched, then declined by the owner (not in scope) | `research/*.md` |
 | 3 | Module documentation (FRDs) | **DONE 30 Sep** | `frd/00-core-and-engines.md`, `frd/{library,lending,gym,hospitality}.md`; `10-architecture.md` §17 (72 resolutions); `11-contracts.md` v1 FINAL; `12-implementation-plan.md`; `13-owner-questions.md` |
 | 4 | Architecture review and reuse map | **DONE 30 Sep** (ADR-041…060; reuse map in 10-architecture) | `10-architecture.md`, ADRs |
-| 5 | Implementation | **Next: Wave A (core foundations)**, then B (Library + dues + attendance), C (Gym, Lending), D (Bookings, Hospitality) | `12-implementation-plan.md` |
+| 5 | Implementation | **Wave A (core foundations) DONE 30 Sep** — 16 tasks merged, gate passed (below). **Next: Wave B** (Library + dues + attendance), then C (Gym, Lending), D (Bookings, Hospitality) | `12-implementation-plan.md`; `progress/wave-a-*.md` |
 | 6 | QA, fixes, integration | Not started | |
 | 7 | Final sync and handoff | Not started | |
 
@@ -92,3 +92,34 @@ against the live stack.
 - [ ] Staging kept out of search indexes (BACKLOG).
 
 - **30 Sep, Phase 3 closed.** Committed: FRDs 22122f0 (core and engines, 30 features), 58a0ee6 (Library LIB-01…14), fb24d04 (Lending LEN-01…14), 80f39ec (Gym GYM-01…21), db8fc74 (Hotel HTL-01…19). The architecture owner resolved all 85 contract questions (R1–R72, aae1e74), froze contracts v1, added ADR-056…060, amended the FRDs (914a3e3), and wrote the implementation plan and owner questions (8801d2b). Owner questions have build defaults, so nothing blocks Wave A.
+
+## Wave A gate (30 Sep 2026)
+
+All 16 Wave A tasks (A1–A16) on main; the gate run is recorded step by step in
+[progress/wave-a-gate.md](progress/wave-a-gate.md).
+
+| Gate | Result |
+|---|---|
+| Backend `pytest -q` (full) | **3,209 passed, 8 skipped, 0 failed** (after the gate's fixes; 3,206/8/0 before them) |
+| `makemigrations --check --dry-run` | clean |
+| Architecture tests (import rules whole-AST, route coverage, error codes, permission registry, `tenant_data`, module scoping) | green (in the full run) |
+| Replay tests (`balance`, `loan_balance`, `deposit_held`, `held_amount`, payment bucket) and the golden statement file | green (in the full run) |
+| Dev DB: 10 migrations applied; `recalc_balances --check` / `check_invariants` | identical before and after: 4,518 parties, the known 306 drifted e2e parties (same lines), stock 246/0 |
+| Dev DB golden: 1,290 real reads (statement, corrections, timeline, detail, aging, summary; 300 parties, 45 tenants) | byte-identical before/after Wave A |
+| Frontend `type-check`, `lint` | clean, 0 warnings |
+| Frontend `jest` (full) | **257 suites, 2,803/2,803** (after the gate's fixes) |
+| `i18n:split` + `i18n:check` | in step, 4,119 keys in 46 catalogues |
+| `build` + `bundle:check` | pass; sharedApp 104.2 → 105.1 (cause found, budget 106, dated note); 44 routes re-baselined; 1 cheap fix |
+| e2e regression `run-regression.mjs -j 3` | **1,911/1,911**, 38 jobs, 0 retried — before the gate's fixes and again on the final build |
+| `landing.mjs` / `seo.mjs` | 169/169 / 105/105 |
+| QA sweep `e2e/wave-a-qa.mjs` (22 screens × 390/1280 × en/hi × light/dark) | **560/560** checks on the final build (280 per language), ~190 screenshots in `/tmp/e2e-shots/wave-a/`; six defects found on the way, all fixed |
+| Canon §0.9 CR | filed: CR-2026-09-30-PLATFORM-ROLES (+ LED-11, WAVE-A) |
+| Owner's Mac fast-forward | coordinator's |
+
+Defects the gate found by looking, all fixed test-first: no deposit panel on the khata (mounted
+only with party roles, and its registration dropped from the production bundle by `sideEffects`);
+"Deposit returned" printed for a deposit adjustment on the khata and the customer's statement; the
+deposit void dialog's wrong khata line and "deposit reopens"; a loan offered for write-off;
+refusals toasted over the dialogs that explain them; a team test red on main since A13. Open
+questions with proposed answers: [10-architecture.md §18](10-architecture.md#18-wave-a-open-questions-collected-at-the-wave-a-gate-30-sep-2026).
+

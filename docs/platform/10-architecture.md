@@ -829,3 +829,61 @@ A12–A16 are new; A4 and A9 are split in the plan into A4a/A4b (payments v2, de
 | gym | 15 | 15 | C5 (split invoicing kept), C9 (409 confirm shape), C15 (no dedupe without a group) |
 | hospitality | 17 | 17 | C3 (explicit payment ids plus earmark), C5 and C12 (Wave D, not A) |
 | **Total** | **85** | **85** | 72 resolution rows |
+
+---
+
+## 18. Wave A open questions (collected at the Wave A gate, 30 Sep 2026)
+
+The three Wave A tracks recorded these as "questions for the architecture owner" in
+`progress/wave-a-track-{m,p,f}.md`. Each was built with the default in the **Built as** column, so
+nothing waits on it. The **Proposed answer** is the gate's recommendation; the contracts
+([11-contracts.md](11-contracts.md) v1) are not changed here — an answer that amends them is the
+architecture owner's, as a v1.1 amendment. The interface-level items are also registered in
+`docs/CR-LOG.md` CR-2026-09-30-WAVE-A.
+
+### 18.1 Money: ledger, payments, the document port (Track M)
+
+| # | Question | Built as | Proposed answer |
+|---|---|---|---|
+| W-M1 | `payments/services/void.py` imported `sales.refund_seam.release_refund` at module level; ADR-056 does not name it. Which mechanism removes it? | A payments-owned void seam (`void_seam.py`), keyed and idempotent, that sales registers into (ADR-042 pattern) | **Confirm.** It is the same shape as `purchases.payment_seam`; add it to §4.2's registry list in the v1.1 amendment |
+| W-M2 | Should the statement CSV carry deposit lines (they cannot be in the running-balance column)? | Not exported | **Append a second section** ("Deposits held", date, received, returned, held) after the running-balance table when `meta.deposit` is present — the CSV is what an accountant reads, and a deposit the printed sheet shows but the CSV omits is a discrepancy. Additive; lands with the first deposit-writing vertical (library, B-wave) |
+| W-M3 | R6 says `"auto"` is global oldest-first by `(document_date, number, id)`; literally applied it re-sorts supplier bills that PUR-02 FR-3 settles by `due_on` | A merge of each target's own FIFO list by that key | **Confirm the merge**, and word R6 as "oldest first across targets, each target's own order within it" |
+| W-M4 | `common/seams/documents.py` may not import `platform_app`, so `issuer_available` asks the issuer; `Issuer.available(tenant)` is not in the protocol | Added as a protocol method; sales answers from `effective_modules` | **Confirm** and add `available` to the `Issuer` protocol in v1.1 |
+| W-M5 | `issue_credit_note(settlement="refund")` cannot say how the money went back | Optional `refund` (sales' `mode_breakup`); without it the open credit is refunded in cash | **Confirm the field**, but make the default explicit: with no `refund`, refuse (400 `refund` required) once a vertical calls it — a silent "cash" default decides a cashbook line for the module. No caller exists yet, so this costs nothing now |
+| W-M6 | "Label via the origin's registered label function" has no signature | Optional listener method `labels(*, tenant, ids) -> {id: str}`, batched per page | **Confirm**; batched per page is the only shape that keeps the list's query budget |
+| W-M7 | `IssuedDocument` has nowhere for BR-3's warning or BR-6's "already issued" | `warnings` and `existing` as `NotRequired` keys | **Confirm** |
+| W-M8 | `overdue.py` moves an invoice to `overdue` without `refresh_invoice_amounts`, so an origin is not told of that move | Not told (the FRD binds the listener to `refresh_invoice_amounts` only) | **Leave it**: overdue is a display status, not a settlement change; say so in PLT-X05 so a vertical does not wait for it |
+| W-M9 | `void_document` trusts the calling module; a module voiding another module's document is not refused | Not refused | **Refuse it**: `void_document(module=…)` compares with the document's `origin_module` and raises; a one-line guard plus a contract test, before the first vertical calls the port |
+
+### 18.2 Platform: release gate, roles, numbering, calendar, parties, reminders (Track P)
+
+| # | Question | Built as | Proposed answer |
+|---|---|---|---|
+| W-P1 | Canon §0.9 amendment (module roles, widened actions, `platform.calendar.manage`) | Built to owner Q1/Q2 defaults | **File** — done at the gate as CR-2026-09-30-PLATFORM-ROLES; the holder records the `DEC-` entry canon requires |
+| W-P2 | `raise_counter` needs `via` for the audit row FRD §6 names; contracts §1.7 has no such keyword | Additive keyword, default `"import"` | **Confirm** in v1.1 |
+| W-P3 | Weekday storage: FRD §5's one nested key or contracts' (R32) per-module keys? Two write paths or one? | Contracts' keys as `{"value": [...]}` rows; written only by `PUT /calendar/weekdays`; `readers` in the list's `meta` | **Confirm all three**: one write path means one validator (BR-2 "never all seven days closed") |
+| W-P4 | Engine reads: the contract's minimum lets a member holding any consuming module's codename read every consumer's rows | Narrowed to modules enabled AND held | **Confirm the stricter rule** and write it into §8 — it is the only reading under which a library-only reader cannot see gym attendance |
+| W-P5 | Where do a vertical's server-sent labels live (off-guard `<module>.off.*`, role `<module>.role.*`, archive `<module>.archive.*`, `nav.module.<code>`)? | Conventions recorded in the track file; catalogue prefix lines route them to settings, team and parties | **Adopt as a rule in §6**: each vertical's first commit adds those keys and their `catalogues.json` lines, and its `--shots` sweep asserts no raw id |
+| W-P6 | A module's own archive "link" (FRD 00 §2 flow 4) has no field in `ArchiveBlock` | The dialog names the module and the next step | **Add an optional `href`** to `ArchiveBlock` in v1.1 (a route path, validated client-side against `ROUTES`), when the first vertical needs it |
+| W-P7 | "Pick or create a party" in the relation dialog | Pick-only; the no-match line says to add them first | **Keep pick-only**: a party form inside a dialog inside the khata is three layers; revisit with the library's guardian flow if its UAT asks |
+| W-P8 | `tests/migrations/test_reversibility.py` uses a fixed scratch database shared by every worktree | Unchanged | **Derive the name from `UB_TEST_DB_NAME`** (an engineering fix, not a contract; logged for Wave B's lead) |
+
+### 18.3 Foundations: import rules, primitives, registries, value credits, deposits (Track F)
+
+| # | Question | Built as | Proposed answer |
+|---|---|---|---|
+| W-F1 | FRD X14 §7 and §6.7 name `no-restricted-imports`; A11 used `import/no-restricted-paths` zones | Zones (resolved paths, sees `import()` inside `dynamic()`, not overridden by later `files` blocks) | **Confirm the zones**; amend §6.7's wording. Add a zone for `app/(app)/<module>/**` in each vertical's skeleton task |
+| W-F2 | `period_label` has no tenant argument, so quarter/FY labels assume April | April | **Add optional `fy_start_month`** only when a tenant can change its FY start (not planned); no change now |
+| W-F3 | Where are verticals' frontend registrations (`registerDashboardSection`, `registerModuleReport`, `registerPartyPanel`, `registerReminderTab`) imported from, without core importing a vertical? | Not wired (no vertical yet) | **One sanctioned file**, `src/modules/registrations.ts`, listing each vertical's `register.ts` as a side-effect import, exempted by name in the boundary lint rule and in no other file, and listed in `package.json` `sideEffects` — a bare import of an undeclared module is DROPPED by the production build (the gate found A4b's deposit panel registration missing from every client chunk; `src/tests/sideEffectImports.test.ts` now fails for it). A generated list adds a build step for four lines. Decide before library F01 |
+| W-F4 | Registered-report CSVs are synchronous with the 1,00,000-row cap; a module report over 5,000 rows would need the async export path | Synchronous only | **Make the registry's `csv` replayable by key** (the export job looks the spec up by `<module>.<name>`) when the first module report can pass 5,000 rows; additive |
+| W-F5 | A value credit line prints as `qty 1 × taxable_value`; should the quantity column be blank? | Prints as stored | **Blank the quantity and rate cells for `credit_mode = value`** on the print sheet (the data stays); a print question for DEC-002's document rendering, with gym T13 |
+| W-F6 | FRD X02 §7 says the deposit panel registers under the core key `deposits`; A6's registry requires `<module>.<name>` | `payments.deposits`, gated on payments | **Confirm** `payments.deposits`; amend X02 §7 |
+| W-F7 | The khata's deposit panel has no Adjust action: Apply needs the charges a vertical allows, and the khata has no vertical context. Should it list the party's open `main` invoices? | Take and Return on the khata; Adjust only where a vertical renders `DepositPanel` with `chargesFor` | **Keep Adjust in the verticals.** A deposit is held for a subject (a membership, a room); adjusting it against an unrelated shop invoice from the khata is exactly the cross-module leak ADR-044 forbids |
+| W-F8 | The slip prints from the khata through a body portal and a `data-printing-slip` rule. Replace with `/deposits/[id]/print`? | Portal | **Keep the portal** until a second document prints from the khata; then one print route for both |
+| W-F9 | `subject_label` is omitted from the deposit detail until a vertical resolves it | Omitted | **Confirm** (the A2 rule: a key that is always empty is a claim the code cannot verify); the resolver is the vertical's `register_origin`-style label function |
+
+### 18.4 From the gate itself
+
+| # | Question | Proposed answer |
+|---|---|---|
+| W-G1 | The shared shell grew 0.9 KB gz in Wave A with no leak — every byte is the invalidation map, `API_PATHS`, the party service warm-up and Turbopack's wider module ids (frontend `bundle-budgets.json`, 30 Sep note). At ~16 tasks per wave, Waves B–D add ~2–3 KB to every route | **Admit per-module invalidation entries lazily** (a module's map entries registered with its lazily injected slice, the same `inject()` CR-134 uses) before Wave B's frontends land; until then each wave's gate re-baselines with a measured note |
