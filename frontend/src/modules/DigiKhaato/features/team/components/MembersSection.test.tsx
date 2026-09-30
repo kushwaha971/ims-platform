@@ -21,6 +21,15 @@ import { MembersSection } from './MembersSection';
  * told to expect one.
  */
 jest.mock('../api/memberService');
+/* A13: the add dialog asks `GET /roles` when it opens. Left unmocked it is a
+   transport error in jsdom, the network slice goes `degraded`, and its recovery
+   refetches the members list — whose loading state unmounts the open dialog
+   between two keystrokes, so every test that fills the form fails on a field
+   that was there a moment ago (red on main since A13; TeamPageContent had the
+   same fix in A6). */
+jest.mock('../api/roleService');
+
+const roleService = jest.requireMock('../api/roleService') as { fetchRoles: jest.Mock };
 
 const memberService = jest.requireMock('../api/memberService') as {
   listMembers: jest.Mock;
@@ -83,6 +92,7 @@ beforeEach(() => {
   signIn(['platform.members.manage']);
   memberService.listMembers.mockResolvedValue(page([]));
   memberService.createMember.mockResolvedValue(CREDENTIALS);
+  roleService.fetchRoles.mockResolvedValue([]);
 });
 
 describe('MembersSection — the permission', () => {

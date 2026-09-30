@@ -19,6 +19,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 from django.conf import settings
@@ -46,7 +47,31 @@ LOCAL_APP_LABELS = (
     "expenses",
 )
 
-SCRATCH_DB = "test_ub_migration_roundtrip"
+
+def scratch_db_name(environ: Any = os.environ) -> str:
+    """The round trip's own database, per worktree.
+
+    It used to be one fixed name, and every track's worktree (each with its own
+    `UB_TEST_DB_NAME`, `scripts/worktree-bootstrap.sh`) dropped and re-created
+    the SAME scratch database: two tracks running this suite at once failed each
+    other (Wave A Track P, A1 QA item 5). Unset, the name is what it always was.
+    """
+    base = environ.get("UB_TEST_DB_NAME")
+    return f"{base}_migration_roundtrip" if base else "test_ub_migration_roundtrip"
+
+
+SCRATCH_DB = scratch_db_name()
+
+
+def test_the_scratch_database_follows_the_worktree_test_database() -> None:
+    """The defect this prevents: two worktrees sharing one scratch database."""
+    assert scratch_db_name({}) == "test_ub_migration_roundtrip"
+    assert scratch_db_name({"UB_TEST_DB_NAME": "test_ub_track_p"}) == (
+        "test_ub_track_p_migration_roundtrip"
+    )
+    assert scratch_db_name({"UB_TEST_DB_NAME": "test_ub_track_m"}) != scratch_db_name(
+        {"UB_TEST_DB_NAME": "test_ub_track_p"}
+    )
 
 
 def _local_migrations() -> list[tuple[str, str]]:
