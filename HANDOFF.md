@@ -414,7 +414,56 @@ No module code before the FRDs are finished.
 - **Wave C**: Gym, then Lending.
 - **Wave D**: bookings engine, then Hospitality.
 
-## 8h. 30 Sep, 01:30 UTC: Wave A in progress, stopped at a usage limit (RESUME HERE)
+## 8i. 30 Sep, 07:45 UTC: WAVE A DONE, Wave B next (RESUME HERE)
+
+**Colleague or new agent: start with `CONTINUE-PROMPT.md`.** The repo on the owner's Mac is the single source of truth.
+
+**Wave A is complete and gated on main (dfab8d7).**
+- All 16 core-foundation tasks are merged: A1, A2, A4a, A4b, A5, A6, A7, A8, A9a, A9b, A10, A11, A12, A13, A14, A15, A16.
+- The track branches are deleted.
+
+**Gate results**
+
+| Check | Result |
+|---|---|
+| Backend pytest | 3,209 passed / 8 skipped |
+| `makemigrations --check` | clean |
+| jest | 2,803/2,803 |
+| lint, type-check | clean |
+| i18n | 4,119 keys |
+| build + bundle:check | green; 44 routes re-baselined with dated notes; `sharedApp` budget raised to 106 KB (no leak found) |
+| e2e regression | 1,911/1,911 |
+| landing / seo e2e | 169 / 105 |
+| QA sweep `e2e/wave-a-qa.mjs` | 560/560 |
+| dev-DB golden reads | byte-identical before and after |
+
+The QA sweep found six product defects, all fixed with tests:
+- the deposit panel was dropped by tree-shaking; `src/tests/sideEffectImports.test.ts` now guards it;
+- adjustment wording;
+- deposit void copy;
+- no write-off is offered for a loan;
+- two double toasts.
+
+**CRs filed in `docs/CR-LOG.md`**
+- CR-PLATFORM-ROLES: the canon §0.9 module roles and `platform.calendar.manage` (owner defaults Q1 and Q2).
+- The LED-11 write-off cap (Q3).
+- CR-WAVE-A: 18 interface items.
+
+`docs/platform/10-architecture.md` §18 lists 27 Wave A open questions, each with a proposed answer.
+
+**Fixed along the way:** a `node_modules` symlink had been committed in A6 (3e84ca9). `.gitignore` now also ignores symlinks. If you have no e2e packages, run `npm ci` in `e2e/`.
+
+**Before starting Wave B, the architecture owner decides:**
+- **W-F3:** a single `src/modules/registrations.ts` for vertical frontend registrations, listed in `sideEffects`.
+- **W-G1:** lazy per-module invalidation entries, to stop the shell growing about 1 KB per wave.
+
+The proposals are in §18.
+
+**Wave B** (plan §3): Library (`docs/platform/frd/library.md`, the owner's priority), plus the dues engine (FRD 00 Part B) and the attendance engine (Part C). Run up to 3 tracks, each in its own git worktree, following plan §1.
+
+**Project note:** the Claude Project "IMS" is at its size limit, so its HANDOFF copy is stale. The repo's `HANDOFF.md` is authoritative.
+
+## 8h. 30 Sep, 01:30 UTC: Wave A paused at a usage limit (superseded by §8i)
 
 **To continue, use `CONTINUE-PROMPT.md` in the repo root.** It is a ready prompt for a new agent.
 
