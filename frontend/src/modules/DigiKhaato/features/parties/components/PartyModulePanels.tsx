@@ -14,19 +14,26 @@ import 'modules/DigiKhaato/features/payments/deposits/partyPanel';
 import type { PartyDetail } from '../types/party.types';
 
 /**
- * A6 (PLT-X04 §7) — every registered module panel whose module is on, under
- * the khata's info panel. Renders nothing at all for a business with no such
- * module, which is every business until the first vertical registers one.
+ * A6 (PLT-X04 §7) — every registered module panel whose module is on (and
+ * which applies to this party), under the khata's info panel. Renders nothing
+ * at all when no panel applies. Mounted whatever the party's ROLES: a panel
+ * belongs to its module, not to the "Guardian and payer" block (Wave A gate —
+ * a held deposit had no panel on a khata with no module roles on).
  */
 export function PartyModulePanels({
   party,
   readOnly,
-}: Readonly<{ party: PartyDetail; readOnly: boolean }>): React.JSX.Element | null {
+  className,
+}: Readonly<{
+  party: PartyDetail;
+  readOnly: boolean;
+  className?: string;
+}>): React.JSX.Element | null {
   const enabled = useAppSelector(selectEnabledModules);
-  const panels = useMemo(() => partyPanelsFor(enabled), [enabled]);
+  const panels = useMemo(() => partyPanelsFor(enabled, party), [enabled, party]);
   if (panels.length === 0) return null;
   return (
-    <UbStack gap={4}>
+    <UbStack gap={4} className={className}>
       {panels.map(({ key, Component }) => (
         <Component key={key} party={party} readOnly={readOnly} />
       ))}

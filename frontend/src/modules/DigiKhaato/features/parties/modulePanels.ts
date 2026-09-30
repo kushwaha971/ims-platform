@@ -35,6 +35,13 @@ export interface PartyPanelEntry {
   /** `<module>.<name>` — the React key and the registry key. */
   readonly key: string;
   readonly load: () => Promise<PartyPanelComponent>;
+  /**
+   * Which parties the panel is for. Omitted, every party while the module is
+   * on. A module that is on for every shop (payments' deposits) says which
+   * parties it has anything to show for, so the khata does not fetch the
+   * panel's chunk on every visit to render nothing (Wave A gate).
+   */
+  readonly appliesTo?: (party: PartyDetail) => boolean;
 }
 
 export interface RegisteredPartyPanel {
@@ -44,10 +51,12 @@ export interface RegisteredPartyPanel {
 }
 
 const KEY = /^([a-z][a-z0-9_]*)\.[a-z0-9][a-z0-9_]*$/;
-const registry = new Map<
-  string,
-  RegisteredPartyPanel & { readonly load: PartyPanelEntry['load'] }
->();
+type StoredPanel = RegisteredPartyPanel & {
+  readonly load: PartyPanelEntry['load'];
+  readonly appliesTo?: PartyPanelEntry['appliesTo'];
+};
+
+const registry = new Map<string, StoredPanel>();
 
 export const registerPartyPanel = (module: string, entry: PartyPanelEntry): void => {
   const match = KEY.exec(entry.key);
@@ -56,25 +65,38 @@ export const registerPartyPanel = (module: string, entry: PartyPanelEntry): void
   }
   const existing = registry.get(entry.key);
   if (existing) {
-    if (existing.module === module && existing.load === entry.load) return;
+    if (
+      existing.module === module &&
+      existing.load === entry.load &&
+      existing.appliesTo === entry.appliesTo
+    )
+      return;
     throw new Error(`Party panel "${entry.key}" is registered twice`);
   }
   registry.set(entry.key, {
     module,
     key: entry.key,
     load: entry.load,
+    ...(entry.appliesTo ? { appliesTo: entry.appliesTo } : {}),
     Component: dynamic(entry.load, { ssr: false }),
   });
 };
 
-/** The panels of the modules in `enabledModules`, in registration order. */
+/**
+ * The panels of the modules in `enabledModules`, in registration order — and,
+ * given the party, only those whose `appliesTo` accepts it.
+ */
 export const partyPanelsFor = (
-  enabledModules: readonly string[]
+  enabledModules: readonly string[],
+  party?: PartyDetail
 ): readonly RegisteredPartyPanel[] =>
-  [...registry.values()].filter((panel) => enabledModules.includes(panel.module));
+  [...registry.values()].filter(
+    (panel) =>
+      enabledModules.includes(panel.module) &&
+      (party === undefined || panel.appliesTo === undefined || panel.appliesTo(party))
+  );
 
-let baseline: ReadonlyMap<string, RegisteredPartyPanel & { load: PartyPanelEntry['load'] }> | null =
-  null;
+let baseline: ReadonlyMap<string, StoredPanel> | null = null;
 
 /** Tests only: back to what was registered when first called — never to empty. */
 export const resetPartyPanelsForTests = (): void => {

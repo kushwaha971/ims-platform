@@ -482,8 +482,9 @@ export function PartyDetailPageContent({
             <UbBox className="lg:hidden">
               <UbDisclosure label={t('parties.detail.details')}>{infoPanel}</UbDisclosure>
             </UbBox>
-            {/* A6 — below the info panel at every width: the section exists only
-                while a module with roles is on (the detail's `roles` key). */}
+            {/* A6 — below the info panel at every width: the relations section
+                exists only while a module with roles is on (the detail's
+                `roles` key). */}
             {party && party.roleBadges !== undefined && (
               <UbStack gap={4} className="mt-4">
                 <PartyRelationsSectionLazy
@@ -491,9 +492,13 @@ export function PartyDetailPageContent({
                   partyName={party.name}
                   readOnly={isArchived}
                 />
-                <PartyModulePanels party={party} readOnly={isArchived} />
               </UbStack>
             )}
+            {/* The module panels do not wait for roles: each belongs to its
+                module and says which parties it is for. Inside the roles block,
+                a held deposit on a shop with no module roles had no panel (and
+                no Return) anywhere — found at the Wave A gate. */}
+            {party && <PartyModulePanels party={party} readOnly={isArchived} className="mt-4" />}
           </UbBox>
         </UbBox>
 

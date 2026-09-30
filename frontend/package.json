@@ -33,7 +33,9 @@
   "sideEffects": [
     "*.css",
     "*.scss",
-    "./src/i18n/catalogues/*.ts"
+    "./src/i18n/catalogues/*.ts",
+    "./src/modules/DigiKhaato/features/payments/deposits/partyPanel.ts",
+    "./src/modules/DigiKhaato/features/notifications/redux/notificationSlice.ts"
   ],
   "engines": {
     "node": ">=22"

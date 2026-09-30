@@ -12,4 +12,14 @@ import {
 export const loadDepositPanel = (): Promise<PartyPanelComponent> =>
   import('./components/DepositPanel').then((module) => module.DepositPanel);
 
-registerPartyPanel('payments', { key: 'payments.deposits', load: loadDepositPanel });
+/** Only a party the server sent a deposit figure for (A2: present when non-zero,
+    or while a deposit-writing module is on). Every shop has payments on, so
+    without this every khata would fetch the panel's chunk to render nothing. */
+export const depositPanelAppliesTo = (party: { readonly depositHeld?: string }): boolean =>
+  party.depositHeld != null;
+
+registerPartyPanel('payments', {
+  key: 'payments.deposits',
+  load: loadDepositPanel,
+  appliesTo: depositPanelAppliesTo,
+});
