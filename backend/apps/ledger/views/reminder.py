@@ -23,6 +23,7 @@ from rest_framework.views import APIView
 
 from apps.common.constants import ModuleCode
 from apps.common.context import Ctx
+from apps.common.dates import tenant_today
 from apps.common.exceptions import ValidationFailed
 from apps.common.pagination import PagePagination
 from apps.common.permissions import HasPermission, ModuleEnabled
@@ -31,8 +32,10 @@ from apps.common.throttling import ScopedUserRateThrottle
 from apps.common.viewsets import TenantScopeMixin
 from apps.ledger.constants import ReminderKind, ReminderStatus
 from apps.ledger.models import Reminder
+from apps.ledger.selectors.module_reminders import module_due_rows, with_allowance
 from apps.ledger.serializers.reminder import serialize_reminder
 from apps.ledger.services import messaging
+from apps.ledger.services.reminder_seam import today as seam_today
 from apps.ledger.services.reminder_settings import reminder_settings, update_reminder_settings
 from apps.ledger.services.reminders import (
     bulk_reminders,
@@ -68,7 +71,10 @@ class _ReminderBase(TenantScopeMixin, APIView):
 class ReminderListCreateView(_ReminderBase):
     def get(self, request: Any) -> Any:
         params = request.query_params
-        rows = self.scope_to_tenant(Reminder.objects.select_related("party"))
+        rows = self.scope_to_tenant(Reminder.objects.select_related("party", "recipient_party"))
+        # A7 §11 — the history's module filter; `module=` alone is the shop's.
+        if "module" in params:
+            rows = rows.filter(module=params.get("module") or "")
         if params.get("party_id"):
             try:
                 rows = rows.filter(party_id=uuid.UUID(params["party_id"]))
@@ -128,9 +134,11 @@ class ReminderDueView(_ReminderBase):
     """
 
     def get(self, request: Any) -> Any:
-        from apps.common.dates import tenant_today
         from apps.ledger.selectors.collection import DUE_TABS, due_parties
 
+        module = request.query_params.get("module") or ""
+        if module:
+            return self._module_due(request, module)
         tab = request.query_params.get("bucket") or "today"
         if tab not in DUE_TABS:
             raise ValidationFailed({"bucket": ["Choose today, overdue or upcoming."]})
@@ -143,12 +151,27 @@ class ReminderDueView(_ReminderBase):
                 "id": str(p.id),
                 "name": p.name,
                 "mobile": p.mobile,
-                "balance": str(p.balance),
+                # A7 BR-7 — the shop's figure, which is what this list asks for.
+                "balance": str(p.shop_balance),
                 "collection_date": p.collection_date.isoformat() if p.collection_date else None,
             }
             for p in page
         ]
         return Response({"data": data, "meta": paginator.get_meta()})
+
+    def _module_due(self, request: Any, module: str) -> Any:
+        """A7 §6 — a module's candidates, bucketed, each with `allowed` and the
+        next allowed time, so the list says "Next: 8:00 am" before anyone taps."""
+        tenant = self.get_tenant()
+        bucket = request.query_params.get("bucket") or ""
+        rows = module_due_rows(
+            tenant=tenant, today=seam_today(tenant), module=module, bucket=bucket
+        )
+        paginator = PagePagination()
+        page = paginator.paginate_queryset(rows, request, view=self)
+        return Response(
+            {"data": with_allowance(tenant, module, page), "meta": paginator.get_meta()}
+        )
 
 
 class ReminderPreviewView(_ReminderBase):
@@ -156,7 +179,11 @@ class ReminderPreviewView(_ReminderBase):
         data = request.data or {}
         return StandardResponse.ok(
             preview_reminder(
-                ctx=self.ctx(), party_id=data.get("party_id"), note=data.get("note") or ""
+                ctx=self.ctx(),
+                party_id=data.get("party_id"),
+                note=data.get("note") or "",
+                source_type=data.get("source_type"),
+                source_id=data.get("source_id"),
             )
         )
 
@@ -203,5 +230,12 @@ class ReminderSettingsView(_ReminderBase):
         )
 
     def patch(self, request: Any) -> Any:
-        settings = update_reminder_settings(ctx=self.ctx(), payload=dict(request.data or {}))
+        payload = dict(request.data or {})
+        # A7 §10 — narrowing a module's sending hours is the OWNER's
+        # (`platform.tenant.manage`), a notch above the messaging switches.
+        if "windows" in payload and not HasPermission("platform.tenant.manage")().has_permission(
+            request, self
+        ):
+            self.permission_denied(request, message="Only the owner can change sending hours.")
+        settings = update_reminder_settings(ctx=self.ctx(), payload=payload)
         return StandardResponse.ok({**settings, "sms_configured": messaging.sms_configured()})

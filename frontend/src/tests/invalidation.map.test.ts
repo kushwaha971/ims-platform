@@ -10,6 +10,7 @@ import 'modules/DigiKhaato/features/branding/redux/brandingSlice';
 import 'modules/DigiKhaato/features/calendar/redux/calendarSlice';
 import 'modules/DigiKhaato/features/parties/redux/partyRelationSlice';
 import 'modules/DigiKhaato/features/parties/redux/partyRoleSlice';
+import 'modules/DigiKhaato/features/reminders/redux/moduleReminderSlice';
 import 'modules/DigiKhaato/features/business-profile/redux/businessProfileSlice';
 import 'modules/DigiKhaato/features/inventory/redux/inventoryMastersSlice';
 import 'modules/DigiKhaato/features/inventory/redux/itemDetailSlice';

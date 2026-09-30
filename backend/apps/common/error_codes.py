@@ -193,6 +193,11 @@ _REGISTRY: dict[str, tuple[int, bool]] = {
     "document_origin_confirm": (409, False),
     # ── A6 ── contracts §4: archive refused by a module's guard (PLT-X04)
     "party_has_open_records": (409, False),
+    # ── A7 ── contracts §4 (PLT-X06): a module's reminder policy refuses, and a
+    # record that is no longer due (EC-1; the dues engine raises it too).
+    "reminder_outside_window": (409, False),
+    "reminder_cap_reached": (409, False),
+    "due_not_open": (409, False),
 }
 
 # `unauthenticated` is emitted by the exception handler for DRF's

@@ -9,7 +9,7 @@ import type { RequestStatus } from 'src/types/api.types';
 /** Part 21 §21.3.4 plus `sms_manual` (the merchant's own SMS app, CR-LOG). */
 export type ReminderChannel =
   'whatsapp_manual' | 'sms_manual' | 'sms' | 'whatsapp_api' | 'call' | 'in_app';
-export type ReminderKind = 'manual' | 'auto_d1' | 'auto_d0' | 'recurring';
+export type ReminderKind = 'manual' | 'auto_d1' | 'auto_d0' | 'recurring' | 'due' | 'notice';
 export type ReminderStatus = 'scheduled' | 'sent' | 'failed' | 'done' | 'dismissed' | 'cancelled';
 
 /** The three LED-05 buckets plus the history of what was sent. */
@@ -30,6 +30,11 @@ export interface Reminder {
   readonly note: string;
   readonly sentAt: string | null;
   readonly createdAt: string;
+  /** A7 — `''` for a shop reminder; the module's code for one about a record. */
+  readonly module?: string;
+  readonly subjectLabel?: string;
+  /** A7 — who was contacted when it was not the party (a guardian, R9). */
+  readonly recipient?: { readonly id: string; readonly name: string } | null;
 }
 
 export interface ReminderTotals {
@@ -127,9 +132,66 @@ export interface ReminderSettings {
   readonly autoSms: boolean;
   readonly partySmsOnEntry: boolean;
   readonly smsConfigured: boolean;
+  /**
+   * A7 (PLT-X06 BR-5) — each module's sending hours, `HH:MM`, for the modules
+   * whose policy has a window; absent for a shop without one (owner Q5).
+   */
+  readonly windows?: Readonly<Record<string, ReminderWindow>>;
 }
 
-export type ReminderSettingsPatch = Partial<Pick<ReminderSettings, 'autoSms' | 'partySmsOnEntry'>>;
+export interface ReminderWindow {
+  readonly start: string;
+  readonly end: string;
+  /** The module's own hours: a tenant may narrow inside them, never widen. */
+  readonly policyStart: string;
+  readonly policyEnd: string;
+}
+
+export type ReminderSettingsPatch = Partial<
+  Pick<ReminderSettings, 'autoSms' | 'partySmsOnEntry'>
+> & {
+  /** `null` puts a module back to its own hours. */
+  readonly windows?: Readonly<Record<string, readonly [string, string] | null>>;
+};
+
+// ── A7 — PLT-X06: reminders about one module record ─────────────────────────
+
+export type ModuleReminderBucket =
+  'due_soon' | 'due_today' | 'overdue_7' | 'overdue_30' | 'overdue_older' | 'notice';
+
+/** A record the module could remind about today (`GET /reminders/due?module=`). */
+export interface ModuleReminderRow {
+  readonly party: { readonly id: string; readonly name: string };
+  readonly recipient: { readonly id: string; readonly name: string } | null;
+  readonly sourceType: string;
+  readonly sourceId: string;
+  readonly subjectLabel: string;
+  readonly dueOn: string;
+  /** Decimal string, or `null` for a notice — which never shows an amount (§8). */
+  readonly amount: string | null;
+  readonly bucket: ModuleReminderBucket;
+  readonly allowed: boolean;
+  /** ISO, tenant offset — when the policy would allow it (window or cap). */
+  readonly nextAllowedAt: string | null;
+}
+
+export interface ReminderSourceRef {
+  readonly sourceType: string;
+  readonly sourceId: string;
+}
+
+export interface SourceReminderPreview {
+  readonly sourceId: string;
+  readonly text: string;
+  readonly smsText: string;
+  /** The RECIPIENT's number — the links are built from it. */
+  readonly mobile: string | null;
+  readonly recipient: { readonly id: string; readonly name: string } | null;
+  readonly subjectLabel: string;
+  readonly fixedText: boolean;
+  readonly allowed: boolean;
+  readonly nextAllowedAt: string | null;
+}
 
 export interface SendManualReminderArg {
   readonly partyId: string;

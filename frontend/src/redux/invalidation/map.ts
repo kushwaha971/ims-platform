@@ -709,4 +709,15 @@ export const INVALIDATION: TInvalidationMap = {
   // relations, and the role counts do not move (a link is not a profile row).
   createPartyRelation: { patch: [['partyRelation', 'data']] },
   deletePartyRelation: { patch: [['partyRelation', 'data']] },
+  // ── A7 ── PLT-X06: the sent record is marked in `moduleReminders.sentIds` and
+  // counted in `sentCount` by its own reducer; whether it may go AGAIN is the
+  // server's, and the tab refetches when that count moves (after the send has
+  // landed, not when the sheet closes). The history list is stale like a shop send.
+  sendSourceReminder: {
+    patch: [
+      ['moduleReminders', 'sentIds'],
+      ['moduleReminders', 'sentCount'],
+    ],
+    stale: ['reminders'],
+  },
 };

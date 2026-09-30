@@ -162,6 +162,9 @@ class ReminderKind(models.TextChoices):
     AUTO_D1 = "auto_d1", _("Day before")
     AUTO_D0 = "auto_d0", _("Due day")
     RECURRING = "recurring", _("Recurring")
+    # ── A7 ── PLT-X06: a module's amount due, and a notice with no amount.
+    DUE = "due", _("Due")
+    NOTICE = "notice", _("Notice")
 
 
 class ReminderStatus(models.TextChoices):
@@ -208,3 +211,22 @@ NOTE_NO_MOBILE = "no mobile"
 NOTE_INVALID_MOBILE = "invalid mobile"
 NOTE_SETTING_OFF = "automated SMS turned off"
 NOTE_DATE_CHANGED = "collection date changed"
+
+
+# ── A7 ── PLT-X06: module reminders ─────────────────────────────────────────
+
+#: The kinds the automated job writes, one per (party, due_on, kind, source) —
+#: `uq_reminder_auto_per_day` covers exactly these.
+UNIQUE_PER_DAY_KINDS: tuple[str, ...] = (
+    ReminderKind.AUTO_D1,
+    ReminderKind.AUTO_D0,
+    ReminderKind.DUE,
+    ReminderKind.NOTICE,
+)
+#: The statuses a daily cap counts (BR-3): what went, and what is about to go.
+CAP_COUNTED_STATUSES: tuple[str, ...] = (ReminderStatus.SENT, ReminderStatus.SCHEDULED)
+#: The shortest window a tenant may narrow a module's to (BR-5).
+MIN_WINDOW_MINUTES = 60
+NOTE_SOURCE_CLOSED = "no longer due"
+NOTE_OUTSIDE_WINDOW = "outside the sending hours"
+NOTE_CAP_REACHED = "daily limit reached"

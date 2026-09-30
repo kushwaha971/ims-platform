@@ -145,6 +145,9 @@ export const QUERIES = {
   // ── A6 ── PLT-X04: the list's role chips and the khata's guardian/payer links.
   fetchPartyRoles: 'partyRole/fetch',
   fetchPartyRelations: 'partyRelation/fetch',
+  // ── A7 ── PLT-X06: a module's reminder tab and the source sheet's text.
+  fetchModuleReminders: 'moduleReminders/fetch',
+  fetchSourcePreview: 'moduleReminders/preview',
 } as const;
 
 export const MUTATIONS = {
@@ -273,6 +276,8 @@ export const MUTATIONS = {
   // ── A6 ── PLT-X04: guardian and payer links.
   createPartyRelation: 'partyRelation/create',
   deletePartyRelation: 'partyRelation/delete',
+  // ── A7 ── PLT-X06: a reminder about one module record (create + send).
+  sendSourceReminder: 'moduleReminders/send',
 } as const;
 
 export type TQueryName = keyof typeof QUERIES;

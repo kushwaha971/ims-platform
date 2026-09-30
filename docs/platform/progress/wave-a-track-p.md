@@ -20,7 +20,7 @@ and `reset_fy` from the settings screen.
 | A8 perpetual counters | done | `daa289a` |
 | A9b closed-day calendar | done | `4ef1484` (the table's `d5efcaf` was the pre-amend hash) |
 | A6 party roles, relations | done | see `git log --grep '^A6:'` on main (merged after A5, `a2ad208`) |
-| A7 reminders | next (A2, A10 merged; A6 merging) | — |
+| A7 reminders seam | done | see `git log --grep '^A7:'` on main |
 | A10 settings wiring (Track F hand-over) | already done in A8 | `daa289a` — `_shown_specs` uses `specs_for`, validation and save use `spec_for`; acceptance test `test_a_module_setting_is_shown_and_writable_only_while_its_module_is_on` in `platform_app/tests/test_number_kinds.py` |
 
 ## A1 — release gate (FRD 00 PLT-X11, R11)
@@ -503,6 +503,102 @@ role is an ICU plural on `{count}`; an archive guard's `label_id` takes `{count}
 (c) A4b registers the deposit guard. (d) A7 registers `register_relation_history` and reads
 `receiving_parties`.
 
+## A7 — the reminder seam (FRD 00 PLT-X06, ADR-054, owner Q5)
+
+### Design note
+
+- **One table, widened.** `ledger_reminder` (0007) gains `module`, `source_type`/`source_id`,
+  `subject_label`, `recipient_party` (RESTRICT) and `message_group_id`. A module's reminder is
+  ABOUT a record (an instalment, a book, a membership) and TO a party or the guardian A6 links, so
+  a second table would split "what did we send this person" in two. The auto unique index now covers
+  `(party, due_on, kind, source_id)` for `auto_d1/auto_d0/due/notice` with `NULLS NOT DISTINCT`, so
+  two loans due the same day are two rows and today's party rows (NULL source) stay unique. CHECKs:
+  a source is both halves or neither; a `notice` carries no amount.
+- **The seam is `ledger/services/reminder_seam.py`**, registries by ADR-042's rules:
+  `register_reminder_source(source_type, module=, candidates=, lookup=None)` yields
+  `ReminderCandidate`s (the source's CURRENT amount, template key, recipient);
+  `register_reminder_policy(module, {window, daily_cap_per_source, fixed_templates,
+  forbidden_words})`. `check_reminder_allowed` is the ONE gate: every recording path (create, send,
+  bulk, the job, `record_source_reminders`) calls it and a refusal is 409 `reminder_outside_window`
+  or `reminder_cap_reached` with `next_allowed_at` in the tenant's offset. Preview never refuses; it
+  reports `allowed`/`next_allowed_at`. The clock is `reminder_seam.now()`/`today(tenant)`, read
+  through the module so tests stop it.
+- **Windows are tenant-local `[start, end)`; caps count `sent` and `scheduled` rows** on
+  `Coalesce(sent_at, scheduled_for)` inside the tenant's day, excluding the row being sent (a row
+  must not refuse itself).
+- **Owner Q5 default:** only a module whose policy has a window gets one; the tenant may NARROW it,
+  never widen (`reminders.<module>.window`, validated against the policy, half-hour steps in the UI,
+  written by `platform.tenant.manage` only — 403 otherwise). The shop's own reminders have no window,
+  exactly as before.
+- **The job.** `schedule_for_tenant` adds a module half: one row per candidate, `scheduled_for` the
+  next allowed moment (09:00 run, 10:00 window → 10:00), enqueued `run_after` it. At send time it
+  re-reads the source, recipient, opt-in, mobile, setting and policy, and cancels with a note rather
+  than sending a stale figure (EC-6).
+- **BR-7:** a party's reminder figure is the trade balance, `balance − loan_balance`; lending's
+  money is never in a shop reminder. Buckets, due list, bulk and the job all use `TRADE`.
+- **Frontend.** `registerReminderTab(module, {labelId, order})`; the reminders screen draws a
+  Shop / module tab row only when an enabled module registered one, so a plain shop is unchanged
+  (a test asserts no tab and no request). The module tab is core's `ModuleRemindersPanel`: records
+  grouped by bucket, the record as the row's title, party "· to" recipient under it, Remind or
+  "Next: …". The sheet is `UbShareSheet` over the server's text; a not-now preview replaces the
+  channels with the rule and the next time. Everything is a lazy slice and a lazy chunk.
+- **Deferred:** the multi-select bulk UI for a module tab (the API takes `sources`; no vertical has
+  rows yet), and the vertical's own tab words (`<module>.reminders.tab`, else `nav.module.<code>`,
+  else "Feature").
+
+### A7 tests
+
+Backend: `ledger/tests/test_reminder_seam.py` (21: registries, window validation, the gate, caps
+across statuses and the day boundary, `next_allowed_at`), `test_module_reminders.py` (12: the
+endpoints end to end with a stand-in `test` module), `test_module_reminder_job.py` (7: the index,
+the CHECKs, the job's deferral and re-check, the guardian's number, A6's relation history),
+`tests/contracts/test_reminder_paths.py` (6, T-PLT-X06-3: no path records what the policy refuses),
+`tests/contracts/test_reminder_templates.py` (T-PLT-X06-6: a module's templates use none of its
+forbidden words, parametrised over registered policies, with a stand-in proving it can fail).
+Frontend: `components/ModuleReminders.test.tsx` (8), `moduleReminders.unit.test.ts` (11: tab
+registry, words, half hours, both services' wire mapping).
+
+### A7 QA (adversarial self-review plus the look pass)
+
+Look pass (`/tmp/e2e-shots/trackp-a7/`): the worktree API on :8100 with a stand-in
+`lending_instalment` source over parties tagged "Loan" (one linked to a guardian), lending's policy
+and templates, the clock pinned at 10:30 IST, and a build with a look-only tab registration (not
+committed). Shop tab, module tab, sheet, after-send, the stale-screen refusal, the owner's hours
+open; 390 and 1280 px, en and hi. No page overflow; no raw ids.
+
+1. **Fixed (found by looking)** — every row carried a bucket badge repeating its group heading
+   word for word ("Overdue 30+ days" over "Overdue 30+ days"). The heading carries it alone.
+2. **Fixed (found by looking)** — at 1280 a guardian row read "Reminded" and still offered Remind.
+   The sheet closes on the tap and the tab refetched then, before the create-then-send pair was
+   recorded, so the server truthfully said "allowed". The tab now refetches when a send LANDS
+   (counted, not by distinct id: a second send for the same record adds no id), and ignores a list
+   answer older than the newest request. `take Remind off a row once its send lands…` fails with
+   either half removed.
+3. Verified — the message is in the tenant's messaging locale in both UIs (it is the customer's
+   text, not the viewer's; same as the shop path); the recipient line and "To Mohan" show; "Next"
+   is in the tenant's zone; the hour options stop at the module's window (08:00–18:30 for a
+   19:00 end); a non-owner sees the hours as text.
+4. Verified (backend) — the job never sends outside the window or over the cap and cancels a closed
+   record; a shop party's figure excludes `loan_balance`; the scratch DB migrated 0007 forward.
+
+Bundle, against a build of main at `a45e528`: shared app 105.0 → 105.0 KB; `/ledger/reminders`
+61.0 → 62.4 KB (+1.4, now 1.4 over its 61 KB budget: the tab row, the lazy panel's loader, the
+windows rows' code and ~20 English catalogue strings); the 48 `(app)` routes +0.2–0.3 KB each. That
+last figure is NOT A7 code: per route the only new bytes are the invalidation-map entry (+153 B
+raw). Turbopack re-split two chunks every one of those routes loads together (79,222 B raw in both
+builds, split 41.7/37.5 KB before and 50.8/28.5 KB after), which moves their gzip total. Routes over
+budget: unchanged. `bundle-budgets.json` not edited (shared file) — for the lead's budget pass.
+
+Gates on the A7 commit: backend full suite 3160 passed, 8 skipped; `makemigrations --check`
+clean; frontend full jest 2765/2765 in 249 suites; `tsc`, eslint and prettier on changed files; locales
+4060 keys in 45 catalogues; `invalidation.registry.test.ts` and `invalidation.map.test.ts` green.
+
+**Notes for the lead / verticals.** (a) A vertical registers its source, policy and templates in
+`apps.py` and its tab in its feature entry; its template keys are `<module>_<purpose>`. (b) A
+vertical endpoint that records reminders calls `record_source_reminders` and adds a case to
+`tests/contracts/test_reminder_paths.py`. (c) `e2e/node_modules` on main is a symlink to itself
+(created 03:15 today, not by this track); the look pass ran from a scratch copy.
+
 ## Decisions log
 
 - (A1) "test" is accepted as an environment for the flag alongside `ci`/`e2e`, because the CI suite
@@ -515,4 +611,4 @@ role is an ICU plural on `{count}`; an archive guard's `label_id` takes `{count}
 
 ## Next steps
 
-1. A7: design note, tests, implement, gates, look pass, merge.
+1. Wave A Track P complete; remaining questions are in the final report.

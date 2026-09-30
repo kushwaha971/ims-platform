@@ -46,21 +46,98 @@ def setting_on(tenant: Any, key: str) -> bool:
     return _as_bool(row.value) if row is not None else False
 
 
-def reminder_settings(tenant: Any) -> dict[str, bool]:
+def reminder_settings(tenant: Any) -> dict[str, Any]:
     from apps.platform_app.models import TenantSetting
 
     rows = {
         row.key: row.value
         for row in TenantSetting.objects.filter(tenant=tenant, key__in=FIELDS.values())
     }
-    return {field: _as_bool(rows.get(key)) for field, key in FIELDS.items()}
+    result: dict[str, Any] = {field: _as_bool(rows.get(key)) for field, key in FIELDS.items()}
+    windows = window_settings(tenant)
+    if windows:
+        result["windows"] = windows
+    return result
+
+
+# ── A7 ── PLT-X06 BR-5: a tenant may NARROW a module's sending hours ─────────
+
+
+def window_settings(tenant: Any) -> dict[str, dict[str, str]]:
+    """`{module: {start, end, policy_start, policy_end}}` for each enabled module
+    whose policy has a window; absent entirely when none has (owner Q5: no window
+    outside lending), so the dialog draws no rows for a plain shop."""
+    from apps.ledger.services.reminder_seam import (
+        effective_policy,
+        registered_policy,
+        reminder_modules,
+    )
+
+    out: dict[str, dict[str, str]] = {}
+    for module in reminder_modules(tenant):
+        base = (registered_policy(module) or {}).get("window")
+        if base is None:
+            continue
+        current = effective_policy(tenant, module).get("window") or base
+        out[module] = {
+            "start": current[0].strftime("%H:%M"),
+            "end": current[1].strftime("%H:%M"),
+            "policy_start": base[0].strftime("%H:%M"),
+            "policy_end": base[1].strftime("%H:%M"),
+        }
+    return out
+
+
+def _write_windows(ctx: Ctx, raw: Any) -> dict[str, Any]:
+    """Validate every window first, then write; `null` clears a module's back to
+    its policy. Returns `{key: (before, after)}` for the audit row."""
+    from apps.ledger.services.reminder_seam import (
+        registered_policy,
+        reminder_modules,
+        validate_window,
+        window_setting_key,
+    )
+    from apps.platform_app.models import TenantSetting
+
+    if not isinstance(raw, dict):
+        raise ValidationFailed({"windows": ["Send the hours per feature."]})
+    enabled = set(reminder_modules(ctx.tenant))
+    staged: dict[str, Any] = {}
+    for module, value in raw.items():
+        key = window_setting_key(str(module))
+        if module not in enabled or (registered_policy(module) or {}).get("window") is None:
+            raise ValidationFailed({key: ["This feature has no sending hours to narrow."]})
+        window = validate_window(module, value)
+        staged[key] = (
+            None if window is None else [window[0].strftime("%H:%M"), window[1].strftime("%H:%M")]
+        )
+    changes: dict[str, Any] = {}
+    for key, value in staged.items():
+        row = TenantSetting.objects.filter(tenant=ctx.tenant, key=key).first()
+        before = row.value.get("value") if row is not None and isinstance(row.value, dict) else None
+        if value is None:
+            if row is not None:
+                row.delete()
+        else:
+            TenantSetting.objects.update_or_create(
+                tenant=ctx.tenant, key=key, defaults={"value": {"value": value}}
+            )
+        if before != value:
+            changes[key] = (before, value)
+    return changes
 
 
 @transaction.atomic
 def update_reminder_settings(*, ctx: Ctx, payload: dict) -> dict[str, bool]:
-    """Write the switches that were sent; audit the change (LED-07 §16)."""
+    """Write the switches that were sent; audit the change (LED-07 §16).
+
+    A7 — `windows: {module: ["09:00", "18:00"] | null}` narrows a module's
+    sending hours (validated whole before anything is written).
+    """
     from apps.platform_app.models import TenantSetting
 
+    payload = dict(payload)
+    window_changes = _write_windows(ctx, payload.pop("windows")) if "windows" in payload else {}
     unknown = set(payload) - set(FIELDS)
     details: dict[str, list[str]] = {f: ["Unknown setting."] for f in sorted(unknown)}
     for field in set(payload) & set(FIELDS):
@@ -77,7 +154,16 @@ def update_reminder_settings(*, ctx: Ctx, payload: dict) -> dict[str, bool]:
             defaults={"value": {"value": "on" if on else "off"}},
         )
     after = reminder_settings(ctx.tenant)
-    changed = {k for k in after if after[k] != before[k]}
+    changed = {k for k in FIELDS if after[k] != before[k]}
+    if window_changes:
+        write_audit(
+            ctx=ctx,
+            action=AuditAction.TENANT_SETTINGS_UPDATED,
+            entity_type="platform_tenant_setting",
+            entity_id=ctx.tenant.id,
+            before={key: old for key, (old, _new) in sorted(window_changes.items())},
+            after={key: new for key, (_old, new) in sorted(window_changes.items())},
+        )
     if changed:
         write_audit(
             ctx=ctx,

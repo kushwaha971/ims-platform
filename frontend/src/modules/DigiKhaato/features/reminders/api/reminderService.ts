@@ -37,6 +37,10 @@ interface ReminderWire {
   readonly note: string;
   readonly sent_at: string | null;
   readonly created_at: string;
+  /** A7 — additive; an older server sends none of these. */
+  readonly module?: string;
+  readonly subject_label?: string;
+  readonly recipient?: { readonly id: string; readonly name: string } | null;
 }
 
 const toReminder = (row: ReminderWire): Reminder => ({
@@ -51,6 +55,9 @@ const toReminder = (row: ReminderWire): Reminder => ({
   note: row.note,
   sentAt: row.sent_at,
   createdAt: row.created_at,
+  module: row.module ?? '',
+  subjectLabel: row.subject_label ?? '',
+  recipient: row.recipient ?? null,
 });
 
 interface WarningWire {
@@ -262,12 +269,26 @@ interface SettingsWire {
   readonly auto_sms: boolean;
   readonly party_sms_on_entry: boolean;
   readonly sms_configured: boolean;
+  readonly windows?: Readonly<
+    Record<string, { start: string; end: string; policy_start: string; policy_end: string }>
+  >;
 }
 
 const toSettings = (data: SettingsWire): ReminderSettings => ({
   autoSms: data.auto_sms,
   partySmsOnEntry: data.party_sms_on_entry,
   smsConfigured: data.sms_configured,
+  /* A7 — present only when a module has sending hours to narrow. */
+  ...(data.windows
+    ? {
+        windows: Object.fromEntries(
+          Object.entries(data.windows).map(([module, w]) => [
+            module,
+            { start: w.start, end: w.end, policyStart: w.policy_start, policyEnd: w.policy_end },
+          ])
+        ),
+      }
+    : {}),
 });
 
 export const getReminderSettings = async (signal?: AbortSignal): Promise<ReminderSettings> => {
@@ -284,6 +305,7 @@ export const updateReminderSettings = async (
   const response = await api.patch<{ data: SettingsWire }>(API_PATHS.REMINDER_SETTINGS, {
     ...(patch.autoSms !== undefined ? { auto_sms: patch.autoSms } : {}),
     ...(patch.partySmsOnEntry !== undefined ? { party_sms_on_entry: patch.partySmsOnEntry } : {}),
+    ...(patch.windows ? { windows: patch.windows } : {}),
   });
   return toSettings(response.data.data);
 };

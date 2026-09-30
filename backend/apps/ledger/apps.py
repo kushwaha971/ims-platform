@@ -30,3 +30,10 @@ class LedgerConfig(AppConfig):
         from apps.parties.services.balance import register_settle_handler
 
         register_settle_handler(cancel_scheduled_reminders)
+
+        # ── A7 ── A6's relation history: a guardian link a reminder has used is
+        # ENDED, not deleted, so "who was told" survives (PLT-X04 §5).
+        from apps.ledger.services.reminder_seam import relation_reminder_count
+        from apps.parties.services.relations import register_relation_history
+
+        register_relation_history(relation_reminder_count)

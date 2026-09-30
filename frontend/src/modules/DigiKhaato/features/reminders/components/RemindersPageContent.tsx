@@ -26,15 +26,18 @@ import {
   type UbDataGridLabels,
   type UbGridState,
 } from 'src/design-system/UbDataGrid';
-import { useAppDispatch } from 'src/hooks/useAppStore';
+import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
+import { selectEnabledModules } from 'src/redux/slice/sessionSlice';
 import { partyPath } from 'src/routes';
 import { formatInr } from 'src/utils/money';
 
 import { usePartyReminder } from 'modules/DigiKhaato/features/ledger/hooks/usePartyReminder';
 
 import { useReminders } from '../hooks/useReminders';
+import { reminderTabsFor } from '../moduleTabs';
 import { startBulkReminders } from '../redux/reminderThunk';
+import { reminderTabLabel } from '../view-model/moduleReminderDisplay';
 import { REMINDER_TABS, bucketFigure, isBucket } from '../view-model/reminderDisplay';
 
 import { createDueColumns, createHistoryColumns } from './ReminderColumns';
@@ -53,6 +56,12 @@ const BulkReminderDialogLazy = /* @__PURE__ */ dynamic(() =>
 const ReminderSettingsDialogLazy = /* @__PURE__ */ dynamic(() =>
   import('./ReminderSettingsDialog').then((m) => m.ReminderSettingsDialog)
 );
+// A7 — a module's tab, in its own chunk: a shop never downloads it.
+const ModuleRemindersPanelLazy = /* @__PURE__ */ dynamic(() =>
+  import('./ModuleRemindersPanel').then((m) => m.ModuleRemindersPanel)
+);
+
+const SHOP_SCOPE = 'shop';
 
 const HISTORY_FILTERS: readonly ReminderKindFilter[] = ['', 'auto', 'manual', 'failed'];
 const FILTER_LABEL: Readonly<Record<ReminderKindFilter, string>> = {
@@ -82,6 +91,20 @@ export function RemindersPageContent(): React.JSX.Element {
   const dispatch = useAppDispatch();
   const tier = useGridTier();
   const r = useReminders();
+  /* A7 — module tabs, from the registry, for the modules that are on. */
+  const enabledModules = useAppSelector(selectEnabledModules);
+  const moduleTabs = useMemo(() => reminderTabsFor(enabledModules), [enabledModules]);
+  const [scope, setScope] = useState<string>(SHOP_SCOPE);
+  const scopeTabs = useMemo(
+    () => [
+      { value: SHOP_SCOPE, label: t('reminders.module.shopTab') },
+      ...moduleTabs.map((tab) => ({
+        value: tab.module,
+        label: reminderTabLabel(t, tab.module, tab.labelId),
+      })),
+    ],
+    [moduleTabs, t]
+  );
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
@@ -262,6 +285,101 @@ export function RemindersPageContent(): React.JSX.Element {
             : 'empty'
           : 'rows';
 
+  const shopTabs = (
+    <UbTabs<ReminderTab>
+      value={tab}
+      onValueChange={setTab}
+      tabs={tabs}
+      ariaLabel={t('reminders.tabs')}
+      layout="fit"
+    >
+      {isBucket(tab) ? (
+        <UbStack gap={3}>
+          <UbStack direction="row" justify="between" align="center" gap={2} wrap>
+            <UbText variant="body-sm" tone="secondary" data-testid="bucket-caption">
+              {figure
+                ? t('reminders.bucket.caption', {
+                    amount: formatInr(figure.amount),
+                    count: figure.count,
+                  })
+                : ' '}
+            </UbText>
+            {canRemind && due.rows.length > 0 && (
+              <UbButton
+                variant="outlineNeutral"
+                size="sm"
+                icon={<MessageCircle aria-hidden className="h-4 w-4" />}
+                onClick={() => startBulk(pageIds)}
+              >
+                {t('reminders.bulk.page')}
+              </UbButton>
+            )}
+          </UbStack>
+          <UbDataGrid
+            rows={due.rows}
+            columns={dueColumns}
+            rowId={dueId}
+            rowName={dueName}
+            state={dueState}
+            labels={labels}
+            emptyStates={emptyStates}
+            caption={t(`reminders.caption.${tab}`)}
+            storageId="ledger.reminders.due"
+            page={{
+              page: due.page,
+              pageSize: due.pageSize,
+              total: due.total,
+              totalPages: Math.max(Math.ceil(due.total / Math.max(due.pageSize, 1)), 1),
+            }}
+            onPageChange={r.setPage}
+            selectable={canRemind}
+            selectedIds={selected}
+            onSelectionChange={setSelected}
+            bulkActions={
+              <UbButton
+                variant="primary"
+                size="sm"
+                icon={<MessageCircle aria-hidden className="h-4 w-4" />}
+                onClick={() => startBulk(selected)}
+              >
+                {t('reminders.bulk.selected', { count: selected.length })}
+              </UbButton>
+            }
+            onRowOpen={tier === 'cards' ? handleCardOpen : undefined}
+          />
+        </UbStack>
+      ) : (
+        <UbStack gap={3}>
+          <UbChoiceChips<ReminderKindFilter>
+            value={history.filter}
+            onChange={setHistoryFilter}
+            ariaLabel={t('reminders.filter.label')}
+            options={HISTORY_FILTERS.map((value) => ({ value, label: t(FILTER_LABEL[value]) }))}
+          />
+          <UbDataGrid
+            rows={history.rows}
+            columns={historyColumns}
+            rowId={historyId}
+            rowName={historyName}
+            state={historyState}
+            labels={labels}
+            emptyStates={emptyStates}
+            caption={t('reminders.caption.sent')}
+            storageId="ledger.reminders.sent"
+            page={{
+              page: history.page,
+              pageSize: history.pageSize,
+              total: history.total,
+              totalPages: Math.max(Math.ceil(history.total / Math.max(history.pageSize, 1)), 1),
+            }}
+            onPageChange={r.setPage}
+            onRowOpen={tier === 'cards' ? handleHistoryOpen : undefined}
+          />
+        </UbStack>
+      )}
+    </UbTabs>
+  );
+
   return (
     <UbPageShell>
       <UbPageHeader
@@ -292,98 +410,21 @@ export function RemindersPageContent(): React.JSX.Element {
           />
         )}
 
-        <UbTabs<ReminderTab>
-          value={tab}
-          onValueChange={setTab}
-          tabs={tabs}
-          ariaLabel={t('reminders.tabs')}
-          layout="fit"
-        >
-          {isBucket(tab) ? (
-            <UbStack gap={3}>
-              <UbStack direction="row" justify="between" align="center" gap={2} wrap>
-                <UbText variant="body-sm" tone="secondary" data-testid="bucket-caption">
-                  {figure
-                    ? t('reminders.bucket.caption', {
-                        amount: formatInr(figure.amount),
-                        count: figure.count,
-                      })
-                    : ' '}
-                </UbText>
-                {canRemind && due.rows.length > 0 && (
-                  <UbButton
-                    variant="outlineNeutral"
-                    size="sm"
-                    icon={<MessageCircle aria-hidden className="h-4 w-4" />}
-                    onClick={() => startBulk(pageIds)}
-                  >
-                    {t('reminders.bulk.page')}
-                  </UbButton>
-                )}
-              </UbStack>
-              <UbDataGrid
-                rows={due.rows}
-                columns={dueColumns}
-                rowId={dueId}
-                rowName={dueName}
-                state={dueState}
-                labels={labels}
-                emptyStates={emptyStates}
-                caption={t(`reminders.caption.${tab}`)}
-                storageId="ledger.reminders.due"
-                page={{
-                  page: due.page,
-                  pageSize: due.pageSize,
-                  total: due.total,
-                  totalPages: Math.max(Math.ceil(due.total / Math.max(due.pageSize, 1)), 1),
-                }}
-                onPageChange={r.setPage}
-                selectable={canRemind}
-                selectedIds={selected}
-                onSelectionChange={setSelected}
-                bulkActions={
-                  <UbButton
-                    variant="primary"
-                    size="sm"
-                    icon={<MessageCircle aria-hidden className="h-4 w-4" />}
-                    onClick={() => startBulk(selected)}
-                  >
-                    {t('reminders.bulk.selected', { count: selected.length })}
-                  </UbButton>
-                }
-                onRowOpen={tier === 'cards' ? handleCardOpen : undefined}
-              />
-            </UbStack>
-          ) : (
-            <UbStack gap={3}>
-              <UbChoiceChips<ReminderKindFilter>
-                value={history.filter}
-                onChange={setHistoryFilter}
-                ariaLabel={t('reminders.filter.label')}
-                options={HISTORY_FILTERS.map((value) => ({ value, label: t(FILTER_LABEL[value]) }))}
-              />
-              <UbDataGrid
-                rows={history.rows}
-                columns={historyColumns}
-                rowId={historyId}
-                rowName={historyName}
-                state={historyState}
-                labels={labels}
-                emptyStates={emptyStates}
-                caption={t('reminders.caption.sent')}
-                storageId="ledger.reminders.sent"
-                page={{
-                  page: history.page,
-                  pageSize: history.pageSize,
-                  total: history.total,
-                  totalPages: Math.max(Math.ceil(history.total / Math.max(history.pageSize, 1)), 1),
-                }}
-                onPageChange={r.setPage}
-                onRowOpen={tier === 'cards' ? handleHistoryOpen : undefined}
-              />
-            </UbStack>
-          )}
-        </UbTabs>
+        {moduleTabs.length > 0 ? (
+          /* A7 (PLT-X06 §7) — "Shop" plus each enabled module with a reminder
+             source. Only with a second tab: a plain shop's screen is unchanged. */
+          <UbTabs<string>
+            value={scope}
+            onValueChange={setScope}
+            tabs={scopeTabs}
+            ariaLabel={t('reminders.module.tabs')}
+            layout="fit"
+          >
+            {scope === SHOP_SCOPE ? shopTabs : <ModuleRemindersPanelLazy module={scope} />}
+          </UbTabs>
+        ) : (
+          shopTabs
+        )}
       </UbStack>
 
       {reminder.canRemind && reminder.open && (

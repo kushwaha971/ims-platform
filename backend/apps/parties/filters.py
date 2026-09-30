@@ -204,15 +204,18 @@ class PartyFilterSet(BaseTenantFilterSet):
         # summary's tiles count with the same predicate (`ledger/selectors/
         # collection.py`). Without it here, tapping "Due today · 3" listed a
         # fourth party who had already paid (AC-2: "lists exactly those").
+        # A7 BR-7 — the TRADE figure, like the ledger summary's tiles it has to
+        # agree with (`ledger/selectors/collection.py`): a borrower who owes only
+        # a loan has no shop collection. Identical to `balance` without a loan.
+        shop_owes = queryset.alias(trade=F("balance") - F("loan_balance")).filter(trade__gt=0)
         if value == "today":
-            return queryset.filter(collection_date=today, balance__gt=0)
+            return shop_owes.filter(collection_date=today)
         if value == "overdue":
-            return queryset.filter(collection_date__lt=today, balance__gt=0)
+            return shop_owes.filter(collection_date__lt=today)
         if value == "upcoming":
-            return queryset.filter(
+            return shop_owes.filter(
                 collection_date__gt=today,
                 collection_date__lte=today + timedelta(days=UPCOMING_DAYS),
-                balance__gt=0,
             )
         return queryset
 

@@ -158,6 +158,11 @@ export const createHistoryColumns = ({
         <UbText as="span" variant="body-sm" tone="secondary">
           {row.kind === 'manual' ? t(channelLabelId(row.channel)) : t(kindLabelId(row.kind))}
           {detail && row.status !== 'sent' ? ` · ${detail}` : ''}
+          {/* A7 §11 — what a module reminder was about, and who got it. */}
+          {row.subjectLabel ? ` · ${row.subjectLabel}` : ''}
+          {row.recipient
+            ? ` · ${t('reminders.module.toRecipient', { name: row.recipient.name })}`
+            : ''}
         </UbText>
       );
     },

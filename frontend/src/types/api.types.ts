@@ -58,6 +58,10 @@ export type ApiErrorCode =
   | 'party_balance_nonzero'
   // A6 — archive refused by a module's guard (contracts §4).
   | 'party_has_open_records'
+  // A7 — a module's reminder policy refuses; a record no longer due (contracts §4).
+  | 'reminder_outside_window'
+  | 'reminder_cap_reached'
+  | 'due_not_open'
   // PTY-04 FR-3 — the write-off escape (Part 43 CR-135).
   | 'nothing_to_write_off'
   | 'balance_changed'

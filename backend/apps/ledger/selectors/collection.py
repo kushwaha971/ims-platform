@@ -13,13 +13,19 @@ import datetime as dt
 from decimal import Decimal
 from typing import Any
 
-from django.db.models import Count, DecimalField, Q, Sum
+from django.db.models import Count, DecimalField, F, Q, Sum
 from django.db.models.functions import Coalesce
 
 from apps.common.money import ZERO
 from apps.ledger.constants import UPCOMING_BUCKET_DAYS
 
 BUCKETS = ("due_today", "overdue", "upcoming_7d")
+
+#: A7 BR-7 — the SHOP's figure, `balance − loan_balance` (ADR-043): a collection
+#: date is a promise about shop credit, and a borrower who owes only a loan is
+#: reminded by lending, never from the shop's lists. Identical to `balance` for
+#: every party without a loan.
+TRADE = F("balance") - F("loan_balance")
 
 
 def bucket_filters(today: dt.date) -> dict[str, Q]:
@@ -45,11 +51,12 @@ def collection_buckets(*, tenant: Any, today: dt.date) -> dict[str, dict[str, An
     for key, predicate in bucket_filters(today).items():
         aggregates[f"{key}__count"] = Count("id", filter=predicate)
         aggregates[f"{key}__amount"] = Coalesce(
-            Sum("balance", filter=predicate), Decimal("0.00"), output_field=money
+            Sum(TRADE, filter=predicate), Decimal("0.00"), output_field=money
         )
     row = (
         Party.objects.for_tenant(tenant)
-        .filter(status=PartyStatus.ACTIVE, balance__gt=ZERO, collection_date__isnull=False)
+        .alias(trade=TRADE)
+        .filter(status=PartyStatus.ACTIVE, trade__gt=ZERO, collection_date__isnull=False)
         .aggregate(**aggregates)
     )
     return {
@@ -63,9 +70,9 @@ DUE_TABS = {"today": "due_today", "overdue": "overdue", "upcoming": "upcoming_7d
 #: The order each tab is worked in: the biggest debt first today; the oldest
 #: promise first when overdue; the nearest date first when looking ahead.
 DUE_ORDERING = {
-    "today": ("-balance", "name", "id"),
-    "overdue": ("collection_date", "-balance", "id"),
-    "upcoming": ("collection_date", "-balance", "id"),
+    "today": ("-shop_balance", "name", "id"),
+    "overdue": ("collection_date", "-shop_balance", "id"),
+    "upcoming": ("collection_date", "-shop_balance", "id"),
 }
 
 
@@ -78,8 +85,9 @@ def due_parties(*, tenant: Any, today: dt.date, tab: str) -> Any:
     predicate = bucket_filters(today)[DUE_TABS[tab]]
     return (
         Party.objects.for_tenant(tenant)
-        .filter(status=PartyStatus.ACTIVE, balance__gt=ZERO, collection_date__isnull=False)
+        .annotate(shop_balance=TRADE)
+        .filter(status=PartyStatus.ACTIVE, shop_balance__gt=ZERO, collection_date__isnull=False)
         .filter(predicate)
-        .only("id", "name", "mobile", "balance", "collection_date")
+        .only("id", "name", "mobile", "balance", "loan_balance", "collection_date")
         .order_by(*DUE_ORDERING[tab])
     )

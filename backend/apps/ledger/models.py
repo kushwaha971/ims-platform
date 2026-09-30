@@ -268,6 +268,29 @@ class Reminder(TenantModel):
     scheduled_for = models.DateTimeField(null=True, blank=True)
     sent_at = models.DateTimeField(null=True, blank=True)
 
+    # ── A7 ── PLT-X06 / contracts §1.6: what the reminder is ABOUT, and to whom.
+    #
+    # `module` is `''` for today's party reminders (the khata balance). A
+    # module's reminder names one record through `(source_type, source_id)` —
+    # an instalment, a library loan, a hold — polymorphically, because core
+    # never imports the vertical that owns the table. `subject_label` is the
+    # line printed in the list and the text ("Instalment 4 of LN-0042").
+    # `recipient_party` is who was contacted when it was not the party (a
+    # guardian, a guarantor, R9); rows sent as one message share
+    # `message_group_id` (R10).
+    module = models.CharField(max_length=32, blank=True, default="", db_default="")
+    source_type = models.CharField(max_length=48, null=True, blank=True)
+    source_id = models.UUIDField(null=True, blank=True)
+    subject_label = models.CharField(max_length=120, blank=True, default="", db_default="")
+    recipient_party = models.ForeignKey(
+        "parties.Party",
+        on_delete=models.RESTRICT,
+        null=True,
+        blank=True,
+        related_name="reminders_received",
+    )
+    message_group_id = models.UUIDField(null=True, blank=True)
+
     class Meta:
         db_table = "ledger_reminder"
         verbose_name = "reminder"
@@ -276,16 +299,43 @@ class Reminder(TenantModel):
             # §21.3.4 / LED-07 FR-7 — one automated reminder per kind per date.
             # This is what makes the scheduler's double run harmless: the second
             # INSERT … ON CONFLICT DO NOTHING writes nothing.
+            #
+            # A7 widened it to `(party, due_on, kind, source_id)` NULLS NOT
+            # DISTINCT over the module kinds too: two loans due the same day
+            # are two reminders, a rerun is still one, and today's party rows
+            # (`source_id` NULL) stay unique because NULLs compare equal here.
             models.UniqueConstraint(
-                fields=["party", "due_on", "kind"],
-                condition=models.Q(kind__in=["auto_d1", "auto_d0"]),
+                fields=["party", "due_on", "kind", "source_id"],
+                condition=models.Q(kind__in=["auto_d1", "auto_d0", "due", "notice"]),
+                nulls_distinct=False,
                 name="uq_reminder_auto_per_day",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(source_type__isnull=True, source_id__isnull=True)
+                | models.Q(source_type__isnull=False, source_id__isnull=False),
+                name="ck_reminder_source_complete",
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(kind="notice") | models.Q(snapshot_balance__isnull=True),
+                name="ck_reminder_notice_has_no_amount",
             ),
         ]
         indexes = [
             models.Index(fields=["tenant", "status", "due_on"], name="ix_reminder_status_due"),
             # The party page's history strip, newest first (LED-06 FR-6).
             models.Index(fields=["party", "-created_at"], name="ix_reminder_party_recent"),
+            # A7 — "was this loan reminded?" from the module's own screens.
+            models.Index(
+                fields=["tenant", "source_type", "source_id"],
+                condition=models.Q(source_type__isnull=False),
+                name="ix_reminder_source",
+            ),
+            # A7 — the daily-cap count (BR-3), module rows only.
+            models.Index(
+                fields=["tenant", "module", "source_id", "sent_at"],
+                condition=~models.Q(module=""),
+                name="ix_reminder_module_sent",
+            ),
         ]
 
     def __str__(self) -> str:  # pragma: no cover - admin convenience
