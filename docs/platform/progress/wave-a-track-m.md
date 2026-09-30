@@ -11,7 +11,7 @@ Owner: Backend/Django lead, Track M. Sequence: **A14 → A2 (+A3) → A4a → A5
 | A14 | **merged** | `4b964a8` | A11 landed as 45aa070 |
 | A2 (+A3) | **merged** | `472cb21` | |
 | A4a | **merged** | `ba2be39` | |
-| A5 | done — merging | (see below) | A15 `98c4d1c` and A4a are on main |
+| A5 | **merged** | `4993d29` | |
 
 ## A14 — decouple payments from sales and purchases (ADR-056, R72)
 
@@ -446,5 +446,5 @@ other than the trade figure answers 409 `balance_changed` with `amount` = the tr
 
 ## Next steps
 
-1. A5: commit, rebase onto main (262a121), rerun the targeted gates, merge ff-only.
-2. Track M's Wave A tasks are then all merged (A14, A2+A3, A4a, A5); report the DSU.
+Track M's Wave A tasks are all on main: A14 `4b964a8`, A2 (+A3) `472cb21`, A4a `ba2be39`,
+A5 `4993d29`. What remains is the lead's e2e pass and the answers to Q-M1 to Q-M7.
