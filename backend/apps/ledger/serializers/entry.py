@@ -101,6 +101,8 @@ def entry_source(entry: LedgerEntry, sources: dict | None = None) -> dict | None
         "status": found.get("status"),
         "kind": found.get("kind"),
         "url": None,
+        # A4b (Wave A gate): an adjustment is not a return; see `resolve_payments`.
+        **({"adjustment": True} if found.get("adjustment") else {}),
     }
 
 

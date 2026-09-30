@@ -224,15 +224,27 @@ def payments_for_document(*, tenant: Any, document_type: str, document_id: Any) 
 
 
 def resolve_payments(ids: set[str]) -> dict[str, dict]:
-    """LED-10 FR-5 — registered with the ledger in `PaymentsConfig.ready()`."""
-    rows = Payment.objects.filter(pk__in=ids).values_list("id", "number", "status", "direction")
+    """LED-10 FR-5 — registered with the ledger in `PaymentsConfig.ready()`.
+
+    `adjustment: true` (A4b, found at the Wave A gate) marks a payment made by
+    ADJUSTING a held deposit against a charge, and is absent on every other
+    payment, so no existing khata or statement payload changes. Without it the
+    deposit's out line could only be labelled by its direction — "Deposit
+    returned" — on the statement a customer reads, for money that was never
+    handed back but applied to their fine. A debit ledger line carries no mode
+    (`ck_ledger_entry_debit_has_no_mode`), so the payment is where it is known.
+    """
+    rows = Payment.objects.filter(pk__in=ids).values_list(
+        "id", "number", "status", "direction", "primary_mode"
+    )
     return {
         str(pk): {
             "number": number,
             "status": status,
             "kind": "payment_in" if direction == PaymentDirection.IN else "payment_out",
+            **({"adjustment": True} if mode == PaymentMode.ADJUSTMENT else {}),
         }
-        for pk, number, status, direction in rows
+        for pk, number, status, direction, mode in rows
     }
 
 

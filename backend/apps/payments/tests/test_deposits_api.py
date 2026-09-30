@@ -280,3 +280,56 @@ def test_a_party_whose_deposit_holds_money_is_not_archived(owner: Any, deposit: 
         {"amount": "500.00", "mode_breakup": upi("500.00"), "reason": "Closed"},
     )
     assert owner.post(archive, {}, format="json").status_code == 200
+
+
+def test_an_adjustment_says_so_on_the_khata_and_the_statement(
+    owner: Any, deposit: Any, invoice_for: Any
+) -> None:
+    """Wave A gate: the deposit's OUT line of an adjustment was indistinguishable
+    from a return, so the statement a customer reads said "Deposit returned ₹120"
+    for money applied to their fine. The payment source now says `adjustment`,
+    on the adjustment's lines only — a cash receipt and a cash return carry no
+    such key, so no existing khata or statement payload changes."""
+    _post(owner, deposit.id, "receive", {"amount": "500.00", "mode_breakup": cash_lines("500.00")})
+    fine = invoice_for(deposit.party, "120.00")
+    _post(
+        owner,
+        deposit.id,
+        "apply",
+        {
+            "allocations": [
+                {"document_type": "sales_document", "document_id": fine["id"], "amount": "120.00"}
+            ],
+            "reason": "Late return fine",
+        },
+    )
+    _post(
+        owner,
+        deposit.id,
+        "refund",
+        {"amount": "80.00", "mode_breakup": upi("80.00"), "reason": "Part"},
+    )
+
+    timeline = owner.get(f"/api/v1/parties/{deposit.party_id}/ledger-entries").json()["data"]
+    marked = {
+        (row["entry_type"], row["bucket"], row["amount"]): (row["source"] or {}).get("adjustment")
+        for row in timeline
+        if row["source_type"] == "payment"
+    }
+    assert marked == {
+        ("payment_in", "deposit", "500.00"): None,  # the deposit received, in cash
+        ("payment_out", "deposit", "120.00"): True,  # adjusted against the fine
+        ("payment_in", "main", "120.00"): True,  # the fine settled by it
+        ("payment_out", "deposit", "80.00"): None,  # handed back, by UPI
+    }
+
+    statement = owner.get(f"/api/v1/parties/{deposit.party_id}/statement").json()["meta"]
+    deposit_rows = {
+        (row["direction"], row["amount"]): row["source"].get("adjustment")
+        for row in statement["deposit"]["rows"]
+    }
+    assert deposit_rows == {
+        ("credit", "500.00"): None,
+        ("debit", "120.00"): True,
+        ("debit", "80.00"): None,
+    }

@@ -100,4 +100,27 @@ describe('the printed statement', () => {
 
     expect(screen.queryByTestId('statement-deposit-block')).not.toBeInTheDocument();
   });
+
+  it('says an adjustment was adjusted, not returned (Wave A gate)', () => {
+    /* The statement a customer is handed said "Deposit returned ₹120" for money
+       the shop applied to their fine: the out line of an adjustment was labelled
+       by its direction alone. The payment source now marks it. */
+    const [received, out] = deposit.rows;
+    if (!received || !out) throw new Error('fixture has two rows');
+    const adjusted: StatementDeposit = {
+      rows: [
+        received,
+        {
+          ...out,
+          amount: '120.00',
+          source: { type: 'payment', id: 'p9', number: 'PAYOUT/26-27/0001', adjustment: true },
+        },
+      ],
+      held: '1380.00',
+    };
+    renderWithProviders(<DepositHeldBlock deposit={adjusted} />);
+    const block = within(screen.getByTestId('statement-deposit-block'));
+    expect(block.getByText('Adjusted from deposit')).toBeInTheDocument();
+    expect(block.queryByText('Deposit returned')).not.toBeInTheDocument();
+  });
 });

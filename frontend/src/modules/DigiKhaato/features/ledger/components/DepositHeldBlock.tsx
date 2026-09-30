@@ -39,7 +39,12 @@ export function DepositHeldBlock({
         </UbText>
       </UbStack>
       {deposit.rows.map((row) => {
-        const view = entryAmountView(row.direction, row.entryType, 'deposit');
+        const view = entryAmountView(
+          row.direction,
+          row.entryType,
+          'deposit',
+          !!row.source?.adjustment
+        );
         const struck = isStruckThrough(row);
         /* A deposit receipt with no note is titled "Deposit received", not by its
            entry type ("Payment received" would read as a payment against the bill),

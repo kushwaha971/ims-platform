@@ -60,7 +60,12 @@ const toDepositRow = (row: StatementDepositRowApi): StatementDepositRow => ({
   note: row.note ?? '',
   status: row.status,
   source: row.source
-    ? { type: row.source.type, id: row.source.id, number: row.source.number }
+    ? {
+        type: row.source.type,
+        id: row.source.id,
+        number: row.source.number,
+        ...(row.source.adjustment ? { adjustment: true as const } : {}),
+      }
     : null,
   reversesId: row.reverses_id,
   supersedesId: row.supersedes_id,
@@ -86,7 +91,12 @@ const toRow = (row: StatementRowApi): StatementRow => ({
   status: row.status,
   runningBalance: row.running_balance,
   source: row.source
-    ? { type: row.source.type, id: row.source.id, number: row.source.number }
+    ? {
+        type: row.source.type,
+        id: row.source.id,
+        number: row.source.number,
+        ...(row.source.adjustment ? { adjustment: true as const } : {}),
+      }
     : null,
   reversesId: row.reverses_id,
   supersedesId: row.supersedes_id,

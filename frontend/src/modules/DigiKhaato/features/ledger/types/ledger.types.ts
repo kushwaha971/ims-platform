@@ -101,6 +101,8 @@ export interface LedgerEntryApiRow {
     readonly number: string | null;
     readonly status?: string | null;
     readonly kind?: string | null;
+    /** A4b — present (true) only on the lines of a deposit ADJUSTMENT. */
+    readonly adjustment?: boolean;
   } | null;
 }
 
@@ -154,6 +156,8 @@ export interface LedgerEntrySource {
   readonly number: string | null;
   readonly status: string | null;
   readonly kind: string | null;
+  /** A4b — the line of a deposit adjustment (see `entryAmountView`). */
+  readonly adjustment?: true;
 }
 
 /**

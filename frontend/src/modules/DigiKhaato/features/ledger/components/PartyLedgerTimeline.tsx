@@ -330,8 +330,9 @@ function EntryRow({
   onOpenMenu?: (entry: LedgerEntry) => void;
 }>): React.JSX.Element {
   const view = useMemo(
-    () => entryAmountView(entry.direction, entry.entryType, entry.bucket),
-    [entry.direction, entry.entryType, entry.bucket]
+    () =>
+      entryAmountView(entry.direction, entry.entryType, entry.bucket, !!entry.source?.adjustment),
+    [entry.direction, entry.entryType, entry.bucket, entry.source?.adjustment]
   );
   const bucketBadge = bucketBadgeId(entry.bucket);
   const caption = useMemo(() => entryCaption(entry, t, viewerId), [entry, t, viewerId]);

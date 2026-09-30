@@ -113,6 +113,7 @@ const toEntry = (row: LedgerEntryApiRow): LedgerEntry => ({
           number: row.source.number,
           status: row.source.status ?? null,
           kind: row.source.kind ?? null,
+          ...(row.source.adjustment ? { adjustment: true as const } : {}),
         },
       }
     : {}),

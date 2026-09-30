@@ -32,6 +32,8 @@ export interface StatementRowApi {
     readonly id: string;
     readonly number: string | null;
     readonly url: string | null;
+    /** A4b — present (true) only on the lines of a deposit ADJUSTMENT. */
+    readonly adjustment?: boolean;
   } | null;
   readonly reverses_id: string | null;
   readonly supersedes_id: string | null;
@@ -74,6 +76,8 @@ export interface StatementRow {
     readonly type: string;
     readonly id: string;
     readonly number: string | null;
+    /** A4b — the line of a deposit adjustment (see `entryAmountView`). */
+    readonly adjustment?: true;
   } | null;
   readonly reversesId: string | null;
   readonly supersedesId: string | null;

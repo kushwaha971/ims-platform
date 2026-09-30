@@ -29,6 +29,9 @@ class SourceSummary(TypedDict, total=False):
     #: The document kind the badge shows — `invoice`, `bill_of_supply`,
     #: `credit_note`, `payment_in`, `payment_out`, `expense`, `purchase_bill`.
     kind: str | None
+    #: A4b — `True` on the lines of a deposit ADJUSTMENT, absent otherwise (payments'
+    #: resolver). Passed through only when present, so no other row's payload changes.
+    adjustment: bool
 
 
 Resolver = Callable[[set[str]], dict[str, SourceSummary]]

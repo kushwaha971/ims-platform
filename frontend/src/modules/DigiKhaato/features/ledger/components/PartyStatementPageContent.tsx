@@ -389,7 +389,7 @@ function StatementRowView({
   d: (value: string) => string;
 }>): React.JSX.Element {
   const struck = isStruckThrough(row);
-  const view = entryAmountView(row.direction, row.entryType, row.bucket);
+  const view = entryAmountView(row.direction, row.entryType, row.bucket, !!row.source?.adjustment);
   /* A write-off stores its reason as its note too (PTY-04 FR-3), so the title
      already says it — the timeline's `entryReason` drops the echo, and so does
      this row. */

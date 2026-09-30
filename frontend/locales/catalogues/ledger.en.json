@@ -65,6 +65,7 @@
   "ledger.entry.date.quick": "Quick dates",
   "ledger.entry.date.today": "Today",
   "ledger.entry.date.yesterday": "Yesterday",
+  "ledger.entry.depositAdjusted": "Adjusted from deposit",
   "ledger.entry.depositIn": "Deposit received",
   "ledger.entry.depositOut": "Deposit returned",
   "ledger.entry.direction": "What happened",

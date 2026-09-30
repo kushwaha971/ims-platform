@@ -44,7 +44,9 @@ export interface EntryAmountView {
 export const entryAmountView = (
   direction: LedgerDirection,
   entryType?: LedgerEntry['entryType'],
-  bucket?: LedgerBucket
+  bucket?: LedgerBucket,
+  /** A4b — the line belongs to a deposit ADJUSTMENT (`source.adjustment`). */
+  adjustment = false
 ): EntryAmountView => {
   /* A2 (PLT-X01 §8) — a deposit is neither "you gave" nor "you got" in the khata
      sense: it is money HELD for the party and returnable, outside the balance. So it
@@ -54,7 +56,16 @@ export const entryAmountView = (
     return {
       tone: 'neutral',
       sign: 'none',
-      labelId: direction === 'credit' ? 'ledger.entry.depositIn' : 'ledger.entry.depositOut',
+      /* Money leaving the deposit is either handed back or ADJUSTED against a
+         charge; "Deposit returned" on an adjustment told a customer, on their
+         own statement, that ₹120 applied to their fine had been given back
+         (Wave A gate). */
+      labelId:
+        direction === 'credit'
+          ? 'ledger.entry.depositIn'
+          : adjustment
+            ? 'ledger.entry.depositAdjusted'
+            : 'ledger.entry.depositOut',
     };
   }
   /* An opening balance is not something that happened today, so "You gave" is
@@ -137,7 +148,10 @@ export const entryTitle = (entry: LedgerEntry, t: TranslateFn): string => {
     return entry.reason?.trim() || t('ledger.entry.type.reversal');
   }
   if (entry.note.trim()) return entry.note.trim();
-  return t(entryAmountView(entry.direction, entry.entryType, entry.bucket).labelId);
+  return t(
+    entryAmountView(entry.direction, entry.entryType, entry.bucket, !!entry.source?.adjustment)
+      .labelId
+  );
 };
 
 /**

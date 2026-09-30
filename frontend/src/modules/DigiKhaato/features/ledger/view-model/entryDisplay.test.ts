@@ -531,6 +531,12 @@ describe('A2 — the two new entry types and the buckets', () => {
     expect(entryAmountView('debit', 'payment_out', 'deposit').labelId).toBe(
       'ledger.entry.depositOut'
     );
+    // Wave A gate: out of the deposit by ADJUSTMENT is not a return.
+    expect(entryAmountView('debit', 'payment_out', 'deposit', true)).toEqual({
+      tone: 'neutral',
+      sign: 'none',
+      labelId: 'ledger.entry.depositAdjusted',
+    });
   });
 
   it('reads a loan line like any line, and badges it', () => {

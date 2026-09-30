@@ -65,6 +65,7 @@
   "ledger.entry.date.quick": "जल्दी तारीख़",
   "ledger.entry.date.today": "आज",
   "ledger.entry.date.yesterday": "कल",
+  "ledger.entry.depositAdjusted": "जमा राशि से समायोजित",
   "ledger.entry.depositIn": "जमा राशि मिली",
   "ledger.entry.depositOut": "जमा राशि लौटाई",
   "ledger.entry.direction": "क्या हुआ",
