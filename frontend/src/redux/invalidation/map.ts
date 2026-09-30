@@ -720,4 +720,27 @@ export const INVALIDATION: TInvalidationMap = {
     ],
     stale: ['reminders'],
   },
+  // ── A4b ── held deposits (FRD 00 PLT-X02) ─────────────────────────────────
+  // Every answer carries the deposit's new figures and `depositSlice` swaps the
+  // row in place (the `patch`), and the panel's held TOTAL is the server's
+  // (`meta.totals.held`), so `deposit` is re-read too rather than re-summed
+  // here (canon rule 3). Taking or returning a deposit moves the party's
+  // DEPOSIT bucket, which the khata header shows, so the ledger's three are
+  // re-read now; the payment list gains a row. Adjusting from a deposit also
+  // settles the charges it was applied to, so the document lists are stale.
+  receiveDeposit: {
+    patch: [['deposit', 'rows']],
+    refetch: [...LEDGER_WRITE_REFETCH, 'paymentList', 'deposit'],
+    stale: ['statement', 'ledgerAging', 'cashbook'],
+  },
+  refundDeposit: {
+    patch: [['deposit', 'rows']],
+    refetch: [...LEDGER_WRITE_REFETCH, 'paymentList', 'deposit'],
+    stale: ['statement', 'ledgerAging', 'cashbook'],
+  },
+  applyDeposit: {
+    patch: [['deposit', 'rows']],
+    refetch: [...LEDGER_WRITE_REFETCH, 'paymentList', 'deposit'],
+    stale: ['invoiceList', 'salesDocList', 'statement', 'ledgerAging'],
+  },
 };

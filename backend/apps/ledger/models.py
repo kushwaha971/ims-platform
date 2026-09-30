@@ -9,7 +9,13 @@ from __future__ import annotations
 
 from django.db import models
 
-from apps.common.constants import Direction, LedgerBucket, PaymentMode, UpiApp
+from apps.common.constants import (
+    MONEY_PAYMENT_MODE_CHOICES,
+    Direction,
+    LedgerBucket,
+    PaymentMode,
+    UpiApp,
+)
 from apps.common.db.fields import MoneyField, uuid7_pk
 from apps.common.models import ImmutableModel, TenantModel
 from apps.ledger.constants import (
@@ -90,7 +96,12 @@ class LedgerEntry(TenantModel, ImmutableModel):
     #: money arrived, not recording a payment against a document. EXP-03's
     #: cashbook reads these entries by `payment_mode` beside real payments.
     payment_mode = models.CharField(
-        max_length=16, choices=PaymentMode.choices, null=True, blank=True
+        # A4b: the money modes, the set this field always had. An adjustment
+        # payment's line may still STORE `adjustment` (no CHECK on the value).
+        max_length=16,
+        choices=MONEY_PAYMENT_MODE_CHOICES,
+        null=True,
+        blank=True,
     )
     #: Which UPI app the money came through — "PhonePe kiya" — so a merchant
     #: checking a disputed payment knows which app's history to open. Only ever

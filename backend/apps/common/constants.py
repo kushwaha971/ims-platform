@@ -69,6 +69,25 @@ class PaymentMode(models.TextChoices):
     CHEQUE = "cheque", _("Cheque")
     CARD = "card", _("Card")
     OTHER = "other", _("Other")
+    # ── A4b ── held deposits (ADR-044, contracts §1.4, R24, R37) ─────────────
+    #: No money moved: the two halves of applying a held deposit to a charge,
+    #: and an opening deposit taken before go-live. Accepted ONLY from
+    #: `payments.services.deposits`; every public path refuses it (R24), and the
+    #: cashbook never counts it (R4).
+    ADJUSTMENT = "adjustment", _("Adjusted, no money moved")
+
+
+# ── A4b ── the modes in which money actually changes hands ───────────────────
+#: Every public way of saying how money moved — a payment, a khata entry, an
+#: expense, a credit note's refund — accepts these and never `adjustment`. The
+#: ledger and expenses model fields keep these as their `choices`, which is
+#: exactly the set they had before `ADJUSTMENT` existed (no migration there).
+MONEY_PAYMENT_MODES: tuple[str, ...] = tuple(
+    mode.value for mode in PaymentMode if mode != PaymentMode.ADJUSTMENT
+)
+MONEY_PAYMENT_MODE_CHOICES: list[tuple[str, str]] = [
+    (mode.value, mode.label) for mode in PaymentMode if mode != PaymentMode.ADJUSTMENT
+]
 
 
 class UpiApp(models.TextChoices):

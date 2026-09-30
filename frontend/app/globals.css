@@ -650,3 +650,14 @@
     transform: none;
   }
 }
+
+/* ── A4b ── the deposit slip (PLT-X02 §8). It is printed from the khata, which
+   is a whole screen of controls, so while `data-printing-slip` is on <body> the
+   slip's portal is the only child that reaches paper. */
+@layer utilities {
+  @media print {
+    body[data-printing-slip] > *:not(.ub-print-slip) {
+      display: none !important;
+    }
+  }
+}

@@ -126,6 +126,20 @@ export interface Payment {
   readonly voidedBy: PaymentPerson | null;
   readonly createdBy: PaymentPerson | null;
   readonly createdAt: string;
+  /**
+   * A4b (PLT-X02 BR-7) — set when this payment is one half of a deposit
+   * adjustment: voiding it voids its partner too. Absent from an older server.
+   */
+  readonly depositPair?: PaymentDepositPair | null;
+}
+
+/** A4b — the other half of a deposit adjustment. */
+export interface PaymentDepositPair {
+  readonly applicationId: string;
+  readonly amount: string;
+  readonly depositId: string;
+  readonly partnerNumber: string;
+  readonly voided: boolean;
 }
 
 /** A bill the allocation panel offers, oldest first (FR-2). */

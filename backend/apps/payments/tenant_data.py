@@ -12,4 +12,8 @@ from apps.common.tenant_data import TenantTable, register
 register(
     TenantTable("payments.Payment", export_name="payments.csv"),
     TenantTable("payments.Allocation", export_name="payment_allocations.csv"),
+    # ── A4b ── held deposits: the application references both payments and the
+    # deposit (RESTRICT), so the computed order drains applications first.
+    TenantTable("payments.HeldDeposit", export_name="held_deposits.csv"),
+    TenantTable("payments.DepositApplication", export_name="deposit_applications.csv"),
 )

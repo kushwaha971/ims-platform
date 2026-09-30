@@ -21,3 +21,18 @@ class ReportsConfig(AppConfig):
         from apps.reports.selectors.cash_sources import PaymentCashSource
 
         register_cashbook_source(PaymentCashSource())
+
+        # ── A4b ── "Deposits held" (FRD 00 PLT-X02 §11), through A10's registry.
+        # Registered here because `payments` may not import `reports`; the rows
+        # are a payments selector (rule D4: reports reads selectors, no services).
+        from apps.payments.selectors.deposits import deposits_held_csv, deposits_held_report
+        from apps.reports.registry import register_report
+
+        register_report(
+            "payments.deposits_held",
+            module="payments",
+            permission="reports.financial.read",
+            label_id="payments.reports.depositsHeld",
+            selector=deposits_held_report,
+            csv=deposits_held_csv,
+        )

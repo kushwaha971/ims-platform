@@ -40,3 +40,31 @@ class PaymentsConfig(AppConfig):
             },
             buckets=frozenset(LedgerBucket.values),
         )
+
+        # ── A4b ── held deposits (ADR-044, contracts §1.4): payments' own two
+        # targets, and PLT-X10's refusal to switch off a module whose deposits
+        # still hold money — for every module that writes the deposit bucket.
+        from apps.parties.services.balance import BUCKET_WRITER_MODULES
+        from apps.payments.services.deposits import open_deposit_counter, register_deposit_targets
+        from apps.platform_app.services.guards import register_module_off_guard
+
+        register_deposit_targets()
+        for module in sorted(BUCKET_WRITER_MODULES[LedgerBucket.DEPOSIT.value]):
+            register_module_off_guard(
+                module, open_deposit_counter(module), label_id="payments.off.depositsOpen"
+            )
+
+        # PLT-X04 BR-5 / PLT-X02 EC-7: a party whose deposit still holds money is
+        # not archived (A6's archive guards). Keyed `payments`, where the deposit
+        # panel lives: a merchant who cannot reach payments cannot return it either.
+        from apps.parties.services.archive import register_archive_guard
+        from apps.payments.services.deposits import deposits_archive_guard
+
+        register_archive_guard("payments", deposits_archive_guard)
+        # …and payments itself stays on while any deposit holds money, or the
+        # guard above would stop being asked (A6 BR-3 skips an unreachable module).
+        from apps.payments.services.deposits import held_deposit_counter
+
+        register_module_off_guard(
+            "payments", held_deposit_counter(), label_id="payments.off.depositsHeld"
+        )

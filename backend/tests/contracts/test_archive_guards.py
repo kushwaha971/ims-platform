@@ -66,6 +66,27 @@ def test_a_block_is_shaped_as_the_409_details(tenant: Any, module: str, guard: A
         create_relation(
             ctx=Ctx.system(tenant), party=ward, related_party_id=party.id, kind="guardian"
         )
+    if module == "payments":  # ── A4b ── a deposit that holds money (PLT-X02 EC-7)
+        import uuid
+
+        from apps.common.context import Ctx
+        from apps.payments.services import deposits
+
+        deposit = deposits.open_deposit(
+            ctx=Ctx.system(tenant),
+            party_id=party.id,
+            module="library",
+            subject_type="library_membership",
+            subject_id=uuid.uuid4(),
+            purpose="Library deposit",
+            expected_amount="500.00",
+        )
+        deposits.receive_deposit(
+            ctx=Ctx.system(tenant),
+            deposit_id=deposit.id,
+            amount="500.00",
+            mode_breakup=[{"mode": "cash", "amount": "500.00"}],
+        )
     block = guard(tenant, party)
     if block is None:
         pytest.skip(f"no fixture makes an open {module} record yet")

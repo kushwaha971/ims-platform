@@ -77,6 +77,8 @@ interface PaymentApi {
   readonly created_at: string;
   /** A4a — additive; absent from an older server. */
   readonly bucket?: PaymentBucket;
+  /** A4b — additive: the other half of a deposit adjustment, or null. */
+  readonly deposit_pair?: Wire | null;
 }
 
 interface WriteResponse {
@@ -127,6 +129,19 @@ export const toPaymentRow = (row: PaymentRowApi): PaymentRow => ({
   allocatedAmount: row.allocated_amount,
 });
 
+/** A4b — `deposit_pair`, or null for every payment that is not half of an adjustment. */
+const toDepositPair = (pair: Wire | null | undefined): Payment['depositPair'] => {
+  if (!pair) return null;
+  const partner = (pair.partner ?? {}) as Wire;
+  return {
+    applicationId: s(pair.application_id),
+    amount: s(pair.amount),
+    depositId: s(pair.deposit_id),
+    partnerNumber: s(partner.number),
+    voided: pair.voided === true,
+  };
+};
+
 export const toPayment = (row: PaymentApi): Payment => ({
   id: row.id,
   number: row.number,
@@ -157,6 +172,7 @@ export const toPayment = (row: PaymentApi): Payment => ({
   createdBy: row.created_by,
   createdAt: row.created_at,
   bucket: row.bucket ?? 'main',
+  depositPair: toDepositPair(row.deposit_pair),
 });
 
 const toSaveResult = (body: WriteResponse): PaymentSaveResult => ({

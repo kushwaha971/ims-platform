@@ -427,8 +427,111 @@ green. `makemigrations --check` is clean.
 
 ## A4b — held deposits (PLT-X02; R4, R12, R24, R35, R36, R37)
 
-Status: **waiting for A4a on main** (Track M; in progress in `/home/claude/wt/track-m`). A15 is
-merged.
+Status: **in progress** — A4a (ba2be39), A5, A6 and A7 are on main and the branch is rebased onto
+them. The session was cut off by a usage limit once; the coordinator saved the work as a WIP commit
+(9d73cb0), which was soft-reset and continued.
+
+Checkpoint log:
+- Backend built, 40 new tests green (adjustment refusal ×7, deposits ×23, API ×11).
+- After the rebase: conflicts in `audit.py`, `error_codes.py`, `test_exceptions.py` (count now
+  166), `invalidation/registry.ts` and `invalidation/map.ts`, all append-block unions.
+- A wide run found five exact-list tests that did not expect payments' own targets. Four assert
+  `targets_for_direction(...)` in full; they are now scoped to `bucket="main"` (and the purchases
+  one also checks `auto_only`), which is what they meant. The allocation-target contract suite
+  gained `held_deposit` and `held_deposit_refund` factories and a per-type settled status (`held`,
+  `released`; `paid` for bills). The fifth, the 2,000-party plan test, is a planner flake under
+  shared load: it passes on rerun and A4b touches no ledger query.
+- A6's `register_archive_guard` is on main, so `deposits_archive_guard` is registered under
+  `payments` (PLT-X04 BR-5, PLT-X02 EC-7). The A6 contract suite now drives it into refusing, and
+  there is an HTTP test (409 `party_has_open_records`, then 200 after the return).
+- Frontend is built. The pieces:
+  - service, view-model, thunks and a lazy `deposit` slice;
+  - registry and map entries, schemas, the hook with one idempotency key per act;
+  - components: `DepositPanel` (party panel `payments.deposits`, rendered only when the party
+    payload carries `depositHeld`), `DepositMoneyDrawer` (Take and Return: one form, two
+    directions, `dynamic()`), `ApplyDepositDialog` (`dynamic()`), `print/DepositSlipPrint`
+    (printed through a body portal plus an A4b print rule in `globals.css`);
+  - the void dialog's `depositPair` consequence line;
+  - locale keys: `ledger.mode.adjustment` "Adjustment · deposit", plus `payments.deposit.*` and
+    `payments.void.consequence.depositPair`. `catalogues.json` gained three prefix lines so each
+    label a server sends rides with the screen that shows it: `payments.off.` → settings,
+    `payments.reports.` → reports, `payments.deposit.archiveBlock` → parties.
+
+### Files outside A4b's Owns column (each minimal, labelled `A4b`)
+- `common/constants.py` has the new `PaymentMode` and `MONEY_PAYMENT_MODES`. The ledger and
+  expenses choices and validators switch to money-only, with the same stored values, so no
+  migration is needed.
+- `reports/selectors/cash_sources.py` (BR-10) and `reports/apps.py` (the report registration).
+- Test edits:
+  - `reports/tests/test_registry.py`: the exact list now includes the deposits report;
+  - `payments/tests/test_payments_v2.py`, `purchases/tests/test_supplier_payment.py`,
+    `payments/tests/test_decoupled_from_documents.py`: scoped to `bucket="main"`;
+  - `tests/contracts/test_allocation_targets.py`: factories for the two deposit targets;
+  - `tests/contracts/test_archive_guards.py`: a payments fixture.
+- `parties/components/PartyModulePanels.tsx`: one side-effect import that registers the panel.
+- `app/(app)/payments/[id]/page.tsx`: dropped `import catalogues/sales`. It was only there for
+  A16's letterhead-error fallback key, which is now the shell's `error.generic`.
+- `app/globals.css`: the A4b print block, appended.
+
+### Adversarial pass (self, no Agent tool)
+- **Held total drifted after a write.** The row was patched from the 201, but the panel's "₹N
+  held" is the server's `meta.totals.held`, so it stayed on the old figure. Re-summing on the
+  client would be money arithmetic (canon rule 3), so `deposit` joined the three writes' `refetch`
+  lists. A test failed before the fix and passes after.
+- **Letterhead fetched for every khata.** The panel called `usePrintBranding()` on mount, which is
+  one extra request on every khata with a deposit panel. The panel now fetches the letterhead only
+  when a slip is printed. The test run's ECONNREFUSED noise disappeared with it.
+- **One idempotency key shared by three acts.** A dropped Take followed by a Return would have
+  replayed the wrong endpoint's key. There is now one key per act.
+- **Archive guard skipped when payments is switched off.** A6 skips guards of unreachable
+  modules (BR-3), so with payments off an archive could go through while a deposit holds money.
+  PLT-X10's module-off guard refuses to switch a deposit-writing vertical off while it holds
+  money, but nothing refused switching payments itself off. Fixed: `payments` now has its own
+  module-off guard, `held_deposit_counter` (label `payments.off.depositsHeld`), with a test.
+- **Deposit words shipped with every payments screen.** They landed in the `payments` catalogue,
+  which added 0.8 KB to /payments. They now have their own `deposits` catalogue, loaded only by
+  the deposit components.
+
+### Tests
+- Backend, 42 new:
+  - adjustment refused: 7 (payments 4, ledger 2, expenses 1);
+  - `test_deposits.py`: 24, covering the worked example, the caps, voids and pairing, the replay
+    fuzz, the cashbook, concurrency, list totals and both module-off guards;
+  - `test_deposits_api.py`: 11, covering HTTP, permissions, idempotent replay, stale version,
+    tenant isolation, the report, `deposit_pair`, and the archive refusal.
+- Contract suites, 12 new parametrisations: two targets × five allocation clauses, and the
+  payments archive guard × two.
+- Frontend, 20 new: 18 across four suites (service, view-model, `ApplyDepositDialog`,
+  `DepositPanel` including the print flow), plus the slip in `customerDocumentsCarryNoProductName`
+  and the `depositPair` consequence.
+
+### Gates (after the rebase onto 2d5bccd)
+- Backend: the full suite (excluding performance) is green. A second run covered payments,
+  platform, architecture, contracts and performance after the last change, also green.
+  `makemigrations --check` reports no changes. black, isort and flake8 are clean on the changed
+  files.
+- Frontend:
+  - `tsc` passes; eslint and prettier are clean on the changed files;
+  - full jest: 253 suites. The one failure, the map test's lazy-slice import list, is fixed;
+    the payments, parties, tests and print suites were rerun (57 suites, 818 tests);
+  - `i18n:split` and `i18n:check` pass.
+- Bundle, measured against a build of main with the same tooling:
+  - main already exceeds 74 budgets; this branch exceeds 73;
+  - shell +0.1 KB, /parties/[id] +0.2, /payments +0.1, /settings +0.3 (the module-off labels);
+  - /payments/[id] −4.4 KB (it no longer loads the sales catalogue);
+  - `bundle-budgets.json` is the lead's and is untouched.
+- No "look" pass: this session has no browser on the stack, and the shared servers on :3000 and
+  :8000 are not mine to restart.
+
+### Questions for the architecture owner
+1. FRD §7 says to register the panel "under the core key `deposits`". A6's registry requires
+   `<module>.<name>` keys, so it is `payments.deposits`, gated on `payments` being enabled.
+2. The khata's panel has no Adjust action. Apply needs the charges a vertical allows (§8), and the
+   khata has no vertical context. Verticals render `DepositPanel` with `chargesFor`. Should the
+   khata instead list the party's open `main` invoices?
+3. The slip prints from the khata through a body portal plus a `data-printing-slip` rule. Should a
+   `/deposits/[id]/print` route replace this when one exists?
+4. `subject_label` is omitted from the detail response until a vertical resolves it (§6 lists it).
 
 ### Design note (review step, drafted while waiting)
 

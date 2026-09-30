@@ -338,5 +338,6 @@
   "parties.writeOff.reason.hint": "यह एंट्री पर लिखा रहेगा। आपके अकाउंटेंट इसे पढ़ेंगे।",
   "parties.writeOff.reason.placeholder": "जैसे दुकान बंद हो गई, पैसा वापस नहीं मिलेगा",
   "parties.writeOff.saving": "बट्टे खाते में डाला जा रहा है…",
-  "parties.writeOff.title": "₹{amount} बट्टे खाते में डालकर {name} को आर्काइव करें?"
+  "parties.writeOff.title": "₹{amount} बट्टे खाते में डालकर {name} को आर्काइव करें?",
+  "payments.deposit.archiveBlock": "{name} की {count, plural, one {# जमा राशि} other {# जमा राशियों}} में अभी पैसा है। पहले जमा राशि लौटाएँ या समायोजित करें।"
 }

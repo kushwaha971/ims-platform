@@ -252,13 +252,14 @@ def _register_report(**overrides: Any) -> None:
     registry.register_report(key, **kwargs)
 
 
-def test_the_report_list_is_empty_for_todays_tenants(tenant: Any, api_as: Any) -> None:
+def test_the_report_list_holds_only_what_modules_registered(tenant: Any, api_as: Any) -> None:
     """The core reports hub is the client's static catalogue; this list is
-    only what modules registered — nothing, today."""
+    only what modules registered — today payments' "Deposits held" (A4b),
+    which the owner may read (`reports.financial.read`)."""
     owner, _ = api_as(tenant)
     response = owner.get(reverse(REPORTS))
     assert response.status_code == 200
-    assert response.json()["data"] == []
+    assert [row["key"] for row in response.json()["data"]] == ["payments.deposits_held"]
 
 
 def test_the_report_list_filters_by_module_and_codename(tenant: Any, api_as: Any) -> None:
@@ -266,7 +267,12 @@ def test_the_report_list_filters_by_module_and_codename(tenant: Any, api_as: Any
     _register_report(key="inventory.costly", permission="inventory.item.write", csv=None)
     owner, _ = api_as(tenant)
     accountant, _ = api_as(tenant, role="accountant")
-    assert owner.get(reverse(REPORTS)).json()["data"] == [
+
+    def inventory_rows(client: Any) -> list[dict]:
+        rows = client.get(reverse(REPORTS)).json()["data"]
+        return [row for row in rows if row["module"] == "inventory"]
+
+    assert inventory_rows(owner) == [
         {
             "key": "inventory.costly",
             "module": "inventory",
@@ -282,12 +288,10 @@ def test_the_report_list_filters_by_module_and_codename(tenant: Any, api_as: Any
             "has_csv": True,
         },
     ]
-    assert [r["key"] for r in accountant.get(reverse(REPORTS)).json()["data"]] == [
-        "inventory.probe"
-    ]
+    assert [r["key"] for r in inventory_rows(accountant)] == ["inventory.probe"]
     tenant.enabled_modules = [m for m in tenant.enabled_modules if m != "inventory"]
     tenant.save(update_fields=["enabled_modules"])
-    assert owner.get(reverse(REPORTS)).json()["data"] == []
+    assert inventory_rows(owner) == []
 
 
 def test_a_registered_report_answers_json_with_its_params(tenant: Any, api_as: Any) -> None:

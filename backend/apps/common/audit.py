@@ -231,6 +231,20 @@ class AuditAction:
     PARTY_RELATION_CREATED = "party.relation.created"
     PARTY_RELATION_DELETED = "party.relation.deleted"
 
+    # ── A4b ── held deposits (ADR-044, contracts §1.4, FRD 00 PLT-X02) ──────
+    DEPOSIT_OPENED = "deposit.opened"
+    DEPOSIT_RECEIVED = "deposit.received"
+    DEPOSIT_APPLIED = "deposit.applied"
+    DEPOSIT_REFUNDED = "deposit.refunded"
+    #: R35 — the vertical raised or lowered what it expects (never below received).
+    DEPOSIT_EXPECTED_CHANGED = "deposit.expected_changed"
+    #: EC-5 — an expected deposit nobody paid, closed by its vertical.
+    DEPOSIT_CANCELLED = "deposit.cancelled"
+    #: The deposit's own status moving because a payment settled or un-settled it.
+    DEPOSIT_STATUS_CHANGED = "deposit.status_changed"
+    #: BR-7 — both halves of an application voided together.
+    DEPOSIT_APPLICATION_VOIDED = "deposit.application_voided"
+
 
 def diff_fields(
     before: Mapping[str, Any] | None,

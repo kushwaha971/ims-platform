@@ -49,3 +49,35 @@ REFERENCE_MAX_LENGTH = 64
 MODE_LINE_KEYS: tuple[str, ...] = ("mode", "amount", "reference", "upi_app")
 #: PAY-05 FR-2 quick reasons are client copy; the server only checks the length.
 LIST_PAGE_SIZE = 25
+
+
+# ── A4b ── held deposits (ADR-044, FRD 00 PLT-X02, contracts §1.4) ───────────
+
+
+class DepositStatus(models.TextChoices):
+    """PLT-X02 BR-2 — derived after every move, never set by hand.
+
+    `expected` while nothing has been received; `held` while money is held;
+    `released` when everything received has been applied or returned (or an
+    expected deposit was cancelled, EC-5)."""
+
+    EXPECTED = "expected", _("Expected")
+    HELD = "held", _("Held")
+    RELEASED = "released", _("Released")
+
+
+#: The two targets payments registers for its own deposits (contracts §1.4 table).
+HELD_DEPOSIT = "held_deposit"
+HELD_DEPOSIT_REFUND = "held_deposit_refund"
+
+#: Column widths (FRD 00 PLT-X02 §5), shared by the validator and the models.
+DEPOSIT_MODULE_MAX = 32
+DEPOSIT_SUBJECT_TYPE_MAX = 48
+DEPOSIT_PURPOSE_MAX = 60
+DEPOSIT_NOTE_MAX = 255
+DEPOSIT_REASON_MAX = 160
+#: `payments_payment.meta.context` of each deposit payment, and what the receipt prints.
+DEPOSIT_CONTEXT_RECEIPT = "deposit_receipt"
+DEPOSIT_CONTEXT_OPENING = "deposit_opening"
+DEPOSIT_CONTEXT_REFUND = "deposit_refund"
+DEPOSIT_CONTEXT_ADJUSTMENT = "deposit_adjustment"

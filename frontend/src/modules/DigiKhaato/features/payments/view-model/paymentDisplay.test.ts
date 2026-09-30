@@ -149,6 +149,34 @@ describe('voidConsequences (PAY-05 FR-2)', () => {
       { kind: 'advance', amount: '102.00' },
     ]);
   });
+
+  // ── A4b ── PLT-X02 BR-7
+  it('names the other half of a deposit adjustment, which the void reverses too', () => {
+    /** Voiding either adjustment voids its partner: the dialog must say so first. */
+    const payment = {
+      party: { id: 'p', name: 'Asha' },
+      amount: '120.00',
+      unallocatedAmount: '0.00',
+      allocations: [],
+      depositPair: {
+        applicationId: 'a1',
+        amount: '120.00',
+        depositId: 'd1',
+        partnerNumber: 'PAYOUT/26-27/0031',
+        voided: false,
+      },
+    } as unknown as Payment;
+    expect(voidConsequences(payment)).toContainEqual({
+      kind: 'depositPair',
+      number: 'PAYOUT/26-27/0031',
+      amount: '120.00',
+    });
+    const done = {
+      ...payment,
+      depositPair: { ...payment.depositPair, voided: true },
+    } as unknown as Payment;
+    expect(voidConsequences(done).map((row) => row.kind)).not.toContain('depositPair');
+  });
 });
 
 describe('where a receipt row links (PUR-02)', () => {

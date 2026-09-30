@@ -1,4 +1,6 @@
 {
+  "payments.off.depositsHeld": "{count, plural, one {# जमा राशि में} other {# जमा राशियों में}} अभी पैसा है। भुगतान बंद करने से पहले उन्हें लौटाएँ या समायोजित करें।",
+  "payments.off.depositsOpen": "{count, plural, one {# जमा राशि} other {# जमा राशियाँ}} अभी खुली हैं। पहले उन्हें लौटाएँ या बंद करें।",
   "settings.conflict": "सेटिंग्स कहीं और बदली गईं। जारी रखने के लिए रीलोड करें।",
   "settings.conflict.reload": "रीलोड करें",
   "settings.conflict.title": "सेटिंग्स कहीं और बदलीं",

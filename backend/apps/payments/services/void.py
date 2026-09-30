@@ -10,6 +10,16 @@ void with `unallocated_amount = 0`; reverse its ledger line through LED-10
 (`reversal`, opposite direction, dated today, sourced to the payment — BR-3).
 Returns `{payment, party_balance, documents: [summary…], reversal_entry_id}`.
 
+── A4b: the two halves of a deposit application void together (BR-7) ────────
+A payment whose `meta.deposit_application_id` names a `payments_deposit_
+application` is half of one act: the adjustment OUT of the deposit or the
+adjustment IN to the charges. Voiding either voids its partner in the same
+transaction — the documents of BOTH are locked before either payment, so the
+lock order stays party → documents → payments — and stamps the application's
+`voided_at`. Half an adjustment would leave the deposit down with the charge
+unpaid, or the charge paid with money nobody moved. The return carries
+`paired_payment` so the screen can say "and PAYOUT/… with it".
+
 An archived party does NOT block a void (EC-5): `party_archived` guards new
 entries, and refusing to undo a wrong payment because the khata was filed away
 would leave the wrong balance standing.
@@ -31,7 +41,7 @@ from decimal import Decimal
 from typing import Any
 
 from django.db import transaction
-from django.db.models import F
+from django.db.models import F, Q
 from django.utils import timezone
 
 from apps.common.audit import AuditAction, write_audit
@@ -61,7 +71,7 @@ def _lock_payment(ctx: Ctx, payment_id: Any) -> Payment:
     return payment
 
 
-def _lock_allocated_documents(ctx: Ctx, payment_id: Any) -> dict[str, dict[str, Any]]:
+def _lock_allocated_documents(ctx: Ctx, payment_ids: list[Any]) -> dict[str, dict[str, Any]]:
     """L2 — the documents this payment settles, locked BEFORE the payment row (L3).
 
     Read from the allocations without a lock: under the party lock they cannot
@@ -71,7 +81,7 @@ def _lock_allocated_documents(ctx: Ctx, payment_id: Any) -> dict[str, dict[str, 
     """
     wanted: dict[str, set[Any]] = {}
     for document_type, document_id in Allocation.objects.filter(
-        tenant=ctx.tenant, payment_id=payment_id
+        tenant=ctx.tenant, payment_id__in=payment_ids
     ).values_list("document_type", "document_id"):
         wanted.setdefault(document_type, set()).add(document_id)
     locked: dict[str, dict[str, Any]] = {}
@@ -98,7 +108,10 @@ def void_payment(*, ctx: Ctx, payment_id: Any, reason: Any) -> dict:
     """
     clean_reason = _validate_reason(reason)
     lock_party_of(tenant=ctx.tenant, rows=Payment.objects.for_tenant(ctx.tenant), pk=payment_id)
-    locked = _lock_allocated_documents(ctx, payment_id)
+    application, partner_id = _deposit_pair(ctx, payment_id)
+    locked = _lock_allocated_documents(
+        ctx, [payment_id] + ([partner_id] if partner_id is not None else [])
+    )
     payment = _lock_payment(ctx, payment_id)
     if payment.status == PaymentStatus.VOID:
         raise BusinessRuleViolation(
@@ -106,7 +119,66 @@ def void_payment(*, ctx: Ctx, payment_id: Any, reason: Any) -> dict:
             "This payment has already been voided.",
             details={"payment_id": str(payment.id), "number": payment.number},
         )
+    partner = _lock_payment(ctx, partner_id) if partner_id is not None else None
 
+    result = _void_locked(ctx, payment, locked, clean_reason)
+    if partner is not None and partner.status != PaymentStatus.VOID:
+        paired = _void_locked(ctx, partner, locked, clean_reason)
+        result["documents"].extend(paired["documents"])
+        result["party_balance"] = paired["party_balance"]
+        result["paired_payment"] = {"id": str(partner.id), "number": partner.number}
+    if application is not None:
+        _stamp_application_voided(ctx, application, payment, partner, clean_reason)
+    return result
+
+
+def _deposit_pair(ctx: Ctx, payment_id: Any) -> tuple[Any, Any]:
+    """A4b — the deposit application this payment is half of, and its partner's id.
+
+    Read without a lock, under the party lock: both payments and the application
+    belong to the one party, and nothing changes them without that lock."""
+    from apps.payments.models import DepositApplication
+
+    try:
+        application = (
+            DepositApplication.objects.filter(tenant=ctx.tenant)
+            .filter(Q(refund_payment_id=payment_id) | Q(settle_payment_id=payment_id))
+            .first()
+        )
+    except (ValueError, TypeError):
+        return None, None
+    if application is None or application.voided_at is not None:
+        return None, None
+    partner = (
+        application.settle_payment_id
+        if str(application.refund_payment_id) == str(payment_id)
+        else application.refund_payment_id
+    )
+    return application, partner
+
+
+def _stamp_application_voided(
+    ctx: Ctx, application: Any, payment: Payment, partner: Payment | None, reason: str
+) -> None:
+    application.voided_at = timezone.now()
+    application.save(update_fields=["voided_at", "updated_at"])
+    write_audit(
+        ctx=ctx,
+        action=AuditAction.DEPOSIT_APPLICATION_VOIDED,
+        entity_type="payments_deposit_application",
+        entity_id=application.id,
+        before={"voided_at": None},
+        after={"voided_at": application.voided_at.isoformat()},
+        metadata={
+            "deposit_id": str(application.deposit_id),
+            "reason": reason,
+            "payment_ids": [str(payment.id)] + ([str(partner.id)] if partner else []),
+        },
+    )
+
+
+def _void_locked(ctx: Ctx, payment: Payment, locked: dict, clean_reason: str) -> dict:
+    """PAY-05 on a payment whose party, documents and row are already locked."""
     rows = list(payment.allocations.all())
     before = payment_snapshot(payment)
     today = tenant_today(ctx.tenant)

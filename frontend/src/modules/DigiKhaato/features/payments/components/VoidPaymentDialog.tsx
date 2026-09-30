@@ -86,6 +86,11 @@ export function VoidPaymentDialog({
         });
       case 'advance':
         return t('payments.void.consequence.advance', { amount: formatAmount(row.amount) });
+      case 'depositPair':
+        return t('payments.void.consequence.depositPair', {
+          number: row.number ?? '',
+          amount: formatAmount(row.amount),
+        });
       default:
         return t('payments.void.walkInWarning');
     }

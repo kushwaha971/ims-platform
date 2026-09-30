@@ -10,7 +10,7 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
-from apps.common.constants import Direction, PaymentMode, UpiApp
+from apps.common.constants import MONEY_PAYMENT_MODE_CHOICES, Direction, UpiApp
 from apps.common.serializers import MoneySerializerField
 from apps.ledger.constants import NOTE_MAX_LENGTH, REFERENCE_MAX_LENGTH, EntryType, SourceType
 from apps.ledger.models import LedgerEntry
@@ -191,7 +191,7 @@ class LedgerEntryWriteSerializer(serializers.Serializer):
         max_length=NOTE_MAX_LENGTH, required=False, allow_blank=True, default=""
     )
     payment_mode = serializers.ChoiceField(
-        choices=PaymentMode.choices, required=False, allow_null=True, default=None
+        choices=MONEY_PAYMENT_MODE_CHOICES, required=False, allow_null=True, default=None
     )
     # Which UPI app. Optional, and meaningful only with `payment_mode='upi'` —
     # the service drops it silently otherwise, so a client may leave the pick in
@@ -318,7 +318,7 @@ class EntryCorrectSerializer(EntryReverseSerializer):
     entry_date = serializers.DateField(required=False)
     note = serializers.CharField(max_length=NOTE_MAX_LENGTH, required=False, allow_blank=True)
     payment_mode = serializers.ChoiceField(
-        choices=PaymentMode.choices, required=False, allow_null=True
+        choices=MONEY_PAYMENT_MODE_CHOICES, required=False, allow_null=True
     )
     upi_app = serializers.ChoiceField(
         choices=UpiApp.choices,

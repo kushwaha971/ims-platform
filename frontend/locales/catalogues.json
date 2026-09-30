@@ -94,6 +94,10 @@
     "landing.": "landing",
     "landing.pricing.": "landingPricing",
     "calendar.": "calendar",
-    "parties.relations.": "partyLinks"
+    "parties.relations.": "partyLinks",
+    "payments.off.": "settings",
+    "payments.reports.": "reports",
+    "payments.deposit.": "deposits",
+    "payments.deposit.archiveBlock": "parties"
   }
 }

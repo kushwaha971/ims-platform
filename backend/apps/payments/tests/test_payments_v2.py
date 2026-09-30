@@ -104,7 +104,8 @@ def test_register_target_is_idempotent_and_refuses_a_different_shape(clean_targe
 def test_targets_for_direction_can_ask_for_auto_targets_only(clean_targets: Any) -> None:
     """R6 — `"auto"` walks only `auto=True` targets, in registration order."""
     register_target(NeverAutoTarget())
-    every = [t.document_type for t in targets_for_direction("in")]
+    # ── A4b ── payments' own `held_deposit` is IN too, in the deposit bucket.
+    every = [t.document_type for t in targets_for_direction("in", bucket="main")]
     auto = [t.document_type for t in targets_for_direction("in", auto_only=True)]
     assert every == ["sales_document", "test_never_auto"]
     assert auto == ["sales_document"]

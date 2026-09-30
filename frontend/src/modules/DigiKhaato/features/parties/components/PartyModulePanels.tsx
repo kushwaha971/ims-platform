@@ -8,6 +8,9 @@ import { selectEnabledModules } from 'src/redux/slice/sessionSlice';
 
 import { partyPanelsFor } from '../modulePanels';
 
+// ── A4b ── core's own panel (held deposits, PLT-X02 §7) registers itself on import.
+import 'modules/DigiKhaato/features/payments/deposits/partyPanel';
+
 import type { PartyDetail } from '../types/party.types';
 
 /**

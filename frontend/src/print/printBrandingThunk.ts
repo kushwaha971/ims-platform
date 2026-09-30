@@ -15,7 +15,7 @@ export const fetchPrintBranding = createAsyncThunk<PrintBranding, void, Reject>(
       const { getPrintBranding } = await import('./brandingPrintService');
       return await getPrintBranding(signal);
     } catch (error) {
-      return rejectWithValue(toApiError(error, 'sales.detail.error.title'));
+      return rejectWithValue(toApiError(error, 'error.generic'));
     }
   }
 );

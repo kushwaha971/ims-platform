@@ -1,4 +1,5 @@
 {
+  "payments.reports.depositsHeld": "Deposits held",
   "reports.aging.bucket.0to30": "0–30 days",
   "reports.aging.bucket.31to60": "31–60 days",
   "reports.aging.bucket.61to90": "61–90 days",

@@ -39,7 +39,7 @@ from typing import Any
 from django.db import transaction
 
 from apps.common.audit import AuditAction, write_audit
-from apps.common.constants import Direction, PaymentMode, UpiApp
+from apps.common.constants import MONEY_PAYMENT_MODES, Direction, PaymentMode, UpiApp
 from apps.common.context import Ctx
 from apps.common.dates import tenant_today
 from apps.common.exceptions import BusinessRuleViolation, NotFound, ValidationFailed
@@ -180,7 +180,7 @@ def validate_entry_payload(payload: dict, *, tenant: Any, needs_mode: bool = Tru
     # refusing to submit for a reason it cannot show.
     mode = payload.get("payment_mode")
     if needs_mode and direction == Direction.CREDIT:
-        if not mode or mode not in PaymentMode.values:
+        if not mode or mode not in MONEY_PAYMENT_MODES:  # A4b / R24: never `adjustment`
             details["payment_mode"] = ["Choose how you received the money."]
     elif not needs_mode:
         # An opening balance is a statement about a date, not a transfer: there

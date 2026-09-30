@@ -20,7 +20,7 @@ from django.db.models import (
 )
 from django.db.models.functions import Coalesce
 
-from apps.common.constants import Direction
+from apps.common.constants import Direction, PaymentMode
 from apps.common.money import ZERO
 from apps.ledger.constants import EntryType, SourceType
 from apps.ledger.models import LedgerEntry
@@ -66,9 +66,13 @@ def detail_queryset(*, tenant: Any) -> QuerySet:
 
 
 def payment_totals(queryset: QuerySet) -> dict:
-    """`meta.totals` over the FILTERED set; a void never counts as money that moved."""
+    """`meta.totals` over the FILTERED set; a void never counts as money that moved.
+
+    Nor does an adjustment (A4b, FRD 00 PLT-X02 §11): the two halves of applying
+    a held deposit, and an opening deposit, are listed with their mode but moved
+    no money, so they are in no money card."""
     money = DecimalField(max_digits=14, decimal_places=2)
-    recorded = Q(status=PaymentStatus.RECORDED)
+    recorded = Q(status=PaymentStatus.RECORDED) & ~Q(primary_mode=PaymentMode.ADJUSTMENT)
     row = queryset.order_by().aggregate(
         count=Count("id", distinct=True),
         # QA P-D6 — each money card counts its own payments: recorded, one direction.

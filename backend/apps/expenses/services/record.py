@@ -40,7 +40,7 @@ from typing import Any
 from django.db import transaction
 
 from apps.common.audit import AuditAction, write_audit
-from apps.common.constants import PaymentMode, UpiApp
+from apps.common.constants import MONEY_PAYMENT_MODES, PaymentMode, UpiApp
 from apps.common.context import Ctx
 from apps.common.exceptions import BusinessRuleViolation, NotFound, ValidationFailed
 from apps.expenses.constants import NOTE_MAX_LENGTH, REFERENCE_MAX_LENGTH, ExpenseStatus
@@ -95,7 +95,7 @@ def validate_expense_payload(payload: dict, *, tenant: Any) -> dict:
     upi_app = payload.get("upi_app") or None
     reference = _clean_text(payload.get("reference") or "")
     if paid:
-        if mode not in PaymentMode.values:
+        if mode not in MONEY_PAYMENT_MODES:  # A4b / R24: never `adjustment`
             details["mode"] = ["Choose how you paid."]
         # Optional even for UPI ("UPI, not sure which" is true), and dropped
         # silently for every other mode: the client keeps the pick in form

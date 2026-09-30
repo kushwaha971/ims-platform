@@ -48,7 +48,9 @@ def test_registry_is_closed_and_complete() -> None:
     """
     # ── A5 ── +2, below; ── A6 ── +1: `party_has_open_records` (contracts §4, PLT-X04).
     # ── A7 ── +3: `reminder_outside_window`, `reminder_cap_reached`, `due_not_open`.
-    assert len(REGISTRY) == 164
+    # ── A4b ── +2: `deposit_insufficient`, `deposit_released`.
+    assert len(REGISTRY) == 166
+    assert REGISTRY["deposit_insufficient"] == (409, False)
     assert REGISTRY["party_has_open_records"] == (409, False)
     assert REGISTRY["reminder_outside_window"] == (409, False)
     assert REGISTRY["reminder_cap_reached"] == (409, False)

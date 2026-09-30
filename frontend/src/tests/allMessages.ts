@@ -20,6 +20,8 @@ import dataEn from 'locales/catalogues/data.en.json';
 import dataHi from 'locales/catalogues/data.hi.json';
 import dataStatusEn from 'locales/catalogues/dataStatus.en.json';
 import dataStatusHi from 'locales/catalogues/dataStatus.hi.json';
+import depositsEn from 'locales/catalogues/deposits.en.json';
+import depositsHi from 'locales/catalogues/deposits.hi.json';
 import expensesEn from 'locales/catalogues/expenses.en.json';
 import expensesHi from 'locales/catalogues/expenses.hi.json';
 import exportsEn from 'locales/catalogues/exports.en.json';
@@ -115,6 +117,7 @@ export const en: Readonly<Record<string, string>> = {
   ...cashbookEn,
   ...dataEn,
   ...dataStatusEn,
+  ...depositsEn,
   ...expensesEn,
   ...exportsEn,
   ...importsEn,
@@ -163,6 +166,7 @@ export const hi: Readonly<Record<string, string>> = {
   ...cashbookHi,
   ...dataHi,
   ...dataStatusHi,
+  ...depositsHi,
   ...expensesHi,
   ...exportsHi,
   ...importsHi,

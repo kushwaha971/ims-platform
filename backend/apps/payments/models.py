@@ -28,14 +28,24 @@ other row; Part 21 §21.9 names this polymorphism as the extension point.
 
 from __future__ import annotations
 
+from typing import Any
+
 from django.db import models
+from django.db.models import Func
+from django.db.models.lookups import Exact
 
 from apps.common.constants import LedgerBucket, PaymentMode
 from apps.common.db.fields import MoneyField, uuid7_pk
 from apps.common.models import TenantModel
 from apps.payments.constants import (
+    DEPOSIT_MODULE_MAX,
+    DEPOSIT_NOTE_MAX,
+    DEPOSIT_PURPOSE_MAX,
+    DEPOSIT_REASON_MAX,
+    DEPOSIT_SUBJECT_TYPE_MAX,
     NOTE_MAX_LENGTH,
     REFERENCE_MAX_LENGTH,
+    DepositStatus,
     PaymentDirection,
     PaymentStatus,
 )
@@ -126,6 +136,19 @@ class Payment(TenantModel):
                 condition=models.Q(bucket__in=[choice.value for choice in LedgerBucket]),
                 name="ck_payment_bucket",
             ),
+            # ── A4b ── an adjustment moved no money, so it is never half of a split.
+            models.CheckConstraint(
+                condition=~models.Q(primary_mode=PaymentMode.ADJUSTMENT)
+                | Exact(
+                    Func(
+                        models.F("mode_breakup"),
+                        function="jsonb_array_length",
+                        output_field=models.IntegerField(),
+                    ),
+                    1,
+                ),
+                name="ck_payment_adjustment_is_whole",
+            ),
         ]
         indexes = [
             models.Index(
@@ -179,3 +202,133 @@ class Allocation(TenantModel):
 
     def __str__(self) -> str:  # pragma: no cover - admin convenience
         return f"{self.document_type}:{self.document_id} {self.amount}"
+
+
+# ── A4b ── held deposits (ADR-044, FRD 00 PLT-X02 §5, contracts §1.4) ────────
+
+
+class HeldDeposit(TenantModel):
+    """Money a party left with the business that is NOT the business's own.
+
+    A library or room security deposit: received by a payment IN in the ledger's
+    `deposit` bucket (so it never shows the party in advance, never enters FIFO
+    and never counts as income), returned by a payment OUT, and applied to what
+    the party owes only by an explicit act — two linked `adjustment` payments
+    (`DepositApplication`). The four money columns are caches the service keeps;
+    the evidence is the payments, their allocations and their ledger lines, and
+    `recalc` of them must reproduce these figures (T-PLT-X02-7).
+
+    Points at the vertical's own row by name (`subject_type`, `subject_id`),
+    never by a foreign key (10-architecture §5 rule 3).
+    """
+
+    party = models.ForeignKey(
+        "parties.Party", on_delete=models.RESTRICT, related_name="held_deposits"
+    )
+    module = models.CharField(max_length=DEPOSIT_MODULE_MAX)
+    subject_type = models.CharField(max_length=DEPOSIT_SUBJECT_TYPE_MAX)
+    subject_id = models.UUIDField()
+    purpose = models.CharField(max_length=DEPOSIT_PURPOSE_MAX)
+    expected_amount = MoneyField()
+    received_amount = MoneyField(default=0)
+    applied_amount = MoneyField(default=0)
+    refunded_amount = MoneyField(default=0)
+    held_amount = MoneyField(default=0)
+    status = models.CharField(
+        max_length=10, choices=DepositStatus.choices, default=DepositStatus.EXPECTED
+    )
+    note = models.CharField(max_length=DEPOSIT_NOTE_MAX, blank=True, default="")
+    version = models.IntegerField(default=1)
+
+    class Meta:
+        db_table = "payments_held_deposit"
+        verbose_name = "held deposit"
+        verbose_name_plural = "held deposits"
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(expected_amount__gt=0), name="ck_deposit_expected_positive"
+            ),
+            # BR-1 — the formula, and never below zero.
+            models.CheckConstraint(
+                condition=models.Q(
+                    held_amount=models.F("received_amount")
+                    - models.F("applied_amount")
+                    - models.F("refunded_amount")
+                ),
+                name="ck_deposit_held_formula",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(held_amount__gte=0), name="ck_deposit_held_non_negative"
+            ),
+            # BR-3 — receive is capped at what was expected.
+            models.CheckConstraint(
+                condition=models.Q(received_amount__lte=models.F("expected_amount")),
+                name="ck_deposit_received_within_expected",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(status__in=[choice.value for choice in DepositStatus]),
+                name="ck_deposit_status",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["tenant", "party", "status"], name="ix_deposit_party"),
+            models.Index(
+                fields=["tenant", "subject_type", "subject_id"], name="ix_deposit_subject"
+            ),
+            models.Index(
+                fields=["tenant", "module"],
+                name="ix_deposit_module_open",
+                condition=~models.Q(status=DepositStatus.RELEASED),
+            ),
+        ]
+
+    def __str__(self) -> str:  # pragma: no cover
+        return f"{self.purpose}: {self.held_amount} held"
+
+    # What `record_payment` and `void_payment` read off any allocated document —
+    # a deposit has no number or document date of its own, so a receipt row and
+    # a refusal name it by its purpose ("Library deposit is no longer open").
+    @property
+    def number(self) -> str:
+        return self.purpose
+
+    @property
+    def document_date(self) -> Any:
+        return self.created_at.date() if self.created_at else None
+
+
+class DepositApplication(TenantModel):
+    """One application of a held deposit to what the party owes (PLT-X02 flow 3).
+
+    Two payments, one act: `refund_payment` — the adjustment OUT that takes the
+    money out of the deposit bucket — and `settle_payment` — the adjustment IN
+    that settles the charges in the main bucket. Voiding either voids both and
+    stamps `voided_at` (BR-7); the row stays, as the payments do.
+    """
+
+    deposit = models.ForeignKey(HeldDeposit, on_delete=models.RESTRICT, related_name="applications")
+    amount = MoneyField()
+    reason = models.CharField(max_length=DEPOSIT_REASON_MAX)
+    refund_payment = models.OneToOneField(
+        Payment, on_delete=models.RESTRICT, related_name="deposit_refund_application"
+    )
+    settle_payment = models.OneToOneField(
+        Payment, on_delete=models.RESTRICT, related_name="deposit_settle_application"
+    )
+    voided_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "payments_deposit_application"
+        verbose_name = "deposit application"
+        verbose_name_plural = "deposit applications"
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(amount__gt=0), name="ck_deposit_application_positive"
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["tenant", "deposit"], name="ix_deposit_application_deposit"),
+        ]
+
+    def __str__(self) -> str:  # pragma: no cover
+        return f"{self.amount} from {self.deposit_id}"

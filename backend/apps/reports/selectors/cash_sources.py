@@ -10,6 +10,14 @@ A split payment (₹700 UPI + ₹300 cash, EC-1 of RPT-02) is TWO cashbook rows 
 the cashbook is a book of buckets, and each share lands in its own — while the
 day book shows it as one row with both effects. The drawer's figure is the
 same either way, which the reconciliation suite asserts.
+
+── A4b / R4: an adjustment is not cash ───────────────────────────────────────
+A share in mode `adjustment` moved no money — the two halves of applying a held
+deposit to a charge, or an opening deposit from the paper era (R37) — so it is
+never a cashbook row and never part of the opening brought forward. The rest of
+the payment's shares are counted as always. (`bucket_of`, the cashbook's own
+cash/bank split, is untouched; it is the cashbook's `cash_bucket` and never the
+ledger's `bucket`.)
 """
 
 from __future__ import annotations
@@ -31,6 +39,7 @@ SELECT m ->> 'mode' AS mode, p.direction, SUM((m ->> 'amount')::numeric)
   FROM payments_payment p
   CROSS JOIN LATERAL jsonb_array_elements(p.mode_breakup) AS m
  WHERE p.tenant_id = %(tenant)s AND p.status = 'recorded' AND p.payment_date < %(before)s
+   AND m ->> 'mode' <> %(adjustment)s
  GROUP BY 1, 2
 """
 
@@ -52,6 +61,8 @@ class PaymentCashSource:
         for payment in queryset:
             parts = payment.mode_breakup or []
             for index, part in enumerate(parts):
+                if part.get("mode") == PaymentMode.ADJUSTMENT:
+                    continue  # R4 — no money moved
                 yield CashRow(
                     source_type="payment",
                     # One id per share, so a split payment's two rows are two
@@ -85,7 +96,12 @@ class PaymentCashSource:
         net: dict[str, Decimal] = defaultdict(lambda: ZERO)
         with connection.cursor() as cursor:
             cursor.execute(
-                _NET_SQL, {"tenant": str(getattr(tenant, "id", tenant)), "before": before}
+                _NET_SQL,
+                {
+                    "tenant": str(getattr(tenant, "id", tenant)),
+                    "before": before,
+                    "adjustment": PaymentMode.ADJUSTMENT.value,
+                },
             )
             for mode, direction, total in cursor.fetchall():
                 signed = (total or ZERO) if direction == "in" else -(total or ZERO)

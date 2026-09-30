@@ -1,4 +1,6 @@
 {
+  "payments.off.depositsHeld": "{count, plural, one {# deposit still holds} other {# deposits still hold}} money. Return or adjust {count, plural, one {it} other {them}} before switching payments off.",
+  "payments.off.depositsOpen": "{count, plural, one {# deposit is} other {# deposits are}} still open. Return or close {count, plural, one {it} other {them}} first.",
   "settings.conflict": "Settings were changed elsewhere. Reload to continue.",
   "settings.conflict.reload": "Reload",
   "settings.conflict.title": "Settings changed elsewhere",

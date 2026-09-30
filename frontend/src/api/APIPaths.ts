@@ -168,6 +168,12 @@ export const API_PATHS = {
   PAYMENT_VOID: (id: string) => `/payments/${seg(id)}/void`,
   /** A4a (PLT-X03) — apply what is not yet applied to open documents. */
   PAYMENT_ALLOCATIONS: (id: string) => `/payments/${seg(id)}/allocations`,
+  // ── A4b ── held deposits (FRD 00 PLT-X02 §6)
+  DEPOSITS: '/deposits',
+  DEPOSIT: (id: string) => `/deposits/${seg(id)}`,
+  DEPOSIT_RECEIVE: (id: string) => `/deposits/${seg(id)}/receive`,
+  DEPOSIT_APPLY: (id: string) => `/deposits/${seg(id)}/apply`,
+  DEPOSIT_REFUND: (id: string) => `/deposits/${seg(id)}/refund`,
   /** PAY-04 BR-4 — the receipt's WhatsApp text, rendered by the server. */
   PAYMENT_SHARE: (id: string) => `/payments/${seg(id)}/share`,
   /** PAY-01 FR-2 — the allocation panel's open bills, oldest first. */

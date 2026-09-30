@@ -110,6 +110,7 @@ class PaymentDetailSerializer(serializers.ModelSerializer):
     party_balance_after = serializers.SerializerMethodField()
     context = serializers.SerializerMethodField()
     business = serializers.SerializerMethodField()
+    deposit_pair = serializers.SerializerMethodField()
 
     class Meta:
         model = Payment
@@ -137,6 +138,8 @@ class PaymentDetailSerializer(serializers.ModelSerializer):
             "created_at",
             # A4a (R5) — which balance this payment settles; Apply to bills lists that bucket.
             "bucket",
+            # A4b — the other half of a deposit application, which a void takes with it.
+            "deposit_pair",
         )
 
     def get_party(self, payment: Payment) -> dict | None:
@@ -157,6 +160,35 @@ class PaymentDetailSerializer(serializers.ModelSerializer):
 
     def get_context(self, payment: Payment) -> str | None:
         return (payment.meta or {}).get("context")
+
+    def get_deposit_pair(self, payment: Payment) -> dict | None:
+        """A4b (BR-7) — for half of a deposit application: the application and its
+        other half, so the void dialog can say "This also reverses PAYOUT/…". `null`
+        for every payment that is not half of one."""
+        application_id = (payment.meta or {}).get("deposit_application_id")
+        if not application_id:
+            return None
+        from apps.payments.models import DepositApplication
+
+        application = (
+            DepositApplication.objects.filter(tenant_id=payment.tenant_id, pk=application_id)
+            .select_related("refund_payment", "settle_payment")
+            .first()
+        )
+        if application is None:
+            return None
+        partner = (
+            application.settle_payment
+            if application.refund_payment_id == payment.id
+            else application.refund_payment
+        )
+        return {
+            "application_id": str(application.id),
+            "amount": str(application.amount),
+            "deposit_id": str(application.deposit_id),
+            "partner": {"id": str(partner.id), "number": partner.number},
+            "voided": application.voided_at is not None,
+        }
 
     def get_business(self, payment: Payment) -> dict:
         """PAY-04 §7's header band — who issued the receipt (the print needs no second call)."""

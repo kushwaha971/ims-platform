@@ -68,7 +68,7 @@ from typing import Any
 from django.db import transaction
 
 from apps.common.audit import AuditAction, write_audit
-from apps.common.constants import LedgerBucket, PaymentMode, UpiApp
+from apps.common.constants import MONEY_PAYMENT_MODES, LedgerBucket, PaymentMode, UpiApp
 from apps.common.context import Ctx
 from apps.common.dates import tenant_today
 from apps.common.exceptions import BusinessRuleViolation, NotFound, ValidationFailed
@@ -94,7 +94,9 @@ from apps.platform_app.services.sequences import allocate_number
 # ── Validation that needs no row ────────────────────────────────────────────
 
 
-def validate_mode_breakup(raw: Any, *, prefix: str = "mode_breakup") -> list[dict]:
+def validate_mode_breakup(
+    raw: Any, *, prefix: str = "mode_breakup", allow_adjustment: bool = False
+) -> list[dict]:
     """PAY-02 §10 — 1–4 lines, known modes, amounts > 0 at 2 dp, each mode once.
 
     Public, because SAL-02's payment at issue validates the same lines before
@@ -113,7 +115,8 @@ def validate_mode_breakup(raw: Any, *, prefix: str = "mode_breakup") -> list[dic
         row = row if isinstance(row, dict) else {}
         key = f"{prefix}.{index}"
         mode = row.get("mode")
-        if mode not in PaymentMode.values:
+        # A4b / R24: `adjustment` only when the deposits module asks for it.
+        if mode not in (PaymentMode.values if allow_adjustment else MONEY_PAYMENT_MODES):
             details[f"{key}.mode"] = ["Choose a payment mode."]
             continue
         if mode in seen:
@@ -158,7 +161,7 @@ def primary_line(lines: list[dict]) -> dict:
     return best
 
 
-def _validate(payload: dict, *, tenant: Any) -> dict:
+def _validate(payload: dict, *, tenant: Any, allow_adjustment: bool = False) -> dict:
     details: dict[str, list[str]] = {}
     direction = payload.get("direction") or PaymentDirection.IN
     if direction not in PaymentDirection.values:
@@ -172,7 +175,9 @@ def _validate(payload: dict, *, tenant: Any) -> dict:
 
     lines: list[dict] = []
     try:
-        lines = validate_mode_breakup(payload.get("mode_breakup"))
+        lines = validate_mode_breakup(
+            payload.get("mode_breakup"), allow_adjustment=allow_adjustment
+        )
     except ValidationFailed as exc:
         details.update(exc.details or {})
 
@@ -480,8 +485,33 @@ def _ledger_note(payment: Payment) -> str:
 
 @transaction.atomic
 def record_payment(*, ctx: Ctx, payload: dict, walk_in_document_id: Any = None) -> dict:
-    """Record one payment. See the module docstring for the contract."""
-    cleaned = _validate(payload, tenant=ctx.tenant)
+    """Record one payment. See the module docstring for the contract.
+
+    Refuses `adjustment` in `mode_breakup` (A4b, R24): money that did not move is
+    written only by `payments.services.deposits`, through `record_adjustment`.
+    """
+    return _record(ctx=ctx, payload=payload, walk_in_document_id=walk_in_document_id)
+
+
+def record_adjustment(*, ctx: Ctx, payload: dict) -> dict:
+    """A4b (ADR-044, contracts §1.4) — `record_payment` for an `adjustment` payment.
+
+    The same validation, locks, allocation, numbering, ledger posting and audit as
+    any payment; the one difference is that `mode_breakup` may be one
+    `adjustment` line. Called ONLY by `payments.services.deposits` — the two halves
+    of applying a held deposit and an opening deposit (R37). Runs inside the
+    caller's transaction.
+    """
+    lines = payload.get("mode_breakup") or []
+    if len(lines) != 1 or (lines[0] or {}).get("mode") != PaymentMode.ADJUSTMENT:
+        raise ValueError("record_adjustment writes exactly one adjustment line")
+    return _record(ctx=ctx, payload=payload, allow_adjustment=True)
+
+
+def _record(
+    *, ctx: Ctx, payload: dict, walk_in_document_id: Any = None, allow_adjustment: bool = False
+) -> dict:
+    cleaned = _validate(payload, tenant=ctx.tenant, allow_adjustment=allow_adjustment)
     direction = cleaned["direction"]
     amount: Decimal = cleaned["amount"]
     today = tenant_today(ctx.tenant)

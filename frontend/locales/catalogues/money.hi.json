@@ -15,6 +15,7 @@
   "ledger.entry.type.purchase_bill": "ख़रीद बिल",
   "ledger.entry.type.reversal": "वापसी",
   "ledger.entry.type.write_off": "बट्टे खाते",
+  "ledger.mode.adjustment": "समायोजन · जमा राशि",
   "ledger.mode.bank": "बैंक",
   "ledger.mode.card": "कार्ड",
   "ledger.mode.cash": "नकद",

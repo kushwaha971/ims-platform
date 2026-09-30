@@ -6,6 +6,8 @@ import { renderWithProviders } from 'src/tests/renderWithProviders';
 
 import { StatementPrintView } from 'modules/DigiKhaato/features/ledger/components/print/StatementPrintView';
 import { PaymentReceiptPrint } from 'modules/DigiKhaato/features/payments/components/print/PaymentReceiptPrint';
+// ── A4b ── the deposit slip (T-PLT-X02-12)
+import { DepositSlipPrint } from 'modules/DigiKhaato/features/payments/deposits/components/print/DepositSlipPrint';
 import type { Payment } from 'modules/DigiKhaato/features/payments/types/payment.types';
 import { InvoicePrintA4 } from 'modules/DigiKhaato/features/sales/components/print/InvoicePrintA4';
 import { InvoicePrintThermal80 } from 'modules/DigiKhaato/features/sales/components/print/InvoicePrintThermal80';
@@ -148,6 +150,67 @@ it('signs the A5 payment receipt with the shop, never the product', () => {
   expect(screen.getByTestId('receipt-issued-by')).toHaveTextContent(
     'Issued by Sharma Kirana Store'
   );
+});
+
+// ── A4b ── T-PLT-X02-12: the deposit slip names the tenant only.
+it('signs the deposit slip with the shop, never the product', () => {
+  function Slip() {
+    const { t } = useTranslation();
+    return (
+      <DepositSlipPrint
+        deposit={{
+          id: 'd1',
+          party: { id: 'p1', name: 'Asha Rao' },
+          module: 'library',
+          subjectType: 'library_membership',
+          subjectId: 's1',
+          purpose: 'Library deposit',
+          expectedAmount: '500.00',
+          receivedAmount: '500.00',
+          appliedAmount: '120.00',
+          refundedAmount: '0.00',
+          heldAmount: '380.00',
+          status: 'held',
+          note: '',
+          version: 3,
+          createdAt: '2026-09-29T10:00:00Z',
+          receipts: [
+            {
+              id: 'r1',
+              number: 'RCT/26-27/0201',
+              paymentDate: '2026-09-29',
+              amount: '500.00',
+              primaryMode: 'cash',
+              status: 'recorded',
+              opening: false,
+            },
+          ],
+          applications: [
+            {
+              id: 'a1',
+              amount: '120.00',
+              reason: 'Late return fine',
+              createdAt: '2026-10-02T10:00:00Z',
+              voidedAt: null,
+              refundPayment: { id: 'o1', number: 'PAYOUT/26-27/0031' },
+              settlePayment: { id: 'i1', number: 'RCT/26-27/0202' },
+            },
+          ],
+          refunds: [],
+        }}
+        businessName="Sharma Library"
+        branding={BRANDING}
+        t={t}
+      />
+    );
+  }
+  const { container } = renderWithProviders(<Slip />);
+  expectShopOnly(container, 'Sharma Library');
+  expect(screen.getByTestId('deposit-slip-issued-by')).toHaveTextContent(
+    'Issued by Sharma Library'
+  );
+  expect(screen.getByTestId('deposit-slip-held')).toHaveTextContent('₹380.00');
+  expect(container).toHaveTextContent('Library deposit');
 });
 
 it('signs the party statement with the shop, never the product', () => {

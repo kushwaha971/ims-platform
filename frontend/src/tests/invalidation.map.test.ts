@@ -30,6 +30,8 @@ import 'modules/DigiKhaato/features/notifications/redux/notificationSlice';
 import 'modules/DigiKhaato/features/payments/redux/paymentFormSlice';
 import 'modules/DigiKhaato/features/payments/redux/paymentListSlice';
 import 'modules/DigiKhaato/features/payments/redux/paymentReceiptSlice';
+// ── A4b ── held deposits
+import 'modules/DigiKhaato/features/payments/deposits/redux/depositSlice';
 import 'modules/DigiKhaato/features/reminders/redux/reminderSlice';
 import 'modules/DigiKhaato/features/sales/redux/invoiceDetailSlice';
 import 'modules/DigiKhaato/features/sales/redux/invoiceEditorSlice';

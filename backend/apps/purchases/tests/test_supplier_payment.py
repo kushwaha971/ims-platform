@@ -307,8 +307,16 @@ def test_money_out_settles_only_purchase_bills() -> None:
     payment; SAL-04's refund voucher uses `allocations='none'` precisely to avoid that."""
     from apps.payments.services.targets import targets_for_direction
 
-    assert [t.document_type for t in targets_for_direction("out")] == ["purchase_document"]
-    assert [t.document_type for t in targets_for_direction("in")] == ["sales_document"]
+    # ── A4b ── the deposit bucket's two targets (never auto) are outside the main bucket.
+    assert [t.document_type for t in targets_for_direction("out", bucket="main")] == [
+        "purchase_document"
+    ]
+    assert [t.document_type for t in targets_for_direction("in", bucket="main")] == [
+        "sales_document"
+    ]
+    assert [t.document_type for t in targets_for_direction("out", auto_only=True)] == [
+        "purchase_document"
+    ]
 
 
 def test_the_khata_names_the_bill_and_the_voucher(

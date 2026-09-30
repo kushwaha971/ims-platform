@@ -15,6 +15,7 @@
   "ledger.entry.type.purchase_bill": "Purchase bill",
   "ledger.entry.type.reversal": "Reversal",
   "ledger.entry.type.write_off": "Write-off",
+  "ledger.mode.adjustment": "Adjustment · deposit",
   "ledger.mode.bank": "Bank",
   "ledger.mode.card": "Card",
   "ledger.mode.cash": "Cash",

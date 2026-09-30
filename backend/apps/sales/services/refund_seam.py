@@ -24,7 +24,7 @@ from __future__ import annotations
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
-from apps.common.constants import PaymentMode
+from apps.common.constants import MONEY_PAYMENT_MODES, PaymentMode
 from apps.common.context import Ctx
 from apps.common.exceptions import ValidationFailed
 from apps.common.money import D, q2
@@ -44,7 +44,7 @@ def clean_refund(refund: dict | None) -> dict | None:
             amount = q2(D(row.get("amount")))
         except (InvalidOperation, TypeError, ValueError):
             amount = ZERO
-        if mode not in PaymentMode.values:
+        if mode not in MONEY_PAYMENT_MODES:  # A4b / R24: never `adjustment`
             raise ValidationFailed(
                 {f"refund.mode_breakup.{index}.mode": ["Choose a payment mode."]}
             )

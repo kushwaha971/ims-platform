@@ -73,11 +73,54 @@ def _purchase_document(ctx: dict, party: Any, day: dt.date) -> Any:
     return PurchaseDocument.objects.get(pk=data["id"])
 
 
+# ── A4b ── payments' own two targets (FRD 00 PLT-X02): a deposit taken IN, and
+# money taken OUT of one (a return, or the OUT half of an application).
+def _open_deposit(ctx: dict, party: Any, day: dt.date) -> Any:
+    from django.utils import timezone
+
+    from apps.payments.models import HeldDeposit
+    from apps.payments.services import deposits
+
+    deposit = deposits.open_deposit(
+        ctx=Ctx.system(ctx["shop"]),
+        party_id=party.id,
+        module="library",
+        subject_type="library_membership",
+        subject_id=uuid.uuid4(),
+        purpose="Library deposit",
+        expected_amount="500.00",
+    )
+    # The deposit's `document_date` is the day it was opened.
+    moment = timezone.make_aware(dt.datetime.combine(day, dt.time(10, 0)))
+    HeldDeposit.objects.filter(pk=deposit.pk).update(created_at=moment)
+    return HeldDeposit.objects.get(pk=deposit.pk)
+
+
+def _held_deposit(ctx: dict, party: Any, day: dt.date) -> Any:
+    from apps.payments.models import HeldDeposit
+    from apps.payments.services import deposits
+
+    deposit = _open_deposit(ctx, party, day)
+    deposits.receive_deposit(
+        ctx=Ctx.system(ctx["shop"]),
+        deposit_id=deposit.id,
+        amount="500.00",
+        mode_breakup=[{"mode": "cash", "amount": "500.00"}],
+    )
+    return HeldDeposit.objects.get(pk=deposit.pk)
+
+
 #: One factory per registered `document_type`. A target registered without one fails the suite.
 FACTORIES: dict[str, Callable[[dict, Any, dt.date], Any]] = {
     "sales_document": _sales_document,
     "purchase_document": _purchase_document,
+    "held_deposit": _open_deposit,
+    "held_deposit_refund": _held_deposit,
 }
+
+#: The status a fully settled document derives. A bill is `paid`; a deposit fully
+#: received is `held`, and one emptied by a return is `released` (PLT-X02 BR-2).
+SETTLED: dict[str, str] = {"held_deposit": "held", "held_deposit_refund": "released"}
 
 
 @pytest.fixture
@@ -140,7 +183,7 @@ def test_apply_then_unapply_restores_the_row_and_rederives_status(
     was, now = target.apply(
         document=locked, amount=due, today=today, payment_id=payment_id, ctx=ctx
     )
-    assert (was, now) == (status_before, "paid")
+    assert (was, now) == (status_before, SETTLED.get(document_type, "paid"))
     assert target.outstanding(locked) == Decimal("0.00")
     assert not target.is_open(locked)
 
@@ -148,7 +191,7 @@ def test_apply_then_unapply_restores_the_row_and_rederives_status(
     was, now = target.unapply(
         document=locked, amount=due, today=today, payment_id=payment_id, ctx=ctx
     )
-    assert (was, now) == ("paid", status_before)
+    assert (was, now) == (SETTLED.get(document_type, "paid"), status_before)
     after = model_to_dict(model.objects.get(pk=document.pk))
     changed = {k for k in before if before[k] != after[k]} - _METADATA
     assert changed == set()

@@ -148,6 +148,9 @@ export const QUERIES = {
   // ── A7 ── PLT-X06: a module's reminder tab and the source sheet's text.
   fetchModuleReminders: 'moduleReminders/fetch',
   fetchSourcePreview: 'moduleReminders/preview',
+  // ── A4b ── held deposits: a party's deposits (PLT-X02 §6)
+  fetchPartyDeposits: 'deposit/fetchPartyDeposits',
+  fetchDeposit: 'deposit/fetchDeposit',
 } as const;
 
 export const MUTATIONS = {
@@ -278,6 +281,10 @@ export const MUTATIONS = {
   deletePartyRelation: 'partyRelation/delete',
   // ── A7 ── PLT-X06: a reminder about one module record (create + send).
   sendSourceReminder: 'moduleReminders/send',
+  // ── A4b ── held deposits: take, adjust against charges, return
+  receiveDeposit: 'deposit/receiveDeposit',
+  applyDeposit: 'deposit/applyDeposit',
+  refundDeposit: 'deposit/refundDeposit',
 } as const;
 
 export type TQueryName = keyof typeof QUERIES;

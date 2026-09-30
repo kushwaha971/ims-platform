@@ -248,7 +248,7 @@ export const hasAdvance = (payment: Pick<Payment, 'unallocatedAmount'>): boolean
  * the held receipt; the server's answer is authoritative.
  */
 export interface VoidConsequence {
-  readonly kind: 'ledger' | 'document' | 'advance' | 'walkIn';
+  readonly kind: 'ledger' | 'document' | 'advance' | 'walkIn' | 'depositPair';
   readonly number?: string;
   readonly amount: string;
 }
@@ -265,5 +265,13 @@ export const voidConsequences = (payment: Payment): readonly VoidConsequence[] =
     });
   }
   if (hasAdvance(payment)) rows.push({ kind: 'advance', amount: payment.unallocatedAmount });
+  // A4b (PLT-X02 BR-7) — half of a deposit adjustment: the void reverses both halves.
+  if (payment.depositPair && !payment.depositPair.voided) {
+    rows.push({
+      kind: 'depositPair',
+      number: payment.depositPair.partnerNumber,
+      amount: payment.depositPair.amount,
+    });
+  }
   return rows;
 };

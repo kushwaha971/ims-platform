@@ -338,5 +338,6 @@
   "parties.writeOff.reason.hint": "It stays on the entry. Your accountant will read it.",
   "parties.writeOff.reason.placeholder": "e.g. Shop closed, cannot recover",
   "parties.writeOff.saving": "Writing off…",
-  "parties.writeOff.title": "Write off ₹{amount} and archive {name}?"
+  "parties.writeOff.title": "Write off ₹{amount} and archive {name}?",
+  "payments.deposit.archiveBlock": "{name} has {count, plural, one {# deposit} other {# deposits}} still holding money. Return or adjust the deposit first."
 }

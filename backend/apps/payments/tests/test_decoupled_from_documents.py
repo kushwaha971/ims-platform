@@ -53,8 +53,10 @@ def test_the_owners_register_their_document_targets_in_the_old_order() -> None:
     purchase_target = target_for("purchase_document")
     assert type(sales_target).__module__ == "apps.sales.services.payment_target"
     assert type(purchase_target).__module__ == "apps.purchases.services.payment_target"
-    assert [t.document_type for t in targets_for_direction("in")] == ["sales_document"]
-    assert [t.document_type for t in targets_for_direction("out")] == ["purchase_document"]
+    # ── A4b ── payments' deposit targets register after both, in their own bucket.
+    main = {"bucket": "main"}
+    assert [t.document_type for t in targets_for_direction("in", **main)] == ["sales_document"]
+    assert [t.document_type for t in targets_for_direction("out", **main)] == ["purchase_document"]
 
 
 def test_purchases_wires_the_bill_void_listener_itself() -> None:
