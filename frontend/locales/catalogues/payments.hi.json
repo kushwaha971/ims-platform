@@ -144,6 +144,8 @@
   "payments.void.banner": "{name} ने रद्द किया · {when}",
   "payments.void.confirm": "भुगतान रद्द करें",
   "payments.void.consequence.advance": "₹{amount} का एडवांस हट जाएगा",
+  "payments.void.consequence.depositBack": "जमा राशि: ₹{amount} फिर से जमा रहेगी",
+  "payments.void.consequence.depositGone": "जमा राशि: ₹{amount} अब जमा नहीं रहेगी",
   "payments.void.consequence.depositPair": "इससे मिलता-जुलता समायोजन {number} भी पलटेगा (जमा राशि से ₹{amount})",
   "payments.void.consequence.document": "{number} फिर से खुलेगा, ₹{amount} बाकी",
   "payments.void.consequence.ledgerIn": "खाता: {name} पर ₹{amount} और बाकी (आज की तारीख से)",

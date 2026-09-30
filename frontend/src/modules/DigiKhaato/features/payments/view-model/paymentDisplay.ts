@@ -248,16 +248,27 @@ export const hasAdvance = (payment: Pick<Payment, 'unallocatedAmount'>): boolean
  * the held receipt; the server's answer is authoritative.
  */
 export interface VoidConsequence {
-  readonly kind: 'ledger' | 'document' | 'advance' | 'walkIn' | 'depositPair';
+  readonly kind:
+    'ledger' | 'document' | 'advance' | 'walkIn' | 'depositPair' | 'depositBack' | 'depositGone';
   readonly number?: string;
   readonly amount: string;
 }
 
 export const voidConsequences = (payment: Payment): readonly VoidConsequence[] => {
   const rows: VoidConsequence[] = [];
-  if (payment.party) rows.push({ kind: 'ledger', amount: payment.amount });
+  /* A4b (Wave A gate) — a payment in the DEPOSIT bucket never moves the khata
+     balance, and its "document" is the deposit itself, not a bill that reopens.
+     Its void puts money back into what is held (an adjustment or a return
+     undone) or takes it out (a deposit receipt undone), and that is what it
+     says. The partner of an adjustment is named by its own line below. */
+  if (payment.bucket === 'deposit') {
+    rows.push({
+      kind: payment.direction === 'out' ? 'depositBack' : 'depositGone',
+      amount: payment.amount,
+    });
+  } else if (payment.party) rows.push({ kind: 'ledger', amount: payment.amount });
   else rows.push({ kind: 'walkIn', amount: payment.amount });
-  for (const allocation of payment.allocations) {
+  for (const allocation of payment.bucket === 'deposit' ? [] : payment.allocations) {
     rows.push({
       kind: 'document',
       number: allocation.number ?? '',

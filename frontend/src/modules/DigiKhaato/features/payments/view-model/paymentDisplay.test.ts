@@ -190,4 +190,48 @@ describe('where a receipt row links (PUR-02)', () => {
       '/sales/invoices/d1'
     );
   });
+
+  it("says what a deposit payment's void does to the DEPOSIT, not to the khata (Wave A gate)", () => {
+    /* The gate's look pass, voiding the out half of a deposit adjustment: the
+       dialog said "Khata: you owe Asha Rao ₹120.00 more" — a deposit line never
+       moves the balance, and the direction was backwards besides — and "Library
+       deposit reopens with ₹500.00 due", the deposit target read as if it were a
+       bill. A deposit payment's void puts money back into, or takes it out of,
+       what is held; that is the line the merchant needs. */
+    const adjustmentOut = {
+      party: { id: 'p', name: 'Asha' },
+      direction: 'out',
+      bucket: 'deposit',
+      amount: '120.00',
+      unallocatedAmount: '0.00',
+      allocations: [
+        {
+          documentType: 'held_deposit_refund',
+          documentId: 'd1',
+          number: 'Library deposit',
+          amountDue: '380.00',
+          amount: '120.00',
+        },
+      ],
+      depositPair: {
+        applicationId: 'a1',
+        amount: '120.00',
+        depositId: 'd1',
+        partnerNumber: 'RCT/26-27/0003',
+        voided: false,
+      },
+    } as unknown as Payment;
+    expect(voidConsequences(adjustmentOut)).toEqual([
+      { kind: 'depositBack', amount: '120.00' },
+      { kind: 'depositPair', number: 'RCT/26-27/0003', amount: '120.00' },
+    ]);
+    const receipt = {
+      ...adjustmentOut,
+      direction: 'in',
+      amount: '500.00',
+      depositPair: null,
+      allocations: [{ ...adjustmentOut.allocations[0], documentType: 'held_deposit' }],
+    } as unknown as Payment;
+    expect(voidConsequences(receipt)).toEqual([{ kind: 'depositGone', amount: '500.00' }]);
+  });
 });

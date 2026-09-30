@@ -10,7 +10,6 @@ import {
   UbDialog,
   UbField,
   UbForm,
-  UbListItemText,
   UbStack,
   UbTag,
   UbText,
@@ -86,6 +85,10 @@ export function VoidPaymentDialog({
         });
       case 'advance':
         return t('payments.void.consequence.advance', { amount: formatAmount(row.amount) });
+      case 'depositBack':
+        return t('payments.void.consequence.depositBack', { amount: formatAmount(row.amount) });
+      case 'depositGone':
+        return t('payments.void.consequence.depositGone', { amount: formatAmount(row.amount) });
       case 'depositPair':
         return t('payments.void.consequence.depositPair', {
           number: row.number ?? '',
@@ -126,7 +129,12 @@ export function VoidPaymentDialog({
         <UbStack as="ul" gap={1} aria-label={t('payments.void.consequences')}>
           {consequences.map((line) => (
             <UbStack as="li" key={line}>
-              <UbListItemText primary={line} />
+              {/* Wraps: a consequence is a sentence whose END is the amount. As a
+                  truncating list-item title it read "This also reverses the
+                  matching adjustment RCT/26-27/0003 (…" at 390 px (Wave A gate). */}
+              <UbText variant="body-sm" className="break-words">
+                {line}
+              </UbText>
             </UbStack>
           ))}
         </UbStack>

@@ -144,6 +144,8 @@
   "payments.void.banner": "Voided by {name} · {when}",
   "payments.void.confirm": "Void payment",
   "payments.void.consequence.advance": "Advance ₹{amount} is dropped",
+  "payments.void.consequence.depositBack": "Deposit: ₹{amount} is held again",
+  "payments.void.consequence.depositGone": "Deposit: ₹{amount} is no longer held",
   "payments.void.consequence.depositPair": "This also reverses the matching adjustment {number} (₹{amount} from the deposit)",
   "payments.void.consequence.document": "{number} reopens with ₹{amount} due",
   "payments.void.consequence.ledgerIn": "Khata: {name} owes ₹{amount} more (reversal dated today)",
