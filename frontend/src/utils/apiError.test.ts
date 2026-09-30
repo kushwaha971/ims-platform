@@ -131,4 +131,38 @@ describe('shouldToast — refusals a dialog already explains stay out of the sna
       ).toBe(false);
     }
   });
+
+  it("keeps the issuing module's void question and lock in the void dialog (A5, Wave A gate)", () => {
+    /* The gate's look pass: voiding a module's invoice put the module's question
+       in the dialog, with "Void anyway" — and the same sentence in an error-red
+       toast above it, with a request id, at both widths and in both languages.
+       A question is not a failure. */
+    for (const code of ['document_origin_confirm', 'document_origin_locked'] as const) {
+      expect(
+        shouldToast({ code, message: 'x', details: {}, requestId: 'r', status: 409, warnings: [] })
+      ).toBe(false);
+    }
+  });
+
+  it('keeps a refused module switch in its banner when the server said what is open (A12, Wave A gate)', () => {
+    /* The gate's look pass: "Close them first · 1 deposit still holds money" under
+       the Payments switch, and "This feature still has records that need
+       attention" in an error toast with a request id above it — one refusal,
+       reported twice. The banner is drawn from `details.breakdown`, so only a
+       refusal that carries one stays out of the snackbar; one without it has no
+       other surface and still toasts. */
+    const refusal = (details: Record<string, unknown>) => ({
+      code: 'module_has_data' as const,
+      message: 'x',
+      details,
+      requestId: 'r',
+      status: 409,
+      warnings: [],
+    });
+    expect(
+      shouldToast(refusal({ module: 'payments', breakdown: [{ label_id: 'l', count: 1 }] }))
+    ).toBe(false);
+    expect(shouldToast(refusal({ module: 'payments' }))).toBe(true);
+    expect(shouldToast(refusal({ module: 'payments', breakdown: [] }))).toBe(true);
+  });
 });

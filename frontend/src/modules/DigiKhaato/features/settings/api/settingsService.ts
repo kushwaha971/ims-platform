@@ -79,7 +79,8 @@ export const fetchSettingsDefaults = async (): Promise<SettingsDefaults> => {
 
 /**
  * PATCH /tenants/current {enabled_modules} — FR-4. A module with live data is
- * 409 `module_has_data` with the count; the global snackbar carries it.
+ * 409 `module_has_data` with the count and its breakdown, drawn under the refused
+ * switch (the snackbar carries it only when the server sent no breakdown).
  */
 export const updateEnabledModules = async (modules: readonly string[]): Promise<void> => {
   await api.patch(API_PATHS.TENANT_CURRENT, { enabled_modules: modules });

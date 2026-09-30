@@ -197,6 +197,12 @@ const LOCALLY_PRESENTED: ReadonlySet<ApiErrorCode> = new Set<ApiErrorCode>([
   // look pass caught it toasting the server's fallback sentence and a request
   // id over the dialog that was already saying it.
   'party_has_open_records',
+  // A5 — the void dialog shows the issuing module's lock in place (Void
+  // disabled) or asks its question with "Void anyway". The Wave A gate's look
+  // pass caught the question toasting in error red, request id and all, over
+  // the dialog that was asking it.
+  'document_origin_confirm',
+  'document_origin_locked',
 
   // Track T1 — each is answered on the surface the merchant is looking at:
   // `low_contrast` under the colour field WITH the darker shade to try (a
@@ -208,7 +214,20 @@ const LOCALLY_PRESENTED: ReadonlySet<ApiErrorCode> = new Set<ApiErrorCode>([
   'sequence_backwards',
 ]);
 
-export const shouldToast = (error: ApiErrorShape): boolean => !LOCALLY_PRESENTED.has(error.code);
+/**
+ * A12 — a refused module switch is drawn under the switch from
+ * `details.breakdown` ("Close them first, then turn this off." and one line per
+ * open thing). With a breakdown there is a better local surface; without one
+ * the snackbar is the only report, so it still toasts (Wave A gate).
+ */
+const presentedByModuleBanner = (error: ApiErrorShape): boolean => {
+  if (error.code !== 'module_has_data') return false;
+  const breakdown = (error.details as Record<string, unknown> | undefined)?.breakdown;
+  return Array.isArray(breakdown) && breakdown.length > 0;
+};
+
+export const shouldToast = (error: ApiErrorShape): boolean =>
+  !LOCALLY_PRESENTED.has(error.code) && !presentedByModuleBanner(error);
 
 /**
  * CR-2026-09-19-E — the codes minted on the CLIENT carry no server copy, so
