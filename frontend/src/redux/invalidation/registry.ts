@@ -142,6 +142,9 @@ export const QUERIES = {
   fetchRoles: 'role/fetchRoles',
   // ── A9b ── PLT-X08: the Business days screen.
   fetchBusinessDays: 'calendar/fetch',
+  // ── A6 ── PLT-X04: the list's role chips and the khata's guardian/payer links.
+  fetchPartyRoles: 'partyRole/fetch',
+  fetchPartyRelations: 'partyRelation/fetch',
 } as const;
 
 export const MUTATIONS = {
@@ -267,6 +270,9 @@ export const MUTATIONS = {
   saveWeekdays: 'calendar/saveWeekdays',
   addClosedDays: 'calendar/add',
   deleteClosedDay: 'calendar/delete',
+  // ── A6 ── PLT-X04: guardian and payer links.
+  createPartyRelation: 'partyRelation/create',
+  deletePartyRelation: 'partyRelation/delete',
 } as const;
 
 export type TQueryName = keyof typeof QUERIES;

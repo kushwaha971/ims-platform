@@ -12,12 +12,20 @@ import { newRequestId } from 'src/utils/requestId';
 import { archiveParty, bulkArchiveParties, restoreParty } from '../redux/partyArchiveThunk';
 
 import type { BulkArchiveResult } from '../api/partyService';
+import type { PartyOpenRecords } from '../types/party.types';
 
 /**
  * What the archive dialog is showing: the ordinary confirmation, or the state
  * the server puts it in when the party still owes something.
  */
-export type ArchiveStage = 'closed' | 'confirm' | 'blocked' | 'writeOff' | 'saving';
+export type ArchiveStage =
+  | 'closed'
+  | 'confirm'
+  | 'blocked'
+  | 'writeOff'
+  | 'saving'
+  /** A6 — a module holds open records for the party (409 `party_has_open_records`). */
+  | 'openRecords';
 
 export interface BlockedBalance {
   /** The SIGNED balance as the server sent it (`"-500.00"` for a payable) — for `UbAmount`. */
@@ -55,10 +63,21 @@ export const blockedFromDetails = (details: Record<string, string>): BlockedBala
   };
 };
 
+/** A6 — the 409's details as the dialog reads them, or null when malformed. */
+export const openRecordsFromDetails = (
+  details: Record<string, unknown>
+): PartyOpenRecords | null => {
+  const { module, count, label_id: labelId } = details;
+  if (typeof module !== 'string' || typeof labelId !== 'string') return null;
+  return { module, count: typeof count === 'number' ? count : 1, labelId };
+};
+
 export interface UsePartyArchiveResult {
   readonly canArchive: boolean;
   readonly stage: ArchiveStage;
   readonly blocked: BlockedBalance | null;
+  /** A6 — which module refused, how many records, and its sentence's id. */
+  readonly openRecords: PartyOpenRecords | null;
   readonly error: ApiErrorShape | null;
   readonly open: () => void;
   readonly close: () => void;
@@ -100,6 +119,7 @@ export function usePartyArchive(id: string | null): UsePartyArchiveResult {
 
   const [stage, setStage] = useState<ArchiveStage>('closed');
   const [blocked, setBlocked] = useState<BlockedBalance | null>(null);
+  const [openRecords, setOpenRecords] = useState<PartyOpenRecords | null>(null);
   const [error, setError] = useState<ApiErrorShape | null>(null);
   const [key, setKey] = useState('');
   const [restoring, setRestoring] = useState(false);
@@ -110,6 +130,7 @@ export function usePartyArchive(id: string | null): UsePartyArchiveResult {
 
   const open = useCallback(() => {
     setBlocked(null);
+    setOpenRecords(null);
     setError(null);
     setKey(newRequestId());
     setStage('confirm');
@@ -133,10 +154,26 @@ export function usePartyArchive(id: string | null): UsePartyArchiveResult {
           if (rejected?.code === 'party_balance_nonzero') {
             const details = (rejected.details ?? {}) as Record<string, string>;
             setBlocked(
-              blockedFromDetails(details) ?? { amount: '0.00', magnitude: '0.00', label: 'receivable' }
+              blockedFromDetails(details) ?? {
+                amount: '0.00',
+                magnitude: '0.00',
+                label: 'receivable',
+              }
             );
             setStage('blocked');
             return;
+          }
+          // A6 — a module holds open records: the dialog swaps in place to say
+          // which, how many, and what to do (PLT-X04 §2 flow 4).
+          if (rejected?.code === 'party_has_open_records') {
+            const records = openRecordsFromDetails(
+              (rejected.details ?? {}) as Record<string, unknown>
+            );
+            if (records) {
+              setOpenRecords(records);
+              setStage('openRecords');
+              return;
+            }
           }
           // Anything else keeps the dialog open with its own message and the
           // request id (R-E-4): closing it would leave a merchant who pressed
@@ -199,6 +236,17 @@ export function usePartyArchive(id: string | null): UsePartyArchiveResult {
             const next = blockedFromDetails((rejected.details ?? {}) as Record<string, string>);
             if (next) setBlocked(next);
           }
+          if (rejected?.code === 'party_has_open_records') {
+            const records = openRecordsFromDetails(
+              (rejected.details ?? {}) as Record<string, unknown>
+            );
+            if (records) {
+              // The write-off was rolled back with the refusal; nothing was forgiven.
+              setOpenRecords(records);
+              setStage('openRecords');
+              return;
+            }
+          }
           if (rejected?.code === 'nothing_to_write_off') {
             // Settled elsewhere meanwhile: the plain archive now works.
             setBlocked(null);
@@ -227,6 +275,7 @@ export function usePartyArchive(id: string | null): UsePartyArchiveResult {
       canArchive,
       stage,
       blocked,
+      openRecords,
       error,
       open,
       close,
@@ -243,6 +292,7 @@ export function usePartyArchive(id: string | null): UsePartyArchiveResult {
       canArchive,
       stage,
       blocked,
+      openRecords,
       error,
       open,
       close,

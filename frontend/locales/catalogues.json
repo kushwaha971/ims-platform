@@ -93,6 +93,7 @@
     "tax.rate.": "money",
     "landing.": "landing",
     "landing.pricing.": "landingPricing",
-    "calendar.": "calendar"
+    "calendar.": "calendar",
+    "parties.relations.": "partyLinks"
   }
 }

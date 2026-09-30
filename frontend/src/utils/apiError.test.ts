@@ -1,6 +1,6 @@
 import { AxiosError, AxiosHeaders, type InternalAxiosRequestConfig } from 'axios';
 
-import { errorMessageId, toApiError } from './apiError';
+import { errorMessageId, shouldToast, toApiError } from './apiError';
 
 /**
  * QA defect D2 (Sprint 3): a failure with no response at all — the server is
@@ -117,5 +117,18 @@ describe('errorMessageId — the client-minted fallbacks resolve to a key', () =
     );
     expect(shape.code).toBe('impersonation_forbidden');
     expect(errorMessageId(shape)).toBe('errors.impersonation_forbidden');
+  });
+});
+
+describe('shouldToast — refusals a dialog already explains stay out of the snackbar', () => {
+  it('keeps both archive refusals in their dialog (A6)', () => {
+    /* The A6 look pass caught `party_has_open_records` toasting the server's
+       English fallback and a request id over the dialog that named the module,
+       the count and the next step. */
+    for (const code of ['party_balance_nonzero', 'party_has_open_records'] as const) {
+      expect(
+        shouldToast({ code, message: 'x', details: {}, requestId: 'r', status: 409, warnings: [] })
+      ).toBe(false);
+    }
   });
 });

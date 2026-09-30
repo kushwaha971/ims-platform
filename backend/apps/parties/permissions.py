@@ -38,6 +38,13 @@ PartyPermissions = HasPermission(
         # lives in `services/credit.py` — the one place in this product where a
         # role is checked directly, recorded there so the pattern is not copied.
         "credit_check": "parties.party.read",
+        # ── A6 ── PLT-X04 §10: roles and relations are read with the party book and
+        # changed with the party WRITE right (staff yes, accountant no). Unlinking a
+        # guardian is not archiving anybody, so it is not `.delete`.
+        "roles": "parties.party.read",
+        "relations": "parties.party.read",
+        "create_relation": "parties.party.write",
+        "delete_relation": "parties.party.write",
     }
 )
 

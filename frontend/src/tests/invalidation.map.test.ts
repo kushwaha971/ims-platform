@@ -8,6 +8,8 @@ import 'modules/DigiKhaato/features/account-data/redux/accountDataSlice';
 import 'modules/DigiKhaato/features/admin/redux/adminSlice';
 import 'modules/DigiKhaato/features/branding/redux/brandingSlice';
 import 'modules/DigiKhaato/features/calendar/redux/calendarSlice';
+import 'modules/DigiKhaato/features/parties/redux/partyRelationSlice';
+import 'modules/DigiKhaato/features/parties/redux/partyRoleSlice';
 import 'modules/DigiKhaato/features/business-profile/redux/businessProfileSlice';
 import 'modules/DigiKhaato/features/inventory/redux/inventoryMastersSlice';
 import 'modules/DigiKhaato/features/inventory/redux/itemDetailSlice';

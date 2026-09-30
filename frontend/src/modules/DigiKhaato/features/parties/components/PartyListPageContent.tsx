@@ -42,6 +42,7 @@ import { useBulkArchive } from '../hooks/usePartyArchive';
 import { usePartyBulkTag } from '../hooks/usePartyBulkTag';
 import { usePartyForm } from '../hooks/usePartyForm';
 import { usePartyList } from '../hooks/usePartyList';
+import { usePartyRoles } from '../hooks/usePartyRoles';
 import { usePartyTags } from '../hooks/usePartyTags';
 import { orderingFor, sortFromOrdering } from '../view-model/partyListSort';
 
@@ -130,6 +131,7 @@ export function PartyListPageContent(): React.JSX.Element {
     totals,
     totalsScope,
     overLimit,
+    rolesOn,
     selectedIds,
     setSelectedIds,
     setOrdering,
@@ -150,6 +152,9 @@ export function PartyListPageContent(): React.JSX.Element {
   const nowMs = useNowMs();
 
   const { tags, byUsage: tagOptions } = usePartyTags();
+  /* A6 — asked only while a module with roles is on, or while a role filter is
+     applied (so the pressed chip survives a filter that matched nobody). */
+  const roles = usePartyRoles(rolesOn || Boolean(filters.role));
 
   /**
    * Whether the CHIP LANE is reserved on every row.
@@ -406,6 +411,7 @@ export function PartyListPageContent(): React.JSX.Element {
     [setFilters]
   );
   const handleTag = useCallback((tag: string) => setFilters({ tag }), [setFilters]);
+  const handleRole = useCallback((role: string) => setFilters({ role }), [setFilters]);
   const handleCredit = useCallback(
     (credit: PartyCreditFilter) => setFilters({ credit }),
     [setFilters]
@@ -539,6 +545,9 @@ export function PartyListPageContent(): React.JSX.Element {
           tag={filters.tag}
           onTagChange={handleTag}
           tags={tagOptions}
+          role={filters.role ?? ''}
+          onRoleChange={handleRole}
+          roles={roles}
           activeFilterCount={activeFilterCount}
           onClear={clearFilters}
         />

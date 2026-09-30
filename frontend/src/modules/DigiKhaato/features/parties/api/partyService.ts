@@ -11,6 +11,7 @@ import type {
   PartyFormValues,
   PartyListParams,
   PartyListResult,
+  PartyRoleBadge,
   PartySaveResult,
 } from '../types/party.types';
 
@@ -92,6 +93,8 @@ const toParty = (row: PartyApiRow): Party => ({
      absent key and an untagged party render identically, which is the one
      place a default is honest: both mean "no chips on this row". */
   tags: (row.tags ?? []).map((tag) => ({ id: tag.id, name: tag.name, color: tag.color })),
+  /* A6 — absent means no module with roles is on, which renders as "no roles". */
+  roles: row.roles ?? [],
 });
 
 /**
@@ -120,6 +123,7 @@ const partyFilterQuery = (
   collection: params.collection || undefined,
   tag: params.tag || undefined,
   credit: params.credit || undefined,
+  role: params.role || undefined,
   ordering: params.ordering,
 });
 
@@ -194,12 +198,24 @@ export const listParties = async (
        server does not count", which hides it too — but only one of them is a
        statement about the merchant's book. */
     overLimit: totals?.over_limit ?? null,
+    /* A6 — the server sends `roles` on every row while a module with roles is
+       on, and on none otherwise, so one row is enough to know. */
+    rolesOn: response.data.data.some((row) => row.roles !== undefined),
   };
 };
 
 // ── PTY-01 — create and edit ────────────────────────────────────────────────
 
-interface PartyDetailApiRow extends PartyApiRow {
+export interface PartyRoleBadgeApi {
+  readonly code: string;
+  readonly module: string;
+  readonly label_id: string;
+}
+
+/* `roles` is objects on the detail and codes on the list row (§6), so the
+   detail row does not inherit the list's spelling of it. */
+interface PartyDetailApiRow extends Omit<PartyApiRow, 'roles'> {
+  readonly roles?: readonly PartyRoleBadgeApi[];
   readonly alt_phone: string | null;
   readonly email: string | null;
   readonly gstin: string | null;
@@ -234,8 +250,16 @@ interface PartySaveApiResponse {
   };
 }
 
+export const toRoleBadge = (role: PartyRoleBadgeApi): PartyRoleBadge => ({
+  code: role.code,
+  module: role.module,
+  labelId: role.label_id,
+});
+
 const toPartyDetail = (row: PartyDetailApiRow): PartyDetail => ({
-  ...toParty(row),
+  ...toParty({ ...row, roles: row.roles?.map((role) => role.code) }),
+  /* A6 — spread only when sent: its absence is what hides the relations section. */
+  ...(row.roles ? { roleBadges: row.roles.map(toRoleBadge) } : {}),
   altPhone: row.alt_phone,
   email: row.email,
   gstin: row.gstin,
@@ -546,6 +570,10 @@ export interface BulkArchiveSkip {
   readonly code: string;
   /** Decimal string, or `null` for an id the server could not find. */
   readonly balance: string | null;
+  /** A6 — with `party_has_open_records`: the module, the count, its sentence's id. */
+  readonly module?: string;
+  readonly count?: number;
+  readonly label_id?: string;
 }
 
 export interface BulkArchiveResult {

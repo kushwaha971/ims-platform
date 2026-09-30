@@ -13,3 +13,6 @@ register(
     TenantTable("parties.Tag", export_name="tags.csv"),
     TenantTable("parties.PartyTag", export_name="party_tags.csv", tenant_path="party__tenant"),
 )
+
+# ── A6 ── PLT-X04 relations
+register(TenantTable("parties.PartyRelation", export_name="party_relations.csv"))

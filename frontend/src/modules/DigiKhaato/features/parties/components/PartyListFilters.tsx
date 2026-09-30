@@ -17,6 +17,7 @@ import {
   type PartyCreditFilter,
   type PartyTypeFilter,
 } from '../constants/partyFilters';
+import { roleChipLabel } from '../view-model/partyRoleDisplay';
 
 /**
  * Split out of the route chunk, and the split is unusually well aimed.
@@ -31,13 +32,11 @@ import {
  * `ssr: false` because the decision to show it depends on a client fetch: the
  * server pass never has the tag list, so it would render nothing either way.
  */
-const PartyTagFilterLazy = dynamic(
-  () => import('./PartyTagFilter').then((m) => m.PartyTagFilter),
-  { ssr: false }
-);
+const PartyTagFilterLazy = dynamic(() => import('./PartyTagFilter').then((m) => m.PartyTagFilter), {
+  ssr: false,
+});
 
-import type { PartyTagWithCount } from '../types/party.types';
-
+import type { PartyRole, PartyTagWithCount } from '../types/party.types';
 
 /**
  * PTY-02 §7's chips row: the three questions a merchant narrows the book by,
@@ -79,6 +78,13 @@ export interface PartyListFiltersProps {
   readonly tag: string;
   readonly onTagChange: (value: string) => void;
   readonly tags: readonly PartyTagWithCount[];
+  /**
+   * A6 (PLT-X04 §2 flow 1) — the enabled modules' roles ("Members",
+   * "Borrowers") and the applied comma list of codes, OR'd within the group.
+   */
+  readonly roles?: readonly PartyRole[];
+  readonly role?: string;
+  readonly onRoleChange?: (value: string) => void;
   readonly activeFilterCount: number;
   readonly onClear: () => void;
 }
@@ -97,6 +103,9 @@ function PartyListFiltersBase({
   tag,
   onTagChange,
   tags,
+  roles = [],
+  role = '',
+  onRoleChange,
   activeFilterCount,
   onClear,
 }: Readonly<PartyListFiltersProps>) {
@@ -115,6 +124,11 @@ function PartyListFiltersBase({
       onCollectionChange(next ? value : ''),
     [onCollectionChange]
   );
+  const appliedRoles = role ? role.split(',').filter(Boolean) : [];
+  const handleRole = (code: string, next: boolean) => {
+    const rest = appliedRoles.filter((applied) => applied !== code);
+    onRoleChange?.((next ? [...rest, code] : rest).join(','));
+  };
   const handleCredit = useCallback(
     (value: Exclude<PartyCreditFilter, ''>, next: boolean) => onCreditChange(next ? value : ''),
     [onCreditChange]
@@ -183,6 +197,32 @@ function PartyListFiltersBase({
         </UbFilterChipGroup>
       )}
 
+      {/* A6 — the modules' own words, beside Customers/Suppliers. The row does
+          not exist without a module that has roles; a role already applied
+          keeps its chip even when the roles list has not come back (the
+          credit-chip lesson: never take away the pressed chip). */}
+      {onRoleChange && (roles.length > 0 || appliedRoles.length > 0) && (
+        <UbFilterChipGroup label={t('parties.list.filter.role.label')}>
+          {roles.map((option) => (
+            <UbFilterChip
+              key={option.code}
+              label={roleChipLabel(t, option)}
+              pressed={appliedRoles.includes(option.code)}
+              onToggle={(next) => handleRole(option.code, next)}
+            />
+          ))}
+          {appliedRoles
+            .filter((code) => !roles.some((option) => option.code === code))
+            .map((code) => (
+              <UbFilterChip
+                key={code}
+                label={t('parties.role.generic')}
+                pressed
+                onToggle={(next) => handleRole(code, next)}
+              />
+            ))}
+        </UbFilterChipGroup>
+      )}
 
       <UbFilterChipGroup label={t('parties.list.filter.balance.label')}>
         {BALANCE_FILTERS.map((value) => (

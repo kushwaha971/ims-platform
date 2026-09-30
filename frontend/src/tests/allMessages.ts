@@ -50,6 +50,8 @@ import onboardingEn from 'locales/catalogues/onboarding.en.json';
 import onboardingHi from 'locales/catalogues/onboarding.hi.json';
 import partiesEn from 'locales/catalogues/parties.en.json';
 import partiesHi from 'locales/catalogues/parties.hi.json';
+import partyLinksEn from 'locales/catalogues/partyLinks.en.json';
+import partyLinksHi from 'locales/catalogues/partyLinks.hi.json';
 import partyPickerEn from 'locales/catalogues/partyPicker.en.json';
 import partyPickerHi from 'locales/catalogues/partyPicker.hi.json';
 import paymentActionsEn from 'locales/catalogues/paymentActions.en.json';
@@ -128,6 +130,7 @@ export const en: Readonly<Record<string, string>> = {
   ...notificationsEn,
   ...onboardingEn,
   ...partiesEn,
+  ...partyLinksEn,
   ...partyPickerEn,
   ...paymentActionsEn,
   ...paymentsEn,
@@ -175,6 +178,7 @@ export const hi: Readonly<Record<string, string>> = {
   ...notificationsHi,
   ...onboardingHi,
   ...partiesHi,
+  ...partyLinksHi,
   ...partyPickerHi,
   ...paymentActionsHi,
   ...paymentsHi,

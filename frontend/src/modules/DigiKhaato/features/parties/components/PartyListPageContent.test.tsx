@@ -688,7 +688,9 @@ describe('the yearly clean-up', () => {
     const bar = await selectFirstRow(user);
     await user.click(within(bar).getByRole('button', { name: 'Archive' }));
 
-    expect(await screen.findByText('Anyone with a balance will be skipped.')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Anyone with a balance or open records will be skipped.')
+    ).toBeInTheDocument();
   });
 
   it('reports who was skipped and what they owe, instead of closing', async () => {

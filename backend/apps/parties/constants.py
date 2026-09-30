@@ -59,3 +59,18 @@ ARCHIVE_VIA_VALUES = frozenset({"detail", "list", "form", ARCHIVE_VIA_DEFAULT})
 def archive_via(raw: object) -> str:
     """`raw` if it is one of `ARCHIVE_VIA_VALUES`, otherwise `"api"`."""
     return raw if isinstance(raw, str) and raw in ARCHIVE_VIA_VALUES else ARCHIVE_VIA_DEFAULT
+
+
+# ── A6 ── PLT-X04: party relations (ADR-046) ──────────────────────────────────
+
+
+class RelationKind(models.TextChoices):
+    """`parties_relation.kind` — who the related party is to the person.
+
+    A closed pair at Wave A (FRD 00 PLT-X04 §3): a guardian ("Rahul's father")
+    and a payer ("the company pays for Sita's membership"). An emergency contact
+    is Phase 2 and gets its own value, never a free-text kind.
+    """
+
+    GUARDIAN = "guardian", _("Guardian")
+    PAYER = "payer", _("Pays for")

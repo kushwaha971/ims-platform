@@ -20,6 +20,7 @@ from apps.common.filters import BaseTenantFilterSet
 from apps.parties.constants import PartyStatus
 from apps.parties.models import Party, PartyTag
 from apps.parties.services.credit import NEAR_LIMIT_RATIO
+from apps.parties.services.roles import parse_role_codes, role_predicate
 from apps.parties.services.tags import normalise_tag_name
 
 #: How far ahead "upcoming" looks. Seven days is the FRD's window and matches
@@ -65,6 +66,8 @@ class PartyFilterSet(BaseTenantFilterSet):
         method="filter_credit",
         choices=(("over", "Over limit"), ("near", "Near limit"), ("ok", "Within limit")),
     )
+    # ── A6 ── PLT-X04: `?role=gym_member,library_member`, OR within, AND against the rest.
+    role = django_filters.CharFilter(method="filter_roles")
 
     class Meta:
         model = Party
@@ -324,6 +327,19 @@ class PartyFilterSet(BaseTenantFilterSet):
         if value == "ok":
             return has_limit.filter(trade__lt=F("credit_limit") * NEAR_LIMIT_RATIO)
         return queryset
+
+    def filter_roles(self, queryset: QuerySet, _name: str, value: str) -> QuerySet:
+        """A6 BR-1 — only roles of ENABLED modules; anything else is a 400.
+
+        Not "matches nothing", unlike an unknown tag: a tag is data the merchant
+        can delete while a link is open, a role is a module's contract, and a
+        request naming one that is off (EC-2) is asking about a feature this
+        business does not have. `{role: ["Unknown role."]}` says so.
+        """
+        roles = parse_role_codes(self.tenant, value)
+        if not roles:
+            return queryset
+        return queryset.filter(role_predicate(self.tenant, roles))
 
     def _today(self) -> date:
         """The business date: today on the TENANT's wall clock (Part 20 §20.2.2).

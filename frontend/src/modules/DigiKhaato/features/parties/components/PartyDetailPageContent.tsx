@@ -32,11 +32,13 @@ import { usePartyReminder } from 'modules/DigiKhaato/features/ledger/hooks/usePa
 import { usePartyArchive } from '../hooks/usePartyArchive';
 import { usePartyDetail } from '../hooks/usePartyDetail';
 import { usePartyForm } from '../hooks/usePartyForm';
+import { roleBadgeLabel } from '../view-model/partyRoleDisplay';
 
 import { PartyCollectionDate } from './PartyCollectionDate';
 import { PartyDetailHeader } from './PartyDetailHeader';
 import { PartyHeaderMenu } from './PartyHeaderMenu';
 import { PartyInfoPanel } from './PartyInfoPanel';
+import { PartyModulePanels } from './PartyModulePanels';
 
 import type { PartyDetail } from '../types/party.types';
 
@@ -141,6 +143,12 @@ const PaymentFormDrawerLazy = /* @__PURE__ */ dynamic(() =>
     (m) => m.PaymentFormDrawer
   )
 );
+// ── A6 ── PLT-X04: the guardian/payer section and module panels, in their own
+// chunk and only for a business with a module that has roles.
+const PartyRelationsSectionLazy = /* @__PURE__ */ dynamic(() =>
+  import('./PartyRelationsSection').then((m) => m.PartyRelationsSection)
+);
+
 const CollectQrSheetLazy = /* @__PURE__ */ dynamic(() =>
   import('modules/DigiKhaato/features/payments/components/CollectQrSheet').then(
     (m) => m.CollectQrSheet
@@ -226,6 +234,16 @@ export function PartyDetailPageContent({
      dependency is an optional chain, and it says so rather than silently
      dropping the memoisation. */
   const lastActivityAt = shown?.lastActivityAt ?? null;
+  /* A6 — the roles worded once, from each module's catalogue (singular). */
+  const roleBadges = party?.roleBadges;
+  const roleLabels = useMemo(
+    () =>
+      roleBadges?.flatMap((role) => {
+        const label = roleBadgeLabel(t, role);
+        return label ? [{ code: role.code, label }] : [];
+      }),
+    [roleBadges, t]
+  );
   const asOf = useMemo(() => (lastActivityAt ? d(lastActivityAt) : null), [lastActivityAt, d]);
 
   /* LED-06 — the SAME balance the header prints (`summary` when the detail has
@@ -431,6 +449,7 @@ export function PartyDetailPageContent({
               pending={status === 'loading' || status === 'refreshing'}
               onCopyMobile={handleCopyMobile}
               copied={copied}
+              roleLabels={roleLabels}
             />
             {/* LED-06 FR-6 — "did I already ask?", answered where the balance
                 is. Its own chunk: it carries the reminders slice, and a khata
@@ -463,6 +482,18 @@ export function PartyDetailPageContent({
             <UbBox className="lg:hidden">
               <UbDisclosure label={t('parties.detail.details')}>{infoPanel}</UbDisclosure>
             </UbBox>
+            {/* A6 — below the info panel at every width: the section exists only
+                while a module with roles is on (the detail's `roles` key). */}
+            {party && party.roleBadges !== undefined && (
+              <UbStack gap={4} className="mt-4">
+                <PartyRelationsSectionLazy
+                  partyId={id}
+                  partyName={party.name}
+                  readOnly={isArchived}
+                />
+                <PartyModulePanels party={party} readOnly={isArchived} />
+              </UbStack>
+            )}
           </UbBox>
         </UbBox>
 
@@ -570,6 +601,7 @@ export function PartyDetailPageContent({
           name={shown.name}
           stage={archive.stage}
           blocked={archive.blocked}
+          openRecords={archive.openRecords}
           error={archive.error}
           onConfirm={archive.confirm}
           onClose={archive.close}

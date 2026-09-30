@@ -99,6 +99,11 @@ export const API_PATHS = {
   PARTY_TAGS: '/parties/tags',
   PARTY_TAG: (id: string) => `/parties/tags/${seg(id)}`,
   PARTY_TAG_MERGE: (id: string) => `/parties/tags/${seg(id)}/merge`,
+  // ── A6 ── PLT-X04: the roles modules give parties, and guardian/payer links.
+  PARTY_ROLES: '/parties/roles',
+  PARTY_RELATIONS: (id: string) => `/parties/${seg(id)}/relations`,
+  PARTY_RELATION: (id: string, relationId: string) =>
+    `/parties/${seg(id)}/relations/${seg(relationId)}`,
 
   // ── ledger ────────────────────────────────────────────────────────────────
   LEDGER_ENTRIES: '/ledger-entries',

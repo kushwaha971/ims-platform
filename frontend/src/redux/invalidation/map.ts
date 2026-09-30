@@ -704,4 +704,9 @@ export const INVALIDATION: TInvalidationMap = {
   saveWeekdays: { patch: [['calendar', 'data']] },
   addClosedDays: { patch: [['calendar', 'data']] },
   deleteClosedDay: { patch: [['calendar', 'data']] },
+  // ── A6 ── PLT-X04: the new, re-opened, ended or removed link is written into
+  // `partyRelation.data` by `partyRelationSlice` itself; no other screen lists
+  // relations, and the role counts do not move (a link is not a profile row).
+  createPartyRelation: { patch: [['partyRelation', 'data']] },
+  deletePartyRelation: { patch: [['partyRelation', 'data']] },
 };

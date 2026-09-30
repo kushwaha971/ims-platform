@@ -19,9 +19,12 @@ import type { ApiErrorShape } from 'src/types/api.types';
 import { todayInTenantTz } from 'src/utils/dates';
 import { formatAmount } from 'src/utils/money';
 
+import { openRecordsMessage } from '../view-model/partyRoleDisplay';
+
 import { PartyWriteOffForm } from './PartyWriteOffForm';
 
 import type { ArchiveStage, BlockedBalance } from '../hooks/usePartyArchive';
+import type { PartyOpenRecords } from '../types/party.types';
 
 // Loaded with dynamic(), so its own words come with its own chunk rather than
 // with the screen that opens it (src/i18n/catalogueRegistry.ts).
@@ -61,6 +64,8 @@ export interface PartyArchiveDialogProps {
   readonly name: string;
   readonly stage: ArchiveStage;
   readonly blocked: BlockedBalance | null;
+  /** A6 — set with stage `openRecords`: the module that refused and its count. */
+  readonly openRecords?: PartyOpenRecords | null;
   readonly error: ApiErrorShape | null;
   readonly onConfirm: (reason: string) => void;
   readonly onClose: () => void;
@@ -83,6 +88,7 @@ function PartyArchiveDialogBase({
   name,
   stage,
   blocked,
+  openRecords = null,
   error,
   onConfirm,
   onClose,
@@ -131,6 +137,7 @@ function PartyArchiveDialogBase({
 
   const isBlocked = stage !== 'closed' && shown === 'blocked' && blocked !== null;
   const isWriteOff = stage !== 'closed' && shown === 'writeOff' && blocked !== null;
+  const isOpenRecords = stage === 'openRecords' && openRecords !== null;
 
   /* M4 — focus is moved on purpose when the body swaps to "blocked".
      The Archive button the merchant just pressed is unmounted by the swap, so
@@ -145,8 +152,8 @@ function PartyArchiveDialogBase({
      the way back from the write-off form, whose Back button unmounts too. */
   const blockedBodyId = useId();
   useEffect(() => {
-    if (isBlocked) document.getElementById(blockedBodyId)?.focus();
-  }, [isBlocked, blockedBodyId]);
+    if (isBlocked || isOpenRecords) document.getElementById(blockedBodyId)?.focus();
+  }, [isBlocked, isOpenRecords, blockedBodyId]);
 
   if (stage === 'closed') return null;
   /* The magnitude, never the signed balance: every string this feeds already
@@ -160,16 +167,18 @@ function PartyArchiveDialogBase({
       open
       onOpenChange={handleOpenChange}
       title={
-        isWriteOff
-          ? t('parties.writeOff.title', { amount: amountText, name })
-          : isBlocked
-            ? t(
-                blocked.label === 'receivable'
-                  ? 'parties.archive.blocked.title'
-                  : 'parties.archive.blocked.titleGive',
-                { name }
-              )
-            : t('parties.archive.title', { name })
+        isOpenRecords
+          ? t('parties.archive.openRecords.title', { name })
+          : isWriteOff
+            ? t('parties.writeOff.title', { amount: amountText, name })
+            : isBlocked
+              ? t(
+                  blocked.label === 'receivable'
+                    ? 'parties.archive.blocked.title'
+                    : 'parties.archive.blocked.titleGive',
+                  { name }
+                )
+              : t('parties.archive.title', { name })
       }
       closeLabel={t('common.action.close')}
       /* A destructive decision does not dismiss on a backdrop tap: the merchant
@@ -186,7 +195,13 @@ function PartyArchiveDialogBase({
          off is still never the first thing offered. */
       footerOrder={isBlocked ? 'as-written' : undefined}
       footer={
-        isWriteOff ? (
+        isOpenRecords ? (
+          /* Nothing to do here but close: the next step is in the module that
+             holds the records, and the sentence above names it. */
+          <UbButton variant="secondary" onClick={onClose} autoFocus>
+            {t('common.action.close')}
+          </UbButton>
+        ) : isWriteOff ? (
           <>
             <UbButton variant="secondary" onClick={onCancelWriteOff} disabled={saving} autoFocus>
               {t('parties.writeOff.back')}
@@ -246,7 +261,14 @@ function PartyArchiveDialogBase({
       }
     >
       <UbStack gap={4}>
-        {isWriteOff && blocked ? (
+        {isOpenRecords && openRecords ? (
+          <UbStack gap={3} id={blockedBodyId} tabIndex={-1} className="outline-none">
+            <UbText variant="body-sm">{openRecordsMessage(t, openRecords, name)}</UbText>
+            <UbText variant="caption" tone="tertiary">
+              {t('parties.archive.openRecords.hint')}
+            </UbText>
+          </UbStack>
+        ) : isWriteOff && blocked ? (
           <PartyWriteOffForm
             t={t}
             name={name}

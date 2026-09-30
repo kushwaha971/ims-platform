@@ -40,6 +40,12 @@ export interface PartyApiRow {
     readonly name: string;
     readonly color: string | null;
   }[];
+  /**
+   * A6 (PLT-X04 §6) — role codes (`gym_member`…). Sent only while a module with
+   * roles is on; absent otherwise, so its ABSENCE is how the list knows there
+   * are no role chips to offer.
+   */
+  readonly roles?: readonly string[];
 }
 
 /**
@@ -74,6 +80,8 @@ export interface Party {
   readonly status: PartyStatus;
   readonly lastActivityAt: string | null;
   readonly tags: readonly PartyTag[];
+  /** A6 — role codes; `[]` or absent when the party has none or no role module is on. */
+  readonly roles?: readonly string[];
 }
 
 export interface PartyListParams {
@@ -102,6 +110,11 @@ export interface PartyListParams {
   readonly tag: string;
   /** PTY-06 FR-12 — `over`, `near`, `ok`, or '' for every party. */
   readonly credit: PartyCreditFilter;
+  /**
+   * A6 (PLT-X04 BR-1) — a comma list of role CODES, OR'd within the group.
+   * An unknown or switched-off code is a 400, not "matches nothing".
+   */
+  readonly role?: string;
   readonly ordering: string;
   readonly page: number;
   readonly pageSize: number;
@@ -137,6 +150,8 @@ export interface PartyListResult {
    * empty list.
    */
   readonly overLimit: number | null;
+  /** A6 — the rows carried `roles`, i.e. a module with roles is on. */
+  readonly rolesOn?: boolean;
 }
 
 // ── PTY-01 — what a create or an edit sends ─────────────────────────────────
@@ -237,6 +252,12 @@ export interface PartyDetail extends Party {
   readonly tradeBalance?: string;
   /** A2 — money held for the party and returnable; never part of the balance. */
   readonly depositHeld?: string;
+  /**
+   * A6 (PLT-X04 §6) — the party's roles with the module that owns each. ABSENT
+   * unless a module with roles is on, which is also what decides whether the
+   * khata shows the guardian and payer section.
+   */
+  readonly roleBadges?: readonly PartyRoleBadge[];
 }
 
 /**
@@ -340,4 +361,67 @@ export interface PartyDetailResult {
   readonly party: PartyDetail;
   readonly summary: PartySummary;
   readonly credit: PartyCredit | null;
+}
+
+// ── A6 — PLT-X04: roles and relations ────────────────────────────────────────
+
+/** One of a party's roles, as the khata header draws it. */
+export interface PartyRoleBadge {
+  readonly code: string;
+  readonly module: string;
+  /** The module's message id — an ICU plural taking `{count}` ("Member"/"Members"). */
+  readonly labelId: string;
+}
+
+/** `GET /parties/roles` — an enabled module's role, and how many active parties hold it. */
+export interface PartyRole extends PartyRoleBadge {
+  readonly count: number;
+}
+
+export type PartyRelationKind = 'guardian' | 'payer';
+
+/** One end of a relation, as small as the row needs. */
+export interface PartyRelationEnd {
+  readonly id: string;
+  readonly name: string;
+  readonly mobileMasked: string | null;
+  readonly status: 'active' | 'archived';
+}
+
+export interface PartyRelation {
+  readonly id: string;
+  readonly kind: PartyRelationKind;
+  readonly receivesMessages: boolean;
+  readonly fromOn: string;
+  readonly toOn: string | null;
+  /** The server's reading against the tenant's today; ended relations stay listed. */
+  readonly active: boolean;
+  /** The person. */
+  readonly party: PartyRelationEnd;
+  /** Their guardian or payer. */
+  readonly relatedParty: PartyRelationEnd;
+}
+
+/** `GET /parties/{id}/relations` — both directions. */
+export interface PartyRelations {
+  readonly asPerson: readonly PartyRelation[];
+  readonly asRelated: readonly PartyRelation[];
+}
+
+export interface PartyRelationDraft {
+  readonly relatedPartyId: string;
+  readonly kind: PartyRelationKind;
+  readonly receivesMessages: boolean;
+}
+
+/** `DELETE` either deletes (nothing comes back) or ends the relation (the ended row). */
+export type PartyRelationRemoval =
+  | { readonly outcome: 'deleted'; readonly id: string }
+  | { readonly outcome: 'ended'; readonly relation: PartyRelation };
+
+/** 409 `party_has_open_records` — the module, the number, the module's own sentence. */
+export interface PartyOpenRecords {
+  readonly module: string;
+  readonly count: number;
+  readonly labelId: string;
 }

@@ -23,6 +23,7 @@ import {
   selectPartyListTotals,
   selectPartyListTotalsScope,
   selectPartyOverLimit,
+  selectPartyRolesOn,
   selectPartyRows,
   selectPartySelection,
 } from '../redux/partyListSlice';
@@ -47,6 +48,8 @@ export interface UsePartyListResult {
   readonly totalsScope: 'filtered' | 'page';
   /** PTY-06 FR-12 — how many matched parties are over their limit, or null. */
   readonly overLimit: number | null;
+  /** A6 — the rows carried roles, so a module with roles is on. */
+  readonly rolesOn: boolean;
   readonly selectedIds: readonly string[];
   readonly setSelectedIds: (ids: readonly string[]) => void;
   /** Sorting is SERVER-side: it changes `ordering` and resets to page 1. */
@@ -90,6 +93,7 @@ export function usePartyList(mode: 'replace' | 'append' = 'replace'): UsePartyLi
   const serverTotals = useAppSelector(selectPartyListTotals);
   const totalsScope = useAppSelector(selectPartyListTotalsScope);
   const overLimit = useAppSelector(selectPartyOverLimit);
+  const rolesOn = useAppSelector(selectPartyRolesOn);
 
   /**
    * The page-sum fallback, computed HERE rather than in the reducer.
@@ -194,6 +198,18 @@ export function usePartyList(mode: 'replace' | 'append' = 'replace'): UsePartyLi
     return () => promise.abort();
   }, [stale, isImpaired, dispatch, filters]);
 
+  /* A6 (PLT-X04 EC-2) — a role the server does not know (its module was switched
+     off since the link was shared) is a 400 for the whole list. Drop that one
+     filter and let the list load, rather than leave an error screen over a
+     book that is fine. */
+  const roleRefused =
+    Boolean(filters.role) &&
+    error?.code === 'validation_error' &&
+    Boolean((error.details as Record<string, unknown> | undefined)?.role);
+  useEffect(() => {
+    if (roleRefused) dispatch(filtersChanged({ role: '' }));
+  }, [roleRefused, dispatch]);
+
   /**
    * Every narrowing the merchant has applied, counted.
    *
@@ -227,6 +243,7 @@ export function usePartyList(mode: 'replace' | 'append' = 'replace'): UsePartyLi
         filters.collection,
         filters.tag,
         filters.credit,
+        filters.role,
       ].filter(Boolean).length,
     [
       filters.q,
@@ -236,6 +253,7 @@ export function usePartyList(mode: 'replace' | 'append' = 'replace'): UsePartyLi
       filters.collection,
       filters.tag,
       filters.credit,
+      filters.role,
     ]
   );
 
@@ -305,6 +323,7 @@ export function usePartyList(mode: 'replace' | 'append' = 'replace'): UsePartyLi
     totals,
     totalsScope,
     overLimit,
+    rolesOn,
     selectedIds,
     setSelectedIds,
     setOrdering,

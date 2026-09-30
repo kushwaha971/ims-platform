@@ -50,6 +50,8 @@ export interface PartyListState {
    * whose only outcome is an empty list, on a screen that already has seven.
    */
   overLimit: number | null;
+  /** A6 — the last page carried role codes, so a module with roles is on. */
+  rolesOn: boolean;
   lastFetchedAt: number | null;
   /**
    * The query `rows` answer — the params of the request that last SUCCEEDED.
@@ -90,6 +92,7 @@ export const DEFAULT_PARTY_FILTERS: PartyListFilters = {
   collection: '',
   tag: '',
   credit: '',
+  role: '',
   ordering: DEFAULT_ORDERING,
   page: 1,
   pageSize: DEFAULT_PAGE_SIZE,
@@ -107,6 +110,7 @@ const initialState: PartyListState = {
   totals: null,
   totalsScope: 'page',
   overLimit: null,
+  rolesOn: false,
   lastFetchedAt: null,
   rowsQuery: null,
   showingSaved: false,
@@ -214,6 +218,7 @@ const partyListSlice = createSlice({
         state.totals = action.payload.totals;
         state.totalsScope = action.payload.totalsScope;
         state.overLimit = action.payload.overLimit;
+        state.rolesOn = action.payload.rolesOn ?? false;
         state.lastFetchedAt = Date.now();
         state.rowsQuery = { ...action.meta.arg.params };
         state.showingSaved = false;
@@ -260,5 +265,7 @@ export const selectPartyListTotals = (state: RootState): PartyListTotals | null 
 export const selectPartyListTotalsScope = (state: RootState): 'filtered' | 'page' =>
   state.partyList.totalsScope;
 export const selectPartyOverLimit = (state: RootState): number | null => state.partyList.overLimit;
+/** A6 — whether the list may offer role chips (a module with roles is on). */
+export const selectPartyRolesOn = (state: RootState): boolean => state.partyList.rolesOn;
 export const selectPartyListShowingSaved = (state: RootState): boolean =>
   state.partyList.showingSaved;

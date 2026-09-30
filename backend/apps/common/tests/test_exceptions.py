@@ -46,7 +46,9 @@ def test_registry_is_closed_and_complete() -> None:
     expired temporary password: the password was right, the window was not, and
     telling the holder otherwise sends them to reset a password they never had.
     """
-    assert len(REGISTRY) == 160  # ── A5 ── +2, below
+    # ── A5 ── +2, below; ── A6 ── +1: `party_has_open_records` (contracts §4, PLT-X04).
+    assert len(REGISTRY) == 161
+    assert REGISTRY["party_has_open_records"] == (409, False)
     assert "unauthenticated" in ERROR_CODES
     assert REGISTRY["password_change_required"] == (403, False)
     assert REGISTRY["password_expired"] == (401, False)

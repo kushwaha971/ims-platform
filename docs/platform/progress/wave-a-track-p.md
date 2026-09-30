@@ -18,9 +18,10 @@ and `reset_fy` from the settings screen.
 | A12 engine enablement | done | `3e67449` |
 | A13 scoping, module roles | done | `03fcbda` |
 | A8 perpetual counters | done | `daa289a` |
-| A9b closed-day calendar | done | `d5efcaf` |
-| A6 party roles, relations | in progress (A2 merged `472cb21`) | — |
-| A7 reminders | waits for A2, A6, A10 | — |
+| A9b closed-day calendar | done | `4ef1484` (the table's `d5efcaf` was the pre-amend hash) |
+| A6 party roles, relations | done | see `git log --grep '^A6:'` on main (merged after A5, `a2ad208`) |
+| A7 reminders | next (A2, A10 merged; A6 merging) | — |
+| A10 settings wiring (Track F hand-over) | already done in A8 | `daa289a` — `_shown_specs` uses `specs_for`, validation and save use `spec_for`; acceptance test `test_a_module_setting_is_shown_and_writable_only_while_its_module_is_on` in `platform_app/tests/test_number_kinds.py` |
 
 ## A1 — release gate (FRD 00 PLT-X11, R11)
 
@@ -391,6 +392,117 @@ Look pass (`/tmp/e2e-shots/trackp-calendar/`), same stack as A13's plus
 Gates: platform_app, common, architecture, integration and the 0013 round trip green; calendar,
 settings, team, utils and `src/tests` (463) jest green; `tsc`, eslint, prettier clean; locales 3964 keys checked.
 
+## A6 — party roles, relations and archive guards (FRD 00 PLT-X04, ADR-046, contracts §1.3)
+
+### Design note
+
+- **Roles** (`parties/services/roles.py`): `register_party_role(code, *, module, label_id,
+  party_ids)` under the ADR-042 rules (idempotent for an equal spec, a conflict raises, a slug code,
+  `_reset_for_tests`). Only roles of *effective* modules count (BR-1, EC-2), and with nothing
+  registered every function returns without a query, so no query budget moved. `?role=` is a
+  declared filter (`PartyFilterSet.filter_roles`): `id IN party_ids(tenant)` OR'd within the group
+  and ANDed with the rest; an unknown or switched-off code is 400 `{role: ["Unknown role."]}`.
+  Badges are ONE query per page whatever the number of roles: an `ARRAY_REMOVE(ARRAY[CASE WHEN id IN
+  (…) THEN code END, …])` annotation over the page's ids. `GET /parties/roles` is one aggregate
+  (active parties only, the list's BR-4 reason). The list CSV gains `roles` from the same annotation.
+- **Payload shape.** List rows carry `roles` (codes) and the detail `roles: [{code, module,
+  label_id}]` *only while a module with roles is on*, the A2 rule for bucket figures, so every
+  tenant today reads byte-identical payloads. The client uses that absence: no role chips request,
+  no relations section, no relations request for a plain shop.
+- **Relations** (`parties_relation`, parties 0010): the FRD §5 columns and constraints, both FKs
+  RESTRICT, registered in `tenant_data`. `services/relations.py`: create (both parties locked in id
+  order; self and duplicate 400; either end archived 409 `party_archived` (EC-4); a future `from_on`
+  400); an ENDED duplicate is re-opened (200) rather than refused, because the unique key covers
+  ended rows and "re-add Rahul's father" must work; remove deletes an unused relation (204) and ends
+  a used one (200 with `to_on`) through `register_relation_history(counter)`, which A7 fills from
+  reminder history. `receiving_parties(tenant, party)` is what reminder sources read (BR-7).
+  Routes are actions on `PartyViewSet` (`roles`, `relations` GET/POST, `relations/<rid>` DELETE),
+  so they inherit its module gate, tenant scoping and 404 for another tenant's ids. Codenames per
+  §10 (`parties.party.read` / `.write`). Audit `party.relation.created|deleted` (`metadata.ended`).
+- **Archive guards** (`parties/services/archive.py`): `register_archive_guard(module, guard)`,
+  several per module, deduplicated with `==`. Single archive calls the guards after the write-off
+  handler and the balance check, under the lock (BR-3) — so a refusal rolls the write-off back. Bulk
+  archive runs them for each locked eligible id and reports `party_has_open_records` with `module`,
+  `count`, `label_id` in `skipped` (BR-4). A disabled module's guard is never called. New error code
+  `party_has_open_records` (409). Parties registers its own BR-6 guard: an active GUARDIAN of an
+  active party cannot be archived (payers are not guarded; BR-6 names the guardian).
+- **Frontend.** Role chips on the list (the module's word via its `label_id`, a plural ICU message
+  on `{count}` — "Members" on the chip, "Member" on the badge), shown when the rows carry `roles` or
+  a `role` filter is applied, in the URL (`role=` codes only), counted in "Clear filters", and a
+  server 400 on a stale role drops that one filter instead of an error screen. Khata: role badges,
+  the "Guardian and payer" section (`UbPanel`, `dynamic()`), the add dialog (RHF + central schema,
+  the one party search minus the party itself, Guardian / Pays for, "Send reminders to them"),
+  remove with a confirm that says a used link is ended instead. `features/parties/modulePanels.ts`
+  (`registerPartyPanel`, ADR-042 rules, `dynamic()` per panel, drawn while the module is enabled).
+  Archive and bulk archive dialogs render the module's sentence with the number, falling back to
+  whole generic sentences. Roles and relations calls live in `api/partyRelationService.ts`, relation
+  copy in a new `partyLinks` catalogue (see QA 5).
+- **Not in A6, and why.** The core deposit guard (BR-5) needs `payments_held_deposit`, which is A4b's
+  (Track F, not merged); A4b's row in the plan lists "deposit guard", so it registers
+  `register_archive_guard("payments", …)` there. "Pick or **create** a party" in the relation dialog
+  is pick-only: creating inline would put the party form inside a dialog inside the khata; the
+  no-match line says to add them first. A module's own archive "link" (§2 flow 4) has no field in
+  the contract's `ArchiveBlock`; the dialog names the module and the next step instead.
+
+### A6 tests
+
+Backend 35 new: `parties/tests/test_party_roles.py` 12 (registry, `?role=` OR/AND and totals,
+disabled/unknown 400, switch-off EC-2, `/parties/roles` counts and scoping, badges on list and
+detail, ONE badge query for 50 rows × 3 roles and exactly +1 query on the list at two page sizes,
+zero queries unregistered, CSV `roles`, the EXPLAIN reaching a profile table's unique party index),
+`test_archive_guards.py` 5 (409 details, disabled guard not called, balance first, bulk skip, a
+refusal rolls a write-off back), `test_relations.py` 15, `tests/contracts/test_archive_guards.py` 3
+(every registered guard: `None` for a party with no records, ≤ 3 queries, block shape).
+Frontend 32 new across `PartyRoleChips`, `PartyRelations`, `PartyBulkArchiveDialog`,
+`partyRelationService`, `partyRoleDisplay`, `modulePanels`, `apiError`.
+
+### A6 QA (adversarial self-review plus the look pass)
+
+Look pass (`/tmp/e2e-shots/trackp-a6/`): the A13 stack plus a stand-in `lending_borrower` role
+(parties tagged "Loan") and a stand-in lending archive guard. List with the role chip (the chip's
+tap asserted on the NETWORK: `role=` sent at every size), both khatas (person and guardian), the add
+dialog, both archive refusals; 390 and 1280 px, en and hi. No page overflow, no raw message id.
+
+1. **Fixed (found by a test first)** — `?role=` in a shared link was ignored: the parser branch had
+   not landed in `readFilters`. The pressed-chip test failed; it passes now.
+2. **Fixed (found by looking)** — the archive refusal also toasted the server's English fallback and
+   a request id over the dialog that already explained it; `party_has_open_records` joined the
+   locally-presented codes (a `shouldToast` test fails without it).
+3. **Fixed (found by looking)** — with no catalogue for the module the badge read just "Role", which
+   says nothing; a badge with no word is not drawn now (the chip keeps its fallback: it is a control).
+4. **Fixed (found by looking)** — the section was a `UbCard` with a louder heading than the info
+   panel above it; it is a `UbPanel`/`UbPanelSection` like the rail's other sections.
+5. **Fixed (found by measuring)** — first build: shared app +0.6 KB and 47 more routes over budget
+   than the baseline. `partyService` is in the app shell (the list warm-up), so the roles/relations
+   calls moved to `partyRelationService.ts`; the relation copy moved to a `partyLinks` catalogue
+   (the `parties` catalogue ships with every party picker). Measured against a baseline build of the
+   same commit with A6 stashed: shared app 104.6 → 105.0 KB (at budget), `(app)` route chunks
+   +0.3–0.4 KB (store registry entries, `partyService` mapping), `/parties` +2.1 KB (role chips,
+   hook, lazy slice, thunk), `/parties/[id]` +1.2 KB. Baseline already has 18 routes over; with A6,
+   64. **For the lead:** `bundle-budgets.json` is shared, so I have not raised it; these are the
+   honest figures for the budget pass.
+6. **Fixed (A13 miss)** — `TeamPageContent.test.tsx` "confirms before revoking" has failed since
+   `03fcbda` (checked at `c2134c2`: green; `03fcbda`: red). A13's unmocked `GET /roles` fails in
+   jsdom as a transport error, the network slice goes `degraded` and the invalidation refetch is
+   withheld. The test mocks `roleService` now.
+7. Verified — a switched-off module's role 400s and disappears; archived parties are not counted;
+   another tenant's profile rows match nothing; a guard of a disabled module is not called; a relation
+   id through another party's URL is 404; accountants read and cannot write; the scratch DB
+   migrated `0010` forward.
+
+Gates after rebasing onto A5 (`a2ad208`): backend parties, ledger, common, platform_app, sales,
+payments, architecture, integration, contracts and the query budgets green, `makemigrations
+--check` clean; frontend full jest 2745/2745 (`src/tests/invalidation.registry.test.ts` included,
+and green on main itself at `a2ad208`); `tsc`, eslint and prettier on changed files; locales 4034
+keys in 45 catalogues.
+
+**Notes for the lead / verticals.** (a) A vertical's `<module>.role.*` and `<module>.archive.*` keys
+must be in a catalogue the parties screens load (route them to `parties` or `partyLinks` in
+`catalogues.json`), or the chip, badge and refusal fall back to generic words. (b) `label_id` for a
+role is an ICU plural on `{count}`; an archive guard's `label_id` takes `{count}` and `{name}`.
+(c) A4b registers the deposit guard. (d) A7 registers `register_relation_history` and reads
+`receiving_parties`.
+
 ## Decisions log
 
 - (A1) "test" is accepted as an environment for the flag alongside `ci`/`e2e`, because the CI suite
@@ -403,4 +515,4 @@ settings, team, utils and `src/tests` (463) jest green; `tsc`, eslint, prettier 
 
 ## Next steps
 
-1. A1: write tests, implement, gates, QA, merge.
+1. A7: design note, tests, implement, gates, look pass, merge.

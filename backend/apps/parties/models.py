@@ -7,13 +7,19 @@ from __future__ import annotations
 
 from django.contrib.postgres.indexes import GinIndex, OpClass
 from django.db import models
-from django.db.models import F
+from django.db.models import F, Q
 from django.db.models.functions import Lower, Upper
 
 from apps.common.db.fields import MoneyField, uuid7_pk
 from apps.common.managers import AllObjectsManager, SoftDeleteManager
 from apps.common.models import SoftDeleteModel, TenantModel
-from apps.parties.constants import ConsentSource, GstRegistration, OpeningDirection, PartyStatus
+from apps.parties.constants import (
+    ConsentSource,
+    GstRegistration,
+    OpeningDirection,
+    PartyStatus,
+    RelationKind,
+)
 
 
 class Party(TenantModel, SoftDeleteModel):
@@ -323,3 +329,59 @@ class PartyTag(models.Model):
             # join row in the tenant, once per tag.
             models.Index(fields=["tag"], name="ix_party_tag_tag"),
         ]
+
+
+# ── A6 ── PLT-X04: a guardian or payer linked to a person (ADR-046) ──────────
+
+
+class PartyRelation(TenantModel):
+    """`party` is the person; `related_party` is their guardian or payer.
+
+    Both ends are parties of the same tenant and both are `RESTRICT`: a party
+    is archived, never deleted, and a relation that silently lost one end would
+    send a reminder to nobody. A relation that has been USED (a reminder went to
+    `related_party`) is ended with `to_on` rather than deleted, so "who was told"
+    stays answerable; one that was never used is deleted outright
+    (`services/relations.py`).
+
+    `receives_messages` is a preference and sends nothing (BR-7): a reminder
+    source reads it when it chooses a recipient (PLT-X06 `recipient_party_id`).
+    """
+
+    id = uuid7_pk()
+    party = models.ForeignKey(
+        "parties.Party", on_delete=models.RESTRICT, related_name="relations_as_person"
+    )
+    related_party = models.ForeignKey(
+        "parties.Party", on_delete=models.RESTRICT, related_name="relations_as_related"
+    )
+    kind = models.CharField(max_length=12, choices=RelationKind.choices)
+    receives_messages = models.BooleanField(default=False, db_default=False)
+    from_on = models.DateField()
+    to_on = models.DateField(null=True, blank=True)
+
+    class Meta:
+        db_table = "parties_relation"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenant", "party", "related_party", "kind"], name="uq_party_relation"
+            ),
+            models.CheckConstraint(
+                condition=~Q(party=F("related_party")), name="ck_party_relation_not_self"
+            ),
+            models.CheckConstraint(
+                condition=Q(kind__in=[choice.value for choice in RelationKind]),
+                name="ck_party_relation_kind",
+            ),
+            models.CheckConstraint(
+                condition=Q(to_on__isnull=True) | Q(to_on__gte=F("from_on")),
+                name="ck_party_relation_dates",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["tenant", "party"], name="ix_party_relation_party"),
+            models.Index(fields=["tenant", "related_party"], name="ix_party_relation_related"),
+        ]
+
+    def __str__(self) -> str:  # pragma: no cover - admin convenience
+        return f"{self.related_party_id} {self.kind} of {self.party_id}"

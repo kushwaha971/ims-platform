@@ -12,11 +12,14 @@ from __future__ import annotations
 
 from typing import Any
 
+from django.db.models import Q
+from django.shortcuts import get_object_or_404
 from rest_framework.decorators import action
 from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
 
 from apps.common.constants import ModuleCode
 from apps.common.context import Ctx
+from apps.common.dates import tenant_today
 from apps.common.exports import CsvExportMixin, ExportColumn, csv_date
 from apps.common.idempotency import idempotent
 from apps.common.permissions import ModuleEnabled
@@ -25,7 +28,7 @@ from apps.common.throttling import ScopedUserRateThrottle
 from apps.common.viewsets import TenantScopedNoDeleteViewSet
 from apps.parties.constants import archive_via
 from apps.parties.filters import PartyFilterSet
-from apps.parties.models import Party
+from apps.parties.models import Party, PartyRelation
 from apps.parties.permissions import PartyPermissions, WriteOffPermissions
 from apps.parties.selectors.party import (
     list_parties,
@@ -47,9 +50,15 @@ from apps.parties.serializers.party import (
     PartyUpdateSerializer,
     PartyWriteSerializer,
 )
+from apps.parties.serializers.relation import (
+    PartyRelationCreateSerializer,
+    PartyRelationSerializer,
+)
 from apps.parties.services.archive import archive_party, bulk_archive_parties, restore_party
 from apps.parties.services.credit import check_credit, credit_mode, credit_snapshot, may_override
 from apps.parties.services.crud import create_party, update_party
+from apps.parties.services.relations import create_relation, relations_of, remove_relation
+from apps.parties.services.roles import enabled_roles, role_counts, roles_for, with_role_codes
 
 
 def _party_type(party: Party) -> str:
@@ -80,6 +89,9 @@ PARTY_EXPORT_COLUMNS = (
     ExportColumn("last_activity", lambda p: csv_date(p.last_activity_at)),
     ExportColumn("status", lambda p: p.status),
     ExportColumn("tags", lambda p: "; ".join(tag.name for tag in p.tags.all())),
+    # A6 (FRD 00 PLT-X04 §11) — the role codes, from ONE annotation on the export
+    # queryset (`with_role_codes`); empty for a tenant without a role-bearing module.
+    ExportColumn("roles", lambda p: "; ".join(getattr(p, "role_codes", None) or ())),
 )
 
 
@@ -190,16 +202,34 @@ class PartyViewSet(CsvExportMixin, TenantScopedNoDeleteViewSet):
         """
         if self.wants_csv(request):
             return self.csv_export(request)
-        queryset = self.export_queryset()
+        # The filtered set WITHOUT the export's role annotation (A6): the page and
+        # the totals are the same queries they were, and badges are one more.
+        queryset = self.filter_queryset(self.get_queryset())
         totals = party_totals(queryset)
         page = self.paginate_queryset(queryset)
-        serializer = self.get_serializer(page, many=True)
+        serializer = self.get_serializer(page, many=True, context=self._roles_context(page))
         # Through a serializer, not straight into the envelope: the two
         # figures are money, and money is a string on the wire (canon rule 3).
         # Handed the raw dict, the renderer emits `0.0` and the precision is
         # gone before the client ever sees it.
         meta = {**self.paginator.get_meta(), "totals": PartyTotalsSerializer(totals).data}
         return StandardResponse.ok(serializer.data, meta=meta)
+
+    def export_queryset(self) -> Any:
+        """The filtered set, plus `role_codes` for the CSV's `roles` column (A6)."""
+        return with_role_codes(self.filter_queryset(self.get_queryset()), self.get_tenant())
+
+    def _roles_context(self, page: Any) -> dict[str, Any]:
+        """The serializer context, with `party_roles` when a role-bearing module is on."""
+        context = self.get_serializer_context()
+        tenant = self.get_tenant()
+        if enabled_roles(tenant):
+            context["party_roles"] = roles_for(tenant, [party.pk for party in page or ()])
+        return context
+
+    def _detail(self, party: Party) -> dict:
+        """`PartyDetailSerializer` with the tenant in hand, so `roles` costs no tenant read."""
+        return PartyDetailSerializer(party, context={"tenant": self.get_tenant()}).data
 
     def retrieve(self, request: Any, *args: Any, **kwargs: Any) -> Any:
         """The party, plus the two blocks the khata page's header draws.
@@ -226,7 +256,7 @@ class PartyViewSet(CsvExportMixin, TenantScopedNoDeleteViewSet):
         app that owns the table.
         """
         party = self.get_object()
-        data = dict(self.get_serializer(party).data)
+        data = dict(self._detail(party))
         data["summary"] = PartySummarySerializer(party_summary(party)).data
         # PTY-06. One setting read for the mode; the rest is arithmetic on the
         # row already in hand, so the block costs no extra query about the party.
@@ -279,7 +309,7 @@ class PartyViewSet(CsvExportMixin, TenantScopedNoDeleteViewSet):
         serializer.is_valid(raise_exception=True)
         party, warnings = create_party(ctx=self._ctx(request), payload=serializer.validated_data)
         return StandardResponse.created(
-            PartyDetailSerializer(party).data,
+            self._detail(party),
             meta={"warnings": warnings} if warnings else None,
         )
 
@@ -298,7 +328,7 @@ class PartyViewSet(CsvExportMixin, TenantScopedNoDeleteViewSet):
             ctx=self._ctx(request), party=party, payload=serializer.validated_data
         )
         return StandardResponse.ok(
-            PartyDetailSerializer(party).data,
+            self._detail(party),
             meta={"warnings": warnings} if warnings else None,
         )
 
@@ -342,7 +372,7 @@ class PartyViewSet(CsvExportMixin, TenantScopedNoDeleteViewSet):
             write_off=dict(write_off) if write_off is not None else None,
         )
         return StandardResponse.ok(
-            PartyDetailSerializer(archived).data,
+            self._detail(archived),
             meta={"write_off_entry_id": write_off_entry_id} if write_off_entry_id else None,
         )
 
@@ -380,7 +410,7 @@ class PartyViewSet(CsvExportMixin, TenantScopedNoDeleteViewSet):
         """
         party = self.get_object()
         restored = restore_party(ctx=self._ctx(request), party=party, via="api")
-        return StandardResponse.ok(PartyDetailSerializer(restored).data)
+        return StandardResponse.ok(self._detail(restored))
 
     # ── PTY-06 — the credit limit's pre-flight ──────────────────────────────
     #
@@ -443,4 +473,71 @@ class PartyViewSet(CsvExportMixin, TenantScopedNoDeleteViewSet):
                 "archived_count": len(result["archived"]),
                 "skipped_count": len(result["skipped"]),
             },
+        )
+
+    # ── A6 ── PLT-X04: roles and relations ─────────────────────────────────
+    #
+    # On this viewset rather than beside it, so `parties/roles` is matched before
+    # `parties/<pk>` by the router's own ordering (list routes come first) and
+    # every relation route inherits this class's module gate, tenant scoping and
+    # 404-for-another-tenant's-id.
+
+    @action(detail=False, methods=["get"], url_path="roles")
+    def roles(self, request: Any, *args: Any, **kwargs: Any) -> Any:
+        """`[{code, module, label_id, count}]` for the enabled modules' roles (§6).
+
+        Empty — not absent — for a tenant with no role-bearing module on: the
+        client hides the chips row when the list is empty (§8).
+        """
+        return StandardResponse.ok(role_counts(self.get_tenant()))
+
+    @action(detail=True, methods=["get"], url_path="relations")
+    def relations(self, request: Any, *args: Any, **kwargs: Any) -> Any:
+        """Both directions: `{as_person: [...], as_related: [...]}`."""
+        party = self.get_object()
+        tenant = self.get_tenant()
+        found = relations_of(tenant, party)
+        context = {"today": tenant_today(tenant)}
+        return StandardResponse.ok(
+            {
+                key: PartyRelationSerializer(rows, many=True, context=context).data
+                for key, rows in found.items()
+            }
+        )
+
+    @relations.mapping.post
+    @idempotent("party_relation_create")
+    def create_relation(self, request: Any, *args: Any, **kwargs: Any) -> Any:
+        """201 with the relation; 200 when an ended one of the same kind is re-opened."""
+        party = self.get_object()
+        serializer = PartyRelationCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        relation, created = create_relation(
+            ctx=self._ctx(request), party=party, **serializer.validated_data
+        )
+        data = PartyRelationSerializer(
+            relation, context={"today": tenant_today(self.get_tenant())}
+        ).data
+        return StandardResponse.created(data) if created else StandardResponse.ok(data)
+
+    @action(detail=True, methods=["delete"], url_path=r"relations/(?P<rid>[0-9a-fA-F-]{36})")
+    def delete_relation(self, request: Any, *args: Any, **kwargs: Any) -> Any:
+        """204 when deleted; 200 with the relation (and its `to_on`) when ended.
+
+        The relation must belong to this party in EITHER direction — a
+        guardian's khata can unlink their ward — and to this tenant; anything
+        else is 404 (canon §0.11 rule 2).
+        """
+        party = self.get_object()
+        relation = get_object_or_404(
+            PartyRelation.objects.for_tenant(self.get_tenant()).filter(
+                Q(party=party) | Q(related_party=party)
+            ),
+            pk=kwargs["rid"],
+        )
+        ended = remove_relation(ctx=self._ctx(request), relation=relation)
+        if ended is None:
+            return StandardResponse.no_content()
+        return StandardResponse.ok(
+            PartyRelationSerializer(ended, context={"today": tenant_today(self.get_tenant())}).data
         )

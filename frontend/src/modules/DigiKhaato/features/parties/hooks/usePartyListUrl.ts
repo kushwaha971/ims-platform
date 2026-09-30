@@ -56,6 +56,7 @@ const URL_KEYS = [
   'collection',
   'tag',
   'credit',
+  'role',
   'ordering',
 ] as const;
 
@@ -105,6 +106,18 @@ const readFilters = (params: URLSearchParams): Partial<PartyListFilters> => {
       .map((name) => name.trim().replace(/\s+/g, ' '))
       .filter(Boolean);
     if (names.length > 0) patch.tag = names.join(',');
+  }
+
+  /* A6 — `role` is a comma list of module role CODES. Codes are slugs, so
+     anything else is dropped here rather than sent to a server that would
+     answer 400 for the whole list. Which codes exist is the server's to say. */
+  const role = params.get('role');
+  if (role !== null) {
+    const codes = role
+      .split(',')
+      .map((code) => code.trim())
+      .filter((code) => /^[a-z0-9_]{1,40}$/.test(code));
+    if (codes.length > 0) patch.role = [...new Set(codes)].join(',');
   }
 
   return patch as Partial<PartyListFilters>;

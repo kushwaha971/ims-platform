@@ -88,6 +88,19 @@ class PartyListSerializer(serializers.ModelSerializer):
         )
         read_only_fields = fields
 
+    def to_representation(self, instance: Party) -> dict:
+        """A6 (PLT-X04 §6) — `roles` (codes) when the view computed them for the page.
+
+        The view puts `party_roles` in the context only when a role-bearing
+        module is on, so a tenant without one reads exactly the row it read
+        before (the A2 rule for the bucket figures).
+        """
+        data = super().to_representation(instance)
+        roles = self.context.get("party_roles")
+        if roles is not None:
+            data["roles"] = roles.get(instance.pk, [])
+        return data
+
 
 class PartyTotalsSerializer(serializers.Serializer):
     """`meta.totals` — and the reason it is a serializer rather than a dict.
@@ -284,7 +297,22 @@ class PartyDetailSerializer(serializers.ModelSerializer):
 
         data = super().to_representation(instance)
         data.update(bucket_figures(instance))
+        data.update(_role_badges(self.context, instance))
         return data
+
+
+def _role_badges(context: dict, instance: Party) -> dict:
+    """A6 (PLT-X04 §6) — `roles: [{code, module, label_id}]` while a role-bearing
+    module is on; absent otherwise. No query at all when no role is registered."""
+    from apps.parties.services.roles import enabled_roles, registered_roles, role_badges, roles_for
+
+    if not registered_roles():
+        return {}
+    tenant = context.get("tenant") or instance.tenant
+    if not enabled_roles(tenant):
+        return {}
+    codes = roles_for(tenant, [instance.pk]).get(instance.pk, [])
+    return {"roles": role_badges(tenant, codes)}
 
 
 class PartySummarySerializer(serializers.Serializer):

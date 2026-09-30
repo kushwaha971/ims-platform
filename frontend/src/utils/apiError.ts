@@ -193,6 +193,10 @@ const LOCALLY_PRESENTED: ReadonlySet<ApiErrorCode> = new Set<ApiErrorCode>([
   'party_balance_nonzero',
   'balance_changed',
   'nothing_to_write_off',
+  // A6 — the same dialog names the module, the count and the next step. The
+  // look pass caught it toasting the server's fallback sentence and a request
+  // id over the dialog that was already saying it.
+  'party_has_open_records',
 
   // Track T1 — each is answered on the surface the merchant is looking at:
   // `low_contrast` under the colour field WITH the darker shade to try (a

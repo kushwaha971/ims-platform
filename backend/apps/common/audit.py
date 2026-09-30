@@ -224,6 +224,13 @@ class AuditAction:
     # `before`/`after` are the payment's allocations; `metadata.reason` is the caller's.
     PAYMENT_ALLOCATED = "payment.allocated"
 
+    # ── A6 ── party relations (contracts §5, FRD 00 PLT-X04) ──────────────
+    #
+    # `deleted` covers both outcomes of a removal; `metadata.ended` says whether
+    # the row was ended (it had been used) or actually deleted.
+    PARTY_RELATION_CREATED = "party.relation.created"
+    PARTY_RELATION_DELETED = "party.relation.deleted"
+
 
 def diff_fields(
     before: Mapping[str, Any] | None,

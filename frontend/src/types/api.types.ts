@@ -56,6 +56,8 @@ export type ApiErrorCode =
   | 'impersonation_forbidden'
   // business
   | 'party_balance_nonzero'
+  // A6 — archive refused by a module's guard (contracts §4).
+  | 'party_has_open_records'
   // PTY-04 FR-3 — the write-off escape (Part 43 CR-135).
   | 'nothing_to_write_off'
   | 'balance_changed'

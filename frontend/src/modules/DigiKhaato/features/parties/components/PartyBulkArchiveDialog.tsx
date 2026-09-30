@@ -6,6 +6,8 @@ import { UbButton, UbDialog, UbStack, UbText, UbTextInput } from 'src/design-sys
 import type { TranslateFn } from 'src/hooks/useTranslation';
 import { absMoney, compareMoney, formatInr } from 'src/utils/money';
 
+import { openRecordsMessage } from '../view-model/partyRoleDisplay';
+
 import type { BulkArchiveResult } from '../api/partyService';
 
 /**
@@ -106,7 +108,16 @@ function PartyBulkArchiveDialogBase({
                 <UbText key={row.id} variant="body-sm" tone="tertiary">
                   {row.code === 'not_found'
                     ? t('parties.archive.bulk.skip.notFound')
-                    : /* The balance is why it was skipped, so the balance is
+                    : row.code === 'party_has_open_records' && row.module && row.label_id
+                      ? /* A6 — the module's own sentence, with the number (§8). */
+                        openRecordsMessage(
+                          t,
+                          { module: row.module, count: row.count ?? 1, labelId: row.label_id },
+                          row.name
+                        )
+                      : row.code === 'party_already_archived'
+                        ? t('parties.archive.bulk.skip.alreadyArchived', { name: row.name })
+                        : /* The balance is why it was skipped, so the balance is
                          what the line says — a name and a reason code would
                          send the merchant back to the list to look each one up.
 
@@ -117,15 +128,15 @@ function PartyBulkArchiveDialogBase({
                          "outstanding", which says nothing about who owes whom.
                          §23.2.6 rule 3 again, one layer away from `UbAmount`,
                          which is where it is easy to reintroduce. */
-                      t(
-                        isPayable(row.balance)
-                          ? 'parties.archive.bulk.skip.payable'
-                          : 'parties.archive.bulk.skip.receivable',
-                        {
-                          name: row.name,
-                          amount: formatInr(absMoney(row.balance ?? '0.00')),
-                        }
-                      )}
+                          t(
+                            isPayable(row.balance)
+                              ? 'parties.archive.bulk.skip.payable'
+                              : 'parties.archive.bulk.skip.receivable',
+                            {
+                              name: row.name,
+                              amount: formatInr(absMoney(row.balance ?? '0.00')),
+                            }
+                          )}
                 </UbText>
               ))}
             </UbStack>
