@@ -234,7 +234,7 @@ function PartyArchiveDialogBase({
                 button of the sheet, under the thumb, with the destructive
                 Write off above it, still outlined red — and Tab walks them in
                 the order they are seen. */}
-            {isBlocked && canWriteOff && onStartWriteOff && (
+            {isBlocked && canWriteOff && !blocked?.loanOpen && onStartWriteOff && (
               <UbButton variant="destructive" onClick={onStartWriteOff}>
                 {t('parties.writeOff.action', { amount: amountText })}
               </UbButton>
@@ -298,9 +298,11 @@ function PartyArchiveDialogBase({
             <UbText variant="body-sm">{t('parties.archive.blocked.body')}</UbText>
             <UbText variant="caption" tone="tertiary">
               {t(
-                canWriteOff
-                  ? 'parties.archive.blocked.options'
-                  : 'parties.archive.blocked.optionsNoWriteOff'
+                blocked.loanOpen
+                  ? 'parties.archive.blocked.optionsLoan'
+                  : canWriteOff
+                    ? 'parties.archive.blocked.options'
+                    : 'parties.archive.blocked.optionsNoWriteOff'
               )}
             </UbText>
           </UbStack>

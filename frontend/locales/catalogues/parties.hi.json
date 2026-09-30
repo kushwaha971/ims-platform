@@ -3,6 +3,7 @@
   "parties.archive.activeGuardian": "{name} {count, plural, one {# सक्रिय पार्टी} other {# सक्रिय पार्टियों}} के अभिभावक हैं। पहले जुड़ाव हटाएँ, या {count, plural, one {उस पार्टी} other {उन पार्टियों}} को आर्काइव करें।",
   "parties.archive.blocked.body": "आर्काइव करने से पहले हिसाब बराबर करें।",
   "parties.archive.blocked.options": "हिसाब बराबर करने के लिए भुगतान दर्ज करें, या अगर पैसा वापस नहीं मिल सकता तो उसे बट्टे खाते में डालें।",
+  "parties.archive.blocked.optionsLoan": "इसमें एक कर्ज़ भी है, और कर्ज़ यहाँ बट्टे खाते में नहीं डाला जा सकता। हिसाब बराबर करने के लिए भुगतान दर्ज करें।",
   "parties.archive.blocked.optionsNoWriteOff": "हिसाब बराबर करने के लिए भुगतान दर्ज करें। बट्टे खाते में सिर्फ़ मालिक डाल सकते हैं।",
   "parties.archive.blocked.title": "{name} से आपको अभी मिलने हैं",
   "parties.archive.blocked.titleGive": "आपको {name} को अभी देने हैं",

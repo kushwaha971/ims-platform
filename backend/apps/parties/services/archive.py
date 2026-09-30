@@ -55,6 +55,7 @@ from apps.common.context import Ctx
 from apps.common.exceptions import BusinessRuleViolation
 from apps.parties.constants import PartyStatus
 from apps.parties.models import Party
+from apps.parties.services.balance import trade_balance
 from apps.parties.services.write_off import get_write_off_handler
 
 #: How the balance is described back to the client, so the message the merchant
@@ -181,14 +182,24 @@ def _refuse_nonzero_balance(party: Party) -> None:
     endpoint, which the server accepts whichever suggestion it made.
     """
     label = RECEIVABLE if party.balance > ZERO else PAYABLE
+    details: dict = {
+        "balance": str(party.balance),
+        "balance_label": label,
+        "suggestion": "write_off" if label == RECEIVABLE else "collect",
+    }
+    # R23 / LED-11 (Wave A gate): with a loan open, a shop write-off may clear only the trade
+    # figure and the archive is still refused by the loan — so the dialog must not offer
+    # "Write off ₹<balance>". Added only then, so no other refusal's payload changes.
+    if party.loan_balance != ZERO:
+        details.update(
+            can_write_off=False,
+            amount=str(abs(trade_balance(party))),
+            suggestion="collect",
+        )
     raise BusinessRuleViolation(
         "party_balance_nonzero",
         "Settle the balance or write it off before archiving.",
-        details={
-            "balance": str(party.balance),
-            "balance_label": label,
-            "suggestion": "write_off" if label == RECEIVABLE else "collect",
-        },
+        details=details,
     )
 
 

@@ -3,6 +3,7 @@
   "parties.archive.activeGuardian": "{name} is the guardian of {count, plural, one {# active party} other {# active parties}}. Remove the link, or archive {count, plural, one {that party} other {those parties}} first.",
   "parties.archive.blocked.body": "Settle the balance before archiving.",
   "parties.archive.blocked.options": "Record a payment to settle it, or write it off if it cannot be recovered.",
+  "parties.archive.blocked.optionsLoan": "Part of this is a loan, and a loan cannot be written off here. Record a payment to settle it.",
   "parties.archive.blocked.optionsNoWriteOff": "Record a payment to settle it. Only the owner can write a balance off.",
   "parties.archive.blocked.title": "{name} still owes you",
   "parties.archive.blocked.titleGive": "You still owe {name}",

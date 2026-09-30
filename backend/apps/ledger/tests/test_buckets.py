@@ -651,6 +651,32 @@ def test_a_write_off_with_only_a_loan_left_has_nothing_to_write_off(tenant: Any)
     assert refused.value.code == "nothing_to_write_off"
 
 
+def test_the_archive_refusal_does_not_offer_to_write_off_a_loan(tenant: Any, api_as: Any) -> None:
+    """Wave A gate: the archive dialog read "Write off ₹2,300.00" for a party owing ₹300 to the
+    shop and ₹2,000 on a loan — it offers the refusal's `balance`, the very figure LED-11's cap
+    exists to keep out of a shop's hands. And with a loan standing, no shop write-off can let the
+    archive through (EC-7), so the offer was a dead end besides. The refusal now says so:
+    `can_write_off: false` and the trade figure as `amount`, only when a loan is open, so every
+    other archive refusal's payload is unchanged."""
+    client, _member = api_as(tenant)
+    shop_only = PartyFactory(tenant=tenant)
+    post(shop_only, EntryType.INVOICE, "300.00", source_type=SourceType.SALES_DOCUMENT)
+    borrower = PartyFactory(tenant=tenant)
+    post(borrower, EntryType.INVOICE, "300.00", source_type=SourceType.SALES_DOCUMENT)
+    post(borrower, EntryType.PAYMENT_OUT, "2000.00", source_type=SourceType.PAYMENT, bucket="loan")
+
+    plain = client.post(f"/api/v1/parties/{shop_only.id}/archive", {}, format="json")
+    assert plain.status_code == 409 and plain.json()["error"]["code"] == "party_balance_nonzero"
+    assert set(plain.json()["error"]["details"]) == {"balance", "balance_label", "suggestion"}
+
+    loan = client.post(f"/api/v1/parties/{borrower.id}/archive", {}, format="json")
+    details = loan.json()["error"]["details"]
+    assert loan.status_code == 409 and details["balance"] == "2300.00"
+    assert details["can_write_off"] is False
+    assert details["amount"] == "300.00"
+    assert details["suggestion"] == "collect"
+
+
 # ── The statement and the timeline ──────────────────────────────────────────
 
 

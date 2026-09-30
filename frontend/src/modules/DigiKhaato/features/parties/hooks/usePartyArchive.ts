@@ -38,6 +38,12 @@ export interface BlockedBalance {
   readonly magnitude: string;
   /** `receivable` — they owe the merchant; `payable` — the merchant owes them. */
   readonly label: string;
+  /**
+   * LED-11 (Wave A gate) — a loan is open: a shop write-off may clear only the
+   * trade figure and the archive would still be refused, so none is offered.
+   * From the refusal's `can_write_off: false`, sent only when a loan is open.
+   */
+  readonly loanOpen?: true;
 }
 
 /**
@@ -60,6 +66,9 @@ export const blockedFromDetails = (details: Record<string, string>): BlockedBala
     amount: balance,
     magnitude: details.amount || absMoney(balance),
     label: details.balance_label ?? (isNegativeAmount(balance) ? 'payable' : 'receivable'),
+    ...((details as Record<string, unknown>).can_write_off === false
+      ? { loanOpen: true as const }
+      : {}),
   };
 };
 
