@@ -46,7 +46,6 @@ import { usePartyRoles } from '../hooks/usePartyRoles';
 import { usePartyTags } from '../hooks/usePartyTags';
 import { orderingFor, sortFromOrdering } from '../view-model/partyListSort';
 
-import { PartyBulkArchiveDialog } from './PartyBulkArchiveDialog';
 import { createPartyColumns } from './PartyListColumns';
 import { PartyListFilters } from './PartyListFilters';
 import { PartyListSortSheet } from './PartyListSortSheet';
@@ -83,6 +82,19 @@ const PartyFormDrawerLazy = dynamic(
  */
 const PartyBulkTagDialogLazy = dynamic(
   () => import('./PartyBulkTagDialog').then((m) => m.PartyBulkTagDialog),
+  { ssr: false }
+);
+
+/**
+ * PTY-04 FR-9's bulk archive dialog, split out by the same measure (Wave A
+ * gate, 30 Sep 2026). A6 taught it to report the modules' open records beside
+ * the balances, and it is opened only from the selection bar, once a year for
+ * most merchants; every merchant who opens the list to READ it was paying for
+ * the report's code on the route. Mounted only while open, so the chunk is
+ * fetched on the press. `listWeight.test.ts` holds it out of the route.
+ */
+const PartyBulkArchiveDialogLazy = dynamic(
+  () => import('./PartyBulkArchiveDialog').then((m) => m.PartyBulkArchiveDialog),
   { ssr: false }
 );
 
@@ -691,15 +703,17 @@ export function PartyListPageContent(): React.JSX.Element {
           />
         )}
 
-        <PartyBulkArchiveDialog
-          t={t}
-          open={bulk.open}
-          count={selectedIds.length}
-          saving={bulk.saving}
-          result={bulk.result}
-          onConfirm={bulk.confirm}
-          onClose={bulk.close}
-        />
+        {bulk.open && (
+          <PartyBulkArchiveDialogLazy
+            t={t}
+            open={bulk.open}
+            count={selectedIds.length}
+            saving={bulk.saving}
+            result={bulk.result}
+            onConfirm={bulk.confirm}
+            onClose={bulk.close}
+          />
+        )}
       </UbStack>
     </UbPageShell>
   );

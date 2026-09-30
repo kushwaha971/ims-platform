@@ -807,11 +807,40 @@
   "  /settings/team            309 -> 312  (measured 310.5)",
   "  /parties/tags             292 -> 294  (measured 292.9)",
   "  /dashboard                279 -> 282  (measured 280.5)",
-  "  default firstLoad         283 -> 286  (measured 284.3 on /switch)"
+  "  default firstLoad         283 -> 286  (measured 284.3 on /switch)",
+  "",
+  "── 30 Sep 2026: the Wave A gate (platform core foundations, A1–A16) ────────",
+  "sharedApp 105 -> 106. Measured 105.1 against 104.2 on the pre-Wave-A commit",
+  "51e93a8 (built in a scratch worktree with the same node_modules), so the",
+  "shell grew 0.9 KB gz over the wave, where the plan allowed none beyond A16's",
+  "note (104.2 -> 104.2). The cause was found module by module, by evaluating",
+  "both builds' shell chunks and diffing their Turbopack module factories. It",
+  "is not one leak but the price of registering sixteen tasks' state the way",
+  "Part 19 §19.3.6 requires, all of it in files the shell must carry:",
+  "  · src/redux/invalidation/map.ts + registry.ts: +1.3 KB raw — the one",
+  "    normative entry per mutation (A4a apply, A4b take/return/adjust, A6",
+  "    relations, A7 module reminders, A9b calendar, A13 roles). The map is the",
+  "    shell's by design: the listener that reads it runs on every route.",
+  "  · src/api/APIPaths.ts: +0.7 KB raw — the new endpoints (roles, calendar,",
+  "    relations, allocations, deposits, reports). One central constant, per the",
+  "    house rule; moving module paths out would split the table in two.",
+  "  · partyService (the list warm-up is in the shell): +0.4 KB raw — A6's",
+  "    roles / role / rolesOn and A2's bucket keys on the detail mapper.",
+  "  · member thunks and services (A13), PAYMENT_MODES (A4b adjustment) and",
+  "    ROUTES (business days): +0.3 KB raw together.",
+  "  · Turbopack's module-id space passed 100000: every e.i(...) reference in",
+  "    the shell is one character longer (six digits), a few hundred bytes raw",
+  "    across ~100 modules, most of which gzip absorbs.",
+  "The shell CATALOGUE did not grow (the en.json module is byte-identical; 113",
+  "keys pinned, as before), and no feature slice joined store.ts — every Wave A",
+  "slice is injected lazily (CR-134). framework 126.9 -> 127.2 is Turbopack's",
+  "runtime chunk table, inside its 128 budget. The method (evaluate both",
+  "builds' shell chunks, diff module by module) is written down in",
+  "docs/platform/progress/wave-a-gate.md for the next time the shell moves."
  ],
  "shared": {
   "framework": 128,
-  "sharedApp": 105
+  "sharedApp": 106
  },
  "//routes": [
   "The `route` figures are §19.9.2's, unchanged, and every route is comfortably",
@@ -1087,7 +1116,39 @@
   "at exactly their tripwire before this change and moved by that 0.1 plus",
   "UbDisclosure's new `size` prop (both render a disclosure):",
   "  /settings/profile      firstLoad 357 -> 358  (measured 357.1)",
-  "  /parties/[id]/statement firstLoad 315 -> 316 (measured 315.1)"
+  "  /parties/[id]/statement firstLoad 315 -> 316 (measured 315.1)",
+  "── 30 Sep 2026: the Wave A gate (A1–A16), re-baselined ────────────────────",
+  "44 routes are over (route chunk, first load or both) after Wave A and the",
+  "gate's fixes,",
+  "against 4 on the pre-Wave-A commit 51e93a8. Two structural costs explain",
+  "most of it, and they reach every (app) route whatever the route does:",
+  "  · the shell's +0.9 KB (see //shared) is in every first load;",
+  "  · the chunks every (app) route loads beyond the shell grew 37.8 -> 38.5 KB:",
+  "    A13's roleLabel / loadedMessage utils (tenant switcher, business",
+  "    chooser), the sidebar's new entry, and a Turbopack re-split of the two",
+  "    large (app) chunks (41.0/37.5 KB raw before, 50.8/28.5 after) that moves",
+  "    their gzip total by itself. That is the +0.7–0.8 on routes Wave A never",
+  "    touched (/items, /expenses, the sales editors, /settings/profile).",
+  "Per-route growth beyond that, largest first, each against 51e93a8:",
+  "  /parties +2.8 (A6 role chips, hook and lazy slice; the archive report)",
+  "  /sales/invoices +2.4 (A5 origin badge and chip, sales.origin.* copy)",
+  "  /parties/[id] +2.6 (A2 buckets and badges, A6; +0.4 of it is the module",
+  "    panel registry, which the gate found had never shipped: see CR-LOG)",
+  "  /sales/invoices|estimates|credit-notes/[id] +1.9 (A5 origin, A4a copy)",
+  "  /ledger/reminders +1.9 (A7 tab row and lazy panel loader, as A7 measured)",
+  "  /payments +1.9 (A4a Apply to bills; A4b's modes)",
+  "ONE cheap fix was found and applied: the party list's bulk archive dialog,",
+  "which A6 grew with the modules' open-records report, was statically imported",
+  "by /parties. It is dynamic() now, mounted only while open, like the bulk tag",
+  "dialog beside it: /parties 101.9 -> 101.3 (listWeight.test.ts guards it).",
+  "Looked at and NOT changed: moving payments.apply.* or sales.origin.* into",
+  "catalogues of their own (~0.15–0.25 KB each, and the receipt row and the",
+  "list badge render some of those keys eagerly), and the invalidation map",
+  "(above). Every other over-budget line below is re-baselined to measured +",
+  "1 KB, as a whole KB and never less than measured + 0.5, which is the",
+  "tripwire this file has always kept. /settings/business-days (A9b) is new",
+  "and gets its own line; / and three /admin routes appear only because the",
+  "shell and the framework moved their first loads."
  ],
  "default": {
   "route": 56,
@@ -1095,28 +1156,28 @@
  },
  "routes": {
   "/parties": {
-   "route": 100,
-   "firstLoad": 331
+   "route": 102,
+   "firstLoad": 335
   },
   "/dashboard": {
    "route": 88,
    "firstLoad": 336
   },
   "/sales/invoices/new": {
-   "route": 129,
-   "firstLoad": 360
+   "route": 130,
+   "firstLoad": 363
   },
   "/sales/invoices/[id]/edit": {
-   "route": 129,
-   "firstLoad": 360
+   "route": 130,
+   "firstLoad": 363
   },
   "/sales/invoices": {
-   "route": 89,
-   "firstLoad": 320
+   "route": 92,
+   "firstLoad": 324
   },
   "/sales/invoices/[id]": {
-   "route": 62,
-   "firstLoad": 293
+   "route": 64,
+   "firstLoad": 297
   },
   "/sales/estimates": {
    "route": 96,
@@ -1139,7 +1200,7 @@
    "firstLoad": 356
   },
   "/sales/credit-notes/new": {
-   "route": 130,
+   "route": 131,
    "firstLoad": 390
   },
   "/sales/credit-notes/[id]": {
@@ -1148,59 +1209,59 @@
   },
   "/onboarding/step/[n]": {
    "route": 86,
-   "firstLoad": 317
+   "firstLoad": 319
   },
   "/design-system": {
    "route": 103,
-   "firstLoad": 334
+   "firstLoad": 335
   },
   "/settings/team": {
-   "route": 72,
-   "firstLoad": 303
+   "route": 73,
+   "firstLoad": 306
   },
   "/parties/[id]": {
-   "route": 94,
-   "firstLoad": 325
+   "route": 97,
+   "firstLoad": 329
   },
   "/parties/tags": {
-   "route": 55,
-   "firstLoad": 286
+   "route": 56,
+   "firstLoad": 289
   },
   "/parties/[id]/statement": {
-   "route": 85,
-   "firstLoad": 316
+   "route": 86,
+   "firstLoad": 319
   },
   "/ledger/aging": {
-   "route": 84,
-   "firstLoad": 315
+   "route": 86,
+   "firstLoad": 318
   },
   "/switch": {
    "route": 43,
-   "firstLoad": 274
+   "firstLoad": 276
   },
   "/settings/plan": {
    "route": 42,
-   "firstLoad": 273
+   "firstLoad": 275
   },
   "/settings": {
-   "route": 93,
-   "firstLoad": 324
+   "route": 95,
+   "firstLoad": 327
   },
   "/settings/profile": {
-   "route": 126,
-   "firstLoad": 358
+   "route": 128,
+   "firstLoad": 360
   },
   "/settings/branding": {
-   "route": 82,
-   "firstLoad": 313
+   "route": 83,
+   "firstLoad": 316
   },
   "/settings/activity": {
-   "route": 95,
-   "firstLoad": 326
+   "route": 97,
+   "firstLoad": 329
   },
   "/settings/devices": {
-   "route": 48,
-   "firstLoad": 280
+   "route": 49,
+   "firstLoad": 282
   },
   "/stock/summary": {
    "route": 115,
@@ -1208,59 +1269,59 @@
   },
   "/items/masters": {
    "route": 44,
-   "firstLoad": 275
+   "firstLoad": 277
   },
   "/items": {
-   "route": 102,
-   "firstLoad": 333
+   "route": 104,
+   "firstLoad": 336
   },
   "/items/[id]": {
-   "route": 92,
-   "firstLoad": 324
+   "route": 93,
+   "firstLoad": 326
   },
   "/stock/low": {
-   "route": 57,
-   "firstLoad": 289
+   "route": 58,
+   "firstLoad": 291
   },
   "/expenses": {
-   "route": 101,
-   "firstLoad": 332
+   "route": 103,
+   "firstLoad": 335
   },
   "/cashbook": {
-   "route": 84,
-   "firstLoad": 316
+   "route": 86,
+   "firstLoad": 318
   },
   "/payments": {
-   "route": 98,
-   "firstLoad": 329
+   "route": 100,
+   "firstLoad": 332
   },
   "/payments/[id]": {
    "route": 57,
    "firstLoad": 289
   },
   "/ledger/reminders": {
-   "route": 61,
-   "firstLoad": 292
+   "route": 63,
+   "firstLoad": 296
   },
   "/imports": {
-   "route": 43,
-   "firstLoad": 274
+   "route": 44,
+   "firstLoad": 276
   },
   "/imports/[id]": {
-   "route": 43,
-   "firstLoad": 274
+   "route": 44,
+   "firstLoad": 276
   },
   "/admin": {
    "route": 11,
-   "firstLoad": 242
+   "firstLoad": 244
   },
   "/admin/partners": {
    "route": 27,
-   "firstLoad": 258
+   "firstLoad": 259
   },
   "/admin/health": {
    "route": 20,
-   "firstLoad": 251
+   "firstLoad": 252
   },
   "/admin/tenants/[id]": {
    "route": 24,
@@ -1271,24 +1332,24 @@
    "firstLoad": 261
   },
   "/settings/data": {
-   "route": 50,
-   "firstLoad": 282
+   "route": 51,
+   "firstLoad": 284
   },
   "/purchases/bills/[id]": {
    "route": 55,
-   "firstLoad": 286
+   "firstLoad": 288
   },
   "/purchases/bills/[id]/edit": {
-   "route": 136,
-   "firstLoad": 368
+   "route": 138,
+   "firstLoad": 370
   },
   "/purchases/bills": {
-   "route": 86,
-   "firstLoad": 317
+   "route": 87,
+   "firstLoad": 319
   },
   "/purchases/bills/new": {
-   "route": 136,
-   "firstLoad": 368
+   "route": 138,
+   "firstLoad": 370
   },
   "/reports": {
    "route": 72,
@@ -1300,23 +1361,27 @@
   },
   "/reports/gst-summary": {
    "route": 95,
-   "firstLoad": 326
+   "firstLoad": 328
   },
   "/reports/purchase-register": {
-   "route": 93,
-   "firstLoad": 325
+   "route": 94,
+   "firstLoad": 327
   },
   "/reports/sales-register": {
-   "route": 93,
-   "firstLoad": 325
+   "route": 94,
+   "firstLoad": 327
   },
   "/login": {
    "route": 56,
-   "firstLoad": 288
+   "firstLoad": 289
   },
   "/": {
    "route": 37,
-   "firstLoad": 269
+   "firstLoad": 270
+  },
+  "/settings/business-days": {
+   "route": 56,
+   "firstLoad": 288
   }
  },
  "//ignoreRoutes": [
