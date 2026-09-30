@@ -26,7 +26,10 @@ cd "$FE/.next/standalone"
 PORT=3000 HOSTNAME=0.0.0.0 setsid nohup node server.js > /tmp/claude-0/fe-run.log 2>&1 < /dev/null &
 sleep 7
 
-CHUNK=$(ls "$FE/.next/static/chunks" | grep '\.js$' | head -1)
+# `sed -n 1p` rather than `head -1`: head exits after one line, `ls` then dies
+# of SIGPIPE, and under `pipefail` the whole script exits 141 AFTER the server
+# came up — a green stack reported as a failure.
+CHUNK=$(ls "$FE/.next/static/chunks" | grep '\.js$' | sed -n 1p)
 printf 'page   %s\n' "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/login)"
 printf 'chunk  %s %s\n' \
   "$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:3000/_next/static/chunks/$CHUNK")" \
