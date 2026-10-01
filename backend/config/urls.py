@@ -26,6 +26,8 @@ api_v1 = [
     path("", include("apps.notifications.urls")),
     path("", include("apps.imports.urls")),
     path("", include("apps.files.urls")),
+    # ── B01 ── library (Wave B Track L) ──
+    path("library/", include("apps.library.urls")),
 ]
 
 urlpatterns = [

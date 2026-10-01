@@ -25,7 +25,7 @@ wherever they differ.
 
 | Task | State | Commit |
 |---|---|---|
-| B01 skeleton | design written; not started | — |
+| B01 skeleton | built; ready for QA | see B01 "Built" |
 | B02 codenames, errors, audit | design written; not started | — |
 | B03 settings, seed, numbering | design written; not started | — |
 | B04 ISBN and accession helpers | design written; not started | — |
@@ -95,6 +95,18 @@ Gaps:
   (`entitlements.py:73-76`). Nothing puts library on a dev or e2e tenant's plan. This is not B01's
   job (release data is T-R1's), but E01 is blocked without it. Lead to choose: a dev/e2e-only
   command, or `seed_plans` adding unreleased modules while the flag is on.
+
+### Built (1 Oct 2026)
+
+Landed as the note says, with no deviation: `apps/library/{__init__,apps,urls,tenant_data}.py`,
+an empty `migrations/0001_initial.py` on `ledger 0007`, `parties 0010`, `payments 0004` and
+`platform 0013` (G2 default, no `sales 0005`), one `# ── B01 ──` block each in `INSTALLED_APPS`,
+`config/urls.py` (`library/`) and `LOCAL_APP_LABELS` (G1 default). `apps/library/tests/conftest.py`
+has `library_on` and the plain helper `entitle_library`; `test_skeleton.py` holds the three
+note tests plus an installed-label check. Gates: `apps/library` 4 passed; `tests/architecture`
+111 passed, 6 skipped (library is now walked by the import matrix, no longer skipped);
+`tests/migrations` 60 passed (the slow round trip included, with library in it);
+`test_tenant_data` + `test_release_gate` 38 passed; `makemigrations --check` clean.
 
 ---
 

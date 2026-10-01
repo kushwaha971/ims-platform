@@ -59,6 +59,8 @@ INSTALLED_APPS = [
     "apps.imports",
     "apps.reports",
     "apps.help",
+    # ── B01 ── library (Wave B Track L) ──
+    "apps.library",
 ]
 
 AUTH_USER_MODEL = "platform.User"

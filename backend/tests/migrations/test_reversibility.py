@@ -45,6 +45,7 @@ LOCAL_APP_LABELS = (
     "reports",
     "sales",
     "expenses",
+    "library",  # ── B01 ── (Track L; G1: this literal is not checked against INSTALLED_APPS)
 )
 
 
