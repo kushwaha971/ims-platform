@@ -13,9 +13,12 @@ describe('localDrafts', () => {
 
   it('round-trips a draft under the tenant/kind namespace', () => {
     const key = localDraftKey('t1', 'invoice', 'abc');
-    writeLocalDraft(key, { lines: 2 }, 3, new Date('2026-09-24T10:00:00Z'));
+    // Read on the day it was written: with the real clock this test began failing on 1 Oct 2026,
+    // a week after its fixed write date, because a seven-day-old draft is (rightly) purged.
+    const writtenAt = new Date('2026-09-24T10:00:00Z');
+    writeLocalDraft(key, { lines: 2 }, 3, writtenAt);
     expect(window.localStorage.getItem('ub.sales.draft.t1.invoice.abc')).not.toBeNull();
-    expect(readLocalDraft<{ lines: number }>(key)?.form.lines).toBe(2);
+    expect(readLocalDraft<{ lines: number }>(key, writtenAt)?.form.lines).toBe(2);
     removeLocalDraft(key);
     expect(readLocalDraft(key)).toBeNull();
   });
