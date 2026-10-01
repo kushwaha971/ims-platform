@@ -13,6 +13,7 @@ from typing import Any
 import pytest
 
 from apps.common.exceptions import ValidationFailed
+from apps.dues.models import DuesPlan
 from apps.dues.services.plans import create_plan, update_plan
 from apps.dues.services.preview import compute_dues, terms_of_plan
 from apps.dues.services.schedules import create_schedule, preview_schedule
@@ -39,9 +40,12 @@ def test_qa_1_a_split_total_with_a_prorated_join_stub_still_sums_to_the_total(
         amount_rule="total_split",
         amount=None,
         total="10000.00",
-        join_policy="by_days",
         recurrence={"freq": "monthly", "by_month_day": 1, "count": 3},
     )
+    # Round 2 (dev): `create_plan` now refuses by_days on a split total, so the
+    # combination is written to the row directly, as a second writer could.
+    DuesPlan.objects.filter(pk=plan.pk).update(join_policy="by_days")
+    plan.refresh_from_db()
     rows = preview_schedule(tenant=tenant, plan=plan, start_on=dt.date(2026, 10, 12))
     live = [r["amount"] for r in rows if r["status"] != "skipped"]
     assert sum(live) == D("10000.00"), [(r["due_on"], r["amount"]) for r in rows]
@@ -197,9 +201,12 @@ def test_qa_11_a_split_the_rounding_rule_cannot_honour_is_a_400_not_a_500(
         amount_rule="total_split",
         amount=None,
         total="1.00",
-        rounding_rule="ten_up",
         recurrence={"freq": "monthly", "by_month_day": 1, "count": 12},
     )
+    # Round 2 (dev): `create_plan` now refuses this split (see
+    # test_plans.py); the preview guard is proven on a row written directly.
+    DuesPlan.objects.filter(pk=plan.pk).update(rounding_rule="ten_up")
+    plan.refresh_from_db()
     with pytest.raises(ValidationFailed):
         preview_schedule(tenant=tenant, plan=plan, start_on=dt.date(2026, 11, 1))
 

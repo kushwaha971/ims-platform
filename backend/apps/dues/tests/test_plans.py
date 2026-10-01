@@ -158,3 +158,43 @@ def test_a_document_plan_can_be_deactivated_while_sales_is_off(
     assert update_plan(ctx=ctx, plan_id=plan.id, data={"is_active": False}).is_active is False
     with pytest.raises(ModuleDisabled):
         update_plan(ctx=ctx, plan_id=other.id, data={"posting": "document"})
+
+
+@pytest.mark.parametrize(
+    "overrides,field",
+    [
+        ({"join_policy": "by_days"}, "join_policy"),
+        ({"join_policy": "half_rule"}, "join_policy"),
+        ({"total": "1.00", "rounding_rule": "ten_up"}, "rounding_rule"),
+    ],
+)
+def test_a_split_plan_that_could_never_be_honoured_is_refused_at_create(
+    ctx: Any, dues_subject: Any, overrides: dict, field: str
+) -> None:
+    """QA-DUE-01-11 and QA's join note — a split total is never prorated, so a
+    form must not offer by_days/half_rule for it; and ₹1 in 12 by `ten_up`
+    leaves the last part negative, a plan no schedule could ever use."""
+    data = monthly(
+        amount_rule="total_split",
+        amount=None,
+        total="10000.00",
+        recurrence={"freq": "monthly", "by_month_day": 1, "count": 12},
+    )
+    data.update(overrides)
+    with pytest.raises(ValidationFailed) as caught:
+        create_plan(ctx=ctx, module=TEST_MODULE, data=data)
+    assert field in caught.value.details
+
+
+def test_update_plan_refuses_turning_a_split_into_a_prorated_one(ctx: Any, make_plan: Any) -> None:
+    """The same rule on edit: the merged terms are checked, not just the delta."""
+    plan = make_plan(
+        name="Course",
+        amount_rule="total_split",
+        amount=None,
+        total="10000.00",
+        recurrence={"freq": "monthly", "by_month_day": 1, "count": 3},
+    )
+    with pytest.raises(ValidationFailed) as caught:
+        update_plan(ctx=ctx, plan_id=plan.id, data={"join_policy": "by_days"})
+    assert "join_policy" in caught.value.details

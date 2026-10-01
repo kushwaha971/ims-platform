@@ -23,7 +23,7 @@ from django.db import IntegrityError, transaction
 from apps.common.audit import AuditAction, write_audit
 from apps.common.dates import tenant_today
 from apps.common.exceptions import ModuleDisabled, NotFound, StaleVersion, ValidationFailed
-from apps.common.money import ROUNDING_RULES, ZERO, q2, sum_money
+from apps.common.money import ROUNDING_RULES, ZERO, q2, split_total, sum_money
 from apps.common.recurrence import FREQS, Recurrence, validate_recurrence
 from apps.common.seams.documents import issuer_available
 from apps.dues.constants import (
@@ -266,6 +266,29 @@ def _clean(tenant: Any, data: dict, base: dict) -> tuple[dict, list[dict] | None
             and len(merged["split_weights"]) != rule.count
         ):
             errors.setdefault("split_weights", []).append("Give one weight per instalment.")
+        if merged.get("join_policy") in (JoinPolicy.BY_DAYS, JoinPolicy.HALF_RULE):
+            # A split total is an agreed figure (BR-5): its first part is never
+            # prorated, so a form must not offer a proration that does nothing.
+            errors.setdefault("join_policy", []).append(
+                "A split total is not prorated; choose full, next period or align to join."
+            )
+        parts = (
+            merged["split_weights"]
+            or (rule.count if rule is not None else None)
+            or (len(rule.explicit_dates) if rule is not None and rule.explicit_dates else None)
+        )
+        if (
+            parts
+            and merged.get("total") is not None
+            and merged.get("rounding_rule") in ROUNDING_RULES
+            and "split_weights" not in errors
+        ):
+            try:
+                split_total(merged["total"], parts, rule=merged["rounding_rule"])
+            except ValueError:  # QA-DUE-01-11: such a plan could never be used
+                errors.setdefault("rounding_rule", []).append(
+                    "This rounding cannot split the total into these parts."
+                )
 
     penalty_kind = merged.get("penalty_kind", PenaltyKind.NONE)
     if penalty_kind == PenaltyKind.NONE and merged["penalty_value"] is not None:

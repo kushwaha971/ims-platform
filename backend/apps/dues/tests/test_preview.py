@@ -11,6 +11,7 @@ import pytest
 
 from apps.common.context import Ctx
 from apps.common.exceptions import ValidationFailed
+from apps.dues.models import DuesPlan
 from apps.dues.services.schedules import preview_schedule
 from apps.dues.tests.subject import SUBJECT, TEST_MODULE
 
@@ -290,9 +291,12 @@ def test_a_split_total_joined_mid_period_keeps_its_total_and_its_parts(
         amount_rule="total_split",
         amount=None,
         total="10000.00",
-        join_policy=policy,
         recurrence={"freq": "monthly", "by_month_day": 1, "count": 3},
     )
+    # by_days/half_rule are refused by `create_plan` on a split total; a row
+    # written with one (a second writer) must still keep its total.
+    DuesPlan.objects.filter(pk=plan.pk).update(join_policy=policy)
+    plan.refresh_from_db()
     rows = preview_schedule(tenant=tenant, plan=plan, start_on=dt.date(2026, 10, 20))
     assert _amounts(rows) == [D("3333.00"), D("3333.00"), D("3334.00")]
     assert rows[0]["due_on"] == dt.date(2026, 10, 20)

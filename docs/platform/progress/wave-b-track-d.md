@@ -475,6 +475,27 @@ kept. Fixes:
   ratified as v1.1 additive keywords; entry added to the Changelog of `11-contracts.md`.
 - **QA-DUE-01-9** Q-D5: no dues screens this wave.
 
+### QA round 2 (2 Oct 2026)
+
+QA's three new tests (`0dd446d`) pass; all 14 in `test_qa_due01.py` pass.
+
+- **QA-DUE-01-12** (regression from QA-3): when the 1,000-due cap stops an open-ended series
+  BEFORE today, the start is refused (400 on `start_on`), because the 409 could not show every
+  past due and DUE-02 would post the rest unconfirmed (BR-7). The cap stopping after today still
+  records the reached horizon (QA-3).
+- **QA-DUE-01-11** A split the rounding rule cannot honour (`split_total` leaves a negative last
+  part) is a 400 on `rounding_rule` at `create_plan`/`update_plan`, and the preview maps the same
+  `ValueError` to a 400 for any row written past the service.
+- **QA-DUE-01-13** A computation with no live due is refused (400 on `start_on`): an active
+  schedule with no dues bills nothing and holds the subject's one live slot (BR-8).
+- **QA's note** A `total_split` plan refuses `join_policy` `by_days`/`half_rule` (400 on
+  `join_policy`), since a split total's first part is never prorated (QA-1); `full`,
+  `next_period` and `align_to_join` remain.
+- **Edits to QA's tests:** `test_qa_1…` and `test_qa_11…` built their plans through `create_plan`,
+  which now refuses those combinations. They now write `join_policy` / `rounding_rule` onto the
+  row directly (a second writer), so they still prove the preview's guards. Assertions are
+  unchanged.
+
 ---
 
 ## DUE-02 — The daily run: materialise, post, overdue, catch-up (FRD 00 #17, R44, ADR-048)

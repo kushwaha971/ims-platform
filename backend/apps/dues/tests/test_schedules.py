@@ -275,3 +275,27 @@ def test_a_start_after_the_plans_until_is_refused_on_start_on(
     assert "start_on" in caught.value.details
     result = _start(ctx, plan, party, dt.date(2026, 12, 1))
     assert [d.due_on for d in result.dues] == [dt.date(2026, 12, 1)]
+
+
+def test_a_backdated_open_plan_over_the_cap_is_refused_and_writes_nothing(
+    ctx: Any, make_plan: Any, party: Any, today: Any
+) -> None:
+    """QA-DUE-01-12 — when the cap stops the series before today, the 409 could
+    not show every past due, and the run would post the rest unconfirmed (BR-7)."""
+    plan = make_plan(name="Daily", amount="10.00", recurrence={"freq": "daily"})
+    with pytest.raises(ValidationFailed) as caught:
+        _start(ctx, plan, party, dt.date(2023, 1, 1), confirm_backdated=True)
+    assert "start_on" in caught.value.details
+    assert DuesSchedule.objects.count() == 0
+
+
+def test_a_start_with_no_due_before_until_is_refused(
+    ctx: Any, make_plan: Any, party: Any, today: Any
+) -> None:
+    """QA-DUE-01-13 — an active schedule with no dues bills nothing and holds the
+    subject's one live slot (BR-8)."""
+    plan = make_plan(recurrence={"freq": "monthly", "by_month_day": 1, "until": "2026-12-15"})
+    with pytest.raises(ValidationFailed) as caught:
+        _start(ctx, plan, party, dt.date(2026, 12, 10))
+    assert "start_on" in caught.value.details
+    assert DuesSchedule.objects.count() == 0

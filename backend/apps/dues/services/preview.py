@@ -445,6 +445,10 @@ def compute_dues(
                 {"recurrence": ["The rule ends before every instalment has a date."]}
             )
 
+    if not any(row["status"] != DueStatus.SKIPPED for row in rows):
+        # QA-DUE-01-13: a schedule with no due bills nothing and still holds the
+        # subject's one live slot (BR-8).
+        raise ScheduleInputError({"start_on": ["This plan has no due from this date."]})
     _price(rows, terms, supplied_rows, start=start, nominal=nominal, rule=rule)
     if amount_hook is not None:
         for row in rows:
@@ -467,6 +471,12 @@ def compute_dues(
         if end_on is not None:
             horizon = min(horizon, end_on - dt.timedelta(days=1))
         horizon = max(horizon, start)
+        if truncated and nominal[-1][0] < today:
+            # QA-DUE-01-12: the cap stopped the series before today, so dues dated
+            # before today would be left for the run to post unconfirmed (BR-7).
+            raise ScheduleInputError(
+                {"start_on": [f"More than {MAX_DUES} dues before today; start later."]}
+            )
         if truncated:
             # QA-DUE-01-3: the cap stopped the series before the window's end. Record
             # what WAS computed, so the run extends from there and skips nothing.
@@ -516,7 +526,12 @@ def _price(
         return
     if terms.amount_rule == AmountRule.TOTAL_SPLIT:
         parts: Any = list(terms.split_weights) if terms.split_weights else len(live)
-        shares = split_total(terms.total, parts, rule=terms.rounding_rule)
+        try:
+            shares = split_total(terms.total, parts, rule=terms.rounding_rule)
+        except ValueError as exc:  # QA-DUE-01-11: a split this rule cannot honour
+            raise ScheduleInputError(
+                {"rounding_rule": ["This rounding cannot split the total into these parts."]}
+            ) from exc
         for row, share in zip(live, shares, strict=False):
             row["amount"] = share
     else:
