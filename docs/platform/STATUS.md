@@ -23,6 +23,7 @@ Owner direction of 29 Sep 2026: [00-platform-vision.md](00-platform-vision.md). 
   - Pricing is unchanged; a line says module pricing is decided at launch.
   - Open for the owner: the recordings still show the demo business "Sharma Kirana Store"; the copy needs review; the `/` bundle budget was re-baselined.
 - **29 Sep, Phase 1, SEO (CR-2026-09-29-PLATFORM-C):** see the section below.
+- **1 Oct, Wave B step 1:** W-F3 and W-G1 decided as ADR-061 (vertical registrations through one sanctioned file, imported by the registry readers) and ADR-062 (module invalidation maps registered with the lazily injected slice), `3341b06`. Next: Library, dues and attendance tracks.
 
 ## SEO (Phase 1, CR-2026-09-29-PLATFORM-C)
 

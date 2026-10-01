@@ -414,6 +414,16 @@ No module code before the FRDs are finished.
 - **Wave C**: Gym, then Lending.
 - **Wave D**: bookings engine, then Hospitality.
 
+## 8k. 1 Oct: Wave B step 1 DONE (W-F3, W-G1 decided). Next: Library, dues, attendance (RESUME HERE, on `dev`)
+
+- **Done:** `3341b06` records ADR-061 (W-F3) and ADR-062 (W-G1) in `docs/38-architecture-decision-records.md`, and marks both decided in `10-architecture.md` §18.
+  - **ADR-061:** a vertical registers from `features/<module>/register.ts`. Those files are imported only from `src/modules/registrations.ts`, which the registry readers import (never the shell). Both paths go in `sideEffects`.
+  - **ADR-062:** each module calls `registerInvalidation(map)` from its slice file, with totality per module. Wave A entries stay in `map.ts`. Both rules are implemented with library F01, the first vertical frontend.
+- **No code changed**, so no gates were run. The step was docs only.
+- **Environment note:** a cloud session must have package registries reachable (PyPI, npm) to run the gates. The owner allowed all domains on 1 Oct; a session started before that change still gets 403. Syncing to the Mac needs the session's delete permission on `ims-platform`, because git removes its own `.git/index.lock`.
+- **Next:** Wave B tracks per plan §3: Library (LIB-01…14, owner's priority), the dues engine (FRD 00 Part B), the attendance engine (Part C); then the Wave B gate (plan §3.4).
+- **Verify:** `git log --oneline -3 dev` shows this commit and `3341b06` above `f4ba8f3`.
+
 ## 8j. 30 Sep: all work now lives on branch `dev` (owner decision)
 
 - The owner does not want this work on `main`. Everything, old and new, is on **`dev`**; `main` is left equal to GitHub's `main` (9473389).

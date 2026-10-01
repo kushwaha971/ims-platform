@@ -42,7 +42,7 @@ You are continuing the **YourKhata platform build**. YourKhata is a multi-tenant
 - **Wave A**: all 16 core-foundation tasks, gated and green.
 
 **Next: Wave B.** Plan §3 has the tasks.
-1. First, have the architecture owner (you, acting in that role, recording ADR entries in `docs/38-architecture-decision-records.md`) decide the two items in 10-architecture §18: **W-F3** (one `src/modules/registrations.ts` for frontend registrations, listed in `sideEffects`) and **W-G1** (lazy per-module invalidation entries). Commit that decision.
+1. **(DONE 1 Oct, `3341b06`: ADR-061, ADR-062; see HANDOFF §8k.)** First, have the architecture owner (you, acting in that role, recording ADR entries in `docs/38-architecture-decision-records.md`) decide the two items in 10-architecture §18: **W-F3** (one `src/modules/registrations.ts` for frontend registrations, listed in `sideEffects`) and **W-G1** (lazy per-module invalidation entries). Commit that decision.
 2. Then build **Library** (LIB-01…14), the **dues engine** (DUE-xx) and the **attendance engine** (ATT-xx), in up to three parallel tracks. Each track is its own git worktree: run `git worktree add ../wt/<track> -b wave-b/<track> dev`, then `bash scripts/worktree-bootstrap.sh <track>` inside it, and export the `UB_TEST_DB_NAME` it prints.
 3. Then run the Wave B gate (plan §3.4), in the same form as the Wave A gate recorded in `docs/platform/progress/wave-a-gate.md`.
 
