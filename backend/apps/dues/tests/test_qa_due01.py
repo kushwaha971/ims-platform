@@ -177,3 +177,86 @@ def test_qa_6_posting_a_due_tells_the_subject_its_status_changed(
         confirm_backdated=True,
     )
     assert len(dues_subject.changes) == 2  # 1 Sep and 1 Oct: scheduled → overdue
+
+
+# ── QA round 2 (re-check of 4c45da2) ─────────────────────────────────────────
+
+
+def test_qa_11_a_split_the_rounding_rule_cannot_honour_is_a_400_not_a_500(
+    tenant: Any, make_plan: Any, today: Any
+) -> None:
+    """QA-DUE-01-11 (plans.py/preview.py: every vertical relays this 400).
+
+    ₹1 in 12 parts by `ten_up` is accepted by `create_plan`, then
+    `split_total` raises a bare `ValueError` ("leaves the last part negative")
+    that `_compute` does not map (it catches only `ScheduleInputError`), so the
+    preview and `create_schedule` answer 500. Refuse it as a field error, at
+    `create_plan` or here."""
+    plan = make_plan(
+        name="Tiny",
+        amount_rule="total_split",
+        amount=None,
+        total="1.00",
+        rounding_rule="ten_up",
+        recurrence={"freq": "monthly", "by_month_day": 1, "count": 12},
+    )
+    with pytest.raises(ValidationFailed):
+        preview_schedule(tenant=tenant, plan=plan, start_on=dt.date(2026, 11, 1))
+
+
+def test_qa_12_the_cap_never_leaves_past_dues_outside_the_confirmation(
+    ctx: Any, make_plan: Any, party: Any, today: Any
+) -> None:
+    """QA-DUE-01-12 (FRD DUE-01 BR-7: ANY due before today needs confirmation,
+    and the 409 shows them all with their total), a regression from the
+    QA-DUE-01-3 fix.
+
+    A daily ₹10 plan backdated to 1 Jan 2023 hits the 1,000-due cap on
+    26 Sep 2025. The 409 shows 1,000 dues and ₹10,000; the merchant confirms;
+    `materialised_until` is now 26 Sep 2025, so DUE-02's first run materialises
+    and posts 27 Sep 2025 to today, about 374 more PAST dues (₹3,740), that
+    nobody confirmed. When the cap stops the series before today, the start
+    must be refused (400), not written short."""
+    plan = make_plan(name="Daily", amount="10.00", recurrence={"freq": "daily"})
+    with pytest.raises(ValidationFailed):
+        create_schedule(
+            ctx=ctx,
+            module=TEST_MODULE,
+            plan_id=plan.id,
+            party_id=party.id,
+            subject_type=SUBJECT,
+            subject_id=uuid.uuid4(),
+            start_on=dt.date(2023, 1, 1),
+            confirm_backdated=True,
+        )
+
+
+def test_qa_13_a_start_that_leaves_no_due_before_until_is_refused(
+    ctx: Any, make_plan: Any, party: Any, today: Any
+) -> None:
+    """QA-DUE-01-13 (the QA-DUE-01-2 fix's own comment: "refused rather than
+    billed or silently left empty"; BR-8 one live schedule per subject).
+
+    A plan "monthly on the 1st until 15 Dec 2026" started on 10 Dec passes the
+    new `start > until` check, but has no occurrence in [10 Dec, 15 Dec]
+    (with `full` join there is no stub either), so `create_schedule` writes an
+    ACTIVE schedule with zero dues. It bills nothing for ever and still holds
+    the subject's one live slot, so the vertical cannot start the right plan
+    for that member. Refuse it (400 on `start_on`), or write at least one due."""
+    plan = make_plan(
+        name="Ends mid Dec",
+        recurrence={"freq": "monthly", "by_month_day": 1, "until": "2026-12-15"},
+    )
+    try:
+        result = create_schedule(
+            ctx=ctx,
+            module=TEST_MODULE,
+            plan_id=plan.id,
+            party_id=party.id,
+            subject_type=SUBJECT,
+            subject_id=uuid.uuid4(),
+            start_on=dt.date(2026, 12, 10),
+        )
+    except ValidationFailed:
+        return
+    assert result.dues, "an active schedule with no dues holds the subject's live slot"
