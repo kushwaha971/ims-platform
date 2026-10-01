@@ -37,6 +37,9 @@ pytestmark = pytest.mark.django_db
 
 GOLDEN = pathlib.Path(__file__).resolve().parent / "golden" / "main_bucket_reads.json"
 TODAY = dt.date(2026, 9, 1)
+#: The day `golden/main_bucket_reads.json` was captured; reads that default to the tenant's
+#: today (the ledger summary's `as_of`) are pinned to it.
+CAPTURED_ON = dt.date(2026, 9, 30)
 
 #: Keys that did not exist when the golden file was captured and are added on purpose, each by
 #: a named task. Stripped from the live response before comparing — and ONLY these:
@@ -234,6 +237,11 @@ def test_a_main_only_tenant_reads_exactly_what_it_read_before_buckets(
     from apps.reports.views import dashboard as dashboard_view
 
     monkeypatch.setattr(dashboard_view, "tenant_today", lambda tenant: TODAY)
+    # The ledger summary and the aging views import `tenant_today` at call time, so the golden
+    # file holds the day it was captured on in `ledger_summary.data.as_of`. Unpinned, this test
+    # passed only on 30 Sep 2026 and failed on every later day — a red that says nothing about
+    # buckets. Pinned to the capture day, the file stays byte-for-byte what it was.
+    monkeypatch.setattr("apps.common.dates.tenant_today", lambda tenant: CAPTURED_ON)
     tenant = TenantFactory(partner=partner, plan=plan, name="Golden Stores", phone="+919900000001")
     parties = _book(tenant)
     client, _member = api_as(tenant)
