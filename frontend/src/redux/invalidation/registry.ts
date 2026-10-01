@@ -151,6 +151,9 @@ export const QUERIES = {
   // ── A4b ── held deposits: a party's deposits (PLT-X02 §6)
   fetchPartyDeposits: 'deposit/fetchPartyDeposits',
   fetchDeposit: 'deposit/fetchDeposit',
+  // ── dues ── DUE-01: the engine's two reads (it has no mutations, ADR-041)
+  fetchDues: 'dues/fetchDues',
+  fetchSchedule: 'dues/fetchSchedule',
 } as const;
 
 export const MUTATIONS = {

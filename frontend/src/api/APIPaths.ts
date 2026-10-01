@@ -174,6 +174,9 @@ export const API_PATHS = {
   DEPOSIT_RECEIVE: (id: string) => `/deposits/${seg(id)}/receive`,
   DEPOSIT_APPLY: (id: string) => `/deposits/${seg(id)}/apply`,
   DEPOSIT_REFUND: (id: string) => `/deposits/${seg(id)}/refund`,
+  // ── dues ── DUE-01: the dues engine's read endpoints (FRD 00 DUE-01 §6; GET only)
+  DUES: '/dues/dues',
+  DUES_SCHEDULE: (id: string) => `/dues/schedules/${seg(id)}`,
   /** PAY-04 BR-4 — the receipt's WhatsApp text, rendered by the server. */
   PAYMENT_SHARE: (id: string) => `/payments/${seg(id)}/share`,
   /** PAY-01 FR-2 — the allocation panel's open bills, oldest first. */
