@@ -10,6 +10,7 @@ from typing import Any
 import pytest
 
 from apps.common.context import Ctx
+from apps.common.exceptions import ValidationFailed
 from apps.dues.services.schedules import preview_schedule
 from apps.dues.tests.subject import SUBJECT, TEST_MODULE
 
@@ -62,6 +63,7 @@ def test_total_split_sums_to_total_exactly_for_random_plans(
     """A seeded fuzz of totals, counts and rounding rules: Σ instalments must be
     the total exactly, every time — never ₹9,999.99 of a ₹10,000 course."""
     rng = random.Random(20261001)
+    ran = refused = 0
     for n in range(25):
         total = D(rng.randint(100, 5_000_000)) / 100
         count = rng.randint(1, 24)
@@ -76,10 +78,16 @@ def test_total_split_sums_to_total_exactly_for_random_plans(
         )
         try:
             rows = preview_schedule(tenant=tenant, plan=plan, start_on=dt.date(2026, 11, 1))
-        except Exception:  # noqa: BLE001 — `rupee_up` over many parts may refuse; that is honest
+        except ValidationFailed:
+            # `rupee_up` over many parts can leave the last share negative, which
+            # `split_total` refuses honestly; only that rule may refuse.
+            assert rule == "rupee_up"
+            refused += 1
             continue
+        ran += 1
         assert len(_amounts(rows)) == count
         assert sum(_amounts(rows)) == total
+    assert ran >= 20 and ran + refused == 25, (ran, refused)
 
 
 @pytest.mark.parametrize(
@@ -269,3 +277,55 @@ def test_the_amount_hook_prices_the_preview_when_the_subject_is_named(
 
 
 __all__ = ["Ctx"]
+
+
+@pytest.mark.parametrize("policy", ["full", "by_days", "half_rule"])
+def test_a_split_total_joined_mid_period_keeps_its_total_and_its_parts(
+    tenant: Any, make_plan: Any, today: Any, policy: str
+) -> None:
+    """QA-DUE-01-1 — whatever the join policy, a split total is the agreed figure:
+    the stub is its first part, not a prorated part, and 3 parts stay 3."""
+    plan = make_plan(
+        name=f"Course {policy}",
+        amount_rule="total_split",
+        amount=None,
+        total="10000.00",
+        join_policy=policy,
+        recurrence={"freq": "monthly", "by_month_day": 1, "count": 3},
+    )
+    rows = preview_schedule(tenant=tenant, plan=plan, start_on=dt.date(2026, 10, 20))
+    assert _amounts(rows) == [D("3333.00"), D("3333.00"), D("3334.00")]
+    assert rows[0]["due_on"] == dt.date(2026, 10, 20)
+
+
+def test_a_capped_series_records_the_horizon_it_reached(
+    tenant: Any, make_plan: Any, today: Any
+) -> None:
+    """QA-DUE-01-3 — a daily plan started a year back hits the 1,000-due cap;
+    the horizon is the last due computed, so the run resumes there and never
+    skips the months between the cap and the 24-month window."""
+    from apps.dues.services.preview import MAX_DUES, compute_dues, terms_of_plan
+
+    plan = make_plan(name="Daily", amount="10.00", recurrence={"freq": "daily"})
+    computed = compute_dues(
+        tenant=tenant, terms=terms_of_plan(plan), start_on=dt.date(2025, 10, 1), today=today
+    )
+    assert len(computed.rows) == MAX_DUES
+    assert computed.horizon == computed.rows[-1]["due_on"]
+
+
+def test_a_count_plan_over_the_cap_is_refused(tenant: Any, make_plan: Any, today: Any) -> None:
+    """QA-DUE-01-3 — a bounded plan is materialised WHOLE (BR-4); one the cap
+    would cut short is refused rather than written short."""
+    plan = make_plan(
+        name="Too many",
+        amount="1.00",
+        recurrence={"freq": "daily", "count": 1000},
+        closed_day_rule="skip",
+    )
+    from apps.platform_app.models import ClosedDay
+
+    ClosedDay.objects.create(tenant=tenant, date=dt.date(2026, 11, 3), reason="Holiday")
+    with pytest.raises(ValidationFailed) as caught:
+        preview_schedule(tenant=tenant, plan=plan, start_on=dt.date(2026, 11, 1))
+    assert "recurrence" in caught.value.details

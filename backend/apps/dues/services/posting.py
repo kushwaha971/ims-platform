@@ -19,7 +19,7 @@ from apps.common.audit import AuditAction, write_audit
 from apps.common.dates import tenant_today
 from apps.dues.constants import SOURCE_DUE, DueStatus, Posting
 from apps.dues.models import DuesDue
-from apps.dues.registry import subject_labels
+from apps.dues.registry import subject_for, subject_labels
 
 
 class PostingNotBuilt(RuntimeError):
@@ -79,6 +79,7 @@ def post_due(
         }
     else:
         raise PostingNotBuilt(f"{posting!r} posting arrives with DUE-02")
+    before = due.status
     updated = DuesDue.objects.filter(pk=due.pk, status=DueStatus.SCHEDULED).update(**changes)
     if updated:
         for key, value in changes.items():
@@ -94,4 +95,9 @@ def post_due(
                 "posted_entry_id": str(due.posted_entry_id) if due.posted_entry_id else None,
             },
         )
+        # Contracts §5: the subject hears of every status change, in this
+        # transaction, so a vertical can act on "overdue" (QA-DUE-01-6).
+        subject = subject_for(schedule.subject_type)
+        if subject is not None and subject.on_due_changed is not None:
+            subject.on_due_changed(ctx, due, before, due.status)
     return due

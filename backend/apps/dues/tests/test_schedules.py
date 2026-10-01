@@ -242,3 +242,36 @@ def test_a_document_plan_cannot_post_before_due_02(
     with pytest.raises(ValidationFailed):
         _start(ctx, plan, party, dt.date(2026, 9, 1), confirm_backdated=True)
     assert _start(ctx, plan, party, dt.date(2026, 11, 1)).posted == []
+
+
+def test_on_due_changed_hears_each_posting_with_before_and_after(
+    ctx: Any, make_plan: Any, party: Any, today: Any, dues_subject: Any
+) -> None:
+    """QA-DUE-01-6 / contracts §5 — the subject is told every status change with
+    the right before/after, including a zero due's move to paid, and nothing for
+    dues that stay scheduled."""
+    _start(ctx, make_plan(amount="0.00"), party, dt.date(2026, 10, 1), confirm_backdated=True)
+    _start(
+        ctx,
+        make_plan(name="Today", recurrence={"freq": "monthly", "by_month_day": 5}),
+        party,
+        today,
+    )
+    assert [(b, a) for _id, b, a in dues_subject.changes] == [
+        ("scheduled", "paid"),
+        ("scheduled", "due"),
+    ]
+
+
+def test_a_start_after_the_plans_until_is_refused_on_start_on(
+    ctx: Any, make_plan: Any, party: Any, today: Any
+) -> None:
+    """QA-DUE-01-2 — `until` is the plan's inclusive last date: a schedule that
+    would start after it is a 400 on `start_on`, and a start ON it still bills
+    that one due."""
+    plan = make_plan(recurrence={"freq": "monthly", "by_month_day": 1, "until": "2026-12-01"})
+    with pytest.raises(ValidationFailed) as caught:
+        _start(ctx, plan, party, dt.date(2027, 1, 1))
+    assert "start_on" in caught.value.details
+    result = _start(ctx, plan, party, dt.date(2026, 12, 1))
+    assert [d.due_on for d in result.dues] == [dt.date(2026, 12, 1)]

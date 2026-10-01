@@ -116,6 +116,19 @@ def _decimal(value: Any) -> Decimal:
     return Decimal(str(value))
 
 
+#: The columns' capacities (QA-DUE-01-5): a value beyond one is a field error, not a
+#: `DataError` from the save. numeric(14,2), numeric(10,4), numeric(9,4).
+MAX_MONEY = Decimal("999999999999.99")
+MAX_PENALTY_VALUE = Decimal("999999.9999")
+MAX_WEIGHT = Decimal("99999.9999")
+FOUR_DP = Decimal("0.0001")
+
+
+def _fits(value: Decimal, ceiling: Decimal) -> bool:
+    """Finite, at most four places, and within the column."""
+    return value.is_finite() and value == value.quantize(FOUR_DP) and abs(value) <= ceiling
+
+
 def _date(value: Any) -> dt.date:
     if isinstance(value, dt.date):
         return value
@@ -180,7 +193,7 @@ def _clean(tenant: Any, data: dict, base: dict) -> tuple[dict, list[dict] | None
             continue
         try:
             amount = _decimal(value)
-            if amount != q2(amount) or amount < 0:
+            if amount != q2(amount) or amount < 0 or amount > MAX_MONEY:
                 raise InvalidOperation
             merged[key] = q2(amount)
         except (InvalidOperation, ValueError):
@@ -192,7 +205,7 @@ def _clean(tenant: Any, data: dict, base: dict) -> tuple[dict, list[dict] | None
     else:
         try:
             merged["penalty_value"] = _decimal(merged["penalty_value"])
-            if merged["penalty_value"] < 0:
+            if not _fits(merged["penalty_value"], MAX_PENALTY_VALUE) or merged["penalty_value"] < 0:
                 raise InvalidOperation
         except (InvalidOperation, ValueError):
             errors.setdefault("penalty_value", []).append("Enter a value of zero or more.")
@@ -204,7 +217,7 @@ def _clean(tenant: Any, data: dict, base: dict) -> tuple[dict, list[dict] | None
             errors.setdefault(key, []).append("Enter a whole number of days from 0 to 365.")
     try:
         merged["split_weights"] = [_decimal(w) for w in merged.get("split_weights") or []]
-        if any(w < 0 for w in merged["split_weights"]) or (
+        if any(w < 0 or not _fits(w, MAX_WEIGHT) for w in merged["split_weights"]) or (
             merged["split_weights"] and sum(merged["split_weights"]) == 0
         ):
             raise InvalidOperation
@@ -374,8 +387,11 @@ def update_plan(*, ctx: Any, plan_id: Any, data: dict) -> DuesPlan:
         raise NotFound()
     _assert_module(ctx.tenant, plan.module)
     version = data.get("version")
-    if version is not None and int(version) != plan.version:
-        raise StaleVersion(plan.version)
+    if version is not None:
+        if isinstance(version, bool) or not str(version).strip().lstrip("-").isdigit():
+            raise ValidationFailed({"version": ["Send the version you read."]})
+        if int(version) != plan.version:
+            raise StaleVersion(plan.version)
     before = _snapshot(plan)
     base = {name: getattr(plan, name) for name in _SNAPSHOT}
     base["split_weights"] = list(plan.split_weights or [])

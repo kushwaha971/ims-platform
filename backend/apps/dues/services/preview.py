@@ -33,7 +33,7 @@ import dataclasses
 import datetime as dt
 from collections.abc import Iterator
 from dataclasses import dataclass, field
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Any, TypedDict
 
 from apps.common.money import ZERO, D, q2, round_amount, split_total
@@ -150,8 +150,6 @@ def _anchored(rule: Recurrence, start: dt.date, join_policy: str) -> Recurrence:
             changes["by_month_day"] = None
         elif rule.freq == "weekly":
             changes["by_weekday"] = 0
-    if rule.until is not None and rule.until < start:
-        changes["until"] = start  # nothing to compute; keeps the rule valid
     return dataclasses.replace(rule, **changes)
 
 
@@ -225,6 +223,23 @@ def _join_amount(
     return amount
 
 
+#: `numeric(14,2)` holds at most this; a larger value is a 400, not a DataError (QA-DUE-01-5).
+MAX_MONEY = Decimal("999999999999.99")
+
+
+def _amount_or_none(value: Any) -> Decimal | None:
+    """A 2-dp amount the column can hold, or None for anything else (QA-DUE-01-4)."""
+    if value is None or isinstance(value, (bool, float)):
+        return None
+    try:
+        amount = D(value)
+        if not amount.is_finite() or amount != q2(amount) or abs(amount) > MAX_MONEY:
+            return None
+        return q2(amount)
+    except (InvalidOperation, ValueError, TypeError):
+        return None
+
+
 def _validate_supplied(supplied: list[Any], mode: str) -> list[SuppliedDue]:
     errors: dict[str, list[str]] = {}
     rows: list[SuppliedDue] = []
@@ -234,9 +249,8 @@ def _validate_supplied(supplied: list[Any], mode: str) -> list[SuppliedDue]:
     if any(with_dates) and not all(with_dates):
         errors.setdefault("supplied", []).append("Give a date on every instalment, or on none.")
     for index, row in enumerate(supplied):
-        try:
-            amount = q2(D(row.get("amount")))
-        except Exception:  # noqa: BLE001 — any unparseable value is the same 400
+        amount = _amount_or_none(row.get("amount"))
+        if amount is None:
             errors.setdefault(f"supplied.{index}.amount", []).append("Enter an amount.")
             continue
         if amount < 0:
@@ -251,7 +265,10 @@ def _validate_supplied(supplied: list[Any], mode: str) -> list[SuppliedDue]:
                 )
                 break
             seen.add(name)
-            value = q2(D(comp.get("amount")))
+            value = _amount_or_none(comp.get("amount"))
+            if value is None:
+                errors.setdefault(f"supplied.{index}.components", []).append("Enter an amount.")
+                break
             if value < 0:
                 errors.setdefault(f"supplied.{index}.components", []).append("Cannot be negative.")
             components.append({"component": name, "amount": value})
@@ -300,6 +317,12 @@ def compute_dues(
     if end_on is not None and end_on <= start_on:
         raise ScheduleInputError({"end_on": ["The end date must be after the start date."]})
     start = max(join_on or start_on, start_on)
+    if terms.rule.until is not None and start > terms.rule.until:
+        # QA-DUE-01-2: `until` is the plan's inclusive last date (contracts §1.8). A
+        # start after it is refused rather than billed or silently left empty.
+        raise ScheduleInputError(
+            {"start_on": [f"This plan ended on {terms.rule.until.isoformat()}."]}
+        )
     rule = _anchored(terms.rule, start, terms.join_policy)
     supplied_rows = (
         _validate_supplied(supplied, terms.mode)
@@ -335,6 +358,8 @@ def compute_dues(
 
     # ── nominal dates and periods ──
     nominal: list[tuple[dt.date, Period, bool]] = []  # (date, period, is_stub)
+    #: QA-DUE-01-3: the series still had dates when the cap stopped it.
+    truncated = False
     style = _label_style(rule)
     if supplied_rows is not None and "due_on" in supplied_rows[0]:
         dates = [row["due_on"] for row in supplied_rows if row["due_on"] >= start]
@@ -359,10 +384,13 @@ def compute_dues(
                 nominal.append((start, Period(start, first), True))
             budget = (target * 2 + MOVE_SLACK_DAYS) if target is not None else MAX_DUES
             day: dt.date | None = first
-            while day is not None and len(nominal) < min(budget, MAX_DUES):
+            while day is not None:
                 if limit_date is not None and day > limit_date:
                     break
                 if end_on is not None and day >= end_on:
+                    break
+                if len(nominal) >= min(budget, MAX_DUES):
+                    truncated = True
                     break
                 nominal.append((day, _period_of(rule, day, end_on), False))
                 day = next(series, None)
@@ -408,6 +436,10 @@ def compute_dues(
         if status != DueStatus.SKIPPED:
             live += 1
     if target is not None and live < target:
+        if truncated:
+            raise ScheduleInputError(
+                {"recurrence": [f"More than {MAX_DUES} dues; shorten the plan."]}
+            )
         if terms.amount_rule != AmountRule.FIXED or supplied_rows is not None:
             raise ScheduleInputError(
                 {"recurrence": ["The rule ends before every instalment has a date."]}
@@ -435,6 +467,10 @@ def compute_dues(
         if end_on is not None:
             horizon = min(horizon, end_on - dt.timedelta(days=1))
         horizon = max(horizon, start)
+        if truncated:
+            # QA-DUE-01-3: the cap stopped the series before the window's end. Record
+            # what WAS computed, so the run extends from there and skips nothing.
+            horizon = nominal[-1][0]
     return Computed(rows=rows, horizon=horizon, rule=rule)
 
 
@@ -486,8 +522,16 @@ def _price(
     else:
         for row in live:
             row["amount"] = q2(D(terms.amount))
-    # BR-6 — the join policy prices the stub only.
-    if nominal and nominal[0][2] and rows and rows[0]["status"] != DueStatus.SKIPPED:
+    # BR-6 — the join policy prices the stub only. A split TOTAL is an agreed
+    # figure (BR-5: the parts add up to it exactly), so there the stub is simply
+    # the first part and is not prorated again (QA-DUE-01-1).
+    if (
+        terms.amount_rule != AmountRule.TOTAL_SPLIT
+        and nominal
+        and nominal[0][2]
+        and rows
+        and rows[0]["status"] != DueStatus.SKIPPED
+    ):
         first = nominal[1][0] if len(nominal) > 1 else nominal[0][1].end
         rows[0]["amount"] = _join_amount(
             rows[0]["amount"],
