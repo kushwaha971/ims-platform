@@ -20,14 +20,14 @@ def ctx(tenant: Any) -> Ctx:
 
 
 @pytest.fixture
-def today(dues_subject: Any, monkeypatch: Any) -> dt.date:
+def today(dues_subject: Any, monkeypatch: Any) -> dt.date:  # noqa: F811
     """The FRD worked example's today: 5 Oct 2026."""
     dues_subject.set_today(monkeypatch, TODAY)
     return TODAY
 
 
 def monthly(**overrides: Any) -> dict:
-    """"Gym monthly ₹1,200": fixed, monthly on the 1st, charge/ledger."""
+    """ "Gym monthly ₹1,200": fixed, monthly on the 1st, charge/ledger."""
     data = {
         "name": "Gym monthly",
         "mode": "charge",
@@ -41,7 +41,7 @@ def monthly(**overrides: Any) -> dict:
 
 
 @pytest.fixture
-def make_plan(ctx: Ctx, dues_subject: Any) -> Any:
+def make_plan(ctx: Ctx, dues_subject: Any) -> Any:  # noqa: F811
     from apps.dues.services.plans import create_plan
 
     def _make(module: str = TEST_MODULE, **overrides: Any) -> Any:

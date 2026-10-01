@@ -28,6 +28,8 @@ api_v1 = [
     path("", include("apps.files.urls")),
     # ── B01 ── library (Wave B Track L) ──
     path("library/", include("apps.library.urls")),
+    # ── dues ── DUE-01: the engine's read endpoints (GET only, ADR-041)
+    path("dues/", include("apps.dues.urls")),
 ]
 
 urlpatterns = [

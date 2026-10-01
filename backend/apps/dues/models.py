@@ -118,7 +118,9 @@ class DuesPlan(TenantModel, RecurrenceFields):
         db_table = "dues_plan"
         constraints = [
             *RecurrenceFields.Meta.constraints,
-            models.CheckConstraint(condition=_mode_posting_pair(), name="ck_dues_plan_mode_posting"),
+            models.CheckConstraint(
+                condition=_mode_posting_pair(), name="ck_dues_plan_mode_posting"
+            ),
             models.CheckConstraint(
                 condition=Q(tax_code__isnull=True, hsn_sac__isnull=True)
                 | Q(posting=Posting.DOCUMENT),
@@ -452,7 +454,9 @@ class DuesPause(TenantModel):
     class Meta:
         db_table = "dues_pause"
         constraints = [
-            models.CheckConstraint(condition=Q(to_on__gte=F("from_on")), name="ck_dues_pause_range"),
+            models.CheckConstraint(
+                condition=Q(to_on__gte=F("from_on")), name="ck_dues_pause_range"
+            ),
             models.CheckConstraint(
                 condition=_in("effect", PauseEffect), name="ck_dues_pause_effect"
             ),

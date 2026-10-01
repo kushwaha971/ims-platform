@@ -223,7 +223,9 @@ def _clean(tenant: Any, data: dict, base: dict) -> tuple[dict, list[dict] | None
             "A charge posts as a document or a ledger line; an expectation posts none."
         )
     if (merged["tax_code"] or merged["hsn_sac"]) and posting != Posting.DOCUMENT:
-        errors.setdefault("posting", []).append("A taxable fee must be invoiced (document posting).")
+        errors.setdefault("posting", []).append(
+            "A taxable fee must be invoiced (document posting)."
+        )
     if merged["tax_code"]:
         from apps.tax.selectors.rates import code_exists
 
@@ -241,7 +243,9 @@ def _clean(tenant: Any, data: dict, base: dict) -> tuple[dict, list[dict] | None
         if merged.get("total") is None:
             errors.setdefault("total", []).append("Enter the total to split.")
         if rule is not None and not (rule.count or rule.explicit_dates or merged["split_weights"]):
-            errors.setdefault("recurrence.count", []).append("A split total needs a number of parts.")
+            errors.setdefault("recurrence.count", []).append(
+                "A split total needs a number of parts."
+            )
         if (
             rule is not None
             and rule.count
