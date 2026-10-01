@@ -394,7 +394,9 @@ def update_plan(*, ctx: Any, plan_id: Any, data: dict) -> DuesPlan:
     }
     base["_heads"] = [{"label": h.label, "amount": h.amount} for h in plan.heads.all()]
     merged, heads = _clean(ctx.tenant, {k: v for k, v in data.items() if k != "version"}, base)
-    if merged["posting"] != plan.posting or plan.posting == Posting.DOCUMENT:
+    if merged["posting"] != plan.posting:
+        # Only a switch TO document needs sales now: deactivating or renaming a
+        # document plan while sales is off must stay possible.
         _assert_issuer(ctx.tenant, merged["posting"])
     _write(plan, merged)
     plan.version += 1

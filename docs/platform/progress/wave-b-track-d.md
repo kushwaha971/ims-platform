@@ -26,7 +26,7 @@ from reading the code, with the file and function named).
 
 | Task | State |
 |---|---|
-| DUE-01 plans, schedules, preview, backdated confirm, subject registry, read API | design written; not started |
+| DUE-01 plans, schedules, preview, backdated confirm, subject registry, read API | **built — ready for QA** (see "Built" under DUE-01) |
 | DUE-02 daily run (ledger, then document posting), catch-up fuzz, `skip` keeps count | design written; not started |
 | DUE-03 targets, settlement split, `plan_allocation`, `payoff`, origin listener, advances, replay, `recalc_dues` | design outline written; not started |
 | DUE-05 pause, resume, reschedule | not started |
@@ -395,6 +395,55 @@ vertical consumes the engine, so the *look* step for these components cannot hap
 - **C-12 `late_fee_so_far`** in the FRD `Due` shape has no source until DUE-04; sending `"0.00"`
   breaks the PTY-03 rule (a key that is always empty is a claim the code cannot verify). Default:
   omitted until DUE-04.
+
+### Built (1 Oct 2026)
+
+Commits on `wave-b/track-d`: `3a07bb0` schema, registry, plan services; `57f17c7` preview,
+schedules, posting, read API; `c7dafce` frontend types/service/slice; plus the closing commit
+(this section and the document-plan deactivation fix).
+
+**What landed.** `backend/apps/dues/` — `apps.py` (the three posting sources, contracts §1.2),
+`constants.py`, `models.py` + `migrations/0001_initial.py` (all nine tables; depends on the five
+Wave B heads), `registry.py`, `services/{plans,preview,schedules,posting}.py`,
+`selectors/{dues,schedules}.py`, `serializers.py`, `views.py`, `urls.py`, `tenant_data.py`;
+tests `tests/{subject,conftest,test_plans,test_preview,test_schedules,test_read_api}.py`
+(47 tests). Frontend `features/dues/{types/dues.types.ts,api/duesService.ts(+test),
+redux/duesThunk.ts,redux/duesSlice.ts}`, no screens (Q-D5).
+
+**Shared hot files (own blocks only):** `config/settings/base.py` and `config/urls.py`
+(`# ── dues ──`), `apps/common/error_codes.py` (`# ── DUE-01 ──` `schedule_backdated_unconfirmed`),
+`apps/common/audit.py` (four `DUES_*` actions), `apps/common/tests/test_exceptions.py` (count
+166 → 167, commented), `tests/migrations/test_reversibility.py` (`"dues"` label),
+`docs/22-api-specification.md` (one row in section G), `frontend/src/api/APIPaths.ts` and
+`frontend/src/redux/invalidation/registry.ts` (`// ── dues ──`, two QUERIES).
+
+**Gates.** `apps/dues` 47 passed; `tests/architecture` 111 passed, 6 skipped; `tests/contracts`
+46 passed, 1 skipped; `apps/common/tests` 316 passed; tenant-data + engine-enablement + ledger
+buckets 91 passed; `tests/migrations` 59 passed + the slow round trip 1 passed;
+`makemigrations --check` clean; black/isort/flake8 clean on `apps/dues`. Frontend: `tsc` clean,
+eslint + prettier clean on changed files, jest `features/dues` + `src/tests` 477 passed.
+
+**Deviations from the note.**
+- Test subject at `apps/dues/tests/subject.py` (Lead ruling), with a second fake module `test_b`
+  (codename `platform.tenant.manage`, which an admin lacks) so T-DUE-01-8's "rows absent" is
+  proven with real roles through the API.
+- `post_due(*, ctx, due, party, today=None, subject_label=None)` reads posting mode and grace from
+  `due.schedule` (the snapshot) rather than taking them as arguments.
+- `preview_schedule` gained `subject_type=None` and `create_schedule` gained `join_on=None` as
+  the additive v1.1 keywords (Q-D3), instead of a private `_preview`.
+- The plan's template anchor (C-4) is moved to `until` when a plan's `until` is earlier than its
+  creation date, because the mixin's `until >= anchor` CHECK applies to the plan row too.
+- `update_plan` asks for sales only when the posting CHANGES to `document`, so a document plan can
+  still be deactivated or renamed after sales is switched off (found while writing the note's
+  EC-2; test `test_a_document_plan_can_be_deactivated_while_sales_is_off`).
+- Labels: `range` style for a join stub, `day` style for supplied dates (C-7/C-8 extended).
+- `ck_dues_due_settled_within_owed` is written `settled <= amount + penalty − waived`, the FRD's
+  `settled + waived <= amount + penalty` rearranged.
+- Frontend: no locale catalogue yet (the thunks fall back to `error.generic`); the
+  `catalogues.json` prefix and `duesPlanSchema` arrive with the first component that needs words.
+
+**New contradictions.** None blocking. C-13's FY check uses `fy_bounds` of the previous FY start,
+mirroring `issue.py:51-58`; DUE-02 should re-read sales' own rule when the document branch lands.
 
 ---
 

@@ -145,3 +145,16 @@ def test_the_plan_anchor_is_a_template_value(make_plan: Any) -> None:
     an `until` earlier than that template date is not an error."""
     plan = make_plan(recurrence={"freq": "monthly", "by_month_day": 1, "until": "2026-01-01"})
     assert plan.until == dt.date(2026, 1, 1)
+
+
+def test_a_document_plan_can_be_deactivated_while_sales_is_off(
+    ctx: Any, make_plan: Any, tenant: Any
+) -> None:
+    """EC-2 with BR-2 — switching sales off must not trap a merchant with a plan
+    they cannot even retire; only switching a plan TO document needs sales."""
+    plan = make_plan(posting="document")
+    other = make_plan(name="Ledger plan")
+    entitle(tenant, "sales", enabled=False)
+    assert update_plan(ctx=ctx, plan_id=plan.id, data={"is_active": False}).is_active is False
+    with pytest.raises(ModuleDisabled):
+        update_plan(ctx=ctx, plan_id=other.id, data={"posting": "document"})
