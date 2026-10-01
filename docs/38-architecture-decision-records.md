@@ -1333,6 +1333,11 @@ This is Wave A task A14 and changes no behaviour: the target contract suite, PAY
 
 **Related.** ADR-041; ADR-044; ADR-062; 10-architecture §18 W-F3; FRD 00 PLT-X14; `src/tests/sideEffectImports.test.ts`; Wave A gate (`docs/platform/progress/wave-a-gate.md`).
 
+**Amendment, 1 October 2026 (Track T review, before any code was written against this record).** Three corrections:
+- **No message ids in `register.ts`.** `check-locales` treats a message id written as a literal in a file as rendered on every route that file reaches, which would pull the module's whole catalogue onto the khata, dashboard and reminders routes. A registration carries keys and `dynamic()` references only; the lazily loaded component renders its own copy from its own catalogue.
+- **The boundary zone is added by F01.** A11 deliberately left out the frontend zone forbidding core features from importing a vertical (no vertical existed). F01 adds it, with `src/modules/registrations.ts` outside every zone as the one sanctioned path, and the guard test asserting it is the only importer of any `register.ts`.
+- **Readers:** `ReminderSettingsDialog` is also a registry reader and imports `registrations.ts`; the reports hub becomes one when the first module report registers (B15/F11), not before.
+
 ---
 
 ## ADR-062 — Module invalidation entries are registered with the module's lazily injected slice
@@ -1358,6 +1363,12 @@ This is Wave A task A14 and changes no behaviour: the target contract suite, PAY
 **Reversal cost and trigger.** Low: concatenating the module maps back into `map.ts` is mechanical. Trigger: if the per-module registration tests prove unreliable (a registration missing in a production build that jest passed), or if the measured shell saving at the Wave B gate is under 0.3 KB, revert to the single map and re-baseline instead.
 
 **Related.** CR-134 (lazy slices); Part 19 §19.3.6 and §19.3.9; ADR-061; 10-architecture §18 W-G1; `frontend/bundle-budgets.json` (30 Sep note); `src/redux/invalidation/{registry,map,listener}.ts`.
+
+**Amendment, 1 October 2026 (Track T review, before any code was written against this record).** The ordering argument above is wrong for this codebase: thunk files do not import slices (slices import thunks), so a map registered from the slice file is missing whenever a module thunk is dispatched before its slice is injected, and the mandated "import the thunk file alone" test could never pass. Corrected decision, which supersedes the slice-file wording above:
+- A module's registration lives in `features/<module>/redux/<module>Invalidation.ts`, which holds the module's `QUERIES` and `MUTATIONS` registries (name → `typePrefix`, as core's `registry.ts`) and its total `Record<TModuleMutationName, TInvalidationEntry>` map, and calls `registerInvalidation` once. **Every thunk file of the module bare-imports it**, so the map is registered by construction before any of the module's thunks can be dispatched; `package.json` `sideEffects` gains `./src/modules/DigiKhaato/features/*/redux/*Invalidation.ts`. The lint restriction moves accordingly: `registerInvalidation(` is allowed only in `*Invalidation.ts`.
+- **Keys:** the module map is written by mutation NAME (for type totality) and registered by `typePrefix`, converted through the module's own `MUTATIONS`; the registry test asserts every string is that thunk's `typePrefix`, as core's does.
+- **Queries** are listed in the module's `QUERIES` so the completeness test ("every `createAsyncThunk` is in exactly one list") covers module thunks too.
+- **`patch`** may name only the module's own slices. A core slice's reducer must not learn a module's action type (ADR-041), so a module write that moves a core figure uses `stale` or `refetch` on that core slice.
 
 ---
 
