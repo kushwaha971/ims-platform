@@ -33,7 +33,7 @@ Beyond ADR-021, the architecture and FRD chapters requested new records **withou
 | ADR-022 | JavaScript barcode decoder fallback (`@zxing/browser`) | Part 17-03 (`INV-10`) — 3 references | **ADR-025** | Part 17-03's three references to ADR-022 must be corrected to ADR-025. Note that the decision is to **decline** the dependency, so the record is `Proposed`, not `Accepted`. |
 | ADR-023 | `cryptography` for RFC 8291 Web Push | Part 17-02 (`NTF-04`) — 2 references | **ADR-024** | Part 17-02's two references to ADR-023 must be corrected to ADR-024. |
 
-The remaining new records, ADR-026 to ADR-040, were not numbered anywhere and are assigned here. ADR-041 to ADR-055 (29 September 2026) and ADR-056 to ADR-060 (30 September 2026, the cross-FRD review) are the platform-expansion records written by the architecture owner under `docs/platform/00-platform-vision.md` §3 rule 5; their status "Accepted (architecture owner)" means in force for the FRDs and implementation, open to the owner's revision. Several of them record decisions that were made and enforced across the specification without ever being written as decisions — immutability, tenant scoping, the permission registry, cached balances with recompute. They are the most load-bearing records in this part and their absence until now was a genuine gap.
+The remaining new records, ADR-026 to ADR-040, were not numbered anywhere and are assigned here. ADR-041 to ADR-055 (29 September 2026) and ADR-056 to ADR-060 (30 September 2026, the cross-FRD review) and ADR-061 to ADR-062 (1 October 2026, the Wave B start) are the platform-expansion records written by the architecture owner under `docs/platform/00-platform-vision.md` §3 rule 5; their status "Accepted (architecture owner)" means in force for the FRDs and implementation, open to the owner's revision. Several of them record decisions that were made and enforced across the specification without ever being written as decisions — immutability, tenant scoping, the permission registry, cached balances with recompute. They are the most load-bearing records in this part and their absence until now was a genuine gap.
 
 ## 38.3 Index
 
@@ -100,6 +100,8 @@ The remaining new records, ADR-026 to ADR-040, were not numbered anywhere and ar
 | ADR-058 | Identity reads are `reveal` codenames, and engine reads name codenames no scoped role holds | Accepted (architecture owner) | Security |
 | ADR-059 | Gym instalments stay separate invoices; no "expected dates against one invoice" dues mode yet | Accepted (architecture owner) | Backend |
 | ADR-060 | Bookings: shared capacity is a seat ordinal in the slot key, and cancellation tiers belong to the vertical | Accepted (architecture owner) | Data |
+| ADR-061 | Vertical frontend registrations are imported from one sanctioned file, by the registries' readers | Accepted (architecture owner) | Frontend |
+| ADR-062 | Module invalidation entries are registered with the module's lazily injected slice | Accepted (architecture owner) | Frontend |
 
 ---
 
@@ -1305,6 +1307,57 @@ This is Wave A task A14 and changes no behaviour: the target contract suite, PAY
 **Reversal cost and trigger.** Low before bookings is built. Trigger: none.
 
 **Related.** ADR-049; FRD 00 CQ-18, CQ-20; hospitality.md C8; `10-architecture.md` §17 R19, R21.
+
+---
+
+## ADR-061 — Vertical frontend registrations are imported from one sanctioned file, by the registries' readers
+
+**Status:** Accepted (architecture owner), owner may revisit · **Date:** 1 October 2026
+
+**Context.** Core owns four frontend registries a vertical contributes to: `registerPartyPanel`, `registerDashboardSection`, `registerModuleReport` and `registerReminderTab` (A6, A13, A14, A7). A registration is a module-level call, so the file that makes it must be *imported* for it to run, and core may not import a vertical (ADR-041; the A11 boundary lint rule). The Wave A gate also showed that a bare import is not enough on its own. A4b's deposit-panel registration was imported bare by `PartyModulePanels`, but its file was not listed in `package.json` `sideEffects`, so the production build dropped it from every client chunk while every jest test passed (`src/tests/sideEffectImports.test.ts` now guards this). Wave B's Library is the first vertical with a frontend, so the question (10-architecture §18, W-F3) had to be settled before library F01.
+
+**Decision.** Every vertical registers from exactly one file, `features/<module>/register.ts`, and those files are imported, as bare side-effect imports, from exactly one sanctioned file, `frontend/src/modules/registrations.ts`; that file and the `register.ts` glob are listed in `sideEffects`, and `registrations.ts` is imported by the components that READ the registries, never by the app shell.
+
+- `registrations.ts` lives outside `features/`, so no A11 boundary zone targets it. Core reaching a vertical through it is the one exemption, and it is named in the lint rule's comment. No other file may import a vertical's `register.ts`; a jest guard (added with library F01) fails for any other importer.
+- `package.json` `sideEffects` gains `./src/modules/registrations.ts` and `./src/modules/DigiKhaato/features/*/register.ts`. A file that is not listed is side-effect-free to the bundler, so `registrations.ts` alone would still lose its bare imports.
+- The readers (`PartyModulePanels`, the dashboard's section host, the reports index and the reminders tab host) each `import 'src/modules/registrations'`. The module is evaluated once, whichever reader loads first. The layout and `AppProviders` do not import it, so `/login` and the landing page pay nothing for any vertical.
+- A `register.ts` holds data and `dynamic()` component references only, never a slice, thunk, schema or service. It ships to every route that renders a registry reader, so its weight is that of a list. The panels, sections and reports themselves load in their own chunks.
+- A registration names its module, and the reader filters by `enabled_modules` as it does today. Importing a disabled module's `register.ts` draws nothing.
+- Released or not, a module's registration is listed. `UNRELEASED_MODULES` is enforced by the module gate the reader already applies, not by leaving a line out.
+
+**Options considered.** *One hand-written file (chosen):* four short lines a reader can audit in one glance; one exemption in one place; no build step. *A generated list (a script scanning `features/*/register.ts`):* nothing to forget. But it adds a build step and a generated file to keep in step for what will be four lines, and forgetting a line is caught anyway, because each vertical's own registry test asserts its registration is present after importing `registrations.ts`. *Importing `register.ts` from `AppProviders`:* simplest wiring, but every route, the login screen included, would pay for every vertical's registration data, which is the shell growth ADR-062 exists to stop. *Each vertical's route layout registers on mount:* the khata's panel and the dashboard's section must appear when the merchant has never opened the vertical's routes in this session, so a registration that waits for a vertical route is a panel that is missing until then.
+
+**Consequences.** *Positive:* the boundary rule keeps exactly one hole, and it is a named file. The A4b class of defect, a registration dropped by tree-shaking, is closed by the glob together with the existing guard. The shell does not grow with verticals. *Negative:* a new vertical must remember one line in `registrations.ts`, which its registry test catches. Every registry reader carries a bare import that looks redundant and must not be removed. Its comment says why, and the side-effect guard fails if the file stops being listed. *Neutral:* a registry reader's chunk grows by each vertical's registration data, about tens of bytes per entry.
+
+**Reversal cost and trigger.** Low: the list moves into a generator, or into another host file, without touching any vertical. Trigger: more than about eight verticals, or a `register.ts` that needs code beyond data and `dynamic()`. The second means the registration is doing a job that belongs in its panel.
+
+**Related.** ADR-041; ADR-044; ADR-062; 10-architecture §18 W-F3; FRD 00 PLT-X14; `src/tests/sideEffectImports.test.ts`; Wave A gate (`docs/platform/progress/wave-a-gate.md`).
+
+---
+
+## ADR-062 — Module invalidation entries are registered with the module's lazily injected slice
+
+**Status:** Accepted (architecture owner), owner may revisit · **Date:** 1 October 2026
+
+**Context.** Part 19 §19.3.6 makes invalidation checkable. `registry.ts` maps every thunk name to its `typePrefix` string, `map.ts` is a `Record<TMutationName, TInvalidationEntry>` that is total by type, and one listener applies it. The store imports the listener, so `registry.ts`, `map.ts` and everything they name are in the chunk `app/layout` loads. The thunks themselves were taken out of the shell in W4-P by mapping to strings. The entries were not, and the Wave A gate measured the shared shell growing 0.9 KB gz with no leak: every byte was invalidation entries, `API_PATHS`, the party warm-up and wider module ids (`bundle-budgets.json`, 30 Sep note). Waves B–D add three verticals and three engines, roughly fifty tasks, which is another 2–3 KB on every route if nothing changes, including `/login` and the landing page. CR-134 already injects route-local slices lazily with `combineSlices().inject()`; the invalidation map is the half of a module's Redux footprint that was not lazy (10-architecture §18, W-G1).
+
+**Decision.** A vertical's or engine's mutations and their invalidation entries are not added to the core `MUTATIONS` and `INVALIDATION`. Each module declares its own map, keyed by thunk `typePrefix`, and registers it with `registerInvalidation(map)` from the same module file that injects its slice, and the listener consults the core map and the registered maps.
+
+- `src/redux/invalidation/moduleRegistry.ts` (core) holds a `Map<string, TInvalidationEntry[]>` from `${typePrefix}/fulfilled` to entries, and exports `registerInvalidation`. Registration is idempotent per module key, so a hot reload or a second injection does not double an entry. The listener's predicate checks the core `FULFILLED` map, then the registered map. When both have entries for one action, the listener applies the union, with each slice signalled once and `now` winning over `next-mount`.
+- **Totality is kept per module.** A module's map is typed `Record<TLibraryMutationName, TInvalidationEntry>` over its own `MUTATIONS`, so a missing entry is still a compile error. `invalidation.registry.test.ts` is extended to parse every `features/<module>/redux/*Thunk.ts` against that module's registry, so a thunk in neither list still fails CI.
+- **Slice keys stay typed.** `TSliceKey = keyof RootState`, and `RootState` includes `LazyLoadedSlices` by module augmentation. A module map naming a core slice (`partyList`, `partyDetail`, `ledgerEntry`) or its own lazy slice is type-checked as today.
+- **Direction.** A module entry may invalidate core slices and its own. A core mutation that must invalidate a module slice (for example, archiving a party stales Library's member list) is expressed by the MODULE registering an entry under the core thunk's `typePrefix`. Core never names a module slice, and the union rule above applies both. If the module is not loaded, its slice is not in the store and there is nothing to stale. That is correct, not a gap, because the slice fetches fresh when it is first injected.
+- **Ordering is safe by construction.** A module's thunks are dispatched only from that module's chunks, and those chunks import the slice module that registers the map. So the registration happens before the module's first dispatch. A jest test asserts this per module: it imports the module's thunk file alone, then asserts the map is registered.
+- `resetAll` stays core-only. A module entry may not declare it.
+- Core's existing entries do not move. The rule applies to Wave B onward. The Wave A engine and core mutations that are already in `map.ts` stay there, because moving them buys nothing that a measured note cannot record.
+
+**Options considered.** *Per-module registration with the injected slice (chosen):* the shell stops growing with modules, and totality survives at module granularity. *Keep one total map and re-baseline at each gate with a measured note:* simplest, and keeps one table to read. But it accepts 2–3 KB on every route for features most tenants never enable, and the budget becomes a number that is raised rather than a limit. *Generate the map at build time and split it per route:* the same lazy effect with no runtime registry, but it needs a build step and a route-to-mutation analysis this codebase does not have (ADR-021 spirit: no new machinery for a two-file problem). *Thunks carry their own invalidation in `meta`:* co-locates the rule with the thunk, but scatters the "single normative statement" across every thunk file, and the map test could no longer show a reviewer one table per module.
+
+**Consequences.** *Positive:* `/login`, the landing page and every Shop & billing route stop paying for verticals' invalidation. Each module's invalidation is one file a reviewer can read, next to its slice. *Negative:* there is no longer one table holding every rule. A reviewer asking "what does archiving a party invalidate" reads the core map and greps `registerInvalidation(` for the core `typePrefix`. The map test prints the union per action to make that one command. A registration that is never imported fails silently in production, which is why the per-module registration test is mandatory and the slice file is the only place `registerInvalidation` may be called (lint: `no-restricted-syntax` outside `*Slice.ts`). *Neutral:* the listener does one extra `Map` lookup per fulfilled action.
+
+**Reversal cost and trigger.** Low: concatenating the module maps back into `map.ts` is mechanical. Trigger: if the per-module registration tests prove unreliable (a registration missing in a production build that jest passed), or if the measured shell saving at the Wave B gate is under 0.3 KB, revert to the single map and re-baseline instead.
+
+**Related.** CR-134 (lazy slices); Part 19 §19.3.6 and §19.3.9; ADR-061; 10-architecture §18 W-G1; `frontend/bundle-budgets.json` (30 Sep note); `src/redux/invalidation/{registry,map,listener}.ts`.
 
 ---
 
