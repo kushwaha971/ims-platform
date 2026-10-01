@@ -445,6 +445,36 @@ eslint + prettier clean on changed files, jest `features/dues` + `src/tests` 477
 **New contradictions.** None blocking. C-13's FY check uses `fy_bounds` of the previous FY start,
 mirroring `issue.py:51-58`; DUE-02 should re-read sales' own rule when the document branch lands.
 
+### QA round 1 (1 Oct 2026)
+
+QA committed 11 failing tests (`apps/dues/tests/test_qa_due01.py`, `4de3eef`); all pass and are
+kept. Fixes:
+
+- **QA-DUE-01-1** A split total is an agreed figure (BR-5), so a join stub on a `total_split` plan
+  is its first PART and is not prorated again; the join policy prices stubs of fixed plans only.
+- **QA-DUE-01-2** `until` is inclusive (contracts §1.8). **Chosen: refuse** — a start after the
+  plan's `until` is 400 on `start_on` ("This plan ended on …"), because a schedule with no dues
+  would occupy the subject's live-schedule slot and bill nothing, which no merchant means. A start
+  ON `until` bills that one due.
+- **QA-DUE-01-3** When `MAX_DUES` stops an open-ended series, the horizon
+  (`materialised_until`) is the last due computed, so DUE-02 extends from there and skips
+  nothing. A bounded plan the cap would cut short is refused (400 `recurrence`), as BR-4 says it
+  is materialised whole.
+- **QA-DUE-01-4** Supplied component amounts are parsed like the row amount: a bad one is 400 on
+  `supplied.N.components`.
+- **QA-DUE-01-5** Plan numbers are checked against their columns (numeric(14,2), (10,4), (9,4));
+  a non-numeric `version` is 400 on `version`.
+- **QA-DUE-01-6** `post_due` calls the subject's `on_due_changed(ctx, due, before, after)` after
+  each status change, in the transaction (contracts §5).
+- **QA-DUE-01-10** The split fuzz counts its cases and only `rupee_up` may refuse.
+
+**Lead rulings recorded.**
+- **QA-DUE-01-7** The two dues QUERIES in core `src/redux/invalidation/registry.ts` are a temporary
+  exception; F01 (Track T) moves them to `features/dues/redux/duesInvalidation.ts`.
+- **QA-DUE-01-8** `preview_schedule(subject_type=None)` and `create_schedule(join_on=None)` are
+  ratified as v1.1 additive keywords; entry added to the Changelog of `11-contracts.md`.
+- **QA-DUE-01-9** Q-D5: no dues screens this wave.
+
 ---
 
 ## DUE-02 — The daily run: materialise, post, overdue, catch-up (FRD 00 #17, R44, ADR-048)

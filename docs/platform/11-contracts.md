@@ -938,3 +938,4 @@ FRD adds. The product sends nothing outside the app (DEC-012).
 | | | §2.3 `module`, session fields, `auto_closed`, entitlement extend/end (R18); off-guard counts earlier days only (R56); session check-in (R57); group-less visits undeduplicated (R59) |
 | | | §3 module roles in A13 (R66); `reveal`/`read_all` and `ENGINE_READ_PERMISSIONS` (R70, R25); route agents join table (R42); staff/accountant codenames by CR (R47) |
 | | | §4 `document_origin_confirm` |
+| v1.1 (additive, pending) | 1 Oct 2026 | §2.1 dues (DUE-01, Q-D3, lead ruling on QA-DUE-01-8): `preview_schedule(…, subject_type=None)` — when given, the subject's `amount_hook` prices the preview exactly as `create_schedule` will (BR-9); `create_schedule(…, join_on=None)` — the join date the first period is priced from (default `start_on`). Both keyword-only and optional; no existing call changes. |
