@@ -245,6 +245,12 @@ class AuditAction:
     #: BR-7 — both halves of an application voided together.
     DEPOSIT_APPLICATION_VOIDED = "deposit.application_voided"
 
+    # ── DUE-01 ── the dues engine (contracts §5); later dues tasks add theirs.
+    DUES_PLAN_CREATED = "dues.plan.created"
+    DUES_PLAN_UPDATED = "dues.plan.updated"
+    DUES_SCHEDULE_CREATED = "dues.schedule.created"
+    DUES_DUE_POSTED = "dues.due.posted"
+
 
 def diff_fields(
     before: Mapping[str, Any] | None,

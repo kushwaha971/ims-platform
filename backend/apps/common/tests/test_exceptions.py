@@ -49,7 +49,9 @@ def test_registry_is_closed_and_complete() -> None:
     # ── A5 ── +2, below; ── A6 ── +1: `party_has_open_records` (contracts §4, PLT-X04).
     # ── A7 ── +3: `reminder_outside_window`, `reminder_cap_reached`, `due_not_open`.
     # ── A4b ── +2: `deposit_insufficient`, `deposit_released`.
-    assert len(REGISTRY) == 166
+    # ── DUE-01 ── +1: `schedule_backdated_unconfirmed` (contracts §4).
+    assert len(REGISTRY) == 167
+    assert REGISTRY["schedule_backdated_unconfirmed"] == (409, False)  # DUE-01
     assert REGISTRY["deposit_insufficient"] == (409, False)
     assert REGISTRY["party_has_open_records"] == (409, False)
     assert REGISTRY["reminder_outside_window"] == (409, False)

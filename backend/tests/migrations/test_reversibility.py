@@ -46,6 +46,7 @@ LOCAL_APP_LABELS = (
     "sales",
     "expenses",
     "library",  # ── B01 ── (Track L; G1: this literal is not checked against INSTALLED_APPS)
+    "dues",  # ── DUE-01 ── the dues engine's migrations
 )
 
 

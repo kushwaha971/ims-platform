@@ -61,6 +61,8 @@ INSTALLED_APPS = [
     "apps.help",
     # ── B01 ── library (Wave B Track L) ──
     "apps.library",
+    # ── dues ── DUE-01: the recurring dues engine (ADR-041, contracts §2.1)
+    "apps.dues",
 ]
 
 AUTH_USER_MODEL = "platform.User"

@@ -203,6 +203,7 @@ Ownership is recorded as **T-16** in Part 0 §0.12.2. No other chapter may carry
 | `payment_already_void` | 409 | E | `void` was called on a payment already void. | "This payment is already cancelled." | `errors.payment_already_void` | no |
 | `payment_not_unmatched` | 409 | D `status` | A match was attempted on a payment that is not in the unmatched queue. | "This payment is already matched." | `errors.payment_not_unmatched` | no |
 | `deposit_insufficient` | 409 | D `held_amount` | A4b (PLT-X02 BR-4, BR-8): applying or returning more of a held deposit than is held, or voiding a deposit receipt that would leave less than nothing held. | "Only ₹{held_amount} of the deposit is held." | `errors.deposit_insufficient` | no |
+| `schedule_backdated_unconfirmed` | 409 | D `dues`, `total` | DUE-01 (BR-7): a dues schedule would add dues dated before today; resend with `confirm_backdated: true`. | "This adds dues dated before today." | `errors.schedule_backdated_unconfirmed` | no |
 | `deposit_released` | 409 | E | A4b (PLT-X02 BR-2): receiving into, applying or returning a deposit that is released (nothing held; closed). | "This deposit is already settled." | `errors.deposit_released` | no |
 | `payment_already_matched` | 409 | D `party_id` | A second match was attempted on a matched payment. | "This payment is already matched." | `errors.payment_already_matched` | no |
 | `payment_request_linked` | 409 | D `request_id` | A payment carrying a live aggregator request was voided. | "Cancel the payment request first." | `errors.payment_request_linked` | no |

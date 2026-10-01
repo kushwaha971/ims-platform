@@ -201,6 +201,8 @@ _REGISTRY: dict[str, tuple[int, bool]] = {
     # ── A4b ── held deposits (contracts §4, FRD 00 PLT-X02 §6) ───────────────
     "deposit_insufficient": (409, False),  # D held_amount
     "deposit_released": (409, False),
+    # ── DUE-01 ── contracts §4: a schedule with past dues needs confirmation.
+    "schedule_backdated_unconfirmed": (409, False),  # D dues, total
 }
 
 # `unauthenticated` is emitted by the exception handler for DRF's
