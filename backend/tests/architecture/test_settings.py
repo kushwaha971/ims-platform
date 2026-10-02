@@ -119,8 +119,17 @@ def test_prod_settings_refuse_the_development_defaults(monkeypatch: pytest.Monke
     """A production process that boots with a development key must fail."""
     monkeypatch.setenv("UB_SECRET_KEY", "dev-insecure-change-me-not-for-production")
     monkeypatch.setenv("UB_DEBUG", "0")
-    with pytest.raises(AssertionError, match="UB_SECRET_KEY"):
-        importlib.reload(importlib.import_module("config.settings.prod"))
+    # `prod` star-imports `base`, and reloading `prod` alone re-reads a `base`
+    # that was evaluated at startup — against a developer's backend/.env, whose
+    # real UB_SECRET_KEY and UB_DEBUG=1 then hide the very defaults this test
+    # plants. Re-evaluate `base` under the patched environment first.
+    importlib.reload(importlib.import_module("config.settings.base"))
+    try:
+        with pytest.raises(AssertionError, match="UB_SECRET_KEY"):
+            importlib.reload(importlib.import_module("config.settings.prod"))
+    finally:
+        monkeypatch.undo()
+        importlib.reload(importlib.import_module("config.settings.base"))
 
 
 def test_the_custom_response_headers_are_exposed_cross_origin() -> None:
