@@ -28,7 +28,7 @@ wherever they differ.
 | B01 skeleton | done (QA round 1: no code defect) | 5b031af4 |
 | B02 codenames, errors, audit | built; ready for QA | 8824cdc4 |
 | B03 settings, seed, numbering | design written; not started | — |
-| B04 ISBN and accession helpers | built; ready for QA | (this commit) |
+| B04 ISBN and accession helpers | built; ready for QA | ad287ba5 |
 | B05 catalogue | design written; not started | — |
 | B06 membership types, loan rules | design written; not started | — |
 | B08 due dates | design written; not started | — |
