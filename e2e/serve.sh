@@ -10,7 +10,15 @@
 # copies INTO it — producing `.next/standalone/.next/static/static`, a server
 # that 500s on every asset, and half an hour of looking at the wrong thing.
 set -euo pipefail
-FE=/home/claude/repo/frontend
+# The repo is the parent of this script's folder, so the same script serves the
+# cloud workspace (/home/claude/repo) and a checkout on the owner's Mac. Logs go
+# to $UB_E2E_LOGS (default /tmp/claude-0); `setsid` is Linux-only, so it is used
+# when present and plain `nohup` detaches otherwise.
+REPO=$(cd "$(dirname "$0")/.." && pwd)
+LOGS=${UB_E2E_LOGS:-/tmp/claude-0}
+mkdir -p "$LOGS"
+DETACH=$(command -v setsid || true)
+FE=$REPO/frontend
 
 pkill -f "standalone/server.js" 2>/dev/null || true
 # A stale `next-server` from an earlier session holds port 3000 and serves an
@@ -23,7 +31,7 @@ cp -r "$FE/.next/static" "$FE/.next/standalone/.next/static"
 cp -r "$FE/public" "$FE/.next/standalone/public"
 
 cd "$FE/.next/standalone"
-PORT=3000 HOSTNAME=0.0.0.0 setsid nohup node server.js > /tmp/claude-0/fe-run.log 2>&1 < /dev/null &
+PORT=3000 HOSTNAME=0.0.0.0 $DETACH nohup node server.js > $LOGS/fe-run.log 2>&1 < /dev/null &
 sleep 7
 
 # `sed -n 1p` rather than `head -1`: head exits after one line, `ls` then dies

@@ -4,7 +4,9 @@
 # Links the main checkout's installed node_modules (never reinstalls) and
 # prints the env a track exports so its pytest uses its own test database.
 set -euo pipefail
-MAIN=/home/claude/repo
+# The main checkout is wherever the shared .git lives — /home/claude/repo in the
+# cloud workspace, ~/Projects/ims-platform on the owner's Mac.
+MAIN=${UB_MAIN_CHECKOUT:-$(cd "$(git rev-parse --git-common-dir)/.." && pwd)}
 TRACK=${1:?track name}
 here=$(pwd)
 [ "$here" = "$MAIN" ] && { echo "run inside a worktree, not the main checkout"; exit 1; }
