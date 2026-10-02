@@ -108,6 +108,61 @@ note tests plus an installed-label check. Gates: `apps/library` 4 passed; `tests
 `tests/migrations` 60 passed (the slow round trip included, with library in it);
 `test_tenant_data` + `test_release_gate` 38 passed; `makemigrations --check` clean.
 
+### QA round 1 (2 Oct 2026, independent QA, branch `wave-b/qa-b01`)
+
+Reviewed `5b031af4` and `50e77422` as they stand on `dev` (`6bd6d142`), against FRD LIB-01 FR-7 and
+T-LIB-01-5/6/7, the task row B01 (FRD §Implementation task list), plan §1.3, §1.4 and §3,
+10-architecture §2.1, §2.4, §7 and §10, and the lead rulings above.
+
+**Findings: no code defect, so this round adds no failing tests.** One documentation slip:
+
+- **QA-B01-1 (low, docs)** — the Status table above (`| B01 skeleton | … | a3ef128 |`) names a commit
+  that does not exist in the repository (`git cat-file -t a3ef128` → "not a valid object name").
+  The change is on `dev` as `5b031af4` (code) and `50e77422` (this file). `50e77422` exists only to
+  record the commit id, and it recorded the id from before the change was rebased or cherry-picked
+  onto `dev`. Expected: the row names `5b031af4`. No test, because the defect is in a document.
+
+**Checked and sound** (gate run on `test_ub_qa`):
+- `apps/library` 4, `apps/platform_app/tests/test_tenant_data.py` + `test_release_gate.py`, and
+  `tests/migrations`, the slow round trip included: 103 passed. `library` is in `LOCAL_APP_LABELS`
+  and the round trip applies, unapplies and re-applies `library 0001`. `makemigrations --check
+  --dry-run` reports no changes. `black`, `isort` and `flake8` are clean on `apps/library`.
+- `tests/architecture`: every test passes except `test_settings.py::test_prod_settings_refuse_the_development_defaults`.
+  That one fails here only because this Mac's `backend/.env` sets a real `UB_SECRET_KEY`. The lead
+  confirmed it is fixed on `dev` in `b3730e7a`, so it is not a B01 finding. `test_import_rules` walks
+  `apps/library` now. The only skips are the five apps not yet on disk (attendance, bookings, gym,
+  hospitality, lending).
+- Migration graph: `library 0001_initial` is `initial`, has no operations, and has exactly four
+  parents: `ledger 0007_reminder_source`, `parties 0010_party_relation`, `payments 0004_held_deposit`
+  and `platform 0013_closed_day`. All four are fixed Wave B heads (plan §1.4 rule 2). Leaving out
+  `sales 0005` is G2's recorded default and stays valid. 10-architecture §10 rule 1 ("vertical `0001`
+  depends on the engines it uses") is met vacuously, because the library MVP uses no engine table
+  (plan §3). Note that `ENGINES_USED_BY["library"] = {"dues"}` (Wave A) still switches on
+  `EngineEnabled("dues")` for a library tenant. If a later library migration takes an FK to a `dues_*`
+  table, it must add a `dues` dependency then.
+- Hot files: one `# ── B01 ──` block each, appended in `INSTALLED_APPS`, `config/urls.py` and
+  `LOCAL_APP_LABELS` (plan §1.3). The mount `path("library/", include("apps.library.urls"))` matches
+  10-architecture §2.1 and §7 (`/api/v1/library/`). With `urlpatterns = []`, nothing under the prefix
+  resolves, with or without the flag.
+- `LibraryConfig`: name `apps.library`, label `library` (table prefix `library_*`). `ready()` imports
+  nothing. `tenant_data.py` registers nothing and `PENDING_APPS` stays empty, which is correct with
+  no models (T-LIB-01-7).
+- Release gate (FR-7, T-LIB-01-5): `ModuleCode.LIBRARY` and its `UNRELEASED_MODULES` entry predate
+  B01 (A1). `test_release_gate.py` covers `modules_view`, `/auth/me`, `ModuleEnabled`,
+  `permissions_for` and the profile for all four new codes, and `src/types/moduleCodes.test.ts` keeps
+  the client `MODULE_CODES` equal to the server enum. `prod.py:46` refuses the flag outside `ci`/`e2e`,
+  and both `.env.example` files ship `UB_UNRELEASED_MODULES=0`.
+- `library_on` fixture: `hidden_modules()` is read at call time, so `override_settings` takes effect.
+  `for_tenant`'s per-instance cache is not primed before the fixture writes the plan and partner. The
+  factories' tenant already has `parties`, `ledger` and `payments` on, so the fixture never produces a
+  state that `MODULE_DEPENDENCIES` would refuse. The two release tests can each fail for the reason
+  they name, and together they rule out a fixture that hides library through the entitlement instead
+  of the flag.
+
+**Not a finding, for the lead (open question 4):** nothing yet guards `LOCAL_APP_LABELS` against a
+missing installed app. All 16 local apps that have migrations are listed today (`help`, which has none, is listed too), so a guard test would
+pass, which is why this round adds none.
+
 ---
 
 ## B02 — codenames, error codes, audit actions, canon CR text
