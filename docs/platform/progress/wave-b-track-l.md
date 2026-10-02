@@ -26,7 +26,7 @@ wherever they differ.
 | Task | State | Commit |
 |---|---|---|
 | B01 skeleton | built; ready for QA | a3ef128 |
-| B02 codenames, errors, audit | design written; not started | — |
+| B02 codenames, errors, audit | built; ready for QA | 8824cdc4 |
 | B03 settings, seed, numbering | design written; not started | — |
 | B04 ISBN and accession helpers | design written; not started | — |
 | B05 catalogue | design written; not started | — |
