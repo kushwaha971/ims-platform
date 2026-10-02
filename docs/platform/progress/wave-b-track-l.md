@@ -28,7 +28,7 @@ wherever they differ.
 | B01 skeleton | done (QA round 1: no code defect) | 5b031af4 |
 | B02 codenames, errors, audit | built; ready for QA | 8824cdc4 |
 | B03 settings, seed, numbering | design written; not started | — |
-| B04 ISBN and accession helpers | design written; not started | — |
+| B04 ISBN and accession helpers | built; ready for QA | (this commit) |
 | B05 catalogue | design written; not started | — |
 | B06 membership types, loan rules | design written; not started | — |
 | B08 due dates | design written; not started | — |
@@ -409,7 +409,7 @@ Gaps:
 
 ### Design note (review step)
 
-Status: design written; not started.
+Status: built; ready for QA (see "Built" below).
 
 Inputs: LIB-02 FR-5, FR-9, §5 `accession_sort`, §9 (the ISBN row, BR-2, BR-3, BR-4, BR-8), EC-3,
 EC-5; T-LIB-02-1, T-LIB-02-2; LIB-04 §5 `member_number_sort` ("as `accession_sort`").
@@ -453,6 +453,42 @@ Gaps:
 - **G13** `varchar(48)` overflows. A legal 24-character number with 12 digit runs (`1/1/1/…`) pads to
   155 characters, and a run longer than 12 digits misorders. Default: `varchar(160)` (a library-owned
   column) and pad each run to `max(12, len)`. The same applies to `member_number_sort`.
+
+### Built (2 Oct 2026)
+
+Note unchanged by the code since it was written. Landed: `apps/library/services/__init__.py`,
+`services/isbn.py` (`normalise`, `is_valid_isbn10`, `is_valid_isbn13`, `to_isbn13`, `to_isbn10`) and
+`services/codes.py` (`validate_number` raising `InvalidNumber` with `.message` = "Use letters,
+numbers, - or /.", `number_key`, `natural_sort_key`, `numeric_value(raw, *, prefix="")`,
+`classify` → frozen `Classified(number_key, isbn13)`, and the constants `NUMBER_MAX = 24`,
+`SORT_KEY_MAX = 160`, `RUN_WIDTH = 12` for B05/B07's columns). Both modules import nothing from
+Django or `apps` (`codes` imports `isbn` relatively); a test walks each module's AST to hold that.
+No shared hot file touched, no migration.
+
+Tests: `apps/library/tests/test_isbn.py` (10) and `test_codes.py` (21 with parametrised cases). The
+ISBN vectors come from reference functions written by a different route (whole weighted sums against
+a residue, not a computed check character); the `X` case is found by searching stems near the
+book's, a 977 periodical EAN is built by the reference, and 500 fuzzed stems check 10 → 13 → 10 and
+that one changed digit is always refused. The sort test uses the corrected G12 vector; a fuzz test
+sorts 2,000 random legal numbers by the key and by a tokenising natural sort and requires identical
+orders. Gates: `apps/library` + `tests/architecture` **162 passed, 5 skipped**; `black`, `isort`,
+`flake8` clean on `apps/library`; `makemigrations --check` clean. No screen.
+
+Deviations from the note:
+- **G13's padding rule is refined.** `max(12, len)` does not fix the misorder it was meant to fix:
+  `1000000000000` (13) still compares `1` against `9` with `999999999999` and sorts first. Instead a
+  run is reduced to its significant digits; up to 12 it is padded to 12 exactly as BR-4 says (so every
+  realistic number has the BR-4 key), and 13–24 significant digits become `:` + the value padded to
+  24. `:` (0x3A) is after every digit and before every letter in C collation, so a long run sorts
+  after every short one, long runs order among themselves, and runs equal in value (`0042`, `42`)
+  get equal keys — EC-3 keeps them different *numbers* (`number_key`), only their sort ties. The
+  worst legal key is 156 characters, inside G13's `varchar(160)`. B05 and B07 must still declare
+  the column `varchar(160)` with `db_collation="C"` (G12).
+- The note's regex `^…$` is applied with `fullmatch` after `strip()`, since `$` alone accepts a
+  trailing newline and `isalnum()` accepts non-ASCII code points (both have tests).
+
+New contradictions: none beyond G11–G13, which remain the FRD's to correct (T-LIB-02-1's vector,
+T-LIB-02-2's order, `accession_sort varchar(48)` in LIB-02 §5 and `member_number_sort` in LIB-04 §5).
 
 ---
 
