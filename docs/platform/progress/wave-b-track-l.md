@@ -25,7 +25,7 @@ wherever they differ.
 
 | Task | State | Commit |
 |---|---|---|
-| B01 skeleton | built; ready for QA | a3ef128 |
+| B01 skeleton | done (QA round 1: no code defect) | 5b031af4 |
 | B02 codenames, errors, audit | built; ready for QA | 8824cdc4 |
 | B03 settings, seed, numbering | design written; not started | — |
 | B04 ISBN and accession helpers | design written; not started | — |
