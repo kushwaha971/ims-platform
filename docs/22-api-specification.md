@@ -253,6 +253,43 @@ Ownership is recorded as **T-16** in Part 0 §0.12.2. No other chapter may carry
 | `schema_validation_failed` | 400 | F | A settings or template payload failed its registered JSON schema. | "These settings are not valid." | `errors.schema_validation_failed` | no |
 | `confirmation_required` | 409 | D `confirm_token`, `impact` | A destructive or large-blast-radius action needs an explicit second call carrying the token returned here. | "Please confirm this action." | `errors.confirmation_required` | no |
 
+<!-- ── B02 ── library (LIB-14) ── table L, FRD library Appendix A; CR drafted in docs/platform/progress/wave-b-track-l.md -->
+
+**L — Library** (the module is unreleased; these are emitted only while `UB_UNRELEASED_MODULES` is on until its release CR. The `hi` copy lands with the library catalogue in F01.)
+
+| Code | HTTP | Envelope | Raised when | English message | `hi` key | Retryable |
+|---|---|---|---|---|---|---|
+| `library_accession_taken` | 409 | D `number`, `copy_id`, `title` | LIB-02 FR-5: a typed accession number is already a copy's, including a withdrawn copy's (numbers are never reused). | "Accession number {number} is already used." | `errors.library_accession_taken` | no |
+| `library_accession_frozen` | 409 | D `copy_id` | LIB-02: the accession number of a copy that has ever been issued was edited. | "This copy has been issued, so its number cannot change." | `errors.library_accession_frozen` | no |
+| `library_code_ambiguous` | 409 | D `code`, `matches` | LIB-02 BR-8: a scanned or typed code matches more than one record (an accession number and a barcode or member number). | "This code matches more than one record. Pick one." | `errors.library_code_ambiguous` | no |
+| `library_copy_on_loan` | 409 | D `loan_id` | LIB-02 BR-7: a copy on loan was withdrawn. | "This copy is on loan. Take it back first." | `errors.library_copy_on_loan` | no |
+| `library_copy_unavailable` | 409 | D `status`, `with?`, `held_for?` | LIB-02, LIB-06: a copy's status does not allow the action (repair, back to shelf, set aside, issue). | "This copy is not available." | `errors.library_copy_unavailable` | no |
+| `library_title_has_copies` | 409 | D `count` | LIB-02 FR-12: a title with copies on the shelf was archived by hand. | "Withdraw this title's copies first." | `errors.library_title_has_copies` | no |
+| `library_category_in_use` | 409 | D `count` | LIB-02: a category that titles still use was deleted. | "Titles still use this category." | `errors.library_category_in_use` | no |
+| `library_location_in_use` | 409 | D `count` | LIB-02: a location that copies still use was deleted. | "Copies are still kept here." | `errors.library_location_in_use` | no |
+| `library_membership_exists` | 409 | D `membership_id`, `status` | LIB-04: a party who is already a member was enrolled, or a member who is not closed re-joined. | "This person is already a member." | `errors.library_membership_exists` | no |
+| `library_member_number_taken` | 409 | D `number`, `membership_id` | LIB-04: a typed member number is already another member's. | "Member number {number} is already used." | `errors.library_member_number_taken` | no |
+| `library_membership_closed` | 409 | D `closed_on` | LIB-04: a closed membership was renewed or changed (re-join is the way back). | "This membership is closed." | `errors.library_membership_closed` | no |
+| `library_membership_has_loans` | 409 | D `count` | LIB-04: a membership with books still out was closed. | "This member still has books out." | `errors.library_membership_has_loans` | no |
+| `library_membership_inactive` | 409 | D `effective_status`, `valid_until` | LIB-06: an issue to a member who is expired, suspended or closed (not overridable, LIB-04 BR-10). | "This membership is not active." | `errors.library_membership_inactive` | no |
+| `library_member_blocked` | 409 | D `blocks`, `override_permission` | LIB-06: an issue refused by one or more member blocks (copy limit, overdue books, dues, deposit). | "This member cannot borrow right now." | `errors.library_member_blocked` | no |
+| `library_copy_not_loanable` | 409 | D `material_type`, `overridable` | LIB-06: a reference or other non-lending copy was issued. | "This copy is not for lending." | `errors.library_copy_not_loanable` | no |
+| `library_copy_not_on_loan` | 409 | D `status`, `offer_found` | LIB-06 BR-2: a return of a copy that has no open loan. | "This copy is not on loan." | `errors.library_copy_not_on_loan` | no |
+| `library_renewal_refused` | 409 | D `reason`, `overridable` | LIB-06: a renewal refused (`max_renewals`, `hold_waiting`, `overdue`, or a due date that would move earlier). | "This loan cannot be renewed." | `errors.library_renewal_refused` | no |
+| `library_cancel_window_passed` | 409 | D `issued_on` | LIB-06: an issue was cancelled after its cancel window. | "It is too late to cancel this issue." | `errors.library_cancel_window_passed` | no |
+| `library_calendar_all_closed` | 409 | E | LIB-05: a due date was computed against a calendar with every weekday closed (a misconfiguration). | "Every day is marked closed. Open at least one day." | `errors.library_calendar_all_closed` | no |
+| `library_loan_not_open` | 409 | D `status` | LIB-07: a loan that is returned, lost or cancelled was marked lost or changed. | "This loan is already closed." | `errors.library_loan_not_open` | no |
+| `library_charge_not_open` | 409 | D `status` | LIB-07: a waiver, payment or change on a charge that is paid, waived, refunded or reversed. | "Nothing is owed on this charge." | `errors.library_charge_not_open` | no |
+| `library_charge_has_payments` | 409 | D `payment_ids` | LIB-07: a charge with payments against it was reversed (void the payments first). | "Cancel the payments on this charge first." | `errors.library_charge_has_payments` | no |
+| `library_waiver_over_ceiling` | 403 | D `ceiling` | LIB-07 (D27): a waiver above the waiver ceiling by a member who is not the owner or an admin. A role check, never grantable; shown inline in the waive dialog. | "Waivers above ₹{ceiling} need the owner or an admin." | `errors.library_waiver_over_ceiling` | no |
+| `library_hold_refused` | 409 | D `reason` | LIB-08: a hold refused (`max_holds`, `already_holding`, `already_borrowed`, and the others LIB-08 lists). | "This hold cannot be placed." | `errors.library_hold_refused` | no |
+| `library_hold_not_open` | 409 | D `status` | LIB-08: a hold that is collected, expired or cancelled was set aside, cancelled or changed. | "This hold is no longer open." | `errors.library_hold_not_open` | no |
+| `library_nothing_overdue` | 409 | E | LIB-09, LIB-13: an overdue reminder or notice for a member with nothing overdue. | "Nothing is overdue for this member." | `errors.library_nothing_overdue` | no |
+| `library_verification_closed` | 409 | E | LIB-10: a scan or close on a stock check that is closed. | "This stock check is closed." | `errors.library_verification_closed` | no |
+| `library_verification_open` | 409 | E | LIB-10: copies were marked missing from a stock check that is still open (missing is known only at close). | "Close this stock check first." | `errors.library_verification_open` | no |
+| `library_verification_reopen_used` | 409 | E | LIB-10: a stock check that was already reopened once was reopened again. | "This stock check has already been reopened once." | `errors.library_verification_reopen_used` | no |
+| `library_print_too_large` | 409 | D `count`, `max` | LIB-12: a report print with more rows than the print cap (2,000). | "Too many rows to print. Narrow the filters." | `errors.library_print_too_large` | no |
+
 
 ### 22.1.2 The naming rule
 

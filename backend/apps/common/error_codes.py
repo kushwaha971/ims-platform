@@ -203,6 +203,40 @@ _REGISTRY: dict[str, tuple[int, bool]] = {
     "deposit_released": (409, False),
     # ── DUE-01 ── contracts §4: a schedule with past dues needs confirmation.
     "schedule_backdated_unconfirmed": (409, False),  # D dues, total
+    # ── B02 ── library (LIB-14) ── FRD library Appendix A; Part 22 §22.1.1 table L.
+    # Every one is a state the member must change, so none is retryable.
+    "library_accession_taken": (409, False),  # D number, copy_id, title
+    "library_accession_frozen": (409, False),  # D copy_id
+    "library_code_ambiguous": (409, False),  # D code, matches
+    "library_copy_on_loan": (409, False),  # D loan_id
+    "library_copy_unavailable": (409, False),  # D status, with?, held_for?
+    "library_title_has_copies": (409, False),  # D count
+    "library_category_in_use": (409, False),  # D count
+    "library_location_in_use": (409, False),  # D count
+    "library_membership_exists": (409, False),  # D membership_id, status
+    "library_member_number_taken": (409, False),  # D number, membership_id
+    "library_membership_closed": (409, False),  # D closed_on
+    "library_membership_has_loans": (409, False),  # D count
+    "library_membership_inactive": (409, False),  # D effective_status, valid_until
+    "library_member_blocked": (409, False),  # D blocks, override_permission
+    "library_copy_not_loanable": (409, False),  # D material_type, overridable
+    "library_copy_not_on_loan": (409, False),  # D status, offer_found
+    "library_renewal_refused": (409, False),  # D reason, overridable
+    "library_cancel_window_passed": (409, False),  # D issued_on
+    "library_calendar_all_closed": (409, False),
+    "library_loan_not_open": (409, False),  # D status
+    "library_charge_not_open": (409, False),  # D status
+    "library_charge_has_payments": (409, False),  # D payment_ids
+    # 403, not 409: LIB-07 §8 shows it inline in the waive dialog with who can
+    # do it; it is a role ceiling (D27), not a conflict with the row's state.
+    "library_waiver_over_ceiling": (403, False),  # D ceiling
+    "library_hold_refused": (409, False),  # D reason
+    "library_hold_not_open": (409, False),  # D status
+    "library_nothing_overdue": (409, False),
+    "library_verification_closed": (409, False),
+    "library_verification_open": (409, False),
+    "library_verification_reopen_used": (409, False),
+    "library_print_too_large": (409, False),  # D count, max
 }
 
 # `unauthenticated` is emitted by the exception handler for DRF's

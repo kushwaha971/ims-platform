@@ -114,7 +114,7 @@ note tests plus an installed-label check. Gates: `apps/library` 4 passed; `tests
 
 ### Design note (review step)
 
-Status: design written; not started.
+Status: built; ready for QA (see "Built" below).
 
 Inputs: FRD LIB-14 (§1, §9 codename table, §10 matrix, §12), Appendix A (30 codes), Appendix B; D27,
 D28; contracts §3 (R47, R70), §4; ADR-052, ADR-058; CR-2026-09-30-PLATFORM-ROLES items 2–3; owner
@@ -173,6 +173,102 @@ Gaps:
   every module edits their literals. Track D's DUE-01 also adds error codes (contracts §4) and edits
   the same count line, so a conflict is certain. Default: recount at merge. Propose adding both files
   to the hot list.
+
+**Note refreshed before building (2 Oct):** DUE-01 is on dev and moved the error-code count to 167,
+so B02 takes it to **197**, not 196. Nothing else in the note changed on disk.
+
+### Built (2 Oct 2026)
+
+Landed as the note says. Each shared file carries one `── B02 ── library (LIB-14) ──` block,
+appended:
+- `apps/common/permissions_registry.py`: the sixteen codenames at the end of `PERMISSIONS`, and the
+  seven at the end of `_STAFF`. Admin and accountant derive (verified: admin all sixteen, accountant
+  exactly the four `.read`). `ENGINE_READ_PERMISSIONS["dues"]["library"]` now names a real codename.
+- `apps/common/error_codes.py`: the thirty Appendix A codes after DUE-01's block, all `(409, False)`
+  except `library_waiver_over_ceiling (403, False)`, each with its `details` keys in a comment.
+- `apps/common/audit.py`: 58 `LIBRARY_*` constants, exactly Appendix B, after DUE-01's block. Core
+  actions (deposit, payment, counter, reminder) are reused, not copied.
+- `apps/library/constants.py` (new): the sixteen vocabularies, values in FRD §5 order.
+- `docs/22-api-specification.md` §22.1.1: a new **table L — Library** after table I, thirty rows with
+  envelope, condition, English message and `hi` key.
+- Test literals: `apps/common/tests/test_permissions.py` (`CANON_PERMISSIONS` +16; the action set +
+  `withdraw`, `close`, `override`, `waive`, `run`), `apps/common/tests/test_exceptions.py` (167 → 197).
+
+New tests: `apps/library/tests/test_codenames.py` (8: the sixteen; staff seven; accountant four;
+owner and admin sixteen; the dues engine codename exists; hidden library grants nothing even to an
+`allow`; switched-off library grants nothing; the positive control with delegation and deny) and
+`apps/library/tests/test_vocabulary.py` (7: Appendix A codes and statuses; the 403; audit actions
+equal Appendix B; ≤ 64 characters and name = value; core actions not duplicated; vocabularies equal
+the FRD CHECK lists; values fit their columns). The six registry tests failed before the change; the
+two hidden/off tests are guards that passed before (nothing granted library) and are kept honest by
+the positive control.
+
+Gates: `apps/library` + `apps/common/tests` + `tests/architecture` + `test_release_gate` +
+`apps/dues/tests` **528 passed, 12 skipped**; the other suites that read the registry or role sets
+(`apps/platform_app` whole, `tests/contracts`, notifications, the expenses/tax/parties/reports tests
+that use `ROLE_PERMISSIONS`, `test_list_page_size_queries`) **1011 passed, 1 skipped**;
+`makemigrations --check` clean; `black`, `isort`, `flake8` clean on every touched file. No screen.
+
+Deviations from the note:
+- The count is 197 (above).
+- Part 22 rows go in a new table L rather than being "appended" to table I, because §22.1.1 groups
+  codes by area and none of A–I is the library's.
+- Part 22 §22.1.3 rule 3 asks for `errors.<code>` in `locales/en.json` and `hi.json` in the same
+  change. Not done here: `locales/en.json` carries 25 `errors.*` keys for 167 existing codes (the rule is not
+  enforced by `check-locales.mjs`), the library's copy belongs in its own catalogue
+  (`library.{en,hi}.json`, F01), and B02 is backend-only. Table L's header says so.
+- The frontend `PermissionCode` union (LIB-14 §7) is F01's, not B02's; nothing on the frontend reads
+  a library codename yet.
+
+New contradiction: none. Note only — FRD LIB-10 §6 lets `library.verification.run` close a stock
+check while §9 row 14 lists "close" under `library.verification.close`; §9's own row 13 says run
+covers "start, scan, close", so §6 and row 13 agree and row 14's word means *reopen and mark
+missing*. B13 should read it that way.
+
+### Canon CR draft — for the lead to file in `docs/CR-LOG.md` / Part 43
+
+> **CR-2026-10-02-LIB-14 — canon §0.9 and Part 22 §22.1.1: the library's codenames, error codes and
+> audit actions**
+>
+> **State:** `raised` (built by Wave B task B02 behind `UNRELEASED_MODULES`). Drafted by Track L in
+> `docs/platform/progress/wave-b-track-l.md`.
+> **Target:** Part 0 §0.9 (codenames), Part 20 §20.5.5 (role sets), Part 22 §22.1.1 (table L),
+> Part 21 §21.3.1 (audit vocabulary); `apps/common/permissions_registry.py`,
+> `apps/common/error_codes.py`, `apps/common/audit.py`.
+>
+> *Change.*
+> 1. **Codenames.** Canon §0.9 gains sixteen, in the `<module>.<resource>.<action>` format, using
+>    the per-module verbs CR-2026-09-30-PLATFORM-ROLES item 2 admitted (`withdraw`, `close`,
+>    `override`, `waive`, `run`): `library.catalogue.read|write`, `library.copy.withdraw`,
+>    `library.member.read|write|close`, `library.loan.read|write|override|adjust`,
+>    `library.charge.waive|write`, `library.verification.run|close`, `library.reports.read`,
+>    `library.settings.manage`.
+> 2. **Role sets** (FRD LIB-14 §10). Owner and admin hold all sixteen. Staff holds seven:
+>    `catalogue.read|write`, `member.read|write`, `loan.read|write`, `verification.run`. The
+>    accountant holds the four reads (`catalogue`, `member`, `loan`, `reports`) through its `.read`
+>    rule. `loan.override`, `loan.adjust`, `charge.waive` and `copy.withdraw` are off for staff and
+>    grantable per member through `permissions_override.allow` (FR-3). A waiver above the ceiling
+>    (D27) and a deposit refund (D28) are role checks inside the service and no override can grant
+>    them (FR-4) — the LED-03 distinction between a business ceiling and an ordinary capability.
+>    This adds library codenames to `_STAFF` at build time rather than at release (item 3 of the
+>    PLATFORM-ROLES CR said the release CR does it): while the module is in `UNRELEASED_MODULES`
+>    `permissions_for` drops every `library.*`, so nobody holds them until release, and the T-LIB-14-4
+>    matrix needs them under the flag. The release CR (T-R1) records the matrix as live.
+> 3. **Error codes.** Part 22 §22.1.1 gains table L, thirty codes from FRD library Appendix A, all
+>    409 and not retryable except `library_waiver_over_ceiling`, which is **403**: it is a role
+>    ceiling, not a conflict with the row's state, and LIB-07 §8 shows it inline in the waive dialog
+>    naming who can waive. The fifteen core codes Appendix A lists as reused are not duplicated.
+> 4. **Audit actions.** Part 21 §21.3.1 gains the 58 `library.<entity>.<verb>` actions of Appendix B.
+>    Deposit, payment, counter and reminder rows written by library flows use the core actions.
+>
+> *Why.* The registry test asserts equality with canon §0.9, and Part 22 §22.1.1 is the closed error
+> registry; every library view names a codename and every refusal a code, so both must exist before
+> the first library view (B03), and `HasPermission` refuses an unknown codename at import time.
+>
+> *Effect today:* none for any tenant — library is unreleased, so no member holds a library codename
+> and no library endpoint exists. `seed_reference_data` rewrites the system roles' `permissions`
+> column on its next run; nothing reads that column at runtime (`system_role_permissions` is the
+> source). *Reversal:* remove the three `── B02 ──` blocks and table L; no table changes.
 
 ---
 

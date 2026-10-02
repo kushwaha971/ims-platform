@@ -62,6 +62,24 @@ CANON_PERMISSIONS = {
     "notifications.settings.manage",
     # A9b — R26, owner Q2; canon §0.9 amended by the module-roles CR.
     "platform.calendar.manage",
+    # ── B02 ── library (LIB-14) ── FRD LIB-14 §9; canon §0.9 CR drafted in the
+    # Track L progress file (CR-PLATFORM-ROLES item 2 widened the action set).
+    "library.catalogue.read",
+    "library.catalogue.write",
+    "library.copy.withdraw",
+    "library.member.read",
+    "library.member.write",
+    "library.member.close",
+    "library.loan.read",
+    "library.loan.write",
+    "library.loan.override",
+    "library.loan.adjust",
+    "library.charge.waive",
+    "library.charge.write",
+    "library.verification.run",
+    "library.verification.close",
+    "library.reports.read",
+    "library.settings.manage",
 }
 
 
@@ -88,6 +106,14 @@ def test_every_codename_is_module_resource_action() -> None:
         "correct",
         "adjust",
         "void",
+        # ── B02 ── library (LIB-14): the per-module verbs its FRD lists
+        # (CR-2026-09-30-PLATFORM-ROLES item 2). Each is named, so an invented
+        # verb such as `library.copy.retire` still fails here.
+        "withdraw",
+        "close",
+        "override",
+        "waive",
+        "run",
     }
     for codename in PERMISSIONS - CANON_FORMAT_EXCEPTIONS:
         parts = codename.split(".")
