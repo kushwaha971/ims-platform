@@ -1,12 +1,13 @@
 # frontend/Dockerfile — Next.js standalone output. Part 29 §29.2.6, verbatim.
 # next.config.js must set `output: 'standalone'` for the runtime stage to work.
-FROM node:20-bookworm-slim AS base
+FROM node:22-bookworm-slim AS base
 ENV NEXT_TELEMETRY_DISABLED=1
 WORKDIR /app
 
 # ---------- dependencies ----------
 FROM base AS deps
 COPY package.json package-lock.json ./
+COPY vendor/ ./vendor/
 RUN npm ci
 
 # ---------- dev ----------
@@ -31,7 +32,7 @@ COPY . .
 RUN npm run build          # next build → .next/standalone + .next/static
 
 # ---------- runtime ----------
-FROM node:20-bookworm-slim AS runtime
+FROM node:22-bookworm-slim AS runtime
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000
 WORKDIR /app
 RUN useradd -u 1001 -m next

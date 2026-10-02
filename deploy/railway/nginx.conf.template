@@ -1,0 +1,52 @@
+user app;
+worker_processes auto;
+pid /tmp/nginx.pid;
+error_log /dev/stderr warn;
+events { worker_connections 1024; }
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+    server_tokens off;
+    # The application already emits redacted request logs; do not log token URLs.
+    access_log off;
+    sendfile on;
+    client_max_body_size 12m;
+    client_body_temp_path /tmp/nginx/body;
+    proxy_temp_path /tmp/nginx/proxy;
+    limit_req_zone $binary_remote_addr zone=api:10m rate=20r/s;
+    limit_req_zone $binary_remote_addr zone=otp:10m rate=1r/s;
+    limit_req_status 429;
+    server {
+        listen ${PORT};
+        server_name _;
+        add_header X-Content-Type-Options nosniff always;
+        add_header X-Frame-Options DENY always;
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        # Railway terminates HTTPS. This listener is reached through its edge.
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Request-Id $request_id;
+        proxy_set_header Connection "";
+        proxy_read_timeout 70s;
+        location /api/v1/admin/ { deny all; }
+        location ~ ^/api/v1/auth/otp/ {
+            limit_req zone=otp burst=5 nodelay;
+            proxy_pass http://127.0.0.1:8000;
+        }
+        location /api/ {
+            limit_req zone=api burst=40 nodelay;
+            proxy_pass http://127.0.0.1:8000;
+        }
+        location /static/ { alias /srv/static/; }
+        location /media/landing/ { proxy_pass http://127.0.0.1:3000; }
+        location /media/ {
+            internal;
+            alias /srv/media/;
+            add_header Cache-Control "private, max-age=86400";
+        }
+        location / { proxy_pass http://127.0.0.1:3000; }
+    }
+}
