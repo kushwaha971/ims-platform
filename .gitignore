@@ -32,10 +32,7 @@ backups/
 !/frontend/public/media/
 /frontend/public/media/*
 !/frontend/public/media/landing/
-# The narrated demo films (and their captions and posters) stay OUT of git, by
-# the owner's decision: they are 10-16 MB each, re-cut often, and served from
-# NEXT_PUBLIC_DEMO_VIDEO_URL_* in production. The modal copes with their absence.
-/frontend/public/media/landing/demo-*
+# Narrated demo videos, captions and posters are tracked for deployment.
 *.dump
 
 # OS / editor

@@ -1,0 +1,319 @@
+WEBVTT
+
+00:00:00.600 --> 00:00:10.647
+Namaste! YourKhata ek platform hai, jahan
+business apna saara hisaab — bills, stock,
+payments aur collections — ek hi jagah
+rakhta hai.
+
+00:00:11.097 --> 00:00:18.286
+Is guide mein hum step by step Shop &
+billing module dekhenge, jo aaj live hai —
+computer par.
+
+00:00:18.736 --> 00:00:27.167
+Hamari demo dukaan hai Sharma General
+Store. Chapters neeche description mein
+hain — jo kaam chahiye, seedha wahan
+jaaiye.
+
+00:00:31.818 --> 00:00:38.955
+Apna email aur password daal kar Log in
+kijiye. Password hamesha dots mein chhupa
+rehta hai.
+
+00:00:43.407 --> 00:00:52.053
+Ye dashboard hai. "To collect" batata hai
+ki customers se kitna lena hai, aur "To
+pay" ki suppliers ko kitna dena hai.
+
+00:00:52.768 --> 00:01:00.842
+Aaj ki sale, galle mein cash aur low stock
+bhi yahin hai. Kisi bhi tile par click
+kijiye — poori list khul jaati hai.
+
+00:01:01.548 --> 00:01:08.764
+Neeche Recent activity, sabse zyada udhaar
+wale customers, aur khatam hota maal
+dikhta hai.
+
+00:01:09.497 --> 00:01:19.201
+Baayein menu mein roz ke kaam, business,
+reports aur settings hain. Upar search se
+kisi bhi customer ya supplier tak turant
+pahunchiye.
+
+00:01:24.563 --> 00:01:34.017
+Settings mein "Business profile" kholiye.
+Dukaan ka naam, GSTIN, pata aur UPI yahan
+ek hi baar bharna hota hai.
+
+00:01:34.728 --> 00:01:40.118
+Side mein "Bill header preview" dikhata
+hai ki aapke bill ke upar kya chhapega.
+
+00:01:40.852 --> 00:01:47.114
+Branding mein apna logo aur rang chuniye —
+bill aur customer page usi rang mein
+dikhenge.
+
+00:01:54.160 --> 00:02:02.470
+Customers list mein har customer ka
+balance dikhta hai. Upar ke chips se sirf
+"Owes me" ya "I owe them" filter kijiye.
+
+00:02:03.180 --> 00:02:10.520
+Naya customer: "Add party" dabaiye, naam
+Ramesh Traders aur mobile number likhiye,
+phir Save party.
+
+00:02:20.787 --> 00:02:28.067
+Ramesh ji ₹1,200 ka ration udhaar le gaye.
+"You gave" dabaiye, amount aur note
+likhiye, Save.
+
+00:02:33.689 --> 00:02:40.743
+Unhone ₹500 diye, par jaldi mein hamne
+₹5,000 likh diya. Aisi galti roz hoti hai.
+
+00:02:42.914 --> 00:02:53.346
+Entry ke teen dots se "Correct" chuniye,
+sahi amount ₹500 aur wajah likhiye. Purani
+entry mitti nahi — record ke liye kati hui
+rehti hai.
+
+00:02:59.265 --> 00:03:07.477
+Result: balance sahi ₹700. "Show
+corrections" on karne par poori history
+dikhti hai — kisne, kab, kya badla.
+
+00:03:12.929 --> 00:03:20.730
+"Statement" kholiye. Passbook ki tarah har
+entry aur running balance — isko print
+kijiye ya customer ko bhejiye.
+
+00:03:23.105 --> 00:03:33.390
+"Send reminder" se ek polite message
+taiyaar milta hai — naam, baaki rakam aur
+dukaan ka naam ke saath. WhatsApp par
+click, aur bhej dijiye.
+
+00:03:34.091 --> 00:03:42.019
+Reminders page par dikhta hai kiska paisa
+aaj aana hai, kiska late ho gaya, aur
+kisko reminder ja chuka hai.
+
+00:03:42.738 --> 00:03:52.838
+Aging report udhaar ko umar ke hisaab se
+baantti hai. 90 din se purana paisa sabse
+zyada risk mein hai — wahan pehle phone
+kijiye.
+
+00:03:58.282 --> 00:04:06.698
+Items mein har cheez ka selling price, GST
+aur dukaan mein bacha stock dikhta hai.
+Upar poore stock ki value bhi.
+
+00:04:07.417 --> 00:04:14.915
+Basmati Rice kholiye. Stock, average cost,
+aur har aana-jaana — opening, bikri,
+kharid — ek list mein.
+
+00:04:15.622 --> 00:04:24.393
+Do bori bheeg kar kharab ho gayi? "Adjust
+stock" mein reason Damage chuniye,
+quantity minus 2, aur Post adjustment.
+
+00:04:33.225 --> 00:04:43.691
+Low stock report batata hai ki kya reorder
+level se neeche hai — jaise Sugar. Stock
+summary mein poore maal ki value average
+cost par milti hai.
+
+00:04:49.146 --> 00:04:57.402
+Bills mein "New bill" dabaiye. Walk-in ke
+liye seedha items, udhaar customer ke liye
+"Party" chuniye — Ramesh Traders.
+
+00:05:04.677 --> 00:05:14.389
+Item mein "Basm" likhiye aur Basmati Rice
+5kg chuniye, quantity 2. Rate aur GST item
+se apne aap bhar jaate hain.
+
+00:05:15.113 --> 00:05:19.781
+"Add item" se doosri line — Toor Dal 1kg,
+quantity 3.
+
+00:05:24.535 --> 00:05:35.376
+Totals dekhiye: taxable value, CGST aur
+SGST alag-alag. Customer doosre state ka
+hota, to IGST apne aap lagta.
+
+00:05:36.119 --> 00:05:45.420
+"Issue" dabaiye. Ramesh ji abhi ₹500
+Google Pay se de rahe hain — amount aur
+mode chuniye, phir "Received ₹500 ·
+Issue".
+
+00:05:53.436 --> 00:06:02.820
+Bill taiyaar! Stock kam ho gaya, aur baaki
+rakam Ramesh ji ke khata mein jud gayi.
+Print A4 ya 80 mm thermal — dono hain.
+
+00:06:03.521 --> 00:06:12.466
+Bill par UPI QR chhapta hai — customer
+scan karke turant pay kar sakta hai, aur
+rakam shabdon mein bhi likhi hoti hai.
+
+00:06:13.170 --> 00:06:22.638
+"Share on WhatsApp" se bill ka link jaata
+hai. Customer ko bina app ke aisa page
+dikhta hai — sirf aapki dukaan ke naam ke
+saath.
+
+00:06:28.666 --> 00:06:36.357
+Priya Sweets ne das kilo cheeni ka rate
+poocha. "New estimate" banaiye, item
+daaliye aur "Save & send".
+
+00:06:52.960 --> 00:07:00.312
+Customer maan gaya? Estimate par "Convert
+to invoice" dabaiye — saari lines naye
+bill mein aa jaati hain.
+
+00:07:01.017 --> 00:07:08.123
+Suresh ji ek Toor Dal wapas laaye. Unka
+bill kholiye, "Return items" chuniye aur
+quantity 1.
+
+00:07:15.477 --> 00:07:22.544
+Save karte hi credit note ban jaata hai:
+Suresh ji ka balance kam, aur Toor Dal
+wapas stock mein.
+
+00:07:27.903 --> 00:07:33.525
+Payments mein "Record payment" dabaiye.
+Received chuniye aur customer — Suresh
+Kumar.
+
+00:07:41.361 --> 00:07:45.509
+PhonePe chuniye, amount ₹1,000, aur Save
+payment.
+
+00:07:50.376 --> 00:08:00.937
+Receipt number ban gaya. Pehle baaki bill
+chukta hota hai; bachi rakam advance ban
+kar rehti hai. Suresh ji ka khata bhi
+update ho gaya.
+
+00:08:06.334 --> 00:08:15.297
+Sugar kam tha, to Gupta Wholesale se 50
+packet aaye. Purchases mein "New bill",
+supplier chuniye aur unka bill number
+likhiye.
+
+00:08:23.700 --> 00:08:29.899
+Item — Sugar 1kg, quantity 50, cost ₹40,
+GST se pehle.
+
+00:08:33.901 --> 00:08:41.070
+"Record" dabaiye. Stock mein 50 Sugar jud
+gayi. Paisa abhi de diya, to bill wahin
+"Paid" ho jaata hai.
+
+00:08:42.751 --> 00:08:51.178
+Pichhla bill abhi baaki hai? Purchases
+mein "Unpaid" bill kholiye aur "Pay
+supplier" se bank ya UPI payment likhiye.
+
+00:09:07.136 --> 00:09:14.147
+"Add expense" dabaiye: amount ₹250,
+category, Cash, aur note — Delivery auto.
+Save.
+
+00:09:27.148 --> 00:09:35.918
+Cashbook mein har din ka opening, aaya
+paisa, gaya paisa aur closing. Cash aur
+Bank-UPI alag bhi dekh sakte hain.
+
+00:09:41.509 --> 00:09:48.155
+Reports mein saari reports ek jagah hain —
+paisa, customer-supplier, stock, aur
+sales-GST.
+
+00:09:48.892 --> 00:09:55.178
+Day book mein din ka har bill, payment aur
+kharcha samay ke kram se — cash aur bank
+ke saath.
+
+00:09:55.888 --> 00:10:06.818
+Sales register mein har bill ka taxable
+value, CGST, SGST aur IGST. B2B aur B2C ke
+liye alag filter bhi hai.
+
+00:10:07.520 --> 00:10:18.400
+GST summary mein rate ke hisaab se outward
+aur inward tax, HSN summary, aur bill
+series — GST return bharne ke liye
+taiyaar.
+
+00:10:19.107 --> 00:10:25.901
+Har report par "Export" hai — CSV file
+download karke seedha CA ko bhej dijiye.
+
+00:10:31.248 --> 00:10:40.021
+Purane customers Excel mein hain? Import
+mein pehle template download kijiye, usme
+naam, mobile aur baaki bhariye.
+
+00:10:40.722 --> 00:10:51.730
+Customers ke saamne "Choose" dabaiye aur
+apni CSV file chuniye. YourKhata har line
+check karta hai, aur galti wali line pehle
+hi bata deta hai.
+
+00:10:52.451 --> 00:11:00.653
+Sab theek hai, to "Import 3 customers"
+dabaiye. Teen naye customers unke purane
+baaki ke saath list mein aa gaye.
+
+00:11:06.073 --> 00:11:14.117
+Team mein "Add member": naam Vikas, email,
+aur role Staff. Staff bill bana sakta hai,
+par settings nahi badal sakta.
+
+00:11:20.068 --> 00:11:29.174
+"Create login" — ek temporary password
+sirf ek baar dikhta hai (video mein
+chhupaya gaya hai). Ise WhatsApp se Vikas
+ko bhejiye.
+
+00:11:29.876 --> 00:11:34.756
+Activity log mein har kaam — kisne, kab,
+kya kiya — likha rehta hai.
+
+00:11:35.463 --> 00:11:45.266
+"Your data" se poora data ek ZIP mein
+download kijiye. Support team bhi aapki
+ijaazat ke bina aapka business nahi dekh
+sakti.
+
+00:11:50.687 --> 00:11:57.029
+Upar account menu se Hindi chuniye — poora
+app Hindi mein. Wapas English bhi yahin
+se.
+
+00:12:06.403 --> 00:12:13.481
+To aapne dekha — udhaar, stock, GST bill,
+payment, kharid, kharche aur reports, sab
+ek hi jagah.
+
+00:12:13.931 --> 00:12:22.677
+Lending & collections, Library, Gym &
+fitness aur Hotel & stays modules planned
+hain — ye abhi app mein nahi hain.
+
+00:12:23.127 --> 00:12:32.164
+Video pasand aaya ho to share kijiye.
+YourKhata ke saath apne business ka hisaab
+aaj hi shuru kijiye. Dhanyavaad!
