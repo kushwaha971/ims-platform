@@ -237,6 +237,10 @@ _REGISTRY: dict[str, tuple[int, bool]] = {
     "library_verification_open": (409, False),
     "library_verification_reopen_used": (409, False),
     "library_print_too_large": (409, False),  # D count, max
+    # ── ATT ── contracts §4: the attendance engine (FRD 00 ATT-02, ATT-04).
+    "attendance_blocked": (409, False),  # D reason, override_permission
+    "attendance_duplicate": (409, False),  # D mark_id
+    "entitlement_exhausted": (409, False),  # D total, used (+ expired)
 }
 
 # `unauthenticated` is emitted by the exception handler for DRF's

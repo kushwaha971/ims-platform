@@ -47,6 +47,7 @@ LOCAL_APP_LABELS = (
     "expenses",
     "library",  # ── B01 ── (Track L; G1: this literal is not checked against INSTALLED_APPS)
     "dues",  # ── DUE-01 ── the dues engine's migrations
+    "attendance",  # ── ATT ── the attendance engine's migrations
 )
 
 
@@ -152,9 +153,9 @@ def test_migrations_round_trip_on_a_scratch_database() -> None:
 
         for label in LOCAL_APP_LABELS:
             backward = _manage(SCRATCH_DB, "migrate", label, "zero", "--noinput")
-            assert backward.returncode == 0, (
-                f"{label} could not be unapplied:\n{backward.stdout}{backward.stderr}"
-            )
+            assert (
+                backward.returncode == 0
+            ), f"{label} could not be unapplied:\n{backward.stdout}{backward.stderr}"
 
         again = _manage(SCRATCH_DB, "migrate", "--noinput")
         assert again.returncode == 0, again.stdout + again.stderr

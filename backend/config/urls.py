@@ -30,6 +30,8 @@ api_v1 = [
     path("library/", include("apps.library.urls")),
     # ── dues ── DUE-01: the engine's read endpoints (GET only, ADR-041)
     path("dues/", include("apps.dues.urls")),
+    # ── ATT ── ATT-01…05: the engine's read endpoints (GET only, ADR-041)
+    path("attendance/", include("apps.attendance.urls")),
 ]
 
 urlpatterns = [

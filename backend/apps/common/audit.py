@@ -314,6 +314,19 @@ class AuditAction:
     LIBRARY_VERIFICATION_MISSING_WITHDRAWN = "library.verification.missing_withdrawn"
     LIBRARY_CARD_PRINTED = "library.card.printed"
     LIBRARY_NO_DUES_ISSUED = "library.no_dues.issued"
+    # ── ATT ── the attendance engine (contracts §5; the group, session and
+    # auto-close actions are the v1.1 additions of the Track T note, C9).
+    ATTENDANCE_GROUP_CREATED = "attendance.group.created"
+    ATTENDANCE_GROUP_UPDATED = "attendance.group.updated"
+    ATTENDANCE_SESSION_CANCELLED = "attendance.session.cancelled"
+    ATTENDANCE_MARK_CREATED = "attendance.mark.created"
+    ATTENDANCE_MARK_EDITED = "attendance.mark.edited"
+    ATTENDANCE_MARK_VOIDED = "attendance.mark.voided"
+    ATTENDANCE_MARK_OVERRIDDEN = "attendance.mark.overridden"
+    ATTENDANCE_VISITS_AUTO_CLOSED = "attendance.visits.auto_closed"
+    ATTENDANCE_ENTITLEMENT_GRANTED = "attendance.entitlement.granted"
+    ATTENDANCE_ENTITLEMENT_EXTENDED = "attendance.entitlement.extended"
+    ATTENDANCE_ENTITLEMENT_ENDED = "attendance.entitlement.ended"
 
 
 def diff_fields(

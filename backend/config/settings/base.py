@@ -63,6 +63,8 @@ INSTALLED_APPS = [
     "apps.library",
     # ── dues ── DUE-01: the recurring dues engine (ADR-041, contracts §2.1)
     "apps.dues",
+    # ── ATT ── ATT-01…05: the check-ins and attendance engine (ADR-041, contracts §2.3)
+    "apps.attendance",
 ]
 
 AUTH_USER_MODEL = "platform.User"

@@ -21,7 +21,15 @@ disk; anything I could not verify by reading is marked **(unverified)**.
 
 ## ATT-01…05 — the check-ins and attendance engine (`apps/attendance`)
 
-Status: **design written; not started**
+Status: **building (backend first, per open question 3's default); shared UI after F01**
+
+### Build log (backend)
+
+- **Step 1 — schema, registry, services, ATT-01 tests.** `apps/attendance` with the six tables
+  (`0001_initial`, dependencies `parties 0010` + `platform 0013` only), the policy/listener registry,
+  every service of §3 written, the hot-file blocks (`# ── ATT ──` in settings, urls, error codes,
+  audit; Part 22 §22.1.1 rows; the migration round-trip list; the error-code count test 167→170).
+  Tests: `tests/test_groups.py` (T-ATT-01-1…3, BR-5, EC-2/3, C17). Next: ATT-02 tests.
 
 ### Design note (review step)
 

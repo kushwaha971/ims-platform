@@ -51,7 +51,11 @@ def test_registry_is_closed_and_complete() -> None:
     # ── A4b ── +2: `deposit_insufficient`, `deposit_released`.
     # ── DUE-01 ── +1: `schedule_backdated_unconfirmed` (contracts §4).
     # ── B02 ── +30: library Appendix A (`apps/library/tests/test_vocabulary.py`).
-    assert len(REGISTRY) == 197
+    # ── ATT ── +3: `attendance_blocked`, `attendance_duplicate`, `entitlement_exhausted`.
+    assert len(REGISTRY) == 200
+    assert REGISTRY["attendance_blocked"] == (409, False)  # ATT
+    assert REGISTRY["attendance_duplicate"] == (409, False)  # ATT
+    assert REGISTRY["entitlement_exhausted"] == (409, False)  # ATT
     assert REGISTRY["schedule_backdated_unconfirmed"] == (409, False)  # DUE-01
     assert REGISTRY["deposit_insufficient"] == (409, False)
     assert REGISTRY["party_has_open_records"] == (409, False)
