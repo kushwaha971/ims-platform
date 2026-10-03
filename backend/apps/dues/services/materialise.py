@@ -333,7 +333,14 @@ def reapply_closed_days(
                 tenant=tenant,
                 schedule=schedule,
                 rule=rule,
-                after=max(d.period_start for d in dues),
+                # After the last due still standing: a replacement cancelled when
+                # a closure was lifted leaves its month free, so re-adding the
+                # closure must reuse that month, not march one further out
+                # (DUE-02 QA-DUE-02-1).
+                after=max(
+                    (d.period_start for d in dues if d.status != DueStatus.CANCELLED),
+                    default=max(d.period_start for d in dues),
+                ),
                 last_seq=dues[-1].seq,
                 wanted=deficit,
                 closed_days=closed_days,
