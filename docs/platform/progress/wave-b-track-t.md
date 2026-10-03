@@ -842,7 +842,7 @@ registerInvalidation('library', LIBRARY_MUTATIONS, LIBRARY_INVALIDATION, LIBRARY
 
 ## F03 — Catalogue screens (LIB-02 §7, §8)
 
-Status: **built; ready for QA** (data layer 8d94e53e; screens in the commit after it).
+Status: **built; QA round 1 fixed** (8d94e53e data layer, 6a961007 screens, bff25bbe QA tests).
 
 ### Build log (F03, 4 Oct, on dev)
 
@@ -879,6 +879,21 @@ categories page is one tap away. Omitted, because B05 omits them: holds, 12-mont
 borrower on a copy, loans on the copy page, the Holds column, the "has holds" chip, the year-range
 filter and "most issued" sort. The list's first request on mount may be aborted and re-sent once the
 URL seed lands.
+
+### QA round 1 (4 Oct 2026)
+
+Read every F03 file against LIB-02 §6–§9 and B05's actual serializers; failing tests in bff25bbe.
+
+| Id | Severity | Where | Fixed |
+|---|---|---|---|
+| QA-F03-1 | medium | `useCatalogueForm.showError` passed `applyServerErrors` no known fields, so every server 400 (`count`, `copies.price`, `isbn13`) went to the banner, not under its field | the drawers name their fields (`TITLE_FIELDS`, `COPIES_FIELDS`, `BOOK_FIELDS`) |
+| QA-F03-2 | low | the first field was labelled "Title or ISBN", but what is typed there is saved as the TITLE; an ISBN has its own field | labelled "Title" / "शीर्षक" |
+
+Checked and sound: a failed save frees the idempotency key on the server (`apps/common/idempotency.py`
+deletes the row on any non-2xx), so reusing the key after a 409 is safe; typed numbers past the count
+are dropped by both the schema and `toCopiesBody`; the lists' late-response guard; Withdraw, Archive and
+Delete offered only where the server allows them. Gates after the fix: jest 2849, lint, `tsc`, locales
+green. Still not looked at in a browser (the sandbox refuses the local port).
 
 ## Open questions for the lead
 

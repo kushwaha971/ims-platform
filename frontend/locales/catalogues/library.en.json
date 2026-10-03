@@ -156,7 +156,7 @@
   "library.form.sourceNote": "Supplier, donor or bill",
   "library.form.sourceNote.placeholder": "Bill 118, Sharma Book Depot",
   "library.form.subtitle": "Subtitle",
-  "library.form.title": "Title or ISBN",
+  "library.form.title": "Title",
   "library.form.title.required": "Enter the book's title.",
   "library.form.year.range": "Enter a year between 1500 and {max}.",
   "library.list.loading": "Loading…",

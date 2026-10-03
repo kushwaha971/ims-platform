@@ -156,7 +156,7 @@
   "library.form.sourceNote": "विक्रेता, दाता या बिल",
   "library.form.sourceNote.placeholder": "बिल 118, शर्मा बुक डिपो",
   "library.form.subtitle": "उपशीर्षक",
-  "library.form.title": "शीर्षक या ISBN",
+  "library.form.title": "शीर्षक",
   "library.form.title.required": "किताब का शीर्षक लिखें।",
   "library.form.year.range": "1500 और {max} के बीच का वर्ष लिखें।",
   "library.list.loading": "लोड हो रहा है…",

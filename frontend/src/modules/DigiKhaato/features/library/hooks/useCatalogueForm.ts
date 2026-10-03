@@ -93,6 +93,15 @@ export const titleFormValues = (title: TitleDetail): TitleFormValues => ({
   notes: title.notes,
 });
 
+/*
+ * The fields each drawer can anchor a server message on (QA-F03-1: with none
+ * named, every 400 went to the banner above the form instead of under the
+ * field it was about).
+ */
+const TITLE_FIELDS = Object.keys(emptyTitle());
+const COPIES_FIELDS = Object.keys(emptyCopies(''));
+const BOOK_FIELDS = [...TITLE_FIELDS, 'copies'];
+
 /** `copies.location_id` → `copies.locationId`; `isbn13` is the form's `isbn`. */
 const toFormPath = (wire: string, prefix: string): string =>
   prefix +
@@ -170,7 +179,8 @@ export const useCatalogueForm = (): CatalogueFormResult => {
       error: ApiErrorShape,
       setError: UseFormSetError<T>,
       copiesPrefix: string,
-      numbers: readonly string[]
+      numbers: readonly string[],
+      knownFields: readonly string[]
     ): void => {
       if (error.code === 'validation_error') {
         rotate();
@@ -185,7 +195,7 @@ export const useCatalogueForm = (): CatalogueFormResult => {
             ])
           ),
         };
-        setFormErrors(applyServerErrors(translated, setError, []));
+        setFormErrors(applyServerErrors(translated, setError, knownFields));
         return;
       }
       if (error.code === 'library_accession_taken') {
@@ -241,7 +251,9 @@ export const useCatalogueForm = (): CatalogueFormResult => {
         router.push(`${ROUTES.LIBRARY_CATALOGUE}/${result.payload.title.id}`);
         return;
       }
-      if (result.payload) showError(result.payload, setError, 'copies.', copies.numbers);
+      if (result.payload) {
+        showError(result.payload, setError, 'copies.', copies.numbers, BOOK_FIELDS);
+      }
     },
     [dispatch, key, rotate, close, announce, router, showError]
   );
@@ -259,7 +271,7 @@ export const useCatalogueForm = (): CatalogueFormResult => {
         announce(result.payload);
         return;
       }
-      if (result.payload) showError(result.payload, setError, '', copies.numbers);
+      if (result.payload) showError(result.payload, setError, '', copies.numbers, COPIES_FIELDS);
     },
     [dispatch, key, rotate, close, announce, showError]
   );
@@ -277,7 +289,7 @@ export const useCatalogueForm = (): CatalogueFormResult => {
         dispatch(showSnackbar({ severity: 'success', id: 'library.title.saved' }));
         return;
       }
-      if (result.payload) showError(result.payload, setError, '', []);
+      if (result.payload) showError(result.payload, setError, '', [], TITLE_FIELDS);
     },
     [dispatch, close, showError]
   );
