@@ -73,6 +73,21 @@ reports (C2) and the party panel (C15); map `uq_attendance_group_subject` lookup
 desk group; grant `gym.attendance.edit_closed` per its FRD (C5); pass `party_ids` to
 `not_visited_since` (C14).
 
+### QA round 1 (3 Oct, independent QA)
+
+Failing tests: `backend/apps/attendance/tests/test_qa_att.py` (commit cea64bbc). Each fails on fc8decfe for its stated reason.
+
+| Id | Sev | Where | Test | Expected |
+|---|---|---|---|---|
+| QA-ATT-1 | High | `services/marks.py:238-240` (window measured from `at`); R57 upsert `:317-349` has no window check | `test_qa_att_1_a_session_check_in_after_the_window_needs_edit_closed`, `…_cannot_flip_absent_to_present` | ATT-03 BR-3 / C10: `check_in(session_id=…)` after `session.ends_at + edit_window_hours` needs `<module>.attendance.edit_closed`. Today anyone can add a present mark to, or turn A into P in, a closed register by leaving `at` empty. |
+| QA-ATT-2 | High | `services/marks.py:644-670` (`roll_call` insert branch) | `test_qa_att_2_roll_call_after_the_window_cannot_add_marks_without_edit_closed` | BR-3: after the window, roll-call cannot insert a mark (which turns the register's implicit "A" into "P" and moves the %) without `edit_closed`. Only changed marks are checked today. |
+| QA-ATT-3 | Medium | `services/marks.py:93-99` + `:645-656` (roll-call writes `context_type=""`) | `test_qa_att_3_a_roll_call_mark_is_heard_by_the_modules_listener_on_create_and_void` | Contracts §5 `on_marked` (created/edited/voided), ATT-03 BR-5: roll-call marks and their edits/voids reach no listener. May need a lead ruling on how they are routed (e.g. by the group's module). |
+| QA-ATT-4 | Low | `services/groups.py:372-433` | `test_qa_att_4_a_time_change_does_not_add_a_second_session_to_a_marked_day` | ATT-01 BR-5: a time change keeps the marked 06:00 session but also adds 07:00 on the same marked day, so the register and roll-call show a class that never happened. |
+| QA-ATT-5 | Low | `roll_call` has no `is_active` check (`marks.py:598-609`); `generate_sessions` returns early for an inactive group (`groups.py:370`) | `test_qa_att_5_roll_call_refuses_an_inactive_group_like_check_in_does`, `…_does_not_leave_eight_weeks_of_scheduled_sessions` | EC-2 (extended to marks in deviation 3): `check_in` refuses an inactive group but `roll_call` writes marks to it. Deactivating also leaves up to 8 weeks of future scheduled sessions behind. |
+| QA-ATT-6 | High | lock order: `check_in` locks party, then the mark FK key-share-locks the session; `roll_call` locks the session `FOR UPDATE`, then the parties (`marks.py:599-629`) | `test_qa_att_6_a_desk_check_in_and_a_roll_call_on_one_session_do_not_deadlock` (two connections) | EC-2 says both writes succeed and the later one wins. Today Postgres raises `deadlock detected` (a 500). |
+
+**Checked and sound:** the dedupe and one-per-day race (party lock); the pack at `total − 1` race; the entitlement replay and C3 `seq`; give-back on void/edit; `recalc_entitlements --check`; the tenancy of every service (`for_tenant` / `lock_party`, foreign ids give 404); override needs both reason and codename, and `None` means nobody can override; the edit and void window for existing marks; engine reads are gated, unreadable modules are hidden and a foreign group gives 404; the R56 off-guard counts earlier days only and registers once; percent rounding uses `half_up`. The existing 69 tests pass. **Not checked:** migration reversibility and EXPLAIN plans (covered by the dev's tests); `not_visited_since` leaving out `late` marks (the FRD says "visit or present" literally, so it is an observation only); tenants west of IST and the 00:05 IST close job.
+
 ### Design note (review step)
 
 **Inputs read.** FRD 00 Part C (ATT-01…05, `frd/00-core-and-engines.md:3001-3455`) and §0.3
