@@ -29,7 +29,7 @@ wherever they differ.
 | B02 codenames, errors, audit | done (QA closed: 536d9436, CR 63f0a8db) | 8824cdc4 |
 | B03 settings, seed, numbering | built; ready for QA | 49ecdd0f |
 | B04 ISBN and accession helpers | done (QA closed: bac48ccc) | ad287ba5 |
-| B05 catalogue | built; ready for QA | (this commit) |
+| B05 catalogue | built; ready for QA | 1072746b |
 | B06 membership types, loan rules | design written; not started | — |
 | B08 due dates | design written; not started | — |
 | B10 charges and waivers | design written; not started | — |
