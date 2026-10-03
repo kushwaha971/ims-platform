@@ -30,6 +30,8 @@ DEFAULT_EDIT_WINDOW_HOURS = 24
 #: BR-5 timetable change / closed day: the reasons the engine writes itself.
 REASON_TIMETABLE_CHANGED = "Timetable changed"
 REASON_CLOSED = "Closed"
+#: QA-ATT-5: future sessions of a group that was switched off.
+REASON_GROUP_STOPPED = "Group stopped"
 
 
 class MarkKind(models.TextChoices):

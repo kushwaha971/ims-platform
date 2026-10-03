@@ -1,13 +1,21 @@
 """Check-in, check-out, roll-call, edit and void (FRD 00 ATT-02, ATT-03; contracts §2.3).
 
 ── Order inside `check_in` (the hottest desk path) ───────────────────────────
-1. `at` (default now) more than 5 minutes ahead → 400; older than the group's
-   edit window (24 h without a group) → 400 — without that a backdated
-   check-in walks round ATT-03's closed-edit rule (C10).
-2. Lock the party (`lock_party`; lock order party → entitlement → mark).
-   Unknown → 404; archived → 409 `party_archived`.
-3. Group / session: same module, active, not cancelled (BR-4); a presence
-   group needs a session, a session takes only expected members (ATT-03 BR-1).
+1. `at` (default now) more than 5 minutes ahead → 400. A visit older than its
+   group's edit window (24 h without a group) → 400 (C10); a SESSION mark after
+   `session.ends_at + edit_window_hours` needs `<module>.attendance.edit_closed`
+   (QA-ATT-1), whatever `at` says.
+2. Lock the party (`lock_party`). Unknown → 404; archived → 409 `party_archived`.
+3. Group / session (the session row locked second): same module, active, not
+   cancelled (BR-4); a presence group needs a session, a session takes only
+   expected members (ATT-03 BR-1).
+
+── The one lock order (QA-ATT-6) ─────────────────────────────────────────────
+Every attendance write locks, in this order: the parties (several in id
+order) → the session → the entitlement → the marks. `check_in` takes one party
+then its session; `roll_call` takes its parties then the session; `edit_mark`
+and `void_mark` take the mark's party first. Two writers on one session
+therefore queue on the first party they share instead of deadlocking.
 4. The policy registered for `context_type` (EC-2: unregistered is refused).
    `block` without `override_reason` → 409 `attendance_blocked`; with it, the
    reason (3–160) AND the policy's `override_permission` held by the actor,
@@ -180,9 +188,12 @@ def _load_place(
     group: Group | None = None
     session: Session | None = None
     if session_id is not None:
+        # Lock order (QA-ATT-6): the party is already locked; the session
+        # comes second, as in roll_call.
         session = (
             Session.objects.for_tenant(ctx.tenant)
             .select_related("group")
+            .select_for_update(of=("self",), no_key=True)
             .filter(pk=session_id)
             .first()
         )
@@ -235,9 +246,15 @@ def check_in(
         group, session = _load_place(
             ctx=ctx, module=module, group_id=group_id, session_id=session_id
         )
-        window = group.edit_window_hours if group else DEFAULT_EDIT_WINDOW_HOURS
-        if at < now - dt.timedelta(hours=window):
-            raise ValidationFailed({"at": ["This is earlier than marks may still be changed."]})
+        if session is not None:
+            # QA-ATT-1: a session's register closes `edit_window_hours` after
+            # the SESSION ends, whatever `at` says — for a new mark and for the
+            # R57 upsert of an absent one alike.
+            _require_session_open(ctx, session, now)
+        else:
+            window = group.edit_window_hours if group else DEFAULT_EDIT_WINDOW_HOURS
+            if at < now - dt.timedelta(hours=window):
+                raise ValidationFailed({"at": ["This is earlier than marks may still be changed."]})
         on = local_day(ctx.tenant, session.starts_at if session else at)
         if (
             session is not None
@@ -485,19 +502,45 @@ def close_open_visits(*, tenant: Any, on: dt.date) -> int:
 # ── edits ────────────────────────────────────────────────────────────────────
 
 
-def _check_window(ctx: Any, mark: Mark, now: dt.datetime) -> None:
-    """ATT-03 BR-3: after the window only `<module>.attendance.edit_closed`."""
-    hours = mark.group.edit_window_hours if mark.group_id else DEFAULT_EDIT_WINDOW_HOURS
-    if mark.session_id:
-        anchor = mark.session.ends_at
-    else:
-        anchor = mark.check_in_at or mark.created_at
+def _require_open(
+    ctx: Any, *, module: str, anchor: dt.datetime, hours: int, now: dt.datetime
+) -> None:
+    """ATT-03 BR-3: after `anchor + hours` only `<module>.attendance.edit_closed`."""
     if now > anchor + dt.timedelta(hours=hours) and not actor_holds(
-        ctx, edit_closed_codename(mark.module)
+        ctx, edit_closed_codename(module)
     ):
         raise PermissionDenied(
             "Marks can no longer be changed here. Ask someone allowed to change closed marks."
         )
+
+
+def _require_session_open(ctx: Any, session: Session, now: dt.datetime) -> None:
+    """The closed-register rule for ANY write into a session — an insert by
+    check-in or roll-call as much as an edit (QA-ATT-1, QA-ATT-2): a held
+    session's missing mark already reads "A" in the register, so adding one
+    after the window changes the register exactly as an edit would."""
+    _require_open(
+        ctx,
+        module=session.group.module,
+        anchor=session.ends_at,
+        hours=session.group.edit_window_hours,
+        now=now,
+    )
+
+
+def _check_window(ctx: Any, mark: Mark, now: dt.datetime) -> None:
+    """ATT-03 BR-3 for an existing mark: from the session's end, or the visit's check-in."""
+    if mark.session_id:
+        _require_session_open(ctx, mark.session, now)
+        return
+    hours = mark.group.edit_window_hours if mark.group_id else DEFAULT_EDIT_WINDOW_HOURS
+    _require_open(
+        ctx,
+        module=mark.module,
+        anchor=mark.check_in_at or mark.created_at,
+        hours=hours,
+        now=now,
+    )
 
 
 def _locked_mark(ctx: Any, mark_id: Any) -> Mark:
@@ -596,17 +639,29 @@ def roll_call(*, ctx: Any, session_id: UUID, marks: dict[UUID, str]) -> list[Mar
     if errors:
         raise ValidationFailed(errors)
     with transaction.atomic():
-        session = (
-            Session.objects.for_tenant(ctx.tenant)
-            .select_related("group")
-            .select_for_update(of=("self",))
-            .filter(pk=session_id)
-            .first()
-        )
-        if session is None:
+        head = Session.objects.for_tenant(ctx.tenant).filter(pk=session_id).first()
+        if head is None:
             raise NotFound()
+        # Lock order (QA-ATT-6), the one every attendance write follows:
+        # the parties (in id order), then the session, then marks and
+        # entitlements. check_in locks its one party and then the session; a
+        # roll-call that took the session first and the parties second was
+        # the opposite-order pair Postgres answers with `deadlock detected`.
+        list(
+            Party.objects.select_for_update()
+            .filter(tenant=ctx.tenant, pk__in=list(wanted))
+            .order_by("pk")
+            .values_list("pk", flat=True)
+        )
+        session = (
+            Session.objects.select_related("group")
+            .select_for_update(of=("self",), no_key=True)
+            .get(pk=head.pk)
+        )
         if session.status == SessionStatus.CANCELLED:
             raise ValidationFailed({"session_id": ["This session was cancelled."]})
+        if not session.group.is_active:
+            raise ValidationFailed({"group_id": ["This group is no longer active."]})
         if not wanted:
             return []
         expected = {
@@ -620,13 +675,6 @@ def roll_call(*, ctx: Any, session_id: UUID, marks: dict[UUID, str]) -> list[Mar
                 )
         if errors:
             raise ValidationFailed(errors)
-        # Party locks first, in id order, so two roll-calls never deadlock.
-        list(
-            Party.objects.select_for_update()
-            .filter(tenant=ctx.tenant, pk__in=list(wanted))
-            .order_by("pk")
-            .values_list("pk", flat=True)
-        )
         current = {
             str(m.party_id): m
             for m in Mark.objects.select_for_update(of=("self",))
@@ -636,6 +684,11 @@ def roll_call(*, ctx: Any, session_id: UUID, marks: dict[UUID, str]) -> list[Mar
         now = timezone.now()
         actor = getattr(ctx, "actor", None)
         day = local_day(ctx.tenant, session.starts_at)
+        if set(wanted) - set(current):
+            _require_session_open(ctx, session, now)  # QA-ATT-2: inserts too
+        # QA-ATT-3: a roll-call mark carries its module's registered context, so
+        # the vertical's listeners hear its create, edits and void.
+        context_type = registry.context_for_module(session.group.module)
         written: list[Mark] = []
         any_new = False
         for key in sorted(wanted):
@@ -652,6 +705,7 @@ def roll_call(*, ctx: Any, session_id: UUID, marks: dict[UUID, str]) -> list[Mar
                     on_date=day,
                     status=status,
                     method=Method.ROLL_CALL,
+                    context_type=context_type,
                     marked_by=actor,
                 )
                 any_new = True

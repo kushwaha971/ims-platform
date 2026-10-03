@@ -120,6 +120,21 @@ def listeners_for(context_type: str) -> list[RegisteredListener]:
     return [entry for entry in _LISTENERS if entry.context_type == context_type]
 
 
+def context_for_module(module: str) -> str:
+    """The context type a module's group marks carry when no check-in named one
+    (QA-ATT-3 ruling: a roll-call mark takes its group's module's registered
+    context). The module's first registered policy, else its first listener's;
+    "" when the module registered neither. A vertical with several context
+    types registers the one its groups stand for first."""
+    for entry in _POLICIES.values():
+        if entry.module == module:
+            return entry.context_type
+    for listener in _LISTENERS:
+        if listener.module == module:
+            return listener.context_type
+    return ""
+
+
 def registered_policies() -> dict[str, RegisteredPolicy]:
     """Every registered policy, by context type (a copy) — for the contract test."""
     return dict(_POLICIES)

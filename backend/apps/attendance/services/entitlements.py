@@ -3,7 +3,7 @@
 `used` is a CACHE of Σ `attendance_entitlement_use.delta` (BR-1), moved one
 use at a time under a row lock on the entitlement and replayed by
 `manage.py recalc_entitlements`. The lock order every caller follows is
-party → entitlement → mark (`check_in`, `roll_call`, `edit_mark`, `void_mark`
+parties → session → entitlement → mark (`check_in`, `roll_call`, `edit_mark`, `void_mark`
 all lock the party first).
 
 Per mark, Σ delta is 0 or 1 and the signs alternate: a mark consumes at most

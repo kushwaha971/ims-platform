@@ -86,6 +86,25 @@ Failing tests: `backend/apps/attendance/tests/test_qa_att.py` (commit cea64bbc).
 | QA-ATT-5 | Low | `roll_call` has no `is_active` check (`marks.py:598-609`); `generate_sessions` returns early for an inactive group (`groups.py:370`) | `test_qa_att_5_roll_call_refuses_an_inactive_group_like_check_in_does`, `…_does_not_leave_eight_weeks_of_scheduled_sessions` | EC-2 (extended to marks in deviation 3): `check_in` refuses an inactive group but `roll_call` writes marks to it. Deactivating also leaves up to 8 weeks of future scheduled sessions behind. |
 | QA-ATT-6 | High | lock order: `check_in` locks party, then the mark FK key-share-locks the session; `roll_call` locks the session `FOR UPDATE`, then the parties (`marks.py:599-629`) | `test_qa_att_6_a_desk_check_in_and_a_roll_call_on_one_session_do_not_deadlock` (two connections) | EC-2 says both writes succeed and the later one wins. Today Postgres raises `deadlock detected` (a 500). |
 
+**Fixed (3 Oct, dev, commit recorded in the status line below):** all six; the eight QA tests pass
+and the earlier 69 stay green (`apps/attendance` + the policy contract test: 78 passed;
+`tests/architecture`: 113 passed, 4 skipped).
+- QA-ATT-1: `check_in(session_id=…)` applies the closed-register rule from `session.ends_at +
+  edit_window_hours` (`_require_session_open`) before the policy, for an insert and for the R57
+  upsert alike; `at` staleness still governs visits. One existing test moved its "next morning"
+  clock from 08:00 to 06:30 to stay inside the 24 h window it was meant to exercise.
+- QA-ATT-2: `roll_call` checks the same rule when it would insert any mark.
+- QA-ATT-3 (lead ruling): a roll-call mark carries `registry.context_for_module(group.module)` — the
+  module's first registered policy context, else its first listener's — so listeners hear its
+  create, edits and void.
+- QA-ATT-4: regeneration does not add a session on a day whose old-time session keeps live marks
+  (`_retire` returns those days).
+- QA-ATT-5: `roll_call` refuses an inactive group; `update_group(is_active=False)` deletes (or, with
+  only voided marks, cancels as "Group stopped") the group's scheduled sessions that have not started.
+- QA-ATT-6: one lock order for every attendance write — parties (id order) → session → entitlement →
+  marks. `check_in` locks its session row (`FOR NO KEY UPDATE`) right after the party; `roll_call`
+  locks its parties before the session. Documented in `services/marks.py`.
+
 **Checked and sound:** the dedupe and one-per-day race (party lock); the pack at `total − 1` race; the entitlement replay and C3 `seq`; give-back on void/edit; `recalc_entitlements --check`; the tenancy of every service (`for_tenant` / `lock_party`, foreign ids give 404); override needs both reason and codename, and `None` means nobody can override; the edit and void window for existing marks; engine reads are gated, unreadable modules are hidden and a foreign group gives 404; the R56 off-guard counts earlier days only and registers once; percent rounding uses `half_up`. The existing 69 tests pass. **Not checked:** migration reversibility and EXPLAIN plans (covered by the dev's tests); `not_visited_since` leaving out `late` marks (the FRD says "visit or present" literally, so it is an observation only); tenants west of IST and the 00:05 IST close job.
 
 ### Design note (review step)

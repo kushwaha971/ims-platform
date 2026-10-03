@@ -32,6 +32,7 @@ from apps.attendance.constants import (
     MODULE_MAX,
     NAME_MAX,
     REASON_CLOSED,
+    REASON_GROUP_STOPPED,
     REASON_MAX,
     REASON_MIN,
     REASON_TIMETABLE_CHANGED,
@@ -277,6 +278,8 @@ def update_group(*, ctx: Any, group_id: UUID, data: dict) -> Group:
                 before=old,
                 after=new,
             )
+        if "is_active" in data and not group.is_active:
+            _retire_future(ctx.tenant, group)
         timetable = {"session_start", "session_minutes", "recurrence", "is_active"} & set(data)
         if timetable and group.freq is not None and group.is_active:
             generate_sessions(
@@ -356,6 +359,53 @@ def local_start(tenant: Any, day: dt.date, at: dt.time) -> dt.datetime:
     return dt.datetime.combine(day, at, tzinfo=tenant_timezone(tenant))
 
 
+def _retire(tenant: Any, rows: list[Session], *, reason: Any) -> set[dt.date]:
+    """Sessions the timetable no longer wants. No mark row at all → deleted;
+    only voided marks → cancelled with `reason(local_day)` (the FK is
+    RESTRICT); a live mark → untouched, history. Returns the local days of
+    the untouched, marked ones."""
+    if not rows:
+        return set()
+    marks: dict[Any, bool | None] = dict.fromkeys([row.id for row in rows], None)
+    for session_id, voided in Mark.objects.filter(session_id__in=list(marks)).values_list(
+        "session_id", "voided_at"
+    ):
+        marks[session_id] = bool(marks[session_id]) or voided is None
+    tz = tenant_timezone(tenant)
+    drop: list[Any] = []
+    cancel: dict[str, list[Any]] = {}
+    kept: set[dt.date] = set()
+    for row in rows:
+        day = row.starts_at.astimezone(tz).date()
+        if marks[row.id] is None:
+            drop.append(row.id)
+        elif marks[row.id] is False:
+            cancel.setdefault(reason(day), []).append(row.id)
+        else:
+            kept.add(day)
+    if drop:
+        Session.objects.filter(pk__in=drop).delete()
+    for text, ids in cancel.items():
+        Session.objects.filter(pk__in=ids).update(
+            status=SessionStatus.CANCELLED, cancel_reason=text
+        )
+    return kept
+
+
+def _retire_future(tenant: Any, group: Group) -> None:
+    """QA-ATT-5, EC-2: a deactivated group keeps its history and loses the
+    scheduled sessions that have not started — they are not history, and left
+    behind they list on /sessions and fill next month's register."""
+    from django.utils import timezone
+
+    rows = list(
+        Session.objects.filter(
+            group=group, status=SessionStatus.SCHEDULED, starts_at__gt=timezone.now()
+        ).only("id", "starts_at", "status")
+    )
+    _retire(tenant, rows, reason=lambda _day: REASON_GROUP_STOPPED)
+
+
 def generate_sessions(*, tenant: Any, group_id: UUID, until: dt.date) -> int:
     """Contracts §2.3: rows created. Idempotent; see the module docstring."""
     until = _date(until)
@@ -391,32 +441,11 @@ def generate_sessions(*, tenant: Any, group_id: UUID, until: dt.date) -> int:
             for row in existing
             if row.status != SessionStatus.CANCELLED and row.starts_at not in wanted
         ]
-        if stale:
-            marks = dict.fromkeys([row.id for row in stale], None)
-            for session_id, voided in Mark.objects.filter(session_id__in=list(marks)).values_list(
-                "session_id", "voided_at"
-            ):
-                live = voided is None
-                marks[session_id] = (marks[session_id] or False) or live
-            tz = tenant_timezone(tenant)
-            drop, cancel_closed, cancel_changed = [], [], []
-            for row in stale:
-                state = marks[row.id]
-                if state is None:
-                    drop.append(row.id)
-                elif state is False:  # only voided marks: keep the row, cancelled
-                    local_day = row.starts_at.astimezone(tz).date()
-                    (cancel_closed if local_day in closed else cancel_changed).append(row.id)
-            if drop:
-                Session.objects.filter(pk__in=drop).delete()
-            if cancel_closed:
-                Session.objects.filter(pk__in=cancel_closed).update(
-                    status=SessionStatus.CANCELLED, cancel_reason=REASON_CLOSED
-                )
-            if cancel_changed:
-                Session.objects.filter(pk__in=cancel_changed).update(
-                    status=SessionStatus.CANCELLED, cancel_reason=REASON_TIMETABLE_CHANGED
-                )
+        marked_days = _retire(
+            tenant,
+            stale,
+            reason=lambda day: REASON_CLOSED if day in closed else REASON_TIMETABLE_CHANGED,
+        )
         new = [
             Session(
                 tenant=tenant,
@@ -426,7 +455,9 @@ def generate_sessions(*, tenant: Any, group_id: UUID, until: dt.date) -> int:
                 status=SessionStatus.SCHEDULED,
             )
             for starts_at in sorted(wanted)
-            if starts_at not in have
+            # QA-ATT-4, BR-5: a day whose (old-time) session carries live marks
+            # keeps that one session; the new time starts on the next unmarked day.
+            if starts_at not in have and wanted[starts_at] not in marked_days
         ]
         if new:
             Session.objects.bulk_create(new, ignore_conflicts=True)

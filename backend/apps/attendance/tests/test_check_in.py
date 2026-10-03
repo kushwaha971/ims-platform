@@ -249,7 +249,7 @@ def test_session_marks_take_the_sessions_date_and_hold_it(
     party = make_party()
     set_members(ctx=ctx, group_id=batch.id, party_id=party.id, from_on=TODAY)
     session = Session.objects.filter(group=batch).order_by("starts_at").first()
-    clock.set(ist(2026, 10, 6, 8, 0))
+    clock.set(ist(2026, 10, 6, 6, 30))  # next morning, inside the 24 h window
     mark = visit(ctx, party, session_id=session.id)["mark"]
     assert mark.on_date == TODAY
     session.refresh_from_db()
