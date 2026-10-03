@@ -19,6 +19,8 @@
   "notifications.type.deletion_cancelled.title": "{actor} ने इस बिज़नेस को हटाना रद्द किया",
   "notifications.type.deletion_requested.body": "आपने नहीं किया? सेटिंग्स → आपका डेटा से रद्द करें।",
   "notifications.type.deletion_requested.title": "{actor} ने इस बिज़नेस को {date} को हटाने का अनुरोध किया",
+  "notifications.type.dues.run_failed.body": "बाकी सब जोड़ दिया गया। इन्हें आज रात फिर से जोड़ने की कोशिश होगी।",
+  "notifications.type.dues.run_failed.title": "{date} को {failed} नियमित शुल्क नहीं जोड़े जा सके",
   "notifications.type.export_failed.body": "कम फ़िल्टर के साथ कोशिश करें।",
   "notifications.type.export_failed.title": "आपका एक्सपोर्ट तैयार नहीं हो सका",
   "notifications.type.export_ready.body": "लिंक 7 दिन चलेगा।",

@@ -26,6 +26,8 @@ export const KNOWN_TYPES: ReadonlySet<string> = new Set([
   'deletion_cancelled',
   'support_access_request',
   'support_session_started',
+  // ── dues ── DUE-02 BR-2: the nightly run could not add some recurring charges (owners).
+  'dues.run_failed',
 ]);
 
 /**

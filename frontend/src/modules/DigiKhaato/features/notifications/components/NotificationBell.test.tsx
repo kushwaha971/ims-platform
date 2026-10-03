@@ -7,7 +7,7 @@ import { renderWithProviders } from 'src/tests/renderWithProviders';
 
 import { resetNotifications } from '../redux/notificationSlice';
 import { fetchUnreadCount } from '../redux/notificationThunk';
-import { badgeText, safeRoute, titleView } from '../view-model/notificationDisplay';
+import { badgeText, bodyId, safeRoute, titleView } from '../view-model/notificationDisplay';
 
 import { NotificationBell } from './NotificationBell';
 
@@ -106,6 +106,33 @@ describe('safeRoute / titleView', () => {
       values: {},
       fallback: DUE.title,
     });
+  });
+});
+
+describe('dues.run_failed (DUE-02 C-22)', () => {
+  /**
+   * A Hindi owner was shown the server's English "N recurring charges could not
+   * be added" because the client had no words for the engine's type; it is now
+   * rendered from the catalogue in both languages, with its params.
+   */
+  const FAILED: AppNotification = {
+    ...DUE,
+    type: 'dues.run_failed',
+    params: { failed: '2', date: '2026-11-01' },
+  };
+
+  it('is a known type with a title and body in English and Hindi', () => {
+    const view = titleView(FAILED);
+    expect(view.id).toBe('notifications.type.dues.run_failed.title');
+    expect(view.values).toMatchObject({ failed: '2', date: '2026-11-01' });
+    expect(bodyId(FAILED)).toBe('notifications.type.dues.run_failed.body');
+    for (const lang of ['en', 'hi']) {
+      const catalogue = require(
+        `../../../../../../locales/catalogues/notifications.${lang}.json`
+      ) as Record<string, string>;
+      expect(catalogue['notifications.type.dues.run_failed.title']).toContain('{failed}');
+      expect(catalogue['notifications.type.dues.run_failed.body']).toBeTruthy();
+    }
   });
 });
 

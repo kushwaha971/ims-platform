@@ -19,6 +19,8 @@
   "notifications.type.deletion_cancelled.title": "{actor} cancelled the deletion of this business",
   "notifications.type.deletion_requested.body": "Not you? Cancel it from Settings → Your data.",
   "notifications.type.deletion_requested.title": "{actor} asked to delete this business on {date}",
+  "notifications.type.dues.run_failed.body": "Everything else was added. These will be tried again tonight.",
+  "notifications.type.dues.run_failed.title": "{failed} recurring charges could not be added on {date}",
   "notifications.type.export_failed.body": "Try a smaller set of filters.",
   "notifications.type.export_failed.title": "Your export could not be prepared",
   "notifications.type.export_ready.body": "The link works for 7 days.",
