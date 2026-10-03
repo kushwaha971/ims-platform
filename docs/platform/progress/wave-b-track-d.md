@@ -27,7 +27,7 @@ from reading the code, with the file and function named).
 | Task | State |
 |---|---|
 | DUE-01 plans, schedules, preview, backdated confirm, subject registry, read API | **built — ready for QA** (see "Built" under DUE-01) |
-| DUE-02 daily run (ledger, then document posting), catch-up fuzz, `skip` keeps count | design written; not started |
+| DUE-02 daily run (ledger, then document posting), catch-up fuzz, `skip` keeps count | **built; ready for QA** (`6b212b35`, `4f8c4aa4`; see "Built" under DUE-02) |
 | DUE-03 targets, settlement split, `plan_allocation`, `payoff`, origin listener, advances, replay, `recalc_dues` | design outline written; not started |
 | DUE-05 pause, resume, reschedule | not started |
 | DUE-04 penalties, waivers, `reverse_adjustment`, document-mode adjustments, end, cancel, slip | not started |
@@ -512,7 +512,7 @@ document posting (origins `dues_due`, `dues_adjustment`), catch-up fuzz; `skip` 
 
 | FRD DUE-02 step | Built in |
 |---|---|
-| 1 Extend (materialise, closed-day rule) | DUE-02 (reuses DUE-01's `materialise`) |
+| 1 Extend (materialise, closed-day rule) | DUE-02 (`services/materialise.py`; DUE-01 had no reusable `materialise`) |
 | 2 Post (ledger, document, expectation) | DUE-02 |
 | 3 Overdue | DUE-02 |
 | 4 Once-off penalties, 5 accruing penalties | **DUE-04** (hook point left in the run; C-14) |
@@ -645,6 +645,83 @@ amount_due`, status re-derived) — because a registered origin must pass the sh
 - **Lock-order note**: the run takes party → due → (new) document; a void takes party → document →
   (`on_void`) due. Different relative order, but both hold the party lock first, so they serialise
   per party and cannot deadlock; the new document is invisible to anyone else until commit.
+
+### Built (3 Oct 2026)
+
+Commits on `dev`: `6b212b35` the run, document and expectation posting, the `dues_due` origin;
+`4f8c4aa4` catch-up property, concurrency, `EXPLAIN` and scale tests; plus this record.
+
+**What landed.** `apps/dues/services/run.py` (`run_for_tenant`, `RunReport`, `run_schedule`,
+`mark_overdue`, `postable_dues`), `services/materialise.py` (`extend`, `reapply_closed_days`,
+`ClosedDays` — one calendar read per module per run), `services/posting.py` (document and
+expectation branches beside DUE-01's; `open_status`, `document_lines`), `origins.py`
+(`DuesDueOrigin`, `resolve_dues`, `resolve_components`), `tasks.py` (`dues.run`,
+`dues.run_for_tenant`), `management/commands/dues_run.py`, wiring in `apps.py` (schedule at 00:30
+IST, origin `dues_due` with module `dues`, two source resolvers, notification type
+`dues.run_failed`). `services/schedules.py` no longer refuses a backdated document/expectation
+schedule (C-10 lifted). Tests: `tests/test_run.py` (21), `test_run_document.py` (14, the
+`dues_due` FACTORIES row), `test_run_catch_up.py` (seeded property, 6 cases × 60 days),
+`test_run_scale.py` (concurrency ×20; `EXPLAIN` and 5,000-schedule timing, both `slow`).
+
+**Shared files (own blocks only):** `apps/common/audit.py` (`# ── DUE-02 ──`
+`DUES_DUE_CANCELLED`), `tests/contracts/test_document_port.py` (`# ── dues ──` FACTORIES row).
+**Also edited, outside any block:** `apps/common/tests/test_document_seam.py` used `"dues_due"` as a
+made-up probe name; with the real origin registered at start-up its rival check fired (2 failures
+on dev). The probe is renamed `"probe_origin"`; assertions unchanged.
+
+**Gates.** `apps/dues` 107 passed (+2 slow passed separately: EXPLAIN 1.8 s, 5,000 schedules
+~22 s of run time, ~43 s with the fixture); `tests/architecture` + `tests/contracts` +
+`apps/common/tests` + `apps/notifications` 523 passed, 12 skipped; `apps/sales` green in the
+same session; `makemigrations --check` clean; black/isort/flake8 clean on `apps/dues`. No
+frontend change. The catch-up property was checked against a planted defect (catch-up lines
+dated by the run's day): it fails on case 0.
+
+**No screen.** The run has none (FRD §7); the bell shows `dues.run_failed` (see C-22).
+
+**Deviations from the note.**
+- There was no reusable `materialise` in DUE-01; `extend` computes the open-ended series from
+  `materialised_until + 1` with the snapshot rule (re-running `compute_dues` from the start would
+  hit `MAX_DUES` on a long daily schedule). Seq continues from the last due.
+- Calendar re-application (EC-3) uses `period_start` as each due's nominal date (every period
+  starts on its occurrence; a stub on its start). Candidates are `scheduled`/`skipped` dues with
+  `period_start >= today`; posted dues are never touched.
+- R44 on re-application: a counted schedule (count, split, supplied) whose due becomes skipped
+  gains a replacement after its last occurrence; the un-posted amounts (and components) are an
+  ordered list re-assigned to the live dues, so a split total still adds up; a lifted closure
+  cancels the surplus trailing due ("Business days changed", audited `dues.due.cancelled`). A
+  LISTED schedule (explicit dates, `once`, supplied) or a rule that runs out falls back to `move`
+  rather than billing less than agreed.
+- Paused schedules: steps 1–2 run for `active` only (BR-4); step 3 (overdue) runs for any
+  schedule, so an ended membership's unpaid month still goes late.
+- Overdue is per schedule under its locks (`SELECT … FOR UPDATE` in `(due_on, seq)` then a
+  conditional update), not one tenant-wide `UPDATE`, which could lock dues in a different order
+  than a payment and deadlock.
+- `RunReport.skipped` counts dues skipped by the closed-day rule this run (materialised skipped
+  plus newly skipped on re-application).
+- Document lines: the schedule's heads when they add up to the due's amount, else one line
+  ("Subject · Oct 2026"); `line_hook` overlays only `description`, `hsn_sac`, `tax_code` (R54).
+  When open advances pay the invoice at issue the due is `paid` with `paid_on = due_on`.
+- The listener re-derives status on every settlement change (`paid` ↔ `due`/`overdue` by today's
+  date), ignores dues still `scheduled` (sales reports settlement while `post_due` is issuing),
+  and caps `settled_amount` at what is owed.
+- `dues_adjustment` is NOT registered as an origin (C-23).
+
+**New contradictions.**
+- **C-22 `dues.run_failed` has no client words.** `notificationDisplay.ts` `KNOWN_TYPES` is NTF-01's
+  core file (not a hot file), so the bell shows the server's English title to a Hindi member.
+  Proposed: add the type and its `notifications.type.dues.run_failed.{title,body}` en/hi strings
+  with DUE-06 (the engine's UI task), or the lead adds them now.
+- **C-23 `dues_adjustment` origin deferred to DUE-04.** Plan §3.2 lists it under DUE-02, but no
+  code issues a penalty document before DUE-04, and the listener's meaning (what a voided penalty
+  invoice does to `penalty_amount`, how a penalty invoice's settlement reaches the due's
+  `settled_amount`) is DUE-04's `reverse_adjustment` design. Registering a stub would put an
+  untested listener under the shared contract.
+- **C-24 Document-mode overdue reads `settled_amount`.** For a document due the cache is moved
+  only by `on_settlement_changed`; a sales path that changes `amount_due` without calling
+  `refresh_invoice_amounts` would leave the due `overdue` while paid. All current paths call it
+  (A5 contract test), so nothing to do now; DUE-03's `recalc_dues --check` is the replay.
+- C-21 still stands: `e2e/qa_standins` registers `dues_charge`; harmless (different key) and left
+  to the lead, who owns that gate.
 
 ---
 
