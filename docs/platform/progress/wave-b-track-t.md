@@ -516,7 +516,7 @@ build step); the exact query counts in C8 (estimated from the plan, not measured
 
 ## F01 — Library feature skeleton, ADR-061 registrations, ADR-062 module invalidation
 
-Status: **built; ready for QA** (b1d0071d).
+Status: **built; QA round 1 clean** (b1d0071d, f5dcb800).
 
 ### Build log (F01, 3 Oct, on dev)
 
@@ -563,6 +563,20 @@ Deviations: no separate `invalidationLintRule.test.ts` harness (the restriction 
 a probe by hand; the lead asked for economy); no fixture for `registrations.ts` or the
 `app/(app)/library` zone (the boundary harness plants only inside feature folders) — the real
 `registrations.ts` lints clean. `register.ts` is `export {};` until F04.
+
+### QA round 1 (4 Oct 2026)
+
+Gates on `dev` at 61dfede4: `tsc` clean, `eslint . --max-warnings=0` clean, the whole jest suite
+262 suites / 2831 tests green, `i18n:split` writes nothing and `i18n:check` is in step (library 38
+keys). Read again: the listener's union (core `resetAll` still short-circuits; a module entry for a
+core thunk is unioned, `now` wins), `registerInvalidation`'s three refusals, `RequireModule` (it
+sits under `AppGroupShell`'s session guard, so `hasModule` decides on a loaded session), the shared
+`useListUrl` (the party list's tests pass through it unchanged) and `libraryListCodec`'s closed-axis
+filter. No defects found.
+
+Not run: `npm run build` and `bundle:check`. Turbopack's PostCSS worker binds a local port and this
+machine's sandbox refuses it (`Operation not permitted`), so the shell's after-number for f5dcb800
+is still unmeasured.
 
 ### Design note (review step)
 
