@@ -518,6 +518,40 @@ New contradictions: none. G7–G9 stand with their defaults.
 
 ---
 
+### QA round 1 (3 Oct 2026, independent QA)
+
+Reviewed 49ecdd0f/ce80cb80 against LIB-01 (§1 FR-1–FR-5, §5, §6, §9, §10, §12), contracts §1.1
+R15 and §1.7, and the design note. Failing tests: `apps/library/tests/test_qa_b03.py` (commit
+d3bd2941). Both fail on 49ecdd0f for the reason they name.
+
+| Id | Severity | Where | Failing test | Expected |
+|---|---|---|---|---|
+| QA-B03-1 | medium | `services/settings.py:166` (`_decimal`) | `test_qa_b03_1_an_oversized_number_is_a_400_on_its_key_not_a_500` (4 cases) | LIB-01 §6: `400 validation_error` per field; §9 money ≤ 99,999,999.99, multiplier 0–10. `number.quantize(...)` runs outside the `try`, and quantising a value with more than 28 significant digits (`"1e30"`, `10**40`, a 30-digit string) raises `decimal.InvalidOperation`. The PUT then answers **500 `server_error`** instead of naming the key. Fix: catch `InvalidOperation` around the quantize, or bound the magnitude before it. |
+| QA-B03-2 | low | `views.py:46` (`get_permissions`) | `test_qa_b03_2_head_is_answered_like_get_for_a_read_only_role` | LIB-01 §10: staff and accountant may view. Only `method == "GET"` gets the reader set. HEAD, which DRF serves with the GET handler, falls through to `HasPermission("library.settings.manage")`, so staff get GET 200 but HEAD 403. OPTIONS behaves the same way. Fix: branch on `SAFE_METHODS`. |
+
+Checked and found sound:
+- The three number kinds match §1.7 exactly.
+- The enable hook runs inside `update_enabled_modules`' transaction, and a raising seed leaves library off.
+- The seed is idempotent and keeps edits; the row is `UNIQUE (tenant)`.
+- `settings_for` is race-safe (a savepoint inside the outer atomic).
+- PUT locks the row; a stale version is 409 with `current_version`.
+- An unchanged PUT writes nothing and no audit row; the audit is `diff_fields` only.
+- The reminder days are de-duplicated, sorted, each 1–365, at most six.
+- `raise_number` refuses `library_charge` (400, not 500). `raise_counter` validates the number, refuses a lower one with 409 `sequence_backwards`, treats an equal one as a no-op and writes one `counter.raised` with `via="settings"`.
+- Staff and support PUT/POST are refused (the `imp` check is in `HasPermission`). An unreleased module is `module_disabled`.
+- `meta.closed_weekdays` reads the library override, else the tenant's value. The member prefix comes from the core row.
+- The migration's CHECKs match §5. 0002 round-trips (`tests/migrations` green).
+- `tenant_data` is registered.
+- The deposit off-guard is not doubled (payments owns it).
+- `apps/library` + `tests/architecture` are green apart from the two QA tests.
+
+Notes, not defects:
+- A GET before the seed creates the defaults row, including under a support session. This is benign: it holds the same values the read would show.
+- T-LIB-01-1's "one type" waits for B06 (recorded).
+- Validation messages are plain strings, as in `parties`.
+
+Not checked: concurrency under real parallel connections (code-reviewed only). No frontend exists yet (F02).
+
 ## B04 — ISBN and accession helpers
 
 ### Design note (review step)
