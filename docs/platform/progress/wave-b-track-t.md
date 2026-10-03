@@ -86,7 +86,7 @@ Failing tests: `backend/apps/attendance/tests/test_qa_att.py` (commit cea64bbc).
 | QA-ATT-5 | Low | `roll_call` has no `is_active` check (`marks.py:598-609`); `generate_sessions` returns early for an inactive group (`groups.py:370`) | `test_qa_att_5_roll_call_refuses_an_inactive_group_like_check_in_does`, `…_does_not_leave_eight_weeks_of_scheduled_sessions` | EC-2 (extended to marks in deviation 3): `check_in` refuses an inactive group but `roll_call` writes marks to it. Deactivating also leaves up to 8 weeks of future scheduled sessions behind. |
 | QA-ATT-6 | High | lock order: `check_in` locks party, then the mark FK key-share-locks the session; `roll_call` locks the session `FOR UPDATE`, then the parties (`marks.py:599-629`) | `test_qa_att_6_a_desk_check_in_and_a_roll_call_on_one_session_do_not_deadlock` (two connections) | EC-2 says both writes succeed and the later one wins. Today Postgres raises `deadlock detected` (a 500). |
 
-**Fixed (3 Oct, dev, commit recorded in the status line below):** all six; the eight QA tests pass
+**Fixed (3 Oct, dev, ef2f7db2):** all six; the eight QA tests pass
 and the earlier 69 stay green (`apps/attendance` + the policy contract test: 78 passed;
 `tests/architecture`: 113 passed, 4 skipped).
 - QA-ATT-1: `check_in(session_id=…)` applies the closed-register rule from `session.ends_at +
