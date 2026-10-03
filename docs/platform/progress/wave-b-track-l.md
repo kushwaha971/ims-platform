@@ -490,6 +490,43 @@ Deviations from the note:
 New contradictions: none beyond G11–G13, which remain the FRD's to correct (T-LIB-02-1's vector,
 T-LIB-02-2's order, `accession_sort varchar(48)` in LIB-02 §5 and `member_number_sort` in LIB-04 §5).
 
+### QA round 1 (3 Oct 2026)
+
+Result: **no code defect found; no failing test committed.** Reviewed `ad287ba5` (`services/isbn.py`,
+`services/codes.py`, both test files) against LIB-02 §9, BR-2–BR-4, BR-8, EC-3, T-LIB-02-1/2 and
+LIB-04 §5/§9 (`member_number`).
+
+Checked and sound:
+- ISBN-10 mod-11 and ISBN-13 EAN checks, `X` only last and in either case, 978/979 only, 10 → 13
+  and 13 → 10 (none for 979), spaces/hyphens stripped, ASCII digits only (`[0-9]` with `fullmatch`;
+  Devanagari and Arabic-Indic digits refused). The developer's G11 claim is right: the FRD's
+  `817371146X` is not a valid ISBN-10 (the book's is `8173711461`).
+- `validate_number`: trimmed, 1–24, the §9 regex via `fullmatch` (no trailing-newline hole),
+  non-ASCII letters and digits refused; `number_key` upper-cases for FR-5.
+- `natural_sort_key` and the G13 deviation: independently re-fuzzed 200 × 500 numbers weighted
+  towards long runs (12, 13, 14, 20, 24 digits) with leading zeros against a tokenising natural sort
+  — identical order every time, and every key ≤ 160 (worst legal is 156, as stated). The `:` mark
+  (0x3A) is consistent with how separators and letters compare against padded digits, so short and
+  long runs order the same way relative to `-`, `/` and letters. The tie between `0042` and `42`
+  follows from BR-4's own padding and does not touch EC-3 (identity is `number_key`, which keeps them
+  distinct). The corrected G12 vector holds.
+- `numeric_value`: all-digit only after an optional case-insensitive series prefix; `4512-A`, `M-`,
+  `+42`, non-ASCII digits → `None` (BR-2, BR-3, EC-3).
+- `classify`: a ten-digit register number yields both keys, a spaced ISBN only the ISBN, a suffixed
+  number only the number key; scanner CR/LF is stripped by both paths (BR-8 ordering is B05/B07's).
+- Purity: no Django or `apps` import in either module; `black`, `flake8` clean; the 31 B04 tests pass
+  on `test_ub_qa2`.
+
+Notes for later tasks (not B04 defects, no test):
+- **For B05/B07 (BR-2):** `numeric_value` returns any 24-digit value, but `raise_counter` refuses
+  anything above `MAX_NEXT_NUMBER` (2^31 − 1) with a `next_number` validation error. A legal typed
+  accession such as `9999999999` would therefore surface an error on a field the merchant never saw.
+  B05 must decide what a typed all-digit number beyond the counter's range does (store it and leave
+  the counter alone is the reading closest to BR-3) and test it.
+- **Test strength (low):** `test_codes.py::test_the_module_is_pure` checks only `level == 0` imports,
+  so a relative `from ..models import …` would pass it. It cannot fail today because the module is
+  pure; tightening it (refuse any relative import other than `from . import isbn`) is a cheap hardening.
+
 ---
 
 ## B05 — catalogue: models, services, API, lookup
