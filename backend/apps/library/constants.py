@@ -164,3 +164,35 @@ class LostFoundPaid(models.TextChoices):
 
     REFUND = "refund"
     KEEP = "keep"
+
+
+class TitleStatus(models.TextChoices):
+    """`library_title.status` (LIB-02 §5): a title is archived, never deleted."""
+
+    ACTIVE = "active"
+    ARCHIVED = "archived"
+
+
+# ── B05 ── catalogue column widths (LIB-02 §5) ──────────────────────────────
+TITLE_MAX = 300
+PUBLISHER_MAX = 160
+EDITION_MAX = 40
+LANGUAGE_MAX = 40
+CALL_NUMBER_MAX = 40
+CATEGORY_NAME_MAX = 60
+LOCATION_CODE_MAX = 24
+LOCATION_NAME_MAX = 80
+LOCATION_TEXT_MAX = 80
+BARCODE_MAX = 40
+SOURCE_NOTE_MAX = 160
+VOLUME_LABEL_MAX = 24
+NOTE_MAX = 160
+SOURCE_TYPE_MAX = 48
+#: LIB-02 §9 (and `services.codes.NUMBER_MAX`, which is pure and cannot import this).
+ACCESSION_MAX = 24
+#: B04/G13: the stored natural sort key.
+ACCESSION_SORT_MAX = 160
+#: LIB-02 §9: copies per request (EC-1).
+MAX_COPIES_PER_REQUEST = 200
+YEAR_MIN = 1500
+YEAR_MAX = 2100

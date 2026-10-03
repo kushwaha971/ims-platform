@@ -26,10 +26,10 @@ wherever they differ.
 | Task | State | Commit |
 |---|---|---|
 | B01 skeleton | done (QA round 1: no code defect) | 5b031af4 |
-| B02 codenames, errors, audit | built; ready for QA | 8824cdc4 |
+| B02 codenames, errors, audit | done (QA closed: 536d9436, CR 63f0a8db) | 8824cdc4 |
 | B03 settings, seed, numbering | built; ready for QA | 49ecdd0f |
-| B04 ISBN and accession helpers | built; ready for QA | ad287ba5 |
-| B05 catalogue | design written; not started | — |
+| B04 ISBN and accession helpers | done (QA closed: bac48ccc) | ad287ba5 |
+| B05 catalogue | built; ready for QA | (this commit) |
 | B06 membership types, loan rules | design written; not started | — |
 | B08 due dates | design written; not started | — |
 | B10 charges and waivers | design written; not started | — |
@@ -753,6 +753,49 @@ Gaps:
 - **G16** `library_code_ambiguous` (BR-8) needs member numbers. B05 checks barcode against accession;
   B07 adds the member side. Cancelling holds on the last withdrawal (LIB-08 EC-4) is a B11 hook.
 - Size: the FRD says L and the plan says M. This is the largest task in this set.
+
+### Built (3 Oct 2026)
+
+Landed in `apps/library` only (no shared hot file): `models/catalogue.py` (five tables, every §5
+CHECK and index, `accession_sort` varchar(160) C collation, `search_text` GeneratedField),
+`migrations/0003_catalogue.py`, five `tenant_data` rows, `services/copy_status.py` (`move_copy`,
+the only status writer: event + copy `version` bump + title caches by `F()`, title `version`
+untouched; `record_new_copies`; set-based `recount_titles`), `services/catalogue.py` (create title
+with copies, add copies, patch title/copy, withdraw/repair/back-to-shelf, archive/restore,
+categories with merge, locations), `selectors/catalogue.py`, `serializers.py`, `views/` (now a
+package: `__init__` = B03 settings, `catalogue.py` = 17 routes in `urls.py`),
+`management/commands/library_recount.py`, `constants.py` (`TitleStatus`, widths).
+
+Decisions: **B04 QA note 1** — a typed all-digit number whose value + 1 exceeds `MAX_NEXT_NUMBER`
+is accepted as typed and does not raise the counter (the counter can never reach it, so BR-2's
+collision cannot happen); tested at 99999999999 and at MAX−1 (raises to MAX). **G14** settled:
+`sqlmigrate` shows `||` over COALESCE; the migration applies. **G15** default taken (reference copy
+or reference title is not "available to borrow"; a title's material-type change or a copy's
+`is_reference` change recounts that title). **G16**: barcode vs accession clash is 409
+`library_code_ambiguous` on create/patch; members join in B07.
+
+Tests: `test_catalogue.py` 24 (reuse in any case incl. withdrawn; consecutive auto numbers and
+announced; typed 9000 raises, 4512-A does not; beyond-range number; taken on copy 3 rolls back
+title, copies and counter with `{number, copy_id, title}`; 5 bad copies blocks 400 before any
+write; ISBN normalise/check/duplicate warning; idempotent create; frozen number and stale version;
+barcode clash; withdraw rules, staff 403, last withdrawal archives, manual archive 409 with count;
+repair/back-to-shelf caches; reference availability; 200-step fuzz equals recount; search by words,
+ISBN, number, Devanagari and a 2-letter prefix; numeric copy order; unbuilt filters 400; lookup
+BR-8; categories one level/merge/in-use; location in use; cross-tenant 404 and accountant read-only)
+and `test_catalogue_plans.py` 2 (slow: trigram index for search, unique index for number lookup, at
+50,000 rows). Gates: `apps/library` + `tests/architecture` + `tests/migrations` **303 passed, 4
+skipped** (plans included); `makemigrations --check` clean; black/isort/flake8 clean. No screen
+(F03).
+
+Deviations: ordering is an explicit map (`title`, `-created_at`; copies `accession`, `title`), each
+ending in `id`, instead of `StableOrderingFilter` — same total order, and it is what lets
+`accession` mean `accession_sort` and an unknown value be 400. Lists use `PagePagination` (`meta:
+page, page_size, total, total_pages`) rather than the FRD's `{count, page}`. A short (< 3 char)
+search uses `istartswith` on the title without a `text_pattern_ops` index. `library_copy_on_loan`
+carries `details: {}` until B09 can fill `loan_id` (PTY-03: no faked key). Omitted keys:
+`holds_waiting`, `holds`, `issues_12m`, `due_on`, `borrower`, `loans`. Withdraw from the hold shelf
+answers `library_copy_unavailable {status}`. No DB guard for barcode-vs-accession across columns
+(service check only).
 
 ---
 
