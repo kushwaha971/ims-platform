@@ -516,7 +516,7 @@ build step); the exact query counts in C8 (estimated from the plan, not measured
 
 ## F01 — Library feature skeleton, ADR-061 registrations, ADR-062 module invalidation
 
-Status: **built; ready for QA** (commit recorded in the F01 commit message's successor line below).
+Status: **built; ready for QA** (b1d0071d).
 
 ### Build log (F01, 3 Oct, on dev)
 
