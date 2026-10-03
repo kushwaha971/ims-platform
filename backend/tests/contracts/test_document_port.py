@@ -26,7 +26,10 @@ pytestmark = pytest.mark.django_db
 
 #: origin type → the module test that proves its listener keeps these clauses. Empty until a
 #: module (dues, gym, hospitality) registers a real origin; the fake below stands in.
-FACTORIES: dict[str, str] = {}
+FACTORIES: dict[str, str] = {
+    # ── dues ── DUE-02 registers `dues_due` (C-18: append-only rows per module).
+    "dues_due": "apps/dues/tests/test_run_document.py",
+}
 
 
 def test_every_registered_origin_is_under_contract() -> None:

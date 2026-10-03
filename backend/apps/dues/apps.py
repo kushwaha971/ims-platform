@@ -43,3 +43,35 @@ class DuesConfig(AppConfig):
             },
             buckets=frozenset({main, loan}),
         )
+
+        # ── DUE-02 ── the daily run, the `dues_due` origin, the khata's labels.
+        from apps.common.jobs import Schedule, register_schedule
+        from apps.common.seams.documents import register_origin
+        from apps.dues import tasks  # noqa: F401  (registers job handlers)
+        from apps.dues.origins import DuesDueOrigin, resolve_components, resolve_dues
+        from apps.ledger.selectors.sources import register_source_resolver
+        from apps.notifications.constants import NotificationCategory, NotificationSeverity
+        from apps.notifications.services.notify import NotificationType, register_notification_type
+
+        # Contracts §2.1, verbatim; the handlers above land in the same commit
+        # because `materialise_due_schedules` raises for a schedule with none.
+        register_schedule(Schedule(tasks.RUN, period="daily", at_hour_ist=0, minute=30))
+        # C-2 / Q-D1: one origin type for every consuming vertical, module "dues".
+        register_origin(SOURCE_DUE, module="dues", listener=DuesDueOrigin())
+        register_source_resolver(SOURCE_DUE, resolve_dues)
+        register_source_resolver(SOURCE_COMPONENT, resolve_components)
+        # BR-2, C-19: the engine has no page, so the row opens the inbox; owners
+        # only, once per day (`group_key` carries the date). The client has no
+        # words for it yet and shows this English title (C-22).
+        register_notification_type(
+            "dues.run_failed",
+            NotificationType(
+                code="dues.run_failed",
+                category=NotificationCategory.SYSTEM,
+                severity=NotificationSeverity.DANGER,
+                required_permission="platform.tenant.manage",
+                title_en="{failed} recurring charges could not be added on {date}",
+                body_en="Everything else was added. These will be tried again tonight.",
+                group_window=24 * 60,
+            ),
+        )

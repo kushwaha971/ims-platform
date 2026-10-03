@@ -34,11 +34,11 @@ def _clean() -> Any:
 
 def test_registering_an_origin_twice_is_a_no_op_and_a_rival_is_refused() -> None:
     listener = _Listener()
-    port.register_origin("dues_due", module="dues", listener=listener)
-    port.register_origin("dues_due", module="dues", listener=listener)
-    assert port.origin_for("dues_due").module == "dues"
+    port.register_origin("probe_origin", module="dues", listener=listener)
+    port.register_origin("probe_origin", module="dues", listener=listener)
+    assert port.origin_for("probe_origin").module == "dues"
     with pytest.raises(ImproperlyConfigured, match="already registered"):
-        port.register_origin("dues_due", module="dues", listener=_Listener())
+        port.register_origin("probe_origin", module="dues", listener=_Listener())
 
 
 def test_a_listener_missing_a_method_or_a_too_long_type_is_refused() -> None:
@@ -83,13 +83,13 @@ def test_labels_are_the_listeners_and_an_unknown_type_reads_record_not_found() -
             return {i: f"Membership {i}" for i in ids}
 
     port.register_origin("gym_membership", module="gym", listener=Named())
-    port.register_origin("dues_due", module="dues", listener=_Listener())
+    port.register_origin("probe_origin", module="dues", listener=_Listener())
     labels = port.origin_labels(
         tenant=None,
-        pairs=[("gym_membership", "M1"), ("dues_due", "D1"), ("gone", "G1"), (None, None)],
+        pairs=[("gym_membership", "M1"), ("probe_origin", "D1"), ("gone", "G1"), (None, None)],
     )
     assert labels == {
         ("gym_membership", "M1"): "Membership M1",
-        ("dues_due", "D1"): None,
+        ("probe_origin", "D1"): None,
         ("gone", "G1"): "Record not found",
     }

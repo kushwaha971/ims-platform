@@ -327,6 +327,8 @@ class AuditAction:
     ATTENDANCE_ENTITLEMENT_GRANTED = "attendance.entitlement.granted"
     ATTENDANCE_ENTITLEMENT_EXTENDED = "attendance.entitlement.extended"
     ATTENDANCE_ENTITLEMENT_ENDED = "attendance.entitlement.ended"
+    # ── DUE-02 ── the daily run and the `dues_due` origin listener (contracts §5).
+    DUES_DUE_CANCELLED = "dues.due.cancelled"
 
 
 def diff_fields(

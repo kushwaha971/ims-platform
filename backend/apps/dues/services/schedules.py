@@ -12,7 +12,9 @@
    `schedule_backdated_unconfirmed` with that preview and its total — raised
    BEFORE a row is written (BR-7).
 6. Insert the schedule (snapshot, BR-3), its heads and its dues; then post every
-   due with `due_on <= today`, each with its own date (BR-7; C-11 for today).
+   due with `due_on <= today`, each with its own date (BR-7; C-11 for today) —
+   in every posting mode since DUE-02 (an invoice per due through the port, or
+   the non-principal components of an expectation).
 
 A second live schedule for the subject is the `uq_dues_schedule_live_subject`
 `IntegrityError`, propagated for the vertical to map to its own code (C-16).
@@ -182,9 +184,6 @@ def create_schedule(
     rows = computed.rows
     to_post = [r for r in rows if r["due_on"] <= today and r["status"] != DueStatus.SKIPPED]
     past = [r for r in to_post if r["due_on"] < today]
-    if plan.posting != Posting.LEDGER and any(r["amount"] > 0 for r in to_post):
-        # C-10: the document and expectation branches of `post_due` are DUE-02's.
-        raise ValidationFailed({"start_on": ["This plan cannot start before today yet."]})
     if plan.posting == Posting.DOCUMENT and past:
         fy_start = fy_bounds(tenant, fy_bounds(tenant, today)[0] - dt.timedelta(days=1))[0]
         if min(r["due_on"] for r in past) < fy_start:  # C-13: sales refuses those dates
