@@ -161,11 +161,17 @@ def _decimal(value: Any, *, places: int = 2) -> Decimal | None:
         return None
     try:
         number = Decimal(str(value).strip())
+        if not number.is_finite():
+            return None
+        # `quantize` itself raises InvalidOperation beyond 28 significant digits,
+        # so it stays inside the `try`: an absurd figure is a 400 on its key,
+        # never a 500 (B03 QA-B03-1).
+        quantized = number.quantize(Decimal(1).scaleb(-places))
     except InvalidOperation:
         return None
-    if not number.is_finite() or number != number.quantize(Decimal(1).scaleb(-places)):
+    if number != quantized:
         return None
-    return number.quantize(Decimal(1).scaleb(-places))
+    return quantized
 
 
 def clean_settings(data: Any) -> dict[str, Any]:

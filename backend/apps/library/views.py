@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
 from rest_framework.views import APIView
 
 from apps.common.context import Ctx
@@ -43,7 +43,9 @@ class LibrarySettingsView(APIView):
     scope_exempt = "One row per tenant; the library has no row scoping (LIB-14 §1, ADR-052)."
 
     def get_permissions(self) -> list:
-        if self.request.method == "GET":
+        # Every safe method reads, so HEAD and OPTIONS admit the same readers as
+        # GET (B03 QA-B03-2).
+        if self.request.method in SAFE_METHODS:
             classes = [*_GATE, HasAnyPermission(*SETTINGS_READERS)]
         else:
             classes = [*_GATE, HasPermission(MANAGE)]
