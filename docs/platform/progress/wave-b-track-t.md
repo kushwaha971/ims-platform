@@ -21,8 +21,8 @@ disk; anything I could not verify by reading is marked **(unverified)**.
 
 ## ATT-01…05 — the check-ins and attendance engine (`apps/attendance`)
 
-Status: **backend built; ready for QA** (commits 22b6cf88, 587eccd7, 819f4598, ab7412e3 and the
-ATT-05 commit recorded below). **Shared UI not started** — it waits for F01 (open question 3).
+Status: **backend built; ready for QA** (commits 22b6cf88, 587eccd7, 819f4598, ab7412e3, fc8decfe).
+**Shared UI not started** — it waits for F01 (open question 3).
 
 ### Build log (backend)
 
@@ -47,7 +47,7 @@ ATT-05 commit recorded below). **Shared UI not started** — it waits for F01 (o
   C4, foreign pack, extend after expiry / end rules C6, grant validation, replay fuzz with
   `recalc_entitlements --check` 0 then 1) and `tests/test_concurrency.py` (T-ATT-02-3 with a desk
   group; T-ATT-04-2), both on two real connections.
-- **Step 5 — ATT-05** `tests/test_reads.py` (percent worked example 91.7, join mid-month, cancelled
+i- **Step 5 — ATT-05** (fc8decfe) `tests/test_reads.py` (percent worked example 91.7, join mid-month, cancelled
   and voided excluded, 0/0 → null; register with a `closed:<date>` column, "-" before joining, "A"
   on a held session; empty month; 60-member register in ≤ 6 queries and no seq scan on marks;
   not-visited with `party_ids`; peak hours tenant-local; the R56 off-guard counting earlier days only
