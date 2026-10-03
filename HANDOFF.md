@@ -414,6 +414,18 @@ No module code before the FRDs are finished.
 - **Wave C**: Gym, then Lending.
 - **Wave D**: bookings engine, then Hospitality.
 
+## 8l. 3 Oct: Wave B under way, committed straight to `dev` (RESUME HERE, on `dev`)
+
+- **Owner decision, 2 Oct:** no worktrees, no track branches, no merges. Every track commits directly on `dev` in `~/Projects/ims-platform`, staging only its own paths; QA agents commit their failing tests and findings on `dev` too. The owner pushes `dev`.
+- **Environment on the Mac:** Python 3.11 venv at `.venv` (excluded in `.git/info/exclude`); Homebrew PostgreSQL 16 on 127.0.0.1:5432. Commands that reach the database run outside the Bash sandbox. `e2e/serve*.sh` and `scripts/worktree-bootstrap.sh` now work on the Mac too (6bd6d142). Video tooling is NOT installed on the Mac (needs Homebrew `espeak-ng` and models; ask the owner before release).
+- **Done and QA'd:** B01 (no defect; status id fixed 59553ba2); B02 (code sound; four Part 22 table L rows corrected 536d9436; CR-2026-10-02-LIB-14 filed 63f0a8db); B04 (code sound; purity guard tightened bac48ccc).
+- **Built, QA running:** B03 library settings, seed hook, number kinds (49ecdd0f); attendance engine backend ATT-01…05 (22b6cf88, 587eccd7, 819f4598, ab7412e3, fc8decfe); DUE-02 dues daily run (6b212b35, 4f8c4aa4).
+- **In progress:** B05 catalogue (Track L), F01 library frontend skeleton (Track T), DUE-03 settlement (Track D).
+- **Lead rulings this session:** G9 `HasAnyPermission` stays in library; ATT C1/C7/C9 built as additive v1.1 keywords, amendment recorded at the gate; ATT C2/C15 move to gym (Wave C); DUE C-23 `dues_adjustment` origin lands with DUE-04; C-22 `dues.run_failed` gets en+hi text now; C-21 the e2e stand-in origin is removed.
+- **Gates at session start:** backend 3,282 passed / 13 skipped (after two Mac-only fixes, b3730e7a); jest 2,807/2,807; lint, type-check clean; i18n 4,119 keys; build + bundle:check green (shell 105.2 KB).
+- **Known issues:** `test_exceptions.py` counts the error registry and every track edits it; recount on each change. Shared-tree runs can see another track's half-written migration for a moment.
+- **Verify:** `cd backend && ../.venv/bin/python -m pytest -q apps/library apps/attendance apps/dues tests/architecture` (outside the sandbox).
+
 ## 8k. 1 Oct: Wave B step 1 DONE (W-F3, W-G1 decided). Next: Library, dues, attendance (RESUME HERE, on `dev`)
 
 - **Done:** `3341b06` records ADR-061 (W-F3) and ADR-062 (W-G1) in `docs/38-architecture-decision-records.md`, and marks both decided in `10-architecture.md` §18.

@@ -24,6 +24,7 @@ Owner direction of 29 Sep 2026: [00-platform-vision.md](00-platform-vision.md). 
   - Open for the owner: the recordings still show the demo business "Sharma Kirana Store"; the copy needs review; the `/` bundle budget was re-baselined.
 - **29 Sep, Phase 1, SEO (CR-2026-09-29-PLATFORM-C):** see the section below.
 - **1 Oct, Wave B step 1:** W-F3 and W-G1 decided as ADR-061 (vertical registrations through one sanctioned file, imported by the registry readers) and ADR-062 (module invalidation maps registered with the lazily injected slice), `3341b06`. Next: Library, dues and attendance tracks.
+- **3 Oct, Wave B building on `dev` directly (owner decision 2 Oct):** B01, B02, B04 done and QA'd; B03, the attendance engine backend (ATT-01…05) and DUE-02 built and in QA; B05, F01 and DUE-03 in progress. HANDOFF §8l.
 
 ## SEO (Phase 1, CR-2026-09-29-PLATFORM-C)
 
