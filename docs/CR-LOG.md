@@ -1891,3 +1891,47 @@ Part 22 §22.1.1.
 | 16 | A payment's ledger `source` carries `adjustment: true` on the lines of a deposit adjustment (absent otherwise), so the out line reads "Adjusted from deposit", not "Deposit returned", on the khata and the customer's statement | FRD X02 §8 names the words by direction only | gate (A4b) | — |
 | 17 | `party_balance_nonzero` carries `can_write_off: false` + `amount` while a loan is open (see CR-2026-09-30-LED-11) | LED-11 / PTY-04 FR-3 | gate (A2) | — |
 | 18 | The khata's module panels are mounted for every party (not only while a module with party roles is on) and a registered panel may say which parties it is for (`appliesTo`); a registration module imported bare must be in `package.json` `sideEffects` | FRD X04 §7 | gate (A6, A4b) | W-F3 |
+
+
+## CR-2026-10-02-LIB-14 — canon §0.9 and Part 22 §22.1.1: the library's codenames, error codes and
+audit actions
+
+**State:** `raised` (filed by the lead, 3 Oct 2026; QA round 1 found no code defect and corrected four table L rows, 536d9436) (built by Wave B task B02 behind `UNRELEASED_MODULES`). Drafted by Track L in
+`docs/platform/progress/wave-b-track-l.md`.
+**Target:** Part 0 §0.9 (codenames), Part 20 §20.5.5 (role sets), Part 22 §22.1.1 (table L),
+Part 21 §21.3.1 (audit vocabulary); `apps/common/permissions_registry.py`,
+`apps/common/error_codes.py`, `apps/common/audit.py`.
+
+*Change.*
+1. **Codenames.** Canon §0.9 gains sixteen, in the `<module>.<resource>.<action>` format, using
+   the per-module verbs CR-2026-09-30-PLATFORM-ROLES item 2 admitted (`withdraw`, `close`,
+   `override`, `waive`, `run`): `library.catalogue.read|write`, `library.copy.withdraw`,
+   `library.member.read|write|close`, `library.loan.read|write|override|adjust`,
+   `library.charge.waive|write`, `library.verification.run|close`, `library.reports.read`,
+   `library.settings.manage`.
+2. **Role sets** (FRD LIB-14 §10). Owner and admin hold all sixteen. Staff holds seven:
+   `catalogue.read|write`, `member.read|write`, `loan.read|write`, `verification.run`. The
+   accountant holds the four reads (`catalogue`, `member`, `loan`, `reports`) through its `.read`
+   rule. `loan.override`, `loan.adjust`, `charge.waive` and `copy.withdraw` are off for staff and
+   grantable per member through `permissions_override.allow` (FR-3). A waiver above the ceiling
+   (D27) and a deposit refund (D28) are role checks inside the service and no override can grant
+   them (FR-4) — the LED-03 distinction between a business ceiling and an ordinary capability.
+   This adds library codenames to `_STAFF` at build time rather than at release (item 3 of the
+   PLATFORM-ROLES CR said the release CR does it): while the module is in `UNRELEASED_MODULES`
+   `permissions_for` drops every `library.*`, so nobody holds them until release, and the T-LIB-14-4
+   matrix needs them under the flag. The release CR (T-R1) records the matrix as live.
+3. **Error codes.** Part 22 §22.1.1 gains table L, thirty codes from FRD library Appendix A, all
+   409 and not retryable except `library_waiver_over_ceiling`, which is **403**: it is a role
+   ceiling, not a conflict with the row's state, and LIB-07 §8 shows it inline in the waive dialog
+   naming who can waive. The fifteen core codes Appendix A lists as reused are not duplicated.
+4. **Audit actions.** Part 21 §21.3.1 gains the 58 `library.<entity>.<verb>` actions of Appendix B.
+   Deposit, payment, counter and reminder rows written by library flows use the core actions.
+
+*Why.* The registry test asserts equality with canon §0.9, and Part 22 §22.1.1 is the closed error
+registry; every library view names a codename and every refusal a code, so both must exist before
+the first library view (B03), and `HasPermission` refuses an unknown codename at import time.
+
+*Effect today:* none for any tenant — library is unreleased, so no member holds a library codename
+and no library endpoint exists. `seed_reference_data` rewrites the system roles' `permissions`
+column on its next run; nothing reads that column at runtime (`system_role_permissions` is the
+source). *Reversal:* remove the three `── B02 ──` blocks and table L; no table changes.
