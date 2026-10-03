@@ -797,6 +797,37 @@ carries `details: {}` until B09 can fill `loan_id` (PTY-03: no faked key). Omitt
 answers `library_copy_unavailable {status}`. No DB guard for barcode-vs-accession across columns
 (service check only).
 
+### QA round 1 (3 Oct 2026, independent QA)
+
+Reviewed 1072746b/ed0df93d against LIB-02 (BR-1–BR-8, EC-1–EC-8, T-LIB-02-3…7) and the design
+note. Failing tests: `apps/library/tests/test_qa_b05.py` (commit f7eb4b5f). Both fail on 1072746b
+for the reason they name.
+
+| Id | Severity | Where | Failing test | Expected |
+|---|---|---|---|---|
+| QA-B05-1 | medium | `services/catalogue.py` `_insert_copies` (the counter branch) | `test_qa_b05_1_an_automatic_number_never_equals_another_copys_barcode` | BR-8: the lookup tries the accession number before the barcode, and a clash "is refused when the second is created" (409 `library_code_ambiguous`). Only TYPED numbers go through `_taken`'s barcode check. A number taken from the counter is inserted unchecked. So a copy barcoded `2` (allowed while no copy is numbered 2) is shadowed when the counter reaches 2: `GET /library/lookup?code=2` returns the new copy. Fix: refuse, or skip barcoded values when allocating. A barcode patch could also refuse a value the counter will reach. |
+| QA-B05-2 | low | `services/catalogue.py` `_raise_for_typed` (`highest + 1 > MAX_NEXT_NUMBER`) | `test_qa_b05_2_a_typed_number_at_the_counters_ceiling_cannot_be_reallocated` | The skip claims the counter "can never reach" the typed number. That is false exactly AT `MAX_NEXT_NUMBER`: `raise_counter` accepts MAX and `allocate_counter` hands it out. After typing 2147483647, `POST /library/settings/numbering {next_number: 2147483647}` is 200. LIB-01 BR-2 requires 409 `sequence_backwards` (≤ a number already imported). LIB-02 BR-2 exists so automatic and typed numbers never collide. Fix: treat `highest >= MAX` as unreachable only above MAX, or cap the raise. |
+
+Observed, not filed as B05 findings:
+- **Core, A8.** With the counter at MAX (typing MAX−1 gets it there, as the dev's own edge test does), the next automatic create runs `allocate_counter`'s `next_number = MAX + 1`. That overflows the `integer` column, a `DataError` and a 500. It belongs to the core allocator; raised here for the lead.
+- **Race, code review only, untested.** `recount_titles` (called on an `is_reference` or `material_type` change) computes its CTE from a snapshot and locks no copies. A concurrent `move_copy` on another copy of the same title can commit its `F()` shift in between, and the recount then overwrites it with the stale derived count. `library_recount` would repair it. Locking the title's copies (or the title row) before the recount closes it.
+- No DB guard for barcode against accession across columns (recorded deviation).
+
+Checked and found sound:
+- `move_copy` is the only writer of `status`. It writes the event, bumps the copy's version and moves the caches by the difference with `F()`; the title's version is untouched. `recount_titles` is an independent set-based route.
+- The caches' CHECK; `ck_library_copy_withdrawn`.
+- The unique `Upper(accession_number)` with no soft-delete exclusion (withdrawn numbers stay taken). The partial unique `Upper(barcode)`.
+- A typed number taken on copy 3 rolls back the title, copies 1–2 and the counter, with details. Auto numbers are taken last.
+- `4512-A` and leading zeros (EC-3) behave as specified.
+- A number is frozen after first issue; a stale version is 409.
+- Withdraw is refused on loan and on the hold shelf; the last withdrawal archives the title. A manual archive with copies is 409.
+- The withdraw permission is separate (staff 403); every method reads its codename (HEAD/OPTIONS map to GET, unlike B03).
+- Body ids from another tenant are field errors; path ids are 404.
+- Soft-deleted categories and locations are excluded by their managers. Merge is guarded.
+- `apps/library` is green apart from the QA tests.
+
+Not checked: the EXPLAIN plan tests were not re-run separately (they are in the developer's 303), and there is no frontend (F03).
+
 ---
 
 ## B06 — membership types and loan rules
