@@ -79,7 +79,7 @@ describe('CatalogueDrawers', () => {
     store.dispatch(catalogueDrawerOpened({ kind: 'addBook', query: '' }));
     renderWithProviders(<CatalogueDrawers />);
 
-    const title = await screen.findByRole('textbox', { name: /title or isbn/i });
+    const title = await screen.findByRole('textbox', { name: /^title/i });
     await waitFor(() => expect(title).toHaveFocus());
     expect(screen.queryByText(/enter the book's title/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -90,7 +90,7 @@ describe('CatalogueDrawers', () => {
     store.dispatch(catalogueDrawerOpened({ kind: 'addBook', query: '' }));
     renderWithProviders(<CatalogueDrawers />);
 
-    await userEvent.type(await screen.findByRole('textbox', { name: /title or isbn/i }), 'Wings');
+    await userEvent.type(await screen.findByRole('textbox', { name: /^title/i }), 'Wings');
     await userEvent.click(await screen.findByRole('button', { name: /add copies to this title/i }));
 
     expect(selectLibraryCatalogueForm(store.getState()).drawer).toEqual({
@@ -122,5 +122,40 @@ describe('CatalogueDrawers', () => {
       numbering: 'typed',
       numbers: ['1024'],
     });
+  });
+});
+
+/**
+ * F03 QA round 1. QA-F03-1: a server 400 on a field (`count`, `copies.price`)
+ * was put in the banner above the form instead of under the field it names,
+ * because the drawers told `applyServerErrors` they had no fields at all.
+ * QA-F03-2: the first field was labelled "Title or ISBN" while an ISBN typed
+ * into it was saved as the book's TITLE; the ISBN has its own field.
+ */
+describe('CatalogueDrawers — QA round 1', () => {
+  it('QA-F03-1: anchors a server field error on the field it names', async () => {
+    jest.mocked(service.addCopies).mockRejectedValue({
+      code: 'validation_error',
+      message: 'Check the highlighted fields.',
+      details: { price: ['Enter a price of 0 or more.'] },
+      requestId: null,
+      status: 400,
+      warnings: [],
+    });
+    store.dispatch(catalogueDrawerOpened({ kind: 'addCopies', titleId: 't1', title: 'Wings' }));
+    renderWithProviders(<CatalogueDrawers />);
+
+    await userEvent.click(await screen.findByRole('button', { name: /save/i }));
+
+    const price = await screen.findByRole('textbox', { name: /^price/i });
+    await waitFor(() => expect(price).toHaveAttribute('aria-invalid', 'true'));
+  });
+
+  it('QA-F03-2: labels the first field as the title, not "Title or ISBN"', async () => {
+    store.dispatch(catalogueDrawerOpened({ kind: 'addBook', query: '' }));
+    renderWithProviders(<CatalogueDrawers />);
+
+    expect(await screen.findByRole('textbox', { name: /^title/i })).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: /title or isbn/i })).not.toBeInTheDocument();
   });
 });
