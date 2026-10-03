@@ -37,7 +37,10 @@ class QaStandinsConfig(AppConfig):
         )
         from apps.platform_app.services.calendar import register_calendar_reader
 
-        register_origin("dues_charge", module="dues", listener=StandIn())
+        # Not `dues_due`: the real dues origin never asks before a void, and the gate needs one
+        # that does (R55's confirm). A name no product origin uses keeps the stand-in from
+        # shadowing or drifting from a real registration (DUE-02 C-21).
+        register_origin("qa_membership", module="dues", listener=StandIn())
         register_calendar_reader("inventory")
         import datetime as dt
 

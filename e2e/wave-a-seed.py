@@ -58,7 +58,7 @@ with transaction.atomic():
     issued = port.issue_document(
         ctx=ctx,
         request={
-            "origin_type": "dues_charge",
+            "origin_type": "qa_membership",
             "origin_id": uuid.uuid4(),
             "party_id": asha.id,
             "document_date": today,
@@ -72,7 +72,7 @@ with transaction.atomic():
     second = port.issue_document(
         ctx=ctx,
         request={
-            "origin_type": "dues_charge",
+            "origin_type": "qa_membership",
             "origin_id": uuid.uuid4(),
             "party_id": asha.id,
             "document_date": today,
@@ -86,7 +86,7 @@ with transaction.atomic():
     note = port.issue_credit_note(
         ctx=ctx,
         against_id=second["document_id"],
-        origin_type="dues_charge",
+        origin_type="qa_membership",
         origin_id=uuid.uuid4(),
         lines=[{"against_line_id": line.id, "taxable_value": Decimal("400.00")}],
         settlement="hold_advance",
@@ -114,7 +114,7 @@ with transaction.atomic():
     fine = port.issue_document(
         ctx=ctx,
         request={
-            "origin_type": "dues_charge",
+            "origin_type": "qa_membership",
             "origin_id": uuid.uuid4(),
             "party_id": asha.id,
             "document_date": today,
