@@ -325,6 +325,62 @@ missing*. B13 should read it that way.
 > column on its next run; nothing reads that column at runtime (`system_role_permissions` is the
 > source). *Reversal:* remove the three `── B02 ──` blocks and table L; no table changes.
 
+### QA round 1 (3 Oct 2026, independent QA)
+
+Commit under test `8824cdc4`; failing tests committed in `6e88f67f`
+(`backend/apps/library/tests/test_qa_b02.py`). One finding, documentation only; the code is sound.
+
+**QA-B02-1 — Part 22 table L misstates four library codes.** Severity: **low–medium** (no runtime
+effect today; Part 22 is the closed registry a client switches on, and the tasks that implement these
+codes — B05, B09, B11, F05 — would build to the wrong contract from it).
+- `docs/22-api-specification.md:281` `library_renewal_refused` lists reasons `overdue` and "a due date
+  that would move earlier"; LIB-06 §6 (`library.md:1512`) defines `details.reason` as
+  `max_renewals | hold_waiting | overdue_blocked | member_blocked | no_gain`. `overdue` is not a token
+  the server sends; `overdue_blocked` and `member_blocked` are missing.
+  Test: `test_renewal_refused_row_names_only_the_frd_reasons`.
+- `docs/22-api-specification.md:288` `library_hold_refused` names `already_borrowed`; LIB-08 §6
+  (`library.md:2128`) names `already_on_loan`. Test: `test_hold_refused_row_names_only_the_frd_reasons`.
+- `docs/22-api-specification.md:267` `library_code_ambiguous` is described (and its English message
+  worded, "Pick one.") as a lookup that matches several records. LIB-02 BR-8 (`library.md:652-655`)
+  says the lookup's first hit wins and the 409 is raised when a second record is **created** with a
+  clashing code. Test: `test_code_ambiguous_is_raised_on_create_not_on_lookup`.
+- `docs/22-api-specification.md:270` `library_title_has_copies` says "a title with copies on the
+  shelf"; LIB-02 FR-12 (`library.md:433-434`) allows a hand archive only when **every** copy is
+  withdrawn (on loan, in repair, lost and missing copies block it too).
+  Test: `test_title_has_copies_covers_every_copy_not_withdrawn`.
+
+Expected: each row's condition restates the FRD (reason tokens exactly the FRD's §6 lists; code
+ambiguity raised at create; title archive blocked by any non-withdrawn copy), and the `ambiguous`
+message reworded to a creation refusal.
+
+**Checked and sound.**
+- The sixteen codenames equal LIB-14 §9 and land in `PERMISSIONS`/`MODULE_OF`; staff holds exactly
+  §10's seven, accountant exactly the four `.read`s, owner and admin all sixteen; the four FR-3
+  delegables are off for staff and reach a member through `allow` (positive control is real: it
+  asserts the full set under the flag, so the hidden/off tests cannot pass vacuously).
+- `permissions_for` drops every `library.*` while library is hidden or switched off, including an
+  explicit `allow`; `ENGINE_READ_PERMISSIONS["dues"]["library"]` now names a real codename.
+- The format test's widened verb set (`withdraw`, `close`, `override`, `waive`, `run`) is a named
+  list, so an invented verb still fails.
+- Thirty Appendix A codes registered with the right status (all 409, `library_waiver_over_ceiling`
+  403 per Appendix A and LIB-14 §6), none retryable; table L's code set, HTTP statuses, `details` keys
+  and `errors.<code>` keys match Appendix A exactly (scripted comparison); the fifteen reused core
+  codes all exist in the registry.
+- Fifty-eight `LIBRARY_*` audit constants equal Appendix B, all three-part (pass the audit
+  selector's `ACTION_RE`), longest 38 characters against `varchar(64)`; core deposit/payment/counter
+  actions not duplicated.
+- The sixteen vocabularies match every FRD §5 CHECK list they claim, in order, and fit their widths.
+- Suites: `apps/library`, `apps/common/tests`, `apps/platform_app/tests`, `tests/contracts`,
+  `apps/dues/tests` green. `tests/architecture/test_module_scoping.py` currently fails on
+  `LibrarySettingsView`/`LibraryNumberingView` — that is B03's uncommitted in-flight work, not B02.
+
+**Notes, not findings.** §22.1.3 rule 3 (`errors.<code>` in `en.json`/`hi.json` in the same change)
+is not met, as the Built section records; the rule is unenforced and 25 of ~200 codes have keys, so
+it is a pre-existing gap — but F01 must put these keys under `errors.` (the shell catalogue by
+`catalogues.json`) or add an `errors.library_` prefix line, since the library catalogue's own prefix
+is `library.`. `constants.py` covers the sixteen vocabularies of the design note; the title, loan,
+loan-event, hold and verification CHECK lists are not there yet and belong to B05/B09/B11/B13.
+
 ---
 
 ## B03 — library settings, preset seed, off-guard, number kinds
