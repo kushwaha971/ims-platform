@@ -27,7 +27,7 @@ wherever they differ.
 |---|---|---|
 | B01 skeleton | done (QA round 1: no code defect) | 5b031af4 |
 | B02 codenames, errors, audit | built; ready for QA | 8824cdc4 |
-| B03 settings, seed, numbering | design written; not started | — |
+| B03 settings, seed, numbering | built; ready for QA | (this commit) |
 | B04 ISBN and accession helpers | built; ready for QA | ad287ba5 |
 | B05 catalogue | design written; not started | — |
 | B06 membership types, loan rules | design written; not started | — |
@@ -387,7 +387,7 @@ loan-event, hold and verification CHECK lists are not there yet and belong to B0
 
 ### Design note (review step)
 
-Status: design written; not started.
+Status: built; ready for QA (see "Built" below).
 
 Inputs: LIB-01 FR-1–FR-5, §5, §6, §9 (BR-1–BR-4), §12 (T-LIB-01-1…4), §13; contracts §1.1 (R14,
 R15), §1.7, §1.8; R26, R32, R43 (the typed `library_settings` model is explicitly allowed);
@@ -458,6 +458,63 @@ Gaps:
   import. Lead to say whether it belongs in `common`.
 - The FRD seed creates the "Standard" membership type, whose table is B06's. B06 extends the seed (a
   module may register several hooks).
+
+### Built (3 Oct 2026)
+
+Note unchanged by the code since it was written (B02's codenames and `LIBRARY_SETTINGS_UPDATED` are
+on dev). Landed, all inside `apps/library` — **no shared hot file touched**:
+- `models/__init__.py`, `models/settings.py` `LibrarySettings`: the §5 columns and defaults,
+  `version`, `uq_library_settings_tenant`, and named CHECKs for the five vocabularies, pickup days
+  1–30, multiplier 0–10, major percent 1–100, money ≥ 0 (nullable for `fallback_price` and
+  `waiver_ceiling`), and `cardinality(overdue_reminder_days) ≤ 6`.
+- `migrations/0002_settings.py` (on `library 0001`, `platform 0013`; the generated `initial = True`
+  removed, since 0001 is the initial one).
+- `tenant_data.py` registers `library.LibrarySettings` (`library_settings.csv`).
+- `services/settings.py`: `settings_for` (race-safe get-or-create), `seed_library` (the enable
+  hook), `settings_json`, `numbering_meta`, `closed_weekdays_for`, `clean_settings` (every field,
+  per-key messages), `update_settings` (row lock, `StaleVersion(current)`, no write and no audit for
+  an unchanged body, `diff_fields` audit), `raise_number` (only `library_accession` and
+  `library_member`; then `raise_counter(via="settings")`). `EDITABLE_FIELDS` is the PUT body.
+- `permissions.py` `HasAnyPermission(*codenames)` (G9 default, library-local) and
+  `SETTINGS_READERS` (every library `.read` plus `settings.manage`). Refuses unsafe methods, so it
+  can only gate reads.
+- `views.py` `LibrarySettingsView` (GET any reader, PUT `settings.manage`, via `get_permissions`)
+  and `LibraryNumberingView`; both carry `scope_exempt` for the module-scoping walk. `urls.py`:
+  `library/settings` (`v1:library-settings`) and `library/settings/numbering`.
+- `apps.py` `ready()`: the three number kinds exactly as contracts §1.7, the enable hook, the calendar
+  reader. No off-guard (G7; payments already counts library deposits).
+
+Tests: `apps/library/tests/test_settings.py`, 40 including parametrised cases — registrations;
+no doubled deposit guard; seed twice leaves one row and keeps edits; one row per tenant in the DB;
+switching on through `PATCH /tenants/current` seeds; a raising seed leaves library off with no row;
+GET defaults before any seed; `closed_weekdays` is the library override else the tenant's; PUT
+saves, bumps and audits only the diff; stale version 409 with `current_version`; unchanged PUT no
+audit; 16 per-field 400s; a missing field named and null clearing optional money; staff and
+accountant read but neither PUT nor raise (who-is-signed-in asserted first); all reads denied → 403;
+unreleased → `module_disabled`; two tenants independent; raise lower/equal/higher; the member
+prefix read from the core row; five 400 kinds/numbers (incl. `library_charge`, a would-be 500); the
+core numbering screen lists the kinds only while library is effective.
+
+Gates: `apps/library` + `tests/architecture` **208 passed, 4 skipped**; with `tests/migrations`
+(round trip includes 0002), `tests/contracts`, all of `apps/platform_app` (support-session walk
+included — it now walks the two library writes), `apps/common/tests` and the deposit tests:
+**1464 passed, 12 skipped** (the 4 B02 QA tests that were failing in that run were the lead's
+round-1 tests, green once 07b3eb67 landed). `makemigrations --check` clean; `black`, `isort`,
+`flake8` clean on `apps/library`. No screen (F02 is the settings page).
+
+Deviations from the note:
+- `update_settings(ctx, data)` takes `version` inside `data` (it is a body field), not as an
+  argument.
+- An unchanged PUT returns 200 without bumping `version` or writing an audit row (an untouched Save
+  is not an event); a test pins it.
+- The DB CHECK on `overdue_reminder_days` holds the count only; element range and de-duplication are
+  the service's (a 365-element `<@` literal in a CHECK buys nothing a second writer is likely to
+  break).
+- `apps/library/permissions.py` imports `_authenticated_membership` and `_method_has_no_handler` from
+  `apps.common.permissions` so that "who is asking" is decided exactly as `HasPermission` decides it
+  (token-stale included). If G9 moves `HasAnyPermission` into `common`, those stay private.
+
+New contradictions: none. G7–G9 stand with their defaults.
 
 ---
 

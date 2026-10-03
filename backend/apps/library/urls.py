@@ -1,9 +1,16 @@
-"""URL routes for the library vertical, mounted at `/api/v1/library/` (B01).
+"""URL routes for the library vertical, mounted at `/api/v1/library/`.
 
-Empty until B03 adds settings: a module with no routes reaches nothing, and the
-release gate for the API half is A1's `test_release_gate.py`.
+B03 adds settings. Every route is behind `ModuleEnabled("library")`, which
+refuses an unreleased module first (A1).
 """
 
 from __future__ import annotations
 
-urlpatterns: list = []
+from django.urls import path
+
+from apps.library.views import LibraryNumberingView, LibrarySettingsView
+
+urlpatterns: list = [
+    path("settings", LibrarySettingsView.as_view(), name="library-settings"),
+    path("settings/numbering", LibraryNumberingView.as_view(), name="library-settings-numbering"),
+]
