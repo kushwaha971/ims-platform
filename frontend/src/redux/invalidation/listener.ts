@@ -11,6 +11,7 @@ import type { RootState } from 'src/redux/store';
 import { fetchSession } from 'modules/DigiKhaato/features/auth/redux/sessionThunk';
 
 import { INVALIDATION } from './map';
+import { moduleEntriesFor } from './moduleRegistry';
 import { MUTATIONS, type TMutationName } from './registry';
 
 import type { TSliceKey, TStaleState } from './types';
@@ -43,25 +44,31 @@ const FULFILLED = new Map<string, TMutationName>(
 export const invalidationListener = createListenerMiddleware();
 
 invalidationListener.startListening({
-  predicate: (action: UnknownAction) => FULFILLED.has(action.type),
+  predicate: (action: UnknownAction) =>
+    FULFILLED.has(action.type) || moduleEntriesFor(action.type).length > 0,
   effect: (action, api) => {
     const name = FULFILLED.get(action.type);
-    if (!name) return;
-    const entry = INVALIDATION[name];
+    const core = name ? INVALIDATION[name] : undefined;
 
-    if (entry.resetAll) {
+    if (core?.resetAll) {
       api.dispatch(resetAllFeatureState());
       return;
     }
-    // `patch` is applied by the owning slice's own extraReducers on this same
-    // action — it is declared in the map so the map is the complete statement,
-    // and asserted by invalidation.map.test.ts. The listener signals the
-    // other two.
-    if (entry.stale?.length) {
-      api.dispatch(cacheInvalidated({ slices: entry.stale, urgency: 'next-mount' }));
+    // ADR-062 — the core entry and every module's entry for this action are
+    // one union: each slice is signalled once, and `now` wins over
+    // `next-mount`. `patch` is applied by the owning slice's own
+    // extraReducers on this same action — it is declared in the map so the
+    // map is the complete statement, and asserted by invalidation.map.test.ts.
+    const entries = [...(core ? [core] : []), ...moduleEntriesFor(action.type)];
+    const now = new Set<TSliceKey>(entries.flatMap((entry) => entry.refetch ?? []));
+    const nextMount = [...new Set<TSliceKey>(entries.flatMap((entry) => entry.stale ?? []))].filter(
+      (slice) => !now.has(slice)
+    );
+    if (nextMount.length) {
+      api.dispatch(cacheInvalidated({ slices: nextMount, urgency: 'next-mount' }));
     }
-    if (entry.refetch?.length) {
-      api.dispatch(cacheInvalidated({ slices: entry.refetch, urgency: 'now' }));
+    if (now.size) {
+      api.dispatch(cacheInvalidated({ slices: [...now], urgency: 'now' }));
     }
   },
 });

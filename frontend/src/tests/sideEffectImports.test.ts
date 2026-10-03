@@ -71,6 +71,9 @@ describe('a bare import survives the production build', () => {
 
   it('finds the imports it is guarding (the scan is not vacuous)', () => {
     expect(bare.some((row) => row.target.endsWith('payments/deposits/partyPanel.ts'))).toBe(true);
+    // F01 (ADR-061): the sanctioned registrations file and what it imports.
+    expect(bare.some((row) => row.target === 'src/modules/registrations.ts')).toBe(true);
+    expect(bare.some((row) => row.target.endsWith('features/library/register.ts'))).toBe(true);
   });
 
   it('every module imported for its side effect is in package.json sideEffects', () => {

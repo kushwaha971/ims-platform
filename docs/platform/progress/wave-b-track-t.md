@@ -516,7 +516,40 @@ build step); the exact query counts in C8 (estimated from the plan, not measured
 
 ## F01 — Library feature skeleton, ADR-061 registrations, ADR-062 module invalidation
 
-Status: **design written; not started**
+Status: **built; ready for QA** (commit recorded in the F01 commit message's successor line below).
+
+### Build log (F01, 3 Oct, on dev)
+
+What landed: ADR-062 `src/redux/invalidation/moduleRegistry.ts` (`registerInvalidation` keyed by
+module, by typePrefix; refuses `resetAll`, a `patch` on a slice the module does not own, and an
+entry naming no thunk; `core` entries add to core mutations) and the listener's union (each slice
+signalled once, `now` wins, a core `resetAll` short-circuits); `features/library/redux/
+libraryInvalidation.ts` (empty registries, registered); the registry test now holds module thunks to
+their module's lists, requires every module thunk file to bare-import `./<m>Invalidation` and to
+register the module when imported alone (`jest.isolateModules`); `registerInvalidation(` is a lint
+error outside `*Invalidation.ts` (and tests). ADR-061 `src/modules/registrations.ts` +
+`features/library/register.ts` (empty), bare-imported by the four readers, three `sideEffects` globs,
+`src/tests/verticalRegistrations.test.ts`. Flat `LIBRARY_*` routes, `/library` guarded (so in
+`CRAWL_DISALLOW`); eight nav rows without `ready`; the sixteen library codenames in
+`PERMISSION_CODES`; catalogue lines (`library.`, `library.off.`/`.numbering.` → settings,
+`library.role.` → team, `library.archive.` → parties, `library.reminders.` → reminders,
+`errors.library_` → library) with the nine nav words in the shell and the thirty `errors.library_*`
+(en + hi, Part 22 table L) in the new `library` catalogue; the route gate
+`app/(app)/library/layout.tsx` → `src/components/layout/RequireModule.tsx` (not found while the module
+is off or unreleased); the core → vertical/engine lint zones (core folders read from disk, every core
+`src/` folder and every route group but a module's own) and the vertical route-group zones (W-F1),
+with two firing fixtures; `src/hooks/useListUrl.ts` extracted from `usePartyListUrl` (which now uses
+it), `useLibraryListUrl` + `libraryListCodec`, `types/library.types.ts`, `api/libraryMapping.ts`.
+
+Gates: `tsc` clean; eslint + prettier clean on every changed file; jest `src/tests src/redux
+src/components/layout src/hooks` + library, navigation, parties, reminders, reports, i18n: 79
+suites, 971 tests passed; `split-locales --check` and `check-locales` green. No page exists under
+`/library` yet, so there is no screen; the only visible change is none (rows are not ready).
+
+Deviations: no separate `invalidationLintRule.test.ts` harness (the restriction was proven by linting
+a probe by hand; the lead asked for economy); no fixture for `registrations.ts` or the
+`app/(app)/library` zone (the boundary harness plants only inside feature folders) — the real
+`registrations.ts` lints clean. `register.ts` is `export {};` until F04.
 
 ### Design note (review step)
 

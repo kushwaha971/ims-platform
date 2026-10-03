@@ -142,6 +142,24 @@ export const PERMISSION_CODES = [
   'notifications.settings.manage',
   // ── A9b ── R26, owner Q2: tenant-wide closed days and weekdays; owner, admin.
   'platform.calendar.manage',
+  // ── library ── F01, LIB-14 §7 (B02's sixteen; the server's registry is the
+  // authority). Held by nobody while library is unreleased or switched off.
+  'library.catalogue.read',
+  'library.catalogue.write',
+  'library.copy.withdraw',
+  'library.member.read',
+  'library.member.write',
+  'library.member.close',
+  'library.loan.read',
+  'library.loan.write',
+  'library.loan.override',
+  'library.loan.adjust',
+  'library.charge.waive',
+  'library.charge.write',
+  'library.verification.run',
+  'library.verification.close',
+  'library.reports.read',
+  'library.settings.manage',
 ] as const;
 export type PermissionCode = (typeof PERMISSION_CODES)[number];
 

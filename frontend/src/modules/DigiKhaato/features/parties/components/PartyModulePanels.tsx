@@ -10,6 +10,10 @@ import { partyPanelsFor } from '../modulePanels';
 
 // ── A4b ── core's own panel (held deposits, PLT-X02 §7) registers itself on import.
 import 'modules/DigiKhaato/features/payments/deposits/partyPanel';
+// ADR-061 — this component READS a registry verticals write to; their
+// registrations run when this bare import is evaluated. It looks redundant
+// and must not be removed (src/tests/verticalRegistrations.test.ts).
+import 'src/modules/registrations';
 
 import type { PartyDetail } from '../types/party.types';
 

@@ -5,6 +5,11 @@ import type { TranslateFn } from 'src/hooks/useTranslation';
 
 import { dashboardSectionComponent } from '../dashboardSections';
 
+// ADR-061 — this component READS a registry verticals write to; their
+// registrations run when this bare import is evaluated. It looks redundant
+// and must not be removed (src/tests/verticalRegistrations.test.ts).
+import 'src/modules/registrations';
+
 import type { DashboardSection } from '../types/reports.types';
 
 /**

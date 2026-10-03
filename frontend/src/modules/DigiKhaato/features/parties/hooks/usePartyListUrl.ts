@@ -1,8 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { seedListPatch, useListUrl, writeListQuery, type ListUrlCodec } from 'src/hooks/useListUrl';
 
 import type { PartyListFilters } from '../types/party.types';
 
@@ -124,18 +122,10 @@ const readFilters = (params: URLSearchParams): Partial<PartyListFilters> => {
 };
 
 /** The query string this filter set should be at, with defaults omitted. */
-export const writeFilters = (filters: PartyListFilters, defaults: PartyListFilters): string => {
-  const params = new URLSearchParams();
-  for (const key of URL_KEYS) {
-    const value = String(filters[key] ?? '');
-    /* Defaults are left OUT, so an untouched list has a clean `/parties` and a
-       shared link carries only what the sender actually chose. A URL full of
-       `&type=&balance=` is a URL nobody can read, which defeats the point. */
-    if (!value || value === String(defaults[key] ?? '')) continue;
-    params.set(key, value);
-  }
-  return params.toString();
-};
+export const writeFilters = (filters: PartyListFilters, defaults: PartyListFilters): string =>
+  /* Defaults are left OUT, so an untouched list has a clean `/parties` and a
+     shared link carries only what the sender actually chose. */
+  writeListQuery(URL_KEYS, filters, defaults);
 
 /**
  * What the slice must change to show exactly what the URL says: every URL axis
@@ -148,14 +138,10 @@ export const seedPatch = (
   fromUrl: Partial<PartyListFilters>,
   current: PartyListFilters,
   defaults: PartyListFilters
-): Partial<PartyListFilters> => {
-  const patch: Record<string, unknown> = {};
-  for (const key of URL_KEYS) {
-    const wanted = fromUrl[key] ?? defaults[key];
-    if (wanted !== current[key]) patch[key] = wanted;
-  }
-  return patch as Partial<PartyListFilters>;
-};
+): Partial<PartyListFilters> => seedListPatch(URL_KEYS, fromUrl, current, defaults);
+
+/** F01 — the mechanism is `src/hooks/useListUrl` (shared with the library's lists). */
+const PARTY_LIST_CODEC: ListUrlCodec<PartyListFilters> = { keys: URL_KEYS, read: readFilters };
 
 export interface UsePartyListUrlOptions {
   readonly filters: PartyListFilters;
@@ -164,57 +150,5 @@ export interface UsePartyListUrlOptions {
 }
 
 export function usePartyListUrl({ filters, defaults, onSeed }: UsePartyListUrlOptions): void {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  /* The string, not the object: `useSearchParams()` may hand back a new
-     object on every render, and an effect keyed on it would re-run for a URL
-     that did not change. */
-  const current = searchParams?.toString() ?? '';
-  /** The query this hook last SAW in the address bar; null before the seed. */
-  const observed = useRef<string | null>(null);
-  /** Queries this hook asked the router for and has not yet seen arrive. */
-  const requested = useRef<string[]>([]);
-
-  useEffect(() => {
-    /* Is this address the merchant's doing or ours?
-       - The first run is a mount: the URL is what was opened, so it is read.
-       - A later change to a query WE requested is our own `replace` arriving;
-         everything requested up to it is settled.
-       - A later change to anything else is a navigation from outside while
-         the screen stayed mounted — the sidebar's "Customers" (a clean
-         `/parties`) tapped while already on `/parties?status=archived`. It is
-         read like a mount, or the writer below would put the Archived tab
-         straight back over the default view the merchant asked for (UAT D7). */
-    let fromOutside = observed.current === null;
-    if (observed.current !== null && current !== observed.current) {
-      const index = requested.current.lastIndexOf(current);
-      if (index >= 0) requested.current.splice(0, index + 1);
-      else fromOutside = true;
-    }
-    observed.current = current;
-
-    if (fromOutside) {
-      requested.current = [];
-      const patch = seedPatch(readFilters(new URLSearchParams(current)), filters, defaults);
-      /* Nothing is written in this pass: `filters` here is still the
-         PRE-seed value, and writing it would `replace` the very link being
-         opened. The render the seed causes runs this again and writes the
-         canonical form (a dropped `type=wholesaler`, say). */
-      if (Object.keys(patch).length > 0) {
-        onSeed(patch);
-        return;
-      }
-    }
-
-    const next = writeFilters(filters, defaults);
-    if (next === current || requested.current.at(-1) === next) return;
-    requested.current.push(next);
-    /* `replace`, not `push`: a chip tap is a refinement of the screen the
-       merchant is on, not a place they navigated to. Pushing would make Back
-       walk them through every chip they tried instead of returning them to
-       wherever they came from. `scroll: false` keeps the list where they were
-       reading it. */
-    router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
-  }, [current, filters, defaults, pathname, router, onSeed]);
+  useListUrl({ codec: PARTY_LIST_CODEC, filters, defaults, onSeed });
 }

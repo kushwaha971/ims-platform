@@ -44,6 +44,11 @@ import { createDueColumns, createHistoryColumns } from './ReminderColumns';
 
 import type { DueParty, Reminder, ReminderKindFilter, ReminderTab } from '../types/reminder.types';
 
+// ADR-061 — this component READS a registry verticals write to; their
+// registrations run when this bare import is evaluated. It looks redundant
+// and must not be removed (src/tests/verticalRegistrations.test.ts).
+import 'src/modules/registrations';
+
 /* Each of these opens from a tap, so each belongs in the chunk that opens it
    (the rule CLAUDE.md records three times): a merchant who opens the screen to
    see who is due today downloads none of them. */

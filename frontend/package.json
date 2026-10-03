@@ -28,14 +28,23 @@
     "module registers its message catalogue into the live map `IntlProvider`",
     "reads (src/i18n/catalogueRegistry.ts), and a screen imports it for exactly",
     "that and nothing else — `import 'src/i18n/catalogues/parties'`. Without",
-    "this line the bundler may drop the import and the screen renders raw ids."
+    "this line the bundler may drop the import and the screen renders raw ids.",
+    "",
+    "F01 (ADR-061, ADR-062): `src/modules/registrations.ts` and each vertical's",
+    "`register.ts` run registrations on import, and each module's",
+    "`redux/<module>Invalidation.ts` registers its invalidation map on import",
+    "(every thunk file of the module bare-imports it). Unlisted, the build drops",
+    "those bare imports while every jest test passes — the A4b defect."
   ],
   "sideEffects": [
     "*.css",
     "*.scss",
     "./src/i18n/catalogues/*.ts",
     "./src/modules/DigiKhaato/features/payments/deposits/partyPanel.ts",
-    "./src/modules/DigiKhaato/features/notifications/redux/notificationSlice.ts"
+    "./src/modules/DigiKhaato/features/notifications/redux/notificationSlice.ts",
+    "./src/modules/registrations.ts",
+    "./src/modules/DigiKhaato/features/*/register.ts",
+    "./src/modules/DigiKhaato/features/*/redux/*Invalidation.ts"
   ],
   "engines": {
     "node": ">=22"

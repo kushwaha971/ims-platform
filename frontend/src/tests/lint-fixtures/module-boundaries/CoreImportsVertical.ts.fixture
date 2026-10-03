@@ -1,0 +1,6 @@
+// @lint-at: parties/__lint_probe_boundaries__/coreImportsVertical.ts
+// @expect: fire
+// F01 (G2): a core feature reaches a vertical only through src/modules/registrations.ts.
+import { PROBE_LIBRARY } from 'modules/DigiKhaato/features/library/__lint_probe_boundaries__/target';
+
+export const probe = PROBE_LIBRARY;

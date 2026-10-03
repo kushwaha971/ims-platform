@@ -25,6 +25,10 @@ import type { ReminderSettingsPatch } from '../types/reminder.types';
 // Loaded with dynamic(), so its own words come with its own chunk rather than
 // with the screen that opens it (src/i18n/catalogueRegistry.ts).
 import 'src/i18n/catalogues/reminders';
+// ADR-061 — this component READS a registry verticals write to; their
+// registrations run when this bare import is evaluated. It looks redundant
+// and must not be removed (src/tests/verticalRegistrations.test.ts).
+import 'src/modules/registrations';
 
 /**
  * LED-07 FR-1 and LED-08 FR-1 — the two SMS switches, owner and admin only.

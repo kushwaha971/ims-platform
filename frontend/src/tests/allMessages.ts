@@ -42,6 +42,8 @@ import ledgerEn from 'locales/catalogues/ledger.en.json';
 import ledgerHi from 'locales/catalogues/ledger.hi.json';
 import legalEn from 'locales/catalogues/legal.en.json';
 import legalHi from 'locales/catalogues/legal.hi.json';
+import libraryEn from 'locales/catalogues/library.en.json';
+import libraryHi from 'locales/catalogues/library.hi.json';
 import moneyEn from 'locales/catalogues/money.en.json';
 import moneyHi from 'locales/catalogues/money.hi.json';
 import movementEn from 'locales/catalogues/movement.en.json';
@@ -128,6 +130,7 @@ export const en: Readonly<Record<string, string>> = {
   ...landingPricingEn,
   ...ledgerEn,
   ...legalEn,
+  ...libraryEn,
   ...moneyEn,
   ...movementEn,
   ...notificationsEn,
@@ -177,6 +180,7 @@ export const hi: Readonly<Record<string, string>> = {
   ...landingPricingHi,
   ...ledgerHi,
   ...legalHi,
+  ...libraryHi,
   ...moneyHi,
   ...movementHi,
   ...notificationsHi,

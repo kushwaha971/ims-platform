@@ -99,6 +99,19 @@ export const ROUTES = {
   /** IMP-01 — the import wizard; `?kind=` skips the kind picker (FR-14). */
   IMPORTS: '/imports',
 
+  // ── library ── F01: the library vertical (FRD library §7). Flat keys, as
+  // every other address here: `Route` is a union of strings, which a nested
+  // `ROUTES.library.*` object would break (G3). Each page arrives with its
+  // F-task; until then only the module gate exists under `/library`.
+  LIBRARY_HOME: '/library',
+  LIBRARY_COUNTER: '/library/counter',
+  LIBRARY_MEMBERS: '/library/members',
+  LIBRARY_CATALOGUE: '/library/catalogue',
+  LIBRARY_HOLDS: '/library/holds',
+  LIBRARY_VERIFICATION: '/library/verification',
+  LIBRARY_REPORTS: '/library/reports',
+  LIBRARY_SETTINGS: '/library/settings',
+
   // ── (admin) — PLT-14's console. Needs a session, not a tenant: an operator
   //    usually belongs to no business at all.
   ADMIN: '/admin',
@@ -229,6 +242,8 @@ export const APP_ROUTE_PREFIXES: readonly string[] = [
   ROUTES.SWITCH_TENANT,
   '/notifications',
   ROUTES.IMPORTS,
+  // ── library ── F01 (and so in CRAWL_DISALLOW, which derives from this list).
+  ROUTES.LIBRARY_HOME,
 ];
 
 /** Everything the proxy guards: a session is required for all of it. */

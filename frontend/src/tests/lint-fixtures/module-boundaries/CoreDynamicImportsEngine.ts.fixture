@@ -1,0 +1,7 @@
+// @lint-at: reports/__lint_probe_boundaries__/coreDynamicImportsEngine.ts
+// @expect: fire
+// F01 (G2): a lazily loaded engine component in a core screen is still coupling.
+export const probe = () =>
+  import('modules/DigiKhaato/features/dues/__lint_probe_boundaries__/target').then(
+    (module) => module.PROBE_DUES
+  );
