@@ -840,6 +840,46 @@ registerInvalidation('library', LIBRARY_MUTATIONS, LIBRARY_INVALIDATION, LIBRARY
 
 ---
 
+## F03 — Catalogue screens (LIB-02 §7, §8)
+
+Status: **built; ready for QA** (data layer 8d94e53e; screens in the commit after it).
+
+### Build log (F03, 4 Oct, on dev)
+
+What landed, all under `features/library/` unless named: `api/libraryPaths.ts` (the library's
+paths stay out of core `API_PATHS`, which ships to every route), `libraryCatalogueService.ts` and the
+catalogue half of `libraryMapping.ts`; `types/catalogue.types.ts`; `libraryCatalogueThunk.ts` (8
+queries incl. the FR-9 `lookup`, 11 mutations, all registered in `libraryInvalidation.ts`); five lazy
+slices (`libraryTitleList`, `libraryCopyList` sharing `libraryListState.ts`; `libraryTitleDetail`,
+`libraryCopyDetail`, `libraryCatalogueForm` holding the drawer, FR-3 matches, categories and
+locations); hooks `useCatalogueList` (URL via `useLibraryListUrl`), `useCatalogueDetail`,
+`useCatalogueForm`, `useLibraryGridLabels`; `src/hooks/useCommittedSearch.ts` (the party list's
+search-box rule, extracted for its second and third callers); screens `CatalogueListPageContent`
+(Books: search, Enter on an exact number opens the copy, availability/archived chips, type select,
+⋯ to copies/categories/places), `CopyListPageContent`, `TitleDetailPageContent` (title owns its line,
+badges on the caption, Archive only when every copy is withdrawn), `CopyDetailPageContent` (history,
+repair/back to shelf, withdraw), `CatalogueDrawers` (`dynamic()`: Add book with search-first, Add
+copies with auto or typed numbers, Edit details), `WithdrawCopyDialog` (`dynamic()`),
+`CatalogueManagerPageContent` (categories with merge; places; delete only at zero, else switch off);
+six routes under `app/(app)/library/`; `ROUTES.LIBRARY_COPIES`; the **Books** nav row (`ready`); 196
+words en + hi in the `library` catalogue; `library_accession_taken` and `library_title_has_copies`
+in `ApiErrorCode`.
+
+Gates: `tsc` clean; `eslint . --max-warnings=0` clean; jest 266 suites / 2847 tests; `i18n:split`
+writes nothing and `i18n:check` is in step. The shell gains one word (`nav.library.catalogue`, the
+row's label) and the row itself. `npm run build` / `bundle:check` cannot run on this machine (the
+sandbox refuses Turbopack's local port), and neither can a dev server, so the screens have **not been
+looked at** — the four-width sweep (`e2e/03-catalogue`, LIB-02 §12) is still owed.
+
+Deviations: no `UbReasonDialog` in the design system — `WithdrawCopyDialog` is local until the
+attendance UI is the second caller. No "Print numbers" slip: the snackbar has no action slot (the
+same gap as PTY-04 FR-12); the numbers are in the snackbar and on the title page. No `location_text`
+field in the form (places list only). Category create-inline in the drawer is not built; the
+categories page is one tap away. Omitted, because B05 omits them: holds, 12-month issues, due date and
+borrower on a copy, loans on the copy page, the Holds column, the "has holds" chip, the year-range
+filter and "most issued" sort. The list's first request on mount may be aborted and re-sent once the
+URL seed lands.
+
 ## Open questions for the lead
 
 1. Attendance `0001` dependencies: the two referenced apps (`parties 0010`, `platform 0013`) or all

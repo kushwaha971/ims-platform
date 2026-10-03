@@ -107,6 +107,7 @@ export const ROUTES = {
   LIBRARY_COUNTER: '/library/counter',
   LIBRARY_MEMBERS: '/library/members',
   LIBRARY_CATALOGUE: '/library/catalogue',
+  LIBRARY_COPIES: '/library/copies',
   LIBRARY_HOLDS: '/library/holds',
   LIBRARY_VERIFICATION: '/library/verification',
   LIBRARY_REPORTS: '/library/reports',

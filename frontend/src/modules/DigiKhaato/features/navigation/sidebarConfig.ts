@@ -1,5 +1,6 @@
 import {
   BarChart3,
+  BookCopy,
   BookOpen,
   BookUser,
   Boxes,
@@ -195,6 +196,19 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
     permission: 'expenses.expense.read',
     section: 'business',
     order: 6,
+  },
+  {
+    // F03 (LIB-02) — the library's first page. Shown only while the library
+    // module is on; each later library row arrives with its own page (F01).
+    key: 'libraryCatalogue',
+    ready: true,
+    icon: BookCopy,
+    labelId: 'nav.library.catalogue',
+    href: ROUTES.LIBRARY_CATALOGUE,
+    module: 'library',
+    permission: 'library.catalogue.read',
+    section: 'daily',
+    order: 13,
   },
   {
     // RPT-02/05/06 — the hub lists only the reports that are built.

@@ -24,7 +24,7 @@ const TITLE_WIRE = {
   subtitle: '',
   authors: 'A. P. J. Abdul Kalam; Arun Tiwari',
   isbn13: '9788173711466',
-  isbn10: '817371146X',
+  isbn10: '8173711461',
   category: { id: 'c1', name: 'Biography' },
   material_type: 'book',
   copies_total: 3,

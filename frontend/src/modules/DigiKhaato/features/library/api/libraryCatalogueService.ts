@@ -195,6 +195,22 @@ export const moveCopy = async (
   return toCopyDetail(response.data.data);
 };
 
+/**
+ * FR-9 — an exact accession number or barcode is a copy, not a search: the
+ * counter's resolver (BR-8) answers which record a typed code names.
+ */
+export const lookupCode = async (
+  code: string,
+  signal?: AbortSignal
+): Promise<{ readonly kind: string; readonly copyId: string | null }> => {
+  const response = await api.get<{ data: { kind: string; copy?: Wire } }>(
+    `${LIBRARY_PATHS.LOOKUP}${toQueryString({ code })}`,
+    ubConfig({ signal })
+  );
+  const { kind, copy } = response.data.data;
+  return { kind, copyId: copy ? toCopyRow(copy).id : null };
+};
+
 export const listCategories = async (signal?: AbortSignal): Promise<readonly LibraryCategory[]> => {
   const response = await api.get<{ data: Wire[] }>(LIBRARY_PATHS.CATEGORIES, ubConfig({ signal }));
   return response.data.data.map(toCategory);

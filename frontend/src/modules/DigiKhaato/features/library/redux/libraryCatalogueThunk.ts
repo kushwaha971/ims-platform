@@ -90,6 +90,19 @@ export const fetchLibraryCopy = createAsyncThunk<CopyDetail, string, Reject>(
   }
 );
 
+/** FR-9 — does a typed code name one copy? (the search box's Enter). */
+export const lookupLibraryCode = createAsyncThunk<
+  { readonly kind: string; readonly copyId: string | null },
+  string,
+  Reject
+>('libraryCatalogueForm/lookup', async (code, { signal, rejectWithValue }) => {
+  try {
+    return await (await service()).lookupCode(code, signal);
+  } catch (error) {
+    return rejectWithValue(toApiError(error, 'library.catalogue.error.title'));
+  }
+});
+
 export const fetchLibraryCategories = createAsyncThunk<readonly LibraryCategory[], void, Reject>(
   'libraryCatalogueForm/fetchCategories',
   async (_, { signal, rejectWithValue }) => {

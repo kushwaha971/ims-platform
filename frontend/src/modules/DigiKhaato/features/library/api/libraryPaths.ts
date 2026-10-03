@@ -16,6 +16,7 @@ export const LIBRARY_PATHS = {
   COPY_WITHDRAW: (id: string) => `/library/copies/${seg(id)}/withdraw`,
   COPY_REPAIR: (id: string) => `/library/copies/${seg(id)}/repair`,
   COPY_BACK_TO_SHELF: (id: string) => `/library/copies/${seg(id)}/back-to-shelf`,
+  LOOKUP: '/library/lookup',
   CATEGORIES: '/library/categories',
   CATEGORY: (id: string) => `/library/categories/${seg(id)}`,
   CATEGORY_MERGE: (id: string) => `/library/categories/${seg(id)}/merge`,

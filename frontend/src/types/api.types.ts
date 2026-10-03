@@ -119,6 +119,9 @@ export type ApiErrorCode =
   | 'track_stock_not_allowed'
   // RPT-07 FR-11 — GST reports for a business with no GSTIN (an empty state).
   | 'gst_not_registered'
+  // F03 (LIB-02 §6) — the catalogue's conflicts the drawers say in place.
+  | 'library_accession_taken'
+  | 'library_title_has_copies'
   // transport-level codes minted on the client, never sent by the server:
   | 'network_error'
   | 'timeout'

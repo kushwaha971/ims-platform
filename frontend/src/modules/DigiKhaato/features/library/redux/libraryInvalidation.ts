@@ -25,6 +25,7 @@ export const LIBRARY_QUERIES = {
   searchLibraryTitles: 'libraryCatalogueForm/search',
   fetchLibraryCopies: 'libraryCopyList/fetch',
   fetchLibraryCopy: 'libraryCopyDetail/fetch',
+  lookupLibraryCode: 'libraryCatalogueForm/lookup',
   fetchLibraryCategories: 'libraryCatalogueForm/fetchCategories',
   fetchLibraryLocations: 'libraryCatalogueForm/fetchLocations',
 } as const satisfies Record<string, string>;
