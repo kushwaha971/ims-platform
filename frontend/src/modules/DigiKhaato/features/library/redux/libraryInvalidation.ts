@@ -14,26 +14,90 @@ import {
  * listed in `package.json` `sideEffects`, or the production build would drop
  * that bare import while every jest test passed.
  *
- * Empty in F01: F02 onward add each thunk here as it is written —
- * `LIBRARY_QUERIES`/`LIBRARY_MUTATIONS` map the thunk's name to its
- * `typePrefix` (the registry test holds each string to the real thunk), and
- * `LIBRARY_INVALIDATION` is total over the mutations by type.
+ * Each F-task adds its thunks here as it writes them — `LIBRARY_QUERIES`/
+ * `LIBRARY_MUTATIONS` map the thunk's name to its `typePrefix` (the registry
+ * test holds each string to the real thunk), and `LIBRARY_INVALIDATION` is
+ * total over the mutations by type. F03 added the catalogue's.
  */
-export const LIBRARY_QUERIES = {} as const satisfies Record<string, string>;
+export const LIBRARY_QUERIES = {
+  fetchLibraryTitles: 'libraryTitleList/fetch',
+  fetchLibraryTitle: 'libraryTitleDetail/fetch',
+  searchLibraryTitles: 'libraryCatalogueForm/search',
+  fetchLibraryCopies: 'libraryCopyList/fetch',
+  fetchLibraryCopy: 'libraryCopyDetail/fetch',
+  fetchLibraryCategories: 'libraryCatalogueForm/fetchCategories',
+  fetchLibraryLocations: 'libraryCatalogueForm/fetchLocations',
+} as const satisfies Record<string, string>;
 
-export const LIBRARY_MUTATIONS = {} as const satisfies Record<string, string>;
+export const LIBRARY_MUTATIONS = {
+  createLibraryTitle: 'libraryCatalogueForm/createTitle',
+  patchLibraryTitle: 'libraryCatalogueForm/patchTitle',
+  addLibraryCopies: 'libraryCatalogueForm/addCopies',
+  setLibraryTitleArchived: 'libraryTitleDetail/setArchived',
+  withdrawLibraryCopy: 'libraryCopyDetail/withdraw',
+  moveLibraryCopy: 'libraryCopyDetail/move',
+  saveLibraryCategory: 'libraryCatalogueForm/saveCategory',
+  deleteLibraryCategory: 'libraryCatalogueForm/deleteCategory',
+  mergeLibraryCategory: 'libraryCatalogueForm/mergeCategory',
+  saveLibraryLocation: 'libraryCatalogueForm/saveLocation',
+  deleteLibraryLocation: 'libraryCatalogueForm/deleteLocation',
+} as const satisfies Record<string, string>;
 
 export type TLibraryQueryName = keyof typeof LIBRARY_QUERIES;
 export type TLibraryMutationName = keyof typeof LIBRARY_MUTATIONS;
 
+/*
+ * F03 (LIB-02 §7) — a write stales every catalogue view that shows what it
+ * changed, and REFETCHES the one the merchant is looking at. The detail slices
+ * that a write answers with (`withdraw`, `move`, `setArchived`) patch
+ * themselves from the response, so they are `patch`, not refetched.
+ */
+const CATALOGUE_LISTS = ['libraryTitleList', 'libraryCopyList'] as const;
+
 export const LIBRARY_INVALIDATION: Readonly<
   Record<TLibraryMutationName, TModuleInvalidationEntry>
-> = {};
+> = {
+  createLibraryTitle: { stale: [...CATALOGUE_LISTS] },
+  patchLibraryTitle: { patch: [['libraryTitleDetail', 'title']], stale: [...CATALOGUE_LISTS] },
+  addLibraryCopies: { refetch: ['libraryTitleDetail'], stale: [...CATALOGUE_LISTS] },
+  setLibraryTitleArchived: {
+    patch: [['libraryTitleDetail', 'title']],
+    stale: ['libraryTitleList'],
+  },
+  withdrawLibraryCopy: {
+    patch: [['libraryCopyDetail', 'copy']],
+    stale: ['libraryTitleDetail', ...CATALOGUE_LISTS],
+  },
+  moveLibraryCopy: {
+    patch: [['libraryCopyDetail', 'copy']],
+    stale: ['libraryTitleDetail', ...CATALOGUE_LISTS],
+  },
+  saveLibraryCategory: {
+    patch: [['libraryCatalogueForm', 'categories']],
+    stale: ['libraryTitleList', 'libraryTitleDetail'],
+  },
+  deleteLibraryCategory: { patch: [['libraryCatalogueForm', 'categories']] },
+  mergeLibraryCategory: {
+    refetch: ['libraryCatalogueForm'],
+    stale: ['libraryTitleList', 'libraryTitleDetail'],
+  },
+  saveLibraryLocation: {
+    patch: [['libraryCatalogueForm', 'locations']],
+    stale: ['libraryCopyList', 'libraryTitleDetail', 'libraryCopyDetail'],
+  },
+  deleteLibraryLocation: { patch: [['libraryCatalogueForm', 'locations']] },
+};
 
 registerInvalidation({
   module: 'library',
   queries: LIBRARY_QUERIES,
   mutations: LIBRARY_MUTATIONS,
   map: LIBRARY_INVALIDATION,
-  ownSlices: [],
+  ownSlices: [
+    'libraryTitleList',
+    'libraryTitleDetail',
+    'libraryCopyList',
+    'libraryCopyDetail',
+    'libraryCatalogueForm',
+  ],
 });

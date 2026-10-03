@@ -32,6 +32,12 @@ describe('lazily registered slices', () => {
     expect(keys).not.toContain('reportDayBook');
     // RPT-03 / RPT-04 / RPT-07 — the tax reports' slice ships with its three routes.
     expect(keys).not.toContain('taxReports');
+    // F03 (LIB-02) — the catalogue's five slices ship with the library routes.
+    expect(keys).not.toContain('libraryTitleList');
+    expect(keys).not.toContain('libraryTitleDetail');
+    expect(keys).not.toContain('libraryCopyList');
+    expect(keys).not.toContain('libraryCopyDetail');
+    expect(keys).not.toContain('libraryCatalogueForm');
     // The shell's own slices are still there.
     expect(keys).toEqual(expect.arrayContaining(['session', 'partyList', 'ledgerForm']));
   });
