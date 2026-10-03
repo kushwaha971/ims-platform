@@ -723,6 +723,37 @@ dated by the run's day): it fails on case 0.
 - C-21 still stands: `e2e/qa_standins` registers `dues_charge`; harmless (different key) and left
   to the lead, who owns that gate.
 
+### QA round 1 (3 Oct 2026, independent QA)
+
+**QA-DUE-02-1 — medium — R44: a closure re-added after being lifted pushes the replacement past
+a cancelled surplus, leaving a hole.** `backend/apps/dues/services/materialise.py:336`
+(`_replacements(after=max(d.period_start for d in dues))` counts CANCELLED dues). Six-month plan
+Nov–Apr, January closed → replacement May; lift → May cancelled ("Business days changed");
+close January again → the new replacement is dated **June**, not May, so the plan bills no May
+and every on/off cycle moves the last instalment a month further out. Expected (R44, EC-3): the
+replacement follows the last LIVE due, so re-adding the closure reproduces the first state.
+Failing test: `apps/dues/tests/test_qa_due02.py::test_a_closure_re_added_after_being_lifted_replaces_after_the_last_live_due`.
+
+**Observation, not filed as a defect — catch-up vs a closure added during the outage.** EC-3
+re-applies the calendar only to dues with `period_start >= today`. A closure added mid-outage for
+a day inside the outage is applied by on-time nightly runs but not by the catch-up run, which
+posts on the closed day. The FRD's EC-3 wording ("on or after today") supports the code; ADR-048's
+"equals an on-time run" does not. Lead to rule; no test (needs the closure's creation time).
+
+**Checked and sound.** Overdue grace boundary (`mark_overdue` cutoff `today − (grace+1)` and
+`open_status` agree: late iff `due_on + grace < today`); catch-up dating (`post_due` uses
+`due.due_on` for ledger lines, invoice `document_date`/`due_on` and expectation components);
+re-run idempotency (conditional `status='scheduled'` update + ledger/port keys; R44 re-run makes
+no change); lock order (party → schedule → dues on every path, overdue per schedule rather than a
+tenant-wide UPDATE); tenant dating (`tenant_today` in fan-out, command and listener); tenancy of
+the run's queries and the origin listener (`for_tenant`); split-total reassignment on add and lift
+of one closure; document `amount := grand_total`, advances-paid-at-issue → `paid`, void →
+`cancelled` and never re-issued (`post_due` only touches `scheduled`).
+
+**Not checked** (time): the catch-up property test's ability to fail beyond the developer's planted
+defect, the 5,000-schedule timing, DUE-01's creation-time R44 path, the fan-out's skipping of
+tenants whose consuming module is off.
+
 ---
 
 ## DUE-03 — Settling dues (FRD 00 #18) — outline
