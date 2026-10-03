@@ -41,6 +41,7 @@ import logging
 from typing import Any, TypedDict
 
 from django.db import transaction
+from django.db.models import Q
 
 from apps.dues.constants import ClosedDayRule, DueStatus, ScheduleStatus
 from apps.dues.models import DuesDue, DuesSchedule
@@ -105,8 +106,8 @@ def _schedules_with_work(tenant: Any, today: dt.date) -> list[tuple[Any, Any]]:
     wanted.update(
         active.exclude(closed_day_rule=ClosedDayRule.IGNORE)
         .filter(
-            dues__status__in=(DueStatus.SCHEDULED, DueStatus.SKIPPED),
-            dues__period_start__gte=today,
+            Q(dues__status=DueStatus.SCHEDULED)
+            | Q(dues__status=DueStatus.SKIPPED, dues__period_start__gte=today)
         )
         .values_list("id", flat=True)
         .distinct()

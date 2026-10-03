@@ -11,9 +11,11 @@ seven nightly runs would have written, in the same order (T-DUE-02-3).
 
 ── Re-read the calendar (EC-3) ────────────────────────────────────────────────
 A closure added (or removed) after materialisation is applied to dues that hold
-no money yet: `scheduled` or `skipped` dues whose NOMINAL date (`period_start`,
-which is where every occurrence's period begins) is today or later. A posted due
-is never touched.
+no money yet, judged by each due's NOMINAL date (`period_start`, where every
+occurrence's period begins): every `scheduled` due whatever its date — so a
+catch-up honours a closure added during the outage, as the missed nights would
+have — and every `skipped` due not yet followed by a posted one. A posted due is
+never touched.
 
 `skip` keeps count (R44). On a count-based schedule (a `count`, a split total or
 supplied instalments) a due that becomes skipped is replaced by a new due after
@@ -289,10 +291,32 @@ def reapply_closed_days(
     dues = list(
         DuesDue.objects.filter(schedule=schedule).prefetch_related("components").order_by("seq")
     )
+    # Every due that holds no money is re-read, whatever its date (lead ruling on
+    # DUE-02 QA, ADR-048): a closure the owner added for a day inside a scheduler
+    # outage must move or skip that day's due exactly as its own night's run
+    # would have. A SKIPPED due is re-read only while no later due has posted —
+    # a skip followed by billed months was decided by its own night and is
+    # history, so lifting the closure later never bills it backdated.
+    decided_through = max(
+        (
+            d.period_start
+            for d in dues
+            if d.status not in (DueStatus.SCHEDULED, DueStatus.SKIPPED, DueStatus.CANCELLED)
+        ),
+        default=None,
+    )
     future = [
         d
         for d in dues
-        if d.status in (DueStatus.SCHEDULED, DueStatus.SKIPPED) and d.period_start >= today
+        if d.status == DueStatus.SCHEDULED
+        or (
+            d.status == DueStatus.SKIPPED
+            and (
+                d.period_start >= today
+                or decided_through is None
+                or d.period_start > decided_through
+            )
+        )
     ]
     if not future:
         return none

@@ -532,3 +532,62 @@ def test_dues_run_command_runs_the_day_inline_and_is_idempotent(
     call_command("dues_run", tenant=str(ctx.tenant.id), date="2026-11-01", stdout=out)
     assert json.loads(out.getvalue())["posted"] == 0
     assert DuesDue.objects.get(schedule=schedule, seq=1).status == DueStatus.DUE
+
+
+def test_a_closure_added_during_an_outage_is_honoured_by_the_catch_up(
+    ctx: Any, make_plan: Any, today: Any
+) -> None:
+    """ADR-048 (lead ruling on DUE-02 QA) — catch-up equals the on-time runs. The owner closes
+    1 Nov while the scheduler is down; the nightly run of 1 Nov would have moved that due to
+    2 Nov (`move`) or skipped and replaced it (`skip`, R44). The run after the outage must do the
+    same, not post the due on the closed day because its date is already behind."""
+    moved = _start(
+        ctx,
+        make_plan(name="Move", closed_day_rule="move", grace_days=30),
+        PartyFactory(tenant=ctx.tenant),
+    )
+    skipped = _start(
+        ctx,
+        make_plan(
+            name="Skip",
+            closed_day_rule="skip",
+            grace_days=30,
+            recurrence={"freq": "monthly", "by_month_day": 1, "count": 3},
+        ),
+        PartyFactory(tenant=ctx.tenant),
+    )
+    run_for_tenant(tenant=ctx.tenant, today=dt.date(2026, 10, 27))
+    _close(ctx.tenant, NOV1)  # added inside the outage, 28 Oct – 7 Nov
+    run_for_tenant(tenant=ctx.tenant, today=dt.date(2026, 11, 8))
+
+    first = DuesDue.objects.get(schedule=moved, seq=1)
+    assert (first.due_on, first.status) == (dt.date(2026, 11, 2), DueStatus.DUE)
+    assert LedgerEntry.objects.get(source_id=first.id).entry_date == dt.date(2026, 11, 2)
+    rows = _dues(skipped)
+    assert rows[0][1:4] == (NOV1, DueStatus.SKIPPED, D("0.00"))
+    assert [r[1] for r in rows if r[2] != DueStatus.SKIPPED] == [
+        dt.date(2026, 12, 1),
+        dt.date(2027, 1, 1),
+        dt.date(2027, 2, 1),
+    ]
+
+
+def test_a_skip_decided_by_an_earlier_run_is_not_reopened(
+    ctx: Any, make_plan: Any, party: Any, today: Any
+) -> None:
+    """The other side of that ruling: a month skipped on its own night and followed by billed
+    months is settled history. Lifting the closure months later must not bill it backdated."""
+    plan = make_plan(
+        closed_day_rule="skip",
+        grace_days=30,
+        recurrence={"freq": "monthly", "by_month_day": 1, "count": 4},
+    )
+    schedule = _start(ctx, plan, party)
+    _close(ctx.tenant, NOV1)
+    run_for_tenant(tenant=ctx.tenant, today=NOV1)
+    run_for_tenant(tenant=ctx.tenant, today=dt.date(2026, 12, 1))
+    _reopen(ctx.tenant, NOV1)
+    run_for_tenant(tenant=ctx.tenant, today=dt.date(2026, 12, 2))
+    rows = _dues(schedule)
+    assert rows[0][1:3] == (NOV1, DueStatus.SKIPPED)
+    assert LedgerEntry.objects.filter(party=party).count() == 1
