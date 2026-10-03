@@ -4,7 +4,6 @@ classification (LIB-02 FR-5, §9 BR-2/BR-3/BR-4/BR-8, EC-3; LIB-04 §5).
 
 from __future__ import annotations
 
-import ast
 import inspect
 import random
 import re
@@ -13,6 +12,7 @@ import pytest
 
 from apps.library.services import codes
 from apps.library.services.codes import InvalidNumber
+from apps.library.tests.purity import impure_imports
 
 MESSAGE = "Use letters, numbers, - or /."
 
@@ -152,9 +152,17 @@ def test_classify_a_code_that_is_only_one_of_the_two() -> None:
 
 def test_the_module_is_pure() -> None:
     """Same rule as `isbn.py`: no Django or app import in a validator."""
-    tree = ast.parse(inspect.getsource(codes))
-    for node in ast.walk(tree):
-        if isinstance(node, ast.ImportFrom) and node.level == 0:
-            assert not (node.module or "").startswith(("django", "apps")), node.module
-        elif isinstance(node, ast.Import):
-            assert not any(a.name.startswith(("django", "apps")) for a in node.names)
+    assert impure_imports(inspect.getsource(codes)) == []
+
+
+def test_the_purity_rule_catches_a_relative_import() -> None:
+    """The guard read only absolute imports, so `from ..models import Copy`
+    inside a helper would have passed it (B04 QA round 1, note 2)."""
+    assert impure_imports("from ..models import Copy\n") == ["..models"]
+    assert impure_imports("from . import models\n") == ["."]
+    assert impure_imports("from . import isbn\nfrom .isbn import normalise\n") == []
+    assert impure_imports("import django.db\nfrom apps.common import money\n") == [
+        "django.db",
+        "apps.common",
+    ]
+    assert impure_imports("import re\nfrom dataclasses import dataclass\n") == []

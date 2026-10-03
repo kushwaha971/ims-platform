@@ -10,11 +10,11 @@ than a computed check character), so a shared mistake is unlikely.
 
 from __future__ import annotations
 
-import ast
 import inspect
 import random
 
 from apps.library.services import isbn
+from apps.library.tests.purity import impure_imports
 
 WINGS_OF_FIRE_13 = "978-81-7371-146-6"
 WINGS_OF_FIRE_10 = "8173711461"
@@ -151,9 +151,4 @@ def test_the_module_is_pure() -> None:
     """B04's helpers run in serializers, importers and the counter's resolver.
     A Django or app import here is the first step to a lookup that queries the
     database from inside a validator."""
-    tree = ast.parse(inspect.getsource(isbn))
-    for node in ast.walk(tree):
-        if isinstance(node, ast.ImportFrom):
-            assert not (node.module or "").startswith(("django", "apps")), node.module
-        elif isinstance(node, ast.Import):
-            assert not any(a.name.startswith(("django", "apps")) for a in node.names)
+    assert impure_imports(inspect.getsource(isbn)) == []
