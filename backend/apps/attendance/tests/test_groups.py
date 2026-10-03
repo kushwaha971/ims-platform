@@ -238,3 +238,26 @@ def test_cancel_session_refuses_live_marks_and_audits(
     with pytest.raises(ValidationFailed) as refused:
         roll_call(ctx=ctx, session_id=spare.id, marks={party.id: "present"})
     assert refused.value.details == {"session_id": ["This session was cancelled."]}
+
+
+def test_the_weekly_job_extends_only_tenants_with_a_timetable(
+    ctx: Any, clock: Any, settings: Any, other_tenant: Any
+) -> None:
+    """ATT-01 §6 — the Monday 01:30 IST fan-out enqueues one child per tenant
+    that has an active group with a rule (not every tenant), once per ISO week;
+    the child keeps every such group generated 8 weeks ahead. Both schedules
+    are registered from `ready()`, so `check_expected_runs` sees them."""
+    from apps.attendance import tasks
+    from apps.common.jobs import SCHEDULES
+    from apps.platform_app.models import Job
+
+    settings.UB_JOBS_EAGER = False
+    assert {tasks.EXTEND, tasks.CLOSE} <= {s.job_type for s in SCHEDULES}
+    group = create_group(ctx=ctx, module=TEST_MODULE, data=batch_data())
+    Session.objects.filter(group=group, starts_at__date__gt=TODAY + dt.timedelta(days=20)).delete()
+    assert tasks.extend_sessions(None, None) == {"tenants": 1}
+    assert tasks.extend_sessions(None, None) == {"tenants": 0}
+    child = Job.objects.get(job_type=tasks.EXTEND_FOR_TENANT)
+    assert child.tenant_id == ctx.tenant.id
+    assert tasks.extend_sessions_for_tenant(child, None)["sessions"] > 0
+    assert Session.objects.filter(group=group).count() == 24

@@ -21,7 +21,8 @@ disk; anything I could not verify by reading is marked **(unverified)**.
 
 ## ATT-01…05 — the check-ins and attendance engine (`apps/attendance`)
 
-Status: **building (backend first, per open question 3's default); shared UI after F01**
+Status: **backend built; ready for QA** (commits 22b6cf88, 587eccd7, 819f4598, ab7412e3 and the
+ATT-05 commit recorded below). **Shared UI not started** — it waits for F01 (open question 3).
 
 ### Build log (backend)
 
@@ -29,7 +30,48 @@ Status: **building (backend first, per open question 3's default); shared UI aft
   (`0001_initial`, dependencies `parties 0010` + `platform 0013` only), the policy/listener registry,
   every service of §3 written, the hot-file blocks (`# ── ATT ──` in settings, urls, error codes,
   audit; Part 22 §22.1.1 rows; the migration round-trip list; the error-code count test 167→170).
-  Tests: `tests/test_groups.py` (T-ATT-01-1…3, BR-5, EC-2/3, C17). Next: ATT-02 tests.
+  Tests: `tests/test_groups.py` (T-ATT-01-1…3, BR-5, EC-2/3, C17). Commit 22b6cf88. Found by the
+  first run: regeneration only re-examined `scheduled` sessions, so a held session whose marks were
+  all voided survived a timetable change; it now applies to every non-cancelled session.
+- **Step 2 — ATT-02** (587eccd7) `tests/test_check_in.py`: policy allow/warn/block, override with and
+  without the codename, `override_permission: None` overridable by nobody, EC-2, a foreign module's
+  policy refused, override audit (T-ATT-02-7), dedupe edges ±1 s, one-per-day, voided ignored, R59,
+  `dedupe_minutes = 0`, future/stale `at` (C10), EC-1 after midnight, archived party, R57 upsert,
+  C11 session date, auto-close (own day, idempotent, missed night heals), the close fan-out,
+  listener rollback, query budget, `EXPLAIN` of open visits.
+- **Step 3 — ATT-03** (819f4598) `tests/test_roll_call.py`: unchanged writes nothing, changed is an
+  audited edit, no policy at roll-call, two devices, BR-1/EC-1, window ±1 minute with and without
+  `edit_closed` (void follows it too — question 4 default), bad reasons and kind swaps, the partial
+  unique index until void, void gives back the use.
+- **Step 4 — ATT-04** (ab7412e3) `tests/test_entitlements.py` (worked example, expired, the C3 walk,
+  C4, foreign pack, extend after expiry / end rules C6, grant validation, replay fuzz with
+  `recalc_entitlements --check` 0 then 1) and `tests/test_concurrency.py` (T-ATT-02-3 with a desk
+  group; T-ATT-04-2), both on two real connections.
+- **Step 5 — ATT-05** `tests/test_reads.py` (percent worked example 91.7, join mid-month, cancelled
+  and voided excluded, 0/0 → null; register with a `closed:<date>` column, "-" before joining, "A"
+  on a held session; empty month; 60-member register in ≤ 6 queries and no seq scan on marks;
+  not-visited with `party_ids`; peak hours tenant-local; the R56 off-guard counting earlier days only
+  and registering once; the eight endpoints' gating, 404s, `module_disabled`, shapes and 400s) and
+  `tests/contracts/test_attendance_policy_contract.py` (T-ATT-02-6, one query with a year of
+  history; a planted policy keeps it non-vacuous). Also the weekly extend fan-out test.
+
+**Gates (3 Oct, on dev):** `apps/attendance` 69 passed; with `tests/architecture`, `tests/contracts`,
+`tests/migrations`, `apps/common/tests`, `test_engine_enablement`, `test_tenant_data`: 647 passed,
+12 skipped; `test_tenant_settings`, `inventory/test_guards`, `test_module_roles`: 46 passed;
+`makemigrations --check` clean; black, isort, flake8 clean on the app. No screen in this step.
+
+**Deviations from the note.** (1) The query budget counts statements excluding the SAVEPOINTs
+`atomic` adds: 3 group-less, 5 at a desk group, 8 with a pack (the note's 4/6/9 counted the policy's
+own query, which the fake policy does not make). (2) The 8-week horizon is `today + 55 days`
+inclusive (56 days, today counted), so Mon/Wed/Fri over 8 weeks is 24 sessions, 23 with a closed
+Monday (T-ATT-01-1). (3) `check_in` also refuses an archived party (`party_archived`, the dues
+engine's EC-4 rule) and an inactive group (EC-2 extended to marks, as §5 said). (4) The Part 22
+"English message" for `attendance_blocked` is the policy's own reason. No new contradictions.
+
+**For gym (Wave C):** register the policy and listener for its context types; register the
+reports (C2) and the party panel (C15); map `uq_attendance_group_subject` lookups for its seeded
+desk group; grant `gym.attendance.edit_closed` per its FRD (C5); pass `party_ids` to
+`not_visited_since` (C14).
 
 ### Design note (review step)
 
@@ -421,7 +463,7 @@ dialog's own focus hook, not `autoFocus` (the LED-01 `MLDialog` finding).
 | C5 | FRD ATT-03 vs gym BR-6 | Closed edit is `<module>.attendance.edit_closed` vs gym's `gym.checkin.void` + owner/admin | Engine checks the FRD 00 codename; gym reconciles in its own FRD |
 | C6 | R18 | `end_entitlement` "on" semantics and `on < valid_from` unspecified | `on` is the last valid day; earlier than `valid_from` refused |
 | C7 | contracts §2.3 vs FRD ATT-01 §6 and gym BR-6 | `cancel_session`, `end_membership`, `entitlement_for` in the FRD only; gym needs `update_group` (dedupe setting moves both groups, `gym.md:413`) which neither has | Build all four as additive public functions; **v1.1 amendment** lists them |
-| C8 | T-ATT-02-5 | ≤ 6 queries is impossible with a pack | ≤ 6 without a pack, ≤ 9 with one |
+| C8 | T-ATT-02-5 | ≤ 6 queries is impossible with a pack | ≤ 6 without a pack, ≤ 9 with one (built: statements without savepoints, 5 at a desk, 8 with a pack, plus the policy's one) |
 | C9 | contracts §5 | No audit action for group create/update, session cancel, auto-close | Add `attendance.group.created|updated`, `attendance.session.cancelled`, `attendance.visits.auto_closed`; **v1.1** |
 | C10 | FRD ATT-02 | `at` may be backdated without limit, bypassing the edit window | Refuse older than the edit window |
 | C11 | FRD ATT-02 BR-4 vs ATT-03 | A roll-call saved next morning would date session marks by save time | Session marks take the session's local date |
