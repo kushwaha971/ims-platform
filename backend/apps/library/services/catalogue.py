@@ -354,10 +354,43 @@ def _raise_for_typed(ctx: Any, numbers: list[str]) -> None:
     if not values:
         return
     highest = max(values)
-    if highest + 1 > sequences.MAX_NEXT_NUMBER:
+    if highest > sequences.MAX_NEXT_NUMBER:
         return  # beyond the counter's range: it can never collide (module docstring)
     if highest >= sequences.peek_counter(tenant=ctx.tenant, kind=ACCESSION_KIND):
-        sequences.raise_counter(ctx=ctx, kind=ACCESSION_KIND, next_number=highest + 1, via="typed")
+        # At the ceiling the counter cannot hold highest + 1; parking it AT the
+        # ceiling is enough, because `allocate_counter` never hands out its last
+        # value (it refuses `sequence_exhausted`) — QA-B05-2.
+        sequences.raise_counter(
+            ctx=ctx,
+            kind=ACCESSION_KIND,
+            next_number=min(highest + 1, sequences.MAX_NEXT_NUMBER),
+            via="typed",
+        )
+
+
+def _counter_numbers(tenant: Any, count: int) -> list[str]:
+    """`count` numbers from the counter, none equal to an existing barcode.
+
+    BR-8 (QA-B05-1): a lookup tries the accession number before the barcode, so
+    a counter number equal to another copy's barcode would make that copy
+    unreachable by its label. Such a number is passed over (it is spent as a
+    label already) and the next one taken; the sequence row stays the last
+    lock (L4).
+    """
+    numbers: list[str] = []
+    while len(numbers) < count:
+        wanted = count - len(numbers)
+        batch = [
+            sequences.allocate_counter(tenant=tenant, kind=ACCESSION_KIND) for _ in range(wanted)
+        ]
+        labels = set(
+            LibraryCopy.objects.filter(tenant=tenant, barcode__isnull=False)
+            .annotate(code=Upper("barcode"))
+            .filter(code__in=[n.upper() for n in batch])
+            .values_list("code", flat=True)
+        )
+        numbers += [n for n in batch if n.upper() not in labels]
+    return numbers
 
 
 def _insert_copies(ctx: Any, title: LibraryTitle, block: dict) -> list[LibraryCopy]:
@@ -369,10 +402,7 @@ def _insert_copies(ctx: Any, title: LibraryTitle, block: dict) -> list[LibraryCo
         numbers = typed
     else:
         # The sequence row is the last lock taken (L4).
-        numbers = [
-            sequences.allocate_counter(tenant=tenant, kind=ACCESSION_KIND)
-            for _ in range(block["count"])
-        ]
+        numbers = _counter_numbers(tenant, block["count"])
     rows = [
         LibraryCopy(
             tenant=tenant,
@@ -703,6 +733,9 @@ def update_copy(*, ctx: Any, copy_id: Any, data: Any) -> LibraryCopy:
             on_date=tenant_today(tenant),
         )
     if "is_reference" in changed:
+        # Lock order copy → title (as `move_copy`), so a loan or return on
+        # another copy cannot interleave with the recount and be overwritten.
+        LibraryTitle.objects.select_for_update().filter(pk=copy.title_id).first()
         copy_status.recount_titles(title_ids=[copy.title_id])
     old, new = diff_fields(
         before,

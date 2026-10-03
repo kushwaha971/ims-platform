@@ -19,7 +19,7 @@ from typing import Any
 from django.db import IntegrityError, transaction
 
 from apps.common.audit import AuditAction, diff_fields, write_audit
-from apps.common.exceptions import StaleVersion, ValidationFailed
+from apps.common.exceptions import BusinessRuleViolation, StaleVersion, ValidationFailed
 from apps.library.constants import (
     FineRounding,
     LostFoundPaid,
@@ -281,4 +281,41 @@ def raise_number(*, ctx: Any, kind: Any, next_number: Any) -> None:
         raise ValidationFailed({"kind": ["Choose the book or the member series."]})
     if next_number is None:
         raise ValidationFailed({"next_number": ["This field is required."]})
+    if kind == "library_accession" and isinstance(next_number, int):
+        highest = _highest_accession_at_or_above(ctx.tenant, next_number)
+        if highest is not None:
+            # LIB-01 BR-2: never at or below a number already in the register.
+            # The counter alone cannot say so when a typed number sits at its
+            # ceiling, where it is parked rather than passed (QA-B05-2).
+            raise BusinessRuleViolation(
+                "sequence_backwards",
+                f"Number {highest} is already used.",
+                details={"current": highest + 1, "requested": next_number},
+            )
     sequences.raise_counter(ctx=ctx, kind=kind, next_number=next_number, via="settings")
+
+
+def _highest_accession_at_or_above(tenant: Any, number: int) -> int | None:
+    """The largest all-digit accession number (after the series prefix) that is
+    ≥ `number`, or None. A settings action, rare: one scan of the tenant's copies."""
+    from django.db import connection
+
+    from apps.platform_app.models import DocumentSequence
+
+    row = DocumentSequence.objects.filter(
+        tenant=tenant, kind="library_accession", fy_label=sequences.PERPETUAL
+    ).first()
+    prefix = (row.prefix if row is not None else "").upper()
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT max(substr(upper(accession_number), %s)::numeric)
+              FROM library_copy
+             WHERE tenant_id = %s
+               AND left(upper(accession_number), %s) = %s
+               AND substr(upper(accession_number), %s) ~ '^[0-9]+$'
+            """,
+            [len(prefix) + 1, tenant.pk, len(prefix), prefix, len(prefix) + 1],
+        )
+        (highest,) = cursor.fetchone()
+    return int(highest) if highest is not None and highest >= number else None

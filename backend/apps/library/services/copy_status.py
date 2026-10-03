@@ -71,9 +71,16 @@ def move_copy(
     """
     if to_status not in CopyStatus.values or reason_code not in CopyEventReason.values:
         raise ValueError(f"Unknown copy status {to_status!r} or reason {reason_code!r}.")
-    row = LibraryCopy.objects.select_for_update().select_related("title").get(pk=copy.pk)
+    row = LibraryCopy.objects.select_for_update().get(pk=copy.pk)
     from_status = row.status
-    material_type = row.title.material_type
+    # The title is locked after the copy (L4) and its material type read from
+    # the locked row: a concurrent change to a reference title recounts under
+    # this lock, so the delta below is computed against what it committed.
+    material_type = (
+        LibraryTitle.objects.select_for_update()
+        .values_list("material_type", flat=True)
+        .get(pk=row.title_id)
+    )
     LibraryCopyEvent.objects.create(
         tenant_id=row.tenant_id,
         created_by=getattr(ctx, "actor", None),

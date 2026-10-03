@@ -194,6 +194,15 @@ def allocate_counter(*, tenant: Any, kind: str) -> str:
     spec = _perpetual(kind)
     row = _locked_counter_row(tenant=tenant, spec=spec)
     number = row.next_number
+    if number >= MAX_NEXT_NUMBER:
+        # ── B05 ── `next_number + 1` would overflow the integer column (a 500).
+        # The last value is never handed out: a counter parked at it guards a
+        # typed number there (QA-B05-2), and it is exhausted, not reusable.
+        raise BusinessRuleViolation(
+            "sequence_exhausted",
+            str(_("This number series has reached its last number.")),
+            details={"kind": kind, "max": MAX_NEXT_NUMBER},
+        )
     DocumentSequence.objects.filter(pk=row.pk).update(next_number=number + 1)
     return format_counter(prefix=row.prefix, number=number, padding=row.padding)
 

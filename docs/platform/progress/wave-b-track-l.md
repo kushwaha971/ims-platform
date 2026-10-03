@@ -828,6 +828,28 @@ Checked and found sound:
 
 Not checked: the EXPLAIN plan tests were not re-run separately (they are in the developer's 303), and there is no frontend (F03).
 
+### QA round 1 fixes (3 Oct 2026)
+
+- **QA-B05-1:** `_counter_numbers` passes over a counter number equal to an existing barcode and
+  takes the next (the value is already spent as a label; the sequence row stays the last lock).
+  Chosen over a 409 because a refusal would block every later create until someone renamed the
+  barcode, since a rolled-back create returns the same number.
+- **QA-B05-2:** at the ceiling, `_raise_for_typed` parks the counter AT `MAX_NEXT_NUMBER` instead
+  of skipping; only a number above MAX is skipped. `raise_number` for `library_accession` also
+  refuses (409 `sequence_backwards`, `current` = highest + 1) a request at or below the highest
+  all-digit number in the register (LIB-01 BR-2), which the counter alone cannot say at its ceiling.
+- **Lead item (b), core A8:** `allocate_counter` refuses at `MAX_NEXT_NUMBER` with the new 409
+  `sequence_exhausted {kind, max}` (`error_codes.py` `── B05 ──` block, count 200 → 201, Part 22 row
+  after `sequence_backwards`). The last value is never handed out, which is what makes parking the
+  counter there a guard.
+- **Lead item (a):** the `is_reference` recount locks the title FOR UPDATE after the copy;
+  `move_copy` now also locks the title after the copy and reads `material_type` from the locked
+  row, so a material-type recount (title locked by `update_title`) and a concurrent loan serialise
+  and the delta is computed against what the recount committed. Test: the PATCH's queries lock the
+  copy before the title.
+- Gates: `apps/library` + `test_number_kinds` + `test_exceptions` + `tests/architecture` (not slow)
+  288 passed, 4 skipped.
+
 ---
 
 ## B06 — membership types and loan rules

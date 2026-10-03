@@ -419,3 +419,49 @@ def test_isolation_and_roles(api_as: Any, library_on: Any, other_tenant: Any) ->
     assert who.role.code == "accountant"
     assert accountant.get(reverse(TITLES)).status_code == 200
     assert _create(accountant).status_code == 403
+
+
+# ── B05 QA round 1 lead items ────────────────────────────────────────────────
+
+
+def test_a_counter_at_its_last_value_refuses_cleanly(library_on: Any) -> None:
+    """QA lead item (b): `allocate_counter` at 2,147,483,647 wrote `next + 1`
+    into an integer column — a 500. It now refuses with 409 `sequence_exhausted`
+    and never hands out the last value (which a typed number may hold)."""
+    from apps.common.exceptions import BusinessRuleViolation
+
+    ctx = Ctx.system(library_on)
+    sequences.raise_counter(
+        ctx=ctx, kind="library_accession", next_number=sequences.MAX_NEXT_NUMBER
+    )
+    with pytest.raises(BusinessRuleViolation) as caught:
+        sequences.allocate_counter(tenant=library_on, kind="library_accession")
+    assert caught.value.code == "sequence_exhausted"
+    assert caught.value.details == {"kind": "library_accession", "max": sequences.MAX_NEXT_NUMBER}
+
+
+def test_a_reference_flag_recount_locks_the_title(api_as: Any, library_on: Any) -> None:
+    """QA lead item (a): the recount after an `is_reference` change read the
+    copies and overwrote the caches with no lock on the title, so a loan or
+    return committing in between was lost. The title is now locked FOR UPDATE
+    (after the copy, the order `move_copy` uses) before the recount."""
+    from django.db import connection
+    from django.test.utils import CaptureQueriesContext
+
+    client, _ = api_as(library_on, role="owner")
+    data = _create(client, count=1).json()["data"]
+    copy = client.get(reverse("v1:library-copy", args=[data["copies"][0]["id"]])).json()["data"]
+    with CaptureQueriesContext(connection) as queries:
+        client.patch(
+            reverse("v1:library-copy", args=[copy["id"]]),
+            {"is_reference": True, "version": copy["version"]},
+            format="json",
+        )
+    sql = [q["sql"] for q in queries.captured_queries]
+    copy_lock = next(
+        i for i, s in enumerate(sql) if 'FROM "library_copy"' in s and "FOR UPDATE" in s
+    )
+    title_lock = next(
+        i for i, s in enumerate(sql) if 'FROM "library_title"' in s and "FOR UPDATE" in s
+    )
+    assert copy_lock < title_lock

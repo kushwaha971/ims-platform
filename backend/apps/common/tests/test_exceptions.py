@@ -52,7 +52,8 @@ def test_registry_is_closed_and_complete() -> None:
     # ── DUE-01 ── +1: `schedule_backdated_unconfirmed` (contracts §4).
     # ── B02 ── +30: library Appendix A (`apps/library/tests/test_vocabulary.py`).
     # ── ATT ── +3: `attendance_blocked`, `attendance_duplicate`, `entitlement_exhausted`.
-    assert len(REGISTRY) == 200
+    # ── B05 ── +1: `sequence_exhausted` (a perpetual counter at its last value).
+    assert len(REGISTRY) == 201
     assert REGISTRY["attendance_blocked"] == (409, False)  # ATT
     assert REGISTRY["attendance_duplicate"] == (409, False)  # ATT
     assert REGISTRY["entitlement_exhausted"] == (409, False)  # ATT

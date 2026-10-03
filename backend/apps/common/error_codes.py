@@ -241,6 +241,9 @@ _REGISTRY: dict[str, tuple[int, bool]] = {
     "attendance_blocked": (409, False),  # D reason, override_permission
     "attendance_duplicate": (409, False),  # D mark_id
     "entitlement_exhausted": (409, False),  # D total, used (+ expired)
+    # ── B05 ── a perpetual counter at its last value (A8 `allocate_counter`): the
+    # integer column cannot hold the next one, so the series refuses rather than 500s.
+    "sequence_exhausted": (409, False),  # D kind, max
 }
 
 # `unauthenticated` is emitted by the exception handler for DRF's
