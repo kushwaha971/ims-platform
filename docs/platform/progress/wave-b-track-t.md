@@ -546,6 +546,19 @@ src/components/layout src/hooks` + library, navigation, parties, reminders, repo
 suites, 971 tests passed; `split-locales --check` and `check-locales` green. No page exists under
 `/library` yet, so there is no screen; the only visible change is none (rows are not ready).
 
+Shell size (lead's build, 3 Oct): F01 grew `sharedApp` 105.2 → 105.5 KB gz. Taken back out (follow-up
+commit): the eight library nav rows and their eight lucide icons left `sidebarConfig.ts` (each F-task
+adds its row with its page — a row without a page is hidden anyway, so it was pure shell weight);
+the nine nav words moved to the `library` catalogue (`nav.library.` → library; the split script pins
+them back to the shell the day a row references them); `nav.module.library` was dropped (the module
+labels are read by a `nav.module.${code}` template, which pins every such key to the shell; the
+callers fall back to plain words until library's release CR adds it); and the module invalidation
+registry was split so the shell carries only `moduleEntries.ts` (the map and `moduleEntriesFor`),
+while registration, its validation and messages stay in `moduleRegistry.ts`, imported only by the
+modules' own `*Invalidation.ts`. `PERMISSION_CODES` is never read at runtime (tree-shaken), so the
+codenames cost nothing. The build cannot run in this agent's environment (Turbopack's PostCSS worker
+is refused a port), so the after-number is the lead's to measure.
+
 Deviations: no separate `invalidationLintRule.test.ts` harness (the restriction was proven by linting
 a probe by hand; the lead asked for economy); no fixture for `registrations.ts` or the
 `app/(app)/library` zone (the boundary harness plants only inside feature folders) — the real

@@ -100,6 +100,7 @@
     "payments.deposit.": "deposits",
     "payments.deposit.archiveBlock": "parties",
     "library.": "library",
+    "nav.library.": "library",
     "library.off.": "settings",
     "library.numbering.": "settings",
     "library.role.": "team",

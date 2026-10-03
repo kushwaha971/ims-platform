@@ -1,6 +1,13 @@
+import {
+  MODULE_INVALIDATION,
+  moduleEntriesFor,
+  type TModuleInvalidationEntry,
+} from './moduleEntries';
 import { MUTATIONS, type TMutationName } from './registry';
 
-import type { TInvalidationEntry, TSliceKey } from './types';
+import type { TSliceKey } from './types';
+
+export { moduleEntriesFor, type TModuleInvalidationEntry };
 
 /**
  * ADR-062 (with its 1 Oct amendment) — the invalidation entries of a vertical
@@ -35,8 +42,6 @@ import type { TInvalidationEntry, TSliceKey } from './types';
  *    `core`; core never names a module slice.
  */
 
-export type TModuleInvalidationEntry = Omit<TInvalidationEntry, 'resetAll'>;
-
 export interface TModuleInvalidation<Q extends string, M extends string> {
   /** The module code (`library`, `dues`, …) — the registration's key. */
   readonly module: string;
@@ -52,14 +57,7 @@ export interface TModuleInvalidation<Q extends string, M extends string> {
   readonly ownSlices?: readonly TSliceKey[];
 }
 
-interface Registered {
-  readonly queries: Readonly<Record<string, string>>;
-  readonly mutations: Readonly<Record<string, string>>;
-  /** `${typePrefix}/fulfilled` → entry. */
-  readonly byAction: ReadonlyMap<string, TModuleInvalidationEntry>;
-}
-
-const MODULES = new Map<string, Registered>();
+const MODULES = MODULE_INVALIDATION;
 
 const fulfilled = (typePrefix: string): string => `${typePrefix}/fulfilled`;
 
@@ -100,16 +98,6 @@ export function registerInvalidation<Q extends string, M extends string>(
     mutations: { ...mutations },
     byAction,
   });
-}
-
-/** Every module entry registered for one action type (empty when none). */
-export function moduleEntriesFor(actionType: string): readonly TModuleInvalidationEntry[] {
-  const found: TModuleInvalidationEntry[] = [];
-  for (const registered of MODULES.values()) {
-    const entry = registered.byAction.get(actionType);
-    if (entry) found.push(entry);
-  }
-  return found;
 }
 
 /** The modules that have registered, for the per-module registration tests. */

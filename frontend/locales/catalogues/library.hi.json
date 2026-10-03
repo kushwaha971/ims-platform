@@ -28,5 +28,13 @@
   "errors.library_verification_closed": "यह स्टॉक जाँच बंद हो चुकी है।",
   "errors.library_verification_open": "पहले यह स्टॉक जाँच बंद करें।",
   "errors.library_verification_reopen_used": "यह स्टॉक जाँच एक बार पहले ही दोबारा खोली जा चुकी है।",
-  "errors.library_waiver_over_ceiling": "₹{ceiling} से ज़्यादा की छूट मालिक या एडमिन ही दे सकते हैं।"
+  "errors.library_waiver_over_ceiling": "₹{ceiling} से ज़्यादा की छूट मालिक या एडमिन ही दे सकते हैं।",
+  "nav.library.catalogue": "किताबें",
+  "nav.library.counter": "काउंटर",
+  "nav.library.holds": "रिज़र्व",
+  "nav.library.home": "लाइब्रेरी",
+  "nav.library.members": "सदस्य",
+  "nav.library.reports": "लाइब्रेरी रिपोर्ट",
+  "nav.library.settings": "लाइब्रेरी सेटिंग",
+  "nav.library.verification": "स्टॉक जाँच"
 }

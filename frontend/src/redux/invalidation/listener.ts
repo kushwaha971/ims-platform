@@ -11,7 +11,7 @@ import type { RootState } from 'src/redux/store';
 import { fetchSession } from 'modules/DigiKhaato/features/auth/redux/sessionThunk';
 
 import { INVALIDATION } from './map';
-import { moduleEntriesFor } from './moduleRegistry';
+import { moduleEntriesFor } from './moduleEntries';
 import { MUTATIONS, type TMutationName } from './registry';
 
 import type { TSliceKey, TStaleState } from './types';

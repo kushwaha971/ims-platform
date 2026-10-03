@@ -28,5 +28,13 @@
   "errors.library_verification_closed": "This stock check is closed.",
   "errors.library_verification_open": "Close this stock check first.",
   "errors.library_verification_reopen_used": "This stock check has already been reopened once.",
-  "errors.library_waiver_over_ceiling": "Waivers above ₹{ceiling} need the owner or an admin."
+  "errors.library_waiver_over_ceiling": "Waivers above ₹{ceiling} need the owner or an admin.",
+  "nav.library.catalogue": "Books",
+  "nav.library.counter": "Counter",
+  "nav.library.holds": "Holds",
+  "nav.library.home": "Library",
+  "nav.library.members": "Members",
+  "nav.library.reports": "Library reports",
+  "nav.library.settings": "Library settings",
+  "nav.library.verification": "Stock check"
 }
