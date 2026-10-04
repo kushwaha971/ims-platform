@@ -91,3 +91,17 @@ class LibraryConfig(AppConfig):
         register_source_resolver(SOURCE_WAIVER, resolve_waivers)
         register_target(LibraryChargeTarget())
         register_module_off_guard("library", OpenChargesCounter(), label_id=OFF_GUARD_CHARGES)
+
+        # ── B07 ── members are a party role, an open membership blocks archiving
+        # the party, and payments counts the library's held deposits already.
+        from apps.library.services.members import archive_guard, member_party_ids
+        from apps.parties.services.archive import register_archive_guard
+        from apps.parties.services.roles import register_party_role
+
+        register_party_role(
+            "library_member",
+            module="library",
+            label_id="library.role.member",
+            party_ids=member_party_ids,
+        )
+        register_archive_guard("library", archive_guard)

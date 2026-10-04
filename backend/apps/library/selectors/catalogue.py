@@ -244,7 +244,7 @@ def copy_detail(tenant: Any, copy_id: Any) -> LibraryCopy | None:
 
 
 def lookup(tenant: Any, code: str) -> dict[str, Any]:
-    """BR-8: exact accession number, then barcode, then (B07) member number,
+    """BR-8: exact accession number, then barcode, then member number (B07),
     then a valid ISBN; the first hit wins. Never raises `library_code_ambiguous`
     — a clash is refused when the second record is created."""
     found = codes.classify(code or "")
@@ -258,6 +258,12 @@ def lookup(tenant: Any, code: str) -> dict[str, Any]:
             )
             if copy is not None:
                 return {"kind": "copy", "copy": copy}
+    if found.number_key:
+        from apps.library.selectors.members import member_by_number
+
+        membership = member_by_number(tenant, found.number_key)
+        if membership is not None:
+            return {"kind": "member", "member": membership}
     if found.isbn13:
         titles = list(
             LibraryTitle.objects.filter(tenant=tenant, isbn13=found.isbn13)

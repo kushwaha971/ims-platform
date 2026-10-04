@@ -58,9 +58,10 @@ from apps.library.models import (
     LibraryCopy,
     LibraryCopyEvent,
     LibraryLocation,
+    LibraryMembership,
     LibraryTitle,
 )
-from apps.library.services import codes, copy_status, isbn
+from apps.library.services import codes, copy_status, isbn, numbering
 from apps.library.services.fields import Errors as _Errors
 from apps.library.services.fields import boolean as _bool
 from apps.library.services.fields import choice as _choice
@@ -221,6 +222,27 @@ def _taken(tenant: Any, keys: list[str], *, exclude_copy: Any = None) -> None:
             "This code is already used by another record.",
             details={"code": row.barcode, "matches": [{"kind": "copy", "id": str(row.id)}]},
         )
+    _member_clash(tenant, keys)
+
+
+def _member_clash(tenant: Any, keys: list[str]) -> None:
+    """BR-8 (B07): a copy's number or barcode may not be a member's number — the counter's
+    scan would open the copy and never the member."""
+    member = (
+        LibraryMembership.objects.filter(tenant=tenant)
+        .annotate(k=Upper("member_number"))
+        .filter(k__in=keys)
+        .first()
+    )
+    if member is not None:
+        raise BusinessRuleViolation(
+            "library_code_ambiguous",
+            "This code is already used by another record.",
+            details={
+                "code": member.member_number,
+                "matches": [{"kind": "member", "id": str(member.id)}],
+            },
+        )
 
 
 def _barcode_clash(tenant: Any, barcode: str, *, exclude_copy: Any = None) -> None:
@@ -242,41 +264,20 @@ def _barcode_clash(tenant: Any, barcode: str, *, exclude_copy: Any = None) -> No
         other = other.exclude(pk=exclude_copy)
     if other.exists():
         raise ValidationFailed({"barcode": ["Another copy already has this barcode."]})
+    _member_clash(tenant, [key])
 
 
 def _counter_prefix(tenant: Any) -> str:
-    from apps.platform_app.models import DocumentSequence
-
-    row = DocumentSequence.objects.filter(
-        tenant=tenant, kind=ACCESSION_KIND, fy_label=sequences.PERPETUAL
-    ).first()
-    return row.prefix if row is not None else ""
+    return numbering.counter_prefix(tenant, ACCESSION_KIND)
 
 
 def _raise_for_typed(ctx: Any, numbers: list[str]) -> None:
-    """BR-2/BR-3: the largest all-digit typed number at or above the counter
-    raises it to that + 1; suffixed numbers never move it. Called LAST."""
-    prefix = _counter_prefix(ctx.tenant)
-    values = [v for v in (codes.numeric_value(n, prefix=prefix) for n in numbers) if v is not None]
-    if not values:
-        return
-    highest = max(values)
-    if highest > sequences.MAX_NEXT_NUMBER:
-        return  # beyond the counter's range: it can never collide (module docstring)
-    if highest >= sequences.peek_counter(tenant=ctx.tenant, kind=ACCESSION_KIND):
-        # At the ceiling the counter cannot hold highest + 1; parking it AT the
-        # ceiling is enough, because `allocate_counter` never hands out its last
-        # value (it refuses `sequence_exhausted`) — QA-B05-2.
-        sequences.raise_counter(
-            ctx=ctx,
-            kind=ACCESSION_KIND,
-            next_number=min(highest + 1, sequences.MAX_NEXT_NUMBER),
-            via="typed",
-        )
+    """BR-2/BR-3 — the shared rule (`services/numbering.py`), for the accession counter."""
+    numbering.raise_for_typed(ctx, ACCESSION_KIND, numbers)
 
 
 def _counter_numbers(tenant: Any, count: int) -> list[str]:
-    """`count` numbers from the counter, none equal to an existing barcode.
+    """`count` numbers from the counter, none equal to an existing barcode or member number.
 
     BR-8 (QA-B05-1): a lookup tries the accession number before the barcode, so
     a counter number equal to another copy's barcode would make that copy
@@ -290,10 +291,16 @@ def _counter_numbers(tenant: Any, count: int) -> list[str]:
         batch = [
             sequences.allocate_counter(tenant=tenant, kind=ACCESSION_KIND) for _ in range(wanted)
         ]
+        keys = [n.upper() for n in batch]
         labels = set(
             LibraryCopy.objects.filter(tenant=tenant, barcode__isnull=False)
             .annotate(code=Upper("barcode"))
-            .filter(code__in=[n.upper() for n in batch])
+            .filter(code__in=keys)
+            .values_list("code", flat=True)
+        ) | set(  # B07: a member's number is spent too (BR-8)
+            LibraryMembership.objects.filter(tenant=tenant)
+            .annotate(code=Upper("member_number"))
+            .filter(code__in=keys)
             .values_list("code", flat=True)
         )
         numbers += [n for n in batch if n.upper() not in labels]

@@ -1138,6 +1138,73 @@ so a library charge's row shows its number without a badge until F06 adds `libra
 
 ---
 
+## B07 — memberships, periods, deposits, party role, archive guard
+
+### Design note (review step, 4 Oct 2026)
+
+Inputs: LIB-04 FR-1…FR-12, §5–§13 (BR-1…BR-10, T-LIB-04-1…7, EC-1…EC-8); contracts §1.3
+(relations), §1.4 (held deposits), §1.6 (party roles, archive guards); ADR-044, ADR-046; D17, D25,
+D28, D31; B06's schema (G17) and B10's `create_charge`.
+
+Adds `services/members.py` (one writer of `library_membership` and its periods), selectors, views:
+- `effective_status(m, today)` (BR-1) and `valid_until_for(start, months)` (BR-2, month-end clamped).
+- Member number: typed (shape and case-insensitive uniqueness, 409 `library_member_number_taken`,
+  and 409 `library_code_ambiguous` against a copy's accession or barcode, BR-8) or the
+  `library_member` counter, taken last.
+- Enrol: party by id or created through `parties.services.crud.create_party`; 409
+  `library_membership_exists {membership_id, status}` (BR-7, EC-5); guardian by
+  `create_relation(kind=guardian)`; fees as `create_charge` (admission, membership); the deposit by
+  `open_deposit`; collect-now as two payments — fees through `record_payment` allocated to the new
+  charges, the deposit through `receive_deposit` — so one payment never mixes buckets (FR-4).
+- Renew (BR-3, D17), change type (period row, FR-6), suspend / reactivate, close (BR-6: apply the
+  deposit to open library charges oldest first, then refund — the refund is a ROLE check, D28),
+  re-join (same row, C10), deposit receive / apply / refund.
+- `member_blocks(m, today)` (BR-10) for the blocks this task can see: expired, suspended, closed,
+  dues over limit, deposit not received. Loan blocks (`copy_limit_reached`, `has_overdue`) and the
+  close guard on open loans and holds are B09's/B11's hooks: until `library_loan` exists there is
+  nothing to count, and the summary omits `loans_*` and `holds_ready` rather than sending 0 (PTY-03).
+- Party role `library_member`, the archive guard (an active or suspended membership blocks),
+  and the lookup's member arm (BR-8 order: accession, barcode, member number, ISBN).
+
+Gaps / defaults:
+- **G24** Close's "refused while any loan is open" and "holds cancelled" cannot run before B09/B11;
+  B09 adds the loan check to `close` and B11 the hold cancellation (tests land with them).
+- **G25** FR-2 "member number is the next `library_member` number or typed (a school admission
+  number)": a typed all-digit number raises the counter like accession numbers (ADR-051, BR-2 of
+  LIB-02), reusing `codes.numeric_value` with the series prefix.
+
+### Built (4 Oct 2026)
+
+`services/members.py` (effective status, validity, blocks; enrol with party create or pick,
+guardian relation, admission and membership fees as charges, the held deposit, collect-now as two
+payments; patch with `version`; renew; change type; suspend / reactivate; close with apply then
+refund (refund a ROLE check); re-join on the same row; deposit receive (incl. `opening`) / apply /
+refund; `member_party_ids` and `archive_guard`), `services/numbering.py` (the typed-number counter
+rule, extracted from B05 for its second counter), `selectors/members.py` (list by EFFECTIVE status
+in SQL, expiring within N days, type, group, has dues, search by name, mobile or exact number;
+`meta.totals`), `views/memberships.py` + routes (`/library/members`, `/{id}`, and nine acts), the
+lookup's member arm, the catalogue refusing a copy number or barcode a member wears (and the
+accession counter passing over one), `ready()` registrations (role `library_member`, archive
+guard), and the two words the parties screens render (`library.role.member`,
+`library.archive.member`; the categories page now spells its ids out so the locale checker does
+not tie it to every catalogue a `library.*` key lives in).
+
+Tests `test_members.py` (21): effective status ×8 (T-LIB-04-1), validity clamping, enrol with both
+blocks (T-LIB-04-2), the deposit block, one membership per party and re-join (BR-7, C10), a typed
+number raising the counter and refused as a copy's, a copy refused as a member's, renewal early and
+late (T-LIB-04-3), close with apply and refund (T-LIB-04-4), refund as a role (T-LIB-04-5), the
+archive guard and role filter (T-LIB-04-7), the scan, the list by effective status. Gates: backend
+non-slow 3607 passed; black/isort/flake8; migrations clean; frontend library + `src/tests` 648
+passed, lint clean, locales in step.
+
+### QA round 1 (4 Oct 2026)
+
+| Id | Severity | Where | Fixed |
+|---|---|---|---|
+| QA-B07-1 | medium | `numbering.counter_prefix` read the prefix from the sequence row, which does not exist until the first automatic number; so a typed `M-0042` before any automatic member number was read against prefix "", never raised the counter, and the counter would later hand out M-0042 again (caught by `test_a_typed_member_number_raises_the_counter…` before commit) | falls back to the kind's registered `default_prefix` |
+
+Still open by design: G24 (close's loan and hold checks come with B09 and B11).
+
 ## Open questions for the lead
 
 1. **G17 / G19 (order):** move the `library_membership` and period *schema* into B06, run B10 after

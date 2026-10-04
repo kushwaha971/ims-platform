@@ -43,6 +43,26 @@ import {
  */
 type Kind = 'categories' | 'locations';
 
+/* Spelled out rather than built as `library.${kind}.…`: a template id is read by the locale
+   checker as "any library.* message", which would tie this page to every catalogue a library
+   key lives in. */
+const WORDS = {
+  categories: {
+    title: 'library.categories.title',
+    add: 'library.categories.add',
+    empty: 'library.categories.empty',
+    emptyBody: 'library.categories.emptyBody',
+    name: 'library.categories.name',
+  },
+  locations: {
+    title: 'library.locations.title',
+    add: 'library.locations.add',
+    empty: 'library.locations.empty',
+    emptyBody: 'library.locations.emptyBody',
+    name: 'library.locations.name',
+  },
+} as const;
+
 interface Row {
   readonly id: string;
   readonly label: string;
@@ -156,7 +176,7 @@ export function CatalogueManagerPageContent({ kind }: Readonly<{ kind: Kind }>):
     [kind, run, dispatch]
   );
 
-  const title = t(`library.${kind}.title`);
+  const title = t(WORDS[kind].title);
   if (!canRead) {
     return (
       <UbPageShell>
@@ -176,7 +196,7 @@ export function CatalogueManagerPageContent({ kind }: Readonly<{ kind: Kind }>):
         actions={
           canWrite && (
             <UbButton onClick={() => setEditing({ id: null, code: '', name: '' })}>
-              {t(`library.${kind}.add`)}
+              {t(WORDS[kind].add)}
             </UbButton>
           )
         }
@@ -184,8 +204,8 @@ export function CatalogueManagerPageContent({ kind }: Readonly<{ kind: Kind }>):
       {status !== 'loading' && rows.length === 0 ? (
         <UbEmptyState
           variant="firstUse"
-          title={t(`library.${kind}.empty`)}
-          description={t(`library.${kind}.emptyBody`)}
+          title={t(WORDS[kind].empty)}
+          description={t(WORDS[kind].emptyBody)}
         />
       ) : (
         <UbCard>
@@ -244,7 +264,7 @@ export function CatalogueManagerPageContent({ kind }: Readonly<{ kind: Kind }>):
         <UbDialog
           open
           onOpenChange={(next) => !next && setEditing(null)}
-          title={t(editing.id ? 'library.manager.rename' : `library.${kind}.add`)}
+          title={t(editing.id ? 'library.manager.rename' : WORDS[kind].add)}
           closeLabel={t('common.action.close')}
           footer={
             <>
@@ -274,8 +294,8 @@ export function CatalogueManagerPageContent({ kind }: Readonly<{ kind: Kind }>):
               />
             )}
             <UbTextInput
-              aria-label={t(`library.${kind}.name`)}
-              placeholder={t(`library.${kind}.name`)}
+              aria-label={t(WORDS[kind].name)}
+              placeholder={t(WORDS[kind].name)}
               value={editing.name}
               maxLength={kind === 'categories' ? 60 : 80}
               autoFocus={kind === 'categories'}

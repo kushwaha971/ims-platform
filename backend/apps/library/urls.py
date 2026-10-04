@@ -12,6 +12,7 @@ from apps.library.views import LibraryNumberingView, LibrarySettingsView
 from apps.library.views import catalogue as c
 from apps.library.views import charges as ch
 from apps.library.views import members as m
+from apps.library.views import memberships as mb
 
 urlpatterns: list = [
     path("settings", LibrarySettingsView.as_view(), name="library-settings"),
@@ -66,4 +67,23 @@ urlpatterns: list = [
         ch.ChargeReverseView.as_view(),
         name="library-charge-reverse",
     ),
+    # ── B07 ── members (LIB-04 §6)
+    path("members", mb.MemberListView.as_view(), name="library-members"),
+    path("members/<uuid:membership_id>", mb.MemberDetailView.as_view(), name="library-member"),
+    *[
+        path(
+            f"members/<uuid:membership_id>/{suffix}", view.as_view(), name=f"library-member-{name}"
+        )
+        for suffix, name, view in (
+            ("renew", "renew", mb.MemberRenewView),
+            ("change-type", "change-type", mb.MemberChangeTypeView),
+            ("suspend", "suspend", mb.MemberSuspendView),
+            ("reactivate", "reactivate", mb.MemberReactivateView),
+            ("close", "close", mb.MemberCloseView),
+            ("rejoin", "rejoin", mb.MemberRejoinView),
+            ("deposit/receive", "deposit-receive", mb.MemberDepositReceiveView),
+            ("deposit/apply", "deposit-apply", mb.MemberDepositApplyView),
+            ("deposit/refund", "deposit-refund", mb.MemberDepositRefundView),
+        )
+    ],
 ]

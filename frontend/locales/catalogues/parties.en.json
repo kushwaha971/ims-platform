@@ -1,4 +1,5 @@
 {
+  "library.archive.member": "{count, plural, one {# library membership} other {# library memberships}} still open. Close it first.",
   "parties.archive.action": "Archive",
   "parties.archive.activeGuardian": "{name} is the guardian of {count, plural, one {# active party} other {# active parties}}. Remove the link, or archive {count, plural, one {that party} other {those parties}} first.",
   "parties.archive.blocked.body": "Settle the balance before archiving.",

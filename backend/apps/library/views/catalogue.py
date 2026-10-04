@@ -174,13 +174,18 @@ class CopyBackToShelfView(_CopyView):
 
 
 class LookupView(_CatalogueView):
-    """The counter's resolver (BR-8). Member numbers join in B07."""
+    """The counter's resolver (BR-8): copy, then member (B07), then ISBN."""
 
     def get(self, request: Any) -> Any:
         found = select.lookup(self.tenant(), request.query_params.get("code") or "")
         body: dict[str, Any] = {"kind": found["kind"]}
         if found["kind"] == "copy":
             body["copy"] = out.copy_row(found["copy"])
+        elif found["kind"] == "member":
+            from apps.common.dates import tenant_today
+            from apps.library.services.members import member_summary
+
+            body["member"] = member_summary(found["member"], tenant_today(self.tenant()))
         elif found["kind"] == "isbn":
             body["titles"] = [out.title_row(t) for t in found["titles"]]
         return StandardResponse.ok(body)

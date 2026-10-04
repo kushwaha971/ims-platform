@@ -1,4 +1,5 @@
 {
+  "library.role.member": "Library members",
   "team.accept.chooseBusiness": "Choose a business",
   "team.accept.failed": "This invitation is no longer valid. Ask the business to send a new one.",
   "team.accept.failedTitle": "This invitation cannot be used",
