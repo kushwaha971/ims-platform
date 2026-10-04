@@ -1,4 +1,4 @@
-import { api } from 'src/api/AxiosInstances';
+import { api, ubConfig } from 'src/api/AxiosInstances';
 
 import { LIBRARY_PATHS } from './libraryPaths';
 
@@ -90,7 +90,12 @@ export const getLibrarySettings = async (signal?: AbortSignal): Promise<LibraryS
 export const putLibrarySettings = async (
   settings: LibrarySettings
 ): Promise<LibrarySettingsBundle> => {
-  const response = await api.put<SettingsApi>(LIBRARY_PATHS.SETTINGS, toSettingsBody(settings));
+  // The page says a refusal on its field and a stale version as "Reloaded".
+  const response = await api.put<SettingsApi>(
+    LIBRARY_PATHS.SETTINGS,
+    toSettingsBody(settings),
+    ubConfig({ suppressErrorSnackbar: true })
+  );
   return toBundle(response.data);
 };
 
@@ -98,5 +103,10 @@ export const raiseLibraryNumber = async (
   kind: LibraryNumberKind,
   nextNumber: number
 ): Promise<void> => {
-  await api.post(LIBRARY_PATHS.SETTINGS_NUMBERING, { kind, next_number: nextNumber });
+  // The dialog says a backwards number on its field.
+  await api.post(
+    LIBRARY_PATHS.SETTINGS_NUMBERING,
+    { kind, next_number: nextNumber },
+    ubConfig({ suppressErrorSnackbar: true })
+  );
 };

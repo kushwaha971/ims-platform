@@ -1044,6 +1044,80 @@ moved with that note recorded in `bundle-budgets.json`.
 
 ---
 
+## F05 — The counter (LIB-06 §7, §8)
+
+Status: **built; QA round 1 found five defects, all fixed** (4 Oct, on dev).
+
+`/library/counter` → `CounterPageContent`. It is not `dynamic()`, because its first paint is the
+scan box.
+
+- **Scan box and modes.** One scan box with three mode chips. Alt+I, Alt+R and Alt+N switch
+  modes, read from `event.code`. The mode is remembered per device.
+- **Queue.** Every submission joins a FIFO queue. One scan is in flight at a time, each with its
+  own idempotency key (BR-5), so a fast scanner's burst issues in order and a retried scan is
+  replayed, never repeated. A StrictMode double effect cannot send a scan twice.
+- **Resolving a scan.** `processCounterItem` resolves the code with `/library/lookup`.
+  - A member number loads the member (`/members/{id}/summary`).
+  - A copy is acted on in the current mode: issue at once with no confirm step; return; or renew
+    through the copy's open loan.
+  - An ISBN says which title it is.
+  - Text that is not code-shaped is a member search; ↑/↓ and Enter pick a name.
+- **Refusals.** Every refusal is the server's (BR-8).
+  - An overridable `library_member_blocked` opens the Override prompt for `library.loan.override`.
+    The prompt takes a one-line reason, and Enter re-sends the same code.
+  - A copy already with the loaded member asks Return or Renew (FR-9).
+  - A copy out with someone else says who has it and until when.
+  - A copy kept for someone else names them.
+  - The five renewal refusals are said in words.
+- **Member panel.** It shows the figures and blocks in words, plus the member's loans, each with
+  Renew, and Renew all.
+- **Session list.** It runs newest first and survives a reload for the same tenant and business
+  day (`localStorage`, wrapped). Issued rows offer Undo the same day (D20). A failed request shows
+  "Not sent · Retry/Skip" with the same key. A refusal beeps through Web Audio, which is never the
+  only signal.
+- **Finishing.** Esc, or Enter on an empty box, finishes. The slip dialog offers the WhatsApp slip
+  (B12), or says why there is none.
+- **Snackbar.** Counter requests set `suppressErrorSnackbar`, because the counter says every
+  outcome in its own list. The same applies to enrol, member acts and settings saves (F02/F04),
+  which say their refusal in place; any failure they do not show inline still reaches the
+  snackbar.
+- **Deferred, with reasons.**
+  - Take ₹ (Alt+P), Waive (Alt+W) and Damage (Alt+D) belong with the charge dialogs, which are
+    F06's.
+  - The backdated-return chip (`library.loan.adjust`).
+  - `useScannerListener`, for a scan burst while focus has drifted.
+  - The shortcuts sheet (`?`).
+  - The ISBN copy picker. Today the counter names the title and asks for the copy's own number.
+
+### QA round 1 (4 Oct 2026, live stack)
+
+| Id | Severity | Where | Fixed |
+|---|---|---|---|
+| QA-F05-1 | medium | A refusal appeared twice: as the counter's red row and as a global error snackbar over it, because the request was not marked as handled | `suppressErrorSnackbar` on the counter's requests (and on enrol, member acts and settings saves, with their unhandled failures still sent to the snackbar) |
+| QA-F05-2 | medium | A book issued and then returned in the same session still offered Undo, which the server would refuse | `canUndo` takes the loans a later row returned or renewed (`touchedLoans`); tested |
+| QA-F05-3 | medium | After a name search the box is cleared, so Enter finished with the member instead of picking the highlighted name | An empty Enter with names on screen picks the active one; tested |
+| QA-F05-4 | low | Finish with a member who has no mobile showed no slip and no reason | "No mobile number for Asha, so there is no slip to send." |
+| QA-F05-5 | low | The Hindi for "Overdue" differed from the product's one word (`hindiDirection.test.ts`) | "समय निकल गया" |
+
+Testing also caught two harness defects of its own. Card `data-testid`s were on `UbCard`, which
+drops them, and the slice and mocks leaked between tests. Both are fixed.
+
+**Looked at:**
+- desktop: three scans in quick succession (member, then two books), all issued in order with
+  focus kept in the box; the same book again offered Return or Renew; Return; Undo; an unknown
+  code; a name search; Esc and Done (focus back in the box); a reload keeps today's list;
+- 360 px: no overflow and no clipped text.
+
+**Gates:**
+- `tsc` and eslint clean;
+- jest: 273 suites, 3,159 passed;
+- `i18n:check` green;
+- `bundle:check` green. `/library/counter` measures 61.6 / 295.2, and the shared app is
+  unchanged at 106.4. Eighteen routes that the F04 rule had left within 0.6 KB were raised by the
+  same rule, with the note in `bundle-budgets.json`.
+
+---
+
 ## Open questions for the lead
 
 1. Attendance `0001` dependencies: the two referenced apps (`parties 0010`, `platform 0013`) or all

@@ -124,6 +124,9 @@ export type ApiErrorCode =
   // F04 (LIB-04 §6) — enrol's conflicts, said on the field they are about.
   | 'library_member_number_taken'
   | 'library_membership_exists'
+  // F05 (LIB-06 §6) — the counter's refusals it turns into prompts.
+  | 'library_member_blocked'
+  | 'library_copy_unavailable'
   | 'library_title_has_copies'
   // transport-level codes minted on the client, never sent by the server:
   | 'network_error'

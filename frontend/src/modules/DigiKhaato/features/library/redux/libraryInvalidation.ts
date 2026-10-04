@@ -32,6 +32,7 @@ export const LIBRARY_QUERIES = {
   fetchLibraryMembers: 'libraryMemberList/fetch',
   fetchLibraryMember: 'libraryMemberDetail/fetch',
   fetchLibraryMembershipTypes: 'libraryMemberList/fetchTypes',
+  loadCounterMember: 'libraryCounter/loadMember',
 } as const satisfies Record<string, string>;
 
 export const LIBRARY_MUTATIONS = {
@@ -50,6 +51,9 @@ export const LIBRARY_MUTATIONS = {
   raiseLibraryNumber: 'librarySettings/raiseNumber',
   enrolLibraryMember: 'libraryMemberList/enrol',
   actOnLibraryMember: 'libraryMemberDetail/act',
+  processCounterItem: 'libraryCounter/process',
+  undoCounterIssue: 'libraryCounter/undo',
+  renewAllAtCounter: 'libraryCounter/renewAll',
 } as const satisfies Record<string, string>;
 
 export type TLibraryQueryName = keyof typeof LIBRARY_QUERIES;
@@ -62,6 +66,16 @@ export type TLibraryMutationName = keyof typeof LIBRARY_MUTATIONS;
  * themselves from the response, so they are `patch`, not refetched.
  */
 const CATALOGUE_LISTS = ['libraryTitleList', 'libraryCopyList'] as const;
+const CIRCULATION_VIEWS = [
+  'libraryTitleList',
+  'libraryCopyList',
+  'libraryTitleDetail',
+  'libraryCopyDetail',
+  'libraryMemberList',
+  'libraryMemberDetail',
+  'partyDetail',
+  'partyList',
+] as const;
 
 export const LIBRARY_INVALIDATION: Readonly<
   Record<TLibraryMutationName, TModuleInvalidationEntry>
@@ -107,6 +121,12 @@ export const LIBRARY_INVALIDATION: Readonly<
     patch: [['libraryMemberDetail', 'member']],
     stale: ['libraryMemberList', 'partyDetail', 'partyList'],
   },
+  // F05 — a scan issues, returns or renews: every list and page showing a
+  // copy's state or a member's books is stale; a fine moves the khata. The
+  // counter's own panel takes the member the act answered with.
+  processCounterItem: { stale: [...CIRCULATION_VIEWS] },
+  undoCounterIssue: { stale: [...CIRCULATION_VIEWS] },
+  renewAllAtCounter: { stale: [...CIRCULATION_VIEWS] },
 };
 
 registerInvalidation({
@@ -123,5 +143,6 @@ registerInvalidation({
     'librarySettings',
     'libraryMemberList',
     'libraryMemberDetail',
+    'libraryCounter',
   ],
 });

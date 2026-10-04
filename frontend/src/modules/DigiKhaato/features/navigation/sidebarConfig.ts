@@ -9,6 +9,7 @@ import {
   Hourglass,
   LayoutDashboard,
   Receipt,
+  ScanLine,
   Settings,
   ShoppingCart,
   Users,
@@ -196,6 +197,18 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
     permission: 'expenses.expense.read',
     section: 'business',
     order: 6,
+  },
+  {
+    // F05 (LIB-06) — the counter, the screen a library uses most.
+    key: 'libraryCounter',
+    ready: true,
+    icon: ScanLine,
+    labelId: 'nav.library.counter',
+    href: ROUTES.LIBRARY_COUNTER,
+    module: 'library',
+    permission: 'library.loan.write',
+    section: 'daily',
+    order: 10,
   },
   {
     // F04 (LIB-04) — the library's members.

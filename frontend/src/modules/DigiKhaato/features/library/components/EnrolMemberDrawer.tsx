@@ -294,8 +294,8 @@ export function EnrolMemberDrawer({
         </UbStack>
 
         {asksMoney && (
-          <UbCard padded data-testid="library-enrol-fees">
-            <UbStack gap={2}>
+          <UbCard padded>
+            <UbStack data-testid="library-enrol-fees" gap={2}>
               {isNonZero(cost.fees) && (
                 <UbStack direction="row" justify="between" gap={2}>
                   <UbText variant="body-sm">{t('library.enrol.fees')}</UbText>

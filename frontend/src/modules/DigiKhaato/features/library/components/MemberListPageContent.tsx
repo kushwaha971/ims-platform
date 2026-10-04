@@ -148,6 +148,16 @@ export function MemberListPageContent(): React.JSX.Element {
         setError(values.partyMode === 'existing' ? 'partyId' : 'name', {
           message: t('library.enrol.exists'),
         });
+      } else {
+        // The request was quiet so a field refusal is said once; anything else
+        // still reaches the snackbar.
+        dispatch(
+          showSnackbar({
+            severity: 'error',
+            message: failure.message,
+            requestId: failure.requestId,
+          })
+        );
       }
     },
     [dispatch, list.types, today, key, rotate, router, t]

@@ -1163,7 +1163,8 @@
   "  /onboarding/step/[n]          route 86 -> 87, firstLoad 319 -> 320   (measured 86.5 / 319.2)",
   "  /admin/tenants                firstLoad 261 -> 262                   (measured 261.2)",
   "  /admin/tenants/[id]           firstLoad 256 -> 257                   (measured 256.2)",
-  "F04 (4 Oct 2026, library members) — shared app 105.5 -> 106.4, measured by building with and without the library's khata-panel registration (register.ts -> partyPanel.ts): that one import regroups Turbopack's common chunks (two shell chunks became three) and the shell's RAW bytes move by 114; the 0.9 KB is gzip losing across the extra chunk boundary, not library code in the shell (no library module is in any shared chunk). sharedApp 106 -> 107, and the 34 routes whose first load moved by that 0.9 KB past their ceiling were raised by the measured + 0.5 rule; /library/members (64.7 / 298.2) and /library/members/[membershipId] (58.6 / 292.1) are new entries, and the other library routes moved 1-2 KB because the library invalidation map now carries the member thunks."
+  "F04 (4 Oct 2026, library members) — shared app 105.5 -> 106.4, measured by building with and without the library's khata-panel registration (register.ts -> partyPanel.ts): that one import regroups Turbopack's common chunks (two shell chunks became three) and the shell's RAW bytes move by 114; the 0.9 KB is gzip losing across the extra chunk boundary, not library code in the shell (no library module is in any shared chunk). sharedApp 106 -> 107, and the 34 routes whose first load moved by that 0.9 KB past their ceiling were raised by the measured + 0.5 rule; /library/members (64.7 / 298.2) and /library/members/[membershipId] (58.6 / 292.1) are new entries, and the other library routes moved 1-2 KB because the library invalidation map now carries the member thunks.",
+  "F05 (4 Oct 2026, the counter) — /library/counter measured 61.6 / 295.2: the scan queue, the member panel and the session list; the override and finish prompts are dynamic() and preloaded on idle. Shared app unchanged at 106.4. Eighteen routes sat within 0.6 KB over a ceiling the F04 raise had set at measured + 0.5 — the library invalidation map grew by the three counter thunks and the same chunk regrouping moved the rest by 0.1-0.3 — and were raised by the same rule."
  ],
  "default": {
   "route": 56,
@@ -1180,11 +1181,11 @@
   },
   "/sales/invoices/new": {
    "route": 130,
-   "firstLoad": 363
+   "firstLoad": 364
   },
   "/sales/invoices/[id]/edit": {
    "route": 130,
-   "firstLoad": 363
+   "firstLoad": 364
   },
   "/sales/invoices": {
    "route": 92,
@@ -1240,7 +1241,7 @@
   },
   "/parties/tags": {
    "route": 56,
-   "firstLoad": 289
+   "firstLoad": 290
   },
   "/parties/[id]/statement": {
    "route": 86,
@@ -1268,7 +1269,7 @@
   },
   "/settings/branding": {
    "route": 83,
-   "firstLoad": 316
+   "firstLoad": 317
   },
   "/settings/activity": {
    "route": 97,
@@ -1276,14 +1277,14 @@
   },
   "/settings/devices": {
    "route": 49,
-   "firstLoad": 282
+   "firstLoad": 283
   },
   "/stock/summary": {
    "route": 115,
    "firstLoad": 360
   },
   "/items/masters": {
-   "route": 44,
+   "route": 45,
    "firstLoad": 278
   },
   "/items": {
@@ -1292,11 +1293,11 @@
   },
   "/items/[id]": {
    "route": 93,
-   "firstLoad": 326
+   "firstLoad": 327
   },
   "/stock/low": {
    "route": 58,
-   "firstLoad": 291
+   "firstLoad": 292
   },
   "/expenses": {
    "route": 103,
@@ -1340,7 +1341,7 @@
   },
   "/admin/tenants/[id]": {
    "route": 24,
-   "firstLoad": 257
+   "firstLoad": 258
   },
   "/admin/tenants": {
    "route": 29,
@@ -1348,7 +1349,7 @@
   },
   "/settings/data": {
    "route": 51,
-   "firstLoad": 284
+   "firstLoad": 285
   },
   "/purchases/bills/[id]": {
    "route": 55,
@@ -1375,7 +1376,7 @@
    "firstLoad": 352
   },
   "/reports/gst-summary": {
-   "route": 95,
+   "route": 96,
    "firstLoad": 329
   },
   "/reports/purchase-register": {
@@ -1399,32 +1400,32 @@
    "firstLoad": 289
   },
   "/library/catalogue": {
-   "route": 63,
-   "firstLoad": 296
+   "route": 64,
+   "firstLoad": 298
   },
   "/library/copies": {
    "route": 62,
-   "firstLoad": 295
+   "firstLoad": 296
   },
   "/library/copies/[copyId]": {
-   "route": 58,
-   "firstLoad": 292
+   "route": 59,
+   "firstLoad": 293
   },
   "/library/settings": {
-   "route": 101,
+   "route": 102,
    "firstLoad": 335
   },
   "/library/members": {
    "route": 66,
-   "firstLoad": 299
+   "firstLoad": 300
   },
   "/library/members/[membershipId]": {
    "route": 60,
-   "firstLoad": 293
+   "firstLoad": 294
   },
   "/library/catalogue/[titleId]": {
    "route": 56,
-   "firstLoad": 289
+   "firstLoad": 290
   },
   "/library/catalogue/categories": {
    "route": 56,
@@ -1433,6 +1434,10 @@
   "/library/catalogue/locations": {
    "route": 56,
    "firstLoad": 288
+  },
+  "/library/counter": {
+   "route": 63,
+   "firstLoad": 296
   }
  },
  "//ignoreRoutes": [

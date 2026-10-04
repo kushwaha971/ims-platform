@@ -68,6 +68,12 @@ export const useLibrarySettings = (): LibrarySettingsResult => {
       if (error?.code === 'stale_version') {
         dispatch(showSnackbar({ severity: 'info', id: 'library.settings.reloaded' }));
         refetch();
+      } else if (error && error.code !== 'validation_error') {
+        // The request was quiet so a field refusal is said once; anything
+        // else still reaches the snackbar — no failure is silent.
+        dispatch(
+          showSnackbar({ severity: 'error', message: error.message, requestId: error.requestId })
+        );
       }
       return { ok: false, error };
     },

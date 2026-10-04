@@ -27,5 +27,8 @@ export const LIBRARY_PATHS = {
   MEMBER: (id: string) => `/library/members/${seg(id)}`,
   MEMBER_ACTION: (id: string, action: string) => `/library/members/${seg(id)}/${action}`,
   MEMBERSHIP_TYPES: '/library/membership-types',
+  LOANS: '/library/loans',
+  LOAN_ACTION: (id: string, action: string) => `/library/loans/${seg(id)}/${action}`,
+  RETURNS: '/library/returns',
   SETTINGS_NUMBERING: '/library/settings/numbering',
 } as const;

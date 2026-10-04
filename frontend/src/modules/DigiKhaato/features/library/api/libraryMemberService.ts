@@ -174,7 +174,8 @@ export const enrolMember = async (body: Wire, key: string): Promise<MemberDetail
   const response = await api.post<{ data: Wire }>(
     LIBRARY_PATHS.MEMBERS,
     body,
-    ubConfig({ headers: { 'Idempotency-Key': key } })
+    // The drawer says enrol's refusals on the field they are about.
+    ubConfig({ headers: { 'Idempotency-Key': key }, suppressErrorSnackbar: true })
   );
   return toMemberDetail(response.data.data);
 };
@@ -190,7 +191,11 @@ export const actOnMember = async (
   const response = await api.post<{ data: Wire }>(
     LIBRARY_PATHS.MEMBER_ACTION(id, action),
     body,
-    key ? ubConfig({ headers: { 'Idempotency-Key': key } }) : undefined
+    // Each act's dialog says its own refusal, where it was asked.
+    ubConfig({
+      ...(key ? { headers: { 'Idempotency-Key': key } } : {}),
+      suppressErrorSnackbar: true,
+    })
   );
   return toMemberDetail(response.data.data);
 };
