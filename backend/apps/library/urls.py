@@ -16,6 +16,7 @@ from apps.library.views import loans as ln
 from apps.library.views import members as m
 from apps.library.views import memberships as mb
 from apps.library.views import reminders as rm
+from apps.library.views import verification as vr
 
 urlpatterns: list = [
     path("settings", LibrarySettingsView.as_view(), name="library-settings"),
@@ -144,5 +145,47 @@ urlpatterns: list = [
     path("holds/<uuid:hold_id>/remind", rm.HoldRemindView.as_view(), name="library-hold-remind"),
     path(
         "members/<uuid:membership_id>/slip", rm.MemberSlipView.as_view(), name="library-member-slip"
+    ),
+    # ── B13 ── stock verification (LIB-10 §6)
+    path("verifications", vr.VerificationListView.as_view(), name="library-verifications"),
+    path(
+        "verifications/<uuid:verification_id>",
+        vr.VerificationDetailView.as_view(),
+        name="library-verification",
+    ),
+    path(
+        "verifications/<uuid:verification_id>/scans",
+        vr.ScanView.as_view(),
+        name="library-verification-scans",
+    ),
+    path(
+        "verifications/<uuid:verification_id>/scans/<uuid:scan_id>/void",
+        vr.VoidScanView.as_view(),
+        name="library-verification-scan-void",
+    ),
+    path(
+        "verifications/<uuid:verification_id>/close",
+        vr.CloseView.as_view(),
+        name="library-verification-close",
+    ),
+    path(
+        "verifications/<uuid:verification_id>/reopen",
+        vr.ReopenView.as_view(),
+        name="library-verification-reopen",
+    ),
+    path(
+        "verifications/<uuid:verification_id>/results",
+        vr.ResultsView.as_view(),
+        name="library-verification-results",
+    ),
+    path(
+        "verifications/<uuid:verification_id>/mark-missing",
+        vr.MarkMissingView.as_view(),
+        name="library-verification-mark-missing",
+    ),
+    path(
+        "verifications/<uuid:verification_id>/withdraw-missing",
+        vr.WithdrawMissingView.as_view(),
+        name="library-verification-withdraw-missing",
     ),
 ]

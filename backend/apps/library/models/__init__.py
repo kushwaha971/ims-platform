@@ -19,6 +19,7 @@ from apps.library.models.members import (
     LibraryMembershipType,
 )
 from apps.library.models.settings import LibrarySettings
+from apps.library.models.verification import LibraryVerification, LibraryVerificationScan
 
 __all__ = [
     "LibraryCategory",
@@ -35,5 +36,7 @@ __all__ = [
     "LibraryMembershipType",
     "LibrarySettings",
     "LibraryTitle",
+    "LibraryVerification",
+    "LibraryVerificationScan",
     "LibraryWaiver",
 ]

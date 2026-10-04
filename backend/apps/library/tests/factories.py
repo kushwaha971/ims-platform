@@ -56,3 +56,33 @@ def charge(
             description=f"Fine {uuid.uuid4().hex[:4]}",
             charge_date=day,
         )
+
+
+def loans_issued(tenant: Any, copy: Any, count: int, on: dt.date) -> None:
+    """`count` returned loans of `copy` issued on `on`, in one insert (B13's loss ratio)."""
+    from django.utils import timezone
+
+    from apps.library.models import LibraryLoan
+    from tests.factories.parties import PartyFactory
+
+    membership = member(tenant, PartyFactory(tenant=tenant))
+    moment = timezone.now()
+    LibraryLoan.objects.bulk_create(
+        LibraryLoan(
+            tenant=tenant,
+            copy=copy,
+            membership=membership,
+            party_id=membership.party_id,
+            issued_on=on,
+            issued_at=moment,
+            due_on=on,
+            returned_on=on,
+            returned_at=moment,
+            status="returned",
+            loan_days=14,
+            grace_days=0,
+            max_renewals=1,
+            fine_per_day=Decimal("2.00"),
+        )
+        for _ in range(count)
+    )

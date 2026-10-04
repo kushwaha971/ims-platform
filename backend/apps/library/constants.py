@@ -260,3 +260,36 @@ class HoldStatus(models.TextChoices):
 LIVE_HOLD_STATUSES = (HoldStatus.WAITING.value, HoldStatus.READY.value)
 #: FR-7: a pickup date may be pushed at most this far ahead.
 HOLD_EXTEND_MAX_DAYS = 30
+
+
+# ── B13 ── stock verification (LIB-10 §5)
+
+
+class VerificationScope(models.TextChoices):
+    ALL = "all"
+    LOCATIONS = "locations"
+    CATEGORIES = "categories"
+    RANGE = "range"
+
+
+class VerificationStatus(models.TextChoices):
+    OPEN = "open"
+    CLOSED = "closed"
+
+
+class ScanResult(models.TextChoices):
+    FOUND = "found"
+    FOUND_WRONG_LOCATION = "found_wrong_location"
+    ON_LOAN = "on_loan"
+    UNKNOWN_NUMBER = "unknown_number"
+    FOUND_FLAGGED = "found_flagged"
+    OUTSIDE_SCOPE = "outside_scope"
+    DUPLICATE_SCAN = "duplicate_scan"
+
+
+VERIFICATION_NAME_MAX = 80
+SCAN_CODE_MAX = 40
+#: BR-1 — the statuses a copy on the shelf can be in; `on_loan` is counted apart.
+EXPECTED_STATUSES = ("available", "on_hold_shelf", "in_repair", "missing")
+#: BR-2 — scanning one of these offers Mark found.
+FLAGGED_STATUSES = ("lost", "missing", "withdrawn")

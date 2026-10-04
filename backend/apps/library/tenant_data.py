@@ -29,4 +29,7 @@ register(
     TenantTable("library.LibraryLoanEvent", export_name="library_loan_events.csv"),
     # ── B11 ── holds
     TenantTable("library.LibraryHold", export_name="library_holds.csv"),
+    # ── B13 ── stock verification
+    TenantTable("library.LibraryVerification", export_name="library_verifications.csv"),
+    TenantTable("library.LibraryVerificationScan", export_name="library_verification_scans.csv"),
 )

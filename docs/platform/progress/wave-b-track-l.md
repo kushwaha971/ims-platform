@@ -1365,6 +1365,53 @@ localises bell titles (C-22), so it is left as specified.
 
 ---
 
+## B13 — stock verification
+
+The work adds `models/verification.py` (two tables, `0008_verification`), `services/verification.py`
+and `views/verification.py`. The tables are registered in `tenant_data`.
+
+- **Start.** A verification is started with a scope: all, locations, categories, or an
+  accession range. The range uses the natural sort key, so "4512-A" falls between 4512 and 4513
+  (EC-5). An overlap with another open check is computed exactly (any copy in both scopes) and is
+  returned as a warning.
+- **Scans.** Scans are classified in BR-2's order. A scan writes its own row and the copy's
+  `last_seen_on` and nothing else (FR-3). A void is allowed for the person who scanned it or for
+  someone holding `library.verification.close`.
+- **Close.** Close re-classifies the scans against the copies as they are then (BR-1, EC-1) and
+  writes the cached counts. Missing is computed as expected minus scanned in a single query, with
+  the missing value summed from prices. `recount` reproduces the cached counts from the rows.
+- **Reopen.** A check can be reopened once.
+- **Mark missing and withdraw missing.** Both need a closed check. They write copy events with
+  this check as the source and charge nobody. The missing list includes the copies the check has
+  already acted on, so the list does not empty itself while the librarian works through it. A copy
+  kept aside for a ready hold is skipped with `kept_aside`, because moving it would leave the hold
+  pointing at a book nobody can hand over. Withdrawing the last copy follows the catalogue rule
+  and archives the title.
+- **Loss per 1,000 issued.** It is calculated per BR-4 and appears in the detail and in the
+  close's `meta.loss`, next to the norm of 5.
+
+`test_verification.py` has 11 tests:
+- every BR-2 branch (T-LIB-10-1);
+- close equals recount with a voided scan (T-LIB-10-2);
+- a scan of a loaned book acts on nothing (T-LIB-10-3);
+- 5.0 per 1,000 (T-LIB-10-4);
+- reopen once, plus a 403 for staff (T-LIB-10-5);
+- EC-1;
+- mark and withdraw missing;
+- the ₹1,000 flag;
+- a slow test that closes 20,000 copies in ≤ 5 s (T-LIB-10-6, passed).
+
+Gates: backend non-slow 3703 passed; black/isort/flake8; migration `0008` clean.
+
+### QA round 1 (4 Oct 2026)
+
+| Id | Severity | Where | Fixed |
+|---|---|---|---|
+| QA-B13-1 | high | Void returned a 500 because `select_for_update` with `select_related` on the nullable copy is refused by Postgres (outer join) | The lock is limited to the scan row (`of=("self",)`) |
+| QA-B13-2 | medium | `ImmutableModel` refuses `updated_at` in `update_fields`, so the void could never save | Only `voided_at` and `voided_by` are saved |
+
+---
+
 ## Open questions for the lead
 
 1. **G17 / G19 (order):** move the `library_membership` and period *schema* into B06, run B10 after
