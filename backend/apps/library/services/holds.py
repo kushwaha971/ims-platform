@@ -178,6 +178,9 @@ def allot(ctx: Any, copy: LibraryCopy, today: dt.date) -> LibraryHold | None:
             source_type="library_hold",
             source_id=hold.id,
         )
+        from apps.library.services.reminders import notify_hold_ready
+
+        notify_hold_ready(ctx.tenant, hold, today)  # LIB-09 FR-8
         return hold
     return None
 

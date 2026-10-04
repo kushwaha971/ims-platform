@@ -1316,6 +1316,55 @@ passed; black/isort/flake8; migrations clean.
 
 ---
 
+## B12 — overdue reminders, hold-ready notices, the issue slip
+
+`services/reminders.py`, `views/reminders.py`, registered from `ready()`.
+
+- Two reminder sources through the core seam: `library_loan` and `library_hold`. Both are kind
+  `notice` with `amount = None` (C3). Loan candidates are open loans exactly 1, 7, 14 or 30
+  calendar days late (D21), plus loans due tomorrow when `remind_day_before` is on. Hold
+  candidates are holds that became ready that day. A `lookup` accepts any overdue loan or ready
+  hold, because the list shows every one (FR-4). A candidate's `due_on` is the run date (FRD §5).
+- The recipient is the guardian only when an active guardian relation has `receives_messages`
+  (D22). The guardian is read at compose time and never copied onto the membership.
+- Templates: `library_overdue` (WhatsApp en/hi, SMS en), `library_hold_ready` (WhatsApp en/hi)
+  and `library_issue_slip` (WhatsApp en). They use `Rs` and are signed with the business name.
+  Optional lines live in Python (`FRAGMENTS`). A list longer than five books folds into
+  "and N more" before the fine line (BR-4).
+- Every candidate carries the full parameter set, so the core per-record send (`POST
+  /ledger/reminders` with a `source_type`) also renders a library loan or hold.
+- Endpoints:
+  - `GET /library/overdue` lists overdue loans grouped by member, with the fine so far and the
+    last reminder. It filters by group, days, type, `q` and "not reminded in N days".
+    `meta.totals` covers the filtered set.
+  - `POST /library/overdue/{id}/preview` writes nothing.
+  - `POST …/remind` records one row per loan through `record_source_reminders`, so all rows share
+    one `message_group_id`. A loan returned since the preview drops out, and none left gives
+    `library_nothing_overdue`.
+  - `POST /library/overdue/bulk-prepare` takes ≤ 100 ids or a group and skips `no_mobile`.
+  - `POST /library/holds/{id}/remind`.
+  - `POST /library/members/{id}/slip` is a share, not a reminder, and records nothing.
+- Policy `{daily_cap_per_source: 1}`: the same book is not reminded twice in a day, and there is
+  no window.
+- Bell: `library.hold_ready` is raised by `allot` and coalesces per day.
+  `library.overdue_today` comes from a 09:00 IST daily job (`tasks.OVERDUE_TODAY`). Both need
+  `library.loan.read`.
+- Deviation: `member_line` reads "for Asha (M-0043), ". The FRD's "Asha (M-0043) has " does not
+  fit its own template sentence ("…has these X books are overdue").
+
+Tests `test_reminders.py` (16) cover T-LIB-09-1…6, the dropped loan, the accountant's 403, the
+list's grouping, totals and filters, bulk skip and ceiling, the hold bell and its cap, the
+morning notice and the slip. Gates: backend non-slow 3685 passed (the first run caught the missing
+Hindi SMS and slip bodies, which NTF-02 requires; the FRD lists English only); black/isort/flake8.
+
+### QA round 1 (4 Oct 2026)
+
+I read the composed texts (overdue to a guardian, the SMS, the slip). No defects were found.
+The bell titles say "1 books" because the FRD's English pattern has no plural. The client
+localises bell titles (C-22), so it is left as specified.
+
+---
+
 ## Open questions for the lead
 
 1. **G17 / G19 (order):** move the `library_membership` and period *schema* into B06, run B10 after

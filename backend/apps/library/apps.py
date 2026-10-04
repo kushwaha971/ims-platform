@@ -111,3 +111,10 @@ class LibraryConfig(AppConfig):
         from apps.library import tasks  # noqa: F401  (registers the job handlers)
 
         register_schedule(Schedule(tasks.EXPIRE, period="daily", at_hour_ist=6, minute=15))
+
+        # ── B12 ── reminder sources, policy, templates and the two bell types
+        # (LIB-09), and the morning "became overdue today" notice.
+        from apps.library.services import reminders
+
+        reminders.register()
+        register_schedule(Schedule(tasks.OVERDUE_TODAY, period="daily", at_hour_ist=9, minute=0))

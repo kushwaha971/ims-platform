@@ -15,6 +15,7 @@ from apps.library.views import holds as hd
 from apps.library.views import loans as ln
 from apps.library.views import members as m
 from apps.library.views import memberships as mb
+from apps.library.views import reminders as rm
 
 urlpatterns: list = [
     path("settings", LibrarySettingsView.as_view(), name="library-settings"),
@@ -123,4 +124,25 @@ urlpatterns: list = [
     path("holds/<uuid:hold_id>/extend", hd.HoldExtendView.as_view(), name="library-hold-extend"),
     path("holds/<uuid:hold_id>/move", hd.HoldMoveView.as_view(), name="library-hold-move"),
     path("titles/<uuid:title_id>/holds", hd.TitleHoldsView.as_view(), name="library-title-holds"),
+    # ── B12 ── reminders and the issue slip (LIB-09 §6)
+    path("overdue", rm.OverdueListView.as_view(), name="library-overdue"),
+    path(
+        "overdue/bulk-prepare",
+        rm.OverdueBulkPrepareView.as_view(),
+        name="library-overdue-bulk-prepare",
+    ),
+    path(
+        "overdue/<uuid:membership_id>/preview",
+        rm.OverduePreviewView.as_view(),
+        name="library-overdue-preview",
+    ),
+    path(
+        "overdue/<uuid:membership_id>/remind",
+        rm.OverdueRemindView.as_view(),
+        name="library-overdue-remind",
+    ),
+    path("holds/<uuid:hold_id>/remind", rm.HoldRemindView.as_view(), name="library-hold-remind"),
+    path(
+        "members/<uuid:membership_id>/slip", rm.MemberSlipView.as_view(), name="library-member-slip"
+    ),
 ]
