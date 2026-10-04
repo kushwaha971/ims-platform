@@ -246,3 +246,17 @@ class LoanEventKind(models.TextChoices):
     CANCELLED = "cancelled"
     OVERRIDDEN = "overridden"
     IMPORTED = "imported"
+
+
+# ── B11 ── holds (LIB-08 §5)
+class HoldStatus(models.TextChoices):
+    WAITING = "waiting"
+    READY = "ready"
+    COLLECTED = "collected"
+    EXPIRED = "expired"
+    CANCELLED = "cancelled"
+
+
+LIVE_HOLD_STATUSES = (HoldStatus.WAITING.value, HoldStatus.READY.value)
+#: FR-7: a pickup date may be pushed at most this far ahead.
+HOLD_EXTEND_MAX_DAYS = 30

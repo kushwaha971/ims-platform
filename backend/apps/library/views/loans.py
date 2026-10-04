@@ -108,13 +108,19 @@ class ReturnView(_LoanView):
     @idempotent("library.loan.return")
     def post(self, request: Any) -> Any:
         ctx = self.ctx()
+        from apps.library.services.holds import hold_json, loaded
+
         result = loans.return_copy(ctx=ctx, data=request.data)
+        if result["hold_ready"] is not None:
+            result["hold_ready"] = loaded(result["hold_ready"].id)
         return StandardResponse.ok(
             loans.loan_json(result["loan"], tenant_today(ctx.tenant)),
             meta={
                 "fine": result["fine"].as_json() if result["fine"] else None,
                 "charges": [charge_json(c) for c in result["charges"]],
-                "hold_ready": None,
+                "hold_ready": (
+                    hold_json(result["hold_ready"]) if result["hold_ready"] is not None else None
+                ),
                 "copy_status": result["copy_status"],
                 "member": _member(ctx.tenant, result["member"]),
             },

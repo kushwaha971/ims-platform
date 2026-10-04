@@ -684,10 +684,17 @@ def withdraw_copy(*, ctx: Any, copy_id: Any, data: Any) -> LibraryCopy:
     errors.raise_if_any()
     copy = _locked_copy(ctx.tenant, copy_id)
     if copy.status == CopyStatus.ON_LOAN:
-        # `details.loan_id` lands with the loans table (B09); a key this code
-        # cannot fill is omitted rather than sent as null (PTY-03).
+        from apps.library.models import LibraryLoan
+
+        loan_id = (
+            LibraryLoan.objects.filter(copy=copy, status="open")
+            .values_list("id", flat=True)
+            .first()
+        )
         raise BusinessRuleViolation(
-            "library_copy_on_loan", "This copy is on loan. Take it back first.", details={}
+            "library_copy_on_loan",
+            "This copy is on loan. Take it back first.",
+            details={"loan_id": str(loan_id)} if loan_id else {},
         )
     if copy.status not in (
         CopyStatus.AVAILABLE,
@@ -717,8 +724,13 @@ def withdraw_copy(*, ctx: Any, copy_id: Any, data: Any) -> LibraryCopy:
         after={"reason_code": reason, "note": note},
     )
     title = LibraryTitle.objects.get(pk=copy.title_id)
-    if title.copies_total == 0 and title.status == TitleStatus.ACTIVE:
-        archive_title(ctx=ctx, title_id=title.pk, auto=True)
+    if title.copies_total == 0:
+        # LIB-08 FR-9, BR-7: nothing is left to keep anybody's place for.
+        from apps.library.services.holds import cancel_for_title
+
+        cancel_for_title(ctx, title.pk, "No copies left")
+        if title.status == TitleStatus.ACTIVE:
+            archive_title(ctx=ctx, title_id=title.pk, auto=True)
     return copy
 
 

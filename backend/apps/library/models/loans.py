@@ -7,7 +7,8 @@ row and the second insert is refused whatever code path wrote it (BR-6).
 `rule_snapshot` is typed columns, not JSON: the resolved rule at issue, so a rule
 changed after the issue never rewrites this loan's fine (LIB-05 EC-4).
 
-`hold` arrives with B11, which owns `library_hold`.
+The hold an issue collected is `library_hold.loan` (B11); the FRD's `library_loan.hold_id`
+would close a foreign-key cycle the tenant deletion order cannot resolve.
 """
 
 from __future__ import annotations

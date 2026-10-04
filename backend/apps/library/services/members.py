@@ -23,8 +23,7 @@ party → membership → charges → deposit → payments → sequences. The mem
 is taken from its counter after the party lock, before any charge number.
 
 B09 added the loan figures, the loan blocks and the close guard on open loans;
-holds do not exist yet (B11), so the summary omits `holds_ready` rather than
-claiming 0 (PTY-03), and B11 adds the hold cancellation to `close` (G24).
+B11 added `holds_ready` and the hold cancellation to `close` (G24).
 """
 
 from __future__ import annotations
@@ -217,6 +216,7 @@ def member_summary(m: LibraryMembership, today: dt.date) -> dict:
         "group_label": m.group_label,
         "loans_open": numbers.loans_open,
         "loans_overdue": numbers.loans_overdue,
+        "holds_ready": m.holds.filter(status="ready").count(),
         "dues_amount": f"{numbers.dues:.2f}",
         "deposit": (
             {
@@ -932,6 +932,9 @@ def close(*, ctx: Any, membership_id: Any, data: Any) -> dict:
             f"Return {open_count} book(s) first.",
             details={"count": open_count},
         )
+    from apps.library.services.holds import cancel_for_member
+
+    cancel_for_member(ctx, m, "Membership closed")  # BR-6, EC-6 of LIB-08
     today = tenant_today(ctx.tenant)
     deposit = deposit_for(m)
     applied = ZERO

@@ -1241,7 +1241,7 @@ Gates: backend non-slow 3632 passed; black/isort/flake8; migrations clean.
 
 | Id | Severity | Where | State |
 |---|---|---|---|
-| QA-B09-1 | medium | T-LIB-06-8 asks ≤ 12 queries per issue and return; measured 38 / 41, cut to 36 / 38 (40 / 37 after B10b's lost-book count) by reading the member's figures once (`members.figures`) instead of ten separate counts | **open for the lead**: about twenty are fixed costs every write here pays (session, idempotency row, audit row, eight savepoint pairs from nested `atomic`); reaching 12 means changing those core paths, not the library. The budget test holds the measured figures. |
+| QA-B09-1 | medium | T-LIB-06-8 asks ≤ 12 queries per issue and return; measured 38 / 41, cut to 36 / 38 (40 / 37 after B10b's lost-book count, 42 / 40 with B11's holds) by reading the member's figures once (`members.figures`) instead of ten separate counts | **open for the lead**: about twenty are fixed costs every write here pays (session, idempotency row, audit row, eight savepoint pairs from nested `atomic`); reaching 12 means changing those core paths, not the library. The budget test holds the measured figures. |
 
 ---
 
@@ -1274,6 +1274,45 @@ backend non-slow 3646 passed; flake8/black/isort; migrations clean.
 | Id | Severity | Where | Fixed |
 |---|---|---|---|
 | QA-B10b-1 | high | `create_charge` and the waiver posting handed `post_source_entry` the party instance loaded at the start of the transaction; `apply_entry` writes the balance from the instance, so a waiver posted after a payment in the same transaction (a found book's refund) wrote back the balance from before the payment — the member was left ₹250 in credit for money they had been handed back. Caught by T-LIB-07-7 before commit. | every library posting now re-reads the locked party (`_fresh_party`, re-entrant) |
+
+---
+
+## B11 — holds and the expiry job
+
+### Built (4 Oct 2026)
+
+`models/holds.py` + `0007_holds` (`uq_library_hold_live`, `uq_library_hold_ready_copy`, the ready
+CHECK, the queue and expiry indexes); `services/holds.py` (position; `collect_by_for` — the N-th
+open day, one calendar read; `allot` — the copy's own waiting holds first, then the title's, FIFO,
+skipping members not effectively active who keep their place; `release`; place with every BR-1
+refusal; set aside, cancel (passes a kept-aside copy on), extend (≤ 30 days), move (EC-2);
+`collect_at_issue` and `collected`; `by_proxy` (EC-3); the undo of an issue restoring its hold;
+cancellation on the last copy withdrawn (FR-9) and on closing a membership (EC-6, G24's hold
+half); `renewal_blocked_by_hold` (BR-6); `expire_holds`). Wiring: issue lends a kept-aside copy only
+to its member (`held_for` otherwise), return allots and answers `hold_ready`, renew refuses
+`hold_waiting`, cancel restores, `withdraw_copy` cancels holds and its `library_copy_on_loan` now
+carries `loan_id`. `tasks.py` (`library.expire_holds` 06:15 IST, fanned out per tenant with ready
+holds, token `library_holds:<tenant>:<date>`), `manage.py library_expire_holds`, views and routes
+(`/library/holds`, `/{id}/set-aside|cancel|extend|move`, `/library/titles/{id}/holds`), and
+`holds_ready` on the member summary.
+
+Deviation: the FRD's `library_loan.hold_id` is not built — with `library_hold.loan_id` it closes a
+foreign-key cycle that the tenant deletion order (PLT-10) refuses (`test_tenant_data` found it); the
+hold an issue collected is read from `library_hold.loan`. The bell (`library.hold_ready`) and the
+pickup notice are B12's.
+
+Tests `test_holds.py` (12): the refusal reasons, FIFO with an expired member skipped (T-LIB-08-1),
+copy-specific precedence (T-LIB-08-2), a kept-aside copy lent only to its member (T-LIB-06-2),
+collected by proxy, renewal refused only when nothing is on the shelf, cancelling a ready hold,
+undoing an issue, the last copy withdrawn, closing a membership, the expiry command run twice
+(T-LIB-08-5), the pickup date over Sunday and Diwali (T-LIB-08-3). Gates: backend non-slow 3664
+passed; black/isort/flake8; migrations clean.
+
+### QA round 1 (4 Oct 2026)
+
+| Id | Severity | Where | Fixed |
+|---|---|---|---|
+| QA-B11-1 | high | the loan → hold FK plus hold → loan made a cycle; business deletion and export refused to plan (`RuntimeError: tenant tables form a foreign-key cycle`) | the loan side dropped; the link is `library_hold.loan` only |
 
 ---
 

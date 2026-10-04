@@ -11,6 +11,7 @@ from django.urls import path
 from apps.library.views import LibraryNumberingView, LibrarySettingsView
 from apps.library.views import catalogue as c
 from apps.library.views import charges as ch
+from apps.library.views import holds as hd
 from apps.library.views import loans as ln
 from apps.library.views import members as m
 from apps.library.views import memberships as mb
@@ -111,4 +112,15 @@ urlpatterns: list = [
     path("copies/<uuid:copy_id>/found", ln.CopyFoundView.as_view(), name="library-copy-found"),
     path("returns", ln.ReturnView.as_view(), name="library-returns"),
     path("due-date-preview", ln.DueDatePreviewView.as_view(), name="library-due-date-preview"),
+    # ── B11 ── holds (LIB-08 §6)
+    path("holds", hd.HoldListView.as_view(), name="library-holds"),
+    path(
+        "holds/<uuid:hold_id>/set-aside",
+        hd.HoldSetAsideView.as_view(),
+        name="library-hold-set-aside",
+    ),
+    path("holds/<uuid:hold_id>/cancel", hd.HoldCancelView.as_view(), name="library-hold-cancel"),
+    path("holds/<uuid:hold_id>/extend", hd.HoldExtendView.as_view(), name="library-hold-extend"),
+    path("holds/<uuid:hold_id>/move", hd.HoldMoveView.as_view(), name="library-hold-move"),
+    path("titles/<uuid:title_id>/holds", hd.TitleHoldsView.as_view(), name="library-title-holds"),
 ]

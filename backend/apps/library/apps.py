@@ -105,3 +105,9 @@ class LibraryConfig(AppConfig):
             party_ids=member_party_ids,
         )
         register_archive_guard("library", archive_guard)
+
+        # ── B11 ── the daily hold expiry (LIB-08 BR-4), handlers and schedule together.
+        from apps.common.jobs import Schedule, register_schedule
+        from apps.library import tasks  # noqa: F401  (registers the job handlers)
+
+        register_schedule(Schedule(tasks.EXPIRE, period="daily", at_hour_ist=6, minute=15))

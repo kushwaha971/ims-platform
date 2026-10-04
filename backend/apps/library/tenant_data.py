@@ -27,4 +27,6 @@ register(
     # ── B09 ── loans
     TenantTable("library.LibraryLoan", export_name="library_loans.csv"),
     TenantTable("library.LibraryLoanEvent", export_name="library_loan_events.csv"),
+    # ── B11 ── holds
+    TenantTable("library.LibraryHold", export_name="library_holds.csv"),
 )

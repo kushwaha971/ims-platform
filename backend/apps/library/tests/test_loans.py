@@ -130,14 +130,14 @@ def test_a_replayed_issue_returns_the_same_loan(desk: dict) -> None:
 
 def test_issue_and_return_stay_within_a_query_budget(desk: dict) -> None:
     """T-LIB-06-8 — the counter's P95; 30 issues in 20 minutes at one desk. The FRD asks for 12
-    and this build measures 40 and 37, about twenty of them fixed costs of any write here (the
+    and this build measures 42 and 40 (holds included), about twenty of them fixed costs of any write here (the
     session, the idempotency row, the audit row, eight savepoint pairs). The budget holds the
     measured figure so it cannot grow unnoticed; QA-B09-1 records the gap for the lead."""
     with CaptureQueriesContext(connection) as issued:
         _issue(desk["client"], desk["member"], desk["copies"][0], "i1")
     with CaptureQueriesContext(connection) as returned:
         _return(desk["client"], desk["copies"][0], "r1")
-    assert len(issued) <= 40 and len(returned) <= 38, (len(issued), len(returned))
+    assert len(issued) <= 42 and len(returned) <= 40, (len(issued), len(returned))
 
 
 # ── return (BR-2; LIB-07 FR-1) ──────────────────────────────────────────────

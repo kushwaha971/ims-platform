@@ -311,7 +311,12 @@ def issue(*, ctx: Any, data: Any) -> dict:
                 "valid_until": m.valid_until.isoformat() if m.valid_until else None,
             },
         )
-    if copy.status != CopyStatus.AVAILABLE:
+    from apps.library.services import holds
+
+    kept_for_member = (
+        holds.collect_at_issue(ctx, copy, m) if copy.status == CopyStatus.ON_HOLD_SHELF else None
+    )
+    if copy.status != CopyStatus.AVAILABLE and kept_for_member is None:
         details: dict[str, Any] = {"status": copy.status}
         if copy.status == CopyStatus.ON_LOAN:
             current = (
@@ -392,6 +397,10 @@ def issue(*, ctx: Any, data: Any) -> dict:
         source_id=loan.id,
     )
     LibraryCopy.objects.filter(pk=copy.pk, issued_ever=False).update(issued_ever=True)
+    if kept_for_member is not None:  # LIB-08 FR-5
+        holds.collected(kept_for_member, loan)
+    else:  # EC-3
+        holds.by_proxy(m, copy.title_id, loan)
     _event(ctx, loan, LoanEventKind.ISSUED, today, to_due=due_on)
     codes_overridden = [b["code"] for b in blocks]
     if codes_overridden:
@@ -520,6 +529,14 @@ def return_copy(*, ctx: Any, data: Any) -> dict:
         withdrawn_reason="damaged" if to_status == CopyStatus.WITHDRAWN else None,
     )
     LibraryCopy.objects.filter(pk=copy.pk).update(last_seen_on=returned_on)
+    hold_ready = None
+    if to_status == CopyStatus.AVAILABLE:  # LIB-08 FR-3: the next member in line gets it
+        from apps.library.services import holds
+
+        copy.refresh_from_db()
+        hold_ready = holds.allot(ctx, copy, today)
+        if hold_ready is not None:
+            to_status = CopyStatus.ON_HOLD_SHELF.value
     _event(ctx, loan, LoanEventKind.RETURNED, returned_on, charge=charge)
     write_audit(
         ctx=ctx,
@@ -534,6 +551,7 @@ def return_copy(*, ctx: Any, data: Any) -> dict:
         "fine": calc if calc.calendar_days else None,
         "charges": [c for c in (charge, damage_charge) if c is not None],
         "copy_status": to_status,
+        "hold_ready": hold_ready,
     }
 
 
@@ -558,6 +576,10 @@ def _renew_locked(ctx: Any, loan: LibraryLoan, today: dt.date, override: str | N
         )
     if loan.renew_count >= loan.max_renewals:
         raise _renewal_refused("max_renewals", "This book has been renewed as often as it can be.")
+    from apps.library.services import holds
+
+    if holds.renewal_blocked_by_hold(loan):  # LIB-08 BR-6
+        raise _renewal_refused("hold_waiting", "Someone is waiting for this book.")
     status = effective_status(m, today)
     # A renewal adds no book, so the copy limit is not its business, and an overdue loan is
     # decided below by `renew_overdue` rather than by the issue rule.
@@ -682,6 +704,16 @@ def cancel(*, ctx: Any, loan_id: Any, data: Any) -> dict:
         source_type="library_loan",
         source_id=loan.id,
     )
+    from apps.library.services import holds
+
+    if holds.restore_after_cancelled_issue(ctx, loan, today):  # BR-4: the hold back as it was
+        copy_status.move_copy(
+            ctx=ctx,
+            copy=loan.copy,
+            to_status=CopyStatus.ON_HOLD_SHELF,
+            reason_code=CopyEventReason.SET_ASIDE,
+            on_date=today,
+        )
     _event(ctx, loan, LoanEventKind.CANCELLED, today, reason=reason or "")
     write_audit(
         ctx=ctx,
