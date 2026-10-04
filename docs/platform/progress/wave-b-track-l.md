@@ -1454,6 +1454,59 @@ the counter correctly refused.
 
 ---
 
+## B15 — the eight reports
+
+- **`selectors/reports.py`.** Each report is a `Report` made of a parser, a row source, the
+  columns and the totals. Totals cover the filtered set (FR-2).
+  - The reports are published through `register_report` as `library.<name>`. The FRD's
+    `library_<name>` is not a valid registry key.
+  - `GET /reports` lists them, and `GET /reports/library.<name>?format=csv` exports them.
+  - `/library/reports`, `/library/reports/<name>` (paged JSON, plus `?format=csv`) and
+    `/library/reports/<name>/print` (unpaged, refused above 2,000 with `library_print_too_large`)
+    are the module's own screens.
+- **Report rules:**
+  - Circulation requires a period of at most 366 days and leaves cancelled issues out.
+  - Overdue works as of any past date, with the fine to that day and the last reminder sent by
+    that day.
+  - Fines and fees follows BR-2. Collected counts allocations to `library_charge` by payment date,
+    with voided payments excluded. Waived and refunded are split by waiver kind.
+  - Stock counts unpriced copies rather than valuing them at zero (BR-5).
+  - The verification report uses B13's missing list and loss ratio.
+  - No dues uses the new `services/no_dues.py`, which is shared with B16.
+- **Core change (Track P to review).** The module-report CSV tail (authorise, ceiling, audit,
+  BOM, stream) moved from `reports/views/module_reports.py` into
+  `common.exports.registered_csv_response`. Core and the library's own screen now share one path,
+  so they cannot apply different export rules to the same file. The library view uses the common
+  renderers, so `?format=csv` reaches the handler instead of DRF's 404.
+- **Deviation.** Deposits and no dues are evaluated on today's records, not as of a past date.
+  Neither a held deposit nor a charge's `amount_due` keeps its history in a column. Rebuilding it
+  from the movement tables is the FRD's "Later".
+- **Deferred to F11.** Report and column labels (`library.report.<name>`,
+  `library.report.col.<key>`) are not in the locale catalogues yet. T-LIB-12-5 (`EXPLAIN`) also
+  belongs to B18's cross-cutting suite.
+
+`test_reports.py` has 10 tests:
+- every report answers and is listed in the hub;
+- suffixed accession order (T-LIB-12-2);
+- circulation period and cancelled issues (T-LIB-12-1);
+- the fines invariant against the ledger (T-LIB-12-4);
+- overdue as of a past day;
+- unpriced stock;
+- no dues;
+- the CSV BOM and dd/mm/yyyy dates (T-LIB-12-3);
+- the print ceiling;
+- staff refused.
+
+Gates: backend non-slow 3718 passed; black/isort/flake8.
+
+### QA round 1 (4 Oct 2026)
+
+| Id | Severity | Where | Fixed |
+|---|---|---|---|
+| QA-B15-1 | medium | `/library/reports/<name>?format=csv` answered 404: DRF matched `format` against the JSON-only renderers before the handler ran | The view declares the JSON and passthrough-CSV renderers |
+
+---
+
 ## Open questions for the lead
 
 1. **G17 / G19 (order):** move the `library_membership` and period *schema* into B06, run B10 after

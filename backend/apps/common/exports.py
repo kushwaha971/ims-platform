@@ -208,6 +208,67 @@ def csv_lines(columns: Iterable[ExportColumn], rows: Iterable[Any]) -> Iterator[
         yield writer.writerow(cells)
 
 
+def _plain_cell(value: Any) -> str:
+    # Numbers stay numbers (a negative amount must not be "neutralised" into
+    # text); everything else is text and goes through the formula guard.
+    from decimal import Decimal
+
+    if isinstance(value, (Decimal, int)) and not isinstance(value, bool):
+        return str(value)
+    return neutralise(value)
+
+
+def rows_csv_lines(rows: Iterable[Any]) -> Iterator[str]:
+    """BOM on the first line, CRLF, for rows that are already sequences (header first)."""
+
+    class _Echo:
+        def write(self, value: str) -> str:
+            return value
+
+    writer = csv.writer(_Echo(), lineterminator="\r\n")
+    for index, row in enumerate(rows):
+        line = writer.writerow([_plain_cell(value) for value in row])
+        yield ("\ufeff" + line) if index == 0 else line
+
+
+def registered_csv_response(
+    request: Any, view: Any, tenant: Any, *, key: str, params: dict, rows: list
+) -> Any:
+    """A module report's file through the export rules (PLT-X13 §6): the cross-site
+    refusal, `reports.export` and the export budget, the row ceiling, the audit row.
+
+    Shared by core `GET /reports/<key>?format=csv` and a module's own report screen
+    (library, LIB-12 FR-3), so the two can never apply different rules to one file.
+    """
+    from django.http import StreamingHttpResponse
+
+    from apps.common.exceptions import BusinessRuleViolation
+
+    authorise_export(
+        request,
+        view,
+        codename="reports.export",
+        refusal="You do not have permission to export reports.",
+    )
+    count = max(len(rows) - 1, 0)
+    if count > MAX_EXPORT_ROWS:
+        raise BusinessRuleViolation(
+            "export_too_large",
+            "Narrow the date range — at most 1,00,000 rows per file.",
+            details={"count": count, "maximum": MAX_EXPORT_ROWS},
+        )
+    audit_export_request(request, tenant, key, params, count, sync=True)
+    response = StreamingHttpResponse(
+        (line.encode("utf-8") for line in rows_csv_lines(rows)),
+        content_type="text/csv; charset=utf-8",
+    )
+    filename = export_filename(key.replace(".", "-"), tenant)
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    response["X-Row-Count"] = str(count)
+    response["Cache-Control"] = "private, no-store"
+    return response
+
+
 def export_filename(resource: str, tenant: Any) -> str:
     """`yourkhata-parties-20260918-1142.csv` in the tenant's own clock (FR-6)."""
     from django.utils import timezone

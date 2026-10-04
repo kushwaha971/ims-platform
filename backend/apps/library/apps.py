@@ -132,3 +132,8 @@ class LibraryConfig(AppConfig):
             order=20,
             redact=redact_money,
         )
+
+        # ── B15 ── the eight reports on the core reports seam (LIB-12 FR-1).
+        from apps.library.selectors import reports as library_reports
+
+        library_reports.register()

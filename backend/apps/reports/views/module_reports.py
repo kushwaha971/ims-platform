@@ -24,25 +24,14 @@ core exporters, whose jobs replay a queryset the job can find again.
 
 from __future__ import annotations
 
-import csv as csv_module
-from collections.abc import Iterator, Sequence
-from decimal import Decimal
 from typing import Any
 
-from django.http import StreamingHttpResponse
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
 from apps.common import exports as common_exports
 from apps.common.constants import ModuleCode
-from apps.common.exceptions import (
-    BusinessRuleViolation,
-    ModuleDisabled,
-    NotFound,
-    PermissionDenied,
-    ValidationFailed,
-)
-from apps.common.exports import audit_export_request, authorise_export, export_filename, neutralise
+from apps.common.exceptions import ModuleDisabled, NotFound, PermissionDenied, ValidationFailed
 from apps.common.permissions import ModuleEnabled
 from apps.common.responses import StandardResponse
 from apps.common.throttling import ScopedUserRateThrottle
@@ -55,25 +44,6 @@ def _effective_modules(tenant: Any) -> frozenset[str]:
     from apps.platform_app.services.entitlements import effective_modules
 
     return effective_modules(tenant)
-
-
-def _cell(value: Any) -> str:
-    # Numbers stay numbers (a negative amount must not be "neutralised" into
-    # text); everything else is text and goes through the formula guard.
-    if isinstance(value, (Decimal, int)) and not isinstance(value, bool):
-        return str(value)
-    return neutralise(value)
-
-
-def _csv_lines(rows: Sequence[Sequence[Any]]) -> Iterator[str]:
-    class _Echo:
-        def write(self, value: str) -> str:
-            return value
-
-    writer = csv_module.writer(_Echo(), lineterminator="\r\n")
-    for index, row in enumerate(rows):
-        line = writer.writerow([_cell(value) for value in row])
-        yield ("﻿" + line) if index == 0 else line
 
 
 class ReportListView(TenantScopeMixin, APIView):
@@ -121,28 +91,11 @@ class ModuleReportView(ReportFormatMixin, TenantScopeMixin, APIView):
 
         if report.csv is None:
             raise ValidationFailed({"format": ["This report has no file to download."]})
-        authorise_export(
+        return common_exports.registered_csv_response(
             request,
             self,
-            codename="reports.export",
-            refusal="You do not have permission to export reports.",
+            tenant,
+            key=report.key,
+            params=params,
+            rows=list(report.csv(tenant, params)),
         )
-        rows = list(report.csv(tenant, params))
-        count = max(len(rows) - 1, 0)
-        maximum = common_exports.MAX_EXPORT_ROWS
-        if count > maximum:
-            raise BusinessRuleViolation(
-                "export_too_large",
-                "Narrow the date range — at most 1,00,000 rows per file.",
-                details={"count": count, "maximum": maximum},
-            )
-        audit_export_request(request, tenant, report.key, params, count, sync=True)
-        response = StreamingHttpResponse(
-            (line.encode("utf-8") for line in _csv_lines(rows)),
-            content_type="text/csv; charset=utf-8",
-        )
-        filename = export_filename(report.key.replace(".", "-"), tenant)
-        response["Content-Disposition"] = f'attachment; filename="{filename}"'
-        response["X-Row-Count"] = str(count)
-        response["Cache-Control"] = "private, no-store"
-        return response

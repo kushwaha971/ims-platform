@@ -17,6 +17,7 @@ from apps.library.views import loans as ln
 from apps.library.views import members as m
 from apps.library.views import memberships as mb
 from apps.library.views import reminders as rm
+from apps.library.views import reports as rpv
 from apps.library.views import verification as vr
 
 urlpatterns: list = [
@@ -191,4 +192,8 @@ urlpatterns: list = [
     ),
     # ── B14 ── the library home (LIB-11 §6)
     path("home", hm.LibraryHomeView.as_view(), name="library-home"),
+    # ── B15 ── reports (LIB-12 §6)
+    path("reports", rpv.ReportIndexView.as_view(), name="library-reports"),
+    path("reports/<str:name>", rpv.ReportView.as_view(), name="library-report"),
+    path("reports/<str:name>/print", rpv.ReportPrintView.as_view(), name="library-report-print"),
 ]
