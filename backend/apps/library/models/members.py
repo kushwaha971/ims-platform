@@ -24,6 +24,7 @@ from apps.common.db.fields import MoneyField
 from apps.common.models import ImmutableModel, TenantModel
 from apps.library.constants import (
     GROUP_LABEL_MAX,
+    LOCKER_LABEL_MAX,
     MEMBER_NUMBER_MAX,
     MEMBER_NUMBER_SORT_MAX,
     REASON_MAX,
@@ -162,6 +163,17 @@ class LibraryMembership(TenantModel):
     closed_on = models.DateField(null=True, blank=True)
     closed_reason = models.CharField(max_length=REASON_MAX, default="", blank=True)
     notes = models.TextField(default="", blank=True)
+    #: W02 — where a study-library student sits, and when. Both optional: a
+    #: lending library's members have neither. The seat is held until it is
+    #: freed or the membership closes, expired or not — a student a few days
+    #: late with the fee has not given up their desk.
+    shift = models.ForeignKey(
+        "library.LibraryShift", on_delete=models.RESTRICT, null=True, blank=True, related_name="+"
+    )
+    seat = models.ForeignKey(
+        "library.LibrarySeat", on_delete=models.RESTRICT, null=True, blank=True, related_name="+"
+    )
+    locker_label = models.CharField(max_length=LOCKER_LABEL_MAX, default="", blank=True)
     version = models.IntegerField(default=1)
 
     class Meta:
@@ -189,6 +201,7 @@ class LibraryMembership(TenantModel):
             ),
             models.Index(fields=["tenant", "group_label"], name="ix_library_membership_group"),
             models.Index(fields=["tenant", "membership_type"], name="ix_library_membership_type"),
+            models.Index(fields=["tenant", "seat"], name="ix_library_membership_seat"),
             models.Index(
                 fields=["tenant", "member_number_sort"], name="ix_library_membership_sort"
             ),

@@ -293,3 +293,14 @@ SCAN_CODE_MAX = 40
 EXPECTED_STATUSES = ("available", "on_hold_shelf", "in_repair", "missing")
 #: BR-2 — scanning one of these offers Mark found.
 FLAGGED_STATUSES = ("lost", "missing", "withdrawn")
+
+# ── W02 ── the study library: shifts, seats, lockers (owner, 4 Oct 2026)
+SHIFT_NAME_MAX = 40
+SEAT_LABEL_MAX = 16
+SEAT_LABEL_SORT_MAX = 80
+SEAT_ZONE_MAX = 40
+LOCKER_LABEL_MAX = 16
+#: A renewal this many days away or fewer reads "Due soon" on the students list.
+RENEWAL_SOON_DAYS = 7
+#: The most seats one "add a row of seats" request may create.
+SEAT_BULK_MAX = 200

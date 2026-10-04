@@ -44,6 +44,8 @@ APPENDIX_A = {
     "library_verification_open": 409,
     "library_verification_reopen_used": 409,
     "library_print_too_large": 409,
+    # W02 (owner, 4 Oct 2026) — beyond Appendix A: the study library's seats.
+    "library_seat_taken": 409,
 }
 
 # Appendix B, expanded from its `a|b|c` shorthand.
@@ -65,6 +67,9 @@ APPENDIX_B = {
     *(f"library.category.{v}" for v in ("created", "updated", "merged", "deleted")),
     *(f"library.location.{v}" for v in ("created", "updated", "deleted")),
     *(f"library.membership_type.{v}" for v in ("created", "updated")),
+    # W02 — beyond Appendix B: a study library's shifts and seats.
+    "library.shift.saved",
+    "library.seat.saved",
     "library.loan_rules.updated",
     *(
         f"library.membership.{v}"

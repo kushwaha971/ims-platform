@@ -19,6 +19,7 @@ from apps.library.views import members as m
 from apps.library.views import memberships as mb
 from apps.library.views import reminders as rm
 from apps.library.views import reports as rpv
+from apps.library.views import seats as st
 from apps.library.views import verification as vr
 
 urlpatterns: list = [
@@ -63,6 +64,13 @@ urlpatterns: list = [
         name="library-membership-type",
     ),
     path("loan-rules", m.LoanRuleView.as_view(), name="library-loan-rules"),
+    # ── W02 ── a study library's shifts and seats
+    path("shifts", st.ShiftListView.as_view(), name="library-shifts"),
+    path("shifts/<uuid:shift_id>", st.ShiftDetailView.as_view(), name="library-shift"),
+    path("seats", st.SeatListView.as_view(), name="library-seats"),
+    path("seats/row", st.SeatRowView.as_view(), name="library-seat-row"),
+    path("seats/<uuid:seat_id>", st.SeatDetailView.as_view(), name="library-seat"),
+    path("seat-map", st.SeatMapView.as_view(), name="library-seat-map"),
     # ── B10 ── charges and waivers (LIB-07 §6)
     path("charges", ch.ChargeListView.as_view(), name="library-charges"),
     path("charges/<uuid:charge_id>", ch.ChargeDetailView.as_view(), name="library-charge"),

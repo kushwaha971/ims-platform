@@ -53,7 +53,8 @@ def test_registry_is_closed_and_complete() -> None:
     # ── B02 ── +30: library Appendix A (`apps/library/tests/test_vocabulary.py`).
     # ── ATT ── +3: `attendance_blocked`, `attendance_duplicate`, `entitlement_exhausted`.
     # ── B05 ── +1: `sequence_exhausted` (a perpetual counter at its last value).
-    assert len(REGISTRY) == 201
+    # ── W02 ── +1: `library_seat_taken` (a study library's seat, held in that shift).
+    assert len(REGISTRY) == 202
     assert REGISTRY["attendance_blocked"] == (409, False)  # ATT
     assert REGISTRY["attendance_duplicate"] == (409, False)  # ATT
     assert REGISTRY["entitlement_exhausted"] == (409, False)  # ATT

@@ -24,6 +24,7 @@ ORDERINGS = {
     "member_number": ("member_number_sort", "id"),
     "valid_until": ("valid_until", "member_number_sort", "id"),
     "-dues": ("-dues", "member_number_sort", "id"),
+    "seat": ("seat__label_sort", "member_number_sort", "id"),
 }
 
 
@@ -54,7 +55,7 @@ def list_members(tenant: Any, params: Any, today: dt.date) -> QuerySet:
     )
     qs = (
         LibraryMembership.objects.filter(tenant=tenant)
-        .select_related("party", "membership_type")
+        .select_related("party", "membership_type", "shift", "seat")
         .annotate(dues=Coalesce(dues, Value(0), output_field=DecimalField()))
     )
     status = params.get("status")
@@ -87,6 +88,17 @@ def list_members(tenant: Any, params: Any, today: dt.date) -> QuerySet:
             errors["party"] = ["Not a valid id."]
         else:
             qs = qs.filter(party_id=party)
+    for field in ("shift", "seat"):
+        # W02 — "who is in the Morning shift", "who sits at A-12".
+        raw = params.get(field)
+        if raw:
+            pk = uuid_or_none(raw)
+            if pk is None:
+                errors[field] = ["Not a valid id."]
+            else:
+                qs = qs.filter(**{f"{field}_id": pk})
+    if params.get("unseated") in ("true", "1"):
+        qs = qs.filter(seat__isnull=True).exclude(status=MembershipStatus.CLOSED)
     group = (params.get("group") or "").strip()
     if group:
         qs = qs.filter(group_label__iexact=group)
@@ -106,7 +118,7 @@ def list_members(tenant: Any, params: Any, today: dt.date) -> QuerySet:
         )
     ordering = params.get("ordering") or "name"
     if ordering not in ORDERINGS:
-        errors["ordering"] = ["Choose name, member_number, valid_until or -dues."]
+        errors["ordering"] = ["Choose name, member_number, valid_until, -dues or seat."]
     if errors:
         raise ValidationFailed(errors)
     return qs.order_by(*ORDERINGS[ordering])

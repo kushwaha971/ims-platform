@@ -59,6 +59,7 @@ from apps.library.models import (
 from apps.library.services import codes, numbering
 from apps.library.services.charges import create_charge
 from apps.library.services.fields import Errors, date, owned, text, uuid_or_none
+from apps.library.services import seats as seating
 
 MEMBER_KIND = "library_member"
 MODULE = "library"
@@ -214,6 +215,26 @@ def member_summary(m: LibraryMembership, today: dt.date) -> dict:
         "starts_on": m.starts_on.isoformat(),
         "valid_until": m.valid_until.isoformat() if m.valid_until else None,
         "group_label": m.group_label,
+        # W02 — the study library: where the student sits, and the fee in one word.
+        "shift": (
+            {
+                "id": str(m.shift_id),
+                "name": m.shift.name,
+                "starts_at": m.shift.starts_at.strftime("%H:%M"),
+                "ends_at": m.shift.ends_at.strftime("%H:%M"),
+            }
+            if m.shift_id
+            else None
+        ),
+        "seat": (
+            {"id": str(m.seat_id), "label": m.seat.label, "zone": m.seat.zone}
+            if m.seat_id
+            else None
+        ),
+        "locker_label": m.locker_label,
+        "plan_fee": f"{Decimal(m.membership_type.fee_amount):.2f}",
+        "validity_months": m.membership_type.validity_months,
+        "fee_state": seating.fee_state(m, today, numbers.dues),
         "loans_open": numbers.loans_open,
         "loans_overdue": numbers.loans_overdue,
         "holds_ready": m.holds.filter(status="ready").count(),
@@ -568,6 +589,23 @@ def _guardian(ctx: Any, member_party: Any, raw: Any) -> None:
     )
 
 
+def _placement(ctx: Any, data: dict, errors: Errors) -> dict:
+    """W02 — `shift_id`, `seat_id`, `locker_label`, for the keys the body carries."""
+    from apps.library.constants import LOCKER_LABEL_MAX
+    from apps.library.models import LibrarySeat, LibraryShift
+
+    out: dict[str, Any] = {}
+    if "shift_id" in data:
+        out["shift"] = owned(LibraryShift, ctx.tenant, data.get("shift_id"), errors, "shift_id")
+        if out["shift"] is not None and not out["shift"].is_active:
+            errors.add("shift_id", "This shift is not in use.")
+    if "seat_id" in data:
+        out["seat"] = owned(LibrarySeat, ctx.tenant, data.get("seat_id"), errors, "seat_id")
+    if "locker_label" in data:
+        out["locker_label"] = text(errors, data, "locker_label", LOCKER_LABEL_MAX) or ""
+    return out
+
+
 @transaction.atomic
 def enrol(*, ctx: Any, data: Any) -> dict:
     """`POST /library/members`. Returns `{membership, charges, payments, deposit}`."""
@@ -583,6 +621,7 @@ def enrol(*, ctx: Any, data: Any) -> dict:
     group = text(errors, data, "group_label", GROUP_LABEL_MAX)
     fees_block = _block(errors, data, "collect_fees")
     deposit_block = _block(errors, data, "collect_deposit")
+    placement = _placement(ctx, data, errors)
     party = _party(ctx, data, errors)
     errors.raise_if_any()
     assert kind is not None and party is not None and start is not None
@@ -610,6 +649,10 @@ def enrol(*, ctx: Any, data: Any) -> dict:
                 starts_on=start,
                 valid_until=until,
                 group_label=group or "",
+                **placement,
+            )
+            seating.assign(
+                ctx=ctx, membership=m, seat=m.seat, shift=m.shift if m.shift_id else None
             )
     except IntegrityError:  # EC-5: another device enrolled the same party a moment ago
         raise BusinessRuleViolation(
@@ -664,7 +707,16 @@ def patch(*, ctx: Any, membership_id: Any, data: Any) -> LibraryMembership:
             errors.add("valid_until", "The end date is before the start date.")
         changes["valid_until"] = until
     typed = _typed_number(errors, data) if "member_number" in data else None
+    placement = _placement(ctx, data, errors)
     errors.raise_if_any()
+    if "seat" in placement or "shift" in placement:
+        # Freeing a seat (seat_id: null) is always allowed; any other change is
+        # checked against who else sits there, in the shift the student will have.
+        seat = placement.get("seat", m.seat if m.seat_id else None)
+        shift = placement.get("shift", m.shift if m.shift_id else None)
+        seating.assign(ctx=ctx, membership=m, seat=seat, shift=shift)
+    for field, value in placement.items():
+        changes[field] = value
     if typed is not None and codes.number_key(typed) != codes.number_key(m.member_number):
         _number_clash(ctx.tenant, codes.number_key(typed), exclude=m.pk)
         changes["member_number"] = typed

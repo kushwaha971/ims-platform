@@ -16,6 +16,9 @@ register(
     TenantTable("library.LibraryTitle", export_name="library_titles.csv"),
     TenantTable("library.LibraryCopy", export_name="library_copies.csv"),
     TenantTable("library.LibraryCopyEvent", export_name="library_copy_events.csv"),
+    # ── W02 ── shifts and seats, before the memberships that point at them
+    TenantTable("library.LibraryShift", export_name="library_shifts.csv"),
+    TenantTable("library.LibrarySeat", export_name="library_seats.csv"),
     # ── B06 ── types, rules, and the membership schema (G17)
     TenantTable("library.LibraryMembershipType", export_name="library_membership_types.csv"),
     TenantTable("library.LibraryLoanRule", export_name="library_loan_rules.csv"),

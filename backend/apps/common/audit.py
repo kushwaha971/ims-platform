@@ -276,6 +276,9 @@ class AuditAction:
     LIBRARY_LOCATION_DELETED = "library.location.deleted"
     LIBRARY_MEMBERSHIP_TYPE_CREATED = "library.membership_type.created"
     LIBRARY_MEMBERSHIP_TYPE_UPDATED = "library.membership_type.updated"
+    # ── W02 ── a study library's shifts and seats
+    LIBRARY_SHIFT_SAVED = "library.shift.saved"
+    LIBRARY_SEAT_SAVED = "library.seat.saved"
     LIBRARY_LOAN_RULES_UPDATED = "library.loan_rules.updated"
     LIBRARY_MEMBERSHIP_ENROLLED = "library.membership.enrolled"
     LIBRARY_MEMBERSHIP_UPDATED = "library.membership.updated"

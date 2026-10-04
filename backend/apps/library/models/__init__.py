@@ -18,6 +18,7 @@ from apps.library.models.members import (
     LibraryMembershipPeriod,
     LibraryMembershipType,
 )
+from apps.library.models.seats import LibrarySeat, LibraryShift
 from apps.library.models.settings import LibrarySettings
 from apps.library.models.verification import LibraryVerification, LibraryVerificationScan
 
@@ -34,7 +35,9 @@ __all__ = [
     "LibraryMembership",
     "LibraryMembershipPeriod",
     "LibraryMembershipType",
+    "LibrarySeat",
     "LibrarySettings",
+    "LibraryShift",
     "LibraryTitle",
     "LibraryVerification",
     "LibraryVerificationScan",

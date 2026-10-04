@@ -237,6 +237,8 @@ _REGISTRY: dict[str, tuple[int, bool]] = {
     "library_verification_open": (409, False),
     "library_verification_reopen_used": (409, False),
     "library_print_too_large": (409, False),  # D count, max
+    # W02 — a seat already held in an overlapping shift (owner, 4 Oct 2026).
+    "library_seat_taken": (409, False),  # D seat, holder
     # ── ATT ── contracts §4: the attendance engine (FRD 00 ATT-02, ATT-04).
     "attendance_blocked": (409, False),  # D reason, override_permission
     "attendance_duplicate": (409, False),  # D mark_id
