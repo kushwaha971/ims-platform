@@ -192,6 +192,15 @@ def test_mark_missing_needs_a_closed_check_and_charges_nobody(shelves: dict) -> 
     event = LibraryCopyEvent.objects.filter(copy=_copy("2")).latest("created_at")
     assert (event.source_type, str(event.source_id)) == ("library_verification", vid)
     assert not LibraryCharge.objects.exists()
+    from apps.platform_app.models import AuditLog
+
+    assert set(
+        AuditLog.objects.filter(entity_type="library_verification").values_list("action", flat=True)
+    ) == {
+        "library.verification.started",
+        "library.verification.closed",
+        "library.verification.missing_marked",
+    }
     missing = shelves["client"].get(
         reverse("v1:library-verification-results", args=[vid]), {"bucket": "missing"}
     )

@@ -25,6 +25,7 @@ from django.db.models import Q, Sum
 from django.db.models.functions import Coalesce, Upper
 from django.utils import timezone
 
+from apps.common.audit import AuditAction, write_audit
 from apps.common.dates import tenant_today
 from apps.common.exceptions import BusinessRuleViolation, NotFound, StaleVersion
 from apps.common.money import ZERO
@@ -151,6 +152,7 @@ def start(*, ctx: Any, data: Any) -> tuple[LibraryVerification, dict]:
         started_on=tenant_today(ctx.tenant),
         **clean,
     )
+    _audit(ctx, AuditAction.LIBRARY_VERIFICATION_STARTED, v, scope_kind=v.scope_kind)
     return v, {"expected_count": expected_qs(v).count(), "overlaps": overlaps(v)}
 
 
@@ -159,6 +161,16 @@ def get(tenant: Any, verification_id: Any) -> LibraryVerification:
     if v is None:
         raise NotFound("No such stock check.")
     return v
+
+
+def _audit(ctx: Any, action: str, v: LibraryVerification, **metadata: Any) -> None:
+    write_audit(
+        ctx=ctx,
+        action=action,
+        entity_type="library_verification",
+        entity_id=v.id,
+        metadata={"name": v.name, **metadata},
+    )
 
 
 def _closed(v: LibraryVerification) -> BusinessRuleViolation:
@@ -410,6 +422,7 @@ def close(*, ctx: Any, verification_id: Any, data: Any = None) -> LibraryVerific
     v.closed_on = tenant_today(ctx.tenant)
     v.version += 1
     v.save()
+    _audit(ctx, AuditAction.LIBRARY_VERIFICATION_CLOSED, v, missing=v.missing_count)
     return v
 
 
@@ -437,6 +450,7 @@ def reopen(*, ctx: Any, verification_id: Any, data: Any) -> LibraryVerification:
     v.reopen_reason = reason
     v.version += 1
     v.save()
+    _audit(ctx, AuditAction.LIBRARY_VERIFICATION_REOPENED, v, reason=reason)
     return v
 
 
@@ -541,6 +555,7 @@ def mark_missing(*, ctx: Any, verification_id: Any, data: Any) -> dict:
             source_id=v.id,
         )
         marked.append(str(copy.id))
+    _audit(ctx, AuditAction.LIBRARY_VERIFICATION_MISSING_MARKED, v, copy_ids=marked)
     return {"marked": len(marked), "copy_ids": marked, "skipped": skipped}
 
 
@@ -571,6 +586,7 @@ def withdraw_missing(*, ctx: Any, verification_id: Any, data: Any) -> dict:
         )
         done.append(copy.title_id)
         _after_withdrawal(ctx, copy.title_id)
+    _audit(ctx, AuditAction.LIBRARY_VERIFICATION_MISSING_WITHDRAWN, v, count=len(done))
     return {"withdrawn": len(done)}
 
 

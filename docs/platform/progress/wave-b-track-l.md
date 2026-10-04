@@ -1507,6 +1507,54 @@ Gates: backend non-slow 3718 passed; black/isort/flake8.
 
 ---
 
+## B16 — document payloads: card, overdue notice, no dues
+
+`services/documents.py` and `views/documents.py` provide the payloads for LIB-13's print sheets.
+There is no server PDF (ADR-021). Each payload carries the tenant's own business block and
+nothing that names the product.
+
+- **Card** (`GET /library/members/{id}/card`):
+  - The QR is `apps/common/qr.encode(member_number)` as `matrix_rows`, and it holds the member
+    number only, with no URL (BR-1).
+  - The guardian is named whether or not they take messages.
+  - `GET /library/cards` takes `ids` or `group` and returns at most 50 cards.
+  - `POST …/card/printed` sets `card_issued_on` on the first print and audits every print.
+- **Overdue notice:**
+  - It reuses LIB-09's recipient, loans and fine so far, so the letter and the WhatsApp text
+    cannot disagree.
+  - `return_by` is the seventh open day after today, taken from the library calendar (BR-3).
+- **No dues:**
+  - `services/no_dues.py` (from B15) evaluates books out, lost-and-unpaid and open dues.
+  - A clear member gets the deterministic reference `NDC-<number>-<yyyymmdd>`. `?issue=1` audits
+    `library.no_dues.issued`.
+  - A member who is not clear gets the reasons and no reference (FR-3).
+  - A held deposit is stated but does not block clearance (BR-4).
+  - `GET /library/no-dues?group=` evaluates a whole class in three queries.
+
+### QA round 1 (4 Oct 2026)
+
+| Id | Severity | Where | Fixed |
+|---|---|---|---|
+| QA-B13-3 | medium | B13's verification wrote no audit rows, though the five `LIBRARY_VERIFICATION_*` actions were registered for it | Start, close, reopen, mark missing and withdraw missing now audit; asserted in `test_verification.py` |
+
+`test_documents.py` has 9 tests:
+- the QR holds the member number only (T-LIB-13-1);
+- the independent OpenCV decode, which is skipped here because `cv2` is not installed;
+- card printed;
+- the 50-card ceiling;
+- the notice and its return-by date;
+- no notice when nothing is overdue;
+- every no-dues reason and the clear case (T-LIB-13-2);
+- group evaluation;
+- an accountant may print but not mark a card printed.
+
+Gates: backend non-slow 3726 passed; black/isort/flake8.
+
+**The library backend for Wave B (B03–B16) is complete.** B17 (import) and B18 (cross-cutting
+suites) remain on the plan and were not part of this request.
+
+---
+
 ## Open questions for the lead
 
 1. **G17 / G19 (order):** move the `library_membership` and period *schema* into B06, run B10 after

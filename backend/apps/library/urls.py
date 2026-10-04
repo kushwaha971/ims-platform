@@ -11,6 +11,7 @@ from django.urls import path
 from apps.library.views import LibraryNumberingView, LibrarySettingsView
 from apps.library.views import catalogue as c
 from apps.library.views import charges as ch
+from apps.library.views import documents as dc
 from apps.library.views import holds as hd
 from apps.library.views import home as hm
 from apps.library.views import loans as ln
@@ -196,4 +197,19 @@ urlpatterns: list = [
     path("reports", rpv.ReportIndexView.as_view(), name="library-reports"),
     path("reports/<str:name>", rpv.ReportView.as_view(), name="library-report"),
     path("reports/<str:name>/print", rpv.ReportPrintView.as_view(), name="library-report-print"),
+    # ── B16 ── document payloads (LIB-13 §6)
+    path("members/<uuid:membership_id>/card", dc.MemberCardView.as_view(), name="library-card"),
+    path(
+        "members/<uuid:membership_id>/card/printed",
+        dc.CardPrintedView.as_view(),
+        name="library-card-printed",
+    ),
+    path("cards", dc.CardsView.as_view(), name="library-cards"),
+    path(
+        "members/<uuid:membership_id>/overdue-notice",
+        dc.OverdueNoticeView.as_view(),
+        name="library-overdue-notice",
+    ),
+    path("members/<uuid:membership_id>/no-dues", dc.NoDuesView.as_view(), name="library-no-dues"),
+    path("no-dues", dc.NoDuesGroupView.as_view(), name="library-no-dues-group"),
 ]
