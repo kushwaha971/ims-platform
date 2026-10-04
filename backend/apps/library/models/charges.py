@@ -12,7 +12,7 @@ REVERSED charge with `amount_due > 0` for ever, so "open" is
 `amount_due > 0 AND reversed_at IS NULL` — `LibraryCharge.objects.open()` —
 and the FIFO index carries the same predicate.
 
-`loan` arrives with B09, which owns `library_loan` (G19).
+`loan` was added by B09, which owns `library_loan` (G19).
 """
 
 from __future__ import annotations
@@ -56,6 +56,14 @@ class LibraryCharge(TenantModel):
     charge_date = models.DateField()
     copy = models.ForeignKey(
         "library.LibraryCopy", on_delete=models.RESTRICT, null=True, blank=True, related_name="+"
+    )
+    #: B09 — the loan a circulation charge (a fine, B10b's lost or damage) belongs to.
+    loan = models.ForeignKey(
+        "library.LibraryLoan",
+        on_delete=models.RESTRICT,
+        null=True,
+        blank=True,
+        related_name="charges",
     )
     description = models.CharField(max_length=CHARGE_DESCRIPTION_MAX)
     fine_days = models.SmallIntegerField(null=True, blank=True)
@@ -106,6 +114,7 @@ class LibraryCharge(TenantModel):
                 fields=["tenant", "membership", "status"], name="ix_library_charge_member"
             ),
             models.Index(fields=["tenant", "kind", "charge_date"], name="ix_library_charge_kind"),
+            models.Index(fields=["loan"], name="ix_library_charge_loan"),
         ]
 
     @property

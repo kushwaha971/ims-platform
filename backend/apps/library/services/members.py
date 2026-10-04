@@ -22,15 +22,16 @@ leave a member wrongly active; every read calls `effective_status`.
 party → membership → charges → deposit → payments → sequences. The member number
 is taken from its counter after the party lock, before any charge number.
 
-Loans and holds do not exist yet (B09, B11): the close guard on open loans and
-the hold cancellation join `close` with them (G24); the summary omits the loan
-and hold figures rather than claiming 0 (PTY-03).
+B09 added the loan figures, the loan blocks and the close guard on open loans;
+holds do not exist yet (B11), so the summary omits `holds_ready` rather than
+claiming 0 (PTY-03), and B11 adds the hold cancellation to `close` (G24).
 """
 
 from __future__ import annotations
 
 import calendar
 import datetime as dt
+from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any
 
@@ -123,26 +124,53 @@ def deposit_for(m: LibraryMembership) -> Any:
     )
 
 
-def member_blocks(m: LibraryMembership, today: dt.date) -> list[dict]:
-    """BR-10 — what stops this member borrowing. The loan blocks (`copy_limit_reached`,
-    `has_overdue`) join with B09, which owns loans."""
+@dataclass(frozen=True)
+class Figures:
+    """What the panel and the blocks read, fetched once: three queries (T-LIB-06-8)."""
+
+    loans_open: int
+    loans_overdue: int
+    dues: Decimal
+    deposit: Any
+
+
+def figures(m: LibraryMembership, today: dt.date) -> Figures:
+    from django.db.models import Count, Q, Sum
+
+    loans = m.loans.filter(status="open").aggregate(
+        open=Count("id"), overdue=Count("id", filter=Q(due_on__lt=today))
+    )
+    owed = LibraryCharge.objects.filter(membership=m).open().aggregate(t=Sum("amount_due"))["t"]
+    return Figures(
+        loans_open=loans["open"],
+        loans_overdue=loans["overdue"],
+        dues=q2(owed or ZERO),
+        deposit=deposit_for(m),
+    )
+
+
+def member_blocks(
+    m: LibraryMembership, today: dt.date, numbers: Figures | None = None
+) -> list[dict]:
+    """BR-10 — what stops this member borrowing, including B09's two loan blocks."""
+    from apps.library.services.loans import loan_blocks
+
+    numbers = numbers or figures(m, today)
     status = effective_status(m, today)
     blocks: list[dict] = []
     if status in ("expired", "suspended", "closed"):
         blocks.append({"code": f"membership_{status}", "overridable": False, "params": {}})
     kind = m.membership_type
-    if kind.dues_block_amount is not None:
-        owed = dues_amount(m)
-        if owed > Decimal(kind.dues_block_amount):
-            blocks.append(
-                {
-                    "code": "dues_over_limit",
-                    "overridable": True,
-                    "params": {"dues": f"{owed:.2f}", "limit": f"{kind.dues_block_amount:.2f}"},
-                }
-            )
+    if kind.dues_block_amount is not None and numbers.dues > Decimal(kind.dues_block_amount):
+        blocks.append(
+            {
+                "code": "dues_over_limit",
+                "overridable": True,
+                "params": {"dues": f"{numbers.dues:.2f}", "limit": f"{kind.dues_block_amount:.2f}"},
+            }
+        )
     if kind.deposit_required_to_borrow and Decimal(kind.deposit_amount) > ZERO:
-        deposit = deposit_for(m)
+        deposit = numbers.deposit
         held = Decimal(deposit.held_amount) if deposit is not None else ZERO
         expected = Decimal(deposit.expected_amount) if deposit is not None else kind.deposit_amount
         if held < Decimal(expected):
@@ -153,14 +181,15 @@ def member_blocks(m: LibraryMembership, today: dt.date) -> list[dict]:
                     "params": {"expected": f"{Decimal(expected):.2f}", "held": f"{held:.2f}"},
                 }
             )
-    return blocks
+    return blocks + loan_blocks(m, today, numbers)
 
 
 # ── Reading ─────────────────────────────────────────────────────────────────
 
 
 def member_summary(m: LibraryMembership, today: dt.date) -> dict:
-    deposit = deposit_for(m)
+    numbers = figures(m, today)
+    deposit = numbers.deposit
     return {
         "membership_id": str(m.id),
         "party_id": str(m.party_id),
@@ -176,7 +205,9 @@ def member_summary(m: LibraryMembership, today: dt.date) -> dict:
         "starts_on": m.starts_on.isoformat(),
         "valid_until": m.valid_until.isoformat() if m.valid_until else None,
         "group_label": m.group_label,
-        "dues_amount": f"{dues_amount(m):.2f}",
+        "loans_open": numbers.loans_open,
+        "loans_overdue": numbers.loans_overdue,
+        "dues_amount": f"{numbers.dues:.2f}",
         "deposit": (
             {
                 "id": str(deposit.id),
@@ -186,7 +217,7 @@ def member_summary(m: LibraryMembership, today: dt.date) -> dict:
             if deposit is not None
             else None
         ),
-        "blocks": member_blocks(m, today),
+        "blocks": member_blocks(m, today, numbers),
     }
 
 
@@ -884,6 +915,13 @@ def close(*, ctx: Any, membership_id: Any, data: Any) -> dict:
         raise _refuse_refund()
     m = _locked(ctx, membership_id)
     _not_closed(m)
+    open_count = m.loans.filter(status="open").count()
+    if open_count:  # BR-6, G24 (B09): every book comes back first
+        raise BusinessRuleViolation(
+            "library_membership_has_loans",
+            f"Return {open_count} book(s) first.",
+            details={"count": open_count},
+        )
     today = tenant_today(ctx.tenant)
     deposit = deposit_for(m)
     applied = ZERO

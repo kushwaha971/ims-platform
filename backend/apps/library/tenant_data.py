@@ -24,4 +24,7 @@ register(
     # ── B10 ── charges and waivers
     TenantTable("library.LibraryCharge", export_name="library_charges.csv"),
     TenantTable("library.LibraryWaiver", export_name="library_waivers.csv"),
+    # ── B09 ── loans
+    TenantTable("library.LibraryLoan", export_name="library_loans.csv"),
+    TenantTable("library.LibraryLoanEvent", export_name="library_loan_events.csv"),
 )

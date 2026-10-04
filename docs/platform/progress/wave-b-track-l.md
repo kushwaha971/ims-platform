@@ -1205,6 +1205,46 @@ passed, lint clean, locales in step.
 
 Still open by design: G24 (close's loan and hold checks come with B09 and B11).
 
+## B09 — loans: issue, return, renew, cancel, change due
+
+### Design note (review step, 4 Oct 2026)
+
+Inputs: LIB-06 §1–§13 (BR-1…BR-8, T-LIB-06-1…8, EC-1…EC-9), LIB-05 FR-6/§6 (G18's three endpoints),
+LIB-07 FR-1 (the fine at return and at an overdue renewal), LIB-04 BR-6/BR-10 (close guard, loan
+blocks). Scope: `library_loan` and `library_loan_event` with the rule snapshot as typed columns and
+`uq_library_loan_open_copy`; `library_charge.loan`; services for issue (blocks and override, the
+override codename read from the body), return (fine charged at once, backdating needs
+`library.loan.adjust`, EC-1 last seen, EC-6), renew (snapshot limit, `renew_overdue`), renew all,
+cancel (same day, D20), change due, due-on / shift-due / due-date preview; the member summary with
+its loans. Holds (the hold shelf, a waiting hold refusing a renewal, routing a return to the hold
+shelf) are B11's; damage, lost and found are B10b's; the issue slip text is B12's (templates).
+
+### Built (4 Oct 2026)
+
+`models/loans.py` + `0006_loans`; `services/loans.py`; `views/loans.py` and routes (`/library/loans`,
+`/{id}`, `/{id}/renew|cancel|change-due`, `/library/returns`, `/library/loans/due-on`,
+`/shift-due`, `/library/due-date-preview`, `/library/members/{id}/summary|renew-all`); B07's
+`member_blocks` now adds the two loan blocks from one `figures()` read (three queries for the whole
+panel), the summary carries `loans_open` / `loans_overdue`, and `close` refuses while a book is out
+(G24's loan half). A renewal ignores the copy limit and the issue rule's overdue block: it adds no
+book, and an overdue loan is `renew_overdue`'s to decide.
+
+Tests `test_loans.py` (17): issue with snapshot, the copy limit refused then overridden (staff 403,
+the `overridden` event names the block), expired member, a copy out with someone else (`with`),
+reference not loanable, the second open loan refused by the database, an idempotent replay, the
+query budget, a late return's fine charged at once, not-on-loan and `offer_found`, backdating needs
+adjust, the renewal limit, an overdue renewal charging the fine first, cancel same day only, close
+refused with a book out, a holiday moving due dates, the fine so far computed and not stored.
+Gates: backend non-slow 3632 passed; black/isort/flake8; migrations clean.
+
+### QA round 1 (4 Oct 2026)
+
+| Id | Severity | Where | State |
+|---|---|---|---|
+| QA-B09-1 | medium | T-LIB-06-8 asks ≤ 12 queries per issue and return; measured 38 / 41, cut to 36 / 38 by reading the member's figures once (`members.figures`) instead of ten separate counts | **open for the lead**: about twenty are fixed costs every write here pays (session, idempotency row, audit row, eight savepoint pairs from nested `atomic`); reaching 12 means changing those core paths, not the library. The budget test holds 36 / 38. |
+
+---
+
 ## Open questions for the lead
 
 1. **G17 / G19 (order):** move the `library_membership` and period *schema* into B06, run B10 after

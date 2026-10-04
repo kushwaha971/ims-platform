@@ -11,6 +11,7 @@ from django.urls import path
 from apps.library.views import LibraryNumberingView, LibrarySettingsView
 from apps.library.views import catalogue as c
 from apps.library.views import charges as ch
+from apps.library.views import loans as ln
 from apps.library.views import members as m
 from apps.library.views import memberships as mb
 
@@ -84,6 +85,22 @@ urlpatterns: list = [
             ("deposit/receive", "deposit-receive", mb.MemberDepositReceiveView),
             ("deposit/apply", "deposit-apply", mb.MemberDepositApplyView),
             ("deposit/refund", "deposit-refund", mb.MemberDepositRefundView),
+            ("renew-all", "renew-all", ln.MemberRenewAllView),
+            ("summary", "summary", ln.MemberCounterSummaryView),
         )
     ],
+    # ── B09 ── loans and the counter (LIB-06 §6), due dates over holidays (LIB-05 §6)
+    path("loans", ln.LoanListView.as_view(), name="library-loans"),
+    path("loans/due-on", ln.DueOnView.as_view(), name="library-loans-due-on"),
+    path("loans/shift-due", ln.ShiftDueView.as_view(), name="library-loans-shift-due"),
+    path("loans/<uuid:loan_id>", ln.LoanDetailView.as_view(), name="library-loan"),
+    path("loans/<uuid:loan_id>/renew", ln.LoanRenewView.as_view(), name="library-loan-renew"),
+    path("loans/<uuid:loan_id>/cancel", ln.LoanCancelView.as_view(), name="library-loan-cancel"),
+    path(
+        "loans/<uuid:loan_id>/change-due",
+        ln.LoanChangeDueView.as_view(),
+        name="library-loan-change-due",
+    ),
+    path("returns", ln.ReturnView.as_view(), name="library-returns"),
+    path("due-date-preview", ln.DueDatePreviewView.as_view(), name="library-due-date-preview"),
 ]

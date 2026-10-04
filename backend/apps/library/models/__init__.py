@@ -10,6 +10,7 @@ from apps.library.models.catalogue import (
     LibraryTitle,
 )
 from apps.library.models.charges import LibraryCharge, LibraryWaiver
+from apps.library.models.loans import LibraryLoan, LibraryLoanEvent
 from apps.library.models.members import (
     LibraryLoanRule,
     LibraryMembership,
@@ -23,6 +24,8 @@ __all__ = [
     "LibraryCharge",
     "LibraryCopy",
     "LibraryCopyEvent",
+    "LibraryLoan",
+    "LibraryLoanEvent",
     "LibraryLoanRule",
     "LibraryLocation",
     "LibraryMembership",

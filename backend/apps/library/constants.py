@@ -226,3 +226,23 @@ OFF_GUARD_CHARGES = "library.off.chargesOpen"
 #: FR-8: the kinds a person may raise by hand.
 MANUAL_CHARGE_KINDS = ("processing", "other")
 WAIVER_REASON_MIN = 3
+
+
+# ── B09 ── loans (LIB-06 §5)
+class LoanStatus(models.TextChoices):
+    OPEN = "open"
+    RETURNED = "returned"
+    LOST = "lost"
+    CANCELLED = "cancelled"
+
+
+class LoanEventKind(models.TextChoices):
+    ISSUED = "issued"
+    RENEWED = "renewed"
+    DUE_CHANGED = "due_changed"
+    RETURNED = "returned"
+    LOST = "lost"
+    FOUND = "found"
+    CANCELLED = "cancelled"
+    OVERRIDDEN = "overridden"
+    IMPORTED = "imported"
