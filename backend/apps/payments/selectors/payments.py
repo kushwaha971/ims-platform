@@ -162,14 +162,19 @@ def open_documents(
         chosen = targets_for_direction(direction, auto_only=True, bucket="main")
     else:
         chosen = targets_for_direction(direction, bucket=bucket)
-    rows: list[dict] = []
-    for target in chosen:
-        rows.extend(
-            target.summary(document)
+    from apps.payments.services.record import merge_oldest_first
+
+    # QA-DUE-03-1: merged by date across targets, the way "auto" chooses (R6) — not target by
+    # target, which listed every invoice before a month-old due once dues joined the bucket.
+    per_target = [
+        [
+            (target, document)
             for document in target.open_documents(tenant=tenant, party_id=party_id)
             if target.outstanding(document) > ZERO
-        )
-    return rows
+        ]
+        for target in chosen
+    ]
+    return [target.summary(document) for target, document in merge_oldest_first(per_target)]
 
 
 def open_advances(

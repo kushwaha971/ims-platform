@@ -758,7 +758,7 @@ tenants whose consuming module is off.
 
 ## DUE-03 — Settling dues (FRD 00 #18) — outline
 
-**Status: built; ready for QA.**
+**Status: built; QA round 1 fixed** (7b7a36b2, QA test 4b9fe27d).
 
 - **Targets** `DuesDueTarget` (`dues_due`, in, `main`, `auto=True`, open = posting `ledger`,
   status `due`/`overdue`, outstanding > 0) and `DuesInstalmentTarget` (`dues_instalment`, in,
@@ -821,6 +821,17 @@ Gates (local venv, Python 3.12, Postgres 16): full backend suite without `slow` 
 skipped; black/isort/flake8 clean; `makemigrations --check` clean. The slow T-DUE-02-9 (5,000
 schedules < 60 s) is borderline on this laptop both before and after DUE-03 (61–64 s call each way,
 setup included), so it is a machine limit rather than a regression.
+
+### QA round 1 (4 Oct 2026)
+
+| Id | Severity | Where | Fixed |
+|---|---|---|---|
+| QA-DUE-03-1 | medium | `payments.selectors.open_documents` concatenated targets in registration order; with `dues_due` a second main-bucket target, every invoice listed before any due, so the panel's FIFO preview disagreed with the server's date-merged `"auto"` | rows merged with `merge_oldest_first`, the key `"auto"` uses |
+
+Checked and sound: a void releases exactly the payment's settlement rows (allocation growth by
+`allocate_existing` grows the rows too, so the sums agree); a cancelled due is left cancelled by
+`unsettle`; document dues are not targets; the run's advance step re-reads the dues per advance.
+Gates after the fix: backend non-slow 3503 passed, flake8/black clean.
 
 
 
