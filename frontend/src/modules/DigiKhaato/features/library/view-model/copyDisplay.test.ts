@@ -1,4 +1,11 @@
-import { canRepair, canShelve, canWithdraw, copyPlace, shelfLine } from './copyDisplay';
+import {
+  canRepair,
+  canShelve,
+  canWithdraw,
+  copyPlace,
+  historyCaption,
+  shelfLine,
+} from './copyDisplay';
 
 /**
  * F03 — the defects: a withdraw button offered on a copy that is out (the
@@ -34,5 +41,24 @@ describe('copyDisplay', () => {
   it('places a copy by its location code, else its free text', () => {
     expect(copyPlace({ location: { id: 'l', code: 'A-3' }, locationText: 'Shelf 2' })).toBe('A-3');
     expect(copyPlace({ location: null, locationText: 'Shelf 2' })).toBe('Shelf 2');
+  });
+});
+
+describe('historyCaption', () => {
+  const t = ((id: string) =>
+    ({
+      'library.event.withdrawn': 'Withdrawn',
+      'library.copy.status.withdrawn': 'Withdrawn',
+      'library.event.created': 'Added to the register',
+      'library.copy.status.available': 'On shelf',
+    })[id] ?? id) as unknown as Parameters<typeof historyCaption>[2];
+
+  it('does not repeat the word the event already says', () => {
+    expect(
+      historyCaption({ reasonCode: 'withdrawn', toStatus: 'withdrawn' }, '04/10/2026', t)
+    ).toBe('04/10/2026');
+    expect(historyCaption({ reasonCode: 'created', toStatus: 'available' }, '04/10/2026', t)).toBe(
+      '04/10/2026 · On shelf'
+    );
   });
 });

@@ -16,7 +16,7 @@ import {
   UbPageHeader,
   UbPageShell,
   UbSearchInput,
-  UbSelect,
+  UbNativeSelect,
   UbStack,
 } from 'src/design-system';
 import { UbDataGrid, type UbDataGridEmptyStates } from 'src/design-system/UbDataGrid';
@@ -217,7 +217,7 @@ export function CatalogueListPageContent(): React.JSX.Element {
         />
         <UbFilterBar
           end={
-            <UbSelect
+            <UbNativeSelect
               name="library-material"
               aria-label={t('library.filter.type')}
               value={filters.materialType || ALL}

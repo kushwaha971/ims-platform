@@ -1,8 +1,15 @@
 import type { UbStatusBadgeTone } from 'src/design-system';
 import type { UbGridState } from 'src/design-system/UbDataGrid';
+import type { TranslateFn } from 'src/hooks/useTranslation';
 import type { RequestStatus } from 'src/types/api.types';
 
-import type { CopyRow, CopyStatus, TitleRow, WithdrawReason } from '../types/catalogue.types';
+import type {
+  CopyEvent,
+  CopyRow,
+  CopyStatus,
+  TitleRow,
+  WithdrawReason,
+} from '../types/catalogue.types';
 
 /**
  * F03 (LIB-02 §7) — how a copy and a title READ: the badge tone of each copy
@@ -62,4 +69,19 @@ export const listGridState = (list: {
   if (list.status === 'failed') return 'error';
   if (list.rows.length > 0) return 'rows';
   return list.narrowed ? 'filtered-empty' : 'empty';
+};
+
+/**
+ * A history row's caption: the date, and the status the copy moved to only when the
+ * event's own words do not already say it — "Withdrawn · 04/10/2026 · Withdrawn" read
+ * the same word twice (seen on the first look at the screen).
+ */
+export const historyCaption = (
+  event: Pick<CopyEvent, 'reasonCode' | 'toStatus'>,
+  date: string,
+  t: TranslateFn
+): string => {
+  const said = t(`library.event.${event.reasonCode}`);
+  const status = t(`library.copy.status.${event.toStatus}`);
+  return said === status ? date : `${date} · ${status}`;
 };

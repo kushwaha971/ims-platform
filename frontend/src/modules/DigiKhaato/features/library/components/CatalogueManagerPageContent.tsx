@@ -11,7 +11,7 @@ import {
   UbListItemText,
   UbPageHeader,
   UbPageShell,
-  UbSelect,
+  UbNativeSelect,
   UbStack,
   UbStatusBadge,
   UbTextInput,
@@ -257,7 +257,7 @@ export function CatalogueManagerPageContent({ kind }: Readonly<{ kind: Kind }>):
                 disabled={!(kind === 'categories' ? editing.name : editing.code).trim()}
                 onClick={() => void save()}
               >
-                {t('common.action.save')}
+                {t('library.form.save')}
               </UbButton>
             </>
           }
@@ -314,7 +314,7 @@ export function CatalogueManagerPageContent({ kind }: Readonly<{ kind: Kind }>):
             </>
           }
         >
-          <UbSelect
+          <UbNativeSelect
             aria-label={t('library.categories.mergeInto')}
             placeholder={t('library.categories.mergeInto')}
             value={merging.into}

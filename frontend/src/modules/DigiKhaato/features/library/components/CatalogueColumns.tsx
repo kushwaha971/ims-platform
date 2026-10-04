@@ -93,7 +93,7 @@ export const createCopyColumns = ({
     widthShare: 16,
     cell: (row) => (
       <UbText as="span" variant="body-sm" className="ds-mono">
-        {row.accessionNumber}
+        {t('library.copy.numberShort', { number: row.accessionNumber })}
       </UbText>
     ),
   },

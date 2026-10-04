@@ -895,6 +895,20 @@ are dropped by both the schema and `toCopiesBody`; the lists' late-response guar
 Delete offered only where the server allows them. Gates after the fix: jest 2849, lint, `tsc`, locales
 green. Still not looked at in a browser (the sandbox refuses the local port).
 
+### Looked at (4 Oct 2026, dev and production build, through the app's preview)
+
+Signed up a library, switched the module on (`UB_UNRELEASED_MODULES=1`), and walked add book →
+title page → copy → withdraw → categories at desktop and 360 px; page width = viewport everywhere.
+Found and fixed: the drawers' Save read the raw id `common.action.save` (no such message; now
+`library.form.save`, and `features/library/messages.test.ts` holds every literal library id to en +
+hi, because `i18n:check` compares catalogues, not code); the empty catalogue promised "bring in your
+register from a spreadsheet" with no import to offer (LIB-03 is not built); a history row read
+"Withdrawn · 04/10/2026 · Withdrawn" (`historyCaption` drops the status when the event says it);
+a phone card showed a bare "1" for the copy number ("No. 1"). The bundle gate refused the lists at
+92 KB: `UbSelect` cost 33.7 KB a route, so the list and manager filters use `UbNativeSelect` (lists
+now 58–59 KB, managers 50 KB; budgets added). The add-book drawer opened red under `next dev` only
+(StrictMode's double effect moves focus to Close); the production build opens on Title, not red.
+
 ## Open questions for the lead
 
 1. Attendance `0001` dependencies: the two referenced apps (`parties 0010`, `platform 0013`) or all

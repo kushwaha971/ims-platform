@@ -13,7 +13,7 @@ import {
   UbPageHeader,
   UbPageShell,
   UbSearchInput,
-  UbSelect,
+  UbNativeSelect,
   UbStack,
 } from 'src/design-system';
 import { UbDataGrid, type UbDataGridEmptyStates } from 'src/design-system/UbDataGrid';
@@ -144,7 +144,7 @@ export function CopyListPageContent(): React.JSX.Element {
         <UbFilterBar
           end={
             <UbStack direction="row" gap={2} wrap>
-              <UbSelect
+              <UbNativeSelect
                 name="library-copy-status"
                 aria-label={t('library.filter.status')}
                 value={filters.status || ALL}
@@ -155,7 +155,7 @@ export function CopyListPageContent(): React.JSX.Element {
                 className="w-36"
               />
               {locations.length > 0 && (
-                <UbSelect
+                <UbNativeSelect
                   name="library-copy-location"
                   aria-label={t('library.filter.location')}
                   value={filters.location || ALL}

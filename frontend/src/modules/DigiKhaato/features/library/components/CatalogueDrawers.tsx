@@ -254,7 +254,7 @@ function DrawerFooter({
         busyLabel={t('library.working')}
         data-testid="library-form-save"
       >
-        {t('common.action.save')}
+        {t('library.form.save')}
       </UbButton>
     </>
   );

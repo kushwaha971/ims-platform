@@ -26,7 +26,13 @@ import { formatBusinessDate } from 'src/utils/dates';
 import { formatInr } from 'src/utils/money';
 
 import { useCopyDetail } from '../hooks/useCatalogueDetail';
-import { canRepair, canShelve, canWithdraw, copyPlace } from '../view-model/copyDisplay';
+import {
+  canRepair,
+  canShelve,
+  canWithdraw,
+  copyPlace,
+  historyCaption,
+} from '../view-model/copyDisplay';
 
 import { CatalogueActionsMenu } from './CatalogueActionsMenu';
 import { CopyStatusBadge } from './CopyStatusBadge';
@@ -190,9 +196,7 @@ export function CopyDetailPageContent({ id }: Readonly<{ id: string }>): React.J
               <UbStack key={event.id} gap={0}>
                 <UbText variant="body-sm">{t(`library.event.${event.reasonCode}`)}</UbText>
                 <UbText variant="caption" tone="tertiary">
-                  {[formatBusinessDate(event.onDate), t(`library.copy.status.${event.toStatus}`)]
-                    .filter(Boolean)
-                    .join(' · ')}
+                  {historyCaption(event, formatBusinessDate(event.onDate), t)}
                 </UbText>
                 {event.note && (
                   <UbText variant="caption" tone="secondary">

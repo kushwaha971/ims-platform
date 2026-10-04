@@ -1148,7 +1148,8 @@
   "1 KB, as a whole KB and never less than measured + 0.5, which is the",
   "tripwire this file has always kept. /settings/business-days (A9b) is new",
   "and gets its own line; / and three /admin routes appear only because the",
-  "shell and the framework moved their first loads."
+  "shell and the framework moved their first loads.",
+  "F03 (4 Oct 2026): the two library lists carry the data grid like every list (87-103 KB elsewhere) and stay near 58 KB because their filters use UbNativeSelect — UbSelect cost each of them, and the categories and places pages, 33.7 KB measured. The copy page is 54 KB route / 287 first load."
  ],
  "default": {
   "route": 56,
@@ -1382,6 +1383,18 @@
   "/settings/business-days": {
    "route": 56,
    "firstLoad": 288
+  },
+  "/library/catalogue": {
+   "route": 59,
+   "firstLoad": 292
+  },
+  "/library/copies": {
+   "route": 58,
+   "firstLoad": 291
+  },
+  "/library/copies/[copyId]": {
+   "route": 55,
+   "firstLoad": 287
   }
  },
  "//ignoreRoutes": [
