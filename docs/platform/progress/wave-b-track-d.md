@@ -821,6 +821,10 @@ Gates (local venv, Python 3.12, Postgres 16): full backend suite without `slow` 
 skipped; black/isort/flake8 clean; `makemigrations --check` clean. The slow T-DUE-02-9 (5,000
 schedules < 60 s) is borderline on this laptop both before and after DUE-03 (61–64 s call each way,
 setup included), so it is a machine limit rather than a regression.
+Follow-up (4 Oct): the run now asks `mark_overdue` only of schedules that had a due already late
+when the run began (`_schedules_with_work` computed that set and discarded it); a due the run posts
+is made late or not by `post_due` itself. That removes 5,000 empty `FOR UPDATE` queries from the
+T-DUE-02-9 night: the test passes on this laptop with about ten seconds to spare (two runs).
 
 ### QA round 1 (4 Oct 2026)
 

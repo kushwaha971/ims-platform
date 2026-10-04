@@ -93,9 +93,10 @@ def postable_dues(tenant: Any, today: dt.date) -> Any:
     return DuesDue.objects.filter(tenant=tenant, status=DueStatus.SCHEDULED, due_on__lte=today)
 
 
-def _schedules_with_work(tenant: Any, today: dt.date) -> list[tuple[Any, Any]]:
+def _schedules_with_work(tenant: Any, today: dt.date) -> tuple[list[tuple[Any, Any]], set[Any]]:
     """`[(schedule_id, party_id)]`, ordered by party then schedule, so one run
-    visits a party's schedules together and two runs visit them alike."""
+    visits a party's schedules together and two runs visit them alike — and the
+    schedules with a due already late (step 3), so the run asks only those for it."""
     wanted: set[Any] = set()
     active = DuesSchedule.objects.filter(tenant=tenant, status=ScheduleStatus.ACTIVE)
     # 1 — the window (`ix_dues_schedule_window`); bounded schedules are whole.
@@ -117,13 +118,15 @@ def _schedules_with_work(tenant: Any, today: dt.date) -> list[tuple[Any, Any]]:
     # 2 — anything dated today or before that is not posted yet.
     wanted.update(postable_dues(tenant, today).values_list("schedule_id", flat=True).distinct())
     # 3 — open dues past their date; grace is the schedule's snapshot.
+    late: set[Any] = set()
     for schedule_id, due_on, grace in DuesDue.objects.filter(
         tenant=tenant, status=DueStatus.DUE, due_on__lt=today
     ).values_list("schedule_id", "due_on", "schedule__grace_days"):
         if due_on + dt.timedelta(days=grace) < today:
-            wanted.add(schedule_id)
+            late.add(schedule_id)
+    wanted |= late
     rows = DuesSchedule.objects.filter(pk__in=wanted).values_list("id", "party_id")
-    return sorted(rows, key=lambda row: (str(row[1]), str(row[0])))
+    return sorted(rows, key=lambda row: (str(row[1]), str(row[0]))), late
 
 
 # ── one schedule ────────────────────────────────────────────────────────────
@@ -159,6 +162,7 @@ def run_schedule(
     today: dt.date,
     closed_days: ClosedDays,
     advance_parties: set[Any] | None = None,
+    late: set[Any] | None = None,
 ) -> dict[str, int]:
     """Every step for one schedule, under its locks. The caller owns the transaction."""
     from apps.parties.services.balance import lock_party
@@ -199,7 +203,11 @@ def run_schedule(
             counts["posted"] = len(dues)
             posted_ids = [due.id for due in dues]
         # 4 penalties (DUE-04) and 7 pauses (DUE-05) hook in here.
-    counts["overdue"] = mark_overdue(ctx=ctx, schedule=schedule, today=today)
+    # 3 — only where a due was already late when the run began: a due this run
+    # posts is posted late or not by `post_due` itself (catch-up posts straight to
+    # overdue), so the 5,000-schedule night skips 5,000 empty lock queries.
+    if late is None or schedule.id in late:
+        counts["overdue"] = mark_overdue(ctx=ctx, schedule=schedule, today=today)
     # 6 — advances onto the dues this run posted (DUE-03 BR-6), after step 3 as the FRD orders it.
     # `advance_parties` (one query per tenant run) spares the 5,000-schedule night a query per
     # schedule for the parties who have no advance at all (T-DUE-02-9's budget).
@@ -222,7 +230,8 @@ def run_for_tenant(*, tenant: Any, today: dt.date) -> RunReport:
 
     closed_days = ClosedDays(tenant)
     advance_parties = parties_with_open_advances(tenant=tenant)
-    for schedule_id, party_id in _schedules_with_work(tenant, today):
+    work, late = _schedules_with_work(tenant, today)
+    for schedule_id, party_id in work:
         try:
             with transaction.atomic():
                 counts = run_schedule(
@@ -232,6 +241,7 @@ def run_for_tenant(*, tenant: Any, today: dt.date) -> RunReport:
                     today=today,
                     closed_days=closed_days,
                     advance_parties=advance_parties,
+                    late=late,
                 )
         except Exception as exc:  # noqa: BLE001 — BR-2: one schedule never stops the tenant
             logger.warning(
