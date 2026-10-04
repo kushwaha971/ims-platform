@@ -107,8 +107,9 @@ def test_targets_for_direction_can_ask_for_auto_targets_only(clean_targets: Any)
     # ── A4b ── payments' own `held_deposit` is IN too, in the deposit bucket.
     every = [t.document_type for t in targets_for_direction("in", bucket="main")]
     auto = [t.document_type for t in targets_for_direction("in", auto_only=True)]
-    assert every == ["sales_document", "test_never_auto"]
-    assert auto == ["sales_document"]
+    # ── DUE-03 ── the dues engine's `dues_due` (main, auto) registers at start-up too.
+    assert every == ["sales_document", "dues_due", "test_never_auto"]
+    assert auto == ["sales_document", "dues_due"]
 
 
 def test_every_caller_hands_the_target_its_ctx_and_payment() -> None:

@@ -75,6 +75,10 @@ def post_due(
         changes = _post_expectation(ctx=ctx, due=due, party=party, note=note)
     else:  # pragma: no cover - the mode/posting CHECK makes this unreachable
         raise ValueError(f"no posting for {schedule.mode!r}/{schedule.posting!r}")
+    if "status" not in changes and due.amount > 0 and _prepaid(due):
+        # DUE-03 EC-2 — an instalment prepaid in full before its date posts its
+        # non-principal components like any other and is paid on its own date.
+        changes.update(status=DueStatus.PAID.value, paid_on=due.due_on)
     if "status" not in changes:
         changes["status"] = open_status(due=due, grace_days=schedule.grace_days, today=today)
     before = due.status
@@ -100,6 +104,12 @@ def post_due(
         if subject is not None and subject.on_due_changed is not None:
             subject.on_due_changed(ctx, due, before, due.status)
     return due
+
+
+def _prepaid(due: DuesDue) -> bool:
+    from apps.dues.services.settlement import outstanding
+
+    return due.settled_amount > 0 and outstanding(due) <= 0
 
 
 def open_status(*, due: DuesDue, grace_days: int, today: dt.date) -> str:

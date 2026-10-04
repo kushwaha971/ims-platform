@@ -75,3 +75,10 @@ class DuesConfig(AppConfig):
                 group_window=24 * 60,
             ),
         )
+
+        # ── DUE-03 ── what a payment can settle: `dues_due` (main, auto) and
+        # `dues_instalment` (loan, explicit). Document-mode dues settle through
+        # their invoice and are not targets (EC-3).
+        from apps.dues.services.payment_target import register_dues_targets
+
+        register_dues_targets()

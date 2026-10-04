@@ -329,6 +329,8 @@ class AuditAction:
     ATTENDANCE_ENTITLEMENT_ENDED = "attendance.entitlement.ended"
     # ── DUE-02 ── the daily run and the `dues_due` origin listener (contracts §5).
     DUES_DUE_CANCELLED = "dues.due.cancelled"
+    # ── DUE-03 ── a due's status moving because a payment settled or un-settled it.
+    DUES_DUE_STATUS_CHANGED = "dues.due.status_changed"
 
 
 def diff_fields(

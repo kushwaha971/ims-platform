@@ -26,8 +26,9 @@ schedule first would deadlock with them (T-DUE-02-6).
 3. Overdue: `due → overdue` once `due_on + grace_days < today` and something is
    still outstanding — any schedule, because an ended membership's last unpaid
    month is still late.
-4–7. Penalties (DUE-04), advance auto-apply (DUE-03) and pauses (DUE-05) are
-   later tasks; their counters stay 0 until then.
+6. Advances (DUE-03, `services/advances.py`): the party's open `main` advances,
+   oldest payment first, onto the ledger dues step 2 posted.
+4, 5, 7. Penalties (DUE-04) and pauses (DUE-05) are later tasks.
 
 Every step is idempotent: a second run for the same date writes nothing
 (T-DUE-02-2), and a run after missed days writes exactly what the missed runs
@@ -46,6 +47,7 @@ from django.db.models import Q
 from apps.dues.constants import ClosedDayRule, DueStatus, ScheduleStatus
 from apps.dues.models import DuesDue, DuesSchedule
 from apps.dues.registry import subject_for, subject_labels
+from apps.dues.services.advances import apply_advances
 from apps.dues.services.materialise import ClosedDays, extend, needs_extension, reapply_closed_days
 from apps.dues.services.posting import post_due
 from apps.dues.services.preview import window_end
@@ -150,7 +152,13 @@ def mark_overdue(*, ctx: Any, schedule: DuesSchedule, today: dt.date) -> int:
 
 
 def run_schedule(
-    *, ctx: Any, schedule_id: Any, party_id: Any, today: dt.date, closed_days: ClosedDays
+    *,
+    ctx: Any,
+    schedule_id: Any,
+    party_id: Any,
+    today: dt.date,
+    closed_days: ClosedDays,
+    advance_parties: set[Any] | None = None,
 ) -> dict[str, int]:
     """Every step for one schedule, under its locks. The caller owns the transaction."""
     from apps.parties.services.balance import lock_party
@@ -158,7 +166,8 @@ def run_schedule(
     tenant = ctx.tenant
     party = lock_party(tenant=tenant, party_id=party_id)
     schedule = DuesSchedule.objects.select_for_update().get(tenant=tenant, pk=schedule_id)
-    counts = {"materialised": 0, "posted": 0, "overdue": 0, "skipped": 0}
+    counts = {"materialised": 0, "posted": 0, "overdue": 0, "skipped": 0, "advances_applied": 0}
+    posted_ids: list[Any] = []
     if schedule.status == ScheduleStatus.ACTIVE:
         subject = subject_for(schedule.subject_type)
         hook = subject.amount_hook if subject is not None else None
@@ -188,8 +197,14 @@ def run_schedule(
                 due.schedule = schedule
                 post_due(ctx=ctx, due=due, party=party, today=today, subject_label=label)
             counts["posted"] = len(dues)
-        # 4 penalties (DUE-04), 6 advances (DUE-03), 7 pauses (DUE-05) hook in here.
+            posted_ids = [due.id for due in dues]
+        # 4 penalties (DUE-04) and 7 pauses (DUE-05) hook in here.
     counts["overdue"] = mark_overdue(ctx=ctx, schedule=schedule, today=today)
+    # 6 — advances onto the dues this run posted (DUE-03 BR-6), after step 3 as the FRD orders it.
+    # `advance_parties` (one query per tenant run) spares the 5,000-schedule night a query per
+    # schedule for the parties who have no advance at all (T-DUE-02-9's budget).
+    if advance_parties is None or party_id in advance_parties:
+        counts["advances_applied"] = apply_advances(ctx=ctx, schedule=schedule, due_ids=posted_ids)
     return counts
 
 
@@ -203,7 +218,10 @@ def run_for_tenant(*, tenant: Any, today: dt.date) -> RunReport:
 
     ctx = Ctx.system(tenant)
     report = _empty_report()
+    from apps.payments.selectors.payments import parties_with_open_advances
+
     closed_days = ClosedDays(tenant)
+    advance_parties = parties_with_open_advances(tenant=tenant)
     for schedule_id, party_id in _schedules_with_work(tenant, today):
         try:
             with transaction.atomic():
@@ -213,6 +231,7 @@ def run_for_tenant(*, tenant: Any, today: dt.date) -> RunReport:
                     party_id=party_id,
                     today=today,
                     closed_days=closed_days,
+                    advance_parties=advance_parties,
                 )
         except Exception as exc:  # noqa: BLE001 — BR-2: one schedule never stops the tenant
             logger.warning(

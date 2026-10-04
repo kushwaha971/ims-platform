@@ -758,7 +758,7 @@ tenants whose consuming module is off.
 
 ## DUE-03 — Settling dues (FRD 00 #18) — outline
 
-**Status: design written; not started.**
+**Status: built; ready for QA.**
 
 - **Targets** `DuesDueTarget` (`dues_due`, in, `main`, `auto=True`, open = posting `ledger`,
   status `due`/`overdue`, outstanding > 0) and `DuesInstalmentTarget` (`dues_instalment`, in,
@@ -786,7 +786,43 @@ tenants whose consuming module is off.
 
 ---
 
-## Contradictions and gaps spanning the track
+### Built (4 Oct 2026)
+
+`services/settlement.py` (the one writer of `dues_settlement`, `settled_amount` and component
+`settled`: `split_due` by BR-3, `settle`/`unsettle`, `derive_status` BR-4, BR-8 exempt days on a void
+that reopens a PAID due, `plan_allocation(…, allow_scheduled=False)` with `components` per row,
+`payoff`), `services/payment_target.py` (`dues_due` main/auto, `dues_instalment` loan/explicit,
+`scheduled` open for an explicit prepayment; registered from `DuesConfig.ready()`),
+`services/advances.py` + run step 6 (open `main` advances, oldest payment first, onto the ledger dues
+the run just posted, through `allocate_existing`; `advances_applied` counted), `post_due` makes a
+fully prepaid instalment `paid` on its date (EC-2), `selectors/integrity.py` + `manage.py recalc_dues`
+(report / `--apply` / `--check`, the `recalc_balances` pattern), `AuditAction.DUES_DUE_STATUS_CHANGED`.
+Tests: `apps/dues/tests/test_settlement.py` (worked example ×3 orders with plan = apply, remainder,
+document schedule refused, payoff, closed dues, void restores, over-settle refused, record → void,
+BR-8 and its partial-void counterpart, second collection becomes an advance, the run's advance step,
+a 25-step seeded fuzz with `recalc_dues --check` and `recalc_balances --check`), factories for both
+targets in `tests/contracts/test_allocation_targets.py` (`apps/dues/tests/factories.py`), and the two
+registry-order assertions in payments and purchases now list `dues_due` after `sales_document`.
+
+Deviations and contradictions:
+- **C-25 Merge key vs lock order.** Dues lock in `(due_on, seq, id)`; the protocol's merge key reads
+  `number`, which is the receipt label "Subject · Oct 2026". Same-date dues of different schedules
+  merge by label but lock by seq. Harmless (every path locks through `lock()`; only the FIFO choice
+  reads the merge), but the contract's sorted-keys clause holds only across dates.
+- BR-2's `due_not_open {status}`: a closed due is refused by `record_payment`'s generic 409
+  `document_not_open` (with the summary), not a dues-specific code.
+- T-DUE-03-6 is sequential, not two concurrent transactions.
+- Run step 6 asks per party only where `parties_with_open_advances` (one query per tenant run, new
+  in `payments.selectors`) says an advance exists, to keep T-DUE-02-9's budget.
+- Frontend (§7 `AllocationSplitPreview`, picker rows) not built: the first vertical's screen owns it.
+- "Collections by component" report (§11) not built: it is lending's (expectation mode only).
+
+Gates (local venv, Python 3.12, Postgres 16): full backend suite without `slow` 3502 passed, 12
+skipped; black/isort/flake8 clean; `makemigrations --check` clean. The slow T-DUE-02-9 (5,000
+schedules < 60 s) is borderline on this laptop both before and after DUE-03 (61–64 s call each way,
+setup included), so it is a machine limit rather than a regression.
+
+
 
 - **C-2 (blocking DUE-02's document posting, not DUE-01) — the origin's module.** `register_origin(
   origin_type, *, module, listener)` fixes one module per origin type, and `SalesIssuer.issue`

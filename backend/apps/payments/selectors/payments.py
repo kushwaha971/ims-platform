@@ -183,10 +183,28 @@ def open_advances(
     voucher (its money went back to the customer), a module refund (`meta.context`
     `<module>_refund`, R36).
     """
+    return _usable_advances(tenant=tenant, direction=direction, bucket=bucket).filter(
+        party_id=party_id
+    )
+
+
+def parties_with_open_advances(
+    *, tenant: Any, direction: str = "in", bucket: str = "main"
+) -> set[Any]:
+    """The parties `open_advances` would offer anything for — one query, so a nightly run over
+    thousands of schedules (DUE-02 step 6) asks per party only where an advance exists."""
+    return set(
+        _usable_advances(tenant=tenant, direction=direction, bucket=bucket)
+        .order_by()
+        .values_list("party_id", flat=True)
+        .distinct()
+    )
+
+
+def _usable_advances(*, tenant: Any, direction: str, bucket: str) -> QuerySet:
     return (
         Payment.objects.filter(
             tenant=tenant,
-            party_id=party_id,
             direction=direction,
             bucket=bucket,
             status=PaymentStatus.RECORDED,

@@ -110,12 +110,28 @@ def _held_deposit(ctx: dict, party: Any, day: dt.date) -> Any:
     return HeldDeposit.objects.get(pk=deposit.pk)
 
 
+# ── DUE-03 ── the dues engine's two targets (FRD 00 DUE-03 §6): a ledger-mode charge due in
+# `main`, and an expectation instalment (principal + interest) in `loan`.
+def _dues_due(ctx: dict, party: Any, day: dt.date) -> Any:
+    from apps.dues.tests.factories import open_due
+
+    return open_due(ctx["shop"], party, day)
+
+
+def _dues_instalment(ctx: dict, party: Any, day: dt.date) -> Any:
+    from apps.dues.tests.factories import open_due
+
+    return open_due(ctx["shop"], party, day, mode="expectation")
+
+
 #: One factory per registered `document_type`. A target registered without one fails the suite.
 FACTORIES: dict[str, Callable[[dict, Any, dt.date], Any]] = {
     "sales_document": _sales_document,
     "purchase_document": _purchase_document,
     "held_deposit": _open_deposit,
     "held_deposit_refund": _held_deposit,
+    "dues_due": _dues_due,
+    "dues_instalment": _dues_instalment,
 }
 
 #: The status a fully settled document derives. A bill is `paid`; a deposit fully
