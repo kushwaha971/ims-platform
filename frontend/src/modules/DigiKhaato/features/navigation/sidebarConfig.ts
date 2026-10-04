@@ -211,6 +211,18 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
     order: 13,
   },
   {
+    // F02 (LIB-01 §7) — the library's settings and counters.
+    key: 'librarySettings',
+    ready: true,
+    icon: Settings,
+    labelId: 'nav.library.settings',
+    href: ROUTES.LIBRARY_SETTINGS,
+    module: 'library',
+    permission: 'library.settings.manage',
+    section: 'account',
+    order: 60,
+  },
+  {
     // RPT-02/05/06 — the hub lists only the reports that are built.
     key: 'reports',
     ready: true,

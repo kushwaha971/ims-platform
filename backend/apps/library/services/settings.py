@@ -158,11 +158,15 @@ def numbering_meta(tenant: Any) -> dict:
         tenant=tenant, kind="library_member", fy_label=sequences.PERPETUAL
     ).first()
     prefix = row.prefix if row is not None else (member_spec.default_prefix if member_spec else "")
+    padding = row.padding if row is not None else (member_spec.padding if member_spec else 0)
+    member_next = sequences.peek_counter(tenant=tenant, kind="library_member")
     return {
         "accession": {"next": sequences.peek_counter(tenant=tenant, kind="library_accession")},
         "member": {
             "prefix": prefix,
-            "next": sequences.peek_counter(tenant=tenant, kind="library_member"),
+            "next": member_next,
+            # F02 QA — what the next card will actually carry ("M-0043", not "M-43").
+            "display": sequences.format_counter(prefix=prefix, number=member_next, padding=padding),
         },
     }
 

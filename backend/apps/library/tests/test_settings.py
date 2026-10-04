@@ -171,7 +171,7 @@ def test_get_before_any_seed_returns_the_defaults(api_as: Any, library_on: Any) 
     assert data["overdue_reminder_days"] == [1, 7, 14, 30] and data["version"] == 1
     assert body["meta"]["numbering"] == {
         "accession": {"next": 1},
-        "member": {"prefix": "M-", "next": 1},
+        "member": {"prefix": "M-", "next": 1, "display": "M-0001"},
     }
     assert body["meta"]["closed_weekdays"] == []
 
@@ -361,7 +361,11 @@ def test_the_member_series_shows_the_prefix_the_core_screen_set(
     )
     assert raised.status_code == 200
     DocumentSequence.objects.filter(tenant=library_on, kind="library_member").update(prefix="LM-")
-    assert _body(client)["meta"]["numbering"]["member"] == {"prefix": "LM-", "next": 43}
+    assert _body(client)["meta"]["numbering"]["member"] == {
+        "prefix": "LM-",
+        "next": 43,
+        "display": "LM-0043",
+    }
 
 
 @pytest.mark.parametrize(

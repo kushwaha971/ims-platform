@@ -22,4 +22,6 @@ export const LIBRARY_PATHS = {
   CATEGORY_MERGE: (id: string) => `/library/categories/${seg(id)}/merge`,
   LOCATIONS: '/library/locations',
   LOCATION: (id: string) => `/library/locations/${seg(id)}`,
+  SETTINGS: '/library/settings',
+  SETTINGS_NUMBERING: '/library/settings/numbering',
 } as const;

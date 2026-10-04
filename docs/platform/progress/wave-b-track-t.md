@@ -909,6 +909,65 @@ a phone card showed a bare "1" for the copy number ("No. 1"). The bundle gate re
 now 58–59 KB, managers 50 KB; budgets added). The add-book drawer opened red under `next dev` only
 (StrictMode's double effect moves focus to Close); the production build opens on Title, not red.
 
+## F02 — Library settings page (LIB-01 §7, §8)
+
+Status: **built; QA round 1 found two defects, both fixed** (4 Oct, on dev).
+
+`/library/settings` → `LibrarySettingsPageContent`. One form across five tabs (General, Renewals,
+Fines, Lost and damaged, Holds and reminders) with one Save. The row is saved whole with its
+`version`, so a tab that saved on its own would race the next one.
+
+- **Counters.** General shows the next book number and the next member number as large figures,
+  each with a **Change** dialog (`RaiseNumberDialog`, loaded with `dynamic()`). The dialog says
+  "Numbers are never reused" before Save. A number already passed is refused inline and the
+  message names the lowest number that would be accepted, using both the schema and the server's
+  `sequence_backwards.current`.
+- **Field rules and refusals.** Each setting has its one-line hint. Reminder days are parsed,
+  de-duplicated and sorted (BR-3). A refused field opens the tab it sits on: `UbForm` gained an
+  optional `onInvalid` (client refusals), and server `validation_error` fields map through
+  `FIELD_TAB`.
+- **Stale version and closed weekdays.** A stale version reloads the settings and the snackbar
+  says so (§8). Closed weekdays are shown read-only and link to `/settings/business-days`; they
+  are written only on the core calendar (G8).
+- **Read-only access.** A library reader without `library.settings.manage` gets every control
+  disabled, no Save and no Change, rather than a page that refuses afterwards.
+- **Wiring.**
+  - Lazy `librarySettingsSlice`.
+  - `librarySettingsThunk`. The save patches the slice from its answer, and a raised counter
+    refetches it (ADR-062 entries).
+  - `librarySettingsService`.
+  - `useLibrarySettingsSchemas` built from the central validators.
+  - `settingsDisplay` view-model.
+  - The `librarySettings` nav row (account, order 60).
+  - About 90 en/hi keys.
+
+### QA round 1 (4 Oct 2026, live stack)
+
+| Id | Severity | Where | Fixed |
+|---|---|---|---|
+| QA-F02-1 | high | Save did nothing. The resolver hands an empty optional amount (fallback price, waiver ceiling) over as `null`, and `fromSettingsForm` called `.trim()` on it and threw before any request. Every jest test passed because none submitted a valid form. | `optionalAmount()` in the view-model; a component test now saves and asserts the body sent |
+| QA-F02-2 | medium | The next member number read "M-1"; the next card would say "M-0001" | Backend `meta.numbering.member.display`, formatted with the series' own padding; the page shows it |
+
+**Looked at:**
+- desktop: the counters, the Change dialog (opens on its field with nothing red), the refusal
+  of 3, raising to 4513, and saving hold days and unsorted reminder days (stored sorted);
+- the production build: the dialog autofocuses;
+- 360 px: no page overflow, the tab row scrolls inside its own box, and no text node is clipped.
+
+**Gates:**
+- `tsc`, eslint and prettier clean;
+- jest: 269 suites, 3,015 passed;
+- `i18n:split` and `i18n:check` green;
+- backend `test_settings.py`: 40 passed;
+- `bundle:check` green after the budget raises recorded in `bundle-budgets.json`.
+
+**Bundle.** `/library/settings` costs 98.2 KB of route chunk, the same machinery `/settings`
+(93.8) and `/settings/activity` (95.4) carry. `UbForm.onInvalid` and the larger library
+invalidation map moved six other routes by 0.2 to 1.1 KB. The shared app is unchanged at
+105.5 KB.
+
+---
+
 ## Open questions for the lead
 
 1. Attendance `0001` dependencies: the two referenced apps (`parties 0010`, `platform 0013`) or all

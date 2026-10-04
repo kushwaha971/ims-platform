@@ -17,7 +17,7 @@ import {
  * Each F-task adds its thunks here as it writes them — `LIBRARY_QUERIES`/
  * `LIBRARY_MUTATIONS` map the thunk's name to its `typePrefix` (the registry
  * test holds each string to the real thunk), and `LIBRARY_INVALIDATION` is
- * total over the mutations by type. F03 added the catalogue's.
+ * total over the mutations by type. F03 added the catalogue's, F02 the settings'.
  */
 export const LIBRARY_QUERIES = {
   fetchLibraryTitles: 'libraryTitleList/fetch',
@@ -28,6 +28,7 @@ export const LIBRARY_QUERIES = {
   lookupLibraryCode: 'libraryCatalogueForm/lookup',
   fetchLibraryCategories: 'libraryCatalogueForm/fetchCategories',
   fetchLibraryLocations: 'libraryCatalogueForm/fetchLocations',
+  fetchLibrarySettings: 'librarySettings/fetch',
 } as const satisfies Record<string, string>;
 
 export const LIBRARY_MUTATIONS = {
@@ -42,6 +43,8 @@ export const LIBRARY_MUTATIONS = {
   mergeLibraryCategory: 'libraryCatalogueForm/mergeCategory',
   saveLibraryLocation: 'libraryCatalogueForm/saveLocation',
   deleteLibraryLocation: 'libraryCatalogueForm/deleteLocation',
+  saveLibrarySettings: 'librarySettings/save',
+  raiseLibraryNumber: 'librarySettings/raiseNumber',
 } as const satisfies Record<string, string>;
 
 export type TLibraryQueryName = keyof typeof LIBRARY_QUERIES;
@@ -87,6 +90,10 @@ export const LIBRARY_INVALIDATION: Readonly<
     stale: ['libraryCopyList', 'libraryTitleDetail', 'libraryCopyDetail'],
   },
   deleteLibraryLocation: { patch: [['libraryCatalogueForm', 'locations']] },
+  // F02 — the save answers with the row as stored, so the screen takes it; a
+  // raised counter is not in that answer, so the screen asks again.
+  saveLibrarySettings: { patch: [['librarySettings', 'bundle']] },
+  raiseLibraryNumber: { refetch: ['librarySettings'] },
 };
 
 registerInvalidation({
@@ -100,5 +107,6 @@ registerInvalidation({
     'libraryCopyList',
     'libraryCopyDetail',
     'libraryCatalogueForm',
+    'librarySettings',
   ],
 });

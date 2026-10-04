@@ -2,7 +2,12 @@
 
 import { memo, type ReactNode } from 'react';
 
-import { FormProvider, type FieldValues, type UseFormReturn } from 'react-hook-form';
+import {
+  FormProvider,
+  type FieldValues,
+  type SubmitErrorHandler,
+  type UseFormReturn,
+} from 'react-hook-form';
 
 import { UbFieldError } from 'src/design-system/UbFieldError';
 import { cn } from 'src/utils/cn';
@@ -21,6 +26,12 @@ import { cn } from 'src/utils/cn';
 export interface UbFormProps<T extends FieldValues> {
   readonly form: UseFormReturn<T>;
   readonly onSubmit: (values: T) => void | Promise<void>;
+  /**
+   * Called with the field errors when the resolver refuses a submit. A form
+   * split across tabs uses it to open the tab the first error is on, so the
+   * message is never on a panel the user is not looking at (F02).
+   */
+  readonly onInvalid?: SubmitErrorHandler<T>;
   readonly children: ReactNode;
   /** Form-level messages the server returned against no known field. */
   readonly formErrors?: readonly string[];
@@ -31,6 +42,7 @@ export interface UbFormProps<T extends FieldValues> {
 function UbFormBase<T extends FieldValues>({
   form,
   onSubmit,
+  onInvalid,
   children,
   formErrors,
   className,
@@ -41,7 +53,7 @@ function UbFormBase<T extends FieldValues>({
       <form
         id={id}
         noValidate
-        onSubmit={form.handleSubmit(onSubmit)}
+        onSubmit={form.handleSubmit(onSubmit, onInvalid)}
         /* BrandHub: 24 px between fields = the 20 px reserved message row
            under each field + this 4 px. */
         className={cn('flex w-full flex-col gap-1', className)}

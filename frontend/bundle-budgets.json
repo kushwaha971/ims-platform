@@ -1149,7 +1149,19 @@
   "tripwire this file has always kept. /settings/business-days (A9b) is new",
   "and gets its own line; / and three /admin routes appear only because the",
   "shell and the framework moved their first loads.",
-  "F03 (4 Oct 2026): the two library lists carry the data grid like every list (87-103 KB elsewhere) and stay near 58 KB because their filters use UbNativeSelect — UbSelect cost each of them, and the categories and places pages, 33.7 KB measured. The copy page is 54 KB route / 287 first load."
+  "F03 (4 Oct 2026): the two library lists carry the data grid like every list (87-103 KB elsewhere) and stay near 58 KB because their filters use UbNativeSelect — UbSelect cost each of them, and the categories and places pages, 33.7 KB measured. The copy page is 54 KB route / 287 first load.",
+  "F02 (4 Oct 2026, library settings) — /library/settings is a five-tab form page: React Hook",
+  "Form, the resolver, the settings Yup schema, radio cards, switches and money inputs, the same",
+  "machinery /settings (93.8) and /settings/activity (95.4) carry. Measured 98.2 / 330.9.",
+  "UbForm gained `onInvalid` (a tabbed form opens the tab of its first refused field) and the",
+  "library invalidation map gained the settings thunks; both ride the routes that have them:",
+  "  /library/settings             route 56 -> 99, firstLoad 286 -> 332",
+  "  /library/catalogue            route 59 -> 61, firstLoad 292 -> 294   (measured 60.1 / 292.8)",
+  "  /library/copies               route 58 -> 60, firstLoad 291 -> 292   (measured 58.6 / 291.3)",
+  "  /library/copies/[copyId]      route 55 -> 56, firstLoad 287 -> 289   (measured 55.5 / 288.2)",
+  "  /onboarding/step/[n]          route 86 -> 87, firstLoad 319 -> 320   (measured 86.5 / 319.2)",
+  "  /admin/tenants                firstLoad 261 -> 262                   (measured 261.2)",
+  "  /admin/tenants/[id]           firstLoad 256 -> 257                   (measured 256.2)"
  ],
  "default": {
   "route": 56,
@@ -1209,8 +1221,8 @@
    "firstLoad": 336
   },
   "/onboarding/step/[n]": {
-   "route": 86,
-   "firstLoad": 319
+   "route": 87,
+   "firstLoad": 320
   },
   "/design-system": {
    "route": 103,
@@ -1326,11 +1338,11 @@
   },
   "/admin/tenants/[id]": {
    "route": 24,
-   "firstLoad": 256
+   "firstLoad": 257
   },
   "/admin/tenants": {
    "route": 29,
-   "firstLoad": 261
+   "firstLoad": 262
   },
   "/settings/data": {
    "route": 51,
@@ -1385,16 +1397,20 @@
    "firstLoad": 288
   },
   "/library/catalogue": {
-   "route": 59,
-   "firstLoad": 292
+   "route": 61,
+   "firstLoad": 294
   },
   "/library/copies": {
-   "route": 58,
-   "firstLoad": 291
+   "route": 60,
+   "firstLoad": 292
   },
   "/library/copies/[copyId]": {
-   "route": 55,
-   "firstLoad": 287
+   "route": 56,
+   "firstLoad": 289
+  },
+  "/library/settings": {
+   "route": 99,
+   "firstLoad": 332
   }
  },
  "//ignoreRoutes": [
