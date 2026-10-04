@@ -1007,7 +1007,7 @@ all-closed is 409. QA round 1: no defect on a second read; the library tests pas
 
 ### Design note (review step)
 
-Status: design written; not started.
+Status: **built (B10a); QA round 1 clean.** Lost, found, replace, damage and the fine preview are B10b, after B09 (G19).
 
 Inputs: LIB-07 §1–§13 (BR-1–BR-14, the twelve worked examples, T-LIB-07-1…10); LIB-04 BR-4;
 contracts §1.2 (sources table, rules 1–3), §1.4 (protocol v2, R30, R36, R6), §1.7; 10-architecture
@@ -1102,6 +1102,39 @@ Gaps:
   member page" cannot come from the resolver. Default: the khata shows the number and the ledger note
   in the MVP, and a v1.1 optional link key is proposed (like W-P6). F06 must label the new `kind`
   values, or a raw message id is shown again (the CLAUDE.md LED-04 defect).
+
+---
+
+### Built (4 Oct 2026)
+
+`models/charges.py` + `0005_charges` (charge and waiver with every §5 CHECK, `objects.open()` =
+owing AND not reversed (G20), the partial FIFO index on the same predicate, `document_date`
+property; `library_membership_period.fee_charge` FK added here), `services/fines.py` (pure
+`calculate_fine` → `FineCalc` with `as_json`), `services/charges.py` (`derive_status` BR-4 and one
+`_save`; `create_charge` — party locked by the caller, number last, `post_source_entry` with no
+credit check (D7), zero refused (EC-2); `create_manual_charge` (409 on a closed membership); `waive`
+— cumulative ceiling per charge (G22) as a ROLE check through `may_override`; `reverse` — refused
+with the live payment ids, reverses the charge and every standing waiver; `LibraryChargeTarget`
+(main, auto, `(charge_date, number, id)`, `label` = description[:120], `unapply` refuses below
+`refunded_amount` (G21)); resolvers; `OpenChargesCounter`), `ready()` registrations, and
+`views/charges.py` (`GET/POST /library/charges` with `meta.totals`, `GET /{id}` with waivers and
+allocations, `/waive`, `/reverse`). The contract suite has a `library_charge` factory
+(`tests/factories.py` writes a membership row directly until B07). Three registry-order assertions in
+payments and purchases now list `library_charge` between sales and dues (app order).
+
+Tests `test_charges.py` (35): the twelve worked examples (13 rows incl. paise and count-all
+variants) and example 10, the cap-room property (200 random loans), status over eight combinations,
+posting kind/bucket and the loan-bucket refusal, D7, the ledger trigger, the ceiling (staff with the
+codename at ₹101, cumulative ₹60 + ₹60, admin ₹250), waiver bounds and reason, reverse refused with
+payment ids then netting the khata to zero after the void, auto FIFO across charges, the off-guard,
+a closed membership, and a 40-step fuzz (Σ live allocations, Σ standing waivers, `recalc_balances`).
+Gates: backend non-slow 3574 passed; black/isort/flake8 on `apps/library`; migrations clean.
+
+### QA round 1 (4 Oct 2026)
+
+No defect on a second read. Noted for F06: the khata's `sourceDisplay.ts` names only the core kinds,
+so a library charge's row shows its number without a badge until F06 adds `library_charge` and
+`library_waiver` labels (null, not a raw id — checked).
 
 ---
 

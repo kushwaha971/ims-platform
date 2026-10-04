@@ -213,3 +213,16 @@ TYPE_BOUNDS = {
     "max_holds": (0, 20),
     "validity_months": (1, 120),
 }
+
+# ── B10 ── charges and waivers (LIB-07 §5)
+CHARGE_NUMBER_MAX = 32
+CHARGE_DESCRIPTION_MAX = 160
+#: R30: an allocation target's label is at most 120 characters.
+TARGET_LABEL_MAX = 120
+SOURCE_CHARGE = "library_charge"
+SOURCE_WAIVER = "library_waiver"
+CHARGE_STATUS_AUDIT = "library.charge.status_changed"
+OFF_GUARD_CHARGES = "library.off.chargesOpen"
+#: FR-8: the kinds a person may raise by hand.
+MANUAL_CHARGE_KINDS = ("processing", "other")
+WAIVER_REASON_MIN = 3

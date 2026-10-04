@@ -124,6 +124,13 @@ def _dues_instalment(ctx: dict, party: Any, day: dt.date) -> Any:
     return open_due(ctx["shop"], party, day, mode="expectation")
 
 
+# ── B10 ── a library charge (LIB-07): a posted fine on a member's khata.
+def _library_charge(ctx: dict, party: Any, day: dt.date) -> Any:
+    from apps.library.tests.factories import charge, member
+
+    return charge(ctx["shop"], member(ctx["shop"], party), day=day)
+
+
 #: One factory per registered `document_type`. A target registered without one fails the suite.
 FACTORIES: dict[str, Callable[[dict, Any, dt.date], Any]] = {
     "sales_document": _sales_document,
@@ -132,6 +139,7 @@ FACTORIES: dict[str, Callable[[dict, Any, dt.date], Any]] = {
     "held_deposit_refund": _held_deposit,
     "dues_due": _dues_due,
     "dues_instalment": _dues_instalment,
+    "library_charge": _library_charge,
 }
 
 #: The status a fully settled document derives. A bill is `paid`; a deposit fully

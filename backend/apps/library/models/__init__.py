@@ -9,6 +9,7 @@ from apps.library.models.catalogue import (
     LibraryLocation,
     LibraryTitle,
 )
+from apps.library.models.charges import LibraryCharge, LibraryWaiver
 from apps.library.models.members import (
     LibraryLoanRule,
     LibraryMembership,
@@ -19,6 +20,7 @@ from apps.library.models.settings import LibrarySettings
 
 __all__ = [
     "LibraryCategory",
+    "LibraryCharge",
     "LibraryCopy",
     "LibraryCopyEvent",
     "LibraryLoanRule",
@@ -28,4 +30,5 @@ __all__ = [
     "LibraryMembershipType",
     "LibrarySettings",
     "LibraryTitle",
+    "LibraryWaiver",
 ]

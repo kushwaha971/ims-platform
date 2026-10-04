@@ -10,6 +10,7 @@ from django.urls import path
 
 from apps.library.views import LibraryNumberingView, LibrarySettingsView
 from apps.library.views import catalogue as c
+from apps.library.views import charges as ch
 from apps.library.views import members as m
 
 urlpatterns: list = [
@@ -54,4 +55,15 @@ urlpatterns: list = [
         name="library-membership-type",
     ),
     path("loan-rules", m.LoanRuleView.as_view(), name="library-loan-rules"),
+    # ── B10 ── charges and waivers (LIB-07 §6)
+    path("charges", ch.ChargeListView.as_view(), name="library-charges"),
+    path("charges/<uuid:charge_id>", ch.ChargeDetailView.as_view(), name="library-charge"),
+    path(
+        "charges/<uuid:charge_id>/waive", ch.ChargeWaiveView.as_view(), name="library-charge-waive"
+    ),
+    path(
+        "charges/<uuid:charge_id>/reverse",
+        ch.ChargeReverseView.as_view(),
+        name="library-charge-reverse",
+    ),
 ]

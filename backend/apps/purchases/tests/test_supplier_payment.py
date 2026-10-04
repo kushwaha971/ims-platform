@@ -314,6 +314,7 @@ def test_money_out_settles_only_purchase_bills() -> None:
     # ── DUE-03 ── a ledger due is a main-bucket IN target too; still nothing OUT but the bill.
     assert [t.document_type for t in targets_for_direction("in", bucket="main")] == [
         "sales_document",
+        "library_charge",
         "dues_due",
     ]
     assert [t.document_type for t in targets_for_direction("out", auto_only=True)] == [

@@ -3,7 +3,7 @@
 B06 owns the type and the rule tables and their services. It also creates the
 SCHEMA of `library_membership` and `library_membership_period` (G17): B10's
 `library_charge` must point at a membership, and B07, which owns membership
-services, runs after B10. `library_membership_period.fee_charge` arrives with B10,
+services, runs after B10. `library_membership_period.fee_charge` was added by B10,
 which owns `library_charge`.
 
 A loan rule overrides a type per material type (`membership_type` null = every
@@ -207,6 +207,10 @@ class LibraryMembershipPeriod(TenantModel, ImmutableModel):
     )
     starts_on = models.DateField()
     valid_until = models.DateField(null=True, blank=True)
+    #: B10 — the fee this period charged (enrol, renew, re-join), when there was one.
+    fee_charge = models.ForeignKey(
+        "library.LibraryCharge", on_delete=models.RESTRICT, null=True, blank=True, related_name="+"
+    )
     reason = models.CharField(max_length=REASON_MAX, default="", blank=True)
     on_date = models.DateField()
 

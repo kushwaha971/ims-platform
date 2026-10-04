@@ -58,6 +58,7 @@ def test_the_owners_register_their_document_targets_in_the_old_order() -> None:
     # ── DUE-03 ── the dues engine's `dues_due` (main, auto) registers after them (ADR-056).
     assert [t.document_type for t in targets_for_direction("in", **main)] == [
         "sales_document",
+        "library_charge",
         "dues_due",
     ]
     assert [t.document_type for t in targets_for_direction("out", **main)] == ["purchase_document"]

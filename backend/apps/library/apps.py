@@ -21,8 +21,8 @@ class LibraryConfig(AppConfig):
         table's task registers its own, and held deposits are already counted
         by payments (`payments.off.depositsOpen`).
 
-        Still to come: B06 the "Standard" membership type in the seed; B10 the
-        two posting sources, their resolvers, the allocation target and the
+        B06 added the "Standard" membership type to the seed; B10 the two
+        posting sources, their resolvers, the allocation target and the
         open-charges off-guard. `ready()` imports no model at module level.
         """
         from apps.library.services.settings import seed_library
@@ -56,3 +56,38 @@ class LibraryConfig(AppConfig):
         )
         register_module_enable_hook("library", seed_library)
         register_calendar_reader("library")
+
+        # ── B10 ── charges post `charge`, waivers `adjustment_credit`, both in
+        # main (contracts §1.2); the khata names them; payments can settle a
+        # charge (FIFO beside invoices, R6); open charges block switching off.
+        from apps.common.constants import Direction, LedgerBucket
+        from apps.ledger.constants import EntryType
+        from apps.ledger.selectors.sources import register_source_resolver
+        from apps.ledger.services.postings import register_posting_source
+        from apps.library.constants import OFF_GUARD_CHARGES, SOURCE_CHARGE, SOURCE_WAIVER
+        from apps.library.services.charges import (
+            LibraryChargeTarget,
+            OpenChargesCounter,
+            resolve_charges,
+            resolve_waivers,
+        )
+        from apps.payments.services.targets import register_target
+        from apps.platform_app.services.guards import register_module_off_guard
+
+        main = frozenset({LedgerBucket.MAIN.value})
+        register_posting_source(
+            SOURCE_CHARGE,
+            module="library",
+            entry_types={EntryType.CHARGE: Direction.DEBIT},
+            buckets=main,
+        )
+        register_posting_source(
+            SOURCE_WAIVER,
+            module="library",
+            entry_types={EntryType.ADJUSTMENT_CREDIT: Direction.CREDIT},
+            buckets=main,
+        )
+        register_source_resolver(SOURCE_CHARGE, resolve_charges)
+        register_source_resolver(SOURCE_WAIVER, resolve_waivers)
+        register_target(LibraryChargeTarget())
+        register_module_off_guard("library", OpenChargesCounter(), label_id=OFF_GUARD_CHARGES)

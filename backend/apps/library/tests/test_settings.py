@@ -78,7 +78,11 @@ def test_no_deposit_off_guard_is_registered_twice() -> None:
     a second counter here would tell the owner they hold six deposits when
     they hold three. B03 registers no off-guard of its own (G7)."""
     labels = guards._OFF_GUARD_LABELS.get("library", {})
-    assert sorted(v for v in labels.values()) == ["payments.off.depositsOpen"]
+    # B10 adds the library's own counter, open charges — once.
+    assert sorted(v for v in labels.values()) == [
+        "library.off.chargesOpen",
+        "payments.off.depositsOpen",
+    ]
 
 
 # ── The seed (T-LIB-01-1, R15) ───────────────────────────────────────────────
