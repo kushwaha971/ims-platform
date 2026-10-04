@@ -41,6 +41,7 @@
     "*.scss",
     "./src/i18n/catalogues/*.ts",
     "./src/modules/DigiKhaato/features/payments/deposits/partyPanel.ts",
+    "./src/modules/DigiKhaato/features/library/partyPanel.ts",
     "./src/modules/DigiKhaato/features/notifications/redux/notificationSlice.ts",
     "./src/modules/registrations.ts",
     "./src/modules/DigiKhaato/features/*/register.ts",

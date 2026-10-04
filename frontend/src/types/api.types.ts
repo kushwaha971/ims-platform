@@ -121,6 +121,9 @@ export type ApiErrorCode =
   | 'gst_not_registered'
   // F03 (LIB-02 §6) — the catalogue's conflicts the drawers say in place.
   | 'library_accession_taken'
+  // F04 (LIB-04 §6) — enrol's conflicts, said on the field they are about.
+  | 'library_member_number_taken'
+  | 'library_membership_exists'
   | 'library_title_has_copies'
   // transport-level codes minted on the client, never sent by the server:
   | 'network_error'

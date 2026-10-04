@@ -198,6 +198,18 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
     order: 6,
   },
   {
+    // F04 (LIB-04) — the library's members.
+    key: 'libraryMembers',
+    ready: true,
+    icon: Users,
+    labelId: 'nav.library.members',
+    href: ROUTES.LIBRARY_MEMBERS,
+    module: 'library',
+    permission: 'library.member.read',
+    section: 'daily',
+    order: 12,
+  },
+  {
     // F03 (LIB-02) — the library's first page. Shown only while the library
     // module is on; each later library row arrives with its own page (F01).
     key: 'libraryCatalogue',

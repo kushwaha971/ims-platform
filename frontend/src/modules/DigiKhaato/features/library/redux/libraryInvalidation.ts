@@ -29,6 +29,9 @@ export const LIBRARY_QUERIES = {
   fetchLibraryCategories: 'libraryCatalogueForm/fetchCategories',
   fetchLibraryLocations: 'libraryCatalogueForm/fetchLocations',
   fetchLibrarySettings: 'librarySettings/fetch',
+  fetchLibraryMembers: 'libraryMemberList/fetch',
+  fetchLibraryMember: 'libraryMemberDetail/fetch',
+  fetchLibraryMembershipTypes: 'libraryMemberList/fetchTypes',
 } as const satisfies Record<string, string>;
 
 export const LIBRARY_MUTATIONS = {
@@ -45,6 +48,8 @@ export const LIBRARY_MUTATIONS = {
   deleteLibraryLocation: 'libraryCatalogueForm/deleteLocation',
   saveLibrarySettings: 'librarySettings/save',
   raiseLibraryNumber: 'librarySettings/raiseNumber',
+  enrolLibraryMember: 'libraryMemberList/enrol',
+  actOnLibraryMember: 'libraryMemberDetail/act',
 } as const satisfies Record<string, string>;
 
 export type TLibraryQueryName = keyof typeof LIBRARY_QUERIES;
@@ -94,6 +99,14 @@ export const LIBRARY_INVALIDATION: Readonly<
   // raised counter is not in that answer, so the screen asks again.
   saveLibrarySettings: { patch: [['librarySettings', 'bundle']] },
   raiseLibraryNumber: { refetch: ['librarySettings'] },
+  // F04 — fees and deposits move the party's khata, which is REFETCHED (a
+  // false `patch` is worse than none, CLAUDE.md LED-01); the member page takes
+  // the act's answer as its own.
+  enrolLibraryMember: { stale: ['libraryMemberList', 'partyDetail', 'partyList'] },
+  actOnLibraryMember: {
+    patch: [['libraryMemberDetail', 'member']],
+    stale: ['libraryMemberList', 'partyDetail', 'partyList'],
+  },
 };
 
 registerInvalidation({
@@ -108,5 +121,7 @@ registerInvalidation({
     'libraryCopyDetail',
     'libraryCatalogueForm',
     'librarySettings',
+    'libraryMemberList',
+    'libraryMemberDetail',
   ],
 });

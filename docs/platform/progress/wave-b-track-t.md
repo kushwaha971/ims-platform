@@ -968,6 +968,82 @@ invalidation map moved six other routes by 0.2 to 1.1 KB. The shared app is unch
 
 ---
 
+## F04 — Members screens and the khata panel (LIB-04 §7, §8)
+
+Status: **built; QA round 1 found three defects, all fixed** (4 Oct, on dev).
+
+- **`/library/members`.**
+  - A search box, status chips (Active, Expiring in 7 days, Expired, Suspended, Closed, Owes
+    money) that are one choice at a time, and a type select. The filters live in the URL
+    (`MEMBER_LIST_URL`).
+  - A totals line ("1 member · ₹100.00 owed · ₹200.00 deposits held") counts the filtered set,
+    and the grid shows Member, Valid until, Books, Dues and Status.
+  - **Add member** opens `EnrolMemberDrawer` (loaded with `dynamic()`). The drawer takes someone
+    new or someone already in the book (the parties search), a type, a group, an optional typed
+    number and a guardian.
+  - The fees card totals fees and the deposit separately; the deposit line always says
+    "returned when membership ends". **Collect now, in cash** turns them into two PaymentBlocks;
+    switched off, the money is owed.
+  - Enrol conflicts (`library_member_number_taken`, `library_membership_exists`) appear on their
+    fields.
+- **`/library/members/[membershipId]`.**
+  - The header follows the khata: the name, a monospace number, the status word and a link to
+    the khata.
+  - A figures card shows books out, what is owed and the deposit held, with blocks in words and
+    amounts through `formatInr`. The facts list and open charges follow, then the period history.
+  - Renew is the one primary action. Suspend, Reactivate, Close and Re-join sit behind ⋯, each
+    with its own dialog (`MemberActionDialog`, `dynamic()`).
+  - Close refuses in its dialog while a book is out (BR-6) and offers to apply the deposit to
+    what is owed. Refunding the rest happens in the deposit panel on the khata.
+- **Khata panel.** `LibraryPartyPanel` is registered from `register.ts` → `partyPanel.ts`, under
+  the key `library.member`, applying to parties with the `library_member` role. It is listed in
+  `sideEffects`, and the production build draws it.
+- **Backend.** `GET /library/members?party=` lets the panel ask for the one member a party is.
+  Test: `test_the_list_finds_the_member_a_party_is`.
+- **Other changes.**
+  - `useCatalogueList` takes the codenames a list reads and writes under.
+  - New `member.types`, `libraryMemberService`, `libraryMemberThunk` and two lazy slices. The
+    invalidation entries stale the party list and khata on enrol and on every act, which is a
+    real refetch, never a false patch.
+  - `memberDisplay` view-model, `useMemberSchemas`, the `libraryMembers` nav row, and about 140
+    en/hi keys.
+- **Deferred, with reasons.**
+  - The `/library/members/new` page for phones: the drawer works at 360 px.
+  - Change type and the deposit receive/apply/refund actions: the deposit panel on the khata
+    already holds them, and the counter (F05) is the next consumer.
+  - The membership-type editor: a settings tab, still to come.
+
+### QA round 1 (4 Oct 2026, live stack and production build)
+
+| Id | Severity | Where | Fixed |
+|---|---|---|---|
+| QA-F04-1 | high | Add member did nothing. The central mobile validator hands an empty optional field over as `null`, and `toEnrolBody` called `.trim()` on it. This is the same class as QA-F02-1, and again no jest test submitted a valid form. | `clean()` reads every optional string; a test feeds resolver-shaped nulls |
+| QA-F04-2 | low | The member page read "Valid until · Valid until 03/10/2027" | The facts row shows the date alone and keeps the sentence for a near date; asserted |
+| QA-F04-3 | medium | The message id `library.member.close` was the same string as the codename, so the locale splitter pinned it to the shell catalogue (the codename list ships everywhere) | Renamed `library.member.closeMembership` |
+
+**Looked at:**
+- desktop: enrolling Asha (9-B, guardian, fees and deposit collected in cash); her member page,
+  the renewal (now owes ₹100, valid to 2028), the khata (charges, receipts, deposit, and the
+  library panel at the bottom);
+- 360 px: no page overflow; the only clipped text node is the ⋯ button's own visually hidden
+  label;
+- the production build: the khata panel renders and the list loads with no console errors.
+
+**Gates:**
+- `tsc`, eslint and prettier clean;
+- jest: 271 suites, 3,118 passed;
+- `i18n:split` and `i18n:check` green;
+- backend `test_members.py`: 22 passed;
+- `bundle:check` green.
+
+**Bundle.** The shared app moved 105.5 → 106.4 KB. Two builds with and without the panel
+registration, and a third of the F02 tree, located the cause. That one import regroups
+Turbopack's shell chunks from two into three. The raw shell bytes move by 114, and the rest is
+gzip losing across the extra boundary; no library module is in any shared chunk. The budgets
+moved with that note recorded in `bundle-budgets.json`.
+
+---
+
 ## Open questions for the lead
 
 1. Attendance `0001` dependencies: the two referenced apps (`parties 0010`, `platform 0013`) or all

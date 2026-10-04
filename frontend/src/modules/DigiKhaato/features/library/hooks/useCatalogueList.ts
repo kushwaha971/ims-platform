@@ -8,6 +8,7 @@ import { usePermissions } from 'src/hooks/usePermissions';
 import { selectNetworkImpaired } from 'src/redux/slice/networkSlice';
 import type { RootState } from 'src/redux/store';
 import type { ApiErrorShape } from 'src/types/api.types';
+import type { PermissionCode } from 'src/types/domain.types';
 
 import { useLibraryListUrl } from './useLibraryListUrl';
 
@@ -30,6 +31,9 @@ export interface CatalogueListSpec<F extends LibraryListFilters & { page: string
   ) => AsyncThunkAction<CataloguePage<R>, F, { rejectValue: ApiErrorShape }>;
   readonly codec: ListUrlCodec<F>;
   readonly defaults: F;
+  /** F04 — the codenames this list reads and writes under; the catalogue's by default. */
+  readonly readCode?: PermissionCode;
+  readonly writeCode?: PermissionCode;
 }
 
 export type CatalogueList<F, R> = LibraryListState<F, R> & {
@@ -47,12 +51,14 @@ export const useCatalogueList = <F extends LibraryListFilters & { page: string }
   spec: CatalogueListSpec<F, R>
 ): CatalogueList<F, R> => {
   const { select, changed, fetch, codec, defaults } = spec;
+  const readCode = spec.readCode ?? 'library.catalogue.read';
+  const writeCode = spec.writeCode ?? 'library.catalogue.write';
   const dispatch = useAppDispatch();
   const state = useAppSelector(select);
   const isImpaired = useAppSelector(selectNetworkImpaired);
   const { can, hasModule } = usePermissions();
-  const canRead = hasModule('library') && can('library.catalogue.read');
-  const canWrite = canRead && can('library.catalogue.write');
+  const canRead = hasModule('library') && can(readCode);
+  const canWrite = canRead && can(writeCode);
 
   const setFilters = useCallback(
     (patch: Partial<F>) => {

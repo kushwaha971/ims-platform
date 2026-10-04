@@ -7,7 +7,7 @@
  * Data and `dynamic()` references only — never a slice, thunk, schema or
  * service — and no message ids (the ADR's amendment): this file reaches the
  * khata, dashboard and reminders routes, and a literal id here would pull the
- * whole library catalogue onto them. Empty in F01: F04 adds the party panel,
+ * whole library catalogue onto them. F04 added the party panel (`./partyPanel`);
  * F08 the reminder tab, F10 the dashboard section, F11 the reports.
  */
-export {};
+import './partyPanel';

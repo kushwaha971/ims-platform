@@ -80,6 +80,13 @@ def list_members(tenant: Any, params: Any, today: dt.date) -> QuerySet:
             errors["type"] = ["Not a valid id."]
         else:
             qs = qs.filter(membership_type_id=pk)
+    if params.get("party"):
+        # F04 — the khata's library panel asks for the one member a party is.
+        party = uuid_or_none(params.get("party"))
+        if party is None:
+            errors["party"] = ["Not a valid id."]
+        else:
+            qs = qs.filter(party_id=party)
     group = (params.get("group") or "").strip()
     if group:
         qs = qs.filter(group_label__iexact=group)

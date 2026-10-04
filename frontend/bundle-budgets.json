@@ -836,11 +836,12 @@
   "slice is injected lazily (CR-134). framework 126.9 -> 127.2 is Turbopack's",
   "runtime chunk table, inside its 128 budget. The method (evaluate both",
   "builds' shell chunks, diff module by module) is written down in",
-  "docs/platform/progress/wave-a-gate.md for the next time the shell moves."
+  "docs/platform/progress/wave-a-gate.md for the next time the shell moves.",
+  "F04 (4 Oct 2026, library members) — shared app 105.5 -> 106.4, measured by building with and without the library's khata-panel registration (register.ts -> partyPanel.ts): that one import regroups Turbopack's common chunks (two shell chunks became three) and the shell's RAW bytes move by 114; the 0.9 KB is gzip losing across the extra chunk boundary, not library code in the shell (no library module is in any shared chunk). sharedApp 106 -> 107, and the 34 routes whose first load moved by that 0.9 KB past their ceiling were raised by the measured + 0.5 rule; /library/members (64.7 / 298.2) and /library/members/[membershipId] (58.6 / 292.1) are new entries, and the other library routes moved 1-2 KB because the library invalidation map now carries the member thunks."
  ],
  "shared": {
   "framework": 128,
-  "sharedApp": 106
+  "sharedApp": 107
  },
  "//routes": [
   "The `route` figures are §19.9.2's, unchanged, and every route is comfortably",
@@ -1161,7 +1162,8 @@
   "  /library/copies/[copyId]      route 55 -> 56, firstLoad 287 -> 289   (measured 55.5 / 288.2)",
   "  /onboarding/step/[n]          route 86 -> 87, firstLoad 319 -> 320   (measured 86.5 / 319.2)",
   "  /admin/tenants                firstLoad 261 -> 262                   (measured 261.2)",
-  "  /admin/tenants/[id]           firstLoad 256 -> 257                   (measured 256.2)"
+  "  /admin/tenants/[id]           firstLoad 256 -> 257                   (measured 256.2)",
+  "F04 (4 Oct 2026, library members) — shared app 105.5 -> 106.4, measured by building with and without the library's khata-panel registration (register.ts -> partyPanel.ts): that one import regroups Turbopack's common chunks (two shell chunks became three) and the shell's RAW bytes move by 114; the 0.9 KB is gzip losing across the extra chunk boundary, not library code in the shell (no library module is in any shared chunk). sharedApp 106 -> 107, and the 34 routes whose first load moved by that 0.9 KB past their ceiling were raised by the measured + 0.5 rule; /library/members (64.7 / 298.2) and /library/members/[membershipId] (58.6 / 292.1) are new entries, and the other library routes moved 1-2 KB because the library invalidation map now carries the member thunks."
  ],
  "default": {
   "route": 56,
@@ -1170,7 +1172,7 @@
  "routes": {
   "/parties": {
    "route": 102,
-   "firstLoad": 335
+   "firstLoad": 336
   },
   "/dashboard": {
    "route": 88,
@@ -1186,7 +1188,7 @@
   },
   "/sales/invoices": {
    "route": 92,
-   "firstLoad": 324
+   "firstLoad": 325
   },
   "/sales/invoices/[id]": {
    "route": 64,
@@ -1222,19 +1224,19 @@
   },
   "/onboarding/step/[n]": {
    "route": 87,
-   "firstLoad": 320
+   "firstLoad": 321
   },
   "/design-system": {
    "route": 103,
-   "firstLoad": 335
+   "firstLoad": 337
   },
   "/settings/team": {
    "route": 73,
-   "firstLoad": 306
+   "firstLoad": 307
   },
   "/parties/[id]": {
    "route": 97,
-   "firstLoad": 329
+   "firstLoad": 331
   },
   "/parties/tags": {
    "route": 56,
@@ -1246,23 +1248,23 @@
   },
   "/ledger/aging": {
    "route": 86,
-   "firstLoad": 318
+   "firstLoad": 319
   },
   "/switch": {
    "route": 43,
-   "firstLoad": 276
+   "firstLoad": 277
   },
   "/settings/plan": {
    "route": 42,
-   "firstLoad": 275
+   "firstLoad": 276
   },
   "/settings": {
    "route": 95,
-   "firstLoad": 327
+   "firstLoad": 328
   },
   "/settings/profile": {
    "route": 128,
-   "firstLoad": 360
+   "firstLoad": 361
   },
   "/settings/branding": {
    "route": 83,
@@ -1270,7 +1272,7 @@
   },
   "/settings/activity": {
    "route": 97,
-   "firstLoad": 329
+   "firstLoad": 330
   },
   "/settings/devices": {
    "route": 49,
@@ -1282,11 +1284,11 @@
   },
   "/items/masters": {
    "route": 44,
-   "firstLoad": 277
+   "firstLoad": 278
   },
   "/items": {
    "route": 104,
-   "firstLoad": 336
+   "firstLoad": 337
   },
   "/items/[id]": {
    "route": 93,
@@ -1298,15 +1300,15 @@
   },
   "/expenses": {
    "route": 103,
-   "firstLoad": 335
+   "firstLoad": 336
   },
   "/cashbook": {
    "route": 86,
-   "firstLoad": 318
+   "firstLoad": 319
   },
   "/payments": {
    "route": 100,
-   "firstLoad": 332
+   "firstLoad": 333
   },
   "/payments/[id]": {
    "route": 57,
@@ -1314,15 +1316,15 @@
   },
   "/ledger/reminders": {
    "route": 63,
-   "firstLoad": 296
+   "firstLoad": 297
   },
   "/imports": {
    "route": 44,
-   "firstLoad": 276
+   "firstLoad": 278
   },
   "/imports/[id]": {
    "route": 44,
-   "firstLoad": 276
+   "firstLoad": 278
   },
   "/admin": {
    "route": 11,
@@ -1330,11 +1332,11 @@
   },
   "/admin/partners": {
    "route": 27,
-   "firstLoad": 259
+   "firstLoad": 260
   },
   "/admin/health": {
    "route": 20,
-   "firstLoad": 252
+   "firstLoad": 253
   },
   "/admin/tenants/[id]": {
    "route": 24,
@@ -1342,7 +1344,7 @@
   },
   "/admin/tenants": {
    "route": 29,
-   "firstLoad": 262
+   "firstLoad": 263
   },
   "/settings/data": {
    "route": 51,
@@ -1350,19 +1352,19 @@
   },
   "/purchases/bills/[id]": {
    "route": 55,
-   "firstLoad": 288
+   "firstLoad": 289
   },
   "/purchases/bills/[id]/edit": {
    "route": 138,
-   "firstLoad": 370
+   "firstLoad": 371
   },
   "/purchases/bills": {
    "route": 87,
-   "firstLoad": 319
+   "firstLoad": 321
   },
   "/purchases/bills/new": {
    "route": 138,
-   "firstLoad": 370
+   "firstLoad": 371
   },
   "/reports": {
    "route": 72,
@@ -1374,43 +1376,63 @@
   },
   "/reports/gst-summary": {
    "route": 95,
-   "firstLoad": 328
+   "firstLoad": 329
   },
   "/reports/purchase-register": {
    "route": 94,
-   "firstLoad": 327
+   "firstLoad": 328
   },
   "/reports/sales-register": {
    "route": 94,
-   "firstLoad": 327
+   "firstLoad": 328
   },
   "/login": {
    "route": 56,
-   "firstLoad": 289
+   "firstLoad": 290
   },
   "/": {
-   "route": 37,
-   "firstLoad": 270
+   "route": 38,
+   "firstLoad": 272
   },
   "/settings/business-days": {
    "route": 56,
-   "firstLoad": 288
+   "firstLoad": 289
   },
   "/library/catalogue": {
-   "route": 61,
-   "firstLoad": 294
+   "route": 63,
+   "firstLoad": 296
   },
   "/library/copies": {
-   "route": 60,
-   "firstLoad": 292
+   "route": 62,
+   "firstLoad": 295
   },
   "/library/copies/[copyId]": {
+   "route": 58,
+   "firstLoad": 292
+  },
+  "/library/settings": {
+   "route": 101,
+   "firstLoad": 335
+  },
+  "/library/members": {
+   "route": 66,
+   "firstLoad": 299
+  },
+  "/library/members/[membershipId]": {
+   "route": 60,
+   "firstLoad": 293
+  },
+  "/library/catalogue/[titleId]": {
    "route": 56,
    "firstLoad": 289
   },
-  "/library/settings": {
-   "route": 99,
-   "firstLoad": 332
+  "/library/catalogue/categories": {
+   "route": 56,
+   "firstLoad": 288
+  },
+  "/library/catalogue/locations": {
+   "route": 56,
+   "firstLoad": 288
   }
  },
  "//ignoreRoutes": [

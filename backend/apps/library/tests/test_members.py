@@ -319,3 +319,13 @@ def test_the_list_filters_by_effective_status(api_as: Any, library_on: Any) -> N
     active = owner.get(reverse(MEMBERS), {"status": "active"}).json()
     assert [r["membership_id"] for r in active["data"]] == [current["membership_id"]]
     assert active["meta"]["totals"]["members"] == 1
+
+
+def test_the_list_finds_the_member_a_party_is(api_as: Any, library_on: Any) -> None:
+    """F04 — the khata's library panel asks by party; a bad id is a 400, not every member."""
+    owner, _ = api_as(library_on, role="owner")
+    first = _enrol(owner, library_on).json()["data"]
+    _enrol(owner, library_on, PartyFactory(tenant=library_on), key="k2")
+    found = owner.get(reverse(MEMBERS), {"party": first["party_id"]}).json()["data"]
+    assert [r["membership_id"] for r in found] == [first["membership_id"]]
+    assert owner.get(reverse(MEMBERS), {"party": "nope"}).status_code == 400

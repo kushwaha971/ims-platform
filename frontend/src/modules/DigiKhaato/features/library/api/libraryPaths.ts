@@ -23,5 +23,9 @@ export const LIBRARY_PATHS = {
   LOCATIONS: '/library/locations',
   LOCATION: (id: string) => `/library/locations/${seg(id)}`,
   SETTINGS: '/library/settings',
+  MEMBERS: '/library/members',
+  MEMBER: (id: string) => `/library/members/${seg(id)}`,
+  MEMBER_ACTION: (id: string, action: string) => `/library/members/${seg(id)}/${action}`,
+  MEMBERSHIP_TYPES: '/library/membership-types',
   SETTINGS_NUMBERING: '/library/settings/numbering',
 } as const;
