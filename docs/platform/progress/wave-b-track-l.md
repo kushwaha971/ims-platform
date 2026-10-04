@@ -943,7 +943,7 @@ copies loanable, which the settings tab must say (F02).
 
 ### Design note (review step)
 
-Status: design written; not started.
+Status: **built; QA round 1 clean** (see below).
 
 Inputs: LIB-05 FR-2–FR-8, §6, §9 BR-3–BR-5 with worked examples 1–5, T-LIB-05-2/-3/-5, EC-1, EC-2,
 EC-5; contracts §1.8 (R32, inclusive); ADR-055.
@@ -988,6 +988,18 @@ Gaps:
 - BR-4 refuses a renewal that gives an *earlier* due date. Default: an *equal* date is refused too,
   because it gains nothing.
 - T-LIB-05-5 ("every weekday closed") cannot be set through the core API, as noted in test 6.
+
+---
+
+### Built (4 Oct 2026)
+
+`services/due_dates.py`: `compute_due` (pure; `(due_on, moved_from)`; 409
+`library_calendar_all_closed` past the horizon), `due_on_for_issue`, `renewal_due_on` (from the
+renewal day or the old due date; an earlier OR equal result is 409 `library_renewal_refused
+{reason: no_gain}`). One `closed_days_between` read per computation. The three loan endpoints wait
+for B09 (G18). Tests `test_due_dates.py` (9): the five worked examples against real closures and the
+library weekday key, `no_gain`, a business-wide closure, weekday precedence both ways, one query,
+all-closed is 409. QA round 1: no defect on a second read; the library tests pass (with B06).
 
 ---
 
