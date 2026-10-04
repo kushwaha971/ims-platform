@@ -101,6 +101,14 @@ urlpatterns: list = [
         ln.LoanChangeDueView.as_view(),
         name="library-loan-change-due",
     ),
+    path("loans/<uuid:loan_id>/lost", ln.LoanLostView.as_view(), name="library-loan-lost"),
+    path("loans/<uuid:loan_id>/replace", ln.LoanReplaceView.as_view(), name="library-loan-replace"),
+    path(
+        "loans/<uuid:loan_id>/fine-preview",
+        ln.LoanFinePreviewView.as_view(),
+        name="library-loan-fine-preview",
+    ),
+    path("copies/<uuid:copy_id>/found", ln.CopyFoundView.as_view(), name="library-copy-found"),
     path("returns", ln.ReturnView.as_view(), name="library-returns"),
     path("due-date-preview", ln.DueDatePreviewView.as_view(), name="library-due-date-preview"),
 ]

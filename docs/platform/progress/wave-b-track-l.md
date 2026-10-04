@@ -1241,7 +1241,39 @@ Gates: backend non-slow 3632 passed; black/isort/flake8; migrations clean.
 
 | Id | Severity | Where | State |
 |---|---|---|---|
-| QA-B09-1 | medium | T-LIB-06-8 asks ≤ 12 queries per issue and return; measured 38 / 41, cut to 36 / 38 by reading the member's figures once (`members.figures`) instead of ten separate counts | **open for the lead**: about twenty are fixed costs every write here pays (session, idempotency row, audit row, eight savepoint pairs from nested `atomic`); reaching 12 means changing those core paths, not the library. The budget test holds 36 / 38. |
+| QA-B09-1 | medium | T-LIB-06-8 asks ≤ 12 queries per issue and return; measured 38 / 41, cut to 36 / 38 (40 / 37 after B10b's lost-book count) by reading the member's figures once (`members.figures`) instead of ten separate counts | **open for the lead**: about twenty are fixed costs every write here pays (session, idempotency row, audit row, eight savepoint pairs from nested `atomic`); reaching 12 means changing those core paths, not the library. The budget test holds the measured figures. |
+
+---
+
+## B10b — lost, found, replaced, damaged; the fine preview
+
+### Built (4 Oct 2026)
+
+`services/losses.py`: `mark_lost` (the fine to the declared day as its own charge, then `lost_book`
+= round(base × `lost_multiplier`, paise) + `lost_processing_fee`; base = price, else the fallback,
+else the typed price, which is saved to the copy, EC-1); `mark_found` (a `found` waiver of what is
+unpaid; when `lost_found_paid = refund`, a payment OUT with `allocations: none`, context
+`library_refund`, plus a `found_refund` waiver of what was paid; the loan becomes `returned`; the
+copy goes back on the shelf; a refund needs `payments.payment.write`); `replace` (only an unpaid lost
+book, BR-10/EC-7: a new copy through the catalogue's `add_copies` with "Replacement for …", the
+charge waived `replaced`, the lost copy withdrawn as `lost`; needs `library.catalogue.write` too);
+damage at return (minor → shelf, major → repair at `damage_major_percent` of the price, unusable →
+a `lost_book` charge and the copy withdrawn as `damaged`; lowering the proposed amount is allowed,
+raising it needs `library.charge.write`). BR-7: a lost book with its charge still owed counts toward
+`max_copies` while `lost_counts_toward_limit`. Endpoints `/loans/{id}/lost`, `/loans/{id}/replace`,
+`/loans/{id}/fine-preview`, `/copies/{id}/found`; `/returns` takes `damage`. The `desk` fixture
+moved to the library conftest, its helpers to `tests/counter.py`.
+
+Tests `test_losses.py` (11): example 7, the limit with a lost book, found unpaid, found after payment
+with the refund and the khata back to zero (T-LIB-07-7), replacement, a paid book not replaceable,
+damage ×3 routes, lowering versus raising a damage charge, the preview charging nothing. Gates:
+backend non-slow 3646 passed; flake8/black/isort; migrations clean.
+
+### QA round 1 (4 Oct 2026)
+
+| Id | Severity | Where | Fixed |
+|---|---|---|---|
+| QA-B10b-1 | high | `create_charge` and the waiver posting handed `post_source_entry` the party instance loaded at the start of the transaction; `apply_entry` writes the balance from the instance, so a waiver posted after a payment in the same transaction (a found book's refund) wrote back the balance from before the payment — the member was left ₹250 in credit for money they had been handed back. Caught by T-LIB-07-7 before commit. | every library posting now re-reads the locked party (`_fresh_party`, re-entrant) |
 
 ---
 

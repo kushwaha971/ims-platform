@@ -129,6 +129,18 @@ def waiver_json(waiver: LibraryWaiver) -> dict:
 # ── Raising a charge ────────────────────────────────────────────────────────
 
 
+def _fresh_party(ctx: Any, party_id: Any) -> Any:
+    """The party as it is NOW, locked (re-entrant inside the caller's transaction).
+
+    `apply_entry` moves the balance cache from the instance it is handed, so a party
+    loaded before a payment in the same transaction would write back a stale balance:
+    a found book's refund waiver posted after the refund payment left the member
+    ₹250 in credit for money they had been handed back (B10b QA)."""
+    from apps.parties.services.balance import lock_party
+
+    return lock_party(tenant=ctx.tenant, party_id=party_id)
+
+
 def create_charge(
     *,
     ctx: Any,
@@ -168,7 +180,7 @@ def create_charge(
     charge.number = allocate_number(tenant=ctx.tenant, kind=CHARGE_KIND, on_date=on)
     entry, _balance = post_source_entry(
         ctx=ctx,
-        party=membership.party,
+        party=_fresh_party(ctx, membership.party_id),
         amount=amount,
         entry_date=on,
         entry_type="charge",
@@ -277,7 +289,7 @@ def _post_waiver(
     )
     entry, _balance = post_source_entry(
         ctx=ctx,
-        party=charge.party,
+        party=_fresh_party(ctx, charge.party_id),
         amount=amount,
         entry_date=on,
         entry_type="adjustment_credit",

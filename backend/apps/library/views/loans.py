@@ -216,3 +216,89 @@ class DueDatePreviewView(_LoanView):
         return StandardResponse.ok(
             loans.due_date_preview(tenant, params.get("membership_id"), params.get("copy_id"), on)
         )
+
+
+# ── B10b ── lost, found, replacement, the fine preview (LIB-07 §6) ──────────
+
+
+class LoanLostView(_LoanView):
+    codename = ADJUST
+
+    def post(self, request: Any, loan_id: Any) -> Any:
+        from apps.library.services.losses import mark_lost
+
+        ctx = self.ctx()
+        result = mark_lost(ctx=ctx, loan_id=loan_id, data=request.data)
+        return StandardResponse.ok(
+            loans.loan_json(result["loan"], tenant_today(ctx.tenant)),
+            meta={
+                "fine": result["fine"].as_json(),
+                "charges": [charge_json(c) for c in result["charges"]],
+                "member": _member(ctx.tenant, result["member"]),
+            },
+        )
+
+
+class LoanReplaceView(_LoanView):
+    codename = ADJUST
+
+    def post(self, request: Any, loan_id: Any) -> Any:
+        from apps.library.services.losses import replace
+
+        ctx = self.ctx()
+        result = replace(ctx=ctx, loan_id=loan_id, data=request.data)
+        return StandardResponse.ok(
+            loans.loan_json(result["loan"], tenant_today(ctx.tenant)),
+            meta={
+                "replacement": {
+                    "id": str(result["replacement"].id),
+                    "accession_number": result["replacement"].accession_number,
+                },
+                "member": _member(ctx.tenant, result["member"]),
+            },
+        )
+
+
+class CopyFoundView(_LoanView):
+    def post(self, request: Any, copy_id: Any) -> Any:
+        from apps.library import serializers as out
+        from apps.library.services.charges import waiver_json
+        from apps.library.services.losses import mark_found
+
+        ctx = self.ctx()
+        result = mark_found(ctx=ctx, copy_id=copy_id, data=request.data)
+        payment = result["refund_payment"]
+        return StandardResponse.ok(
+            out.copy_row(result["copy"]),
+            meta={
+                "waivers": [waiver_json(w) for w in result["waivers"]],
+                "refund_payment": (
+                    {
+                        "id": str(payment.id),
+                        "number": payment.number,
+                        "amount": f"{payment.amount:.2f}",
+                    }
+                    if payment
+                    else None
+                ),
+                "hold_ready": None,
+            },
+        )
+
+
+class LoanFinePreviewView(_LoanView):
+    def get(self, request: Any, loan_id: Any) -> Any:
+        tenant = get_effective_tenant(request)
+        loan = (
+            LibraryLoan.objects.filter(tenant=tenant, pk=loan_id)
+            .select_related("copy__title")
+            .first()
+        )
+        if loan is None:
+            raise NotFound()
+        on = (
+            _dates(request.query_params, "on")[0]
+            if request.query_params.get("on")
+            else tenant_today(tenant)
+        )
+        return StandardResponse.ok(loans.fine_for(loan, on).as_json())

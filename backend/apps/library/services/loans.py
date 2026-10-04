@@ -160,16 +160,20 @@ def loan_blocks(m: LibraryMembership, today: dt.date, numbers: Any = None) -> li
     from apps.library.services.members import figures
 
     numbers = numbers or figures(m, today)
+    settings = _settings(m.tenant)
     blocks: list[dict] = []
-    if numbers.loans_open >= m.membership_type.max_copies:
+    held = numbers.loans_open
+    if settings.lost_counts_toward_limit:  # BR-7, D18
+        held += numbers.lost_unsettled
+    if held >= m.membership_type.max_copies:
         blocks.append(
             {
                 "code": "copy_limit_reached",
                 "overridable": True,
-                "params": {"held": numbers.loans_open, "max": m.membership_type.max_copies},
+                "params": {"held": held, "max": m.membership_type.max_copies},
             }
         )
-    if numbers.loans_overdue and _settings(m.tenant).overdue_issue_rule == OverdueIssueRule.BLOCK:
+    if numbers.loans_overdue and settings.overdue_issue_rule == OverdueIssueRule.BLOCK:
         blocks.append(
             {"code": "has_overdue", "overridable": True, "params": {"count": numbers.loans_overdue}}
         )
@@ -438,11 +442,14 @@ def return_copy(*, ctx: Any, data: Any) -> dict:
 
     if not isinstance(data, dict):
         raise ValidationFailed({"non_field_errors": ["Expected an object."]})
+    from apps.library.services.losses import apply_damage, clean_damage
+
     today = tenant_today(ctx.tenant)
     errors = Errors()
     returned_on = date(errors, data, "returned_on") or today
     if returned_on > today:
         errors.add("returned_on", "A return cannot be in the future.")
+    damage = clean_damage(errors, data)
     errors.raise_if_any()
     if returned_on < today and not actor_can(ctx, ADJUST):
         raise BusinessRuleViolation(
@@ -491,6 +498,11 @@ def return_copy(*, ctx: Any, data: Any) -> dict:
         )
     calc = fine_for(loan, returned_on)
     charge = _charge_fine(ctx, loan, calc, returned_on)
+    damage_charge, to_status = (
+        apply_damage(ctx, loan, damage, returned_on)
+        if damage
+        else (None, CopyStatus.AVAILABLE.value)
+    )
     loan.status = LoanStatus.RETURNED
     loan.returned_on = returned_on
     loan.returned_at = timezone.now()
@@ -499,11 +511,13 @@ def return_copy(*, ctx: Any, data: Any) -> dict:
     copy_status.move_copy(
         ctx=ctx,
         copy=copy,
-        to_status=CopyStatus.AVAILABLE,
+        to_status=to_status,
         reason_code=CopyEventReason.RETURNED,
         on_date=returned_on,
+        note=(damage or {}).get("note", ""),
         source_type="library_loan",
         source_id=loan.id,
+        withdrawn_reason="damaged" if to_status == CopyStatus.WITHDRAWN else None,
     )
     LibraryCopy.objects.filter(pk=copy.pk).update(last_seen_on=returned_on)
     _event(ctx, loan, LoanEventKind.RETURNED, returned_on, charge=charge)
@@ -518,8 +532,8 @@ def return_copy(*, ctx: Any, data: Any) -> dict:
         "loan": _loaded(loan.id),
         "member": loan.membership,
         "fine": calc if calc.calendar_days else None,
-        "charges": [charge] if charge else [],
-        "copy_status": CopyStatus.AVAILABLE.value,
+        "charges": [c for c in (charge, damage_charge) if c is not None],
+        "copy_status": to_status,
     }
 
 

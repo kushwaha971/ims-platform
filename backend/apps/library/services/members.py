@@ -130,6 +130,8 @@ class Figures:
 
     loans_open: int
     loans_overdue: int
+    #: Lost books whose charge is still owed (LIB-07 BR-7, D18).
+    lost_unsettled: int
     dues: Decimal
     deposit: Any
 
@@ -140,11 +142,19 @@ def figures(m: LibraryMembership, today: dt.date) -> Figures:
     loans = m.loans.filter(status="open").aggregate(
         open=Count("id"), overdue=Count("id", filter=Q(due_on__lt=today))
     )
-    owed = LibraryCharge.objects.filter(membership=m).open().aggregate(t=Sum("amount_due"))["t"]
+    charges = (
+        LibraryCharge.objects.filter(membership=m)
+        .open()
+        .aggregate(
+            t=Sum("amount_due"),
+            lost=Count("loan", distinct=True, filter=Q(kind="lost_book", loan__status="lost")),
+        )
+    )
     return Figures(
         loans_open=loans["open"],
         loans_overdue=loans["overdue"],
-        dues=q2(owed or ZERO),
+        lost_unsettled=charges["lost"],
+        dues=q2(charges["t"] or ZERO),
         deposit=deposit_for(m),
     )
 
