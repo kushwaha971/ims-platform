@@ -20,6 +20,7 @@ export function CounterMemberPanel({
   t,
   busy,
   onRenew,
+  onLost,
   onRenewAll,
   onFinish,
 }: Readonly<{
@@ -27,6 +28,8 @@ export function CounterMemberPanel({
   t: TranslateFn;
   busy: boolean;
   onRenew: (copyId: string, code: string) => void;
+  /** F06 — present for a member holding `library.loan.adjust`. */
+  onLost?: (loanId: string, title: string) => void;
   onRenewAll: () => void;
   onFinish: () => void;
 }>): React.JSX.Element {
@@ -121,15 +124,26 @@ export function CounterMemberPanel({
                     ].join(' · ')}
                   </UbText>
                 </UbStack>
-                <UbButton
-                  variant="secondary"
-                  size="sm"
-                  className="shrink-0"
-                  disabled={busy}
-                  onClick={() => onRenew(loan.copy.id, loan.copy.accessionNumber)}
-                >
-                  {t('library.counter.renew')}
-                </UbButton>
+                <UbStack direction="row" gap={1} className="shrink-0">
+                  {onLost && (
+                    <UbButton
+                      variant="ghost"
+                      size="sm"
+                      disabled={busy}
+                      onClick={() => onLost(loan.id, loan.copy.title)}
+                    >
+                      {t('library.charge.lost')}
+                    </UbButton>
+                  )}
+                  <UbButton
+                    variant="secondary"
+                    size="sm"
+                    disabled={busy}
+                    onClick={() => onRenew(loan.copy.id, loan.copy.accessionNumber)}
+                  >
+                    {t('library.counter.renew')}
+                  </UbButton>
+                </UbStack>
               </UbStack>
             ))}
           </UbStack>

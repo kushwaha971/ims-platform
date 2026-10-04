@@ -127,6 +127,9 @@ export type ApiErrorCode =
   // F05 (LIB-06 §6) — the counter's refusals it turns into prompts.
   | 'library_member_blocked'
   | 'library_copy_unavailable'
+  // F06 (LIB-07 §6) — refusals the charge dialogs say in place.
+  | 'library_waiver_over_ceiling'
+  | 'library_charge_has_payments'
   | 'library_title_has_copies'
   // transport-level codes minted on the client, never sent by the server:
   | 'network_error'

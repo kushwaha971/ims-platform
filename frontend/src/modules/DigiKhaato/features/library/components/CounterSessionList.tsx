@@ -57,6 +57,7 @@ export function CounterSessionList({
   onUndo,
   onRetry,
   onSkip,
+  onCollect,
 }: Readonly<{
   rows: readonly CounterRow[];
   pending: readonly QueueItem[];
@@ -67,6 +68,8 @@ export function CounterSessionList({
   onUndo: (row: CounterRow) => void;
   onRetry: (key: string) => void;
   onSkip: (key: string) => void;
+  /** F06 — present for a member holding `payments.payment.write`. */
+  onCollect?: (row: CounterRow) => void;
 }>): React.JSX.Element {
   const touched = touchedLoans(rows);
   return (
@@ -132,6 +135,18 @@ export function CounterSessionList({
                       amount: formatInr(row.fine),
                     })}
                   </UbText>
+                )}
+                {row.kind === 'returned' && row.charge && onCollect && (
+                  <UbStack direction="row" gap={2}>
+                    <UbButton
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => onCollect(row)}
+                      data-testid="counter-take-payment"
+                    >
+                      {t('library.charge.collect', { amount: formatInr(row.charge.amountDue) })}
+                    </UbButton>
+                  </UbStack>
                 )}
                 {row.kind === 'returned' && row.holdReady && (
                   <UbText variant="body-sm" tone="warning" data-testid="counter-keep-aside">

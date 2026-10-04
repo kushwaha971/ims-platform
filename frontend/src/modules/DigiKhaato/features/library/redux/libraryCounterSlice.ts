@@ -101,6 +101,10 @@ const libraryCounterSlice = createSlice({
     counterModeRestored(state, action: PayloadAction<CounterMode>) {
       state.mode = action.payload;
     },
+    /** A row the counter writes itself (F06: a book marked lost). */
+    counterNoted(state, action: PayloadAction<CounterRow>) {
+      push(state, action.payload);
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -185,6 +189,7 @@ export const {
   counterSearchClosed,
   counterSessionRestored,
   counterModeRestored,
+  counterNoted,
 } = libraryCounterSlice.actions;
 
 declare module 'src/redux/store' {

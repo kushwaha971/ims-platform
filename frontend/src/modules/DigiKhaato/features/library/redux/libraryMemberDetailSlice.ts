@@ -5,8 +5,10 @@ import { acceptInvalidation } from 'src/redux/invalidation/listener';
 import { rootReducer, type RootState } from 'src/redux/store';
 import type { ApiErrorShape, RequestStatus } from 'src/types/api.types';
 
+import { fetchMemberCharges } from './libraryChargeThunk';
 import { actOnLibraryMember, fetchLibraryMember } from './libraryMemberThunk';
 
+import type { ChargeRow, ChargeTotals } from '../types/charge.types';
 import type { MemberDetail } from '../types/member.types';
 
 /**
@@ -21,6 +23,9 @@ export interface LibraryMemberDetailState {
   actionStatus: RequestStatus;
   stale: boolean;
   staleUrgency: 'now' | 'next-mount' | null;
+  /** F06 — every charge of this member, newest first, and their totals. */
+  charges: ChargeRow[] | null;
+  chargeTotals: ChargeTotals | null;
 }
 
 const initialState: LibraryMemberDetailState = {
@@ -30,6 +35,8 @@ const initialState: LibraryMemberDetailState = {
   actionStatus: 'idle',
   stale: false,
   staleUrgency: null,
+  charges: null,
+  chargeTotals: null,
 };
 
 const libraryMemberDetailSlice = createSlice({
@@ -42,7 +49,11 @@ const libraryMemberDetailSlice = createSlice({
       .addCase(fetchLibraryMember.pending, (state, action) => {
         const same = state.member?.membershipId === action.meta.arg;
         state.status = same ? 'refreshing' : 'loading';
-        if (!same) state.member = null;
+        if (!same) {
+          state.member = null;
+          state.charges = null;
+          state.chargeTotals = null;
+        }
         state.error = null;
       })
       .addCase(fetchLibraryMember.fulfilled, (state, action) => {
@@ -66,6 +77,10 @@ const libraryMemberDetailSlice = createSlice({
       })
       .addCase(actOnLibraryMember.rejected, (state) => {
         state.actionStatus = 'failed';
+      })
+      .addCase(fetchMemberCharges.fulfilled, (state, action) => {
+        state.charges = action.payload.rows as Draft<ChargeRow>[];
+        state.chargeTotals = action.payload.totals as Draft<ChargeTotals>;
       })
       .addCase(resetAllFeatureState, () => initialState);
   },

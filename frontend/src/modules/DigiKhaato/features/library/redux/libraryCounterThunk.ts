@@ -222,6 +222,9 @@ export const processCounterItem = createAsyncThunk<
             fine: result.fine ?? undefined,
             daysLate: result.daysLate,
             holdReady: result.holdReady,
+            charge: result.fineCharge
+              ? { ...result.fineCharge, partyName: result.loan.membership.name }
+              : null,
           }),
           member: item.membershipId ? await api.getCounterMember(item.membershipId) : undefined,
         };

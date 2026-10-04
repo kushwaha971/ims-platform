@@ -163,6 +163,7 @@ describe('CounterPageContent', () => {
       fine: null,
       daysLate: 0,
       holdReady: null,
+      fineCharge: null,
     });
     renderWithProviders(<CounterPageContent />);
     await scan('M-0043');

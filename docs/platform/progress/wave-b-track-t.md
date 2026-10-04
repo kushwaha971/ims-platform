@@ -1118,6 +1118,40 @@ drops them, and the slice and mocks leaked between tests. Both are fixed.
 
 ---
 
+## F06 — Charges UI (LIB-07 §7, §8)
+
+Status: **stopped at a clean point on the owner's change of plan (4 Oct, 17:51)**. The work is
+built, tested, and checked on the live stack; the bundle was not measured.
+
+- **Member page charges.** The member page lists every charge, newest first, with totals ("Owes ·
+  paid · waived"). An owing charge offers:
+  - **Take ₹**: the core `PaymentFormDrawer`, pre-allocated to that charge.
+  - **Waive**: an amount and a reason. The dialog shows the dues afterwards, and the ceiling
+    refusal appears inline.
+  - **Reverse**: only when nothing has been paid; `has_payments` is refused inline.
+  **Add charge** adds a processing or other charge. The charges live in
+  `libraryMemberDetail.charges`, so there is no new store key.
+- **Counter.** A return row carrying a fine offers Take ₹, and a panel loan offers **Lost**
+  (`library.loan.adjust`). Lost shows the fine preview, marks the loan lost and charges it.
+- **Invalidation.** `recordPayment` (core) now refetches the member page through the library's
+  `core` registration.
+- **New guard.** `src/tests/noMessageIdIsACodename.test.ts` catches a message id spelled exactly
+  like a codename, which `split-locales` pins into the shell. It caught `library.charge.waive`, and
+  F04 had hit the same trap. `ledger.statement.export` predates the guard and is allow-listed for
+  the ledger to rename.
+- **Looked at, live.** A ₹40 waiver (owes 100 → 60), Take ₹60 through the payment drawer (owes 0,
+  and the page refetched), Add charge ₹10, then Reverse (owes 0, row "Reversed"). The counter's
+  Lost and Take ₹ were not exercised live.
+- **Not done.**
+  - Damage at return (Alt+D).
+  - Mark found on the copy page. The service and thunk exist (`markLibraryCopyFound`), but no
+    button calls them yet.
+  - The bundle measurement.
+
+Gates: `tsc` and eslint clean; jest 274 suites, 3,186 passed; `i18n:check` green.
+
+---
+
 ## Open questions for the lead
 
 1. Attendance `0001` dependencies: the two referenced apps (`parties 0010`, `platform 0013`) or all

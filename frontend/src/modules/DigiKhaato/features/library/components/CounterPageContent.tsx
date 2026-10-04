@@ -17,10 +17,12 @@ import {
   UbText,
   UbTextInput,
 } from 'src/design-system';
+import { usePermissions } from 'src/hooks/usePermissions';
 import { useTranslation } from 'src/hooks/useTranslation';
 
+import { finePreview } from '../api/libraryChargeService';
 import { useCounter } from '../hooks/useCounter';
-import { COUNTER_MODES, type CounterMode } from '../types/counter.types';
+import { COUNTER_MODES, type CounterMode, type CounterRow } from '../types/counter.types';
 import { MODE_SHORTCUTS } from '../view-model/counterDisplay';
 
 import { CounterMemberPanel } from './CounterMemberPanel';
@@ -34,6 +36,16 @@ const OverridePromptLazy = dynamic(() => loadPrompts().then((m) => m.OverridePro
 const FinishDialogLazy = dynamic(() => loadPrompts().then((m) => m.FinishDialog), {
   ssr: false,
 });
+const MarkLostDialogLazy = dynamic(() => import('./ChargeDialogs').then((m) => m.MarkLostDialog), {
+  ssr: false,
+});
+const PaymentFormDrawerLazy = dynamic(
+  () =>
+    import('modules/DigiKhaato/features/payments/components/PaymentFormDrawer').then(
+      (m) => m.PaymentFormDrawer
+    ),
+  { ssr: false }
+);
 
 /**
  * F05 (LIB-06) — `/library/counter`, the screen a library uses most: one scan
@@ -50,6 +62,15 @@ export function CounterPageContent(): React.JSX.Element {
   const [text, setText] = useState('');
   const [finishing, setFinishing] = useState(false);
   const [active, setActive] = useState(0);
+  const [collecting, setCollecting] = useState<CounterRow | null>(null);
+  const [losing, setLosing] = useState<{
+    loanId: string;
+    title: string;
+    fine: { amount: string; daysLate: number } | null;
+  } | null>(null);
+  const { can } = usePermissions();
+  const canCollect = can('payments.payment.write');
+  const canAdjust = can('library.loan.adjust');
   const { member, mode, prompt, search } = counter;
 
   const focusBox = useCallback(() => {
@@ -64,8 +85,8 @@ export function CounterPageContent(): React.JSX.Element {
 
   // Focus back in the box whenever a prompt or the finish dialog closes.
   useEffect(() => {
-    if (!prompt && !finishing) focusBox();
-  }, [prompt, finishing, focusBox, counter.session.length, member]);
+    if (!prompt && !finishing && !collecting && !losing) focusBox();
+  }, [prompt, finishing, collecting, losing, focusBox, counter.session.length, member]);
 
   const finish = useCallback(() => {
     if (member) setFinishing(true);
@@ -263,6 +284,7 @@ export function CounterPageContent(): React.JSX.Element {
               onUndo={(row) => void counter.undo(row, t('library.counter.undoReason'))}
               onRetry={counter.retry}
               onSkip={counter.skip}
+              onCollect={canCollect ? setCollecting : undefined}
             />
           )}
         </UbStack>
@@ -274,6 +296,16 @@ export function CounterPageContent(): React.JSX.Element {
               t={t}
               busy={counter.busy}
               onRenew={(copyId, code) => counter.submit(code, { copyId, mode: 'renew' })}
+              onLost={
+                canAdjust
+                  ? (loanId, title) => {
+                      setLosing({ loanId, title, fine: null });
+                      void finePreview(loanId)
+                        .then((fine) => setLosing((now) => (now ? { ...now, fine } : now)))
+                        .catch(() => undefined);
+                    }
+                  : undefined
+              }
               onRenewAll={counter.renewAll}
               onFinish={finish}
             />
@@ -299,6 +331,29 @@ export function CounterPageContent(): React.JSX.Element {
               ...(prompt.copyId ? { copyId: prompt.copyId } : {}),
             })
           }
+        />
+      )}
+      {collecting?.charge && (
+        <PaymentFormDrawerLazy
+          context={{
+            direction: 'in',
+            partyId: collecting.charge.partyId,
+            partyName: collecting.charge.partyName,
+            documentId: collecting.charge.id,
+            documentNumber: collecting.charge.number,
+            documentDue: collecting.charge.amountDue,
+            entry: 'party',
+          }}
+          onClose={() => setCollecting(null)}
+        />
+      )}
+      {losing && (
+        <MarkLostDialogLazy
+          title={losing.title}
+          fine={losing.fine}
+          busy={counter.busy}
+          onClose={() => setLosing(null)}
+          onSubmit={(reason) => counter.markLost(losing.loanId, losing.title, reason)}
         />
       )}
       {finishing && member && (

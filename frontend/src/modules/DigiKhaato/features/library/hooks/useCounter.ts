@@ -5,14 +5,18 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { usePermissions } from 'src/hooks/usePermissions';
 import { selectActiveTenant, selectTenantTimezone } from 'src/redux/slice/sessionSlice';
+import type { ApiErrorShape } from 'src/types/api.types';
 import { todayInTenantTz } from 'src/utils/dates';
+import { formatInr } from 'src/utils/money';
 import { newRequestId } from 'src/utils/requestId';
 
+import { markLibraryLoanLost } from '../redux/libraryChargeThunk';
 import {
   counterEnqueued,
   counterMemberCleared,
   counterModeChanged,
   counterModeRestored,
+  counterNoted,
   counterPromptClosed,
   counterRetried,
   counterSessionRestored,
@@ -55,6 +59,12 @@ export interface Counter extends LibraryCounterState {
   readonly skip: (key: string) => void;
   readonly undo: (row: CounterRow, reason: string) => Promise<void>;
   readonly renewAll: () => void;
+  /** F06 — the loan is lost: fine to today, then the book's cost; the copy is marked lost. */
+  readonly markLost: (
+    loanId: string,
+    title: string,
+    reason: string
+  ) => Promise<{ ok: true } | { ok: false; error: ApiErrorShape | null }>;
 }
 
 /**
@@ -165,6 +175,30 @@ export const useCounter = (): Counter => {
     [dispatch, state.member]
   );
 
+  const markLost = useCallback<Counter['markLost']>(
+    async (loanId, title, reason) => {
+      const result = await dispatch(markLibraryLoanLost({ loanId, ...(reason ? { reason } : {}) }));
+      if (!markLibraryLoanLost.fulfilled.match(result)) {
+        return { ok: false, error: result.payload ?? null };
+      }
+      const total = result.payload.reduce((sum, charge) => sum + Number(charge.amount), 0);
+      dispatch(
+        counterNoted({
+          id: `lost-${loanId}`,
+          kind: 'info',
+          code: title,
+          at: new Date().toISOString(),
+          title,
+          messageId: 'library.counter.markedLost',
+          messageParams: { amount: formatInr(total.toFixed(2)) },
+        })
+      );
+      if (state.member) void dispatch(loadCounterMember(state.member.membershipId));
+      return { ok: true };
+    },
+    [dispatch, state.member]
+  );
+
   const renewAll = useCallback(() => {
     if (state.member) void dispatch(renewAllAtCounter(state.member.membershipId));
   }, [dispatch, state.member]);
@@ -183,5 +217,6 @@ export const useCounter = (): Counter => {
     skip: (key: string) => dispatch(counterSkipped(key)),
     undo,
     renewAll,
+    markLost,
   };
 };

@@ -33,6 +33,7 @@ export const LIBRARY_QUERIES = {
   fetchLibraryMember: 'libraryMemberDetail/fetch',
   fetchLibraryMembershipTypes: 'libraryMemberList/fetchTypes',
   loadCounterMember: 'libraryCounter/loadMember',
+  fetchMemberCharges: 'libraryMemberDetail/fetchCharges',
 } as const satisfies Record<string, string>;
 
 export const LIBRARY_MUTATIONS = {
@@ -54,6 +55,11 @@ export const LIBRARY_MUTATIONS = {
   processCounterItem: 'libraryCounter/process',
   undoCounterIssue: 'libraryCounter/undo',
   renewAllAtCounter: 'libraryCounter/renewAll',
+  waiveLibraryCharge: 'libraryMemberDetail/waiveCharge',
+  reverseLibraryCharge: 'libraryMemberDetail/reverseCharge',
+  createLibraryCharge: 'libraryMemberDetail/createCharge',
+  markLibraryLoanLost: 'libraryCounter/markLost',
+  markLibraryCopyFound: 'libraryCopyDetail/found',
 } as const satisfies Record<string, string>;
 
 export type TLibraryQueryName = keyof typeof LIBRARY_QUERIES;
@@ -127,6 +133,13 @@ export const LIBRARY_INVALIDATION: Readonly<
   processCounterItem: { stale: [...CIRCULATION_VIEWS] },
   undoCounterIssue: { stale: [...CIRCULATION_VIEWS] },
   renewAllAtCounter: { stale: [...CIRCULATION_VIEWS] },
+  // F06 — a charge write moves the member's dues and the khata's balance; the
+  // member page refetches (its charges and its figures both moved).
+  waiveLibraryCharge: { refetch: ['libraryMemberDetail'], stale: [...CIRCULATION_VIEWS] },
+  reverseLibraryCharge: { refetch: ['libraryMemberDetail'], stale: [...CIRCULATION_VIEWS] },
+  createLibraryCharge: { refetch: ['libraryMemberDetail'], stale: [...CIRCULATION_VIEWS] },
+  markLibraryLoanLost: { stale: [...CIRCULATION_VIEWS] },
+  markLibraryCopyFound: { refetch: ['libraryCopyDetail'], stale: [...CIRCULATION_VIEWS] },
 };
 
 registerInvalidation({
@@ -134,6 +147,14 @@ registerInvalidation({
   queries: LIBRARY_QUERIES,
   mutations: LIBRARY_MUTATIONS,
   map: LIBRARY_INVALIDATION,
+  // F06 — a payment collected against a library charge (the core drawer) moves
+  // the member's dues: the member page refetches and the lists go stale.
+  core: {
+    recordPayment: {
+      refetch: ['libraryMemberDetail'],
+      stale: ['libraryMemberList'],
+    },
+  },
   ownSlices: [
     'libraryTitleList',
     'libraryTitleDetail',

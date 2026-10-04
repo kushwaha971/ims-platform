@@ -123,6 +123,7 @@ export interface ReturnResult {
   readonly fine: string | null;
   readonly daysLate: number;
   readonly holdReady: { memberName: string; memberNumber: string; collectBy: string | null } | null;
+  readonly fineCharge: { id: string; number: string; partyId: string; amountDue: string } | null;
 }
 
 export const returnCopy = async (copyId: string, key: string): Promise<ReturnResult> => {
@@ -135,8 +136,19 @@ export const returnCopy = async (copyId: string, key: string): Promise<ReturnRes
   const fine = meta.fine as Wire | null;
   const hold = meta.hold_ready as Wire | null;
   const holdMember = (hold?.membership ?? {}) as Wire;
+  const fineCharge = ((meta.charges as Wire[] | undefined) ?? []).find(
+    (charge) => charge.kind === 'overdue_fine'
+  );
   return {
     loan: toLoanRow(data),
+    fineCharge: fineCharge
+      ? {
+          id: str(fineCharge.id),
+          number: str(fineCharge.number),
+          partyId: str(fineCharge.party_id),
+          amountDue: str(fineCharge.amount_due),
+        }
+      : null,
     fine: fine && Number(fine.amount) > 0 ? str(fine.amount) : null,
     daysLate: Number(fine?.days_late ?? 0),
     holdReady: hold

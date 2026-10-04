@@ -61,6 +61,14 @@ export interface CounterRow {
   readonly daysLate?: number;
   readonly fine?: string;
   readonly holdReady?: HoldReady | null;
+  /** F06 — the fine charged at return, so the row can offer Take ₹ (FR-5). */
+  readonly charge?: {
+    readonly id: string;
+    readonly number: string;
+    readonly partyId: string;
+    readonly partyName: string;
+    readonly amountDue: string;
+  } | null;
   readonly override?: boolean;
   /** A refusal's message id and params, already decided by the server's code. */
   readonly messageId?: string;

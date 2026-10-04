@@ -35,6 +35,7 @@ import { fetchLibraryMembershipTypes } from '../redux/libraryMemberThunk';
 import { blockParams, isNonZero, STATUS_TONE, validityLine } from '../view-model/memberDisplay';
 
 import { CatalogueActionsMenu } from './CatalogueActionsMenu';
+import { MemberChargesSection } from './MemberChargesSection';
 
 import type { MemberDialogKind } from './MemberActionDialog';
 
@@ -284,28 +285,7 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
           </UbStack>
         </UbCard>
 
-        {member.chargesOpen.length > 0 && (
-          <UbCard padded>
-            <UbStack gap={2}>
-              <UbText variant="label">{t('library.member.chargesOpen')}</UbText>
-              {member.chargesOpen.map((charge) => (
-                <UbStack key={charge.id} direction="row" justify="between" gap={3}>
-                  <UbStack gap={0} className="min-w-0">
-                    <UbText variant="body-sm" className="line-clamp-2">
-                      {charge.description}
-                    </UbText>
-                    <UbText variant="caption" tone="tertiary">
-                      {[charge.number, formatBusinessDate(charge.chargeDate)].join(' · ')}
-                    </UbText>
-                  </UbStack>
-                  <UbText variant="body-sm-medium" className="shrink-0">
-                    {formatInr(charge.amountDue)}
-                  </UbText>
-                </UbStack>
-              ))}
-            </UbStack>
-          </UbCard>
-        )}
+        <MemberChargesSection member={member} t={t} />
 
         {member.periods.length > 0 && (
           <UbCard padded>
