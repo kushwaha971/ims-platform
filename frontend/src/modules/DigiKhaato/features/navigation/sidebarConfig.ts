@@ -28,7 +28,55 @@ import type { ModuleCode, PermissionCode } from 'src/types/domain.types';
  * user cannot read, simply does not exist in the menu — it is never rendered
  * disabled (§19.7.5).
  */
-export type NavSection = 'daily' | 'business' | 'insight' | 'account';
+export type NavSection = 'daily' | 'business' | 'books' | 'insight' | 'account';
+
+/**
+ * The owner's rule (4 Oct 2026): each kind of business gets its OWN menu. A
+ * reading room is not a shop with a library bolted on — it has students, seats,
+ * shifts and fees, and has no use for Bills, Purchases or a Cashbook in its
+ * sidebar. So every row names the workspace it belongs to, and the sidebar
+ * shows one workspace at a time. `'any'` rows (Team, Settings) appear in all.
+ *
+ * A business running more than one (a shop with a reading room upstairs) gets
+ * a switcher at the top of the menu; one running a single kind never sees it.
+ */
+export type Workspace = 'shop' | 'library' | 'lending';
+
+export interface WorkspaceConfig {
+  readonly code: Workspace;
+  readonly labelId: string;
+  /** The paths that put the menu in this workspace when a page under them is open. */
+  readonly prefixes: readonly string[];
+}
+
+/**
+ * In preference order for a business that has not picked one yet: a vertical
+ * before the shop, because a tenant that switched on Library or Lending did so
+ * to run that, and the shop rows are what every tenant gets by default.
+ */
+export const WORKSPACES: readonly WorkspaceConfig[] = [
+  { code: 'library', labelId: 'nav.workspace.library', prefixes: [ROUTES.LIBRARY_HOME] },
+  { code: 'lending', labelId: 'nav.workspace.lending', prefixes: ['/lending'] },
+  {
+    code: 'shop',
+    labelId: 'nav.workspace.shop',
+    // Not `/parties` or `/payments`: a library's student opens their khata and a
+    // fee receipt there, and that must not throw the menu back to the shop. Not
+    // `/dashboard` either: it is where sign-in, a business switch and the logo
+    // land, so it follows the workspace rather than choosing one, and sends a
+    // library on to the library's own first page.
+    prefixes: [
+      '/sales',
+      '/items',
+      '/stock',
+      '/purchases',
+      '/expenses',
+      '/cashbook',
+      '/ledger',
+      '/reports',
+    ],
+  },
+];
 
 export interface NavItemConfig {
   readonly key: string;
@@ -38,6 +86,8 @@ export interface NavItemConfig {
   readonly module: ModuleCode; // gated by tenant.enabled_modules
   readonly permission: PermissionCode; // gated by session.permissions
   readonly section: NavSection;
+  /** Which business's menu this row belongs to; `'any'` is shown in every one. */
+  readonly workspace: Workspace | 'any';
   readonly order: number;
   /** Shown in the mobile bottom nav (max 4 + "More"). */
   readonly bottomNav?: boolean;
@@ -64,6 +114,7 @@ export interface NavItemConfig {
 export const NAV_SECTIONS: readonly { readonly key: NavSection; readonly labelId: string }[] = [
   { key: 'daily', labelId: 'nav.section.daily' },
   { key: 'business', labelId: 'nav.section.business' },
+  { key: 'books', labelId: 'nav.section.books' },
   { key: 'insight', labelId: 'nav.section.insight' },
   { key: 'account', labelId: 'nav.section.account' },
 ];
@@ -73,6 +124,7 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
     // RPT-01 — the landing screen, first in the menu. UAT D8 removed the row
     // while `/dashboard` was a redirect to Customers; the page is built now.
     key: 'dashboard',
+    workspace: 'shop',
     ready: true,
     icon: LayoutDashboard,
     labelId: 'nav.dashboard',
@@ -84,6 +136,7 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
   },
   {
     key: 'parties',
+    workspace: 'shop',
     ready: true,
     icon: BookUser,
     labelId: 'nav.parties',
@@ -99,6 +152,7 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
     // rather than under Reports, because it is the collection round's starting
     // list, not a month-end document.
     key: 'aging',
+    workspace: 'shop',
     ready: true,
     icon: Hourglass,
     labelId: 'nav.aging',
@@ -110,6 +164,7 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
   },
   {
     key: 'reminders',
+    workspace: 'shop',
     icon: Wallet,
     labelId: 'nav.reminders',
     href: ROUTES.LEDGER_REMINDERS,
@@ -123,6 +178,7 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
   },
   {
     key: 'invoices',
+    workspace: 'shop',
     // SAL-02/03/06/07/08 — bills, drafts, walk-in cash sales, print and share.
     ready: true,
     icon: FileText,
@@ -136,6 +192,7 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
   },
   {
     key: 'items',
+    workspace: 'shop',
     // INV-01…INV-08 — items, adjustments, the stock summary and low stock.
     ready: true,
     icon: Boxes,
@@ -150,6 +207,7 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
   },
   {
     key: 'purchases',
+    workspace: 'shop',
     // PUR-01/03/04 — bills, drafts, record and void. Supplier payments are PUR-02.
     ready: true,
     icon: ShoppingCart,
@@ -163,6 +221,7 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
   {
     // PAY-01 … PAY-05 — ready as of the payments wave: list, record, receipt, void.
     key: 'payments',
+    workspace: 'shop',
     ready: true,
     icon: CreditCard,
     labelId: 'nav.payments',
@@ -175,6 +234,7 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
   {
     // EXP-01 — ready as of the expenses wave: list, drawer, void.
     key: 'expenses',
+    workspace: 'shop',
     ready: true,
     icon: Receipt,
     labelId: 'nav.expenses',
@@ -189,6 +249,7 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
     // Staff with `expenses.expense.read` see it too: their view is today's
     // till, which the server scopes (FR-13).
     key: 'cashbook',
+    workspace: 'shop',
     ready: true,
     icon: BookOpen,
     labelId: 'nav.cashbook',
@@ -201,18 +262,22 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
   {
     // F05 (LIB-06) — the counter, the screen a library uses most.
     key: 'libraryCounter',
+    workspace: 'library',
     ready: true,
     icon: ScanLine,
     labelId: 'nav.library.counter',
     href: ROUTES.LIBRARY_COUNTER,
     module: 'library',
     permission: 'library.loan.write',
-    section: 'daily',
-    order: 10,
+    // A study library's books are a side line (owner, 4 Oct 2026): students
+    // and seats come first, the book counter sits in its own group below.
+    section: 'books',
+    order: 2,
   },
   {
     // F04 (LIB-04) — the library's members.
     key: 'libraryMembers',
+    workspace: 'library',
     ready: true,
     icon: Users,
     labelId: 'nav.library.members',
@@ -226,18 +291,20 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
     // F03 (LIB-02) — the library's first page. Shown only while the library
     // module is on; each later library row arrives with its own page (F01).
     key: 'libraryCatalogue',
+    workspace: 'library',
     ready: true,
     icon: BookCopy,
     labelId: 'nav.library.catalogue',
     href: ROUTES.LIBRARY_CATALOGUE,
     module: 'library',
     permission: 'library.catalogue.read',
-    section: 'daily',
-    order: 13,
+    section: 'books',
+    order: 1,
   },
   {
     // F02 (LIB-01 §7) — the library's settings and counters.
     key: 'librarySettings',
+    workspace: 'library',
     ready: true,
     icon: Settings,
     labelId: 'nav.library.settings',
@@ -250,6 +317,7 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
   {
     // RPT-02/05/06 — the hub lists only the reports that are built.
     key: 'reports',
+    workspace: 'shop',
     ready: true,
     icon: BarChart3,
     labelId: 'nav.reports',
@@ -261,6 +329,7 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
   },
   {
     key: 'team',
+    workspace: 'any',
     ready: true,
     icon: Users,
     labelId: 'nav.team',
@@ -272,6 +341,7 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
   },
   {
     key: 'settings',
+    workspace: 'any',
     ready: true,
     icon: Settings,
     labelId: 'nav.settings',

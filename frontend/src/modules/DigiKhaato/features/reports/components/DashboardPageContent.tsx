@@ -21,6 +21,7 @@ import { ROUTES } from 'src/routes';
 
 import { LANDING_FALLBACK } from '../../navigation/landing';
 import { useLandingPath } from '../../navigation/useLandingPath';
+import { useNavigation } from '../../navigation/useNavigation';
 import { useDashboard } from '../hooks/useDashboard';
 import { isFirstUse } from '../view-model/dashboardDisplay';
 
@@ -64,14 +65,21 @@ export function DashboardPageContent(): React.JSX.Element {
   const { can, hasModule } = usePermissions();
   const dash = useDashboard();
   const landing = useLandingPath();
+  const { workspace } = useNavigation();
+
+  // Owner, 4 Oct 2026 — one menu per kind of business. Sign-in, a business
+  // switch and the logo all land here; a library or a lender is sent on to
+  // its own first page instead of a shop's dashboard.
+  const elsewhere = landing !== ROUTES.DASHBOARD && !!workspace;
 
   useEffect(() => {
     // Never back to this page: were the two gates ever to disagree, a loop on
     // the first screen after signing in is the worst place to find out.
     if (!dash.canRead) router.replace(landing === ROUTES.DASHBOARD ? LANDING_FALLBACK : landing);
-  }, [dash.canRead, landing, router]);
+    else if (elsewhere) router.replace(landing);
+  }, [dash.canRead, elsewhere, landing, router]);
 
-  if (!dash.canRead) return <UbPageSkeleton variant="card" />;
+  if (!dash.canRead || elsewhere) return <UbPageSkeleton variant="card" />;
 
   const { data } = dash;
   const state = data ? 'ready' : dash.status === 'failed' ? 'error' : 'loading';

@@ -226,13 +226,23 @@ describe('no copy for unbuilt features or retired behaviour (UAT D8)', () => {
     expect(hiMessages[key]).toBeUndefined();
   });
 
-  it.each(['common.action.goToDashboard', 'team.accept.goToDashboard', 'nav.brandHome'])(
+  it.each(['common.action.goToDashboard', 'team.accept.goToDashboard'])(
     '%s names the dashboard it links to, now that it exists (RPT-01)',
     (key) => {
       expect(enMessages[key]).toMatch(/dashboard/i);
       expect(hiMessages[key]).toMatch(/डैशबोर्ड/u);
     }
   );
+
+  /**
+   * The logo opens the workspace's first page (owner, 4 Oct 2026): a shop's
+   * dashboard, a library's students. Naming "Dashboard" would be wrong for
+   * the library, so it says "home", which is true for both.
+   */
+  it('nav.brandHome names home, which is where the logo goes in every workspace', () => {
+    expect(enMessages['nav.brandHome']).toMatch(/home/i);
+    expect(hiMessages['nav.brandHome']).toMatch(/होम/u);
+  });
 
   it('retires the old opening-balance key rather than leaving it to be reused', () => {
     expect(enMessages['parties.form.opening.notPostedYet']).toBeUndefined();

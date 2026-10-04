@@ -3,10 +3,13 @@
 import { usePathname } from 'next/navigation';
 
 import { UbLink, UbStack, UbText } from 'src/design-system';
+import { useAppSelector } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
+import { selectActiveTenant } from 'src/redux/slice/sessionSlice';
 import { cn } from 'src/utils/cn';
 
 import { useNavigation } from 'modules/DigiKhaato/features/navigation/useNavigation';
+import { rememberWorkspace } from 'modules/DigiKhaato/features/navigation/workspaceMemory';
 
 /**
  * The entitlement-driven navigation list, shared by the rail and the drawer.
@@ -29,10 +32,50 @@ export function NavSections({
 }: Readonly<{ onNavigate?: () => void }>): React.JSX.Element {
   const pathname = usePathname();
   const { t } = useTranslation();
-  const { sections } = useNavigation();
+  const { sections, workspaces, workspace } = useNavigation();
+  const tenantId = useAppSelector(selectActiveTenant)?.id ?? null;
 
   return (
     <UbStack gap={0} as="div" className="min-h-0 flex-1">
+      {workspaces.length > 1 && (
+        /* Owner, 4 Oct 2026 — one menu per kind of business. A business that
+           runs two (a shop with a reading room) switches between them here;
+           one that runs a single kind never sees this row. */
+        <UbStack
+          direction="row"
+          gap={1}
+          wrap
+          className="px-3 pt-3"
+          aria-label={t('nav.workspace.label')}
+          data-testid="nav-workspaces"
+        >
+          {workspaces.map((ws) => {
+            const current = ws.code === workspace;
+            return (
+              <UbLink
+                key={ws.code}
+                href={ws.href}
+                variant="inherit"
+                tone="inherit"
+                underline={false}
+                aria-current={current ? 'true' : undefined}
+                onClick={() => {
+                  if (tenantId) rememberWorkspace(tenantId, ws.code);
+                  onNavigate?.();
+                }}
+                className={cn(
+                  'ds-nav-label-medium rounded-xs border px-2 py-1',
+                  current
+                    ? 'border-border-navActive bg-surface-navActive text-text-onNav'
+                    : 'border-transparent text-text-onNavMuted hover:bg-surface-navHover hover:text-text-onNav'
+                )}
+              >
+                {t(ws.labelId)}
+              </UbLink>
+            );
+          })}
+        </UbStack>
+      )}
       {sections.map((section) => (
         /* Figma "menu": 12 px padding, a 10 px section label, rows 2 px apart. */
         <UbStack key={section.key} gap={0} className="gap-0.5 p-3">

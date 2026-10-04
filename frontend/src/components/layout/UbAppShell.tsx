@@ -14,8 +14,8 @@ import { useAppSelector } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { selectImpersonation } from 'src/redux/slice/sessionSlice';
 import { selectAppName } from 'src/redux/slice/whiteLabelSlice';
-import { ROUTES } from 'src/routes';
 
+import { useLandingPath } from 'modules/DigiKhaato/features/navigation/useLandingPath';
 import { NotificationBell } from 'modules/DigiKhaato/features/notifications/components/NotificationBell';
 import { useNotificationPoll } from 'modules/DigiKhaato/features/notifications/hooks/useNotificationPoll';
 import { PlanLimitDialog } from 'modules/DigiKhaato/features/plan/components/PlanLimitDialog';
@@ -61,6 +61,8 @@ export function UbAppShell({ children }: Readonly<{ children: ReactNode }>): Rea
   // NTF-01 FR-8 — one poll for the two bells (phone header, desktop bar).
   useNotificationPoll();
   const appName = useAppSelector(selectAppName);
+  // The logo opens this workspace's first page — a library's, not the shop's.
+  const landing = useLandingPath();
   const impersonating = useAppSelector(selectImpersonation) !== null;
 
   return (
@@ -95,7 +97,7 @@ export function UbAppShell({ children }: Readonly<{ children: ReactNode }>): Rea
               this is the only route out of the current screen. */}
           <MobileNavDrawer />
           <UbLink
-            href={ROUTES.DASHBOARD}
+            href={landing}
             tone="inherit"
             underline={false}
             aria-label={t('nav.brandHome', { appName })}
