@@ -46,6 +46,11 @@ def _section(tenant: Any, today: Any) -> dict:
     return {"members": 3, "as_of": today.isoformat()}
 
 
+def _probes() -> list[str]:
+    """The probe sections only: verticals (library, B14) register their own at start-up."""
+    return [s.key for s in registry.dashboard_sections() if s.key.startswith("inventory.")]
+
+
 def _register_probe(**overrides: Any) -> None:
     key = overrides.pop("key", "inventory.probe")
     kwargs: dict[str, Any] = {
@@ -65,7 +70,7 @@ def test_a_second_identical_registration_is_harmless() -> None:
     """ADR-042: a second `ready()` must not raise or duplicate."""
     _register_probe()
     _register_probe()
-    assert [s.key for s in registry.dashboard_sections()] == ["inventory.probe"]
+    assert _probes() == ["inventory.probe"]
 
 
 def test_a_different_registration_under_a_used_key_refuses_at_start_up() -> None:
@@ -111,7 +116,7 @@ def test_sections_come_back_in_order_then_key() -> None:
     _register_probe(key="inventory.b", order=5)
     _register_probe(key="inventory.a", order=5)
     _register_probe(key="inventory.c", order=1)
-    assert [s.key for s in registry.dashboard_sections()] == [
+    assert _probes() == [
         "inventory.c",
         "inventory.a",
         "inventory.b",
@@ -190,6 +195,22 @@ def test_a_section_needs_its_codename(tenant: Any, api_as: Any) -> None:
         "inventory.probe"
     ]
     assert accountant.get(reverse(DASHBOARD)).json()["data"]["sections"] == []
+
+
+def test_a_sections_redact_runs_per_reader(tenant: Any, api_as: Any) -> None:
+    """B14: a figure behind a second codename is ABSENT for a reader without it."""
+
+    def hide_members(data: dict, granted: frozenset) -> dict:
+        if "inventory.item.write" in granted:
+            return data
+        return {k: v for k, v in data.items() if k != "members"}
+
+    _register_probe(redact=hide_members)
+    owner, _ = api_as(tenant)
+    accountant, _ = api_as(tenant, role="accountant")
+    assert "members" in owner.get(reverse(DASHBOARD)).json()["data"]["sections"][0]["data"]
+    seen = accountant.get(reverse(DASHBOARD)).json()["data"]["sections"][0]["data"]
+    assert "members" not in seen and seen["as_of"]
 
 
 def test_sections_are_fresh_even_when_the_tiles_are_cached(tenant: Any, api_as: Any) -> None:
@@ -372,6 +393,7 @@ def test_no_registered_sections_costs_the_dashboard_no_query(tenant: Any, monkey
         raise AssertionError("effective_modules read with no section registered")
 
     monkeypatch.setattr(entitlements, "effective_modules", boom)
+    monkeypatch.setattr(registry, "_SECTIONS", {})
     with CaptureQueriesContext(connection) as queries:
         assert module_sections(tenant, tenant_today(tenant), granted=frozenset()) == []
     assert len(queries) == 0

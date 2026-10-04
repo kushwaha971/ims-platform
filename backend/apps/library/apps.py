@@ -118,3 +118,17 @@ class LibraryConfig(AppConfig):
 
         reminders.register()
         register_schedule(Schedule(tasks.OVERDUE_TODAY, period="daily", at_hour_ist=9, minute=0))
+
+        # ── B14 ── the library's block on the core dashboard (LIB-11 FR-1).
+        from apps.library.selectors.home import library_dashboard
+        from apps.library.selectors.home import redact as redact_money
+        from apps.reports.registry import register_dashboard_section
+
+        register_dashboard_section(
+            "library.today",
+            module="library",
+            permission="library.loan.read",
+            selector=library_dashboard,
+            order=20,
+            redact=redact_money,
+        )

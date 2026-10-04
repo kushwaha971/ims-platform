@@ -12,6 +12,7 @@ from apps.library.views import LibraryNumberingView, LibrarySettingsView
 from apps.library.views import catalogue as c
 from apps.library.views import charges as ch
 from apps.library.views import holds as hd
+from apps.library.views import home as hm
 from apps.library.views import loans as ln
 from apps.library.views import members as m
 from apps.library.views import memberships as mb
@@ -188,4 +189,6 @@ urlpatterns: list = [
         vr.WithdrawMissingView.as_view(),
         name="library-verification-withdraw-missing",
     ),
+    # ── B14 ── the library home (LIB-11 §6)
+    path("home", hm.LibraryHomeView.as_view(), name="library-home"),
 ]

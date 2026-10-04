@@ -1412,6 +1412,48 @@ Gates: backend non-slow 3703 passed; black/isort/flake8; migration `0008` clean.
 
 ---
 
+## B14 — dashboard section and library home
+
+- `selectors/home.py`: `library_dashboard(tenant, today)` returns the LIB-11 §6 shape in **one
+  statement** of scalar subqueries. Each subquery is tenant-scoped and served by an existing
+  index.
+  - Issued today excludes cancelled loans.
+  - Overdue counts both loans and distinct members.
+  - "Expiring in 7 days" covers active memberships whose `valid_until` falls within the next week.
+  - "Expired but holding" covers memberships that are not closed, are past `valid_until`, and
+    still have an open loan.
+  - Money is Σ open `amount_due` (G20) and Σ library deposits `held`.
+- `GET /library/home` returns the dashboard figures plus overdue-by-group (the top twelve) and
+  quick actions. Each quick action needs the codename of the screen it opens.
+- The section is registered from `ready()` as `library.today`, at order 20.
+  - **Deviation from LIB-11 §6:** the FRD key `library` is not a valid registry key. The
+    registry requires `<module>.<name>` (PLT-X13 BR-2).
+- **Core change (Track P to review):** `register_dashboard_section` takes an optional
+  `redact(data, granted)`. `module_sections` applies it per reader.
+  - Reason: a section selector receives only `(tenant, today)`, so it cannot meet FR-4 ("money
+    absent without `library.member.read`") without a reader.
+  - The change is backward-compatible. It has one registry test
+    (`test_a_sections_redact_runs_per_reader`).
+  - Three registry tests had assumed no section is registered at start-up. They now look only at
+    their own probe sections.
+- **Budget conflict.** The core section budget is 3 queries (`SECTION_QUERY_BUDGET`), while LIB-11
+  BR-4 allows 6. The library section uses 1, which satisfies both.
+
+`test_home.py` has 4 tests:
+- each figure, including a cancelled issue (T-LIB-11-1);
+- money absent on both the home and the core dashboard (T-LIB-11-2);
+- one query (T-LIB-11-3);
+- groups and actions.
+
+Gates: backend non-slow 3708 passed; black/isort/flake8.
+
+### QA round 1 (4 Oct 2026)
+
+No defects in the code. The test fixture had issued a third book to a member allowed two, which
+the counter correctly refused.
+
+---
+
 ## Open questions for the lead
 
 1. **G17 / G19 (order):** move the `library_membership` and period *schema* into B06, run B10 after

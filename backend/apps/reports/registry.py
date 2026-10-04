@@ -24,7 +24,8 @@ Rules (ADR-042, FRD 00 PLT-X13):
   `csv(tenant, params) -> Iterable[Sequence]` yields the header row first,
   then one sequence per row (numbers as `Decimal`/`int`, the rest as text).
 * Visibility is decided by the endpoint per reader — module enabled, codename
-  held — never here.
+  held — never here. A section whose figures need more than one codename
+  passes `redact(data, granted)`, which the endpoint applies per reader.
 * `_reset_for_tests()` restores what the apps registered at start-up.
 """
 
@@ -42,6 +43,8 @@ SECTION_QUERY_BUDGET = 3
 _KEY = re.compile(r"^(?P<module>[a-z][a-z0-9_]*)\.[a-z0-9][a-z0-9_]*$")
 
 SectionSelector = Callable[[Any, date], dict]
+#: `(data, granted) -> data` — what this reader may see of a computed section.
+SectionRedact = Callable[[dict, frozenset], dict]
 ReportSelector = Callable[[Any, dict], Any]
 ReportCsv = Callable[[Any, dict], Iterable[Sequence[Any]]]
 
@@ -53,6 +56,9 @@ class DashboardSection:
     permission: str
     selector: SectionSelector
     order: int
+    #: Optional: drop keys the reader's codenames do not cover (a section whose
+    #: money figures need a second codename, LIB-11 FR-4). Absent keys, not zeros.
+    redact: SectionRedact | None = None
 
 
 @dataclass(frozen=True)
@@ -90,14 +96,20 @@ def _put(store: dict, key: str, entry: Any, what: str) -> None:
 
 
 def register_dashboard_section(
-    key: str, *, module: str, permission: str, selector: SectionSelector, order: int
+    key: str,
+    *,
+    module: str,
+    permission: str,
+    selector: SectionSelector,
+    order: int,
+    redact: SectionRedact | None = None,
 ) -> None:
     """A module's block on `/dashboard`, below the core tiles, in `order`."""
     _check_key(key, module)
     _put(
         _SECTIONS,
         key,
-        DashboardSection(key, module, permission, selector, int(order)),
+        DashboardSection(key, module, permission, selector, int(order), redact),
         "dashboard section",
     )
 
