@@ -97,4 +97,13 @@ describe('UbField', () => {
     render(<Harness formErrors={['Something about the whole form']} />);
     expect(screen.getByText('Something about the whole form')).toBeInTheDocument();
   });
+
+  /**
+   * Found in QA: a sign-in submitted before hydration used the browser's
+   * default GET and put the password in the address bar. Every form posts.
+   */
+  it('posts, so a submit before hydration never puts fields in the URL', () => {
+    const { container } = render(<Harness />);
+    expect(container.querySelector('form')).toHaveAttribute('method', 'post');
+  });
 });

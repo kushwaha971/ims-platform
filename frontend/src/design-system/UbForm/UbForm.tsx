@@ -52,6 +52,11 @@ function UbFormBase<T extends FieldValues>({
     <FormProvider {...form}>
       <form
         id={id}
+        /* Found in QA (5 Oct 2026): a sign-in submitted before React had
+           hydrated fell back to the browser's default GET and put the email and
+           PASSWORD in the address bar, history and server log. POST keeps a
+           pre-hydration submit's fields in the body. */
+        method="post"
         noValidate
         onSubmit={form.handleSubmit(onSubmit, onInvalid)}
         /* BrandHub: 24 px between fields = the 20 px reserved message row
