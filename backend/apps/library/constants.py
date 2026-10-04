@@ -196,3 +196,20 @@ ACCESSION_SORT_MAX = 160
 MAX_COPIES_PER_REQUEST = 200
 YEAR_MIN = 1500
 YEAR_MAX = 2100
+
+# ── B06 ── membership types, loan rules and the membership schema (LIB-04 §5, LIB-05 §5)
+TYPE_NAME_MAX = 60
+TYPE_CODE_MAX = 16
+MEMBER_NUMBER_MAX = 24
+MEMBER_NUMBER_SORT_MAX = 160
+GROUP_LABEL_MAX = 40
+REASON_MAX = 160
+#: The type's columns (LIB-04 §5): (minimum, maximum) of each bounded integer.
+TYPE_BOUNDS = {
+    "max_copies": (0, 50),
+    "loan_days": (1, 365),
+    "max_renewals": (0, 20),
+    "grace_days": (0, 30),
+    "max_holds": (0, 20),
+    "validity_months": (1, 120),
+}

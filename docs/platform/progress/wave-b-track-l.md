@@ -856,7 +856,7 @@ Not checked: the EXPLAIN plan tests were not re-run separately (they are in the 
 
 ### Design note (review step)
 
-Status: design written; not started.
+Status: **built; QA round 1 clean** (see below).
 
 Inputs: LIB-04 FR-1, §5 (`library_membership_type`); LIB-05 FR-1, §4–§6, §9 BR-1/BR-2,
 T-LIB-05-1, EC-4; D29, D31; Q6 (library grace 0).
@@ -909,6 +909,33 @@ Gaps:
   `library_membership` and `library_membership_period`. B07 keeps their services, API, party role and
   archive guard.
 - Read access is "any `library.*.read`" (G9).
+
+---
+
+### Built (4 Oct 2026)
+
+`models/members.py` + `0004_membership_types` (types with every §5 CHECK and a unique
+`(tenant, lower(name))`; rules with `UNIQUE NULLS NOT DISTINCT (tenant, membership_type,
+material_type)`; and, per G17, the schema of `library_membership` and `library_membership_period`
+— `period.fee_charge` waits for B10's `library_charge`), four `tenant_data` rows,
+`services/rules.py` (pure `resolve_rule`, column by column, reference copies as `reference`,
+`allows_reference_loan`), `services/membership_types.py` (create, patch with `version`, no delete),
+`services/loan_rules.py` (`replace_rules` validates every row first and serialises on the settings
+row; `effective_matrix` for `meta.effective`), the seed (a "Standard" type and the
+`(null, reference, loanable=false)` rule only when the business has no type), `views/members.py`
+(`GET/POST /library/membership-types`, `PATCH /{id}`, `GET/PUT /library/loan-rules`), and
+`services/fields.py`: the catalogue's field cleaners, extracted for their second caller (+ `integer`).
+Tests: `test_members_config.py` (16: T-LIB-05-1 as eight cases incl. the mixed one, reference
+resolution, duplicate every-type rows, a bad row changes nothing, the matrix, bounds and a
+case-insensitive name, version and no delete, staff 403 / accountant 200, the seed).
+Gates: backend non-slow 3523 passed; black/isort/flake8; `makemigrations --check` clean.
+
+### QA round 1 (4 Oct 2026)
+
+Re-read against LIB-04 §5–§6, LIB-05 §5–§9 and the design note. No defect found: a deactivated
+type still resolves (the resolver never reads `is_active`); a rule change touches no open loan
+(there are none until B09, and loans will snapshot); deleting the reference rule makes reference
+copies loanable, which the settings tab must say (F02).
 
 ---
 

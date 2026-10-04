@@ -16,4 +16,9 @@ register(
     TenantTable("library.LibraryTitle", export_name="library_titles.csv"),
     TenantTable("library.LibraryCopy", export_name="library_copies.csv"),
     TenantTable("library.LibraryCopyEvent", export_name="library_copy_events.csv"),
+    # ── B06 ── types, rules, and the membership schema (G17)
+    TenantTable("library.LibraryMembershipType", export_name="library_membership_types.csv"),
+    TenantTable("library.LibraryLoanRule", export_name="library_loan_rules.csv"),
+    TenantTable("library.LibraryMembership", export_name="library_memberships.csv"),
+    TenantTable("library.LibraryMembershipPeriod", export_name="library_membership_periods.csv"),
 )

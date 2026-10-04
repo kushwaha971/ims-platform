@@ -20,9 +20,6 @@ savepoint, for the race between two devices typing the same number.
 
 from __future__ import annotations
 
-import datetime as dt
-import uuid
-from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from django.db import IntegrityError, transaction
@@ -64,108 +61,18 @@ from apps.library.models import (
     LibraryTitle,
 )
 from apps.library.services import codes, copy_status, isbn
+from apps.library.services.fields import Errors as _Errors
+from apps.library.services.fields import boolean as _bool
+from apps.library.services.fields import choice as _choice
+from apps.library.services.fields import date as _date
+from apps.library.services.fields import money as _money
+from apps.library.services.fields import owned as _owned
+from apps.library.services.fields import text as _text
+from apps.library.services.fields import uuid_or_none as _uuid
 from apps.platform_app.services import sequences
 
 ACCESSION_KIND = "library_accession"
-MONEY_MAX = Decimal("99999999.99")
 NUMBER_MESSAGE = codes.MESSAGE
-
-# ── Small cleaners (each returns the value or records a per-field message) ────
-
-
-class _Errors(dict):
-    def add(self, field: str, message: str) -> None:
-        self.setdefault(field, []).append(message)
-
-    def raise_if_any(self) -> None:
-        if self:
-            raise ValidationFailed(dict(self))
-
-
-def _text(errors: _Errors, data: dict, field: str, limit: int, *, required: bool = False) -> Any:
-    value = data.get(field, "")
-    if value is None:
-        value = ""
-    if not isinstance(value, str):
-        errors.add(field, "Enter text.")
-        return None
-    value = value.strip()
-    if required and not value:
-        errors.add(field, "This field is required.")
-        return None
-    if len(value) > limit:
-        errors.add(field, f"Use at most {limit} characters.")
-        return None
-    return value
-
-
-def _choice(errors: _Errors, data: dict, field: str, choices: Any, default: str) -> Any:
-    value = data.get(field, default)
-    if value not in choices.values:
-        errors.add(field, "Choose one of the options.")
-        return None
-    return value
-
-
-def _money(errors: _Errors, data: dict, field: str) -> Any:
-    value = data.get(field)
-    if value in (None, ""):
-        return None
-    if isinstance(value, bool) or not isinstance(value, (str, int, float, Decimal)):
-        errors.add(field, "Enter an amount.")
-        return None
-    try:
-        amount = Decimal(str(value).strip())
-    except InvalidOperation:
-        errors.add(field, "Enter an amount.")
-        return None
-    if (
-        not amount.is_finite()
-        or amount != amount.quantize(Decimal("0.01"))
-        or not Decimal("0") <= amount <= MONEY_MAX
-    ):
-        errors.add(field, "Enter an amount from 0 to 99,999,999.99.")
-        return None
-    return amount.quantize(Decimal("0.01"))
-
-
-def _date(errors: _Errors, data: dict, field: str) -> Any:
-    value = data.get(field)
-    if value in (None, ""):
-        return None
-    try:
-        return dt.date.fromisoformat(str(value))
-    except ValueError:
-        errors.add(field, "Enter a date as YYYY-MM-DD.")
-        return None
-
-
-def _bool(errors: _Errors, data: dict, field: str, default: bool = False) -> Any:
-    value = data.get(field, default)
-    if not isinstance(value, bool):
-        errors.add(field, "Choose yes or no.")
-        return None
-    return value
-
-
-def _uuid(raw: Any) -> uuid.UUID | None:
-    try:
-        return uuid.UUID(str(raw))
-    except (ValueError, TypeError, AttributeError):
-        return None
-
-
-def _owned(model: Any, tenant: Any, raw: Any, errors: _Errors, field: str) -> Any:
-    """A live row of `model` in this tenant by id, or a field error (never 404:
-    the id is a field of the body, and another tenant's id is "not a choice")."""
-    if raw in (None, ""):
-        return None
-    pk = _uuid(raw)
-    row = model.objects.filter(tenant=tenant, pk=pk).first() if pk else None
-    if row is None:
-        errors.add(field, "Choose one of the options.")
-    return row
-
 
 # ── Title fields ─────────────────────────────────────────────────────────────
 

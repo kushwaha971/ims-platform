@@ -9,13 +9,23 @@ from apps.library.models.catalogue import (
     LibraryLocation,
     LibraryTitle,
 )
+from apps.library.models.members import (
+    LibraryLoanRule,
+    LibraryMembership,
+    LibraryMembershipPeriod,
+    LibraryMembershipType,
+)
 from apps.library.models.settings import LibrarySettings
 
 __all__ = [
     "LibraryCategory",
     "LibraryCopy",
     "LibraryCopyEvent",
+    "LibraryLoanRule",
     "LibraryLocation",
+    "LibraryMembership",
+    "LibraryMembershipPeriod",
+    "LibraryMembershipType",
     "LibrarySettings",
     "LibraryTitle",
 ]

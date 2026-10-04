@@ -1,6 +1,6 @@
 """URL routes for the library vertical, mounted at `/api/v1/library/`.
 
-B03 settings, B05 the catalogue. Every route is behind
+B03 settings, B05 the catalogue, B06 membership types and loan rules. Every route is behind
 `ModuleEnabled("library")`, which refuses an unreleased module first (A1).
 """
 
@@ -10,6 +10,7 @@ from django.urls import path
 
 from apps.library.views import LibraryNumberingView, LibrarySettingsView
 from apps.library.views import catalogue as c
+from apps.library.views import members as m
 
 urlpatterns: list = [
     path("settings", LibrarySettingsView.as_view(), name="library-settings"),
@@ -45,4 +46,12 @@ urlpatterns: list = [
     ),
     path("locations", c.LocationListView.as_view(), name="library-locations"),
     path("locations/<uuid:location_id>", c.LocationDetailView.as_view(), name="library-location"),
+    # ── B06 ── membership types and loan rules (LIB-04 §6, LIB-05 §6)
+    path("membership-types", m.MembershipTypeListView.as_view(), name="library-membership-types"),
+    path(
+        "membership-types/<uuid:type_id>",
+        m.MembershipTypeDetailView.as_view(),
+        name="library-membership-type",
+    ),
+    path("loan-rules", m.LoanRuleView.as_view(), name="library-loan-rules"),
 ]

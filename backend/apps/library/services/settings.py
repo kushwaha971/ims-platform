@@ -97,8 +97,28 @@ def settings_for(tenant: Any, *, actor: Any = None) -> LibrarySettings:
 
 
 def seed_library(ctx: Any, tenant: Any) -> None:
-    """The enable hook (FR-2, BR-4): the settings row if absent, and nothing else."""
-    settings_for(tenant, actor=getattr(ctx, "actor", None))
+    """The enable hook (FR-2, BR-4): the settings row if absent, and — on the first switch-on
+    only, when the business has no membership type at all — a "Standard" type and the one
+    seeded rule, reference copies not for loan (LIB-05 §5).
+
+    "First switch-on" is read as "no type exists": a library that later deletes its reference
+    rule and switches the module off and on again keeps its own rules (B06 test 6).
+    """
+    from apps.library.models import LibraryLoanRule, LibraryMembershipType
+
+    actor = getattr(ctx, "actor", None)
+    settings_for(tenant, actor=actor)
+    if LibraryMembershipType.objects.filter(tenant=tenant).exists():
+        return
+    LibraryMembershipType.objects.create(tenant=tenant, created_by=actor, name="Standard")
+    if not LibraryLoanRule.objects.filter(tenant=tenant).exists():
+        LibraryLoanRule.objects.create(
+            tenant=tenant,
+            created_by=actor,
+            membership_type=None,
+            material_type="reference",
+            loanable=False,
+        )
 
 
 def settings_json(row: LibrarySettings) -> dict:
