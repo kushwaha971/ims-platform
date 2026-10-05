@@ -1167,7 +1167,8 @@
   "F05 (4 Oct 2026, the counter) — /library/counter measured 61.6 / 295.2: the scan queue, the member panel and the session list; the override and finish prompts are dynamic() and preloaded on idle. Shared app unchanged at 106.4. Eighteen routes sat within 0.6 KB over a ceiling the F04 raise had set at measured + 0.5 — the library invalidation map grew by the three counter thunks and the same chunk regrouping moved the rest by 0.1-0.3 — and were raised by the same rule.",
   "W01-W03 (5 Oct 2026, a study library's own menu, seats, shifts and fees) — measured against a build of F06 (32948842): every (app) route's chunk moved by 1.1-1.3 KB, which is the per-workspace navigation (WORKSPACES, the switcher, three new library rows with two new icons, and useNavigation now read by the top bar and the phone search so the party search shows only in the shop); the library routes moved 2.2-3.9 KB on top, from the seat and plan thunks in the library invalidation map, the members' seat, shift and fee fields and, on /library/members, the shift filter's seats slice. /library/seats (61.1 / 294.6) and /library/fees (57.5 / 291.0) are new. Shared app 106.2 -> 106.3, within its 107. Every route over its ceiling was raised by the measured + 0.5 rule (59 routes).",
   "W04 (5 Oct 2026, the reading room's home) — /library is new at 61.1 / 294.5: the stat tiles, the per-shift progress bars and the who-has-to-pay list; raised by the measured + 0.5 rule. /cashbook sat at its 86 ceiling by a rounding hair (measured 86.0) and moved to 87.",
-  "W05 (5 Oct 2026, the reading room's attendance) — /library/attendance is new at 60.7 / 294.2 after its day picker was made dynamic() (statically it was 86.7: the calendar is ~26 KB and the desk marks today without opening it). The attendance thunks joined the library invalidation map, which moved the library routes 0.2-0.9 KB and, through chunk regrouping, a few core routes by up to 0.5; 19 routes at or over a ceiling were raised by the measured + 0.5 rule."
+  "W05 (5 Oct 2026, the reading room's attendance) — /library/attendance is new at 60.7 / 294.2 after its day picker was made dynamic() (statically it was 86.7: the calendar is ~26 KB and the desk marks today without opening it). The attendance thunks joined the library invalidation map, which moved the library routes 0.2-0.9 KB and, through chunk regrouping, a few core routes by up to 0.5; 19 routes at or over a ceiling were raised by the measured + 0.5 rule.",
+  "W06 (5 Oct 2026, WhatsApp messages handled like reminders) — /library/messages is new at 59.4 / 293.0; the message dialog is dynamic() on both screens that open it. The three message thunks joined the library invalidation map, moving the library routes 0.1-0.4 KB; 12 routes at or over a ceiling were raised by the measured + 0.5 rule."
  ],
  "default": {
   "route": 56,
@@ -1403,7 +1404,7 @@
    "firstLoad": 290
   },
   "/library/catalogue": {
-   "route": 67,
+   "route": 68,
    "firstLoad": 301
   },
   "/library/copies": {
@@ -1412,43 +1413,43 @@
   },
   "/library/copies/[copyId]": {
    "route": 63,
-   "firstLoad": 296
+   "firstLoad": 297
   },
   "/library/settings": {
    "route": 106,
-   "firstLoad": 339
+   "firstLoad": 340
   },
   "/library/members": {
    "route": 72,
    "firstLoad": 305
   },
   "/library/members/[membershipId]": {
-   "route": 67,
+   "route": 68,
    "firstLoad": 301
   },
   "/library/catalogue/[titleId]": {
-   "route": 60,
+   "route": 61,
    "firstLoad": 294
   },
   "/library/catalogue/categories": {
-   "route": 58,
+   "route": 59,
    "firstLoad": 292
   },
   "/library/catalogue/locations": {
-   "route": 58,
+   "route": 59,
    "firstLoad": 292
   },
   "/library/counter": {
-   "route": 68,
+   "route": 69,
    "firstLoad": 302
   },
   "/library/seats": {
-   "route": 62,
+   "route": 63,
    "firstLoad": 296
   },
   "/library/fees": {
    "route": 59,
-   "firstLoad": 292
+   "firstLoad": 293
   },
   "/signup": {
    "route": 51,
@@ -1491,12 +1492,16 @@
    "firstLoad": 234
   },
   "/library": {
-   "route": 62,
+   "route": 63,
    "firstLoad": 296
   },
   "/library/attendance": {
    "route": 62,
    "firstLoad": 295
+  },
+  "/library/messages": {
+   "route": 60,
+   "firstLoad": 294
   }
  },
  "//ignoreRoutes": [

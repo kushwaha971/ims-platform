@@ -4,7 +4,16 @@ import { useEffect, useState } from 'react';
 
 import dynamic from 'next/dynamic';
 
-import { Armchair, Ban, CirclePlay, DoorClosed, RefreshCw, UserRoundPlus } from 'lucide-react';
+import {
+  Armchair,
+  Ban,
+  CirclePlay,
+  DoorClosed,
+  MessageCircle,
+  Receipt,
+  RefreshCw,
+  UserRoundPlus,
+} from 'lucide-react';
 
 import {
   UbActionLink,
@@ -47,6 +56,7 @@ import { MemberAttendanceStrip } from './MemberAttendanceStrip';
 import { MemberChargesSection } from './MemberChargesSection';
 
 import type { MemberDialogKind } from './MemberActionDialog';
+import type { MessageKind } from '../types/message.types';
 
 /** Each act's dialog loads with the tap that opens it (CLAUDE.md). */
 const MemberActionDialogLazy = dynamic(
@@ -54,6 +64,10 @@ const MemberActionDialogLazy = dynamic(
   { ssr: false }
 );
 
+const MessageDialogLazy = dynamic(
+  () => import('./MessageDialog').then((m) => m.MessageDialog),
+  { ssr: false }
+);
 const SeatDialogLazy = dynamic(() => import('./SeatDialog').then((m) => m.SeatDialog), {
   ssr: false,
 });
@@ -74,6 +88,7 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
   const today = todayInTenantTz(timezone ?? undefined);
   const [dialog, setDialog] = useState<MemberDialogKind | null>(null);
   const [seating, setSeating] = useState(false);
+  const [messaging, setMessaging] = useState<MessageKind | null>(null);
   const { member } = detail;
 
   useEffect(() => {
@@ -173,6 +188,27 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
             <CatalogueActionsMenu
               t={t}
               items={[
+                {
+                  key: 'remind',
+                  label: t('library.messages.kind.fee.menu'),
+                  icon: MessageCircle,
+                  action:
+                    detail.canWrite && !closed && member.feeState !== 'paid'
+                      ? () => setMessaging('fee')
+                      : undefined,
+                },
+                {
+                  key: 'welcome',
+                  label: t('library.messages.kind.welcome.menu'),
+                  icon: MessageCircle,
+                  action: detail.canWrite && !closed ? () => setMessaging('welcome') : undefined,
+                },
+                {
+                  key: 'receipt',
+                  label: t('library.messages.kind.receipt.menu'),
+                  icon: Receipt,
+                  action: detail.canWrite ? () => setMessaging('receipt') : undefined,
+                },
                 {
                   key: 'seat',
                   label: t(member.seat ? 'library.place.change' : 'library.place.give'),
@@ -405,6 +441,14 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
         )}
       </UbStack>
 
+      {messaging && (
+        <MessageDialogLazy
+          membershipId={member.membershipId}
+          name={member.name}
+          kind={messaging}
+          onClose={() => setMessaging(null)}
+        />
+      )}
       {seating && (
         <SeatDialogLazy
           member={member}

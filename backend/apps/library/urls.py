@@ -79,6 +79,13 @@ urlpatterns: list = [
         at.AttendanceOutView.as_view(),
         name="library-attendance-out",
     ),
+    # ── W06 ── WhatsApp messages handled like reminders
+    path("fee-reminders", at.FeeRemindersView.as_view(), name="library-fee-reminders"),
+    path(
+        "members/<uuid:membership_id>/message/<str:kind>",
+        at.MemberMessageView.as_view(),
+        name="library-member-message",
+    ),
     path(
         "members/<uuid:membership_id>/attendance",
         at.MemberAttendanceView.as_view(),

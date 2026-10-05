@@ -40,6 +40,8 @@ export const LIBRARY_QUERIES = {
   fetchLibraryHome: 'libraryHome/fetch',
   fetchLibraryAttendance: 'libraryAttendance/fetch',
   fetchMemberAttendance: 'libraryAttendance/fetchMember',
+  fetchFeeReminders: 'libraryMessages/fetch',
+  prepareLibraryMessage: 'libraryMessages/prepare',
 } as const satisfies Record<string, string>;
 
 export const LIBRARY_MUTATIONS = {
@@ -74,6 +76,7 @@ export const LIBRARY_MUTATIONS = {
   saveLibraryPlan: 'libraryMemberList/savePlan',
   checkInLibraryStudent: 'libraryAttendance/checkIn',
   checkOutLibraryStudent: 'libraryAttendance/checkOut',
+  recordLibraryMessage: 'libraryMessages/record',
 } as const satisfies Record<string, string>;
 
 export type TLibraryQueryName = keyof typeof LIBRARY_QUERIES;
@@ -177,6 +180,8 @@ export const LIBRARY_INVALIDATION: Readonly<
   // (refetched: the answer is one row's mark, not the day) and the home.
   checkInLibraryStudent: { refetch: ['libraryAttendance'], stale: ['libraryHome'] },
   checkOutLibraryStudent: { refetch: ['libraryAttendance'], stale: ['libraryHome'] },
+  // W06 — a recorded message ticks "sent today" on the list.
+  recordLibraryMessage: { refetch: ['libraryMessages'] },
 };
 
 registerInvalidation({
@@ -205,5 +210,6 @@ registerInvalidation({
     'librarySeats',
     'libraryHome',
     'libraryAttendance',
+    'libraryMessages',
   ],
 });

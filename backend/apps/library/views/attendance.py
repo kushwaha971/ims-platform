@@ -87,3 +87,41 @@ class MemberAttendanceView(_AttendanceView):
         month = _day(f"{raw}-01" if raw else None, tenant_today(tenant), "month")
         days = attendance.month_days(tenant, membership_id, month)
         return StandardResponse.ok(days, meta={"month": month.strftime("%Y-%m")})
+
+
+class FeeRemindersView(_AttendanceView):
+    """`GET /library/fee-reminders` — today's scheduled fee messages (W06)."""
+
+    def get(self, request: Any) -> Any:
+        from apps.library.services import fee_messages
+
+        return StandardResponse.ok(fee_messages.due_today(get_effective_tenant(request)))
+
+
+class MemberMessageView(_AttendanceView):
+    """`GET|POST /library/members/<id>/message/<kind>` — kind fee | welcome | receipt.
+
+    GET prepares the text and the link and records nothing; POST is the tap that
+    opens WhatsApp and records it like a reminder (W06).
+    """
+
+    def get(self, request: Any, membership_id: Any, kind: str) -> Any:
+        from apps.library.services import fee_messages
+
+        return StandardResponse.ok(
+            fee_messages.preview(
+                ctx=Ctx.from_request(request), membership_id=membership_id, kind=kind
+            )
+        )
+
+    def post(self, request: Any, membership_id: Any, kind: str) -> Any:
+        from apps.library.services import fee_messages
+
+        return StandardResponse.ok(
+            fee_messages.send(
+                ctx=Ctx.from_request(request),
+                membership_id=membership_id,
+                kind=kind,
+                data=request.data if isinstance(request.data, dict) else {},
+            )
+        )

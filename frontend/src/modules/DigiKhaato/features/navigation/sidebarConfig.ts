@@ -6,6 +6,7 @@ import {
   BookOpen,
   BookUser,
   CalendarCheck,
+  MessageCircle,
   Boxes,
   CreditCard,
   FileText,
@@ -346,6 +347,19 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
     permission: 'library.member.read',
     section: 'daily',
     order: 5,
+  },
+  {
+    // W06 — today's fee messages, sent by hand like reminders.
+    key: 'libraryMessages',
+    workspace: 'library',
+    ready: true,
+    icon: MessageCircle,
+    labelId: 'nav.library.messages',
+    href: ROUTES.LIBRARY_MESSAGES,
+    module: 'library',
+    permission: 'library.member.read',
+    section: 'daily',
+    order: 6,
   },
   {
     // F03 (LIB-02) — the library's first page. Shown only while the library

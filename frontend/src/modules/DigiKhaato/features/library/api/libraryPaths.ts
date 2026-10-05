@@ -44,4 +44,7 @@ export const LIBRARY_PATHS = {
   ATTENDANCE: '/library/attendance',
   ATTENDANCE_OUT: (id: string) => `/library/attendance/${seg(id)}/out`,
   MEMBER_ATTENDANCE: (id: string) => `/library/members/${seg(id)}/attendance`,
+  MEMBER_MESSAGE: (id: string, kind: string) =>
+    `/library/members/${seg(id)}/message/${encodeURIComponent(kind)}`,
+  FEE_REMINDERS: '/library/fee-reminders',
 } as const;
