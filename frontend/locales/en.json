@@ -216,6 +216,7 @@
   "team.member.add.error": "We could not add that person",
   "team.members.error.title": "We could not load your team",
   "team.revoke.error": "We could not revoke that invitation",
+  "tenant.switcher.apps.error": "That did not work. Try again.",
   "tenant.switcher.leave.error": "Could not leave the business.",
   "tenant.switcher.setDefault.error": "Could not set the default business.",
   "tenant.switcher.staleTab": "This business was switched in another tab. Reloading…",

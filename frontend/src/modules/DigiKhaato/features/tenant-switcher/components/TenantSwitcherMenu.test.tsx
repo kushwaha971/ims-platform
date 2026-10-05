@@ -19,6 +19,8 @@ import { TenantSwitcherMenu } from './TenantSwitcherMenu';
 jest.mock('../../auth/api/authService');
 const authService = jest.requireMock('../../auth/api/authService') as {
   switchApp: jest.Mock;
+  setAppRunning: jest.Mock;
+  leaveApp: jest.Mock;
   getSession: jest.Mock;
 };
 
@@ -34,7 +36,18 @@ const APPS: SessionApp[] = [
   { code: 'lending', labelId: 'nav.workspace.lending', homePath: '/lending', order: 20 },
 ];
 
-const load = (apps: SessionApp[]) =>
+const load = (
+  apps: SessionApp[],
+  {
+    role = 'owner',
+    addable = [],
+    others = [],
+  }: {
+    role?: string;
+    addable?: SessionApp[];
+    others?: { id: string; name: string; role: string }[];
+  } = {}
+) =>
   store.dispatch(
     sessionLoaded({
       user: {
@@ -46,28 +59,106 @@ const load = (apps: SessionApp[]) =>
         mustChangePassword: false,
         passwordExpiresAt: null,
       },
-      activeTenant: { id: 't1', name: 'Verma Finance', timezone: 'Asia/Kolkata', role: 'owner' },
+      activeTenant: { id: 't1', name: 'Verma Finance', timezone: 'Asia/Kolkata', role },
       tenants: [
         {
           id: 't1',
           name: 'Verma Finance',
           timezone: 'Asia/Kolkata',
-          role: 'owner',
+          role,
           status: 'active',
           membershipId: 'm1',
         },
+        ...others.map((other, index) => ({
+          ...other,
+          timezone: 'Asia/Kolkata',
+          status: 'active' as const,
+          membershipId: `m${index + 2}`,
+        })),
       ],
       permissions: ['library.member.read', 'lending.loan.read'] as PermissionCode[],
       enabledModules: ['library', 'lending', 'platform'],
       version: 1,
       apps,
       activeApp: 'library',
+      appsAddable: addable,
     })
   );
 
 beforeEach(() => {
   jest.clearAllMocks();
   authService.switchApp.mockImplementation(() => new Promise(() => undefined));
+});
+
+const LENDING = APPS[1] as SessionApp;
+const LIBRARY = APPS[0] as SessionApp;
+const after = (apps: SessionApp[], activeApp: string) => ({
+  user: store.getState().session.user,
+  activeTenant: store.getState().session.activeTenant,
+  tenants: store.getState().session.tenants,
+  permissions: [],
+  enabledModules: [],
+  version: 2,
+  apps,
+  activeApp,
+  appsAddable: [],
+});
+
+describe('step 4 — businesses you own and where you work', () => {
+  it('lists them under two headings', async () => {
+    load([LIBRARY], { others: [{ id: 't2', name: 'Sharma Traders', role: 'staff' }] });
+    renderWithProviders(<TenantSwitcherMenu rail caption="YourKhata" />);
+    await userEvent.click(screen.getByRole('button', { name: /Verma Finance/ }));
+    const labels = await screen.findAllByText(/Your businesses|Where you work/);
+    expect(labels.map((node) => node.textContent)).toEqual(['Your businesses', 'Where you work']);
+    expect(screen.getByRole('menuitem', { name: /Sharma Traders/ })).toBeInTheDocument();
+  });
+});
+
+describe('step 4 — the owner adds and turns off apps', () => {
+  it('offers an app the plan has, runs it and opens its home', async () => {
+    load([LIBRARY], { addable: [LENDING] });
+    authService.setAppRunning.mockResolvedValue(after([LIBRARY, LENDING], 'library'));
+    renderWithProviders(<TenantSwitcherMenu rail caption="YourKhata" />);
+    await userEvent.click(screen.getByRole('button', { name: /Verma Finance/ }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Add Lending' }));
+    await waitFor(() => expect(authService.setAppRunning).toHaveBeenCalledWith('lending', true));
+    await waitFor(() => expect(authService.switchApp).toHaveBeenCalledWith('lending'));
+  });
+
+  it('turns the open app off for the business, after saying what that means', async () => {
+    load(APPS);
+    authService.setAppRunning.mockResolvedValue(after([LENDING], 'lending'));
+    renderWithProviders(<TenantSwitcherMenu rail caption="YourKhata" />);
+    await userEvent.click(screen.getByRole('button', { name: /Verma Finance/ }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Turn off Library' }));
+    expect(await screen.findByText(/Nothing is deleted/)).toBeInTheDocument();
+    expect(authService.setAppRunning).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'Turn off Library' }));
+    await waitFor(() => expect(authService.setAppRunning).toHaveBeenCalledWith('library', false));
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/lending'));
+  });
+
+  it('never offers the owner "Leave", nor anyone else "Add" or "Turn off"', async () => {
+    load(APPS, { role: 'staff', addable: [] });
+    renderWithProviders(<TenantSwitcherMenu rail caption="YourKhata" />);
+    await userEvent.click(screen.getByRole('button', { name: /Verma Finance/ }));
+    await screen.findByRole('menuitem', { name: 'Leave Library' });
+    expect(screen.queryByRole('menuitem', { name: /Turn off|^Add (Library|Lending|Shop)/ })).toBeNull();
+  });
+});
+
+describe('step 4 — anyone else leaves an app', () => {
+  it('takes themselves out of the open app and goes to the one they keep', async () => {
+    load(APPS, { role: 'staff' });
+    authService.leaveApp.mockResolvedValue(after([LENDING], 'lending'));
+    renderWithProviders(<TenantSwitcherMenu rail caption="YourKhata" />);
+    await userEvent.click(screen.getByRole('button', { name: /Verma Finance/ }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Leave Library' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Leave Library' }));
+    await waitFor(() => expect(authService.leaveApp).toHaveBeenCalledWith('library'));
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/lending'));
+  });
 });
 
 describe('choosing an app', () => {

@@ -67,6 +67,11 @@ export const INVALIDATION: TInvalidationMap = {
   // (grants scope the business, not the app open). Only which app the person
   // is in moves, and the session slice writes it from this action's payload.
   switchApp: { patch: [['session', 'activeApp']] },
+  // The business's apps (and with them its modules) or this person's grants
+  // move. Same business and token, so nothing a feature cached belongs to
+  // someone else; the session slice re-reads the whole body from the answer.
+  setAppRunning: { patch: [['session', 'apps']] },
+  leaveApp: { patch: [['session', 'apps']] },
   logout: { resetAll: true },
 
   // ── PLT-02 / CR-2026-09-19-A — authentication ─────────────────────────────

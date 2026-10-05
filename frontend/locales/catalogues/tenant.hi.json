@@ -16,6 +16,14 @@
   "tenant.status.suspended": "निलंबित",
   "tenant.switcher.add": "नया व्यापार जोड़ें",
   "tenant.switcher.apps": "ऐप्स",
+  "tenant.switcher.apps.add": "{app} जोड़ें",
+  "tenant.switcher.apps.leave": "{app} छोड़ें",
+  "tenant.switcher.apps.leave.body": "यहाँ आपको {app} नहीं दिखेगा। आपके बाकी ऐप बने रहेंगे, और मालिक आपको फिर जोड़ सकते हैं।",
+  "tenant.switcher.apps.leave.title": "{business} में {app} छोड़ें?",
+  "tenant.switcher.apps.turnOff": "{app} बंद करें",
+  "tenant.switcher.apps.turnOff.body": "यहाँ सबके लिए इसका मेन्यू हट जाएगा। कुछ भी मिटेगा नहीं, और आप इसी मेन्यू से इसे फिर चालू कर सकते हैं।",
+  "tenant.switcher.apps.turnOff.title": "{business} के लिए {app} बंद करें?",
+  "tenant.switcher.apps.working": "हो रहा है…",
   "tenant.switcher.defaultSet": "यह व्यापार डिफ़ॉल्ट रूप से खुलेगा।",
   "tenant.switcher.invitations": "आमंत्रण",
   "tenant.switcher.isDefault": "डिफ़ॉल्ट रूप से खुलता है",
@@ -29,5 +37,6 @@
   "tenant.switcher.setDefault": "इसे डिफ़ॉल्ट रूप से खोलें",
   "tenant.switcher.switched": "अब {name} में",
   "tenant.switcher.title": "आपके व्यापार",
-  "tenant.switcher.trigger": "मौजूदा व्यापार: {name}। व्यापार बदलें"
+  "tenant.switcher.trigger": "मौजूदा व्यापार: {name}। व्यापार बदलें",
+  "tenant.switcher.workAt": "जहाँ आप काम करते हैं"
 }

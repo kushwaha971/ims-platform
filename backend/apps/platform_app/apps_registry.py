@@ -112,6 +112,18 @@ def apps_of_business(tenant: Any) -> tuple[AppSpec, ...]:
     return tuple(a for a in registered_apps() if a.anchor in effective)
 
 
+def addable_apps(tenant: Any) -> tuple[AppSpec, ...]:
+    """The apps this business could start running: not running yet, and its plan
+    (and partner) includes the app's anchor. An unreleased app is never offered
+    (`modules_view` already leaves hidden modules out of `available`).
+    """
+    from apps.platform_app.services.tenant_settings import modules_view
+
+    available = set(modules_view(tenant)["available"])
+    running = {a.code for a in apps_of_business(tenant)}
+    return tuple(a for a in registered_apps() if a.code not in running and a.anchor in available)
+
+
 def grants_of(membership: Any) -> dict[str, Any]:
     """`{app_code: role}` for a membership, cached on the instance for the request.
 

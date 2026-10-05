@@ -184,6 +184,13 @@ def build(
         "landing": resolve_landing(user=user, membership=membership, tenants=tenants, app=current),
         "apps": [apps_registry.app_json(a) for a in apps],
         "active_app": current.code if current is not None else None,
+        # §6 decision 3 — the owner adds apps from the switcher: the ones this
+        # business could run and does not. Nobody else is offered any.
+        "apps_addable": (
+            [apps_registry.app_json(a) for a in apps_registry.addable_apps(membership.tenant)]
+            if membership is not None and apps_registry.is_business_owner(membership)
+            else []
+        ),
         "active_tenant_id": str(membership.tenant_id) if membership is not None else None,
         "active_tenant": active_tenant_block(membership.tenant) if membership else None,
         "permissions": permissions,

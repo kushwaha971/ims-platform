@@ -13,7 +13,9 @@ import {
 } from 'modules/DigiKhaato/features/auth/redux/authThunk';
 import {
   fetchSession,
+  leaveApp,
   logout,
+  setAppRunning,
   switchApp,
   switchTenant,
 } from 'modules/DigiKhaato/features/auth/redux/sessionThunk';
@@ -138,6 +140,8 @@ export interface SessionState {
   /** docs/platform/14 §4.2 — `null` until a server body says (old fixtures). */
   apps: SessionApp[] | null;
   activeApp: string | null;
+  /** The apps the OWNER could add here (empty for everyone else). */
+  appsAddable: SessionApp[];
   lastFetchedAt: number | null;
   /**
    * N1-P1 — has THIS DOCUMENT (this JS runtime) held a session before?
@@ -164,6 +168,7 @@ const initialState: SessionState = {
   landing: null,
   apps: null,
   activeApp: null,
+  appsAddable: [],
   lastFetchedAt: null,
   heldInThisDocument: false,
 };
@@ -200,6 +205,7 @@ export interface SessionPayload {
   /** docs/platform/14 §4.2 — the apps this person can open here; absent in old fixtures. */
   readonly apps?: readonly SessionApp[] | null;
   readonly activeApp?: string | null;
+  readonly appsAddable?: readonly SessionApp[];
 }
 
 const sessionSlice = createSlice({
@@ -222,6 +228,7 @@ const sessionSlice = createSlice({
       state.landing = (payload.landing ?? null) as Draft<Landing> | null;
       state.apps = payload.apps ? [...payload.apps] : null;
       state.activeApp = payload.activeApp ?? null;
+      state.appsAddable = payload.appsAddable ? [...payload.appsAddable] : [];
       state.lastFetchedAt = Date.now();
       state.error = null;
       state.status = payload.activeTenant ? 'authenticated' : 'no_tenant';
@@ -281,6 +288,18 @@ const sessionSlice = createSlice({
         sessionSlice.caseReducers.sessionLoaded(state, {
           type: 'session/sessionLoaded',
           payload: action.payload.session,
+        });
+      })
+      .addCase(setAppRunning.fulfilled, (state, action) => {
+        sessionSlice.caseReducers.sessionLoaded(state, {
+          type: 'session/sessionLoaded',
+          payload: action.payload,
+        });
+      })
+      .addCase(leaveApp.fulfilled, (state, action) => {
+        sessionSlice.caseReducers.sessionLoaded(state, {
+          type: 'session/sessionLoaded',
+          payload: action.payload,
         });
       })
       .addCase(switchApp.fulfilled, (state, action) => {
@@ -387,6 +406,8 @@ export const selectLanding = (state: RootState): Landing => {
 export const selectSessionApps = (state: RootState): readonly SessionApp[] | null =>
   state.session.apps;
 export const selectActiveApp = (state: RootState): string | null => state.session.activeApp;
+export const selectAppsAddable = (state: RootState): readonly SessionApp[] =>
+  state.session.appsAddable;
 
 export const selectMustChangePassword = (state: RootState): boolean =>
   state.session.user?.mustChangePassword ?? false;

@@ -216,6 +216,7 @@
   "team.member.add.error": "हम उस व्यक्ति को जोड़ नहीं सके",
   "team.members.error.title": "हम आपकी टीम लोड नहीं कर सके",
   "team.revoke.error": "हम वह निमंत्रण वापस नहीं ले सके",
+  "tenant.switcher.apps.error": "यह नहीं हो पाया। फिर कोशिश करें।",
   "tenant.switcher.leave.error": "व्यापार छोड़ा नहीं जा सका।",
   "tenant.switcher.setDefault.error": "डिफ़ॉल्ट व्यापार सेट नहीं हो सका।",
   "tenant.switcher.staleTab": "यह व्यापार दूसरे टैब में बदला गया। रीलोड हो रहा है…",

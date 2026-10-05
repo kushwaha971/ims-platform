@@ -35,6 +35,7 @@ from apps.platform_app.views.auth import (
     PasswordSetView,
     RefreshView,
     RegisterView,
+    LeaveAppView,
     SwitchAppView,
     SwitchTenantView,
 )
@@ -48,6 +49,7 @@ urlpatterns = [
     path("me", MeView.as_view(), name="auth-me"),
     path("switch-tenant", SwitchTenantView.as_view(), name="auth-switch-tenant"),
     path("switch-app", SwitchAppView.as_view(), name="auth-switch-app"),
+    path("leave-app", LeaveAppView.as_view(), name="auth-leave-app"),
     # PLT-09 (CR-013).
     path("sessions", SessionListView.as_view(), name="auth-sessions"),
     path("sessions/<uuid:session_id>", SessionDetailView.as_view(), name="auth-session-detail"),

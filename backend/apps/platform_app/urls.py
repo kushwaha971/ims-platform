@@ -29,6 +29,7 @@ from apps.platform_app.views.admin import (
     AdminTenantDetailView,
     AdminTenantListView,
 )
+from apps.platform_app.views.auth import BusinessAppsView
 from apps.platform_app.views.calendar import (
     ClosedDayDetailView,
     ClosedDayListView,
@@ -70,6 +71,7 @@ from apps.platform_app.views.tenant import (
 urlpatterns = [
     path("tenants", TenantCreateView.as_view(), name="tenant-create"),
     path("tenants/current", TenantCurrentView.as_view(), name="tenant-current"),
+    path("tenants/current/apps", BusinessAppsView.as_view(), name="tenant-apps"),
     path("tenants/resumable", TenantResumableView.as_view(), name="tenant-resumable"),
     # PLT-06, WLB-01, PLT-08, PLT-09 (Track T1).
     path("tenants/current/settings", TenantSettingsView.as_view(), name="tenant-settings"),

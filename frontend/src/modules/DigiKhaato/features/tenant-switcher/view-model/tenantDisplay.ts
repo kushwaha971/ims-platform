@@ -22,6 +22,19 @@ export const groupTenants = (tenants: readonly SessionTenant[]): TenantGroups =>
 });
 
 /**
+ * docs/platform/14 §6.1 — "a business you own and a business you work in are
+ * separate contexts": the switcher lists them under two headings, so a person
+ * who works at Verma Traders and owns a side shop never mistakes one for the
+ * other. Order within each group is the server's.
+ */
+export const splitByOwnership = (
+  tenants: readonly SessionTenant[]
+): { readonly owned: readonly SessionTenant[]; readonly working: readonly SessionTenant[] } => ({
+  owned: tenants.filter((tenant) => tenant.role === 'owner'),
+  working: tenants.filter((tenant) => tenant.role !== 'owner'),
+});
+
+/**
  * §5 / EC-5 — "chooser renders ≤ 50 tenants without pagination (≥ 50 → search
  * field appears)", and the MENU shows at most eight plus "See all". A CA with
  * sixty clients is the case these two numbers exist for.

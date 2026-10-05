@@ -161,6 +161,9 @@ export const MUTATIONS = {
   switchTenant: 'session/switchTenant',
   // docs/platform/14 §4.2 — open another app of the same business
   switchApp: 'session/switchApp',
+  // docs/platform/14 §6 — add / turn off an app (owner), leave an app (member)
+  setAppRunning: 'session/setAppRunning',
+  leaveApp: 'session/leaveApp',
   logout: 'session/logout',
   // CR-2026-09-19-A — email + password sign-up replaces the OTP pair
   registerAccount: 'auth/registerAccount',

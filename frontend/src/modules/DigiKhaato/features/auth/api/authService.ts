@@ -169,6 +169,12 @@ interface SessionApiResponse {
       readonly order: number;
     }[];
     readonly active_app?: string | null;
+    readonly apps_addable?: readonly {
+      readonly code: string;
+      readonly label_id: string;
+      readonly home_path: string;
+      readonly order: number;
+    }[];
   };
 }
 
@@ -397,6 +403,12 @@ export const getSession = async (signal?: AbortSignal): Promise<SessionPayload> 
         }))
       : null,
     activeApp: data.active_app ?? null,
+    appsAddable: (data.apps_addable ?? []).map((app) => ({
+      code: app.code,
+      labelId: app.label_id,
+      homePath: app.home_path,
+      order: app.order,
+    })),
     impersonation: support
       ? {
           id: support.id,
@@ -439,6 +451,24 @@ export const switchApp = async (app: string): Promise<SessionPayload> => {
   return getSession();
 };
 export const switchAppWriteClass: TWriteClass = 'online-only';
+
+/**
+ * POST /tenants/current/apps — the owner adds an app, or turns one off for the
+ * business (docs/platform/14 §6 decision 2: the data stays, the menu goes for
+ * everyone). The session is re-read: apps, modules and menu all move.
+ */
+export const setAppRunning = async (app: string, running: boolean): Promise<SessionPayload> => {
+  await api.post(API_PATHS.TENANT_APPS, { app, running });
+  return getSession();
+};
+export const setAppRunningWriteClass: TWriteClass = 'online-only';
+
+/** POST /auth/leave-app — anyone but the owner takes themselves out of one app. */
+export const leaveApp = async (app: string): Promise<SessionPayload> => {
+  await api.post(API_PATHS.AUTH_LEAVE_APP, { app });
+  return getSession();
+};
+export const leaveAppWriteClass: TWriteClass = 'online-only';
 
 /** POST /auth/logout — the teardown order is the caller's (§19.7.4). */
 export const logout = async (): Promise<void> => {

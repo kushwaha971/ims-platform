@@ -56,6 +56,32 @@ export const switchApp = createAsyncThunk<
   }
 });
 
+/** MUTATION. docs/platform/14 §6 — the owner adds an app or turns one off. */
+export const setAppRunning = createAsyncThunk<
+  SessionPayload,
+  { readonly app: string; readonly running: boolean },
+  { rejectValue: ApiErrorShape }
+>('session/setAppRunning', async ({ app, running }, { rejectWithValue }) => {
+  try {
+    return await authService.setAppRunning(app, running);
+  } catch (error) {
+    return rejectWithValue(toApiError(error, 'tenant.switcher.apps.error'));
+  }
+});
+
+/** MUTATION. docs/platform/14 §6 — a member takes themselves out of one app. */
+export const leaveApp = createAsyncThunk<
+  SessionPayload,
+  { readonly app: string },
+  { rejectValue: ApiErrorShape }
+>('session/leaveApp', async ({ app }, { rejectWithValue }) => {
+  try {
+    return await authService.leaveApp(app);
+  } catch (error) {
+    return rejectWithValue(toApiError(error, 'tenant.switcher.apps.error'));
+  }
+});
+
 /** MUTATION. §19.7.4 — teardown is dispatched before the navigation. */
 export const logout = createAsyncThunk<void, void, { rejectValue: ApiErrorShape }>(
   'session/logout',

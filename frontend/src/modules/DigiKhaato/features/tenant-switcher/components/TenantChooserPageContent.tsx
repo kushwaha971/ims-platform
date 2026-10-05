@@ -26,7 +26,7 @@ import { cn } from 'src/utils/cn';
 import { roleLabel } from 'src/utils/roleLabel';
 
 import { useTenantSwitcher } from '../hooks/useTenantSwitcher';
-import { filterTenants, needsChooserSearch } from '../view-model/tenantDisplay';
+import { filterTenants, needsChooserSearch, splitByOwnership } from '../view-model/tenantDisplay';
 
 /**
  * PLT-04 FR-9 / §7 — the full-screen chooser at `/switch`.
@@ -53,6 +53,7 @@ export function TenantChooserPageContent(): React.JSX.Element {
     [switcher.groups.active, query]
   );
   const showSearch = needsChooserSearch(switcher.groups.active.length);
+  const grouped = useMemo(() => splitByOwnership(rows), [rows]);
   const isFiltered = query.trim().length > 0;
 
   return (
@@ -121,46 +122,54 @@ export function TenantChooserPageContent(): React.JSX.Element {
           />
         )}
 
-        {rows.length > 0 && (
-          <UbCard padded={false}>
-            <UbStack as="ul">
-              {rows.map((tenant) => {
-                const busy = switcher.switchingTenantId === tenant.id;
-                const isActive = tenant.id === switcher.activeTenant?.id;
-                return (
-                  <UbBox
-                    as="li"
-                    key={tenant.id}
-                    className="border-b border-border-hairline last:border-b-0"
-                  >
-                    <UbPressable
-                      onClick={() => void switcher.switchTo(tenant.id)}
-                      disabled={!switcher.canSwitch || busy}
-                      selected={isActive}
-                      className={cn(
-                        'flex min-h-[56px] items-center gap-3 px-4 py-3',
-                        'hover:bg-surface-hover disabled:opacity-60',
-                        isActive && 'bg-accent-quiet'
-                      )}
+        {/* docs/platform/14 §6.1 — owned and worked-at are separate contexts. */}
+        {(
+          [
+            ['owned', 'tenant.switcher.title'],
+            ['working', 'tenant.switcher.workAt'],
+          ] as const
+        ).map(([group, labelId]) =>
+          grouped[group].length === 0 ? null : (
+            <UbCard key={group} padded={false} title={t(labelId)}>
+              <UbStack as="ul">
+                {grouped[group].map((tenant) => {
+                  const busy = switcher.switchingTenantId === tenant.id;
+                  const isActive = tenant.id === switcher.activeTenant?.id;
+                  return (
+                    <UbBox
+                      as="li"
+                      key={tenant.id}
+                      className="border-b border-border-hairline last:border-b-0"
                     >
-                      <UbAvatar name={tenant.name} />
-                      <UbListItemText
-                        primary={tenant.name}
-                        secondary={tenant.role ? roleLabel(t, tenant.role) : undefined}
-                      />
-                      {tenant.isDefault && (
-                        <Star
-                          aria-label={t('tenant.switcher.isDefault')}
-                          className="h-4 w-4 shrink-0 text-warning"
+                      <UbPressable
+                        onClick={() => void switcher.switchTo(tenant.id)}
+                        disabled={!switcher.canSwitch || busy}
+                        selected={isActive}
+                        className={cn(
+                          'flex min-h-[56px] items-center gap-3 px-4 py-3',
+                          'hover:bg-surface-hover disabled:opacity-60',
+                          isActive && 'bg-accent-quiet'
+                        )}
+                      >
+                        <UbAvatar name={tenant.name} />
+                        <UbListItemText
+                          primary={tenant.name}
+                          secondary={tenant.role ? roleLabel(t, tenant.role) : undefined}
                         />
-                      )}
-                      {busy && <MLSpinner />}
-                    </UbPressable>
-                  </UbBox>
-                );
-              })}
-            </UbStack>
-          </UbCard>
+                        {tenant.isDefault && (
+                          <Star
+                            aria-label={t('tenant.switcher.isDefault')}
+                            className="h-4 w-4 shrink-0 text-warning"
+                          />
+                        )}
+                        {busy && <MLSpinner />}
+                      </UbPressable>
+                    </UbBox>
+                  );
+                })}
+              </UbStack>
+            </UbCard>
+          )
         )}
 
         {/* FR-8 — invitations are listed separately and do not switch. PLT-05

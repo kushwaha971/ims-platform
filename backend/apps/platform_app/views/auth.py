@@ -22,6 +22,7 @@ from django.db import transaction
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 
+from apps.common.context import Ctx
 from apps.common.exceptions import PermissionDenied, ValidationFailed
 from apps.common.responses import StandardResponse
 from apps.common.tenancy import get_effective_tenant
@@ -39,6 +40,7 @@ from apps.platform_app.serializers.auth import (
     SwitchTenantSerializer,
 )
 from apps.platform_app.services import auth as auth_service
+from apps.platform_app.services import business_apps as business_apps_service
 from apps.platform_app.services import memberships as membership_service
 from apps.platform_app.services import passwords as password_service
 from apps.platform_app.services import sessions as session_service
@@ -486,3 +488,55 @@ class EmailVerifyConfirmView(APIView):
             ip=meta["ip"],
         )
         return StandardResponse.ok({"email_verified": bool(user.email_verified_at)})
+
+
+def _current_membership(request: Any) -> Any:
+    """The membership this request acts in — never an impersonated one."""
+    claims = getattr(request, "auth_claims", {}) or {}
+    membership = (
+        active_membership(user=request.user, tenant_id=claims.get("tid"))
+        if claims.get("tid") and not claims.get("imp")
+        else None
+    )
+    if membership is None:
+        raise PermissionDenied("Open a business first.")
+    return membership
+
+
+class LeaveAppView(APIView):
+    """`POST /auth/leave-app {app}` — take yourself out of one app (docs/platform/14 §6.2).
+
+    The session body comes back, so the switcher and the menu follow at once.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request: Any) -> Any:
+        membership = _current_membership(request)
+        data = request.data if isinstance(request.data, dict) else {}
+        business_apps_service.leave_app(
+            membership=membership, app=data.get("app"), ctx=Ctx.from_request(request)
+        )
+        return StandardResponse.ok(session_payload.build(user=request.user, membership=membership))
+
+
+class BusinessAppsView(APIView):
+    """`POST /tenants/current/apps {app, running}` — the owner adds or turns off an app.
+
+    Owner decision 2 (docs/platform/14 §6): the data stays, the menu goes for
+    everyone. The session body comes back for the owner's own switcher.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request: Any) -> Any:
+        membership = _current_membership(request)
+        data = request.data if isinstance(request.data, dict) else {}
+        business_apps_service.set_app_running(
+            membership=membership,
+            app=data.get("app"),
+            running=data.get("running"),
+            ctx=Ctx.from_request(request),
+        )
+        membership.tenant.refresh_from_db()
+        return StandardResponse.ok(session_payload.build(user=request.user, membership=membership))

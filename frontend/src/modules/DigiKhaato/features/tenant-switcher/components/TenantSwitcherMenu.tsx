@@ -1,10 +1,10 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { Fragment, useCallback, useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { Check, ChevronsUpDown, Plus, Star } from 'lucide-react';
+import { Check, ChevronsUpDown, LogOut, Plus, Power, Star } from 'lucide-react';
 
 import {
   UbAvatar,
@@ -16,19 +16,25 @@ import {
   UbText,
 } from 'src/design-system';
 import { MLMenu, MLMenuItem, MLMenuLabel, MLSpinner } from 'src/design-system/primitives';
-import { useAppDispatch } from 'src/hooks/useAppStore';
+import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
+import { selectAppsAddable } from 'src/redux/slice/sessionSlice';
 import { ROUTES } from 'src/routes';
 import { cn } from 'src/utils/cn';
 import { roleLabel } from 'src/utils/roleLabel';
 
-import { switchApp } from 'modules/DigiKhaato/features/auth/redux/sessionThunk';
+import {
+  leaveApp,
+  setAppRunning,
+  switchApp,
+} from 'modules/DigiKhaato/features/auth/redux/sessionThunk';
 import { useNavigation } from 'modules/DigiKhaato/features/navigation/useNavigation';
 
 import { useTenantSwitcher } from '../hooks/useTenantSwitcher';
 import {
   MENU_TENANT_LIMIT,
   canLeave,
+  splitByOwnership,
   canSetDefault,
   tenantNameView,
 } from '../view-model/tenantDisplay';
@@ -50,6 +56,11 @@ import {
  * the businesses, never as a row in the sidebar (owner, 5 Oct 2026). The rail
  * caption names the open app, so "Verma Finance · Lending" is always visible,
  * and the sidebar below shows only that app's menu.
+ *
+ * docs/platform/14 step 4 — the owner adds an app here ("Add Library") and turns
+ * the open one off for the business; anyone else leaves the open app. Both
+ * ends are confirmed, because both change what other screens show. Businesses
+ * are grouped "Your businesses" and "Where you work" (§6.1: separate contexts).
  *
  * FR-7's "Leave business" is behind `UbConfirmDialog` because it is not
  * reversible by the person doing it; FR-2's switch is not, because it is.
@@ -74,6 +85,9 @@ export function TenantSwitcherMenu({
   const switcher = useTenantSwitcher();
   const dispatch = useAppDispatch();
   const { apps, app } = useNavigation();
+  const addable = useAppSelector(selectAppsAddable);
+  const [appAction, setAppAction] = useState<'off' | 'leave' | null>(null);
+  const [appBusy, setAppBusy] = useState(false);
   const [leavingMembershipId, setLeavingMembershipId] = useState<string | null>(null);
 
   const confirmLeave = useCallback(async () => {
@@ -83,6 +97,37 @@ export function TenantSwitcherMenu({
   }, [leavingMembershipId, switcher]);
 
   const seeAll = useCallback(() => router.push(ROUTES.SWITCH_TENANT), [router]);
+
+  // Add an app: run it for the business, open it, and land on its home.
+  const addApp = useCallback(
+    async (code: string, home: string) => {
+      setAppBusy(true);
+      const done = await dispatch(setAppRunning({ app: code, running: true }));
+      if (setAppRunning.fulfilled.match(done)) {
+        await dispatch(switchApp({ app: code }));
+        router.push(home);
+      }
+      setAppBusy(false);
+    },
+    [dispatch, router]
+  );
+
+  // Turn the open app off (owner) or leave it (anyone else), then go to the
+  // home of whichever app the server now says this person is in.
+  const confirmAppAction = useCallback(async () => {
+    if (!app || !appAction) return;
+    setAppBusy(true);
+    const done =
+      appAction === 'off'
+        ? await dispatch(setAppRunning({ app, running: false }))
+        : await dispatch(leaveApp({ app }));
+    setAppBusy(false);
+    setAppAction(null);
+    if (setAppRunning.fulfilled.match(done) || leaveApp.fulfilled.match(done)) {
+      const next = done.payload.apps?.find((row) => row.code === done.payload.activeApp);
+      if (next) router.push(next.homePath);
+    }
+  }, [app, appAction, dispatch, router]);
 
   // Remembered by the server, per person per business, so every device opens
   // the same app next time; then straight to that app's home.
@@ -99,11 +144,14 @@ export function TenantSwitcherMenu({
   if (!switcher.activeTenant) return null;
 
   const active = switcher.activeTenant;
-  const shown = switcher.groups.active.slice(0, MENU_TENANT_LIMIT);
+  const shown = splitByOwnership(switcher.groups.active.slice(0, MENU_TENANT_LIMIT));
   const overflow = switcher.groups.active.length > MENU_TENANT_LIMIT;
   const activeName = tenantNameView(active.name);
   const openAppLabel = apps.find((a) => a.code === app)?.labelId;
   const railCaption = openAppLabel ? t(openAppLabel) : caption;
+  const isOwner = active.role === 'owner';
+  const openAppName = openAppLabel ? t(openAppLabel) : '';
+  const showApps = apps.length > 1 || (isOwner && addable.length > 0);
 
   return (
     <>
@@ -159,7 +207,7 @@ export function TenantSwitcherMenu({
           )
         }
       >
-        {apps.length > 1 && (
+        {showApps && (
           <>
             <MLMenuLabel>{t('tenant.switcher.apps')}</MLMenuLabel>
             {apps.map((item) => (
@@ -176,39 +224,75 @@ export function TenantSwitcherMenu({
                 )}
               </MLMenuItem>
             ))}
+            {isOwner &&
+              addable.map((item) => (
+                <MLMenuItem
+                  key={`add-${item.code}`}
+                  disabled={appBusy || !switcher.canSwitch}
+                  onSelect={() => void addApp(item.code, item.homePath)}
+                >
+                  <Plus aria-hidden className="h-4 w-4 shrink-0 text-text-tertiary" />
+                  {t('tenant.switcher.apps.add', { app: t(item.labelId) })}
+                </MLMenuItem>
+              ))}
+            {apps.length > 1 && openAppName && (
+              <MLMenuItem
+                disabled={appBusy || !switcher.canSwitch}
+                onSelect={() => setAppAction(isOwner ? 'off' : 'leave')}
+              >
+                {isOwner ? (
+                  <Power aria-hidden className="h-4 w-4 shrink-0 text-text-tertiary" />
+                ) : (
+                  <LogOut aria-hidden className="h-4 w-4 shrink-0 text-text-tertiary" />
+                )}
+                {t(isOwner ? 'tenant.switcher.apps.turnOff' : 'tenant.switcher.apps.leave', {
+                  app: openAppName,
+                })}
+              </MLMenuItem>
+            )}
           </>
         )}
 
-        <MLMenuLabel>{t('tenant.switcher.title')}</MLMenuLabel>
-
-        {shown.map((tenant) => {
-          const name = tenantNameView(tenant.name);
-          const busy = switcher.switchingTenantId === tenant.id;
-          return (
-            <MLMenuItem
-              key={tenant.id}
-              selected={tenant.id === active.id}
-              disabled={!switcher.canSwitch || busy}
-              onSelect={() => void switcher.switchTo(tenant.id)}
-            >
-              <UbAvatar name={tenant.name} size="sm" />
-              <UbListItemText
-                primary={name.text}
-                primaryVariant="inherit"
-                primaryTone="inherit"
-                title={name.truncated ? tenant.name : undefined}
-                secondary={tenant.role ? roleLabel(t, tenant.role) : undefined}
-              />
-              {tenant.isDefault && (
-                <Star
-                  aria-label={t('tenant.switcher.isDefault')}
-                  className="h-4 w-4 shrink-0 text-warning"
-                />
-              )}
-              {busy && <MLSpinner />}
-            </MLMenuItem>
-          );
-        })}
+        {(
+          [
+            ['owned', 'tenant.switcher.title'],
+            ['working', 'tenant.switcher.workAt'],
+          ] as const
+        ).map(([group, labelId]) =>
+          shown[group].length === 0 ? null : (
+            <Fragment key={group}>
+              <MLMenuLabel>{t(labelId)}</MLMenuLabel>
+              {shown[group].map((tenant) => {
+                const name = tenantNameView(tenant.name);
+                const busy = switcher.switchingTenantId === tenant.id;
+                return (
+                  <MLMenuItem
+                    key={tenant.id}
+                    selected={tenant.id === active.id}
+                    disabled={!switcher.canSwitch || busy}
+                    onSelect={() => void switcher.switchTo(tenant.id)}
+                  >
+                    <UbAvatar name={tenant.name} size="sm" />
+                    <UbListItemText
+                      primary={name.text}
+                      primaryVariant="inherit"
+                      primaryTone="inherit"
+                      title={name.truncated ? tenant.name : undefined}
+                      secondary={tenant.role ? roleLabel(t, tenant.role) : undefined}
+                    />
+                    {tenant.isDefault && (
+                      <Star
+                        aria-label={t('tenant.switcher.isDefault')}
+                        className="h-4 w-4 shrink-0 text-warning"
+                      />
+                    )}
+                    {busy && <MLSpinner />}
+                  </MLMenuItem>
+                );
+              })}
+            </Fragment>
+          )
+        )}
 
         {overflow && (
           <MLMenuItem onSelect={seeAll}>
@@ -265,6 +349,33 @@ export function TenantSwitcherMenu({
           </MLMenuItem>
         )}
       </MLMenu>
+
+      <UbConfirmDialog
+        open={appAction !== null}
+        onOpenChange={(open) => !open && setAppAction(null)}
+        title={t(
+          appAction === 'off'
+            ? 'tenant.switcher.apps.turnOff.title'
+            : 'tenant.switcher.apps.leave.title',
+          { app: openAppName, business: active.name }
+        )}
+        // §8 — the consequence, in one sentence, before the act.
+        description={t(
+          appAction === 'off'
+            ? 'tenant.switcher.apps.turnOff.body'
+            : 'tenant.switcher.apps.leave.body',
+          { app: openAppName }
+        )}
+        confirmLabel={t(
+          appAction === 'off' ? 'tenant.switcher.apps.turnOff' : 'tenant.switcher.apps.leave',
+          { app: openAppName }
+        )}
+        cancelLabel={t('common.action.cancel')}
+        closeLabel={t('common.action.dismiss')}
+        onConfirm={() => void confirmAppAction()}
+        busy={appBusy}
+        busyLabel={t('tenant.switcher.apps.working')}
+      />
 
       <UbConfirmDialog
         open={leavingMembershipId !== null}

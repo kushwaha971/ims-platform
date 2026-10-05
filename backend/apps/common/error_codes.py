@@ -253,6 +253,10 @@ _REGISTRY: dict[str, tuple[int, bool]] = {
     # ── B05 ── a perpetual counter at its last value (A8 `allocate_counter`): the
     # integer column cannot hold the next one, so the series refuses rather than 500s.
     "sequence_exhausted": (409, False),  # D kind, max
+    # docs/platform/14 §6 decision 2 — a business runs at least one app, and a
+    # member is in at least one; the owner is in every app and turns one off.
+    "app_last_one": (409, False),  # D app, of (business|member)
+    "owner_in_every_app": (409, False),  # D app
 }
 
 # `unauthenticated` is emitted by the exception handler for DRF's

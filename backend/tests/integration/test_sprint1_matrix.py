@@ -132,6 +132,25 @@ EXPECTED: dict[tuple[str, str], dict[str, int]] = {
         "anon": 401,
         "other_tenant": 403,
     },
+    # docs/platform/14 step 4 — an empty body names no app. Only the owner may
+    # add or turn off an app (400 for the empty body); everyone else is 403.
+    ("POST", "v1:tenant-apps"): {
+        "owner": 400,
+        "admin": 403,
+        "staff": 403,
+        "accountant": 403,
+        "anon": 401,
+        "other_tenant": 400,
+    },
+    # The owner is in every app (409); anyone else names no app they are in (400).
+    ("POST", "v1:auth-leave-app"): {
+        "owner": 409,
+        "admin": 400,
+        "staff": 400,
+        "accountant": 400,
+        "anon": 401,
+        "other_tenant": 409,
+    },
     # Sending oneself a confirmation link needs a session and nothing else: the
     # address it confirms is the caller's own, so there is no body to validate.
     ("POST", "v1:auth-email-verify-request"): {
@@ -554,6 +573,8 @@ def test_an_unauthenticated_call_to_every_guarded_route_is_401(
         ("POST", "v1:auth-logout"),
         ("POST", "v1:auth-switch-tenant"),
         ("POST", "v1:auth-switch-app"),
+        ("POST", "v1:auth-leave-app"),
+        ("POST", "v1:tenant-apps"),
         ("POST", "v1:auth-password-set"),
         ("POST", "v1:tenant-create"),
         ("GET", "v1:tenant-current"),

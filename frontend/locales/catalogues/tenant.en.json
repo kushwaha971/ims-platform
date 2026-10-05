@@ -16,6 +16,14 @@
   "tenant.status.suspended": "Suspended",
   "tenant.switcher.add": "Add a business",
   "tenant.switcher.apps": "Apps",
+  "tenant.switcher.apps.add": "Add {app}",
+  "tenant.switcher.apps.leave": "Leave {app}",
+  "tenant.switcher.apps.leave.body": "You will no longer see {app} here. Your other apps stay, and the owner can add you back.",
+  "tenant.switcher.apps.leave.title": "Leave {app} at {business}?",
+  "tenant.switcher.apps.turnOff": "Turn off {app}",
+  "tenant.switcher.apps.turnOff.body": "Its menu goes for everyone here. Nothing is deleted, and you can turn it back on from this menu.",
+  "tenant.switcher.apps.turnOff.title": "Turn off {app} for {business}?",
+  "tenant.switcher.apps.working": "Working…",
   "tenant.switcher.defaultSet": "This business will open by default.",
   "tenant.switcher.invitations": "Invitations",
   "tenant.switcher.isDefault": "Opens by default",
@@ -29,5 +37,6 @@
   "tenant.switcher.setDefault": "Open this by default",
   "tenant.switcher.switched": "Now in {name}",
   "tenant.switcher.title": "Your businesses",
-  "tenant.switcher.trigger": "Current business: {name}. Change business"
+  "tenant.switcher.trigger": "Current business: {name}. Change business",
+  "tenant.switcher.workAt": "Where you work"
 }
