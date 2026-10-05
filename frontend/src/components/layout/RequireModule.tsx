@@ -5,8 +5,9 @@ import type { ReactNode } from 'react';
 import { UbActionLink, UbEmptyState, UbPageShell } from 'src/design-system';
 import { usePermissions } from 'src/hooks/usePermissions';
 import { useTranslation } from 'src/hooks/useTranslation';
-import { ROUTES } from 'src/routes';
 import type { ModuleCode } from 'src/types/domain.types';
+
+import { useLandingPath } from 'modules/DigiKhaato/features/navigation/useLandingPath';
 
 /**
  * F01 (G1) — a module's route gate: the module's pages render only while the
@@ -28,6 +29,8 @@ export function RequireModule({
 }: Readonly<{ module: ModuleCode; children: ReactNode }>): React.JSX.Element {
   const { t } = useTranslation();
   const { hasModule } = usePermissions();
+  // The first page of the app the person is in, not the Shop's dashboard.
+  const home = useLandingPath();
   if (hasModule(module)) return <>{children}</>;
   return (
     <UbPageShell>
@@ -36,8 +39,8 @@ export function RequireModule({
         title={t('common.notFound.title')}
         description={t('common.notFound.body')}
         action={
-          <UbActionLink href={ROUTES.DASHBOARD} variant="secondary">
-            {t('common.action.goToDashboard')}
+          <UbActionLink href={home} variant="secondary">
+            {t('common.action.goHome')}
           </UbActionLink>
         }
       />

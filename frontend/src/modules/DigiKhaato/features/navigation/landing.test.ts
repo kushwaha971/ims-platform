@@ -1,7 +1,8 @@
 import { ROUTES } from 'src/routes';
 
+import { SHOP_APP } from 'modules/DigiKhaato/features/shop/app';
+
 import { landingPath, LANDING_FALLBACK } from './landing';
-import { NAV_ITEMS } from './sidebarConfig';
 
 import type { NavSectionView } from './useNavigation';
 
@@ -13,7 +14,7 @@ import type { NavSectionView } from './useNavigation';
  * first screen after signing in.
  */
 const item = (key: string) => {
-  const found = NAV_ITEMS.find((row) => row.key === key);
+  const found = SHOP_APP.navigation.find((row) => row.key === key);
   if (!found) throw new Error(key);
   return found;
 };

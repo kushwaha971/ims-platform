@@ -14,6 +14,7 @@ import {
 import {
   fetchSession,
   logout,
+  switchApp,
   switchTenant,
 } from 'modules/DigiKhaato/features/auth/redux/sessionThunk';
 import { completeOnboarding } from 'modules/DigiKhaato/features/onboarding/redux/onboardingThunk';
@@ -134,6 +135,9 @@ export interface SessionState {
   version: number | null;
   /** docs/platform/14 §4.1 — the server's `landing`; read through `selectLanding`. */
   landing: Landing | null;
+  /** docs/platform/14 §4.2 — `null` until a server body says (old fixtures). */
+  apps: SessionApp[] | null;
+  activeApp: string | null;
   lastFetchedAt: number | null;
   /**
    * N1-P1 — has THIS DOCUMENT (this JS runtime) held a session before?
@@ -158,6 +162,8 @@ const initialState: SessionState = {
   error: null,
   version: null,
   landing: null,
+  apps: null,
+  activeApp: null,
   lastFetchedAt: null,
   heldInThisDocument: false,
 };
@@ -173,6 +179,14 @@ const endedSession = (state: SessionState): SessionState => ({
   heldInThisDocument: state.heldInThisDocument,
 });
 
+/** docs/platform/14 §4.2 — one app this person can open in the active business. */
+export interface SessionApp {
+  readonly code: string;
+  readonly labelId: string;
+  readonly homePath: string;
+  readonly order: number;
+}
+
 export interface SessionPayload {
   readonly user: SessionUser;
   readonly activeTenant: SessionTenant | null;
@@ -183,6 +197,9 @@ export interface SessionPayload {
   readonly impersonation?: SessionImpersonation | null;
   /** docs/platform/14 §4.1 — the server's decision; absent only in test fixtures. */
   readonly landing?: Landing | null;
+  /** docs/platform/14 §4.2 — the apps this person can open here; absent in old fixtures. */
+  readonly apps?: readonly SessionApp[] | null;
+  readonly activeApp?: string | null;
 }
 
 const sessionSlice = createSlice({
@@ -203,6 +220,8 @@ const sessionSlice = createSlice({
       state.impersonation = payload.impersonation ?? null;
       state.version = payload.version;
       state.landing = (payload.landing ?? null) as Draft<Landing> | null;
+      state.apps = payload.apps ? [...payload.apps] : null;
+      state.activeApp = payload.activeApp ?? null;
       state.lastFetchedAt = Date.now();
       state.error = null;
       state.status = payload.activeTenant ? 'authenticated' : 'no_tenant';
@@ -262,6 +281,12 @@ const sessionSlice = createSlice({
         sessionSlice.caseReducers.sessionLoaded(state, {
           type: 'session/sessionLoaded',
           payload: action.payload.session,
+        });
+      })
+      .addCase(switchApp.fulfilled, (state, action) => {
+        sessionSlice.caseReducers.sessionLoaded(state, {
+          type: 'session/sessionLoaded',
+          payload: action.payload,
         });
       })
       .addCase(switchTenant.fulfilled, (state, action) => {
@@ -358,6 +383,10 @@ export const selectLanding = (state: RootState): Landing => {
   });
   return lastLanding;
 };
+
+export const selectSessionApps = (state: RootState): readonly SessionApp[] | null =>
+  state.session.apps;
+export const selectActiveApp = (state: RootState): string | null => state.session.activeApp;
 
 export const selectMustChangePassword = (state: RootState): boolean =>
   state.session.user?.mustChangePassword ?? false;

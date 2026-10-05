@@ -43,6 +43,19 @@ export const switchTenant = createAsyncThunk<
   }
 });
 
+/** MUTATION. docs/platform/14 §4.2 — open another app of the same business. */
+export const switchApp = createAsyncThunk<
+  SessionPayload,
+  { readonly app: string },
+  { rejectValue: ApiErrorShape }
+>('session/switchApp', async ({ app }, { rejectWithValue }) => {
+  try {
+    return await authService.switchApp(app);
+  } catch (error) {
+    return rejectWithValue(toApiError(error, 'auth.switchTenant.error'));
+  }
+});
+
 /** MUTATION. §19.7.4 — teardown is dispatched before the navigation. */
 export const logout = createAsyncThunk<void, void, { rejectValue: ApiErrorShape }>(
   'session/logout',

@@ -1,21 +1,59 @@
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { Provider } from 'react-redux';
 
-import { sessionLoaded } from 'src/redux/slice/sessionSlice';
+import { resetAllFeatureState } from 'src/redux/actions';
+import { sessionLoaded, type SessionApp } from 'src/redux/slice/sessionSlice';
 import { store } from 'src/redux/store';
-import { MODULE_CODES, type ModuleCode } from 'src/types/domain.types';
+import { MODULE_CODES, type ModuleCode, type PermissionCode } from 'src/types/domain.types';
 
-import { NAV_ITEMS } from './sidebarConfig';
+import { APP_MANIFESTS } from 'modules/appManifests';
+
+import * as authService from '../auth/api/authService';
+
+import { PLATFORM_NAV_ITEMS } from './appManifest';
 import { useNavigation } from './useNavigation';
-import { rememberWorkspace, resetWorkspaceMemory } from './workspaceMemory';
 
+/**
+ * docs/platform/14 §4.2 — the sidebar is the CURRENT APP's manifest, filtered by
+ * entitlements and permissions, plus the platform's rows; which apps a person
+ * can open, and which they are in, is the server's (`apps`, `active_app`).
+ *
+ * The defect this replaced: one shared list of every row of every app, with
+ * the app remembered in `localStorage` — so a laptop and a phone disagreed,
+ * and the server could not open a person's app after sign-in.
+ */
 let mockPath = '/settings';
 jest.mock('next/navigation', () => ({
   ...jest.requireActual('next/navigation'),
   usePathname: () => mockPath,
 }));
+jest.mock('../auth/api/authService', () => ({
+  ...jest.requireActual('../auth/api/authService'),
+  switchApp: jest.fn(),
+}));
 
-const load = (enabledModules: readonly ModuleCode[]) =>
+const ALL_PERMISSIONS = [
+  ...APP_MANIFESTS.flatMap((app) => app.navigation.map((item) => item.permission)),
+  ...PLATFORM_NAV_ITEMS.map((item) => item.permission),
+] as PermissionCode[];
+
+const SERVER_APPS: SessionApp[] = [
+  { code: 'library', labelId: 'nav.workspace.library', homePath: '/library', order: 10 },
+  { code: 'lending', labelId: 'nav.workspace.lending', homePath: '/lending', order: 20 },
+  { code: 'shop', labelId: 'nav.workspace.shop', homePath: '/dashboard', order: 90 },
+];
+
+const load = ({
+  apps = SERVER_APPS,
+  activeApp = 'library',
+  modules = MODULE_CODES,
+  permissions = ALL_PERMISSIONS,
+}: {
+  apps?: SessionApp[] | null;
+  activeApp?: string | null;
+  modules?: readonly ModuleCode[];
+  permissions?: PermissionCode[];
+} = {}) =>
   store.dispatch(
     sessionLoaded({
       user: {
@@ -29,9 +67,11 @@ const load = (enabledModules: readonly ModuleCode[]) =>
       },
       activeTenant: { id: 't1', name: 'Kumar Kirana', timezone: 'Asia/Kolkata', role: 'owner' },
       tenants: [{ id: 't1', name: 'Kumar Kirana', timezone: 'Asia/Kolkata', role: 'owner' }],
-      permissions: NAV_ITEMS.map((item) => item.permission) as never,
-      enabledModules: [...enabledModules],
+      permissions,
+      enabledModules: [...modules],
       version: 1,
+      apps,
+      activeApp,
     })
   );
 
@@ -44,51 +84,18 @@ const keysOf = (nav: ReturnType<typeof useNavigation>) =>
   nav.sections.flatMap((section) => section.items.map((item) => item.key));
 
 beforeEach(() => {
-  window.localStorage.clear();
-  resetWorkspaceMemory();
+  store.dispatch(resetAllFeatureState());
+  jest.mocked(authService.switchApp).mockReset();
+  jest.mocked(authService.switchApp).mockImplementation(() => new Promise(() => undefined));
   mockPath = '/settings';
-  load(MODULE_CODES);
+  load();
 });
 
-/**
- * Owner rule — "don't show unbuilt features". Bills, Purchases, Payments and
- * Reports used to sit in the sidebar as greyed "Soon" rows; a row whose page
- * does not exist (`ready` absent) is now left out entirely, even for an owner
- * who has every module and every permission.
- */
-describe('useNavigation', () => {
-  it('lists no row whose page is not built (no "Soon" rows), in any workspace', () => {
-    /* Every row is checked both ways — a built row that went missing fails
-       too — across the workspaces, since each shows only its own rows. */
-    const keys = new Set<string>();
-    for (const path of ['/sales/invoices', '/library/members', '/lending/loans']) {
-      mockPath = path;
-      keysOf(listed()).forEach((key) => keys.add(key));
-    }
-    for (const item of NAV_ITEMS) {
-      expect({ key: item.key, listed: keys.has(item.key) }).toEqual({
-        key: item.key,
-        listed: Boolean(item.ready),
-      });
-    }
-  });
-
-  it('keeps unbuilt rows out of the bottom nav too', () => {
-    for (const item of listed().bottomNav) expect(item.ready).toBe(true);
-  });
-});
-
-/**
- * Owner, 4 Oct 2026: "that sidebar also should be module specific, not common".
- * A reading room's menu carried Customers, Bills, Purchases and Cashbook because
- * every row was shown to every tenant that had the module on — which is every
- * tenant, since the shop modules are the default.
- */
-describe('one menu per kind of business', () => {
+describe('one menu per app', () => {
   it('shows a library only library rows, plus Team and Settings', () => {
     mockPath = '/library/members';
     const nav = listed();
-    expect(nav.workspace).toBe('library');
+    expect(nav.app).toBe('library');
     const keys = keysOf(nav);
     expect(keys).toEqual(expect.arrayContaining(['libraryMembers', 'team', 'settings']));
     for (const shop of ['parties', 'invoices', 'purchases', 'cashbook', 'payments', 'dashboard']) {
@@ -96,87 +103,91 @@ describe('one menu per kind of business', () => {
     }
   });
 
-  /** L02 — a lender's menu is the lender's: its own rows, never the shop's or the library's. */
   it('shows a lender only lending rows, plus Team and Settings', () => {
     mockPath = '/lending/loans';
-    const nav = listed();
-    expect(nav.workspace).toBe('lending');
-    const keys = keysOf(nav);
-    expect(keys).toEqual(
-      expect.arrayContaining([
-        'lendingToday',
-        'lendingLoans',
-        'lendingBorrowers',
-        'team',
-        'settings',
-      ])
-    );
+    const keys = keysOf(listed());
+    expect(keys).toEqual(expect.arrayContaining(['lendingToday', 'lendingLoans', 'team']));
     for (const other of ['parties', 'invoices', 'cashbook', 'libraryMembers']) {
       expect(keys).not.toContain(other);
     }
   });
 
-  it('shows a shop page the shop menu, with no library rows', () => {
+  it('groups the Shop like Vyapar and Zoho: parties, sales, purchases, stock, money, reports', () => {
     mockPath = '/sales/invoices';
-    const keys = keysOf(listed());
-    expect(keys).toContain('invoices');
-    expect(keys.some((key) => key.startsWith('library'))).toBe(false);
-  });
-
-  it('keeps the remembered menu on a page every workspace shares', () => {
-    rememberWorkspace('t1', 'shop');
-    mockPath = '/settings';
-    expect(listed().workspace).toBe('shop');
-    act(() => rememberWorkspace('t1', 'library'));
-    expect(listed().workspace).toBe('library');
-  });
-
-  it('opens a business with a vertical on in that vertical, before the shop', () => {
-    expect(listed().workspace).toBe('library');
-  });
-
-  it('offers the switcher only to a business that runs more than one kind', () => {
-    expect(listed().workspaces.map((ws) => ws.code)).toEqual(['library', 'lending', 'shop']);
-    act(() => {
-      load(MODULE_CODES.filter((code) => code !== 'library' && code !== 'lending'));
-    });
     const nav = listed();
-    expect(nav.workspaces.map((ws) => ws.code)).toEqual(['shop']);
-    expect(nav.workspace).toBe('shop');
+    expect(nav.sections.map((s) => s.key)).toEqual([
+      'home',
+      'parties',
+      'sales',
+      'purchases',
+      'stock',
+      'money',
+      'insight',
+      'account',
+    ]);
+    const sales = nav.sections.find((s) => s.key === 'sales')?.items.map((i) => i.key);
+    expect(sales).toEqual(['invoices', 'estimates', 'creditNotes']);
+    expect(nav.shell.partySearch).toBe(true);
   });
 
-  it('does not throw the menu back to the shop when a student khata opens', () => {
-    rememberWorkspace('t1', 'library');
-    mockPath = '/parties/01a10730';
-    expect(listed().workspace).toBe('library');
+  it('offers the party search only in an app that declares it, never by name', () => {
+    mockPath = '/library/members';
+    expect(listed().shell.partySearch).toBeUndefined();
   });
-});
 
-describe('the dashboard follows the workspace', () => {
-  /**
-   * Sign-in, a business switch and the logo all go to /dashboard. Were it a
-   * shop path, a library would land on a shop dashboard and its menu would turn
-   * into the shop's on the very first screen.
-   */
-  it('does not choose the shop for a library that lands on /dashboard', () => {
-    mockPath = '/dashboard';
-    expect(listed().workspace).toBe('library');
+  it('keeps the menu of the app the person is in on a page every app shares', () => {
+    load({ activeApp: 'lending' });
+    mockPath = '/settings';
+    expect(listed().app).toBe('lending');
+  });
+
+  it('leaves out a row the person may not use, and an app they hold no grant for', () => {
+    load({
+      apps: [SERVER_APPS[1] as SessionApp],
+      activeApp: 'lending',
+      permissions: ['lending.today.read', 'lending.loan.read'] as PermissionCode[],
+    });
+    mockPath = '/settings';
+    const nav = listed();
+    expect(nav.apps.map((a) => a.code)).toEqual(['lending']);
+    expect(keysOf(nav)).toEqual(['lendingToday', 'lendingLoans']);
   });
 });
 
 describe('the switcher', () => {
-  /**
-   * Found by tapping it: "Shop" on a library page wrote `shop`, the hook's
-   * memo rebuilt its workspace list, the remember-effect re-ran on the new
-   * array and wrote `library` back before the navigation away had happened.
-   */
-  it('keeps a choice made from a page of the other workspace', () => {
-    mockPath = '/library/members';
-    const { result } = renderHook(() => useNavigation(), {
-      wrapper: ({ children }) => <Provider store={store}>{children}</Provider>,
+  it('lists the apps the server says, in its order, with their homes', () => {
+    expect(listed().apps).toEqual([
+      { code: 'library', labelId: 'nav.workspace.library', href: '/library' },
+      { code: 'lending', labelId: 'nav.workspace.lending', href: '/lending' },
+      { code: 'shop', labelId: 'nav.workspace.shop', href: '/dashboard' },
+    ]);
+  });
+
+  it('is not offered to a person who can open one app', () => {
+    load({ apps: [SERVER_APPS[2] as SessionApp], activeApp: 'shop' });
+    expect(listed().apps).toHaveLength(1);
+  });
+
+  it('tells the server when a page of another app is opened directly', async () => {
+    load({ activeApp: 'library' });
+    mockPath = '/lending/loans';
+    act(() => {
+      listed();
     });
-    expect(result.current.workspace).toBe('library');
-    act(() => rememberWorkspace('t1', 'shop'));
-    expect(JSON.parse(window.localStorage.getItem('ub_workspace') ?? '{}')).toEqual({ t1: 'shop' });
+    await waitFor(() => expect(authService.switchApp).toHaveBeenCalledWith('lending'));
+  });
+
+  it('says nothing when the page belongs to the app the person is already in', () => {
+    load({ activeApp: 'lending' });
+    mockPath = '/lending/loans';
+    listed();
+    expect(authService.switchApp).not.toHaveBeenCalled();
+  });
+});
+
+describe('a body without apps (an old fixture)', () => {
+  it('falls back to every app with a row this person can see', () => {
+    load({ apps: null, activeApp: null, modules: MODULE_CODES.filter((m) => m !== 'library') });
+    expect(listed().apps.map((a) => a.code)).toEqual(['lending', 'shop']);
   });
 });

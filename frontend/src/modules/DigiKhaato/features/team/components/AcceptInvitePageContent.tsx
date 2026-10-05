@@ -10,6 +10,7 @@ import { useTranslation } from 'src/hooks/useTranslation';
 import { ROUTES } from 'src/routes';
 import { toApiError } from 'src/utils/apiError';
 
+import { useGoToLanding } from 'modules/DigiKhaato/features/auth/hooks/useGoToLanding';
 import { fetchSession } from 'modules/DigiKhaato/features/auth/redux/sessionThunk';
 
 import { acceptInvitation } from '../api/invitationService';
@@ -104,7 +105,8 @@ export function AcceptInvitePageContent({ token }: Readonly<{ token: string }>):
     return undefined;
   }, [dispatch, token]);
 
-  const goToDashboard = useCallback(() => router.replace(ROUTES.DASHBOARD), [router]);
+  // The business just joined decides where this person starts (§4.1).
+  const goToDashboard = useGoToLanding();
   const goToSwitch = useCallback(() => router.replace(ROUTES.SWITCH_TENANT), [router]);
 
   return (

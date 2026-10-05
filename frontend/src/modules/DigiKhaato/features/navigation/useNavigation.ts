@@ -4,119 +4,140 @@ import { useEffect, useMemo } from 'react';
 
 import { usePathname } from 'next/navigation';
 
-import { useAppSelector } from 'src/hooks/useAppStore';
+import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import {
-  selectActiveTenant,
+  selectActiveApp,
   selectEnabledModules,
   selectPermissions,
+  selectSessionApps,
 } from 'src/redux/slice/sessionSlice';
 
+import { APP_MANIFESTS } from 'modules/appManifests';
+
+import { switchApp } from '../auth/redux/sessionThunk';
+
 import {
-  NAV_ITEMS,
-  NAV_SECTIONS,
-  WORKSPACES,
-  type NavItemConfig,
-  type NavSection,
-  type Workspace,
-} from './sidebarConfig';
-import { rememberWorkspace, useRememberedWorkspace } from './workspaceMemory';
+  PLATFORM_NAV_ITEMS,
+  PLATFORM_SECTION,
+  type AppManifest,
+  type AppNavItem,
+} from './appManifest';
 
 export interface NavSectionView {
-  readonly key: NavSection;
+  readonly key: string;
   readonly labelId: string;
-  readonly items: readonly NavItemConfig[];
+  readonly items: readonly AppNavItem[];
 }
 
-export interface WorkspaceView {
-  readonly code: Workspace;
+export interface AppView {
+  readonly code: string;
   readonly labelId: string;
-  /** Where the switcher goes: the workspace's first row. */
+  /** Where the switcher goes: the server's home for the app, else its first row. */
   readonly href: string;
 }
 
 export interface UseNavigationResult {
   readonly sections: readonly NavSectionView[];
-  readonly bottomNav: readonly NavItemConfig[];
-  /** Every workspace this person can open; the switcher shows when there are two or more. */
-  readonly workspaces: readonly WorkspaceView[];
-  readonly workspace: Workspace | null;
+  readonly bottomNav: readonly AppNavItem[];
+  /** Every app this person can open here; the switcher shows when there are two or more. */
+  readonly apps: readonly AppView[];
+  /** The app whose menu is showing, or null when the person can open none. */
+  readonly app: string | null;
+  /** What the shell offers while that app is open (`AppManifest.shell`). */
+  readonly shell: NonNullable<AppManifest['shell']>;
 }
 
 const matches = (pathname: string, prefix: string): boolean =>
   pathname === prefix || pathname.startsWith(`${prefix}/`);
 
-/** The workspace an open page belongs to, by its path, or null for shared pages. */
-export const workspaceForPath = (pathname: string | null): Workspace | null =>
-  (pathname && WORKSPACES.find((ws) => ws.prefixes.some((p) => matches(pathname, p)))?.code) ||
+/** The app an open page belongs to, by its path, or null for a shared page. */
+export const appForPath = (
+  pathname: string | null,
+  manifests: readonly AppManifest[] = APP_MANIFESTS
+): string | null =>
+  (pathname &&
+    manifests.find((app) => app.routePrefixes.some((p) => matches(pathname, p)))?.code) ||
   null;
 
+const NO_SHELL: NonNullable<AppManifest['shell']> = {};
+
 /**
- * Part 19 §19.6.2 — the config intersected with entitlements, then narrowed to
- * ONE workspace (owner, 4 Oct 2026: each kind of business has its own menu).
+ * docs/platform/14 §4.2 — the sidebar is `currentApp.navigation ∩ entitlements ∩
+ * permissions`, plus the platform's own rows.
  *
- * The workspace is, in order: the one the open page belongs to; the one this
- * person last used in this business; the first available in `WORKSPACES`'
- * order, which puts a vertical before the shop.
+ * Which apps exist for this person is the server's answer (`apps` on the
+ * session: the business runs it and the person holds a grant for it). The app
+ * whose menu shows is, in order: the one the open page belongs to; the one the
+ * server says they are in (`active_app`, remembered per person per business on
+ * any device); the first they can open. A body without `apps` (an old fixture)
+ * falls back to "every app with a row this person can see".
+ *
+ * When a page of another app is opened directly (a deep link, the back
+ * button), the server is told, so the switcher, the next sign-in and another
+ * device all agree on where this person is.
  */
 export function useNavigation(): UseNavigationResult {
+  const dispatch = useAppDispatch();
   const enabledModules = useAppSelector(selectEnabledModules);
   const permissions = useAppSelector(selectPermissions);
-  const tenantId = useAppSelector(selectActiveTenant)?.id ?? null;
+  const sessionApps = useAppSelector(selectSessionApps);
+  const activeApp = useAppSelector(selectActiveApp);
   const pathname = usePathname();
-  const remembered = useRememberedWorkspace(tenantId);
-  const fromPath = workspaceForPath(pathname);
+  const fromPath = appForPath(pathname);
 
   const result = useMemo(() => {
-    // Owner rule: an unbuilt feature is not shown. A row whose page does not
-    // exist yet (`ready` absent) is left out, not rendered as an inert "Soon".
-    const visible = NAV_ITEMS.filter(
-      (item) =>
-        item.ready === true &&
-        enabledModules.includes(item.module) &&
-        permissions.includes(item.permission)
-    );
-    const ordered = [...visible].sort(
-      (a, b) =>
-        NAV_SECTIONS.findIndex((s) => s.key === a.section) -
-          NAV_SECTIONS.findIndex((s) => s.key === b.section) || a.order - b.order
-    );
-    const workspaces: WorkspaceView[] = WORKSPACES.flatMap((ws) => {
-      const first = ordered.find((item) => item.workspace === ws.code);
-      return first ? [{ code: ws.code, labelId: ws.labelId, href: first.href }] : [];
-    });
-    const has = (code: string | null): code is Workspace =>
-      !!code && workspaces.some((ws) => ws.code === code);
-    const workspace = has(fromPath)
+    const visible = (item: AppNavItem): boolean =>
+      enabledModules.includes(item.module) && permissions.includes(item.permission);
+
+    const accessible = sessionApps
+      ? sessionApps.flatMap((server) => {
+          const manifest = APP_MANIFESTS.find((m) => m.code === server.code);
+          return manifest ? [{ manifest, home: server.homePath }] : [];
+        })
+      : APP_MANIFESTS.flatMap((manifest) => {
+          const first = manifest.navigation.find(visible);
+          return first ? [{ manifest, home: first.href }] : [];
+        });
+    const has = (code: string | null): boolean =>
+      !!code && accessible.some((a) => a.manifest.code === code);
+    const code = has(fromPath)
       ? fromPath
-      : has(remembered)
-        ? remembered
-        : (workspaces[0]?.code ?? null);
+      : has(activeApp)
+        ? activeApp
+        : (accessible[0]?.manifest.code ?? null);
+    const current = accessible.find((a) => a.manifest.code === code)?.manifest ?? null;
 
-    const inWorkspace = visible.filter(
-      (item) => item.workspace === 'any' || item.workspace === workspace
-    );
-    const sections = NAV_SECTIONS.map((section) => ({
-      ...section,
-      items: inWorkspace
-        .filter((item) => item.section === section.key)
-        .sort((a, b) => a.order - b.order),
-    })).filter((section) => section.items.length > 0);
+    const ownSections = current ? current.sections : [];
+    const allSections = [...ownSections, PLATFORM_SECTION];
+    const rows = [...(current ? current.navigation : []), ...PLATFORM_NAV_ITEMS].filter(visible);
+    const sections = allSections
+      .map((section) => ({
+        ...section,
+        items: rows
+          .filter((item) => item.section === section.key)
+          .sort((a, b) => a.order - b.order),
+      }))
+      .filter((section) => section.items.length > 0);
 
-    const bottomNav = inWorkspace.filter((item) => item.bottomNav).slice(0, 4);
-    return { sections, bottomNav, workspaces, workspace };
-  }, [enabledModules, permissions, fromPath, remembered]);
+    const bottomNav = sections
+      .flatMap((section) => section.items)
+      .filter((item) => item.bottomNav)
+      .slice(0, 4);
+    const apps: AppView[] = accessible.map(({ manifest, home }) => ({
+      code: manifest.code,
+      labelId: manifest.labelId,
+      href: home,
+    }));
+    return { sections, bottomNav, apps, app: code, shell: current?.shell ?? NO_SHELL };
+  }, [enabledModules, permissions, sessionApps, activeApp, fromPath]);
 
-  // Remember the workspace the open page put the menu in, so Settings and Team
-  // (shared by every workspace) keep showing the menu the person came from.
-  // Keyed on the codes, not the array: the array is rebuilt whenever the
-  // remembered value changes, and re-running on that undid every switcher tap
-  // made from a library page before the navigation away had happened.
-  const available = result.workspaces.map((ws) => ws.code).join(',');
+  // A page of another app was opened directly: say so, once, so the server's
+  // `active_app` follows the person rather than the last switcher tap.
+  const syncTo =
+    sessionApps && fromPath && fromPath !== activeApp && result.app === fromPath ? fromPath : null;
   useEffect(() => {
-    if (tenantId && fromPath && available.split(',').includes(fromPath)) {
-      rememberWorkspace(tenantId, fromPath);
-    }
-  }, [tenantId, fromPath, available]);
+    if (syncTo) void dispatch(switchApp({ app: syncTo }));
+  }, [dispatch, syncTo]);
 
   return result;
 }

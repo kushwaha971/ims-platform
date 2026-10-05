@@ -41,13 +41,13 @@ const UbDrawer = dynamic(
 export function MobileQuickSearch(): React.JSX.Element | null {
   const { t } = useTranslation();
   const canSearch = useCanSearchParties();
-  const { workspace } = useNavigation();
+  const { shell } = useNavigation();
   const [open, setOpen] = useState(false);
   const [opened, setOpened] = useState(false);
   const close = useCallback(() => setOpen(false), []);
 
   // The party search is the shop's question, not a library's (owner, 4 Oct 2026).
-  if (!canSearch || workspace !== 'shop') return null;
+  if (!canSearch || !shell.partySearch) return null;
 
   return (
     <>

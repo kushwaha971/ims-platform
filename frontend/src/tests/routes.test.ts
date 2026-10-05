@@ -24,7 +24,8 @@ import {
   onboardingStepPath,
 } from 'src/routes';
 
-import { NAV_ITEMS } from 'modules/DigiKhaato/features/navigation/sidebarConfig';
+import { APP_MANIFESTS } from 'modules/appManifests';
+import { PLATFORM_NAV_ITEMS } from 'modules/DigiKhaato/features/navigation/appManifest';
 
 const ROOT = process.cwd();
 
@@ -249,8 +250,7 @@ describe('the onboarding guard', () => {
  * journey stopped reaching network-idle, which is a roundabout way to discover
  * a navigation bug and exactly why this assertion now exists.
  *
- * `ready` is opt-in, so a row added before its route defaults to hidden. This
- * checks the other direction: nothing may claim `ready: true` without a page.
+ * A manifest lists only built pages, so every row it declares must have one.
  */
 describe('the sidebar only links to pages that exist', () => {
   const pageDirs = walk(join(ROOT, 'app'))
@@ -264,20 +264,16 @@ describe('the sidebar only links to pages that exist', () => {
     )
     .map((path) => path || '/');
 
-  it.each(NAV_ITEMS.filter((item) => item.ready).map((item) => [item.key, item.href]))(
-    '%s → %s has a page',
-    (_key, href) => {
-      expect(pageDirs).toContain(href);
-    }
-  );
+  // docs/platform/14 §4.2 — a manifest lists only built pages (owner rule: an
+  // unbuilt feature is not shown), so every row must have one.
+  const rows = [
+    ...APP_MANIFESTS.flatMap((app) =>
+      app.navigation.map((item) => [`${app.code}.${item.key}`, item.href])
+    ),
+    ...PLATFORM_NAV_ITEMS.map((item) => [`platform.${item.key}`, item.href]),
+  ] as [string, string][];
 
-  it('has no page behind any row that is not ready (those rows are not shown)', () => {
-    // `useNavigation` drops a row that is not `ready` — owner rule: unbuilt
-    // features are not shown, not even as an inert "Soon" row. So a row whose
-    // page now exists but is still not `ready` would be a built feature hidden.
-    const notReady = NAV_ITEMS.filter((item) => !item.ready).map((item) => item.href);
-    for (const href of notReady) {
-      expect(pageDirs).not.toContain(href);
-    }
+  it.each(rows)('%s → %s has a page', (_key, href) => {
+    expect(pageDirs).toContain(href);
   });
 });

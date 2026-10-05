@@ -134,15 +134,15 @@ export const usePasswordFlow = (): UsePasswordFlowResult => {
         // `RequireSession` reads exactly that — so without this re-read the
         // person is bounced straight back to this screen by the guard that
         // sent them here, having just successfully changed their password.
-        await dispatch(fetchSession()).unwrap().catch(() => undefined);
+        await dispatch(fetchSession())
+          .unwrap()
+          .catch(() => undefined);
         dispatch(showSnackbar({ severity: 'success', id: 'auth.password.updated' }));
         return true;
       } catch (thrown) {
         const apiError = thrown as ApiErrorShape;
         if (apiError.code === 'validation_error') {
-          setFormErrors(
-            applyServerErrors(apiError, setError, ['currentPassword', 'password'])
-          );
+          setFormErrors(applyServerErrors(apiError, setError, ['currentPassword', 'password']));
         } else if (apiError.code === 'invalid_credentials') {
           // The server answers this for a wrong CURRENT password, and it is the
           // one failure with an obvious field to sit on. Left to the global

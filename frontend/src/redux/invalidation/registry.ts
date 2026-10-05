@@ -159,6 +159,8 @@ export const QUERIES = {
 export const MUTATIONS = {
   // platform & settings
   switchTenant: 'session/switchTenant',
+  // docs/platform/14 §4.2 — open another app of the same business
+  switchApp: 'session/switchApp',
   logout: 'session/logout',
   // CR-2026-09-19-A — email + password sign-up replaces the OTP pair
   registerAccount: 'auth/registerAccount',

@@ -25,14 +25,14 @@ import { PartyQuickSearch } from 'modules/DigiKhaato/features/parties/components
 export function UbAppTopBar(): React.JSX.Element {
   // Owner, 4 Oct 2026 — the party search ("Search customers and suppliers") is
   // the shop's question. A library's screens have their own student search.
-  const { workspace } = useNavigation();
+  const { shell } = useNavigation();
   return (
     <UbBox
       as="header"
       data-print="hide"
       className="sticky top-0 z-30 hidden h-14 shrink-0 items-center justify-between gap-6 border-b border-border-hairline bg-surface-card px-6 lg:flex"
     >
-      {workspace === 'shop' ? <PartyQuickSearch className="max-w-[360px]" /> : <UbBox />}
+      {shell.partySearch ? <PartyQuickSearch className="max-w-[360px]" /> : <UbBox />}
       <UbBox className="flex items-center gap-2">
         <NotificationBell />
         <AccountMenu />

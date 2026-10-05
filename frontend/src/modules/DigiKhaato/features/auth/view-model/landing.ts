@@ -26,7 +26,10 @@ export const landingRoute = (landing: Landing, nextPath: string): string => {
     case 'business_setup':
       return AUTH_CONFIG.onboardingStepPath(landing.step);
     case 'app':
-      return nextPath;
+      // `?next=` wins when it named a page; otherwise the app they were in.
+      return nextPath === AUTH_CONFIG.defaultPostLoginPath && landing.path
+        ? landing.path
+        : nextPath;
     default:
       return AUTH_CONFIG.defaultPostLoginPath;
   }

@@ -162,6 +162,13 @@ interface SessionApiResponse {
      */
     readonly ver?: number | null;
     readonly landing?: unknown;
+    readonly apps?: readonly {
+      readonly code: string;
+      readonly label_id: string;
+      readonly home_path: string;
+      readonly order: number;
+    }[];
+    readonly active_app?: string | null;
   };
 }
 
@@ -381,6 +388,15 @@ export const getSession = async (signal?: AbortSignal): Promise<SessionPayload> 
     enabledModules: activeRow?.enabled_modules ?? [],
     version: data.ver ?? null,
     landing: toLanding(data.landing),
+    apps: data.apps
+      ? data.apps.map((app) => ({
+          code: app.code,
+          labelId: app.label_id,
+          homePath: app.home_path,
+          order: app.order,
+        }))
+      : null,
+    activeApp: data.active_app ?? null,
     impersonation: support
       ? {
           id: support.id,
@@ -412,6 +428,17 @@ export const switchTenant = async (tenantId: string): Promise<SessionPayload> =>
   }
 };
 export const switchTenantWriteClass: TWriteClass = 'online-only';
+
+/**
+ * POST /auth/switch-app — docs/platform/14 §4.2. The server remembers the app per
+ * person per business, so the session is re-read rather than patched locally:
+ * the menu, the landing and the switcher all come from the same answer.
+ */
+export const switchApp = async (app: string): Promise<SessionPayload> => {
+  await api.post(API_PATHS.AUTH_SWITCH_APP, { app });
+  return getSession();
+};
+export const switchAppWriteClass: TWriteClass = 'online-only';
 
 /** POST /auth/logout — the teardown order is the caller's (§19.7.4). */
 export const logout = async (): Promise<void> => {

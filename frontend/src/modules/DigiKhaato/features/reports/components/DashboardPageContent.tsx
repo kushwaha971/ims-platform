@@ -21,7 +21,7 @@ import { ROUTES } from 'src/routes';
 
 import { LANDING_FALLBACK } from '../../navigation/landing';
 import { useLandingPath } from '../../navigation/useLandingPath';
-import { useNavigation } from '../../navigation/useNavigation';
+import { appForPath, useNavigation } from '../../navigation/useNavigation';
 import { useDashboard } from '../hooks/useDashboard';
 import { isFirstUse } from '../view-model/dashboardDisplay';
 
@@ -65,12 +65,12 @@ export function DashboardPageContent(): React.JSX.Element {
   const { can, hasModule } = usePermissions();
   const dash = useDashboard();
   const landing = useLandingPath();
-  const { workspace } = useNavigation();
+  const { app } = useNavigation();
 
-  // Owner, 4 Oct 2026 — one menu per kind of business. Sign-in, a business
-  // switch and the logo all land here; a library or a lender is sent on to
-  // its own first page instead of a shop's dashboard.
-  const elsewhere = landing !== ROUTES.DASHBOARD && !!workspace;
+  // docs/platform/14 §4.2 — this page belongs to the app that declares it. A
+  // person who cannot open that app here (a library's staff, a lender) is
+  // sent on to the first page of the app they are in.
+  const elsewhere = !!app && app !== appForPath(ROUTES.DASHBOARD);
 
   useEffect(() => {
     // Never back to this page: were the two gates ever to disagree, a loop on

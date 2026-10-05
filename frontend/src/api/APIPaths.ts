@@ -28,6 +28,7 @@ export const API_PATHS = {
   AUTH_LOGOUT: '/auth/logout',
   AUTH_ME: '/auth/me',
   AUTH_SWITCH_TENANT: '/auth/switch-tenant',
+  AUTH_SWITCH_APP: '/auth/switch-app',
   AUTH_PASSWORD_SET: '/auth/password/set',
   AUTH_PASSWORD_RESET_REQUEST: '/auth/password/reset/request',
   AUTH_PASSWORD_RESET_CONFIRM: '/auth/password/reset/confirm',

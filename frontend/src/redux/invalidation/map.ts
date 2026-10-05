@@ -63,6 +63,10 @@ export const INVALIDATION: TInvalidationMap = {
   // ── platform & settings ───────────────────────────────────────────────────
   // A new tenant means a new token and a new dataset; nothing survives.
   switchTenant: { resetAll: true },
+  // Another app of the SAME business: same token, same data, same permissions
+  // (grants scope the business, not the app open). Only which app the person
+  // is in moves, and the session slice writes it from this action's payload.
+  switchApp: { patch: [['session', 'activeApp']] },
   logout: { resetAll: true },
 
   // ── PLT-02 / CR-2026-09-19-A — authentication ─────────────────────────────

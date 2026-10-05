@@ -3,14 +3,13 @@
 import { usePathname } from 'next/navigation';
 
 import { UbLink, UbStack, UbText } from 'src/design-system';
-import { useAppSelector } from 'src/hooks/useAppStore';
+import { useAppDispatch } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
-import { selectActiveTenant } from 'src/redux/slice/sessionSlice';
 import { cn } from 'src/utils/cn';
 
+import { switchApp } from 'modules/DigiKhaato/features/auth/redux/sessionThunk';
 import { activeNavHref } from 'modules/DigiKhaato/features/navigation/activeNav';
 import { useNavigation } from 'modules/DigiKhaato/features/navigation/useNavigation';
-import { rememberWorkspace } from 'modules/DigiKhaato/features/navigation/workspaceMemory';
 
 /**
  * The entitlement-driven navigation list, shared by the rail and the drawer.
@@ -33,8 +32,8 @@ export function NavSections({
 }: Readonly<{ onNavigate?: () => void }>): React.JSX.Element {
   const pathname = usePathname();
   const { t } = useTranslation();
-  const { sections, workspaces, workspace } = useNavigation();
-  const tenantId = useAppSelector(selectActiveTenant)?.id ?? null;
+  const { sections, apps, app } = useNavigation();
+  const dispatch = useAppDispatch();
   const currentHref = activeNavHref(
     pathname,
     sections.flatMap((section) => section.items.map((item) => item.href))
@@ -42,7 +41,7 @@ export function NavSections({
 
   return (
     <UbStack gap={0} as="div" className="min-h-0 flex-1">
-      {workspaces.length > 1 && (
+      {apps.length > 1 && (
         /* Owner, 4 Oct 2026 — one menu per kind of business. A business that
            runs two (a shop with a reading room) switches between them here;
            one that runs a single kind never sees this row. */
@@ -54,8 +53,8 @@ export function NavSections({
           aria-label={t('nav.workspace.label')}
           data-testid="nav-workspaces"
         >
-          {workspaces.map((ws) => {
-            const current = ws.code === workspace;
+          {apps.map((ws) => {
+            const current = ws.code === app;
             return (
               <UbLink
                 key={ws.code}
@@ -65,7 +64,9 @@ export function NavSections({
                 underline={false}
                 aria-current={current ? 'true' : undefined}
                 onClick={() => {
-                  if (tenantId) rememberWorkspace(tenantId, ws.code);
+                  // docs/platform/14 §4.2 — remembered by the server, per person
+                  // per business, so every device opens the same app next time.
+                  if (!current) void dispatch(switchApp({ app: ws.code }));
                   onNavigate?.();
                 }}
                 className={cn(

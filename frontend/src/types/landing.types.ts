@@ -14,7 +14,13 @@ export type Landing =
   | { readonly kind: 'admin' }
   | { readonly kind: 'no_business' }
   | { readonly kind: 'business_setup'; readonly tenantId: string; readonly step: number }
-  | { readonly kind: 'app'; readonly tenantId: string };
+  | {
+      readonly kind: 'app';
+      readonly tenantId: string;
+      /** docs/platform/14 §4.2 — the app the person is in, and its home. */
+      readonly app?: string;
+      readonly path?: string;
+    };
 
 export type LandingKind = Landing['kind'];
 
@@ -35,7 +41,12 @@ export const toLanding = (raw: unknown): Landing | null => {
     case 'business_setup':
       return { kind: 'business_setup', tenantId, step: Number(row.step) || 1 };
     case 'app':
-      return { kind: 'app', tenantId };
+      return {
+        kind: 'app',
+        tenantId,
+        ...(typeof row.app === 'string' ? { app: row.app } : {}),
+        ...(typeof row.path === 'string' && row.path.startsWith('/') ? { path: row.path } : {}),
+      };
     default:
       return null;
   }

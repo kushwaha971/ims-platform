@@ -30,7 +30,9 @@ describe('the library route gate', () => {
     );
     expect(screen.queryByText('Library page')).toBeNull();
     expect(screen.getByText('We could not find that page')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /dashboard/i })).toHaveAttribute('href', '/dashboard');
+    // The way out is the first page of the app the person is in, not the
+    // Shop's dashboard: a library's staff cannot open that.
+    expect(screen.getByRole('link', { name: /home page/i })).toHaveAttribute('href', '/parties');
   });
 
   it('renders the page when library is on', () => {

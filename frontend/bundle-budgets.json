@@ -627,7 +627,18 @@
   "Measured: route 37.1 -> 36.8 KB, firstLoad 268.3 -> 268.0 KB. The route is",
   "tightened; firstLoad stays at 269, because 268.0 sits on the line and a",
   "centred last row of cards (four class names) was enough to tip it.",
-  "  /                            route 38 -> 37, firstLoad 269 (unchanged)"
+  "  /                            route 38 -> 37, firstLoad 269 (unchanged)",
+  "",
+  "── 5 Oct 2026: one menu per app (docs/platform/14 step 3) ───────────────────",
+  "The shell moved 106.5 -> 107.2. The shared sidebarConfig.ts became three app",
+  "manifests plus a platform list, the session slice learned `apps` and",
+  "`active_app`, and the Shop menu gained the Vyapar/Zoho grouping, which is six",
+  "section names and four new rows (estimates, credit notes, stock summary, low",
+  "stock) — ten shell catalogue keys in two languages and two more lucide icons.",
+  "No route chunk moved; every first-load failure is the same 0.7 KB of shell.",
+  "  shared app  107 -> 108  (measured 107.2)",
+  "  first load  +1 on the 31 routes that measured within 0.5 of their budget",
+  "  /accept-invite/[token] first load 244 -> 245 (measured 244.5): joining a business now carries on to that business's landing (useGoToLanding) instead of the Shop dashboard"
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -841,7 +852,7 @@
  ],
  "shared": {
   "framework": 128,
-  "sharedApp": 107
+  "sharedApp": 108
  },
  "//routes": [
   "The `route` figures are §19.9.2's, unchanged, and every route is comfortably",
@@ -1180,7 +1191,7 @@
  "routes": {
   "/parties": {
    "route": 104,
-   "firstLoad": 338
+   "firstLoad": 339
   },
   "/dashboard": {
    "route": 88,
@@ -1192,7 +1203,7 @@
   },
   "/sales/invoices/[id]/edit": {
    "route": 132,
-   "firstLoad": 366
+   "firstLoad": 367
   },
   "/sales/invoices": {
    "route": 93,
@@ -1240,11 +1251,11 @@
   },
   "/settings/team": {
    "route": 75,
-   "firstLoad": 309
+   "firstLoad": 310
   },
   "/parties/[id]": {
    "route": 99,
-   "firstLoad": 332
+   "firstLoad": 333
   },
   "/parties/tags": {
    "route": 58,
@@ -1268,11 +1279,11 @@
   },
   "/settings": {
    "route": 97,
-   "firstLoad": 330
+   "firstLoad": 331
   },
   "/settings/profile": {
    "route": 130,
-   "firstLoad": 363
+   "firstLoad": 365
   },
   "/settings/branding": {
    "route": 85,
@@ -1284,7 +1295,7 @@
   },
   "/settings/devices": {
    "route": 51,
-   "firstLoad": 285
+   "firstLoad": 286
   },
   "/stock/summary": {
    "route": 115,
@@ -1292,7 +1303,7 @@
   },
   "/items/masters": {
    "route": 47,
-   "firstLoad": 280
+   "firstLoad": 281
   },
   "/items": {
    "route": 105,
@@ -1324,7 +1335,7 @@
   },
   "/ledger/reminders": {
    "route": 66,
-   "firstLoad": 299
+   "firstLoad": 300
   },
   "/imports": {
    "route": 46,
@@ -1360,19 +1371,19 @@
   },
   "/purchases/bills/[id]": {
    "route": 58,
-   "firstLoad": 291
+   "firstLoad": 292
   },
   "/purchases/bills/[id]/edit": {
    "route": 140,
-   "firstLoad": 373
+   "firstLoad": 374
   },
   "/purchases/bills": {
    "route": 89,
-   "firstLoad": 322
+   "firstLoad": 323
   },
   "/purchases/bills/new": {
    "route": 140,
-   "firstLoad": 373
+   "firstLoad": 374
   },
   "/reports": {
    "route": 72,
@@ -1384,19 +1395,19 @@
   },
   "/reports/gst-summary": {
    "route": 98,
-   "firstLoad": 331
+   "firstLoad": 332
   },
   "/reports/purchase-register": {
    "route": 96,
-   "firstLoad": 330
+   "firstLoad": 331
   },
   "/reports/sales-register": {
    "route": 96,
-   "firstLoad": 330
+   "firstLoad": 331
   },
   "/login": {
    "route": 56,
-   "firstLoad": 290
+   "firstLoad": 291
   },
   "/": {
    "route": 38,
@@ -1404,11 +1415,11 @@
   },
   "/settings/business-days": {
    "route": 57,
-   "firstLoad": 291
+   "firstLoad": 292
   },
   "/library/catalogue": {
    "route": 68,
-   "firstLoad": 302
+   "firstLoad": 303
   },
   "/library/copies": {
    "route": 68,
@@ -1432,7 +1443,7 @@
   },
   "/library/catalogue/[titleId]": {
    "route": 61,
-   "firstLoad": 295
+   "firstLoad": 296
   },
   "/library/catalogue/categories": {
    "route": 60,
@@ -1448,7 +1459,7 @@
   },
   "/library/seats": {
    "route": 63,
-   "firstLoad": 297
+   "firstLoad": 298
   },
   "/library/fees": {
    "route": 60,
@@ -1456,7 +1467,7 @@
   },
   "/signup": {
    "route": 51,
-   "firstLoad": 284
+   "firstLoad": 285
   },
   "/reset-password": {
    "route": 51,
@@ -1468,7 +1479,7 @@
   },
   "/set-password": {
    "route": 50,
-   "firstLoad": 283
+   "firstLoad": 284
   },
   "/d/[token]": {
    "route": 35,
@@ -1476,19 +1487,19 @@
   },
   "/accept-invite/[token]": {
    "route": 11,
-   "firstLoad": 244
+   "firstLoad": 245
   },
   "/legal/privacy": {
    "route": 8,
-   "firstLoad": 241
+   "firstLoad": 242
   },
   "/legal/terms": {
    "route": 8,
-   "firstLoad": 241
+   "firstLoad": 242
   },
   "/onboarding": {
    "route": 6,
-   "firstLoad": 239
+   "firstLoad": 240
   },
   "/_not-found": {
    "route": 1,
@@ -1500,11 +1511,11 @@
   },
   "/library/attendance": {
    "route": 62,
-   "firstLoad": 296
+   "firstLoad": 297
   },
   "/library/messages": {
    "route": 61,
-   "firstLoad": 294
+   "firstLoad": 295
   },
   "/lending/loans/new": {
    "route": 117,
@@ -1512,15 +1523,15 @@
   },
   "/lending": {
    "route": 56,
-   "firstLoad": 290
+   "firstLoad": 291
   },
   "/lending/loans/[loanId]": {
    "route": 56,
-   "firstLoad": 289
+   "firstLoad": 290
   },
   "/lending/loans": {
    "route": 56,
-   "firstLoad": 288
+   "firstLoad": 289
   }
  },
  "//ignoreRoutes": [
