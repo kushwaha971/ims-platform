@@ -18,6 +18,7 @@ import {
   enrolLibraryMember,
   fetchLibraryMembers,
   fetchLibraryMembershipTypes,
+  saveLibraryPlan,
 } from './libraryMemberThunk';
 
 import type {
@@ -68,6 +69,12 @@ const libraryMemberListSlice = createSlice({
       )
       .addCase(fetchLibraryMembershipTypes.fulfilled, (state, action) => {
         state.types = action.payload as Draft<MembershipType>[];
+      })
+      .addCase(saveLibraryPlan.fulfilled, (state, action) => {
+        const plan = action.payload as Draft<MembershipType>;
+        state.types = state.types.some((t) => t.id === plan.id)
+          ? state.types.map((t) => (t.id === plan.id ? plan : t))
+          : [...state.types, plan];
       })
       .addCase(enrolLibraryMember.pending, (state) => {
         state.enrolling = true;

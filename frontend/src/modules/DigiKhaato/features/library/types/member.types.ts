@@ -4,7 +4,28 @@
  * the forms that enrol, renew, suspend and close. Money is a decimal string.
  */
 export const MEMBER_STATUSES = ['active', 'expiring', 'expired', 'suspended', 'closed'] as const;
-export const MEMBER_ORDERINGS = ['name', 'member_number', 'valid_until', '-dues'] as const;
+export const MEMBER_ORDERINGS = ['name', 'member_number', 'valid_until', '-dues', 'seat'] as const;
+
+/**
+ * W02 — the fee in one word, worst first: the plan ran out (`overdue`), a fee
+ * is charged and not paid (`unpaid`), the plan ends within a week
+ * (`due_soon`), all clear (`paid`), or the student has left.
+ */
+export const FEE_STATES = ['overdue', 'unpaid', 'due_soon', 'paid', 'left'] as const;
+export type FeeState = (typeof FEE_STATES)[number];
+
+export interface SeatRef {
+  readonly id: string;
+  readonly label: string;
+  readonly zone: string;
+}
+
+export interface ShiftRef {
+  readonly id: string;
+  readonly name: string;
+  readonly startsAt: string;
+  readonly endsAt: string;
+}
 
 export type MemberStatusFilter = (typeof MEMBER_STATUSES)[number];
 export type EffectiveStatus = 'active' | 'expired' | 'suspended' | 'closed';
@@ -26,6 +47,12 @@ export interface MemberSummary {
   readonly startsOn: string;
   readonly validUntil: string | null;
   readonly groupLabel: string;
+  readonly shift: ShiftRef | null;
+  readonly seat: SeatRef | null;
+  readonly lockerLabel: string;
+  readonly planFee: string;
+  readonly validityMonths: number | null;
+  readonly feeState: FeeState;
   readonly loansOpen: number;
   readonly loansOverdue: number;
   readonly holdsReady: number;
@@ -79,6 +106,7 @@ export interface MembershipType {
   readonly depositAmount: string;
   readonly validityMonths: number | null;
   readonly isActive: boolean;
+  readonly version: number;
 }
 
 export type MemberFilters = Readonly<{
@@ -87,6 +115,7 @@ export type MemberFilters = Readonly<{
   type: string;
   group: string;
   hasDues: '' | 'true';
+  shift: string;
   ordering: '' | (typeof MEMBER_ORDERINGS)[number];
   page: string;
 }>;
@@ -108,6 +137,11 @@ export interface EnrolFormValues {
   groupLabel: string;
   guardianName: string;
   guardianMobile: string;
+  shiftId: string;
+  seatId: string;
+  lockerLabel: string;
+  /** How the money collected now was paid: cash or UPI at a reading-room desk. */
+  paymentMode: 'cash' | 'upi';
   /** Collect the fees and the deposit now, in cash; otherwise they are owed. */
   collectNow: boolean;
 }

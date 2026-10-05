@@ -131,6 +131,8 @@ export type ApiErrorCode =
   | 'library_waiver_over_ceiling'
   | 'library_charge_has_payments'
   | 'library_title_has_copies'
+  // W03 — a desk already held in that shift, said on the seat field.
+  | 'library_seat_taken'
   // transport-level codes minted on the client, never sent by the server:
   | 'network_error'
   | 'timeout'

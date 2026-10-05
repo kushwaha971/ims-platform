@@ -54,6 +54,17 @@ def overlaps(a: LibraryShift | None, b: LibraryShift | None) -> bool:
     return any(s1 < e2 + k and s2 + k < e1 for k in (-DAY, 0, DAY))
 
 
+def in_day_order(shifts: Any) -> list[LibraryShift]:
+    """Short shifts by start time, the long ones after: Morning, Evening, Night,
+    then Full day — the order a librarian reads a day in. Seen live: ordering by
+    start alone put "Full day" (06:00) before "Morning" (06:00) and made it the
+    seat map's default shift."""
+    return sorted(
+        shifts,
+        key=lambda s: (s.sort_order, span(s)[1] - span(s)[0], span(s)[0], s.name.lower()),
+    )
+
+
 # ── JSON ────────────────────────────────────────────────────────────────────
 
 

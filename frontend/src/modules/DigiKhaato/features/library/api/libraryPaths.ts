@@ -33,4 +33,11 @@ export const LIBRARY_PATHS = {
   CHARGES: '/library/charges',
   CHARGE_ACTION: (id: string, action: string) => `/library/charges/${seg(id)}/${action}`,
   SETTINGS_NUMBERING: '/library/settings/numbering',
+  MEMBERSHIP_TYPE: (id: string) => `/library/membership-types/${seg(id)}`,
+  SHIFTS: '/library/shifts',
+  SHIFT: (id: string) => `/library/shifts/${seg(id)}`,
+  SEATS: '/library/seats',
+  SEAT: (id: string) => `/library/seats/${seg(id)}`,
+  SEAT_ROW: '/library/seats/row',
+  SEAT_MAP: '/library/seat-map',
 } as const;

@@ -12,7 +12,7 @@ import {
   selectLibraryMemberDetail,
   type LibraryMemberDetailState,
 } from '../redux/libraryMemberDetailSlice';
-import { actOnLibraryMember, fetchLibraryMember } from '../redux/libraryMemberThunk';
+import { actOnLibraryMember, fetchLibraryMember, placeLibraryMember } from '../redux/libraryMemberThunk';
 
 import type { MemberAction } from '../api/libraryMemberService';
 
@@ -30,6 +30,12 @@ export interface MemberDetailResult extends LibraryMemberDetailState {
     body: Readonly<Record<string, unknown>>,
     key?: string
   ) => Promise<ActOutcome>;
+  /** W03 — give, move or free a seat (`seatId: null`), or change the locker. */
+  readonly place: (body: {
+    seatId?: string | null;
+    shiftId?: string | null;
+    lockerLabel?: string;
+  }) => Promise<ActOutcome>;
 }
 
 /**
@@ -81,9 +87,33 @@ export const useMemberDetail = (id: string): MemberDetailResult => {
     [dispatch, id]
   );
 
+  const place = useCallback(
+    async (body: {
+      seatId?: string | null;
+      shiftId?: string | null;
+      lockerLabel?: string;
+    }): Promise<ActOutcome> => {
+      const version = state.member?.version ?? 1;
+      const result = await dispatch(placeLibraryMember({ id, version, body }));
+      if (placeLibraryMember.fulfilled.match(result)) {
+        dispatch(
+          showSnackbar({
+            severity: 'success',
+            id: result.payload.seat ? 'library.place.done' : 'library.place.freed',
+            params: { name: result.payload.name, seat: result.payload.seat?.label ?? '' },
+          })
+        );
+        return { ok: true };
+      }
+      return { ok: false, error: result.payload ?? null };
+    },
+    [dispatch, id, state.member?.version]
+  );
+
   return {
     ...state,
     canRead,
+    place,
     canWrite: canRead && can('library.member.write'),
     canClose: canRead && can('library.member.close'),
     refetch,

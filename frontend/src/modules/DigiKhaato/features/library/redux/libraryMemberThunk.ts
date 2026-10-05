@@ -5,7 +5,7 @@ import { toApiError } from 'src/utils/apiError';
 
 import './libraryInvalidation';
 
-import type { MemberAction, MemberPage } from '../api/libraryMemberService';
+import type { MemberAction, MemberPage, PlanBody } from '../api/libraryMemberService';
 import type { MemberDetail, MemberFilters, MembershipType } from '../types/member.types';
 
 /**
@@ -76,5 +76,33 @@ export const actOnLibraryMember = createAsyncThunk<
     return await (await service()).actOnMember(id, action, body, key);
   } catch (error) {
     return rejectWithValue(toApiError(error, 'library.member.error.save'));
+  }
+});
+
+export const placeLibraryMember = createAsyncThunk<
+  MemberDetail,
+  {
+    id: string;
+    version: number;
+    body: { seatId?: string | null; shiftId?: string | null; lockerLabel?: string };
+  },
+  Reject
+>('libraryMemberDetail/place', async ({ id, version, body }, { rejectWithValue }) => {
+  try {
+    return await (await service()).placeMember(id, body, version);
+  } catch (error) {
+    return rejectWithValue(toApiError(error, 'library.member.error.save'));
+  }
+});
+
+export const saveLibraryPlan = createAsyncThunk<
+  MembershipType,
+  { body: PlanBody; existing?: { id: string; version: number } },
+  Reject
+>('libraryMemberList/savePlan', async ({ body, existing }, { rejectWithValue }) => {
+  try {
+    return await (await service()).savePlan(body, existing);
+  } catch (error) {
+    return rejectWithValue(toApiError(error, 'library.plans.error.save'));
   }
 });

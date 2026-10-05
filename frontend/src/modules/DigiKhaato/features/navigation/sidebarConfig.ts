@@ -1,6 +1,8 @@
 import {
+  Armchair,
   BarChart3,
   BookCopy,
+  IndianRupee,
   BookOpen,
   BookUser,
   Boxes,
@@ -275,7 +277,8 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
     order: 2,
   },
   {
-    // F04 (LIB-04) — the library's members.
+    // F04 (LIB-04) — the library's members; a study library's STUDENTS
+    // (owner, 4 Oct 2026), so the first of its daily rows.
     key: 'libraryMembers',
     workspace: 'library',
     ready: true,
@@ -285,7 +288,36 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
     module: 'library',
     permission: 'library.member.read',
     section: 'daily',
-    order: 12,
+    order: 2,
+    bottomNav: true,
+  },
+  {
+    // W03 — the seat map by shift: the room as the librarian sees it.
+    key: 'librarySeats',
+    workspace: 'library',
+    ready: true,
+    icon: Armchair,
+    labelId: 'nav.library.seats',
+    href: ROUTES.LIBRARY_SEATS,
+    module: 'library',
+    permission: 'library.member.read',
+    section: 'daily',
+    order: 3,
+    bottomNav: true,
+  },
+  {
+    // W03 — who has to pay, and the fee plans.
+    key: 'libraryFees',
+    workspace: 'library',
+    ready: true,
+    icon: IndianRupee,
+    labelId: 'nav.library.fees',
+    href: ROUTES.LIBRARY_FEES,
+    module: 'library',
+    permission: 'library.member.read',
+    section: 'daily',
+    order: 4,
+    bottomNav: true,
   },
   {
     // F03 (LIB-02) — the library's first page. Shown only while the library

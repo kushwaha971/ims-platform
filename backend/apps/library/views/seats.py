@@ -29,10 +29,8 @@ EXEMPT = "The library has no row scoping (LIB-14 §1, ADR-052)."
 
 class ShiftListView(_ConfigView):
     def get(self, request: Any) -> Any:
-        rows = LibraryShift.objects.filter(tenant=get_effective_tenant(request)).order_by(
-            "sort_order", "starts_at", "name", "id"
-        )
-        return StandardResponse.ok([seats.shift_json(r) for r in rows])
+        rows = LibraryShift.objects.filter(tenant=get_effective_tenant(request))
+        return StandardResponse.ok([seats.shift_json(r) for r in seats.in_day_order(rows)])
 
     def post(self, request: Any) -> Any:
         row = seats.create_shift(ctx=Ctx.from_request(request), data=request.data)

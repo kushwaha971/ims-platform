@@ -23,6 +23,7 @@ jest.mock('../api/libraryMemberService', () => ({
   getMember: jest.fn(),
   listMembershipTypes: jest.fn(),
   actOnMember: jest.fn(),
+  placeMember: jest.fn(),
 }));
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
@@ -41,6 +42,12 @@ const ASHA: MemberDetail = {
   startsOn: '2026-04-01',
   validUntil: '2027-03-31',
   groupLabel: '9-B',
+  shift: null,
+  seat: null,
+  lockerLabel: '',
+  planFee: '150.00',
+  validityMonths: 6,
+  feeState: 'paid',
   loansOpen: 1,
   loansOverdue: 0,
   holdsReady: 0,
@@ -106,11 +113,36 @@ describe('MemberDetailPageContent', () => {
     renderWithProviders(<MemberDetailPageContent id="m1" />);
     await screen.findByTestId('library-member-number');
     await userEvent.click(screen.getByTestId('library-more'));
-    await userEvent.click(screen.getByRole('button', { name: 'Close membership' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Mark as left' }));
     expect(await screen.findByTestId('library-close-books-out')).toHaveTextContent(
       '1 book is still out.'
     );
     expect(service.actOnMember).not.toHaveBeenCalled();
+  });
+
+  /**
+   * W03 — a study library's student page says where they sit and when, and
+   * frees the desk in one tap: the PATCH sends `seat_id: null` with the
+   * version, and nothing else the student holds changes.
+   */
+  it('shows the seat and shift, and frees the seat in one tap', async () => {
+    jest.mocked(service.getMember).mockResolvedValue({
+      ...ASHA,
+      seat: { id: 's12', label: 'A12', zone: 'AC hall' },
+      shift: { id: 'sh1', name: 'Morning', startsAt: '06:00', endsAt: '12:00' },
+      lockerLabel: 'L-7',
+      feeState: 'due_soon',
+    });
+    jest.mocked(service.placeMember).mockResolvedValue({ ...ASHA, seat: null, shift: null });
+    signIn(['library.member.read', 'library.member.write']);
+    renderWithProviders(<MemberDetailPageContent id="m1" />);
+    const seat = await screen.findByTestId('library-member-seat');
+    expect(seat).toHaveTextContent('A12');
+    expect(seat).toHaveTextContent('Morning · 06:00–12:00');
+    expect(seat).toHaveTextContent('Locker L-7');
+    expect(screen.getByText('Due soon')).toBeInTheDocument();
+    await userEvent.click(screen.getByTestId('library-member-free-seat'));
+    expect(service.placeMember).toHaveBeenCalledWith('m1', { seatId: null }, ASHA.version);
   });
 
   it('offers a reader no acts at all', async () => {

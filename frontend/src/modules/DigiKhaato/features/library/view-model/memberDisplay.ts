@@ -4,6 +4,7 @@ import { formatInr } from 'src/utils/money';
 import type {
   EnrolFormValues,
   EffectiveStatus,
+  FeeState,
   MemberBlock,
   MemberSummary,
   MembershipType,
@@ -19,6 +20,23 @@ export const STATUS_TONE: Readonly<Record<EffectiveStatus, UbStatusBadgeTone>> =
   suspended: 'warning',
   closed: 'neutral',
 };
+
+/** W02 — the fee in one word, and its colour; never the colour alone. */
+export const FEE_TONE: Readonly<Record<FeeState, UbStatusBadgeTone>> = {
+  overdue: 'error',
+  unpaid: 'warning',
+  due_soon: 'warning',
+  paid: 'success',
+  left: 'neutral',
+};
+
+/** "A12 · Morning", "A12", "Morning" or '' — where and when a student sits. */
+export const placeLine = (member: Pick<MemberSummary, 'seat' | 'shift'>): string =>
+  [member.seat?.label, member.shift?.name].filter(Boolean).join(' · ');
+
+/** "06:00–12:00". */
+export const shiftHours = (shift: { readonly startsAt: string; readonly endsAt: string }): string =>
+  `${shift.startsAt}–${shift.endsAt}`;
 
 const DAY_MS = 86_400_000;
 
@@ -80,7 +98,7 @@ export const toEnrolBody = (
 ): Record<string, unknown> => {
   const cost = enrolCost(type);
   const cash = (amount: string) => ({
-    mode_breakup: [{ mode: 'cash', amount }],
+    mode_breakup: [{ mode: values.paymentMode || 'cash', amount }],
     payment_date: today,
   });
   const guardian = clean(values.guardianName)
@@ -93,6 +111,9 @@ export const toEnrolBody = (
     membership_type_id: values.membershipTypeId,
     member_number: clean(values.memberNumber) || undefined,
     group_label: clean(values.groupLabel) || undefined,
+    shift_id: values.shiftId || undefined,
+    seat_id: values.seatId || undefined,
+    locker_label: clean(values.lockerLabel) || undefined,
     guardian,
     collect_fees: values.collectNow && isNonZero(cost.fees) ? cash(cost.fees) : undefined,
     collect_deposit: values.collectNow && isNonZero(cost.deposit) ? cash(cost.deposit) : undefined,

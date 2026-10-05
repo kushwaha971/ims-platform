@@ -34,6 +34,9 @@ export const LIBRARY_QUERIES = {
   fetchLibraryMembershipTypes: 'libraryMemberList/fetchTypes',
   loadCounterMember: 'libraryCounter/loadMember',
   fetchMemberCharges: 'libraryMemberDetail/fetchCharges',
+  fetchLibraryShifts: 'librarySeats/fetchShifts',
+  fetchLibrarySeats: 'librarySeats/fetchSeats',
+  fetchLibrarySeatMap: 'librarySeats/fetchMap',
 } as const satisfies Record<string, string>;
 
 export const LIBRARY_MUTATIONS = {
@@ -60,6 +63,12 @@ export const LIBRARY_MUTATIONS = {
   createLibraryCharge: 'libraryMemberDetail/createCharge',
   markLibraryLoanLost: 'libraryCounter/markLost',
   markLibraryCopyFound: 'libraryCopyDetail/found',
+  saveLibraryShift: 'librarySeats/saveShift',
+  setLibraryShiftActive: 'librarySeats/setShiftActive',
+  addLibrarySeatRow: 'librarySeats/addRow',
+  setLibrarySeatActive: 'librarySeats/setSeatActive',
+  placeLibraryMember: 'libraryMemberDetail/place',
+  saveLibraryPlan: 'libraryMemberList/savePlan',
 } as const satisfies Record<string, string>;
 
 export type TLibraryQueryName = keyof typeof LIBRARY_QUERIES;
@@ -122,10 +131,13 @@ export const LIBRARY_INVALIDATION: Readonly<
   // F04 — fees and deposits move the party's khata, which is REFETCHED (a
   // false `patch` is worse than none, CLAUDE.md LED-01); the member page takes
   // the act's answer as its own.
-  enrolLibraryMember: { stale: ['libraryMemberList', 'partyDetail', 'partyList'] },
+  enrolLibraryMember: {
+    stale: ['libraryMemberList', 'librarySeats', 'partyDetail', 'partyList'],
+  },
+  // W03 — closing a membership frees its seat, so the map is stale too.
   actOnLibraryMember: {
     patch: [['libraryMemberDetail', 'member']],
-    stale: ['libraryMemberList', 'partyDetail', 'partyList'],
+    stale: ['libraryMemberList', 'librarySeats', 'partyDetail', 'partyList'],
   },
   // F05 — a scan issues, returns or renews: every list and page showing a
   // copy's state or a member's books is stale; a fine moves the khata. The
@@ -140,6 +152,21 @@ export const LIBRARY_INVALIDATION: Readonly<
   createLibraryCharge: { refetch: ['libraryMemberDetail'], stale: [...CIRCULATION_VIEWS] },
   markLibraryLoanLost: { stale: [...CIRCULATION_VIEWS] },
   markLibraryCopyFound: { refetch: ['libraryCopyDetail'], stale: [...CIRCULATION_VIEWS] },
+  // W02 — a shift's name or times show on every student row and on the map;
+  // the settings list takes the saved row itself. A new row of seats is only
+  // in the map, which refetches.
+  saveLibraryShift: { patch: [['librarySeats', 'shifts']], stale: ['libraryMemberList'] },
+  setLibraryShiftActive: { patch: [['librarySeats', 'shifts']] },
+  addLibrarySeatRow: { refetch: ['librarySeats'] },
+  setLibrarySeatActive: { patch: [['librarySeats', 'seats']], stale: ['librarySeats'] },
+  // Moving or freeing a seat changes the student page (which takes the answer),
+  // the list's seat column and the map.
+  placeLibraryMember: {
+    patch: [['libraryMemberDetail', 'member']],
+    stale: ['libraryMemberList', 'librarySeats'],
+  },
+  // A plan's fee and length show on every student row that holds it.
+  saveLibraryPlan: { refetch: ['libraryMemberList'] },
 };
 
 registerInvalidation({
@@ -165,5 +192,6 @@ registerInvalidation({
     'libraryMemberList',
     'libraryMemberDetail',
     'libraryCounter',
+    'librarySeats',
   ],
 });

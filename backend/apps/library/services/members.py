@@ -662,7 +662,7 @@ def enrol(*, ctx: Any, data: Any) -> dict:
         ) from None
     _guardian(ctx, party, data.get("guardian"))
     admission = _fee(ctx, m, ChargeKind.ADMISSION_FEE, kind.admission_fee, "Admission", today)
-    fee = _fee(ctx, m, ChargeKind.MEMBERSHIP_FEE, kind.fee_amount, "Membership", today)
+    fee = _fee(ctx, m, ChargeKind.MEMBERSHIP_FEE, kind.fee_amount, "Fee", today)
     _period(ctx, m, PeriodKind.ENROL, on=today, fee=fee)
     deposit = _open_deposit(ctx, m)
     charges = [c for c in (admission, fee) if c is not None]
@@ -1080,7 +1080,7 @@ def rejoin(*, ctx: Any, membership_id: Any, data: Any) -> dict:
             "updated_at",
         ]
     )
-    fee = _fee(ctx, m, ChargeKind.MEMBERSHIP_FEE, kind.fee_amount, "Membership", today)
+    fee = _fee(ctx, m, ChargeKind.MEMBERSHIP_FEE, kind.fee_amount, "Fee", today)
     _period(ctx, m, PeriodKind.REJOIN, on=today, fee=fee)
     deposit = deposit_for(m) or _open_deposit(ctx, m)
     payments = []

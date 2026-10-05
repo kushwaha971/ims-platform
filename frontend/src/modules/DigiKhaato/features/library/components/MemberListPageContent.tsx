@@ -35,6 +35,7 @@ import { formatInr } from 'src/utils/money';
 import { MEMBER_SEARCH_DEBOUNCE_MS } from '../constants/memberConstants';
 import { useLibraryGridLabels } from '../hooks/useLibraryGridLabels';
 import { useMemberList } from '../hooks/useMemberList';
+import { useSeats } from '../hooks/useSeats';
 import { enrolLibraryMember, fetchLibraryMembershipTypes } from '../redux/libraryMemberThunk';
 import { MEMBER_STATUSES, type EnrolFormValues, type MemberSummary } from '../types/member.types';
 import { listGridState } from '../view-model/copyDisplay';
@@ -60,6 +61,9 @@ const ENROL_FIELDS = [
   'groupLabel',
   'guardianName',
   'guardianMobile',
+  'shiftId',
+  'seatId',
+  'lockerLabel',
 ] as const;
 /** Server field paths → the drawer's own names. */
 const SERVER_FIELD: Readonly<Record<string, string>> = {
@@ -71,6 +75,9 @@ const SERVER_FIELD: Readonly<Record<string, string>> = {
   group_label: 'groupLabel',
   'guardian.name': 'guardianName',
   'guardian.mobile': 'guardianMobile',
+  shift_id: 'shiftId',
+  seat_id: 'seatId',
+  locker_label: 'lockerLabel',
 };
 
 /**
@@ -89,6 +96,14 @@ export function MemberListPageContent(): React.JSX.Element {
   const { key, rotate } = useIdempotencyKey();
   const [enrolling, setEnrolling] = useState(false);
   const { filters, setFilters, clearFilters, refetch, error, canRead, canWrite, totals } = list;
+  const { activeShifts } = useSeats();
+  const shiftOptions = useMemo(
+    () => [
+      { value: ALL, label: t('library.members.allShifts') },
+      ...activeShifts.map((shift) => ({ value: shift.id, label: shift.name })),
+    ],
+    [t, activeShifts]
+  );
 
   useEffect(() => {
     if (!canRead) return undefined;
@@ -142,6 +157,9 @@ export function MemberListPageContent(): React.JSX.Element {
           ])
         );
         applyServerErrors({ ...failure, details }, setError, ENROL_FIELDS);
+      } else if (failure.code === 'library_seat_taken') {
+        // "A12 is taken by Asha (Morning)": said on the seat, so another is picked.
+        setError('seatId', { message: failure.message });
       } else if (failure.code === 'library_member_number_taken') {
         setError('memberNumber', { message: failure.message });
       } else if (failure.code === 'library_membership_exists') {
@@ -240,7 +258,13 @@ export function MemberListPageContent(): React.JSX.Element {
             {[
               t('library.members.totals.members', { count: totals.members }),
               t('library.members.totals.dues', { amount: formatInr(totals.dues) }),
-              t('library.members.totals.deposits', { amount: formatInr(totals.depositsHeld) }),
+              ...(Number(totals.depositsHeld) > 0
+                ? [
+                    t('library.members.totals.deposits', {
+                      amount: formatInr(totals.depositsHeld),
+                    }),
+                  ]
+                : []),
             ].join(' · ')}
           </UbText>
         )}
@@ -252,15 +276,29 @@ export function MemberListPageContent(): React.JSX.Element {
         />
         <UbFilterBar
           end={
-            list.types.length > 1 ? (
-              <UbNativeSelect
-                name="library-member-type"
-                aria-label={t('library.members.filter.type')}
-                value={filters.type || ALL}
-                options={typeOptions}
-                onChange={(value: string) => setFilters({ type: value === ALL ? '' : value })}
-                className="w-40"
-              />
+            activeShifts.length > 1 || list.types.length > 1 ? (
+              <UbStack direction="row" gap={2}>
+                {activeShifts.length > 1 && (
+                  <UbNativeSelect
+                    name="library-member-shift"
+                    aria-label={t('library.members.filter.shift')}
+                    value={filters.shift || ALL}
+                    options={shiftOptions}
+                    onChange={(value: string) => setFilters({ shift: value === ALL ? '' : value })}
+                    className="w-36"
+                  />
+                )}
+                {list.types.length > 1 && (
+                  <UbNativeSelect
+                    name="library-member-type"
+                    aria-label={t('library.members.filter.type')}
+                    value={filters.type || ALL}
+                    options={typeOptions}
+                    onChange={(value: string) => setFilters({ type: value === ALL ? '' : value })}
+                    className="w-36"
+                  />
+                )}
+              </UbStack>
             ) : undefined
           }
         >

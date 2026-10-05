@@ -198,7 +198,9 @@ def test_the_students_list_filters_by_shift_and_finds_the_unseated(room: dict) -
     _admit(room, "Imran", "A2", "Evening", "b")
     _admit(room, "Pooja", None, None, "c")
     url = reverse("v1:library-members")
-    names = lambda params: [r["name"] for r in room["client"].get(url, params).json()["data"]]  # noqa: E731
+    names = lambda params: [
+        r["name"] for r in room["client"].get(url, params).json()["data"]
+    ]  # noqa: E731
     assert names({"shift": room["shifts"]["Evening"]}) == ["Imran"]
     assert names({"unseated": "true"}) == ["Pooja"]
     assert names({"ordering": "seat"})[:2] == ["Asha", "Imran"]
@@ -221,3 +223,10 @@ def test_staff_can_read_the_seat_map_but_not_add_seats(room: dict, api_as: Any) 
     assert staff.get(reverse("v1:library-seat-map")).status_code == 200
     refused = staff.post(reverse("v1:library-seats"), {"label": "Z1"}, format="json")
     assert refused.status_code == 403
+
+
+def test_shifts_list_in_the_order_a_day_is_read(room: dict) -> None:
+    """Found by looking: ordering by start time alone listed "Full day" (06:00)
+    before "Morning" (06:00), and the seat map opens on the first shift."""
+    names = [s["name"] for s in room["client"].get(reverse("v1:library-shifts")).json()["data"]]
+    assert names == ["Morning", "Evening", "Full day"]

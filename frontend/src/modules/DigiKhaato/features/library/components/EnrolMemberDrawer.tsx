@@ -27,8 +27,9 @@ import { formatInr } from 'src/utils/money';
 
 import { usePartySearch } from 'modules/DigiKhaato/features/parties/hooks/usePartySearch';
 
+import { useSeats } from '../hooks/useSeats';
 import { useMemberSchemas } from '../validation/memberSchemas';
-import { enrolCost, isNonZero } from '../view-model/memberDisplay';
+import { enrolCost, isNonZero, shiftHours } from '../view-model/memberDisplay';
 
 import type { EnrolFormValues, MembershipType } from '../types/member.types';
 import type { UseFormSetError } from 'react-hook-form';
@@ -48,6 +49,10 @@ const DEFAULTS: EnrolFormValues = {
   groupLabel: '',
   guardianName: '',
   guardianMobile: '',
+  shiftId: '',
+  seatId: '',
+  lockerLabel: '',
+  paymentMode: 'cash',
   collectNow: true,
 };
 
@@ -81,10 +86,20 @@ export function EnrolMemberDrawer({
     mode: 'onTouched',
     defaultValues: { ...DEFAULTS, membershipTypeId: active[0]?.id ?? '' },
   });
-  const [mode, partyId, partyName, typeId, collectNow] = useWatch({
+  const [mode, partyId, partyName, typeId, collectNow, shiftId] = useWatch({
     control: form.control,
-    name: ['partyMode', 'partyId', 'partyName', 'membershipTypeId', 'collectNow'],
+    name: ['partyMode', 'partyId', 'partyName', 'membershipTypeId', 'collectNow', 'shiftId'],
   });
+  // W03 — the desks free in the chosen shift ('' = free all day).
+  const seating = useSeats(shiftId ?? '');
+  const freeSeats = useMemo(
+    () =>
+      seating.map?.shiftId === (shiftId ?? '')
+        ? seating.map.seats.filter((seat) => seat.occupants.length === 0)
+        : [],
+    [seating.map, shiftId]
+  );
+  const hasSeats = seating.seats.length > 0;
   const type = active.find((row) => row.id === typeId);
   const cost = enrolCost(type);
   const search = usePartySearch();
@@ -249,6 +264,75 @@ export function EnrolMemberDrawer({
           )}
         </UbField>
 
+        {(seating.activeShifts.length > 0 || hasSeats) && (
+          <UbStack direction="row" gap={3} className="max-sm:flex-col">
+            {seating.activeShifts.length > 0 && (
+              <UbField
+                name="shiftId"
+                label={t('library.enrol.shift')}
+                optionalLabel={t('common.field.optional')}
+                className="flex-1"
+              >
+                {(field) => (
+                  <UbNativeSelect
+                    name={field.name}
+                    id={field.id}
+                    aria-label={t('library.enrol.shift')}
+                    value={String(field.value ?? '')}
+                    onChange={(next: string) => {
+                      field.onChange(next);
+                      // A desk free in one shift may be taken in the next.
+                      form.setValue('seatId', '');
+                    }}
+                    placeholder={t('library.enrol.shift.placeholder')}
+                    options={seating.activeShifts.map((shift) => ({
+                      value: shift.id,
+                      label: `${shift.name} (${shiftHours(shift)})`,
+                    }))}
+                  />
+                )}
+              </UbField>
+            )}
+            {hasSeats && (
+              <UbField
+                name="seatId"
+                label={t('library.enrol.seat')}
+                optionalLabel={t('common.field.optional')}
+                hint={
+                  seating.mapStatus === 'succeeded'
+                    ? t('library.enrol.seat.free', { count: freeSeats.length })
+                    : undefined
+                }
+                className="flex-1"
+              >
+                {(field) => (
+                  <UbNativeSelect
+                    name={field.name}
+                    id={field.id}
+                    aria-label={t('library.enrol.seat')}
+                    value={String(field.value ?? '')}
+                    onChange={field.onChange}
+                    placeholder={t('library.enrol.seat.placeholder')}
+                    options={freeSeats.map((seat) => ({
+                      value: seat.id,
+                      label: seat.zone ? `${seat.label} · ${seat.zone}` : seat.label,
+                    }))}
+                  />
+                )}
+              </UbField>
+            )}
+          </UbStack>
+        )}
+
+        <UbField
+          name="lockerLabel"
+          label={t('library.enrol.locker')}
+          placeholder={t('library.enrol.locker.placeholder')}
+          optionalLabel={t('common.field.optional')}
+        >
+          {(field) => <UbTextInput {...field} autoComplete="off" disabled={busy} />}
+        </UbField>
+
         <UbStack direction="row" gap={3} className="max-sm:flex-col">
           <UbField
             name="groupLabel"
@@ -322,6 +406,24 @@ export function EnrolMemberDrawer({
                   />
                 )}
               </UbField>
+              {collectNow && (
+                <UbField name="paymentMode" label={t('library.enrol.paidBy')} controlOwnsLabel>
+                  {(field) => (
+                    <UbChoiceChips<'cash' | 'upi'>
+                      id={field.id}
+                      ariaLabel={t('library.enrol.paidBy')}
+                      value={field.value as 'cash' | 'upi'}
+                      onChange={(next) => field.onChange(next)}
+                      onBlur={field.onBlur}
+                      options={[
+                        { value: 'cash', label: t('library.enrol.paidBy.cash') },
+                        { value: 'upi', label: t('library.enrol.paidBy.upi') },
+                      ]}
+                      disabled={busy}
+                    />
+                  )}
+                </UbField>
+              )}
             </UbStack>
           </UbCard>
         )}

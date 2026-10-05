@@ -20,6 +20,9 @@ export interface MemberSchemas {
   readonly closeSchema: Yup.ObjectSchema<CloseFormValues>;
 }
 
+/** W03 — `library_membership.locker_label`. */
+const LOCKER_MAX = 16;
+
 export const useMemberSchemas = (): MemberSchemas => {
   const v = useValidationSchemas();
 
@@ -42,6 +45,10 @@ export const useMemberSchemas = (): MemberSchemas => {
       groupLabel: v.boundedText(GROUP_MAX),
       guardianName: v.boundedText(120),
       guardianMobile: v.mobileValidation(false).defined().default(''),
+      shiftId: Yup.string().defined().default(''),
+      seatId: Yup.string().defined().default(''),
+      lockerLabel: v.boundedText(LOCKER_MAX),
+      paymentMode: Yup.mixed<'cash' | 'upi'>().oneOf(['cash', 'upi']).defined(),
       collectNow: Yup.boolean().defined(),
     }) as Yup.ObjectSchema<EnrolFormValues>;
 

@@ -6,7 +6,7 @@ import { rootReducer, type RootState } from 'src/redux/store';
 import type { ApiErrorShape, RequestStatus } from 'src/types/api.types';
 
 import { fetchMemberCharges } from './libraryChargeThunk';
-import { actOnLibraryMember, fetchLibraryMember } from './libraryMemberThunk';
+import { actOnLibraryMember, fetchLibraryMember, placeLibraryMember } from './libraryMemberThunk';
 
 import type { ChargeRow, ChargeTotals } from '../types/charge.types';
 import type { MemberDetail } from '../types/member.types';
@@ -77,6 +77,10 @@ const libraryMemberDetailSlice = createSlice({
       })
       .addCase(actOnLibraryMember.rejected, (state) => {
         state.actionStatus = 'failed';
+      })
+      .addCase(placeLibraryMember.fulfilled, (state, action) => {
+        if (state.member?.membershipId === action.payload.membershipId)
+          state.member = action.payload as Draft<MemberDetail>;
       })
       .addCase(fetchMemberCharges.fulfilled, (state, action) => {
         state.charges = action.payload.rows as Draft<ChargeRow>[];

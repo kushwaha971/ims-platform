@@ -14,6 +14,7 @@ const STUDENT: MembershipType = {
   depositAmount: '500.00',
   validityMonths: 12,
   isActive: true,
+  version: 1,
 };
 
 const VALUES: EnrolFormValues = {
@@ -27,6 +28,10 @@ const VALUES: EnrolFormValues = {
   groupLabel: '9-B',
   guardianName: 'Suresh Kulkarni',
   guardianMobile: '9876543210',
+  shiftId: '',
+  seatId: '',
+  lockerLabel: '',
+  paymentMode: 'cash',
   collectNow: true,
 };
 

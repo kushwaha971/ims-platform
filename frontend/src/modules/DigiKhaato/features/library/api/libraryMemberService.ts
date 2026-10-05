@@ -11,6 +11,7 @@ import type {
   MemberSummary,
   MemberTotals,
   MembershipType,
+  ShiftRef,
 } from '../types/member.types';
 
 /**
@@ -23,6 +24,16 @@ const str = (value: unknown): string =>
   value === null || value === undefined ? '' : String(value);
 const strOrNull = (value: unknown): string | null =>
   value === null || value === undefined ? null : String(value);
+
+const toShiftRef = (row: Wire | null | undefined): ShiftRef | null =>
+  row
+    ? {
+        id: str(row.id),
+        name: str(row.name),
+        startsAt: str(row.starts_at),
+        endsAt: str(row.ends_at),
+      }
+    : null;
 
 export const toMemberSummary = (row: Wire): MemberSummary => {
   const type = (row.type ?? {}) as Wire;
@@ -38,6 +49,21 @@ export const toMemberSummary = (row: Wire): MemberSummary => {
     startsOn: str(row.starts_on),
     validUntil: strOrNull(row.valid_until),
     groupLabel: str(row.group_label),
+    shift: toShiftRef(row.shift as Wire | null),
+    seat: row.seat
+      ? {
+          id: str((row.seat as Wire).id),
+          label: str((row.seat as Wire).label),
+          zone: str((row.seat as Wire).zone),
+        }
+      : null,
+    lockerLabel: str(row.locker_label),
+    planFee: str(row.plan_fee || '0.00'),
+    validityMonths:
+      row.validity_months === null || row.validity_months === undefined
+        ? null
+        : Number(row.validity_months),
+    feeState: (str(row.fee_state) || 'paid') as MemberSummary['feeState'],
     loansOpen: Number(row.loans_open ?? 0),
     loansOverdue: Number(row.loans_overdue ?? 0),
     holdsReady: Number(row.holds_ready ?? 0),
@@ -97,6 +123,7 @@ export const toMembershipType = (row: Wire): MembershipType => ({
   depositAmount: str(row.deposit_amount || '0.00'),
   validityMonths: row.validity_months === null ? null : Number(row.validity_months),
   isActive: Boolean(row.is_active),
+  version: Number(row.version ?? 1),
 });
 
 export const memberListQuery = (filters: MemberFilters): string =>
@@ -106,6 +133,7 @@ export const memberListQuery = (filters: MemberFilters): string =>
     type: filters.type || undefined,
     group: filters.group || undefined,
     has_dues: filters.hasDues || undefined,
+    shift: filters.shift || undefined,
     ordering: filters.ordering || undefined,
     page: filters.page,
   });
@@ -198,4 +226,58 @@ export const actOnMember = async (
     })
   );
   return toMemberDetail(response.data.data);
+};
+
+/** W02 — move, seat or free a student: `seat_id`/`shift_id` null clears it. */
+export const placeMember = async (
+  id: string,
+  body: Readonly<{ seatId?: string | null; shiftId?: string | null; lockerLabel?: string }>,
+  version: number
+): Promise<MemberDetail> => {
+  const response = await api.patch<{ data: Wire }>(
+    LIBRARY_PATHS.MEMBER(id),
+    {
+      ...(body.seatId !== undefined ? { seat_id: body.seatId } : {}),
+      ...(body.shiftId !== undefined ? { shift_id: body.shiftId } : {}),
+      ...(body.lockerLabel !== undefined ? { locker_label: body.lockerLabel } : {}),
+      version,
+    },
+    // The seat dialog says "taken by Asha" itself.
+    ubConfig({ suppressErrorSnackbar: true })
+  );
+  return toMemberDetail(response.data.data);
+};
+
+export interface PlanBody {
+  readonly name: string;
+  readonly feeAmount: string;
+  readonly validityMonths: number;
+  readonly admissionFee: string;
+  readonly depositAmount: string;
+}
+
+/** W02 — a fee plan is a membership type: its fee, its length, what joining costs. */
+export const savePlan = async (
+  body: PlanBody,
+  existing?: { readonly id: string; readonly version: number }
+): Promise<MembershipType> => {
+  const wire = {
+    name: body.name.trim(),
+    fee_amount: body.feeAmount,
+    validity_months: body.validityMonths,
+    admission_fee: body.admissionFee || '0.00',
+    deposit_amount: body.depositAmount || '0.00',
+    // A study library lends no books on a plan by default: the deposit is the
+    // seat's, not a book's, so it must not stop a student from borrowing.
+    deposit_required_to_borrow: false,
+  };
+  const quiet = ubConfig({ suppressErrorSnackbar: true });
+  const response = existing
+    ? await api.patch<{ data: Wire }>(
+        LIBRARY_PATHS.MEMBERSHIP_TYPE(existing.id),
+        { ...wire, version: existing.version },
+        quiet
+      )
+    : await api.post<{ data: Wire }>(LIBRARY_PATHS.MEMBERSHIP_TYPES, wire, quiet);
+  return toMembershipType(response.data.data);
 };

@@ -112,6 +112,10 @@ export const ROUTES = {
   LIBRARY_VERIFICATION: '/library/verification',
   LIBRARY_REPORTS: '/library/reports',
   LIBRARY_SETTINGS: '/library/settings',
+  // W03 — a study library's desks, by shift.
+  LIBRARY_SEATS: '/library/seats',
+  // W03 — who has to pay, and the fee plans.
+  LIBRARY_FEES: '/library/fees',
 
   // ── (admin) — PLT-14's console. Needs a session, not a tenant: an operator
   //    usually belongs to no business at all.

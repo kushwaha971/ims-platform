@@ -8,12 +8,13 @@ export const MEMBER_FILTER_DEFAULTS: MemberFilters = {
   type: '',
   group: '',
   hasDues: '',
+  shift: '',
   ordering: '',
   page: '1',
 };
 
 export const MEMBER_LIST_URL = libraryListCodec<MemberFilters>({
-  keys: ['q', 'status', 'type', 'group', 'hasDues', 'ordering', 'page'],
+  keys: ['q', 'status', 'type', 'group', 'hasDues', 'shift', 'ordering', 'page'],
   closed: { status: MEMBER_STATUSES, hasDues: ['true'], ordering: MEMBER_ORDERINGS },
 });
 

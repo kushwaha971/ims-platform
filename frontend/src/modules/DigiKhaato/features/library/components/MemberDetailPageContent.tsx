@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 
 import dynamic from 'next/dynamic';
 
-import { Ban, CirclePlay, DoorClosed, RefreshCw, UserRoundPlus } from 'lucide-react';
+import { Armchair, Ban, CirclePlay, DoorClosed, RefreshCw, UserRoundPlus } from 'lucide-react';
 
 import {
   UbActionLink,
@@ -28,11 +28,19 @@ import { selectTenantTimezone } from 'src/redux/slice/sessionSlice';
 import { ROUTES } from 'src/routes';
 import { formatBusinessDate, todayInTenantTz } from 'src/utils/dates';
 import { formatInr } from 'src/utils/money';
+import { formatPhoneForDisplay } from 'src/utils/share';
 
 import { useMemberDetail } from '../hooks/useMemberDetail';
 import { selectLibraryMemberList } from '../redux/libraryMemberListSlice';
 import { fetchLibraryMembershipTypes } from '../redux/libraryMemberThunk';
-import { blockParams, isNonZero, STATUS_TONE, validityLine } from '../view-model/memberDisplay';
+import {
+  blockParams,
+  FEE_TONE,
+  isNonZero,
+  shiftHours,
+  STATUS_TONE,
+  validityLine,
+} from '../view-model/memberDisplay';
 
 import { CatalogueActionsMenu } from './CatalogueActionsMenu';
 import { MemberChargesSection } from './MemberChargesSection';
@@ -44,6 +52,10 @@ const MemberActionDialogLazy = dynamic(
   () => import('./MemberActionDialog').then((m) => m.MemberActionDialog),
   { ssr: false }
 );
+
+const SeatDialogLazy = dynamic(() => import('./SeatDialog').then((m) => m.SeatDialog), {
+  ssr: false,
+});
 
 /**
  * F04 (LIB-04 §7, §8) — `/library/members/[membershipId]`: who the member is,
@@ -60,6 +72,7 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
   const timezone = useAppSelector(selectTenantTimezone);
   const today = todayInTenantTz(timezone ?? undefined);
   const [dialog, setDialog] = useState<MemberDialogKind | null>(null);
+  const [seating, setSeating] = useState(false);
   const { member } = detail;
 
   useEffect(() => {
@@ -118,7 +131,15 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
   );
 
   const facts: readonly [string, string][] = [
-    [t('library.member.type'), member.type.name],
+    [
+      t('library.member.type'),
+      isNonZero(member.planFee)
+        ? t('library.member.planWithFee', {
+            plan: member.type.name,
+            fee: formatInr(member.planFee),
+          })
+        : member.type.name,
+    ],
     // QA-F04-2 — under the label "Valid until", the value is the date alone;
     // the sentence form ("Expires in 3 days") is for when the date is near.
     [
@@ -129,7 +150,7 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
     ],
     [t('library.member.group'), member.groupLabel],
     [t('library.member.guardian'), member.guardian?.name ?? ''],
-    [t('library.member.mobile'), member.party.mobile ?? ''],
+    [t('library.member.mobile'), formatPhoneForDisplay(member.party.mobile)],
     [t('library.member.since'), formatBusinessDate(member.startsOn)],
   ].filter((fact): fact is [string, string] => fact[1] !== '');
 
@@ -151,6 +172,12 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
             <CatalogueActionsMenu
               t={t}
               items={[
+                {
+                  key: 'seat',
+                  label: t(member.seat ? 'library.place.change' : 'library.place.give'),
+                  icon: Armchair,
+                  action: detail.canWrite && !closed ? () => setSeating(true) : undefined,
+                },
                 {
                   key: 'suspend',
                   label: t('library.member.suspend'),
@@ -189,9 +216,15 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
             {member.memberNumber}
           </UbText>
           <UbStatusBadge
-            tone={STATUS_TONE[member.effectiveStatus]}
-            label={t(`library.member.status.${member.effectiveStatus}`)}
+            tone={FEE_TONE[member.feeState]}
+            label={t(`library.fee.${member.feeState}`)}
           />
+          {suspended && (
+            <UbStatusBadge
+              tone={STATUS_TONE[member.effectiveStatus]}
+              label={t(`library.member.status.${member.effectiveStatus}`)}
+            />
+          )}
           <UbLink href={`${ROUTES.PARTIES}/${member.party.id}`}>{t('library.member.khata')}</UbLink>
         </UbStack>
 
@@ -221,22 +254,42 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
         <UbCard padded>
           <UbStack gap={3}>
             <UbStack direction="row" gap={4} wrap>
-              <UbStack gap={0} className="min-w-28">
+              <UbStack gap={0} className="min-w-28" data-testid="library-member-seat">
                 <UbText variant="caption" tone="tertiary">
-                  {t('library.member.booksOut')}
+                  {t('library.members.column.seat')}
                 </UbText>
                 <UbText variant="metric-sm">
-                  {t('library.member.booksOf', {
-                    count: member.loansOpen,
-                    max: member.type.maxCopies,
-                  })}
+                  {member.seat?.label ?? t('library.members.noSeat')}
                 </UbText>
-                {member.loansOverdue > 0 && (
-                  <UbText variant="caption" tone="error">
-                    {t('library.member.overdueCount', { count: member.loansOverdue })}
+                {member.shift && (
+                  <UbText variant="caption" tone="tertiary">
+                    {`${member.shift.name} · ${shiftHours(member.shift)}`}
+                  </UbText>
+                )}
+                {member.lockerLabel && (
+                  <UbText variant="caption" tone="tertiary">
+                    {t('library.member.lockerOf', { locker: member.lockerLabel })}
                   </UbText>
                 )}
               </UbStack>
+              {member.loansOpen > 0 && (
+                <UbStack gap={0} className="min-w-28">
+                  <UbText variant="caption" tone="tertiary">
+                    {t('library.member.booksOut')}
+                  </UbText>
+                  <UbText variant="metric-sm">
+                    {t('library.member.booksOf', {
+                      count: member.loansOpen,
+                      max: member.type.maxCopies,
+                    })}
+                  </UbText>
+                  {member.loansOverdue > 0 && (
+                    <UbText variant="caption" tone="error">
+                      {t('library.member.overdueCount', { count: member.loansOverdue })}
+                    </UbText>
+                  )}
+                </UbStack>
+              )}
               <UbStack gap={0} className="min-w-28">
                 <UbText variant="caption" tone="tertiary">
                   {t('library.member.owes')}
@@ -258,14 +311,44 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
                   <UbText variant="caption" tone="tertiary">
                     {t('library.member.depositHeld')}
                   </UbText>
-                  <UbText variant="metric-sm">{formatInr(member.deposit.held)}</UbText>
+                  <UbText variant="metric-sm">
+                    {Number(member.deposit.held) < Number(member.deposit.expected)
+                      ? t('library.member.depositOf', {
+                          held: formatInr(member.deposit.held),
+                          expected: formatInr(member.deposit.expected),
+                        })
+                      : formatInr(member.deposit.held)}
+                  </UbText>
                   <UbText variant="caption" tone="tertiary">
                     {t('library.member.depositReturned')}
                   </UbText>
                 </UbStack>
               )}
             </UbStack>
-            {member.blocks.length > 0 && !closed && (
+            {!closed && detail.canWrite && (
+              <UbStack direction="row" gap={2} wrap>
+                <UbButton
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setSeating(true)}
+                  data-testid="library-member-place"
+                >
+                  {t(member.seat ? 'library.place.change' : 'library.place.give')}
+                </UbButton>
+                {member.seat && (
+                  <UbButton
+                    size="sm"
+                    variant="ghost"
+                    disabled={busy}
+                    onClick={() => void detail.place({ seatId: null })}
+                    data-testid="library-member-free-seat"
+                  >
+                    {t('library.place.free', { seat: member.seat.label })}
+                  </UbButton>
+                )}
+              </UbStack>
+            )}
+            {member.blocks.length > 0 && !closed && member.loansOpen > 0 && (
               <UbStack gap={1} data-testid="library-member-blocks">
                 {member.blocks.map((block) => (
                   <UbText key={block.code} variant="body-sm" tone="warning">
@@ -314,6 +397,14 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
         )}
       </UbStack>
 
+      {seating && (
+        <SeatDialogLazy
+          member={member}
+          busy={busy}
+          onClose={() => setSeating(false)}
+          onSubmit={detail.place}
+        />
+      )}
       {dialog && (
         <MemberActionDialogLazy
           kind={dialog}

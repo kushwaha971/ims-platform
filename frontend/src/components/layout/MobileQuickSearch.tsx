@@ -9,6 +9,7 @@ import { Search } from 'lucide-react';
 import { UbButton } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
 
+import { useNavigation } from 'modules/DigiKhaato/features/navigation/useNavigation';
 import { PartyQuickSearch } from 'modules/DigiKhaato/features/parties/components/PartyQuickSearch';
 import { useCanSearchParties } from 'modules/DigiKhaato/features/parties/hooks/usePartySearch';
 
@@ -40,11 +41,13 @@ const UbDrawer = dynamic(
 export function MobileQuickSearch(): React.JSX.Element | null {
   const { t } = useTranslation();
   const canSearch = useCanSearchParties();
+  const { workspace } = useNavigation();
   const [open, setOpen] = useState(false);
   const [opened, setOpened] = useState(false);
   const close = useCallback(() => setOpen(false), []);
 
-  if (!canSearch) return null;
+  // The party search is the shop's question, not a library's (owner, 4 Oct 2026).
+  if (!canSearch || workspace !== 'shop') return null;
 
   return (
     <>
