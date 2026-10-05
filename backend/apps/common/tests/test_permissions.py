@@ -74,6 +74,22 @@ CANON_PERMISSIONS = {
     "library.loan.write",
     "library.loan.override",
     "library.loan.adjust",
+    # ── LEN ── lending (FRD lending §0.8), the codenames the built features use.
+    "lending.loan.read",
+    "lending.loan.read_all",
+    "lending.loan.create",
+    "lending.loan.close",
+    "lending.borrower.read",
+    "lending.borrower.write",
+    "lending.collection.create",
+    "lending.collection.read",
+    "lending.collection.void",
+    "lending.visit.write",
+    "lending.route.read",
+    "lending.route.manage",
+    "lending.today.read",
+    "lending.reminder.send",
+    "lending.report.read",
     "library.charge.waive",
     "library.charge.write",
     "library.verification.run",
@@ -114,6 +130,12 @@ def test_every_codename_is_module_resource_action() -> None:
         "override",
         "waive",
         "run",
+        # ── LEN ── lending's verbs (FRD lending §0.8): a loan is CREATED (not
+        # merely written: giving money is its own act), a reminder is SENT, and
+        # the whole book is read with `read_all` beside the scoped `read`.
+        "create",
+        "send",
+        "read_all",
     }
     for codename in PERMISSIONS - CANON_FORMAT_EXCEPTIONS:
         parts = codename.split(".")

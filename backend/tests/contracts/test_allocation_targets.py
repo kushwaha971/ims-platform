@@ -131,6 +131,13 @@ def _library_charge(ctx: dict, party: Any, day: dt.date) -> Any:
     return charge(ctx["shop"], member(ctx["shop"], party), day=day)
 
 
+# ── LEN ── a loan's disbursal (FRD lending §0.3): a payment OUT hands the cash over.
+def _lending_loan(ctx: dict, party: Any, day: dt.date) -> Any:
+    from apps.lending.tests.factories import loan
+
+    return loan(ctx["shop"], party, day=day)
+
+
 #: One factory per registered `document_type`. A target registered without one fails the suite.
 FACTORIES: dict[str, Callable[[dict, Any, dt.date], Any]] = {
     "sales_document": _sales_document,
@@ -140,11 +147,18 @@ FACTORIES: dict[str, Callable[[dict, Any, dt.date], Any]] = {
     "dues_due": _dues_due,
     "dues_instalment": _dues_instalment,
     "library_charge": _library_charge,
+    "lending_loan": _lending_loan,
 }
 
 #: The status a fully settled document derives. A bill is `paid`; a deposit fully
 #: received is `held`, and one emptied by a return is `released` (PLT-X02 BR-2).
-SETTLED: dict[str, str] = {"held_deposit": "held", "held_deposit_refund": "released"}
+SETTLED: dict[str, str] = {
+    "held_deposit": "held",
+    "held_deposit_refund": "released",
+    # A loan stays `active` whether its cash is handed over or not: disbursal is
+    # not what closes a loan (FRD lending §0.6).
+    "lending_loan": "active",
+}
 
 
 @pytest.fixture

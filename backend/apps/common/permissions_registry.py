@@ -80,6 +80,22 @@ PERMISSIONS: frozenset[str] = frozenset(
         "library.verification.close",
         "library.reports.read",
         "library.settings.manage",
+        # ── LEN ── lending (FRD lending §0.8), the subset the screens built so far use.
+        "lending.loan.read",
+        "lending.loan.read_all",
+        "lending.loan.create",
+        "lending.loan.close",
+        "lending.borrower.read",
+        "lending.borrower.write",
+        "lending.collection.create",
+        "lending.collection.read",
+        "lending.collection.void",
+        "lending.visit.write",
+        "lending.route.read",
+        "lending.route.manage",
+        "lending.today.read",
+        "lending.reminder.send",
+        "lending.report.read",
     }
 )
 
@@ -141,6 +157,19 @@ _STAFF = {
     "library.loan.read",
     "library.loan.write",
     "library.verification.run",
+    # ── LEN ── the office staff and the collection round: read the book, record
+    # collections and visits, add borrowers. Lending, closing, voiding, routes and
+    # reports stay with the owner and admin (FRD lending §0.8, CQ-12).
+    "lending.loan.read",
+    "lending.loan.read_all",
+    "lending.borrower.read",
+    "lending.borrower.write",
+    "lending.collection.create",
+    "lending.collection.read",
+    "lending.visit.write",
+    "lending.route.read",
+    "lending.today.read",
+    "lending.reminder.send",
 }
 # No *.void, no ledger.entry.correct, no reports.financial.read, no platform.*.
 # `inventory.stock.adjust` is OFF by default and granted per member through
@@ -152,6 +181,8 @@ _ACCOUNTANT = {p for p in PERMISSIONS if p.endswith(".read")} | {
     "reports.export",
     "reports.financial.read",
     "platform.audit.read",
+    # ── LEN ── `.read_all` does not end in `.read`; the accountant reads the whole book.
+    "lending.loan.read_all",
 }  # read everything, export everything, no writes
 
 ROLE_PERMISSIONS: MappingProxyType = MappingProxyType(

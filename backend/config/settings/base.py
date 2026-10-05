@@ -65,6 +65,8 @@ INSTALLED_APPS = [
     "apps.dues",
     # ── ATT ── ATT-01…05: the check-ins and attendance engine (ADR-041, contracts §2.3)
     "apps.attendance",
+    # ── LEN ── lending & collections (FRD lending.md; the owner's go-ahead, 4 Oct 2026)
+    "apps.lending",
 ]
 
 AUTH_USER_MODEL = "platform.User"

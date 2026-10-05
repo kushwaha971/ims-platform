@@ -239,6 +239,11 @@ _REGISTRY: dict[str, tuple[int, bool]] = {
     "library_print_too_large": (409, False),  # D count, max
     # W02 — a seat already held in an overlapping shift (owner, 4 Oct 2026).
     "library_seat_taken": (409, False),  # D seat, holder
+    # LEN (FRD lending §0.7) — the codes the built features raise.
+    "loan_not_active": (409, False),  # D status
+    "loan_disbursal_locked": (409, False),  # D loan_id
+    "collection_over_payoff": (409, False),  # D payoff, amount
+    "route_has_loans": (409, False),  # D count
     # ── ATT ── contracts §4: the attendance engine (FRD 00 ATT-02, ATT-04).
     "attendance_blocked": (409, False),  # D reason, override_permission
     "attendance_duplicate": (409, False),  # D mark_id
