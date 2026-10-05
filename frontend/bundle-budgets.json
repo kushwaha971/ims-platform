@@ -675,7 +675,13 @@
   "you work\", and confirms the two app actions in a dialog: two thunks, a confirm",
   "dialog and ten words, ~0.7 KB gz on every app route, measured. The shared app",
   "moved 107.3 -> 107.5 (the session slice learned `appsAddable`). 66 lines",
-  "raised by measured + 0.5."
+  "raised by measured + 0.5.",
+  "",
+  "── 6 Oct 2026: app setup checklists (docs/platform/14 step 5) ──────────────",
+  "The Library home and Lending's Today now carry AppSetupCard (its service,",
+  "hook, three words in its own `appSetup` catalogue and two lucide icons): ~1 KB",
+  "gz on those homes, measured; /lending/loans/[loanId] shares the chunk. Raised",
+  "by measured + 0.5. No other route and not the shell."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -1544,7 +1550,7 @@
   },
   "/library": {
    "route": 66,
-   "firstLoad": 300
+   "firstLoad": 301
   },
   "/library/attendance": {
    "route": 64,
@@ -1559,11 +1565,11 @@
    "firstLoad": 354
   },
   "/lending": {
-   "route": 58,
-   "firstLoad": 293
+   "route": 60,
+   "firstLoad": 294
   },
   "/lending/loans/[loanId]": {
-   "route": 57,
+   "route": 58,
    "firstLoad": 292
   },
   "/lending/loans": {

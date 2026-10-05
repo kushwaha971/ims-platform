@@ -29,7 +29,7 @@ from apps.platform_app.views.admin import (
     AdminTenantDetailView,
     AdminTenantListView,
 )
-from apps.platform_app.views.auth import BusinessAppsView
+from apps.platform_app.views.auth import AppSetupHideView, AppSetupView, BusinessAppsView
 from apps.platform_app.views.calendar import (
     ClosedDayDetailView,
     ClosedDayListView,
@@ -72,6 +72,8 @@ urlpatterns = [
     path("tenants", TenantCreateView.as_view(), name="tenant-create"),
     path("tenants/current", TenantCurrentView.as_view(), name="tenant-current"),
     path("tenants/current/apps", BusinessAppsView.as_view(), name="tenant-apps"),
+    path("apps/<str:code>/setup", AppSetupView.as_view(), name="app-setup"),
+    path("apps/<str:code>/setup/hide", AppSetupHideView.as_view(), name="app-setup-hide"),
     path("tenants/resumable", TenantResumableView.as_view(), name="tenant-resumable"),
     # PLT-06, WLB-01, PLT-08, PLT-09 (Track T1).
     path("tenants/current/settings", TenantSettingsView.as_view(), name="tenant-settings"),

@@ -96,7 +96,7 @@ describe('the wizard — step 1 (FR-2)', () => {
     renderWithProviders(<OnboardingStepPageContent step={1} />);
 
     expect(screen.getByText('Step 1 of 4')).toBeInTheDocument();
-    const grid = screen.getByRole('radiogroup', { name: 'What kind of business?' });
+    const grid = screen.getByRole('radiogroup', { name: 'What does your shop mostly sell or do?' });
     expect(grid).toBeInTheDocument();
     // The nine types of FR-7's table, each with its one-line hint (§8).
     expect(screen.getAllByRole('radio')).toHaveLength(9);
@@ -569,7 +569,7 @@ describe('the wizard — step 1 no longer belongs to its tiles', () => {
 
     const name = screen.getByLabelText(/Business name/);
     const state = screen.getByLabelText(/^State/);
-    const tiles = screen.getByRole('radiogroup', { name: 'What kind of business?' });
+    const tiles = screen.getByRole('radiogroup', { name: 'What does your shop mostly sell or do?' });
 
     // The state used to be stranded BELOW the nine tiles. It is a select, not a
     // tile, and it belongs with the other thing the merchant types.
@@ -581,7 +581,7 @@ describe('the wizard — step 1 no longer belongs to its tiles', () => {
 
   it('lets the tile grid follow the width it has: 1, then 2, then 3', () => {
     renderWithProviders(<OnboardingStepPageContent step={1} />);
-    const tiles = screen.getByRole('radiogroup', { name: 'What kind of business?' });
+    const tiles = screen.getByRole('radiogroup', { name: 'What does your shop mostly sell or do?' });
 
     // One column at 360 px — two 160 px tiles wrap a label and a hint to four
     // ragged lines each, nine times over.

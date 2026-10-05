@@ -31,6 +31,8 @@ import { ROUTES } from 'src/routes';
 import { formatBusinessDate } from 'src/utils/dates';
 import { formatInr } from 'src/utils/money';
 
+import { AppSetupCard } from 'modules/DigiKhaato/features/appSetup/components/AppSetupCard';
+
 import { selectLibraryHome } from '../redux/libraryHomeSlice';
 import { fetchLibraryHome } from '../redux/libraryHomeThunk';
 import { FEE_TONE, isNonZero, shiftHours } from '../view-model/memberDisplay';
@@ -113,6 +115,8 @@ export function LibraryHomePageContent(): React.JSX.Element {
           ) : undefined
         }
       />
+      {/* docs/platform/14 step 5 — never blocking; gone once done or hidden. */}
+      <AppSetupCard app="library" appName={t('nav.workspace.library')} />
       {!study ? (
         <UbText variant="body-sm" tone="tertiary">
           {t('library.home.noFigures')}

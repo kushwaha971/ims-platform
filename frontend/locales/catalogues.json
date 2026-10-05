@@ -110,6 +110,7 @@
     "library.reminders.": "reminders",
     "errors.library_": "library",
     "lending.": "lending",
-    "nav.lending.": "lending"
+    "nav.lending.": "lending",
+    "appSetup.": "appSetup"
   }
 }

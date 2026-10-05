@@ -166,3 +166,9 @@ class LibraryConfig(AppConfig):
                 order=10,
             )
         )
+
+        # docs/platform/14 step 5 — the setup checklist on this app's home.
+        from apps.platform_app.apps_registry import register_app_setup
+        from apps.library.selectors.setup import library_setup
+
+        register_app_setup("library", library_setup)

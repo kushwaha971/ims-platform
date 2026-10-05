@@ -32,6 +32,8 @@ import { ROUTES } from 'src/routes';
 import { formatBusinessDate } from 'src/utils/dates';
 import { formatInr } from 'src/utils/money';
 
+import { AppSetupCard } from 'modules/DigiKhaato/features/appSetup/components/AppSetupCard';
+
 import { fetchLendingRoutes, fetchLendingToday } from '../redux/lendingThunk';
 import { selectLendingToday } from '../redux/lendingTodaySlice';
 import { askedToday, isNonZero, STOP_TONE, stopState } from '../view-model/lendingDisplay';
@@ -124,6 +126,8 @@ export function TodayPageContent(): React.JSX.Element {
           ) : undefined
         }
       />
+      {/* docs/platform/14 step 5 — never blocking; gone once done or hidden. */}
+      <AppSetupCard app="lending" appName={t('nav.workspace.lending')} />
       {!round ? (
         state.status === 'failed' ? (
           <UbEmptyState

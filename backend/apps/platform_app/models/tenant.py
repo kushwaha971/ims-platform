@@ -52,6 +52,9 @@ class Tenant(TimeStampedModel):
     )
     deletion_requested_at = models.DateTimeField(null=True, blank=True)
     onboarding_step = models.SmallIntegerField(default=0)
+    #: docs/platform/14 step 5 — apps whose setup checklist the owner or an
+    #: admin hid for this business. Hidden is not done: the steps stay facts.
+    setup_hidden_apps = ArrayField(models.CharField(max_length=32), default=list, blank=True)
 
     class Meta:
         db_table = "platform_tenant"

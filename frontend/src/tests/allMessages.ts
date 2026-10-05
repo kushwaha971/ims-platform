@@ -4,6 +4,8 @@ import type { Locale } from 'src/types/domain.types';
 
 import adminEn from 'locales/catalogues/admin.en.json';
 import adminHi from 'locales/catalogues/admin.hi.json';
+import appSetupEn from 'locales/catalogues/appSetup.en.json';
+import appSetupHi from 'locales/catalogues/appSetup.hi.json';
 import auditEn from 'locales/catalogues/audit.en.json';
 import auditHi from 'locales/catalogues/audit.hi.json';
 import authEn from 'locales/catalogues/auth.en.json';
@@ -115,6 +117,7 @@ import shellHi from 'locales/hi.json';
 export const en: Readonly<Record<string, string>> = {
   ...shellEn,
   ...adminEn,
+  ...appSetupEn,
   ...auditEn,
   ...authEn,
   ...brandingEn,
@@ -167,6 +170,7 @@ export const en: Readonly<Record<string, string>> = {
 export const hi: Readonly<Record<string, string>> = {
   ...shellHi,
   ...adminHi,
+  ...appSetupHi,
   ...auditHi,
   ...authHi,
   ...brandingHi,

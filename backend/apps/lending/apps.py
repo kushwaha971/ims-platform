@@ -87,3 +87,9 @@ class LendingConfig(AppConfig):
                 order=20,
             )
         )
+
+        # docs/platform/14 step 5 — the setup checklist on this app's home.
+        from apps.platform_app.apps_registry import register_app_setup
+        from apps.lending.selectors.setup import lending_setup
+
+        register_app_setup("lending", lending_setup)

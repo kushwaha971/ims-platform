@@ -540,3 +540,30 @@ class BusinessAppsView(APIView):
         )
         membership.tenant.refresh_from_db()
         return StandardResponse.ok(session_payload.build(user=request.user, membership=membership))
+
+
+class AppSetupView(APIView):
+    """`GET /apps/{code}/setup` — the app's setup checklist for this person (step 5)."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request: Any, code: str) -> Any:
+        from apps.platform_app.selectors.app_setup import setup_payload
+
+        return StandardResponse.ok(
+            setup_payload(membership=_current_membership(request), code=code)
+        )
+
+
+class AppSetupHideView(APIView):
+    """`POST /apps/{code}/setup/hide` — the owner or an admin hides it for the business."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request: Any, code: str) -> Any:
+        from apps.platform_app.selectors.app_setup import setup_payload
+        from apps.platform_app.services.app_setup import hide_setup
+
+        membership = _current_membership(request)
+        hide_setup(membership=membership, code=code, ctx=Ctx.from_request(request))
+        return StandardResponse.ok(setup_payload(membership=membership, code=code))

@@ -182,6 +182,41 @@ def active_app(membership: Any, apps: tuple[AppSpec, ...]) -> AppSpec | None:
     return next((a for a in apps if a.code == last), apps[0])
 
 
+# ── App setup (docs/platform/14 step 5) ──────────────────────────────────────
+
+
+@dataclass(frozen=True, slots=True)
+class SetupStep:
+    """One line of an app's setup checklist, as its home shows it.
+
+    `done` is a fact about the business's data ("a fee plan exists"), never a
+    box someone ticked, so the list cannot claim something the books do not
+    show. `permission` is what doing the step needs: a person is shown only the
+    steps they could do.
+    """
+
+    key: str
+    label_id: str
+    path: str
+    done: bool
+    permission: str
+
+
+_SETUP: dict[str, Any] = {}
+
+
+def register_app_setup(code: str, steps: Any) -> None:
+    """Register `steps(tenant) -> list[SetupStep]` for an app (idempotent per callable)."""
+    existing = _SETUP.get(code)
+    if existing is not None and existing is not steps:
+        raise ImproperlyConfigured(f"App {code!r} already has a setup checklist.")
+    _SETUP[code] = steps
+
+
+def app_setup(code: str) -> Any:
+    return _SETUP.get(code)
+
+
 def app_json(spec: AppSpec) -> dict:
     return {
         "code": spec.code,
