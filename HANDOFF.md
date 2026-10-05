@@ -1,8 +1,73 @@
 # DigiKhaato — Handoff / Continuation Prompt
 
-Last updated: 29 Sep 2026 (IST) — MVP complete; final UAT approved with issues and all fixed (D1–D8, D10); product renamed YourKhata (yourkhata.com, logo concept A applied, round-2 logo options awaiting owner choice); support sessions now truly view-only (SEC-A); demo videos: plan/scripts/pipeline done, recording paused.
+Last updated: 5 Oct 2026 (§0 is live); older sections last revised 29 Sep 2026 (IST) — MVP complete; final UAT approved with issues and all fixed (D1–D8, D10); product renamed YourKhata (yourkhata.com, logo concept A applied, round-2 logo options awaiting owner choice); support sessions now truly view-only (SEC-A); demo videos: plan/scripts/pipeline done, recording paused.
 
 ---
+
+## 0. RESUME HERE — live state (updated 5 Oct 2026, by the Claude thread working the study-library rework)
+
+**This section is the current state and wins over anything older below.** The local repo is the source of truth. Before changing anything:
+
+1. Run `git status`, `git log --oneline -15` on branch `dev`, and read this section.
+2. Verify each claim below against the code and tests; do not trust it blindly.
+3. Find the first unchecked step in §0.4 and continue from there, without redoing finished steps.
+4. Update this section (and commit it on `dev`) after every finished step, so it never lags the code.
+
+If this section looks stale (the commits it names are not the latest), rebuild the state from git history, `git status`, `docs/platform/progress/*.md`, the test suites and the running app before acting.
+
+### 0.1 Standing rules from the owner (binding)
+
+- Work on `dev` only, commit locally. Never commit to, merge into or push `main`. Never push at all (the owner pushes). No feature branches or worktrees.
+- No subagents and nothing in parallel. One item at a time: build, run one QA pass by using it in the browser, fix what you find, commit, move on.
+- The Library release waits for the owner's UAT go-ahead: do not release or flip release flags.
+- Keep replies to the owner short.
+
+### 0.2 What changed in direction (4 Oct 2026, owner's words paraphrased)
+
+- Each kind of business is its OWN app: its own sidebar, its own words. A library must not show Customers, Bills, Purchases, Cashbook, "owed", "deposit", "khata".
+- The owner's library is a **private study library / reading room**: students rent a **seat** in a **shift** for a monthly **fee plan**. Focus is students, seats, shifts, fees, attendance. The book counter stays but is secondary (a "Books" group).
+- Lending & collections: daily/weekly/monthly or flexible repayment, part and lump-sum payments after a gap, a note on every loan and payment, payment mode (cash, UPI, bank, cheque) with a reference.
+- **All WhatsApp messages are handled like Reminders** (prepared, scheduled or sent by hand from the owner's phone, logged): library fee due (T-7/T-3/T-1), overdue, welcome on admission, payment receipt; lending instalment due, missed payment, receipt after collection.
+- Approved wireframes: https://claude.ai/artifact/W7FrpajYXKmHPVMHKK49WD (source generator in the Claude scratchpad, not in the repo).
+
+### 0.3 Done (commits on `dev`, newest last)
+
+- `8a30d075` **W01** per-business sidebar. `NavItemConfig.workspace` (`shop | library | lending | any`), `WORKSPACES` in `frontend/src/modules/DigiKhaato/features/navigation/sidebarConfig.ts`; `useNavigation()` picks the workspace from the page path, then the per-tenant memory (`workspaceMemory.ts`, localStorage key `ub_workspace`), then vertical-before-shop. `/dashboard` belongs to no workspace and redirects a library to its first page. A Shop/Library switcher shows only when a tenant runs both.
+- `8e9ced6e` **W02** server: `library_shift`, `library_seat` (migration `backend/apps/library/migrations/0009_seats.py`), membership gains `shift`, `seat`, `locker_label`. `services/seats.py` (overlap rule, `assign`, `seat_map`, `fee_state`), `views/seats.py`, routes `/api/v1/library/shifts`, `/shifts/<id>`, `/seats`, `/seats/row`, `/seats/<id>`, `/seat-map?shift=`. New error code `library_seat_taken` (registry count 202), audit actions `library.shift.saved`, `library.seat.saved`. Members list filters `shift`, `seat`, `unseated`, ordering `seat`; summary carries `shift`, `seat`, `locker_label`, `plan_fee`, `validity_months`, `fee_state` (`overdue|unpaid|due_soon|paid|left`). Dev DB migrated.
+- `709dfe13` `UbForm` renders `method="post"` (QA found a pre-hydration sign-in putting the password in the URL).
+
+### 0.4 In progress and next (check off as you go)
+
+- [x] **W03 screens — committed as `3ba72137`.** Contents:
+  - Students list (`MemberListPageContent`, `MemberColumns`: Student, Seat · Shift, Plan, Plan till, Fee due, Fee badge; shift filter; study-library chips).
+  - Admission drawer (`EnrolMemberDrawer`): plan, shift, free seats for that shift, locker, collect now in Cash or UPI.
+  - Student page (`MemberDetailPageContent`): seat/shift/locker block, fee badge, Change seat (`SeatDialog`), Free seat, plan with fee, formatted mobile, security "held of expected".
+  - `/library/seats` (`SeatsPageContent`, `SeatSetupDrawer`, `view-model/seatDisplay.ts`): seat map by shift, colour + word per seat, tap for occupants; owners add shifts and a row of seats.
+  - `/library/fees` (`FeesPageContent`, `PlanDialog`): who has to pay (links to filtered students) and fee plans (membership types: Monthly/Quarterly/Half-yearly/Yearly, fee, admission fee, refundable security).
+  - New slice `librarySeatsSlice` + `librarySeatThunk`, `api/librarySeatService.ts`, thunks `placeLibraryMember`, `saveLibraryPlan`; invalidation map updated.
+  - Words: ~150 en/hi keys (students, seat, shift, plan, fee). "Overdue" is "समय निकल गया" everywhere (a test enforces one rendering).
+  - Party quick search shows only in the shop workspace.
+  - Server tweaks in the same step: `in_day_order` (Morning, Evening, then Full day), joining charge described as "Fee – <plan>" not "Membership".
+  - Bundle budgets raised by the measured + 0.5 rule with a dated note in `frontend/bundle-budgets.json` (measured against a build of F06 `32948842`).
+  - Verified: type-check, lint, i18n:check, all 3265 jest tests, next build, bundle:check green; `pytest apps/library` 317 passed.
+- **Exact stopping point:** W03 committed; nothing uncommitted except this file. Next is the Library home.
+- [ ] **Library home** (`/library`, first nav row): seats filled per shift, fees due this week, overdue, collected this month, renewals list. Backend `selectors/home.py` exists but is book-centric; extend it.
+- [ ] **Attendance**: check-in per day per student (an attendance engine exists in `backend/apps/attendance`; read it before building).
+- [ ] **WhatsApp messages like Reminders** (library templates and schedule; reuse `apps/library/services/reminders.py` and the core reminders module).
+- [ ] Fresh screenshots of the library at phone and desktop sizes (script `/tmp/claude-501/shots.mjs` may be gone; rebuild with Playwright against the `web-prod` preview on :3001).
+- [ ] Then the **Lending & collections** screens per the approved wireframes.
+- Paused until the owner asks: F06 remainder, F07–F13, B17, B18, E01–E04, DUE-04/05/06 in `docs/platform/progress/wave-b-track-*.md`.
+
+### 0.5 Known issues and environment notes
+
+- Pre-existing failure, not from this work: `apps/ledger/tests/test_module_reminders.py::test_a_party_reminder_quotes_the_shop_figure_never_the_loan` (fails identically with the W02 change stashed).
+- `tests/architecture/test_import_rules.py::test_the_matrix_covers_every_app_on_disk` fails if an empty `backend/apps/.claude` directory appears (editor tooling); delete it.
+- If pytest suddenly takes minutes, a killed run left a connection on the test database; it clears by itself.
+- Backend tests: `cd backend && UB_SECRET_KEY=local-test-key-that-is-long-enough-32b UB_DEBUG=1 .venv/bin/python -m pytest -p no:cacheprovider -W ignore -o addopts="" -q -m "not slow"`. Formatter is `black` (ruff is not installed in `.venv`).
+- Dev DB: `UB_UNRELEASED_MODULES=1 .venv/bin/python manage.py migrate`. The `api` preview runs with `--noreload`: restart it after backend edits.
+- Frontend gates: `npm run type-check && npm run lint && npm run i18n:split && npm run i18n:check && npx jest && npx next build && npm run bundle:check`. New message ids go into `locales/en.json`/`hi.json`, then `npm run i18n:split` routes them to catalogues.
+- QA tenant "Saraswati Library" (owner login in `/tmp/claude-501/qa-creds`, never print the password). Data made in QA: shifts Morning/Evening/Full day, seats A1–A24 "AC hall", plan Monthly ₹900 (+₹200 admission, ₹500 security), students Rahul Sharma (A12 Morning, paid by UPI) and Imran Khan (A12 Evening, fee unpaid).
+
 
 You are continuing development of **DigiKhaato**, a multi-tenant khata (credit ledger) + inventory + GST billing SaaS for Indian merchants. Owner: Akash Kushwaha (akash.k@metislabs.eu, Metis Labs). Continue exactly from the state below. Don't redo completed work. Don't change the architecture or conventions.
 
