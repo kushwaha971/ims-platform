@@ -681,7 +681,13 @@
   "The Library home and Lending's Today now carry AppSetupCard (its service,",
   "hook, three words in its own `appSetup` catalogue and two lucide icons): ~1 KB",
   "gz on those homes, measured; /lending/loans/[loanId] shares the chunk. Raised",
-  "by measured + 0.5. No other route and not the shell."
+  "by measured + 0.5. No other route and not the shell.",
+  "",
+  "── 6 Oct 2026: words per app (docs/platform/14 step 6) ─────────────────────",
+  "Each manifest carries the app's words for shared pages and its people list;",
+  "the manifests and the ten words they name are in the shell (107.5 -> 107.6),",
+  "and useAppWords is in the khata's chunk. 27 lines that measured within",
+  "0.2 of their budget were raised by measured + 0.5."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -1254,7 +1260,7 @@
   },
   "/sales/invoices/[id]": {
    "route": 68,
-   "firstLoad": 302
+   "firstLoad": 303
   },
   "/sales/estimates": {
    "route": 96,
@@ -1294,18 +1300,18 @@
   },
   "/settings/team": {
    "route": 78,
-   "firstLoad": 312
+   "firstLoad": 313
   },
   "/parties/[id]": {
    "route": 101,
-   "firstLoad": 335
+   "firstLoad": 336
   },
   "/parties/tags": {
    "route": 60,
    "firstLoad": 295
   },
   "/parties/[id]/statement": {
-   "route": 89,
+   "route": 90,
    "firstLoad": 324
   },
   "/ledger/aging": {
@@ -1313,16 +1319,16 @@
    "firstLoad": 324
   },
   "/switch": {
-   "route": 47,
+   "route": 48,
    "firstLoad": 282
   },
   "/settings/plan": {
-   "route": 46,
+   "route": 47,
    "firstLoad": 281
   },
   "/settings": {
    "route": 99,
-   "firstLoad": 333
+   "firstLoad": 334
   },
   "/settings/profile": {
    "route": 132,
@@ -1333,7 +1339,7 @@
    "firstLoad": 322
   },
   "/settings/activity": {
-   "route": 100,
+   "route": 101,
    "firstLoad": 335
   },
   "/settings/devices": {
@@ -1346,10 +1352,10 @@
   },
   "/items/masters": {
    "route": 49,
-   "firstLoad": 283
+   "firstLoad": 284
   },
   "/items": {
-   "route": 107,
+   "route": 108,
    "firstLoad": 342
   },
   "/items/[id]": {
@@ -1361,11 +1367,11 @@
    "firstLoad": 297
   },
   "/expenses": {
-   "route": 106,
+   "route": 107,
    "firstLoad": 341
   },
   "/cashbook": {
-   "route": 89,
+   "route": 90,
    "firstLoad": 324
   },
   "/payments": {
@@ -1374,19 +1380,19 @@
   },
   "/payments/[id]": {
    "route": 59,
-   "firstLoad": 293
+   "firstLoad": 294
   },
   "/ledger/reminders": {
    "route": 68,
-   "firstLoad": 302
+   "firstLoad": 303
   },
   "/imports": {
    "route": 48,
-   "firstLoad": 282
+   "firstLoad": 283
   },
   "/imports/[id]": {
    "route": 48,
-   "firstLoad": 282
+   "firstLoad": 283
   },
   "/admin": {
    "route": 11,
@@ -1413,8 +1419,8 @@
    "firstLoad": 290
   },
   "/purchases/bills/[id]": {
-   "route": 59,
-   "firstLoad": 294
+   "route": 60,
+   "firstLoad": 295
   },
   "/purchases/bills/[id]/edit": {
    "route": 143,
@@ -1454,7 +1460,7 @@
   },
   "/": {
    "route": 38,
-   "firstLoad": 272
+   "firstLoad": 273
   },
   "/settings/business-days": {
    "route": 59,
@@ -1490,23 +1496,23 @@
   },
   "/library/catalogue/categories": {
    "route": 62,
-   "firstLoad": 296
+   "firstLoad": 297
   },
   "/library/catalogue/locations": {
    "route": 62,
-   "firstLoad": 296
+   "firstLoad": 297
   },
   "/library/counter": {
-   "route": 71,
+   "route": 72,
    "firstLoad": 306
   },
   "/library/seats": {
-   "route": 65,
+   "route": 66,
    "firstLoad": 300
   },
   "/library/fees": {
    "route": 62,
-   "firstLoad": 296
+   "firstLoad": 297
   },
   "/signup": {
    "route": 51,
@@ -1558,7 +1564,7 @@
   },
   "/library/messages": {
    "route": 63,
-   "firstLoad": 297
+   "firstLoad": 298
   },
   "/lending/loans/new": {
    "route": 119,
@@ -1570,11 +1576,11 @@
   },
   "/lending/loans/[loanId]": {
    "route": 58,
-   "firstLoad": 292
+   "firstLoad": 293
   },
   "/lending/loans": {
    "route": 57,
-   "firstLoad": 291
+   "firstLoad": 292
   },
   "/customers": {
    "route": 107,

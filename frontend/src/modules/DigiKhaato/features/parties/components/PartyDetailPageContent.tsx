@@ -28,6 +28,7 @@ import { PartyLedgerTimeline } from 'modules/DigiKhaato/features/ledger/componen
 import { useLedgerEntryForm } from 'modules/DigiKhaato/features/ledger/hooks/useLedgerEntryForm';
 import { useOpeningBalance } from 'modules/DigiKhaato/features/ledger/hooks/useOpeningBalance';
 import { usePartyReminder } from 'modules/DigiKhaato/features/ledger/hooks/usePartyReminder';
+import { useAppWords } from 'modules/DigiKhaato/features/navigation/useAppWords';
 
 import { usePartyArchive } from '../hooks/usePartyArchive';
 import { usePartyDetail } from '../hooks/usePartyDetail';
@@ -167,6 +168,9 @@ export function PartyDetailPageContent({
   id,
 }: Readonly<PartyDetailPageContentProps>): React.JSX.Element {
   const { t, d } = useTranslation();
+  // docs/platform/14 step 6 — a library's student, a lender's borrower: the
+  // open app's words for this person, and its own list to go back to.
+  const { w, peopleHref } = useAppWords();
   const router = useRouter();
   const partyForm = usePartyForm();
   const entryForm = useLedgerEntryForm();
@@ -218,7 +222,10 @@ export function PartyDetailPageContent({
     return () => window.clearTimeout(timer);
   }, [copied]);
 
-  const backToList = useCallback(() => router.push(ROUTES.PARTIES), [router]);
+  const backToList = useCallback(
+    () => router.push(peopleHref ?? ROUTES.CUSTOMERS),
+    [router, peopleHref]
+  );
   const openEdit = useCallback(() => {
     if (party) partyForm.openEdit(party as PartyDetail);
   }, [partyForm, party]);
@@ -268,11 +275,11 @@ export function PartyDetailPageContent({
       <UbPageShell>
         <UbEmptyState
           variant="error"
-          title={t('parties.detail.notFound')}
+          title={w('parties.detail.notFound')}
           description={t('parties.detail.notFound.body')}
           action={
             <UbButton variant="secondary" onClick={backToList}>
-              {t('parties.detail.backToList')}
+              {w('parties.detail.backToList')}
             </UbButton>
           }
         />
@@ -285,7 +292,7 @@ export function PartyDetailPageContent({
       <UbPageShell>
         <UbEmptyState
           variant="error"
-          title={t('parties.detail.error.title')}
+          title={w('parties.detail.error.title')}
           description={error?.message ?? t('parties.detail.error.body')}
           requestId={error?.requestId ?? null}
           requestIdLabel={t('common.error.reference')}
@@ -411,7 +418,7 @@ export function PartyDetailPageContent({
         {isArchived && (
           <UbStatusBanner
             tone="warning"
-            title={t('parties.detail.archivedBanner')}
+            title={w('parties.detail.archivedBanner')}
             description={t('parties.detail.archivedBanner.body')}
             action={
               /* Hidden rather than disabled for a role that cannot restore
@@ -436,7 +443,7 @@ export function PartyDetailPageContent({
         <UbCard>
           <UbBox>
             <PartyDetailHeader
-              t={t}
+              t={w}
               name={shown.name}
               balance={summary?.balance ?? shown.balance}
               displayCode={shown.displayCode}

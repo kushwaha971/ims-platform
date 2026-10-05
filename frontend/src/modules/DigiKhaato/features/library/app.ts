@@ -23,6 +23,15 @@ export const LIBRARY_APP: AppManifest = {
   code: 'library',
   labelId: 'nav.workspace.library',
   routePrefixes: [ROUTES.LIBRARY_HOME],
+  // docs/platform/14 step 6 — this app's words on the shared khata.
+  words: {
+    'parties.detail.badge.customer': 'library.words.person',
+    'parties.detail.backToList': 'library.words.backToList',
+    'parties.detail.notFound': 'library.words.notFound',
+    'parties.detail.error.title': 'library.words.error',
+    'parties.detail.archivedBanner': 'library.words.archived',
+  },
+  peopleHref: ROUTES.LIBRARY_MEMBERS,
   sections: [
     { key: 'daily', labelId: 'nav.section.daily' },
     { key: 'books', labelId: 'nav.section.books' },

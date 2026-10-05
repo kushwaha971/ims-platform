@@ -13,6 +13,15 @@ export const LENDING_APP: AppManifest = {
   code: 'lending',
   labelId: 'nav.workspace.lending',
   routePrefixes: [ROUTES.LENDING_HOME],
+  // docs/platform/14 step 6 — this app's words on the shared khata.
+  words: {
+    'parties.detail.badge.customer': 'lending.words.person',
+    'parties.detail.backToList': 'lending.words.backToList',
+    'parties.detail.notFound': 'lending.words.notFound',
+    'parties.detail.error.title': 'lending.words.error',
+    'parties.detail.archivedBanner': 'lending.words.archived',
+  },
+  peopleHref: ROUTES.LENDING_BORROWERS,
   sections: [{ key: 'daily', labelId: 'nav.section.daily' }],
   navigation: [
     {

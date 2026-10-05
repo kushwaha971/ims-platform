@@ -59,6 +59,15 @@ export interface AppManifest {
    * not even as an inert "Soon" row, so a row is added the day its page is.
    */
   readonly navigation: readonly AppNavItem[];
+  /**
+   * docs/platform/14 step 6 — the app's own words on pages every app shares.
+   * A map from a shared message id to this app's one: on a library's khata
+   * "Customer" is "Student", and "Back to customers" is "Back to students".
+   * Shared code asks `useAppWords().w(id)` and never names an app.
+   */
+  readonly words?: Readonly<Record<string, string>>;
+  /** Where "back to the list" goes from a shared person page (the khata). */
+  readonly peopleHref?: string;
   /** What the shell offers while this app is open, by capability, never by name. */
   readonly shell?: {
     /** The top bar's party search (the Shop's customers and suppliers). */
