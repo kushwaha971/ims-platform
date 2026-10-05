@@ -121,6 +121,13 @@ export const ROUTES = {
   // W06 — today's fee messages, sent by hand like reminders.
   LIBRARY_MESSAGES: '/library/messages',
 
+  // ── lending ── L02: the lending vertical's screens (FRD lending §0.2).
+  LENDING_HOME: '/lending',
+  LENDING_LOANS: '/lending/loans',
+  LENDING_NEW_LOAN: '/lending/loans/new',
+  LENDING_BORROWERS: '/lending/borrowers',
+  LENDING_ROUTES: '/lending/routes',
+
   // ── (admin) — PLT-14's console. Needs a session, not a tenant: an operator
   //    usually belongs to no business at all.
   ADMIN: '/admin',
@@ -253,6 +260,8 @@ export const APP_ROUTE_PREFIXES: readonly string[] = [
   ROUTES.IMPORTS,
   // ── library ── F01 (and so in CRAWL_DISALLOW, which derives from this list).
   ROUTES.LIBRARY_HOME,
+  // ── lending ── L02, likewise.
+  ROUTES.LENDING_HOME,
 ];
 
 /** Everything the proxy guards: a session is required for all of it. */

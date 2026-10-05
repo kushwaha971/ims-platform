@@ -160,6 +160,22 @@ export const PERMISSION_CODES = [
   'library.verification.close',
   'library.reports.read',
   'library.settings.manage',
+  // ── LEN ── lending (FRD lending §0.8), the codenames the built screens use.
+  'lending.loan.read',
+  'lending.loan.read_all',
+  'lending.loan.create',
+  'lending.loan.close',
+  'lending.borrower.read',
+  'lending.borrower.write',
+  'lending.collection.create',
+  'lending.collection.read',
+  'lending.collection.void',
+  'lending.visit.write',
+  'lending.route.read',
+  'lending.route.manage',
+  'lending.today.read',
+  'lending.reminder.send',
+  'lending.report.read',
 ] as const;
 export type PermissionCode = (typeof PERMISSION_CODES)[number];
 

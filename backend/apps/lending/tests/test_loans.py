@@ -100,3 +100,28 @@ def test_staff_cannot_give_a_loan(office: dict, api_as: Any) -> None:
         HTTP_IDEMPOTENCY_KEY="s",
     )
     assert refused.status_code == 403
+
+
+@pytest.mark.parametrize(
+    "field, value",
+    [
+        ("collection_weekdays", [0, 1, 2]),
+        ("collection_weekdays", "mon"),
+        ("collection_weekdays", 0),
+        ("collection_weekdays", 128),
+        ("per_instalment_amount", "a lot"),
+    ],
+)
+def test_malformed_terms_are_a_field_error_not_a_server_error(
+    office: dict, field: str, value: Any
+) -> None:
+    """L02 QA: `collection_weekdays` sent as a list (a client that thinks in
+    day names) reached `int(list)` and answered 500; and a malformed
+    `per_instalment_amount` was parsed AFTER the errors were raised, so its
+    error was silently dropped. Both must be a 400 on the field."""
+    today = tenant_today(office["tenant"])
+    got = office["client"].post(
+        reverse("v1:lending-loan-preview"), _terms(today, **{field: value}), format="json"
+    )
+    assert got.status_code == 400, got.content
+    assert field in got.json()["error"]["details"]

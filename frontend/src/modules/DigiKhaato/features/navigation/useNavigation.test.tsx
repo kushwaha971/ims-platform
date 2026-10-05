@@ -61,7 +61,7 @@ describe('useNavigation', () => {
     /* Every row is checked both ways — a built row that went missing fails
        too — across the workspaces, since each shows only its own rows. */
     const keys = new Set<string>();
-    for (const path of ['/sales/invoices', '/library/members']) {
+    for (const path of ['/sales/invoices', '/library/members', '/lending/loans']) {
       mockPath = path;
       keysOf(listed()).forEach((key) => keys.add(key));
     }
@@ -96,6 +96,26 @@ describe('one menu per kind of business', () => {
     }
   });
 
+  /** L02 — a lender's menu is the lender's: its own rows, never the shop's or the library's. */
+  it('shows a lender only lending rows, plus Team and Settings', () => {
+    mockPath = '/lending/loans';
+    const nav = listed();
+    expect(nav.workspace).toBe('lending');
+    const keys = keysOf(nav);
+    expect(keys).toEqual(
+      expect.arrayContaining([
+        'lendingToday',
+        'lendingLoans',
+        'lendingBorrowers',
+        'team',
+        'settings',
+      ])
+    );
+    for (const other of ['parties', 'invoices', 'cashbook', 'libraryMembers']) {
+      expect(keys).not.toContain(other);
+    }
+  });
+
   it('shows a shop page the shop menu, with no library rows', () => {
     mockPath = '/sales/invoices';
     const keys = keysOf(listed());
@@ -116,9 +136,9 @@ describe('one menu per kind of business', () => {
   });
 
   it('offers the switcher only to a business that runs more than one kind', () => {
-    expect(listed().workspaces.map((ws) => ws.code)).toEqual(['library', 'shop']);
+    expect(listed().workspaces.map((ws) => ws.code)).toEqual(['library', 'lending', 'shop']);
     act(() => {
-      load(MODULE_CODES.filter((code) => code !== 'library'));
+      load(MODULE_CODES.filter((code) => code !== 'library' && code !== 'lending'));
     });
     const nav = listed();
     expect(nav.workspaces.map((ws) => ws.code)).toEqual(['shop']);

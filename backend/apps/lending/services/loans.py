@@ -117,7 +117,25 @@ def parse_terms(data: Any, today: dt.date) -> LoanTerms:
     first_due = _day(errors, data, "first_due_on")
     if first_due is None:
         errors.setdefault("first_due_on", []).append("Enter the first due date.")
-    weekdays = data.get("collection_weekdays")
+    weekdays = MON_TO_SAT
+    raw_weekdays = data.get("collection_weekdays")
+    if raw_weekdays not in (None, ""):
+        # A bitmask Monday=1 … Sunday=64. A list, a word or a bool is a field
+        # error, never `int(list)` and a 500 (L02 QA).
+        if isinstance(raw_weekdays, bool) or not isinstance(raw_weekdays, (int, str)):
+            errors.setdefault("collection_weekdays", []).append("Choose the collection days.")
+        else:
+            try:
+                weekdays = int(raw_weekdays)
+            except ValueError:
+                errors.setdefault("collection_weekdays", []).append("Choose the collection days.")
+            else:
+                if not 1 <= weekdays <= 127:
+                    errors.setdefault("collection_weekdays", []).append(
+                        "Choose the collection days."
+                    )
+    # Parsed BEFORE the errors are raised, so its own error is not dropped.
+    per_instalment = _money(errors, data, "per_instalment_amount", required=False)
     if errors:
         raise ValidationFailed(errors)
     assert principal is not None and first_due is not None
@@ -130,8 +148,8 @@ def parse_terms(data: Any, today: dt.date) -> LoanTerms:
         instalment_count=count,
         rate=rate,
         rate_unit=str(data.get("rate_unit") or "per_month"),
-        per_instalment_amount=_money(errors, data, "per_instalment_amount", required=False),
-        collection_weekdays=int(weekdays) if weekdays not in (None, "") else MON_TO_SAT,
+        per_instalment_amount=per_instalment,
+        collection_weekdays=weekdays,
         rounding_rule=str(data.get("rounding_rule") or "paise"),
         deductions=tuple(deductions),
     )

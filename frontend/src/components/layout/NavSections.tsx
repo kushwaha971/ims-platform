@@ -8,6 +8,7 @@ import { useTranslation } from 'src/hooks/useTranslation';
 import { selectActiveTenant } from 'src/redux/slice/sessionSlice';
 import { cn } from 'src/utils/cn';
 
+import { activeNavHref } from 'modules/DigiKhaato/features/navigation/activeNav';
 import { useNavigation } from 'modules/DigiKhaato/features/navigation/useNavigation';
 import { rememberWorkspace } from 'modules/DigiKhaato/features/navigation/workspaceMemory';
 
@@ -34,6 +35,10 @@ export function NavSections({
   const { t } = useTranslation();
   const { sections, workspaces, workspace } = useNavigation();
   const tenantId = useAppSelector(selectActiveTenant)?.id ?? null;
+  const currentHref = activeNavHref(
+    pathname,
+    sections.flatMap((section) => section.items.map((item) => item.href))
+  );
 
   return (
     <UbStack gap={0} as="div" className="min-h-0 flex-1">
@@ -88,7 +93,7 @@ export function NavSections({
           </UbText>
           {section.items.map((item) => {
             const Icon = item.icon;
-            const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const active = item.href === currentHref;
 
             const inner = (
               <>

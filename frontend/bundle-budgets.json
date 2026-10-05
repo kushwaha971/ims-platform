@@ -1168,7 +1168,8 @@
   "W01-W03 (5 Oct 2026, a study library's own menu, seats, shifts and fees) — measured against a build of F06 (32948842): every (app) route's chunk moved by 1.1-1.3 KB, which is the per-workspace navigation (WORKSPACES, the switcher, three new library rows with two new icons, and useNavigation now read by the top bar and the phone search so the party search shows only in the shop); the library routes moved 2.2-3.9 KB on top, from the seat and plan thunks in the library invalidation map, the members' seat, shift and fee fields and, on /library/members, the shift filter's seats slice. /library/seats (61.1 / 294.6) and /library/fees (57.5 / 291.0) are new. Shared app 106.2 -> 106.3, within its 107. Every route over its ceiling was raised by the measured + 0.5 rule (59 routes).",
   "W04 (5 Oct 2026, the reading room's home) — /library is new at 61.1 / 294.5: the stat tiles, the per-shift progress bars and the who-has-to-pay list; raised by the measured + 0.5 rule. /cashbook sat at its 86 ceiling by a rounding hair (measured 86.0) and moved to 87.",
   "W05 (5 Oct 2026, the reading room's attendance) — /library/attendance is new at 60.7 / 294.2 after its day picker was made dynamic() (statically it was 86.7: the calendar is ~26 KB and the desk marks today without opening it). The attendance thunks joined the library invalidation map, which moved the library routes 0.2-0.9 KB and, through chunk regrouping, a few core routes by up to 0.5; 19 routes at or over a ceiling were raised by the measured + 0.5 rule.",
-  "W06 (5 Oct 2026, WhatsApp messages handled like reminders) — /library/messages is new at 59.4 / 293.0; the message dialog is dynamic() on both screens that open it. The three message thunks joined the library invalidation map, moving the library routes 0.1-0.4 KB; 12 routes at or over a ceiling were raised by the measured + 0.5 rule."
+  "W06 (5 Oct 2026, WhatsApp messages handled like reminders) — /library/messages is new at 59.4 / 293.0; the message dialog is dynamic() on both screens that open it. The three message thunks joined the library invalidation map, moving the library routes 0.1-0.4 KB; 12 routes at or over a ceiling were raised by the measured + 0.5 rule.",
+  "5 Oct 2026 (L02, the lending screens) - every route's first load grew 0.3-0.6 KB: the lending workspace's four sidebar rows, their three lucide icons and five ROUTES entries ship in the shared navigation chunk, and activeNavHref (one current menu row, not two) replaced an inline prefix test. The /lending/* routes get budgets for the first time; /lending/loans/new is the form page itself (RHF, Yup, the schedule preview), the same shape as /sales/invoices/new. 58 routes at or over a ceiling were raised by the measured + 0.5 rule."
  ],
  "default": {
   "route": 56,
@@ -1177,7 +1178,7 @@
  "routes": {
   "/parties": {
    "route": 104,
-   "firstLoad": 337
+   "firstLoad": 338
   },
   "/dashboard": {
    "route": 88,
@@ -1185,19 +1186,19 @@
   },
   "/sales/invoices/new": {
    "route": 132,
-   "firstLoad": 365
+   "firstLoad": 366
   },
   "/sales/invoices/[id]/edit": {
    "route": 132,
-   "firstLoad": 365
+   "firstLoad": 366
   },
   "/sales/invoices": {
    "route": 93,
-   "firstLoad": 326
+   "firstLoad": 327
   },
   "/sales/invoices/[id]": {
    "route": 66,
-   "firstLoad": 299
+   "firstLoad": 300
   },
   "/sales/estimates": {
    "route": 96,
@@ -1220,7 +1221,7 @@
    "firstLoad": 356
   },
   "/sales/credit-notes/new": {
-   "route": 132,
+   "route": 133,
    "firstLoad": 390
   },
   "/sales/credit-notes/[id]": {
@@ -1237,103 +1238,103 @@
   },
   "/settings/team": {
    "route": 75,
-   "firstLoad": 308
+   "firstLoad": 309
   },
   "/parties/[id]": {
-   "route": 98,
+   "route": 99,
    "firstLoad": 332
   },
   "/parties/tags": {
    "route": 58,
-   "firstLoad": 291
+   "firstLoad": 292
   },
   "/parties/[id]/statement": {
    "route": 87,
-   "firstLoad": 320
+   "firstLoad": 322
   },
   "/ledger/aging": {
    "route": 87,
-   "firstLoad": 320
+   "firstLoad": 322
   },
   "/switch": {
    "route": 45,
-   "firstLoad": 278
+   "firstLoad": 280
   },
   "/settings/plan": {
    "route": 44,
-   "firstLoad": 277
+   "firstLoad": 279
   },
   "/settings": {
-   "route": 96,
+   "route": 97,
    "firstLoad": 330
   },
   "/settings/profile": {
-   "route": 129,
+   "route": 130,
    "firstLoad": 363
   },
   "/settings/branding": {
    "route": 85,
-   "firstLoad": 318
+   "firstLoad": 319
   },
   "/settings/activity": {
    "route": 98,
-   "firstLoad": 331
+   "firstLoad": 333
   },
   "/settings/devices": {
    "route": 51,
-   "firstLoad": 284
+   "firstLoad": 285
   },
   "/stock/summary": {
    "route": 115,
    "firstLoad": 360
   },
   "/items/masters": {
-   "route": 46,
+   "route": 47,
    "firstLoad": 280
   },
   "/items": {
    "route": 105,
-   "firstLoad": 338
+   "firstLoad": 340
   },
   "/items/[id]": {
    "route": 95,
-   "firstLoad": 328
+   "firstLoad": 329
   },
   "/stock/low": {
    "route": 60,
-   "firstLoad": 293
+   "firstLoad": 294
   },
   "/expenses": {
    "route": 104,
-   "firstLoad": 337
+   "firstLoad": 339
   },
   "/cashbook": {
    "route": 87,
-   "firstLoad": 320
+   "firstLoad": 322
   },
   "/payments": {
-   "route": 101,
-   "firstLoad": 335
+   "route": 102,
+   "firstLoad": 336
   },
   "/payments/[id]": {
    "route": 57,
-   "firstLoad": 290
+   "firstLoad": 291
   },
   "/ledger/reminders": {
-   "route": 65,
+   "route": 66,
    "firstLoad": 299
   },
   "/imports": {
-   "route": 45,
-   "firstLoad": 279
+   "route": 46,
+   "firstLoad": 280
   },
   "/imports/[id]": {
-   "route": 45,
-   "firstLoad": 279
+   "route": 46,
+   "firstLoad": 280
   },
   "/admin": {
    "route": 11,
-   "firstLoad": 244
+   "firstLoad": 245
   },
   "/admin/partners": {
    "route": 27,
@@ -1353,22 +1354,22 @@
   },
   "/settings/data": {
    "route": 53,
-   "firstLoad": 286
+   "firstLoad": 287
   },
   "/purchases/bills/[id]": {
-   "route": 57,
+   "route": 58,
    "firstLoad": 291
   },
   "/purchases/bills/[id]/edit": {
-   "route": 139,
+   "route": 140,
    "firstLoad": 373
   },
   "/purchases/bills": {
-   "route": 88,
+   "route": 89,
    "firstLoad": 322
   },
   "/purchases/bills/new": {
-   "route": 139,
+   "route": 140,
    "firstLoad": 373
   },
   "/reports": {
@@ -1380,16 +1381,16 @@
    "firstLoad": 352
   },
   "/reports/gst-summary": {
-   "route": 97,
+   "route": 98,
    "firstLoad": 331
   },
   "/reports/purchase-register": {
    "route": 96,
-   "firstLoad": 329
+   "firstLoad": 330
   },
   "/reports/sales-register": {
    "route": 96,
-   "firstLoad": 329
+   "firstLoad": 330
   },
   "/login": {
    "route": 56,
@@ -1401,55 +1402,55 @@
   },
   "/settings/business-days": {
    "route": 57,
-   "firstLoad": 290
+   "firstLoad": 291
   },
   "/library/catalogue": {
    "route": 68,
-   "firstLoad": 301
+   "firstLoad": 302
   },
   "/library/copies": {
-   "route": 66,
-   "firstLoad": 300
-  },
-  "/library/copies/[copyId]": {
-   "route": 63,
-   "firstLoad": 297
-  },
-  "/library/settings": {
-   "route": 106,
-   "firstLoad": 340
-  },
-  "/library/members": {
-   "route": 72,
-   "firstLoad": 305
-  },
-  "/library/members/[membershipId]": {
    "route": 68,
    "firstLoad": 301
   },
+  "/library/copies/[copyId]": {
+   "route": 64,
+   "firstLoad": 298
+  },
+  "/library/settings": {
+   "route": 107,
+   "firstLoad": 341
+  },
+  "/library/members": {
+   "route": 73,
+   "firstLoad": 307
+  },
+  "/library/members/[membershipId]": {
+   "route": 68,
+   "firstLoad": 302
+  },
   "/library/catalogue/[titleId]": {
    "route": 61,
-   "firstLoad": 294
+   "firstLoad": 295
   },
   "/library/catalogue/categories": {
-   "route": 59,
-   "firstLoad": 292
+   "route": 60,
+   "firstLoad": 294
   },
   "/library/catalogue/locations": {
-   "route": 59,
-   "firstLoad": 292
+   "route": 60,
+   "firstLoad": 294
   },
   "/library/counter": {
-   "route": 69,
-   "firstLoad": 302
+   "route": 70,
+   "firstLoad": 304
   },
   "/library/seats": {
    "route": 63,
-   "firstLoad": 296
+   "firstLoad": 297
   },
   "/library/fees": {
-   "route": 59,
-   "firstLoad": 293
+   "route": 60,
+   "firstLoad": 294
   },
   "/signup": {
    "route": 51,
@@ -1493,15 +1494,31 @@
   },
   "/library": {
    "route": 63,
-   "firstLoad": 296
+   "firstLoad": 297
   },
   "/library/attendance": {
    "route": 62,
-   "firstLoad": 295
+   "firstLoad": 296
   },
   "/library/messages": {
-   "route": 60,
+   "route": 61,
    "firstLoad": 294
+  },
+  "/lending/loans/new": {
+   "route": 117,
+   "firstLoad": 350
+  },
+  "/lending": {
+   "route": 56,
+   "firstLoad": 290
+  },
+  "/lending/loans/[loanId]": {
+   "route": 56,
+   "firstLoad": 289
+  },
+  "/lending/loans": {
+   "route": 56,
+   "firstLoad": 288
   }
  },
  "//ignoreRoutes": [

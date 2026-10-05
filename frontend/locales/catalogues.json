@@ -106,6 +106,8 @@
     "library.role.": "team",
     "library.archive.": "parties",
     "library.reminders.": "reminders",
-    "errors.library_": "library"
+    "errors.library_": "library",
+    "lending.": "lending",
+    "nav.lending.": "lending"
   }
 }
