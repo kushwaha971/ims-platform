@@ -23,6 +23,7 @@ import { formatPhoneForDisplay } from 'src/utils/share';
 
 import { selectLendingForm } from '../redux/lendingFormSlice';
 import { fetchLendingBorrowers } from '../redux/lendingThunk';
+import { caption } from '../view-model/lendingDisplay';
 
 /** `/lending/borrowers` (FRD LEN-02): everybody who has borrowed; a tap opens their loans. */
 export function BorrowersPageContent(): React.JSX.Element {
@@ -84,14 +85,12 @@ export function BorrowersPageContent(): React.JSX.Element {
                   >
                     <UbListItemText
                       primary={b.name}
-                      secondary={[
+                      secondary={caption([
                         b.number,
                         b.mobile ? formatPhoneForDisplay(b.mobile) : '',
                         b.area,
-                        b.route?.name ?? '',
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')}
+                        b.route?.name,
+                      ])}
                     />
                   </UbPressable>
                 </UbStack>

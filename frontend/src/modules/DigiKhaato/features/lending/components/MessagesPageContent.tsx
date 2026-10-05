@@ -28,7 +28,7 @@ import { ROUTES } from 'src/routes';
 
 import { selectLendingMessages } from '../redux/lendingMessagesSlice';
 import { fetchLendingReminders } from '../redux/lendingMessageThunk';
-import { localClock } from '../view-model/lendingDisplay';
+import { caption, localClock } from '../view-model/lendingDisplay';
 
 import type { LendingReminderRow } from '../types/lending.types';
 
@@ -118,11 +118,7 @@ export function MessagesPageContent(): React.JSX.Element {
                       >
                         <UbListItemText
                           primary={row.name}
-                          // A route named after its area read "Station road · LN-0004 ·
-                          // Station road" (L03 QA): each word once.
-                          secondary={[...new Set([row.area, row.number, row.route])]
-                            .filter(Boolean)
-                            .join(' · ')}
+                          secondary={caption([row.area, row.number, row.route])}
                         />
                       </UbPressable>
                       <UbStack gap={1} align="end" className="shrink-0">

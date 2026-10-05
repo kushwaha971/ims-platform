@@ -39,6 +39,14 @@ export const STOP_TONE: Readonly<Record<StopState, UbStatusBadgeTone>> = {
 /** Monday = bit 1 … Sunday = bit 64; the order a week is read in. */
 export const WEEKDAY_BITS = [1, 2, 4, 8, 16, 32, 64] as const;
 
+/**
+ * A row's caption: each word once, in order, blanks dropped. A route is often
+ * named after its area, and "Station road · LN-0004 · Station road" was on two
+ * screens before this existed (L03 QA).
+ */
+export const caption = (parts: readonly (string | null | undefined)[]): string =>
+  [...new Set(parts.filter((part): part is string => Boolean(part)))].join(' · ');
+
 /** `2026-10-05` → `2026-10-06`, on the calendar (no clock, no zone). */
 export const nextDay = (wireDate: string): string => {
   const [y = 0, m = 1, d = 1] = wireDate.split('-').map(Number);

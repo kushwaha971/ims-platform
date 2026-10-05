@@ -1,5 +1,6 @@
 import {
   askedToday,
+  caption,
   isRemindable,
   localClock,
   localDay,
@@ -83,5 +84,14 @@ describe('the reminder decisions', () => {
     expect(localClock('2026-10-05T10:14:03.120000+04:00')).toBe('10:14');
     expect(localDay('2026-10-05T23:50:00+05:30')).toBe('2026-10-05');
     expect(localClock(null)).toBe('');
+  });
+});
+
+describe('a row caption', () => {
+  it('says each word once, in order, without blanks', () => {
+    expect(caption(['Station road', 'LN-0004', 'Station road'])).toBe('Station road · LN-0004');
+    expect(caption(['B-0001', '', null, 'Market lane 2', undefined])).toBe(
+      'B-0001 · Market lane 2'
+    );
   });
 });
