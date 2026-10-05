@@ -417,6 +417,19 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
     order: 4,
   },
   {
+    // L03 — today's reminders to borrowers, sent by hand like reminders (LEN-12).
+    key: 'lendingMessages',
+    workspace: 'lending',
+    ready: true,
+    icon: MessageCircle,
+    labelId: 'nav.lending.messages',
+    href: ROUTES.LENDING_MESSAGES,
+    module: 'lending',
+    permission: 'lending.reminder.send',
+    section: 'daily',
+    order: 5,
+  },
+  {
     // F03 (LIB-02) — the library's first page. Shown only while the library
     // module is on; each later library row arrives with its own page (F01).
     key: 'libraryCatalogue',

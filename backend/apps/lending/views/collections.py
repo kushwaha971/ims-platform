@@ -11,7 +11,7 @@ from apps.common.idempotency import idempotent
 from apps.common.responses import StandardResponse
 from apps.common.tenancy import get_effective_tenant
 from apps.lending.models import LendingRoute
-from apps.lending.services import collections, routes
+from apps.lending.services import collections, messages, routes
 from apps.lending.services.loans import get_loan
 from apps.lending.views.loans import _LendingView
 
@@ -46,7 +46,11 @@ class CollectionView(_LendingView):
     def get(self, request: Any, loan_id: Any) -> Any:
         loan = get_loan(get_effective_tenant(request), loan_id)
         return StandardResponse.ok(
-            collections.loan_collections(loan), meta={"visits": collections.loan_visits(loan)}
+            collections.loan_collections(loan),
+            meta={
+                "visits": collections.loan_visits(loan),
+                "messages": messages.loan_messages(loan),
+            },
         )
 
     @idempotent("lending.collection.create")

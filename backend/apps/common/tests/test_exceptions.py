@@ -56,7 +56,8 @@ def test_registry_is_closed_and_complete() -> None:
     # ── W02 ── +1: `library_seat_taken` (a study library's seat, held in that shift).
     # ── LEN ── +4: `loan_not_active`, `loan_disbursal_locked`, `collection_over_payoff`,
     #           `route_has_loans` (FRD lending §0.7).
-    assert len(REGISTRY) == 206
+    # ── L03 ── +1: `lending_nothing_due` (a Remind on a loan with nothing due).
+    assert len(REGISTRY) == 207
     assert REGISTRY["attendance_blocked"] == (409, False)  # ATT
     assert REGISTRY["attendance_duplicate"] == (409, False)  # ATT
     assert REGISTRY["entitlement_exhausted"] == (409, False)  # ATT

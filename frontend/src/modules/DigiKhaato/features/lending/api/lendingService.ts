@@ -12,6 +12,7 @@ import type {
   LoanDetail,
   LoanFigures,
   LoanFormValues,
+  LoanMessageRow,
   LoanPreview,
   LoanRow,
   TodayRound,
@@ -198,8 +199,8 @@ export const getLoan = async (id: string, signal?: AbortSignal): Promise<LoanDet
 export const getLoanActivity = async (
   id: string,
   signal?: AbortSignal
-): Promise<{ collections: CollectionRow[]; visits: VisitRow[] }> => {
-  const response = await api.get<{ data: Wire[]; meta: { visits: Wire[] } }>(
+): Promise<{ collections: CollectionRow[]; visits: VisitRow[]; messages: LoanMessageRow[] }> => {
+  const response = await api.get<{ data: Wire[]; meta: { visits: Wire[]; messages?: Wire[] } }>(
     LENDING_PATHS.COLLECTIONS(id),
     { signal }
   );
@@ -219,6 +220,13 @@ export const getLoanActivity = async (
       outcome: str(v.outcome) as VisitOutcome,
       reason: str(v.reason),
       promisedOn: strOrNull(v.promised_on),
+    })),
+    messages: (response.data.meta?.messages ?? []).map((m) => ({
+      id: str(m.id),
+      kind: str(m.kind) as LoanMessageRow['kind'],
+      subject: str(m.subject),
+      channel: str(m.channel) as LoanMessageRow['channel'],
+      at: strOrNull(m.at),
     })),
   };
 };
@@ -325,6 +333,7 @@ export const getToday = async (route: string, signal?: AbortSignal): Promise<Tod
         daysPastDue: num(s.days_past_due),
         collectedToday: str(s.collected_today),
         remaining: str(s.remaining),
+        remindedToday: Boolean(s.reminded_today),
         visit: visit
           ? {
               outcome: str(visit.outcome) as VisitOutcome,

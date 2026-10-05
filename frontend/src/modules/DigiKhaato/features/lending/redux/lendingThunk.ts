@@ -14,6 +14,7 @@ import type {
   LendingRoute,
   LoanDetail,
   LoanFormValues,
+  LoanMessageRow,
   LoanPreview,
   TodayRound,
   VisitOutcome,
@@ -60,7 +61,12 @@ export const fetchLendingLoans = createAsyncThunk<
 });
 
 export const fetchLendingLoan = createAsyncThunk<
-  { loan: LoanDetail; collections: CollectionRow[]; visits: VisitRow[] },
+  {
+    loan: LoanDetail;
+    collections: CollectionRow[];
+    visits: VisitRow[];
+    messages: LoanMessageRow[];
+  },
   string,
   Reject
 >('lendingLoans/fetchOne', async (id, { signal, rejectWithValue }) => {

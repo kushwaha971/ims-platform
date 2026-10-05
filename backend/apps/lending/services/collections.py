@@ -307,6 +307,20 @@ def record_visit(*, ctx: Any, loan_id: Any, data: Any) -> LendingVisit:
 # ── Today's round (LEN-08) ──────────────────────────────────────────────────
 
 
+def _reminded_today(tenant: Any, today: dt.date) -> set[Any]:
+    """Loans a reminder was recorded for today (L03), in one query."""
+    from apps.ledger.models import Reminder
+    from apps.ledger.services.reminder_seam import _day_bounds
+    from apps.lending.constants import MODULE
+
+    start, end = _day_bounds(tenant, today)
+    return set(
+        Reminder.objects.for_tenant(tenant)
+        .filter(module=MODULE, source_type="lending_loan", sent_at__gte=start, sent_at__lt=end)
+        .values_list("source_id", flat=True)
+    )
+
+
 def today_round(tenant: Any, route_id: Any = None) -> dict:
     """Every running loan with something due today or late, in route order, with
     what was collected and any visit note today. Paid stops stay on the list (the
@@ -331,6 +345,7 @@ def today_round(tenant: Any, route_id: Any = None) -> dict:
         v.loan_id: v
         for v in LendingVisit.objects.filter(tenant=tenant, on_date=today).order_by("created_at")
     }
+    reminded = _reminded_today(tenant, today)
     stops = []
     totals = {"due": ZERO, "collected": ZERO, "stops": 0, "done": 0}
     for loan in loans:
@@ -360,6 +375,7 @@ def today_round(tenant: Any, route_id: Any = None) -> dict:
                 "days_past_due": f["days_past_due"],
                 "collected_today": f"{q2(got):.2f}",
                 "remaining": f["remaining"],
+                "reminded_today": loan.id in reminded,
                 "visit": (
                     {
                         "outcome": visit.outcome,

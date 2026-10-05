@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 
 import dynamic from 'next/dynamic';
 
-import { HandCoins } from 'lucide-react';
+import { HandCoins, MessageCircle } from 'lucide-react';
 
 import {
   UbActionLink,
@@ -32,12 +32,23 @@ import { formatPhoneForDisplay } from 'src/utils/share';
 
 import { selectLendingLoans } from '../redux/lendingLoansSlice';
 import { fetchLendingLoan } from '../redux/lendingThunk';
-import { isNonZero, LOAN_STATUS_TONE } from '../view-model/lendingDisplay';
+import {
+  isNonZero,
+  isRemindable,
+  LOAN_STATUS_TONE,
+  localClock,
+  localDay,
+} from '../view-model/lendingDisplay';
+
+import type { LendingMessageKind } from '../types/lending.types';
 
 const CollectDialogLazy = dynamic(() => import('./CollectDialog').then((m) => m.CollectDialog), {
   ssr: false,
 });
 const NotPaidDialogLazy = dynamic(() => import('./NotPaidDialog').then((m) => m.NotPaidDialog), {
+  ssr: false,
+});
+const MessageDialogLazy = dynamic(() => import('./MessageDialog').then((m) => m.MessageDialog), {
   ssr: false,
 });
 
@@ -64,6 +75,11 @@ export function LoanPageContent({ id }: Readonly<{ id: string }>): React.JSX.Ele
   const canCollect = hasModule('lending') && can('lending.collection.create');
   const [collecting, setCollecting] = useState(false);
   const [visiting, setVisiting] = useState(false);
+  const canRemind = hasModule('lending') && can('lending.reminder.send');
+  const [messaging, setMessaging] = useState<{
+    kind: LendingMessageKind;
+    collectionId?: string;
+  } | null>(null);
   const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
@@ -107,6 +123,12 @@ export function LoanPageContent({ id }: Readonly<{ id: string }>): React.JSX.Ele
     return <UbPageSkeleton variant="card" />;
   }
   const active = loan.status === 'active';
+  const remindable = canRemind && isRemindable(loan, today);
+  const remindedToday = state.messages.find(
+    (m) => m.kind === 'reminder' && localDay(m.at) === today
+  );
+  // "Receipt after a collection": offered on the latest one still standing.
+  const latestCollection = state.collections.find((c) => !c.voided);
   const asked = (Number(loan.dueToday) + Number(loan.arrears)).toFixed(2);
   const schedule = showAll
     ? loan.schedule
@@ -200,11 +222,32 @@ export function LoanPageContent({ id }: Readonly<{ id: string }>): React.JSX.Ele
             {/* "Not paid" records a missed visit, so it is offered only when
                 something is actually due (L02 QA: it showed on a loan whose
                 first instalment was tomorrow). */}
-            {active && canCollect && isNonZero(asked) && (
-              <UbStack direction="row" gap={2} wrap>
-                <UbButton size="sm" variant="secondary" onClick={() => setVisiting(true)}>
-                  {t('lending.visit.button')}
-                </UbButton>
+            {((active && canCollect && isNonZero(asked)) || remindable) && (
+              <UbStack direction="row" gap={2} align="center" wrap>
+                {active && canCollect && isNonZero(asked) && (
+                  <UbButton size="sm" variant="secondary" onClick={() => setVisiting(true)}>
+                    {t('lending.visit.button')}
+                  </UbButton>
+                )}
+                {remindable && (
+                  <UbButton
+                    size="sm"
+                    variant="secondary"
+                    icon={<MessageCircle className="h-4 w-4" aria-hidden />}
+                    onClick={() => setMessaging({ kind: 'reminder' })}
+                    data-testid="lending-loan-remind"
+                  >
+                    {t('lending.messages.remind')}
+                  </UbButton>
+                )}
+                {remindable && remindedToday && (
+                  <UbText variant="caption" tone="tertiary">
+                    {t('lending.messages.remindedAt', {
+                      time: localClock(remindedToday.at),
+                      channel: t(`lending.messages.channel.${remindedToday.channel}`),
+                    })}
+                  </UbText>
+                )}
               </UbStack>
             )}
           </UbStack>
@@ -308,6 +351,18 @@ export function LoanPageContent({ id }: Readonly<{ id: string }>): React.JSX.Ele
                       .join(' · ')}
                   </UbText>
                 )}
+                {canRemind && c.id === latestCollection?.id && (
+                  <UbButton
+                    size="sm"
+                    variant="ghost"
+                    className="self-start"
+                    icon={<MessageCircle className="h-4 w-4" aria-hidden />}
+                    onClick={() => setMessaging({ kind: 'receipt', collectionId: c.id })}
+                    data-testid="lending-loan-receipt"
+                  >
+                    {t('lending.messages.sendReceipt')}
+                  </UbButton>
+                )}
               </UbStack>
             ))}
             {state.visits.map((v, i) => (
@@ -329,7 +384,38 @@ export function LoanPageContent({ id }: Readonly<{ id: string }>): React.JSX.Ele
             ))}
           </UbStack>
         </UbCard>
+
+        {state.messages.length > 0 && (
+          <UbCard padded>
+            <UbStack gap={1} data-testid="lending-loan-messages">
+              <UbText variant="label">{t('lending.messages.history')}</UbText>
+              {state.messages.map((m) => (
+                <UbText
+                  key={m.id}
+                  variant="caption"
+                  tone="tertiary"
+                  className="border-t border-border-hairline py-2"
+                >
+                  {[
+                    `${formatBusinessDate(localDay(m.at))} ${localClock(m.at)}`,
+                    t(`lending.messages.kind.${m.kind}`),
+                    t(`lending.messages.channel.${m.channel}`),
+                  ].join(' · ')}
+                </UbText>
+              ))}
+            </UbStack>
+          </UbCard>
+        )}
       </UbStack>
+      {messaging && (
+        <MessageDialogLazy
+          loanId={loan.id}
+          name={loan.borrower.name}
+          kind={messaging.kind}
+          collectionId={messaging.collectionId}
+          onClose={() => setMessaging(null)}
+        />
+      )}
       {collecting && (
         <CollectDialogLazy
           loanId={loan.id}

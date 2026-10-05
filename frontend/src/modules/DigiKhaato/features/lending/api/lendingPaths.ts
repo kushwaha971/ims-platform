@@ -9,6 +9,8 @@ export const LENDING_PATHS = {
   COLLECTION_PREVIEW: (id: string) => `/lending/loans/${seg(id)}/collections/preview`,
   VISITS: (id: string) => `/lending/loans/${seg(id)}/visits`,
   VOID: (id: string) => `/lending/collections/${seg(id)}/void`,
+  MESSAGE: (id: string, kind: string) => `/lending/loans/${seg(id)}/message/${seg(kind)}`,
+  REMINDERS: '/lending/reminders',
   TODAY: '/lending/today',
   BORROWERS: '/lending/borrowers',
   ROUTES: '/lending/routes',

@@ -25,7 +25,7 @@ class LendingConfig(AppConfig):
             SOURCE_DEDUCTION,
             SUBJECT_LOAN,
         )
-        from apps.lending.services import loans
+        from apps.lending.services import loans, messages
         from apps.parties.services.roles import register_party_role
         from apps.payments.services.targets import register_target
         from apps.platform_app.services.calendar import register_calendar_reader
@@ -70,3 +70,5 @@ class LendingConfig(AppConfig):
             label_id="lending.role.borrower",
             party_ids=loans.borrower_party_ids,
         )
+        # LEN-12 — the policy, the reminder sources and the fixed texts.
+        messages.register()

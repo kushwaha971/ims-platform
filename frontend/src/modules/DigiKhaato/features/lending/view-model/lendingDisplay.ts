@@ -38,3 +38,32 @@ export const STOP_TONE: Readonly<Record<StopState, UbStatusBadgeTone>> = {
 
 /** Monday = bit 1 … Sunday = bit 64; the order a week is read in. */
 export const WEEKDAY_BITS = [1, 2, 4, 8, 16, 32, 64] as const;
+
+/** `2026-10-05` → `2026-10-06`, on the calendar (no clock, no zone). */
+export const nextDay = (wireDate: string): string => {
+  const [y = 0, m = 1, d = 1] = wireDate.split('-').map(Number);
+  const next = new Date(Date.UTC(y, m - 1, d + 1));
+  return next.toISOString().slice(0, 10);
+};
+
+/**
+ * L03 — whether a loan has a reminder to send: something late, something due
+ * today, or the next instalment tomorrow (LEN-12 FR-1's three buckets). The
+ * server decides the text; this only decides whether Remind is offered.
+ */
+export const isRemindable = (
+  loan: { status: string; arrears: string; dueToday: string; nextDueOn: string | null },
+  today: string
+): boolean =>
+  loan.status === 'active' &&
+  (isNonZero(loan.arrears) || isNonZero(loan.dueToday) || loan.nextDueOn === nextDay(today));
+
+/**
+ * A tenant-local ISO instant (`2026-10-05T10:14:00+05:30`), read off the string:
+ * the server wrote it in the lender's own time, and parsing it would move it to
+ * the device's zone.
+ */
+export const localClock = (iso: string | null | undefined): string =>
+  iso && iso.length >= 16 ? iso.slice(11, 16) : '';
+export const localDay = (iso: string | null | undefined): string =>
+  iso && iso.length >= 10 ? iso.slice(0, 10) : '';

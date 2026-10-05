@@ -127,6 +127,7 @@ export const ROUTES = {
   LENDING_NEW_LOAN: '/lending/loans/new',
   LENDING_BORROWERS: '/lending/borrowers',
   LENDING_ROUTES: '/lending/routes',
+  LENDING_MESSAGES: '/lending/messages',
 
   // ── (admin) — PLT-14's console. Needs a session, not a tenant: an operator
   //    usually belongs to no business at all.

@@ -244,6 +244,8 @@ _REGISTRY: dict[str, tuple[int, bool]] = {
     "loan_disbursal_locked": (409, False),  # D loan_id
     "collection_over_payoff": (409, False),  # D payoff, amount
     "route_has_loans": (409, False),  # D count
+    # L03 — a Remind on a loan with nothing due today, tomorrow or late.
+    "lending_nothing_due": (409, False),  # D loan_id
     # ── ATT ── contracts §4: the attendance engine (FRD 00 ATT-02, ATT-04).
     "attendance_blocked": (409, False),  # D reason, override_permission
     "attendance_duplicate": (409, False),  # D mark_id

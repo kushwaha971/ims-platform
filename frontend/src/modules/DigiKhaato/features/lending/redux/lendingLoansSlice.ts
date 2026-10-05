@@ -7,7 +7,13 @@ import type { ApiErrorShape, RequestStatus } from 'src/types/api.types';
 
 import { fetchLendingLoan, fetchLendingLoans } from './lendingThunk';
 
-import type { CollectionRow, LoanDetail, LoanRow, VisitRow } from '../types/lending.types';
+import type {
+  CollectionRow,
+  LoanDetail,
+  LoanMessageRow,
+  LoanRow,
+  VisitRow,
+} from '../types/lending.types';
 
 /** The loan book and the loan open on screen. Injected lazily. */
 export interface LendingLoansState {
@@ -17,6 +23,7 @@ export interface LendingLoansState {
   loan: LoanDetail | null;
   collections: CollectionRow[];
   visits: VisitRow[];
+  messages: LoanMessageRow[];
   status: RequestStatus;
   error: ApiErrorShape | null;
   stale: boolean;
@@ -30,6 +37,7 @@ const initialState: LendingLoansState = {
   loan: null,
   collections: [],
   visits: [],
+  messages: [],
   status: 'idle',
   error: null,
   stale: false,
@@ -66,6 +74,7 @@ const lendingLoansSlice = createSlice({
         state.loan = action.payload.loan as Draft<LoanDetail>;
         state.collections = action.payload.collections as Draft<CollectionRow>[];
         state.visits = action.payload.visits as Draft<VisitRow>[];
+        state.messages = action.payload.messages as Draft<LoanMessageRow>[];
         state.status = 'succeeded';
         state.stale = false;
         state.staleUrgency = null;

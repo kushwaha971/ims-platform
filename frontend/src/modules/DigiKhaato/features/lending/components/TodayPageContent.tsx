@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 
-import { Plus } from 'lucide-react';
+import { MessageCircle, Plus } from 'lucide-react';
 
 import {
   UbActionLink,
@@ -45,6 +45,9 @@ const CollectDialogLazy = dynamic(() => import('./CollectDialog').then((m) => m.
 const NotPaidDialogLazy = dynamic(() => import('./NotPaidDialog').then((m) => m.NotPaidDialog), {
   ssr: false,
 });
+const MessageDialogLazy = dynamic(() => import('./MessageDialog').then((m) => m.MessageDialog), {
+  ssr: false,
+});
 
 const ALL = '';
 
@@ -66,6 +69,11 @@ export function TodayPageContent(): React.JSX.Element {
   const [route, setRoute] = useState(ALL);
   const [collecting, setCollecting] = useState<TodayStop | null>(null);
   const [notPaid, setNotPaid] = useState<TodayStop | null>(null);
+  const canRemind = hasModule('lending') && can('lending.reminder.send');
+  const [messaging, setMessaging] = useState<{
+    stop: TodayStop;
+    kind: 'reminder' | 'receipt';
+  } | null>(null);
 
   useEffect(() => {
     if (!canRead) return undefined;
@@ -242,22 +250,49 @@ export function TodayPageContent(): React.JSX.Element {
                             .join(' · ')}
                         </UbText>
                       )}
-                      {canCollect && open && (
-                        <UbStack direction="row" gap={2} wrap>
-                          <UbButton
-                            size="sm"
-                            onClick={() => setCollecting(stop)}
-                            data-testid="lending-stop-collect"
-                          >
-                            {t('lending.collect.button', { amount: formatInr(askedToday(stop)) })}
-                          </UbButton>
-                          {!stop.visit && state !== 'part' && (
+                      {((canCollect && open) || canRemind) && (
+                        <UbStack direction="row" gap={2} align="center" wrap>
+                          {canCollect && open && (
+                            <UbButton
+                              size="sm"
+                              onClick={() => setCollecting(stop)}
+                              data-testid="lending-stop-collect"
+                            >
+                              {t('lending.collect.button', { amount: formatInr(askedToday(stop)) })}
+                            </UbButton>
+                          )}
+                          {canCollect && open && !stop.visit && state !== 'part' && (
                             <UbButton
                               size="sm"
                               variant="secondary"
                               onClick={() => setNotPaid(stop)}
                             >
                               {t('lending.visit.button')}
+                            </UbButton>
+                          )}
+                          {/* L03 — money in: the receipt; nothing in yet: a reminder,
+                              once a day (the sheet says when the next can go). */}
+                          {canRemind && isNonZero(stop.collectedToday) && (
+                            <UbButton
+                              size="sm"
+                              variant="ghost"
+                              icon={<MessageCircle className="h-4 w-4" aria-hidden />}
+                              onClick={() => setMessaging({ stop, kind: 'receipt' })}
+                            >
+                              {t('lending.messages.sendReceipt')}
+                            </UbButton>
+                          )}
+                          {canRemind && open && !isNonZero(stop.collectedToday) && (
+                            <UbButton
+                              size="sm"
+                              variant="ghost"
+                              icon={<MessageCircle className="h-4 w-4" aria-hidden />}
+                              onClick={() => setMessaging({ stop, kind: 'reminder' })}
+                              data-testid="lending-stop-remind"
+                            >
+                              {stop.remindedToday
+                                ? t('lending.messages.reminded')
+                                : t('lending.messages.remind')}
                             </UbButton>
                           )}
                         </UbStack>
@@ -279,6 +314,14 @@ export function TodayPageContent(): React.JSX.Element {
             isNonZero(askedToday(collecting)) ? askedToday(collecting) : collecting.instalmentAmount
           }
           onClose={() => setCollecting(null)}
+        />
+      )}
+      {messaging && (
+        <MessageDialogLazy
+          loanId={messaging.stop.loanId}
+          name={messaging.stop.name}
+          kind={messaging.kind}
+          onClose={() => setMessaging(null)}
         />
       )}
       {notPaid && round && (

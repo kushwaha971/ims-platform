@@ -16,6 +16,8 @@ export const LENDING_QUERIES = {
   fetchLendingBorrowers: 'lendingForm/fetchBorrowers',
   previewLendingLoan: 'lendingForm/preview',
   previewLendingCollection: 'lendingForm/previewCollection',
+  fetchLendingReminders: 'lendingMessages/fetch',
+  prepareLendingMessage: 'lendingMessages/prepare',
 } as const satisfies Record<string, string>;
 
 export const LENDING_MUTATIONS = {
@@ -23,6 +25,7 @@ export const LENDING_MUTATIONS = {
   collectLendingLoan: 'lendingForm/collect',
   recordLendingVisit: 'lendingForm/visit',
   saveLendingRoute: 'lendingToday/saveRoute',
+  recordLendingMessage: 'lendingMessages/record',
 } as const satisfies Record<string, string>;
 
 export type TLendingMutationName = keyof typeof LENDING_MUTATIONS;
@@ -42,6 +45,9 @@ export const LENDING_INVALIDATION: Readonly<
   },
   recordLendingVisit: { refetch: ['lendingToday', 'lendingLoans'] },
   saveLendingRoute: { refetch: ['lendingToday'] },
+  // L03 — a recorded message ticks "reminded today" on the round and the
+  // list, and joins the loan's activity.
+  recordLendingMessage: { refetch: ['lendingToday', 'lendingLoans', 'lendingMessages'] },
 };
 
 registerInvalidation({
@@ -49,5 +55,5 @@ registerInvalidation({
   queries: LENDING_QUERIES,
   mutations: LENDING_MUTATIONS,
   map: LENDING_INVALIDATION,
-  ownSlices: ['lendingToday', 'lendingLoans', 'lendingForm'],
+  ownSlices: ['lendingToday', 'lendingLoans', 'lendingForm', 'lendingMessages'],
 });

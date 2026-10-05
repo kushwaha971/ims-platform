@@ -1169,7 +1169,8 @@
   "W04 (5 Oct 2026, the reading room's home) — /library is new at 61.1 / 294.5: the stat tiles, the per-shift progress bars and the who-has-to-pay list; raised by the measured + 0.5 rule. /cashbook sat at its 86 ceiling by a rounding hair (measured 86.0) and moved to 87.",
   "W05 (5 Oct 2026, the reading room's attendance) — /library/attendance is new at 60.7 / 294.2 after its day picker was made dynamic() (statically it was 86.7: the calendar is ~26 KB and the desk marks today without opening it). The attendance thunks joined the library invalidation map, which moved the library routes 0.2-0.9 KB and, through chunk regrouping, a few core routes by up to 0.5; 19 routes at or over a ceiling were raised by the measured + 0.5 rule.",
   "W06 (5 Oct 2026, WhatsApp messages handled like reminders) — /library/messages is new at 59.4 / 293.0; the message dialog is dynamic() on both screens that open it. The three message thunks joined the library invalidation map, moving the library routes 0.1-0.4 KB; 12 routes at or over a ceiling were raised by the measured + 0.5 rule.",
-  "5 Oct 2026 (L02, the lending screens) - every route's first load grew 0.3-0.6 KB: the lending workspace's four sidebar rows, their three lucide icons and five ROUTES entries ship in the shared navigation chunk, and activeNavHref (one current menu row, not two) replaced an inline prefix test. The /lending/* routes get budgets for the first time; /lending/loans/new is the form page itself (RHF, Yup, the schedule preview), the same shape as /sales/invoices/new. 58 routes at or over a ceiling were raised by the measured + 0.5 rule."
+  "5 Oct 2026 (L02, the lending screens) - every route's first load grew 0.3-0.6 KB: the lending workspace's four sidebar rows, their three lucide icons and five ROUTES entries ship in the shared navigation chunk, and activeNavHref (one current menu row, not two) replaced an inline prefix test. The /lending/* routes get budgets for the first time; /lending/loans/new is the form page itself (RHF, Yup, the schedule preview), the same shape as /sales/invoices/new. 58 routes at or over a ceiling were raised by the measured + 0.5 rule.",
+  "5 Oct 2026 (L03, lending's WhatsApp messages) - the shared app grew 0.1 KB (the Messages sidebar row and its route) and /lending/loans/new's first load reached 350.3, so its ceiling is 351 by the measured + 0.5 rule; the dialog, its service and the messages slice load with the tap and the page that use them, so no other route moved. /lending/messages sits under the default."
  ],
  "default": {
   "route": 56,
@@ -1506,7 +1507,7 @@
   },
   "/lending/loans/new": {
    "route": 117,
-   "firstLoad": 350
+   "firstLoad": 351
   },
   "/lending": {
    "route": 56,

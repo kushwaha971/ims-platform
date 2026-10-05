@@ -104,7 +104,9 @@ const signIn = (permissions: PermissionCode[]): void => {
 const PERMS = ['lending.loan.read', 'lending.collection.create'] as PermissionCode[];
 
 beforeEach(() => {
-  jest.mocked(service.getLoanActivity).mockResolvedValue({ collections: [], visits: [] } as never);
+  jest
+    .mocked(service.getLoanActivity)
+    .mockResolvedValue({ collections: [], visits: [], messages: [] } as never);
 });
 
 describe('LoanPageContent', () => {
@@ -128,5 +130,65 @@ describe('LoanPageContent', () => {
     renderWithProviders(<LoanPageContent id="l1" />);
     expect(await screen.findByRole('button', { name: 'Not paid' })).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /^Collect/ })).toHaveLength(1);
+  });
+
+  /** L03 — Remind is offered to whoever may send it, only while something is due. */
+  it('offers Remind on a late loan to a member who may send it, and not otherwise', async () => {
+    jest
+      .mocked(service.getLoan)
+      .mockResolvedValue(loan({ arrears: '240.00', dueToday: '120.00', daysPastDue: 2 }));
+    signIn([...PERMS, 'lending.reminder.send'] as PermissionCode[]);
+    const { unmount } = renderWithProviders(<LoanPageContent id="l1" />);
+    expect(await screen.findByTestId('lending-loan-remind')).toHaveTextContent('Remind');
+    unmount();
+    signIn(PERMS);
+    renderWithProviders(<LoanPageContent id="l1" />);
+    expect(await screen.findByRole('button', { name: 'Not paid' })).toBeInTheDocument();
+    expect(screen.queryByTestId('lending-loan-remind')).not.toBeInTheDocument();
+  });
+
+  it('offers a receipt on the latest collection, and lists what was sent', async () => {
+    jest.mocked(service.getLoan).mockResolvedValue(loan({ nextDueOn: '2026-12-01' }));
+    jest.mocked(service.getLoanActivity).mockResolvedValue({
+      collections: [
+        {
+          id: 'c2',
+          collectedOn: '2026-10-05',
+          amount: '120.00',
+          mode: 'cash',
+          reference: '',
+          note: '',
+          receiptNumber: 'RCT/26-27/0002',
+          voided: false,
+        },
+        {
+          id: 'c1',
+          collectedOn: '2026-10-04',
+          amount: '120.00',
+          mode: 'cash',
+          reference: '',
+          note: '',
+          receiptNumber: 'RCT/26-27/0001',
+          voided: false,
+        },
+      ],
+      visits: [],
+      messages: [
+        {
+          id: 'm1',
+          kind: 'receipt',
+          subject: 'Receipt RCT/26-27/0001 · LN-0001',
+          channel: 'whatsapp_manual',
+          at: '2026-10-04T10:14:00+05:30',
+        },
+      ],
+    } as never);
+    signIn([...PERMS, 'lending.reminder.send'] as PermissionCode[]);
+    renderWithProviders(<LoanPageContent id="l1" />);
+    expect(await screen.findAllByTestId('lending-loan-receipt')).toHaveLength(1);
+    expect(screen.getByTestId('lending-loan-messages')).toHaveTextContent(
+      '04/10/2026 10:14 · Receipt · WhatsApp'
+    );
+    expect(screen.queryByTestId('lending-loan-remind')).not.toBeInTheDocument();
   });
 });

@@ -113,6 +113,55 @@ export interface VisitRow {
   readonly promisedOn: string | null;
 }
 
+/** L03 — one message recorded for a loan: a reminder or a receipt (LEN-12). */
+export interface LoanMessageRow {
+  readonly id: string;
+  readonly kind: LendingMessageKind;
+  readonly subject: string;
+  readonly channel: MessageChannel;
+  /** Tenant-local ISO instant: the clock is read off the string. */
+  readonly at: string | null;
+}
+
+export type LendingMessageKind = 'reminder' | 'receipt';
+export type ReminderBucket = 'due_tomorrow' | 'due_today' | 'overdue';
+export type MessageChannel = 'whatsapp_manual' | 'sms_manual' | 'call';
+
+/** What the server prepared, and whether it may go now (LEN-12 §6). */
+export interface PreparedLendingMessage {
+  readonly kind: LendingMessageKind;
+  readonly bucket: ReminderBucket | null;
+  readonly text: string;
+  readonly waUrl: string;
+  readonly smsUrl: string;
+  readonly telUrl: string;
+  readonly recipient: { readonly name: string; readonly hasMobile: boolean };
+  readonly allowed: boolean;
+  readonly refusal: {
+    readonly code: string;
+    readonly message: string;
+    readonly nextAllowedAt: string | null;
+    readonly windowStart: string | null;
+    readonly windowEnd: string | null;
+  } | null;
+  readonly lastToday: { readonly at: string; readonly channel: MessageChannel } | null;
+}
+
+/** A row of `/lending/messages`: today's reminders and tomorrow's. */
+export interface LendingReminderRow {
+  readonly loanId: string;
+  readonly number: string;
+  readonly name: string;
+  readonly area: string;
+  readonly route: string | null;
+  readonly bucket: ReminderBucket;
+  readonly amount: string;
+  /** The date the text names, already dd/mm/yyyy. */
+  readonly date: string;
+  readonly hasMobile: boolean;
+  readonly sentToday: { readonly at: string; readonly channel: MessageChannel } | null;
+}
+
 export interface TodayStop {
   readonly loanId: string;
   readonly number: string;
@@ -128,6 +177,8 @@ export interface TodayStop {
   readonly daysPastDue: number;
   readonly collectedToday: string;
   readonly remaining: string;
+  /** L03 — a reminder was recorded for this loan today. */
+  readonly remindedToday: boolean;
   readonly visit: {
     readonly outcome: VisitOutcome;
     readonly reason: string;

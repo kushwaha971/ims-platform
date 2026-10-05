@@ -10,6 +10,7 @@ from django.urls import path
 
 from apps.lending.views import collections as co
 from apps.lending.views import loans as ln
+from apps.lending.views import messages as ms
 
 urlpatterns: list = [
     path("loans/preview", ln.LoanPreviewView.as_view(), name="lending-loan-preview"),
@@ -30,6 +31,12 @@ urlpatterns: list = [
         "collections/<uuid:collection_id>/void",
         co.CollectionVoidView.as_view(),
         name="lending-collection-void",
+    ),
+    path("reminders", ms.ReminderListView.as_view(), name="lending-reminders"),
+    path(
+        "loans/<uuid:loan_id>/message/<str:kind>",
+        ms.LoanMessageView.as_view(),
+        name="lending-loan-message",
     ),
     path("routes", co.RouteListView.as_view(), name="lending-routes"),
     path("routes/<uuid:route_id>", co.RouteDetailView.as_view(), name="lending-route"),
