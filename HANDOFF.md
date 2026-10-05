@@ -50,8 +50,8 @@ If this section looks stale (the commits it names are not the latest), rebuild t
   - Server tweaks in the same step: `in_day_order` (Morning, Evening, then Full day), joining charge described as "Fee – <plan>" not "Membership".
   - Bundle budgets raised by the measured + 0.5 rule with a dated note in `frontend/bundle-budgets.json` (measured against a build of F06 `32948842`).
   - Verified: type-check, lint, i18n:check, all 3265 jest tests, next build, bundle:check green; `pytest apps/library` 317 passed.
-- **Exact stopping point:** W03 committed; nothing uncommitted except this file. Next is the Library home.
-- [ ] **Library home** (`/library`, first nav row): seats filled per shift, fees due this week, overdue, collected this month, renewals list. Backend `selectors/home.py` exists but is book-centric; extend it.
+- [x] **Library home — committed as `6df920d7` (W04).** `/library` (`LibraryHomePageContent`, `libraryHomeSlice`, `libraryHomeThunk`, `api/libraryHomeService.ts`, `types/home.types.ts`); server `selectors/home.py::study_home` adds a `study` block to `GET /library/home` (behind `library.member.read`) and a `seats` quick action. Nav row "Home" is the library's first row. `?add=1` on the students list opens admission. Checks: jest 3280 green, lint, build, bundle (new `/library` budget), `test_seats.py` + `test_home.py` 25 passed.
+- **Exact stopping point:** W04 committed; next is Attendance.
 - [ ] **Attendance**: check-in per day per student (an attendance engine exists in `backend/apps/attendance`; read it before building).
 - [ ] **WhatsApp messages like Reminders** (library templates and schedule; reuse `apps/library/services/reminders.py` and the core reminders module).
 - [ ] Fresh screenshots of the library at phone and desktop sizes (script `/tmp/claude-501/shots.mjs` may be gone; rebuild with Playwright against the `web-prod` preview on :3001).
