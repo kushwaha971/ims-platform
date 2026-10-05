@@ -51,8 +51,8 @@ If this section looks stale (the commits it names are not the latest), rebuild t
   - Bundle budgets raised by the measured + 0.5 rule with a dated note in `frontend/bundle-budgets.json` (measured against a build of F06 `32948842`).
   - Verified: type-check, lint, i18n:check, all 3265 jest tests, next build, bundle:check green; `pytest apps/library` 317 passed.
 - [x] **Library home — committed as `6df920d7` (W04).** `/library` (`LibraryHomePageContent`, `libraryHomeSlice`, `libraryHomeThunk`, `api/libraryHomeService.ts`, `types/home.types.ts`); server `selectors/home.py::study_home` adds a `study` block to `GET /library/home` (behind `library.member.read`) and a `seats` quick action. Nav row "Home" is the library's first row. `?add=1` on the students list opens admission. Checks: jest 3280 green, lint, build, bundle (new `/library` budget), `test_seats.py` + `test_home.py` 25 passed.
-- **Exact stopping point:** W04 committed; next is Attendance.
-- [ ] **Attendance**: check-in per day per student (an attendance engine exists in `backend/apps/attendance`; read it before building).
+- [x] **Attendance — committed (W05).** Server `services/attendance.py` (policy for context `library_membership`, registered in `apps.py`; one visit per day in a per-tenant "Reading room" group on the attendance engine), `views/attendance.py`, routes `/library/attendance` (GET day register, POST check-in), `/library/attendance/<mark_id>/out`, `/library/members/<id>/attendance?month=`. Frontend `/library/attendance` (`AttendancePageContent`, `AttendanceOverrideDialog`, `libraryAttendanceSlice/Thunk`, `api/libraryAttendanceService.ts`), `MemberAttendanceStrip` on the student page, `formatClock` in `src/utils/dates.ts`. Tests: `test_attendance.py` 6, policy contract, jest 3303 green, build and bundle green.
+- **Exact stopping point:** W05 committed; next is WhatsApp messages like Reminders.
 - [ ] **WhatsApp messages like Reminders** (library templates and schedule; reuse `apps/library/services/reminders.py` and the core reminders module).
 - [ ] Fresh screenshots of the library at phone and desktop sizes (script `/tmp/claude-501/shots.mjs` may be gone; rebuild with Playwright against the `web-prod` preview on :3001).
 - [ ] Then the **Lending & collections** screens per the approved wireframes.
@@ -62,6 +62,8 @@ If this section looks stale (the commits it names are not the latest), rebuild t
 
 - Pre-existing failure, not from this work: `apps/ledger/tests/test_module_reminders.py::test_a_party_reminder_quotes_the_shop_figure_never_the_loan` (fails identically with the W02 change stashed).
 - `tests/architecture/test_import_rules.py::test_the_matrix_covers_every_app_on_disk` fails if an empty `backend/apps/.claude` directory appears (editor tooling); delete it.
+- Running jest while the `web` dev server is up can break it: `src/tests/partyFetchLintRule.test.ts` creates and deletes a probe folder and Tailwind's watcher then fails on the missing file (500 on every page). Stop `web`, `rm -rf frontend/.next/cache frontend/.next/dev`, start it again.
+- Restarting the `api` preview signs the browser out; sign in again (wait for hydration before submitting).
 - If pytest suddenly takes minutes, a killed run left a connection on the test database; it clears by itself.
 - Backend tests: `cd backend && UB_SECRET_KEY=local-test-key-that-is-long-enough-32b UB_DEBUG=1 .venv/bin/python -m pytest -p no:cacheprovider -W ignore -o addopts="" -q -m "not slow"`. Formatter is `black` (ruff is not installed in `.venv`).
 - Dev DB: `UB_UNRELEASED_MODULES=1 .venv/bin/python manage.py migrate`. The `api` preview runs with `--noreload`: restart it after backend edits.
