@@ -421,13 +421,20 @@ def due_today(tenant: Any) -> list[dict]:
 
     on = tenant_today(tenant)
     candidates = fee_candidates(tenant, on)
+    # The business's day, not the database's: `sent_at__date` is the UTC date,
+    # so from midnight to 05:30 in India a message sent minutes ago read as
+    # "not sent today" and was offered again (found by the suite at 00:42 IST).
+    from apps.ledger.services.reminder_seam import _day_bounds
+
+    start, end = _day_bounds(tenant, on)
     told = set(
         Reminder.objects.filter(
             tenant=tenant,
             module="library",
             source_type=SOURCE_FEE,
             source_id__in=[c["source_id"] for c in candidates],
-            sent_at__date=on,
+            sent_at__gte=start,
+            sent_at__lt=end,
         ).values_list("source_id", flat=True)
     )
     members = {
