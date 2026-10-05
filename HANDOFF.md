@@ -4,7 +4,7 @@ Last updated: 5 Oct 2026 (§0 is live); older sections last revised 29 Sep 2026 
 
 ---
 
-## 0. RESUME HERE — live state (updated 5 Oct 2026, by the Claude thread working the study-library rework)
+## 0. RESUME HERE — live state (updated 5 Oct 2026; L02 finished by the cloud Claude session, synced to the Mac by bundle)
 
 **This section is the current state and wins over anything older below.** The local repo is the source of truth. Before changing anything:
 
@@ -54,11 +54,28 @@ If this section looks stale (the commits it names are not the latest), rebuild t
 - [x] **Attendance — committed (W05).** Server `services/attendance.py` (policy for context `library_membership`, registered in `apps.py`; one visit per day in a per-tenant "Reading room" group on the attendance engine), `views/attendance.py`, routes `/library/attendance` (GET day register, POST check-in), `/library/attendance/<mark_id>/out`, `/library/members/<id>/attendance?month=`. Frontend `/library/attendance` (`AttendancePageContent`, `AttendanceOverrideDialog`, `libraryAttendanceSlice/Thunk`, `api/libraryAttendanceService.ts`), `MemberAttendanceStrip` on the student page, `formatClock` in `src/utils/dates.ts`. Tests: `test_attendance.py` 6, policy contract, jest 3303 green, build and bundle green.
 - [x] **WhatsApp messages like Reminders — committed (W06).** Server `services/fee_messages.py` (sources `library_fee` and `library_message` on `apps/ledger/services/reminder_seam.py`; templates `library_fee_due|fee_overdue|fee_unpaid|welcome|receipt` en/hi), routes `/library/fee-reminders`, `/library/members/<id>/message/<fee|welcome|receipt>` (GET prepares, POST records). Frontend `/library/messages` (`MessagesPageContent`), `MessageDialog` (opened from the student page ⋯ menu too), `libraryMessagesSlice/Thunk`, `api/libraryMessageService.ts`. Tests: `test_fee_messages.py` 9; full backend suite 3772 passed; jest 3321; build and bundle green.
 - [x] Fresh screenshots sent to the owner (5 Oct 2026): home, students, attendance, messages on desktop; home, seat map, student, admission, fees on a phone. Playwright script kept in the session scratchpad only (it logs in with the QA owner and walks `/library/*` on the `web-prod` preview, :3001).
-- **Exact stopping point:** Library rework done (W01–W06). Lending server committed (L01, see below). Next is the lending screens.
+- **Exact stopping point:** Lending screens committed (L02, `a7915ad`). Next is L03, lending WhatsApp messages like the library's (instalment due, missed payment, receipt after collection), then screenshots to the owner.
 - [x] **Lending server — committed (L01).** New app `backend/apps/lending` (migration `0001_initial`, dev DB migrated): `services/calculator.py` (pure Decimal: flat, reducing, interest_only, fixed_daily, flexible; effective yearly rate by bisection; reproduces every FRD worked example), `services/loans.py` (parse/preview/create: deductions as loan-bucket `charge`, disbursal payment OUT to the `lending_loan` target, per-loan dues plan in expectation mode with supplied principal/interest; figures from dues), `services/collections.py` (any amount up to payoff via `dues.plan_allocation(allow_scheduled=True)`, mode/reference/note on the payment, closes when nothing is owed, void reopens; visits; today's round), `services/routes.py`. Routes under `/api/v1/lending/`: `loans/preview`, `loans`, `loans/<id>`, `borrowers`, `today`, `loans/<id>/collections[/preview]`, `loans/<id>/visits`, `collections/<id>/void`, `routes`, `routes/<id>`, `routes/<id>/stops`. Codenames (subset of FRD §0.8) on owner/admin; staff get read, borrower write, collection create/read, visit, route read, today, reminder send. Error codes `loan_not_active`, `loan_disbursal_locked`, `collection_over_payoff`, `route_has_loans` (registry 206). Tests: 36 in `apps/lending/tests`; full suite 3815 passed.
-- [ ] **Lending screens** (wireframes): own sidebar (Home, Today/Collections, Overdue, Loans, Borrowers, Routes, Reports, Settings), Today's round with Collect sheet (amount, what it clears, mode, reference, note, "Not paid" with reason), New loan with schedule preview and effective yearly rate, Loans list and loan page, Borrowers. Then WhatsApp reminders for lending like the library's, and screenshots.
+- [x] **Lending screens — committed as `a7915ad` (L02).**
+  - Lending workspace sidebar: Today, Loans, Borrowers, Routes, plus Team and Settings. Overdue, Reports and Settings screens for lending are not built, so they are not in the menu (owner rule).
+  - `/lending` is today's round in route order, with a route filter, the four tiles, and Collect and Not paid per stop.
+  - `CollectDialog` takes any amount and shows what it clears and what is left after it, plus mode, a reference (not for cash) and a note.
+  - `NotPaidDialog` records a reason.
+  - `/lending/loans/new` (`NewLoanPageContent`) covers all five plans, with a live preview: cash handed over, total, cost, effective yearly rate and the schedule.
+  - `/lending/loans` lists loans and `/lending/loans/[id]` is the loan page: one Collect with its amount in the header, icon-only on a phone, and Not paid only while something is due.
+  - `/lending/borrowers` and `/lending/routes` (add route).
+  - New code: `lendingService`, slices (`lendingToday`, `lendingLoans`, `lendingForm`), `lendingInvalidation`, and the en/hi catalogue `lending`.
+  - **QA in the browser** (390 and 1280, en and hi, cloud copy) found and fixed:
+    - two menu rows lit at once: `features/navigation/activeNav.ts` now picks the most specific row, which also fixes the library's Home;
+    - `collection_weekdays` sent as a list gave a 500, and an invalid per-instalment error was dropped: both are now 400s, tested in `test_loans.py`;
+    - Collect shown twice, and Not paid with nothing due (`LoanPageContent.test.tsx`);
+    - no heading on the payment chips;
+    - the file charge label wrapped;
+    - "Khata" became "Account".
+  - **Checks:** full jest 3335 green; tsc, eslint and prettier on the changed files; i18n check; `next build`; `bundle:check` (58 routes raised by the measured + 0.5 rule, dated note); `pytest apps/lending tests/architecture` 147 passed.
+  - **Dev note:** in a fresh dev DB the plans and partner must list `lending` and `library` before the module can be switched on, because the release data migration is not run until UAT. The cloud copy did this by hand in its dev DB only.
+- [ ] **L03:** lending WhatsApp messages, handled like reminders (instalment due, missed payment, receipt after collection). Then screenshots to the owner.
 - Not built in lending yet (FRD): agent role and route scoping, late fees and waivers, write-off/cancel, documents (receipt print, statement, closure letter), reports, settings screen, rate-ceiling warning.
-- [ ] Then the **Lending & collections** screens per the approved wireframes.
 - Paused until the owner asks: F06 remainder, F07–F13, B17, B18, E01–E04, DUE-04/05/06 in `docs/platform/progress/wave-b-track-*.md`.
 
 ### 0.5 Known issues and environment notes
