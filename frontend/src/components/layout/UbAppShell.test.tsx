@@ -125,7 +125,8 @@ describe('UAT D2 — the phone and tablet chrome', () => {
     const header = within(mobileHeader());
     await user.click(header.getByRole('button', { name: 'Account menu for Suresh Kumar' }));
 
-    const menu = within(header.getByRole('menu'));
+    // The panel is portalled to the body (R7), so it is looked up there.
+    const menu = within(screen.getByRole('menu'));
     expect(menu.getByText('Suresh Kumar')).toBeInTheDocument();
     expect(menu.getByText('suresh@kirana.test')).toBeInTheDocument();
 
@@ -207,7 +208,8 @@ describe('UAT D2 — the language switch, in the account menu at every width', (
 
     const header = within(mobileHeader());
     await user.click(header.getByRole('button', { name: 'Account menu for Suresh Kumar' }));
-    const menu = within(header.getByRole('menu'));
+    // The panel is portalled to the body (R7), so it is looked up there.
+    const menu = within(screen.getByRole('menu'));
 
     // Each option in its own script: the only label a person who needs it can read.
     expect(menu.getByRole('menuitem', { name: 'English' })).toHaveAttribute('aria-current', 'true');

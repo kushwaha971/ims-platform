@@ -638,7 +638,16 @@
   "No route chunk moved; every first-load failure is the same 0.7 KB of shell.",
   "  shared app  107 -> 108  (measured 107.2)",
   "  first load  +1 on the 31 routes that measured within 0.5 of their budget",
-  "  /accept-invite/[token] first load 244 -> 245 (measured 244.5): joining a business now carries on to that business's landing (useGoToLanding) instead of the Shop dashboard"
+  "  /accept-invite/[token] first load 244 -> 245 (measured 244.5): joining a business now carries on to that business's landing (useGoToLanding) instead of the Shop dashboard",
+  "",
+  "── 5 Oct 2026: the menu panel is portalled (docs/platform/14 R7) ───────────",
+  "MLMenu's panel used to be absolute inside its trigger, so the business",
+  "switcher opened inside the 180 px rail, was clipped by it and made it scroll,",
+  "and on a phone ran off the right edge. It is portalled to the body and placed",
+  "from the trigger's box (placeMenu). That is ~0.1 KB in mlOverlayPrimitives,",
+  "which every route with a dialog carries: 22 route and first-load budgets",
+  "that measured within 0.1 of their line were raised by the usual measured +",
+  "0.5 rule. The shell did not move (107.2)."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -1190,7 +1199,7 @@
  },
  "routes": {
   "/parties": {
-   "route": 104,
+   "route": 105,
    "firstLoad": 339
   },
   "/dashboard": {
@@ -1199,7 +1208,7 @@
   },
   "/sales/invoices/new": {
    "route": 132,
-   "firstLoad": 366
+   "firstLoad": 367
   },
   "/sales/invoices/[id]/edit": {
    "route": 132,
@@ -1207,7 +1216,7 @@
   },
   "/sales/invoices": {
    "route": 93,
-   "firstLoad": 327
+   "firstLoad": 328
   },
   "/sales/invoices/[id]": {
    "route": 66,
@@ -1259,22 +1268,22 @@
   },
   "/parties/tags": {
    "route": 58,
-   "firstLoad": 292
+   "firstLoad": 293
   },
   "/parties/[id]/statement": {
-   "route": 87,
+   "route": 88,
    "firstLoad": 322
   },
   "/ledger/aging": {
-   "route": 87,
+   "route": 88,
    "firstLoad": 322
   },
   "/switch": {
-   "route": 45,
+   "route": 46,
    "firstLoad": 280
   },
   "/settings/plan": {
-   "route": 44,
+   "route": 45,
    "firstLoad": 279
   },
   "/settings": {
@@ -1287,10 +1296,10 @@
   },
   "/settings/branding": {
    "route": 85,
-   "firstLoad": 319
+   "firstLoad": 320
   },
   "/settings/activity": {
-   "route": 98,
+   "route": 99,
    "firstLoad": 333
   },
   "/settings/devices": {
@@ -1306,23 +1315,23 @@
    "firstLoad": 281
   },
   "/items": {
-   "route": 105,
+   "route": 106,
    "firstLoad": 340
   },
   "/items/[id]": {
    "route": 95,
-   "firstLoad": 329
+   "firstLoad": 330
   },
   "/stock/low": {
    "route": 60,
-   "firstLoad": 294
+   "firstLoad": 295
   },
   "/expenses": {
-   "route": 104,
+   "route": 105,
    "firstLoad": 339
   },
   "/cashbook": {
-   "route": 87,
+   "route": 88,
    "firstLoad": 322
   },
   "/payments": {
@@ -1367,7 +1376,7 @@
   },
   "/settings/data": {
    "route": 53,
-   "firstLoad": 287
+   "firstLoad": 288
   },
   "/purchases/bills/[id]": {
    "route": 58,
@@ -1423,11 +1432,11 @@
   },
   "/library/copies": {
    "route": 68,
-   "firstLoad": 301
+   "firstLoad": 302
   },
   "/library/copies/[copyId]": {
    "route": 64,
-   "firstLoad": 298
+   "firstLoad": 299
   },
   "/library/settings": {
    "route": 107,
@@ -1439,7 +1448,7 @@
   },
   "/library/members/[membershipId]": {
    "route": 68,
-   "firstLoad": 302
+   "firstLoad": 303
   },
   "/library/catalogue/[titleId]": {
    "route": 61,
@@ -1458,7 +1467,7 @@
    "firstLoad": 304
   },
   "/library/seats": {
-   "route": 63,
+   "route": 64,
    "firstLoad": 298
   },
   "/library/fees": {
@@ -1507,7 +1516,7 @@
   },
   "/library": {
    "route": 63,
-   "firstLoad": 297
+   "firstLoad": 298
   },
   "/library/attendance": {
    "route": 62,
@@ -1519,7 +1528,7 @@
   },
   "/lending/loans/new": {
    "route": 117,
-   "firstLoad": 351
+   "firstLoad": 352
   },
   "/lending": {
    "route": 56,

@@ -15,6 +15,7 @@
   "tenant.status.invited": "Invited",
   "tenant.status.suspended": "Suspended",
   "tenant.switcher.add": "Add a business",
+  "tenant.switcher.apps": "Apps",
   "tenant.switcher.defaultSet": "This business will open by default.",
   "tenant.switcher.invitations": "Invitations",
   "tenant.switcher.isDefault": "Opens by default",

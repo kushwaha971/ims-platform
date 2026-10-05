@@ -3,11 +3,9 @@
 import { usePathname } from 'next/navigation';
 
 import { UbLink, UbStack, UbText } from 'src/design-system';
-import { useAppDispatch } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { cn } from 'src/utils/cn';
 
-import { switchApp } from 'modules/DigiKhaato/features/auth/redux/sessionThunk';
 import { activeNavHref } from 'modules/DigiKhaato/features/navigation/activeNav';
 import { useNavigation } from 'modules/DigiKhaato/features/navigation/useNavigation';
 
@@ -24,6 +22,10 @@ import { useNavigation } from 'modules/DigiKhaato/features/navigation/useNavigat
  * (Zoho-style), which is why this uses the on-nav text tokens rather than
  * `--text-primary`.
  *
+ * Only the open app's menu lives here. Which app, like which business, is
+ * chosen in the business switcher above it (owner, 5 Oct 2026: no app row in
+ * the sidebar) — so the list never moves when a person changes app.
+ *
  * `onNavigate` exists for the drawer: a rail stays open when you follow a link,
  * a drawer must close. The rail passes nothing.
  */
@@ -32,8 +34,7 @@ export function NavSections({
 }: Readonly<{ onNavigate?: () => void }>): React.JSX.Element {
   const pathname = usePathname();
   const { t } = useTranslation();
-  const { sections, apps, app } = useNavigation();
-  const dispatch = useAppDispatch();
+  const { sections } = useNavigation();
   const currentHref = activeNavHref(
     pathname,
     sections.flatMap((section) => section.items.map((item) => item.href))
@@ -41,47 +42,6 @@ export function NavSections({
 
   return (
     <UbStack gap={0} as="div" className="min-h-0 flex-1">
-      {apps.length > 1 && (
-        /* Owner, 4 Oct 2026 — one menu per kind of business. A business that
-           runs two (a shop with a reading room) switches between them here;
-           one that runs a single kind never sees this row. */
-        <UbStack
-          direction="row"
-          gap={1}
-          wrap
-          className="px-3 pt-3"
-          aria-label={t('nav.workspace.label')}
-          data-testid="nav-workspaces"
-        >
-          {apps.map((ws) => {
-            const current = ws.code === app;
-            return (
-              <UbLink
-                key={ws.code}
-                href={ws.href}
-                variant="inherit"
-                tone="inherit"
-                underline={false}
-                aria-current={current ? 'true' : undefined}
-                onClick={() => {
-                  // docs/platform/14 §4.2 — remembered by the server, per person
-                  // per business, so every device opens the same app next time.
-                  if (!current) void dispatch(switchApp({ app: ws.code }));
-                  onNavigate?.();
-                }}
-                className={cn(
-                  'ds-nav-label-medium rounded-xs border px-2 py-1',
-                  current
-                    ? 'border-border-navActive bg-surface-navActive text-text-onNav'
-                    : 'border-transparent text-text-onNavMuted hover:bg-surface-navHover hover:text-text-onNav'
-                )}
-              >
-                {t(ws.labelId)}
-              </UbLink>
-            );
-          })}
-        </UbStack>
-      )}
       {sections.map((section) => (
         /* Figma "menu": 12 px padding, a 10 px section label, rows 2 px apart. */
         <UbStack key={section.key} gap={0} className="gap-0.5 p-3">

@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { ChevronsUpDown, Plus, Star } from 'lucide-react';
+import { Check, ChevronsUpDown, Plus, Star } from 'lucide-react';
 
 import {
   UbAvatar,
@@ -16,10 +16,14 @@ import {
   UbText,
 } from 'src/design-system';
 import { MLMenu, MLMenuItem, MLMenuLabel, MLSpinner } from 'src/design-system/primitives';
+import { useAppDispatch } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { ROUTES } from 'src/routes';
 import { cn } from 'src/utils/cn';
 import { roleLabel } from 'src/utils/roleLabel';
+
+import { switchApp } from 'modules/DigiKhaato/features/auth/redux/sessionThunk';
+import { useNavigation } from 'modules/DigiKhaato/features/navigation/useNavigation';
 
 import { useTenantSwitcher } from '../hooks/useTenantSwitcher';
 import {
@@ -42,6 +46,11 @@ import {
  * EC-5 — a CA with sixty memberships gets the first eight plus "See all", which
  * opens the chooser. A sixty-row dropdown is not a menu.
  *
+ * docs/platform/14 §4.2 — the apps of the open business are chosen HERE, above
+ * the businesses, never as a row in the sidebar (owner, 5 Oct 2026). The rail
+ * caption names the open app, so "Verma Finance · Lending" is always visible,
+ * and the sidebar below shows only that app's menu.
+ *
  * FR-7's "Leave business" is behind `UbConfirmDialog` because it is not
  * reversible by the person doing it; FR-2's switch is not, because it is.
  */
@@ -63,6 +72,8 @@ export function TenantSwitcherMenu({
   const { t } = useTranslation();
   const router = useRouter();
   const switcher = useTenantSwitcher();
+  const dispatch = useAppDispatch();
+  const { apps, app } = useNavigation();
   const [leavingMembershipId, setLeavingMembershipId] = useState<string | null>(null);
 
   const confirmLeave = useCallback(async () => {
@@ -73,6 +84,16 @@ export function TenantSwitcherMenu({
 
   const seeAll = useCallback(() => router.push(ROUTES.SWITCH_TENANT), [router]);
 
+  // Remembered by the server, per person per business, so every device opens
+  // the same app next time; then straight to that app's home.
+  const openApp = useCallback(
+    (code: string, href: string) => {
+      if (code !== app) void dispatch(switchApp({ app: code }));
+      router.push(href);
+    },
+    [app, dispatch, router]
+  );
+
   // Before `/auth/me` lands there is no name to show; a placeholder chevron
   // next to an empty string reads as a broken control.
   if (!switcher.activeTenant) return null;
@@ -81,6 +102,8 @@ export function TenantSwitcherMenu({
   const shown = switcher.groups.active.slice(0, MENU_TENANT_LIMIT);
   const overflow = switcher.groups.active.length > MENU_TENANT_LIMIT;
   const activeName = tenantNameView(active.name);
+  const openAppLabel = apps.find((a) => a.code === app)?.labelId;
+  const railCaption = openAppLabel ? t(openAppLabel) : caption;
 
   return (
     <>
@@ -105,14 +128,14 @@ export function TenantSwitcherMenu({
                 >
                   {activeName.text}
                 </UbText>
-                {caption && (
+                {railCaption && (
                   <UbText
                     as="span"
                     variant="inherit"
                     truncate
                     className="ds-nav-caption-regular text-text-onNavMuted"
                   >
-                    {caption}
+                    {railCaption}
                   </UbText>
                 )}
               </UbBox>
@@ -136,6 +159,26 @@ export function TenantSwitcherMenu({
           )
         }
       >
+        {apps.length > 1 && (
+          <>
+            <MLMenuLabel>{t('tenant.switcher.apps')}</MLMenuLabel>
+            {apps.map((item) => (
+              <MLMenuItem
+                key={item.code}
+                selected={item.code === app}
+                onSelect={() => openApp(item.code, item.href)}
+              >
+                <UbText as="span" variant="inherit" tone="inherit" className="min-w-0 flex-1">
+                  {t(item.labelId)}
+                </UbText>
+                {item.code === app && (
+                  <Check aria-hidden className="h-4 w-4 shrink-0 text-text-tertiary" />
+                )}
+              </MLMenuItem>
+            ))}
+          </>
+        )}
+
         <MLMenuLabel>{t('tenant.switcher.title')}</MLMenuLabel>
 
         {shown.map((tenant) => {

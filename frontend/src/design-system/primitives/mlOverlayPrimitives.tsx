@@ -29,6 +29,7 @@ import {
   useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   type KeyboardEvent,
@@ -447,10 +448,45 @@ export interface MLMenuProps {
   readonly className?: string;
 }
 
+/** The gutter a menu keeps from every edge of the screen. */
+const MENU_GUTTER = 16;
+const MENU_WIDTH = 320;
+
+interface MenuPlace {
+  readonly top: number;
+  readonly left: number;
+  readonly width: number;
+  readonly maxHeight: number;
+}
+
+/**
+ * Where the panel goes: under its trigger, as wide as `MENU_WIDTH` allows, slid
+ * back inside the screen when the trigger sits near an edge, and no taller than
+ * the room below it (the panel scrolls inside itself beyond that).
+ */
+export const placeMenu = (
+  trigger: { left: number; right: number; bottom: number },
+  viewport: { width: number; height: number },
+  align: 'start' | 'end'
+): MenuPlace => {
+  const width = Math.min(MENU_WIDTH, viewport.width - MENU_GUTTER * 2);
+  const wanted = align === 'end' ? trigger.right - width : trigger.left;
+  const left = Math.max(MENU_GUTTER, Math.min(wanted, viewport.width - MENU_GUTTER - width));
+  const top = trigger.bottom + 4;
+  const maxHeight = Math.max(160, viewport.height - top - MENU_GUTTER);
+  return { top, left, width, maxHeight };
+};
+
 /**
  * The WAI-ARIA menu-button pattern: ArrowDown/ArrowUp move between items, Home
  * and End jump, Escape closes and returns focus to the trigger, and a pointer
  * outside closes it. Items are `MLMenuItem`.
+ *
+ * The panel is PORTALLED to `document.body` and placed `fixed` from the
+ * trigger's box (docs/platform/14 R7). It used to be `absolute` inside its
+ * trigger's wrapper, so in the sidebar it was clipped by a 180 px rail and made
+ * the rail's own scroll container grow and scroll; on a phone the 320 px panel
+ * ran off the right edge from a trigger in the middle of the top bar.
  */
 export function MLMenu({
   trigger,
@@ -465,6 +501,24 @@ export function MLMenu({
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
+  const [place, setPlace] = useState<MenuPlace | null>(null);
+
+  useLayoutEffect(() => {
+    if (!open || typeof window === 'undefined') return undefined;
+    const measure = () => {
+      const box = triggerRef.current?.getBoundingClientRect();
+      if (!box) return;
+      setPlace(placeMenu(box, { width: window.innerWidth, height: window.innerHeight }, align));
+    };
+    measure();
+    // The page or the rail scrolling under an open menu moves its trigger.
+    window.addEventListener('resize', measure);
+    window.addEventListener('scroll', measure, true);
+    return () => {
+      window.removeEventListener('resize', measure);
+      window.removeEventListener('scroll', measure, true);
+    };
+  }, [open, align]);
 
   useEffect(() => {
     if (!open || typeof document === 'undefined') return undefined;
@@ -527,27 +581,40 @@ export function MLMenu({
       >
         {trigger}
       </button>
-      {open && (
-        <div
-          ref={listRef}
-          role="menu"
-          aria-label={ariaLabel}
-          aria-labelledby={`${id}-trigger`}
-          onKeyDown={onKeyDown}
-          className={cn(
-            /* `z-[60]` and `shadow-ub-popover`, so a menu matches every other
+      {open &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            ref={listRef}
+            role="menu"
+            aria-label={ariaLabel}
+            aria-labelledby={`${id}-trigger`}
+            onKeyDown={onKeyDown}
+            className={cn(
+              /* `z-[60]` and `shadow-ub-popover`, so a menu matches every other
                floating surface in the kit and can open inside a dialog. It was
                `z-40` — BELOW the dialog's own `z-50` — so a menu opened from
                inside a modal rendered behind it. Same class of bug as the Radix
                popper wrapper, and fixed the same way. */
-            'absolute z-[60] mt-1 flex w-[min(320px,calc(100vw-32px))] flex-col gap-0.5',
-            'rounded-card border border-border-hairline bg-surface-raised p-1.5 shadow-ub-popover',
-            align === 'end' ? 'right-0' : 'left-0'
-          )}
-        >
-          {children}
-        </div>
-      )}
+              'fixed z-[60] flex flex-col gap-0.5 overflow-y-auto overscroll-contain',
+              'rounded-card border border-border-hairline bg-surface-raised p-1.5 shadow-ub-popover',
+              !place && 'invisible'
+            )}
+            style={
+              place
+                ? {
+                    top: place.top,
+                    left: place.left,
+                    width: place.width,
+                    maxHeight: place.maxHeight,
+                  }
+                : undefined
+            }
+          >
+            {children}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
