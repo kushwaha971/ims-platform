@@ -52,6 +52,7 @@ import { PartyListSortSheet } from './PartyListSortSheet';
 import { PartyListStats } from './PartyListStats';
 
 import type {
+  PartyKind,
   PartyBalanceFilter,
   PartyCollectionFilter,
   PartyCreditFilter,
@@ -130,7 +131,17 @@ const PartyBulkArchiveDialogLazy = dynamic(
 
 const STATUS_OPTIONS: readonly PartyStatus[] = ['active', 'archived'];
 
-export function PartyListPageContent(): React.JSX.Element {
+export function PartyListPageContent({
+  kind,
+}: Readonly<{
+  /**
+   * docs/platform/14 step 3b — the Shop's Customers and Suppliers pages are
+   * this list with its type FIXED, the way Zoho and Vyapar keep the two books
+   * apart. A party who is both is in both (BR-5). Without it, `/parties` is
+   * the whole book, which is what the Library and shared links still open.
+   */
+  kind?: PartyKind;
+}> = {}): React.JSX.Element {
   const { t, n } = useTranslation();
   const router = useRouter();
   const partyForm = usePartyForm();
@@ -158,7 +169,7 @@ export function PartyListPageContent(): React.JSX.Element {
     refetch,
     isRefreshing,
     showingSaved,
-  } = usePartyList();
+  } = usePartyList('replace', kind);
 
   /** Read outside render, so the column array's memo key is stable. */
   const nowMs = useNowMs();
@@ -196,8 +207,16 @@ export function PartyListPageContent(): React.JSX.Element {
   const tagChipsPerRow = TAG_CHIPS_PER_ROW[tier];
 
   const columns = useMemo(
-    () => createPartyColumns({ t, nowMs, balanceLabels, hasTags, tagChipsPerRow }),
-    [t, nowMs, balanceLabels, hasTags, tagChipsPerRow]
+    () =>
+      createPartyColumns({
+        t,
+        nowMs,
+        balanceLabels,
+        hasTags,
+        tagChipsPerRow,
+        nameHeader: kind === 'supplier' ? t('parties.list.supplier.column.name') : undefined,
+      }),
+    [t, nowMs, balanceLabels, hasTags, tagChipsPerRow, kind]
   );
 
   const labels = useMemo<UbDataGridLabels>(
@@ -251,6 +270,12 @@ export function PartyListPageContent(): React.JSX.Element {
      rendered as a string. TypeScript caught it here; a `() => void` signature
      would not have. */
   const openBlankCreate = useCallback(() => partyForm.openCreate(), [partyForm]);
+  const addLabel =
+    kind === 'supplier'
+      ? t('parties.list.supplier.add')
+      : kind === 'customer'
+        ? t('parties.list.customer.add')
+        : t('parties.list.add');
   /** The committed term, trimmed once — the empty state quotes it and the Add
    *  action prefills the form with it, and they must be the same string. */
   const searchTerm = searchInput.trim();
@@ -281,8 +306,14 @@ export function PartyListPageContent(): React.JSX.Element {
             description: t('parties.list.empty.archived.body'),
           }
         : {
-            title: t('parties.list.empty.firstUse.title'),
-            description: t('parties.list.empty.firstUse.body'),
+            title:
+              kind === 'supplier'
+                ? t('parties.list.supplier.empty.title')
+                : t('parties.list.empty.firstUse.title'),
+            description:
+              kind === 'supplier'
+                ? t('parties.list.supplier.empty.body')
+                : t('parties.list.empty.firstUse.body'),
             // The empty state's whole job is to offer the one move that closes
             // it. Before PTY-01 it described a screen and left the merchant to
             // find the way out themselves. FR-13's secondary "Import from CSV"
@@ -290,7 +321,7 @@ export function PartyListPageContent(): React.JSX.Element {
             // is built, and a control for an unbuilt feature is not rendered
             // (docs/DESIGN-SYSTEM.md §5).
             action: partyForm.canWrite ? (
-              <UbButton onClick={openBlankCreate}>{t('parties.list.add')}</UbButton>
+              <UbButton onClick={openBlankCreate}>{addLabel}</UbButton>
             ) : undefined,
           },
       filtered: archivedOnly
@@ -317,8 +348,12 @@ export function PartyListPageContent(): React.JSX.Element {
                they had not made. The search wording also gets to quote the term,
                which is the thing they will want to check for a typo. */
             title: searchTerm
-              ? t('parties.list.empty.filtered.searchTitle', { q: searchTerm })
-              : t('parties.list.empty.filtered.chipsTitle'),
+              ? kind === 'supplier'
+                ? t('parties.list.supplier.empty.searchTitle', { q: searchTerm })
+                : t('parties.list.empty.filtered.searchTitle', { q: searchTerm })
+              : kind === 'supplier'
+                ? t('parties.list.supplier.empty.chipsTitle')
+                : t('parties.list.empty.filtered.chipsTitle'),
             description: searchTerm
               ? t('parties.list.empty.filtered.searchBody')
               : t('parties.list.empty.filtered.chipsBody'),
@@ -355,6 +390,8 @@ export function PartyListPageContent(): React.JSX.Element {
     }),
     [
       t,
+      kind,
+      addLabel,
       clearFilters,
       refetch,
       error,
@@ -456,8 +493,20 @@ export function PartyListPageContent(): React.JSX.Element {
       width="full"
       header={
         <UbPageHeader
-          title={t('parties.list.title')}
-          subtitle={t('parties.list.subtitle')}
+          title={
+            kind === 'supplier'
+              ? t('parties.list.supplier.title')
+              : kind === 'customer'
+                ? t('parties.list.customer.title')
+                : t('parties.list.title')
+          }
+          subtitle={
+            kind === 'supplier'
+              ? t('parties.list.supplier.subtitle')
+              : kind === 'customer'
+                ? t('parties.list.customer.subtitle')
+                : t('parties.list.subtitle')
+          }
           actions={
             <>
               {/* FR-7 reaches the manager from an overflow menu on this header.
@@ -493,7 +542,7 @@ export function PartyListPageContent(): React.JSX.Element {
                   iconOnly="mobile"
                   onClick={openBlankCreate}
                 >
-                  {t('parties.list.add')}
+                  {addLabel}
                 </UbButton>
               )}
             </>
@@ -542,6 +591,7 @@ export function PartyListPageContent(): React.JSX.Element {
         <PartyListFilters
           t={t}
           type={filters.type}
+          typeFixed={Boolean(kind)}
           balance={filters.balance}
           collection={filters.collection}
           onTypeChange={handleType}
@@ -682,7 +732,7 @@ export function PartyListPageContent(): React.JSX.Element {
             merchant who opens the list to READ it, which is almost all of
             them. `openFor` is the only thing the page needs eagerly, and that
             lives in the slice. */}
-        {partyForm.open && <PartyFormDrawerLazy form={partyForm} />}
+        {partyForm.open && <PartyFormDrawerLazy form={partyForm} kind={kind} />}
 
         {/* Mounted only once it is open, so the chunk is fetched on the press
             rather than on the route. */}

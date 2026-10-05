@@ -95,6 +95,8 @@
     "landing.pricing.": "landingPricing",
     "calendar.": "calendar",
     "parties.relations.": "partyLinks",
+    "parties.list.customer.": "partyBooks",
+    "parties.list.supplier.": "partyBooks",
     "payments.off.": "settings",
     "payments.reports.": "reports",
     "payments.deposit.": "deposits",

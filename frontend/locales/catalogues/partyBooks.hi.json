@@ -1,0 +1,13 @@
+{
+  "parties.list.customer.add": "ग्राहक जोड़ें",
+  "parties.list.customer.subtitle": "वे सब जो आपसे ख़रीदते हैं।",
+  "parties.list.customer.title": "ग्राहक",
+  "parties.list.supplier.add": "सप्लायर जोड़ें",
+  "parties.list.supplier.column.name": "सप्लायर",
+  "parties.list.supplier.empty.body": "जिस सप्लायर से आप माल ख़रीदते हैं, उसे जोड़िए — उसका खाता यहीं से शुरू होगा।",
+  "parties.list.supplier.empty.chipsTitle": "इन फ़िल्टर से कोई सप्लायर नहीं मिला",
+  "parties.list.supplier.empty.searchTitle": "“{q}” से कोई सप्लायर नहीं मिला",
+  "parties.list.supplier.empty.title": "अभी कोई सप्लायर नहीं",
+  "parties.list.supplier.subtitle": "वे सब जिनसे आप ख़रीदते हैं।",
+  "parties.list.supplier.title": "सप्लायर"
+}

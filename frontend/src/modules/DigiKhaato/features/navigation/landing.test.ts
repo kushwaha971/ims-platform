@@ -26,11 +26,11 @@ const section = (key: NavSectionView['key'], ...keys: string[]): NavSectionView 
 
 it('is the dashboard when the dashboard row is visible — it is always first', () => {
   expect(item('dashboard').permission).toBe('reports.basic.read');
-  expect(landingPath([section('daily', 'dashboard', 'parties')])).toBe(ROUTES.DASHBOARD);
+  expect(landingPath([section('daily', 'dashboard', 'customers')])).toBe(ROUTES.DASHBOARD);
 });
 
 it('is the first visible item otherwise', () => {
-  expect(landingPath([section('daily', 'parties')])).toBe(ROUTES.PARTIES);
+  expect(landingPath([section('daily', 'customers')])).toBe(ROUTES.CUSTOMERS);
   expect(landingPath([section('business', 'invoices', 'items')])).toBe(item('invoices').href);
 });
 

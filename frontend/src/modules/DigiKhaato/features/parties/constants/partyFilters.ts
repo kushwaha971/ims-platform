@@ -24,6 +24,8 @@
 
 /** Empty string, not `null` or `undefined`: it round-trips through a URL. */
 export type PartyTypeFilter = '' | 'customer' | 'supplier';
+/** A list with its type fixed: the Shop's Customers and Suppliers pages. */
+export type PartyKind = Exclude<PartyTypeFilter, ''>;
 export type PartyBalanceFilter = '' | 'owes_me' | 'i_owe' | 'settled';
 export type PartyCollectionFilter = '' | 'today' | 'overdue' | 'upcoming';
 
@@ -52,7 +54,6 @@ export const COLLECTION_FILTERS: readonly Exclude<PartyCollectionFilter, ''>[] =
 export const RECEIVABLE_FILTER = 'owes_me' as const;
 export const PAYABLE_FILTER = 'i_owe' as const;
 
-
 /**
  * PTY-06 FR-12 — the credit band a party is in.
  *
@@ -64,8 +65,4 @@ export const PAYABLE_FILTER = 'i_owe' as const;
  */
 export type PartyCreditFilter = '' | 'over' | 'near' | 'ok';
 
-export const CREDIT_FILTERS: readonly Exclude<PartyCreditFilter, ''>[] = [
-  'over',
-  'near',
-  'ok',
-];
+export const CREDIT_FILTERS: readonly Exclude<PartyCreditFilter, ''>[] = ['over', 'near', 'ok'];

@@ -13,6 +13,7 @@ import {
   PackageSearch,
   Receipt,
   ShoppingCart,
+  Truck,
   Wallet,
 } from 'lucide-react';
 
@@ -43,6 +44,8 @@ export const SHOP_APP: AppManifest = {
   // in the switcher bounced straight back to the app being left.
   routePrefixes: [
     ROUTES.DASHBOARD,
+    ROUTES.CUSTOMERS,
+    ROUTES.SUPPLIERS,
     '/sales',
     '/items',
     '/stock',
@@ -73,16 +76,28 @@ export const SHOP_APP: AppManifest = {
       section: 'home',
       order: 1,
     },
+    // Step 3b — two books, as Zoho and Vyapar keep them: the people you sell
+    // to and the people you buy from. A party who is both is in both.
     {
-      key: 'parties',
+      key: 'customers',
       icon: BookUser,
       labelId: 'nav.parties',
-      href: ROUTES.PARTIES,
+      href: ROUTES.CUSTOMERS,
       module: 'parties',
       permission: 'parties.party.read',
       section: 'parties',
       order: 1,
       bottomNav: true,
+    },
+    {
+      key: 'suppliers',
+      icon: Truck,
+      labelId: 'nav.suppliers',
+      href: ROUTES.SUPPLIERS,
+      module: 'parties',
+      permission: 'parties.party.read',
+      section: 'parties',
+      order: 2,
     },
     // LED-09 — "who do I ring first", the collection round's starting list.
     {
@@ -93,7 +108,7 @@ export const SHOP_APP: AppManifest = {
       module: 'ledger',
       permission: 'ledger.entry.read',
       section: 'parties',
-      order: 2,
+      order: 3,
     },
     // LED-05/06/07 — the buckets, manual and bulk reminders, and the history.
     {
@@ -104,7 +119,7 @@ export const SHOP_APP: AppManifest = {
       module: 'ledger',
       permission: 'ledger.entry.read',
       section: 'parties',
-      order: 3,
+      order: 4,
       badge: 'overdueReminders',
     },
     // SAL-02/03/06/07/08 — bills, drafts, walk-in cash sales, print and share.

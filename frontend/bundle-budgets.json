@@ -647,7 +647,18 @@
   "from the trigger's box (placeMenu). That is ~0.1 KB in mlOverlayPrimitives,",
   "which every route with a dialog carries: 22 route and first-load budgets",
   "that measured within 0.1 of their line were raised by the usual measured +",
-  "0.5 rule. The shell did not move (107.2)."
+  "0.5 rule. The shell did not move (107.2).",
+  "",
+  "── 5 Oct 2026: Customers and Suppliers (docs/platform/14 step 3b) ──────────",
+  "/customers and /suppliers are the party list with its type fixed, so they",
+  "measure what /parties does and get its budgets (measured + 0.5). Their ten",
+  "words are a catalogue of their own (partyBooks) so the party catalogue every",
+  "party picker loads did not grow. 31 other budgets measured within 0.6 of",
+  "their line and were raised by the same rule. Measured, not guessed: a build",
+  "with the two routes removed still crossed 26 lines, so it is not the new",
+  "routes; the shared modules that changed are routes.ts (two paths) and the",
+  "catalogue registry (one name), and Turbopack re-partitioning its shared",
+  "chunks moves the last tenth of a kilobyte between routes from build to build."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -1200,7 +1211,7 @@
  "routes": {
   "/parties": {
    "route": 105,
-   "firstLoad": 339
+   "firstLoad": 340
   },
   "/dashboard": {
    "route": 88,
@@ -1215,12 +1226,12 @@
    "firstLoad": 367
   },
   "/sales/invoices": {
-   "route": 93,
+   "route": 94,
    "firstLoad": 328
   },
   "/sales/invoices/[id]": {
    "route": 66,
-   "firstLoad": 300
+   "firstLoad": 301
   },
   "/sales/estimates": {
    "route": 96,
@@ -1256,11 +1267,11 @@
   },
   "/design-system": {
    "route": 103,
-   "firstLoad": 337
+   "firstLoad": 338
   },
   "/settings/team": {
-   "route": 75,
-   "firstLoad": 310
+   "route": 77,
+   "firstLoad": 311
   },
   "/parties/[id]": {
    "route": 99,
@@ -1303,7 +1314,7 @@
    "firstLoad": 333
   },
   "/settings/devices": {
-   "route": 51,
+   "route": 52,
    "firstLoad": 286
   },
   "/stock/summary": {
@@ -1323,7 +1334,7 @@
    "firstLoad": 330
   },
   "/stock/low": {
-   "route": 60,
+   "route": 61,
    "firstLoad": 295
   },
   "/expenses": {
@@ -1336,11 +1347,11 @@
   },
   "/payments": {
    "route": 102,
-   "firstLoad": 336
+   "firstLoad": 337
   },
   "/payments/[id]": {
    "route": 57,
-   "firstLoad": 291
+   "firstLoad": 292
   },
   "/ledger/reminders": {
    "route": 66,
@@ -1348,11 +1359,11 @@
   },
   "/imports": {
    "route": 46,
-   "firstLoad": 280
+   "firstLoad": 281
   },
   "/imports/[id]": {
    "route": 46,
-   "firstLoad": 280
+   "firstLoad": 281
   },
   "/admin": {
    "route": 11,
@@ -1383,16 +1394,16 @@
    "firstLoad": 292
   },
   "/purchases/bills/[id]/edit": {
-   "route": 140,
-   "firstLoad": 374
+   "route": 142,
+   "firstLoad": 376
   },
   "/purchases/bills": {
-   "route": 89,
-   "firstLoad": 323
+   "route": 90,
+   "firstLoad": 325
   },
   "/purchases/bills/new": {
-   "route": 140,
-   "firstLoad": 374
+   "route": 142,
+   "firstLoad": 376
   },
   "/reports": {
    "route": 72,
@@ -1404,14 +1415,14 @@
   },
   "/reports/gst-summary": {
    "route": 98,
-   "firstLoad": 332
+   "firstLoad": 333
   },
   "/reports/purchase-register": {
-   "route": 96,
+   "route": 97,
    "firstLoad": 331
   },
   "/reports/sales-register": {
-   "route": 96,
+   "route": 97,
    "firstLoad": 331
   },
   "/login": {
@@ -1423,11 +1434,11 @@
    "firstLoad": 272
   },
   "/settings/business-days": {
-   "route": 57,
+   "route": 58,
    "firstLoad": 292
   },
   "/library/catalogue": {
-   "route": 68,
+   "route": 69,
    "firstLoad": 303
   },
   "/library/copies": {
@@ -1440,18 +1451,18 @@
   },
   "/library/settings": {
    "route": 107,
-   "firstLoad": 341
+   "firstLoad": 342
   },
   "/library/members": {
    "route": 73,
-   "firstLoad": 307
+   "firstLoad": 308
   },
   "/library/members/[membershipId]": {
    "route": 68,
    "firstLoad": 303
   },
   "/library/catalogue/[titleId]": {
-   "route": 61,
+   "route": 62,
    "firstLoad": 296
   },
   "/library/catalogue/categories": {
@@ -1472,7 +1483,7 @@
   },
   "/library/fees": {
    "route": 60,
-   "firstLoad": 294
+   "firstLoad": 295
   },
   "/signup": {
    "route": 51,
@@ -1484,7 +1495,7 @@
   },
   "/forgot-password": {
    "route": 50,
-   "firstLoad": 283
+   "firstLoad": 284
   },
   "/set-password": {
    "route": 50,
@@ -1515,11 +1526,11 @@
    "firstLoad": 235
   },
   "/library": {
-   "route": 63,
+   "route": 64,
    "firstLoad": 298
   },
   "/library/attendance": {
-   "route": 62,
+   "route": 63,
    "firstLoad": 297
   },
   "/library/messages": {
@@ -1531,7 +1542,7 @@
    "firstLoad": 352
   },
   "/lending": {
-   "route": 56,
+   "route": 57,
    "firstLoad": 291
   },
   "/lending/loans/[loanId]": {
@@ -1541,6 +1552,14 @@
   "/lending/loans": {
    "route": 56,
    "firstLoad": 289
+  },
+  "/customers": {
+   "route": 106,
+   "firstLoad": 340
+  },
+  "/suppliers": {
+   "route": 106,
+   "firstLoad": 340
   }
  },
  "//ignoreRoutes": [

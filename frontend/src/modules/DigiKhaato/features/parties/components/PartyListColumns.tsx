@@ -4,15 +4,9 @@ import type { TranslateFn } from 'src/hooks/useTranslation';
 import { activityView, contactLine } from '../view-model/partyDisplay';
 import { PARTY_SORT_FIELDS } from '../view-model/partyListSort';
 
-import {
-  PartyBalanceCell,
-  PartyMetaCell,
-  PartyNameCell,
-  PartyStatusCell,
-} from './PartyListRow';
+import { PartyBalanceCell, PartyMetaCell, PartyNameCell, PartyStatusCell } from './PartyListRow';
 
 import type { Party } from '../types/party.types';
-
 
 /**
  * Part 19 §19.9.4 — a MODULE-LEVEL column factory, memoised by the screen on
@@ -83,6 +77,8 @@ export interface PartyColumnDeps {
    * cannot tell which one it is painting.
    */
   readonly tagChipsPerRow: number;
+  /** The first column's heading when the page is one book (Suppliers). */
+  readonly nameHeader?: string;
 }
 
 export const createPartyColumns = ({
@@ -91,10 +87,11 @@ export const createPartyColumns = ({
   balanceLabels,
   hasTags,
   tagChipsPerRow,
+  nameHeader,
 }: PartyColumnDeps): readonly UbDataGridColumn<Party>[] => [
   {
     id: 'name',
-    header: t('parties.list.column.name'),
+    header: nameHeader ?? t('parties.list.column.name'),
     priority: 1,
     sortField: PARTY_SORT_FIELDS.name,
     cardSlot: 'title',

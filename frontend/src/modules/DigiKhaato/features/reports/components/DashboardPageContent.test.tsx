@@ -167,7 +167,7 @@ it('leaves out a tile the reader may not see, rather than showing it as ₹0 (FR
 it('sends a member who may not read reports on to Customers', () => {
   signIn(['parties.party.read']);
   renderWithProviders(<DashboardPageContent />);
-  expect(mockReplace).toHaveBeenCalledWith('/parties');
+  expect(mockReplace).toHaveBeenCalledWith('/customers');
   expect(service.getDashboard).not.toHaveBeenCalled();
 });
 
@@ -180,7 +180,7 @@ it('shows the first-use checklist instead of ₹0 tiles in an empty book (FR-9)'
   expect(await screen.findByText('Get your book started')).toBeInTheDocument();
   expect(screen.getByRole('link', { name: 'Add your first customer' })).toHaveAttribute(
     'href',
-    '/parties'
+    '/customers'
   );
   expect(screen.queryByText('To collect')).not.toBeInTheDocument();
 });

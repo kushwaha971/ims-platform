@@ -33,6 +33,7 @@ import { usePartySchemas } from '../validation/partySchemas';
 
 import { PartyTagField } from './PartyTagField';
 
+import type { PartyKind } from '../constants/partyFilters';
 import type { UsePartyFormResult } from '../hooks/usePartyForm';
 import type { PartyFormValues } from '../types/party.types';
 
@@ -65,8 +66,11 @@ import 'src/i18n/catalogues/validation';
 export function PartyFormDrawer({
   form: partyForm,
   returnFocusRef,
+  kind,
 }: Readonly<{
   form: UsePartyFormResult;
+  /** Opened from Suppliers: a new party is a supplier unless the merchant says otherwise. */
+  kind?: PartyKind;
   /** Focus target on close when the opener is gone (QA D1) — the khata's ⋯. */
   returnFocusRef?: RefObject<HTMLElement | null>;
 }>): React.JSX.Element {
@@ -97,8 +101,8 @@ export function PartyFormDrawer({
          for a create, so the edit branch cannot be shadowed by it. */
       name: editing?.name ?? prefillName,
       mobile: editing?.mobile ?? '',
-      isCustomer: editing?.isCustomer ?? true,
-      isSupplier: editing?.isSupplier ?? false,
+      isCustomer: editing?.isCustomer ?? kind !== 'supplier',
+      isSupplier: editing?.isSupplier ?? kind === 'supplier',
       displayCode: editing?.displayCode ?? '',
       altPhone: editing?.altPhone ?? '',
       email: editing?.email ?? '',
@@ -123,7 +127,7 @@ export function PartyFormDrawer({
          date). The hint asks for the real date; "Year start" is a chip. */
       openingAsOf: isoToday(),
     }),
-    [editing, prefillName]
+    [editing, prefillName, kind]
   );
 
   const form = useForm<PartyFormValues>({

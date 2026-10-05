@@ -9,6 +9,7 @@ import { PartyListPageContent } from 'modules/DigiKhaato/features/parties/compon
 // The words this screen renders arrive with its chunk (src/i18n/catalogueRegistry.ts).
 import 'src/i18n/catalogues/exports';
 import 'src/i18n/catalogues/parties';
+import 'src/i18n/catalogues/partyBooks';
 
 /**
  * Part 19 §19.1.4 — this is the ENTIRE file, and every application route looks

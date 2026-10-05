@@ -1914,3 +1914,55 @@ describe('sorting on a phone (UAT D5)', () => {
     expect(screen.queryByRole('button', { name: 'Sort' })).not.toBeInTheDocument();
   });
 });
+
+/**
+ * docs/platform/14 step 3b — the owner's "not one tab for everything, like
+ * Zoho": the Shop's Customers and Suppliers are this list with its type FIXED.
+ * The defects this guards: a Suppliers page that sends no `type` (and shows
+ * the whole book), a type chip that lets the merchant un-fix it, a Clear that
+ * quietly widens Suppliers back to everyone, and copy that calls a supplier a
+ * customer.
+ */
+describe('one book: Suppliers', () => {
+  const lastParams = () =>
+    partyService.listParties.mock.calls.at(-1)?.[0] as Record<string, unknown>;
+
+  beforeEach(() => {
+    store.dispatch(resetPartyList());
+    store.dispatch(resetPartyTags());
+    jest.clearAllMocks();
+    mockSearch = '';
+    tagService.listTags.mockResolvedValue([]);
+    setTier('cards');
+  });
+
+  it('asks only for suppliers, names the page, and offers no type chip', async () => {
+    partyService.listParties.mockResolvedValue(EMPTY);
+    renderWithProviders(<PartyListPageContent kind="supplier" />);
+
+    expect(await screen.findByText('No suppliers yet')).toBeInTheDocument();
+    expect(lastParams().type).toBe('supplier');
+    expect(screen.getByRole('heading', { name: 'Suppliers' })).toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Type' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Suppliers', pressed: false })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Customers', pressed: false })).toBeNull();
+    // The fixed type is the page, not a filter the merchant applied.
+    expect(screen.queryByRole('button', { name: 'Clear filters' })).not.toBeInTheDocument();
+  });
+
+  it('keeps the type when the merchant clears what they applied', async () => {
+    partyService.listParties.mockResolvedValue(loaded([RAMESH]));
+    const user = userEvent.setup();
+    renderWithProviders(<PartyListPageContent kind="supplier" />);
+    await screen.findAllByText('Ramesh Traders');
+
+    partyService.listParties.mockResolvedValue(EMPTY);
+    await user.click(screen.getByRole('button', { name: 'Owes me' }));
+    await waitFor(() => expect(lastParams().balance).toBe('owes_me'));
+    expect(await screen.findByText('No suppliers match these filters')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Clear filters' }));
+    await waitFor(() => expect(lastParams().balance ?? '').toBe(''));
+    expect(lastParams().type).toBe('supplier');
+  });
+});

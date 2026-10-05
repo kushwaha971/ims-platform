@@ -298,7 +298,7 @@ export function FirstUseChecklist({
   t: TranslateFn;
 }>): React.JSX.Element {
   const rows = [
-    { key: 'party', show: steps.party, done: firstUse.hasParty, href: ROUTES.PARTIES },
+    { key: 'party', show: steps.party, done: firstUse.hasParty, href: ROUTES.CUSTOMERS },
     { key: 'item', show: steps.item, done: firstUse.hasItem, href: ROUTES.ITEMS },
     {
       key: 'bill',

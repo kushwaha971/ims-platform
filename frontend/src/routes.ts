@@ -48,6 +48,9 @@ export const ROUTES = {
   // ── (app) ─────────────────────────────────────────────────────────────────
   DASHBOARD: '/dashboard',
   PARTIES: '/parties',
+  // docs/platform/14 step 3b — the Shop's two books; `/parties` is the whole one.
+  CUSTOMERS: '/customers',
+  SUPPLIERS: '/suppliers',
   /** PTY-05 FR-7 — the tag manager. A sibling of the list rather than a
    *  settings page: tags are a way of working through the book, and a merchant
    *  renaming one is in the middle of using the list, not configuring the

@@ -33,7 +33,7 @@ import { partyTotals } from '../view-model/partyDisplay';
 
 import { usePartyListUrl } from './usePartyListUrl';
 
-import type { PartyBalanceFilter } from '../constants/partyFilters';
+import type { PartyBalanceFilter, PartyKind } from '../constants/partyFilters';
 import type { Party, PartyListFilters } from '../types/party.types';
 import type { PartyListTotals } from '../view-model/partyDisplay';
 
@@ -80,8 +80,20 @@ export interface UsePartyListResult {
  * screen. It binds React to the store: selectors in, a thunk out, memoised
  * handlers back, and a plain typed result object (R-H-1, R-H-2). No JSX.
  */
-export function usePartyList(mode: 'replace' | 'append' = 'replace'): UsePartyListResult {
+export function usePartyList(
+  mode: 'replace' | 'append' = 'replace',
+  /**
+   * docs/platform/14 step 3b — `/customers` and `/suppliers` are this list with
+   * its type FIXED: it is their default (so their address stays clean), it is
+   * not counted as a filter the merchant applied, and Clear keeps it.
+   */
+  kind?: PartyKind
+): UsePartyListResult {
   const dispatch = useAppDispatch();
+  const defaults = useMemo<PartyListFilters>(
+    () => (kind ? { ...DEFAULT_PARTY_FILTERS, type: kind } : DEFAULT_PARTY_FILTERS),
+    [kind]
+  );
 
   const rows = useAppSelector(selectPartyRows);
   const meta = useAppSelector(selectPartyListMeta);
@@ -237,8 +249,8 @@ export function usePartyList(mode: 'replace' | 'append' = 'replace'): UsePartyLi
     () =>
       [
         filters.q,
-        filters.status !== DEFAULT_PARTY_FILTERS.status,
-        filters.type,
+        filters.status !== defaults.status,
+        filters.type !== defaults.type,
         filters.balance,
         filters.collection,
         filters.tag,
@@ -254,6 +266,7 @@ export function usePartyList(mode: 'replace' | 'append' = 'replace'): UsePartyLi
       filters.tag,
       filters.credit,
       filters.role,
+      defaults,
     ]
   );
 
@@ -272,7 +285,7 @@ export function usePartyList(mode: 'replace' | 'append' = 'replace'): UsePartyLi
    * slice is the only place that can keep them from disagreeing. The hook seeds
    * from the URL once and follows the slice afterwards.
    */
-  usePartyListUrl({ filters, defaults: DEFAULT_PARTY_FILTERS, onSeed: setFilters });
+  usePartyListUrl({ filters, defaults, onSeed: setFilters });
   const setPage = useCallback(
     (page: number, pageSize?: number) => {
       dispatch(pageChanged({ page, pageSize }));
@@ -309,7 +322,8 @@ export function usePartyList(mode: 'replace' | 'append' = 'replace'): UsePartyLi
   const clearFilters = useCallback(() => {
     setSearchInput('');
     dispatch(filtersCleared());
-  }, [dispatch]);
+    if (kind) dispatch(filtersChanged({ type: kind }));
+  }, [dispatch, kind]);
   const refetch = useCallback(() => {
     void dispatch(fetchPartyList({ params: filters, mode: 'replace' }));
   }, [dispatch, filters]);

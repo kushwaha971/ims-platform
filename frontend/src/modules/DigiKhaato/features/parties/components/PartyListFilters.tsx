@@ -62,6 +62,8 @@ export interface PartyListFiltersProps {
   readonly balance: PartyBalanceFilter;
   readonly collection: PartyCollectionFilter;
   readonly onTypeChange: (value: PartyTypeFilter) => void;
+  /** The page itself is Customers or Suppliers, so the type is not a choice. */
+  readonly typeFixed?: boolean;
   readonly onBalanceChange: (value: PartyBalanceFilter) => void;
   readonly onCollectionChange: (value: PartyCollectionFilter) => void;
   /** PTY-06 FR-12 — over, near, or within the credit limit. */
@@ -95,6 +97,7 @@ function PartyListFiltersBase({
   balance,
   collection,
   onTypeChange,
+  typeFixed = false,
   onBalanceChange,
   onCollectionChange,
   credit,
@@ -235,16 +238,18 @@ function PartyListFiltersBase({
         ))}
       </UbFilterChipGroup>
 
-      <UbFilterChipGroup label={t('parties.list.filter.type.label')}>
-        {TYPE_FILTERS.map((value) => (
-          <UbFilterChip
-            key={value}
-            label={t(`parties.list.filter.type.${value}`)}
-            pressed={type === value}
-            onToggle={(next) => handleType(value, next)}
-          />
-        ))}
-      </UbFilterChipGroup>
+      {!typeFixed && (
+        <UbFilterChipGroup label={t('parties.list.filter.type.label')}>
+          {TYPE_FILTERS.map((value) => (
+            <UbFilterChip
+              key={value}
+              label={t(`parties.list.filter.type.${value}`)}
+              pressed={type === value}
+              onToggle={(next) => handleType(value, next)}
+            />
+          ))}
+        </UbFilterChipGroup>
+      )}
 
       <UbFilterChipGroup label={t('parties.list.filter.collection.label')}>
         {COLLECTION_FILTERS.map((value) => (
