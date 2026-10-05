@@ -145,11 +145,21 @@ The table stakes are a front desk with a room chart, reservations, a channel man
 | Offline / mobile app | web, works on a phone | native apps, offline | PWA offline for the counter and the round |
 | Price | — | ₹249–₹1,000+ a month per app | bundle apps per business; owner pays, staff free (§6.1 of `14`) |
 
+## 6.1 Insights (owner, 5 Oct 2026: "and what about the insight section, like graphs?")
+
+The design system already has the chart primitives (`UbTrendArea`, `UbAgingBars`, `ChartBarRow`, `UbStatCard`), but no screen uses them except the aging bars. The Shop dashboard is tiles and lists. Vyapar's dashboard and Zoho's 75+ reports lead with charts. Each app gets its own Insights section in its own menu:
+
+- **Shop:** sales vs purchases over time; cash in vs out; receivables and payables; top items and customers; margin by item, category and customer; stock value and slow movers.
+- **Library:** seat occupancy by shift; fees collected vs due; renewals vs drop-outs; attendance trend.
+- **Lending:** disbursed vs collected; collection efficiency by day, route and agent; overdue buckets; interest earned.
+
+The Shop's sales, cash and dues charts come right after cost of goods on sale lines; margin charts need that column, or they would be wrong for every past sale.
+
 ## 7. The recommendation
 
 Finish the platform-shell refactor (steps 3–7 of `14`): it is what lets each app grow its own menus, words and reports without touching the others. Then build in this order, each one a step with QA:
 
-1. Shop item truth: cost on sale lines, item tabs, supplier and customer memory, then profit reports.
+1. Shop item truth: cost on sale lines, item tabs, supplier and customer memory, then profit reports and the Shop's Insights (§6.1).
 2. UPI collection (link and QR on every invoice, fee and instalment), once in the platform.
 3. Lending documents, late fees and waivers, write-off, agent scoping.
 4. Library UPI fees, QR check-in, expenses and profit.
