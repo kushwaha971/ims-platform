@@ -66,6 +66,10 @@ class Membership(TimeStampedModel):
     #: one business and owns a side business lands where they were, on any
     #: device (docs/platform/14 §4.1). Null until first used.
     last_used_at = models.DateTimeField(null=True, blank=True)
+    #: The app this person was last in, in this business (`apps_registry`):
+    #: the switcher and the landing open it again, on any device. Blank → the
+    #: first app they can open.
+    last_app = models.CharField(max_length=32, blank=True, default="")
 
     class Meta:
         db_table = "platform_membership"
@@ -80,6 +84,36 @@ class Membership(TimeStampedModel):
 
     def __str__(self) -> str:
         return f"{self.user_id}@{self.tenant_id}:{self.role_id}"
+
+
+class MembershipAppGrant(TimeStampedModel):
+    """One person's access to one app of one business, with their role there.
+
+    docs/platform/14 §6 decision 1: the owner assigns apps per person — "Ravi:
+    Lending as agent, Shop as staff". The business's owner needs no rows (they
+    are in every app); a membership with no rows is a legacy one whose single
+    role covers every app, as before grants existed.
+
+    `app` is an `apps_registry` code, validated by the service that writes it;
+    a grant for an app the business no longer runs is kept (switching the app
+    back on restores the access) and simply grants nothing meanwhile.
+    """
+
+    id = uuid7_pk()
+    membership = models.ForeignKey(Membership, on_delete=models.CASCADE, related_name="app_grants")
+    app = models.CharField(max_length=32)
+    role = models.ForeignKey(Role, on_delete=models.RESTRICT, related_name="app_grants")
+
+    class Meta:
+        db_table = "platform_membership_app_grant"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["membership", "app"], name="uq_app_grant_membership_app"
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.membership_id}:{self.app}:{self.role_id}"
 
 
 class Invitation(TimeStampedModel):

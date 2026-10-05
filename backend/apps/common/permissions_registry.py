@@ -222,6 +222,9 @@ def permissions_for(membership: Any) -> frozenset[str]:
         base = set(system_role_permissions(role.code))
     else:
         base = set(role.permissions or [])
+    scoped = _scoped_by_app_grants(membership, base)
+    if scoped is not None:
+        base = scoped
     override = membership.permissions_override or {}
     allow = set(override.get("allow", []))
     spec = _MODULE_ROLES.get(role.code) if role.is_system else None
@@ -246,6 +249,38 @@ def permissions_for(membership: Any) -> frozenset[str]:
         for p in base
         if p in PERMISSIONS and (MODULE_OF[p] in enabled or MODULE_OF[p] == "platform")
     )
+
+
+def _role_codenames(role: Any) -> set[str]:
+    if role.is_system:
+        return set(system_role_permissions(role.code))
+    return set(role.permissions or [])
+
+
+def _scoped_by_app_grants(membership: Any, base: set[str]) -> set[str] | None:
+    """docs/platform/14 §6 decision 1 — per-person, per-app roles.
+
+    `None` leaves the membership's own role in charge: the business's owner, and
+    a legacy membership with no grants. Otherwise the person holds the business
+    capabilities their business role gives (team, settings, inbox) plus, for
+    each app granted, that grant's role limited to the capabilities the app
+    covers — so "admin in Shop, staff in Library" is exactly that, and a staff
+    grant in one app never lends its codenames to another.
+    """
+    from apps.platform_app import apps_registry as registry
+
+    if registry.is_business_owner(membership):
+        return None
+    grants = registry.grants_of(membership)
+    if not grants:
+        return None
+    scoped = {c for c in base if MODULE_OF.get(c) in registry.BUSINESS_CAPABILITIES}
+    for code, grant_role in grants.items():
+        spec = registry.app_spec(code)
+        if spec is None:
+            continue
+        scoped |= {c for c in _role_codenames(grant_role) if MODULE_OF.get(c) in spec.capabilities}
+    return scoped
 
 
 # ── A13 ── module roles (ADR-052, contracts §3, FRD 00 PLT-X12) ──────────────

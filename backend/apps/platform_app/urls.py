@@ -57,6 +57,7 @@ from apps.platform_app.views.tenant import (
     InvitationAcceptView,
     InvitationDetailView,
     InvitationListCreateView,
+    MemberAppsView,
     MemberCredentialsView,
     MemberListCreateView,
     MembershipDetailView,
@@ -144,6 +145,7 @@ urlpatterns = [
         name="membership-detail",
     ),
     path("members", MemberListCreateView.as_view(), name="member-list"),
+    path("members/<uuid:membership_id>/apps", MemberAppsView.as_view(), name="member-apps"),
     # A13 (PLT-X12) — canon roles plus the module roles of enabled modules.
     path("roles", RoleListView.as_view(), name="role-list"),
     # A9b (PLT-X08) — the tenant's closed-day calendar.

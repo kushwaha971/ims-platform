@@ -15,7 +15,7 @@ from apps.platform_app.models.calendar import ClosedDay
 from apps.platform_app.models.auth import AuthToken, OtpChallenge, Session
 from apps.platform_app.models.idempotency import IdempotencyKey
 from apps.platform_app.models.job import Job
-from apps.platform_app.models.membership import Invitation, Membership, Role
+from apps.platform_app.models.membership import Invitation, Membership, MembershipAppGrant, Role
 from apps.platform_app.models.partner import Partner, Plan
 from apps.platform_app.models.rate_limit import RateLimit
 from apps.platform_app.models.settings import (
@@ -45,6 +45,7 @@ __all__ = [
     "InvitationStatus",
     "Job",
     "Membership",
+    "MembershipAppGrant",
     "MembershipStatus",
     "OtpChallenge",
     "OtpPurpose",

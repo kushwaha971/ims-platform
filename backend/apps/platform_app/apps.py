@@ -25,6 +25,33 @@ class PlatformConfig(AppConfig):
 
         register_durable_throttle(durable_factory)
 
+        # docs/platform/14 §4.2 — the Shop is an app like the others, registered
+        # here because its capabilities are the core ones, not a vertical's.
+        from apps.platform_app.apps_registry import AppSpec, register_app
+
+        register_app(AppSpec(
+            code="shop",
+            label_id="nav.workspace.shop",
+            anchor="sales",
+            capabilities=frozenset(
+                {
+                    "parties",
+                    "ledger",
+                    "inventory",
+                    "sales",
+                    "purchases",
+                    "payments",
+                    "expenses",
+                    "reports",
+                    "import_export",
+                }
+                ),  # fmt: skip
+                entry_permission="parties.party.read",
+                home_path="/dashboard",
+                order=90,
+            ),
+        )
+
         register(Tags.security, deploy=True)(check_console_sms_backend)
 
 

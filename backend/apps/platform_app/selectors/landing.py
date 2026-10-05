@@ -31,8 +31,12 @@ from apps.platform_app.constants import MembershipStatus
 from apps.platform_app.selectors.memberships import is_own_draft
 
 
-def resolve_landing(*, user: Any, membership: Any, tenants: list[dict]) -> dict:
-    """`landing` for a session; `tenants` is the body's own `tenants[]` (no extra query)."""
+def resolve_landing(*, user: Any, membership: Any, tenants: list[dict], app: Any = None) -> dict:
+    """`landing` for a session; `tenants` is the body's own `tenants[]` (no extra query).
+
+    `app` is the active app (`apps_registry.active_app`); an `app` landing then
+    names it and its home, so a sign-in opens the app the person was last in.
+    """
     from apps.platform_app.services.onboarding import WIZARD_LAST_STEP
 
     if getattr(user, "must_change_password", False):
@@ -54,4 +58,8 @@ def resolve_landing(*, user: Any, membership: Any, tenants: list[dict]) -> dict:
             "tenant_id": tenant_id,
             "step": min(WIZARD_LAST_STEP, max(1, done + 1)),
         }
-    return {"kind": "app", "tenant_id": tenant_id}
+    landing: dict = {"kind": "app", "tenant_id": tenant_id}
+    if app is not None:
+        landing["app"] = app.code
+        landing["path"] = app.home_path
+    return landing

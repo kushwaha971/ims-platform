@@ -63,7 +63,12 @@ def test_a_business_made_outside_the_wizard_is_never_unfinished() -> None:
     tenant = TenantFactory(onboarding_step=0)
     MembershipFactory(user=user, tenant=tenant, role=_owner())
     data = _sign_in(user)
-    assert data["landing"] == {"kind": "app", "tenant_id": str(tenant.id)}
+    assert data["landing"] == {
+        "kind": "app",
+        "tenant_id": str(tenant.id),
+        "app": "shop",
+        "path": "/dashboard",
+    }
 
 
 def test_an_owner_who_stopped_the_wizard_resumes_it_at_the_next_step() -> None:
@@ -91,7 +96,8 @@ def test_someone_who_works_here_is_not_sent_into_their_own_half_made_side_busine
     MembershipFactory(user=user, tenant=work, role=_staff(), is_default=False)
     data = _sign_in(user)
     assert data["active_tenant_id"] == str(work.id)
-    assert data["landing"] == {"kind": "app", "tenant_id": str(work.id)}
+    assert data["landing"]["kind"] == "app"
+    assert data["landing"]["tenant_id"] == str(work.id)
 
 
 def test_a_sign_in_opens_the_business_last_used_on_any_device() -> None:

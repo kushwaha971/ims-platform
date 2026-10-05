@@ -167,18 +167,26 @@ def build(
 
     from apps.platform_app.services.entitlements import plan_limits_payload
 
+    from apps.platform_app import apps_registry
     from apps.platform_app.selectors.landing import resolve_landing
 
     tenants = tenant_rows(user)
+    permissions = sorted(permissions_for(membership)) if membership is not None else []
+    # docs/platform/14 §4.2 — the apps this person can open in the active
+    # business, and the one they are in (the last used here, else the first).
+    apps = apps_registry.accessible_apps(membership, permissions)
+    current = apps_registry.active_app(membership, apps)
     payload: dict[str, Any] = {
         "user": user_block(user, is_new=is_new),
         "tenants": tenants,
         # docs/platform/14 §4.1 — where this session goes next, decided here so
         # sign-in, refresh, a deep link and a password reset cannot disagree.
-        "landing": resolve_landing(user=user, membership=membership, tenants=tenants),
+        "landing": resolve_landing(user=user, membership=membership, tenants=tenants, app=current),
+        "apps": [apps_registry.app_json(a) for a in apps],
+        "active_app": current.code if current is not None else None,
         "active_tenant_id": str(membership.tenant_id) if membership is not None else None,
         "active_tenant": active_tenant_block(membership.tenant) if membership else None,
-        "permissions": sorted(permissions_for(membership)) if membership is not None else [],
+        "permissions": permissions,
         "plan_limits": plan_limits_payload(membership.tenant) if membership else None,
         "feature_flags": dict(settings.UB_FEATURE_FLAGS or {}),
         "sessions": session_rows(user),

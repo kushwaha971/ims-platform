@@ -52,6 +52,141 @@ def touch(membership: Any) -> None:
     membership.last_used_at = now
 
 
+def switch_app(*, membership: Any, app: Any, request_id: str | None = None) -> Any:
+    """`POST /auth/switch-app` — open another app of the same business (docs/platform/14 §4.2).
+
+    The choice is the person's, per business, kept on the server
+    (`membership.last_app`) so a phone and a laptop agree and the next sign-in
+    opens it. Refused for an app this person cannot open here: the business
+    does not run it, or they hold no grant for it.
+    """
+    from apps.common.permissions_registry import permissions_for
+    from apps.platform_app import apps_registry
+    from apps.platform_app.models import Membership
+
+    code = str(app or "")
+    allowed = {
+        a.code for a in apps_registry.accessible_apps(membership, permissions_for(membership))
+    }
+    if code not in allowed:
+        raise PermissionDenied("You cannot open that app in this business.")
+    Membership.objects.filter(pk=membership.pk).update(last_app=code)
+    membership.last_app = code
+    touch(membership)
+    write_audit(
+        ctx=Ctx(
+            tenant=membership.tenant,
+            actor=membership.user,
+            actor_type="user",
+            request_id=request_id or "",
+        ),
+        action=AuditAction.APP_SWITCHED,
+        entity_type="platform_membership",
+        entity_id=membership.id,
+        after={"app": code},
+    )
+    return membership
+
+
+def app_grants_json(membership: Any) -> list[dict]:
+    """A member's grants as the Team screen shows them, in switcher order."""
+    from apps.platform_app import apps_registry
+
+    grants = apps_registry.grants_of(membership)
+    order = {a.code: a.order for a in apps_registry.registered_apps()}
+    return [
+        {"app": code, "role": role.code, "role_label_id": role_label_id(role)}
+        for code, role in sorted(grants.items(), key=lambda kv: order.get(kv[0], 999))
+    ]
+
+
+@transaction.atomic
+def set_app_grants(*, tenant: Any, membership_id: Any, grants: Any, actor: Any, ctx: Ctx) -> Any:
+    """`PUT /members/{id}/apps` — which apps this person is in, and as what (§6 decision 1).
+
+    Replaces the whole set. The owner of the business is in every app and takes
+    no grants; an empty set returns a member to the legacy reading, where their
+    one business role covers every app (to take someone out of the business,
+    remove them from the team). The roles a grant may carry are the business's
+    own: the canon roles except owner, and a module role only in its own app.
+    Only an owner gives `admin`, as only an owner makes an admin today.
+
+    `permissions_version` is bumped so a session holding the old set re-reads
+    it on its next request (`token_stale`) instead of keeping it till expiry.
+    """
+    from apps.common.exceptions import NotFound, ValidationFailed
+    from apps.common.permissions_registry import module_role
+    from apps.platform_app import apps_registry
+    from apps.platform_app.models import Membership, MembershipAppGrant
+    from apps.platform_app.selectors.memberships import role_by_code
+
+    target = (
+        Membership.objects.select_related("role", "tenant")
+        .select_for_update(of=("self",))
+        .filter(tenant=tenant, pk=membership_id)
+        .first()
+    )
+    if target is None:
+        raise NotFound()
+    if target.role.code == "owner":
+        raise ValidationFailed({"grants": ["The owner is in every app of the business."]})
+    if not isinstance(grants, list):
+        raise ValidationFailed({"grants": ["Send a list of {app, role}."]})
+    running = {a.code: a for a in apps_registry.apps_of_business(tenant)}
+    actor_is_owner = (
+        actor is not None
+        and Membership.objects.filter(
+            tenant=tenant, user=actor, role__code="owner", status=MembershipStatus.ACTIVE
+        ).exists()
+    )
+    resolved: dict[str, Any] = {}
+    errors: list[str] = []
+    for row in grants:
+        app = str((row or {}).get("app") or "") if isinstance(row, dict) else ""
+        code = str((row or {}).get("role") or "") if isinstance(row, dict) else ""
+        spec = running.get(app)
+        role = role_by_code(tenant=tenant, code=code) if code else None
+        if spec is None:
+            errors.append(f"{app or '?'}: this business does not run that app.")
+        elif app in resolved:
+            errors.append(f"{app}: one role per app.")
+        elif role is None or role.code == "owner":
+            errors.append(f"{app}: choose a role.")
+        elif role.code == "admin" and not actor_is_owner:
+            errors.append(f"{app}: only the owner makes someone an admin.")
+        elif role_assignment_error(tenant=tenant, role=role):
+            errors.append(f"{app}: {role_assignment_error(tenant=tenant, role=role)}")
+        elif (m := module_role(role.code)) is not None and m.module not in spec.capabilities:
+            errors.append(f"{app}: that role belongs to another app.")
+        else:
+            resolved[app] = role
+    if errors:
+        raise ValidationFailed({"grants": errors})
+    before = {g.app: g.role.code for g in target.app_grants.select_related("role")}
+    MembershipAppGrant.objects.filter(membership=target).delete()
+    MembershipAppGrant.objects.bulk_create(
+        [
+            MembershipAppGrant(membership=target, app=app, role=role)
+            for app, role in resolved.items()
+        ]
+    )
+    Membership.objects.filter(pk=target.pk).update(
+        permissions_version=target.permissions_version + 1
+    )
+    target.permissions_version += 1
+    if hasattr(target, "_ub_app_grants"):
+        del target._ub_app_grants
+    write_audit(
+        ctx=ctx,
+        action=AuditAction.MEMBER_APPS_CHANGED,
+        entity_type="platform_membership",
+        entity_id=target.id,
+        before={"grants": before},
+        after={"grants": {app: role.code for app, role in resolved.items()}},
+    )
+    return target
+
+
 def switch_tenant(
     *,
     user: Any,

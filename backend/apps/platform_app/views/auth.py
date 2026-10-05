@@ -22,7 +22,7 @@ from django.db import transaction
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 
-from apps.common.exceptions import ValidationFailed
+from apps.common.exceptions import PermissionDenied, ValidationFailed
 from apps.common.responses import StandardResponse
 from apps.common.tenancy import get_effective_tenant
 from apps.platform_app import tokens
@@ -237,6 +237,34 @@ class MeView(APIView):
                 if claims.get("tid")
                 else None
             )
+        return StandardResponse.ok(session_payload.build(user=request.user, membership=membership))
+
+
+class SwitchAppView(APIView):
+    """`POST /auth/switch-app {app}` — the app switcher (docs/platform/14 §4.2).
+
+    The same body as `/auth/me`, so the client swaps its menu, words and home
+    from one response. No new tokens: the business and the permissions version
+    are unchanged, and permissions come from the membership's grants, not the app.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request: Any) -> Any:
+        claims = getattr(request, "auth_claims", {}) or {}
+        membership = (
+            active_membership(user=request.user, tenant_id=claims.get("tid"))
+            if claims.get("tid") and not claims.get("imp")
+            else None
+        )
+        if membership is None:
+            raise PermissionDenied("Open a business first.")
+        data = request.data if isinstance(request.data, dict) else {}
+        membership_service.switch_app(
+            membership=membership,
+            app=data.get("app"),
+            request_id=getattr(request, "request_id", None),
+        )
         return StandardResponse.ok(session_payload.build(user=request.user, membership=membership))
 
 

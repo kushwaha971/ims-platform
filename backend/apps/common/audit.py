@@ -35,6 +35,8 @@ class AuditAction:
     REFRESH_REUSE_DETECTED = "auth.refresh_reuse_detected"
     LOGGED_OUT = "auth.logged_out"
     TENANT_SWITCHED = "auth.tenant_switched"
+    # docs/platform/14 §4.2 — the app switcher (per person, per business).
+    APP_SWITCHED = "auth.app_switched"
     # ── Sprint 1: PLT-03 / PLT-04 / PLT-15 ─────────────────────────────────
     TENANT_CREATED = "tenant.created"
     TENANT_PRESET_APPLIED = "tenant.preset_applied"
@@ -56,6 +58,8 @@ class AuditAction:
     MEMBER_CREDENTIALS_ISSUED = "member.credentials_issued"
     MEMBER_CREDENTIALS_REGENERATED = "member.credentials_regenerated"
     MEMBER_ROLE_CHANGED = "member.role_changed"
+    # docs/platform/14 §6 decision 1 — which apps a member is in, and as what.
+    MEMBER_APPS_CHANGED = "member.apps_changed"
     MEMBER_REMOVED = "member.removed"
     PARTY_CREATED = "party.created"
     PARTY_UPDATED = "party.updated"

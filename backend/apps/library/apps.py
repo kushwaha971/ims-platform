@@ -148,3 +148,21 @@ class LibraryConfig(AppConfig):
         from apps.library.services import attendance
 
         register_checkin_policy(attendance.CONTEXT, module="library", policy=attendance.policy)
+
+        # docs/platform/14 §4.2 — the Library as an app: its own capability and
+        # the shared engines a grant to it covers.
+        from apps.platform_app.apps_registry import AppSpec, register_app
+
+        register_app(
+            AppSpec(
+                code="library",
+                label_id="nav.workspace.library",
+                anchor="library",
+                capabilities=frozenset(
+                    {"library", "parties", "ledger", "payments", "dues", "attendance"}
+                ),
+                entry_permission="library.member.read",
+                home_path="/library",
+                order=10,
+            )
+        )

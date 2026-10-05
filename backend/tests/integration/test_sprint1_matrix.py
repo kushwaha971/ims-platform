@@ -123,6 +123,15 @@ EXPECTED: dict[tuple[str, str], dict[str, int]] = {
         "anon": 401,
         "other_tenant": 400,
     },
+    # docs/platform/14 §4.2 — an empty body names no app, so nobody can open it.
+    ("POST", "v1:auth-switch-app"): {
+        "owner": 403,
+        "admin": 403,
+        "staff": 403,
+        "accountant": 403,
+        "anon": 401,
+        "other_tenant": 403,
+    },
     # Sending oneself a confirmation link needs a session and nothing else: the
     # address it confirms is the caller's own, so there is no body to validate.
     ("POST", "v1:auth-email-verify-request"): {
@@ -544,6 +553,7 @@ def test_an_unauthenticated_call_to_every_guarded_route_is_401(
         ("GET", "v1:auth-me"),
         ("POST", "v1:auth-logout"),
         ("POST", "v1:auth-switch-tenant"),
+        ("POST", "v1:auth-switch-app"),
         ("POST", "v1:auth-password-set"),
         ("POST", "v1:tenant-create"),
         ("GET", "v1:tenant-current"),

@@ -547,6 +547,37 @@ class MemberListCreateView(APIView):
         return body
 
 
+class MemberAppsView(APIView):
+    """`GET`/`PUT /members/{id}/apps` — which apps a member is in, and as what.
+
+    docs/platform/14 §6 decision 1: the owner assigns apps per person. Same
+    guard as the rest of the team screen (`platform.members.manage`), and 404
+    for a membership of another business.
+    """
+
+    permission_classes = [IsAuthenticated, MembersManagePermission]
+
+    def get(self, request: Any, membership_id: Any) -> Any:
+        membership = member_of_tenant(
+            tenant=_tenant_or_refuse(request), membership_id=membership_id
+        )
+        if membership is None:
+            raise NotFound()
+        return StandardResponse.ok({"grants": membership_service.app_grants_json(membership)})
+
+    def put(self, request: Any, membership_id: Any) -> Any:
+        tenant = _tenant_or_refuse(request)
+        data = request.data if isinstance(request.data, dict) else {}
+        membership = membership_service.set_app_grants(
+            tenant=tenant,
+            membership_id=membership_id,
+            grants=data.get("grants"),
+            actor=request.user,
+            ctx=Ctx.from_request(request),
+        )
+        return StandardResponse.ok({"grants": membership_service.app_grants_json(membership)})
+
+
 class MemberCredentialsView(APIView):
     """`POST /members/{id}/credentials` — reissue a temporary password (DEC-012).
 
