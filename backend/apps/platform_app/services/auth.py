@@ -31,7 +31,7 @@ from django.db import IntegrityError, transaction
 from apps.common.audit import AuditAction, write_audit
 from apps.common.context import Ctx
 from apps.common.exceptions import ValidationFailed
-from apps.platform_app.selectors.memberships import active_membership, default_membership
+from apps.platform_app.selectors.memberships import active_membership, preferred_membership
 from apps.platform_app.services import passwords, sessions, throttle
 
 VERIFY_TOKEN_BYTES = 32
@@ -323,16 +323,19 @@ def start_session(
 ) -> LoggedIn:
     """Open a session and pick the landing tenant (PLT-01 FR-9, PLT-04 FR-9).
 
-    Landing rule, in order: the tenant explicitly asked for (invitation accept
-    routes this way), else the `is_default` membership, else the single active
-    membership, else none — and "none" is a legitimate answer that routes the
-    client to onboarding or to the chooser.
+    The business, in order: the one explicitly asked for (invitation accept
+    routes this way), else `preferred_membership` — the last used, then a usable
+    default — else none, which is a legitimate answer: the session's `landing`
+    then says create a business or choose one (docs/platform/14 §4.1).
     """
     membership = None
     if tenant_id is not None:
         membership = active_membership(user=user, tenant_id=tenant_id)
     if membership is None:
-        membership = default_membership(user=user)
+        membership = preferred_membership(user=user)
+    from apps.platform_app.services.memberships import touch
+
+    touch(membership)
 
     with transaction.atomic():
         issued = sessions.issue(

@@ -2,15 +2,13 @@
 
 import { useCallback } from 'react';
 
-import { useRouter } from 'next/navigation';
-
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, useWatch } from 'react-hook-form';
 
 import { UbButton, UbField, UbForm, UbStack, UbStatusBanner, UbTextInput } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
-import { onboardingStepPath } from 'src/routes';
 
+import { useGoToLanding } from '../hooks/useGoToLanding';
 import { usePasswordFlow } from '../hooks/usePasswordFlow';
 import { useAuthSchemas } from '../validation/authSchemas';
 
@@ -27,13 +25,13 @@ import type { PasswordSetFormValues } from '../validation/authSchemas';
  * **CR-2026-09-19-A narrowed what reaches this screen.** Sign-up now sets a
  * password by definition, so the route no longer sits between an OTP verify and
  * the wizard. What is left is the invitation path (PLT-05), where a member
- * accepts an invite and has no password yet, and `postAuthDestination()`'s
- * `setPassword` branch, which is what routes them here.
+ * accepts an invite and has no password yet. Afterwards they go to the
+ * session's `landing` (docs/platform/14 §4.1), not to the wizard.
  *
  * Skip is allowed (FR-3): forcing a password on a merchant standing at a counter
  * is how completion drops, and the account still has its invitation-issued
- * session. The skip goes straight on to the wizard; the user stays logged in
- * either way (FR-9).
+ * session. The skip goes straight on to where the session belongs; the user
+ * stays logged in either way (FR-9).
  *
  * §9 states: Initial · Partial (the strength hint updates live) · Processing ·
  * Completed (snackbar, then onward) · Failed (server rules, anchored on the
@@ -41,7 +39,7 @@ import type { PasswordSetFormValues } from '../validation/authSchemas';
  */
 export function SetPasswordPageContent(): React.JSX.Element {
   const { t } = useTranslation();
-  const router = useRouter();
+  const goToLanding = useGoToLanding();
   const schemas = useAuthSchemas();
   const password = usePasswordFlow();
 
@@ -57,16 +55,16 @@ export function SetPasswordPageContent(): React.JSX.Element {
   const submit = useCallback(
     async (values: PasswordSetFormValues) => {
       await password.submitSetPassword(values, form.setError);
-      // The wizard is the next step whether a password was set or skipped; a
-      // failed submit leaves `error` set and the form on screen.
-      if (!password.error) router.replace(onboardingStepPath(1));
+      // docs/platform/14 R1 — this used to go to onboarding step 1 for
+      // everyone, so a person added to a business they already work in was
+      // sent to create a new one. Set or skipped, they go where the session
+      // belongs; a failed submit leaves `error` set and the form on screen.
+      if (!password.error) goToLanding();
     },
-    [password, form, router]
+    [password, form, goToLanding]
   );
 
-  const skip = useCallback(() => {
-    router.replace(onboardingStepPath(1));
-  }, [router]);
+  const skip = goToLanding;
 
   return (
     <UbStack gap={6} className="w-full">

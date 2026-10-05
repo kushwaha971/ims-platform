@@ -35,6 +35,23 @@ class InvitationInvalid(BusinessRuleViolation):
         super().__init__("invitation_invalid", message)
 
 
+def touch(membership: Any) -> None:
+    """Record that this business was opened now (docs/platform/14 §4.1).
+
+    One UPDATE, no signal and no audit row: sign-in and switch are audited
+    themselves, and this is their consequence, not a separate act.
+    """
+    from django.utils import timezone
+
+    from apps.platform_app.models import Membership
+
+    if membership is None:
+        return
+    now = timezone.now()
+    Membership.objects.filter(pk=membership.pk).update(last_used_at=now)
+    membership.last_used_at = now
+
+
 def switch_tenant(
     *,
     user: Any,
@@ -63,6 +80,7 @@ def switch_tenant(
     previous = sessions.session_for_claims(user=user, claims=current_claims or {})
 
     with transaction.atomic():
+        touch(membership)
         issued = sessions.issue(
             user=user,
             tenant=membership.tenant,
@@ -116,6 +134,9 @@ def set_default(*, user: Any, membership: Any, request_id: str | None = None) ->
         if not membership.is_default:
             membership.is_default = True
             membership.save(update_fields=["is_default", "updated_at"])
+        # "Open this one when I sign in" is a choice about the next sign-in, and
+        # sign-in opens the business last used: so choosing it counts as using it.
+        touch(membership)
         write_audit(
             ctx=Ctx(
                 tenant=membership.tenant,

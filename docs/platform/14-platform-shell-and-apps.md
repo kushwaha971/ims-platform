@@ -1,6 +1,6 @@
 # 14 — Platform shell and independent apps: architecture review
 
-Status: review written 5 Oct 2026 on `dev` at `354b6bf`, before any refactor. Owner decisions are in §6; the plan in §7 starts only after them.
+Status: review written 5 Oct 2026 on `dev` at `354b6bf`, before any refactor. Owner decisions taken the same day (§6). Step 1 of §7 is done; the rest follow in order.
 
 This chapter answers the owner's eight-point brief of 5 Oct 2026. Four problems were reported: an existing user sent to onboarding, modules that look and behave the same, one shared sidebar, and a module switcher that makes the sidebar scroll. All four were traced in the code and reproduced in the browser before anything was changed. The order of the chapter is the one the brief asked for: current architecture, root causes, proposed architecture, migration plan, then implementation and validation as the plan runs.
 
@@ -132,24 +132,41 @@ The sidebar's header becomes one control, the context switcher: the business nam
 
 ## 5. What stays as it is
 
-The backend's capability entitlements, vertical registries, module roles, per-business onboarding storage, the dues and ledger engines and the reminder seam are all sound and stay. The route-level `RequireModule` gate stays. So does the rule that a business type is a preset and never changes behaviour; what changes is that sign-up asks which app the person runs before it asks a Shop business type.
+The backend's capability entitlements, vertical registries, module roles, per-business onboarding storage, the dues and ledger engines and the reminder seam are all sound and stay. The route-level `RequireModule` gate stays. So does the rule that a business type is a preset and never changes behaviour; it stays a Shop setting and is no longer presented as if it chose a product.
 
-## 6. Decisions the owner is asked for
+## 6. Owner decisions (5 Oct 2026)
 
-1. **Who can open an app.** Either derive it from the person's role, so an app is visible when the business has it and the role holds its entry permission (no schema change), or let the owner assign apps per person ("Ravi: Lending only"). That needs a `membership_app` table and a team-screen control.
-2. **What "leave module" means.** The owner turning an app off for the business (data kept, menu gone), a person hiding an app for themselves, or both.
-3. **Sign-up asks "what do you run?"** first, so a library owner never sees the Shop wizard.
-4. **Order of work** against the planned lending documents: this refactor first, or the redirect fix first and the rest after the lending documents.
+1. **The owner assigns apps per person, with a role per app.** A person's access is a list of grants, each one business → app → role. The owner of a business is in every app with full rights and needs no grant. Everyone else holds explicit grants, set on the Team screen ("Ravi: Lending — agent; Shop — staff"). The menu, the switcher, the landing and the permissions follow the grants. This is the model of Atlassian's product access (one site; per-person, per-product access and role) and Zoho One's apps per user.
+2. **"Leave" depends on who asks.** The owner turns an app off for the business: the data is kept and the menu goes for everyone. Anyone else removes themselves from that app. Leaving a business is unchanged.
+3. **Sign-up does not ask which app.** Everything follows the person's actual grants instead. A new business starts with the Shop, and its owner adds apps from the switcher.
+4. **The whole refactor goes first,** one step at a time, and the lending documents follow it.
+
+### 6.1 Rules the owner fixed for the future
+
+- **A business you own and a business you work in are separate contexts.** Each membership carries its own role, grants, permissions, menu and data. Owner rights in one never apply in another, and switching business swaps all of it. The switcher groups them as "Your businesses" and "Where you work". The case the owner gave: "I work here, and I own my side business along with that."
+- **One account on yourkhata.com for all of them.** One email and password; every business the person owns or works in is in the same switcher. White-label partners keep their own domains for their own merchants, which is separate.
+- **Billing belongs to the business, and its owner pays.** Plans, subscriptions and seats attach to the tenant, never to the user account. A person never pays for a business they only work in; a staff seat is counted on, and paid by, the business that granted it. When payments are built they hang off the business (`tenant.plan`, seats from its memberships and grants), with the owner as payer. This is how Slack and Atlassian bill workspaces and sites.
+
+### 6.2 Reference patterns, by concern
+
+| Concern | Pattern adopted | Seen in |
+|---|---|---|
+| Identity | one account, many organisations, a separate role in each | Slack, Notion, Atlassian |
+| First screen | reopen the organisation and product last used, server-decided | Slack, Notion, Linear |
+| Products inside an organisation | per-person product access with a role per product | Atlassian, Zoho One |
+| Switching | a floating org/app switcher, outside the product's own navigation | Atlassian app switcher, Slack workspace menu |
+| Extensibility | each product registers a manifest (menu, routes, permissions) | Atlassian Forge, Shopify app extensions, Microsoft Teams apps |
+| Billing | per organisation, paid by its owner, seats per product | Slack, Atlassian |
 
 ## 7. Migration plan
 
 Each step ships on its own on `dev` with tests, a browser QA pass and a commit, in this order. No step breaks a page the previous one left working.
 
-1. **Landing resolver.** Add `resolve_landing`, `membership.last_used_at`, the `landing` field and the client executor; delete the five client copies; define step 0 once. Fixes the reported redirect. Tests: every row of §8 that concerns sign-in.
-2. **App registry, server.** Add `register_app` for shop, library and lending; `apps` and `active_app` in the session; `membership.last_app` and the switch endpoint.
+1. **Landing resolver — done.** Server: `selectors/landing.py`, `membership.last_used_at` (migration 0014), `preferred_membership` (last used; then a usable default, so an owner's own half-made side business never takes over a sign-in) and `is_own_draft`, the single definition of "unfinished" (owner, wizard step 1–3; step 0 never). Every session body carries `landing`. Client: `src/types/landing.types.ts`, `view-model/landing.ts`, the one place a landing becomes a path, and `hooks/useGoToLanding.ts`. Removed: `postAuthDestination`, `noTenantDestination`, `resolveActiveTenant`, `PostAuthDestination`, and the hard-coded destinations of both password screens and of the business switch. Tests: `test_landing.py` 12 (each sign-in row of §8), `landing.test.ts`, `SetPasswordPageContent.test.tsx`. Browser: the three reported cases, a new staff login with a temporary password, and a password reset all land correctly; refresh and deep links hold.
+2. **App registry and grants, server.** Add `register_app` for shop, library and lending; `membership_app_grant(membership, app, role)` per decision 1; `apps` and `active_app` in the session; `membership.last_app` and the switch endpoint; permissions computed from the business role plus the app grants.
 3. **App registry, client.** Move each app's navigation into its manifest; make `useNavigation` generic; remove `sidebarConfig.ts`'s shared list, the `Workspace` union, `ub_workspace` and the `=== 'shop'` checks; add the architecture test.
 4. **Context switcher.** Portalled panel; add and turn off an app; leave a business; the stable sidebar.
-5. **Setup scoped to apps.** App setup checklists; sign-up asks the app first (decision 3).
+5. **Setup scoped to apps.** App setup checklists on each app's home, never blocking; the business-type grid reads as a Shop setting, not a product choice (decision 3).
 6. **Words per app.** Shared pages read the active app's terminology.
 7. **A new app by registration only.** A guide plus a test app in the test suite that registers a manifest and gets a menu, a home and a landing with no shared file edited.
 
@@ -164,7 +181,7 @@ Each row is a test, unit or API, and is walked in the browser at the step that d
 | Existing user added to another business | the business they use; the new one in the switcher |
 | Existing user given another app | that app in the switcher; landing unchanged |
 | Owner of a script-made business (step 0) | the app, never the wizard |
-| Owner of a wizard business stopped at step 2 | the wizard at step 3, also on refresh and deep link |
+| Owner of a wizard business stopped at step 2 | the wizard at step 3 on sign-in and refresh of the wizard; a deep link opens the page asked for (the business works) |
 | Staff of an unfinished business | the app (never a wizard they cannot complete) |
 | Several businesses, none default | the chooser |
 | Only an invitation | the chooser listing it |

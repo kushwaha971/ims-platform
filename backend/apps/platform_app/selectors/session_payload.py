@@ -167,9 +167,15 @@ def build(
 
     from apps.platform_app.services.entitlements import plan_limits_payload
 
+    from apps.platform_app.selectors.landing import resolve_landing
+
+    tenants = tenant_rows(user)
     payload: dict[str, Any] = {
         "user": user_block(user, is_new=is_new),
-        "tenants": tenant_rows(user),
+        "tenants": tenants,
+        # docs/platform/14 §4.1 — where this session goes next, decided here so
+        # sign-in, refresh, a deep link and a password reset cannot disagree.
+        "landing": resolve_landing(user=user, membership=membership, tenants=tenants),
         "active_tenant_id": str(membership.tenant_id) if membership is not None else None,
         "active_tenant": active_tenant_block(membership.tenant) if membership else None,
         "permissions": sorted(permissions_for(membership)) if membership is not None else [],

@@ -4,6 +4,7 @@ import { resetAllFeatureState } from 'src/redux/actions';
 import type { RootState } from 'src/redux/store';
 import type { ApiErrorShape } from 'src/types/api.types';
 import type { Locale, ModuleCode, PermissionCode } from 'src/types/domain.types';
+import { landingFromFacts, type Landing } from 'src/types/landing.types';
 
 import {
   confirmPasswordReset,
@@ -131,6 +132,8 @@ export interface SessionState {
   error: ApiErrorShape | null;
   /** The token's `ver` claim; a change forces a re-read (Part 22 §22.2). */
   version: number | null;
+  /** docs/platform/14 §4.1 — the server's `landing`; read through `selectLanding`. */
+  landing: Landing | null;
   lastFetchedAt: number | null;
   /**
    * N1-P1 — has THIS DOCUMENT (this JS runtime) held a session before?
@@ -154,6 +157,7 @@ const initialState: SessionState = {
   impersonation: null,
   error: null,
   version: null,
+  landing: null,
   lastFetchedAt: null,
   heldInThisDocument: false,
 };
@@ -177,6 +181,8 @@ export interface SessionPayload {
   readonly enabledModules: readonly ModuleCode[];
   readonly version: number | null;
   readonly impersonation?: SessionImpersonation | null;
+  /** docs/platform/14 §4.1 — the server's decision; absent only in test fixtures. */
+  readonly landing?: Landing | null;
 }
 
 const sessionSlice = createSlice({
@@ -196,6 +202,7 @@ const sessionSlice = createSlice({
       state.enabledModules = [...payload.enabledModules];
       state.impersonation = payload.impersonation ?? null;
       state.version = payload.version;
+      state.landing = (payload.landing ?? null) as Draft<Landing> | null;
       state.lastFetchedAt = Date.now();
       state.error = null;
       state.status = payload.activeTenant ? 'authenticated' : 'no_tenant';
@@ -327,6 +334,31 @@ export const selectSessionStatus = (state: RootState): SessionStatus => state.se
 /** N1-P1 — see `SessionState.heldInThisDocument`. */
 export const selectSessionHeldInThisDocument = (state: RootState): boolean =>
   state.session.heldInThisDocument;
+/**
+ * docs/platform/14 §4.1 — the server's `landing`. A fixture without one is read
+ * as "the active business's app", or "create a business" without one: the
+ * honest reading of the facts, never a rule of its own.
+ */
+// Memoised by hand on the four inputs: `createSelector` would bring reselect
+// into the shell, which every route pays for (it measured +0.8 KB), to cache one
+// object for a fixture-only path.
+let lastLandingInputs: readonly unknown[] = [];
+let lastLanding: Landing = { kind: 'no_business' };
+export const selectLanding = (state: RootState): Landing => {
+  const { landing, user, activeTenant, tenants } = state.session;
+  if (landing) return landing;
+  const inputs = [user, activeTenant, tenants];
+  if (inputs.every((value, index) => value === lastLandingInputs[index])) return lastLanding;
+  lastLandingInputs = inputs;
+  lastLanding = landingFromFacts({
+    mustChangePassword: user?.mustChangePassword ?? false,
+    activeTenantId: activeTenant?.id ?? null,
+    tenantStatuses: tenants.map((t) => t.status),
+    isSuperAdmin: user?.isSuperAdmin ?? false,
+  });
+  return lastLanding;
+};
+
 export const selectMustChangePassword = (state: RootState): boolean =>
   state.session.user?.mustChangePassword ?? false;
 export const selectSessionUser = (state: RootState): SessionUser | null => state.session.user;

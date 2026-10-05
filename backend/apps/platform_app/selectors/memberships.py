@@ -88,6 +88,49 @@ def default_membership(*, user: Any) -> Membership | None:
     return None
 
 
+def is_own_draft(membership: Any) -> bool:
+    """An unfinished business this person is setting up themselves (docs/platform/14 R2, R3).
+
+    Owner, and the WIZARD made it and stopped part-way: steps 1–3. Step 0 is a
+    business the wizard did not make at all — a script, a seed, a support fix —
+    and is never "unfinished"; the client used to count it as unfinished and
+    sent its owner to the wizard on every sign-in.
+    """
+    from apps.platform_app.services.onboarding import WIZARD_LAST_STEP
+
+    step = int(membership.tenant.onboarding_step or 0)
+    return membership.role.code == "owner" and 1 <= step < WIZARD_LAST_STEP
+
+
+def preferred_membership(*, user: Any) -> Membership | None:
+    """The business a sign-in opens (docs/platform/14 §4.1; replaces PLT-04 FR-9's rule).
+
+    1. The one this person used last, on any device (`last_used_at`).
+    2. Never used any: their default, else the only one — counting only usable
+       businesses when they have one, so a half-made side business they own
+       does not take over the sign-in of the business they work at.
+    3. Several, none default, none used: `None`, and the chooser asks.
+    """
+    active = list(
+        Membership.objects.select_related("tenant", "role")
+        .filter(user=user, status=MembershipStatus.ACTIVE)
+        .exclude(tenant__status=TenantStatus.DELETED)
+        .order_by("created_at", "id")
+    )
+    if not active:
+        return None
+    used = [m for m in active if m.last_used_at is not None]
+    if used:
+        return max(used, key=lambda m: m.last_used_at)
+    pool = [m for m in active if not is_own_draft(m)] or active
+    flagged = [m for m in pool if m.is_default]
+    if flagged:
+        return flagged[0]
+    if len(pool) == 1:
+        return pool[0]
+    return None
+
+
 def owner_count(*, tenant: Any) -> int:
     """Live owners of a tenant — PLT-04 FR-7's `last_owner` guard."""
     return Membership.objects.filter(

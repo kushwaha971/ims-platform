@@ -61,6 +61,11 @@ class Membership(TimeStampedModel):
     joined_at = models.DateTimeField(null=True, blank=True)
     permissions_override = models.JSONField(default=dict, blank=True)
     permissions_version = models.IntegerField(default=1)
+    #: When this person last opened this business (sign-in into it, or a switch
+    #: to it). A sign-in opens the business last used, so someone who works at
+    #: one business and owns a side business lands where they were, on any
+    #: device (docs/platform/14 §4.1). Null until first used.
+    last_used_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = "platform_membership"

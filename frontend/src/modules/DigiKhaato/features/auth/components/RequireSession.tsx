@@ -6,15 +6,10 @@ import { usePathname, useRouter } from 'next/navigation';
 
 import { UbPageSkeleton } from 'src/design-system';
 import { useAppSelector } from 'src/hooks/useAppStore';
-import {
-  selectIsSuperAdmin,
-  selectMustChangePassword,
-  selectSessionStatus,
-  selectSessionTenants,
-} from 'src/redux/slice/sessionSlice';
+import { selectLanding, selectSessionStatus } from 'src/redux/slice/sessionSlice';
 import { ROUTES, loginPathWithNext } from 'src/routes';
 
-import { noTenantDestination } from '../view-model/authDisplay';
+import { isTenantless, landingRoute } from '../view-model/landing';
 
 /**
  * Part 19 §19.7.3 — the real guard. `proxy.ts` does the cheap
@@ -35,8 +30,16 @@ import { noTenantDestination } from '../view-model/authDisplay';
  * into a wizard for a business they never wanted to create. `postAuthDestination`
  * routes them to `/switch` correctly; this is where that routing was undone.
  *
- * `noTenantDestination` is the shared rule, so the guard and the post-login
- * redirect cannot drift apart.
+ * **docs/platform/14 §4.1 — the guard asks the server's `landing`.** It used
+ * to apply its own rule (`noTenantDestination`) beside the sign-in's
+ * (`postAuthDestination`), and the two disagreed: a deep link walked past the
+ * wizard the sign-in sent the same person into. Now both read `landing` from
+ * the same session body, so sign-in, refresh and a deep link agree.
+ *
+ * What the guard enforces is what the person cannot use the app without: the
+ * password change, and having a business at all. An owner's unfinished setup
+ * (`business_setup`) is NOT enforced here — the business works, the page they
+ * opened is theirs to use, and the next sign-in resumes the wizard.
  *
  * **DEC-012 — the forced password change outranks everything above it.** A
  * member created by an owner arrives on a password somebody else chose, and the
@@ -52,46 +55,31 @@ export function RequireSession({
   children,
 }: Readonly<{ children: ReactNode }>): React.JSX.Element | null {
   const status = useAppSelector(selectSessionStatus);
-  const tenants = useAppSelector(selectSessionTenants);
-  const mustChangePassword = useAppSelector(selectMustChangePassword);
-  const isSuperAdmin = useAppSelector(selectIsSuperAdmin);
+  const landing = useAppSelector(selectLanding);
   const router = useRouter();
   const pathname = usePathname();
 
-  // The chooser is the destination for a tenant-less session that has
-  // something to choose, so it cannot also be a place this guard redirects
-  // away from — that is the bounce.
+  // The chooser is where a tenant-less session with something to choose goes,
+  // so it cannot also be a place this guard sends people away from — that is
+  // the bounce.
   const isChooser = pathname === ROUTES.SWITCH_TENANT;
-  const noTenantAllowed = isChooser && noTenantDestination(tenants) === 'chooser';
+  const mustChange = landing.kind === 'set_password';
+  const blocked =
+    mustChange ||
+    (status === 'no_tenant' &&
+      isTenantless(landing) &&
+      !(isChooser && (landing.kind === 'choose_business' || landing.kind === 'invitation')));
 
   useEffect(() => {
     if (status === 'anonymous') {
       router.replace(loginPathWithNext(pathname));
       return;
     }
-    // Before any tenant question: the server will refuse everything else.
-    if (mustChangePassword) {
-      router.replace(ROUTES.SET_PASSWORD);
-      return;
-    }
-    if (status === 'no_tenant' && !noTenantAllowed) {
-      // PLT-14 — an operator with no business of their own belongs in the
-      // console, not in the onboarding wizard. This is also where a support
-      // session lands when its token lapses and the refresh restores the
-      // operator's own, tenant-less session.
-      if (isSuperAdmin && tenants.length === 0) {
-        router.replace(ROUTES.ADMIN_TENANTS);
-        return;
-      }
-      router.replace(
-        noTenantDestination(tenants) === 'chooser' ? ROUTES.SWITCH_TENANT : ROUTES.ONBOARDING
-      );
-    }
-  }, [status, router, pathname, tenants, noTenantAllowed, mustChangePassword, isSuperAdmin]);
+    if (blocked) router.replace(landingRoute(landing, ROUTES.DASHBOARD));
+  }, [status, router, pathname, blocked, landing]);
 
   if (status === 'loading' || status === 'idle') return <UbPageSkeleton variant="app" />;
   if (status === 'anonymous') return null;
-  if (mustChangePassword) return null;
-  if (status === 'no_tenant' && !noTenantAllowed) return null;
+  if (blocked) return null;
   return <>{children}</>;
 }

@@ -5,6 +5,7 @@ import { DEFAULT_TENANT_TIMEZONE } from 'src/constants';
 import type { SessionBranding, SessionPayload, SessionTenant } from 'src/redux/slice/sessionSlice';
 import type { TWriteClass } from 'src/types/api.types';
 import type { Locale, ModuleCode, PermissionCode } from 'src/types/domain.types';
+import { toLanding } from 'src/types/landing.types';
 
 import type {
   AuthResult,
@@ -119,6 +120,8 @@ interface AuthApiResponse {
     readonly active_tenant_id: string | null;
     readonly active_tenant?: ActiveTenantApiRow | null;
     readonly permissions: readonly PermissionCode[];
+    /** docs/platform/14 §4.1 — the server's decision; see `src/types/landing.types.ts`. */
+    readonly landing?: unknown;
   };
 }
 
@@ -158,6 +161,7 @@ interface SessionApiResponse {
      * indexed, unlike `enabled_modules` was.
      */
     readonly ver?: number | null;
+    readonly landing?: unknown;
   };
 }
 
@@ -208,6 +212,7 @@ const toAuthResult = (body: AuthApiResponse): AuthResult => {
     // sent; the `?? []` meant it degraded to "no modules" instead of throwing,
     // which is why only `getSession` (below) blew up.
     enabledModules: data.active_tenant?.enabled_modules ?? [],
+    landing: toLanding(data.landing),
   };
 };
 
@@ -375,6 +380,7 @@ export const getSession = async (signal?: AbortSignal): Promise<SessionPayload> 
     // legitimately has no modules, which is what `[]` says.
     enabledModules: activeRow?.enabled_modules ?? [],
     version: data.ver ?? null,
+    landing: toLanding(data.landing),
     impersonation: support
       ? {
           id: support.id,

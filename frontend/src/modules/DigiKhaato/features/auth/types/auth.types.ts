@@ -1,4 +1,5 @@
 import type { Locale, ModuleCode, PermissionCode } from 'src/types/domain.types';
+import type { Landing } from 'src/types/landing.types';
 
 /**
  * Part 19 §19.2.3 — the auth feature's own types.
@@ -94,6 +95,8 @@ export interface PasswordResetConfirmInput {
  * one field only a fresh authentication knows: whether this account is new.
  */
 export interface AuthResult {
+  /** docs/platform/14 §4.1 — where this session goes next, as the server decided. */
+  readonly landing: Landing | null;
   readonly userId: string;
   readonly name: string;
   /** The identity. Never null: an account without one cannot be logged into. */
@@ -127,24 +130,7 @@ export interface AuthTenant {
 }
 
 /**
- * PLT-01 FR-9 / PLT-04 FR-9 — where an authenticated user goes next. A pure
- * decision, computed by the view-model and executed by the hook, so the routing
- * rule is unit-testable without a router.
+ * docs/platform/14 §4.1 — where an authenticated user goes next is the server's
+ * `landing` (`src/types/landing.types.ts`); `PostAuthDestination` was the
+ * client's own five-branch copy of that rule and is gone with it.
  */
-/**
- * PLT-01 FR-9 / PLT-04 FR-9 — the five branches `postAuthDestination` can
- * return, and only those.
- *
- * `{ kind: 'setPassword' }` was removed once by CR-2026-09-19-D, because
- * registration always set a password and the branch became unreachable. DEC-012
- * makes it reachable again and for a different reason: an owner can now create
- * an account on somebody else's behalf, so a session CAN arrive on a password
- * its holder did not choose. The branch is back because the situation is, not
- * because the old one returned.
- */
-export type PostAuthDestination =
-  | { readonly kind: 'setPassword' }
-  | { readonly kind: 'onboarding'; readonly step: number }
-  | { readonly kind: 'chooser' }
-  | { readonly kind: 'invitation' }
-  | { readonly kind: 'app'; readonly tenantId: string };

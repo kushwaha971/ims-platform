@@ -1,7 +1,5 @@
 import { PASSWORD_FLOOR } from '../constants/authDefaults';
 
-import type { AuthResult, AuthTenant, PostAuthDestination } from '../types/auth.types';
-
 /**
  * Part 19 §19.1.1 layer 3 — pure functions. No React, no Redux, no I/O, no
  * `react-intl`: the caller passes translated copy in and gets a decision out.
@@ -12,107 +10,14 @@ import type { AuthResult, AuthTenant, PostAuthDestination } from '../types/auth.
  */
 
 /**
- * CR-2026-09-19-A did not change this rule. Registration and login produce the
- * same `AuthResult` the OTP verify used to, so the five branches below are
- * untouched — which is the point of having put them here rather than in a
- * component.
- *
- * PLT-01 FR-9 / PLT-04 FR-9, in order of precedence:
- *
- *  1. A brand-new user, or a user with no membership at all, goes to the
- *     onboarding wizard — not to a dashboard that would be empty of everything
- *     including a business (§19.7.3's `no_tenant` status).
- *  2. A user whose ONLY membership is `invited` goes to the acceptance screen
- *     (EC-5); PLT-05 owns that screen, so Sprint 1 routes to the chooser, which
- *     lists the invitation and says what it is.
- *  3. An active tenant whose wizard is unfinished resumes it at `step + 1`
- *     (PLT-03 FR-9) — but only for the OWNER, who is the only role that can
- *     complete it. See the branch itself for the dead end this avoids.
- *  4. Exactly one active tenant, or a default among several, opens it.
- *  5. Several with no default opens the full-screen chooser.
+ * docs/platform/14 §4.1 — `postAuthDestination`, `noTenantDestination` and
+ * `resolveActiveTenant` lived here and were the client's own copy of "where
+ * does this session go". They are gone: the server sends `landing`, and
+ * `view-model/landing.ts` is the one place it becomes a path. The copy had
+ * drifted from the server in two ways the owner hit — a business made outside
+ * the wizard (step 0) counted as unfinished, and the business a sign-in opened
+ * was the oldest default rather than the one in use.
  */
-export const postAuthDestination = (result: AuthResult): PostAuthDestination => {
-  if (result.mustChangePassword) return { kind: 'setPassword' };
-
-  const active = result.tenants.filter((tenant) => tenant.status === 'active');
-  const invited = result.tenants.filter((tenant) => tenant.status === 'invited');
-
-  if (active.length === 0) {
-    if (invited.length > 0) return { kind: 'invitation' };
-    return { kind: 'onboarding', step: 1 };
-  }
-
-  const chosen = resolveActiveTenant(result.activeTenantId, active);
-  if (!chosen) return { kind: 'chooser' };
-
-  /**
-   * Rule 3, and the role test is not a refinement — it is what stops a dead end.
-   *
-   * The wizard writes through `PATCH /tenants/current`, which requires
-   * `platform.tenant.manage`, and canon §0.9 gives that to the OWNER alone —
-   * not even to an admin. So routing anybody else into an unfinished wizard
-   * sends them to a screen where every step answers 403, on every sign-in,
-   * with no way out: the router puts them back each time they navigate away.
-   *
-   * It was unreachable until DEC-012, because there was no working way for a
-   * second person to join a business. Measured against the live server the day
-   * that changed: a staff member added to a tenant with `onboarding_step: 1`
-   * landed on `/onboarding/step/2`, and `PATCH /tenants/current` answered
-   * `403 permission_denied`.
-   *
-   * An owner who has not finished setting the business up is not a reason to
-   * stop their salesman working, so the staff member goes to the app. The
-   * business is usable; it is the owner's own configuration that is pending,
-   * and the owner is the one who will be asked to finish it.
-   */
-  const canRunTheWizard = chosen.role === 'owner';
-  if (canRunTheWizard && chosen.onboardingStep !== null && chosen.onboardingStep < 4) {
-    return { kind: 'onboarding', step: Math.max(1, chosen.onboardingStep + 1) };
-  }
-  return { kind: 'app', tenantId: chosen.id };
-};
-
-/**
- * PLT-01 EC-5 / PLT-04 FR-8, FR-9 — where a session with NO active tenant
- * belongs. This is `postAuthDestination`'s rule, asked of the session rather
- * than of a login result, because the route guard has to answer it too.
- *
- * `sessionSlice` reports `no_tenant` whenever `activeTenant` is null, and that
- * is three different situations, not one:
- *
- *  - no memberships at all → the wizard, which is what `no_tenant` was written
- *    for;
- *  - an `invited` membership and nothing active → the CHOOSER, which is the
- *    only screen that lists an invitation (EC-5);
- *  - several active memberships with no default → the chooser again (FR-9),
- *    reachable as soon as a default membership's tenant is deleted.
- *
- * `RequireSession` used to send all three to `/onboarding`, so the two latter
- * users were pushed into creating yet another business and the invitation they
- * were sent could never be opened by any account the product can create.
- */
-export type NoTenantDestination = 'chooser' | 'onboarding';
-
-export const noTenantDestination = (
-  tenants: readonly { readonly status?: string }[]
-): NoTenantDestination =>
-  tenants.some((tenant) => tenant.status === 'invited' || tenant.status === 'active')
-    ? 'chooser'
-    : 'onboarding';
-
-/** The active tenant, the default one, or — when several and no default — none. */
-export const resolveActiveTenant = (
-  activeTenantId: string | null,
-  active: readonly AuthTenant[]
-): AuthTenant | null => {
-  if (activeTenantId) {
-    const named = active.find((tenant) => tenant.id === activeTenantId);
-    if (named) return named;
-  }
-  const byDefault = active.find((tenant) => tenant.isDefault);
-  if (byDefault) return byDefault;
-  return active.length === 1 ? (active[0] ?? null) : null;
-};
 
 /**
  * §19.6.4 rule 2 — `next` is validated against a same-origin, leading-slash

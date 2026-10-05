@@ -118,7 +118,7 @@ describe('RequireSession — a session with no active tenant', () => {
       </RequireSession>
     );
 
-    await waitFor(() => expect(replace).toHaveBeenCalledWith('/onboarding'));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/onboarding/step/1'));
     expect(screen.queryByText('the app')).not.toBeInTheDocument();
   });
 
@@ -136,7 +136,7 @@ describe('RequireSession — a session with no active tenant', () => {
     );
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/admin/tenants'));
-    expect(replace).not.toHaveBeenCalledWith('/onboarding');
+    expect(replace).not.toHaveBeenCalledWith('/onboarding/step/1');
   });
 
   it('sends an invited-only user who lands on another (app) route TO the chooser', async () => {
@@ -224,7 +224,7 @@ describe('RequireSession — the forced password change (DEC-012)', () => {
     );
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/set-password'));
-    expect(replace).not.toHaveBeenCalledWith('/onboarding');
+    expect(replace).not.toHaveBeenCalledWith('/onboarding/step/1');
   });
 
   it('lets an ordinary session through untouched', async () => {

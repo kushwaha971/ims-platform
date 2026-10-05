@@ -19,6 +19,7 @@ import type { AuthResult } from '../types/auth.types';
 const initial = authReducer(undefined, { type: '@@init' }) as AuthState;
 
 const AUTH_RESULT: AuthResult = {
+  landing: null,
   userId: 'u1',
   name: 'Ramesh',
   email: 'ramesh@example.com',
