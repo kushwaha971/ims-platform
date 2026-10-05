@@ -37,6 +37,7 @@ export const LIBRARY_QUERIES = {
   fetchLibraryShifts: 'librarySeats/fetchShifts',
   fetchLibrarySeats: 'librarySeats/fetchSeats',
   fetchLibrarySeatMap: 'librarySeats/fetchMap',
+  fetchLibraryHome: 'libraryHome/fetch',
 } as const satisfies Record<string, string>;
 
 export const LIBRARY_MUTATIONS = {
@@ -90,6 +91,7 @@ const CIRCULATION_VIEWS = [
   'libraryMemberDetail',
   'partyDetail',
   'partyList',
+  'libraryHome',
 ] as const;
 
 export const LIBRARY_INVALIDATION: Readonly<
@@ -132,12 +134,12 @@ export const LIBRARY_INVALIDATION: Readonly<
   // false `patch` is worse than none, CLAUDE.md LED-01); the member page takes
   // the act's answer as its own.
   enrolLibraryMember: {
-    stale: ['libraryMemberList', 'librarySeats', 'partyDetail', 'partyList'],
+    stale: ['libraryMemberList', 'librarySeats', 'libraryHome', 'partyDetail', 'partyList'],
   },
   // W03 — closing a membership frees its seat, so the map is stale too.
   actOnLibraryMember: {
     patch: [['libraryMemberDetail', 'member']],
-    stale: ['libraryMemberList', 'librarySeats', 'partyDetail', 'partyList'],
+    stale: ['libraryMemberList', 'librarySeats', 'libraryHome', 'partyDetail', 'partyList'],
   },
   // F05 — a scan issues, returns or renews: every list and page showing a
   // copy's state or a member's books is stale; a fine moves the khata. The
@@ -163,7 +165,7 @@ export const LIBRARY_INVALIDATION: Readonly<
   // the list's seat column and the map.
   placeLibraryMember: {
     patch: [['libraryMemberDetail', 'member']],
-    stale: ['libraryMemberList', 'librarySeats'],
+    stale: ['libraryMemberList', 'librarySeats', 'libraryHome'],
   },
   // A plan's fee and length show on every student row that holds it.
   saveLibraryPlan: { refetch: ['libraryMemberList'] },
@@ -179,7 +181,7 @@ registerInvalidation({
   core: {
     recordPayment: {
       refetch: ['libraryMemberDetail'],
-      stale: ['libraryMemberList'],
+      stale: ['libraryMemberList', 'libraryHome', 'librarySeats'],
     },
   },
   ownSlices: [
@@ -193,5 +195,6 @@ registerInvalidation({
     'libraryMemberDetail',
     'libraryCounter',
     'librarySeats',
+    'libraryHome',
   ],
 });

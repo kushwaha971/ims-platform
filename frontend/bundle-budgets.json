@@ -1165,7 +1165,8 @@
   "  /admin/tenants/[id]           firstLoad 256 -> 257                   (measured 256.2)",
   "F04 (4 Oct 2026, library members) — shared app 105.5 -> 106.4, measured by building with and without the library's khata-panel registration (register.ts -> partyPanel.ts): that one import regroups Turbopack's common chunks (two shell chunks became three) and the shell's RAW bytes move by 114; the 0.9 KB is gzip losing across the extra chunk boundary, not library code in the shell (no library module is in any shared chunk). sharedApp 106 -> 107, and the 34 routes whose first load moved by that 0.9 KB past their ceiling were raised by the measured + 0.5 rule; /library/members (64.7 / 298.2) and /library/members/[membershipId] (58.6 / 292.1) are new entries, and the other library routes moved 1-2 KB because the library invalidation map now carries the member thunks.",
   "F05 (4 Oct 2026, the counter) — /library/counter measured 61.6 / 295.2: the scan queue, the member panel and the session list; the override and finish prompts are dynamic() and preloaded on idle. Shared app unchanged at 106.4. Eighteen routes sat within 0.6 KB over a ceiling the F04 raise had set at measured + 0.5 — the library invalidation map grew by the three counter thunks and the same chunk regrouping moved the rest by 0.1-0.3 — and were raised by the same rule.",
-  "W01-W03 (5 Oct 2026, a study library's own menu, seats, shifts and fees) — measured against a build of F06 (32948842): every (app) route's chunk moved by 1.1-1.3 KB, which is the per-workspace navigation (WORKSPACES, the switcher, three new library rows with two new icons, and useNavigation now read by the top bar and the phone search so the party search shows only in the shop); the library routes moved 2.2-3.9 KB on top, from the seat and plan thunks in the library invalidation map, the members' seat, shift and fee fields and, on /library/members, the shift filter's seats slice. /library/seats (61.1 / 294.6) and /library/fees (57.5 / 291.0) are new. Shared app 106.2 -> 106.3, within its 107. Every route over its ceiling was raised by the measured + 0.5 rule (59 routes)."
+  "W01-W03 (5 Oct 2026, a study library's own menu, seats, shifts and fees) — measured against a build of F06 (32948842): every (app) route's chunk moved by 1.1-1.3 KB, which is the per-workspace navigation (WORKSPACES, the switcher, three new library rows with two new icons, and useNavigation now read by the top bar and the phone search so the party search shows only in the shop); the library routes moved 2.2-3.9 KB on top, from the seat and plan thunks in the library invalidation map, the members' seat, shift and fee fields and, on /library/members, the shift filter's seats slice. /library/seats (61.1 / 294.6) and /library/fees (57.5 / 291.0) are new. Shared app 106.2 -> 106.3, within its 107. Every route over its ceiling was raised by the measured + 0.5 rule (59 routes).",
+  "W04 (5 Oct 2026, the reading room's home) — /library is new at 61.1 / 294.5: the stat tiles, the per-shift progress bars and the who-has-to-pay list; raised by the measured + 0.5 rule. /cashbook sat at its 86 ceiling by a rounding hair (measured 86.0) and moved to 87."
  ],
  "default": {
   "route": 56,
@@ -1305,7 +1306,7 @@
    "firstLoad": 337
   },
   "/cashbook": {
-   "route": 86,
+   "route": 87,
    "firstLoad": 320
   },
   "/payments": {
@@ -1487,6 +1488,10 @@
   "/_not-found": {
    "route": 1,
    "firstLoad": 234
+  },
+  "/library": {
+   "route": 62,
+   "firstLoad": 295
   }
  },
  "//ignoreRoutes": [

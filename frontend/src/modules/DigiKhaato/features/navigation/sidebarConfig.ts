@@ -277,6 +277,20 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
     order: 2,
   },
   {
+    // W04 — a reading room's day; the library's first row, so its landing.
+    key: 'libraryHome',
+    workspace: 'library',
+    ready: true,
+    icon: LayoutDashboard,
+    labelId: 'nav.library.home',
+    href: ROUTES.LIBRARY_HOME,
+    module: 'library',
+    permission: 'library.loan.read',
+    section: 'daily',
+    order: 1,
+    bottomNav: true,
+  },
+  {
     // F04 (LIB-04) — the library's members; a study library's STUDENTS
     // (owner, 4 Oct 2026), so the first of its daily rows.
     key: 'libraryMembers',

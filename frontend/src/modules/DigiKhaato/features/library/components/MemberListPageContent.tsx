@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import dynamic from 'next/dynamic';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import { UserPlus } from 'lucide-react';
 
@@ -94,7 +94,9 @@ export function MemberListPageContent(): React.JSX.Element {
   const timezone = useAppSelector(selectTenantTimezone);
   const today = todayInTenantTz(timezone ?? undefined);
   const { key, rotate } = useIdempotencyKey();
-  const [enrolling, setEnrolling] = useState(false);
+  // W04 — the home's "New admission" opens the drawer here (`?add=1`).
+  const asksToAdd = useSearchParams().get('add') === '1';
+  const [enrolling, setEnrolling] = useState(asksToAdd);
   const { filters, setFilters, clearFilters, refetch, error, canRead, canWrite, totals } = list;
   const { activeShifts } = useSeats();
   const shiftOptions = useMemo(
@@ -339,7 +341,7 @@ export function MemberListPageContent(): React.JSX.Element {
           cardAvatar={false}
         />
       </UbStack>
-      {enrolling && (
+      {enrolling && canWrite && (
         <EnrolMemberDrawerLazy
           types={list.types}
           busy={list.enrolling}

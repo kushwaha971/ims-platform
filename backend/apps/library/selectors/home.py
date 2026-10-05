@@ -104,13 +104,130 @@ QUICK_ACTIONS = (
     ("counter", "/library/counter", "library.loan.write"),
     ("add_book", "/library/catalogue?add=1", "library.catalogue.write"),
     ("add_member", "/library/members?add=1", "library.member.write"),
+    ("seats", "/library/seats", "library.member.read"),
     ("stock_check", "/library/verification", "library.verification.run"),
 )
+
+
+_STUDY = """
+SELECT
+  (SELECT count(*) FROM library_seat WHERE tenant_id = %(t)s AND is_active),
+  (SELECT count(*) FROM library_membership
+     WHERE tenant_id = %(t)s AND status <> 'closed'
+       AND valid_until >= %(today)s AND valid_until <= %(week)s),
+  (SELECT count(*) FROM library_membership
+     WHERE tenant_id = %(t)s AND status <> 'closed' AND valid_until < %(today)s),
+  (SELECT count(DISTINCT membership_id) FROM library_charge
+     WHERE tenant_id = %(t)s AND amount_due > 0 AND reversed_at IS NULL),
+  (SELECT coalesce(sum(a.amount), 0) FROM payments_allocation a
+     JOIN payments_payment p ON p.id = a.payment_id
+     WHERE a.tenant_id = %(t)s AND a.document_type = 'library_charge'
+       AND p.status = 'recorded' AND p.payment_date >= %(month)s AND p.payment_date <= %(today)s),
+  (SELECT count(*) FROM library_membership
+     WHERE tenant_id = %(t)s AND status <> 'closed')
+"""
+
+#: W04 — how many students the home's "who has to pay" list names.
+TO_PAY_SHOWN = 8
+
+
+def study_home(tenant: Any, today: dt.date) -> dict:
+    """W04 (owner, 4 Oct 2026) — a reading room's day: seats filled per shift,
+    whose fee is due, overdue or unpaid, and what came in this month.
+
+    One statement for the figures; the per-shift occupancy is the seat map's own
+    rule (`services.seats`), so the home and the map cannot disagree.
+    """
+    from django.db.models import DecimalField, OuterRef, Subquery, Sum, Value
+    from django.db.models.functions import Coalesce
+
+    from apps.library.models import LibraryCharge, LibraryMembership, LibraryShift
+    from apps.library.services import seats as seating
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            _STUDY,
+            {
+                "t": tenant.pk,
+                "today": today,
+                "week": today + dt.timedelta(days=7),
+                "month": today.replace(day=1),
+            },
+        )
+        seats, due_week, overdue, unpaid, collected, students = cursor.fetchone()
+
+    holders = list(seating._holders(tenant))
+    shifts = [
+        {
+            "id": str(shift.id),
+            "name": shift.name,
+            "starts_at": shift.starts_at.strftime("%H:%M"),
+            "ends_at": shift.ends_at.strftime("%H:%M"),
+            "filled": len(
+                {
+                    m.seat_id
+                    for m in holders
+                    if seating.overlaps(shift, m.shift if m.shift_id else None)
+                }
+            ),
+        }
+        for shift in seating.in_day_order(
+            LibraryShift.objects.filter(tenant=tenant, is_active=True)
+        )
+    ]
+
+    dues = Subquery(
+        LibraryCharge.objects.filter(membership=OuterRef("pk"))
+        .open()
+        .values("membership")
+        .annotate(total=Sum("amount_due"))
+        .values("total"),
+        output_field=DecimalField(max_digits=14, decimal_places=2),
+    )
+    week = today + dt.timedelta(days=7)
+    from django.db.models import Q
+
+    to_pay = (
+        LibraryMembership.objects.filter(tenant=tenant)
+        .exclude(status="closed")
+        .annotate(dues=Coalesce(dues, Value(0), output_field=DecimalField()))
+        .filter(Q(valid_until__lte=week) | Q(dues__gt=0))
+        .select_related("party", "membership_type", "shift", "seat")
+        .order_by("valid_until", "member_number_sort")[:TO_PAY_SHOWN]
+    )
+    return {
+        "seats": seats,
+        "students": students,
+        "shifts": shifts,
+        "fees": {
+            "due_this_week": due_week,
+            "overdue": overdue,
+            "unpaid": unpaid,
+            "collected_this_month": f"{Decimal(collected):.2f}",
+        },
+        "to_pay": [
+            {
+                "membership_id": str(m.id),
+                "name": m.party.name,
+                "member_number": m.member_number,
+                "seat": m.seat.label if m.seat_id else None,
+                "shift": m.shift.name if m.shift_id else None,
+                "plan": m.membership_type.name,
+                "plan_fee": f"{Decimal(m.membership_type.fee_amount):.2f}",
+                "valid_until": m.valid_until.isoformat() if m.valid_until else None,
+                "dues_amount": f"{Decimal(m.dues):.2f}",
+                "fee_state": seating.fee_state(m, today, Decimal(m.dues)),
+            }
+            for m in to_pay
+        ],
+    }
 
 
 def library_home(tenant: Any, today: dt.date, granted: frozenset) -> dict:
     return {
         **redact(library_dashboard(tenant, today), granted),
+        # W04 — a reading room's figures; money-bearing, so behind the same codename.
+        **({"study": study_home(tenant, today)} if MONEY_PERMISSION in granted else {}),
         "overdue_by_group": overdue_by_group(tenant, today),
         "quick_actions": [
             {"key": key, "href": href}

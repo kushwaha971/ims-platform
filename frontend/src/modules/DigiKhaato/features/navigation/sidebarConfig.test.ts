@@ -23,8 +23,12 @@ describe('the sidebar offers the Dashboard now that it exists (RPT-01, UAT D8)',
     });
   });
 
-  it('starts the daily section with the Dashboard, then Customers', () => {
-    const daily = NAV_ITEMS.filter((item) => item.section === 'daily').sort(
+  it('starts the shop daily section with the Dashboard, then Customers', () => {
+    // Each workspace orders its own menu (owner, 4 Oct 2026); the library's
+    // daily section starts with its own Home.
+    const daily = NAV_ITEMS.filter(
+      (item) => item.section === 'daily' && item.workspace === 'shop'
+    ).sort(
       (a, b) => a.order - b.order
     );
     expect(daily.slice(0, 2).map((item) => item.key)).toEqual(['dashboard', 'parties']);

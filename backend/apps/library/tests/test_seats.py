@@ -230,3 +230,32 @@ def test_shifts_list_in_the_order_a_day_is_read(room: dict) -> None:
     before "Morning" (06:00), and the seat map opens on the first shift."""
     names = [s["name"] for s in room["client"].get(reverse("v1:library-shifts")).json()["data"]]
     assert names == ["Morning", "Evening", "Full day"]
+
+
+def test_the_home_says_how_full_each_shift_is_and_who_has_to_pay(room: dict) -> None:
+    """W04 — a reading room's home. Seats filled per shift use the seat map's
+    overlap rule: a Full-day student fills a Morning seat too, so Morning reads
+    2 of 24 here, not 1. Who has to pay names the unpaid student and not the
+    paid one, and money collected this month is the fee actually received."""
+    from apps.library.models import LibraryMembership
+
+    asha = _admit(room, "Asha", "A1", "Morning", "a").json()["data"]
+    _admit(room, "Rahul", "A2", "Full day", "b")
+    LibraryMembership.objects.filter(pk=asha["membership_id"]).update(
+        valid_until=dt.date(2099, 1, 1)
+    )
+    home = room["client"].get(reverse("v1:library-home")).json()["data"]["study"]
+    assert home["seats"] == 24 and home["students"] == 2
+    filled = {s["name"]: s["filled"] for s in home["shifts"]}
+    assert filled == {"Morning": 2, "Evening": 1, "Full day": 2}
+    assert home["fees"]["unpaid"] == 2  # both admitted without collecting
+    assert {p["name"] for p in home["to_pay"]} == {"Asha", "Rahul"}
+    assert home["fees"]["collected_this_month"] == "0.00"
+
+
+def test_staff_without_member_read_get_no_study_figures(room: dict, api_as: Any) -> None:
+    """The figures carry money, so they follow the money codename like the rest."""
+    from apps.library.selectors.home import library_home
+
+    data = library_home(room["tenant"], dt.date(2026, 10, 5), frozenset({"library.loan.read"}))
+    assert "study" not in data

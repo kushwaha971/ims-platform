@@ -40,4 +40,5 @@ export const LIBRARY_PATHS = {
   SEAT: (id: string) => `/library/seats/${seg(id)}`,
   SEAT_ROW: '/library/seats/row',
   SEAT_MAP: '/library/seat-map',
+  HOME: '/library/home',
 } as const;

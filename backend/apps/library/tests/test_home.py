@@ -106,6 +106,7 @@ def test_the_home_lists_overdue_by_group_and_the_owners_actions(desk: dict) -> N
         "counter",
         "add_book",
         "add_member",
+        "seats",
         "stock_check",
     ]
     assert home["money"] == {"open_charges": "0.00", "deposits_held": "0.00"}
