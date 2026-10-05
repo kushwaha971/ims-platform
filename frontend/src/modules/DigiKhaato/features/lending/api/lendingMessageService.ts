@@ -45,6 +45,10 @@ const toPrepared = (row: Wire): PreparedLendingMessage => {
         }
       : null,
     lastToday: sent(row.last_today),
+    changesInSeconds:
+      row.changes_in_seconds === null || row.changes_in_seconds === undefined
+        ? null
+        : Number(row.changes_in_seconds),
   };
 };
 

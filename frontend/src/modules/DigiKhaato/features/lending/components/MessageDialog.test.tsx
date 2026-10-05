@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { act, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { resetAllFeatureState } from 'src/redux/actions';
@@ -37,6 +37,7 @@ const prepared = (over: Partial<PreparedLendingMessage> = {}): PreparedLendingMe
   allowed: true,
   refusal: null,
   lastToday: null,
+  changesInSeconds: 3600,
   ...over,
 });
 
@@ -138,5 +139,55 @@ describe('MessageDialog (lending)', () => {
       await screen.findByText('Nothing is due on this loan today or tomorrow.')
     ).toBeInTheDocument();
     expect(screen.queryByTestId('lending-message-whatsapp')).not.toBeInTheDocument();
+  });
+
+  /**
+   * L03 follow-up — the link opens WhatsApp on the tap, before the record, so
+   * the sheet must not keep offering a tap the server will refuse: it asks
+   * again when the server said its answer changes, and the buttons go.
+   */
+  it('turns itself off when the server said the answer changes', async () => {
+    jest.useFakeTimers();
+    try {
+      jest
+        .mocked(service.prepareMessage)
+        .mockResolvedValueOnce(prepared({ changesInSeconds: 60 }))
+        .mockResolvedValueOnce(
+          prepared({
+            allowed: false,
+            changesInSeconds: 46800,
+            refusal: {
+              code: 'reminder_outside_window',
+              message: 'Reminders for this can be sent between 08:00 and 19:00.',
+              nextAllowedAt: `${nextDay(todayInTenantTz())}T08:00:00+05:30`,
+              windowStart: '08:00',
+              windowEnd: '19:00',
+            },
+          })
+        );
+      open();
+      expect(await screen.findByTestId('lending-message-whatsapp')).toBeInTheDocument();
+      await act(async () => {
+        jest.advanceTimersByTime(61_000);
+      });
+      expect(await screen.findByTestId('lending-message-guard')).toHaveTextContent(
+        'Next: tomorrow at 08:00.'
+      );
+      expect(screen.queryByTestId('lending-message-whatsapp')).not.toBeInTheDocument();
+      expect(service.prepareMessage).toHaveBeenCalledTimes(2);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('asks again when the phone comes back to the app', async () => {
+    jest.mocked(service.prepareMessage).mockResolvedValue(prepared());
+    open();
+    await screen.findByTestId('lending-message-whatsapp');
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    await screen.findByTestId('lending-message-whatsapp');
+    expect(service.prepareMessage).toHaveBeenCalledTimes(2);
   });
 });

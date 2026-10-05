@@ -333,3 +333,32 @@ def test_every_placeholder_is_one_the_message_fills(
     filled |= {"seq"} if code == messages.TEMPLATE_DUE_TOMORROW else set()
     filled |= {"receipt_number", "left_line"} if code == messages.TEMPLATE_RECEIPT else set()
     assert set(re.findall(r"{{(\w+)}}", body)) <= filled, (code, channel, locale)
+
+
+def test_the_sheet_turns_itself_off_a_minute_before_seven(book: dict) -> None:
+    """L03 follow-up: the link opens WhatsApp on the tap, before the record. A
+    sheet that said "go" at 18:59:30 opened WhatsApp at 19:00:05 while the
+    server refused to record it. So the preview looks a minute ahead and says
+    when its answer changes; the record keeps the true rule."""
+    zone = tenant_timezone(book["tenant"])
+    at = lambda h, m, s=0: dt.datetime.combine(
+        book["today"], dt.time(h, m, s), tzinfo=zone
+    )  # noqa: E731
+    book["clock"](at(18, 58))
+    sheet = book["client"].get(_msg(book["loan"])).json()["data"]
+    assert sheet["allowed"] is True and sheet["changes_in_seconds"] == 60
+    book["clock"](at(18, 59, 30))
+    sheet = book["client"].get(_msg(book["loan"])).json()["data"]
+    assert sheet["allowed"] is False
+    assert sheet["refusal"]["code"] == "reminder_outside_window"
+    tomorrow = (book["today"] + dt.timedelta(days=1)).isoformat()
+    assert sheet["refusal"]["next_allowed_at"].startswith(f"{tomorrow}T08:00:00")
+    assert sheet["changes_in_seconds"] == 13 * 3600 + 30
+    assert _send(book).status_code == 201, "the rule itself is still 08:00 to 19:00"
+
+
+def test_the_sheet_turns_itself_on_at_eight(book: dict) -> None:
+    zone = tenant_timezone(book["tenant"])
+    book["clock"](dt.datetime.combine(book["today"], dt.time(7, 59, 30), tzinfo=zone))
+    sheet = book["client"].get(_msg(book["loan"])).json()["data"]
+    assert sheet["allowed"] is False and sheet["changes_in_seconds"] == 30

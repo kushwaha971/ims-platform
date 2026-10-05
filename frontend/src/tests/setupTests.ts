@@ -3,8 +3,15 @@ import '@testing-library/jest-dom';
 /**
  * `src/constants.ts` validates its environment at module load, so the test run
  * has to supply the same variables the app requires (§19.14.1).
+ *
+ * Always a port nothing listens on — never the developer's own API. It used to
+ * be `??=` with `localhost:8000`, which `.env.local` also names: with the dev
+ * API up, a request a test forgot to mock reached the REAL server, got a 401
+ * and signed the test's session out mid-render. The student page's test then
+ * failed one run in two, and only while a dev server was running (L03 QA). An
+ * unmocked request now fails fast as a network error, the same every time.
  */
-process.env.NEXT_PUBLIC_API_BASE_URL ??= 'http://localhost:8000/api/v1';
+process.env.NEXT_PUBLIC_API_BASE_URL = 'http://127.0.0.1:9/api/v1';
 
 // jsdom has no matchMedia; ThemeProvider and the responsive hooks read it.
 if (typeof window !== 'undefined' && !window.matchMedia) {

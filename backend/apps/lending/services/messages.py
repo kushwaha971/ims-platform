@@ -30,6 +30,7 @@ waits for loans to record a guarantor.
 from __future__ import annotations
 
 import datetime as dt
+import math
 from decimal import Decimal
 from typing import Any
 
@@ -420,27 +421,65 @@ def _last_today(loan: LendingLoan, source_id: Any) -> dict | None:
     return {"at": _local_iso(loan.tenant, row.sent_at), "channel": row.channel} if row else None
 
 
-def _guard(loan: LendingLoan, source_id: Any) -> dict:
-    """`allowed`, and when not, the policy's own reason and next time (§8: a
-    disabled button always says why and when)."""
+#: A sheet that says "go" must still be right when the tap lands. The link is
+#: a real anchor (in-app browsers and installed web apps block `window.open`),
+#: so WhatsApp opens on the tap itself; the record follows. So the preview asks
+#: the policy about now AND about a minute from now, and tells the sheet when
+#: its answer changes, so the sheet turns itself off at 18:59 and on at 08:00.
+TAP_MARGIN = dt.timedelta(seconds=60)
+
+
+def _refused_at(loan: LendingLoan, source_id: Any, at: dt.datetime) -> Any:
     from apps.ledger.services.reminder_seam import check_reminder_allowed
 
     try:
         check_reminder_allowed(
-            tenant=loan.tenant, module=MODULE, party_id=loan.party_id, source_id=source_id
+            tenant=loan.tenant, module=MODULE, party_id=loan.party_id, source_id=source_id, at=at
         )
     except BusinessRuleViolation as refused:
-        return {
-            "allowed": False,
-            "refusal": {
-                "code": refused.code,
-                "message": refused.message,
-                "next_allowed_at": refused.details.get("next_allowed_at"),
-                "window_start": refused.details.get("window_start"),
-                "window_end": refused.details.get("window_end"),
-            },
-        }
-    return {"allowed": True, "refusal": None}
+        return refused
+    return None
+
+
+def _guard(loan: LendingLoan, source_id: Any) -> dict:
+    """`allowed`, and when not, the policy's own reason and next time (§8: a
+    disabled button always says why and when); `changes_in_seconds` is when
+    that answer next changes, so the open sheet can ask again then."""
+    from django.utils import timezone
+
+    from apps.common.dates import tenant_timezone
+    from apps.ledger.services.reminder_seam import effective_policy, now
+
+    moment = now()
+    refused = _refused_at(loan, source_id, moment) or _refused_at(
+        loan, source_id, moment + TAP_MARGIN
+    )
+    if refused is None:
+        window = effective_policy(loan.tenant, MODULE).get("window")
+        changes = None
+        if window is not None:
+            zone = tenant_timezone(loan.tenant)
+            local = timezone.localtime(moment, zone)
+            closes = dt.datetime.combine(local.date(), window[1], tzinfo=zone) - TAP_MARGIN
+            changes = max(0, math.ceil((closes - moment).total_seconds()))
+        return {"allowed": True, "refusal": None, "changes_in_seconds": changes}
+    upcoming = refused.details.get("next_allowed_at")
+    changes = (
+        max(0, math.ceil((dt.datetime.fromisoformat(upcoming) - moment).total_seconds()))
+        if upcoming
+        else None
+    )
+    return {
+        "allowed": False,
+        "refusal": {
+            "code": refused.code,
+            "message": refused.message,
+            "next_allowed_at": upcoming,
+            "window_start": refused.details.get("window_start"),
+            "window_end": refused.details.get("window_end"),
+        },
+        "changes_in_seconds": changes,
+    }
 
 
 def _recipient_json(loan: LendingLoan) -> dict:

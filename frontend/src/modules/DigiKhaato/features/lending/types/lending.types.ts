@@ -145,6 +145,9 @@ export interface PreparedLendingMessage {
     readonly windowEnd: string | null;
   } | null;
   readonly lastToday: { readonly at: string; readonly channel: MessageChannel } | null;
+  /** Seconds until `allowed` changes (the window, a minute early; or the next
+   * allowed time). `null` when nothing will change it. */
+  readonly changesInSeconds: number | null;
 }
 
 /** A row of `/lending/messages`: today's reminders and tomorrow's. */

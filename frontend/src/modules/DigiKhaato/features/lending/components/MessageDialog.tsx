@@ -42,6 +42,13 @@ const BUCKET_TONE = { overdue: 'error', due_today: 'warning', due_tomorrow: 'inf
  * When the policy says no — before 08:00, after 19:00, or already reminded
  * today — there is no button to press, and the sheet says why and when it can
  * go (§8: a disabled Remind always says both).
+ *
+ * Because the link opens WhatsApp on the tap and the record follows, the
+ * sheet must never offer a tap the server will refuse (L03: a sheet opened at
+ * 18:58 and tapped at 19:01 opened WhatsApp and recorded nothing). The server
+ * answers for a minute ahead and says when its answer changes; the sheet asks
+ * again at that moment — the buttons go while it asks — and whenever the
+ * phone comes back to the app, since a locked phone stops timers.
  */
 export function MessageDialog({
   loanId,
@@ -61,16 +68,38 @@ export function MessageDialog({
   const timezone = useAppSelector(selectTenantTimezone);
   const [message, setMessage] = useState<PreparedLendingMessage | null>(null);
   const [refusal, setRefusal] = useState('');
+  const [asked, setAsked] = useState(0);
+  const askAgain = () => {
+    setMessage(null);
+    setAsked((n) => n + 1);
+  };
 
   useEffect(() => {
     const promise = dispatch(prepareLendingMessage({ loanId, kind, collectionId }));
     void promise.then((result) => {
-      if (prepareLendingMessage.fulfilled.match(result)) setMessage(result.payload);
-      else if (!result.meta.aborted)
+      if (prepareLendingMessage.fulfilled.match(result)) {
+        setMessage(result.payload);
+      } else if (!result.meta.aborted)
         setRefusal(result.payload?.message ?? t('lending.messages.error.prepare'));
     });
     return () => promise.abort();
-  }, [dispatch, loanId, kind, collectionId, t]);
+  }, [dispatch, loanId, kind, collectionId, t, asked]);
+
+  // Keyed on the answer itself: two answers can share a number of seconds.
+  useEffect(() => {
+    const changesIn = message?.changesInSeconds ?? null;
+    // Past ~24 days setTimeout overflows; a sheet is not open that long.
+    if (changesIn === null || changesIn * 1000 > 2_000_000_000) return undefined;
+    const timer = window.setTimeout(askAgain, changesIn * 1000 + 500);
+    return () => window.clearTimeout(timer);
+  }, [message]);
+  useEffect(() => {
+    const back = () => {
+      if (document.visibilityState === 'visible') askAgain();
+    };
+    document.addEventListener('visibilitychange', back);
+    return () => document.removeEventListener('visibilitychange', back);
+  }, []);
 
   const record = (channel: MessageChannel) => {
     void dispatch(recordLendingMessage({ loanId, kind, channel, collectionId })).then((result) => {
