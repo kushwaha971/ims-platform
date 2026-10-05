@@ -133,6 +133,9 @@ export type ApiErrorCode =
   | 'library_title_has_copies'
   // W03 — a desk already held in that shift, said on the seat field.
   | 'library_seat_taken'
+  // W05 — the reading room desk says these itself.
+  | 'attendance_blocked'
+  | 'attendance_duplicate'
   // transport-level codes minted on the client, never sent by the server:
   | 'network_error'
   | 'timeout'

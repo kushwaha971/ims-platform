@@ -43,6 +43,7 @@ import {
 } from '../view-model/memberDisplay';
 
 import { CatalogueActionsMenu } from './CatalogueActionsMenu';
+import { MemberAttendanceStrip } from './MemberAttendanceStrip';
 import { MemberChargesSection } from './MemberChargesSection';
 
 import type { MemberDialogKind } from './MemberActionDialog';
@@ -367,6 +368,13 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
             ))}
           </UbStack>
         </UbCard>
+
+        <MemberAttendanceStrip
+          membershipId={member.membershipId}
+          startsOn={member.startsOn}
+          today={today}
+          t={t}
+        />
 
         <MemberChargesSection member={member} t={t} />
 

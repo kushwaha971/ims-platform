@@ -116,6 +116,8 @@ export const ROUTES = {
   LIBRARY_SEATS: '/library/seats',
   // W03 — who has to pay, and the fee plans.
   LIBRARY_FEES: '/library/fees',
+  // W05 — the reading room's day register: who came in, who is in now.
+  LIBRARY_ATTENDANCE: '/library/attendance',
 
   // ── (admin) — PLT-14's console. Needs a session, not a tenant: an operator
   //    usually belongs to no business at all.

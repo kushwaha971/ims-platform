@@ -9,6 +9,7 @@ from __future__ import annotations
 from django.urls import path
 
 from apps.library.views import LibraryNumberingView, LibrarySettingsView
+from apps.library.views import attendance as at
 from apps.library.views import catalogue as c
 from apps.library.views import charges as ch
 from apps.library.views import documents as dc
@@ -71,6 +72,18 @@ urlpatterns: list = [
     path("seats/row", st.SeatRowView.as_view(), name="library-seat-row"),
     path("seats/<uuid:seat_id>", st.SeatDetailView.as_view(), name="library-seat"),
     path("seat-map", st.SeatMapView.as_view(), name="library-seat-map"),
+    # ── W05 ── the reading room's day register
+    path("attendance", at.AttendanceView.as_view(), name="library-attendance"),
+    path(
+        "attendance/<uuid:mark_id>/out",
+        at.AttendanceOutView.as_view(),
+        name="library-attendance-out",
+    ),
+    path(
+        "members/<uuid:membership_id>/attendance",
+        at.MemberAttendanceView.as_view(),
+        name="library-member-attendance",
+    ),
     # ── B10 ── charges and waivers (LIB-07 §6)
     path("charges", ch.ChargeListView.as_view(), name="library-charges"),
     path("charges/<uuid:charge_id>", ch.ChargeDetailView.as_view(), name="library-charge"),

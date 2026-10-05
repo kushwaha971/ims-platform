@@ -38,6 +38,8 @@ export const LIBRARY_QUERIES = {
   fetchLibrarySeats: 'librarySeats/fetchSeats',
   fetchLibrarySeatMap: 'librarySeats/fetchMap',
   fetchLibraryHome: 'libraryHome/fetch',
+  fetchLibraryAttendance: 'libraryAttendance/fetch',
+  fetchMemberAttendance: 'libraryAttendance/fetchMember',
 } as const satisfies Record<string, string>;
 
 export const LIBRARY_MUTATIONS = {
@@ -70,6 +72,8 @@ export const LIBRARY_MUTATIONS = {
   setLibrarySeatActive: 'librarySeats/setSeatActive',
   placeLibraryMember: 'libraryMemberDetail/place',
   saveLibraryPlan: 'libraryMemberList/savePlan',
+  checkInLibraryStudent: 'libraryAttendance/checkIn',
+  checkOutLibraryStudent: 'libraryAttendance/checkOut',
 } as const satisfies Record<string, string>;
 
 export type TLibraryQueryName = keyof typeof LIBRARY_QUERIES;
@@ -169,6 +173,10 @@ export const LIBRARY_INVALIDATION: Readonly<
   },
   // A plan's fee and length show on every student row that holds it.
   saveLibraryPlan: { refetch: ['libraryMemberList'] },
+  // W05 — a check-in or -out changes the day register the desk is looking at
+  // (refetched: the answer is one row's mark, not the day) and the home.
+  checkInLibraryStudent: { refetch: ['libraryAttendance'], stale: ['libraryHome'] },
+  checkOutLibraryStudent: { refetch: ['libraryAttendance'], stale: ['libraryHome'] },
 };
 
 registerInvalidation({
@@ -196,5 +204,6 @@ registerInvalidation({
     'libraryCounter',
     'librarySeats',
     'libraryHome',
+    'libraryAttendance',
   ],
 });

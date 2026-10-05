@@ -137,3 +137,10 @@ class LibraryConfig(AppConfig):
         from apps.library.selectors import reports as library_reports
 
         library_reports.register()
+
+        # ── W05 ── a reading room's attendance, on the attendance engine: the
+        # library says who may come in (fee overdue warns; left or on hold blocks).
+        from apps.attendance.registry import register_checkin_policy
+        from apps.library.services import attendance
+
+        register_checkin_policy(attendance.CONTEXT, module="library", policy=attendance.policy)

@@ -49,6 +49,13 @@ export const formatTimestamp = (value: string | null | undefined): string => {
   return parsed.isValid() ? parsed.format(`${DISPLAY_DATE_FORMAT}, HH:mm`) : '—';
 };
 
+/** RFC 3339 instant → `HH:mm`, for a check-in or check-out time on a day's list. */
+export const formatClock = (value: string | null | undefined): string => {
+  if (!value) return '';
+  const parsed = dayjs(value);
+  return parsed.isValid() ? parsed.format('HH:mm') : '';
+};
+
 /**
  * Milliseconds from now until an RFC 3339 instant, never negative — the cool-off
  * countdown (PLT-10) and a support session's end (PLT-14) both read it. Lives

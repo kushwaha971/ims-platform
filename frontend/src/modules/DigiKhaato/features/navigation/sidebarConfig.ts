@@ -5,6 +5,7 @@ import {
   IndianRupee,
   BookOpen,
   BookUser,
+  CalendarCheck,
   Boxes,
   CreditCard,
   FileText,
@@ -332,6 +333,19 @@ export const NAV_ITEMS: readonly NavItemConfig[] = [
     section: 'daily',
     order: 4,
     bottomNav: true,
+  },
+  {
+    // W05 — the reading room's day register.
+    key: 'libraryAttendance',
+    workspace: 'library',
+    ready: true,
+    icon: CalendarCheck,
+    labelId: 'nav.library.attendance',
+    href: ROUTES.LIBRARY_ATTENDANCE,
+    module: 'library',
+    permission: 'library.member.read',
+    section: 'daily',
+    order: 5,
   },
   {
     // F03 (LIB-02) — the library's first page. Shown only while the library
