@@ -19,6 +19,7 @@ import { useAppDispatch } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import { formatAmount, formatInr } from 'src/utils/money';
+import { comboPaging } from 'src/utils/searchPaging';
 
 import { useItemSearch } from '../../inventory/hooks/useItemSearch';
 import {
@@ -60,6 +61,8 @@ function ItemCell({
       selectedLabel={line?.description}
       query={search.query}
       onQueryChange={search.setQuery}
+      onOpen={search.activate}
+      paging={comboPaging(search, t)}
       options={search.options}
       loading={search.status === 'loading'}
       disabled={disabled}

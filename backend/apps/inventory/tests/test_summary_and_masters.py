@@ -133,7 +133,15 @@ def test_hsn_search_by_code_prefix_and_by_word(owner: Any) -> None:
         "is_service": False,
     } in rice
     assert [r["code"] for r in owner.get(url, {"q": "100"}).json()["data"]] == ["1001", "1006"]
-    assert owner.get(url, {"q": ""}).json()["data"] == []
+    # Owner, 5 Oct 2026 — nothing typed lists the schedule by code, paged, so
+    # the picker opens onto codes rather than an empty panel.
+    browse = owner.get(url, {"q": ""}).json()
+    codes = [r["code"] for r in browse["data"]]
+    assert codes and codes == sorted(codes)
+    assert browse["meta"]["page"] == 1
+    assert browse["meta"]["has_more"] is (len(browse["data"]) == 20)
+    second = owner.get(url, {"q": "", "page": 2}).json()
+    assert not {r["code"] for r in second["data"]} & {r["code"] for r in browse["data"]}
 
 
 # ── EC-4 across every inventory read (QA defect: valuation leaked to staff) ──

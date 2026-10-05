@@ -1,13 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import type { UbAsyncComboboxOption } from 'src/design-system';
+import { usePagedSearch, type PagedSearchStatus } from 'src/hooks/usePagedSearch';
 import { usePermissions } from 'src/hooks/usePermissions';
 import { formatQuantity } from 'src/utils/quantity';
 
 import { lookupItemByBarcode, searchItems } from '../api/itemService';
-import { ITEM_SEARCH_DEBOUNCE_MS, ITEM_SEARCH_MIN_CHARS } from '../constants/inventoryConstants';
+import { ITEM_SEARCH_DEBOUNCE_MS } from '../constants/inventoryConstants';
 
 import type { ItemListRow } from '../types/item.types';
 
@@ -35,56 +36,43 @@ export interface UseItemSearchResult {
   readonly setQuery: (next: string) => void;
   readonly results: readonly ItemListRow[];
   readonly options: readonly UbAsyncComboboxOption[];
-  readonly status: 'idle' | 'loading' | 'succeeded' | 'failed';
+  readonly status: PagedSearchStatus;
   readonly canSearch: boolean;
+  /** Start listing — the picker's `onOpen`. */
+  readonly activate: () => void;
+  readonly hasMore: boolean;
+  readonly loadMore: () => void;
   readonly find: (id: string) => ItemListRow | undefined;
   readonly lookup: (code: string) => Promise<ItemListRow | null>;
   readonly clear: () => void;
 }
 
-const EMPTY: readonly ItemListRow[] = [];
+const itemId = (row: ItemListRow): string => row.id;
 
+/**
+ * Owner, 5 Oct 2026 — the picker lists every active item (by name) the moment
+ * it opens, pages as the list scrolls, and narrows as the merchant types
+ * (`src/hooks/usePagedSearch`). A line's "which item?" is often answered by
+ * looking, not by remembering how it was spelt.
+ */
 export function useItemSearch(options: UseItemSearchOptions = {}): UseItemSearchResult {
   const { can, hasModule } = usePermissions();
   const canSearch = hasModule('inventory') && can('inventory.item.read');
   const { trackedOnly = false } = options;
 
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<readonly ItemListRow[]>([]);
-  const [status, setStatus] = useState<UseItemSearchResult['status']>('idle');
-  const controller = useRef<AbortController | null>(null);
-
-  const term = query.trim();
-  const searching = canSearch && term.length >= ITEM_SEARCH_MIN_CHARS;
-
-  useEffect(() => {
-    if (!searching) {
-      controller.current?.abort();
-      return undefined;
-    }
-    const timer = window.setTimeout(() => {
-      controller.current?.abort();
-      const next = new AbortController();
-      controller.current = next;
-      setStatus('loading');
-      searchItems(term, next.signal, { trackedOnly })
-        .then((rows) => {
-          if (next.signal.aborted) return;
-          setResults(rows);
-          setStatus('succeeded');
-        })
-        .catch(() => {
-          if (next.signal.aborted) return;
-          setResults([]);
-          setStatus('failed');
-        });
-    }, ITEM_SEARCH_DEBOUNCE_MS);
-    return () => window.clearTimeout(timer);
-  }, [term, searching, trackedOnly]);
-
-  useEffect(() => () => controller.current?.abort(), []);
-
-  const visible = searching ? results : EMPTY;
+  const fetchPage = useCallback(
+    (term: string, page: number, signal: AbortSignal) =>
+      searchItems(term, page, signal, { trackedOnly }),
+    [trackedOnly]
+  );
+  const search = usePagedSearch<ItemListRow>({
+    enabled: canSearch,
+    fetchPage,
+    key: trackedOnly ? 'tracked' : 'all',
+    debounceMs: ITEM_SEARCH_DEBOUNCE_MS,
+    idOf: itemId,
+  });
+  const visible = search.results;
 
   const comboOptions = useMemo(
     () =>
@@ -110,20 +98,21 @@ export function useItemSearch(options: UseItemSearchOptions = {}): UseItemSearch
     [trackedOnly]
   );
 
-  const clear = useCallback(() => setQuery(''), []);
-
   return useMemo(
     () => ({
-      query,
-      setQuery,
+      query: search.query,
+      setQuery: search.setQuery,
       results: visible,
       options: comboOptions,
-      status: searching ? status : 'idle',
+      status: search.status,
       canSearch,
+      activate: search.activate,
+      hasMore: search.hasMore,
+      loadMore: search.loadMore,
       find,
       lookup,
-      clear,
+      clear: search.clear,
     }),
-    [query, visible, comboOptions, searching, status, canSearch, find, lookup, clear]
+    [search, visible, comboOptions, canSearch, find, lookup]
   );
 }

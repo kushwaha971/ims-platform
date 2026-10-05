@@ -4,7 +4,7 @@ import { memo, useCallback, useId, useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { UbAmount, UbBox, UbSearchInput, UbText } from 'src/design-system';
+import { UbAmount, UbBox, UbLoadMore, UbSearchInput, UbText } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { partyPath } from 'src/routes';
 import { cn } from 'src/utils/cn';
@@ -73,6 +73,11 @@ function PartyQuickSearchBase({
       if (event.key === 'ArrowDown') {
         event.preventDefault();
         setOpen(true);
+        // ↓ on the last row asks for the next page rather than wrapping past it.
+        if (active === search.results.length - 1 && search.hasMore) {
+          search.loadMore();
+          return;
+        }
         setActive((index) => (index + 1) % search.results.length);
       } else if (event.key === 'ArrowUp') {
         event.preventDefault();
@@ -85,12 +90,13 @@ function PartyQuickSearchBase({
         }
       }
     },
-    [search.results, active, openParty]
+    [search, active, openParty]
   );
 
   if (!search.canSearch) return null;
 
-  const showList = open && (search.results.length > 0 || search.isEmpty);
+  // Owner, 5 Oct 2026: the list opens on focus, before anything is typed.
+  const showList = open && search.active;
 
   return (
     <UbBox className={cn('relative w-full', className)}>
@@ -101,7 +107,10 @@ function PartyQuickSearchBase({
           setActive(0);
           setOpen(true);
         }}
-        onFocus={() => setOpen(true)}
+        onFocus={() => {
+          search.activate();
+          setOpen(true);
+        }}
         /* Inline, the list IS the sheet's content: a phone user who drops the
            keyboard to read the matches blurs the field, and closing on that
            would take the matches away at the moment they looked at them. */
@@ -128,10 +137,14 @@ function PartyQuickSearchBase({
             inline ? 'mt-2' : 'absolute left-0 right-0 top-11 z-40 shadow-2'
           )}
         >
-          {search.isEmpty ? (
+          {search.results.length === 0 ? (
             <UbBox as="li" className="px-3 py-2">
               <UbText as="span" variant="inherit" className="ds-body-s-regular text-text-tertiary">
-                {t('parties.quickSearch.empty', { query: search.query.trim() })}
+                {!search.isEmpty
+                  ? t('common.search.loading')
+                  : search.query.trim()
+                    ? t('parties.quickSearch.empty', { query: search.query.trim() })
+                    : t('parties.quickSearch.none')}
               </UbText>
             </UbBox>
           ) : (
@@ -183,6 +196,15 @@ function PartyQuickSearchBase({
                 </UbBox>
               );
             })
+          )}
+          {search.hasMore && search.results.length > 0 && (
+            <UbLoadMore
+              as="li"
+              onLoadMore={search.loadMore}
+              loading={search.status === 'loadingMore'}
+              loadingLabel={t('common.search.loadingMore')}
+              moreLabel={t('common.search.showMore')}
+            />
           )}
         </UbBox>
       )}

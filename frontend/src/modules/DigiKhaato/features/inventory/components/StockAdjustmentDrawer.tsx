@@ -28,6 +28,7 @@ import { useScannerListener } from 'src/hooks/useScannerListener';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import { formatQuantity } from 'src/utils/quantity';
+import { comboPaging } from 'src/utils/searchPaging';
 
 import { ADJUSTMENT_MAX_LINES, ADJUSTMENT_REASONS } from '../constants/inventoryConstants';
 import { useInventoryMasters } from '../hooks/useInventoryMasters';
@@ -99,6 +100,8 @@ function ItemCell({
       selectedLabel={line.itemName}
       query={search.query}
       onQueryChange={search.setQuery}
+      onOpen={search.activate}
+      paging={comboPaging(search, t)}
       options={search.options}
       loading={search.status === 'loading'}
       onSelect={(option) => {

@@ -112,7 +112,7 @@ it('asks who is owed and by when once Paid now is off, and hides Paid by', async
 it('offers only live categories in the picker', async () => {
   // EXP-02 FR-6 — an archived category is gone from pickers, kept on old rows.
   renderWithProviders(<ExpenseFormDrawer form={form()} />);
-  await userEvent.click(screen.getByRole('combobox'));
+  await userEvent.click(screen.getByRole('combobox', { name: /Category/ }));
   expect(await screen.findByRole('option', { name: 'Rent' })).toBeInTheDocument();
   expect(screen.queryByRole('option', { name: 'Old' })).not.toBeInTheDocument();
 });

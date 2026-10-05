@@ -99,14 +99,20 @@ def rate_summary(row: TaxRate | None, *, is_current: bool) -> dict | None:
     }
 
 
-def search_hsn(q: str, *, limit: int = 20) -> QuerySet:
-    """FR-4 — code prefix, else description substring (trigram-indexed)."""
+def search_hsn(q: str, *, limit: int = 20, offset: int = 0) -> QuerySet:
+    """FR-4 — code prefix, else description substring (trigram-indexed).
+
+    Nothing typed lists the whole schedule by code (owner, 5 Oct 2026: a picker
+    lists on open and pages as it scrolls), one page at a time.
+    """
     text = (q or "").strip()
     if not text:
-        return HsnCode.objects.none()
-    if text.isdigit():
-        return HsnCode.objects.filter(code__startswith=text).order_by("code")[:limit]
-    return HsnCode.objects.filter(description__icontains=text).order_by("code")[:limit]
+        rows = HsnCode.objects.order_by("code")
+    elif text.isdigit():
+        rows = HsnCode.objects.filter(code__startswith=text).order_by("code")
+    else:
+        rows = HsnCode.objects.filter(description__icontains=text).order_by("code")
+    return rows[offset : offset + limit]
 
 
 def hsn_known(code: str) -> bool:

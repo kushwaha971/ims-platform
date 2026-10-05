@@ -1,7 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 
+import {
+  PAGED_SEARCH_DEBOUNCE_MS,
+  usePagedSearch,
+  type UsePagedSearchResult,
+} from 'src/hooks/usePagedSearch';
 import { usePermissions } from 'src/hooks/usePermissions';
 
 import { listParties } from '../api/partyService';
@@ -28,11 +33,9 @@ import type { Party } from '../types/party.types';
  * A new keystroke aborts the request in flight: on a slow link the answer for
  * "ram" must never land after, and overwrite, the answer for "ramesh".
  */
-export const PARTY_SEARCH_DEBOUNCE_MS = 250;
-export const PARTY_SEARCH_LIMIT = 8;
-/** Below this many characters nothing is fetched — "r" matches the whole book. */
-export const PARTY_SEARCH_MIN_CHARS = 2;
-const EMPTY: readonly Party[] = [];
+export const PARTY_SEARCH_DEBOUNCE_MS = PAGED_SEARCH_DEBOUNCE_MS;
+/** One page of the list a picker shows: enough to fill the panel and scroll. */
+export const PARTY_SEARCH_LIMIT = 20;
 
 export interface UsePartySearchOptions {
   /** `customer` / `supplier` narrow the source for a document picker. */
@@ -40,16 +43,15 @@ export interface UsePartySearchOptions {
   readonly limit?: number;
 }
 
-export interface UsePartySearchResult {
-  readonly query: string;
-  readonly setQuery: (next: string) => void;
-  readonly results: readonly Party[];
-  readonly status: 'idle' | 'loading' | 'succeeded' | 'failed';
-  /** True once a search has run and matched nothing — the "no match" row. */
-  readonly isEmpty: boolean;
+/**
+ * Owner, 5 Oct 2026 — the box lists on focus, pages on scroll and narrows as
+ * the merchant types (`src/hooks/usePagedSearch`). With nothing typed the list
+ * is the people traded with most recently, which is who a counter is asking
+ * for; typed, it is by name.
+ */
+export type UsePartySearchResult = UsePagedSearchResult<Party> & {
   readonly canSearch: boolean;
-  readonly clear: () => void;
-}
+};
 
 /**
  * Whether this session may search parties at all — the one rule, so a control
@@ -66,28 +68,9 @@ export function usePartySearch(options: UsePartySearchOptions = {}): UsePartySea
   const canSearch = useCanSearchParties();
   const { type, limit = PARTY_SEARCH_LIMIT } = options;
 
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<readonly Party[]>([]);
-  const [status, setStatus] = useState<UsePartySearchResult['status']>('idle');
-  const controller = useRef<AbortController | null>(null);
-
-  const term = query.trim();
-  /* Below the threshold the answer is "nothing", derived here rather than
-     set from the effect — an effect that only clears state is a second render
-     for a value the render already knows. */
-  const searching = canSearch && term.length >= PARTY_SEARCH_MIN_CHARS;
-
-  useEffect(() => {
-    if (!searching) {
-      controller.current?.abort();
-      return undefined;
-    }
-    const timer = window.setTimeout(() => {
-      controller.current?.abort();
-      const next = new AbortController();
-      controller.current = next;
-      setStatus('loading');
-      listParties(
+  const fetchPage = useCallback(
+    async (term: string, page: number, signal: AbortSignal) => {
+      const answer = await listParties(
         {
           q: term,
           status: 'active',
@@ -96,40 +79,25 @@ export function usePartySearch(options: UsePartySearchOptions = {}): UsePartySea
           collection: '',
           tag: '',
           credit: '',
-          ordering: 'name',
-          page: 1,
+          ordering: term ? 'name' : '-last_activity_at',
+          page,
           pageSize: limit,
         },
-        next.signal
-      )
-        .then((page) => {
-          if (next.signal.aborted) return;
-          setResults(page.rows);
-          setStatus('succeeded');
-        })
-        .catch(() => {
-          if (next.signal.aborted) return;
-          setResults([]);
-          setStatus('failed');
-        });
-    }, PARTY_SEARCH_DEBOUNCE_MS);
-    return () => window.clearTimeout(timer);
-  }, [term, searching, type, limit]);
-
-  useEffect(() => () => controller.current?.abort(), []);
-
-  const clear = useCallback(() => setQuery(''), []);
-
-  return useMemo(
-    () => ({
-      query,
-      setQuery,
-      results: searching ? results : EMPTY,
-      status: searching ? status : 'idle',
-      isEmpty: searching && status === 'succeeded' && results.length === 0,
-      canSearch,
-      clear,
-    }),
-    [query, results, status, searching, canSearch, clear]
+        signal
+      );
+      const { meta } = answer;
+      return { rows: answer.rows, hasMore: Boolean(meta && meta.page < meta.totalPages) };
+    },
+    [type, limit]
   );
+
+  const search = usePagedSearch<Party>({
+    enabled: canSearch,
+    fetchPage,
+    key: `${type ?? ''}:${limit}`,
+    idOf: partyId,
+  });
+  return useMemo(() => ({ ...search, canSearch }), [search, canSearch]);
 }
+
+const partyId = (party: Party): string => party.id;

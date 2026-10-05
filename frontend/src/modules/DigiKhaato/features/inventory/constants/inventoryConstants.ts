@@ -63,9 +63,8 @@ export const ITEM_LIST_PAGE_SIZE = 25;
 export const SCANNER_MIN_LENGTH = 4;
 export const SCANNER_MAX_GAP_MS = 50;
 
-/** The picker's debounce and minimum query (as `usePartySearch`). */
+/** The picker's debounce (as `usePartySearch`); it lists on open, so there is no minimum. */
 export const ITEM_SEARCH_DEBOUNCE_MS = 250;
-export const ITEM_SEARCH_MIN_CHARS = 1;
 
 /** Movement type → locale key (INV-03 §7 "label map in constants/movementTypes"). */
 export const MOVEMENT_TYPE_LABEL_ID: Readonly<Record<string, string>> = {

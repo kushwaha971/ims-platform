@@ -33,6 +33,10 @@ const panelModule = deferredModule(() => import('./UbAsyncComboboxPanel'));
  *     scanner types the code and presses Enter faster than any search answers,
  *     and that Enter is the caller's cue to do an exact lookup instead;
  *   · `onCreate` adds a "+ Create '<query>'" row (inline create, INV-01 FR-9).
+ *
+ * Owner, 5 Oct 2026 — it lists on OPEN, before anything is typed: `onOpen` is
+ * the caller's cue to start its search (`usePagedSearch.activate`), and
+ * `paging` adds the row that loads the next page when it scrolls into view.
  */
 export interface UbAsyncComboboxOption {
   readonly value: string;
@@ -68,6 +72,18 @@ export interface UbAsyncComboboxProps {
   readonly 'aria-describedby'?: string;
   readonly onBlur?: () => void;
   readonly onKeyDown?: (event: React.KeyboardEvent<HTMLButtonElement>) => void;
+  /** Called whenever the panel opens — start listing. */
+  readonly onOpen?: () => void;
+  /** The next page, when there is one. */
+  readonly paging?: UbAsyncComboboxPaging;
+}
+
+export interface UbAsyncComboboxPaging {
+  readonly hasMore: boolean;
+  readonly loadingMore: boolean;
+  readonly onLoadMore: () => void;
+  readonly loadingMoreLabel: string;
+  readonly showMoreLabel: string;
 }
 
 const isPrintable = (event: React.KeyboardEvent): boolean =>
@@ -96,12 +112,21 @@ const UbAsyncComboboxInner = forwardRef<HTMLButtonElement, UbAsyncComboboxProps>
       id,
       onBlur,
       onKeyDown,
+      onOpen,
+      paging,
       name: _name,
       ...aria
     },
     ref
   ) {
-    const [open, setOpen] = useState(false);
+    const [open, setOpenState] = useState(false);
+    const setOpen = useCallback(
+      (next: boolean) => {
+        setOpenState(next);
+        if (next) onOpen?.();
+      },
+      [onOpen]
+    );
     const trimmed = query.trim();
     const canCreate = Boolean(onCreate && createLabel && trimmed);
     const panel = useDeferredModule(panelModule, open);
@@ -111,7 +136,7 @@ const UbAsyncComboboxInner = forwardRef<HTMLButtonElement, UbAsyncComboboxProps>
         onSelect(option);
         setOpen(false);
       },
-      [onSelect]
+      [onSelect, setOpen]
     );
 
     const handleTriggerKey = useCallback(
@@ -127,7 +152,7 @@ const UbAsyncComboboxInner = forwardRef<HTMLButtonElement, UbAsyncComboboxProps>
           setOpen(true);
         }
       },
-      [disabled, onKeyDown, onQueryChange]
+      [disabled, onKeyDown, onQueryChange, setOpen]
     );
 
     const handleContentKey = useCallback(
@@ -145,7 +170,7 @@ const UbAsyncComboboxInner = forwardRef<HTMLButtonElement, UbAsyncComboboxProps>
           setOpen(false);
         }
       },
-      [options.length, trimmed, onSubmitQuery]
+      [options.length, trimmed, onSubmitQuery, setOpen]
     );
 
     return (
@@ -194,6 +219,7 @@ const UbAsyncComboboxInner = forwardRef<HTMLButtonElement, UbAsyncComboboxProps>
               canCreate={canCreate}
               trimmed={trimmed}
               createLabel={createLabel}
+              paging={paging}
               onCreate={() => {
                 onCreate?.(trimmed);
                 setOpen(false);

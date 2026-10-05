@@ -39,12 +39,21 @@ class TaxRateListView(APIView):
         return StandardResponse.ok(rates_on(tenant=tenant, on_date=on_date, include=include))
 
 
+HSN_PAGE_SIZE = 20
+
+
 class HsnSearchView(APIView):
     permission_classes = [IsAuthenticated, TaxReadPermission]
 
     def get(self, request: Any) -> Any:
         q = (request.query_params.get("q") or "")[:60]
-        rows = search_hsn(q)
+        try:
+            page = max(1, int(request.query_params.get("page") or 1))
+        except ValueError:
+            page = 1
+        # One row past the page says whether there is another, without a COUNT
+        # over the schedule on every keystroke.
+        rows = list(search_hsn(q, limit=HSN_PAGE_SIZE + 1, offset=(page - 1) * HSN_PAGE_SIZE))
         return StandardResponse.ok(
             [
                 {
@@ -53,6 +62,7 @@ class HsnSearchView(APIView):
                     "default_tax_code": row.default_tax_code or None,
                     "is_service": row.is_service,
                 }
-                for row in rows
-            ]
+                for row in rows[:HSN_PAGE_SIZE]
+            ],
+            meta={"page": page, "has_more": len(rows) > HSN_PAGE_SIZE},
         )

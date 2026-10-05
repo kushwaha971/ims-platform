@@ -126,6 +126,8 @@ export { UbStatusBadge } from './UbStatusBadge';
 export type { UbStatusBadgeProps, UbStatusBadgeTone } from './UbStatusBadge';
 
 export { UbSearchInput } from './UbSearchInput';
+export { UbLoadMore } from './UbLoadMore';
+export type { UbLoadMoreProps } from './UbLoadMore';
 export type { UbSearchInputProps } from './UbSearchInput';
 export { UbSectionHeading } from './UbSectionHeading';
 export type { UbSectionHeadingProps } from './UbSectionHeading';
@@ -210,7 +212,11 @@ export type { UbMoneyInputProps } from './UbMoneyInput';
 export { UbQuantityInput, sanitiseQuantity } from './UbQuantityInput';
 export type { UbQuantityInputProps } from './UbQuantityInput';
 export { UbAsyncCombobox } from './UbAsyncCombobox';
-export type { UbAsyncComboboxOption, UbAsyncComboboxProps } from './UbAsyncCombobox';
+export type {
+  UbAsyncComboboxOption,
+  UbAsyncComboboxPaging,
+  UbAsyncComboboxProps,
+} from './UbAsyncCombobox';
 export { UbLineItemsEditor } from './UbLineItemsEditor';
 export type {
   UbLineCellContext,

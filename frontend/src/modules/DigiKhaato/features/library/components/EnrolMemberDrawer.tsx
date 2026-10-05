@@ -3,7 +3,6 @@
 import { useId, useMemo } from 'react';
 
 import { yupResolver } from '@hookform/resolvers/yup';
-import { X } from 'lucide-react';
 import { useForm, useWatch } from 'react-hook-form';
 
 import {
@@ -13,10 +12,8 @@ import {
   UbDrawer,
   UbField,
   UbForm,
-  UbListItemText,
   UbNativeSelect,
   UbPhoneInput,
-  UbPressable,
   UbStack,
   UbSwitch,
   UbText,
@@ -25,7 +22,8 @@ import {
 import { useTranslation } from 'src/hooks/useTranslation';
 import { formatInr } from 'src/utils/money';
 
-import { usePartySearch } from 'modules/DigiKhaato/features/parties/hooks/usePartySearch';
+import { PartyPickerField } from 'modules/DigiKhaato/features/parties/components/PartyPickerField';
+import { useCanSearchParties } from 'modules/DigiKhaato/features/parties/hooks/usePartySearch';
 
 import { useSeats } from '../hooks/useSeats';
 import { useMemberSchemas } from '../validation/memberSchemas';
@@ -86,7 +84,7 @@ export function EnrolMemberDrawer({
     mode: 'onTouched',
     defaultValues: { ...DEFAULTS, membershipTypeId: active[0]?.id ?? '' },
   });
-  const [mode, partyId, partyName, typeId, collectNow, shiftId] = useWatch({
+  const [mode, _partyId, partyName, typeId, collectNow, shiftId] = useWatch({
     control: form.control,
     name: ['partyMode', 'partyId', 'partyName', 'membershipTypeId', 'collectNow', 'shiftId'],
   });
@@ -102,7 +100,16 @@ export function EnrolMemberDrawer({
   const hasSeats = seating.seats.length > 0;
   const type = active.find((row) => row.id === typeId);
   const cost = enrolCost(type);
-  const search = usePartySearch();
+  const canSearchParties = useCanSearchParties();
+  const enrolPickerLabels = useMemo(
+    () => ({
+      clear: (name: string) => t('library.enrol.person.clear', { name }),
+      noAccess: t('library.enrol.person.none'),
+      results: t('library.enrol.person.results'),
+      noMatch: t('library.enrol.person.none'),
+    }),
+    [t]
+  );
   const asksMoney = isNonZero(cost.fees) || isNonZero(cost.deposit);
 
   return (
@@ -141,7 +148,7 @@ export function EnrolMemberDrawer({
                 { value: 'new', label: t('library.enrol.who.new') },
                 { value: 'existing', label: t('library.enrol.who.existing') },
               ]}
-              disabled={busy || !search.canSearch}
+              disabled={busy || !canSearchParties}
             />
           )}
         </UbField>
@@ -172,80 +179,19 @@ export function EnrolMemberDrawer({
             placeholder={t('library.enrol.person.placeholder')}
             required
           >
-            {(field) =>
-              partyId ? (
-                <UbStack
-                  direction="row"
-                  align="center"
-                  justify="between"
-                  className="border-border-default h-10 rounded-control border px-3"
-                >
-                  <UbText variant="body" className="truncate">
-                    {partyName}
-                  </UbText>
-                  <UbButton
-                    variant="ghost"
-                    size="sm"
-                    iconOnly
-                    icon={<X className="h-4 w-4" aria-hidden />}
-                    aria-label={t('library.enrol.person.clear', { name: partyName })}
-                    onClick={() => {
-                      form.setValue('partyId', '', { shouldValidate: true });
-                      form.setValue('partyName', '');
-                    }}
-                  >
-                    {t('library.enrol.person.clear', { name: partyName })}
-                  </UbButton>
-                </UbStack>
-              ) : (
-                <UbStack gap={1}>
-                  <UbTextInput
-                    id={field.id}
-                    name={field.name}
-                    value={search.query}
-                    onChange={search.setQuery}
-                    onBlur={field.onBlur}
-                    placeholder={field.placeholder}
-                    invalid={field.invalid}
-                    aria-invalid={field['aria-invalid']}
-                    aria-describedby={field['aria-describedby']}
-                    autoComplete="off"
-                    disabled={busy}
-                  />
-                  {search.results.length > 0 && (
-                    <UbStack
-                      as="ul"
-                      gap={0}
-                      aria-label={t('library.enrol.person.results')}
-                      className="border-border-default rounded-control border"
-                    >
-                      {search.results.map((party) => (
-                        <UbStack as="li" key={party.id} gap={0}>
-                          <UbPressable
-                            className="w-full px-3 py-2 text-left"
-                            onClick={() => {
-                              form.setValue('partyId', party.id, { shouldValidate: true });
-                              form.setValue('partyName', party.name);
-                              search.clear();
-                            }}
-                          >
-                            <UbListItemText
-                              primary={party.name}
-                              secondary={party.mobile ?? undefined}
-                            />
-                          </UbPressable>
-                        </UbStack>
-                      ))}
-                    </UbStack>
-                  )}
-                  {search.isEmpty && (
-                    <UbText variant="caption" tone="tertiary">
-                      {t('library.enrol.person.none')}
-                    </UbText>
-                  )}
-                </UbStack>
-              )
-            }
+            {(field) => (
+              <PartyPickerField
+                field={field}
+                pickedName={partyName}
+                onPick={(id, name) => {
+                  form.setValue('partyId', id, { shouldValidate: true });
+                  form.setValue('partyName', name);
+                }}
+                labels={enrolPickerLabels}
+                t={t}
+                disabled={busy}
+              />
+            )}
           </UbField>
         )}
 

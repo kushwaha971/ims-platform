@@ -25,7 +25,9 @@ import {
   isoFinancialYearStart,
   isoToday,
 } from 'src/design-system';
+import { usePagedSearch } from 'src/hooks/usePagedSearch';
 import { useTranslation } from 'src/hooks/useTranslation';
+import { comboPaging } from 'src/utils/searchPaging';
 
 import { lookupItemByBarcode } from '../api/itemService';
 import { searchHsn } from '../api/mastersService';
@@ -55,6 +57,8 @@ import 'src/i18n/catalogues/validation';
  * fills the GST rate unless the merchant already chose one (FR-5); a scanner
  * Enter inside Barcode checks for a duplicate instead of submitting (FR-11).
  */
+const hsnCodeOf = (row: HsnCode): string => row.code;
+
 export function ItemFormDrawer({
   form: itemForm,
 }: Readonly<{ form: UseItemFormResult }>): React.JSX.Element {
@@ -131,30 +135,23 @@ export function ItemFormDrawer({
     !isService && trackStock && (!isEdit || (editing !== null && !editing.trackStock));
 
   // ── HSN picker (FR-4/FR-5) ────────────────────────────────────────────────
-  const [hsnQuery, setHsnQuery] = useState('');
-  const [hsnResults, setHsnResults] = useState<readonly HsnCode[]>([]);
+  // Owner, 5 Oct 2026 — the HSN box lists the schedule on open, pages as it
+  // scrolls and narrows as the merchant types (`usePagedSearch`).
+  const hsnSearch = usePagedSearch<HsnCode>({
+    enabled: true,
+    fetchPage: searchHsn,
+    debounceMs: 300,
+    idOf: hsnCodeOf,
+  });
+  const hsnResults = hsnSearch.results;
   const [hsnHint, setHsnHint] = useState<string | null>(null);
-  useEffect(() => {
-    const term = hsnQuery.trim();
-    if (!term) return undefined;
-    const controller = new AbortController();
-    const timer = window.setTimeout(() => {
-      searchHsn(term, controller.signal)
-        .then(setHsnResults)
-        .catch(() => undefined);
-    }, 300);
-    return () => {
-      window.clearTimeout(timer);
-      controller.abort();
-    };
-  }, [hsnQuery]);
   const hsnOptions = useMemo(
     () =>
-      (hsnQuery.trim() ? hsnResults : []).map((row) => ({
+      hsnResults.map((row) => ({
         value: row.code,
         label: `${row.code} — ${row.description}`,
       })),
-    [hsnResults, hsnQuery]
+    [hsnResults]
   );
   const pickHsn = useCallback(
     (code: string) => {
@@ -371,8 +368,10 @@ export function ItemFormDrawer({
                 id={field.id}
                 value={(field.value as string) || null}
                 selectedLabel={field.value as string}
-                query={hsnQuery}
-                onQueryChange={setHsnQuery}
+                query={hsnSearch.query}
+                onQueryChange={hsnSearch.setQuery}
+                onOpen={hsnSearch.activate}
+                paging={comboPaging(hsnSearch, t)}
                 options={hsnOptions}
                 onSelect={(option) => pickHsn(option.value)}
                 onSubmitQuery={(typed) => pickHsn(typed)}

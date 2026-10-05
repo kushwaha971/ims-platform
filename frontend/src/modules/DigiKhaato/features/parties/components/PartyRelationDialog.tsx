@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useId, useMemo } from 'react';
 
 import { yupResolver } from '@hookform/resolvers/yup';
-import { X } from 'lucide-react';
 import { useForm, useWatch } from 'react-hook-form';
 
 import {
@@ -13,18 +12,12 @@ import {
   UbDialog,
   UbField,
   UbForm,
-  UbListItemText,
-  UbPressable,
-  UbStack,
   UbStatusBanner,
   UbSwitch,
-  UbText,
-  UbTextInput,
   type UbFieldRenderProps,
 } from 'src/design-system';
 import { useTranslation, type TranslateFn } from 'src/hooks/useTranslation';
 
-import { usePartySearch } from '../hooks/usePartySearch';
 import {
   RELATION_FIELD_FOR_SERVER,
   RELATION_KINDS,
@@ -32,6 +25,8 @@ import {
   type PartyRelationFormValues,
 } from '../validation/partyRelationSchemas';
 import { KIND_LABEL } from '../view-model/partyRelationDisplay';
+
+import { PartyPickerField } from './PartyPickerField';
 
 import type { UsePartyRelationsResult } from '../hooks/usePartyRelations';
 
@@ -222,86 +217,23 @@ function RelatedPartyPicker({
   onPick: (id: string, name: string) => void;
   t: TranslateFn;
 }>): React.JSX.Element {
-  const { query, setQuery, results, status, isEmpty, canSearch, clear } = usePartySearch();
-  const shown = useMemo(() => results.filter((party) => party.id !== selfId), [results, selfId]);
-
-  if (field.value) {
-    return (
-      <UbStack
-        direction="row"
-        align="center"
-        justify="between"
-        className="border-border-default h-10 rounded-control border px-3"
-      >
-        <UbText variant="body" className="truncate">
-          {pickedName}
-        </UbText>
-        <UbButton
-          variant="ghost"
-          size="sm"
-          iconOnly
-          icon={<X className="h-4 w-4" aria-hidden />}
-          aria-label={t('parties.relations.dialog.clear', { name: pickedName })}
-          onClick={() => {
-            onPick('', '');
-            clear();
-          }}
-        >
-          {t('parties.relations.dialog.clear', { name: pickedName })}
-        </UbButton>
-      </UbStack>
-    );
-  }
-
-  if (!canSearch) {
-    return (
-      <UbText variant="caption" tone="tertiary">
-        {t('parties.relations.dialog.noAccess')}
-      </UbText>
-    );
-  }
-
+  const labels = useMemo(
+    () => ({
+      clear: (name: string) => t('parties.relations.dialog.clear', { name }),
+      noAccess: t('parties.relations.dialog.noAccess'),
+      results: t('parties.relations.dialog.results'),
+      noMatch: t('parties.relations.dialog.noMatch'),
+    }),
+    [t]
+  );
   return (
-    <UbStack gap={1}>
-      <UbTextInput
-        id={field.id}
-        name={field.name}
-        value={query}
-        onChange={setQuery}
-        onBlur={field.onBlur}
-        placeholder={field.placeholder}
-        invalid={field.invalid}
-        aria-invalid={field['aria-invalid']}
-        aria-describedby={field['aria-describedby']}
-        autoComplete="off"
-      />
-      {shown.length > 0 && (
-        <UbStack
-          as="ul"
-          gap={0}
-          aria-label={t('parties.relations.dialog.results')}
-          className="border-border-default rounded-control border"
-        >
-          {shown.map((party) => (
-            <UbStack as="li" key={party.id} gap={0}>
-              <UbPressable
-                className="w-full px-3 py-2 text-left"
-                onClick={() => {
-                  onPick(party.id, party.name);
-                  clear();
-                }}
-              >
-                <UbListItemText primary={party.name} secondary={party.mobile ?? undefined} />
-              </UbPressable>
-            </UbStack>
-          ))}
-        </UbStack>
-      )}
-      {(isEmpty || (status === 'succeeded' && shown.length === 0 && query.trim())) && (
-        <UbText variant="caption" tone="tertiary">
-          {t('parties.relations.dialog.noMatch')}
-        </UbText>
-      )}
-    </UbStack>
+    <PartyPickerField
+      field={field}
+      pickedName={pickedName}
+      onPick={onPick}
+      labels={labels}
+      t={t}
+      excludeId={selfId}
+    />
   );
 }

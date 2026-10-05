@@ -263,27 +263,37 @@ export const listItems = async (
 };
 
 /**
- * The picker's search (`useItemSearch`): active items matching `q`, 20 at most.
- * A picker's failure is not a page's: it toasts like any other request.
+ * The picker's search (`useItemSearch`): one page of active items matching
+ * `q` — or, with nothing typed, every active item by name, so the picker lists
+ * on open (owner, 5 Oct 2026). A picker's failure is not a page's: it toasts
+ * like any other request.
  */
+export const ITEM_SEARCH_PAGE_SIZE = 20;
+
 export const searchItems = async (
   q: string,
+  page: number,
   signal?: AbortSignal,
   options: { readonly trackedOnly?: boolean } = {}
-): Promise<readonly ItemListRow[]> => {
+): Promise<{ readonly rows: readonly ItemListRow[]; readonly hasMore: boolean }> => {
   const query = toQueryString({
-    q,
+    q: q || undefined,
     status: 'active',
     type: options.trackedOnly ? 'goods' : undefined,
-    page_size: 20,
+    page,
+    page_size: ITEM_SEARCH_PAGE_SIZE,
     ordering: 'name',
   });
-  const response = await api.get<{ data: readonly ItemRowWire[] }>(
-    `${API_PATHS.ITEMS}${query}`,
-    ubConfig({ signal })
-  );
+  const response = await api.get<{
+    data: readonly ItemRowWire[];
+    meta?: { page?: number; total_pages?: number };
+  }>(`${API_PATHS.ITEMS}${query}`, ubConfig({ signal }));
   const rows = response.data.data.map(toItemRow);
-  return options.trackedOnly ? rows.filter((row) => row.trackStock) : rows;
+  const meta = response.data.meta;
+  return {
+    rows: options.trackedOnly ? rows.filter((row) => row.trackStock) : rows,
+    hasMore: (meta?.page ?? page) < (meta?.total_pages ?? 0),
+  };
 };
 
 /** GET /items/lookup — the scanner's exact path. `null` for a 404, never a throw. */

@@ -10,7 +10,9 @@ import {
   MLCommandList,
 } from 'src/design-system/primitives';
 
-import type { UbAsyncComboboxOption } from './UbAsyncCombobox';
+import { UbLoadMore } from '../UbLoadMore';
+
+import type { UbAsyncComboboxOption, UbAsyncComboboxPaging } from './UbAsyncCombobox';
 
 /**
  * The search list inside an open `UbAsyncCombobox` — cmdk and its rows. Its
@@ -31,6 +33,7 @@ export interface UbAsyncComboboxPanelProps {
   readonly trimmed: string;
   readonly createLabel?: (query: string) => string;
   readonly onCreate: () => void;
+  readonly paging?: UbAsyncComboboxPaging;
 }
 
 export function UbAsyncComboboxPanel({
@@ -46,6 +49,7 @@ export function UbAsyncComboboxPanel({
   trimmed,
   createLabel,
   onCreate,
+  paging,
 }: UbAsyncComboboxPanelProps): React.JSX.Element {
   return (
     <MLCommand shouldFilter={false}>
@@ -61,7 +65,7 @@ export function UbAsyncComboboxPanel({
         className="ds-body-base-regular h-10"
       />
       <MLCommandList className="max-h-[min(18rem,55dvh)]">
-        {loading && (
+        {loading && options.length === 0 && (
           <div className="ds-body-sm flex items-center gap-2 px-3 py-3 text-text-tertiary">
             <Loader2 aria-hidden className="h-4 w-4 animate-spin" />
             {loadingLabel}
@@ -98,6 +102,14 @@ export function UbAsyncComboboxPanel({
             </MLCommandItem>
           )}
         </MLCommandGroup>
+        {paging?.hasMore && options.length > 0 && (
+          <UbLoadMore
+            onLoadMore={paging.onLoadMore}
+            loading={paging.loadingMore}
+            loadingLabel={paging.loadingMoreLabel}
+            moreLabel={paging.showMoreLabel}
+          />
+        )}
       </MLCommandList>
     </MLCommand>
   );
