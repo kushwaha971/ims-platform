@@ -49,6 +49,11 @@ export interface UbRankedBarsProps {
    * ICU plural lives in the caller's message — a `Ub*` never calls `t()`.
    */
   readonly moreLabel?: string;
+  /**
+   * How a row's figure reads. Rupees by default; a ranking by QUANTITY ("12
+   * KG") passes its own, since the bar length is the same arithmetic either way.
+   */
+  readonly formatValue?: (party: UbRankedParty) => string;
   readonly className?: string;
 }
 
@@ -57,6 +62,7 @@ function UbRankedBarsBase({
   labelledBy,
   describedBy,
   moreLabel,
+  formatValue,
   className,
 }: Readonly<UbRankedBarsProps>) {
   const [container, width] = useChartWidth();
@@ -69,7 +75,7 @@ function UbRankedBarsBase({
 
     return shown.map((party, index) => {
       const value = values[index] ?? 0;
-      const formatted = formatInr(party.amount);
+      const formatted = formatValue ? formatValue(party) : formatInr(party.amount);
       return {
         key: party.id,
         label: party.name,
@@ -80,7 +86,7 @@ function UbRankedBarsBase({
         length: barLength(value, axisMax, width),
       };
     });
-  }, [parties, width]);
+  }, [parties, width, formatValue]);
 
   const hasMore = parties.length > UB_RANKED_BARS_CAP && Boolean(moreLabel);
 

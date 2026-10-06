@@ -112,3 +112,15 @@ export const CHART_RESERVED_SERIES_TOKENS: readonly string[] = [
   'success-bright',
   'success-dim',
 ];
+
+/**
+ * **Up to three series side by side** (`UbGroupedBars`: sales, purchases and
+ * profit; money in against money out). Categorical, so HUES rather than a
+ * ramp: the accent for the first series, which is the one the owner reads
+ * first, `--viz-2` (secondary-400) for the second and `--viz-3` (violet) for
+ * the third. Neither is a ledger red or green —
+ * "money out" is not "you gave" — and the legend and table name both, so the
+ * colour is never the only carrier.
+ */
+export const CHART_PAIR_FILLS: readonly string[] = ['fill-accent', 'fill-viz-2', 'fill-viz-3'];
+export const CHART_PAIR_KEYS: readonly string[] = ['bg-accent', 'bg-viz-2', 'bg-viz-3'];

@@ -4,6 +4,7 @@ import { extname, join } from 'node:path';
 import { render } from '@testing-library/react';
 
 import { UbAgingBars } from './UbAgingBars';
+import { UbGroupedBars } from './UbGroupedBars';
 import { UbRankedBars } from './UbRankedBars';
 import { UbTrendArea } from './UbTrendArea';
 
@@ -67,12 +68,14 @@ describe('banned chart forms never enter the design system', () => {
     expect(sourceFiles(CHARTS_DIR).length).toBeGreaterThan(10);
   });
 
-  it('exports exactly the three approved chart forms', () => {
+  it('exports exactly the four approved chart forms', () => {
+    // The fourth (grouped columns) was the owner's decision on 6 Oct 2026. A
+    // fifth is a decision too, not a commit.
     const forms = Object.keys(charts)
       .filter((name) => name.startsWith('Ub'))
       .filter((name) => /Bars$|Area$/.test(name))
       .sort();
-    expect(forms).toEqual(['UbAgingBars', 'UbRankedBars', 'UbTrendArea']);
+    expect(forms).toEqual(['UbAgingBars', 'UbGroupedBars', 'UbRankedBars', 'UbTrendArea']);
   });
 });
 
@@ -98,6 +101,24 @@ const CHART_CASES = [
   ['UbAgingBars', <UbAgingBars key="a" buckets={BUCKETS} labelledBy="t" describedBy="d" />],
   ['UbTrendArea', <UbTrendArea key="t" points={POINTS} labelledBy="t" describedBy="d" />],
   ['UbRankedBars', <UbRankedBars key="r" parties={PARTIES} labelledBy="t" describedBy="d" />],
+  [
+    'UbGroupedBars',
+    <UbGroupedBars
+      key="g"
+      series={[
+        { key: 'sales', label: 'Sales' },
+        { key: 'purchases', label: 'Purchases' },
+      ]}
+      groups={POINTS.map((point) => ({
+        key: point.date,
+        label: point.date.slice(8),
+        longLabel: point.date,
+        values: [point.amount, '5000.00'],
+      }))}
+      labelledBy="t"
+      describedBy="d"
+    />,
+  ],
 ] as const;
 
 describe('rendered geometry cannot be a pie, a donut or a gauge', () => {

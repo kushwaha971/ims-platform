@@ -157,6 +157,42 @@ export const nearestPointIndex = (pointerX: number, points: readonly ChartPoint[
   });
   return best;
 };
+/**
+ * A COLUMN: rounded at the data end, square on the baseline — the vertical twin
+ * of `horizontalBarPath`, for `UbGroupedBars`. `down` draws a negative figure
+ * (a loss) hanging from the zero line, rounded at its BOTTOM end.
+ */
+export const verticalBarPath = (
+  { x, y, width, height, radius = CHART_BAR_RADIUS }: RoundedBarSpec,
+  down = false
+): string => {
+  const w = Math.max(0, width);
+  const h = Math.max(0, height);
+  if (w === 0 || h === 0) return '';
+  const r = Math.max(0, Math.min(radius, w / 2, h));
+  const right = x + w;
+  const bottom = y + h;
+  if (down) {
+    return [
+      `M ${x} ${y}`,
+      `L ${right} ${y}`,
+      `L ${right} ${bottom - r}`,
+      `Q ${right} ${bottom} ${right - r} ${bottom}`,
+      `L ${x + r} ${bottom}`,
+      `Q ${x} ${bottom} ${x} ${bottom - r}`,
+      'Z',
+    ].join(' ');
+  }
+  return [
+    `M ${x} ${bottom}`,
+    `L ${x} ${y + r}`,
+    `Q ${x} ${y} ${x + r} ${y}`,
+    `L ${right - r} ${y}`,
+    `Q ${right} ${y} ${right} ${y + r}`,
+    `L ${right} ${bottom}`,
+    'Z',
+  ].join(' ');
+};
 
 /**
  * `"2026-09-19"` → `"19/09/2026"`. India writes dd/mm/yyyy, and a chart axis

@@ -9,9 +9,10 @@
  *
  * What is here, and what is deliberately NOT:
  *
- *  - Three chart forms, and only three. Receivables aging (ordered bars on a
+ *  - Four chart forms, and only four. Receivables aging (ordered bars on a
  *    sequential ramp), collections over time (one area), who owes most (ranked
- *    bars with emphasis). Everything else a ledger dashboard shows is a stat
+ *    bars with emphasis), and — added 6 Oct 2026 on the owner's call, for the
+ *    dashboard's sale graph — two figures per period as grouped columns. Everything else a ledger dashboard shows is a stat
  *    tile, a meter (`UbProgress`) or a table.
  *  - **No pie, no donut, no gauge, no dual-axis chart** — banned product-wide.
  *    A ratio against a limit is `UbProgress`; a category split is a horizontal
@@ -35,6 +36,9 @@ export type { UbChartTableProps } from './UbChartTable';
 export { UbChartTooltip } from './UbChartTooltip';
 export type { UbChartTooltipProps } from './UbChartTooltip';
 
+export { UbGroupedBars } from './UbGroupedBars';
+export type { UbGroupedBarsGroup, UbGroupedBarsProps, UbGroupedBarsSeries } from './UbGroupedBars';
+
 export { UB_RANKED_BARS_CAP, UbRankedBars } from './UbRankedBars';
 export type { UbRankedBarsProps } from './UbRankedBars';
 
@@ -57,6 +61,8 @@ export {
   CHART_AGING_RAMP,
   CHART_EMPHASIS_FILL,
   CHART_EMPHASIS_KEY,
+  CHART_PAIR_FILLS,
+  CHART_PAIR_KEYS,
   CHART_RECESSIVE_FILL,
   CHART_RECESSIVE_KEY,
   CHART_RESERVED_SERIES_TOKENS,

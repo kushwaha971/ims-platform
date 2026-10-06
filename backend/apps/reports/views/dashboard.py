@@ -124,3 +124,68 @@ class DashboardView(TenantScopeMixin, APIView):
         )
         response["Cache-Control"] = "private, no-store"
         return response
+
+
+class DashboardChartsView(TenantScopeMixin, APIView):
+    """`GET /reports/dashboard/charts` — the dashboard's graphs.
+
+    `range` is a preset (7d, 30d, month, last_month, quarter, fy, last_fy, 12m,
+    all) or `custom` with `from`/`to`; `group` is day, week, month or year and
+    defaults to what suits the range; `top_by` is `value` or `qty`. Every series
+    is trimmed per reader by `dashboard_charts` itself: absent, never zero (§10).
+    A range that would draw more than `MAX_BUCKETS` bars is a 400 that names the
+    grouping control, not a thousand slivers.
+    """
+
+    permission_classes = [
+        IsAuthenticated,
+        ModuleEnabled(ModuleCode.REPORTS),
+        HasPermission("reports.basic.read"),
+    ]
+    throttle_classes = [ScopedUserRateThrottle]
+
+    def get(self, request: Any, *args: Any, **kwargs: Any) -> Any:
+        from apps.common.exceptions import ValidationFailed
+        from apps.reports.selectors.dashboard_charts import (
+            DEFAULT_RANGE,
+            GROUPS,
+            RANGES,
+            ChartRequestError,
+            dashboard_charts,
+        )
+
+        params = request.query_params
+        range_ = params.get("range") or DEFAULT_RANGE
+        if range_ not in RANGES:
+            raise ValidationFailed({"range": [f"Choose one of {', '.join(RANGES)}."]})
+        group = params.get("group") or None
+        if group is not None and group not in GROUPS:
+            raise ValidationFailed({"group": [f"Choose one of {', '.join(GROUPS)}."]})
+        top_by = params.get("top_by") or "value"
+        if top_by not in ("value", "qty"):
+            raise ValidationFailed({"top_by": ["Choose value or qty."]})
+        dates: dict[str, Any] = {}
+        for name in ("from", "to"):
+            raw = params.get(name)
+            try:
+                dates[name] = date.fromisoformat(raw) if raw else None
+            except ValueError:
+                raise ValidationFailed({name: ["Enter a date as YYYY-MM-DD."]}) from None
+        tenant = self.get_tenant()
+        try:
+            body = dashboard_charts(
+                tenant=tenant,
+                today=tenant_today(tenant),
+                range_=range_,
+                group=group,
+                granted=granted_permissions(tenant),
+                modules=frozenset(tenant.enabled_modules or ()),
+                date_from=dates["from"],
+                date_to=dates["to"],
+                top_by=top_by,
+            )
+        except ChartRequestError as error:
+            raise ValidationFailed({error.field: [str(error)]}) from None
+        response = StandardResponse.ok(body)
+        response["Cache-Control"] = "private, no-store"
+        return response

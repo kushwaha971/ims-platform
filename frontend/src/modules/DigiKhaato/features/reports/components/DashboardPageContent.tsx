@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 
 import { BellRing, FilePlus, RefreshCw, ShoppingCart } from 'lucide-react';
@@ -34,6 +35,13 @@ import {
 import { DashboardModuleSections } from './DashboardModuleSections';
 import { DashboardTiles } from './DashboardTiles';
 import { ReportStateBody } from './ReportStateBody';
+
+/* The graphs arrive after the tiles: a landing screen waits for nothing it
+   does not need to answer "what do I collect today". */
+const DashboardChartsLazy = dynamic(
+  () => import('./DashboardCharts').then((module) => module.DashboardCharts),
+  { ssr: false }
+);
 
 /**
  * RPT-01 — `/dashboard`, the landing screen: "what do I have to collect, what
@@ -177,7 +185,10 @@ export function DashboardPageContent(): React.JSX.Element {
                   t={t}
                 />
               ) : (
-                <DashboardTiles tiles={data.tiles} t={t} />
+                <>
+                  <DashboardTiles tiles={data.tiles} t={t} />
+                  <DashboardChartsLazy refreshKey={data.generatedAt} />
+                </>
               )}
 
               <UbGrid columns={{ base: 1, lg: 2 }} gap={4}>

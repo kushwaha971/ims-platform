@@ -28,6 +28,9 @@ import type { DashboardData } from '../types/reports.types';
  * empty book; and the refresh icon asks the server to recompute.
  */
 jest.mock('../api/dashboardService');
+// The graphs have their own read and their own suite (DashboardCharts.test);
+// here they would be a second, unmocked request on every render.
+jest.mock('./DashboardCharts', () => ({ DashboardCharts: () => null }));
 
 const mockPush = jest.fn();
 const mockReplace = jest.fn();

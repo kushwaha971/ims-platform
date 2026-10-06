@@ -702,7 +702,13 @@
   "The bill editor gained a schema. Imported statically it cost the editor routes",
   "+17.9 KB gz (Yup and the resolver, on the counter screen); it now loads on the",
   "first validation through `lazyInvoiceResolver`, and what remains is the resolver",
-  "shim, the payment-row checks and the messages. Raised by measured + 0.5."
+  "shim, the payment-row checks and the messages. Raised by measured + 0.5.",
+  "",
+  "── 6 Oct 2026: dashboard graphs ───────────────────────────────────────────",
+  "A fourth chart form (UbGroupedBars) joined the charts barrel, which the two",
+  "registers and the design-system page share (+0.2 KB). The dashboard itself",
+  "did not move: its charts block is dynamic(). The design-system page also gained 0.1 KB of first load (three series, losses).",
+  "Raised by measured + 0.5."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -1310,8 +1316,8 @@
    "firstLoad": 322
   },
   "/design-system": {
-   "route": 103,
-   "firstLoad": 338
+   "route": 104,
+   "firstLoad": 339
   },
   "/settings/team": {
    "route": 78,
@@ -1462,12 +1468,12 @@
    "firstLoad": 335
   },
   "/reports/purchase-register": {
-   "route": 98,
-   "firstLoad": 333
+   "route": 99,
+   "firstLoad": 334
   },
   "/reports/sales-register": {
-   "route": 98,
-   "firstLoad": 333
+   "route": 99,
+   "firstLoad": 334
   },
   "/login": {
    "route": 56,
