@@ -189,3 +189,56 @@ class DashboardChartsView(TenantScopeMixin, APIView):
         response = StandardResponse.ok(body)
         response["Cache-Control"] = "private, no-store"
         return response
+
+
+class ItemTradeView(TenantScopeMixin, APIView):
+    """`GET /reports/items/{id}/trade?side=sales|purchases[&from=&to=]` — the item page's
+    Sales and Purchases tabs: by party, the latest lines and the totals.
+
+    Each side is the side's own read permission (a cashier who may not read
+    purchase bills does not learn what the shop pays); margin is
+    `reports.financial.read`'s and is absent, never zero, without it.
+    """
+
+    permission_classes = [
+        IsAuthenticated,
+        ModuleEnabled(ModuleCode.INVENTORY),
+        HasPermission("inventory.item.read"),
+    ]
+    throttle_classes = [ScopedUserRateThrottle]
+
+    def get(self, request: Any, item_id: Any = None, *args: Any, **kwargs: Any) -> Any:
+        from rest_framework.exceptions import NotFound, PermissionDenied
+
+        from apps.common.exceptions import ValidationFailed
+        from apps.inventory.models import Item
+        from apps.reports.selectors.item_trade import item_trade
+
+        side = request.query_params.get("side") or "sales"
+        if side not in ("sales", "purchases"):
+            raise ValidationFailed({"side": ["Choose sales or purchases."]})
+        tenant = self.get_tenant()
+        granted = granted_permissions(tenant)
+        needed = "sales.invoice.read" if side == "sales" else "purchases.bill.read"
+        if needed not in granted:
+            raise PermissionDenied("You may not read these documents.")
+        if not Item.objects.filter(tenant=tenant, pk=item_id).exists():
+            raise NotFound("No such item.")
+        dates: dict[str, Any] = {}
+        for name in ("from", "to"):
+            raw = request.query_params.get(name)
+            try:
+                dates[name] = date.fromisoformat(raw) if raw else None
+            except ValueError:
+                raise ValidationFailed({name: ["Enter a date as YYYY-MM-DD."]}) from None
+        body = item_trade(
+            tenant=tenant,
+            item_id=item_id,
+            side=side,
+            with_margin="reports.financial.read" in granted,
+            date_from=dates["from"],
+            date_to=dates["to"],
+        )
+        response = StandardResponse.ok(body)
+        response["Cache-Control"] = "private, no-store"
+        return response

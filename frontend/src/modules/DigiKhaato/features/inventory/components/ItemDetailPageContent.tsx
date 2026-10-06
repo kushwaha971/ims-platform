@@ -21,8 +21,10 @@ import {
   UbSelect,
   UbStack,
   UbStatusBadge,
+  UbTabs,
   UbText,
 } from 'src/design-system';
+import { usePermissions } from 'src/hooks/usePermissions';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { formatBusinessDate } from 'src/utils/dates';
 import { formatInr } from 'src/utils/money';
@@ -44,10 +46,18 @@ const StockAdjustmentDrawer = dynamic(
   () => import('./StockAdjustmentDrawer').then((m) => m.StockAdjustmentDrawer),
   { ssr: false }
 );
+/** The Sales and Purchases tabs load with the tap that opens them: +7.7 KB
+ * on the route chunk otherwise, paid by everyone who opens an item to read
+ * its stock. */
+const ItemTradePanel = dynamic(() => import('./ItemTradePanel').then((m) => m.ItemTradePanel), {
+  ssr: false,
+});
 const AdjustmentDetailDialog = dynamic(
   () => import('./AdjustmentDetailDialog').then((m) => m.AdjustmentDetailDialog),
   { ssr: false }
 );
+
+type ItemTab = 'movements' | 'sales' | 'purchases';
 
 const TYPE_FILTERS: readonly (MovementType | 'all')[] = [
   'all',
@@ -73,6 +83,8 @@ export function ItemDetailPageContent({ id }: Readonly<{ id: string }>): React.J
   const [confirm, setConfirm] = useState<'archive' | 'restore' | null>(null);
   const [busy, setBusy] = useState(false);
   const { item, can } = detail;
+  const perms = usePermissions();
+  const [tab, setTab] = useState<ItemTab | null>(null);
 
   const typeOptions = useMemo(
     () =>
@@ -111,6 +123,59 @@ export function ItemDetailPageContent({ id }: Readonly<{ id: string }>): React.J
   const tracked = item.trackStock && item.itemType === 'goods';
   const stock = item.stock[0];
   const unit = item.unit.code;
+
+  const showMovements = tracked && can.stock;
+  const tabs = [
+    ...(showMovements ? [{ value: 'movements' as const, label: t('items.detail.movements') }] : []),
+    ...(perms.hasModule('sales') && perms.can('sales.invoice.read')
+      ? [{ value: 'sales' as const, label: t('items.trade.tab.sales') }]
+      : []),
+    ...(perms.hasModule('purchases') && perms.can('purchases.bill.read')
+      ? [{ value: 'purchases' as const, label: t('items.trade.tab.purchases') }]
+      : []),
+  ];
+  const active: ItemTab =
+    tab && tabs.some((x) => x.value === tab) ? tab : (tabs[0]?.value ?? 'movements');
+  const typeSelect = (
+    <UbSelect
+      aria-label={t('items.movements.filter.type')}
+      value={detail.filters.type[0] ?? 'all'}
+      onChange={(value) =>
+        detail.setFilters({
+          ...detail.filters,
+          type: value === 'all' ? [] : [value as MovementType],
+        })
+      }
+      options={typeOptions}
+      className="w-44"
+    />
+  );
+  const movementsSection = (
+    <UbStack gap={3}>
+      {tabs.length > 1 ? (
+        <UbStack direction="row" justify="end">
+          {typeSelect}
+        </UbStack>
+      ) : (
+        <UbSectionHeading title={t('items.detail.movements')} aside={typeSelect} />
+      )}
+      <ItemMovementList
+        movements={detail.movements}
+        unitCode={unit}
+        status={detail.movementsStatus}
+        hasMore={detail.hasMore}
+        onLoadMore={detail.loadMore}
+        onOpenSource={(sourceId) => adjustment.view(sourceId)}
+        emptyAction={
+          can.adjust && !archived ? (
+            <UbButton variant="secondary" onClick={() => adjustment.openFor([item])}>
+              {t('items.detail.adjust')}
+            </UbButton>
+          ) : undefined
+        }
+      />
+    </UbStack>
+  );
 
   const doConfirm = async () => {
     setBusy(true);
@@ -284,41 +349,21 @@ export function ItemDetailPageContent({ id }: Readonly<{ id: string }>): React.J
           </UbPanel>
         </UbGrid>
 
-        {tracked && can.stock && (
-          <UbStack gap={3}>
-            <UbSectionHeading
-              title={t('items.detail.movements')}
-              aside={
-                <UbSelect
-                  aria-label={t('items.movements.filter.type')}
-                  value={detail.filters.type[0] ?? 'all'}
-                  onChange={(value) =>
-                    detail.setFilters({
-                      ...detail.filters,
-                      type: value === 'all' ? [] : [value as MovementType],
-                    })
-                  }
-                  options={typeOptions}
-                  className="w-44"
-                />
-              }
-            />
-            <ItemMovementList
-              movements={detail.movements}
-              unitCode={unit}
-              status={detail.movementsStatus}
-              hasMore={detail.hasMore}
-              onLoadMore={detail.loadMore}
-              onOpenSource={(sourceId) => adjustment.view(sourceId)}
-              emptyAction={
-                can.adjust && !archived ? (
-                  <UbButton variant="secondary" onClick={() => adjustment.openFor([item])}>
-                    {t('items.detail.adjust')}
-                  </UbButton>
-                ) : undefined
-              }
-            />
-          </UbStack>
+        {tabs.length > 1 ? (
+          <UbTabs<ItemTab>
+            value={active}
+            onValueChange={setTab}
+            tabs={tabs}
+            ariaLabel={t('items.trade.tabs')}
+            layout="fit"
+          >
+            {active === 'movements' && movementsSection}
+            {active !== 'movements' && (
+              <ItemTradePanel key={active} itemId={item.id} side={active} unitCode={unit} />
+            )}
+          </UbTabs>
+        ) : (
+          showMovements && movementsSection
         )}
       </UbStack>
 
