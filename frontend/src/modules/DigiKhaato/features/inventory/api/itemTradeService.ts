@@ -135,3 +135,46 @@ export const getItemTrade = async (
     },
   };
 };
+
+/** `GET /reports/items/{id}/last-rate` — price memory: the latest bill with this party. */
+export interface LastRate {
+  readonly rate: string;
+  readonly taxInclusive: boolean;
+  readonly unitCode: string;
+  readonly qty: string;
+  readonly document: { readonly id: string; readonly number: string | null; readonly date: string };
+}
+
+interface LastRateWire {
+  readonly data: {
+    readonly rate: string;
+    readonly tax_inclusive: boolean;
+    readonly unit_code: string;
+    readonly qty: string;
+    readonly document: LastRate['document'];
+  } | null;
+}
+
+export const getLastRate = async (
+  itemId: string,
+  partyId: string,
+  side: TradeSide,
+  signal?: AbortSignal
+): Promise<LastRate | null> => {
+  const params = toQueryString({ side, party: partyId });
+  const response = await api.get<LastRateWire>(
+    `${API_PATHS.REPORT_ITEM_LAST_RATE(itemId)}${params}`,
+    // A hint, not the bill: if it cannot be read the line is still writable.
+    ubConfig({ signal, suppressErrorSnackbar: true })
+  );
+  const data = response.data.data;
+  return data
+    ? {
+        rate: data.rate,
+        taxInclusive: data.tax_inclusive,
+        unitCode: data.unit_code,
+        qty: data.qty,
+        document: data.document,
+      }
+    : null;
+};

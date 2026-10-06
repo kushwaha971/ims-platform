@@ -214,3 +214,41 @@ def item_trade(
         )
         totals["uncosted_lines"] = totals_row["uncosted"]
     return {"side": side, "by_party": by_party, "lines": recent, "totals": totals}
+
+
+def last_rate(
+    *, tenant: Any, item_id: Any, party_id: Any, side: str, exclude: Any = None
+) -> dict[str, Any] | None:
+    """`GET /reports/items/{id}/last-rate?side=&party=` — price memory (Shop gap §1.5).
+
+    The rate on the latest issued bill of this item TO this customer, or FROM
+    this supplier: what a merchant otherwise looks up in last month's carbon
+    copy before writing the next one. Drafts and voids are not prices anybody
+    agreed to. `exclude` leaves out the bill being edited, which would
+    otherwise answer with its own rate.
+    """
+    sales = side == "sales"
+    lines = (_sales if sales else _purchases)(tenant, item_id, None, None).filter(
+        document__party_id=party_id
+    )
+    if exclude:
+        lines = lines.exclude(document_id=exclude)
+    line = (
+        lines.select_related("document")
+        .order_by("-document__document_date", "-document__created_at", "-line_no")
+        .first()
+    )
+    if line is None:
+        return None
+    doc = line.document
+    return {
+        "rate": _money(line.unit_price if sales else line.unit_cost),
+        "tax_inclusive": bool(line.tax_inclusive) if sales else False,
+        "unit_code": line.unit_code,
+        "qty": _qty(line.qty),
+        "document": {
+            "id": str(doc.id),
+            "number": doc.number,
+            "date": doc.document_date.isoformat(),
+        },
+    }

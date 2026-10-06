@@ -10,7 +10,12 @@ from __future__ import annotations
 from django.urls import path, re_path
 
 from apps.reports.views.aging import PayablesAgingView, ReceivablesAgingView
-from apps.reports.views.dashboard import DashboardChartsView, DashboardView, ItemTradeView
+from apps.reports.views.dashboard import (
+    DashboardChartsView,
+    DashboardView,
+    ItemLastRateView,
+    ItemTradeView,
+)
 from apps.reports.views.day_book import DayBookView
 from apps.reports.views.exports import ExportDetailView, ExportDownloadView
 from apps.reports.views.gst import GstSummaryView
@@ -33,6 +38,9 @@ urlpatterns = [
     path("dashboard", DashboardView.as_view(), name="report-dashboard"),
     path("dashboard/charts", DashboardChartsView.as_view(), name="report-dashboard-charts"),
     path("items/<uuid:item_id>/trade", ItemTradeView.as_view(), name="report-item-trade"),
+    path(
+        "items/<uuid:item_id>/last-rate", ItemLastRateView.as_view(), name="report-item-last-rate"
+    ),
     path("day-book", DayBookView.as_view(), name="report-day-book"),
     path("receivables-aging", ReceivablesAgingView.as_view(), name="report-receivables-aging"),
     path("payables-aging", PayablesAgingView.as_view(), name="report-payables-aging"),

@@ -1,4 +1,8 @@
 {
+  "items.lastRate.bought": "{party} से पिछली बार {date} को {rate} पर खरीदा",
+  "items.lastRate.inclusive": "(GST सहित)",
+  "items.lastRate.sold": "{party} को पिछली बार {date} को {rate} पर बेचा",
+  "items.lastRate.use": "यही रेट लगाएँ",
   "items.list.searchPlaceholder": "नाम, SKU खोजें या बारकोड स्कैन करें",
   "items.scan.create": "आइटम बनाएँ",
   "items.scan.notFound": "बारकोड {code} का कोई आइटम नहीं"

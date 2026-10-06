@@ -528,7 +528,9 @@ def _query_params(tenant: Any, query: DayBookQuery) -> dict:
 
 def count_rows(*, tenant: Any, query: DayBookQuery) -> int:
     """The filtered row count — the export's sync/async decision (RPT-08 BR-3)."""
-    sql = f"WITH {_cte(query.sources)} SELECT COUNT(*) FROM rows WHERE {_OUTER_FILTERS}"  # noqa: S608
+    sql = (
+        f"WITH {_cte(query.sources)} SELECT COUNT(*) FROM rows WHERE {_OUTER_FILTERS}"  # noqa: S608
+    )
     return int(_fetch(sql, _query_params(tenant, query))[0][0])
 
 

@@ -195,6 +195,7 @@ export const API_PATHS = {
   REPORT_DASHBOARD: '/reports/dashboard',
   REPORT_DASHBOARD_CHARTS: '/reports/dashboard/charts',
   REPORT_ITEM_TRADE: (id: string) => `/reports/items/${seg(id)}/trade`,
+  REPORT_ITEM_LAST_RATE: (id: string) => `/reports/items/${seg(id)}/last-rate`,
   /** A10 — the reports modules registered (`apps.reports.registry`). */
   REPORTS: '/reports',
   REPORT_DAY_BOOK: '/reports/day-book',

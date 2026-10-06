@@ -726,7 +726,8 @@
   "(filterPanels via deferredModule), which brought them to 0.1–1.8 KB.",
   "Items and Stock summary dropped their selects and combobox for the Filters",
   "sheet; the combobox left a shared chunk and the editors and onboarding, which",
-  "still use it, now carry it themselves (+0.1–1.1 KB). Raised by measured + 0.5."
+  "still use it, now carry it themselves (+0.1–1.1 KB). Raised by measured + 0.5.",
+  "2026-10-06 — /purchases/bills/new 144 → 145 KB route: price memory (Shop gap §1.5), the \"Last bought from … at …\" note under each bill line with its one-tap Use. 0.1 KB over; the request itself is suppressed-snackbar and cached per item and party."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -1470,7 +1471,7 @@
    "firstLoad": 330
   },
   "/purchases/bills/new": {
-   "route": 144,
+   "route": 145,
    "firstLoad": 379
   },
   "/reports": {

@@ -203,3 +203,78 @@ def test_the_endpoint_gates_each_side_by_its_own_document_permission(
     sales = staff.get(url, {"side": "sales"})
     assert sales.status_code == 200, sales.content
     assert "margin" not in sales.json()["data"]["totals"]
+
+
+# ── Price memory ─────────────────────────────────────────────────────────────
+
+LAST = "v1:report-item-last-rate"
+
+
+def test_last_rate_is_the_latest_issued_bill_with_this_party(tenant: Any) -> None:
+    from apps.reports.selectors.item_trade import last_rate
+
+    rice = b.stocked_item(tenant, "Rice", on_hand=100)
+    ramesh, suresh = b.party(tenant, "Ramesh"), b.party(tenant, "Suresh")
+    _sold(
+        b.sale(tenant, TODAY - dt.timedelta(days=9), "440", party=ramesh),
+        rice,
+        qty="10",
+        value="440",
+        cost="40",
+    )
+    latest = b.sale(tenant, TODAY - dt.timedelta(days=2), "460", party=ramesh)
+    _sold(latest, rice, qty="10", value="460", cost="40")
+    _sold(
+        b.sale(tenant, TODAY, "999", party=ramesh, status="void"),
+        rice,
+        qty="1",
+        value="999",
+        cost="1",
+    )
+    _sold(
+        b.sale(tenant, TODAY, "999", party=ramesh, status="draft"),
+        rice,
+        qty="1",
+        value="999",
+        cost="1",
+    )
+    _sold(b.sale(tenant, TODAY, "500", party=suresh), rice, qty="10", value="500", cost="40")
+
+    got = last_rate(tenant=tenant, item_id=rice.id, party_id=ramesh.id, side="sales")
+    assert got is not None
+    assert (got["rate"], got["document"]["id"], got["tax_inclusive"]) == (
+        "46.00",
+        str(latest.id),
+        False,
+    )
+    # Editing that very bill must not answer with its own rate.
+    older = last_rate(
+        tenant=tenant, item_id=rice.id, party_id=ramesh.id, side="sales", exclude=latest.id
+    )
+    assert older is not None and older["rate"] == "44.00"
+    stranger = b.party(tenant, "New")
+    assert last_rate(tenant=tenant, item_id=rice.id, party_id=stranger.id, side="sales") is None
+
+    agro = b.party(tenant, "Agro")
+    _bought(b.purchase(tenant, TODAY, "380", party=agro), rice, qty="10", cost="38")
+    bought = last_rate(tenant=tenant, item_id=rice.id, party_id=agro.id, side="purchases")
+    assert bought is not None and bought["rate"] == "38.00"
+
+
+def test_last_rate_endpoint_validates_and_allows_a_writer(tenant: Any, api_as: Any) -> None:
+    rice = b.stocked_item(tenant, "Rice", on_hand=10)
+    ramesh = b.party(tenant)
+    _sold(b.sale(tenant, TODAY, "100", party=ramesh), rice, qty="2", value="100", cost="40")
+    owner, _ = api_as(tenant)
+    url = reverse(LAST, kwargs={"item_id": rice.id})
+    got = owner.get(url, {"side": "sales", "party": str(ramesh.id)})
+    assert got.status_code == 200, got.content
+    assert got.json()["data"]["rate"] == "50.00"
+    assert owner.get(url, {"side": "sales"}).status_code == 400
+    assert owner.get(url, {"party": "nope"}).status_code == 400
+    assert owner.get(url, {"side": "x", "party": str(ramesh.id)}).status_code == 400
+
+    staff, member = api_as(tenant, role="staff")
+    member.permissions_override = {"deny": ["purchases.bill.read", "purchases.bill.write"]}
+    member.save(update_fields=["permissions_override"])
+    assert staff.get(url, {"side": "purchases", "party": str(ramesh.id)}).status_code == 403

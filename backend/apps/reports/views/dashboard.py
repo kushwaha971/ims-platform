@@ -242,3 +242,56 @@ class ItemTradeView(TenantScopeMixin, APIView):
         response = StandardResponse.ok(body)
         response["Cache-Control"] = "private, no-store"
         return response
+
+
+class ItemLastRateView(TenantScopeMixin, APIView):
+    """`GET /reports/items/{id}/last-rate?side=sales|purchases&party=<id>[&exclude=<doc>]`
+    — the rate on the latest bill of this item with this party, for the line
+    editor's "Last sold to … at …" note. `data` is null when there is none.
+
+    Readable by whoever may read OR write that side's documents: the cashier
+    writing an invoice is the person this exists for.
+    """
+
+    permission_classes = [
+        IsAuthenticated,
+        ModuleEnabled(ModuleCode.INVENTORY),
+        HasPermission("inventory.item.read"),
+    ]
+    throttle_classes = [ScopedUserRateThrottle]
+
+    def get(self, request: Any, item_id: Any = None, *args: Any, **kwargs: Any) -> Any:
+        import uuid
+
+        from rest_framework.exceptions import PermissionDenied
+
+        from apps.common.exceptions import ValidationFailed
+        from apps.reports.selectors.item_trade import last_rate
+
+        side = request.query_params.get("side") or "sales"
+        if side not in ("sales", "purchases"):
+            raise ValidationFailed({"side": ["Choose sales or purchases."]})
+        ids: dict[str, Any] = {}
+        for name in ("party", "exclude"):
+            raw = request.query_params.get(name)
+            try:
+                ids[name] = uuid.UUID(raw) if raw else None
+            except ValueError:
+                raise ValidationFailed({name: ["Not a valid id."]}) from None
+        if ids["party"] is None:
+            raise ValidationFailed({"party": ["Choose a party."]})
+        tenant = self.get_tenant()
+        granted = granted_permissions(tenant)
+        prefix = "sales.invoice" if side == "sales" else "purchases.bill"
+        if f"{prefix}.read" not in granted and f"{prefix}.write" not in granted:
+            raise PermissionDenied("You may not read these documents.")
+        body = last_rate(
+            tenant=tenant,
+            item_id=item_id,
+            party_id=ids["party"],
+            side=side,
+            exclude=ids["exclude"],
+        )
+        response = StandardResponse.ok(body)
+        response["Cache-Control"] = "private, no-store"
+        return response

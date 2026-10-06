@@ -21,6 +21,7 @@ import { formatAmount } from 'src/utils/money';
 import { comboPaging } from 'src/utils/searchPaging';
 import { taxRateLabel } from 'src/utils/taxRateLabel';
 
+import { LastRateNote } from '../../inventory/components/LastRateNote';
 import { useItemSearch } from '../../inventory/hooks/useItemSearch';
 import { ratePlaces } from '../../sales/view-model/invoiceForm';
 import { PURCHASE_MAX_LINES } from '../constants/purchaseConstants';
@@ -118,6 +119,8 @@ export function PurchaseBillLinesSection({
   const { control, watch, setValue } = form;
   const fieldArray = useFieldArray({ control, name: 'lines', keyName: 'key' });
   const lines = watch('lines');
+  const partyId = watch('partyId');
+  const partyName = watch('partyName');
 
   // FR-3 — item defaults fill a line when the item is PICKED, never later.
   const pick = useCallback(
@@ -263,9 +266,23 @@ export function PurchaseBillLinesSection({
       if (!line) return null;
       const change = lastCostChange(line.unitCost, line.lastCost);
       const taxDiffers = !!line.itemTaxCode && line.itemTaxCode !== line.taxCode;
-      if (!change && !taxDiffers) return null;
+      const remember = !!line.itemId && !!partyId;
+      if (!change && !taxDiffers && !remember) return null;
       return (
         <UbStack gap={0}>
+          {/* Shop gap §1.5 — what this supplier charged for it last time. */}
+          {remember && (
+            <LastRateNote
+              itemId={line.itemId ?? ''}
+              partyId={partyId ?? ''}
+              partyName={partyName}
+              side="purchases"
+              current={line.unitCost}
+              onUse={(last) =>
+                setValue(`lines.${index}.unitCost`, last.rate, { shouldDirty: true })
+              }
+            />
+          )}
           {change && (
             <UbText variant="caption" tone="tertiary">
               {t('purchases.line.lastCost', {
@@ -282,7 +299,7 @@ export function PurchaseBillLinesSection({
         </UbStack>
       );
     },
-    [lines, t]
+    [lines, t, partyId, partyName, setValue]
   );
 
   return (

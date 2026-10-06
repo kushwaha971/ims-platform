@@ -76,6 +76,7 @@
     "imports.action.": "exports",
     "inventory.movement.type.": "movement",
     "items.list.searchPlaceholder": "itemPicker",
+    "items.lastRate.": "itemPicker",
     "items.scan.": "itemPicker",
     "ledger.entry.type.": "money",
     "ledger.mode.": "money",

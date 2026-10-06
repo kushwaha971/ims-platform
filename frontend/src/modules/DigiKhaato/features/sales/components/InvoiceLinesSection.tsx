@@ -21,6 +21,7 @@ import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import { formatAmount, formatInr } from 'src/utils/money';
 import { comboPaging } from 'src/utils/searchPaging';
 
+import { LastRateNote } from '../../inventory/components/LastRateNote';
 import { useItemSearch } from '../../inventory/hooks/useItemSearch';
 import {
   emptyLine,
@@ -118,6 +119,8 @@ export function InvoiceLinesSection({
   const { control, watch, setValue } = form;
   const fieldArray = useFieldArray({ control, name: 'lines', keyName: 'key' });
   const lines = watch('lines');
+  const partyId = watch('partyId');
+  const partyName = watch('partyName');
 
   // FR-15 — item defaults fill a line when the item is PICKED, never later.
   const pick = useCallback(
@@ -275,6 +278,29 @@ export function InvoiceLinesSection({
     [t, lines, disabled, pick, taxFree, taxOptions, preview, setValue]
   );
 
+  // Shop gap §1.5 — what this customer paid for this item last time.
+  const renderLineNote = useCallback(
+    (index: number) => {
+      const line = lines?.[index];
+      if (!line?.itemId || !partyId) return null;
+      return (
+        <LastRateNote
+          itemId={line.itemId}
+          partyId={partyId}
+          partyName={partyName}
+          side="sales"
+          current={line.unitPrice}
+          currentInclusive={line.taxInclusive}
+          onUse={(last) => {
+            setValue(`lines.${index}.unitPrice`, last.rate, { shouldDirty: true });
+            setValue(`lines.${index}.taxInclusive`, last.taxInclusive, { shouldDirty: true });
+          }}
+        />
+      );
+    },
+    [lines, partyId, partyName, setValue]
+  );
+
   return (
     <UbLineItemsEditor<InvoiceFormValues, 'lines'>
       control={control}
@@ -285,6 +311,7 @@ export function InvoiceLinesSection({
       maxLines={MAX_LINES}
       disabled={disabled}
       onSubmitShortcut={onSubmitShortcut}
+      renderLineNote={renderLineNote}
       labels={{
         addLine: t('sales.line.add'),
         removeLine: (n) => t('sales.line.remove', { n }),
