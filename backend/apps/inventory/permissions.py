@@ -41,3 +41,19 @@ AdjustmentPermissions = HasPermission(
 )
 
 StockReadPermissions = HasPermission("inventory.stock.read")
+
+#: Shop gap §1.6 — price lists. Reading a list (and a party's rates, which the
+#: bill editor asks for on every pick) is the item READ right; setting rates and
+#: putting a party on a list is pricing authority, the item WRITE right.
+PriceListPermissions = HasPermission(
+    {
+        "list": "inventory.item.read",
+        "rates": "inventory.item.read",
+        "for_party": "inventory.item.read",
+        "create": "inventory.item.write",
+        "partial_update": "inventory.item.write",
+        "destroy": "inventory.item.write",
+        "set_rate": "inventory.item.write",
+        "assign": "inventory.item.write",
+    }
+)

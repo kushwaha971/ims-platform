@@ -195,6 +195,12 @@ export const API_PATHS = {
   REPORT_DASHBOARD: '/reports/dashboard',
   REPORT_DASHBOARD_CHARTS: '/reports/dashboard/charts',
   REPORT_ITEM_TRADE: (id: string) => `/reports/items/${seg(id)}/trade`,
+  PRICE_LISTS: '/price-lists',
+  PRICE_LIST: (id: string) => `/price-lists/${seg(id)}`,
+  PRICE_LIST_RATES: (id: string) => `/price-lists/${seg(id)}/rates`,
+  PRICE_LIST_RATE: (id: string) => `/price-lists/${seg(id)}/rate`,
+  PRICE_LIST_ASSIGN: '/price-lists/assign',
+  PRICE_LIST_FOR_PARTY: '/price-lists/for-party',
   REPORT_ITEM_LAST_RATE: (id: string) => `/reports/items/${seg(id)}/last-rate`,
   /** A10 — the reports modules registered (`apps.reports.registry`). */
   REPORTS: '/reports',

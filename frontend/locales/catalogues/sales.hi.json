@@ -178,6 +178,7 @@
   "sales.line.itemPlaceholder": "आइटम खोजें या स्कैन करें",
   "sales.line.label": "पंक्ति {n}",
   "sales.line.max": "एक बिल में 100 पंक्तियाँ तक",
+  "sales.line.priceListRate": "{list} रेट",
   "sales.line.qty": "मात्रा",
   "sales.line.rate": "दर",
   "sales.line.ratePlaceholder": "0.00",

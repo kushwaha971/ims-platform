@@ -727,7 +727,8 @@
   "Items and Stock summary dropped their selects and combobox for the Filters",
   "sheet; the combobox left a shared chunk and the editors and onboarding, which",
   "still use it, now carry it themselves (+0.1–1.1 KB). Raised by measured + 0.5.",
-  "2026-10-06 — /purchases/bills/new 144 → 145 KB route: price memory (Shop gap §1.5), the \"Last bought from … at …\" note under each bill line with its one-tap Use. 0.1 KB over; the request itself is suppressed-snackbar and cached per item and party."
+  "2026-10-06 — /purchases/bills/new 144 → 145 KB route: price memory (Shop gap §1.5), the \"Last bought from … at …\" note under each bill line with its one-tap Use. 0.1 KB over; the request itself is suppressed-snackbar and cached per item and party.",
+  "2026-10-06 — price lists (Shop gap §1.6). Every route's first load +0.3 KB: one nav entry with its icon, the route constants and API paths the shell carries. /items/price-lists/[id] is new at 80 KB: it is the one screen with the item picker, and it is a settings page opened to set rates, not a read screen. The bill editors +0.2-0.4 KB for the price-list lookup on pick."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -1287,12 +1288,12 @@
    "firstLoad": 336
   },
   "/sales/invoices/new": {
-   "route": 139,
-   "firstLoad": 374
+   "route": 141,
+   "firstLoad": 376
   },
   "/sales/invoices/[id]/edit": {
-   "route": 139,
-   "firstLoad": 374
+   "route": 141,
+   "firstLoad": 376
   },
   "/sales/invoices": {
    "route": 98,
@@ -1399,8 +1400,8 @@
    "firstLoad": 344
   },
   "/items/[id]": {
-   "route": 98,
-   "firstLoad": 333
+   "route": 99,
+   "firstLoad": 334
   },
   "/stock/low": {
    "route": 64,
@@ -1440,7 +1441,7 @@
   },
   "/admin/partners": {
    "route": 27,
-   "firstLoad": 261
+   "firstLoad": 262
   },
   "/admin/health": {
    "route": 20,
@@ -1472,7 +1473,7 @@
   },
   "/purchases/bills/new": {
    "route": 145,
-   "firstLoad": 379
+   "firstLoad": 380
   },
   "/reports": {
    "route": 72,
@@ -1560,7 +1561,7 @@
   },
   "/reset-password": {
    "route": 51,
-   "firstLoad": 285
+   "firstLoad": 286
   },
   "/forgot-password": {
    "route": 50,
@@ -1592,7 +1593,7 @@
   },
   "/_not-found": {
    "route": 1,
-   "firstLoad": 235
+   "firstLoad": 236
   },
   "/library": {
    "route": 68,
@@ -1612,14 +1613,14 @@
   },
   "/lending": {
    "route": 62,
-   "firstLoad": 296
+   "firstLoad": 297
   },
   "/lending/loans/[loanId]": {
    "route": 58,
    "firstLoad": 293
   },
   "/lending/loans": {
-   "route": 58,
+   "route": 59,
    "firstLoad": 294
   },
   "/customers": {
@@ -1629,7 +1630,15 @@
   "/suppliers": {
    "route": 110,
    "firstLoad": 344
-  }
+  },
+  "/items/price-lists/[id]": {
+   "route": 80,
+   "firstLoad": 315
+  },
+  "/lending/messages": {},
+  "/lending/routes": {},
+  "/lending/borrowers": {},
+  "/items/price-lists": {}
  },
  "//ignoreRoutes": [
   "`_global-error` replaces the whole document, including the provider tree, so",

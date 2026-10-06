@@ -93,6 +93,15 @@ const LedgerEntryDrawerLazy = dynamic(
   { ssr: false }
 );
 
+/** Shop gap §1.6 — loaded only for a customer of a business with inventory. */
+const PartyPriceListControl = dynamic(
+  () =>
+    import('modules/DigiKhaato/features/inventory/components/PartyPriceListControl').then(
+      (m) => m.PartyPriceListControl
+    ),
+  { ssr: false }
+);
+
 /**
  * LED-02's drawer, lazily and for a sharper reason than the other two.
  *
@@ -314,6 +323,9 @@ export function PartyDetailPageContent({
     );
   }
 
+  // Shop gap §1.6 — price lists are for the customers a shop bills.
+  const showPriceList =
+    !!party && hasModule('inventory') && can('inventory.item.read') && shown.isCustomer;
   const infoPanel = party ? (
     <PartyInfoPanel
       t={t}
@@ -332,6 +344,14 @@ export function PartyDetailPageContent({
           disabled={isArchived || !partyForm.canWrite}
           formatted={party.collectionDate ? d(party.collectionDate) : null}
         />
+      }
+      priceListControl={
+        showPriceList ? (
+          <PartyPriceListControl
+            partyId={party.id}
+            canWrite={!isArchived && can('inventory.item.write')}
+          />
+        ) : undefined
       }
     />
   ) : (

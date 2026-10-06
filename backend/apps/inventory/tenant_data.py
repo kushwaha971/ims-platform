@@ -22,4 +22,8 @@ register(
     ),
     TenantTable("inventory.StockAdjustment", export_name="stock_adjustments.csv"),
     TenantTable("inventory.LowStockAlert"),
+    # Shop gap §1.6 — price lists, their pinned rates, and who is on which.
+    TenantTable("inventory.PriceList", export_name="price_lists.csv"),
+    TenantTable("inventory.PriceListRate", export_name="price_list_rates.csv"),
+    TenantTable("inventory.PriceListParty", export_name="price_list_parties.csv"),
 )

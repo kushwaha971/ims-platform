@@ -124,6 +124,12 @@ class AuditAction:
     ITEM_ARCHIVED = "item.archived"
     ITEM_RESTORED = "item.restored"
     CATEGORY_CREATED = "category.created"
+    # Shop gap §1.6 — price lists.
+    PRICE_LIST_CREATED = "price_list.created"
+    PRICE_LIST_UPDATED = "price_list.updated"
+    PRICE_LIST_DELETED = "price_list.deleted"
+    PRICE_LIST_RATE_SET = "price_list.rate_set"
+    PRICE_LIST_PARTY_SET = "price_list.party_set"
     UNIT_CREATED = "unit.created"
     STOCK_OPENING_POSTED = "stock.opening_posted"
     STOCK_ADJUSTMENT_POSTED = "stock.adjustment_posted"

@@ -178,6 +178,7 @@
   "sales.line.itemPlaceholder": "Search or scan an item",
   "sales.line.label": "Line {n}",
   "sales.line.max": "A bill can have up to 100 lines",
+  "sales.line.priceListRate": "{list} rate",
   "sales.line.qty": "Qty",
   "sales.line.rate": "Rate",
   "sales.line.ratePlaceholder": "0.00",

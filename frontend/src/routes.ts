@@ -64,6 +64,7 @@ export const ROUTES = {
    *  is of parties: the masters are part of keeping the catalogue, not a
    *  settings chore (and `/settings` is not built). */
   ITEM_MASTERS: '/items/masters',
+  ITEM_PRICE_LISTS: '/items/price-lists',
   /** INV-08 / INV-07. */
   STOCK_SUMMARY: '/stock/summary',
   STOCK_LOW: '/stock/low',
@@ -330,6 +331,10 @@ export const RETIRED_ROUTES: Readonly<Record<string, string>> = {
 /** PLT-14 — one business in the console. */
 export const adminTenantPath = (id: string): string =>
   `${ROUTES.ADMIN_TENANTS}/${encodeURIComponent(id)}`;
+
+/** Shop gap §1.6 — one price list, `/items/price-lists/{id}`. */
+export const priceListPath = (id: string): string =>
+  `${ROUTES.ITEM_PRICE_LISTS}/${encodeURIComponent(id)}`;
 
 /** INV-03's item page — `/items/{id}`, one encoded segment, like `partyPath`. */
 export const itemPath = (id: string): string => `${ROUTES.ITEMS}/${encodeURIComponent(id)}`;

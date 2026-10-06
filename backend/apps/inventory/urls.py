@@ -13,11 +13,13 @@ from apps.inventory.views.items import (
     StockSummaryView,
     UnitViewSet,
 )
+from apps.inventory.views.price_lists import PriceListViewSet
 
 router = DefaultRouter(trailing_slash=False)
 router.register("items", ItemViewSet, basename="item")
 router.register("categories", CategoryViewSet, basename="category")
 router.register("units", UnitViewSet, basename="unit")
+router.register("price-lists", PriceListViewSet, basename="price-list")
 router.register("stock-adjustments", StockAdjustmentViewSet, basename="stock-adjustment")
 
 urlpatterns = [

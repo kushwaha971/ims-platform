@@ -37,6 +37,8 @@ export interface PartyInfoPanelProps {
   readonly lastActivity: string | null;
   /** The collection-date control, which is the one editable thing here. */
   readonly collectionControl?: ReactNode;
+  /** Shop gap §1.6 — which price list this customer's bills start from. */
+  readonly priceListControl?: ReactNode;
 }
 
 interface Field {
@@ -131,6 +133,7 @@ function PartyInfoPanelBase({
   addedOn,
   lastActivity,
   collectionControl,
+  priceListControl,
 }: Readonly<PartyInfoPanelProps>) {
   return (
     <UbPanel as="aside">
@@ -186,6 +189,7 @@ function PartyInfoPanelBase({
         ]}
       >
         {collectionControl}
+        {priceListControl}
       </Section>
 
       <Section title={t('parties.detail.section.notes')}>

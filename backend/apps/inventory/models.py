@@ -393,3 +393,74 @@ class LowStockAlert(TenantModel):
 
     def __str__(self) -> str:  # pragma: no cover
         return f"{self.level} {self.item_id}"
+
+
+class PriceList(TenantModel, SoftDeleteModel):
+    """Shop gap §1.6 — a named rate card ("Wholesale", "Dealer") for a group of parties.
+
+    A list is a RULE plus OVERRIDES. `adjust_percent` moves every item's selling
+    price (−5 is "5% off list"), so a list is useful the moment it is named,
+    without the merchant typing two hundred rates; a `PriceListRate` pins one
+    item's rate exactly and wins over the rule. A party carries at most one list
+    (`PriceListParty`), and its bills start from that list's rate at the moment
+    an item is picked — the same rule as the list price (SAL-02 FR-15).
+    """
+
+    name = models.CharField(max_length=60)
+    adjust_percent = models.DecimalField(max_digits=6, decimal_places=2, default=0)
+
+    objects = SoftDeleteManager()
+    all_objects = AllObjectsManager()
+
+    class Meta:
+        db_table = "inventory_price_list"
+        constraints = [
+            models.UniqueConstraint(
+                "tenant",
+                Lower("name"),
+                condition=models.Q(deleted_at__isnull=True),
+                name="uq_price_list_tenant_name",
+            ),
+            # Below −100% a rate is negative; above +1000% it is a typo.
+            models.CheckConstraint(
+                condition=models.Q(adjust_percent__gte=-100, adjust_percent__lte=1000),
+                name="ck_price_list_adjust_range",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class PriceListRate(TenantModel):
+    """One item's exact rate on one list — wins over the list's percentage."""
+
+    price_list = models.ForeignKey(PriceList, on_delete=models.CASCADE, related_name="rates")
+    item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name="price_list_rates")
+    rate = MoneyField()
+
+    class Meta:
+        db_table = "inventory_price_list_rate"
+        constraints = [
+            models.UniqueConstraint(fields=["price_list", "item"], name="uq_price_list_rate_item"),
+            models.CheckConstraint(
+                condition=models.Q(rate__gte=0), name="ck_price_list_rate_nonneg"
+            ),
+        ]
+
+
+class PriceListParty(TenantModel):
+    """Which list a party buys (or sells) on. One row per party, at most.
+
+    Kept here rather than as a column on `parties_party`: price lists are an
+    inventory concern and a business without the module never sees one.
+    """
+
+    party = models.OneToOneField(
+        "parties.Party", on_delete=models.CASCADE, related_name="price_list_link"
+    )
+    price_list = models.ForeignKey(PriceList, on_delete=models.CASCADE, related_name="parties")
+
+    class Meta:
+        db_table = "inventory_price_list_party"
+        indexes = [models.Index(fields=["price_list"], name="ix_price_list_party_list")]

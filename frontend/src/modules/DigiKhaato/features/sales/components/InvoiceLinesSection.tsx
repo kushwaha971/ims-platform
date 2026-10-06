@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { useFieldArray, type UseFormReturn } from 'react-hook-form';
 
@@ -21,6 +21,7 @@ import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import { formatAmount, formatInr } from 'src/utils/money';
 import { comboPaging } from 'src/utils/searchPaging';
 
+import { getPartyRates } from '../../inventory/api/priceListService';
 import { LastRateNote } from '../../inventory/components/LastRateNote';
 import { useItemSearch } from '../../inventory/hooks/useItemSearch';
 import {
@@ -116,11 +117,13 @@ export function InvoiceLinesSection({
   onSubmitShortcut: () => void;
 }>): React.JSX.Element {
   const { t } = useTranslation();
-  const { control, watch, setValue } = form;
+  const { control, watch, setValue, getValues } = form;
   const fieldArray = useFieldArray({ control, name: 'lines', keyName: 'key' });
   const lines = watch('lines');
   const partyId = watch('partyId');
   const partyName = watch('partyName');
+  /** Items whose rate came from the customer's price list, and that rate. */
+  const [listed, setListed] = useState<Record<string, { name: string; rate: string }>>({});
 
   // FR-15 — item defaults fill a line when the item is PICKED, never later.
   const pick = useCallback(
@@ -134,8 +137,25 @@ export function InvoiceLinesSection({
       setValue(`${base}.taxCode`, row.taxCode);
       setValue(`${base}.hsnSac`, row.hsnSac ?? '');
       setValue(`${base}.taxInclusive`, row.taxInclusiveSelling ?? false);
+      // Shop gap §1.6 — a customer on a price list starts from the list's rate.
+      // Still a default filled at the pick (FR-15), only a party-specific one;
+      // if it cannot be read the item's own price stands.
+      if (!partyId) return;
+      void getPartyRates(partyId, [row.id])
+        .then(({ priceList, rates }) => {
+          const listed = rates[row.id];
+          if (!priceList || !listed) return;
+          if (getValues(`${base}.itemId`) !== row.id) return;
+          setValue(`${base}.unitPrice`, listed.rate, { shouldDirty: true });
+          setValue(`${base}.taxInclusive`, listed.taxInclusive, { shouldDirty: true });
+          setListed((current) => ({
+            ...current,
+            [row.id]: { name: priceList.name, rate: listed.rate },
+          }));
+        })
+        .catch(() => undefined);
     },
-    [setValue]
+    [setValue, getValues, partyId]
   );
 
   const taxOptions = useMemo(
@@ -283,22 +303,31 @@ export function InvoiceLinesSection({
     (index: number) => {
       const line = lines?.[index];
       if (!line?.itemId || !partyId) return null;
+      const fromList = listed[line.itemId];
+      const onList = fromList && Number(fromList.rate) === Number(line.unitPrice || 0);
       return (
-        <LastRateNote
-          itemId={line.itemId}
-          partyId={partyId}
-          partyName={partyName}
-          side="sales"
-          current={line.unitPrice}
-          currentInclusive={line.taxInclusive}
-          onUse={(last) => {
-            setValue(`lines.${index}.unitPrice`, last.rate, { shouldDirty: true });
-            setValue(`lines.${index}.taxInclusive`, last.taxInclusive, { shouldDirty: true });
-          }}
-        />
+        <UbStack gap={0}>
+          {onList && (
+            <UbText variant="caption" tone="secondary" data-testid="price-list-applied">
+              {t('sales.line.priceListRate', { list: fromList.name })}
+            </UbText>
+          )}
+          <LastRateNote
+            itemId={line.itemId}
+            partyId={partyId}
+            partyName={partyName}
+            side="sales"
+            current={line.unitPrice}
+            currentInclusive={line.taxInclusive}
+            onUse={(last) => {
+              setValue(`lines.${index}.unitPrice`, last.rate, { shouldDirty: true });
+              setValue(`lines.${index}.taxInclusive`, last.taxInclusive, { shouldDirty: true });
+            }}
+          />
+        </UbStack>
       );
     },
-    [lines, partyId, partyName, setValue]
+    [lines, partyId, partyName, setValue, listed, t]
   );
 
   return (

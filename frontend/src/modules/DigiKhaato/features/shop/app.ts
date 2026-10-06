@@ -13,6 +13,7 @@ import {
   PackageSearch,
   Receipt,
   ShoppingCart,
+  Tags,
   Truck,
   Wallet,
 } from 'lucide-react';
@@ -208,6 +209,17 @@ export const SHOP_APP: AppManifest = {
       permission: 'inventory.stock.read',
       section: 'stock',
       order: 3,
+    },
+    // Shop gap §1.6 — rate cards for groups of customers.
+    {
+      key: 'priceLists',
+      icon: Tags,
+      labelId: 'nav.priceLists',
+      href: ROUTES.ITEM_PRICE_LISTS,
+      module: 'inventory',
+      permission: 'inventory.item.read',
+      section: 'stock',
+      order: 4,
     },
     // PAY-01 … PAY-05 — payments in and out, receipts, void.
     {
