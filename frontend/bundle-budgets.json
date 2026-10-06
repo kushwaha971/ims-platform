@@ -691,7 +691,12 @@
   "",
   "── 6 Oct 2026: bill-wise profit (docs/platform/15 §1.4 item 1) ─────────────",
   "The bill page gains InvoiceProfitCard and its service (~1 KB gz); the editor",
-  "routes share that chunk and moved 0.1. Raised by measured + 0.5."
+  "routes share that chunk and moved 0.1. Raised by measured + 0.5.",
+  "",
+  "── 6 Oct 2026: standard GST print layout ──────────────────────────────────",
+  "The A4 sheet gained an HSN summary, bank rows, a signatory block and a ruled",
+  "line table — about 1 KB gz on the share page and the bill routes that",
+  "render the sheet. Raised by measured + 0.5."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -1252,15 +1257,15 @@
   },
   "/sales/invoices/new": {
    "route": 135,
-   "firstLoad": 369
+   "firstLoad": 370
   },
   "/sales/invoices/[id]/edit": {
    "route": 135,
-   "firstLoad": 369
+   "firstLoad": 370
   },
   "/sales/invoices": {
    "route": 96,
-   "firstLoad": 330
+   "firstLoad": 331
   },
   "/sales/invoices/[id]": {
    "route": 70,
@@ -1287,7 +1292,7 @@
    "firstLoad": 356
   },
   "/sales/credit-notes/new": {
-   "route": 135,
+   "route": 136,
    "firstLoad": 390
   },
   "/sales/credit-notes/[id]": {
@@ -1535,8 +1540,8 @@
    "firstLoad": 284
   },
   "/d/[token]": {
-   "route": 35,
-   "firstLoad": 270
+   "route": 37,
+   "firstLoad": 272
   },
   "/accept-invite/[token]": {
    "route": 11,

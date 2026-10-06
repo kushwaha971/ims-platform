@@ -1,12 +1,14 @@
 'use client';
 
+import { Fragment } from 'react';
+
 import { UbQrCode } from 'src/design-system';
 import type { TranslateFn } from 'src/hooks/useTranslation';
 import type { PrintBranding } from 'src/print/brandingPrintService';
 import type { Locale } from 'src/types/domain.types';
 import { amountInWords } from 'src/utils/amountInWords';
 import { formatBusinessDate } from 'src/utils/dates';
-import { formatAmount, formatInr } from 'src/utils/money';
+import { formatAmount, formatInr, subtractMoney } from 'src/utils/money';
 import { formatPhoneForDisplay } from 'src/utils/share';
 
 import { stateName } from 'modules/DigiKhaato/features/onboarding/constants/gstStates';
@@ -14,9 +16,25 @@ import { stateName } from 'modules/DigiKhaato/features/onboarding/constants/gstS
 import { documentTitleId, sgstLabelId } from '../../view-model/invoiceDisplay';
 
 import { InvoicePrintLines } from './InvoicePrintLines';
-import { hasCess, isPaidStamp, pct, taxColumns, taxSummary, watermark } from './printModel';
+import {
+  halfRate,
+  hasCess,
+  hsnSummary,
+  isPaidStamp,
+  pct,
+  taxColumns,
+  watermark,
+} from './printModel';
 
 import type { SalesAddress, SalesDocument, UpiIntent } from '../../types/sales.types';
+
+/** The document number's label, by kind: a credit note is not an "Invoice no.". */
+const numberLabelId = (kind: SalesDocument['kind']): string =>
+  kind === 'credit_note'
+    ? 'sales.print.number.creditNote'
+    : kind === 'estimate'
+      ? 'sales.print.number.estimate'
+      : 'sales.print.number';
 
 const COMPOSITION_FOOTER = 'Composition taxable person, not eligible to collect tax on supplies';
 
@@ -24,11 +42,18 @@ const addressLines = (a: SalesAddress): string =>
   [a.line1, a.line2, a.city, a.state, a.pincode].filter(Boolean).join(', ');
 
 /**
- * SAL-03 §7 `InvoicePrintA4` — 210 × 297 mm: header band with logo, GSTIN and
- * title; the meta grid; Bill to; the line table (tax columns by kind and state
- * split, §7.4); totals with the amount in words; the tax summary by rate; the
- * UPI QR and bank details; terms, composition wording, footer and signatory.
- * Primary colour on the header rule only; black text regardless (EC-8).
+ * SAL-03 §7 `InvoicePrintA4` — 210 × 297 mm, in the layout every Indian
+ * accounting product prints and every buyer's accountant expects (owner,
+ * 6 Oct 2026: "like the standard other applications follow"): one ruled box
+ * with the title and "Original for recipient"; seller (logo, GSTIN, state and
+ * code, phone, email) beside the document details (number, dates, place of
+ * supply, reverse charge, the invoice a credit note is against); the buyer;
+ * the line table (§7.4, tax as rate and amount per head, a totals row); the
+ * amount in words, the HSN/SAC-wise tax summary, bank details and the UPI QR
+ * beside the totals; terms, the declaration and "For <business> / Authorised
+ * signatory". The same sheet serves invoices, bills of supply, estimates and
+ * credit notes, titled by kind. Primary colour on the title rule only; black
+ * text regardless (EC-8).
  */
 export function InvoicePrintA4({
   doc,
@@ -70,9 +95,22 @@ export function InvoicePrintA4({
     [t('sales.totals.roundOff'), formatInr(doc.roundOff)],
   ];
 
+  const buyerName = party?.name || doc.walkInName || t('sales.walkIn.customer');
+  const buyerMobile = party?.mobile || doc.walkInMobile;
+  const bank = supplier.bankDetails;
+  const bankRows: [string, string | undefined][] = [
+    [t('sales.print.bankName'), bank.bank_name],
+    [t('sales.print.accountName'), bank.account_name],
+    [t('sales.print.accountNumber'), bank.account_number],
+    [t('sales.print.ifsc'), bank.ifsc],
+    [t('sales.print.branch'), bank.branch],
+  ];
+  const business = supplier.legalName || supplier.name;
+  const credited = subtractMoney(subtractMoney(doc.grandTotal, doc.amountPaid), doc.amountDue);
+
   return (
     <article
-      className="ub-print-sheet ub-print-a4 relative bg-white p-6 text-black"
+      className="ub-print-sheet ub-print-a4 ub-gst relative bg-white p-6 text-black"
       data-print-template="a4"
       data-testid="print-a4"
     >
@@ -89,228 +127,308 @@ export function InvoicePrintA4({
           </span>
         </div>
       )}
-      <header
-        className="flex items-start justify-between gap-4 border-b-2 pb-3"
-        style={{ borderColor: rule }}
-      >
-        <div className="flex items-start gap-3">
-          {branding?.logoUrl && (
-            // eslint-disable-next-line @next/next/no-img-element -- a print sheet, served by the API host
-            <img
-              src={branding.logoUrl}
-              alt=""
-              className="max-h-[14mm] max-w-[40mm] object-contain"
-            />
-          )}
-          <div>
-            {/* h2, not h1: on screen this sheet is the preview INSIDE the
-                document page, whose h1 is the document number — two h1s made
-                the outline read the business name as a second page title
-                (Sprint 12 a11y sweep). Paper has no outline to disturb. */}
-            <h2 className="text-lg font-bold">{supplier.legalName || supplier.name}</h2>
-            <p className="text-xs">{addressLines(supplier.address)}</p>
-            {supplier.phone && <p className="text-xs">{formatPhoneForDisplay(supplier.phone)}</p>}
-            {supplier.gstin && <p className="font-mono text-xs">GSTIN {supplier.gstin}</p>}
-            {branding?.docHeader && <p className="text-xs">{branding.docHeader}</p>}
-          </div>
-        </div>
-        <div className="text-right">
-          <h2 className="text-base font-bold uppercase">
+
+      {/* The standard Indian GST layout (Tally, Zoho, Vyapar): one ruled box
+          — title, seller and document details, buyer, the line table, the
+          HSN-wise tax summary, totals with the amount in words, bank and UPI,
+          terms, and "For <business> / Authorised signatory". */}
+      <div className="gst-box">
+        <div className="gst-row gst-title" style={{ borderBottomColor: rule }}>
+          <h2 className="text-center text-base font-bold uppercase tracking-wide">
             {t(documentTitleId(doc.kind, supplier.gstType))}
           </h2>
-          {columns !== 'none' && <p className="text-xs">{t('sales.print.original')}</p>}
+          {columns !== 'none' && (
+            <p className="text-center text-[9px] uppercase sm:absolute sm:right-2 sm:top-1 print:absolute print:right-2 print:top-1">
+              {t('sales.print.original')}
+            </p>
+          )}
           {isPaidStamp(doc) && (
             <p
-              className="mt-1 inline-block border-2 border-black px-2 text-sm font-bold"
+              className="absolute left-2 top-1 border-2 border-black px-2 text-xs font-bold"
               data-testid="print-paid"
             >
               {t('sales.status.paid')}
             </p>
           )}
         </div>
-      </header>
 
-      <section className="grid grid-cols-2 gap-x-6 gap-y-1 py-3 text-xs">
-        <p>
-          {t('sales.print.number')}: <strong>{doc.number ?? '—'}</strong>
-        </p>
-        <p>
-          {t('sales.editor.pos')}: {stateName(doc.placeOfSupplyState, locale)} (
-          {doc.placeOfSupplyState})
-        </p>
-        <p>
-          {t('sales.editor.date')}: {formatBusinessDate(doc.documentDate)}
-        </p>
-        <p>
-          {t('sales.print.reverseCharge')}:{' '}
-          {doc.reverseCharge ? t('sales.print.yes') : t('sales.print.no.value')}
-        </p>
-        {doc.dueOn && (
-          <p>
-            {t('sales.editor.dueOn')}: {formatBusinessDate(doc.dueOn)}
-          </p>
-        )}
-        {doc.kind === 'estimate' && doc.validUntil && (
-          <p>
-            {t('sales.estimate.validUntil')}: {formatBusinessDate(doc.validUntil)}
-          </p>
-        )}
-        {doc.links.against && (
-          <p data-testid="print-against">
-            {t('sales.creditNote.printAgainst', {
-              number: doc.links.against.number ?? '',
-              date: formatBusinessDate(doc.links.against.documentDate),
-            })}
-          </p>
-        )}
-      </section>
-
-      <section className="border-y py-2 text-xs">
-        <p className="font-semibold">{t('sales.print.billTo')}</p>
-        <p>{party?.name || doc.walkInName || t('sales.walkIn.customer')}</p>
-        {party && addressLines(party.address) && <p>{addressLines(party.address)}</p>}
-        {party?.gstin && <p className="font-mono">GSTIN {party.gstin}</p>}
-        {party?.stateCode && (
-          <p>
-            {stateName(party.stateCode, locale)} ({party.stateCode})
-          </p>
-        )}
-      </section>
-
-      <InvoicePrintLines doc={doc} columns={columns} sgstLabel={sgst} t={t} />
-
-      <section className="ub-print-closing mt-3 grid grid-cols-2 gap-6 text-xs">
-        <div className="space-y-2">
-          {columns !== 'none' && (
-            <table className="w-full">
-              <thead>
-                <tr>
-                  <th className="text-left">{t('sales.print.rate')}</th>
-                  <th className="text-right">{t('sales.totals.taxable')}</th>
-                  {columns === 'intra' && <th className="text-right">{t('sales.tax.cgst')}</th>}
-                  {columns === 'intra' && <th className="text-right">{sgst}</th>}
-                  {columns === 'inter' && <th className="text-right">{t('sales.tax.igst')}</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {taxSummary(doc.lines).map((row) => (
-                  <tr key={row.rate}>
-                    <td>{pct(row.rate)}</td>
-                    <td className="text-right">{formatAmount(row.taxable)}</td>
-                    {columns === 'intra' && (
-                      <td className="text-right">{formatAmount(row.cgst)}</td>
-                    )}
-                    {columns === 'intra' && (
-                      <td className="text-right">{formatAmount(row.sgst)}</td>
-                    )}
-                    {columns === 'inter' && (
-                      <td className="text-right">{formatAmount(row.igst)}</td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-          {upi && !mark && (
-            <div className="flex flex-wrap items-center gap-3">
-              <UbQrCode modules={upi.qr.modules} size="28mm" label={t('sales.print.scanToPay')} />
-              {/* min-w-0 + a breakable VPA: in a narrow column (the share page
-                  on a phone) the VPA ran into the totals beside it otherwise. */}
-              <div className="min-w-0 break-words">
-                <p className="font-semibold">
-                  {upi.amount
-                    ? t('sales.print.scanToPayAmount', { amount: formatInr(upi.amount) })
-                    : t('sales.print.scanToPay')}
+        <div className="gst-row grid grid-cols-1 sm:grid-cols-2 print:grid-cols-2">
+          <div className="gst-cell gst-divide flex items-start gap-3">
+            {branding?.logoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element -- a print sheet, served by the API host
+              <img
+                src={branding.logoUrl}
+                alt=""
+                className="max-h-[16mm] max-w-[32mm] object-contain"
+              />
+            )}
+            <div className="min-w-0">
+              {/* h2, not h1: on screen this sheet is the preview INSIDE the
+                  document page, whose h1 is the document number. */}
+              <h2 className="text-sm font-bold">{business}</h2>
+              {addressLines(supplier.address) && <p>{addressLines(supplier.address)}</p>}
+              {supplier.gstin && (
+                <p>
+                  <span className="font-semibold">GSTIN:</span>{' '}
+                  <span className="font-mono">{supplier.gstin}</span>
                 </p>
-                <p className="break-all font-mono">{supplier.upiVpa}</p>
-              </div>
+              )}
+              <p>
+                <span className="font-semibold">{t('sales.print.state')}:</span>{' '}
+                {stateName(supplier.stateCode, locale)} ({supplier.stateCode})
+              </p>
+              {supplier.phone && (
+                <p>
+                  <span className="font-semibold">{t('sales.print.phone')}:</span>{' '}
+                  {formatPhoneForDisplay(supplier.phone)}
+                </p>
+              )}
+              {supplier.email && (
+                <p>
+                  <span className="font-semibold">{t('sales.print.email')}:</span> {supplier.email}
+                </p>
+              )}
+              {branding?.docHeader && <p>{branding.docHeader}</p>}
             </div>
-          )}
-          {Object.keys(supplier.bankDetails).length > 0 && (
+          </div>
+          <table className="gst-meta">
+            <tbody>
+              <tr>
+                <th scope="row">{t(numberLabelId(doc.kind))}</th>
+                <td className="font-semibold">{doc.number ?? '—'}</td>
+              </tr>
+              <tr>
+                <th scope="row">{t('sales.editor.date')}</th>
+                <td>{formatBusinessDate(doc.documentDate)}</td>
+              </tr>
+              {doc.dueOn && (
+                <tr>
+                  <th scope="row">{t('sales.editor.dueOn')}</th>
+                  <td>{formatBusinessDate(doc.dueOn)}</td>
+                </tr>
+              )}
+              {doc.kind === 'estimate' && doc.validUntil && (
+                <tr>
+                  <th scope="row">{t('sales.estimate.validUntil')}</th>
+                  <td>{formatBusinessDate(doc.validUntil)}</td>
+                </tr>
+              )}
+              <tr>
+                <th scope="row">{t('sales.editor.pos')}</th>
+                <td>
+                  {stateName(doc.placeOfSupplyState, locale)} ({doc.placeOfSupplyState})
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">{t('sales.print.reverseCharge')}</th>
+                <td>{doc.reverseCharge ? t('sales.print.yes') : t('sales.print.no.value')}</td>
+              </tr>
+              {doc.links.against && (
+                <tr data-testid="print-against">
+                  <th scope="row">{t('sales.print.againstInvoice')}</th>
+                  <td>
+                    {t('sales.print.againstValue', {
+                      number: doc.links.against.number ?? '',
+                      date: formatBusinessDate(doc.links.against.documentDate),
+                    })}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="gst-row gst-cell">
+          <p className="gst-label">{t('sales.print.billTo')}</p>
+          <p className="text-sm font-bold">{buyerName}</p>
+          {party && addressLines(party.address) && <p>{addressLines(party.address)}</p>}
+          {party?.gstin && (
             <p>
-              {t('sales.print.bank')}:{' '}
-              {Object.values(supplier.bankDetails).filter(Boolean).join(' · ')}
+              <span className="font-semibold">GSTIN:</span>{' '}
+              <span className="font-mono">{party.gstin}</span>
+            </p>
+          )}
+          {party?.stateCode && (
+            <p>
+              <span className="font-semibold">{t('sales.print.state')}:</span>{' '}
+              {stateName(party.stateCode, locale)} ({party.stateCode})
+            </p>
+          )}
+          {buyerMobile && (
+            <p>
+              <span className="font-semibold">{t('sales.print.phone')}:</span>{' '}
+              {formatPhoneForDisplay(buyerMobile)}
             </p>
           )}
         </div>
-        <div>
-          <table className="w-full">
-            <tbody>
-              {/* Label ↔ figure rows: the label cell is the ROW HEADER, so the
-                  table has headers and a screen reader says "CGST, ₹20.25"
-                  rather than two unrelated cells (WCAG 1.3.1, Sprint 12). */}
-              {totals.map(([label, value]) => (
-                <tr key={label}>
-                  <th scope="row" className="text-left font-normal">
-                    {label}
-                  </th>
-                  <td className="text-right">{value}</td>
-                </tr>
-              ))}
-              <tr>
-                <th scope="row" className="text-left font-bold">
-                  {t('sales.totals.grand')}
-                </th>
-                <td className="text-right text-base font-bold" data-testid="print-grand-total">
-                  {formatInr(doc.grandTotal)}
-                </td>
-              </tr>
-              {doc.status !== 'draft' && doc.kind !== 'estimate' && (
-                <>
+
+        <div className="gst-row">
+          <InvoicePrintLines doc={doc} columns={columns} sgstLabel={sgst} t={t} />
+        </div>
+
+        <div className="ub-print-closing gst-row grid grid-cols-1 sm:grid-cols-[1fr_38%] print:grid-cols-[1fr_38%]">
+          <div className="gst-cell gst-divide space-y-2">
+            <div>
+              <p className="gst-label">{t('sales.print.amountInWords')}</p>
+              <p className="font-semibold" data-testid="print-words">
+                {amountInWords(doc.grandTotal, locale)}
+              </p>
+            </div>
+            {columns !== 'none' && (
+              <table className="gst-grid gst-grid-boxed" data-testid="print-hsn-summary">
+                <thead>
                   <tr>
-                    <th scope="row" className="text-left font-normal">
-                      {t('sales.print.paid')}
-                    </th>
-                    <td className="text-right">{formatInr(doc.amountPaid)}</td>
+                    <th rowSpan={2}>{t('sales.print.hsn')}</th>
+                    <th rowSpan={2}>{t('sales.print.taxableValue')}</th>
+                    {columns === 'intra' && <th colSpan={2}>{t('sales.tax.cgst')}</th>}
+                    {columns === 'intra' && <th colSpan={2}>{sgst}</th>}
+                    {columns === 'inter' && <th colSpan={2}>{t('sales.tax.igst')}</th>}
+                    <th rowSpan={2}>{t('sales.print.totalTax')}</th>
                   </tr>
                   <tr>
-                    <th scope="row" className="text-left font-normal">
-                      {t('sales.print.balance')}
-                    </th>
-                    <td className="text-right">{formatInr(doc.amountDue)}</td>
+                    {(columns === 'intra' ? [0, 1] : [0]).map((index) => (
+                      <Fragment key={index}>
+                        <th>{t('sales.print.ratePct')}</th>
+                        <th>{t('sales.print.amount')}</th>
+                      </Fragment>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {hsnSummary(doc.lines).map((row) => (
+                    <tr key={`${row.hsn}-${row.rate}`}>
+                      <td className="text-center">{row.hsn}</td>
+                      <td className="text-right">{formatAmount(row.taxable)}</td>
+                      {columns === 'intra' && (
+                        <>
+                          <td className="text-right">{pct(halfRate(row.rate))}</td>
+                          <td className="text-right">{formatAmount(row.cgst)}</td>
+                          <td className="text-right">{pct(halfRate(row.rate))}</td>
+                          <td className="text-right">{formatAmount(row.sgst)}</td>
+                        </>
+                      )}
+                      {columns === 'inter' && (
+                        <>
+                          <td className="text-right">{pct(row.rate)}</td>
+                          <td className="text-right">{formatAmount(row.igst)}</td>
+                        </>
+                      )}
+                      <td className="text-right">{formatAmount(row.tax)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            {bankRows.some(([, value]) => value) && (
+              <div>
+                <p className="gst-label">{t('sales.print.bank')}</p>
+                {bankRows
+                  .filter(([, value]) => value)
+                  .map(([label, value]) => (
+                    <p key={label}>
+                      <span className="font-semibold">{label}:</span> {value}
+                    </p>
+                  ))}
+              </div>
+            )}
+            {upi && !mark && (
+              <div className="flex flex-wrap items-center gap-3">
+                <UbQrCode modules={upi.qr.modules} size="24mm" label={t('sales.print.scanToPay')} />
+                {/* min-w-0 + a breakable VPA: in a narrow column (the share page
+                    on a phone) the VPA ran into the totals beside it otherwise. */}
+                <div className="min-w-0 break-words">
+                  <p className="font-semibold">
+                    {upi.amount
+                      ? t('sales.print.scanToPayAmount', { amount: formatInr(upi.amount) })
+                      : t('sales.print.scanToPay')}
+                  </p>
+                  <p className="break-all font-mono">{supplier.upiVpa}</p>
+                </div>
+              </div>
+            )}
+          </div>
+          <table className="gst-totals self-start">
+            <tbody>
+              {/* Label ↔ figure rows: the label cell is the ROW HEADER, so a
+                  screen reader says "CGST, ₹20.25" (WCAG 1.3.1, Sprint 12). */}
+              {totals.map(([label, value]) => (
+                <tr key={label}>
+                  <th scope="row">{label}</th>
+                  <td>{value}</td>
+                </tr>
+              ))}
+              <tr className="gst-grand">
+                <th scope="row">{t('sales.totals.grand')}</th>
+                <td data-testid="print-grand-total">{formatInr(doc.grandTotal)}</td>
+              </tr>
+              {doc.status !== 'draft' && doc.kind !== 'estimate' && doc.kind !== 'credit_note' && (
+                <>
+                  <tr>
+                    <th scope="row">{t('sales.print.paid')}</th>
+                    <td>{formatInr(doc.amountPaid)}</td>
+                  </tr>
+                  {/* What returns took off the bill, so Paid + this + Balance
+                      due adds up to the grand total on paper. */}
+                  {credited !== '0.00' && (
+                    <tr>
+                      <th scope="row">{t('sales.print.credited')}</th>
+                      <td>{`−${formatInr(credited)}`}</td>
+                    </tr>
+                  )}
+                  <tr>
+                    <th scope="row">{t('sales.print.balance')}</th>
+                    <td className="font-semibold">{formatInr(doc.amountDue)}</td>
                   </tr>
                 </>
               )}
             </tbody>
           </table>
-          <p className="mt-2 italic" data-testid="print-words">
-            {amountInWords(doc.grandTotal, locale)}
-          </p>
         </div>
-      </section>
 
-      <footer className="mt-4 space-y-1 border-t pt-2 text-xs">
-        {doc.kind === 'bill_of_supply' && <p className="font-semibold">{COMPOSITION_FOOTER}</p>}
-        {doc.kind === 'estimate' && (
-          <p className="font-semibold" data-testid="print-not-tax-invoice">
-            {t('sales.estimate.notTaxInvoice')}
-          </p>
-        )}
-        {doc.kind === 'credit_note' && doc.links.against && (
-          <p data-testid="print-sec34">
-            {t('sales.creditNote.sec34', {
-              number: doc.links.against.number ?? '',
-              date: formatBusinessDate(doc.links.against.documentDate),
-            })}
-          </p>
-        )}
-        {doc.terms && <p className="whitespace-pre-line">{doc.terms}</p>}
-        {doc.notes && <p className="whitespace-pre-line">{doc.notes}</p>}
-        {branding?.docFooter && <p>{branding.docFooter}</p>}
-        <div className="flex items-end justify-between pt-6">
-          {/* CR-2026-09-29-BRAND-A: the sheet is signed by the business that
-              issued it. No product name, no domain, nothing of ours. */}
-          <p className="text-[10px] text-black/60" data-testid="print-issued-by">
-            {t('sales.print.issuedBy', { business: supplier.legalName || supplier.name })}
-          </p>
-          <div className="text-right">
-            {branding?.signatureUrl && (
+        <div className="gst-row grid grid-cols-1 sm:grid-cols-[1fr_38%] print:grid-cols-[1fr_38%]">
+          <div className="gst-cell gst-divide space-y-1">
+            {doc.kind === 'bill_of_supply' && <p className="font-semibold">{COMPOSITION_FOOTER}</p>}
+            {doc.kind === 'estimate' && (
+              <p className="font-semibold" data-testid="print-not-tax-invoice">
+                {t('sales.estimate.notTaxInvoice')}
+              </p>
+            )}
+            {doc.kind === 'credit_note' && doc.links.against && (
+              <p data-testid="print-sec34">
+                {t('sales.creditNote.sec34', {
+                  number: doc.links.against.number ?? '',
+                  date: formatBusinessDate(doc.links.against.documentDate),
+                })}
+              </p>
+            )}
+            {doc.terms && (
+              <div>
+                <p className="gst-label">{t('sales.print.terms')}</p>
+                <p className="whitespace-pre-line">{doc.terms}</p>
+              </div>
+            )}
+            {doc.notes && <p className="whitespace-pre-line">{doc.notes}</p>}
+            {doc.kind !== 'estimate' && <p className="italic">{t('sales.print.declaration')}</p>}
+            {branding?.docFooter && <p>{branding.docFooter}</p>}
+          </div>
+          <div className="gst-cell flex flex-col justify-between text-right">
+            <p className="font-semibold">{t('sales.print.forBusiness', { business })}</p>
+            {branding?.signatureUrl ? (
               // eslint-disable-next-line @next/next/no-img-element -- a print sheet
               <img src={branding.signatureUrl} alt="" className="ml-auto max-h-[14mm]" />
+            ) : (
+              <span className="block h-[14mm]" aria-hidden />
             )}
             <p>{t('sales.print.signatory')}</p>
           </div>
         </div>
+      </div>
+
+      <footer className="mt-1 flex justify-between text-[9px] text-black/60">
+        <p>{t('sales.print.computerGenerated')}</p>
+        {/* CR-2026-09-29-BRAND-A: signed by the business that issued it. No
+            product name, no domain, nothing of ours. */}
+        <p data-testid="print-issued-by">{t('sales.print.issuedBy', { business })}</p>
       </footer>
     </article>
   );

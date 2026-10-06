@@ -126,6 +126,139 @@
   }
 }
 
+/* SAL-03 — the standard Indian GST invoice sheet (owner, 6 Oct 2026). One
+   ruled box, every table cell ruled, the same on screen and on paper, so the
+   preview IS the print. Black on white whatever the theme: it is a document. */
+@layer components {
+  .ub-gst {
+    font-size: 10.5px;
+    line-height: 1.4;
+    color: #000;
+    background: #fff;
+  }
+
+  .ub-gst .gst-box {
+    border: 1px solid #000;
+  }
+
+  .ub-gst .gst-row {
+    position: relative;
+    border-bottom: 1px solid #000;
+  }
+
+  .ub-gst .gst-row:last-child {
+    border-bottom: 0;
+  }
+
+  .ub-gst .gst-title {
+    padding: 4px 8px;
+    border-bottom-width: 2px;
+  }
+
+  .ub-gst .gst-cell {
+    padding: 6px 8px;
+  }
+
+  /* Side-by-side cells divide with a rule; on a phone screen they stack, and
+     the rule goes (paper is always side by side). */
+  @media (min-width: 640px) {
+    .ub-gst .gst-divide {
+      border-right: 1px solid #000;
+    }
+  }
+
+  @media (max-width: 639.98px) {
+    .ub-gst .gst-divide {
+      border-bottom: 1px solid #000;
+    }
+  }
+
+  .ub-gst .gst-label {
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #333;
+  }
+
+  .ub-gst table {
+    width: 100%;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ub-gst .gst-grid th,
+  .ub-gst .gst-grid td {
+    border: 1px solid #000;
+    padding: 3px 5px;
+    vertical-align: top;
+  }
+
+  .ub-gst .gst-grid th {
+    background: #f2f2f2;
+    font-weight: 600;
+    text-align: center;
+  }
+
+  /* The line table sits inside the box: its outer edge IS the box. */
+  .ub-gst .gst-row > .gst-grid tr > :first-child {
+    border-left: 0;
+  }
+
+  .ub-gst .gst-row > .gst-grid tr > :last-child {
+    border-right: 0;
+  }
+
+  .ub-gst .gst-row > .gst-grid thead tr:first-child > * {
+    border-top: 0;
+  }
+
+  .ub-gst .gst-row > .gst-grid tfoot tr:last-child > * {
+    border-bottom: 0;
+  }
+
+  .ub-gst .gst-grid tfoot td {
+    background: #f7f7f7;
+  }
+
+  .ub-gst .gst-meta th,
+  .ub-gst .gst-meta td {
+    padding: 3px 8px;
+    text-align: left;
+    vertical-align: top;
+    border-bottom: 1px solid #ddd;
+  }
+
+  .ub-gst .gst-meta th {
+    width: 42%;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .ub-gst .gst-totals th,
+  .ub-gst .gst-totals td {
+    padding: 3px 8px;
+    border-bottom: 1px solid #ddd;
+  }
+
+  .ub-gst .gst-totals th {
+    text-align: left;
+    font-weight: 400;
+  }
+
+  .ub-gst .gst-totals td {
+    text-align: right;
+  }
+
+  .ub-gst .gst-totals .gst-grand > * {
+    border-top: 1px solid #000;
+    border-bottom: 1px solid #000;
+    font-size: 12px;
+    font-weight: 700;
+    background: #f2f2f2;
+  }
+}
+
 @layer utilities {
   /* Reserved for the print routes of §19.2.2: they are always light. */
   @media print {
@@ -232,6 +365,54 @@
 
     .ub-print-a4 {
       padding: 0 !important;
+    }
+
+    /* The GST sheet keeps its own rules on paper: the statement's generic
+       hairline-and-padding cells must not draw inside it. */
+    .ub-print-sheet.ub-gst {
+      font-size: 8.5pt;
+    }
+
+    .ub-print-sheet.ub-gst .gst-meta th,
+    .ub-print-sheet.ub-gst .gst-meta td,
+    .ub-print-sheet.ub-gst .gst-totals th,
+    .ub-print-sheet.ub-gst .gst-totals td {
+      padding: 2pt 6pt;
+      border-bottom: 0.5pt solid #ccc;
+    }
+
+    .ub-print-sheet.ub-gst .gst-grid th,
+    .ub-print-sheet.ub-gst .gst-grid td {
+      padding: 2pt 4pt;
+      border: 0.75pt solid #000;
+    }
+
+    .ub-print-sheet.ub-gst .gst-box,
+    .ub-print-sheet.ub-gst .gst-row {
+      border-color: #000;
+    }
+
+    .ub-print-sheet.ub-gst .gst-divide {
+      border-right: 0.75pt solid #000;
+      border-bottom: 0;
+    }
+
+    /* Utilities outrank components whatever the specificity, so the line
+       table's outer edges are taken off again here: the box is its edge. */
+    .ub-print-sheet.ub-gst .gst-row > .gst-grid tr > :first-child {
+      border-left: 0;
+    }
+
+    .ub-print-sheet.ub-gst .gst-row > .gst-grid tr > :last-child {
+      border-right: 0;
+    }
+
+    .ub-print-sheet.ub-gst .gst-row > .gst-grid thead tr:first-child > * {
+      border-top: 0;
+    }
+
+    .ub-print-sheet.ub-gst .gst-row > .gst-grid tfoot tr:last-child > * {
+      border-bottom: 0;
     }
 
     /* PAY-04 FR-1 — the payment receipt prints onto an A5 named page: half an

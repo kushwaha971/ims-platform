@@ -156,3 +156,95 @@ it('UAT-D8: the A4 and thermal letterheads print the shop phone spaced, not raw 
   renderWithProviders(<Thermal doc={doc} />);
   expect(screen.getByText('+91 98765 01234')).toBeInTheDocument();
 });
+
+/**
+ * The standard GST layout (owner, 6 Oct 2026: "like other applications"). An
+ * Indian tax invoice is read against a shape every accountant knows — seller and
+ * meta side by side, a ruled line table, an HSN-wise tax summary, bank details,
+ * "For <business> / Authorised signatory". These pin what the paper SAYS in it.
+ */
+describe('standard GST layout', () => {
+  const twoRates = (): SalesDocument =>
+    makeDocument({
+      lines: [
+        wireLine(),
+        wireLine({ id: 'l2', line_no: 2, description: 'Sunflower Oil 1L', hsn_sac: '1512' }),
+        wireLine({
+          id: 'l3',
+          line_no: 3,
+          description: 'Detergent 1kg',
+          hsn_sac: '3402',
+          tax_code: 'GST18',
+          tax_rate: '18.000',
+          taxable_value: '100.00',
+          cgst: '9.00',
+          sgst: '9.00',
+          line_total: '118.00',
+        }),
+      ],
+    });
+
+  it('summarises tax by HSN and rate, one row per pair, with the split rate', () => {
+    // GSTR-1 table 12 is filed HSN-wise; a summary that merged two HSNs at one
+    // rate, or printed 5% under CGST, would not reconcile with the return.
+    renderWithProviders(<A4 doc={twoRates()} />);
+    const summary = screen.getByTestId('print-hsn-summary');
+    const rows = within(summary).getAllByRole('row').slice(2);
+    expect(rows.map((r) => within(r).getAllByRole('cell')[0]?.textContent)).toEqual([
+      '1006',
+      '1512',
+      '3402',
+    ]);
+    expect(rows[2]).toHaveTextContent('9%');
+    expect(rows[2]).toHaveTextContent('18.00');
+    expect(rows[0]).toHaveTextContent('2.5%');
+  });
+
+  it('totals the line table, and the quantity only when every line has one unit', () => {
+    // "3 NOS" across rice in NOS and oil in LTR would be a sum of nothing.
+    renderWithProviders(<A4 doc={twoRates()} />);
+    const foot = within(screen.getByTestId('print-lines')).getAllByRole('row').at(-1);
+    expect(foot).toHaveTextContent('3 NOS');
+  });
+
+  it('labels a credit note’s number as a credit note, and names the invoice it is against once', () => {
+    renderWithProviders(
+      <A4
+        doc={makeDocument({
+          kind: 'credit_note',
+          number: 'CN/26-27/0001',
+          links: {
+            against: {
+              id: 'd0',
+              kind: 'invoice',
+              number: 'INV/26-27/0004',
+              document_date: '2026-09-20',
+              status: 'issued',
+            },
+          },
+        })}
+        upi={null}
+      />
+    );
+    expect(screen.getByRole('rowheader', { name: 'Credit note no.' })).toBeInTheDocument();
+    expect(screen.queryByRole('rowheader', { name: 'Invoice no.' })).toBeNull();
+    expect(screen.getByTestId('print-against')).toHaveTextContent('INV/26-27/0004');
+    expect(screen.getByTestId('print-sec34')).toBeInTheDocument();
+    // A credit note settles nothing on its own paper: no Paid, no Balance due.
+    expect(screen.queryByRole('rowheader', { name: 'Balance due' })).toBeNull();
+  });
+
+  it('shows credit notes taken off an invoice, so Paid + credited + due adds up to the total', () => {
+    // Without the row, ₹1,850 − ₹0 paid printed "Balance due ₹1,401" with no reason.
+    renderWithProviders(<A4 doc={makeDocument({ amount_paid: '100.00', amount_due: '273.00' })} />);
+    const row = screen.getByRole('rowheader', { name: 'Less: credit notes' }).closest('tr');
+    expect(row).toHaveTextContent('−₹100.00');
+  });
+
+  it('closes with the business’s signatory block and never the product’s name', () => {
+    renderWithProviders(<A4 doc={makeDocument()} />);
+    expect(screen.getByText('For Sharma General Store')).toBeInTheDocument();
+    expect(screen.getByText('Authorised signatory')).toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent(/YourKhata|yourkhata\.com/i);
+  });
+});
