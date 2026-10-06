@@ -114,7 +114,13 @@ export function DesignSystemWave3Gallery(): React.JSX.Element {
             to={range.to}
             onRangeChange={(from, to) => setRange({ from, to })}
             max="2026-09-23"
-            labels={{ presets: 'Period', from: 'From date', to: 'To date' }}
+            labels={{
+              presets: 'Period',
+              from: 'From date',
+              to: 'To date',
+              apply: 'Apply',
+              close: 'Close',
+            }}
             end={
               <UbSwitch
                 checked={corrections}

@@ -6,12 +6,13 @@ import dynamic from 'next/dynamic';
 
 import { ArrowDownLeft, ArrowUpRight, Plus, Wallet } from 'lucide-react';
 
+import { SummaryStatGrid } from 'src/components/stats/SummaryStatGrid';
 import {
   UbButton,
   UbCard,
-  UbChoiceChips,
   UbDateRangePicker,
   UbEmptyState,
+  UbFilterSelect,
   UbMoneyInput,
   UbPageHeader,
   UbPageShell,
@@ -20,7 +21,6 @@ import {
   UbSkeleton,
   UbStack,
   UbStatCard,
-  UbStatGrid,
   UbStatusBadge,
   UbStatusBanner,
   UbText,
@@ -137,13 +137,20 @@ export function CashbookPageContent(): React.JSX.Element {
               presets: t('expenses.period.label'),
               from: t('expenses.period.from'),
               to: t('expenses.period.to'),
+              apply: t('common.action.apply'),
+              close: t('common.action.close'),
             }}
             end={
-              <UbChoiceChips<CashbookBucketFilter>
-                ariaLabel={t('cashbook.bucket.label')}
+              <UbFilterSelect
+                spec={{
+                  kind: 'single',
+                  key: 'bucket',
+                  label: t('cashbook.bucket.label'),
+                  options: bucketOptions,
+                }}
                 value={filters.bucket}
-                options={bucketOptions}
-                onChange={book.setBucket}
+                onChange={(next) => book.setBucket(next as CashbookBucketFilter)}
+                closeLabel={t('common.action.close')}
               />
             }
           />
@@ -176,7 +183,7 @@ export function CashbookPageContent(): React.JSX.Element {
 
         {data && (
           <>
-            <UbStatGrid>
+            <SummaryStatGrid storageKey="cashbook">
               <UbStatCard
                 icon={<Wallet className="h-4 w-4" aria-hidden />}
                 label={t('cashbook.opening')}
@@ -206,7 +213,7 @@ export function CashbookPageContent(): React.JSX.Element {
                 }
                 tone={isNegative(closingValue) ? 'danger' : 'success'}
               />
-            </UbStatGrid>
+            </SummaryStatGrid>
 
             <UbText variant="caption" tone="tertiary">
               {t('cashbook.openingSource')}

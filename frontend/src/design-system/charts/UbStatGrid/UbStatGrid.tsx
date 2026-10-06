@@ -1,8 +1,10 @@
 'use client';
 
-import { memo, type ReactNode } from 'react';
+import { Children, isValidElement, memo, type ReactNode } from 'react';
 
 import { cn } from 'src/utils/cn';
+
+import { UbStatSummary, type UbStatSummaryItem } from '../../UbStatSummary';
 
 /**
  * The KPI row: stat tiles, **2-across on a 360 px phone and 3-across from
@@ -32,11 +34,45 @@ export interface UbStatGridProps {
   readonly live?: boolean;
   /** Names the region — "Totals for this list". Required with `live`. */
   readonly label?: string;
+  /**
+   * Fold the tiles into one summary line, expandable (owner, 6 Oct 2026: the
+   * cards above a list took the space the list needed). The line shows the
+   * first `limit` tiles' labels and figures, read from the `UbStatCard`
+   * children, so a screen opts in with one prop and says nothing twice.
+   */
+  readonly collapse?: {
+    readonly storageKey: string;
+    readonly labels: { readonly show: string; readonly hide: string };
+    readonly limit?: number;
+  };
   readonly className?: string;
 }
 
-function UbStatGridBase({ children, live, label, className }: Readonly<UbStatGridProps>) {
-  return (
+const SUMMARY_TONE: Record<string, UbStatSummaryItem['tone']> = {
+  success: 'positive',
+  danger: 'negative',
+  warning: 'warning',
+};
+
+/** The summary line, from the cards themselves. */
+const summaryOf = (children: ReactNode, limit: number): UbStatSummaryItem[] => {
+  const items: UbStatSummaryItem[] = [];
+  Children.forEach(children, (child) => {
+    if (!isValidElement(child)) return;
+    const props = child.props as { label?: unknown; value?: unknown; tone?: unknown };
+    if (typeof props.label !== 'string' || typeof props.value !== 'string') return;
+    items.push({
+      key: String(child.key ?? props.label),
+      label: props.label,
+      value: props.value,
+      tone: SUMMARY_TONE[String(props.tone)] ?? 'default',
+    });
+  });
+  return items.slice(0, limit);
+};
+
+function UbStatGridBase({ children, live, label, collapse, className }: Readonly<UbStatGridProps>) {
+  const grid = (
     <div
       data-testid="ub-stat-grid"
       role={live ? 'region' : undefined}
@@ -53,6 +89,16 @@ function UbStatGridBase({ children, live, label, className }: Readonly<UbStatGri
     >
       {children}
     </div>
+  );
+  if (!collapse) return grid;
+  return (
+    <UbStatSummary
+      items={summaryOf(children, collapse.limit ?? 4)}
+      storageKey={collapse.storageKey}
+      labels={collapse.labels}
+    >
+      {grid}
+    </UbStatSummary>
   );
 }
 

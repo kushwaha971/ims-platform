@@ -55,6 +55,8 @@ export function StatementFilterBar({
         presets: t('ledger.statement.period.label'),
         from: t('ledger.statement.period.from'),
         to: t('ledger.statement.period.to'),
+        apply: t('common.action.apply'),
+        close: t('common.action.close'),
       }}
       end={
         /* AC-4. Off by default: a statement a customer reads should show what

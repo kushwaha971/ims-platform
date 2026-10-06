@@ -1,44 +1,33 @@
 'use client';
 
-import { useCallback, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
-import { UbDateInput } from 'src/design-system/UbDateInput';
-import { UbFilterBar, UbFilterChip, UbFilterChipGroup } from 'src/design-system/UbFilterChip';
+import { cn } from 'src/utils/cn';
+
+import { UbPeriodSelect } from '../UbFilters/UbPeriodSelect';
 
 /**
- * Part 23 §23.3 — a period: a row of presets, and a from/to pair for the one
- * preset that means "let me choose".
+ * Part 23 §23.3 — a screen's period, and whatever else scopes the screen.
  *
- * ── Why it is a filter bar, not a field ───────────────────────────────────
- * Every period in this product scopes a screen — the statement today, RPT-04
- * and the reports behind it next — and the owner's rule for a screen's scope
- * is that its date sits on the RIGHT (docs/DESIGN-SYSTEM.md §3). So this
- * renders a `UbFilterBar`: presets on the scrolling chip track, the two dates
- * in the `end` cluster, and whatever else the screen scopes by (`end`, e.g. the
- * statement's "Show corrections") after them. `children` adds further chip
- * groups to the track. A range INSIDE a form would be a different component,
- * and nothing asks for one.
+ * ── Now a dropdown, not a row of chips (owner, 6 Oct 2026) ────────────────
+ * This used to render every preset as a chip on a scrolling track with the
+ * custom dates beside it, which on a 360 px phone was two rows before the
+ * first result. The owner approved the dropdown pattern: the period is ONE
+ * button ("📅 This financial year ▾") opening the presets with "Custom range"
+ * and its two dates at the foot (`UbPeriodSelect`). The API is unchanged, so
+ * every list and report that scoped itself by this component moved at once.
  *
- * ── Why the dates only appear for the custom preset ───────────────────────
- * Two date boxes beside six chips are two ways of answering one question, and
- * on a 360 px phone they are also the two controls that push the chips off the
- * screen. With no `customPreset` the dates are always shown.
- *
- * ── A period is a single choice ───────────────────────────────────────────
- * `UbFilterChip.onToggle` reports the state the chip WILL be in; turning the
- * applied preset "off" means nothing for a period, so it is ignored and the
- * preset stays applied — which is what a merchant expects of a chip they just
- * tapped twice.
+ * `children` and `end` follow the button on the same row: further dropdowns
+ * (`UbFilterSelect`) and a Filters drawer (`UbFilterSheet`), never chip rows.
  *
  * ── Bounds ─────────────────────────────────────────────────────────────────
- * `from` can never be after `to` and neither can pass `max` (usually today):
- * `from`'s calendar stops at `to ?? max`, `to`'s starts at `from`. A range the
- * pickers cannot produce is a range the server never has to refuse.
+ * `from` can never be after `to` and neither can pass `max` (usually today),
+ * and a custom range is applied only with both dates — a range the picker
+ * cannot produce is one the server never has to refuse.
  *
- * Presets are resolved to dates by the CALLER (the statement's financial-year
- * arithmetic lives in its view-model, where it is tested); this component only
- * says which one is chosen. Generic in the preset union so a caller's
- * `onPresetChange` receives its own type rather than a `string`.
+ * Presets are resolved to dates by the CALLER; this component only says which
+ * one is chosen. A preset reports through `onPresetChange`; the custom range
+ * through `onRangeChange`, whose callers already treat it as "custom".
  */
 export interface UbDateRangePreset<P extends string> {
   readonly value: P;
@@ -46,31 +35,35 @@ export interface UbDateRangePreset<P extends string> {
 }
 
 export interface UbDateRangePickerLabels {
-  /** Names the chip group — "Period". */
+  /** Names the control — "Period". */
   readonly presets: string;
   readonly from: string;
   readonly to: string;
+  /** The custom range's button. */
+  readonly apply: string;
+  /** The phone sheet's close button. */
+  readonly close: string;
 }
 
 export interface UbDateRangePickerProps<P extends string> {
   readonly presets: readonly UbDateRangePreset<P>[];
   readonly preset: P;
   readonly onPresetChange: (preset: P) => void;
-  /** The preset that reveals the from/to fields. Omit to always show them. */
-  readonly customPreset?: P;
+  /** The preset that means "use from/to". */
+  readonly customPreset: P;
   /** ISO `YYYY-MM-DD`, or null for an open end. */
   readonly from: string | null;
   readonly to: string | null;
-  /** Called with the whole range; a cleared field arrives as `null`. */
+  /** Called with the whole custom range at once. */
   readonly onRangeChange: (from: string | null, to: string | null) => void;
   /** The latest date either field may take — usually today. */
   readonly max?: string;
   readonly labels: UbDateRangePickerLabels;
-  /** Prefix for the fields' `name`s: `${name}-from`, `${name}-to`. */
+  /** Kept for callers that named their fields; the dropdown needs no name. */
   readonly name?: string;
-  /** More of the screen's scope, after the dates in the right-hand cluster. */
+  readonly locale?: string;
+  /** More of the screen's scope after the period: dropdowns, a Filters button. */
   readonly end?: ReactNode;
-  /** Further chip groups on the track, after the presets. */
   readonly children?: ReactNode;
   readonly className?: string;
 }
@@ -85,66 +78,36 @@ export function UbDateRangePicker<P extends string>({
   onRangeChange,
   max,
   labels,
-  name = 'date-range',
+  locale,
   end,
   children,
   className,
 }: Readonly<UbDateRangePickerProps<P>>): React.JSX.Element {
-  const choose = useCallback(
-    (value: P) => (next: boolean) => {
-      if (next) onPresetChange(value);
-    },
-    [onPresetChange]
-  );
-
-  const showRange = customPreset === undefined || preset === customPreset;
-
   return (
-    <UbFilterBar
-      className={className}
-      end={
-        showRange || end ? (
-          <>
-            {showRange && (
-              <div className="flex flex-row items-center gap-2">
-                <UbDateInput
-                  name={`${name}-from`}
-                  aria-label={labels.from}
-                  placeholder={labels.from}
-                  value={from ?? ''}
-                  max={to ?? max}
-                  onChange={(value: string | null) => onRangeChange(value || null, to)}
-                  className="w-36"
-                />
-                <UbDateInput
-                  name={`${name}-to`}
-                  aria-label={labels.to}
-                  placeholder={labels.to}
-                  value={to ?? ''}
-                  min={from ?? undefined}
-                  max={max}
-                  onChange={(value: string | null) => onRangeChange(from, value || null)}
-                  className="w-36"
-                />
-              </div>
-            )}
-            {end}
-          </>
-        ) : undefined
-      }
-    >
-      <UbFilterChipGroup label={labels.presets}>
-        {presets.map((option) => (
-          <UbFilterChip
-            key={option.value}
-            label={option.label}
-            pressed={preset === option.value}
-            onToggle={choose(option.value)}
-          />
-        ))}
-      </UbFilterChipGroup>
+    <div className={cn('flex flex-wrap items-center gap-2', className)} data-testid="scope-bar">
+      <UbPeriodSelect<P>
+        presets={presets}
+        value={preset}
+        customValue={customPreset}
+        from={from}
+        to={to}
+        max={max}
+        locale={locale}
+        onChange={(value, nextFrom, nextTo) => {
+          if (value === customPreset) onRangeChange(nextFrom, nextTo);
+          else onPresetChange(value);
+        }}
+        labels={{
+          period: labels.presets,
+          from: labels.from,
+          to: labels.to,
+          apply: labels.apply,
+          close: labels.close,
+        }}
+      />
       {children}
-    </UbFilterBar>
+      {end}
+    </div>
   );
 }
 

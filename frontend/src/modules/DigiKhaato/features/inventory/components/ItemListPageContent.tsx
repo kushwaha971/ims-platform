@@ -16,6 +16,7 @@ import {
   Wrench,
 } from 'lucide-react';
 
+import { SummaryStatGrid } from 'src/components/stats/SummaryStatGrid';
 import {
   UbActionLink,
   UbButton,
@@ -27,7 +28,6 @@ import {
   UbSelect,
   UbStack,
   UbStatCard,
-  UbStatGrid,
   UbStatusBanner,
   UbTabs,
 } from 'src/design-system';
@@ -332,7 +332,7 @@ export function ItemListPageContent(): React.JSX.Element {
         )}
 
         {list.totals && (
-          <UbStatGrid>
+          <SummaryStatGrid storageKey="items">
             <UbStatCard
               icon={<Boxes className="h-4 w-4" aria-hidden />}
               label={t('items.list.stat.items')}
@@ -358,7 +358,7 @@ export function ItemListPageContent(): React.JSX.Element {
                 pressed={filters.tab === 'low'}
               />
             )}
-          </UbStatGrid>
+          </SummaryStatGrid>
         )}
 
         <UbTabs<StockTab>

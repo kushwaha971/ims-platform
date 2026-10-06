@@ -103,7 +103,7 @@ describe('ReportPageShell', () => {
     expect(screen.getByRole('button', { name: 'Export' })).toBeInTheDocument();
   });
 
-  it('draws the period as presets on the scope bar (RPT-common)', async () => {
+  it('draws the period as one dropdown on the scope bar (RPT-common; owner, 6 Oct 2026)', async () => {
     signIn(['reports.basic.read']);
     const change = jest.fn();
     renderWithProviders(
@@ -121,12 +121,18 @@ describe('ReportPageShell', () => {
           from: '2026-09-18',
           to: '2026-09-18',
           onRangeChange: jest.fn(),
-          labels: { presets: 'Period', from: 'From', to: 'To' },
+          labels: { presets: 'Period', from: 'From', to: 'To', apply: 'Apply', close: 'Close' },
         }}
       />
     );
-    await userEvent.click(screen.getByRole('button', { name: 'Custom' }));
-    expect(change).toHaveBeenCalledWith('custom');
+    await userEvent.click(screen.getByRole('button', { name: 'Period: Today' }));
+    // A preset is chosen from the list; "Custom" is the range at its foot.
+    expect(await screen.findByRole('option', { name: 'Today' })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    );
+    expect(screen.queryByRole('option', { name: 'Custom' })).toBeNull();
+    expect(change).not.toHaveBeenCalled();
   });
 
   it('shows only the no-access state to a reader who may not open the report', () => {

@@ -4,18 +4,19 @@ import { useCallback, useMemo } from 'react';
 
 import { ArrowDownLeft, ArrowUpRight, Landmark, Wallet } from 'lucide-react';
 
+import { SummaryStatGrid } from 'src/components/stats/SummaryStatGrid';
 import {
   UbButton,
   UbCard,
-  UbFilterChip,
-  UbFilterChipGroup,
+  UbActiveFilters,
+  UbFilterSheet,
   UbInfoRow,
   UbInputHint,
   UbStack,
   UbStatCard,
-  UbStatGrid,
   UbSwitch,
   UbText,
+  type UbFilterSpec,
 } from 'src/design-system';
 import {
   UbDataGrid,
@@ -54,6 +55,20 @@ import { ReportPageShell } from './ReportPageShell';
  */
 export function DayBookPageContent(): React.JSX.Element {
   const { t } = useTranslation();
+  const typeSpecs = useMemo<readonly UbFilterSpec[]>(
+    () => [
+      {
+        kind: 'multi',
+        key: 'types',
+        label: t('reports.daybook.filter.type'),
+        options: DAY_BOOK_TYPE_FILTERS.map((group) => ({
+          value: group,
+          label: t(`reports.daybook.filter.${group}`),
+        })),
+      },
+    ],
+    [t]
+  );
   const tier = useGridTier();
   const book = useDayBook();
   const { data, filters } = book;
@@ -147,19 +162,39 @@ export function DayBookPageContent(): React.JSX.Element {
           presets: t('reports.shell.period.label'),
           from: t('reports.shell.period.from'),
           to: t('reports.shell.period.to'),
+          apply: t('common.action.apply'),
+          close: t('common.action.close'),
         },
       }}
       filters={
-        <UbFilterChipGroup label={t('reports.daybook.filter.type')}>
-          {DAY_BOOK_TYPE_FILTERS.map((group) => (
-            <UbFilterChip
-              key={group}
-              label={t(`reports.daybook.filter.${group}`)}
-              pressed={filters.types.includes(group)}
-              onToggle={(next) => book.toggleType(group, next)}
-            />
-          ))}
-        </UbFilterChipGroup>
+        <>
+          <UbFilterSheet
+            specs={typeSpecs}
+            values={{ types: filters.types.join(',') }}
+            onApply={(next) =>
+              book.setTypes(
+                DAY_BOOK_TYPE_FILTERS.filter((group) =>
+                  (next.types ?? '').split(',').includes(group)
+                )
+              )
+            }
+            labels={{
+              title: t('common.filters.title'),
+              apply: t('common.action.apply'),
+              reset: t('common.action.reset'),
+              close: t('common.action.close'),
+            }}
+          />
+          <UbActiveFilters
+            specs={typeSpecs}
+            values={{ types: filters.types.join(',') }}
+            onChange={book.clearTypes}
+            labels={{
+              remove: (pill) => t('common.filters.remove', { filter: pill }),
+              clearAll: t('common.filters.clearAll'),
+            }}
+          />
+        </>
       }
       filterEnd={
         <UbSwitch
@@ -192,7 +227,7 @@ export function DayBookPageContent(): React.JSX.Element {
     >
       {data && (
         <UbStack gap={4}>
-          <UbStatGrid>
+          <SummaryStatGrid storageKey="dayBook">
             {balances && data.opening && (
               <UbStatCard
                 icon={<Wallet className="h-4 w-4" aria-hidden />}
@@ -231,7 +266,7 @@ export function DayBookPageContent(): React.JSX.Element {
                 />
               </>
             )}
-          </UbStatGrid>
+          </SummaryStatGrid>
           {!balances && <UbInputHint>{t('reports.daybook.balancesHidden')}</UbInputHint>}
 
           {tier === 'cards' ? (

@@ -11,10 +11,10 @@ import {
   UbButton,
   UbDataGrid,
   UbDateRangePicker,
+  UbFilterSelect,
   UbPageHeader,
   UbPageShell,
   UbSearchInput,
-  UbSelect,
   UbStack,
   UbText,
 } from 'src/design-system';
@@ -205,24 +205,36 @@ export function AuditLogPageContent(): React.JSX.Element {
             presets: t('audit.filter.period'),
             from: t('audit.filter.from'),
             to: t('audit.filter.to'),
+            apply: t('common.action.apply'),
+            close: t('common.action.close'),
           }}
           end={
-            <UbStack direction="row" gap={2} wrap>
-              <UbSelect
-                value={filters.actorId ?? ALL}
-                onChange={handleActor}
-                options={actorOptions}
-                aria-label={t('audit.filter.actor')}
-                className="w-44"
+            <>
+              <UbFilterSelect
+                spec={{
+                  kind: 'single',
+                  key: 'actor',
+                  label: t('audit.filter.actor'),
+                  anyLabel: t('audit.filter.actor.all'),
+                  options: actorOptions.filter((option) => option.value !== ALL),
+                }}
+                value={filters.actorId ?? ''}
+                onChange={(value) => handleActor(value || ALL)}
+                closeLabel={t('common.action.close')}
               />
-              <UbSelect
-                value={filters.group ?? ALL}
-                onChange={handleGroup}
-                options={groupOptions}
-                aria-label={t('audit.filter.action')}
-                className="w-40"
+              <UbFilterSelect
+                spec={{
+                  kind: 'single',
+                  key: 'action',
+                  label: t('audit.filter.action'),
+                  anyLabel: t('audit.filter.action.all'),
+                  options: groupOptions.filter((option) => option.value !== ALL),
+                }}
+                value={filters.group ?? ''}
+                onChange={(value) => handleGroup(value || ALL)}
+                closeLabel={t('common.action.close')}
               />
-            </UbStack>
+            </>
           }
         />
 

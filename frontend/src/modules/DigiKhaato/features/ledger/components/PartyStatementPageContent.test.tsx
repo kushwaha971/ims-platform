@@ -164,7 +164,8 @@ describe('the statement a merchant reads', () => {
     const view = await onScreen();
 
     await view.findByText('Cement bags');
-    await userEvent.click(view.getByRole('button', { name: 'All time' }));
+    await userEvent.click(view.getByTestId('period-select'));
+    await userEvent.click(await screen.findByRole('option', { name: 'All time' }));
 
     /* `replace`, not `push`: a merchant trying five presets and hitting back
        expects the khata page, not four statements. */

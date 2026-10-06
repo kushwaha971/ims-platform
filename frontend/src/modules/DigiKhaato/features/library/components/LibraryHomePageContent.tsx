@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 
 import { Armchair, CalendarClock, CircleAlert, IndianRupee, UserPlus } from 'lucide-react';
 
+import { SummaryStatGrid } from 'src/components/stats/SummaryStatGrid';
 import {
   UbActionLink,
   UbAmount,
@@ -20,7 +21,6 @@ import {
   UbProgress,
   UbStack,
   UbStatCard,
-  UbStatGrid,
   UbStatusBadge,
   UbText,
 } from 'src/design-system';
@@ -123,7 +123,7 @@ export function LibraryHomePageContent(): React.JSX.Element {
         </UbText>
       ) : (
         <UbStack gap={5} data-testid="library-home">
-          <UbStatGrid>
+          <SummaryStatGrid storageKey="libraryHome">
             <UbStatCard
               icon={<CalendarClock className="h-4 w-4" aria-hidden />}
               label={t('library.home.dueThisWeek')}
@@ -148,7 +148,7 @@ export function LibraryHomePageContent(): React.JSX.Element {
               label={t('library.home.collected')}
               value={formatInr(study.fees.collectedThisMonth)}
             />
-          </UbStatGrid>
+          </SummaryStatGrid>
 
           <UbCard padded>
             <UbStack gap={3} data-testid="library-home-shifts">

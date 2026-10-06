@@ -8,9 +8,9 @@ import { Plus } from 'lucide-react';
 
 import {
   UbActionLink,
-  UbChoiceChips,
   UbButton,
   UbDateRangePicker,
+  UbFilterSelect,
   UbEmptyState,
   UbPageHeader,
   UbPageShell,
@@ -52,9 +52,6 @@ const NEW_BILL = `${ROUTES.SALES_INVOICES}/new`;
  * and search filters, FR-2), with count / total / due over the filtered set
  * (FR-5). Rows open the bill; `N` starts a new one (FR-12).
  */
-/** A5 — the origin chip's "every source" choice (no `?origin=`). */
-const ORIGIN_ALL = 'all';
-
 export function InvoicesListPageContent(): React.JSX.Element {
   const { t } = useTranslation();
   const router = useRouter();
@@ -217,27 +214,33 @@ export function InvoicesListPageContent(): React.JSX.Element {
           onRangeChange={list.setRange}
           max={list.today}
           name="invoice-period"
+          end={
+            list.originModules.length > 0 ? (
+              <UbFilterSelect
+                spec={{
+                  kind: 'single',
+                  key: 'origin',
+                  label: t('sales.origin.filterLabel'),
+                  anyLabel: t('sales.origin.filterAll'),
+                  options: list.originModules.map((module) => {
+                    const id = ORIGIN_MODULE_IDS[module];
+                    return { value: module, label: id ? t(id) : module };
+                  }),
+                }}
+                value={filters.originModule ?? ''}
+                onChange={(next) => list.setOriginModule(next || null)}
+                closeLabel={t('common.action.close')}
+              />
+            ) : undefined
+          }
           labels={{
             presets: t('sales.period.label'),
             from: t('sales.period.from'),
             to: t('sales.period.to'),
+            apply: t('common.action.apply'),
+            close: t('common.action.close'),
           }}
         />
-        {list.originModules.length > 0 && (
-          <UbChoiceChips<string>
-            value={filters.originModule ?? ORIGIN_ALL}
-            onChange={(next) => list.setOriginModule(next === ORIGIN_ALL ? null : next)}
-            options={[
-              { value: ORIGIN_ALL, label: t('sales.origin.filterAll') },
-              ...list.originModules.map((module) => {
-                const id = ORIGIN_MODULE_IDS[module];
-                return { value: module, label: id ? t(id) : module };
-              }),
-            ]}
-            ariaLabel={t('sales.origin.filterLabel')}
-            className="flex-wrap"
-          />
-        )}
         {totals && <InvoiceListStats totals={totals} />}
         <UbTabs<InvoiceTab>
           value={filters.tab}

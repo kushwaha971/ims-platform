@@ -7,17 +7,17 @@ import { useRouter } from 'next/navigation';
 
 import { ArrowDownLeft, ArrowUpRight, Plus } from 'lucide-react';
 
+import { SummaryStatGrid } from 'src/components/stats/SummaryStatGrid';
 import {
   UbButton,
   UbDateRangePicker,
   UbEmptyState,
+  UbFilterSelect,
   UbPageHeader,
   UbPageShell,
   UbSearchInput,
-  UbSelect,
   UbStack,
   UbStatCard,
-  UbStatGrid,
   UbTabs,
 } from 'src/design-system';
 import {
@@ -219,23 +219,27 @@ export function PaymentsPageContent(): React.JSX.Element {
             presets: t('expenses.period.label'),
             from: t('expenses.period.from'),
             to: t('expenses.period.to'),
+            apply: t('common.action.apply'),
+            close: t('common.action.close'),
           }}
           end={
-            <UbSelect
-              name="payment-mode"
-              aria-label={t('payments.filter.mode')}
-              value={filters.mode ?? ALL}
-              options={modeOptions}
-              onChange={(value: string) =>
-                list.setMode(value === ALL ? null : (value as PaymentMode))
-              }
-              className="w-36"
+            <UbFilterSelect
+              spec={{
+                kind: 'single',
+                key: 'mode',
+                label: t('payments.filter.mode'),
+                anyLabel: t('payments.filter.allModes'),
+                options: modeOptions.filter((option) => option.value !== ALL),
+              }}
+              value={filters.mode ?? ''}
+              onChange={(value) => list.setMode(value ? (value as PaymentMode) : null)}
+              closeLabel={t('common.action.close')}
             />
           }
         />
 
         {totals && list.rows.length > 0 && (
-          <UbStatGrid>
+          <SummaryStatGrid storageKey="payments">
             <UbStatCard
               icon={<ArrowDownLeft className="h-4 w-4" aria-hidden />}
               label={t('payments.total.in')}
@@ -248,7 +252,7 @@ export function PaymentsPageContent(): React.JSX.Element {
               value={formatInr(totals.amountOut)}
               subtext={t('payments.total.count', { count: totals.countOut })}
             />
-          </UbStatGrid>
+          </SummaryStatGrid>
         )}
 
         <UbTabs<PaymentTab>

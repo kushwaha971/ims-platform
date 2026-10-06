@@ -6,7 +6,6 @@ import {
   UbDateInput,
   UbDateRangePicker,
   UbEmptyState,
-  UbFilterBar,
   UbPageHeader,
   UbPageShell,
   UbStack,
@@ -86,7 +85,7 @@ export interface ReportPageShellProps<P extends string> {
   readonly asOf?: ReportAsOf;
   /** A range report's period — the presets and custom range, as the scope bar. */
   readonly period?: Omit<UbDateRangePickerProps<P>, 'children' | 'end' | 'className'>;
-  /** More chip groups on the scope bar's track (`UbFilterChipGroup`s). */
+  /** More scope after the period: dropdowns (`UbFilterSelect`), a Filters sheet. */
   readonly filters?: ReactNode;
   /** More scope controls at the bar's right end — a switch, a select. */
   readonly filterEnd?: ReactNode;
@@ -174,7 +173,10 @@ export function ReportPageShell<P extends string>({
             {filters}
           </UbDateRangePicker>
         ) : filters || filterEnd ? (
-          <UbFilterBar end={filterEnd}>{filters}</UbFilterBar>
+          <UbStack direction="row" align="center" gap={2} className="flex-wrap">
+            {filters}
+            {filterEnd}
+          </UbStack>
         ) : null}
 
         {banner}

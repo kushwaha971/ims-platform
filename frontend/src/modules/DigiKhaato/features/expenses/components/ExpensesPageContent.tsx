@@ -6,18 +6,18 @@ import dynamic from 'next/dynamic';
 
 import { BookOpen, Plus, Receipt } from 'lucide-react';
 
+import { SummaryStatGrid } from 'src/components/stats/SummaryStatGrid';
 import {
   UbActionLink,
   UbButton,
   UbDateRangePicker,
   UbEmptyState,
+  UbFilterSelect,
   UbPageHeader,
   UbPageShell,
   UbSearchInput,
-  UbSelect,
   UbStack,
   UbStatCard,
-  UbStatGrid,
   UbTabs,
   UbTag,
   UbText,
@@ -63,7 +63,6 @@ const SEARCH_DEBOUNCE_MS = 300;
 /* The "no filter" choice of the two selects. Not '' — the select cannot show
    an empty value as chosen, and the first sweep found both boxes rendering
    blank, with nothing to say what they filter by. */
-const ALL = 'all';
 
 /**
  * EXP-01 FR-9 — `/expenses`: what went out, filtered, with the total over the
@@ -167,17 +166,11 @@ export function ExpensesPageContent(): React.JSX.Element {
     [t]
   );
   const categoryOptions = useMemo(
-    () => [
-      { value: ALL, label: t('expenses.filter.allCategories') },
-      ...form.categories.map((category) => ({ value: category.id, label: category.name })),
-    ],
-    [t, form.categories]
+    () => form.categories.map((category) => ({ value: category.id, label: category.name })),
+    [form.categories]
   );
   const modeOptions = useMemo(
-    () => [
-      { value: ALL, label: t('expenses.filter.allModes') },
-      ...PAYMENT_MODES.map((mode) => ({ value: mode, label: t(`ledger.mode.${mode}`) })),
-    ],
+    () => PAYMENT_MODES.map((mode) => ({ value: mode, label: t(`ledger.mode.${mode}`) })),
     [t]
   );
   const tabs = useMemo(
@@ -256,26 +249,34 @@ export function ExpensesPageContent(): React.JSX.Element {
             presets: t('expenses.period.label'),
             from: t('expenses.period.from'),
             to: t('expenses.period.to'),
+            apply: t('common.action.apply'),
+            close: t('common.action.close'),
           }}
           end={
             <>
-              <UbSelect
-                name="expense-category"
-                aria-label={t('expenses.filter.category')}
-                value={filters.categoryId ?? ALL}
-                options={categoryOptions}
-                onChange={(value: string) => list.setCategory(value === ALL ? null : value)}
-                className="w-44"
+              <UbFilterSelect
+                spec={{
+                  kind: 'single',
+                  key: 'category',
+                  label: t('expenses.filter.category'),
+                  anyLabel: t('expenses.filter.allCategories'),
+                  options: categoryOptions,
+                }}
+                value={filters.categoryId ?? ''}
+                onChange={(value) => list.setCategory(value || null)}
+                closeLabel={t('common.action.close')}
               />
-              <UbSelect
-                name="expense-mode"
-                aria-label={t('expenses.filter.mode')}
-                value={filters.mode ?? ALL}
-                options={modeOptions}
-                onChange={(value: string) =>
-                  list.setMode(value === ALL ? null : (value as PaymentMode))
-                }
-                className="w-36"
+              <UbFilterSelect
+                spec={{
+                  kind: 'single',
+                  key: 'mode',
+                  label: t('expenses.filter.mode'),
+                  anyLabel: t('expenses.filter.allModes'),
+                  options: modeOptions,
+                }}
+                value={filters.mode ?? ''}
+                onChange={(value) => list.setMode(value ? (value as PaymentMode) : null)}
+                closeLabel={t('common.action.close')}
               />
             </>
           }
@@ -283,7 +284,7 @@ export function ExpensesPageContent(): React.JSX.Element {
 
         {totals && list.rows.length > 0 && (
           <UbStack gap={2}>
-            <UbStatGrid>
+            <SummaryStatGrid storageKey="expenses">
               <UbStatCard
                 icon={<Receipt className="h-4 w-4" aria-hidden />}
                 /* On the Void tab the figure is money that did NOT go out; calling it
@@ -292,7 +293,7 @@ export function ExpensesPageContent(): React.JSX.Element {
                 value={formatInr(totals.amount)}
                 subtext={t('expenses.total.count', { count: totals.count })}
               />
-            </UbStatGrid>
+            </SummaryStatGrid>
             {totals.byCategory.length > 0 && (
               <UbStack direction="row" align="center" className="flex-wrap gap-2">
                 <UbText variant="caption" tone="tertiary">

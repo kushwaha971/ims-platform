@@ -157,6 +157,9 @@ export type { UbInputHintProps } from './UbInputHint';
 // `UbDateInput`'s quick choices once PTY-02 needed the same pill three more
 // times.
 export { UbFilterBar, UbFilterChip, UbFilterChipGroup } from './UbFilterChip';
+// Owner, 6 Oct 2026: stat cards fold into one summary line, expandable.
+export { UbStatSummary } from './UbStatSummary';
+export type { UbStatSummaryItem, UbStatSummaryProps } from './UbStatSummary';
 // Owner-approved filter pattern (6 Oct 2026): dropdowns, one Filters drawer,
 // and pills for what is on — replacing rows of chips on list screens.
 export {

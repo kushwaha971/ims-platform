@@ -138,7 +138,12 @@ it('draws exactly the tiles the server sent, each opening its list', async () =>
   service.getDashboard.mockResolvedValue(DATA());
   signIn(OWNER);
   renderWithProviders(<DashboardPageContent />);
-  expect(await screen.findByText('To collect')).toBeInTheDocument();
+  expect(await screen.findAllByText('To collect')).not.toHaveLength(0);
+  // Owner, 6 Oct 2026: the key figures are one line; the tiles open from Details.
+  const strip = screen.getByTestId('stat-summary');
+  expect(within(strip).getByText('To collect')).toBeInTheDocument();
+  expect(screen.queryByText('Due today')).toBeNull();
+  await userEvent.click(screen.getByRole('button', { name: 'Details' }));
   for (const label of [
     'To pay',
     'Due today',
@@ -147,9 +152,9 @@ it('draws exactly the tiles the server sent, each opening its list', async () =>
     'Cash in hand',
     'Low stock',
   ]) {
-    expect(screen.getByText(label)).toBeInTheDocument();
+    expect(screen.getAllByText(label).length).toBeGreaterThan(0);
   }
-  expect(screen.getByText('₹7,000.00')).toBeInTheDocument();
+  expect(screen.getAllByText('₹7,000.00').length).toBeGreaterThan(0);
   expect(screen.getByText(/₹900\.00 in 2 bills/)).toBeInTheDocument();
   expect(screen.getByText('1 out of stock')).toBeInTheDocument();
   await userEvent.click(screen.getByRole('button', { name: /To collect: ₹7,000\.00/ }));
@@ -161,7 +166,7 @@ it('leaves out a tile the reader may not see, rather than showing it as ₹0 (FR
   service.getDashboard.mockResolvedValue(DATA({ tiles }));
   signIn(OWNER.filter((code) => code !== 'reports.financial.read'));
   renderWithProviders(<DashboardPageContent />);
-  await screen.findByText('To collect');
+  await screen.findAllByText('To collect');
   expect(screen.queryByText('Cash in hand')).not.toBeInTheDocument();
   expect(screen.queryByText('Low stock')).not.toBeInTheDocument();
   expect(screen.queryByText('Running low')).not.toBeInTheDocument();
@@ -210,7 +215,7 @@ it('asks the server to recompute when the refresh icon is pressed (FR-8)', async
   service.getDashboard.mockResolvedValue(DATA());
   signIn(OWNER);
   renderWithProviders(<DashboardPageContent />);
-  await screen.findByText('To collect');
+  await screen.findAllByText('To collect');
   expect(screen.getByText(/Updated/)).toBeInTheDocument();
   await userEvent.click(screen.getByRole('button', { name: 'Refresh' }));
   expect(service.getDashboard).toHaveBeenLastCalledWith({ refresh: true }, expect.anything());
@@ -220,7 +225,7 @@ it('re-reads after any write the invalidation map signals (TSK-RPT-01-06)', asyn
   service.getDashboard.mockResolvedValue(DATA());
   signIn(OWNER);
   renderWithProviders(<DashboardPageContent />);
-  await screen.findByText('To collect');
+  await screen.findAllByText('To collect');
   const before = service.getDashboard.mock.calls.length;
   act(() => {
     store.dispatch(cacheInvalidated({ slices: ['partyList'], urgency: 'next-mount' }));
@@ -270,7 +275,7 @@ it('never draws a registered section the server did not return', async () => {
   service.getDashboard.mockResolvedValue(DATA());
   signIn(OWNER);
   renderWithProviders(<DashboardPageContent />);
-  expect(await screen.findByText('To collect')).toBeInTheDocument();
+  expect(await screen.findAllByText('To collect')).not.toHaveLength(0);
   expect(screen.queryByTestId('dashboard-module-sections')).not.toBeInTheDocument();
   expect(screen.queryByText(/Probe members/)).not.toBeInTheDocument();
 });

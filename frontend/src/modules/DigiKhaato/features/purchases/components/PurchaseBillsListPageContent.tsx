@@ -214,6 +214,8 @@ export function PurchaseBillsListPageContent(): React.JSX.Element {
             presets: t('purchases.period.label'),
             from: t('purchases.period.from'),
             to: t('purchases.period.to'),
+            apply: t('common.action.apply'),
+            close: t('common.action.close'),
           }}
         />
         {list.totals && <PurchaseBillListStats totals={list.totals} />}

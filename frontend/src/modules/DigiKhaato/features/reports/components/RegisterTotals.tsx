@@ -1,6 +1,7 @@
 'use client';
 
-import { UbInfoRow, UbPanel, UbPanelSection, UbStatCard, UbStatGrid } from 'src/design-system';
+import { SummaryStatGrid } from 'src/components/stats/SummaryStatGrid';
+import { UbInfoRow, UbPanel, UbPanelSection, UbStatCard } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { formatInr } from 'src/utils/money';
 
@@ -26,7 +27,7 @@ export function RegisterTotals({
   );
   return (
     <>
-      <UbStatGrid label={t('reports.register.totals')}>
+      <SummaryStatGrid storageKey="register" label={t('reports.register.totals')}>
         <UbStatCard
           label={t('reports.register.tile.taxable')}
           value={formatInr(totals.taxableTotal)}
@@ -52,7 +53,7 @@ export function RegisterTotals({
             totals.amountDue.startsWith('-') || totals.amountDue === '0.00' ? 'default' : 'warning'
           }
         />
-      </UbStatGrid>
+      </SummaryStatGrid>
       <UbPanel as="section">
         <UbPanelSection title={t('reports.register.footer.title')} collapsible defaultOpen={false}>
           {row(t('reports.register.column.cgst'), totals.cgst)}

@@ -2,7 +2,8 @@
 
 import { FileText, IndianRupee, Receipt } from 'lucide-react';
 
-import { UbStatCard, UbStatGrid } from 'src/design-system';
+import { SummaryStatGrid } from 'src/components/stats/SummaryStatGrid';
+import { UbStatCard } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { formatInr } from 'src/utils/money';
 
@@ -18,7 +19,7 @@ export function InvoiceListStats({
 }: Readonly<{ totals: InvoiceListTotals }>): React.JSX.Element {
   const { t } = useTranslation();
   return (
-    <UbStatGrid>
+    <SummaryStatGrid storageKey="invoices">
       <UbStatCard
         icon={<Receipt className="h-4 w-4" aria-hidden />}
         label={t('sales.total.billed')}
@@ -35,6 +36,6 @@ export function InvoiceListStats({
         value={String(totals.count)}
         className="max-md:hidden"
       />
-    </UbStatGrid>
+    </SummaryStatGrid>
   );
 }

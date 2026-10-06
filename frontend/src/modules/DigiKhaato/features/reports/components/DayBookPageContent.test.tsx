@@ -231,7 +231,10 @@ it('writes a type chip into the URL, back to page one', async () => {
   signIn(OWNER);
   renderWithProviders(<DayBookPageContent />);
   await screen.findByTestId('ub-grid-table');
-  await userEvent.click(screen.getByRole('button', { name: 'Payments' }));
+  // Owner, 6 Oct 2026: the type filter lives in the Filters sheet, applied once.
+  await userEvent.click(screen.getByTestId('filters-button'));
+  await userEvent.click(await screen.findByRole('checkbox', { name: 'Payments' }));
+  await userEvent.click(screen.getByTestId('filters-apply'));
   expect(mockReplace).toHaveBeenCalledWith('?type=payments', { scroll: false });
 });
 

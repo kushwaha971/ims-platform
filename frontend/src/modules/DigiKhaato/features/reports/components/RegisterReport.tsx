@@ -9,6 +9,7 @@ import {
   UbEmptyState,
   UbFilterChip,
   UbFilterChipGroup,
+  UbFilterSelect,
   UbPageShell,
   UbSwitch,
 } from 'src/design-system';
@@ -124,24 +125,27 @@ export function RegisterReport({ book }: Readonly<{ book: RegisterBook }>): Reac
     );
   }
 
+  // Owner, 6 Oct 2026: each single-choice filter is a dropdown, not a chip row.
   const chips = <K extends keyof RegisterFilters>(
     key: K,
     values: readonly RegisterFilters[K][],
     label: string,
     labelFor: (value: RegisterFilters[K]) => string
   ) => (
-    <UbFilterChipGroup label={label}>
-      {values.map((value) => (
-        <UbFilterChip
-          key={String(value)}
-          label={labelFor(value)}
-          pressed={filters[key] === value}
-          onToggle={(next) => {
-            if (next) update({ [key]: value } as Partial<RegisterFilters>);
-          }}
-        />
-      ))}
-    </UbFilterChipGroup>
+    <UbFilterSelect
+      spec={{
+        kind: 'single',
+        key: String(key),
+        label,
+        options: values.map((value) => ({ value: String(value), label: labelFor(value) })),
+      }}
+      value={String(filters[key])}
+      onChange={(next) => {
+        const value = values.find((candidate) => String(candidate) === next);
+        if (value !== undefined) update({ [key]: value } as Partial<RegisterFilters>);
+      }}
+      closeLabel={t('common.action.close')}
+    />
   );
   const levels: readonly RegisterLevel[] = ['document', 'line'];
 
@@ -166,6 +170,8 @@ export function RegisterReport({ book }: Readonly<{ book: RegisterBook }>): Reac
           presets: t('reports.period.label'),
           from: t('reports.period.from'),
           to: t('reports.period.to'),
+          apply: t('common.action.apply'),
+          close: t('common.action.close'),
         },
       }}
       exportAction={{

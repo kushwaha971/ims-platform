@@ -216,6 +216,13 @@ const tableHead = async () => {
   return within(head);
 };
 
+/* These tests read the figures on the cards. The owner folded the cards into a
+   summary line (6 Oct 2026) that opens with "Details"; open it, as a merchant
+   who wants the cards does once and the screen remembers. */
+beforeEach(() => {
+  window.localStorage.setItem('ub.statSummary.aging', 'open');
+});
+
 beforeEach(() => {
   /* Only `Date` is faked. The popover, the lazy calendar and user-event all
      run on real timers, and faking those too is how a test hangs on a

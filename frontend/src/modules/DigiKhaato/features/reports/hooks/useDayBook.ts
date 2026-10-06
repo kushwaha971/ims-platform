@@ -41,6 +41,8 @@ export interface UseDayBookResult {
   readonly setRange: (from: string | null, to: string | null) => void;
   readonly toggleType: (group: DayBookTypeFilter, on: boolean) => void;
   readonly clearTypes: () => void;
+  /** The Filters sheet applies every type at once — one navigation, not one per type. */
+  readonly setTypes: (groups: readonly DayBookTypeFilter[]) => void;
   readonly setIncludeVoid: (on: boolean) => void;
   readonly setPage: (page: number) => void;
   readonly refetch: () => void;
@@ -129,6 +131,10 @@ export const useDayBook = (): UseDayBookResult => {
     [push, filters]
   );
   const clearTypes = useCallback(() => push({ ...filters, types: [], page: 1 }), [push, filters]);
+  const setTypes = useCallback(
+    (groups: readonly DayBookTypeFilter[]) => push({ ...filters, types: [...groups], page: 1 }),
+    [push, filters]
+  );
   const setIncludeVoid = useCallback(
     (on: boolean) => push({ ...filters, includeVoid: on, page: 1 }),
     [push, filters]
@@ -151,6 +157,7 @@ export const useDayBook = (): UseDayBookResult => {
       setRange,
       toggleType,
       clearTypes,
+      setTypes,
       setIncludeVoid,
       setPage,
       refetch,
@@ -167,6 +174,7 @@ export const useDayBook = (): UseDayBookResult => {
       setRange,
       toggleType,
       clearTypes,
+      setTypes,
       setIncludeVoid,
       setPage,
       refetch,

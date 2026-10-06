@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 
 import { Package, TriangleAlert } from 'lucide-react';
 
+import { SummaryStatGrid } from 'src/components/stats/SummaryStatGrid';
 import {
   UbActionLink,
   UbButton,
@@ -19,7 +20,6 @@ import {
   UbSelect,
   UbStack,
   UbStatCard,
-  UbStatGrid,
   UbStatusBanner,
   UbSwitch,
   UbText,
@@ -273,7 +273,7 @@ export function StockSummaryPageContent(): React.JSX.Element {
           />
         )}
         {summary && (
-          <UbStatGrid>
+          <SummaryStatGrid storageKey="stockSummary">
             {valuation && summary.totals.value !== null && (
               <UbStatCard
                 label={t('stock.summary.totalValue')}
@@ -282,7 +282,7 @@ export function StockSummaryPageContent(): React.JSX.Element {
               />
             )}
             <UbStatCard label={t('stock.summary.items')} value={String(summary.totals.items)} />
-          </UbStatGrid>
+          </SummaryStatGrid>
         )}
         <UbDataGrid
           rows={rows}

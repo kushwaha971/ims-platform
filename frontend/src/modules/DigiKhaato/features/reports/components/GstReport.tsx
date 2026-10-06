@@ -140,6 +140,8 @@ export function GstReport(): React.JSX.Element {
           presets: t('reports.period.label'),
           from: t('reports.period.from'),
           to: t('reports.period.to'),
+          apply: t('common.action.apply'),
+          close: t('common.action.close'),
         },
       }}
       exportAction={{

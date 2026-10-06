@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 
 import { MessageCircle, Plus } from 'lucide-react';
 
+import { SummaryStatGrid } from 'src/components/stats/SummaryStatGrid';
 import {
   UbActionLink,
   UbAmount,
@@ -21,7 +22,6 @@ import {
   UbPressable,
   UbStack,
   UbStatCard,
-  UbStatGrid,
   UbStatusBadge,
   UbText,
 } from 'src/design-system';
@@ -140,7 +140,7 @@ export function TodayPageContent(): React.JSX.Element {
         )
       ) : (
         <UbStack gap={4} data-testid="lending-today">
-          <UbStatGrid>
+          <SummaryStatGrid storageKey="lendingToday">
             <UbStatCard
               label={t('lending.today.due')}
               value={formatInr(round.due)}
@@ -160,7 +160,7 @@ export function TodayPageContent(): React.JSX.Element {
               label={t('lending.today.left')}
               value={String(round.stopsCount - round.done)}
             />
-          </UbStatGrid>
+          </SummaryStatGrid>
           {routes.length > 0 && (
             <UbChoiceChips<string>
               id="lending-today-route"

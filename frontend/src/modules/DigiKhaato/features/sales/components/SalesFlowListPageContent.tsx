@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 
 import { FileText, IndianRupee, Plus, Receipt } from 'lucide-react';
 
+import { SummaryStatGrid } from 'src/components/stats/SummaryStatGrid';
 import {
   UbActionLink,
   UbButton,
@@ -16,7 +17,6 @@ import {
   UbSearchInput,
   UbStack,
   UbStatCard,
-  UbStatGrid,
   UbTabs,
 } from 'src/design-system';
 import {
@@ -202,10 +202,12 @@ export function SalesFlowListPageContent({
             presets: t('sales.period.label'),
             from: t('sales.period.from'),
             to: t('sales.period.to'),
+            apply: t('common.action.apply'),
+            close: t('common.action.close'),
           }}
         />
         {totals && (
-          <UbStatGrid>
+          <SummaryStatGrid storageKey="salesFlows">
             <UbStatCard
               icon={<Receipt className="h-4 w-4" aria-hidden />}
               label={t(stat)}
@@ -224,7 +226,7 @@ export function SalesFlowListPageContent({
                 value={String(totals.count)}
               />
             )}
-          </UbStatGrid>
+          </SummaryStatGrid>
         )}
         <UbTabs<FlowTab>
           value={filters.tab}

@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 
 import { Download } from 'lucide-react';
 
+import { SummaryStatGrid } from 'src/components/stats/SummaryStatGrid';
 import {
   UbActionLink,
   UbBox,
@@ -17,7 +18,6 @@ import {
   UbPageShell,
   UbStack,
   UbStatCard,
-  UbStatGrid,
   UbStatusBanner,
   UbTabs,
   UbText,
@@ -280,7 +280,7 @@ export function AgingPageContent(): React.JSX.Element {
                 a problem: three warning tiles beside it would make every shop's
                 book read as an alarm, and every shop has money in 0–30. */}
             {aging.totals && aging.rows.length > 0 && (
-              <UbStatGrid>
+              <SummaryStatGrid storageKey="aging">
                 {AGING_BUCKETS.map((bucket) => (
                   <UbStatCard
                     key={bucket}
@@ -289,7 +289,7 @@ export function AgingPageContent(): React.JSX.Element {
                     tone={bucket === '90_plus' ? 'danger' : 'default'}
                   />
                 ))}
-              </UbStatGrid>
+              </SummaryStatGrid>
             )}
 
             <UbDataGrid

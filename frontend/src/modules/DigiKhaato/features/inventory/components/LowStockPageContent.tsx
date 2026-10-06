@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 
 import { Package, SlidersHorizontal } from 'lucide-react';
 
+import { SummaryStatGrid } from 'src/components/stats/SummaryStatGrid';
 import {
   UbButton,
   UbEmptyState,
@@ -15,7 +16,6 @@ import {
   UbPageShell,
   UbStack,
   UbStatCard,
-  UbStatGrid,
   UbText,
 } from 'src/design-system';
 import {
@@ -244,7 +244,7 @@ export function LowStockPageContent(): React.JSX.Element {
       <UbPageHeader title={t('stock.low.title')} />
       <UbStack gap={4} data-testid="low-stock-screen">
         {report.low && (
-          <UbStatGrid>
+          <SummaryStatGrid storageKey="lowStock">
             <UbStatCard
               label={t('items.stock.out')}
               value={String(report.low.totals.out)}
@@ -255,7 +255,7 @@ export function LowStockPageContent(): React.JSX.Element {
               value={String(report.low.totals.low)}
               tone={report.low.totals.low > 0 ? 'warning' : 'default'}
             />
-          </UbStatGrid>
+          </SummaryStatGrid>
         )}
         <UbDataGrid
           rows={rows}

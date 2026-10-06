@@ -15,7 +15,7 @@ import {
   Wallet,
 } from 'lucide-react';
 
-import { UbStatCard, UbStatGrid, type UbStatCardDelta } from 'src/design-system';
+import { UbStatCard, UbStatGrid, UbStatSummary, type UbStatCardDelta } from 'src/design-system';
 import type { TranslateFn } from 'src/hooks/useTranslation';
 import { formatInr } from 'src/utils/money';
 
@@ -178,21 +178,44 @@ export function DashboardTiles({
     return out;
   }, [tiles, t, units]);
 
+  // Owner, 6 Oct 2026: the eight tiles took the first screen. The figures a
+  // merchant opens the app for stay on one line; the tiles are a tap away.
+  const SUMMARY: readonly TileKey[] = ['toCollect', 'toPay', 'todaySales', 'cashInHand'];
+  const summary = views
+    .filter((view) => SUMMARY.includes(view.key))
+    .map((view) => ({
+      key: view.key,
+      label: view.label,
+      value: view.value,
+      tone:
+        view.key === 'toCollect'
+          ? ('negative' as const)
+          : view.key === 'toPay'
+            ? ('positive' as const)
+            : ('default' as const),
+    }));
+
   return (
-    <UbStatGrid>
-      {views.map((view) => (
-        <UbStatCard
-          key={view.key}
-          icon={ICON[view.key]}
-          label={view.label}
-          value={view.value}
-          subtext={view.subtext}
-          delta={view.delta}
-          tone={tileTone(view.key, tiles)}
-          onClick={() => router.push(tileHref(view.key, tiles))}
-          actionLabel={t('reports.dashboard.tile.open', { label: view.label, amount: view.full })}
-        />
-      ))}
-    </UbStatGrid>
+    <UbStatSummary
+      items={summary}
+      storageKey="dashboard"
+      labels={{ show: t('common.summary.show'), hide: t('common.summary.hide') }}
+    >
+      <UbStatGrid>
+        {views.map((view) => (
+          <UbStatCard
+            key={view.key}
+            icon={ICON[view.key]}
+            label={view.label}
+            value={view.value}
+            subtext={view.subtext}
+            delta={view.delta}
+            tone={tileTone(view.key, tiles)}
+            onClick={() => router.push(tileHref(view.key, tiles))}
+            actionLabel={t('reports.dashboard.tile.open', { label: view.label, amount: view.full })}
+          />
+        ))}
+      </UbStatGrid>
+    </UbStatSummary>
   );
 }

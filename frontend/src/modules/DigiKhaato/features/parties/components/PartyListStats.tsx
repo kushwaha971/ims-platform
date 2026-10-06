@@ -4,7 +4,8 @@ import { memo, useCallback } from 'react';
 
 import { ArrowDownLeft, ArrowUpRight, Users } from 'lucide-react';
 
-import { UbSkeleton, UbStatCard, UbStatGrid } from 'src/design-system';
+import { SummaryStatGrid } from 'src/components/stats/SummaryStatGrid';
+import { UbSkeleton, UbStatCard } from 'src/design-system';
 import { formatInr } from 'src/utils/money';
 
 import type { PartyBalanceFilter } from '../constants/partyFilters';
@@ -107,18 +108,18 @@ function PartyListStatsBase({
 
   if (loading) {
     return (
-      <UbStatGrid live label={regionLabel}>
+      <SummaryStatGrid storageKey="parties" live label={regionLabel}>
         <UbSkeleton variant="card" label={loadingLabel} />
         <UbSkeleton variant="card" label={loadingLabel} />
         {/* The count tile's slot, reserved at the widths that show it, so the
             row does not reflow when the figures land (R-P-6). */}
         <UbSkeleton variant="card" label={loadingLabel} className="max-md:hidden" />
-      </UbStatGrid>
+      </SummaryStatGrid>
     );
   }
 
   return (
-    <UbStatGrid live label={regionLabel}>
+    <SummaryStatGrid storageKey="parties" live label={regionLabel}>
       <UbStatCard
         icon={<ArrowDownLeft className="h-3.5 w-3.5" />}
         label={receivableLabel}
@@ -159,7 +160,7 @@ function PartyListStatsBase({
            The two money tiles — the ones a merchant acts on — stay. */
         className="max-md:hidden"
       />
-    </UbStatGrid>
+    </SummaryStatGrid>
   );
 }
 
