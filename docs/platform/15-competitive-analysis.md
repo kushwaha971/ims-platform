@@ -2,6 +2,8 @@
 
 Status: written 5 Oct 2026, on `dev` after `6180ec6`. The owner's brief was "from every point of view, a proper analysis comparing what we built for each module, because I'm going to compete with all these". It also asked for item-level truth in the Shop: the same product bought from two suppliers at two costs, sold to different customers at different prices, and the margin of each.
 
+**Corrections, 6 Oct 2026.** Before building each gap the code is checked again, and four rows of this table were wrong: cost on sale lines, UPI link/QR and the thermal print were already built, and the GST summary already exports (CSV, not the portal's JSON). The rows say so where they changed.
+
 **How this was done.** Our side is read from the code on `dev` (models, endpoints, menu rows and screens), not from the FRDs, so "we have it" means it is built. The competitors' side is read from their own current public feature pages, linked at the end; it is what they advertise, not a hands-on test, and a later hands-on pass should confirm the rows that drive decisions.
 
 Legend: **✓** built · **◐** partly (the note says what is missing) · **✗** not built.
@@ -26,11 +28,11 @@ Compared with Vyapar (the closest Indian small-business product), Zoho Inventory
 | Khata (you gave / you got), corrections that stay visible | ✓ | ◐ | ◐ | our strongest area: correct balances, reversals kept, aging |
 | Payment reminders (WhatsApp by hand, logged) | ✓ | ✓ | ✓ | theirs also send automatically |
 | Cashbook, expenses | ✓ | ✓ | ✓ | |
-| UPI collection link / QR on invoice | ✗ | ✓ | ✓ | |
+| UPI collection link / QR on invoice | ✓ | ✓ | ✓ | corrected 6 Oct: built (PAY-03 `payments/services/upi.py`, the invoice print's QR and the bill's UPI intent); this row was wrong |
 | e-Invoice (IRN) and e-way bill | ✗ | ✓ | ✓ | must-have above the turnover threshold |
-| Thermal / POS billing, barcode scan at counter | ✗ | ✓ | ✓ | |
+| Thermal / POS billing, barcode scan at counter | ◐ | ✓ | ✓ | corrected 6 Oct: 80 mm thermal print and barcode scan into a bill line are built; a dedicated POS counter screen is not |
 | Online store / catalogue link | ✗ | ✓ | ✓ | |
-| Tally export | ✗ | ✓ | ✓ | |
+| Tally export | ◐ | ✓ | ✓ | corrected 6 Oct: registers export as CSV laid out for an accountant importing into Tally; no Tally XML |
 
 ### 1.2 Items and stock — the owner's point
 
@@ -54,7 +56,7 @@ Compared with Vyapar (the closest Indian small-business product), Zoho Inventory
 |---|---|---|---|
 | Dashboard, day book, sales and purchase registers | ✓ | ✓ | ✓ |
 | GST summary | ✓ | ✓ | ✓ |
-| GSTR-1 / 3B filing exports (JSON) | ✗ | ✓ | ✓ |
+| GSTR-1 / 3B filing exports (JSON) | ◐ | ✓ | ✓ |
 | Receivables and payables aging | ✓ | ✓ | ✓ |
 | Stock summary | ✓ | ✓ | ✓ |
 | Profit & loss, balance sheet, cash flow | ✗ | ✓ | ✓ |
