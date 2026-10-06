@@ -687,7 +687,11 @@
   "Each manifest carries the app's words for shared pages and its people list;",
   "the manifests and the ten words they name are in the shell (107.5 -> 107.6),",
   "and useAppWords is in the khata's chunk. 27 lines that measured within",
-  "0.2 of their budget were raised by measured + 0.5."
+  "0.2 of their budget were raised by measured + 0.5.",
+  "",
+  "── 6 Oct 2026: bill-wise profit (docs/platform/15 §1.4 item 1) ─────────────",
+  "The bill page gains InvoiceProfitCard and its service (~1 KB gz); the editor",
+  "routes share that chunk and moved 0.1. Raised by measured + 0.5."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -1247,11 +1251,11 @@
    "firstLoad": 336
   },
   "/sales/invoices/new": {
-   "route": 134,
+   "route": 135,
    "firstLoad": 369
   },
   "/sales/invoices/[id]/edit": {
-   "route": 134,
+   "route": 135,
    "firstLoad": 369
   },
   "/sales/invoices": {
@@ -1259,8 +1263,8 @@
    "firstLoad": 330
   },
   "/sales/invoices/[id]": {
-   "route": 68,
-   "firstLoad": 303
+   "route": 70,
+   "firstLoad": 305
   },
   "/sales/estimates": {
    "route": 96,

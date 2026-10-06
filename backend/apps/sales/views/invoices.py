@@ -152,6 +152,14 @@ class InvoiceViewSet(
             return StandardResponse.created(body["data"], meta=body["meta"])
         return StandardResponse.ok(body["data"], meta=body["meta"])
 
+    @action(detail=True, methods=["get"], url_path="profit")
+    def profit(self, request: Any, *args: Any, **kwargs: Any) -> Any:
+        """What this bill made: cost of goods and profit, per line and in all."""
+        from apps.sales.selectors.profit import invoice_profit
+
+        document = get_object_or_404(self.get_queryset(), pk=kwargs["pk"])
+        return StandardResponse.ok(invoice_profit(document))
+
     @action(detail=True, methods=["post"], url_path="void")
     def void(self, request: Any, *args: Any, **kwargs: Any) -> Any:
         """SAL-05 — `{reason}` → the void document, its reversals and the payments left over."""

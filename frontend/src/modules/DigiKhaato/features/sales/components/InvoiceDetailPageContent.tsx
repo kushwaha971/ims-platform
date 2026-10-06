@@ -32,6 +32,7 @@ import { STATUS_TONE, partyLabel } from '../view-model/invoiceDisplay';
 
 import { DocumentActions } from './DocumentActions';
 import { DocumentLinksPanel } from './DocumentLinksPanel';
+import { InvoiceProfitCard } from './InvoiceProfitCard';
 import { OriginBadge } from './OriginBadge';
 
 import type { FlowKind } from '../types/salesFlows.types';
@@ -231,6 +232,10 @@ export function InvoiceDetailPageContent({
             )}
           </UbStack>
         </UbPanel>
+        {/* docs/platform/15 §1.4 — bill-wise profit, for whoever may see costs. */}
+        {invoice && !draft && doc.status !== 'void' && can('reports.financial.read') && (
+          <InvoiceProfitCard id={doc.id} />
+        )}
         {/* A region that scrolls sideways on a phone must be reachable by
             keyboard, and named, or its right half is unreadable without a
             pointer (axe scrollable-region-focusable, Sprint 12 sweep). */}

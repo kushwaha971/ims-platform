@@ -41,8 +41,8 @@ Compared with Vyapar (the closest Indian small-business product), Zoho Inventory
 | Locations | ◐ | ✓ | ✓ | the model has locations; no transfer screen |
 | **Cost per supplier** (same item, two suppliers, two costs; last and average per supplier) | ✗ | ◐ | ✓ | the data exists on purchase lines; nothing shows or uses it |
 | **Price per customer** (remembered last rate; price lists per customer group) | ✗ | ✓ party-wise rate | ✓ price lists | |
-| **Margin per sale line** (cost of goods kept on the line) | ✗ | ✓ bill-wise profit | ✓ | sales lines store no cost, so no margin report can be honest yet |
-| Item-wise P&L, party-wise P&L, bill-wise profit | ✗ | ✓ | ✓ | |
+| **Margin per sale line** (cost of goods kept on the line) | ✓ | ✓ bill-wise profit | ✓ | the cost was already frozen on every line at issue (`unit_cost_snapshot`; this row was wrong on 5 Oct); 6 Oct: items that keep no stock are costed at their purchase price then, and each bill shows its profit (`GET /sales/invoices/{id}/profit`) |
+| Item-wise P&L, party-wise P&L, bill-wise profit | ◐ | ✓ | ✓ | bill-wise profit on every bill (6 Oct); item-, party-wise and P&L to come |
 | Item page tabs: purchases by supplier, sales by customer | ✗ | ✓ item report by party | ✓ | ours shows pricing, stock and movements only |
 | Multiple units with conversion (box = 12 pcs) | ✗ | ✓ | ✓ | |
 | Batch and expiry; serial numbers | ✗ | ✓ | ✓ | must-have for pharmacy and FMCG |
@@ -64,7 +64,7 @@ Compared with Vyapar (the closest Indian small-business product), Zoho Inventory
 
 The owner's item point is the right first move. It is what makes the Shop an inventory product rather than a billing app, and it is mostly a matter of showing data we already keep correctly.
 
-1. **Cost of goods on every sale line.** When an invoice is issued, write the line's cost (the weighted average at that moment, which the stock movement already computes) onto the line, and reverse it with the line on a credit note. This one column is what every margin report stands on; computing margin later from today's average would be wrong for every past sale.
+1. **Cost of goods on every sale line — done (it already existed; bill-wise profit shown 6 Oct).** When an invoice is issued, write the line's cost (the weighted average at that moment, which the stock movement already computes) onto the line, and reverse it with the line on a credit note. This one column is what every margin report stands on; computing margin later from today's average would be wrong for every past sale.
 2. **Item page tabs.** Overview, Stock (by location), Purchases (by supplier: quantity, last cost, average cost, last date), Sales (by customer: quantity, last price, average price, margin), Movements.
 3. **Supplier and customer memory.** An `item_supplier` row per item and supplier (last cost, last bought on, preferred), kept by purchase posting. The customer's last price for the item is offered on the next invoice.
 4. **Price lists.** Per customer or customer group, as Zoho does, after the memory above, which covers the common case.

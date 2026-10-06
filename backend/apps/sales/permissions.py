@@ -26,6 +26,8 @@ InvoicePermissions = HasPermission(
         # who may void, so it rides on the void codename.
         "revoke_share_link": "sales.invoice.void",
         "upi_intent": "sales.invoice.read",
+        # docs/platform/15 §1.4 — cost and profit are financial (INV-08 EC-4).
+        "profit": "reports.financial.read",
     }
 )
 

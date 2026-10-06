@@ -190,6 +190,12 @@ def issue_invoice(
     document.save()
     for row in rows:
         row["unit_cost_snapshot"] = unit_costs.get(row["line_no"])
+        # An item that keeps no stock has no moving average; its purchase price
+        # NOW is its cost on this bill (Vyapar's bill-wise profit does the
+        # same), frozen like the average is. No price, no cost: never zero.
+        item = row.get("item")
+        if row["unit_cost_snapshot"] is None and item is not None and item.purchase_price > 0:
+            row["unit_cost_snapshot"] = item.purchase_price
     replace_lines(document, rows)
 
     ledger_entry_id = None
