@@ -10,6 +10,7 @@ import 'src/i18n/catalogues/money';
 import 'src/i18n/catalogues/movement';
 import 'src/i18n/catalogues/partyPicker';
 import 'src/i18n/catalogues/sales';
+import 'src/i18n/catalogues/validation';
 
 /** SAL-06 — `/sales/invoices/{id}/edit`: continue a draft (server copy, device copy offered). */
 export default function EditInvoicePage({

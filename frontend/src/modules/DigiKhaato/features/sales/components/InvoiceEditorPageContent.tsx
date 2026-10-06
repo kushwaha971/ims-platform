@@ -107,6 +107,15 @@ export function InvoiceEditorPageContent({
     if (!estimate && preview.grandTotal !== '0.00') setPaying(true);
     else void finishIssue(null);
   }, [hasLines, locked, estimate, preview.grandTotal, finishIssue]);
+  // Every way to issue (the button, Ctrl+Enter, the form's own submit) runs the
+  // schema first, so a half-filled row stops the issue with its reason under
+  // the cell instead of being left off the bill.
+  const requestIssue = useCallback(
+    () => void form.handleSubmit(() => startIssue())(),
+    [form, startIssue]
+  );
+  const { submitCount, errors } = form.formState;
+  const refused = submitCount > 0 && Object.keys(errors).length > 0;
 
   const saveNow = useCallback(() => void save(false), [save]);
   useEditorWindowEffects({
@@ -114,7 +123,7 @@ export function InvoiceEditorPageContent({
     savedId: server.documentId,
     dirty: autosave.dirty,
     onSave: saveNow,
-    onIssue: startIssue,
+    onIssue: requestIssue,
   });
 
   const onDelete = useCallback(() => {
@@ -185,7 +194,7 @@ export function InvoiceEditorPageContent({
             <UbButton
               iconOnly="mobile"
               icon={<Send className="h-4 w-4" aria-hidden />}
-              onClick={startIssue}
+              onClick={requestIssue}
               busy={server.issuing}
               busyLabel={t(estimate ? 'sales.estimate.sending' : 'sales.editor.issuing')}
               disabled={!hasLines || locked}
@@ -196,7 +205,11 @@ export function InvoiceEditorPageContent({
           </>
         }
       />
-      <UbForm form={form} onSubmit={() => startIssue()}>
+      <UbForm
+        form={form}
+        onSubmit={() => startIssue()}
+        formErrors={refused ? [t('sales.validation.fixHighlighted')] : undefined}
+      >
         <UbGrid columns={{ base: 1, lg: 3 }} gap={4}>
           <UbStack gap={4} className="lg:col-span-2">
             {creditBlocked && (
@@ -233,7 +246,7 @@ export function InvoiceEditorPageContent({
               rateOptions={context.rateOptions}
               taxFree={taxFree}
               disabled={locked}
-              onSubmitShortcut={startIssue}
+              onSubmitShortcut={requestIssue}
             />
           </UbStack>
           <InvoiceTotalsPanel

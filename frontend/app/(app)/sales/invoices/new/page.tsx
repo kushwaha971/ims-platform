@@ -8,6 +8,7 @@ import 'src/i18n/catalogues/money';
 import 'src/i18n/catalogues/movement';
 import 'src/i18n/catalogues/partyPicker';
 import 'src/i18n/catalogues/sales';
+import 'src/i18n/catalogues/validation';
 
 /** SAL-02 / SAL-07 — `/sales/invoices/new`: a new bill (walk-in or party). */
 export default function NewInvoicePage(): React.JSX.Element {

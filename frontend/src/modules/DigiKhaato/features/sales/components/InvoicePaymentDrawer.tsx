@@ -10,13 +10,34 @@ import type { PaymentMode } from 'src/types/domain.types';
 import { formatInr, sumMoney } from 'src/utils/money';
 
 import { PaymentMethodField } from '../../ledger/components/PaymentMethodField';
-import { fullCashPayment, type PaymentRowForm } from '../view-model/invoiceForm';
+import {
+  fullCashPayment,
+  MAX_PAYMENT_ROWS,
+  paymentRowProblems,
+  type PaymentRowForm,
+  type PaymentRowProblem,
+} from '../view-model/invoiceForm';
 
 // Loaded with dynamic(), so its own words come with its own chunk rather than
 // with the screen that opens it (src/i18n/catalogueRegistry.ts).
 import 'src/i18n/catalogues/ledger';
 import 'src/i18n/catalogues/money';
 import 'src/i18n/catalogues/sales';
+
+/**
+ * The row's message. An EMPTY amount says nothing — a split the merchant has
+ * just added is not yet a mistake — but the confirm button still waits for it.
+ */
+function problemMessage(
+  problem: PaymentRowProblem,
+  row: PaymentRowForm,
+  t: (id: string) => string
+): string | null {
+  if (problem === 'amount') return row.amount.trim() ? t('sales.payment.rowAmount') : null;
+  if (problem === 'duplicate') return t('sales.payment.duplicateMode');
+  if (problem === 'reference') return t('sales.creditNote.chequeRequired');
+  return null;
+}
 
 /**
  * SAL-07 FR-3 — the walk-in payment sheet: defaults to the full amount in
@@ -51,7 +72,9 @@ export function InvoicePaymentDrawer({
   const paid = useMemo(() => sumMoney(rows.map((r) => r.amount || '0')), [rows]);
   const party = onCredit !== undefined;
   const balanced = party ? paid !== '0.00' : paid === grandTotal;
-  const needsReference = rows.some((r) => r.mode === 'cheque' && !r.reference.trim());
+  const problems = useMemo(() => paymentRowProblems(rows), [rows]);
+  const blocked = problems.some((problem) => problem !== null);
+  const messages = rows.map((row, index) => problemMessage(problems[index] ?? null, row, t));
 
   const update = (index: number, patch: Partial<PaymentRowForm>) =>
     setRows((current) => current.map((row, i) => (i === index ? { ...row, ...patch } : row)));
@@ -74,7 +97,7 @@ export function InvoicePaymentDrawer({
             fullWidth={!party}
             busy={busy}
             busyLabel={t('sales.editor.issuing')}
-            disabled={!balanced || needsReference}
+            disabled={!balanced || blocked}
             onClick={() => onConfirm(rows)}
             data-testid="invoice-payment-confirm"
           >
@@ -117,6 +140,11 @@ export function InvoicePaymentDrawer({
                 </UbButton>
               )}
             </UbStack>
+            {messages[index] && (
+              <UbText variant="caption" tone="formError" role="alert">
+                {messages[index]}
+              </UbText>
+            )}
             {row.mode !== 'cash' && (
               <UbTextInput
                 id={`${baseId}-ref-${index}`}
@@ -131,6 +159,7 @@ export function InvoicePaymentDrawer({
         ))}
         <UbButton
           variant="secondary"
+          disabled={rows.length >= MAX_PAYMENT_ROWS}
           icon={<Plus className="h-4 w-4" aria-hidden />}
           onClick={() =>
             setRows((current) => [...current, { mode: 'upi', amount: '', reference: '' }])

@@ -1,5 +1,6 @@
 import Decimal from 'decimal.js-light';
 
+import { unitAllowsDecimal } from './invoiceForm';
 import { computeDocumentTotals, type EngineGstType, type EngineResult } from './taxEngine';
 
 import type { SalesDocument, SalesDocumentLine } from '../types/sales.types';
@@ -31,6 +32,9 @@ export const remainingQty = (line: SalesDocumentLine): number =>
 export const returnCaps = (invoice: SalesDocument): ReturnCaps => ({
   remaining: Object.fromEntries(invoice.lines.map((line) => [line.id ?? '', remainingQty(line)])),
   invoiceDate: invoice.documentDate,
+  wholeOnly: Object.fromEntries(
+    invoice.lines.map((line) => [line.id ?? '', !!line.itemId && !unitAllowsDecimal(line.unitCode)])
+  ),
 });
 
 export const emptyCreditNoteForm = (

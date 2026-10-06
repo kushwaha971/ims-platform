@@ -7,6 +7,7 @@ import { useForm, useWatch, type UseFormReturn } from 'react-hook-form';
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useIdempotencyKey } from 'src/hooks/useIdempotencyKey';
 import { usePermissions } from 'src/hooks/usePermissions';
+import { useTranslation } from 'src/hooks/useTranslation';
 import { selectTenantTimezone } from 'src/redux/slice/sessionSlice';
 import { todayInTenantTz } from 'src/utils/dates';
 
@@ -22,6 +23,7 @@ import {
   issueInvoice,
   saveInvoiceDraft,
 } from '../redux/salesThunk';
+import { lazyInvoiceResolver } from '../validation/invoiceEditorResolver';
 import {
   defaultBillingMode,
   emptyInvoiceForm,
@@ -81,9 +83,23 @@ export const useInvoiceEditor = (
     hasModule('sales') && can(kind === 'estimate' ? 'sales.estimate.write' : 'sales.invoice.write');
   const idempotency = useIdempotencyKey();
 
+  const { t } = useTranslation();
+  const resolver = useMemo(() => lazyInvoiceResolver(t, { kind }), [t, kind]);
+  const shop = editor.context;
+  // The bill-discount check prices the bill with the rates on screen.
+  const schemaContext = useMemo(
+    () => ({
+      rates: shop?.rates ?? {},
+      gstType: shop?.gstType ?? 'regular',
+      tenantState: shop?.stateCode ?? '',
+    }),
+    [shop]
+  );
   const form = useForm<InvoiceFormValues>({
     defaultValues: emptyInvoiceForm(today, 'party', ''),
     mode: 'onTouched',
+    resolver,
+    context: schemaContext,
   });
   const values = useWatch({ control: form.control }) as InvoiceFormValues;
 

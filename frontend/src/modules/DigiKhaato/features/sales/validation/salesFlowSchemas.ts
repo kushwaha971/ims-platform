@@ -41,6 +41,8 @@ export interface ReturnCaps {
   /** The most each invoice line can still take back (`qty − returned_qty`). */
   readonly remaining: Readonly<Record<string, number>>;
   readonly invoiceDate: string;
+  /** Lines whose unit is counted, not weighed — the server refuses "1.5 NOS". */
+  readonly wholeOnly?: Readonly<Record<string, boolean>>;
 }
 
 export interface SalesFlowSchemas {
@@ -92,6 +94,10 @@ export const useSalesFlowSchemas = (): SalesFlowSchemas => {
               .test('number', t('sales.creditNote.qtyFormat'), (value) =>
                 value ? /^\d+(\.\d{1,3})?$/.test(value) : true
               )
+              .test('whole', t('validation.qty.wholeOnly'), function whole(value) {
+                const counted = caps.wholeOnly?.[this.parent.againstLineId as string] ?? false;
+                return !counted || !value || /^\d+(\.0{1,3})?$/.test(value);
+              })
               .test('cap', '', function cap(value) {
                 const left = caps.remaining[this.parent.againstLineId as string] ?? 0;
                 if (!value || Number(value) <= left) return true;

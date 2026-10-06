@@ -210,3 +210,28 @@ describe('the walk-in payment sheet (SAL-07 FR-3)', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('₹473.00');
   });
 });
+
+describe('the payment sheet’s row checks (PAY-02 §10)', () => {
+  it('says why a split row cannot be confirmed instead of greying the button silently', async () => {
+    // The server refuses a zero row, a repeated mode and a cheque without its
+    // number; before, the sheet either greyed the button with no reason or let
+    // the row through to a snackbar after the tap. `paymentRowProblems` covers
+    // all three; this pins that the reason reaches the screen.
+    renderWithProviders(
+      <InvoicePaymentDrawer
+        open
+        grandTotal="473.00"
+        busy={false}
+        onClose={jest.fn()}
+        onConfirm={jest.fn()}
+        onCredit={jest.fn()}
+      />
+    );
+    await screen.findByTestId('invoice-payment-confirm');
+    await userEvent.click(screen.getByRole('button', { name: 'Split payment' }));
+    const amounts = screen.getAllByLabelText('Amount');
+    await userEvent.type(amounts[1] as HTMLElement, '0');
+    expect(await screen.findByText(/Enter an amount above zero/)).toBeInTheDocument();
+    expect(screen.getByTestId('invoice-payment-confirm')).toBeDisabled();
+  });
+});

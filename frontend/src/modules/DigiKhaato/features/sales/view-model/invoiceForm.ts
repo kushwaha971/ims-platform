@@ -141,6 +141,14 @@ export const toWireBody = (values: InvoiceFormValues): Record<string, unknown> =
   })),
 });
 
+/**
+ * Whether a saved line's unit takes decimals. A document line carries its
+ * unit CODE, not the unit's `allow_decimal`, so this is the client's best
+ * reading: counted units are whole, everything else may be weighed. It errs
+ * lenient — the server, which has the unit, refuses what this lets through.
+ */
+export const unitAllowsDecimal = (unitCode: string): boolean => !/^(NOS|PCS)$/.test(unitCode);
+
 /** The server's draft back into the form — for "edit", "restore" and a reload. */
 export const fromDocument = (doc: SalesDocument): InvoiceFormValues => ({
   mode: doc.party ? 'party' : 'walkIn',
@@ -166,7 +174,7 @@ export const fromDocument = (doc: SalesDocument): InvoiceFormValues => ({
         hsnSac: line.hsnSac ?? '',
         qty: line.qty,
         unitCode: line.unitCode,
-        allowDecimal: !/^(NOS|PCS)$/.test(line.unitCode),
+        allowDecimal: unitAllowsDecimal(line.unitCode),
         unitPrice: line.unitPrice,
         taxInclusive: line.taxInclusive,
         discountType: line.discountType ?? '',
@@ -238,6 +246,26 @@ export interface PaymentRowForm {
 export const fullCashPayment = (grandTotal: string): PaymentRowForm[] => [
   { mode: 'cash', amount: grandTotal, reference: '' },
 ];
+
+/** PAY-02 §10 — the server takes at most four modes, each once. */
+export const MAX_PAYMENT_ROWS = 4;
+
+export type PaymentRowProblem = 'amount' | 'duplicate' | 'reference' | null;
+
+/**
+ * What is wrong with each row of the payment sheet, in the server's own order
+ * (`validate_mode_breakup`): an amount above zero at two decimals, each mode
+ * once, and a cheque's number. Before this the sheet greyed its button for a
+ * missing cheque number and said nothing, and let two UPI rows through to a
+ * 400 the merchant saw as a snackbar after the tap.
+ */
+export const paymentRowProblems = (rows: readonly PaymentRowForm[]): PaymentRowProblem[] =>
+  rows.map((row, index) => {
+    if (!/^\d+(\.\d{1,2})?$/.test(row.amount.trim()) || Number(row.amount) <= 0) return 'amount';
+    if (rows.findIndex((other) => other.mode === row.mode) !== index) return 'duplicate';
+    if (row.mode === 'cheque' && !row.reference.trim()) return 'reference';
+    return null;
+  });
 
 export interface PaymentWireBody {
   readonly payment_date: string;

@@ -8,6 +8,7 @@ import {
   emptyLine,
   fromDocument,
   fullCashPayment,
+  paymentRowProblems,
   paymentWireBody,
   ratePlaces,
   toWireBody,
@@ -135,5 +136,18 @@ describe('the list in the address bar (SAL-08 FR-3)', () => {
     expect(daysOverdue('2026-09-21', TODAY)).toBe(3);
     expect(daysOverdue(TODAY, TODAY)).toBe(0);
     expect(daysOverdue(null, TODAY)).toBe(0);
+  });
+});
+
+describe('paymentRowProblems (PAY-02 §10)', () => {
+  it('flags a zero amount, a repeated mode and a cheque with no number, in the server’s order', () => {
+    expect(
+      paymentRowProblems([
+        { mode: 'cash', amount: '100', reference: '' },
+        { mode: 'upi', amount: '0', reference: '' },
+        { mode: 'cash', amount: '50', reference: '' },
+        { mode: 'cheque', amount: '20', reference: ' ' },
+      ])
+    ).toEqual([null, 'amount', 'duplicate', 'reference']);
   });
 });

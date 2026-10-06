@@ -696,7 +696,13 @@
   "── 6 Oct 2026: standard GST print layout ──────────────────────────────────",
   "The A4 sheet gained an HSN summary, bank rows, a signatory block and a ruled",
   "line table — about 1 KB gz on the share page and the bill routes that",
-  "render the sheet. Raised by measured + 0.5."
+  "render the sheet. Raised by measured + 0.5.",
+  "",
+  "── 6 Oct 2026: invoice editor validation ──────────────────────────────────",
+  "The bill editor gained a schema. Imported statically it cost the editor routes",
+  "+17.9 KB gz (Yup and the resolver, on the counter screen); it now loads on the",
+  "first validation through `lazyInvoiceResolver`, and what remains is the resolver",
+  "shim, the payment-row checks and the messages. Raised by measured + 0.5."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -1256,12 +1262,12 @@
    "firstLoad": 336
   },
   "/sales/invoices/new": {
-   "route": 135,
-   "firstLoad": 370
+   "route": 137,
+   "firstLoad": 372
   },
   "/sales/invoices/[id]/edit": {
-   "route": 135,
-   "firstLoad": 370
+   "route": 137,
+   "firstLoad": 372
   },
   "/sales/invoices": {
    "route": 96,
@@ -1292,7 +1298,7 @@
    "firstLoad": 356
   },
   "/sales/credit-notes/new": {
-   "route": 136,
+   "route": 137,
    "firstLoad": 390
   },
   "/sales/credit-notes/[id]": {
@@ -1525,7 +1531,7 @@
   },
   "/signup": {
    "route": 51,
-   "firstLoad": 285
+   "firstLoad": 286
   },
   "/reset-password": {
    "route": 51,

@@ -8,6 +8,7 @@ import 'src/i18n/catalogues/money';
 import 'src/i18n/catalogues/movement';
 import 'src/i18n/catalogues/partyPicker';
 import 'src/i18n/catalogues/sales';
+import 'src/i18n/catalogues/validation';
 
 /** SAL-01 — `/sales/estimates/{id}/edit`: continue a draft estimate. */
 export default function EditEstimatePage({
