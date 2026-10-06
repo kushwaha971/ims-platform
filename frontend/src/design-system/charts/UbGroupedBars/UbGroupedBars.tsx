@@ -49,7 +49,17 @@ export interface UbGroupedBarsGroup {
 }
 
 export interface UbGroupedBarsProps {
+  /** Every series the reader may show; colour is fixed by position here. */
   readonly series: readonly UbGroupedBarsSeries[];
+  /**
+   * The keys drawn (at most three). Omit to draw the first three. With
+   * `onToggle`, the legend items become buttons that show and hide a series —
+   * the control sits beside the colour it controls (owner-approved pattern).
+   */
+  readonly visible?: readonly string[];
+  readonly onToggle?: (key: string) => void;
+  /** "Show {series}" / "Hide {series}" is the caller's message; this is its name. */
+  readonly toggleLabel?: (series: string, shown: boolean) => string;
   /** Oldest first. */
   readonly groups: readonly UbGroupedBarsGroup[];
   readonly labelledBy: string;
@@ -64,10 +74,15 @@ const GUTTER_BOTTOM = 24;
 const PLOT_HEIGHT = 168;
 const SVG_HEIGHT = GUTTER_TOP + PLOT_HEIGHT + GUTTER_BOTTOM;
 /** A tick needs this much room or every other one is skipped. */
-const MIN_TICK_SPACING = 34;
+const MIN_TICK_SPACING = 46;
+/** More than three columns per period is a table, not a chart. */
+const MAX_SERIES = 3;
 
 function UbGroupedBarsBase({
   series,
+  visible,
+  onToggle,
+  toggleLabel,
   groups,
   labelledBy,
   describedBy,
@@ -75,11 +90,22 @@ function UbGroupedBarsBase({
 }: Readonly<UbGroupedBarsProps>) {
   const [container, width] = useChartWidth();
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
-  const shown = useMemo(() => series.slice(0, 3), [series]);
+  const shown = useMemo(
+    () =>
+      series
+        .map((item, colour) => ({ ...item, colour }))
+        .filter((item) => (visible ? visible.includes(item.key) : true))
+        .slice(0, MAX_SERIES),
+    [series, visible]
+  );
+  const valuesOf = useCallback(
+    (group: UbGroupedBarsGroup) => shown.map((item) => group.values[item.colour] ?? '0'),
+    [shown]
+  );
 
   const model = useMemo(() => {
     const plotWidth = Math.max(0, width - GUTTER_LEFT - GUTTER_RIGHT);
-    const values = groups.flatMap((group) => group.values.slice(0, shown.length).map(toPlotValue));
+    const values = groups.flatMap((group) => valuesOf(group).map(toPlotValue));
     const axisMax = niceAxisMax(Math.max(...values, 0));
     const lowest = Math.min(...values, 0);
     const axisMin = lowest < 0 ? -niceAxisMax(-lowest) : 0;
@@ -96,7 +122,7 @@ function UbGroupedBarsBase({
       return {
         center: GUTTER_LEFT + slot * index + slot / 2,
         bars: shown.map((_s, seriesIndex) => {
-          const value = toPlotValue(group.values[seriesIndex] ?? '0');
+          const value = toPlotValue(valuesOf(group)[seriesIndex] ?? '0');
           const x = left + seriesIndex * (barWidth + gap);
           return value >= 0
             ? verticalBarPath({ x, y: yOf(value), width: barWidth, height: zero - yOf(value) })
@@ -106,7 +132,7 @@ function UbGroupedBarsBase({
     });
     const ticks = axisMin < 0 ? [axisMax, 0, axisMin] : [axisMax, axisMax / 2, 0];
     return { slot, columns, tickEvery, plotWidth, ticks, yOf, zero };
-  }, [groups, shown, width]);
+  }, [groups, shown, width, valuesOf]);
 
   const handlePointerMove = useCallback(
     (event: PointerEvent<SVGSVGElement>) => {
@@ -144,19 +170,60 @@ function UbGroupedBarsBase({
   const active = activeIndex === null ? null : groups[activeIndex];
   const activeColumn = activeIndex === null ? null : model.columns[activeIndex];
   const readout = active
-    ? shown.map((s, index) => `${s.label} ${formatInr(active.values[index] ?? '0')}`).join(' · ')
+    ? shown.map((s) => `${s.label} ${formatInr(active.values[s.colour] ?? '0')}`).join(' · ')
     : '';
 
   return (
     <div ref={container} className={cn('relative w-full', className)}>
-      <ul className="mb-2 flex flex-wrap gap-x-4 gap-y-1" aria-hidden>
-        {shown.map((s, index) => (
-          <li key={s.key} className="ds-caption flex items-center gap-1.5 text-text-secondary">
-            <span className={cn('inline-block h-2.5 w-2.5 rounded-sm', CHART_PAIR_KEYS[index])} />
-            {s.label}
-          </li>
-        ))}
-      </ul>
+      {onToggle ? (
+        <div
+          className="mb-2 flex flex-wrap gap-1"
+          role="group"
+          aria-label={series.map((s) => s.label).join(', ')}
+        >
+          {series.map((item, colour) => {
+            const on = shown.some((s) => s.key === item.key);
+            const locked = (on && shown.length === 1) || (!on && shown.length >= MAX_SERIES);
+            return (
+              <button
+                key={item.key}
+                type="button"
+                aria-pressed={on}
+                disabled={locked}
+                title={toggleLabel?.(item.label, on)}
+                onClick={() => onToggle(item.key)}
+                className={cn(
+                  'ub-hit ds-caption inline-flex h-7 items-center gap-1.5 rounded-control border px-2 outline-none',
+                  'focus-visible:shadow-focus disabled:cursor-not-allowed',
+                  on
+                    ? 'border-transparent text-text-primary hover:bg-surface-hover'
+                    : 'border-border text-text-tertiary hover:text-text-primary'
+                )}
+              >
+                <span
+                  aria-hidden
+                  className={cn(
+                    'inline-block h-2.5 w-2.5 rounded-sm',
+                    on ? CHART_PAIR_KEYS[colour] : 'border border-text-tertiary'
+                  )}
+                />
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <ul className="mb-2 flex flex-wrap gap-x-4 gap-y-1" aria-hidden>
+          {shown.map((s) => (
+            <li key={s.key} className="ds-caption flex items-center gap-1.5 text-text-secondary">
+              <span
+                className={cn('inline-block h-2.5 w-2.5 rounded-sm', CHART_PAIR_KEYS[s.colour])}
+              />
+              {s.label}
+            </li>
+          ))}
+        </ul>
+      )}
       <svg
         width={width}
         height={SVG_HEIGHT}
@@ -213,22 +280,18 @@ function UbGroupedBarsBase({
                 <path
                   key={shown[seriesIndex]?.key}
                   d={d}
-                  className={CHART_PAIR_FILLS[seriesIndex]}
+                  className={CHART_PAIR_FILLS[shown[seriesIndex]?.colour ?? 0]}
                 />
               ) : null
             )}
             {index % model.tickEvery === (groups.length - 1) % model.tickEvery && (
               <text
-                /* The newest tick sits under the last column, which is at the
-                   card's edge: anchored at its end it stays inside the SVG
-                   instead of losing its last digits ("06/1"). */
-                x={
-                  index === groups.length - 1
-                    ? Math.min(column.center + model.slot / 2, width - 1)
-                    : column.center
-                }
+                /* The newest tick sits under the last column, at the card's
+                   edge: held 20 px in, it keeps its last digits ("06/1") without
+                   being pushed into its neighbour's label. */
+                x={Math.min(column.center, width - 20)}
                 y={SVG_HEIGHT - 6}
-                textAnchor={index === groups.length - 1 ? 'end' : 'middle'}
+                textAnchor="middle"
                 className={cn('ds-num', CHART_AXIS_TEXT)}
               >
                 {groups[index]?.label}
@@ -241,16 +304,16 @@ function UbGroupedBarsBase({
       {active && activeColumn && (
         <UbChartTooltip
           label={active.longLabel}
-          value={`${shown[0]?.label ?? ''}: ${formatInr(active.values[0] ?? '0')}`}
+          value={`${shown[0]?.label ?? ''}: ${formatInr(active.values[shown[0]?.colour ?? 0] ?? '0')}`}
           detail={
             shown.length > 1
               ? shown
                   .slice(1)
-                  .map((item, i) => `${item.label}: ${formatInr(active.values[i + 1] ?? '0')}`)
+                  .map((item) => `${item.label}: ${formatInr(active.values[item.colour] ?? '0')}`)
                   .join(' · ')
               : undefined
           }
-          keyClassName={CHART_PAIR_KEYS[0]}
+          keyClassName={CHART_PAIR_KEYS[shown[0]?.colour ?? 0]}
           style={{
             left: `${Math.min(Math.max(activeColumn.center, 72), Math.max(width - 72, 72))}px`,
           }}

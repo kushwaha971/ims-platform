@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { renderWithProviders } from 'src/tests/renderWithProviders';
@@ -81,32 +81,34 @@ it('opens on the last 7 days, sales against purchases, and draws every block it 
   expect(screen.getByText(/as of 6 Oct 2026/)).toBeInTheDocument();
 });
 
-it('lets the owner add profit to the comparison and says what profit leaves out', async () => {
+it('lets the owner add profit from the legend and says what profit leaves out', async () => {
   service.getDashboardCharts.mockResolvedValue(full);
   renderWithProviders(<DashboardCharts />);
   await screen.findByRole('heading', { name: 'Business trend' });
-  const compare = screen.getByRole('group', { name: 'Compare' });
-  await userEvent.click(within(compare).getByRole('button', { name: 'Profit' }));
-  expect(screen.getByText(/Profit ₹-70.00|Profit −₹70.00|Profit -₹70.00/)).toBeInTheDocument();
+  const profit = screen.getByRole('button', { name: 'Profit', pressed: false });
+  await userEvent.click(profit);
+  expect(screen.getByRole('button', { name: 'Profit', pressed: true })).toBeInTheDocument();
   expect(
     screen.getByText('Profit leaves out 2 sold lines that have no cost price.')
   ).toBeInTheDocument();
-  // Three is the cap: with three chosen the fourth cannot be added.
-  expect(within(compare).getByRole('button', { name: 'Expenses' })).toBeDisabled();
+  // Three is the cap: with three shown the fourth cannot be added.
+  expect(screen.getByRole('button', { name: 'Expenses', pressed: false })).toBeDisabled();
 });
 
-it('re-reads every chart for the period and the grouping picked', async () => {
+it('re-reads every chart for the period and the grouping picked from the two dropdowns', async () => {
   service.getDashboardCharts.mockResolvedValue(full);
   renderWithProviders(<DashboardCharts />);
   await screen.findByRole('heading', { name: 'Business trend' });
-  await userEvent.click(screen.getByRole('button', { name: 'This financial year' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Period: Last 7 days' }));
+  await userEvent.click(screen.getByRole('option', { name: 'This financial year' }));
   expect(lastQuery()).toMatchObject({ range: 'fy', group: null });
   await screen.findByRole('heading', { name: 'Business trend' });
-  await userEvent.click(screen.getByRole('button', { name: 'Week' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Show by: Day' }));
+  await userEvent.click(screen.getByRole('option', { name: 'Week' }));
   expect(lastQuery()).toMatchObject({ range: 'fy', group: 'week' });
 });
 
-it('waits for both custom dates, and shows the server’s reason when a range is refused', async () => {
+it('shows the server’s reason when a range is refused', async () => {
   service.getDashboardCharts.mockResolvedValueOnce(full).mockRejectedValueOnce({
     status: 400,
     message: 'Please check the highlighted fields.',
@@ -114,10 +116,10 @@ it('waits for both custom dates, and shows the server’s reason when a range is
   });
   renderWithProviders(<DashboardCharts />);
   await screen.findByRole('heading', { name: 'Business trend' });
-  await userEvent.click(screen.getByRole('button', { name: 'Custom' }));
-  expect(screen.getByText('Choose a from and a to date to see the charts.')).toBeInTheDocument();
-  expect(service.getDashboardCharts).toHaveBeenCalledTimes(1);
-  await userEvent.click(screen.getByRole('button', { name: 'Last 12 months' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Period: Last 7 days' }));
+  // A custom range is applied only with both dates.
+  expect(screen.getByRole('button', { name: 'Apply' })).toBeDisabled();
+  await userEvent.click(screen.getByRole('option', { name: 'Last 12 months' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('group by a longer step');
 });
 

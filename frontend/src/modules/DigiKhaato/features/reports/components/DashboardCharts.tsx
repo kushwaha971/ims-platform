@@ -5,10 +5,9 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   UbButton,
   UbChoiceChips,
-  UbDateRangePicker,
-  UbFilterChip,
-  UbFilterChipGroup,
+  UbFilterSelect,
   UbGrid,
+  UbPeriodSelect,
   UbSkeleton,
   UbStack,
   UbText,
@@ -170,44 +169,51 @@ export function DashboardCharts({
 
   return (
     <UbStack gap={3} data-testid="dashboard-charts">
-      <UbText as="h2" variant="h3">
-        {t('reports.charts.title')}
-      </UbText>
-      <UbDateRangePicker<ChartRange>
-        name="charts"
-        presets={presets}
-        preset={query.range}
-        onPresetChange={(range) => update({ range, group: null })}
-        customPreset="custom"
-        from={query.from}
-        to={query.to}
-        max={today}
-        onRangeChange={(from, to) => update({ from, to, group: null })}
-        labels={{
-          presets: t('reports.charts.range.label'),
-          from: t('reports.charts.from'),
-          to: t('reports.charts.to'),
-        }}
-      >
-        <UbFilterChipGroup label={t('reports.charts.group.label')}>
-          {CHART_GROUPS.map((group) => {
-            const tooMany = rangeDates
-              ? barsFor(rangeDates.from, rangeDates.to, group) > MAX_BARS
-              : false;
-            return (
-              <UbFilterChip
-                key={group}
-                label={t(`reports.charts.group.${group}`)}
-                pressed={activeGroup === group}
-                disabled={tooMany}
-                onToggle={(next) => {
-                  if (next) update({ group });
-                }}
-              />
-            );
-          })}
-        </UbFilterChipGroup>
-      </UbDateRangePicker>
+      {/* One row: the title, then the two dropdowns the owner approved in
+          place of two rows of chips — the period, and what each bar covers. */}
+      <UbStack direction="row" align="center" gap={2} className="flex-wrap">
+        <UbText as="h2" variant="h3" className="mr-auto">
+          {t('reports.charts.title')}
+        </UbText>
+        <UbPeriodSelect<ChartRange>
+          presets={presets}
+          value={query.range}
+          customValue="custom"
+          from={query.from}
+          to={query.to}
+          max={today}
+          locale={locale}
+          onChange={(range, from, to) => update({ range, from, to, group: null })}
+          labels={{
+            period: t('reports.charts.range.label'),
+            from: t('reports.charts.from'),
+            to: t('reports.charts.to'),
+            apply: t('reports.charts.apply'),
+            close: t('common.action.close'),
+          }}
+        />
+        <UbFilterSelect
+          spec={{
+            kind: 'single',
+            key: 'group',
+            label: t('reports.charts.group.label'),
+            options: CHART_GROUPS.map((group) => {
+              const tooMany = rangeDates
+                ? barsFor(rangeDates.from, rangeDates.to, group) > MAX_BARS
+                : false;
+              return {
+                value: group,
+                label: t(`reports.charts.group.${group}`),
+                disabled: tooMany,
+                hint: tooMany ? t('reports.charts.group.tooMany') : undefined,
+              };
+            }),
+          }}
+          value={activeGroup ?? ''}
+          onChange={(group) => update({ group: group as ChartGroup })}
+          closeLabel={t('common.action.close')}
+        />
+      </UbStack>
 
       {waiting && (
         <UbText variant="body-sm" tone="secondary">
@@ -337,43 +343,31 @@ function TrendCard({
     TREND_METRICS.map((metric) => [metric, t(`reports.charts.trend.${metric}`)])
   ) as Record<TrendMetric, string>;
   return (
-    <UbStack gap={2} className="min-w-0">
-      {available.length > 1 && (
-        <UbFilterChipGroup label={t('reports.charts.trend.pick')}>
-          {available.map((metric) => {
-            const on = shown.includes(metric);
-            return (
-              <UbFilterChip
-                key={metric}
-                label={names[metric]}
-                pressed={on}
-                disabled={(!on && shown.length >= MAX_METRICS) || (on && shown.length === 1)}
-                onToggle={(next) =>
-                  onMetrics(next ? [...shown, metric] : shown.filter((m) => m !== metric))
-                }
-              />
-            );
-          })}
-        </UbFilterChipGroup>
-      )}
-      <SeriesCard
-        id="trend"
-        title={t('reports.charts.trend.title')}
-        block={block}
-        keys={shown}
-        names={names}
-        group={group}
-        rangeLabel={rangeLabel}
-        locale={locale}
-        viewLabels={viewLabels}
-        t={t}
-        note={
-          shown.includes('profit') && uncosted > 0
-            ? t('reports.charts.trend.uncosted', { count: uncosted })
-            : undefined
-        }
-      />
-    </UbStack>
+    <SeriesCard
+      id="trend"
+      title={t('reports.charts.trend.title')}
+      block={block}
+      keys={available}
+      visible={shown}
+      onToggle={(metric) =>
+        onMetrics(
+          shown.includes(metric)
+            ? shown.filter((m) => m !== metric)
+            : [...shown, metric].slice(-MAX_METRICS)
+        )
+      }
+      names={names}
+      group={group}
+      rangeLabel={rangeLabel}
+      locale={locale}
+      viewLabels={viewLabels}
+      t={t}
+      note={
+        shown.includes('profit') && uncosted > 0
+          ? t('reports.charts.trend.uncosted', { count: uncosted })
+          : undefined
+      }
+    />
   );
 }
 
@@ -382,6 +376,8 @@ function SeriesCard<K extends string>({
   title,
   block,
   keys,
+  visible = keys,
+  onToggle,
   names,
   group,
   rangeLabel,
@@ -393,7 +389,11 @@ function SeriesCard<K extends string>({
   id: string;
   title: string;
   block: SeriesBlock<K>;
+  /** Every series the reader may show, in legend order. */
   keys: readonly K[];
+  /** The ones drawn; with `onToggle` the legend shows and hides them. */
+  visible?: readonly K[];
+  onToggle?: (key: K) => void;
   names: Readonly<Record<K, string>>;
   group: ChartGroup;
   rangeLabel: string;
@@ -408,7 +408,8 @@ function SeriesCard<K extends string>({
     ...groupLabels(point.date, group, locale, t),
     values: keys.map((key) => point[key] ?? '0.00'),
   }));
-  const totals = keys
+  const drawn = keys.filter((key) => visible.includes(key));
+  const totals = drawn
     .map((key) => `${names[key]} ${formatInr(block.totals[key] ?? '0.00')}`)
     .join(' · ');
   return (
@@ -420,11 +421,14 @@ function SeriesCard<K extends string>({
         caption: title,
         columns: [
           { key: 'when', label: t('reports.charts.when') },
-          ...series.map((s) => ({ key: s.key, label: s.label, numeric: true })),
+          ...drawn.map((key) => ({ key, label: names[key], numeric: true })),
         ],
-        rows: groups.map((row) => ({
-          key: row.key,
-          cells: [row.longLabel, ...row.values.map((value) => formatInr(value))],
+        rows: block.points.map((point, index) => ({
+          key: point.date,
+          cells: [
+            groups[index]?.longLabel ?? point.date,
+            ...drawn.map((key) => formatInr(point[key] ?? '0.00')),
+          ],
         })),
       }}
     >
@@ -432,6 +436,13 @@ function SeriesCard<K extends string>({
         <UbStack gap={2}>
           <UbGroupedBars
             series={series}
+            visible={drawn}
+            onToggle={onToggle ? (key) => onToggle(key as K) : undefined}
+            toggleLabel={(name, shown) =>
+              t(shown ? 'reports.charts.legend.hide' : 'reports.charts.legend.show', {
+                series: name,
+              })
+            }
             groups={groups}
             labelledBy={a11y.labelledBy}
             describedBy={a11y.describedBy}

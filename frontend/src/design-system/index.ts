@@ -157,6 +157,31 @@ export type { UbInputHintProps } from './UbInputHint';
 // `UbDateInput`'s quick choices once PTY-02 needed the same pill three more
 // times.
 export { UbFilterBar, UbFilterChip, UbFilterChipGroup } from './UbFilterChip';
+// Owner-approved filter pattern (6 Oct 2026): dropdowns, one Filters drawer,
+// and pills for what is on — replacing rows of chips on list screens.
+export {
+  UbActiveFilters,
+  UbFilterSelect,
+  UbFilterSheet,
+  UbPeriodSelect,
+  appliedCount,
+  appliedLabel,
+  isApplied,
+} from './UbFilters';
+export type {
+  UbActiveFiltersProps,
+  UbFilterDateRangeSpec,
+  UbFilterMultiSpec,
+  UbFilterOption,
+  UbFilterSelectProps,
+  UbFilterSheetLabels,
+  UbFilterSheetProps,
+  UbFilterSingleSpec,
+  UbFilterSpec,
+  UbFilterValues,
+  UbPeriodPreset,
+  UbPeriodSelectProps,
+} from './UbFilters';
 export type { UbFilterBarProps, UbFilterChipGroupProps, UbFilterChipProps } from './UbFilterChip';
 
 // ── Wave 1 — controls ────────────────────────────────────────────────────────
