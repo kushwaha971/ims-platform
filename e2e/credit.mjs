@@ -346,17 +346,28 @@ async function checks(browser, token, parties) {
   await signIn(page);
   await openList(page);
 
-  // 1. The chip exists, and it carries the count from `meta.totals`.
+  // 1. The band exists in the Filters sheet (owner, 6 Oct 2026), and "Over
+  //    limit" carries the count from `meta.totals`.
   {
-    const chip = page.getByRole('button', { name: /^Over limit \(/ });
-    const label = (await chip.count()) > 0 ? await chip.first().innerText() : '(absent)';
-    record('the over-limit chip carries the server’s count', label === 'Over limit (2)', label);
+    await page.getByTestId('filters-button').click();
+    await settle(page, 800);
+    const credit = page.getByRole('radiogroup', { name: 'Credit' });
+    const text = (await credit.count()) > 0 ? await credit.innerText() : '(absent)';
+    record(
+      'the over-limit choice carries the server’s count',
+      /Over limit\s*2/.test(text),
+      text.replace(/\n/g, ' | ')
+    );
   }
 
   // 2. Tapping it reaches the wire and narrows the list.
   {
     const before = listRequests.length;
-    await page.getByRole('button', { name: /^Over limit \(/ }).first().click();
+    await page
+      .getByRole('radiogroup', { name: 'Credit' })
+      .getByRole('radio', { name: /^Over limit/ })
+      .click();
+    await page.getByTestId('filters-apply').click();
     await settle(page, 1500);
     const issued = listRequests.slice(before);
     record(
@@ -388,20 +399,27 @@ async function checks(browser, token, parties) {
   // produces that zero; every component test hands the count in by hand.
   {
     await openList(page, '?credit=near');
-    const near = page.getByRole('button', { name: 'Near limit' });
-    const present = (await near.count()) > 0;
     record(
-      'narrowing to Near limit leaves its own chips on screen',
-      present && (await near.first().getAttribute('aria-pressed')) === 'true',
-      present ? 'pressed' : '(the whole credit group disappeared)'
+      'narrowing to Near limit shows it as a pill',
+      (await page.getByText('Credit: Near limit').count()) > 0,
+      ''
     );
+    await page.getByTestId('filters-button').click();
+    await settle(page, 800);
+    const credit = page.getByRole('radiogroup', { name: 'Credit' });
+    const present = (await credit.count()) > 0;
     record(
-      'and the chip beside it has no "(0)" on a list it does not count',
-      (await page.getByRole('button', { name: 'Over limit' }).count()) > 0,
-      (await page.getByRole('button', { name: /^Over limit/ }).count()) > 0
-        ? await page.getByRole('button', { name: /^Over limit/ }).first().innerText()
-        : '(absent)'
+      'and its own band is still offered, chosen',
+      present && (await credit.getByRole('radio', { name: 'Near limit' }).isChecked()),
+      present ? 'checked' : '(the whole credit group disappeared)'
     );
+    const text = present ? await credit.innerText() : '';
+    record(
+      'and "Over limit" beside it has no 0 on a list it does not count',
+      present && !/Over limit\s*0/.test(text),
+      text.replace(/\n/g, ' | ')
+    );
+    await page.keyboard.press('Escape');
   }
 
   // 3. The bar on the khata page reads the SERVER's percentage.

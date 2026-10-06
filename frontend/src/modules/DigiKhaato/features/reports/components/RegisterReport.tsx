@@ -8,10 +8,14 @@ import {
   UbButton,
   UbEmptyState,
   UbFilterChip,
+  UbActiveFilters,
   UbFilterChipGroup,
   UbFilterSelect,
+  UbFilterSheet,
   UbPageShell,
   UbSwitch,
+  type UbFilterSpec,
+  type UbFilterValues,
 } from 'src/design-system';
 import {
   UbDataGrid,
@@ -125,6 +129,57 @@ export function RegisterReport({ book }: Readonly<{ book: RegisterBook }>): Reac
     );
   }
 
+  /* The sheet's filters. Each has an "all" value on the wire; to the sheet
+     that is "no filter" (''), so the count and the pills say only what is on. */
+  const sheetKeys: readonly ('status' | 'kind' | 'party' | 'itc')[] =
+    book === 'sales' ? ['status', 'kind', 'party'] : ['status', 'itc'];
+  const sheetSource = {
+    status: {
+      values: REGISTER_STATUS_FILTERS,
+      label: t('reports.register.status.label'),
+      id: 'reports.register.status',
+    },
+    kind: {
+      values: SALES_KIND_FILTERS,
+      label: t('reports.salesRegister.kind.label'),
+      id: 'reports.salesRegister.kind',
+    },
+    party: {
+      values: REGISTER_PARTY_FILTERS,
+      label: t('reports.salesRegister.party.label'),
+      id: 'reports.salesRegister.party',
+    },
+    itc: {
+      values: ITC_FILTERS,
+      label: t('reports.purchaseRegister.itc.label'),
+      id: 'reports.purchaseRegister.itc',
+    },
+  } as const;
+  const sheetSpecs: UbFilterSpec[] = sheetKeys.map((key) => {
+    const source = sheetSource[key];
+    return {
+      kind: 'single',
+      key,
+      label: source.label,
+      anyLabel: t(`${source.id}.all`),
+      options: (source.values as readonly string[])
+        .filter((value) => value !== 'all')
+        .map((value) => ({ value, label: t(`${source.id}.${value}`) })),
+    };
+  });
+  const sheetValues: UbFilterValues = Object.fromEntries(
+    sheetKeys.map((key) => {
+      const value = String((filters as unknown as Record<string, unknown>)[key] ?? 'all');
+      return [key, value === 'all' ? '' : value];
+    })
+  );
+  const applySheet = (next: UbFilterValues) =>
+    update(
+      Object.fromEntries(
+        sheetKeys.map((key) => [key, next[key] || 'all'])
+      ) as Partial<RegisterFilters>
+    );
+
   // Owner, 6 Oct 2026: each single-choice filter is a dropdown, not a chip row.
   const chips = <K extends keyof RegisterFilters>(
     key: K,
@@ -188,21 +243,27 @@ export function RegisterReport({ book }: Readonly<{ book: RegisterBook }>): Reac
           {chips('level', levels, t('reports.register.level.label'), (v) =>
             t(`reports.register.level.${v}`)
           )}
-          {chips('status', REGISTER_STATUS_FILTERS, t('reports.register.status.label'), (v) =>
-            t(`reports.register.status.${v}`)
-          )}
-          {book === 'sales' &&
-            chips('kind', SALES_KIND_FILTERS, t('reports.salesRegister.kind.label'), (v) =>
-              t(`reports.salesRegister.kind.${v}`)
-            )}
-          {book === 'sales' &&
-            chips('party', REGISTER_PARTY_FILTERS, t('reports.salesRegister.party.label'), (v) =>
-              t(`reports.salesRegister.party.${v}`)
-            )}
-          {book === 'purchase' &&
-            chips('itc', ITC_FILTERS, t('reports.purchaseRegister.itc.label'), (v) =>
-              t(`reports.purchaseRegister.itc.${v}`)
-            )}
+          {/* Owner, 6 Oct 2026: three or more filters live behind ONE button. */}
+          <UbFilterSheet
+            specs={sheetSpecs}
+            values={sheetValues}
+            onApply={applySheet}
+            labels={{
+              title: t('common.filters.title'),
+              apply: t('common.action.apply'),
+              reset: t('common.action.reset'),
+              close: t('common.action.close'),
+            }}
+          />
+          <UbActiveFilters
+            specs={sheetSpecs}
+            values={sheetValues}
+            onChange={applySheet}
+            labels={{
+              remove: (pill) => t('common.filters.remove', { filter: pill }),
+              clearAll: t('common.filters.clearAll'),
+            }}
+          />
           {(filters.taxCode || filters.interState !== null) && (
             <UbFilterChipGroup label={t('reports.register.drill.label')}>
               <UbFilterChip

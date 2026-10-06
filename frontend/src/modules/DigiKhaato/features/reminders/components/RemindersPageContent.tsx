@@ -10,7 +10,6 @@ import { MessageCircle, Settings2 } from 'lucide-react';
 import {
   UbBox,
   UbButton,
-  UbChoiceChips,
   UbEmptyState,
   UbPageHeader,
   UbPageShell,
@@ -18,6 +17,7 @@ import {
   UbStatusBanner,
   UbTabs,
   UbText,
+  UbFilterSelect,
 } from 'src/design-system';
 import {
   UbDataGrid,
@@ -355,12 +355,19 @@ export function RemindersPageContent(): React.JSX.Element {
         </UbStack>
       ) : (
         <UbStack gap={3}>
-          <UbChoiceChips<ReminderKindFilter>
-            value={history.filter}
-            onChange={setHistoryFilter}
-            ariaLabel={t('reminders.filter.label')}
-            options={HISTORY_FILTERS.map((value) => ({ value, label: t(FILTER_LABEL[value]) }))}
-          />
+          <UbStack direction="row" gap={2}>
+            <UbFilterSelect
+              spec={{
+                kind: 'single',
+                key: 'kind',
+                label: t('reminders.filter.label'),
+                options: HISTORY_FILTERS.map((value) => ({ value, label: t(FILTER_LABEL[value]) })),
+              }}
+              value={history.filter}
+              onChange={(next) => setHistoryFilter(next as ReminderKindFilter)}
+              closeLabel={t('common.action.close')}
+            />
+          </UbStack>
           <UbDataGrid
             rows={history.rows}
             columns={historyColumns}

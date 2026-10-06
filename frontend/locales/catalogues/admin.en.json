@@ -98,6 +98,7 @@
   "admin.stat.partners": "Partners",
   "admin.stat.total": "Businesses",
   "admin.status.active": "Active",
+  "admin.status.any": "All",
   "admin.status.deleted": "Deleted",
   "admin.status.pending_deletion": "Pending deletion",
   "admin.status.suspended": "Suspended",

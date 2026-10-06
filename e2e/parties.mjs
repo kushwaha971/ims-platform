@@ -173,6 +173,11 @@ async function run() {
   await page.goto(`${FRONTEND}/parties`, { waitUntil: 'networkidle', timeout: 45000 });
   await page.waitForSelector('[data-testid="ub-grid"]', { timeout: 30000 });
   await page.waitForTimeout(1200);
+  // The stat cards fold into a summary line (owner, 6 Oct 2026); open them
+  // once — the screen remembers on this device.
+  if (await page.getByRole('button', { name: 'Details' }).count()) {
+    await page.getByRole('button', { name: 'Details' }).click();
+  }
 
   const totals = () => page.locator('[data-testid="ub-stat-grid"]').innerText();
 
@@ -193,18 +198,34 @@ async function run() {
   }
 
   // ── A chip must reach the SERVER, not just the pressed state ──────────────
-  for (const [label, expected, rows] of [
+  /* Owner, 6 Oct 2026 — the approved filter pattern: Balance is a dropdown,
+     Type lives in the Filters sheet (applied once). Same assertions, on the
+     WIRE, through the controls a merchant now uses. */
+  const chooseFilter = async (axis, label) => {
+    if (axis === 'balance') {
+      await page.getByRole('button', { name: /^Balance:/ }).click();
+      await page.getByRole('option', { name: label, exact: true }).click();
+      return;
+    }
+    await page.getByTestId('filters-button').click();
+    await page
+      .getByRole('radiogroup', { name: 'Type' })
+      .getByRole('radio', { name: label, exact: true })
+      .click();
+    await page.getByTestId('filters-apply').click();
+  };
+  for (const [axis, label, expected, rows] of [
     // Nobody owes anything yet (see BOOK), so these two find nobody — which is
     // the server and the screen agreeing, and is exactly what breaks when a
     // filter silently fails to leave the device.
-    ['Owes me', 'balance=owes_me', 0],
-    ['I owe them', 'balance=i_owe', 0],
-    ['Settled', 'balance=settled', BOOK.length],
-    ['Suppliers', 'type=supplier', 2],
-    ['Customers', 'type=customer', BOOK.length],
+    ['balance', 'Owes me', 'balance=owes_me', 0],
+    ['balance', 'I owe them', 'balance=i_owe', 0],
+    ['balance', 'Settled', 'balance=settled', BOOK.length],
+    ['type', 'Suppliers', 'type=supplier', 2],
+    ['type', 'Customers', 'type=customer', BOOK.length],
   ]) {
     const before = listRequests.length;
-    await page.getByRole('button', { name: label, exact: true }).click();
+    await chooseFilter(axis, label);
     await page.waitForTimeout(1500);
     const issued = listRequests.slice(before);
 
@@ -228,7 +249,7 @@ async function run() {
     );
 
     // Off again, so each filter is measured on its own.
-    await page.getByRole('button', { name: label, exact: true }).click();
+    await chooseFilter(axis, 'All');
     await page.waitForTimeout(1200);
   }
 
@@ -245,8 +266,8 @@ async function run() {
       issued.length ? issued.join(' , ') : 'NO REQUEST WAS MADE'
     );
     record(
-      'and the matching chip says the list is narrowed',
-      (await page.getByRole('button', { name: 'Owes me', exact: true }).getAttribute('aria-pressed')) === 'true',
+      'and the Balance dropdown says the list is narrowed',
+      (await page.getByRole('button', { name: 'Balance: Owes me' }).count()) === 1,
       'a filter applied with nothing on screen saying so reads as missing parties'
     );
 
@@ -266,7 +287,7 @@ async function run() {
 
   // ── The empty state says which way the merchant got there ─────────────────
   {
-    await page.getByRole('button', { name: 'Owes me', exact: true }).click();
+    await chooseFilter('balance', 'Owes me');
     await page.waitForTimeout(1600);
 
     const body = await page.locator('body').innerText();
@@ -427,7 +448,7 @@ async function run() {
     record(
       'but is still there under Archived \u2014 hidden, never deleted',
       await (async () => {
-        await page.getByRole('combobox', { name: 'Show' }).click();
+        await page.getByRole('button', { name: /^Show:/ }).click();
         await page.getByRole('option', { name: 'Archived' }).click();
         await page.waitForTimeout(1500);
         return (await page.getByRole('button', { name: `Open ${name}` }).count()) > 0;

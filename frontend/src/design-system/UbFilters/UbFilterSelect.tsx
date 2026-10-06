@@ -1,14 +1,16 @@
 'use client';
 
-import { memo, useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 
 import { Check, ChevronDown } from 'lucide-react';
 
+import { deferredModule, useDeferredModule } from 'src/design-system/primitives/deferredModule';
 import { cn } from 'src/utils/cn';
 
+
 import { useMediaQuery } from '../motion/useMediaQuery';
-import { UbDialog } from '../UbDialog';
-import { UbPopover } from '../UbPopover';
+
+import { FilterAnchor } from './FilterAnchor';
 
 import type { UbFilterOption, UbFilterSingleSpec } from './filterTypes';
 
@@ -20,7 +22,9 @@ import type { UbFilterOption, UbFilterSingleSpec } from './filterTypes';
  * three rows of a phone before the first result. One choice from many is a
  * dropdown; at a desk it opens a popover under the button, on a phone a bottom
  * sheet, because a thumb reaches the bottom of the screen and a 36 px popover
- * row is a missed tap. A disabled choice keeps its hint ("too many bars for
+ * row is a missed tap. The desktop list is `FilterAnchor` (no positioning
+ * engine) and the phone sheet loads on first open, so the button is all a
+ * screen pays for on first paint. A disabled choice keeps its hint ("too many bars for
  * this period") so the merchant learns why rather than seeing it vanish.
  */
 export interface UbFilterSelectProps {
@@ -34,10 +38,12 @@ export interface UbFilterSelectProps {
   readonly className?: string;
 }
 
-const SHEET_QUERY = '(max-width: 639px)';
+export const SHEET_QUERY = '(max-width: 639px)';
+
+const panels = deferredModule(() => import('./filterPanels'));
 
 export const FILTER_BUTTON_CLASS = cn(
-  'ub-hit ds-body-s-regular inline-flex h-9 max-w-full shrink-0 items-center gap-2 rounded-control border px-3',
+  'ub-hit ds-body-s-regular inline-flex h-10 max-w-full shrink-0 items-center gap-2 rounded-control border px-3',
   'transition-colors duration-fast ease-standard motion-reduce:transition-none',
   'outline-none focus-visible:shadow-focus disabled:cursor-not-allowed disabled:opacity-60'
 );
@@ -112,13 +118,16 @@ function UbFilterSelectBase({
     if (next !== value) onChange(next);
   };
 
+  const loaded = useDeferredModule(panels, open && sheet);
+  const close = useCallback(() => setOpen(false), []);
+
   const button = (
     <button
       type="button"
       aria-haspopup="listbox"
       aria-expanded={open}
       aria-label={`${spec.label}: ${current}`}
-      onClick={sheet ? () => setOpen(true) : undefined}
+      onClick={() => setOpen((was) => !was)}
       className={cn(
         FILTER_BUTTON_CLASS,
         filterButtonTone(value !== '' && !!spec.anyLabel),
@@ -134,22 +143,23 @@ function UbFilterSelectBase({
     return (
       <>
         {button}
-        <UbDialog open={open} onOpenChange={setOpen} title={spec.label} closeLabel={closeLabel}>
-          <OptionList options={options} value={value} onPick={pick} large />
-        </UbDialog>
+        {loaded && (
+          <loaded.SheetDialog
+            open={open}
+            onOpenChange={setOpen}
+            title={spec.label}
+            closeLabel={closeLabel}
+          >
+            <OptionList options={options} value={value} onPick={pick} large />
+          </loaded.SheetDialog>
+        )}
       </>
     );
   }
   return (
-    <UbPopover
-      trigger={button}
-      open={open}
-      onOpenChange={setOpen}
-      label={spec.label}
-      className="w-64"
-    >
+    <FilterAnchor open={open} onClose={close} trigger={button} label={spec.label} className="w-64">
       <OptionList options={options} value={value} onPick={pick} large={false} />
-    </UbPopover>
+    </FilterAnchor>
   );
 }
 

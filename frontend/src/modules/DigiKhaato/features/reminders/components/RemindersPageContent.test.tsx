@@ -350,10 +350,12 @@ describe('the Sent tab', () => {
     renderWithProviders(<RemindersPageContent />);
 
     expect(await screen.findByText(/no SMS provider set up/)).toBeInTheDocument();
-    // The badge, beside the filter chip of the same word.
-    expect(screen.getAllByText('Failed').length).toBeGreaterThanOrEqual(2);
+    // The row's badge says it; the filter is a dropdown now, so the word appears once.
+    expect(screen.getAllByText('Failed').length).toBeGreaterThanOrEqual(1);
 
-    await user.click(screen.getByRole('radio', { name: 'Failed' }));
+    // Owner, 6 Oct 2026: the kind filter is a dropdown.
+    await user.click(screen.getByRole('button', { name: /^Show reminders:/ }));
+    await user.click(await screen.findByRole('option', { name: 'Failed' }));
     await waitFor(() =>
       expect(service.listReminders).toHaveBeenLastCalledWith(
         { kind: undefined, status: 'failed', page: 1, pageSize: 25 },

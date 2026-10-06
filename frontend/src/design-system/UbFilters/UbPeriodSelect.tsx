@@ -1,18 +1,17 @@
 'use client';
 
-import { memo, useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 
-import { CalendarDays, Check, ChevronDown } from 'lucide-react';
+import { CalendarDays, ChevronDown } from 'lucide-react';
 
+import { deferredModule, useDeferredModule } from 'src/design-system/primitives/deferredModule';
 import { cn } from 'src/utils/cn';
 
 import { useMediaQuery } from '../motion/useMediaQuery';
-import { UbButton } from '../UbButton';
-import { UbDateInput, formatDateFace } from '../UbDateInput/UbDateInput';
-import { UbDialog } from '../UbDialog';
-import { UbPopover } from '../UbPopover';
 
-import { FILTER_BUTTON_CLASS, filterButtonTone } from './UbFilterSelect';
+import { FilterAnchor } from './FilterAnchor';
+import { formatDateFace } from './filterDisplay';
+import { FILTER_BUTTON_CLASS, SHEET_QUERY, filterButtonTone } from './UbFilterSelect';
 
 /**
  * The period, as one dropdown: presets in a list, "Custom range" at the foot
@@ -48,7 +47,7 @@ export interface UbPeriodSelectProps<P extends string> {
   readonly className?: string;
 }
 
-const SHEET_QUERY = '(max-width: 639px)';
+const panels = deferredModule(() => import('./filterPanels'));
 
 function UbPeriodSelectBase<P extends string>({
   presets,
@@ -63,9 +62,10 @@ function UbPeriodSelectBase<P extends string>({
   className,
 }: Readonly<UbPeriodSelectProps<P>>) {
   const [open, setOpen] = useState(false);
-  const [draftFrom, setDraftFrom] = useState(from ?? '');
-  const [draftTo, setDraftTo] = useState(to ?? '');
   const sheet = useMediaQuery(SHEET_QUERY);
+  // Desktop and phone both need the panel (it holds the calendars).
+  const loaded = useDeferredModule(panels, open);
+  const close = useCallback(() => setOpen(false), []);
   const isCustom = value === customValue;
   const face = (iso: string) => formatDateFace(iso, locale);
   const current =
@@ -73,81 +73,26 @@ function UbPeriodSelectBase<P extends string>({
       ? `${face(from)} – ${face(to)}`
       : (presets.find((preset) => preset.value === value)?.label ?? '');
 
-  const openPanel = (next: boolean) => {
-    if (next) {
-      setDraftFrom(from ?? '');
-      setDraftTo(to ?? '');
-    }
-    setOpen(next);
-  };
-  const choose = (next: P) => {
-    setOpen(false);
-    onChange(next, null, null);
-  };
-
-  const panel = (
-    <div className="flex flex-col p-1">
-      <ul role="listbox" aria-label={labels.period} className="flex flex-col">
-        {presets
-          .filter((preset) => preset.value !== customValue)
-          .map((preset) => {
-            const selected = preset.value === value;
-            return (
-              <li key={preset.value} role="presentation">
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={selected}
-                  onClick={() => choose(preset.value)}
-                  className={cn(
-                    'flex w-full items-center gap-3 rounded-control px-3 text-left outline-none focus-visible:shadow-focus',
-                    sheet ? 'ds-body min-h-12' : 'ds-body-s-regular min-h-9',
-                    selected
-                      ? 'bg-accent-quiet text-text-accent'
-                      : 'text-text-primary hover:bg-surface-hover'
-                  )}
-                >
-                  <span className="flex-1">{preset.label}</span>
-                  {selected && <Check aria-hidden className="h-4 w-4" />}
-                </button>
-              </li>
-            );
-          })}
-      </ul>
-      <div className="mt-1 flex flex-col gap-2 border-t border-border-hairline px-2 pb-2 pt-3">
-        <span className="ds-label text-text-secondary">
-          {presets.find((preset) => preset.value === customValue)?.label}
-        </span>
-        <div className="grid grid-cols-2 gap-2">
-          <UbDateInput
-            aria-label={labels.from}
-            placeholder={labels.from}
-            value={draftFrom}
-            max={draftTo || max}
-            onChange={(next) => setDraftFrom(next ?? '')}
-          />
-          <UbDateInput
-            aria-label={labels.to}
-            placeholder={labels.to}
-            value={draftTo}
-            min={draftFrom || undefined}
-            max={max}
-            onChange={(next) => setDraftTo(next ?? '')}
-          />
-        </div>
-        <UbButton
-          size="sm"
-          disabled={!draftFrom || !draftTo}
-          onClick={() => {
-            setOpen(false);
-            onChange(customValue, draftFrom, draftTo);
-          }}
-        >
-          {labels.apply}
-        </UbButton>
-      </div>
-    </div>
-  );
+  const panel = loaded ? (
+    <loaded.PeriodPanel
+      presets={presets}
+      value={value}
+      customValue={customValue}
+      from={from}
+      to={to}
+      max={max}
+      large={sheet}
+      labels={labels}
+      onPreset={(next) => {
+        setOpen(false);
+        onChange(next as P, null, null);
+      }}
+      onCustom={(nextFrom, nextTo) => {
+        setOpen(false);
+        onChange(customValue, nextFrom, nextTo);
+      }}
+    />
+  ) : null;
 
   const button = (
     <button
@@ -155,7 +100,7 @@ function UbPeriodSelectBase<P extends string>({
       aria-haspopup="dialog"
       aria-expanded={open}
       aria-label={`${labels.period}: ${current}`}
-      onClick={sheet ? () => openPanel(true) : undefined}
+      onClick={() => setOpen((was) => !was)}
       className={cn(FILTER_BUTTON_CLASS, filterButtonTone(false), className)}
       data-testid="period-select"
     >
@@ -169,28 +114,29 @@ function UbPeriodSelectBase<P extends string>({
     return (
       <>
         {button}
-        <UbDialog
-          open={open}
-          onOpenChange={setOpen}
-          title={labels.period}
-          closeLabel={labels.close}
-        >
-          {panel}
-        </UbDialog>
+        {loaded && (
+          <loaded.SheetDialog
+            open={open}
+            onOpenChange={setOpen}
+            title={labels.period}
+            closeLabel={labels.close}
+          >
+            {panel}
+          </loaded.SheetDialog>
+        )}
       </>
     );
   }
   return (
-    <UbPopover
+    <FilterAnchor
+      open={open && !!panel}
+      onClose={close}
       trigger={button}
-      open={open}
-      onOpenChange={openPanel}
       label={labels.period}
-      align="end"
       className="w-72"
     >
       {panel}
-    </UbPopover>
+    </FilterAnchor>
   );
 }
 

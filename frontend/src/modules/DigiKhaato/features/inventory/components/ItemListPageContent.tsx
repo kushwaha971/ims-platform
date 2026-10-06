@@ -20,16 +20,18 @@ import { SummaryStatGrid } from 'src/components/stats/SummaryStatGrid';
 import {
   UbActionLink,
   UbButton,
-  UbCombobox,
   UbEmptyState,
   UbPageHeader,
   UbPageShell,
   UbSearchInput,
-  UbSelect,
   UbStack,
   UbStatCard,
   UbStatusBanner,
   UbTabs,
+  UbActiveFilters,
+  UbFilterSheet,
+  type UbFilterSpec,
+  type UbFilterValues,
 } from 'src/design-system';
 import {
   UbDataGrid,
@@ -99,6 +101,44 @@ export function ItemListPageContent(): React.JSX.Element {
   const [unknownCode, setUnknownCode] = useState<string | null>(null);
 
   const { filters, update } = list;
+  const sheetSpecs: UbFilterSpec[] = [
+    {
+      kind: 'single',
+      key: 'type',
+      label: t('items.list.filter.type'),
+      anyLabel: t('items.list.filter.typeAny'),
+      options: [
+        { value: 'goods', label: t('items.form.type.goods') },
+        { value: 'service', label: t('items.form.type.service') },
+      ],
+    },
+    {
+      kind: 'single',
+      key: 'categoryId',
+      label: t('items.list.filter.category'),
+      anyLabel: t('items.list.filter.categoryAny'),
+      options: masters.categoryOptions,
+    },
+    {
+      kind: 'single',
+      key: 'status',
+      label: t('items.list.filter.status'),
+      anyLabel: t('items.list.filter.active'),
+      options: [{ value: 'archived', label: t('items.list.filter.archived') }],
+    },
+  ];
+  // "Active" is the list's default, so to the sheet it is "no filter".
+  const sheetValues: UbFilterValues = {
+    type: filters.type,
+    categoryId: filters.categoryId ?? '',
+    status: filters.status === 'archived' ? 'archived' : '',
+  };
+  const applySheet = (next: UbFilterValues) =>
+    update({
+      type: (next.type ?? '') as '' | 'goods' | 'service',
+      categoryId: next.categoryId ?? '',
+      status: next.status === 'archived' ? 'archived' : 'active',
+    });
   const [draft, setDraft] = useState(filters.q);
   const settled = useDebounce(draft, 300);
   /* The typed text reaches the URL once it has settled (300 ms, INV-02 FR-2).
@@ -408,56 +448,31 @@ export function ItemListPageContent(): React.JSX.Element {
               />
             }
             filters={
-              /* QA at 360–390 px: three fixed-width selects wrapped onto three
-                 lines above the list. On a phone they share ONE row as equal
-                 thirds (each label truncates rather than wraps); from `md` up
-                 they keep their natural widths. */
-              <UbStack
-                direction="row"
-                gap={2}
-                data-ub-filters="fill"
-                className="max-md:grid max-md:w-full max-md:grid-cols-3"
-              >
-                <UbSelect
-                  aria-label={t('items.list.filter.type')}
-                  value={filters.type || 'any'}
-                  onChange={(value) =>
-                    update({ type: value === 'any' ? '' : (value as 'goods' | 'service') })
-                  }
-                  options={[
-                    { value: 'any', label: t('items.list.filter.typeAny') },
-                    { value: 'goods', label: t('items.form.type.goods') },
-                    { value: 'service', label: t('items.form.type.service') },
-                  ]}
-                  className="w-44 max-md:w-full max-md:min-w-0"
+              /* Owner, 6 Oct 2026: type, category and status behind ONE Filters
+                 button (they took three selects, and three rows on a phone);
+                 what is on shows beside it as pills. */
+              <>
+                <UbFilterSheet
+                  specs={sheetSpecs}
+                  values={sheetValues}
+                  onApply={applySheet}
+                  labels={{
+                    title: t('common.filters.title'),
+                    apply: t('common.action.apply'),
+                    reset: t('common.action.reset'),
+                    close: t('common.action.close'),
+                  }}
                 />
-                <UbCombobox
-                  aria-label={t('items.list.filter.category')}
-                  /* '' selects the "All categories" option itself, so it reads
-                     in the same ink as "All types" and "Active" beside it —
-                     null showed the grey placeholder instead. */
-                  value={filters.categoryId}
-                  onChange={(value) => update({ categoryId: value })}
-                  options={[
-                    { value: '', label: t('items.list.filter.categoryAny') },
-                    ...masters.categoryOptions,
-                  ]}
-                  placeholder={t('items.list.filter.categoryAny')}
-                  searchPlaceholder={t('items.form.category.search')}
-                  emptyLabel={t('items.form.category.empty')}
-                  className="w-44 max-md:w-full max-md:min-w-0"
+                <UbActiveFilters
+                  specs={sheetSpecs}
+                  values={sheetValues}
+                  onChange={applySheet}
+                  labels={{
+                    remove: (pill) => t('common.filters.remove', { filter: pill }),
+                    clearAll: t('common.filters.clearAll'),
+                  }}
                 />
-                <UbSelect
-                  aria-label={t('items.list.filter.status')}
-                  value={filters.status}
-                  onChange={(value) => update({ status: value as 'active' | 'archived' })}
-                  options={[
-                    { value: 'active', label: t('items.list.filter.active') },
-                    { value: 'archived', label: t('items.list.filter.archived') },
-                  ]}
-                  className="w-36 max-md:w-full max-md:min-w-0"
-                />
-              </UbStack>
+              </>
             }
           />
         </UbTabs>

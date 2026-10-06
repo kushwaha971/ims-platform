@@ -210,9 +210,10 @@ it('asks the server for unpaid documents when the Unpaid chip is pressed (FR-6)'
   signIn(SALES_READ, ['reports', 'sales']);
   renderWithProviders(<SalesRegisterPageContent />);
   await screen.findAllByText(/^CN · /);
-  // Owner, 6 Oct 2026: each single-choice filter is a dropdown.
-  await userEvent.click(screen.getByRole('button', { name: /^Status:/ }));
-  await userEvent.click(await screen.findByRole('option', { name: 'Unpaid' }));
+  // Owner, 6 Oct 2026: three or more filters live behind ONE Filters button.
+  await userEvent.click(screen.getByTestId('filters-button'));
+  await userEvent.click(await screen.findByRole('radio', { name: 'Unpaid' }));
+  await userEvent.click(screen.getByTestId('filters-apply'));
   await waitFor(() => expect(lastAsked().filters.status).toBe('unpaid'));
   expect(mockSearch).toBe('status=unpaid');
 });
@@ -264,8 +265,9 @@ it('shows ITC eligible on the purchase register and asks by the ITC chip (RPT-04
   expect(await screen.findByText('₹900.00')).toBeInTheDocument();
   expect(screen.getAllByText('To pay').length).toBeGreaterThan(0);
   expect(lastAsked().book).toBe('purchase');
-  await userEvent.click(screen.getByRole('button', { name: /^ITC:/ }));
-  await userEvent.click(await screen.findByRole('option', { name: 'No ITC' }));
+  await userEvent.click(screen.getByTestId('filters-button'));
+  await userEvent.click(await screen.findByRole('radio', { name: 'No ITC' }));
+  await userEvent.click(screen.getByTestId('filters-apply'));
   await waitFor(() => expect(lastAsked().filters.itc).toBe('blocked'));
 });
 

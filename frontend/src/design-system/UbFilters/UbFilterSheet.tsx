@@ -4,13 +4,8 @@ import { memo, useState } from 'react';
 
 import { SlidersHorizontal } from 'lucide-react';
 
+import { deferredModule, useDeferredModule } from 'src/design-system/primitives/deferredModule';
 import { cn } from 'src/utils/cn';
-
-import { UbButton } from '../UbButton';
-import { UbCheckbox } from '../UbCheckbox';
-import { UbDateInput } from '../UbDateInput';
-import { UbDrawer } from '../UbDrawer';
-import { UbRadioGroup } from '../UbRadioGroup';
 
 import { appliedCount } from './filterDisplay';
 import { FILTER_BUTTON_CLASS, filterButtonTone } from './UbFilterSelect';
@@ -24,10 +19,11 @@ import type { UbFilterSpec, UbFilterValues } from './filterTypes';
  * (`UbDrawer` is both). The merchant changes as many filters as they like and
  * then taps Apply — Baymard's mobile finding: a list that reloads on every tap
  * makes choosing two filters a wait between each. Reset clears the DRAFT, not
- * the list, so it can be taken back by closing the sheet.
+ * the list, so it can be taken back by closing the sheet. The draft is seeded
+ * from the applied values every time the sheet opens.
  *
- * The draft is seeded from the applied values every time the sheet opens, so
- * a half-edited sheet that was dismissed never leaks into the next one.
+ * The drawer and its fields load on the first tap (`filterPanels`); a screen
+ * pays for the button on first paint.
  */
 export interface UbFilterSheetLabels {
   /** The button and the sheet's title: "Filters". */
@@ -47,75 +43,7 @@ export interface UbFilterSheetProps {
   readonly className?: string;
 }
 
-function SpecField({
-  spec,
-  draft,
-  setDraft,
-}: Readonly<{
-  spec: UbFilterSpec;
-  draft: UbFilterValues;
-  setDraft: (patch: UbFilterValues) => void;
-}>) {
-  if (spec.kind === 'single') {
-    const options = [
-      ...(spec.anyLabel ? [{ value: '', label: spec.anyLabel }] : []),
-      ...spec.options.map((option) => ({
-        value: option.value,
-        label: option.label,
-        hint: option.hint,
-        disabled: option.disabled,
-      })),
-    ];
-    return (
-      <UbRadioGroup
-        name={`filter-${spec.key}`}
-        ariaLabel={spec.label}
-        value={draft[spec.key] ?? ''}
-        options={options}
-        onChange={(value) => setDraft({ [spec.key]: value })}
-      />
-    );
-  }
-  if (spec.kind === 'multi') {
-    const chosen = (draft[spec.key] ?? '').split(',').filter(Boolean);
-    return (
-      <div className="flex flex-col gap-2">
-        {spec.options.map((option) => (
-          <UbCheckbox
-            key={option.value}
-            checked={chosen.includes(option.value)}
-            label={option.hint ? `${option.label} (${option.hint})` : option.label}
-            onChange={(on) => {
-              const rest = chosen.filter((value) => value !== option.value);
-              setDraft({ [spec.key]: (on ? [...rest, option.value] : rest).join(',') });
-            }}
-          />
-        ))}
-      </div>
-    );
-  }
-  const from = draft[spec.fromKey] ?? '';
-  const to = draft[spec.toKey] ?? '';
-  return (
-    <div className="grid grid-cols-2 gap-2">
-      <UbDateInput
-        aria-label={spec.fromLabel}
-        placeholder={spec.fromLabel}
-        value={from}
-        max={to || spec.max}
-        onChange={(value) => setDraft({ [spec.fromKey]: value ?? '' })}
-      />
-      <UbDateInput
-        aria-label={spec.toLabel}
-        placeholder={spec.toLabel}
-        value={to}
-        min={from || undefined}
-        max={spec.max}
-        onChange={(value) => setDraft({ [spec.toKey]: value ?? '' })}
-      />
-    </div>
-  );
-}
+const panels = deferredModule(() => import('./filterPanels'));
 
 function UbFilterSheetBase({
   specs,
@@ -126,33 +54,19 @@ function UbFilterSheetBase({
   className,
 }: Readonly<UbFilterSheetProps>) {
   const [open, setOpen] = useState(false);
-  const [draft, setDraftState] = useState<UbFilterValues>(values);
+  // A new key per opening re-seeds the drawer's draft from what is applied.
+  const [opening, setOpening] = useState(0);
+  const loaded = useDeferredModule(panels, open);
   const count = appliedCount(specs, values);
-  const setDraft = (patch: UbFilterValues) =>
-    setDraftState((current) => ({ ...current, ...patch }));
-
-  const openSheet = () => {
-    setDraftState(values);
-    setOpen(true);
-  };
-  const reset = () => {
-    const cleared: Record<string, string> = { ...draft };
-    specs.forEach((spec) => {
-      if (spec.kind === 'dateRange') {
-        cleared[spec.fromKey] = '';
-        cleared[spec.toKey] = '';
-      } else {
-        cleared[spec.key] = '';
-      }
-    });
-    setDraftState(cleared);
-  };
 
   return (
     <>
       <button
         type="button"
-        onClick={openSheet}
+        onClick={() => {
+          setOpening((n) => n + 1);
+          setOpen(true);
+        }}
         aria-haspopup="dialog"
         aria-label={count > 0 ? `${labels.title} (${count})` : labels.title}
         className={cn(FILTER_BUTTON_CLASS, filterButtonTone(count > 0), className)}
@@ -169,37 +83,17 @@ function UbFilterSheetBase({
           </span>
         )}
       </button>
-      <UbDrawer
-        open={open}
-        onOpenChange={setOpen}
-        title={labels.title}
-        closeLabel={labels.close}
-        footer={
-          <>
-            <UbButton variant="secondary" onClick={reset}>
-              {labels.reset}
-            </UbButton>
-            <UbButton
-              onClick={() => {
-                setOpen(false);
-                onApply(draft);
-              }}
-              data-testid="filters-apply"
-            >
-              {labels.apply}
-            </UbButton>
-          </>
-        }
-      >
-        <div className="flex flex-col divide-y divide-border-hairline">
-          {specs.map((spec) => (
-            <fieldset key={spec.key} className="flex min-w-0 flex-col gap-2 py-4 first:pt-0">
-              <legend className="ds-label mb-2 text-text-primary">{spec.label}</legend>
-              <SpecField spec={spec} draft={draft} setDraft={setDraft} />
-            </fieldset>
-          ))}
-        </div>
-      </UbDrawer>
+      {loaded && (
+        <loaded.FilterSheetDrawer
+          key={opening}
+          open={open}
+          onOpenChange={setOpen}
+          specs={specs}
+          values={values}
+          onApply={onApply}
+          labels={labels}
+        />
+      )}
     </>
   );
 }

@@ -10,7 +10,6 @@ import {
   UbActionLink,
   UbAmount,
   UbCard,
-  UbChoiceChips,
   UbEmptyState,
   UbListItemText,
   UbPageHeader,
@@ -21,6 +20,7 @@ import {
   UbStack,
   UbStatusBadge,
   UbText,
+  UbFilterSelect,
 } from 'src/design-system';
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useCommittedSearch } from 'src/hooks/useCommittedSearch';
@@ -94,13 +94,19 @@ export function LoansPageContent(): React.JSX.Element {
           placeholder={t('lending.loans.search')}
           aria-label={t('lending.loans.search')}
         />
-        <UbChoiceChips<StatusFilter>
-          id="lending-loans-status"
-          ariaLabel={t('lending.loans.status')}
-          value={status}
-          onChange={setStatus}
-          options={STATUSES.map((s) => ({ value: s, label: t(`lending.loans.filter.${s}`) }))}
-        />
+        <UbStack direction="row" gap={2}>
+          <UbFilterSelect
+            spec={{
+              kind: 'single',
+              key: 'status',
+              label: t('lending.loans.status'),
+              options: STATUSES.map((s) => ({ value: s, label: t(`lending.loans.filter.${s}`) })),
+            }}
+            value={status}
+            onChange={(next) => setStatus(next as StatusFilter)}
+            closeLabel={t('common.action.close')}
+          />
+        </UbStack>
         {state.listStatus === 'loading' || state.listStatus === 'idle' ? (
           <UbPageSkeleton variant="card" />
         ) : state.rows.length === 0 ? (

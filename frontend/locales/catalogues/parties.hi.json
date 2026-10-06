@@ -168,6 +168,7 @@
   "parties.list.empty.firstUse.body": "जिसे आप सबसे पहले उधार देते हैं उसे जोड़ें — उसका खाता यहीं से शुरू होगा।",
   "parties.list.empty.firstUse.title": "अभी कोई ग्राहक नहीं है",
   "parties.list.error.body": "कनेक्शन जाँचकर फिर कोशिश करें।",
+  "parties.list.filter.any": "सभी",
   "parties.list.filter.balance.i_owe": "मुझे देने हैं",
   "parties.list.filter.balance.label": "बकाया",
   "parties.list.filter.balance.owes_me": "मुझे मिलने हैं",

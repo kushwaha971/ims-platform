@@ -13,7 +13,6 @@ import {
   UbAmount,
   UbButton,
   UbCard,
-  UbChoiceChips,
   UbEmptyState,
   UbListItemText,
   UbPageHeader,
@@ -24,6 +23,7 @@ import {
   UbStatCard,
   UbStatusBadge,
   UbText,
+  UbFilterSelect,
 } from 'src/design-system';
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { usePermissions } from 'src/hooks/usePermissions';
@@ -162,16 +162,22 @@ export function TodayPageContent(): React.JSX.Element {
             />
           </SummaryStatGrid>
           {routes.length > 0 && (
-            <UbChoiceChips<string>
-              id="lending-today-route"
-              ariaLabel={t('lending.route.label')}
-              value={route}
-              onChange={setRoute}
-              options={[
-                { value: ALL, label: t('lending.route.all') },
-                ...routes.map((r) => ({ value: r.id, label: r.name })),
-              ]}
-            />
+            <UbStack direction="row" gap={2}>
+              <UbFilterSelect
+                spec={{
+                  kind: 'single',
+                  key: 'route',
+                  label: t('lending.route.label'),
+                  options: [
+                    { value: ALL, label: t('lending.route.all') },
+                    ...routes.map((r) => ({ value: r.id, label: r.name })),
+                  ],
+                }}
+                value={route}
+                onChange={setRoute}
+                closeLabel={t('common.action.close')}
+              />
+            </UbStack>
           )}
           {round.stops.length === 0 ? (
             <UbEmptyState

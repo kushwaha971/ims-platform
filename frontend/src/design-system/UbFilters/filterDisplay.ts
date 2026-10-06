@@ -1,4 +1,25 @@
-import { formatDateFace } from '../UbDateInput/UbDateInput';
+/** "6 Oct 2026" — `UbDateInput`'s face, copied so a button does not import a calendar. */
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTHS_HI = [
+  'जन॰',
+  'फ़र॰',
+  'मार्च',
+  'अप्रैल',
+  'मई',
+  'जून',
+  'जुल॰',
+  'अग॰',
+  'सित॰',
+  'अक्तू॰',
+  'नव॰',
+  'दिस॰',
+];
+export const formatDateFace = (iso: string, locale?: string): string => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  if (!match) return iso;
+  const months = locale?.startsWith('hi') ? MONTHS_HI : MONTHS;
+  return `${Number(match[3])} ${months[Number(match[2]) - 1]} ${match[1]}`;
+};
 
 import type { UbFilterSpec, UbFilterValues } from './filterTypes';
 

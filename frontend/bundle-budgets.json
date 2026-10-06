@@ -718,7 +718,15 @@
   "UbFilterSelect, the day book uses UbFilterSheet, and stat cards fold into",
   "UbStatSummary. That shared code costs 0.3–2.8 KB on the routes that scope by",
   "a period or show stat cards. Raised by measured + 0.5 on the",
-  "86 measurements that crossed."
+  "86 measurements that crossed.",
+  "The remaining screens (party lists, register Filters, library lists, reminders,",
+  "lending, admin tenants) first cost 23–35 KB each: the dropdown used a Radix",
+  "popover and the drawer pulled in calendars. The desktop list is now a plain",
+  "anchored box (FilterAnchor) and every panel loads on first open",
+  "(filterPanels via deferredModule), which brought them to 0.1–1.8 KB.",
+  "Items and Stock summary dropped their selects and combobox for the Filters",
+  "sheet; the combobox left a shared chunk and the editors and onboarding, which",
+  "still use it, now carry it themselves (+0.1–1.1 KB). Raised by measured + 0.5."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -1278,12 +1286,12 @@
    "firstLoad": 336
   },
   "/sales/invoices/new": {
-   "route": 137,
-   "firstLoad": 372
+   "route": 139,
+   "firstLoad": 374
   },
   "/sales/invoices/[id]/edit": {
-   "route": 137,
-   "firstLoad": 372
+   "route": 139,
+   "firstLoad": 374
   },
   "/sales/invoices": {
    "route": 98,
@@ -1314,7 +1322,7 @@
    "firstLoad": 356
   },
   "/sales/credit-notes/new": {
-   "route": 137,
+   "route": 139,
    "firstLoad": 390
   },
   "/sales/credit-notes/[id]": {
@@ -1322,8 +1330,8 @@
    "firstLoad": 336
   },
   "/onboarding/step/[n]": {
-   "route": 87,
-   "firstLoad": 322
+   "route": 88,
+   "firstLoad": 323
   },
   "/design-system": {
    "route": 106,
@@ -1414,8 +1422,8 @@
    "firstLoad": 295
   },
   "/ledger/reminders": {
-   "route": 68,
-   "firstLoad": 303
+   "route": 69,
+   "firstLoad": 304
   },
   "/imports": {
    "route": 49,
@@ -1442,8 +1450,8 @@
    "firstLoad": 259
   },
   "/admin/tenants": {
-   "route": 30,
-   "firstLoad": 265
+   "route": 31,
+   "firstLoad": 266
   },
   "/settings/data": {
    "route": 56,
@@ -1478,12 +1486,12 @@
    "firstLoad": 339
   },
   "/reports/purchase-register": {
-   "route": 103,
-   "firstLoad": 338
+   "route": 104,
+   "firstLoad": 339
   },
   "/reports/sales-register": {
-   "route": 103,
-   "firstLoad": 338
+   "route": 104,
+   "firstLoad": 339
   },
   "/login": {
    "route": 56,
@@ -1498,12 +1506,12 @@
    "firstLoad": 295
   },
   "/library/catalogue": {
-   "route": 71,
-   "firstLoad": 306
+   "route": 74,
+   "firstLoad": 309
   },
   "/library/copies": {
-   "route": 70,
-   "firstLoad": 305
+   "route": 73,
+   "firstLoad": 308
   },
   "/library/copies/[copyId]": {
    "route": 67,
@@ -1514,8 +1522,8 @@
    "firstLoad": 344
   },
   "/library/members": {
-   "route": 76,
-   "firstLoad": 311
+   "route": 78,
+   "firstLoad": 313
   },
   "/library/members/[membershipId]": {
    "route": 71,
@@ -1538,7 +1546,7 @@
    "firstLoad": 308
   },
   "/library/seats": {
-   "route": 66,
+   "route": 68,
    "firstLoad": 302
   },
   "/library/fees": {
@@ -1602,7 +1610,7 @@
    "firstLoad": 355
   },
   "/lending": {
-   "route": 61,
+   "route": 62,
    "firstLoad": 296
   },
   "/lending/loans/[loanId]": {
@@ -1611,14 +1619,14 @@
   },
   "/lending/loans": {
    "route": 58,
-   "firstLoad": 292
+   "firstLoad": 294
   },
   "/customers": {
-   "route": 109,
+   "route": 110,
    "firstLoad": 344
   },
   "/suppliers": {
-   "route": 109,
+   "route": 110,
    "firstLoad": 344
   }
  },

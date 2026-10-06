@@ -12,10 +12,10 @@ import {
   UbButton,
   UbPageHeader,
   UbPageShell,
-  UbSelect,
   UbStack,
   UbStatusBanner,
   UbTextInput,
+  UbFilterSelect,
 } from 'src/design-system';
 import {
   UbDataGrid,
@@ -583,11 +583,8 @@ export function PartyListPageContent({
           />
         )}
 
-        {/* Between the figures and the list, which is the order the FRD sets
-            and the order the eye takes: how much, then who. Not in the grid's
-            toolbar — its filter slot is a `shrink-0` group that deliberately
-            does not wrap, and seven chips in it would squeeze the search box
-            to nothing. */}
+        {/* What is on, once, as pills above the card (owner, 6 Oct 2026);
+            the controls themselves are in the grid's toolbar below. */}
         <PartyListFilters
           t={t}
           type={filters.type}
@@ -612,6 +609,7 @@ export function PartyListPageContent({
           roles={roles}
           activeFilterCount={activeFilterCount}
           onClear={clearFilters}
+          part="pills"
         />
 
         {/* FR-15 / §9 Error, stale-cache variant: the refresh failed, the rows
@@ -702,14 +700,44 @@ export function PartyListPageContent({
           }
           filters={
             <>
-              <UbSelect
+              <UbFilterSelect
+                spec={{
+                  kind: 'single',
+                  key: 'status',
+                  label: t('parties.list.filter.status.label'),
+                  options: STATUS_OPTIONS.map((value) => ({
+                    value,
+                    label: t(`parties.list.status.${value}`),
+                  })),
+                }}
                 value={filters.status}
-                onChange={handleStatus}
-                aria-label={t('parties.list.filter.status.label')}
-                options={STATUS_OPTIONS.map((value) => ({
-                  value,
-                  label: t(`parties.list.status.${value}`),
-                }))}
+                onChange={(value) => handleStatus(value)}
+                closeLabel={t('common.action.close')}
+              />
+              <PartyListFilters
+                t={t}
+                type={filters.type}
+                typeFixed={Boolean(kind)}
+                balance={filters.balance}
+                collection={filters.collection}
+                onTypeChange={handleType}
+                onBalanceChange={handleBalance}
+                onCollectionChange={handleCollection}
+                credit={filters.credit}
+                onCreditChange={handleCredit}
+                /* The count is the UNFILTERED one when nothing is applied, which is
+                   the number the chip is for. Once a filter narrows the list it
+                   narrows with it, so the chip answers the question the merchant just
+                   asked rather than one about a set they are not looking at. */
+                overLimitCount={overLimit}
+                tag={filters.tag}
+                onTagChange={handleTag}
+                tags={tagOptions}
+                role={filters.role ?? ''}
+                onRoleChange={handleRole}
+                roles={roles}
+                activeFilterCount={activeFilterCount}
+                onClear={clearFilters}
               />
               {/* UAT D5 — the cards have no column headers to sort by, so the
                   phone gets the same orderings from a sheet. Not drawn from

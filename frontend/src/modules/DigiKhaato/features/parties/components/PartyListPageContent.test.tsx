@@ -142,6 +142,27 @@ beforeEach(() => {
   window.localStorage.setItem('ub.statSummary.parties', 'open');
 });
 
+
+/* Owner, 6 Oct 2026 — the approved filter pattern: Balance is the toolbar's
+   one dropdown; credit, role, type, collection and tags live in the Filters
+   sheet, applied once, and come back as pills. These drive the real controls. */
+type User = ReturnType<typeof userEvent.setup>;
+const pickBalance = async (user: User, label: string): Promise<void> => {
+  await user.click(screen.getByRole('button', { name: /^Balance:/ }));
+  await user.click(await screen.findByRole('option', { name: label }));
+};
+const inFilters = async (user: User, choose: () => Promise<void>): Promise<void> => {
+  await user.click(screen.getByTestId('filters-button'));
+  await choose();
+  await user.click(screen.getByTestId('filters-apply'));
+};
+const chooseRadio = (user: User, group: string, label: string) => async () => {
+  const set = await screen.findByRole('radiogroup', { name: group });
+  await user.click(within(set).getByRole('radio', { name: label }));
+};
+const balanceShows = (label: string) =>
+  screen.getByRole('button', { name: `Balance: ${label}` });
+
 describe('PartyListPageContent', () => {
   beforeEach(() => {
     store.dispatch(resetPartyList());
@@ -425,28 +446,27 @@ describe('the approved responsive rules, on the real screen', () => {
     renderWithProviders(<PartyListPageContent />);
     await screen.findByText('Ramesh Traders');
 
-    await user.click(screen.getByRole('button', { name: 'Overdue' }));
+    await inFilters(user, chooseRadio(user, 'Collection', 'Overdue'));
 
     await waitFor(() => expect(lastParams()?.collection).toBe('overdue'));
-    expect(screen.getByRole('button', { name: 'Overdue', pressed: true })).toBeInTheDocument();
+    expect(screen.getByText('Collection: Overdue')).toBeInTheDocument();
   });
 
-  it('clears a chip when the applied one is tapped again', async () => {
+  it('clears a filter from its pill', async () => {
     partyService.listParties.mockResolvedValue(loaded([RAMESH]));
     const user = userEvent.setup();
 
     renderWithProviders(<PartyListPageContent />);
     await screen.findByText('Ramesh Traders');
 
-    const chip = screen.getByRole('button', { name: 'Suppliers' });
-    await user.click(chip);
+    await inFilters(user, chooseRadio(user, 'Type', 'Suppliers'));
     await waitFor(() => expect(lastParams()?.type).toBe('supplier'));
 
-    await user.click(screen.getByRole('button', { name: 'Suppliers' }));
+    await user.click(screen.getByRole('button', { name: 'Remove Type: Suppliers' }));
     await waitFor(() => expect(lastParams()?.type).toBe(''));
   });
 
-  it('replaces rather than adds when a second chip on the same axis is tapped', async () => {
+  it('replaces rather than adds when a second balance is chosen', async () => {
     /**
      * `balance` is one value on the wire — a `ChoiceFilter`. A chip row that
      * looked multi-select would silently drop one of the two choices, which is
@@ -458,15 +478,15 @@ describe('the approved responsive rules, on the real screen', () => {
     renderWithProviders(<PartyListPageContent />);
     await screen.findByText('Ramesh Traders');
 
-    await user.click(screen.getByRole('button', { name: 'Owes me' }));
+    await pickBalance(user, 'Owes me');
     await waitFor(() => expect(lastParams()?.balance).toBe('owes_me'));
 
-    await user.click(screen.getByRole('button', { name: 'I owe them' }));
+    await pickBalance(user, 'I owe them');
     await waitFor(() => expect(lastParams()?.balance).toBe('i_owe'));
-    expect(screen.getByRole('button', { name: 'Owes me', pressed: false })).toBeInTheDocument();
+    expect(balanceShows('I owe them')).toBeInTheDocument();
   });
 
-  it('filters the list from the receivable tile, and the chip says so', async () => {
+  it('filters the list from the receivable tile, and the Balance dropdown says so', async () => {
     /**
      * FRD §6 Alternate A, the collection round: the merchant reads ₹2,800 and
      * the next thing they want is the list of who it is made of. The chip
@@ -483,7 +503,7 @@ describe('the approved responsive rules, on the real screen', () => {
     await user.click(screen.getByRole('button', { name: 'Show only who owes me' }));
 
     await waitFor(() => expect(lastParams()?.balance).toBe('owes_me'));
-    expect(screen.getByRole('button', { name: 'Owes me', pressed: true })).toBeInTheDocument();
+    expect(balanceShows('Owes me')).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Show only who owes me', pressed: true })
     ).toBeInTheDocument();
@@ -534,7 +554,7 @@ describe('the approved responsive rules, on the real screen', () => {
     await screen.findByText('Ramesh Traders');
 
     partyService.listParties.mockResolvedValue(EMPTY);
-    await user.click(screen.getByRole('button', { name: 'Settled' }));
+    await pickBalance(user, 'Settled');
 
     /* And the words match the way it was reached: no search was typed, so it
        must not tell the merchant to clear one. */
@@ -571,7 +591,7 @@ describe('the approved responsive rules, on the real screen', () => {
 
     expect(screen.queryByRole('button', { name: /Clear filters/ })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Overdue' }));
+    await inFilters(user, chooseRadio(user, 'Collection', 'Overdue'));
 
     expect(await screen.findByRole('button', { name: 'Clear filters (1)' })).toBeInTheDocument();
   });
@@ -592,12 +612,12 @@ describe('the approved responsive rules, on the real screen', () => {
 
     /* `UbSelect` is a Radix listbox since `ml-uikit` was vendored, not a native
        `<select>` — `selectOptions` finds nothing. */
-    await user.click(screen.getByRole('combobox', { name: 'Show' }));
+    await user.click(screen.getByRole('button', { name: /^Show:/ }));
     await user.click(await screen.findByRole('option', { name: 'Archived' }));
     await waitFor(() => expect(lastParams()?.status).toBe('archived'));
     expect(await screen.findByRole('button', { name: 'Clear filters (1)' })).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Owes me' }));
+    await pickBalance(user, 'Owes me');
     await waitFor(() => expect(lastParams()?.balance).toBe('owes_me'));
 
     await user.click(screen.getByRole('button', { name: 'Clear filters (2)' }));
@@ -738,7 +758,7 @@ describe('the yearly clean-up', () => {
     renderWithProviders(<PartyListPageContent />);
     await screen.findByText('Ramesh Traders');
 
-    await user.click(screen.getByRole('combobox', { name: 'Show' }));
+    await user.click(screen.getByRole('button', { name: /^Show:/ }));
     await user.click(await screen.findByRole('option', { name: 'Archived' }));
     await user.click(await screen.findByRole('checkbox', { name: 'Select Ramesh Traders' }));
 
@@ -846,7 +866,9 @@ describe('tags on the party list', () => {
     renderWithProviders(<PartyListPageContent />);
     await screen.findByText('Ramesh Traders');
 
-    expect(screen.queryByRole('combobox', { name: 'Tag' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByTestId('filters-button'));
+    expect(screen.queryByRole('group', { name: 'Tag' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Tag')).not.toBeInTheDocument();
   });
 
   it('sends the chosen tag to the server and counts it as a filter', async () => {
@@ -870,8 +892,9 @@ describe('tags on the party list', () => {
     renderWithProviders(<PartyListPageContent />);
     await screen.findByText('Ramesh Traders');
 
-    await user.click(await screen.findByRole('combobox', { name: 'Tag' }));
-    await user.click(await screen.findByText('Camp Area'));
+    await inFilters(user, async () => {
+      await user.click(await screen.findByRole('checkbox', { name: 'Camp Area (34)' }));
+    });
 
     await waitFor(() => {
       expect(partyService.listParties).toHaveBeenLastCalledWith(
@@ -975,7 +998,7 @@ describe('tags on the party list', () => {
     renderWithProviders(<PartyListPageContent />);
     await screen.findByText('Ramesh Traders');
 
-    expect(await screen.findByRole('button', { name: 'Remove tag Camp Area' })).toBeInTheDocument();
+    expect(await screen.findByText('Tag: Camp Area')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Clear filters/ })).toBeInTheDocument();
   });
 
@@ -1033,8 +1056,9 @@ describe('tags on the party list', () => {
     renderWithProviders(<PartyListPageContent />);
     await screen.findByText('Ramesh Traders');
 
-    await user.click(await screen.findByRole('combobox', { name: 'Tag' }));
-    await user.click(await screen.findByRole('option', { name: 'Camp Area' }));
+    await inFilters(user, async () => {
+      await user.click(await screen.findByRole('checkbox', { name: 'Camp Area (34)' }));
+    });
 
     await waitFor(() => {
       expect(mockReplace).toHaveBeenLastCalledWith('/parties?tag=Camp+Area', { scroll: false });
@@ -1170,7 +1194,10 @@ describe('the over-limit chip', () => {
     renderWithProviders(<PartyListPageContent />);
     await screen.findByText('Ramesh Traders');
 
-    expect(await screen.findByRole('button', { name: 'Over limit (7)' })).toBeInTheDocument();
+    await userEvent.click(screen.getByTestId('filters-button'));
+    const credit = await screen.findByRole('radiogroup', { name: 'Credit' });
+    expect(within(credit).getByRole('radio', { name: /Over limit/ })).toBeInTheDocument();
+    expect(within(credit).getByText('7')).toBeInTheDocument();
   });
 
   it('sends the band to the server and counts as a filter', async () => {
@@ -1187,7 +1214,10 @@ describe('the over-limit chip', () => {
     renderWithProviders(<PartyListPageContent />);
     await screen.findByText('Ramesh Traders');
 
-    await user.click(await screen.findByRole('button', { name: 'Over limit (7)' }));
+    await inFilters(user, async () => {
+      const credit = await screen.findByRole('radiogroup', { name: 'Credit' });
+      await user.click(within(credit).getByRole('radio', { name: /Over limit/ }));
+    });
 
     await waitFor(() => {
       expect(partyService.listParties).toHaveBeenLastCalledWith(
@@ -1221,12 +1251,15 @@ describe('the over-limit chip', () => {
     renderWithProviders(<PartyListPageContent />);
     await screen.findByText('Ramesh Traders');
 
-    const near = await screen.findByRole('button', { name: 'Near limit' });
-    expect(near).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'Within limit' })).toBeInTheDocument();
-    // Without a count there is nothing to put in the brackets, and "(0)" is a
-    // worse answer than none: it reads as a tally of the list on screen.
-    expect(screen.getByRole('button', { name: 'Over limit' })).toBeInTheDocument();
+    expect(await screen.findByText('Credit: Near limit')).toBeInTheDocument();
+    await userEvent.click(screen.getByTestId('filters-button'));
+    const credit = await screen.findByRole('radiogroup', { name: 'Credit' });
+    expect(within(credit).getByRole('radio', { name: 'Near limit' })).toBeChecked();
+    expect(within(credit).getByRole('radio', { name: 'Within limit' })).toBeInTheDocument();
+    // Without a count there is nothing to put beside it, and "0" is a worse
+    // answer than none: it reads as a tally of the list on screen.
+    expect(within(credit).getByRole('radio', { name: 'Over limit' })).toBeInTheDocument();
+    expect(within(credit).queryByText('0')).not.toBeInTheDocument();
   });
 
   it('applies a credit band that arrived in the URL', async () => {
@@ -1372,7 +1405,7 @@ describe('PTY-02 §9 — the ten states of the party list', () => {
 
     const inFlight = deferred<ReturnType<typeof loaded>>();
     partyService.listParties.mockReturnValue(inFlight.promise);
-    await user.click(screen.getByRole('button', { name: 'Owes me' }));
+    await pickBalance(user, 'Owes me');
 
     expect(await screen.findByTestId('ub-grid-busy')).toBeInTheDocument();
     const row = screen.getByText('Ramesh Traders');
@@ -1475,7 +1508,7 @@ describe('PTY-02 §9 — the ten states of the party list', () => {
     await screen.findByText('Ramesh Traders');
 
     partyService.listParties.mockResolvedValue(EMPTY);
-    await user.click(screen.getByRole('combobox', { name: 'Show' }));
+    await user.click(screen.getByRole('button', { name: /^Show:/ }));
     await user.click(await screen.findByRole('option', { name: 'Archived' }));
 
     expect(await screen.findByText('No archived customers')).toBeInTheDocument();
@@ -1585,7 +1618,7 @@ describe('PTY-02 §9 — the ten states of the party list', () => {
     await screen.findByText('Ramesh Traders');
 
     partyService.listParties.mockRejectedValue(API_ERROR);
-    await user.click(screen.getByRole('button', { name: 'Settled' }));
+    await pickBalance(user, 'Settled');
 
     expect(await screen.findByText('We could not load your customers')).toBeInTheDocument();
     expect(screen.queryByText('Ramesh Traders')).not.toBeInTheDocument();
@@ -1800,7 +1833,7 @@ describe('the list comes back on its default view (UAT D7)', () => {
     const user = userEvent.setup();
     const first = renderWithProviders(<PartyListPageContent />);
     await screen.findByText('Ramesh Traders');
-    await user.click(screen.getByRole('combobox', { name: 'Show' }));
+    await user.click(screen.getByRole('button', { name: /^Show:/ }));
     await user.click(await screen.findByRole('option', { name: 'Archived' }));
     await waitFor(() => expect(lastParams()?.status).toBe('archived'));
     first.unmount();
@@ -1823,7 +1856,7 @@ describe('the list comes back on its default view (UAT D7)', () => {
     const user = userEvent.setup();
     const first = renderWithProviders(<PartyListPageContent />);
     await screen.findByText('Ramesh Traders');
-    await user.click(screen.getByRole('combobox', { name: 'Show' }));
+    await user.click(screen.getByRole('button', { name: /^Show:/ }));
     await user.click(await screen.findByRole('option', { name: 'Archived' }));
     await waitFor(() => expect(lastParams()?.status).toBe('archived'));
     first.unmount();
@@ -1964,7 +1997,7 @@ describe('one book: Suppliers', () => {
     await screen.findAllByText('Ramesh Traders');
 
     partyService.listParties.mockResolvedValue(EMPTY);
-    await user.click(screen.getByRole('button', { name: 'Owes me' }));
+    await pickBalance(user, 'Owes me');
     await waitFor(() => expect(lastParams().balance).toBe('owes_me'));
     expect(await screen.findByText('No suppliers match these filters')).toBeInTheDocument();
 

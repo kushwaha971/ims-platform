@@ -504,10 +504,16 @@ async function checks(browser, token) {
 
   // 2. The filter reaches the wire with the NAME intact.
   {
+    // Owner, 6 Oct 2026: tags are a multi-choice group in the Filters sheet,
+    // and the stat cards open from "Details" (remembered on this device).
+    if (await page.getByRole('button', { name: 'Details' }).count()) {
+      await page.getByRole('button', { name: 'Details' }).click();
+    }
     const before = listRequests.length;
-    await page.getByRole('combobox', { name: 'Tag' }).first().click();
-    await settle(page, 500);
-    await page.getByRole('option', { name: 'Camp Area' }).first().click();
+    await page.getByTestId('filters-button').click();
+    await settle(page, 800);
+    await page.getByRole('checkbox', { name: /^Camp Area/ }).first().click();
+    await page.getByTestId('filters-apply').click();
     await settle(page, 1500);
     const issued = listRequests.slice(before);
     record(
@@ -553,8 +559,8 @@ async function checks(browser, token) {
       ''
     );
     record(
-      'and the chip shows what is applied',
-      (await page.getByRole('button', { name: 'Remove tag Camp Area' }).count()) > 0,
+      'and a pill shows what is applied',
+      (await page.getByText('Tag: Camp Area').count()) > 0,
       ''
     );
   }

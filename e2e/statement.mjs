@@ -339,7 +339,8 @@ async function sweep(ctx, size, parties) {
 
   await at('05-period-custom', async () => {
     await openStatement(page, parties.passbook);
-    await page.getByRole('button', { name: 'Custom' }).first().click();
+    // The period is one dropdown (owner, 6 Oct 2026); its custom range is at the foot.
+    await page.getByTestId('period-select').first().click();
     await settle(page, 900);
     await capture(page, size, '05-period-custom');
   });
@@ -521,7 +522,8 @@ async function checks(browser, token, parties) {
     });
     await signIn(page);
     await openStatement(page, parties.passbook);
-    await page.getByRole('button', { name: 'All time' }).first().click();
+    await page.getByTestId('period-select').first().click();
+    await page.getByRole('option', { name: 'All time' }).first().click();
     await settle(page, 1800);
 
     record(

@@ -7,14 +7,15 @@ import { useRouter } from 'next/navigation';
 import {
   UbButton,
   UbEmptyState,
-  UbFilterBar,
-  UbFilterChip,
-  UbFilterChipGroup,
   UbPageHeader,
   UbPageShell,
   UbSearchInput,
-  UbNativeSelect,
   UbStack,
+  UbActiveFilters,
+  UbFilterSelect,
+  UbFilterSheet,
+  type UbFilterSpec,
+  type UbFilterValues,
 } from 'src/design-system';
 import { UbDataGrid, type UbDataGridEmptyStates } from 'src/design-system/UbDataGrid';
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
@@ -31,8 +32,6 @@ import { COPY_STATUSES, type CopyFilters, type CopyRow } from '../types/catalogu
 import { listGridState } from '../view-model/copyDisplay';
 
 import { createCopyColumns } from './CatalogueColumns';
-
-const ALL = 'all';
 
 /**
  * F03 (LIB-02 FR-10) — `/library/copies`: every physical book, in accession
@@ -63,20 +62,47 @@ export function CopyListPageContent(): React.JSX.Element {
   );
 
   const columns = useMemo(() => createCopyColumns({ t }), [t]);
-  const statusOptions = useMemo(
+  const sheetSpecs = useMemo<UbFilterSpec[]>(
     () => [
-      { value: ALL, label: t('library.filter.allStatuses') },
-      ...COPY_STATUSES.map((value) => ({ value, label: t(`library.copy.status.${value}`) })),
-    ],
-    [t]
-  );
-  const locationOptions = useMemo(
-    () => [
-      { value: ALL, label: t('library.filter.allLocations') },
-      ...locations.map((loc) => ({ value: loc.id, label: loc.code })),
+      ...(locations.length > 0
+        ? [
+            {
+              kind: 'single' as const,
+              key: 'location',
+              label: t('library.filter.location'),
+              anyLabel: t('library.filter.allLocations'),
+              options: locations.map((loc) => ({ value: loc.id, label: loc.code })),
+            },
+          ]
+        : []),
+      {
+        kind: 'single',
+        key: 'priceMissing',
+        label: t('library.filter.priceMissing'),
+        anyLabel: t('library.members.filter.any'),
+        options: [{ value: 'true', label: t('library.members.filter.yes') }],
+      },
+      {
+        kind: 'single',
+        key: 'ordering',
+        label: t('library.filter.order'),
+        anyLabel: t('library.filter.byAccession'),
+        options: [{ value: 'title', label: t('library.filter.byTitle') }],
+      },
     ],
     [t, locations]
   );
+  const sheetValues: UbFilterValues = {
+    location: filters.location,
+    priceMissing: filters.priceMissing,
+    ordering: filters.ordering,
+  };
+  const applySheet = (next: UbFilterValues) =>
+    setFilters({
+      location: next.location ?? '',
+      priceMissing: next.priceMissing ?? '',
+      ordering: next.ordering ?? '',
+    } as Partial<CopyFilters>);
 
   const emptyStates = useMemo<UbDataGridEmptyStates>(
     () => ({
@@ -141,45 +167,45 @@ export function CopyListPageContent(): React.JSX.Element {
           placeholder={t('library.copies.search.placeholder')}
           aria-label={t('library.copies.search.label')}
         />
-        <UbFilterBar
-          end={
-            <UbStack direction="row" gap={2} wrap>
-              <UbNativeSelect
-                name="library-copy-status"
-                aria-label={t('library.filter.status')}
-                value={filters.status || ALL}
-                options={statusOptions}
-                onChange={(value: string) =>
-                  setFilters({ status: (value === ALL ? '' : value) as CopyFilters['status'] })
-                }
-                className="w-36"
-              />
-              {locations.length > 0 && (
-                <UbNativeSelect
-                  name="library-copy-location"
-                  aria-label={t('library.filter.location')}
-                  value={filters.location || ALL}
-                  options={locationOptions}
-                  onChange={(value: string) => setFilters({ location: value === ALL ? '' : value })}
-                  className="w-32"
-                />
-              )}
-            </UbStack>
-          }
-        >
-          <UbFilterChipGroup label={t('library.filter.register')}>
-            <UbFilterChip
-              label={t('library.filter.priceMissing')}
-              pressed={filters.priceMissing === 'true'}
-              onToggle={(pressed) => setFilters({ priceMissing: pressed ? 'true' : '' })}
-            />
-            <UbFilterChip
-              label={t('library.filter.byTitle')}
-              pressed={filters.ordering === 'title'}
-              onToggle={(pressed) => setFilters({ ordering: pressed ? 'title' : '' })}
-            />
-          </UbFilterChipGroup>
-        </UbFilterBar>
+        {/* Owner, 6 Oct 2026: status is the one dropdown; place, the
+            missing-price register and the order sit behind Filters. */}
+        <UbStack direction="row" align="center" gap={2} className="flex-wrap">
+          <UbFilterSelect
+            spec={{
+              kind: 'single',
+              key: 'status',
+              label: t('library.filter.status'),
+              anyLabel: t('library.filter.allStatuses'),
+              options: COPY_STATUSES.map((value) => ({
+                value,
+                label: t(`library.copy.status.${value}`),
+              })),
+            }}
+            value={filters.status}
+            onChange={(status) => setFilters({ status } as Partial<CopyFilters>)}
+            closeLabel={t('common.action.close')}
+          />
+          <UbFilterSheet
+            specs={sheetSpecs}
+            values={sheetValues}
+            onApply={applySheet}
+            labels={{
+              title: t('common.filters.title'),
+              apply: t('common.action.apply'),
+              reset: t('common.action.reset'),
+              close: t('common.action.close'),
+            }}
+          />
+        </UbStack>
+        <UbActiveFilters
+          specs={sheetSpecs}
+          values={sheetValues}
+          onChange={applySheet}
+          labels={{
+            remove: (pill) => t('common.filters.remove', { filter: pill }),
+            clearAll: t('common.filters.clearAll'),
+          }}
+        />
         <UbDataGrid
           rows={list.rows}
           columns={columns}

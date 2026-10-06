@@ -10,14 +10,15 @@ import { BookCopy, FolderTree, MapPin, Plus } from 'lucide-react';
 import {
   UbButton,
   UbEmptyState,
-  UbFilterBar,
-  UbFilterChip,
-  UbFilterChipGroup,
   UbPageHeader,
   UbPageShell,
   UbSearchInput,
-  UbNativeSelect,
   UbStack,
+  UbActiveFilters,
+  UbFilterSelect,
+  UbFilterSheet,
+  type UbFilterSpec,
+  type UbFilterValues,
 } from 'src/design-system';
 import { UbDataGrid, type UbDataGridEmptyStates } from 'src/design-system/UbDataGrid';
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
@@ -44,8 +45,6 @@ const CatalogueDrawersLazy = dynamic(
   () => import('./CatalogueDrawers').then((m) => m.CatalogueDrawers),
   { ssr: false }
 );
-
-const ALL = 'all';
 
 /**
  * F03 (LIB-02 FR-9, FR-10, §8) — `/library/catalogue`, "Books": every title,
@@ -87,20 +86,34 @@ export function CatalogueListPageContent(): React.JSX.Element {
     [dispatch]
   );
   const columns = useMemo(() => createTitleColumns({ t }), [t]);
-  const materialOptions = useMemo(
+  const sheetSpecs = useMemo<UbFilterSpec[]>(
     () => [
-      { value: ALL, label: t('library.filter.allTypes') },
-      ...MATERIAL_TYPES.map((value) => ({ value, label: t(`library.material.${value}`) })),
+      {
+        kind: 'single',
+        key: 'materialType',
+        label: t('library.filter.type'),
+        anyLabel: t('library.filter.allTypes'),
+        options: MATERIAL_TYPES.map((value) => ({ value, label: t(`library.material.${value}`) })),
+      },
+      {
+        kind: 'single',
+        key: 'status',
+        label: t('library.filter.status'),
+        anyLabel: t('library.filter.allStatuses'),
+        options: [{ value: 'archived', label: t('library.filter.archived') }],
+      },
     ],
     [t]
   );
-  const toggle = useCallback(
-    <K extends keyof TitleFilters>(key: K, value: TitleFilters[K]) =>
-      (pressed: boolean) =>
-        setFilters({ [key]: pressed ? value : '' } as Partial<TitleFilters>),
-    [setFilters]
-  );
-
+  const sheetValues: UbFilterValues = {
+    materialType: filters.materialType,
+    status: filters.status,
+  };
+  const applySheet = (next: UbFilterValues) =>
+    setFilters({
+      materialType: next.materialType ?? '',
+      status: next.status ?? '',
+    } as Partial<TitleFilters>);
   const emptyStates = useMemo<UbDataGridEmptyStates>(
     () => ({
       firstUse: {
@@ -215,42 +228,45 @@ export function CatalogueListPageContent(): React.JSX.Element {
           placeholder={t('library.catalogue.search.placeholder')}
           aria-label={t('library.catalogue.search.label')}
         />
-        <UbFilterBar
-          end={
-            <UbNativeSelect
-              name="library-material"
-              aria-label={t('library.filter.type')}
-              value={filters.materialType || ALL}
-              options={materialOptions}
-              onChange={(value: string) =>
-                setFilters({
-                  materialType: (value === ALL ? '' : value) as TitleFilters['materialType'],
-                })
-              }
-              className="w-40"
-            />
-          }
-        >
-          <UbFilterChipGroup label={t('library.filter.availability')}>
-            <UbFilterChip
-              label={t('library.filter.onShelf')}
-              pressed={filters.availability === 'on_shelf'}
-              onToggle={toggle('availability', 'on_shelf')}
-            />
-            <UbFilterChip
-              label={t('library.filter.allOut')}
-              pressed={filters.availability === 'all_out'}
-              onToggle={toggle('availability', 'all_out')}
-            />
-          </UbFilterChipGroup>
-          <UbFilterChipGroup label={t('library.filter.status')}>
-            <UbFilterChip
-              label={t('library.filter.archived')}
-              pressed={filters.status === 'archived'}
-              onToggle={toggle('status', 'archived')}
-            />
-          </UbFilterChipGroup>
-        </UbFilterBar>
+        {/* Owner, 6 Oct 2026: availability is the one dropdown; type and
+            archived sit behind Filters and return as pills when on. */}
+        <UbStack direction="row" align="center" gap={2} className="flex-wrap">
+          <UbFilterSelect
+            spec={{
+              kind: 'single',
+              key: 'availability',
+              label: t('library.filter.availability'),
+              anyLabel: t('library.filter.anyAvailability'),
+              options: [
+                { value: 'on_shelf', label: t('library.filter.onShelf') },
+                { value: 'all_out', label: t('library.filter.allOut') },
+              ],
+            }}
+            value={filters.availability}
+            onChange={(availability) => setFilters({ availability } as Partial<TitleFilters>)}
+            closeLabel={t('common.action.close')}
+          />
+          <UbFilterSheet
+            specs={sheetSpecs}
+            values={sheetValues}
+            onApply={applySheet}
+            labels={{
+              title: t('common.filters.title'),
+              apply: t('common.action.apply'),
+              reset: t('common.action.reset'),
+              close: t('common.action.close'),
+            }}
+          />
+        </UbStack>
+        <UbActiveFilters
+          specs={sheetSpecs}
+          values={sheetValues}
+          onChange={applySheet}
+          labels={{
+            remove: (pill) => t('common.filters.remove', { filter: pill }),
+            clearAll: t('common.filters.clearAll'),
+          }}
+        />
         <UbDataGrid
           rows={list.rows}
           columns={columns}

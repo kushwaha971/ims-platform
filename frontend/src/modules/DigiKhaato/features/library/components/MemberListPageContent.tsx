@@ -10,15 +10,16 @@ import { UserPlus } from 'lucide-react';
 import {
   UbButton,
   UbEmptyState,
-  UbFilterBar,
-  UbFilterChip,
-  UbFilterChipGroup,
-  UbNativeSelect,
   UbPageHeader,
   UbPageShell,
   UbSearchInput,
   UbStack,
   UbText,
+  UbActiveFilters,
+  UbFilterSelect,
+  UbFilterSheet,
+  type UbFilterSpec,
+  type UbFilterValues,
 } from 'src/design-system';
 import { UbDataGrid, type UbDataGridEmptyStates } from 'src/design-system/UbDataGrid';
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
@@ -51,7 +52,6 @@ const EnrolMemberDrawerLazy = dynamic(
   { ssr: false }
 );
 
-const ALL = 'all';
 const ENROL_FIELDS = [
   'partyId',
   'name',
@@ -99,13 +99,6 @@ export function MemberListPageContent(): React.JSX.Element {
   const [enrolling, setEnrolling] = useState(asksToAdd);
   const { filters, setFilters, clearFilters, refetch, error, canRead, canWrite, totals } = list;
   const { activeShifts } = useSeats();
-  const shiftOptions = useMemo(
-    () => [
-      { value: ALL, label: t('library.members.allShifts') },
-      ...activeShifts.map((shift) => ({ value: shift.id, label: shift.name })),
-    ],
-    [t, activeShifts]
-  );
 
   useEffect(() => {
     if (!canRead) return undefined;
@@ -121,13 +114,51 @@ export function MemberListPageContent(): React.JSX.Element {
   );
 
   const columns = useMemo(() => createMemberColumns({ t, today }), [t, today]);
-  const typeOptions = useMemo(
+  const sheetSpecs = useMemo<UbFilterSpec[]>(
     () => [
-      { value: ALL, label: t('library.members.allTypes') },
-      ...list.types.map((type) => ({ value: type.id, label: type.name })),
+      {
+        kind: 'single',
+        key: 'hasDues',
+        label: t('library.members.chip.hasDues'),
+        anyLabel: t('library.members.filter.any'),
+        options: [{ value: 'true', label: t('library.members.filter.yes') }],
+      },
+      ...(activeShifts.length > 1
+        ? [
+            {
+              kind: 'single' as const,
+              key: 'shift',
+              label: t('library.members.filter.shift'),
+              anyLabel: t('library.members.allShifts'),
+              options: activeShifts.map((shift) => ({ value: shift.id, label: shift.name })),
+            },
+          ]
+        : []),
+      ...(list.types.length > 1
+        ? [
+            {
+              kind: 'single' as const,
+              key: 'type',
+              label: t('library.members.filter.type'),
+              anyLabel: t('library.members.allTypes'),
+              options: list.types.map((type) => ({ value: type.id, label: type.name })),
+            },
+          ]
+        : []),
     ],
-    [t, list.types]
+    [t, activeShifts, list.types]
   );
+  const sheetValues: UbFilterValues = {
+    hasDues: filters.hasDues,
+    shift: filters.shift,
+    type: filters.type,
+  };
+  const applySheet = (next: UbFilterValues) =>
+    setFilters({
+      hasDues: next.hasDues ?? '',
+      shift: next.shift ?? '',
+      type: next.type ?? '',
+    } as Partial<typeof filters>);
 
   const enrol = useCallback(
     async (values: EnrolFormValues, setError: UseFormSetError<EnrolFormValues>) => {
@@ -276,50 +307,45 @@ export function MemberListPageContent(): React.JSX.Element {
           placeholder={t('library.members.search.placeholder')}
           aria-label={t('library.members.search.label')}
         />
-        <UbFilterBar
-          end={
-            activeShifts.length > 1 || list.types.length > 1 ? (
-              <UbStack direction="row" gap={2}>
-                {activeShifts.length > 1 && (
-                  <UbNativeSelect
-                    name="library-member-shift"
-                    aria-label={t('library.members.filter.shift')}
-                    value={filters.shift || ALL}
-                    options={shiftOptions}
-                    onChange={(value: string) => setFilters({ shift: value === ALL ? '' : value })}
-                    className="w-36"
-                  />
-                )}
-                {list.types.length > 1 && (
-                  <UbNativeSelect
-                    name="library-member-type"
-                    aria-label={t('library.members.filter.type')}
-                    value={filters.type || ALL}
-                    options={typeOptions}
-                    onChange={(value: string) => setFilters({ type: value === ALL ? '' : value })}
-                    className="w-36"
-                  />
-                )}
-              </UbStack>
-            ) : undefined
-          }
-        >
-          <UbFilterChipGroup label={t('library.members.filter.status')}>
-            {MEMBER_STATUSES.map((status) => (
-              <UbFilterChip
-                key={status}
-                label={t(`library.members.chip.${status}`)}
-                pressed={filters.status === status}
-                onToggle={(pressed) => setFilters({ status: pressed ? status : '' })}
-              />
-            ))}
-            <UbFilterChip
-              label={t('library.members.chip.hasDues')}
-              pressed={filters.hasDues === 'true'}
-              onToggle={(pressed) => setFilters({ hasDues: pressed ? 'true' : '' })}
-            />
-          </UbFilterChipGroup>
-        </UbFilterBar>
+        {/* Owner, 6 Oct 2026: the status a desk changes most is the one
+            dropdown; dues, shift and plan sit behind Filters, as pills when on. */}
+        <UbStack direction="row" align="center" gap={2} className="flex-wrap">
+          <UbFilterSelect
+            spec={{
+              kind: 'single',
+              key: 'status',
+              label: t('library.members.filter.status'),
+              anyLabel: t('library.members.filter.any'),
+              options: MEMBER_STATUSES.map((status) => ({
+                value: status,
+                label: t(`library.members.chip.${status}`),
+              })),
+            }}
+            value={filters.status}
+            onChange={(status) => setFilters({ status } as Partial<typeof filters>)}
+            closeLabel={t('common.action.close')}
+          />
+          <UbFilterSheet
+            specs={sheetSpecs}
+            values={sheetValues}
+            onApply={applySheet}
+            labels={{
+              title: t('common.filters.title'),
+              apply: t('common.action.apply'),
+              reset: t('common.action.reset'),
+              close: t('common.action.close'),
+            }}
+          />
+        </UbStack>
+        <UbActiveFilters
+          specs={sheetSpecs}
+          values={sheetValues}
+          onChange={applySheet}
+          labels={{
+            remove: (pill) => t('common.filters.remove', { filter: pill }),
+            clearAll: t('common.filters.clearAll'),
+          }}
+        />
         <UbDataGrid
           rows={list.rows}
           columns={columns}

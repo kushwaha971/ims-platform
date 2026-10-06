@@ -10,7 +10,6 @@ import {
   UbActionLink,
   UbButton,
   UbCard,
-  UbChoiceChips,
   UbEmptyState,
   UbListItemText,
   UbPageHeader,
@@ -20,6 +19,7 @@ import {
   UbStack,
   UbStatusBadge,
   UbText,
+  UbFilterSelect,
 } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { ROUTES } from 'src/routes';
@@ -124,16 +124,22 @@ export function SeatsPageContent(): React.JSX.Element {
       ) : (
         <UbStack gap={4} data-testid="library-seats-screen">
           {shiftOptions.length > 1 && (
-            <UbChoiceChips<string>
-              id="library-seats-shift"
-              ariaLabel={t('library.enrol.shift')}
-              value={current ?? WHOLE_DAY}
-              onChange={(next) => {
-                setShiftId(next);
-                setPicked(null);
-              }}
-              options={shiftOptions}
-            />
+            <UbStack direction="row" gap={2}>
+              <UbFilterSelect
+                spec={{
+                  kind: 'single',
+                  key: 'shift',
+                  label: t('library.enrol.shift'),
+                  options: shiftOptions,
+                }}
+                value={current ?? WHOLE_DAY}
+                onChange={(next) => {
+                  setShiftId(next);
+                  setPicked(null);
+                }}
+                closeLabel={t('common.action.close')}
+              />
+            </UbStack>
           )}
           <UbText variant="body-sm" tone="secondary" data-testid="library-seats-counts">
             {[

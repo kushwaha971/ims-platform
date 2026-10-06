@@ -168,6 +168,7 @@
   "parties.list.empty.firstUse.body": "Add the first person you give udhaar to, and their khata starts here.",
   "parties.list.empty.firstUse.title": "No customers yet",
   "parties.list.error.body": "Check your connection and try again.",
+  "parties.list.filter.any": "All",
   "parties.list.filter.balance.i_owe": "I owe them",
   "parties.list.filter.balance.label": "Balance",
   "parties.list.filter.balance.owes_me": "Owes me",

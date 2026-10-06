@@ -10,20 +10,22 @@ import { SummaryStatGrid } from 'src/components/stats/SummaryStatGrid';
 import {
   UbActionLink,
   UbButton,
-  UbCombobox,
   UbDateInput,
   UbEmptyState,
   UbLink,
   UbPageHeader,
   UbPageShell,
   UbSearchInput,
-  UbSelect,
   UbStack,
   UbStatCard,
   UbStatusBanner,
   UbSwitch,
   UbText,
   isoToday,
+  UbActiveFilters,
+  UbFilterSheet,
+  type UbFilterSpec,
+  type UbFilterValues,
 } from 'src/design-system';
 import {
   UbDataGrid,
@@ -184,6 +186,36 @@ export function StockSummaryPageContent(): React.JSX.Element {
   const report = useStockSummary();
   const masters = useInventoryMasters();
   const { filters, update, summary } = report;
+  const sheetSpecs: UbFilterSpec[] = [
+    {
+      kind: 'single',
+      key: 'categoryId',
+      label: t('items.list.filter.category'),
+      anyLabel: t('items.list.filter.categoryAny'),
+      options: masters.categoryOptions,
+    },
+    {
+      kind: 'single',
+      key: 'status',
+      label: t('stock.summary.filter.status'),
+      anyLabel: t('stock.summary.filter.any'),
+      options: [
+        { value: 'in', label: t('items.stock.in') },
+        { value: 'low', label: t('items.stock.low') },
+        { value: 'out', label: t('items.stock.out') },
+        { value: 'negative', label: t('stock.summary.filter.negative') },
+      ],
+    },
+  ];
+  const sheetValues: UbFilterValues = {
+    categoryId: filters.categoryId ?? '',
+    status: filters.status ?? '',
+  };
+  const applySheet = (next: UbFilterValues) =>
+    update({
+      categoryId: next.categoryId ?? '',
+      status: (next.status ?? '') as StockSummaryFilters['status'],
+    });
   const valuation = summary?.valuationVisible ?? false;
   /* RPT-06 — the report's file of exactly this view, under Reports' own
      permission (the button itself checks `reports.export`). */
@@ -351,35 +383,26 @@ export function StockSummaryPageContent(): React.JSX.Element {
           }
           filters={
             <UbStack direction="row" gap={2} wrap align="center">
-              <UbCombobox
-                aria-label={t('items.list.filter.category')}
-                value={filters.categoryId || null}
-                onChange={(categoryId) => update({ categoryId })}
-                options={[
-                  { value: '', label: t('items.list.filter.categoryAny') },
-                  ...masters.categoryOptions,
-                ]}
-                placeholder={t('items.list.filter.categoryAny')}
-                searchPlaceholder={t('items.form.category.search')}
-                emptyLabel={t('items.form.category.empty')}
-                className="w-44"
+              {/* Owner, 6 Oct 2026: category and status behind ONE Filters button. */}
+              <UbFilterSheet
+                specs={sheetSpecs}
+                values={sheetValues}
+                onApply={applySheet}
+                labels={{
+                  title: t('common.filters.title'),
+                  apply: t('common.action.apply'),
+                  reset: t('common.action.reset'),
+                  close: t('common.action.close'),
+                }}
               />
-              <UbSelect
-                aria-label={t('stock.summary.filter.status')}
-                value={filters.status || 'any'}
-                onChange={(value) =>
-                  update({
-                    status: (value === 'any' ? '' : value) as StockSummaryFilters['status'],
-                  })
-                }
-                options={[
-                  { value: 'any', label: t('stock.summary.filter.any') },
-                  { value: 'in', label: t('items.stock.in') },
-                  { value: 'low', label: t('items.stock.low') },
-                  { value: 'out', label: t('items.stock.out') },
-                  { value: 'negative', label: t('stock.summary.filter.negative') },
-                ]}
-                className="w-40"
+              <UbActiveFilters
+                specs={sheetSpecs}
+                values={sheetValues}
+                onChange={applySheet}
+                labels={{
+                  remove: (pill) => t('common.filters.remove', { filter: pill }),
+                  clearAll: t('common.filters.clearAll'),
+                }}
               />
               <UbSwitch
                 checked={filters.hideZero}

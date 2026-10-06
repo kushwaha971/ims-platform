@@ -92,12 +92,16 @@ describe('Role chips', () => {
 
     renderWithProviders(<PartyListPageContent />, { messages: MESSAGES });
 
-    const members = await screen.findByRole('button', { name: 'Members' });
+    // Owner, 6 Oct 2026: roles are a multi-choice group in the Filters sheet.
+    await screen.findByText('Rahul');
+    await user.click(await screen.findByTestId('filters-button'));
+    const members = await screen.findByRole('checkbox', { name: 'Members' });
     // A role whose catalogue is not loaded here falls back to a whole word, never an id.
-    expect(screen.getByRole('button', { name: 'Role' })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Role' })).toBeInTheDocument();
     expect(screen.queryByText('lending.role.borrowers')).not.toBeInTheDocument();
 
     await user.click(members);
+    await user.click(screen.getByTestId('filters-apply'));
 
     await waitFor(() =>
       expect(partyService.listParties).toHaveBeenLastCalledWith(
@@ -105,7 +109,7 @@ describe('Role chips', () => {
         expect.anything()
       )
     );
-    expect(screen.getByRole('button', { name: 'Members' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('Role: Members')).toBeInTheDocument();
   });
 
   it('keep a pressed chip even when the filtered list is empty', async () => {
@@ -116,8 +120,8 @@ describe('Role chips', () => {
 
     renderWithProviders(<PartyListPageContent />, { messages: MESSAGES });
 
-    const members = await screen.findByRole('button', { name: 'Members' });
-    expect(members).toHaveAttribute('aria-pressed', 'true');
+    // The pill stays, so the merchant can see and remove what matched nobody.
+    expect(await screen.findByText('Role: Members')).toBeInTheDocument();
     expect(partyService.listParties).toHaveBeenCalledWith(
       expect.objectContaining({ role: 'gym_member' }),
       expect.anything()
