@@ -64,6 +64,8 @@ import partyLinksEn from 'locales/catalogues/partyLinks.en.json';
 import partyLinksHi from 'locales/catalogues/partyLinks.hi.json';
 import partyPickerEn from 'locales/catalogues/partyPicker.en.json';
 import partyPickerHi from 'locales/catalogues/partyPicker.hi.json';
+import payLinkEn from 'locales/catalogues/payLink.en.json';
+import payLinkHi from 'locales/catalogues/payLink.hi.json';
 import paymentActionsEn from 'locales/catalogues/paymentActions.en.json';
 import paymentActionsHi from 'locales/catalogues/paymentActions.hi.json';
 import paymentsEn from 'locales/catalogues/payments.en.json';
@@ -76,6 +78,8 @@ import priceListsEn from 'locales/catalogues/priceLists.en.json';
 import priceListsHi from 'locales/catalogues/priceLists.hi.json';
 import publicDocumentEn from 'locales/catalogues/publicDocument.en.json';
 import publicDocumentHi from 'locales/catalogues/publicDocument.hi.json';
+import publicPayEn from 'locales/catalogues/publicPay.en.json';
+import publicPayHi from 'locales/catalogues/publicPay.hi.json';
 import purchasesEn from 'locales/catalogues/purchases.en.json';
 import purchasesHi from 'locales/catalogues/purchases.hi.json';
 import remindersEn from 'locales/catalogues/reminders.en.json';
@@ -149,12 +153,14 @@ export const en: Readonly<Record<string, string>> = {
   ...partyBooksEn,
   ...partyLinksEn,
   ...partyPickerEn,
+  ...payLinkEn,
   ...paymentActionsEn,
   ...paymentsEn,
   ...periodEn,
   ...planEn,
   ...priceListsEn,
   ...publicDocumentEn,
+  ...publicPayEn,
   ...purchasesEn,
   ...remindersEn,
   ...reportsEn,
@@ -203,12 +209,14 @@ export const hi: Readonly<Record<string, string>> = {
   ...partyBooksHi,
   ...partyLinksHi,
   ...partyPickerHi,
+  ...payLinkHi,
   ...paymentActionsHi,
   ...paymentsHi,
   ...periodHi,
   ...planHi,
   ...priceListsHi,
   ...publicDocumentHi,
+  ...publicPayHi,
   ...purchasesHi,
   ...remindersHi,
   ...reportsHi,

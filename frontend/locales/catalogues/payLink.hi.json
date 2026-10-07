@@ -1,0 +1,16 @@
+{
+  "payLink.button": "UPI QR",
+  "payLink.copied": "भुगतान लिंक कॉपी हुआ",
+  "payLink.copy": "लिंक कॉपी करें",
+  "payLink.copyFailed": "लिंक कॉपी नहीं हो सका",
+  "payLink.error": "QR नहीं बन सका। फिर कोशिश करें।",
+  "payLink.feeTitle": "फ़ीस UPI से भुगतान करें",
+  "payLink.loanTitle": "{amount} UPI से भुगतान करें",
+  "payLink.missing": "QR दिखाने के लिए बिज़नेस प्रोफ़ाइल में अपना UPI ID जोड़ें।",
+  "payLink.openApp": "UPI ऐप खोलें",
+  "payLink.openProfile": "बिज़नेस प्रोफ़ाइल खोलें",
+  "payLink.qrLabel": "{amount} के लिए UPI QR",
+  "payLink.scanAny": "किसी भी UPI ऐप से स्कैन करें: GPay, PhonePe, Paytm या बैंक का ऐप।",
+  "payLink.share": "QR भेजें",
+  "payLink.shareText": "{amount} UPI से भुगतान करें: यह QR स्कैन करें या {url} खोलें"
+}

@@ -213,7 +213,11 @@ def test_whatsapp_digits_strip_the_plus_and_refuse_a_guess(raw: Any, digits: Any
 
 
 def test_the_reminder_carries_a_upi_link_only_when_the_shop_has_a_vpa(tenant: Any) -> None:
-    """NTF-03 / LED-06 AC-1, EC-7 — `upi://pay?pa=…&am=2800.00`, or no line at all."""
+    """NTF-03 / LED-06 AC-1, EC-7 — the pay page's link for 2,800, or no line at all.
+
+    Shop P0: the link is the https pay page (QR, amount, "Pay by UPI"), because
+    `upi://` is not tappable on every phone and a prefilled WhatsApp cannot carry the
+    QR image. The page's payload is the proof the link names this shop and this sum."""
     party = PartyFactory(tenant=tenant, name="Ramesh Traders", mobile="+919812345678")
     without = compose_reminder(tenant=tenant, party=party, balance=Decimal("2800.00"))
     assert "upi://" not in without.text and "Pay via UPI" not in without.text
@@ -225,7 +229,12 @@ def test_the_reminder_carries_a_upi_link_only_when_the_shop_has_a_vpa(tenant: An
     )
     decoded = unquote(with_vpa.wa_url)
     assert "Rs 2,800" in decoded and tenant.name in decoded
-    assert "upi://pay?pa=sharma%40okaxis" in with_vpa.text and "am=2800.00" in with_vpa.text
+    from apps.payments.services.pay_link import resolve_pay_link
+
+    assert "Pay by UPI or scan the QR: http" in with_vpa.text
+    token = with_vpa.text.split("/pay/", 1)[1].split()[0]
+    page = resolve_pay_link(token)
+    assert page["amount"] == "2800.00" and "pa=sharma@okaxis" in page["upi_url"]
 
 
 def test_optional_lines_collapse_instead_of_leaving_blanks(tenant: Any) -> None:

@@ -69,6 +69,8 @@ export const CRAWL_DISALLOW: readonly string[] = [
     ...GUARDED_ROUTE_PREFIXES,
     ...FLOW_PREFIXES,
     SHARE_PAGE_PREFIX,
+    // Shop P0 — the UPI pay page: its token is the credential, as the share page's is.
+    `${ROUTES.PUBLIC_PAY}/`,
     '/api/',
     '/design-system',
   ]),

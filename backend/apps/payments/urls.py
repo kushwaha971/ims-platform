@@ -11,6 +11,7 @@ from django.urls import path
 from rest_framework.routers import DefaultRouter
 
 from apps.payments.views.deposits import DepositViewSet
+from apps.payments.views.pay_link import PayLinkView
 from apps.payments.views.payment import PaymentViewSet, UpiIntentView
 from apps.payments.views.qr import QrSvgView
 
@@ -21,5 +22,6 @@ router.register("deposits", DepositViewSet, basename="deposit")  # ── A4b �
 urlpatterns: list = [
     path("payments/qr.svg", QrSvgView.as_view(), name="payments-qr-svg"),
     path("payments/upi-intent", UpiIntentView.as_view(), name="payments-upi-intent"),
+    path("payments/pay-links", PayLinkView.as_view(), name="payments-pay-links"),
     *router.urls,
 ]

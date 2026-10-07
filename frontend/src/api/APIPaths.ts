@@ -259,6 +259,9 @@ export const API_PATHS = {
   TAX_HSN: '/taxes/hsn',
   SYSTEM_HEALTH: '/system/health',
   PUBLIC_DOCUMENT: (token: string) => `/public/d/${seg(token)}`,
+  // Shop P0 — the UPI pay link's page (no session) and the desk's QR for any amount.
+  PUBLIC_PAY: (token: string) => `/public/pay/${seg(token)}`,
+  PAY_LINKS: '/payments/pay-links',
 
   // ── PLT-10 — "Your data" (owner only) ─────────────────────────────────────
   TENANT_EXPORT: '/tenants/current/export',

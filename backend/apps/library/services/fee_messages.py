@@ -62,12 +62,12 @@ TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
             "en": (
                 "Hello {{recipient_name}}, {{whose}} {{plan}} plan at {{library}} "
                 "ends on {{ends_on}}. The fee is Rs {{amount}}. Please renew to keep the seat."
-                "\n— {{library}}"
+                "{{pay_line}}\n— {{library}}"
             ),
             "hi": (
                 "नमस्ते {{recipient_name}} जी, {{library}} में {{whose}} {{plan}} प्लान "
                 "{{ends_on}} को ख़त्म हो रहा है। फ़ीस Rs {{amount}} है। सीट बनाए रखने के लिए "
-                "कृपया नवीनीकरण करें।\n— {{library}}"
+                "कृपया नवीनीकरण करें।{{pay_line}}\n— {{library}}"
             ),
         },
         "sms": {
@@ -80,12 +80,12 @@ TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
             "en": (
                 "Hello {{recipient_name}}, {{whose}} {{plan}} plan at {{library}} "
                 "ended on {{ends_on}}. The fee of Rs {{amount}} is due. Please pay to keep "
-                "the seat.\n— {{library}}"
+                "the seat.{{pay_line}}\n— {{library}}"
             ),
             "hi": (
                 "नमस्ते {{recipient_name}} जी, {{library}} में {{whose}} {{plan}} प्लान "
                 "{{ends_on}} को ख़त्म हो गया। Rs {{amount}} फ़ीस बाकी है। सीट बनाए रखने के लिए "
-                "कृपया भुगतान करें।\n— {{library}}"
+                "कृपया भुगतान करें।{{pay_line}}\n— {{library}}"
             ),
         },
         "sms": {
@@ -97,11 +97,11 @@ TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
         "whatsapp": {
             "en": (
                 "Hello {{recipient_name}}, Rs {{amount}} is pending{{for_whom}} at "
-                "{{library}}. Please pay at the desk or by UPI.\n— {{library}}"
+                "{{library}}. Please pay at the desk or by UPI.{{pay_line}}\n— {{library}}"
             ),
             "hi": (
                 "नमस्ते {{recipient_name}} जी, {{library}} में {{whose_fee}} Rs {{amount}} "
-                "फ़ीस बाकी है। कृपया काउंटर पर या UPI से भुगतान करें।\n— {{library}}"
+                "फ़ीस बाकी है। कृपया काउंटर पर या UPI से भुगतान करें।{{pay_line}}\n— {{library}}"
             ),
         },
     },
@@ -198,7 +198,15 @@ def fee_params(m: LibraryMembership, dues: Decimal) -> dict[str, str]:
         "plan": m.membership_type.name,
         "ends_on": _day(m.valid_until),
         "amount": _rs(amount),
+        # Shop P0 — the pay page (UPI QR) for this fee, or "".
+        "pay_line": _pay_line(m, amount),
     }
+
+
+def _pay_line(m: LibraryMembership, amount: Decimal) -> str:
+    from apps.notifications.services.whatsapp_text import pay_fragment
+
+    return pay_fragment(tenant=m.tenant, amount=amount, reference=m.member_number)
 
 
 def _candidate(m: LibraryMembership, on: dt.date, template: str, guardian: Any) -> dict:

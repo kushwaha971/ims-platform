@@ -138,6 +138,9 @@ export const QUERIES = {
   fetchProfitReport: 'profitReport/fetch',
   // SAL-03 FR-5 — the customer share page's one read (no session)
   fetchPublicDocument: 'publicDocument/fetch',
+  // Shop P0 — the UPI pay link: the desk's QR and the payer's page
+  createPayLink: 'payLink/createPayLink',
+  fetchPublicPayLink: 'payLink/fetchPublicPayLink',
   // ── A16 ── R33: the print letterhead moved to `src/print` (was sales').
   fetchPrintBranding: 'printBranding/fetchPrintBranding',
   // ── A4a ── Apply to bills: the payment's own bucket's open documents

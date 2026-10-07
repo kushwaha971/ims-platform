@@ -1,0 +1,15 @@
+{
+  "publicPay.button": "Pay {amount} by UPI",
+  "publicPay.failed.description": "Check your connection and try again.",
+  "publicPay.failed.title": "Could not open the payment",
+  "publicPay.hint": "Opens your UPI app with the amount filled in.",
+  "publicPay.rateLimited.description": "Wait a minute and open the link again.",
+  "publicPay.rateLimited.title": "Too many tries",
+  "publicPay.reference": "Reference {reference}",
+  "publicPay.retry": "Try again",
+  "publicPay.scan": "Or scan with any UPI app",
+  "publicPay.title": "Pay {amount}",
+  "publicPay.to": "To {name}",
+  "publicPay.unavailable.description": "Ask for a new payment link.",
+  "publicPay.unavailable.title": "This link has expired"
+}

@@ -8,6 +8,7 @@ import { StatementPrintView } from 'modules/DigiKhaato/features/ledger/component
 import { PaymentReceiptPrint } from 'modules/DigiKhaato/features/payments/components/print/PaymentReceiptPrint';
 // ── A4b ── the deposit slip (T-PLT-X02-12)
 import { DepositSlipPrint } from 'modules/DigiKhaato/features/payments/deposits/components/print/DepositSlipPrint';
+import { PublicPayPageContent } from 'modules/DigiKhaato/features/payments/pay-link/components/PublicPayPageContent';
 import type { Payment } from 'modules/DigiKhaato/features/payments/types/payment.types';
 import { InvoicePrintA4 } from 'modules/DigiKhaato/features/sales/components/print/InvoicePrintA4';
 import { InvoicePrintThermal80 } from 'modules/DigiKhaato/features/sales/components/print/InvoicePrintThermal80';
@@ -269,6 +270,51 @@ describe('the customer share page /d/<token>', () => {
     const { container } = renderWithProviders(<PublicDocumentPageContent token="tokGone_AbCd" />);
 
     expect(await screen.findByTestId('public-unavailable')).toBeInTheDocument();
+    const html = container.innerHTML.toLowerCase();
+    for (const word of FORBIDDEN) expect(html).not.toContain(word);
+  });
+});
+
+/**
+ * Shop P0 — the pay page a reminder's link opens is the customer's too: it names the
+ * business and the amount, opens their UPI app, and nothing of the product.
+ */
+describe('the UPI pay page /pay/<token>', () => {
+  const get = (jest.requireMock('src/api/AxiosInstances') as { publicApi: { get: jest.Mock } })
+    .publicApi.get;
+
+  it('names the business, the amount and the UPI app link, and no product', async () => {
+    get.mockResolvedValueOnce({
+      data: {
+        data: {
+          business_name: SHOP,
+          amount: '2800.00',
+          note: `Payment to ${SHOP}`,
+          reference: 'LN0001',
+          upi_url: 'upi://pay?pa=sharma@okhdfc&am=2800.00&cu=INR',
+          vpa: 'sharma@okhdfc',
+          qr: { size: 21, modules: Array.from({ length: 21 }, () => '1'.repeat(21)) },
+        },
+      },
+    });
+    const { container } = renderWithProviders(<PublicPayPageContent token="payTok_AbCd" />);
+    const button = await screen.findByTestId('public-pay-upi');
+    expect(button).toHaveAttribute('href', 'upi://pay?pa=sharma@okhdfc&am=2800.00&cu=INR');
+    expect(button).toHaveTextContent('Pay ₹2,800.00 by UPI');
+    expectShopOnly(container, SHOP);
+  });
+
+  it('says the link has expired and names nobody', async () => {
+    get.mockRejectedValueOnce({
+      code: 'not_found',
+      message: 'x',
+      details: {},
+      requestId: null,
+      status: 404,
+      warnings: [],
+    });
+    const { container } = renderWithProviders(<PublicPayPageContent token="payGone_AbCd" />);
+    expect(await screen.findByText('This link has expired')).toBeInTheDocument();
     const html = container.innerHTML.toLowerCase();
     for (const word of FORBIDDEN) expect(html).not.toContain(word);
   });

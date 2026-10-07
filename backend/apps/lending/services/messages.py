@@ -89,11 +89,11 @@ TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
         "whatsapp": {
             "en": (
                 "Namaste {{recipient_name}}. A reminder from {{business}}: instalment {{seq}} "
-                "of loan {{loan_number}}, Rs {{amount}}, is due tomorrow, {{date}}. Thank you."
+                "of loan {{loan_number}}, Rs {{amount}}, is due tomorrow, {{date}}. Thank you.{{pay_line}}"
             ),
             "hi": (
                 "नमस्ते {{recipient_name}}। {{business}} की ओर से याद दिला रहे हैं: कर्ज़ "
-                "{{loan_number}} की किस्त {{seq}}, Rs {{amount}}, कल {{date}} को देय है। धन्यवाद।"
+                "{{loan_number}} की किस्त {{seq}}, Rs {{amount}}, कल {{date}} को देय है। धन्यवाद।{{pay_line}}"
             ),
         },
         "sms": {
@@ -105,11 +105,11 @@ TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
         "whatsapp": {
             "en": (
                 "Namaste {{recipient_name}}. A reminder from {{business}}: Rs {{amount}} for "
-                "loan {{loan_number}} is due today, {{date}}. Thank you."
+                "loan {{loan_number}} is due today, {{date}}. Thank you.{{pay_line}}"
             ),
             "hi": (
                 "नमस्ते {{recipient_name}}। {{business}} की ओर से याद दिला रहे हैं: कर्ज़ "
-                "{{loan_number}} के Rs {{amount}} आज, {{date}} को देय हैं। धन्यवाद।"
+                "{{loan_number}} के Rs {{amount}} आज, {{date}} को देय हैं। धन्यवाद।{{pay_line}}"
             ),
         },
         "sms": {
@@ -122,12 +122,12 @@ TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
             "en": (
                 "Namaste {{recipient_name}}. {{business}} here. Our records show Rs {{amount}} "
                 "due on loan {{loan_number}} since {{date}}. Please pay when you can, or tell "
-                "us if your records are different. Thank you."
+                "us if your records are different. Thank you.{{pay_line}}"
             ),
             "hi": (
                 "नमस्ते {{recipient_name}}। {{business}} से। हमारे हिसाब में कर्ज़ {{loan_number}} "
                 "के Rs {{amount}} {{date}} से बाकी हैं। जब हो सके दे दीजिए, या आपका हिसाब अलग हो "
-                "तो बताइए। धन्यवाद।"
+                "तो बताइए। धन्यवाद।{{pay_line}}"
             ),
         },
         "sms": {
@@ -181,6 +181,12 @@ def _rs(amount: Decimal) -> str:
     from apps.notifications.services.templates import format_rs
 
     return format_rs(amount)
+
+
+def _pay_line(loan: LendingLoan, amount: Decimal) -> str:
+    from apps.notifications.services.whatsapp_text import pay_fragment
+
+    return pay_fragment(tenant=loan.tenant, amount=amount, reference=loan.number)
 
 
 def _day(day: dt.date | None) -> str:
@@ -298,6 +304,8 @@ def _reminder(loan: LendingLoan, on: dt.date) -> dict | None:
             "seq": str(seq or ""),
             "amount": _rs(amount),
             "date": _day(date),
+            # Shop P0 — the pay page (UPI QR) for exactly this amount, or "".
+            "pay_line": _pay_line(loan, amount),
         },
     }
 

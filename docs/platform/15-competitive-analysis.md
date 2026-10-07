@@ -87,7 +87,7 @@ Compared with the reading-room products Indian exam-prep libraries use (TrackMyL
 | WhatsApp fee messages (due T-7/3/1, overdue, welcome, receipt), logged | ✓ | ✓ | theirs send automatically from a paid sender |
 | Attendance (desk check-in/out) | ✓ | ✓ | |
 | QR self check-in, biometric | ✗ | ◐ | QR is cheap and wanted |
-| Online fee payment (UPI link/QR) | ✗ | ✓ | the biggest collection lever |
+| Online fee payment (UPI link/QR) | ✓ | ✓ | 8 Oct: fee reminders carry the pay page link (QR + "Pay by UPI"); "Pay the fee by UPI" QR on the student page. No gateway: money goes straight to the library's UPI ID |
 | Book counter (catalogue, issue/return, fines, holds, stock-take) | ✓ | ✗ | an advantage for libraries that lend books |
 | Home dashboard (occupancy, collections, dues) | ✓ | ✓ | |
 | Library expenses and profit (rent, electricity, salaries) | ✗ | ◐ | the Shop's expenses are not in the Library app |
@@ -116,7 +116,7 @@ Compared with daily-collection and small-lender software (Intelligrow's daily-lo
 | Agent role scoped to their routes; agent app; offline | ✗ | ✓ | the module role exists in the platform; not yet used by lending |
 | KYC documents and photos, geo-tagged visits | ✗ | ✓ | |
 | Guarantor | ✗ | ◐ | FRD has it |
-| UPI / e-NACH collection | ✗ | ✓ | |
+| UPI / e-NACH collection | ◐ | ✓ | 8 Oct: UPI pay link in every instalment reminder and a "UPI QR" on the loan page; no e-NACH auto-debit |
 | Portfolio reports: outstanding, aging / overdue buckets, collection efficiency, agent performance | ✗ | ✓ | |
 | Lender's cash book and interest income | ✗ | ✓ | |
 
@@ -143,7 +143,7 @@ The table stakes are a front desk with a room chart, reservations, a channel man
 | One account, many businesses, a role per app | ✓ (steps 1–2 of `14`) | rare; Vyapar has multi-firm | a real edge: the owner who works at one business and owns another |
 | Hindi throughout | ✓ | ◐ | an edge in tier-2/3 |
 | Messages | by hand from the owner's WhatsApp, free, logged | automatic, paid credits | add an optional paid sender later, behind the same policy |
-| Online payments (UPI link/QR, gateway) | ✗ | ✓ everywhere | the single most repeated gap; build once in the platform for every app |
+| Online payments (UPI link/QR, gateway) | ◐ | ✓ everywhere | 8 Oct: built once — a signed pay page (/pay/…) with the QR and a UPI button, linked from every payment WhatsApp in every app; no gateway or auto-reconciliation |
 | Offline / mobile app | web, works on a phone | native apps, offline | PWA offline for the counter and the round |
 | Price | — | ₹249–₹1,000+ a month per app | bundle apps per business; owner pays, staff free (§6.1 of `14`) |
 

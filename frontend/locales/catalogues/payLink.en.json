@@ -1,0 +1,16 @@
+{
+  "payLink.button": "UPI QR",
+  "payLink.copied": "Pay link copied",
+  "payLink.copy": "Copy link",
+  "payLink.copyFailed": "Could not copy the link",
+  "payLink.error": "Could not make the QR. Try again.",
+  "payLink.feeTitle": "Pay the fee by UPI",
+  "payLink.loanTitle": "Pay {amount} by UPI",
+  "payLink.missing": "Add your UPI ID in Business profile to show a QR.",
+  "payLink.openApp": "Open UPI app",
+  "payLink.openProfile": "Open Business profile",
+  "payLink.qrLabel": "UPI QR for {amount}",
+  "payLink.scanAny": "Scan with any UPI app: GPay, PhonePe, Paytm or your bank's.",
+  "payLink.share": "Share QR",
+  "payLink.shareText": "Pay {amount} by UPI: scan this QR or open {url}"
+}

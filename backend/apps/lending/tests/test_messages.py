@@ -332,6 +332,8 @@ def test_every_placeholder_is_one_the_message_fills(
     filled = {"recipient_name", "business", "loan_number", "amount", "date"}
     filled |= {"seq"} if code == messages.TEMPLATE_DUE_TOMORROW else set()
     filled |= {"receipt_number", "left_line"} if code == messages.TEMPLATE_RECEIPT else set()
+    # Shop P0 — the three reminders carry the UPI pay link (or nothing).
+    filled |= {"pay_line"} if code in messages.BUCKET and channel == "whatsapp" else set()
     assert set(re.findall(r"{{(\w+)}}", body)) <= filled, (code, channel, locale)
 
 
@@ -362,3 +364,20 @@ def test_the_sheet_turns_itself_on_at_eight(book: dict) -> None:
     book["clock"](dt.datetime.combine(book["today"], dt.time(7, 59, 30), tzinfo=zone))
     sheet = book["client"].get(_msg(book["loan"])).json()["data"]
     assert sheet["allowed"] is False and sheet["changes_in_seconds"] == 30
+
+
+def test_with_a_upi_id_the_reminder_carries_the_pay_page_for_exactly_that_sum(book: dict) -> None:
+    """Shop P0 (owner, 7 Oct 2026) — the QR goes with every payment reminder: the link
+    opens the pay page for the Rs 2,000 the text names, and without a UPI ID there is
+    no line at all."""
+    from apps.payments.services.pay_link import resolve_pay_link
+
+    plain = book["client"].get(_msg(book["loan"])).json()["data"]["text"]
+    assert "/pay/" not in plain and "{{" not in plain
+    tenant = book["tenant"]
+    tenant.upi_vpa = "geeta.finance@okaxis"
+    tenant.save(update_fields=["upi_vpa"])
+    text = book["client"].get(_msg(book["loan"])).json()["data"]["text"]
+    assert "Pay by UPI or scan the QR: http" in text
+    page = resolve_pay_link(text.split("/pay/", 1)[1].split()[0])
+    assert page["amount"] == "2000.00"

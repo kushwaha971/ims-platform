@@ -23,50 +23,15 @@ from typing import Any
 
 from django.core.files.storage import default_storage
 from django.http import FileResponse
-from rest_framework.permissions import AllowAny
-from rest_framework.views import APIView
 
 from apps.common.exceptions import NotFound
+from apps.common.public_views import PUBLIC_HEADERS, PublicLinkView  # noqa: F401
 from apps.common.responses import StandardResponse
-from apps.common.throttling import durable_throttle
 from apps.sales.serializers.public import public_document_payload
 from apps.sales.services.share import public_document, public_logo
 
-#: Headers every public-link response carries, success or failure.
-PUBLIC_HEADERS: dict[str, str] = {
-    "Cache-Control": "private, no-store",
-    "X-Robots-Tag": "noindex, nofollow",
-    "Referrer-Policy": "no-referrer",
-    "X-Content-Type-Options": "nosniff",
-    "X-Frame-Options": "DENY",
-    # JSON only: nothing on this response may load, run or frame anything.
-    "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'; base-uri 'none'",
-}
-
-
-def _token_key(request: Any, view: Any) -> str | None:
-    token = (getattr(view, "kwargs", None) or {}).get("token")
-    return f"token:{token[:128]}" if token else None
-
-
-class _PublicLinkView(APIView):
-    """What every route under a share token shares: no session, the durable
-    budgets, and the headers on every response."""
-
-    permission_classes = [AllowAny]
-    authentication_classes: list = []
-
-    def get_throttles(self) -> list[Any]:
-        return [
-            durable_throttle("public_link", key="ip"),
-            durable_throttle("public_link_token", key=_token_key),
-        ]
-
-    def finalize_response(self, request: Any, response: Any, *args: Any, **kwargs: Any) -> Any:
-        response = super().finalize_response(request, response, *args, **kwargs)
-        for name, value in PUBLIC_HEADERS.items():
-            response[name] = value
-        return response
+# The shared base moved to `apps.common.public_views` (Shop P0's pay page uses it too).
+_PublicLinkView = PublicLinkView
 
 
 class PublicDocumentView(_PublicLinkView):

@@ -10,6 +10,7 @@ import {
   CirclePlay,
   DoorClosed,
   MessageCircle,
+  QrCode,
   Receipt,
   RefreshCw,
   UserRoundPlus,
@@ -64,8 +65,12 @@ const MemberActionDialogLazy = dynamic(
   { ssr: false }
 );
 
-const MessageDialogLazy = dynamic(
-  () => import('./MessageDialog').then((m) => m.MessageDialog),
+const MessageDialogLazy = dynamic(() => import('./MessageDialog').then((m) => m.MessageDialog), {
+  ssr: false,
+});
+/* Shop P0 — the student's UPI QR for the fee, with Share and Copy link. */
+const UpiPayQrDialogLazy = dynamic(
+  () => import('../../payments/pay-link/components/UpiPayQrDialog').then((m) => m.UpiPayQrDialog),
   { ssr: false }
 );
 const SeatDialogLazy = dynamic(() => import('./SeatDialog').then((m) => m.SeatDialog), {
@@ -89,6 +94,7 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
   const [dialog, setDialog] = useState<MemberDialogKind | null>(null);
   const [seating, setSeating] = useState(false);
   const [messaging, setMessaging] = useState<MessageKind | null>(null);
+  const [showingQr, setShowingQr] = useState(false);
   const { member } = detail;
 
   useEffect(() => {
@@ -138,6 +144,8 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
   const closed = member.effectiveStatus === 'closed';
   const suspended = member.effectiveStatus === 'suspended';
   const busy = detail.actionStatus === 'loading';
+  // Shop P0 — what the fee QR asks for: what is owed, else the plan's fee (a renewal).
+  const feeAmount = isNonZero(member.duesAmount) ? member.duesAmount : member.planFee;
   const validity = validityLine(member, today);
   const validityText = t(
     validity.id,
@@ -195,6 +203,15 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
                   action:
                     detail.canWrite && !closed && member.feeState !== 'paid'
                       ? () => setMessaging('fee')
+                      : undefined,
+                },
+                {
+                  key: 'upiQr',
+                  label: t('payLink.feeTitle'),
+                  icon: QrCode,
+                  action:
+                    detail.canWrite && !closed && isNonZero(feeAmount)
+                      ? () => setShowingQr(true)
                       : undefined,
                 },
                 {
@@ -441,6 +458,14 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
         )}
       </UbStack>
 
+      {showingQr && (
+        <UpiPayQrDialogLazy
+          amount={feeAmount}
+          reference={member.memberNumber}
+          title={t('payLink.feeTitle')}
+          onClose={() => setShowingQr(false)}
+        />
+      )}
       {messaging && (
         <MessageDialogLazy
           membershipId={member.membershipId}

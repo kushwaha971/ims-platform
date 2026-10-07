@@ -78,6 +78,8 @@ export type ApiErrorCode =
   | 'document_not_open'
   | 'payment_already_void'
   | 'upi_vpa_missing'
+  // Shop P0 — the desk's UPI QR (`/payments/pay-links`) with no UPI ID saved.
+  | 'upi_not_configured'
   | 'credit_limit_exceeded'
   | 'duplicate_supplier_invoice'
   // PTY-05 — tags. Both are closed-registry codes the server mints

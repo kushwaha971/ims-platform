@@ -12,9 +12,12 @@ builds each fragment in the message's language or leaves it empty. The template
 stays a sentence with holes in it and the decisions stay in Python.
 
 ── The UPI line ──────────────────────────────────────────────────────────────
-Only when the tenant has a VPA (NTF-03 / LED-06 EC-7). It is the NPCI intent
-URL with the balance as the amount (LED-06 BR-8); on a phone WhatsApp renders
-`upi://` as tappable and the customer's UPI app opens with the figure filled in.
+Only when the tenant has a VPA (NTF-03 / LED-06 EC-7), with the balance as the
+amount (LED-06 BR-8). Since 7 Oct 2026 (Shop P0; the owner asked for the QR in
+every payment reminder) it is the https PAY LINK, not the bare `upi://` intent:
+WhatsApp does not make `upi://` tappable on every phone and cannot attach an
+image to a prefilled message, while the pay page shows the QR, the amount and a
+button that opens the payer's UPI app (`apps.payments.services.pay_link`).
 """
 
 from __future__ import annotations
@@ -25,7 +28,6 @@ from decimal import Decimal
 from typing import Any
 from urllib.parse import quote
 
-from apps.common.integrations.upi.intent import build_upi_url
 from apps.common.integrations.whatsapp.deep_link import WaMeBackend
 from apps.notifications.constants import TEMPLATE_REMINDER_MANUAL, TEMPLATE_REMINDER_MANUAL_SMS
 from apps.notifications.services.dispatch import whatsapp_digits
@@ -38,7 +40,7 @@ MAX_SHARE_TEXT = 900
 FRAGMENTS: dict[str, dict[str, str]] = {
     "en": {
         "due_line": " (collection date {date})",
-        "upi_line": "Pay via UPI: {link}\n",
+        "upi_line": "Pay by UPI or scan the QR: {link}\n",
         "pay_line": "Pay: {link} ",
         "pay_at_shop": "Please pay at the shop. ",
         "note_line": "{note}\n",
@@ -46,7 +48,7 @@ FRAGMENTS: dict[str, dict[str, str]] = {
     },
     "hi": {
         "due_line": " (वसूली तारीख {date})",
-        "upi_line": "UPI से भुगतान: {link}\n",
+        "upi_line": "UPI से भुगतान करें या QR स्कैन करें: {link}\n",
         "pay_line": "भुगतान: {link} ",
         "pay_at_shop": "कृपया दुकान पर भुगतान करें। ",
         "note_line": "{note}\n",
@@ -68,13 +70,10 @@ def shop_name(tenant: Any, limit: int = 30) -> str:
 
 
 def upi_link(*, tenant: Any, amount: Decimal, reference: str | None = None) -> str | None:
-    vpa = (getattr(tenant, "upi_vpa", None) or "").strip()
-    if not vpa or amount <= 0:
-        return None
-    shop = shop_name(tenant)
-    return build_upi_url(
-        vpa=vpa, payee_name=shop, amount=amount, note=f"Payment to {shop}", reference=reference
-    )
+    """The pay page's https link for `amount`, or None without a valid UPI ID."""
+    from apps.payments.services.pay_link import pay_url
+
+    return pay_url(tenant=tenant, amount=amount, reference=reference or "")
 
 
 def wa_url(digits: str | None, text: str) -> str:
@@ -171,3 +170,12 @@ def pay_line(*, tenant: Any, amount: Decimal, reference: str | None = None) -> s
     frag = FRAGMENTS[message_locale(tenant)]
     link = upi_link(tenant=tenant, amount=amount, reference=reference)
     return frag["pay_line"].format(link=link) if link else frag["pay_at_shop"]
+
+
+def pay_fragment(*, tenant: Any, amount: Decimal, reference: str | None = None) -> str:
+    """Shop P0 — "\nPay by UPI or scan the QR: <link>" for any module's payment
+    message, in the business's language, or "" without a UPI ID (the line collapses)."""
+    link = upi_link(tenant=tenant, amount=amount, reference=reference)
+    if not link:
+        return ""
+    return "\n" + FRAGMENTS[message_locale(tenant)]["upi_line"].format(link=link).rstrip("\n")

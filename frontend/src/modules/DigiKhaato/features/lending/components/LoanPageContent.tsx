@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 
 import dynamic from 'next/dynamic';
 
-import { HandCoins, MessageCircle } from 'lucide-react';
+import { HandCoins, MessageCircle, QrCode } from 'lucide-react';
 
 import {
   UbActionLink,
@@ -48,6 +48,11 @@ const CollectDialogLazy = dynamic(() => import('./CollectDialog').then((m) => m.
 const NotPaidDialogLazy = dynamic(() => import('./NotPaidDialog').then((m) => m.NotPaidDialog), {
   ssr: false,
 });
+/* Shop P0 — the borrower's UPI QR for what is due, with Share and Copy link. */
+const UpiPayQrDialogLazy = dynamic(
+  () => import('../../payments/pay-link/components/UpiPayQrDialog').then((m) => m.UpiPayQrDialog),
+  { ssr: false }
+);
 const MessageDialogLazy = dynamic(() => import('./MessageDialog').then((m) => m.MessageDialog), {
   ssr: false,
 });
@@ -81,6 +86,7 @@ export function LoanPageContent({ id }: Readonly<{ id: string }>): React.JSX.Ele
     collectionId?: string;
   } | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [showingQr, setShowingQr] = useState(false);
 
   useEffect(() => {
     if (!canRead) return undefined;
@@ -222,8 +228,21 @@ export function LoanPageContent({ id }: Readonly<{ id: string }>): React.JSX.Ele
             {/* "Not paid" records a missed visit, so it is offered only when
                 something is actually due (L02 QA: it showed on a loan whose
                 first instalment was tomorrow). */}
-            {((active && canCollect && isNonZero(asked)) || remindable) && (
+            {((active && canCollect && isNonZero(asked)) ||
+              remindable ||
+              (active && canCollect)) && (
               <UbStack direction="row" gap={2} align="center" wrap>
+                {active && canCollect && (
+                  <UbButton
+                    size="sm"
+                    variant="secondary"
+                    icon={<QrCode className="h-4 w-4" aria-hidden />}
+                    onClick={() => setShowingQr(true)}
+                    data-testid="lending-loan-upi-qr"
+                  >
+                    {t('payLink.button')}
+                  </UbButton>
+                )}
                 {active && canCollect && isNonZero(asked) && (
                   <UbButton size="sm" variant="secondary" onClick={() => setVisiting(true)}>
                     {t('lending.visit.button')}
@@ -407,6 +426,16 @@ export function LoanPageContent({ id }: Readonly<{ id: string }>): React.JSX.Ele
           </UbCard>
         )}
       </UbStack>
+      {showingQr && (
+        <UpiPayQrDialogLazy
+          amount={isNonZero(asked) ? asked : loan.instalmentAmount}
+          reference={loan.number}
+          title={t('payLink.loanTitle', {
+            amount: formatInr(isNonZero(asked) ? asked : loan.instalmentAmount),
+          })}
+          onClose={() => setShowingQr(false)}
+        />
+      )}
       {messaging && (
         <MessageDialogLazy
           loanId={loan.id}

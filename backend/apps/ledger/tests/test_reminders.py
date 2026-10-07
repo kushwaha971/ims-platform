@@ -56,7 +56,8 @@ def test_whatsapp_send_marks_sent_snapshots_and_logs_wa_me(
     body = sent.json()["data"]
     decoded = unquote(body["wa_url"])
     assert body["wa_url"].startswith("https://wa.me/919812345678?text=")
-    assert "Rs 2,800" in decoded and tenant.name in decoded and "am=2800.00" in decoded
+    # Shop P0 — the UPI line is the pay page's https link (QR + "Pay by UPI").
+    assert "Rs 2,800" in decoded and tenant.name in decoded and "/pay/" in decoded
 
     reminder = Reminder.objects.get()
     assert (reminder.status, reminder.snapshot_balance) == ("sent", Decimal("2800.00"))

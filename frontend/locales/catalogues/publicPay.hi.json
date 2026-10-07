@@ -1,0 +1,15 @@
+{
+  "publicPay.button": "{amount} UPI से भुगतान करें",
+  "publicPay.failed.description": "अपना इंटरनेट देखें और फिर कोशिश करें।",
+  "publicPay.failed.title": "भुगतान नहीं खुल सका",
+  "publicPay.hint": "आपका UPI ऐप राशि भरकर खुलेगा।",
+  "publicPay.rateLimited.description": "एक मिनट रुककर लिंक फिर खोलें।",
+  "publicPay.rateLimited.title": "बहुत बार कोशिश हुई",
+  "publicPay.reference": "संदर्भ {reference}",
+  "publicPay.retry": "फिर कोशिश करें",
+  "publicPay.scan": "या किसी भी UPI ऐप से स्कैन करें",
+  "publicPay.title": "{amount} भुगतान करें",
+  "publicPay.to": "{name} को",
+  "publicPay.unavailable.description": "नया भुगतान लिंक माँगें।",
+  "publicPay.unavailable.title": "यह लिंक समाप्त हो गया है"
+}

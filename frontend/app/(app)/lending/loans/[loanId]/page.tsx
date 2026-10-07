@@ -6,6 +6,7 @@ import { LoanPageContent } from 'modules/DigiKhaato/features/lending/components/
 
 // The words this screen renders arrive with its chunk (src/i18n/catalogueRegistry.ts).
 import 'src/i18n/catalogues/lending';
+import 'src/i18n/catalogues/payLink';
 
 /** Lending — one loan: terms, instalments, collections, visits. */
 export default function Page({

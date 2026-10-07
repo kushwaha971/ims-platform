@@ -158,3 +158,20 @@ def test_the_student_reads_your_plan_and_never_their_own_name_in_the_possessive(
     url = reverse("v1:library-member-message", args=[rahul["membership_id"], "fee"])
     text = room["client"].get(url).json()["data"]["text"]
     assert "your Monthly plan" in text and "Rahul's" not in text
+
+
+def test_with_a_upi_id_the_fee_reminder_carries_the_pay_page_for_the_fee(room: dict) -> None:
+    """Shop P0 (owner, 7 Oct 2026) — the student taps the link, sees the QR for Rs 900
+    and pays; the line sits above the library's sign-off, and is absent without a UPI ID."""
+    from apps.payments.services.pay_link import resolve_pay_link
+
+    imran = room["admit"]("Imran", "a", "9876500001", collect=False)
+    url = reverse("v1:library-member-message", args=[imran["membership_id"], "fee"])
+    assert "/pay/" not in room["client"].get(url).json()["data"]["text"]
+    room["tenant"].upi_vpa = "reading.room@okhdfc"
+    room["tenant"].save(update_fields=["upi_vpa"])
+    text = room["client"].get(url).json()["data"]["text"]
+    assert "Pay by UPI or scan the QR: http" in text and text.rstrip().split("\n")[-1].startswith(
+        "—"
+    )
+    assert resolve_pay_link(text.split("/pay/", 1)[1].split()[0])["amount"] == "900.00"

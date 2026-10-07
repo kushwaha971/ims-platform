@@ -735,7 +735,8 @@
   "2026-10-07 — sales orders (Shop item 3). /sales/orders, /sales/orders/[id], /new and /[id]/edit are new and are their estimate siblings' size: the same list, detail page and bill editor, by kind. Those siblings and /sales/invoices/[id] +0.4 KB for the order branches they share; every route's first load +0.1 KB for one nav row and its route constants, which tipped /settings/profile, /library/settings and /d/[token] that sat exactly on their budgets.",
   "2026-10-07 — purchase orders (Shop item 3). /purchases/orders, /[id], /new and /[id]/edit are new and are their bill siblings' size: the same list, editor and page, by kind. Those siblings +0.3-1.1 KB for the order branches (Create bill, Cancel, the order's words); every route's first load +0.1 KB for one nav row and two route constants, which tipped the routes that sat exactly on their budgets (/settings, /library/messages, /items/masters, /set-password, /sales/invoices/[id]).",
   "2026-10-07 — delivery challans (Shop item 4). /sales/challans, /[id], /new and /[id]/edit are new and are their estimate and order siblings' size: the same list, editor and page, by kind; the challan's own fields load with the challan editor only (dynamic), so an invoice editor pays +0.6 KB for the challan branches and copy, not the panel. Every route's first load +0.1-0.2 KB for one nav row, its icon and the route and API constants, which tipped the routes sitting exactly on their budgets (four lending routes had an empty entry, i.e. the default, and now have their own). The shared app chunks 108 → 109 KB and /library/messages 63 → 64 KB route sat on the line and crossed it by the same constants.",
-  "7 Oct 2026, Shop P0 debit notes: two new routes are the purchase orders list and page by kind (same chunks); every other route +0.1-0.8 KB from the two debit-note thunks in the invalidation registry and the bill page's Return goods button"
+  "7 Oct 2026, Shop P0 debit notes: two new routes are the purchase orders list and page by kind (same chunks); every other route +0.1-0.8 KB from the two debit-note thunks in the invalidation registry and the bill page's Return goods button",
+  "8 Oct 2026, Shop P0 UPI pay link: the member and loan pages gained the UPI QR button and its lazy dialog's loader"
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -1595,8 +1596,8 @@
    "firstLoad": 313
   },
   "/library/members/[membershipId]": {
-   "route": 71,
-   "firstLoad": 306
+   "route": 72,
+   "firstLoad": 308
   },
   "/library/catalogue/[titleId]": {
    "route": 64,
@@ -1684,7 +1685,7 @@
   },
   "/lending/loans/[loanId]": {
    "route": 59,
-   "firstLoad": 294
+   "firstLoad": 295
   },
   "/lending/loans": {
    "route": 59,

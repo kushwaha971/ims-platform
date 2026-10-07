@@ -44,6 +44,8 @@ export const ROUTES = {
   LEGAL_PRIVACY: '/legal/privacy',
   /** SAL-03 FR-5 — the customer's copy of a shared bill, `/d/<token>`. */
   PUBLIC_DOCUMENT: '/d',
+  /** Shop P0 — the UPI pay page a payment reminder's link opens, without an account. */
+  PUBLIC_PAY: '/pay',
 
   // ── (app) ─────────────────────────────────────────────────────────────────
   DASHBOARD: '/dashboard',
@@ -315,6 +317,9 @@ export const PUBLIC_ROUTE_PREFIXES: readonly string[] = [
   // failed refresh sent them to `/login?next=/d/<token>` — the bill never
   // showed, and the credential in the path moved into a query string.
   ROUTES.PUBLIC_DOCUMENT,
+  // Shop P0 — the same trap, found by looking: the UPI pay page bounced the payer to
+  // `/login?next=/pay/<token>` before it could show the QR.
+  ROUTES.PUBLIC_PAY,
   // The same trap, found by the same probe: the sign-up screen links to these
   // BEFORE an account exists, and an anonymous visitor was bounced to login.
   ROUTES.LEGAL_TERMS,
