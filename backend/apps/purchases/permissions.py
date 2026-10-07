@@ -34,3 +34,14 @@ PurchaseOrderPermissions = HasPermission(
         "create_bill": "purchases.bill.write",
     }
 )
+
+#: Shop P0 — a debit note is written by whoever writes bills, and voided by whoever
+#: voids them (PUR-07 §12).
+DebitNotePermissions = HasPermission(
+    {
+        "list": "purchases.bill.read",
+        "retrieve": "purchases.bill.read",
+        "create": "purchases.bill.write",
+        "void": "purchases.bill.void",
+    }
+)

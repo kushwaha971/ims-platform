@@ -100,7 +100,19 @@ const BILL: PurchaseBill = {
   voidedAt: null,
   voidedBy: null,
   voidReason: null,
-  links: { bill: null, order: null, cancelReason: null },
+  links: {
+    bill: null,
+    order: null,
+    cancelReason: null,
+    against: null,
+    reason: null,
+    restock: false,
+    applied: '0.00',
+    supplierInvoiceNumber: null,
+    debitNotes: [],
+    debitApplied: '0.00',
+    returned: {},
+  },
   updatedAt: '2026-09-18T10:00:00Z',
 };
 
@@ -327,11 +339,125 @@ describe('a purchase order', () => {
           bill: { id: 'b9', kind: 'purchase_bill', number: 'PB/26-27/0009', status: 'recorded' },
           order: null,
           cancelReason: null,
+          against: null,
+          reason: null,
+          restock: false,
+          applied: '0.00',
+          supplierInvoiceNumber: null,
+          debitNotes: [],
+          debitApplied: '0.00',
+          returned: {},
         },
       })
     );
     renderWithProviders(<PurchaseBillDetailPageContent id="o1" kind="purchase_order" />);
     expect(await screen.findByText('Billed as PB/26-27/0009')).toBeInTheDocument();
     expect(screen.queryByTestId('purchase-order-create-bill')).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Shop P0 — debit notes. What these protect: "Return goods" sends exactly the lines and
+ * quantities typed, against THIS bill, and cannot be pressed with a quantity above what
+ * is still returnable (the server's cap, shown first) or without a reason; the bill
+ * lists its notes and what they took off; a note shows its bill and offers only Void.
+ */
+describe('debit notes', () => {
+  const issueMock = (): jest.Mock =>
+    (jest.requireMock('../api/purchaseBillService') as { issueDebitNote: jest.Mock })
+      .issueDebitNote;
+
+  it('returns goods from a bill with the quantity and the reason typed', async () => {
+    signIn(OWNER);
+    service.getPurchaseBill.mockResolvedValue(
+      envelope({ ...BILL, links: { ...BILL.links, returned: { '1': '15.000' } } })
+    );
+    issueMock().mockResolvedValue(
+      envelope({
+        ...BILL,
+        id: 'dn1',
+        kind: 'debit_note',
+        number: 'DN/26-27/0001',
+        status: 'issued',
+        grandTotal: '241.50',
+      })
+    );
+    renderWithProviders(<PurchaseBillDetailPageContent id="b1" />);
+    await userEvent.click(await screen.findByTestId('purchase-return'));
+    expect(await screen.findByText(/can return 5 NOS/)).toBeInTheDocument();
+    const issue = screen.getByTestId('debit-note-issue');
+    await userEvent.type(screen.getByLabelText('Quantity of Rice to return'), '6');
+    expect(issue).toBeDisabled(); // above what is left
+    await userEvent.clear(screen.getByLabelText('Quantity of Rice to return'));
+    await userEvent.type(screen.getByLabelText('Quantity of Rice to return'), '5');
+    expect(issue).toBeDisabled(); // no reason yet
+    await userEvent.selectOptions(screen.getByLabelText('Reason'), 'damaged_goods');
+    await userEvent.click(issue);
+    await waitFor(() =>
+      expect(issueMock()).toHaveBeenCalledWith(
+        expect.objectContaining({
+          against_id: 'b1',
+          reason: 'damaged_goods',
+          restock: true,
+          lines: [{ bill_line_no: 1, qty: '5' }],
+        })
+      )
+    );
+  });
+
+  it('lists a bill’s notes and what they took off its due', async () => {
+    signIn(OWNER);
+    service.getPurchaseBill.mockResolvedValue(
+      envelope({
+        ...BILL,
+        amountDue: '2679.50',
+        links: {
+          ...BILL.links,
+          debitApplied: '241.50',
+          debitNotes: [
+            {
+              id: 'dn1',
+              number: 'DN/26-27/0001',
+              status: 'issued',
+              grandTotal: '241.50',
+              documentDate: '2026-09-20',
+            },
+          ],
+        },
+      })
+    );
+    renderWithProviders(<PurchaseBillDetailPageContent id="b1" />);
+    expect(await screen.findByText('DN/26-27/0001')).toBeInTheDocument();
+    expect(screen.getByText('Less debit notes')).toBeInTheDocument();
+  });
+
+  it('shows a note against its bill with Void and nothing to pay', async () => {
+    signIn(OWNER);
+    service.getPurchaseBill.mockResolvedValue(
+      envelope({
+        ...BILL,
+        id: 'dn1',
+        kind: 'debit_note',
+        number: 'DN/26-27/0001',
+        status: 'issued',
+        amountDue: '0.00',
+        links: {
+          ...BILL.links,
+          against: { id: 'b1', kind: 'purchase_bill', number: 'PB/26-27/0007', status: 'recorded' },
+          reason: 'damaged_goods',
+          restock: true,
+          applied: '241.50',
+        },
+      })
+    );
+    renderWithProviders(<PurchaseBillDetailPageContent id="dn1" kind="debit_note" />);
+    expect(
+      await screen.findByText('Against bill PB/26-27/0007 · Damaged goods')
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('debit-note-void')).toBeInTheDocument();
+    expect(screen.queryByTestId('purchase-void')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('purchase-return')).not.toBeInTheDocument();
+    expect(screen.queryByText('To pay')).not.toBeInTheDocument();
+    expect(screen.getByText('Taken off the bill')).toBeInTheDocument();
   });
 });

@@ -17,6 +17,7 @@ import {
   ShoppingCart,
   Tags,
   Truck,
+  Undo2,
   Wallet,
 } from 'lucide-react';
 
@@ -201,6 +202,17 @@ export const SHOP_APP: AppManifest = {
       section: 'purchases',
       order: 2,
     },
+    // Shop P0 — goods sent back to a supplier (PUR-07).
+    {
+      key: 'debitNotes',
+      icon: Undo2,
+      labelId: 'nav.debitNotes',
+      href: ROUTES.DEBIT_NOTES,
+      module: 'purchases',
+      permission: 'purchases.bill.read',
+      section: 'purchases',
+      order: 3,
+    },
     // EXP-01 — where Zoho files it: under Purchases.
     {
       key: 'expenses',
@@ -210,7 +222,7 @@ export const SHOP_APP: AppManifest = {
       module: 'expenses',
       permission: 'expenses.expense.read',
       section: 'purchases',
-      order: 3,
+      order: 4,
     },
     // INV-01…INV-08 — items, adjustments, the stock summary and low stock.
     {

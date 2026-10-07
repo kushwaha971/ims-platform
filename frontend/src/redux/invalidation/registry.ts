@@ -261,6 +261,9 @@ export const MUTATIONS = {
   voidPurchaseBill: 'purchaseBill/voidPurchaseBill',
   // Shop item 3 — an order sent, cancelled or turned into a draft bill
   movePurchaseOrder: 'purchaseBill/movePurchaseOrder',
+  // Shop P0 — a debit note issued or voided
+  issueDebitNote: 'purchaseBill/issueDebitNote',
+  voidDebitNote: 'purchaseBill/voidDebitNote',
   // IMP-01 — upload, commit and cancel an import
   uploadImportFile: 'importJob/uploadImportFile',
   commitImportJob: 'importJob/commitImportJob',

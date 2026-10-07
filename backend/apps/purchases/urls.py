@@ -5,10 +5,12 @@ from __future__ import annotations
 from rest_framework.routers import DefaultRouter
 
 from apps.purchases.views.bills import PurchaseBillViewSet
+from apps.purchases.views.debit_notes import DebitNoteViewSet
 from apps.purchases.views.orders import PurchaseOrderViewSet
 
 router = DefaultRouter(trailing_slash=False)
 router.register("bills", PurchaseBillViewSet, basename="purchase-bill")
 router.register("orders", PurchaseOrderViewSet, basename="purchase-order")
+router.register("debit-notes", DebitNoteViewSet, basename="purchase-debit-note")
 
 urlpatterns = [*router.urls]

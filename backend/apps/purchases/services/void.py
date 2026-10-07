@@ -53,8 +53,11 @@ from apps.purchases.services.ledger_link import reverse_bill_credit, standing_bi
 from apps.purchases.services.payment_seam import release_payments_on_void, released_payment_ids
 
 
-def _reverse_stock(ctx: Ctx, document: Any, reason: str) -> list[Any]:
-    """FR-2a/b — one reversal per standing `purchase_in` of this bill, through `post_movements`."""
+def _reverse_stock(
+    ctx: Ctx, document: Any, reason: str, *, movement_type: str = "purchase_in"
+) -> list[Any]:
+    """FR-2a/b — one reversal per standing `purchase_in` of this bill, through `post_movements`
+    (a debit note's void passes `purchase_return_out`)."""
     from apps.inventory.constants import MovementSource, MovementType
     from apps.inventory.models import StockMovement
     from apps.inventory.services.stock import MovementLine, post_movements
@@ -64,7 +67,7 @@ def _reverse_stock(ctx: Ctx, document: Any, reason: str) -> list[Any]:
             tenant=ctx.tenant,
             source_type=MovementSource.PURCHASE_DOCUMENT,
             source_id=document.id,
-            movement_type=MovementType.PURCHASE_IN,
+            movement_type=movement_type,
         )
         .select_related("item", "item__unit", "location")
         .order_by("sequence_no", "id")
@@ -126,6 +129,9 @@ def void_bill(*, ctx: Ctx, document_id: Any, reason: Any) -> dict:
             details={"status": document.status},
         )
 
+    from apps.purchases.services.debit_notes import refuse_bill_void_with_notes
+
+    refuse_bill_void_with_notes(document)
     before = snapshot(document)
     original = standing_bill_entry(tenant=ctx.tenant, document_id=document.id)
     if party is not None and party.status == PartyStatus.ARCHIVED:

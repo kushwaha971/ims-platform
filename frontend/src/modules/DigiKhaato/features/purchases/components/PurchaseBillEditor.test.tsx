@@ -134,7 +134,19 @@ const DRAFT: PurchaseBill = {
   voidedAt: null,
   voidedBy: null,
   voidReason: null,
-  links: { bill: null, order: null, cancelReason: null },
+  links: {
+    bill: null,
+    order: null,
+    cancelReason: null,
+    against: null,
+    reason: null,
+    restock: false,
+    applied: '0.00',
+    supplierInvoiceNumber: null,
+    debitNotes: [],
+    debitApplied: '0.00',
+    returned: {},
+  },
   updatedAt: '2026-09-18T10:00:00Z',
 };
 

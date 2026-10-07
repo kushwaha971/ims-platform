@@ -24,12 +24,15 @@ export const createPurchaseBillColumns = ({
   today,
   isCards,
   order = false,
+  note = false,
 }: {
   readonly t: TranslateFn;
   readonly today: string;
   readonly isCards: boolean;
   /** Shop item 3 — an orders list: no supplier bill number, "Expected by" for "Due". */
   readonly order?: boolean;
+  /** Shop P0 — a debit notes list: "Open credit" (what no bill could take) for "Due". */
+  readonly note?: boolean;
 }): readonly UbDataGridColumn<PurchaseBillListRow>[] => [
   {
     id: 'supplier',
@@ -108,13 +111,14 @@ export const createPurchaseBillColumns = ({
     : [
         {
           id: 'due',
-          header: t('purchases.column.due'),
+          header: t(note ? 'purchases.debitNote.openCredit' : 'purchases.column.due'),
           priority: 2,
           cardSlot: 'none',
           align: 'end',
           widthShare: 15,
           cell: (row) => {
             if (row.status === 'draft' || row.status === 'void') return '—';
+            if (note) return <UbAmount value={row.amountDue} size="sm" />;
             const days = daysLate(row.dueOn, today);
             return (
               <UbStack gap={0} className="items-end">

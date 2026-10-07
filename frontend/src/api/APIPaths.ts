@@ -183,6 +183,10 @@ export const API_PATHS = {
   PURCHASE_ORDER: (id: string) => `/purchases/orders/${seg(id)}`,
   PURCHASE_ORDER_ACTION: (id: string, verb: 'send' | 'cancel' | 'create-bill') =>
     `/purchases/orders/${seg(id)}/${verb}`,
+  // Shop P0 — goods sent back to a supplier (PUR-07)
+  DEBIT_NOTES: '/purchases/debit-notes',
+  DEBIT_NOTE: (id: string) => `/purchases/debit-notes/${seg(id)}`,
+  DEBIT_NOTE_VOID: (id: string) => `/purchases/debit-notes/${seg(id)}/void`,
   PAYMENTS: '/payments',
   PAYMENT: (id: string) => `/payments/${seg(id)}`,
   PAYMENT_VOID: (id: string) => `/payments/${seg(id)}/void`,
@@ -289,6 +293,7 @@ export const IDEMPOTENT_POST_PATHS: readonly string[] = [
   API_PATHS.SALES_CHALLANS,
   API_PATHS.SALES_CREDIT_NOTES,
   API_PATHS.PURCHASE_BILLS,
+  API_PATHS.DEBIT_NOTES,
   API_PATHS.PAYMENTS,
   API_PATHS.STOCK_ADJUSTMENTS,
   // INV-01 — a retried item create must not mint a second SKU for one item.

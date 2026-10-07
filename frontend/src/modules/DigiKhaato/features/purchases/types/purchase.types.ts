@@ -16,18 +16,45 @@ export const PURCHASE_BILL_STATUSES = [
   'sent',
   'billed',
   'cancelled',
+  // Shop P0 — a debit note is issued at once and only ever voided
+  'issued',
 ] as const;
 export type PurchaseBillStatus = (typeof PURCHASE_BILL_STATUSES)[number];
 
 /** The two kinds of purchase document the screens write: a bill, or an order for one. */
-export type PurchaseKind = 'purchase_bill' | 'purchase_order';
+export type PurchaseKind = 'purchase_bill' | 'purchase_order' | 'debit_note';
 
 /** PUR-03 FR-1 — the list's tabs, each a set of statuses on the server. */
 export const PURCHASE_BILL_TABS = ['all', 'unpaid', 'overdue', 'paid', 'draft', 'void'] as const;
 /** Shop item 3 — the orders list's tabs; `sent` is what is still to arrive. */
 export const PURCHASE_ORDER_TABS = ['all', 'sent', 'draft', 'billed', 'cancelled'] as const;
+/** Shop P0 — the debit notes list's tabs. */
+export const DEBIT_NOTE_TABS = ['all', 'issued', 'void'] as const;
 export type PurchaseBillTab =
-  (typeof PURCHASE_BILL_TABS)[number] | (typeof PURCHASE_ORDER_TABS)[number];
+  | (typeof PURCHASE_BILL_TABS)[number]
+  | (typeof PURCHASE_ORDER_TABS)[number]
+  | (typeof DEBIT_NOTE_TABS)[number];
+
+/** PUR-07 FR-12 — why goods went back, or the bill was corrected. */
+export const DEBIT_NOTE_REASONS = [
+  'goods_returned',
+  'damaged_goods',
+  'short_supply',
+  'rate_correction',
+  'qty_correction',
+  'discount_agreed',
+  'other',
+] as const;
+export type DebitNoteReason = (typeof DEBIT_NOTE_REASONS)[number];
+
+/** A debit note as its bill lists it. */
+export interface PurchaseDebitNoteRef {
+  readonly id: string;
+  readonly number: string | null;
+  readonly status: string;
+  readonly grandTotal: string;
+  readonly documentDate: string;
+}
 
 /** Shop item 3 — what a document is tied to: an order's bill, or a bill's order. */
 export interface PurchaseDocRef {
@@ -40,6 +67,17 @@ export interface PurchaseLinks {
   readonly bill: PurchaseDocRef | null;
   readonly order: PurchaseDocRef | null;
   readonly cancelReason: string | null;
+  /** A debit note's bill, its reason, whether goods left, and what the bill took. */
+  readonly against: PurchaseDocRef | null;
+  readonly reason: DebitNoteReason | null;
+  readonly restock: boolean;
+  readonly applied: string;
+  /** A debit note's bill's own supplier number (the note never carries it in its column). */
+  readonly supplierInvoiceNumber: string | null;
+  /** A bill's debit notes, what they took off its due, and `{line no: qty returned}`. */
+  readonly debitNotes: readonly PurchaseDebitNoteRef[];
+  readonly debitApplied: string;
+  readonly returned: Readonly<Record<string, string>>;
 }
 
 export type PurchaseDiscountType = 'percent' | 'amount';

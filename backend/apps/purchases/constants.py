@@ -12,6 +12,8 @@ class DocumentKind(models.TextChoices):
     PURCHASE_BILL = "purchase_bill", _("Purchase bill")
     #: Shop item 3 — what the shop asked a supplier to send, before the bill.
     PURCHASE_ORDER = "purchase_order", _("Purchase order")
+    #: Shop P0 — goods sent back to a supplier, or a price the supplier got wrong.
+    DEBIT_NOTE = "debit_note", _("Debit note")
 
 
 class DocumentStatus(models.TextChoices):
@@ -27,11 +29,30 @@ class DocumentStatus(models.TextChoices):
     SENT = "sent", _("Sent")
     BILLED = "billed", _("Billed")
     CANCELLED = "cancelled", _("Cancelled")
+    #: Debit note: issued (numbered, posted) → void. There is no draft.
+    ISSUED = "issued", _("Issued")
 
 
 #: Every bill read and write is limited to these, so an order never counts as a bill.
 BILL_KINDS: tuple[str, ...] = ("purchase_bill",)
 ORDER_KINDS: tuple[str, ...] = ("purchase_order",)
+DEBIT_NOTE_KINDS: tuple[str, ...] = ("debit_note",)
+#: The debit notes list's tabs. `open` still holds credit the bill could not take.
+DEBIT_NOTE_TAB_STATUSES: dict[str, tuple[str, ...]] = {
+    "all": ("issued", "void"),
+    "issued": ("issued",),
+    "void": ("void",),
+}
+#: PUR-07 FR-12 — why the note was written.
+DEBIT_NOTE_REASONS: tuple[str, ...] = (
+    "goods_returned",
+    "damaged_goods",
+    "short_supply",
+    "rate_correction",
+    "qty_correction",
+    "discount_agreed",
+    "other",
+)
 #: Shop item 3 — the purchase orders list's tabs. `sent` is what is still to arrive.
 ORDER_TAB_STATUSES: dict[str, tuple[str, ...]] = {
     "all": ("draft", "sent", "billed", "cancelled"),

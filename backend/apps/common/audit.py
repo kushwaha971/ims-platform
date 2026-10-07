@@ -172,6 +172,8 @@ class AuditAction:
     PURCHASE_ORDER_SENT = "purchase_order.sent"
     PURCHASE_ORDER_CANCELLED = "purchase_order.cancelled"
     PURCHASE_ORDER_BILLED = "purchase_order.billed"
+    DEBIT_NOTE_ISSUED = "debit_note.issued"
+    DEBIT_NOTE_VOIDED = "debit_note.voided"
     PURCHASE_BILL_DRAFT_CREATED = "purchase_bill.draft_created"
     PURCHASE_BILL_UPDATED = "purchase_bill.updated"
     PURCHASE_BILL_DELETED = "purchase_bill.deleted"

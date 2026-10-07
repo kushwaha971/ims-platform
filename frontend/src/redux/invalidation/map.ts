@@ -579,6 +579,22 @@ export const INVALIDATION: TInvalidationMap = {
       'stockSummary',
     ],
   },
+  // Shop P0 — a debit note moves stock, the supplier's khata and its bill's due, in
+  // both directions; the bill page refetches to show its note and its smaller due.
+  issueDebitNote: {
+    stale: [
+      'purchaseBillList',
+      'purchaseBillDetail',
+      ...EXPENSE_LEDGER_STALE,
+      'itemList',
+      'itemDetail',
+      'stockSummary',
+    ],
+  },
+  voidDebitNote: {
+    patch: [['purchaseBillDetail', 'bill']],
+    stale: ['purchaseBillList', ...EXPENSE_LEDGER_STALE, 'itemList', 'itemDetail', 'stockSummary'],
+  },
   voidPurchaseBill: {
     patch: [['purchaseBillDetail', 'bill']],
     stale: [

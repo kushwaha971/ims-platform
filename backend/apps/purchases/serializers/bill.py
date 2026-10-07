@@ -213,7 +213,46 @@ class BillReadSerializer(serializers.ModelSerializer):
 
         if obj.kind == "purchase_order":
             return {"bill": ref(meta.get("bill_id")), "cancel_reason": meta.get("cancel_reason")}
-        return {"order": ref(meta.get("po_id"))}
+        if obj.kind == "debit_note":
+            against = meta.get("against") or {}
+            return {
+                "against": ref(against.get("bill_id")),
+                "supplier_invoice_number": against.get("supplier_invoice_number"),
+                "reason": meta.get("reason"),
+                "restock": bool(meta.get("restock")),
+                "applied": meta.get("applied") or "0.00",
+                "returns": meta.get("returns") or [],
+            }
+        return {
+            "order": ref(meta.get("po_id")),
+            **({} if obj.status == "draft" else self._debit_notes(obj)),
+        }
+
+    @staticmethod
+    def _debit_notes(obj: PurchaseDocument) -> dict:
+        """A bill names its standing and voided debit notes, and how much of each line went back."""
+        from apps.purchases.services.debit_notes import debit_applied, returned_quantities
+
+        notes = (
+            PurchaseDocument.objects.filter(
+                tenant_id=obj.tenant_id, kind="debit_note", meta__against__bill_id=str(obj.id)
+            )
+            .order_by("document_date", "number")
+            .values("id", "number", "status", "grand_total", "document_date")
+        )
+        return {
+            "debit_notes": [
+                {
+                    **row,
+                    "id": str(row["id"]),
+                    "grand_total": str(row["grand_total"]),
+                    "document_date": row["document_date"].isoformat(),
+                }
+                for row in notes
+            ],
+            "debit_applied": str(debit_applied(obj)),
+            "returned": {str(k): str(v) for k, v in returned_quantities(obj).items()},
+        }
 
     def get_party(self, obj: PurchaseDocument) -> dict | None:
         party = obj.party

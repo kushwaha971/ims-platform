@@ -18,6 +18,7 @@ import {
 } from '../redux/purchaseBillListSlice';
 import { fetchPurchaseBillList } from '../redux/purchaseBillThunk';
 import {
+  DEBIT_NOTE_TABS,
   PURCHASE_ORDER_TABS,
   type PurchaseBillTab,
   type PurchaseKind,
@@ -73,7 +74,11 @@ export const usePurchaseBillList = (
       purchaseFiltersFromQuery(
         new URLSearchParams(queryString),
         today,
-        kind === 'purchase_order' ? PURCHASE_ORDER_TABS : PURCHASE_BILL_TABS_ORDER
+        kind === 'purchase_order'
+          ? PURCHASE_ORDER_TABS
+          : kind === 'debit_note'
+            ? DEBIT_NOTE_TABS
+            : PURCHASE_BILL_TABS_ORDER
       ),
     [queryString, today, kind]
   );

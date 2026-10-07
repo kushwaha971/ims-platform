@@ -5,7 +5,7 @@ import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 
-import { Ban, FileOutput, Pencil, XCircle } from 'lucide-react';
+import { Ban, FileOutput, Pencil, Undo2, XCircle } from 'lucide-react';
 
 import {
   UbActionLink,
@@ -50,6 +50,12 @@ const OrderCancelDialogLazy = dynamic(
   { ssr: false }
 );
 
+/* Shop P0 — "Return goods": the lines, the reason and the stock switch load with the tap. */
+const DebitNoteDrawerLazy = dynamic(
+  () => import('./DebitNoteDrawer').then((m) => m.DebitNoteDrawer),
+  { ssr: false }
+);
+
 const VOIDABLE = new Set(['recorded', 'partially_paid', 'paid', 'overdue']);
 /**
  * Shop item 3 — an order is billed once; again only if that bill was voided or its
@@ -84,10 +90,14 @@ export function PurchaseBillDetailPageContent({
   const [voiding, setVoiding] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [billing, setBilling] = useState(false);
+  const [returning, setReturning] = useState(false);
   const bill = detail.bill?.id === id ? detail.bill : null;
   // Shop item 3 — the same page shows an order: Create bill and Cancel, no money owed.
   const order = kind === 'purchase_order';
+  // Shop P0 — a debit note: against its bill, Void only, what it took off and what is left.
+  const note = kind === 'debit_note';
   const home = order ? ROUTES.PURCHASE_ORDERS : ROUTES.PURCHASE_BILLS;
+  const isBill = !order && !note;
 
   const createBill = async () => {
     if (!bill) return;
@@ -192,7 +202,29 @@ export function PurchaseBillDetailPageContent({
                 {t('purchases.order.createBill.action')}
               </UbButton>
             )}
-            {VOIDABLE.has(bill.status) && detail.canVoid && (
+            {isBill && VOIDABLE.has(bill.status) && detail.canWrite && (
+              <UbButton
+                variant="secondary"
+                iconOnly="mobile"
+                icon={<Undo2 className="h-4 w-4" aria-hidden />}
+                onClick={() => setReturning(true)}
+                data-testid="purchase-return"
+              >
+                {t('purchases.debitNote.open')}
+              </UbButton>
+            )}
+            {note && bill.status === 'issued' && detail.canVoid && (
+              <UbButton
+                variant="secondary"
+                iconOnly="mobile"
+                icon={<Ban className="h-4 w-4" aria-hidden />}
+                onClick={() => setCancelling(true)}
+                data-testid="debit-note-void"
+              >
+                {t('purchases.debitNote.void.action')}
+              </UbButton>
+            )}
+            {isBill && VOIDABLE.has(bill.status) && detail.canVoid && (
               <UbButton
                 variant="secondary"
                 iconOnly="mobile"
@@ -237,7 +269,30 @@ export function PurchaseBillDetailPageContent({
             }
           />
         )}
-        {!order && bill.links.order && (
+        {note && bill.links.against && (
+          <UbStatusBanner
+            tone="info"
+            title={t('purchases.debitNote.against', {
+              number: bill.links.against.number ?? '',
+              reason: bill.links.reason ? t(`purchases.debitNote.reason.${bill.links.reason}`) : '',
+            })}
+            description={t(
+              bill.links.restock
+                ? 'purchases.debitNote.goodsLeft'
+                : 'purchases.debitNote.noGoodsMoved'
+            )}
+            action={
+              <UbActionLink
+                href={`${ROUTES.PURCHASE_BILLS}/${bill.links.against.id}`}
+                variant="secondary"
+                size="sm"
+              >
+                {t('purchases.order.openBill')}
+              </UbActionLink>
+            }
+          />
+        )}
+        {isBill && bill.links.order && (
           <UbText variant="body-sm">
             {t('purchases.order.fromOrder')}{' '}
             <UbLink href={`${ROUTES.PURCHASE_ORDERS}/${bill.links.order.id}`}>
@@ -261,11 +316,20 @@ export function PurchaseBillDetailPageContent({
             <UbPanel>
               <UbStack gap={2} className="p-4">
                 {row(
-                  t(order ? 'purchases.order.date' : 'purchases.detail.billDate'),
+                  t(
+                    order
+                      ? 'purchases.order.date'
+                      : note
+                        ? 'purchases.debitNote.date'
+                        : 'purchases.detail.billDate'
+                  ),
                   formatBusinessDate(bill.documentDate)
                 )}
                 {!order &&
-                  row(t('purchases.detail.supplierInvoice'), bill.supplierInvoiceNumber ?? '—')}
+                  row(
+                    t('purchases.detail.supplierInvoice'),
+                    (note ? bill.links.supplierInvoiceNumber : bill.supplierInvoiceNumber) ?? '—'
+                  )}
                 {bill.supplierInvoiceDate &&
                   row(
                     t('purchases.detail.supplierInvoiceDate'),
@@ -276,7 +340,7 @@ export function PurchaseBillDetailPageContent({
                     t(order ? 'purchases.order.expectedBy' : 'purchases.detail.dueOn'),
                     formatBusinessDate(bill.dueOn)
                   )}
-                {!order &&
+                {isBill &&
                   row(
                     t('purchases.detail.itc'),
                     bill.itcEligible ? t('purchases.detail.itcYes') : t('purchases.detail.itcNo')
@@ -339,18 +403,45 @@ export function PurchaseBillDetailPageContent({
               {row(t('purchases.totals.roundOffShort'), formatInr(bill.roundOff))}
               <UbDivider />
               {row(
-                t(order ? 'purchases.order.estimatedTotal' : 'purchases.totals.grand'),
+                t(
+                  order
+                    ? 'purchases.order.estimatedTotal'
+                    : note
+                      ? 'purchases.debitNote.total'
+                      : 'purchases.totals.grand'
+                ),
                 formatInr(bill.grandTotal)
               )}
+              {note && bill.status === 'issued' && (
+                <>
+                  {row(t('purchases.debitNote.applied'), formatInr(bill.links.applied))}
+                  {row(t('purchases.debitNote.openCredit'), formatInr(bill.amountDue))}
+                </>
+              )}
+              {isBill &&
+                bill.links.debitApplied !== '0.00' &&
+                row(t('purchases.debitNote.lessNotes'), `−${formatInr(bill.links.debitApplied)}`)}
               {!draft &&
-                !order &&
+                isBill &&
                 bill.status !== 'void' &&
                 bill.amountPaid !== '0.00' &&
                 row(t('purchases.detail.paid'), formatInr(bill.amountPaid))}
               {!draft &&
-                !order &&
+                isBill &&
                 bill.status !== 'void' &&
                 row(t('purchases.total.toPay'), formatInr(bill.amountDue))}
+              {bill.links.debitNotes.length > 0 && (
+                <UbStack gap={1} className="pt-2" data-testid="purchase-debit-notes">
+                  <UbText variant="body-sm-medium">{t('purchases.debitNote.listTitle')}</UbText>
+                  {bill.links.debitNotes.map((dn) => (
+                    <UbText key={dn.id} variant="caption" tone="secondary" className="ds-num">
+                      <UbLink href={`${ROUTES.DEBIT_NOTES}/${dn.id}`}>{dn.number ?? ''}</UbLink>
+                      {` · ${formatBusinessDate(dn.documentDate)} · ${formatInr(dn.grandTotal)}`}
+                      {dn.status === 'void' ? ` · ${t('purchases.status.void')}` : ''}
+                    </UbText>
+                  ))}
+                </UbStack>
+              )}
               {bill.payments.length > 0 && (
                 <UbStack gap={1} className="pt-2" data-testid="purchase-payments">
                   <UbText variant="body-sm-medium">{t('purchases.detail.payments')}</UbText>
@@ -366,7 +457,14 @@ export function PurchaseBillDetailPageContent({
           </UbPanel>
         </UbGrid>
       </UbStack>
-      {cancelling && <OrderCancelDialogLazy order={bill} onClose={() => setCancelling(false)} />}
+      {cancelling && (
+        <OrderCancelDialogLazy
+          order={bill}
+          mode={note ? 'voidNote' : 'cancelOrder'}
+          onClose={() => setCancelling(false)}
+        />
+      )}
+      {returning && <DebitNoteDrawerLazy bill={bill} onClose={() => setReturning(false)} />}
       {voiding && (
         <VoidDialogLazy
           bill={bill}

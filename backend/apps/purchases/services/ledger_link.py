@@ -43,10 +43,26 @@ def _actor(ctx: Ctx) -> Any:
 
 def ledger_note_for(document: Any) -> str:
     """ "Purchase bill PB/26-27/0007 · AT/778" — stored on an immutable row, so it reads for ever."""
-    text = f"Purchase bill {document.number}"
+    word = "Debit note" if document.kind == "debit_note" else "Purchase bill"
+    text = f"{word} {document.number}"
     if document.supplier_invoice_number:
         text = f"{text} · {document.supplier_invoice_number}"
     return text[:255]
+
+
+def post_note_debit(*, ctx: Ctx, document: Any, party: Any) -> tuple[LedgerEntry, Any]:
+    """A debit note: DEBIT `party` (LOCKED by the caller) by its total — the shop owes less.
+
+    No credit-limit check either: a debit to a SUPPLIER only reduces what the shop owes.
+    """
+    return _post(
+        ctx=ctx,
+        document=document,
+        party=party,
+        direction=Direction.DEBIT,
+        entry_type=EntryType.DEBIT_NOTE,
+        via="debit_note",
+    )
 
 
 def post_bill_credit(*, ctx: Ctx, document: Any, party: Any) -> tuple[LedgerEntry, Any]:
@@ -55,9 +71,22 @@ def post_bill_credit(*, ctx: Ctx, document: Any, party: Any) -> tuple[LedgerEntr
     No credit-limit check: a credit only ever reduces what the party owes the
     shop (LED-01 FR-6's reasoning).
     """
+    return _post(
+        ctx=ctx,
+        document=document,
+        party=party,
+        direction=Direction.CREDIT,
+        entry_type=EntryType.PURCHASE_BILL,
+        via="purchase_bill",
+    )
+
+
+def _post(
+    *, ctx: Ctx, document: Any, party: Any, direction: str, entry_type: str, via: str
+) -> tuple[LedgerEntry, Any]:
     row = validate_entry_payload(
         {
-            "direction": Direction.CREDIT,
+            "direction": direction,
             "amount": document.grand_total,
             "entry_date": document.document_date,
             "note": ledger_note_for(document),
@@ -72,7 +101,7 @@ def post_bill_credit(*, ctx: Ctx, document: Any, party: Any) -> tuple[LedgerEntr
         direction=row["direction"],
         amount=row["amount"],
         entry_date=row["entry_date"],
-        entry_type=EntryType.PURCHASE_BILL,
+        entry_type=entry_type,
         source_type=SourceType.PURCHASE_DOCUMENT,
         source_id=document.id,
         note=row["note"],
@@ -86,7 +115,7 @@ def post_bill_credit(*, ctx: Ctx, document: Any, party: Any) -> tuple[LedgerEntr
         entity_id=entry.id,
         after=_audit_snapshot(entry),
         metadata={
-            "via": "purchase_bill",
+            "via": via,
             "document_id": str(document.id),
             "party_id": str(party.id),
             "balance_after": str(balance),
@@ -95,7 +124,9 @@ def post_bill_credit(*, ctx: Ctx, document: Any, party: Any) -> tuple[LedgerEntr
     return entry, balance
 
 
-def standing_bill_entry(*, tenant: Any, document_id: Any) -> LedgerEntry | None:
+def standing_bill_entry(
+    *, tenant: Any, document_id: Any, entry_type: str = EntryType.PURCHASE_BILL
+) -> LedgerEntry | None:
     """The POSTED credit this bill produced, locked, or None (a ₹0 bill posts none).
 
     Locked because the void reverses it and two voids racing must not both find
@@ -106,7 +137,7 @@ def standing_bill_entry(*, tenant: Any, document_id: Any) -> LedgerEntry | None:
             tenant=tenant,
             source_type=SourceType.PURCHASE_DOCUMENT,
             source_id=document_id,
-            entry_type=EntryType.PURCHASE_BILL,
+            entry_type=entry_type,
             status=EntryStatus.POSTED,
         )
         .select_for_update()

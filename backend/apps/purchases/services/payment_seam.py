@@ -108,8 +108,10 @@ def apply_payment(*, document: Any, amount: Decimal, today: dt.date) -> Any:
             "This bill cannot take a payment.",
             details={"document_id": str(document.id), "status": document.status},
         )
+    from apps.purchases.services.debit_notes import debit_applied
+
     paid = document.amount_paid + amount
-    due = document.grand_total - paid
+    due = document.grand_total - paid - debit_applied(document)
     if paid < ZERO or due < ZERO:
         raise BusinessRuleViolation(
             "over_allocated",

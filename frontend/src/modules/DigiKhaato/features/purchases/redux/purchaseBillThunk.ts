@@ -4,6 +4,7 @@ import type { ApiErrorShape } from 'src/types/api.types';
 import { toApiError } from 'src/utils/apiError';
 
 import type {
+  DebitNoteWireBody,
   PurchaseBillListQuery,
   PurchaseBillWireBody,
   PurchasePaymentWireBody,
@@ -157,6 +158,34 @@ export const movePurchaseOrder = createAsyncThunk<
     return await (await service()).movePurchaseOrder(id, verb, body);
   } catch (error) {
     return rejectWithValue(toApiError(error, 'purchases.order.error.move'));
+  }
+});
+
+/**
+ * MUTATION. Shop P0 (PUR-07) — goods back to the supplier: written and issued at once,
+ * stock out, the supplier's khata and the bill's due both less.
+ */
+export const issueDebitNote = createAsyncThunk<PurchaseBillEnvelope, DebitNoteWireBody, Reject>(
+  'purchaseBill/issueDebitNote',
+  async (body, { rejectWithValue }) => {
+    try {
+      return await (await service()).issueDebitNote(body);
+    } catch (error) {
+      return rejectWithValue(toApiError(error, 'purchases.debitNote.error'));
+    }
+  }
+);
+
+/** MUTATION. Shop P0 — the goods came back to the shelf, the bill owes again. */
+export const voidDebitNote = createAsyncThunk<
+  PurchaseBillEnvelope,
+  { readonly id: string; readonly reason: string },
+  Reject
+>('purchaseBill/voidDebitNote', async ({ id, reason }, { rejectWithValue }) => {
+  try {
+    return await (await service()).voidDebitNote(id, reason);
+  } catch (error) {
+    return rejectWithValue(toApiError(error, 'purchases.debitNote.void.error'));
   }
 });
 

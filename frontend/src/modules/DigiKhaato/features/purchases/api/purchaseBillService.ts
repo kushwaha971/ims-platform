@@ -13,6 +13,7 @@ import type {
   PurchaseBillTabCounts,
   PurchaseDocRef,
   PurchaseKind,
+  PurchaseLinks,
 } from '../types/purchase.types';
 
 /**
@@ -66,7 +67,9 @@ export const toBill = (row: Wire): PurchaseBill => {
   };
   return {
     id: s(row.id),
-    kind: (row.kind === 'purchase_order' ? 'purchase_order' : 'purchase_bill') as PurchaseKind,
+    kind: (row.kind === 'purchase_order' || row.kind === 'debit_note'
+      ? row.kind
+      : 'purchase_bill') as PurchaseKind,
     number: sn(row.number),
     fyLabel: s(row.fy_label),
     status: row.status as PurchaseBill['status'],
@@ -133,6 +136,20 @@ export const toBill = (row: Wire): PurchaseBill => {
       bill: ref(links.bill),
       order: ref(links.order),
       cancelReason: sn(links.cancel_reason),
+      against: ref(links.against),
+      reason: (links.reason as PurchaseLinks['reason']) ?? null,
+      restock: Boolean(links.restock),
+      applied: s(links.applied ?? '0.00'),
+      supplierInvoiceNumber: sn(links.supplier_invoice_number),
+      debitNotes: ((links.debit_notes ?? []) as Wire[]).map((n) => ({
+        id: s(n.id),
+        number: sn(n.number),
+        status: s(n.status),
+        grandTotal: s(n.grand_total),
+        documentDate: s(n.document_date),
+      })),
+      debitApplied: s(links.debit_applied ?? '0.00'),
+      returned: (links.returned ?? {}) as Record<string, string>,
     },
     updatedAt: s(row.updated_at),
   };
@@ -206,10 +223,12 @@ export const purchaseBillListQuery = (filters: PurchaseBillListQuery): string =>
 const LIST_PATH: Readonly<Record<PurchaseKind, string>> = {
   purchase_bill: API_PATHS.PURCHASE_BILLS,
   purchase_order: API_PATHS.PURCHASE_ORDERS,
+  debit_note: API_PATHS.DEBIT_NOTES,
 };
 const DETAIL_PATH: Readonly<Record<PurchaseKind, (id: string) => string>> = {
   purchase_bill: API_PATHS.PURCHASE_BILL,
   purchase_order: API_PATHS.PURCHASE_ORDER,
+  debit_note: API_PATHS.DEBIT_NOTE,
 };
 
 export const listPurchaseBills = async (
@@ -362,3 +381,28 @@ export const voidPurchaseBill = async (id: string, reason: string): Promise<Purc
       )
     ).data
   );
+
+/** Shop P0 — what goes back on a debit note: the bill's line and how many. */
+export interface DebitNoteWireBody {
+  readonly against_id: string;
+  readonly document_date: string;
+  readonly reason: string;
+  readonly reason_note: string;
+  readonly restock: boolean;
+  readonly lines: readonly { bill_line_no: number; qty: string }[];
+}
+
+/** PUR-07 — written and issued in one call; `insufficient_stock` is shown in the drawer. */
+export const issueDebitNote = async (body: DebitNoteWireBody): Promise<PurchaseBillEnvelope> =>
+  toEnvelope(
+    (
+      await api.post<EnvelopeWire>(
+        API_PATHS.DEBIT_NOTES,
+        body,
+        ubConfig({ suppressErrorSnackbar: true })
+      )
+    ).data
+  );
+
+export const voidDebitNote = async (id: string, reason: string): Promise<PurchaseBillEnvelope> =>
+  toEnvelope((await api.post<EnvelopeWire>(API_PATHS.DEBIT_NOTE_VOID(id), { reason })).data);

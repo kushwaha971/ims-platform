@@ -60,7 +60,11 @@ def lock_document(
         .first()
     )
     if document is None:
-        raise NotFound("No such bill." if kinds == BILL_KINDS else "No such order.")
+        raise NotFound(
+            "No such bill."
+            if kinds == BILL_KINDS
+            else ("No such debit note." if "debit_note" in kinds else "No such order.")
+        )
     return document
 
 

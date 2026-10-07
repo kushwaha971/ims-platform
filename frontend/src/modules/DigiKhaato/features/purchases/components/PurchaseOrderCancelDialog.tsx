@@ -18,7 +18,7 @@ import { useAppDispatch } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 
-import { movePurchaseOrder } from '../redux/purchaseBillThunk';
+import { movePurchaseOrder, voidDebitNote } from '../redux/purchaseBillThunk';
 import { usePurchaseBillSchemas } from '../validation/purchaseBillSchemas';
 
 import type { PurchaseBill } from '../types/purchase.types';
@@ -28,12 +28,21 @@ import 'src/i18n/catalogues/validation';
  * Shop item 3 — "Cancel order PO/26-27/0004?" with the reason (three characters at
  * least, the void's own schema). A cancelled order keeps its number and is never
  * billed; nothing else moves, because an order never moved anything.
+ *
+ * Shop P0 — the same question voids a debit note (`mode="voidNote"`): the goods come
+ * back to the shelf and the bill owes again, so its copy says that instead.
  */
 export function PurchaseOrderCancelDialog({
   order,
   onClose,
-}: Readonly<{ order: PurchaseBill; onClose: () => void }>): React.JSX.Element {
+  mode = 'cancelOrder',
+}: Readonly<{
+  order: PurchaseBill;
+  onClose: () => void;
+  mode?: 'cancelOrder' | 'voidNote';
+}>): React.JSX.Element {
   const { t } = useTranslation();
+  const ns = mode === 'voidNote' ? 'purchases.debitNote.void' : 'purchases.order.cancel';
   const dispatch = useAppDispatch();
   const { voidReasonSchema } = usePurchaseBillSchemas();
   const formId = useId();
@@ -48,55 +57,59 @@ export function PurchaseOrderCancelDialog({
   const submit = useCallback(
     async (values: { reason: string }) => {
       setBusy(true);
-      const result = await dispatch(
-        movePurchaseOrder({ id: order.id, verb: 'cancel', reason: values.reason.trim() })
-      );
+      const reason = values.reason.trim();
+      const result =
+        mode === 'voidNote'
+          ? await dispatch(voidDebitNote({ id: order.id, reason }))
+          : await dispatch(movePurchaseOrder({ id: order.id, verb: 'cancel', reason }));
       setBusy(false);
-      if (!movePurchaseOrder.fulfilled.match(result)) return;
+      if (result.meta.requestStatus !== 'fulfilled') return;
       dispatch(
         showSnackbar({
           severity: 'success',
-          id: 'purchases.order.cancel.done',
+          id: `${ns}.done`,
           params: { number: order.number ?? '' },
         })
       );
       onClose();
     },
-    [dispatch, order.id, order.number, onClose]
+    [dispatch, order.id, order.number, onClose, mode, ns]
   );
 
   return (
     <UbDialog
       open
       onOpenChange={(next) => !next && onClose()}
-      title={t('purchases.order.cancel.title', { number: order.number ?? '' })}
+      title={t(`${ns}.title`, { number: order.number ?? '' })}
       closeLabel={t('common.action.close')}
       footer={
         <>
           <UbButton variant="secondary" onClick={onClose} disabled={busy}>
-            {t('purchases.order.cancel.keep')}
+            {t(`${ns}.keep`)}
           </UbButton>
           <UbButton
             type="submit"
             form={formId}
             variant="destructive"
             busy={busy}
-            busyLabel={t('purchases.order.cancel.working')}
+            busyLabel={t(`${ns}.working`)}
             disabled={reason.trim().length < 3}
-            data-testid="purchase-order-cancel-confirm"
+            data-testid={
+              mode === 'voidNote' ? 'debit-note-void-confirm' : 'purchase-order-cancel-confirm'
+            }
           >
-            {t('purchases.order.cancel.action')}
+            {t(`${ns}.action`)}
           </UbButton>
         </>
       }
     >
       <UbForm id={formId} form={rhf} onSubmit={submit}>
         <UbStack gap={3}>
-          <UbText variant="body-sm">{t('purchases.order.cancel.body')}</UbText>
+          <UbText variant="body-sm">{t(`${ns}.body`)}</UbText>
           <UbField
             name="reason"
-            label={t('purchases.order.cancel.reason')}
-            placeholder={t('purchases.order.cancel.reasonPlaceholder')}
+            label={t(`${ns}.reason`)}
+            placeholder={t(`${ns}.reasonPlaceholder`)}
             required
           >
             {(field) => <UbTextArea {...field} maxLength={160} rows={2} />}

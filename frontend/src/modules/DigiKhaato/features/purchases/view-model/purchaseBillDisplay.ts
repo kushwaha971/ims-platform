@@ -9,7 +9,12 @@ import {
   type PurchaseBillPreset,
 } from '../constants/purchaseConstants';
 
-import type { PurchaseBill, PurchaseBillStatus, PurchaseBillTab } from '../types/purchase.types';
+import type {
+  PurchaseBill,
+  PurchaseBillLine,
+  PurchaseBillStatus,
+  PurchaseBillTab,
+} from '../types/purchase.types';
 
 /**
  * PUR-03 §7 — the badge tones: draft neutral, recorded info, part-paid
@@ -27,6 +32,8 @@ export const PURCHASE_STATUS_TONE: Record<PurchaseBillStatus, UbStatusBadgeTone>
   sent: 'info',
   billed: 'success',
   cancelled: 'neutral',
+  // Shop P0 — a debit note standing.
+  issued: 'info',
 };
 
 export const supplierName = (bill: Pick<PurchaseBill, 'party' | 'partySnapshot'>): string =>
@@ -145,4 +152,16 @@ export const shortLines = (details: Readonly<Record<string, unknown>> | undefine
       unit: String(line.unit_code ?? ''),
     };
   });
+};
+
+/**
+ * Shop P0 — what each line of a bill may still send back: its quantity less what
+ * standing debit notes already returned (the server's cap, shown before it refuses).
+ */
+export const returnableQty = (
+  line: Pick<PurchaseBillLine, 'lineNo' | 'qty'>,
+  returned: Readonly<Record<string, string>>
+): string => {
+  const left = Number(line.qty) - Number(returned[String(line.lineNo)] ?? 0);
+  return trimQty(String(Math.max(left, 0)));
 };

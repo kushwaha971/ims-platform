@@ -36,6 +36,7 @@ import {
 } from '../constants/purchaseConstants';
 import { usePurchaseBillList } from '../hooks/usePurchaseBillList';
 import {
+  DEBIT_NOTE_TABS,
   PURCHASE_ORDER_TABS,
   type PurchaseBillListRow,
   type PurchaseBillTab,
@@ -65,6 +66,16 @@ const LIST_COPY = {
     emptyFirst: 'purchases.order.empty.first',
     emptyFirstBody: 'purchases.order.empty.firstBody',
     tab: 'purchases.order.tab',
+  },
+  // Shop P0 — a debit note starts from its bill, so this list has no "New".
+  debit_note: {
+    home: ROUTES.DEBIT_NOTES,
+    tabs: DEBIT_NOTE_TABS,
+    title: 'purchases.debitNote.listTitle',
+    newLabel: null,
+    emptyFirst: 'purchases.debitNote.empty.first',
+    emptyFirstBody: 'purchases.debitNote.empty.firstBody',
+    tab: 'purchases.debitNote.tab',
   },
 } as const;
 
@@ -96,8 +107,15 @@ export function PurchaseBillsListPageContent({
   }, [debounced, filters.q, setQuery]);
 
   const columns = useMemo(
-    () => createPurchaseBillColumns({ t, today: list.today, isCards: tier === 'cards', order }),
-    [t, list.today, tier, order]
+    () =>
+      createPurchaseBillColumns({
+        t,
+        today: list.today,
+        isCards: tier === 'cards',
+        order,
+        note: kind === 'debit_note',
+      }),
+    [t, list.today, tier, order, kind]
   );
   const labels = useMemo<UbDataGridLabels>(
     () => ({
@@ -129,11 +147,12 @@ export function PurchaseBillsListPageContent({
       firstUse: {
         title: t(copy.emptyFirst),
         description: t(copy.emptyFirstBody),
-        action: canWrite ? (
-          <UbButton icon={<Plus className="h-4 w-4" aria-hidden />} onClick={newBill}>
-            {t(copy.newLabel)}
-          </UbButton>
-        ) : undefined,
+        action:
+          canWrite && copy.newLabel ? (
+            <UbButton icon={<Plus className="h-4 w-4" aria-hidden />} onClick={newBill}>
+              {t(copy.newLabel)}
+            </UbButton>
+          ) : undefined,
       },
       filtered: {
         title: t('purchases.empty.filtered'),
@@ -213,7 +232,7 @@ export function PurchaseBillsListPageContent({
       <UbPageHeader
         title={t(copy.title)}
         actions={
-          canWrite ? (
+          canWrite && copy.newLabel ? (
             <UbActionLink
               href={NEW_BILL}
               variant="primary"
@@ -245,7 +264,7 @@ export function PurchaseBillsListPageContent({
             close: t('common.action.close'),
           }}
         />
-        {list.totals && <PurchaseBillListStats totals={list.totals} order={order} />}
+        {list.totals && <PurchaseBillListStats totals={list.totals} order={order} kind={kind} />}
         <UbTabs<PurchaseBillTab>
           value={filters.tab}
           onValueChange={list.setTab}

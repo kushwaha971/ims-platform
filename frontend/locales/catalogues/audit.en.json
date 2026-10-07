@@ -33,6 +33,8 @@
   "audit.action.challan.updated": "Changed a draft delivery challan",
   "audit.action.challan.voided": "Voided a delivery challan",
   "audit.action.credit.limit.set": "Changed credit limit",
+  "audit.action.debit_note.issued": "Debit note issued",
+  "audit.action.debit_note.voided": "Debit note voided",
   "audit.action.expense.recorded": "Added expense",
   "audit.action.expense.voided": "Cancelled expense",
   "audit.action.export.requested": "Started an export",
