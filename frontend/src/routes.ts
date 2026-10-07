@@ -84,6 +84,7 @@ export const ROUTES = {
   REPORTS_SALES_REGISTER: '/reports/sales-register',
   REPORTS_PURCHASE_REGISTER: '/reports/purchase-register',
   REPORTS_GST_SUMMARY: '/reports/gst-summary',
+  REPORTS_PROFIT: '/reports/profit',
   SETTINGS: '/settings',
   SETTINGS_PLAN: '/settings/plan',
   SETTINGS_TEAM: '/settings/team',

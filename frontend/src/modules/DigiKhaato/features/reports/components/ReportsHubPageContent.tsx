@@ -13,6 +13,7 @@ import {
   Landmark,
   ReceiptText,
   ShoppingCart,
+  TrendingUp,
 } from 'lucide-react';
 
 import {
@@ -46,6 +47,7 @@ const ICONS: Readonly<Record<ReportCatalogueEntry['icon'], LucideIcon>> = {
   salesRegister: ReceiptText,
   purchaseRegister: ShoppingCart,
   gst: Landmark,
+  profit: TrendingUp,
 };
 
 /**

@@ -252,26 +252,13 @@ def purchase_series(span: _Span) -> list[Decimal]:
 
 def profit_series(span: _Span) -> tuple[list[Decimal], int]:
     """Gross profit per bucket by bill date, and how many lines had no cost to count."""
-    from apps.sales.models import SalesDocumentLine
+    # The profit report's own line arithmetic, so the graph and the report agree.
+    from apps.reports.selectors.profit import line_figures, sold_lines
 
-    lines = SalesDocumentLine.objects.filter(
-        document__tenant=span.tenant,
-        document__kind__in=SALE_KINDS,
-        document__document_date__gte=span.first,
-        document__document_date__lte=span.last,
-        qty__gt=0,
-    ).exclude(document__status__in=(DRAFT, VOID))
-    kept = F("qty") - Coalesce(F("returned_qty"), Decimal("0"))
-    margin = ExpressionWrapper(
-        F("taxable_value") * kept / F("qty") - F("unit_cost_snapshot") * kept,
-        output_field=_WIDE,
-    )
-    rows = _grouped(
-        lines.filter(unit_cost_snapshot__isnull=False),
-        "document__document_date",
-        margin,
-        span.group,
-    )
+    lines = sold_lines(tenant=span.tenant, date_from=span.first, date_to=span.last)
+    fig = line_figures()
+    margin = ExpressionWrapper(fig["costed_sale"] - fig["cost"], output_field=_WIDE)
+    rows = _grouped(lines, "document__document_date", margin, span.group)
     uncosted = lines.filter(unit_cost_snapshot__isnull=True).count()
     return _series(rows, span.starts), uncosted
 

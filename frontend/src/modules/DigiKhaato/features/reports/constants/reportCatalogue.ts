@@ -36,7 +36,8 @@ export interface ReportCatalogueEntry {
     | 'lowStock'
     | 'salesRegister'
     | 'purchaseRegister'
-    | 'gst';
+    | 'gst'
+    | 'profit';
 }
 
 export const REPORT_GROUPS: readonly ReportGroup[] = ['money', 'parties', 'stock', 'sales'];
@@ -105,6 +106,15 @@ export const REPORT_CATALOGUE: readonly ReportCatalogueEntry[] = [
     modules: ['reports', 'purchases'],
     permissions: ['reports.basic.read', 'purchases.bill.read'],
     icon: 'purchaseRegister',
+  },
+  {
+    // Shop item 1 — every figure is a cost or a margin, so it is the financial read's.
+    key: 'profit',
+    group: 'sales',
+    href: ROUTES.REPORTS_PROFIT,
+    modules: ['reports', 'sales'],
+    permissions: ['reports.basic.read', 'sales.invoice.read', 'reports.financial.read'],
+    icon: 'profit',
   },
   {
     key: 'gstSummary',

@@ -84,7 +84,7 @@ def replay(export: Any) -> tuple[tuple[ExportColumn, ...], Iterable[Any]]:
 
 def _load_builtin() -> None:
     """Import the modules that register exporters, so the job can find them."""
-    from apps.reports.views import aging, day_book, stock  # noqa: F401
+    from apps.reports.views import aging, day_book, profit, stock  # noqa: F401
 
 
 # ── Cell helpers (RPT-08 FR-9) ───────────────────────────────────────────────

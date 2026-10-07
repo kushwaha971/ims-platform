@@ -132,6 +132,8 @@ export const QUERIES = {
   // RPT-03/04/07 — registers and GST summary
   fetchGstSummary: 'taxReports/fetchGstSummary',
   fetchRegister: 'taxReports/fetchRegister',
+  // Shop item 1 — profit by item, customer, category or bill
+  fetchProfitReport: 'profitReport/fetch',
   // SAL-03 FR-5 — the customer share page's one read (no session)
   fetchPublicDocument: 'publicDocument/fetch',
   // ── A16 ── R33: the print letterhead moved to `src/print` (was sales').

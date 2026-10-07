@@ -20,6 +20,7 @@ from apps.reports.views.day_book import DayBookView
 from apps.reports.views.exports import ExportDetailView, ExportDownloadView
 from apps.reports.views.gst import GstSummaryView
 from apps.reports.views.module_reports import ModuleReportView
+from apps.reports.views.profit import ProfitReportView
 from apps.reports.views.registers import PurchaseRegisterView, SalesRegisterView
 from apps.reports.views.stock import StockSummaryReportView
 
@@ -28,6 +29,8 @@ urlpatterns = [
     path("sales-register", SalesRegisterView.as_view(), name="report-sales-register"),
     path("purchase-register", PurchaseRegisterView.as_view(), name="report-purchase-register"),
     path("gst-summary", GstSummaryView.as_view(), name="report-gst-summary"),
+    # docs/platform/15 §1.4 — profit by item, customer, category or bill, and the P&L.
+    path("profit", ProfitReportView.as_view(), name="report-profit"),
     path("exports/<uuid:export_id>", ExportDetailView.as_view(), name="report-export-detail"),
     path(
         "exports/<uuid:export_id>/download",

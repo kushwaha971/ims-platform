@@ -209,6 +209,8 @@ export const API_PATHS = {
   /** RPT-04. */
   REPORT_PURCHASE_REGISTER: '/reports/purchase-register',
   REPORT_GST_SUMMARY: '/reports/gst-summary',
+  /** Shop item 1 — profit by item, customer, category or bill, and the P&L. */
+  REPORT_PROFIT: '/reports/profit',
   REPORT_STOCK_SUMMARY: '/reports/stock-summary',
   REPORT_RECEIVABLES_AGING: '/reports/receivables-aging',
   /** RPT-05 — the payable side of the same report (W4-A). */

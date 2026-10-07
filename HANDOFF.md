@@ -4,7 +4,7 @@ Last updated: 5 Oct 2026 (§0 is live); older sections last revised 29 Sep 2026 
 
 ---
 
-## 0. RESUME HERE — live state (updated 5 Oct 2026; platform-shell refactor under way in the cloud Claude session, synced to the Mac by bundle)
+## 0. RESUME HERE — live state (updated 7 Oct 2026; work now runs directly on the Mac, on `dev`)
 
 **This section is the current state and wins over anything older below.** The local repo is the source of truth. Before changing anything:
 
@@ -97,6 +97,14 @@ If this section looks stale (the commits it names are not the latest), rebuild t
 - **QA data added for the refactor (cloud dev DB):** `script-owner@e2e.test` (8 businesses, incl. "Script Made Traders" at step 0), `abandoned-then-staff@e2e.test` (staff at Verma Finance, owner of the half-made "Asha half-made shop"), `draft-owner@e2e.test` ("Draft Kirana" stopped at step 2). Passwords are in the session scratchpad only.
 - Not built in lending yet (FRD): agent role and route scoping, late fees and waivers, write-off/cancel, documents (receipt print, statement, closure letter), reports, settings screen, rate-ceiling warning.
 - Paused until the owner asks: F06 remainder, F07–F13, B17, B18, E01–E04, DUE-04/05/06 in `docs/platform/progress/wave-b-track-*.md`.
+
+### 0.4b Shop competitor gaps (CONTINUE-PROMPT §4 order; one at a time, build → browser QA → fix → commit)
+
+- [x] 7 Oct: the Mac's `dev` was moved onto the cloud history at `9e2b158` (price lists) without touching a file — the working tree already matched all 3,645 cloud checksums (`~/digikhaato/sync/md5-9e2b158.txt`), so `git reset` onto the fetched `cloud-dev-pricelists-20261006.bundle` was enough. The Mac dev DB then needed `migrate` (platform 0014–0016, inventory 0006).
+- [x] **Shop item 1, profit and loss** — `GET /reports/profit?group=item|party|category|bill&date_from&date_to&ordering&q&page[&format=csv]` (`apps/reports/selectors/profit.py`, `views/profit.py`; `reports.financial.read` + `reports.basic.read` + `sales.invoice.read`; export via the RPT-08 exporter `profit`). `meta.totals` is the period P&L over every bill: sales before GST, cost of goods, gross profit, margin, uncosted lines, and expenses + net profit only when the expenses module is on. A row with no known cost sends `cost`/`profit` null, never ₹0.00. Value-only credit notes now come off the sale in all three profit figures (report, dashboard graph, bill's own profit panel) — one rule, a test holds them equal. Screen `/reports/profit` (hub row under Sales and GST; View dropdown, period, grid sort, search, rows open item/khata/bill). Tests: `test_profit.py` 7; jest `ProfitReportPageContent.test.tsx`, `profitDisplay.test.ts`. Live QA: `node e2e/profit.mjs` (set `PW_CHROMIUM` to `~/Library/Caches/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-mac-arm64/chrome-headless-shell` — the pinned Playwright browser is not installed on the Mac).
+- [ ] Shop item 2: GSTR-1 / GSTR-3B JSON export. Then 3 sales/purchase orders, 4 delivery challans, 5 purchase returns, 6 multiple units, 7 batch/expiry, 8 serial numbers, 9 POS.
+- Mac notes: `next build` hangs inside Claude's sandbox (Turbopack workers) and pytest needs the local Postgres socket — run both outside it. Write scratch files under `/tmp/claude-501`, not `$TMPDIR`, when a command runs outside the sandbox.
+- Open question to the owner (asked 7 Oct): revert the Verma Finance QA changes in the dev DB or keep them.
 
 ### 0.5 Known issues and environment notes
 

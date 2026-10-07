@@ -14,7 +14,11 @@ is shown without a profit rather than as pure profit, and the total says how
 many lines it could not cost, so a figure is never better than its data.
 
 Returns are netted: a line half returned on a credit note counts the half that
-stayed sold. Cost and profit are visible only with `reports.financial.read`
+stayed sold, and a value-only credit against a line (A15, "₹50 off for the
+dent") comes off its sale value, because it moves no quantity and so
+`returned_qty` never sees it. The reports' profit (`apps.reports.selectors.
+profit`) and the dashboard's use the same rule, and a test holds all three to
+one figure. Cost and profit are visible only with `reports.financial.read`
 (INV-08 EC-4) — the route enforces it.
 """
 
@@ -34,8 +38,27 @@ def _pct(profit: Decimal, sale: Decimal) -> str | None:
     return f"{(profit * HUNDRED / sale).quantize(Decimal('0.1'))}"
 
 
+def _value_credits(document: Any) -> dict[Any, Decimal]:
+    """Taxable value credited against each line by live value-only credit notes."""
+    from django.db.models import Sum
+
+    from apps.sales.models import SalesDocumentLine
+
+    rows = (
+        SalesDocumentLine.objects.filter(
+            against_line__document=document,
+            credit_mode="value",
+            document__status__in=("issued", "applied"),
+        )
+        .values("against_line_id")
+        .annotate(total=Sum("taxable_value"))
+    )
+    return {row["against_line_id"]: row["total"] for row in rows}
+
+
 def invoice_profit(document: Any) -> dict:
     """`GET /sales/invoices/{id}/profit`."""
+    credits = _value_credits(document)
     rows: list[dict] = []
     sale_total = cost_total = ZERO
     uncosted = 0
@@ -43,7 +66,7 @@ def invoice_profit(document: Any) -> dict:
         qty = Decimal(line.qty)
         kept = qty - Decimal(line.returned_qty or 0)
         share = kept / qty if qty else ZERO
-        sale = q2(Decimal(line.taxable_value) * share)
+        sale = q2(Decimal(line.taxable_value) * share - credits.get(line.id, ZERO))
         unit_cost = line.unit_cost_snapshot
         if unit_cost is None:
             cost = profit = None

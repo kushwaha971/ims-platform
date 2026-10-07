@@ -333,6 +333,7 @@ describe('the reports hub catalogue', () => {
       'payablesAging',
       'salesRegister',
       'purchaseRegister',
+      'profit',
       'gstSummary',
     ]);
     const inventoryOff = visibleReports(
@@ -357,7 +358,12 @@ describe('the reports hub catalogue', () => {
         .filter((entry) => entry.group === 'sales')
         .map((entry) => entry.key);
 
-    expect(keys(() => true)).toEqual(['salesRegister', 'purchaseRegister', 'gstSummary']);
+    expect(keys(() => true)).toEqual([
+      'salesRegister',
+      'purchaseRegister',
+      'profit',
+      'gstSummary',
+    ]);
     expect(keys((code) => code !== 'reports.financial.read')).toEqual([
       'salesRegister',
       'purchaseRegister',
@@ -366,7 +372,11 @@ describe('the reports hub catalogue', () => {
       'purchaseRegister',
       'gstSummary',
     ]);
-    expect(keys((code) => code !== 'purchases.bill.read')).toEqual(['salesRegister', 'gstSummary']);
+    expect(keys((code) => code !== 'purchases.bill.read')).toEqual([
+      'salesRegister',
+      'profit',
+      'gstSummary',
+    ]);
     expect(keys((code) => code !== 'reports.basic.read')).toEqual(['gstSummary']);
     expect(
       keys(
@@ -379,7 +389,7 @@ describe('the reports hub catalogue', () => {
         () => true,
         (module) => module !== 'purchases'
       )
-    ).toEqual(['salesRegister', 'gstSummary']);
+    ).toEqual(['salesRegister', 'profit', 'gstSummary']);
     expect(
       keys(
         () => true,
