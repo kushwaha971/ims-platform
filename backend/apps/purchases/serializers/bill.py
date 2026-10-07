@@ -147,6 +147,7 @@ class BillReadSerializer(serializers.ModelSerializer):
     voided_by = serializers.SerializerMethodField()
     ledger_entry = serializers.SerializerMethodField()
     payments = serializers.SerializerMethodField()
+    links = serializers.SerializerMethodField()
 
     class Meta:
         model = PurchaseDocument
@@ -191,9 +192,28 @@ class BillReadSerializer(serializers.ModelSerializer):
             "voided_at",
             "voided_by",
             "void_reason",
+            "links",
             "created_at",
             "updated_at",
         )
+
+    def get_links(self, obj: PurchaseDocument) -> dict:
+        """Shop item 3 — an order names its bill; a bill names the order it came from."""
+        meta = obj.meta or {}
+
+        def ref(document_id: Any) -> dict | None:
+            if not document_id:
+                return None
+            row = (
+                PurchaseDocument.objects.filter(tenant_id=obj.tenant_id, pk=document_id)
+                .values("id", "kind", "number", "status")
+                .first()
+            )
+            return None if row is None else {**row, "id": str(row["id"])}
+
+        if obj.kind == "purchase_order":
+            return {"bill": ref(meta.get("bill_id")), "cancel_reason": meta.get("cancel_reason")}
+        return {"order": ref(meta.get("po_id"))}
 
     def get_party(self, obj: PurchaseDocument) -> dict | None:
         party = obj.party

@@ -158,7 +158,9 @@ def record_bill(
     tenant = ctx.tenant
     # L1 before the draft (`parties.services.balance.lock_party_of`).
     early_party = lock_party_of(
-        tenant=tenant, rows=PurchaseDocument.objects.filter(tenant=tenant), pk=document_id
+        tenant=tenant,
+        rows=PurchaseDocument.objects.filter(tenant=tenant, kind="purchase_bill"),
+        pk=document_id,
     )
     document = lock_document(tenant, document_id)
     if document.status != DocumentStatus.DRAFT:

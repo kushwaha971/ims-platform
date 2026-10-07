@@ -12,7 +12,13 @@ import type {
   DuplicateSupplierInvoice,
   PurchaseBillEnvelope,
   PurchaseBillListPage,
+  PurchaseKind,
 } from '../types/purchase.types';
+
+/** Shop item 3 — a thunk's argument names its kind when it is an order's. */
+type ById = string | { readonly id: string; readonly kind: PurchaseKind };
+const byId = (arg: ById): { readonly id: string; readonly kind: PurchaseKind } =>
+  typeof arg === 'string' ? { id: arg, kind: 'purchase_bill' } : arg;
 
 /**
  * Part 19 §19.3.3 — one service call each, and a catch that normalises.
@@ -28,22 +34,24 @@ type Reject = { rejectValue: ApiErrorShape };
 /** QUERY. PUR-03 — one page of the list with its totals and tab counts. */
 export const fetchPurchaseBillList = createAsyncThunk<
   PurchaseBillListPage,
-  PurchaseBillListQuery,
+  PurchaseBillListQuery & { readonly kind?: PurchaseKind },
   Reject
->('purchaseBillList/fetchPurchaseBillList', async (filters, { signal, rejectWithValue }) => {
+>('purchaseBillList/fetchPurchaseBillList', async (arg, { signal, rejectWithValue }) => {
+  const { kind = 'purchase_bill', ...filters } = arg;
   try {
-    return await (await service()).listPurchaseBills(filters, signal);
+    return await (await service()).listPurchaseBills(filters, signal, kind);
   } catch (error) {
     return rejectWithValue(toApiError(error, 'purchases.list.error.title'));
   }
 });
 
 /** QUERY. PUR-01 FR-9 — one bill, for the detail page and for editing a draft. */
-export const fetchPurchaseBill = createAsyncThunk<PurchaseBillEnvelope, string, Reject>(
+export const fetchPurchaseBill = createAsyncThunk<PurchaseBillEnvelope, ById, Reject>(
   'purchaseBill/fetchPurchaseBill',
-  async (id, { signal, rejectWithValue }) => {
+  async (arg, { signal, rejectWithValue }) => {
+    const { id, kind } = byId(arg);
     try {
-      return await (await service()).getPurchaseBill(id, signal);
+      return await (await service()).getPurchaseBill(id, signal, kind);
     } catch (error) {
       return rejectWithValue(toApiError(error, 'purchases.detail.error.title'));
     }
@@ -51,6 +59,8 @@ export const fetchPurchaseBill = createAsyncThunk<PurchaseBillEnvelope, string, 
 );
 
 export interface SavePurchaseDraftArg {
+  /** Shop item 3 — absent is a bill. */
+  readonly kind?: PurchaseKind;
   readonly id: string | null;
   readonly version: number | null;
   readonly body: PurchaseBillWireBody;
@@ -63,12 +73,12 @@ export const savePurchaseBillDraft = createAsyncThunk<
   PurchaseBillEnvelope,
   SavePurchaseDraftArg,
   Reject
->('purchaseBillEditor/savePurchaseBillDraft', async ({ id, version, body, quiet }, api) => {
+>('purchaseBillEditor/savePurchaseBillDraft', async ({ id, version, body, quiet, kind }, api) => {
   try {
     const client = await service();
     return id
-      ? await client.updatePurchaseBill(id, { ...body, version }, { quiet })
-      : await client.createPurchaseBill(body, { quiet });
+      ? await client.updatePurchaseBill(id, { ...body, version }, { quiet, kind })
+      : await client.createPurchaseBill(body, { quiet, kind });
   } catch (error) {
     return api.rejectWithValue(toApiError(error, 'purchases.editor.error.save'));
   }
@@ -100,11 +110,12 @@ export const recordPurchaseBill = createAsyncThunk<
 );
 
 /** MUTATION. FR-8 — drafts only; a recorded bill is voided. */
-export const deletePurchaseBillDraft = createAsyncThunk<string, string, Reject>(
+export const deletePurchaseBillDraft = createAsyncThunk<string, ById, Reject>(
   'purchaseBillEditor/deletePurchaseBillDraft',
-  async (id, { rejectWithValue }) => {
+  async (arg, { rejectWithValue }) => {
+    const { id, kind } = byId(arg);
     try {
-      await (await service()).deletePurchaseBill(id);
+      await (await service()).deletePurchaseBill(id, kind);
       return id;
     } catch (error) {
       return rejectWithValue(toApiError(error, 'purchases.editor.error.delete'));
@@ -122,6 +133,30 @@ export const voidPurchaseBill = createAsyncThunk<
     return await (await service()).voidPurchaseBill(id, reason);
   } catch (error) {
     return rejectWithValue(toApiError(error, 'purchases.void.error'));
+  }
+});
+
+/**
+ * MUTATION. Shop item 3 — an order's moves: `send` (numbered), `cancel` (with the
+ * reason) and `create-bill`, whose payload is the new DRAFT bill.
+ */
+export const movePurchaseOrder = createAsyncThunk<
+  PurchaseBillEnvelope,
+  {
+    readonly id: string;
+    readonly verb: 'send' | 'cancel' | 'create-bill';
+    readonly version?: number;
+    readonly reason?: string;
+  },
+  Reject
+>('purchaseBill/movePurchaseOrder', async ({ id, verb, version, reason }, { rejectWithValue }) => {
+  try {
+    const body: PurchaseBillWireBody = {};
+    if (version !== undefined) body.version = version;
+    if (reason) body.reason = reason;
+    return await (await service()).movePurchaseOrder(id, verb, body);
+  } catch (error) {
+    return rejectWithValue(toApiError(error, 'purchases.order.error.move'));
   }
 });
 

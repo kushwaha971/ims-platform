@@ -19,10 +19,10 @@ Compared with Vyapar (the closest Indian small-business product), Zoho Inventory
 | GST invoice, bill of supply | ✓ | ✓ | ✓ | |
 | Estimates / quotations | ✓ | ✓ | ✓ | |
 | Credit notes / sale returns | ✓ | ✓ | ✓ | |
-| Sales orders | ✗ | ✓ | ✓ | |
+| Sales orders | ✓ | ✓ | ✓ | 7 Oct: `/sales/orders` — confirm (SO/ number), convert to invoice, cancel with a reason; the whole order at once (no backorders) |
 | Delivery challans | ✗ | ✓ | ✓ | |
 | Purchase bills | ✓ | ✓ | ✓ | |
-| Purchase orders → bill | ✗ | ✓ | ✓ | |
+| Purchase orders → bill | ✓ | ✓ | ✓ | 7 Oct: `/purchases/orders` — send (PO/ number, expected date), Create bill (a draft bill with the order's lines), cancel; no goods-received notes or part receipts yet |
 | Purchase returns / debit notes | ✗ | ✓ | ✓ | |
 | Payments in and out, linked to bills | ✓ | ✓ | ✓ | |
 | Khata (you gave / you got), corrections that stay visible | ✓ | ◐ | ◐ | our strongest area: correct balances, reversals kept, aging |

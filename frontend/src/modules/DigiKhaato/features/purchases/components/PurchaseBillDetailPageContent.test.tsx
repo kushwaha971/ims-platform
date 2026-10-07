@@ -32,6 +32,7 @@ const service = jest.requireMock('../api/purchaseBillService') as {
 
 const BILL: PurchaseBill = {
   id: 'b1',
+  kind: 'purchase_bill',
   number: 'PB/26-27/0007',
   fyLabel: '2026-27',
   status: 'recorded',
@@ -99,6 +100,7 @@ const BILL: PurchaseBill = {
   voidedAt: null,
   voidedBy: null,
   voidReason: null,
+  links: { bill: null, order: null, cancelReason: null },
   updatedAt: '2026-09-18T10:00:00Z',
 };
 
@@ -284,5 +286,52 @@ it('says how much stays as advance when a paid bill is voided (PUR-02 BR-4)', as
   expect(store.getState().snackbar.params).toEqual({
     number: 'PB/26-27/0007',
     amount: '₹600.00',
+  });
+});
+
+/**
+ * Shop item 3 — the same page shows a purchase order: Create bill and Cancel order
+ * on a sent order, no Void, no "To pay" (an order owes nothing), and the order is
+ * asked for on its own route — so a bill route can never be shown one.
+ */
+describe('a purchase order', () => {
+  const ORDER: PurchaseBill = {
+    ...BILL,
+    id: 'o1',
+    kind: 'purchase_order',
+    number: 'PO/26-27/0001',
+    status: 'sent',
+    amountDue: '0.00',
+    supplierInvoiceNumber: null,
+  };
+
+  it('offers Create bill and Cancel order, never Void or what is owed', async () => {
+    signIn(OWNER);
+    service.getPurchaseBill.mockResolvedValue(envelope(ORDER));
+    renderWithProviders(<PurchaseBillDetailPageContent id="o1" kind="purchase_order" />);
+    expect(await screen.findByTestId('purchase-order-create-bill')).toBeInTheDocument();
+    expect(screen.getByTestId('purchase-order-cancel')).toBeInTheDocument();
+    expect(screen.queryByTestId('purchase-void')).not.toBeInTheDocument();
+    expect(screen.queryByText('To pay')).not.toBeInTheDocument();
+    expect(screen.getByText('Estimated total')).toBeInTheDocument();
+    expect(service.getPurchaseBill).toHaveBeenCalledWith('o1', expect.anything(), 'purchase_order');
+  });
+
+  it('says what it was billed as, and offers no second bill while that bill stands', async () => {
+    signIn(OWNER);
+    service.getPurchaseBill.mockResolvedValue(
+      envelope({
+        ...ORDER,
+        status: 'billed',
+        links: {
+          bill: { id: 'b9', kind: 'purchase_bill', number: 'PB/26-27/0009', status: 'recorded' },
+          order: null,
+          cancelReason: null,
+        },
+      })
+    );
+    renderWithProviders(<PurchaseBillDetailPageContent id="o1" kind="purchase_order" />);
+    expect(await screen.findByText('Billed as PB/26-27/0009')).toBeInTheDocument();
+    expect(screen.queryByTestId('purchase-order-create-bill')).not.toBeInTheDocument();
   });
 });

@@ -16,6 +16,8 @@ import {
 import { fetchPurchaseBill, voidPurchaseBill } from '../redux/purchaseBillThunk';
 import { releasedTotal } from '../view-model/purchaseToasts';
 
+import type { PurchaseKind } from '../types/purchase.types';
+
 /**
  * PUR-01 FR-9 / PUR-04 — the detail page's data and its one act, the void.
  * The void's 409s (`insufficient_stock`, `document_already_void`) are shown IN
@@ -30,7 +32,10 @@ export interface UsePurchaseBillDetailResult extends PurchaseBillDetailState {
   readonly clearVoidError: () => void;
 }
 
-export const usePurchaseBillDetail = (id: string): UsePurchaseBillDetailResult => {
+export const usePurchaseBillDetail = (
+  id: string,
+  kind: PurchaseKind = 'purchase_bill'
+): UsePurchaseBillDetailResult => {
   const dispatch = useAppDispatch();
   const detail = useAppSelector(selectPurchaseBillDetail);
   const isImpaired = useAppSelector(selectNetworkImpaired);
@@ -40,15 +45,15 @@ export const usePurchaseBillDetail = (id: string): UsePurchaseBillDetailResult =
 
   useEffect(() => {
     if (!canRead) return undefined;
-    const promise = dispatch(fetchPurchaseBill(id));
+    const promise = dispatch(fetchPurchaseBill({ id, kind }));
     return () => promise.abort();
-  }, [dispatch, id, canRead]);
+  }, [dispatch, id, canRead, kind]);
 
   useEffect(() => {
     if (!detail.stale || isImpaired || !canRead) return undefined;
-    const promise = dispatch(fetchPurchaseBill(id));
+    const promise = dispatch(fetchPurchaseBill({ id, kind }));
     return () => promise.abort();
-  }, [detail.stale, isImpaired, canRead, dispatch, id]);
+  }, [detail.stale, isImpaired, canRead, dispatch, id, kind]);
 
   const voidBill = useCallback(
     async (reason: string): Promise<boolean> => {

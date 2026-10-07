@@ -108,7 +108,9 @@ def void_bill(*, ctx: Ctx, document_id: Any, reason: Any) -> dict:
     # L1 before the bill (`parties.services.balance.lock_party_of`): bill void
     # took bill → party while supplier-payment void takes party → bills.
     party = lock_party_of(
-        tenant=ctx.tenant, rows=PurchaseDocument.objects.filter(tenant=ctx.tenant), pk=document_id
+        tenant=ctx.tenant,
+        rows=PurchaseDocument.objects.filter(tenant=ctx.tenant, kind="purchase_bill"),
+        pk=document_id,
     )
     document = lock_document(ctx.tenant, document_id)
     if document.status == DocumentStatus.VOID:

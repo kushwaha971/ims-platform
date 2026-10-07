@@ -564,6 +564,8 @@ export const INVALIDATION: TInvalidationMap = {
   // reducer), which is the one `patch`.
   savePurchaseBillDraft: { stale: ['purchaseBillList'] },
   deletePurchaseBillDraft: { stale: ['purchaseBillList'] },
+  // Shop item 3 — the orders list moves; the bills list gains a draft on create-bill.
+  movePurchaseOrder: { stale: ['purchaseBillList'] },
   // "Paid now" (PUR-02) writes a PAYOUT voucher with the record, and a void
   // releases supplier payments as advances: the payments list is stale for both.
   recordPurchaseBill: {

@@ -10,12 +10,18 @@ import { selectNetworkImpaired } from 'src/redux/slice/networkSlice';
 import { selectTenantTimezone } from 'src/redux/slice/sessionSlice';
 import { todayInTenantTz } from 'src/utils/dates';
 
+import { PURCHASE_BILL_TABS_ORDER } from '../constants/purchaseConstants';
 import {
   purchaseBillFiltersChanged,
   selectPurchaseBillList,
   type PurchaseBillListState,
 } from '../redux/purchaseBillListSlice';
 import { fetchPurchaseBillList } from '../redux/purchaseBillThunk';
+import {
+  PURCHASE_ORDER_TABS,
+  type PurchaseBillTab,
+  type PurchaseKind,
+} from '../types/purchase.types';
 import {
   purchaseFiltersFromQuery,
   purchaseQueryFromFilters,
@@ -25,7 +31,6 @@ import {
 
 import type { PurchaseBillListQuery } from '../api/purchaseBillService';
 import type { PurchaseBillPreset } from '../constants/purchaseConstants';
-import type { PurchaseBillTab } from '../types/purchase.types';
 
 /**
  * Part 19 §19.4 — everything the purchase bills list does, so the page only
@@ -46,7 +51,9 @@ export interface UsePurchaseBillListResult extends Omit<PurchaseBillListState, '
   readonly refetch: () => void;
 }
 
-export const usePurchaseBillList = (): UsePurchaseBillListResult => {
+export const usePurchaseBillList = (
+  kind: PurchaseKind = 'purchase_bill'
+): UsePurchaseBillListResult => {
   const dispatch = useAppDispatch();
   const router = useRouter();
   const search = useSearchParams();
@@ -62,11 +69,17 @@ export const usePurchaseBillList = (): UsePurchaseBillListResult => {
   // Keyed on the query STRING — `useSearchParams()` is a new object every render.
   const queryString = search?.toString() ?? '';
   const filters = useMemo(
-    () => purchaseFiltersFromQuery(new URLSearchParams(queryString), today),
-    [queryString, today]
+    () =>
+      purchaseFiltersFromQuery(
+        new URLSearchParams(queryString),
+        today,
+        kind === 'purchase_order' ? PURCHASE_ORDER_TABS : PURCHASE_BILL_TABS_ORDER
+      ),
+    [queryString, today, kind]
   );
   const query = useMemo<PurchaseBillListQuery>(
     () => ({
+      kind,
       tab: filters.tab,
       dateFrom: filters.dateFrom,
       dateTo: filters.dateTo,
@@ -74,7 +87,7 @@ export const usePurchaseBillList = (): UsePurchaseBillListResult => {
       q: filters.q,
       page: filters.page,
     }),
-    [filters]
+    [filters, kind]
   );
 
   useEffect(() => {

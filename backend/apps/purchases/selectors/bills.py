@@ -8,7 +8,7 @@ from django.db.models import Count, Q, QuerySet, Sum, Value
 from django.db.models.functions import Coalesce
 
 from apps.common.money import ZERO
-from apps.purchases.constants import NOT_PAYABLE_STATUSES, TAB_STATUSES
+from apps.purchases.constants import BILL_KINDS, NOT_PAYABLE_STATUSES, TAB_STATUSES
 from apps.purchases.models import PurchaseDocument
 
 #: PUR-03 §10 — the ordering whitelist; anything else is 400.
@@ -16,30 +16,34 @@ ORDERING_FIELDS = ("document_date", "number", "grand_total", "amount_due", "due_
 DEFAULT_ORDERING = ("-document_date", "-created_at", "-id")
 
 
-def list_bills(*, tenant: Any) -> QuerySet:
+def list_bills(*, tenant: Any, kinds: tuple[str, ...] = BILL_KINDS) -> QuerySet:
     return (
         PurchaseDocument.objects.for_tenant(tenant)
+        .filter(kind__in=kinds)
         .select_related("party", "created_by")
         .order_by(*DEFAULT_ORDERING)
     )
 
 
-def detail_queryset(*, tenant: Any) -> QuerySet:
+def detail_queryset(*, tenant: Any, kinds: tuple[str, ...] = BILL_KINDS) -> QuerySet:
     return (
         PurchaseDocument.objects.for_tenant(tenant)
+        .filter(kind__in=kinds)
         .select_related("party", "created_by", "voided_by", "tenant")
         .prefetch_related("lines", "lines__item")
     )
 
 
-def apply_tab(queryset: QuerySet, tab: str) -> QuerySet:
-    return queryset.filter(status__in=TAB_STATUSES.get(tab, TAB_STATUSES["all"]))
+def apply_tab(queryset: QuerySet, tab: str, tabs: dict | None = None) -> QuerySet:
+    tabs = tabs or TAB_STATUSES
+    return queryset.filter(status__in=tabs.get(tab, tabs["all"]))
 
 
-def tab_counts(queryset: QuerySet) -> dict[str, int]:
+def tab_counts(queryset: QuerySet, tabs: dict | None = None) -> dict[str, int]:
     """FR-3 `meta.counts` — one grouped query over the filtered set WITHOUT the tab."""
     aggregates = {
-        tab: Count("id", filter=Q(status__in=statuses)) for tab, statuses in TAB_STATUSES.items()
+        tab: Count("id", filter=Q(status__in=statuses))
+        for tab, statuses in (tabs or TAB_STATUSES).items()
     }
     return queryset.order_by().aggregate(**aggregates)
 

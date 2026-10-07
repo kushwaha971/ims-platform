@@ -39,6 +39,7 @@ export function PurchaseBillHeaderSection({
   disabled,
   onPickSupplier,
   onInvoiceNumberBlur,
+  order = false,
 }: Readonly<{
   form: UseFormReturn<PurchaseBillFormValues>;
   today: string;
@@ -48,6 +49,8 @@ export function PurchaseBillHeaderSection({
   disabled: boolean;
   onPickSupplier: (id: string, name: string) => void;
   onInvoiceNumberBlur: () => void;
+  /** Shop item 3 — an order has no supplier bill yet, no ITC, and an "Expected by" date. */
+  order?: boolean;
 }>): React.JSX.Element {
   const { t } = useTranslation();
   const { watch, setValue } = form;
@@ -57,11 +60,13 @@ export function PurchaseBillHeaderSection({
   const creditDays = watch('partyCreditDays');
   const itcEligible = watch('itcEligible');
   const reverseCharge = watch('reverseCharge');
-  const dueHint = partyId
-    ? t('purchases.editor.dueDefault', {
-        date: formatBusinessDate(defaultDueOn(documentDate, creditDays)),
-      })
-    : undefined;
+  const dueHint = order
+    ? t('purchases.order.expectedHint')
+    : partyId
+      ? t('purchases.editor.dueDefault', {
+          date: formatBusinessDate(defaultDueOn(documentDate, creditDays)),
+        })
+      : undefined;
 
   return (
     <UbStack gap={3} className="p-4">
@@ -85,54 +90,66 @@ export function PurchaseBillHeaderSection({
         )}
       </UbField>
       <UbGrid columns={{ base: 1, sm: 2 }} gap={3}>
-        <UbStack gap={1}>
-          <UbField
-            name="supplierInvoiceNumber"
-            label={t('purchases.editor.supplierInvoice')}
-            placeholder={t('purchases.editor.supplierInvoicePlaceholder')}
-          >
-            {(field) => (
-              <UbTextInput
-                {...field}
-                maxLength={SUPPLIER_INVOICE_MAX}
-                autoComplete="off"
-                disabled={disabled}
-                onBlur={() => {
-                  field.onBlur();
-                  onInvoiceNumberBlur();
-                }}
-              />
-            )}
-          </UbField>
-          {duplicate && (
-            <UbText variant="caption" tone="warning" role="status" data-testid="duplicate-warning">
-              {t('purchases.editor.duplicate', {
-                number: duplicate.number,
-                date: formatBusinessDate(duplicate.documentDate),
-              })}{' '}
-              <UbLink href={`${ROUTES.PURCHASE_BILLS}/${duplicate.id}`} variant="caption">
-                {t('purchases.editor.duplicateOpen')}
-              </UbLink>
-            </UbText>
-          )}
-        </UbStack>
+        {!order && (
+          <>
+            <UbStack gap={1}>
+              <UbField
+                name="supplierInvoiceNumber"
+                label={t('purchases.editor.supplierInvoice')}
+                placeholder={t('purchases.editor.supplierInvoicePlaceholder')}
+              >
+                {(field) => (
+                  <UbTextInput
+                    {...field}
+                    maxLength={SUPPLIER_INVOICE_MAX}
+                    autoComplete="off"
+                    disabled={disabled}
+                    onBlur={() => {
+                      field.onBlur();
+                      onInvoiceNumberBlur();
+                    }}
+                  />
+                )}
+              </UbField>
+              {duplicate && (
+                <UbText
+                  variant="caption"
+                  tone="warning"
+                  role="status"
+                  data-testid="duplicate-warning"
+                >
+                  {t('purchases.editor.duplicate', {
+                    number: duplicate.number,
+                    date: formatBusinessDate(duplicate.documentDate),
+                  })}{' '}
+                  <UbLink href={`${ROUTES.PURCHASE_BILLS}/${duplicate.id}`} variant="caption">
+                    {t('purchases.editor.duplicateOpen')}
+                  </UbLink>
+                </UbText>
+              )}
+            </UbStack>
+            <UbField
+              name="supplierInvoiceDate"
+              label={t('purchases.editor.supplierInvoiceDate')}
+              placeholder={t('purchases.editor.datePlaceholder')}
+            >
+              {(field) => (
+                <UbDateInput
+                  id={field.id}
+                  value={(field.value as string) || null}
+                  onChange={(next) => field.onChange(next ?? '')}
+                  max={today}
+                  placeholder={field.placeholder}
+                  disabled={disabled}
+                />
+              )}
+            </UbField>
+          </>
+        )}
         <UbField
-          name="supplierInvoiceDate"
-          label={t('purchases.editor.supplierInvoiceDate')}
-          placeholder={t('purchases.editor.datePlaceholder')}
+          name="documentDate"
+          label={t(order ? 'purchases.order.date' : 'purchases.editor.billDate')}
         >
-          {(field) => (
-            <UbDateInput
-              id={field.id}
-              value={(field.value as string) || null}
-              onChange={(next) => field.onChange(next ?? '')}
-              max={today}
-              placeholder={field.placeholder}
-              disabled={disabled}
-            />
-          )}
-        </UbField>
-        <UbField name="documentDate" label={t('purchases.editor.billDate')}>
           {(field) => (
             <UbDateInput
               id={field.id}
@@ -145,7 +162,7 @@ export function PurchaseBillHeaderSection({
         </UbField>
         <UbField
           name="dueOn"
-          label={t('purchases.editor.dueOn')}
+          label={t(order ? 'purchases.order.expectedBy' : 'purchases.editor.dueOn')}
           placeholder={t('purchases.editor.datePlaceholder')}
           hint={dueHint}
         >
@@ -162,7 +179,7 @@ export function PurchaseBillHeaderSection({
         </UbField>
       </UbGrid>
       <UbGrid columns={{ base: 1, sm: 2 }} gap={3}>
-        {regular && (
+        {regular && !order && (
           <UbSwitch
             checked={itcEligible}
             onCheckedChange={(checked) => setValue('itcEligible', checked, { shouldDirty: true })}

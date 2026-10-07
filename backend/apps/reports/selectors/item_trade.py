@@ -91,7 +91,7 @@ def _purchases(
     from apps.purchases.models import PurchaseDocumentLine
 
     lines = PurchaseDocumentLine.objects.filter(
-        document__tenant=tenant, item_id=item_id, qty__gt=0
+        document__tenant=tenant, document__kind="purchase_bill", item_id=item_id, qty__gt=0
     ).exclude(document__status__in=(DRAFT, VOID))
     if date_from:
         lines = lines.filter(document__document_date__gte=date_from)

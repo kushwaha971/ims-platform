@@ -178,6 +178,17 @@ export const SHOP_APP: AppManifest = {
       section: 'purchases',
       order: 1,
     },
+    // Shop item 3 — what was asked of a supplier, before the bill came.
+    {
+      key: 'purchaseOrders',
+      icon: ClipboardList,
+      labelId: 'nav.purchaseOrders',
+      href: ROUTES.PURCHASE_ORDERS,
+      module: 'purchases',
+      permission: 'purchases.bill.read',
+      section: 'purchases',
+      order: 2,
+    },
     // EXP-01 — where Zoho files it: under Purchases.
     {
       key: 'expenses',
@@ -187,7 +198,7 @@ export const SHOP_APP: AppManifest = {
       module: 'expenses',
       permission: 'expenses.expense.read',
       section: 'purchases',
-      order: 2,
+      order: 3,
     },
     // INV-01…INV-08 — items, adjustments, the stock summary and low stock.
     {

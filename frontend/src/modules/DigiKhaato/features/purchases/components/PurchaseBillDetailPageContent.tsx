@@ -3,8 +3,9 @@
 import { useState } from 'react';
 
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 
-import { Ban, Pencil } from 'lucide-react';
+import { Ban, FileOutput, Pencil, XCircle } from 'lucide-react';
 
 import {
   UbActionLink,
@@ -24,6 +25,7 @@ import {
   UbStatusBanner,
   UbText,
 } from 'src/design-system';
+import { useAppDispatch } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { ROUTES } from 'src/routes';
 import { formatBusinessDate, formatTimestamp } from 'src/utils/dates';
@@ -32,7 +34,10 @@ import { taxRateLabel } from 'src/utils/taxRateLabel';
 
 import { RecordPaymentButton } from '../../payments/components/RecordPaymentButton';
 import { usePurchaseBillDetail } from '../hooks/usePurchaseBillDetail';
+import { movePurchaseOrder } from '../redux/purchaseBillThunk';
 import { PURCHASE_STATUS_TONE, supplierName, trimQty } from '../view-model/purchaseBillDisplay';
+
+import type { PurchaseBill, PurchaseKind } from '../types/purchase.types';
 
 /* The void form (RHF, the resolver, the schema) loads with the tap that opens it. */
 const VoidDialogLazy = dynamic(
@@ -40,7 +45,20 @@ const VoidDialogLazy = dynamic(
   { ssr: false }
 );
 
+const OrderCancelDialogLazy = dynamic(
+  () => import('./PurchaseOrderCancelDialog').then((m) => m.PurchaseOrderCancelDialog),
+  { ssr: false }
+);
+
 const VOIDABLE = new Set(['recorded', 'partially_paid', 'paid', 'overdue']);
+/**
+ * Shop item 3 — an order is billed once; again only if that bill was voided or its
+ * draft discarded (the server's rule, so the button never offers a 409).
+ */
+const billable = (doc: PurchaseBill): boolean =>
+  doc.status === 'sent' ||
+  (doc.status === 'billed' && (!doc.links.bill || doc.links.bill.status === 'void'));
+
 /** PUR-02 FR-3 — the statuses a supplier payment may be allocated to. */
 const PAYABLE = new Set(['recorded', 'partially_paid', 'overdue']);
 
@@ -55,11 +73,31 @@ const PAYABLE = new Set(['recorded', 'partially_paid', 'overdue']);
  * wave), Duplicate and Print (FR-9's `PurchaseBillPrint`) — no control for an
  * unbuilt feature.
  */
-export function PurchaseBillDetailPageContent({ id }: Readonly<{ id: string }>): React.JSX.Element {
+export function PurchaseBillDetailPageContent({
+  id,
+  kind = 'purchase_bill',
+}: Readonly<{ id: string; kind?: PurchaseKind }>): React.JSX.Element {
   const { t } = useTranslation();
-  const detail = usePurchaseBillDetail(id);
+  const router = useRouter();
+  const dispatch = useAppDispatch();
+  const detail = usePurchaseBillDetail(id, kind);
   const [voiding, setVoiding] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [billing, setBilling] = useState(false);
   const bill = detail.bill?.id === id ? detail.bill : null;
+  // Shop item 3 — the same page shows an order: Create bill and Cancel, no money owed.
+  const order = kind === 'purchase_order';
+  const home = order ? ROUTES.PURCHASE_ORDERS : ROUTES.PURCHASE_BILLS;
+
+  const createBill = async () => {
+    if (!bill) return;
+    setBilling(true);
+    const result = await dispatch(movePurchaseOrder({ id: bill.id, verb: 'create-bill' }));
+    setBilling(false);
+    if (movePurchaseOrder.fulfilled.match(result)) {
+      router.push(`${ROUTES.PURCHASE_BILLS}/${result.payload.bill.id}/edit`);
+    }
+  };
 
   if (!detail.canRead) {
     return (
@@ -106,7 +144,7 @@ export function PurchaseBillDetailPageContent({ id }: Readonly<{ id: string }>):
           <>
             {draft && detail.canWrite && (
               <UbActionLink
-                href={`${ROUTES.PURCHASE_BILLS}/${bill.id}/edit`}
+                href={`${home}/${bill.id}/edit`}
                 variant="secondary"
                 iconOnly="mobile"
                 icon={<Pencil className="h-4 w-4" aria-hidden />}
@@ -131,6 +169,29 @@ export function PurchaseBillDetailPageContent({ id }: Readonly<{ id: string }>):
                 }}
               />
             )}
+            {order && bill.status === 'sent' && detail.canWrite && (
+              <UbButton
+                variant="ghost"
+                iconOnly="mobile"
+                icon={<XCircle className="h-4 w-4" aria-hidden />}
+                onClick={() => setCancelling(true)}
+                data-testid="purchase-order-cancel"
+              >
+                {t('purchases.order.cancel.action')}
+              </UbButton>
+            )}
+            {order && billable(bill) && detail.canWrite && (
+              <UbButton
+                iconOnly="mobile"
+                icon={<FileOutput className="h-4 w-4" aria-hidden />}
+                onClick={() => void createBill()}
+                busy={billing}
+                busyLabel={t('purchases.order.createBill.working')}
+                data-testid="purchase-order-create-bill"
+              >
+                {t('purchases.order.createBill.action')}
+              </UbButton>
+            )}
             {VOIDABLE.has(bill.status) && detail.canVoid && (
               <UbButton
                 variant="secondary"
@@ -149,6 +210,41 @@ export function PurchaseBillDetailPageContent({ id }: Readonly<{ id: string }>):
         }
       />
       <UbStack gap={4}>
+        {order && bill.status === 'cancelled' && (
+          <UbStatusBanner
+            tone="warning"
+            title={t('purchases.order.cancelledBanner')}
+            description={bill.links.cancelReason ?? undefined}
+          />
+        )}
+        {order && bill.links.bill && (
+          <UbStatusBanner
+            tone={bill.links.bill.status === 'void' ? 'warning' : 'info'}
+            title={t(
+              bill.links.bill.status === 'void'
+                ? 'purchases.order.billVoided'
+                : 'purchases.order.billedAs',
+              { number: bill.links.bill.number ?? t('purchases.status.draft') }
+            )}
+            action={
+              <UbActionLink
+                href={`${ROUTES.PURCHASE_BILLS}/${bill.links.bill.id}`}
+                variant="secondary"
+                size="sm"
+              >
+                {t('purchases.order.openBill')}
+              </UbActionLink>
+            }
+          />
+        )}
+        {!order && bill.links.order && (
+          <UbText variant="body-sm">
+            {t('purchases.order.fromOrder')}{' '}
+            <UbLink href={`${ROUTES.PURCHASE_ORDERS}/${bill.links.order.id}`}>
+              {bill.links.order.number ?? ''}
+            </UbLink>
+          </UbText>
+        )}
         {bill.status === 'void' && (
           <UbStatusBanner
             tone="error"
@@ -164,18 +260,27 @@ export function PurchaseBillDetailPageContent({ id }: Readonly<{ id: string }>):
           <UbStack gap={4} className="lg:col-span-2">
             <UbPanel>
               <UbStack gap={2} className="p-4">
-                {row(t('purchases.detail.billDate'), formatBusinessDate(bill.documentDate))}
-                {row(t('purchases.detail.supplierInvoice'), bill.supplierInvoiceNumber ?? '—')}
+                {row(
+                  t(order ? 'purchases.order.date' : 'purchases.detail.billDate'),
+                  formatBusinessDate(bill.documentDate)
+                )}
+                {!order &&
+                  row(t('purchases.detail.supplierInvoice'), bill.supplierInvoiceNumber ?? '—')}
                 {bill.supplierInvoiceDate &&
                   row(
                     t('purchases.detail.supplierInvoiceDate'),
                     formatBusinessDate(bill.supplierInvoiceDate)
                   )}
-                {bill.dueOn && row(t('purchases.detail.dueOn'), formatBusinessDate(bill.dueOn))}
-                {row(
-                  t('purchases.detail.itc'),
-                  bill.itcEligible ? t('purchases.detail.itcYes') : t('purchases.detail.itcNo')
-                )}
+                {bill.dueOn &&
+                  row(
+                    t(order ? 'purchases.order.expectedBy' : 'purchases.detail.dueOn'),
+                    formatBusinessDate(bill.dueOn)
+                  )}
+                {!order &&
+                  row(
+                    t('purchases.detail.itc'),
+                    bill.itcEligible ? t('purchases.detail.itcYes') : t('purchases.detail.itcNo')
+                  )}
                 {bill.notes && row(t('purchases.editor.notes'), bill.notes)}
               </UbStack>
             </UbPanel>
@@ -233,12 +338,17 @@ export function PurchaseBillDetailPageContent({ id }: Readonly<{ id: string }>):
               )}
               {row(t('purchases.totals.roundOffShort'), formatInr(bill.roundOff))}
               <UbDivider />
-              {row(t('purchases.totals.grand'), formatInr(bill.grandTotal))}
+              {row(
+                t(order ? 'purchases.order.estimatedTotal' : 'purchases.totals.grand'),
+                formatInr(bill.grandTotal)
+              )}
               {!draft &&
+                !order &&
                 bill.status !== 'void' &&
                 bill.amountPaid !== '0.00' &&
                 row(t('purchases.detail.paid'), formatInr(bill.amountPaid))}
               {!draft &&
+                !order &&
                 bill.status !== 'void' &&
                 row(t('purchases.total.toPay'), formatInr(bill.amountDue))}
               {bill.payments.length > 0 && (
@@ -256,6 +366,7 @@ export function PurchaseBillDetailPageContent({ id }: Readonly<{ id: string }>):
           </UbPanel>
         </UbGrid>
       </UbStack>
+      {cancelling && <OrderCancelDialogLazy order={bill} onClose={() => setCancelling(false)} />}
       {voiding && (
         <VoidDialogLazy
           bill={bill}

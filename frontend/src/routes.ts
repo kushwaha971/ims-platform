@@ -75,6 +75,8 @@ export const ROUTES = {
   SALES_ORDERS: '/sales/orders',
   SALES_CREDIT_NOTES: '/sales/credit-notes',
   PURCHASE_BILLS: '/purchases/bills',
+  /** Shop item 3 — what was asked of a supplier, before the bill. */
+  PURCHASE_ORDERS: '/purchases/orders',
   PAYMENTS: '/payments',
   EXPENSES: '/expenses',
   /** EXP-03 — money in and out, day by day, beside Expenses in the menu. */

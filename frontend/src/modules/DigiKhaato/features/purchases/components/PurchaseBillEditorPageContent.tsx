@@ -39,6 +39,8 @@ import { PurchaseBillHeaderSection } from './PurchaseBillHeaderSection';
 import { PurchaseBillLinesSection } from './PurchaseBillLinesSection';
 import { PurchaseBillTotalsPanel } from './PurchaseBillTotalsPanel';
 
+import type { PurchaseKind } from '../types/purchase.types';
+
 /* The "Paid now" sheet loads with the tap on Record, never with the editor. */
 const PaidNowDrawerLazy = dynamic(
   () => import('./PurchasePaidNowDrawer').then((m) => m.PurchasePaidNowDrawer),
@@ -61,11 +63,15 @@ const PaidNowDrawerLazy = dynamic(
  */
 export function PurchaseBillEditorPageContent({
   documentId,
-}: Readonly<{ documentId: string | null }>): React.JSX.Element {
+  kind = 'purchase_bill',
+}: Readonly<{ documentId: string | null; kind?: PurchaseKind }>): React.JSX.Element {
   const { t } = useTranslation();
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const editor = usePurchaseBillEditor(documentId);
+  const editor = usePurchaseBillEditor(documentId, kind);
+  // Shop item 3 — the same editor writes an order: Send in place of Record, never paid.
+  const order = kind === 'purchase_order';
+  const home = order ? ROUTES.PURCHASE_ORDERS : ROUTES.PURCHASE_BILLS;
   const { form, preview, editor: server, canWrite, save, record, values, today, regular } = editor;
   const { validate, canPayNow } = editor;
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -74,7 +80,7 @@ export function PurchaseBillEditorPageContent({
   const context = server.context;
   const hasLines = hasRecordableLines(values, preview);
   const locked = server.recording || !!server.recorded;
-  const claimable = regular && values.itcEligible;
+  const claimable = regular && values.itcEligible && !order;
 
   const finishRecord = useCallback(
     async (payment: readonly PurchasePaymentRow[] | null) => {
@@ -82,22 +88,32 @@ export function PurchaseBillEditorPageContent({
       const result = await record(payment);
       if (!result) return;
       setPaying(false);
-      dispatch(showSnackbar(recordedToast(result, values.partyName)));
-      router.push(`${ROUTES.PURCHASE_BILLS}/${result.bill.id}`);
+      dispatch(
+        showSnackbar(
+          order
+            ? {
+                severity: 'success',
+                id: 'purchases.order.sent',
+                params: { number: result.bill.number ?? '' },
+              }
+            : recordedToast(result, values.partyName)
+        )
+      );
+      router.push(`${home}/${result.bill.id}`);
     },
-    [hasLines, locked, record, dispatch, router, values.partyName]
+    [hasLines, locked, record, dispatch, router, values.partyName, order, home]
   );
 
   /* The header rules run BEFORE the sheet opens: asking "Paid now?" about a
      bill that is then refused for a missing supplier is a question wasted. */
   const startRecord = useCallback(async () => {
     if (!hasLines || locked) return;
-    if (!canPayNow || preview.grandTotal === '0.00') {
+    if (order || !canPayNow || preview.grandTotal === '0.00') {
       void finishRecord(null);
       return;
     }
     if (await validate()) setPaying(true);
-  }, [hasLines, locked, canPayNow, preview.grandTotal, validate, finishRecord]);
+  }, [hasLines, locked, order, canPayNow, preview.grandTotal, validate, finishRecord]);
 
   const onPickSupplier = useCallback(
     (id: string, name: string) => {
@@ -150,8 +166,8 @@ export function PurchaseBillEditorPageContent({
       <UbPageHeader
         title={
           documentId || server.documentId
-            ? t('purchases.editor.editTitle')
-            : t('purchases.editor.newTitle')
+            ? t(order ? 'purchases.order.editTitle' : 'purchases.editor.editTitle')
+            : t(order ? 'purchases.order.newTitle' : 'purchases.editor.newTitle')
         }
         controls={
           indicator ? (
@@ -188,11 +204,11 @@ export function PurchaseBillEditorPageContent({
               icon={<Send className="h-4 w-4" aria-hidden />}
               onClick={() => void startRecord()}
               busy={server.recording}
-              busyLabel={t('purchases.editor.recording')}
+              busyLabel={t(order ? 'purchases.order.sending' : 'purchases.editor.recording')}
               disabled={!hasLines || locked}
               data-testid="purchase-record"
             >
-              {t('purchases.editor.record')}
+              {t(order ? 'purchases.order.send' : 'purchases.editor.record')}
             </UbButton>
           </>
         }
@@ -210,6 +226,7 @@ export function PurchaseBillEditorPageContent({
                 disabled={locked}
                 onPickSupplier={onPickSupplier}
                 onInvoiceNumberBlur={editor.checkDuplicate}
+                order={order}
               />
             </UbPanel>
             <PurchaseBillLinesSection
@@ -268,8 +285,8 @@ export function PurchaseBillEditorPageContent({
         destructive
         onConfirm={() => {
           if (!server.documentId) return;
-          void dispatch(deletePurchaseBillDraft(server.documentId)).then(() =>
-            router.push(ROUTES.PURCHASE_BILLS)
+          void dispatch(deletePurchaseBillDraft({ id: server.documentId, kind })).then(() =>
+            router.push(home)
           );
         }}
       />

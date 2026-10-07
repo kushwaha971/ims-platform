@@ -35,14 +35,38 @@ import {
   type PurchaseBillPreset,
 } from '../constants/purchaseConstants';
 import { usePurchaseBillList } from '../hooks/usePurchaseBillList';
+import {
+  PURCHASE_ORDER_TABS,
+  type PurchaseBillListRow,
+  type PurchaseBillTab,
+  type PurchaseKind,
+} from '../types/purchase.types';
 import { isPurchaseListNarrowed } from '../view-model/purchaseBillDisplay';
 
 import { createPurchaseBillColumns } from './PurchaseBillColumns';
 import { PurchaseBillListStats } from './PurchaseBillListStats';
 
-import type { PurchaseBillListRow, PurchaseBillTab } from '../types/purchase.types';
-
-const NEW_BILL = `${ROUTES.PURCHASE_BILLS}/new`;
+/** Shop item 3 — the same list for orders: its words, its tabs, its routes. */
+const LIST_COPY = {
+  purchase_bill: {
+    home: ROUTES.PURCHASE_BILLS,
+    tabs: PURCHASE_BILL_TABS_ORDER,
+    title: 'purchases.list.title',
+    newLabel: 'purchases.newBill',
+    emptyFirst: 'purchases.empty.first',
+    emptyFirstBody: 'purchases.empty.firstBody',
+    tab: 'purchases.tab',
+  },
+  purchase_order: {
+    home: ROUTES.PURCHASE_ORDERS,
+    tabs: PURCHASE_ORDER_TABS,
+    title: 'purchases.order.listTitle',
+    newLabel: 'purchases.order.new',
+    emptyFirst: 'purchases.order.empty.first',
+    emptyFirstBody: 'purchases.order.empty.firstBody',
+    tab: 'purchases.order.tab',
+  },
+} as const;
 
 /**
  * PUR-03 — `/purchases/bills`: every purchase bill by status tab (counts over
@@ -53,11 +77,16 @@ const NEW_BILL = `${ROUTES.PURCHASE_BILLS}/new`;
  * payments track), and Export (RPT-04's purchase register) — a control for an
  * unbuilt feature is not rendered (docs/DESIGN-SYSTEM.md §5).
  */
-export function PurchaseBillsListPageContent(): React.JSX.Element {
+export function PurchaseBillsListPageContent({
+  kind = 'purchase_bill',
+}: Readonly<{ kind?: PurchaseKind }>): React.JSX.Element {
   const { t } = useTranslation();
   const router = useRouter();
   const tier = useGridTier();
-  const list = usePurchaseBillList();
+  const list = usePurchaseBillList(kind);
+  const copy = LIST_COPY[kind];
+  const order = kind === 'purchase_order';
+  const NEW_BILL = `${copy.home}/new`;
 
   const [search, setSearch] = useState(list.filters.q);
   const debounced = useDebounce(search, PURCHASE_BILL_SEARCH_DEBOUNCE_MS);
@@ -67,8 +96,8 @@ export function PurchaseBillsListPageContent(): React.JSX.Element {
   }, [debounced, filters.q, setQuery]);
 
   const columns = useMemo(
-    () => createPurchaseBillColumns({ t, today: list.today, isCards: tier === 'cards' }),
-    [t, list.today, tier]
+    () => createPurchaseBillColumns({ t, today: list.today, isCards: tier === 'cards', order }),
+    [t, list.today, tier, order]
   );
   const labels = useMemo<UbDataGridLabels>(
     () => ({
@@ -94,15 +123,15 @@ export function PurchaseBillsListPageContent(): React.JSX.Element {
   );
 
   const { refetch, clearFilters, error } = list;
-  const newBill = useCallback(() => router.push(NEW_BILL), [router]);
+  const newBill = useCallback(() => router.push(NEW_BILL), [router, NEW_BILL]);
   const emptyStates = useMemo<UbDataGridEmptyStates>(
     () => ({
       firstUse: {
-        title: t('purchases.empty.first'),
-        description: t('purchases.empty.firstBody'),
+        title: t(copy.emptyFirst),
+        description: t(copy.emptyFirstBody),
         action: canWrite ? (
           <UbButton icon={<Plus className="h-4 w-4" aria-hidden />} onClick={newBill}>
-            {t('purchases.newBill')}
+            {t(copy.newLabel)}
           </UbButton>
         ) : undefined,
       },
@@ -127,7 +156,7 @@ export function PurchaseBillsListPageContent(): React.JSX.Element {
         ),
       },
     }),
-    [t, canWrite, newBill, clearFilters, error, refetch]
+    [t, copy, canWrite, newBill, clearFilters, error, refetch]
   );
 
   const gridState: UbGridState =
@@ -147,12 +176,12 @@ export function PurchaseBillsListPageContent(): React.JSX.Element {
   );
   const tabs = useMemo(
     () =>
-      PURCHASE_BILL_TABS_ORDER.map((value) => {
+      copy.tabs.map((value: PurchaseBillTab) => {
         const count = list.counts?.[value];
-        const label = t(`purchases.tab.${value}`);
+        const label = t(`${copy.tab}.${value}`);
         return { value, label: count ? `${label} · ${count}` : label };
       }),
-    [t, list.counts]
+    [t, list.counts, copy]
   );
   const rowId = useCallback((row: PurchaseBillListRow) => row.id, []);
   const rowName = useCallback(
@@ -162,11 +191,9 @@ export function PurchaseBillsListPageContent(): React.JSX.Element {
   const openRow = useCallback(
     (row: PurchaseBillListRow) =>
       router.push(
-        row.status === 'draft'
-          ? `${ROUTES.PURCHASE_BILLS}/${row.id}/edit`
-          : `${ROUTES.PURCHASE_BILLS}/${row.id}`
+        row.status === 'draft' ? `${copy.home}/${row.id}/edit` : `${copy.home}/${row.id}`
       ),
-    [router]
+    [router, copy]
   );
 
   if (!list.canRead) {
@@ -184,7 +211,7 @@ export function PurchaseBillsListPageContent(): React.JSX.Element {
   return (
     <UbPageShell>
       <UbPageHeader
-        title={t('purchases.list.title')}
+        title={t(copy.title)}
         actions={
           canWrite ? (
             <UbActionLink
@@ -194,7 +221,7 @@ export function PurchaseBillsListPageContent(): React.JSX.Element {
               iconOnly="mobile"
               data-testid="purchase-bill-new"
             >
-              {t('purchases.newBill')}
+              {t(copy.newLabel)}
             </UbActionLink>
           ) : undefined
         }
@@ -218,7 +245,7 @@ export function PurchaseBillsListPageContent(): React.JSX.Element {
             close: t('common.action.close'),
           }}
         />
-        {list.totals && <PurchaseBillListStats totals={list.totals} />}
+        {list.totals && <PurchaseBillListStats totals={list.totals} order={order} />}
         <UbTabs<PurchaseBillTab>
           value={filters.tab}
           onValueChange={list.setTab}
@@ -244,7 +271,7 @@ export function PurchaseBillsListPageContent(): React.JSX.Element {
             labels={labels}
             emptyStates={emptyStates}
             caption={t('purchases.list.caption')}
-            storageId="purchases.columns"
+            storageId={order ? 'purchaseOrders.columns' : 'purchases.columns'}
             page={{
               page: list.page,
               pageSize: list.pageSize,

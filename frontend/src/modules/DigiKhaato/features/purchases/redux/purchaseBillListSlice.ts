@@ -50,6 +50,7 @@ const initialState: PurchaseBillListState = {
 
 const sameFilters = (a: PurchaseBillListQuery | null, b: PurchaseBillListQuery): boolean =>
   !!a &&
+  a.kind === b.kind &&
   a.tab === b.tab &&
   a.dateFrom === b.dateFrom &&
   a.dateTo === b.dateTo &&

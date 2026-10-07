@@ -77,6 +77,7 @@ const line = (over: Partial<PurchaseBill['lines'][number]>): PurchaseBill['lines
 
 const DRAFT: PurchaseBill = {
   id: 'b1',
+  kind: 'purchase_bill',
   number: null,
   fyLabel: '2026-27',
   status: 'draft',
@@ -133,6 +134,7 @@ const DRAFT: PurchaseBill = {
   voidedAt: null,
   voidedBy: null,
   voidReason: null,
+  links: { bill: null, order: null, cancelReason: null },
   updatedAt: '2026-09-18T10:00:00Z',
 };
 

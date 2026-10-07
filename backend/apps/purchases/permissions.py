@@ -20,3 +20,17 @@ PurchaseBillPermissions = HasPermission(
         "void": "purchases.bill.void",
     }
 )
+
+#: Shop item 3 — whoever may write a bill may order the goods for it; reading is the bill's.
+PurchaseOrderPermissions = HasPermission(
+    {
+        "list": "purchases.bill.read",
+        "retrieve": "purchases.bill.read",
+        "create": "purchases.bill.write",
+        "partial_update": "purchases.bill.write",
+        "destroy": "purchases.bill.write",
+        "send": "purchases.bill.write",
+        "cancel": "purchases.bill.write",
+        "create_bill": "purchases.bill.write",
+    }
+)

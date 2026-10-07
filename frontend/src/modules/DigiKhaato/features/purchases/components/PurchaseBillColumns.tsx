@@ -23,10 +23,13 @@ export const createPurchaseBillColumns = ({
   t,
   today,
   isCards,
+  order = false,
 }: {
   readonly t: TranslateFn;
   readonly today: string;
   readonly isCards: boolean;
+  /** Shop item 3 — an orders list: no supplier bill number, "Expected by" for "Due". */
+  readonly order?: boolean;
 }): readonly UbDataGridColumn<PurchaseBillListRow>[] => [
   {
     id: 'supplier',
@@ -58,14 +61,18 @@ export const createPurchaseBillColumns = ({
     widthShare: 11,
     cell: (row) => formatBusinessDate(row.documentDate),
   },
-  {
-    id: 'invoice',
-    header: t('purchases.column.supplierInvoice'),
-    priority: 2,
-    cardSlot: 'none',
-    widthShare: 13,
-    cell: (row) => row.supplierInvoiceNumber ?? '—',
-  },
+  ...(order
+    ? []
+    : [
+        {
+          id: 'invoice',
+          header: t('purchases.column.supplierInvoice'),
+          priority: 2,
+          cardSlot: 'none',
+          widthShare: 13,
+          cell: (row) => row.supplierInvoiceNumber ?? '—',
+        } satisfies UbDataGridColumn<PurchaseBillListRow>,
+      ]),
   {
     id: 'status',
     header: t('purchases.column.status'),
@@ -84,30 +91,46 @@ export const createPurchaseBillColumns = ({
       );
     },
   },
-  {
-    id: 'due',
-    header: t('purchases.column.due'),
-    priority: 2,
-    cardSlot: 'none',
-    align: 'end',
-    widthShare: 15,
-    cell: (row) => {
-      if (row.status === 'draft' || row.status === 'void') return '—';
-      const days = daysLate(row.dueOn, today);
-      return (
-        <UbStack gap={0} className="items-end">
-          <UbAmount value={row.amountDue} size="sm" />
-          {row.amountDue !== '0.00' && row.dueOn && (
-            <UbText as="span" variant="caption" tone={days > 0 ? 'error' : 'tertiary'}>
-              {days > 0
-                ? t('purchases.list.daysLate', { days })
-                : t('purchases.list.dueOn', { date: formatBusinessDate(row.dueOn) })}
-            </UbText>
-          )}
-        </UbStack>
-      );
-    },
-  },
+  ...(order
+    ? [
+        {
+          id: 'expected',
+          header: t('purchases.order.expectedBy'),
+          priority: 2,
+          cardSlot: 'none',
+          widthShare: 15,
+          cell: (row) => (row.dueOn ? formatBusinessDate(row.dueOn) : '—'),
+        } satisfies UbDataGridColumn<PurchaseBillListRow>,
+      ]
+    : []),
+  ...(order
+    ? []
+    : [
+        {
+          id: 'due',
+          header: t('purchases.column.due'),
+          priority: 2,
+          cardSlot: 'none',
+          align: 'end',
+          widthShare: 15,
+          cell: (row) => {
+            if (row.status === 'draft' || row.status === 'void') return '—';
+            const days = daysLate(row.dueOn, today);
+            return (
+              <UbStack gap={0} className="items-end">
+                <UbAmount value={row.amountDue} size="sm" />
+                {row.amountDue !== '0.00' && row.dueOn && (
+                  <UbText as="span" variant="caption" tone={days > 0 ? 'error' : 'tertiary'}>
+                    {days > 0
+                      ? t('purchases.list.daysLate', { days })
+                      : t('purchases.list.dueOn', { date: formatBusinessDate(row.dueOn) })}
+                  </UbText>
+                )}
+              </UbStack>
+            );
+          },
+        } satisfies UbDataGridColumn<PurchaseBillListRow>,
+      ]),
   {
     id: 'total',
     header: t('purchases.column.total'),

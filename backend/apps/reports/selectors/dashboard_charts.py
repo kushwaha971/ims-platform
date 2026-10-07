@@ -106,7 +106,7 @@ def _first_record(tenant: Any) -> dt.date | None:
         SalesDocument.objects.filter(tenant=tenant)
         .exclude(status=DRAFT)
         .aggregate(d=Min("document_date"))["d"],
-        PurchaseDocument.objects.filter(tenant=tenant)
+        PurchaseDocument.objects.filter(tenant=tenant, kind="purchase_bill")
         .exclude(status=DRAFT)
         .aggregate(d=Min("document_date"))["d"],
         Payment.objects.filter(tenant=tenant).aggregate(d=Min("payment_date"))["d"],
@@ -244,8 +244,9 @@ def sales_series(span: _Span) -> list[Decimal]:
 def purchase_series(span: _Span) -> list[Decimal]:
     from apps.purchases.models import PurchaseDocument
 
+    # Bills only: a purchase order (Shop item 3) is a request, not a purchase.
     bills = PurchaseDocument.objects.filter(
-        tenant=span.tenant, **span.between("document_date")
+        tenant=span.tenant, kind="purchase_bill", **span.between("document_date")
     ).exclude(status__in=(DRAFT, VOID))
     return _series(_grouped(bills, "document_date", "grand_total", span.group), span.starts)
 

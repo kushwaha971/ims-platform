@@ -1,4 +1,5 @@
-// Shop item 3 — sales orders on a live stack: draft → confirm → bill, and cancel.
+// Shop item 3 — sales and purchase orders on a live stack: draft → confirm/send →
+// bill, and cancel.
 //
 // Seeds a shop through the API, then at 1280 and 390 px:
 //   * opens a draft order in the editor and presses "Save & confirm" — it must land
@@ -38,6 +39,12 @@ const rice = await must('POST', '/items', {
   tax_code: 'GST0', opening_stock: { qty: '40', unit_cost: '300.00' },
 }, tok);
 const ramesh = await must('POST', '/parties', { name: 'Ramesh Traders', is_customer: true, state_code: '27' }, tok);
+const agro = await must('POST', '/parties', { name: 'Agro Wholesale', is_supplier: true, is_customer: false, state_code: '27' }, tok);
+const draftPurchaseOrder = async (qty) => {
+  const r = await api('POST', '/purchases/orders', { party_id: agro.id, document_date: TODAY, lines: [{ item_id: rice.id, qty, unit_cost: '300.00' }] }, tok);
+  if (r.status >= 300) throw new Error(`purchase order ${r.status} ${JSON.stringify(r.body).slice(0, 300)}`);
+  return r.body.data;
+};
 const draftOrder = async (qty) => {
   const r = await api('POST', '/sales/orders', { party_id: ramesh.id, document_date: TODAY, lines: [{ item_id: rice.id, qty }] }, tok);
   if (r.status >= 300) throw new Error(`order ${r.status} ${JSON.stringify(r.body).slice(0, 300)}`);
@@ -119,6 +126,44 @@ for (const [size, viewport] of [['desktop', { width: 1280, height: 860 }], ['pho
   await page.goto(`${FE}/sales/orders`, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(2500);
   await look('list');
+
+  // ── Purchase orders ──────────────────────────────────────────────────────
+  const po = await draftPurchaseOrder('20');
+  await page.goto(`${FE}/purchases/orders/${po.id}/edit`, { waitUntil: 'domcontentloaded' });
+  await page.getByTestId('purchase-record').waitFor({ timeout: 20000 });
+  const editorText = await page.locator('main').innerText();
+  check(`${size}: the order editor asks no supplier bill number`, !editorText.includes('Supplier invoice') && editorText.includes('Expected by'), '');
+  await look('po-editor');
+  await page.getByTestId('purchase-record').click();
+  await page.waitForURL((u) => u.pathname === `/purchases/orders/${po.id}`, { timeout: 20000 }).catch(() => {});
+  check(`${size}: Save & send opens the order`, new URL(page.url()).pathname === `/purchases/orders/${po.id}`, page.url());
+  await page.getByTestId('purchase-order-create-bill').waitFor({ timeout: 20000 });
+  check(`${size}: the order is numbered PO/`, /PO\/\d\d-\d\d\/\d{4}/.test(await page.locator('main').innerText()));
+  await look('po-sent');
+  await page.getByTestId('purchase-order-create-bill').click();
+  await page.waitForURL((u) => /\/purchases\/bills\/[^/]+\/edit$/.test(u.pathname), { timeout: 20000 }).catch(() => {});
+  check(`${size}: Create bill lands in the bill draft`, /\/purchases\/bills\/[^/]+\/edit$/.test(new URL(page.url()).pathname), page.url());
+  await look('po-bill-draft');
+  await page.goto(`${FE}/purchases/orders/${po.id}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(2500);
+  check(`${size}: the order says it was billed`, (await page.locator('main').innerText()).includes('Billed as'));
+  await look('po-billed');
+  const po2 = await draftPurchaseOrder('5');
+  await must('POST', `/purchases/orders/${po2.id}/send`, {}, tok);
+  await page.goto(`${FE}/purchases/orders/${po2.id}`, { waitUntil: 'domcontentloaded' });
+  await page.getByTestId('purchase-order-cancel').click();
+  await page.getByRole('textbox').fill('Supplier out of stock');
+  await page.getByTestId('purchase-order-cancel-confirm').click();
+  await page.waitForTimeout(2000);
+  const po2After = await api('GET', `/purchases/orders/${po2.id}`, null, tok);
+  check(`${size}: purchase order cancelled`, po2After.body.data.status === 'cancelled', po2After.body.data.status);
+  await page.goto(`${FE}/purchases/orders`, { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(2500);
+  await look('po-list');
+  await page.goto(`${FE}/purchases/bills`, { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(2500);
+  const billsText = await page.locator('main').innerText();
+  check(`${size}: no order in the bills list`, !/PO\/\d\d-/.test(billsText), '');
   check(`${size}: no page errors`, errors.length === 0, errors.join(' | '));
   check(`${size}: no failed requests`, bad.length === 0, bad.join(' | '));
   await ctx.close();
@@ -127,7 +172,9 @@ await browser.close();
 
 // ── Nothing moved ───────────────────────────────────────────────────────────
 const stockAfter = (await must('GET', `/items/${rice.id}`, null, tok)).on_hand;
-check('orders moved no stock', stockAfter === stockBefore, `${stockBefore} → ${stockAfter}`);
+check('orders moved no stock (the bill drafts are not recorded)', stockAfter === stockBefore, `${stockBefore} → ${stockAfter}`);
+const supplier = await must('GET', `/parties/${agro.id}`, null, tok);
+check('purchase orders moved no money', Number(supplier.balance) === 0, supplier.balance);
 const party = await must('GET', `/parties/${ramesh.id}`, null, tok);
 check('orders moved no money', Number(party.balance) === 0, party.balance);
 const invoices = await api('GET', '/sales/invoices?tab=all', null, tok);

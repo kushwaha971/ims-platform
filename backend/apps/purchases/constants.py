@@ -10,6 +10,8 @@ class DocumentKind(models.TextChoices):
     """Part 21 §21.3.8 — this wave records purchase bills only (debit notes are PUR-07, P2)."""
 
     PURCHASE_BILL = "purchase_bill", _("Purchase bill")
+    #: Shop item 3 — what the shop asked a supplier to send, before the bill.
+    PURCHASE_ORDER = "purchase_order", _("Purchase order")
 
 
 class DocumentStatus(models.TextChoices):
@@ -21,6 +23,23 @@ class DocumentStatus(models.TextChoices):
     PAID = "paid", _("Paid")
     OVERDUE = "overdue", _("Overdue")
     VOID = "void", _("Void")
+    #: Purchase order: draft → sent (numbered) → billed | cancelled. Never payable.
+    SENT = "sent", _("Sent")
+    BILLED = "billed", _("Billed")
+    CANCELLED = "cancelled", _("Cancelled")
+
+
+#: Every bill read and write is limited to these, so an order never counts as a bill.
+BILL_KINDS: tuple[str, ...] = ("purchase_bill",)
+ORDER_KINDS: tuple[str, ...] = ("purchase_order",)
+#: Shop item 3 — the purchase orders list's tabs. `sent` is what is still to arrive.
+ORDER_TAB_STATUSES: dict[str, tuple[str, ...]] = {
+    "all": ("draft", "sent", "billed", "cancelled"),
+    "draft": ("draft",),
+    "sent": ("sent",),
+    "billed": ("billed",),
+    "cancelled": ("cancelled",),
+}
 
 
 class DiscountType(models.TextChoices):

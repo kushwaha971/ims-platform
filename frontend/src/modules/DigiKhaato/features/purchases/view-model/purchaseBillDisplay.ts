@@ -23,6 +23,10 @@ export const PURCHASE_STATUS_TONE: Record<PurchaseBillStatus, UbStatusBadgeTone>
   paid: 'success',
   overdue: 'error',
   void: 'neutral',
+  // Shop item 3 — an order on its way (info), billed (success), called off (neutral).
+  sent: 'info',
+  billed: 'success',
+  cancelled: 'neutral',
 };
 
 export const supplierName = (bill: Pick<PurchaseBill, 'party' | 'partySnapshot'>): string =>
@@ -47,7 +51,8 @@ export const resolvePurchasePreset = (
 
 export const purchaseFiltersFromQuery = (
   query: URLSearchParams,
-  today: string
+  today: string,
+  tabs: readonly PurchaseBillTab[] = PURCHASE_BILL_TABS_ORDER
 ): PurchaseBillListFilters => {
   const rawPreset = query.get('period') as PurchaseBillPreset | null;
   const from = query.get('from');
@@ -66,7 +71,7 @@ export const purchaseFiltersFromQuery = (
     preset,
     dateFrom: resolved?.dateFrom ?? (hasDates ? (from as string) : today),
     dateTo: resolved?.dateTo ?? (hasDates ? (to as string) : today),
-    tab: tab && PURCHASE_BILL_TABS_ORDER.includes(tab) ? tab : 'all',
+    tab: tab && tabs.includes(tab) ? tab : 'all',
     q: query.get('q') ?? '',
     page: Number.isInteger(page) && page > 1 ? page : 1,
   };

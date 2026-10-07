@@ -165,6 +165,13 @@ class AuditAction:
     # draft per 10 minutes, with `changes_count`) — the editor autosaves.
     # `recorded` carries the totals, number, movement ids and ledger id;
     # `voided` the reason and every reversal id (PUR-04 §16).
+    # Shop item 3 — purchase orders
+    PURCHASE_ORDER_CREATED = "purchase_order.created"
+    PURCHASE_ORDER_UPDATED = "purchase_order.updated"
+    PURCHASE_ORDER_DELETED = "purchase_order.deleted"
+    PURCHASE_ORDER_SENT = "purchase_order.sent"
+    PURCHASE_ORDER_CANCELLED = "purchase_order.cancelled"
+    PURCHASE_ORDER_BILLED = "purchase_order.billed"
     PURCHASE_BILL_DRAFT_CREATED = "purchase_bill.draft_created"
     PURCHASE_BILL_UPDATED = "purchase_bill.updated"
     PURCHASE_BILL_DELETED = "purchase_bill.deleted"

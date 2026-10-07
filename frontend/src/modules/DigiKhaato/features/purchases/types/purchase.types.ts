@@ -12,12 +12,35 @@ export const PURCHASE_BILL_STATUSES = [
   'paid',
   'overdue',
   'void',
+  // Shop item 3 — purchase orders: draft → sent → billed | cancelled
+  'sent',
+  'billed',
+  'cancelled',
 ] as const;
 export type PurchaseBillStatus = (typeof PURCHASE_BILL_STATUSES)[number];
 
+/** The two kinds of purchase document the screens write: a bill, or an order for one. */
+export type PurchaseKind = 'purchase_bill' | 'purchase_order';
+
 /** PUR-03 FR-1 — the list's tabs, each a set of statuses on the server. */
 export const PURCHASE_BILL_TABS = ['all', 'unpaid', 'overdue', 'paid', 'draft', 'void'] as const;
-export type PurchaseBillTab = (typeof PURCHASE_BILL_TABS)[number];
+/** Shop item 3 — the orders list's tabs; `sent` is what is still to arrive. */
+export const PURCHASE_ORDER_TABS = ['all', 'sent', 'draft', 'billed', 'cancelled'] as const;
+export type PurchaseBillTab =
+  (typeof PURCHASE_BILL_TABS)[number] | (typeof PURCHASE_ORDER_TABS)[number];
+
+/** Shop item 3 — what a document is tied to: an order's bill, or a bill's order. */
+export interface PurchaseDocRef {
+  readonly id: string;
+  readonly kind: string;
+  readonly number: string | null;
+  readonly status: string;
+}
+export interface PurchaseLinks {
+  readonly bill: PurchaseDocRef | null;
+  readonly order: PurchaseDocRef | null;
+  readonly cancelReason: string | null;
+}
 
 export type PurchaseDiscountType = 'percent' | 'amount';
 
@@ -95,6 +118,7 @@ export interface PurchaseReleasedPayment {
 
 export interface PurchaseBill {
   readonly id: string;
+  readonly kind: PurchaseKind;
   readonly number: string | null;
   readonly fyLabel: string;
   readonly status: PurchaseBillStatus;
@@ -131,6 +155,7 @@ export interface PurchaseBill {
   readonly voidedAt: string | null;
   readonly voidedBy: PurchasePerson | null;
   readonly voidReason: string | null;
+  readonly links: PurchaseLinks;
   readonly updatedAt: string;
 }
 
@@ -170,7 +195,7 @@ export interface PurchaseBillTotals {
   readonly amountDue: string;
 }
 
-export type PurchaseBillTabCounts = Readonly<Record<PurchaseBillTab, number>>;
+export type PurchaseBillTabCounts = Readonly<Partial<Record<PurchaseBillTab, number>>>;
 
 export interface PurchaseBillListPage {
   readonly rows: readonly PurchaseBillListRow[];

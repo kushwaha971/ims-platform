@@ -17,7 +17,7 @@ from django.utils import timezone
 from apps.common.audit import AuditAction, write_audit
 from apps.common.context import Ctx
 from apps.common.exceptions import BusinessRuleViolation, NotFound, PermissionDenied, StaleVersion
-from apps.purchases.constants import DocumentKind, DocumentStatus
+from apps.purchases.constants import BILL_KINDS, DocumentKind, DocumentStatus
 from apps.purchases.models import PurchaseDocument, PurchaseDocumentLine
 from apps.purchases.services import settings as purchase_settings
 from apps.purchases.services.payload import apply_payload
@@ -49,13 +49,39 @@ def snapshot(document: PurchaseDocument) -> dict:
     }
 
 
-def lock_document(tenant: Any, document_id: Any) -> PurchaseDocument:
+def lock_document(
+    tenant: Any, document_id: Any, kinds: tuple[str, ...] = BILL_KINDS
+) -> PurchaseDocument:
+    """`SELECT … FOR UPDATE` one document of `kinds` — another kind's id is a 404, so a bill
+    route can never record, void or edit a purchase order (Shop item 3), nor the reverse."""
     document = (
-        PurchaseDocument.objects.select_for_update().filter(tenant=tenant, pk=document_id).first()
+        PurchaseDocument.objects.select_for_update()
+        .filter(tenant=tenant, pk=document_id, kind__in=kinds)
+        .first()
     )
     if document is None:
-        raise NotFound("No such bill.")
+        raise NotFound("No such bill." if kinds == BILL_KINDS else "No such order.")
     return document
+
+
+#: The audit words each kind's draft writes: (created, updated, deleted).
+_DRAFT_ACTIONS: dict[str, tuple[str, str, str]] = {
+    DocumentKind.PURCHASE_BILL: (
+        AuditAction.PURCHASE_BILL_DRAFT_CREATED,
+        AuditAction.PURCHASE_BILL_UPDATED,
+        AuditAction.PURCHASE_BILL_DELETED,
+    ),
+    DocumentKind.PURCHASE_ORDER: (
+        AuditAction.PURCHASE_ORDER_CREATED,
+        AuditAction.PURCHASE_ORDER_UPDATED,
+        AuditAction.PURCHASE_ORDER_DELETED,
+    ),
+}
+
+
+def _payable(document: PurchaseDocument) -> None:
+    """A bill's draft carries what will be owed; an order never owes anything."""
+    document.amount_due = document.grand_total if document.kind == DocumentKind.PURCHASE_BILL else 0
 
 
 def require_draft(document: PurchaseDocument) -> None:
@@ -83,23 +109,23 @@ def may_edit_draft(ctx: Ctx, document: PurchaseDocument) -> bool:
 
 
 @transaction.atomic
-def create_draft(*, ctx: Ctx, payload: dict) -> dict:
+def create_draft(*, ctx: Ctx, payload: dict, kind: str = DocumentKind.PURCHASE_BILL) -> dict:
     tenant = ctx.tenant
     document = PurchaseDocument(
         tenant=tenant,
         created_by=actor_of(ctx),
-        kind=DocumentKind.PURCHASE_BILL,
+        kind=kind,
         status=DocumentStatus.DRAFT,
         round_off_enabled=purchase_settings.round_off_default(tenant),
         itc_eligible=tenant.gst_type == "regular",
     )
     outcome = apply_payload(ctx, document, payload, strict=False)
-    document.amount_due = document.grand_total
+    _payable(document)
     document.save()
     replace_lines(document, outcome["rows"])
     write_audit(
         ctx=ctx,
-        action=AuditAction.PURCHASE_BILL_DRAFT_CREATED,
+        action=_DRAFT_ACTIONS[document.kind][0],
         entity_type=ENTITY,
         entity_id=document.id,
         after=snapshot(document),
@@ -112,9 +138,11 @@ POST_RECORD_FIELDS = ("notes",)
 
 
 @transaction.atomic
-def update_draft(*, ctx: Ctx, document_id: Any, payload: dict) -> dict:
+def update_draft(
+    *, ctx: Ctx, document_id: Any, payload: dict, kinds: tuple[str, ...] = BILL_KINDS
+) -> dict:
     """PATCH a draft (`version` required); on a recorded bill only `notes` (BR-7, T-PUR-01-10)."""
-    document = lock_document(ctx.tenant, document_id)
+    document = lock_document(ctx.tenant, document_id, kinds)
     if document.status != DocumentStatus.DRAFT:
         return _update_recorded(ctx, document, payload)
     check_version(document, payload.get("version"))
@@ -123,7 +151,7 @@ def update_draft(*, ctx: Ctx, document_id: Any, payload: dict) -> dict:
             "Only the person who started this draft, or an owner, can change it."
         )
     outcome = apply_payload(ctx, document, payload, strict=False)
-    document.amount_due = document.grand_total
+    _payable(document)
     document.version += 1
     document.save()
     if "lines" in payload:
@@ -156,17 +184,18 @@ def _throttled_update_audit(ctx: Ctx, document: PurchaseDocument) -> None:
     from apps.platform_app.models import AuditLog
 
     since = timezone.now() - DRAFT_AUDIT_THROTTLE
+    action = _DRAFT_ACTIONS[document.kind][1]
     recent = AuditLog.objects.filter(
         tenant=ctx.tenant,
         entity_type=ENTITY,
         entity_id=document.id,
-        action=AuditAction.PURCHASE_BILL_UPDATED,
+        action=action,
         created_at__gte=since,
     ).exists()
     if not recent:
         write_audit(
             ctx=ctx,
-            action=AuditAction.PURCHASE_BILL_UPDATED,
+            action=action,
             entity_type=ENTITY,
             entity_id=document.id,
             after=snapshot(document),
@@ -175,9 +204,9 @@ def _throttled_update_audit(ctx: Ctx, document: PurchaseDocument) -> None:
 
 
 @transaction.atomic
-def delete_draft(*, ctx: Ctx, document_id: Any) -> None:
+def delete_draft(*, ctx: Ctx, document_id: Any, kinds: tuple[str, ...] = BILL_KINDS) -> None:
     """FR-8 — drafts only; anything recorded is voided, never deleted (§21.6)."""
-    document = lock_document(ctx.tenant, document_id)
+    document = lock_document(ctx.tenant, document_id, kinds)
     require_draft(document)
     if not may_edit_draft(ctx, document):
         raise PermissionDenied(
@@ -185,10 +214,11 @@ def delete_draft(*, ctx: Ctx, document_id: Any) -> None:
         )
     before = snapshot(document)
     document_pk = document.id
+    action = _DRAFT_ACTIONS[document.kind][2]
     document.delete()
     write_audit(
         ctx=ctx,
-        action=AuditAction.PURCHASE_BILL_DELETED,
+        action=action,
         entity_type=ENTITY,
         entity_id=document_pk,
         before=before,

@@ -376,7 +376,9 @@ def recent_activity(*, tenant: Any) -> list[dict[str, Any]]:
             )
         )
 
-    bills = PurchaseDocument.objects.filter(tenant=tenant).select_related("party")
+    bills = PurchaseDocument.objects.filter(tenant=tenant, kind="purchase_bill").select_related(
+        "party"
+    )
     for bill in bills.exclude(status=DRAFT).order_by(_newest("recorded_at"), "-id")[:limit]:
         events.append(
             _event(

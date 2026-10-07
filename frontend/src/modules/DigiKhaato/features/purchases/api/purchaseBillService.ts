@@ -11,6 +11,8 @@ import type {
   PurchaseBillListRow,
   PurchaseBillTab,
   PurchaseBillTabCounts,
+  PurchaseDocRef,
+  PurchaseKind,
 } from '../types/purchase.types';
 
 /**
@@ -56,8 +58,15 @@ export const toBill = (row: Wire): PurchaseBill => {
   const party = row.party as Wire | null;
   const snapshot = row.party_snapshot as Wire | null;
   const ledger = row.ledger_entry as Wire | null;
+  const links = (row.links ?? {}) as Wire;
+  const ref = (raw: unknown): PurchaseDocRef | null => {
+    if (!raw || typeof raw !== 'object') return null;
+    const doc = raw as Wire;
+    return { id: s(doc.id), kind: s(doc.kind), number: sn(doc.number), status: s(doc.status) };
+  };
   return {
     id: s(row.id),
+    kind: (row.kind === 'purchase_order' ? 'purchase_order' : 'purchase_bill') as PurchaseKind,
     number: sn(row.number),
     fyLabel: s(row.fy_label),
     status: row.status as PurchaseBill['status'],
@@ -120,6 +129,11 @@ export const toBill = (row: Wire): PurchaseBill => {
     voidedAt: sn(row.voided_at),
     voidedBy: toPerson(row.voided_by),
     voidReason: sn(row.void_reason),
+    links: {
+      bill: ref(links.bill),
+      order: ref(links.order),
+      cancelReason: sn(links.cancel_reason),
+    },
     updatedAt: s(row.updated_at),
   };
 };
@@ -168,6 +182,8 @@ const toListRow = (row: Wire): PurchaseBillListRow => ({
 // ── Endpoints ───────────────────────────────────────────────────────────────
 
 export interface PurchaseBillListQuery {
+  /** Shop item 3 — which list: bills (absent) or orders. Never sent as a parameter. */
+  readonly kind?: PurchaseKind;
   readonly tab: PurchaseBillTab;
   readonly dateFrom: string;
   readonly dateTo: string;
@@ -186,12 +202,23 @@ export const purchaseBillListQuery = (filters: PurchaseBillListQuery): string =>
     page: filters.page > 1 ? filters.page : undefined,
   });
 
+/* Shop item 3 — an order is written through the bill's calls, on its own routes. */
+const LIST_PATH: Readonly<Record<PurchaseKind, string>> = {
+  purchase_bill: API_PATHS.PURCHASE_BILLS,
+  purchase_order: API_PATHS.PURCHASE_ORDERS,
+};
+const DETAIL_PATH: Readonly<Record<PurchaseKind, (id: string) => string>> = {
+  purchase_bill: API_PATHS.PURCHASE_BILL,
+  purchase_order: API_PATHS.PURCHASE_ORDER,
+};
+
 export const listPurchaseBills = async (
   filters: PurchaseBillListQuery,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  kind: PurchaseKind = 'purchase_bill'
 ): Promise<PurchaseBillListPage> => {
   const response = await api.get<{ data: Wire[]; meta: Wire }>(
-    `${API_PATHS.PURCHASE_BILLS}${purchaseBillListQuery(filters)}`,
+    `${LIST_PATH[kind]}${purchaseBillListQuery(filters)}`,
     ubConfig({ signal })
   );
   const { data, meta } = response.data;
@@ -238,9 +265,10 @@ export const findDuplicateSupplierInvoice = async (
 
 export const getPurchaseBill = async (
   id: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  kind: PurchaseKind = 'purchase_bill'
 ): Promise<PurchaseBillEnvelope> =>
-  toEnvelope((await api.get<EnvelopeWire>(API_PATHS.PURCHASE_BILL(id), ubConfig({ signal }))).data);
+  toEnvelope((await api.get<EnvelopeWire>(DETAIL_PATH[kind](id), ubConfig({ signal }))).data);
 
 /** The draft body (snake_case) — built by `view-model/purchaseBillForm.toWireBody`. */
 export type PurchaseBillWireBody = Record<string, unknown>;
@@ -258,12 +286,12 @@ export interface PurchasePaymentWireBody {
 
 export const createPurchaseBill = async (
   body: PurchaseBillWireBody,
-  options: { readonly quiet?: boolean } = {}
+  options: { readonly quiet?: boolean; readonly kind?: PurchaseKind } = {}
 ): Promise<PurchaseBillEnvelope> =>
   toEnvelope(
     (
       await api.post<EnvelopeWire>(
-        API_PATHS.PURCHASE_BILLS,
+        LIST_PATH[options.kind ?? 'purchase_bill'],
         body,
         ubConfig({ suppressErrorSnackbar: options.quiet ?? false })
       )
@@ -274,21 +302,35 @@ export const createPurchaseBill = async (
 export const updatePurchaseBill = async (
   id: string,
   body: PurchaseBillWireBody,
-  options: { readonly quiet?: boolean } = {}
+  options: { readonly quiet?: boolean; readonly kind?: PurchaseKind } = {}
 ): Promise<PurchaseBillEnvelope> =>
   toEnvelope(
     (
       await api.patch<EnvelopeWire>(
-        API_PATHS.PURCHASE_BILL(id),
+        DETAIL_PATH[options.kind ?? 'purchase_bill'](id),
         body,
         ubConfig({ suppressErrorSnackbar: options.quiet ?? false })
       )
     ).data
   );
 
-export const deletePurchaseBill = async (id: string): Promise<void> => {
-  await api.delete(API_PATHS.PURCHASE_BILL(id));
+export const deletePurchaseBill = async (
+  id: string,
+  kind: PurchaseKind = 'purchase_bill'
+): Promise<void> => {
+  await api.delete(DETAIL_PATH[kind](id));
 };
+
+/**
+ * Shop item 3 — an order's moves: `send` numbers it, `cancel` carries the reason,
+ * `create-bill` answers 201 with the new DRAFT bill (whose envelope this returns).
+ */
+export const movePurchaseOrder = async (
+  id: string,
+  verb: 'send' | 'cancel' | 'create-bill',
+  body: PurchaseBillWireBody = {}
+): Promise<PurchaseBillEnvelope> =>
+  toEnvelope((await api.post<EnvelopeWire>(API_PATHS.PURCHASE_ORDER_ACTION(id, verb), body)).data);
 
 /**
  * BR-13 — the key is minted per logical Record and REUSED on a retry. The

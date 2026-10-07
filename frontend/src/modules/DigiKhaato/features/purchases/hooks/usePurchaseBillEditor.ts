@@ -25,6 +25,7 @@ import {
   checkDuplicateSupplierInvoice,
   fetchPurchaseBill,
   fetchPurchaseContext,
+  movePurchaseOrder,
   recordPurchaseBill,
   savePurchaseBillDraft,
 } from '../redux/purchaseBillThunk';
@@ -40,7 +41,7 @@ import {
   type PurchasePaymentRow,
 } from '../view-model/purchaseBillForm';
 
-import type { PurchaseBillEnvelope } from '../types/purchase.types';
+import type { PurchaseBillEnvelope, PurchaseKind } from '../types/purchase.types';
 
 /** The fields `applyServerErrors` may anchor a server 400 on. */
 const FORM_FIELDS: readonly string[] = [
@@ -86,7 +87,10 @@ export interface UsePurchaseBillEditorResult {
   readonly restart: () => void;
 }
 
-export const usePurchaseBillEditor = (documentId: string | null): UsePurchaseBillEditorResult => {
+export const usePurchaseBillEditor = (
+  documentId: string | null,
+  kind: PurchaseKind = 'purchase_bill'
+): UsePurchaseBillEditorResult => {
   const dispatch = useAppDispatch();
   const { t } = useTranslation();
   const editor = useAppSelector(selectPurchaseBillEditor);
@@ -108,12 +112,12 @@ export const usePurchaseBillEditor = (documentId: string | null): UsePurchaseBil
   useEffect(() => {
     dispatch(purchaseEditorReset());
     const context = dispatch(fetchPurchaseContext(today));
-    const draft = documentId ? dispatch(fetchPurchaseBill(documentId)) : null;
+    const draft = documentId ? dispatch(fetchPurchaseBill({ id: documentId, kind })) : null;
     return () => {
       context.abort();
       draft?.abort();
     };
-  }, [dispatch, documentId, today]);
+  }, [dispatch, documentId, today, kind]);
 
   // Seed the form ONCE per editor: from the draft, or from the shop's defaults.
   const seeded = useRef<string | null>(null);
@@ -153,6 +157,7 @@ export const usePurchaseBillEditor = (documentId: string | null): UsePurchaseBil
     async (quiet: boolean): Promise<PurchaseBillEnvelope | null> => {
       const result = await dispatch(
         savePurchaseBillDraft({
+          kind,
           id: savedId,
           version,
           body: toPurchaseWireBody(form.getValues()),
@@ -167,7 +172,7 @@ export const usePurchaseBillEditor = (documentId: string | null): UsePurchaseBil
       }
       return result.payload;
     },
-    [dispatch, savedId, version, form]
+    [dispatch, savedId, version, form, kind]
   );
 
   /** §10 — the header rules at Record only; a draft is saved half-entered (FR-8). */
@@ -196,6 +201,15 @@ export const usePurchaseBillEditor = (documentId: string | null): UsePurchaseBil
       if (!(await validate())) return null;
       const saved = await save(false);
       if (!saved) return null;
+      if (kind === 'purchase_order') {
+        // Shop item 3 — an order's "Record" is Send: numbered, owing nothing, no stock.
+        const sent = await dispatch(
+          movePurchaseOrder({ id: saved.bill.id, verb: 'send', version: saved.bill.version })
+        );
+        if (!movePurchaseOrder.fulfilled.match(sent)) return null;
+        form.reset(form.getValues());
+        return sent.payload;
+      }
       const result = await dispatch(
         recordPurchaseBill({
           id: saved.bill.id,
@@ -221,7 +235,7 @@ export const usePurchaseBillEditor = (documentId: string | null): UsePurchaseBil
       }
       return null;
     },
-    [validate, form, save, dispatch, idempotency, t]
+    [validate, form, save, dispatch, idempotency, t, kind]
   );
 
   /** FR-7 — on blur of the supplier invoice number. */

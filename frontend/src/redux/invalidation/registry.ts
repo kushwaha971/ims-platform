@@ -259,6 +259,8 @@ export const MUTATIONS = {
   deletePurchaseBillDraft: 'purchaseBillEditor/deletePurchaseBillDraft',
   recordPurchaseBill: 'purchaseBillEditor/recordPurchaseBill',
   voidPurchaseBill: 'purchaseBill/voidPurchaseBill',
+  // Shop item 3 — an order sent, cancelled or turned into a draft bill
+  movePurchaseOrder: 'purchaseBill/movePurchaseOrder',
   // IMP-01 — upload, commit and cancel an import
   uploadImportFile: 'importJob/uploadImportFile',
   commitImportJob: 'importJob/commitImportJob',

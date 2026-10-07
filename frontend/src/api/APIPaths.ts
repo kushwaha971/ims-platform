@@ -172,6 +172,11 @@ export const API_PATHS = {
   PURCHASE_BILL: (id: string) => `/purchases/bills/${seg(id)}`,
   PURCHASE_BILL_RECORD: (id: string) => `/purchases/bills/${seg(id)}/record`,
   PURCHASE_BILL_VOID: (id: string) => `/purchases/bills/${seg(id)}/void`,
+  // Shop item 3 — purchase orders: the bill's routes, with send / cancel / create-bill.
+  PURCHASE_ORDERS: '/purchases/orders',
+  PURCHASE_ORDER: (id: string) => `/purchases/orders/${seg(id)}`,
+  PURCHASE_ORDER_ACTION: (id: string, verb: 'send' | 'cancel' | 'create-bill') =>
+    `/purchases/orders/${seg(id)}/${verb}`,
   PAYMENTS: '/payments',
   PAYMENT: (id: string) => `/payments/${seg(id)}`,
   PAYMENT_VOID: (id: string) => `/payments/${seg(id)}/void`,
