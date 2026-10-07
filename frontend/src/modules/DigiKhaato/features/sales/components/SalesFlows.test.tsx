@@ -10,6 +10,7 @@ import type { PermissionCode } from 'src/types/domain.types';
 import { makeDocument, wireDocument, wireLine } from '../testing/salesFixtures';
 
 import { CreditNoteEditorPageContent } from './CreditNoteEditorPageContent';
+import { DocumentActions } from './DocumentActions';
 import { InvoiceEditorPageContent } from './InvoiceEditorPageContent';
 import { VoidDocumentDialog } from './VoidDocumentDialog';
 
@@ -120,6 +121,49 @@ describe('the estimate editor (SAL-01, TSK-SAL-01-07)', () => {
     renderWithProviders(<InvoiceEditorPageContent documentId={null} kind="estimate" />);
     expect(screen.getByText('Bills are not available')).toBeInTheDocument();
     await settle();
+  });
+});
+
+/**
+ * Shop item 3 — a sales order is the estimate's editor and page with its own words:
+ * "Save & confirm" in place of "Save & send", no validity and no due date (an
+ * order is never a receivable), and on an open order Convert to invoice and
+ * Cancel order — never Void, which is a bill's.
+ */
+describe('the sales order (Shop item 3)', () => {
+  it('is the bill editor titled Sales order, confirmed rather than sent, with no dates owed', async () => {
+    signIn(['sales.estimate.read', 'sales.estimate.write']);
+    renderWithProviders(<InvoiceEditorPageContent documentId={null} kind="sales_order" />);
+    expect(await screen.findByRole('heading', { name: /Sales order/ })).toBeInTheDocument();
+    expect(screen.getByTestId('invoice-issue')).toHaveTextContent('Save & confirm');
+    expect(screen.queryByText('Valid until')).not.toBeInTheDocument();
+    expect(screen.queryByText('Due on')).not.toBeInTheDocument();
+    await settle();
+  });
+
+  it('offers Convert and Cancel on an open order, and neither once it is billed', () => {
+    signIn([
+      'sales.estimate.read',
+      'sales.estimate.write',
+      'sales.invoice.write',
+      'sales.invoice.void',
+    ]);
+    const open = makeDocument({ kind: 'sales_order', status: 'open', number: 'SO/26-27/0001' });
+    const view = renderWithProviders(<DocumentActions doc={open} />);
+    expect(screen.getByTestId('order-convert')).toBeInTheDocument();
+    expect(screen.getByTestId('order-cancel')).toBeInTheDocument();
+    expect(screen.queryByTestId('document-void')).not.toBeInTheDocument();
+    view.unmount();
+    const billed = makeDocument({
+      kind: 'sales_order',
+      status: 'converted',
+      number: 'SO/26-27/0001',
+      // Billed as a live invoice; with no link (its draft discarded) it may be billed again.
+      links: { converted_to: { id: 'i9', kind: 'invoice', number: 'INV/1', status: 'issued' } },
+    });
+    renderWithProviders(<DocumentActions doc={billed} />);
+    expect(screen.queryByTestId('order-convert')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('order-cancel')).not.toBeInTheDocument();
   });
 });
 

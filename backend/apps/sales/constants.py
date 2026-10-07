@@ -13,6 +13,8 @@ class DocumentKind(models.TextChoices):
     BILL_OF_SUPPLY = "bill_of_supply", _("Bill of supply")
     ESTIMATE = "estimate", _("Estimate")
     CREDIT_NOTE = "credit_note", _("Credit note")
+    #: Shop item 3 — a customer's confirmed order, converted into an invoice.
+    SALES_ORDER = "sales_order", _("Sales order")
 
 
 class DocumentStatus(models.TextChoices):
@@ -35,6 +37,9 @@ class DocumentStatus(models.TextChoices):
     EXPIRED = "expired", _("Expired")
     CONVERTED = "converted", _("Converted")
     APPLIED = "applied", _("Applied")
+    #: Sales order: draft → open (confirmed, numbered) → converted | cancelled.
+    OPEN = "open", _("Open")
+    CANCELLED = "cancelled", _("Cancelled")
 
 
 #: The tax-document kinds `/sales/invoices` serves; estimates and credit notes have their own routes.
@@ -73,6 +78,14 @@ ESTIMATE_TAB_STATUSES: dict[str, tuple[str, ...]] = {
     "expired": ("expired",),
     "converted": ("converted",),
     "rejected": ("rejected",),
+}
+#: Shop item 3 — the sales orders list's tabs. `open` is what is still to be billed.
+SALES_ORDER_TAB_STATUSES: dict[str, tuple[str, ...]] = {
+    "all": ("draft", "open", "converted", "cancelled"),
+    "draft": ("draft",),
+    "open": ("open",),
+    "converted": ("converted",),
+    "cancelled": ("cancelled",),
 }
 #: SAL-04 §14 — the credit notes list's tabs (`open` = issued with credit left to use).
 CREDIT_NOTE_TAB_STATUSES: dict[str, tuple[str, ...]] = {

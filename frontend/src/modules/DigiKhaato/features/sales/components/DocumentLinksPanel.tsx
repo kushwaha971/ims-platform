@@ -59,7 +59,7 @@ export function DocumentLinksPanel({
         description={t('sales.void.bannerReason', { reason: doc.voidReason ?? '' })}
       />
     ),
-    doc.kind === 'estimate' && links.convertedTo && (
+    (doc.kind === 'estimate' || doc.kind === 'sales_order') && links.convertedTo && (
       <UbStatusBanner
         key="converted"
         tone={links.convertedTo.status === 'void' ? 'warning' : 'info'}
@@ -87,8 +87,12 @@ export function DocumentLinksPanel({
     ),
     links.convertedFrom && (
       <UbText key="from" variant="body-sm">
-        {t('sales.estimate.fromEstimate')}{' '}
-        <UbLink href={flowDetailHref('estimate', links.convertedFrom.id)}>
+        {t(
+          links.convertedFrom.kind === 'sales_order'
+            ? 'sales.order.fromOrder'
+            : 'sales.estimate.fromEstimate'
+        )}{' '}
+        <UbLink href={flowDetailHref(links.convertedFrom.kind, links.convertedFrom.id)}>
           {refLabel(links.convertedFrom)}
         </UbLink>
       </UbText>

@@ -66,26 +66,31 @@ export const createFlowColumns = ({
         <UbStatusBadge tone={STATUS_TONE[row.status]} label={t(`sales.status.${row.status}`)} />
       ),
   },
-  kind === 'estimate'
-    ? {
-        id: 'validUntil',
-        header: t('sales.estimate.validUntil'),
-        priority: 2,
-        cardSlot: 'none',
-        widthShare: 14,
-        cell: (row) => (row.validUntil ? formatBusinessDate(row.validUntil) : '—'),
-      }
-    : {
-        id: 'open',
-        header: t('sales.creditNote.openCredit'),
-        priority: 2,
-        cardSlot: 'none',
-        align: 'end',
-        widthShare: 16,
-        cell: (row) => (
-          <UbAmount value={row.status === 'void' ? '0.00' : row.amountDue} size="sm" />
-        ),
-      },
+  // Shop item 3 — an order has no validity and no credit: its status says it all.
+  ...(kind === 'sales_order'
+    ? []
+    : ([
+        kind === 'estimate'
+          ? {
+              id: 'validUntil',
+              header: t('sales.estimate.validUntil'),
+              priority: 2,
+              cardSlot: 'none',
+              widthShare: 14,
+              cell: (row) => (row.validUntil ? formatBusinessDate(row.validUntil) : '—'),
+            }
+          : {
+              id: 'open',
+              header: t('sales.creditNote.openCredit'),
+              priority: 2,
+              cardSlot: 'none',
+              align: 'end',
+              widthShare: 16,
+              cell: (row) => (
+                <UbAmount value={row.status === 'void' ? '0.00' : row.amountDue} size="sm" />
+              ),
+            },
+      ] satisfies UbDataGridColumn<InvoiceListRow>[])),
   {
     id: 'total',
     header: t('sales.column.total'),

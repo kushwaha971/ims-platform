@@ -1,4 +1,5 @@
 import type { PaymentMode } from 'src/types/domain.types';
+import { formQty } from 'src/utils/quantity';
 
 import type { EngineDocumentInput, EngineGstType } from './taxEngine';
 import type { DiscountType, SalesDocument } from '../types/sales.types';
@@ -147,6 +148,8 @@ export const toWireBody = (values: InvoiceFormValues): Record<string, unknown> =
  * reading: counted units are whole, everything else may be weighed. It errs
  * lenient — the server, which has the unit, refuses what this lets through.
  */
+export { formQty };
+
 export const unitAllowsDecimal = (unitCode: string): boolean => !/^(NOS|PCS)$/.test(unitCode);
 
 /** The server's draft back into the form — for "edit", "restore" and a reload. */
@@ -172,7 +175,7 @@ export const fromDocument = (doc: SalesDocument): InvoiceFormValues => ({
         itemId: line.itemId,
         description: line.description,
         hsnSac: line.hsnSac ?? '',
-        qty: line.qty,
+        qty: formQty(line.qty, unitAllowsDecimal(line.unitCode)),
         unitCode: line.unitCode,
         allowDecimal: unitAllowsDecimal(line.unitCode),
         unitPrice: line.unitPrice,

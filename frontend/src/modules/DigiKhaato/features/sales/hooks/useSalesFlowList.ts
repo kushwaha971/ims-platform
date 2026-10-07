@@ -52,10 +52,12 @@ export const useSalesFlowList = (kind: FlowKind): UseSalesFlowListResult => {
   const state = useAppSelector(selectSalesDocList);
 
   const canRead =
-    hasModule('sales') && can(kind === 'estimate' ? 'sales.estimate.read' : 'sales.invoice.read');
+    hasModule('sales') &&
+    can(kind === 'credit_note' ? 'sales.invoice.read' : 'sales.estimate.read');
+  // Estimates and sales orders are the estimate codenames' (Shop item 3).
   const canWrite =
     hasModule('sales') &&
-    can(kind === 'estimate' ? 'sales.estimate.write' : 'sales.credit_note.write');
+    can(kind === 'credit_note' ? 'sales.credit_note.write' : 'sales.estimate.write');
   const today = useMemo(() => todayInTenantTz(timezone ?? undefined), [timezone]);
 
   const queryString = search?.toString() ?? '';

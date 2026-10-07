@@ -196,6 +196,13 @@ class AuditAction:
     ESTIMATE_REJECTED = "estimate.rejected"
     ESTIMATE_EXPIRED = "estimate.expired"
     ESTIMATE_CONVERTED = "estimate.converted"
+    # Shop item 3 — sales orders
+    SALES_ORDER_CREATED = "sales_order.created"
+    SALES_ORDER_UPDATED = "sales_order.updated"
+    SALES_ORDER_DELETED = "sales_order.deleted"
+    SALES_ORDER_CONFIRMED = "sales_order.confirmed"
+    SALES_ORDER_CANCELLED = "sales_order.cancelled"
+    SALES_ORDER_CONVERTED = "sales_order.converted"
     CREDIT_NOTE_DRAFT_CREATED = "credit_note.draft_created"
     CREDIT_NOTE_DRAFT_UPDATED = "credit_note.draft_updated"
     CREDIT_NOTE_DRAFT_DELETED = "credit_note.draft_deleted"

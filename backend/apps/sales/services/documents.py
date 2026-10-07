@@ -31,6 +31,11 @@ _DRAFT_ACTIONS: dict[str, tuple[str, str, str]] = {
         AuditAction.ESTIMATE_UPDATED,
         AuditAction.ESTIMATE_DELETED,
     ),
+    DocumentKind.SALES_ORDER: (
+        AuditAction.SALES_ORDER_CREATED,
+        AuditAction.SALES_ORDER_UPDATED,
+        AuditAction.SALES_ORDER_DELETED,
+    ),
     DocumentKind.CREDIT_NOTE: (
         AuditAction.CREDIT_NOTE_DRAFT_CREATED,
         AuditAction.CREDIT_NOTE_DRAFT_UPDATED,

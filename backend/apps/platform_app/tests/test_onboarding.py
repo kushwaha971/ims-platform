@@ -450,7 +450,8 @@ def test_completing_the_wizard_seeds_every_default(
     assert labels == {"customer": "Customer", "supplier": "Supplier"}
 
     sequences = DocumentSequence.objects.filter(tenant=new_tenant)
-    assert sequences.count() == len(NUMBERING_PREFIXES) == 12
+    # Twelve core kinds, plus sales orders (Shop item 3, 7 Oct 2026).
+    assert sequences.count() == len(NUMBERING_PREFIXES) == 13
     invoice = sequences.get(kind="invoice")
     assert (invoice.prefix, invoice.next_number, invoice.padding) == ("INV", 1, 4)
 

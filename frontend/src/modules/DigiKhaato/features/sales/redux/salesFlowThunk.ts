@@ -6,7 +6,7 @@ import { toApiError } from 'src/utils/apiError';
 import type { CreditNoteIssued, VoidedEnvelope } from '../api/creditNoteService';
 import type { FlowListPage, FlowListQuery } from '../api/estimateService';
 import type { InvoiceListPage, SalesDocumentEnvelope } from '../types/sales.types';
-import type { EstimateMove, FlowKind } from '../types/salesFlows.types';
+import type { FlowKind, FlowMove, QuoteKind } from '../types/salesFlows.types';
 
 /**
  * SAL-01 / SAL-04 / SAL-05 thunks — one service call each and a catch that
@@ -77,6 +77,8 @@ export const fetchOpenInvoices = createAsyncThunk<InvoiceListPage, string, Rejec
 );
 
 export interface SaveEstimateArg {
+  /** Shop item 3 — `sales_order` writes through the same thunk; absent is an estimate. */
+  readonly kind?: QuoteKind;
   readonly id: string | null;
   readonly version: number | null;
   readonly body: Record<string, unknown>;
@@ -86,12 +88,12 @@ export interface SaveEstimateArg {
 /** MUTATION. The estimate draft: POST the first time, PATCH with the version after. */
 export const saveEstimateDraft = createAsyncThunk<SalesDocumentEnvelope, SaveEstimateArg, Reject>(
   'invoiceEditor/saveEstimateDraft',
-  async ({ id, version, body, quiet }, { rejectWithValue }) => {
+  async ({ id, version, body, quiet, kind }, { rejectWithValue }) => {
     try {
       const api = await estimates();
       return id
-        ? await api.updateEstimate(id, { ...body, version }, { quiet })
-        : await api.createEstimate(body, { quiet });
+        ? await api.updateEstimate(id, { ...body, version }, { quiet, kind })
+        : await api.createEstimate(body, { quiet, kind });
     } catch (error) {
       return rejectWithValue(toApiError(error, 'sales.editor.error.save'));
     }
@@ -99,24 +101,26 @@ export const saveEstimateDraft = createAsyncThunk<SalesDocumentEnvelope, SaveEst
 );
 
 /** MUTATION. FR-12 — only a draft estimate is deleted; a sent one is rejected instead. */
-export const deleteEstimateDraft = createAsyncThunk<string, string, Reject>(
-  'invoiceEditor/deleteEstimateDraft',
-  async (id, { rejectWithValue }) => {
-    try {
-      await (await estimates()).deleteEstimate(id);
-      return id;
-    } catch (error) {
-      return rejectWithValue(toApiError(error, 'sales.editor.error.delete'));
-    }
+export const deleteEstimateDraft = createAsyncThunk<
+  string,
+  string | { readonly id: string; readonly kind: QuoteKind },
+  Reject
+>('invoiceEditor/deleteEstimateDraft', async (arg, { rejectWithValue }) => {
+  const { id, kind } = typeof arg === 'string' ? { id: arg, kind: 'estimate' as const } : arg;
+  try {
+    await (await estimates()).deleteEstimate(id, kind);
+    return id;
+  } catch (error) {
+    return rejectWithValue(toApiError(error, 'sales.editor.error.delete'));
   }
-);
+});
 
 /** MUTATION. `draft → sent` (numbered), `sent → accepted | rejected`. */
 export const moveEstimate = createAsyncThunk<
   SalesDocumentEnvelope,
   {
     readonly id: string;
-    readonly move: EstimateMove;
+    readonly move: FlowMove;
     readonly version?: number;
     readonly note?: string;
   },
@@ -125,7 +129,8 @@ export const moveEstimate = createAsyncThunk<
   try {
     const body: Record<string, unknown> = {};
     if (version !== undefined) body.version = version;
-    if (note) body.note = note;
+    // A sales order's cancel carries the customer's reason; an estimate's reject, a note.
+    if (note) body[move === 'cancel' ? 'reason' : 'note'] = note;
     return await (await estimates()).moveEstimate(id, move, body);
   } catch (error) {
     return rejectWithValue(toApiError(error, 'sales.estimate.error.move'));
@@ -133,16 +138,18 @@ export const moveEstimate = createAsyncThunk<
 });
 
 /** MUTATION. The draft invoice an estimate becomes (FR-6). */
-export const convertEstimate = createAsyncThunk<SalesDocumentEnvelope, string, Reject>(
-  'invoice/convertEstimate',
-  async (id, { rejectWithValue }) => {
-    try {
-      return await (await estimates()).convertEstimate(id);
-    } catch (error) {
-      return rejectWithValue(toApiError(error, 'sales.estimate.error.convert'));
-    }
+export const convertEstimate = createAsyncThunk<
+  SalesDocumentEnvelope,
+  string | { readonly id: string; readonly kind: QuoteKind },
+  Reject
+>('invoice/convertEstimate', async (arg, { rejectWithValue }) => {
+  const { id, kind } = typeof arg === 'string' ? { id: arg, kind: 'estimate' as const } : arg;
+  try {
+    return await (await estimates()).convertEstimate(id, kind);
+  } catch (error) {
+    return rejectWithValue(toApiError(error, 'sales.estimate.error.convert'));
   }
-);
+});
 
 /** MUTATION. The return, issued in one request; the key survives a retry (EC-8). */
 export const issueCreditNote = createAsyncThunk<

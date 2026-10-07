@@ -40,6 +40,9 @@ const shareText = (
       validUntil: formatBusinessDate(doc.validUntil),
     });
   }
+  if (doc.kind === 'sales_order') {
+    return t('sales.order.shareText', { ...base, total: formatInr(doc.grandTotal) });
+  }
   if (doc.kind === 'credit_note') {
     return t('sales.creditNote.shareText', {
       ...base,

@@ -3,7 +3,7 @@
 One nested object rather than a dozen top-level keys, so an invoice read and a
 credit note read keep the §22.7 common shape and differ only inside `links`:
 
-* estimate → `converted_to` (the invoice it became);
+* estimate, sales order → `converted_to` (the invoice it became);
 * invoice  → `converted_from`, `credit_notes[]` (notes written against it) and
   `credit_applications[]` (credit used on it, from any note);
 * credit note → `against`, `applications[]`, `refund`, `reason`, `restock`,
@@ -30,7 +30,7 @@ def _applications(rows: Any, other: str) -> list[dict]:
 def document_links(obj: Any) -> dict:
     from apps.sales.models import SalesCreditApplication, SalesDocument
 
-    if obj.kind == "estimate":
+    if obj.kind in ("estimate", "sales_order"):
         target = (
             SalesDocument.objects.filter(pk=obj.converted_to_id).first()
             if obj.converted_to_id

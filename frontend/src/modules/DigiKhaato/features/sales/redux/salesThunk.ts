@@ -144,7 +144,7 @@ export const fetchUpiIntent = createAsyncThunk<UpiIntent | null, string, Reject>
 /** UAT D1 — kill the live link so the next share mints a new one (owner/admin). */
 export const revokeInvoiceShareLink = createAsyncThunk<
   boolean,
-  { readonly id: string; readonly kind?: 'invoice' | 'estimate' | 'credit_note' },
+  { readonly id: string; readonly kind?: 'invoice' | 'estimate' | 'credit_note' | 'sales_order' },
   Reject
 >('invoice/revokeInvoiceShareLink', async ({ id, kind }, { rejectWithValue }) => {
   try {
@@ -160,7 +160,7 @@ export const createInvoiceShareLink = createAsyncThunk<
     readonly id: string;
     readonly channel: 'link' | 'whatsapp';
     /** SAL-01 / SAL-04 — estimates and credit notes share through their own routes. */
-    readonly kind?: 'invoice' | 'estimate' | 'credit_note';
+    readonly kind?: 'invoice' | 'estimate' | 'credit_note' | 'sales_order';
   },
   Reject
 >('invoice/createInvoiceShareLink', async ({ id, channel, kind }, { rejectWithValue }) => {

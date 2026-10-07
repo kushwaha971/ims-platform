@@ -36,6 +36,12 @@ class RejectSerializer(serializers.Serializer):
     note = serializers.CharField(required=False, allow_blank=True, max_length=255)
 
 
+class CancelSerializer(serializers.Serializer):
+    """Shop item 3 — why a confirmed sales order will not be billed."""
+
+    reason = serializers.CharField(max_length=160, allow_blank=True)
+
+
 class VersionSerializer(serializers.Serializer):
     version = serializers.IntegerField(required=False)
 

@@ -72,15 +72,23 @@ export interface VoidResult {
   readonly partyBalance: string | null;
 }
 
-/** The two kinds with their own list and detail routes. */
-export type FlowKind = 'estimate' | 'credit_note';
+/** The kinds with their own list and detail routes. */
+export type FlowKind = 'estimate' | 'credit_note' | 'sales_order';
+/** The kinds the bill editor writes besides the invoice: a quote, or an order. */
+export type QuoteKind = 'estimate' | 'sales_order';
 
 /** SAL-01 FR-10 / SAL-04 §14 — the lists' tabs, each a set of statuses on the server. */
 export const ESTIMATE_TABS = ['all', 'draft', 'sent', 'accepted', 'expired', 'converted'] as const;
 export const CREDIT_NOTE_TABS = ['all', 'open', 'applied', 'draft', 'void'] as const;
+/** Shop item 3 — `open` is what is still to be billed. */
+export const SALES_ORDER_TABS = ['all', 'open', 'draft', 'converted', 'cancelled'] as const;
 export type EstimateTab = (typeof ESTIMATE_TABS)[number];
 export type CreditNoteTab = (typeof CREDIT_NOTE_TABS)[number];
-export type FlowTab = EstimateTab | CreditNoteTab;
+export type SalesOrderTab = (typeof SALES_ORDER_TABS)[number];
+export type FlowTab = EstimateTab | CreditNoteTab | SalesOrderTab;
 
 /** The estimate status moves the detail page offers (§9). */
 export type EstimateMove = 'sent' | 'accepted' | 'rejected';
+/** Shop item 3 — a sales order's moves: confirm (numbered) and cancel (with a reason). */
+export type SalesOrderMove = 'confirm' | 'cancel';
+export type FlowMove = EstimateMove | SalesOrderMove;

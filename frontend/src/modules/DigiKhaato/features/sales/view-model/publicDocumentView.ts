@@ -34,6 +34,14 @@ export const publicStatus = (doc: Pick<SalesDocument, 'kind' | 'status'>): Publi
     }
     return { labelId: 'publicDocument.status.valid', tone: 'info' };
   }
+  // Shop item 3 — an order says whether it stands, was billed, or was called off.
+  if (doc.kind === 'sales_order') {
+    if (doc.status === 'cancelled')
+      return { labelId: 'publicDocument.status.cancelled', tone: 'neutral' };
+    if (doc.status === 'converted')
+      return { labelId: 'publicDocument.status.billed', tone: 'success' };
+    return { labelId: 'publicDocument.status.orderConfirmed', tone: 'info' };
+  }
   if (doc.kind === 'credit_note') {
     return doc.status === 'applied'
       ? { labelId: 'publicDocument.status.adjusted', tone: 'success' }
@@ -63,6 +71,9 @@ export const headlineAmount = (
   if (doc.kind === 'estimate') {
     return { labelId: 'publicDocument.amount.estimate', value: doc.grandTotal };
   }
+  if (doc.kind === 'sales_order') {
+    return { labelId: 'publicDocument.amount.order', value: doc.grandTotal };
+  }
   if (doc.kind === 'credit_note') {
     return { labelId: 'publicDocument.amount.creditNote', value: doc.grandTotal };
   }
@@ -79,6 +90,7 @@ export const headlineAmount = (
 export const kindNoteId = (doc: Pick<SalesDocument, 'kind' | 'status'>): string | null => {
   if (doc.status === 'void') return 'publicDocument.note.void';
   if (doc.kind === 'estimate') return 'publicDocument.note.estimate';
+  if (doc.kind === 'sales_order') return 'publicDocument.note.order';
   if (doc.kind === 'credit_note') return 'publicDocument.note.creditNote';
   return null;
 };

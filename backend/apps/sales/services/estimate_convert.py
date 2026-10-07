@@ -64,7 +64,11 @@ def _refuse_second_conversion(estimate: Any) -> None:
     if target is not None and target.status != DocumentStatus.VOID:
         raise BusinessRuleViolation(
             "document_not_draft",
-            "Estimate already converted",
+            (
+                "Estimate already converted"
+                if estimate.kind == DocumentKind.ESTIMATE
+                else "This order is already an invoice"
+            ),
             details={"invoice_id": str(target.id), "number": target.number},
         )
 
@@ -108,13 +112,33 @@ def _warnings(estimate_lines: list, invoice: Any, tenant: Any) -> list[dict]:
 @transaction.atomic
 def convert_estimate(*, ctx: Ctx, document_id: Any) -> dict:
     """Returns `{document: <draft invoice>, estimate, warnings}`."""
-    estimate = drafts.lock_document(ctx.tenant, document_id, ESTIMATE_KINDS)
+    return convert_to_invoice(
+        ctx=ctx,
+        document_id=document_id,
+        kinds=ESTIMATE_KINDS,
+        statuses=CONVERTIBLE_STATUSES,
+        refusal="Only a sent, accepted or expired estimate can be converted.",
+        action=AuditAction.ESTIMATE_CONVERTED,
+    )
+
+
+@transaction.atomic
+def convert_to_invoice(
+    *,
+    ctx: Ctx,
+    document_id: Any,
+    kinds: tuple[str, ...],
+    statuses: tuple[str, ...],
+    refusal: str,
+    action: str,
+) -> dict:
+    """An estimate or a sales order (Shop item 3) becomes a draft invoice — one path, so
+    an order is priced, taxed and linked exactly as a quote is."""
+    estimate = drafts.lock_document(ctx.tenant, document_id, kinds)
     _refuse_second_conversion(estimate)
-    if estimate.status not in CONVERTIBLE_STATUSES and estimate.status != DocumentStatus.CONVERTED:
+    if estimate.status not in statuses and estimate.status != DocumentStatus.CONVERTED:
         raise BusinessRuleViolation(
-            "document_not_open",
-            "Only a sent, accepted or expired estimate can be converted.",
-            details={"status": estimate.status},
+            "document_not_open", refusal, details={"status": estimate.status}
         )
     party = estimate.party
     if party is not None and party.status == "archived":
@@ -146,7 +170,7 @@ def convert_estimate(*, ctx: Ctx, document_id: Any) -> dict:
     warnings = list(result["warnings"]) + _warnings(lines, invoice, ctx.tenant)
     write_audit(
         ctx=ctx,
-        action=AuditAction.ESTIMATE_CONVERTED,
+        action=action,
         entity_type="sales_document",
         entity_id=estimate.id,
         before=before,

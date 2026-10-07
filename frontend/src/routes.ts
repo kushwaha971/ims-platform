@@ -71,6 +71,8 @@ export const ROUTES = {
   SALES_INVOICES: '/sales/invoices',
   /** SAL-01 — quotations (kachha bill); SAL-04 — returns against a bill. */
   SALES_ESTIMATES: '/sales/estimates',
+  /** Shop item 3 — a customer's order, before it is billed. */
+  SALES_ORDERS: '/sales/orders',
   SALES_CREDIT_NOTES: '/sales/credit-notes',
   PURCHASE_BILLS: '/purchases/bills',
   PAYMENTS: '/payments',

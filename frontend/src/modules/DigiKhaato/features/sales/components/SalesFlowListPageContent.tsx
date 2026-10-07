@@ -47,6 +47,7 @@ import type { FlowKind, FlowTab } from '../types/salesFlows.types';
 const COPY: Readonly<Record<FlowKind, { readonly ns: string; readonly stat: string }>> = {
   estimate: { ns: 'sales.estimate', stat: 'sales.estimate.totalQuoted' },
   credit_note: { ns: 'sales.creditNote', stat: 'sales.creditNote.totalCredited' },
+  sales_order: { ns: 'sales.order', stat: 'sales.order.totalOrdered' },
 };
 
 /**
@@ -65,7 +66,8 @@ export function SalesFlowListPageContent({
   const list = useSalesFlowList(kind);
   const labels = useSalesGridLabels();
   const { ns, stat } = COPY[kind];
-  const newHref = `${FLOW_HOME.estimate}/new`;
+  const newHref = `${FLOW_HOME[kind === 'sales_order' ? 'sales_order' : 'estimate']}/new`;
+  const newLabelId = kind === 'sales_order' ? 'sales.order.new' : 'sales.estimate.new';
 
   const [search, setSearch] = useState(list.filters.q);
   const debounced = useDebounce(search, INVOICE_SEARCH_DEBOUNCE_MS);
@@ -78,7 +80,7 @@ export function SalesFlowListPageContent({
     () => createFlowColumns({ t, kind, isCards: tier === 'cards' }),
     [t, kind, tier]
   );
-  const newEstimate = canWrite && kind === 'estimate';
+  const newEstimate = canWrite && (kind === 'estimate' || kind === 'sales_order');
   const emptyStates = useMemo<UbDataGridEmptyStates>(
     () => ({
       firstUse: {
@@ -89,7 +91,7 @@ export function SalesFlowListPageContent({
             icon={<Plus className="h-4 w-4" aria-hidden />}
             onClick={() => router.push(newHref)}
           >
-            {t('sales.estimate.new')}
+            {t(newLabelId)}
           </UbButton>
         ) : undefined,
       },
@@ -114,7 +116,7 @@ export function SalesFlowListPageContent({
         ),
       },
     }),
-    [t, ns, newEstimate, router, newHref, clearFilters, error, refetch]
+    [t, ns, newEstimate, router, newHref, newLabelId, clearFilters, error, refetch]
   );
 
   const narrowed = filters.tab !== 'all' || !!filters.q.trim();
@@ -181,7 +183,7 @@ export function SalesFlowListPageContent({
                 iconOnly="mobile"
                 data-testid="estimate-new"
               >
-                {t('sales.estimate.new')}
+                {t(newLabelId)}
               </UbActionLink>
             )}
           </>
@@ -222,7 +224,8 @@ export function SalesFlowListPageContent({
             ) : (
               <UbStatCard
                 icon={<FileText className="h-4 w-4" aria-hidden />}
-                label={t('sales.total.count')}
+                // The list's own noun: an estimates list counts estimates, not "Bills".
+                label={t(`${ns}.count`)}
                 value={String(totals.count)}
               />
             )}

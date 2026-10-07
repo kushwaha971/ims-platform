@@ -35,12 +35,16 @@ export const STATUS_TONE: Record<SalesStatus, UbStatusBadgeTone> = {
   converted: 'neutral',
   // SAL-04 §9 — open credit is `issued` (info); fully used is `applied`.
   applied: 'success',
+  // Shop item 3 — an open order is still to be billed (info); cancelled is grey.
+  open: 'info',
+  cancelled: 'neutral',
 };
 
 /** SAL-02 §8 / BR-12 — the document title a merchant's registration gives it. */
 export const documentTitleId = (kind: SalesKind, gstType: GstType): string => {
   if (kind === 'bill_of_supply') return 'sales.title.billOfSupply';
   if (kind === 'estimate') return 'sales.estimate.title';
+  if (kind === 'sales_order') return 'sales.order.title';
   if (kind === 'credit_note') return 'sales.creditNote.title';
   return gstType === 'regular' ? 'sales.title.taxInvoice' : 'sales.title.invoice';
 };

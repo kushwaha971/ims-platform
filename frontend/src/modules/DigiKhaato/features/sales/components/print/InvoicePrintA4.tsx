@@ -34,7 +34,9 @@ const numberLabelId = (kind: SalesDocument['kind']): string =>
     ? 'sales.print.number.creditNote'
     : kind === 'estimate'
       ? 'sales.print.number.estimate'
-      : 'sales.print.number';
+      : kind === 'sales_order'
+        ? 'sales.print.number.order'
+        : 'sales.print.number';
 
 const COMPOSITION_FOOTER = 'Composition taxable person, not eligible to collect tax on supplies';
 
@@ -361,26 +363,29 @@ export function InvoicePrintA4({
                 <th scope="row">{t('sales.totals.grand')}</th>
                 <td data-testid="print-grand-total">{formatInr(doc.grandTotal)}</td>
               </tr>
-              {doc.status !== 'draft' && doc.kind !== 'estimate' && doc.kind !== 'credit_note' && (
-                <>
-                  <tr>
-                    <th scope="row">{t('sales.print.paid')}</th>
-                    <td>{formatInr(doc.amountPaid)}</td>
-                  </tr>
-                  {/* What returns took off the bill, so Paid + this + Balance
-                      due adds up to the grand total on paper. */}
-                  {credited !== '0.00' && (
+              {doc.status !== 'draft' &&
+                doc.kind !== 'estimate' &&
+                doc.kind !== 'sales_order' &&
+                doc.kind !== 'credit_note' && (
+                  <>
                     <tr>
-                      <th scope="row">{t('sales.print.credited')}</th>
-                      <td>{`−${formatInr(credited)}`}</td>
+                      <th scope="row">{t('sales.print.paid')}</th>
+                      <td>{formatInr(doc.amountPaid)}</td>
                     </tr>
-                  )}
-                  <tr>
-                    <th scope="row">{t('sales.print.balance')}</th>
-                    <td className="font-semibold">{formatInr(doc.amountDue)}</td>
-                  </tr>
-                </>
-              )}
+                    {/* What returns took off the bill, so Paid + this + Balance
+                      due adds up to the grand total on paper. */}
+                    {credited !== '0.00' && (
+                      <tr>
+                        <th scope="row">{t('sales.print.credited')}</th>
+                        <td>{`−${formatInr(credited)}`}</td>
+                      </tr>
+                    )}
+                    <tr>
+                      <th scope="row">{t('sales.print.balance')}</th>
+                      <td className="font-semibold">{formatInr(doc.amountDue)}</td>
+                    </tr>
+                  </>
+                )}
             </tbody>
           </table>
         </div>
@@ -388,9 +393,13 @@ export function InvoicePrintA4({
         <div className="gst-row grid grid-cols-1 sm:grid-cols-[1fr_38%] print:grid-cols-[1fr_38%]">
           <div className="gst-cell gst-divide space-y-1">
             {doc.kind === 'bill_of_supply' && <p className="font-semibold">{COMPOSITION_FOOTER}</p>}
-            {doc.kind === 'estimate' && (
+            {(doc.kind === 'estimate' || doc.kind === 'sales_order') && (
               <p className="font-semibold" data-testid="print-not-tax-invoice">
-                {t('sales.estimate.notTaxInvoice')}
+                {t(
+                  doc.kind === 'sales_order'
+                    ? 'sales.order.notTaxInvoice'
+                    : 'sales.estimate.notTaxInvoice'
+                )}
               </p>
             )}
             {doc.kind === 'credit_note' && doc.links.against && (
@@ -408,7 +417,9 @@ export function InvoicePrintA4({
               </div>
             )}
             {doc.notes && <p className="whitespace-pre-line">{doc.notes}</p>}
-            {doc.kind !== 'estimate' && <p className="italic">{t('sales.print.declaration')}</p>}
+            {doc.kind !== 'estimate' && doc.kind !== 'sales_order' && (
+              <p className="italic">{t('sales.print.declaration')}</p>
+            )}
             {branding?.docFooter && <p>{branding.docFooter}</p>}
           </div>
           <div className="gst-cell flex flex-col justify-between text-right">

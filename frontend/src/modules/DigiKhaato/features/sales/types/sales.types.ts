@@ -9,7 +9,14 @@ import type { SalesDocumentLinks } from './salesFlows.types';
  * and never stores its own figure; the server's is the one that is printed.
  */
 
-export const SALES_KINDS = ['invoice', 'bill_of_supply', 'estimate', 'credit_note'] as const;
+export const SALES_KINDS = [
+  'invoice',
+  'bill_of_supply',
+  'estimate',
+  'credit_note',
+  // Shop item 3 — a customer's order, converted into an invoice.
+  'sales_order',
+] as const;
 export type SalesKind = (typeof SALES_KINDS)[number];
 
 export const SALES_STATUSES = [
@@ -27,6 +34,9 @@ export const SALES_STATUSES = [
   'converted',
   // SAL-04 — credit notes
   'applied',
+  // Shop item 3 — sales orders: draft → open → converted | cancelled
+  'open',
+  'cancelled',
 ] as const;
 export type SalesStatus = (typeof SALES_STATUSES)[number];
 

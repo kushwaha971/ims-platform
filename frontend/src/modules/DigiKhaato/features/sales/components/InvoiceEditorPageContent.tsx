@@ -76,8 +76,14 @@ export function InvoiceEditorPageContent({
   const { form, preview, editor: server, canWrite, save, issue, values, today } = editor;
   const [paying, setPaying] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const estimate = kind === 'estimate';
-  const home = estimate ? ROUTES.SALES_ESTIMATES : ROUTES.SALES_INVOICES;
+  // Shop item 3 — a sales order is written as an estimate is: saved, then numbered, never paid.
+  const estimate = kind === 'estimate' || kind === 'sales_order';
+  const order = kind === 'sales_order';
+  const home = order
+    ? ROUTES.SALES_ORDERS
+    : estimate
+      ? ROUTES.SALES_ESTIMATES
+      : ROUTES.SALES_INVOICES;
 
   const context = server.context;
   const taxFree = context ? context.gstType !== 'regular' : false;
@@ -94,10 +100,10 @@ export function InvoiceEditorPageContent({
         setPaying(false);
         autosave.clearLocal();
         // An estimate has no success sheet: it opens, numbered, to be shared.
-        if (estimate) router.push(`${ROUTES.SALES_ESTIMATES}/${result.document.id}`);
+        if (estimate) router.push(`${home}/${result.document.id}`);
       }
     },
-    [issue, autosave, estimate, router]
+    [issue, autosave, estimate, router, home]
   );
   const startIssue = useCallback(() => {
     if (!hasLines || locked) return;
@@ -128,12 +134,15 @@ export function InvoiceEditorPageContent({
 
   const onDelete = useCallback(() => {
     if (!server.documentId) return;
-    const thunk = estimate ? deleteEstimateDraft : deleteInvoiceDraft;
-    void dispatch(thunk(server.documentId)).then(() => {
+    const id = server.documentId;
+    const deleting = estimate
+      ? dispatch(deleteEstimateDraft({ id, kind: order ? 'sales_order' : 'estimate' }))
+      : dispatch(deleteInvoiceDraft(id));
+    void deleting.then(() => {
       autosave.clearLocal();
       router.push(home);
     });
-  }, [server.documentId, estimate, dispatch, autosave, router, home]);
+  }, [server.documentId, estimate, order, dispatch, autosave, router, home]);
 
   if (!canWrite) {
     return (
@@ -152,7 +161,13 @@ export function InvoiceEditorPageContent({
 
   const title = t(
     documentTitleId(
-      estimate ? 'estimate' : context.gstType === 'composition' ? 'bill_of_supply' : 'invoice',
+      order
+        ? 'sales_order'
+        : estimate
+          ? 'estimate'
+          : context.gstType === 'composition'
+            ? 'bill_of_supply'
+            : 'invoice',
       context.gstType
     )
   );
@@ -196,11 +211,23 @@ export function InvoiceEditorPageContent({
               icon={<Send className="h-4 w-4" aria-hidden />}
               onClick={requestIssue}
               busy={server.issuing}
-              busyLabel={t(estimate ? 'sales.estimate.sending' : 'sales.editor.issuing')}
+              busyLabel={t(
+                order
+                  ? 'sales.order.confirming'
+                  : estimate
+                    ? 'sales.estimate.sending'
+                    : 'sales.editor.issuing'
+              )}
               disabled={!hasLines || locked}
               data-testid="invoice-issue"
             >
-              {t(estimate ? 'sales.estimate.saveAndSend' : 'sales.editor.issue')}
+              {t(
+                order
+                  ? 'sales.order.confirm'
+                  : estimate
+                    ? 'sales.estimate.saveAndSend'
+                    : 'sales.editor.issue'
+              )}
             </UbButton>
           </>
         }

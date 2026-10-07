@@ -3,6 +3,7 @@ import { ROUTES } from 'src/routes';
 import {
   CREDIT_NOTE_TABS,
   ESTIMATE_TABS,
+  SALES_ORDER_TABS,
   type FlowKind,
   type FlowTab,
 } from '../types/salesFlows.types';
@@ -21,11 +22,13 @@ import type { SalesDocument, SalesStatus } from '../types/sales.types';
 export const FLOW_TABS: Readonly<Record<FlowKind, readonly FlowTab[]>> = {
   estimate: ESTIMATE_TABS,
   credit_note: CREDIT_NOTE_TABS,
+  sales_order: SALES_ORDER_TABS,
 };
 
 export const FLOW_HOME: Readonly<Record<FlowKind, string>> = {
   estimate: ROUTES.SALES_ESTIMATES,
   credit_note: ROUTES.SALES_CREDIT_NOTES,
+  sales_order: ROUTES.SALES_ORDERS,
 };
 
 export interface FlowListFilters extends Omit<InvoiceListFilters, 'tab'> {
@@ -45,9 +48,17 @@ export const flowFiltersFromQuery = (
 
 /** Where a list row opens: a draft estimate into its editor, everything else its page. */
 export const flowRowHref = (kind: FlowKind, id: string, status: SalesStatus): string =>
-  kind === 'estimate' && status === 'draft'
-    ? `${ROUTES.SALES_ESTIMATES}/${id}/edit`
+  (kind === 'estimate' || kind === 'sales_order') && status === 'draft'
+    ? `${FLOW_HOME[kind]}/${id}/edit`
     : `${FLOW_HOME[kind]}/${id}`;
+
+/** Shop item 3 — what an order's status allows: an open order is billed or cancelled. */
+export const salesOrderActions = (
+  status: SalesStatus
+): { readonly convert: boolean; readonly cancel: boolean } => ({
+  convert: status === 'open',
+  cancel: status === 'open',
+});
 
 /** SAL-01 §9 — the moves an estimate's status allows. `rejected` is terminal. */
 export const estimateActions = (
@@ -80,6 +91,8 @@ export const canApply = (doc: SalesDocument): boolean =>
 export const flowDetailHref = (kind: string, id: string): string =>
   kind === 'estimate'
     ? `${ROUTES.SALES_ESTIMATES}/${id}`
-    : kind === 'credit_note'
-      ? `${ROUTES.SALES_CREDIT_NOTES}/${id}`
-      : `${ROUTES.SALES_INVOICES}/${id}`;
+    : kind === 'sales_order'
+      ? `${ROUTES.SALES_ORDERS}/${id}`
+      : kind === 'credit_note'
+        ? `${ROUTES.SALES_CREDIT_NOTES}/${id}`
+        : `${ROUTES.SALES_INVOICES}/${id}`;

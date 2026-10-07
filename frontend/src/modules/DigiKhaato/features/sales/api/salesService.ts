@@ -262,6 +262,7 @@ const SHARE_PATH = {
   invoice: API_PATHS.SALES_INVOICE_SHARE_LINKS,
   estimate: API_PATHS.SALES_ESTIMATE_SHARE_LINKS,
   credit_note: API_PATHS.SALES_CREDIT_NOTE_SHARE_LINKS,
+  sales_order: API_PATHS.SALES_ORDER_SHARE_LINKS,
 } as const;
 
 /** SAL-03 FR-5 — one link per document; each kind has its own route (CR-SAL-1). */

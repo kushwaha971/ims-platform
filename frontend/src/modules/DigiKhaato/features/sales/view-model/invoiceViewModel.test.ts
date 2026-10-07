@@ -6,6 +6,7 @@ import {
   defaultPlaceOfSupply,
   emptyInvoiceForm,
   emptyLine,
+  formQty,
   fromDocument,
   fullCashPayment,
   paymentRowProblems,
@@ -65,7 +66,8 @@ describe('invoice form → wire', () => {
     const doc = makeDocument({ status: 'draft', number: null, lines: [wireLine()] });
     const body = toWireBody(fromDocument(doc));
     expect(body.lines).toEqual([
-      expect.objectContaining({ item_id: 'i1', qty: '1.000', tax_code: 'GST5' }),
+      // The same quantity, as the editor holds a whole unit's: "1", not "1.000".
+      expect.objectContaining({ item_id: 'i1', qty: '1', tax_code: 'GST5' }),
     ]);
   });
 
@@ -150,4 +152,18 @@ describe('paymentRowProblems (PAY-02 §10)', () => {
       ])
     ).toEqual([null, 'amount', 'duplicate', 'reference']);
   });
+});
+
+/**
+ * Found by the sales-order browser pass (7 Oct 2026): a draft reopened from the
+ * server came back as "3.000" NOS, failed the editor's whole-number rule, and
+ * Issue (or Save & confirm) did nothing at all.
+ */
+it('reopens a whole-number line as "3", which the editor accepts, and keeps decimals as sent', () => {
+  expect(formQty('3.000', false)).toBe('3');
+  expect(formQty('12.0', false)).toBe('12');
+  expect(formQty('1.500', false)).toBe('1.500'); // a real fraction stays, for the rule to refuse
+  expect(formQty('1.250', true)).toBe('1.250');
+  const doc = makeDocument({ lines: [wireLine({ qty: '3.000', unit_code: 'NOS' })] });
+  expect(fromDocument(doc).lines[0]?.qty).toBe('3');
 });

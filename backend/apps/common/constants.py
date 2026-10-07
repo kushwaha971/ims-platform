@@ -128,6 +128,7 @@ class DocumentKind(models.TextChoices):
     """Part 21 §21.3.1 `platform_document_sequence.kind`."""
 
     ESTIMATE = "estimate", _("Estimate")
+    SALES_ORDER = "sales_order", _("Sales order")
     INVOICE = "invoice", _("Invoice")
     BILL_OF_SUPPLY = "bill_of_supply", _("Bill of supply")
     CREDIT_NOTE = "credit_note", _("Credit note")

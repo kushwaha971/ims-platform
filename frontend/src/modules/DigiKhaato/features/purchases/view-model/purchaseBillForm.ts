@@ -1,5 +1,6 @@
 import type { PaymentMode, UpiApp } from 'src/types/domain.types';
 import { compareMoney, toDecimal, toMoneyString } from 'src/utils/money';
+import { formQty } from 'src/utils/quantity';
 
 import type { EngineDocumentInput, EngineResult } from '../../sales/view-model/taxEngine';
 import type { PurchaseBill, PurchaseDiscountType } from '../types/purchase.types';
@@ -135,7 +136,7 @@ export const fromPurchaseBill = (bill: PurchaseBill): PurchaseBillFormValues => 
     ? bill.lines.map((line) => ({
         itemId: line.itemId,
         description: line.description,
-        qty: line.qty,
+        qty: formQty(line.qty, !/^(NOS|PCS)$/.test(line.unitCode)),
         unitCode: line.unitCode,
         allowDecimal: !/^(NOS|PCS)$/.test(line.unitCode),
         unitCost: line.unitCost,

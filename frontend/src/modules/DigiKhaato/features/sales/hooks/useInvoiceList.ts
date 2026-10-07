@@ -25,7 +25,6 @@ import {
   type InvoiceListFilters,
 } from '../view-model/invoiceDisplay';
 
-
 import type { InvoiceListQuery } from '../api/salesService';
 import type { InvoicePreset } from '../constants/salesConstants';
 import type { InvoiceTab } from '../types/sales.types';

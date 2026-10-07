@@ -25,3 +25,17 @@ export const addQuantity = (a: string, b: string): string =>
 
 export const compareQuantity = (a: string, b: string): -1 | 0 | 1 =>
   new Decimal(a).comparedTo(new Decimal(b)) as -1 | 0 | 1;
+
+/**
+ * The server stores every quantity to three places ("3.000"), and the editor's
+ * rule for a whole-number unit accepts digits only — so a draft reopened from
+ * the server failed its own check on every NOS line and Issue did nothing, with
+ * the reason hidden in a field too narrow to show it (found by the sales-order
+ * browser pass, 7 Oct 2026; the purchase bill editor had the same defect). A
+ * whole unit's quantity comes back as "3".
+ */
+export const formQty = (qty: string, allowDecimal: boolean): string => {
+  if (allowDecimal) return qty;
+  const whole = /^(\d+)\.0*$/.exec(qty.trim());
+  return whole ? (whole[1] ?? qty) : qty;
+};

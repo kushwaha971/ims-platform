@@ -104,11 +104,15 @@ export function InvoicePrintThermal80({
       {columns === 'inter' && row(t('sales.tax.igst'), formatAmount(doc.igstTotal))}
       {row(t('sales.totals.roundOff'), formatAmount(doc.roundOff))}
       {row(t('sales.print.total'), formatInr(doc.grandTotal), true)}
-      {doc.status !== 'draft' && row(t('sales.print.paid'), formatAmount(doc.amountPaid))}
+      {doc.status !== 'draft' &&
+        doc.kind !== 'sales_order' &&
+        row(t('sales.print.paid'), formatAmount(doc.amountPaid))}
       {doc.status !== 'draft' &&
         doc.kind !== 'estimate' &&
+        doc.kind !== 'sales_order' &&
         row(t('sales.print.balance'), formatAmount(doc.amountDue))}
       {doc.kind === 'estimate' && <p>{t('sales.estimate.notTaxInvoice')}</p>}
+      {doc.kind === 'sales_order' && <p>{t('sales.order.notTaxInvoice')}</p>}
       {columns !== 'none' &&
         taxSummary(doc.lines).map((s) => (
           <p key={s.rate}>

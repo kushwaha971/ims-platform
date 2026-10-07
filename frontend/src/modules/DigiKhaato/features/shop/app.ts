@@ -4,6 +4,7 @@ import {
   BookOpen,
   BookUser,
   Boxes,
+  ClipboardCheck,
   ClipboardList,
   CreditCard,
   FileMinus,
@@ -145,6 +146,17 @@ export const SHOP_APP: AppManifest = {
       section: 'sales',
       order: 2,
     },
+    // Shop item 3 — a customer's order before it is billed (Vyapar's "Sale order").
+    {
+      key: 'salesOrders',
+      icon: ClipboardCheck,
+      labelId: 'nav.salesOrders',
+      href: ROUTES.SALES_ORDERS,
+      module: 'sales',
+      permission: 'sales.estimate.read',
+      section: 'sales',
+      order: 3,
+    },
     {
       key: 'creditNotes',
       icon: FileMinus,
@@ -153,7 +165,7 @@ export const SHOP_APP: AppManifest = {
       module: 'sales',
       permission: 'sales.invoice.read',
       section: 'sales',
-      order: 3,
+      order: 4,
     },
     // PUR-01/03/04 — bills, drafts, record and void.
     {

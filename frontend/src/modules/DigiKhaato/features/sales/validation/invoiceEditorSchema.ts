@@ -48,7 +48,7 @@ export const isIndianMobile = (value: string): boolean =>
   /^(\+91)?[6-9]\d{9}$/.test(value.replace(/[\s-]/g, ''));
 
 export interface InvoiceSchemaOptions {
-  readonly kind: 'invoice' | 'estimate';
+  readonly kind: 'invoice' | 'estimate' | 'sales_order';
 }
 
 /**

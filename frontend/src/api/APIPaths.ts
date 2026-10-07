@@ -155,6 +155,12 @@ export const API_PATHS = {
     `/sales/estimates/${seg(id)}/mark-${move}`,
   SALES_ESTIMATE_CONVERT: (id: string) => `/sales/estimates/${seg(id)}/convert`,
   SALES_ESTIMATE_SHARE_LINKS: (id: string) => `/sales/estimates/${seg(id)}/share-links`,
+  // Shop item 3 — sales orders: the estimate's routes, with confirm / cancel / convert.
+  SALES_ORDERS: '/sales/orders',
+  SALES_ORDER: (id: string) => `/sales/orders/${seg(id)}`,
+  SALES_ORDER_ACTION: (id: string, verb: 'confirm' | 'cancel' | 'convert') =>
+    `/sales/orders/${seg(id)}/${verb}`,
+  SALES_ORDER_SHARE_LINKS: (id: string) => `/sales/orders/${seg(id)}/share-links`,
   SALES_CREDIT_NOTES: '/sales/credit-notes',
   SALES_CREDIT_NOTE: (id: string) => `/sales/credit-notes/${seg(id)}`,
   SALES_CREDIT_NOTE_APPLY: (id: string) => `/sales/credit-notes/${seg(id)}/apply`,
@@ -268,6 +274,7 @@ export const IDEMPOTENT_POST_PATHS: readonly string[] = [
   API_PATHS.LEDGER_ENTRIES,
   API_PATHS.SALES_INVOICES,
   API_PATHS.SALES_ESTIMATES,
+  API_PATHS.SALES_ORDERS,
   API_PATHS.SALES_CREDIT_NOTES,
   API_PATHS.PURCHASE_BILLS,
   API_PATHS.PAYMENTS,

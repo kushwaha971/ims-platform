@@ -136,6 +136,8 @@ NUMBERING_PREFIXES: tuple[tuple[str, str], ...] = (
     ("delivery_challan", "DC"),
     ("stock_adjustment", "ADJ"),
     ("stock_transfer", "TRF"),
+    # Shop item 3 (7 Oct 2026) — sales orders, `SO/26-27/0001`.
+    ("sales_order", "SO"),
 )
 
 NUMBER_PADDING = 4

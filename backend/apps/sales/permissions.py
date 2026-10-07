@@ -48,6 +48,25 @@ EstimatePermissions = HasPermission(_ESTIMATE_ACTIONS)
 #: SAL-01 §12 — converting also writes an invoice, so it needs both codenames.
 EstimateConvertPermissions = HasPermission({**_ESTIMATE_ACTIONS, "convert": "sales.invoice.write"})
 
+#: Shop item 3 — a sales order is the estimate's kind of promise, held by the same people;
+#: converting it writes an invoice, so that also needs `sales.invoice.write`.
+_SALES_ORDER_ACTIONS = {
+    "list": "sales.estimate.read",
+    "retrieve": "sales.estimate.read",
+    "create": "sales.estimate.write",
+    "partial_update": "sales.estimate.write",
+    "destroy": "sales.estimate.write",
+    "confirm": "sales.estimate.write",
+    "cancel": "sales.estimate.write",
+    "convert": "sales.estimate.write",
+    "share_links": "sales.estimate.read",
+    "revoke_share_link": "sales.invoice.void",
+}
+SalesOrderPermissions = HasPermission(_SALES_ORDER_ACTIONS)
+SalesOrderConvertPermissions = HasPermission(
+    {**_SALES_ORDER_ACTIONS, "convert": "sales.invoice.write"}
+)
+
 #: SAL-04 §12 — reading is `sales.invoice.read` (no separate read codename exists).
 CreditNotePermissions = HasPermission(
     {

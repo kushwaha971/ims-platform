@@ -46,13 +46,19 @@ import type { SalesDocumentEnvelope } from '../types/sales.types';
  * recomputes everything regardless (FR-3).
  */
 /** SAL-01 TSK-SAL-01-07 — the kind drives the title, the fields and the actions; one editor. */
-export type EditorKind = 'invoice' | 'estimate';
+export type EditorKind = 'invoice' | 'estimate' | 'sales_order';
 
-/** The draft body for the kind: an estimate adds its validity and never has a due date. */
+/** Shop item 3 — a quote and an order are written the same way: never a receivable. */
+export const isQuoteKind = (kind: EditorKind): kind is 'estimate' | 'sales_order' =>
+  kind === 'estimate' || kind === 'sales_order';
+
+/** The draft body for the kind: an estimate adds its validity; neither has a due date. */
 const wireBodyFor = (kind: EditorKind, values: InvoiceFormValues): Record<string, unknown> =>
   kind === 'estimate'
     ? { ...toWireBody(values), due_on: null, valid_until: values.validUntil || null }
-    : toWireBody(values);
+    : kind === 'sales_order'
+      ? { ...toWireBody(values), due_on: null }
+      : toWireBody(values);
 
 export interface UseInvoiceEditorResult {
   readonly kind: EditorKind;
@@ -80,7 +86,7 @@ export const useInvoiceEditor = (
   const { can, hasModule } = usePermissions();
   const today = useMemo(() => todayInTenantTz(timezone ?? undefined), [timezone]);
   const canWrite =
-    hasModule('sales') && can(kind === 'estimate' ? 'sales.estimate.write' : 'sales.invoice.write');
+    hasModule('sales') && can(isQuoteKind(kind) ? 'sales.estimate.write' : 'sales.invoice.write');
   const idempotency = useIdempotencyKey();
 
   const { t } = useTranslation();
@@ -109,8 +115,8 @@ export const useInvoiceEditor = (
     const context = dispatch(fetchSalesContext(today));
     const draft = !documentId
       ? null
-      : kind === 'estimate'
-        ? dispatch(fetchFlowDocument({ kind: 'estimate', id: documentId }))
+      : isQuoteKind(kind)
+        ? dispatch(fetchFlowDocument({ kind, id: documentId }))
         : dispatch(fetchInvoice(documentId));
     return () => {
       context.abort();
@@ -162,10 +168,9 @@ export const useInvoiceEditor = (
   const save = useCallback(
     async (quiet: boolean): Promise<SalesDocumentEnvelope | null> => {
       const arg = { id: savedId, version, body: wireBodyFor(kind, form.getValues()), quiet };
-      const result =
-        kind === 'estimate'
-          ? await dispatch(saveEstimateDraft(arg))
-          : await dispatch(saveInvoiceDraft(arg));
+      const result = isQuoteKind(kind)
+        ? await dispatch(saveEstimateDraft({ ...arg, kind }))
+        : await dispatch(saveInvoiceDraft(arg));
       if (!(
         saveInvoiceDraft.fulfilled.match(result) || saveEstimateDraft.fulfilled.match(result)
       )) {
@@ -184,10 +189,15 @@ export const useInvoiceEditor = (
     async (payment: readonly PaymentRowForm[] | null, override = false) => {
       const saved = await save(false);
       if (!saved) return null;
-      if (kind === 'estimate') {
-        // SAL-01 FR-2 — an estimate's "issue" is `mark-sent`, which numbers it.
+      if (isQuoteKind(kind)) {
+        // SAL-01 FR-2 — an estimate's "issue" is `mark-sent`, which numbers it; a sales
+        // order's is `confirm` (Shop item 3).
         const sent = await dispatch(
-          moveEstimate({ id: saved.document.id, move: 'sent', version: saved.document.version })
+          moveEstimate({
+            id: saved.document.id,
+            move: kind === 'estimate' ? 'sent' : 'confirm',
+            version: saved.document.version,
+          })
         );
         return moveEstimate.fulfilled.match(sent) ? sent.payload : null;
       }

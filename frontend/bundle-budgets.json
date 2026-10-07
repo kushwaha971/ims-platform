@@ -731,7 +731,8 @@
   "2026-10-06 — price lists (Shop gap §1.6). Every route's first load +0.3 KB: one nav entry with its icon, the route constants and API paths the shell carries. /items/price-lists/[id] is new at 80 KB: it is the one screen with the item picker, and it is a settings page opened to set rates, not a read screen. The bill editors +0.2-0.4 KB for the price-list lookup on pick.",
   "2026-10-07 — profit and loss (Shop item 1). /reports/profit is new at 100 KB route / 335 KB first load, the size of the registers: it is the same report shell, period picker and data grid. The three register and GST routes and /parties/[id] +0.1-0.2 KB for the reports catalogue's fifty new words and the route constant the shell carries.",
   "2026-10-07 — GST portal files (Shop item 2). /reports/gst-summary 104 → 106 KB route, 340 → 341 KB first load: the GSTR-1 / GSTR-3B JSON button and its strings. Its request, the blob download and the save are imported by the thunk on the tap, so the measured +0.6 KB is the button itself.",
-  "2026-10-07 — every route +0.1 KB first load: the API client now reads a refused file request's JSON out of its Blob before normalising it (export and GST-file refusals had read \"Request failed.\"). Four routes sitting exactly on their budget tipped over: /settings/team, /library/seats and the two library catalogue routes, +1 each."
+  "2026-10-07 — every route +0.1 KB first load: the API client now reads a refused file request's JSON out of its Blob before normalising it (export and GST-file refusals had read \"Request failed.\"). Four routes sitting exactly on their budget tipped over: /settings/team, /library/seats and the two library catalogue routes, +1 each.",
+  "2026-10-07 — sales orders (Shop item 3). /sales/orders, /sales/orders/[id], /new and /[id]/edit are new and are their estimate siblings' size: the same list, detail page and bill editor, by kind. Those siblings and /sales/invoices/[id] +0.4 KB for the order branches they share; every route's first load +0.1 KB for one nav row and its route constants, which tipped /settings/profile, /library/settings and /d/[token] that sat exactly on their budgets."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -1282,6 +1283,22 @@
   "firstLoad": 288
  },
  "routes": {
+  "/sales/orders/[id]": {
+   "route": 72,
+   "firstLoad": 307
+  },
+  "/sales/orders": {
+   "route": 74,
+   "firstLoad": 309
+  },
+  "/sales/orders/new": {
+   "route": 141,
+   "firstLoad": 376
+  },
+  "/sales/orders/[id]/edit": {
+   "route": 141,
+   "firstLoad": 376
+  },
   "/parties": {
    "route": 109,
    "firstLoad": 344
@@ -1304,18 +1321,18 @@
   },
   "/sales/invoices/[id]": {
    "route": 71,
-   "firstLoad": 306
+   "firstLoad": 307
   },
   "/sales/estimates": {
    "route": 98,
    "firstLoad": 356
   },
   "/sales/estimates/new": {
-   "route": 140,
+   "route": 141,
    "firstLoad": 400
   },
   "/sales/estimates/[id]/edit": {
-   "route": 140,
+   "route": 141,
    "firstLoad": 400
   },
   "/sales/estimates/[id]": {
@@ -1376,7 +1393,7 @@
   },
   "/settings/profile": {
    "route": 133,
-   "firstLoad": 367
+   "firstLoad": 368
   },
   "/settings/branding": {
    "route": 88,
@@ -1528,7 +1545,7 @@
   },
   "/library/settings": {
    "route": 109,
-   "firstLoad": 344
+   "firstLoad": 345
   },
   "/library/members": {
    "route": 78,
@@ -1580,7 +1597,7 @@
   },
   "/d/[token]": {
    "route": 37,
-   "firstLoad": 272
+   "firstLoad": 273
   },
   "/accept-invite/[token]": {
    "route": 11,

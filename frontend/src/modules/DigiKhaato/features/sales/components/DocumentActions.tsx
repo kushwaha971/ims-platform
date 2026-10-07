@@ -15,7 +15,13 @@ import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import { ROUTES } from 'src/routes';
 
 import { convertEstimate, moveEstimate } from '../redux/salesFlowThunk';
-import { canApply, canReturn, estimateActions, isVoidable } from '../view-model/flowDisplay';
+import {
+  canApply,
+  canReturn,
+  estimateActions,
+  isVoidable,
+  salesOrderActions,
+} from '../view-model/flowDisplay';
 
 import type { SalesDocument } from '../types/sales.types';
 
@@ -24,12 +30,16 @@ const VoidDialogLazy = dynamic(
   () => import('./VoidDocumentDialog').then((m) => m.VoidDocumentDialog),
   { ssr: false }
 );
+const CancelOrderDialogLazy = dynamic(
+  () => import('./CancelOrderDialog').then((m) => m.CancelOrderDialog),
+  { ssr: false }
+);
 const ApplyDialogLazy = dynamic(
   () => import('./ApplyCreditDialog').then((m) => m.ApplyCreditDialog),
   { ssr: false }
 );
 
-type Open = 'void' | 'apply' | 'convert' | 'reject' | null;
+type Open = 'void' | 'apply' | 'convert' | 'reject' | 'cancelOrder' | null;
 
 /**
  * The header actions a document's kind and status allow — SAL-01 §9, SAL-04
@@ -38,7 +48,9 @@ type Open = 'void' | 'apply' | 'convert' | 'reject' | null;
  * * estimate — Edit (draft); Mark accepted / Mark rejected (sent); Convert to
  *   invoice (sent, accepted, expired — the single primary on accepted, §8);
  * * invoice — Return items (a credit note against it), Void (owner/admin);
- * * credit note — Apply credit (open credit left), Void (owner/admin).
+ * * credit note — Apply credit (open credit left), Void (owner/admin);
+ * * sales order (Shop item 3) — Edit (draft); Convert to invoice, the primary,
+ *   and Cancel with a reason (open).
  *
  * Icon-only on a phone, so the header stays one row (owner's rule).
  */
@@ -61,7 +73,9 @@ export function DocumentActions({ doc }: Readonly<{ doc: SalesDocument }>): Reac
   );
   const convert = useCallback(async () => {
     setBusy(true);
-    const result = await dispatch(convertEstimate(doc.id));
+    const result = await dispatch(
+      convertEstimate({ id: doc.id, kind: doc.kind === 'sales_order' ? 'sales_order' : 'estimate' })
+    );
     setBusy(false);
     if (!convertEstimate.fulfilled.match(result)) return;
     const changed = result.payload.warnings.length;
@@ -75,18 +89,57 @@ export function DocumentActions({ doc }: Readonly<{ doc: SalesDocument }>): Reac
       );
     }
     router.push(`${ROUTES.SALES_INVOICES}/${result.payload.document.id}/edit`);
-  }, [dispatch, doc.id, router]);
+  }, [dispatch, doc.id, doc.kind, router]);
 
   const estimate = doc.kind === 'estimate';
+  const order = doc.kind === 'sales_order';
   const moves = estimateActions(doc.status);
+  const orderMoves = salesOrderActions(doc.status);
   // SAL-05 EC-9 — the invoice it became was voided (or its draft discarded): convert again.
   const reconvert =
     doc.status === 'converted' &&
     (!doc.links.convertedTo || doc.links.convertedTo.status === 'void');
   const writesEstimates = can('sales.estimate.write');
-  const voidable = isVoidable(doc) && can('sales.invoice.void') && !estimate;
+  const voidable = isVoidable(doc) && can('sales.invoice.void') && !estimate && !order;
   return (
     <>
+      {order && doc.status === 'draft' && writesEstimates && (
+        <UbActionLink
+          href={`${ROUTES.SALES_ORDERS}/${doc.id}/edit`}
+          variant="secondary"
+          iconOnly="mobile"
+          icon={icon(Pencil)}
+        >
+          {t('sales.detail.edit')}
+        </UbActionLink>
+      )}
+      {order && writesEstimates && orderMoves.cancel && (
+        <UbButton
+          variant="ghost"
+          iconOnly="mobile"
+          icon={icon(XCircle)}
+          onClick={() => setOpen('cancelOrder')}
+          data-testid="order-cancel"
+        >
+          {t('sales.order.cancel.action')}
+        </UbButton>
+      )}
+      {order &&
+        writesEstimates &&
+        can('sales.invoice.write') &&
+        (orderMoves.convert || reconvert) && (
+          <UbButton
+            variant="primary"
+            iconOnly="mobile"
+            icon={icon(FileOutput)}
+            onClick={() => setOpen('convert')}
+            busy={busy}
+            busyLabel={t('sales.estimate.convert.working')}
+            data-testid="order-convert"
+          >
+            {t('sales.estimate.convert.action')}
+          </UbButton>
+        )}
       {estimate && doc.status === 'draft' && writesEstimates && (
         <UbActionLink
           href={`${ROUTES.SALES_ESTIMATES}/${doc.id}/edit`}
@@ -169,11 +222,14 @@ export function DocumentActions({ doc }: Readonly<{ doc: SalesDocument }>): Reac
       )}
       {open === 'void' && <VoidDialogLazy doc={doc} onClose={close} />}
       {open === 'apply' && <ApplyDialogLazy note={doc} onClose={close} />}
+      {open === 'cancelOrder' && <CancelOrderDialogLazy doc={doc} onClose={close} />}
       <UbConfirmDialog
         open={open === 'convert'}
         onOpenChange={(next) => !next && close()}
-        title={t('sales.estimate.convert.title')}
-        description={t('sales.estimate.convert.confirm', { number: doc.number ?? '' })}
+        title={t(order ? 'sales.order.convert.title' : 'sales.estimate.convert.title')}
+        description={t(order ? 'sales.order.convert.confirm' : 'sales.estimate.convert.confirm', {
+          number: doc.number ?? '',
+        })}
         confirmLabel={t('sales.estimate.convert.action')}
         cancelLabel={t('common.action.cancel')}
         closeLabel={t('common.action.close')}

@@ -51,7 +51,7 @@ export function InvoicePartySection({
   locale: Locale;
   disabled: boolean;
   /** SAL-01 FR-4 — an estimate carries "Valid until" where a bill carries its due date. */
-  kind?: 'invoice' | 'estimate';
+  kind?: 'invoice' | 'estimate' | 'sales_order';
 }>): React.JSX.Element {
   const { t } = useTranslation();
   const { watch, setValue } = form;
