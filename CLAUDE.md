@@ -54,7 +54,9 @@ not used** — this overrides any earlier suggestion to the contrary. TanStack
 if you write something twice, extract it.
 
 **Errors surface through the global snackbar**, mounted once in `AppProviders`,
-never per page.
+never per page. **No error shows a "Reference <request id>" line** (owner, 7 Oct
+2026): `UbRequestId` draws nothing, so every snackbar, empty state and dialog
+obeys at once. The id is still sent, logged and kept on audit rows for support.
 
 **Product name is YourKhata (yourkhata.com); the folder stays `ims-platform`**
 and the code namespace stays `DigiKhaato`, so the name can change again without

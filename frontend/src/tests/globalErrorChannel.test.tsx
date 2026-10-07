@@ -152,10 +152,10 @@ describe('the rule: an API failure surfaces centrally, through the snackbar', ()
 
     const toast = await screen.findByTestId('snackbar');
     expect(toast).toHaveTextContent('The books are briefly unavailable.');
-    // R-E-4 — the trace id travels with the failure, as the banner used to do.
-    expect(toast).toHaveTextContent('req_channel');
-    // Labelled as the thing to quote, as every error surface labels it (QA B5).
-    expect(toast).toHaveTextContent('Reference req_channel');
+    // Owner, 7 Oct 2026: no "Reference <id>" on any error. The id still travels
+    // in the store (and the server's log), just not onto the merchant's screen.
+    expect(toast).not.toHaveTextContent('req_channel');
+    expect(store.getState().snackbar.requestId).toBe('req_channel');
     // It reached the store's single channel, not some component's local state.
     expect(store.getState().snackbar.snackbarSeverity).toBe('error');
   });
@@ -259,8 +259,8 @@ describe('EXCEPTION 2 — a whole-page failure keeps its in-page state', () => {
     );
 
     // The screen says what happened and offers the way back …
-    expect(await screen.findByText('req_channel')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Try again' })).toBeInTheDocument();
+    expect(screen.queryByText('req_channel')).not.toBeInTheDocument(); // owner, 7 Oct 2026
     // … and the channel stays quiet, because a toast here would disappear and
     // leave an empty screen with no explanation of why it is empty.
     expect(screen.queryByTestId('snackbar')).not.toBeInTheDocument();

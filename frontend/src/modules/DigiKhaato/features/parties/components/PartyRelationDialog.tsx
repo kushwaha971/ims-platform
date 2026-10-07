@@ -6,7 +6,6 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, useWatch } from 'react-hook-form';
 
 import {
-  formatRequestReference,
   UbButton,
   UbChoiceChips,
   UbDialog,
@@ -188,18 +187,7 @@ export function PartyRelationDialog({
           )}
         </UbField>
       </UbForm>
-      {bannerError && (
-        <UbStatusBanner
-          tone="error"
-          title={bannerError.message}
-          description={
-            bannerError.requestId
-              ? formatRequestReference(t('common.error.reference'), bannerError.requestId)
-              : undefined
-          }
-          className="mt-3"
-        />
-      )}
+      {bannerError && <UbStatusBanner tone="error" title={bannerError.message} className="mt-3" />}
     </UbDialog>
   );
 }

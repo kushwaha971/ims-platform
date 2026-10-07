@@ -8,7 +8,6 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, useWatch } from 'react-hook-form';
 
 import {
-  formatRequestReference,
   UbButton,
   UbField,
   UbForm,
@@ -118,15 +117,7 @@ export function ResetPasswordPageContent(): React.JSX.Element {
               `LOCALLY_PRESENTED` (src/utils/apiError.ts), so it does not also
               toast. Every OTHER failure on this screen goes to the snackbar. */}
           {password.error?.code === 'invalid_token' && (
-            <UbStatusBanner
-              tone="error"
-              title={password.error.message}
-              description={
-                password.error.requestId
-                  ? formatRequestReference(t('common.error.reference'), password.error.requestId)
-                  : undefined
-              }
-            />
+            <UbStatusBanner tone="error" title={password.error.message} />
           )}
 
           <UbForm form={form} onSubmit={submit} formErrors={password.formErrors}>

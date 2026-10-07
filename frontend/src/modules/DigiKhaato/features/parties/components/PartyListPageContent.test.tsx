@@ -142,7 +142,6 @@ beforeEach(() => {
   window.localStorage.setItem('ub.statSummary.parties', 'open');
 });
 
-
 /* Owner, 6 Oct 2026 — the approved filter pattern: Balance is the toolbar's
    one dropdown; credit, role, type, collection and tags live in the Filters
    sheet, applied once, and come back as pills. These drive the real controls. */
@@ -160,8 +159,7 @@ const chooseRadio = (user: User, group: string, label: string) => async () => {
   const set = await screen.findByRole('radiogroup', { name: group });
   await user.click(within(set).getByRole('radio', { name: label }));
 };
-const balanceShows = (label: string) =>
-  screen.getByRole('button', { name: `Balance: ${label}` });
+const balanceShows = (label: string) => screen.getByRole('button', { name: `Balance: ${label}` });
 
 describe('PartyListPageContent', () => {
   beforeEach(() => {
@@ -230,7 +228,7 @@ describe('PartyListPageContent', () => {
     // R-E-4 — the only thing that connects a screenshot to a backend log line.
     // Labelled, not a bare id (QA B5): the merchant has to know it is the
     // thing to quote.
-    expect(screen.getByTestId('request-id')).toHaveTextContent('Reference req_7f3a91');
+    expect(screen.queryByTestId('request-id')).not.toBeInTheDocument(); // owner, 7 Oct 2026: no reference on errors
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
   });
 
@@ -253,7 +251,7 @@ describe('PartyListPageContent', () => {
     );
     // … and labelled "Reference" (QA B5): D2 put the id on screen but as a
     // bare UUID, because UbEmptyState never printed the label.
-    expect(screen.getByTestId('request-id')).toHaveTextContent('Reference req_abc');
+    expect(screen.queryByTestId('request-id')).not.toBeInTheDocument(); // owner, 7 Oct 2026: no reference on errors
   });
 
   it('offers to CLEAR the search on a filtered-empty result, and says so', async () => {
@@ -1561,7 +1559,7 @@ describe('PTY-02 §9 — the ten states of the party list', () => {
     expect(await screen.findByText('We could not load your customers')).toBeInTheDocument();
     // Labelled, not a bare id (QA B5): the merchant has to know it is the
     // thing to quote.
-    expect(screen.getByTestId('request-id')).toHaveTextContent('Reference req_7f3a91');
+    expect(screen.queryByTestId('request-id')).not.toBeInTheDocument(); // owner, 7 Oct 2026: no reference on errors
     // No figures without an answer: not "You will get ₹0.00" over a failure.
     expect(screen.queryByTestId('ub-stat-grid')).not.toBeInTheDocument();
 

@@ -212,7 +212,7 @@ describe('TeamPageContent — the list states', () => {
     renderWithProviders(<TeamPageContent />);
 
     expect(await screen.findByText('We could not load your team')).toBeInTheDocument();
-    expect(screen.getByTestId('request-id')).toHaveTextContent('req_42');
+    expect(screen.queryByTestId('request-id')).not.toBeInTheDocument(); // owner, 7 Oct 2026: no reference on errors
 
     invitationService.listInvitations.mockResolvedValue(page([PENDING]));
     await user.click(screen.getByRole('button', { name: 'Try again' }));

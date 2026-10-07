@@ -374,7 +374,7 @@ describe('the states a list has', () => {
   it('carries the request id on the error state and nowhere else', () => {
     const { rerender } = renderGrid('cards', { state: 'error' });
     // Labelled, never a bare id (QA B5).
-    expect(screen.getByTestId('request-id')).toHaveTextContent('Reference req_7f3a91');
+    expect(screen.queryByTestId('request-id')).not.toBeInTheDocument(); // owner, 7 Oct 2026: no reference on errors
 
     rerender(
       <UbDataGrid<Row>

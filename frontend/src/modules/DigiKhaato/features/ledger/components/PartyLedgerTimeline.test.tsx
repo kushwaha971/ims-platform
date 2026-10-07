@@ -409,7 +409,7 @@ describe('the khata timeline', () => {
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
     // R-E-4 — the reference an operator can trace, on the screen rather than in
     // a console the merchant will never open.
-    expect(screen.getByText(/req_abc123/)).toBeInTheDocument();
+    expect(screen.queryByText(/req_abc123/)).not.toBeInTheDocument(); // owner, 7 Oct 2026: no reference on errors
   });
 
   it('renders nothing at all for a tenant without the ledger module', async () => {

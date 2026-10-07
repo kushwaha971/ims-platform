@@ -21,6 +21,7 @@ If this section looks stale (the commits it names are not the latest), rebuild t
 - No subagents and nothing in parallel. One item at a time: build, run one QA pass by using it in the browser, fix what you find, commit, move on.
 - The Library release waits for the owner's UAT go-ahead: do not release or flip release flags.
 - Keep replies to the owner short.
+- No error shows a "Reference <request id>" line (owner, 7 Oct 2026); `UbRequestId` renders nothing.
 
 ### 0.2 What changed in direction (4 Oct 2026, owner's words paraphrased)
 

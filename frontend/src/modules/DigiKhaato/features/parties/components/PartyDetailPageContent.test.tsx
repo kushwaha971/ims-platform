@@ -514,7 +514,7 @@ describe('the khata page', () => {
 
     expect(await screen.findByText('We could not load this party')).toBeInTheDocument();
     // R-E-4: the id is what support asks for, so it stays on screen.
-    expect(screen.getByText(/req_abc123/)).toBeInTheDocument();
+    expect(screen.queryByText(/req_abc123/)).not.toBeInTheDocument(); // owner, 7 Oct 2026: no reference on errors
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
   });
 

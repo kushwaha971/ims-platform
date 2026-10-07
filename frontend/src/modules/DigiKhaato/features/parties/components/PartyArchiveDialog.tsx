@@ -3,7 +3,6 @@
 import { memo, useCallback, useEffect, useId, useMemo, useState, type RefObject } from 'react';
 
 import {
-  formatRequestReference,
   UbAmount,
   UbButton,
   UbDialog,
@@ -324,17 +323,7 @@ function PartyArchiveDialogBase({
           </UbStack>
         )}
 
-        {error && (
-          <UbStatusBanner
-            tone="error"
-            title={error.message}
-            description={
-              error.requestId
-                ? formatRequestReference(t('common.error.reference'), error.requestId)
-                : undefined
-            }
-          />
-        )}
+        {error && <UbStatusBanner tone="error" title={error.message} />}
       </UbStack>
     </UbDialog>
   );

@@ -64,7 +64,7 @@ describe('ReportPageShell', () => {
     expect(screen.queryByText('rows')).not.toBeInTheDocument();
   });
 
-  it("puts the server's sentence, its reference and Retry on a failure", async () => {
+  it("puts the server's sentence and Retry on a failure, and no reference (owner, 7 Oct 2026)", async () => {
     signIn(['reports.basic.read']);
     const retry = jest.fn();
     renderWithProviders(
@@ -78,7 +78,7 @@ describe('ReportPageShell', () => {
       />
     );
     expect(screen.getByText('The register is busy.')).toBeInTheDocument();
-    expect(screen.getByText(/abc123/)).toBeInTheDocument();
+    expect(screen.queryByText(/abc123/)).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(retry).toHaveBeenCalled();
   });

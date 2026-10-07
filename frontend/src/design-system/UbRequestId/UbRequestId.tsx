@@ -2,8 +2,6 @@
 
 import { memo } from 'react';
 
-import { cn } from 'src/utils/cn';
-
 /**
  * R-E-4 — the request id of a failure, printed as "Reference 3f2b…": the one
  * thing that joins a merchant's screenshot to a backend log line.
@@ -29,12 +27,17 @@ export interface UbRequestIdProps {
 /** The same line as a plain string, for surfaces that take text (a banner's description). */
 export const formatRequestReference = (label: string, id: string): string => `${label} ${id}`;
 
-function UbRequestIdBase({ id, label, className }: Readonly<UbRequestIdProps>) {
-  return (
-    <p className={cn('ds-caption text-text-muted', className)} data-testid="request-id">
-      {label} <span className="ds-mono break-all">{id}</span>
-    </p>
-  );
+/**
+ * Owner, 7 Oct 2026: "in any error, I do not want the reference". A merchant
+ * reads an error to know what to do next, and a 36-character id under it is
+ * noise to them. So this draws NOTHING, in every snackbar, empty state and
+ * dialog at once — the one switch, rather than fifty callers edited. The id is
+ * still sent as `X-Request-Id`, logged by the server and kept on the audit
+ * row, so support can still join a complaint to its log line; the props stay
+ * so turning it back on is this function and nothing else.
+ */
+function UbRequestIdBase(_props: Readonly<UbRequestIdProps>): null {
+  return null;
 }
 
 UbRequestIdBase.displayName = 'UbRequestId';
