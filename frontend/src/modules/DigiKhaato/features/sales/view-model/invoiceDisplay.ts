@@ -40,11 +40,27 @@ export const STATUS_TONE: Record<SalesStatus, UbStatusBadgeTone> = {
   cancelled: 'neutral',
 };
 
+/**
+ * Shop items 3–4 — paper that is not a bill: a quote, an order, a challan. None of
+ * them is a tax invoice, none is owed, and none carries the invoice's declaration.
+ */
+export const NOT_A_BILL: readonly SalesKind[] = ['estimate', 'sales_order', 'delivery_challan'];
+export const isNotABill = (kind: SalesKind): boolean => NOT_A_BILL.includes(kind);
+
+/** The "not a tax invoice" line each of them prints. */
+export const notTaxInvoiceId = (kind: SalesKind): string =>
+  kind === 'sales_order'
+    ? 'sales.order.notTaxInvoice'
+    : kind === 'delivery_challan'
+      ? 'sales.challan.notTaxInvoice'
+      : 'sales.estimate.notTaxInvoice';
+
 /** SAL-02 §8 / BR-12 — the document title a merchant's registration gives it. */
 export const documentTitleId = (kind: SalesKind, gstType: GstType): string => {
   if (kind === 'bill_of_supply') return 'sales.title.billOfSupply';
   if (kind === 'estimate') return 'sales.estimate.title';
   if (kind === 'sales_order') return 'sales.order.title';
+  if (kind === 'delivery_challan') return 'sales.challan.title';
   if (kind === 'credit_note') return 'sales.creditNote.title';
   return gstType === 'regular' ? 'sales.title.taxInvoice' : 'sales.title.invoice';
 };

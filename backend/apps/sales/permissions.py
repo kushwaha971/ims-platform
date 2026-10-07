@@ -67,6 +67,22 @@ SalesOrderConvertPermissions = HasPermission(
     {**_SALES_ORDER_ACTIONS, "convert": "sales.invoice.write"}
 )
 
+#: Shop item 4 — SAL-09 §12: the invoice's codenames govern challans; void is the owner's.
+DeliveryChallanPermissions = HasPermission(
+    {
+        "list": "sales.invoice.read",
+        "retrieve": "sales.invoice.read",
+        "create": "sales.invoice.write",
+        "partial_update": "sales.invoice.write",
+        "destroy": "sales.invoice.write",
+        "issue": "sales.invoice.write",
+        "convert": "sales.invoice.write",
+        "void": "sales.invoice.void",
+        "share_links": "sales.invoice.read",
+        "revoke_share_link": "sales.invoice.void",
+    }
+)
+
 #: SAL-04 §12 — reading is `sales.invoice.read` (no separate read codename exists).
 CreditNotePermissions = HasPermission(
     {

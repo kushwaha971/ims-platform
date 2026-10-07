@@ -173,7 +173,8 @@ it('asks the server again when the view changes to customers, and opens the khat
   await userEvent.click(await screen.findByRole('option', { name: 'By customer' }));
   await waitFor(() => expect(lastAsked().group).toBe('party'));
   expect(mockSearch).toBe('by=party');
-  await userEvent.click((await screen.findAllByRole('button', { name: /Rice 5 kg/ }))[0]!);
+  const [firstRow] = await screen.findAllByRole('button', { name: /Rice 5 kg/ });
+  await userEvent.click(firstRow as HTMLElement);
   expect(mockPush).toHaveBeenCalledWith('/parties/i1');
 });
 

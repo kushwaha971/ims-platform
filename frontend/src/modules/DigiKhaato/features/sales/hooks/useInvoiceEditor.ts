@@ -46,11 +46,12 @@ import type { SalesDocumentEnvelope } from '../types/sales.types';
  * recomputes everything regardless (FR-3).
  */
 /** SAL-01 TSK-SAL-01-07 — the kind drives the title, the fields and the actions; one editor. */
-export type EditorKind = 'invoice' | 'estimate' | 'sales_order';
+export type EditorKind = 'invoice' | 'estimate' | 'sales_order' | 'delivery_challan';
 
-/** Shop item 3 — a quote and an order are written the same way: never a receivable. */
-export const isQuoteKind = (kind: EditorKind): kind is 'estimate' | 'sales_order' =>
-  kind === 'estimate' || kind === 'sales_order';
+/** Shop items 3–4 — a quote, an order and a challan are written alike: never a receivable. */
+export const isQuoteKind = (
+  kind: EditorKind
+): kind is 'estimate' | 'sales_order' | 'delivery_challan' => kind !== 'invoice';
 
 /** The draft body for the kind: an estimate adds its validity; neither has a due date. */
 const wireBodyFor = (kind: EditorKind, values: InvoiceFormValues): Record<string, unknown> =>
@@ -58,7 +59,16 @@ const wireBodyFor = (kind: EditorKind, values: InvoiceFormValues): Record<string
     ? { ...toWireBody(values), due_on: null, valid_until: values.validUntil || null }
     : kind === 'sales_order'
       ? { ...toWireBody(values), due_on: null }
-      : toWireBody(values);
+      : kind === 'delivery_challan'
+        ? {
+            ...toWireBody(values),
+            due_on: null,
+            challan_type: values.challanType || 'other',
+            transporter: values.transporter.trim(),
+            vehicle_number: values.vehicleNumber.trim(),
+            eway_bill_number: values.ewayBillNumber.trim(),
+          }
+        : toWireBody(values);
 
 export interface UseInvoiceEditorResult {
   readonly kind: EditorKind;
@@ -86,7 +96,12 @@ export const useInvoiceEditor = (
   const { can, hasModule } = usePermissions();
   const today = useMemo(() => todayInTenantTz(timezone ?? undefined), [timezone]);
   const canWrite =
-    hasModule('sales') && can(isQuoteKind(kind) ? 'sales.estimate.write' : 'sales.invoice.write');
+    hasModule('sales') &&
+    can(
+      isQuoteKind(kind) && kind !== 'delivery_challan'
+        ? 'sales.estimate.write'
+        : 'sales.invoice.write'
+    );
   const idempotency = useIdempotencyKey();
 
   const { t } = useTranslation();
@@ -138,10 +153,14 @@ export const useInvoiceEditor = (
     if (context && seeded.current !== 'new') {
       seeded.current = 'new';
       form.reset(
-        emptyInvoiceForm(today, defaultBillingMode(context.businessType), context.stateCode)
+        emptyInvoiceForm(
+          today,
+          kind === 'delivery_challan' ? 'party' : defaultBillingMode(context.businessType),
+          context.stateCode
+        )
       );
     }
-  }, [documentId, document, context, form, today]);
+  }, [documentId, document, context, form, today, kind]);
 
   // FR-17 — rates are by the bill's date; a changed date re-reads them.
   const documentDate = values.documentDate;
@@ -195,7 +214,7 @@ export const useInvoiceEditor = (
         const sent = await dispatch(
           moveEstimate({
             id: saved.document.id,
-            move: kind === 'estimate' ? 'sent' : 'confirm',
+            move: kind === 'estimate' ? 'sent' : kind === 'sales_order' ? 'confirm' : 'issue',
             version: saved.document.version,
           })
         );
@@ -225,10 +244,14 @@ export const useInvoiceEditor = (
     dispatch(editorReset());
     seeded.current = 'new';
     form.reset(
-      emptyInvoiceForm(today, defaultBillingMode(context?.businessType), context?.stateCode ?? '')
+      emptyInvoiceForm(
+        today,
+        kind === 'delivery_challan' ? 'party' : defaultBillingMode(context?.businessType),
+        context?.stateCode ?? ''
+      )
     );
     idempotency.rotate();
-  }, [dispatch, form, today, context, idempotency]);
+  }, [dispatch, form, today, context, idempotency, kind]);
 
   return { kind, form, values, preview, editor, today, canWrite, save, issue, restart };
 };

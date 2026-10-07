@@ -42,6 +42,12 @@ export const publicStatus = (doc: Pick<SalesDocument, 'kind' | 'status'>): Publi
       return { labelId: 'publicDocument.status.billed', tone: 'success' };
     return { labelId: 'publicDocument.status.orderConfirmed', tone: 'info' };
   }
+  // Shop item 4 — a challan says the goods went, were billed, or came back.
+  if (doc.kind === 'delivery_challan') {
+    if (doc.status === 'converted')
+      return { labelId: 'publicDocument.status.billed', tone: 'success' };
+    return { labelId: 'publicDocument.status.dispatched', tone: 'info' };
+  }
   if (doc.kind === 'credit_note') {
     return doc.status === 'applied'
       ? { labelId: 'publicDocument.status.adjusted', tone: 'success' }
@@ -74,6 +80,9 @@ export const headlineAmount = (
   if (doc.kind === 'sales_order') {
     return { labelId: 'publicDocument.amount.order', value: doc.grandTotal };
   }
+  if (doc.kind === 'delivery_challan') {
+    return { labelId: 'publicDocument.amount.challan', value: doc.grandTotal };
+  }
   if (doc.kind === 'credit_note') {
     return { labelId: 'publicDocument.amount.creditNote', value: doc.grandTotal };
   }
@@ -91,6 +100,7 @@ export const kindNoteId = (doc: Pick<SalesDocument, 'kind' | 'status'>): string 
   if (doc.status === 'void') return 'publicDocument.note.void';
   if (doc.kind === 'estimate') return 'publicDocument.note.estimate';
   if (doc.kind === 'sales_order') return 'publicDocument.note.order';
+  if (doc.kind === 'delivery_challan') return 'publicDocument.note.challan';
   if (doc.kind === 'credit_note') return 'publicDocument.note.creditNote';
   return null;
 };

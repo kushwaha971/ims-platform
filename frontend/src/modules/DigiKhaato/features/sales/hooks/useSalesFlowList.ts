@@ -53,11 +53,21 @@ export const useSalesFlowList = (kind: FlowKind): UseSalesFlowListResult => {
 
   const canRead =
     hasModule('sales') &&
-    can(kind === 'credit_note' ? 'sales.invoice.read' : 'sales.estimate.read');
+    can(
+      kind === 'credit_note' || kind === 'delivery_challan'
+        ? 'sales.invoice.read'
+        : 'sales.estimate.read'
+    );
   // Estimates and sales orders are the estimate codenames' (Shop item 3).
   const canWrite =
     hasModule('sales') &&
-    can(kind === 'credit_note' ? 'sales.credit_note.write' : 'sales.estimate.write');
+    can(
+      kind === 'credit_note'
+        ? 'sales.credit_note.write'
+        : kind === 'delivery_challan'
+          ? 'sales.invoice.write'
+          : 'sales.estimate.write'
+    );
   const today = useMemo(() => todayInTenantTz(timezone ?? undefined), [timezone]);
 
   const queryString = search?.toString() ?? '';

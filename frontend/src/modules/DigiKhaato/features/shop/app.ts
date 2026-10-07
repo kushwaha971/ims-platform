@@ -11,6 +11,7 @@ import {
   FileText,
   Hourglass,
   LayoutDashboard,
+  PackageCheck,
   PackageSearch,
   Receipt,
   ShoppingCart,
@@ -157,6 +158,17 @@ export const SHOP_APP: AppManifest = {
       section: 'sales',
       order: 3,
     },
+    // Shop item 4 — goods that leave before the bill (SAL-09).
+    {
+      key: 'challans',
+      icon: PackageCheck,
+      labelId: 'nav.challans',
+      href: ROUTES.SALES_CHALLANS,
+      module: 'sales',
+      permission: 'sales.invoice.read',
+      section: 'sales',
+      order: 4,
+    },
     {
       key: 'creditNotes',
       icon: FileMinus,
@@ -165,7 +177,7 @@ export const SHOP_APP: AppManifest = {
       module: 'sales',
       permission: 'sales.invoice.read',
       section: 'sales',
-      order: 4,
+      order: 5,
     },
     // PUR-01/03/04 — bills, drafts, record and void.
     {

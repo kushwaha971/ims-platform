@@ -73,6 +73,8 @@ export const ROUTES = {
   SALES_ESTIMATES: '/sales/estimates',
   /** Shop item 3 — a customer's order, before it is billed. */
   SALES_ORDERS: '/sales/orders',
+  /** Shop item 4 — goods that left before the bill. */
+  SALES_CHALLANS: '/sales/challans',
   SALES_CREDIT_NOTES: '/sales/credit-notes',
   PURCHASE_BILLS: '/purchases/bills',
   /** Shop item 3 — what was asked of a supplier, before the bill. */

@@ -167,6 +167,43 @@ describe('the sales order (Shop item 3)', () => {
   });
 });
 
+/**
+ * Shop item 4 — a delivery challan is the bill editor for a named party only (no
+ * walk-in: goods on a challan go to somebody), with the challan's type and
+ * transport, "Save & issue"; on an issued challan, Convert to invoice and Void
+ * challan — Void only for a member who may void.
+ */
+describe('the delivery challan (Shop item 4)', () => {
+  it('asks why the goods are going and who carries them, for a party only', async () => {
+    signIn(['sales.invoice.read', 'sales.invoice.write']);
+    renderWithProviders(<InvoiceEditorPageContent documentId={null} kind="delivery_challan" />);
+    expect(await screen.findByRole('heading', { name: /Delivery challan/ })).toBeInTheDocument();
+    expect(screen.getByTestId('invoice-issue')).toHaveTextContent('Save & issue');
+    expect(screen.getByTestId('challan-details')).toHaveTextContent('Vehicle number');
+    expect(screen.queryByRole('radio', { name: 'Walk-in' })).not.toBeInTheDocument();
+    await settle();
+  });
+
+  it('offers Convert and Void on an issued challan, and Void only to a member who may void', () => {
+    signIn(['sales.invoice.read', 'sales.invoice.write', 'sales.invoice.void']);
+    const issued = makeDocument({
+      kind: 'delivery_challan',
+      status: 'issued',
+      number: 'DC/26-27/0001',
+    });
+    const view = renderWithProviders(<DocumentActions doc={issued} />);
+    expect(screen.getByTestId('challan-convert')).toBeInTheDocument();
+    expect(screen.getByTestId('challan-void')).toBeInTheDocument();
+    expect(screen.queryByTestId('document-void')).not.toBeInTheDocument();
+    view.unmount();
+    store.dispatch(resetAllFeatureState());
+    signIn(['sales.invoice.read', 'sales.invoice.write']);
+    renderWithProviders(<DocumentActions doc={issued} />);
+    expect(screen.getByTestId('challan-convert')).toBeInTheDocument();
+    expect(screen.queryByTestId('challan-void')).not.toBeInTheDocument();
+  });
+});
+
 describe('the void dialog (SAL-05 §7)', () => {
   it('T-SAL05-8: states the consequences and keeps Void disabled below three characters', async () => {
     signIn(['sales.invoice.read', 'sales.invoice.void']);

@@ -16,6 +16,8 @@ export const SALES_KINDS = [
   'credit_note',
   // Shop item 3 — a customer's order, converted into an invoice.
   'sales_order',
+  // Shop item 4 — goods that leave before the bill (SAL-09).
+  'delivery_challan',
 ] as const;
 export type SalesKind = (typeof SALES_KINDS)[number];
 

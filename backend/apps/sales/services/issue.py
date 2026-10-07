@@ -129,7 +129,13 @@ def issue_invoice(
                 details={"party_id": str(document.party_id)},
             )
 
-    unit_costs = post_stock(ctx, document, rows)
+    # Shop item 4 — an invoice made from a delivery challan does not take out of stock
+    # again what the challan already took (SAL-09 BR-2); those lines carry the cost
+    # the challan froze, which is what the goods really cost.
+    from apps.sales.services.challans import delivered_quantities, split_delivered
+
+    to_move, covered_costs = split_delivered(rows, delivered_quantities(document))
+    unit_costs = {**post_stock(ctx, document, to_move), **covered_costs}
 
     # What the invoice will have received once the payment below is recorded.
     # The credit check reads the part going on CREDIT (BR-13), so it is decided

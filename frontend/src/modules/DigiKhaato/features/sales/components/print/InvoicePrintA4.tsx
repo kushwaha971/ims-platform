@@ -13,7 +13,12 @@ import { formatPhoneForDisplay } from 'src/utils/share';
 
 import { stateName } from 'modules/DigiKhaato/features/onboarding/constants/gstStates';
 
-import { documentTitleId, sgstLabelId } from '../../view-model/invoiceDisplay';
+import {
+  documentTitleId,
+  sgstLabelId,
+  isNotABill,
+  notTaxInvoiceId,
+} from '../../view-model/invoiceDisplay';
 
 import { InvoicePrintLines } from './InvoicePrintLines';
 import {
@@ -36,7 +41,9 @@ const numberLabelId = (kind: SalesDocument['kind']): string =>
       ? 'sales.print.number.estimate'
       : kind === 'sales_order'
         ? 'sales.print.number.order'
-        : 'sales.print.number';
+        : kind === 'delivery_challan'
+          ? 'sales.print.number.challan'
+          : 'sales.print.number';
 
 const COMPOSITION_FOOTER = 'Composition taxable person, not eligible to collect tax on supplies';
 
@@ -215,6 +222,33 @@ export function InvoicePrintA4({
                   <td>{formatBusinessDate(doc.validUntil)}</td>
                 </tr>
               )}
+              {/* Shop item 4 — SAL-09 FR-6: what the driver carries the goods under. */}
+              {doc.kind === 'delivery_challan' && doc.links.challan && (
+                <>
+                  <tr>
+                    <th scope="row">{t('sales.challan.type.label')}</th>
+                    <td>{t(`sales.challan.type.${doc.links.challan.type}`)}</td>
+                  </tr>
+                  {doc.links.challan.transporter && (
+                    <tr>
+                      <th scope="row">{t('sales.challan.transporter')}</th>
+                      <td>{doc.links.challan.transporter}</td>
+                    </tr>
+                  )}
+                  {doc.links.challan.vehicleNumber && (
+                    <tr>
+                      <th scope="row">{t('sales.challan.vehicle')}</th>
+                      <td>{doc.links.challan.vehicleNumber}</td>
+                    </tr>
+                  )}
+                  {doc.links.challan.ewayBillNumber && (
+                    <tr>
+                      <th scope="row">{t('sales.challan.eway')}</th>
+                      <td>{doc.links.challan.ewayBillNumber}</td>
+                    </tr>
+                  )}
+                </>
+              )}
               <tr>
                 <th scope="row">{t('sales.editor.pos')}</th>
                 <td>
@@ -363,29 +397,26 @@ export function InvoicePrintA4({
                 <th scope="row">{t('sales.totals.grand')}</th>
                 <td data-testid="print-grand-total">{formatInr(doc.grandTotal)}</td>
               </tr>
-              {doc.status !== 'draft' &&
-                doc.kind !== 'estimate' &&
-                doc.kind !== 'sales_order' &&
-                doc.kind !== 'credit_note' && (
-                  <>
-                    <tr>
-                      <th scope="row">{t('sales.print.paid')}</th>
-                      <td>{formatInr(doc.amountPaid)}</td>
-                    </tr>
-                    {/* What returns took off the bill, so Paid + this + Balance
+              {doc.status !== 'draft' && !isNotABill(doc.kind) && doc.kind !== 'credit_note' && (
+                <>
+                  <tr>
+                    <th scope="row">{t('sales.print.paid')}</th>
+                    <td>{formatInr(doc.amountPaid)}</td>
+                  </tr>
+                  {/* What returns took off the bill, so Paid + this + Balance
                       due adds up to the grand total on paper. */}
-                    {credited !== '0.00' && (
-                      <tr>
-                        <th scope="row">{t('sales.print.credited')}</th>
-                        <td>{`−${formatInr(credited)}`}</td>
-                      </tr>
-                    )}
+                  {credited !== '0.00' && (
                     <tr>
-                      <th scope="row">{t('sales.print.balance')}</th>
-                      <td className="font-semibold">{formatInr(doc.amountDue)}</td>
+                      <th scope="row">{t('sales.print.credited')}</th>
+                      <td>{`−${formatInr(credited)}`}</td>
                     </tr>
-                  </>
-                )}
+                  )}
+                  <tr>
+                    <th scope="row">{t('sales.print.balance')}</th>
+                    <td className="font-semibold">{formatInr(doc.amountDue)}</td>
+                  </tr>
+                </>
+              )}
             </tbody>
           </table>
         </div>
@@ -393,13 +424,9 @@ export function InvoicePrintA4({
         <div className="gst-row grid grid-cols-1 sm:grid-cols-[1fr_38%] print:grid-cols-[1fr_38%]">
           <div className="gst-cell gst-divide space-y-1">
             {doc.kind === 'bill_of_supply' && <p className="font-semibold">{COMPOSITION_FOOTER}</p>}
-            {(doc.kind === 'estimate' || doc.kind === 'sales_order') && (
+            {isNotABill(doc.kind) && (
               <p className="font-semibold" data-testid="print-not-tax-invoice">
-                {t(
-                  doc.kind === 'sales_order'
-                    ? 'sales.order.notTaxInvoice'
-                    : 'sales.estimate.notTaxInvoice'
-                )}
+                {t(notTaxInvoiceId(doc.kind))}
               </p>
             )}
             {doc.kind === 'credit_note' && doc.links.against && (
@@ -417,9 +444,7 @@ export function InvoicePrintA4({
               </div>
             )}
             {doc.notes && <p className="whitespace-pre-line">{doc.notes}</p>}
-            {doc.kind !== 'estimate' && doc.kind !== 'sales_order' && (
-              <p className="italic">{t('sales.print.declaration')}</p>
-            )}
+            {!isNotABill(doc.kind) && <p className="italic">{t('sales.print.declaration')}</p>}
             {branding?.docFooter && <p>{branding.docFooter}</p>}
           </div>
           <div className="gst-cell flex flex-col justify-between text-right">

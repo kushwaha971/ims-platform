@@ -1,4 +1,5 @@
 {
+  "publicDocument.amount.challan": "माल की कीमत",
   "publicDocument.amount.creditNote": "क्रेडिट नोट की राशि",
   "publicDocument.amount.due": "बकाया राशि",
   "publicDocument.amount.estimate": "अनुमान की कुल राशि",
@@ -13,6 +14,7 @@
   "publicDocument.gstin": "GSTIN {gstin}",
   "publicDocument.language": "भाषा",
   "publicDocument.loading": "बिल खुल रहा है",
+  "publicDocument.note.challan": "यह डिलीवरी चालान है, बिल नहीं। अभी कोई भुगतान देय नहीं है।",
   "publicDocument.note.creditNote": "यह क्रेडिट नोट आपके रिकॉर्ड के लिए है।",
   "publicDocument.note.estimate": "यह अनुमान है, बिल नहीं। अभी कोई भुगतान देय नहीं है।",
   "publicDocument.note.order": "यह ऑर्डर है, बिल नहीं। अभी कोई भुगतान देय नहीं है।",
@@ -33,6 +35,7 @@
   "publicDocument.status.billed": "बिल बना",
   "publicDocument.status.cancelled": "रद्द",
   "publicDocument.status.creditOpen": "क्रेडिट बाकी",
+  "publicDocument.status.dispatched": "माल भेजा गया",
   "publicDocument.status.due": "भुगतान बाकी",
   "publicDocument.status.expired": "समाप्त",
   "publicDocument.status.orderConfirmed": "ऑर्डर पक्का",

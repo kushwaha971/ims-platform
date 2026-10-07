@@ -45,6 +45,11 @@ const PaymentDrawerLazy = dynamic(
   () => import('./InvoicePaymentDrawer').then((m) => m.InvoicePaymentDrawer),
   { ssr: false }
 );
+/* Shop item 4 — only a challan has these fields, so only a challan's editor loads them. */
+const ChallanDetailsSection = dynamic(
+  () => import('./ChallanDetailsSection').then((m) => m.ChallanDetailsSection),
+  { ssr: false }
+);
 const IssuedDialogLazy = dynamic(
   () => import('./InvoiceIssuedDialog').then((m) => m.InvoiceIssuedDialog),
   { ssr: false }
@@ -77,13 +82,17 @@ export function InvoiceEditorPageContent({
   const [paying, setPaying] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   // Shop item 3 — a sales order is written as an estimate is: saved, then numbered, never paid.
-  const estimate = kind === 'estimate' || kind === 'sales_order';
+  // Shop item 4 — a delivery challan likewise: saved, then issued (stock out), never paid.
+  const estimate = kind !== 'invoice';
   const order = kind === 'sales_order';
+  const challan = kind === 'delivery_challan';
   const home = order
     ? ROUTES.SALES_ORDERS
-    : estimate
-      ? ROUTES.SALES_ESTIMATES
-      : ROUTES.SALES_INVOICES;
+    : challan
+      ? ROUTES.SALES_CHALLANS
+      : estimate
+        ? ROUTES.SALES_ESTIMATES
+        : ROUTES.SALES_INVOICES;
 
   const context = server.context;
   const taxFree = context ? context.gstType !== 'regular' : false;
@@ -136,13 +145,18 @@ export function InvoiceEditorPageContent({
     if (!server.documentId) return;
     const id = server.documentId;
     const deleting = estimate
-      ? dispatch(deleteEstimateDraft({ id, kind: order ? 'sales_order' : 'estimate' }))
+      ? dispatch(
+          deleteEstimateDraft({
+            id,
+            kind: order ? 'sales_order' : challan ? 'delivery_challan' : 'estimate',
+          })
+        )
       : dispatch(deleteInvoiceDraft(id));
     void deleting.then(() => {
       autosave.clearLocal();
       router.push(home);
     });
-  }, [server.documentId, estimate, order, dispatch, autosave, router, home]);
+  }, [server.documentId, estimate, order, challan, dispatch, autosave, router, home]);
 
   if (!canWrite) {
     return (
@@ -163,11 +177,13 @@ export function InvoiceEditorPageContent({
     documentTitleId(
       order
         ? 'sales_order'
-        : estimate
-          ? 'estimate'
-          : context.gstType === 'composition'
-            ? 'bill_of_supply'
-            : 'invoice',
+        : challan
+          ? 'delivery_challan'
+          : estimate
+            ? 'estimate'
+            : context.gstType === 'composition'
+              ? 'bill_of_supply'
+              : 'invoice',
       context.gstType
     )
   );
@@ -214,9 +230,11 @@ export function InvoiceEditorPageContent({
               busyLabel={t(
                 order
                   ? 'sales.order.confirming'
-                  : estimate
-                    ? 'sales.estimate.sending'
-                    : 'sales.editor.issuing'
+                  : challan
+                    ? 'sales.challan.issuing'
+                    : estimate
+                      ? 'sales.estimate.sending'
+                      : 'sales.editor.issuing'
               )}
               disabled={!hasLines || locked}
               data-testid="invoice-issue"
@@ -224,9 +242,11 @@ export function InvoiceEditorPageContent({
               {t(
                 order
                   ? 'sales.order.confirm'
-                  : estimate
-                    ? 'sales.estimate.saveAndSend'
-                    : 'sales.editor.issue'
+                  : challan
+                    ? 'sales.challan.issue'
+                    : estimate
+                      ? 'sales.estimate.saveAndSend'
+                      : 'sales.editor.issue'
               )}
             </UbButton>
           </>
@@ -267,6 +287,11 @@ export function InvoiceEditorPageContent({
                 kind={kind}
               />
             </UbPanel>
+            {challan && (
+              <UbPanel>
+                <ChallanDetailsSection form={form} disabled={locked} />
+              </UbPanel>
+            )}
             <InvoiceLinesSection
               form={form}
               preview={preview}

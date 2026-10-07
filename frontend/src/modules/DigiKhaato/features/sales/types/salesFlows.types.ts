@@ -56,6 +56,8 @@ export interface SalesDocumentLinks {
   readonly restock: boolean;
   readonly settlement: Settlement;
   readonly openCredit: string | null;
+  /** Shop item 4 — a challan's type and transport (empty for every other kind). */
+  readonly challan: ChallanDetails | null;
 }
 
 /** SAL-05 FR-6 — a payment the void detached; `walkIn` when there is no party to hold it. */
@@ -73,22 +75,43 @@ export interface VoidResult {
 }
 
 /** The kinds with their own list and detail routes. */
-export type FlowKind = 'estimate' | 'credit_note' | 'sales_order';
-/** The kinds the bill editor writes besides the invoice: a quote, or an order. */
-export type QuoteKind = 'estimate' | 'sales_order';
+export type FlowKind = 'estimate' | 'credit_note' | 'sales_order' | 'delivery_challan';
+/** The kinds the bill editor writes besides the invoice: a quote, an order, a challan. */
+export type QuoteKind = 'estimate' | 'sales_order' | 'delivery_challan';
+
+/** Shop item 4 — SAL-09 FR-2: why the goods left, and how. */
+export const CHALLAN_TYPES = [
+  'supply_on_approval',
+  'job_work',
+  'branch_transfer',
+  'sample',
+  'other',
+] as const;
+export type ChallanType = (typeof CHALLAN_TYPES)[number];
+export interface ChallanDetails {
+  readonly type: ChallanType;
+  readonly transporter: string;
+  readonly vehicleNumber: string;
+  readonly ewayBillNumber: string;
+}
 
 /** SAL-01 FR-10 / SAL-04 §14 — the lists' tabs, each a set of statuses on the server. */
 export const ESTIMATE_TABS = ['all', 'draft', 'sent', 'accepted', 'expired', 'converted'] as const;
 export const CREDIT_NOTE_TABS = ['all', 'open', 'applied', 'draft', 'void'] as const;
 /** Shop item 3 — `open` is what is still to be billed. */
 export const SALES_ORDER_TABS = ['all', 'open', 'draft', 'converted', 'cancelled'] as const;
+/** Shop item 4 — `issued` is goods out and not yet billed. */
+export const CHALLAN_TABS = ['all', 'issued', 'draft', 'converted', 'void'] as const;
 export type EstimateTab = (typeof ESTIMATE_TABS)[number];
 export type CreditNoteTab = (typeof CREDIT_NOTE_TABS)[number];
 export type SalesOrderTab = (typeof SALES_ORDER_TABS)[number];
-export type FlowTab = EstimateTab | CreditNoteTab | SalesOrderTab;
+export type ChallanTab = (typeof CHALLAN_TABS)[number];
+export type FlowTab = EstimateTab | CreditNoteTab | SalesOrderTab | ChallanTab;
 
 /** The estimate status moves the detail page offers (§9). */
 export type EstimateMove = 'sent' | 'accepted' | 'rejected';
 /** Shop item 3 — a sales order's moves: confirm (numbered) and cancel (with a reason). */
 export type SalesOrderMove = 'confirm' | 'cancel';
-export type FlowMove = EstimateMove | SalesOrderMove;
+/** Shop item 4 — a challan's moves: issue (numbered, stock out) and void (stock back). */
+export type ChallanMove = 'issue' | 'void';
+export type FlowMove = EstimateMove | SalesOrderMove | ChallanMove;

@@ -36,6 +36,15 @@ class RejectSerializer(serializers.Serializer):
     note = serializers.CharField(required=False, allow_blank=True, max_length=255)
 
 
+class ChallanWriteSerializer(InvoiceWriteSerializer):
+    """Shop item 4 — the invoice's draft body plus the challan's type and transport (FR-2)."""
+
+    challan_type = serializers.CharField(required=False, allow_blank=True, max_length=24)
+    transporter = serializers.CharField(required=False, allow_blank=True, max_length=120)
+    vehicle_number = serializers.CharField(required=False, allow_blank=True, max_length=120)
+    eway_bill_number = serializers.CharField(required=False, allow_blank=True, max_length=120)
+
+
 class CancelSerializer(serializers.Serializer):
     """Shop item 3 — why a confirmed sales order will not be billed."""
 

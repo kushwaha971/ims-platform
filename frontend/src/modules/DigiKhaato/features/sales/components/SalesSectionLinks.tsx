@@ -1,13 +1,13 @@
 'use client';
 
-import { ClipboardCheck, ClipboardList, FileText, Undo2 } from 'lucide-react';
+import { ClipboardCheck, ClipboardList, FileText, PackageCheck, Undo2 } from 'lucide-react';
 
 import { UbActionLink } from 'src/design-system';
 import { usePermissions } from 'src/hooks/usePermissions';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { ROUTES } from 'src/routes';
 
-type Section = 'invoice' | 'estimate' | 'sales_order' | 'credit_note';
+type Section = 'invoice' | 'estimate' | 'sales_order' | 'delivery_challan' | 'credit_note';
 
 const SECTIONS: readonly {
   readonly key: Section;
@@ -36,6 +36,13 @@ const SECTIONS: readonly {
     labelId: 'sales.order.listTitle',
     permission: 'sales.estimate.read',
     icon: ClipboardCheck,
+  },
+  {
+    key: 'delivery_challan',
+    href: ROUTES.SALES_CHALLANS,
+    labelId: 'sales.challan.listTitle',
+    permission: 'sales.invoice.read',
+    icon: PackageCheck,
   },
   {
     key: 'credit_note',

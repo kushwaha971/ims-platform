@@ -30,6 +30,13 @@ def _applications(rows: Any, other: str) -> list[dict]:
 def document_links(obj: Any) -> dict:
     from apps.sales.models import SalesCreditApplication, SalesDocument
 
+    if obj.kind == "delivery_challan":
+        target = (
+            SalesDocument.objects.filter(pk=obj.converted_to_id).first()
+            if obj.converted_to_id
+            else None
+        )
+        return {"converted_to": doc_ref(target), "challan": (obj.meta or {}).get("challan") or {}}
     if obj.kind in ("estimate", "sales_order"):
         target = (
             SalesDocument.objects.filter(pk=obj.converted_to_id).first()

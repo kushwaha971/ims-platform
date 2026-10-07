@@ -110,7 +110,13 @@ If this section looks stale (the commits it names are not the latest), rebuild t
   - Found on the way and fixed: a draft reopened from the server failed the whole-number rule ("3.000" NOS) so Issue/Record silently did nothing (invoice, estimate, purchase bill editors; `src/utils/quantity.formQty`); estimate and credit-note lists counted their rows as "Bills".
   - Not built: goods-received notes / part receipts / close-with-what-arrived (PUR-06), raise PO from low stock, PDF share link for a PO, sales-order backorders.
   - Live: `node e2e/orders.mjs` all passed at 1280 and 390.
-- [ ] Shop item 4: delivery challans. Then 5 purchase returns, 6 multiple units, 7 batch/expiry, 8 serial numbers, 9 POS.
+- **Owner, 7 Oct 2026 — P0 order (agreed in chat), report once ALL are done:**
+  - [x] Shop: delivery challans — `sales_document` kind `delivery_challan` (`services/challans.py`, `views/challans.py`, `/sales/delivery-challans`, migration `sales/0007`; draft → issued → converted | void). `meta.challan` = type + transporter + vehicle (uppercased) + e-way bill no. Issue numbers DC/ and posts `sale_out` (cost frozen on the line); nothing on the khata. Convert = draft invoice with `meta.from_challan`; when it issues, `issue.py` skips the quantities the challan moved (`delivered_quantities`/`split_delivered`) and uses the challan's frozen cost; extra quantity moves normally. Void (owner, reason) reverses the challan's stock; a converted challan waits for its invoice's void. Screens reuse the estimate list/editor/page by kind (`ChallanDetailsSection` lazy), prints say "Delivery challan — not a tax invoice". Tests `test_challans.py` 6; live `e2e/orders.mjs` all passed.
+  - [ ] Shop: purchase returns / debit notes.
+  - [ ] Platform: UPI payment link + QR on every invoice, library fee and loan instalment (built once).
+  - [ ] Lending: documents (receipt print, statement, closure letter), late fees / penal interest and waivers, write-off / cancel.
+  - [ ] Library: QR self check-in; library expenses with a profit view.
+  - Later, when a customer needs it: multiple units, batch/expiry, serial numbers, POS, e-invoice/e-way bill, Tally XML, balance sheet, variants; library enquiries/waitlist; lending agent scoping, KYC, portfolio reports.
 - Mac notes: `next build` hangs inside Claude's sandbox (Turbopack workers) and pytest needs the local Postgres socket — run both outside it. Write scratch files under `/tmp/claude-501`, not `$TMPDIR`, when a command runs outside the sandbox.
 - Open question to the owner (asked 7 Oct): revert the Verma Finance QA changes in the dev DB or keep them.
 

@@ -40,6 +40,9 @@ const shareText = (
       validUntil: formatBusinessDate(doc.validUntil),
     });
   }
+  if (doc.kind === 'delivery_challan') {
+    return t('sales.challan.shareText', { ...base });
+  }
   if (doc.kind === 'sales_order') {
     return t('sales.order.shareText', { ...base, total: formatInr(doc.grandTotal) });
   }

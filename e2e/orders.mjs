@@ -127,6 +127,49 @@ for (const [size, viewport] of [['desktop', { width: 1280, height: 860 }], ['pho
   await page.waitForTimeout(2500);
   await look('list');
 
+  // ── Delivery challans ───────────────────────────────────────────────────
+  const onHand = async () => Number((await must('GET', `/items/${rice.id}`, null, tok)).on_hand);
+  const dcDraft = await api('POST', '/sales/delivery-challans', {
+    party_id: ramesh.id, document_date: TODAY, challan_type: 'supply_on_approval',
+    transporter: 'Shree Roadways', vehicle_number: 'mh12ab1234', lines: [{ item_id: rice.id, qty: '4' }],
+  }, tok);
+  check(`${size}: challan draft`, dcDraft.status === 201, `${dcDraft.status}`);
+  const dc = dcDraft.body.data;
+  const before = await onHand();
+  await page.goto(`${FE}/sales/challans/${dc.id}/edit`, { waitUntil: 'domcontentloaded' });
+  await page.getByTestId('challan-details').waitFor({ timeout: 20000 });
+  await look('dc-editor');
+  await page.getByTestId('invoice-issue').click();
+  await page.waitForURL((u) => u.pathname === `/sales/challans/${dc.id}`, { timeout: 20000 }).catch(() => {});
+  check(`${size}: Save & issue opens the challan`, new URL(page.url()).pathname === `/sales/challans/${dc.id}`, page.url());
+  await page.getByTestId('challan-convert').waitFor({ timeout: 20000 });
+  const dcText = await page.locator('main').innerText();
+  check(`${size}: numbered DC/ with its transport`, /DC\/\d\d-\d\d\/\d{4}/.test(dcText) && dcText.includes('MH12AB1234'), dcText.slice(0, 200));
+  check(`${size}: the goods left on the challan`, (await onHand()) === before - 4, `${before} → ${await onHand()}`);
+  await look('dc-issued');
+  await page.getByTestId('challan-convert').click();
+  await page.getByRole('button', { name: 'Convert to invoice' }).last().click();
+  await page.waitForURL((u) => /\/sales\/invoices\/[^/]+\/edit$/.test(u.pathname), { timeout: 20000 }).catch(() => {});
+  const invoiceId = new URL(page.url()).pathname.split('/')[3];
+  check(`${size}: convert lands in the invoice draft`, !!invoiceId && page.url().endsWith('/edit'), page.url());
+  const inv = await must('GET', `/sales/invoices/${invoiceId}`, null, tok);
+  const issued = await api('POST', `/sales/invoices/${invoiceId}/issue`, { version: inv.version }, tok);
+  check(`${size}: the invoice from the challan issues`, issued.status === 200, `${issued.status} ${JSON.stringify(issued.body?.error ?? '').slice(0, 200)}`);
+  check(`${size}: and does not take the stock out again`, (await onHand()) === before - 4, `${await onHand()}`);
+  const dc2 = (await api('POST', '/sales/delivery-challans', { party_id: ramesh.id, document_date: TODAY, lines: [{ item_id: rice.id, qty: '2' }] }, tok)).body.data;
+  await must('POST', `/sales/delivery-challans/${dc2.id}/issue`, {}, tok);
+  const mid = await onHand();
+  await page.goto(`${FE}/sales/challans/${dc2.id}`, { waitUntil: 'domcontentloaded' });
+  await page.getByTestId('challan-void').click();
+  await page.getByRole('textbox').fill('Customer returned the goods');
+  await look('dc-void-dialog');
+  await page.getByTestId('order-cancel-confirm').click();
+  await page.waitForTimeout(2000);
+  check(`${size}: voiding the challan brings the goods back`, (await onHand()) === mid + 2, `${mid} → ${await onHand()}`);
+  await page.goto(`${FE}/sales/challans`, { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(2500);
+  await look('dc-list');
+
   // ── Purchase orders ──────────────────────────────────────────────────────
   const po = await draftPurchaseOrder('20');
   await page.goto(`${FE}/purchases/orders/${po.id}/edit`, { waitUntil: 'domcontentloaded' });
@@ -172,11 +215,12 @@ await browser.close();
 
 // ── Nothing moved ───────────────────────────────────────────────────────────
 const stockAfter = (await must('GET', `/items/${rice.id}`, null, tok)).on_hand;
-check('orders moved no stock (the bill drafts are not recorded)', stockAfter === stockBefore, `${stockBefore} → ${stockAfter}`);
+// Each pass: a challan of 4 billed (stock −4 once) and one of 2 voided (back).
+check('only the billed challans moved stock, once each', Number(stockAfter) === Number(stockBefore) - 8, `${stockBefore} → ${stockAfter}`);
 const supplier = await must('GET', `/parties/${agro.id}`, null, tok);
 check('purchase orders moved no money', Number(supplier.balance) === 0, supplier.balance);
 const party = await must('GET', `/parties/${ramesh.id}`, null, tok);
-check('orders moved no money', Number(party.balance) === 0, party.balance);
+check('orders and challans moved no money; the two bills from challans did', Number(party.balance) > 0, party.balance);
 const invoices = await api('GET', '/sales/invoices?tab=all', null, tok);
 check('no order is in the invoice list', invoices.body.data.every((row) => row.kind !== 'sales_order'));
 writeFileSync(`${ROOT}/account.json`, JSON.stringify({ email }, null, 1));

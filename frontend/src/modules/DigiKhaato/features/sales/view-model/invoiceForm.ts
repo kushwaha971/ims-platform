@@ -3,6 +3,7 @@ import { formQty } from 'src/utils/quantity';
 
 import type { EngineDocumentInput, EngineGstType } from './taxEngine';
 import type { DiscountType, SalesDocument } from '../types/sales.types';
+import type { ChallanType } from '../types/salesFlows.types';
 
 /**
  * The invoice editor's form ⇄ the wire (SAL-02 §14) ⇄ the tax preview.
@@ -49,6 +50,11 @@ export interface InvoiceFormValues {
   notes: string;
   terms: string;
   lines: InvoiceLineForm[];
+  /** Shop item 4 — a delivery challan's type and transport (SAL-09 FR-2); unused otherwise. */
+  challanType: ChallanType;
+  transporter: string;
+  vehicleNumber: string;
+  ewayBillNumber: string;
 }
 
 /** SAL-07 FR-1 — counters bill walk-ins; everybody else bills a party. */
@@ -93,6 +99,10 @@ export const emptyInvoiceForm = (
   notes: '',
   terms: '',
   lines: [emptyLine()],
+  challanType: 'other',
+  transporter: '',
+  vehicleNumber: '',
+  ewayBillNumber: '',
 });
 
 const isNumber = (value: string): boolean => /^\d+(\.\d+)?$/.test(value.trim());
@@ -185,6 +195,10 @@ export const fromDocument = (doc: SalesDocument): InvoiceFormValues => ({
         taxCode: line.taxCode,
       }))
     : [emptyLine()],
+  challanType: doc.links.challan?.type ?? 'other',
+  transporter: doc.links.challan?.transporter ?? '',
+  vehicleNumber: doc.links.challan?.vehicleNumber ?? '',
+  ewayBillNumber: doc.links.challan?.ewayBillNumber ?? '',
 });
 
 export interface RateLookup {

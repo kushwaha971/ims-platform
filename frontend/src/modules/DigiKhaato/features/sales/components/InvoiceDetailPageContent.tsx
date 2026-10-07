@@ -51,6 +51,7 @@ const READ_PERMISSION = {
   estimate: 'sales.estimate.read',
   credit_note: 'sales.invoice.read',
   sales_order: 'sales.estimate.read',
+  delivery_challan: 'sales.invoice.read',
 } as const;
 
 /**

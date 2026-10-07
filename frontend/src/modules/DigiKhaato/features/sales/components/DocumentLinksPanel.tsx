@@ -59,26 +59,40 @@ export function DocumentLinksPanel({
         description={t('sales.void.bannerReason', { reason: doc.voidReason ?? '' })}
       />
     ),
-    (doc.kind === 'estimate' || doc.kind === 'sales_order') && links.convertedTo && (
-      <UbStatusBanner
-        key="converted"
-        tone={links.convertedTo.status === 'void' ? 'warning' : 'info'}
-        title={t(
-          links.convertedTo.status === 'void'
-            ? 'sales.estimate.convertedVoid'
-            : 'sales.estimate.convertedTo',
-          { number: links.convertedTo.number ?? t('sales.status.draft') }
-        )}
-        action={
-          <UbActionLink
-            href={flowDetailHref('invoice', links.convertedTo.id)}
-            variant="secondary"
-            size="sm"
-          >
-            {t('sales.estimate.openInvoice')}
-          </UbActionLink>
-        }
-      />
+    (doc.kind === 'estimate' || doc.kind === 'sales_order' || doc.kind === 'delivery_challan') &&
+      links.convertedTo && (
+        <UbStatusBanner
+          key="converted"
+          tone={links.convertedTo.status === 'void' ? 'warning' : 'info'}
+          title={t(
+            links.convertedTo.status === 'void'
+              ? 'sales.estimate.convertedVoid'
+              : 'sales.estimate.convertedTo',
+            { number: links.convertedTo.number ?? t('sales.status.draft') }
+          )}
+          action={
+            <UbActionLink
+              href={flowDetailHref('invoice', links.convertedTo.id)}
+              variant="secondary"
+              size="sm"
+            >
+              {t('sales.estimate.openInvoice')}
+            </UbActionLink>
+          }
+        />
+      ),
+    doc.kind === 'delivery_challan' && links.challan && (
+      <UbText key="challan" variant="body-sm" tone="secondary" data-testid="challan-line">
+        {[
+          t(`sales.challan.type.${links.challan.type}`),
+          links.challan.transporter,
+          links.challan.vehicleNumber,
+          links.challan.ewayBillNumber &&
+            t('sales.challan.ewayShort', { number: links.challan.ewayBillNumber }),
+        ]
+          .filter(Boolean)
+          .join(' · ')}
+      </UbText>
     ),
     doc.kind === 'estimate' && doc.validUntil && doc.status !== 'converted' && (
       <UbText key="valid" variant="body-sm" tone="tertiary">
@@ -90,7 +104,9 @@ export function DocumentLinksPanel({
         {t(
           links.convertedFrom.kind === 'sales_order'
             ? 'sales.order.fromOrder'
-            : 'sales.estimate.fromEstimate'
+            : links.convertedFrom.kind === 'delivery_challan'
+              ? 'sales.challan.fromChallan'
+              : 'sales.estimate.fromEstimate'
         )}{' '}
         <UbLink href={flowDetailHref(links.convertedFrom.kind, links.convertedFrom.id)}>
           {refLabel(links.convertedFrom)}

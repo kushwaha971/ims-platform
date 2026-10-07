@@ -13,6 +13,7 @@ import type {
   SalesDocumentLinks,
   Settlement,
   UnallocatedPayment,
+  ChallanType,
 } from '../types/salesFlows.types';
 
 /**
@@ -118,6 +119,14 @@ export const toLinks = (raw: unknown): SalesDocumentLinks => {
     restock: row.restock === undefined ? true : Boolean(row.restock),
     settlement: (row.settlement as Settlement | undefined) ?? 'hold_advance',
     openCredit: sn(row.open_credit),
+    challan: row.challan
+      ? {
+          type: (s((row.challan as Wire).type) || 'other') as ChallanType,
+          transporter: s((row.challan as Wire).transporter),
+          vehicleNumber: s((row.challan as Wire).vehicle_number),
+          ewayBillNumber: s((row.challan as Wire).eway_bill_number),
+        }
+      : null,
   };
 };
 

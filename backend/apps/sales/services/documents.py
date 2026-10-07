@@ -36,6 +36,11 @@ _DRAFT_ACTIONS: dict[str, tuple[str, str, str]] = {
         AuditAction.SALES_ORDER_UPDATED,
         AuditAction.SALES_ORDER_DELETED,
     ),
+    DocumentKind.DELIVERY_CHALLAN: (
+        AuditAction.CHALLAN_CREATED,
+        AuditAction.CHALLAN_UPDATED,
+        AuditAction.CHALLAN_DELETED,
+    ),
     DocumentKind.CREDIT_NOTE: (
         AuditAction.CREDIT_NOTE_DRAFT_CREATED,
         AuditAction.CREDIT_NOTE_DRAFT_UPDATED,

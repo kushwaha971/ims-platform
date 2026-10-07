@@ -210,6 +210,13 @@ class AuditAction:
     SALES_ORDER_CONFIRMED = "sales_order.confirmed"
     SALES_ORDER_CANCELLED = "sales_order.cancelled"
     SALES_ORDER_CONVERTED = "sales_order.converted"
+    # Shop item 4 — delivery challans (SAL-09 §16)
+    CHALLAN_CREATED = "challan.created"
+    CHALLAN_UPDATED = "challan.updated"
+    CHALLAN_DELETED = "challan.deleted"
+    CHALLAN_ISSUED = "challan.issued"
+    CHALLAN_CONVERTED = "challan.converted"
+    CHALLAN_VOIDED = "challan.voided"
     CREDIT_NOTE_DRAFT_CREATED = "credit_note.draft_created"
     CREDIT_NOTE_DRAFT_UPDATED = "credit_note.draft_updated"
     CREDIT_NOTE_DRAFT_DELETED = "credit_note.draft_deleted"

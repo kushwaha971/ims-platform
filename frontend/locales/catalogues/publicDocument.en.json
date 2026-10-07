@@ -1,4 +1,5 @@
 {
+  "publicDocument.amount.challan": "Value of goods",
   "publicDocument.amount.creditNote": "Credit note value",
   "publicDocument.amount.due": "Amount due",
   "publicDocument.amount.estimate": "Estimate total",
@@ -13,6 +14,7 @@
   "publicDocument.gstin": "GSTIN {gstin}",
   "publicDocument.language": "Language",
   "publicDocument.loading": "Loading the bill",
+  "publicDocument.note.challan": "This is a delivery challan, not a bill. Nothing is due yet.",
   "publicDocument.note.creditNote": "This credit note is for your records.",
   "publicDocument.note.estimate": "This is an estimate, not a bill. Nothing is due yet.",
   "publicDocument.note.order": "This is an order, not a bill. Nothing is due yet.",
@@ -33,6 +35,7 @@
   "publicDocument.status.billed": "Billed",
   "publicDocument.status.cancelled": "Cancelled",
   "publicDocument.status.creditOpen": "Credit available",
+  "publicDocument.status.dispatched": "Goods sent",
   "publicDocument.status.due": "Payment due",
   "publicDocument.status.expired": "Expired",
   "publicDocument.status.orderConfirmed": "Order confirmed",

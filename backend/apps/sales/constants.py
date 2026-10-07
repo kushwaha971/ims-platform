@@ -15,6 +15,8 @@ class DocumentKind(models.TextChoices):
     CREDIT_NOTE = "credit_note", _("Credit note")
     #: Shop item 3 — a customer's confirmed order, converted into an invoice.
     SALES_ORDER = "sales_order", _("Sales order")
+    #: Shop item 4 — goods that leave before the bill (SAL-09).
+    DELIVERY_CHALLAN = "delivery_challan", _("Delivery challan")
 
 
 class DocumentStatus(models.TextChoices):
@@ -86,6 +88,14 @@ SALES_ORDER_TAB_STATUSES: dict[str, tuple[str, ...]] = {
     "open": ("open",),
     "converted": ("converted",),
     "cancelled": ("cancelled",),
+}
+#: Shop item 4 — the challans list's tabs. `issued` is goods out and not yet billed.
+CHALLAN_TAB_STATUSES: dict[str, tuple[str, ...]] = {
+    "all": ("draft", "issued", "converted", "void"),
+    "issued": ("issued",),
+    "draft": ("draft",),
+    "converted": ("converted",),
+    "void": ("void",),
 }
 #: SAL-04 §14 — the credit notes list's tabs (`open` = issued with credit left to use).
 CREDIT_NOTE_TAB_STATUSES: dict[str, tuple[str, ...]] = {

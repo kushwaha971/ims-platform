@@ -7,7 +7,12 @@ import { formatBusinessDate } from 'src/utils/dates';
 import { formatAmount, formatInr } from 'src/utils/money';
 import { formatPhoneForDisplay } from 'src/utils/share';
 
-import { documentTitleId, sgstLabelId } from '../../view-model/invoiceDisplay';
+import {
+  documentTitleId,
+  sgstLabelId,
+  isNotABill,
+  notTaxInvoiceId,
+} from '../../view-model/invoiceDisplay';
 
 import { pct, taxColumns, taxSummary, thermalName, trimQty, watermark } from './printModel';
 
@@ -106,13 +111,12 @@ export function InvoicePrintThermal80({
       {row(t('sales.print.total'), formatInr(doc.grandTotal), true)}
       {doc.status !== 'draft' &&
         doc.kind !== 'sales_order' &&
+        doc.kind !== 'delivery_challan' &&
         row(t('sales.print.paid'), formatAmount(doc.amountPaid))}
       {doc.status !== 'draft' &&
-        doc.kind !== 'estimate' &&
-        doc.kind !== 'sales_order' &&
+        !isNotABill(doc.kind) &&
         row(t('sales.print.balance'), formatAmount(doc.amountDue))}
-      {doc.kind === 'estimate' && <p>{t('sales.estimate.notTaxInvoice')}</p>}
-      {doc.kind === 'sales_order' && <p>{t('sales.order.notTaxInvoice')}</p>}
+      {isNotABill(doc.kind) && <p>{t(notTaxInvoiceId(doc.kind))}</p>}
       {columns !== 'none' &&
         taxSummary(doc.lines).map((s) => (
           <p key={s.rate}>

@@ -28,11 +28,13 @@ const LIST_PATH = {
   estimate: API_PATHS.SALES_ESTIMATES,
   credit_note: API_PATHS.SALES_CREDIT_NOTES,
   sales_order: API_PATHS.SALES_ORDERS,
+  delivery_challan: API_PATHS.SALES_CHALLANS,
 } as const;
 const DETAIL_PATH = {
   estimate: API_PATHS.SALES_ESTIMATE,
   credit_note: API_PATHS.SALES_CREDIT_NOTE,
   sales_order: API_PATHS.SALES_ORDER,
+  delivery_challan: API_PATHS.SALES_CHALLAN,
 } as const;
 
 /** The estimates and credit notes lists share SAL-08's list shape (views/common.py). */
@@ -100,7 +102,9 @@ export const moveEstimate = async (
       await api.post<EnvelopeWire>(
         move === 'confirm' || move === 'cancel'
           ? API_PATHS.SALES_ORDER_ACTION(id, move)
-          : API_PATHS.SALES_ESTIMATE_MOVE(id, move),
+          : move === 'issue' || move === 'void'
+            ? API_PATHS.SALES_CHALLAN_ACTION(id, move)
+            : API_PATHS.SALES_ESTIMATE_MOVE(id, move),
         body
       )
     ).data
@@ -116,7 +120,9 @@ export const convertEstimate = async (
       await api.post<EnvelopeWire>(
         kind === 'sales_order'
           ? API_PATHS.SALES_ORDER_ACTION(id, 'convert')
-          : API_PATHS.SALES_ESTIMATE_CONVERT(id),
+          : kind === 'delivery_challan'
+            ? API_PATHS.SALES_CHALLAN_ACTION(id, 'convert')
+            : API_PATHS.SALES_ESTIMATE_CONVERT(id),
         {}
       )
     ).data

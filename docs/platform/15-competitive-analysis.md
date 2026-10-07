@@ -20,7 +20,7 @@ Compared with Vyapar (the closest Indian small-business product), Zoho Inventory
 | Estimates / quotations | ✓ | ✓ | ✓ | |
 | Credit notes / sale returns | ✓ | ✓ | ✓ | |
 | Sales orders | ✓ | ✓ | ✓ | 7 Oct: `/sales/orders` — confirm (SO/ number), convert to invoice, cancel with a reason; the whole order at once (no backorders) |
-| Delivery challans | ✗ | ✓ | ✓ | |
+| Delivery challans | ✓ | ✓ | ✓ | 7 Oct: `/sales/challans` — type (approval, job work, branch transfer, sample), transporter, vehicle, e-way bill no.; issuing (DC/ number) takes the goods out of stock; convert to invoice without a second deduction; void brings them back. No part conversion or part returns yet |
 | Purchase bills | ✓ | ✓ | ✓ | |
 | Purchase orders → bill | ✓ | ✓ | ✓ | 7 Oct: `/purchases/orders` — send (PO/ number, expected date), Create bill (a draft bill with the order's lines), cancel; no goods-received notes or part receipts yet |
 | Purchase returns / debit notes | ✗ | ✓ | ✓ | |

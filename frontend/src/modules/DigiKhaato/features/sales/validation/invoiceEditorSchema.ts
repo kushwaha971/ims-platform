@@ -48,7 +48,7 @@ export const isIndianMobile = (value: string): boolean =>
   /^(\+91)?[6-9]\d{9}$/.test(value.replace(/[\s-]/g, ''));
 
 export interface InvoiceSchemaOptions {
-  readonly kind: 'invoice' | 'estimate' | 'sales_order';
+  readonly kind: 'invoice' | 'estimate' | 'sales_order' | 'delivery_challan';
 }
 
 /**
@@ -191,6 +191,19 @@ export const buildInvoiceEditorSchema = (
       kind === 'estimate'
         ? onOrAfterDate('sales.validation.validUntilBeforeDate')
         : Yup.string().defined().default(''),
+    challanType: Yup.mixed<InvoiceFormValues['challanType']>().defined().default('other'),
+    transporter: Yup.string()
+      .defined()
+      .default('')
+      .max(60, t('validation.maxChars', { value: 60 })),
+    vehicleNumber: Yup.string()
+      .defined()
+      .default('')
+      .max(60, t('validation.maxChars', { value: 60 })),
+    ewayBillNumber: Yup.string()
+      .defined()
+      .default('')
+      .max(60, t('validation.maxChars', { value: 60 })),
     placeOfSupplyState: Yup.string()
       .defined()
       .default('')

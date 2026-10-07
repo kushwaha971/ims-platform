@@ -733,7 +733,8 @@
   "2026-10-07 — GST portal files (Shop item 2). /reports/gst-summary 104 → 106 KB route, 340 → 341 KB first load: the GSTR-1 / GSTR-3B JSON button and its strings. Its request, the blob download and the save are imported by the thunk on the tap, so the measured +0.6 KB is the button itself.",
   "2026-10-07 — every route +0.1 KB first load: the API client now reads a refused file request's JSON out of its Blob before normalising it (export and GST-file refusals had read \"Request failed.\"). Four routes sitting exactly on their budget tipped over: /settings/team, /library/seats and the two library catalogue routes, +1 each.",
   "2026-10-07 — sales orders (Shop item 3). /sales/orders, /sales/orders/[id], /new and /[id]/edit are new and are their estimate siblings' size: the same list, detail page and bill editor, by kind. Those siblings and /sales/invoices/[id] +0.4 KB for the order branches they share; every route's first load +0.1 KB for one nav row and its route constants, which tipped /settings/profile, /library/settings and /d/[token] that sat exactly on their budgets.",
-  "2026-10-07 — purchase orders (Shop item 3). /purchases/orders, /[id], /new and /[id]/edit are new and are their bill siblings' size: the same list, editor and page, by kind. Those siblings +0.3-1.1 KB for the order branches (Create bill, Cancel, the order's words); every route's first load +0.1 KB for one nav row and two route constants, which tipped the routes that sat exactly on their budgets (/settings, /library/messages, /items/masters, /set-password, /sales/invoices/[id])."
+  "2026-10-07 — purchase orders (Shop item 3). /purchases/orders, /[id], /new and /[id]/edit are new and are their bill siblings' size: the same list, editor and page, by kind. Those siblings +0.3-1.1 KB for the order branches (Create bill, Cancel, the order's words); every route's first load +0.1 KB for one nav row and two route constants, which tipped the routes that sat exactly on their budgets (/settings, /library/messages, /items/masters, /set-password, /sales/invoices/[id]).",
+  "2026-10-07 — delivery challans (Shop item 4). /sales/challans, /[id], /new and /[id]/edit are new and are their estimate and order siblings' size: the same list, editor and page, by kind; the challan's own fields load with the challan editor only (dynamic), so an invoice editor pays +0.6 KB for the challan branches and copy, not the panel. Every route's first load +0.1-0.2 KB for one nav row, its icon and the route and API constants, which tipped the routes sitting exactly on their budgets (four lending routes had an empty entry, i.e. the default, and now have their own). The shared app chunks 108 → 109 KB and /library/messages 63 → 64 KB route sat on the line and crossed it by the same constants."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -947,7 +948,7 @@
  ],
  "shared": {
   "framework": 128,
-  "sharedApp": 108
+  "sharedApp": 109
  },
  "//routes": [
   "The `route` figures are §19.9.2's, unchanged, and every route is comfortably",
@@ -1284,6 +1285,22 @@
   "firstLoad": 288
  },
  "routes": {
+  "/sales/challans/[id]": {
+   "route": 74,
+   "firstLoad": 309
+  },
+  "/sales/challans": {
+   "route": 75,
+   "firstLoad": 310
+  },
+  "/sales/challans/new": {
+   "route": 143,
+   "firstLoad": 378
+  },
+  "/sales/challans/[id]/edit": {
+   "route": 143,
+   "firstLoad": 378
+  },
   "/purchases/orders/[id]": {
    "route": 62,
    "firstLoad": 297
@@ -1301,20 +1318,20 @@
    "firstLoad": 381
   },
   "/sales/orders/[id]": {
-   "route": 72,
-   "firstLoad": 307
-  },
-  "/sales/orders": {
    "route": 74,
    "firstLoad": 309
   },
+  "/sales/orders": {
+   "route": 75,
+   "firstLoad": 310
+  },
   "/sales/orders/new": {
-   "route": 141,
-   "firstLoad": 376
+   "route": 143,
+   "firstLoad": 378
   },
   "/sales/orders/[id]/edit": {
-   "route": 141,
-   "firstLoad": 376
+   "route": 143,
+   "firstLoad": 378
   },
   "/parties": {
    "route": 109,
@@ -1325,31 +1342,31 @@
    "firstLoad": 336
   },
   "/sales/invoices/new": {
-   "route": 141,
-   "firstLoad": 376
+   "route": 143,
+   "firstLoad": 378
   },
   "/sales/invoices/[id]/edit": {
-   "route": 141,
-   "firstLoad": 376
+   "route": 143,
+   "firstLoad": 378
   },
   "/sales/invoices": {
    "route": 98,
    "firstLoad": 333
   },
   "/sales/invoices/[id]": {
-   "route": 72,
-   "firstLoad": 307
+   "route": 74,
+   "firstLoad": 309
   },
   "/sales/estimates": {
    "route": 98,
    "firstLoad": 356
   },
   "/sales/estimates/new": {
-   "route": 141,
+   "route": 143,
    "firstLoad": 400
   },
   "/sales/estimates/[id]/edit": {
-   "route": 141,
+   "route": 143,
    "firstLoad": 400
   },
   "/sales/estimates/[id]": {
@@ -1561,7 +1578,7 @@
    "firstLoad": 302
   },
   "/library/settings": {
-   "route": 109,
+   "route": 110,
    "firstLoad": 345
   },
   "/library/members": {
@@ -1613,8 +1630,8 @@
    "firstLoad": 285
   },
   "/d/[token]": {
-   "route": 37,
-   "firstLoad": 273
+   "route": 39,
+   "firstLoad": 274
   },
   "/accept-invite/[token]": {
    "route": 11,
@@ -1645,7 +1662,7 @@
    "firstLoad": 300
   },
   "/library/messages": {
-   "route": 63,
+   "route": 64,
    "firstLoad": 299
   },
   "/lending/loans/new": {
@@ -1658,7 +1675,7 @@
   },
   "/lending/loans/[loanId]": {
    "route": 58,
-   "firstLoad": 293
+   "firstLoad": 294
   },
   "/lending/loans": {
    "route": 59,
@@ -1676,9 +1693,18 @@
    "route": 80,
    "firstLoad": 315
   },
-  "/lending/messages": {},
-  "/lending/routes": {},
-  "/lending/borrowers": {},
+  "/lending/messages": {
+   "route": 56,
+   "firstLoad": 289
+  },
+  "/lending/routes": {
+   "route": 56,
+   "firstLoad": 289
+  },
+  "/lending/borrowers": {
+   "route": 56,
+   "firstLoad": 289
+  },
   "/items/price-lists": {}
  },
  "//ignoreRoutes": [

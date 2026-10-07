@@ -48,6 +48,7 @@ const COPY: Readonly<Record<FlowKind, { readonly ns: string; readonly stat: stri
   estimate: { ns: 'sales.estimate', stat: 'sales.estimate.totalQuoted' },
   credit_note: { ns: 'sales.creditNote', stat: 'sales.creditNote.totalCredited' },
   sales_order: { ns: 'sales.order', stat: 'sales.order.totalOrdered' },
+  delivery_challan: { ns: 'sales.challan', stat: 'sales.challan.totalSent' },
 };
 
 /**
@@ -66,8 +67,13 @@ export function SalesFlowListPageContent({
   const list = useSalesFlowList(kind);
   const labels = useSalesGridLabels();
   const { ns, stat } = COPY[kind];
-  const newHref = `${FLOW_HOME[kind === 'sales_order' ? 'sales_order' : 'estimate']}/new`;
-  const newLabelId = kind === 'sales_order' ? 'sales.order.new' : 'sales.estimate.new';
+  const newHref = `${FLOW_HOME[kind]}/new`;
+  const newLabelId =
+    kind === 'sales_order'
+      ? 'sales.order.new'
+      : kind === 'delivery_challan'
+        ? 'sales.challan.new'
+        : 'sales.estimate.new';
 
   const [search, setSearch] = useState(list.filters.q);
   const debounced = useDebounce(search, INVOICE_SEARCH_DEBOUNCE_MS);
@@ -80,7 +86,7 @@ export function SalesFlowListPageContent({
     () => createFlowColumns({ t, kind, isCards: tier === 'cards' }),
     [t, kind, tier]
   );
-  const newEstimate = canWrite && (kind === 'estimate' || kind === 'sales_order');
+  const newEstimate = canWrite && kind !== 'credit_note';
   const emptyStates = useMemo<UbDataGridEmptyStates>(
     () => ({
       firstUse: {

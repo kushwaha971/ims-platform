@@ -130,7 +130,7 @@ export const moveEstimate = createAsyncThunk<
     const body: Record<string, unknown> = {};
     if (version !== undefined) body.version = version;
     // A sales order's cancel carries the customer's reason; an estimate's reject, a note.
-    if (note) body[move === 'cancel' ? 'reason' : 'note'] = note;
+    if (note) body[move === 'cancel' || move === 'void' ? 'reason' : 'note'] = note;
     return await (await estimates()).moveEstimate(id, move, body);
   } catch (error) {
     return rejectWithValue(toApiError(error, 'sales.estimate.error.move'));

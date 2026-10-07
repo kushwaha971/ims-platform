@@ -161,6 +161,12 @@ export const API_PATHS = {
   SALES_ORDER_ACTION: (id: string, verb: 'confirm' | 'cancel' | 'convert') =>
     `/sales/orders/${seg(id)}/${verb}`,
   SALES_ORDER_SHARE_LINKS: (id: string) => `/sales/orders/${seg(id)}/share-links`,
+  // Shop item 4 — delivery challans (SAL-09 §14): issue / void / convert.
+  SALES_CHALLANS: '/sales/delivery-challans',
+  SALES_CHALLAN: (id: string) => `/sales/delivery-challans/${seg(id)}`,
+  SALES_CHALLAN_ACTION: (id: string, verb: 'issue' | 'void' | 'convert') =>
+    `/sales/delivery-challans/${seg(id)}/${verb}`,
+  SALES_CHALLAN_SHARE_LINKS: (id: string) => `/sales/delivery-challans/${seg(id)}/share-links`,
   SALES_CREDIT_NOTES: '/sales/credit-notes',
   SALES_CREDIT_NOTE: (id: string) => `/sales/credit-notes/${seg(id)}`,
   SALES_CREDIT_NOTE_APPLY: (id: string) => `/sales/credit-notes/${seg(id)}/apply`,
@@ -280,6 +286,7 @@ export const IDEMPOTENT_POST_PATHS: readonly string[] = [
   API_PATHS.SALES_INVOICES,
   API_PATHS.SALES_ESTIMATES,
   API_PATHS.SALES_ORDERS,
+  API_PATHS.SALES_CHALLANS,
   API_PATHS.SALES_CREDIT_NOTES,
   API_PATHS.PURCHASE_BILLS,
   API_PATHS.PAYMENTS,

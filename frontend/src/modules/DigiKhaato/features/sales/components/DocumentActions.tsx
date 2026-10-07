@@ -18,6 +18,7 @@ import { convertEstimate, moveEstimate } from '../redux/salesFlowThunk';
 import {
   canApply,
   canReturn,
+  challanActions,
   estimateActions,
   isVoidable,
   salesOrderActions,
@@ -39,7 +40,7 @@ const ApplyDialogLazy = dynamic(
   { ssr: false }
 );
 
-type Open = 'void' | 'apply' | 'convert' | 'reject' | 'cancelOrder' | null;
+type Open = 'void' | 'apply' | 'convert' | 'reject' | 'cancelOrder' | 'voidChallan' | null;
 
 /**
  * The header actions a document's kind and status allow — SAL-01 §9, SAL-04
@@ -74,7 +75,10 @@ export function DocumentActions({ doc }: Readonly<{ doc: SalesDocument }>): Reac
   const convert = useCallback(async () => {
     setBusy(true);
     const result = await dispatch(
-      convertEstimate({ id: doc.id, kind: doc.kind === 'sales_order' ? 'sales_order' : 'estimate' })
+      convertEstimate({
+        id: doc.id,
+        kind: doc.kind === 'sales_order' || doc.kind === 'delivery_challan' ? doc.kind : 'estimate',
+      })
     );
     setBusy(false);
     if (!convertEstimate.fulfilled.match(result)) return;
@@ -93,16 +97,52 @@ export function DocumentActions({ doc }: Readonly<{ doc: SalesDocument }>): Reac
 
   const estimate = doc.kind === 'estimate';
   const order = doc.kind === 'sales_order';
+  const challan = doc.kind === 'delivery_challan';
   const moves = estimateActions(doc.status);
   const orderMoves = salesOrderActions(doc.status);
+  const challanMoves = challanActions(doc.status);
   // SAL-05 EC-9 — the invoice it became was voided (or its draft discarded): convert again.
   const reconvert =
     doc.status === 'converted' &&
     (!doc.links.convertedTo || doc.links.convertedTo.status === 'void');
   const writesEstimates = can('sales.estimate.write');
-  const voidable = isVoidable(doc) && can('sales.invoice.void') && !estimate && !order;
+  const voidable = isVoidable(doc) && can('sales.invoice.void') && !estimate && !order && !challan;
   return (
     <>
+      {challan && doc.status === 'draft' && can('sales.invoice.write') && (
+        <UbActionLink
+          href={`${ROUTES.SALES_CHALLANS}/${doc.id}/edit`}
+          variant="secondary"
+          iconOnly="mobile"
+          icon={icon(Pencil)}
+        >
+          {t('sales.detail.edit')}
+        </UbActionLink>
+      )}
+      {challan && challanMoves.void && can('sales.invoice.void') && (
+        <UbButton
+          variant="ghost"
+          iconOnly="mobile"
+          icon={icon(Ban)}
+          onClick={() => setOpen('voidChallan')}
+          data-testid="challan-void"
+        >
+          {t('sales.challan.void.action')}
+        </UbButton>
+      )}
+      {challan && can('sales.invoice.write') && (challanMoves.convert || reconvert) && (
+        <UbButton
+          variant="primary"
+          iconOnly="mobile"
+          icon={icon(FileOutput)}
+          onClick={() => setOpen('convert')}
+          busy={busy}
+          busyLabel={t('sales.estimate.convert.working')}
+          data-testid="challan-convert"
+        >
+          {t('sales.estimate.convert.action')}
+        </UbButton>
+      )}
       {order && doc.status === 'draft' && writesEstimates && (
         <UbActionLink
           href={`${ROUTES.SALES_ORDERS}/${doc.id}/edit`}
@@ -223,13 +263,19 @@ export function DocumentActions({ doc }: Readonly<{ doc: SalesDocument }>): Reac
       {open === 'void' && <VoidDialogLazy doc={doc} onClose={close} />}
       {open === 'apply' && <ApplyDialogLazy note={doc} onClose={close} />}
       {open === 'cancelOrder' && <CancelOrderDialogLazy doc={doc} onClose={close} />}
+      {open === 'voidChallan' && <CancelOrderDialogLazy doc={doc} onClose={close} move="void" />}
       <UbConfirmDialog
         open={open === 'convert'}
         onOpenChange={(next) => !next && close()}
-        title={t(order ? 'sales.order.convert.title' : 'sales.estimate.convert.title')}
-        description={t(order ? 'sales.order.convert.confirm' : 'sales.estimate.convert.confirm', {
-          number: doc.number ?? '',
-        })}
+        title={t(order || challan ? 'sales.order.convert.title' : 'sales.estimate.convert.title')}
+        description={t(
+          order
+            ? 'sales.order.convert.confirm'
+            : challan
+              ? 'sales.challan.convert.confirm'
+              : 'sales.estimate.convert.confirm',
+          { number: doc.number ?? '' }
+        )}
         confirmLabel={t('sales.estimate.convert.action')}
         cancelLabel={t('common.action.cancel')}
         closeLabel={t('common.action.close')}

@@ -51,7 +51,7 @@ export function InvoicePartySection({
   locale: Locale;
   disabled: boolean;
   /** SAL-01 FR-4 — an estimate carries "Valid until" where a bill carries its due date. */
-  kind?: 'invoice' | 'estimate' | 'sales_order';
+  kind?: 'invoice' | 'estimate' | 'sales_order' | 'delivery_challan';
 }>): React.JSX.Element {
   const { t } = useTranslation();
   const { watch, setValue } = form;
@@ -75,20 +75,23 @@ export function InvoicePartySection({
 
   return (
     <UbStack gap={3} className="p-4">
-      <UbChoiceChips<BillingMode>
-        ariaLabel={t('sales.editor.billTo')}
-        value={mode}
-        options={modeOptions}
-        disabled={disabled}
-        onChange={(next) => {
-          setValue('mode', next, { shouldDirty: true });
-          if (next === 'walkIn') {
-            setValue('partyId', null, { shouldDirty: true });
-            setValue('partyName', '');
-            setValue('placeOfSupplyState', tenantState, { shouldDirty: true });
-          }
-        }}
-      />
+      {/* Shop item 4 — goods on a challan always go to a named party (SAL-09 §10). */}
+      {kind !== 'delivery_challan' && (
+        <UbChoiceChips<BillingMode>
+          ariaLabel={t('sales.editor.billTo')}
+          value={mode}
+          options={modeOptions}
+          disabled={disabled}
+          onChange={(next) => {
+            setValue('mode', next, { shouldDirty: true });
+            if (next === 'walkIn') {
+              setValue('partyId', null, { shouldDirty: true });
+              setValue('partyName', '');
+              setValue('placeOfSupplyState', tenantState, { shouldDirty: true });
+            }
+          }}
+        />
+      )}
       {mode === 'party' ? (
         <UbField
           name="partyId"
