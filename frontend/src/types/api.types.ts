@@ -80,6 +80,9 @@ export type ApiErrorCode =
   | 'upi_vpa_missing'
   // Shop P0 — the desk's UPI QR (`/payments/pay-links`) with no UPI ID saved.
   | 'upi_not_configured'
+  // Library P0 — QR self check-in: nobody matches; the policy wants the desk.
+  | 'checkin_not_found'
+  | 'checkin_see_desk'
   | 'credit_limit_exceeded'
   | 'duplicate_supplier_invoice'
   // PTY-05 — tags. Both are closed-registry codes the server mints

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import dynamic from 'next/dynamic';
 
-import { LogIn, LogOut } from 'lucide-react';
+import { LogIn, LogOut, QrCode } from 'lucide-react';
 
 import {
   UbButton,
@@ -47,6 +47,12 @@ const UbDateInputLazy = dynamic(
 );
 
 /** The "let in anyway" prompt loads with the refusal that needs it. */
+/* Library P0 — the door's QR for self check-in loads with the tap. */
+const CheckInPosterDialogLazy = dynamic(
+  () => import('./CheckInPosterDialog').then((m) => m.CheckInPosterDialog),
+  { ssr: false }
+);
+
 const AttendanceOverrideDialogLazy = dynamic(
   () => import('./AttendanceOverrideDialog').then((m) => m.AttendanceOverrideDialog),
   { ssr: false }
@@ -80,6 +86,7 @@ export function AttendancePageContent(): React.JSX.Element {
   const canOverride = hasModule('library') && can('library.member.close');
   const [on, setOn] = useState(today);
   const [q, setQ] = useState('');
+  const [posterOpen, setPosterOpen] = useState(false);
   const [blocked, setBlocked] = useState<{ row: AttendanceRow; reason: string } | null>(null);
   const isToday = on === today;
 
@@ -150,16 +157,28 @@ export function AttendancePageContent(): React.JSX.Element {
     <UbPageShell>
       <UbPageHeader
         title={t('library.attendance.title')}
+        className="ub-print-hide"
         actions={
-          <UbDateInputLazy
-            name="library-attendance-day"
-            appearance="inline"
-            inlineLabel={t('library.attendance.day')}
-            aria-label={t('library.attendance.day')}
-            value={on}
-            max={today}
-            onChange={(value: string | null) => setOn(value || today)}
-          />
+          <UbStack direction="row" gap={2} align="center">
+            <UbButton
+              variant="secondary"
+              iconOnly="mobile"
+              icon={<QrCode className="h-4 w-4" aria-hidden />}
+              onClick={() => setPosterOpen(true)}
+              data-testid="library-checkin-open"
+            >
+              {t('library.checkin.button')}
+            </UbButton>
+            <UbDateInputLazy
+              name="library-attendance-day"
+              appearance="inline"
+              inlineLabel={t('library.attendance.day')}
+              aria-label={t('library.attendance.day')}
+              value={on}
+              max={today}
+              onChange={(value: string | null) => setOn(value || today)}
+            />
+          </UbStack>
         }
       />
       {!day ? (
@@ -181,7 +200,7 @@ export function AttendancePageContent(): React.JSX.Element {
           description={t('library.attendance.empty.body')}
         />
       ) : (
-        <UbStack gap={4} data-testid="library-attendance">
+        <UbStack gap={4} data-testid="library-attendance" className="ub-print-hide">
           <UbText variant="body-sm" tone="secondary" data-testid="library-attendance-counts">
             {[
               t('library.attendance.came', { present: day.present, students: day.students }),
@@ -215,10 +234,7 @@ export function AttendancePageContent(): React.JSX.Element {
                           .join(' · ')}
                       />
                       <UbStack gap={1} align="end" className="shrink-0">
-                        <UbText
-                          variant="body-sm-medium"
-                          tone={row.markId ? undefined : 'tertiary'}
-                        >
+                        <UbText variant="body-sm-medium" tone={row.markId ? undefined : 'tertiary'}>
                           {!row.markId
                             ? t('library.attendance.notIn')
                             : row.checkOutAt
@@ -272,6 +288,7 @@ export function AttendancePageContent(): React.JSX.Element {
           </UbCard>
         </UbStack>
       )}
+      {posterOpen && <CheckInPosterDialogLazy onClose={() => setPosterOpen(false)} />}
       {blocked && (
         <AttendanceOverrideDialogLazy
           name={blocked.row.name}

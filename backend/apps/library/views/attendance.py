@@ -125,3 +125,12 @@ class MemberMessageView(_AttendanceView):
                 data=request.data if isinstance(request.data, dict) else {},
             )
         )
+
+
+class CheckInPosterView(_AttendanceView):
+    """`GET /library/checkin-poster` — the door's QR for self check-in (Library P0)."""
+
+    def get(self, request: Any) -> Any:
+        from apps.library.services import self_checkin
+
+        return StandardResponse.ok(self_checkin.poster(get_effective_tenant(request)))

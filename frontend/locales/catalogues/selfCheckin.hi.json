@@ -1,0 +1,17 @@
+{
+  "selfCheckin.already": "{name}, आपका आज का चेक-इन पहले ही हो चुका है।",
+  "selfCheckin.dead.body": "कृपया काउंटर पर चेक-इन करें।",
+  "selfCheckin.dead.title": "यह चेक-इन कोड चालू नहीं है",
+  "selfCheckin.failed": "चेक-इन नहीं हो सका। फिर कोशिश करें।",
+  "selfCheckin.last4": "मोबाइल के आखिरी 4 अंक",
+  "selfCheckin.notFound": "आप नहीं मिले। नंबर जाँचें, या काउंटर पर पूछें।",
+  "selfCheckin.number": "विद्यार्थी नंबर",
+  "selfCheckin.seat": "सीट {seat}",
+  "selfCheckin.seeDesk": "अंदर आने से पहले कृपया काउंटर पर मिलें।",
+  "selfCheckin.submit": "चेक-इन करें",
+  "selfCheckin.subtitle": "आज के लिए चेक-इन",
+  "selfCheckin.tooMany": "बहुत बार कोशिश हुई। एक मिनट रुककर फिर कोशिश करें।",
+  "selfCheckin.warning": "कृपया काउंटर पर मिलें",
+  "selfCheckin.welcome": "स्वागत है, {name}। आपका चेक-इन हो गया।",
+  "selfCheckin.working": "चेक-इन हो रहा है…"
+}

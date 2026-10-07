@@ -27,3 +27,10 @@ export interface CheckInOutcome {
   readonly decision: 'allow' | 'warn' | 'block_overridden';
   readonly reason: string;
 }
+
+/** Library P0 — the door's poster: the self check-in page's link and its QR. */
+export interface CheckInPoster {
+  readonly url: string;
+  readonly library: string;
+  readonly qrModules: readonly string[];
+}

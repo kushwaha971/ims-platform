@@ -12,7 +12,11 @@ import {
   selectLibraryMemberDetail,
   type LibraryMemberDetailState,
 } from '../redux/libraryMemberDetailSlice';
-import { actOnLibraryMember, fetchLibraryMember, placeLibraryMember } from '../redux/libraryMemberThunk';
+import {
+  actOnLibraryMember,
+  fetchLibraryMember,
+  placeLibraryMember,
+} from '../redux/libraryMemberThunk';
 
 import type { MemberAction } from '../api/libraryMemberService';
 

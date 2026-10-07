@@ -55,7 +55,9 @@ export function SeatsPageContent(): React.JSX.Element {
   const [setup, setSetup] = useState(false);
   const lists = useSeats();
   // Until the shifts arrive, ask for nothing; then default to the first shift.
-  const current = shiftId ?? (lists.listsStatus === 'succeeded' ? (lists.activeShifts[0]?.id ?? WHOLE_DAY) : undefined);
+  const current =
+    shiftId ??
+    (lists.listsStatus === 'succeeded' ? (lists.activeShifts[0]?.id ?? WHOLE_DAY) : undefined);
   const seating = useSeats(current);
   const map = seating.map?.shiftId === current ? seating.map : null;
 

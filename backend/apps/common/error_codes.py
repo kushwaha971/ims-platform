@@ -251,6 +251,9 @@ _REGISTRY: dict[str, tuple[int, bool]] = {
     "penalty_cap_reached": (409, False),  # D cap
     # LEN-10 — a loan with money collected is written off or closed, never cancelled.
     "loan_has_collections": (409, False),  # D count
+    # Library P0 — QR self check-in: no student matches; the policy wants the desk.
+    "checkin_not_found": (404, False),
+    "checkin_see_desk": (409, False),
     # ── ATT ── contracts §4: the attendance engine (FRD 00 ATT-02, ATT-04).
     "attendance_blocked": (409, False),  # D reason, override_permission
     "attendance_duplicate": (409, False),  # D mark_id

@@ -88,6 +88,8 @@ import reportsEn from 'locales/catalogues/reports.en.json';
 import reportsHi from 'locales/catalogues/reports.hi.json';
 import salesEn from 'locales/catalogues/sales.en.json';
 import salesHi from 'locales/catalogues/sales.hi.json';
+import selfCheckinEn from 'locales/catalogues/selfCheckin.en.json';
+import selfCheckinHi from 'locales/catalogues/selfCheckin.hi.json';
 import sessionsEn from 'locales/catalogues/sessions.en.json';
 import sessionsHi from 'locales/catalogues/sessions.hi.json';
 import settingsEn from 'locales/catalogues/settings.en.json';
@@ -165,6 +167,7 @@ export const en: Readonly<Record<string, string>> = {
   ...remindersEn,
   ...reportsEn,
   ...salesEn,
+  ...selfCheckinEn,
   ...sessionsEn,
   ...settingsEn,
   ...settingsGateEn,
@@ -221,6 +224,7 @@ export const hi: Readonly<Record<string, string>> = {
   ...remindersHi,
   ...reportsHi,
   ...salesHi,
+  ...selfCheckinHi,
   ...sessionsHi,
   ...settingsHi,
   ...settingsGateHi,

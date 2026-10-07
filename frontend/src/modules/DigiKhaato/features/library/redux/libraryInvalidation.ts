@@ -21,6 +21,8 @@ import {
  */
 export const LIBRARY_QUERIES = {
   fetchLibraryTitles: 'libraryTitleList/fetch',
+  // Library P0 — the door's QR for self check-in
+  fetchCheckInPoster: 'libraryCheckin/fetchPoster',
   fetchLibraryTitle: 'libraryTitleDetail/fetch',
   searchLibraryTitles: 'libraryCatalogueForm/search',
   fetchLibraryCopies: 'libraryCopyList/fetch',

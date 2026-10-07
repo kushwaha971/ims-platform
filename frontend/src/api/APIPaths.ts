@@ -262,6 +262,8 @@ export const API_PATHS = {
   // Shop P0 — the UPI pay link's page (no session) and the desk's QR for any amount.
   PUBLIC_PAY: (token: string) => `/public/pay/${seg(token)}`,
   PAY_LINKS: '/payments/pay-links',
+  // Library P0 — a student's self check-in from the door's QR (no session).
+  PUBLIC_CHECKIN: (token: string) => `/public/in/${seg(token)}`,
 
   // ── PLT-10 — "Your data" (owner only) ─────────────────────────────────────
   TENANT_EXPORT: '/tenants/current/export',

@@ -46,6 +46,8 @@ export const ROUTES = {
   PUBLIC_DOCUMENT: '/d',
   /** Shop P0 — the UPI pay page a payment reminder's link opens, without an account. */
   PUBLIC_PAY: '/pay',
+  /** Library P0 — the page a reading room's door QR opens: self check-in, no account. */
+  SELF_CHECKIN: '/in',
 
   // ── (app) ─────────────────────────────────────────────────────────────────
   DASHBOARD: '/dashboard',
@@ -320,6 +322,8 @@ export const PUBLIC_ROUTE_PREFIXES: readonly string[] = [
   // Shop P0 — the same trap, found by looking: the UPI pay page bounced the payer to
   // `/login?next=/pay/<token>` before it could show the QR.
   ROUTES.PUBLIC_PAY,
+  // Library P0 — the student scanning the door's QR has no account either.
+  ROUTES.SELF_CHECKIN,
   // The same trap, found by the same probe: the sign-up screen links to these
   // BEFORE an account exists, and an anonymous visitor was bounced to login.
   ROUTES.LEGAL_TERMS,

@@ -31,17 +31,17 @@ export const useSeatSchemas = (): SeatSchemas => {
     const seatNumber = () =>
       v
         .requiredText(4)
-        .test('number', t('library.seats.number.invalid'), (value) =>
-          /^\d{1,4}$/.test(String(value ?? '')) && Number(value) >= 1
+        .test(
+          'number',
+          t('library.seats.number.invalid'),
+          (value) => /^\d{1,4}$/.test(String(value ?? '')) && Number(value) >= 1
         );
     const shiftSchema = Yup.object({
       name: v.requiredText(SHIFT_NAME_MAX),
       startsAt: v.requiredText(5),
-      endsAt: v
-        .requiredText(5)
-        .test('same', t('library.seats.shift.same'), function check(value) {
-          return value !== (this.parent as ShiftFormValues).startsAt;
-        }),
+      endsAt: v.requiredText(5).test('same', t('library.seats.shift.same'), function check(value) {
+        return value !== (this.parent as ShiftFormValues).startsAt;
+      }),
     }) as Yup.ObjectSchema<ShiftFormValues>;
     const seatRowSchema = Yup.object({
       prefix: v.boundedText(SEAT_PREFIX_MAX),

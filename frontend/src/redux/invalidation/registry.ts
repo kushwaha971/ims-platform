@@ -141,6 +141,11 @@ export const QUERIES = {
   // Shop P0 — the UPI pay link: the desk's QR and the payer's page
   createPayLink: 'payLink/createPayLink',
   fetchPublicPayLink: 'payLink/fetchPublicPayLink',
+  // Library P0 — QR self check-in: the student's page (core; the poster is the library's)
+  fetchSelfCheckIn: 'selfCheckin/fetchPage',
+  // A POST, registered as a query on purpose: it is idempotent (a second scan says
+  // "already checked in") and the student's phone holds no state it could make stale.
+  submitSelfCheckIn: 'selfCheckin/submit',
   // ── A16 ── R33: the print letterhead moved to `src/print` (was sales').
   fetchPrintBranding: 'printBranding/fetchPrintBranding',
   // ── A4a ── Apply to bills: the payment's own bucket's open documents

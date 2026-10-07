@@ -14,7 +14,10 @@ const str = (value: unknown): string =>
 const strOrNull = (value: unknown): string | null =>
   value === null || value === undefined ? null : String(value);
 
-export const getAttendanceDay = async (on: string, signal?: AbortSignal): Promise<AttendanceDay> => {
+export const getAttendanceDay = async (
+  on: string,
+  signal?: AbortSignal
+): Promise<AttendanceDay> => {
   const response = await api.get<{
     data: readonly Wire[];
     meta: { on: string; students: number; present: number; in_now: number };

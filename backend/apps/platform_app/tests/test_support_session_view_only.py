@@ -160,6 +160,9 @@ def test_the_anonymous_routes_never_read_a_token() -> None:
         "/api/v1/auth/password/reset/request",
         "/api/v1/auth/refresh",
         "/api/v1/auth/register",
+        # Library P0 — a student checks in from the door's QR: no session by design, and
+        # it writes only an attendance mark, under the public-link budgets.
+        "/api/v1/public/in/00000000-0000-4000-8000-000000000001",
     }
 
 

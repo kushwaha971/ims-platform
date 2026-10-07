@@ -105,6 +105,15 @@ const nextConfig = {
           { key: 'Cache-Control', value: 'private, no-store' },
         ],
       },
+      // Library P0 — the self check-in page a door QR opens: the token is half a credential.
+      {
+        source: '/in/:token*',
+        headers: [
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
+          { key: 'Cache-Control', value: 'private, no-store' },
+        ],
+      },
       // Shop P0 — the UPI pay page: its token is the credential, as the share page's is.
       {
         source: '/pay/:token*',

@@ -1,0 +1,17 @@
+{
+  "selfCheckin.already": "{name}, you are already checked in today.",
+  "selfCheckin.dead.body": "Please check in at the desk.",
+  "selfCheckin.dead.title": "This check-in code is not in use",
+  "selfCheckin.failed": "Could not check you in. Try again.",
+  "selfCheckin.last4": "Last 4 digits of your mobile",
+  "selfCheckin.notFound": "We could not find you. Check the number, or ask at the desk.",
+  "selfCheckin.number": "Student number",
+  "selfCheckin.seat": "Seat {seat}",
+  "selfCheckin.seeDesk": "Please see the desk before you come in.",
+  "selfCheckin.submit": "Check in",
+  "selfCheckin.subtitle": "Check in for today",
+  "selfCheckin.tooMany": "Too many tries. Wait a minute and try again.",
+  "selfCheckin.warning": "Please see the desk",
+  "selfCheckin.welcome": "Welcome, {name}. You are checked in.",
+  "selfCheckin.working": "Checking in…"
+}

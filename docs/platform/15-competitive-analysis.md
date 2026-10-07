@@ -86,7 +86,7 @@ Compared with the reading-room products Indian exam-prep libraries use (TrackMyL
 | Who has to pay, fee due / overdue / unpaid states | ✓ | ✓ | |
 | WhatsApp fee messages (due T-7/3/1, overdue, welcome, receipt), logged | ✓ | ✓ | theirs send automatically from a paid sender |
 | Attendance (desk check-in/out) | ✓ | ✓ | |
-| QR self check-in, biometric | ✗ | ◐ | QR is cheap and wanted |
+| QR self check-in, biometric | ◐ | ◐ | 8 Oct: a printed door QR; the student scans it with their own phone, types their number and the last 4 of their mobile, and is checked in under the desk's rules. No biometric |
 | Online fee payment (UPI link/QR) | ✓ | ✓ | 8 Oct: fee reminders carry the pay page link (QR + "Pay by UPI"); "Pay the fee by UPI" QR on the student page. No gateway: money goes straight to the library's UPI ID |
 | Book counter (catalogue, issue/return, fines, holds, stock-take) | ✓ | ✗ | an advantage for libraries that lend books |
 | Home dashboard (occupancy, collections, dues) | ✓ | ✓ | |

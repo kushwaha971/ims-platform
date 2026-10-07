@@ -74,6 +74,7 @@ urlpatterns: list = [
     path("seat-map", st.SeatMapView.as_view(), name="library-seat-map"),
     # ── W05 ── the reading room's day register
     path("attendance", at.AttendanceView.as_view(), name="library-attendance"),
+    path("checkin-poster", at.CheckInPosterView.as_view(), name="library-checkin-poster"),
     path(
         "attendance/<uuid:mark_id>/out",
         at.AttendanceOutView.as_view(),

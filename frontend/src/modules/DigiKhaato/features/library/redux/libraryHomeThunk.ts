@@ -10,14 +10,13 @@ import type { LibraryHome } from '../types/home.types';
 /** W04 — the home's one read; the service loads with the first request. */
 const service = () => import('../api/libraryHomeService');
 
-export const fetchLibraryHome = createAsyncThunk<
-  LibraryHome,
-  void,
-  { rejectValue: ApiErrorShape }
->('libraryHome/fetch', async (_arg, { signal, rejectWithValue }) => {
-  try {
-    return await (await service()).getLibraryHome(signal);
-  } catch (error) {
-    return rejectWithValue(toApiError(error, 'library.home.error.title'));
+export const fetchLibraryHome = createAsyncThunk<LibraryHome, void, { rejectValue: ApiErrorShape }>(
+  'libraryHome/fetch',
+  async (_arg, { signal, rejectWithValue }) => {
+    try {
+      return await (await service()).getLibraryHome(signal);
+    } catch (error) {
+      return rejectWithValue(toApiError(error, 'library.home.error.title'));
+    }
   }
-});
+);
