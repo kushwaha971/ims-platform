@@ -74,8 +74,22 @@ export const toLoanRow = (row: Wire): LoanRow => {
   };
 };
 
+const toLender = (raw: unknown): LoanDetail['lender'] => {
+  if (!raw || typeof raw !== 'object') return null;
+  const l = raw as Wire;
+  return {
+    name: str(l.name),
+    legalName: str(l.legal_name),
+    address: ((l.address as unknown[] | undefined) ?? []).map(str),
+    phone: str(l.phone),
+    gstin: str(l.gstin),
+  };
+};
+
 export const toLoanDetail = (row: Wire): LoanDetail => ({
   ...toLoanRow(row),
+  lender: toLender(row.lender),
+  closedOn: strOrNull(row.closed_on),
   deductions: ((row.deductions as Wire[] | undefined) ?? []).map((d) => ({
     kind: str(d.kind),
     label: str(d.label),

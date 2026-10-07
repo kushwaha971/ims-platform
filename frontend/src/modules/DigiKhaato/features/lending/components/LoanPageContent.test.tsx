@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 
 import { sessionLoaded } from 'src/redux/slice/sessionSlice';
 import { store } from 'src/redux/store';
@@ -35,6 +35,14 @@ const loan = (over: Partial<LoanDetail> = {}): LoanDetail => ({
   number: 'LN-0001',
   status: 'active',
   closeReason: '',
+  lender: {
+    name: 'Verma Finance',
+    legalName: '',
+    address: ['12 Station Road', 'Indore, 452001'],
+    phone: '+919820011223',
+    gstin: '',
+  },
+  closedOn: null,
   borrower: {
     id: 'b1',
     number: 'B-0001',
@@ -190,5 +198,75 @@ describe('LoanPageContent', () => {
       '04/10/2026 10:14 · Receipt · WhatsApp'
     );
     expect(screen.queryByTestId('lending-loan-remind')).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Lending P0 — the papers. What these protect: each paper is headed and signed by the
+ * LENDER (never the product), a receipt quotes its own collection, the statement lists
+ * every instalment, and the closure letter is offered only for a loan paid off — a
+ * "no dues" paper for a loan with money left would be a lie the borrower can keep.
+ */
+describe('the loan papers', () => {
+  const COLLECTION = {
+    id: 'c1',
+    collectedOn: '2026-10-06',
+    amount: '120.00',
+    mode: 'upi',
+    reference: 'UTR9',
+    note: '',
+    receiptNumber: 'RCPT/26-27/0004',
+    voided: false,
+  };
+  let print: jest.SpyInstance;
+  beforeEach(() => {
+    print = jest.spyOn(window, 'print').mockImplementation(() => undefined);
+  });
+  afterEach(() => print.mockRestore());
+
+  it('prints a receipt for one collection under the lender’s name', async () => {
+    jest.mocked(service.getLoan).mockResolvedValue(loan({ collected: '120.00' }));
+    jest
+      .mocked(service.getLoanActivity)
+      .mockResolvedValue({ collections: [COLLECTION], visits: [], messages: [] } as never);
+    signIn(PERMS);
+    renderWithProviders(<LoanPageContent id="l1" />);
+    const button = await screen.findByTestId('lending-loan-print-receipt');
+    button.click();
+    const sheet = await screen.findByTestId('loan-paper-receipt');
+    await waitFor(() => expect(print).toHaveBeenCalledTimes(1));
+    expect(sheet).toHaveTextContent('Verma Finance');
+    expect(sheet).toHaveTextContent('RCPT/26-27/0004');
+    expect(sheet).toHaveTextContent('Received ₹120.00');
+    expect(sheet.innerHTML.toLowerCase()).not.toContain('yourkhata');
+  });
+
+  it('prints the statement with every instalment, and no closure letter while money is left', async () => {
+    jest.mocked(service.getLoan).mockResolvedValue(loan());
+    signIn(PERMS);
+    renderWithProviders(<LoanPageContent id="l1" />);
+    (await screen.findByTestId('lending-loan-print-statement')).click();
+    const sheet = await screen.findByTestId('loan-paper-statement');
+    expect(sheet).toHaveTextContent('Loan statement');
+    expect(sheet).toHaveTextContent('06/10/2026');
+    expect(screen.queryByTestId('lending-loan-print-closure')).not.toBeInTheDocument();
+  });
+
+  it('offers the no-dues letter for a loan paid off, dated the day it closed', async () => {
+    jest.mocked(service.getLoan).mockResolvedValue(
+      loan({
+        status: 'closed',
+        closeReason: 'completed',
+        closedOn: '2027-01-20',
+        remaining: '0.00',
+        collected: '12000.00',
+      })
+    );
+    signIn(PERMS);
+    renderWithProviders(<LoanPageContent id="l1" />);
+    (await screen.findByTestId('lending-loan-print-closure')).click();
+    const sheet = await screen.findByTestId('loan-paper-closure');
+    expect(sheet).toHaveTextContent('has repaid loan LN-0001');
+    expect(sheet).toHaveTextContent('Nothing is due on this loan as of 20/01/2027');
   });
 });

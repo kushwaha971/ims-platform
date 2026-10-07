@@ -110,7 +110,7 @@ Compared with daily-collection and small-lender software (Intelligrow's daily-lo
 | Visits: not paid, not at home, promised date | ✓ | ◐ | |
 | Routes and today's round in route order | ✓ | ✓ | |
 | Reminders with legal guardrails (08:00–19:00, one a day, polite fixed text) | ✓ | ◐ | a real differentiator under fair-practice rules |
-| Receipt print, statement, closure letter, loan agreement | ✗ | ✓ | next in our plan |
+| Receipt print, statement, closure letter, loan agreement | ◐ | ✓ | 8 Oct: receipt (per collection, VOID mark), loan statement (terms, every instalment, payments) and no-dues closure letter for a paid-off loan, printed from the loan page under the lender's letterhead; no loan agreement yet |
 | Late fees / penal interest, waivers | ✗ | ✓ | next |
 | Write-off, cancel, foreclosure | ✗ | ✓ | next |
 | Agent role scoped to their routes; agent app; offline | ✗ | ✓ | the module role exists in the platform; not yet used by lending |

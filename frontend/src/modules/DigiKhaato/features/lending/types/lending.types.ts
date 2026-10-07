@@ -90,7 +90,18 @@ export interface LoanDue {
   readonly status: string;
 }
 
+/** Lending P0 — the letterhead a loan's papers carry: the lender's own, never ours. */
+export interface LoanLender {
+  readonly name: string;
+  readonly legalName: string;
+  readonly address: readonly string[];
+  readonly phone: string;
+  readonly gstin: string;
+}
+
 export interface LoanDetail extends LoanRow {
+  readonly lender: LoanLender | null;
+  readonly closedOn: string | null;
   readonly deductions: readonly { kind: string; label: string; amount: string }[];
   readonly schedule: readonly LoanDue[];
 }

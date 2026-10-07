@@ -125,3 +125,21 @@ def test_malformed_terms_are_a_field_error_not_a_server_error(
     )
     assert got.status_code == 400, got.content
     assert field in got.json()["error"]["details"]
+
+
+def test_the_loan_page_carries_the_lenders_letterhead_for_its_papers(office: dict) -> None:
+    """Lending P0 — the receipt, statement and closure letter are headed by the LENDER's
+    own name, address and phone, which only the loan page's payload can give them."""
+    tenant = office["tenant"]
+    tenant.address = {"line1": "12 Station Road", "city": "Indore", "pincode": "452001"}
+    tenant.phone = "+919820011223"
+    tenant.save(update_fields=["address", "phone"])
+    loan = _create(office).json()["data"]
+    page = office["client"].get(reverse("v1:lending-loan", args=[loan["id"]])).json()["data"]
+    assert page["lender"] == {
+        "name": tenant.name,
+        "legal_name": tenant.legal_name or "",
+        "address": ["12 Station Road", "Indore, 452001"],
+        "phone": "+919820011223",
+        "gstin": tenant.gstin or "",
+    }

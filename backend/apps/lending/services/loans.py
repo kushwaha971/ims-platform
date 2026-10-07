@@ -653,6 +653,8 @@ def loan_json(loan: LendingLoan, today: dt.date, *, with_schedule: bool = False)
     }
     if with_schedule:
         from apps.dues.models import DuesDue
+
+        out["lender"] = lender_json(loan.tenant)
         from apps.dues.services.settlement import outstanding
 
         out["deductions"] = [
@@ -674,6 +676,21 @@ def loan_json(loan: LendingLoan, today: dt.date, *, with_schedule: bool = False)
             )
         ]
     return out
+
+
+def lender_json(tenant: Any) -> dict:
+    """The letterhead the loan's papers carry — receipt, statement, closure letter: the
+    lender's own name, address and phone, never the product's (BRAND-A)."""
+    address = dict(tenant.address or {})
+    lines = [address.get(k, "") for k in ("line1", "line2")]
+    place = ", ".join(x for x in (address.get("city", ""), address.get("pincode", "")) if x)
+    return {
+        "name": tenant.name,
+        "legal_name": tenant.legal_name or "",
+        "address": [x for x in (*lines, place) if x],
+        "phone": tenant.phone or "",
+        "gstin": tenant.gstin or "",
+    }
 
 
 def get_loan(tenant: Any, loan_id: Any) -> LendingLoan:

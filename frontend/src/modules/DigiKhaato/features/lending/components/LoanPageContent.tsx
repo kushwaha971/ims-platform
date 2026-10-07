@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 
 import dynamic from 'next/dynamic';
 
-import { HandCoins, MessageCircle, QrCode } from 'lucide-react';
+import { FileCheck2, FileText, HandCoins, MessageCircle, Printer, QrCode } from 'lucide-react';
 
 import {
   UbActionLink,
@@ -24,6 +24,7 @@ import {
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { usePermissions } from 'src/hooks/usePermissions';
 import { useTranslation } from 'src/hooks/useTranslation';
+import { selectLocale } from 'src/redux/slice/localeSlice';
 import { selectTenantTimezone } from 'src/redux/slice/sessionSlice';
 import { ROUTES } from 'src/routes';
 import { formatBusinessDate, todayInTenantTz } from 'src/utils/dates';
@@ -41,6 +42,7 @@ import {
 } from '../view-model/lendingDisplay';
 
 import type { LendingMessageKind } from '../types/lending.types';
+import type { LoanPaper } from './print/LoanPapersPrint';
 
 const CollectDialogLazy = dynamic(() => import('./CollectDialog').then((m) => m.CollectDialog), {
   ssr: false,
@@ -51,6 +53,11 @@ const NotPaidDialogLazy = dynamic(() => import('./NotPaidDialog').then((m) => m.
 /* Shop P0 — the borrower's UPI QR for what is due, with Share and Copy link. */
 const UpiPayQrDialogLazy = dynamic(
   () => import('../../payments/pay-link/components/UpiPayQrDialog').then((m) => m.UpiPayQrDialog),
+  { ssr: false }
+);
+/* Lending P0 — receipt, statement and closure letter: the sheet loads with the tap. */
+const LoanPapersPrintLazy = dynamic(
+  () => import('./print/LoanPapersPrint').then((m) => m.LoanPapersPrint),
   { ssr: false }
 );
 const MessageDialogLazy = dynamic(() => import('./MessageDialog').then((m) => m.MessageDialog), {
@@ -75,6 +82,7 @@ export function LoanPageContent({ id }: Readonly<{ id: string }>): React.JSX.Ele
   const state = useAppSelector(selectLendingLoans);
   const timezone = useAppSelector(selectTenantTimezone);
   const today = todayInTenantTz(timezone ?? undefined);
+  const locale = useAppSelector(selectLocale);
   const { can, hasModule } = usePermissions();
   const canRead = hasModule('lending') && can('lending.loan.read');
   const canCollect = hasModule('lending') && can('lending.collection.create');
@@ -87,6 +95,13 @@ export function LoanPageContent({ id }: Readonly<{ id: string }>): React.JSX.Ele
   } | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [showingQr, setShowingQr] = useState(false);
+  const [paper, setPaper] = useState<{
+    kind: LoanPaper;
+    collectionId?: string;
+    key: number;
+  } | null>(null);
+  const printPaper = (kind: LoanPaper, collectionId?: string) =>
+    setPaper((current) => ({ kind, collectionId, key: (current?.key ?? 0) + 1 }));
 
   useEffect(() => {
     if (!canRead) return undefined;
@@ -153,6 +168,7 @@ export function LoanPageContent({ id }: Readonly<{ id: string }>): React.JSX.Ele
   return (
     <UbPageShell>
       <UbPageHeader
+        className="ub-print-hide"
         title={loan.borrower.name}
         actions={
           active && canCollect ? (
@@ -171,7 +187,7 @@ export function LoanPageContent({ id }: Readonly<{ id: string }>): React.JSX.Ele
           ) : undefined
         }
       />
-      <UbStack gap={4} data-testid="lending-loan">
+      <UbStack gap={4} data-testid="lending-loan" className="ub-print-hide">
         <UbStack direction="row" gap={2} align="center" wrap>
           <UbText variant="body-sm" className="ds-mono">
             {loan.number}
@@ -272,6 +288,31 @@ export function LoanPageContent({ id }: Readonly<{ id: string }>): React.JSX.Ele
           </UbStack>
         </UbCard>
 
+        {/* Lending P0 — the papers a borrower is handed: the statement any time, and
+            the closure letter ("no dues") once the loan is paid off. */}
+        <UbStack direction="row" gap={2} wrap data-testid="lending-loan-papers">
+          <UbButton
+            size="sm"
+            variant="secondary"
+            icon={<FileText className="h-4 w-4" aria-hidden />}
+            onClick={() => printPaper('statement')}
+            data-testid="lending-loan-print-statement"
+          >
+            {t('lending.papers.statement.print')}
+          </UbButton>
+          {loan.status === 'closed' && !isNonZero(loan.remaining) && (
+            <UbButton
+              size="sm"
+              variant="secondary"
+              icon={<FileCheck2 className="h-4 w-4" aria-hidden />}
+              onClick={() => printPaper('closure')}
+              data-testid="lending-loan-print-closure"
+            >
+              {t('lending.papers.closure.print')}
+            </UbButton>
+          )}
+        </UbStack>
+
         <UbCard padded>
           <UbStack gap={2}>
             <UbInfoRow label={t('lending.loan.terms')} value={rateLine} />
@@ -370,6 +411,16 @@ export function LoanPageContent({ id }: Readonly<{ id: string }>): React.JSX.Ele
                       .join(' · ')}
                   </UbText>
                 )}
+                <UbButton
+                  size="sm"
+                  variant="ghost"
+                  className="self-start"
+                  icon={<Printer className="h-4 w-4" aria-hidden />}
+                  onClick={() => printPaper('receipt', c.id)}
+                  data-testid="lending-loan-print-receipt"
+                >
+                  {t('lending.papers.receipt.print')}
+                </UbButton>
                 {canRemind && c.id === latestCollection?.id && (
                   <UbButton
                     size="sm"
@@ -426,6 +477,17 @@ export function LoanPageContent({ id }: Readonly<{ id: string }>): React.JSX.Ele
           </UbCard>
         )}
       </UbStack>
+      {paper && (
+        <LoanPapersPrintLazy
+          loan={loan}
+          collections={state.collections}
+          paper={paper.kind}
+          collectionId={paper.collectionId ?? null}
+          locale={locale}
+          today={today}
+          printKey={paper.key}
+        />
+      )}
       {showingQr && (
         <UpiPayQrDialogLazy
           amount={isNonZero(asked) ? asked : loan.instalmentAmount}
