@@ -209,6 +209,8 @@ export const API_PATHS = {
   /** RPT-04. */
   REPORT_PURCHASE_REGISTER: '/reports/purchase-register',
   REPORT_GST_SUMMARY: '/reports/gst-summary',
+  /** Shop item 2 — GSTR-1 / GSTR-3B as the GST offline tool's JSON, one closed month. */
+  REPORT_GST_RETURN_JSON: (kind: string) => `/reports/gst-returns/${seg(kind)}`,
   /** Shop item 1 — profit by item, customer, category or bill, and the P&L. */
   REPORT_PROFIT: '/reports/profit',
   REPORT_STOCK_SUMMARY: '/reports/stock-summary',

@@ -1,4 +1,8 @@
+import { API_PATHS } from 'src/api/APIPaths';
 import { api, ubConfig } from 'src/api/AxiosInstances';
+import { toQueryString } from 'src/utils/queryString';
+
+import { FILENAME, unwrapBlobError } from 'modules/DigiKhaato/features/imports/api/exportService';
 
 import { gstPath, registerPath } from '../view-model/registerDisplay';
 
@@ -291,4 +295,33 @@ export const getGstSummary = async (query: GstQuery, signal?: AbortSignal): Prom
       yearToDate: b(meta.year_to_date),
     },
   };
+};
+
+// ── Shop item 2 — the GST portal's files ──────────────────────────────────────
+
+export type GstReturnKind = 'gstr1' | 'gstr3b';
+
+/**
+ * `GET /reports/gst-returns/{gstr1|gstr3b}` for the period on screen — the file
+ * the offline tool loads. A refusal (a document the portal would reject, a
+ * month still running) arrives as a Blob and is turned back into the server's
+ * own sentence before anything above the service sees it.
+ */
+export const getGstReturnJson = async (
+  kind: GstReturnKind,
+  query: Pick<GstQuery, 'dateFrom' | 'dateTo'>
+): Promise<{ readonly blob: Blob; readonly filename: string }> => {
+  try {
+    const response = await api.get<Blob>(
+      `${API_PATHS.REPORT_GST_RETURN_JSON(kind)}${toQueryString({
+        date_from: query.dateFrom,
+        date_to: query.dateTo,
+      })}`,
+      ubConfig({ responseType: 'blob', suppressErrorSnackbar: true, timeout: 120_000 })
+    );
+    const disposition = String(response.headers['content-disposition'] ?? '');
+    return { blob: response.data, filename: FILENAME.exec(disposition)?.[1] ?? `${kind}.json` };
+  } catch (error) {
+    return unwrapBlobError(error);
+  }
 };

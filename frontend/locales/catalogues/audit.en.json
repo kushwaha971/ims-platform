@@ -30,6 +30,7 @@
   "audit.action.expense.recorded": "Added expense",
   "audit.action.expense.voided": "Cancelled expense",
   "audit.action.export.requested": "Started an export",
+  "audit.action.gst.return_json.exported": "Downloaded a GST return file",
   "audit.action.import.cancelled": "Cancelled an import",
   "audit.action.import.committed": "Imported from a spreadsheet",
   "audit.action.import.failed": "Import failed",

@@ -22,6 +22,7 @@ import type { GstQuery, GstSummary } from '../types/taxReports.types';
  * shown nothing to fetch; a rate row opens the register lines behind it.
  */
 jest.mock('../api/taxReportsService');
+jest.mock('modules/DigiKhaato/features/imports/api/fileDownload', () => ({ saveBlob: jest.fn() }));
 
 const mockReplace = jest.fn();
 const mockPush = jest.fn();
@@ -154,6 +155,10 @@ const signIn = (permissions: readonly PermissionCode[]): void => {
   );
 };
 
+const files = jest.requireMock('modules/DigiKhaato/features/imports/api/fileDownload') as {
+  saveBlob: jest.Mock;
+};
+
 const lastAsked = (): GstQuery => {
   const calls = service.getGstSummary.mock.calls as [GstQuery][];
   const last = calls[calls.length - 1];
@@ -268,4 +273,70 @@ it('shows staff that the report is not available and fetches nothing (§12)', ()
   renderWithProviders(<GstSummaryPageContent />);
   expect(screen.getByText('The GST summary is not available')).toBeInTheDocument();
   expect(service.getGstSummary).not.toHaveBeenCalled();
+});
+
+/**
+ * Shop item 2 — the portal file. It names the return of the open tab, asks for
+ * the period on screen, saves under the server's name, and says the server's
+ * own sentence when the month cannot be filed yet.
+ */
+it('downloads the GSTR-1 file on its tab and the GSTR-3B file on the other', async () => {
+  signIn(FINANCIAL);
+  const getFile = (jest.requireMock('../api/taxReportsService') as { getGstReturnJson: jest.Mock })
+    .getGstReturnJson;
+  getFile.mockResolvedValue({
+    blob: new Blob(['{}']),
+    filename: 'GSTR1_27AAPFU0939F1ZV_092026.json',
+  });
+  renderWithProviders(<GstSummaryPageContent />);
+  await screen.findByText('Ready to file');
+  await userEvent.click(screen.getByRole('button', { name: 'GSTR-1 JSON' }));
+  await waitFor(() => expect(files.saveBlob).toHaveBeenCalled());
+  expect(getFile.mock.calls[0][0]).toBe('gstr1');
+  expect(getFile.mock.calls[0][1]).toMatchObject({ dateFrom: lastAsked().dateFrom });
+  expect(files.saveBlob.mock.calls[0][1]).toBe('GSTR1_27AAPFU0939F1ZV_092026.json');
+  // The snackbar is mounted once, in AppProviders; here its state is the message.
+  await waitFor(() => expect(store.getState().snackbar.id).toBe('reports.gst.json.saved'));
+  expect(store.getState().snackbar.params).toEqual({
+    file: 'GSTR1_27AAPFU0939F1ZV_092026.json',
+  });
+
+  await userEvent.click(screen.getByRole('tab', { name: 'GSTR-3B' }));
+  expect(await screen.findByRole('button', { name: 'GSTR-3B JSON' })).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('tab', { name: 'Details' }));
+  expect(screen.queryByRole('button', { name: /JSON/ })).not.toBeInTheDocument();
+});
+
+it('says why a month cannot be filed yet, and hides the file from a reader who may not export', async () => {
+  signIn(FINANCIAL);
+  const getFile = (jest.requireMock('../api/taxReportsService') as { getGstReturnJson: jest.Mock })
+    .getGstReturnJson;
+  getFile.mockRejectedValue({
+    isAxiosError: true,
+    response: {
+      status: 409,
+      data: {
+        error: {
+          code: 'period_not_closed',
+          message: 'You can make this file once the month has ended.',
+        },
+      },
+    },
+  });
+  const view = renderWithProviders(<GstSummaryPageContent />);
+  await screen.findByText('Ready to file');
+  await userEvent.click(screen.getByRole('button', { name: 'GSTR-1 JSON' }));
+  await waitFor(() =>
+    expect(store.getState().snackbar.snackbarMessage).toBe(
+      'You can make this file once the month has ended.'
+    )
+  );
+  expect(files.saveBlob).not.toHaveBeenCalled();
+  view.unmount();
+
+  store.dispatch(resetAllFeatureState());
+  signIn(['reports.financial.read']);
+  renderWithProviders(<GstSummaryPageContent />);
+  await screen.findByText('Ready to file');
+  expect(screen.queryByRole('button', { name: /JSON/ })).not.toBeInTheDocument();
 });

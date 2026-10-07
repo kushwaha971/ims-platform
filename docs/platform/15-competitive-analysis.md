@@ -56,7 +56,7 @@ Compared with Vyapar (the closest Indian small-business product), Zoho Inventory
 |---|---|---|---|
 | Dashboard, day book, sales and purchase registers | ✓ | ✓ | ✓ |
 | GST summary | ✓ | ✓ | ✓ |
-| GSTR-1 / 3B filing exports (JSON) | ◐ | ✓ | ✓ |
+| GSTR-1 / 3B filing exports (JSON) | ✓ | ✓ | ✓ | 7 Oct: GSTR-1 and GSTR-3B JSON for the offline tool, one closed month, refused with the documents named when the portal would reject it |
 | Receivables and payables aging | ✓ | ✓ | ✓ |
 | Stock summary | ✓ | ✓ | ✓ |
 | Profit & loss, balance sheet, cash flow | ✗ | ✓ | ✓ |

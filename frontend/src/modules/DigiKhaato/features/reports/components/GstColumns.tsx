@@ -95,7 +95,9 @@ export const natureColumns = (t: TranslateFn): UbDataGridColumn<GstNatureRow>[] 
         <UbText as="span" variant="body-sm">
           {t(`reports.gst.nature.${row.nature}`)}
         </UbText>
-        <UbText as="span" variant="caption" tone="tertiary">
+        {/* Wraps: on a phone card "Not applicable — tax on advances is not
+            recorded in YourKhata" was cut at "record…" (GST file pass, 7 Oct). */}
+        <UbText as="span" variant="caption" tone="tertiary" className="whitespace-normal">
           {row.applicable ? `GSTR-1 · ${row.table}` : t('reports.gst.nature.notApplicable')}
         </UbText>
       </UbStack>

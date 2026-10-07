@@ -34,6 +34,7 @@ import {
   rateColumns,
 } from './GstColumns';
 import { Gstr3bBoxes } from './Gstr3bBoxes';
+import { GstReturnJsonButton } from './GstReturnJsonButton';
 import { GstSection, GstTable } from './GstSection';
 import { ReportPageShell, type ReportState } from './ReportPageShell';
 
@@ -144,6 +145,13 @@ export function GstReport(): React.JSX.Element {
           close: t('common.action.close'),
         },
       }}
+      /* Shop item 2 — the portal file for the open tab. A composition business
+         files CMP-08 instead, so it is offered neither. */
+      actions={
+        view !== 'details' && data && !data.composition ? (
+          <GstReturnJsonButton kind={view} query={query} />
+        ) : undefined
+      }
       exportAction={{
         path: report.exportPath,
         empty: data !== null && data.meta.documentCount === 0,

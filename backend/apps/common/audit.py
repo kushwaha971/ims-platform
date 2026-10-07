@@ -111,6 +111,8 @@ class AuditAction:
     BRANDING_UPDATED = "branding.updated"
     BRANDING_SIGNATURE_UPDATED = "branding.signature_updated"
     AUDIT_EXPORTED = "audit.exported"
+    # Shop item 2 — a GSTR-1 / GSTR-3B file for the offline tool: a statutory record.
+    GST_RETURN_JSON_EXPORTED = "gst.return_json.exported"
     SESSION_REVOKED = "auth.session_revoked"
     SESSIONS_REVOKED_ALL = "auth.sessions_revoked_all"
     SESSION_RENAMED = "auth.session_renamed"

@@ -39,3 +39,24 @@ export const fetchGstSummary = createAsyncThunk<GstSummary, GstQuery, Reject>(
     }
   }
 );
+
+/**
+ * QUERY. Shop item 2 — the GSTR-1 or GSTR-3B file for the offline tool, saved
+ * HERE so the Blob never enters an action; the payload is only its name.
+ */
+export const downloadGstReturnJson = createAsyncThunk<
+  { readonly filename: string },
+  { readonly kind: 'gstr1' | 'gstr3b'; readonly dateFrom: string; readonly dateTo: string },
+  Reject
+>('taxReports/downloadGstReturnJson', async ({ kind, ...query }, { rejectWithValue }) => {
+  try {
+    const file = await (await service()).getGstReturnJson(kind, query);
+    (await import('modules/DigiKhaato/features/imports/api/fileDownload')).saveBlob(
+      file.blob,
+      file.filename
+    );
+    return { filename: file.filename };
+  } catch (error) {
+    return rejectWithValue(toApiError(error, 'reports.gst.json.error'));
+  }
+});

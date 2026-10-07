@@ -334,6 +334,25 @@ api.interceptors.response.use(
       return Promise.reject(toApiError(error));
     }
 
+    /* A file request (`responseType: 'blob'`) gets its REFUSAL as a Blob too,
+       and normalising it unread turned the server's sentence ("You can make
+       this file once the month has ended.") into "Request failed." on every
+       export, because this is the one place an error is normalised and it ran
+       before any service's own unwrap could. Found by the GST portal file's
+       browser pass (7 Oct 2026); jsdom tests mock the service and never saw it. */
+    const blob = error.response?.data;
+    if (
+      error.response &&
+      typeof Blob !== 'undefined' &&
+      blob instanceof Blob &&
+      typeof blob.text === 'function'
+    ) {
+      try {
+        error.response.data = JSON.parse(await blob.text()) as unknown;
+      } catch {
+        // Not JSON (a proxy's page): the normaliser falls back to the status.
+      }
+    }
     const apiError = toApiError(error);
 
     // PLT-15 FR-6 — the plan-limit dialog is the presentation for this code,

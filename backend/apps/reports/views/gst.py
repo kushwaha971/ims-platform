@@ -131,3 +131,97 @@ class GstSummaryView(TenantScopeMixin, APIView):
                 "sync": True,
             },
         )
+
+
+class GstReturnJsonView(TenantScopeMixin, APIView):
+    """`GET /reports/gst-returns/{gstr1|gstr3b}?period=YYYY-MM` — the file the GST
+    portal's offline tool loads, for one closed month (Shop item 2, RPT-12).
+
+    The same period parameters as the summary (`period`, or `date_from`/`date_to`
+    covering exactly one month), the same permissions plus `reports.export`, and
+    the same selectors, so the file is the screen. A GSTR-1 the portal would
+    refuse is a 409 `gstr1_blocked` naming each document; a month still running
+    is a 409 `period_not_closed`. Every file is audited with its SHA-256, the
+    answer months later to "which file did we upload".
+    """
+
+    permission_classes = [
+        IsAuthenticated,
+        ModuleEnabled(ModuleCode.REPORTS),
+        HasPermission("reports.financial.read"),
+    ]
+    throttle_classes = [ScopedUserRateThrottle]
+    renderer_classes = [EnvelopeJSONRenderer]
+
+    def get(self, request: Any, return_type: str = "", *args: Any, **kwargs: Any) -> Any:
+        import hashlib
+        import json
+
+        from rest_framework.exceptions import NotFound
+
+        from apps.reports.selectors import gst_json
+
+        if return_type not in gst_json.RETURNS:
+            raise NotFound("Choose gstr1 or gstr3b.")
+        tenant = self.get_tenant()
+        today = tenant_today(tenant)
+        params = gst_params(request, today=today, fy_start_month=fy_start_month(tenant))
+        if tenant.gst_type not in ("regular", "composition"):
+            raise BusinessRuleViolation(
+                "gst_not_registered",
+                "Add your GSTIN in Business settings to use GST reports",
+            )
+        fp = gst_json.return_month(params.date_from, params.date_to, today=today)
+        window = {"tenant": tenant, "date_from": params.date_from, "date_to": params.date_to}
+        if return_type == "gstr1":
+            gst_json.refuse_if_blocked(gst_json.gstr1_issues(**window))
+        else:
+            gst_json.refuse_if_blocked(gst_json.business_issues(tenant))
+        # After every refusal that costs nothing, before the book is walked (I-5).
+        authorise_export(
+            request,
+            self,
+            codename="reports.export",
+            refusal="You do not have permission to export reports.",
+        )
+        build = gst_json.gstr1 if return_type == "gstr1" else gst_json.gstr3b
+        body = build(**window, fp=fp)
+        # Compact, UTF-8, no BOM: what the offline tool imports (RPT-12 NFR).
+        content = json.dumps(body, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        digest = hashlib.sha256(content).hexdigest()
+        self._audit(request, tenant, return_type, fp, body, digest)
+        response = HttpResponse(content, content_type="application/json; charset=utf-8")
+        name = f"{return_type.upper()}_{tenant.gstin}_{fp}.json"
+        response["Content-Disposition"] = f'attachment; filename="{name}"'
+        response["X-File-Sha256"] = digest
+        response["Cache-Control"] = "private, no-store"
+        return response
+
+    @staticmethod
+    def _audit(
+        request: Any, tenant: Any, return_type: str, fp: str, body: dict, digest: str
+    ) -> None:
+        from apps.common.audit import AuditAction, write_audit
+        from apps.common.context import Ctx
+        from apps.reports.selectors.gst_json import section_counts
+
+        write_audit(
+            ctx=Ctx(
+                tenant=tenant,
+                actor=request.user,
+                actor_type="user",
+                request_id=getattr(request, "request_id", "") or "",
+                ip=getattr(request, "client_ip", None),
+                user_agent=request.META.get("HTTP_USER_AGENT"),
+            ),
+            action=AuditAction.GST_RETURN_JSON_EXPORTED,
+            entity_type="reports_export",
+            metadata={
+                "return": return_type,
+                "fp": fp,
+                "gstin": tenant.gstin,
+                "version": body.get("version"),
+                "section_counts": section_counts(body) if return_type == "gstr1" else {},
+                "file_hash": digest,
+            },
+        )

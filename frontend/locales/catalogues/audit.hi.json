@@ -30,6 +30,7 @@
   "audit.action.expense.recorded": "खर्च जोड़ा",
   "audit.action.expense.voided": "खर्च रद्द किया",
   "audit.action.export.requested": "एक्सपोर्ट शुरू किया",
+  "audit.action.gst.return_json.exported": "जीएसटी रिटर्न फ़ाइल डाउनलोड की",
   "audit.action.import.cancelled": "इम्पोर्ट रद्द किया",
   "audit.action.import.committed": "स्प्रेडशीट से इम्पोर्ट किया",
   "audit.action.import.failed": "इम्पोर्ट नहीं हो सका",

@@ -132,6 +132,8 @@ export const QUERIES = {
   // RPT-03/04/07 — registers and GST summary
   fetchGstSummary: 'taxReports/fetchGstSummary',
   fetchRegister: 'taxReports/fetchRegister',
+  // Shop item 2 — the GST portal's JSON (a read: the server writes only its audit row)
+  downloadGstReturnJson: 'taxReports/downloadGstReturnJson',
   // Shop item 1 — profit by item, customer, category or bill
   fetchProfitReport: 'profitReport/fetch',
   // SAL-03 FR-5 — the customer share page's one read (no session)
