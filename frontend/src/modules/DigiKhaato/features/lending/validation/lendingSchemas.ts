@@ -86,6 +86,21 @@ export const useLendingSchemas = (): {
         .oneOf(['cash', 'upi', 'bank', 'cheque'])
         .defined(),
       notes: v.boundedText(500),
+      lateFeeKind: Yup.mixed<LoanFormValues['lateFeeKind']>()
+        .oneOf(['none', 'flat_once', 'per_day', 'simple_interest'])
+        .defined(),
+      lateFeeValue: Yup.string()
+        .defined()
+        .when('lateFeeKind', { is: (k: string) => k !== 'none', then: () => v.amountValidation() }),
+      lateFeeCap: Yup.string()
+        .defined()
+        .when('lateFeeKind', {
+          is: (k: string) => k === 'per_day' || k === 'simple_interest',
+          then: () => v.amountValidation(),
+        }),
+      lateFeeGraceDays: Yup.string()
+        .defined()
+        .when('lateFeeKind', { is: (k: string) => k !== 'none', then: () => whole(0, 90) }),
     }) as Yup.ObjectSchema<LoanFormValues>;
 
     return { collectSchema, loanSchema };

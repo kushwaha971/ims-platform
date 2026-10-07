@@ -87,6 +87,9 @@ export interface LoanDue {
   readonly amount: string;
   readonly settled: string;
   readonly outstanding: string;
+  /** LEN-09 — late fees added, and everything waived, on this instalment. */
+  readonly lateFee: string;
+  readonly waived: string;
   readonly status: string;
 }
 
@@ -101,6 +104,7 @@ export interface LoanLender {
 
 export interface LoanDetail extends LoanRow {
   readonly lender: LoanLender | null;
+  readonly lateFee: LoanLateFeeRule;
   readonly closedOn: string | null;
   readonly deductions: readonly { kind: string; label: string; amount: string }[];
   readonly schedule: readonly LoanDue[];
@@ -261,6 +265,45 @@ export interface LoanFormValues {
   collectionWeekdays: number;
   paymentMode: LendingPaymentMode;
   notes: string;
+  /** LEN-09 — the late-fee rule agreed with the borrower; `none` unless they agreed. */
+  lateFeeKind: LateFeeKind;
+  lateFeeValue: string;
+  lateFeeCap: string;
+  lateFeeGraceDays: string;
+}
+
+export type LateFeeKind = 'none' | 'flat_once' | 'per_day' | 'simple_interest';
+export const LATE_FEE_KINDS: readonly LateFeeKind[] = [
+  'none',
+  'flat_once',
+  'per_day',
+  'simple_interest',
+];
+
+export interface LoanLateFeeRule {
+  readonly kind: LateFeeKind;
+  readonly value: string | null;
+  readonly cap: string | null;
+  readonly graceDays: number;
+}
+
+/** LEN-09 — one instalment's late-fee suggestion and what each part can still forgive. */
+export interface LoanDueFigures {
+  readonly dueId: string;
+  readonly seq: number;
+  readonly status: string;
+  readonly lateFee: {
+    readonly rule: LateFeeKind;
+    readonly daysLate: number;
+    readonly ruleAmount: string;
+    readonly alreadyCharged: string;
+    readonly suggested: string;
+  } | null;
+  readonly waivable: {
+    readonly interest: string;
+    readonly fee: string;
+    readonly principal: string;
+  };
 }
 
 export interface CollectFormValues {

@@ -62,6 +62,8 @@
   "audit.action.ledger.entry.created": "एंट्री जोड़ी",
   "audit.action.ledger.entry.reversed": "एंट्री उलटी",
   "audit.action.ledger.statement.exported": "स्टेटमेंट निर्यात किया",
+  "audit.action.lending.late_fee.added": "देरी शुल्क जोड़ा गया",
+  "audit.action.lending.waiver.created": "छूट दी गई",
   "audit.action.member.accepted": "टीम में शामिल हुए",
   "audit.action.member.created": "टीम सदस्य जोड़ा",
   "audit.action.member.credentials_issued": "अस्थायी पासवर्ड दिया",

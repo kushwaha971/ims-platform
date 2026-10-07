@@ -62,6 +62,8 @@
   "audit.action.ledger.entry.created": "Added entry",
   "audit.action.ledger.entry.reversed": "Reversed entry",
   "audit.action.ledger.statement.exported": "Exported a statement",
+  "audit.action.lending.late_fee.added": "Late fee added",
+  "audit.action.lending.waiver.created": "Waiver given",
   "audit.action.member.accepted": "Joined the team",
   "audit.action.member.created": "Added team member",
   "audit.action.member.credentials_issued": "Issued a temporary password",

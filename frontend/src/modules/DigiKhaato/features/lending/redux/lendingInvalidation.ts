@@ -18,6 +18,7 @@ export const LENDING_QUERIES = {
   previewLendingCollection: 'lendingForm/previewCollection',
   fetchLendingReminders: 'lendingMessages/fetch',
   prepareLendingMessage: 'lendingMessages/prepare',
+  fetchLendingDue: 'lendingForm/fetchDue',
 } as const satisfies Record<string, string>;
 
 export const LENDING_MUTATIONS = {
@@ -26,6 +27,7 @@ export const LENDING_MUTATIONS = {
   recordLendingVisit: 'lendingForm/visit',
   saveLendingRoute: 'lendingToday/saveRoute',
   recordLendingMessage: 'lendingMessages/record',
+  adjustLendingDue: 'lendingForm/adjustDue',
 } as const satisfies Record<string, string>;
 
 export type TLendingMutationName = keyof typeof LENDING_MUTATIONS;
@@ -48,6 +50,12 @@ export const LENDING_INVALIDATION: Readonly<
   // L03 — a recorded message ticks "reminded today" on the round and the
   // list, and joins the loan's activity.
   recordLendingMessage: { refetch: ['lendingToday', 'lendingLoans', 'lendingMessages'] },
+  // LEN-09 — a late fee or a waiver moves what is owed on the loan, the round and the
+  // borrower's khata.
+  adjustLendingDue: {
+    refetch: ['lendingToday', 'lendingLoans'],
+    stale: ['partyList', 'partyDetail'],
+  },
 };
 
 registerInvalidation({

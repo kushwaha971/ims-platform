@@ -737,7 +737,8 @@
   "2026-10-07 — delivery challans (Shop item 4). /sales/challans, /[id], /new and /[id]/edit are new and are their estimate and order siblings' size: the same list, editor and page, by kind; the challan's own fields load with the challan editor only (dynamic), so an invoice editor pays +0.6 KB for the challan branches and copy, not the panel. Every route's first load +0.1-0.2 KB for one nav row, its icon and the route and API constants, which tipped the routes sitting exactly on their budgets (four lending routes had an empty entry, i.e. the default, and now have their own). The shared app chunks 108 → 109 KB and /library/messages 63 → 64 KB route sat on the line and crossed it by the same constants.",
   "7 Oct 2026, Shop P0 debit notes: two new routes are the purchase orders list and page by kind (same chunks); every other route +0.1-0.8 KB from the two debit-note thunks in the invalidation registry and the bill page's Return goods button",
   "8 Oct 2026, Shop P0 UPI pay link: the member and loan pages gained the UPI QR button and its lazy dialog's loader",
-  "8 Oct 2026, Lending P0 papers: the loan page's statement, closure and receipt buttons and the lazy sheet's loader; the lending shell grew with the loan detail's lender mapping"
+  "8 Oct 2026, Lending P0 papers: the loan page's statement, closure and receipt buttons and the lazy sheet's loader; the lending shell grew with the loan detail's lender mapping",
+  "8 Oct 2026, LEN-09 late fees and waivers: the loan form's late-fee terms, the schedule rows' Late fee and Waive and the lazy dialog's loader; elsewhere +0.1-0.3 KB from two codenames and the lending invalidation entries in shared modules"
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -1414,7 +1415,7 @@
   },
   "/parties/tags": {
    "route": 61,
-   "firstLoad": 296
+   "firstLoad": 297
   },
   "/parties/[id]/statement": {
    "route": 93,
@@ -1434,7 +1435,7 @@
   },
   "/settings": {
    "route": 100,
-   "firstLoad": 335
+   "firstLoad": 336
   },
   "/settings/profile": {
    "route": 133,
@@ -1442,7 +1443,7 @@
   },
   "/settings/branding": {
    "route": 88,
-   "firstLoad": 323
+   "firstLoad": 324
   },
   "/settings/activity": {
    "route": 101,
@@ -1450,7 +1451,7 @@
   },
   "/settings/devices": {
    "route": 54,
-   "firstLoad": 289
+   "firstLoad": 290
   },
   "/stock/summary": {
    "route": 115,
@@ -1466,7 +1467,7 @@
   },
   "/items/[id]": {
    "route": 99,
-   "firstLoad": 334
+   "firstLoad": 335
   },
   "/stock/low": {
    "route": 64,
@@ -1502,27 +1503,27 @@
   },
   "/admin": {
    "route": 11,
-   "firstLoad": 246
+   "firstLoad": 247
   },
   "/admin/partners": {
    "route": 27,
-   "firstLoad": 262
+   "firstLoad": 263
   },
   "/admin/health": {
    "route": 20,
-   "firstLoad": 255
+   "firstLoad": 256
   },
   "/admin/tenants/[id]": {
    "route": 24,
-   "firstLoad": 259
+   "firstLoad": 260
   },
   "/admin/tenants": {
    "route": 31,
-   "firstLoad": 266
+   "firstLoad": 267
   },
   "/settings/data": {
    "route": 56,
-   "firstLoad": 291
+   "firstLoad": 292
   },
   "/purchases/bills/[id]": {
    "route": 63,
@@ -1554,15 +1555,15 @@
   },
   "/reports/profit": {
    "route": 100,
-   "firstLoad": 335
+   "firstLoad": 336
   },
   "/reports/purchase-register": {
    "route": 105,
-   "firstLoad": 340
+   "firstLoad": 341
   },
   "/reports/sales-register": {
    "route": 105,
-   "firstLoad": 340
+   "firstLoad": 341
   },
   "/login": {
    "route": 56,
@@ -1574,7 +1575,7 @@
   },
   "/settings/business-days": {
    "route": 61,
-   "firstLoad": 295
+   "firstLoad": 296
   },
   "/library/catalogue": {
    "route": 74,
@@ -1586,7 +1587,7 @@
   },
   "/library/copies/[copyId]": {
    "route": 67,
-   "firstLoad": 302
+   "firstLoad": 303
   },
   "/library/settings": {
    "route": 110,
@@ -1594,7 +1595,7 @@
   },
   "/library/members": {
    "route": 78,
-   "firstLoad": 313
+   "firstLoad": 314
   },
   "/library/members/[membershipId]": {
    "route": 72,
@@ -1634,7 +1635,7 @@
   },
   "/forgot-password": {
    "route": 50,
-   "firstLoad": 284
+   "firstLoad": 285
   },
   "/set-password": {
    "route": 50,
@@ -1658,7 +1659,7 @@
   },
   "/onboarding": {
    "route": 6,
-   "firstLoad": 240
+   "firstLoad": 241
   },
   "/_not-found": {
    "route": 1,
@@ -1666,7 +1667,7 @@
   },
   "/library": {
    "route": 68,
-   "firstLoad": 303
+   "firstLoad": 304
   },
   "/library/attendance": {
    "route": 66,
@@ -1677,20 +1678,20 @@
    "firstLoad": 299
   },
   "/lending/loans/new": {
-   "route": 121,
-   "firstLoad": 356
+   "route": 122,
+   "firstLoad": 358
   },
   "/lending": {
-   "route": 62,
-   "firstLoad": 298
+   "route": 64,
+   "firstLoad": 299
   },
   "/lending/loans/[loanId]": {
    "route": 61,
-   "firstLoad": 296
+   "firstLoad": 297
   },
   "/lending/loans": {
-   "route": 59,
-   "firstLoad": 295
+   "route": 60,
+   "firstLoad": 296
   },
   "/customers": {
    "route": 110,
@@ -1706,15 +1707,15 @@
   },
   "/lending/messages": {
    "route": 56,
-   "firstLoad": 289
+   "firstLoad": 291
   },
   "/lending/routes": {
    "route": 56,
-   "firstLoad": 289
+   "firstLoad": 291
   },
   "/lending/borrowers": {
    "route": 56,
-   "firstLoad": 289
+   "firstLoad": 291
   },
   "/items/price-lists": {}
  },

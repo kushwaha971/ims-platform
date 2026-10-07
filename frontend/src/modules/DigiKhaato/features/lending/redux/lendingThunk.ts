@@ -13,6 +13,7 @@ import type {
   CollectionRow,
   LendingRoute,
   LoanDetail,
+  LoanDueFigures,
   LoanFormValues,
   LoanMessageRow,
   LoanPreview,
@@ -164,3 +165,37 @@ export const saveLendingRoute = createAsyncThunk<boolean, string, Reject>(
     }
   }
 );
+
+/** QUERY. LEN-09 — one instalment's late-fee suggestion and what can still be forgiven. */
+export const fetchLendingDue = createAsyncThunk<
+  LoanDueFigures,
+  { loanId: string; dueId: string },
+  Reject
+>('lendingForm/fetchDue', async ({ loanId, dueId }, { signal, rejectWithValue }) => {
+  try {
+    return await (await service()).getLoanDue(loanId, dueId, signal);
+  } catch (error) {
+    return rejectWithValue(toApiError(error, 'lending.adjust.error'));
+  }
+});
+
+/** MUTATION. LEN-09 — add a late fee ("fee") or forgive part of an instalment ("waive"). */
+export const adjustLendingDue = createAsyncThunk<
+  LoanDetail,
+  {
+    loanId: string;
+    kind: 'fee' | 'waive';
+    dueId: string;
+    amount: string;
+    reason: string;
+    component?: 'interest' | 'fee' | 'principal';
+    key: string;
+  },
+  Reject
+>('lendingForm/adjustDue', async ({ loanId, key, ...body }, { rejectWithValue }) => {
+  try {
+    return await (await service()).adjustLoanDue(loanId, body, key);
+  } catch (error) {
+    return rejectWithValue(toApiError(error, 'lending.adjust.error'));
+  }
+});

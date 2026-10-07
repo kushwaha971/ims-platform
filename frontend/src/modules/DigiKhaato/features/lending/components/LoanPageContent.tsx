@@ -41,7 +41,7 @@ import {
   localDay,
 } from '../view-model/lendingDisplay';
 
-import type { LendingMessageKind } from '../types/lending.types';
+import type { LendingMessageKind, LoanDue } from '../types/lending.types';
 import type { LoanPaper } from './print/LoanPapersPrint';
 
 const CollectDialogLazy = dynamic(() => import('./CollectDialog').then((m) => m.CollectDialog), {
@@ -55,6 +55,13 @@ const UpiPayQrDialogLazy = dynamic(
   () => import('../../payments/pay-link/components/UpiPayQrDialog').then((m) => m.UpiPayQrDialog),
   { ssr: false }
 );
+/* LEN-09 — the late-fee and waiver dialog loads with the tap. */
+const AdjustDueDialogLazy = dynamic(
+  () => import('./AdjustDueDialog').then((m) => m.AdjustDueDialog),
+  { ssr: false }
+);
+const OPEN_DUE = new Set(['due', 'overdue']);
+
 /* Lending P0 — receipt, statement and closure letter: the sheet loads with the tap. */
 const LoanPapersPrintLazy = dynamic(
   () => import('./print/LoanPapersPrint').then((m) => m.LoanPapersPrint),
@@ -95,6 +102,9 @@ export function LoanPageContent({ id }: Readonly<{ id: string }>): React.JSX.Ele
   } | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [showingQr, setShowingQr] = useState(false);
+  const canCharge = hasModule('lending') && can('lending.charge.create');
+  const canWaive = hasModule('lending') && can('lending.waiver.create');
+  const [adjusting, setAdjusting] = useState<{ due: LoanDue; mode: 'fee' | 'waive' } | null>(null);
   const [paper, setPaper] = useState<{
     kind: LoanPaper;
     collectionId?: string;
@@ -316,6 +326,17 @@ export function LoanPageContent({ id }: Readonly<{ id: string }>): React.JSX.Ele
         <UbCard padded>
           <UbStack gap={2}>
             <UbInfoRow label={t('lending.loan.terms')} value={rateLine} />
+            {loan.lateFee.kind !== 'none' && (
+              <UbInfoRow
+                label={t('lending.loan.lateFeeRule')}
+                value={t(`lending.lateFee.rule.${loan.lateFee.kind}`, {
+                  value: formatInr(loan.lateFee.value ?? '0'),
+                  rate: Number(loan.lateFee.value ?? 0).toString(),
+                  cap: formatInr(loan.lateFee.cap ?? '0'),
+                  days: loan.lateFee.graceDays,
+                })}
+              />
+            )}
             <UbInfoRow
               label={t('lending.preview.rate')}
               value={t('lending.preview.rateValue', {
@@ -348,28 +369,61 @@ export function LoanPageContent({ id }: Readonly<{ id: string }>): React.JSX.Ele
           <UbStack gap={1} data-testid="lending-loan-schedule">
             <UbText variant="label">{t('lending.loan.instalments')}</UbText>
             {schedule.map((due) => (
-              <UbStack
-                key={due.id}
-                direction="row"
-                justify="between"
-                align="center"
-                gap={2}
-                className="border-t border-border-hairline py-2"
-              >
-                <UbText variant="body-sm">{`${due.seq}. ${formatBusinessDate(due.dueOn)}`}</UbText>
-                <UbStack direction="row" gap={2} align="center">
-                  <UbText variant="body-sm">
-                    {formatInr(isNonZero(due.outstanding) ? due.outstanding : due.amount)}
-                  </UbText>
-                  <UbStatusBadge
-                    tone={DUE_TONE[due.status] ?? 'neutral'}
-                    label={t(
-                      due.status === 'scheduled' && !isNonZero(due.outstanding)
-                        ? 'lending.due.prepaid'
-                        : `lending.due.${due.status}`
-                    )}
-                  />
+              <UbStack key={due.id} gap={1} className="border-t border-border-hairline py-2">
+                <UbStack direction="row" justify="between" align="center" gap={2}>
+                  <UbText variant="body-sm">{`${due.seq}. ${formatBusinessDate(due.dueOn)}`}</UbText>
+                  <UbStack direction="row" gap={2} align="center">
+                    <UbText variant="body-sm">
+                      {formatInr(isNonZero(due.outstanding) ? due.outstanding : due.amount)}
+                    </UbText>
+                    <UbStatusBadge
+                      tone={DUE_TONE[due.status] ?? 'neutral'}
+                      label={t(
+                        due.status === 'scheduled' && !isNonZero(due.outstanding)
+                          ? 'lending.due.prepaid'
+                          : `lending.due.${due.status}`
+                      )}
+                    />
+                  </UbStack>
                 </UbStack>
+                {(isNonZero(due.lateFee) || isNonZero(due.waived)) && (
+                  <UbText variant="caption" tone="tertiary" data-testid="lending-due-adjusted">
+                    {[
+                      isNonZero(due.lateFee)
+                        ? t('lending.due.lateFee', { amount: formatInr(due.lateFee) })
+                        : '',
+                      isNonZero(due.waived)
+                        ? t('lending.due.waived', { amount: formatInr(due.waived) })
+                        : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </UbText>
+                )}
+                {active && OPEN_DUE.has(due.status) && (canCharge || canWaive) && (
+                  <UbStack direction="row" gap={2}>
+                    {canCharge && loan.lateFee.kind !== 'none' && due.status === 'overdue' && (
+                      <UbButton
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setAdjusting({ due, mode: 'fee' })}
+                        data-testid="lending-due-late-fee"
+                      >
+                        {t('lending.adjust.fee.button')}
+                      </UbButton>
+                    )}
+                    {canWaive && (
+                      <UbButton
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setAdjusting({ due, mode: 'waive' })}
+                        data-testid="lending-due-waive"
+                      >
+                        {t('lending.adjust.waive.button')}
+                      </UbButton>
+                    )}
+                  </UbStack>
+                )}
               </UbStack>
             ))}
             <UbButton size="sm" variant="ghost" onClick={() => setShowAll((s) => !s)}>
@@ -477,6 +531,14 @@ export function LoanPageContent({ id }: Readonly<{ id: string }>): React.JSX.Ele
           </UbCard>
         )}
       </UbStack>
+      {adjusting && (
+        <AdjustDueDialogLazy
+          loanId={loan.id}
+          due={adjusting.due}
+          mode={adjusting.mode}
+          onClose={() => setAdjusting(null)}
+        />
+      )}
       {paper && (
         <LoanPapersPrintLazy
           loan={loan}

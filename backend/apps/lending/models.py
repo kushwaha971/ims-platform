@@ -111,6 +111,13 @@ class LendingLoan(TenantModel):
     close_reason = models.CharField(max_length=12, default="", blank=True)
     closed_on = models.DateField(null=True, blank=True)
     notes = models.TextField(max_length=NOTE_MAX, default="", blank=True)
+    #: LEN-09 FR-1/FR-2 — the late-fee rule agreed with the borrower, frozen with the
+    #: terms: `none`, `flat_once` (₹ once per late instalment), `per_day` (₹ a day,
+    #: capped) or `simple_interest` (% a year on the unpaid instalment, capped).
+    late_fee_kind = models.CharField(max_length=16, default="none")
+    late_fee_value = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True)
+    late_fee_cap = MoneyField(null=True, blank=True)
+    late_fee_grace_days = models.SmallIntegerField(default=0)
     version = models.IntegerField(default=1)
 
     class Meta:

@@ -94,3 +94,64 @@ class BorrowerListView(_LendingView):
         paginator = PagePagination()
         rows = paginator.paginate_queryset(qs.order_by("party__name", "id"), request, view=self)
         return paginator.get_paginated_response([borrower_json(b) for b in rows])
+
+
+class LoanDueFiguresView(_LendingView):
+    """`GET /lending/loans/{id}/dues/{due_id}` — the late-fee and waiver dialogs' read."""
+
+    def get(self, request: Any, loan_id: Any, due_id: Any) -> Any:
+        from apps.lending.services import late_fees
+
+        ctx = Ctx.from_request(request)
+        loan = loans.get_loan(ctx.tenant, loan_id)
+        return StandardResponse.ok(
+            late_fees.due_figures(ctx=ctx, loan=loan, due_id=due_id, on=tenant_today(ctx.tenant))
+        )
+
+
+def _detail(ctx: Any, loan_id: Any) -> dict:
+    fresh = loans.get_loan(ctx.tenant, loan_id)
+    return loans.loan_json(fresh, tenant_today(ctx.tenant), with_schedule=True)
+
+
+class LateFeeView(_LendingView):
+    """`POST /lending/loans/{id}/late-fees {due_id, amount, reason}` (LEN-09 FR-3, FR-4)."""
+
+    write = "lending.charge.create"
+
+    @idempotent("lending.late_fee.add")
+    def post(self, request: Any, loan_id: Any) -> Any:
+        from apps.lending.services import late_fees
+
+        ctx = Ctx.from_request(request)
+        data = request.data if isinstance(request.data, dict) else {}
+        result = late_fees.add_late_fee(
+            ctx=ctx,
+            loan_id=loan_id,
+            due_id=data.get("due_id"),
+            amount=data.get("amount"),
+            reason=data.get("reason"),
+        )
+        return StandardResponse.created({**result, "loan": _detail(ctx, loan_id)})
+
+
+class WaiverView(_LendingView):
+    """`POST /lending/loans/{id}/waivers {due_id, component, amount, reason}` (LEN-09 FR-5)."""
+
+    write = "lending.waiver.create"
+
+    @idempotent("lending.waiver.create")
+    def post(self, request: Any, loan_id: Any) -> Any:
+        from apps.lending.services import late_fees
+
+        ctx = Ctx.from_request(request)
+        data = request.data if isinstance(request.data, dict) else {}
+        result = late_fees.waive_due(
+            ctx=ctx,
+            loan_id=loan_id,
+            due_id=data.get("due_id"),
+            component=str(data.get("component") or ""),
+            amount=data.get("amount"),
+            reason=data.get("reason"),
+        )
+        return StandardResponse.created({**result, "loan": _detail(ctx, loan_id)})

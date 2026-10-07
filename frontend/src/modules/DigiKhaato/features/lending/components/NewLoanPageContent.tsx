@@ -46,6 +46,7 @@ import {
 } from '../redux/lendingThunk';
 import { selectLendingToday } from '../redux/lendingTodaySlice';
 import {
+  LATE_FEE_KINDS,
   PAYMENT_MODES,
   PLAN_FREQUENCIES,
   PLAN_TYPES,
@@ -129,6 +130,10 @@ export function NewLoanPageContent(): React.JSX.Element {
       collectionWeekdays: MON_TO_SAT,
       paymentMode: 'cash',
       notes: '',
+      lateFeeKind: 'none',
+      lateFeeValue: '',
+      lateFeeCap: '',
+      lateFeeGraceDays: '0',
     },
   });
   const values = useWatch({ control: form.control }) as LoanFormValues;
@@ -195,7 +200,10 @@ export function NewLoanPageContent(): React.JSX.Element {
   const rows = preview?.schedule ?? [];
   const shown = showAll ? rows : rows.slice(0, SHOWN_ROWS);
 
-  const money = (name: 'principal' | 'fileCharge' | 'perInstalmentAmount', required = false) => (
+  const money = (
+    name: 'principal' | 'fileCharge' | 'perInstalmentAmount' | 'lateFeeValue' | 'lateFeeCap',
+    required = false
+  ) => (
     <UbField
       name={name}
       label={t(`lending.form.${name}`)}
@@ -475,6 +483,50 @@ export function NewLoanPageContent(): React.JSX.Element {
                     </UbStack>
                   )}
                 </UbField>
+              )}
+            </UbStack>
+          </UbCard>
+
+          {/* LEN-09 FR-1 — a late fee is charged only when the borrower agreed to one
+              here; the rule is frozen with the terms. */}
+          <UbCard padded>
+            <UbStack gap={3} data-testid="lending-late-fee-terms">
+              <UbField name="lateFeeKind" label={t('lending.form.lateFeeKind')}>
+                {(field) => (
+                  <UbNativeSelect
+                    id={field.id}
+                    value={String(field.value ?? 'none')}
+                    onChange={field.onChange}
+                    options={LATE_FEE_KINDS.map((kind) => ({
+                      value: kind,
+                      label: t(`lending.lateFee.kind.${kind}`),
+                    }))}
+                  />
+                )}
+              </UbField>
+              {values.lateFeeKind && values.lateFeeKind !== 'none' && (
+                <UbStack direction="row" gap={3} className="max-sm:flex-col">
+                  {values.lateFeeKind === 'simple_interest' ? (
+                    <UbField
+                      name="lateFeeValue"
+                      label={t('lending.form.lateFeeRate')}
+                      required
+                      className="flex-1"
+                    >
+                      {(field) => <UbTextInput {...field} inputMode="decimal" autoComplete="off" />}
+                    </UbField>
+                  ) : (
+                    money('lateFeeValue', true)
+                  )}
+                  {values.lateFeeKind !== 'flat_once' && money('lateFeeCap', true)}
+                  <UbField
+                    name="lateFeeGraceDays"
+                    label={t('lending.form.lateFeeGraceDays')}
+                    className="flex-1"
+                  >
+                    {(field) => <UbTextInput {...field} inputMode="numeric" autoComplete="off" />}
+                  </UbField>
+                </UbStack>
               )}
             </UbStack>
           </UbCard>

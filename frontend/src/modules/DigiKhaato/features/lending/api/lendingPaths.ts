@@ -8,6 +8,10 @@ export const LENDING_PATHS = {
   COLLECTIONS: (id: string) => `/lending/loans/${seg(id)}/collections`,
   COLLECTION_PREVIEW: (id: string) => `/lending/loans/${seg(id)}/collections/preview`,
   VISITS: (id: string) => `/lending/loans/${seg(id)}/visits`,
+  // LEN-09 — one instalment's late-fee suggestion and waivable parts; adding and waiving.
+  DUE: (id: string, dueId: string) => `/lending/loans/${seg(id)}/dues/${seg(dueId)}`,
+  LATE_FEES: (id: string) => `/lending/loans/${seg(id)}/late-fees`,
+  WAIVERS: (id: string) => `/lending/loans/${seg(id)}/waivers`,
   VOID: (id: string) => `/lending/collections/${seg(id)}/void`,
   MESSAGE: (id: string, kind: string) => `/lending/loans/${seg(id)}/message/${seg(kind)}`,
   REMINDERS: '/lending/reminders',

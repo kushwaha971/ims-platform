@@ -156,6 +156,44 @@ def parse_terms(data: Any, today: dt.date) -> LoanTerms:
     return terms
 
 
+LATE_FEE_KINDS = ("none", "flat_once", "per_day", "simple_interest")
+
+
+def parse_late_fee(data: dict) -> dict:
+    """LEN-09 FR-2 — the late-fee rule as columns, or a 400. Absent is `none`."""
+    kind = str(data.get("late_fee_kind") or "none")
+    errors: dict[str, list[str]] = {}
+    if kind not in LATE_FEE_KINDS:
+        errors["late_fee_kind"] = ["Choose a late-fee rule."]
+    if kind in ("none",) or errors:
+        if errors:
+            raise ValidationFailed(errors)
+        return {
+            "late_fee_kind": "none",
+            "late_fee_value": None,
+            "late_fee_cap": None,
+            "late_fee_grace_days": 0,
+        }
+    value = _money(errors, data, "late_fee_value")
+    if value is not None and value <= 0:
+        errors.setdefault("late_fee_value", []).append("Enter an amount.")
+    cap = _money(errors, data, "late_fee_cap", required=kind != "flat_once")
+    try:
+        grace = int(data.get("late_fee_grace_days") or 0)
+    except (TypeError, ValueError):
+        grace = -1
+    if not 0 <= grace <= 90:
+        errors["late_fee_grace_days"] = ["Between 0 and 90 days."]
+    if errors:
+        raise ValidationFailed(errors)
+    return {
+        "late_fee_kind": kind,
+        "late_fee_value": value,
+        "late_fee_cap": cap if kind != "flat_once" else None,
+        "late_fee_grace_days": grace,
+    }
+
+
 def _closed(tenant: Any, terms: LoanTerms) -> set[dt.date]:
     if terms.frequency != "daily":
         return set()
@@ -441,6 +479,7 @@ def create_loan(*, ctx: Any, data: Any) -> LendingLoan:
             m=Max("route_seq")
         )
         seq = (top["m"] or 0) + 1
+    late_fee = parse_late_fee(data)
     number = allocate_counter(tenant=ctx.tenant, kind=NUMBER_LOAN)
     try:
         with transaction.atomic():
@@ -468,6 +507,7 @@ def create_loan(*, ctx: Any, data: Any) -> LendingLoan:
                 total_interest=schedule.total_interest,
                 total_payable=schedule.total_payable,
                 deductions_total=schedule.deductions_total,
+                **late_fee,
                 cash_handed_over=schedule.cash_handed_over,
                 effective_annual_rate=schedule.effective_annual_rate,
                 notes=note,
@@ -648,6 +688,12 @@ def loan_json(loan: LendingLoan, today: dt.date, *, with_schedule: bool = False)
         "first_due_on": loan.first_due_on.isoformat(),
         "maturity_on": loan.maturity_on.isoformat(),
         "notes": loan.notes,
+        "late_fee": {
+            "kind": loan.late_fee_kind,
+            "value": f"{loan.late_fee_value:.2f}" if loan.late_fee_value is not None else None,
+            "cap": f"{loan.late_fee_cap:.2f}" if loan.late_fee_cap is not None else None,
+            "grace_days": loan.late_fee_grace_days,
+        },
         "version": loan.version,
         **figures(loan, today),
     }
@@ -669,6 +715,8 @@ def loan_json(loan: LendingLoan, today: dt.date, *, with_schedule: bool = False)
                 "amount": f"{Decimal(due.amount):.2f}",
                 "settled": f"{Decimal(due.settled_amount):.2f}",
                 "outstanding": f"{outstanding(due):.2f}",
+                "late_fee": f"{Decimal(due.penalty_amount):.2f}",
+                "waived": f"{Decimal(due.waived_amount):.2f}",
                 "status": due.status,
             }
             for due in DuesDue.objects.filter(schedule_id=loan.schedule_id).order_by(

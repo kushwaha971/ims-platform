@@ -321,6 +321,9 @@ class AuditAction:
     LENDING_LOAN_UPDATED = "lending.loan.updated"
     LENDING_LOAN_CLOSED = "lending.loan.closed"
     LENDING_LOAN_REOPENED = "lending.loan.reopened"
+    # LEN-09 — late fees and waivers
+    LENDING_LATE_FEE_ADDED = "lending.late_fee.added"
+    LENDING_WAIVER_CREATED = "lending.waiver.created"
     LENDING_COLLECTION_RECORDED = "lending.collection.recorded"
     LENDING_COLLECTION_VOIDED = "lending.collection.voided"
     LENDING_VISIT_CREATED = "lending.visit.created"

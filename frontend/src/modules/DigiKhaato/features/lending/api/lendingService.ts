@@ -8,8 +8,10 @@ import type {
   CollectFormValues,
   CollectionPreview,
   CollectionRow,
+  LateFeeKind,
   LendingRoute,
   LoanDetail,
+  LoanDueFigures,
   LoanFigures,
   LoanFormValues,
   LoanMessageRow,
@@ -89,6 +91,15 @@ const toLender = (raw: unknown): LoanDetail['lender'] => {
 export const toLoanDetail = (row: Wire): LoanDetail => ({
   ...toLoanRow(row),
   lender: toLender(row.lender),
+  lateFee: (() => {
+    const rule = (row.late_fee ?? {}) as Wire;
+    return {
+      kind: (str(rule.kind) || 'none') as LoanDetail['lateFee']['kind'],
+      value: strOrNull(rule.value),
+      cap: strOrNull(rule.cap),
+      graceDays: num(rule.grace_days),
+    };
+  })(),
   closedOn: strOrNull(row.closed_on),
   deductions: ((row.deductions as Wire[] | undefined) ?? []).map((d) => ({
     kind: str(d.kind),
@@ -102,6 +113,8 @@ export const toLoanDetail = (row: Wire): LoanDetail => ({
     amount: str(d.amount),
     settled: str(d.settled),
     outstanding: str(d.outstanding),
+    lateFee: str(d.late_fee ?? '0.00'),
+    waived: str(d.waived ?? '0.00'),
     status: str(d.status),
   })),
 });
@@ -139,6 +152,14 @@ export const toLoanBody = (values: LoanFormValues): Record<string, unknown> => (
   route_id: values.routeId || undefined,
   payment_mode: values.paymentMode,
   notes: (values.notes ?? '').trim() || undefined,
+  ...(values.lateFeeKind && values.lateFeeKind !== 'none'
+    ? {
+        late_fee_kind: values.lateFeeKind,
+        late_fee_value: values.lateFeeValue,
+        late_fee_cap: values.lateFeeKind === 'flat_once' ? undefined : values.lateFeeCap,
+        late_fee_grace_days: Number(values.lateFeeGraceDays || 0),
+      }
+    : {}),
 });
 
 const quiet = ubConfig({ suppressErrorSnackbar: true });
@@ -396,4 +417,64 @@ export const listBorrowers = async (q: string, signal?: AbortSignal): Promise<Bo
       route: route ? { id: str(route.id), name: str(route.name) } : null,
     };
   });
+};
+
+// ── LEN-09 — late fees and waivers ──────────────────────────────────────────
+
+export const getLoanDue = async (
+  loanId: string,
+  dueId: string,
+  signal?: AbortSignal
+): Promise<LoanDueFigures> => {
+  const response = await api.get<{ data: Wire }>(
+    LENDING_PATHS.DUE(loanId, dueId),
+    ubConfig({ signal, suppressErrorSnackbar: true })
+  );
+  const d = response.data.data;
+  const fee = d.late_fee as Wire | null;
+  const left = (d.waivable ?? {}) as Wire;
+  return {
+    dueId: str(d.due_id),
+    seq: num(d.seq),
+    status: str(d.status),
+    lateFee: fee
+      ? {
+          rule: str(fee.rule) as LateFeeKind,
+          daysLate: num(fee.days_late),
+          ruleAmount: str(fee.rule_amount),
+          alreadyCharged: str(fee.already_charged),
+          suggested: str(fee.suggested),
+        }
+      : null,
+    waivable: {
+      interest: str(left.interest),
+      fee: str(left.fee),
+      principal: str(left.principal),
+    },
+  };
+};
+
+/** `kind` "fee" adds a late fee; "waive" forgives `component` of the instalment. */
+export const adjustLoanDue = async (
+  loanId: string,
+  body: {
+    kind: 'fee' | 'waive';
+    dueId: string;
+    amount: string;
+    reason: string;
+    component?: 'interest' | 'fee' | 'principal';
+  },
+  key: string
+): Promise<LoanDetail> => {
+  const response = await api.post<{ data: Wire }>(
+    body.kind === 'fee' ? LENDING_PATHS.LATE_FEES(loanId) : LENDING_PATHS.WAIVERS(loanId),
+    {
+      due_id: body.dueId,
+      amount: body.amount,
+      reason: body.reason.trim(),
+      ...(body.kind === 'waive' ? { component: body.component } : {}),
+    },
+    ubConfig({ headers: { 'Idempotency-Key': key }, suppressErrorSnackbar: true })
+  );
+  return toLoanDetail(response.data.data.loan as Wire);
 };

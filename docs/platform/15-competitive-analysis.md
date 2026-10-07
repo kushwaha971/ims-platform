@@ -111,7 +111,7 @@ Compared with daily-collection and small-lender software (Intelligrow's daily-lo
 | Routes and today's round in route order | ✓ | ✓ | |
 | Reminders with legal guardrails (08:00–19:00, one a day, polite fixed text) | ✓ | ◐ | a real differentiator under fair-practice rules |
 | Receipt print, statement, closure letter, loan agreement | ◐ | ✓ | 8 Oct: receipt (per collection, VOID mark), loan statement (terms, every instalment, payments) and no-dues closure letter for a paid-off loan, printed from the loan page under the lender's letterhead; no loan agreement yet |
-| Late fees / penal interest, waivers | ✗ | ✓ | next |
+| Late fees / penal interest, waivers | ✓ | ✓ | 8 Oct: late-fee rule agreed in the terms (fixed once, per day capped, % a year capped, grace days), suggested per late instalment and added by the owner, never automatic; waivers of late fee, interest or principal with a reason, owner or admin only |
 | Write-off, cancel, foreclosure | ✗ | ✓ | next |
 | Agent role scoped to their routes; agent app; offline | ✗ | ✓ | the module role exists in the platform; not yet used by lending |
 | KYC documents and photos, geo-tagged visits | ✗ | ✓ | |

@@ -1,4 +1,5 @@
 import { screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 import { sessionLoaded } from 'src/redux/slice/sessionSlice';
 import { store } from 'src/redux/store';
@@ -23,6 +24,8 @@ jest.mock('../api/lendingService', () => ({
   ...jest.requireActual('../api/lendingService'),
   getLoan: jest.fn(),
   getLoanActivity: jest.fn(),
+  getLoanDue: jest.fn(),
+  adjustLoanDue: jest.fn(),
 }));
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
@@ -43,6 +46,7 @@ const loan = (over: Partial<LoanDetail> = {}): LoanDetail => ({
     gstin: '',
   },
   closedOn: null,
+  lateFee: { kind: 'none', value: null, cap: null, graceDays: 0 },
   borrower: {
     id: 'b1',
     number: 'B-0001',
@@ -82,6 +86,8 @@ const loan = (over: Partial<LoanDetail> = {}): LoanDetail => ({
       amount: '120.00',
       settled: '0.00',
       outstanding: '120.00',
+      lateFee: '0.00',
+      waived: '0.00',
       status: 'scheduled',
     },
   ],
@@ -268,5 +274,109 @@ describe('the loan papers', () => {
     const sheet = await screen.findByTestId('loan-paper-closure');
     expect(sheet).toHaveTextContent('has repaid loan LN-0001');
     expect(sheet).toHaveTextContent('Nothing is due on this loan as of 20/01/2027');
+  });
+});
+
+/**
+ * LEN-09 — late fees and waivers. What these protect: the late fee is offered only on a
+ * LATE instalment of a loan whose terms carry a rule, prefilled with the rule's
+ * suggestion and refusing more; Waive is the owner's (a staff member never sees it);
+ * and what was added or waived shows on the instalment afterwards.
+ */
+describe('late fees and waivers', () => {
+  const late = (over: Partial<LoanDetail> = {}) =>
+    loan({
+      lateFee: { kind: 'per_day', value: '10.00', cap: '300.00', graceDays: 3 },
+      arrears: '120.00',
+      daysPastDue: 12,
+      schedule: [
+        {
+          id: 'd1',
+          seq: 1,
+          dueOn: '2026-10-06',
+          amount: '120.00',
+          settled: '0.00',
+          outstanding: '120.00',
+          lateFee: '0.00',
+          waived: '0.00',
+          status: 'overdue',
+        },
+      ],
+      ...over,
+    });
+
+  it('adds a late fee at most the rule allows', async () => {
+    jest.mocked(service.getLoan).mockResolvedValue(late());
+    jest.mocked(service.getLoanDue).mockResolvedValue({
+      dueId: 'd1',
+      seq: 1,
+      status: 'overdue',
+      lateFee: {
+        rule: 'per_day',
+        daysLate: 9,
+        ruleAmount: '90.00',
+        alreadyCharged: '0.00',
+        suggested: '90.00',
+      },
+      waivable: { interest: '20.00', fee: '0.00', principal: '100.00' },
+    });
+    jest.mocked(service.adjustLoanDue).mockResolvedValue(late());
+    signIn([...PERMS, 'lending.charge.create'] as PermissionCode[]);
+    renderWithProviders(<LoanPageContent id="l1" />);
+    (await screen.findByTestId('lending-due-late-fee')).click();
+    expect(await screen.findByTestId('lending-adjust-so-far')).toHaveTextContent('₹90.00');
+    const save = screen.getByTestId('lending-adjust-save');
+    const amount = screen.getByLabelText('Amount');
+    await userEvent.clear(amount);
+    await userEvent.type(amount, '95');
+    expect(save).toBeDisabled();
+    await userEvent.clear(amount);
+    await userEvent.type(amount, '90');
+    await userEvent.click(save);
+    await waitFor(() =>
+      expect(service.adjustLoanDue).toHaveBeenCalledWith(
+        'l1',
+        expect.objectContaining({ kind: 'fee', dueId: 'd1', amount: '90.00' }),
+        expect.any(String)
+      )
+    );
+    expect(screen.queryByTestId('lending-due-waive')).not.toBeInTheDocument();
+  });
+
+  it('shows what was added and waived on the instalment, and Waive to the owner', async () => {
+    jest.mocked(service.getLoan).mockResolvedValue(
+      late({
+        schedule: [
+          {
+            id: 'd1',
+            seq: 1,
+            dueOn: '2026-10-06',
+            amount: '120.00',
+            settled: '0.00',
+            outstanding: '140.00',
+            lateFee: '30.00',
+            waived: '10.00',
+            status: 'overdue',
+          },
+        ],
+      })
+    );
+    signIn([...PERMS, 'lending.waiver.create'] as PermissionCode[]);
+    renderWithProviders(<LoanPageContent id="l1" />);
+    expect(await screen.findByTestId('lending-due-adjusted')).toHaveTextContent(
+      '+₹30.00 late fee · ₹10.00 waived'
+    );
+    expect(screen.getByTestId('lending-due-waive')).toBeInTheDocument();
+    expect(screen.queryByTestId('lending-due-late-fee')).not.toBeInTheDocument();
+  });
+
+  it('offers no late fee when the terms carry none', async () => {
+    jest
+      .mocked(service.getLoan)
+      .mockResolvedValue(late({ lateFee: { kind: 'none', value: null, cap: null, graceDays: 0 } }));
+    signIn([...PERMS, 'lending.charge.create'] as PermissionCode[]);
+    renderWithProviders(<LoanPageContent id="l1" />);
+    await screen.findByTestId('lending-loan');
+    expect(screen.queryByTestId('lending-due-late-fee')).not.toBeInTheDocument();
   });
 });

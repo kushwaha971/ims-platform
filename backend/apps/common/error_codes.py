@@ -246,6 +246,9 @@ _REGISTRY: dict[str, tuple[int, bool]] = {
     "route_has_loans": (409, False),  # D count
     # L03 — a Remind on a loan with nothing due today, tomorrow or late.
     "lending_nothing_due": (409, False),  # D loan_id
+    # LEN-09 — a late fee on a loan whose terms have none; nothing more under the rule.
+    "late_fee_not_in_terms": (409, False),
+    "penalty_cap_reached": (409, False),  # D cap
     # ── ATT ── contracts §4: the attendance engine (FRD 00 ATT-02, ATT-04).
     "attendance_blocked": (409, False),  # D reason, override_permission
     "attendance_duplicate": (409, False),  # D mark_id

@@ -90,6 +90,8 @@ PERMISSIONS: frozenset[str] = frozenset(
         "lending.collection.create",
         "lending.collection.read",
         "lending.collection.void",
+        "lending.charge.create",
+        "lending.waiver.create",
         "lending.visit.write",
         "lending.route.read",
         "lending.route.manage",
