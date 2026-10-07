@@ -24,6 +24,8 @@ urlpatterns: list = [
     ),
     path("loans/<uuid:loan_id>/late-fees", ln.LateFeeView.as_view(), name="lending-late-fees"),
     path("loans/<uuid:loan_id>/waivers", ln.WaiverView.as_view(), name="lending-waivers"),
+    path("loans/<uuid:loan_id>/write-off", ln.WriteOffView.as_view(), name="lending-write-off"),
+    path("loans/<uuid:loan_id>/cancel", ln.CancelLoanView.as_view(), name="lending-cancel"),
     path("today", co.TodayView.as_view(), name="lending-today"),
     path(
         "loans/<uuid:loan_id>/collections/preview",

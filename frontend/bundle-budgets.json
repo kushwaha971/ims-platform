@@ -738,7 +738,8 @@
   "7 Oct 2026, Shop P0 debit notes: two new routes are the purchase orders list and page by kind (same chunks); every other route +0.1-0.8 KB from the two debit-note thunks in the invalidation registry and the bill page's Return goods button",
   "8 Oct 2026, Shop P0 UPI pay link: the member and loan pages gained the UPI QR button and its lazy dialog's loader",
   "8 Oct 2026, Lending P0 papers: the loan page's statement, closure and receipt buttons and the lazy sheet's loader; the lending shell grew with the loan detail's lender mapping",
-  "8 Oct 2026, LEN-09 late fees and waivers: the loan form's late-fee terms, the schedule rows' Late fee and Waive and the lazy dialog's loader; elsewhere +0.1-0.3 KB from two codenames and the lending invalidation entries in shared modules"
+  "8 Oct 2026, LEN-09 late fees and waivers: the loan form's late-fee terms, the schedule rows' Late fee and Waive and the lazy dialog's loader; elsewhere +0.1-0.3 KB from two codenames and the lending invalidation entries in shared modules",
+  "8 Oct 2026, LEN-10 write-off and cancel: the loan page's two buttons, the ended banner and the lazy dialog's loader"
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -1678,7 +1679,7 @@
    "firstLoad": 299
   },
   "/lending/loans/new": {
-   "route": 122,
+   "route": 123,
    "firstLoad": 358
   },
   "/lending": {
@@ -1686,8 +1687,8 @@
    "firstLoad": 299
   },
   "/lending/loans/[loanId]": {
-   "route": 61,
-   "firstLoad": 297
+   "route": 63,
+   "firstLoad": 298
   },
   "/lending/loans": {
    "route": 60,

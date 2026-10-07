@@ -28,6 +28,7 @@ export const LENDING_MUTATIONS = {
   saveLendingRoute: 'lendingToday/saveRoute',
   recordLendingMessage: 'lendingMessages/record',
   adjustLendingDue: 'lendingForm/adjustDue',
+  endLendingLoan: 'lendingForm/endLoan',
 } as const satisfies Record<string, string>;
 
 export type TLendingMutationName = keyof typeof LENDING_MUTATIONS;
@@ -54,6 +55,11 @@ export const LENDING_INVALIDATION: Readonly<
   // borrower's khata.
   adjustLendingDue: {
     refetch: ['lendingToday', 'lendingLoans'],
+    stale: ['partyList', 'partyDetail'],
+  },
+  // LEN-10 — a written-off or cancelled loan leaves the round, the list and the khata.
+  endLendingLoan: {
+    refetch: ['lendingToday', 'lendingLoans', 'lendingMessages'],
     stale: ['partyList', 'partyDetail'],
   },
 };

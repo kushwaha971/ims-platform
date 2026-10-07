@@ -12,6 +12,8 @@ export const LENDING_PATHS = {
   DUE: (id: string, dueId: string) => `/lending/loans/${seg(id)}/dues/${seg(dueId)}`,
   LATE_FEES: (id: string) => `/lending/loans/${seg(id)}/late-fees`,
   WAIVERS: (id: string) => `/lending/loans/${seg(id)}/waivers`,
+  WRITE_OFF: (id: string) => `/lending/loans/${seg(id)}/write-off`,
+  CANCEL: (id: string) => `/lending/loans/${seg(id)}/cancel`,
   VOID: (id: string) => `/lending/collections/${seg(id)}/void`,
   MESSAGE: (id: string, kind: string) => `/lending/loans/${seg(id)}/message/${seg(kind)}`,
   REMINDERS: '/lending/reminders',

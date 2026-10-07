@@ -105,6 +105,11 @@ export interface LoanLender {
 export interface LoanDetail extends LoanRow {
   readonly lender: LoanLender | null;
   readonly lateFee: LoanLateFeeRule;
+  /** LEN-10 — why it was written off or cancelled; what a write-off would clear today
+   * (null unless running); and whether money was collected (no Cancel then). */
+  readonly statusReason: string;
+  readonly writeOffAmount: string | null;
+  readonly hasCollections: boolean;
   readonly closedOn: string | null;
   readonly deductions: readonly { kind: string; label: string; amount: string }[];
   readonly schedule: readonly LoanDue[];

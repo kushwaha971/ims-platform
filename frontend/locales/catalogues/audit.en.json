@@ -63,6 +63,8 @@
   "audit.action.ledger.entry.reversed": "Reversed entry",
   "audit.action.ledger.statement.exported": "Exported a statement",
   "audit.action.lending.late_fee.added": "Late fee added",
+  "audit.action.lending.loan.cancelled": "Loan cancelled",
+  "audit.action.lending.loan.written_off": "Loan written off",
   "audit.action.lending.waiver.created": "Waiver given",
   "audit.action.member.accepted": "Joined the team",
   "audit.action.member.created": "Added team member",

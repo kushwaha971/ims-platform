@@ -26,6 +26,7 @@ jest.mock('../api/lendingService', () => ({
   getLoanActivity: jest.fn(),
   getLoanDue: jest.fn(),
   adjustLoanDue: jest.fn(),
+  endLoan: jest.fn(),
 }));
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
@@ -47,6 +48,9 @@ const loan = (over: Partial<LoanDetail> = {}): LoanDetail => ({
   },
   closedOn: null,
   lateFee: { kind: 'none', value: null, cap: null, graceDays: 0 },
+  statusReason: '',
+  writeOffAmount: '12000.00',
+  hasCollections: false,
   borrower: {
     id: 'b1',
     number: 'B-0001',
@@ -378,5 +382,67 @@ describe('late fees and waivers', () => {
     renderWithProviders(<LoanPageContent id="l1" />);
     await screen.findByTestId('lending-loan');
     expect(screen.queryByTestId('lending-due-late-fee')).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * LEN-10 — write-off and cancel. What these protect: Write off is the owner's alone and
+ * sends the figure the owner was shown; Cancel disappears once money was collected; an
+ * ended loan says so, with its reason, and offers neither.
+ */
+describe('ending a loan', () => {
+  const OWNER = [...PERMS, 'lending.loan.close', 'platform.tenant.manage'] as PermissionCode[];
+
+  it('writes off the figure shown, after a reason and a tick', async () => {
+    jest.mocked(service.getLoan).mockResolvedValue(loan({ hasCollections: true }));
+    const end = jest.spyOn(service, 'endLoan').mockResolvedValue(loan({ status: 'written_off' }));
+    signIn(OWNER);
+    renderWithProviders(<LoanPageContent id="l1" />);
+    const writeOff = await screen.findByTestId('lending-loan-write-off');
+    await waitFor(() =>
+      expect(screen.queryByTestId('lending-loan-cancel')).not.toBeInTheDocument()
+    );
+    writeOff.click();
+    const body = await screen.findByTestId('lending-end-body');
+    expect(body).toHaveTextContent('₹12,000.00 still owed by Geeta Devi');
+    const confirm = screen.getByTestId('lending-end-confirm');
+    await userEvent.selectOptions(screen.getByLabelText('Reason'), 'cannot_trace');
+    await userEvent.type(screen.getByLabelText('Reason, in a few words'), 'Moved away');
+    expect(confirm).toBeDisabled();
+    await userEvent.click(screen.getByLabelText('I understand ₹12,000.00 is written off'));
+    await userEvent.click(confirm);
+    await waitFor(() =>
+      expect(end).toHaveBeenCalledWith('l1', {
+        kind: 'write_off',
+        amount: '12000.00',
+        reasonCode: 'cannot_trace',
+        reason: 'Moved away',
+      })
+    );
+  });
+
+  it('keeps Write off from an admin, and offers Cancel while nothing was collected', async () => {
+    jest.mocked(service.getLoan).mockResolvedValue(loan());
+    signIn([...PERMS, 'lending.loan.close'] as PermissionCode[]);
+    renderWithProviders(<LoanPageContent id="l1" />);
+    expect(await screen.findByTestId('lending-loan-cancel')).toBeInTheDocument();
+    expect(screen.queryByTestId('lending-loan-write-off')).not.toBeInTheDocument();
+  });
+
+  it('shows an ended loan with its reason and no way to end it again', async () => {
+    jest.mocked(service.getLoan).mockResolvedValue(
+      loan({
+        status: 'written_off',
+        closedOn: '2026-10-08',
+        statusReason: 'cannot_trace: Moved away',
+        writeOffAmount: null,
+      })
+    );
+    signIn(OWNER);
+    renderWithProviders(<LoanPageContent id="l1" />);
+    expect(await screen.findByText('Written off on 08/10/2026')).toBeInTheDocument();
+    expect(screen.getByText('Cannot trace the borrower · Moved away')).toBeInTheDocument();
+    expect(screen.queryByTestId('lending-loan-write-off')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('lending-loan-cancel')).not.toBeInTheDocument();
   });
 });

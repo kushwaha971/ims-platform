@@ -199,3 +199,21 @@ export const adjustLendingDue = createAsyncThunk<
     return rejectWithValue(toApiError(error, 'lending.adjust.error'));
   }
 });
+
+/** MUTATION. LEN-10 — write a loan off (owner) or cancel one nothing was collected on. */
+export const endLendingLoan = createAsyncThunk<
+  LoanDetail,
+  {
+    loanId: string;
+    body:
+      | { kind: 'write_off'; amount: string; reasonCode: string; reason: string }
+      | { kind: 'cancel'; reason: string };
+  },
+  Reject
+>('lendingForm/endLoan', async ({ loanId, body }, { rejectWithValue }) => {
+  try {
+    return await (await service()).endLoan(loanId, body);
+  } catch (error) {
+    return rejectWithValue(toApiError(error, 'lending.end.error'));
+  }
+});

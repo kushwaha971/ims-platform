@@ -688,6 +688,7 @@ def loan_json(loan: LendingLoan, today: dt.date, *, with_schedule: bool = False)
         "first_due_on": loan.first_due_on.isoformat(),
         "maturity_on": loan.maturity_on.isoformat(),
         "notes": loan.notes,
+        "status_reason": loan.status_reason,
         "late_fee": {
             "kind": loan.late_fee_kind,
             "value": f"{loan.late_fee_value:.2f}" if loan.late_fee_value is not None else None,
@@ -701,6 +702,15 @@ def loan_json(loan: LendingLoan, today: dt.date, *, with_schedule: bool = False)
         from apps.dues.models import DuesDue
 
         out["lender"] = lender_json(loan.tenant)
+        from apps.lending.models import LendingCollection
+        from apps.lending.services.closing import write_off_amount
+
+        # LEN-10 — what the write-off dialog pins, and whether Cancel is still possible.
+        active = loan.status == LoanStatus.ACTIVE
+        out["write_off_amount"] = f"{write_off_amount(loan):.2f}" if active else None
+        out["has_collections"] = LendingCollection.objects.filter(
+            loan=loan, voided_at__isnull=True
+        ).exists()
         from apps.dues.services.settlement import outstanding
 
         out["deductions"] = [

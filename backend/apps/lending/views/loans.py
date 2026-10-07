@@ -155,3 +155,37 @@ class WaiverView(_LendingView):
             reason=data.get("reason"),
         )
         return StandardResponse.created({**result, "loan": _detail(ctx, loan_id)})
+
+
+class WriteOffView(_LendingView):
+    """`POST /lending/loans/{id}/write-off {amount, reason_code, reason}` — owner only (LEN-10)."""
+
+    write = "lending.loan.close"
+
+    def post(self, request: Any, loan_id: Any) -> Any:
+        from apps.lending.services import closing
+
+        ctx = Ctx.from_request(request)
+        data = request.data if isinstance(request.data, dict) else {}
+        closing.write_off(
+            ctx=ctx,
+            loan_id=loan_id,
+            amount=data.get("amount"),
+            reason_code=data.get("reason_code"),
+            reason=data.get("reason"),
+        )
+        return StandardResponse.ok({"loan": _detail(ctx, loan_id)})
+
+
+class CancelLoanView(_LendingView):
+    """`POST /lending/loans/{id}/cancel {reason}` — a loan with no collection (LEN-10 FR-4)."""
+
+    write = "lending.loan.close"
+
+    def post(self, request: Any, loan_id: Any) -> Any:
+        from apps.lending.services import closing
+
+        ctx = Ctx.from_request(request)
+        data = request.data if isinstance(request.data, dict) else {}
+        closing.cancel(ctx=ctx, loan_id=loan_id, reason=data.get("reason"))
+        return StandardResponse.ok({"loan": _detail(ctx, loan_id)})

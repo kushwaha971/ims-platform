@@ -101,6 +101,9 @@ export const toLoanDetail = (row: Wire): LoanDetail => ({
     };
   })(),
   closedOn: strOrNull(row.closed_on),
+  statusReason: str(row.status_reason),
+  writeOffAmount: strOrNull(row.write_off_amount),
+  hasCollections: Boolean(row.has_collections),
   deductions: ((row.deductions as Wire[] | undefined) ?? []).map((d) => ({
     kind: str(d.kind),
     label: str(d.label),
@@ -475,6 +478,24 @@ export const adjustLoanDue = async (
       ...(body.kind === 'waive' ? { component: body.component } : {}),
     },
     ubConfig({ headers: { 'Idempotency-Key': key }, suppressErrorSnackbar: true })
+  );
+  return toLoanDetail(response.data.data.loan as Wire);
+};
+
+// ── LEN-10 — write-off and cancel ───────────────────────────────────────────
+
+export const endLoan = async (
+  loanId: string,
+  body:
+    | { kind: 'write_off'; amount: string; reasonCode: string; reason: string }
+    | { kind: 'cancel'; reason: string }
+): Promise<LoanDetail> => {
+  const response = await api.post<{ data: Wire }>(
+    body.kind === 'write_off' ? LENDING_PATHS.WRITE_OFF(loanId) : LENDING_PATHS.CANCEL(loanId),
+    body.kind === 'write_off'
+      ? { amount: body.amount, reason_code: body.reasonCode, reason: body.reason.trim() }
+      : { reason: body.reason.trim() },
+    quiet
   );
   return toLoanDetail(response.data.data.loan as Wire);
 };

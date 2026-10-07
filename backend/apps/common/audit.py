@@ -324,6 +324,9 @@ class AuditAction:
     # LEN-09 — late fees and waivers
     LENDING_LATE_FEE_ADDED = "lending.late_fee.added"
     LENDING_WAIVER_CREATED = "lending.waiver.created"
+    # LEN-10 — write-off and cancel
+    LENDING_LOAN_WRITTEN_OFF = "lending.loan.written_off"
+    LENDING_LOAN_CANCELLED = "lending.loan.cancelled"
     LENDING_COLLECTION_RECORDED = "lending.collection.recorded"
     LENDING_COLLECTION_VOIDED = "lending.collection.voided"
     LENDING_VISIT_CREATED = "lending.visit.created"

@@ -118,6 +118,8 @@ class LendingLoan(TenantModel):
     late_fee_value = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True)
     late_fee_cap = MoneyField(null=True, blank=True)
     late_fee_grace_days = models.SmallIntegerField(default=0)
+    #: LEN-10 — why a loan was written off or cancelled, in the owner's words.
+    status_reason = models.CharField(max_length=255, default="", blank=True)
     version = models.IntegerField(default=1)
 
     class Meta:

@@ -56,6 +56,15 @@ class LendingConfig(AppConfig):
             buckets=frozenset({LedgerBucket.LOAN.value}),
         )
         register_source_resolver(SOURCE_DEDUCTION, loans.resolve_deductions)
+        # LEN-10 — a write-off is one credit off the borrower's loan balance.
+        from apps.lending.services.closing import SOURCE_WRITE_OFF
+
+        register_posting_source(
+            SOURCE_WRITE_OFF,
+            module=MODULE,
+            entry_types={EntryType.ADJUSTMENT_CREDIT: Direction.CREDIT},
+            buckets=frozenset({LedgerBucket.LOAN.value}),
+        )
         register_target(loans.LendingLoanTarget())
         register_subject(
             SUBJECT_LOAN,

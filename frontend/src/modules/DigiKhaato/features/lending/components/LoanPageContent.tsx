@@ -4,7 +4,16 @@ import { useEffect, useState } from 'react';
 
 import dynamic from 'next/dynamic';
 
-import { FileCheck2, FileText, HandCoins, MessageCircle, Printer, QrCode } from 'lucide-react';
+import {
+  Ban,
+  FileCheck2,
+  FileText,
+  FileX2,
+  HandCoins,
+  MessageCircle,
+  Printer,
+  QrCode,
+} from 'lucide-react';
 
 import {
   UbActionLink,
@@ -19,6 +28,7 @@ import {
   UbPageSkeleton,
   UbStack,
   UbStatusBadge,
+  UbStatusBanner,
   UbText,
 } from 'src/design-system';
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
@@ -34,9 +44,10 @@ import { formatPhoneForDisplay } from 'src/utils/share';
 import { selectLendingLoans } from '../redux/lendingLoansSlice';
 import { fetchLendingLoan } from '../redux/lendingThunk';
 import {
+  LOAN_STATUS_TONE,
+  endedReason,
   isNonZero,
   isRemindable,
-  LOAN_STATUS_TONE,
   localClock,
   localDay,
 } from '../view-model/lendingDisplay';
@@ -61,6 +72,10 @@ const AdjustDueDialogLazy = dynamic(
   { ssr: false }
 );
 const OPEN_DUE = new Set(['due', 'overdue']);
+/* LEN-10 — write-off and cancel load with the tap. */
+const EndLoanDialogLazy = dynamic(() => import('./EndLoanDialog').then((m) => m.EndLoanDialog), {
+  ssr: false,
+});
 
 /* Lending P0 — receipt, statement and closure letter: the sheet loads with the tap. */
 const LoanPapersPrintLazy = dynamic(
@@ -104,6 +119,10 @@ export function LoanPageContent({ id }: Readonly<{ id: string }>): React.JSX.Ele
   const [showingQr, setShowingQr] = useState(false);
   const canCharge = hasModule('lending') && can('lending.charge.create');
   const canWaive = hasModule('lending') && can('lending.waiver.create');
+  const canClose = hasModule('lending') && can('lending.loan.close');
+  // A write-off is the owner's alone; `platform.tenant.manage` is the owner's codename.
+  const isOwner = can('platform.tenant.manage');
+  const [ending, setEnding] = useState<'write_off' | 'cancel' | null>(null);
   const [adjusting, setAdjusting] = useState<{ due: LoanDue; mode: 'fee' | 'waive' } | null>(null);
   const [paper, setPaper] = useState<{
     kind: LoanPaper;
@@ -198,6 +217,16 @@ export function LoanPageContent({ id }: Readonly<{ id: string }>): React.JSX.Ele
         }
       />
       <UbStack gap={4} data-testid="lending-loan" className="ub-print-hide">
+        {(loan.status === 'written_off' || loan.status === 'cancelled') && (
+          <UbStatusBanner
+            tone="warning"
+            title={t(`lending.end.banner.${loan.status}`, {
+              date: loan.closedOn ? formatBusinessDate(loan.closedOn) : '',
+            })}
+            description={loan.statusReason ? endedReason(loan.statusReason, t) : undefined}
+            data-testid="lending-loan-ended"
+          />
+        )}
         <UbStack direction="row" gap={2} align="center" wrap>
           <UbText variant="body-sm" className="ds-mono">
             {loan.number}
@@ -310,6 +339,32 @@ export function LoanPageContent({ id }: Readonly<{ id: string }>): React.JSX.Ele
           >
             {t('lending.papers.statement.print')}
           </UbButton>
+          {active &&
+            canClose &&
+            isOwner &&
+            loan.writeOffAmount &&
+            isNonZero(loan.writeOffAmount) && (
+              <UbButton
+                size="sm"
+                variant="secondary"
+                icon={<FileX2 className="h-4 w-4" aria-hidden />}
+                onClick={() => setEnding('write_off')}
+                data-testid="lending-loan-write-off"
+              >
+                {t('lending.end.writeOff.button')}
+              </UbButton>
+            )}
+          {active && canClose && !loan.hasCollections && (
+            <UbButton
+              size="sm"
+              variant="secondary"
+              icon={<Ban className="h-4 w-4" aria-hidden />}
+              onClick={() => setEnding('cancel')}
+              data-testid="lending-loan-cancel"
+            >
+              {t('lending.end.cancel.button')}
+            </UbButton>
+          )}
           {loan.status === 'closed' && !isNonZero(loan.remaining) && (
             <UbButton
               size="sm"
@@ -531,6 +586,7 @@ export function LoanPageContent({ id }: Readonly<{ id: string }>): React.JSX.Ele
           </UbCard>
         )}
       </UbStack>
+      {ending && <EndLoanDialogLazy loan={loan} mode={ending} onClose={() => setEnding(null)} />}
       {adjusting && (
         <AdjustDueDialogLazy
           loanId={loan.id}

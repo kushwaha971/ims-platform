@@ -75,3 +75,14 @@ export const localClock = (iso: string | null | undefined): string =>
   iso && iso.length >= 16 ? iso.slice(11, 16) : '';
 export const localDay = (iso: string | null | undefined): string =>
   iso && iso.length >= 10 ? iso.slice(0, 10) : '';
+
+const WRITE_OFF_CODE = /^(cannot_trace|death|bad_debt|other): (.*)$/s;
+
+/**
+ * LEN-10 — a written-off loan's reason as the owner reads it: the server keeps
+ * "cannot_trace: Moved away"; the page says "Cannot trace the borrower · Moved away".
+ */
+export const endedReason = (reason: string, t: (id: string) => string): string => {
+  const match = WRITE_OFF_CODE.exec(reason);
+  return match ? `${t(`lending.end.writeOff.code.${match[1]}`)} · ${match[2]}` : reason;
+};

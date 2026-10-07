@@ -249,6 +249,8 @@ _REGISTRY: dict[str, tuple[int, bool]] = {
     # LEN-09 — a late fee on a loan whose terms have none; nothing more under the rule.
     "late_fee_not_in_terms": (409, False),
     "penalty_cap_reached": (409, False),  # D cap
+    # LEN-10 — a loan with money collected is written off or closed, never cancelled.
+    "loan_has_collections": (409, False),  # D count
     # ── ATT ── contracts §4: the attendance engine (FRD 00 ATT-02, ATT-04).
     "attendance_blocked": (409, False),  # D reason, override_permission
     "attendance_duplicate": (409, False),  # D mark_id
