@@ -26,7 +26,7 @@
   --num:"Inter",system-ui,sans-serif;
   --stage:#ECEBF3;
 }
-:root[data-theme="dark"]{
+:root[data-theme="dark"]{color-scheme:dark;
   --canvas:#0F0E13; --card:#17161C; --sunken:#1F1E25; --subtle:#1A1920; --hover:#22212A;
   --hairline:#2A2930; --border:#36353D; --text:#F4F4F6; --text-2:#C9C7CF; --text-3:#A3A1AA; --text-accent:#B6B3F5;
   --primary-50:#24223F; --primary-100:#2D2B52;
@@ -34,6 +34,14 @@
   --seat-free:#18301F; --seat-free-b:#5BC985; --seat-busy:#2D2B52; --seat-busy-b:#B6B3F5; --seat-res:#3A2C12; --seat-res-b:#E9B04B;
   --stage:#07070A;
 }
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --canvas:#0F0E13; --card:#17161C; --sunken:#1F1E25; --subtle:#1A1920; --hover:#22212A;
+  --hairline:#2A2930; --border:#36353D; --text:#F4F4F6; --text-2:#C9C7CF; --text-3:#A3A1AA; --text-accent:#B6B3F5;
+  --primary-50:#24223F; --primary-100:#2D2B52;
+  --get:#F2706A; --get-dim:#3A1D1D; --give:#5BC985; --give-dim:#18301F; --warn:#E9B04B; --warn-dim:#3A2C12; --info:#7FA7FF; --info-dim:#1A2540;
+  --seat-free:#18301F; --seat-free-b:#5BC985; --seat-busy:#2D2B52; --seat-busy-b:#B6B3F5; --seat-res:#3A2C12; --seat-res-b:#E9B04B;
+  --stage:#07070A;
+  color-scheme:dark}}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%}
 body{font-family:var(--font);background:var(--stage);color:var(--text);-webkit-font-smoothing:antialiased}
@@ -345,7 +353,7 @@ const balLabel=(b,type)=>b>0?'You will get':b<0?'You will give':'Settled';
 /* ════════════════════════════════════════════════════════════════════════
    State
    ════════════════════════════════════════════════════════════════════════ */
-const S={app:'shop',tab:'home',stack:[],sheet:null,dialog:null,snack:null,mode:'normal',theme:'light',
+const S={app:'shop',tab:'home',stack:[],sheet:null,dialog:null,snack:null,mode:'normal',theme:(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light',
   seg:'customer',q:'',filters:{show:'active',bal:'all',sort:'recent',tags:[]},
   billStatus:'all',billKind:'invoices',itemChip:'all',corrections:false,justPushed:false,sheetNew:false,
   draft:null,entry:null,flashId:null,seatShift:'All',busy:false};
