@@ -14,6 +14,7 @@ import {
   UbEmptyState,
   UbLink,
   UbPageHeader,
+  UbPageHeaderMobileActions,
   UbPageShell,
   UbSkeleton,
   UbStack,
@@ -109,6 +110,16 @@ export function PartyStatementPageContent({ id }: Readonly<{ id: string }>): Rea
               ? `${t('ledger.statement.title')} · ${statement.party.mobileMasked}`
               : t('ledger.statement.title')
           }
+          /* docs/mobile-redesign (A3) — on a phone these actions are a worded ⋯ sheet. */
+          renderMobileActions={(actions) => (
+            <UbPageHeaderMobileActions
+              actions={actions}
+              mobile={{
+                menuLabel: t('common.action.moreActions'),
+                closeLabel: t('common.action.close'),
+              }}
+            />
+          )}
           actions={<StatementActions statement={statement} id={id} t={t} />}
         />
 

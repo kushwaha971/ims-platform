@@ -17,6 +17,7 @@ import {
   UbInfoRow,
   UbLink,
   UbPageHeader,
+  UbPageHeaderMobileActions,
   UbPageShell,
   UbPageSkeleton,
   UbPanel,
@@ -150,6 +151,16 @@ export function PurchaseBillDetailPageContent({
             />
           </UbStack>
         }
+        /* docs/mobile-redesign (A3) — on a phone these actions are a worded ⋯ sheet. */
+        renderMobileActions={(actions) => (
+          <UbPageHeaderMobileActions
+            actions={actions}
+            mobile={{
+              menuLabel: t('common.action.moreActions'),
+              closeLabel: t('common.action.close'),
+            }}
+          />
+        )}
         actions={
           <>
             {draft && detail.canWrite && (

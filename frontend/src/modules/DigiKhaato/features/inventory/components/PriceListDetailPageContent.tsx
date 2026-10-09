@@ -16,6 +16,7 @@ import {
   UbListItemText,
   UbMoneyInput,
   UbPageHeader,
+  UbPageHeaderMobileActions,
   UbPageShell,
   UbPageSkeleton,
   UbPressable,
@@ -198,6 +199,16 @@ export function PriceListDetailPageContent({ id }: Readonly<{ id: string }>): Re
       <UbPageHeader
         title={list.name}
         subtitle={priceRule(list.adjustPercent, t)}
+        /* docs/mobile-redesign (A3) — on a phone these actions are a worded ⋯ sheet. */
+        renderMobileActions={(actions) => (
+          <UbPageHeaderMobileActions
+            actions={actions}
+            mobile={{
+              menuLabel: t('common.action.moreActions'),
+              closeLabel: t('common.action.close'),
+            }}
+          />
+        )}
         actions={
           canWrite ? (
             <>

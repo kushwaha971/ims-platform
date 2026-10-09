@@ -7,15 +7,18 @@ import { type UseFormReturn } from 'react-hook-form';
 import {
   UbChoiceChips,
   UbDateInput,
+  UbDisclosure,
   UbField,
   UbGrid,
   UbSelect,
   UbStack,
   UbText,
   UbTextInput,
+  useIsMobileLayer,
 } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
 import type { Locale } from 'src/types/domain.types';
+import { formatBusinessDate } from 'src/utils/dates';
 
 import { ExpensePartyField } from '../../expenses/components/ExpensePartyField';
 import { GST_STATES } from '../../onboarding/constants/gstStates';
@@ -54,6 +57,7 @@ export function InvoicePartySection({
   kind?: 'invoice' | 'estimate' | 'sales_order' | 'delivery_challan';
 }>): React.JSX.Element {
   const { t } = useTranslation();
+  const isMobileLayer = useIsMobileLayer();
   const { watch, setValue } = form;
   const mode = watch('mode');
   const partyName = watch('partyName');
@@ -122,91 +126,112 @@ export function InvoicePartySection({
             />
           )}
         </UbField>
-      ) : (
-        <UbGrid columns={{ base: 1, sm: 2 }} gap={3}>
-          <UbField
-            name="walkInName"
-            label={t('sales.walkIn.name')}
-            placeholder={t('sales.walkIn.namePlaceholder')}
-          >
-            {(field) => <UbTextInput {...field} maxLength={120} disabled={disabled} />}
-          </UbField>
-          <UbField
-            name="walkInMobile"
-            label={t('sales.walkIn.mobile')}
-            placeholder={t('sales.walkIn.mobilePlaceholder')}
-          >
-            {(field) => (
-              <UbTextInput {...field} inputMode="tel" maxLength={13} disabled={disabled} />
+      ) : null}
+      {/* docs/mobile-redesign (A14) — on a phone the details that rarely change
+          (walk-in name and mobile, the dates, the place of supply) fold under
+          one line that says what they are, so the items come first. A desktop
+          renders them exactly as before. */}
+      {(() => {
+        const details = (
+          <>
+            {mode !== 'party' && (
+              <UbGrid columns={{ base: 1, sm: 2 }} gap={3}>
+                <UbField
+                  name="walkInName"
+                  label={t('sales.walkIn.name')}
+                  placeholder={t('sales.walkIn.namePlaceholder')}
+                >
+                  {(field) => <UbTextInput {...field} maxLength={120} disabled={disabled} />}
+                </UbField>
+                <UbField
+                  name="walkInMobile"
+                  label={t('sales.walkIn.mobile')}
+                  placeholder={t('sales.walkIn.mobilePlaceholder')}
+                >
+                  {(field) => (
+                    <UbTextInput {...field} inputMode="tel" maxLength={13} disabled={disabled} />
+                  )}
+                </UbField>
+              </UbGrid>
             )}
-          </UbField>
-        </UbGrid>
-      )}
-      <UbGrid columns={{ base: 1, sm: 3 }} gap={3}>
-        <UbField name="documentDate" label={t('sales.editor.date')}>
-          {(field) => (
-            <UbDateInput
-              id={field.id}
-              value={field.value as string}
-              onChange={(next) => field.onChange(next ?? today)}
-              max={today}
-              disabled={disabled}
-            />
-          )}
-        </UbField>
-        {kind === 'estimate' && (
-          <UbField
-            name="validUntil"
-            label={t('sales.estimate.validUntil')}
-            placeholder={t('sales.estimate.validUntilPlaceholder')}
+            <UbGrid columns={{ base: 1, sm: 3 }} gap={3}>
+              <UbField name="documentDate" label={t('sales.editor.date')}>
+                {(field) => (
+                  <UbDateInput
+                    id={field.id}
+                    value={field.value as string}
+                    onChange={(next) => field.onChange(next ?? today)}
+                    max={today}
+                    disabled={disabled}
+                  />
+                )}
+              </UbField>
+              {kind === 'estimate' && (
+                <UbField
+                  name="validUntil"
+                  label={t('sales.estimate.validUntil')}
+                  placeholder={t('sales.estimate.validUntilPlaceholder')}
+                >
+                  {(field) => (
+                    <UbDateInput
+                      id={field.id}
+                      value={(field.value as string) || null}
+                      onChange={(next) => field.onChange(next ?? '')}
+                      min={documentDate}
+                      placeholder={field.placeholder}
+                      disabled={disabled}
+                    />
+                  )}
+                </UbField>
+              )}
+              {kind === 'invoice' && mode === 'party' && (
+                <UbField
+                  name="dueOn"
+                  label={t('sales.editor.dueOn')}
+                  placeholder={t('sales.editor.dueOnPlaceholder')}
+                >
+                  {(field) => (
+                    <UbDateInput
+                      id={field.id}
+                      value={(field.value as string) || null}
+                      onChange={(next) => field.onChange(next ?? '')}
+                      min={documentDate}
+                      placeholder={field.placeholder}
+                      disabled={disabled}
+                    />
+                  )}
+                </UbField>
+              )}
+              <UbField name="placeOfSupplyState" label={t('sales.editor.pos')}>
+                {(field) => (
+                  <UbSelect
+                    id={field.id}
+                    aria-label={t('sales.editor.pos')}
+                    value={(field.value as string) || null}
+                    placeholder={t('sales.editor.posFromParty')}
+                    options={stateOptions}
+                    onChange={field.onChange}
+                    disabled={disabled}
+                  />
+                )}
+              </UbField>
+            </UbGrid>
+            <UbText variant="caption" tone="tertiary">
+              {interState ? t('sales.editor.interState') : t('sales.editor.intraState')}
+            </UbText>
+          </>
+        );
+        if (!isMobileLayer) return details;
+        const posLabel = stateOptions.find((option) => option.value === pos)?.label;
+        return (
+          <UbDisclosure
+            label={t('sales.editor.moreDetails')}
+            hint={[formatBusinessDate(documentDate), posLabel].filter(Boolean).join(' · ')}
           >
-            {(field) => (
-              <UbDateInput
-                id={field.id}
-                value={(field.value as string) || null}
-                onChange={(next) => field.onChange(next ?? '')}
-                min={documentDate}
-                placeholder={field.placeholder}
-                disabled={disabled}
-              />
-            )}
-          </UbField>
-        )}
-        {kind === 'invoice' && mode === 'party' && (
-          <UbField
-            name="dueOn"
-            label={t('sales.editor.dueOn')}
-            placeholder={t('sales.editor.dueOnPlaceholder')}
-          >
-            {(field) => (
-              <UbDateInput
-                id={field.id}
-                value={(field.value as string) || null}
-                onChange={(next) => field.onChange(next ?? '')}
-                min={documentDate}
-                placeholder={field.placeholder}
-                disabled={disabled}
-              />
-            )}
-          </UbField>
-        )}
-        <UbField name="placeOfSupplyState" label={t('sales.editor.pos')}>
-          {(field) => (
-            <UbSelect
-              id={field.id}
-              aria-label={t('sales.editor.pos')}
-              value={(field.value as string) || null}
-              placeholder={t('sales.editor.posFromParty')}
-              options={stateOptions}
-              onChange={field.onChange}
-              disabled={disabled}
-            />
-          )}
-        </UbField>
-      </UbGrid>
-      <UbText variant="caption" tone="tertiary">
-        {interState ? t('sales.editor.interState') : t('sales.editor.intraState')}
-      </UbText>
+            <UbStack gap={3}>{details}</UbStack>
+          </UbDisclosure>
+        );
+      })()}
     </UbStack>
   );
 }

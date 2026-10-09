@@ -62,6 +62,7 @@ const SCREENS = [
   ['items', '/items', true],
   ['invoices', '/sales/invoices', true],
   ['invoice-new', '/sales/invoices/new', false],
+  ['purchase-new', '/purchases/bills/new', false],
   ['estimates', '/sales/estimates', true],
   ['payments', '/payments', true],
   ['expenses', '/expenses', true],
@@ -110,6 +111,9 @@ for (const variant of VARIANTS) {
         const clipped = Array.from(document.querySelectorAll('main p, main span, main div, main h1, main h2, main h3, main a, main button, [data-ub-bottom-nav] span, header span'))
           .filter((n) => n.children.length === 0 && (n.textContent ?? '').trim())
           .filter((n) => !n.className.toString().includes('sr-only') && !n.closest('.sr-only'))
+          // `.ub-hit` widens a small control's tap area with an ::after that
+          // counts in scrollWidth; that overhang is not clipped text.
+          .filter((n) => !n.classList.contains('ub-hit'))
           .filter((n) => getComputedStyle(n).textOverflow !== 'ellipsis' && n.scrollWidth - n.clientWidth > 1)
           .map((n) => (n.textContent ?? '').trim().slice(0, 40))
           .slice(0, 5);
@@ -120,6 +124,11 @@ for (const variant of VARIANTS) {
       if (size.width < 1024 && m.navShown !== navExpected) failures.push(`${tag}: bottom nav ${m.navShown ? 'shown' : 'missing'}`);
       // The khata's pair is docked at the bottom on a phone and must not also
       // sit under the title: two visible "You gave" buttons is the defect.
+      // An editor's Save is docked under the total on a phone, not also in the header.
+      if (name.endsWith('-new') && size.width < 1024 && variant.locale === 'en') {
+        const save = await page.getByRole('button', { name: /^Save draft$/ }).filter({ visible: true }).count();
+        if (save !== 1) failures.push(`${tag}: ${save} visible "Save draft" buttons (want the docked one only)`);
+      }
       if (name === 'khata' && size.width < 1024 && variant.locale === 'en') {
         const gave = await page.getByRole('button', { name: /^You gave/ }).filter({ visible: true }).count();
         if (gave !== 1) failures.push(`${tag}: ${gave} visible "You gave" buttons (want the docked one only)`);

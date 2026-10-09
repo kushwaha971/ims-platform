@@ -92,7 +92,9 @@ async function diff(page, a, b) {
       const px = (img) => { const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const g = c.getContext('2d'); g.drawImage(img, 0, 0); return g.getImageData(0, 0, img.width, img.height).data; };
       const da = px(ia), db = px(ib);
       let n = 0;
-      for (let i = 0; i < da.length; i += 4) if (da[i] !== db[i] || da[i + 1] !== db[i + 1] || da[i + 2] !== db[i + 2]) n += 1;
+      // A channel moved by 1-2 levels at a rounded corner is rasteriser noise
+      // (seen on card corners between two builds); a moved control moves by far more.
+      for (let i = 0; i < da.length; i += 4) if (Math.max(Math.abs(da[i] - db[i]), Math.abs(da[i + 1] - db[i + 1]), Math.abs(da[i + 2] - db[i + 2])) > 2) n += 1;
       return n;
     },
     [toUrl(a), toUrl(b)]

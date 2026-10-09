@@ -153,6 +153,7 @@
   "sales.editor.intraState": "Intra-state supply — CGST + SGST",
   "sales.editor.issue": "Issue",
   "sales.editor.issuing": "Issuing…",
+  "sales.editor.moreDetails": "More details",
   "sales.editor.newTitle": "New {title}",
   "sales.editor.noTaxHint": "No GST is charged on this bill.",
   "sales.editor.party": "Party",

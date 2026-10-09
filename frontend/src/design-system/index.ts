@@ -55,6 +55,8 @@ export type { UbBottomBarElement, UbBottomBarProps } from './UbBottomBar';
 export { UbBottomNav } from './UbBottomNav';
 export type { UbBottomNavItem, UbBottomNavProps } from './UbBottomNav';
 export { UbMenuList } from './UbMenuList';
+export { UbTotalDock } from './UbTotalDock';
+export type { UbTotalDockProps } from './UbTotalDock';
 export { UbActionSheet, useUbActionPresentation } from './UbActionSheet';
 export type { UbActionPresentation, UbActionSheetProps } from './UbActionSheet';
 export type { UbMenuListProps, UbMenuListRow } from './UbMenuList';

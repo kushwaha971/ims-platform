@@ -18,12 +18,15 @@ import {
   UbPanel,
   UbStack,
   UbStatusBanner,
+  UbTotalDock,
+  useIsMobileLayer,
 } from 'src/design-system';
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { selectLocale } from 'src/redux/slice/localeSlice';
 import { selectActiveRole } from 'src/redux/slice/sessionSlice';
 import { ROUTES } from 'src/routes';
+import { formatInr } from 'src/utils/money';
 
 import { useDraftAutosave } from '../hooks/useDraftAutosave';
 import { useEditorWindowEffects } from '../hooks/useEditorWindowEffects';
@@ -97,6 +100,7 @@ export function InvoiceEditorPageContent({
   const context = server.context;
   const taxFree = context ? context.gstType !== 'regular' : false;
   const walkIn = values.mode === 'walkIn';
+  const isMobileLayer = useIsMobileLayer();
   const hasLines = preview.lines.length > 0 && values.lines.some((l) => l.itemId || l.description);
   const locked = server.issuing || !!server.issued;
   const creditBlocked = server.error?.code === 'credit_limit_exceeded';
@@ -187,6 +191,25 @@ export function InvoiceEditorPageContent({
       context.gstType
     )
   );
+  const issueLabel = t(
+    order
+      ? 'sales.order.confirm'
+      : challan
+        ? 'sales.challan.issue'
+        : estimate
+          ? 'sales.estimate.saveAndSend'
+          : 'sales.editor.issue'
+  );
+  const issueBusyLabel = t(
+    order
+      ? 'sales.order.confirming'
+      : challan
+        ? 'sales.challan.issuing'
+        : estimate
+          ? 'sales.estimate.sending'
+          : 'sales.editor.issuing'
+  );
+
   return (
     <UbPageShell>
       <UbPageHeader
@@ -219,6 +242,8 @@ export function InvoiceEditorPageContent({
               onClick={() => void save(false)}
               busy={server.saveState === 'saving'}
               disabled={locked}
+              /* The phone docks Save and Issue under the total (below). */
+              className="max-lg:hidden"
             >
               {t('sales.editor.saveDraft')}
             </UbButton>
@@ -227,27 +252,12 @@ export function InvoiceEditorPageContent({
               icon={<Send className="h-4 w-4" aria-hidden />}
               onClick={requestIssue}
               busy={server.issuing}
-              busyLabel={t(
-                order
-                  ? 'sales.order.confirming'
-                  : challan
-                    ? 'sales.challan.issuing'
-                    : estimate
-                      ? 'sales.estimate.sending'
-                      : 'sales.editor.issuing'
-              )}
+              busyLabel={issueBusyLabel}
               disabled={!hasLines || locked}
               data-testid="invoice-issue"
+              className="max-lg:hidden"
             >
-              {t(
-                order
-                  ? 'sales.order.confirm'
-                  : challan
-                    ? 'sales.challan.issue'
-                    : estimate
-                      ? 'sales.estimate.saveAndSend'
-                      : 'sales.editor.issue'
-              )}
+              {issueLabel}
             </UbButton>
           </>
         }
@@ -312,6 +322,34 @@ export function InvoiceEditorPageContent({
           />
         </UbGrid>
       </UbForm>
+
+      {/* docs/mobile-redesign (A14) — on a phone the total and the two ways to
+          finish are docked at the bottom, always in view while lines are
+          added; the header no longer carries them there. */}
+      {isMobileLayer && (
+        <UbTotalDock
+          data-testid="invoice-dock"
+          totalLabel={t('sales.totals.grand')}
+          total={formatInr(preview.grandTotal)}
+        >
+          <UbButton
+            variant="secondary"
+            onClick={() => void save(false)}
+            busy={server.saveState === 'saving'}
+            disabled={locked}
+          >
+            {t('sales.editor.saveDraft')}
+          </UbButton>
+          <UbButton
+            onClick={requestIssue}
+            busy={server.issuing}
+            busyLabel={issueBusyLabel}
+            disabled={!hasLines || locked}
+          >
+            {issueLabel}
+          </UbButton>
+        </UbTotalDock>
+      )}
 
       {paying && (
         <PaymentDrawerLazy

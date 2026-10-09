@@ -19,12 +19,15 @@ import {
   UbPanel,
   UbStack,
   UbText,
+  UbTotalDock,
+  useIsMobileLayer,
 } from 'src/design-system';
 import { useAppDispatch } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import { ROUTES } from 'src/routes';
 import { formatTimestamp } from 'src/utils/dates';
+import { formatInr } from 'src/utils/money';
 
 import { usePurchaseBillEditor } from '../hooks/usePurchaseBillEditor';
 import {
@@ -79,6 +82,7 @@ export function PurchaseBillEditorPageContent({
 
   const context = server.context;
   const hasLines = hasRecordableLines(values, preview);
+  const isMobileLayer = useIsMobileLayer();
   const locked = server.recording || !!server.recorded;
   const claimable = regular && values.itcEligible && !order;
 
@@ -196,6 +200,8 @@ export function PurchaseBillEditorPageContent({
               onClick={() => void save(false)}
               busy={server.saveState === 'saving'}
               disabled={locked}
+              /* The phone docks Save and Record under the total (below). */
+              className="max-lg:hidden"
             >
               {t('purchases.editor.saveDraft')}
             </UbButton>
@@ -207,6 +213,7 @@ export function PurchaseBillEditorPageContent({
               busyLabel={t(order ? 'purchases.order.sending' : 'purchases.editor.recording')}
               disabled={!hasLines || locked}
               data-testid="purchase-record"
+              className="max-lg:hidden"
             >
               {t(order ? 'purchases.order.send' : 'purchases.editor.record')}
             </UbButton>
@@ -247,6 +254,32 @@ export function PurchaseBillEditorPageContent({
         </UbGrid>
       </UbForm>
 
+      {/* docs/mobile-redesign (A14) — the total and the finishing actions,
+          docked on a phone (see UbTotalDock). */}
+      {isMobileLayer && (
+        <UbTotalDock
+          data-testid="purchase-dock"
+          totalLabel={t('purchases.totals.grand')}
+          total={formatInr(preview.grandTotal)}
+        >
+          <UbButton
+            variant="secondary"
+            onClick={() => void save(false)}
+            busy={server.saveState === 'saving'}
+            disabled={locked}
+          >
+            {t('purchases.editor.saveDraft')}
+          </UbButton>
+          <UbButton
+            onClick={() => void startRecord()}
+            busy={server.recording}
+            busyLabel={t(order ? 'purchases.order.sending' : 'purchases.editor.recording')}
+            disabled={!hasLines || locked}
+          >
+            {t(order ? 'purchases.order.send' : 'purchases.editor.record')}
+          </UbButton>
+        </UbTotalDock>
+      )}
       {paying && (
         <PaidNowDrawerLazy
           grandTotal={preview.grandTotal}

@@ -13,6 +13,7 @@ import {
   UbGrid,
   UbInfoRow,
   UbPageHeader,
+  UbPageHeaderMobileActions,
   UbPageShell,
   UbPageSkeleton,
   UbPanel,
@@ -189,6 +190,16 @@ export function ItemDetailPageContent({ id }: Readonly<{ id: string }>): React.J
       <UbPageHeader
         title={item.name}
         subtitle={[item.sku, item.category?.name].filter(Boolean).join(' · ')}
+        /* docs/mobile-redesign (A3) — on a phone these actions are a worded ⋯ sheet. */
+        renderMobileActions={(actions) => (
+          <UbPageHeaderMobileActions
+            actions={actions}
+            mobile={{
+              menuLabel: t('common.action.moreActions'),
+              closeLabel: t('common.action.close'),
+            }}
+          />
+        )}
         actions={
           <>
             {!archived && can.write && (

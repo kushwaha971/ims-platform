@@ -153,6 +153,7 @@
   "sales.editor.intraState": "राज्य के भीतर आपूर्ति — CGST + SGST",
   "sales.editor.issue": "बिल बनाएँ",
   "sales.editor.issuing": "बिल बन रहा है…",
+  "sales.editor.moreDetails": "और जानकारी",
   "sales.editor.newTitle": "नया {title}",
   "sales.editor.noTaxHint": "इस बिल पर GST नहीं लगता।",
   "sales.editor.party": "पार्टी",

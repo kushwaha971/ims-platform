@@ -11,6 +11,7 @@ import {
   UbEmptyState,
   UbLink,
   UbPageHeader,
+  UbPageHeaderMobileActions,
   UbPageShell,
   UbPageSkeleton,
   UbPanel,
@@ -114,6 +115,16 @@ export function InvoiceDetailPageContent({
             <UbStatusBadge tone={STATUS_TONE[doc.status]} label={t(`sales.status.${doc.status}`)} />
           </UbStack>
         }
+        /* docs/mobile-redesign (A3) — on a phone these actions are a worded ⋯ sheet. */
+        renderMobileActions={(actions) => (
+          <UbPageHeaderMobileActions
+            actions={actions}
+            mobile={{
+              menuLabel: t('common.action.moreActions'),
+              closeLabel: t('common.action.close'),
+            }}
+          />
+        )}
         actions={
           <>
             {invoice && draft && can('sales.invoice.write') && (
