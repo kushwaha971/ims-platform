@@ -37,12 +37,13 @@
  * Exits non-zero on any failure.
  */
 import { chromium } from 'playwright';
+import { BACKEND_DIR as LOCAL_BACKEND_DIR, PYTHON } from './lib/local.mjs';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, readFileSync } from 'node:fs';
 
 const FRONTEND = process.env.E2E_FRONTEND ?? 'http://localhost:3000';
 const BACKEND = process.env.E2E_BACKEND ?? 'http://localhost:8000/api/v1';
-const BACKEND_DIR = process.env.E2E_BACKEND_DIR ?? '/home/claude/repo/backend';
+const BACKEND_DIR = LOCAL_BACKEND_DIR;
 const SHOT_DIR = `${process.env.E2E_SHOTS ?? '/tmp/e2e-shots'}/aging`;
 const EXPORT_LIMIT = Number(process.env.E2E_EXPORT_LIMIT ?? 10); // UB_RATE_LIMIT_EXPORT, 10/hour
 const wantShots = process.argv.includes('--shots');
@@ -283,7 +284,9 @@ const readTiles = (page) =>
   page.evaluate((labels) => {
     const out = {};
     for (const [bucket, label] of Object.entries(labels)) {
-      const el = [...document.querySelectorAll('[data-testid="aging-screen"] span')].find(
+      // `dt` too: the figures collapse to a summary line (UbStatSummary, a
+      // `dl`) unless the merchant opened the cards, and the label is a `dt` there.
+      const el = [...document.querySelectorAll('[data-testid="aging-screen"] span, [data-testid="aging-screen"] dt')].find(
         (s) => s.textContent.trim() === label && !s.closest('table, th, [data-testid="ub-grid-card"]')
       );
       let node = el;
@@ -497,7 +500,7 @@ const main = async () => {
       `rows = AuditLog.objects.filter(action="ledger.aging.exported", actor__email=${JSON.stringify(OWNER.email)}).order_by("created_at")`,
       'print(json.dumps([dict(entity_type=r.entity_type, tenant=str(r.tenant_id), metadata=r.metadata) for r in rows]))',
     ].join('\n');
-    const out = execFileSync('python3', ['manage.py', 'shell', '-c', code], {
+    const out = execFileSync(PYTHON, ['manage.py', 'shell', '-c', code], {
       cwd: BACKEND_DIR, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 60000,
     });
     const rows = JSON.parse(out.trim().split('\n').pop());

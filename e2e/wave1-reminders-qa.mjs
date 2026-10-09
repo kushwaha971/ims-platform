@@ -6,6 +6,7 @@
  * Env: E2E_FRONTEND, E2E_BACKEND, E2E_SHOTS (default /tmp/e2e-shots/wave1/reminders-expenses)
  */
 import { chromium } from 'playwright';
+import { PYTHON, psql as localPsql } from './lib/local.mjs';
 import { mkdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { newOwner, addParty, api, must, uniq, uniqMobile, PASSWORD } from './lib/fixtures.mjs';
@@ -20,8 +21,8 @@ const record = (id, check, ok, detail = '') => {
   results.push({ id, check, ok, detail });
   console.log(`${ok ? 'ok  ' : 'FAIL'} [${id}] ${check}${detail ? ` — ${String(detail).slice(0, 300)}` : ''}`);
 };
-const psql = (sql) => execFileSync('psql', ['-h', '127.0.0.1', '-U', 'udhaarbook', 'udhaarbook', '-tAq', '-c', sql], { env: { ...process.env, PGPASSWORD: 'udhaarbook' } }).toString().trim();
-const djangoShell = (code) => execFileSync('python3', ['manage.py', 'shell', '-c', code], { cwd: BACKEND_DIR }).toString().trim();
+const psql = localPsql;
+const djangoShell = (code) => execFileSync(PYTHON, ['manage.py', 'shell', '-c', code], { cwd: BACKEND_DIR }).toString().trim();
 const ist = (n = 0) => new Date(Date.now() + n * 86400000 + 5.5 * 3600000).toISOString().slice(0, 10);
 const SIZES = [{ id: 'phone', width: 390, height: 844 }, { id: 'desktop', width: 1280, height: 860 }];
 const shot = async (page, size, name, full = false) => page.screenshot({ path: `${SHOTS}/${size}/${name}.png`, fullPage: full }).catch((e) => console.log('shot fail', name, e.message));

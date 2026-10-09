@@ -89,7 +89,7 @@ async function exerciseField(page, field, where, id = 'H1') {
   for (const v of VARIANTS) {
     await field.fill('');
     await page.evaluate((t) => navigator.clipboard.writeText(t), v);
-    await field.focus(); await page.keyboard.press('Control+V'); await page.waitForTimeout(150);
+    await field.focus(); await page.keyboard.press('ControlOrMeta+V'); await page.waitForTimeout(150);
     pasteOut.push([v, await field.inputValue()]);
     await field.fill(''); await field.fill(v); await page.waitForTimeout(100);
     fillOut.push([v, await field.inputValue()]);
@@ -117,7 +117,7 @@ async function phaseP(browser) {
     const mob = dlg.locator('input[type="tel"]').first();
     const unique = `9${String(Date.now()).slice(-9)}`;
     await page.evaluate((t) => navigator.clipboard.writeText(t), `+91 ${unique.slice(0, 5)} ${unique.slice(5)}`);
-    await mob.fill(''); await mob.focus(); await page.keyboard.press('Control+V'); await page.waitForTimeout(200);
+    await mob.fill(''); await mob.focus(); await page.keyboard.press('ControlOrMeta+V'); await page.waitForTimeout(200);
     let body = null;
     page.on('request', (r) => { if (/\/api\/v1\/parties$/.test(r.url()) && r.method() === 'POST') body = r.postData(); });
     await dlg.getByRole('button', { name: /Save party/ }).click(); await page.waitForTimeout(2500);

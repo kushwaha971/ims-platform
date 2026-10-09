@@ -586,15 +586,23 @@ async function phaseL(browser) {
   // ── D-L7: Clear filters visible at 360 without scrolling the chip strip; follows chips on desktop ──
   for (const vp of [PHONE, PHONE2, DESK]) {
     const { ctx, page } = await open(vp);
-    await page.goto(`${FE}/parties`, { waitUntil: 'networkidle' }); await page.waitForTimeout(1500);
-    await page.getByRole('button', { name: 'Owes me' }).first().click(); await page.waitForTimeout(900);
-    await page.getByRole('button', { name: 'Customers', exact: true }).first().click(); await page.waitForTimeout(1200);
+    // The balance and type chips became filter selects (owner, 6 Oct 2026) and
+    // the list's filters live in the address bar (PTY-05), so the two filters
+    // this check needs are applied the way a shared link would apply them.
+    await page.goto(`${FE}/parties?balance=owes_me&type=customer`, { waitUntil: 'networkidle' }); await page.waitForTimeout(1500);
     const clear = page.getByRole('button', { name: /Clear filters/ }).first();
     const bb = await clear.boundingBox();
     const label = await clear.innerText().catch(() => '');
     const sw = await page.evaluate(() => document.documentElement.scrollWidth);
     const chipBoxes = await page.evaluate(() => [...document.querySelectorAll('[aria-pressed="true"]')].map((b) => { const r = b.getBoundingClientRect(); return { t: b.textContent.trim(), right: Math.round(r.right) }; }));
-    const lastChip = await page.evaluate(() => { const g = [...document.querySelectorAll('[role="group"] button')]; const r = g.at(-1)?.getBoundingClientRect(); return r ? Math.round(r.right) : null; });
+    // The applied filters are pills now (owner, 6 Oct 2026), not a chip group:
+    // the last one is the right-most pressed pill.
+    const lastChip = await clear.evaluate((el) => {
+      let node = el;
+      while (node && !node.previousElementSibling) node = node.parentElement;
+      const r = node?.previousElementSibling?.getBoundingClientRect();
+      return r ? Math.round(r.right) : null;
+    }).catch(() => null);
     await page.screenshot({ path: `${SHOTS}/${vp.width < 768 ? 'phone' : 'desktop'}/partylist-filters-clear-${vp.width}.png` });
     const inView = bb && bb.x >= 0 && bb.x + bb.width <= vp.width && bb.y >= 0 && bb.y + bb.height <= vp.height;
     if (vp.width < 768) record('D-L7', `${vp.width}: "${label}" fully on screen without scrolling the chip strip; no page overflow`, Boolean(inView) && /\(2\)/.test(label) && sw <= vp.width, `box=${JSON.stringify(bb)} scrollWidth=${sw} pressed=${JSON.stringify(chipBoxes)}`);

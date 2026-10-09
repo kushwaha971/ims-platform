@@ -39,6 +39,7 @@
  * Exits non-zero on any failure.
  */
 import { chromium } from 'playwright';
+import { BACKEND_DIR as LOCAL_BACKEND_DIR, PYTHON } from './lib/local.mjs';
 import { mkdirSync, writeFileSync } from 'node:fs';
 
 const FRONTEND = process.env.E2E_FRONTEND ?? 'http://localhost:3000';
@@ -127,7 +128,7 @@ const today = () => new Date().toISOString().slice(0, 10);
 const setCreditMode = async (mode, partyId) => {
   const { execFileSync } = await import('node:child_process');
   execFileSync(
-    'python',
+    PYTHON,
     [
       'manage.py',
       'shell',
@@ -139,7 +140,7 @@ const setCreditMode = async (mode, partyId) => {
         "key='ledger.credit_limit_mode', defaults={'value': {'mode': '" + mode + "'}})",
     ],
     {
-      cwd: '/home/claude/repo/backend',
+      cwd: LOCAL_BACKEND_DIR,
       env: { ...process.env, DJANGO_SETTINGS_MODULE: 'config.settings.local' },
     }
   );

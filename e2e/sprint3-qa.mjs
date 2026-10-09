@@ -41,20 +41,23 @@
  * lacks it and there is no API for overrides).
  */
 import { chromium } from 'playwright';
+import { BACKEND_DIR as LOCAL_BACKEND_DIR, PYTHON, psql as localPsql } from './lib/local.mjs';
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 
 const FRONTEND = process.env.E2E_FRONTEND ?? 'http://localhost:3000';
 const BACKEND = process.env.E2E_BACKEND ?? 'http://localhost:8000/api/v1';
-const BACKEND_DIR = '/home/claude/repo/backend';
+const BACKEND_DIR = LOCAL_BACKEND_DIR;
 // Every path below can be pointed elsewhere, which is what lets
 // `run-regression.mjs` run each phase in its own directory, against its own
 // freshly seeded accounts, concurrently with every other phase. The defaults
 // are the historical single-run locations.
 const SHOT_ROOT = process.env.E2E_SPRINT3_DIR ?? '/tmp/e2e-shots/sprint3-qa';
 const STATE_FILE = `${SHOT_ROOT}/state.json`;
-const BE_LOG = process.env.E2E_BE_LOG ?? '/tmp/claude-0/be-run.log';
-const FE_LOG = process.env.E2E_FE_LOG ?? '/tmp/claude-0/fe-run.log';
+// The serve scripts write their logs to $UB_E2E_LOGS (default /tmp/claude-0); read them from there.
+const LOG_DIR = process.env.UB_E2E_LOGS ?? '/tmp/claude-0';
+const BE_LOG = process.env.E2E_BE_LOG ?? `${LOG_DIR}/be-run.log`;
+const FE_LOG = process.env.E2E_FE_LOG ?? `${LOG_DIR}/fe-run.log`;
 
 const argOnly = process.argv.find((a) => a.startsWith('--only='));
 const PHASES = argOnly ? argOnly.slice(7).split(',') : ['A', 'B', 'C'];
@@ -114,12 +117,9 @@ const must = async (...args) => {
   if (r.status >= 400) throw new Error(`${args[0]} ${args[1]} ${r.status}: ${JSON.stringify(r.body)}`);
   return r;
 };
-const psql = (sql) =>
-  execFileSync('psql', ['-h', '127.0.0.1', '-U', 'udhaarbook', 'udhaarbook', '-tAq', '-c', sql], {
-    env: { ...process.env, PGPASSWORD: 'udhaarbook' },
-  }).toString().trim();
+const psql = localPsql;
 const djangoShell = (code) =>
-  execFileSync('python3', ['manage.py', 'shell', '-c', code], { cwd: BACKEND_DIR }).toString().trim();
+  execFileSync(PYTHON, ['manage.py', 'shell', '-c', code], { cwd: BACKEND_DIR }).toString().trim();
 
 const daysAgo = (n) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
 const todayIst = () => {
@@ -1312,8 +1312,10 @@ async function phaseR(browser, state) {
       note(`${size.id}: error-state id=${shown} (labelled "Reference": ${labelled}); snackbar id=${snackId} belongs to ${JSON.stringify(sent.find((x) => x.id === snackId) ?? 'no /parties* request')}; all /parties* requests: ${JSON.stringify(sent)}`);
       const listReqs = sent.filter((s) => /^\/parties(\?|$)/.test(s.url) && s.method === 'GET');
       const last = listReqs[listReqs.length - 1];
-      record('D2', `${size.id}: the network-failure error state shows a reference`, Boolean(shown), errText.replace(/\n/g, ' | ').slice(0, 300));
-      record('D2', `${size.id}: the reference EQUALS the X-Request-Id the failed list request carried`, Boolean(shown) && shown === last?.id,
+      // Owner, 7 Oct 2026: no error shows a "Reference <id>" line. The id is
+      // still sent (and logged) for support; the screen no longer prints it.
+      record('D2', `${size.id}: the network-failure error state shows NO reference line (owner, 7 Oct)`, !shown && !labelled, errText.replace(/\n/g, ' | ').slice(0, 300));
+      record('D2', `${size.id}: the failed list request still carried an X-Request-Id`, Boolean(last?.id),
         `shown=${shown} lastListRequest=${JSON.stringify(last)} allListRequests=${JSON.stringify(listReqs.map((s) => s.id))}`);
       await ctx.close();
     }
@@ -1696,7 +1698,7 @@ async function phaseN1(browser, state) {
   // /onboarding by design. R1's "Retest Budget Stores" finished onboarding.
   const tenantA = { email: rt.R1.email, password: RT_PASSWORD, shop: 'Retest Budget Stores' };
   // /dashboard is a redirect to /parties until RPT-01 (app/(app)/dashboard/page.tsx).
-  const landed = (u) => ['/dashboard', '/parties'].includes(new URL(u).pathname);
+  const landed = (u) => ['/dashboard', '/parties', '/customers'].includes(new URL(u).pathname);
   for (const size of [DESKTOP, PHONE]) {
     const ctx = await browser.newContext({ viewport: { width: size.width, height: size.height } });
     let armed = false; const leaks = []; const snacks = []; let docLoads = 0; const docUrls = [];
@@ -1732,8 +1734,9 @@ async function phaseN1(browser, state) {
     await ctx.clearCookies({ name: 'ub_refresh' });
     const l0 = docLoads; const v0 = navs.length; const n0 = net.length;
     // Customers link (Dashboard was removed from the sidebar in the UAT-fix
-    // batch) — on the phone it sits in the navigation drawer.
-    let dash = page.getByRole('link', { name: /^Customers/ }).filter({ visible: true });
+    // batch) — on a phone it is the Parties tab of the bottom nav
+    // (docs/mobile-redesign), which replaced the navigation drawer.
+    let dash = page.getByRole('link', { name: /^(Customers|Parties)/ }).filter({ visible: true });
     if ((await dash.count()) === 0) {
       const menu = page.getByRole('button', { name: /menu|navigation/i }).first();
       if (await menu.count()) { await menu.click(); await page.waitForTimeout(600); }
@@ -1745,7 +1748,8 @@ async function phaseN1(browser, state) {
     await page.waitForTimeout(2500);
     const loginUrl = page.url().replace(FRONTEND, '');
     await page.screenshot({ path: nShot(size.id, 'N1-1-login-after-expiry') });
-    record('N1', `${size.id}: cookies deleted, Customers click → /login?next=%2Fparties in the same runtime`, loginUrl === '/login?next=%2Fparties' && docLoads === l0, `${loginUrl} docLoads+${docLoads - l0} navs=${JSON.stringify(navs.slice(v0))}`);
+    // Customers lives at /customers since step 3b (Customers and Suppliers apart).
+    record('N1', `${size.id}: cookies deleted, Customers click → /login?next=%2Fcustomers in the same runtime`, loginUrl === '/login?next=%2Fcustomers' && docLoads === l0, `${loginUrl} docLoads+${docLoads - l0} navs=${JSON.stringify(navs.slice(v0))}`);
     // One sign-in as tenant A, slowed tenant reads so any stale frame is held on screen.
     await ctx.route(/\/api\/v1\/(ledger\/summary|ledger\/aging|parties(\?|$))/, async (route) => { await sleep(1500); await route.continue(); });
     const l1 = docLoads; const v1 = navs.length; const n1 = net.length;
@@ -2218,8 +2222,10 @@ async function phaseF1(browser, state) {
     const label = hi ? 'संदर्भ' : 'Reference';
     const last = aborted[aborted.length - 1]?.id;
     const mm = shown?.match(/^(\S+)\s+([0-9a-f-]{36})$/i);
-    record('F1', `${tag}: list error reads "${label} <uuid>" and the uuid is the aborted request's X-Request-Id`,
-      Boolean(mm) && mm[1] === label && mm[2] === last,
+    // Owner, 7 Oct 2026: no "Reference <id>" line on any error; the aborted
+    // request still carries its X-Request-Id for the logs.
+    record('F1', `${tag}: list error shows no "${label}" line, and the aborted request carried an X-Request-Id`,
+      !mm && !mainText.includes(`${label} `) && Boolean(last),
       `shown="${shown}" aborted=${JSON.stringify(aborted.map((a) => a.id))} (last ${last}) main="${mainText.slice(0, 220)}"`);
     await ctx.close();
   }
@@ -2256,7 +2262,8 @@ async function phaseF1(browser, state) {
     await page.waitForTimeout(400);
     const all = await page.locator('[data-testid="request-id"]').allInnerTexts();
     await page.screenshot({ path: fShot(dir, 'F1-server-error-snackbar') });
-    record('F1', `${size.id}: the server-error snackbar reads "Reference <id>" with the request's X-Request-Id`, all.some((t) => t.trim() === `Reference ${sentId}`), `request-id nodes=${JSON.stringify(all)} sent=${sentId}`);
+    // Owner, 7 Oct 2026: the snackbar shows no "Reference <id>"; the request still carries it.
+    record('F1', `${size.id}: the server-error snackbar shows no "Reference" line, and the request carried an X-Request-Id`, all.length === 0 && Boolean(sentId), `request-id nodes=${JSON.stringify(all)} sent=${sentId}`);
     await page.keyboard.press('Escape').catch(() => {});
     await ctx.close();
   }
@@ -2566,8 +2573,10 @@ async function phaseF3(browser, state) {
     armed = true;
     const d1 = docs.length; const v1 = navs.length;
     const how = W.w < 1024 ? 'logo' : 'sidebar Customers link';
-    if (W.w < 1024) await page.getByRole('link', { name: /go to Dashboard/i }).first().click();
-    else await page.locator('nav a[href="/parties"]').first().click();
+    // The logo's name is "<app> — go to home" now, and Customers lives at
+    // /customers since step 3b (Customers and Suppliers apart).
+    if (W.w < 1024) await page.getByRole('link', { name: /go to (home|Dashboard)/i }).first().click();
+    else await page.locator('nav a[href="/customers"]').first().click();
     await page.waitForURL((u) => u.pathname.startsWith('/login'), { timeout: 30000 }).catch(() => {});
     await page.waitForTimeout(1500);
     const loginUrl = page.url().replace(FRONTEND, '');
@@ -2586,15 +2595,17 @@ async function phaseF3(browser, state) {
     // The phone path now goes through the logo, which is "Go to Dashboard" (the
     // landing page is /dashboard), so A may land on either of A's own pages.
     record('F3', `${tag}: ONE submit as A lands on A's /parties or /dashboard — exactly one document load, never back to /login`,
-      ['/parties', '/dashboard'].includes(new URL(page.url()).pathname) && me.email === A.email && shopA > 0 && docs.slice(d2).length === 1 && !docs.slice(d2)[0].startsWith('/login') && !afterNavs.slice(1).some((u) => u.startsWith('/login')),
+      ['/parties', '/customers', '/dashboard'].includes(new URL(page.url()).pathname) && me.email === A.email && shopA > 0 && docs.slice(d2).length === 1 && !docs.slice(d2)[0].startsWith('/login') && !afterNavs.slice(1).some((u) => u.startsWith('/login')),
       `url=${page.url().replace(FRONTEND, '')} me=${me.email} shopA=${shopA} docs=${JSON.stringify(docs.slice(d2))} navs=${JSON.stringify(afterNavs)}`);
     record('F3', `${tag}: B's shop name / parties never rendered after expiry`, leaks.length === 0, JSON.stringify(leaks.slice(0, 3)));
 
     // 4. Logo (or the sidebar Customers link — Dashboard left the sidebar in
     //    the UAT-fix batch) afterwards stays signed in.
     const v3 = navs.length;
-    if (W.w < 1024) await page.getByRole('link', { name: /go to Dashboard/i }).first().click();
-    else await page.locator('nav a[href="/parties"]').first().click();
+    // The logo's name is "<app> — go to home" now, and Customers lives at
+    // /customers since step 3b (Customers and Suppliers apart).
+    if (W.w < 1024) await page.getByRole('link', { name: /go to (home|Dashboard)/i }).first().click();
+    else await page.locator('nav a[href="/customers"]').first().click();
     await page.waitForTimeout(3000);
     const me2 = await whoAmI(page);
     await page.screenshot({ path: fShot(W.dir, `F3-${tag}-3-logo-after`) });

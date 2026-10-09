@@ -37,6 +37,7 @@
  * Exits non-zero on any failure.
  */
 import { chromium } from 'playwright';
+import { BACKEND_DIR as LOCAL_BACKEND_DIR, PYTHON } from './lib/local.mjs';
 import { mkdirSync, writeFileSync } from 'node:fs';
 
 const FRONTEND = process.env.E2E_FRONTEND ?? 'http://localhost:3000';
@@ -577,14 +578,14 @@ async function run() {
     )
     .join('\n');
   execFileSync(
-    'python',
+    PYTHON,
     [
       'manage.py',
       'shell',
       '-c',
       `from decimal import Decimal\nfrom apps.parties.models import Party\n${script}`,
     ],
-    { cwd: '/home/claude/repo/backend', env: { ...process.env, DJANGO_SETTINGS_MODULE: 'config.settings.local' } }
+    { cwd: LOCAL_BACKEND_DIR, env: { ...process.env, DJANGO_SETTINGS_MODULE: 'config.settings.local' } }
   );
 
   const browser = await chromium.launch();
