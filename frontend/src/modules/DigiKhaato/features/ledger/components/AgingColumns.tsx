@@ -127,6 +127,10 @@ export const createAgingColumns = ({
            half of the line that answers the report's question. */
         if (isCards) {
           const oldest = oldestBucket(row.amounts);
+          // The whole balance in one bucket: the amount is already the row's
+          // figure on the right, so the line says only how old it is (audit
+          // A16 — "₹4,150.00 · 31–60 days" beside "₹4,150.00").
+          if (oldest && oldest.amount === row.amounts.total) return bucketLabel(oldest.bucket);
           return oldest
             ? t('ledger.aging.oldest', {
                 amount: formatInr(oldest.amount),

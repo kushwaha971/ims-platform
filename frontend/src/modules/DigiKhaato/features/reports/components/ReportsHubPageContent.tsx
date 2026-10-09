@@ -86,7 +86,14 @@ export function ReportsHubPageContent(): React.JSX.Element {
                 aria-label={t(`reports.shell.hub.group.${group}`)}
               >
                 <UbSectionHeading title={t(`reports.shell.hub.group.${group}`)} />
-                <UbGrid columns={{ base: 1, md: 2, lg: 3 }} gap={3}>
+                {/* docs/mobile-redesign (A17) — on a phone a group is one list of
+                    rows in a single bordered card, not a stack of cards with
+                    underlined links; a desktop keeps its grid of cards. */}
+                <UbGrid
+                  columns={{ base: 1, md: 2, lg: 3 }}
+                  gap={3}
+                  className="max-lg:gap-0 max-lg:overflow-hidden max-lg:rounded-card max-lg:border max-lg:border-border-hairline"
+                >
                   {entries.map((entry) => {
                     const Icon = ICONS[entry.icon];
                     return (
@@ -94,14 +101,18 @@ export function ReportsHubPageContent(): React.JSX.Element {
                       // is one: the title link's `::after` covers the card (a
                       // stretched link). It was an 18 px line of text inside a
                       // 90 px card that did nothing when tapped (Sprint 12, R-A-3).
-                      <UbCard key={entry.key} padded className="relative">
+                      <UbCard
+                        key={entry.key}
+                        padded
+                        className="relative max-lg:rounded-none max-lg:border-x-0 max-lg:border-t-0 max-lg:last:border-b-0"
+                      >
                         <UbStack direction="row" align="start" className="gap-3">
                           <Icon className="mt-0.5 h-5 w-5 shrink-0 text-text-accent" aria-hidden />
                           <UbStack gap={1} className="min-w-0 flex-1">
                             <UbLink
                               href={entry.href}
                               variant="body-medium"
-                              className="after:absolute after:inset-0 after:rounded-card after:content-['']"
+                              className="after:absolute after:inset-0 after:rounded-card after:content-[''] max-lg:no-underline"
                             >
                               {t(`reports.shell.hub.${entry.key}.title`)}
                             </UbLink>

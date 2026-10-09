@@ -75,7 +75,7 @@ function UbHeroPairBase({
           </span>
           <span
             className={cn(
-              'ds-num truncate text-[24px] font-semibold leading-[30px]',
+              'ds-num truncate text-[24px] font-semibold leading-9',
               TONE_TEXT[figure.tone ?? 'default']
             )}
           >
