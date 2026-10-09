@@ -9,4 +9,9 @@ add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" alway
 add_header X-Content-Type-Options "nosniff" always;
 add_header X-Frame-Options "DENY" always;                  # OEM embedding (P3) needs a per-partner CSP frame-ancestors
 add_header Permissions-Policy "camera=(self), microphone=(), geolocation=(), payment=()" always;
-add_header Content-Security-Policy "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
+# script-src needs 'unsafe-inline': Next.js starts every page with inline
+# scripts (the RSC payload and the theme/locale boot scripts), and with
+# `script-src 'self'` alone the login form never became usable — nobody could
+# sign in (production-readiness audit, 9 Oct 2026; e2e/csp.mjs loads the app
+# under this exact policy). External scripts are still refused.
+add_header Content-Security-Policy "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;

@@ -121,6 +121,8 @@ const JOBS = [
   // Harnesses that always seeded themselves.
   plain('journey', 90, { quick: true, quickArgs: ['--viewport', 'laptop'] }),
   plain('parties', 60, { quick: true }),
+  // The app under nginx's production CSP (nginx/conf.d/security-headers.inc).
+  plain('csp', 60, { quick: true }),
   plain('credit', 120, { quick: true }),
   plain('tags', 120),
   plain('aging', 120, { quick: true }),

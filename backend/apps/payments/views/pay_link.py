@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import Any
 
 from rest_framework import serializers
@@ -24,7 +25,7 @@ from apps.payments.services.pay_link import make_pay_link, resolve_pay_link
 
 
 class PayLinkSerializer(serializers.Serializer):
-    amount = serializers.DecimalField(max_digits=14, decimal_places=2, min_value=0.01)
+    amount = serializers.DecimalField(max_digits=14, decimal_places=2, min_value=Decimal('0.01'))
     reference = serializers.CharField(required=False, allow_blank=True, max_length=40)
 
 
