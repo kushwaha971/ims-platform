@@ -97,7 +97,7 @@ for (const [size, viewport] of [['desktop', { width: 1280, height: 860 }], ['pho
   await look('pay-expired');
 
   // The desk's QR on the loan page.
-  await page.goto(`${FE}/login`, { waitUntil: 'networkidle', timeout: 120000 });
+  await page.goto(`${FE}/login/email`, { waitUntil: 'networkidle', timeout: 120000 });
   await page.fill('input[type="email"]', email);
   await page.fill('input[type="password"]', PASSWORD);
   await page.click('button[type="submit"]');

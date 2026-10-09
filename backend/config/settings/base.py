@@ -241,16 +241,19 @@ REST_FRAMEWORK = {
 UB_INVITATION_DAYS = env.int("UB_INVITATION_DAYS", 7)
 
 UB_ACCESS_TOKEN_MINUTES = env.int("UB_ACCESS_TOKEN_MINUTES", 15)
-UB_REFRESH_TOKEN_DAYS = env.int("UB_REFRESH_TOKEN_DAYS", 30)
-# DEC-010: identity at MVP is email + password. Mobile OTP, the SMS adapters and
-# everything that needs a telecom provider sit behind this flag, which is off.
-# With it off the OTP routes are not registered at all, so they 404, and no
-# module on the default path imports the OTP service.
-UB_AUTH_OTP_ENABLED = env.bool("UB_AUTH_OTP_ENABLED", False)
+# Stay signed in "just like other mobile apps" (owner, 9 Oct 2026): every
+# refresh rotates the token and restarts this clock, so a session ends only on
+# sign-out or after this many days WITHOUT opening the app — on a phone and on
+# a desktop alike.
+UB_REFRESH_TOKEN_DAYS = env.int("UB_REFRESH_TOKEN_DAYS", 90)
+# Owner, 9 Oct 2026 — sign-up and sign-in are mobile number + OTP, and this
+# reverses DEC-010's email + password. The routes were retired behind this flag
+# with their service and tests intact; they are on by default now.
+UB_AUTH_OTP_ENABLED = env.bool("UB_AUTH_OTP_ENABLED", True)
 
-# The OTP settings below are read only when that flag is on.
 UB_OTP_PEPPER = env.str("UB_OTP_PEPPER", "dev-otp-pepper")
-UB_OTP_TTL_SECONDS = env.int("UB_OTP_TTL_SECONDS", 300)
+# Ten minutes: a code that arrives late on a weak network must still work.
+UB_OTP_TTL_SECONDS = env.int("UB_OTP_TTL_SECONDS", 600)
 UB_OTP_MAX_ATTEMPTS = env.int("UB_OTP_MAX_ATTEMPTS", 5)
 
 # Password reset: single-use, 15-minute, hashed at rest (Part 27 §27.4.2).
@@ -349,7 +352,19 @@ UB_SCHEDULER_BATCH = env.int("UB_SCHEDULER_BATCH", 50)
 UB_SCHEDULER_ENQUEUE_LOCK_ID = env.int("UB_SCHEDULER_ENQUEUE_LOCK_ID", 918273645)
 
 # ── Integrations (ADR-015/016) ───────────────────────────────────────────────
-UB_SMS_BACKEND = env.str("UB_SMS_BACKEND", "apps.common.integrations.sms.console.ConsoleSmsBackend")
+# Fast2SMS (owner, 9 Oct 2026). With a key the sign-in OTP is sent by SMS; with
+# none it is printed in the server log (the console backend), which is how a
+# local run works without paying for a message.
+UB_FAST2SMS_API_KEY = env.str("UB_FAST2SMS_API_KEY", "")
+# Reminders and other non-OTP texts cost per message and need DLT; off unless asked.
+UB_FAST2SMS_ALLOW_QUICK = env.bool("UB_FAST2SMS_ALLOW_QUICK", False)
+# An EMPTY value follows the key too: docker-compose passes `${UB_SMS_BACKEND:-}`,
+# and an empty path would resolve to no backend, so no code would go anywhere.
+UB_SMS_BACKEND = env.str("UB_SMS_BACKEND", "") or (
+    "apps.common.integrations.sms.fast2sms.Fast2SmsBackend"
+    if UB_FAST2SMS_API_KEY
+    else "apps.common.integrations.sms.console.ConsoleSmsBackend"
+)
 UB_SMS_SENDER_ID = env.str("UB_SMS_SENDER_ID", "UDHAAR")
 UB_WHATSAPP_BACKEND = env.str(
     "UB_WHATSAPP_BACKEND", "apps.common.integrations.whatsapp.deep_link.WaMeBackend"

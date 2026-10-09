@@ -63,7 +63,7 @@ const page = await ctx.newPage();
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 await page.addInitScript(() => { window.print = () => { window.__printed = (window.__printed ?? 0) + 1; }; });
-await page.goto(`${FE}/login`, { waitUntil: 'networkidle', timeout: 120000 });
+await page.goto(`${FE}/login/email`, { waitUntil: 'networkidle', timeout: 120000 });
 await page.fill('input[type="email"]', email);
 await page.fill('input[type="password"]', PASSWORD);
 await page.click('button[type="submit"]');

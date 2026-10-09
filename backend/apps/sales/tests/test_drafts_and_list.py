@@ -84,6 +84,17 @@ def test_future_date_and_bad_mobile_are_refused_even_on_a_draft(owner: Any) -> N
     assert "document_date" in details and "walk_in_mobile" in details
 
 
+def test_a_walk_in_mobile_from_another_country_is_kept_in_e164(owner: Any) -> None:
+    """The walk-in field is the country picker now; a UK number must save, and
+    a bare Indian one is still stored in the one spelling the rest of the app
+    uses. It used to be refused unless it was ten Indian digits."""
+    foreign = draft(owner, walk_in_name="Visitor", walk_in_mobile="+44 7911 123456")
+    assert foreign.status_code == 201, foreign.json()
+    assert foreign.json()["data"]["walk_in_mobile"] == "+447911123456"
+    indian = draft(owner, walk_in_name="Local", walk_in_mobile="98765 43210")
+    assert indian.json()["data"]["walk_in_mobile"] == "+919876543210"
+
+
 def _issued(owner: Any, item: Any, party: Any = None, **body: Any) -> dict:
     extra = {"party_id": str(party.id)} if party else {}
     doc = draft(owner, lines=[line(item)], **extra, **body).json()["data"]

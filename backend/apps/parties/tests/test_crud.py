@@ -546,3 +546,24 @@ def test_the_edit_path_has_the_same_savepoint(tenant: Any, api_as: Any) -> None:
 
     assert response.status_code == 400
     assert "mobile" in response.json()["error"]["details"]
+
+
+@pytest.mark.parametrize("mobile", ["+447911123456", "+6581234567", "+6831234"])
+def test_a_party_may_have_another_countrys_mobile(tenant: Any, api_as: Any, mobile: str) -> None:
+    """Owner, 9 Oct 2026: the mobile field defaults to India and lets the
+    merchant pick another country. Singapore's eight digits and Niue's four
+    were refused before, because the rule wanted ten digits after the plus."""
+    client, _ = api_as(tenant)
+    response = _create(client, name=f"Overseas {mobile}", mobile=mobile)
+    assert response.status_code == 201, response.json()
+    assert response.json()["data"]["mobile"] == mobile
+
+
+def test_a_mobile_too_long_for_its_column_is_a_message_not_a_500(
+    tenant: Any, api_as: Any
+) -> None:
+    """`+` and fifteen digits is sixteen characters in a `varchar(15)` column."""
+    client, _ = api_as(tenant)
+    response = _create(client, name="Too long", mobile="+441234567890123")
+    assert response.status_code == 400
+    assert "mobile" in response.json()["error"]["details"]

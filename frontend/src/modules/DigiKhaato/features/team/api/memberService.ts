@@ -39,6 +39,8 @@ interface CredentialsApiResponse {
     readonly password_expires_at: string | null;
     readonly created_user: boolean;
     readonly login_url: string;
+    readonly mobile?: string | null;
+    readonly sign_in?: 'otp' | 'password';
   };
 }
 
@@ -73,6 +75,8 @@ const toCredentials = (data: CredentialsApiResponse['data']): IssuedCredentials 
   passwordExpiresAt: data.password_expires_at ?? null,
   createdUser: Boolean(data.created_user),
   loginUrl: data.login_url,
+  mobile: data.mobile ?? null,
+  signIn: data.sign_in ?? (data.password ? 'password' : 'otp'),
 });
 
 /**
@@ -132,7 +136,9 @@ export const createMember = async (
   const response = await api.post<CredentialsApiResponse>(
     API_PATHS.MEMBERS,
     {
-      email: input.email,
+      // No email: the member is identified by the mobile and signs in with an
+      // OTP (owner, 9 Oct 2026). Sent only when somebody supplied one.
+      ...(input.email ? { email: input.email } : {}),
       full_name: input.fullName,
       role: input.role,
       ...(input.mobile ? { mobile: input.mobile } : {}),

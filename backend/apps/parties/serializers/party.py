@@ -17,6 +17,9 @@ from apps.parties.models import Party, Tag
 from apps.parties.services.archive import BULK_ARCHIVE_MAX
 
 
+MOBILE_PATTERN = r"^(\+[1-9][0-9]{6,13}|[0-9]{10,14})$"
+
+
 class AddressField(serializers.JSONField):
     """A postal address, bounded.
 
@@ -183,11 +186,14 @@ class PartyWriteSerializer(serializers.Serializer):
     display_code = serializers.CharField(
         max_length=24, required=False, allow_null=True, allow_blank=True
     )
+    # Any country's E.164 (seven to fourteen digits, so it fits `varchar(15)`
+    # with its plus — see `platform_app.mobile`), or the bare digits older
+    # clients send. Short international numbers used to need ten digits.
     mobile = serializers.RegexField(
-        r"^\+?[0-9]{10,15}$", required=False, allow_null=True, allow_blank=True
+        MOBILE_PATTERN, required=False, allow_null=True, allow_blank=True
     )
     alt_phone = serializers.RegexField(
-        r"^\+?[0-9]{10,15}$", required=False, allow_null=True, allow_blank=True
+        MOBILE_PATTERN, required=False, allow_null=True, allow_blank=True
     )
     email = serializers.EmailField(
         max_length=254, required=False, allow_null=True, allow_blank=True

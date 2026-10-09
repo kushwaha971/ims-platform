@@ -80,7 +80,8 @@ export interface MemberListResult {
 
 /** What the add-member form collects. `mobile` is a channel, never an identity. */
 export interface MemberDraft {
-  readonly email: string;
+  /** Optional since 9 Oct 2026: staff are added by mobile and sign in with an OTP. */
+  readonly email?: string;
   readonly fullName: string;
   readonly role: MemberRoleCode;
   readonly mobile?: string | null;
@@ -104,4 +105,8 @@ export interface IssuedCredentials {
   readonly passwordExpiresAt: string | null;
   readonly createdUser: boolean;
   readonly loginUrl: string;
+  /** The number they sign in with, when they were added by mobile. */
+  readonly mobile: string | null;
+  /** `otp` — no password exists; they sign in with `mobile` and a code. */
+  readonly signIn: 'otp' | 'password';
 }

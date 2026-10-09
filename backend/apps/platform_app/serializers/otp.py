@@ -25,6 +25,16 @@ class OtpRequestSerializer(serializers.Serializer):
     device_hint = serializers.CharField(max_length=120, required=False, allow_blank=True)
     locale = serializers.ChoiceField(choices=["en", "hi"], required=False, default="en")
 
+    def validate_mobile(self, value: str) -> str:
+        """Fast2SMS delivers to Indian numbers only, so sign-in takes only those.
+
+        `MobileField` accepts any country since the country picker landed; a
+        foreign number here would be a code nobody receives, so it is refused
+        with a message rather than "sent" to nowhere."""
+        if not value.startswith("+91"):
+            raise serializers.ValidationError("Sign in with an Indian mobile number.")
+        return value
+
 
 class OtpVerifySerializer(serializers.Serializer):
     """`POST /auth/otp/verify` — `{challenge_id, code, device_label}` (FR-4)."""

@@ -129,7 +129,7 @@ for (const [size, viewport] of [['desktop', { width: 1280, height: 860 }], ['pho
     const expected = res.url().includes('/gst-returns/') && res.status() === 409;
     if (res.status() >= 400 && res.url().includes('/api/') && !probe && !expected) bad.push(`${res.status()} ${res.url().replace(/.*\/api\/v1/, '')}`);
   });
-  await page.goto(`${FE}/login`, { waitUntil: 'networkidle', timeout: 120000 });
+  await page.goto(`${FE}/login/email`, { waitUntil: 'networkidle', timeout: 120000 });
   await page.fill('input[type="email"]', email);
   await page.fill('input[type="password"]', PASSWORD);
   await page.click('button[type="submit"]');

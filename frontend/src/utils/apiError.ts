@@ -153,6 +153,11 @@ const LOCALLY_PRESENTED: ReadonlySet<ApiErrorCode> = new Set<ApiErrorCode>([
   // has; a toast beside it would be a second, differently-worded report of the
   // same event, and a toast that named the address would enumerate users.
   'invalid_credentials',
+  // DEC-013 — a wrong or spent sign-in code. It lands under the code cells,
+  // with the tries left; a toast as well said it twice, and it OUTLIVED the
+  // screen — still up on onboarding after the right code went in (otpsignin
+  // sweep, 9 Oct 2026).
+  'otp_invalid',
 
   // CASE 3 — the login/reset lockout. The screen shows a countdown banner
   // and the submit is disabled until it runs out, which is information a toast

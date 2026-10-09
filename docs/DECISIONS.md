@@ -306,3 +306,37 @@ ADR-021 ↔ §26.14 contradiction recorded as `CR-j`.
   `password_expired` (401). Neither could reuse an existing code without sending the person
   to the wrong screen. Carried in `CR-LOG`.
 - **Links:** `PLT-05` · canon §0.7 · `ADR-021` · Part 27 §27.4.2, §27.4.4 · `BACKLOG.md`
+
+### DEC-013 — Sign-up and sign-in are mobile number + OTP, by Fast2SMS; this reverses DEC-010
+
+- **Status:** `decided` (2026-10-09, by the owner, in the project thread)
+- **The owner's words:** "for registration and login I want to use only mobile number and
+  OTP, not email/password … stay logged in just like other mobile apps, on mobile as well
+  as desktop … also handle proper resend OTP logic, timer of 2 min", with Fast2SMS as the
+  provider.
+- **Decided:**
+  - `/login` and `/signup` are one flow: an Indian mobile, then a six-digit code. A number
+    with no account becomes one at its first verified code (`is_new` → onboarding).
+    `UB_AUTH_OTP_ENABLED` now defaults to **on**; the routes, service, model and tests DEC-010
+    retired were intact and are what runs.
+  - Codes live 10 minutes (`UB_OTP_TTL_SECONDS=600`); a resend waits **2 minutes**
+    (`OTP_RESEND_GAP_SECONDS=120`), enforced by the server and only shown by the screen;
+    five codes per number per hour; five wrong tries ends a code.
+  - Sessions slide: `UB_REFRESH_TOKEN_DAYS=90`, rotated on every refresh, so a person stays
+    signed in until they sign out or do not open the app for ninety days.
+  - Fast2SMS (`apps/common/integrations/sms/fast2sms.py`, standard library only): the
+    `otp` route carries only the digits. Reminders over its paid `q` route stay off unless
+    `UB_FAST2SMS_ALLOW_QUICK=1`. Without `UB_FAST2SMS_API_KEY` the code is printed in the
+    API log (console backend), which is how a local run signs in without paying.
+  - India only for sign-in (Fast2SMS delivers in India): the sign-in field is
+    `UbPhoneInput lockCountry`. Every other mobile field keeps the country picker.
+  - **Staff (amends DEC-012):** an owner adds a member by name, mobile and role; no password
+    is minted or shown, and the member signs in with that number. The temporary-password
+    path stays on the server for accounts made before this.
+- **Kept, unlinked:** `/login/email` — the email + password screen, for the platform
+  operator's console account and for any account made before the change that has no
+  mobile yet. Nothing in the product links to it. The `/auth/login` and `/auth/register`
+  endpoints are unchanged, which is also what the e2e harnesses sign in through.
+- **Not done:** DLT template registration (Fast2SMS's `otp` route needs the account
+  verified for it; the owner's dashboard), moving existing email accounts onto a mobile.
+- **Links:** DEC-010 · DEC-012 · `PLT-01` · `e2e/otpsignin.mjs`

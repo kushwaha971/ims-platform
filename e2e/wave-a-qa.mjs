@@ -174,7 +174,7 @@ for (const lang of (process.env.WAVE_A_LANGS ?? 'en,hi').split(',')) {
         { name: 'ub_theme_choice', value: theme, url: FE },
       ]);
       const page = await ctx.newPage();
-      await page.goto(`${FE}/login`, { waitUntil: 'networkidle', timeout: 90000 });
+      await page.goto(`${FE}/login/email`, { waitUntil: 'networkidle', timeout: 90000 });
       await page.waitForTimeout(1200); // hydration: a click before it submits the form natively
       await page.fill('input[type="email"]', owner.email);
       await page.fill('input[type="password"]', PASSWORD);

@@ -284,7 +284,7 @@ const settle = async (page) => {
 
 async function signIn(ctx, email) {
   const page = await ctx.newPage();
-  await page.goto(`${FE}/login`, { waitUntil: 'networkidle', timeout: 120000 });
+  await page.goto(`${FE}/login/email`, { waitUntil: 'networkidle', timeout: 120000 });
   await page.fill('input[type="email"]', email);
   await page.fill('input[type="password"]', PASSWORD);
   await page.click('button[type="submit"]');
@@ -451,7 +451,7 @@ async function overlay(page, name, trigger, { walk = 12 } = {}) {
 async function formErrors(browser, size) {
   const ctx = await browser.newContext({ viewport: VIEWPORTS[size], locale: 'en-IN' });
   const page = await ctx.newPage();
-  await page.goto(`${FE}/login`); await settle(page);
+  await page.goto(`${FE}/login/email`); await settle(page);
   await page.click('button[type="submit"]');
   await page.waitForTimeout(800);
   const fields = await page.evaluate(() => [...document.querySelectorAll('[aria-invalid="true"]')].map((e) => {

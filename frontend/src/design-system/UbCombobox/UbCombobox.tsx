@@ -64,6 +64,18 @@ export interface UbComboboxProps {
    */
   readonly onCreate?: (text: string) => void;
   readonly createLabel?: (text: string) => string;
+  /**
+   * What the closed trigger shows instead of the selected option's label —
+   * `UbPhoneInput` shows `+44` and keeps "United Kingdom (+44)" for the list.
+   */
+  readonly triggerContent?: React.ReactNode;
+  /** Classes for the open menu, when it must be wider than its trigger. */
+  readonly contentClassName?: string;
+  /**
+   * Where focus goes when the menu closes. Radix returns it to the trigger;
+   * `UbPhoneInput` sends it on to the number, so call `preventDefault()`.
+   */
+  readonly onCloseAutoFocus?: (event: Event) => void;
 }
 
 const UbComboboxInner = forwardRef<HTMLButtonElement, UbComboboxProps>(function UbComboboxInner(
@@ -81,12 +93,25 @@ const UbComboboxInner = forwardRef<HTMLButtonElement, UbComboboxProps>(function 
     onBlur,
     onCreate,
     createLabel,
+    triggerContent,
+    contentClassName,
+    onCloseAutoFocus,
     ...aria
   },
   ref
 ) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpenState] = useState(false);
   const [search, setSearch] = useState('');
+  /**
+   * Every close clears the search. It used to survive: pick "United Arab
+   * Emirates" by typing 971, reopen, and the list was still filtered to 971 —
+   * so typing "india" searched "971india" and found nothing. Found by the
+   * phone field's country picker, the first caller opened twice in a row.
+   */
+  const setOpen = useCallback((next: boolean) => {
+    setOpenState(next);
+    if (!next) setSearch('');
+  }, []);
   const typed = search.trim();
   const exact = options.some((option) => option.label.toLowerCase() === typed.toLowerCase());
   const showCreate = Boolean(onCreate && createLabel && typed && !exact);
@@ -98,7 +123,7 @@ const UbComboboxInner = forwardRef<HTMLButtonElement, UbComboboxProps>(function 
       onChange(next);
       setOpen(false);
     },
-    [onChange]
+    [onChange, setOpen]
   );
 
   /**
@@ -123,7 +148,7 @@ const UbComboboxInner = forwardRef<HTMLButtonElement, UbComboboxProps>(function 
     // attached directly to `document`, which is what the overlay's is.
     event.nativeEvent.stopImmediatePropagation();
     setOpen(false);
-  }, []);
+  }, [setOpen]);
 
   return (
     <MLPopover open={open} onOpenChange={setOpen}>
@@ -165,7 +190,7 @@ const UbComboboxInner = forwardRef<HTMLButtonElement, UbComboboxProps>(function 
         {...aria}
       >
         <span className={cn('truncate', !selected && 'text-text-muted')}>
-          {selected?.label ?? placeholder}
+          {triggerContent ?? selected?.label ?? placeholder}
         </span>
         <ChevronDown aria-hidden className="h-4 w-4 shrink-0 text-text-tertiary" />
       </MLPopoverTrigger>
@@ -173,9 +198,13 @@ const UbComboboxInner = forwardRef<HTMLButtonElement, UbComboboxProps>(function 
       <MLPopoverContent
         align="start"
         onKeyDownCapture={handleEscape}
+        onCloseAutoFocus={onCloseAutoFocus}
         // Matched to the trigger so a long option cannot make the menu wider
         // than the field it belongs to — the same rule `UbSelect` follows.
-        className="w-[var(--radix-popover-trigger-width)] border-border-subtle bg-surface-card p-0"
+        className={cn(
+          'w-[var(--radix-popover-trigger-width)] border-border-subtle bg-surface-card p-0',
+          contentClassName
+        )}
       >
         {panel ? (
           <panel.UbComboboxPanel

@@ -15,6 +15,7 @@ import {
 import { useAppSelector } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { selectActiveTenant } from 'src/redux/slice/sessionSlice';
+import { formatPhoneForDisplay } from 'src/utils/share';
 
 import { buildShareText } from '../view-model/credentialsShare';
 
@@ -78,6 +79,31 @@ export function CredentialsDialog({
   if (!lastCredentials) return null;
 
   const { member, email, password, passwordExpiresAt } = lastCredentials;
+
+  /**
+   * Added by mobile (owner, 9 Oct 2026): nothing was minted and nothing has to
+   * be passed on. The owner is told the one thing the person needs — sign in
+   * with this number — and the dialog can be closed by any tap, because there
+   * is no secret on it to lose.
+   */
+  if (lastCredentials.signIn === 'otp') {
+    return (
+      <UbDialog
+        open
+        onOpenChange={handleOpenChange}
+        title={t('team.credentials.otp.title', { name: member.fullName })}
+        closeLabel={t('common.action.close')}
+        footer={<UbButton onClick={dismissCredentials}>{t('team.credentials.done')}</UbButton>}
+      >
+        <UbText variant="body" tone="secondary">
+          {t('team.credentials.otp.body', {
+            name: member.fullName,
+            mobile: formatPhoneForDisplay(lastCredentials.mobile),
+          })}
+        </UbText>
+      </UbDialog>
+    );
+  }
 
   /**
    * They already had a YourKhata account, so there is no password to send and

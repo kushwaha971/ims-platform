@@ -31,7 +31,7 @@
   "settings.profile.field.pan.placeholder": "e.g. ABCDE1234F",
   "settings.profile.field.phone": "Business phone",
   "settings.profile.field.phone.hint": "Printed on bills. It is not your login.",
-  "settings.profile.field.phone.placeholder": "10-digit mobile number",
+  "settings.profile.field.phone.placeholder": "98765 43210",
   "settings.profile.field.pincode": "PIN code",
   "settings.profile.field.pincode.placeholder": "6-digit PIN",
   "settings.profile.field.stateCode": "State",

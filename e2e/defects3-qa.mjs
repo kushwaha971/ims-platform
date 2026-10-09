@@ -49,7 +49,7 @@ async function session(browser, email, vp, { hi = false, password = PW, clipboar
   const ctx = await browser.newContext({ viewport: vp, ...(clipboard ? { permissions: ['clipboard-read', 'clipboard-write'] } : {}) });
   if (hi) await ctx.addCookies([{ name: 'ub_locale', value: 'hi', url: FE }]);
   const page = await ctx.newPage();
-  await page.goto(`${FE}/login`, { waitUntil: 'networkidle' });
+  await page.goto(`${FE}/login/email`, { waitUntil: 'networkidle' });
   await page.fill('input[type="email"]', email);
   await page.fill('input[type="password"]', password);
   await page.click('button[type="submit"]');
@@ -282,7 +282,7 @@ async function phaseSW(browser) {
   // genuine other-tab switch must still warn + reload
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   const a = await ctx.newPage();
-  await a.goto(`${FE}/login`, { waitUntil: 'networkidle' });
+  await a.goto(`${FE}/login/email`, { waitUntil: 'networkidle' });
   await a.fill('input[type="email"]', OWNER); await a.fill('input[type="password"]', PW);
   await a.click('button[type="submit"]'); await a.waitForTimeout(3000);
   await a.goto(`${FE}/ledger/aging`, { waitUntil: 'networkidle' }); await a.waitForTimeout(1500);
@@ -332,7 +332,7 @@ async function phaseL8(browser) {
   record('L8', 'precondition: nothing resumable (so both tabs race to CREATE)', !res.body?.data?.tenant, JSON.stringify(res.body?.data?.tenant?.name ?? null));
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   const a = await ctx.newPage();
-  await a.goto(`${FE}/login`, { waitUntil: 'networkidle' });
+  await a.goto(`${FE}/login/email`, { waitUntil: 'networkidle' });
   await a.fill('input[type="email"]', OWNER); await a.fill('input[type="password"]', PW);
   await a.click('button[type="submit"]'); await a.waitForTimeout(3000);
   const tabs = [a, await ctx.newPage()];
@@ -360,6 +360,10 @@ async function phaseL8(browser) {
 // ─── L6: the mobile-taken message in Hindi, and no raw field codes ──────────
 async function phaseHI(browser) {
   const taken = arg('taken') ?? '9845678901';
+  // DEC-013 — a number with an account is added, not refused; once it is on
+  // the team, typing it again is the refusal this phase reads in both languages.
+  const tok = await login(OWNER);
+  await api('POST', '/members', { full_name: 'Mobile Holder', mobile: `+91${taken}`, role: 'staff' }, tok, { 'Idempotency-Key': `holder-${Date.now()}` });
   for (const [vp, hi] of [[{ width: 360, height: 780 }, true], [{ width: 1280, height: 800 }, true], [{ width: 360, height: 780 }, false]]) {
     const { ctx, page } = await session(browser, OWNER, vp, { hi });
     let resp = null;
@@ -368,16 +372,15 @@ async function phaseHI(browser) {
     await page.getByRole('button', { name: hi ? /सदस्य जोड़ें/ : /Add member/ }).first().click(); await page.waitForTimeout(800);
     const dlg = page.getByRole('dialog').last();
     await dlg.getByRole('textbox').nth(0).fill('Kiran Patil');
-    await dlg.getByRole('textbox').nth(1).fill(`l6-${vp.width}-${Date.now()}@shop.test`);
     await dlg.locator('input[type="tel"]').first().fill(`+91 ${taken.slice(0, 5)} ${taken.slice(5)}`);
-    await dlg.getByRole('button', { name: hi ? /लॉगिन बनाएँ/ : /Create login/ }).click(); await page.waitForTimeout(2000);
+    await dlg.getByRole('button', { name: hi ? /टीम में जोड़ें/ : /Add to team/ }).click(); await page.waitForTimeout(2000);
     const text = await dlg.innerText();
     const all = await page.locator('body').innerText();
     await shot(page, `l6-mobile-taken-${hi ? 'hi' : 'en'}`);
     const codes = (() => { try { return JSON.stringify(JSON.parse(resp.b).error.field_codes ?? JSON.parse(resp.b).error.details); } catch { return ''; } })();
-    const want = hi ? 'यह मोबाइल नंबर किसी दूसरे लॉगिन में पहले से इस्तेमाल हो रहा है' : 'This mobile number is already used by another login';
-    record('L6', `${vp.width} ${hi ? 'hi' : 'en'}: taken mobile (typed with +91 and spaces) → message in ${hi ? 'Hindi' : 'English'} under the field`, resp?.s === 400 && text.includes(want) && (!hi || !/already used by another login/.test(all)), `status=${resp?.s} codes=${codes} :: ${text.replace(/\s+/g, ' ').slice(0, 300)}`);
-    record('L6', `${vp.width} ${hi ? 'hi' : 'en'}: no raw field code (mobile_taken / errors.field.*) on screen`, !/mobile_taken|errors\.field|field_codes/.test(all), '');
+    const want = hi ? 'यह व्यक्ति पहले से इस टीम में है' : 'That person is already on this team';
+    record('L6', `${vp.width} ${hi ? 'hi' : 'en'}: a teammate's mobile (typed with +91 and spaces) → message in ${hi ? 'Hindi' : 'English'} under the field`, resp?.s === 400 && text.includes(want) && (!hi || !/already on this team/.test(all)), `status=${resp?.s} codes=${codes} :: ${text.replace(/\s+/g, ' ').slice(0, 300)}`);
+    record('L6', `${vp.width} ${hi ? 'hi' : 'en'}: no raw field code (mobile_taken / errors.field.*) on screen`, !/mobile_taken|already_member|errors\.field|field_codes/.test(all), '');
     await ctx.close();
   }
 }

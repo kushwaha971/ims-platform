@@ -31,7 +31,7 @@
   "settings.profile.field.pan.placeholder": "जैसे: ABCDE1234F",
   "settings.profile.field.phone": "व्यापार का फ़ोन",
   "settings.profile.field.phone.hint": "बिल पर छपता है। यह आपका लॉगिन नहीं है।",
-  "settings.profile.field.phone.placeholder": "10 अंकों का मोबाइल नंबर",
+  "settings.profile.field.phone.placeholder": "98765 43210",
   "settings.profile.field.pincode": "पिन कोड",
   "settings.profile.field.pincode.placeholder": "6 अंकों का पिन",
   "settings.profile.field.stateCode": "राज्य",

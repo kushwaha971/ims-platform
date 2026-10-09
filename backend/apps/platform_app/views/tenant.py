@@ -473,6 +473,10 @@ def _credentials_payload(issued: Any) -> dict:
         "password_expires_at": issued.expires_at,
         "created_user": issued.created_user,
         "email": issued.user.email,
+        # Owner, 9 Oct 2026 — a member added by mobile has no password: they
+        # sign in with this number and an OTP, and the dialog says exactly that.
+        "mobile": issued.user.mobile,
+        "sign_in": "password" if issued.password else "otp",
         "login_url": f"{(settings.UB_PUBLIC_BASE_URL or '').rstrip('/')}/login",
     }
 
@@ -522,7 +526,7 @@ class MemberListCreateView(APIView):
         issued = credentials_service.create_member(
             tenant=tenant,
             role=role,
-            email=data["email"],
+            email=data.get("email") or "",
             full_name=data["full_name"],
             mobile=data.get("mobile") or None,
             actor=request.user,

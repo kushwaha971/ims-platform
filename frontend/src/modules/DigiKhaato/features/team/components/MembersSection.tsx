@@ -174,10 +174,9 @@ export function MembersSection(): React.JSX.Element {
   /* QA O3 — people who have joined, and the invited apart: an invited row
      holds no access, and "3 people" counted it as a colleague. */
   const count = memberCountOf(rows, meta);
-  const countLabel =
-    count.invited
-      ? t('team.members.countWithInvited', { count: count.joined, invited: count.invited })
-      : t('team.members.count', { count: count.joined });
+  const countLabel = count.invited
+    ? t('team.members.countWithInvited', { count: count.joined, invited: count.invited })
+    : t('team.members.count', { count: count.joined });
   const handlePageSize = useCallback((pageSize: number) => setPage(1, pageSize), [setPage]);
   const handleRegenerateOpenChange = useCallback(
     (next: boolean) => {

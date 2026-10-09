@@ -100,7 +100,7 @@
   "lending.form.lateFeeRate": "Rate, % a year",
   "lending.form.lateFeeValue": "Late fee",
   "lending.form.mobile": "Mobile",
-  "lending.form.mobile.placeholder": "10-digit mobile number",
+  "lending.form.mobile.placeholder": "98765 43210",
   "lending.form.name": "Name",
   "lending.form.name.placeholder": "e.g. Geeta Devi",
   "lending.form.notes": "Note",

@@ -57,10 +57,7 @@ export function AddMemberDialog({
   const { addMemberSchema } = useMemberSchemas(roleCodes);
   const formId = useId();
 
-  const defaults = useMemo(
-    () => ({ fullName: '', email: '', role: DEFAULT_INVITE_ROLE, mobile: '' }),
-    []
-  );
+  const defaults = useMemo(() => ({ fullName: '', role: DEFAULT_INVITE_ROLE, mobile: '' }), []);
 
   const form = useForm<AddMemberFormValues>({
     resolver: yupResolver(addMemberSchema),
@@ -132,14 +129,18 @@ export function AddMemberDialog({
           {(field) => <UbTextInput {...field} autoComplete="off" />}
         </UbField>
 
+        {/* The way they sign in (owner, 9 Oct 2026): a code is texted to this
+            number, so it is required and Indian — Fast2SMS delivers in India
+            only, hence `lockCountry`. `UbPhoneInput`, as on the party form:
+            the merchant types ten digits and the schema wants E.164 (UAT D4). */}
         <UbField
-          name="email"
-          label={t('team.member.email.label')}
-          placeholder={t('team.member.email.placeholder')}
-          hint={t('team.member.email.hint')}
+          name="mobile"
+          label={t('team.member.mobile.label')}
+          placeholder={t('team.member.mobile.placeholder')}
+          hint={t('team.member.mobile.hint')}
           required
         >
-          {(field) => <UbTextInput {...field} type="email" autoComplete="off" />}
+          {(field) => <UbPhoneInput {...field} lockCountry autoComplete="off" />}
         </UbField>
 
         <UbField
@@ -155,18 +156,6 @@ export function AddMemberDialog({
               placeholder={t('team.member.role.placeholder')}
             />
           )}
-        </UbField>
-
-        {/* `UbPhoneInput`, as on the party form: the merchant types ten digits
-            and the schema wants E.164, so a plain `type="tel"` box refused
-            "9890011223" with a format error (UAT D4). */}
-        <UbField
-          name="mobile"
-          label={t('team.member.mobile.label')}
-          placeholder={t('team.member.mobile.placeholder')}
-          hint={t('team.member.mobile.hint')}
-        >
-          {(field) => <UbPhoneInput {...field} autoComplete="off" />}
         </UbField>
       </UbForm>
     </UbDialog>

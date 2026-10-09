@@ -24,6 +24,9 @@ export const API_PATHS = {
    */
   AUTH_REGISTER: '/auth/register',
   AUTH_LOGIN: '/auth/login',
+  // Owner, 9 Oct 2026 — sign-up and sign-in are mobile + OTP.
+  AUTH_OTP_REQUEST: '/auth/otp/request',
+  AUTH_OTP_VERIFY: '/auth/otp/verify',
   AUTH_REFRESH: '/auth/refresh',
   AUTH_LOGOUT: '/auth/logout',
   AUTH_ME: '/auth/me',

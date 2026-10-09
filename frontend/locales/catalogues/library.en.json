@@ -255,7 +255,7 @@
   "library.enrol.locker": "Locker",
   "library.enrol.locker.placeholder": "e.g. L-7",
   "library.enrol.mobile": "Mobile",
-  "library.enrol.mobile.placeholder": "10-digit mobile number",
+  "library.enrol.mobile.placeholder": "98765 43210",
   "library.enrol.name": "Name",
   "library.enrol.name.placeholder": "e.g. Asha Kulkarni",
   "library.enrol.number": "Student number",

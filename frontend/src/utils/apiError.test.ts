@@ -166,3 +166,20 @@ describe('shouldToast — refusals a dialog already explains stay out of the sna
     expect(shouldToast(refusal({ module: 'payments', breakdown: [] }))).toBe(true);
   });
 });
+
+describe('shouldToast — a wrong sign-in code (DEC-013)', () => {
+  // The code cells say "Wrong code. 3 tries left."; the toast said it again,
+  // and stayed up on onboarding after the right code went in.
+  it('is not toasted: the code step reports it', () => {
+    expect(
+      shouldToast({
+        code: 'otp_invalid',
+        message: 'Incorrect or expired code.',
+        details: { reason: 'incorrect', attempts_left: 3 },
+        requestId: 'r',
+        status: 400,
+        warnings: [],
+      })
+    ).toBe(false);
+  });
+});

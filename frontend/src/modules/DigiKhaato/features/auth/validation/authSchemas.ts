@@ -83,6 +83,8 @@ export interface ForcePasswordChangeFormValues {
 }
 
 export const PASSWORD_LOGIN_FIELDS = ['email', 'password'] as const;
+export const OTP_MOBILE_FIELDS = ['mobile'] as const;
+export const OTP_CODE_FIELDS = ['code'] as const;
 /**
  * `fullName` and `mobile` are still listed: they are the SERVER's spellings, and
  * a 400 that names a field this form no longer shows must still surface at form
@@ -93,7 +95,19 @@ export const PASSWORD_RESET_REQUEST_FIELDS = ['email'] as const;
 export const PASSWORD_SET_FIELDS = ['name', 'password', 'newPassword'] as const;
 export const PASSWORD_RESET_FIELDS = ['token', 'password', 'newPassword'] as const;
 
+export interface OtpMobileFormValues {
+  mobile: string;
+}
+
+export interface OtpCodeFormValues {
+  code: string;
+}
+
 export interface AuthSchemas {
+  /** Owner, 9 Oct 2026 — the number a code is sent to (India only, the field is locked). */
+  readonly otpMobileSchema: Yup.ObjectSchema<OtpMobileFormValues>;
+  /** Six digits; the server decides whether they are right. */
+  readonly otpCodeSchema: Yup.ObjectSchema<OtpCodeFormValues>;
   readonly passwordLoginSchema: Yup.ObjectSchema<PasswordLoginFormValues>;
   readonly signUpSchema: Yup.ObjectSchema<SignUpFormValues>;
   readonly passwordResetRequestSchema: Yup.ObjectSchema<PasswordResetRequestFormValues>;
@@ -108,6 +122,15 @@ export const useAuthSchemas = (): AuthSchemas => {
 
   return useMemo<AuthSchemas>(
     () => ({
+      otpMobileSchema: Yup.object({
+        mobile: v.mobileValidation(true).nonNullable().defined(),
+      }),
+      otpCodeSchema: Yup.object({
+        code: Yup.string()
+          .required(t('auth.otp.codeRequired'))
+          .matches(/^\d{6}$/, t('auth.otp.codeFormat'))
+          .defined(),
+      }),
       passwordLoginSchema: Yup.object({
         email: v.emailIdentityValidation().defined(),
         // NOT `passwordValidation()`: a login form that rejected a password

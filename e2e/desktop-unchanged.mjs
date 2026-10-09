@@ -114,7 +114,7 @@ for (const scheme of SCHEMES) {
     // The app's theme is a cookie choice (`ub_theme_choice`, read before first paint), not the OS setting.
     await ctx.addCookies([{ name: 'ub_theme_choice', value: scheme, url: FRONTEND }]);
     const page = await ctx.newPage();
-    await page.goto(`${FRONTEND}/login`, { waitUntil: 'networkidle', timeout: 180000 });
+    await page.goto(`${FRONTEND}/login/email`, { waitUntil: 'networkidle', timeout: 180000 });
     await page.fill('input[type="email"]', account.email);
     await page.fill('input[type="password"]', account.password);
     await page.keyboard.press('Enter');

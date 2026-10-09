@@ -86,6 +86,61 @@ def test_creating_a_member_returns_credentials_that_actually_sign_in(
 
 
 @pytest.mark.django_db
+def test_a_member_added_by_mobile_gets_no_password_and_signs_in_with_an_otp(
+    api_as: Any, tenant: Any, fixed_otp: str
+) -> None:
+    """Owner, 9 Oct 2026 — staff sign in with their mobile and an OTP.
+
+    So the owner adds a name, a number and a role; there is no password to
+    mint, show or forward on WhatsApp, and the number itself is the way in.
+    The assertion that matters is the last one: the OTP signs the new person
+    into THIS business, not into an empty account of their own.
+    """
+    from rest_framework.test import APIClient
+
+    from tests.fixtures import login_via_otp
+
+    client, _ = api_as(tenant)
+    response = _create(client, email="", mobile="98450 11122")
+    assert response.status_code == 201, response.content
+    data = response.json()["data"]
+    assert data["password"] is None
+    assert data["sign_in"] == "otp"
+    assert data["mobile"] == "+919845011122"
+    assert data["created_user"] is True
+
+    signed_in = login_via_otp(APIClient(), "+919845011122", code=fixed_otp)
+    assert signed_in["user"]["is_new"] is False
+    assert [t["id"] for t in signed_in["tenants"]] == [str(tenant.id)]
+
+
+@pytest.mark.django_db
+def test_adding_somebody_already_on_the_team_is_a_field_error_on_mobile(
+    api_as: Any, tenant: Any
+) -> None:
+    """It used to be a bare `validation_error` with no details: the form had no
+    field to put it under, validation errors are never toasted, and the owner
+    tapped "Add to team" and saw nothing happen (d3-HI sweep, 9 Oct 2026)."""
+    client, _ = api_as(tenant)
+    assert _create(client, email="", mobile="9845022233").status_code == 201
+    again = _create(client, email="", mobile="+91 98450 22233")
+    assert again.status_code == 400, again.content
+    details = again.json()["error"]["details"]
+    assert details["mobile"] == ["That person is already on this team."]
+    assert details["field_codes"] == {"mobile": "already_member"}
+
+
+@pytest.mark.django_db
+def test_a_member_by_mobile_needs_an_indian_number(api_as: Any, tenant: Any) -> None:
+    """The OTP goes by Fast2SMS, which delivers in India only."""
+    client, _ = api_as(tenant)
+    missing = _create(client, email="", mobile="")
+    assert missing.status_code == 400 and "mobile" in missing.json()["error"]["details"]
+    foreign = _create(client, email="", mobile="+447911123456")
+    assert foreign.status_code == 400 and "mobile" in foreign.json()["error"]["details"]
+
+
+@pytest.mark.django_db
 def test_the_password_never_appears_in_any_other_response(api_as: Any, tenant: Any) -> None:
     """Created once, in one body. The list is the path that would leak it silently."""
     client, _ = api_as(tenant)
@@ -305,7 +360,7 @@ def test_a_mobile_another_login_holds_is_a_400_on_the_field_not_a_500(
     assert error["details"] == {
         "mobile": [
             "This mobile number is already used by another login. "
-            "Leave it blank or use a different number."
+            "Use a different number."
         ],
         # L6 -- the stable code the client localises by; without it the Hindi
         # UI could only show the English sentence above.

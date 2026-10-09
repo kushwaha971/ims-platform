@@ -46,29 +46,33 @@ export interface TenantApiRow {
 // ── Domain shapes ────────────────────────────────────────────────────────────
 
 /** PLT-02 FR-1 — the login body. One identity, and it is an email. */
+/** Owner, 9 Oct 2026 — `POST /auth/otp/request`. */
+export interface OtpRequestInput {
+  /** E.164, always `+91…`: Fast2SMS delivers in India only. */
+  readonly mobile: string;
+  readonly locale?: Locale;
+}
+
+/** What `otp/request` answers. Seconds, as the server sends them. */
+export interface OtpChallenge {
+  readonly challengeId: string;
+  readonly expiresIn: number;
+  /** Seconds before another code may be asked for — two minutes. */
+  readonly retryAfter: number;
+}
+
+/** `POST /auth/otp/verify`. */
+export interface OtpVerifyInput {
+  readonly challengeId: string;
+  readonly code: string;
+  readonly deviceLabel?: string;
+  readonly locale?: Locale;
+}
+
 export interface PasswordLoginInput {
   readonly email: string;
   readonly password: string;
   /** PLT-01 §7 — a label the user will recognise in PLT-09's device list. */
-  readonly deviceLabel?: string;
-}
-
-/**
- * CR-2026-09-19-A FR-S1 — sign-up. There is no longer an OTP verify that
- * registers a user as a side effect, so registration is an explicit act with an
- * explicit screen.
- */
-export interface RegisterInput {
-  readonly email: string;
-  readonly password: string;
-  /** PLT-03 BR-7 — optional; step 1 of the wizard asks again if it is blank. */
-  readonly name?: string;
-  /**
-   * E.164, and OPTIONAL — this is the whole point of CR-2026-09-19-A. A number
-   * given here is a profile field the later WhatsApp reminders and PLT-03's
-   * default business phone use; it proves nothing and logs nobody in.
-   */
-  readonly mobile?: string;
   readonly deviceLabel?: string;
 }
 

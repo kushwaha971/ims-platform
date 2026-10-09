@@ -57,7 +57,7 @@
   "onboarding.pan.placeholder": "जैसे ABCDE1234F",
   "onboarding.phone.hint": "ज़रूरी नहीं। वह नंबर जिस पर ग्राहक आपकी दुकान से बात कर सकें।",
   "onboarding.phone.label": "दुकान का फ़ोन",
-  "onboarding.phone.placeholder": "10 अंकों का मोबाइल नंबर",
+  "onboarding.phone.placeholder": "98765 43210",
   "onboarding.progress": "{total} में से चरण {current}",
   "onboarding.rail.label": "सेटअप की प्रगति",
   "onboarding.rail.reassurance": "यहाँ कुछ भी पक्का नहीं है: ये सिर्फ़ शुरुआती सेटिंग हैं, और आपका खाता कभी सीमित नहीं होता।",

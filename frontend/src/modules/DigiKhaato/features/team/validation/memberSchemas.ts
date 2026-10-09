@@ -14,20 +14,21 @@ import type { MemberRoleCode } from '../types/role.types';
  * Part 19 §19.5.3 — the add-member form's schema, COMPOSED from the central
  * validators rather than written here (DEC-012).
  *
- * `emailIdentityValidation()` trims and lower-cases before it checks, which
- * matters more here than almost anywhere: this address becomes a login, and an
- * account created as `Ramesh@Shop.test` that its owner then types as
- * `ramesh@shop.test` is an account nobody can sign in to. The server normalises
- * too; this is what stops the merchant seeing a confusing 400 first.
+ * Owner, 9 Oct 2026: a team member is a name, a mobile and a role. The mobile
+ * is how they sign in (an OTP to that number), so there is no address and no
+ * password to create or pass on.
  */
 export interface AddMemberFormValues {
   fullName: string;
-  email: string;
   role: MemberRoleCode;
-  mobile?: string | null;
+  mobile: string;
 }
 
-/** The RHF paths this form owns, so `applyServerErrors()` knows what to anchor. */
+/**
+ * The RHF paths this form owns, so `applyServerErrors()` knows what to anchor.
+ * `email` stays listed: it is the SERVER's spelling, and a 400 naming it must
+ * still surface at form level rather than vanish (§19.5.6).
+ */
 export const ADD_MEMBER_FIELDS = ['fullName', 'email', 'role', 'mobile'] as const;
 
 /**
@@ -46,14 +47,13 @@ export const useMemberSchemas = (
     () => ({
       addMemberSchema: Yup.object({
         fullName: v.nameValidation().defined(),
-        email: v.emailIdentityValidation().defined(),
         // `owner` is absent from `INVITABLE_ROLES` and must stay absent: a
         // business has exactly one and ownership is transferred (canon §0.7).
         role: v.enumValidation<MemberRoleCode>(roleCodes, 'validation.role.required').defined(),
-        // Optional, and a NOTIFICATION channel rather than an identity
-        // (DEC-010) — it is here so the owner can note the number they are
-        // about to WhatsApp the password to.
-        mobile: v.mobileValidation(false),
+        // The identity since 9 Oct 2026: they sign in with this number and an
+        // OTP, so it is required (and Indian — the field is locked to +91,
+        // because the code goes by Fast2SMS).
+        mobile: v.mobileValidation(true).nonNullable().defined(),
       }),
     }),
     [v, roleCodes]

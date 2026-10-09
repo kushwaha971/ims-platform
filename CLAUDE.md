@@ -31,14 +31,19 @@ Sentry/OTel/Prometheus, client-side PDF via `window.print()`, adapter-only
 messaging, local UPI QR. Anything else needs a new ADR. If a fix seems to need a
 package, say so instead of adding one.
 
-**Identity is email and password (DEC-010).** The mobile-OTP flow was removed.
-Anything still mentioning OTP or SMS is stale documentation or backlogged work,
-not a gap to fill. Do not build OTP.
+**Identity is a mobile number and an OTP (DEC-013, owner, 9 Oct 2026; it
+reverses DEC-010).** `/login` and `/signup` are one flow — an Indian mobile, then
+a six-digit code sent by Fast2SMS (`UB_FAST2SMS_API_KEY`; without it the code is
+printed in the API log). Resend waits two minutes, enforced by the server;
+sessions slide for ninety days. The email + password screen survives only at the
+unlinked `/login/email`, for the platform console and pre-change accounts, and
+the e2e harnesses sign in there. Never commit a Fast2SMS key.
 
 **Nothing is emailed (DEC-012).** `UB_EMAIL_BACKEND` is the console backend and
-no provider is being paid for until the platform earns. So an owner adds staff by
-creating the account — the server mints a temporary password, returns it once,
-and the owner sends it by hand, which is WhatsApp in practice. The invitation
+no provider is being paid for until the platform earns. An owner adds staff by
+name, mobile and role, and the member signs in with that number (DEC-013); the
+older path — a temporary password returned once and sent by hand — remains on
+the server for accounts made with an email. The invitation
 token flow is kept, untouched, because it *is* the email flow the day email
 lands. Do not write copy that implies a message was sent.
 

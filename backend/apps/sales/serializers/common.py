@@ -15,11 +15,21 @@ def person(user: Any) -> dict | None:
 
 
 def mask_mobile(value: str | None) -> str | None:
-    """SAL-02 §19 — `+91 98••• ••210` in lists."""
+    """SAL-02 §19 — `+91 98••• ••210` in lists.
+
+    Another country's number keeps its own code rather than being labelled
+    +91: `+44 79••• ••456`. The code's length is not known without a table,
+    so everything before the last ten digits is shown as the code — exact for
+    a ten-digit national number, and still masked for any other.
+    """
     if not value:
         return None
-    digits = value[-10:]
-    return f"+91 {digits[:2]}••• ••{digits[-3:]}"
+    if not value.startswith("+") or value.startswith("+91"):
+        digits = value[-10:]
+        return f"+91 {digits[:2]}••• ••{digits[-3:]}"
+    digits = value[1:]
+    code, national = digits[:-10] or digits[:2], digits[-10:] if len(digits) > 10 else digits[2:]
+    return f"+{code} {national[:2]}••• ••{national[-3:]}"
 
 
 def doc_ref(document: Any) -> dict | None:

@@ -17,7 +17,7 @@ for (const [label, viewport] of [
 ]) {
   const ctx = await browser.newContext({ viewport, deviceScaleFactor: 2 });
   const page = await ctx.newPage();
-  await page.goto(`${FE}/login`);
+  await page.goto(`${FE}/login/email`);
   await page.waitForLoadState('networkidle');
   await page.screenshot({ path: `${OUT}/${label}-01-login.png` });
   await page.getByLabel(/email/i).fill(owner.email);

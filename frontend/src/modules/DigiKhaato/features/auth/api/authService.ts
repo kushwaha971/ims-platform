@@ -10,10 +10,12 @@ import { toLanding } from 'src/types/landing.types';
 import type {
   AuthResult,
   AuthTenant,
+  OtpChallenge,
+  OtpRequestInput,
+  OtpVerifyInput,
   PasswordLoginInput,
   PasswordResetConfirmInput,
   PasswordSetInput,
-  RegisterInput,
   RoleCode,
   TenantApiRow,
 } from '../types/auth.types';
@@ -229,35 +231,41 @@ const toAuthResult = (body: AuthApiResponse): AuthResult => {
   };
 };
 
-// ── CR-2026-09-19-A FR-S1 — registration ─────────────────────────────────────
+// ── Owner, 9 Oct 2026 — mobile number + OTP ─────────────────────────────────
 
 /**
- * POST /auth/register — `{ email, password, full_name? }` → the `/auth/me`
- * body, with the session cookies set as a side effect.
- *
- * CR-2026-09-19-E — this call used to pass `suppressErrorSnackbar: true`, and
- * so did every other call in this file. The reason given was sound but the
- * mechanism was too broad: the two failures it named — a 400 whose
- * `details.email` says the address is taken, and a 400 whose `details.password`
- * carries the server's policy — are both `validation_error`, which
- * `shouldToast` already excludes BY CODE for the whole application. Opting the
- * request out as well ALSO silenced the 500s, the 503s and the timeouts, which
- * is why every auth screen had grown an error banner of its own. The flag is
- * gone; the exceptions are decided once, by code, in src/utils/apiError.ts.
+ * POST /auth/otp/request — `{ mobile }` → the challenge. The response is the
+ * same for a number with an account and one without (no enumeration), which is
+ * why one screen serves sign-up and sign-in: the verify creates the account
+ * when the number is new, and `isNew` on its result says so.
  */
-export const register = async (input: RegisterInput): Promise<AuthResult> => {
-  const response = await api.post<AuthApiResponse>(API_PATHS.AUTH_REGISTER, {
-    email: input.email,
-    password: input.password,
-    ...(input.name ? { full_name: input.name } : {}),
-    // Sent only when the user gave one: the serializer takes `allow_blank`,
-    // but an empty string in the body would claim they answered.
-    ...(input.mobile ? { mobile: input.mobile } : {}),
+export const requestOtp = async (input: OtpRequestInput): Promise<OtpChallenge> => {
+  const response = await api.post<{
+    data: { challenge_id: string; expires_in: number; retry_after: number };
+  }>(API_PATHS.AUTH_OTP_REQUEST, {
+    mobile: input.mobile,
+    ...(input.locale ? { locale: input.locale } : {}),
+  });
+  const data = response.data.data;
+  return {
+    challengeId: data.challenge_id,
+    expiresIn: data.expires_in,
+    retryAfter: data.retry_after,
+  };
+};
+export const requestOtpWriteClass: TWriteClass = 'online-only';
+
+/** POST /auth/otp/verify — the `/auth/me` body, with the session cookies set. */
+export const verifyOtp = async (input: OtpVerifyInput): Promise<AuthResult> => {
+  const response = await api.post<AuthApiResponse>(API_PATHS.AUTH_OTP_VERIFY, {
+    challenge_id: input.challengeId,
+    code: input.code,
     ...(input.deviceLabel ? { device_label: input.deviceLabel } : {}),
+    ...(input.locale ? { locale: input.locale } : {}),
   });
   return toAuthResult(response.data);
 };
-export const registerWriteClass: TWriteClass = 'online-only';
+export const verifyOtpWriteClass: TWriteClass = 'online-only';
 
 // ── PLT-02 — password ────────────────────────────────────────────────────────
 

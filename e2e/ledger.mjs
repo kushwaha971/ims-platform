@@ -339,7 +339,7 @@ const settle = (page, ms = 900) => page.waitForTimeout(ms);
 
 const signIn = async (page, who = OWNER) => {
   for (const attempt of [1, 2]) {
-    await page.goto(`${FRONTEND}/login`, { waitUntil: 'domcontentloaded', timeout: 45000 });
+    await page.goto(`${FRONTEND}/login/email`, { waitUntil: 'domcontentloaded', timeout: 45000 });
     await page.fill('input[type="email"], input[name="email"]', who.email);
     await page.fill('input[type="password"], input[name="password"]', who.password);
     await page.click('button[type="submit"]');

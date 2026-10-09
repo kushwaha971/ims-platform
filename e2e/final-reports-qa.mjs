@@ -144,7 +144,7 @@ async function session(label, viewport, who, locale = 'en') {
   const p = await ctx.newPage();
   const errors = [];
   p.on('pageerror', (e) => errors.push(e.message));
-  await p.goto(`${FE}/login`, { waitUntil: 'networkidle', timeout: 120000 });
+  await p.goto(`${FE}/login/email`, { waitUntil: 'networkidle', timeout: 120000 });
   await p.fill('input[type="email"]', who);
   await p.fill('input[type="password"]', PASSWORD);
   await p.click('button[type="submit"]');

@@ -71,7 +71,7 @@ MOBILE_UNIQUE_CONSTRAINT = "uq_user_mobile_notnull"
 # must refuse the number can say.
 MOBILE_TAKEN_MESSAGE = (
     "This mobile number is already used by another login. "
-    "Leave it blank or use a different number."
+    "Use a different number."
 )
 
 # L6. The stable, machine-readable name of that refusal, so a client can show
@@ -80,6 +80,8 @@ MOBILE_TAKEN_MESSAGE = (
 # field it belongs to; it is NOT a top-level error code -- the envelope's code
 # stays `validation_error` (Part 22 §22.1.1) and the message stays the `en` copy.
 MOBILE_TAKEN_CODE = "mobile_taken"
+ALREADY_MEMBER_MESSAGE = "That person is already on this team."
+ALREADY_MEMBER_CODE = "already_member"
 FIELD_CODES_KEY = "field_codes"
 
 
@@ -103,7 +105,8 @@ class IssuedCredentials:
     user: Any
     membership: Any
     password: str
-    expires_at: dt.datetime
+    # None for a member added by mobile: there is no password to expire.
+    expires_at: dt.datetime | None
     created_user: bool
 
 
@@ -272,29 +275,54 @@ def create_member(
     accepting it could re-apply a role the owner has since decided against.
     """
     from apps.platform_app.models import Invitation, Membership, User
+    from apps.platform_app.services.auth import synthetic_email_for
 
-    normalised = membership_service.normalise_email_or_none(email)
-    if not normalised:
-        raise ValidationFailed({"email": ["An email address is required."]})
     display_name = (full_name or "").strip()
+    # Owner, 9 Oct 2026 — staff sign in with their mobile and an OTP, so a
+    # member added WITHOUT an email is identified by the number: no password is
+    # minted, none is shown, and the person simply signs in with that number.
+    # The email path below is kept for accounts made before the change.
+    by_mobile = not (email or "").strip()
+    if by_mobile:
+        if not mobile:
+            raise ValidationFailed({"mobile": ["A mobile number is required."]})
+        if not mobile.startswith("+91"):
+            raise ValidationFailed({"mobile": ["Staff sign in with an Indian mobile number."]})
+        normalised = synthetic_email_for(mobile)
+    else:
+        normalised = membership_service.normalise_email_or_none(email)
+        if not normalised:
+            raise ValidationFailed({"email": ["An email address is required."]})
     if not display_name:
         raise ValidationFailed({"full_name": ["A name is required."]})
+
+    def find_user() -> Any:
+        if by_mobile:
+            return User.objects.filter(mobile=mobile).first()
+        return User.objects.filter(email=normalised).first()
 
     # Minted before the lock, and only when the address is new: an existing
     # account keeps its own password, so hashing one for it would be wasted work.
     # The rare race (someone registers this address between here and the lock)
-    # falls back to hashing inside, which is correct if slower.
-    minted = None if User.objects.filter(email=normalised).exists() else _mint()
+    # falls back to hashing inside, which is correct if slower. A member added
+    # by mobile gets no password at all: the OTP is their way in.
+    minted = None if by_mobile or find_user() is not None else _mint()
 
     with transaction.atomic():
         locked = entitlements.lock_tenant_for_write(tenant)
-        existing_user = User.objects.filter(email=normalised).first()
+        existing_user = find_user()
 
         if existing_user is not None:
             already = Membership.objects.filter(user=existing_user, tenant=locked).first()
             if already is not None and already.status == MembershipStatus.ACTIVE:
-                raise BusinessRuleViolation(
-                    "validation_error", "That person is already on this team."
+                # A FIELD error, on the field that identifies them. As a bare
+                # `validation_error` with no details the form had no field to
+                # anchor it to and no toast (validation errors are presented
+                # locally), so the owner tapped "Add to team" and saw nothing
+                # happen at all (d3-HI sweep, 9 Oct 2026).
+                field = "mobile" if by_mobile else "email"
+                raise ValidationFailed(
+                    {field: [ALREADY_MEMBER_MESSAGE], FIELD_CODES_KEY: {field: ALREADY_MEMBER_CODE}}
                 )
 
         # NEW-2: the number is only ever written for a NEW account (an existing
@@ -310,7 +338,13 @@ def create_member(
             tenant=locked, adding=1, endpoint="members.create", excluding_email=normalised
         )
 
-        if existing_user is None:
+        if existing_user is None and by_mobile:
+            user = _create_user_or_refuse_mobile(
+                email=normalised, full_name=display_name, mobile=mobile
+            )
+            password, expires_at = "", None
+            created_user = True
+        elif existing_user is None:
             user = _create_user_or_refuse_mobile(
                 email=normalised, full_name=display_name, mobile=mobile or None
             )

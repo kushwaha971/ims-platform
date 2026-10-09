@@ -20,10 +20,19 @@
  *   node e2e/credentials.mjs
  *   node e2e/credentials.mjs --shots
  *
+ * DEC-013 (owner, 9 Oct 2026) changed the screen: an owner adds staff by
+ * name, mobile and role, sees no password, and the member signs in with that
+ * number and a texted code. The first half walks THAT, through the UI, reading
+ * the code from the API log (console SMS backend, $UB_E2E_LOGS/be-run.log).
+ * The temporary-password path is kept on the server for accounts made with an
+ * email, so the second half mints one through the API and proves the forced
+ * change is still the SERVER's, exactly as before.
+ *
  * Exits non-zero on any failure, so it can gate a commit.
  */
 import { chromium } from 'playwright';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 const FRONTEND = process.env.E2E_FRONTEND ?? 'http://localhost:3000';
 const BACKEND = process.env.E2E_BACKEND ?? 'http://localhost:8000/api/v1';
@@ -58,6 +67,22 @@ const keep = (text) => !/(401|403)\s*\(?(Unauthorized|Forbidden)?\)?/i.test(text
 const stamp = Date.now();
 const OWNER = { email: `owner-${stamp}@shop.test`, password: 'Dukaan2026x', name: 'Owner Person' };
 const STAFF = { email: `staff-${stamp}@shop.test`, name: 'Ramesh Kumar' };
+const MOBILE_STAFF = { name: 'Suresh Yadav', national: `8${String(stamp).slice(-9)}` };
+const LOGS = process.env.UB_E2E_LOGS ?? '/tmp';
+let ownerToken = null;
+
+/** The newest code the console SMS backend logged for a number ending in `last3`. */
+const codeFromLog = async (last3, notBefore) => {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    let log = '';
+    try { log = readFileSync(join(LOGS, 'be-run.log'), 'utf8').slice(notBefore); } catch { /* not yet */ }
+    const hits = [...log.matchAll(/sms\.console to=\+91…(\d{3}) body=(\d{6}) is your/g)].filter((m) => m[1] === last3);
+    if (hits.length) return hits[hits.length - 1][2];
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  return null;
+};
+const logSize = () => { try { return readFileSync(join(LOGS, 'be-run.log'), 'utf8').length; } catch { return 0; } };
 
 /** Sign up an owner and a business through the API — this script is not about that path. */
 async function seedOwner() {
@@ -84,10 +109,17 @@ async function seedOwner() {
     body: JSON.stringify({ name: "Kumar Stores", business_type: "retail", state_code: "27" }),
   });
   if (!tenant.ok) throw new Error(`tenant ${tenant.status}: ${await tenant.text()}`);
+  // Signing in again picks the new business as the token's active tenant.
+  const login = await fetch(`${BACKEND}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Client': 'api' },
+    body: JSON.stringify({ email: OWNER.email, password: OWNER.password }),
+  });
+  ownerToken = (await login.json()).data.access_token;
 }
 
 const signIn = async (page, email, password) => {
-  await page.goto(`${FRONTEND}/login`, { waitUntil: 'networkidle', timeout: 45000 });
+  await page.goto(`${FRONTEND}/login/email`, { waitUntil: 'networkidle', timeout: 45000 });
   await page.fill('input[type="email"], input[name="email"]', email);
   await page.fill('input[type="password"], input[name="password"]', password);
   await page.click('button[type="submit"]');
@@ -99,8 +131,7 @@ async function run() {
   const browser = await chromium.launch();
   const viewport = { width: 1440, height: 900 };
 
-  // ── The owner adds a member and reads the password off the screen ─────────
-  let issuedPassword = null;
+  // ── DEC-013: the owner adds a member by mobile; no password exists ───────
   {
     const ctx = await browser.newContext({ viewport });
     const page = await ctx.newPage();
@@ -117,30 +148,66 @@ async function run() {
     await addButton.first().click();
     await page.waitForTimeout(900);
 
-    await page.getByLabel(/Full name/i).fill(STAFF.name);
-    await page.getByLabel(/Email address/i).first().fill(STAFF.email);
+    record('the form asks for no email and no password',
+      (await page.getByLabel(/Email/i).count()) === 0 && (await page.locator('input[type="password"]').count()) === 0);
+    await page.getByLabel(/Full name/i).fill(MOBILE_STAFF.name);
+    await page.getByLabel(/Mobile number/i).first().fill(MOBILE_STAFF.national);
     await shot(page, '02-add-form');
-    await page.getByRole('button', { name: /Create login/i }).click();
+    await page.getByRole('button', { name: /Add to team/i }).click();
     await page.waitForTimeout(2500);
-    await shot(page, '03-credentials');
+    await shot(page, '03-on-your-team');
 
-    const field = page.getByTestId('credentials-password');
-    record('the credentials dialog appears', (await field.count()) > 0);
-    issuedPassword = await field.inputValue().catch(() => null);
-    record('it carries a password the owner can read', Boolean(issuedPassword), issuedPassword ?? '');
-
-    // The shape is the contract the typing argument rests on: no I/l/1, no O/0.
-    record(
-      'the password is typeable — no lookalike characters',
-      Boolean(issuedPassword) && !/[IlO01]/.test(issuedPassword),
-      issuedPassword ?? ''
-    );
-
-    const emailField = await page.getByTestId('credentials-email').inputValue().catch(() => null);
-    record('and the address it belongs to', emailField === STAFF.email, emailField ?? '');
-
+    record('it confirms the member is on the team',
+      await page.getByText(`${MOBILE_STAFF.name} is on your team`).isVisible().catch(() => false));
+    record('and shows no password', (await page.getByTestId('credentials-password').count()) === 0);
+    const body = await page.locator('body').innerText();
+    record('it says they sign in with their number', body.includes(MOBILE_STAFF.national.slice(-5)), body.slice(0, 200));
     record('no console errors on the owner path', consoleErrors.length === 0, consoleErrors.join(' | '));
     await ctx.close();
+  }
+
+  // ── The member signs in with that number and a code ──────────────────────
+  {
+    const ctx = await browser.newContext({ viewport });
+    const page = await ctx.newPage();
+    await page.goto(`${FRONTEND}/login`, { waitUntil: 'networkidle', timeout: 45000 });
+    await page.getByLabel('Mobile number').fill(MOBILE_STAFF.national);
+    const before = logSize();
+    await page.getByRole('button', { name: 'Send code' }).click();
+    await page.getByRole('heading', { name: 'Enter the code' }).waitFor({ timeout: 30000 }).catch(() => {});
+    const code = await codeFromLog(MOBILE_STAFF.national.slice(-3), before);
+    record('a code is sent to the number the owner typed', Boolean(code));
+    if (code) {
+      await page.getByRole('textbox').first().focus();
+      await page.keyboard.type(code);
+      await page.waitForURL((u) => !u.pathname.startsWith('/login'), { timeout: 30000 }).catch(() => {});
+      await page.waitForTimeout(1500);
+    }
+    await shot(page, '04-mobile-member-in');
+    // Straight into the owner's business — not onboarding (they own nothing)
+    // and not a password screen (they have none).
+    record('the code gets the member straight into the business',
+      !/\/(login|onboarding|set-password)/.test(page.url()), page.url());
+    await ctx.close();
+  }
+
+  // ── DEC-012, kept on the server: an email member gets a temporary password ─
+  let issuedPassword = null;
+  {
+    const created = await fetch(`${BACKEND}/members`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Client': 'api',
+        Authorization: `Bearer ${ownerToken}`,
+        'Idempotency-Key': `member-${stamp}`,
+      },
+      body: JSON.stringify({ full_name: STAFF.name, email: STAFF.email, role: 'staff' }),
+    });
+    const json = await created.json().catch(() => ({}));
+    issuedPassword = json?.data?.password ?? null;
+    record('the server still issues a temporary password for an email member', created.status === 201 && Boolean(issuedPassword), `${created.status}`);
+    record('the password is typeable — no lookalike characters', Boolean(issuedPassword) && !/[IlO01]/.test(issuedPassword), issuedPassword ?? '');
   }
 
   if (!issuedPassword) {

@@ -8,9 +8,10 @@ import { readDetailNumber } from 'src/utils/errorDetails';
 import {
   confirmPasswordReset,
   passwordLogin,
-  registerAccount,
+  requestOtp,
   requestPasswordReset,
   setPassword,
+  verifyOtp,
 } from './authThunk';
 
 import type { AuthResult } from '../types/auth.types';
@@ -51,6 +52,23 @@ export interface AuthState {
   resetRequested: boolean;
   /** The authenticated result, held until the hook has routed on it. */
   result: AuthResult | null;
+  /**
+   * Owner, 9 Oct 2026 — the code that was sent: which number, which
+   * challenge, and two ABSOLUTE deadlines (epoch ms), for the same reason
+   * `throttledUntil` is one. `null` until a code is asked for, and again after
+   * "Change number".
+   */
+  otp: OtpState | null;
+}
+
+export interface OtpState {
+  mobile: string;
+  challengeId: string;
+  /** Resend unlocks at this moment — two minutes after the last send. */
+  resendAt: number;
+  expiresAt: number;
+  /** Set while a code is being checked or asked for, for the busy states. */
+  busy: 'sending' | 'verifying' | null;
 }
 
 const initialState: AuthState = {
@@ -62,6 +80,7 @@ const initialState: AuthState = {
   passwordSet: false,
   resetRequested: false,
   result: null,
+  otp: null,
 };
 
 /**
@@ -90,6 +109,13 @@ const throttleUntilFrom = (error: ApiErrorShape | null | undefined): number | nu
   return Date.now() + (seconds !== null && seconds > 0 ? seconds : 60) * 1000;
 };
 
+/** `otp_throttled`'s `retry_after`, in seconds; `null` for anything else. */
+const otpRetryAfter = (error: ApiErrorShape | null | undefined): number | null => {
+  if (!error || (error.code !== 'otp_throttled' && error.code !== 'rate_limited')) return null;
+  const seconds = readDetailNumber(error.details, 'retry_after');
+  return seconds !== null && seconds > 0 ? seconds : 60;
+};
+
 const authSlice = createSlice({
   name: 'auth',
   initialState,
@@ -111,33 +137,63 @@ const authSlice = createSlice({
     authErrorCleared(state) {
       state.error = null;
     },
+    /** "Change number" — back to the number, with nothing of the last one kept. */
+    otpCleared(state) {
+      state.otp = null;
+      state.error = null;
+      state.status = 'idle';
+    },
     resetAuth: () => initialState,
   },
   extraReducers: (builder) => {
     builder
-      // ── CR-2026-09-19-A FR-S1 — sign up ─────────────────────────────────
-      .addCase(registerAccount.pending, (state) => {
+      // ── Owner, 9 Oct 2026 — mobile + OTP ────────────────────────────────
+      .addCase(requestOtp.pending, (state) => {
         state.status = 'loading';
         state.error = null;
+        if (state.otp) state.otp.busy = 'sending';
       })
-      .addCase(registerAccount.fulfilled, (state, action) => {
-        state.status = 'succeeded';
-        state.result = action.payload as Draft<AuthResult>;
-        state.email = action.payload.email;
-        // A brand-new account has just set a password, by definition — the
-        // register call would have been rejected without one.
-        state.passwordSet = true;
-        // FR-5: the SERVER decides this. A client that assumed "registered
-        // therefore new" would send a returning user through the wizard again
-        // if the backend ever makes register idempotent.
-        state.isNew = action.payload.isNew;
+      .addCase(requestOtp.fulfilled, (state, action) => {
+        const now = Date.now();
+        state.status = 'idle';
+        state.otp = {
+          mobile: action.meta.arg.mobile,
+          challengeId: action.payload.challengeId,
+          resendAt: now + action.payload.retryAfter * 1000,
+          expiresAt: now + action.payload.expiresIn * 1000,
+          busy: null,
+        };
       })
-      .addCase(registerAccount.rejected, (state, action) => {
+      .addCase(requestOtp.rejected, (state, action) => {
         if (action.meta.aborted) return;
         state.status = 'failed';
-        // See partyListSlice: a frozen, never-mutated ApiErrorShape in a draft.
         state.error = (action.payload ?? null) as Draft<ApiErrorShape> | null;
-        state.throttledUntil = throttleUntilFrom(action.payload);
+        // A resend asked for too early is the SAME two-minute clock the screen
+        // shows, so it moves that clock; any other 429 shuts the form.
+        const wait = otpRetryAfter(action.payload);
+        if (state.otp) {
+          state.otp.busy = null;
+          if (wait !== null) state.otp.resendAt = Date.now() + wait * 1000;
+        } else if (wait !== null) {
+          state.throttledUntil = Date.now() + wait * 1000;
+        }
+      })
+      .addCase(verifyOtp.pending, (state) => {
+        state.status = 'loading';
+        state.error = null;
+        if (state.otp) state.otp.busy = 'verifying';
+      })
+      .addCase(verifyOtp.fulfilled, (state, action) => {
+        state.status = 'succeeded';
+        state.result = action.payload as Draft<AuthResult>;
+        state.isNew = action.payload.isNew;
+        state.otp = null;
+      })
+      .addCase(verifyOtp.rejected, (state, action) => {
+        if (action.meta.aborted) return;
+        state.status = 'failed';
+        state.error = (action.payload ?? null) as Draft<ApiErrorShape> | null;
+        if (state.otp) state.otp.busy = null;
       })
 
       // ── PLT-02 FR-1 — password login ────────────────────────────────────
@@ -215,7 +271,7 @@ const authSlice = createSlice({
        * Logout and tenant switch clear every feature slice (§19.6.5) — with one
        * carefully bounded exception.
        *
-       * `registerAccount`, `passwordLogin` and `confirmPasswordReset` are mapped
+       * `verifyOtp`, `passwordLogin` and `confirmPasswordReset` are mapped
        * to `resetAll` in the INVALIDATION map, because a new session means
        * nothing a previous one left behind may survive. The listener dispatches
        * that teardown AFTER this slice's own `fulfilled` reducer has run, so a
@@ -243,6 +299,7 @@ export const {
   resetRequestCleared,
   authResultConsumed,
   authErrorCleared,
+  otpCleared,
   resetAuth,
 } = authSlice.actions;
 
@@ -258,3 +315,4 @@ export const selectAuthResult = (state: RootState): AuthResult | null => state.a
 export const selectAuthIsNew = (state: RootState): boolean => state.auth.isNew;
 export const selectPasswordSet = (state: RootState): boolean => state.auth.passwordSet;
 export const selectResetRequested = (state: RootState): boolean => state.auth.resetRequested;
+export const selectOtp = (state: RootState): OtpState | null => state.auth.otp;

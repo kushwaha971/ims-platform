@@ -154,7 +154,7 @@ async function run() {
       const ctx = await browser.newContext({ viewport, colorScheme: 'dark' });
       const page = await ctx.newPage();
       const w = watch(page, 'login');
-      await page.goto(`${FRONTEND}/login`, { waitUntil: 'networkidle', timeout: 45000 });
+      await page.goto(`${FRONTEND}/login/email`, { waitUntil: 'networkidle', timeout: 45000 });
       await page.waitForTimeout(1200);
 
       const theme = await readTheme(page);
@@ -179,7 +179,7 @@ async function run() {
     {
       const ctx = await browser.newContext({ viewport });
       const page = await ctx.newPage();
-      await page.goto(`${FRONTEND}/login`, { waitUntil: 'networkidle', timeout: 45000 });
+      await page.goto(`${FRONTEND}/login/email`, { waitUntil: 'networkidle', timeout: 45000 });
       await page.waitForTimeout(800);
 
       const picker = page.locator('select').filter({ hasText: /English|हिन्दी/ }).first();
@@ -221,7 +221,7 @@ async function run() {
     {
       const ctx = await browser.newContext({ viewport });
       const page = await ctx.newPage();
-      await page.goto(`${FRONTEND}/login`, { waitUntil: 'networkidle', timeout: 45000 });
+      await page.goto(`${FRONTEND}/login/email`, { waitUntil: 'networkidle', timeout: 45000 });
       await page.waitForTimeout(500);
       // Signed out, so this checks the shell, not the nav contents — the signed-in
       // nav check lives in the authenticated journey below.

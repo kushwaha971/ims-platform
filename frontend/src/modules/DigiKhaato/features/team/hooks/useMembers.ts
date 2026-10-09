@@ -144,7 +144,6 @@ export function useMembers(): UseMembersResult {
       try {
         await dispatch(
           addMember({
-            email: values.email,
             fullName: values.fullName,
             role: values.role,
             mobile: values.mobile ?? null,

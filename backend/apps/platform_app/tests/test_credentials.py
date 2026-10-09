@@ -17,7 +17,7 @@ from django.utils import timezone
 
 from apps.common.constants import RoleCode
 from apps.common.context import Ctx
-from apps.common.exceptions import BusinessRuleViolation
+from apps.common.exceptions import BusinessRuleViolation, ValidationFailed
 from apps.platform_app.constants import MembershipStatus
 from apps.platform_app.models import AuditLog
 from apps.platform_app.services import credentials, passwords
@@ -185,7 +185,7 @@ def test_adding_somebody_already_on_the_team_is_refused(
         actor=user,
         ctx=_ctx(user, tenant),
     )
-    with pytest.raises(BusinessRuleViolation) as exc:
+    with pytest.raises(ValidationFailed) as exc:
         credentials.create_member(
             tenant=tenant,
             role=system_roles[RoleCode.STAFF.value],
@@ -194,7 +194,9 @@ def test_adding_somebody_already_on_the_team_is_refused(
             actor=user,
             ctx=_ctx(user, tenant),
         )
+    # On the field, so the form can show it: as a bare code it showed nowhere.
     assert exc.value.code == "validation_error"
+    assert exc.value.details["field_codes"] == {"email": "already_member"}
 
 
 # ── regenerating ─────────────────────────────────────────────────────────────

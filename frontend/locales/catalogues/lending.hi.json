@@ -100,7 +100,7 @@
   "lending.form.lateFeeRate": "दर, सालाना %",
   "lending.form.lateFeeValue": "देरी शुल्क",
   "lending.form.mobile": "मोबाइल",
-  "lending.form.mobile.placeholder": "10 अंकों का मोबाइल नंबर",
+  "lending.form.mobile.placeholder": "98765 43210",
   "lending.form.name": "नाम",
   "lending.form.name.placeholder": "जैसे गीता देवी",
   "lending.form.notes": "नोट",

@@ -152,7 +152,7 @@ async function apiChecks({ token, landlordId }) {
 }
 
 const signIn = async (page) => {
-  await page.goto(`${FRONTEND}/login`, { waitUntil: 'networkidle', timeout: 180000 });
+  await page.goto(`${FRONTEND}/login/email`, { waitUntil: 'networkidle', timeout: 180000 });
   await page.waitForTimeout(2000);
   await page.fill('input[type="email"], input[name="email"]', OWNER.email);
   await page.fill('input[type="password"], input[name="password"]', OWNER.password);

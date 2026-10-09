@@ -10,6 +10,7 @@ import {
   UbDisclosure,
   UbField,
   UbGrid,
+  UbPhoneInput,
   UbSelect,
   UbStack,
   UbText,
@@ -148,9 +149,7 @@ export function InvoicePartySection({
                   label={t('sales.walkIn.mobile')}
                   placeholder={t('sales.walkIn.mobilePlaceholder')}
                 >
-                  {(field) => (
-                    <UbTextInput {...field} inputMode="tel" maxLength={13} disabled={disabled} />
-                  )}
+                  {(field) => <UbPhoneInput {...field} disabled={disabled} />}
                 </UbField>
               </UbGrid>
             )}

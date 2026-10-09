@@ -65,7 +65,14 @@ for (const vp of [
     await route.fulfill({ response, headers });
   });
 
+  // The sign-in merchants use: mobile + OTP (owner, 9 Oct 2026).
   await page.goto(`${FRONTEND}/login`, { waitUntil: 'networkidle', timeout: 180000 });
+  record(
+    `${vp.id}: the mobile sign-in is usable under the production CSP`,
+    await page.getByLabel('Mobile number').isVisible({ timeout: 20000 }).catch(() => false)
+  );
+  // The rest of the walk signs in by email at the kept, unlinked address.
+  await page.goto(`${FRONTEND}/login/email`, { waitUntil: 'networkidle', timeout: 180000 });
   const email = page.locator('input[type="email"]');
   const usable = await email.isVisible({ timeout: 20000 }).catch(() => false);
   record(`${vp.id}: the login form is usable under the production CSP`, usable);

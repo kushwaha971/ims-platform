@@ -1,15 +1,15 @@
-"""The OTP retirement, asserted from the default configuration (DEC-010).
+"""Mobile + OTP is the sign-in, by default (owner, 9 Oct 2026; reverses DEC-010).
 
-`test_otp.py` proves the OTP flow still works when it is switched on. This
-module proves the other half, which is the half the decision is actually about:
-with `UB_AUTH_OTP_ENABLED=0` — the default, and the setting every environment
-module inherits — the endpoints are **absent**, not merely refusing, and nothing
-on the default path reaches the OTP service, the SMS adapters or the challenge
-table.
+This module used to assert the OTP retirement: with the flag off by default,
+the routes were absent. The owner has now asked for sign-up and sign-in by
+mobile number and OTP only, so the flag is ON by default and these assert that
+the routes exist and are reachable from the default configuration — the same
+configuration every environment module inherits. `test_otp.py` proves the flow
+itself.
 
-"Absent" is the word that matters. A 403 or a 501 would still be a surface an
-attacker could probe and a client could accidentally depend on; a route that is
-not in the URL map is neither.
+The password endpoints still exist for the platform console and for existing
+accounts until they are moved over; the checks further down prove that path
+still writes no OTP challenge and sends no SMS.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ from typing import Any
 
 import pytest
 from django.conf import settings
-from django.urls import NoReverseMatch, reverse
+from django.urls import reverse
 
 pytestmark = pytest.mark.django_db
 
@@ -26,45 +26,34 @@ pytestmark = pytest.mark.django_db
 OTP_PATHS = ("/api/v1/auth/otp/request", "/api/v1/auth/otp/verify")
 
 
-def test_the_flag_is_off_by_default() -> None:
+def test_the_flag_is_on_by_default() -> None:
     """The decision, in one assertion. Everything below follows from it."""
-    assert settings.UB_AUTH_OTP_ENABLED is False
+    assert settings.UB_AUTH_OTP_ENABLED is True
 
 
 @pytest.mark.parametrize("name", ["v1:auth-otp-request", "v1:auth-otp-verify"])
-def test_the_otp_route_names_do_not_resolve(name: str) -> None:
-    with pytest.raises(NoReverseMatch):
-        reverse(name)
+def test_the_otp_route_names_resolve(name: str) -> None:
+    assert reverse(name).startswith("/api/v1/auth/otp/")
 
 
 @pytest.mark.parametrize("path", OTP_PATHS)
-def test_posting_to_an_otp_path_is_a_404(anonymous_client: Any, path: str) -> None:
-    """Not 401, not 403, not 405 — the route does not exist."""
-    response = anonymous_client.post(path, {"mobile": "9876543210"}, format="json")
-    assert response.status_code == 404
+def test_an_otp_path_answers_rather_than_404(anonymous_client: Any, path: str) -> None:
+    """An empty body is a validation error from a route that exists."""
+    response = anonymous_client.post(path, {}, format="json")
+    assert response.status_code == 400
 
 
-@pytest.mark.parametrize("path", OTP_PATHS)
-def test_an_authenticated_caller_gets_the_same_404(api_as: Any, tenant: Any, path: str) -> None:
-    client, _member = api_as(tenant)
-    assert client.post(path, {"mobile": "9876543210"}, format="json").status_code == 404
+def test_sessions_last_ninety_days_by_default() -> None:
+    """ "Stay signed in just like other mobile apps": every refresh restarts the
+    clock, so this is ninety days WITHOUT opening the app, not ninety in all."""
+    assert settings.UB_REFRESH_TOKEN_DAYS == 90
 
 
-def test_no_otp_route_is_registered_anywhere_in_the_url_map() -> None:
-    """A stronger statement than "these two paths 404": nothing OTP is routed."""
-    from django.urls import URLPattern, URLResolver, get_resolver
+def test_a_resend_waits_two_minutes() -> None:
+    """The owner's timer, enforced on the server; the screen only shows it."""
+    from apps.platform_app.services import throttle
 
-    names: set[str] = set()
-
-    def walk(patterns: Any) -> None:
-        for entry in patterns:
-            if isinstance(entry, URLResolver):
-                walk(entry.url_patterns)
-            elif isinstance(entry, URLPattern) and entry.name:
-                names.add(entry.name)
-
-    walk(get_resolver().url_patterns)
-    assert not [name for name in names if "otp" in name]
+    assert throttle.OTP_RESEND_GAP_SECONDS == 120
 
 
 def test_the_default_sign_in_path_writes_no_otp_challenge(auth_client: Any) -> None:

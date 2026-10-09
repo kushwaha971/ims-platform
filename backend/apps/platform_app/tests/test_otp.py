@@ -96,9 +96,43 @@ def test_every_accepted_spelling_normalises_to_one(raw: str) -> None:
     assert normalise_mobile(raw) == "+919876543210"
 
 
-@pytest.mark.parametrize("raw", ["09876543210", "5876543210", "98765", "", None, "abcdefghij"])
+@pytest.mark.parametrize(
+    "raw",
+    ["09876543210", "5876543210", "98765", "", None, "abcdefghij", "+915876543210", "+9198765"],
+)
 def test_a_number_that_is_not_an_indian_mobile_is_refused(raw: Any) -> None:
-    """T-PLT-01-2: `09876…` is the landline trunk prefix, not a mobile."""
+    """T-PLT-01-2: `09876…` is the landline trunk prefix, not a mobile.
+
+    `+91` keeps India's strict rule even now other countries are accepted —
+    the other-country branch must not become a way round it."""
+    with pytest.raises(InvalidMobile):
+        normalise_mobile(raw)
+
+
+@pytest.mark.parametrize(
+    ("raw", "stored"),
+    [
+        ("+447911123456", "+447911123456"),
+        ("+44 7911 123456", "+447911123456"),
+        ("0044 7911 123456", "+447911123456"),
+        ("+1 (416) 555-0100", "+14165550100"),
+        ("+971501234567", "+971501234567"),
+        ("0091 98765 43210", "+919876543210"),
+    ],
+)
+def test_another_countrys_mobile_is_stored_as_e164(raw: str, stored: str) -> None:
+    """Owner, 9 Oct 2026: India by default, other countries selectable.
+
+    Before this, every non-+91 number was refused on staff, shop-phone and
+    walk-in fields, so a merchant with a supplier in Dubai could not save the
+    number the country picker now lets them type."""
+    assert normalise_mobile(raw) == stored
+
+
+@pytest.mark.parametrize("raw", ["+4479", "+441234567890123", "+0123456789"])
+def test_a_malformed_international_number_is_refused(raw: str) -> None:
+    """Too short, too long for the `varchar(15)` column (a DataError, not a
+    message, if it got through), or a country code starting 0."""
     with pytest.raises(InvalidMobile):
         normalise_mobile(raw)
 
@@ -118,8 +152,8 @@ def test_request_then_verify_creates_user_session_and_cookies(
     assert response.status_code == 200
     body = response.json()["data"]
     assert set(body) == {"challenge_id", "expires_in", "retry_after"}
-    assert body["expires_in"] == 300
-    assert body["retry_after"] == 30
+    assert body["expires_in"] == 600
+    assert body["retry_after"] == 120
     assert "code" not in response.content.decode()
 
     verified = auth_client.post(
@@ -240,7 +274,7 @@ def test_the_correct_code_after_four_failures_still_works(auth_client: Any, fixe
 # ── T-PLT-01-5 API: throttling and lockout (Part 27 §27.4.1) ─────────────────
 
 
-def test_the_sixth_request_in_ten_minutes_is_429(auth_client: Any, fixed_otp: str) -> None:
+def test_the_sixth_request_in_an_hour_is_429(auth_client: Any, fixed_otp: str) -> None:
     """T-PLT-01-5 / FR-7: 5 per mobile per 10 minutes, with `Retry-After`."""
     from apps.platform_app.models import RateLimit
     from apps.platform_app.services import throttle
@@ -248,10 +282,10 @@ def test_the_sixth_request_in_ten_minutes_is_429(auth_client: Any, fixed_otp: st
     for index in range(5):
         response = auth_client.post(reverse(REQUEST_URL), {"mobile": "9876543214"}, format="json")
         assert response.status_code == 200, index
-        # FR-7's 30-second resend gap would otherwise refuse request 2 onwards;
+        # FR-7's two-minute resend gap would otherwise refuse request 2 onwards;
         # this test is about the *window*, so the gap is aged out deliberately.
         RateLimit.objects.filter(scope=throttle.SCOPE_OTP_MOBILE).update(
-            last_hit_at=timezone.now() - dt.timedelta(seconds=60)
+            last_hit_at=timezone.now() - dt.timedelta(seconds=180)
         )
 
     refused = auth_client.post(reverse(REQUEST_URL), {"mobile": "9876543214"}, format="json")
@@ -261,13 +295,13 @@ def test_the_sixth_request_in_ten_minutes_is_429(auth_client: Any, fixed_otp: st
     assert refused.json()["error"]["details"]["retry_after"] > 0
 
 
-def test_a_resend_inside_thirty_seconds_is_refused(auth_client: Any) -> None:
-    """FR-7: "Resend is allowed after `retry_after` (30 s)"."""
+def test_a_resend_inside_two_minutes_is_refused(auth_client: Any) -> None:
+    """FR-7: "Resend is allowed after `retry_after`" — two minutes since 9 Oct 2026."""
     first = auth_client.post(reverse(REQUEST_URL), {"mobile": "9876543215"}, format="json")
     assert first.status_code == 200
     second = auth_client.post(reverse(REQUEST_URL), {"mobile": "9876543215"}, format="json")
     assert second.status_code == 429
-    assert second.json()["error"]["details"]["retry_after"] <= 30
+    assert 60 < second.json()["error"]["details"]["retry_after"] <= 120
 
 
 def test_twenty_requests_from_one_ip_per_hour_is_the_ceiling(auth_client: Any) -> None:
@@ -304,7 +338,7 @@ def test_five_failed_challenges_lock_the_mobile_out_for_thirty_minutes(
             format="json",
         )
         RateLimit.objects.filter(scope=throttle.SCOPE_OTP_MOBILE).update(
-            last_hit_at=timezone.now() - dt.timedelta(seconds=60)
+            last_hit_at=timezone.now() - dt.timedelta(seconds=180)
         )
 
     lock = RateLimit.objects.get(
@@ -431,7 +465,7 @@ def test_an_older_challenge_is_superseded_by_a_newer_one(auth_client: Any, fixed
         "data"
     ]
     RateLimit.objects.filter(scope=throttle.SCOPE_OTP_MOBILE).update(
-        last_hit_at=timezone.now() - dt.timedelta(seconds=60)
+        last_hit_at=timezone.now() - dt.timedelta(seconds=180)
     )
     auth_client.post(reverse(REQUEST_URL), {"mobile": "9876543222"}, format="json")
 
@@ -557,3 +591,15 @@ def test_the_audit_trail_hashes_the_mobile_and_carries_no_tenant(auth_client: An
     assert row.tenant_id is None
     assert row.metadata["mobile_sha256"] == hashlib.sha256(b"+919876543225").hexdigest()
     assert "9876543225" not in str(row.metadata)
+
+
+def test_sign_in_refuses_a_foreign_mobile_with_a_message(auth_client: Any) -> None:
+    """Fast2SMS delivers to Indian numbers only. Since the country picker,
+    `MobileField` accepts any country; a UK number here would be a code nobody
+    receives, behind a screen saying "code sent"."""
+    from apps.platform_app.models import OtpChallenge
+
+    response = auth_client.post(reverse(REQUEST_URL), {"mobile": "+447911123456"}, format="json")
+    assert response.status_code == 400
+    assert "mobile" in response.json()["error"]["details"]
+    assert OtpChallenge.objects.count() == 0

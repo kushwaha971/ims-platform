@@ -1,9 +1,15 @@
 import { useState } from 'react';
 
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { toE164, toNationalDigits, UbPhoneInput } from './UbPhoneInput';
+import { preloadCountryPicker, toE164, toNationalDigits, UbPhoneInput } from './UbPhoneInput';
+
+// The country list is fetched after first paint (see `pickerModule`); these
+// tests are about the list, so it is in place before the first render.
+beforeAll(async () => {
+  await preloadCountryPicker();
+});
 
 /**
  * PLT-01 FR-1 — the control's contract: the user types ten digits, the FORM
@@ -297,5 +303,212 @@ describe('UbPhoneInput', () => {
   it('marks itself invalid so the border can be --form-error', () => {
     render(<UbPhoneInput value="" onChange={jest.fn()} invalid aria-label="Mobile" />);
     expect(screen.getByLabelText('Mobile')).toHaveAttribute('aria-invalid', 'true');
+  });
+});
+
+/**
+ * Owner, 9 Oct 2026 — "keep that default of India but also allow to select
+ * other countries", then "use that ml uikit existing component, and check the
+ * drop down selection and search work properly". India stays the default and
+ * keeps every rule above; the code is `UbCombobox` (MLPopover + MLCommand), so
+ * these open it, SEARCH it by name and by code, and pick from it.
+ */
+describe('UbPhoneInput country picker', () => {
+  const trigger = () => screen.getByRole('combobox', { name: 'Country code' });
+
+  /** Open the list, type into its search box, pick the row that matches. */
+  const pick = async (user: ReturnType<typeof userEvent.setup>, query: string, row: string) => {
+    await user.click(trigger());
+    await user.type(await screen.findByPlaceholderText('Search country or code'), query);
+    await user.click(await screen.findByRole('option', { name: new RegExp(row) }));
+  };
+
+  it('starts on India for an empty field', () => {
+    render(<Controlled />);
+    expect(trigger()).toHaveTextContent('+91');
+  });
+
+  it('lists India first and every other country after it, by name', async () => {
+    const user = userEvent.setup();
+    render(<Controlled />);
+    await user.click(trigger());
+    const options = await screen.findAllByRole('option');
+    expect(options[0]).toHaveTextContent('India (+91)');
+    expect(options.length).toBeGreaterThan(200);
+    expect(options.some((o) => o.textContent === 'United Kingdom (+44)')).toBe(true);
+  });
+
+  it('finds a country by name in the search box', async () => {
+    const user = userEvent.setup();
+    render(<Controlled />);
+    await user.click(trigger());
+    await user.type(await screen.findByPlaceholderText('Search country or code'), 'united kin');
+    const options = await screen.findAllByRole('option');
+    expect(options[0]).toHaveTextContent('United Kingdom (+44)');
+  });
+
+  it('finds a country by its code in the search box', async () => {
+    const user = userEvent.setup();
+    render(<Controlled />);
+    await user.click(trigger());
+    await user.type(await screen.findByPlaceholderText('Search country or code'), '+971');
+    const options = await screen.findAllByRole('option');
+    expect(options[0]).toHaveTextContent('United Arab Emirates (+971)');
+  });
+
+  // The search used to survive a close: after picking by "971" the list
+  // reopened still filtered, so the next search was "971india".
+  it('opens with an empty search every time', async () => {
+    const user = userEvent.setup();
+    render(<Controlled />);
+    await pick(user, '971', 'United Arab Emirates');
+    await user.click(trigger());
+    expect(await screen.findByPlaceholderText('Search country or code')).toHaveValue('');
+  });
+
+  it('says so when nothing matches', async () => {
+    const user = userEvent.setup();
+    render(<Controlled />);
+    await user.click(trigger());
+    await user.type(await screen.findByPlaceholderText('Search country or code'), 'qxqxqx');
+    expect(await screen.findByText('No country matches')).toBeInTheDocument();
+  });
+
+  it('types a UK number after picking the UK, and reports E.164', async () => {
+    const user = userEvent.setup();
+    const onValue = jest.fn();
+    render(<Controlled onValue={onValue} />);
+
+    await pick(user, 'united kingdom', 'United Kingdom');
+    expect(trigger()).toHaveTextContent('+44');
+    // Picking a code hands the keypad back to the number.
+    await waitFor(() => expect(screen.getByLabelText('Mobile')).toHaveFocus());
+    await user.type(screen.getByLabelText('Mobile'), '07911123456');
+
+    // The trunk 0 a UK number is written with is not part of E.164.
+    expect(screen.getByLabelText('Mobile')).toHaveValue('7911123456');
+    expect(onValue).toHaveBeenLastCalledWith('+447911123456');
+  });
+
+  it('moves the digits already typed to the new code, and back', async () => {
+    const user = userEvent.setup();
+    const onValue = jest.fn();
+    render(<Controlled initial="+919845612345" onValue={onValue} />);
+
+    await pick(user, '971', 'United Arab Emirates');
+    expect(onValue).toHaveBeenLastCalledWith('+9719845612345');
+
+    await pick(user, 'india', '^India \\(\\+91\\)$');
+    expect(onValue).toHaveBeenLastCalledWith('+919845612345');
+    expect(screen.getByLabelText('Mobile')).toHaveValue('9845612345');
+  });
+
+  it('shows a loaded foreign number on its own country', () => {
+    render(<Controlled initial="+14165550100" />);
+    expect(trigger()).toHaveTextContent('+1');
+    expect(screen.getByLabelText('Mobile')).toHaveValue('4165550100');
+  });
+
+  it('keeps Canada for a +1 number once Canada is picked', async () => {
+    const user = userEvent.setup();
+    const onValue = jest.fn();
+    render(<Controlled onValue={onValue} />);
+    await pick(user, 'canada', 'Canada');
+    await user.type(screen.getByLabelText('Mobile'), '4165550100');
+    expect(onValue).toHaveBeenLastCalledWith('+14165550100');
+    // The list marks Canada, not the United States, as the chosen row.
+    await user.click(trigger());
+    await user.type(await screen.findByPlaceholderText('Search country or code'), '+1');
+    const canada = await screen.findByRole('option', { name: /Canada/ });
+    expect(canada.querySelector('svg')).toHaveClass('opacity-100');
+  });
+
+  it.each([
+    ['+44 7911 123456', '+44', '7911123456', '+447911123456'],
+    ['0044 7911 123456', '+44', '7911123456', '+447911123456'],
+    ['+971 50 123 4567', '+971', '501234567', '+971501234567'],
+  ])(
+    'switches by itself when %s is pasted into an Indian field',
+    async (pasted, code, shown, e164) => {
+      const user = userEvent.setup();
+      const onValue = jest.fn();
+      render(<Controlled onValue={onValue} />);
+
+      await user.click(screen.getByLabelText('Mobile'));
+      await user.paste(pasted);
+
+      expect(trigger()).toHaveTextContent(code);
+      expect(screen.getByLabelText('Mobile')).toHaveValue(shown);
+      expect(onValue).toHaveBeenLastCalledWith(e164);
+    }
+  );
+
+  it('switches back to India when an Indian number is pasted into a UK field', async () => {
+    const user = userEvent.setup();
+    const onValue = jest.fn();
+    render(<Controlled initial="+447911123456" onValue={onValue} />);
+
+    await user.clear(screen.getByLabelText('Mobile'));
+    await user.paste('+91 98456 78901');
+
+    expect(trigger()).toHaveTextContent('+91');
+    expect(onValue).toHaveBeenLastCalledWith('+919845678901');
+  });
+
+  it('follows an autofilled international number', () => {
+    const onValue = jest.fn();
+    render(<Controlled onValue={onValue} />);
+    fireEvent.change(screen.getByLabelText('Mobile'), { target: { value: '+447911123456' } });
+    expect(trigger()).toHaveTextContent('+44');
+    expect(onValue).toHaveBeenLastCalledWith('+447911123456');
+  });
+
+  it('stays on the picked country after its number is cleared', async () => {
+    const user = userEvent.setup();
+    render(<Controlled initial="+447911123456" />);
+    await user.clear(screen.getByLabelText('Mobile'));
+    expect(trigger()).toHaveTextContent('+44');
+  });
+
+  // Fourteen, not E.164's fifteen: the server's column is varchar(15).
+  it('caps a foreign number at fourteen digits with its code', async () => {
+    const user = userEvent.setup();
+    const onValue = jest.fn();
+    render(<Controlled onValue={onValue} />);
+    await pick(user, 'united kingdom', 'United Kingdom');
+    await user.type(screen.getByLabelText('Mobile'), '1234567890123456');
+    expect(onValue).toHaveBeenLastCalledWith('+44123456789012');
+  });
+
+  it('disables the picker with the field', () => {
+    render(<UbPhoneInput value="" onChange={jest.fn()} disabled aria-label="Mobile" />);
+    expect(trigger()).toBeDisabled();
+  });
+});
+
+describe('UbPhoneInput with lockCountry (sign-in)', () => {
+  // Sign-in codes go by Fast2SMS, India only: a picker there would offer 242
+  // countries that cannot receive a code.
+  it('shows +91 with no picker and still reports E.164', async () => {
+    const user = userEvent.setup();
+    const onChange = jest.fn();
+    render(<UbPhoneInput value="" onChange={onChange} lockCountry aria-label="Mobile" />);
+    expect(screen.queryByRole('combobox', { name: 'Country code' })).not.toBeInTheDocument();
+    expect(screen.getByText('+91')).toBeInTheDocument();
+    await user.type(screen.getByLabelText('Mobile'), '9');
+    expect(onChange).toHaveBeenLastCalledWith('+919');
+  });
+
+  it('does not switch country on a pasted foreign number', async () => {
+    const user = userEvent.setup();
+    render(<Controlled />);
+    // (the unlocked control switches; covered above)
+    expect(screen.getByRole('combobox', { name: 'Country code' })).toHaveTextContent('+91');
+    const onChange = jest.fn();
+    render(<UbPhoneInput value="" onChange={onChange} lockCountry aria-label="Locked" />);
+    await user.click(screen.getByLabelText('Locked'));
+    await user.paste('+44 7911 123456');
+    expect(screen.getAllByText('+91').length).toBeGreaterThan(0);
+    expect(onChange).not.toHaveBeenCalledWith('+447911123456');
   });
 });

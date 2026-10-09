@@ -111,7 +111,7 @@ console.log('SEED', owner.email, owner.tenantId);
 // ───────────────────────── browser ─────────────────────────
 const browser = await chromium.launch();
 const signIn = async (page, email, password = PASSWORD) => {
-  await page.goto(`${FRONTEND}/login`, { waitUntil: 'networkidle', timeout: 180000 });
+  await page.goto(`${FRONTEND}/login/email`, { waitUntil: 'networkidle', timeout: 180000 });
   await page.fill('input[type="email"], input[name="email"]', email);
   await page.fill('input[type="password"], input[name="password"]', password);
   await page.waitForTimeout(1500);

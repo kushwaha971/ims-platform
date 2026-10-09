@@ -4,9 +4,10 @@ import {
   confirmPasswordReset,
   getSession,
   passwordLogin,
-  register,
+  requestOtp,
   requestPasswordReset,
   setPassword,
+  verifyOtp,
 } from './authService';
 
 /**
@@ -57,65 +58,32 @@ const AUTH_BODY = {
   },
 };
 
-describe('authService — CR-2026-09-19-A registration', () => {
+describe('authService — mobile + OTP (owner, 9 Oct 2026)', () => {
   afterEach(() => jest.restoreAllMocks());
 
-  it('posts the address, the password and the name to /auth/register', async () => {
-    const post = jest.spyOn(api, 'post').mockResolvedValue({ data: AUTH_BODY });
-
-    const result = await register({
-      email: 'ramesh@example.com',
-      password: 'kirana2026',
-      name: 'Ramesh',
-      deviceLabel: 'Chrome on Android',
+  it('asks for a code with the E.164 number and reads the two-minute clock', async () => {
+    const post = jest.spyOn(api, 'post').mockResolvedValue({
+      data: { data: { challenge_id: 'c-1', expires_in: 600, retry_after: 120 } },
     });
 
-    expect(post.mock.calls[0]?.[0]).toBe('/auth/register');
-    expect(post.mock.calls[0]?.[1]).toEqual({
-      email: 'ramesh@example.com',
-      password: 'kirana2026',
-      // `full_name` is what `platform_user` calls it (Part 21 §21.3.1).
-      full_name: 'Ramesh',
-      device_label: 'Chrome on Android',
-    });
-    expect(result.userId).toBe('u1');
-    expect(result.email).toBe('ramesh@example.com');
+    const challenge = await requestOtp({ mobile: '+919845011122', locale: 'hi' });
+
+    expect(post.mock.calls[0]?.[0]).toBe('/auth/otp/request');
+    expect(post.mock.calls[0]?.[1]).toEqual({ mobile: '+919845011122', locale: 'hi' });
+    expect(challenge).toEqual({ challengeId: 'c-1', expiresIn: 600, retryAfter: 120 });
   });
 
-  it('omits the name entirely when it was left blank (PLT-03 BR-7)', async () => {
-    const post = jest.spyOn(api, 'post').mockResolvedValue({ data: AUTH_BODY });
-
-    await register({ email: 'ramesh@example.com', password: 'kirana2026' });
-
-    expect(post.mock.calls[0]?.[1]).toEqual({
-      email: 'ramesh@example.com',
-      password: 'kirana2026',
-    });
-  });
-
-  /**
-   * CR-2026-09-19-E — was "suppresses the global toast — a taken address
-   * belongs under the field", asserting `suppressErrorSnackbar: true` on this
-   * request. It no longer sets it, and that is the change: a taken address is a
-   * `validation_error` and `shouldToast` excludes that code for the WHOLE
-   * application, so the field still owns it — while the 500s and timeouts this
-   * blanket flag was also silencing now reach the single snackbar channel.
-   * src/tests/globalErrorChannel.test.tsx asserts both halves.
-   */
-  it('does NOT opt out of the global toast — the exceptions are by error code', async () => {
-    const post = jest.spyOn(api, 'post').mockResolvedValue({ data: AUTH_BODY });
-
-    await register({ email: 'ramesh@example.com', password: 'kirana2026' });
-
-    const config = post.mock.calls[0]?.[2] as { suppressErrorSnackbar?: boolean } | undefined;
-    expect(config?.suppressErrorSnackbar).toBeUndefined();
-  });
-
-  it('treats a user with no name as a new user with an empty one (FR-5)', async () => {
-    jest.spyOn(api, 'post').mockResolvedValue({
+  it('verifies with snake_case keys and maps the session like any sign-in', async () => {
+    const post = jest.spyOn(api, 'post').mockResolvedValue({
       data: {
         data: {
-          user: { id: 'u2', email: 'new@example.com', locale: 'en', is_new: true },
+          user: {
+            id: 'u2',
+            email: '919845011122@mobile.invalid',
+            mobile: '+919845011122',
+            locale: 'en',
+            is_new: true,
+          },
           tenants: [],
           active_tenant_id: null,
           permissions: [],
@@ -123,14 +91,18 @@ describe('authService — CR-2026-09-19-A registration', () => {
       },
     });
 
-    const result = await register({ email: 'new@example.com', password: 'kirana2026' });
+    const result = await verifyOtp({ challengeId: 'c-1', code: '482913', deviceLabel: 'Chrome' });
 
-    expect(result.name).toBe('');
+    expect(post.mock.calls[0]?.[0]).toBe('/auth/otp/verify');
+    expect(post.mock.calls[0]?.[1]).toEqual({
+      challenge_id: 'c-1',
+      code: '482913',
+      device_label: 'Chrome',
+    });
+    // A new number is a new account, which routes to onboarding.
     expect(result.isNew).toBe(true);
-    // CR-2026-09-19-A — an account that has never given a number is normal.
-    expect(result.mobile).toBeNull();
+    expect(result.mobile).toBe('+919845011122');
     expect(result.tenants).toEqual([]);
-    expect(result.enabledModules).toEqual([]);
   });
 });
 

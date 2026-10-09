@@ -29,8 +29,13 @@ class ConsoleSmsBackend:
     def send(
         self, *, to: str, body: str, sender_id: str, template_id: str | None = None
     ) -> SmsResult:
+        # The body is in the MESSAGE as well as in `extra`: the local console
+        # format prints `%(message)s` and no extras, so a developer signing in
+        # with the OTP flow (owner, 9 Oct 2026) saw no code anywhere.
         logger.info(
-            "sms.console",
+            "sms.console to=%s body=%s",
+            _mask(to),
+            body,
             extra={
                 "to_masked": _mask(to),
                 "sender_id": sender_id,

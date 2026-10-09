@@ -5,9 +5,10 @@ import authReducer, { authResultConsumed, resetRequestCleared, type AuthState } 
 import {
   confirmPasswordReset,
   passwordLogin,
-  registerAccount,
+  requestOtp,
   requestPasswordReset,
   setPassword,
+  verifyOtp,
 } from './authThunk';
 
 import type { AuthResult } from '../types/auth.types';
@@ -58,44 +59,50 @@ const error = (
   warnings: [],
 });
 
-describe('authSlice — CR-2026-09-19-A sign-up', () => {
-  it('stores the result, the address and that a password now exists', () => {
-    const state = authReducer(initial, {
-      type: registerAccount.fulfilled.type,
-      payload: AUTH_RESULT,
-      meta: { arg: { email: 'ramesh@example.com', password: 'kirana2026' }, requestId: 'r' },
+describe('authSlice — mobile + OTP (owner, 9 Oct 2026)', () => {
+  const sent = (_now: number) =>
+    authReducer(initial, {
+      type: requestOtp.fulfilled.type,
+      payload: { challengeId: 'c-1', expiresIn: 600, retryAfter: 120 },
+      meta: { arg: { mobile: '+919845011122' }, requestId: 'r' },
     });
 
-    expect(state.status).toBe('succeeded');
-    expect(state.result).toEqual(AUTH_RESULT);
-    expect(state.email).toBe('ramesh@example.com');
-    expect(state.passwordSet).toBe(true);
+  it('holds the number, the challenge and the resend moment as a DEADLINE', () => {
+    const before = Date.now();
+    const state = sent(before);
+    expect(state.otp?.mobile).toBe('+919845011122');
+    expect(state.otp?.challengeId).toBe('c-1');
+    // An absolute moment, so a backgrounded tab comes back to the right number.
+    expect(state.otp?.resendAt).toBeGreaterThanOrEqual(before + 120_000);
+    expect(state.otp?.resendAt).toBeLessThanOrEqual(Date.now() + 120_000);
   });
 
-  it('takes `isNew` from the SERVER, never from the fact that it registered', () => {
-    const state = authReducer(initial, {
-      type: registerAccount.fulfilled.type,
+  it('moves the resend deadline when the server refuses an early resend', () => {
+    const state = authReducer(sent(Date.now()), {
+      type: requestOtp.rejected.type,
+      payload: error('otp_throttled' as ApiErrorShape['code'], { retry_after: 45 }),
+      meta: { arg: { mobile: '+919845011122' }, aborted: false, requestId: 'r' },
+    });
+    expect(state.otp?.resendAt).toBeLessThanOrEqual(Date.now() + 45_000);
+    expect(state.otp?.resendAt).toBeGreaterThan(Date.now() + 40_000);
+    // The form is not locked: the code already sent still works.
+    expect(state.throttledUntil).toBeNull();
+  });
+
+  it('stores the result and forgets the challenge once a code is verified', () => {
+    const state = authReducer(sent(Date.now()), {
+      type: verifyOtp.fulfilled.type,
       payload: { ...AUTH_RESULT, isNew: true, tenants: [] },
       meta: { arg: {}, requestId: 'r' },
     });
+    expect(state.status).toBe('succeeded');
     expect(state.isNew).toBe(true);
-  });
-
-  it('keeps a validation_error without guessing at a field', () => {
-    const state = authReducer(initial, {
-      type: registerAccount.rejected.type,
-      payload: error('validation_error', { email: ['That address is already registered.'] }),
-      meta: { arg: {}, aborted: false, requestId: 'r' },
-    });
-
-    expect(state.status).toBe('failed');
-    expect(state.error?.code).toBe('validation_error');
-    expect(state.result).toBeNull();
+    expect(state.otp).toBeNull();
   });
 
   it('ignores an aborted request — it is a remount, not a failure', () => {
     const state = authReducer(initial, {
-      type: registerAccount.rejected.type,
+      type: verifyOtp.rejected.type,
       payload: undefined,
       meta: { arg: {}, aborted: true, requestId: 'r' },
     });
@@ -251,7 +258,7 @@ describe('authSlice — PLT-02 reset', () => {
 
 describe('authSlice — teardown', () => {
   const loaded = authReducer(initial, {
-    type: registerAccount.fulfilled.type,
+    type: verifyOtp.fulfilled.type,
     payload: AUTH_RESULT,
     meta: { arg: {}, requestId: 'r' },
   });
@@ -263,16 +270,11 @@ describe('authSlice — teardown', () => {
   it('clears everything on the teardown signal once the result is consumed', () => {
     const consumed = authReducer(loaded, authResultConsumed());
 
-    expect(authReducer(consumed, resetAllFeatureState())).toEqual({
-      ...initial,
-      // The address is a preference, not previous-session data.
-      email: 'ramesh@example.com',
-      passwordSet: true,
-    });
+    expect(authReducer(consumed, resetAllFeatureState())).toEqual(initial);
   });
 
   it('carries a result the redirect hook has not read yet ACROSS the teardown', () => {
-    // `registerAccount` is mapped to `resetAll`, and the listener dispatches
+    // `verifyOtp` is mapped to `resetAll`, and the listener dispatches
     // that teardown after this slice's own reducer has run. Dropping the result
     // here would leave a signed-in user sitting on the sign-up screen.
     const afterTeardown = authReducer(loaded, resetAllFeatureState());

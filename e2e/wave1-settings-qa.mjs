@@ -28,7 +28,7 @@ export async function login(browser, email, { width = 1280, height = 800, hi = f
   if (hi) await ctx.addCookies([{ name: 'ub_locale', value: 'hi', url: FE }]);
   const page = await ctx.newPage();
   page.on('pageerror', (e) => console.log('PAGEERROR', e.message));
-  await page.goto(`${FE}/login`, { waitUntil: 'networkidle' });
+  await page.goto(`${FE}/login/email`, { waitUntil: 'networkidle' });
   await page.fill('input[type="email"]', email);
   await page.fill('input[type="password"]', PASSWORD);
   await page.keyboard.press('Enter');

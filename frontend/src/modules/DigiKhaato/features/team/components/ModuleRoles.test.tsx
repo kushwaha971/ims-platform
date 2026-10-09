@@ -111,7 +111,7 @@ describe('module roles on the team screen', () => {
     await user.click(await screen.findByRole('button', { name: 'Add member' }));
     await waitFor(() => expect(roleService.fetchRoles).toHaveBeenCalled());
     const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByRole('combobox'));
+    await user.click(within(dialog).getByRole('combobox', { name: /role/i }));
     const options = (await screen.findAllByRole('option')).map((o) => o.textContent);
     expect(options).toEqual(['Admin', 'Staff', 'Accountant', 'Collection agent · Lending']);
   });

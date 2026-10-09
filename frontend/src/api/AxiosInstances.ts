@@ -32,6 +32,10 @@ const AUTH_FREE_PATHS: readonly string[] = [
   // any of them is the answer, not a stale token: refreshing on it would turn
   // "that password is wrong" into a redirect to the screen the user is on.
   API_PATHS.AUTH_REGISTER,
+  // Owner, 9 Oct 2026 — the sign-in code. A refused code, or an inactive
+  // account's 401 at verify, is the answer and must not start a refresh.
+  API_PATHS.AUTH_OTP_REQUEST,
+  API_PATHS.AUTH_OTP_VERIFY,
   API_PATHS.AUTH_PASSWORD_RESET_REQUEST,
   API_PATHS.AUTH_PASSWORD_RESET_CONFIRM,
   API_PATHS.AUTH_REFRESH,

@@ -13,6 +13,7 @@ import {
   PASSWORD_MIN_LENGTH_PRIVILEGED,
 } from 'src/constants';
 import { useTranslation, type TranslateFn } from 'src/hooks/useTranslation';
+import { isValidMobile, readsAsIndian } from 'src/utils/phone';
 import { REGEX } from 'src/utils/regexConstants';
 
 /**
@@ -268,7 +269,9 @@ export const buildValidationSchemas = (t: TranslateFn): ValidationSchemas => {
       .max(max, t('validation.percent.max', { value: max }));
 
   /**
-   * Indian mobile: E.164 with +91 default; exactly 10 digits after the code.
+   * Mobile: E.164. India (+91, the default) is exactly 10 digits starting
+   * 6–9; any other country is well-formed E.164 with a real dial code
+   * (`isValidMobile`, owner, 9 Oct 2026).
    *
    * **The optional branch normalises `''` to `null` and excludes it from the
    * pattern.** Yup's `.matches()` skips `undefined` but NOT the empty string,
@@ -299,18 +302,20 @@ export const buildValidationSchemas = (t: TranslateFn): ValidationSchemas => {
     const base = Yup.string().transform((value: unknown) =>
       typeof value === 'string' ? value.replace(/\s|-/g, '') : value
     );
+    // India's message names its ten digits; another country's cannot know
+    // its length, so it points at the code the merchant picked instead.
+    const format = (schema: Yup.StringSchema<string | null | undefined>) =>
+      schema.test('mobile-format', function mobileFormat(value) {
+        if (!value || isValidMobile(value)) return true;
+        return this.createError({
+          message: readsAsIndian(value)
+            ? t('validation.mobile.format')
+            : t('validation.mobile.formatOther'),
+        });
+      });
     return required
-      ? base
-          .matches(REGEX.MOBILE_E164_IN, t('validation.mobile.format'))
-          .required(t('validation.mobile.required'))
-      : base
-          .transform(blankToNull)
-          .nullable()
-          .notRequired()
-          .matches(REGEX.MOBILE_E164_IN, {
-            message: t('validation.mobile.format'),
-            excludeEmptyString: true,
-          });
+      ? format(base).required(t('validation.mobile.required'))
+      : format(base.transform(blankToNull).nullable().notRequired());
   };
 
   /** GSTIN: 15 chars, statutory layout, checksum verified. */

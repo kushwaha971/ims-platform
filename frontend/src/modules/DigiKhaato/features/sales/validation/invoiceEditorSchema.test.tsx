@@ -6,7 +6,7 @@ import { en } from 'src/tests/allMessages';
 
 import { emptyInvoiceForm, emptyLine, type InvoiceFormValues } from '../view-model/invoiceForm';
 
-import { isIndianMobile, useInvoiceEditorSchema } from './invoiceEditorSchema';
+import { isWalkInMobile, useInvoiceEditorSchema } from './invoiceEditorSchema';
 
 import type { ValidationError } from 'yup';
 
@@ -147,8 +147,11 @@ it.each([
   ['98765-43210', true],
   ['5876543210', false],
   ['987654321', false],
-])('reads %p as an Indian mobile: %p (the server’s rule)', (value, ok) => {
-  expect(isIndianMobile(value)).toBe(ok);
+  ['+447911123456', true],
+  ['+14165550100', true],
+  ['+4479', false],
+])('reads %p as a walk-in mobile: %p (the server’s rule)', (value, ok) => {
+  expect(isWalkInMobile(value)).toBe(ok);
 });
 
 describe('the return form (SAL-04 §10)', () => {

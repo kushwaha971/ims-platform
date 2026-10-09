@@ -56,7 +56,7 @@ const login = async (email, password = PASSWORD) => (await api('POST', '/auth/lo
 const myTenants = async (email, password = PASSWORD) => (await api('GET', '/auth/me', null, await login(email, password))).body.data.tenants;
 
 const signIn = async (page, email, password = PASSWORD) => {
-  await page.goto(`${FE}/login`, { waitUntil: 'networkidle', timeout: 60000 });
+  await page.goto(`${FE}/login/email`, { waitUntil: 'networkidle', timeout: 60000 });
   await page.fill('input[type="email"]', email);
   await page.fill('input[type="password"]', password);
   await page.click('button[type="submit"]');
@@ -369,8 +369,13 @@ async function phaseM(browser) {
   const id = 'M';
   const owner = USER;
   const tok = await login(owner);
-  const membersBefore = (await api('GET', '/members', null, tok)).body.data;
   const taken = arg('taken') ?? '9845678901';
+  // DEC-013 — a number that already has an account is ADDED to the team now,
+  // not refused. So the account holder joins first, and every spelling of the
+  // number after that is "already on this team", under the Mobile field.
+  await api('POST', '/members', { full_name: 'Mobile Holder', mobile: `+91${taken}`, role: 'staff' }, tok, { 'Idempotency-Key': `holder-${Date.now()}` });
+  const membersBefore = (await api('GET', '/members', null, tok)).body.data;
+  const fresh9 = [];
   for (const vp of [{ width: 360, height: 780 }, { width: 1280, height: 800 }]) {
     const tag = vp.width;
     const ctx = await browser.newContext({ viewport: vp });
@@ -381,15 +386,14 @@ async function phaseM(browser) {
     await page.goto(`${FE}/settings/team`, { waitUntil: 'networkidle' }); await page.waitForTimeout(1500);
     await page.getByRole('button', { name: /Add member/i }).first().click();
     await page.waitForTimeout(800);
-    const em = `n2ui-${tag}-${Date.now()}@shop.test`;
+    // DEC-013 — the form is name, mobile and role; there is no email field.
     await page.getByLabel(/Full name/i).fill('Kiran Patil');
-    await page.getByLabel(/Email address/i).first().fill(em);
     const mobile = page.getByLabel(/Mobile/i).first();
     const spellings = [`+91 ${taken.slice(0, 5)} ${taken.slice(5)}`, taken, `0${taken}`];
     let i = 0;
     for (const sp of spellings) {
       await mobile.fill(sp);
-      await page.getByRole('button', { name: /Create login/i }).click();
+      await page.getByRole('button', { name: /Add to team/i }).click();
       await page.waitForTimeout(1800);
       const last = posts.at(-1);
       const dlg = page.getByRole('dialog');
@@ -397,26 +401,30 @@ async function phaseM(browser) {
       const dlgText = open ? await dlg.innerText() : '';
       const inv = await mobile.getAttribute('aria-invalid').catch(() => null);
       const desc = await mobile.evaluate((el) => (el.getAttribute('aria-describedby') || '').split(' ').map((x) => document.getElementById(x)?.textContent || '').join(' | ')).catch(() => '');
-      const vals = [await page.getByLabel(/Full name/i).inputValue().catch(() => ''), await page.getByLabel(/Email address/i).first().inputValue().catch(() => ''), await mobile.inputValue().catch(() => '')];
+      const vals = [await page.getByLabel(/Full name/i).inputValue().catch(() => ''), await mobile.inputValue().catch(() => '')];
       if (i === 0) await shot(page, `team-addmember-mobile-taken`);
-      record(id, `${tag}: taken mobile "${sp}" → 400 field error ON the Mobile field, dialog open, values kept`,
-        last?.status === 400 && /already used by another login/.test(last.body) && open && inv === 'true' && /already used by another login/.test(desc) && vals[0] === 'Kiran Patil' && vals[1] === em,
-        `status=${last?.status} aria-invalid=${inv} describedby="${desc}" vals=${JSON.stringify(vals)} body=${last?.body?.slice(0, 200)} dialogHasMsg=${/already used/.test(dlgText)}`);
+      record(id, `${tag}: a teammate's mobile "${sp}" → 400 field error ON the Mobile field, dialog open, values kept`,
+        last?.status === 400 && /already on this team/.test(last.body) && open && inv === 'true' && /already on this team/.test(desc) && vals[0] === 'Kiran Patil' && vals[1] !== '',
+        `status=${last?.status} aria-invalid=${inv} describedby="${desc}" vals=${JSON.stringify(vals)} body=${last?.body?.slice(0, 200)} dialogHasMsg=${/already on this team/.test(dlgText)}`);
       i += 1;
     }
     const k400 = posts.map((p) => p.key);
-    await mobile.fill('');
-    await page.getByRole('button', { name: /Create login/i }).click();
+    // A mobile is required now (they sign in with it): the retry uses a free one.
+    const fresh = `7${String(Date.now()).slice(-9)}`;
+    fresh9.push(`+91${fresh}`);
+    await mobile.fill(fresh);
+    await page.getByRole('button', { name: /Add to team/i }).click();
     await page.waitForTimeout(2500);
     const last = posts.at(-1);
-    const pw = await page.getByTestId('credentials-password').inputValue().catch(() => null);
-    await shot(page, `team-addmember-blank-mobile-success`);
-    record(id, `${tag}: retry with blank mobile → 201 and credentials shown`, last?.status === 201 && Boolean(pw), `status=${last?.status} keys=${JSON.stringify(k400.concat(last?.key))}`);
+    const done = await page.getByText(/Kiran Patil is on your team/).isVisible().catch(() => false);
+    const noPassword = (await page.getByTestId('credentials-password').count()) === 0;
+    await shot(page, `team-addmember-fresh-mobile-success`);
+    record(id, `${tag}: retry with a free mobile → 201, "on your team", and no password shown`, last?.status === 201 && done && noPassword, `status=${last?.status} keys=${JSON.stringify(k400.concat(last?.key))}`);
     await ctx.close();
   }
   const membersAfter = (await api('GET', '/members', null, tok)).body.data;
-  const added = membersAfter.filter((x) => !membersBefore.some((y) => y.email === x.email));
-  record(id, 'no partial users/memberships: exactly the 2 blank-mobile members were added, both mobile=null', added.length === 2 && added.every((x) => x.mobile === null), JSON.stringify(added.map((x) => [x.email, x.mobile])));
+  const added = membersAfter.filter((x) => !membersBefore.some((y) => y.id === x.id));
+  record(id, 'no partial users/memberships: exactly the 2 retried members were added, each with its own mobile', added.length === 2 && added.every((x) => fresh9.includes(x.mobile)), JSON.stringify(added.map((x) => [x.mobile, fresh9])));
 }
 
 
@@ -576,9 +584,9 @@ async function phaseL(browser) {
     await page.goto(`${FE}/settings/team`, { waitUntil: 'networkidle' }); await page.waitForTimeout(1200);
     await page.getByRole('button', { name: /Add member/i }).first().click(); await page.waitForTimeout(800);
     const dlg2 = page.getByRole('dialog').last();
-    const fb2 = await dlg2.evaluate((el) => [...el.querySelectorAll('button')].filter((b) => /^(Cancel|Create login)$/.test((b.textContent || '').trim())).map((b) => { const r = b.getBoundingClientRect(); return { name: b.textContent.trim(), x: Math.round(r.x), y: Math.round(r.y) }; }));
+    const fb2 = await dlg2.evaluate((el) => [...el.querySelectorAll('button')].filter((b) => /^(Cancel|Add to team)$/.test((b.textContent || '').trim())).map((b) => { const r = b.getBoundingClientRect(); return { name: b.textContent.trim(), x: Math.round(r.x), y: Math.round(r.y) }; }));
     await shot(page, 'dialog-add-member');
-    const ok2 = vp.width < 640 ? fb2.find((b) => b.name === 'Create login')?.y < fb2.find((b) => b.name === 'Cancel')?.y : fb2.find((b) => b.name === 'Create login')?.x > fb2.find((b) => b.name === 'Cancel')?.x;
+    const ok2 = vp.width < 640 ? fb2.find((b) => b.name === 'Add to team')?.y < fb2.find((b) => b.name === 'Cancel')?.y : fb2.find((b) => b.name === 'Add to team')?.x > fb2.find((b) => b.name === 'Cancel')?.x;
     record('D-L6', `${vp.width}: unchanged — Add member footer keeps primary ${vp.width < 640 ? 'on top' : 'on the right'}`, ok2, JSON.stringify(fb2));
     await ctx.close();
   }

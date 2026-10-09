@@ -156,6 +156,9 @@ def test_the_anonymous_routes_never_read_a_token() -> None:
     assert {p for _, p in ANONYMOUS} == {
         "/api/v1/auth/email/verify/confirm",
         "/api/v1/auth/login",
+        # DEC-013 — sign-in by mobile and OTP: anonymous by definition.
+        "/api/v1/auth/otp/request",
+        "/api/v1/auth/otp/verify",
         "/api/v1/auth/password/reset/confirm",
         "/api/v1/auth/password/reset/request",
         "/api/v1/auth/refresh",

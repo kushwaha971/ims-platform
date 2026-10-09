@@ -27,6 +27,10 @@ _PROD_ENV = {
     "POSTGRES_PASSWORD": "not-the-dev-password",
     "UB_E2E_MODE": "0",
     "UB_ALLOW_PARTNER_HEADER": "0",
+    # DEC-013 — production signs in by OTP, so it has an SMS provider; without
+    # one `check --deploy` rightly fails (platform.E001), which is asserted in
+    # `test_auth_flags.py`. A placeholder key is what "configured" means here.
+    "UB_FAST2SMS_API_KEY": "placeholder-not-a-real-key",
 }
 
 

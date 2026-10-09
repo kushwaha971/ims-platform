@@ -6,6 +6,7 @@ import * as Yup from 'yup';
 import { MAX_AMOUNT } from 'src/constants';
 import { useTranslation, type TranslateFn } from 'src/hooks/useTranslation';
 import { buildValidationSchemas } from 'src/hooks/useValidationSchemas';
+import { isValidMobile, readsAsIndian } from 'src/utils/phone';
 import { REGEX } from 'src/utils/regexConstants';
 
 import {
@@ -43,9 +44,13 @@ const WALK_IN_NAME_MAX = 120;
 export const isStartedLine = (line: Pick<InvoiceLineForm, 'itemId' | 'description'>): boolean =>
   !!line.itemId || line.description.trim() !== '';
 
-/** The server's rule: 10 digits starting 6–9, `+91` optional, spaces ignored. */
-export const isIndianMobile = (value: string): boolean =>
-  /^(\+91)?[6-9]\d{9}$/.test(value.replace(/[\s-]/g, ''));
+/**
+ * The server's rule: any country's mobile in E.164 (India's ten digits by
+ * default). A bare ten-digit Indian number is still read, because a draft
+ * saved before the field became `UbPhoneInput` holds one.
+ */
+export const isWalkInMobile = (value: string): boolean =>
+  isValidMobile(value) || /^[6-9]\d{9}$/.test(value.replace(/[\s-]/g, ''));
 
 export interface InvoiceSchemaOptions {
   readonly kind: 'invoice' | 'estimate' | 'sales_order' | 'delivery_challan';
@@ -182,8 +187,13 @@ export const buildInvoiceEditorSchema = (
     walkInMobile: Yup.string()
       .defined()
       .default('')
-      .test('mobile', t('validation.mobile.format'), function mobile(value) {
-        return this.parent.mode !== 'walkIn' || !value?.trim() || isIndianMobile(value);
+      .test('mobile', function mobile(value) {
+        if (this.parent.mode !== 'walkIn' || !value?.trim() || isWalkInMobile(value)) return true;
+        return this.createError({
+          message: readsAsIndian(value)
+            ? t('validation.mobile.format')
+            : t('validation.mobile.formatOther'),
+        });
       }),
     documentDate: v.businessDateValidation().defined().default(''),
     dueOn: onOrAfterDate('sales.validation.dueBeforeDate'),

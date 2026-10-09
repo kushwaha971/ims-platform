@@ -90,3 +90,33 @@ def test_the_console_sms_backend_masks_the_number(caplog: Any) -> None:
     assert result.status == "sent"
     for record in caplog.records:
         assert not re.search(MOBILE_PATTERN, json.dumps(record.__dict__, default=str))
+
+
+def test_the_console_sms_backend_prints_the_body_in_the_message() -> None:
+    """Locally the log format is `%(message)s` with no extras, so the OTP has
+    to be IN the message or nobody running the app can sign in without a key.
+
+    A handler on the logger itself, not `caplog`: `ub.notifications` does not
+    propagate to the root logger `caplog` listens on."""
+    from apps.common.integrations.sms.console import ConsoleSmsBackend
+
+    seen: list[str] = []
+
+    class Collect(logging.Handler):
+        def emit(self, record: logging.LogRecord) -> None:
+            seen.append(record.getMessage())
+
+    handler = Collect(level=logging.INFO)
+    target = logging.getLogger("ub.notifications")
+    previous = target.level
+    target.addHandler(handler)
+    target.setLevel(logging.INFO)
+    try:
+        ConsoleSmsBackend().send(
+            to="+919812345678", body="482913 is your YourKhata code.", sender_id="UDHAAR"
+        )
+    finally:
+        target.removeHandler(handler)
+        target.setLevel(previous)
+
+    assert any("482913 is your YourKhata code." in message for message in seen), seen

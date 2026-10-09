@@ -251,7 +251,7 @@ async function seed() {
 // ── Browser helpers ─────────────────────────────────────────────────────────
 
 const signIn = async (page) => {
-  await page.goto(`${FRONTEND}/login`, { waitUntil: 'networkidle', timeout: 180000 });
+  await page.goto(`${FRONTEND}/login/email`, { waitUntil: 'networkidle', timeout: 180000 });
   await page.waitForTimeout(1500);
   await page.fill('input[type="email"]', OWNER.email);
   await page.fill('input[type="password"]', OWNER.password);

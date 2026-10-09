@@ -80,6 +80,8 @@ export const INVALIDATION: TInvalidationMap = {
   // change is one flag on the auth slice, written by that slice's extraReducers
   // on this very action, which is what `patch` declares.
   requestPasswordReset: { patch: [['auth', 'resetRequested']] },
+  // A code was sent: the auth slice holds the challenge and the resend clock.
+  requestOtp: { patch: [['auth', 'otp']] },
   // A successful registration, login or reset-confirm is a NEW SESSION.
   // Anything a previous session left in the store belongs to a different user or
   // a different business, so the teardown is total — the same signal a tenant
@@ -92,8 +94,8 @@ export const INVALIDATION: TInvalidationMap = {
   // the `patch` declares: without it, the previous session's `activeTenant`
   // was still there when `/auth/me` answered for the new one, and the
   // stale-tab guard read a different tenant as "switched in another tab".
-  registerAccount: { resetAll: true, patch: [['session', 'activeTenant']] },
   passwordLogin: { resetAll: true, patch: [['session', 'activeTenant']] },
+  verifyOtp: { resetAll: true, patch: [['session', 'activeTenant']] },
   confirmPasswordReset: { resetAll: true, patch: [['session', 'activeTenant']] },
   // Setting a password changes no cached row; it changes whether the account
   // has one, which is a field of the auth slice.

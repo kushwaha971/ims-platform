@@ -24,6 +24,7 @@
   "validation.id.required": "एक चुनें।",
   "validation.maxChars": "ज़्यादा से ज़्यादा {value} अक्षर लिखें।",
   "validation.mobile.format": "10 अंकों का भारतीय मोबाइल नंबर भरें।",
+  "validation.mobile.formatOther": "चुने गए देश कोड के लिए पूरा मोबाइल नंबर भरें।",
   "validation.mobile.required": "मोबाइल नंबर भरें।",
   "validation.name.required": "नाम भरें।",
   "validation.name.tooLong": "ज़्यादा से ज़्यादा {value} अक्षर लिखें।",

@@ -24,6 +24,7 @@
   "validation.id.required": "Choose one.",
   "validation.maxChars": "Use at most {value} characters.",
   "validation.mobile.format": "Enter a 10-digit Indian mobile number.",
+  "validation.mobile.formatOther": "Enter the full mobile number for the country code you picked.",
   "validation.mobile.required": "Enter a mobile number.",
   "validation.name.required": "Enter a name.",
   "validation.name.tooLong": "Use at most {value} characters.",

@@ -9,7 +9,7 @@ import { landingFromFacts, type Landing } from 'src/types/landing.types';
 import {
   confirmPasswordReset,
   passwordLogin,
-  registerAccount,
+  verifyOtp,
 } from 'modules/DigiKhaato/features/auth/redux/authThunk';
 import {
   fetchSession,
@@ -334,7 +334,7 @@ const sessionSlice = createSlice({
          `fetchSession.pending` moves it to `loading` in the same tick
          `useAuthRedirect` dispatches it. */
       .addCase(passwordLogin.fulfilled, (state) => endedSession(state))
-      .addCase(registerAccount.fulfilled, (state) => endedSession(state))
+      .addCase(verifyOtp.fulfilled, (state) => endedSession(state))
       .addCase(confirmPasswordReset.fulfilled, (state) => endedSession(state))
       // A tenant switch keeps the session and clears everything else; the
       // session itself is refetched immediately afterwards (§19.6.5 step 2).

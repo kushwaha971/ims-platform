@@ -361,7 +361,9 @@ class MemberCreateSerializer(serializers.Serializer):
     WhatsApp the password to.
     """
 
-    email = serializers.EmailField(max_length=254)
+    # Owner, 9 Oct 2026: staff are added by mobile and sign in with an OTP, so
+    # the email is optional now; without one the mobile is required.
+    email = serializers.EmailField(max_length=254, required=False, allow_blank=True)
     full_name = serializers.CharField(max_length=120, trim_whitespace=True)
     role = serializers.CharField(max_length=32)
     mobile = serializers.CharField(max_length=15, required=False, allow_blank=True, allow_null=True)

@@ -235,7 +235,7 @@ async function seed() {
 const signIn = async (page, who) => {
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
-      await page.goto(`${FRONTEND}/login`, { waitUntil: 'networkidle', timeout: 120000 });
+      await page.goto(`${FRONTEND}/login/email`, { waitUntil: 'networkidle', timeout: 120000 });
       await page.waitForTimeout(1500);
       await page.fill('input[type="email"]', who.email);
       await page.fill('input[type="password"]', who.password);
@@ -1643,6 +1643,28 @@ const postViaDrawer = async (page, which, amount, noteText, { windowMs = 3500, w
   return { t0, reqs: reqs.map((r) => `+${r.t - t0}ms ${r.m} ${r.u}`) };
 };
 
+
+/** DEC-013 — /login is the mobile + OTP screen now; a redirect to it is followed
+ *  on to the kept email screen, with its `next`, before the harness signs in.
+ *
+ *  CLIENT-SIDE, through Next's own router: F3 and N1 are about what a sign-in
+ *  does in a document that already held a session (it must end in exactly one
+ *  document load), and a `page.goto` would hand them a fresh document and turn
+ *  the very path they test into the first-session one. */
+const toEmailLogin = async (page) => {
+  const u = new URL(page.url());
+  if (u.pathname !== '/login') return;
+  const target = `/login/email${u.search}`;
+  const routed = await page.evaluate((t) => {
+    const router = window.next?.router;
+    if (!router?.push) return false;
+    router.push(t);
+    return true;
+  }, target);
+  if (!routed) await page.goto(`${u.origin}${target}`, { waitUntil: 'networkidle' });
+  await page.waitForURL((x) => x.pathname === '/login/email', { timeout: 30000 });
+};
+
 // ─── N3 ──────────────────────────────────────────────────────────────────────
 async function phaseN3(browser, state, token) {
   const P = state.parties;
@@ -1765,6 +1787,7 @@ async function phaseN1(browser, state) {
     record('N1', `${size.id}: cookies deleted, Customers click → /login?next=%2Fcustomers in the same runtime`, loginUrl === '/login?next=%2Fcustomers' && docLoads === l0, `${loginUrl} docLoads+${docLoads - l0} navs=${JSON.stringify(navs.slice(v0))}`);
     // One sign-in as tenant A, slowed tenant reads so any stale frame is held on screen.
     await ctx.route(/\/api\/v1\/(ledger\/summary|ledger\/aging|parties(\?|$))/, async (route) => { await sleep(1500); await route.continue(); });
+    await toEmailLogin(page);
     const l1 = docLoads; const v1 = navs.length; const n1 = net.length;
     nLogins += 1;
     await page.fill('input[type="email"]', tenantA.email);
@@ -1853,11 +1876,12 @@ async function phaseN1(browser, state) {
     await page.waitForTimeout(2500);
     // Client-side navigation to /login (same JS runtime): push via history + popstate is not Next's router, so click a link if one exists, else use the Next router global.
     const viaRouter = await page.evaluate(() => { const r = window.next?.router; if (r?.push) { r.push('/login'); return 'next.router.push'; } return null; });
-    if (!viaRouter) await page.goto(`${FRONTEND}/login`, { waitUntil: 'domcontentloaded' });
+    if (!viaRouter) await page.goto(`${FRONTEND}/login/email`, { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(3000);
     const urlAfter = page.url().replace(FRONTEND, '');
     const shellAfter = await page.getByText(state.shop).count();
-    const formShown = await page.locator('input[type="email"]').count();
+    // DEC-013 — /login's form is the mobile number now.
+    const formShown = await page.locator('input[type="tel"], input[type="email"]').count();
     await page.screenshot({ path: nShot('desktop', 'N1-6-deliberate-login') });
     record('N1', 'signed-in user opening /login: the login form is shown and the shell no longer shows their business (signed out in that tab)', formShown > 0 && shellAfter === 0, `${viaRouter ?? 'page.goto'} → ${urlAfter} form=${formShown} shopNodes=${shellAfter}`);
     const cookiesKept = (await ctx.cookies()).filter((c) => c.name.startsWith('ub_')).map((c) => c.name);
@@ -2533,6 +2557,7 @@ async function phaseF3(browser, state) {
     { w: 1440, h: 900, dir: 'desktop' },
   ];
   const submit = async (page, who) => {
+    await toEmailLogin(page);
     await page.locator('input[type="email"]').waitFor({ timeout: 30000 });
     await page.fill('input[type="email"]', who.email);
     await page.fill('input[type="password"]', who.password);
@@ -2567,7 +2592,7 @@ async function phaseF3(browser, state) {
     page.on('framenavigated', (f) => { if (f === page.mainFrame()) navs.push(f.url().replace(FRONTEND, '')); });
 
     // 1. Fresh sign-in as B on a newly loaded /login: zero document loads.
-    await page.goto(`${FRONTEND}/login`, { waitUntil: 'networkidle', timeout: 120000 });
+    await page.goto(`${FRONTEND}/login/email`, { waitUntil: 'networkidle', timeout: 120000 });
     await page.waitForTimeout(1500);
     const d0 = docs.length;
     await submit(page, B);

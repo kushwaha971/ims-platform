@@ -108,7 +108,7 @@
   "parties.form.isSupplier": "मैं इनसे ख़रीदता हूँ",
   "parties.form.mobile.hint": "ताकि आप बाद में याद दिला सकें।",
   "parties.form.mobile.label": "मोबाइल नंबर",
-  "parties.form.mobile.placeholder": "10 अंकों का मोबाइल नंबर",
+  "parties.form.mobile.placeholder": "98765 43210",
   "parties.form.name.hint": "जैसे रमेश ट्रेडर्स",
   "parties.form.name.label": "नाम",
   "parties.form.name.placeholder": "जैसे रमेश ट्रेडर्स",

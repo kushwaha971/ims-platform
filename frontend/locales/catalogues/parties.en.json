@@ -108,7 +108,7 @@
   "parties.form.isSupplier": "I buy from them",
   "parties.form.mobile.hint": "So you can send reminders and receipts later.",
   "parties.form.mobile.label": "Mobile number",
-  "parties.form.mobile.placeholder": "10-digit mobile number",
+  "parties.form.mobile.placeholder": "98765 43210",
   "parties.form.name.hint": "e.g. Ramesh Traders",
   "parties.form.name.label": "Name",
   "parties.form.name.placeholder": "e.g. Ramesh Traders",

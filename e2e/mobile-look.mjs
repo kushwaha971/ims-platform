@@ -96,7 +96,7 @@ for (const variant of VARIANTS) {
       { name: 'ub_theme_choice', value: variant.theme, url: FRONTEND },
     ]);
     const page = await ctx.newPage();
-    await page.goto(`${FRONTEND}/login`, { waitUntil: 'networkidle', timeout: 180000 });
+    await page.goto(`${FRONTEND}/login/email`, { waitUntil: 'networkidle', timeout: 180000 });
     await page.fill('input[type="email"]', account.email);
     await page.fill('input[type="password"]', account.password);
     await page.keyboard.press('Enter');

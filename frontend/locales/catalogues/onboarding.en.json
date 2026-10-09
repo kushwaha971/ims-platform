@@ -57,7 +57,7 @@
   "onboarding.pan.placeholder": "e.g. ABCDE1234F",
   "onboarding.phone.hint": "Optional. The number customers can reach your shop on.",
   "onboarding.phone.label": "Shop phone",
-  "onboarding.phone.placeholder": "10-digit mobile number",
+  "onboarding.phone.placeholder": "98765 43210",
   "onboarding.progress": "Step {current} of {total}",
   "onboarding.rail.label": "Setup progress",
   "onboarding.rail.reassurance": "Nothing here is locked in: these are only starting defaults, and your khata is never limited.",

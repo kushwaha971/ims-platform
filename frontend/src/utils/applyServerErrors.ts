@@ -12,6 +12,7 @@ import type { FieldErrors, FieldValues, Path, UseFormSetError } from 'react-hook
  */
 export const SERVER_FIELD_CODE_MESSAGE_ID: Readonly<Record<string, string>> = {
   mobile_taken: 'errors.field.mobile_taken',
+  already_member: 'errors.field.already_member',
 };
 
 /**

@@ -62,7 +62,7 @@ export async function open(vp = 'desktop', { hi = false } = {}) {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   const st = S();
-  await page.goto(`${FE}/login`, { waitUntil: 'networkidle' });
+  await page.goto(`${FE}/login/email`, { waitUntil: 'networkidle' });
   await page.fill('input[type="email"]', st.email);
   await page.fill('input[type="password"]', st.password);
   await page.click('button[type="submit"]');

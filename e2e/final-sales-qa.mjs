@@ -56,7 +56,7 @@ async function login(browser, s, { width = 1280, height = 860, hi = false } = {}
   const page = await ctx.newPage();
   page.errors = [];
   page.on('pageerror', (e) => page.errors.push(e.message));
-  await page.goto(`${FE}/login`, { waitUntil: 'networkidle' });
+  await page.goto(`${FE}/login/email`, { waitUntil: 'networkidle' });
   await page.fill('input[type="email"]', s.email);
   await page.fill('input[type="password"]', s.password);
   await page.click('button[type="submit"]');

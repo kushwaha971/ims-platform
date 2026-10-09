@@ -177,8 +177,9 @@ export const MUTATIONS = {
   setAppRunning: 'session/setAppRunning',
   leaveApp: 'session/leaveApp',
   logout: 'session/logout',
-  // CR-2026-09-19-A — email + password sign-up replaces the OTP pair
-  registerAccount: 'auth/registerAccount',
+  // Owner, 9 Oct 2026 — mobile + OTP sign-up and sign-in
+  requestOtp: 'auth/requestOtp',
+  verifyOtp: 'auth/verifyOtp',
   // DEC-012 — owner-issued credentials
   addMember: 'member/addMember',
   regenerateCredentials: 'member/regenerateCredentials',

@@ -14,6 +14,7 @@ from apps.common.context import Ctx
 from apps.common.dates import fy_label_for, tenant_today
 from apps.common.exceptions import BusinessRuleViolation, ValidationFailed
 from apps.common.money import D
+from apps.platform_app.mobile import InvalidMobile, normalise_mobile
 from apps.sales.constants import KIND_FOR_GST_TYPE, NOTES_MAX, WALK_IN_NAME_MAX
 from apps.sales.models import SalesDocument, SalesDocumentLine
 from apps.sales.services import settings as sales_settings
@@ -128,8 +129,11 @@ def apply_payload(
     else:
         document.walk_in_name = (document.walk_in_name or "").strip()[:WALK_IN_NAME_MAX] or None
         document.walk_in_mobile = (document.walk_in_mobile or "").strip() or None
-    if document.walk_in_mobile and not _valid_mobile(document.walk_in_mobile):
-        errors["walk_in_mobile"] = ["Enter a valid 10-digit mobile."]
+    if document.walk_in_mobile:
+        try:
+            document.walk_in_mobile = normalise_mobile(document.walk_in_mobile)
+        except InvalidMobile as exc:
+            errors["walk_in_mobile"] = [str(exc)]
     for text in ("notes", "terms"):
         if len(getattr(document, text) or "") > NOTES_MAX:
             errors[text] = ["Keep this under 2,000 characters."]
@@ -215,11 +219,6 @@ def apply_payload(
             }
         )
     return {"rows": rows, "warnings": built.warnings, "items": built.items}
-
-
-def _valid_mobile(value: str) -> bool:
-    digits = value.replace("+91", "", 1) if value.startswith("+91") else value
-    return len(digits) == 10 and digits.isdigit() and digits[0] in "6789"
 
 
 def _line_as_payload(line: SalesDocumentLine) -> dict:

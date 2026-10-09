@@ -63,6 +63,18 @@ const CREDENTIALS = {
   passwordExpiresAt: MEMBER.passwordExpiresAt,
   createdUser: true,
   loginUrl: 'https://shop.test/login',
+  mobile: null,
+  signIn: 'password' as const,
+};
+
+/** What `POST /members` answers since 9 Oct 2026: added by mobile, no password. */
+const BY_MOBILE = {
+  ...CREDENTIALS,
+  email: '919890011223@mobile.invalid',
+  password: null,
+  passwordExpiresAt: null,
+  mobile: '+919890011223',
+  signIn: 'otp' as const,
 };
 
 const signIn = (permissions: readonly PermissionCode[]): void => {
@@ -108,46 +120,49 @@ describe('MembersSection — the permission', () => {
 });
 
 describe('MembersSection — adding somebody', () => {
-  it('shows the password once, with everything needed to send it on', async () => {
-    // The whole feature. Only a hash is stored, so a screen that renders the
-    // 201 without the password — or loses it to a re-render — has cost the
-    // merchant a login they have already promised somebody, with no way back
-    // but to regenerate.
+  it('adds a name and a mobile, and says they sign in with that number', async () => {
+    // Owner, 9 Oct 2026 — staff sign in with their mobile and an OTP. There is
+    // no address to type and no password to pass on; the dialog afterwards
+    // says the one thing the person needs, and shows no secret.
+    memberService.createMember.mockResolvedValue(BY_MOBILE);
     const user = userEvent.setup();
     renderWithProviders(<MembersSection />);
 
     await user.click(await screen.findByRole('button', { name: 'Add member' }));
+    expect(screen.queryByLabelText(/Email address/)).not.toBeInTheDocument();
     await user.type(await screen.findByLabelText(/Full name/), 'Ramesh Kumar');
-    await user.type(screen.getByLabelText(/Email address/), 'ramesh@shop.test');
-    await user.click(screen.getByRole('button', { name: 'Create login' }));
+    await user.type(screen.getByLabelText(/Mobile number/), '9890011223');
+    await user.click(screen.getByRole('button', { name: 'Add to team' }));
 
-    expect(await screen.findByDisplayValue('Gtde-R9mz-F2NA')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('ramesh@shop.test')).toBeInTheDocument();
-    // The copy affordance is for the MESSAGE, not the password on its own: the
-    // owner's job is to tell Ramesh how to get in, and a bare password leaves
-    // them typing the address and the link into WhatsApp from memory.
-    expect(screen.getByTestId('credentials-copy-message')).toBeInTheDocument();
+    expect(await screen.findByText('Ramesh Kumar is on your team')).toBeInTheDocument();
+    expect(screen.getByText(/sign in with \+91 98900 11223/)).toBeInTheDocument();
+    expect(screen.queryByTestId('credentials-password')).not.toBeInTheDocument();
+    expect(memberService.createMember.mock.calls[0][0]).toMatchObject({
+      fullName: 'Ramesh Kumar',
+      role: 'staff',
+      mobile: '+919890011223',
+    });
+    expect(memberService.createMember.mock.calls[0][0]).not.toHaveProperty('email');
   });
 
-  it('says so plainly when the address already had an account', async () => {
-    // No password is issued for an existing account — that would be a takeover
-    // wearing an onboarding costume. The dialog has to say what actually
-    // happened rather than show an empty field the owner will try to copy.
-    memberService.createMember.mockResolvedValue({
-      ...CREDENTIALS,
-      password: null,
-      createdUser: false,
-    });
+  it('needs the mobile, because it is how they sign in', async () => {
     const user = userEvent.setup();
     renderWithProviders(<MembersSection />);
 
     await user.click(await screen.findByRole('button', { name: 'Add member' }));
     await user.type(await screen.findByLabelText(/Full name/), 'Ramesh Kumar');
-    await user.type(screen.getByLabelText(/Email address/), 'ramesh@shop.test');
-    await user.click(screen.getByRole('button', { name: 'Create login' }));
+    await user.click(screen.getByRole('button', { name: 'Add to team' }));
 
-    expect(await screen.findByText('They already have a YourKhata account')).toBeInTheDocument();
-    expect(screen.queryByDisplayValue('Gtde-R9mz-F2NA')).not.toBeInTheDocument();
+    expect(await screen.findByText('Enter a mobile number.')).toBeInTheDocument();
+    expect(memberService.createMember).not.toHaveBeenCalled();
+  });
+
+  it('offers no country picker: the sign-in code goes to Indian numbers only', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<MembersSection />);
+    await user.click(await screen.findByRole('button', { name: 'Add member' }));
+    await screen.findByLabelText(/Mobile number/);
+    expect(screen.queryByRole('combobox', { name: 'Country code' })).not.toBeInTheDocument();
   });
 });
 
@@ -221,31 +236,6 @@ describe('MembersSection — somebody invited but not yet joined', () => {
   });
 });
 
-describe('MembersSection — the optional mobile field', () => {
-  it('submits with the mobile left blank', async () => {
-    // It used to not. `mobileValidation(false)` ran `.matches()` over the empty
-    // string, which Yup does not skip, so an OPTIONAL field refused to submit
-    // with "Enter a 10-digit mobile number" against an empty box — and there is
-    // no visible clue, because the message lands on a field the merchant never
-    // touched. The onboarding address step had the same defect.
-    const user = userEvent.setup();
-    renderWithProviders(<MembersSection />);
-
-    await user.click(await screen.findByRole('button', { name: 'Add member' }));
-    await user.type(await screen.findByLabelText(/Full name/), 'Ramesh Kumar');
-    await user.type(screen.getByLabelText(/Email address/), 'ramesh@shop.test');
-    await user.click(screen.getByRole('button', { name: 'Create login' }));
-
-    await waitFor(() => expect(memberService.createMember).toHaveBeenCalledTimes(1));
-    expect(memberService.createMember.mock.calls[0][0]).toMatchObject({
-      email: 'ramesh@shop.test',
-      fullName: 'Ramesh Kumar',
-      role: 'staff',
-      mobile: null,
-    });
-  });
-});
-
 describe('MembersSection — a ten-digit mobile (UAT D4)', () => {
   it('accepts 9890011223 and submits +919890011223', async () => {
     /* Prevents UAT D4: the field was a plain `type="tel"` box while the schema
@@ -258,9 +248,8 @@ describe('MembersSection — a ten-digit mobile (UAT D4)', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Add member' }));
     await user.type(await screen.findByLabelText(/Full name/), 'Ramesh Kumar');
-    await user.type(screen.getByLabelText(/Email address/), 'ramesh@shop.test');
     await user.type(screen.getByLabelText(/Mobile number/), '9890011223');
-    await user.click(screen.getByRole('button', { name: 'Create login' }));
+    await user.click(screen.getByRole('button', { name: 'Add to team' }));
 
     await waitFor(() => expect(memberService.createMember).toHaveBeenCalledTimes(1));
     expect(screen.queryByText('Enter a 10-digit Indian mobile number.')).not.toBeInTheDocument();
@@ -274,13 +263,12 @@ describe('MembersSection — a mobile another login already holds (NEW-2)', () =
   it('puts the server’s refusal on the Mobile field and keeps the dialog open', async () => {
     /* Prevents NEW-2: the server answered a taken number with a 500, which the
        merchant saw as a generic toast over a form with nothing highlighted —
-       no clue that the OPTIONAL mobile was the problem or that leaving it
-       blank would get the person added. The server now sends a 400 with a
+       no clue that the mobile was the problem. The server now sends a 400 with a
        field error on `mobile`; this pins that it lands on that control, is
        announced through its `aria-describedby`, and that the dialog stays up
        with what the owner typed so they only have to clear the one field. */
     const message =
-      'This mobile number is already used by another login. Leave it blank or use a different number.';
+      'This mobile number is already used by another login. Use a different number.';
     memberService.createMember.mockRejectedValue({
       code: 'validation_error',
       message: 'Please check the highlighted fields.',
@@ -294,16 +282,14 @@ describe('MembersSection — a mobile another login already holds (NEW-2)', () =
 
     await user.click(await screen.findByRole('button', { name: 'Add member' }));
     await user.type(await screen.findByLabelText(/Full name/), 'Ramesh Kumar');
-    await user.type(screen.getByLabelText(/Email address/), 'ramesh@shop.test');
     await user.type(screen.getByLabelText(/Mobile number/), '9876543210');
-    await user.click(screen.getByRole('button', { name: 'Create login' }));
+    await user.click(screen.getByRole('button', { name: 'Add to team' }));
 
     const mobile = screen.getByLabelText(/Mobile number/);
     await waitFor(() => expect(mobile).toHaveAttribute('aria-invalid', 'true'));
     expect(mobile).toHaveAccessibleDescription(expect.stringContaining(message));
-    expect(screen.getByLabelText(/Email address/)).toHaveAttribute('aria-invalid', 'false');
-    expect(screen.getByDisplayValue('ramesh@shop.test')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Create login' })).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Ramesh Kumar')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add to team' })).toBeInTheDocument();
   });
 });
 
@@ -315,7 +301,7 @@ describe('MembersSection — the taken-mobile refusal in Hindi (L6)', () => {
        "mobile_taken"`, and the dialog must say `errors.field.mobile_taken`
        from hi.json instead. */
     const english =
-      'This mobile number is already used by another login. Leave it blank or use a different number.';
+      'This mobile number is already used by another login. Use a different number.';
     memberService.createMember.mockRejectedValue({
       code: 'validation_error',
       message: 'Please check the highlighted fields.',
@@ -334,10 +320,6 @@ describe('MembersSection — the taken-mobile refusal in Hindi (L6)', () => {
     await user.type(
       await screen.findByLabelText(new RegExp(messages['team.member.name.label'] ?? '')),
       'Ramesh Kumar'
-    );
-    await user.type(
-      screen.getByLabelText(new RegExp(messages['team.member.email.label'] ?? '')),
-      'ramesh@shop.test'
     );
     const mobile = screen.getByLabelText(/मोबाइल नंबर/);
     await user.type(mobile, '9876543210');

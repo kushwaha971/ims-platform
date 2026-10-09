@@ -141,7 +141,7 @@ async function signIn(viewport, who) {
     const probe = /\/auth\/(me|refresh)$/.test(new URL(res.url()).pathname);
     if (res.status() >= 400 && res.url().includes('/api/') && !probe) bad.push(`${res.status()} ${res.url().replace(/.*\/api\/v1/, '')}`);
   });
-  await page.goto(`${FE}/login`, { waitUntil: 'networkidle', timeout: 120000 });
+  await page.goto(`${FE}/login/email`, { waitUntil: 'networkidle', timeout: 120000 });
   await page.fill('input[type="email"]', who);
   await page.fill('input[type="password"]', PASSWORD);
   await page.click('button[type="submit"]');

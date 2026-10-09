@@ -36,11 +36,13 @@ x-backend-env: &backend-env
   UB_PUBLIC_BASE_URL: ${UB_PUBLIC_BASE_URL:-http://localhost:3000}
   UB_CORS_ALLOWED_ORIGINS: ${UB_CORS_ALLOWED_ORIGINS:-http://localhost:3000}
   UB_CSRF_TRUSTED_ORIGINS: ${UB_CSRF_TRUSTED_ORIGINS:-http://localhost:3000}
-  UB_SMS_BACKEND: ${UB_SMS_BACKEND:-platform.messaging.backends.ConsoleSmsBackend}
+  # Empty follows UB_FAST2SMS_API_KEY (Fast2SMS with a key, the log without).
+  UB_SMS_BACKEND: ${UB_SMS_BACKEND:-}
+  UB_FAST2SMS_API_KEY: ${UB_FAST2SMS_API_KEY:-}
   UB_WHATSAPP_BACKEND: ${UB_WHATSAPP_BACKEND:-platform.messaging.backends.DeepLinkWhatsAppBackend}
   UB_EMAIL_BACKEND: ${UB_EMAIL_BACKEND:-django.core.mail.backends.console.EmailBackend}
   UB_ACCESS_TOKEN_MINUTES: ${UB_ACCESS_TOKEN_MINUTES:-15}
-  UB_REFRESH_TOKEN_DAYS: ${UB_REFRESH_TOKEN_DAYS:-30}
+  UB_REFRESH_TOKEN_DAYS: ${UB_REFRESH_TOKEN_DAYS:-90}
   UB_LOG_LEVEL: ${UB_LOG_LEVEL:-INFO}
   UB_LOG_FORMAT: ${UB_LOG_FORMAT:-json}
   UB_SCHEDULER_INTERVAL: ${UB_SCHEDULER_INTERVAL:-60}

@@ -53,7 +53,7 @@ const browser = await chromium.launch(process.env.PW_CHROMIUM ? { executablePath
 {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: 'en-IN' });
   const page = await ctx.newPage();
-  await page.goto(`${FE}/login`, { waitUntil: 'networkidle', timeout: 120000 });
+  await page.goto(`${FE}/login/email`, { waitUntil: 'networkidle', timeout: 120000 });
   await page.fill('input[type="email"]', email);
   await page.fill('input[type="password"]', PASSWORD);
   await page.click('button[type="submit"]');

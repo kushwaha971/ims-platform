@@ -295,7 +295,7 @@ for (const [width, height] of WIDTHS) {
     console.log(`        (could not create an owner: ${error.message})`);
   }
   if (owner) {
-    await page.goto(`${FRONTEND}/login`, { waitUntil: "networkidle" });
+    await page.goto(`${FRONTEND}/login/email`, { waitUntil: "networkidle" });
     await page.fill('input[type="email"]', owner.email);
     await page.fill('input[type="password"]', PASSWORD);
     await page.click('button[type="submit"]');

@@ -14,7 +14,7 @@ const partyId=r.body.data.id;
 const b=await chromium.launch();
 const ctx=await b.newContext({viewport:{width:1440,height:900}});
 const p=await ctx.newPage();
-await p.goto(`${FE}/login`,{waitUntil:'domcontentloaded'});
+await p.goto(`${FE}/login/email`,{waitUntil:'domcontentloaded'});
 await p.fill('input[type="email"]',email); await p.fill('input[type="password"]',password);
 await p.click('button[type="submit"]'); await p.waitForTimeout(2500);
 await p.goto(`${FE}/parties/${partyId}`,{waitUntil:'domcontentloaded'});

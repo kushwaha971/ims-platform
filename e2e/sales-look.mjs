@@ -78,7 +78,7 @@ for (const [label, viewport] of [['desktop', { width: 1440, height: 900 }], ['ph
   const p = await ctx.newPage();
   const errors = [];
   p.on('pageerror', (e) => errors.push(e.message));
-  await p.goto(`${FE}/login`, { waitUntil: 'networkidle' });
+  await p.goto(`${FE}/login/email`, { waitUntil: 'networkidle' });
   await p.fill('input[type="email"]', email);
   await p.fill('input[type="password"]', password);
   await p.click('button[type="submit"]');

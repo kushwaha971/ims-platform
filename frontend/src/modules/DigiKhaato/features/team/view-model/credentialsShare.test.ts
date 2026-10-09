@@ -27,6 +27,8 @@ const credentials = (overrides: Partial<IssuedCredentials> = {}): IssuedCredenti
   passwordExpiresAt: '2026-09-28T00:00:00Z',
   createdUser: true,
   loginUrl: 'https://shop.test/login',
+  mobile: null,
+  signIn: 'password',
   ...overrides,
 });
 
