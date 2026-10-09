@@ -26,7 +26,6 @@ import {
 
 import { APP_MANIFESTS } from 'modules/appManifests';
 import { PLATFORM_NAV_ITEMS } from 'modules/DigiKhaato/features/navigation/appManifest';
-
 const ROOT = process.cwd();
 
 const walk = (dir: string): readonly string[] =>
@@ -71,6 +70,22 @@ describe('ROUTES', () => {
     ]) {
       expect(guarded(href)).toBe(true);
     }
+  });
+
+  it("guards every menu row of every app, and the phone's More tab", () => {
+    /* Prevents: a menu destination the proxy lets through unsigned and robots
+       does not disallow. Step 3b split the party list into /customers and
+       /suppliers and neither was added to the hand-written list above, so both
+       went unguarded for a week; deriving the list from the manifests means
+       the next new row cannot be forgotten. */
+    const guarded = (href: string): boolean =>
+      APP_ROUTE_PREFIXES.some((prefix) => href === prefix || href.startsWith(`${prefix}/`));
+    const hrefs = [
+      ...APP_MANIFESTS.flatMap((app) => app.navigation.map((row) => row.href)),
+      ...PLATFORM_NAV_ITEMS.map((row) => row.href),
+      ROUTES.MORE,
+    ];
+    for (const href of hrefs) expect([href, guarded(href)]).toEqual([href, true]);
   });
 
   it('never guards an (auth) address, or the login page would redirect to itself', () => {

@@ -103,11 +103,7 @@ function UbDataGridToolbarBase({
           whole width below `md`, so it can lay its controls out as one row of
           equal parts instead of wrapping them one per line (the item list). */}
       {(filters || columns) && (
-        // docs/mobile-redesign (A5) — below `md` the controls are ONE row that
-        // scrolls sideways rather than wrapping: the party list's sort button
-        // sat alone on a fourth line. The 6 px of padding keeps each control's
-        // 44 px `.ub-hit` overhang inside the scroller, which would clip it.
-        <div className="flex max-w-full shrink-0 flex-wrap items-center gap-2 max-md:w-full max-md:flex-nowrap max-md:overflow-x-auto max-md:py-1.5 max-md:[scrollbar-width:none] max-md:has-[[data-ub-filters=fill]]:w-full max-md:[&::-webkit-scrollbar]:hidden max-md:[&>*]:shrink-0">
+        <div className="flex max-w-full shrink-0 flex-wrap items-center gap-2 max-md:has-[[data-ub-filters=fill]]:w-full">
           {filters}
           {columns}
         </div>

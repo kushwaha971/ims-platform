@@ -266,6 +266,10 @@ export const SESSION_ONLY_ROUTE_PREFIXES: readonly string[] = [
 export const APP_ROUTE_PREFIXES: readonly string[] = [
   ROUTES.DASHBOARD,
   ROUTES.PARTIES,
+  // Step 3b split the party list into these two; they were never added here,
+  // so the proxy did not guard them and robots.txt did not disallow them.
+  ROUTES.CUSTOMERS,
+  ROUTES.SUPPLIERS,
   '/ledger',
   ROUTES.ITEMS,
   '/stock',
