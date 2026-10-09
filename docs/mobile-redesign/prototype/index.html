@@ -1,0 +1,822 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>YourKhata Mobile Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ── Tokens. Colours are YourKhata's existing light.css / dark.css values; the
+      mobile layer adds only type, spacing and size tokens (see 04-design-system.md). */
+:root{
+  --primary:#4A47D6; --primary-600:#3A36B8; --primary-50:#F1F0FE; --primary-100:#E1E0FC;
+  --canvas:#FFFFFF; --card:#FFFFFF; --sunken:#F1F1F1; --subtle:#FAFAFA; --hover:#F5F5F5;
+  --hairline:#E6E6E6; --border:#DCDCDE;
+  --text:#0A090B; --text-2:#4F4D55; --text-3:#6B696F; --text-accent:#3A36B8; --on-fill:#FFFFFF;
+  --get:#CC1C1C; --get-dim:#FEF1F1; --give:#2B7443; --give-dim:#E8F6ED;
+  --warn:#955F0B; --warn-dim:#FFF0D8; --info:#245FE0; --info-dim:#E9F0FF;
+  --scrim:rgba(8,10,12,.48); --shadow-2:0 4px 6px -4px rgba(19,25,39,.12),0 8px 8px -4px rgba(19,25,39,.08);
+  --shadow-3:0 8px 24px rgba(0,0,0,.14); --shadow-4:0 -8px 32px rgba(0,0,0,.18);
+  --seat-free:#E8F6ED; --seat-free-b:#2B7443; --seat-busy:#E1E0FC; --seat-busy-b:#3A36B8; --seat-res:#FFF0D8; --seat-res-b:#955F0B;
+  /* mobile layer */
+  --m-gutter:16px; --m-bar:56px; --m-nav:64px; --m-target:48px; --m-row:64px;
+  --r-card:12px; --r-control:10px; --r-sheet:20px; --r-pill:999px;
+  --font:"DM Sans","Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --num:"Inter",system-ui,sans-serif;
+  --stage:#ECEBF3;
+}
+:root[data-theme="dark"]{
+  --canvas:#0F0E13; --card:#17161C; --sunken:#1F1E25; --subtle:#1A1920; --hover:#22212A;
+  --hairline:#2A2930; --border:#36353D; --text:#F4F4F6; --text-2:#C9C7CF; --text-3:#A3A1AA; --text-accent:#B6B3F5;
+  --primary-50:#24223F; --primary-100:#2D2B52;
+  --get:#F2706A; --get-dim:#3A1D1D; --give:#5BC985; --give-dim:#18301F; --warn:#E9B04B; --warn-dim:#3A2C12; --info:#7FA7FF; --info-dim:#1A2540;
+  --seat-free:#18301F; --seat-free-b:#5BC985; --seat-busy:#2D2B52; --seat-busy-b:#B6B3F5; --seat-res:#3A2C12; --seat-res-b:#E9B04B;
+  --stage:#07070A;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{font-family:var(--font);background:var(--stage);color:var(--text);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:6px}
+svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex:none}
+svg.i.sm{width:20px;height:20px} svg.i.xs{width:16px;height:16px}
+
+/* ── Stage: the prototype in a phone on a wide screen, full-bleed on a phone */
+.stage{display:grid;grid-template-columns:280px 390px 340px;gap:32px;justify-content:center;align-items:start;padding:28px 16px;min-height:100%}
+.panel{background:var(--card);border:1px solid var(--hairline);border-radius:16px;padding:18px;font-size:14px;line-height:1.5;position:sticky;top:28px;max-height:calc(100vh - 56px);overflow:auto}
+.panel h2{font-size:15px;margin:0 0 4px} .panel h3{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--text-3);margin:18px 0 8px;font-weight:600}
+.panel p{margin:0 0 8px;color:var(--text-2)} .panel ul{margin:0;padding-left:18px;color:var(--text-2)} .panel li{margin:0 0 8px}
+.seg-ctl{display:flex;flex-wrap:wrap;gap:6px}
+.seg-ctl button{border:1px solid var(--border);border-radius:999px;padding:6px 12px;font-size:13px}
+.seg-ctl button[aria-pressed="true"]{background:var(--text);color:var(--canvas);border-color:var(--text)}
+.jump{display:grid;gap:2px} .jump button{text-align:left;padding:6px 8px;border-radius:8px;font-size:13px;color:var(--text-2)} .jump button:hover{background:var(--hover)}
+.phone{width:390px;height:844px;border-radius:48px;background:#15141A;padding:12px;box-shadow:0 30px 60px rgba(20,18,40,.25)}
+.screen-wrap{position:relative;width:100%;height:100%;border-radius:38px;overflow:hidden;background:var(--canvas);isolation:isolate}
+.statusbar{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;font:600 15px var(--num);color:var(--text);background:var(--canvas);position:relative;z-index:6}
+@media (max-width:1100px){.stage{grid-template-columns:390px 340px}.panel.left{display:none}}
+@media (max-width:780px){.stage{display:block;padding:0}.panel{display:none}.phone{width:100%;height:100dvh;border-radius:0;padding:0;box-shadow:none}.screen-wrap{border-radius:0}.statusbar{display:none}}
+
+/* ── App frame */
+#app{position:absolute;inset:44px 0 0 0;display:flex;flex-direction:column}
+@media (max-width:780px){#app{inset:0}}
+.scr{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--canvas)}
+.scr.push{animation:push .26s cubic-bezier(.2,.8,.2,1)}
+@keyframes push{from{transform:translateX(28%);opacity:.4}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.scr.push,.sheet.enter,.scrim.enter{animation:none!important}}
+.bar{height:var(--m-bar);flex:none;display:flex;align-items:center;gap:4px;padding:0 4px 0 8px;background:var(--canvas);border-bottom:1px solid transparent;transition:border-color .15s}
+.bar.raised{border-bottom-color:var(--hairline)}
+.bar .title{flex:1;min-width:0;font-weight:600;font-size:18px;line-height:24px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:4px}
+.icon-btn{width:48px;height:48px;display:grid;place-items:center;border-radius:999px;color:var(--text-2);position:relative}
+.icon-btn:active{background:var(--hover)}
+.icon-btn .dot{position:absolute;top:11px;right:12px;width:8px;height:8px;border-radius:50%;background:var(--get);border:2px solid var(--canvas)}
+.biz{display:flex;align-items:center;gap:10px;min-width:0;flex:1;height:48px;padding:0 8px;border-radius:12px;text-align:left}
+.biz:active{background:var(--hover)}
+.biz .mk{width:32px;height:32px;border-radius:9px;background:var(--primary-600);color:#fff;display:grid;place-items:center;font-weight:700;font-size:15px;flex:none}
+.biz .nm{font-weight:600;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:20px}
+.biz .sub{font-size:12px;color:var(--text-3);line-height:16px}
+.content{flex:1;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding-bottom:calc(var(--m-nav) + 96px)}
+.content.no-nav{padding-bottom:120px}
+.content.with-dock{padding-bottom:150px}
+.pad{padding:0 var(--m-gutter)}
+.h1{font-size:28px;line-height:34px;font-weight:600;margin:4px 0 0;letter-spacing:-.01em}
+.sec{display:flex;align-items:baseline;justify-content:space-between;margin:24px var(--m-gutter) 8px}
+.sec h3{margin:0;font-size:16px;font-weight:600}
+.sec .meta{font-size:13px;color:var(--text-3)}
+.link{color:var(--text-accent);font-weight:500;font-size:14px;min-height:44px;display:inline-flex;align-items:center}
+.num{font-family:var(--num);font-feature-settings:"tnum" 1;letter-spacing:-.01em}
+.get{color:var(--get)} .give{color:var(--give)} .muted{color:var(--text-3)}
+
+/* ── Bottom navigation */
+.nav{position:absolute;left:0;right:0;bottom:0;height:calc(var(--m-nav) + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);display:grid;grid-template-columns:repeat(5,1fr);background:var(--card);border-top:1px solid var(--hairline);z-index:4}
+.nav button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:12px;font-weight:500;color:var(--text-3);position:relative}
+.nav button .pill{width:56px;height:30px;border-radius:999px;display:grid;place-items:center;transition:background .15s}
+.nav button[aria-current="page"]{color:var(--text)} .nav button[aria-current="page"] .pill{background:var(--primary-100);color:var(--primary-600)}
+:root[data-theme="dark"] .nav button[aria-current="page"] .pill{color:var(--text-accent)}
+.nav .badge{position:absolute;top:6px;left:calc(50% + 8px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--get);color:#fff;font:600 11px/18px var(--num)}
+
+/* ── FAB (extended, shrinks on scroll) */
+.fab{position:absolute;right:16px;bottom:calc(var(--m-nav) + 16px);height:56px;padding:0 20px 0 16px;border-radius:16px;background:var(--primary);color:#fff;display:flex;align-items:center;gap:8px;font-weight:600;font-size:15px;box-shadow:var(--shadow-3);z-index:3;transition:padding .2s,width .2s}
+.fab.compact{padding:0 16px} .fab.compact span{display:none}
+.fab:active{background:var(--primary-600)}
+
+/* ── Cards, rows, chips */
+.card{background:var(--card);border:1px solid var(--hairline);border-radius:var(--r-card)}
+.hero{margin:12px var(--m-gutter) 0;padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.hero .lbl{font-size:13px;color:var(--text-3);display:flex;align-items:center;gap:4px}
+.hero .val{font-size:24px;font-weight:600;line-height:30px;margin-top:2px}
+.hero > button{text-align:left;padding:4px;border-radius:8px}
+.hero > button + button{border-left:1px solid var(--hairline);padding-left:16px;border-radius:0}
+.strip{display:flex;gap:8px;overflow-x:auto;padding:12px var(--m-gutter) 4px;scrollbar-width:none} .strip::-webkit-scrollbar{display:none}
+.mini{flex:none;min-width:132px;padding:12px;border-radius:12px;background:var(--subtle);border:1px solid var(--hairline)}
+.mini .lbl{font-size:12px;color:var(--text-3)} .mini .val{font-size:17px;font-weight:600;margin-top:2px}
+.qa{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:0 var(--m-gutter)}
+.qa button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 2px;border-radius:12px;font-size:12.5px;font-weight:500;line-height:16px;text-align:center}
+.qa button:active{background:var(--hover)}
+.qa .ic{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:var(--primary-50);color:var(--primary-600)}
+:root[data-theme="dark"] .qa .ic{color:var(--text-accent)}
+.list{background:var(--card)}
+.row{display:flex;align-items:center;gap:12px;min-height:var(--m-row);padding:10px var(--m-gutter);width:100%;text-align:left;position:relative}
+.row:active{background:var(--hover)}
+.row + .row::before{content:"";position:absolute;top:0;left:68px;right:0;border-top:1px solid var(--hairline)}
+.row.plain + .row.plain::before{left:var(--m-gutter)}
+.av{width:40px;height:40px;border-radius:50%;background:var(--sunken);display:grid;place-items:center;font-size:14px;font-weight:600;color:var(--text-2);flex:none}
+.av.ic{border-radius:12px}
+.row .main{flex:1;min-width:0}
+.row .t{font-size:16px;line-height:22px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .s{font-size:13px;line-height:18px;color:var(--text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .end{text-align:right;flex:none}
+.row .amt{font-size:16px;font-weight:600;line-height:22px}
+.row .amt-l{font-size:12px;color:var(--text-3);line-height:16px}
+.row .chev{color:var(--text-3)}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:4px var(--m-gutter) 8px;scrollbar-width:none} .chips::-webkit-scrollbar{display:none}
+.chip{flex:none;height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--border);display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:500;color:var(--text-2);background:var(--card);white-space:nowrap}
+.chip[aria-pressed="true"]{background:var(--text);border-color:var(--text);color:var(--canvas)}
+.chip.rm{background:var(--primary-50);border-color:transparent;color:var(--primary-600)}
+:root[data-theme="dark"] .chip.rm{color:var(--text-accent)}
+.chip .n{font-family:var(--num);font-size:12px;opacity:.75}
+.badge-s{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:500;background:var(--sunken);color:var(--text-2)}
+.badge-s.get{background:var(--get-dim);color:var(--get)} .badge-s.give{background:var(--give-dim);color:var(--give)} .badge-s.warn{background:var(--warn-dim);color:var(--warn)} .badge-s.info{background:var(--info-dim);color:var(--info)}
+.search{display:flex;align-items:center;gap:8px;height:48px;margin:8px var(--m-gutter);padding:0 6px 0 14px;border-radius:12px;background:var(--sunken);color:var(--text-3)}
+.search input{flex:1;min-width:0;border:0;background:transparent;font-size:16px;color:var(--text);outline:none;height:100%}
+.search .fbtn{height:36px;padding:0 10px;border-radius:10px;display:flex;align-items:center;gap:6px;color:var(--text-2);font-size:14px;font-weight:500;background:var(--card);border:1px solid var(--hairline)}
+.search .fbtn .cnt{min-width:18px;height:18px;border-radius:9px;background:var(--primary);color:#fff;font:600 11px/18px var(--num);text-align:center}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;background:var(--sunken);border-radius:12px;padding:4px;margin:8px var(--m-gutter) 0;gap:4px}
+.seg button{height:40px;border-radius:9px;font-weight:500;font-size:15px;color:var(--text-2)}
+.seg button[aria-pressed="true"]{background:var(--card);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.1)}
+.band{padding:8px var(--m-gutter);font-size:13px;font-weight:500;color:var(--text-3);background:var(--subtle);border-top:1px solid var(--hairline);border-bottom:1px solid var(--hairline);position:sticky;top:0;z-index:1}
+.summary-line{margin:12px var(--m-gutter) 0;font-size:14px;color:var(--text-3)}
+.summary-line b{font-weight:600;color:var(--text)}
+
+/* ── Buttons */
+.btn{height:48px;border-radius:12px;padding:0 18px;font-weight:600;font-size:16px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid transparent}
+.btn.primary{background:var(--primary);color:#fff} .btn.primary:active{background:var(--primary-600)}
+.btn.secondary{background:var(--card);border-color:var(--border);color:var(--text)}
+.btn.tonal{background:var(--primary-50);color:var(--primary-600)}
+:root[data-theme="dark"] .btn.tonal{color:var(--text-accent)}
+.btn.danger{background:var(--get);color:#fff}
+.btn.gave{background:var(--get);color:#fff} .btn.got{background:var(--give);color:#fff}
+:root[data-theme="dark"] .btn.gave{background:#B42318} :root[data-theme="dark"] .btn.got{background:#1F7A45}
+.btn.ghost{color:var(--text-accent);padding:0 12px}
+.btn.block{width:100%} .btn[disabled]{opacity:.45;pointer-events:none}
+.btn .spin{width:18px;height:18px;border-radius:50%;border:2px solid rgba(255,255,255,.45);border-top-color:#fff;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.dock{position:absolute;left:0;right:0;bottom:0;padding:12px var(--m-gutter) calc(12px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid var(--hairline);display:flex;gap:12px;z-index:3}
+.dock.over-nav{bottom:var(--m-nav)}
+.dock .btn{flex:1}
+.pillbtns{display:flex;gap:8px;padding:12px var(--m-gutter) 0;overflow-x:auto;scrollbar-width:none}
+.pillbtns button{flex:none;height:40px;padding:0 14px;border-radius:999px;background:var(--sunken);display:flex;align-items:center;gap:6px;font-size:14px;font-weight:500;color:var(--text)}
+
+/* ── Forms */
+.field{margin:0 var(--m-gutter) 20px}
+.field label{display:block;font-size:14px;font-weight:500;margin-bottom:6px}
+.field .opt{color:var(--text-3);font-weight:400}
+.input{width:100%;height:52px;border-radius:12px;border:1px solid var(--border);background:var(--card);padding:0 14px;font-size:16px;outline:none}
+.input:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-100)}
+.input.err{border-color:var(--get);border-width:2px}
+.ferr{display:flex;gap:6px;align-items:center;color:var(--get);font-size:13px;margin-top:6px}
+.hint{color:var(--text-3);font-size:13px;margin-top:6px}
+.amount{display:flex;align-items:center;justify-content:center;gap:4px;padding:20px 16px 8px}
+.amount .cur{font-size:32px;font-weight:600;color:var(--text-3)}
+.amount input{width:100%;max-width:260px;border:0;outline:none;background:transparent;font:600 44px/1.1 var(--num);text-align:left;color:var(--text);caret-color:var(--primary)}
+.amount input::placeholder{color:var(--text-3);opacity:.5}
+.amount-wrap{border-bottom:2px solid var(--hairline);margin:0 var(--m-gutter) 4px}
+.amount-wrap.err{border-color:var(--get)}
+.disclosure{margin:0 var(--m-gutter);border-radius:12px;border:1px solid var(--hairline)}
+.disclosure > button{width:100%;display:flex;align-items:center;gap:12px;padding:14px 16px;text-align:left;min-height:56px}
+.disclosure .sum{font-size:13px;color:var(--text-3)}
+.stepper{display:flex;align-items:center;border:1px solid var(--border);border-radius:10px;height:40px}
+.stepper button{width:40px;height:40px;display:grid;place-items:center;color:var(--text-2)}
+.stepper span{min-width:28px;text-align:center;font:600 15px var(--num)}
+.line{display:flex;gap:12px;align-items:center;padding:12px var(--m-gutter)}
+.line + .line{border-top:1px solid var(--hairline)}
+
+/* ── Sheets, dialogs, snackbar */
+.scrim{position:absolute;inset:0;background:var(--scrim);z-index:10}
+.scrim.enter{animation:fade .2s}
+@keyframes fade{from{opacity:0}}
+.sheet{position:absolute;left:0;right:0;bottom:0;max-height:92%;background:var(--card);border-radius:var(--r-sheet) var(--r-sheet) 0 0;z-index:11;display:flex;flex-direction:column;box-shadow:var(--shadow-4);touch-action:none}
+.sheet.enter{animation:up .28s cubic-bezier(.2,.8,.2,1)}
+@keyframes up{from{transform:translateY(100%)}}
+.sheet.full{top:0;max-height:none;border-radius:0}
+.grab{height:24px;display:grid;place-items:center;flex:none;cursor:grab}
+.grab::after{content:"";width:36px;height:4px;border-radius:2px;background:var(--border)}
+.sh-head{display:flex;align-items:center;gap:8px;padding:0 8px 8px var(--m-gutter);flex:none}
+.sh-head h2{flex:1;margin:0;font-size:18px;font-weight:600;line-height:24px}
+.sh-body{overflow-y:auto;flex:1;padding-bottom:8px;touch-action:pan-y}
+.sh-foot{display:flex;gap:12px;padding:12px var(--m-gutter) calc(16px + env(safe-area-inset-bottom));border-top:1px solid var(--hairline);flex:none}
+.sh-foot .btn{flex:1}
+.mrow{display:flex;align-items:center;gap:14px;width:100%;min-height:56px;padding:0 var(--m-gutter);text-align:left;font-size:16px}
+.mrow:active{background:var(--hover)} .mrow .sub{font-size:13px;color:var(--text-3)}
+.mrow.danger{color:var(--get)}
+.mrow svg{color:var(--text-2)} .mrow.danger svg{color:var(--get)}
+.dialog{position:absolute;left:24px;right:24px;top:50%;transform:translateY(-50%);background:var(--card);border-radius:20px;z-index:11;padding:24px 20px 16px;box-shadow:var(--shadow-3)}
+.dialog h2{margin:0 0 8px;font-size:20px;line-height:26px}
+.dialog p{margin:0 0 20px;color:var(--text-2);font-size:15px;line-height:22px}
+.dialog .acts{display:flex;flex-direction:column;gap:8px}
+.snack{position:absolute;left:12px;right:12px;bottom:calc(var(--m-nav) + 12px);background:#1E1D24;color:#fff;border-radius:12px;padding:12px 8px 12px 16px;display:flex;align-items:center;gap:12px;font-size:14px;line-height:20px;z-index:20;box-shadow:var(--shadow-3);animation:up .2s}
+.snack.no-nav{bottom:96px}
+.snack .act{color:#B6B3F5;font-weight:600;padding:8px 12px;border-radius:8px}
+.offline{background:var(--warn-dim);color:var(--warn);font-size:13px;padding:8px var(--m-gutter);display:flex;gap:8px;align-items:center;flex:none}
+
+/* ── States */
+.sk{background:linear-gradient(90deg,var(--sunken),var(--hover),var(--sunken));background-size:200% 100%;animation:sh 1.2s infinite;border-radius:6px}
+@keyframes sh{to{background-position:-200% 0}}
+.empty{text-align:center;padding:48px 32px}
+.empty .ill{width:72px;height:72px;border-radius:24px;background:var(--primary-50);color:var(--primary-600);display:grid;place-items:center;margin:0 auto 16px}
+.empty h3{margin:0 0 6px;font-size:18px} .empty p{margin:0 0 20px;color:var(--text-3);font-size:15px;line-height:22px}
+.empty .acts{display:flex;flex-direction:column;gap:8px;max-width:260px;margin:0 auto}
+.errbox{margin:16px var(--m-gutter);padding:16px;border-radius:12px;background:var(--get-dim);color:var(--text);display:flex;gap:12px}
+.errbox svg{color:var(--get)}
+.errbox p{margin:2px 0 10px;color:var(--text-2);font-size:14px}
+.success{text-align:center;padding:40px 24px 8px}
+.success .tick{width:80px;height:80px;border-radius:50%;background:var(--give-dim);color:var(--give);display:grid;place-items:center;margin:0 auto 16px;animation:pop .35s cubic-bezier(.2,1.4,.4,1)}
+@keyframes pop{from{transform:scale(.5);opacity:0}}
+.flash{animation:flash 1.6s}
+@keyframes flash{0%,40%{background:var(--primary-50)}}
+
+/* ── Khata */
+.kh-head{padding:4px var(--m-gutter) 0}
+.kh-id{display:flex;align-items:center;gap:12px}
+.kh-bal{margin-top:16px;padding:16px;border-radius:16px;background:var(--subtle);border:1px solid var(--hairline)}
+.kh-bal .big{font-size:34px;font-weight:600;line-height:40px}
+.kh-bal .cap{font-size:14px;color:var(--text-2);margin-top:2px}
+.credit{height:6px;border-radius:3px;background:var(--sunken);margin-top:12px;overflow:hidden} .credit i{display:block;height:100%;background:var(--warn)}
+.ent{display:flex;gap:12px;padding:12px var(--m-gutter);width:100%;text-align:left;align-items:flex-start;position:relative}
+.ent:active{background:var(--hover)}
+.ent + .ent::before{content:"";position:absolute;top:0;left:var(--m-gutter);right:0;border-top:1px solid var(--hairline)}
+.ent .t{font-size:16px;line-height:22px;font-weight:500;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ent .s{font-size:13px;color:var(--text-3);margin-top:2px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.ent .end{margin-left:auto;text-align:right;flex:none}
+.ent .amt{font-size:16px;font-weight:600}
+
+/* ── Seats */
+.seats{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;padding:8px var(--m-gutter)}
+.seat{aspect-ratio:1;border-radius:10px;display:grid;place-items:center;font:600 13px var(--num);border:1.5px solid}
+.seat.free{background:var(--seat-free);border-color:var(--seat-free-b);color:var(--seat-free-b)}
+.seat.busy{background:var(--seat-busy);border-color:var(--seat-busy-b);color:var(--seat-busy-b)}
+.seat.res{background:var(--seat-res);border-color:var(--seat-res-b);color:var(--seat-res-b);border-style:dashed}
+.legend{display:flex;gap:16px;padding:4px var(--m-gutter) 8px;font-size:13px;color:var(--text-2)}
+.legend span{display:flex;align-items:center;gap:6px} .legend i{width:12px;height:12px;border-radius:4px;border:1.5px solid}
+.spark{display:block;width:100%;height:56px}
+.r{font-family:var(--num)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<div class="stage">
+  <aside class="panel left" aria-label="Prototype controls">
+    <h2>YourKhata · mobile prototype</h2>
+    <p>A clickable proposal, not the app. Every tap works; data resets on reload.</p>
+    <h3>App</h3>
+    <div class="seg-ctl" id="ctl-app"></div>
+    <h3>Screen state</h3>
+    <div class="seg-ctl" id="ctl-mode"></div>
+    <h3>Theme</h3>
+    <div class="seg-ctl" id="ctl-theme"></div>
+    <h3>Journeys to try</h3>
+    <div class="jump" id="ctl-jump"></div>
+  </aside>
+  <div class="phone"><div class="screen-wrap" id="frame">
+    <div class="statusbar"><span>9:41</span><span style="font-size:13px">5G · 82%</span></div>
+    <div id="app"></div>
+  </div></div>
+  <aside class="panel right" aria-live="polite"><div id="notes"></div></aside>
+</div>
+
+<script>
+/* ════════════════════════════════════════════════════════════════════════
+   Icons (lucide-compatible paths)
+   ════════════════════════════════════════════════════════════════════════ */
+const P={home:'<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/>',users:'<circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/>',file:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/>',box:'<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>',grid:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',search:'<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',bell:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',back:'<path d="m15 18-6-6 6-6"/>',chev:'<path d="m9 18 6-6-6-6"/>',down:'<path d="m6 9 6 6 6-6"/>',plus:'<path d="M12 5v14M5 12h14"/>',minus:'<path d="M5 12h14"/>',x:'<path d="M18 6 6 18M6 6l12 12"/>',dots:'<circle cx="5" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="19" cy="12" r="1.4" fill="currentColor"/>',filter:'<path d="M3 6h18M7 12h10M10 18h4"/>',phone:'<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/>',msg:'<path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l2.1-5.6A8.4 8.4 0 1 1 21 11.5z"/>',check:'<path d="M20 6 9 17l-5-5"/>',wallet:'<path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0 0 4h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5"/><path d="M16 14h.01"/>',cart:'<circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="M2 3h3l2.7 12.4a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6L22 7H6"/>',receipt:'<path d="M4 2v20l3-2 3 2 3-2 3 2 3-2V2l-3 2-3-2-3 2-3-2-3 2z"/><path d="M8 8h8M8 12h8"/>',chart:'<path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/>',settings:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1 7 17M17 7l2.1-2.1"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',alert:'<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',seat:'<path d="M19 9V6a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v3"/><path d="M3 11v5a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v2H7v-2a2 2 0 0 0-4 0z"/><path d="M5 18v2M19 18v2"/>',login:'<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="m10 17 5-5-5-5M15 12H3"/>',scan:'<path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10"/>',share:'<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/>',printer:'<path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>',download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5M12 15V3"/>',edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',tag:'<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8z"/><circle cx="7" cy="7" r="1.5"/>',archive:'<rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8M10 12h4"/>',calendar:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',refresh:'<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>',wifioff:'<path d="M2 2l20 20"/><path d="M8.5 16.5a5 5 0 0 1 7 0M5 12.9a10 10 0 0 1 5.2-2.8M19 12.9a10 10 0 0 0-2.3-1.7M2 8.8a15 15 0 0 1 4.2-2.7M22 8.8A15 15 0 0 0 11 5M12 20h.01"/>',user:'<circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/>',globe:'<circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/>',moon:'<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',logout:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>',book:'<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5z"/><path d="M4 19.5V22h16"/>',truck:'<path d="M1 3h15v13H1zM16 8h4l3 3v5h-7z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>',undo:'<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',hourglass:'<path d="M5 22h14M5 2h14M17 22v-4.2a2 2 0 0 0-.6-1.4L12 12l-4.4 4.4a2 2 0 0 0-.6 1.4V22M7 2v4.2a2 2 0 0 0 .6 1.4L12 12l4.4-4.4a2 2 0 0 0 .6-1.4V2"/>',upload:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5M12 3v12"/>',copy:'<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',rupee:'<path d="M6 3h12M6 8h12M6 13l8.5 8M6 13h3a5 5 0 0 0 0-10"/>',inbox:'<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.7 4H7.3a2 2 0 0 0-1.8 1.1z"/>'};
+const ic=(n,c='')=>`<svg class="i ${c}" viewBox="0 0 24 24" aria-hidden="true">${P[n]||''}</svg>`;
+
+/* ════════════════════════════════════════════════════════════════════════
+   Data
+   ════════════════════════════════════════════════════════════════════════ */
+const inr=(n,d=true)=>{const a=Math.abs(n);return '₹'+a.toLocaleString('en-IN',{minimumFractionDigits:d?2:0,maximumFractionDigits:d?2:0})};
+const initials=s=>s.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+let uid=100;
+const D={
+  parties:[
+    {id:1,name:'Ramesh Traders',type:'customer',mobile:'+91 90946 59548',last:'Today',tags:['Route 2'],limit:5000,entries:[
+      {id:11,date:'Today',dir:'gave',amt:200,note:'Rice 25 kg'},
+      {id:12,date:'6 Oct',dir:'got',amt:500,note:'Cash received'},
+      {id:13,date:'6 Oct',dir:'gave',amt:500,note:'Sugar 10 kg, oil 5 L'},
+      {id:14,date:'4 Oct',dir:'gave',amt:800,note:'Rice 25 kg',tag:'Backdated'},
+      {id:15,date:'30 Aug',dir:'gave',amt:0,note:'Opening balance',opening:true,ob:0}]},
+    {id:2,name:'Anil Kumar',type:'customer',mobile:'+91 90955 98860',last:'Yesterday',tags:['Camp Area'],entries:[{id:21,date:'Yesterday',dir:'gave',amt:4150,note:'Monthly ration'}]},
+    {id:3,name:'Priya Textiles',type:'customer',mobile:'+91 90954 35064',last:'3 days ago',tags:[],entries:[{id:31,date:'5 Oct',dir:'gave',amt:3420,note:'Cloth 40 m'}]},
+    {id:4,name:'Gupta Kirana',type:'customer',mobile:'+91 90950 94266',last:'1 week ago',tags:['Route 2'],entries:[{id:41,date:'1 Oct',dir:'gave',amt:1960,note:'Wholesale order'}]},
+    {id:5,name:'Sunita Devi',type:'customer',mobile:'+91 90948 74553',last:'2 weeks ago',tags:[],entries:[{id:51,date:'24 Sep',dir:'gave',amt:1230,note:'Groceries'}]},
+    {id:6,name:'Mohan Lal',type:'customer',mobile:'+91 90952 55820',last:'Today',tags:[],entries:[{id:61,date:'Today',dir:'got',amt:2690,note:'Advance for Diwali order'}]},
+    {id:7,name:'Kailash Wholesale',type:'supplier',mobile:'+91 98201 11220',last:'Today',tags:[],entries:[{id:71,date:'Today',dir:'got',amt:2690,note:'Purchase bill PB-0021'}]},
+    {id:8,name:'Shree Oils',type:'supplier',mobile:'+91 98201 33441',last:'4 days ago',tags:[],entries:[{id:81,date:'5 Oct',dir:'gave',amt:0,note:'Settled'}]},
+  ],
+  bills:[
+    {no:'INV-0012',party:'Anil Kumar',date:'Yesterday',total:4150,status:'unpaid',kind:'invoices'},
+    {no:'INV-0011',party:'Walk-in customer',date:'Yesterday',total:860,status:'paid',kind:'invoices'},
+    {no:'INV-0010',party:'Priya Textiles',date:'5 Oct',total:3420,status:'overdue',kind:'invoices'},
+    {no:'INV-0009',party:'Gupta Kirana',date:'1 Oct',total:1960,status:'overdue',kind:'invoices'},
+    {no:'INV-0008',party:'Mohan Lal',date:'28 Sep',total:2240,status:'paid',kind:'invoices'},
+    {no:'—',party:'Ramesh Traders',date:'Today',total:1200,status:'draft',kind:'invoices'},
+    {no:'EST-0004',party:'Priya Textiles',date:'2 Oct',total:12800,status:'sent',kind:'estimates'},
+    {no:'SO-0002',party:'Gupta Kirana',date:'30 Sep',total:5600,status:'open',kind:'orders'},
+  ],
+  items:[
+    {id:1,name:'Basmati Rice 5 kg',sku:'BASMATI-001',stock:24,unit:'bag',price:450,low:10},
+    {id:2,name:'Sugar 1 kg',sku:'SUGAR-1KG',stock:6,unit:'pkt',price:46,low:10},
+    {id:3,name:'Sunflower Oil 1 L',sku:'OIL-SF-1L',stock:0,unit:'btl',price:155,low:6},
+    {id:4,name:'Toor Dal 1 kg',sku:'DAL-TOOR',stock:38,unit:'pkt',price:142,low:10},
+    {id:5,name:'Tea 250 g',sku:'TEA-250',stock:15,unit:'pkt',price:120,low:5},
+    {id:6,name:'Atta 10 kg',sku:'ATTA-10',stock:9,unit:'bag',price:420,low:8},
+  ],
+  students:[
+    {name:'Rohit Verma',seat:'A4',shift:'Morning',due:0,ends:'31 Oct'},{name:'Neha Singh',seat:'B2',shift:'Full day',due:1200,ends:'14 Oct'},
+    {name:'Aman Gupta',seat:'A9',shift:'Evening',due:800,ends:'12 Oct'},{name:'Pooja Yadav',seat:'C1',shift:'Full day',due:0,ends:'5 Nov'},
+    {name:'Sahil Khan',seat:'B7',shift:'Morning',due:600,ends:'10 Oct'},
+  ],
+};
+const bal=p=>{let b=0;for(const e of p.entries){if(e.opening)b+=e.ob;else b+=e.dir==='gave'?e.amt:-e.amt}return b};
+D.parties[0].entries[4].ob=-500; // opening: "I owe them ₹500"
+const balLabel=(b,type)=>b>0?'You will get':b<0?'You will give':'Settled';
+
+/* ════════════════════════════════════════════════════════════════════════
+   State
+   ════════════════════════════════════════════════════════════════════════ */
+const S={app:'shop',tab:'home',stack:[],sheet:null,dialog:null,snack:null,mode:'normal',theme:'light',
+  seg:'customer',q:'',filters:{show:'active',bal:'all',sort:'recent',tags:[]},
+  billStatus:'all',billKind:'invoices',itemChip:'all',corrections:false,justPushed:false,sheetNew:false,
+  draft:null,entry:null,flashId:null,seatShift:'All',busy:false};
+const cur=()=>S.stack.length?S.stack[S.stack.length-1]:{r:S.tab};
+
+/* ════════════════════════════════════════════════════════════════════════
+   Shell pieces
+   ════════════════════════════════════════════════════════════════════════ */
+const TABS={
+  shop:[{k:'home',l:'Home',i:'home'},{k:'parties',l:'Parties',i:'users'},{k:'bills',l:'Bills',i:'file'},{k:'items',l:'Items',i:'box',badge:2},{k:'more',l:'More',i:'grid'}],
+  library:[{k:'lhome',l:'Today',i:'home'},{k:'students',l:'Students',i:'users'},{k:'seats',l:'Seats',i:'seat'},{k:'fees',l:'Fees',i:'wallet',badge:3},{k:'more',l:'More',i:'grid'}],
+};
+function nav(){
+  return `<nav class="nav" aria-label="Main">${TABS[S.app].map(t=>`<button data-a="tab" data-v="${t.k}" ${S.tab===t.k&&!S.stack.length?'aria-current="page"':''}><span class="pill">${ic(t.i)}</span>${t.l}${t.badge?`<span class="badge" aria-label="${t.badge} need attention">${t.badge}</span>`:''}</button>`).join('')}</nav>`;
+}
+const topBiz=()=>{const lib=S.app==='library';return `<button class="biz" data-a="sheet" data-v="switcher" aria-haspopup="dialog"><span class="mk">${lib?'SP':'SG'}</span><span style="min-width:0"><span class="nm" style="display:block">${lib?'Sharma Study Point':'Sharma General Store'}</span><span class="sub">${lib?'Library':'Shop'} · tap to switch</span></span>${ic('down','sm')}</button>`};
+const tabBar=(title,{biz=false,actions=''}={})=>`<header class="bar">${biz?topBiz():`<span class="title" style="font-size:22px;padding-left:8px">${title}</span>`}${actions}<button class="icon-btn" data-a="go" data-v="search" aria-label="Search">${ic('search')}</button><button class="icon-btn" data-a="toast" data-v="Notifications open here, same panel as desktop." aria-label="Notifications, 3 new">${ic('bell')}<span class="dot"></span></button></header>`;
+const detailBar=(title,actions='',close=false)=>`<header class="bar"><button class="icon-btn" data-a="back" aria-label="${close?'Close':'Back'}">${ic(close?'x':'back')}</button><span class="title">${title}</span>${actions}</header>`;
+const fab=(label,a,v,icon='plus')=>`<button class="fab" data-a="${a}" data-v="${v}" aria-label="${label}">${ic(icon)}<span>${label}</span></button>`;
+const offline=()=>S.mode==='offline'?`<div class="offline" role="status">${ic('wifioff','sm')}You're offline. Showing what was last loaded; saving is paused.</div>`:'';
+const skRows=n=>Array.from({length:n},()=>`<div class="row"><div class="sk" style="width:40px;height:40px;border-radius:50%"></div><div class="main"><div class="sk" style="height:14px;width:60%;margin-bottom:8px"></div><div class="sk" style="height:12px;width:40%"></div></div><div class="sk" style="height:14px;width:64px"></div></div>`).join('');
+const errBox=(what)=>`<div class="errbox" role="alert">${ic('alert')}<div><b>Couldn't load ${what}</b><p>Check the connection and try again. Nothing you saved is lost.</p><button class="btn secondary" style="height:40px" data-a="retry">${ic('refresh','sm')}Try again</button></div></div>`;
+
+/* ════════════════════════════════════════════════════════════════════════
+   Screens
+   ════════════════════════════════════════════════════════════════════════ */
+const R={};
+
+R.home=()=>{
+  const cust=D.parties.filter(p=>p.type==='customer');
+  const get=cust.reduce((s,p)=>s+Math.max(bal(p),0),0)+D.parties.filter(p=>p.type==='supplier').reduce((s,p)=>s+Math.max(bal(p),0),0);
+  const give=D.parties.reduce((s,p)=>s+Math.max(-bal(p),0),0);
+  if(S.mode==='loading')return tabBar('',{biz:true})+offline()+`<div class="content"><div class="card hero"><div><div class="sk" style="height:12px;width:70%"></div><div class="sk" style="height:24px;width:90%;margin-top:10px"></div></div><div><div class="sk" style="height:12px;width:70%"></div><div class="sk" style="height:24px;width:90%;margin-top:10px"></div></div></div>${skRows(4)}</div>`+nav();
+  const recent=D.parties.flatMap(p=>p.entries.filter(e=>!e.opening&&e.amt).map(e=>({p,e}))).slice(0,4);
+  return tabBar('',{biz:true})+offline()+`<div class="content">
+  ${S.mode==='error'?errBox('your summary'):''}
+  <div class="card hero" role="group" aria-label="Balances">
+    <button data-a="partiesBal" data-v="get"><div class="lbl">To collect ${ic('chev','xs')}</div><div class="val num get">${inr(get,false)}</div></button>
+    <button data-a="partiesBal" data-v="give"><div class="lbl">To pay ${ic('chev','xs')}</div><div class="val num give">${inr(give,false)}</div></button>
+  </div>
+  <div class="strip" aria-label="Today">
+    <div class="mini"><div class="lbl">Sales today</div><div class="val num">${inr(5010,false)}</div></div>
+    <div class="mini"><div class="lbl">Cash in hand</div><div class="val num">${inr(18240,false)}</div></div>
+    <div class="mini"><div class="lbl">Bills due</div><div class="val num">2</div></div>
+    <div class="mini"><div class="lbl">Low stock</div><div class="val num">2</div></div>
+  </div>
+  <div class="sec"><h3>Quick actions</h3></div>
+  <div class="qa">
+    <button data-a="newBill"><span class="ic">${ic('file')}</span>New bill</button>
+    <button data-a="sheet" data-v="pickParty"><span class="ic">${ic('rupee')}</span>Gave / got</button>
+    <button data-a="go" data-v="addParty"><span class="ic">${ic('users')}</span>Add party</button>
+    <button data-a="toast" data-v="Expense form opens full screen, like Add party."><span class="ic">${ic('receipt')}</span>Expense</button>
+  </div>
+  <div class="sec"><h3>Needs attention</h3></div>
+  <div class="list">
+    <button class="row" data-a="go" data-v="aging"><span class="av ic" style="background:var(--get-dim);color:var(--get)">${ic('hourglass','sm')}</span><span class="main"><span class="t" style="display:block">2 bills overdue</span><span class="s" style="display:block">₹5,380 · oldest 8 days</span></span>${ic('chev','sm chev')}</button>
+    <button class="row" data-a="toast" data-v="Opens the reminders list with WhatsApp sharing per party."><span class="av ic" style="background:var(--warn-dim);color:var(--warn)">${ic('bell','sm')}</span><span class="main"><span class="t" style="display:block">5 people not reminded</span><span class="s" style="display:block">Send on WhatsApp in one go</span></span>${ic('chev','sm chev')}</button>
+    <button class="row" data-a="itemsLow"><span class="av ic" style="background:var(--info-dim);color:var(--info)">${ic('box','sm')}</span><span class="main"><span class="t" style="display:block">2 items low or out</span><span class="s" style="display:block">Sunflower Oil is out of stock</span></span>${ic('chev','sm chev')}</button>
+  </div>
+  <div class="sec"><h3>This week</h3><button class="link" data-a="toast" data-v="Full insights: the existing charts, one per screen, with a period chip.">See insights</button></div>
+  <div class="card" style="margin:0 var(--m-gutter);padding:14px 16px">
+    <div style="display:flex;justify-content:space-between;font-size:14px"><span class="muted">Sales, last 7 days</span><b class="num">${inr(31840,false)}</b></div>
+    <svg class="spark" viewBox="0 0 300 56" preserveAspectRatio="none" aria-label="Sales rose from 3,100 to 5,010 rupees over 7 days"><polyline fill="none" stroke="var(--primary)" stroke-width="2.5" points="0,40 50,44 100,30 150,34 200,22 250,26 300,12"/></svg>
+  </div>
+  <div class="sec"><h3>Recent</h3></div>
+  <div class="list">${recent.map(({p,e})=>`<button class="row" data-a="go" data-v="khata" data-id="${p.id}"><span class="av">${initials(p.name)}</span><span class="main"><span class="t" style="display:block">${p.name}</span><span class="s" style="display:block">${e.note} · ${e.date}</span></span><span class="end"><span class="amt num ${e.dir==='gave'?'get':'give'}" style="display:block">${inr(e.amt,false)}</span><span class="amt-l">${e.dir==='gave'?'You gave':'You got'}</span></span></button>`).join('')}</div>
+  </div>`+nav();
+};
+
+function partyList(){
+  let ps=D.parties.filter(p=>p.type===S.seg);
+  const q=S.q.trim().toLowerCase();
+  if(q)ps=ps.filter(p=>p.name.toLowerCase().includes(q)||p.mobile.replace(/\s/g,'').includes(q));
+  const f=S.filters;
+  if(f.bal==='get')ps=ps.filter(p=>bal(p)>0); if(f.bal==='give')ps=ps.filter(p=>bal(p)<0); if(f.bal==='settled')ps=ps.filter(p=>bal(p)===0);
+  if(f.tags.length)ps=ps.filter(p=>p.tags.some(t=>f.tags.includes(t)));
+  if(f.sort==='high')ps=[...ps].sort((a,b)=>Math.abs(bal(b))-Math.abs(bal(a)));
+  if(f.sort==='name')ps=[...ps].sort((a,b)=>a.name.localeCompare(b.name));
+  return ps;
+}
+const activeFilterCount=()=>{const f=S.filters;return (f.show!=='active')+(f.bal!=='all')+f.tags.length+(f.sort!=='recent')};
+function partyRows(){
+  if(S.mode==='loading')return skRows(6);
+  if(S.mode==='error')return errBox('parties');
+  const ps=partyList();
+  const word=S.seg==='customer'?'customer':'supplier';
+  if(S.mode==='empty'&&!S.q)return `<div class="empty"><div class="ill">${ic('users')}</div><h3>No ${word}s yet</h3><p>Add the people you give credit to. Their balance stays up to date as you write entries.</p><div class="acts"><button class="btn primary" data-a="go" data-v="addParty">${ic('plus','sm')}Add ${word}</button><button class="btn secondary" data-a="toast" data-v="Import from a CSV, the existing import flow.">${ic('upload','sm')}Import a list</button></div></div>`;
+  if(!ps.length)return `<div class="empty"><div class="ill">${ic('search')}</div><h3>No one matches${S.q?` "${S.q}"`:''}</h3><p>${activeFilterCount()?'Try clearing a filter.':'Check the spelling, or add them now.'}</p><div class="acts">${S.q?`<button class="btn primary" data-a="go" data-v="addParty">Add "${S.q}"</button>`:''}${activeFilterCount()?`<button class="btn secondary" data-a="clearFilters">Clear filters</button>`:''}</div></div>`;
+  return `<div class="list">${ps.map(p=>{const b=bal(p);return `<button class="row" data-a="go" data-v="khata" data-id="${p.id}"><span class="av">${initials(p.name)}</span><span class="main"><span class="t" style="display:block">${p.name}</span><span class="s" style="display:block">${p.last}${p.tags.length?' · '+p.tags.join(', '):''}</span></span><span class="end"><span class="amt num ${b>0?'get':b<0?'give':''}" style="display:block">${b?inr(b,false):'₹0'}</span><span class="amt-l">${balLabel(b)}</span></span></button>`}).join('')}</div>
+  <p class="muted" style="text-align:center;font-size:13px;margin:16px 0">That's everyone · ${ps.length} ${word}${ps.length>1?'s':''}</p>`;
+}
+R.parties=()=>{
+  const ps=D.parties.filter(p=>p.type===S.seg);
+  const get=ps.reduce((s,p)=>s+Math.max(bal(p),0),0),give=ps.reduce((s,p)=>s+Math.max(-bal(p),0),0);
+  const f=S.filters,n=activeFilterCount();
+  const chips=[];
+  if(f.bal!=='all')chips.push(`<button class="chip rm" data-a="rmFilter" data-v="bal">${{get:'You will get',give:'You will give',settled:'Settled'}[f.bal]} ${ic('x','xs')}</button>`);
+  f.tags.forEach(t=>chips.push(`<button class="chip rm" data-a="rmFilter" data-v="tag:${t}">${t} ${ic('x','xs')}</button>`));
+  if(f.sort!=='recent')chips.push(`<button class="chip rm" data-a="rmFilter" data-v="sort">Sort: ${{high:'Highest balance',name:'Name'}[f.sort]} ${ic('x','xs')}</button>`);
+  return tabBar('Parties',{actions:`<button class="icon-btn" data-a="sheet" data-v="partyMore" aria-label="More actions">${ic('dots')}</button>`})+offline()+`<div class="content" data-scroll>
+  <div class="seg" role="group" aria-label="Show"><button data-a="seg" data-v="customer" aria-pressed="${S.seg==='customer'}">Customers</button><button data-a="seg" data-v="supplier" aria-pressed="${S.seg==='supplier'}">Suppliers</button></div>
+  <p class="summary-line">You will get <b class="num get">${inr(get,false)}</b> · You will give <b class="num give">${inr(give,false)}</b></p>
+  <label class="search">${ic('search','sm')}<span class="sr">Search</span><input id="q" type="search" inputmode="search" placeholder="Name or mobile" value="${S.q}" autocomplete="off"><button class="fbtn" data-a="sheet" data-v="filters" aria-label="Filter and sort${n?`, ${n} active`:''}">${ic('filter','xs')}Filter${n?`<span class="cnt">${n}</span>`:''}</button></label>
+  ${chips.length?`<div class="chips">${chips.join('')}</div>`:''}
+  <div id="plist">${partyRows()}</div>
+  </div>`+(S.mode==='empty'||S.mode==='error'?'':fab(S.seg==='customer'?'Add customer':'Add supplier','go','addParty'))+nav();
+};
+
+R.khata=(r)=>{
+  const p=D.parties.find(x=>x.id===r.id);const b=bal(p);
+  const rows=[...p.entries];
+  let running=b;const withBal=rows.map(e=>{const out={e,bal:running};running-=e.opening?e.ob:(e.dir==='gave'?e.amt:-e.amt);return out});
+  const groups=[];withBal.forEach(x=>{const g=groups[groups.length-1];if(g&&g.d===x.e.date)g.items.push(x);else groups.push({d:x.e.date,items:[x]})});
+  const pct=p.limit?Math.min(100,Math.round(Math.max(b,0)/p.limit*100)):0;
+  return detailBar(p.name,`<button class="icon-btn" data-a="toast" data-v="Calls ${p.mobile}" aria-label="Call ${p.name}">${ic('phone')}</button><button class="icon-btn" data-a="sheet" data-v="khataMore" aria-label="More for ${p.name}">${ic('dots')}</button>`)+offline()+`<div class="content with-dock">
+  <div class="kh-head">
+    <div class="kh-id"><span class="av" style="width:48px;height:48px">${initials(p.name)}</span><div style="min-width:0"><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><span class="badge-s">${p.type==='customer'?'Customer':'Supplier'}</span>${p.tags.map(t=>`<span class="badge-s info">${t}</span>`).join('')}</div><div class="muted num" style="font-size:14px;margin-top:4px">${p.mobile}</div></div></div>
+    <div class="kh-bal" aria-live="polite"><div class="big num ${b>0?'get':b<0?'give':''}">${inr(b)}</div><div class="cap">${balLabel(b)} · as of today</div>
+    ${p.limit?`<div class="credit" role="img" aria-label="${pct}% of the ₹${p.limit.toLocaleString('en-IN')} credit limit used"><i style="width:${pct}%"></i></div><div class="muted" style="font-size:13px;margin-top:6px">${pct}% of ${inr(p.limit,false)} credit limit</div>`:''}</div>
+  </div>
+  <div class="pillbtns"><button data-a="sheet" data-v="remind">${ic('msg','sm')}Remind</button><button data-a="go" data-v="statement" data-id="${p.id}">${ic('file','sm')}Statement</button><button data-a="toast" data-v="Promise date picker (existing control).">${ic('calendar','sm')}Promise</button></div>
+  <div class="sec" style="margin-top:20px"><h3>Transactions</h3><span class="meta">${p.entries.length} entries${S.corrections?' · corrections shown':''}</span></div>
+  ${S.mode==='loading'?skRows(4):S.mode==='error'?errBox('entries'):groups.map(g=>`<div class="band">${g.d}</div>${g.items.map(({e,bal:rb})=>`<button class="ent ${S.flashId===e.id?'flash':''}" data-a="sheet" data-v="entry:${e.id}"><span style="min-width:0;flex:1"><span class="t">${e.note}</span><span class="s"><span class="num">Bal ${inr(rb,false)}${rb<0?' (to give)':''}</span>${e.opening?'<span class="badge-s info">Opening</span>':''}${e.tag?`<span class="badge-s">${e.tag}</span>`:''}</span></span><span class="end">${e.opening?`<span class="amt num give">${inr(e.ob,false)}</span><div class="muted" style="font-size:12px">I owe them</div>`:`<span class="amt num ${e.dir==='gave'?'get':'give'}">${inr(e.amt,false)}</span><div class="muted" style="font-size:12px">${e.dir==='gave'?'You gave':'You got'}</div>`}</span></button>`).join('')}`).join('')}
+  </div>
+  <div class="dock"><button class="btn gave" data-a="entry" data-v="gave">${ic('minus','sm')}You gave</button><button class="btn got" data-a="entry" data-v="got">${ic('plus','sm')}You got</button></div>`;
+};
+
+R.statement=(r)=>{
+  const p=D.parties.find(x=>x.id===r.id);const b=bal(p);
+  const gave=p.entries.filter(e=>!e.opening&&e.dir==='gave').reduce((s,e)=>s+e.amt,0),got=p.entries.filter(e=>!e.opening&&e.dir==='got').reduce((s,e)=>s+e.amt,0);
+  let run=0;const rows=[...p.entries].reverse().map(e=>{run+=e.opening?e.ob:(e.dir==='gave'?e.amt:-e.amt);return {e,run}});
+  return detailBar('Statement',`<button class="icon-btn" data-a="sheet" data-v="stmtShare" aria-label="Share statement">${ic('share')}</button>`)+`<div class="content no-nav">
+  <div class="pad"><div style="font-weight:600;font-size:18px">${p.name}</div><div class="muted" style="font-size:14px">1 Apr 2026 – today</div></div>
+  <div class="chips" style="padding-top:12px"><button class="chip" aria-pressed="false">This month</button><button class="chip" aria-pressed="false">Last month</button><button class="chip" aria-pressed="true">This FY</button><button class="chip" aria-pressed="false">${ic('calendar','xs')}Custom</button></div>
+  <div class="card" style="margin:8px var(--m-gutter) 0;padding:4px 16px">
+    ${[['Brought forward','₹0.00',''],['You gave',inr(gave),'get'],['You got',inr(got),'give']].map(([l,v,c])=>`<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--hairline);font-size:15px"><span class="muted">${l}</span><span class="num ${c}">${v}</span></div>`).join('')}
+    <div style="display:flex;justify-content:space-between;padding:12px 0;font-size:16px;font-weight:600"><span>Closing · ${balLabel(b)}</span><span class="num ${b>0?'get':'give'}">${inr(b)}</span></div>
+  </div>
+  <div class="sec"><h3>Entries</h3><span class="meta">oldest first</span></div>
+  <div class="list">${rows.map(({e,run})=>`<div class="ent"><span style="flex:1;min-width:0"><span class="t">${e.note}</span><span class="s">${e.date} · <span class="num">Balance ${inr(run,false)}${run<0?' to give':''}</span></span></span><span class="end"><span class="amt num ${e.opening?'give':e.dir==='gave'?'get':'give'}">${inr(e.opening?e.ob:e.amt,false)}</span><div class="muted" style="font-size:12px">${e.opening?'Opening':e.dir==='gave'?'You gave':'You got'}</div></span></div>`).join('')}</div>
+  </div><div class="dock"><button class="btn secondary" data-a="toast" data-v="Prints the existing statement sheet (window.print).">${ic('printer','sm')}Print</button><button class="btn primary" data-a="sheet" data-v="stmtShare">${ic('share','sm')}Share</button></div>`;
+};
+
+R.addParty=()=>{
+  const d=S.newParty||(S.newParty={name:S.q||'',mobile:'',type:S.seg,amt:'',dir:'get',err:{}});
+  return detailBar(`Add ${d.type}`,'',true)+`<div class="content no-nav" style="padding-top:12px">
+  <div class="seg" style="margin-bottom:20px" role="group" aria-label="Type"><button data-a="npType" data-v="customer" aria-pressed="${d.type==='customer'}">Customer</button><button data-a="npType" data-v="supplier" aria-pressed="${d.type==='supplier'}">Supplier</button></div>
+  <div class="field"><label for="np-name">Name</label><input id="np-name" class="input ${d.err.name?'err':''}" placeholder="e.g. Ramesh Traders" value="${d.name}" autocomplete="name" ${d.err.name?'aria-invalid="true" aria-describedby="np-name-e"':''}>${d.err.name?`<div class="ferr" id="np-name-e">${ic('alert','xs')}${d.err.name}</div>`:''}</div>
+  <div class="field"><label for="np-mob">Mobile <span class="opt">optional</span></label><input id="np-mob" class="input ${d.err.mobile?'err':''}" type="tel" inputmode="tel" placeholder="10-digit mobile number" value="${d.mobile}" autocomplete="tel">${d.err.mobile?`<div class="ferr">${ic('alert','xs')}${d.err.mobile}</div>`:'<div class="hint">Used for reminders on WhatsApp. Never shared.</div>'}</div>
+  <div class="disclosure" style="margin-bottom:12px"><button data-a="toggle" data-v="npOpen" aria-expanded="${!!S.npOpen}">${ic('wallet')}<span style="flex:1"><span style="display:block;font-weight:500">Opening balance</span><span class="sum">${d.amt?inr(+d.amt)+' · '+(d.dir==='get'?'they owe you':'you owe them'):'Carry over a balance from paper'}</span></span>${ic(S.npOpen?'down':'chev','sm')}</button>
+  ${S.npOpen?`<div style="padding:0 0 8px"><div class="field"><label for="np-amt">Amount</label><input id="np-amt" class="input num" inputmode="decimal" placeholder="0" value="${d.amt}"></div><div class="seg" style="margin-top:-8px;margin-bottom:12px"><button data-a="npDir" data-v="get" aria-pressed="${d.dir==='get'}">They owe me</button><button data-a="npDir" data-v="give" aria-pressed="${d.dir==='give'}">I owe them</button></div></div>`:''}</div>
+  <div class="disclosure"><button data-a="toast" data-v="Address, GSTIN, credit limit and tags: the same fields as desktop, folded away until needed.">${ic('edit')}<span style="flex:1"><span style="display:block;font-weight:500">More details</span><span class="sum">Address, GSTIN, credit limit, tags</span></span>${ic('chev','sm')}</button></div>
+  </div><div class="dock"><button class="btn primary" data-a="saveParty" ${S.busy?'disabled':''}>${S.busy?'<span class="spin"></span>Saving':'Save'}</button></div>`;
+};
+
+const billKinds={invoices:'Bills',estimates:'Estimates',orders:'Sales orders',challans:'Delivery challans',credit:'Credit notes'};
+const stat={unpaid:['Unpaid','warn'],paid:['Paid','give'],overdue:['Overdue','get'],draft:['Draft',''],sent:['Sent','info'],open:['Open','info']};
+R.bills=()=>{
+  let bs=D.bills.filter(b=>b.kind===S.billKind);
+  const all=bs;
+  if(S.billStatus!=='all')bs=bs.filter(b=>b.status===S.billStatus);
+  const count=k=>all.filter(b=>b.status===k).length;
+  const body=S.mode==='loading'?skRows(5):S.mode==='error'?errBox('bills'):(S.mode==='empty'||!bs.length)?`<div class="empty"><div class="ill">${ic('file')}</div><h3>${S.mode==='empty'?'No bills yet':'Nothing here'}</h3><p>${S.mode==='empty'?'Your first bill takes about a minute. Walk-in customers need no name.':'No bills with this status in this period.'}</p><div class="acts"><button class="btn primary" data-a="newBill">${ic('plus','sm')}New bill</button></div></div>`:
+  `<div class="list">${bs.map(b=>`<button class="row" data-a="go" data-v="bill" data-id="${b.no}"><span class="main"><span class="t" style="display:block">${b.party}</span><span class="s" style="display:block">${b.no==='—'?'Draft':b.no} · ${b.date}</span></span><span class="end"><span class="amt num" style="display:block">${inr(b.total,false)}</span><span class="badge-s ${stat[b.status][1]}">${stat[b.status][0]}</span></span></button>`).join('')}</div>`;
+  return `<header class="bar"><button class="biz" data-a="sheet" data-v="billKind" aria-haspopup="dialog" style="flex:1"><span class="nm" style="font-size:22px;line-height:28px">${billKinds[S.billKind]}</span>${ic('down','sm')}</button><button class="icon-btn" data-a="go" data-v="search" aria-label="Search">${ic('search')}</button><button class="icon-btn" data-a="sheet" data-v="billsMore" aria-label="More actions">${ic('dots')}</button></header>`+offline()+`<div class="content" data-scroll>
+  <p class="summary-line" style="margin-top:0">This FY · Billed <b class="num">${inr(12630,false)}</b> · Due <b class="num get">${inr(9530,false)}</b></p>
+  <div class="chips" style="padding-top:12px">${[['all','All',all.length],['unpaid','Unpaid',count('unpaid')],['overdue','Overdue',count('overdue')],['paid','Paid',count('paid')],['draft','Draft',count('draft')]].map(([k,l,c])=>`<button class="chip" data-a="billStatus" data-v="${k}" aria-pressed="${S.billStatus===k}">${l} <span class="n">${c}</span></button>`).join('')}<button class="chip" data-a="toast" data-v="Period sheet: This FY, Last FY, This month, Custom range.">${ic('calendar','xs')}This FY</button></div>
+  ${body}</div>`+(S.mode==='empty'||S.mode==='error'?'':fab(S.billKind==='invoices'?'New bill':'New','newBill',''))+nav();
+};
+
+R.bill=(r)=>{
+  const b=D.bills.find(x=>x.no===r.id)||D.bills[0];
+  return detailBar(b.no==='—'?'Draft bill':b.no,`<button class="icon-btn" data-a="sheet" data-v="stmtShare" aria-label="Share bill">${ic('share')}</button><button class="icon-btn" data-a="sheet" data-v="billOne" aria-label="More">${ic('dots')}</button>`)+`<div class="content no-nav">
+  <div class="pad"><span class="badge-s ${stat[b.status][1]}">${stat[b.status][0]}</span><div class="num" style="font-size:34px;font-weight:600;margin-top:10px">${inr(b.total)}</div><div class="muted">${b.party} · ${b.date}</div></div>
+  <div class="sec"><h3>Items</h3><span class="meta">3</span></div>
+  <div class="card" style="margin:0 var(--m-gutter)">${[['Basmati Rice 5 kg','4 × ₹450',1800],['Toor Dal 1 kg','10 × ₹142',1420],['Tea 250 g','8 × ₹120',960]].map(([n,q,t],i)=>`<div class="line"><span style="flex:1"><div style="font-weight:500">${n}</div><div class="muted num" style="font-size:13px">${q}</div></span><span class="num">${inr(t)}</span></div>`).join('')}</div>
+  <div class="card" style="margin:12px var(--m-gutter);padding:4px 16px">${[['Taxable value',inr(b.total)],['Paid','₹0.00'],['Balance due',inr(b.total)]].map(([l,v],i)=>`<div style="display:flex;justify-content:space-between;padding:10px 0;${i<2?'border-bottom:1px solid var(--hairline)':'font-weight:600'}"><span class="${i<2?'muted':''}">${l}</span><span class="num">${v}</span></div>`).join('')}</div>
+  </div><div class="dock">${b.status==='paid'?`<button class="btn secondary" data-a="toast" data-v="Prints the existing A4 / 80 mm bill.">${ic('printer','sm')}Print</button>`:`<button class="btn primary" data-a="toast" data-v="Payment drawer: the existing payment form as a full-height sheet.">${ic('wallet','sm')}Record payment</button>`}</div>`;
+};
+
+R.newBill=()=>{
+  const d=S.draft;const total=d.lines.reduce((s,l)=>s+l.qty*l.price,0);
+  return detailBar('New bill',`<button class="btn ghost" data-a="toast" data-v="Saved as a draft. It stays in Bills → Draft.">Save draft</button>`,true)+`<div class="content no-nav" style="padding-bottom:140px">
+  <div class="seg" role="group" aria-label="Customer"><button data-a="billWho" data-v="walkin" aria-pressed="${d.who==='walkin'}">Walk-in</button><button data-a="billWho" data-v="party" aria-pressed="${d.who==='party'}">Party</button></div>
+  ${d.who==='party'?`<button class="row" style="margin-top:8px" data-a="sheet" data-v="billParty"><span class="av">${d.party?initials(d.party):ic('users','sm')}</span><span class="main"><span class="t" style="display:block">${d.party||'Choose a party'}</span><span class="s" style="display:block">${d.party?'Balance '+inr(bal(D.parties.find(p=>p.name===d.party)),false)+' · added to their khata':'Search by name or mobile'}</span></span>${ic('chev','sm chev')}</button>`:`<p class="hint pad" style="margin-top:10px">No name needed. Add a name or mobile under More options if they want a copy.</p>`}
+  <div class="sec"><h3>Items</h3><span class="meta">${d.lines.length?d.lines.length+' added':''}</span></div>
+  ${d.lines.length?`<div class="card" style="margin:0 var(--m-gutter)">${d.lines.map((l,i)=>`<div class="line"><span style="flex:1;min-width:0"><div style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.name}</div><div class="muted num" style="font-size:13px">${inr(l.price)} each · <b style="color:var(--text)">${inr(l.qty*l.price)}</b></div></span><div class="stepper"><button data-a="qty" data-v="${i}:-1" aria-label="One less ${l.name}">${ic(l.qty>1?'minus':'x','xs')}</button><span aria-live="polite">${l.qty}</span><button data-a="qty" data-v="${i}:1" aria-label="One more ${l.name}">${ic('plus','xs')}</button></div></div>`).join('')}</div>`:''}
+  ${d.err?`<div class="ferr pad" role="alert" style="margin-bottom:8px">${ic('alert','xs')}${d.err}</div>`:''}
+  <div class="pad" style="margin-top:8px;display:flex;gap:8px"><button class="btn tonal" style="flex:1" data-a="sheet" data-v="itemPick">${ic('plus','sm')}Add item</button><button class="btn secondary" style="width:48px;padding:0" data-a="toast" data-v="A hardware scanner already works anywhere on this screen (useScannerListener)." aria-label="Scan barcode">${ic('scan','sm')}</button></div>
+  <div class="disclosure" style="margin-top:20px"><button data-a="toggle" data-v="billMore" aria-expanded="${!!S.billMore}">${ic('filter')}<span style="flex:1"><span style="display:block;font-weight:500">More options</span><span class="sum">9 Oct · Maharashtra · No discount · Round off on</span></span>${ic(S.billMore?'down':'chev','sm')}</button>
+  ${S.billMore?`<div style="padding-bottom:4px">${d.who==='walkin'?`<div class="field"><label for="wname">Customer name <span class="opt">optional</span></label><input id="wname" class="input" placeholder="e.g. Suresh" autocomplete="off"></div><div class="field"><label for="wmob">Mobile <span class="opt">optional, to send the bill</span></label><input id="wmob" class="input" type="tel" inputmode="tel" placeholder="10-digit mobile number"></div>`:''}<div class="field"><label>Date</label><button class="input" style="text-align:left;display:flex;align-items:center;gap:8px" data-a="toast" data-v="UbDateInput opens as a sheet with Today / Yesterday chips.">${ic('calendar','sm')}9 Oct 2026</button></div><div class="field"><label>Place of supply</label><button class="input" style="text-align:left" data-a="toast" data-v="Searchable state list in a full-height sheet.">Maharashtra (27)</button><div class="hint">Intra-state: CGST + SGST</div></div><div class="field"><label for="disc">Discount</label><input id="disc" class="input num" inputmode="decimal" placeholder="₹ 0"></div><div class="field"><label for="bnote">Note on bill <span class="opt">optional</span></label><input id="bnote" class="input" placeholder="e.g. Thank you, visit again"></div></div>`:''}</div>
+  </div>
+  <div class="dock" style="align-items:center"><div style="flex:1"><div class="muted" style="font-size:13px">${d.lines.reduce((s,l)=>s+l.qty,0)} items · Total</div><div class="num" style="font-size:22px;font-weight:600">${inr(total)}</div></div><button class="btn primary" style="flex:1" data-a="saveBill" ${S.busy?'disabled':''}>${S.busy?'<span class="spin"></span>Saving':'Save bill'}</button></div>`;
+};
+
+R.billDone=()=>{
+  const d=S.lastBill;
+  return `<header class="bar"><span class="title"></span><button class="icon-btn" data-a="doneBill" aria-label="Close">${ic('x')}</button></header><div class="content no-nav">
+  <div class="success"><div class="tick">${ic('check')}</div><h2 style="margin:0 0 4px;font-size:22px">Bill INV-0013 saved</h2><p class="muted" style="margin:0"><span class="num">${inr(d.total)}</span> · ${d.who==='party'?d.party+"'s khata updated":'Walk-in customer'}</p></div>
+  <div class="pad" style="display:grid;gap:10px;margin-top:24px">
+    <button class="btn primary block" data-a="sheet" data-v="stmtShare">${ic('msg','sm')}Send on WhatsApp</button>
+    <button class="btn secondary block" data-a="toast" data-v="Prints on the 80 mm or A4 layout chosen in Settings.">${ic('printer','sm')}Print</button>
+    <button class="btn secondary block" data-a="toast" data-v="Payment sheet, prefilled with the bill total.">${ic('wallet','sm')}Record payment</button>
+    <button class="btn ghost block" data-a="newBillAgain">${ic('plus','sm')}New bill</button>
+  </div></div>`;
+};
+
+R.items=()=>{
+  let its=D.items;const lowN=its.filter(i=>i.stock>0&&i.stock<=i.low).length,outN=its.filter(i=>!i.stock).length;
+  if(S.itemChip==='low')its=its.filter(i=>i.stock>0&&i.stock<=i.low); if(S.itemChip==='out')its=its.filter(i=>!i.stock); if(S.itemChip==='in')its=its.filter(i=>i.stock>i.low);
+  const body=S.mode==='loading'?skRows(5):S.mode==='error'?errBox('items'):S.mode==='empty'?`<div class="empty"><div class="ill">${ic('box')}</div><h3>No items yet</h3><p>Add what you sell to bill faster and track stock.</p><div class="acts"><button class="btn primary" data-a="toast" data-v="Add item form, full screen.">${ic('plus','sm')}Add item</button><button class="btn secondary" data-a="toast" data-v="CSV import, the existing flow.">${ic('upload','sm')}Import a list</button></div></div>`:
+  `<div class="list">${its.map(i=>`<button class="row" data-a="toast" data-v="Item detail: stock movements as a day-banded list, like the khata."><span class="av ic">${ic('box','sm')}</span><span class="main"><span class="t" style="display:block">${i.name}</span><span class="s num" style="display:block">${inr(i.price)} · ${i.sku}</span></span><span class="end"><span class="amt num" style="display:block">${i.stock} ${i.unit}</span>${!i.stock?'<span class="badge-s get">Out</span>':i.stock<=i.low?'<span class="badge-s warn">Low</span>':''}</span></button>`).join('')}</div>`;
+  return tabBar('Items',{actions:`<button class="icon-btn" data-a="sheet" data-v="itemsMore" aria-label="More actions">${ic('dots')}</button>`})+offline()+`<div class="content" data-scroll>
+  <p class="summary-line">${D.items.length} items · Stock value <b class="num">${inr(43610,false)}</b></p>
+  <label class="search">${ic('search','sm')}<input type="search" placeholder="Name, SKU or scan" aria-label="Search items"><button class="fbtn" data-a="toast" data-v="Camera scanning is not built; a USB/Bluetooth scanner types here." aria-label="Scan">${ic('scan','xs')}</button></label>
+  <div class="chips">${[['all','All',D.items.length],['in','In stock',D.items.length-lowN-outN],['low','Low',lowN],['out','Out',outN]].map(([k,l,c])=>`<button class="chip" data-a="itemChip" data-v="${k}" aria-pressed="${S.itemChip===k}">${l} <span class="n">${c}</span></button>`).join('')}</div>
+  ${body}</div>`+(S.mode==='empty'||S.mode==='error'?'':fab('Add item','toast','Add item form, full screen.'))+nav();
+};
+
+const MORE={shop:[
+  ['Sell',[['file','Estimates'],['file','Sales orders'],['truck','Delivery challans'],['undo','Credit notes']]],
+  ['Buy',[['cart','Purchase bills'],['file','Purchase orders'],['undo','Debit notes'],['receipt','Expenses']]],
+  ['Money',[['wallet','Payments'],['book','Cashbook']]],
+  ['Customers & suppliers',[['hourglass','Aging','aging'],['bell','Reminders'],['tag','Tags']]],
+  ['Stock',[['chart','Stock summary'],['alert','Low stock'],['tag','Price lists'],['upload','Imports']]],
+  ['Reports',[['chart','All reports','reports']]],
+],library:[
+  ['Daily',[['login','Counter (check in / out)'],['clock','Attendance'],['msg','Messages'],['wallet','Money'],['receipt','Expenses']]],
+  ['Books',[['book','Catalogue'],['box','Copies']]],
+]};
+R.more=()=>{
+  const groups=MORE[S.app];
+  return tabBar('More')+`<div class="content">
+  <label class="search">${ic('search','sm')}<input type="search" placeholder="Find a feature" aria-label="Find a feature" id="mq"></label>
+  ${groups.map(([g,rows])=>`<div class="sec"><h3 style="font-size:13px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:.04em">${g}</h3></div><div class="list">${rows.map(([i,l,go])=>`<button class="mrow" data-a="${go?'go':'toast'}" data-v="${go||l+' opens with the standard list pattern: summary line, chips, rows, one primary action.'}">${ic(i)}<span style="flex:1">${l}</span>${ic('chev','sm')}</button>`).join('')}</div>`).join('')}
+  <div class="sec"><h3 style="font-size:13px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:.04em">Business</h3></div>
+  <div class="list">
+    <button class="mrow" data-a="sheet" data-v="switcher">${ic('home')}<span style="flex:1">Switch business or app<div class="sub">${S.app==='library'?'Sharma Study Point · Library':'Sharma General Store · Shop'}</div></span>${ic('chev','sm')}</button>
+    <button class="mrow" data-a="toast" data-v="Settings: grouped rows, each opening its own page (profile, branding, business days, data, devices, plan, activity).">${ic('settings')}<span style="flex:1">Settings</span>${ic('chev','sm')}</button>
+    <button class="mrow" data-a="toast" data-v="Team: members list, add staff (temporary password shown once).">${ic('users')}<span style="flex:1">Team</span>${ic('chev','sm')}</button>
+  </div>
+  <div class="sec"><h3 style="font-size:13px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:.04em">You</h3></div>
+  <div class="list">
+    <div class="mrow"><span class="av">AS</span><span style="flex:1">Akash Sharma<div class="sub">akash@example.com · Owner</div></span></div>
+    <button class="mrow" data-a="sheet" data-v="lang">${ic('globe')}<span style="flex:1">Language<div class="sub">English</div></span>${ic('chev','sm')}</button>
+    <button class="mrow" data-a="theme">${ic('moon')}<span style="flex:1">Dark theme<div class="sub">${S.theme==='dark'?'On':'Off'}</div></span></button>
+    <button class="mrow danger" data-a="dialog" data-v="signout">${ic('logout')}<span style="flex:1">Sign out</span></button>
+  </div>
+  <p class="muted" style="text-align:center;font-size:12px;margin:24px">YourKhata</p>
+  </div>`+nav();
+};
+
+R.reports=()=>detailBar('Reports')+`<div class="content no-nav">${[['Money',[['book','Day book','Everything in order, with cash and bank after each line'],['book','Cashbook','Money in and out, day by day']]],['Customers and suppliers',[['hourglass','Receivables aging','Who owes you, and for how long'],['hourglass','Payables aging','Whom you owe']]],['Stock',[['chart','Stock summary','What you have and what it is worth'],['alert','Low stock','At or below reorder level']]],['Sales and GST',[['file','Sales register','Every bill with GST columns'],['file','GST summary','GSTR-1 and 3B figures'],['chart','Profit','Sales minus cost and expenses']]]].map(([g,rows])=>`<div class="sec"><h3>${g}</h3></div><div class="list">${rows.map(([i,t,s])=>`<button class="row plain" data-a="toast" data-v="${t}: summary card on top, rows below, the period as chips, export in the ⋯ menu."><span class="av ic">${ic(i,'sm')}</span><span class="main"><span class="t" style="display:block">${t}</span><span class="s" style="display:block;white-space:normal">${s}</span></span>${ic('chev','sm chev')}</button>`).join('')}</div>`).join('')}</div>`;
+
+R.aging=()=>{const ps=D.parties.filter(p=>bal(p)>0).sort((a,b)=>bal(b)-bal(a));const age=['31–60 days','31–60 days','31–60 days','0–30 days','0–30 days'];
+  return detailBar('Who owes you',`<button class="icon-btn" data-a="toast" data-v="CSV download, same as desktop." aria-label="Download">${ic('download')}</button>`)+`<div class="content no-nav">
+  <div class="seg"><button aria-pressed="true">You will get</button><button aria-pressed="false" data-a="toast" data-v="Same list for suppliers.">You will give</button></div>
+  <div class="card" style="margin:12px var(--m-gutter);padding:14px 16px"><div class="num" style="font-size:26px;font-weight:600" >${inr(11760,false)}</div><div style="display:flex;height:10px;border-radius:5px;overflow:hidden;margin:12px 0 8px"><i style="width:9%;background:var(--give)"></i><i style="width:91%;background:var(--warn)"></i></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:13px"><span>0–30 days <b class="num">₹1,000</b></span><span>31–60 days <b class="num">₹10,760</b></span><span class="muted">61–90 days ₹0</span><span class="muted">90+ days ₹0</span></div></div>
+  <div class="list">${ps.map((p,i)=>`<button class="row" data-a="go" data-v="khata" data-id="${p.id}"><span class="av">${initials(p.name)}</span><span class="main"><span class="t" style="display:block">${p.name}</span><span class="s" style="display:block">${age[i]||'0–30 days'}</span></span><span class="end"><span class="amt num get">${inr(bal(p),false)}</span></span></button>`).join('')}</div></div>`;};
+
+R.search=()=>{const q=(S.gq||'').toLowerCase();
+  const ps=q?D.parties.filter(p=>p.name.toLowerCase().includes(q)):[];const bs=q?D.bills.filter(b=>(b.party+b.no).toLowerCase().includes(q)):[];const is=q?D.items.filter(i=>i.name.toLowerCase().includes(q)):[];
+  return `<header class="bar"><button class="icon-btn" data-a="back" aria-label="Back">${ic('back')}</button><label class="search" style="flex:1;margin:0 8px 0 0;height:44px">${ic('search','sm')}<input id="gq" type="search" placeholder="Parties, bills, items" value="${S.gq||''}" aria-label="Search everything"></label></header><div class="content no-nav" id="sres">${searchBody(ps,bs,is,q)}</div>`;};
+function searchBody(ps,bs,is,q){
+  if(!q)return `<div class="sec"><h3>Recent</h3></div><div class="list">${['Ramesh','INV-0010','Sugar'].map(r=>`<button class="mrow" data-a="gq" data-v="${r}">${ic('clock')}<span style="flex:1">${r}</span></button>`).join('')}</div>`;
+  if(!ps.length&&!bs.length&&!is.length)return `<div class="empty"><div class="ill">${ic('search')}</div><h3>Nothing for "${q}"</h3><p>Search looks through party names and mobiles, bill numbers and items.</p></div>`;
+  return (ps.length?`<div class="sec"><h3>Parties</h3><span class="meta">${ps.length}</span></div><div class="list">${ps.map(p=>`<button class="row" data-a="go" data-v="khata" data-id="${p.id}"><span class="av">${initials(p.name)}</span><span class="main"><span class="t" style="display:block">${p.name}</span><span class="s" style="display:block">${p.mobile}</span></span><span class="amt num ${bal(p)>0?'get':'give'}">${inr(bal(p),false)}</span></button>`).join('')}</div>`:'')+
+  (bs.length?`<div class="sec"><h3>Bills</h3><span class="meta">${bs.length}</span></div><div class="list">${bs.map(b=>`<button class="row plain" data-a="go" data-v="bill" data-id="${b.no}"><span class="main"><span class="t" style="display:block">${b.party}</span><span class="s" style="display:block">${b.no} · ${b.date}</span></span><span class="amt num">${inr(b.total,false)}</span></button>`).join('')}</div>`:'')+
+  (is.length?`<div class="sec"><h3>Items</h3><span class="meta">${is.length}</span></div><div class="list">${is.map(i=>`<div class="row plain"><span class="main"><span class="t" style="display:block">${i.name}</span><span class="s" style="display:block">${i.stock} ${i.unit} in stock</span></span><span class="amt num">${inr(i.price)}</span></div>`).join('')}</div>`:'');
+}
+
+/* Library */
+R.lhome=()=>tabBar('',{biz:true})+offline()+`<div class="content">
+  ${S.mode==='loading'?skRows(5):`<div class="card hero"><button data-a="tab" data-v="seats"><div class="lbl">In now ${ic('chev','xs')}</div><div class="val num">42 <span class="muted" style="font-size:16px">/ 60</span></div></button><button data-a="tab" data-v="fees"><div class="lbl">Fees due ${ic('chev','xs')}</div><div class="val num get">${inr(2600,false)}</div></button></div>
+  <div class="strip"><div class="mini"><div class="lbl">Free seats</div><div class="val num">14</div></div><div class="mini"><div class="lbl">Collected today</div><div class="val num">${inr(3600,false)}</div></div><div class="mini"><div class="lbl">Ending this week</div><div class="val num">3</div></div></div>
+  <div class="sec"><h3>Quick actions</h3></div>
+  <div class="qa"><button data-a="toast" data-v="Counter: search a student, tap Check in."><span class="ic">${ic('login')}</span>Check in</button><button data-a="toast" data-v="Add student: full-screen form, seat picked from the seat map."><span class="ic">${ic('users')}</span>Add student</button><button data-a="tab" data-v="fees"><span class="ic">${ic('wallet')}</span>Collect fee</button><button data-a="tab" data-v="seats"><span class="ic">${ic('seat')}</span>Seat map</button></div>
+  <div class="sec"><h3>Needs attention</h3></div>
+  <div class="list"><button class="row" data-a="tab" data-v="fees"><span class="av ic" style="background:var(--get-dim);color:var(--get)">${ic('wallet','sm')}</span><span class="main"><span class="t" style="display:block">3 fees overdue</span><span class="s" style="display:block">₹2,600 · send reminders</span></span>${ic('chev','sm chev')}</button><button class="row" data-a="tab" data-v="students"><span class="av ic" style="background:var(--warn-dim);color:var(--warn)">${ic('calendar','sm')}</span><span class="main"><span class="t" style="display:block">3 memberships end this week</span><span class="s" style="display:block">Renew before the seat is released</span></span>${ic('chev','sm chev')}</button></div>`}
+  </div>`+fab('Check in','toast','Counter: search a student, tap Check in. One tap per student at the door.','login')+nav();
+R.students=()=>tabBar('Students')+`<div class="content"><label class="search">${ic('search','sm')}<input type="search" placeholder="Name, mobile or seat" aria-label="Search students"><button class="fbtn" data-a="toast" data-v="Filter sheet: shift, fee status, membership ending.">${ic('filter','xs')}Filter</button></label>
+  <div class="chips"><button class="chip" aria-pressed="true">Active <span class="n">5</span></button><button class="chip" aria-pressed="false">Fee due <span class="n">3</span></button><button class="chip" aria-pressed="false">Ending soon <span class="n">3</span></button></div>
+  <div class="list">${D.students.map(s=>`<button class="row" data-a="toast" data-v="Student page: the khata pattern, fees instead of entries, Collect fee docked at the bottom."><span class="av">${initials(s.name)}</span><span class="main"><span class="t" style="display:block">${s.name}</span><span class="s" style="display:block">Seat ${s.seat} · ${s.shift} · till ${s.ends}</span></span><span class="end">${s.due?`<span class="amt num get" style="display:block">${inr(s.due,false)}</span><span class="amt-l">Fee due</span>`:'<span class="badge-s give">Paid</span>'}</span></button>`).join('')}</div></div>`+fab('Add student','toast','Add student form, full screen.')+nav();
+R.seats=()=>{const st=i=>[3,8,14,15,22,27,31,40,41,44,50,57].includes(i)?'free':[5,19,33].includes(i)?'res':'busy';
+  return tabBar('Seats')+`<div class="content"><div class="chips" style="padding-top:8px">${['All','Morning','Evening','Full day'].map(s=>`<button class="chip" data-a="shift" data-v="${s}" aria-pressed="${S.seatShift===s}">${s}</button>`).join('')}</div>
+  <div class="legend"><span><i style="background:var(--seat-free);border-color:var(--seat-free-b)"></i>Free 12</span><span><i style="background:var(--seat-busy);border-color:var(--seat-busy-b)"></i>Taken 45</span><span><i style="background:var(--seat-res);border-color:var(--seat-res-b);border-style:dashed"></i>Held 3</span></div>
+  <div class="seats" role="grid" aria-label="Seat map, 60 seats">${Array.from({length:60},(_,i)=>{const s=st(i);const lab=String.fromCharCode(65+Math.floor(i/12))+(i%12+1);return `<button class="seat ${s}" data-a="sheet" data-v="seat:${lab}:${s}" aria-label="Seat ${lab}, ${s==='free'?'free':s==='res'?'held':'taken'}">${lab}</button>`}).join('')}</div>
+  <p class="hint pad">Tap a seat to see who has it, or give a free seat to a student.</p></div>`+nav();};
+R.fees=()=>tabBar('Fees')+`<div class="content"><p class="summary-line">Due <b class="num get">${inr(2600,false)}</b> · Collected this month <b class="num">${inr(48200,false)}</b></p><div class="chips" style="padding-top:12px"><button class="chip" aria-pressed="true">Due <span class="n">3</span></button><button class="chip" aria-pressed="false">Collected</button><button class="chip" aria-pressed="false">${ic('calendar','xs')}October</button></div>
+  <div class="list">${D.students.filter(s=>s.due).map(s=>`<div class="row"><span class="av">${initials(s.name)}</span><span class="main"><span class="t" style="display:block">${s.name}</span><span class="s" style="display:block">Seat ${s.seat} · due since ${s.ends}</span></span><button class="btn tonal" style="height:40px;padding:0 14px;font-size:14px" data-a="toast" data-v="Collect ${inr(s.due,false)} from ${s.name}: amount prefilled, cash or UPI, receipt to share.">Collect</button></div>`).join('')}</div>
+  <div class="pad" style="margin-top:12px"><button class="btn secondary block" data-a="sheet" data-v="remind">${ic('msg','sm')}Remind all 3 on WhatsApp</button></div></div>`+nav();
+
+/* ════════════════════════════════════════════════════════════════════════
+   Sheets & dialogs
+   ════════════════════════════════════════════════════════════════════════ */
+const sheet=(title,body,foot='',full=false)=>`<div class="scrim ${S.sheetNew?'enter':''}" data-a="closeSheet"></div><div class="sheet ${full?'full':''} ${S.sheetNew?'enter':''}" role="dialog" aria-modal="true" aria-label="${title}">${full?'':'<div class="grab" data-grab></div>'}<div class="sh-head" ${full?'style="padding-top:8px"':''}><h2>${title}</h2><button class="icon-btn" data-a="closeSheet" aria-label="Close">${ic('x')}</button></div><div class="sh-body">${body}</div>${foot?`<div class="sh-foot">${foot}</div>`:''}</div>`;
+const menu=rows=>rows.map(([i,l,a,v,cls,sub])=>`<button class="mrow ${cls||''}" data-a="${a}" data-v="${v||''}">${ic(i)}<span style="flex:1">${l}${sub?`<div class="sub">${sub}</div>`:''}</span></button>`).join('');
+const SH={};
+SH.switcher=()=>sheet('Switch',`<div class="sec" style="margin-top:0"><h3 style="font-size:13px;color:var(--text-3)">Sharma General Store</h3></div>${menu([['home','Shop','switchApp','shop',S.app==='shop'?'':'' ,S.app==='shop'?'Open now':'Billing, khata, stock'],['seat','Library','switchApp','library','',S.app==='library'?'Open now':'Sharma Study Point · seats, fees']])}<div class="sec"><h3 style="font-size:13px;color:var(--text-3)">Other businesses</h3></div>${menu([['home','Sharma Wholesale','toast','Switches business; the same tabs reload for it.','', 'Shop']])}`);
+SH.filters=()=>{const f=S.filters;const opt=(k,v,l)=>`<button class="chip" data-a="setF" data-v="${k}:${v}" aria-pressed="${k==='tags'?f.tags.includes(v):f[k]===v}">${l}</button>`;
+  const cnt=partyList().length;
+  return sheet('Filter and sort',`<div class="sec" style="margin-top:4px"><h3>Balance</h3></div><div class="chips" style="flex-wrap:wrap">${opt('bal','all','All')}${opt('bal','get','You will get')}${opt('bal','give','You will give')}${opt('bal','settled','Settled')}</div>
+  <div class="sec"><h3>Tags</h3><span class="meta">any of</span></div><div class="chips" style="flex-wrap:wrap">${opt('tags','Route 2','Route 2')}${opt('tags','Camp Area','Camp Area')}</div>
+  <div class="sec"><h3>Show</h3></div><div class="chips" style="flex-wrap:wrap">${opt('show','active','Active')}${opt('show','archived','Archived')}${opt('show','all','All')}</div>
+  <div class="sec"><h3>Sort by</h3></div><div role="radiogroup">${[['recent','Recent activity'],['high','Highest balance'],['name','Name A–Z']].map(([v,l])=>`<button class="mrow" role="radio" aria-checked="${f.sort===v}" data-a="setF" data-v="sort:${v}"><span style="flex:1">${l}</span>${f.sort===v?`<span style="color:var(--primary)">${ic('check')}</span>`:''}</button>`).join('')}</div>`,
+  `<button class="btn secondary" data-a="clearFilters">Clear</button><button class="btn primary" data-a="closeSheet">Show ${cnt} ${cnt===1?'result':'results'}</button>`);};
+SH.partyMore=()=>sheet('Parties',menu([['tag','Manage tags','toast','Tag manager (existing page).'],['upload','Import a list','toast','CSV import (existing flow).'],['download','Download list','toast','CSV export (existing).'],['hourglass','Who owes you (aging)','go','aging'],['bell','Reminders','toast','Reminders list.']]));
+SH.itemsMore=()=>sheet('Items',menu([['chart','Stock summary','toast','Stock summary report.'],['tag','Categories and units','toast','Item masters.'],['file','Price lists','toast','Price lists.'],['box','Adjust stock','toast','Stock adjustment form.'],['upload','Import items','toast','CSV import.'],['download','Download list','toast','CSV export.']]));
+SH.billsMore=()=>sheet(billKinds[S.billKind],menu([['download','Download list','toast','CSV export, filtered as shown.'],['chart','Sales register','toast','Sales register report.'],['settings','Bill settings','toast','Numbering, print layout, terms.']]));
+SH.billKind=()=>sheet('Show',`<div role="radiogroup">${Object.entries(billKinds).map(([k,l])=>`<button class="mrow" role="radio" aria-checked="${S.billKind===k}" data-a="billKind" data-v="${k}">${ic(k==='credit'?'undo':k==='challans'?'truck':'file')}<span style="flex:1">${l}<div class="sub">${D.bills.filter(b=>b.kind===k).length} this FY</div></span>${S.billKind===k?`<span style="color:var(--primary)">${ic('check')}</span>`:''}</button>`).join('')}</div>`);
+SH.billOne=()=>sheet('Bill',menu([['printer','Print','toast','Print layout as chosen in Settings.'],['edit','Edit','toast','Opens the bill editor.'],['copy','Duplicate','toast','A new draft with these lines.'],['undo','Credit note','toast','Credit note against this bill.'],['x','Cancel bill','dialog','cancelBill','danger','Keeps the number; the khata is reversed']]));
+SH.khataMore=()=>{const p=D.parties.find(x=>x.id===cur().id);return sheet(p.name,menu([['file','Statement','go','statement'],['msg','Send reminder','sheet','remind'],['edit','Edit details','toast','Edit form, full screen; the same fields as desktop.'],['tag','Tags','toast','Tag picker sheet with create-inline.'],['undo',(S.corrections?'Hide':'Show')+' corrections','corr',''],['archive','Archive','dialog','archive','danger','Hides them from lists; history stays']]))};
+SH.remind=()=>sheet('Send reminder',`<div class="card" style="margin:0 var(--m-gutter) 12px;padding:12px 14px;font-size:14px;line-height:20px;background:var(--subtle)">Namaste Ramesh ji, ₹1,000 is pending at Sharma General Store. Please pay when convenient. — Sharma General Store</div>${menu([['msg','WhatsApp','toast','Opens WhatsApp with the message. You press send.'],['msg','SMS','toast','Opens Messages with the text. You press send.'],['copy','Copy message','toast','Copied.']])}<p class="hint pad">Nothing is sent by YourKhata; it opens your WhatsApp or SMS app.</p>`);
+SH.stmtShare=()=>sheet('Share',menu([['msg','WhatsApp','toast','Opens WhatsApp with the link and PDF. You press send.'],['share','More apps','toast','The phone share sheet (navigator.share).'],['download','Download PDF','toast','Saves the PDF.'],['download','Download CSV','toast','Saves the CSV.']]));
+SH.lang=()=>sheet('Language',`<div role="radiogroup">${[['English','English'],['हिन्दी','Hindi']].map(([l,s],i)=>`<button class="mrow" role="radio" aria-checked="${i===0}" data-a="toast" data-v="Language switches in place; the tab bar labels are 1-word in both languages."><span style="flex:1">${l}<div class="sub">${s}</div></span>${i===0?`<span style="color:var(--primary)">${ic('check')}</span>`:''}</button>`).join('')}</div>`);
+SH.pickParty=()=>sheet('Gave or got · choose party',`<label class="search" style="margin-top:0">${ic('search','sm')}<input type="search" placeholder="Name or mobile" aria-label="Search parties"></label><div class="list">${D.parties.slice(0,6).map(p=>`<button class="row" data-a="pickParty" data-v="${p.id}"><span class="av">${initials(p.name)}</span><span class="main"><span class="t" style="display:block">${p.name}</span><span class="s" style="display:block">${balLabel(bal(p))} ${inr(bal(p),false)}</span></span></button>`).join('')}</div>`,'',true);
+SH.billParty=()=>sheet('Choose party',`<label class="search" style="margin-top:0">${ic('search','sm')}<input type="search" placeholder="Name or mobile" aria-label="Search parties"></label><div class="list">${D.parties.filter(p=>p.type==='customer').map(p=>`<button class="row" data-a="billPartySet" data-v="${p.name}"><span class="av">${initials(p.name)}</span><span class="main"><span class="t" style="display:block">${p.name}</span><span class="s" style="display:block">${p.mobile}</span></span></button>`).join('')}<button class="row" data-a="go" data-v="addParty"><span class="av ic" style="background:var(--primary-50);color:var(--primary-600)">${ic('plus','sm')}</span><span class="main"><span class="t" style="display:block">Add a new party</span></span></button></div>`,'',true);
+SH.itemPick=()=>sheet('Add items',`<label class="search" style="margin-top:0">${ic('search','sm')}<input type="search" placeholder="Name, SKU or scan" aria-label="Search items"></label><div class="sec" style="margin-top:8px"><h3 style="font-size:13px;color:var(--text-3)">Frequently billed</h3></div><div class="list">${D.items.map(i=>{const inB=(S.draft.lines.find(l=>l.id===i.id)||{}).qty;return `<button class="row plain" data-a="addLine" data-v="${i.id}" ${!i.stock?'aria-disabled="true"':''}><span class="main"><span class="t" style="display:block">${i.name}</span><span class="s num" style="display:block">${inr(i.price)} · ${i.stock?i.stock+' '+i.unit+' in stock':'Out of stock'}</span></span>${inB?`<span class="badge-s info">${inB} added</span>`:`<span style="color:var(--primary)">${ic('plus')}</span>`}</button>`}).join('')}</div>`,`<button class="btn primary" data-a="closeSheet">Done · ${S.draft.lines.reduce((s,l)=>s+l.qty,0)} items</button>`,true);
+SH.entry=()=>{const e=S.entry;const p=D.parties.find(x=>x.id===e.pid);
+  return sheet(`${e.dir==='gave'?'You gave':'You got'} · ${p.name}`,`<div class="seg" style="margin-top:0" role="group" aria-label="Direction"><button data-a="eDir" data-v="gave" aria-pressed="${e.dir==='gave'}">You gave</button><button data-a="eDir" data-v="got" aria-pressed="${e.dir==='got'}">You got</button></div>
+  <div class="amount-wrap ${e.err?'err':''}"><div class="amount"><span class="cur">₹</span><input id="eamt" inputmode="decimal" enterkeyhint="done" placeholder="0" value="${e.amt}" aria-label="Amount in rupees" ${e.err?'aria-invalid="true" aria-describedby="eamt-e"':''}></div></div>
+  ${e.err?`<div class="ferr pad" id="eamt-e" role="alert">${ic('alert','xs')}${e.err}</div>`:`<div class="hint pad">${p.limit&&e.dir==='gave'?`Credit left before the limit: ${inr(p.limit-bal(p),false)}`:'&nbsp;'}</div>`}
+  <div class="chips" style="padding-top:16px"><button class="chip" data-a="eDate" data-v="Today" aria-pressed="${e.date==='Today'}">Today</button><button class="chip" data-a="eDate" data-v="Yesterday" aria-pressed="${e.date==='Yesterday'}">Yesterday</button><button class="chip" data-a="toast" data-v="Calendar sheet (UbDateInput).">${ic('calendar','xs')}Other date</button></div>
+  <div class="field" style="margin-top:12px"><label for="enote">Note <span class="opt">optional</span></label><input id="enote" class="input" placeholder="e.g. Rice 5 kg" value="${e.note}"></div>`,
+  `<button class="btn ${e.dir==='gave'?'gave':'got'}" data-a="saveEntry" ${S.busy?'disabled':''}>${S.busy?'<span class="spin"></span>Saving':'Save'}</button>`)};
+SH.entryDetail=(id)=>{const p=D.parties.find(x=>x.id===cur().id);const e=p.entries.find(x=>x.id===+id);
+  return sheet(e.note,`<div class="pad"><div class="num ${e.opening?'give':e.dir==='gave'?'get':'give'}" style="font-size:32px;font-weight:600">${inr(e.opening?e.ob:e.amt)}</div><div class="muted">${e.opening?'Opening balance':e.dir==='gave'?'You gave':'You got'} · ${e.date} · by Akash</div></div><div style="height:12px"></div>${menu(e.opening?[['edit','Change opening balance','toast','Opening balance is corrected from Edit details.']]:[['edit','Correct this entry','toast','Correction sheet: the same form, prefilled. The original stays visible as corrected.','','Wrong amount, date or note'],['undo','Reverse this entry','dialog','reverse','danger','Cancels it with an opposite entry']])}`)};
+SH.seat=(lab,s)=>sheet(`Seat ${lab}`,s==='free'?`<p class="pad muted" style="margin-top:0">Free in all shifts.</p><div class="pad"><button class="btn primary block" data-a="toast" data-v="Pick a student; seat ${lab} is assigned.">Give to a student</button></div>`:`<div class="row"><span class="av">NS</span><span class="main"><span class="t" style="display:block">Neha Singh</span><span class="s" style="display:block">${s==='res'?'Held until 12 Oct':'Full day · till 14 Oct'}</span></span></div><div class="pad" style="display:grid;gap:8px;margin-top:8px"><button class="btn secondary block" data-a="toast" data-v="Student page.">Open student</button><button class="btn secondary block" data-a="toast" data-v="Move to another seat: the map opens in pick mode.">Move seat</button></div>`);
+
+const DLG={
+  archive:()=>{const p=D.parties.find(x=>x.id===cur().id);const b=bal(p);return b?['Settle the balance first',`${p.name} has ${inr(b)} ${b>0?'to pay you':'to get from you'}. A party with any balance can't be archived.`,`<button class="btn primary block" data-a="closeDialog" >Keep them</button><button class="btn secondary block" data-a="toast" data-v="Write-off flow (existing FR-3).">Write off ${inr(b,false)}</button>`]:['Archive '+p.name+'?','They leave your lists. Their history stays and you can restore them any time.',`<button class="btn secondary block" data-a="closeDialog">Cancel</button><button class="btn danger block" data-a="toast" data-v="Archived.">Archive</button>`]},
+  reverse:()=>['Reverse this entry?','An opposite entry is added and both stay visible, so the khata still shows what happened.',`<button class="btn secondary block" data-a="closeDialog">Cancel</button><button class="btn danger block" data-a="doReverse">Reverse</button>`],
+  cancelBill:()=>['Cancel this bill?','The number is kept and marked cancelled. Stock and the khata are put back.',`<button class="btn secondary block" data-a="closeDialog">Keep bill</button><button class="btn danger block" data-a="toast" data-v="Bill cancelled.">Cancel bill</button>`],
+  signout:()=>['Sign out?','You will need your email and password to sign in again on this phone.',`<button class="btn secondary block" data-a="closeDialog">Stay signed in</button><button class="btn danger block" data-a="toast" data-v="Signed out (prototype stays open).">Sign out</button>`],
+  discard:()=>['Discard this bill?','The items you added will be lost. Save it as a draft to finish later.',`<button class="btn primary block" data-a="draftExit">Save as draft</button><button class="btn secondary block" data-a="forceBack">Discard</button>`],
+};
+
+/* ════════════════════════════════════════════════════════════════════════
+   Render
+   ════════════════════════════════════════════════════════════════════════ */
+const app=document.getElementById('app');
+let lastKey='',scrollMem={};
+function render(){
+  const c=cur();const key=c.r+(c.id||'');
+  const sc=app.querySelector('.content');if(sc)scrollMem[lastKey]=sc.scrollTop;
+  let html=`<div class="scr ${S.justPushed?'push':''}">${R[c.r](c)}</div>`;
+  if(S.sheet){const [n,...args]=S.sheet.split(':');html+=n==='entry'&&args.length?SH.entryDetail(args[0]):n==='seat'?SH.seat(args[0],args[1]):SH[n==='entryNew'?'entry':n]()}
+  if(S.dialog){const [t,b,a]=DLG[S.dialog]();html+=`<div class="scrim enter" data-a="closeDialog"></div><div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="dlgt"><h2 id="dlgt">${t}</h2><p>${b}</p><div class="acts">${a}</div></div>`}
+  if(S.snack)html+=`<div class="snack ${hasNav()?'':'no-nav'}" role="status"><span style="flex:1">${S.snack.t}</span>${S.snack.a?`<button class="act" data-a="${S.snack.a}">${S.snack.l}</button>`:''}</div>`;
+  app.innerHTML=html;
+  const nsc=app.querySelector('.content');if(nsc&&key===lastKey&&!S.justPushed)nsc.scrollTop=scrollMem[key]||0;
+  lastKey=key;S.justPushed=false;S.sheetNew=false;
+  wrapRupee(app);bindScroll();controls();notes();
+  const fi=app.querySelector('#eamt');if(fi&&S.focusAmt){fi.focus();S.focusAmt=false}
+}
+const hasNav=()=>!S.stack.length;
+/* DM Sans draws ₹ oddly; the app sets the rupee sign in Inter everywhere (DESIGN-SYSTEM §2). */
+function wrapRupee(root){const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);const hits=[];while(w.nextNode()){const n=w.currentNode;if(n.nodeValue.includes('₹')&&!n.parentElement.closest('.num,.r'))hits.push(n)}for(const n of hits){const f=document.createDocumentFragment();n.nodeValue.split(/(₹)/).forEach(part=>{if(part==='₹'){const s=document.createElement('span');s.className='r';s.textContent='₹';f.appendChild(s)}else if(part)f.appendChild(document.createTextNode(part))});n.replaceWith(f)}}
+function bindScroll(){const sc=app.querySelector('.content');const bar=app.querySelector('.bar');const f=app.querySelector('.fab');if(!sc)return;let last=sc.scrollTop;sc.onscroll=()=>{bar&&bar.classList.toggle('raised',sc.scrollTop>4);if(f){if(sc.scrollTop>last+4)f.classList.add('compact');else if(sc.scrollTop<last-4)f.classList.remove('compact')}last=sc.scrollTop}}
+let snackT;
+function toast(t,a,l){S.snack={t,a,l};clearTimeout(snackT);snackT=setTimeout(()=>{S.snack=null;render()},a?6000:3200)}
+function push(r,id){S.stack.push({r,id});S.justPushed=true;S.sheet=null;S.dialog=null}
+
+/* ════════════════════════════════════════════════════════════════════════
+   Events
+   ════════════════════════════════════════════════════════════════════════ */
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-a]');if(!t)return;
+  const a=t.dataset.a,v=t.dataset.v,id=t.dataset.id;
+  const A={
+    tab:()=>{S.tab=v;S.stack=[];S.sheet=null;S.justPushed=false},
+    go:()=>{if(v==='statement'&&!id){push('statement',cur().id)}else push(v,id?(isNaN(+id)?id:+id):undefined);if(v==='addParty')S.newParty=null},
+    back:()=>{const c=cur();if(c.r==='newBill'&&S.draft.lines.length){S.dialog='discard';return}S.stack.pop()},
+    forceBack:()=>{S.dialog=null;S.stack.pop()},
+    draftExit:()=>{S.dialog=null;S.stack.pop();toast('Saved as a draft in Bills.')},
+    sheet:()=>{S.sheet=v;S.sheetNew=true;S.dialog=null},
+    closeSheet:()=>{S.sheet=null},
+    dialog:()=>{S.dialog=v;S.sheet=null},
+    closeDialog:()=>{S.dialog=null},
+    toast:()=>{S.sheet=null;S.dialog=null;toast(v)},
+    seg:()=>{S.seg=v},
+    partiesBal:()=>{S.tab='parties';S.stack=[];S.seg='customer';S.filters.bal=v==='get'?'get':'give';if(v==='give'){S.seg='customer'}},
+    setF:()=>{const [k,val]=v.split(':');if(k==='tags'){const i=S.filters.tags.indexOf(val);i<0?S.filters.tags.push(val):S.filters.tags.splice(i,1)}else S.filters[k]=val},
+    rmFilter:()=>{if(v.startsWith('tag:'))S.filters.tags=S.filters.tags.filter(x=>x!==v.slice(4));else S.filters[v]=v==='sort'?'recent':'all'},
+    clearFilters:()=>{S.filters={show:'active',bal:'all',sort:'recent',tags:[]};S.q='';S.sheet=null},
+    billStatus:()=>{S.billStatus=v},
+    billKind:()=>{S.billKind=v;S.billStatus='all';S.sheet=null},
+    itemChip:()=>{S.itemChip=v},
+    itemsLow:()=>{S.tab='items';S.stack=[];S.itemChip='low'},
+    entry:()=>{S.entry={pid:cur().id,dir:v,amt:'',note:'',date:'Today',err:null};S.sheet='entryNew';S.sheetNew=true;S.focusAmt=true},
+    pickParty:()=>{S.sheet=null;push('khata',+v);S.entry={pid:+v,dir:'gave',amt:'',note:'',date:'Today',err:null};S.sheet='entryNew';S.sheetNew=true;S.focusAmt=true},
+    eDir:()=>{readEntry();S.entry.dir=v},
+    eDate:()=>{readEntry();S.entry.date=v},
+    saveEntry:()=>{readEntry();const n=parseFloat(S.entry.amt);if(!S.entry.amt||!(n>0)){S.entry.err='Enter an amount more than ₹0.';S.focusAmt=true;return}
+      const p=D.parties.find(x=>x.id===S.entry.pid);
+      if(S.entry.dir==='gave'&&p.limit&&bal(p)+n>p.limit){S.entry.err=`That crosses ${p.name}'s ${inr(p.limit,false)} credit limit. Only the owner can go past it.`;return}
+      S.busy=true;render();setTimeout(()=>{S.busy=false;const ne={id:++uid,date:S.entry.date,dir:S.entry.dir,amt:n,note:S.entry.note||(S.entry.dir==='gave'?'Goods or cash given':'Payment received')};p.entries.unshift(ne);S.flashId=ne.id;S.sheet=null;
+        toast(`${inr(n,false)} ${S.entry.dir==='gave'?'given to':'received from'} ${p.name}. Balance ${inr(bal(p),false)}.`,'undoEntry','Undo');S.lastEntry={p,ne};render()},S.mode==='offline'?0:600)},
+    undoEntry:()=>{const {p,ne}=S.lastEntry;p.entries=p.entries.filter(x=>x!==ne);S.snack=null;toast('Entry removed.')},
+    corr:()=>{S.corrections=!S.corrections;S.sheet=null},
+    doReverse:()=>{S.dialog=null;toast('Entry reversed. Both lines stay in the khata.')},
+    toggle:()=>{if(v==='npOpen')readParty();S[v]=!S[v]},
+    npType:()=>{readParty();S.newParty.type=v},npDir:()=>{readParty();S.newParty.dir=v},
+    saveParty:()=>{readParty();const d=S.newParty;d.err={};if(!d.name.trim())d.err.name='Enter a name.';const m=d.mobile.replace(/\D/g,'');if(m&&!/^[6-9]\d{9}$/.test(m.slice(-10)))d.err.mobile='Enter a 10-digit mobile number starting 6–9.';
+      if(Object.keys(d.err).length)return;S.busy=true;render();setTimeout(()=>{S.busy=false;const p={id:++uid,name:d.name.trim(),type:d.type,mobile:m?'+91 '+m.slice(-10,-5)+' '+m.slice(-5):'—',last:'Just now',tags:[],entries:d.amt?[{id:++uid,date:'Today',dir:'gave',amt:0,note:'Opening balance',opening:true,ob:(d.dir==='get'?1:-1)*+d.amt}]:[]};D.parties.unshift(p);S.stack.pop();S.q='';
+        if(cur().r==='newBill'){S.draft.party=p.name}else{push('khata',p.id)}toast(`${p.name} added.`);render()},600)},
+    newBill:()=>{S.draft={who:'walkin',party:null,lines:[],err:null};S.billMore=false;push('newBill')},
+    newBillAgain:()=>{S.stack.pop();S.draft={who:'walkin',party:null,lines:[],err:null};push('newBill')},
+    billWho:()=>{S.draft.who=v},
+    billPartySet:()=>{S.draft.party=v;S.sheet=null},
+    addLine:()=>{const it=D.items.find(i=>i.id===+v);if(!it.stock){toast(`${it.name} is out of stock.`);return}const l=S.draft.lines.find(x=>x.id===it.id);l?l.qty++:S.draft.lines.push({id:it.id,name:it.name,price:it.price,qty:1});S.draft.err=null},
+    qty:()=>{const [i,d]=v.split(':').map(Number);const l=S.draft.lines[i];l.qty+=d;if(l.qty<1)S.draft.lines.splice(i,1)},
+    saveBill:()=>{const d=S.draft;if(!d.lines.length){d.err='Add at least one item.';return}if(d.who==='party'&&!d.party){d.err='Choose a party, or switch to Walk-in.';return}
+      S.busy=true;render();setTimeout(()=>{S.busy=false;S.lastBill={...d,total:d.lines.reduce((s,l)=>s+l.qty*l.price,0)};D.bills.unshift({no:'INV-0013',party:d.party||'Walk-in customer',date:'Today',total:S.lastBill.total,status:'unpaid',kind:'invoices'});S.stack.pop();push('billDone');render()},700)},
+    doneBill:()=>{S.stack.pop()},
+    switchApp:()=>{S.app=v;S.tab=v==='library'?'lhome':'home';S.stack=[];S.sheet=null;S.justPushed=true},
+    theme:()=>{setTheme(S.theme==='dark'?'light':'dark')},
+    retry:()=>{S.mode='loading';render();setTimeout(()=>{S.mode='normal';render()},900);return 'skip'},
+    gq:()=>{S.gq=v},
+    shift:()=>{S.seatShift=v},
+  };
+  if(['tab','go','back','switchApp'].includes(a))S.snack=null; // a toast belongs to the screen it reports on
+  if(A[a]){e.preventDefault();if(A[a]()!=='skip')render()}
+});
+function readEntry(){const a=app.querySelector('#eamt'),n=app.querySelector('#enote');if(a)S.entry.amt=a.value.replace(/[^\d.]/g,'');if(n)S.entry.note=n.value;S.entry.err=null}
+function readParty(){const d=S.newParty;const g=s=>app.querySelector(s);if(g('#np-name'))d.name=g('#np-name').value;if(g('#np-mob'))d.mobile=g('#np-mob').value;if(g('#np-amt'))d.amt=g('#np-amt').value.replace(/[^\d.]/g,'')}
+app.addEventListener('input',e=>{
+  if(e.target.id==='q'){S.q=e.target.value;document.getElementById('plist').innerHTML=partyRows()}
+  if(e.target.id==='gq'){S.gq=e.target.value;const q=S.gq.toLowerCase();document.getElementById('sres').innerHTML=searchBody(q?D.parties.filter(p=>p.name.toLowerCase().includes(q)):[],q?D.bills.filter(b=>(b.party+b.no).toLowerCase().includes(q)):[],q?D.items.filter(i=>i.name.toLowerCase().includes(q)):[],q)}
+});
+app.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='eamt'){e.preventDefault();app.querySelector('[data-a="saveEntry"]')?.click()}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(S.dialog)S.dialog=null;else if(S.sheet)S.sheet=null;else return;render()}});
+/* swipe a sheet down to dismiss (from its grabber or header) */
+let drag=null;
+app.addEventListener('pointerdown',e=>{const g=e.target.closest('[data-grab], .sh-head');if(!g||e.target.closest('button'))return;const sh=g.closest('.sheet');if(!sh||sh.classList.contains('full'))return;drag={sh,y:e.clientY,dy:0};sh.setPointerCapture(e.pointerId)});
+app.addEventListener('pointermove',e=>{if(!drag)return;drag.dy=Math.max(0,e.clientY-drag.y);drag.sh.style.transform=`translateY(${drag.dy}px)`});
+app.addEventListener('pointerup',()=>{if(!drag)return;if(drag.dy>90){S.sheet=null;render()}else drag.sh.style.transform='';drag=null});
+
+/* ════════════════════════════════════════════════════════════════════════
+   Side panels: controls and design notes
+   ════════════════════════════════════════════════════════════════════════ */
+function setTheme(t){S.theme=t;document.documentElement.dataset.theme=t}
+function btns(el,opts,curv,fn){el.innerHTML=opts.map(([v,l])=>`<button data-ctl="${v}" aria-pressed="${curv===v}">${l}</button>`).join('');el.onclick=e=>{const b=e.target.closest('[data-ctl]');if(b){fn(b.dataset.ctl);render()}}}
+function controls(){
+  btns(document.getElementById('ctl-app'),[['shop','Shop'],['library','Library']],S.app,v=>{S.app=v;S.tab=v==='library'?'lhome':'home';S.stack=[];S.sheet=null});
+  btns(document.getElementById('ctl-mode'),[['normal','Normal'],['loading','Loading'],['empty','Empty'],['error','Error'],['offline','Offline']],S.mode,v=>{S.mode=v});
+  btns(document.getElementById('ctl-theme'),[['light','Light'],['dark','Dark']],S.theme,v=>setTheme(v));
+  const J=[['Write a khata entry',()=>{S.app='shop';S.tab='parties';S.stack=[];push('khata',1)}],['Make a bill for a walk-in',()=>{S.app='shop';S.tab='bills';S.stack=[];A_newBill()}],['Filter customers',()=>{S.app='shop';S.tab='parties';S.stack=[];S.sheet='filters';S.sheetNew=true}],['Add a party',()=>{S.app='shop';S.tab='parties';S.stack=[];S.newParty=null;push('addParty')}],['Archive with a balance',()=>{S.app='shop';S.stack=[];S.tab='parties';push('khata',1);S.dialog='archive'}],['Find anything',()=>{S.app='shop';S.stack=[];push('search')}],['Every other feature (More)',()=>{S.app='shop';S.tab='more';S.stack=[]}],['Library: seat map',()=>{S.app='library';S.tab='seats';S.stack=[]}]];
+  const j=document.getElementById('ctl-jump');j.innerHTML=J.map(([l],i)=>`<button data-j="${i}">→ ${l}</button>`).join('');j.onclick=e=>{const b=e.target.closest('[data-j]');if(b){S.sheet=null;S.dialog=null;J[+b.dataset.j][1]();render()}};
+}
+function A_newBill(){S.draft={who:'walkin',party:null,lines:[],err:null};S.billMore=false;push('newBill')}
+const N={
+ home:['Home','Answers "how is my day?" in one screen, then gets out of the way.',['The two numbers a merchant asks every morning (to collect, to pay) are the hero, tappable into the filtered list.','Today\'s figures are a scrolling strip instead of a 2×2 stats box, so they never push the first action below the fold.','Quick actions replace the three wrapped header buttons; 4 equal targets, 48 px icons, in the thumb zone.','Needs attention turns the dashboard into a to-do list: overdue, not reminded, low stock.','Charts are one sparkline here; the full charts move to Insights (desktop keeps its dashboard unchanged).','The business switcher is the header itself, where people look for "which shop am I in".']],
+ parties:['Parties','One list, two segments, one filter button.',['Customers and Suppliers become a segmented control on one tab instead of two sidebar rows.','The totals strip (3 figures in a bordered box) becomes one summary line.','Search is full width; three dropdowns and a sort button collapse into one Filter button with a count.','Active filters show as removable chips, so the state is visible without opening the sheet.','Rows are 64 px with the balance as the strongest thing on the right.','"Page 1 of 1" pagination is replaced by continuous loading and an end-of-list line.','The extended FAB is the one primary action; it shrinks while scrolling down.']],
+ khata:['Khata','The screen used most: the balance on top, the two buttons under the thumb.',['You gave / You got are docked at the bottom permanently, coloured by meaning (red = they owe more, green = they paid).','The balance gets a dedicated block with the credit limit bar, not a corner of a card.','Remind, Statement and Promise date are labelled pills, not icons.','Each row loses its ⋯ button: tap the row to see it and to correct or reverse it. That removes a 24 px target from every row.','Show corrections moves into the ⋯ menu; it is a rare switch.','Call is one tap in the top bar.']],
+ statement:['Statement','A passbook to show a customer across the counter.',['Period chips replace the dropdown; 2×2 stat cards become one compact summary.','Share and Print are in a docked bar, the two things done with a statement.']],
+ addParty:['Add party','Full screen, two fields, everything else folded.',['Only name is required; mobile is optional and explains why it is asked.','Opening balance and More details are disclosures with a summary of what is set.','Inputs are 52 px with 16 px text (no iOS zoom), the right keyboard per field.','Errors appear after Save, under the field, never on open.']],
+ bills:['Bills','Five document types without five icon buttons.',['The title is a switcher: Bills, Estimates, Sales orders, Challans, Credit notes, each with its count.','Status tabs become scrolling chips with counts.','Rows show party, number, date, amount and a status badge.']],
+ newBill:['New bill','A counter-speed flow: walk-in by default, items first, the total always visible.',['Walk-in / Party is a segmented control; no fields for a walk-in.','Items are added from a full-height picker with search and frequently billed; quantity is a stepper.','Date, place of supply, discount, round off and notes fold under More options with a one-line summary.','The total and Save are docked; leaving with items asks to save a draft.']],
+ billDone:['Bill saved','The next step is always one tap.',['Send on WhatsApp, Print, Record payment, New bill.']],
+ bill:['Bill','Status and amount first; the one next action docked.',[]],
+ items:['Items','Six icon buttons become one ⋯ menu with words.',['Stock, categories, price lists, adjust, import and export are labelled rows in the ⋯ sheet.','Stock state is chips with counts; Low and Out are badges on the row.']],
+ more:['More','Every desktop feature, reachable in two taps, with words.',['Replaces the hamburger drawer. Grouped like the sidebar so the two never disagree (same manifest data).','A "Find a feature" search for the long tail.','Business, account, language, theme and sign out live here instead of in four header icons.']],
+ search:['Search','One search across parties, bills and items.',['Recent searches show before typing; results are grouped by type.']],
+ reports:['Reports','A plain list, not a stack of cards with underlined links.',[]],
+ aging:['Aging','The buckets become one bar; the rows drop the repeated amount.',[]],
+ lhome:['Library · Today','The same shell for a different app.',['Tabs come from the library manifest: Today, Students, Seats, Fees, More.','Check in is the FAB, because it is what happens at the door all day.']],
+ students:['Students','The parties pattern, reused.',[]],seats:['Seats','A dense grid works on a phone when each cell is a 48 px target.',['Colour plus border style plus the label carry state, never colour alone.']],fees:['Fees','Collect is a row action because fees are worked through as a queue.',[]],
+};
+function notes(){const c=cur();const n=N[c.r]||N[S.tab];if(!n)return;document.getElementById('notes').innerHTML=`<h2>${n[0]}</h2><p>${n[1]}</p>${n[2].length?`<h3>What changed and why</h3><ul>${n[2].map(x=>`<li>${x}</li>`).join('')}</ul>`:''}<h3>Try</h3><p>Use the screen state buttons to see loading, empty, error and offline on this screen.</p>`}
+render();
+</script>
+</body>
+</html>

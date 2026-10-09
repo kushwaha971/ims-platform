@@ -39,6 +39,7 @@ If this section looks stale (the commits it names are not the latest), rebuild t
 
 ### 0.4 In progress and next (check off as you go)
 
+- [ ] **Mobile-first redesign — PROPOSAL ONLY, awaiting the owner's approval (9 Oct 2026).** `docs/mobile-redesign/`: audit of the phone experience (20 findings with screenshots), competitor and guideline research, the mobile IA (bottom nav per app from the manifests' unused `bottomNav` flags + a More tab), a mobile design system that extends `docs/DESIGN-SYSTEM.md`, screen-by-screen recommendations, an implementation plan that keeps ≥ `lg` byte-identical, and a clickable standalone prototype (`prototype/index.html`). It asks the owner to change three 23 Sep phone-header decisions (06 §1). **No app code was changed; do not start implementing until the owner approves.**
 - [x] **W03 screens — committed as `3ba72137`.** Contents:
   - Students list (`MemberListPageContent`, `MemberColumns`: Student, Seat · Shift, Plan, Plan till, Fee due, Fee badge; shift filter; study-library chips).
   - Admission drawer (`EnrolMemberDrawer`): plan, shift, free seats for that shift, locker, collect now in Cash or UPI.
