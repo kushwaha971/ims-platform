@@ -8,8 +8,10 @@ import { cn } from 'src/utils/cn';
 /**
  * Part 23 §23.3 — the page container every screen sits in: the content max
  * width, the page padding (16 px below `sm`, 32 px above, from the tokens) and
- * the bottom padding that keeps a sticky footer clear of `UbBottomNav`
- * (§19.6.3).
+ * a sticky footer slot. Room for `UbBottomNav` is the SHELL's job now
+ * (`--ub-nav-offset` on `main`): this spacer reserved 64 px under every phone
+ * page for a nav that did not exist, and could not know whether the page it sat
+ * in shows one (detail and task screens do not).
  *
  * ── CR-2026-09-19-D ─────────────────────────────────────────────────────────
  *  · **The content region is no longer a `<main>`.** `UbAppShell` renders the
@@ -86,8 +88,6 @@ function UbPageShellBase({
           <div className={cn('mx-auto w-full', WIDTH[width])}>{footer}</div>
         </UbBottomBar>
       )}
-      {/* Clears the 64 px bottom nav plus the iOS safe area (§19.6.3). */}
-      <div aria-hidden className="h-bottom-nav md:hidden" />
     </div>
   );
 }

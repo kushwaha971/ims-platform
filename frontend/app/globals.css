@@ -450,9 +450,11 @@
       gap: 0 !important;
     }
 
-    /* The phone bottom-nav spacer: A5 is narrower than `md`, so it would show. */
-    body:has(.ub-print-a5) main [aria-hidden].h-bottom-nav {
-      display: none !important;
+    /* The phone nav is not printed (`data-print="hide"`), so nothing on paper
+       makes room for it: A5 is narrower than `lg` and would otherwise keep the
+       64 px the shell reserves below the content. */
+    :root {
+      --ub-nav-offset: 0px !important;
     }
 
     .ub-print-a5 {
@@ -717,13 +719,27 @@
     transform: translateY(12px);
   }
 
-  .ub-reveal-stagger > :nth-child(2) { transition-delay: calc(var(--dur-stagger) * 1); }
-  .ub-reveal-stagger > :nth-child(3) { transition-delay: calc(var(--dur-stagger) * 2); }
-  .ub-reveal-stagger > :nth-child(4) { transition-delay: calc(var(--dur-stagger) * 3); }
-  .ub-reveal-stagger > :nth-child(5) { transition-delay: calc(var(--dur-stagger) * 4); }
-  .ub-reveal-stagger > :nth-child(6) { transition-delay: calc(var(--dur-stagger) * 5); }
-  .ub-reveal-stagger > :nth-child(7) { transition-delay: calc(var(--dur-stagger) * 6); }
-  .ub-reveal-stagger > :nth-child(n + 8) { transition-delay: calc(var(--dur-stagger) * 7); }
+  .ub-reveal-stagger > :nth-child(2) {
+    transition-delay: calc(var(--dur-stagger) * 1);
+  }
+  .ub-reveal-stagger > :nth-child(3) {
+    transition-delay: calc(var(--dur-stagger) * 2);
+  }
+  .ub-reveal-stagger > :nth-child(4) {
+    transition-delay: calc(var(--dur-stagger) * 3);
+  }
+  .ub-reveal-stagger > :nth-child(5) {
+    transition-delay: calc(var(--dur-stagger) * 4);
+  }
+  .ub-reveal-stagger > :nth-child(6) {
+    transition-delay: calc(var(--dur-stagger) * 5);
+  }
+  .ub-reveal-stagger > :nth-child(7) {
+    transition-delay: calc(var(--dur-stagger) * 6);
+  }
+  .ub-reveal-stagger > :nth-child(n + 8) {
+    transition-delay: calc(var(--dur-stagger) * 7);
+  }
 
   /* UbRotatingText — every word sits in the same grid cell, so the widest one
      reserves the width and nothing beside it moves when the word changes. */
@@ -778,16 +794,32 @@
   }
 
   @keyframes ub-blob-drift {
-    0% { transform: translate3d(0, 0, 0) scale(1); }
-    25% { transform: translate3d(6%, -4%, 0) scale(1.06); }
-    50% { transform: translate3d(-3%, 5%, 0) scale(0.96); }
-    75% { transform: translate3d(-6%, -2%, 0) scale(1.04); }
-    100% { transform: translate3d(0, 0, 0) scale(1); }
+    0% {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+    25% {
+      transform: translate3d(6%, -4%, 0) scale(1.06);
+    }
+    50% {
+      transform: translate3d(-3%, 5%, 0) scale(0.96);
+    }
+    75% {
+      transform: translate3d(-6%, -2%, 0) scale(1.04);
+    }
+    100% {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
   }
 
   @keyframes ub-panel-in {
-    from { opacity: 0; transform: translateY(6px); }
-    to { opacity: 1; transform: none; }
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
   }
 
   .ub-panel-in {
@@ -840,5 +872,17 @@
     body[data-printing-slip] > *:not(.ub-print-slip) {
       display: none !important;
     }
+  }
+}
+
+/* docs/mobile-redesign/04 §3 — 16 px in every text field below `lg`.
+   The body scale is fluid (`clamp(0.875rem, 0.821rem + 0.268vw, …)`), which is
+   14.2 px on a 390 px phone, and iOS Safari zooms the whole page when a field
+   under 16 px takes focus — the merchant then pinches back out on every entry.
+   Only the controls the design system draws with the body style are touched,
+   and only below `lg`: desktop keeps its type exactly. */
+@media (max-width: 1023.98px) {
+  :is(input, textarea, select).ds-body-base-regular {
+    font-size: 16px;
   }
 }

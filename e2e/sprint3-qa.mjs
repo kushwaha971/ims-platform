@@ -2602,20 +2602,17 @@ async function phaseF3(browser, state) {
 
     // 5. Sign-out control below lg (observation), then sign out and in again.
     if (W.w < 1024) {
-      const burger = page.getByRole('button', { name: /open navigation|menu/i }).first();
+      // docs/mobile-redesign — the phone's account (and Sign out) is on the More
+      // tab of the bottom nav; the ☰ drawer and the header avatar are gone.
       let found = 0;
-      if (await burger.count()) {
-        await burger.click(); await page.waitForTimeout(700);
-        found = await page.getByText(/^Sign out$/).filter({ visible: true }).count();
-        await page.screenshot({ path: fShot(W.dir, `F3-${tag}-4-drawer`) });
-        await page.keyboard.press('Escape'); await page.waitForTimeout(400);
-        // The drawer's close transition outlasts 400 ms; while it is still
-        // mounted the header behind it is inert and its account button is not
-        // "visible" to getByRole. Wait for it to go before counting.
-        await page.getByRole('dialog').first().waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
+      const more = page.getByRole('navigation').getByRole('link', { name: 'More' });
+      if (await more.count()) {
+        await more.first().click(); await page.waitForTimeout(900);
+        found = await page.getByRole('button', { name: 'Sign out' }).filter({ visible: true }).count();
+        await page.screenshot({ path: fShot(W.dir, `F3-${tag}-4-more`) });
+        await page.goBack(); await page.waitForTimeout(600);
       }
-      found += await page.getByRole('button', { name: /^Account menu for/ }).filter({ visible: true }).count();
-      record('F3', `${tag}: a Sign out control is reachable below 1024 px (drawer or account menu)`, found > 0, `visible sign-out/account controls: ${found}`);
+      record('F3', `${tag}: a Sign out control is reachable below 1024 px (More tab)`, found > 0, `visible sign-out/account controls: ${found}`);
     }
     await signOut(page, W);
     const d4 = docs.length;

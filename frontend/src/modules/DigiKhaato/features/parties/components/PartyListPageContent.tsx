@@ -11,6 +11,7 @@ import {
   UbActionLink,
   UbButton,
   UbPageHeader,
+  UbPageHeaderMobileActions,
   UbPageShell,
   UbStack,
   UbStatusBanner,
@@ -533,20 +534,40 @@ export function PartyListPageContent({
                 permission="parties.party.export"
                 empty={status === 'succeeded' && meta.total === 0}
               />
-              {/* Hidden rather than disabled when the role cannot write
-                  (§19.7.5). A disabled Add button invites a support call; an
-                  absent one says nothing a merchant has to interpret. */}
-              {partyForm.canWrite && (
-                <UbButton
-                  icon={<Plus className="h-4 w-4" aria-hidden />}
-                  iconOnly="mobile"
-                  onClick={openBlankCreate}
-                >
-                  {addLabel}
-                </UbButton>
-              )}
             </>
           }
+          /* Hidden rather than disabled when the role cannot write (§19.7.5).
+             A disabled Add button invites a support call; an absent one says
+             nothing a merchant has to interpret. */
+          primaryAction={
+            partyForm.canWrite ? (
+              <UbButton
+                icon={<Plus className="h-4 w-4" aria-hidden />}
+                iconOnly="mobile"
+                onClick={openBlankCreate}
+              >
+                {addLabel}
+              </UbButton>
+            ) : undefined
+          }
+          /* docs/mobile-redesign — on a phone the header's three icon squares
+             become a worded ⋯ sheet, and Add is the floating button. */
+          renderMobileActions={(actions) => (
+            <UbPageHeaderMobileActions
+              actions={actions}
+              mobile={{
+                menuLabel: t('common.action.moreActions'),
+                closeLabel: t('common.action.close'),
+                primary: partyForm.canWrite
+                  ? {
+                      label: addLabel,
+                      icon: <Plus className="h-6 w-6" aria-hidden />,
+                      onClick: openBlankCreate,
+                    }
+                  : undefined,
+              }}
+            />
+          )}
         />
       }
     >

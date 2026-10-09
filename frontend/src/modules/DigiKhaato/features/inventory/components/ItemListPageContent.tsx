@@ -22,6 +22,7 @@ import {
   UbButton,
   UbEmptyState,
   UbPageHeader,
+  UbPageHeaderMobileActions,
   UbPageShell,
   UbSearchInput,
   UbStack,
@@ -335,18 +336,38 @@ export function ItemListPageContent(): React.JSX.Element {
                 {t('items.list.adjust')}
               </UbButton>
             )}
-            {canWrite && (
-              <UbButton
-                icon={<Plus className="h-4 w-4" aria-hidden />}
-                iconOnly="mobile"
-                onClick={() => itemForm.openCreate()}
-                data-testid="item-add"
-              >
-                {t('items.list.add')}
-              </UbButton>
-            )}
           </>
         }
+        primaryAction={
+          canWrite ? (
+            <UbButton
+              icon={<Plus className="h-4 w-4" aria-hidden />}
+              iconOnly="mobile"
+              onClick={() => itemForm.openCreate()}
+              data-testid="item-add"
+            >
+              {t('items.list.add')}
+            </UbButton>
+          ) : undefined
+        }
+        /* docs/mobile-redesign (A3) — six icon squares became a worded ⋯
+           sheet on a phone, and Add item the floating button. */
+        renderMobileActions={(actions) => (
+          <UbPageHeaderMobileActions
+            actions={actions}
+            mobile={{
+              menuLabel: t('common.action.moreActions'),
+              closeLabel: t('common.action.close'),
+              primary: canWrite
+                ? {
+                    label: t('items.list.add'),
+                    icon: <Plus className="h-6 w-6" aria-hidden />,
+                    onClick: () => itemForm.openCreate(),
+                  }
+                : undefined,
+            }}
+          />
+        )}
       />
 
       <UbStack gap={4} data-testid="item-list-screen">

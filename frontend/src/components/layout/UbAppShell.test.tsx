@@ -1,4 +1,4 @@
-import { act, screen, waitFor, within } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Plus } from 'lucide-react';
 
@@ -10,7 +10,6 @@ import { browserCameOnline, browserWentOffline } from 'src/redux/slice/networkSl
 import { sessionLoaded } from 'src/redux/slice/sessionSlice';
 import { hideSnackbar, showSnackbar } from 'src/redux/slice/snackbarSlice';
 import { store } from 'src/redux/store';
-import { ROUTES } from 'src/routes';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
 import { clearCookie, LOCALE_COOKIE, readCookie } from 'src/utils/cookieUtils';
 
@@ -18,9 +17,9 @@ import { clearCookie, LOCALE_COOKIE, readCookie } from 'src/utils/cookieUtils';
  * The app chrome at every width.
  *
  * jsdom applies no stylesheet, so "below 1024 px" cannot be a viewport here: it
- * is the mobile HEADER, the one `lg:hidden` renders — the header holding the
- * hamburger. Whatever a phone user can reach, they reach from inside that
- * element, so that is where these tests look.
+ * is the mobile HEADER, the one `lg:hidden` renders (the phone's navigation
+ * itself is `MobileTabBar`, tested beside it, and the account lives on the More
+ * tab, `MorePageContent.test.tsx`).
  */
 jest.mock('modules/DigiKhaato/features/auth/api/authService');
 jest.mock('modules/DigiKhaato/features/parties/api/partyService', () => ({
@@ -95,12 +94,11 @@ const renderShell = () =>
     </>
   );
 
-/** The header a phone shows: the one that holds the navigation drawer's trigger. */
+/** The header a phone shows: the `lg:hidden` one. */
 const mobileHeader = (): HTMLElement => {
-  const header = screen
-    .getAllByRole('button', { name: 'Open menu' })
-    .map((button) => button.closest('header'))
-    .find((node): node is HTMLElement => node !== null);
+  const header = Array.from(document.querySelectorAll('header')).find((node) =>
+    node.className.includes('lg:hidden')
+  );
   if (!header) throw new Error('no mobile header');
   return header;
 };
@@ -116,25 +114,19 @@ beforeEach(() => {
 });
 
 describe('UAT D2 — the phone and tablet chrome', () => {
-  it('shows who is signed in and a Sign out that logs out and routes to login', async () => {
-    /* D2: below 1024 px there was no Sign out and no account identity at all —
-       the account menu lived only in `UbAppTopBar`, which is `hidden lg:flex`. */
-    const user = userEvent.setup();
+  it('keeps the account off the phone header: it lives on the More tab now', () => {
+    /* docs/mobile-redesign — the header held six controls in 390 px and cut
+       the business name to "Sharm…". The ☰ drawer and the account avatar left
+       it (the bottom nav and More replace them); the business switcher, the
+       search and the bell stay. A regression that put either back would take
+       the switcher's width again. */
     renderShell();
-
     const header = within(mobileHeader());
-    await user.click(header.getByRole('button', { name: 'Account menu for Suresh Kumar' }));
-
-    // The panel is portalled to the body (R7), so it is looked up there.
-    const menu = within(screen.getByRole('menu'));
-    expect(menu.getByText('Suresh Kumar')).toBeInTheDocument();
-    expect(menu.getByText('suresh@kirana.test')).toBeInTheDocument();
-
-    await user.click(menu.getByRole('menuitem', { name: 'Sign out' }));
-
-    await waitFor(() => expect(authService.logout).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith(ROUTES.LOGIN));
-    expect(store.getState().session.status).toBe('anonymous');
+    expect(header.queryByRole('button', { name: 'Open menu' })).not.toBeInTheDocument();
+    expect(
+      header.queryByRole('button', { name: 'Account menu for Suresh Kumar' })
+    ).not.toBeInTheDocument();
+    expect(header.getByRole('button', { name: 'Search parties' })).toBeInTheDocument();
   });
 
   it('has a search button that opens the party quick search, focused', async () => {
@@ -160,7 +152,9 @@ describe('UAT D2 — the phone and tablet chrome', () => {
     renderShell();
 
     const header = within(mobileHeader());
-    expect(header.getByRole('button', { name: 'Open menu' })).toBeInTheDocument();
+    // `/parties` (this file's path) is not a menu destination, so the phone
+    // header carries Back where the brand would be (MobileBackButton).
+    expect(header.getByRole('button', { name: 'Back' })).toBeInTheDocument();
     expect(header.queryByRole('button', { name: 'Search parties' })).not.toBeInTheDocument();
     expect(partyService.listParties).not.toHaveBeenCalled();
   });
@@ -201,33 +195,13 @@ describe('UAT D2 — the phone and tablet chrome', () => {
   });
 });
 
-describe('UAT D2 — the language switch, in the account menu at every width', () => {
-  it('switches to Hindi from the phone header and persists it as the picker did', async () => {
-    const user = userEvent.setup();
-    renderShell();
-
-    const header = within(mobileHeader());
-    await user.click(header.getByRole('button', { name: 'Account menu for Suresh Kumar' }));
-    // The panel is portalled to the body (R7), so it is looked up there.
-    const menu = within(screen.getByRole('menu'));
-
-    // Each option in its own script: the only label a person who needs it can read.
-    expect(menu.getByRole('menuitem', { name: 'English' })).toHaveAttribute('aria-current', 'true');
-    await user.click(menu.getByRole('menuitem', { name: 'हिन्दी' }));
-
-    expect(store.getState().locale.current).toBe('hi');
-    expect(store.getState().locale.overridden).toBe(true);
-    expect(readCookie(LOCALE_COOKIE)).toBe('hi');
-  });
-
+describe('UAT D2 — the language switch in the desktop account menu', () => {
   it('offers the same switch in the desktop account menu', async () => {
     const user = userEvent.setup();
     renderShell();
 
-    const triggers = screen.getAllByRole('button', { name: 'Account menu for Suresh Kumar' });
-    const desktop = triggers.find((node) => !mobileHeader().contains(node));
-    if (!desktop) throw new Error('no desktop account menu');
-    await user.click(desktop);
+    // The phone's switch is on the More tab (`MorePageContent.test.tsx`).
+    await user.click(screen.getByRole('button', { name: 'Account menu for Suresh Kumar' }));
 
     const menu = within(screen.getByRole('menu'));
     await user.click(menu.getByRole('menuitem', { name: 'हिन्दी' }));

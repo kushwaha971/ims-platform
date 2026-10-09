@@ -1285,7 +1285,8 @@
   "W06 (5 Oct 2026, WhatsApp messages handled like reminders) — /library/messages is new at 59.4 / 293.0; the message dialog is dynamic() on both screens that open it. The three message thunks joined the library invalidation map, moving the library routes 0.1-0.4 KB; 12 routes at or over a ceiling were raised by the measured + 0.5 rule.",
   "5 Oct 2026 (L02, the lending screens) - every route's first load grew 0.3-0.6 KB: the lending workspace's four sidebar rows, their three lucide icons and five ROUTES entries ship in the shared navigation chunk, and activeNavHref (one current menu row, not two) replaced an inline prefix test. The /lending/* routes get budgets for the first time; /lending/loans/new is the form page itself (RHF, Yup, the schedule preview), the same shape as /sales/invoices/new. 58 routes at or over a ceiling were raised by the measured + 0.5 rule.",
   "5 Oct 2026 (L03, lending's WhatsApp messages) - the shared app grew 0.1 KB (the Messages sidebar row and its route) and /lending/loans/new's first load reached 350.3, so its ceiling is 351 by the measured + 0.5 rule; the dialog, its service and the messages slice load with the tap and the page that use them, so no other route moved. /lending/messages sits under the default.",
-  "5 Oct 2026 (docs/platform/14 step 1, the server-decided landing) - the shared app grew 0.3 KB: the Landing type and its parser, the one landing-to-path executor and useGoToLanding, which the route guard and the business switcher now import instead of the old client rule. selectLanding is memoised by hand rather than with createSelector, which would have brought reselect into the shell for +0.8 KB. Four routes at their ceiling by a rounding hair were raised by the measured + 0.5 rule."
+  "5 Oct 2026 (docs/platform/14 step 1, the server-decided landing) - the shared app grew 0.3 KB: the Landing type and its parser, the one landing-to-path executor and useGoToLanding, which the route guard and the business switcher now import instead of the old client rule. selectLanding is memoised by hand rather than with createSelector, which would have brought reselect into the shell for +0.8 KB. Four routes at their ceiling by a rounding hair were raised by the measured + 0.5 rule.",
+  "9 Oct 2026, mobile redesign phases 1-3 (docs/mobile-redesign): the list screens that adopt the phone header (⋯ sheet + floating Add via UbPageHeaderMobileActions, its sheet lazy) grew 1.1-1.5 KB route; every other route moved by 0.0-0.3 KB (UbButton/UbActionLink read the sheet presentation context). The phone nav replaced the ☰ drawer, so sharedApp did not move (107.5). Raised by the measured + 0.5 rule: /settings/profile 133→134, /sales/challans 75→76, /sales/orders 75→76, /purchases/orders 71→73, /ledger/reminders 69→70, /library 68→69, /library/copies/[copyId] 67→68, /stock/low 64→65, /login 56→57, /switch 48→49."
  ],
  "default": {
   "route": 56,
@@ -1309,8 +1310,8 @@
    "firstLoad": 309
   },
   "/sales/challans": {
-   "route": 75,
-   "firstLoad": 310
+   "route": 76,
+   "firstLoad": 311
   },
   "/sales/challans/new": {
    "route": 143,
@@ -1325,8 +1326,8 @@
    "firstLoad": 299
   },
   "/purchases/orders": {
-   "route": 71,
-   "firstLoad": 307
+   "route": 73,
+   "firstLoad": 308
   },
   "/purchases/orders/new": {
    "route": 147,
@@ -1341,8 +1342,8 @@
    "firstLoad": 309
   },
   "/sales/orders": {
-   "route": 75,
-   "firstLoad": 310
+   "route": 76,
+   "firstLoad": 311
   },
   "/sales/orders/new": {
    "route": 143,
@@ -1433,7 +1434,7 @@
    "firstLoad": 327
   },
   "/switch": {
-   "route": 48,
+   "route": 49,
    "firstLoad": 284
   },
   "/settings/plan": {
@@ -1445,7 +1446,7 @@
    "firstLoad": 336
   },
   "/settings/profile": {
-   "route": 133,
+   "route": 134,
    "firstLoad": 369
   },
   "/settings/branding": {
@@ -1477,7 +1478,7 @@
    "firstLoad": 335
   },
   "/stock/low": {
-   "route": 64,
+   "route": 65,
    "firstLoad": 300
   },
   "/expenses": {
@@ -1497,7 +1498,7 @@
    "firstLoad": 295
   },
   "/ledger/reminders": {
-   "route": 69,
+   "route": 70,
    "firstLoad": 305
   },
   "/imports": {
@@ -1573,7 +1574,7 @@
    "firstLoad": 341
   },
   "/login": {
-   "route": 56,
+   "route": 57,
    "firstLoad": 292
   },
   "/": {
@@ -1593,7 +1594,7 @@
    "firstLoad": 308
   },
   "/library/copies/[copyId]": {
-   "route": 67,
+   "route": 68,
    "firstLoad": 303
   },
   "/library/settings": {
@@ -1673,7 +1674,7 @@
    "firstLoad": 236
   },
   "/library": {
-   "route": 68,
+   "route": 69,
    "firstLoad": 304
   },
   "/library/attendance": {

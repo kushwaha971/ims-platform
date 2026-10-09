@@ -104,6 +104,8 @@ function UbDataGridPaginationBase({
       className={cn(
         'grid w-full grid-cols-[auto_1fr_auto] items-center gap-3',
         'border-t border-border-hairline p-4',
+        // A pager with nothing to page is clutter on a phone ("Page 1 of 1").
+        pages <= 1 && 'max-md:hidden',
         className
       )}
     >

@@ -69,8 +69,12 @@ const UbFabInner = forwardRef<HTMLButtonElement, UbFabProps>(function UbFabInner
       sticky={false}
       data-ub-fab=""
       className={cn(
-        'pointer-events-none fixed z-30 pb-4 pr-4',
-        'bottom-[env(safe-area-inset-bottom,0px)] right-[env(safe-area-inset-right,0px)]',
+        // The wrapper reaches the bottom edge and pads up past the safe area or,
+        // on a phone with `UbBottomNav`, past the nav — so the button rides
+        // above the bar and the measured wrapper still spans to the edge.
+        'pointer-events-none fixed bottom-0 z-30 pr-4',
+        'pb-[calc(1rem+max(var(--ub-nav-offset),env(safe-area-inset-bottom,0px)))]',
+        'right-[env(safe-area-inset-right,0px)]',
         mobileOnly && 'lg:hidden'
       )}
     >

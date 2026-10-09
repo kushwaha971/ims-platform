@@ -14,6 +14,7 @@ import {
   UbEmptyState,
   UbFilterSelect,
   UbPageHeader,
+  UbPageHeaderMobileActions,
   UbPageShell,
   UbSearchInput,
   UbStack,
@@ -191,7 +192,7 @@ export function PaymentsPageContent(): React.JSX.Element {
     <UbPageShell>
       <UbPageHeader
         title={t('payments.title')}
-        actions={
+        primaryAction={
           canWrite && (
             <UbButton
               icon={<Plus className="h-4 w-4" aria-hidden />}
@@ -203,6 +204,24 @@ export function PaymentsPageContent(): React.JSX.Element {
             </UbButton>
           )
         }
+        /* docs/mobile-redesign (A3) — on a phone: a worded ⋯ sheet and the
+           primary action as the floating button. Desktop is unchanged. */
+        renderMobileActions={(actions) => (
+          <UbPageHeaderMobileActions
+            actions={actions}
+            mobile={{
+              menuLabel: t('common.action.moreActions'),
+              closeLabel: t('common.action.close'),
+              primary: canWrite
+                ? {
+                    label: t('payments.record.title'),
+                    icon: <Plus className="h-6 w-6" aria-hidden />,
+                    onClick: openDrawer,
+                  }
+                : undefined,
+            }}
+          />
+        )}
       />
       <UbStack gap={4} data-testid="payments-screen">
         <UbDateRangePicker<PaymentPreset>

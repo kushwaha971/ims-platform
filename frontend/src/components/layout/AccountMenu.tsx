@@ -1,21 +1,15 @@
 'use client';
 
-import { useCallback } from 'react';
-
 import { useRouter } from 'next/navigation';
 
 import { Check, ChevronDown, LogOut, MonitorSmartphone, ShieldCheck } from 'lucide-react';
 
+import { useAccountActions } from 'src/components/layout/useAccountActions';
 import { UbAvatar, UbBox, UbDivider, UbText } from 'src/design-system';
 import { MLMenu, MLMenuItem, MLMenuLabel } from 'src/design-system/primitives';
-import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
-import { useLocaleSwitch } from 'src/hooks/useLocaleSwitch';
 import { useTranslation } from 'src/hooks/useTranslation';
-import { selectImpersonation, selectSessionUser } from 'src/redux/slice/sessionSlice';
 import { ROUTES } from 'src/routes';
 import { cn } from 'src/utils/cn';
-
-import { logout } from 'modules/DigiKhaato/features/auth/redux/sessionThunk';
 
 /**
  * The account menu — who is signed in, the language, and Sign out.
@@ -39,15 +33,7 @@ export function AccountMenu({
 }: Readonly<{ compact?: boolean }>): React.JSX.Element | null {
   const { t } = useTranslation();
   const router = useRouter();
-  const dispatch = useAppDispatch();
-  const user = useAppSelector(selectSessionUser);
-  const impersonating = useAppSelector(selectImpersonation) !== null;
-  const { locale, options, setLocale } = useLocaleSwitch();
-
-  const signOut = useCallback(async () => {
-    await dispatch(logout());
-    router.replace(ROUTES.LOGIN);
-  }, [dispatch, router]);
+  const { user, impersonating, locale, options, setLocale, signOut } = useAccountActions();
 
   if (!user) return null;
   const displayName = user.name || user.email;

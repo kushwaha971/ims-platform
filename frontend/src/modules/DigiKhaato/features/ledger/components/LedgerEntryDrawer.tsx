@@ -187,7 +187,14 @@ export function LedgerEntryDrawer({
       dismissOnBackdrop={!formState.isDirty}
       footer={
         <>
-          <UbButton variant="secondary" onClick={close} disabled={isSaving}>
+          {/* A phone closes the sheet with ✕ or a swipe; a second full-width
+              button under Save was the same action twice (audit A12). */}
+          <UbButton
+            variant="secondary"
+            onClick={close}
+            disabled={isSaving}
+            className="max-lg:hidden"
+          >
             {t('common.action.cancel')}
           </UbButton>
           <UbButton
@@ -245,6 +252,9 @@ export function LedgerEntryDrawer({
               variant="card"
               options={directionOptions}
               ariaLabel={t('ledger.entry.direction')}
+              /* Side by side on a phone: two stacked cards cost the amount
+                 field its place above the keyboard (audit A12). */
+              className="max-lg:grid max-lg:grid-cols-2 max-lg:gap-2"
             />
           )}
         </UbField>
@@ -255,7 +265,16 @@ export function LedgerEntryDrawer({
           placeholder={t('ledger.entry.amount.placeholder')}
           required
         >
-          {(field) => <UbMoneyInput {...field} autoFocus inputMode="decimal" />}
+          {(field) => (
+            <UbMoneyInput
+              {...field}
+              autoFocus
+              inputMode="decimal"
+              /* The number being typed is the point of this sheet: large on a
+                 phone (audit A13). */
+              className="max-lg:[&_input]:!h-14 max-lg:[&_input]:!text-[26px] max-lg:[&_input]:!font-semibold"
+            />
+          )}
         </UbField>
 
         <UbField

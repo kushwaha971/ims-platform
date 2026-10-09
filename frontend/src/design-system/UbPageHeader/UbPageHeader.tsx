@@ -4,6 +4,8 @@ import { memo, type ReactNode, type Ref } from 'react';
 
 import { cn } from 'src/utils/cn';
 
+export type { UbPageHeaderMobile } from './UbPageHeaderMobileActions';
+
 /**
  * Part 23 §23.3 — title, breadcrumb, scope controls and actions, 60 px sticky.
  * A layout that exists only to add a page title is a defect (§19.6.1): the
@@ -59,6 +61,26 @@ export interface UbPageHeaderProps {
    * phone once it has (see `useScrolledPast`).
    */
   readonly primaryActionsRef?: Ref<HTMLDivElement>;
+  /**
+   * The screen's primary action ("Add customer"), drawn at the END of the
+   * actions row on a desktop — the same place it always sat inside `actions`.
+   * Separate so that a phone can show it as the floating button instead.
+   */
+  readonly primaryAction?: ReactNode;
+  /**
+   * docs/mobile-redesign (A9) — below `lg` the screen docks `primaryActions` at
+   * the bottom (in reach of the thumb), so the header does not draw them there.
+   */
+  readonly dockPrimaryActions?: boolean;
+  /**
+   * docs/mobile-redesign — the phone's version of the actions, below `lg`:
+   * a `UbPageHeaderMobileActions` (a ⋯ sheet of worded rows and the floating
+   * primary action). When it is given, the inline actions row is hidden below
+   * `lg`. A render function (given this header's `actions`) rather than a
+   * config, so that only the screens that opt in carry its code: the header
+   * itself imports none of it.
+   */
+  readonly renderMobileActions?: (actions: ReactNode) => ReactNode;
   readonly className?: string;
 }
 
@@ -69,6 +91,9 @@ function UbPageHeaderBase({
   actions,
   primaryActions,
   primaryActionsRef,
+  primaryAction,
+  dockPrimaryActions = false,
+  renderMobileActions,
   className,
 }: Readonly<UbPageHeaderProps>) {
   return (
@@ -121,27 +146,34 @@ function UbPageHeaderBase({
             </p>
           )}
         </div>
-        {(actions || primaryActions) && (
+        {(actions || primaryActions || primaryAction) && (
           <div
             className={cn(
               // 12 px between a phone's 32 px icon actions, so each one's
               // 44 px hit area (`.ub-hit`, 6 px of overhang a side) meets its
               // neighbour's instead of covering it (R-A-3, Sprint 12).
               'flex shrink-0 flex-wrap items-center gap-2 max-sm:gap-3',
-              primaryActions && 'max-sm:contents'
+              primaryActions && 'max-sm:contents',
+              // The phone draws these as a ⋯ sheet and a floating button.
+              renderMobileActions && !primaryActions && 'max-lg:hidden'
             )}
           >
             {primaryActions && (
               <div
                 ref={primaryActionsRef}
-                className="flex items-center gap-2 max-sm:order-last max-sm:grid max-sm:basis-full max-sm:grid-cols-2 max-sm:[&>*]:w-full"
+                className={cn(
+                  'flex items-center gap-2 max-sm:order-last max-sm:grid max-sm:basis-full max-sm:grid-cols-2 max-sm:[&>*]:w-full',
+                  dockPrimaryActions && 'max-lg:!hidden'
+                )}
               >
                 {primaryActions}
               </div>
             )}
             {actions}
+            {primaryAction}
           </div>
         )}
+        {renderMobileActions?.(actions)}
       </div>
       {controls}
     </header>

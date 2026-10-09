@@ -5,6 +5,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 
+import { Minus, Plus } from 'lucide-react';
+
 import {
   UbBottomBar,
   UbBox,
@@ -17,6 +19,7 @@ import {
   UbSkeleton,
   UbStack,
   UbStatusBanner,
+  useIsMobileLayer,
 } from 'src/design-system';
 import { usePermissions } from 'src/hooks/usePermissions';
 import { useScrolledPast } from 'src/hooks/useScrolledPast';
@@ -215,6 +218,7 @@ export function PartyDetailPageContent({
      up the pair sits beside the title and a laptop's khata rarely scrolls it
      away from a reachable place. */
   const [pairRef, pairScrolledPast] = useScrolledPast<HTMLDivElement>();
+  const isMobileLayer = useIsMobileLayer();
 
   const [copied, setCopied] = useState(false);
   const [paying, setPaying] = useState<KhataPaymentPreset | null>(null);
@@ -400,6 +404,9 @@ export function PartyDetailPageContent({
              R-SEC-2): a greyed button with a tooltip is a support call. */
           primaryActions={canRecord ? entryPair : undefined}
           primaryActionsRef={pairRef}
+          /* docs/mobile-redesign (A9) — on a phone the pair lives in the dock
+             at the bottom from the first moment, not only after scrolling. */
+          dockPrimaryActions
           actions={
             /* Edit, Add opening balance and Archive. All three are things done
                once a month or once in a party's life, and at five buttons the
@@ -540,12 +547,41 @@ export function PartyDetailPageContent({
             viewport: it publishes its height so the snackbar lifts above it
             (CR-2026-09-19-G). Sticky in the page column, edge to edge (`-mx-4`
             undoes the column's inset) and clear of the iOS home indicator. */}
-        {canRecord && pairScrolledPast && (
+        {/* docs/mobile-redesign (A9, A11) — below `lg` the dock IS the pair:
+            always there, under the thumb, the header's copy hidden, and the
+            two choices coloured by what they do to the balance (red raises
+            what they owe, green lowers it) like every khata a merchant has
+            used. On a desktop nothing changed: the dock still only follows a
+            scrolled-away pair, and it is `lg:hidden` there anyway. */}
+        {canRecord && (isMobileLayer || pairScrolledPast) && (
           <UbBottomBar
             data-testid="khata-dock"
-            className="-mx-4 grid grid-cols-2 gap-2 border-t border-border-hairline bg-surface-card px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] pt-3 sm:hidden"
+            className="-mx-4 grid grid-cols-2 gap-2 border-t border-border-hairline bg-surface-card px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] pt-3 lg:hidden"
           >
-            {entryPair}
+            {isMobileLayer ? (
+              <>
+                <UbButton
+                  variant="primary"
+                  size="lg"
+                  className="bg-error hover:bg-error active:bg-error"
+                  icon={<Minus className="h-5 w-5" aria-hidden />}
+                  onClick={() => entryForm.openEntry(id, 'debit')}
+                >
+                  {t('ledger.entry.gaveAction')}
+                </UbButton>
+                <UbButton
+                  variant="primary"
+                  size="lg"
+                  className="bg-success hover:bg-success active:bg-success"
+                  icon={<Plus className="h-5 w-5" aria-hidden />}
+                  onClick={() => entryForm.openEntry(id, 'credit')}
+                >
+                  {t('ledger.entry.gotAction')}
+                </UbButton>
+              </>
+            ) : (
+              entryPair
+            )}
           </UbBottomBar>
         )}
       </UbStack>

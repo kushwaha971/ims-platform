@@ -2,9 +2,9 @@
 
 import { type ReactNode } from 'react';
 
-import { AccountMenu } from 'src/components/layout/AccountMenu';
-import { MobileNavDrawer } from 'src/components/layout/MobileNavDrawer';
+import { MobileBackButton } from 'src/components/layout/MobileBackButton';
 import { MobileQuickSearch } from 'src/components/layout/MobileQuickSearch';
+import { MobileTabBar } from 'src/components/layout/MobileTabBar';
 import { NetworkStrip } from 'src/components/layout/NetworkStrip';
 import { ShellNotices } from 'src/components/layout/ShellNotices';
 import { UbAppTopBar } from 'src/components/layout/UbAppTopBar';
@@ -16,6 +16,7 @@ import { selectImpersonation } from 'src/redux/slice/sessionSlice';
 import { selectAppName } from 'src/redux/slice/whiteLabelSlice';
 
 import { useLandingPath } from 'modules/DigiKhaato/features/navigation/useLandingPath';
+import { useMobileNav } from 'modules/DigiKhaato/features/navigation/useMobileNav';
 import { NotificationBell } from 'modules/DigiKhaato/features/notifications/components/NotificationBell';
 import { useNotificationPoll } from 'modules/DigiKhaato/features/notifications/hooks/useNotificationPoll';
 import { PlanLimitDialog } from 'modules/DigiKhaato/features/plan/components/PlanLimitDialog';
@@ -64,6 +65,7 @@ export function UbAppShell({ children }: Readonly<{ children: ReactNode }>): Rea
   // The logo opens this workspace's first page — a library's, not the shop's.
   const landing = useLandingPath();
   const impersonating = useAppSelector(selectImpersonation) !== null;
+  const mobileNav = useMobileNav();
 
   return (
     <UbStack direction="row" className="min-h-dvh w-full bg-canvas">
@@ -93,31 +95,34 @@ export function UbAppShell({ children }: Readonly<{ children: ReactNode }>): Rea
           data-print="hide"
           className="h-14 shrink-0 border-b border-border-hairline bg-surface-card px-4 lg:hidden"
         >
-          {/* First in the header and first in the tab order, because on a phone
-              this is the only route out of the current screen. */}
-          <MobileNavDrawer />
-          <UbLink
-            href={landing}
-            tone="inherit"
-            underline={false}
-            aria-label={t('nav.brandHome', { appName })}
-            // A 24 px mark with a 44 px hit area (R-A-3): 10 px of overhang a
-            // side, so `mx-0.5` opens the 8 px gaps to the menu button and the
-            // switcher to exactly 10 — the overhang fills the gap and never
-            // covers a neighbour, at a cost of 4 px of the switcher's width on
-            // a 360 px phone (Sprint 12 sweep).
-            className="ub-hit mx-0.5 flex shrink-0 items-center rounded-control"
-          >
-            <UbLogo size="sm" />
-          </UbLink>
+          {/* A top-level screen shows the brand; a detail or task screen shows
+              Back in its place, because the bottom nav is not there to leave by. */}
+          {mobileNav.visible ? (
+            <UbLink
+              href={landing}
+              tone="inherit"
+              underline={false}
+              aria-label={t('nav.brandHome', { appName })}
+              // A 24 px mark with a 44 px hit area (R-A-3): 10 px of overhang a
+              // side, so `mx-0.5` opens the 8 px gaps to the menu button and the
+              // switcher to exactly 10 — the overhang fills the gap and never
+              // covers a neighbour, at a cost of 4 px of the switcher's width on
+              // a 360 px phone (Sprint 12 sweep).
+              className="ub-hit mx-0.5 flex shrink-0 items-center rounded-control"
+            >
+              <UbLogo size="sm" />
+            </UbLink>
+          ) : (
+            <MobileBackButton upHref={mobileNav.upHref} />
+          )}
           <TenantSwitcherMenu className="min-w-0 flex-1" />
           {/* UAT D2 — below `lg` the top bar does not render, and it held the
-              only party search and the only Sign out. Both are here now, as
-              44 px icons, reusing the same two components. */}
+              only party search. It is here as a 44 px icon, reusing the same
+              component. The account (and Sign out) moved to the More tab with
+              the mobile redesign, which also took the ☰ drawer's place. */}
           <MobileQuickSearch />
-          {/* NTF-01 FR-4 — the bell sits beside search, before the account. */}
+          {/* NTF-01 FR-4 — the bell sits beside search. */}
           <NotificationBell />
-          <AccountMenu compact />
         </UbStack>
 
         <UbAppTopBar />
@@ -133,11 +138,23 @@ export function UbAppShell({ children }: Readonly<{ children: ReactNode }>): Rea
             disable themselves with this reason as their title. The banner and
             the account menu sit outside it, so End session and Sign out stay. */}
         <UbViewOnlyProvider reason={impersonating ? t('common.viewOnly.reason') : null}>
-          <UbBox as="main" id={APP_CONTENT_ID} tabIndex={-1} className="flex-1 outline-none">
+          {/* `--ub-nav-offset` is the phone nav's height while it is on screen
+              and 0 everywhere else, desktop included: the content's last row
+              never hides under the bar. */}
+          <UbBox
+            as="main"
+            id={APP_CONTENT_ID}
+            tabIndex={-1}
+            className="flex-1 pb-[var(--ub-nav-offset)] outline-none"
+          >
             {children}
           </UbBox>
         </UbViewOnlyProvider>
       </UbStack>
+
+      {/* docs/mobile-redesign/03 — four tabs and More, below `lg`, on the
+          screens that are destinations rather than details. */}
+      <MobileTabBar />
 
       {/* CR-2026-09-19-E — `SnackbarHost` used to be mounted here. It is in
           `AppProviders` now, so the one toast channel also covers the auth,

@@ -1953,8 +1953,9 @@ describe('the docked You gave / You got pair on a phone', () => {
     scrollPast(true);
     const dock = await screen.findByTestId('khata-dock');
     expect(dock).toHaveAttribute('data-ub-bottom-bar');
-    // Phone only: from `sm` up the header pair sits beside the title.
-    expect(dock).toHaveClass('sm:hidden');
+    // Below `lg` only (docs/mobile-redesign): the phone layer docks the pair;
+    // a desktop keeps it beside the title.
+    expect(dock).toHaveClass('lg:hidden');
     expect(within(dock).getByRole('button', { name: /You gave/ })).toBeInTheDocument();
     expect(within(dock).getByRole('button', { name: /You got/ })).toBeInTheDocument();
 

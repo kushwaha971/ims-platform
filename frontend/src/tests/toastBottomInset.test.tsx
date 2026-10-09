@@ -152,7 +152,9 @@ describe('the two archetypes that own the bottom of the page declare it', () => 
     expect(bar).not.toBeNull();
     // It is still the sticky bar it always was.
     expect(bar?.className).toContain('sticky');
-    expect(bar?.className).toContain('bottom-0');
+    // `--ub-nav-offset` is 0 outside a phone screen with the bottom nav, so
+    // this is `bottom: 0` wherever the wizard is (it has no nav).
+    expect(bar?.className).toContain('bottom-[var(--ub-nav-offset)]');
   });
 });
 

@@ -13,6 +13,7 @@ import {
   UbDateRangePicker,
   UbEmptyState,
   UbPageHeader,
+  UbPageHeaderMobileActions,
   UbPageShell,
   UbSearchInput,
   UbStack,
@@ -178,22 +179,38 @@ export function SalesFlowListPageContent({
     <UbPageShell>
       <UbPageHeader
         title={t(`${ns}.listTitle`)}
-        actions={
-          <>
-            <SalesSectionLinks current={kind} />
-            {newEstimate && (
-              <UbActionLink
-                href={newHref}
-                variant="primary"
-                icon={<Plus className="h-4 w-4" aria-hidden />}
-                iconOnly="mobile"
-                data-testid="estimate-new"
-              >
-                {t(newLabelId)}
-              </UbActionLink>
-            )}
-          </>
+        actions={<SalesSectionLinks current={kind} />}
+        primaryAction={
+          newEstimate ? (
+            <UbActionLink
+              href={newHref}
+              variant="primary"
+              icon={<Plus className="h-4 w-4" aria-hidden />}
+              iconOnly="mobile"
+              data-testid="estimate-new"
+            >
+              {t(newLabelId)}
+            </UbActionLink>
+          ) : undefined
         }
+        /* docs/mobile-redesign (A3) — on a phone: a worded ⋯ sheet and the
+           primary action as the floating button. Desktop is unchanged. */
+        renderMobileActions={(actions) => (
+          <UbPageHeaderMobileActions
+            actions={actions}
+            mobile={{
+              menuLabel: t('common.action.moreActions'),
+              closeLabel: t('common.action.close'),
+              primary: newEstimate
+                ? {
+                    label: t(newLabelId),
+                    icon: <Plus className="h-6 w-6" aria-hidden />,
+                    href: newHref,
+                  }
+                : undefined,
+            }}
+          />
+        )}
       />
       <UbStack gap={4} data-testid={`${kind}-list-screen`}>
         <UbDateRangePicker<InvoicePreset>

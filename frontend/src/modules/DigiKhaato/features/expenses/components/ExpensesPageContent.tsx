@@ -14,6 +14,7 @@ import {
   UbEmptyState,
   UbFilterSelect,
   UbPageHeader,
+  UbPageHeaderMobileActions,
   UbPageShell,
   UbSearchInput,
   UbStack,
@@ -226,19 +227,39 @@ export function ExpensesPageContent(): React.JSX.Element {
               permission="reports.export"
               empty={list.status === 'succeeded' && list.total === 0}
             />
-            {/* Hidden rather than disabled for a role that cannot write (§19.7.5). */}
-            {canWrite && (
-              <UbButton
-                icon={<Plus className="h-4 w-4" aria-hidden />}
-                iconOnly="mobile"
-                onClick={openDrawer}
-                data-testid="expense-add"
-              >
-                {t('expenses.add')}
-              </UbButton>
-            )}
           </>
         }
+        /* Hidden rather than disabled for a role that cannot write (§19.7.5). */
+        primaryAction={
+          canWrite ? (
+            <UbButton
+              icon={<Plus className="h-4 w-4" aria-hidden />}
+              iconOnly="mobile"
+              onClick={openDrawer}
+              data-testid="expense-add"
+            >
+              {t('expenses.add')}
+            </UbButton>
+          ) : undefined
+        }
+        /* docs/mobile-redesign (A3) — on a phone: a worded ⋯ sheet and the
+           primary action as the floating button. Desktop is unchanged. */
+        renderMobileActions={(actions) => (
+          <UbPageHeaderMobileActions
+            actions={actions}
+            mobile={{
+              menuLabel: t('common.action.moreActions'),
+              closeLabel: t('common.action.close'),
+              primary: canWrite
+                ? {
+                    label: t('expenses.add'),
+                    icon: <Plus className="h-6 w-6" aria-hidden />,
+                    onClick: openDrawer,
+                  }
+                : undefined,
+            }}
+          />
+        )}
       />
 
       <UbStack gap={4} data-testid="expenses-screen">

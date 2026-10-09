@@ -11,6 +11,7 @@ import {
 } from 'src/design-system/primitives';
 import { cn } from 'src/utils/cn';
 
+import { SHEET_ROW_CLASSES, useUbActionPresentation } from '../UbActionSheet/actionPresentation';
 import { ICON_ONLY_MOBILE, LABEL_ONLY_FROM_SM } from '../UbButton/UbButton';
 
 /**
@@ -49,22 +50,26 @@ function UbActionLinkBase({
   className,
   ...rest
 }: Readonly<UbActionLinkProps>) {
+  // Inside a ⋯ sheet the link is a worded row (see `actionPresentation`).
+  const inSheet = useUbActionPresentation() === 'sheet';
+  const shape = inSheet ? false : iconOnly;
   const classes = mlButtonClasses(
-    variant,
+    inSheet ? 'ghost' : variant,
     size,
     cn(
       'outline-none focus-visible:shadow-focus',
-      iconOnly === true && 'aspect-square px-0',
-      iconOnly === 'mobile' && ICON_ONLY_MOBILE,
-      className
+      shape === true && 'aspect-square px-0',
+      shape === 'mobile' && ICON_ONLY_MOBILE,
+      className,
+      inSheet && SHEET_ROW_CLASSES
     )
   );
   const label = (
     <span
       className={cn(
         'inline-flex items-center gap-2',
-        iconOnly === true && 'sr-only',
-        iconOnly === 'mobile' && LABEL_ONLY_FROM_SM
+        shape === true && 'sr-only',
+        shape === 'mobile' && LABEL_ONLY_FROM_SM
       )}
     >
       {children}

@@ -12,6 +12,7 @@ import {
   UbDateRangePicker,
   UbEmptyState,
   UbPageHeader,
+  UbPageHeaderMobileActions,
   UbPageShell,
   UbSearchInput,
   UbStack,
@@ -231,7 +232,7 @@ export function PurchaseBillsListPageContent({
     <UbPageShell>
       <UbPageHeader
         title={t(copy.title)}
-        actions={
+        primaryAction={
           canWrite && copy.newLabel ? (
             <UbActionLink
               href={NEW_BILL}
@@ -244,6 +245,25 @@ export function PurchaseBillsListPageContent({
             </UbActionLink>
           ) : undefined
         }
+        /* docs/mobile-redesign (A3) — on a phone: a worded ⋯ sheet and the
+           primary action as the floating button. Desktop is unchanged. */
+        renderMobileActions={(actions) => (
+          <UbPageHeaderMobileActions
+            actions={actions}
+            mobile={{
+              menuLabel: t('common.action.moreActions'),
+              closeLabel: t('common.action.close'),
+              primary:
+                canWrite && copy.newLabel
+                  ? {
+                      label: t(copy.newLabel ?? ''),
+                      icon: <Plus className="h-6 w-6" aria-hidden />,
+                      href: NEW_BILL,
+                    }
+                  : undefined,
+            }}
+          />
+        )}
       />
       <UbStack gap={4} data-testid="purchase-bills-screen">
         <UbDateRangePicker<PurchaseBillPreset>

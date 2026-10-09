@@ -67,6 +67,7 @@ export const LENDING_APP: AppManifest = {
       permission: 'lending.route.read',
       section: 'daily',
       order: 4,
+      bottomNav: true,
     },
     {
       // L03 — today's reminders to borrowers, sent by hand like reminders (LEN-12).

@@ -63,7 +63,11 @@ describe('UbFab', () => {
     const wrapper = button.parentElement as HTMLElement;
     expect(wrapper).toHaveAttribute('data-ub-fab');
     expect(wrapper).toHaveClass('fixed', 'pointer-events-none');
-    expect(wrapper.className).toContain('bottom-[env(safe-area-inset-bottom,0px)]');
+    expect(wrapper.className).toContain('bottom-0');
+    // Above the safe area, or above the phone's nav bar when one is on screen.
+    expect(wrapper.className).toContain(
+      'pb-[calc(1rem+max(var(--ub-nav-offset),env(safe-area-inset-bottom,0px)))]'
+    );
     expect(wrapper.className).toContain('right-[env(safe-area-inset-right,0px)]');
     expect(button).toHaveClass('pointer-events-auto');
   });

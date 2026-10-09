@@ -53,6 +53,11 @@
   --grid-gap: 20px;
   /* DigiKhaato mobile overrides (§23.2.1). */
   --bottom-nav-h: calc(64px + env(safe-area-inset-bottom, 0px));
+  /* docs/mobile-redesign — how far bottom furniture (a sticky action bar, the
+   * FAB) must sit above the phone's navigation bar. 0 unless `UbBottomNav` is on
+   * the page and the viewport is below `lg` (the rule after this block), so
+   * desktop computes exactly the `bottom: 0` it always had. */
+  --ub-nav-offset: 0px;
 
   /* ── Bottom furniture, and the one inset that clears it ─────────────────
    * CR-2026-09-19-G. The global toast is `position: fixed` at the bottom of
@@ -79,10 +84,18 @@
   /* ── Typography (§23.2.2) ──────────────────────────────────────────────── */
   /* Clash Grotesk/Display carry no Devanagari; the roles are kept and the faces
      substituted with Inter + Noto Sans Devanagari (§23.2.2 font decision). */
-  --font-display: 'DK Rupee', var(--font-dm-sans, 'DM Sans'), var(--font-inter, 'Inter'), var(--font-noto-devanagari, 'Noto Sans Devanagari'), system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-ui: 'DK Rupee', var(--font-dm-sans, 'DM Sans'), var(--font-inter, 'Inter'), var(--font-noto-devanagari, 'Noto Sans Devanagari'), system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display:
+    'DK Rupee', var(--font-dm-sans, 'DM Sans'), var(--font-inter, 'Inter'),
+    var(--font-noto-devanagari, 'Noto Sans Devanagari'), system-ui, -apple-system, 'Segoe UI',
+    sans-serif;
+  --font-ui:
+    'DK Rupee', var(--font-dm-sans, 'DM Sans'), var(--font-inter, 'Inter'),
+    var(--font-noto-devanagari, 'Noto Sans Devanagari'), system-ui, -apple-system, 'Segoe UI',
+    sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', 'Menlo', monospace;
-  --font-metric: var(--font-inter, 'Inter'), var(--font-noto-devanagari, 'Noto Sans Devanagari'), system-ui, sans-serif;
+  --font-metric:
+    var(--font-inter, 'Inter'), var(--font-noto-devanagari, 'Noto Sans Devanagari'), system-ui,
+    sans-serif;
 
   --size-display: 44px;
   --size-h1: 20px;
@@ -175,5 +188,13 @@
 @media (min-width: 768px) {
   :root {
     --ub-toast-gap: var(--space-6);
+  }
+}
+
+/* `UbBottomNav` is `lg:hidden`; while it is on the page below `lg`, everything
+   pinned to the bottom edge sits on top of it instead of under it. */
+@media (max-width: 1023.98px) {
+  :root:has([data-ub-bottom-nav]) {
+    --ub-nav-offset: var(--bottom-nav-h);
   }
 }

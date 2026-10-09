@@ -15,7 +15,7 @@ import { useCanSearchParties } from 'modules/DigiKhaato/features/parties/hooks/u
 
 /**
  * W4-P — the sheet (vaul, via `UbDrawer`) is fetched on the first tap rather
- * than with every `(app)` route; see `MobileNavDrawer` for the measured reason.
+ * than with every `(app)` route; vaul and its Radix dialog are not worth their bytes on every route for a sheet opened now and then.
  */
 const UbDrawer = dynamic(
   () => import('src/design-system/UbDrawer').then((module) => module.UbDrawer),

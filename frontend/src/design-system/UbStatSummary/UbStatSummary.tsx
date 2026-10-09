@@ -89,7 +89,10 @@ function UbStatSummaryBase({
           'flex items-start gap-2',
           open
             ? 'justify-end'
-            : 'rounded-card border border-border-hairline bg-surface-card px-3 py-2'
+            : 'rounded-card border border-border-hairline bg-surface-card px-3 py-2 ' +
+                // docs/mobile-redesign (A4) — on a phone the figures are one
+                // summary line under the title, not a bordered box.
+                'max-lg:rounded-none max-lg:border-0 max-lg:bg-transparent max-lg:px-0 max-lg:py-0'
         )}
       >
         {/* Open, the cards say it all: the line steps aside to its toggle

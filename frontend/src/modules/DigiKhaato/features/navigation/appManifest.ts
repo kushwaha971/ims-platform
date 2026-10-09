@@ -33,6 +33,14 @@ export interface AppNavItem {
   readonly order: number;
   /** Shown in the mobile bottom nav (max 4 + "More"). */
   readonly bottomNav?: boolean;
+  /** The bottom-nav label, when the sidebar's is too long or names one half of a tab. */
+  readonly tabLabelId?: string;
+  /**
+   * docs/mobile-redesign/03 §3 — the bottom-nav row (by `key`) this page lives
+   * under on a phone: Suppliers under the Parties tab, Estimates under Bills.
+   * A page with neither `bottomNav` nor `tab` lights More.
+   */
+  readonly tab?: string;
   /** Slice selector key for the badge count, if any. */
   readonly badge?: 'overdueReminders' | 'lowStock' | 'unreadNotifications';
 }

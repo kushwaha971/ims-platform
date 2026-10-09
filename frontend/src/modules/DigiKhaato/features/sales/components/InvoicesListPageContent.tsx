@@ -13,6 +13,7 @@ import {
   UbFilterSelect,
   UbEmptyState,
   UbPageHeader,
+  UbPageHeaderMobileActions,
   UbPageShell,
   UbSearchInput,
   UbStack,
@@ -186,22 +187,38 @@ export function InvoicesListPageContent(): React.JSX.Element {
     <UbPageShell>
       <UbPageHeader
         title={t('sales.list.title')}
-        actions={
-          <>
-            <SalesSectionLinks current="invoice" />
-            {canWrite && (
-              <UbActionLink
-                href={NEW_BILL}
-                variant="primary"
-                icon={<Plus className="h-4 w-4" aria-hidden />}
-                iconOnly="mobile"
-                data-testid="invoice-new"
-              >
-                {t('sales.newBill')}
-              </UbActionLink>
-            )}
-          </>
+        actions={<SalesSectionLinks current="invoice" />}
+        primaryAction={
+          canWrite ? (
+            <UbActionLink
+              href={NEW_BILL}
+              variant="primary"
+              icon={<Plus className="h-4 w-4" aria-hidden />}
+              iconOnly="mobile"
+              data-testid="invoice-new"
+            >
+              {t('sales.newBill')}
+            </UbActionLink>
+          ) : undefined
         }
+        /* docs/mobile-redesign (A3) — on a phone: a worded ⋯ sheet and the
+           primary action as the floating button. Desktop is unchanged. */
+        renderMobileActions={(actions) => (
+          <UbPageHeaderMobileActions
+            actions={actions}
+            mobile={{
+              menuLabel: t('common.action.moreActions'),
+              closeLabel: t('common.action.close'),
+              primary: canWrite
+                ? {
+                    label: t('sales.newBill'),
+                    icon: <Plus className="h-6 w-6" aria-hidden />,
+                    href: NEW_BILL,
+                  }
+                : undefined,
+            }}
+          />
+        )}
       />
       <UbStack gap={4} data-testid="invoices-screen">
         <UbDateRangePicker<InvoicePreset>

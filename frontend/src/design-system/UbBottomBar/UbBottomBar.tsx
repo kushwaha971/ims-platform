@@ -57,7 +57,9 @@ function UbBottomBarBase({
       // Not read by any stylesheet: it is the marker that makes "what is at the
       // bottom of this page" greppable, and answerable in a DOM snapshot.
       'data-ub-bottom-bar': '',
-      className: cn(sticky && 'sticky bottom-0 z-10', className),
+      // `--ub-nav-offset` is 0 except on a phone screen that shows `UbBottomNav`,
+      // where a sticky action bar must ride above the bar rather than under it.
+      className: cn(sticky && 'sticky bottom-[var(--ub-nav-offset)] z-10', className),
       ...rest,
     },
     children

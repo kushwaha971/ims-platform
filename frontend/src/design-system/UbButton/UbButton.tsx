@@ -8,6 +8,10 @@ import {
   type MLButtonSize,
   type MLButtonVariant,
 } from 'src/design-system/primitives';
+import {
+  SHEET_ROW_CLASSES,
+  useUbActionPresentation,
+} from 'src/design-system/UbActionSheet/actionPresentation';
 import { useUbViewOnly } from 'src/design-system/UbViewOnly';
 import { cn } from 'src/utils/cn';
 
@@ -100,10 +104,13 @@ const UbButtonInner = forwardRef<HTMLButtonElement, UbButtonProps>(function UbBu
   const viewOnly = useUbViewOnly();
   const locked =
     viewOnly !== null && !viewOnlySafe && (WRITE_VARIANTS.has(variant) || rest.type === 'submit');
+  // Inside a ⋯ sheet the action is a worded row, whatever it is inline.
+  const inSheet = useUbActionPresentation() === 'sheet';
+  const shape = inSheet ? false : iconOnly;
   return (
     <MLButton
       ref={ref}
-      variant={variant}
+      variant={inSheet ? 'ghost' : variant}
       size={size}
       disabled={disabled || busy || locked}
       aria-busy={busy || undefined}
@@ -112,9 +119,11 @@ const UbButtonInner = forwardRef<HTMLButtonElement, UbButtonProps>(function UbBu
       data-view-only={locked || undefined}
       className={cn(
         fullWidth && 'w-full',
-        iconOnly === true && 'aspect-square px-0',
-        iconOnly === 'mobile' && ICON_ONLY_MOBILE,
-        className
+        shape === true && 'aspect-square px-0',
+        shape === 'mobile' && ICON_ONLY_MOBILE,
+        className,
+        inSheet && SHEET_ROW_CLASSES,
+        inSheet && variant === 'destructive' && 'text-error [&_svg]:text-error'
       )}
       {...rest}
     >
@@ -130,8 +139,8 @@ const UbButtonInner = forwardRef<HTMLButtonElement, UbButtonProps>(function UbBu
       <span
         className={cn(
           'inline-flex items-center gap-2',
-          iconOnly === true && 'sr-only',
-          iconOnly === 'mobile' && LABEL_ONLY_FROM_SM
+          shape === true && 'sr-only',
+          shape === 'mobile' && LABEL_ONLY_FROM_SM
         )}
       >
         {busy ? (busyLabel ?? children) : children}

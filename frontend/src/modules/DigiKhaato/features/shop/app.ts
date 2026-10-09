@@ -78,6 +78,8 @@ export const SHOP_APP: AppManifest = {
       permission: 'reports.basic.read',
       section: 'home',
       order: 1,
+      bottomNav: true,
+      tabLabelId: 'nav.tab.home',
     },
     // Step 3b — two books, as Zoho and Vyapar keep them: the people you sell
     // to and the people you buy from. A party who is both is in both.
@@ -91,6 +93,7 @@ export const SHOP_APP: AppManifest = {
       section: 'parties',
       order: 1,
       bottomNav: true,
+      tabLabelId: 'nav.tab.parties',
     },
     {
       key: 'suppliers',
@@ -101,6 +104,7 @@ export const SHOP_APP: AppManifest = {
       permission: 'parties.party.read',
       section: 'parties',
       order: 2,
+      tab: 'customers',
     },
     // LED-09 — "who do I ring first", the collection round's starting list.
     {
@@ -146,6 +150,7 @@ export const SHOP_APP: AppManifest = {
       permission: 'sales.estimate.read',
       section: 'sales',
       order: 2,
+      tab: 'invoices',
     },
     // Shop item 3 — a customer's order before it is billed (Vyapar's "Sale order").
     {
@@ -157,6 +162,7 @@ export const SHOP_APP: AppManifest = {
       permission: 'sales.estimate.read',
       section: 'sales',
       order: 3,
+      tab: 'invoices',
     },
     // Shop item 4 — goods that leave before the bill (SAL-09).
     {
@@ -168,6 +174,7 @@ export const SHOP_APP: AppManifest = {
       permission: 'sales.invoice.read',
       section: 'sales',
       order: 4,
+      tab: 'invoices',
     },
     {
       key: 'creditNotes',
@@ -178,6 +185,7 @@ export const SHOP_APP: AppManifest = {
       permission: 'sales.invoice.read',
       section: 'sales',
       order: 5,
+      tab: 'invoices',
     },
     // PUR-01/03/04 — bills, drafts, record and void.
     {
@@ -245,6 +253,7 @@ export const SHOP_APP: AppManifest = {
       permission: 'inventory.stock.read',
       section: 'stock',
       order: 2,
+      tab: 'items',
     },
     {
       key: 'lowStock',
@@ -255,6 +264,7 @@ export const SHOP_APP: AppManifest = {
       permission: 'inventory.stock.read',
       section: 'stock',
       order: 3,
+      tab: 'items',
     },
     // Shop gap §1.6 — rate cards for groups of customers.
     {
@@ -266,6 +276,7 @@ export const SHOP_APP: AppManifest = {
       permission: 'inventory.item.read',
       section: 'stock',
       order: 4,
+      tab: 'items',
     },
     // PAY-01 … PAY-05 — payments in and out, receipts, void.
     {

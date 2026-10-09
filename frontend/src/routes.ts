@@ -112,6 +112,8 @@ export const ROUTES = {
   // Reached from Settings only while an enabled module reads the calendar.
   SETTINGS_BUSINESS_DAYS: '/settings/business-days',
   SWITCH_TENANT: '/switch',
+  /** docs/mobile-redesign — the phone's More tab: every destination that is not a tab. */
+  MORE: '/more',
   /** IMP-01 — the import wizard; `?kind=` skips the kind picker (FR-14). */
   IMPORTS: '/imports',
 
@@ -275,6 +277,7 @@ export const APP_ROUTE_PREFIXES: readonly string[] = [
   ROUTES.REPORTS,
   ROUTES.SETTINGS,
   ROUTES.SWITCH_TENANT,
+  ROUTES.MORE,
   '/notifications',
   ROUTES.IMPORTS,
   // ── library ── F01 (and so in CRAWL_DISALLOW, which derives from this list).

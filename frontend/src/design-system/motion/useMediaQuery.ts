@@ -43,4 +43,16 @@ export const usePrefersReducedMotion = (): boolean => useMediaQuery(REDUCED_MOTI
  * before a single `<source>` exists, so only one variant is ever requested.
  */
 export const matchesNow = (query: string | undefined): boolean =>
-  !query || (typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia(query).matches);
+  !query ||
+  (typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia(query).matches);
+
+/**
+ * docs/mobile-redesign/06 §2 — the phone layer is everything below `lg`
+ * (1024 px), where the rail disappears. Components that would otherwise put a
+ * second copy of an action in the DOM (the floating button, the ⋯ sheet) render
+ * only while this matches, so a desktop document is unchanged and the server
+ * renders the desktop shape first.
+ */
+export const MOBILE_LAYER_QUERY = '(max-width: 1023.98px)';
+
+export const useIsMobileLayer = (): boolean => useMediaQuery(MOBILE_LAYER_QUERY);

@@ -51,6 +51,13 @@ export type { UbBoxProps } from './UbBox';
  */
 export { UbBottomBar } from './UbBottomBar';
 export type { UbBottomBarElement, UbBottomBarProps } from './UbBottomBar';
+// docs/mobile-redesign — the phone's navigation bar (below `lg`).
+export { UbBottomNav } from './UbBottomNav';
+export type { UbBottomNavItem, UbBottomNavProps } from './UbBottomNav';
+export { UbMenuList } from './UbMenuList';
+export { UbActionSheet, useUbActionPresentation } from './UbActionSheet';
+export type { UbActionPresentation, UbActionSheetProps } from './UbActionSheet';
+export type { UbMenuListProps, UbMenuListRow } from './UbMenuList';
 
 export { UbDivider } from './UbDivider';
 export type { UbDividerOrientation, UbDividerProps } from './UbDivider';
@@ -110,8 +117,8 @@ export type { UbEmptyStateProps, UbEmptyStateVariant } from './UbEmptyState';
 export { UbRequestId, formatRequestReference } from './UbRequestId';
 export type { UbRequestIdFields, UbRequestIdProps } from './UbRequestId';
 
-export { UbPageHeader } from './UbPageHeader';
-export type { UbPageHeaderProps, UbPageHeaderWidth } from './UbPageHeader';
+export { UbPageHeader, UbPageHeaderMobileActions } from './UbPageHeader';
+export type { UbPageHeaderMobile, UbPageHeaderProps, UbPageHeaderWidth } from './UbPageHeader';
 
 export { UbPageShell } from './UbPageShell';
 export type { UbPageShellProps, UbPageShellWidth } from './UbPageShell';
@@ -454,8 +461,10 @@ export { UbChipTabs } from './UbChipTabs';
 export type { UbChipTab, UbChipTabsProps } from './UbChipTabs';
 export {
   matchesNow,
+  MOBILE_LAYER_QUERY,
   REDUCED_MOTION_QUERY,
   useInView,
+  useIsMobileLayer,
   useMediaQuery,
   usePrefersReducedMotion,
 } from './motion';

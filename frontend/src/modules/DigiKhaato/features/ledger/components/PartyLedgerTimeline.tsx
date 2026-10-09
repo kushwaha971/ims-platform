@@ -342,7 +342,9 @@ function EntryRow({
   const isOpening = isOpeningEntry(entry);
 
   return (
-    <UbStack direction="row" justify="between" align="start" className="gap-3 py-3">
+    // `relative` so the row's menu button can stretch its tap target over the
+    // whole row on a phone (below) — the row is what a thumb aims at.
+    <UbStack direction="row" justify="between" align="start" className="gap-3 py-3 max-lg:relative">
       <UbStack gap={1} className="min-w-0 flex-1">
         {/* The title has the LINE TO ITSELF, and it wraps rather than truncates.
  
@@ -479,6 +481,10 @@ function EntryRow({
             iconOnly
             icon={<MoreHorizontal className="h-4 w-4" aria-hidden />}
             onClick={() => onOpenMenu(entry)}
+            /* docs/mobile-redesign — below `lg` the whole row opens the menu
+               (the button's ::after covers the row), so a merchant taps the
+               entry rather than hunting for a 24 px ⋯. One control, one name. */
+            className="max-lg:static max-lg:after:absolute max-lg:after:inset-0 max-lg:after:content-['']"
           >
             {t('ledger.correction.rowActions', { title: khataEntryTitle(entry, t) })}
           </UbButton>
