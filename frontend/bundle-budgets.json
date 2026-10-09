@@ -740,7 +740,8 @@
   "8 Oct 2026, Lending P0 papers: the loan page's statement, closure and receipt buttons and the lazy sheet's loader; the lending shell grew with the loan detail's lender mapping",
   "8 Oct 2026, LEN-09 late fees and waivers: the loan form's late-fee terms, the schedule rows' Late fee and Waive and the lazy dialog's loader; elsewhere +0.1-0.3 KB from two codenames and the lending invalidation entries in shared modules",
   "8 Oct 2026, LEN-10 write-off and cancel: the loan page's two buttons, the ended banner and the lazy dialog's loader",
-  "8 Oct 2026, Library P0 QR self check-in: the attendance page's Check-in QR button and the lazy poster dialog's loader; /in/[token] is the student's no-login page"
+  "8 Oct 2026, Library P0 QR self check-in: the attendance page's Check-in QR button and the lazy poster dialog's loader; /in/[token] is the student's no-login page",
+  "9 Oct 2026, Library P0 income & expenses: the new /library/money route, two library menu rows in the shared nav, and the Expenses header's app check"
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -1291,6 +1292,10 @@
   "firstLoad": 288
  },
  "routes": {
+  "/library/money": {
+   "route": 67,
+   "firstLoad": 302
+  },
   "/purchases/debit-notes/[id]": {
    "route": 63,
    "firstLoad": 299
@@ -1596,7 +1601,7 @@
    "firstLoad": 345
   },
   "/library/members": {
-   "route": 78,
+   "route": 79,
    "firstLoad": 314
   },
   "/library/members/[membershipId]": {
@@ -1604,7 +1609,7 @@
    "firstLoad": 308
   },
   "/library/catalogue/[titleId]": {
-   "route": 64,
+   "route": 65,
    "firstLoad": 300
   },
   "/library/catalogue/categories": {

@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react';
 import { Printer } from 'lucide-react';
 import { flushSync } from 'react-dom';
 
-
 import {
   UbBox,
   UbButton,

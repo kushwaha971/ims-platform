@@ -44,6 +44,8 @@ export const LIBRARY_PATHS = {
   ATTENDANCE: '/library/attendance',
   // Library P0 — the door's QR for self check-in.
   CHECKIN_POSTER: '/library/checkin-poster',
+  // Library P0 — the month's money: fees in, expenses out.
+  PROFIT: '/library/profit',
   ATTENDANCE_OUT: (id: string) => `/library/attendance/${seg(id)}/out`,
   MEMBER_ATTENDANCE: (id: string) => `/library/members/${seg(id)}/attendance`,
   MEMBER_MESSAGE: (id: string, kind: string) =>

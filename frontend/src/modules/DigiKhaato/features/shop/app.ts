@@ -54,7 +54,6 @@ export const SHOP_APP: AppManifest = {
     '/items',
     '/stock',
     '/purchases',
-    '/expenses',
     '/cashbook',
     '/ledger',
     '/reports',

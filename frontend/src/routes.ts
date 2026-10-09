@@ -136,6 +136,8 @@ export const ROUTES = {
   LIBRARY_ATTENDANCE: '/library/attendance',
   // W06 — today's fee messages, sent by hand like reminders.
   LIBRARY_MESSAGES: '/library/messages',
+  /** Library P0 — fees in, expenses out, what is left. */
+  LIBRARY_MONEY: '/library/money',
 
   // ── lending ── L02: the lending vertical's screens (FRD lending §0.2).
   LENDING_HOME: '/lending',

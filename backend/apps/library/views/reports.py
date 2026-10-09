@@ -87,3 +87,35 @@ class ReportPrintView(_View):
         data = rp.report_print(_report(name), get_effective_tenant(request), _params(request))
         meta = {key: data.pop(key) for key in ("count", "filters", "orientation")}
         return StandardResponse.ok(data, meta=meta)
+
+
+class ProfitView(_View):
+    """`GET /library/profit?from&to` — fees in, expenses out, what is left (Library P0).
+
+    The period defaults to this month so far; at most a year.
+    """
+
+    def get(self, request: Any) -> Any:
+        import datetime as dt
+
+        from apps.common.dates import tenant_today
+        from apps.common.exceptions import ValidationFailed
+        from apps.library.services.profit import profit
+
+        tenant = get_effective_tenant(request)
+        today = tenant_today(tenant)
+
+        def day(name: str, default: dt.date) -> dt.date:
+            raw = request.query_params.get(name)
+            if not raw:
+                return default
+            try:
+                return dt.date.fromisoformat(raw)
+            except ValueError as error:
+                raise ValidationFailed({name: ["Enter a date like 2026-10-01."]}) from error
+
+        start = day("from", today.replace(day=1))
+        end = day("to", today)
+        if end < start or (end - start).days > 366:
+            raise ValidationFailed({"to": ["Choose a period of up to a year."]})
+        return StandardResponse.ok(profit(tenant, start, end))

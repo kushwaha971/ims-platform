@@ -113,3 +113,28 @@ def list_categories(*, tenant: Any, include_archived: bool) -> QuerySet:
     return queryset.annotate(
         recent_uses=Coalesce(Subquery(usage, output_field=IntegerField()), Value(0))
     ).order_by("-recent_uses", "sort_order", "name", "id")
+
+
+def spend_by_category(tenant: Any, start: Any, end: Any) -> list[dict]:
+    """Recorded expenses dated in `[start, end]`, summed by category, largest first.
+
+    The spend seam's reader (`apps.common.seams.spend`): what a vertical's profit view
+    subtracts from what came in. A void expense was never spent.
+    """
+    from django.db.models import Sum
+
+    from apps.expenses.constants import ExpenseStatus
+    from apps.expenses.models import Expense
+
+    rows = (
+        Expense.objects.filter(
+            tenant=tenant,
+            status=ExpenseStatus.RECORDED,
+            expense_date__gte=start,
+            expense_date__lte=end,
+        )
+        .values("category__name")
+        .annotate(total=Sum("amount"))
+        .order_by("-total", "category__name")
+    )
+    return [{"category": row["category__name"], "amount": row["total"]} for row in rows]

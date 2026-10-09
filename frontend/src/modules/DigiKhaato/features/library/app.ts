@@ -5,9 +5,11 @@ import {
   IndianRupee,
   LayoutDashboard,
   MessageCircle,
+  Receipt,
   ScanLine,
   Settings,
   Users,
+  Wallet,
 } from 'lucide-react';
 
 import { ROUTES } from 'src/routes';
@@ -120,6 +122,31 @@ export const LIBRARY_APP: AppManifest = {
       permission: 'library.member.read',
       section: 'daily',
       order: 6,
+    },
+    {
+      // Library P0 — fees in, expenses out, what is left.
+      key: 'libraryMoney',
+      icon: Wallet,
+      labelId: 'nav.library.money',
+      href: ROUTES.LIBRARY_MONEY,
+      module: 'library',
+      permission: 'library.reports.read',
+      section: 'daily',
+      order: 7,
+    },
+    {
+      // Library P0 — the rent, the light bill, the wifi: the shared Expenses page,
+      // which keeps this app's menu (it is no longer the shop's alone).
+      key: 'libraryExpenses',
+      icon: Receipt,
+      labelId: 'nav.expenses',
+      href: ROUTES.EXPENSES,
+      // The library's row: shown while the library runs (every business has the
+      // expenses module), so a business without the library never lists this app.
+      module: 'library',
+      permission: 'expenses.expense.read',
+      section: 'daily',
+      order: 8,
     },
     {
       // F03 (LIB-02) — the library's first page. Shown only while the library

@@ -30,8 +30,10 @@ import {
   type UbDataGridLabels,
   type UbGridState,
 } from 'src/design-system/UbDataGrid';
+import { useAppSelector } from 'src/hooks/useAppStore';
 import { useDebounce } from 'src/hooks/useDebounce';
 import { useTranslation } from 'src/hooks/useTranslation';
+import { selectActiveApp } from 'src/redux/slice/sessionSlice';
 import { ROUTES } from 'src/routes';
 import { PAYMENT_MODES, type PaymentMode } from 'src/types/domain.types';
 import { formatInr } from 'src/utils/money';
@@ -74,6 +76,7 @@ const SEARCH_DEBOUNCE_MS = 300;
  * detail sheet, where a wrong expense is voided with a reason.
  */
 export function ExpensesPageContent(): React.JSX.Element {
+  const activeApp = useAppSelector(selectActiveApp);
   const { t } = useTranslation();
   const tier = useGridTier();
   const list = useExpenseList();
@@ -206,13 +209,17 @@ export function ExpensesPageContent(): React.JSX.Element {
         title={t('expenses.title')}
         actions={
           <>
-            <UbActionLink
-              href={ROUTES.CASHBOOK}
-              icon={<BookOpen className="h-4 w-4" aria-hidden />}
-              iconOnly="mobile"
-            >
-              {t('cashbook.title')}
-            </UbActionLink>
+            {/* Library P0 — Expenses is shared now; the cashbook is the shop's word and
+                the shop's screen, so another app's menu never offers it. */}
+            {(activeApp === null || activeApp === 'shop') && (
+              <UbActionLink
+                href={ROUTES.CASHBOOK}
+                icon={<BookOpen className="h-4 w-4" aria-hidden />}
+                iconOnly="mobile"
+              >
+                {t('cashbook.title')}
+              </UbActionLink>
+            )}
             {/* IMP-02 — this period and these filters, as a CSV. */}
             <ListExportButton
               listPath={expenseExportPath(list.filters)}

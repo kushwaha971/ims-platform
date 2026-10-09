@@ -224,6 +224,7 @@ urlpatterns: list = [
     path("home", hm.LibraryHomeView.as_view(), name="library-home"),
     # ── B15 ── reports (LIB-12 §6)
     path("reports", rpv.ReportIndexView.as_view(), name="library-reports"),
+    path("profit", rpv.ProfitView.as_view(), name="library-profit"),
     path("reports/<str:name>", rpv.ReportView.as_view(), name="library-report"),
     path("reports/<str:name>/print", rpv.ReportPrintView.as_view(), name="library-report-print"),
     # ── B16 ── document payloads (LIB-13 §6)

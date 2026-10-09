@@ -90,7 +90,7 @@ Compared with the reading-room products Indian exam-prep libraries use (TrackMyL
 | Online fee payment (UPI link/QR) | ✓ | ✓ | 8 Oct: fee reminders carry the pay page link (QR + "Pay by UPI"); "Pay the fee by UPI" QR on the student page. No gateway: money goes straight to the library's UPI ID |
 | Book counter (catalogue, issue/return, fines, holds, stock-take) | ✓ | ✗ | an advantage for libraries that lend books |
 | Home dashboard (occupancy, collections, dues) | ✓ | ✓ | |
-| Library expenses and profit (rent, electricity, salaries) | ✗ | ◐ | the Shop's expenses are not in the Library app |
+| Library expenses and profit (rent, electricity, salaries) | ✓ | ◐ | 9 Oct: Expenses in the Library menu; "Income & expenses" shows fees collected, expenses by category and what is left, this month / last month / this year |
 | Enquiries / leads and seat waitlist | ✗ | ◐ | |
 | Student app / portal | ✗ | ◐ | |
 | Multi-branch | ◐ | ◐ | separate businesses today; no combined view |

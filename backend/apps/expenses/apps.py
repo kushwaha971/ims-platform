@@ -29,3 +29,9 @@ class ExpensesConfig(AppConfig):
         register_posting_source(
             SourceType.EXPENSE, module="expenses", entry_types={EntryType.EXPENSE: Direction.CREDIT}
         )
+
+        # Library P0 — a vertical's profit view reads spend through the seam, never this app.
+        from apps.common.seams.spend import register_spend_reader
+        from apps.expenses.selectors.expense import spend_by_category
+
+        register_spend_reader(spend_by_category)
