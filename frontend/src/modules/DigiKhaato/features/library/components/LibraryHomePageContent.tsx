@@ -4,7 +4,14 @@ import { useEffect } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { Armchair, CalendarClock, CircleAlert, IndianRupee, UserPlus } from 'lucide-react';
+import {
+  Armchair,
+  CalendarClock,
+  CircleAlert,
+  IndianRupee,
+  ScanLine,
+  UserPlus,
+} from 'lucide-react';
 
 import { SummaryStatGrid } from 'src/components/stats/SummaryStatGrid';
 import {
@@ -23,6 +30,10 @@ import {
   UbStatCard,
   UbStatusBadge,
   UbText,
+  UbAttentionList,
+  UbHeroPair,
+  UbQuickActions,
+  useIsMobileLayer,
 } from 'src/design-system';
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { usePermissions } from 'src/hooks/usePermissions';
@@ -52,6 +63,7 @@ export function LibraryHomePageContent(): React.JSX.Element {
   const { can, hasModule } = usePermissions();
   const canRead = hasModule('library') && can('library.loan.read');
   const canAdmit = hasModule('library') && can('library.member.write');
+  const isMobileLayer = useIsMobileLayer();
 
   // Fresh on every visit. Found by looking: keying this effect on the status
   // aborted its own request the moment the status became 'loading', and an
@@ -123,32 +135,118 @@ export function LibraryHomePageContent(): React.JSX.Element {
         </UbText>
       ) : (
         <UbStack gap={5} data-testid="library-home">
-          <SummaryStatGrid storageKey="libraryHome">
-            <UbStatCard
-              icon={<CalendarClock className="h-4 w-4" aria-hidden />}
-              label={t('library.home.dueThisWeek')}
-              value={String(study.fees.dueThisWeek)}
-              onClick={() => router.push(`${students}?status=expiring`)}
-            />
-            <UbStatCard
-              icon={<CircleAlert className="h-4 w-4" aria-hidden />}
-              label={t('library.home.overdue')}
-              value={String(study.fees.overdue)}
-              tone={study.fees.overdue > 0 ? 'danger' : undefined}
-              onClick={() => router.push(`${students}?status=expired`)}
-            />
-            <UbStatCard
-              icon={<IndianRupee className="h-4 w-4" aria-hidden />}
-              label={t('library.home.unpaid')}
-              value={String(study.fees.unpaid)}
-              onClick={() => router.push(`${students}?hasDues=true`)}
-            />
-            <UbStatCard
-              icon={<IndianRupee className="h-4 w-4" aria-hidden />}
-              label={t('library.home.collected')}
-              value={formatInr(study.fees.collectedThisMonth)}
-            />
-          </SummaryStatGrid>
+          {/* docs/mobile-redesign (phase 7) — on a phone the day reads as the
+              Shop's Home does: the two fee figures, the shortcuts, and what
+              needs doing. A desktop keeps its tiles. */}
+          {isMobileLayer ? (
+            <UbStack gap={4} data-testid="library-home-mobile">
+              <UbHeroPair
+                figures={[
+                  {
+                    key: 'unpaid',
+                    label: t('library.home.unpaid'),
+                    value: String(study.fees.unpaid),
+                    href: `${students}?hasDues=true`,
+                    tone: study.fees.unpaid > 0 ? 'danger' : 'default',
+                  },
+                  {
+                    key: 'collected',
+                    label: t('library.home.collected'),
+                    value: formatInr(study.fees.collectedThisMonth),
+                    href: ROUTES.LIBRARY_FEES,
+                  },
+                ]}
+              />
+              <UbQuickActions
+                label={t('library.home.title')}
+                actions={[
+                  {
+                    key: 'counter',
+                    label: t('nav.library.counter'),
+                    icon: <ScanLine aria-hidden />,
+                    href: ROUTES.LIBRARY_COUNTER,
+                  },
+                  ...(canAdmit
+                    ? [
+                        {
+                          key: 'admit',
+                          label: t('library.members.add'),
+                          icon: <UserPlus aria-hidden />,
+                          href: `${students}?add=1`,
+                        },
+                      ]
+                    : []),
+                  {
+                    key: 'seats',
+                    label: t('library.home.openSeats'),
+                    icon: <Armchair aria-hidden />,
+                    href: ROUTES.LIBRARY_SEATS,
+                  },
+                  {
+                    key: 'fees',
+                    label: t('nav.library.fees'),
+                    icon: <IndianRupee aria-hidden />,
+                    href: ROUTES.LIBRARY_FEES,
+                  },
+                ]}
+              />
+              {(study.fees.overdue > 0 || study.fees.dueThisWeek > 0) && (
+                <UbAttentionList
+                  items={[
+                    ...(study.fees.overdue > 0
+                      ? [
+                          {
+                            key: 'overdue',
+                            title: `${t('library.home.overdue')} · ${study.fees.overdue}`,
+                            icon: <CircleAlert />,
+                            href: `${students}?status=expired`,
+                            tone: 'danger' as const,
+                          },
+                        ]
+                      : []),
+                    ...(study.fees.dueThisWeek > 0
+                      ? [
+                          {
+                            key: 'dueThisWeek',
+                            title: `${t('library.home.dueThisWeek')} · ${study.fees.dueThisWeek}`,
+                            icon: <CalendarClock />,
+                            href: `${students}?status=expiring`,
+                            tone: 'warning' as const,
+                          },
+                        ]
+                      : []),
+                  ]}
+                />
+              )}
+            </UbStack>
+          ) : (
+            <SummaryStatGrid storageKey="libraryHome">
+              <UbStatCard
+                icon={<CalendarClock className="h-4 w-4" aria-hidden />}
+                label={t('library.home.dueThisWeek')}
+                value={String(study.fees.dueThisWeek)}
+                onClick={() => router.push(`${students}?status=expiring`)}
+              />
+              <UbStatCard
+                icon={<CircleAlert className="h-4 w-4" aria-hidden />}
+                label={t('library.home.overdue')}
+                value={String(study.fees.overdue)}
+                tone={study.fees.overdue > 0 ? 'danger' : undefined}
+                onClick={() => router.push(`${students}?status=expired`)}
+              />
+              <UbStatCard
+                icon={<IndianRupee className="h-4 w-4" aria-hidden />}
+                label={t('library.home.unpaid')}
+                value={String(study.fees.unpaid)}
+                onClick={() => router.push(`${students}?hasDues=true`)}
+              />
+              <UbStatCard
+                icon={<IndianRupee className="h-4 w-4" aria-hidden />}
+                label={t('library.home.collected')}
+                value={formatInr(study.fees.collectedThisMonth)}
+              />
+            </SummaryStatGrid>
+          )}
 
           <UbCard padded>
             <UbStack gap={3} data-testid="library-home-shifts">

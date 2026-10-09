@@ -95,6 +95,7 @@
   "purchases.editor.intraState": "Supplier in your state — CGST + SGST",
   "purchases.editor.itc": "Input tax credit",
   "purchases.editor.itcHint": "Off when you cannot claim this bill's GST — it then counts in the cost",
+  "purchases.editor.moreDetails": "More details",
   "purchases.editor.newTitle": "New purchase bill",
   "purchases.editor.notes": "Notes",
   "purchases.editor.notesPlaceholder": "e.g. Delivered by Ramu, 2 bags short",

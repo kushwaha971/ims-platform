@@ -4,6 +4,7 @@ import { type UseFormReturn } from 'react-hook-form';
 
 import {
   UbDateInput,
+  UbDisclosure,
   UbField,
   UbGrid,
   UbLink,
@@ -11,6 +12,7 @@ import {
   UbSwitch,
   UbText,
   UbTextInput,
+  useIsMobileLayer,
 } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { ROUTES } from 'src/routes';
@@ -53,6 +55,7 @@ export function PurchaseBillHeaderSection({
   order?: boolean;
 }>): React.JSX.Element {
   const { t } = useTranslation();
+  const isMobileLayer = useIsMobileLayer();
   const { watch, setValue } = form;
   const partyName = watch('partyName');
   const partyId = watch('partyId');
@@ -89,118 +92,140 @@ export function PurchaseBillHeaderSection({
           />
         )}
       </UbField>
-      <UbGrid columns={{ base: 1, sm: 2 }} gap={3}>
-        {!order && (
+      {/* docs/mobile-redesign (A14) — on a phone the supplier's invoice number,
+          the dates and the tax switches fold under one line that says what
+          they hold, so the items come first. A desktop renders them as before. */}
+      {(() => {
+        const details = (
           <>
-            <UbStack gap={1}>
+            <UbGrid columns={{ base: 1, sm: 2 }} gap={3}>
+              {!order && (
+                <>
+                  <UbStack gap={1}>
+                    <UbField
+                      name="supplierInvoiceNumber"
+                      label={t('purchases.editor.supplierInvoice')}
+                      placeholder={t('purchases.editor.supplierInvoicePlaceholder')}
+                    >
+                      {(field) => (
+                        <UbTextInput
+                          {...field}
+                          maxLength={SUPPLIER_INVOICE_MAX}
+                          autoComplete="off"
+                          disabled={disabled}
+                          onBlur={() => {
+                            field.onBlur();
+                            onInvoiceNumberBlur();
+                          }}
+                        />
+                      )}
+                    </UbField>
+                    {duplicate && (
+                      <UbText
+                        variant="caption"
+                        tone="warning"
+                        role="status"
+                        data-testid="duplicate-warning"
+                      >
+                        {t('purchases.editor.duplicate', {
+                          number: duplicate.number,
+                          date: formatBusinessDate(duplicate.documentDate),
+                        })}{' '}
+                        <UbLink href={`${ROUTES.PURCHASE_BILLS}/${duplicate.id}`} variant="caption">
+                          {t('purchases.editor.duplicateOpen')}
+                        </UbLink>
+                      </UbText>
+                    )}
+                  </UbStack>
+                  <UbField
+                    name="supplierInvoiceDate"
+                    label={t('purchases.editor.supplierInvoiceDate')}
+                    placeholder={t('purchases.editor.datePlaceholder')}
+                  >
+                    {(field) => (
+                      <UbDateInput
+                        id={field.id}
+                        value={(field.value as string) || null}
+                        onChange={(next) => field.onChange(next ?? '')}
+                        max={today}
+                        placeholder={field.placeholder}
+                        disabled={disabled}
+                      />
+                    )}
+                  </UbField>
+                </>
+              )}
               <UbField
-                name="supplierInvoiceNumber"
-                label={t('purchases.editor.supplierInvoice')}
-                placeholder={t('purchases.editor.supplierInvoicePlaceholder')}
+                name="documentDate"
+                label={t(order ? 'purchases.order.date' : 'purchases.editor.billDate')}
               >
                 {(field) => (
-                  <UbTextInput
-                    {...field}
-                    maxLength={SUPPLIER_INVOICE_MAX}
-                    autoComplete="off"
+                  <UbDateInput
+                    id={field.id}
+                    value={field.value as string}
+                    onChange={(next) => field.onChange(next ?? today)}
+                    max={today}
                     disabled={disabled}
-                    onBlur={() => {
-                      field.onBlur();
-                      onInvoiceNumberBlur();
-                    }}
                   />
                 )}
               </UbField>
-              {duplicate && (
-                <UbText
-                  variant="caption"
-                  tone="warning"
-                  role="status"
-                  data-testid="duplicate-warning"
-                >
-                  {t('purchases.editor.duplicate', {
-                    number: duplicate.number,
-                    date: formatBusinessDate(duplicate.documentDate),
-                  })}{' '}
-                  <UbLink href={`${ROUTES.PURCHASE_BILLS}/${duplicate.id}`} variant="caption">
-                    {t('purchases.editor.duplicateOpen')}
-                  </UbLink>
-                </UbText>
-              )}
-            </UbStack>
-            <UbField
-              name="supplierInvoiceDate"
-              label={t('purchases.editor.supplierInvoiceDate')}
-              placeholder={t('purchases.editor.datePlaceholder')}
-            >
-              {(field) => (
-                <UbDateInput
-                  id={field.id}
-                  value={(field.value as string) || null}
-                  onChange={(next) => field.onChange(next ?? '')}
-                  max={today}
-                  placeholder={field.placeholder}
+              <UbField
+                name="dueOn"
+                label={t(order ? 'purchases.order.expectedBy' : 'purchases.editor.dueOn')}
+                placeholder={t('purchases.editor.datePlaceholder')}
+                hint={dueHint}
+              >
+                {(field) => (
+                  <UbDateInput
+                    id={field.id}
+                    value={(field.value as string) || null}
+                    onChange={(next) => field.onChange(next ?? '')}
+                    min={documentDate}
+                    placeholder={field.placeholder}
+                    disabled={disabled}
+                  />
+                )}
+              </UbField>
+            </UbGrid>
+            <UbGrid columns={{ base: 1, sm: 2 }} gap={3}>
+              {regular && !order && (
+                <UbSwitch
+                  checked={itcEligible}
+                  onCheckedChange={(checked) =>
+                    setValue('itcEligible', checked, { shouldDirty: true })
+                  }
+                  label={t('purchases.editor.itc')}
+                  description={t('purchases.editor.itcHint')}
                   disabled={disabled}
                 />
               )}
-            </UbField>
+              <UbSwitch
+                checked={reverseCharge}
+                onCheckedChange={(checked) =>
+                  setValue('reverseCharge', checked, { shouldDirty: true })
+                }
+                label={t('purchases.editor.reverseCharge')}
+                description={t('purchases.editor.reverseChargeHint')}
+                disabled={disabled}
+              />
+            </UbGrid>
+            {partyId && (
+              <UbText variant="caption" tone="tertiary">
+                {interState ? t('purchases.editor.interState') : t('purchases.editor.intraState')}
+              </UbText>
+            )}
           </>
-        )}
-        <UbField
-          name="documentDate"
-          label={t(order ? 'purchases.order.date' : 'purchases.editor.billDate')}
-        >
-          {(field) => (
-            <UbDateInput
-              id={field.id}
-              value={field.value as string}
-              onChange={(next) => field.onChange(next ?? today)}
-              max={today}
-              disabled={disabled}
-            />
-          )}
-        </UbField>
-        <UbField
-          name="dueOn"
-          label={t(order ? 'purchases.order.expectedBy' : 'purchases.editor.dueOn')}
-          placeholder={t('purchases.editor.datePlaceholder')}
-          hint={dueHint}
-        >
-          {(field) => (
-            <UbDateInput
-              id={field.id}
-              value={(field.value as string) || null}
-              onChange={(next) => field.onChange(next ?? '')}
-              min={documentDate}
-              placeholder={field.placeholder}
-              disabled={disabled}
-            />
-          )}
-        </UbField>
-      </UbGrid>
-      <UbGrid columns={{ base: 1, sm: 2 }} gap={3}>
-        {regular && !order && (
-          <UbSwitch
-            checked={itcEligible}
-            onCheckedChange={(checked) => setValue('itcEligible', checked, { shouldDirty: true })}
-            label={t('purchases.editor.itc')}
-            description={t('purchases.editor.itcHint')}
-            disabled={disabled}
-          />
-        )}
-        <UbSwitch
-          checked={reverseCharge}
-          onCheckedChange={(checked) => setValue('reverseCharge', checked, { shouldDirty: true })}
-          label={t('purchases.editor.reverseCharge')}
-          description={t('purchases.editor.reverseChargeHint')}
-          disabled={disabled}
-        />
-      </UbGrid>
-      {partyId && (
-        <UbText variant="caption" tone="tertiary">
-          {interState ? t('purchases.editor.interState') : t('purchases.editor.intraState')}
-        </UbText>
-      )}
+        );
+        if (!isMobileLayer) return details;
+        return (
+          <UbDisclosure
+            label={t('purchases.editor.moreDetails')}
+            hint={formatBusinessDate(documentDate)}
+          >
+            <UbStack gap={3}>{details}</UbStack>
+          </UbDisclosure>
+        );
+      })()}
     </UbStack>
   );
 }

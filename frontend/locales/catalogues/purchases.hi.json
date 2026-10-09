@@ -95,6 +95,7 @@
   "purchases.editor.intraState": "सप्लायर आपके राज्य में — CGST + SGST",
   "purchases.editor.itc": "इनपुट टैक्स क्रेडिट",
   "purchases.editor.itcHint": "बंद करें अगर इस बिल का GST क्लेम नहीं होगा — तब वह लागत में जुड़ेगा",
+  "purchases.editor.moreDetails": "और जानकारी",
   "purchases.editor.newTitle": "नया खरीद बिल",
   "purchases.editor.notes": "नोट",
   "purchases.editor.notesPlaceholder": "जैसे रामू ने पहुँचाया, 2 बोरी कम",

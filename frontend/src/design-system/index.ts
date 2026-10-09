@@ -56,6 +56,8 @@ export { UbBottomNav } from './UbBottomNav';
 export type { UbBottomNavItem, UbBottomNavProps } from './UbBottomNav';
 export { UbMenuList } from './UbMenuList';
 export { UbTotalDock } from './UbTotalDock';
+export { UbAttentionList, UbHeroPair, UbMiniStatStrip, UbQuickActions } from './UbHomeBlocks';
+export type { UbAttentionItem, UbHeroFigure, UbMiniStat, UbQuickAction } from './UbHomeBlocks';
 export type { UbTotalDockProps } from './UbTotalDock';
 export { UbActionSheet, useUbActionPresentation } from './UbActionSheet';
 export type { UbActionPresentation, UbActionSheetProps } from './UbActionSheet';

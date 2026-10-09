@@ -122,6 +122,8 @@
   "reports.dashboard.lowStock.status.low": "कम",
   "reports.dashboard.lowStock.status.out": "स्टॉक खत्म",
   "reports.dashboard.lowStock.title": "कम होता स्टॉक",
+  "reports.dashboard.mobile.attention": "ध्यान दें",
+  "reports.dashboard.mobile.today": "आज",
   "reports.dashboard.quick.label": "जल्दी के काम",
   "reports.dashboard.quick.newBill": "नया बिल",
   "reports.dashboard.quick.newPurchase": "नई खरीद",

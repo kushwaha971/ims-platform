@@ -122,6 +122,8 @@
   "reports.dashboard.lowStock.status.low": "Low",
   "reports.dashboard.lowStock.status.out": "Out of stock",
   "reports.dashboard.lowStock.title": "Running low",
+  "reports.dashboard.mobile.attention": "Needs attention",
+  "reports.dashboard.mobile.today": "Today",
   "reports.dashboard.quick.label": "Quick actions",
   "reports.dashboard.quick.newBill": "New bill",
   "reports.dashboard.quick.newPurchase": "New purchase",

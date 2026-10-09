@@ -15,6 +15,7 @@ import {
   UbPageShell,
   UbPageSkeleton,
   UbStack,
+  useIsMobileLayer,
 } from 'src/design-system';
 import { usePermissions } from 'src/hooks/usePermissions';
 import { useTranslation, type TranslateFn } from 'src/hooks/useTranslation';
@@ -32,6 +33,7 @@ import {
   RecentActivityList,
   TopDebtorsCard,
 } from './DashboardLists';
+import { DashboardMobileSummary } from './DashboardMobileSummary';
 import { DashboardModuleSections } from './DashboardModuleSections';
 import { DashboardTiles } from './DashboardTiles';
 import { ReportStateBody } from './ReportStateBody';
@@ -72,6 +74,7 @@ export function DashboardPageContent(): React.JSX.Element {
   const router = useRouter();
   const { can, hasModule } = usePermissions();
   const dash = useDashboard();
+  const isMobileLayer = useIsMobileLayer();
   const landing = useLandingPath();
   const { app } = useNavigation();
 
@@ -128,50 +131,61 @@ export function DashboardPageContent(): React.JSX.Element {
         >
           {data && (
             <UbStack gap={4}>
-              {(canBill || canBuy || canRemind) && (
-                <UbStack
-                  direction="row"
-                  // QA R-D4 — the chips wrap on a phone rather than scrolling
-                  // "Send reminders" half off the edge of a 390 px screen.
-                  // 16 px between wrapped rows on a phone: each 28 px action's
-                  // 44 px hit area (`.ub-hit`) overhangs 8 px above and below,
-                  // and at 8 px the second row covered the first (Sprint 12).
-                  className="flex-wrap gap-2 max-sm:gap-y-4"
-                  aria-label={t('reports.dashboard.quick.label')}
-                  role="group"
-                >
-                  {canBill && (
-                    <UbActionLink
-                      href={`${ROUTES.SALES_INVOICES}/new`}
-                      variant="primary"
-                      size="sm"
-                      icon={<FilePlus className="h-4 w-4" aria-hidden />}
-                    >
-                      {t('reports.dashboard.quick.newBill')}
-                    </UbActionLink>
-                  )}
-                  {canBuy && (
-                    <UbActionLink
-                      href={`${ROUTES.PURCHASE_BILLS}/new`}
-                      variant="secondary"
-                      size="sm"
-                      icon={<ShoppingCart className="h-4 w-4" aria-hidden />}
-                    >
-                      {t('reports.dashboard.quick.newPurchase')}
-                    </UbActionLink>
-                  )}
-                  {canRemind && (
-                    <UbActionLink
-                      href={ROUTES.LEDGER_REMINDERS}
-                      variant="secondary"
-                      size="sm"
-                      icon={<BellRing className="h-4 w-4" aria-hidden />}
-                    >
-                      {t('reports.dashboard.quick.remind')}
-                    </UbActionLink>
-                  )}
-                </UbStack>
+              {/* docs/mobile-redesign (A7, A8) — the phone's top of Home. */}
+              {isMobileLayer && !isFirstUse(data.firstUse) && (
+                <DashboardMobileSummary
+                  tiles={data.tiles}
+                  t={t}
+                  canBill={canBill}
+                  canBuy={canBuy}
+                  canRemind={canRemind}
+                />
               )}
+              {(canBill || canBuy || canRemind) &&
+                !(isMobileLayer && !isFirstUse(data.firstUse)) && (
+                  <UbStack
+                    direction="row"
+                    // QA R-D4 — the chips wrap on a phone rather than scrolling
+                    // "Send reminders" half off the edge of a 390 px screen.
+                    // 16 px between wrapped rows on a phone: each 28 px action's
+                    // 44 px hit area (`.ub-hit`) overhangs 8 px above and below,
+                    // and at 8 px the second row covered the first (Sprint 12).
+                    className="flex-wrap gap-2 max-sm:gap-y-4"
+                    aria-label={t('reports.dashboard.quick.label')}
+                    role="group"
+                  >
+                    {canBill && (
+                      <UbActionLink
+                        href={`${ROUTES.SALES_INVOICES}/new`}
+                        variant="primary"
+                        size="sm"
+                        icon={<FilePlus className="h-4 w-4" aria-hidden />}
+                      >
+                        {t('reports.dashboard.quick.newBill')}
+                      </UbActionLink>
+                    )}
+                    {canBuy && (
+                      <UbActionLink
+                        href={`${ROUTES.PURCHASE_BILLS}/new`}
+                        variant="secondary"
+                        size="sm"
+                        icon={<ShoppingCart className="h-4 w-4" aria-hidden />}
+                      >
+                        {t('reports.dashboard.quick.newPurchase')}
+                      </UbActionLink>
+                    )}
+                    {canRemind && (
+                      <UbActionLink
+                        href={ROUTES.LEDGER_REMINDERS}
+                        variant="secondary"
+                        size="sm"
+                        icon={<BellRing className="h-4 w-4" aria-hidden />}
+                      >
+                        {t('reports.dashboard.quick.remind')}
+                      </UbActionLink>
+                    )}
+                  </UbStack>
+                )}
 
               {isFirstUse(data.firstUse) ? (
                 <FirstUseChecklist
@@ -186,7 +200,7 @@ export function DashboardPageContent(): React.JSX.Element {
                 />
               ) : (
                 <>
-                  <DashboardTiles tiles={data.tiles} t={t} />
+                  {!isMobileLayer && <DashboardTiles tiles={data.tiles} t={t} />}
                   <DashboardChartsLazy refreshKey={data.generatedAt} />
                 </>
               )}
