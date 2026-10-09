@@ -91,9 +91,16 @@ function UbStatGridBase({ children, live, label, collapse, className }: Readonly
     </div>
   );
   if (!collapse) return grid;
+  const items = summaryOf(children, collapse.limit ?? 4);
+  // Nothing to summarise means the children are not figures yet — the loading
+  // skeletons. A collapsed summary of them was an empty line with only
+  // "Details" in it, so a slow list showed no sign its totals were coming
+  // (sprint-3 B1 on a phone). Show the shimmering cards until there are
+  // figures, then the summary line.
+  if (items.length === 0) return grid;
   return (
     <UbStatSummary
-      items={summaryOf(children, collapse.limit ?? 4)}
+      items={items}
       storageKey={collapse.storageKey}
       labels={collapse.labels}
     >

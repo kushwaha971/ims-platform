@@ -580,7 +580,9 @@ const LIST_OBSERVER = () => {
   window.__qa = { stats: [], zeroSeen: [], statSkeleton: 0, rowSkeletonMax: 0, seq: [], t0: performance.now() };
   const scan = () => {
     const q = window.__qa;
-    const grid = document.querySelector('[data-testid="ub-stat-grid"]');
+    // The figures are cards when open and a summary line when collapsed (the
+    // default); read whichever is on screen.
+    const grid = document.querySelector('[data-testid="ub-stat-grid"]') ?? document.querySelector('[data-testid="stat-summary"]');
     if (grid) {
       const text = grid.innerText.replace(/\s+/g, ' ').trim();
       if (q.stats[q.stats.length - 1] !== text) q.stats.push(text);
@@ -688,7 +690,13 @@ async function listStatesFor(browser, state, size) {
     await route.continue();
   });
   const before = await partyNamesOnScreen(page);
-  await page.getByRole('button', { name: /^Owes me/ }).first().click();
+  // The balance chips became a filter select (owner, 6 Oct 2026): open it and
+  // pick the option, which issues the same request the chip did.
+  const pickBalance = async (option) => {
+    await page.getByRole('button', { name: /^Balance/ }).filter({ visible: true }).first().click();
+    await page.getByRole('option', { name: option }).filter({ visible: true }).first().click();
+  };
+  await pickBalance(/^Owes me/);
   await page.waitForTimeout(900);
   const busyBar = await page.locator('[data-testid="ub-grid-busy"]').count();
   const dim = await page.evaluate(() => {
@@ -704,7 +712,7 @@ async function listStatesFor(browser, state, size) {
   record('B2', `${tag}: then the filtered rows replace them (no payable/settled party left)`,
     after.includes('Ramesh Traders') && !after.includes('Mahesh Suppliers') && !after.includes('Suresh Settled Stores') && (await page.locator('[data-testid="ub-grid-busy"]').count()) === 0, JSON.stringify(after));
   await page.unroute(/\/api\/v1\/parties\?.*balance=owes_me/);
-  await page.getByRole('button', { name: /^Owes me/ }).first().click(); // back to everyone
+  await pickBalance(/^(All|Any)/); // back to everyone
   await page.getByText('Mahesh Suppliers').first().waitFor({ timeout: 30000 });
   await page.waitForTimeout(1000);
 
@@ -724,7 +732,7 @@ async function listStatesFor(browser, state, size) {
   await page.waitForTimeout(800);
   const staleBanner = await page.getByText('Showing saved list').count();
   const staleRows = await partyNamesOnScreen(page);
-  const staleTiles = await page.locator('[data-testid="ub-stat-grid"]').count();
+  const staleTiles = await page.locator('[data-testid="ub-stat-grid"], [data-testid="stat-summary"]').count();
   await page.screenshot({ path: shotPath(tag, 'B5-stale-saved-list') });
   record('B5', `${tag}: a failed same-query refresh was actually attempted (GET /parties aborted)`, blocked > 0, `blocked GETs=${blocked}`);
   record('B5', `${tag}: rows stay under the "Showing saved list" banner`, staleBanner > 0 && staleRows.length >= 10, `banner=${staleBanner} rows=${staleRows.length}`);
@@ -733,16 +741,17 @@ async function listStatesFor(browser, state, size) {
 
   // different query while still blocked → full error state
   const errBefore = blocked;
-  await page.getByRole('button', { name: /^I owe/ }).first().click();
+  await pickBalance(/^I owe/);
   await page.getByText('We could not load your customers').first().waitFor({ timeout: 30000 }).catch(() => {});
   await page.waitForTimeout(800);
   const errText = await page.locator('[data-testid="ub-grid"]').innerText().catch(() => '');
   const errRows = await partyNamesOnScreen(page);
-  const errTiles = await page.locator('[data-testid="ub-stat-grid"]').count();
+  const errTiles = await page.locator('[data-testid="ub-stat-grid"], [data-testid="stat-summary"]').count();
   const errBanner = await page.getByText('Showing saved list').count();
   await page.screenshot({ path: shotPath(tag, 'B5-error-different-query') });
   record('B5', `${tag}: a DIFFERENT query while blocked shows the full error state`, errText.includes('We could not load your customers') && blocked > errBefore, errText.replace(/\n/g, ' | ').slice(0, 200));
-  record('B5', `${tag}: the error carries a request id (Reference …)`, /Reference\s*[:·]?\s*\S{6,}/.test(errText), errText.replace(/\n/g, ' | ').slice(0, 300));
+  // Owner, 7 Oct 2026: no error shows a "Reference <id>" line any more.
+  record('B5', `${tag}: the error shows no "Reference" line (owner, 7 Oct)`, !/Reference/.test(errText), errText.replace(/\n/g, ' | ').slice(0, 300));
   record('B5', `${tag}: no tiles, no saved rows and no stale banner in the error state`, errTiles === 0 && errRows.length === 0 && errBanner === 0, `tiles=${errTiles} rows=${errRows.length} banner=${errBanner}`);
   record('B7', `${tag}: error state fits the viewport`, (await overflowPx(page)) <= 0, `overflow ${await overflowPx(page)}px`);
 
@@ -755,13 +764,13 @@ async function listStatesFor(browser, state, size) {
   await page.waitForTimeout(1000);
   const recovered = await partyNamesOnScreen(page);
   record('B5', `${tag}: Try again re-sends the SAME (I owe) query and recovers`,
-    Boolean(rq) && /balance=i_owe/.test(rq.url()) && recovered.includes('Mahesh Suppliers') && !recovered.includes('Ramesh Traders') && (await page.getByText('We could not load your customers').count()) === 0 && (await page.locator('[data-testid="ub-stat-grid"]').count()) === 1,
+    Boolean(rq) && /balance=i_owe/.test(rq.url()) && recovered.includes('Mahesh Suppliers') && !recovered.includes('Ramesh Traders') && (await page.getByText('We could not load your customers').count()) === 0 && (await page.locator('[data-testid="ub-stat-grid"], [data-testid="stat-summary"]').count()) === 1,
     `${rq?.url().split('/api/v1')[1]} → ${JSON.stringify(recovered)}`);
   await page.screenshot({ path: shotPath(tag, 'B5-recovered') });
   if (size.id === 'desktop') {
     // Control for B6: the OWNER's selection bar does carry Archive, so its
     // absence for the accountant is about the role and not the bar.
-    await page.getByRole('button', { name: /^I owe/ }).first().click();
+    await pickBalance(/^(All|Any)/);
     await page.getByText('Ramesh Traders').first().waitFor({ timeout: 30000 });
     await page.waitForTimeout(800);
     const boxes = page.locator('[data-testid="ub-grid"] [role="checkbox"]');
@@ -776,12 +785,16 @@ async function listStatesFor(browser, state, size) {
     ? route.fulfill({ status: 500, contentType: 'application/json', headers: { 'X-Request-Id': 'qa-req-5f2e9a71', 'Access-Control-Allow-Origin': FRONTEND, 'Access-Control-Allow-Credentials': 'true', 'Access-Control-Expose-Headers': 'X-Request-Id' }, body: JSON.stringify({ success: false, error: { code: 'server_error', message: 'Something went wrong on our side.', request_id: 'qa-req-5f2e9a71' } }) })
     : route.continue();
   await page.route(listUrl, serverErr);
-  await page.getByRole('button', { name: /^Settled/ }).first().click();
+  // The desktop control above left two rows ticked; the selection bar replaces
+  // the toolbar (and its Balance filter) until it is cleared.
+  await page.getByRole('button', { name: /^Clear selection/ }).first().click({ timeout: 2000 }).catch(() => {});
+  await pickBalance(/^Settled/);
   await page.getByText('We could not load your customers').first().waitFor({ timeout: 30000 }).catch(() => {});
   await page.waitForTimeout(800);
   const err500 = await page.locator('[data-testid="ub-grid"]').innerText().catch(() => '');
   await page.screenshot({ path: shotPath(tag, 'B5-error-server-500') });
-  record('B5', `${tag}: control — a SERVER error (500 + X-Request-Id) does show the reference`, err500.includes('qa-req-5f2e9a71'), err500.replace(/\n/g, ' | ').slice(0, 300));
+  // Owner, 7 Oct 2026: a server error does not print its request id either.
+  record('B5', `${tag}: a SERVER error (500 + X-Request-Id) shows the error, not the request id (owner, 7 Oct)`, err500.includes('We could not load your customers') && !err500.includes('qa-req-5f2e9a71'), err500.replace(/\n/g, ' | ').slice(0, 300));
   await page.unroute(listUrl, serverErr);
   await ctx.close();
 }
