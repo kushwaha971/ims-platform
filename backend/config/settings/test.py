@@ -37,6 +37,7 @@ DATABASES["default"]["TEST"] = {  # noqa: F405
 # the owner's Message Central credentials live, so without this every OTP test
 # would text a made-up number on a paid account. Tests of the Message Central
 # service set the credentials themselves and stub the network.
+FAST2SMS_API_KEY = ""
 MC_CUSTOMER_ID = ""
 MC_PASSWORD = ""
 UB_OTP_PROVIDER = "console"

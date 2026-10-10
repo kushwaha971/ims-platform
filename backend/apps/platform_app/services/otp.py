@@ -40,7 +40,7 @@ from django.utils import timezone
 from apps.common.audit import AuditAction, write_audit
 from apps.common.exceptions import BusinessRuleViolation
 from apps.platform_app.constants import OtpPurpose
-from apps.platform_app.services import message_central, throttle
+from apps.platform_app.services import fast2sms, message_central, throttle
 
 # Message Central's default length; the console provider matches it.
 CODE_LENGTH = 4
@@ -82,17 +82,21 @@ class OtpNotSent(BusinessRuleViolation):
     """502 `provider_error` — the code could not be sent, or could not be checked."""
 
     def __init__(
-        self, message: str = "We couldn't send the code right now. Please try again in a few minutes."
+        self,
+        message: str = "We couldn't send the code right now. Please try again in a few minutes.",
     ) -> None:
         super().__init__("provider_error", message)
 
 
 PROVIDER_MESSAGE_CENTRAL = "message_central"
 PROVIDER_CONSOLE = "console"
+PROVIDER_FAST2SMS = "fast2sms"
 
 
 def _provider() -> str:
-    """`message_central` only when it is asked for AND its credentials are set."""
+    """Fast2SMS is explicit and fails closed when its credentials are absent."""
+    if getattr(settings, "UB_OTP_PROVIDER", PROVIDER_CONSOLE) == PROVIDER_FAST2SMS:
+        return PROVIDER_FAST2SMS
     if (
         getattr(settings, "UB_OTP_PROVIDER", PROVIDER_CONSOLE) == PROVIDER_MESSAGE_CENTRAL
         and message_central.is_configured()
@@ -181,10 +185,13 @@ def request_otp(
     """Create a challenge and dispatch the code. Never reveals whether the mobile exists."""
     from apps.platform_app.models import OtpChallenge
 
+    if _provider() == PROVIDER_FAST2SMS and purpose not in (OtpPurpose.LOGIN, OtpPurpose.SIGNUP):
+        raise OtpNotSent("SMS OTP is available only for sign-in and sign-up.")
     _assert_not_throttled(mobile=mobile, ip=ip)
 
     ttl = int(settings.UB_OTP_TTL_SECONDS)
-    via_message_central = _provider() == PROVIDER_MESSAGE_CENTRAL
+    provider = _provider()
+    via_message_central = provider == PROVIDER_MESSAGE_CENTRAL
     code = "" if via_message_central else generate_code()
 
     with transaction.atomic():
@@ -213,13 +220,20 @@ def request_otp(
             OtpChallenge.objects.filter(pk=challenge.pk).update(
                 provider_verification_id=verification_id
             )
+        elif provider == PROVIDER_FAST2SMS:
+            fast2sms.send_otp(mobile, code)
         else:
             _send_console_code(
-                mobile=mobile, code=code, ttl=ttl, locale=locale, purpose=purpose, challenge=challenge
+                mobile=mobile,
+                code=code,
+                ttl=ttl,
+                locale=locale,
+                purpose=purpose,
+                challenge=challenge,
             )
-    except message_central.MessageCentralError as exc:
+    except (message_central.MessageCentralError, fast2sms.Fast2SmsError) as exc:
         OtpChallenge.objects.filter(pk=challenge.pk).update(expires_at=timezone.now())
-        if exc.code == message_central.REQUEST_ALREADY_EXISTS:
+        if getattr(exc, "code", None) == message_central.REQUEST_ALREADY_EXISTS:
             # They hold their own 60-second gap; ours matches it, so this is a
             # race or a clock difference. Same answer as our own throttle.
             raise OtpThrottled(RESEND_AFTER_SECONDS) from exc

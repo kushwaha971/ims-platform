@@ -38,6 +38,7 @@ x-backend-env: &backend-env
   UB_CSRF_TRUSTED_ORIGINS: ${UB_CSRF_TRUSTED_ORIGINS:-http://localhost:3000}
   UB_SMS_BACKEND: ${UB_SMS_BACKEND:-}
   # Message Central VerifyNow (sign-in OTP). Empty prints the code in the log.
+  FAST2SMS_API_KEY: ${FAST2SMS_API_KEY:-}
   MC_CUSTOMER_ID: ${MC_CUSTOMER_ID:-}
   MC_PASSWORD: ${MC_PASSWORD:-}
   UB_OTP_PROVIDER: ${UB_OTP_PROVIDER:-}

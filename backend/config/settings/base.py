@@ -356,6 +356,7 @@ UB_SCHEDULER_ENQUEUE_LOCK_ID = env.int("UB_SCHEDULER_ENQUEUE_LOCK_ID", 918273645
 # the sign-in OTP. Credentials come from the environment only and never leave
 # Django. `MC_*` are the names Message Central's own guides use, so they are
 # not `UB_`-prefixed.
+FAST2SMS_API_KEY = env.str("FAST2SMS_API_KEY", "")
 MC_CUSTOMER_ID = env.str("MC_CUSTOMER_ID", "")
 MC_PASSWORD = env.str("MC_PASSWORD", "")
 # `cpaas` is the host their API page documents. The brief this was built from
@@ -367,7 +368,9 @@ MC_BASE_URL = env.str("MC_BASE_URL", "https://cpaas.messagecentral.com")
 # which is how a local run, the test suite and the e2e harnesses sign in
 # without texting anybody. Set it explicitly only to force `console`.
 UB_OTP_PROVIDER = env.str("UB_OTP_PROVIDER", "") or (
-    "message_central" if MC_CUSTOMER_ID and MC_PASSWORD else "console"
+    "fast2sms"
+    if FAST2SMS_API_KEY
+    else ("message_central" if MC_CUSTOMER_ID and MC_PASSWORD else "console")
 )
 # Reminders and other texts are adapter-only (ADR-015): the console backend
 # until a provider is chosen for them. The sign-in OTP does not go through it.

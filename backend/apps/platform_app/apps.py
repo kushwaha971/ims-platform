@@ -86,7 +86,7 @@ def check_console_sms_backend(app_configs: object = None, **kwargs: object) -> l
         Error(
             "The OTP provider is the console and DEBUG is off: no sign-in code would "
             "be delivered to any merchant.",
-            hint="Set MC_CUSTOMER_ID and MC_PASSWORD (Message Central), or set "
+            hint="Set FAST2SMS_API_KEY and UB_OTP_PROVIDER=fast2sms, or set "
             "UB_ALLOW_CONSOLE_SMS=1 for a single-user local deployment.",
             id="platform.E001",
         )
