@@ -118,21 +118,17 @@ def _member_with(membership: Any, system_roles: dict, role: RoleCode, **override
 
 
 @pytest.mark.django_db
-def test_a_hidden_library_grants_nothing_even_to_an_explicit_allow(
+def test_a_released_library_grants_its_codenames_without_the_flag(
     membership: Any, system_roles: dict
 ) -> None:
-    """T-LIB-14-3: library entitled and switched on but unreleased (no flag).
-    An owner — and a staff member granted `library.charge.waive` by override —
-    must hold no `library.*`, or an unreleased module leaks through the
-    permissions endpoint before its QA."""
+    """Library was released on 10 Oct 2026 (PLT-X11 BR-4), so an entitled,
+    switched-on library gives its owner `library.*` with the development flag
+    OFF — which is production. Before the release this test asserted the
+    opposite: that nothing leaked while the module was hidden."""
     entitle_library(membership.tenant)
     with override_settings(UB_UNRELEASED_MODULES=False):
         owner = _member_with(membership, system_roles, RoleCode.OWNER)
-        assert not _library(permissions_for(owner))
-        staff = _member_with(
-            membership, system_roles, RoleCode.STAFF, allow=["library.charge.waive"]
-        )
-        assert not _library(permissions_for(staff))
+        assert _library(permissions_for(owner))
 
 
 @pytest.mark.django_db

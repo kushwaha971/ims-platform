@@ -19,8 +19,8 @@ Each tenant (a business or organisation) turns on the modules it needs. Every mo
 |---|---|---|
 | **Core** (every tenant) | platform, team, parties (people & contacts), ledger (money in/out, balances), payments, notifications/reminders, reports, files, import_export, help | **Live** |
 | **Shop & billing** | sales (GST invoices, estimates, credit notes), purchases, inventory (items & stock), expenses (and cashbook) | **Live** |
-| **Lending & collections** | lending: lenders, borrowers, principal, interest, collection schedules, collection history, dues, reminders | **Planned**: research, then document |
-| **Library** | library: catalogue, copies, members, issue and return, fines | **Planned** |
+| **Lending & collections** | lending: lenders, borrowers, principal, interest, collection schedules, collection history, dues, reminders | **Live** (released 10 Oct 2026, DEC-015) |
+| **Library** | library: catalogue, copies, members, issue and return, fines | **Live** (released 10 Oct 2026, DEC-015) |
 | **Gym & fitness** | gym: members, plans, memberships, renewals, attendance | **Planned** |
 | **Hotel & stays** | hospitality: rooms, bookings, check-in/out, guest folio, billing | **Planned** |
 | **Candidates** | Rent & property is next in line (research: `research/candidates-and-competitors.md`). Clinics and chit funds are rejected; housing societies are deferred. Coaching & tuition: researched (`research/coaching.md`), owner declined 29 Sep; not in scope. | Not in scope yet |

@@ -93,4 +93,7 @@ class AuthTokenPurpose(models.TextChoices):
 #: A module leaves this set only through its release CR, in the same commit as
 #: its plan/partner data migration and its `seed_plans.MVP_MODULES` line
 #: (PLT-X11 BR-4), so a fresh database and an old one converge.
-UNRELEASED_MODULES: frozenset[str] = frozenset({"lending", "library", "gym", "hospitality"})
+#:
+#: `lending` and `library` were released on 10 Oct 2026 (owner, in the project
+#: thread), by `lending/migrations/*_release.py` and `library/migrations/*_release.py`.
+UNRELEASED_MODULES: frozenset[str] = frozenset({"gym", "hospitality"})

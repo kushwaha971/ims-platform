@@ -375,3 +375,28 @@ ADR-021 ↔ §26.14 contradiction recorded as `CR-j`.
 - **Removed:** `integrations/sms/fast2sms.py`, its tests, `UB_FAST2SMS_API_KEY`,
   `UB_FAST2SMS_ALLOW_QUICK`.
 - **Links:** DEC-013 · `apps/platform_app/tests/test_message_central.py` · `e2e/otpsignin.mjs`
+
+### DEC-015 — Library and Lending are released; Gym and Hotel are hidden from the landing page
+
+- **Status:** `decided` (2026-10-10, by the owner, in the project thread)
+- **The owner's words:** the landing page is to present Shop, Library and Lending for the
+  coming deployment, with Gym and Hotel hidden; and, told that Library and Lending were still
+  behind the production release gate, "enable this".
+- **Released (PLT-X11 BR-4, all in one commit):** `lending` and `library` left
+  `UNRELEASED_MODULES`; both joined `seed_plans.MVP_MODULES`; and each app ships a release data
+  migration (`lending/0004_release`, `library/0010_release`) that adds the module to every plan
+  and to every partner that already allows the whole MVP set. A fresh database and an existing
+  one converge. No tenant's `enabled_modules` is changed: a business gets a module when it is
+  created for it or its owner turns it on. The migrations reverse.
+- **Still gated:** `gym` and `hospitality` stay in `UNRELEASED_MODULES`; nothing of theirs
+  reaches a merchant.
+- **Hidden from the landing page, not removed:** `NEXT_PUBLIC_LANDING_HIDDEN_MODULES`
+  (default `gym,hotel`, `frontend/src/constants.ts`) filters the module map, the cards, "Who
+  it's for", the FAQ's list, the page title and description, and the structured data. Their
+  copy, config rows and icons are untouched. To show them again build with the variable empty.
+- **What the release was checked against:** the backend suites for both modules and the
+  release gate; the demo stack (`e2e/demo/`) walking both modules end to end. It was **not**
+  checked on a production deployment — run `manage.py migrate` there and confirm a new
+  business can turn Library on.
+- **Links:** `docs/platform/frd/00-core-and-engines.md` PLT-X11 · ADR-041 ·
+  `apps/platform_app/tests/test_release_gate.py`

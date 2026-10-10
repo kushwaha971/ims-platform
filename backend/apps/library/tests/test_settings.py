@@ -304,13 +304,20 @@ def test_a_member_with_no_library_codename_cannot_read(api_as: Any, library_on: 
     assert client.get(reverse(SETTINGS)).status_code == 403
 
 
-def test_library_switched_off_or_unreleased_is_module_disabled(api_as: Any, tenant: Any) -> None:
-    """The release gate and the switch both hold for the library's own routes."""
+def test_library_switched_off_is_module_disabled_and_released_is_reachable(
+    api_as: Any, tenant: Any
+) -> None:
+    """Released on 10 Oct 2026: an entitled, switched-on library answers with
+    the development flag off. The tenant's own switch still holds."""
     entitle_library(tenant)
     client, _ = api_as(tenant, role="owner")
-    hidden = client.get(reverse(SETTINGS))
-    assert hidden.status_code == 403
-    assert hidden.json()["error"]["code"] == "module_disabled"
+    assert client.get(reverse(SETTINGS)).status_code == 200
+
+    tenant.enabled_modules = [m for m in tenant.enabled_modules if m != "library"]
+    tenant.save(update_fields=["enabled_modules"])
+    off = client.get(reverse(SETTINGS))
+    assert off.status_code == 403
+    assert off.json()["error"]["code"] == "module_disabled"
 
 
 def test_another_tenants_settings_are_never_read(
@@ -391,12 +398,11 @@ def test_a_wrong_kind_or_number_is_400(api_as: Any, library_on: Any, body: dict)
 def test_the_core_numbering_screen_lists_the_kinds_only_while_library_is_on(
     api_as: Any, tenant: Any
 ) -> None:
-    """FR-3 (A8's pattern): a hidden or switched-off library adds no rows to
-    the shop's numbering screen."""
-    entitle_library(tenant)
+    """FR-3 (A8's pattern): a business WITHOUT the library has no library rows
+    on its numbering screen; one with it switched on has all three."""
     client, _ = api_as(tenant, role="owner")
     url = reverse("v1:tenant-settings")
     assert "library_accession" not in client.get(url).json()["data"]["numbering"]
-    with override_settings(UB_UNRELEASED_MODULES=True):
-        numbering = client.get(url).json()["data"]["numbering"]
+    entitle_library(tenant)
+    numbering = client.get(url).json()["data"]["numbering"]
     assert {"library_accession", "library_member", "library_charge"} <= set(numbering)

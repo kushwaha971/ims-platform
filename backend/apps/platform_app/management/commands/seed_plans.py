@@ -41,6 +41,9 @@ MVP_MODULES: tuple[str, ...] = (
     "import_export",
     "team",
     "help",
+    # Released 10 Oct 2026 (PLT-X11 BR-4), with their `*_release` migrations.
+    "lending",
+    "library",
 )
 
 # code -> (name, modules, limits, price)

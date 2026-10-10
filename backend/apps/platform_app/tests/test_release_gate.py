@@ -25,7 +25,10 @@ from apps.platform_app.services import entitlements, tenant_settings
 
 pytestmark = pytest.mark.django_db
 
-NEW = ("lending", "library", "gym", "hospitality")
+# The codes still behind the gate. `lending` and `library` were here until their
+# release on 10 Oct 2026 (PLT-X11 BR-4) and are asserted RELEASED below.
+NEW = ("gym", "hospitality")
+RELEASED_10_OCT = ("lending", "library")
 
 
 def _with_new_modules(tenant: Any) -> Any:
@@ -44,7 +47,60 @@ def _with_new_modules(tenant: Any) -> Any:
     return tenant
 
 
-def test_the_four_new_codes_exist_and_are_all_unreleased() -> None:
+def test_lending_and_library_are_released_everywhere_a_release_has_to_reach() -> None:
+    """PLT-X11 BR-4: a release is three things in one commit — out of the gate,
+    into `seed_plans.MVP_MODULES` (so a fresh database has it), and a data
+    migration (so an existing one does). Miss one and a module is on the landing
+    page and missing from the product, or present on a new server and absent on
+    the live one."""
+    from importlib import import_module
+
+    from apps.platform_app.management.commands.seed_plans import MVP_MODULES
+
+    for code in RELEASED_10_OCT:
+        assert code not in UNRELEASED_MODULES
+        assert code in entitlements.released_modules()
+        assert code in MVP_MODULES
+    assert import_module("apps.lending.migrations.0004_release").CODE == "lending"
+    assert import_module("apps.library.migrations.0010_release").CODE == "library"
+
+
+def test_the_release_migration_adds_the_module_and_its_reverse_removes_it(tenant: Any) -> None:
+    """The migration's own two functions, run against real rows: a plan gains
+    the code once (never twice), a partner that allows the whole MVP set gains
+    it, a partner restricted to fewer modules is left alone, and the reverse
+    takes it back out."""
+    from importlib import import_module
+
+    from django.apps import apps as django_apps
+
+    release = import_module("apps.library.migrations.0010_release")
+    plan, partner = tenant.plan, tenant.partner
+    plan.modules = [m for m in plan.modules if m != "library"]
+    plan.save(update_fields=["modules"])
+    partner.allowed_modules = list(release.MVP_BEFORE)
+    partner.save(update_fields=["allowed_modules"])
+
+    release.forwards(django_apps, None)
+    release.forwards(django_apps, None)
+    plan.refresh_from_db()
+    partner.refresh_from_db()
+    assert plan.modules.count("library") == 1
+    assert partner.allowed_modules.count("library") == 1
+
+    release.backwards(django_apps, None)
+    plan.refresh_from_db()
+    partner.refresh_from_db()
+    assert "library" not in plan.modules and "library" not in partner.allowed_modules
+
+    partner.allowed_modules = ["platform", "parties"]
+    partner.save(update_fields=["allowed_modules"])
+    release.forwards(django_apps, None)
+    partner.refresh_from_db()
+    assert "library" not in partner.allowed_modules
+
+
+def test_the_unbuilt_codes_exist_and_are_all_unreleased() -> None:
     """Contracts §1.1: the codes are real `ModuleCode` values and every one of
     them is behind the gate until its release CR. A code added to the enum and
     forgotten in the set is shown to every merchant the next deploy."""

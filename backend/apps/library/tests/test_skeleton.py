@@ -23,14 +23,20 @@ WAVE_B_HEADS = {
 }
 
 
-def test_library_is_unreleased_without_the_flag(tenant: Any) -> None:
-    """Plan, partner and switch all name library and it is still not effective.
+def test_library_is_released_and_effective_once_entitled_and_switched_on(tenant: Any) -> None:
+    """Released on 10 Oct 2026 (PLT-X11 BR-4): with the plan, the partner and
+    the switch all naming library it IS effective, with no development flag.
 
-    Prevents the B01 fixture (or any data) becoming a release leak: only the
-    `UB_UNRELEASED_MODULES` flag may expose an unbuilt module (ADR-041).
+    And only then: `test_a_business_without_library_does_not_have_it` below.
     """
-    entitle_library(tenant)
+    tenant = entitle_library(tenant)
     assert "library" in tenant.enabled_modules
+    assert "library" in entitlements.effective_modules(tenant)
+
+
+def test_a_business_without_library_does_not_have_it(tenant: Any) -> None:
+    """Releasing the module puts it on plans; it switches it on for nobody."""
+    assert "library" not in (tenant.enabled_modules or [])
     assert "library" not in entitlements.effective_modules(tenant)
 
 
