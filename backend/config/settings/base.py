@@ -358,7 +358,10 @@ UB_SCHEDULER_ENQUEUE_LOCK_ID = env.int("UB_SCHEDULER_ENQUEUE_LOCK_ID", 918273645
 # not `UB_`-prefixed.
 MC_CUSTOMER_ID = env.str("MC_CUSTOMER_ID", "")
 MC_PASSWORD = env.str("MC_PASSWORD", "")
-MC_BASE_URL = env.str("MC_BASE_URL", "https://cxapi.messagecentral.com")
+# `cpaas` is the host their API page documents. The brief this was built from
+# said `cxapi.messagecentral.com`, which has no DNS record: every send failed
+# as "unreachable" until this was corrected (10 Oct 2026).
+MC_BASE_URL = env.str("MC_BASE_URL", "https://cpaas.messagecentral.com")
 # Who issues and checks the code: `message_central` whenever both credentials
 # are set, else `console` -- the code is made here and printed in the API log,
 # which is how a local run, the test suite and the e2e harnesses sign in

@@ -66,7 +66,7 @@ class FakeMessageCentral:
 def fake(monkeypatch: Any, settings: Any) -> FakeMessageCentral:
     settings.MC_CUSTOMER_ID = "C-TEST"
     settings.MC_PASSWORD = "s3cret-pass"
-    settings.MC_BASE_URL = "https://cxapi.messagecentral.com"
+    settings.MC_BASE_URL = "https://cpaas.messagecentral.com"
     settings.UB_OTP_PROVIDER = "message_central"
     cache.delete(mc.TOKEN_CACHE_KEY)
     fake = FakeMessageCentral()

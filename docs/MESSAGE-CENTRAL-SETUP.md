@@ -14,7 +14,7 @@ Put these in `backend/.env` (git ignores that file). Never commit real values.
 | --- | --- |
 | `MC_CUSTOMER_ID` | Your Message Central customer id (looks like `C-XXXXXXXX`) |
 | `MC_PASSWORD` | Your Message Central account password, as plain text. Django base64-encodes it for the token call |
-| `MC_BASE_URL` | Optional. Default `https://cxapi.messagecentral.com` |
+| `MC_BASE_URL` | Optional. Default `https://cpaas.messagecentral.com` |
 | `UB_OTP_PROVIDER` | Optional. Leave empty: it becomes `message_central` when both values above are set, otherwise `console` |
 
 With both credentials empty, the `console` provider is used: the code is

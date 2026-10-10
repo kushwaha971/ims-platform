@@ -353,7 +353,7 @@ ADR-021 ↔ §26.14 contradiction recorded as `CR-j`.
     `MC_PASSWORD` are both set) this product never creates or stores a code: the challenge
     row keeps their `verificationId` and an empty `code_hash`.
   - **Django only.** `apps/platform_app/services/message_central.py` is the one module that
-    calls `https://cxapi.messagecentral.com` — token (cached 30 min in Django's cache,
+    calls `https://cpaas.messagecentral.com` — token (cached 30 min in Django's cache,
     refreshed once on a 401), `send`, `validateOtp`, 10-second timeouts. Nothing of theirs
     — credentials, token, `verificationId` — is ever returned to the browser.
   - **The endpoints did not move:** `POST /auth/otp/request` and `POST /auth/otp/verify`,
