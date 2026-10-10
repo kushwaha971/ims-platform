@@ -32,3 +32,10 @@ LOGGING = build_logging_config(level="CRITICAL", fmt="console")  # noqa: F405
 DATABASES["default"]["TEST"] = {  # noqa: F405
     "NAME": env.str("UB_TEST_DB_NAME", "test_udhaarbook")  # noqa: F405
 }
+
+# DEC-013 — never a real SMS from the suite. `base` reads backend/.env, and the
+# owner's Fast2SMS key lives there, so without this every OTP test would text a
+# made-up number on a paid account. Tests that exercise the Fast2SMS adapter
+# set the key themselves and stub the network (`test_fast2sms.py`).
+UB_FAST2SMS_API_KEY = ""
+UB_SMS_BACKEND = "apps.common.integrations.sms.console.ConsoleSmsBackend"

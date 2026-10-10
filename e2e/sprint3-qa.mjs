@@ -1678,8 +1678,15 @@ async function phaseN3(browser, state, token) {
   // Fixtures: Vijay due on the IST date, Sunita (₹0) and Kavita (₹300) due on the UTC date, Lakshmi tomorrow (IST).
   const tomorrowIst = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date(Date.now() + 86_400_000));
   const fix = { vijay: ist, sunita: utc, kavita: utc, lakshmi: tomorrowIst };
-  for (const [k, d] of Object.entries(fix)) await must('PATCH', `/parties/${P[k]}`, { collection_date: d }, token);
-  note(`FIXTURE (API): collection_date Vijay=${ist} (IST today), Sunita=${utc} & Kavita=${utc} (UTC today = IST yesterday), Lakshmi=${tomorrowIst}`);
+  // The two UTC-dated promises are IST YESTERDAY, which the API rightly
+  // refuses (a promise is never set in the past: "Choose a date within the next
+  // year."). They are the overdue rows this phase exists to read, so they are
+  // written with psql, as the header says such fixtures are.
+  for (const [k, d] of Object.entries(fix)) {
+    if (d < ist) psql(`UPDATE parties_party SET collection_date = '${d}' WHERE id = '${P[k]}'`);
+    else await must('PATCH', `/parties/${P[k]}`, { collection_date: d }, token);
+  }
+  note(`FIXTURE (API; psql for the past dates): collection_date Vijay=${ist} (IST today), Sunita=${utc} & Kavita=${utc} (UTC today = IST yesterday), Lakshmi=${tomorrowIst}`);
   try {
     for (const c of ['today', 'overdue', 'upcoming']) {
       const r = await must('GET', `/parties?collection=${c}`, null, token);

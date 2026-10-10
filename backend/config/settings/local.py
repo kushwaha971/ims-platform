@@ -11,6 +11,15 @@ CORS_ALLOW_ALL_ORIGINS = True
 UB_LOG_FORMAT = "console"
 LOGGING = build_logging_config(level="DEBUG", fmt="console")  # noqa: F405
 
+# ── One database connection per request, locally ────────────────────────────
+# `runserver` is threaded: a thread per request, and with `CONN_MAX_AGE` > 0
+# each one keeps its connection when the request ends. The thread then exits
+# without closing it, so a long e2e run left 100 idle connections on the
+# server and every next request answered 500 "too many clients already" (seen
+# twice in the 9 Oct 2026 regression runs). Production runs a process server
+# with a fixed worker count, where reuse is the point; it keeps base's 60 s.
+DATABASES["default"]["CONN_MAX_AGE"] = env.int("UB_DB_CONN_MAX_AGE", 0)  # noqa: F405
+
 # ── E2E: lift the shared per-IP auth budgets (local ONLY) ────────────────────
 # Every e2e harness signs up and signs in from 127.0.0.1, so the budgets keyed
 # on the caller's IP — 20 sign-ups an hour, 100 failed logins an hour, 20 reset
@@ -36,3 +45,7 @@ if UB_E2E_RELAX_THROTTLES:
     _ub_throttle.LOGIN_FAILURES_PER_IP = 100_000
     _ub_throttle.RESET_REQUESTS_PER_IP = 100_000
     _ub_throttle.RESET_CONFIRMS_PER_IP = 100_000
+    # DEC-013 — every harness that signs in by OTP asks from 127.0.0.1 too. The
+    # per-NUMBER budget and the two-minute resend gap stay as shipped: the
+    # otpsignin harness asserts the server refuses an early resend.
+    _ub_throttle.OTP_REQUESTS_PER_IP = 100_000
