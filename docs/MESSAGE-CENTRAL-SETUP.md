@@ -115,7 +115,7 @@ Errors the screen shows:
 
 Added
 - `apps/platform_app/services/message_central.py` — token, send, validate
-- `apps/platform_app/tests/test_message_central.py` — 22 tests, network stubbed
+- `apps/platform_app/tests/test_message_central.py` — 18 tests, network stubbed
 - `apps/platform_app/migrations/0017_otp_provider_verification_id.py`
 
 Changed
@@ -156,7 +156,7 @@ Removed
 
 ## 6. What was and was not tested
 
-- Backend: the full suite passes, including 22 new tests that drive the token,
+- Backend: the full suite passes, including 18 new tests that drive the token,
   send and validate calls against a scripted stand-in for Message Central.
 - Frontend: type-check, lint, all tests and the production build pass.
 - Browser: sign-up on phone and laptop sizes passes 32 of 32 with the
