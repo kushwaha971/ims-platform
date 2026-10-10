@@ -30,7 +30,8 @@ export const REGEX = {
    * CR-2026-09-19-A moved mobile OTP to the backlog; this pattern is retained
    * with `UbOtpInput` for the day the flow returns, and is unused at MVP.
    */
-  OTP_CODE: /^\d{6}$/,
+  // Message Central's sign-in codes are four digits (DEC-014).
+  OTP_CODE: /^\d{4}$/,
   /**
    * CR-2026-09-19-A — email is the MVP identity, so the client checks the
    * address it is about to send. Deliberately the pragmatic shape a browser's

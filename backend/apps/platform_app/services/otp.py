@@ -5,7 +5,15 @@ Two entry points, both of which take Python values and return Python values:
 
 The properties this module exists to hold:
 
+* **Message Central issues and checks the code** (DEC-014): with
+  `UB_OTP_PROVIDER=message_central` this module never sees a code it did not
+  just receive from the person typing it, and stores only the provider's
+  `verificationId`. The `console` provider — local runs, tests, e2e — makes a
+  code here and prints it in the API log, because nobody is texted there;
 * the code never appears in a response, in any environment (Part 27 §27.4.1);
+* the provider's `verificationId` never appears in a response either: the
+  browser holds our `challenge_id`, which binds the mobile, the attempts and
+  the single use to it;
 * the response to `request_otp` is identical for a known and an unknown mobile,
   so the endpoint cannot be used to enumerate accounts (PLT-01 FR-2, BR-2);
 * comparison is constant time (`hmac.compare_digest`);
@@ -32,9 +40,10 @@ from django.utils import timezone
 from apps.common.audit import AuditAction, write_audit
 from apps.common.exceptions import BusinessRuleViolation
 from apps.platform_app.constants import OtpPurpose
-from apps.platform_app.services import throttle
+from apps.platform_app.services import message_central, throttle
 
-CODE_LENGTH = 6
+# Message Central's default length; the console provider matches it.
+CODE_LENGTH = 4
 RESEND_AFTER_SECONDS = throttle.OTP_RESEND_GAP_SECONDS
 
 
@@ -69,6 +78,49 @@ class OtpInvalid(BusinessRuleViolation):
         )
 
 
+class OtpNotSent(BusinessRuleViolation):
+    """502 `provider_error` — the code could not be sent, or could not be checked."""
+
+    def __init__(
+        self, message: str = "We couldn't send the code right now. Please try again in a few minutes."
+    ) -> None:
+        super().__init__("provider_error", message)
+
+
+PROVIDER_MESSAGE_CENTRAL = "message_central"
+PROVIDER_CONSOLE = "console"
+
+
+def _provider() -> str:
+    """`message_central` only when it is asked for AND its credentials are set."""
+    if (
+        getattr(settings, "UB_OTP_PROVIDER", PROVIDER_CONSOLE) == PROVIDER_MESSAGE_CENTRAL
+        and message_central.is_configured()
+    ):
+        return PROVIDER_MESSAGE_CENTRAL
+    return PROVIDER_CONSOLE
+
+
+def _send_console_code(
+    *, mobile: str, code: str, ttl: int, locale: str, purpose: str, challenge: Any
+) -> None:
+    """The local provider: the code goes to the API log through the SMS adapter."""
+    from apps.platform_app.services.messaging import render_otp_sms, send_sms
+
+    sent = send_sms(
+        to=mobile,
+        body=render_otp_sms(
+            code=code, minutes=max(1, ttl // 60), app_name=_app_name(), locale=locale
+        ),
+        template_code="otp",
+        payload={"purpose": purpose, "minutes": max(1, ttl // 60)},
+        related_type="platform_otp_challenge",
+        related_id=challenge.id,
+    )
+    if getattr(sent, "status", "sent") == "failed":
+        raise message_central.MessageCentralError("The SMS adapter refused the code.")
+
+
 def hash_code(code: str) -> str:
     """`sha256(code + UB_OTP_PEPPER)` (Part 27 §27.4.1).
 
@@ -79,7 +131,7 @@ def hash_code(code: str) -> str:
 
 
 def generate_code() -> str:
-    """Six digits from `secrets.randbelow` — never `random`, never `000000`.
+    """The CONSOLE provider's code — `secrets.randbelow`, never `random`, never all zeroes.
 
     PLT-01 BR-4 forbids the all-zero code because it is the value a broken
     generator produces and the value a guesser tries first.
@@ -128,51 +180,50 @@ def request_otp(
 ) -> OtpIssued:
     """Create a challenge and dispatch the code. Never reveals whether the mobile exists."""
     from apps.platform_app.models import OtpChallenge
-    from apps.platform_app.services.messaging import render_otp_sms, send_sms
 
     _assert_not_throttled(mobile=mobile, ip=ip)
 
     ttl = int(settings.UB_OTP_TTL_SECONDS)
-    code = generate_code()
+    via_message_central = _provider() == PROVIDER_MESSAGE_CENTRAL
+    code = "" if via_message_central else generate_code()
 
     with transaction.atomic():
         challenge = OtpChallenge.objects.create(
             mobile=mobile,
             purpose=purpose,
-            code_hash=hash_code(code),
+            code_hash="" if via_message_central else hash_code(code),
             attempts=0,
             expires_at=timezone.now() + dt.timedelta(seconds=ttl),
             ip=ip,
             device_hint=(device_hint or "")[:120] or None,
         )
 
-    sent = send_sms(
-        to=mobile,
-        body=render_otp_sms(
-            code=code,
-            minutes=max(1, ttl // 60),
-            app_name=_app_name(),
-            locale=locale,
-        ),
-        template_code="otp",
-        payload={"purpose": purpose, "minutes": max(1, ttl // 60)},
-        related_type="platform_otp_challenge",
-        related_id=challenge.id,
-    )
-
-    # A code the provider refused never arrives, and answering 200 put the
-    # merchant on "Enter the code" waiting for a text that was not coming --
-    # the owner's own first sign-up, 10 Oct 2026, when Fast2SMS answered 996
-    # (website verification pending) and the screen said a code was sent. The
-    # refusal is the same for every number, so it says nothing about whether
-    # the mobile has an account. The challenge is spent rather than deleted so
-    # the resend gap and the hourly budgets still count the attempt.
-    if getattr(sent, "status", "sent") == "failed":
+    # The provider call is made with no transaction open, so no row lock is
+    # held across an HTTP exchange (Part 20 §20.11.2).
+    #
+    # A code that was not sent must not answer 200: the owner's own first
+    # sign-up (10 Oct 2026) sat on "Enter the code" waiting for a text the
+    # provider had refused. The refusal is the same for every number, so it
+    # says nothing about whether the mobile has an account. The challenge is
+    # spent rather than deleted so the resend gap and the hourly budgets still
+    # count the attempt.
+    try:
+        if via_message_central:
+            verification_id = message_central.send_otp(mobile)
+            OtpChallenge.objects.filter(pk=challenge.pk).update(
+                provider_verification_id=verification_id
+            )
+        else:
+            _send_console_code(
+                mobile=mobile, code=code, ttl=ttl, locale=locale, purpose=purpose, challenge=challenge
+            )
+    except message_central.MessageCentralError as exc:
         OtpChallenge.objects.filter(pk=challenge.pk).update(expires_at=timezone.now())
-        raise BusinessRuleViolation(
-            "provider_error",
-            "We couldn't send the code right now. Please try again in a few minutes.",
-        )
+        if exc.code == message_central.REQUEST_ALREADY_EXISTS:
+            # They hold their own 60-second gap; ours matches it, so this is a
+            # race or a clock difference. Same answer as our own throttle.
+            raise OtpThrottled(RESEND_AFTER_SECONDS) from exc
+        raise OtpNotSent() from exc
 
     _audit(
         AuditAction.OTP_REQUESTED,
@@ -202,26 +253,60 @@ def consume_challenge(
 
     max_attempts = int(settings.UB_OTP_MAX_ATTEMPTS)
 
+    def checked(row: Any) -> Any:
+        """Every refusal that needs no code: missing, spent, expired, burned, superseded."""
+        if row is None:
+            raise OtpInvalid("not_found")
+        if purpose is not None and row.purpose != purpose:
+            raise OtpInvalid("wrong_purpose")
+        if row.verified_at is not None:
+            raise OtpInvalid("used")
+        if row.expires_at <= timezone.now():
+            raise OtpInvalid("expired")
+        if row.attempts >= max_attempts:
+            raise OtpInvalid("burned", attempts_left=0)
+        if _is_superseded(row):
+            raise OtpInvalid("superseded")
+        return row
+
+    known = _looks_like_uuid(challenge_id)
+
+    # Message Central checks its own codes, over HTTP, so that question is
+    # asked BEFORE the row is locked (Part 20 §20.11.2: no lock across a
+    # provider call). The same refusals run first, so a spent or expired
+    # challenge never costs a provider request; they run again under the lock.
+    provider_answer: message_central.Validation | None = None
+    if known:
+        peek = checked(OtpChallenge.objects.filter(pk=challenge_id).first())
+        if peek.provider_verification_id:
+            try:
+                provider_answer = message_central.validate_otp(
+                    peek.mobile, peek.provider_verification_id, str(code)
+                )
+            except message_central.MessageCentralError as exc:
+                # Not the person's mistake: no attempt is counted against them.
+                raise OtpNotSent(
+                    "We couldn't check the code right now. Please try again in a moment."
+                ) from exc
+
     with transaction.atomic():
-        challenge = (
+        challenge = checked(
             OtpChallenge.objects.select_for_update().filter(pk=challenge_id).first()
-            if _looks_like_uuid(challenge_id)
+            if known
             else None
         )
-        if challenge is None:
-            raise OtpInvalid("not_found")
-        if purpose is not None and challenge.purpose != purpose:
-            raise OtpInvalid("wrong_purpose")
-        if challenge.verified_at is not None:
-            raise OtpInvalid("used")
-        if challenge.expires_at <= timezone.now():
-            raise OtpInvalid("expired")
-        if challenge.attempts >= max_attempts:
-            raise OtpInvalid("burned", attempts_left=0)
-        if _is_superseded(challenge):
-            raise OtpInvalid("superseded")
 
-        if not hmac.compare_digest(challenge.code_hash, hash_code(str(code))):
+        if provider_answer is not None:
+            matches = provider_answer.verified
+            # Their word on why not ("expired" above all) is truer than ours.
+            failure_reason = provider_answer.reason or "incorrect"
+        else:
+            matches = bool(challenge.code_hash) and hmac.compare_digest(
+                challenge.code_hash, hash_code(str(code))
+            )
+            failure_reason = "incorrect"
+
+        if not matches:
             challenge.attempts += 1
             burned = challenge.attempts >= max_attempts
             if burned:
@@ -259,7 +344,7 @@ def consume_challenge(
     # back of it. The lockout this failure may have just set is enforced by
     # `_assert_not_throttled` on the next *request*, which is where Part 27
     # §27.4.1 puts it ("further `otp/request` calls return 429").
-    raise OtpInvalid("incorrect", attempts_left=attempts_left)
+    raise OtpInvalid(failure_reason, attempts_left=attempts_left)
 
 
 def _is_superseded(challenge: Any) -> bool:
@@ -323,6 +408,7 @@ def _audit(
 __all__ = [
     "OtpIssued",
     "OtpInvalid",
+    "OtpNotSent",
     "OtpPurpose",
     "OtpThrottled",
     "RESEND_AFTER_SECONDS",

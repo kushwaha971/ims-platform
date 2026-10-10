@@ -31,13 +31,17 @@ Sentry/OTel/Prometheus, client-side PDF via `window.print()`, adapter-only
 messaging, local UPI QR. Anything else needs a new ADR. If a fix seems to need a
 package, say so instead of adding one.
 
-**Identity is a mobile number and an OTP (DEC-013, owner, 9 Oct 2026; it
-reverses DEC-010).** `/login` and `/signup` are one flow — an Indian mobile, then
-a six-digit code sent by Fast2SMS (`UB_FAST2SMS_API_KEY`; without it the code is
-printed in the API log). Resend waits two minutes, enforced by the server;
-sessions slide for ninety days. The email + password screen survives only at the
-unlinked `/login/email`, for the platform console and pre-change accounts, and
-the e2e harnesses sign in there. Never commit a Fast2SMS key.
+**Identity is a mobile number and an OTP (DEC-013, DEC-014; they reverse
+DEC-010).** `/login` and `/signup` are one flow — an Indian mobile, then a
+four-digit code. **Message Central VerifyNow generates, sends and validates the
+code**, called only from Django (`services/message_central.py`, credentials
+`MC_CUSTOMER_ID` / `MC_PASSWORD` from the environment); nothing of theirs
+reaches the browser. Without credentials the `console` provider prints the code
+in the API log — which is what tests and `e2e/serve-api.sh` always use. Resend
+waits sixty seconds, enforced by the server; sessions slide for ninety days. The
+email + password screen survives only at the unlinked `/login/email`, for the
+platform console and pre-change accounts, and the e2e harnesses sign in there.
+Never commit Message Central credentials. Fast2SMS is gone; do not bring it back.
 
 **Nothing is emailed (DEC-012).** `UB_EMAIL_BACKEND` is the console backend and
 no provider is being paid for until the platform earns. An owner adds staff by

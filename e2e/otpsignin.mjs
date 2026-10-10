@@ -8,12 +8,12 @@
  *  - /signup and /login ask for a mobile number only (+91, no picker, no email,
  *    no password);
  *  - "Send code" moves to the code step, naming the number;
- *  - "Resend code" is a countdown from 2:00, not a button, and the SERVER
+ *  - "Resend code" is a countdown from 1:00, not a button, and the SERVER
  *    refuses an early resend too (asserted through the API, which the screen
  *    cannot be trusted to prove);
  *  - a wrong code says how many tries are left;
  *  - the right code — read from the API's log, where the console SMS backend
- *    prints it when no Fast2SMS key is set — creates the account and opens
+ *    prints it when no Message Central credentials are set — creates the account and opens
  *    onboarding;
  *  - the session cookie lives ninety days and survives a reload;
  *  - nothing is wider than the phone.
@@ -46,7 +46,7 @@ const freshMobile = (salt) => `9${String(Date.now() + salt).slice(-9)}`;
 const codeFromLog = async (last3, notBefore) => {
   for (let attempt = 0; attempt < 20; attempt += 1) {
     const log = readFileSync(join(LOGS, 'be-run.log'), 'utf8').slice(notBefore);
-    const matches = [...log.matchAll(/sms\.console to=\+91…(\d{3}) body=(\d{6}) is your/g)].filter(
+    const matches = [...log.matchAll(/sms\.console to=\+91…(\d{3}) body=(\d{4,6}) is your/g)].filter(
       (m) => m[1] === last3
     );
     if (matches.length) return matches[matches.length - 1][2];
@@ -106,24 +106,24 @@ for (const [index, vp] of [
   const sentTo = `+91 ${national.slice(0, 5)} ${national.slice(5)}`;
   record(`${vp.id}: it names the number the code went to`, await page.getByText(sentTo).isVisible().catch(() => false), sentTo);
 
-  const countdown = page.getByText(/^Resend code in (2:00|1:[0-5]\d)$/);
-  record(`${vp.id}: resend is a 2-minute countdown, not a button`,
+  const countdown = page.getByText(/^Resend code in (1:00|0:[0-5]\d)$/);
+  record(`${vp.id}: resend is a 60-second countdown, not a button`,
     (await countdown.isVisible().catch(() => false)) &&
       (await page.getByRole('button', { name: 'Resend code' }).count()) === 0,
     await page.getByText(/Resend code/).first().textContent().catch(() => ''));
   record(`${vp.id}: the code step fits the screen`, (await overflow()) <= 0);
   await shot('2-code');
 
-  // The server, not the screen, is what holds the two minutes.
+  // The server, not the screen, is what holds the sixty seconds.
   const early = await api('POST', '/auth/otp/request', { mobile: `+91${national}` });
-  record(`${vp.id}: the server refuses a resend inside two minutes`, early.status === 429 &&
-    Number(early.body?.error?.details?.retry_after) > 60, JSON.stringify(early.body?.error ?? early.status));
+  record(`${vp.id}: the server refuses a resend inside sixty seconds`, early.status === 429 &&
+    Number(early.body?.error?.details?.retry_after) > 30, JSON.stringify(early.body?.error ?? early.status));
 
   const code = await codeFromLog(last3, before);
-  record(`${vp.id}: the code is in the API log (no Fast2SMS key locally)`, Boolean(code));
+  record(`${vp.id}: the code is in the API log (console provider locally)`, Boolean(code));
 
   // A wrong code first: it must say how many tries are left.
-  const wrong = code === '000001' ? '000002' : '000001';
+  const wrong = code === '0001' ? '0002' : '0001';
   await page.keyboard.type(wrong);
   const wrongMsg = page.getByText(/Wrong code\. \d tries? left\./);
   record(`${vp.id}: a wrong code says how many tries are left`,

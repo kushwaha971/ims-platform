@@ -352,18 +352,24 @@ UB_SCHEDULER_BATCH = env.int("UB_SCHEDULER_BATCH", 50)
 UB_SCHEDULER_ENQUEUE_LOCK_ID = env.int("UB_SCHEDULER_ENQUEUE_LOCK_ID", 918273645)
 
 # ── Integrations (ADR-015/016) ───────────────────────────────────────────────
-# Fast2SMS (owner, 9 Oct 2026). With a key the sign-in OTP is sent by SMS; with
-# none it is printed in the server log (the console backend), which is how a
-# local run works without paying for a message.
-UB_FAST2SMS_API_KEY = env.str("UB_FAST2SMS_API_KEY", "")
-# Reminders and other non-OTP texts cost per message and need DLT; off unless asked.
-UB_FAST2SMS_ALLOW_QUICK = env.bool("UB_FAST2SMS_ALLOW_QUICK", False)
-# An EMPTY value follows the key too: docker-compose passes `${UB_SMS_BACKEND:-}`,
-# and an empty path would resolve to no backend, so no code would go anywhere.
+# Message Central VerifyNow (DEC-014, owner 10 Oct 2026) sends, and validates,
+# the sign-in OTP. Credentials come from the environment only and never leave
+# Django. `MC_*` are the names Message Central's own guides use, so they are
+# not `UB_`-prefixed.
+MC_CUSTOMER_ID = env.str("MC_CUSTOMER_ID", "")
+MC_PASSWORD = env.str("MC_PASSWORD", "")
+MC_BASE_URL = env.str("MC_BASE_URL", "https://cxapi.messagecentral.com")
+# Who issues and checks the code: `message_central` whenever both credentials
+# are set, else `console` -- the code is made here and printed in the API log,
+# which is how a local run, the test suite and the e2e harnesses sign in
+# without texting anybody. Set it explicitly only to force `console`.
+UB_OTP_PROVIDER = env.str("UB_OTP_PROVIDER", "") or (
+    "message_central" if MC_CUSTOMER_ID and MC_PASSWORD else "console"
+)
+# Reminders and other texts are adapter-only (ADR-015): the console backend
+# until a provider is chosen for them. The sign-in OTP does not go through it.
 UB_SMS_BACKEND = env.str("UB_SMS_BACKEND", "") or (
-    "apps.common.integrations.sms.fast2sms.Fast2SmsBackend"
-    if UB_FAST2SMS_API_KEY
-    else "apps.common.integrations.sms.console.ConsoleSmsBackend"
+    "apps.common.integrations.sms.console.ConsoleSmsBackend"
 )
 UB_SMS_SENDER_ID = env.str("UB_SMS_SENDER_ID", "UDHAAR")
 UB_WHATSAPP_BACKEND = env.str(

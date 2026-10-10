@@ -39,9 +39,9 @@ import { cn } from 'src/utils/cn';
  *    than `disabled`, so focus is not thrown away mid-request.
  *
  * The value is the whole code, so the FORM holds one string and the schema is
- * `/^\d{6}$/` — the cells are a rendering decision, not a data shape.
+ * `/^\d{4}$/` — the cells are a rendering decision, not a data shape.
  */
-export const OTP_LENGTH = 6;
+export const OTP_LENGTH = 4;
 
 export interface UbOtpInputProps {
   readonly value: string;

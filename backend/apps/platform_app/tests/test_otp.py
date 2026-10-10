@@ -55,12 +55,12 @@ def otp_enabled(settings: Any) -> Any:
 # ── T-PLT-01-1 unit: code generation ─────────────────────────────────────────
 
 
-def test_generate_code_is_six_digits_and_zero_padded() -> None:
+def test_generate_code_is_four_digits_and_zero_padded() -> None:
     """T-PLT-01-1 / BR-4."""
     from apps.platform_app.services.otp import generate_code
 
     seen = {generate_code() for _ in range(300)}
-    assert all(re.fullmatch(r"\d{6}", code) for code in seen)
+    assert all(re.fullmatch(r"\d{4}", code) for code in seen)
     assert len(seen) > 100, "the generator is not varying"
 
 
@@ -153,7 +153,7 @@ def test_request_then_verify_creates_user_session_and_cookies(
     body = response.json()["data"]
     assert set(body) == {"challenge_id", "expires_in", "retry_after"}
     assert body["expires_in"] == 600
-    assert body["retry_after"] == 120
+    assert body["retry_after"] == 60
     assert "code" not in response.content.decode()
 
     verified = auth_client.post(
@@ -295,13 +295,13 @@ def test_the_sixth_request_in_an_hour_is_429(auth_client: Any, fixed_otp: str) -
     assert refused.json()["error"]["details"]["retry_after"] > 0
 
 
-def test_a_resend_inside_two_minutes_is_refused(auth_client: Any) -> None:
-    """FR-7: "Resend is allowed after `retry_after`" — two minutes since 9 Oct 2026."""
+def test_a_resend_inside_sixty_seconds_is_refused(auth_client: Any) -> None:
+    """FR-7: "Resend is allowed after `retry_after`" — sixty seconds (DEC-014)."""
     first = auth_client.post(reverse(REQUEST_URL), {"mobile": "9876543215"}, format="json")
     assert first.status_code == 200
     second = auth_client.post(reverse(REQUEST_URL), {"mobile": "9876543215"}, format="json")
     assert second.status_code == 429
-    assert 60 < second.json()["error"]["details"]["retry_after"] <= 120
+    assert 30 < second.json()["error"]["details"]["retry_after"] <= 60
 
 
 def test_twenty_requests_from_one_ip_per_hour_is_the_ceiling(auth_client: Any) -> None:
@@ -594,7 +594,7 @@ def test_the_audit_trail_hashes_the_mobile_and_carries_no_tenant(auth_client: An
 
 
 def test_sign_in_refuses_a_foreign_mobile_with_a_message(auth_client: Any) -> None:
-    """Fast2SMS delivers to Indian numbers only. Since the country picker,
+    """The sign-in OTP is sent to Indian numbers only. Since the country picker,
     `MobileField` accepts any country; a UK number here would be a code nobody
     receives, behind a screen saying "code sent"."""
     from apps.platform_app.models import OtpChallenge
@@ -606,7 +606,7 @@ def test_sign_in_refuses_a_foreign_mobile_with_a_message(auth_client: Any) -> No
 
 
 class _RefusingSms:
-    """A provider that answers the way Fast2SMS did before website verification."""
+    """An SMS adapter that refuses every message."""
 
     name = "refusing"
 
@@ -620,7 +620,7 @@ class _RefusingSms:
 def test_a_code_the_provider_refused_is_an_error_not_a_silent_200(
     auth_client: Any, settings: Any
 ) -> None:
-    """The owner's own first sign-up (10 Oct 2026): Fast2SMS refused the
+    """The owner's own first sign-up (10 Oct 2026): the provider refused the
     message, the API answered 200, and the screen said "we sent a code" over a
     text that was never coming. A refused send must say so, and must leave no
     live challenge behind."""

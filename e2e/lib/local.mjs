@@ -42,12 +42,13 @@ export const psql = (sql) =>
 /**
  * Refuse to ask for sign-in codes from an API that is not the e2e one.
  *
- * `serve-api.sh` pins the console SMS backend and logs to
+ * `serve-api.sh` pins the console OTP provider and logs to
  * $UB_E2E_LOGS/be-run.log. Anything else on :8000 — the owner's Docker stack,
- * `dev-backend.sh` — reads backend/.env and sends through Fast2SMS, so a
- * harness that typed made-up numbers into it would text strangers on a paid
- * account. That happened once (10 Oct 2026: Docker had taken the port, and
- * four OTP requests reached Fast2SMS, which happened to refuse them).
+ * `dev-backend.sh` — reads backend/.env and sends real codes through the SMS
+ * provider, so a harness that typed made-up numbers into it would text
+ * strangers on a paid account. That happened once (10 Oct 2026: Docker had
+ * taken the port and four requests reached the provider, which happened to
+ * refuse them).
  *
  * The proof is the log: a health request carrying a fresh request id must
  * appear in the e2e server's own log file. If it does not, something else is

@@ -63,7 +63,7 @@ describe('authSlice — mobile + OTP (owner, 9 Oct 2026)', () => {
   const sent = (_now: number) =>
     authReducer(initial, {
       type: requestOtp.fulfilled.type,
-      payload: { challengeId: 'c-1', expiresIn: 600, retryAfter: 120 },
+      payload: { challengeId: 'c-1', expiresIn: 600, retryAfter: 60 },
       meta: { arg: { mobile: '+919845011122' }, requestId: 'r' },
     });
 
@@ -73,8 +73,8 @@ describe('authSlice — mobile + OTP (owner, 9 Oct 2026)', () => {
     expect(state.otp?.mobile).toBe('+919845011122');
     expect(state.otp?.challengeId).toBe('c-1');
     // An absolute moment, so a backgrounded tab comes back to the right number.
-    expect(state.otp?.resendAt).toBeGreaterThanOrEqual(before + 120_000);
-    expect(state.otp?.resendAt).toBeLessThanOrEqual(Date.now() + 120_000);
+    expect(state.otp?.resendAt).toBeGreaterThanOrEqual(before + 60_000);
+    expect(state.otp?.resendAt).toBeLessThanOrEqual(Date.now() + 60_000);
   });
 
   it('moves the resend deadline when the server refuses an early resend', () => {

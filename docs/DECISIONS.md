@@ -340,3 +340,38 @@ ADR-021 ↔ §26.14 contradiction recorded as `CR-j`.
 - **Not done:** DLT template registration (Fast2SMS's `otp` route needs the account
   verified for it; the owner's dashboard), moving existing email accounts onto a mobile.
 - **Links:** DEC-010 · DEC-012 · `PLT-01` · `e2e/otpsignin.mjs`
+
+### DEC-014 — The sign-in OTP is Message Central VerifyNow; Fast2SMS is removed
+
+- **Status:** `decided` (2026-10-10, by the owner, in the project thread)
+- **Why:** Fast2SMS refused every OTP with 996 (its OTP route needs website verification
+  on the account), including the owner's own first sign-up. The owner chose Message
+  Central VerifyNow instead.
+- **Decided:**
+  - **Message Central generates, sends and validates the code.** With
+    `UB_OTP_PROVIDER=message_central` (the default whenever `MC_CUSTOMER_ID` and
+    `MC_PASSWORD` are both set) this product never creates or stores a code: the challenge
+    row keeps their `verificationId` and an empty `code_hash`.
+  - **Django only.** `apps/platform_app/services/message_central.py` is the one module that
+    calls `https://cxapi.messagecentral.com` — token (cached 30 min in Django's cache,
+    refreshed once on a 401), `send`, `validateOtp`, 10-second timeouts. Nothing of theirs
+    — credentials, token, `verificationId` — is ever returned to the browser.
+  - **The endpoints did not move:** `POST /auth/otp/request` and `POST /auth/otp/verify`,
+    same bodies and the same session response, so the frontend changed only in length and
+    timing. The browser holds our `challenge_id`, which stands in for their
+    `verificationId` and binds the mobile, the attempt count and the single use to it. The
+    owner's brief sketched `{mobile, verificationId, code}` on verify; the id is kept
+    server-side instead because a client-supplied pair would let one number's verification
+    be replayed against another's.
+  - **Four digits, sixty seconds.** Codes are their default four digits (the API accepts
+    four to six); a resend waits 60 s (`OTP_RESEND_GAP_SECONDS`), which is also their own
+    gap. This replaces DEC-013's six digits and two minutes.
+  - **`console` provider for everything that must not text anybody** — a local run with no
+    credentials, the test suite (`config/settings/test.py` pins it) and the e2e API
+    (`e2e/serve-api.sh` pins it). The code is made here and printed in the API log.
+  - **No `requests` dependency.** The brief suggested it; ADR-021 admits no new package, so
+    the client is `urllib`, as the removed Fast2SMS adapter was.
+  - India only (`countryCode=91`). Reminder texts are untouched: adapter-only, console.
+- **Removed:** `integrations/sms/fast2sms.py`, its tests, `UB_FAST2SMS_API_KEY`,
+  `UB_FAST2SMS_ALLOW_QUICK`.
+- **Links:** DEC-013 · `apps/platform_app/tests/test_message_central.py` · `e2e/otpsignin.mjs`

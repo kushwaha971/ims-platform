@@ -64,7 +64,7 @@ export interface AuthState {
 export interface OtpState {
   mobile: string;
   challengeId: string;
-  /** Resend unlocks at this moment — two minutes after the last send. */
+  /** Resend unlocks at this moment — sixty seconds after the last send. */
   resendAt: number;
   expiresAt: number;
   /** Set while a code is being checked or asked for, for the busy states. */
@@ -168,7 +168,7 @@ const authSlice = createSlice({
         if (action.meta.aborted) return;
         state.status = 'failed';
         state.error = (action.payload ?? null) as Draft<ApiErrorShape> | null;
-        // A resend asked for too early is the SAME two-minute clock the screen
+        // A resend asked for too early is the SAME sixty-second clock the screen
         // shows, so it moves that clock; any other 429 shuts the form.
         const wait = otpRetryAfter(action.payload);
         if (state.otp) {

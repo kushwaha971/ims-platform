@@ -18,13 +18,18 @@ from apps.platform_app.constants import AuthTokenPurpose, OtpPurpose
 class OtpChallenge(TimeStampedModel):
     """OTP send/verify with throttling. Rows are purged after 24 h.
 
-    Reachable only when `UB_AUTH_OTP_ENABLED=1` (DEC-010).
+    One row per code asked for. The code itself is Message Central's when
+    `provider_verification_id` is set (DEC-014); the row is still ours, because
+    the single-use rule, the attempt count and the throttles are.
     """
 
     id = uuid7_pk()
     mobile = models.CharField(max_length=15)
     purpose = models.CharField(max_length=16, choices=OtpPurpose.choices)
-    code_hash = models.CharField(max_length=128)
+    # Empty when Message Central issued the code: it holds the code, we hold
+    # only its `verificationId` (DEC-014). Filled for the local console provider.
+    code_hash = models.CharField(max_length=128, blank=True, default="")
+    provider_verification_id = models.CharField(max_length=64, null=True, blank=True)
     attempts = models.SmallIntegerField(default=0)
     expires_at = models.DateTimeField()
     verified_at = models.DateTimeField(null=True, blank=True)

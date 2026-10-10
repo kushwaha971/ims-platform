@@ -52,7 +52,7 @@ export const useMemberSchemas = (
         role: v.enumValidation<MemberRoleCode>(roleCodes, 'validation.role.required').defined(),
         // The identity since 9 Oct 2026: they sign in with this number and an
         // OTP, so it is required (and Indian — the field is locked to +91,
-        // because the code goes by Fast2SMS).
+        // because the sign-in code is sent to India only).
         mobile: v.mobileValidation(true).nonNullable().defined(),
       }),
     }),

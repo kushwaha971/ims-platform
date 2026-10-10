@@ -61,16 +61,16 @@ const AUTH_BODY = {
 describe('authService — mobile + OTP (owner, 9 Oct 2026)', () => {
   afterEach(() => jest.restoreAllMocks());
 
-  it('asks for a code with the E.164 number and reads the two-minute clock', async () => {
+  it('asks for a code with the E.164 number and reads the sixty-second clock', async () => {
     const post = jest.spyOn(api, 'post').mockResolvedValue({
-      data: { data: { challenge_id: 'c-1', expires_in: 600, retry_after: 120 } },
+      data: { data: { challenge_id: 'c-1', expires_in: 600, retry_after: 60 } },
     });
 
     const challenge = await requestOtp({ mobile: '+919845011122', locale: 'hi' });
 
     expect(post.mock.calls[0]?.[0]).toBe('/auth/otp/request');
     expect(post.mock.calls[0]?.[1]).toEqual({ mobile: '+919845011122', locale: 'hi' });
-    expect(challenge).toEqual({ challengeId: 'c-1', expiresIn: 600, retryAfter: 120 });
+    expect(challenge).toEqual({ challengeId: 'c-1', expiresIn: 600, retryAfter: 60 });
   });
 
   it('verifies with snake_case keys and maps the session like any sign-in', async () => {
@@ -91,12 +91,12 @@ describe('authService — mobile + OTP (owner, 9 Oct 2026)', () => {
       },
     });
 
-    const result = await verifyOtp({ challengeId: 'c-1', code: '482913', deviceLabel: 'Chrome' });
+    const result = await verifyOtp({ challengeId: 'c-1', code: '4829', deviceLabel: 'Chrome' });
 
     expect(post.mock.calls[0]?.[0]).toBe('/auth/otp/verify');
     expect(post.mock.calls[0]?.[1]).toEqual({
       challenge_id: 'c-1',
-      code: '482913',
+      code: '4829',
       device_label: 'Chrome',
     });
     // A new number is a new account, which routes to onboarding.

@@ -78,7 +78,7 @@ const codeFromLog = async (last3, notBefore) => {
   for (let attempt = 0; attempt < 20; attempt += 1) {
     let log = '';
     try { log = readFileSync(join(LOGS, 'be-run.log'), 'utf8').slice(notBefore); } catch { /* not yet */ }
-    const hits = [...log.matchAll(/sms\.console to=\+91…(\d{3}) body=(\d{6}) is your/g)].filter((m) => m[1] === last3);
+    const hits = [...log.matchAll(/sms\.console to=\+91…(\d{3}) body=(\d{4,6}) is your/g)].filter((m) => m[1] === last3);
     if (hits.length) return hits[hits.length - 1][2];
     await new Promise((r) => setTimeout(r, 500));
   }

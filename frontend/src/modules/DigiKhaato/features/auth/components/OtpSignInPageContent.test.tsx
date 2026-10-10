@@ -33,7 +33,7 @@ jest.mock('next/navigation', () => ({
   usePathname: () => '/login',
 }));
 
-const CHALLENGE = { challengeId: 'c-1', expiresIn: 600, retryAfter: 120 };
+const CHALLENGE = { challengeId: 'c-1', expiresIn: 600, retryAfter: 60 };
 
 const otpError = (reason: string, attemptsLeft: number) => ({
   code: 'otp_invalid',
@@ -78,7 +78,7 @@ describe('OtpSignInPageContent — the number', () => {
     expect(screen.getByText('+91')).toBeInTheDocument();
     expect(screen.queryByLabelText(/Email/)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Password/)).not.toBeInTheDocument();
-    // Fast2SMS delivers in India only; 242 other codes would be 242 dead ends.
+    // The sign-in code is sent to India only; 242 other codes would be 242 dead ends.
     expect(screen.queryByRole('combobox', { name: 'Country code' })).not.toBeInTheDocument();
   });
 
@@ -89,7 +89,7 @@ describe('OtpSignInPageContent — the number', () => {
     expect(authService.requestOtp).toHaveBeenCalledWith(
       expect.objectContaining({ mobile: '+919845011122' })
     );
-    expect(screen.getByText(/We sent a 6-digit code to \+91 98450 11122/)).toBeInTheDocument();
+    expect(screen.getByText(/We sent a 4-digit code to \+91 98450 11122/)).toBeInTheDocument();
   });
 
   it('refuses a short number before asking the server', async () => {
@@ -109,7 +109,7 @@ describe('OtpSignInPageContent — the number', () => {
 });
 
 describe('OtpSignInPageContent — the code', () => {
-  it('verifies by itself when the sixth digit lands, then routes', async () => {
+  it('verifies by itself when the fourth digit lands, then routes', async () => {
     authService.verifyOtp.mockResolvedValue({
       userId: 'u1',
       name: '',
@@ -130,11 +130,11 @@ describe('OtpSignInPageContent — the code', () => {
     renderWithProviders(<OtpSignInPageContent mode="signUp" />);
     await toCodeStep(user);
 
-    await user.keyboard('482913');
+    await user.keyboard('4829');
 
     await waitFor(() =>
       expect(authService.verifyOtp).toHaveBeenCalledWith(
-        expect.objectContaining({ challengeId: 'c-1', code: '482913' })
+        expect.objectContaining({ challengeId: 'c-1', code: '4829' })
       )
     );
     // A new number is a new account, and a new account starts onboarding.
@@ -146,7 +146,7 @@ describe('OtpSignInPageContent — the code', () => {
     const user = userEvent.setup();
     renderWithProviders(<OtpSignInPageContent mode="signIn" />);
     await toCodeStep(user);
-    await user.keyboard('111111');
+    await user.keyboard('1111');
     expect(await screen.findByText('Wrong code. 3 tries left.')).toBeInTheDocument();
     // The cells empty, so the next code is typed rather than edited over.
     await waitFor(() =>
@@ -159,7 +159,7 @@ describe('OtpSignInPageContent — the code', () => {
     const user = userEvent.setup();
     renderWithProviders(<OtpSignInPageContent mode="signIn" />);
     await toCodeStep(user);
-    await user.keyboard('111111');
+    await user.keyboard('1111');
     expect(
       await screen.findByText("This code can't be used any more. Tap Resend code for a new one.")
     ).toBeInTheDocument();
@@ -171,29 +171,29 @@ describe('OtpSignInPageContent — the code', () => {
     await toCodeStep(user);
     await user.click(screen.getByRole('button', { name: 'Change number' }));
     expect(await screen.findByLabelText(/Mobile number/)).toBeInTheDocument();
-    expect(screen.queryByText(/We sent a 6-digit code/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/We sent a 4-digit code/)).not.toBeInTheDocument();
   });
 });
 
-describe('OtpSignInPageContent — resend after two minutes', () => {
-  it('counts down from 2:00 and only then offers "Resend code"', async () => {
+describe('OtpSignInPageContent — resend after sixty seconds', () => {
+  it('counts down from 1:00 and only then offers "Resend code"', async () => {
     jest.useFakeTimers({ now: new Date('2026-10-09T10:00:00Z'), doNotFake: ['queueMicrotask'] });
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
     renderWithProviders(<OtpSignInPageContent mode="signIn" />);
     await toCodeStep(user);
 
-    // Never "2:01": the countdown rounds up, and a 2-minute timer is capped at 2:00.
-    expect(screen.getByText(/Resend code in (2:00|1:59)/)).toBeInTheDocument();
-    expect(screen.queryByText(/Resend code in 2:0[1-9]/)).not.toBeInTheDocument();
+    // Never "2:01": the countdown rounds up, and a 60-second timer is capped at 1:00.
+    expect(screen.getByText(/Resend code in (1:00|0:59)/)).toBeInTheDocument();
+    expect(screen.queryByText(/Resend code in 1:0[1-9]/)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Resend code' })).not.toBeInTheDocument();
 
     act(() => {
-      jest.advanceTimersByTime(61_000);
+      jest.advanceTimersByTime(31_000);
     });
-    expect(screen.getByText(/Resend code in 0:5\d/)).toBeInTheDocument();
+    expect(screen.getByText(/Resend code in 0:2\d/)).toBeInTheDocument();
 
     act(() => {
-      jest.advanceTimersByTime(60_000);
+      jest.advanceTimersByTime(30_000);
     });
     const resend = await screen.findByRole('button', { name: 'Resend code' });
 
@@ -203,7 +203,7 @@ describe('OtpSignInPageContent — resend after two minutes', () => {
       expect.objectContaining({ mobile: '+919845011122' })
     );
     // A new code restarts the two minutes.
-    expect(await screen.findByText(/Resend code in (2:00|1:59)/)).toBeInTheDocument();
+    expect(await screen.findByText(/Resend code in (1:00|0:59)/)).toBeInTheDocument();
   });
 
   it('moves the countdown when the server says a resend came too early', async () => {
@@ -212,7 +212,7 @@ describe('OtpSignInPageContent — resend after two minutes', () => {
     renderWithProviders(<OtpSignInPageContent mode="signIn" />);
     await toCodeStep(user);
     act(() => {
-      jest.advanceTimersByTime(121_000);
+      jest.advanceTimersByTime(61_000);
     });
     authService.requestOtp.mockRejectedValueOnce({
       code: 'otp_throttled',

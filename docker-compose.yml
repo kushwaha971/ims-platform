@@ -36,9 +36,11 @@ x-backend-env: &backend-env
   UB_PUBLIC_BASE_URL: ${UB_PUBLIC_BASE_URL:-http://localhost:3000}
   UB_CORS_ALLOWED_ORIGINS: ${UB_CORS_ALLOWED_ORIGINS:-http://localhost:3000}
   UB_CSRF_TRUSTED_ORIGINS: ${UB_CSRF_TRUSTED_ORIGINS:-http://localhost:3000}
-  # Empty follows UB_FAST2SMS_API_KEY (Fast2SMS with a key, the log without).
   UB_SMS_BACKEND: ${UB_SMS_BACKEND:-}
-  UB_FAST2SMS_API_KEY: ${UB_FAST2SMS_API_KEY:-}
+  # Message Central VerifyNow (sign-in OTP). Empty prints the code in the log.
+  MC_CUSTOMER_ID: ${MC_CUSTOMER_ID:-}
+  MC_PASSWORD: ${MC_PASSWORD:-}
+  UB_OTP_PROVIDER: ${UB_OTP_PROVIDER:-}
   UB_WHATSAPP_BACKEND: ${UB_WHATSAPP_BACKEND:-platform.messaging.backends.DeepLinkWhatsAppBackend}
   UB_EMAIL_BACKEND: ${UB_EMAIL_BACKEND:-django.core.mail.backends.console.EmailBackend}
   UB_ACCESS_TOKEN_MINUTES: ${UB_ACCESS_TOKEN_MINUTES:-15}

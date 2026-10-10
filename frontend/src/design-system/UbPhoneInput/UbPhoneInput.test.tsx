@@ -487,7 +487,7 @@ describe('UbPhoneInput country picker', () => {
 });
 
 describe('UbPhoneInput with lockCountry (sign-in)', () => {
-  // Sign-in codes go by Fast2SMS, India only: a picker there would offer 242
+  // Sign-in codes are sent to India only (countryCode=91): a picker there would offer 242
   // countries that cannot receive a code.
   it('shows +91 with no picker and still reports E.164', async () => {
     const user = userEvent.setup();

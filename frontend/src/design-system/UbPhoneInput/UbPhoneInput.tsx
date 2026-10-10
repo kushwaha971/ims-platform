@@ -163,7 +163,7 @@ export interface UbPhoneInputProps extends Omit<
   readonly defaultCountry?: string;
   /**
    * Show the default country's code as a fixed label, with no picker. Sign-in
-   * uses it: the code goes by Fast2SMS, which delivers in India only, so
+   * uses it: the sign-in code is sent to Indian numbers only, so
    * offering 243 countries there would offer 242 that cannot sign in.
    */
   readonly lockCountry?: boolean;

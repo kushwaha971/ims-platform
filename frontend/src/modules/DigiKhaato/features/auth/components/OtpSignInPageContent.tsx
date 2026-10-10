@@ -33,9 +33,9 @@ import type { OtpCodeFormValues, OtpMobileFormValues } from '../validation/authS
 /**
  * The server's resend gap. The deadline is computed from the moment the answer
  * arrives and the countdown rounds UP, so the first frame read "2:01"; it is
- * capped here so a two-minute timer never shows more than two minutes.
+ * capped here so a sixty-second timer never shows more than a minute.
  */
-const RESEND_SECONDS = 120;
+const RESEND_SECONDS = 60;
 
 /** `95` → `1:35`, the way a phone's own resend timers read. */
 const clock = (seconds: number): string =>
@@ -51,10 +51,11 @@ export interface OtpSignInPageContentProps {
  * OTP … use same things", replacing the email + password screens on /login and
  * /signup. Two steps on one screen:
  *
- *  1. the mobile number (India only — `lockCountry`, because the code goes by
- *     Fast2SMS) and "Send code";
- *  2. the six-digit code, sent automatically when the sixth digit lands, with
- *     "Resend code" behind a two-minute countdown and "Change number".
+ *  1. the mobile number (India only — `lockCountry`, because the code is sent
+ *     with `countryCode=91`) and "Send code". Django asks Message Central
+ *     VerifyNow to text it (DEC-014); nothing of theirs reaches this bundle;
+ *  2. the four-digit code, sent automatically when the fourth digit lands, with
+ *     "Resend code" behind a sixty-second countdown and "Change number".
  *
  * Staying signed in needs nothing here: the session cookie is refreshed on
  * every visit for ninety days (server `UB_REFRESH_TOKEN_DAYS`), on a phone and
@@ -178,7 +179,7 @@ export function OtpSignInPageContent({ mode }: OtpSignInPageContentProps): React
                     id={field.id}
                     value={(field.value as string) ?? ''}
                     onChange={field.onChange}
-                    // The sixth digit is the submit: SMS autofill fills all six
+                    // The fourth digit is the submit: SMS autofill fills all four
                     // at once, and a second tap on "Verify" is a wasted one.
                     onComplete={(code) => {
                       codeForm.setValue('code', code);

@@ -6,7 +6,7 @@ import userEvent from '@testing-library/user-event';
 import { OTP_LENGTH, UbOtpInput } from './UbOtpInput';
 
 /**
- * PLT-01 §7 and T-PLT-01-9 — "paste fills six cells and auto-submits".
+ * PLT-01 §7 and T-PLT-01-9 — "paste fills four cells and auto-submits".
  *
  * A controlled harness rather than a bare render: the component's whole
  * contract is that the FORM holds one string and the cells are a rendering of
@@ -46,11 +46,11 @@ describe('UbOtpInput', () => {
     render(<Harness />);
     const [first, second] = cells();
     expect(first).toHaveAttribute('autocomplete', 'one-time-code');
-    // Six one-time-code fields make the platform offer the code six times.
+    // Four one-time-code fields make the platform offer the code four times.
     expect(second).toHaveAttribute('autocomplete', 'off');
   });
 
-  it('fills all six cells from one paste and fires onComplete once', async () => {
+  it('fills all four cells from one paste and fires onComplete once', async () => {
     const user = userEvent.setup();
     const onComplete = jest.fn();
     render(<Harness onComplete={onComplete} />);
@@ -58,11 +58,11 @@ describe('UbOtpInput', () => {
     const [first] = cells();
     if (!first) throw new Error('no cells rendered');
     first.focus();
-    await user.paste('123456');
+    await user.paste('1234');
 
-    expect(cells().map((cell) => cell.value)).toEqual(['1', '2', '3', '4', '5', '6']);
+    expect(cells().map((cell) => cell.value)).toEqual(['1', '2', '3', '4']);
     expect(onComplete).toHaveBeenCalledTimes(1);
-    expect(onComplete).toHaveBeenCalledWith('123456');
+    expect(onComplete).toHaveBeenCalledWith('1234');
   });
 
   it('strips the spaces an SMS copy brings with it', async () => {
@@ -77,22 +77,22 @@ describe('UbOtpInput', () => {
       cells()
         .map((cell) => cell.value)
         .join('')
-    ).toBe('123456');
+    ).toBe('1234');
   });
 
-  it('advances as digits are typed and auto-submits on the sixth', async () => {
+  it('advances as digits are typed and auto-submits on the fourth', async () => {
     const user = userEvent.setup();
     const onComplete = jest.fn();
     render(<Harness onComplete={onComplete} />);
 
-    await user.type(cells()[0] as HTMLInputElement, '123456');
+    await user.type(cells()[0] as HTMLInputElement, '1234');
 
     expect(
       cells()
         .map((cell) => cell.value)
         .join('')
-    ).toBe('123456');
-    expect(onComplete).toHaveBeenCalledWith('123456');
+    ).toBe('1234');
+    expect(onComplete).toHaveBeenCalledWith('1234');
   });
 
   it('rejects a non-digit rather than showing it', async () => {
@@ -119,7 +119,7 @@ describe('UbOtpInput', () => {
   });
 
   it('is read-only, not disabled, while verifying — focus must survive', () => {
-    render(<Harness readOnly initial="123456" />);
+    render(<Harness readOnly initial="1234" />);
     cells().forEach((cell) => {
       expect(cell).toHaveAttribute('readonly');
       expect(cell).not.toBeDisabled();

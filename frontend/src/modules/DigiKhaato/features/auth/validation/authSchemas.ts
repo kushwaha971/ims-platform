@@ -4,8 +4,10 @@ import { useMemo } from 'react';
 
 import * as Yup from 'yup';
 
+
 import { useTranslation } from 'src/hooks/useTranslation';
 import { useValidationSchemas } from 'src/hooks/useValidationSchemas';
+import { REGEX } from 'src/utils/regexConstants';
 
 import { PASSWORD_FLOOR } from '../constants/authDefaults';
 
@@ -128,7 +130,7 @@ export const useAuthSchemas = (): AuthSchemas => {
       otpCodeSchema: Yup.object({
         code: Yup.string()
           .required(t('auth.otp.codeRequired'))
-          .matches(/^\d{6}$/, t('auth.otp.codeFormat'))
+          .matches(REGEX.OTP_CODE, t('auth.otp.codeFormat'))
           .defined(),
       }),
       passwordLoginSchema: Yup.object({

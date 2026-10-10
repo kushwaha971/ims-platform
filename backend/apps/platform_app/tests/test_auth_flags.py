@@ -49,11 +49,11 @@ def test_sessions_last_ninety_days_by_default() -> None:
     assert settings.UB_REFRESH_TOKEN_DAYS == 90
 
 
-def test_a_resend_waits_two_minutes() -> None:
+def test_a_resend_waits_sixty_seconds() -> None:
     """The owner's timer, enforced on the server; the screen only shows it."""
     from apps.platform_app.services import throttle
 
-    assert throttle.OTP_RESEND_GAP_SECONDS == 120
+    assert throttle.OTP_RESEND_GAP_SECONDS == 60
 
 
 def test_the_default_sign_in_path_writes_no_otp_challenge(auth_client: Any) -> None:

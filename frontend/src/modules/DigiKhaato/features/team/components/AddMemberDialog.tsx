@@ -130,7 +130,7 @@ export function AddMemberDialog({
         </UbField>
 
         {/* The way they sign in (owner, 9 Oct 2026): a code is texted to this
-            number, so it is required and Indian — Fast2SMS delivers in India
+            number, so it is required and Indian — the sign-in code is sent in India
             only, hence `lockCountry`. `UbPhoneInput`, as on the party form:
             the merchant types ten digits and the schema wants E.164 (UAT D4). */}
         <UbField

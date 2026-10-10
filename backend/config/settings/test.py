@@ -33,9 +33,11 @@ DATABASES["default"]["TEST"] = {  # noqa: F405
     "NAME": env.str("UB_TEST_DB_NAME", "test_udhaarbook")  # noqa: F405
 }
 
-# DEC-013 — never a real SMS from the suite. `base` reads backend/.env, and the
-# owner's Fast2SMS key lives there, so without this every OTP test would text a
-# made-up number on a paid account. Tests that exercise the Fast2SMS adapter
-# set the key themselves and stub the network (`test_fast2sms.py`).
-UB_FAST2SMS_API_KEY = ""
+# DEC-014 — never a real SMS from the suite. `base` reads backend/.env, where
+# the owner's Message Central credentials live, so without this every OTP test
+# would text a made-up number on a paid account. Tests of the Message Central
+# service set the credentials themselves and stub the network.
+MC_CUSTOMER_ID = ""
+MC_PASSWORD = ""
+UB_OTP_PROVIDER = "console"
 UB_SMS_BACKEND = "apps.common.integrations.sms.console.ConsoleSmsBackend"

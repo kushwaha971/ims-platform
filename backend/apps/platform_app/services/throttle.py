@@ -43,7 +43,7 @@ SCOPE_RESET_CONFIRM_IP = "reset_confirm_ip"  # 30 link confirmations per IP per 
 SCOPE_VERIFY_USER = "verify_user"  # 5 verification links per user per hour, 60 s apart
 
 # Reachable only when `UB_AUTH_OTP_ENABLED=1` (DEC-010).
-SCOPE_OTP_MOBILE = "otp_mobile"  # 5 per mobile per hour, 2 min apart
+SCOPE_OTP_MOBILE = "otp_mobile"  # 5 per mobile per hour, 60 s apart
 SCOPE_OTP_IP = "otp_ip"  # 20 per IP per hour
 SCOPE_OTP_FAILURES = "otp_fail"  # 5 failed challenges/hour → 30 min lockout
 
@@ -55,7 +55,7 @@ OTP_IP_WINDOW_SECONDS = 3600
 # PLT-01 FR-7 "Resend is allowed after retry_after" — two minutes (owner, 9 Oct
 # 2026: "proper resend OTP logic … timer of 2 min"). The server enforces it; the
 # screen's countdown only shows it.
-OTP_RESEND_GAP_SECONDS = 120
+OTP_RESEND_GAP_SECONDS = 60
 
 OTP_FAILURES_BEFORE_LOCKOUT = 5
 OTP_FAILURE_WINDOW_SECONDS = 3600

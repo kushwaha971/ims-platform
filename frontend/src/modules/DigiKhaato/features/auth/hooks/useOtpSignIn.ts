@@ -28,12 +28,12 @@ import type { UseFormSetError } from 'react-hook-form';
 
 /**
  * Owner, 9 Oct 2026 — the sign-in and sign-up screen's only door into Redux:
- * a mobile number, then the six-digit code. One flow for both, because the
+ * a mobile number, then the four-digit code. One flow for both, because the
  * server answers `otp/request` identically for a number with an account and
  * one without, and `otp/verify` creates the account when the number is new
  * (`isNew` on the result routes it to onboarding).
  *
- * The resend clock is the SERVER's: `retry_after` (two minutes) arrives with
+ * The resend clock is the SERVER's: `retry_after` (sixty seconds) arrives with
  * every code, the slice keeps it as an absolute deadline, and a resend asked
  * for early is refused by the server and moves the same deadline. The screen
  * only shows it.

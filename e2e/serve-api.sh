@@ -25,12 +25,12 @@ PY=python; [ -x "$REPO/.venv/bin/python" ] && PY="$REPO/.venv/bin/python"
 pkill -f "manage.py runserver" 2>/dev/null || true
 sleep 2
 cd $REPO/backend
-# DEC-013 — the harnesses sign in by OTP with made-up numbers and read the code
-# from this log. With a Fast2SMS key in backend/.env every run would text real
-# (and paid) SMS to strangers, so the e2e server always uses the console
-# backend unless a run explicitly asks for real delivery.
+# DEC-014 — the harnesses sign in by OTP with made-up numbers and read the code
+# from this log. With Message Central credentials in backend/.env every run
+# would text real (and paid) codes to strangers, so the e2e server always uses
+# the console provider unless a run explicitly asks for real delivery.
 if [ "${UB_E2E_REAL_SMS:-0}" != "1" ]; then
-  export UB_SMS_BACKEND=apps.common.integrations.sms.console.ConsoleSmsBackend
+  export UB_OTP_PROVIDER=console
 fi
 $DETACH nohup "$PY" manage.py runserver 0.0.0.0:8000 --noreload > $LOGS/be-run.log 2>&1 < /dev/null &
 for _ in $(seq 1 20); do

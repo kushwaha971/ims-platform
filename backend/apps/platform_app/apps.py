@@ -75,17 +75,19 @@ def check_console_sms_backend(app_configs: object = None, **kwargs: object) -> l
     if not getattr(settings, "UB_AUTH_OTP_ENABLED", False):
         return []
 
-    backend = getattr(settings, "UB_SMS_BACKEND", "") or ""
-    if settings.DEBUG or not backend.endswith("ConsoleSmsBackend"):
+    # DEC-014: the code is Message Central's to send. `console` means it is
+    # only printed in this server's log.
+    provider = getattr(settings, "UB_OTP_PROVIDER", "console") or "console"
+    if settings.DEBUG or provider != "console":
         return []
     if getattr(settings, "UB_ALLOW_CONSOLE_SMS", False):
         return []
     return [
         Error(
-            "UB_SMS_BACKEND is the console backend and DEBUG is off: no OTP would "
+            "The OTP provider is the console and DEBUG is off: no sign-in code would "
             "be delivered to any merchant.",
-            hint="Configure a real SMS provider, or set UB_ALLOW_CONSOLE_SMS=1 "
-            "for a single-user local deployment.",
+            hint="Set MC_CUSTOMER_ID and MC_PASSWORD (Message Central), or set "
+            "UB_ALLOW_CONSOLE_SMS=1 for a single-user local deployment.",
             id="platform.E001",
         )
     ]

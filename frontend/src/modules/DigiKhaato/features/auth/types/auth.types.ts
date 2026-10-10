@@ -48,7 +48,7 @@ export interface TenantApiRow {
 /** PLT-02 FR-1 — the login body. One identity, and it is an email. */
 /** Owner, 9 Oct 2026 — `POST /auth/otp/request`. */
 export interface OtpRequestInput {
-  /** E.164, always `+91…`: Fast2SMS delivers in India only. */
+  /** E.164, always `+91…`: the sign-in code is sent to India only. */
   readonly mobile: string;
   readonly locale?: Locale;
 }
@@ -57,7 +57,7 @@ export interface OtpRequestInput {
 export interface OtpChallenge {
   readonly challengeId: string;
   readonly expiresIn: number;
-  /** Seconds before another code may be asked for — two minutes. */
+  /** Seconds before another code may be asked for — sixty seconds. */
   readonly retryAfter: number;
 }
 
