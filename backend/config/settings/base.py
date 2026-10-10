@@ -359,6 +359,7 @@ UB_SCHEDULER_ENQUEUE_LOCK_ID = env.int("UB_SCHEDULER_ENQUEUE_LOCK_ID", 918273645
 FAST2SMS_API_KEY = env.str("FAST2SMS_API_KEY", "")
 MC_CUSTOMER_ID = env.str("MC_CUSTOMER_ID", "")
 MC_PASSWORD = env.str("MC_PASSWORD", "")
+MC_AUTH_TOKEN = env.str("MC_AUTH_TOKEN", "")
 # `cpaas` is the host their API page documents. The brief this was built from
 # said `cxapi.messagecentral.com`, which has no DNS record: every send failed
 # as "unreachable" until this was corrected (10 Oct 2026).
@@ -370,7 +371,7 @@ MC_BASE_URL = env.str("MC_BASE_URL", "https://cpaas.messagecentral.com")
 UB_OTP_PROVIDER = env.str("UB_OTP_PROVIDER", "") or (
     "fast2sms"
     if FAST2SMS_API_KEY
-    else ("message_central" if MC_CUSTOMER_ID and MC_PASSWORD else "console")
+    else ("message_central" if MC_CUSTOMER_ID and (MC_PASSWORD or MC_AUTH_TOKEN) else "console")
 )
 # Reminders and other texts are adapter-only (ADR-015): the console backend
 # until a provider is chosen for them. The sign-in OTP does not go through it.

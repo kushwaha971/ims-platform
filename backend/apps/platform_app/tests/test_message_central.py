@@ -32,7 +32,11 @@ class FakeMessageCentral:
         self.valid_tokens = {"token-1", "token-2", "token-3"}
         self.send_response: tuple[int, dict] = (
             200,
-            {"responseCode": 200, "message": "SUCCESS", "data": {"verificationId": "2949", "timeout": "60"}},
+            {
+                "responseCode": 200,
+                "message": "SUCCESS",
+                "data": {"verificationId": "2949", "timeout": "60"},
+            },
         )
         self.code = "1476"
         self.validate_override: tuple[int, dict] | None = None
@@ -279,3 +283,18 @@ def test_the_deploy_check_wants_credentials_in_production(settings: Any) -> None
     assert [error.id for error in check_console_sms_backend()] == ["platform.E001"]
     settings.UB_OTP_PROVIDER = "message_central"
     assert check_console_sms_backend() == []
+
+
+def test_dashboard_token_works_without_account_password(settings, monkeypatch):
+    """Use the provider-issued API token without retaining the console password."""
+    settings.MC_CUSTOMER_ID = "C-TEST"
+    settings.MC_PASSWORD = ""
+    settings.MC_AUTH_TOKEN = "dashboard-token"
+
+    def unexpected(*args, **kwargs):
+        raise AssertionError("Static API token must not trigger password authentication")
+
+    monkeypatch.setattr(mc, "_call", unexpected)
+    assert mc.is_configured()
+    assert mc.get_auth_token() == "dashboard-token"
+    assert mc.get_auth_token(force=True) == "dashboard-token"

@@ -120,8 +120,11 @@ def test_failed_delivery_expires_challenge_and_returns_error(auth_client, settin
 
 
 @pytest.mark.parametrize("purpose", ["verify", "reset"])
-def test_fast2sms_cannot_be_used_outside_signin_signup(settings, purpose):
+@pytest.mark.parametrize("provider", ["fast2sms", "message_central"])
+def test_fast2sms_cannot_be_used_outside_signin_signup(settings, purpose, provider):
     """Only the owner's requested authentication purposes may trigger a paid SMS."""
-    settings.UB_OTP_PROVIDER = "fast2sms"
+    settings.UB_OTP_PROVIDER = provider
+    settings.MC_CUSTOMER_ID = "C-TEST"
+    settings.MC_AUTH_TOKEN = "test-token"
     with pytest.raises(otp.OtpNotSent):
         otp.request_otp(mobile="+919794620535", purpose=purpose)

@@ -40,5 +40,6 @@ DATABASES["default"]["TEST"] = {  # noqa: F405
 FAST2SMS_API_KEY = ""
 MC_CUSTOMER_ID = ""
 MC_PASSWORD = ""
+MC_AUTH_TOKEN = ""
 UB_OTP_PROVIDER = "console"
 UB_SMS_BACKEND = "apps.common.integrations.sms.console.ConsoleSmsBackend"

@@ -41,6 +41,7 @@ x-backend-env: &backend-env
   FAST2SMS_API_KEY: ${FAST2SMS_API_KEY:-}
   MC_CUSTOMER_ID: ${MC_CUSTOMER_ID:-}
   MC_PASSWORD: ${MC_PASSWORD:-}
+  MC_AUTH_TOKEN: ${MC_AUTH_TOKEN:-}
   UB_OTP_PROVIDER: ${UB_OTP_PROVIDER:-}
   UB_WHATSAPP_BACKEND: ${UB_WHATSAPP_BACKEND:-platform.messaging.backends.DeepLinkWhatsAppBackend}
   UB_EMAIL_BACKEND: ${UB_EMAIL_BACKEND:-django.core.mail.backends.console.EmailBackend}

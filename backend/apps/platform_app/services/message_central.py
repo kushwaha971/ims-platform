@@ -73,7 +73,9 @@ class Validation:
 
 
 def is_configured() -> bool:
-    return bool(settings.MC_CUSTOMER_ID and settings.MC_PASSWORD)
+    return bool(
+        settings.MC_CUSTOMER_ID and (settings.MC_PASSWORD or getattr(settings, "MC_AUTH_TOKEN", ""))
+    )
 
 
 def national_number(mobile: str) -> str:
@@ -110,6 +112,9 @@ def get_auth_token(*, force: bool = False) -> str:
     """The cached auth token, fetched when missing or when ``force`` is set."""
     if not is_configured():
         raise NotConfigured("MC_CUSTOMER_ID and MC_PASSWORD are not set.")
+    configured_token = getattr(settings, "MC_AUTH_TOKEN", "")
+    if configured_token:
+        return str(configured_token)
     if not force:
         cached = cache.get(TOKEN_CACHE_KEY)
         if cached:

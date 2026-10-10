@@ -185,7 +185,10 @@ def request_otp(
     """Create a challenge and dispatch the code. Never reveals whether the mobile exists."""
     from apps.platform_app.models import OtpChallenge
 
-    if _provider() == PROVIDER_FAST2SMS and purpose not in (OtpPurpose.LOGIN, OtpPurpose.SIGNUP):
+    if _provider() in (PROVIDER_FAST2SMS, PROVIDER_MESSAGE_CENTRAL) and purpose not in (
+        OtpPurpose.LOGIN,
+        OtpPurpose.SIGNUP,
+    ):
         raise OtpNotSent("SMS OTP is available only for sign-in and sign-up.")
     _assert_not_throttled(mobile=mobile, ip=ip)
 
