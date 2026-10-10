@@ -21,7 +21,7 @@
   "sessions.rename.action": "नाम बदलें",
   "sessions.rename.error": "उस डिवाइस का नाम नहीं बदल सके।",
   "sessions.rename.label": "डिवाइस का नाम",
-  "sessions.rename.placeholder": "जैसे: दुकान काउंटर का फ़ोन",
+  "sessions.rename.placeholder": "डिवाइस का नाम लिखें",
   "sessions.rename.required": "इस डिवाइस के लिए नाम लिखें।",
   "sessions.rename.save": "नाम सेव करें",
   "sessions.rename.saved": "डिवाइस का नाम बदला गया",

@@ -356,7 +356,7 @@ for (const size of SIZES) {
       await dr.getByPlaceholder('Search a customer or supplier').fill('Gupta'); await page.waitForTimeout(1500);
       await page.getByRole('option', { name: /Gupta Wholesale/ }).first().click().catch(async () => page.getByText('Gupta Wholesale').last().click());
       await page.waitForTimeout(500);
-      await dr.getByPlaceholder('e.g. Tea and snacks for staff').fill('Loading charges — unpaid').catch(() => {});
+      await dr.getByPlaceholder('Enter a note').fill('Loading charges — unpaid').catch(() => {});
       await dr.getByRole('button', { name: /Pick a date/ }).or(dr.getByText('Pick a date')).first().click();
       await page.waitForTimeout(700);
       const cal = page.locator('[role="grid"]').last();
@@ -395,7 +395,7 @@ for (const size of SIZES) {
     await vd.getByRole('button', { name: 'Void expense' }).click(); await page.waitForTimeout(600);
     const needReason = /Give a short reason/.test(await vd.innerText());
     record('EXP-02', 'void without reason blocked', needReason, '');
-    await vd.getByPlaceholder('e.g. Wrong amount').fill('Hamali was already paid in cash');
+    await vd.getByPlaceholder('Enter the reason').fill('Hamali was already paid in cash');
     await vd.getByRole('button', { name: 'Void expense' }).click(); await page.waitForTimeout(1800);
     const g = await must('GET', `/parties/${gupta.id}`, null, T);
     record('EXP-02', 'void reverses the khata (Gupta back to -1500)', g.balance === '-1500.00', g.balance);

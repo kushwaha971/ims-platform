@@ -11,7 +11,7 @@
   "priceLists.empty.title": "No price lists yet",
   "priceLists.error": "Could not load price lists.",
   "priceLists.form.name": "Name",
-  "priceLists.form.name.placeholder": "e.g. Wholesale",
+  "priceLists.form.name.placeholder": "Enter a price list name",
   "priceLists.form.name.required": "Enter a name, like Wholesale.",
   "priceLists.form.percent": "Change on selling price",
   "priceLists.form.percent.format": "Enter a percentage between -100 and 1000, like -5.",

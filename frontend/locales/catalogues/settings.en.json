@@ -61,7 +61,7 @@
   "settings.template.hint": "Leave empty to use the standard message.",
   "settings.template.insert": "Insert a detail",
   "settings.template.missingAmount": "Include '{amount}' so the customer sees how much is due.",
-  "settings.template.placeholder": "e.g. Namaste '{party_name}', '{amount}' is pending with '{business_name}'.",
+  "settings.template.placeholder": "Enter your message",
   "settings.template.placeholder.amount": "Amount due",
   "settings.template.placeholder.business_name": "Your shop name",
   "settings.template.placeholder.due_date": "Due date",

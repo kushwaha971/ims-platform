@@ -61,7 +61,7 @@
   "settings.template.hint": "मानक संदेश के लिए खाली छोड़ें।",
   "settings.template.insert": "कोई विवरण जोड़ें",
   "settings.template.missingAmount": "'{amount}' जोड़ें ताकि ग्राहक को बकाया राशि दिखे।",
-  "settings.template.placeholder": "जैसे: नमस्ते '{party_name}', '{business_name}' का '{amount}' बकाया है।",
+  "settings.template.placeholder": "अपना संदेश लिखें",
   "settings.template.placeholder.amount": "बकाया राशि",
   "settings.template.placeholder.business_name": "आपकी दुकान का नाम",
   "settings.template.placeholder.due_date": "नियत तारीख",

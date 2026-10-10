@@ -16,7 +16,7 @@
   "calendar.dialog.body": "एक दिन, या लगातार 31 दिन तक।",
   "calendar.dialog.from": "पहला दिन",
   "calendar.dialog.reason": "कारण",
-  "calendar.dialog.reasonPlaceholder": "दिवाली",
+  "calendar.dialog.reasonPlaceholder": "कारण लिखें",
   "calendar.dialog.submit": "जोड़ें",
   "calendar.dialog.submitting": "जोड़ रहे हैं…",
   "calendar.dialog.title": "बंद दिन जोड़ें",

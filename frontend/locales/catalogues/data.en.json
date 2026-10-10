@@ -28,7 +28,7 @@
   "data.delete.pending.countdown": "{days, plural, one {# day left} other {# days left}} to change your mind.",
   "data.delete.pending.title": "This business will be deleted on {date}",
   "data.delete.reason.label": "Why are you leaving? (optional)",
-  "data.delete.reason.placeholder": "e.g. Closing the shop",
+  "data.delete.reason.placeholder": "Enter the reason",
   "data.delete.requested": "Deletion requested. The business is now read-only.",
   "data.delete.title": "Delete this business",
   "data.error.body": "Check your connection and try again.",

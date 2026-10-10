@@ -21,7 +21,7 @@
   "sessions.rename.action": "Rename",
   "sessions.rename.error": "We could not rename that device.",
   "sessions.rename.label": "Device name",
-  "sessions.rename.placeholder": "e.g. Shop counter phone",
+  "sessions.rename.placeholder": "Enter a device name",
   "sessions.rename.required": "Enter a name for this device.",
   "sessions.rename.save": "Save name",
   "sessions.rename.saved": "Device renamed",

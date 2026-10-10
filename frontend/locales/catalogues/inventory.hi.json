@@ -6,7 +6,7 @@
   "inventory.masters.category.name": "श्रेणी का नाम",
   "inventory.masters.category.name.required": "श्रेणी का नाम लिखें।",
   "inventory.masters.category.parent": "किसके अंदर",
-  "inventory.masters.category.placeholder": "जैसे राशन",
+  "inventory.masters.category.placeholder": "श्रेणी का नाम लिखें",
   "inventory.masters.category.topLevel": "सबसे ऊपर",
   "inventory.masters.itemCount": "{count, plural, one {# आइटम} other {# आइटम}}",
   "inventory.masters.title": "श्रेणियाँ और इकाइयाँ",
@@ -14,7 +14,7 @@
   "inventory.masters.unit.code": "कोड",
   "inventory.masters.unit.code.format": "8 तक अक्षर या अंक लिखें।",
   "inventory.masters.unit.code.hint": "यह GST इकाई कोड नहीं है — बिल पर जैसा लिखा है वैसा छपेगा।",
-  "inventory.masters.unit.code.placeholder": "जैसे PETI",
+  "inventory.masters.unit.code.placeholder": "इकाई का कोड लिखें",
   "inventory.masters.unit.code.required": "इकाई कोड लिखें।",
   "inventory.masters.unit.custom": "अपनी",
   "inventory.masters.unit.decimals": "दशमलव की अनुमति",
@@ -23,7 +23,7 @@
   "inventory.masters.unit.decimalsOn": "दशमलव चलेगा",
   "inventory.masters.unit.gst": "GST इकाई",
   "inventory.masters.unit.name": "इकाई का नाम",
-  "inventory.masters.unit.name.placeholder": "जैसे पेटी",
+  "inventory.masters.unit.name.placeholder": "इकाई का नाम लिखें",
   "inventory.masters.unit.name.required": "इकाई का नाम लिखें।",
   "inventory.masters.units": "इकाइयाँ"
 }

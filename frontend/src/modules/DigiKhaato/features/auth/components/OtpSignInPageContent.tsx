@@ -143,7 +143,7 @@ export function OtpSignInPageContent({ mode }: OtpSignInPageContentProps): React
               <UbField
                 name="mobile"
                 label={t('auth.otp.mobileLabel')}
-                placeholder="98765 43210"
+                placeholder={t('auth.otp.mobilePlaceholder')}
                 required
               >
                 {(field) => (

@@ -16,7 +16,7 @@
   "calendar.dialog.body": "One day, or up to 31 days in a row.",
   "calendar.dialog.from": "First day",
   "calendar.dialog.reason": "Reason",
-  "calendar.dialog.reasonPlaceholder": "Diwali",
+  "calendar.dialog.reasonPlaceholder": "Enter the reason",
   "calendar.dialog.submit": "Add",
   "calendar.dialog.submitting": "Adding…",
   "calendar.dialog.title": "Add a closure",

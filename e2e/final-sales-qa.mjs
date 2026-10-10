@@ -305,11 +305,11 @@ async function flows(browser, s) {
   const vd = await page.getByRole('dialog').innerText().catch(() => '');
   console.log('VOID DIALOG', vd.replace(/\n/g, ' | '));
   check('void dialog lists consequences (stock, khata, payments → advance)', /Stock/.test(vd) && /Khata/.test(vd) && /advance/.test(vd), vd.replace(/\n/g, ' | '));
-  await page.getByPlaceholder('e.g. Duplicate bill').fill('Du').catch(() => {});
+  await page.getByPlaceholder('Enter the reason').fill('Du').catch(() => {});
   await page.getByTestId('void-confirm').click().catch(() => {});
   await page.waitForTimeout(800);
   check('void reason < 3 chars refused', /at least 3 characters/.test(await page.getByRole('dialog').innerText().catch(() => '')));
-  await page.getByPlaceholder('e.g. Duplicate bill').fill('Customer cancelled order');
+  await page.getByPlaceholder('Enter the reason').fill('Customer cancelled order');
   await shot(page, D, '22-void-dialog');
   await page.getByTestId('void-confirm').click();
   await page.waitForTimeout(3500);
@@ -585,7 +585,7 @@ async function void2(browser, s) {
     await go(page, `/sales/invoices/${inv}`, 3000);
     await page.getByTestId('document-void').click();
     await page.waitForTimeout(1200);
-    await page.getByPlaceholder('e.g. Duplicate bill').fill('Customer cancelled order');
+    await page.getByPlaceholder('Enter the reason').fill('Customer cancelled order');
     console.log('VOID', label, (await page.getByRole('dialog').innerText()).replace(/\n/g, ' | '));
     if (label === 'paid-party') await shot(page, D, '22b-void-dialog-paid');
     await page.getByTestId('void-confirm').click();

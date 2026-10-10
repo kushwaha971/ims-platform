@@ -94,7 +94,7 @@ for (const [size, viewport] of [['desktop', { width: 1280, height: 860 }], ['pho
   await qty.waitFor({ timeout: 20000 });
   await qty.fill('3');
   await page.getByLabel('Reason').selectOption('damaged_goods');
-  await page.getByPlaceholder(/Note \(optional\)/).fill('3 bags torn');
+  await page.getByPlaceholder(/note \(optional\)/i).fill('3 bags torn');
   await look('drawer', 'viewport');
   await page.getByTestId('debit-note-issue').click();
   await page.waitForURL((u) => /\/purchases\/debit-notes\/[^/]+$/.test(u.pathname), { timeout: 20000 }).catch(() => {});

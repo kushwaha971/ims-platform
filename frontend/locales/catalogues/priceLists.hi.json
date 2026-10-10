@@ -11,7 +11,7 @@
   "priceLists.empty.title": "अभी कोई प्राइस लिस्ट नहीं",
   "priceLists.error": "प्राइस लिस्ट लोड नहीं हो सकीं।",
   "priceLists.form.name": "नाम",
-  "priceLists.form.name.placeholder": "जैसे होलसेल",
+  "priceLists.form.name.placeholder": "मूल्य सूची का नाम लिखें",
   "priceLists.form.name.required": "नाम लिखें, जैसे होलसेल।",
   "priceLists.form.percent": "बिक्री कीमत पर बदलाव",
   "priceLists.form.percent.format": "-100 से 1000 के बीच प्रतिशत लिखें, जैसे -5।",

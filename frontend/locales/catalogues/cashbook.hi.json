@@ -8,7 +8,7 @@
   "cashbook.closeDay": "दिन बंद करें",
   "cashbook.closing": "अंतिम बाकी",
   "cashbook.countedCash": "गिना हुआ नकद",
-  "cashbook.countedCash.placeholder": "जैसे 18140",
+  "cashbook.countedCash.placeholder": "गिना हुआ कैश लिखें",
   "cashbook.day.header": "{date} · {weekday} — आया {in} · गया {out} · अंतिम {closing}",
   "cashbook.days": "दिन",
   "cashbook.empty.body": "इस अवधि में न पैसा आया, न गया।",

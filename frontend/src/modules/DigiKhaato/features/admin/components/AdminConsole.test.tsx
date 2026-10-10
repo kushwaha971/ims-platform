@@ -179,7 +179,7 @@ describe('AdminTenantDetailPageContent', () => {
     );
     await userEvent.click(await screen.findByRole('button', { name: 'Enter business' }));
     await userEvent.type(
-      await screen.findByPlaceholderText('e.g. Owner reported a wrong balance on 3 Sep'),
+      await screen.findByPlaceholderText('Enter the reason'),
       'Reproduce the wrong balance'
     );
     const enterButtons = screen.getAllByRole('button', { name: 'Enter business' });

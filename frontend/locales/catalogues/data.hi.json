@@ -28,7 +28,7 @@
   "data.delete.pending.countdown": "मन बदलने के लिए {days, plural, one {# दिन बाकी} other {# दिन बाकी}}।",
   "data.delete.pending.title": "यह बिज़नेस {date} को हटा दिया जाएगा",
   "data.delete.reason.label": "आप क्यों जा रहे हैं? (वैकल्पिक)",
-  "data.delete.reason.placeholder": "जैसे दुकान बंद कर रहे हैं",
+  "data.delete.reason.placeholder": "कारण लिखें",
   "data.delete.requested": "हटाने का अनुरोध हो गया। बिज़नेस अब केवल-पढ़ने योग्य है।",
   "data.delete.title": "यह बिज़नेस हटाएँ",
   "data.error.body": "अपना कनेक्शन जाँचें और फिर कोशिश करें।",

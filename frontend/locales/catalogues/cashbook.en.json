@@ -8,7 +8,7 @@
   "cashbook.closeDay": "Close the day",
   "cashbook.closing": "Closing",
   "cashbook.countedCash": "Counted cash",
-  "cashbook.countedCash.placeholder": "e.g. 18140",
+  "cashbook.countedCash.placeholder": "Enter the cash counted",
   "cashbook.day.header": "{date} · {weekday} — In {in} · Out {out} · Closing {closing}",
   "cashbook.days": "Days",
   "cashbook.empty.body": "No money came in or went out in this range.",
