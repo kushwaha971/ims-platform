@@ -26,6 +26,7 @@ import { mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { api } from './lib/fixtures.mjs';
+import { assertE2eApi } from './lib/local.mjs';
 
 const FRONTEND = process.env.E2E_FRONTEND ?? 'http://localhost:3000';
 const LOGS = process.env.UB_E2E_LOGS ?? '/tmp';
@@ -60,6 +61,9 @@ const logSize = () => {
     return 0;
   }
 };
+
+// Made-up numbers are about to ask for codes: only ever from the e2e API.
+await assertE2eApi();
 
 const browser = await chromium.launch(process.env.CHROME ? { executablePath: process.env.CHROME } : {});
 for (const [index, vp] of [

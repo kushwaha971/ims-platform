@@ -603,3 +603,34 @@ def test_sign_in_refuses_a_foreign_mobile_with_a_message(auth_client: Any) -> No
     assert response.status_code == 400
     assert "mobile" in response.json()["error"]["details"]
     assert OtpChallenge.objects.count() == 0
+
+
+class _RefusingSms:
+    """A provider that answers the way Fast2SMS did before website verification."""
+
+    name = "refusing"
+
+    def send(self, **_: Any) -> Any:
+        from apps.common.integrations.sms.base import SmsResult
+
+        return SmsResult(status="failed", provider=self.name, error="996: not verified")
+
+
+@pytest.mark.django_db
+def test_a_code_the_provider_refused_is_an_error_not_a_silent_200(
+    auth_client: Any, settings: Any
+) -> None:
+    """The owner's own first sign-up (10 Oct 2026): Fast2SMS refused the
+    message, the API answered 200, and the screen said "we sent a code" over a
+    text that was never coming. A refused send must say so, and must leave no
+    live challenge behind."""
+    from apps.platform_app.models import OtpChallenge
+
+    settings.UB_SMS_BACKEND = f"{__name__}._RefusingSms"
+    response = auth_client.post(
+        reverse(REQUEST_URL), {"mobile": "9845055566", "purpose": "signup"}, format="json"
+    )
+    assert response.status_code == 502, response.content
+    assert response.json()["error"]["code"] == "provider_error"
+    challenge = OtpChallenge.objects.get(mobile="+919845055566")
+    assert challenge.expires_at <= timezone.now()

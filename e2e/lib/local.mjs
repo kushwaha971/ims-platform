@@ -14,7 +14,8 @@
  *             cloud workspace's `udhaarbook` on 127.0.0.1.
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -37,3 +38,31 @@ export const psql = (sql) =>
   })
     .toString()
     .trim();
+
+/**
+ * Refuse to ask for sign-in codes from an API that is not the e2e one.
+ *
+ * `serve-api.sh` pins the console SMS backend and logs to
+ * $UB_E2E_LOGS/be-run.log. Anything else on :8000 — the owner's Docker stack,
+ * `dev-backend.sh` — reads backend/.env and sends through Fast2SMS, so a
+ * harness that typed made-up numbers into it would text strangers on a paid
+ * account. That happened once (10 Oct 2026: Docker had taken the port, and
+ * four OTP requests reached Fast2SMS, which happened to refuse them).
+ *
+ * The proof is the log: a health request carrying a fresh request id must
+ * appear in the e2e server's own log file. If it does not, something else is
+ * answering.
+ */
+export const assertE2eApi = async (backend = process.env.E2E_BACKEND ?? 'http://localhost:8000/api/v1') => {
+  const log = join(process.env.UB_E2E_LOGS ?? '/tmp/claude-0', 'be-run.log');
+  const id = randomUUID().replace(/-/g, '');
+  await fetch(`${backend}/system/health`, { headers: { 'X-Request-Id': id } }).catch(() => null);
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    if (existsSync(log) && readFileSync(log, 'utf8').includes(id)) return;
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  }
+  throw new Error(
+    `The API at ${backend} is not the e2e server (its requests are not in ${log}). ` +
+      'Refusing to request sign-in codes from it: it may send real SMS. Run e2e/serve-api.sh first.'
+  );
+};

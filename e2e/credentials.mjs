@@ -34,6 +34,8 @@ import { chromium } from 'playwright';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { assertE2eApi } from './lib/local.mjs';
+
 const FRONTEND = process.env.E2E_FRONTEND ?? 'http://localhost:3000';
 const BACKEND = process.env.E2E_BACKEND ?? 'http://localhost:8000/api/v1';
 const SHOT_DIR = process.env.E2E_SHOTS ?? '/tmp/e2e-shots';
@@ -127,6 +129,8 @@ const signIn = async (page, email, password) => {
 };
 
 async function run() {
+  // A made-up number is about to ask for a code: only ever from the e2e API.
+  await assertE2eApi();
   await seedOwner();
   const browser = await chromium.launch();
   const viewport = { width: 1440, height: 900 };

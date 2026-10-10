@@ -146,7 +146,7 @@ def request_otp(
             device_hint=(device_hint or "")[:120] or None,
         )
 
-    send_sms(
+    sent = send_sms(
         to=mobile,
         body=render_otp_sms(
             code=code,
@@ -159,6 +159,20 @@ def request_otp(
         related_type="platform_otp_challenge",
         related_id=challenge.id,
     )
+
+    # A code the provider refused never arrives, and answering 200 put the
+    # merchant on "Enter the code" waiting for a text that was not coming --
+    # the owner's own first sign-up, 10 Oct 2026, when Fast2SMS answered 996
+    # (website verification pending) and the screen said a code was sent. The
+    # refusal is the same for every number, so it says nothing about whether
+    # the mobile has an account. The challenge is spent rather than deleted so
+    # the resend gap and the hourly budgets still count the attempt.
+    if getattr(sent, "status", "sent") == "failed":
+        OtpChallenge.objects.filter(pk=challenge.pk).update(expires_at=timezone.now())
+        raise BusinessRuleViolation(
+            "provider_error",
+            "We couldn't send the code right now. Please try again in a few minutes.",
+        )
 
     _audit(
         AuditAction.OTP_REQUESTED,
