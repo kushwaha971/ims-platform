@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { usePathname } from 'next/navigation';
 
@@ -18,11 +18,15 @@ import {
   selectSessionUser,
 } from 'src/redux/slice/sessionSlice';
 
+import { FeedbackTab } from './FeedbackTab';
+
+import type { PostHog } from 'posthog-js';
+
 /**
  * DEC-017 — product analytics and feedback (PostHog), mounted once.
  *
- * It renders nothing. Its whole job is to decide WHEN the SDK may be loaded
- * and what it is told: see `analyticsRules.ts` for the three rules. On a page
+ * Its job is to decide WHEN the SDK may be loaded and what it is told, and to
+ * draw the one thing a person sees of it, the Feedback tab: see `analyticsRules.ts` for the three rules. On a page
  * a merchant's customer opens, or one whose address carries a token, the SDK
  * is not even downloaded; if it was loaded earlier in the same visit it is
  * told to stop until the address is an ordinary one again.
@@ -36,13 +40,15 @@ const idle = (run: () => void): void => {
   else window.setTimeout(run, 1500);
 };
 
-export function AnalyticsHost(): null {
+export function AnalyticsHost(): React.JSX.Element | null {
   const pathname = usePathname() ?? '';
   const user = useAppSelector(selectSessionUser);
   const tenant = useAppSelector(selectActiveTenant);
   const apps = useAppSelector(selectSessionApps);
   const locale = useAppSelector(selectLocale);
   const identified = useRef<string | null>(null);
+  /** The SDK, once it is here: what the Feedback tab opens the survey with. */
+  const [client, setClient] = useState<PostHog | null>(null);
 
   const enabled = ANALYTICS_ENABLED && Boolean(POSTHOG_KEY);
   const allowed = enabled && analyticsAllowedOn(pathname);
@@ -69,6 +75,7 @@ export function AnalyticsHost(): null {
         .then(({ loadPosthog }) => loadPosthog())
         .then((posthog) => {
           if (!posthog || cancelled) return;
+          setClient(posthog);
           if (posthog.has_opted_out_capturing()) posthog.opt_in_capturing();
           posthog.capture('$pageview', {
             $current_url: `${window.location.origin}${pathname}`,
@@ -101,5 +108,6 @@ export function AnalyticsHost(): null {
       });
   }, [allowed, userId, tenantId, role, appCodes, locale]);
 
-  return null;
+  // The Feedback tab: only where analytics may run, and only once the SDK is here.
+  return allowed && client ? <FeedbackTab posthog={client} /> : null;
 }

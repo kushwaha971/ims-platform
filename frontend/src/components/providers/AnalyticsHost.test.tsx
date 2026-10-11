@@ -1,4 +1,4 @@
-import { act, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 
 import { resetPosthogForTests } from 'src/analytics/posthogClient';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
@@ -17,7 +17,10 @@ const posthog = {
   opt_out_capturing: jest.fn(),
   opt_in_capturing: jest.fn(),
   has_opted_out_capturing: jest.fn(() => false),
+  getSurveys: jest.fn((callback: (surveys: unknown[]) => void) => callback(mockSurveys)),
+  displaySurvey: jest.fn(),
 };
+let mockSurveys: { id: string; type: string; end_date?: string | null }[] = [];
 jest.mock('posthog-js', () => ({ __esModule: true, default: posthog }));
 
 let mockPath = '/dashboard';
@@ -57,6 +60,7 @@ beforeEach(() => {
   mockEnabled = true;
   mockKey = 'phc_test';
   mockMaskText = false;
+  mockSurveys = [];
 });
 afterEach(() => jest.useRealTimers());
 
@@ -120,4 +124,42 @@ describe('AnalyticsHost', () => {
       expect(posthog.capture).not.toHaveBeenCalled();
     }
   );
+
+  /**
+   * The Feedback tab (owner, 11 Oct 2026). A PostHog "Popover" survey shows
+   * once and is gone for good from that browser when closed; the owner closed
+   * his and could not get it back. The tab asks for the same survey again.
+   */
+  it('draws a Feedback tab that opens the running survey again, ignoring "already seen"', async () => {
+    mockSurveys = [{ id: 'sv_1', type: 'popover', end_date: null }];
+    await mount();
+    const tab = await screen.findByRole('button', { name: 'Give feedback' });
+    fireEvent.click(tab);
+    fireEvent.click(tab);
+    expect(posthog.displaySurvey).toHaveBeenCalledTimes(2);
+    expect(posthog.displaySurvey).toHaveBeenCalledWith('sv_1', {
+      displayType: 'popover',
+      ignoreConditions: true,
+      ignoreDelay: true,
+    });
+  });
+
+  it.each([
+    ['there is no survey', []],
+    ['the only survey has ended', [{ id: 'sv_1', type: 'popover', end_date: '2026-10-01' }]],
+    // PostHog's own "Feedback button" kind brings its own tab: ours would make two.
+    ['PostHog draws its own feedback button', [{ id: 'sv_2', type: 'widget', end_date: null }]],
+  ])('draws no tab when %s', async (_why, surveys) => {
+    mockSurveys = surveys;
+    await mount();
+    await waitFor(() => expect(posthog.getSurveys).toHaveBeenCalled());
+    expect(screen.queryByTestId('feedback-tab')).toBeNull();
+  });
+
+  it("draws no tab on a page a merchant's customer opens", async () => {
+    mockSurveys = [{ id: 'sv_1', type: 'popover', end_date: null }];
+    mockPath = '/d/2f9c1a7e';
+    await mount();
+    expect(screen.queryByTestId('feedback-tab')).toBeNull();
+  });
 });

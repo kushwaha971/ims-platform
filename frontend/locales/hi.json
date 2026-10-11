@@ -110,6 +110,8 @@
   "errors.token_stale": "आपकी अनुमतियाँ बदल गईं। रीलोड हो रहा है।",
   "errors.unauthenticated": "जारी रखने के लिए साइन इन करें।",
   "errors.validation_error": "कृपया हाइलाइट किए गए फ़ील्ड जाँचें।",
+  "feedback.tab": "सुझाव",
+  "feedback.tab.label": "सुझाव दें",
   "ledger.correction.error.title": "यह बदलाव सहेजा नहीं जा सका",
   "ledger.correction.history.error": "उस प्रविष्टि का इतिहास नहीं खुल सका",
   "ledger.entry.error.title": "यह एंट्री सेव नहीं हुई",

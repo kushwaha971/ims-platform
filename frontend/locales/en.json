@@ -110,6 +110,8 @@
   "errors.token_stale": "Your permissions changed. Reloading.",
   "errors.unauthenticated": "Please sign in to continue.",
   "errors.validation_error": "Please check the highlighted fields.",
+  "feedback.tab": "Feedback",
+  "feedback.tab.label": "Give feedback",
   "ledger.correction.error.title": "That change could not be saved",
   "ledger.correction.history.error": "That entry's history could not be loaded",
   "ledger.entry.error.title": "That entry did not save",
