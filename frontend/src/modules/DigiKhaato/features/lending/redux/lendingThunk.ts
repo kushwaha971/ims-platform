@@ -5,9 +5,11 @@ import { toApiError } from 'src/utils/apiError';
 
 import './lendingInvalidation';
 
-import type { CollectResult, LoanPage } from '../api/lendingService';
+import type { BorrowerCollectResult, CollectResult, LoanPage } from '../api/lendingService';
 import type {
+  BorrowerPage,
   BorrowerRow,
+  BorrowerSplit,
   CollectFormValues,
   CollectionPreview,
   CollectionRow,
@@ -83,7 +85,7 @@ export const fetchLendingLoan = createAsyncThunk<
   }
 });
 
-export const fetchLendingBorrowers = createAsyncThunk<BorrowerRow[], string, Reject>(
+export const fetchLendingBorrowers = createAsyncThunk<BorrowerPage, string, Reject>(
   'lendingForm/fetchBorrowers',
   async (q, { signal, rejectWithValue }) => {
     try {
@@ -148,6 +150,35 @@ export const collectLendingLoan = createAsyncThunk<
 >('lendingForm/collect', async ({ loanId, values, key }, { rejectWithValue }) => {
   try {
     return await (await service()).collect(loanId, values, key);
+  } catch (error) {
+    return rejectWithValue(toApiError(error, 'lending.collect.error'));
+  }
+});
+
+/** "Collect from <borrower>" (review L5) — the split, before anything is saved. */
+export const previewBorrowerCollection = createAsyncThunk<
+  BorrowerSplit,
+  { borrowerId: string; amount: string },
+  Reject
+>(
+  'lendingForm/previewBorrowerCollection',
+  async ({ borrowerId, amount }, { signal, rejectWithValue }) => {
+    try {
+      return await (await service()).previewBorrowerCollection(borrowerId, amount, signal);
+    } catch (error) {
+      return rejectWithValue(toApiError(error, 'lending.collect.error'));
+    }
+  }
+);
+
+/** One collection per loan, exactly as `split` showed. */
+export const collectFromBorrower = createAsyncThunk<
+  BorrowerCollectResult,
+  { split: BorrowerSplit; values: CollectFormValues; key: string },
+  Reject
+>('lendingForm/collectFromBorrower', async ({ split, values, key }, { rejectWithValue }) => {
+  try {
+    return await (await service()).collectFromBorrower(split, values, key);
   } catch (error) {
     return rejectWithValue(toApiError(error, 'lending.collect.error'));
   }

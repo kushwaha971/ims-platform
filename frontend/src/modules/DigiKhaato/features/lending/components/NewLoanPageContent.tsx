@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useMemo, useState } from 'react';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, useWatch } from 'react-hook-form';
@@ -104,14 +104,19 @@ export function NewLoanPageContent(): React.JSX.Element {
   const { key, rotate } = useIdempotencyKey();
   const { loanSchema } = useLendingSchemas();
   const [showAll, setShowAll] = useState(false);
-  const [search, setSearch] = useState('');
+  // "+ Loan" on a borrower's page opens this form with that person chosen
+  // (`?borrower=<id>&name=<name>`); the name seeds the search so the picker's
+  // first page holds them however long the book is.
+  const params = useSearchParams();
+  const givenBorrower = params.get('borrower') ?? '';
+  const [search, setSearch] = useState(givenBorrower ? (params.get('name') ?? '') : '');
 
   const form = useForm<LoanFormValues>({
     resolver: yupResolver(loanSchema),
     mode: 'onTouched',
     defaultValues: {
-      borrowerMode: 'new',
-      borrowerId: '',
+      borrowerMode: givenBorrower ? 'existing' : 'new',
+      borrowerId: givenBorrower,
       borrowerName: '',
       name: '',
       mobile: '',

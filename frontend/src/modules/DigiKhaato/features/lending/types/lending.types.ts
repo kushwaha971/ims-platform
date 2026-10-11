@@ -211,6 +211,11 @@ export interface TodayStop {
 
 export interface TodayRound {
   readonly on: string;
+  /**
+   * Has this business ever given a loan? An empty round on day one is the
+   * first-use panel ("Give your first loan"), not "nothing to collect today".
+   */
+  readonly hasLoans: boolean;
   readonly stops: readonly TodayStop[];
   readonly due: string;
   readonly collected: string;
@@ -230,6 +235,28 @@ export interface CollectionPreview {
   }[];
 }
 
+/**
+ * "Collect from Geeta" (review L5): how one amount splits across a person's
+ * running loans — what is due now first, the oldest instalment first, then
+ * ahead. The server's answer; the screen shows it and sends it back unchanged.
+ */
+export interface BorrowerSplit {
+  readonly borrowerId: string;
+  readonly name: string;
+  readonly amount: string;
+  readonly leftAfter: string;
+  readonly loans: readonly BorrowerSplitLoan[];
+}
+
+export interface BorrowerSplitLoan {
+  readonly loanId: string;
+  readonly number: string;
+  readonly amount: string;
+  readonly dueNow: string;
+  readonly late: boolean;
+  readonly leftAfter: string;
+}
+
 export interface LendingRoute {
   readonly id: string;
   readonly name: string;
@@ -237,6 +264,13 @@ export interface LendingRoute {
   readonly isActive: boolean;
   readonly loans: number | null;
   readonly version: number;
+}
+
+/** `GET /lending/borrowers`: a page of people, and the whole book's left and late. */
+export interface BorrowerPage {
+  readonly rows: readonly BorrowerRow[];
+  /** Absent from a server that does not send it. */
+  readonly totals: { readonly left: string; readonly late: string } | null;
 }
 
 export interface BorrowerRow {

@@ -1,7 +1,9 @@
 """Lending & collections' setup checklist (docs/platform/14 step 5).
 
-A lender's first day: the routes the agents walk, the first loan, and the
-agents themselves on the team. Facts read from the books, each a link.
+A lender's first act is giving a loan, so that is the first step (owner,
+approved designs, 12 Oct 2026). Routes and collectors are for a lender who has
+people walking a round; they come after, and say they are optional. Facts read
+from the books, each a link.
 """
 
 from __future__ import annotations
@@ -17,18 +19,18 @@ def lending_setup(tenant: Any) -> list:
 
     return [
         SetupStep(
-            key="routes",
-            label_id="lending.setup.routes",
-            path="/lending/routes",
-            done=LendingRoute.objects.filter(tenant=tenant).exists(),
-            permission="lending.route.manage",
-        ),
-        SetupStep(
             key="loan",
             label_id="lending.setup.loan",
             path="/lending/loans/new",
             done=LendingLoan.objects.filter(tenant=tenant).exists(),
             permission="lending.loan.create",
+        ),
+        SetupStep(
+            key="routes",
+            label_id="lending.setup.routes",
+            path="/lending/routes",
+            done=LendingRoute.objects.filter(tenant=tenant).exists(),
+            permission="lending.route.manage",
         ),
         SetupStep(
             key="team",

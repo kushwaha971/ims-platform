@@ -6,6 +6,7 @@ import { rootReducer, type RootState } from 'src/redux/store';
 import type { ApiErrorShape, RequestStatus } from 'src/types/api.types';
 
 import {
+  collectFromBorrower,
   collectLendingLoan,
   createLendingLoan,
   fetchLendingBorrower,
@@ -21,6 +22,10 @@ export interface LendingFormState {
   previewStatus: RequestStatus;
   previewError: ApiErrorShape | null;
   borrowers: BorrowerRow[];
+  /** The Borrowers list's own load state, so an unloaded list is not "No borrowers yet". */
+  borrowersStatus: RequestStatus;
+  /** The whole book's left and late (the line above the Borrowers table). */
+  borrowerTotals: { left: string; late: string } | null;
   /** The borrower whose loans are being listed (`/lending/loans?borrower=`). */
   borrower: BorrowerRow | null;
   saving: boolean;
@@ -33,6 +38,8 @@ const initialState: LendingFormState = {
   previewStatus: 'idle',
   previewError: null,
   borrowers: [],
+  borrowersStatus: 'idle',
+  borrowerTotals: null,
   borrower: null,
   saving: false,
   stale: false,
@@ -60,8 +67,17 @@ const lendingFormSlice = createSlice({
         state.preview = null;
         state.previewError = (action.payload ?? null) as Draft<ApiErrorShape> | null;
       })
+      .addCase(fetchLendingBorrowers.pending, (state) => {
+        state.borrowersStatus = state.borrowers.length ? 'refreshing' : 'loading';
+      })
       .addCase(fetchLendingBorrowers.fulfilled, (state, action) => {
-        state.borrowers = action.payload as Draft<BorrowerRow>[];
+        state.borrowers = action.payload.rows as Draft<BorrowerRow>[];
+        state.borrowerTotals = action.payload.totals;
+        state.borrowersStatus = 'succeeded';
+      })
+      .addCase(fetchLendingBorrowers.rejected, (state, action) => {
+        if (action.meta.aborted) return;
+        state.borrowersStatus = 'failed';
       })
       // Somebody else's figures are never shown over a new name: cleared while
       // the next person's are read, and on a failure.
@@ -82,6 +98,15 @@ const lendingFormSlice = createSlice({
         state.preview = null;
       })
       .addCase(createLendingLoan.rejected, (state) => {
+        state.saving = false;
+      })
+      .addCase(collectFromBorrower.pending, (state) => {
+        state.saving = true;
+      })
+      .addCase(collectFromBorrower.fulfilled, (state) => {
+        state.saving = false;
+      })
+      .addCase(collectFromBorrower.rejected, (state) => {
         state.saving = false;
       })
       .addCase(collectLendingLoan.pending, (state) => {

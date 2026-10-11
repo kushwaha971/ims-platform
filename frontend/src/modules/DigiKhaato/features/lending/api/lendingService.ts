@@ -1,10 +1,14 @@
 import { api, ubConfig } from 'src/api/AxiosInstances';
 import { toQueryString } from 'src/utils/queryString';
 
+import { toSplit } from '../view-model/borrowerSplit';
+
 import { LENDING_PATHS } from './lendingPaths';
 
 import type {
+  BorrowerPage,
   BorrowerRow,
+  BorrowerSplit,
   CollectFormValues,
   CollectionPreview,
   CollectionRow,
@@ -208,6 +212,8 @@ export const createLoan = async (values: LoanFormValues, key: string): Promise<L
 
 export interface LoanPage {
   readonly rows: LoanRow[];
+  /** Any loan at all, whatever the filter: a list hides its search only when there is none. */
+  readonly hasLoans: boolean;
   readonly total: number;
   readonly page: number;
   readonly totalPages: number;
@@ -219,10 +225,14 @@ export const listLoans = async (
 ): Promise<LoanPage> => {
   const response = await api.get<{
     data: Wire[];
-    meta: { page: number; total: number; total_pages: number };
+    meta: { page: number; total: number; total_pages: number; has_loans?: boolean };
   }>(`${LENDING_PATHS.LOANS}${toQueryString(params)}`, { signal });
+  const rows = response.data.data.map(toLoanRow);
   return {
-    rows: response.data.data.map(toLoanRow),
+    rows,
+    // An older server does not say; a row is proof enough, and otherwise the
+    // search stays, as it always did.
+    hasLoans: response.data.meta.has_loans ?? true,
     total: response.data.meta.total,
     page: response.data.meta.page,
     totalPages: response.data.meta.total_pages,
@@ -344,11 +354,13 @@ export const getToday = async (route: string, signal?: AbortSignal): Promise<Tod
       short: string;
       stops: number;
       done: number;
+      has_loans?: boolean;
     };
   }>(`${LENDING_PATHS.TODAY}${toQueryString({ route: route || undefined })}`, { signal });
   const meta = response.data.meta;
   return {
     on: meta.on,
+    hasLoans: meta.has_loans ?? true,
     due: meta.due,
     collected: meta.collected,
     short: meta.short,
@@ -403,12 +415,16 @@ export const saveRoute = async (name: string): Promise<void> => {
   await api.post(LENDING_PATHS.ROUTES, { name }, quiet);
 };
 
-export const listBorrowers = async (q: string, signal?: AbortSignal): Promise<BorrowerRow[]> => {
-  const response = await api.get<{ data: Wire[] }>(
+export const listBorrowers = async (q: string, signal?: AbortSignal): Promise<BorrowerPage> => {
+  const response = await api.get<{ data: Wire[]; meta?: { totals?: Wire } }>(
     `${LENDING_PATHS.BORROWERS}${toQueryString({ q: q || undefined })}`,
     { signal }
   );
-  return response.data.data.map(toBorrower);
+  const totals = response.data.meta?.totals;
+  return {
+    rows: response.data.data.map(toBorrower),
+    totals: totals ? { left: str(totals.left), late: str(totals.late) } : null,
+  };
 };
 
 const toBorrower = (b: Wire): BorrowerRow => {
@@ -439,6 +455,55 @@ const toBorrower = (b: Wire): BorrowerRow => {
 export const getBorrower = async (id: string, signal?: AbortSignal): Promise<BorrowerRow> => {
   const response = await api.get<{ data: Wire }>(`${LENDING_PATHS.BORROWERS}/${id}`, { signal });
   return toBorrower(response.data.data);
+};
+
+// ── "Collect from <borrower>" (review L5) ───────────────────────────────────
+
+/** How `amount` splits across the borrower's running loans. Records nothing. */
+export const previewBorrowerCollection = async (
+  borrowerId: string,
+  amount: string,
+  signal?: AbortSignal
+): Promise<BorrowerSplit> => {
+  const response = await api.post<{ data: Wire }>(
+    LENDING_PATHS.BORROWER_COLLECTION_PREVIEW(borrowerId),
+    { amount },
+    ubConfig({ signal, suppressErrorSnackbar: true })
+  );
+  return toSplit(response.data.data as Readonly<Record<string, unknown>>);
+};
+
+export interface BorrowerCollectResult {
+  readonly amount: string;
+  readonly receipts: readonly string[];
+}
+
+/**
+ * One collection per loan, exactly the split that was shown. A split that
+ * changed meanwhile comes back as `balance_changed` with the new one in
+ * `details.split`, for the sheet to show instead.
+ */
+export const collectFromBorrower = async (
+  split: BorrowerSplit,
+  values: CollectFormValues,
+  key: string
+): Promise<BorrowerCollectResult> => {
+  const response = await api.post<{ data: Wire }>(
+    LENDING_PATHS.BORROWER_COLLECTIONS(split.borrowerId),
+    {
+      amount: split.amount,
+      split: split.loans.map((l) => ({ loan_id: l.loanId, amount: l.amount })),
+      mode: values.mode,
+      reference: (values.reference ?? '').trim() || undefined,
+      note: (values.note ?? '').trim() || undefined,
+    },
+    ubConfig({ headers: { 'Idempotency-Key': key }, suppressErrorSnackbar: true })
+  );
+  const d = response.data.data;
+  return {
+    amount: str(d.amount),
+    receipts: ((d.collections as Wire[] | undefined) ?? []).map((c) => str(c.receipt_number)),
+  };
 };
 
 // ── LEN-09 — late fees and waivers ──────────────────────────────────────────

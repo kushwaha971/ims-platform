@@ -11,7 +11,7 @@ from apps.common.idempotency import idempotent
 from apps.common.responses import StandardResponse
 from apps.common.tenancy import get_effective_tenant
 from apps.lending.models import LendingRoute
-from apps.lending.services import collections, messages, routes
+from apps.lending.services import borrower_collections, collections, messages, routes
 from apps.lending.services.loans import get_loan
 from apps.lending.views.loans import _LendingView
 
@@ -23,7 +23,10 @@ class TodayView(_LendingView):
         result = collections.today_round(
             get_effective_tenant(request), request.query_params.get("route") or None
         )
-        return StandardResponse.ok(result["stops"], meta={"on": result["on"], **result["totals"]})
+        return StandardResponse.ok(
+            result["stops"],
+            meta={"on": result["on"], "has_loans": result["has_loans"], **result["totals"]},
+        )
 
 
 class CollectionPreviewView(_LendingView):
@@ -57,6 +60,37 @@ class CollectionView(_LendingView):
     def post(self, request: Any, loan_id: Any) -> Any:
         return StandardResponse.created(
             collections.collect(ctx=Ctx.from_request(request), loan_id=loan_id, data=request.data)
+        )
+
+
+class BorrowerCollectionPreviewView(_LendingView):
+    """`POST /lending/borrowers/<id>/collections/preview` — how one amount splits
+    across a person's running loans (review L5). Records nothing."""
+
+    read = "lending.collection.create"
+    write = "lending.collection.create"
+
+    def post(self, request: Any, borrower_id: Any) -> Any:
+        data = request.data if isinstance(request.data, dict) else {}
+        return StandardResponse.ok(
+            borrower_collections.plan(
+                ctx=Ctx.from_request(request), borrower_id=borrower_id, amount=data.get("amount")
+            )
+        )
+
+
+class BorrowerCollectionView(_LendingView):
+    """`POST /lending/borrowers/<id>/collections` — `{amount, split, mode, reference,
+    note}`: one collection per loan, exactly the split that was shown, all or none."""
+
+    write = "lending.collection.create"
+
+    @idempotent("lending.collection.create")
+    def post(self, request: Any, borrower_id: Any) -> Any:
+        return StandardResponse.created(
+            borrower_collections.collect(
+                ctx=Ctx.from_request(request), borrower_id=borrower_id, data=request.data
+            )
         )
 
 

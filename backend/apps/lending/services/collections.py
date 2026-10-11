@@ -389,6 +389,11 @@ def today_round(tenant: Any, route_id: Any = None) -> dict:
         )
     return {
         "on": today.isoformat(),
+        # Has this business ever given a loan? An empty round on day one is a
+        # first-use screen ("Give your first loan"); an empty round for a lender
+        # with a book is "nothing to collect today". The client cannot tell the
+        # two apart from an empty list (review §1.1, 12 Oct 2026).
+        "has_loans": LendingLoan.objects.filter(tenant=tenant).exists(),
         "stops": stops,
         "totals": {
             "due": f"{q2(totals['due']):.2f}",

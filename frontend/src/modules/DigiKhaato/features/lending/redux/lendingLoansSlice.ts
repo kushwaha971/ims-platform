@@ -19,6 +19,8 @@ import type {
 export interface LendingLoansState {
   rows: LoanRow[];
   total: number;
+  /** The server's: whether the business has any loan, whatever the filter. */
+  hasLoans: boolean;
   listStatus: RequestStatus;
   loan: LoanDetail | null;
   collections: CollectionRow[];
@@ -33,6 +35,7 @@ export interface LendingLoansState {
 const initialState: LendingLoansState = {
   rows: [],
   total: 0,
+  hasLoans: true,
   listStatus: 'idle',
   loan: null,
   collections: [],
@@ -57,6 +60,7 @@ const lendingLoansSlice = createSlice({
       .addCase(fetchLendingLoans.fulfilled, (state, action) => {
         state.rows = action.payload.rows as Draft<LoanRow>[];
         state.total = action.payload.total;
+        state.hasLoans = action.payload.hasLoans;
         state.listStatus = 'succeeded';
         state.stale = false;
         state.staleUrgency = null;

@@ -718,6 +718,39 @@ def borrower_summaries(tenant: Any, borrower_ids: Any, today: dt.date) -> dict[A
     }
 
 
+def book_totals(tenant: Any, today: dt.date) -> dict:
+    """What is left and what is late on every running loan, in ONE query.
+
+    The same arithmetic as `borrower_summaries` (an instalment's amount plus
+    late fees, less waivers and what was paid, never below zero), summed by the
+    database, so the line above the Borrowers table agrees with its rows added
+    up and does not read every instalment of the book into Python to say so.
+    """
+    from django.db.models import DecimalField, F, Sum, Value
+    from django.db.models.functions import Greatest
+
+    from apps.dues.models import DuesDue
+
+    left = Greatest(
+        F("amount") + F("penalty_amount") - F("waived_amount") - F("settled_amount"),
+        Value(ZERO),
+        output_field=DecimalField(max_digits=14, decimal_places=2),
+    )
+    got = (
+        DuesDue.objects.filter(
+            schedule_id__in=LendingLoan.objects.filter(
+                tenant=tenant, status=LoanStatus.ACTIVE
+            ).values("schedule_id")
+        )
+        .exclude(status__in=["cancelled", "skipped"])
+        .aggregate(left=Sum(left), late=Sum(left, filter=Q(due_on__lt=today)))
+    )
+    return {
+        "left": f"{q2(got['left'] or ZERO):.2f}",
+        "late": f"{q2(got['late'] or ZERO):.2f}",
+    }
+
+
 def loan_json(loan: LendingLoan, today: dt.date, *, with_schedule: bool = False) -> dict:
     out = {
         "id": str(loan.id),

@@ -19,6 +19,8 @@ export const LENDING_PATHS = {
   REMINDERS: '/lending/reminders',
   TODAY: '/lending/today',
   BORROWERS: '/lending/borrowers',
+  BORROWER_COLLECTIONS: (id: string) => `/lending/borrowers/${seg(id)}/collections`,
+  BORROWER_COLLECTION_PREVIEW: (id: string) => `/lending/borrowers/${seg(id)}/collections/preview`,
   ROUTES: '/lending/routes',
   ROUTE: (id: string) => `/lending/routes/${seg(id)}`,
 } as const;

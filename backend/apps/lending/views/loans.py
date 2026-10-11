@@ -43,7 +43,14 @@ class LoanListView(_LendingView):
         qs = loans.list_loans(tenant, request.query_params)
         paginator = PagePagination()
         rows = paginator.paginate_queryset(qs, request, view=self)
-        return paginator.get_paginated_response([loans.loan_json(r, today) for r in rows])
+        response = paginator.get_paginated_response([loans.loan_json(r, today) for r in rows])
+        # Whether the business has any loan at all, whatever the filter: the
+        # list hides its search and filters only for a lender who has none, and
+        # says "No loans match" to one whose filter found nothing.
+        response.data["meta"]["has_loans"] = (
+            bool(rows) or loans.LendingLoan.objects.filter(tenant=tenant).exists()
+        )
+        return response
 
     @idempotent("lending.loan.create")
     def post(self, request: Any) -> Any:
@@ -96,8 +103,14 @@ class BorrowerListView(_LendingView):
             )
         paginator = PagePagination()
         rows = paginator.paginate_queryset(qs.order_by("party__name", "id"), request, view=self)
-        totals = loans.borrower_summaries(tenant, [b.id for b in rows], tenant_today(tenant))
-        return paginator.get_paginated_response([borrower_json(b, totals.get(b.id)) for b in rows])
+        today = tenant_today(tenant)
+        totals = loans.borrower_summaries(tenant, [b.id for b in rows], today)
+        response = paginator.get_paginated_response(
+            [borrower_json(b, totals.get(b.id)) for b in rows]
+        )
+        # The whole book's left and late, for the line above the table.
+        response.data["meta"]["totals"] = loans.book_totals(tenant, today)
+        return response
 
 
 class BorrowerDetailView(_LendingView):

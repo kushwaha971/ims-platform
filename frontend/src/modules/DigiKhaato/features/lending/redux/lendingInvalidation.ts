@@ -17,6 +17,7 @@ export const LENDING_QUERIES = {
   fetchLendingBorrower: 'lendingForm/fetchBorrower',
   previewLendingLoan: 'lendingForm/preview',
   previewLendingCollection: 'lendingForm/previewCollection',
+  previewBorrowerCollection: 'lendingForm/previewBorrowerCollection',
   fetchLendingReminders: 'lendingMessages/fetch',
   prepareLendingMessage: 'lendingMessages/prepare',
   fetchLendingDue: 'lendingForm/fetchDue',
@@ -25,6 +26,7 @@ export const LENDING_QUERIES = {
 export const LENDING_MUTATIONS = {
   createLendingLoan: 'lendingForm/create',
   collectLendingLoan: 'lendingForm/collect',
+  collectFromBorrower: 'lendingForm/collectFromBorrower',
   recordLendingVisit: 'lendingForm/visit',
   saveLendingRoute: 'lendingToday/saveRoute',
   recordLendingMessage: 'lendingMessages/record',
@@ -44,6 +46,12 @@ export const LENDING_INVALIDATION: Readonly<
 > = {
   createLendingLoan: { stale: ['lendingToday', 'lendingLoans', 'partyList', 'partyDetail'] },
   collectLendingLoan: {
+    refetch: ['lendingToday', 'lendingLoans'],
+    stale: ['partyList', 'partyDetail'],
+  },
+  // Review L5 — one handover, several loans: the same reach as one collection.
+  // `lendingLoans` refetching also refetches the borrower's totals above them.
+  collectFromBorrower: {
     refetch: ['lendingToday', 'lendingLoans'],
     stale: ['partyList', 'partyDetail'],
   },

@@ -1,61 +1,218 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useRouter } from 'next/navigation';
+
+import { Plus } from 'lucide-react';
 
 import {
   UbActionLink,
   UbAmount,
-  UbCard,
+  UbDataGrid,
   UbEmptyState,
-  UbListItemText,
+  UbGrid,
   UbPageHeader,
   UbPageShell,
-  UbPressable,
   UbSearchInput,
   UbStack,
+  UbStatCard,
   UbStatusBadge,
-  UbText,
+  useGridTier,
+} from 'src/design-system';
+import type {
+  UbDataGridColumn,
+  UbDataGridEmptyStates,
+  UbDataGridLabels,
+  UbGridState,
 } from 'src/design-system';
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useCommittedSearch } from 'src/hooks/useCommittedSearch';
 import { usePermissions } from 'src/hooks/usePermissions';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { ROUTES } from 'src/routes';
-import { formatPhoneForDisplay } from 'src/utils/share';
+import { formatInr } from 'src/utils/money';
 
 import { selectLendingForm } from '../redux/lendingFormSlice';
-import { fetchLendingBorrowers } from '../redux/lendingThunk';
-import { caption, isNonZero } from '../view-model/lendingDisplay';
+import { fetchLendingBorrowers, fetchLendingToday } from '../redux/lendingThunk';
+import { selectLendingToday } from '../redux/lendingTodaySlice';
+import { isNonZero } from '../view-model/lendingDisplay';
+
+import type { BorrowerRow } from '../types/lending.types';
+
+type T = ReturnType<typeof useTranslation>['t'];
+
+const loansLine = (t: T, row: BorrowerRow): string =>
+  row.summary
+    ? t('lending.borrowers.loans', { loans: row.summary.loans, running: row.summary.running })
+    : '';
+
+/**
+ * The columns the approved design draws (12 Oct 2026). On a phone the grid
+ * paints a card per person: the name, "3 loans · 3 running", and what is left
+ * across them with "Late" when any of it is; on a computer the full table,
+ * because there is room to compare people.
+ */
+const borrowerColumns = (t: T): UbDataGridColumn<BorrowerRow>[] => [
+  {
+    id: 'name',
+    header: t('lending.borrowers.col.borrower'),
+    priority: 1,
+    cardSlot: 'title',
+    widthShare: 26,
+    cell: (row) => row.name,
+  },
+  {
+    id: 'loans',
+    header: t('lending.borrowers.col.loans'),
+    priority: 1,
+    cardSlot: 'meta',
+    widthShare: 18,
+    // The design's line is the count alone: with the area beside it the phone
+    // card cut it to "2 loans · 2 running · …" (QA, 12 Oct 2026).
+    cell: (row) => loansLine(t, row),
+  },
+  {
+    id: 'given',
+    header: t('lending.borrowers.given'),
+    priority: 3,
+    align: 'end',
+    cardSlot: 'none',
+    widthShare: 14,
+    cell: (row) => (row.summary ? formatInr(row.summary.given) : ''),
+  },
+  {
+    id: 'collected',
+    header: t('lending.borrowers.gotBack'),
+    priority: 3,
+    align: 'end',
+    cardSlot: 'none',
+    widthShare: 14,
+    cell: (row) => (row.summary ? formatInr(row.summary.collected) : ''),
+  },
+  {
+    id: 'left',
+    header: t('lending.loan.left'),
+    priority: 1,
+    align: 'end',
+    cardSlot: 'trailing',
+    widthShare: 16,
+    cell: (row) =>
+      row.summary ? (
+        <UbStack gap={1} align="end">
+          <UbAmount
+            value={row.summary.left}
+            tone={isNonZero(row.summary.late) ? 'receivable' : undefined}
+            label={t('lending.loan.left')}
+            labelHidden
+          />
+          {isNonZero(row.summary.late) ? (
+            <UbStatusBadge tone="error" label={t('lending.borrowers.late')} />
+          ) : null}
+        </UbStack>
+      ) : null,
+  },
+  {
+    id: 'late',
+    header: t('lending.borrowers.lateAmount'),
+    priority: 2,
+    align: 'end',
+    cardSlot: 'none',
+    widthShare: 12,
+    cell: (row) => (row.summary ? formatInr(row.summary.late) : ''),
+  },
+];
+
+const useLendingGridLabels = (t: T): UbDataGridLabels =>
+  useMemo<UbDataGridLabels>(
+    () => ({
+      loading: t('lending.list.loading'),
+      pageOf: t('common.grid.pageOf', { page: '{page}', pages: '{pages}' }),
+      previousPage: t('common.grid.previousPage'),
+      nextPage: t('common.grid.nextPage'),
+      pageSize: t('common.grid.pageSize'),
+      goToPage: t('common.grid.goToPage', { page: '{page}' }),
+      ofTotal: t('common.grid.ofTotal', { total: '{total}' }),
+      selectedCount: t('common.grid.selectedCount', { count: 0 }),
+      selectAll: t('lending.list.selectAll'),
+      selectRow: t('lending.list.selectRow', { name: '{name}' }),
+      showing: t('common.grid.showing'),
+      columns: t('common.grid.columns'),
+      showAllColumns: t('common.grid.showAllColumns'),
+      sortBy: t('common.grid.sortBy', { column: '{column}' }),
+      sortedAscending: t('common.grid.sortedAscending'),
+      sortedDescending: t('common.grid.sortedDescending'),
+      openRow: t('lending.list.open', { name: '{name}' }),
+    }),
+    [t]
+  );
 
 /**
  * `/lending/borrowers` (FRD LEN-02): everybody who has borrowed; a tap opens
- * THEIR LOANS.
+ * THEIR page — their loans, their totals and "Collect from <name>".
  *
  * A borrower is a person and a loan is a loan (owner, 12 Oct 2026): one person
- * may hold several, each with its own terms. So a row says how many loans the
- * person has and how much is left across them, and a tap lists those loans. It
- * used to show a name and a phone number, and a tap opened the shop's khata
- * page for the person, which knows nothing about loans — while this docstring
- * said "a tap opens their loans".
+ * may hold several, each with its own terms, so a row says how many loans the
+ * person has and how much is left across them.
+ *
+ * With nobody yet there is no search box over an empty list — one sentence and
+ * "New loan". On a computer four figures sit above the table: today's from the
+ * round, and the book's left and late from the server's own sum, never from
+ * the rows on this page added up (a page is not the book).
  */
 export function BorrowersPageContent(): React.JSX.Element {
   const { t } = useTranslation();
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { borrowers } = useAppSelector(selectLendingForm);
+  const { borrowers, borrowersStatus, borrowerTotals } = useAppSelector(selectLendingForm);
+  const { round } = useAppSelector(selectLendingToday);
   const { can, hasModule } = usePermissions();
   const canRead = hasModule('lending') && can('lending.borrower.read');
   const canLend = hasModule('lending') && can('lending.loan.create');
+  const canSeeRound = hasModule('lending') && can('lending.today.read');
+  const wide = useGridTier() === 'full';
   const [q, setQ] = useState('');
   const [search, setSearch] = useCommittedSearch(q, setQ, 300);
+  const columns = useMemo(() => borrowerColumns(t), [t]);
+  const labels = useLendingGridLabels(t);
 
   useEffect(() => {
     if (!canRead) return undefined;
     const promise = dispatch(fetchLendingBorrowers(q));
     return () => promise.abort();
   }, [canRead, dispatch, q]);
+  // Today's two figures are for the computer's header row only; a phone
+  // never draws them, so it never asks.
+  useEffect(() => {
+    if (!canSeeRound || !wide) return undefined;
+    const promise = dispatch(fetchLendingToday(''));
+    return () => promise.abort();
+  }, [canSeeRound, wide, dispatch]);
+
+  const open = useCallback(
+    (row: BorrowerRow) => router.push(`${ROUTES.LENDING_LOANS}?borrower=${row.id}`),
+    [router]
+  );
+  const rowId = useCallback((row: BorrowerRow) => row.id, []);
+  const rowName = useCallback((row: BorrowerRow) => row.name, []);
+  const page = useMemo(
+    () => ({
+      page: 1,
+      pageSize: Math.max(borrowers.length, 1),
+      total: borrowers.length,
+      totalPages: 1,
+    }),
+    [borrowers.length]
+  );
+  const noPaging = useCallback(() => undefined, []);
+  const emptyStates = useMemo<UbDataGridEmptyStates>(
+    () => ({
+      firstUse: { title: t('lending.borrowers.empty') },
+      filtered: { title: t('lending.borrowers.emptyFiltered') },
+      error: { title: t('lending.borrowers.error') },
+    }),
+    [t]
+  );
 
   if (!canRead) {
     return (
@@ -68,76 +225,94 @@ export function BorrowersPageContent(): React.JSX.Element {
       </UbPageShell>
     );
   }
+
+  const loaded = borrowersStatus === 'succeeded' || borrowersStatus === 'refreshing';
+  const none = loaded && borrowers.length === 0 && !q;
+  let gridState: UbGridState = 'rows';
+  if (borrowersStatus === 'idle' || borrowersStatus === 'loading') gridState = 'loading';
+  else if (borrowersStatus === 'failed') gridState = 'error';
+  else if (borrowers.length === 0) gridState = 'filtered-empty';
+
   return (
-    <UbPageShell width="measure">
-      <UbPageHeader title={t('lending.borrowers.title')} />
-      <UbStack gap={4} data-testid="lending-borrowers">
-        <UbSearchInput
-          value={search}
-          onChange={setSearch}
-          placeholder={t('lending.borrowers.search')}
-          aria-label={t('lending.borrowers.search')}
+    <UbPageShell>
+      <UbPageHeader
+        title={t('lending.borrowers.title')}
+        actions={
+          canLend && !none ? (
+            <UbActionLink
+              href={ROUTES.LENDING_NEW_LOAN}
+              icon={<Plus className="h-4 w-4" aria-hidden />}
+              iconOnly="mobile"
+            >
+              {t('lending.loan.new')}
+            </UbActionLink>
+          ) : undefined
+        }
+      />
+      {none ? (
+        <UbEmptyState
+          variant="firstUse"
+          title={t('lending.borrowers.empty')}
+          description={t('lending.borrowers.emptyBody')}
+          action={
+            canLend ? (
+              <UbActionLink href={ROUTES.LENDING_NEW_LOAN}>{t('lending.loan.new')}</UbActionLink>
+            ) : undefined
+          }
         />
-        {borrowers.length === 0 ? (
-          <UbEmptyState
-            variant="firstUse"
-            title={t('lending.borrowers.empty')}
-            description={t('lending.borrowers.emptyBody')}
-            action={
-              canLend && !q ? (
-                <UbActionLink href={ROUTES.LENDING_NEW_LOAN}>{t('lending.loan.new')}</UbActionLink>
-              ) : undefined
+      ) : (
+        <UbStack gap={4} data-testid="lending-borrowers">
+          {wide && borrowerTotals && (
+            <UbGrid columns={4} gap={3} data-testid="lending-borrowers-totals">
+              {round && (
+                <UbStatCard
+                  label={t('lending.today.due')}
+                  value={formatInr(round.due)}
+                  tone={isNonZero(round.due) ? 'danger' : undefined}
+                />
+              )}
+              {round && (
+                <UbStatCard
+                  label={t('lending.today.collectedToday')}
+                  value={formatInr(round.collected)}
+                  tone="success"
+                />
+              )}
+              <UbStatCard
+                label={t('lending.borrowers.leftAll')}
+                value={formatInr(borrowerTotals.left)}
+              />
+              <UbStatCard
+                label={t('lending.borrowers.lateAmount')}
+                value={formatInr(borrowerTotals.late)}
+                tone={isNonZero(borrowerTotals.late) ? 'danger' : undefined}
+              />
+            </UbGrid>
+          )}
+          <UbDataGrid
+            rows={borrowers}
+            columns={columns}
+            rowId={rowId}
+            rowName={rowName}
+            state={gridState}
+            labels={labels}
+            emptyStates={emptyStates}
+            caption={t('lending.borrowers.title')}
+            page={page}
+            onPageChange={noPaging}
+            onRowOpen={open}
+            busy={borrowersStatus === 'refreshing'}
+            search={
+              <UbSearchInput
+                value={search}
+                onChange={setSearch}
+                placeholder={t('lending.borrowers.search')}
+                aria-label={t('lending.borrowers.search')}
+              />
             }
           />
-        ) : (
-          <UbCard padded>
-            <UbStack as="ul" gap={0} aria-label={t('lending.borrowers.title')}>
-              {borrowers.map((b) => (
-                <UbStack
-                  as="li"
-                  key={b.id}
-                  gap={0}
-                  className="border-b border-border-hairline last:border-b-0"
-                >
-                  <UbPressable
-                    className="w-full py-3 text-left"
-                    onClick={() => router.push(`${ROUTES.LENDING_LOANS}?borrower=${b.id}`)}
-                  >
-                    <UbStack direction="row" justify="between" align="start" gap={3}>
-                      <UbListItemText
-                        primary={b.name}
-                        secondary={caption([
-                          b.number,
-                          b.mobile ? formatPhoneForDisplay(b.mobile) : '',
-                          b.area,
-                        ])}
-                      />
-                      {b.summary ? (
-                        <UbStack gap={1} align="end" className="shrink-0">
-                          <UbAmount
-                            value={b.summary.left}
-                            tone={isNonZero(b.summary.late) ? 'receivable' : undefined}
-                            label={t('lending.loans.left')}
-                          />
-                          {isNonZero(b.summary.late) ? (
-                            <UbStatusBadge tone="error" label={t('lending.borrowers.late')} />
-                          ) : null}
-                          <UbText variant="caption" tone="tertiary">
-                            {t('lending.borrowers.loans', {
-                              loans: b.summary.loans,
-                              running: b.summary.running,
-                            })}
-                          </UbText>
-                        </UbStack>
-                      ) : null}
-                    </UbStack>
-                  </UbPressable>
-                </UbStack>
-              ))}
-            </UbStack>
-          </UbCard>
-        )}
-      </UbStack>
+        </UbStack>
+      )}
     </UbPageShell>
   );
 }

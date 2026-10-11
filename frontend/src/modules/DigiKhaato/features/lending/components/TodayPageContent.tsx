@@ -7,13 +7,13 @@ import { useRouter } from 'next/navigation';
 
 import { MessageCircle, Plus } from 'lucide-react';
 
-import { SummaryStatGrid } from 'src/components/stats/SummaryStatGrid';
 import {
   UbActionLink,
   UbAmount,
   UbButton,
   UbCard,
   UbEmptyState,
+  UbGrid,
   UbListItemText,
   UbPageHeader,
   UbPageShell,
@@ -32,11 +32,9 @@ import { ROUTES } from 'src/routes';
 import { formatBusinessDate } from 'src/utils/dates';
 import { formatInr } from 'src/utils/money';
 
-import { AppSetupCard } from 'modules/DigiKhaato/features/appSetup/components/AppSetupCard';
-
 import { fetchLendingRoutes, fetchLendingToday } from '../redux/lendingThunk';
 import { selectLendingToday } from '../redux/lendingTodaySlice';
-import { askedToday, isNonZero, STOP_TONE, stopState } from '../view-model/lendingDisplay';
+import { askedToday, caption, isNonZero, STOP_TONE, stopState } from '../view-model/lendingDisplay';
 
 import type { TodayStop } from '../types/lending.types';
 
@@ -54,10 +52,22 @@ const MessageDialogLazy = dynamic(() => import('./MessageDialog').then((m) => m.
 const ALL = '';
 
 /**
- * `/lending` — today's collection round (FRD LEN-08; the agreed wireframe).
- * What is due today with what is late, what came in, and what is short; then
- * every stop in route order with Collect and Not paid. A stop paid or visited
- * stays on the list, counted done, so the agent sees the round they walked.
+ * `/lending` — today's collection round (FRD LEN-08; the approved designs,
+ * 12 Oct 2026).
+ *
+ * A lender who has never given a loan sees ONE thing: "Give your first loan",
+ * with a line saying routes and collectors come later — no row of ₹0.00 tiles
+ * and no checklist whose first step is routes. The setup card (docs/platform/14
+ * step 5) is not drawn here at all: its first step is that panel, and the two
+ * left after it are optional and already said under it, while on a phone the
+ * card pushed the day's two figures below the fold (QA, 12 Oct 2026). That needs the server's
+ * `hasLoans`, because an empty round on day one and an empty round for a lender
+ * with a book look the same as a list.
+ *
+ * With loans: two big figures (to collect today, collected), then every stop in
+ * route order with Collect on each. A person with two loans is two rows, each
+ * named by its loan number. A stop paid or visited stays on the list, counted
+ * done, so the agent sees the round they walked.
  */
 export function TodayPageContent(): React.JSX.Element {
   const { t } = useTranslation();
@@ -126,8 +136,6 @@ export function TodayPageContent(): React.JSX.Element {
           ) : undefined
         }
       />
-      {/* docs/platform/14 step 5 — never blocking; gone once done or hidden. */}
-      <AppSetupCard app="lending" appName={t('nav.workspace.lending')} />
       {!round ? (
         state.status === 'failed' ? (
           <UbEmptyState
@@ -138,29 +146,43 @@ export function TodayPageContent(): React.JSX.Element {
         ) : (
           <UbPageSkeleton variant="card" />
         )
+      ) : !round.hasLoans ? (
+        <UbStack gap={3} data-testid="lending-first-use">
+          <UbEmptyState
+            variant="firstUse"
+            title={t('lending.today.first.title')}
+            description={t('lending.today.first.body')}
+            action={
+              canLend ? (
+                <UbActionLink
+                  href={ROUTES.LENDING_NEW_LOAN}
+                  icon={<Plus className="h-4 w-4" aria-hidden />}
+                >
+                  {t('lending.loan.new')}
+                </UbActionLink>
+              ) : undefined
+            }
+          />
+          <UbText variant="body-sm" tone="tertiary" align="center">
+            {t('lending.today.first.later')}
+          </UbText>
+        </UbStack>
       ) : (
         <UbStack gap={4} data-testid="lending-today">
-          <SummaryStatGrid storageKey="lendingToday">
+          <UbGrid columns={2} gap={3}>
             <UbStatCard
               label={t('lending.today.due')}
               value={formatInr(round.due)}
               subtext={t('lending.today.stops', { count: round.stopsCount })}
+              tone={isNonZero(round.short) ? 'danger' : undefined}
             />
             <UbStatCard
               label={t('lending.today.collected')}
               value={formatInr(round.collected)}
+              subtext={t('lending.today.doneCount', { count: round.done })}
               tone="success"
             />
-            <UbStatCard
-              label={t('lending.today.short')}
-              value={formatInr(round.short)}
-              tone={isNonZero(round.short) ? 'warning' : undefined}
-            />
-            <UbStatCard
-              label={t('lending.today.left')}
-              value={String(round.stopsCount - round.done)}
-            />
-          </SummaryStatGrid>
+          </UbGrid>
           {routes.length > 0 && (
             <UbStack direction="row" gap={2}>
               <UbFilterSelect
@@ -195,7 +217,7 @@ export function TodayPageContent(): React.JSX.Element {
           ) : (
             <UbCard padded>
               <UbStack as="ul" gap={0} aria-label={t('lending.today.title')}>
-                {round.stops.map((stop, index) => {
+                {round.stops.map((stop) => {
                   const state = stopState(stop);
                   // Found by using it: a stop marked "not paid" lost its Collect
                   // button, and the borrower who comes round at six could not pay.
@@ -213,17 +235,19 @@ export function TodayPageContent(): React.JSX.Element {
                           className="min-w-0 flex-1 text-left"
                           onClick={() => router.push(`${ROUTES.LENDING_LOANS}/${stop.loanId}`)}
                         >
+                          {/* Named by the LOAN as well as the person: Geeta with two
+                              loans is two rows, and the number tells them apart. */}
                           <UbListItemText
-                            primary={`${index + 1}. ${stop.name}`}
-                            secondary={[
-                              stop.area,
-                              stop.number,
-                              t(`lending.frequency.each.${stop.frequency}`, {
-                                amount: formatInr(stop.instalmentAmount),
+                            primary={stop.name}
+                            secondary={caption([
+                              t('lending.today.loanEach', {
+                                number: stop.number,
+                                each: t(`lending.frequency.each.${stop.frequency}`, {
+                                  amount: formatInr(stop.instalmentAmount),
+                                }),
                               }),
-                            ]
-                              .filter(Boolean)
-                              .join(' · ')}
+                              stop.area,
+                            ])}
                           />
                         </UbPressable>
                         <UbStack gap={1} align="end" className="shrink-0">
