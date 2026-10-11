@@ -85,3 +85,25 @@ export const SITEMAP_PATHS: readonly string[] = [
   ROUTES.LEGAL_TERMS,
   ROUTES.LEGAL_PRIVACY,
 ];
+
+/**
+ * The ownership tags Search Console and Bing Webmaster Tools look for, in the
+ * shape Next's `metadata.verification` takes. A token is the bare code, but
+ * people paste the whole `<meta … content="CODE">` tag they were shown, so the
+ * code is taken out of that too; anything that is not a plausible code writes
+ * no tag, because a malformed tag verifies nothing and says so to nobody.
+ */
+const verificationCode = (value: string): string => {
+  const pasted = /content=["']([^"']+)["']/.exec(value)?.[1] ?? value;
+  const code = pasted.trim();
+  return /^[\w-]{10,120}$/.test(code) ? code : '';
+};
+
+export const siteVerification = (
+  google: string,
+  bing: string
+): { google?: string; other?: Record<string, string> } => {
+  const g = verificationCode(google);
+  const b = verificationCode(bing);
+  return { ...(g ? { google: g } : {}), ...(b ? { other: { 'msvalidate.01': b } } : {}) };
+};

@@ -1,10 +1,16 @@
 import { cookies } from 'next/headers';
 
 import { AppProviders } from 'src/components/providers/AppProviders';
-import { APP_NAME, SITE_URL } from 'src/constants';
+import {
+  APP_NAME,
+  BING_SITE_VERIFICATION,
+  GOOGLE_SITE_VERIFICATION,
+  SITE_URL,
+} from 'src/constants';
 import { dmSans, epilogue, fraunces, inter, notoDevanagari } from 'src/fonts';
 import { BRAND_INIT, THEME_INIT } from 'src/utils/bootScripts';
 import { LOCALE_COOKIE, THEME_CHOICE_COOKIE } from 'src/utils/cookieUtils';
+import { siteVerification } from 'src/utils/seo';
 
 import { SessionBootstrap } from 'modules/DigiKhaato/features/auth/components/SessionBootstrap';
 
@@ -60,6 +66,8 @@ export const metadata: Metadata = {
   description:
     'Customers, money in and out, GST bills, stock and payments for your business, in one place.',
   manifest: '/manifest.webmanifest',
+  // Search Console / Bing ownership tags, when the build has the codes.
+  verification: siteVerification(GOOGLE_SITE_VERIFICATION, BING_SITE_VERIFICATION),
   /**
    * CR-2026-09-29-BRAND-C — K-c "Bandhan", the tied bahi cover. The PNGs are
    * rendered from `public/brand/` by `scripts/render-brand.mjs`. The SVG

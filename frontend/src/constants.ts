@@ -138,3 +138,13 @@ export const PASSWORD_MAX_LENGTH = 128;
 
 /** The longest address DRF's `EmailField` accepts. */
 export const EMAIL_MAX_LENGTH = 254;
+
+/**
+ * Search-engine ownership tokens (owner, 11 Oct 2026). Google Search Console and
+ * Bing Webmaster Tools each give a short code to put in a `<meta>` tag on the
+ * home page; it proves the site is ours and is not a secret. Empty, no tag is
+ * written. Verifying by a DNS record instead needs neither.
+ */
+export const GOOGLE_SITE_VERIFICATION: string =
+  process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ?? '';
+export const BING_SITE_VERIFICATION: string = process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION ?? '';

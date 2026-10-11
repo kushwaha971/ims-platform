@@ -8,7 +8,7 @@ import { serializeJsonLd, UbDisclosure } from 'src/design-system';
 import { APP_ROUTE_PREFIXES, GUARDED_ROUTE_PREFIXES, ROUTES } from 'src/routes';
 import { LANDING_JARGON, STATUS_WORDS, withoutBrand } from 'src/tests/moduleVocabulary';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
-import { CRAWL_DISALLOW, NOINDEX_ROBOTS, SITEMAP_PATHS } from 'src/utils/seo';
+import { CRAWL_DISALLOW, NOINDEX_ROBOTS, SITEMAP_PATHS, siteVerification } from 'src/utils/seo';
 
 import { metadata as adminLayoutMetadata } from 'app/(admin)/layout';
 import { metadata as appLayoutMetadata } from 'app/(app)/layout';
@@ -496,5 +496,31 @@ describe('cache headers for unhashed public assets', () => {
     }
     expect(nextConfig).toContain("source: '/media/landing/:path*'");
     expect(nextConfig).toContain("source: '/brand/:path*'");
+  });
+});
+
+/**
+ * Search Console and Bing ownership tags (owner, 11 Oct 2026). The code comes
+ * from the environment; people paste what they were shown, which is the whole
+ * tag, and a wrong value must write nothing rather than a tag that verifies
+ * nothing.
+ */
+describe('search-engine ownership tags', () => {
+  it('writes a tag for each code it is given, and none for a blank', () => {
+    expect(siteVerification('', '')).toEqual({});
+    expect(siteVerification('abcDEF123_-xyz4567', '')).toEqual({ google: 'abcDEF123_-xyz4567' });
+    expect(siteVerification('', '0123456789ABCDEF0123456789ABCDEF')).toEqual({
+      other: { 'msvalidate.01': '0123456789ABCDEF0123456789ABCDEF' },
+    });
+  });
+
+  it('takes the code out of a whole pasted meta tag', () => {
+    expect(
+      siteVerification('<meta name="google-site-verification" content="abcDEF123_-xyz4567" />', '')
+    ).toEqual({ google: 'abcDEF123_-xyz4567' });
+  });
+
+  it('writes nothing for something that is not a code', () => {
+    expect(siteVerification('yes please', '<script>')).toEqual({});
   });
 });
