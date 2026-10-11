@@ -96,9 +96,9 @@ export const shop = {
     await st.pause(1400);
   },
 
-  /** A bill from the first field to the issued invoice. `items`: [search, full name, qty][]. */
-  bill: async (st, party, items, { issue = true } = {}) => {
-    await st.go('/sales/invoices/new');
+  /** The bill's steps, one at a time, so a film can speak each as it happens. */
+  billParty: async (st, party, { open = true } = {}) => {
+    if (open) await st.go('/sales/invoices/new');
     await st.soft(`bill party ${party}`, async () => {
       await st.tap(st.page.getByRole('radio', { name: 'Party' }), { after: 300 });
       await st.tap(st.page.getByPlaceholder('Search by name or mobile'), { after: 120 });
@@ -106,20 +106,29 @@ export const shop = {
       await st.pause(1100);
       await st.tap(st.page.getByRole('option', { name: new RegExp(party) }).or(st.page.getByText(party)).first(), { after: 450 });
     });
-    for (const [n, [search, name, qty]] of items.entries()) {
-      await st.soft(`bill item ${name}`, async () => {
-        const empty = st.page.locator('[role=combobox]', { hasText: /Search or scan an item/ });
-        if (!(await empty.count())) await st.tap(st.page.getByRole('button', { name: 'Add item' }).first(), { after: 350 });
-        await st.tap(empty.first(), { after: 150 });
-        await st.type(search, 110);
-        await st.pause(1000);
-        await st.tap(st.page.getByRole('option', { name: new RegExp(name) }).first(), { after: 400 });
-        const field = st.page.locator('input[aria-label^="Qty"]').nth(n);
-        await field.fill(String(qty));
-        await st.pause(350);
-      });
-    }
+  },
+  billItem: async (st, n, search, name, qty) => {
+    await st.soft(`bill item ${name}`, async () => {
+      const empty = st.page.locator('[role=combobox]', { hasText: /Search or scan an item/ });
+      if (!(await empty.count())) await st.tap(st.page.getByRole('button', { name: 'Add item' }).first(), { after: 350 });
+      await st.tap(empty.first(), { after: 150 });
+      await st.type(search, 110);
+      await st.pause(1000);
+      await st.tap(st.page.getByRole('option', { name: new RegExp(name) }).first(), { after: 400 });
+      const field = st.page.locator('input[aria-label^="Qty"]').nth(n);
+      await field.fill(String(qty));
+      await st.pause(350);
+    });
+  },
+  billTotals: async (st) => {
     await st.soft('bill totals', async () => { const totals = st.page.getByTestId('invoice-totals'); await totals.scrollIntoViewIfNeeded(); await st.look([totals], 1300); });
+  },
+
+  /** A bill from the first field to the issued invoice. `items`: [search, full name, qty][]. */
+  bill: async (st, party, items, { issue = true } = {}) => {
+    await shop.billParty(st, party);
+    for (const [n, [search, name, qty]] of items.entries()) await shop.billItem(st, n, search, name, qty);
+    await shop.billTotals(st);
     if (!issue) return;
     await st.soft('issue bill', async () => {
       await st.tap(st.page.getByRole('button', { name: 'Issue', exact: true }).first(), { after: 350 });

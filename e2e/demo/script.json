@@ -1,212 +1,604 @@
 {
-  "note": "The narration of the YourKhata demo film, scene by scene, in English and Hindi. This file is the source of truth: the voice-over, the captions (.vtt), the transcript on the landing page and the storyboard are all generated from it by e2e/demo/build-demo.mjs. Each line is one caption; `say` is what the voice reads when the written form would be mispronounced. Every sentence describes something record-demo.mjs actually does on screen in that scene.",
-  "chapters": [
-    { "id": "signup", "from": "intro" },
-    { "id": "shop", "from": "shop-khata" },
-    { "id": "library", "from": "library-home" },
-    { "id": "lending", "from": "lending-today" },
-    { "id": "together", "from": "together" }
-  ],
-  "scenes": [
+ "note": "The narration of the YourKhata demo film, scene by scene. This file is the source of truth: the voice-over (Hindi), the captions (Hindi, and English subtitles), the transcript on the landing page and the storyboard are all generated from it. Every feature is told in the same order — the PROBLEM and a real moment it bites (a still card), then the answer performed step by step on the real screens, and its benefit in the last line. Each line is one caption and is spoken at the moment record-demo.mjs performs what it describes (`cue(n)`); `say` is what the voice reads when the written form would be mispronounced. `en` is the translation, line for line: it is the English subtitle track and the English transcript, not a second film.",
+ "voiced": "hi",
+ "chapters": [
+  {
+   "id": "start",
+   "from": "start-problem"
+  },
+  {
+   "id": "credit",
+   "from": "credit-problem"
+  },
+  {
+   "id": "billing",
+   "from": "billing-problem"
+  },
+  {
+   "id": "stock",
+   "from": "stock-problem"
+  },
+  {
+   "id": "members",
+   "from": "members-problem"
+  },
+  {
+   "id": "collections",
+   "from": "collect-problem"
+  },
+  {
+   "id": "together",
+   "from": "together"
+  }
+ ],
+ "scenes": [
+  {
+   "id": "intro",
+   "part": "title",
+   "screen": "Title card: the YourKhata mark and the six everyday problems the film answers.",
+   "actions": "None. A still card.",
+   "hi": [
     {
-      "id": "intro",
-      "screen": "Title card: the YourKhata mark and the three module names.",
-      "actions": "None. A still card.",
-      "en": [
-        { "t": "This is YourKhata: one place for a small business's records.", "say": "This is Your Khaata: one place for a small business's records." },
-        { "t": "It has three modules: Shop and billing, Library, and Lending. Let's walk through all three." }
-      ],
-      "hi": [
-        { "t": "यह है YourKhata: छोटे व्यापार का सारा हिसाब, एक ही जगह।", "say": "यह है योर खाता: छोटे व्यापार का सारा हिसाब, एक ही जगह।" },
-        { "t": "इसमें तीन मॉड्यूल हैं: दुकान और बिलिंग, लाइब्रेरी, और कर्ज़ वसूली। चलिए, तीनों देखते हैं।" }
-      ]
+     "t": "यह है YourKhata। आपके व्यापार का पूरा हिसाब, एक ही जगह।",
+     "say": "यह है योर खाता। आपके व्यापार का पूरा हिसाब, एक ही जगह।"
     },
     {
-      "id": "signup",
-      "screen": "/signup, then the code step, then business setup (step 1 of 4).",
-      "actions": "Type a new mobile number, press Send code, type the 4-digit code, land on business setup; type a business name and an owner name, choose Retail shop.",
-      "en": [
-        { "t": "Signing up takes only a mobile number. There is no password." },
-        { "t": "Enter your number and press Send code. A four-digit code arrives by SMS." },
-        { "t": "Type the code, and a new number goes straight to business setup." },
-        { "t": "Name your business, choose what kind it is, and continue. It takes about a minute." }
-      ],
-      "hi": [
-        { "t": "साइन अप के लिए बस मोबाइल नंबर चाहिए। कोई पासवर्ड नहीं।" },
-        { "t": "अपना नंबर डालिए और Send code दबाइए। SMS से चार अंकों का कोड आता है।", "say": "अपना नंबर डालिए और सेंड कोड दबाइए। एस एम एस से चार अंकों का कोड आता है।" },
-        { "t": "कोड डालते ही नया नंबर सीधे व्यापार सेटअप पर पहुँचता है।" },
-        { "t": "व्यापार का नाम लिखिए, उसका प्रकार चुनिए और आगे बढ़िए। इसमें क़रीब एक मिनट लगता है।" }
-      ]
-    },
-    {
-      "id": "login",
-      "screen": "/login, the code step, then the Shop dashboard of Sharma General Store.",
-      "actions": "Type the owner's number, Send code, type the code; the dashboard opens. Move across the To collect and To pay tiles, then the menu (the sidebar on a desktop, the bottom bar on a phone).",
-      "en": [
-        { "t": "Next time, the same number and a fresh code log you back in." },
-        { "t": "The dashboard shows what you have to collect, what you have to pay, today's sales and cash in hand." },
-        { "t": "The menu has customers, bills, purchases, items and reports." }
-      ],
-      "hi": [
-        { "t": "अगली बार वही नंबर और नया कोड, और आप वापस अंदर।" },
-        { "t": "डैशबोर्ड पर दिखता है कितना लेना है, कितना देना है, आज की बिक्री और हाथ में कैश।" },
-        { "t": "मेन्यू में ग्राहक, बिल, ख़रीद, आइटम और रिपोर्ट हैं।" }
-      ]
-    },
-    {
-      "id": "shop-khata",
-      "screen": "Customers, then Ramesh Traders' account, then the You got drawer.",
-      "actions": "Open Customers, open Ramesh Traders, press You got, type 500 and a note, save. The balance changes.",
-      "en": [
-        { "t": "Open Customers to see who owes you. Each customer has an account with a running balance." },
-        { "t": "Here is Ramesh Traders. When he pays, press You got, enter the amount and save." },
-        { "t": "The balance updates at once, and every entry keeps its date and its note." }
-      ],
-      "hi": [
-        { "t": "Customers खोलिए और देखिए किस पर कितना बाकी है। हर ग्राहक का अपना खाता है, चलते बैलेंस के साथ।", "say": "कस्टमर्स खोलिए और देखिए किस पर कितना बाकी है। हर ग्राहक का अपना खाता है, चलते बैलेंस के साथ।" },
-        { "t": "यह हैं रमेश ट्रेडर्स। जब वे पैसे दें, You got दबाइए, रकम लिखिए और सेव कीजिए।", "say": "यह हैं रमेश ट्रेडर्स। जब वे पैसे दें, यू गॉट दबाइए, रकम लिखिए और सेव कीजिए।" },
-        { "t": "बैलेंस तुरंत बदल जाता है, और हर एंट्री अपनी तारीख़ और नोट के साथ रहती है।" }
-      ]
-    },
-    {
-      "id": "shop-bill",
-      "screen": "New Invoice, then the issued invoice.",
-      "actions": "Choose Party, pick Anita General Store, add Basmati Rice 5kg with quantity 2, watch the tax lines, press Issue and choose Full credit.",
-      "en": [
-        { "t": "To make a bill, choose the customer and add the items." },
-        { "t": "GST is worked out for you, with CGST and SGST shown separately.", "say": "G S T is worked out for you, with C G S T and S G S T shown separately." },
-        { "t": "Issue the bill and it is ready to print or to share on WhatsApp. Stock comes down by itself." }
-      ],
-      "hi": [
-        { "t": "बिल बनाने के लिए ग्राहक चुनिए और आइटम जोड़िए।" },
-        { "t": "GST अपने-आप जुड़ता है, CGST और SGST अलग-अलग दिखते हैं।", "say": "जी एस टी अपने-आप जुड़ता है, सी जी एस टी और एस जी एस टी अलग-अलग दिखते हैं।" },
-        { "t": "बिल जारी कीजिए, और वह प्रिंट या WhatsApp पर भेजने के लिए तैयार है। स्टॉक अपने-आप घट जाता है।", "say": "बिल जारी कीजिए, और वह प्रिंट या व्हाट्सऐप पर भेजने के लिए तैयार है। स्टॉक अपने-आप घट जाता है।" }
-      ]
-    },
-    {
-      "id": "shop-stock",
-      "screen": "Items, then Reports.",
-      "actions": "Open Items and move down the list; open Reports and move across the report names.",
-      "en": [
-        { "t": "Items shows what is in stock, with tabs for what is low or out." },
-        { "t": "Reports has the day book, receivables aging, the sales register, profit and loss, and a GST summary.", "say": "Reports has the day book, receivables aging, the sales register, profit and loss, and a G S T summary." }
-      ],
-      "hi": [
-        { "t": "Items में दिखता है स्टॉक में क्या है, और क्या कम या ख़त्म हो रहा है।", "say": "आइटम्स में दिखता है स्टॉक में क्या है, और क्या कम या ख़त्म हो रहा है।" },
-        { "t": "Reports में रोज़नामचा, बकाया की उम्र, बिक्री रजिस्टर, मुनाफ़ा-घाटा और GST का सार है।", "say": "रिपोर्ट्स में रोज़नामचा, बकाया की उम्र, बिक्री रजिस्टर, मुनाफ़ा-घाटा और जी एस टी का सार है।" }
-      ]
-    },
-    {
-      "id": "library-home",
-      "screen": "Your businesses, then the Library home screen of Vidya Reading Room.",
-      "actions": "Open the business list, choose Vidya Reading Room. The Library home opens: fees, seats by shift, who has to pay.",
-      "en": [
-        { "t": "Now the Library module, made for libraries and study rooms." },
-        { "t": "One login can hold more than one business, so we simply switch to the reading room." },
-        { "t": "Its home screen shows fees due, how many seats are filled in each shift, and who still has to pay." }
-      ],
-      "hi": [
-        { "t": "अब लाइब्रेरी मॉड्यूल, जो लाइब्रेरी और स्टडी रूम के लिए बना है।" },
-        { "t": "एक लॉगिन में एक से ज़्यादा व्यापार हो सकते हैं, तो हम बस रीडिंग रूम पर चले जाते हैं।" },
-        { "t": "होम स्क्रीन पर दिखती है बकाया फ़ीस, हर शिफ़्ट में कितनी सीटें भरी हैं, और किसे अभी फ़ीस देनी है।" }
-      ]
-    },
-    {
-      "id": "library-students",
-      "screen": "Students, then the New admission form.",
-      "actions": "Open Students; open New admission, type a name, show the plan, shift and seat fields, then cancel.",
-      "en": [
-        { "t": "Students lists every member with their plan, their seat and whether the fee is paid." },
-        { "t": "A new admission takes a name, a plan, a shift and a seat, and the fee can be collected on the spot." }
-      ],
-      "hi": [
-        { "t": "Students में हर सदस्य है, उसके प्लान, सीट और फ़ीस की स्थिति के साथ।", "say": "स्टूडेंट्स में हर सदस्य है, उसके प्लान, सीट और फ़ीस की स्थिति के साथ।" },
-        { "t": "नए दाख़िले में नाम, प्लान, शिफ़्ट और सीट भरिए, और फ़ीस वहीं ली जा सकती है।" }
-      ]
-    },
-    {
-      "id": "library-books",
-      "screen": "Catalogue, then Counter (Issue, then Return).",
-      "actions": "Search the catalogue for a title; at the counter type student number M-0004 and book number 9 to issue; switch to Return and type 9 to take it back.",
-      "en": [
-        { "t": "The catalogue has every book, and how many copies are on the shelf. Search by title, author or book number." },
-        { "t": "At the counter, enter the student's number, then the book's number. The book is issued with its due date." },
-        { "t": "To take a book back, switch to Return and enter the book's number again." }
-      ],
-      "hi": [
-        { "t": "कैटलॉग में हर किताब है, और शेल्फ़ पर उसकी कितनी प्रतियाँ हैं। नाम, लेखक या किताब नंबर से खोजिए।" },
-        { "t": "काउंटर पर पहले छात्र का नंबर डालिए, फिर किताब का नंबर। किताब लौटाने की तारीख़ के साथ दे दी जाती है।" },
-        { "t": "किताब वापस लेने के लिए Return पर जाइए और किताब का नंबर फिर से डालिए।", "say": "किताब वापस लेने के लिए रिटर्न पर जाइए और किताब का नंबर फिर से डालिए।" }
-      ]
-    },
-    {
-      "id": "library-seats",
-      "screen": "Seats, then Attendance.",
-      "actions": "Open the seat map for the morning shift; open Attendance.",
-      "en": [
-        { "t": "The seat map shows every seat in each shift, and Attendance marks who came in today." }
-      ],
-      "hi": [
-        { "t": "सीट मैप में हर शिफ़्ट की हर सीट दिखती है, और Attendance में आज कौन आया, यह दर्ज होता है।", "say": "सीट मैप में हर शिफ़्ट की हर सीट दिखती है, और अटेंडेंस में आज कौन आया, यह दर्ज होता है।" }
-      ]
-    },
-    {
-      "id": "lending-today",
-      "screen": "Your businesses, then Lending's Today screen of Verma Finance, then the Collect dialog.",
-      "actions": "Switch to Verma Finance. On Today, press Collect for the first borrower, choose UPI, save.",
-      "en": [
-        { "t": "The third module is Lending. It keeps a record of loans and collections. It does not lend or move money itself." },
-        { "t": "Today lists every borrower who is due, in the order of the collection round." },
-        { "t": "Press Collect, choose how it was paid, and save. The day's total moves at once, and a receipt can go out on WhatsApp." }
-      ],
-      "hi": [
-        { "t": "तीसरा मॉड्यूल है कर्ज़ और वसूली। यह कर्ज़ और वसूली का हिसाब रखता है। ख़ुद कर्ज़ नहीं देता और पैसा नहीं भेजता।" },
-        { "t": "Today में वे सब लोग हैं जिनसे आज लेना है, वसूली के रास्ते के क्रम में।", "say": "टुडे में वे सब लोग हैं जिनसे आज लेना है, वसूली के रास्ते के क्रम में।" },
-        { "t": "Collect दबाइए, भुगतान का तरीक़ा चुनिए और सेव कीजिए। दिन का जोड़ तुरंत बदलता है, और रसीद WhatsApp पर भेजी जा सकती है।", "say": "कलेक्ट दबाइए, भुगतान का तरीक़ा चुनिए और सेव कीजिए। दिन का जोड़ तुरंत बदलता है, और रसीद व्हाट्सऐप पर भेजी जा सकती है।" }
-      ]
-    },
-    {
-      "id": "lending-loans",
-      "screen": "Loans, one loan's page, then the New loan form.",
-      "actions": "Open Loans; open Salma Begum's loan and scroll through the schedule and collections; open New loan and move down the form.",
-      "en": [
-        { "t": "Loans shows what is left on each loan, and who is running late." },
-        { "t": "Open a loan for its schedule, every collection, and a statement you can print." },
-        { "t": "A new loan takes the borrower, the amount and the instalments, daily or weekly." }
-      ],
-      "hi": [
-        { "t": "Loans में दिखता है हर कर्ज़ पर कितना बाकी है, और कौन देर से चल रहा है।", "say": "लोन्स में दिखता है हर कर्ज़ पर कितना बाकी है, और कौन देर से चल रहा है।" },
-        { "t": "किसी कर्ज़ को खोलिए: उसकी किस्तें, हर वसूली, और प्रिंट करने लायक़ स्टेटमेंट।" },
-        { "t": "नए कर्ज़ में उधार लेने वाले का नाम, रकम और किस्तें भरिए, रोज़ की या हफ़्ते की।" }
-      ]
-    },
-    {
-      "id": "together",
-      "screen": "Your businesses, then Team, then the account menu and the dashboard in Hindi.",
-      "actions": "Open the business list showing all three; open Team and Add member; choose Hindi (the account menu on a desktop, the More page on a phone); the screen changes language.",
-      "en": [
-        { "t": "All three modules share one sign-in. The business switcher moves between them without logging in again." },
-        { "t": "Add your staff by mobile number and give each person a role." },
-        { "t": "And every screen works in Hindi as well as English." }
-      ],
-      "hi": [
-        { "t": "तीनों मॉड्यूल एक ही साइन-इन से चलते हैं। दोबारा लॉगिन किए बिना एक व्यापार से दूसरे में जाइए।" },
-        { "t": "अपने स्टाफ़ को मोबाइल नंबर से जोड़िए और हर एक को उसकी भूमिका दीजिए।" },
-        { "t": "और हर स्क्रीन हिंदी में भी चलती है, अंग्रेज़ी में भी।" }
-      ]
-    },
-    {
-      "id": "outro",
-      "screen": "Closing card: the YourKhata mark and yourkhata.com.",
-      "actions": "None. A still card.",
-      "en": [
-        { "t": "That is YourKhata: Shop, Library and Lending, in one place.", "say": "That is Your Khaata: Shop, Library and Lending, in one place." },
-        { "t": "Sign up free with your mobile number at yourkhata.com.", "say": "Sign up free with your mobile number at your khaata dot com." }
-      ],
-      "hi": [
-        { "t": "यही है YourKhata: दुकान, लाइब्रेरी और कर्ज़ वसूली, एक ही जगह।", "say": "यही है योर खाता: दुकान, लाइब्रेरी और कर्ज़ वसूली, एक ही जगह।" },
-        { "t": "yourkhata.com पर अपने मोबाइल नंबर से मुफ़्त साइन अप कीजिए।", "say": "योर खाता डॉट कॉम पर अपने मोबाइल नंबर से मुफ़्त साइन अप कीजिए।" }
-      ]
+     "t": "इस वीडियो में रोज़ की छह मुश्किलें हैं, और हर एक का हल, एक-एक कदम में।"
     }
-  ]
+   ],
+   "en": [
+    {
+     "t": "This is YourKhata. All of your business's records, in one place."
+    },
+    {
+     "t": "This video takes six everyday problems, and solves each one, a step at a time."
+    }
+   ],
+   "card": {
+    "hi": [
+     "आपका पूरा हिसाब, एक ही जगह",
+     [
+      "उधार",
+      "बिल",
+      "स्टॉक",
+      "फीस",
+      "किस्तें"
+     ]
+    ],
+    "en": [
+     "All your records, in one place",
+     [
+      "Credit",
+      "Bills",
+      "Stock",
+      "Fees",
+      "Instalments"
+     ]
+    ]
+   }
+  },
+  {
+   "id": "start-problem",
+   "part": "problem",
+   "screen": "Problem card: “A new app, full of things you do not need?”",
+   "actions": "None. A still card.",
+   "hi": [
+    {
+     "t": "पहली मुश्किल। नया सॉफ़्टवेयर खोलते ही ढेर सारे बटन, जिनमें से आधे आपके काम के ही नहीं।"
+    },
+    {
+     "t": "मान लीजिए आप आज ही अपना काम शुरू कर रहे हैं, और आपको बस अपने काम की चीज़ें चाहिए।"
+    }
+   ],
+   "en": [
+    {
+     "t": "The first problem. You open a new app and it is full of buttons, half of which are not for your work."
+    },
+    {
+     "t": "Say you are starting today, and you want only the things your own work needs."
+    }
+   ],
+   "card": {
+    "n": 1,
+    "hi": [
+     "नया ऐप, और ढेर सारी चीज़ें जो आपके काम की नहीं?",
+     "आपको बस अपने काम की चीज़ें चाहिए।"
+    ],
+    "en": [
+     "A new app, full of things you do not need?",
+     "You want only what your own work needs."
+    ]
+   }
+  },
+  {
+   "id": "start",
+   "part": "solution",
+   "screen": "/signup, the code step, business setup steps 1 to 4, then the new business's first screen.",
+   "actions": "Type a new mobile number, press Send code, type the 4-digit code; type the business name and the owner's name and choose the state; look across the three choices and tick Shop; choose Retail shop and Continue; skip GST and address; read the summary and press Start; look at the menu.",
+   "hi": [
+    {
+     "t": "हल आसान है। साइन अप के लिए बस मोबाइल नंबर चाहिए। कोई पासवर्ड नहीं।"
+    },
+    {
+     "t": "Send code दबाइए, और SMS से आया चार अंकों का कोड डालिए।",
+     "say": "सेंड कोड दबाइए, और एस एम एस से आया चार अंकों का कोड डालिए।"
+    },
+    {
+     "t": "अब व्यापार का नाम, अपना नाम और राज्य भरिए।"
+    },
+    {
+     "t": "फिर चुनिए कि आपको क्या चाहिए। एक भी चुन सकते हैं, और एक से ज़्यादा भी।"
+    },
+    {
+     "t": "हमने Shop चुना, तो बस दुकान का प्रकार पूछा गया। अब Continue।",
+     "say": "हमने शॉप चुना, तो बस दुकान का प्रकार पूछा गया। अब कंटिन्यू।"
+    },
+    {
+     "t": "GST और पता अभी छोड़ सकते हैं। आख़िरी स्क्रीन बताती है कि आपने क्या चुना।",
+     "say": "जी एस टी और पता अभी छोड़ सकते हैं। आख़िरी स्क्रीन बताती है कि आपने क्या चुना।"
+    },
+    {
+     "t": "फ़ायदा यह, कि मेन्यू में वही दिखता है जो आपने चुना। बाकी चीज़ें बाद में कभी भी जोड़ सकते हैं।"
+    }
+   ],
+   "en": [
+    {
+     "t": "The answer is simple. Signing up takes only a mobile number. There is no password."
+    },
+    {
+     "t": "Press Send code, and type the four-digit code that arrives by SMS."
+    },
+    {
+     "t": "Now fill in the business name, your own name and your state."
+    },
+    {
+     "t": "Then choose what you need. You can pick one, or more than one."
+    },
+    {
+     "t": "We chose Shop, so it asks only what kind of shop. Now Continue."
+    },
+    {
+     "t": "GST and the address can wait. The last screen says back what you chose."
+    },
+    {
+     "t": "The benefit: the menu shows only what you chose. Anything else can be added later, whenever you want."
+    }
+   ]
+  },
+  {
+   "id": "credit-problem",
+   "part": "problem",
+   "screen": "Problem card: “Who owes you, and how much?”",
+   "actions": "None. A still card.",
+   "hi": [
+    {
+     "t": "दूसरी मुश्किल, उधार का हिसाब। कॉपी में लिखा मिलता नहीं, और याद रहता नहीं।"
+    },
+    {
+     "t": "ग्राहक कहता है, मैंने तो पैसे दे दिए थे। अब आप क्या दिखाएँगे?"
+    }
+   ],
+   "en": [
+    {
+     "t": "The second problem: money given on credit. The notebook cannot be found, and memory does not hold."
+    },
+    {
+     "t": "A customer says, but I already paid you. What will you show them?"
+    }
+   ],
+   "card": {
+    "n": 2,
+    "hi": [
+     "किस पर कितना बाकी है?",
+     "“मैंने तो पैसे दे दिए थे।”"
+    ],
+    "en": [
+     "Who owes you, and how much?",
+     "“But I already paid you.”"
+    ]
+   }
+  },
+  {
+   "id": "credit",
+   "part": "solution",
+   "screen": "A business already in use: Customers, then Ramesh Traders' account, then the You got drawer.",
+   "actions": "Open Customers and look down the balances; open Ramesh Traders; press You got, type 500 and a note, save; look at the new balance.",
+   "hi": [
+    {
+     "t": "हल, हर ग्राहक का अपना खाता। Customers खोलिए, सामने है किस पर कितना बाकी है।",
+     "say": "हल, हर ग्राहक का अपना खाता। कस्टमर्स खोलिए, सामने है किस पर कितना बाकी है।"
+    },
+    {
+     "t": "रमेश ट्रेडर्स का खाता खोलते हैं। हर लेन-देन तारीख़ के साथ लिखा है।"
+    },
+    {
+     "t": "आज उन्होंने पाँच सौ रुपये दिए। You got दबाइए, रकम लिखिए, और सेव कीजिए।",
+     "say": "आज उन्होंने पाँच सौ रुपये दिए। यू गॉट दबाइए, रकम लिखिए, और सेव कीजिए।"
+    },
+    {
+     "t": "बैलेंस तुरंत बदल गया। फ़ायदा, हिसाब पर कोई बहस नहीं, और वसूली समय पर।"
+    }
+   ],
+   "en": [
+    {
+     "t": "The answer: an account for every customer. Open Customers, and there is who owes how much."
+    },
+    {
+     "t": "Open the account of Ramesh Traders. Every entry is written down with its date."
+    },
+    {
+     "t": "Today he paid five hundred rupees. Press You got, type the amount, and save."
+    },
+    {
+     "t": "The balance changed at once. The benefit: no arguments about the account, and money collected on time."
+    }
+   ]
+  },
+  {
+   "id": "billing-problem",
+   "part": "problem",
+   "screen": "Problem card: “Bills by hand, and the tax added wrong?”",
+   "actions": "None. A still card.",
+   "hi": [
+    {
+     "t": "तीसरी मुश्किल, बिल बनाना। हाथ से बिल में समय लगता है, और टैक्स का जोड़ ग़लत हो जाता है।"
+    },
+    {
+     "t": "काउंटर पर भीड़ है, और ग्राहक को अभी पक्का बिल चाहिए।"
+    }
+   ],
+   "en": [
+    {
+     "t": "The third problem: making a bill. By hand it takes time, and the tax gets added wrong."
+    },
+    {
+     "t": "The counter is busy, and the customer wants a proper bill right now."
+    }
+   ],
+   "card": {
+    "n": 3,
+    "hi": [
+     "बिल हाथ से, और टैक्स का जोड़ ग़लत?",
+     "काउंटर पर भीड़ है, और बिल अभी चाहिए।"
+    ],
+    "en": [
+     "Bills by hand, and the tax added wrong?",
+     "The counter is busy, and the bill is needed now."
+    ]
+   }
+  },
+  {
+   "id": "billing",
+   "part": "solution",
+   "screen": "New invoice, then the issued invoice.",
+   "actions": "Open a new bill and choose Anita General Store; add Basmati Rice 5kg and set the quantity to 2; look at the tax lines; press Issue, choose Full credit and open the bill.",
+   "hi": [
+    {
+     "t": "हल, नया बिल खोलिए और ग्राहक चुनिए।"
+    },
+    {
+     "t": "आइटम जोड़िए, और मात्रा लिखिए।"
+    },
+    {
+     "t": "GST अपने-आप जुड़ गया। CGST और SGST अलग-अलग दिख रहे हैं।",
+     "say": "जी एस टी अपने-आप जुड़ गया। सी जी एस टी और एस जी एस टी अलग-अलग दिख रहे हैं।"
+    },
+    {
+     "t": "Issue दबाइए। बिल तैयार है, प्रिंट के लिए, या WhatsApp पर भेजने के लिए।",
+     "say": "इशू दबाइए। बिल तैयार है, प्रिंट के लिए, या व्हाट्सऐप पर भेजने के लिए।"
+    },
+    {
+     "t": "फ़ायदा, सही बिल कुछ ही पलों में, और बिका हुआ माल स्टॉक से अपने-आप घट गया।"
+    }
+   ],
+   "en": [
+    {
+     "t": "The answer: open a new bill and choose the customer."
+    },
+    {
+     "t": "Add the item, and type the quantity."
+    },
+    {
+     "t": "GST was added by itself. CGST and SGST are shown separately."
+    },
+    {
+     "t": "Press Issue. The bill is ready, to print or to send on WhatsApp."
+    },
+    {
+     "t": "The benefit: a correct bill in moments, and what was sold has come off the stock by itself."
+    }
+   ]
+  },
+  {
+   "id": "stock-problem",
+   "part": "problem",
+   "screen": "Problem card: “What is running out, and what did you earn?”",
+   "actions": "None. A still card.",
+   "hi": [
+    {
+     "t": "चौथी मुश्किल। माल ख़त्म हो गया, यह तब पता चलता है जब ग्राहक ख़ाली हाथ लौट जाता है।"
+    },
+    {
+     "t": "और महीने के आख़िर में, बिक्री और टैक्स का हिसाब जोड़ना, अलग सिरदर्द।"
+    }
+   ],
+   "en": [
+    {
+     "t": "The fourth problem. You learn that something has run out only when a customer leaves empty-handed."
+    },
+    {
+     "t": "And at the end of the month, adding up sales and tax is a headache of its own."
+    }
+   ],
+   "card": {
+    "n": 4,
+    "hi": [
+     "क्या ख़त्म हो रहा है, और कमाई कितनी हुई?",
+     "पता तब चलता है जब ग्राहक लौट जाता है।"
+    ],
+    "en": [
+     "What is running out, and what did you earn?",
+     "You find out when the customer walks away."
+    ]
+   }
+  },
+  {
+   "id": "stock",
+   "part": "solution",
+   "screen": "Items, then Reports.",
+   "actions": "Open Items and press the Low tab; open Reports and move across Day book, Receivables aging, Sales register and GST summary.",
+   "hi": [
+    {
+     "t": "हल, Items में पूरा स्टॉक है। Low दबाइए, और दिखेगा क्या कम बचा है।",
+     "say": "हल, आइटम्स में पूरा स्टॉक है। लो दबाइए, और दिखेगा क्या कम बचा है।"
+    },
+    {
+     "t": "Reports में रोज़ की बही, बकाया, बिक्री और GST का सार, सब तैयार मिलता है।",
+     "say": "रिपोर्ट्स में रोज़ की बही, बकाया, बिक्री और जी एस टी का सार, सब तैयार मिलता है।"
+    },
+    {
+     "t": "फ़ायदा, ख़रीद समय पर, और हिसाब जोड़ने के लिए अलग से बैठना नहीं पड़ता।"
+    }
+   ],
+   "en": [
+    {
+     "t": "The answer: Items holds all your stock. Press Low, and it shows what is running short."
+    },
+    {
+     "t": "Reports has the day book, what is owed, sales and the GST summary, all ready."
+    },
+    {
+     "t": "The benefit: you reorder in time, and never sit down separately to add things up."
+    }
+   ]
+  },
+  {
+   "id": "members-problem",
+   "part": "problem",
+   "screen": "Problem card: “Who has paid this month, and who has not?”",
+   "actions": "None. A still card.",
+   "hi": [
+    {
+     "t": "पाँचवीं मुश्किल, उन कामों की, जहाँ सदस्य हर महीने फीस देते हैं।"
+    },
+    {
+     "t": "किसने फीस दी, किसकी बाकी है, और कौन-सी सीट ख़ाली है? रजिस्टर पलटते रहिए।"
+    }
+   ],
+   "en": [
+    {
+     "t": "The fifth problem belongs to any work where members pay a fee every month."
+    },
+    {
+     "t": "Who has paid, who has not, and which seat is free? You keep turning the pages of a register."
+    }
+   ],
+   "card": {
+    "n": 5,
+    "hi": [
+     "किसने फीस दी, किसकी बाकी है?",
+     "और कौन-सी सीट ख़ाली है?"
+    ],
+    "en": [
+     "Who has paid this month, and who has not?",
+     "And which seat is free?"
+    ]
+   }
+  },
+  {
+   "id": "members",
+   "part": "solution",
+   "screen": "Another business that chose only Library: its home, Students, a new admission, Seats and Attendance.",
+   "actions": "Open Vidya Reading Room; look at fees unpaid, seats by shift and who has to pay; open Students; press New admission, type a name and look at plan, shift and seat; open Seats, then Attendance.",
+   "hi": [
+    {
+     "t": "हल, Library। यह व्यापार सिर्फ़ Library चलाता है। पहली स्क्रीन पर आज का हाल है।",
+     "say": "हल, लाइब्रेरी। यह व्यापार सिर्फ़ लाइब्रेरी चलाता है। पहली स्क्रीन पर आज का हाल है।"
+    },
+    {
+     "t": "कितनी फीस बाकी है, किस शिफ़्ट में कितनी सीटें भरी हैं, और किसे पैसे देने हैं।"
+    },
+    {
+     "t": "Students में हर सदस्य का प्लान, सीट और फीस की तारीख़ है।",
+     "say": "स्टूडेंट्स में हर सदस्य का प्लान, सीट और फीस की तारीख़ है।"
+    },
+    {
+     "t": "नया दाख़िला। नाम लिखिए, फिर प्लान, शिफ़्ट और सीट चुनिए।"
+    },
+    {
+     "t": "Seats में दिखता है कौन-सी सीट ख़ाली है, और Attendance में रोज़ की हाज़िरी।",
+     "say": "सीट्स में दिखता है कौन-सी सीट ख़ाली है, और अटेंडेंस में रोज़ की हाज़िरी।"
+    },
+    {
+     "t": "फ़ायदा, फीस की याद रजिस्टर पलटे बिना, और हर सीट का हिसाब साफ़।"
+    }
+   ],
+   "en": [
+    {
+     "t": "The answer: Library. This business runs only Library. The first screen is today at a glance."
+    },
+    {
+     "t": "How much in fees is unpaid, how many seats are taken in each shift, and who has to pay."
+    },
+    {
+     "t": "Students lists every member's plan, seat and fee date."
+    },
+    {
+     "t": "A new admission. Type the name, then choose the plan, the shift and the seat."
+    },
+    {
+     "t": "Seats shows which seat is free, and Attendance the daily register."
+    },
+    {
+     "t": "The benefit: fees remembered without turning a page, and every seat accounted for."
+    }
+   ]
+  },
+  {
+   "id": "collect-problem",
+   "part": "problem",
+   "screen": "Problem card: “Whom do you collect from today?”",
+   "actions": "None. A still card.",
+   "hi": [
+    {
+     "t": "छठी मुश्किल, रोज़ की किस्तें। आज किस-किस से लेना है, और किसने दे दिया?"
+    },
+    {
+     "t": "वसूली करने वाला निकल चुका है, और आपके पास बस एक पुरानी डायरी है।"
+    }
+   ],
+   "en": [
+    {
+     "t": "The sixth problem: daily instalments. Whom do you collect from today, and who has already paid?"
+    },
+    {
+     "t": "The collector has already left, and all you have is an old diary."
+    }
+   ],
+   "card": {
+    "n": 6,
+    "hi": [
+     "आज किससे कितना लेना है?",
+     "और किसने दे दिया?"
+    ],
+    "en": [
+     "Whom do you collect from today?",
+     "And who has already paid?"
+    ]
+   }
+  },
+  {
+   "id": "collect",
+   "part": "solution",
+   "screen": "A third business that chose only Lending: Today, the collection sheet, Loans and one loan's schedule.",
+   "actions": "Open Verma Finance; look at the amount to collect and the first names; press Collect, choose UPI and save; open Loans, then Salma Begum's loan and scroll its schedule.",
+   "hi": [
+    {
+     "t": "हल, Lending। Today में आज की पूरी सूची है, नाम और रकम के साथ।",
+     "say": "हल, लेंडिंग। टुडे में आज की पूरी सूची है, नाम और रकम के साथ।"
+    },
+    {
+     "t": "Collect दबाइए, पैसे का तरीका चुनिए, और सेव कीजिए। किस्त दर्ज हो गई।",
+     "say": "कलेक्ट दबाइए, पैसे का तरीका चुनिए, और सेव कीजिए। किस्त दर्ज हो गई।"
+    },
+    {
+     "t": "Loans में हर लोन का पूरा शेड्यूल है। कितनी किस्तें आईं, और कितनी बाकी हैं।",
+     "say": "लोन्स में हर लोन का पूरा शेड्यूल है। कितनी किस्तें आईं, और कितनी बाकी हैं।"
+    },
+    {
+     "t": "फ़ायदा, कोई किस्त छूटती नहीं, और शाम को हिसाब मिलाना नहीं पड़ता।"
+    }
+   ],
+   "en": [
+    {
+     "t": "The answer: Lending. Today is the whole list for the day, with names and amounts."
+    },
+    {
+     "t": "Press Collect, choose how it was paid, and save. The instalment is recorded."
+    },
+    {
+     "t": "Loans holds the full schedule of every loan: how many instalments are in, and how many remain."
+    },
+    {
+     "t": "The benefit: no instalment is missed, and nothing has to be tallied in the evening."
+    }
+   ]
+  },
+  {
+   "id": "together",
+   "part": "solution",
+   "screen": "The business chooser, the business menu with its Add options, Team, and the language switch.",
+   "actions": "Open the list of businesses and move across the three; open a business's menu and look at the apps it can add; open Team and press Add member; switch the language to Hindi.",
+   "hi": [
+    {
+     "t": "ये सब एक ही लॉगिन में चलता है। एक व्यापार से दूसरे में जाना, बस एक टैप।"
+    },
+    {
+     "t": "कोई चीज़ बाद में चाहिए? व्यापार के मेन्यू से जोड़ लीजिए। ज़रूरत न रहे, तो बंद कर दीजिए।"
+    },
+    {
+     "t": "Team में स्टाफ़ जोड़िए, और तय कीजिए कि कौन क्या देख सकता है।",
+     "say": "टीम में स्टाफ़ जोड़िए, और तय कीजिए कि कौन क्या देख सकता है।"
+    },
+    {
+     "t": "और पूरा ऐप हिंदी में भी चलता है।"
+    }
+   ],
+   "en": [
+    {
+     "t": "All of this runs under one login. Moving from one business to another is a single tap."
+    },
+    {
+     "t": "Need something later? Add it from the business menu. If you stop needing it, turn it off."
+    },
+    {
+     "t": "In Team, add your staff, and decide who can see what."
+    },
+    {
+     "t": "And the whole app runs in Hindi too."
+    }
+   ]
+  },
+  {
+   "id": "outro",
+   "part": "title",
+   "screen": "Closing card: start free at yourkhata.com.",
+   "actions": "None. A still card.",
+   "hi": [
+    {
+     "t": "yourkhata.com पर मुफ़्त शुरू कीजिए। बस मोबाइल नंबर चाहिए।",
+     "say": "योर खाता डॉट कॉम पर मुफ़्त शुरू कीजिए। बस मोबाइल नंबर चाहिए।"
+    },
+    {
+     "t": "जो चाहिए, वही चुनिए। और अपना हिसाब आज से ही साफ़ रखिए।"
+    }
+   ],
+   "en": [
+    {
+     "t": "Start free at yourkhata.com. All you need is a mobile number."
+    },
+    {
+     "t": "Choose only what you need. And keep your accounts clear from today."
+    }
+   ],
+   "card": {
+    "hi": [
+     "yourkhata.com पर मुफ़्त शुरू करें",
+     [
+      "बस मोबाइल नंबर",
+      "जो चाहिए वही चुनें",
+      "हिंदी या अंग्रेज़ी"
+     ]
+    ],
+    "en": [
+     "Start free at yourkhata.com",
+     [
+      "Only a mobile number",
+      "Choose only what you need",
+      "Hindi or English"
+     ]
+    ]
+   }
+  }
+ ]
 }

@@ -154,22 +154,19 @@ describe('LandingPage', () => {
   });
 
   /**
-   * The narrated demo is a SECTION now (owner, 10 Oct 2026), in English and
-   * Hindi. Before play is pressed there is no <video> in the page at all — two
-   * films cost a visitor one poster image — and nothing ever plays by itself.
+   * The narrated demo is a SECTION (owner, 10 Oct 2026), and ONE film since
+   * 11 Oct: Hindi voice, English subtitles. Before play is pressed there is no
+   * <video> in the page at all — the film costs a visitor one poster image —
+   * and nothing ever plays by itself.
    */
-  it('shows the demo with a language switch, and loads no film until play is pressed', () => {
+  it('shows one demo film, with no language switch, and loads nothing until play is pressed', () => {
     const { container } = renderPage();
     const demo = container.querySelector('#demo') as HTMLElement;
 
     expect(screen.getByRole('link', { name: 'Watch the demo' })).toHaveAttribute('href', '#demo');
     expect(demo.querySelector('video')).toBeNull();
-    const languages = within(demo).getByRole('tablist', { name: 'Video language' });
-    expect(
-      within(languages)
-        .getAllByRole('tab')
-        .map((tab) => tab.textContent)
-    ).toEqual(['English', 'हिन्दी']);
+    // The separate English film is withdrawn, and the switch between films with it.
+    expect(within(demo).queryByRole('tablist')).toBeNull();
     // Both posters are in the HTML and lazy; CSS shows the one for this screen.
     expect(
       [...demo.querySelectorAll('img')].map((img) => [
@@ -177,30 +174,30 @@ describe('LandingPage', () => {
         img.getAttribute('loading'),
       ])
     ).toEqual([
-      ['/media/landing/demo-en-mobile-poster.jpg', 'lazy'],
-      ['/media/landing/demo-en-desktop-poster.jpg', 'lazy'],
+      ['/media/landing/demo-hi-mobile-poster.jpg', 'lazy'],
+      ['/media/landing/demo-hi-desktop-poster.jpg', 'lazy'],
     ]);
 
     // jsdom matches no media query, so this is the phone: it gets the PHONE cut.
     fireEvent.click(within(demo).getByTestId('landing-demo-play'));
     const video = within(demo).getByTestId('landing-demo-video');
-    expect(video).toHaveAttribute('src', '/media/landing/demo-en-mobile.mp4');
+    expect(video).toHaveAttribute('src', '/media/landing/demo-hi-mobile.mp4');
+    expect(video).toHaveAttribute('lang', 'hi');
     expect(video).toHaveAttribute('controls');
     expect(video).not.toHaveAttribute('muted');
-    const track = video.querySelector('track[kind="captions"]') as HTMLTrackElement;
-    expect(track).toHaveAttribute('src', '/media/landing/demo-en-mobile.vtt');
-    expect(track).toHaveAttribute('srclang', 'en');
-
-    // The other language is the other film, with its own captions.
-    fireEvent.click(within(languages).getByRole('tab', { name: 'हिन्दी' }));
-    expect(demo.querySelector('video')).toBeNull();
-    fireEvent.click(within(demo).getByTestId('landing-demo-play'));
-    const hindi = within(demo).getByTestId('landing-demo-video');
-    expect(hindi).toHaveAttribute('src', '/media/landing/demo-hi-mobile.mp4');
-    expect(hindi.querySelector('track')).toHaveAttribute('srclang', 'hi');
+    // Somebody reading the page in English is not left out of a Hindi film:
+    // it carries English subtitles, and on an English page they are the ones on.
+    const captions = video.querySelector('track[kind="captions"]') as HTMLTrackElement;
+    expect(captions).toHaveAttribute('src', '/media/landing/demo-hi-mobile.vtt');
+    expect(captions).toHaveAttribute('srclang', 'hi');
+    expect(captions).not.toHaveAttribute('default');
+    const subtitles = video.querySelector('track[kind="subtitles"]') as HTMLTrackElement;
+    expect(subtitles).toHaveAttribute('src', '/media/landing/demo-hi-mobile.en.vtt');
+    expect(subtitles).toHaveAttribute('srclang', 'en');
+    expect(subtitles).toHaveAttribute('default');
 
     // A missing film is a sentence and a way forward, not a black box.
-    fireEvent.error(hindi);
+    fireEvent.error(video);
     const unavailable = within(demo).getByTestId('landing-demo-unavailable');
     expect(within(unavailable).getByRole('link', { name: /start free/i })).toHaveAttribute(
       'href',
@@ -226,10 +223,10 @@ describe('LandingPage', () => {
       const demo = container.querySelector('#demo') as HTMLElement;
       fireEvent.click(within(demo).getByTestId('landing-demo-play'));
       const video = within(demo).getByTestId('landing-demo-video');
-      expect(video).toHaveAttribute('src', '/media/landing/demo-en-desktop.mp4');
-      expect(video.querySelector('track')).toHaveAttribute(
+      expect(video).toHaveAttribute('src', '/media/landing/demo-hi-desktop.mp4');
+      expect(video.querySelector('track[kind="subtitles"]')).toHaveAttribute(
         'src',
-        '/media/landing/demo-en-desktop.vtt'
+        '/media/landing/demo-hi-desktop.en.vtt'
       );
     } finally {
       window.matchMedia = original;

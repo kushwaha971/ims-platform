@@ -69,30 +69,43 @@ describe('landing media config matches manifest.json', () => {
   });
 
   /**
-   * The four narrated films (English and Hindi, desktop and phone), their
-   * captions and their posters: each one the page can ask for is on disk, is
-   * in the manifest, and its captions are a WebVTT file with cues in it.
+   * The narrated film in its two cuts (desktop and phone), with its Hindi
+   * captions, its English subtitles and its posters: everything the page can
+   * ask for is on disk and in the manifest, and both text tracks are WebVTT
+   * files with the SAME cue times — a subtitle that drifts from the caption
+   * it translates is a subtitle on the wrong sentence.
    */
   it.each(
-    (['en', 'hi'] as const).flatMap((language) =>
-      (['desktop', 'mobile'] as const).map(
-        (device) => [`demo-${language}-${device}`, DEMO_FILMS[language][device]] as const
-      )
+    (['desktop', 'mobile'] as const).map(
+      (device) => [`demo-hi-${device}`, DEMO_FILMS[device]] as const
     )
-  )('%s has its film, captions and posters', (id, film) => {
+  )('%s has its film, both text tracks and posters', (id, film) => {
     expect(film.id).toBe(id);
     expect(byId.get(id)).toBeDefined();
-    [`/media/landing/${id}.mp4`, film.captions, film.poster.webp, film.poster.jpg].forEach((src) =>
-      expect(existsSync(join(PUBLIC, src))).toBe(true)
-    );
-    const vtt = readFileSync(join(PUBLIC, film.captions), 'utf8');
-    expect(vtt.startsWith('WEBVTT')).toBe(true);
-    expect(vtt.match(/-->/g)?.length ?? 0).toBeGreaterThan(20);
+    [
+      `/media/landing/${id}.mp4`,
+      film.tracks.hi,
+      film.tracks.en,
+      film.poster.webp,
+      film.poster.jpg,
+    ].forEach((src) => expect(existsSync(join(PUBLIC, src))).toBe(true));
+    const times = (src: string): string[] => {
+      const vtt = readFileSync(join(PUBLIC, src), 'utf8');
+      expect(vtt.startsWith('WEBVTT')).toBe(true);
+      return vtt.match(/^\d\d:.* --> .*$/gm) ?? [];
+    };
+    expect(times(film.tracks.hi).length).toBeGreaterThan(20);
+    expect(times(film.tracks.en)).toEqual(times(film.tracks.hi));
   });
 
   it('keeps none of the retired films', () => {
-    ['demo-desktop-720.mp4', 'demo-mobile.mp4'].forEach((file) =>
-      expect(existsSync(join(PUBLIC, 'media/landing', file))).toBe(false)
-    );
+    // The first two, and the separate English film withdrawn on 11 Oct 2026.
+    [
+      'demo-desktop-720.mp4',
+      'demo-mobile.mp4',
+      'demo-en-desktop.mp4',
+      'demo-en-mobile.mp4',
+      'demo-en-desktop.vtt',
+    ].forEach((file) => expect(existsSync(join(PUBLIC, 'media/landing', file))).toBe(false));
   });
 });

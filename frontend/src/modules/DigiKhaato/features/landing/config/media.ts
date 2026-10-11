@@ -80,36 +80,43 @@ export const CARD_DESKTOP_MEDIA = '(min-width: 640px)';
 export const CARD_MOBILE_MEDIA = '(max-width: 639.98px)';
 
 /**
- * The narrated demo films: English and Hindi, each in two cuts — the desktop
- * layout (16:9) and the phone layout (portrait). Same journey and the same
- * words in all four: sign-in, Shop & billing, Library, Lending, switching
- * business. Each has its own captions (`.vtt`) and poster; the transcript is
+ * The narrated demo film: ONE narration, in Hindi, in two cuts — the desktop
+ * layout (16:9) and the phone layout (portrait, tapped through like a phone).
+ * Six everyday problems, each told as problem, real moment, the steps on the
+ * real screens, and the benefit. Each cut has Hindi captions and an English
+ * subtitle track (`.vtt`) and a poster; the transcript, in both languages, is
  * `config/demoTranscript.ts`. Built by `e2e/demo/build-demo.mjs`.
+ *
+ * The separate English film was withdrawn on 11 Oct 2026 (owner): one film
+ * made well, for both screen sizes, rather than four.
  */
+/** The languages the film's WORDS are in: Hindi is spoken, English is its subtitle track. */
 export type DemoLanguage = 'en' | 'hi';
 export type DemoDevice = 'desktop' | 'mobile';
 
+/** The language the film is narrated in. One film, not one per language (owner, 11 Oct 2026). */
+export const DEMO_VOICE: DemoLanguage = 'hi';
+
 export interface DemoFilmFiles {
-  /** Site-relative file name stem under the demo base URL, e.g. `demo-en-desktop`. */
+  /** Site-relative file name stem under the demo base URL, e.g. `demo-hi-desktop`. */
   readonly id: string;
   readonly poster: { readonly webp: string; readonly jpg: string };
-  readonly captions: string;
+  /** A text track per language: captions in the voice's, subtitles in the other. */
+  readonly tracks: Readonly<Record<DemoLanguage, string>>;
 }
 
-const film = (language: DemoLanguage, device: DemoDevice): DemoFilmFiles => {
-  const id = `demo-${language}-${device}`;
+const film = (device: DemoDevice): DemoFilmFiles => {
+  const id = `demo-${DEMO_VOICE}-${device}`;
   return {
     id,
     poster: { webp: `${BASE}/${id}-poster.webp`, jpg: `${BASE}/${id}-poster.jpg` },
-    captions: `${BASE}/${id}.vtt`,
+    tracks: { hi: `${BASE}/${id}.vtt`, en: `${BASE}/${id}.en.vtt` },
   };
 };
 
-export const DEMO_FILMS: Readonly<
-  Record<DemoLanguage, Readonly<Record<DemoDevice, DemoFilmFiles>>>
-> = {
-  en: { desktop: film('en', 'desktop'), mobile: film('en', 'mobile') },
-  hi: { desktop: film('hi', 'desktop'), mobile: film('hi', 'mobile') },
+export const DEMO_FILMS: Readonly<Record<DemoDevice, DemoFilmFiles>> = {
+  desktop: film('desktop'),
+  mobile: film('mobile'),
 };
 
 /**

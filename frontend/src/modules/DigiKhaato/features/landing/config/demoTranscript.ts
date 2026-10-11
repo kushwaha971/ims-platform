@@ -6,10 +6,12 @@
  * quotes. Generated from the same script and the same audio as the films and
  * their captions, so the page can never describe a film it does not have.
  *
- * Each language has two cuts — the desktop layout and the phone layout — with
- * the same words; only the picture, its size and the chapter times differ.
+ * ONE film, narrated in Hindi, in two cuts — the desktop layout and the phone
+ * layout. `hi` is what is said; `en` is its translation, line for line (the
+ * English subtitle track and the English transcript), so both share the cuts.
  */
-export type DemoChapterId = 'signup' | 'shop' | 'library' | 'lending' | 'together';
+export type DemoChapterId =
+  'start' | 'credit' | 'billing' | 'stock' | 'members' | 'collections' | 'together';
 
 export interface DemoChapter {
   readonly id: DemoChapterId;
@@ -36,108 +38,58 @@ export interface DemoFilm {
 export const DEMO_PUBLISHED_ON = '2026-10-11';
 
 export const DEMO_TRANSCRIPT: Readonly<Record<'en' | 'hi', DemoFilm>> = {
-  en: {
-    name: 'YourKhata product demo (English)',
-    description:
-      'A guided tour of YourKhata: signing up with a mobile number, then Shop & billing, Library and Lending on real screens, with voice-over and captions.',
-    chapters: [
-      {
-        id: 'signup',
-        paragraphs: [
-          "This is YourKhata: one place for a small business's records. It has three modules: Shop and billing, Library, and Lending. Let's walk through all three.",
-          'Signing up takes only a mobile number. There is no password. Enter your number and press Send code. A four-digit code arrives by SMS. Type the code, and a new number goes straight to business setup. Name your business, choose what kind it is, and continue. It takes about a minute.',
-          "Next time, the same number and a fresh code log you back in. The dashboard shows what you have to collect, what you have to pay, today's sales and cash in hand. The menu has customers, bills, purchases, items and reports.",
-        ],
-      },
-      {
-        id: 'shop',
-        paragraphs: [
-          'Open Customers to see who owes you. Each customer has an account with a running balance. Here is Ramesh Traders. When he pays, press You got, enter the amount and save. The balance updates at once, and every entry keeps its date and its note.',
-          'To make a bill, choose the customer and add the items. GST is worked out for you, with CGST and SGST shown separately. Issue the bill and it is ready to print or to share on WhatsApp. Stock comes down by itself.',
-          'Items shows what is in stock, with tabs for what is low or out. Reports has the day book, receivables aging, the sales register, profit and loss, and a GST summary.',
-        ],
-      },
-      {
-        id: 'library',
-        paragraphs: [
-          'Now the Library module, made for libraries and study rooms. One login can hold more than one business, so we simply switch to the reading room. Its home screen shows fees due, how many seats are filled in each shift, and who still has to pay.',
-          'Students lists every member with their plan, their seat and whether the fee is paid. A new admission takes a name, a plan, a shift and a seat, and the fee can be collected on the spot.',
-          "The catalogue has every book, and how many copies are on the shelf. Search by title, author or book number. At the counter, enter the student's number, then the book's number. The book is issued with its due date. To take a book back, switch to Return and enter the book's number again.",
-          'The seat map shows every seat in each shift, and Attendance marks who came in today.',
-        ],
-      },
-      {
-        id: 'lending',
-        paragraphs: [
-          "The third module is Lending. It keeps a record of loans and collections. It does not lend or move money itself. Today lists every borrower who is due, in the order of the collection round. Press Collect, choose how it was paid, and save. The day's total moves at once, and a receipt can go out on WhatsApp.",
-          'Loans shows what is left on each loan, and who is running late. Open a loan for its schedule, every collection, and a statement you can print. A new loan takes the borrower, the amount and the instalments, daily or weekly.',
-        ],
-      },
-      {
-        id: 'together',
-        paragraphs: [
-          'All three modules share one sign-in. The business switcher moves between them without logging in again. Add your staff by mobile number and give each person a role. And every screen works in Hindi as well as English.',
-          'That is YourKhata: Shop, Library and Lending, in one place. Sign up free with your mobile number at yourkhata.com.',
-        ],
-      },
-    ],
-    cuts: {
-      desktop: {
-        width: 1280,
-        height: 720,
-        durationSeconds: 191,
-        starts: [0, 43, 85, 135, 168],
-      },
-      mobile: {
-        width: 720,
-        height: 1558,
-        durationSeconds: 190,
-        starts: [0, 43, 85, 135, 168],
-      },
-    },
-  },
   hi: {
     name: 'YourKhata प्रोडक्ट डेमो (हिन्दी)',
     description:
-      'YourKhata का गाइडेड टूर: मोबाइल नंबर से साइन अप, फिर दुकान और बिलिंग, लाइब्रेरी और कर्ज़ वसूली की असली स्क्रीन, आवाज़ और कैप्शन के साथ।',
+      'रोज़ की छह मुश्किलें, और YourKhata में हर एक का हल, असली स्क्रीन पर एक-एक कदम में: सिर्फ़ अपने काम की चीज़ों से शुरुआत, उधार, बिल, स्टॉक, महीने की फीस और रोज़ की वसूली। हिंदी आवाज़ और कैप्शन के साथ।',
     chapters: [
       {
-        id: 'signup',
+        id: 'start',
         paragraphs: [
-          'यह है YourKhata: छोटे व्यापार का सारा हिसाब, एक ही जगह। इसमें तीन मॉड्यूल हैं: दुकान और बिलिंग, लाइब्रेरी, और कर्ज़ वसूली। चलिए, तीनों देखते हैं।',
-          'साइन अप के लिए बस मोबाइल नंबर चाहिए। कोई पासवर्ड नहीं। अपना नंबर डालिए और Send code दबाइए। SMS से चार अंकों का कोड आता है। कोड डालते ही नया नंबर सीधे व्यापार सेटअप पर पहुँचता है। व्यापार का नाम लिखिए, उसका प्रकार चुनिए और आगे बढ़िए। इसमें क़रीब एक मिनट लगता है।',
-          'अगली बार वही नंबर और नया कोड, और आप वापस अंदर। डैशबोर्ड पर दिखता है कितना लेना है, कितना देना है, आज की बिक्री और हाथ में कैश। मेन्यू में ग्राहक, बिल, ख़रीद, आइटम और रिपोर्ट हैं।',
+          'पहली मुश्किल। नया सॉफ़्टवेयर खोलते ही ढेर सारे बटन, जिनमें से आधे आपके काम के ही नहीं। मान लीजिए आप आज ही अपना काम शुरू कर रहे हैं, और आपको बस अपने काम की चीज़ें चाहिए।',
+          'हल आसान है। साइन अप के लिए बस मोबाइल नंबर चाहिए। कोई पासवर्ड नहीं। Send code दबाइए, और SMS से आया चार अंकों का कोड डालिए। अब व्यापार का नाम, अपना नाम और राज्य भरिए। फिर चुनिए कि आपको क्या चाहिए। एक भी चुन सकते हैं, और एक से ज़्यादा भी। हमने Shop चुना, तो बस दुकान का प्रकार पूछा गया। अब Continue। GST और पता अभी छोड़ सकते हैं। आख़िरी स्क्रीन बताती है कि आपने क्या चुना। फ़ायदा यह, कि मेन्यू में वही दिखता है जो आपने चुना। बाकी चीज़ें बाद में कभी भी जोड़ सकते हैं।',
         ],
       },
       {
-        id: 'shop',
+        id: 'credit',
         paragraphs: [
-          'Customers खोलिए और देखिए किस पर कितना बाकी है। हर ग्राहक का अपना खाता है, चलते बैलेंस के साथ। यह हैं रमेश ट्रेडर्स। जब वे पैसे दें, You got दबाइए, रकम लिखिए और सेव कीजिए। बैलेंस तुरंत बदल जाता है, और हर एंट्री अपनी तारीख़ और नोट के साथ रहती है।',
-          'बिल बनाने के लिए ग्राहक चुनिए और आइटम जोड़िए। GST अपने-आप जुड़ता है, CGST और SGST अलग-अलग दिखते हैं। बिल जारी कीजिए, और वह प्रिंट या WhatsApp पर भेजने के लिए तैयार है। स्टॉक अपने-आप घट जाता है।',
-          'Items में दिखता है स्टॉक में क्या है, और क्या कम या ख़त्म हो रहा है। Reports में रोज़नामचा, बकाया की उम्र, बिक्री रजिस्टर, मुनाफ़ा-घाटा और GST का सार है।',
+          'दूसरी मुश्किल, उधार का हिसाब। कॉपी में लिखा मिलता नहीं, और याद रहता नहीं। ग्राहक कहता है, मैंने तो पैसे दे दिए थे। अब आप क्या दिखाएँगे?',
+          'हल, हर ग्राहक का अपना खाता। Customers खोलिए, सामने है किस पर कितना बाकी है। रमेश ट्रेडर्स का खाता खोलते हैं। हर लेन-देन तारीख़ के साथ लिखा है। आज उन्होंने पाँच सौ रुपये दिए। You got दबाइए, रकम लिखिए, और सेव कीजिए। बैलेंस तुरंत बदल गया। फ़ायदा, हिसाब पर कोई बहस नहीं, और वसूली समय पर।',
         ],
       },
       {
-        id: 'library',
+        id: 'billing',
         paragraphs: [
-          'अब लाइब्रेरी मॉड्यूल, जो लाइब्रेरी और स्टडी रूम के लिए बना है। एक लॉगिन में एक से ज़्यादा व्यापार हो सकते हैं, तो हम बस रीडिंग रूम पर चले जाते हैं। होम स्क्रीन पर दिखती है बकाया फ़ीस, हर शिफ़्ट में कितनी सीटें भरी हैं, और किसे अभी फ़ीस देनी है।',
-          'Students में हर सदस्य है, उसके प्लान, सीट और फ़ीस की स्थिति के साथ। नए दाख़िले में नाम, प्लान, शिफ़्ट और सीट भरिए, और फ़ीस वहीं ली जा सकती है।',
-          'कैटलॉग में हर किताब है, और शेल्फ़ पर उसकी कितनी प्रतियाँ हैं। नाम, लेखक या किताब नंबर से खोजिए। काउंटर पर पहले छात्र का नंबर डालिए, फिर किताब का नंबर। किताब लौटाने की तारीख़ के साथ दे दी जाती है। किताब वापस लेने के लिए Return पर जाइए और किताब का नंबर फिर से डालिए।',
-          'सीट मैप में हर शिफ़्ट की हर सीट दिखती है, और Attendance में आज कौन आया, यह दर्ज होता है।',
+          'तीसरी मुश्किल, बिल बनाना। हाथ से बिल में समय लगता है, और टैक्स का जोड़ ग़लत हो जाता है। काउंटर पर भीड़ है, और ग्राहक को अभी पक्का बिल चाहिए।',
+          'हल, नया बिल खोलिए और ग्राहक चुनिए। आइटम जोड़िए, और मात्रा लिखिए। GST अपने-आप जुड़ गया। CGST और SGST अलग-अलग दिख रहे हैं। Issue दबाइए। बिल तैयार है, प्रिंट के लिए, या WhatsApp पर भेजने के लिए। फ़ायदा, सही बिल कुछ ही पलों में, और बिका हुआ माल स्टॉक से अपने-आप घट गया।',
         ],
       },
       {
-        id: 'lending',
+        id: 'stock',
         paragraphs: [
-          'तीसरा मॉड्यूल है कर्ज़ और वसूली। यह कर्ज़ और वसूली का हिसाब रखता है। ख़ुद कर्ज़ नहीं देता और पैसा नहीं भेजता। Today में वे सब लोग हैं जिनसे आज लेना है, वसूली के रास्ते के क्रम में। Collect दबाइए, भुगतान का तरीक़ा चुनिए और सेव कीजिए। दिन का जोड़ तुरंत बदलता है, और रसीद WhatsApp पर भेजी जा सकती है।',
-          'Loans में दिखता है हर कर्ज़ पर कितना बाकी है, और कौन देर से चल रहा है। किसी कर्ज़ को खोलिए: उसकी किस्तें, हर वसूली, और प्रिंट करने लायक़ स्टेटमेंट। नए कर्ज़ में उधार लेने वाले का नाम, रकम और किस्तें भरिए, रोज़ की या हफ़्ते की।',
+          'चौथी मुश्किल। माल ख़त्म हो गया, यह तब पता चलता है जब ग्राहक ख़ाली हाथ लौट जाता है। और महीने के आख़िर में, बिक्री और टैक्स का हिसाब जोड़ना, अलग सिरदर्द।',
+          'हल, Items में पूरा स्टॉक है। Low दबाइए, और दिखेगा क्या कम बचा है। Reports में रोज़ की बही, बकाया, बिक्री और GST का सार, सब तैयार मिलता है। फ़ायदा, ख़रीद समय पर, और हिसाब जोड़ने के लिए अलग से बैठना नहीं पड़ता।',
+        ],
+      },
+      {
+        id: 'members',
+        paragraphs: [
+          'पाँचवीं मुश्किल, उन कामों की, जहाँ सदस्य हर महीने फीस देते हैं। किसने फीस दी, किसकी बाकी है, और कौन-सी सीट ख़ाली है? रजिस्टर पलटते रहिए।',
+          'हल, Library। यह व्यापार सिर्फ़ Library चलाता है। पहली स्क्रीन पर आज का हाल है। कितनी फीस बाकी है, किस शिफ़्ट में कितनी सीटें भरी हैं, और किसे पैसे देने हैं। Students में हर सदस्य का प्लान, सीट और फीस की तारीख़ है। नया दाख़िला। नाम लिखिए, फिर प्लान, शिफ़्ट और सीट चुनिए। Seats में दिखता है कौन-सी सीट ख़ाली है, और Attendance में रोज़ की हाज़िरी। फ़ायदा, फीस की याद रजिस्टर पलटे बिना, और हर सीट का हिसाब साफ़।',
+        ],
+      },
+      {
+        id: 'collections',
+        paragraphs: [
+          'छठी मुश्किल, रोज़ की किस्तें। आज किस-किस से लेना है, और किसने दे दिया? वसूली करने वाला निकल चुका है, और आपके पास बस एक पुरानी डायरी है।',
+          'हल, Lending। Today में आज की पूरी सूची है, नाम और रकम के साथ। Collect दबाइए, पैसे का तरीका चुनिए, और सेव कीजिए। किस्त दर्ज हो गई। Loans में हर लोन का पूरा शेड्यूल है। कितनी किस्तें आईं, और कितनी बाकी हैं। फ़ायदा, कोई किस्त छूटती नहीं, और शाम को हिसाब मिलाना नहीं पड़ता।',
         ],
       },
       {
         id: 'together',
         paragraphs: [
-          'तीनों मॉड्यूल एक ही साइन-इन से चलते हैं। दोबारा लॉगिन किए बिना एक व्यापार से दूसरे में जाइए। अपने स्टाफ़ को मोबाइल नंबर से जोड़िए और हर एक को उसकी भूमिका दीजिए। और हर स्क्रीन हिंदी में भी चलती है, अंग्रेज़ी में भी।',
-          'यही है YourKhata: दुकान, लाइब्रेरी और कर्ज़ वसूली, एक ही जगह। yourkhata.com पर अपने मोबाइल नंबर से मुफ़्त साइन अप कीजिए।',
+          'ये सब एक ही लॉगिन में चलता है। एक व्यापार से दूसरे में जाना, बस एक टैप। कोई चीज़ बाद में चाहिए? व्यापार के मेन्यू से जोड़ लीजिए। ज़रूरत न रहे, तो बंद कर दीजिए। Team में स्टाफ़ जोड़िए, और तय कीजिए कि कौन क्या देख सकता है। और पूरा ऐप हिंदी में भी चलता है।',
+          'yourkhata.com पर मुफ़्त शुरू कीजिए। बस मोबाइल नंबर चाहिए। जो चाहिए, वही चुनिए। और अपना हिसाब आज से ही साफ़ रखिए।',
         ],
       },
     ],
@@ -145,14 +97,84 @@ export const DEMO_TRANSCRIPT: Readonly<Record<'en' | 'hi', DemoFilm>> = {
       desktop: {
         width: 1280,
         height: 720,
-        durationSeconds: 219,
-        starts: [0, 47, 96, 153, 192],
+        durationSeconds: 320,
+        starts: [12, 75, 116, 156, 191, 244, 281],
       },
       mobile: {
         width: 720,
         height: 1558,
-        durationSeconds: 218,
-        starts: [0, 47, 96, 153, 192],
+        durationSeconds: 316,
+        starts: [12, 74, 115, 155, 189, 241, 279],
+      },
+    },
+  },
+  en: {
+    name: 'YourKhata product demo (Hindi voice, English subtitles)',
+    description:
+      'Six everyday business problems and how YourKhata solves each one, step by step on real screens: starting with only what you need, credit, bills, stock, monthly fees and daily collections. Hindi voice-over, with English subtitles.',
+    chapters: [
+      {
+        id: 'start',
+        paragraphs: [
+          'The first problem. You open a new app and it is full of buttons, half of which are not for your work. Say you are starting today, and you want only the things your own work needs.',
+          'The answer is simple. Signing up takes only a mobile number. There is no password. Press Send code, and type the four-digit code that arrives by SMS. Now fill in the business name, your own name and your state. Then choose what you need. You can pick one, or more than one. We chose Shop, so it asks only what kind of shop. Now Continue. GST and the address can wait. The last screen says back what you chose. The benefit: the menu shows only what you chose. Anything else can be added later, whenever you want.',
+        ],
+      },
+      {
+        id: 'credit',
+        paragraphs: [
+          'The second problem: money given on credit. The notebook cannot be found, and memory does not hold. A customer says, but I already paid you. What will you show them?',
+          'The answer: an account for every customer. Open Customers, and there is who owes how much. Open the account of Ramesh Traders. Every entry is written down with its date. Today he paid five hundred rupees. Press You got, type the amount, and save. The balance changed at once. The benefit: no arguments about the account, and money collected on time.',
+        ],
+      },
+      {
+        id: 'billing',
+        paragraphs: [
+          'The third problem: making a bill. By hand it takes time, and the tax gets added wrong. The counter is busy, and the customer wants a proper bill right now.',
+          'The answer: open a new bill and choose the customer. Add the item, and type the quantity. GST was added by itself. CGST and SGST are shown separately. Press Issue. The bill is ready, to print or to send on WhatsApp. The benefit: a correct bill in moments, and what was sold has come off the stock by itself.',
+        ],
+      },
+      {
+        id: 'stock',
+        paragraphs: [
+          'The fourth problem. You learn that something has run out only when a customer leaves empty-handed. And at the end of the month, adding up sales and tax is a headache of its own.',
+          'The answer: Items holds all your stock. Press Low, and it shows what is running short. Reports has the day book, what is owed, sales and the GST summary, all ready. The benefit: you reorder in time, and never sit down separately to add things up.',
+        ],
+      },
+      {
+        id: 'members',
+        paragraphs: [
+          'The fifth problem belongs to any work where members pay a fee every month. Who has paid, who has not, and which seat is free? You keep turning the pages of a register.',
+          "The answer: Library. This business runs only Library. The first screen is today at a glance. How much in fees is unpaid, how many seats are taken in each shift, and who has to pay. Students lists every member's plan, seat and fee date. A new admission. Type the name, then choose the plan, the shift and the seat. Seats shows which seat is free, and Attendance the daily register. The benefit: fees remembered without turning a page, and every seat accounted for.",
+        ],
+      },
+      {
+        id: 'collections',
+        paragraphs: [
+          'The sixth problem: daily instalments. Whom do you collect from today, and who has already paid? The collector has already left, and all you have is an old diary.',
+          'The answer: Lending. Today is the whole list for the day, with names and amounts. Press Collect, choose how it was paid, and save. The instalment is recorded. Loans holds the full schedule of every loan: how many instalments are in, and how many remain. The benefit: no instalment is missed, and nothing has to be tallied in the evening.',
+        ],
+      },
+      {
+        id: 'together',
+        paragraphs: [
+          'All of this runs under one login. Moving from one business to another is a single tap. Need something later? Add it from the business menu. If you stop needing it, turn it off. In Team, add your staff, and decide who can see what. And the whole app runs in Hindi too.',
+          'Start free at yourkhata.com. All you need is a mobile number. Choose only what you need. And keep your accounts clear from today.',
+        ],
+      },
+    ],
+    cuts: {
+      desktop: {
+        width: 1280,
+        height: 720,
+        durationSeconds: 320,
+        starts: [12, 75, 116, 156, 191, 244, 281],
+      },
+      mobile: {
+        width: 720,
+        height: 1558,
+        durationSeconds: 316,
+        starts: [12, 74, 115, 155, 189, 241, 279],
       },
     },
   },

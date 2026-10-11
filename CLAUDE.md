@@ -277,6 +277,33 @@ constants live in a module that imports nothing, because importing them from
 the file that also holds the Yup schema dragged Yup into the route for another
 17 KB. Module-level imports tree-shake between modules, not within one.
 
+## A business chooses its apps at sign-up (DEC-016, 11 Oct 2026)
+
+Step 1 of the wizard asks "What do you want to use?" and the list is the
+SERVER's (`GET /onboarding/apps`: registered ∩ released ∩ plan ∩ partner).
+`POST /tenants {apps}` switches each one on through
+`business_apps.set_app_running`, the business menu's own service; no `apps`
+means the Shop, as it always did. `business_type` is the Shop's question and is
+asked only with the Shop. `apply_preset` governs the shop's capabilities only.
+Do not give a new business a module it did not choose, and do not add an app
+to the choice in the frontend — register it and release it, and it appears.
+
+`node e2e/onboarding-apps.mjs` (demo stack only: `E2E_BACKEND` on :8100 and
+`DEMO_API_LOG`) signs up five ways on a desktop and a 360 px phone and reads
+what the merchant GOT from the server's session: 186 checks.
+
+## The demo film (11 Oct 2026)
+
+One narration, Hindi with English subtitles, in a desktop and a phone cut.
+Each feature is told as problem → a real moment → the steps on real screens →
+the benefit. Read `e2e/demo/README.md` before touching it. The lesson that cost
+most: **Playwright's `recordVideo` cannot be used for narrated film** — it runs
+4–9% long against the clock, and the published films had the picture 12–14 s
+behind the voice by the end. The recorder keeps the screencast's own
+timestamped frames instead, and a line of narration starts when its step does.
+To check a cut, take a frame at 80% of every caption and read it against the
+words.
+
 ## State
 
 Sprint 1 is in, and Sprint 3 has started: **PTY-01 (create/edit a party) is

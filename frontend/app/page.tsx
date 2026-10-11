@@ -10,7 +10,11 @@ import {
   DEMO_PUBLISHED_ON,
   DEMO_TRANSCRIPT,
 } from 'modules/DigiKhaato/features/landing/config/demoTranscript';
-import { DEMO_FILMS, demoVideoUrl } from 'modules/DigiKhaato/features/landing/config/media';
+import {
+  DEMO_FILMS,
+  DEMO_VOICE,
+  demoVideoUrl,
+} from 'modules/DigiKhaato/features/landing/config/media';
 import {
   ALL_MODULES_VISIBLE,
   VISIBLE_MODULES,
@@ -101,23 +105,27 @@ const JSON_LD = buildLandingJsonLd({
   moduleNames: VISIBLE_MODULES.map(
     (module) => en[`landing.module.${module.id}.name` as keyof typeof en]
   ),
-  // Both narrated demo films are on this page (the #demo section), with their
-  // transcripts in the HTML, which is what lets them be declared here.
-  // The desktop cut of each language is the one declared: the phone cut is the
-  // same film in another shape, and declaring both would be a duplicate.
-  videos: (['en', 'hi'] as const).map((language) => ({
-    language,
-    name: DEMO_TRANSCRIPT[language].name,
-    description: DEMO_TRANSCRIPT[language].description,
-    contentUrl: demoVideoUrl(DEMO_FILMS[language].desktop.id),
-    thumbnailUrl: DEMO_FILMS[language].desktop.poster.jpg,
-    // Google asks for a date WITH a timezone; the films are cut in India.
-    uploadDate: `${DEMO_PUBLISHED_ON}T00:00:00+05:30`,
-    durationSeconds: DEMO_TRANSCRIPT[language].cuts.desktop.durationSeconds,
-    transcript: DEMO_TRANSCRIPT[language].chapters
-      .flatMap((chapter) => chapter.paragraphs)
-      .join(' '),
-  })),
+  // The narrated demo film is on this page (the #demo section), with its
+  // transcript in the HTML, which is what lets it be declared here. ONE film,
+  // in the language it is spoken in: the English words on the page are its
+  // subtitles, not a second film, so they are not declared as one. The desktop
+  // cut is the one declared: the phone cut is the same film in another shape,
+  // and declaring both would be a duplicate.
+  videos: [
+    {
+      language: DEMO_VOICE,
+      name: DEMO_TRANSCRIPT[DEMO_VOICE].name,
+      description: DEMO_TRANSCRIPT[DEMO_VOICE].description,
+      contentUrl: demoVideoUrl(DEMO_FILMS.desktop.id),
+      thumbnailUrl: DEMO_FILMS.desktop.poster.jpg,
+      // Google asks for a date WITH a timezone; the film is cut in India.
+      uploadDate: `${DEMO_PUBLISHED_ON}T00:00:00+05:30`,
+      durationSeconds: DEMO_TRANSCRIPT[DEMO_VOICE].cuts.desktop.durationSeconds,
+      transcript: DEMO_TRANSCRIPT[DEMO_VOICE].chapters
+        .flatMap((chapter) => chapter.paragraphs)
+        .join(' '),
+    },
+  ],
 });
 
 export default function HomePage(): React.JSX.Element {

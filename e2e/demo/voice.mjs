@@ -3,14 +3,22 @@
  *
  *   node e2e/demo/voice.mjs <work-dir>
  *
- * Uses the macOS `say` voices (no account, no upload, nothing leaves the
- * machine): Samantha for English, Lekha for Hindi — both female. Each line of
- * `script.json` becomes <work-dir>/voice/<lang>/<scene>-<n>.wav, and
- * <work-dir>/timing.json records how long each one runs. Because every line is
- * its own file, the captions are timed from the audio itself, not estimated.
+ * Uses a macOS `say` voice (no account, no upload, nothing leaves the
+ * machine): Lekha, Hindi, female. Each line of `script.json` becomes
+ * <work-dir>/voice/hi/<scene>-<n>.wav, and <work-dir>/timing.json records how
+ * long each one runs. Because every line is its own file, the recorder can
+ * start each line at the moment it performs what the line describes, and the
+ * captions are timed from the audio itself.
+ *
+ * PACE (owner, 11 Oct 2026: "too fast, and not in step with the screen"). The
+ * first films were read at 168 words a minute with a third of a second between
+ * lines, which is a news reader, not somebody showing you a screen. Now: 138
+ * words a minute, a breath after every sentence inside a line, most of a
+ * second between lines and a full pause between scenes — and the picture
+ * waits for the voice (`record-demo.mjs`), not the other way round.
  *
  * A better voice (a recorded narrator, or a neural TTS service) drops in here:
- * put files of the same names in place and re-run `build-demo.mjs`.
+ * put files of the same names in place and re-run the recorder and the build.
  */
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -22,30 +30,32 @@ const work = process.argv[2];
 if (!work) throw new Error('usage: node e2e/demo/voice.mjs <work-dir>');
 const script = JSON.parse(readFileSync(path.join(HERE, 'script.json'), 'utf8'));
 
-export const VOICES = { en: { name: 'Samantha', rate: 172 }, hi: { name: 'Lekha', rate: 168 } };
+export const VOICE = { lang: script.voiced, name: 'Lekha', rate: 138 };
 /** Silence after each line, and after each scene, in seconds. */
-export const GAP = { line: 0.35, scene: 0.7 };
+export const GAP = { line: 0.8, scene: 1.3 };
+/** A breath between the sentences of one line, in milliseconds. */
+const BREATH = 380;
 
 const duration = (file) => Number(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', file]).toString().trim());
+/** `say` reads `[[slnc N]]` as N ms of silence: one after every sentence but the last, and a shorter one at a comma. */
+const paced = (text) => text.replace(/([।?!])\s+(?=\S)/g, `$1 [[slnc ${BREATH}]] `).replace(/,\s+(?=\S)/g, `, [[slnc 140]] `);
 
-const timing = {};
-for (const lang of Object.keys(VOICES)) {
-  const dir = path.join(work, 'voice', lang);
-  mkdirSync(dir, { recursive: true });
-  timing[lang] = {};
-  for (const scene of script.scenes) {
-    timing[lang][scene.id] = scene[lang].map((line, n) => {
-      const aiff = path.join(dir, `${scene.id}-${n}.aiff`);
-      const wav = path.join(dir, `${scene.id}-${n}.wav`);
-      execFileSync('say', ['-v', VOICES[lang].name, '-r', String(VOICES[lang].rate), '-o', aiff, line.say ?? line.t]);
-      // 48 kHz mono, loudness-normalised, so the two languages sit at one level.
-      execFileSync('ffmpeg', ['-loglevel', 'error', '-y', '-i', aiff, '-af', 'loudnorm=I=-18:TP=-2:LRA=7', '-ar', '48000', '-ac', '1', wav]);
-      return +duration(wav).toFixed(3);
-    });
-  }
+const lang = VOICE.lang;
+const dir = path.join(work, 'voice', lang);
+mkdirSync(dir, { recursive: true });
+const lines = {};
+for (const scene of script.scenes) {
+  lines[scene.id] = scene[lang].map((line, n) => {
+    const aiff = path.join(dir, `${scene.id}-${n}.aiff`);
+    const wav = path.join(dir, `${scene.id}-${n}.wav`);
+    execFileSync('say', ['-v', VOICE.name, '-r', String(VOICE.rate), '-o', aiff, paced(line.say ?? line.t)]);
+    // 48 kHz mono, loudness-normalised, with the silence `say` leaves at the end trimmed
+    // so a line's length is the length of its words.
+    execFileSync('ffmpeg', ['-loglevel', 'error', '-y', '-i', aiff, '-af', 'areverse,silenceremove=start_periods=1:start_threshold=-45dB,areverse,loudnorm=I=-18:TP=-2:LRA=7', '-ar', '48000', '-ac', '1', wav]);
+    return +duration(wav).toFixed(3);
+  });
 }
-const sceneSeconds = (lang, id) => timing[lang][id].reduce((sum, d) => sum + d + GAP.line, 0) + GAP.scene;
-const scenes = Object.fromEntries(script.scenes.map((scene) => [scene.id, { en: +sceneSeconds('en', scene.id).toFixed(2), hi: +sceneSeconds('hi', scene.id).toFixed(2) }]));
-writeFileSync(path.join(work, 'timing.json'), JSON.stringify({ lines: timing, scenes, gap: GAP }, null, 1));
-const total = (lang) => Object.values(scenes).reduce((sum, s) => sum + s[lang], 0);
-console.log(JSON.stringify({ scenes, totalEn: +total('en').toFixed(1), totalHi: +total('hi').toFixed(1) }));
+const spoken = Object.values(lines).flat();
+const total = spoken.reduce((sum, d) => sum + d + GAP.line, 0) + script.scenes.length * GAP.scene;
+writeFileSync(path.join(work, 'timing.json'), JSON.stringify({ lang, voice: VOICE, lines, gap: GAP }, null, 1));
+console.log(JSON.stringify({ lines: spoken.length, longest: Math.max(...spoken), narrationSeconds: +total.toFixed(1) }));

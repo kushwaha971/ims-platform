@@ -634,65 +634,13 @@
       "speed": 1.1
     },
     {
-      "id": "demo-en-desktop",
-      "kind": "demo",
-      "device": "desktop",
-      "language": "en",
-      "width": 1280,
-      "height": 720,
-      "duration": 190.97,
-      "fps": 30,
-      "loop": false,
-      "audio": true,
-      "sources": [
-        {
-          "src": "/media/landing/demo-en-desktop.mp4",
-          "type": "video/mp4; codecs=avc1.4D401F,mp4a.40.2",
-          "bytes": 7793312
-        }
-      ],
-      "bytes": 7793312,
-      "poster": {
-        "webp": "/media/landing/demo-en-desktop-poster.webp",
-        "jpg": "/media/landing/demo-en-desktop-poster.jpg"
-      },
-      "captions": "/media/landing/demo-en-desktop.vtt",
-      "alt": "A guided tour of YourKhata: signing up with a mobile number, then Shop & billing, Library and Lending on real screens, with voice-over and captions."
-    },
-    {
-      "id": "demo-en-mobile",
-      "kind": "demo",
-      "device": "mobile",
-      "language": "en",
-      "width": 720,
-      "height": 1558,
-      "duration": 189.57,
-      "fps": 30,
-      "loop": false,
-      "audio": true,
-      "sources": [
-        {
-          "src": "/media/landing/demo-en-mobile.mp4",
-          "type": "video/mp4; codecs=avc1.4D401F,mp4a.40.2",
-          "bytes": 7961327
-        }
-      ],
-      "bytes": 7961327,
-      "poster": {
-        "webp": "/media/landing/demo-en-mobile-poster.webp",
-        "jpg": "/media/landing/demo-en-mobile-poster.jpg"
-      },
-      "captions": "/media/landing/demo-en-mobile.vtt",
-      "alt": "A guided tour of YourKhata: signing up with a mobile number, then Shop & billing, Library and Lending on real screens, with voice-over and captions."
-    },
-    {
       "id": "demo-hi-desktop",
       "kind": "demo",
       "device": "desktop",
       "language": "hi",
       "width": 1280,
       "height": 720,
-      "duration": 219.23,
+      "duration": 320.3,
       "fps": 30,
       "loop": false,
       "audio": true,
@@ -700,16 +648,19 @@
         {
           "src": "/media/landing/demo-hi-desktop.mp4",
           "type": "video/mp4; codecs=avc1.4D401F,mp4a.40.2",
-          "bytes": 8913865
+          "bytes": 11186751
         }
       ],
-      "bytes": 8913865,
+      "bytes": 11186751,
       "poster": {
         "webp": "/media/landing/demo-hi-desktop-poster.webp",
         "jpg": "/media/landing/demo-hi-desktop-poster.jpg"
       },
       "captions": "/media/landing/demo-hi-desktop.vtt",
-      "alt": "YourKhata का गाइडेड टूर: मोबाइल नंबर से साइन अप, फिर दुकान और बिलिंग, लाइब्रेरी और कर्ज़ वसूली की असली स्क्रीन, आवाज़ और कैप्शन के साथ।"
+      "subtitles": {
+        "en": "/media/landing/demo-hi-desktop.en.vtt"
+      },
+      "alt": "Six everyday business problems and how YourKhata solves each one, step by step on real screens: starting with only what you need, credit, bills, stock, monthly fees and daily collections. Hindi voice-over, with English subtitles."
     },
     {
       "id": "demo-hi-mobile",
@@ -718,7 +669,7 @@
       "language": "hi",
       "width": 720,
       "height": 1558,
-      "duration": 217.83,
+      "duration": 316.27,
       "fps": 30,
       "loop": false,
       "audio": true,
@@ -726,16 +677,19 @@
         {
           "src": "/media/landing/demo-hi-mobile.mp4",
           "type": "video/mp4; codecs=avc1.4D401F,mp4a.40.2",
-          "bytes": 9207583
+          "bytes": 12206434
         }
       ],
-      "bytes": 9207583,
+      "bytes": 12206434,
       "poster": {
         "webp": "/media/landing/demo-hi-mobile-poster.webp",
         "jpg": "/media/landing/demo-hi-mobile-poster.jpg"
       },
       "captions": "/media/landing/demo-hi-mobile.vtt",
-      "alt": "YourKhata का गाइडेड टूर: मोबाइल नंबर से साइन अप, फिर दुकान और बिलिंग, लाइब्रेरी और कर्ज़ वसूली की असली स्क्रीन, आवाज़ और कैप्शन के साथ।"
+      "subtitles": {
+        "en": "/media/landing/demo-hi-mobile.en.vtt"
+      },
+      "alt": "Six everyday business problems and how YourKhata solves each one, step by step on real screens: starting with only what you need, credit, bills, stock, monthly fees and daily collections. Hindi voice-over, with English subtitles."
     }
   ]
 }
