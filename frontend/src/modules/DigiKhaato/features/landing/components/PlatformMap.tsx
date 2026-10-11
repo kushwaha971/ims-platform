@@ -28,12 +28,20 @@ import { LANDING_CONTAINER, LANDING_SECTION, LandingSectionHeading } from './Lan
  * config gets its column with no edit here — and each has its own stub down to
  * a bus line. The bus runs from the centre of the first column to the centre
  * of the last: `(100% - (n - 1) gaps) / 2n` in from each edge, exact for n
- * equal columns at `gap-4`, and `e2e/landing.mjs` measures it. Below `lg` the
- * tiles wrap into two columns and a single centre line carries the "built on"
- * label, because per-tile stubs cannot line up with a grid that wraps.
+ * equal columns at `gap-4`, and `e2e/landing.mjs` measures it. Below `lg` a
+ * single centre line carries the "built on" label, because per-tile stubs
+ * cannot line up with a grid that wraps.
+ *
+ * On a phone (owner, 11 Oct 2026: "looking too weird") the map used to be two
+ * columns of tall tiles, which with three modules left the third alone beside
+ * an empty hole, and under it nine chips of nine different widths wrapping
+ * into a ragged block. Below `sm` it is now two plain lists: each module one
+ * row (icon, then name), and each shared part one full-width row. From `sm`
+ * the tiles are two across and an odd last one spans both, so there is never
+ * a hole; the chips wrap as before, where there is room for them to.
  */
 const TILE =
-  'group relative flex h-full flex-col gap-3 rounded-[18px] border border-border-hairline bg-surface-card p-4 shadow-[0_18px_44px_-30px_var(--device-glow)] outline-none transition-[border-color,box-shadow,transform] duration-base ease-standard hover:-translate-y-0.5 hover:border-accent-line focus-visible:shadow-focus sm:p-5';
+  'group relative flex h-full flex-row items-center gap-3 rounded-[18px] sm:flex-col sm:items-start border border-border-hairline bg-surface-card p-4 shadow-[0_18px_44px_-30px_var(--device-glow)] outline-none transition-[border-color,box-shadow,transform] duration-base ease-standard hover:-translate-y-0.5 hover:border-accent-line focus-visible:shadow-focus sm:p-5';
 
 /** `lg`: one column per module, from `--module-cols`. */
 const MODULE_COLUMNS = 'lg:grid-cols-[repeat(var(--module-cols),minmax(0,1fr))]';
@@ -103,7 +111,14 @@ function PlatformMapSectionBase() {
             >
               {t('landing.platform.modules')}
             </UbText>
-            <UbBox as="ul" className={cn('grid grid-cols-2 gap-3 sm:gap-4', MODULE_COLUMNS)}>
+            <UbBox
+              as="ul"
+              className={cn(
+                'grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-4',
+                'sm:[&>li:last-child:nth-child(odd)]:col-span-2 lg:[&>li:last-child:nth-child(odd)]:col-span-1',
+                MODULE_COLUMNS
+              )}
+            >
               {VISIBLE_MODULES.map((module) => (
                 <UbBox as="li" key={module.id}>
                   <ModuleTile module={module} t={t} />
@@ -162,11 +177,14 @@ function PlatformMapSectionBase() {
                     </UbText>
                   </UbStack>
                 </UbStack>
-                <UbStack as="ul" direction="row" wrap gap={2.5}>
+                <UbBox
+                  as="ul"
+                  className="grid grid-cols-1 gap-2 sm:flex sm:flex-row sm:flex-wrap sm:gap-2.5"
+                >
                   {CORE_IDS.map((id) => (
                     <CoreChip key={id} id={id} t={t} />
                   ))}
-                </UbStack>
+                </UbBox>
                 <UbText
                   variant="inherit"
                   tone="secondary"
