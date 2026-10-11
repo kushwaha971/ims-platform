@@ -1,4 +1,4 @@
-import { POSTHOG_HOST, POSTHOG_KEY } from 'src/constants';
+import { POSTHOG_DEFAULTS, POSTHOG_HOST, POSTHOG_KEY } from 'src/constants';
 
 import { scrubEvent } from './analyticsRules';
 
@@ -40,7 +40,9 @@ export const loadPosthog = (): Promise<PostHog | null> => {
     .then(({ default: posthog }) => {
       posthog.init(POSTHOG_KEY, {
         api_host: POSTHOG_HOST,
-        defaults: '2026-05-30',
+        // The SDK types this as a list of the dates it knows; the value is the
+        // build's, so a newer date needs no code change.
+        defaults: POSTHOG_DEFAULTS as '2026-05-30',
         person_profiles: 'identified_only',
         // Page views are sent by `AnalyticsHost`, which knows which addresses
         // may be seen; the SDK's own would report a share link's token.

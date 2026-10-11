@@ -34,6 +34,7 @@ jest.mock('src/constants', () => ({
     return mockKey;
   },
   POSTHOG_HOST: 'https://us.i.posthog.com',
+  POSTHOG_DEFAULTS: '2026-05-30',
 }));
 
 const mount = async (): Promise<void> => {
@@ -79,6 +80,7 @@ describe('AnalyticsHost', () => {
     // text on the button, and a replay must not carry the book.
     expect(config).toMatchObject({
       api_host: 'https://us.i.posthog.com',
+      defaults: '2026-05-30',
       person_profiles: 'identified_only',
       capture_pageview: false,
       mask_all_text: true,

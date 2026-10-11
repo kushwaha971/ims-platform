@@ -30,6 +30,8 @@ export const ANALYTICS_ENABLED: boolean = process.env.NEXT_PUBLIC_ANALYTICS_ENAB
 export const POSTHOG_KEY: string = process.env.NEXT_PUBLIC_POSTHOG_KEY ?? '';
 export const POSTHOG_HOST: string =
   process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
+/** The dated set of SDK defaults PostHog's snippet names (`defaults:`). */
+export const POSTHOG_DEFAULTS: string = process.env.NEXT_PUBLIC_POSTHOG_DEFAULTS || '2026-05-30';
 export const COMMIT_SHA: string = process.env.NEXT_PUBLIC_COMMIT_SHA ?? 'dev';
 
 /**
