@@ -59,7 +59,8 @@ def test_minimoth_request_and_verify_create_our_session_and_prevent_replay(
     )
     assert requested.status_code == 200
     data = requested.json()["data"]
-    assert set(data) == {"challenge_id", "expires_in", "retry_after"}
+    assert set(data) == {"challenge_id", "expires_in", "retry_after", "code_length", "channel"}
+    assert (data["code_length"], data["channel"]) == (6, "whatsapp")
     from apps.platform_app.models import OtpChallenge
 
     row = OtpChallenge.objects.get(pk=data["challenge_id"])
@@ -129,3 +130,26 @@ def test_only_signin_signup_can_send_through_minimoth(settings, purpose):
     settings.UB_OTP_PROVIDER = "minimoth"
     with pytest.raises(otp.OtpNotSent):
         otp.request_otp(mobile="+919794620535", purpose=purpose)
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "provider,shape",
+    [("console", (4, "sms")), ("message_central", (4, "sms")), ("minimoth", (6, "whatsapp"))],
+)
+def test_the_code_length_comes_from_the_running_server(
+    auth_client, settings, monkeypatch, provider, shape
+):
+    """Review G2: the sign-in screen used to choose 4 or 6 boxes when the site
+    was BUILT while the server chose its provider when it RAN. A build that
+    disagreed with the server was a sign-in nobody could finish. The answer to
+    every code request now says how many digits were sent and where, so the
+    screen never has to guess. (Message Central without credentials falls back
+    to the console provider, which also sends four.)"""
+    settings.UB_OTP_PROVIDER = provider
+    monkeypatch.setattr(minimoth, "send_otp", lambda mobile: "request-1")
+    data = auth_client.post(
+        reverse("v1:auth-otp-request"), {"mobile": "9794620536"}, format="json"
+    ).json()["data"]
+    assert (data["code_length"], data["channel"]) == shape
+    assert otp.code_shape() == shape

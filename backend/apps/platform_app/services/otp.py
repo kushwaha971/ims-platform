@@ -49,11 +49,19 @@ RESEND_AFTER_SECONDS = throttle.OTP_RESEND_GAP_SECONDS
 
 @dataclass(frozen=True, slots=True)
 class OtpIssued:
-    """What the view turns into `{challenge_id, expires_in, retry_after}`."""
+    """What the view turns into `{challenge_id, expires_in, retry_after, code_length, channel}`.
+
+    `code_length` and `channel` are here because the provider is chosen when the
+    server RUNS (`UB_OTP_PROVIDER`), and the sign-in screen used to guess both
+    when the site was BUILT. A build that guessed six while the server sent four
+    was a sign-in screen nobody could get past (review G2, 12 Oct 2026).
+    """
 
     challenge_id: Any
     expires_in: int
     retry_after: int
+    code_length: int = 4
+    channel: str = "sms"
 
 
 class OtpThrottled(BusinessRuleViolation):
@@ -106,6 +114,18 @@ def _provider() -> str:
     ):
         return PROVIDER_MESSAGE_CENTRAL
     return PROVIDER_CONSOLE
+
+
+# MiniMoth chooses its own six-digit code and delivers it on WhatsApp first;
+# every other provider sends our four digits (or Message Central's) by SMS.
+MINIMOTH_CODE_LENGTH = 6
+
+
+def code_shape() -> tuple[int, str]:
+    """`(digits, channel)` for the provider this server is running with now."""
+    if _provider() == PROVIDER_MINIMOTH:
+        return MINIMOTH_CODE_LENGTH, "whatsapp"
+    return CODE_LENGTH, "sms"
 
 
 def _send_console_code(
@@ -268,7 +288,14 @@ def request_otp(
         ip=ip,
         metadata={"purpose": purpose, "challenge_id": str(challenge.id)},
     )
-    return OtpIssued(challenge_id=challenge.id, expires_in=ttl, retry_after=RESEND_AFTER_SECONDS)
+    length, channel = code_shape()
+    return OtpIssued(
+        challenge_id=challenge.id,
+        expires_in=ttl,
+        retry_after=RESEND_AFTER_SECONDS,
+        code_length=length,
+        channel=channel,
+    )
 
 
 def consume_challenge(

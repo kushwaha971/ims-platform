@@ -14,7 +14,7 @@ import {
   verifyOtp,
 } from './authThunk';
 
-import type { AuthResult } from '../types/auth.types';
+import type { AuthResult, OtpChannel, OtpCodeLength } from '../types/auth.types';
 
 /**
  * Part 19 §19.3.2 — the auth feature's own slice. It is NOT `sessionSlice`:
@@ -67,6 +67,9 @@ export interface OtpState {
   /** Resend unlocks at this moment — sixty seconds after the last send. */
   resendAt: number;
   expiresAt: number;
+  /** The server's: how many boxes to draw and where to tell the person to look. */
+  codeLength: OtpCodeLength;
+  channel: OtpChannel;
   /** Set while a code is being checked or asked for, for the busy states. */
   busy: 'sending' | 'verifying' | null;
 }
@@ -161,6 +164,8 @@ const authSlice = createSlice({
           challengeId: action.payload.challengeId,
           resendAt: now + action.payload.retryAfter * 1000,
           expiresAt: now + action.payload.expiresIn * 1000,
+          codeLength: action.payload.codeLength,
+          channel: action.payload.channel,
           busy: null,
         };
       })

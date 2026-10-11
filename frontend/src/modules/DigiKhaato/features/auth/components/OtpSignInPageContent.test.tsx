@@ -33,7 +33,13 @@ jest.mock('next/navigation', () => ({
   usePathname: () => '/login',
 }));
 
-const CHALLENGE = { challengeId: 'c-1', expiresIn: 600, retryAfter: 60 };
+const CHALLENGE = {
+  challengeId: 'c-1',
+  expiresIn: 600,
+  retryAfter: 60,
+  codeLength: 4,
+  channel: 'sms',
+};
 
 const otpError = (reason: string, attemptsLeft: number) => ({
   code: 'otp_invalid',
@@ -90,6 +96,27 @@ describe('OtpSignInPageContent — the number', () => {
       expect.objectContaining({ mobile: '+919845011122' })
     );
     expect(screen.getByText(/We sent a 4-digit code to \+91 98450 11122/)).toBeInTheDocument();
+  });
+
+  it('draws as many boxes as the SERVER sent digits, whatever the build guessed', async () => {
+    // Review G2: this build was made for the four-digit SMS provider, and the
+    // server it talks to is running MiniMoth's six. The screen used to draw
+    // four boxes, submit on the fourth, and refuse every code it was sent.
+    authService.requestOtp.mockResolvedValue({ ...CHALLENGE, codeLength: 6 });
+    authService.verifyOtp.mockReturnValue(new Promise(() => undefined));
+    const user = userEvent.setup();
+    renderWithProviders(<OtpSignInPageContent mode="signIn" />);
+    await toCodeStep(user);
+    expect(screen.getByText(/We sent a 6-digit code to/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Digit 6 of 6')).toBeInTheDocument();
+    screen.getByLabelText('Digit 1 of 6').focus();
+    // With four boxes this paste was cut to 9322 and sent: a wrong code.
+    await user.paste('932234');
+    await waitFor(() =>
+      expect(authService.verifyOtp).toHaveBeenCalledWith(
+        expect.objectContaining({ code: '932234' })
+      )
+    );
   });
 
   it('refuses a short number before asking the server', async () => {

@@ -149,6 +149,11 @@ export const GOOGLE_SITE_VERIFICATION: string =
   process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ?? '';
 export const BING_SITE_VERIFICATION: string = process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION ?? '';
 
-/** Public delivery choice only; the API key stays on the server. */
+/**
+ * Public delivery choice, used ONLY for the words shown before a code is asked
+ * for (who will send it). The number of digits and where the code went come
+ * from the server's answer to `otp/request` — the server picks its provider
+ * when it runs, and a screen that guessed the length at build time locked
+ * everybody out whenever the two disagreed (review G2, 12 Oct 2026).
+ */
 export const OTP_USES_MINIMOTH = process.env.NEXT_PUBLIC_OTP_PROVIDER === 'minimoth';
-export const AUTH_OTP_LENGTH: 4 | 6 = OTP_USES_MINIMOTH ? 6 : 4;

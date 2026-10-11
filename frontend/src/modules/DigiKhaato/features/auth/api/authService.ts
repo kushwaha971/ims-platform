@@ -241,7 +241,13 @@ const toAuthResult = (body: AuthApiResponse): AuthResult => {
  */
 export const requestOtp = async (input: OtpRequestInput): Promise<OtpChallenge> => {
   const response = await api.post<{
-    data: { challenge_id: string; expires_in: number; retry_after: number };
+    data: {
+      challenge_id: string;
+      expires_in: number;
+      retry_after: number;
+      code_length?: number;
+      channel?: string;
+    };
   }>(API_PATHS.AUTH_OTP_REQUEST, {
     mobile: input.mobile,
     ...(input.locale ? { locale: input.locale } : {}),
@@ -251,6 +257,9 @@ export const requestOtp = async (input: OtpRequestInput): Promise<OtpChallenge> 
     challengeId: data.challenge_id,
     expiresIn: data.expires_in,
     retryAfter: data.retry_after,
+    // An older server sends neither; it only ever sent four digits by SMS.
+    codeLength: data.code_length === 6 ? 6 : 4,
+    channel: data.channel === 'whatsapp' ? 'whatsapp' : 'sms',
   };
 };
 export const requestOtpWriteClass: TWriteClass = 'online-only';

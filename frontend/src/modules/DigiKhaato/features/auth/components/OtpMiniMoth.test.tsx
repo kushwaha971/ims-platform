@@ -12,7 +12,6 @@ import { OtpSignInPageContent } from './OtpSignInPageContent';
 jest.mock('src/constants', () => ({
   ...jest.requireActual('src/constants'),
   OTP_USES_MINIMOTH: true,
-  AUTH_OTP_LENGTH: 6,
 }));
 jest.mock('../api/authService');
 jest.mock('next/navigation', () => ({
@@ -28,7 +27,13 @@ const service = jest.requireMock('../api/authService') as {
 it('identifies the shared sender before requesting a code and verifies all six digits', async () => {
   store.dispatch(resetSession());
   store.dispatch(resetAuth());
-  service.requestOtp.mockResolvedValue({ challengeId: 'moth-1', expiresIn: 600, retryAfter: 60 });
+  service.requestOtp.mockResolvedValue({
+    challengeId: 'moth-1',
+    expiresIn: 600,
+    retryAfter: 60,
+    codeLength: 6,
+    channel: 'whatsapp',
+  });
   service.verifyOtp.mockRejectedValue({
     code: 'otp_invalid',
     details: { reason: 'incorrect', attempts_left: 4 },

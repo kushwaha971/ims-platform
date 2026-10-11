@@ -32,7 +32,6 @@ export const REGEX = {
    */
   // Message Central's sign-in codes are four digits (DEC-014).
   OTP_CODE: /^\d{4}$/,
-  OTP_CODE_SIX: /^\d{6}$/,
   /**
    * CR-2026-09-19-A — email is the MVP identity, so the client checks the
    * address it is about to send. Deliberately the pragmatic shape a browser's

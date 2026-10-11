@@ -53,6 +53,9 @@ class OtpRequestView(APIView):
                 "challenge_id": str(issued.challenge_id),
                 "expires_in": issued.expires_in,
                 "retry_after": issued.retry_after,
+                # The screen draws this many boxes; it must never guess (G2).
+                "code_length": issued.code_length,
+                "channel": issued.channel,
             }
         )
 

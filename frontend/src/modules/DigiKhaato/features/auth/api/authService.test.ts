@@ -70,7 +70,30 @@ describe('authService — mobile + OTP (owner, 9 Oct 2026)', () => {
 
     expect(post.mock.calls[0]?.[0]).toBe('/auth/otp/request');
     expect(post.mock.calls[0]?.[1]).toEqual({ mobile: '+919845011122', locale: 'hi' });
-    expect(challenge).toEqual({ challengeId: 'c-1', expiresIn: 600, retryAfter: 60 });
+    // An older server sent no length: it only ever sent four digits by SMS.
+    expect(challenge).toEqual({
+      challengeId: 'c-1',
+      expiresIn: 600,
+      retryAfter: 60,
+      codeLength: 4,
+      channel: 'sms',
+    });
+  });
+
+  it('reads how many digits the server sent and where (review G2)', async () => {
+    jest.spyOn(api, 'post').mockResolvedValue({
+      data: {
+        data: {
+          challenge_id: 'c-2',
+          expires_in: 600,
+          retry_after: 60,
+          code_length: 6,
+          channel: 'whatsapp',
+        },
+      },
+    });
+    const challenge = await requestOtp({ mobile: '+919845011122' });
+    expect(challenge).toMatchObject({ codeLength: 6, channel: 'whatsapp' });
   });
 
   it('verifies with snake_case keys and maps the session like any sign-in', async () => {

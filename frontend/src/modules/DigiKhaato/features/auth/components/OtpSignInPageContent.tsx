@@ -1,9 +1,11 @@
 'use client';
 
+import { useMemo } from 'react';
+
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm } from 'react-hook-form';
 
-import { AUTH_OTP_LENGTH, OTP_USES_MINIMOTH } from 'src/constants';
+import { OTP_USES_MINIMOTH } from 'src/constants';
 import {
   UbButton,
   UbField,
@@ -75,14 +77,20 @@ export function OtpSignInPageContent({ mode }: OtpSignInPageContentProps): React
     mode: 'onTouched',
     defaultValues: { mobile: '' },
   });
+  const otp = flow.otp;
+  // The server says how many digits it sent and where; before the first code
+  // there is no answer yet, and the code step is not on screen.
+  const codeLength = otp?.codeLength ?? 4;
+  const viaWhatsApp = otp?.channel === 'whatsapp';
+  const codeSchema = useMemo(() => schemas.otpCodeSchema(codeLength), [schemas, codeLength]);
   const codeForm = useForm<OtpCodeFormValues>({
-    resolver: yupResolver(schemas.otpCodeSchema),
+    resolver: yupResolver(codeSchema),
     mode: 'onSubmit',
     defaultValues: { code: '' },
   });
+  const codeLabel = t('auth.otp.codeLabel', { length: codeLength });
 
   const disabled = !flow.canSubmit;
-  const otp = flow.otp;
 
   const changeNumber = (): void => {
     codeForm.reset({ code: '' });
@@ -112,8 +120,9 @@ export function OtpSignInPageContent({ mode }: OtpSignInPageContentProps): React
         }
         description={
           otp
-            ? t(OTP_USES_MINIMOTH ? 'auth.otp.minimothCodePrompt' : 'auth.otp.sentTo', {
+            ? t(viaWhatsApp ? 'auth.otp.minimothCodePrompt' : 'auth.otp.sentTo', {
                 mobile: formatPhoneForDisplay(otp.mobile),
+                length: codeLength,
               })
             : t(OTP_USES_MINIMOTH ? 'auth.otp.minimothPrompt' : 'auth.otp.prompt', { appName })
         }
@@ -121,7 +130,7 @@ export function OtpSignInPageContent({ mode }: OtpSignInPageContentProps): React
 
       <AuthPanel>
         <UbStack gap={4}>
-          {OTP_USES_MINIMOTH && (
+          {(otp ? viaWhatsApp : OTP_USES_MINIMOTH) && (
             <UbText variant="body-sm" tone="secondary">
               {t('auth.otp.minimothSafety')}
             </UbText>
@@ -177,20 +186,15 @@ export function OtpSignInPageContent({ mode }: OtpSignInPageContentProps): React
             </UbForm>
           ) : (
             <UbForm form={codeForm} onSubmit={verify} formErrors={flow.formErrors}>
-              <UbField
-                name="code"
-                label={t(OTP_USES_MINIMOTH ? 'auth.otp.sixLabel' : 'auth.otp.codeLabel')}
-                controlOwnsLabel
-                required
-              >
+              <UbField name="code" label={codeLabel} controlOwnsLabel required>
                 {(field) => (
                   <UbOtpInput
-                    length={AUTH_OTP_LENGTH}
+                    length={codeLength}
                     id={field.id}
                     value={(field.value as string) ?? ''}
                     onChange={field.onChange}
-                    // The fourth digit is the submit: SMS autofill fills all four
-                    // at once, and a second tap on "Verify" is a wasted one.
+                    // The last digit is the submit: SMS autofill fills them all at
+                    // once, and a second tap on "Verify" is a wasted one.
                     onComplete={(code) => {
                       codeForm.setValue('code', code);
                       void codeForm.handleSubmit(verify)();
@@ -199,7 +203,7 @@ export function OtpSignInPageContent({ mode }: OtpSignInPageContentProps): React
                     readOnly={flow.isVerifying}
                     disabled={disabled}
                     autoFocus
-                    label={t(OTP_USES_MINIMOTH ? 'auth.otp.sixLabel' : 'auth.otp.codeLabel')}
+                    label={codeLabel}
                     cellLabel={(index, total) => t('auth.otp.cell', { index, total })}
                     describedBy={field['aria-describedby']}
                   />

@@ -4,10 +4,8 @@ import { useMemo } from 'react';
 
 import * as Yup from 'yup';
 
-import { OTP_USES_MINIMOTH } from 'src/constants';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { useValidationSchemas } from 'src/hooks/useValidationSchemas';
-import { REGEX } from 'src/utils/regexConstants';
 
 import { PASSWORD_FLOOR } from '../constants/authDefaults';
 
@@ -108,8 +106,11 @@ export interface OtpCodeFormValues {
 export interface AuthSchemas {
   /** Owner, 9 Oct 2026 — the number a code is sent to (India only, the field is locked). */
   readonly otpMobileSchema: Yup.ObjectSchema<OtpMobileFormValues>;
-  /** Six digits; the server decides whether they are right. */
-  readonly otpCodeSchema: Yup.ObjectSchema<OtpCodeFormValues>;
+  /**
+   * As many digits as the server said it sent (`otp/request`'s `code_length`);
+   * the server decides whether they are right.
+   */
+  readonly otpCodeSchema: (length: number) => Yup.ObjectSchema<OtpCodeFormValues>;
   readonly passwordLoginSchema: Yup.ObjectSchema<PasswordLoginFormValues>;
   readonly signUpSchema: Yup.ObjectSchema<SignUpFormValues>;
   readonly passwordResetRequestSchema: Yup.ObjectSchema<PasswordResetRequestFormValues>;
@@ -127,15 +128,13 @@ export const useAuthSchemas = (): AuthSchemas => {
       otpMobileSchema: Yup.object({
         mobile: v.mobileValidation(true).nonNullable().defined(),
       }),
-      otpCodeSchema: Yup.object({
-        code: Yup.string()
-          .required(t(OTP_USES_MINIMOTH ? 'auth.otp.sixRequired' : 'auth.otp.codeRequired'))
-          .matches(
-            OTP_USES_MINIMOTH ? REGEX.OTP_CODE_SIX : REGEX.OTP_CODE,
-            t(OTP_USES_MINIMOTH ? 'auth.otp.sixFormat' : 'auth.otp.codeFormat')
-          )
-          .defined(),
-      }),
+      otpCodeSchema: (length: number) =>
+        Yup.object({
+          code: Yup.string()
+            .required(t('auth.otp.codeRequired', { length }))
+            .matches(new RegExp(`^\\d{${length}}$`), t('auth.otp.codeFormat', { length }))
+            .defined(),
+        }),
       passwordLoginSchema: Yup.object({
         email: v.emailIdentityValidation().defined(),
         // NOT `passwordValidation()`: a login form that rejected a password

@@ -59,7 +59,18 @@ export interface OtpChallenge {
   readonly expiresIn: number;
   /** Seconds before another code may be asked for — sixty seconds. */
   readonly retryAfter: number;
+  /**
+   * How many digits were sent. The SERVER's answer, because it chooses the
+   * provider when it runs and a build that guessed differently was a sign-in
+   * nobody could finish (review G2, 12 Oct 2026).
+   */
+  readonly codeLength: OtpCodeLength;
+  /** Where the code went: our SMS, or MiniMoth's WhatsApp-first delivery. */
+  readonly channel: OtpChannel;
 }
+
+export type OtpCodeLength = 4 | 6;
+export type OtpChannel = 'sms' | 'whatsapp';
 
 /** `POST /auth/otp/verify`. */
 export interface OtpVerifyInput {
