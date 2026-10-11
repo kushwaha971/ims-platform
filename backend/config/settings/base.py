@@ -356,6 +356,7 @@ UB_SCHEDULER_ENQUEUE_LOCK_ID = env.int("UB_SCHEDULER_ENQUEUE_LOCK_ID", 918273645
 # the sign-in OTP. Credentials come from the environment only and never leave
 # Django. `MC_*` are the names Message Central's own guides use, so they are
 # not `UB_`-prefixed.
+MINIMOTH_API_KEY = env.str("MINIMOTH_API_KEY", "")
 FAST2SMS_API_KEY = env.str("FAST2SMS_API_KEY", "")
 MC_CUSTOMER_ID = env.str("MC_CUSTOMER_ID", "")
 MC_PASSWORD = env.str("MC_PASSWORD", "")

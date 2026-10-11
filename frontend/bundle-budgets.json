@@ -744,7 +744,11 @@
   "9 Oct 2026, Library P0 income & expenses: the new /library/money route, two library menu rows in the shared nav, and the Expenses header's app check",
   "11 Oct 2026, a new business chooses its apps at sign-up (owner): the setup wizard reads the apps on offer from the server and carries the choice, so the onboarding slice gained one thunk, two reducers and the draft's `apps` — it is a static slice, so the shared app grew 108.2 → 108.4 — and /onboarding/step/[n] gained the app tiles, their copy and the checkbox group (+1.0 KB route). Routes sitting on their ceiling went over by 0.0-0.2 KB. Raised by the measured + 0.5 rule: /purchases/orders/[id]/edit firstLoad 384→385; /purchases/bills/[id]/edit firstLoad 384→385; /purchases/orders/new firstLoad 384→385; /purchases/bills/new firstLoad 384→385; /settings/profile firstLoad 372→373; /onboarding/step/[n] route 91→93; /onboarding/step/[n] firstLoad 326→329; /items/price-lists/[id] firstLoad 317→318; /library/catalogue firstLoad 310→311; /library/copies firstLoad 309→310; /purchases/orders firstLoad 308→309; /purchases/debit-notes firstLoad 308→309; /purchases/orders/[id] firstLoad 300→301; /purchases/debit-notes/[id] firstLoad 300→301; /purchases/bills/[id] firstLoad 300→301; /library/fees firstLoad 299→300; /settings/business-days firstLoad 296→297; /forgot-password firstLoad 285→286; /accept-invite/[token] firstLoad 246→247.",
   "11 Oct 2026, PostHog for analytics and feedback (DEC-017, owner): the SDK (about 60 KB gz) is `import()`ed after the page is idle and is in no route's first load; its host is `React.lazy` in AppProviders and only in a build with analytics on, so the shared app grew 108.4 → 108.7 (the lazy boundary and two constants). `next/dynamic` was tried for the host and cost the shell 1.4 KB by itself; a static import cost 0.9. Measured with analytics ON, which is the heavier build. Routes on their ceiling raised by the measured + 0.5 rule: /design-system firstLoad 344→345; /items/[id] firstLoad 336→337; /library firstLoad 306→307; /library/seats firstLoad 304→305; /lending/loans/[loanId] firstLoad 298→299; /lending/borrowers firstLoad 291→292; /lending/routes firstLoad 291→292; /lending/messages firstLoad 291→292.",
-  "11 Oct 2026, the demo film on YouTube and analytics on by default: the landing route gained the YouTube player frame and `track()` (a few hundred bytes; nothing of YouTube's is requested before play). Routes that sat exactly on their ceiling tipped by rounding; raised by the measured + 0.5 rule: /sales/challans/[id] firstLoad 311→312; /sales/orders/[id] firstLoad 311→312; /admin/health firstLoad 256→257."
+  "11 Oct 2026, the demo film on YouTube and analytics on by default: the landing route gained the YouTube player frame and `track()` (a few hundred bytes; nothing of YouTube's is requested before play). Routes that sat exactly on their ceiling tipped by rounding; raised by the measured + 0.5 rule: /sales/challans/[id] firstLoad 311→312; /sales/orders/[id] firstLoad 311→312; /admin/health firstLoad 256→257.",
+  "",
+  "11 Oct 2026 — MiniMoth: six-digit OTP validation extends the shared regex catalogue.",
+  "The production build crosses five first-load boundaries by less than 0.1 KB gz.",
+  "Those five caps increase by 0.1 KB; auth routes also gain shared-sender guidance."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -1321,7 +1325,7 @@
   },
   "/sales/challans": {
    "route": 77,
-   "firstLoad": 312
+   "firstLoad": 312.1
   },
   "/sales/challans/new": {
    "route": 149,
@@ -1353,7 +1357,7 @@
   },
   "/sales/orders": {
    "route": 77,
-   "firstLoad": 312
+   "firstLoad": 312.1
   },
   "/sales/orders/new": {
    "route": 149,
@@ -1385,7 +1389,7 @@
   },
   "/sales/invoices/[id]": {
    "route": 76,
-   "firstLoad": 311
+   "firstLoad": 311.1
   },
   "/sales/estimates": {
    "route": 98,
@@ -1505,7 +1509,7 @@
   },
   "/payments/[id]": {
    "route": 62,
-   "firstLoad": 297
+   "firstLoad": 297.1
   },
   "/ledger/reminders": {
    "route": 71,
@@ -1681,7 +1685,7 @@
   },
   "/_not-found": {
    "route": 1,
-   "firstLoad": 236
+   "firstLoad": 236.1
   },
   "/library": {
    "route": 71,

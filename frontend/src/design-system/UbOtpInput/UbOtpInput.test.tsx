@@ -16,10 +16,17 @@ function Harness({
   onComplete,
   readOnly,
   initial = '',
-}: Readonly<{ onComplete?: (value: string) => void; readOnly?: boolean; initial?: string }>) {
+  length,
+}: Readonly<{
+  onComplete?: (value: string) => void;
+  readOnly?: boolean;
+  initial?: string;
+  length?: 4 | 6;
+}>) {
   const [value, setValue] = useState(initial);
   return (
     <UbOtpInput
+      length={length}
       value={value}
       onChange={setValue}
       onComplete={onComplete}
@@ -136,4 +143,23 @@ describe('UbOtpInput', () => {
         .join('')
     ).toBe('12');
   });
+});
+
+it('pastes all six MiniMoth digits and submits once without truncation', async () => {
+  const user = userEvent.setup();
+  const complete = jest.fn();
+  render(<Harness length={6} onComplete={complete} />);
+  screen.getByLabelText('Digit 1 of 6').focus();
+  await user.paste('932234');
+  expect(screen.getAllByRole('textbox')).toHaveLength(6);
+  expect(screen.getAllByRole('textbox').map((cell) => (cell as HTMLInputElement).value)).toEqual([
+    '9',
+    '3',
+    '2',
+    '2',
+    '3',
+    '4',
+  ]);
+  expect(complete).toHaveBeenCalledTimes(1);
+  expect(complete).toHaveBeenCalledWith('932234');
 });

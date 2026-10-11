@@ -148,3 +148,7 @@ export const EMAIL_MAX_LENGTH = 254;
 export const GOOGLE_SITE_VERIFICATION: string =
   process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ?? '';
 export const BING_SITE_VERIFICATION: string = process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION ?? '';
+
+/** Public delivery choice only; the API key stays on the server. */
+export const OTP_USES_MINIMOTH = process.env.NEXT_PUBLIC_OTP_PROVIDER === 'minimoth';
+export const AUTH_OTP_LENGTH: 4 | 6 = OTP_USES_MINIMOTH ? 6 : 4;

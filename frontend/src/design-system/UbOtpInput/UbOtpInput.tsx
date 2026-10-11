@@ -44,6 +44,7 @@ import { cn } from 'src/utils/cn';
 export const OTP_LENGTH = 4;
 
 export interface UbOtpInputProps {
+  readonly length?: 4 | 6;
   readonly value: string;
   readonly onChange: (value: string) => void;
   /** Fired once, when the sixth digit lands. */
@@ -64,6 +65,7 @@ export interface UbOtpInputProps {
 const onlyDigits = (value: string): string => value.replace(/\D/g, '');
 
 function UbOtpInputBase({
+  length = OTP_LENGTH,
   value,
   onChange,
   onComplete,
@@ -82,28 +84,31 @@ function UbOtpInputBase({
   // happens to carry six digits (a parent repaint while verifying, say).
   const completedFor = useRef<string | null>(null);
 
-  const digits = onlyDigits(value).slice(0, OTP_LENGTH);
+  const digits = onlyDigits(value).slice(0, length);
 
   useEffect(() => {
-    if (digits.length === OTP_LENGTH && completedFor.current !== digits) {
+    if (digits.length === length && completedFor.current !== digits) {
       completedFor.current = digits;
       onComplete?.(digits);
     }
-    if (digits.length < OTP_LENGTH) completedFor.current = null;
-  }, [digits, onComplete]);
+    if (digits.length < length) completedFor.current = null;
+  }, [digits, onComplete, length]);
 
-  const focusCell = useCallback((index: number) => {
-    const clamped = Math.max(0, Math.min(OTP_LENGTH - 1, index));
-    cells.current[clamped]?.focus();
-    cells.current[clamped]?.select();
-  }, []);
+  const focusCell = useCallback(
+    (index: number) => {
+      const clamped = Math.max(0, Math.min(length - 1, index));
+      cells.current[clamped]?.focus();
+      cells.current[clamped]?.select();
+    },
+    [length]
+  );
 
   const commit = useCallback(
     (next: string, focusIndex: number) => {
-      onChange(next.slice(0, OTP_LENGTH));
+      onChange(next.slice(0, length));
       focusCell(focusIndex);
     },
-    [onChange, focusCell]
+    [onChange, focusCell, length]
   );
 
   const handleChange = useCallback(
@@ -118,9 +123,9 @@ function UbOtpInputBase({
       // Typing over a filled cell replaces it; a multi-character insert (some
       // Android keyboards deliver a paste this way) spills into the cells after.
       const combined = `${digits.slice(0, index)}${typed}${digits.slice(index + typed.length)}`;
-      commit(combined.slice(0, OTP_LENGTH), index + typed.length);
+      commit(combined.slice(0, length), index + typed.length);
     },
-    [digits, readOnly, commit]
+    [digits, readOnly, commit, length]
   );
 
   const handleKeyDown = useCallback(
@@ -152,10 +157,10 @@ function UbOtpInputBase({
       const pasted = onlyDigits(event.clipboardData.getData('text'));
       if (!pasted) return;
       event.preventDefault();
-      const next = pasted.slice(0, OTP_LENGTH);
+      const next = pasted.slice(0, length);
       commit(next, next.length);
     },
-    [readOnly, commit]
+    [readOnly, commit, length]
   );
 
   return (
@@ -166,7 +171,7 @@ function UbOtpInputBase({
       id={id}
       className={cn('flex items-center gap-2', className)}
     >
-      {Array.from({ length: OTP_LENGTH }, (_, index) => (
+      {Array.from({ length: length }, (_, index) => (
         <input
           key={index}
           ref={(node) => {
@@ -181,7 +186,7 @@ function UbOtpInputBase({
           maxLength={1}
           readOnly={readOnly}
           disabled={disabled}
-          aria-label={cellLabel(index + 1, OTP_LENGTH)}
+          aria-label={cellLabel(index + 1, length)}
           aria-invalid={invalid || undefined}
           value={digits[index] ?? ''}
           onChange={(event) => handleChange(index, event.target.value)}

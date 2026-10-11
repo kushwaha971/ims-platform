@@ -3,6 +3,7 @@
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm } from 'react-hook-form';
 
+import { AUTH_OTP_LENGTH, OTP_USES_MINIMOTH } from 'src/constants';
 import {
   UbButton,
   UbField,
@@ -111,13 +112,20 @@ export function OtpSignInPageContent({ mode }: OtpSignInPageContentProps): React
         }
         description={
           otp
-            ? t('auth.otp.sentTo', { mobile: formatPhoneForDisplay(otp.mobile) })
-            : t('auth.otp.prompt', { appName })
+            ? t(OTP_USES_MINIMOTH ? 'auth.otp.minimothCodePrompt' : 'auth.otp.sentTo', {
+                mobile: formatPhoneForDisplay(otp.mobile),
+              })
+            : t(OTP_USES_MINIMOTH ? 'auth.otp.minimothPrompt' : 'auth.otp.prompt', { appName })
         }
       />
 
       <AuthPanel>
         <UbStack gap={4}>
+          {OTP_USES_MINIMOTH && (
+            <UbText variant="body-sm" tone="secondary">
+              {t('auth.otp.minimothSafety')}
+            </UbText>
+          )}
           {flow.isOffline && (
             <UbStatusBanner
               tone="offline"
@@ -168,14 +176,16 @@ export function OtpSignInPageContent({ mode }: OtpSignInPageContentProps): React
               </UbButton>
             </UbForm>
           ) : (
-            <UbForm
-              form={codeForm}
-              onSubmit={verify}
-              formErrors={flow.formErrors}
-            >
-              <UbField name="code" label={t('auth.otp.codeLabel')} controlOwnsLabel required>
+            <UbForm form={codeForm} onSubmit={verify} formErrors={flow.formErrors}>
+              <UbField
+                name="code"
+                label={t(OTP_USES_MINIMOTH ? 'auth.otp.sixLabel' : 'auth.otp.codeLabel')}
+                controlOwnsLabel
+                required
+              >
                 {(field) => (
                   <UbOtpInput
+                    length={AUTH_OTP_LENGTH}
                     id={field.id}
                     value={(field.value as string) ?? ''}
                     onChange={field.onChange}
@@ -189,7 +199,7 @@ export function OtpSignInPageContent({ mode }: OtpSignInPageContentProps): React
                     readOnly={flow.isVerifying}
                     disabled={disabled}
                     autoFocus
-                    label={t('auth.otp.codeLabel')}
+                    label={t(OTP_USES_MINIMOTH ? 'auth.otp.sixLabel' : 'auth.otp.codeLabel')}
                     cellLabel={(index, total) => t('auth.otp.cell', { index, total })}
                     describedBy={field['aria-describedby']}
                   />
@@ -208,7 +218,9 @@ export function OtpSignInPageContent({ mode }: OtpSignInPageContentProps): React
               <UbStack direction="row" justify="between" align="center" gap={2} wrap>
                 {flow.resendSeconds > 0 ? (
                   <UbText variant="body-sm" tone="tertiary" aria-live="polite">
-                    {t('auth.otp.resendIn', { time: clock(Math.min(flow.resendSeconds, RESEND_SECONDS)) })}
+                    {t('auth.otp.resendIn', {
+                      time: clock(Math.min(flow.resendSeconds, RESEND_SECONDS)),
+                    })}
                   </UbText>
                 ) : (
                   <UbButton

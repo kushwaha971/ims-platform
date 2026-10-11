@@ -6,9 +6,11 @@ COPY frontend/package.json frontend/package-lock.json ./
 COPY frontend/vendor ./vendor
 RUN npm ci
 COPY frontend/ ./
+ARG NEXT_PUBLIC_OTP_PROVIDER=message_central
 ARG NEXT_PUBLIC_SITE_URL=https://yourkhata.com
 ARG RAILWAY_GIT_COMMIT_SHA=dev
-ENV NEXT_PUBLIC_API_BASE_URL=/api/v1 \
+ENV NEXT_PUBLIC_OTP_PROVIDER=${NEXT_PUBLIC_OTP_PROVIDER} \
+    NEXT_PUBLIC_API_BASE_URL=/api/v1 \
     NEXT_PUBLIC_ENV=production \
     NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL} \
     NEXT_PUBLIC_COMMIT_SHA=${RAILWAY_GIT_COMMIT_SHA}

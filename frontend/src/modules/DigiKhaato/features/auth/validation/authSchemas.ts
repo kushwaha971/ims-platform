@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 
 import * as Yup from 'yup';
 
-
+import { OTP_USES_MINIMOTH } from 'src/constants';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { useValidationSchemas } from 'src/hooks/useValidationSchemas';
 import { REGEX } from 'src/utils/regexConstants';
@@ -129,8 +129,11 @@ export const useAuthSchemas = (): AuthSchemas => {
       }),
       otpCodeSchema: Yup.object({
         code: Yup.string()
-          .required(t('auth.otp.codeRequired'))
-          .matches(REGEX.OTP_CODE, t('auth.otp.codeFormat'))
+          .required(t(OTP_USES_MINIMOTH ? 'auth.otp.sixRequired' : 'auth.otp.codeRequired'))
+          .matches(
+            OTP_USES_MINIMOTH ? REGEX.OTP_CODE_SIX : REGEX.OTP_CODE,
+            t(OTP_USES_MINIMOTH ? 'auth.otp.sixFormat' : 'auth.otp.codeFormat')
+          )
           .defined(),
       }),
       passwordLoginSchema: Yup.object({

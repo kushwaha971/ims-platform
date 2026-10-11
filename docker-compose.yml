@@ -38,6 +38,7 @@ x-backend-env: &backend-env
   UB_CSRF_TRUSTED_ORIGINS: ${UB_CSRF_TRUSTED_ORIGINS:-http://localhost:3000}
   UB_SMS_BACKEND: ${UB_SMS_BACKEND:-}
   # Message Central VerifyNow (sign-in OTP). Empty prints the code in the log.
+  MINIMOTH_API_KEY: ${MINIMOTH_API_KEY:-}
   FAST2SMS_API_KEY: ${FAST2SMS_API_KEY:-}
   MC_CUSTOMER_ID: ${MC_CUSTOMER_ID:-}
   MC_PASSWORD: ${MC_PASSWORD:-}
@@ -143,6 +144,7 @@ services:
       dockerfile: Dockerfile
       target: ${FRONTEND_TARGET:-runtime}
       args:
+        NEXT_PUBLIC_OTP_PROVIDER: ${NEXT_PUBLIC_OTP_PROVIDER:-message_central}
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000/api/v1}
         NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-YourKhata}
         # CR-2026-09-29-PLATFORM-C — canonical, og:image, robots and sitemap URLs.
