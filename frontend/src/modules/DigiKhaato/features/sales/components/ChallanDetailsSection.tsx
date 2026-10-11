@@ -2,7 +2,6 @@
 
 import { useMemo } from 'react';
 
-
 import { UbField, UbGrid, UbSelect, UbStack, UbTextInput } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
 

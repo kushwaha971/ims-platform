@@ -49,7 +49,7 @@ describe('the party-list warm-up', () => {
     expect(get).toHaveBeenCalledTimes(1);
   });
 
-  it('is idempotent, so Strict Mode\'s second effect run does not issue a second GET', () => {
+  it("is idempotent, so Strict Mode's second effect run does not issue a second GET", () => {
     const get = jest.spyOn(api, 'get').mockResolvedValue(EMPTY_PAGE);
 
     // React Strict Mode mounts, tears down and remounts every effect in
@@ -181,9 +181,7 @@ describe('the party-list warm-up', () => {
     const forwards = partyListRequestKey(ARG);
     const backwards = partyListRequestKey({
       ...ARG,
-      params: Object.fromEntries(
-        Object.entries(ARG.params).reverse()
-      ) as typeof ARG.params,
+      params: Object.fromEntries(Object.entries(ARG.params).reverse()) as typeof ARG.params,
     });
 
     expect(backwards).toBe(forwards);

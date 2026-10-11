@@ -122,7 +122,7 @@
   "reminders.strip.summary": "Reminded {count, plural, one {once} other {# times}} · last {when} ({channel})",
   "reminders.tab.overdue": "Overdue",
   "reminders.tab.sent": "Sent",
-  "reminders.tab.today": "Due today",
+  "reminders.tab.today": "To collect today",
   "reminders.tab.upcoming": "Upcoming",
   "reminders.tabShort.overdue": "Late",
   "reminders.tabShort.sent": "Sent",

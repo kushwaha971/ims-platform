@@ -122,7 +122,7 @@
   "reminders.strip.summary": "{count, plural, one {एक बार} other {# बार}} याद दिलाया · पिछली बार {when} ({channel})",
   "reminders.tab.overdue": "समय निकल गया",
   "reminders.tab.sent": "भेजे गए",
-  "reminders.tab.today": "आज देय",
+  "reminders.tab.today": "आज लेना है",
   "reminders.tab.upcoming": "आने वाले",
   "reminders.tabShort.overdue": "देर",
   "reminders.tabShort.sent": "भेजे",

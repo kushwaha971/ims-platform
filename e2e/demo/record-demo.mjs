@@ -232,7 +232,7 @@ await segment('a', async (page, scene, cardScene) => {
     await st.soft('start using', async () => { await st.tap(page.getByRole('button', { name: /Start using/ }), { after: 300 }); await page.waitForURL((u) => !u.pathname.startsWith('/onboarding'), { timeout: 60000 }); await st.settle(); await st.pause(1200); });
     // 6 — the menu holds what was chosen, and nothing else.
     await cue(6);
-    if (device.mobile) await st.look([page.getByRole('link', { name: 'Parties' }), page.getByRole('link', { name: 'Bills' }), page.getByRole('link', { name: 'Items' }), page.getByRole('link', { name: 'More' })], 1100);
+    if (device.mobile) await st.look([page.getByRole('link', { name: 'Customers' }), page.getByRole('link', { name: 'Bills' }), page.getByRole('link', { name: 'Items' }), page.getByRole('link', { name: 'More' })], 1100);
     else await st.look([page.getByRole('link', { name: 'Customers', exact: true }), page.getByRole('link', { name: 'Bills', exact: true }), page.getByRole('link', { name: 'Purchases', exact: true }), page.getByRole('link', { name: 'Items', exact: true }), page.getByRole('link', { name: 'Reports', exact: true })], 1000);
   });
 });

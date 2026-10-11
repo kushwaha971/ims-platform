@@ -121,19 +121,16 @@ function PartyTagFieldBase({
     [onChange]
   );
 
-  const handleCreate = useCallback(
-    (name: string): UbTokenInputOption | null => {
-      const clean = name.trim();
-      /* The two characters the server refuses (EC-14), refused here too rather
+  const handleCreate = useCallback((name: string): UbTokenInputOption | null => {
+    const clean = name.trim();
+    /* The two characters the server refuses (EC-14), refused here too rather
          than accepted and rejected on save. The list filter serialises tags as
          `?tag=Camp Area,Route 2`, so "Camp, East" would round-trip as two tags
          that do not exist — and the merchant would see a filter matching
          nothing with no clue why. */
-      if (!clean || clean.includes(',') || clean.includes(';')) return null;
-      return { value: clean, label: clean, color: null };
-    },
-    []
-  );
+    if (!clean || clean.includes(',') || clean.includes(';')) return null;
+    return { value: clean, label: clean, color: null };
+  }, []);
 
   return (
     <UbTokenInput

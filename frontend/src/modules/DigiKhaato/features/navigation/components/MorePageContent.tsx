@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 
 import { ArrowLeftRight, LogOut, MonitorSmartphone, ShieldCheck } from 'lucide-react';
 
-import { useAccountActions } from 'src/components/layout/useAccountActions';
+import { THEME_MODES, useAccountActions } from 'src/components/layout/useAccountActions';
 import {
   UbAvatar,
   UbBox,
@@ -39,7 +39,8 @@ export function MorePageContent(): React.JSX.Element {
   const { t } = useTranslation();
   const { sections, bottomNav } = useNavigation();
   const tenant = useAppSelector(selectActiveTenant);
-  const { user, impersonating, locale, options, setLocale, signOut } = useAccountActions();
+  const { user, impersonating, locale, options, setLocale, theme, setTheme, signOut } =
+    useAccountActions();
   const [query, setQuery] = useState('');
 
   const tabKeys = useMemo(() => new Set(bottomNav.map((tab) => tab.key)), [bottomNav]);
@@ -147,6 +148,18 @@ export function MorePageContent(): React.JSX.Element {
                 lang: option.value,
                 selected: option.value === locale,
                 onSelect: () => setLocale(option.value),
+              }))}
+            />
+            {/* Light or dark, on the phone too: a shop counter at noon and a
+                bedside at midnight are not the same screen. */}
+            <UbMenuList
+              title={t('theme.label')}
+              selectable
+              rows={THEME_MODES.map((mode) => ({
+                key: mode,
+                label: t(`theme.${mode}`),
+                selected: mode === theme,
+                onSelect: () => setTheme(mode),
               }))}
             />
             <UbMenuList rows={accountRows} className="pb-2" />

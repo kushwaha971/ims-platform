@@ -2,7 +2,6 @@
 
 import { useCallback, useMemo, useState } from 'react';
 
-
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useDegradedNetwork } from 'src/hooks/useDegradedNetwork';
 import { useIdempotencyKey } from 'src/hooks/useIdempotencyKey';
@@ -161,7 +160,11 @@ export const usePartyForm = (): UsePartyFormResult => {
                     state: mismatch.stateCode ?? '',
                   },
                 }
-              : { severity: 'success', id: 'parties.form.saved', params: { name: saved.party.name } }
+              : {
+                  severity: 'success',
+                  id: 'parties.form.saved',
+                  params: { name: saved.party.name },
+                }
           )
         );
       } catch (thrown) {

@@ -145,15 +145,12 @@ export const {
 
 export const partyFormReducer = partyFormSlice.reducer;
 
-export const selectPartyFormOpenFor = (state: RootState): string | null =>
-  state.partyForm.openFor;
+export const selectPartyFormOpenFor = (state: RootState): string | null => state.partyForm.openFor;
 
-export const selectPartyFormPrefillName = (state: RootState): string =>
-  state.partyForm.prefillName;
+export const selectPartyFormPrefillName = (state: RootState): string => state.partyForm.prefillName;
 export const selectPartyFormEditing = (state: RootState): PartyDetail | null =>
   state.partyForm.editing;
-export const selectPartyFormStatus = (state: RootState): RequestStatus =>
-  state.partyForm.status;
+export const selectPartyFormStatus = (state: RootState): RequestStatus => state.partyForm.status;
 export const selectPartyFormError = (state: RootState): ApiErrorShape | null =>
   state.partyForm.error;
 export const selectPartyFormWarnings = (state: RootState): readonly PartyWarning[] =>

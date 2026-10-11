@@ -99,7 +99,7 @@ it('asks who is owed and by when once Paid now is off, and hides Paid by', async
   renderWithProviders(<ExpenseFormDrawer form={form({ submit })} />);
   await userEvent.click(screen.getByRole('switch', { name: /Paid now/ }));
   expect(screen.queryByRole('radiogroup', { name: 'Paid by' })).not.toBeInTheDocument();
-  expect(screen.getByText('Owed to')).toBeInTheDocument();
+  expect(screen.getByText('Pay to')).toBeInTheDocument();
   expect(screen.getByText('Due on')).toBeInTheDocument();
 
   await userEvent.type(screen.getByLabelText(/Amount/), '12000');

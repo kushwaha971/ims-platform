@@ -31,22 +31,22 @@ function Harness(props: { canBill: boolean }) {
 describe('DashboardMobileSummary', () => {
   it('leads with to collect and to pay, each opening its list', () => {
     renderWithProviders(<Harness canBill />);
-    expect(screen.getByRole('link', { name: /To collect/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /You will get/ })).toHaveAttribute(
       'href',
       expect.stringContaining('balance=owes_me')
     );
-    expect(screen.getByRole('link', { name: /To pay/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /You will give/ })).toHaveAttribute(
       'href',
       expect.stringContaining('balance=i_owe')
     );
   });
 
-  it('lists only what needs attention — nothing due today means no "Due today" row', () => {
+  it('lists only what needs attention — nothing due today means no "To collect today" row', () => {
     /* Prevents: a to-do list of zeros, which teaches a merchant to ignore it. */
     renderWithProviders(<Harness canBill />);
     expect(screen.getByRole('link', { name: /Overdue/ })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Low stock/ })).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /Due today/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /To collect today/ })).not.toBeInTheDocument();
   });
 
   it('offers a shortcut only to a role that may use it', () => {

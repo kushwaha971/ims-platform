@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 
 import { Check, ChevronDown, LogOut, MonitorSmartphone, ShieldCheck } from 'lucide-react';
 
-import { useAccountActions } from 'src/components/layout/useAccountActions';
+import { THEME_MODES, useAccountActions } from 'src/components/layout/useAccountActions';
 import { UbAvatar, UbBox, UbDivider, UbText } from 'src/design-system';
 import { MLMenu, MLMenuItem, MLMenuLabel } from 'src/design-system/primitives';
 import { useTranslation } from 'src/hooks/useTranslation';
@@ -34,7 +34,8 @@ export function AccountMenu({
 }: Readonly<{ compact?: boolean }>): React.JSX.Element | null {
   const { t } = useTranslation();
   const router = useRouter();
-  const { user, impersonating, locale, options, setLocale, signOut } = useAccountActions();
+  const { user, impersonating, locale, options, setLocale, theme, setTheme, signOut } =
+    useAccountActions();
 
   if (!user) return null;
   // Never the placeholder address of a mobile-number account (accountIdentity.ts).
@@ -83,6 +84,17 @@ export function AccountMenu({
             {option.label}
           </UbText>
           {option.value === locale && <Check aria-hidden className="h-4 w-4 text-accent" />}
+        </MLMenuItem>
+      ))}
+
+      <UbDivider decorative className="my-1" />
+      <MLMenuLabel>{t('theme.label')}</MLMenuLabel>
+      {THEME_MODES.map((mode) => (
+        <MLMenuItem key={mode} selected={mode === theme} onSelect={() => setTheme(mode)}>
+          <UbText as="span" variant="inherit" className="flex-1">
+            {t(`theme.${mode}`)}
+          </UbText>
+          {mode === theme && <Check aria-hidden className="h-4 w-4 text-accent" />}
         </MLMenuItem>
       ))}
 

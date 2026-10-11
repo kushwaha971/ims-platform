@@ -1,7 +1,7 @@
 {
   "publicDocument.amount.challan": "माल की कीमत",
   "publicDocument.amount.creditNote": "क्रेडिट नोट की राशि",
-  "publicDocument.amount.due": "बकाया राशि",
+  "publicDocument.amount.due": "बाकी राशि",
   "publicDocument.amount.estimate": "अनुमान की कुल राशि",
   "publicDocument.amount.order": "ऑर्डर की कुल राशि",
   "publicDocument.amount.paid": "पूरा भुगतान हो गया",

@@ -16,9 +16,9 @@
   "notifications.type.data_export_ready.body": "डाउनलोड करने के लिए सेटिंग्स → आपका डेटा खोलें।",
   "notifications.type.data_export_ready.title": "आपका डेटा डाउनलोड तैयार है",
   "notifications.type.deletion_cancelled.body": "सब पहले की तरह काम कर सकते हैं।",
-  "notifications.type.deletion_cancelled.title": "{actor} ने इस बिज़नेस को हटाना रद्द किया",
+  "notifications.type.deletion_cancelled.title": "{actor} ने इस व्यापार को हटाना रद्द किया",
   "notifications.type.deletion_requested.body": "आपने नहीं किया? सेटिंग्स → आपका डेटा से रद्द करें।",
-  "notifications.type.deletion_requested.title": "{actor} ने इस बिज़नेस को {date} को हटाने का अनुरोध किया",
+  "notifications.type.deletion_requested.title": "{actor} ने इस व्यापार को {date} को हटाने का अनुरोध किया",
   "notifications.type.dues.run_failed.body": "बाकी सब जोड़ दिया गया। इन्हें आज रात फिर से जोड़ने की कोशिश होगी।",
   "notifications.type.dues.run_failed.title": "{date} को {failed} नियमित शुल्क नहीं जोड़े जा सके",
   "notifications.type.export_failed.body": "कम फ़िल्टर के साथ कोशिश करें।",
@@ -36,8 +36,8 @@
   "notifications.type.reminder_failed.body": "कारण 'भेजे गए' टैब में देखें।",
   "notifications.type.reminder_failed.title": "{count, plural, one {# रिमाइंडर नहीं भेजा जा सका} other {# रिमाइंडर नहीं भेजे जा सके}}",
   "notifications.type.support_access_request.body": "सेटिंग्स → आपका डेटा में अनुमति दें या मना करें।",
-  "notifications.type.support_access_request.title": "सपोर्ट ({admin}) ने आपके बिज़नेस को देखने की अनुमति माँगी",
+  "notifications.type.support_access_request.title": "सपोर्ट ({admin}) ने आपके व्यापार को देखने की अनुमति माँगी",
   "notifications.type.support_session_started.body": "आप सेटिंग्स → आपका डेटा में उनका एक्सेस बंद कर सकते हैं।",
-  "notifications.type.support_session_started.title": "सपोर्ट ({admin}) ने आपका बिज़नेस खोला",
+  "notifications.type.support_session_started.title": "सपोर्ट ({admin}) ने आपका व्यापार खोला",
   "notifications.unreadDot": "अपठित"
 }

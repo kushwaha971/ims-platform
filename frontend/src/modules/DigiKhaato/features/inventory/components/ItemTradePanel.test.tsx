@@ -7,7 +7,6 @@ import { ItemTradePanel } from './ItemTradePanel';
 
 import type { ItemTrade } from '../api/itemTradeService';
 
-
 /**
  * The item page's Sales and Purchases tabs (Shop gap §1.4). These pin that the
  * party rows and the latest bills say what the server sent, that margin is

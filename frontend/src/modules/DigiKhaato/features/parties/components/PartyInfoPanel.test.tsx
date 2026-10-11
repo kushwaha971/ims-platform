@@ -10,7 +10,7 @@ import type { PartyDetail } from '../types/party.types';
 /**
  * A2 (T-PLT-X01-12) — the info panel's loan and deposit lines.
  *
- * The defect prevented: a "Loan outstanding ₹0.00" line on every shop party's khata, a
+ * The defect prevented: a "Loan left ₹0.00" line on every shop party's khata, a
  * claim about lending on a product that has not lent anything. The lines appear only
  * when the server sends the figures, in their words and tones.
  */
@@ -47,9 +47,7 @@ describe('PartyInfoPanel balances', () => {
     renderWithProviders(<Harness party={base} />);
 
     expect(screen.queryByText('Balances')).not.toBeInTheDocument();
-    expect(
-      screen.queryByText(/Loan outstanding|Deposit held|Shop balance/)
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Loan left|Deposit held|Shop balance/)).not.toBeInTheDocument();
   });
 
   it('shows the loan, the shop balance and the deposit with their words', () => {
@@ -65,7 +63,7 @@ describe('PartyInfoPanel balances', () => {
     );
 
     expect(screen.getByText('Balances')).toBeInTheDocument();
-    expect(screen.getAllByText('Loan outstanding').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Loan left').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Shop balance').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Deposit held').length).toBeGreaterThan(0);
     expect(screen.getByText('₹46,625.00')).toBeInTheDocument();

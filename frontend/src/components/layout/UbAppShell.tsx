@@ -96,8 +96,9 @@ export function UbAppShell({ children }: Readonly<{ children: ReactNode }>): Rea
           className="h-14 shrink-0 border-b border-border-hairline bg-surface-card px-4 lg:hidden"
         >
           {/* A top-level screen shows the brand; a detail or task screen shows
-              Back in its place, because the bottom nav is not there to leave by. */}
-          {mobileNav.visible ? (
+              Back in its place. The bottom nav is there on most of them too (all but
+              a form and a khata), so Back is the way UP and the tabs the way out. */}
+          {mobileNav.topLevel ? (
             <UbLink
               href={landing}
               tone="inherit"

@@ -171,9 +171,11 @@ describe('partyService.listParties', () => {
      * No fixture in this file carried a totals block at all, which is why it
      * survived: the mapping was never exercised, only the shape without it.
      */
-    jest.spyOn(api, 'get').mockResolvedValue(
-      bodyWith({ totals: { receivable: '2800.00', payable: '900.00', count: 2 } })
-    );
+    jest
+      .spyOn(api, 'get')
+      .mockResolvedValue(
+        bodyWith({ totals: { receivable: '2800.00', payable: '900.00', count: 2 } })
+      );
 
     const result = await listParties(PARAMS);
 
@@ -182,9 +184,11 @@ describe('partyService.listParties', () => {
   });
 
   it('keeps money a string on the way out of the totals too', async () => {
-    jest.spyOn(api, 'get').mockResolvedValue(
-      bodyWith({ totals: { receivable: '1234.50', payable: '0.00', count: 1 } })
-    );
+    jest
+      .spyOn(api, 'get')
+      .mockResolvedValue(
+        bodyWith({ totals: { receivable: '1234.50', payable: '0.00', count: 1 } })
+      );
 
     const result = await listParties(PARAMS);
 
@@ -214,9 +218,9 @@ describe('partyService.listParties', () => {
      * block is the contract (Part 22 §22.4); flat keys are not a second
      * spelling of it, they are nothing.
      */
-    jest.spyOn(api, 'get').mockResolvedValue(
-      bodyWith({ totals_receivable: '9999.00', totals_payable: '9999.00' })
-    );
+    jest
+      .spyOn(api, 'get')
+      .mockResolvedValue(bodyWith({ totals_receivable: '9999.00', totals_payable: '9999.00' }));
 
     const result = await listParties(PARAMS);
 

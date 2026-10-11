@@ -19,6 +19,9 @@ describe('memberCountOf', () => {
 
   it('keeps the plain total on a team that pages, rather than guess about other pages', () => {
     const rows = [{ status: 'invited' }];
-    expect(memberCountOf(rows, { total: 40, totalPages: 2 })).toEqual({ joined: 40, invited: null });
+    expect(memberCountOf(rows, { total: 40, totalPages: 2 })).toEqual({
+      joined: 40,
+      invited: null,
+    });
   });
 });

@@ -144,7 +144,9 @@ describe('step 4 — the owner adds and turns off apps', () => {
     renderWithProviders(<TenantSwitcherMenu rail caption="YourKhata" />);
     await userEvent.click(screen.getByRole('button', { name: /Verma Finance/ }));
     await screen.findByRole('menuitem', { name: 'Leave Library' });
-    expect(screen.queryByRole('menuitem', { name: /Turn off|^Add (Library|Lending|Shop)/ })).toBeNull();
+    expect(
+      screen.queryByRole('menuitem', { name: /Turn off|^Add (Library|Lending|Shop)/ })
+    ).toBeNull();
   });
 });
 

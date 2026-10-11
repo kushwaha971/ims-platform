@@ -251,8 +251,23 @@ export function usePartyTagManager(): UsePartyTagManagerResult {
       acceptMerge,
     }),
     [
-      can, stage, draft, target, saving, error, collision, deleteCount,
-      openCreate, openEdit, openMerge, openDelete, close, save, merge, remove, acceptMerge,
+      can,
+      stage,
+      draft,
+      target,
+      saving,
+      error,
+      collision,
+      deleteCount,
+      openCreate,
+      openEdit,
+      openMerge,
+      openDelete,
+      close,
+      save,
+      merge,
+      remove,
+      acceptMerge,
     ]
   );
 }

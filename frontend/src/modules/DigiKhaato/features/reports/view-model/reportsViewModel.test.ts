@@ -358,12 +358,7 @@ describe('the reports hub catalogue', () => {
         .filter((entry) => entry.group === 'sales')
         .map((entry) => entry.key);
 
-    expect(keys(() => true)).toEqual([
-      'salesRegister',
-      'purchaseRegister',
-      'profit',
-      'gstSummary',
-    ]);
+    expect(keys(() => true)).toEqual(['salesRegister', 'purchaseRegister', 'profit', 'gstSummary']);
     expect(keys((code) => code !== 'reports.financial.read')).toEqual([
       'salesRegister',
       'purchaseRegister',

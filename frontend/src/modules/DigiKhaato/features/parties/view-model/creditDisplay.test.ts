@@ -65,9 +65,7 @@ describe('creditCaption', () => {
      * think "−₹1,700 available", they think "₹1,700 over". The direction is in
      * the wording.
      */
-    const caption = creditCaption(
-      credit({ status: 'over', available: '0.00', overBy: '1700.00' })
-    );
+    const caption = creditCaption(credit({ status: 'over', available: '0.00', overBy: '1700.00' }));
 
     expect(caption.id).toBe('parties.credit.over');
     expect(caption.values).toEqual({ over: '1,700.00', limit: '50,000.00' });

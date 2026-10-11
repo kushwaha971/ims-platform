@@ -476,12 +476,12 @@ describe('the approved responsive rules, on the real screen', () => {
     renderWithProviders(<PartyListPageContent />);
     await screen.findByText('Ramesh Traders');
 
-    await pickBalance(user, 'Owes me');
+    await pickBalance(user, 'I will get');
     await waitFor(() => expect(lastParams()?.balance).toBe('owes_me'));
 
-    await pickBalance(user, 'I owe them');
+    await pickBalance(user, 'I will give');
     await waitFor(() => expect(lastParams()?.balance).toBe('i_owe'));
-    expect(balanceShows('I owe them')).toBeInTheDocument();
+    expect(balanceShows('I will give')).toBeInTheDocument();
   });
 
   it('filters the list from the receivable tile, and the Balance dropdown says so', async () => {
@@ -498,12 +498,14 @@ describe('the approved responsive rules, on the real screen', () => {
     renderWithProviders(<PartyListPageContent />);
     await screen.findByText('Ramesh Traders');
 
-    await user.click(screen.getByRole('button', { name: 'Show only who owes me' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Show only people I will get money from' })
+    );
 
     await waitFor(() => expect(lastParams()?.balance).toBe('owes_me'));
-    expect(balanceShows('Owes me')).toBeInTheDocument();
+    expect(balanceShows('I will get')).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Show only who owes me', pressed: true })
+      screen.getByRole('button', { name: 'Show only people I will get money from', pressed: true })
     ).toBeInTheDocument();
   });
 
@@ -514,17 +516,21 @@ describe('the approved responsive rules, on the real screen', () => {
     renderWithProviders(<PartyListPageContent />);
     await screen.findByText('Ramesh Traders');
 
-    await user.click(screen.getByRole('button', { name: 'Show only who I owe' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Show only people I have to give money to' })
+    );
     await waitFor(() => expect(lastParams()?.balance).toBe('i_owe'));
 
-    await user.click(screen.getByRole('button', { name: 'Show only who I owe' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Show only people I have to give money to' })
+    );
     await waitFor(() => expect(lastParams()?.balance).toBe(''));
   });
 
   it('announces the totals when a filter changes them', async () => {
     /**
      * PTY-02's NFR. A filter changes the rows visibly and the totals silently;
-     * without the live region a merchant using a screen reader taps "Owes me"
+     * without the live region a merchant using a screen reader taps "I will get"
      * and is told nothing about the number they tapped it to find out.
      */
     partyService.listParties.mockResolvedValue(loaded([RAMESH]));
@@ -615,7 +621,7 @@ describe('the approved responsive rules, on the real screen', () => {
     await waitFor(() => expect(lastParams()?.status).toBe('archived'));
     expect(await screen.findByRole('button', { name: 'Clear filters (1)' })).toBeInTheDocument();
 
-    await pickBalance(user, 'Owes me');
+    await pickBalance(user, 'I will get');
     await waitFor(() => expect(lastParams()?.balance).toBe('owes_me'));
 
     await user.click(screen.getByRole('button', { name: 'Clear filters (2)' }));
@@ -1392,7 +1398,7 @@ describe('PTY-02 §9 — the ten states of the party list', () => {
      * Prevents: a filter change that looked like nothing happened. The slice
      * already kept the old rows during a refresh (`refreshing`), but nothing on
      * screen said a request was in flight — on a 3G phone a merchant tapped
-     * "Owes me", saw the same list for two seconds, and tapped it again, which
+     * "I will get", saw the same list for two seconds, and tapped it again, which
      * CLEARED the filter they had just applied.
      */
     partyService.listParties.mockResolvedValue(loaded([RAMESH]));
@@ -1403,7 +1409,7 @@ describe('PTY-02 §9 — the ten states of the party list', () => {
 
     const inFlight = deferred<ReturnType<typeof loaded>>();
     partyService.listParties.mockReturnValue(inFlight.promise);
-    await pickBalance(user, 'Owes me');
+    await pickBalance(user, 'I will get');
 
     expect(await screen.findByTestId('ub-grid-busy')).toBeInTheDocument();
     const row = screen.getByText('Ramesh Traders');
@@ -1995,7 +2001,7 @@ describe('one book: Suppliers', () => {
     await screen.findAllByText('Ramesh Traders');
 
     partyService.listParties.mockResolvedValue(EMPTY);
-    await pickBalance(user, 'Owes me');
+    await pickBalance(user, 'I will get');
     await waitFor(() => expect(lastParams().balance).toBe('owes_me'));
     expect(await screen.findByText('No suppliers match these filters')).toBeInTheDocument();
 

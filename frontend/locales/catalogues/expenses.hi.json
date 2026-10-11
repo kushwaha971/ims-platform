@@ -44,7 +44,7 @@
   "expenses.note": "नोट",
   "expenses.note.placeholder": "नोट लिखें",
   "expenses.owedTo": "किसे देना है",
-  "expenses.owedToHint": "उनके खाते में यह रकम आपकी ओर बाकी दिखेगी",
+  "expenses.owedToHint": "उनके खाते में दिखेगा कि यह आपको देना है",
   "expenses.paidNow": "अभी भुगतान किया",
   "expenses.paidNowHint": "अगर यह पैसा अभी देना बाकी है तो बंद करें",
   "expenses.paidTo": "किसे दिया",

@@ -723,7 +723,9 @@ describe('archiving from the khata page', () => {
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Archive' }));
 
-    expect(await screen.findByText('Ramesh Traders still owes you')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Ramesh Traders still has to give you money')
+    ).toBeInTheDocument();
     /* Inside the dialog: the header behind it is showing the same ₹2,300.00,
        which is the point — the dialog repeats the figure so the merchant does
        not have to look past a modal to read it. */
@@ -754,7 +756,7 @@ describe('archiving from the khata page', () => {
     await user.click(await screen.findByRole('button', { name: 'Archive' }));
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Archive' }));
-    await screen.findByText('Ramesh Traders still owes you');
+    await screen.findByText('Ramesh Traders still has to give you money');
     return screen.getByRole('dialog');
   };
 
@@ -941,7 +943,7 @@ describe('archiving from the khata page', () => {
     await user.click(await screen.findByRole('button', { name: 'Archive' }));
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Archive' }));
-    await screen.findByText('You still owe Ramesh Traders');
+    await screen.findByText('You still have to give Ramesh Traders money');
     const blocked = screen.getByRole('dialog');
     // The figure is positive; the words carry the direction.
     expect(within(blocked).getByText('₹500.00')).toBeInTheDocument();

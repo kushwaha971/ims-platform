@@ -233,11 +233,9 @@ describe('the entry drawer', () => {
      * screen that fails to OPEN because a convenience could not be read would
      * be a very poor trade for saving one tap.
      */
-    const getItem = jest
-      .spyOn(Storage.prototype, 'getItem')
-      .mockImplementation(() => {
-        throw new Error('denied');
-      });
+    const getItem = jest.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('denied');
+    });
 
     openDrawer('credit');
     renderWithProviders(<Harness />);
@@ -384,9 +382,7 @@ describe('the entry drawer', () => {
     await user.type(await screen.findByLabelText('Amount'), '500');
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
-    await waitFor(() =>
-      expect(store.getState().snackbar.id).toBe('ledger.entry.savedOverLimit')
-    );
+    await waitFor(() => expect(store.getState().snackbar.id).toBe('ledger.entry.savedOverLimit'));
     expect(store.getState().snackbar.params).toEqual({
       over: '10,000.00',
       limit: '50,000.00',

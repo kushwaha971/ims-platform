@@ -278,11 +278,23 @@ describe('the landing page promises only what is built', () => {
     },
     { what: 'e-invoice', en: /e-?invoic/i, hi: /ई-?इनवॉइस/u },
     { what: 'e-way bill', en: /e-?way/i, hi: /ई-?वे/u },
-    { what: 'GST return filing', en: /GSTR|file (your )?(GST )?returns?|return filing/i, hi: /GSTR|रिटर्न/u },
+    {
+      what: 'GST return filing',
+      en: /GSTR|file (your )?(GST )?returns?|return filing/i,
+      hi: /GSTR|रिटर्न/u,
+    },
     { what: 'bank sync', en: /\bbank\b/i, hi: /बैंक/u },
-    { what: 'a payment gateway', en: /gateway|pay online|accept (online |card |UPI )?payments/i, hi: /गेटवे|ऑनलाइन पेमेंट/u },
+    {
+      what: 'a payment gateway',
+      en: /gateway|pay online|accept (online |card |UPI )?payments/i,
+      hi: /गेटवे|ऑनलाइन पेमेंट/u,
+    },
     { what: 'barcode', en: /barcode|\bscan/i, hi: /बारकोड|स्कैन/u },
-    { what: 'P&L and balance sheet', en: /profit|P&L|balance sheet/i, hi: /लाभ|मुनाफ़ा|बैलेंस शीट/u },
+    {
+      what: 'P&L and balance sheet',
+      en: /profit|P&L|balance sheet/i,
+      hi: /लाभ|मुनाफ़ा|बैलेंस शीट/u,
+    },
     { what: 'multiple branches', en: /branch|multi-?(store|shop|location)/i, hi: /ब्रांच|शाखा/u },
     {
       what: 'a native app',
@@ -290,7 +302,7 @@ describe('the landing page promises only what is built', () => {
       hi: /ऐप स्टोर|प्ले स्टोर|ऐप डाउनलोड|मोबाइल ऐप/u,
     },
     {
-      what: 'something sent on the merchant\'s behalf (DEC-012)',
+      what: "something sent on the merchant's behalf (DEC-012)",
       en: /we send|sent automatically|automatic(ally)? (send|remind)|auto-?remind/i,
       hi: /अपने-आप भेज|हम भेज/u,
     },
@@ -302,7 +314,11 @@ describe('the landing page promises only what is built', () => {
       en: /\d[\d,.]*\s*(\+|k\b|lakh|crore)?\s*(users|shops|merchants|businesses|customers|downloads|shopkeepers)\b/i,
       hi: /\d[\d,.]*\s*\+?\s*(दुकानें|दुकानदार|यूज़र|व्यापारी)/u,
     },
-    { what: 'a rating or testimonial', en: /\brated\b|rating|★|\bstars?\b|testimonial|review/i, hi: /रेटिंग|समीक्षा/u },
+    {
+      what: 'a rating or testimonial',
+      en: /\brated\b|rating|★|\bstars?\b|testimonial|review/i,
+      hi: /रेटिंग|समीक्षा/u,
+    },
     {
       what: 'a popularity claim',
       en: /most popular|trusted by|loved by|thousands|lakhs|millions|#1|number one|best-selling/i,
@@ -416,7 +432,8 @@ describe('each module speaks only in its own place', () => {
   });
 
   it('retires the status labels and the planned-module lines, in both languages', () => {
-    const retired = /^landing\.module\.status\.|\.problem\.\d$|^landing\.modules\.(note|problems|willBuildOn|seeInUse|included|key\.planned)$/;
+    const retired =
+      /^landing\.module\.status\.|\.problem\.\d$|^landing\.modules\.(note|problems|willBuildOn|seeInUse|included|key\.planned)$/;
     expect(Object.keys(enMessages).filter((key) => retired.test(key))).toEqual([]);
     expect(Object.keys(hiMessages).filter((key) => retired.test(key))).toEqual([]);
   });
@@ -437,8 +454,12 @@ describe('each module speaks only in its own place', () => {
    */
   it('names the withdrawn coaching module nowhere', () => {
     const offending = landingKeys.flatMap((key) => [
-      ...(WITHDRAWN_MODULE_WORDS.en.test(enMessages[key] ?? '') ? [`${key} (en): ${enMessages[key]}`] : []),
-      ...(WITHDRAWN_MODULE_WORDS.hi.test(hiMessages[key] ?? '') ? [`${key} (hi): ${hiMessages[key]}`] : []),
+      ...(WITHDRAWN_MODULE_WORDS.en.test(enMessages[key] ?? '')
+        ? [`${key} (en): ${enMessages[key]}`]
+        : []),
+      ...(WITHDRAWN_MODULE_WORDS.hi.test(hiMessages[key] ?? '')
+        ? [`${key} (hi): ${hiMessages[key]}`]
+        : []),
     ]);
     expect(offending).toEqual([]);
   });
@@ -473,12 +494,24 @@ describe('"Why YourKhata" names nobody and ranks nothing', () => {
     WHY_POINTS.forEach((id) =>
       WHY_PARTS.forEach((part) => {
         const key = whyKey(id, part);
-        expect({ key, en: !!enMessages[key], hi: !!hiMessages[key] }).toEqual({ key, en: true, hi: true });
+        expect({ key, en: !!enMessages[key], hi: !!hiMessages[key] }).toEqual({
+          key,
+          en: true,
+          hi: true,
+        });
       })
     );
-    const pointKeys = new Set(WHY_POINTS.flatMap((id) => WHY_PARTS.map((part) => whyKey(id, part))));
-    const shared = new Set(['eyebrow', 'lead', 'key', 'body', 'missLabel'].map((part) => `landing.why.${part}`));
-    expect(landingKeys.filter((key) => key.startsWith('landing.why.') && !pointKeys.has(key) && !shared.has(key))).toEqual([]);
+    const pointKeys = new Set(
+      WHY_POINTS.flatMap((id) => WHY_PARTS.map((part) => whyKey(id, part)))
+    );
+    const shared = new Set(
+      ['eyebrow', 'lead', 'key', 'body', 'missLabel'].map((part) => `landing.why.${part}`)
+    );
+    expect(
+      landingKeys.filter(
+        (key) => key.startsWith('landing.why.') && !pointKeys.has(key) && !shared.has(key)
+      )
+    ).toEqual([]);
   });
 
   it.each(['en', 'hi'] as const)('names no competitor in any landing string (%s)', (lang) => {
@@ -488,7 +521,9 @@ describe('"Why YourKhata" names nobody and ranks nothing', () => {
 
   it.each(['en', 'hi'] as const)('makes no comparative claim nobody has measured (%s)', (lang) => {
     const messages = lang === 'en' ? enMessages : hiMessages;
-    expect(landingKeys.filter((key) => COMPARATIVE_CLAIMS[lang].test(messages[key] ?? ''))).toEqual([]);
+    expect(landingKeys.filter((key) => COMPARATIVE_CLAIMS[lang].test(messages[key] ?? ''))).toEqual(
+      []
+    );
   });
 
   /** The payments point is about where the money goes, never a gateway (DEC-012, capabilities). */

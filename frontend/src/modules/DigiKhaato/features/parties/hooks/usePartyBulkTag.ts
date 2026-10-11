@@ -89,17 +89,11 @@ const groupChanges = (
   return [...groups.values()];
 };
 
-export function usePartyBulkTag(
-  ids: readonly string[],
-  onDone: () => void
-): UsePartyBulkTagResult {
+export function usePartyBulkTag(ids: readonly string[], onDone: () => void): UsePartyBulkTagResult {
   const dispatch = useAppDispatch();
   const { can } = usePermissions();
   const tags = useAppSelector(selectPartyTags);
-  const tagsById = useMemo(
-    () => new Map(tags.map((tag) => [tag.id, tag.name] as const)),
-    [tags]
-  );
+  const tagsById = useMemo(() => new Map(tags.map((tag) => [tag.id, tag.name] as const)), [tags]);
 
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);

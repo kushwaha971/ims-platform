@@ -139,8 +139,7 @@ export default partyTagSlice.reducer;
 export const selectPartyTags = (state: RootState): readonly PartyTagWithCount[] =>
   state.partyTag.tags;
 export const selectPartyTagStatus = (state: RootState): RequestStatus => state.partyTag.status;
-export const selectPartyTagError = (state: RootState): ApiErrorShape | null =>
-  state.partyTag.error;
+export const selectPartyTagError = (state: RootState): ApiErrorShape | null => state.partyTag.error;
 export const selectPartyTagsLoaded = (state: RootState): boolean =>
   state.partyTag.loadedAt !== null;
 export const selectPartyTagsStale = (state: RootState): boolean => state.partyTag.stale;

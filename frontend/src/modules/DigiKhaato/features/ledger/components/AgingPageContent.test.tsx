@@ -522,8 +522,8 @@ describe('the states that are not a list', () => {
     signIn(['parties.party.read' as PermissionCode]);
     renderWithProviders(<AgingPageContent />);
 
-    expect(await screen.findByText('You can’t see the ledger')).toBeInTheDocument();
-    expect(screen.getByText('Ask the owner for access to the ledger.')).toBeInTheDocument();
+    expect(await screen.findByText('You can’t see the khata')).toBeInTheDocument();
+    expect(screen.getByText('Ask the owner to let you see the khata.')).toBeInTheDocument();
     expect(agingService.getLedgerAging).not.toHaveBeenCalled();
     expect(agingService.getLedgerSummary).not.toHaveBeenCalled();
     expect(screen.queryByTestId('aging-export')).not.toBeInTheDocument();
@@ -536,7 +536,7 @@ describe('the states that are not a list', () => {
     signIn(OWNER_PERMISSIONS, ['parties']);
     renderWithProviders(<AgingPageContent />);
 
-    expect(await screen.findByText('You can’t see the ledger')).toBeInTheDocument();
+    expect(await screen.findByText('You can’t see the khata')).toBeInTheDocument();
     expect(agingService.getLedgerAging).not.toHaveBeenCalled();
   });
 });

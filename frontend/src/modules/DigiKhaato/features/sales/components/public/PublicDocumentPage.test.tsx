@@ -247,7 +247,7 @@ it('a network failure offers a retry, not the expired screen', async () => {
 it('renders in Hindi', async () => {
   respond(publicWire({ locale: 'hi' }));
   render({ locale: 'hi' });
-  expect(await screen.findByText('बकाया राशि')).toBeInTheDocument();
+  expect((await screen.findAllByText('बाकी राशि')).length).toBeGreaterThan(0);
   expect(screen.getByTestId('public-pay')).toHaveTextContent('₹473.00 का भुगतान करें');
   expect(screen.getByTestId('public-status')).toHaveTextContent('भुगतान बाकी');
 });

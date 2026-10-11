@@ -164,7 +164,7 @@
   "sales.empty.filtered": "No bills match",
   "sales.empty.filteredBody": "Try another tab, date range or search.",
   "sales.empty.first": "No bills yet",
-  "sales.empty.firstBody": "Create your first bill.",
+  "sales.empty.firstBody": "Make a bill, then print it or send it on WhatsApp.",
   "sales.estimate.convert.action": "Convert to invoice",
   "sales.estimate.convert.confirm": "Create invoice from {number}? Lines and prices are copied; you can edit before issuing.",
   "sales.estimate.convert.title": "Create invoice?",

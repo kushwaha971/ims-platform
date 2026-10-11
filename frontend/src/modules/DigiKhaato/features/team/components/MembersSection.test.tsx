@@ -267,8 +267,7 @@ describe('MembersSection — a mobile another login already holds (NEW-2)', () =
        field error on `mobile`; this pins that it lands on that control, is
        announced through its `aria-describedby`, and that the dialog stays up
        with what the owner typed so they only have to clear the one field. */
-    const message =
-      'This mobile number is already used by another login. Use a different number.';
+    const message = 'This mobile number is already used by another login. Use a different number.';
     memberService.createMember.mockRejectedValue({
       code: 'validation_error',
       message: 'Please check the highlighted fields.',
@@ -300,8 +299,7 @@ describe('MembersSection — the taken-mobile refusal in Hindi (L6)', () => {
        does not localise it. The server now sends `field_codes.mobile =
        "mobile_taken"`, and the dialog must say `errors.field.mobile_taken`
        from hi.json instead. */
-    const english =
-      'This mobile number is already used by another login. Use a different number.';
+    const english = 'This mobile number is already used by another login. Use a different number.';
     memberService.createMember.mockRejectedValue({
       code: 'validation_error',
       message: 'Please check the highlighted fields.',

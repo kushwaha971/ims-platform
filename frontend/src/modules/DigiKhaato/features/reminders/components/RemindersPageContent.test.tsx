@@ -227,7 +227,7 @@ describe('the reminders screen (LED-05)', () => {
     await waitFor(() =>
       expect(within(tabs).getByRole('tab', { name: /Overdue\s*5/ })).toBeInTheDocument()
     );
-    expect(within(tabs).getByRole('tab', { name: /Due today\s*2/ })).toHaveAttribute(
+    expect(within(tabs).getByRole('tab', { name: /To collect today\s*2/ })).toHaveAttribute(
       'aria-selected',
       'true'
     );

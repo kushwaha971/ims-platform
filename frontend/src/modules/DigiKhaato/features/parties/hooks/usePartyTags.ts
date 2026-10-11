@@ -95,10 +95,7 @@ export function usePartyTags(options: { readonly force?: boolean } = {}): UsePar
     return map;
   }, [tags]);
 
-  const byName = useCallback(
-    (name: string) => index.get(name.trim().toLocaleLowerCase()),
-    [index]
-  );
+  const byName = useCallback((name: string) => index.get(name.trim().toLocaleLowerCase()), [index]);
 
   const refetch = useCallback(() => {
     void dispatch(fetchPartyTags({ force: true }));

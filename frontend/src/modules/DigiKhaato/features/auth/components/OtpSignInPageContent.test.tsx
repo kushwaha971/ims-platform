@@ -103,7 +103,9 @@ describe('OtpSignInPageContent — the number', () => {
 
   it('words the same flow as sign-up on /signup, with the terms line', () => {
     renderWithProviders(<OtpSignInPageContent mode="signUp" />);
-    expect(screen.getByRole('heading', { level: 1, name: 'Create your account' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Create your account' })
+    ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Sign in' })).toBeInTheDocument();
   });
 });

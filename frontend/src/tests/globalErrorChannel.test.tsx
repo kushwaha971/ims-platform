@@ -196,7 +196,7 @@ describe('the rule: an API failure surfaces centrally, through the snackbar', ()
     // host resolves it — BrandHub's `id`/`params` mechanism.
     await waitFor(() => expect(store.getState().snackbar.id).toBe('error.network'));
     expect(await screen.findByTestId('snackbar')).toHaveTextContent(
-      'Could not reach the server. Check your connection and try again.'
+      'No internet. Check it and try again.'
     );
   });
 });
