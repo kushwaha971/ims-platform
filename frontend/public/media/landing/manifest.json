@@ -669,7 +669,7 @@
       "language": "hi",
       "width": 720,
       "height": 1558,
-      "duration": 316.27,
+      "duration": 316.3,
       "fps": 30,
       "loop": false,
       "audio": true,
@@ -677,10 +677,10 @@
         {
           "src": "/media/landing/demo-hi-mobile.mp4",
           "type": "video/mp4; codecs=avc1.4D401F,mp4a.40.2",
-          "bytes": 12206434
+          "bytes": 12294764
         }
       ],
-      "bytes": 12206434,
+      "bytes": 12294764,
       "poster": {
         "webp": "/media/landing/demo-hi-mobile-poster.webp",
         "jpg": "/media/landing/demo-hi-mobile-poster.jpg"

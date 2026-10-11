@@ -171,6 +171,39 @@
     .ub-gst .gst-divide {
       border-bottom: 1px solid #000;
     }
+
+    /* The HSN-wise tax summary is seven columns of figures. On a phone its
+       cell is the full width of a 390 px sheet, and at the sheet's own type
+       and padding the table's narrowest layout was still ~20 px wider than
+       that: it ran through the sheet's right-hand rule and the last column
+       ("Total tax") was drawn across the border (owner, 11 Oct 2026, from the
+       phone demo film). The cell may shrink, and the summary is set tighter.
+       Paper is untouched: this is the screen, below `sm`. */
+    .ub-gst .gst-cell {
+      min-width: 0;
+    }
+
+    /* Set tighter, an ordinary bill's summary fits a 360 px phone with room
+       to spare and no figure broken. A bill in lakhs has longer figures than
+       any phone has room for, so the table is also its own scroll box: it can
+       be slid sideways, and it can never be drawn across the sheet's border.
+       (Two other ways were tried and looked at. `table-layout: fixed` split
+       "Amount" and "720.00" in two on every bill; `overflow-wrap: anywhere`
+       split "Rate" into "Rat/e".) */
+    .ub-gst .gst-grid-boxed {
+      display: block;
+      max-width: 100%;
+      overflow-x: auto;
+      font-size: 8.5px;
+    }
+
+    /* `table.` on purpose: the general `.gst-grid th, td` padding is declared
+       further down this file with the same weight, and won — the first
+       version of this rule changed nothing and looked as though it had. */
+    .ub-gst table.gst-grid-boxed th,
+    .ub-gst table.gst-grid-boxed td {
+      padding: 2px 2px;
+    }
   }
 
   .ub-gst .gst-label {

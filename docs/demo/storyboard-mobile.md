@@ -54,12 +54,12 @@ Every feature follows one order: the problem and a real moment it bites (a still
   - `1:20` ग्राहक कहता है, मैंने तो पैसे दे दिए थे। अब आप क्या दिखाएँगे?
     - _A customer says, but I already paid you. What will you show them?_
 
-## Scene 5: credit — Solution, step by step, and its benefit (1:27–1:54)
+## Scene 5: credit — Solution, step by step, and its benefit (1:26–1:54)
 
 - **On screen:** A business already in use: Customers, then Ramesh Traders' account, then the You got drawer.
 - **Recorded actions:** Open Customers and look down the balances; open Ramesh Traders; press You got, type 500 and a note, save; look at the new balance.
 - **Narration:**
-  - `1:27` हल, हर ग्राहक का अपना खाता। Customers खोलिए, सामने है किस पर कितना बाकी है।
+  - `1:26` हल, हर ग्राहक का अपना खाता। Customers खोलिए, सामने है किस पर कितना बाकी है।
     - _The answer: an account for every customer. Open Customers, and there is who owes how much._
   - `1:34` रमेश ट्रेडर्स का खाता खोलते हैं। हर लेन-देन तारीख़ के साथ लिखा है।
     - _Open the account of Ramesh Traders. Every entry is written down with its date._
