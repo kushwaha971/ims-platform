@@ -201,7 +201,7 @@ function UbOtpInputBase({
                uses for its own slots (`ds-body-l-medium` on a `size-9` box).
                The cell stays 48x44 rather than their 36x36: this is a six-cell
                row a merchant types on a phone. */
-            'ds-num-base h-12 w-11 rounded-control border bg-surface-card text-center',
+            'ds-num-base h-12 w-11 min-w-0 rounded-control border bg-surface-card text-center',
             'text-text-primary transition-colors duration-fast ease-standard',
             'read-only:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-100',
             'disabled:bg-surface-sunken disabled:text-text-muted',
