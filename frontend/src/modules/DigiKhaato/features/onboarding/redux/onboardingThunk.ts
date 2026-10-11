@@ -9,6 +9,7 @@ import { getSession } from '../../auth/api/authService';
 import * as onboardingService from '../api/onboardingService';
 
 import type {
+  OfferedApp,
   OnboardingAddressStep,
   OnboardingBusinessStep,
   OnboardingGstStep,
@@ -92,6 +93,30 @@ export const findResumableBusiness = createAsyncThunk<
     condition: (_arg, { getState }) =>
       (getState() as { onboarding: { resumableStatus: string } }).onboarding.resumableStatus ===
       'idle',
+  }
+);
+
+/**
+ * QUERY — which apps a new business may choose (owner, 11 Oct 2026). Read once
+ * per wizard, before step 1 is drawn. Rejected means "no choice to offer", and
+ * step 1 falls back to the Shop the server gives by default.
+ */
+export const loadOfferedApps = createAsyncThunk<
+  readonly OfferedApp[],
+  void,
+  { rejectValue: ApiErrorShape }
+>(
+  'onboarding/loadOfferedApps',
+  async (_arg, { rejectWithValue }) => {
+    try {
+      return await onboardingService.fetchOfferedApps();
+    } catch (error) {
+      return rejectWithValue(toApiError(error, 'onboarding.error.resume'));
+    }
+  },
+  {
+    condition: (_arg, { getState }) =>
+      (getState() as { onboarding: { offeredStatus: string } }).onboarding.offeredStatus === 'idle',
   }
 );
 

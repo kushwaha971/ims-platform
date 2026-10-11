@@ -7,6 +7,7 @@
   "validation.amount.positive": "रकम शून्य से ज़्यादा होनी चाहिए।",
   "validation.amount.required": "रकम भरें।",
   "validation.amount.tooLarge": "यह रकम बहुत बड़ी है।",
+  "validation.apps.required": "कम से कम एक चुनें",
   "validation.businessType.required": "व्यापार का प्रकार चुनें",
   "validation.date.future": "यह तारीख आगे की नहीं हो सकती।",
   "validation.date.invalid": "यह तारीख सही नहीं है।",

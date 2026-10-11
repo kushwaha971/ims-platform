@@ -52,6 +52,8 @@ export const QUERIES = {
   resumeOnboarding: 'onboarding/resume',
   // M2 — which unfinished business "Add a business" would continue
   findResumableBusiness: 'onboarding/findResumable',
+  // 11 Oct 2026 — the apps a new business may choose on step 1
+  loadOfferedApps: 'onboarding/loadOfferedApps',
   // PLT-06 — the settings screen, and the product defaults "Reset" offers
   fetchSettings: 'settings/fetch',
   fetchSettingsDefaults: 'settings/fetchDefaults',

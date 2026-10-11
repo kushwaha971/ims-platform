@@ -20,13 +20,11 @@
  * Prints one JSON line with the ids the recorders open. Names are invented and
  * the mobiles are in ranges nobody is texted from here.
  */
-import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { api, must } from '../lib/fixtures.mjs';
-import { PYTHON } from '../lib/local.mjs';
 
 const REPO = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const LOG = process.env.DEMO_API_LOG;
@@ -53,16 +51,12 @@ const challenge = await must('POST', '/auth/otp/request', { mobile: OWNER.mobile
 const signedIn = await must('POST', '/auth/otp/verify', { challenge_id: challenge.challenge_id, code: await codeFor(OWNER.mobile, from) });
 let tok = signedIn.access_token;
 
-const enable = (tenantId, module) => execFileSync(PYTHON, ['manage.py', 'shell', '-c', `
-from apps.platform_app.models import Tenant
-t = Tenant.objects.get(id='${tenantId}')
-for row, field in ((t.plan, 'modules'), (t.partner, 'allowed_modules')):
-    setattr(row, field, sorted(set(getattr(row, field) or []) | {'${module}'})); row.save(update_fields=[field])
-t.enabled_modules = sorted(set(t.enabled_modules or []) | {'${module}'}); t.save(update_fields=['enabled_modules'])
-`], { cwd: path.join(REPO, 'backend'), env: { ...process.env, UB_UNRELEASED_MODULES: '1' } });
-
-const business = async (name, type, extra = {}) => {
-  const made = await must('POST', '/tenants', { name, business_type: type, state_code: '27', owner_name: OWNER.name }, tok);
+// Each business chooses what it runs at sign-up, the way a merchant now does
+// (`apps` on POST /tenants). The reading room is a Library and nothing else;
+// the finance business is Lending and nothing else. Until 11 Oct 2026 this
+// seed had to switch those modules on behind the API's back.
+const business = async (name, apps, extra = {}) => {
+  const made = await must('POST', '/tenants', { name, apps, ...(apps.includes('shop') ? { business_type: 'retail' } : {}), state_code: '27', owner_name: OWNER.name }, tok);
   const token = made.access_token ?? (await must('POST', '/auth/switch-tenant', { tenant_id: made.id ?? made.tenant?.id }, tok)).access_token;
   for (const step of [2, 3, 4]) await must('PATCH', '/tenants/current', { onboarding_step: step }, token);
   await must('PATCH', '/tenants/current', { phone: '9876543210', address: { line1: '12 Station Road', city: 'Pune', pincode: '411001', state_code: '27' }, ...extra }, token);
@@ -79,7 +73,7 @@ const demoGstin = (() => {
   [...body].forEach((ch, i) => { const p = B36.indexOf(ch) * (i % 2 ? 2 : 1); sum += Math.floor(p / 36) + (p % 36); });
   return body + B36[(36 - (sum % 36)) % 36];
 })();
-const shop = await business('Sharma General Store', 'retail', { upi_vpa: 'sharmastore.demo@example', gst_type: 'regular', gstin: demoGstin });
+const shop = await business('Sharma General Store', ['shop'], { upi_vpa: 'sharmastore.demo@example', gst_type: 'regular', gstin: demoGstin });
 {
   const t = shop.token;
   const units = await must('GET', '/units', null, t);
@@ -126,8 +120,7 @@ const shop = await business('Sharma General Store', 'retail', { upi_vpa: 'sharma
 }
 
 // ── 2. Library ──────────────────────────────────────────────────────────────
-const library = await business('Vidya Reading Room', 'retail');
-enable(library.id, 'library');
+const library = await business('Vidya Reading Room', ['library']);
 {
   const t = library.token;
   const cat = async (name) => (await must('POST', '/library/categories', { name }, t)).id;
@@ -171,8 +164,7 @@ enable(library.id, 'library');
 }
 
 // ── 3. Lending ──────────────────────────────────────────────────────────────
-const lending = await business('Verma Finance', 'retail', { upi_vpa: 'vermafinance.demo@example' });
-enable(lending.id, 'lending');
+const lending = await business('Verma Finance', ['lending'], { upi_vpa: 'vermafinance.demo@example' });
 {
   const t = lending.token;
   const loan = (name, mobile, principal, count, per, startedDaysAgo, extra = {}) => must('POST', '/lending/loans', {

@@ -101,10 +101,24 @@ class TenantCreateSerializer(serializers.Serializer):
     """Step 1 — `POST /tenants` (FR-2, §10)."""
 
     name = serializers.CharField(min_length=2, max_length=160, trim_whitespace=True)
-    business_type = serializers.ChoiceField(choices=BusinessType.choices)
+    # The kind of shop. It configures Shop & billing only, so it is asked for
+    # only when the business runs that app (`apps` absent means it does).
+    business_type = serializers.ChoiceField(choices=BusinessType.choices, required=False)
     state_code = StateCodeField(max_length=2)
     locale = serializers.ChoiceField(choices=["en", "hi"], required=False, default="en")
     owner_name = serializers.CharField(max_length=120, required=False, allow_blank=True)
+    # What the business will run: app codes from `GET /onboarding/apps`. Absent
+    # is the Shop, which is what every client before 11 Oct 2026 means by it.
+    apps = serializers.ListField(
+        child=serializers.CharField(max_length=32), required=False, allow_empty=False, max_length=16
+    )
+
+    def validate(self, attrs: dict) -> dict:
+        runs_shop = "apps" not in attrs or "shop" in attrs["apps"]
+        if runs_shop and not attrs.get("business_type"):
+            raise serializers.ValidationError({"business_type": ["Choose what kind of business it is."]})
+        attrs.setdefault("business_type", BusinessType.OTHER.value)
+        return attrs
 
 
 class TenantUpdateSerializer(serializers.Serializer):
@@ -117,6 +131,12 @@ class TenantUpdateSerializer(serializers.Serializer):
     """
 
     name = serializers.CharField(min_length=2, max_length=160, required=False)
+    # Step 1 edited before the wizard is finished: what the business will run.
+    # Refused once setup is complete — from then on an app is added or turned
+    # off in the switcher, where the open-work checks and the copy for it live.
+    apps = serializers.ListField(
+        child=serializers.CharField(max_length=32), required=False, allow_empty=False, max_length=16
+    )
     legal_name = serializers.CharField(
         max_length=200, required=False, allow_blank=True, allow_null=True
     )
@@ -228,6 +248,16 @@ class TenantReadSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         hidden = hidden_modules()
         data["enabled_modules"] = [m for m in data.get("enabled_modules") or [] if m not in hidden]
+        # What the business RUNS, as app codes (11 Oct 2026): the setup wizard
+        # reads its step-1 choice back from here after a reload, instead of
+        # guessing it from capability names.
+        from apps.platform_app import apps_registry
+
+        # Read off the switches already in hand: `apps_of_business` resolves the
+        # effective set and costs a query on the cheapest endpoint in the
+        # product (`tests/performance/test_query_budgets.py`, tenants-current).
+        on = set(data["enabled_modules"])
+        data["apps"] = [a.code for a in apps_registry.registered_apps() if a.anchor in on]
         return data
 
 

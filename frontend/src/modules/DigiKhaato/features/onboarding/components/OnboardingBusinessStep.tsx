@@ -3,16 +3,18 @@
 import { useCallback, useMemo } from 'react';
 
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 
 import { UbCombobox, UbDivider, UbField, UbForm, UbStack, UbTextInput } from 'src/design-system';
 import { useAppSelector } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { selectLocale } from 'src/redux/slice/localeSlice';
 
+import { SHOP_APP } from '../constants/appChoices';
 import { GST_STATES } from '../constants/gstStates';
 import { useOnboardingSchemas } from '../validation/onboardingSchemas';
 
+import { AppChoiceGrid } from './AppChoiceGrid';
 import { BusinessTypeGrid } from './BusinessTypeGrid';
 import { OnboardingStepActions } from './OnboardingStepActions';
 import { OnboardingStepCard } from './OnboardingStepCard';
@@ -48,6 +50,7 @@ export function OnboardingBusinessStep({
     defaultValues: {
       name: onboarding.draft.name,
       businessType: onboarding.draft.businessType ?? '',
+      apps: initialApps(onboarding),
       stateCode: onboarding.draft.stateCode ?? '',
       ownerName: onboarding.draft.ownerName,
     },
@@ -59,6 +62,8 @@ export function OnboardingBusinessStep({
   );
 
   const { setError } = form;
+  const chosenApps = useWatch({ control: form.control, name: 'apps' });
+  const runsShop = chosenApps.includes(SHOP_APP);
   const submit = useCallback(
     (values: BusinessStepFormValues) => onboarding.submitBusinessStep(values, setError),
     [onboarding, setError]
@@ -134,23 +139,51 @@ export function OnboardingBusinessStep({
 
         <UbDivider decorative />
 
-        <UbField
-          name="businessType"
-          label={t('onboarding.type.label')}
-          placeholder={t('onboarding.type.placeholder')}
-          hint={t('onboarding.type.hint')}
-          required
-        >
-          {(field) => (
-            <BusinessTypeGrid
-              value={(field.value as BusinessType | '') || ''}
-              onChange={field.onChange}
-              invalid={field.invalid}
-              describedBy={field['aria-describedby']}
-              ariaLabel={t('onboarding.type.label')}
-            />
-          )}
-        </UbField>
+        {/* Owner, 11 Oct 2026 — the question this step never asked. Every
+            business was given the Shop, and a library was told (in the hint
+            under the shop tiles) to add its own app "from the business menu"
+            afterwards. It is asked here, of everybody, from the server's own
+            list; more than one may be ticked and none is ticked for them. */}
+        {onboarding.offeredApps && (
+          <UbField
+            name="apps"
+            label={t('onboarding.apps.label')}
+            hint={t('onboarding.apps.hint')}
+            required
+          >
+            {(field) => (
+              <AppChoiceGrid
+                apps={onboarding.offeredApps ?? []}
+                value={(field.value as string[] | undefined) ?? []}
+                onChange={field.onChange}
+                describedBy={field['aria-describedby']}
+                ariaLabel={t('onboarding.apps.label')}
+              />
+            )}
+          </UbField>
+        )}
+
+        {/* The kind of shop sets the Shop's starting defaults and nothing
+            else, so it is asked only of a business that ticked the Shop. */}
+        {runsShop && (
+          <UbField
+            name="businessType"
+            label={t('onboarding.type.label')}
+            placeholder={t('onboarding.type.placeholder')}
+            hint={t('onboarding.type.hint')}
+            required
+          >
+            {(field) => (
+              <BusinessTypeGrid
+                value={(field.value as BusinessType | '') || ''}
+                onChange={field.onChange}
+                invalid={field.invalid}
+                describedBy={field['aria-describedby']}
+                ariaLabel={t('onboarding.type.label')}
+              />
+            )}
+          </UbField>
+        )}
 
         <OnboardingStepActions
           onBack={null}
@@ -165,3 +198,21 @@ export function OnboardingBusinessStep({
     </OnboardingStepCard>
   );
 }
+
+/**
+ * What step 1 opens with ticked.
+ *
+ * A choice already made (this wizard, or read back after a reload) is shown
+ * as made. With one app on offer there is nothing to choose, so it is taken.
+ * With no offer at all the step asks no question and the business is a Shop,
+ * as before the choice existed. Otherwise NOTHING is ticked: the point of the
+ * question is that nobody is handed an app they did not ask for.
+ */
+const initialApps = (onboarding: UseOnboardingResult): string[] => {
+  const offered = onboarding.offeredApps;
+  if (!offered) return [SHOP_APP];
+  const codes = offered.map((app) => app.code);
+  const drafted = (onboarding.draft.apps ?? []).filter((code) => codes.includes(code));
+  if (drafted.length > 0) return drafted;
+  return codes.length === 1 ? [...codes] : [];
+};

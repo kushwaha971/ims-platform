@@ -11,6 +11,7 @@ import { selectLocale } from 'src/redux/slice/localeSlice';
 import {
   selectActiveTenant,
   selectEnabledModules,
+  selectLanding,
   selectSessionUser,
 } from 'src/redux/slice/sessionSlice';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
@@ -27,6 +28,8 @@ import { applyServerErrors } from 'src/utils/applyServerErrors';
 import { newRequestId } from 'src/utils/requestId';
 import { readLocal, removeLocal, writeLocal } from 'src/utils/storage';
 
+import { landingRoute } from '../../auth/view-model/landing';
+import { SHOP_APP } from '../constants/appChoices';
 import {
   draftChanged,
   onboardingErrorCleared,
@@ -35,6 +38,8 @@ import {
   selectOnboardingCreateKey,
   selectOnboardingDraft,
   selectOnboardingError,
+  selectOnboardingOfferedApps,
+  selectOnboardingOfferedStatus,
   selectOnboardingResumable,
   selectOnboardingResumableStatus,
   selectOnboardingResumeStatus,
@@ -51,6 +56,7 @@ import {
   completeOnboarding,
   createTenant,
   findResumableBusiness,
+  loadOfferedApps,
   resumeOnboarding,
   saveAddressStep,
   saveBusinessStep,
@@ -59,7 +65,7 @@ import {
 import { isOnboardingComplete, shouldResumeFromServer } from '../view-model/onboardingDisplay';
 
 import type { OnboardingDraft, ResumableBusiness } from '../redux/onboardingSlice';
-import type { OnboardingResult, OnboardingWarning } from '../types/onboarding.types';
+import type { OfferedApp, OnboardingResult, OnboardingWarning } from '../types/onboarding.types';
 import type {
   AddressStepFormValues,
   BusinessStepFormValues,
@@ -86,7 +92,7 @@ import type { UseFormSetError } from 'react-hook-form';
  *    disabled — not hidden — in confirmed `offline`.
  */
 /** The RHF paths each step owns, so `applyServerErrors()` knows what to anchor. */
-const BUSINESS_FIELDS = ['name', 'businessType', 'stateCode', 'ownerName'];
+const BUSINESS_FIELDS = ['name', 'businessType', 'apps', 'stateCode', 'ownerName'];
 const GST_FIELDS = ['gstType', 'gstin', 'legalName', 'pan'];
 const ADDRESS_FIELDS = ['line1', 'line2', 'city', 'district', 'pincode', 'phone', 'email'];
 
@@ -147,6 +153,11 @@ export interface UseOnboardingResult {
    * found one. Step 1 names it and shows its values; Continue finishes it.
    */
   readonly resumableBusiness: ResumableBusiness | null;
+  /**
+   * The apps step 1 lets a new business choose from — the server's list.
+   * `null` when it offered none: the step then asks no app question.
+   */
+  readonly offeredApps: readonly OfferedApp[] | null;
   readonly formErrors: readonly string[];
   /** The owner's name, so step 1 only asks when it is genuinely blank (BR-7). */
   readonly needsOwnerName: boolean;
@@ -260,7 +271,20 @@ export const useOnboarding = (routeStep: number): UseOnboardingResult => {
   const isCheckingResumable =
     needsResumableCheck && (resumableStatus === 'idle' || resumableStatus === 'loading');
 
-  const isResuming = (needsResume && resumeStatus !== 'failed') || isCheckingResumable;
+  /**
+   * What a new business may choose to run, asked once per wizard and BEFORE
+   * step 1 is drawn — its form takes its values once, at mount, so a list that
+   * arrived late would find the form already built without the question.
+   */
+  const offeredApps = useAppSelector(selectOnboardingOfferedApps);
+  const offeredStatus = useAppSelector(selectOnboardingOfferedStatus);
+  useEffect(() => {
+    if (offeredStatus === 'idle') void dispatch(loadOfferedApps());
+  }, [dispatch, offeredStatus]);
+  const isLoadingOffer = offeredStatus === 'idle' || offeredStatus === 'loading';
+
+  const isResuming =
+    (needsResume && resumeStatus !== 'failed') || isCheckingResumable || isLoadingOffer;
 
   const [formErrors, setFormErrors] = useState<readonly string[]>([]);
 
@@ -274,9 +298,20 @@ export const useOnboarding = (routeStep: number): UseOnboardingResult => {
   // sign-in lands them (UAT D5): RPT-01's dashboard is built and is the app's
   // landing page (auth's `DEFAULT_POST_LOGIN_PATH`), so finishing the wizard and
   // signing in next morning open the same screen.
+  //
+  // 11 Oct 2026 — "where sign-in lands them" is the SERVER's answer now, not
+  // the Shop's dashboard: a business that chose only Library opens on the
+  // library's day, exactly as it will tomorrow morning. `completeOnboarding`
+  // re-reads the session before `completed` is set, so `landing` is current.
+  const landing = useAppSelector(selectLanding);
   useEffect(() => {
-    if (completed) router.replace(ROUTES.DASHBOARD);
-  }, [completed, router]);
+    if (!completed) return;
+    // Only an `app` landing is a place to go: anything else here would be a
+    // session that has not caught up, and the dashboard is the safe answer.
+    router.replace(
+      landing.kind === 'app' ? landingRoute(landing, ROUTES.DASHBOARD) : ROUTES.DASHBOARD
+    );
+  }, [completed, router, landing]);
 
   const goToStep = useCallback(
     (next: number) => {
@@ -330,8 +365,12 @@ export const useOnboarding = (routeStep: number): UseOnboardingResult => {
     async (values: BusinessStepFormValues, setError: UseFormSetError<BusinessStepFormValues>) => {
       setFormErrors([]);
       // Held in a const so the narrowing survives into the retry closure below.
-      const { businessType } = values;
-      if (!businessType) return;
+      // `null` when the server offered no choice: nothing is sent and the
+      // business is a Shop, as before. The kind of shop goes only with a Shop.
+      const apps = offeredApps ? values.apps : null;
+      const runsShop = apps === null || apps.includes(SHOP_APP);
+      const businessType = runsShop ? values.businessType || null : null;
+      if (runsShop && !businessType) return;
       const isEdit = tenantId !== null;
       try {
         if (isEdit) {
@@ -339,6 +378,7 @@ export const useOnboarding = (routeStep: number): UseOnboardingResult => {
             saveBusinessStep({
               name: values.name,
               businessType,
+              apps,
               stateCode: values.stateCode,
               ownerName: values.ownerName,
             })
@@ -356,6 +396,7 @@ export const useOnboarding = (routeStep: number): UseOnboardingResult => {
             createTenant({
               name: values.name,
               businessType,
+              apps,
               stateCode: values.stateCode,
               ownerName: values.ownerName,
               idempotencyKey: key,
@@ -397,7 +438,7 @@ export const useOnboarding = (routeStep: number): UseOnboardingResult => {
         // `gstin_in_use` cannot occur on step 1; everything else is the banner.
       }
     },
-    [dispatch, idempotencyKey, advance, tenantId]
+    [dispatch, idempotencyKey, advance, tenantId, offeredApps]
   );
 
   const submitGstStep = useCallback(
@@ -509,6 +550,7 @@ export const useOnboarding = (routeStep: number): UseOnboardingResult => {
     isResuming,
     progressStep: isResuming ? Math.min(ONBOARDING_STEP_MAX, Math.max(1, routeStep)) : step,
     resumableBusiness: tenantId === null ? resumable : null,
+    offeredApps,
     formErrors,
     needsOwnerName: !user?.name,
     goToStep,

@@ -97,6 +97,26 @@ def _tenant_or_refuse(request: Any) -> Any:
     return tenant
 
 
+class OnboardingAppsView(APIView):
+    """`GET /onboarding/apps` — what a NEW business can choose to run.
+
+    For somebody signed in who has no business yet, so it takes no tenant: the
+    answer is the registry's released apps on the plan a new business gets.
+    The client draws its step-1 choice from this and nothing else, so an app
+    that is registered and released appears there without a frontend release,
+    and one that is not can never be picked.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request: Any) -> Any:
+        from apps.platform_app import apps_registry
+
+        return StandardResponse.ok(
+            [apps_registry.app_json(app) for app in onboarding_service.offerable_apps()]
+        )
+
+
 class TenantCreateView(APIView):
     """`POST /tenants` — onboarding step 1 (PLT-03 FR-2, §12, EC-7).
 
@@ -135,6 +155,7 @@ class TenantCreateView(APIView):
             request_id=meta["request_id"],
             ip=meta["ip"],
             user_agent=meta["user_agent"],
+            apps=data.get("apps"),
         )
         # FR-2: "then returns new tokens with `tid`" — the wizard's next step is
         # already tenant-scoped, so the token must be too before it is taken.
@@ -253,8 +274,13 @@ class TenantCurrentView(APIView):
         meta = _meta(request)
         changes = dict(serializer.validated_data)
         modules = changes.pop("enabled_modules", None)
+        apps = changes.pop("apps", None)
 
         warnings: list = []
+        if apps is not None:
+            tenant = onboarding_service.choose_apps(
+                tenant=tenant, user=request.user, apps=apps, ctx=Ctx.from_request(request)
+            )
         # PLT-06 FR-4: the module switches have their own rules and their own
         # audit event, so they go to their own service. A request carrying only
         # `enabled_modules` never touches the profile (and never re-runs its GST

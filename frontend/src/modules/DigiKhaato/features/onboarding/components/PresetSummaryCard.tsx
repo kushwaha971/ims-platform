@@ -31,12 +31,21 @@ export interface PresetSummaryCardProps {
   readonly businessType: BusinessType;
   /** The tenant's effective modules once the server intersected plan+partner. */
   readonly effectiveModules: readonly ModuleCode[] | null;
+  /**
+   * The names of the apps chosen on step 1, already translated. `null` when
+   * no choice was offered — the card then reads as it did before there was one.
+   */
+  readonly appNames?: readonly string[] | null;
+  /** Does the business run the Shop? The type and its defaults are the Shop's. */
+  readonly runsShop?: boolean;
   readonly className?: string;
 }
 
 function PresetSummaryCardBase({
   businessType,
   effectiveModules,
+  appNames = null,
+  runsShop = true,
   className,
 }: Readonly<PresetSummaryCardProps>) {
   const { t } = useTranslation();
@@ -46,20 +55,39 @@ function PresetSummaryCardBase({
   return (
     <UbCard
       title={t('onboarding.summary.title')}
-      description={t('onboarding.summary.body')}
+      description={t(runsShop ? 'onboarding.summary.body' : 'onboarding.summary.appsBody')}
       className={className}
     >
       {/* A definition list, not a table: these are label/value pairs, and a
           two-column `dl` collapses to one column below `sm` for free. */}
       <UbGrid as="dl" columns={{ base: 1, sm: 2 }} gap={3}>
-        <UbStack gap={0.5}>
-          <UbText as="dt" variant="label" tone="tertiary">
-            {t('onboarding.summary.type')}
-          </UbText>
-          <UbText as="dd" variant="body-sm">
-            {t(config.labelId)}
-          </UbText>
-        </UbStack>
+        {/* What was chosen on step 1, said back before Finish: this is the
+            last screen on which changing it is one tap on the stepper. */}
+        {appNames && appNames.length > 0 && (
+          <UbStack gap={0.5} className="sm:col-span-2">
+            <UbText as="dt" variant="label" tone="tertiary">
+              {t('onboarding.summary.apps')}
+            </UbText>
+            <UbBox as="dd" className="flex flex-wrap gap-1.5">
+              {appNames.map((name) => (
+                <UbStatusBadge key={name} tone="info" label={name} />
+              ))}
+            </UbBox>
+          </UbStack>
+        )}
+
+        {/* The kind of shop, and what it readies, are the Shop's. A business
+            without the Shop was never asked and is not told. */}
+        {runsShop && (
+          <UbStack gap={0.5}>
+            <UbText as="dt" variant="label" tone="tertiary">
+              {t('onboarding.summary.type')}
+            </UbText>
+            <UbText as="dd" variant="body-sm">
+              {t(config.labelId)}
+            </UbText>
+          </UbStack>
+        )}
 
         {/* No Stock row. It read "Stock: On" (or EC-6's "not available in
             your plan") for a module that had no screen yet —
@@ -72,20 +100,22 @@ function PresetSummaryCardBase({
             naming their defaults here described features the merchant cannot
             open. They come back with the screens that use them. */}
 
-        <UbStack gap={0.5} className="sm:col-span-2">
-          <UbText as="dt" variant="label" tone="tertiary">
-            {t('onboarding.summary.modules')}
-          </UbText>
-          <UbBox as="dd" className="flex flex-wrap gap-1.5">
-            {summary.readyModules.map((module) => (
-              <UbStatusBadge key={module} tone="neutral" label={t(`nav.module.${module}`)} />
-            ))}
-          </UbBox>
-        </UbStack>
+        {runsShop && (
+          <UbStack gap={0.5} className="sm:col-span-2">
+            <UbText as="dt" variant="label" tone="tertiary">
+              {t('onboarding.summary.modules')}
+            </UbText>
+            <UbBox as="dd" className="flex flex-wrap gap-1.5">
+              {summary.readyModules.map((module) => (
+                <UbStatusBadge key={module} tone="neutral" label={t(`nav.module.${module}`)} />
+              ))}
+            </UbBox>
+          </UbStack>
+        )}
       </UbGrid>
 
       <UbText variant="caption" tone="tertiary" className="mt-4">
-        {t('onboarding.summary.changeable')}
+        {t(appNames ? 'onboarding.summary.appsChangeable' : 'onboarding.summary.changeable')}
       </UbText>
     </UbCard>
   );

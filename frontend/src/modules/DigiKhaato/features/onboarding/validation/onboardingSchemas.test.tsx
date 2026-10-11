@@ -20,9 +20,19 @@ describe('businessStepSchema — step 1', () => {
   const ok = {
     name: 'Sharma General Store',
     businessType: 'retail' as const,
+    apps: ['shop'],
     stateCode: '27',
     ownerName: null,
   };
+
+  it('needs at least one app, and the kind of shop only when the Shop is one of them', () => {
+    // The defect this prevents is a library blocked on a field it cannot see:
+    // the shop tiles are not drawn unless the Shop is ticked.
+    const schema = schemas().businessStepSchema;
+    expect(schema.isValidSync({ ...ok, apps: [] })).toBe(false);
+    expect(schema.isValidSync({ ...ok, apps: ['library'], businessType: '' })).toBe(true);
+    expect(schema.isValidSync({ ...ok, apps: ['library', 'shop'], businessType: '' })).toBe(false);
+  });
 
   it('accepts the three required fields', () => {
     expect(schemas().businessStepSchema.isValidSync(ok)).toBe(true);

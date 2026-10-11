@@ -55,6 +55,7 @@ from apps.platform_app.views.settings import (
     TenantSettingsView,
 )
 from apps.platform_app.views.tenant import (
+    OnboardingAppsView,
     InvitationAcceptView,
     InvitationDetailView,
     InvitationListCreateView,
@@ -71,6 +72,7 @@ from apps.platform_app.views.tenant import (
 urlpatterns = [
     path("tenants", TenantCreateView.as_view(), name="tenant-create"),
     path("tenants/current", TenantCurrentView.as_view(), name="tenant-current"),
+    path("onboarding/apps", OnboardingAppsView.as_view(), name="onboarding-apps"),
     path("tenants/current/apps", BusinessAppsView.as_view(), name="tenant-apps"),
     path("apps/<str:code>/setup", AppSetupView.as_view(), name="app-setup"),
     path("apps/<str:code>/setup/hide", AppSetupHideView.as_view(), name="app-setup-hide"),

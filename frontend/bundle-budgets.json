@@ -741,7 +741,8 @@
   "8 Oct 2026, LEN-09 late fees and waivers: the loan form's late-fee terms, the schedule rows' Late fee and Waive and the lazy dialog's loader; elsewhere +0.1-0.3 KB from two codenames and the lending invalidation entries in shared modules",
   "8 Oct 2026, LEN-10 write-off and cancel: the loan page's two buttons, the ended banner and the lazy dialog's loader",
   "8 Oct 2026, Library P0 QR self check-in: the attendance page's Check-in QR button and the lazy poster dialog's loader; /in/[token] is the student's no-login page",
-  "9 Oct 2026, Library P0 income & expenses: the new /library/money route, two library menu rows in the shared nav, and the Expenses header's app check"
+  "9 Oct 2026, Library P0 income & expenses: the new /library/money route, two library menu rows in the shared nav, and the Expenses header's app check",
+  "11 Oct 2026, a new business chooses its apps at sign-up (owner): the setup wizard reads the apps on offer from the server and carries the choice, so the onboarding slice gained one thunk, two reducers and the draft's `apps` — it is a static slice, so the shared app grew 108.2 → 108.4 — and /onboarding/step/[n] gained the app tiles, their copy and the checkbox group (+1.0 KB route). Routes sitting on their ceiling went over by 0.0-0.2 KB. Raised by the measured + 0.5 rule: /purchases/orders/[id]/edit firstLoad 384→385; /purchases/bills/[id]/edit firstLoad 384→385; /purchases/orders/new firstLoad 384→385; /purchases/bills/new firstLoad 384→385; /settings/profile firstLoad 372→373; /onboarding/step/[n] route 91→93; /onboarding/step/[n] firstLoad 326→329; /items/price-lists/[id] firstLoad 317→318; /library/catalogue firstLoad 310→311; /library/copies firstLoad 309→310; /purchases/orders firstLoad 308→309; /purchases/debit-notes firstLoad 308→309; /purchases/orders/[id] firstLoad 300→301; /purchases/debit-notes/[id] firstLoad 300→301; /purchases/bills/[id] firstLoad 300→301; /library/fees firstLoad 299→300; /settings/business-days firstLoad 296→297; /forgot-password firstLoad 285→286; /accept-invite/[token] firstLoad 246→247."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -1306,11 +1307,11 @@
   },
   "/purchases/debit-notes/[id]": {
    "route": 65,
-   "firstLoad": 300
+   "firstLoad": 301
   },
   "/purchases/debit-notes": {
    "route": 73,
-   "firstLoad": 308
+   "firstLoad": 309
   },
   "/sales/challans/[id]": {
    "route": 76,
@@ -1330,19 +1331,19 @@
   },
   "/purchases/orders/[id]": {
    "route": 65,
-   "firstLoad": 300
+   "firstLoad": 301
   },
   "/purchases/orders": {
    "route": 73,
-   "firstLoad": 308
+   "firstLoad": 309
   },
   "/purchases/orders/new": {
    "route": 149,
-   "firstLoad": 384
+   "firstLoad": 385
   },
   "/purchases/orders/[id]/edit": {
    "route": 149,
-   "firstLoad": 384
+   "firstLoad": 385
   },
   "/sales/orders/[id]": {
    "route": 76,
@@ -1413,8 +1414,8 @@
    "firstLoad": 336
   },
   "/onboarding/step/[n]": {
-   "route": 91,
-   "firstLoad": 326
+   "route": 93,
+   "firstLoad": 329
   },
   "/design-system": {
    "route": 109,
@@ -1454,7 +1455,7 @@
   },
   "/settings/profile": {
    "route": 137,
-   "firstLoad": 372
+   "firstLoad": 373
   },
   "/settings/branding": {
    "route": 89,
@@ -1542,11 +1543,11 @@
   },
   "/purchases/bills/[id]": {
    "route": 65,
-   "firstLoad": 300
+   "firstLoad": 301
   },
   "/purchases/bills/[id]/edit": {
    "route": 149,
-   "firstLoad": 384
+   "firstLoad": 385
   },
   "/purchases/bills": {
    "route": 95,
@@ -1554,7 +1555,7 @@
   },
   "/purchases/bills/new": {
    "route": 149,
-   "firstLoad": 384
+   "firstLoad": 385
   },
   "/reports": {
    "route": 72,
@@ -1590,15 +1591,15 @@
   },
   "/settings/business-days": {
    "route": 61,
-   "firstLoad": 296
+   "firstLoad": 297
   },
   "/library/catalogue": {
    "route": 75,
-   "firstLoad": 310
+   "firstLoad": 311
   },
   "/library/copies": {
    "route": 74,
-   "firstLoad": 309
+   "firstLoad": 310
   },
   "/library/copies/[copyId]": {
    "route": 69,
@@ -1638,7 +1639,7 @@
   },
   "/library/fees": {
    "route": 64,
-   "firstLoad": 299
+   "firstLoad": 300
   },
   "/signup": {
    "route": 56,
@@ -1650,7 +1651,7 @@
   },
   "/forgot-password": {
    "route": 50,
-   "firstLoad": 285
+   "firstLoad": 286
   },
   "/set-password": {
    "route": 51,
@@ -1662,7 +1663,7 @@
   },
   "/accept-invite/[token]": {
    "route": 11,
-   "firstLoad": 246
+   "firstLoad": 247
   },
   "/legal/privacy": {
    "route": 8,
@@ -1718,7 +1719,7 @@
   },
   "/items/price-lists/[id]": {
    "route": 82,
-   "firstLoad": 317
+   "firstLoad": 318
   },
   "/lending/messages": {
    "route": 56,

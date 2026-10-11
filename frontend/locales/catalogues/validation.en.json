@@ -7,6 +7,7 @@
   "validation.amount.positive": "The amount must be more than zero.",
   "validation.amount.required": "Enter an amount.",
   "validation.amount.tooLarge": "That amount is too large.",
+  "validation.apps.required": "Choose at least one",
   "validation.businessType.required": "Choose a business type",
   "validation.date.future": "This date cannot be in the future.",
   "validation.date.invalid": "That date is not valid.",

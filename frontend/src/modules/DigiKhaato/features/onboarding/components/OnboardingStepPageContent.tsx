@@ -7,6 +7,7 @@ import { useAppSelector } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { selectAppName } from 'src/redux/slice/whiteLabelSlice';
 
+import { SHOP_APP } from '../constants/appChoices';
 import { ONBOARDING_STEPS } from '../constants/businessTypes';
 import { useEffectiveModules, useOnboarding } from '../hooks/useOnboarding';
 
@@ -58,6 +59,14 @@ export function OnboardingStepPageContent({
     () => ONBOARDING_STEPS.map((entry) => ({ key: entry.key, label: t(entry.labelId) })),
     [t]
   );
+
+  // Step 4 says the step-1 choice back, in the names the switcher will use.
+  const chosenApps = onboarding.offeredApps
+    ? onboarding.offeredApps.filter((app) => (onboarding.draft.apps ?? []).includes(app.code))
+    : null;
+  const appNames = chosenApps && chosenApps.length > 0 ? chosenApps.map((a) => t(a.labelId)) : null;
+  const runsShop =
+    chosenApps === null || chosenApps.length === 0 || chosenApps.some((a) => a.code === SHOP_APP);
 
   const backToAddress = useCallback(() => onboarding.goToStep(3), [onboarding]);
   const finish = useCallback(() => void onboarding.finish(), [onboarding]);
@@ -121,6 +130,8 @@ export function OnboardingStepPageContent({
             <PresetSummaryCard
               businessType={onboarding.draft.businessType ?? 'other'}
               effectiveModules={effectiveModules.length > 0 ? effectiveModules : null}
+              appNames={appNames}
+              runsShop={runsShop}
             />
             {/* CR-2026-09-19-G — the review step's own action bar. Same
                 `UbBottomBar` as `OnboardingStepActions`, for the same reason:

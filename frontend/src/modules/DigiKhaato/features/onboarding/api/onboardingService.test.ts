@@ -4,6 +4,7 @@ import {
   completeOnboarding,
   createTenant,
   fetchCurrentTenant,
+  fetchOfferedApps,
   updateAddressStep,
   updateBusinessStep,
   updateGstStep,
@@ -304,5 +305,69 @@ describe('onboardingService.fetchCurrentTenant — NEW-1, resume after a reload'
     await fetchCurrentTenant();
     const config = get.mock.calls[0]?.[1] as { suppressErrorSnackbar?: boolean } | undefined;
     expect(config?.suppressErrorSnackbar).toBeFalsy();
+  });
+});
+
+describe('onboardingService — what the business will run (11 Oct 2026)', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('sends the chosen apps, and no business type for a business without the Shop', async () => {
+    // `business_type` configures the Shop. Sending one for a library would
+    // record a kind of shop for a business that is not a shop.
+    const post = jest.spyOn(api, 'post').mockResolvedValue({ data: { data: { tenant: TENANT } } });
+
+    await createTenant(
+      {
+        name: 'Vidya Reading Room',
+        businessType: null,
+        stateCode: '27',
+        ownerName: null,
+        apps: ['library'],
+      },
+      'key-1'
+    );
+
+    expect(post.mock.calls[0]?.[1]).toEqual({
+      name: 'Vidya Reading Room',
+      apps: ['library'],
+      state_code: '27',
+    });
+  });
+
+  it('sends no apps at all when the server offered no choice', async () => {
+    // An older server would refuse a field it does not know; absent means the Shop.
+    const post = jest.spyOn(api, 'post').mockResolvedValue({ data: { data: { tenant: TENANT } } });
+
+    await createTenant(
+      {
+        name: 'Sharma General Store',
+        businessType: 'retail',
+        stateCode: '27',
+        ownerName: null,
+        apps: null,
+      },
+      'key-2'
+    );
+
+    expect(post.mock.calls[0]?.[1]).toEqual({
+      name: 'Sharma General Store',
+      business_type: 'retail',
+      state_code: '27',
+    });
+  });
+
+  it('reads the offer from the server and reads the running apps back off a tenant', async () => {
+    const get = jest
+      .spyOn(api, 'get')
+      .mockResolvedValueOnce({
+        data: { data: [{ code: 'library', label_id: 'nav.workspace.library' }] },
+      })
+      .mockResolvedValueOnce({ data: { data: { ...TENANT, apps: ['library'] } } });
+
+    expect(await fetchOfferedApps()).toEqual([
+      { code: 'library', labelId: 'nav.workspace.library' },
+    ]);
+    expect(get.mock.calls[0]?.[0]).toBe('/onboarding/apps');
+    expect((await fetchCurrentTenant()).apps).toEqual(['library']);
   });
 });

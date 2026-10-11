@@ -400,3 +400,51 @@ ADR-021 ↔ §26.14 contradiction recorded as `CR-j`.
   business can turn Library on.
 - **Links:** `docs/platform/frd/00-core-and-engines.md` PLT-X11 · ADR-041 ·
   `apps/platform_app/tests/test_release_gate.py`
+
+### DEC-016 — A new business chooses what it runs at sign-up
+
+- **Status:** `decided` (2026-10-11, by the owner, in the project thread). Reverses decision 3
+  of `docs/platform/14` §6 ("a new business starts with the Shop and its owner adds apps from
+  the switcher").
+- **The owner's words:** "Why are the Library and Lending modules missing from the initial
+  module-selection screen? … Display all available modules … Allow users to select only the
+  modules they need … Do not force users to enable modules that are unrelated to their
+  business … investigate why these modules are missing rather than simply adding them to the UI."
+- **Why they were missing (the root cause, in four layers):**
+  1. *There was no module-selection screen.* Step 1 asked for a name, a state and one of nine
+     kinds of SHOP. `business_type` is a shop preset, not a module choice.
+  2. *`POST /tenants` gave every business the Shop.* `create_tenant` wrote
+     `enabled_modules = _seed_modules(…)`, the business-type preset, and had no other input.
+  3. *Finishing setup wrote the preset back.* `apply_preset` replaced the whole of
+     `enabled_modules` with the shop preset at step 4 — so even a business created with a
+     library would have been turned back into a shop by pressing Finish.
+  4. *Until DEC-015 (one day earlier) both modules were unreleased*, so nothing could have
+     offered them. The hint under the shop tiles said it outright: "A library, lending or
+     another app sits beside the Shop: add it from the business menu."
+  Registration, the plan and the release gate were all correct: both apps are in the registry,
+  on the default plan and released. Only the creation path never asked.
+- **What changed:**
+  - `GET /onboarding/apps` lists what a new business may choose: registered ∩ released ∩ the
+    default plan ∩ the partner. The client draws its tiles from this and nothing else, so an app
+    registered tomorrow appears at sign-up with no frontend release, and an unreleased one
+    (Gym, Hotel) cannot be picked.
+  - `POST /tenants` takes `apps: [codes]`. Absent means the Shop, exactly as before, so every
+    older client and script is untouched. `business_type` is required only when the Shop is one
+    of them. Each chosen app is switched on through `business_apps.set_app_running` — the same
+    service the switcher uses — so the plan check, dependencies, enable hooks and audit rows are
+    the ones an app added a month later gets.
+  - `apply_preset` governs only the shop's capabilities, and only for a business that runs the
+    Shop. Everything else that is on stays on.
+  - `PATCH /tenants/current {apps}` changes the choice until setup is finished (owner only);
+    after that it is refused and the switcher is the place, with its open-work checks.
+  - The tenant payload carries `apps`, so the wizard restores its choice after a reload.
+  - Step 1 has a "What do you want to use?" group of checkboxes (nothing pre-ticked, one line on
+    what each is for); the kind-of-shop tiles appear only when the Shop is ticked; step 4 says
+    the choice back; Finish lands on the server's `landing` (the chosen app's home), not always
+    the Shop dashboard.
+- **Not changed:** adding or turning off an app after setup (already in the business menu,
+  `TenantSwitcherMenu`); plans and pricing (see `docs/MODULE-SUBSCRIPTIONS.md` for the review).
+- **Checked:** `apps/platform_app/tests/test_onboarding_apps.py` (20 tests);
+  `OnboardingStepPageContent.test.tsx` (9 new); and `e2e/onboarding-apps.mjs` — five app
+  combinations × desktop and a 360 px phone, signing up through the real screens: 186 checks.
+- **Links:** DEC-015 · `docs/ONBOARDING-AND-DEMO-AUDIT.md`
