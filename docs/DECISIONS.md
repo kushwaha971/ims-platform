@@ -448,3 +448,37 @@ ADR-021 ↔ §26.14 contradiction recorded as `CR-j`.
   `OnboardingStepPageContent.test.tsx` (9 new); and `e2e/onboarding-apps.mjs` — five app
   combinations × desktop and a 360 px phone, signing up through the real screens: 186 checks.
 - **Links:** DEC-015 · `docs/ONBOARDING-AND-DEMO-AUDIT.md`
+
+### DEC-017 — PostHog for product analytics and feedback
+
+- **Status:** `decided` (2026-10-11, by the owner, in the project thread). An exception to
+  ADR-021's "no Sentry/OTel/Prometheus" and to its closed runtime dependency list, made by the
+  person who owns that list: `posthog-js` is the one runtime dependency added.
+- **The owner's words:** "this is my posthog I want to integrate here for feedback, analytics
+  and other stuff", with the project key and `posthog.init(…, { api_host:
+  'https://us.i.posthog.com', defaults: '2026-05-30' })`.
+- **Three rules bound it** (`frontend/src/analytics/analyticsRules.ts`), because every screen
+  of this product is somebody's accounts:
+  1. **Never on a page a merchant's customer opens** — `/d/<token>`, `/pay/<token>`, the
+     reading room's `/in/…`. Those people are not our users. The SDK is not downloaded there.
+  2. **Never on an address that carries a credential** — the same pages, `/reset-password/…`,
+     `/accept-invite/…`, `/set-password`. A page view records the address.
+  3. **No names, numbers or amounts.** A person is known by account id only (plus language,
+     business id, role and the apps the business runs). Clicks carry no text
+     (`mask_all_text`, `mask_all_element_attributes`); session replay masks all text and every
+     input; `before_send` cuts the query and hash off every address, so a search term or a
+     `?next=` link never leaves.
+- **How it loads:** off unless the build has `NEXT_PUBLIC_ANALYTICS_ENABLED=true` **and**
+  `NEXT_PUBLIC_POSTHOG_KEY`. The SDK is `import()`ed after the page is idle, in its own chunk;
+  the host is `React.lazy`. Cost on every route: 0.3 KB.
+- **Feedback:** PostHog surveys are served by the same SDK; a survey made in the PostHog
+  dashboard appears with no release. Nothing is built for them here.
+- **Checked on the wire, with nothing sent:** `e2e/analytics.mjs` answers every request to
+  posthog.com locally and reads the payloads — 13 checks. It found one leak the unit tests
+  could not: the page view was clean while the click and the identify beside it carried
+  `/customers?q=Ramesh`.
+- **Not done, and the owner's to decide:** a consent notice (India's DPDP Act, and any visitor
+  from the EU); whether session replay should be on at all — it is masked, but it is a
+  recording; the privacy page does not yet name PostHog.
+- **Links:** ADR-021 · `frontend/src/components/providers/AnalyticsHost.tsx` ·
+  `frontend/src/analytics/posthogClient.ts`

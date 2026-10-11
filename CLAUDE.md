@@ -27,7 +27,8 @@ Django 5 + DRF on PostgreSQL 16, Next.js 16 + React 19 + TypeScript strict.
 **Minimal third-party dependencies (ADR-021).** No Celery, no Redis: background
 work is `platform_job` rows drained by a cron-driven `manage.py run_scheduler`
 using `FOR UPDATE SKIP LOCKED`. No S3/MinIO (local `MEDIA_ROOT`), no
-Sentry/OTel/Prometheus, client-side PDF via `window.print()`, adapter-only
+Sentry/OTel/Prometheus (PostHog is the one exception, DEC-017: read
+`frontend/src/analytics/analyticsRules.ts` before sending it anything), client-side PDF via `window.print()`, adapter-only
 messaging, local UPI QR. Anything else needs a new ADR. If a fix seems to need a
 package, say so instead of adding one.
 

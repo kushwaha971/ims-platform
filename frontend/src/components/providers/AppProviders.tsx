@@ -1,6 +1,6 @@
 'use client';
 
-import { type ReactNode } from 'react';
+import { lazy, Suspense, type ReactNode } from 'react';
 
 import { Provider } from 'react-redux';
 
@@ -10,7 +10,20 @@ import { NetworkProbe } from 'src/components/providers/NetworkProbe';
 import { PreferencesBootstrap } from 'src/components/providers/PreferencesBootstrap';
 import { ThemeProvider } from 'src/components/providers/ThemeProvider';
 import { WhiteLabelSync } from 'src/components/providers/WhiteLabelSync';
+import { ANALYTICS_ENABLED, POSTHOG_KEY } from 'src/constants';
 import { store } from 'src/redux/store';
+
+/**
+ * DEC-017 — analytics and feedback. Its own chunk, fetched after hydration and
+ * only by a build that has analytics on: statically imported, the host and its
+ * rules put 0.9 KB on the shell of every route (measured), for something most
+ * builds never run. `React.lazy`, not `next/dynamic`: that was tried first and
+ * its own loader cost the shell MORE than the import it was deferring (+1.4 KB).
+ */
+const AnalyticsHost = lazy(() =>
+  import('src/components/providers/AnalyticsHost').then((m) => ({ default: m.AnalyticsHost }))
+);
+const ANALYTICS_ON = ANALYTICS_ENABLED && Boolean(POSTHOG_KEY);
 
 /**
  * Part 19 §19.7.2 / §19.11.1 — the provider stack `app/layout.tsx` renders.
@@ -55,6 +68,11 @@ export function AppProviders({ children }: Readonly<{ children: ReactNode }>): R
             <NetworkProbe />
             {/* WLB-01 FR-4 — the active tenant's brand ramp on <html>. */}
             <WhiteLabelSync />
+            {ANALYTICS_ON && (
+              <Suspense fallback={null}>
+                <AnalyticsHost />
+              </Suspense>
+            )}
           </ThemeProvider>
         </IntlProviderShell>
       </PreferencesBootstrap>

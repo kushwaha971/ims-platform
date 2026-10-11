@@ -22,6 +22,14 @@ export const DEFAULT_LOCALE: Locale = (process.env.NEXT_PUBLIC_DEFAULT_LOCALE ??
 export const IS_PRODUCTION: boolean = process.env.NEXT_PUBLIC_ENV === 'production';
 export const SW_ENABLED: boolean = process.env.NEXT_PUBLIC_SW_ENABLED === 'true';
 export const ANALYTICS_ENABLED: boolean = process.env.NEXT_PUBLIC_ANALYTICS_ENABLED === 'true';
+/**
+ * DEC-017 — the PostHog project the build reports to. A PUBLIC key by design
+ * (it is in the page of every PostHog customer); unset, analytics is off
+ * whatever `ANALYTICS_ENABLED` says. See `src/analytics/`.
+ */
+export const POSTHOG_KEY: string = process.env.NEXT_PUBLIC_POSTHOG_KEY ?? '';
+export const POSTHOG_HOST: string =
+  process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
 export const COMMIT_SHA: string = process.env.NEXT_PUBLIC_COMMIT_SHA ?? 'dev';
 
 /**
@@ -35,10 +43,9 @@ export const COMMIT_SHA: string = process.env.NEXT_PUBLIC_COMMIT_SHA ?? 'dev';
  * follows the Host header lets anyone who points a domain at the server tell
  * search engines that their domain is the original.
  */
-export const SITE_URL: string = (process.env.NEXT_PUBLIC_SITE_URL || 'https://yourkhata.com').replace(
-  /\/+$/,
-  ''
-);
+export const SITE_URL: string = (
+  process.env.NEXT_PUBLIC_SITE_URL || 'https://yourkhata.com'
+).replace(/\/+$/, '');
 
 /**
  * The landing page's narrated demo films: English and Hindi, each cut for the

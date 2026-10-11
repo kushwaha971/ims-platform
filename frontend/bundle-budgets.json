@@ -742,7 +742,8 @@
   "8 Oct 2026, LEN-10 write-off and cancel: the loan page's two buttons, the ended banner and the lazy dialog's loader",
   "8 Oct 2026, Library P0 QR self check-in: the attendance page's Check-in QR button and the lazy poster dialog's loader; /in/[token] is the student's no-login page",
   "9 Oct 2026, Library P0 income & expenses: the new /library/money route, two library menu rows in the shared nav, and the Expenses header's app check",
-  "11 Oct 2026, a new business chooses its apps at sign-up (owner): the setup wizard reads the apps on offer from the server and carries the choice, so the onboarding slice gained one thunk, two reducers and the draft's `apps` — it is a static slice, so the shared app grew 108.2 → 108.4 — and /onboarding/step/[n] gained the app tiles, their copy and the checkbox group (+1.0 KB route). Routes sitting on their ceiling went over by 0.0-0.2 KB. Raised by the measured + 0.5 rule: /purchases/orders/[id]/edit firstLoad 384→385; /purchases/bills/[id]/edit firstLoad 384→385; /purchases/orders/new firstLoad 384→385; /purchases/bills/new firstLoad 384→385; /settings/profile firstLoad 372→373; /onboarding/step/[n] route 91→93; /onboarding/step/[n] firstLoad 326→329; /items/price-lists/[id] firstLoad 317→318; /library/catalogue firstLoad 310→311; /library/copies firstLoad 309→310; /purchases/orders firstLoad 308→309; /purchases/debit-notes firstLoad 308→309; /purchases/orders/[id] firstLoad 300→301; /purchases/debit-notes/[id] firstLoad 300→301; /purchases/bills/[id] firstLoad 300→301; /library/fees firstLoad 299→300; /settings/business-days firstLoad 296→297; /forgot-password firstLoad 285→286; /accept-invite/[token] firstLoad 246→247."
+  "11 Oct 2026, a new business chooses its apps at sign-up (owner): the setup wizard reads the apps on offer from the server and carries the choice, so the onboarding slice gained one thunk, two reducers and the draft's `apps` — it is a static slice, so the shared app grew 108.2 → 108.4 — and /onboarding/step/[n] gained the app tiles, their copy and the checkbox group (+1.0 KB route). Routes sitting on their ceiling went over by 0.0-0.2 KB. Raised by the measured + 0.5 rule: /purchases/orders/[id]/edit firstLoad 384→385; /purchases/bills/[id]/edit firstLoad 384→385; /purchases/orders/new firstLoad 384→385; /purchases/bills/new firstLoad 384→385; /settings/profile firstLoad 372→373; /onboarding/step/[n] route 91→93; /onboarding/step/[n] firstLoad 326→329; /items/price-lists/[id] firstLoad 317→318; /library/catalogue firstLoad 310→311; /library/copies firstLoad 309→310; /purchases/orders firstLoad 308→309; /purchases/debit-notes firstLoad 308→309; /purchases/orders/[id] firstLoad 300→301; /purchases/debit-notes/[id] firstLoad 300→301; /purchases/bills/[id] firstLoad 300→301; /library/fees firstLoad 299→300; /settings/business-days firstLoad 296→297; /forgot-password firstLoad 285→286; /accept-invite/[token] firstLoad 246→247.",
+  "11 Oct 2026, PostHog for analytics and feedback (DEC-017, owner): the SDK (about 60 KB gz) is `import()`ed after the page is idle and is in no route's first load; its host is `React.lazy` in AppProviders and only in a build with analytics on, so the shared app grew 108.4 → 108.7 (the lazy boundary and two constants). `next/dynamic` was tried for the host and cost the shell 1.4 KB by itself; a static import cost 0.9. Measured with analytics ON, which is the heavier build. Routes on their ceiling raised by the measured + 0.5 rule: /design-system firstLoad 344→345; /items/[id] firstLoad 336→337; /library firstLoad 306→307; /library/seats firstLoad 304→305; /lending/loans/[loanId] firstLoad 298→299; /lending/borrowers firstLoad 291→292; /lending/routes firstLoad 291→292; /lending/messages firstLoad 291→292."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -1419,7 +1420,7 @@
   },
   "/design-system": {
    "route": 109,
-   "firstLoad": 344
+   "firstLoad": 345
   },
   "/settings/team": {
    "route": 80,
@@ -1483,7 +1484,7 @@
   },
   "/items/[id]": {
    "route": 101,
-   "firstLoad": 336
+   "firstLoad": 337
   },
   "/stock/low": {
    "route": 65,
@@ -1635,7 +1636,7 @@
   },
   "/library/seats": {
    "route": 69,
-   "firstLoad": 304
+   "firstLoad": 305
   },
   "/library/fees": {
    "route": 64,
@@ -1683,7 +1684,7 @@
   },
   "/library": {
    "route": 71,
-   "firstLoad": 306
+   "firstLoad": 307
   },
   "/library/attendance": {
    "route": 67,
@@ -1703,7 +1704,7 @@
   },
   "/lending/loans/[loanId]": {
    "route": 63,
-   "firstLoad": 298
+   "firstLoad": 299
   },
   "/lending/loans": {
    "route": 62,
@@ -1723,15 +1724,15 @@
   },
   "/lending/messages": {
    "route": 56,
-   "firstLoad": 291
+   "firstLoad": 292
   },
   "/lending/routes": {
    "route": 56,
-   "firstLoad": 291
+   "firstLoad": 292
   },
   "/lending/borrowers": {
    "route": 56,
-   "firstLoad": 291
+   "firstLoad": 292
   },
   "/items/price-lists": {},
   "/login/email": {
