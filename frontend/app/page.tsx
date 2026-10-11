@@ -13,6 +13,7 @@ import {
 import {
   DEMO_FILMS,
   DEMO_VOICE,
+  DEMO_YOUTUBE,
   demoVideoUrl,
 } from 'modules/DigiKhaato/features/landing/config/media';
 import {
@@ -118,6 +119,9 @@ const JSON_LD = buildLandingJsonLd({
       description: DEMO_TRANSCRIPT[DEMO_VOICE].description,
       contentUrl: demoVideoUrl(DEMO_FILMS.desktop.id),
       thumbnailUrl: DEMO_FILMS.desktop.poster.jpg,
+      ...(DEMO_YOUTUBE.desktop
+        ? { embedUrl: `https://www.youtube.com/embed/${DEMO_YOUTUBE.desktop}` }
+        : {}),
       // Google asks for a date WITH a timezone; the film is cut in India.
       uploadDate: `${DEMO_PUBLISHED_ON}T00:00:00+05:30`,
       durationSeconds: DEMO_TRANSCRIPT[DEMO_VOICE].cuts.desktop.durationSeconds,

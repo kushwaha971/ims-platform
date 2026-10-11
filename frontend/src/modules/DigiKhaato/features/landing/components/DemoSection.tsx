@@ -4,6 +4,7 @@ import { memo, useCallback, useRef, useState } from 'react';
 
 import { Play } from 'lucide-react';
 
+import { track } from 'src/analytics/track';
 import {
   UbActionLink,
   UbBox,
@@ -23,8 +24,10 @@ import { DEMO_TRANSCRIPT } from '../config/demoTranscript';
 import {
   DEMO_FILMS,
   DEMO_VOICE,
+  DEMO_YOUTUBE,
   DESKTOP_MEDIA,
   demoVideoUrl,
+  demoYoutubeEmbedUrl,
   type DemoDevice,
   type DemoLanguage,
 } from '../config/media';
@@ -61,6 +64,13 @@ export const demoClock = (seconds: number): string =>
  * and transcript below it are in the page's language. Captions are on by
  * default in either language — most phones are on mute.
  *
+ * WHERE THE FILM COMES FROM (owner, 11 Oct 2026). A cut that has a YouTube id
+ * (`DEMO_YOUTUBE`) plays in YouTube's player — it adapts the quality to the
+ * connection, which one fixed file cannot — and a cut without one plays the
+ * file. Either way nothing of it is requested before play is pressed: the
+ * poster is ours, and YouTube's player, its scripts and its cookies arrive
+ * only with that press. The chapters seek either player.
+ *
  * Every word, in BOTH languages, is in the server's HTML: the chapters and the
  * transcript are rendered for both, the one that is not the page's `hidden`,
  * and the transcript sits in a `keepMounted` disclosure. A crawler or an
@@ -78,6 +88,8 @@ function DemoSectionBase() {
   const [device, setDevice] = useState<DemoDevice>('desktop');
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
+  const frameRef = useRef<HTMLIFrameElement | null>(null);
+
   /** Play from a chapter: start the player there, or seek it if it is running. */
   const playFrom = useCallback((seconds: number) => {
     const video = videoRef.current;
@@ -86,16 +98,33 @@ function DemoSectionBase() {
       void video.play()?.catch?.(() => undefined);
       return;
     }
-    setDevice(matchesNow(DESKTOP_MEDIA) ? 'desktop' : 'mobile');
+    // YouTube's player, already on the page: it is told where to go. This is
+    // its documented message format; no script of theirs is loaded for it.
+    const frame = frameRef.current?.contentWindow;
+    if (frame) {
+      const say = (func: string, args: readonly unknown[]): void =>
+        frame.postMessage(JSON.stringify({ event: 'command', func, args }), '*');
+      say('seekTo', [seconds, true]);
+      say('playVideo', []);
+      return;
+    }
+    const cut: DemoDevice = matchesNow(DESKTOP_MEDIA) ? 'desktop' : 'mobile';
+    setDevice(cut);
     setStartAt(seconds);
     setPlaying(true);
+    track('demo_played', {
+      cut,
+      source: DEMO_YOUTUBE[cut] ? 'youtube' : 'file',
+      from_seconds: Math.floor(seconds),
+    });
   }, []);
 
   /** A chapter starts at a slightly different second in each cut. */
   const playChapter = useCallback(
     (code: DemoLanguage, index: number) => {
       const cut = matchesNow(DESKTOP_MEDIA) ? 'desktop' : 'mobile';
-      playFrom(DEMO_TRANSCRIPT[code].cuts[videoRef.current ? device : cut].starts[index] ?? 0);
+      const showing = videoRef.current || frameRef.current ? device : cut;
+      playFrom(DEMO_TRANSCRIPT[code].cuts[showing].starts[index] ?? 0);
     },
     [playFrom, device]
   );
@@ -156,7 +185,22 @@ function DemoSectionBase() {
                 </UbActionLink>
               </UbStack>
             )}
-            {!failed && playing && (
+            {!failed && playing && DEMO_YOUTUBE[device] && (
+              <iframe
+                key={`yt-${device}`}
+                ref={frameRef}
+                src={demoYoutubeEmbedUrl(DEMO_YOUTUBE[device], startAt, language)}
+                title={t('landing.demo.title')}
+                width={cuts[device].width}
+                height={cuts[device].height}
+                allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                allowFullScreen
+                referrerPolicy="strict-origin-when-cross-origin"
+                className="absolute inset-0 h-full w-full border-0"
+                data-testid="landing-demo-youtube"
+              />
+            )}
+            {!failed && playing && !DEMO_YOUTUBE[device] && (
               <video
                 key={film.id}
                 ref={(node) => {

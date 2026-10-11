@@ -58,6 +58,8 @@ export interface LandingVideo {
   /** Site-relative or absolute. */
   readonly contentUrl: string;
   readonly thumbnailUrl: string;
+  /** The same film's player elsewhere (YouTube), when it is published there. */
+  readonly embedUrl?: string;
   /** ISO 8601 date the film was published. */
   readonly uploadDate: string;
   /** Whole seconds. */
@@ -161,6 +163,7 @@ export const buildLandingJsonLd = ({
         description: video.description,
         thumbnailUrl: [absolute(siteUrl, video.thumbnailUrl)],
         contentUrl: absolute(siteUrl, video.contentUrl),
+        ...(video.embedUrl ? { embedUrl: video.embedUrl } : {}),
         uploadDate: video.uploadDate,
         duration: isoDuration(video.durationSeconds),
         inLanguage: video.language,

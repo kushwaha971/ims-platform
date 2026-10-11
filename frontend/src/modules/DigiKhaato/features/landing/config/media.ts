@@ -11,7 +11,7 @@
  *
  * Imports only the demo base URL.
  */
-import { DEMO_VIDEO_BASE_URL } from 'src/constants';
+import { DEMO_VIDEO_BASE_URL, DEMO_YOUTUBE_DESKTOP, DEMO_YOUTUBE_MOBILE } from 'src/constants';
 
 export interface LandingClip {
   readonly id: string;
@@ -125,3 +125,37 @@ export const DEMO_FILMS: Readonly<Record<DemoDevice, DemoFilmFiles>> = {
  * on the server, where an export of a `'use client'` file is not callable.
  */
 export const demoVideoUrl = (id: string): string => `${DEMO_VIDEO_BASE_URL}/${id}.mp4`;
+
+/** A YouTube video id is 11 characters of this alphabet; anything else is not played. */
+const youtubeId = (value: string): string => (/^[\w-]{11}$/.test(value.trim()) ? value.trim() : '');
+
+/** The YouTube video for each cut, or `''` where the file is what plays. */
+export const DEMO_YOUTUBE: Readonly<Record<DemoDevice, string>> = {
+  desktop: youtubeId(DEMO_YOUTUBE_DESKTOP),
+  mobile: youtubeId(DEMO_YOUTUBE_MOBILE),
+};
+
+/**
+ * YouTube's player for a cut, from a given second, with captions asked for in
+ * the page's language.
+ *
+ * `youtube-nocookie.com`: the same player, which sets no cookie until it is
+ * played. `rel=0` keeps the "more videos" at the end to the same channel.
+ * `enablejsapi=1` is what lets a chapter button move a film that is already
+ * playing (`postMessage`), with no script of YouTube's loaded by the page.
+ */
+export const demoYoutubeEmbedUrl = (
+  id: string,
+  startSeconds: number,
+  language: DemoLanguage
+): string =>
+  `https://www.youtube-nocookie.com/embed/${id}?${new URLSearchParams({
+    autoplay: '1',
+    playsinline: '1',
+    rel: '0',
+    enablejsapi: '1',
+    start: String(Math.max(0, Math.floor(startSeconds))),
+    cc_load_policy: '1',
+    cc_lang_pref: language,
+    hl: language,
+  }).toString()}`;

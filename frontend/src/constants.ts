@@ -21,7 +21,12 @@ export const APP_NAME: string = process.env.NEXT_PUBLIC_APP_NAME ?? 'YourKhata';
 export const DEFAULT_LOCALE: Locale = (process.env.NEXT_PUBLIC_DEFAULT_LOCALE ?? 'en') as Locale;
 export const IS_PRODUCTION: boolean = process.env.NEXT_PUBLIC_ENV === 'production';
 export const SW_ENABLED: boolean = process.env.NEXT_PUBLIC_SW_ENABLED === 'true';
-export const ANALYTICS_ENABLED: boolean = process.env.NEXT_PUBLIC_ANALYTICS_ENABLED === 'true';
+/**
+ * On unless a build says `false` (owner, 11 Oct 2026: "analytics enable true").
+ * It still needs a PostHog key to do anything, so the test stacks and a fresh
+ * checkout, which have none, send nothing.
+ */
+export const ANALYTICS_ENABLED: boolean = process.env.NEXT_PUBLIC_ANALYTICS_ENABLED !== 'false';
 /**
  * DEC-017 — the PostHog project the build reports to. A PUBLIC key by design
  * (it is in the page of every PostHog customer); unset, analytics is off
@@ -61,6 +66,23 @@ export const SITE_URL: string = (
 export const DEMO_VIDEO_BASE_URL: string = (
   process.env.NEXT_PUBLIC_DEMO_VIDEO_BASE_URL || '/media/landing'
 ).replace(/\/+$/, '');
+
+/**
+ * The same film on YouTube, one video id per cut (owner, 11 Oct 2026). Where a
+ * cut has an id, pressing play loads YouTube's player for it instead of the
+ * file above: YouTube adapts the quality to the connection and carries the
+ * bandwidth. Where it has none, the file plays, exactly as before.
+ *
+ * The phone cut has NO default id on purpose: on the day these were set,
+ * YouTube refused to describe that video to another site (oEmbed 403, which is
+ * what "embedding off" or "not public" looks like), and a player that says
+ * "Video unavailable" is worse than the file. Set
+ * `NEXT_PUBLIC_DEMO_YOUTUBE_MOBILE=Js-xjsUXdYY` once it can be embedded. An
+ * EMPTY value turns YouTube off for that cut.
+ */
+export const DEMO_YOUTUBE_DESKTOP: string =
+  process.env.NEXT_PUBLIC_DEMO_YOUTUBE_DESKTOP ?? 'fk-hjhDi-tg';
+export const DEMO_YOUTUBE_MOBILE: string = process.env.NEXT_PUBLIC_DEMO_YOUTUBE_MOBILE ?? '';
 
 /**
  * Modules the public landing page does NOT show (owner, 10 Oct 2026: Gym and

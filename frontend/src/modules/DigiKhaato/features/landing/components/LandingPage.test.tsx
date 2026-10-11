@@ -205,8 +205,13 @@ describe('LandingPage', () => {
     );
   });
 
-  /** From `lg` the same button plays the DESKTOP cut: a wide screen never downloads the phone film. */
-  it('plays the desktop cut on a desktop', () => {
+  /**
+   * From `lg` the same button plays the DESKTOP cut, and that cut is on
+   * YouTube (owner, 11 Oct 2026): its player is what loads — and only on the
+   * press. Before it, the page has asked YouTube for nothing: no player, no
+   * script, no cookie.
+   */
+  it("plays the desktop cut in YouTube's player on a desktop, loaded only by the press", () => {
     const original = window.matchMedia;
     window.matchMedia = ((query: string) => ({
       matches: /min-width: 1024px/.test(query),
@@ -221,13 +226,23 @@ describe('LandingPage', () => {
     try {
       const { container } = renderPage();
       const demo = container.querySelector('#demo') as HTMLElement;
+      expect(container.querySelector('iframe')).toBeNull();
+      expect(container.innerHTML).not.toMatch(/youtube/i);
+
       fireEvent.click(within(demo).getByTestId('landing-demo-play'));
-      const video = within(demo).getByTestId('landing-demo-video');
-      expect(video).toHaveAttribute('src', '/media/landing/demo-hi-desktop.mp4');
-      expect(video.querySelector('track[kind="subtitles"]')).toHaveAttribute(
-        'src',
-        '/media/landing/demo-hi-desktop.en.vtt'
-      );
+      const player = within(demo).getByTestId('landing-demo-youtube');
+      const src = new URL(player.getAttribute('src') ?? '');
+      // The no-cookie host, this film, from the start, captions asked for in
+      // the page's language.
+      expect(src.origin + src.pathname).toBe('https://www.youtube-nocookie.com/embed/fk-hjhDi-tg');
+      expect(Object.fromEntries(src.searchParams)).toMatchObject({
+        autoplay: '1',
+        start: '0',
+        rel: '0',
+        cc_lang_pref: 'en',
+      });
+      expect(player).toHaveAttribute('title', 'YourKhata product demo');
+      expect(demo.querySelector('video')).toBeNull();
     } finally {
       window.matchMedia = original;
     }
