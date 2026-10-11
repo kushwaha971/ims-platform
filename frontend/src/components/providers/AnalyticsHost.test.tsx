@@ -25,6 +25,7 @@ jest.mock('next/navigation', () => ({ usePathname: () => mockPath }));
 
 let mockEnabled = true;
 let mockKey = 'phc_test';
+let mockMaskText = false;
 jest.mock('src/constants', () => ({
   ...jest.requireActual('src/constants'),
   get ANALYTICS_ENABLED() {
@@ -35,6 +36,9 @@ jest.mock('src/constants', () => ({
   },
   POSTHOG_HOST: 'https://us.i.posthog.com',
   POSTHOG_DEFAULTS: '2026-05-30',
+  get POSTHOG_REPLAY_MASK_TEXT() {
+    return mockMaskText;
+  },
 }));
 
 const mount = async (): Promise<void> => {
@@ -52,6 +56,7 @@ beforeEach(() => {
   mockPath = '/dashboard';
   mockEnabled = true;
   mockKey = 'phc_test';
+  mockMaskText = false;
 });
 afterEach(() => jest.useRealTimers());
 
@@ -77,7 +82,7 @@ describe('AnalyticsHost', () => {
     const [key, config] = posthog.init.mock.calls[0];
     expect(key).toBe('phc_test');
     // Every screen here is somebody's accounts: a click must not carry the
-    // text on the button, and a replay must not carry the book.
+    // text on the button.
     expect(config).toMatchObject({
       api_host: 'https://us.i.posthog.com',
       defaults: '2026-05-30',
@@ -85,10 +90,23 @@ describe('AnalyticsHost', () => {
       capture_pageview: false,
       mask_all_text: true,
       mask_all_element_attributes: true,
-      session_recording: { maskAllInputs: true, maskTextSelector: '*' },
+      session_recording: { maskAllInputs: true },
     });
+    // The owner wants to read the screen in a replay, so its text is not
+    // masked by default — but nothing anybody TYPES is ever recorded.
+    expect(config.session_recording).not.toHaveProperty('maskTextSelector');
     expect(posthog.capture).toHaveBeenCalledWith('$pageview', {
       $current_url: 'http://localhost/customers',
+    });
+  });
+
+  it('masks every word in a replay again when the build asks for it', async () => {
+    mockMaskText = true;
+    await mount();
+    await waitFor(() => expect(posthog.init).toHaveBeenCalled());
+    expect(posthog.init.mock.calls[0][1].session_recording).toEqual({
+      maskAllInputs: true,
+      maskTextSelector: '*',
     });
   });
 

@@ -35,6 +35,15 @@ export const ANALYTICS_ENABLED: boolean = process.env.NEXT_PUBLIC_ANALYTICS_ENAB
 export const POSTHOG_KEY: string = process.env.NEXT_PUBLIC_POSTHOG_KEY ?? '';
 export const POSTHOG_HOST: string =
   process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
+/**
+ * Session replay shows the words on the screen (owner, 11 Oct 2026: "I'm not
+ * able to see the text … I want to see the text in recording"). Set
+ * `NEXT_PUBLIC_POSTHOG_REPLAY_MASK_TEXT=true` to turn every word in a replay
+ * back into asterisks. Whatever this says, what a person TYPES is never in a
+ * replay, and clicks never carry text.
+ */
+export const POSTHOG_REPLAY_MASK_TEXT: boolean =
+  process.env.NEXT_PUBLIC_POSTHOG_REPLAY_MASK_TEXT === 'true';
 /** The dated set of SDK defaults PostHog's snippet names (`defaults:`). */
 export const POSTHOG_DEFAULTS: string = process.env.NEXT_PUBLIC_POSTHOG_DEFAULTS || '2026-05-30';
 export const COMMIT_SHA: string = process.env.NEXT_PUBLIC_COMMIT_SHA ?? 'dev';

@@ -468,6 +468,13 @@ ADR-021 ↔ §26.14 contradiction recorded as `CR-j`.
      (`mask_all_text`, `mask_all_element_attributes`); session replay masks all text and every
      input; `before_send` cuts the query and hash off every address, so a search term or a
      `?next=` link never leaves.
+- **Amended the same day, by the owner:** session replay shows the words on the screen. His
+  words, after watching replays that were rows of asterisks: "why in that tracking I'm not
+  able to see the text, I want to see the text in recording". So a replay of a khata screen
+  now contains the names and balances that were on it, held by PostHog. What a person TYPES is
+  still never recorded, clicks still carry no text, and the excluded pages are still excluded.
+  `NEXT_PUBLIC_POSTHOG_REPLAY_MASK_TEXT=true` puts the asterisks back. Analytics is also on
+  unless a build says `false`.
 - **How it loads:** off unless the build has `NEXT_PUBLIC_ANALYTICS_ENABLED=true` **and**
   `NEXT_PUBLIC_POSTHOG_KEY`. The SDK is `import()`ed after the page is idle, in its own chunk;
   the host is `React.lazy`. Cost on every route: 0.3 KB.

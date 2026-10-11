@@ -1,4 +1,9 @@
-import { POSTHOG_DEFAULTS, POSTHOG_HOST, POSTHOG_KEY } from 'src/constants';
+import {
+  POSTHOG_DEFAULTS,
+  POSTHOG_HOST,
+  POSTHOG_KEY,
+  POSTHOG_REPLAY_MASK_TEXT,
+} from 'src/constants';
 
 import { scrubEvent } from './analyticsRules';
 
@@ -17,8 +22,12 @@ import type { PostHog } from 'posthog-js';
  *  - `mask_all_text` / `mask_all_element_attributes`: a click is recorded as
  *    "a button was pressed on /customers", never with the text on it — which
  *    on this product is a customer's name or a balance.
- *  - session recording masks every input and all text: a replay shows where a
- *    merchant got stuck, as shapes, not their book.
+ *  - session recording masks everything a person TYPES, always. The words on
+ *    the screen are shown: the owner asked for that on 11 Oct 2026, after
+ *    watching replays that were rows of asterisks and useless for seeing
+ *    where somebody got stuck. It means a replay of a khata screen contains
+ *    the names and balances that were on it; `POSTHOG_REPLAY_MASK_TEXT` puts
+ *    the asterisks back for a build that must not.
  *  - `before_send` cuts the query off every address: `?q=` is what somebody
  *    typed into a search box, which here is a customer's name.
  *  - `person_profiles: 'identified_only'`: an anonymous visitor to the landing
@@ -50,7 +59,13 @@ export const loadPosthog = (): Promise<PostHog | null> => {
         capture_pageleave: false,
         mask_all_text: true,
         mask_all_element_attributes: true,
-        session_recording: { maskAllInputs: true, maskTextSelector: '*' },
+        // Replays show the words on screen unless the build asks for them
+        // masked (`POSTHOG_REPLAY_MASK_TEXT`). Typed values never: a mobile
+        // number, a code, an amount being entered stay hidden either way.
+        session_recording: {
+          maskAllInputs: true,
+          ...(POSTHOG_REPLAY_MASK_TEXT ? { maskTextSelector: '*' } : {}),
+        },
         // Every event carries the address it was raised on; see `scrubEvent`.
         before_send: (event) => scrubEvent(event, window.location.pathname),
       });
