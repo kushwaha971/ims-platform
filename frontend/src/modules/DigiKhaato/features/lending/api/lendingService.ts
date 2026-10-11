@@ -214,7 +214,7 @@ export interface LoanPage {
 }
 
 export const listLoans = async (
-  params: { status?: string; q?: string; route?: string; page?: string },
+  params: { status?: string; q?: string; route?: string; borrower?: string; page?: string },
   signal?: AbortSignal
 ): Promise<LoanPage> => {
   const response = await api.get<{
@@ -408,18 +408,37 @@ export const listBorrowers = async (q: string, signal?: AbortSignal): Promise<Bo
     `${LENDING_PATHS.BORROWERS}${toQueryString({ q: q || undefined })}`,
     { signal }
   );
-  return response.data.data.map((b) => {
-    const route = b.route as Wire | null;
-    return {
-      id: str(b.id),
-      number: str(b.number),
-      partyId: str(b.party_id),
-      name: str(b.name),
-      mobile: strOrNull(b.mobile),
-      area: str(b.area),
-      route: route ? { id: str(route.id), name: str(route.name) } : null,
-    };
-  });
+  return response.data.data.map(toBorrower);
+};
+
+const toBorrower = (b: Wire): BorrowerRow => {
+  const route = b.route as Wire | null;
+  const sum = b.summary as Wire | null | undefined;
+  return {
+    id: str(b.id),
+    number: str(b.number),
+    partyId: str(b.party_id),
+    name: str(b.name),
+    mobile: strOrNull(b.mobile),
+    area: str(b.area),
+    route: route ? { id: str(route.id), name: str(route.name) } : null,
+    summary: sum
+      ? {
+          loans: num(sum.loans),
+          running: num(sum.running),
+          given: str(sum.given),
+          collected: str(sum.collected),
+          left: str(sum.left),
+          late: str(sum.late),
+        }
+      : null,
+  };
+};
+
+/** One borrower with their loans added up — the line above their list of loans. */
+export const getBorrower = async (id: string, signal?: AbortSignal): Promise<BorrowerRow> => {
+  const response = await api.get<{ data: Wire }>(`${LENDING_PATHS.BORROWERS}/${id}`, { signal });
+  return toBorrower(response.data.data);
 };
 
 // ── LEN-09 — late fees and waivers ──────────────────────────────────────────

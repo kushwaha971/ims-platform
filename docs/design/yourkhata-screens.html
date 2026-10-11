@@ -1,0 +1,232 @@
+<title>YourKhata Screen Designs</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Noto+Sans+Devanagari:wght@400;600&display=swap">
+<style>
+/* Layout: a review board. One app at a time, empty or with data, phone frames in a wrapping row, then the desktop view. */
+:root{
+  --bg:#f3f3f8; --panel:#ffffff; --ink:#17163a; --ink2:#55546e; --ink3:#8a899c; --line:#e3e2ee; --soft:#f6f6fb;
+  --accent:#4a47d6; --accent-quiet:#ecebfb; --on-accent:#ffffff;
+  --get:#c0271f; --get-quiet:#fdecea; --give:#17753f; --give-quiet:#e6f5ec; --warn:#9a5b00; --warn-quiet:#fdf1dc;
+  --note:#fff7d6; --note-ink:#5b4a00; --shadow:0 18px 40px -24px rgba(23,22,58,.45);
+  --font:'DM Sans','Noto Sans Devanagari',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0c0d14; --panel:#161823; --ink:#f1f1f7; --ink2:#b9b8cb; --ink3:#83829a; --line:#2a2c3d; --soft:#1d1f2c;
+  --accent:#8f8cff; --accent-quiet:#24244a; --on-accent:#0c0d14;
+  --get:#ff8f86; --get-quiet:#3a1b1a; --give:#6fdc9c; --give-quiet:#153222; --warn:#f2c26b; --warn-quiet:#3a2c10;
+  --note:#35300f; --note-ink:#f4e7a6; --shadow:0 18px 40px -24px rgba(0,0,0,.8); color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0c0d14; --panel:#161823; --ink:#f1f1f7; --ink2:#b9b8cb; --ink3:#83829a; --line:#2a2c3d; --soft:#1d1f2c;
+  --accent:#8f8cff; --accent-quiet:#24244a; --on-accent:#0c0d14;
+  --get:#ff8f86; --get-quiet:#3a1b1a; --give:#6fdc9c; --give-quiet:#153222; --warn:#f2c26b; --warn-quiet:#3a2c10;
+  --note:#35300f; --note-ink:#f4e7a6; --shadow:0 18px 40px -24px rgba(0,0,0,.8); color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.45;padding-inline:16px;padding-block:20px 60px}
+.wrap{max-width:1240px;margin-inline:auto;display:flex;flex-direction:column;gap:22px}
+h1{font-size:26px;line-height:1.2;margin:0;letter-spacing:-.01em;text-wrap:balance}
+h2{font-size:18px;margin:0;text-wrap:balance}
+p{margin:0}
+.lede{color:var(--ink2);max-width:68ch}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:10px;display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;border-bottom:1px solid var(--line)}
+.seg{display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px}
+.seg button{font:inherit;font-weight:600;border:0;background:transparent;color:var(--ink2);padding:7px 14px;border-radius:999px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.barlabel{font-size:12px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.row{display:flex;flex-wrap:wrap;gap:26px 22px;align-items:flex-start}
+.unit{display:flex;flex-direction:column;gap:8px;width:300px;max-width:100%}
+.cap{font-weight:600}
+.why{background:var(--note);color:var(--note-ink);border-radius:10px;padding:8px 10px;font-size:12.5px}
+.why b{font-weight:700}
+/* phone */
+.phone{width:300px;max-width:100%;height:600px;background:var(--panel);border:1px solid var(--line);border-radius:26px;box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column}
+.top{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.logo{width:24px;height:24px;border-radius:7px;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font-weight:700;font-size:13px}
+.biz{font-weight:600;font-size:13px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ico{width:18px;height:18px;border:1.6px solid var(--ink2);border-radius:50%}
+.body{flex:1;overflow:auto;padding:14px 12px;display:flex;flex-direction:column;gap:12px}
+.pt{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.pt b{font-size:17px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:var(--accent);color:var(--on-accent);border-radius:10px;padding:9px 14px;font-weight:600;font-size:13px}
+.btn.ghost{background:var(--soft);color:var(--ink)}
+.btn.sm{padding:6px 10px;font-size:12px;border-radius:8px}
+.btn.wide{width:100%;padding:12px}
+.card{border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px;background:var(--panel)}
+.empty{border:1.5px dashed var(--line);border-radius:14px;padding:22px 14px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px}
+.empty .big{width:46px;height:46px;border-radius:50%;background:var(--accent-quiet);display:grid;place-items:center;font-size:20px}
+.empty b{font-size:15px}
+.empty p,.muted{color:var(--ink2);font-size:12.5px}
+.steps{display:flex;flex-direction:column;gap:8px}
+.step{display:flex;gap:10px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:12px}
+.step .n{width:24px;height:24px;border-radius:50%;background:var(--accent-quiet);color:var(--accent);display:grid;place-items:center;font-weight:700;font-size:12px;flex:none}
+.step.done .n{background:var(--give-quiet);color:var(--give)}
+.step.done span{color:var(--ink3);text-decoration:line-through}
+.step span{flex:1;font-weight:500}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tile{border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:2px}
+.tile small{color:var(--ink2);font-size:12px}
+.tile b{font-size:18px;font-variant-numeric:tabular-nums}
+.get{color:var(--get)} .give{color:var(--give)}
+.item{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.item:last-child{border-bottom:0}
+.item .l{min-width:0;display:flex;flex-direction:column;gap:2px}
+.item .l b{font-weight:600}
+.item .l small,.item .r small{color:var(--ink2);font-size:12px}
+.item .r{text-align:right;display:flex;flex-direction:column;gap:3px;align-items:flex-end;flex:none}
+.item .r b{font-variant-numeric:tabular-nums}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--soft);color:var(--ink2)}
+.pill.bad{background:var(--get-quiet);color:var(--get)} .pill.ok{background:var(--give-quiet);color:var(--give)} .pill.warn{background:var(--warn-quiet);color:var(--warn)}
+.search{border:1px solid var(--line);border-radius:10px;padding:9px 11px;color:var(--ink3);font-size:13px;display:flex;justify-content:space-between}
+.acts{display:flex;gap:6px;flex-wrap:wrap}
+.nav{display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px))}
+.nav div{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10.5px;color:var(--ink3)}
+.nav i{width:34px;height:20px;border-radius:999px;display:block;background:var(--soft)}
+.nav .on{color:var(--ink);font-weight:600}.nav .on i{background:var(--accent-quiet);outline:1.5px solid var(--accent)}
+.day{font-size:11.5px;color:var(--ink3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;padding-top:4px}
+/* desktop */
+.desk{border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:var(--shadow);overflow:hidden}
+.deskbar{display:flex;gap:6px;padding:9px 12px;border-bottom:1px solid var(--line)}
+.deskbar i{width:9px;height:9px;border-radius:50%;background:var(--line)}
+.deskin{display:grid;grid-template-columns:170px minmax(0,1fr)}
+.side{border-right:1px solid var(--line);padding:12px;display:flex;flex-direction:column;gap:4px;font-size:13px}
+.side b{font-size:13px;margin-bottom:6px}
+.side span{padding:6px 8px;border-radius:8px;color:var(--ink2)}
+.side span.on{background:var(--accent-quiet);color:var(--accent);font-weight:600}
+.main{padding:16px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.tiles4{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:13px;font-variant-numeric:tabular-nums}
+th{text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink3);font-weight:600;padding:9px 12px;border-bottom:1px solid var(--line);background:var(--soft)}
+td{padding:10px 12px;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:0}
+td.num,th.num{text-align:right}
+@media (max-width:640px){ .deskin{grid-template-columns:1fr} .side{display:none} }
+.sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.sum div{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+.sum b{display:block;margin-bottom:4px}
+</style>
+
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:8px">
+    <h1>YourKhata screen designs, for your approval</h1>
+    <p class="lede">Proposed designs for every home screen and every list or table, in Shop, Library and Lending. Switch between a brand-new account with nothing in it and an account with records. The yellow note under each screen says what changes from today. These are drawings with made-up sample names and amounts. Nothing here is built until you approve it.</p>
+  </header>
+
+  <div class="bar" role="group" aria-label="Choose what to look at">
+    <span class="barlabel">App</span>
+    <div class="seg" id="appSeg"></div>
+    <span class="barlabel">Account</span>
+    <div class="seg" id="stateSeg"></div>
+  </div>
+
+  <section style="display:flex;flex-direction:column;gap:12px">
+    <h2>On a phone</h2>
+    <div class="row" id="phones"></div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:12px">
+    <h2>On a computer</h2>
+    <p class="lede">A computer keeps full tables, because there is room to compare rows. Only the home screen and the first-use state change.</p>
+    <div id="desktop"></div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:12px">
+    <h2>The rules behind every screen</h2>
+    <div class="sum">
+      <div><b>A new account sees one next step</b>No rows of zeros, no empty charts, no search box over an empty list. One sentence and one button.</div>
+      <div><b>Cards on a phone, tables on a computer</b>A phone card shows the name, the one amount that matters, and its status. Everything else is one tap away.</div>
+      <div><b>Two words for money direction</b>"You will get" in red and "You will give" in green, the same everywhere. No "owes", "receivable" or "outstanding".</div>
+      <div><b>Four different "nothing here" states</b>Never used yet, nothing matches your search, still loading, and could not load each look and read differently.</div>
+      <div><b>The bottom bar stays</b>It is hidden only while filling a form or inside one customer's khata, where Save or You gave / You got sit at the bottom.</div>
+      <div><b>No made-up figures</b>The app never shows sample numbers as if they were yours. Sample data appears only in this design page.</div>
+    </div>
+  </section>
+</div>
+
+<script>
+const R = (n) => '₹' + n;
+const nav = (items, on) => `<div class="nav">${items.map((t, i) => `<div class="${i === on ? 'on' : ''}"><i></i>${t}</div>`).join('')}</div>`;
+const phone = (biz, body, navItems, on) => `<div class="phone"><div class="top"><div class="logo">K</div><div class="biz">${biz}</div><div class="ico"></div></div><div class="body">${body}</div>${navItems ? nav(navItems, on) : ''}</div>`;
+const unit = (title, html, why) => `<div class="unit"><div class="cap">${title}</div>${html}<div class="why"><b>Change:</b> ${why}</div></div>`;
+const empty = (icon, title, text, btn) => `<div class="empty"><div class="big">${icon}</div><b>${title}</b><p>${text}</p>${btn ? `<span class="btn">${btn}</span>` : ''}</div>`;
+const item = (name, sub, amt, cls, extra) => `<div class="item"><div class="l"><b>${name}</b><small>${sub}</small></div><div class="r"><b class="${cls || ''}">${amt}</b>${extra || ''}</div></div>`;
+const steps = (list) => `<div class="steps">${list.map(([t, done], i) => `<div class="step ${done ? 'done' : ''}"><div class="n">${done ? '✓' : i + 1}</div><span>${t}</span>${done ? '' : '<span class="btn sm ghost" style="flex:none">Start</span>'}</div>`).join('')}</div>`;
+
+const NAV = { shop: ['Home', 'Customers', 'Bills', 'Items', 'More'], library: ['Home', 'Students', 'Seats', 'Fees', 'More'], lending: ['Today', 'Loans', 'Borrowers', 'Routes', 'More'] };
+const BIZ = { shop: 'Gupta Kirana Store', library: 'Gyan Reading Room', lending: 'Shree Finance' };
+
+const SCREENS = {
+  shop: {
+    empty: [
+      ['Home', phone(BIZ.shop, `<div class="pt"><b>Welcome, Ramesh</b></div><p class="muted">Three small steps and your khata is running. You can skip any of them.</p>${steps([['Add your first customer'], ['Add an item you sell'], ['Make your first bill']])}<p class="muted">Your totals will show here after your first entry.</p>`, NAV.shop, 0), 'Only the three steps. Today it also shows three empty boxes (Recent activity, Who owes most, Running low) and a "Send reminders" button with nobody to remind.'],
+      ['Customers', phone(BIZ.shop, `<div class="pt"><b>Customers</b></div>${empty('👤', 'No customers yet', 'Add a person you sell to on credit. Their khata starts here.', '+ Add customer')}<span class="btn ghost wide">Pick from phone contacts</span>`, NAV.shop, 1), 'No search box, filters or sort button while the list is empty. Today those take half the screen above an empty box. New: add from your phone contacts.'],
+      ['Bills', phone(BIZ.shop, `<div class="pt"><b>Bills</b></div>${empty('🧾', 'No bills yet', 'Make a bill, then print it or send it on WhatsApp.', '+ New bill')}`, NAV.shop, 2), 'The date filter, six tabs and search are hidden until there is a bill.'],
+      ['Items', phone(BIZ.shop, `<div class="pt"><b>Items</b></div>${empty('📦', 'No items yet', 'Add what you sell, with its price. Stock is counted for you.', '+ Add item')}`, NAV.shop, 3), 'The row of zero totals and the four empty tabs are hidden until there is an item.'],
+      ['Day book (report)', phone(BIZ.shop, `<div class="pt"><b>Day book</b><span class="pill">Today</span></div>${empty('📒', 'Nothing recorded today', 'Every bill, payment and expense you enter today is listed here in order.', '')}`, NAV.shop, 4), 'A plain sentence instead of an empty table with column headings. The bottom bar stays on reports.'],
+    ],
+    data: [
+      ['Home', phone(BIZ.shop, `<div class="pt"><b>Home</b><span class="btn sm">+ New bill</span></div><div class="tiles"><div class="tile"><small>You will get</small><b class="get">${R('7,039')}</b><small>from 4 customers</small></div><div class="tile"><small>You will give</small><b class="give">${R('8,978')}</b><small>to 2 suppliers</small></div><div class="tile"><small>Sold today</small><b>${R('2,583')}</b></div><div class="tile"><small>Cash in hand</small><b>${R('380')}</b></div></div><div class="card"><b>Who has to give you the most</b>${item('Ramesh Traders', 'Last entry today', R('3,265'), 'get')}${item('Priya Sweets', 'Bill 5 days old', R('1,638'), 'get', '<span class="pill warn">Remind</span>')}</div><div class="card"><b>Running low</b>${item('Bath Soap', '6 left', 'Reorder', '')}</div>`, NAV.shop, 0), 'Same four totals, with "You will get / You will give" instead of "To collect / To pay", and who they are from. Each box below appears only when it has something in it.'],
+      ['Customers', phone(BIZ.shop, `<div class="pt"><b>Customers</b><span class="btn sm">+ Add</span></div><div class="search"><span>Search name or mobile</span><span>Filters</span></div><div class="card" style="padding:4px 12px">${item('Priya Sweets', 'Today', R('1,638'), 'get', '<small>You will get</small>')}${item('Ramesh Traders', 'Today', R('3,265'), 'get', '<small>You will get</small>')}${item('Gupta Wholesale', '3 days ago', R('8,978'), 'give', '<small>You will give</small>')}${item('Mohan Lal', 'No entries yet', R('0'), '', '<small>Nothing left</small>')}</div>`, NAV.shop, 1), 'One "Filters" button opens a sheet, instead of three filter controls in a row. Each card: name, last activity, amount, direction in words and colour.'],
+      ['Bills', phone(BIZ.shop, `<div class="pt"><b>Bills</b><span class="btn sm">+ New bill</span></div><div class="search"><span>Search bill or name</span><span>Filters</span></div><div class="card" style="padding:4px 12px">${item('Anita General Store', 'INV-0005 · today', R('945'), '', '<span class="pill bad">Not paid</span>')}${item('Priya Sweets', 'INV-0004 · today', R('1,638'), '', '<span class="pill warn">Part paid</span>')}${item('Walk-in customer', 'INV-0003 · yesterday', R('252'), '', '<span class="pill ok">Paid</span>')}</div>`, NAV.shop, 2), 'A card per bill: who, bill number and day, total, paid or not. Tabs (Unpaid, Overdue, Paid…) move into Filters. Tap a bill for the full detail.'],
+      ['Items', phone(BIZ.shop, `<div class="pt"><b>Items</b><span class="btn sm">+ Add</span></div><div class="search"><span>Search or scan</span><span>Filters</span></div><div class="card" style="padding:4px 12px">${item('Basmati Rice 5kg', 'Sells at ' + R('450'), '58 left', '')}${item('Bath Soap', 'Sells at ' + R('35'), '6 left', 'get', '<span class="pill warn">Low</span>')}${item('Tea 250g', 'Sells at ' + R('120'), '0 left', 'get', '<span class="pill bad">Finished</span>')}</div>`, NAV.shop, 3), 'Stock left is the big number, because that is what you check. SKU, tax rate and purchase price move to the item page.'],
+      ['Day book (report)', phone(BIZ.shop, `<div class="pt"><b>Day book</b><span class="pill">Today</span></div><div class="tiles"><div class="tile"><small>Money in</small><b class="give">${R('500')}</b></div><div class="tile"><small>Money out</small><b class="get">${R('120')}</b></div></div><div class="day">Today</div><div class="card" style="padding:4px 12px">${item('Bill to Priya Sweets', '10:01 · on credit', R('1,638'), '')}${item('Expense: tea and snacks', '10:01 · cash', '− ' + R('120'), 'get')}${item('Got from Ramesh Traders', '10:04 · cash', '+ ' + R('500'), 'give')}</div><span class="btn ghost wide">Open as full table</span>`, NAV.shop, 4), 'Today this is an 11-column table squeezed onto the phone. Proposed: a list of what happened in order, with the full table one tap away for when you need it.'],
+    ],
+  },
+  library: {
+    empty: [
+      ['Home', phone(BIZ.library, `<div class="pt"><b>Welcome</b></div><p class="muted">Set up your library in three steps.</p>${steps([['Add your fee plans', true], ['Lay out your seats'], ['Admit your first student']])}<p class="muted">Fees to collect and seats filled will show here once you admit a student.</p>`, NAV.library, 0), 'No "Fee unpaid 0 / Collected ₹0.00" boxes and no "Everyone has paid" message when there are no students yet.'],
+      ['Students', phone(BIZ.library, `<div class="pt"><b>Students</b></div>${empty('🎓', 'No students yet', 'Admit your first student and give them a seat, a shift and a fee plan.', '+ New admission')}`, NAV.library, 1), 'Search and the two filters are hidden until there is a student.'],
+      ['Seats', phone(BIZ.library, `<div class="pt"><b>Seats</b></div>${empty('🪑', 'No seats laid out', 'Add your desks one row at a time, and the shifts you run.', 'Lay out seats')}`, NAV.library, 2), 'One clear action instead of an empty seat map.'],
+      ['Fees', phone(BIZ.library, `<div class="pt"><b>Fees</b></div>${empty('₹', 'No fees to collect yet', 'When a student is admitted, their fee and its date appear here.', '')}`, NAV.library, 3), 'Explains what will appear, with no zero totals.'],
+    ],
+    data: [
+      ['Home', phone(BIZ.library, `<div class="pt"><b>Today</b><span class="btn sm">+ Admission</span></div><div class="tiles"><div class="tile"><small>Fees to collect</small><b class="get">${R('900')}</b><small>1 student</small></div><div class="tile"><small>Collected this month</small><b class="give">${R('6,600')}</b></div><div class="tile"><small>Seats filled now</small><b>9 of 12</b></div><div class="tile"><small>Came today</small><b>7</b></div></div><div class="card"><b>Who has to pay</b>${item('Imran Khan', 'Plan ended 10 Oct', R('900'), 'get', '<span class="btn sm">Take fee</span>')}</div><div class="card"><b>Plans ending this week</b>${item('Sneha Patil', 'Seat A4 · ends 15 Oct', 'Remind', '')}</div>`, NAV.library, 0), 'Four numbers a librarian checks every morning, then the people to act on, each with its action beside it.'],
+      ['Students', phone(BIZ.library, `<div class="pt"><b>Students</b><span class="btn sm">+ Admission</span></div><div class="search"><span>Search name or number</span><span>Filters</span></div><div class="card" style="padding:4px 12px">${item('Asha Kulkarni', 'Seat A1 · Morning · Monthly', 'Paid', 'give', '<small>till 10 Nov</small>')}${item('Imran Khan', 'Seat A3 · Evening · Monthly', R('900'), 'get', '<span class="pill bad">Fee not paid</span>')}${item('Rahul Sharma', 'No seat · Quarterly', 'Paid', 'give', '<small>till 10 Jan</small>')}</div>`, NAV.library, 1), 'Seat, shift and plan on one line; fee status as the thing on the right. Today the seat reads "No seat" on its own line and the status is a small badge.'],
+      ['Seats', phone(BIZ.library, `<div class="pt"><b>Seats</b><span class="pill">Morning 7–1</span></div><p class="muted">9 filled · 3 free</p><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">${['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9', 'A10', 'A11', 'A12'].map((s, i) => `<div class="tile" style="align-items:center;padding:8px 4px;${i % 4 === 3 ? '' : 'background:var(--accent-quiet)'}"><b style="font-size:14px">${s}</b><small>${i % 4 === 3 ? 'Free' : 'Taken'}</small></div>`).join('')}</div>`, NAV.library, 2), 'Four seats to a row so each is easy to tap, with filled and free counted at the top.'],
+      ['Fees', phone(BIZ.library, `<div class="pt"><b>Fees</b></div><div class="tiles"><div class="tile"><small>To collect</small><b class="get">${R('900')}</b></div><div class="tile"><small>Collected this month</small><b class="give">${R('6,600')}</b></div></div><div class="day">Not paid</div><div class="card" style="padding:4px 12px">${item('Imran Khan', 'Monthly · was due 10 Oct', R('900'), 'get', '<span class="btn sm">Take fee</span>')}</div><div class="day">Paid this month</div><div class="card" style="padding:4px 12px">${item('Asha Kulkarni', '10 Oct · UPI', R('900'), 'give')}${item('Sneha Patil', '10 Oct · cash', R('900'), 'give')}</div>`, NAV.library, 3), 'Grouped as "Not paid" then "Paid", with Take fee on the row, instead of one long mixed list.'],
+    ],
+  },
+  lending: {
+    empty: [
+      ['Today', phone(BIZ.lending, `<div class="pt"><b>Welcome</b></div>${empty('🤝', 'Give your first loan', 'Choose the amount, the instalment and the days. Every instalment is listed for you, and this screen shows who to collect from each day.', '+ New loan')}<p class="muted">Later, if you have collectors: add the areas they visit, and add them to your team.</p>`, NAV.lending, 0), 'Today the first step shown is "Make the routes your agents walk" and a row of four zeros. A lender\'s first step is giving a loan; routes and collectors are optional and come later.'],
+      ['Loans', phone(BIZ.lending, `<div class="pt"><b>Loans</b></div>${empty('🏦', 'No loans yet', 'A loan you give appears here with what is left and when the next instalment comes.', '+ New loan')}`, NAV.lending, 1), 'Was the three words "No loans here" with no button. Search and the status filter are hidden until there is a loan.'],
+      ['Borrowers', phone(BIZ.lending, `<div class="pt"><b>Borrowers</b></div>${empty('👥', 'No borrowers yet', 'Give a loan, and the person who takes it is added here.', '+ New loan')}`, NAV.lending, 2), 'Says what to do and offers the button.'],
+    ],
+    data: [
+      ['Today', phone(BIZ.lending, `<div class="pt"><b>Today · 12 Oct</b><span class="btn sm">+ New loan</span></div><div class="tiles"><div class="tile"><small>To collect today</small><b class="get">${R('2,500')}</b><small>4 stops</small></div><div class="tile"><small>Collected</small><b class="give">${R('400')}</b><small>1 done</small></div></div><div class="card" style="padding:4px 12px">${item('Geeta Devi', 'Loan LN-0001 · ' + R('100') + ' a day', R('100'), 'get', '<span class="btn sm">Collect</span>')}${item('Geeta Devi', 'Loan LN-0006 · 1 day late', R('550'), 'get', '<span class="btn sm">Collect</span>')}${item('Ramu Kaka', 'Loan LN-0002 · 1 day late', R('200'), 'get', '<span class="btn sm">Collect</span>')}${item('Salma Begum', 'Loan LN-0003', 'Paid', 'give', '<small>' + R('200') + ' today</small>')}</div>`, NAV.lending, 0), 'Two big numbers instead of four small ones. A person with two loans shows as two rows, each named by its loan number, one after the other. Collect is on every row.'],
+      ['Loans', phone(BIZ.lending, `<div class="pt"><b>Loans</b><span class="btn sm">+ New loan</span></div><div class="search"><span>Search name or loan</span><span>Running</span></div><div class="card" style="padding:4px 12px">${item('Geeta Devi', 'LN-0001 · next 13 Oct', R('9,600'), '', '<span class="pill">Running</span>')}${item('Geeta Devi', 'LN-0006 · next 13 Oct', R('5,500'), 'get', '<span class="pill bad">1 day late</span>')}${item('Ramu Kaka', 'LN-0002 · next 13 Oct', R('1,800'), 'get', '<span class="pill bad">1 day late</span>')}</div><p class="muted">The amount is what is left to collect on that loan.</p>`, NAV.lending, 1), 'Mostly as it is now. The amount is labelled "left to collect", and late loans are red.'],
+      ['Borrowers', phone(BIZ.lending, `<div class="pt"><b>Borrowers</b></div><div class="search"><span>Search name or mobile</span><span></span></div><div class="card" style="padding:4px 12px">${item('Geeta Devi', '3 loans · 3 running', R('37,100'), 'get', '<span class="pill bad">Late</span>')}${item('Ramu Kaka', '1 loan · 1 running', R('1,800'), 'get', '<span class="pill bad">Late</span>')}${item('Salma Begum', '2 loans · 1 running', R('3,400'), '', '<small>Left to collect</small>')}</div>`, NAV.lending, 2), 'Each person shows how many loans they have and the total left across them. Before, this was only a name and phone number. (Already built in my working copy, not yet committed.)'],
+      ['One borrower\'s loans', phone(BIZ.lending, `<div class="pt"><b>Geeta Devi</b><span class="btn sm">+ Loan</span></div><div class="tiles"><div class="tile"><small>Given in all</small><b>${R('35,000')}</b></div><div class="tile"><small>Got back</small><b class="give">${R('400')}</b></div><div class="tile"><small>Left to collect</small><b class="get">${R('37,100')}</b></div><div class="tile"><small>Late now</small><b class="get">${R('550')}</b></div></div><span class="btn wide">Collect from Geeta</span><div class="card" style="padding:4px 12px">${item('LN-0001', R('10,000') + ' given 1 Oct', R('9,600'), '', '<span class="pill">Running</span>')}${item('LN-0006', R('5,000') + ' given 10 Oct', R('5,500'), 'get', '<span class="pill bad">1 day late</span>')}${item('LN-0007', R('20,000') + ' given 12 Oct', R('22,000'), '', '<span class="pill">Running</span>')}</div>`, NAV.lending, 2), 'New screen: one person, their totals, and each loan as its own row. "Collect from Geeta" would let you take one amount and split it across her loans, showing the split before you save. The totals are built; the Collect button is proposed.'],
+    ],
+  },
+};
+
+const DESK = {
+  shop: {
+    empty: `<div class="pt"><b style="font-size:18px">Welcome, Ramesh</b></div><p class="muted">Three small steps and your khata is running.</p><div style="max-width:520px">${steps([['Add your first customer'], ['Add an item you sell'], ['Make your first bill']])}</div>`,
+    data: `<div class="pt"><b style="font-size:18px">Home</b><span class="btn sm">+ New bill</span></div><div class="tiles4"><div class="tile"><small>You will get</small><b class="get">${R('7,039')}</b></div><div class="tile"><small>You will give</small><b class="give">${R('8,978')}</b></div><div class="tile"><small>Sold today</small><b>${R('2,583')}</b></div><div class="tile"><small>Cash in hand</small><b>${R('380')}</b></div></div><div class="tw"><table><thead><tr><th>Customer</th><th>Last entry</th><th>Mobile</th><th class="num">Amount</th><th>Direction</th></tr></thead><tbody><tr><td>Priya Sweets</td><td>Today</td><td>98220 12348</td><td class="num get">${R('1,638')}</td><td>You will get</td></tr><tr><td>Ramesh Traders</td><td>Today</td><td>98220 12345</td><td class="num get">${R('3,265')}</td><td>You will get</td></tr><tr><td>Gupta Wholesale</td><td>3 days ago</td><td>98220 12350</td><td class="num give">${R('8,978')}</td><td>You will give</td></tr></tbody></table></div>`,
+    side: ['Home', 'Customers', 'Suppliers', 'Bills', 'Items', 'Reports'],
+  },
+  library: {
+    empty: `<div class="pt"><b style="font-size:18px">Welcome</b></div><p class="muted">Set up your library in three steps.</p><div style="max-width:520px">${steps([['Add your fee plans', true], ['Lay out your seats'], ['Admit your first student']])}</div>`,
+    data: `<div class="pt"><b style="font-size:18px">Today</b><span class="btn sm">+ New admission</span></div><div class="tiles4"><div class="tile"><small>Fees to collect</small><b class="get">${R('900')}</b></div><div class="tile"><small>Collected this month</small><b class="give">${R('6,600')}</b></div><div class="tile"><small>Seats filled now</small><b>9 of 12</b></div><div class="tile"><small>Came today</small><b>7</b></div></div><div class="tw"><table><thead><tr><th>Student</th><th>Seat</th><th>Shift</th><th>Plan</th><th>Paid till</th><th class="num">Fee to collect</th></tr></thead><tbody><tr><td>Asha Kulkarni</td><td>A1</td><td>Morning</td><td>Monthly</td><td>10 Nov</td><td class="num">${R('0')}</td></tr><tr><td>Imran Khan</td><td>A3</td><td>Evening</td><td>Monthly</td><td>10 Oct</td><td class="num get">${R('900')}</td></tr><tr><td>Rahul Sharma</td><td>None</td><td>All day</td><td>Quarterly</td><td>10 Jan</td><td class="num">${R('0')}</td></tr></tbody></table></div>`,
+    side: ['Home', 'Students', 'Seats', 'Fees', 'Attendance', 'Books'],
+  },
+  lending: {
+    empty: `<div class="pt"><b style="font-size:18px">Welcome</b></div><div style="max-width:520px">${empty('🤝', 'Give your first loan', 'Choose the amount, the instalment and the days. Every instalment is listed for you.', '+ New loan')}</div>`,
+    data: `<div class="pt"><b style="font-size:18px">Borrowers</b><span class="btn sm">+ New loan</span></div><div class="tiles4"><div class="tile"><small>To collect today</small><b class="get">${R('2,500')}</b></div><div class="tile"><small>Collected today</small><b class="give">${R('400')}</b></div><div class="tile"><small>Left on all loans</small><b>${R('42,300')}</b></div><div class="tile"><small>Late now</small><b class="get">${R('750')}</b></div></div><div class="tw"><table><thead><tr><th>Borrower</th><th>Loans</th><th class="num">Given in all</th><th class="num">Got back</th><th class="num">Left to collect</th><th class="num">Late now</th></tr></thead><tbody><tr><td>Geeta Devi</td><td>3 (3 running)</td><td class="num">${R('35,000')}</td><td class="num">${R('400')}</td><td class="num get">${R('37,100')}</td><td class="num get">${R('550')}</td></tr><tr><td>Ramu Kaka</td><td>1 (1 running)</td><td class="num">${R('2,000')}</td><td class="num">${R('200')}</td><td class="num get">${R('1,800')}</td><td class="num get">${R('200')}</td></tr><tr><td>Salma Begum</td><td>2 (1 running)</td><td class="num">${R('8,000')}</td><td class="num">${R('5,600')}</td><td class="num">${R('3,400')}</td><td class="num">${R('0')}</td></tr></tbody></table></div>`,
+    side: ['Today', 'Loans', 'Borrowers', 'Routes', 'Messages'],
+  },
+};
+
+let app = 'shop', state = 'empty';
+try { const h = location.hash.replace('#', '').split('-'); if (SCREENS[h[0]]) app = h[0]; if (h[1] === 'data' || h[1] === 'empty') state = h[1]; } catch (e) {}
+const seg = (el, opts, get, set) => { el.innerHTML = opts.map(([v, l]) => `<button type="button" id="${el.id}-${v}" aria-pressed="${get() === v}">${l}</button>`).join(''); el.querySelectorAll('button').forEach((b, i) => b.addEventListener('click', () => { set(opts[i][0]); render(); })); };
+function render() {
+  seg(document.getElementById('appSeg'), [['shop', 'Shop'], ['library', 'Library'], ['lending', 'Lending']], () => app, (v) => { app = v; });
+  seg(document.getElementById('stateSeg'), [['empty', 'Brand new, nothing in it'], ['data', 'With records']], () => state, (v) => { state = v; });
+  document.getElementById('phones').innerHTML = SCREENS[app][state].map(([t, h, w]) => unit(t, h, w)).join('');
+  const d = DESK[app];
+  document.getElementById('desktop').innerHTML = `<div class="desk"><div class="deskbar"><i></i><i></i><i></i></div><div class="deskin"><div class="side"><b>${BIZ[app]}</b>${d.side.map((s, i) => `<span class="${i === (state === 'data' && app !== 'library' ? (app === 'shop' ? 0 : 2) : 0) ? 'on' : ''}">${s}</span>`).join('')}</div><div class="main">${d[state]}</div></div></div>`;
+}
+render();
+</script>

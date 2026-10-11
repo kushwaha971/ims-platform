@@ -8,6 +8,7 @@ import type { ApiErrorShape, RequestStatus } from 'src/types/api.types';
 import {
   collectLendingLoan,
   createLendingLoan,
+  fetchLendingBorrower,
   fetchLendingBorrowers,
   previewLendingLoan,
 } from './lendingThunk';
@@ -20,6 +21,8 @@ export interface LendingFormState {
   previewStatus: RequestStatus;
   previewError: ApiErrorShape | null;
   borrowers: BorrowerRow[];
+  /** The borrower whose loans are being listed (`/lending/loans?borrower=`). */
+  borrower: BorrowerRow | null;
   saving: boolean;
   stale: boolean;
   staleUrgency: 'now' | 'next-mount' | null;
@@ -30,6 +33,7 @@ const initialState: LendingFormState = {
   previewStatus: 'idle',
   previewError: null,
   borrowers: [],
+  borrower: null,
   saving: false,
   stale: false,
   staleUrgency: null,
@@ -58,6 +62,17 @@ const lendingFormSlice = createSlice({
       })
       .addCase(fetchLendingBorrowers.fulfilled, (state, action) => {
         state.borrowers = action.payload as Draft<BorrowerRow>[];
+      })
+      // Somebody else's figures are never shown over a new name: cleared while
+      // the next person's are read, and on a failure.
+      .addCase(fetchLendingBorrower.pending, (state) => {
+        state.borrower = null;
+      })
+      .addCase(fetchLendingBorrower.fulfilled, (state, action) => {
+        state.borrower = action.payload as Draft<BorrowerRow>;
+      })
+      .addCase(fetchLendingBorrower.rejected, (state) => {
+        state.borrower = null;
       })
       .addCase(createLendingLoan.pending, (state) => {
         state.saving = true;

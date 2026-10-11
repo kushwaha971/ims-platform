@@ -748,7 +748,8 @@
   "",
   "11 Oct 2026 — MiniMoth: six-digit OTP validation extends the shared regex catalogue.",
   "The production build crosses five first-load boundaries by less than 0.1 KB gz.",
-  "Those five caps increase by 0.1 KB; auth routes also gain shared-sender guidance."
+  "Those five caps increase by 0.1 KB; auth routes also gain shared-sender guidance.",
+  "12 Oct 2026, product review, first slice: the account-actions hook gained the theme (it reaches the shell through the account menu and More), the phone nav rule a named exception list, and the lending loans list a per-borrower head. Shared app +0.1 KB; routes on their ceiling raised by the measured + 0.5 rule: /sales/challans/[id]/edit firstLoad 384→385; /sales/orders/[id]/edit firstLoad 384→385; /sales/estimates/[id]/edit route 148→149; /sales/challans/new firstLoad 384→385; /sales/orders/new firstLoad 384→385; /sales/estimates/new route 148→149; /sales/invoices/[id]/edit firstLoad 384→385; /sales/invoices/new firstLoad 384→385; /lending/loans/new route 126→127; /lending/loans/new firstLoad 362→363; /reports/profit firstLoad 337→338; /library/members firstLoad 315→316; /sales/challans firstLoad 312→313; /sales/orders firstLoad 312→313; /sales/invoices/[id] firstLoad 311→312; /library/catalogue/[titleId] firstLoad 301→302; /lending firstLoad 300→301; /lending/loans firstLoad 297→299; /payments/[id] firstLoad 297→298; /items/masters firstLoad 286→287; /imports/[id] firstLoad 285→286; /imports firstLoad 285→286."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -1325,15 +1326,15 @@
   },
   "/sales/challans": {
    "route": 77,
-   "firstLoad": 312.1
+   "firstLoad": 313
   },
   "/sales/challans/new": {
    "route": 149,
-   "firstLoad": 384
+   "firstLoad": 385
   },
   "/sales/challans/[id]/edit": {
    "route": 149,
-   "firstLoad": 384
+   "firstLoad": 385
   },
   "/purchases/orders/[id]": {
    "route": 65,
@@ -1357,15 +1358,15 @@
   },
   "/sales/orders": {
    "route": 77,
-   "firstLoad": 312.1
+   "firstLoad": 313
   },
   "/sales/orders/new": {
    "route": 149,
-   "firstLoad": 384
+   "firstLoad": 385
   },
   "/sales/orders/[id]/edit": {
    "route": 149,
-   "firstLoad": 384
+   "firstLoad": 385
   },
   "/parties": {
    "route": 109,
@@ -1377,11 +1378,11 @@
   },
   "/sales/invoices/new": {
    "route": 149,
-   "firstLoad": 384
+   "firstLoad": 385
   },
   "/sales/invoices/[id]/edit": {
    "route": 149,
-   "firstLoad": 384
+   "firstLoad": 385
   },
   "/sales/invoices": {
    "route": 98,
@@ -1389,18 +1390,18 @@
   },
   "/sales/invoices/[id]": {
    "route": 76,
-   "firstLoad": 311.1
+   "firstLoad": 312
   },
   "/sales/estimates": {
    "route": 98,
    "firstLoad": 356
   },
   "/sales/estimates/new": {
-   "route": 148,
+   "route": 149,
    "firstLoad": 400
   },
   "/sales/estimates/[id]/edit": {
-   "route": 148,
+   "route": 149,
    "firstLoad": 400
   },
   "/sales/estimates/[id]": {
@@ -1481,7 +1482,7 @@
   },
   "/items/masters": {
    "route": 51,
-   "firstLoad": 286
+   "firstLoad": 287
   },
   "/items": {
    "route": 108,
@@ -1509,7 +1510,7 @@
   },
   "/payments/[id]": {
    "route": 62,
-   "firstLoad": 297.1
+   "firstLoad": 298
   },
   "/ledger/reminders": {
    "route": 71,
@@ -1517,11 +1518,11 @@
   },
   "/imports": {
    "route": 50,
-   "firstLoad": 285
+   "firstLoad": 286
   },
   "/imports/[id]": {
    "route": 50,
-   "firstLoad": 285
+   "firstLoad": 286
   },
   "/admin": {
    "route": 11,
@@ -1577,7 +1578,7 @@
   },
   "/reports/profit": {
    "route": 102,
-   "firstLoad": 337
+   "firstLoad": 338
   },
   "/reports/purchase-register": {
    "route": 106,
@@ -1617,7 +1618,7 @@
   },
   "/library/members": {
    "route": 80,
-   "firstLoad": 315
+   "firstLoad": 316
   },
   "/library/members/[membershipId]": {
    "route": 73,
@@ -1625,7 +1626,7 @@
   },
   "/library/catalogue/[titleId]": {
    "route": 66,
-   "firstLoad": 301
+   "firstLoad": 302
   },
   "/library/catalogue/categories": {
    "route": 64,
@@ -1700,12 +1701,12 @@
    "firstLoad": 301
   },
   "/lending/loans/new": {
-   "route": 126,
-   "firstLoad": 362
+   "route": 127,
+   "firstLoad": 363
   },
   "/lending": {
    "route": 65,
-   "firstLoad": 300
+   "firstLoad": 301
   },
   "/lending/loans/[loanId]": {
    "route": 63,
@@ -1713,7 +1714,7 @@
   },
   "/lending/loans": {
    "route": 62,
-   "firstLoad": 297
+   "firstLoad": 299
   },
   "/customers": {
    "route": 110,

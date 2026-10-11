@@ -18,6 +18,11 @@ urlpatterns: list = [
     path("loans/<uuid:loan_id>", ln.LoanDetailView.as_view(), name="lending-loan"),
     path("borrowers", ln.BorrowerListView.as_view(), name="lending-borrowers"),
     path(
+        "borrowers/<uuid:borrower_id>",
+        ln.BorrowerDetailView.as_view(),
+        name="lending-borrower",
+    ),
+    path(
         "loans/<uuid:loan_id>/dues/<uuid:due_id>",
         ln.LoanDueFiguresView.as_view(),
         name="lending-loan-due",

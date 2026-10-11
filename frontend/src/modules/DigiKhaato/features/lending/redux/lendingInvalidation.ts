@@ -14,6 +14,7 @@ export const LENDING_QUERIES = {
   fetchLendingLoans: 'lendingLoans/fetch',
   fetchLendingLoan: 'lendingLoans/fetchOne',
   fetchLendingBorrowers: 'lendingForm/fetchBorrowers',
+  fetchLendingBorrower: 'lendingForm/fetchBorrower',
   previewLendingLoan: 'lendingForm/preview',
   previewLendingCollection: 'lendingForm/previewCollection',
   fetchLendingReminders: 'lendingMessages/fetch',

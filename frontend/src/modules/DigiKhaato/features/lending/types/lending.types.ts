@@ -247,6 +247,22 @@ export interface BorrowerRow {
   readonly mobile: string | null;
   readonly area: string;
   readonly route: { readonly id: string; readonly name: string } | null;
+  /** This person's loans added up; absent from a server that does not send it. */
+  readonly summary?: BorrowerSummary | null;
+}
+
+/**
+ * A borrower's loans, added up by the server (`GET /lending/borrowers`). A
+ * borrower and a loan are different things: one person may hold several loans,
+ * and this is the line that says so. `left` and `late` count running loans only.
+ */
+export interface BorrowerSummary {
+  readonly loans: number;
+  readonly running: number;
+  readonly given: string;
+  readonly collected: string;
+  readonly left: string;
+  readonly late: string;
 }
 
 export interface LoanFormValues {

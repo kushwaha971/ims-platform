@@ -51,7 +51,7 @@ export const fetchLendingRoutes = createAsyncThunk<LendingRoute[], void, Reject>
 
 export const fetchLendingLoans = createAsyncThunk<
   LoanPage,
-  { status?: string; q?: string; route?: string; page?: string },
+  { status?: string; q?: string; route?: string; borrower?: string; page?: string },
   Reject
 >('lendingLoans/fetch', async (params, { signal, rejectWithValue }) => {
   try {
@@ -88,6 +88,18 @@ export const fetchLendingBorrowers = createAsyncThunk<BorrowerRow[], string, Rej
   async (q, { signal, rejectWithValue }) => {
     try {
       return await (await service()).listBorrowers(q, signal);
+    } catch (error) {
+      return rejectWithValue(toApiError(error, 'lending.borrowers.error'));
+    }
+  }
+);
+
+/** QUERY — one borrower and their loans added up, for the head of their loan list. */
+export const fetchLendingBorrower = createAsyncThunk<BorrowerRow, string, Reject>(
+  'lendingForm/fetchBorrower',
+  async (id, { signal, rejectWithValue }) => {
+    try {
+      return await (await service()).getBorrower(id, signal);
     } catch (error) {
       return rejectWithValue(toApiError(error, 'lending.borrowers.error'));
     }

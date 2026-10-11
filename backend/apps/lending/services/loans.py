@@ -655,6 +655,69 @@ def figures(loan: LendingLoan, today: dt.date) -> dict:
     }
 
 
+def borrower_summaries(tenant: Any, borrower_ids: Any, today: dt.date) -> dict[Any, dict]:
+    """Each borrower's loans, added up — in three queries however many borrowers.
+
+    A borrower and a loan are different things (owner, 12 Oct 2026): one person
+    may hold several loans, each with its own terms, schedule and status, and
+    every money path in this module is per LOAN. What was missing was the
+    person: nothing said "Ramesh has three loans, ₹35,000 given, ₹9,000 back,
+    ₹29,500 left" — the Borrowers list showed a name and a phone number, and a
+    tap opened the shop's khata page, which knows nothing of loans.
+
+    The figures are sums of the same per-loan figures `figures()` returns, read
+    from the dues in bulk, so a borrower's total can never disagree with their
+    loans added up by hand. `left` and `late` count RUNNING loans only: a loan
+    that was written off or cancelled is not money anybody is waiting for.
+    """
+    from apps.dues.models import DuesDue
+
+    ids = list(borrower_ids)
+    out: dict[Any, dict] = {
+        bid: {"loans": 0, "running": 0, "given": ZERO, "collected": ZERO, "left": ZERO, "late": ZERO}
+        for bid in ids
+    }
+    if not ids:
+        return {}
+    loans_of = list(
+        LendingLoan.objects.filter(tenant=tenant, borrower_id__in=ids)
+        .exclude(status=LoanStatus.CANCELLED)
+        .values("id", "borrower_id", "schedule_id", "status", "principal")
+    )
+    by_schedule = {row["schedule_id"]: row for row in loans_of if row["schedule_id"]}
+    for row in loans_of:
+        mine = out[row["borrower_id"]]
+        mine["loans"] += 1
+        mine["given"] += Decimal(row["principal"])
+        if row["status"] == LoanStatus.ACTIVE:
+            mine["running"] += 1
+    dues = DuesDue.objects.filter(schedule_id__in=list(by_schedule)).exclude(
+        status__in=["cancelled", "skipped"]
+    )
+    for due in dues:
+        loan = by_schedule[due.schedule_id]
+        mine = out[loan["borrower_id"]]
+        mine["collected"] += Decimal(due.settled_amount)
+        if loan["status"] != LoanStatus.ACTIVE:
+            continue
+        owed = Decimal(due.amount) + Decimal(due.penalty_amount) - Decimal(due.waived_amount)
+        left = max(q2(owed - Decimal(due.settled_amount)), ZERO)
+        mine["left"] += left
+        if due.due_on < today:
+            mine["late"] += left
+    return {
+        bid: {
+            "loans": v["loans"],
+            "running": v["running"],
+            "given": f"{q2(v['given']):.2f}",
+            "collected": f"{q2(v['collected']):.2f}",
+            "left": f"{q2(v['left']):.2f}",
+            "late": f"{q2(v['late']):.2f}",
+        }
+        for bid, v in out.items()
+    }
+
+
 def loan_json(loan: LendingLoan, today: dt.date, *, with_schedule: bool = False) -> dict:
     out = {
         "id": str(loan.id),

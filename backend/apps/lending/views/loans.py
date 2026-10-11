@@ -62,8 +62,11 @@ class LoanDetailView(_LendingView):
         return StandardResponse.ok(loans.loan_json(loan, tenant_today(tenant), with_schedule=True))
 
 
-def borrower_json(b: LendingBorrower) -> dict:
+def borrower_json(b: LendingBorrower, summary: dict | None = None) -> dict:
     return {
+        # Their loans, added up (`loans.borrower_summaries`): how many, how much
+        # was given, how much has come back, how much is left and how much is late.
+        **({"summary": summary} if summary is not None else {}),
         "id": str(b.id),
         "number": b.borrower_number,
         "party_id": str(b.party_id),
@@ -93,7 +96,35 @@ class BorrowerListView(_LendingView):
             )
         paginator = PagePagination()
         rows = paginator.paginate_queryset(qs.order_by("party__name", "id"), request, view=self)
-        return paginator.get_paginated_response([borrower_json(b) for b in rows])
+        totals = loans.borrower_summaries(tenant, [b.id for b in rows], tenant_today(tenant))
+        return paginator.get_paginated_response([borrower_json(b, totals.get(b.id)) for b in rows])
+
+
+class BorrowerDetailView(_LendingView):
+    """`GET /lending/borrowers/{id}` — one person and their loans added up.
+
+    The loans themselves are `GET /lending/loans?borrower={id}`, each with its
+    own figures: this is the line above them.
+    """
+
+    read = "lending.borrower.read"
+
+    def get(self, request: Any, borrower_id: Any) -> Any:
+        from django.core.exceptions import ValidationError
+
+        from apps.common.exceptions import NotFound
+
+        tenant = get_effective_tenant(request)
+        try:
+            borrower = (
+                LendingBorrower.objects.filter(tenant=tenant)
+                .select_related("party", "route")
+                .get(pk=borrower_id)
+            )
+        except (LendingBorrower.DoesNotExist, ValidationError, ValueError, TypeError) as exc:
+            raise NotFound("Borrower not found.") from exc
+        totals = loans.borrower_summaries(tenant, [borrower.id], tenant_today(tenant))
+        return StandardResponse.ok(borrower_json(borrower, totals.get(borrower.id)))
 
 
 class LoanDueFiguresView(_LendingView):
