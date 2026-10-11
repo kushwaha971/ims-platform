@@ -1,4 +1,5 @@
 import type { UbDataGridColumn } from 'src/design-system/UbDataGrid';
+import { accountContact } from 'src/utils/accountIdentity';
 
 import { accessStateOf } from '../view-model/credentialsShare';
 import { roleText } from '../view-model/roleDisplay';
@@ -62,7 +63,14 @@ export const createMemberColumns = ({
     priority: 1,
     cardSlot: 'title',
     widthShare: 34,
-    cell: (member) => <MemberNameCell name={member.fullName} email={member.email} />,
+    // The contact line is a real email or the mobile they sign in with — never
+    // a mobile account's placeholder address (accountIdentity.ts).
+    cell: (member) => (
+      <MemberNameCell
+        name={member.fullName}
+        email={accountContact({ email: member.email, mobile: member.mobile })}
+      />
+    ),
   },
   {
     id: 'access',

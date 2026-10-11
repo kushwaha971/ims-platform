@@ -3,7 +3,6 @@ import { join } from 'node:path';
 
 import { fireEvent, screen } from '@testing-library/react';
 
-
 import { SITE_URL } from 'src/constants';
 import { serializeJsonLd, UbDisclosure } from 'src/design-system';
 import { APP_ROUTE_PREFIXES, GUARDED_ROUTE_PREFIXES, ROUTES } from 'src/routes';
@@ -24,16 +23,29 @@ import sitemap from 'app/sitemap';
 import en from 'locales/catalogues/landing.en.json';
 
 import { FaqSection } from 'modules/DigiKhaato/features/landing/components/LandingClosing';
-import { faqAnswerKey, faqIds, faqQuestionKey } from 'modules/DigiKhaato/features/landing/config/faq';
-import { PRICING, SHOW_PRICING, type Pricing } from 'modules/DigiKhaato/features/landing/config/pricing';
+import {
+  faqAnswerKey,
+  faqIds,
+  faqQuestionKey,
+} from 'modules/DigiKhaato/features/landing/config/faq';
+import { ALL_MODULES_VISIBLE } from 'modules/DigiKhaato/features/landing/config/modules';
+import {
+  PRICING,
+  SHOW_PRICING,
+  type Pricing,
+} from 'modules/DigiKhaato/features/landing/config/pricing';
 import {
   LANDING_DESCRIPTION,
   LANDING_SHARE_DESCRIPTION,
   LANDING_SHARE_TITLE,
   LANDING_TITLE,
+  landingWords,
   OG_IMAGE,
 } from 'modules/DigiKhaato/features/landing/config/seo';
-import { buildLandingJsonLd } from 'modules/DigiKhaato/features/landing/utils/landingJsonLd';
+import {
+  buildLandingJsonLd,
+  isoDuration,
+} from 'modules/DigiKhaato/features/landing/utils/landingJsonLd';
 
 import type { Metadata } from 'next';
 
@@ -72,32 +84,46 @@ describe('the landing page metadata', () => {
   });
 
   /**
-   * CR-2026-09-29-PLATFORM-D: the result describes the WHOLE platform. The
-   * title reaches all five modules — bills (shop), fees (library, gym),
-   * collections (lending), bookings (hotel) — and the description names every
-   * module in plain words, not the shop alone. Coaching, withdrawn by the
-   * owner, is named nowhere.
+   * The result describes what the PAGE shows. With every module visible it is
+   * the five-module wording (CR-2026-09-29-PLATFORM-D): bills (shop), fees
+   * (library, gym), collections (lending), bookings (hotel). While Gym and
+   * Hotel are hidden (owner, 10 Oct 2026) it names Shop, Library and Lending
+   * and NOTHING of the hidden two — a title that promises room bookings over a
+   * page with no hotel on it is a claim made only to search engines.
    */
-  it('describes the whole platform: all five modules, in the title and the description', () => {
-    for (const word of [/bills/, /fees/, /collections/, /bookings/]) expect(LANDING_TITLE).toMatch(word);
-    for (const [module, word] of [
-      ['shop', /GST bills|stock/],
-      ['lending', /loan collections/],
-      ['library', /library/],
-      ['gym', /gym/],
-      ['hotel', /room bookings/],
-    ] as const) {
-      expect({ module, description: word.test(LANDING_DESCRIPTION), share: word.test(LANDING_SHARE_DESCRIPTION) }).toEqual({
-        module,
-        description: true,
-        share: true,
-      });
+  it('names all five modules when all five are shown', () => {
+    const all = landingWords(true);
+    for (const word of [/bills/, /fees/, /collections/, /bookings/])
+      expect(all.title).toMatch(word);
+    for (const word of [/GST bills|stock/, /loan collections/, /library/, /gym/, /room bookings/]) {
+      expect(all.description).toMatch(word);
+      expect(all.shareDescription).toMatch(word);
     }
   });
 
+  it('names Shop, Library and Lending, and neither hidden module, while Gym and Hotel are hidden', () => {
+    const shown = landingWords(false);
+    for (const word of [/shop/i, /library/i, /lending/i]) expect(shown.title).toMatch(word);
+    for (const word of [/GST bills|stock/, /librar/, /loan/]) {
+      expect(shown.description).toMatch(word);
+      expect(shown.shareDescription).toMatch(word);
+    }
+    for (const text of Object.values(shown))
+      expect(text).not.toMatch(/gym|fitness|hotel|room booking|guest/i);
+    expect(shown.title.length).toBeLessThan(60);
+    expect(shown.description.length).toBeLessThan(160);
+    // And the live page uses the set that matches its module flag.
+    expect(LANDING_TITLE).toBe(landingWords(ALL_MODULES_VISIBLE).title);
+  });
+
   it('names the withdrawn coaching module in no metadata', () => {
-    for (const text of [LANDING_TITLE, LANDING_DESCRIPTION, LANDING_SHARE_TITLE, LANDING_SHARE_DESCRIPTION]) {
-      expect(text).not.toMatch(/coaching|tuition|student/i);
+    for (const text of [
+      LANDING_TITLE,
+      LANDING_DESCRIPTION,
+      LANDING_SHARE_TITLE,
+      LANDING_SHARE_DESCRIPTION,
+    ]) {
+      expect(text).not.toMatch(/coaching|tuition/i);
     }
   });
 
@@ -124,8 +150,13 @@ describe('the landing page metadata', () => {
       title: LANDING_SHARE_TITLE,
       description: LANDING_SHARE_DESCRIPTION,
     });
-    expect(og.images).toEqual([expect.objectContaining({ url: OG_IMAGE.url, width: 1200, height: 630 })]);
-    expect(landingMetadata.twitter).toMatchObject({ card: 'summary_large_image', title: LANDING_SHARE_TITLE });
+    expect(og.images).toEqual([
+      expect.objectContaining({ url: OG_IMAGE.url, width: 1200, height: 630 }),
+    ]);
+    expect(landingMetadata.twitter).toMatchObject({
+      card: 'summary_large_image',
+      title: LANDING_SHARE_TITLE,
+    });
   });
 
   /** A preview card that 404s, or is not the size it claims, is cropped or dropped. */
@@ -237,13 +268,24 @@ describe('sitemap.xml', () => {
 describe('the landing page JSON-LD', () => {
   const build = (pricing: Pricing = PRICING, showPricing: boolean = SHOW_PRICING) =>
     JSON.parse(
-      serializeJsonLd(buildLandingJsonLd({ siteUrl: SITE_URL, appName: 'YourKhata', messages: en, pricing, showPricing }))
+      serializeJsonLd(
+        buildLandingJsonLd({
+          siteUrl: SITE_URL,
+          appName: 'YourKhata',
+          messages: en,
+          pricing,
+          showPricing,
+        })
+      )
     ) as {
       '@context': string;
       '@graph': Record<string, unknown>[];
     };
   const node = (type: string, pricing?: Pricing, showPricing?: boolean) =>
-    build(pricing, showPricing)['@graph'].find((entry) => entry['@type'] === type) as Record<string, unknown>;
+    build(pricing, showPricing)['@graph'].find((entry) => entry['@type'] === type) as Record<
+      string,
+      unknown
+    >;
 
   const keysDeep = (value: unknown): string[] =>
     value && typeof value === 'object'
@@ -264,9 +306,59 @@ describe('the landing page JSON-LD', () => {
   /** Nobody has rated or reviewed the product; structured data saying so is invented. */
   it('carries no rating, review or other invented figure anywhere', () => {
     // Per key, anchored: `operatingSystem` contains the letters "rating".
-    const invented = /^(aggregateRating|rating|ratingValue|ratingCount|bestRating|reviews?|reviewCount|interactionStatistic|userInteractionCount)$/i;
+    const invented =
+      /^(aggregateRating|rating|ratingValue|ratingCount|bestRating|reviews?|reviewCount|interactionStatistic|userInteractionCount)$/i;
     expect(keysDeep(build()).filter((key) => invented.test(key))).toEqual([]);
     expect(JSON.stringify(build())).not.toMatch(/ratingValue|reviewCount|bestRating/);
+  });
+
+  /**
+   * The narrated demo films (owner, 10 Oct 2026). Google's video markup needs a
+   * name, a description, a thumbnail, an upload date and a content URL, and
+   * wants the video on the page that declares it — so a `VideoObject` exists
+   * only when the caller passes a film, never by default, and every URL in it
+   * is absolute.
+   */
+  it('declares a VideoObject per demo film only when the films are passed, with what Google requires', () => {
+    expect(JSON.stringify(build())).not.toMatch(/VideoObject/);
+
+    const graph = buildLandingJsonLd({
+      siteUrl: SITE_URL,
+      appName: 'YourKhata',
+      messages: en,
+      pricing: PRICING,
+      showPricing: false,
+      moduleNames: ['Shop & billing', 'Lending & collections', 'Library'],
+      videos: [
+        {
+          language: 'hi',
+          name: 'Demo',
+          description: 'A tour.',
+          contentUrl: '/media/landing/demo-hi.mp4',
+          thumbnailUrl: '/media/landing/demo-hi-poster.jpg',
+          uploadDate: '2026-10-10',
+          durationSeconds: 218,
+          transcript: 'Words.',
+        },
+      ],
+    }) as { '@graph': Record<string, unknown>[] };
+    const video = graph['@graph'].find((entry) => entry['@type'] === 'VideoObject');
+    expect(video).toMatchObject({
+      name: 'Demo',
+      description: 'A tour.',
+      contentUrl: 'https://yourkhata.com/media/landing/demo-hi.mp4',
+      thumbnailUrl: ['https://yourkhata.com/media/landing/demo-hi-poster.jpg'],
+      uploadDate: '2026-10-10',
+      duration: 'PT3M38S',
+      inLanguage: 'hi',
+      transcript: 'Words.',
+    });
+    const app = graph['@graph'].find((entry) => entry['@type'] === 'SoftwareApplication');
+    expect(app).toMatchObject({
+      featureList: ['Shop & billing', 'Lending & collections', 'Library'],
+    });
+    expect(isoDuration(59)).toBe('PT59S');
+    expect(isoDuration(185)).toBe('PT3M5S');
   });
 
   it('describes the organisation and the site at the canonical origin', () => {
@@ -295,7 +387,9 @@ describe('the landing page JSON-LD', () => {
     expect(SHOW_PRICING).toBe(false);
     expect(node('SoftwareApplication')).not.toHaveProperty('offers');
     expect(JSON.stringify(build())).not.toMatch(/"Offer"|priceCurrency|"price"|#pricing/);
-    expect(node('SoftwareApplication', { ...PRICING, status: 'approved' })).not.toHaveProperty('offers');
+    expect(node('SoftwareApplication', { ...PRICING, status: 'approved' })).not.toHaveProperty(
+      'offers'
+    );
   });
 
   /**
@@ -306,29 +400,40 @@ describe('the landing page JSON-LD', () => {
   it('offers the free plan only, at 0 INR, when pricing is shown but proposed', () => {
     expect(PRICING.status).toBe('proposed');
     const offers = node('SoftwareApplication', PRICING, true).offers as Record<string, unknown>[];
-    expect(offers).toEqual([expect.objectContaining({ '@type': 'Offer', price: '0', priceCurrency: 'INR' })]);
+    expect(offers).toEqual([
+      expect.objectContaining({ '@type': 'Offer', price: '0', priceCurrency: 'INR' }),
+    ]);
     for (const plan of PRICING.plans.filter((p) => p.monthly > 0)) {
       expect(JSON.stringify(build(PRICING, true))).not.toContain(`"${plan.monthly}"`);
     }
   });
 
   it('emits the paid plans once pricing is shown and approved, and not before', () => {
-    const offers = node('SoftwareApplication', { ...PRICING, status: 'approved' }, true).offers as Record<string, unknown>[];
-    expect(offers.map((offer) => offer.price)).toEqual(PRICING.plans.map((plan) => String(plan.monthly)));
+    const offers = node('SoftwareApplication', { ...PRICING, status: 'approved' }, true)
+      .offers as Record<string, unknown>[];
+    expect(offers.map((offer) => offer.price)).toEqual(
+      PRICING.plans.map((plan) => String(plan.monthly))
+    );
   });
 
-  it.each([false, true])('builds the FAQPage from the same questions the page renders (pricing shown: %s)', (shown) => {
-    const faq = node('FAQPage', PRICING, shown).mainEntity as { name: string; acceptedAnswer: { text: string } }[];
-    const messages = en as Record<string, string>;
-    expect(faq).toEqual(
-      faqIds(shown).map((id) => ({
-        '@type': 'Question',
-        name: messages[faqQuestionKey(id)],
-        acceptedAnswer: { '@type': 'Answer', text: messages[faqAnswerKey(id)] },
-      }))
-    );
-    expect(faq.some((q) => q.name === 'What does it cost?')).toBe(shown);
-  });
+  it.each([false, true])(
+    'builds the FAQPage from the same questions the page renders (pricing shown: %s)',
+    (shown) => {
+      const faq = node('FAQPage', PRICING, shown).mainEntity as {
+        name: string;
+        acceptedAnswer: { text: string };
+      }[];
+      const messages = en as Record<string, string>;
+      expect(faq).toEqual(
+        faqIds(shown).map((id) => ({
+          '@type': 'Question',
+          name: messages[faqQuestionKey(id)],
+          acceptedAnswer: { '@type': 'Answer', text: messages[faqAnswerKey(id)] },
+        }))
+      );
+      expect(faq.some((q) => q.name === 'What does it cost?')).toBe(shown);
+    }
+  );
 
   /** A `</script>` inside a string would end the element and spill the rest as markup. */
   it('escapes markup characters so it cannot close its own script element', () => {
@@ -347,10 +452,13 @@ describe('the FAQ keeps its answers in the HTML', () => {
   it('renders every answer while closed, hidden, and shows it on open', () => {
     const { container } = renderWithProviders(<FaqSection />);
     const messages = en as Record<string, string>;
-    for (const id of faqIds(SHOW_PRICING)) expect(container.textContent).toContain(messages[faqAnswerKey(id)]);
+    for (const id of faqIds(SHOW_PRICING))
+      expect(container.textContent).toContain(messages[faqAnswerKey(id)]);
 
     const trigger = screen.getByRole('button', { name: messages[faqQuestionKey('hindi')] });
-    const panel = container.querySelector(`#${CSS.escape(trigger.getAttribute('aria-controls') ?? '')}`);
+    const panel = container.querySelector(
+      `#${CSS.escape(trigger.getAttribute('aria-controls') ?? '')}`
+    );
     expect(panel).toHaveAttribute('hidden');
     expect(panel).not.toHaveClass('flex');
     fireEvent.click(trigger);
@@ -382,7 +490,9 @@ describe('cache headers for unhashed public assets', () => {
     expect(value).toBe('public, max-age=86400, stale-while-revalidate=604800');
     for (const prefix of ['/media/landing/', '/brand/']) {
       const block = nginx.slice(nginx.indexOf(`location ${prefix} {`));
-      expect(block.slice(0, block.indexOf('}'))).toContain(`add_header Cache-Control "${value}" always;`);
+      expect(block.slice(0, block.indexOf('}'))).toContain(
+        `add_header Cache-Control "${value}" always;`
+      );
     }
     expect(nextConfig).toContain("source: '/media/landing/:path*'");
     expect(nextConfig).toContain("source: '/brand/:path*'");

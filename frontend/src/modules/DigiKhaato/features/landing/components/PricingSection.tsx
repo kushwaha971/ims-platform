@@ -76,9 +76,11 @@ function PlanCard({
           <UbText as="h3" variant="inherit" className="ds-body-xl-semibold">
             {t(`landing.pricing.${plan.id}.name`)}
           </UbText>
-          {plan.highlight && <UbStatusBadge tone="info" label={t('landing.pricing.business.badge')} />}
+          {plan.highlight && (
+            <UbStatusBadge tone="info" label={t('landing.pricing.business.badge')} />
+          )}
         </UbStack>
-        <UbText variant="inherit" tone="tertiary" className="min-h-[2.75em] ds-body-base-regular">
+        <UbText variant="inherit" tone="tertiary" className="ds-body-base-regular min-h-[2.75em]">
           {t(`landing.pricing.${plan.id}.tagline`)}
         </UbText>
       </UbStack>
@@ -200,7 +202,12 @@ function PricingSectionBase({ pricing = PRICING }: Readonly<{ pricing?: Pricing 
           <UbText variant="body-sm" tone="tertiary" align="center">
             {t('landing.pricing.exGst')}
           </UbText>
-          <UbText variant="body-sm" tone="tertiary" align="center" data-testid="landing-pricing-modules">
+          <UbText
+            variant="body-sm"
+            tone="tertiary"
+            align="center"
+            data-testid="landing-pricing-modules"
+          >
             {t('landing.pricing.modules')}
           </UbText>
         </UbStack>

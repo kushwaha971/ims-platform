@@ -15,6 +15,7 @@ import {
 } from 'src/design-system/UbDataGrid';
 import { useNowMs } from 'src/hooks/useNowMs';
 import { useTranslation } from 'src/hooks/useTranslation';
+import { accountDisplayName } from 'src/utils/accountIdentity';
 
 import { Can } from '../../auth/components/Can';
 import { PAGE_SIZE_OPTIONS } from '../constants/teamDefaults';
@@ -166,7 +167,11 @@ export function MembersSection(): React.JSX.Element {
           : 'rows';
 
   const rowId = useCallback((member: Member) => member.id, []);
-  const rowName = useCallback((member: Member) => member.fullName || member.email, []);
+  const rowName = useCallback(
+    (member: Member) =>
+      accountDisplayName({ name: member.fullName, email: member.email, mobile: member.mobile }),
+    []
+  );
   const avatarIcon = useCallback(
     (member: Member) => (member.status === 'invited' ? INVITE_AVATAR_ICON : null),
     []
@@ -234,7 +239,13 @@ export function MembersSection(): React.JSX.Element {
         onOpenChange={handleRegenerateOpenChange}
         title={t('team.regenerate.title')}
         description={t('team.regenerate.body', {
-          name: regenerateTarget?.fullName ?? regenerateTarget?.email ?? '',
+          name: regenerateTarget
+            ? accountDisplayName({
+                name: regenerateTarget.fullName,
+                email: regenerateTarget.email,
+                mobile: regenerateTarget.mobile,
+              })
+            : '',
         })}
         confirmLabel={t('team.regenerate.confirm')}
         cancelLabel={t('team.regenerate.cancel')}

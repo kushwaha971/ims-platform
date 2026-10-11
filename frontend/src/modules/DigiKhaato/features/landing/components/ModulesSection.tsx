@@ -4,10 +4,18 @@ import { memo } from 'react';
 
 import { Check } from 'lucide-react';
 
-import { UbBox, UbReveal, UbStack, UbText, type UbVideoLabels } from 'src/design-system';
+import {
+  UbActionLink,
+  UbBox,
+  UbReveal,
+  UbStack,
+  UbText,
+  type UbVideoLabels,
+} from 'src/design-system';
 import { useTranslation, type TranslateFn } from 'src/hooks/useTranslation';
+import { ROUTES } from 'src/routes';
 
-import { CAN_DO_LINES, LANDING_MODULES, type LandingModule } from '../config/modules';
+import { CAN_DO_LINES, VISIBLE_MODULES, type LandingModule } from '../config/modules';
 
 import { CoreChip, ModuleIconTile, ModuleStage } from './LandingModuleParts';
 import { LANDING_CONTAINER, LANDING_SECTION, LandingSectionHeading } from './LandingPrimitives';
@@ -89,7 +97,10 @@ function ModuleCard({
           </UbStack>
         </UbStack>
 
-        <UbStack gap={2.5} className="border-t border-border-hairline pt-4">
+        {/* "Built on" is the platform map's story, told again per card. On a
+            phone it made each card a screen taller for six chips the map
+            already shows, so below `sm` it is not drawn (10 Oct 2026). */}
+        <UbStack gap={2.5} className="hidden border-t border-border-hairline pt-4 sm:flex">
           <UbText as="h4" variant="inherit" className="ds-body-s-semibold text-text-tertiary">
             {t('landing.modules.buildsOn')}
           </UbText>
@@ -98,6 +109,31 @@ function ModuleCard({
               <CoreChip key={id} id={id} t={t} size="sm" />
             ))}
           </UbStack>
+        </UbStack>
+
+        {/* What to do next, on every card: start, or watch this module in the
+            narrated demo. The accessible names carry the module, so three
+            "Start free" links are three different links to a screen reader. */}
+        <UbStack direction="row" wrap gap={2} className="pt-1 max-sm:flex-col max-sm:[&>*]:w-full">
+          <UbActionLink
+            href={ROUTES.SIGNUP}
+            variant="primary"
+            size="md"
+            aria-label={t('landing.modules.cta.startFor', { name: t(key('name')) })}
+            className="h-11 rounded-[12px] px-5"
+            data-testid={`landing-module-start-${module.id}`}
+          >
+            {t('landing.modules.cta.start')}
+          </UbActionLink>
+          <UbActionLink
+            href="#demo"
+            variant="outlineNeutral"
+            size="md"
+            aria-label={t('landing.modules.cta.demoFor', { name: t(key('name')) })}
+            className="h-11 rounded-[12px] px-5"
+          >
+            {t('landing.modules.cta.demo')}
+          </UbActionLink>
         </UbStack>
       </UbStack>
     </UbStack>
@@ -135,8 +171,12 @@ function ModulesSectionBase() {
           lead={t('landing.modules.lead')}
           keyLine={t('landing.modules.key')}
         />
-        <UbReveal as="ul" stagger className="mt-12 grid gap-4 md:grid-cols-4 md:gap-5 xl:grid-cols-6">
-          {LANDING_MODULES.map((module) => (
+        <UbReveal
+          as="ul"
+          stagger
+          className="mt-12 grid gap-4 md:grid-cols-4 md:gap-5 xl:grid-cols-6"
+        >
+          {VISIBLE_MODULES.map((module) => (
             <UbBox as="li" key={module.id} className={CARD_CELL}>
               <ModuleCard module={module} t={t} videoLabels={videoLabels} />
             </UbBox>
@@ -159,7 +199,9 @@ function AudienceSectionBase() {
   const { t } = useTranslation();
   return (
     <UbBox as="section" aria-labelledby="landing-audience-title" className={LANDING_SECTION}>
-      <UbBox className={`${LANDING_CONTAINER} grid gap-10 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:gap-16`}>
+      <UbBox
+        className={`${LANDING_CONTAINER} grid gap-10 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:gap-16`}
+      >
         <LandingSectionHeading
           id="landing-audience-title"
           eyebrow={t('landing.audience.eyebrow')}
@@ -169,7 +211,7 @@ function AudienceSectionBase() {
           className="lg:sticky lg:top-28 lg:self-start"
         />
         <UbReveal as="ul" stagger className="flex flex-col gap-3">
-          {LANDING_MODULES.map((module) => (
+          {VISIBLE_MODULES.map((module) => (
             <UbBox as="li" key={module.id}>
               <UbStack
                 direction="row"
@@ -181,7 +223,11 @@ function AudienceSectionBase() {
               >
                 <ModuleIconTile id={module.id} />
                 <UbStack gap={1} className="min-w-0 flex-1">
-                  <UbText as="h3" variant="inherit" className="ds-body-l-semibold text-text-primary">
+                  <UbText
+                    as="h3"
+                    variant="inherit"
+                    className="ds-body-l-semibold text-text-primary"
+                  >
                     {t(`landing.module.${module.id}.audience`)}
                   </UbText>
                   <UbText variant="inherit" tone="secondary" className="ds-body-base-regular">

@@ -4,7 +4,15 @@ import { memo, useCallback, useRef, useState } from 'react';
 
 import { Menu } from 'lucide-react';
 
-import { UbActionLink, UbBox, UbButton, UbDialog, UbLink, UbLogo, UbStack } from 'src/design-system';
+import {
+  UbActionLink,
+  UbBox,
+  UbButton,
+  UbDialog,
+  UbLink,
+  UbLogo,
+  UbStack,
+} from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { ROUTES } from 'src/routes';
 import { cn } from 'src/utils/cn';
@@ -15,8 +23,9 @@ import { LANDING_CONTAINER } from './LandingPrimitives';
 import { LanguageToggle, ThemeToggle } from './LandingToggles';
 
 const ANCHORS = [
-  { href: '#platform', key: 'landing.nav.platform' },
   { href: '#modules', key: 'landing.nav.modules' },
+  { href: '#demo', key: 'landing.nav.demo' },
+  { href: '#platform', key: 'landing.nav.platform' },
   { href: '#why', key: 'landing.nav.why' },
   { href: '#pricing', key: 'landing.nav.pricing' },
   { href: '#faq', key: 'landing.nav.faq' },
@@ -61,7 +70,12 @@ function LandingHeaderBase() {
             'bg-canvas/75 shadow-[0_8px_30px_-12px_rgb(10_9_11/0.18)] backdrop-blur-xl backdrop-saturate-150'
           )}
         >
-          <UbLink href={ROUTES.HOME} underline={false} tone="inherit" className="shrink-0 rounded-control outline-none focus-visible:shadow-focus">
+          <UbLink
+            href={ROUTES.HOME}
+            underline={false}
+            tone="inherit"
+            className="shrink-0 rounded-control outline-none focus-visible:shadow-focus"
+          >
             <UbLogo variant="full" size="md" label={t('landing.nav.home')} />
           </UbLink>
 
@@ -74,7 +88,7 @@ function LandingHeaderBase() {
                     underline={false}
                     variant="inherit"
                     tone="secondary"
-                    className="inline-flex h-10 items-center rounded-pill px-4 ds-body-base-medium transition-colors duration-fast hover:bg-surface-hover hover:text-text-primary"
+                    className="ds-body-base-medium inline-flex h-10 items-center rounded-pill px-4 transition-colors duration-fast hover:bg-surface-hover hover:text-text-primary"
                   >
                     {t(anchor.key)}
                   </UbLink>
@@ -135,7 +149,7 @@ function LandingHeaderBase() {
                     variant="inherit"
                     tone="primary"
                     onClick={closeMenu}
-                    className="flex h-12 items-center rounded-control px-3 ds-body-l-medium hover:bg-surface-hover"
+                    className="ds-body-l-medium flex h-12 items-center rounded-control px-3 hover:bg-surface-hover"
                   >
                     {t(anchor.key)}
                   </UbLink>
@@ -148,10 +162,20 @@ function LandingHeaderBase() {
             <ThemeToggle />
           </UbStack>
           <UbStack gap={3}>
-            <UbActionLink href={ROUTES.SIGNUP} variant="primary" size="lg" className="w-full rounded-[14px]">
+            <UbActionLink
+              href={ROUTES.SIGNUP}
+              variant="primary"
+              size="lg"
+              className="w-full rounded-[14px]"
+            >
               {t('landing.nav.startFree')}
             </UbActionLink>
-            <UbActionLink href={ROUTES.LOGIN} variant="outlineNeutral" size="lg" className="w-full rounded-[14px]">
+            <UbActionLink
+              href={ROUTES.LOGIN}
+              variant="outlineNeutral"
+              size="lg"
+              className="w-full rounded-[14px]"
+            >
               {t('landing.nav.login')}
             </UbActionLink>
           </UbStack>

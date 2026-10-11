@@ -9,8 +9,10 @@
  * `landing.uc.*.alt`) because it has to be in Hindi too; the manifest's is the
  * English original it was written from.
  *
- * Imports nothing.
+ * Imports only the demo base URL.
  */
+import { DEMO_VIDEO_BASE_URL } from 'src/constants';
+
 export interface LandingClip {
   readonly id: string;
   readonly width: number;
@@ -57,17 +59,62 @@ export const FEATURE_CLIPS: Readonly<
 ) as Record<UseCaseId, { desktop: LandingClip; mobile: LandingClip }>;
 
 /**
- * The narrated demo films. NOT in git (the owner's call: 10–16 MB each, re-cut
- * often), so the URL is configurable — `NEXT_PUBLIC_DEMO_VIDEO_URL_*` through
- * `src/constants.ts` — and the dialog copes with a 404.
+ * The module cards' recordings (11 Oct 2026): real screens of the demo book
+ * (`e2e/demo/seed-demo.mjs`), recorded by `e2e/demo/record-clips.mjs` — one
+ * take of the desktop layout and one of the phone layout for each module. The
+ * Shop card uses the GST-bill loop, which is that module's signature job.
  */
-export const DEMO_POSTERS = {
-  desktop: { webp: `${BASE}/demo-desktop-720-poster.webp`, jpg: `${BASE}/demo-desktop-720-poster.jpg`, width: 1280, height: 720 },
-  mobile: { webp: `${BASE}/demo-mobile-poster.webp`, jpg: `${BASE}/demo-mobile-poster.jpg`, width: 540, height: 960 },
+const pair = (id: string): { readonly desktop: LandingClip; readonly mobile: LandingClip } => ({
+  desktop: clip(`${id}-desktop`, 1280, 800, 'avc1.4D4020'),
+  mobile: clip(`${id}-mobile`, 584, 1264, 'avc1.4D401F'),
+});
+
+export const MODULE_CLIPS = {
+  shop: FEATURE_CLIPS.bill,
+  library: pair('mod-library'),
+  lending: pair('mod-lending'),
 } as const;
 
-export const DEMO_CAPTIONS = {
-  desktop: `${BASE}/demo-desktop-720.vtt`,
-  mobile: `${BASE}/demo-mobile.vtt`,
-  srclang: 'hi-Latn',
-} as const;
+/** `sm` — below it a module card shows the phone recording in a phone frame. */
+export const CARD_DESKTOP_MEDIA = '(min-width: 640px)';
+export const CARD_MOBILE_MEDIA = '(max-width: 639.98px)';
+
+/**
+ * The narrated demo films: English and Hindi, each in two cuts — the desktop
+ * layout (16:9) and the phone layout (portrait). Same journey and the same
+ * words in all four: sign-in, Shop & billing, Library, Lending, switching
+ * business. Each has its own captions (`.vtt`) and poster; the transcript is
+ * `config/demoTranscript.ts`. Built by `e2e/demo/build-demo.mjs`.
+ */
+export type DemoLanguage = 'en' | 'hi';
+export type DemoDevice = 'desktop' | 'mobile';
+
+export interface DemoFilmFiles {
+  /** Site-relative file name stem under the demo base URL, e.g. `demo-en-desktop`. */
+  readonly id: string;
+  readonly poster: { readonly webp: string; readonly jpg: string };
+  readonly captions: string;
+}
+
+const film = (language: DemoLanguage, device: DemoDevice): DemoFilmFiles => {
+  const id = `demo-${language}-${device}`;
+  return {
+    id,
+    poster: { webp: `${BASE}/${id}-poster.webp`, jpg: `${BASE}/${id}-poster.jpg` },
+    captions: `${BASE}/${id}.vtt`,
+  };
+};
+
+export const DEMO_FILMS: Readonly<
+  Record<DemoLanguage, Readonly<Record<DemoDevice, DemoFilmFiles>>>
+> = {
+  en: { desktop: film('en', 'desktop'), mobile: film('en', 'mobile') },
+  hi: { desktop: film('hi', 'desktop'), mobile: film('hi', 'mobile') },
+};
+
+/**
+ * The film file for a cut: the demo base URL plus its id. Here, not in the
+ * (client) demo section, because `app/page.tsx` builds structured data with it
+ * on the server, where an export of a `'use client'` file is not callable.
+ */
+export const demoVideoUrl = (id: string): string => `${DEMO_VIDEO_BASE_URL}/${id}.mp4`;

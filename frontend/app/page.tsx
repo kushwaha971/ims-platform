@@ -1,4 +1,3 @@
-
 import { SITE_URL } from 'src/constants';
 import { UbJsonLd } from 'src/design-system';
 import { frauncesItalic } from 'src/fonts/landing';
@@ -7,6 +6,15 @@ import { absoluteUrl } from 'src/utils/seo';
 import en from 'locales/catalogues/landing.en.json';
 
 import { LandingPage } from 'modules/DigiKhaato/features/landing/components/LandingPage';
+import {
+  DEMO_PUBLISHED_ON,
+  DEMO_TRANSCRIPT,
+} from 'modules/DigiKhaato/features/landing/config/demoTranscript';
+import { DEMO_FILMS, demoVideoUrl } from 'modules/DigiKhaato/features/landing/config/media';
+import {
+  ALL_MODULES_VISIBLE,
+  VISIBLE_MODULES,
+} from 'modules/DigiKhaato/features/landing/config/modules';
 import { PRICING, SHOW_PRICING } from 'modules/DigiKhaato/features/landing/config/pricing';
 import {
   BRAND_NAME,
@@ -72,7 +80,9 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: LANDING_SHARE_TITLE,
     description: LANDING_SHARE_DESCRIPTION,
-    images: [{ url: OG_IMAGE.url, alt: OG_IMAGE.alt, width: OG_IMAGE.width, height: OG_IMAGE.height }],
+    images: [
+      { url: OG_IMAGE.url, alt: OG_IMAGE.alt, width: OG_IMAGE.width, height: OG_IMAGE.height },
+    ],
   },
 };
 
@@ -87,6 +97,27 @@ const JSON_LD = buildLandingJsonLd({
   messages: en,
   pricing: PRICING,
   showPricing: SHOW_PRICING,
+  allModules: ALL_MODULES_VISIBLE,
+  moduleNames: VISIBLE_MODULES.map(
+    (module) => en[`landing.module.${module.id}.name` as keyof typeof en]
+  ),
+  // Both narrated demo films are on this page (the #demo section), with their
+  // transcripts in the HTML, which is what lets them be declared here.
+  // The desktop cut of each language is the one declared: the phone cut is the
+  // same film in another shape, and declaring both would be a duplicate.
+  videos: (['en', 'hi'] as const).map((language) => ({
+    language,
+    name: DEMO_TRANSCRIPT[language].name,
+    description: DEMO_TRANSCRIPT[language].description,
+    contentUrl: demoVideoUrl(DEMO_FILMS[language].desktop.id),
+    thumbnailUrl: DEMO_FILMS[language].desktop.poster.jpg,
+    // Google asks for a date WITH a timezone; the films are cut in India.
+    uploadDate: `${DEMO_PUBLISHED_ON}T00:00:00+05:30`,
+    durationSeconds: DEMO_TRANSCRIPT[language].cuts.desktop.durationSeconds,
+    transcript: DEMO_TRANSCRIPT[language].chapters
+      .flatMap((chapter) => chapter.paragraphs)
+      .join(' '),
+  })),
 });
 
 export default function HomePage(): React.JSX.Element {

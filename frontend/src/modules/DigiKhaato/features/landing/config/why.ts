@@ -48,4 +48,5 @@ export type WhyId = (typeof WHY_POINTS)[number];
 /** The three strings each point carries. */
 export const WHY_PARTS = ['miss', 'title', 'get'] as const;
 
-export const whyKey = (id: WhyId, part: (typeof WHY_PARTS)[number]): string => `landing.why.${id}.${part}`;
+export const whyKey = (id: WhyId, part: (typeof WHY_PARTS)[number]): string =>
+  `landing.why.${id}.${part}`;

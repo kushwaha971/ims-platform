@@ -41,16 +41,33 @@ export const SITE_URL: string = (process.env.NEXT_PUBLIC_SITE_URL || 'https://yo
 );
 
 /**
- * The landing page's narrated demo films. They are not in git (owner: too big,
- * re-cut too often), so a deployment points these at wherever it hosts them;
- * the defaults are the files a local checkout keeps untracked under
- * `public/media/landing/`. The dialog shows a message and a sign-up link when
- * the file is not there, so an unset variable is a degraded page, not a broken one.
+ * The landing page's narrated demo films: English and Hindi, each cut for the
+ * desktop layout and for the phone layout (owner, 10–11 Oct 2026). The
+ * defaults are the files under `public/media/landing/`; a deployment that
+ * serves them from a CDN sets `NEXT_PUBLIC_DEMO_VIDEO_BASE_URL` to the folder
+ * they are in (no trailing slash). The player shows a message and a sign-up
+ * link when a file is not there, so a wrong value is a degraded page, not a
+ * broken one.
  */
-export const DEMO_VIDEO_URL_DESKTOP: string =
-  process.env.NEXT_PUBLIC_DEMO_VIDEO_URL_DESKTOP || '/media/landing/demo-desktop-720.mp4';
-export const DEMO_VIDEO_URL_MOBILE: string =
-  process.env.NEXT_PUBLIC_DEMO_VIDEO_URL_MOBILE || '/media/landing/demo-mobile.mp4';
+export const DEMO_VIDEO_BASE_URL: string = (
+  process.env.NEXT_PUBLIC_DEMO_VIDEO_BASE_URL || '/media/landing'
+).replace(/\/+$/, '');
+
+/**
+ * Modules the public landing page does NOT show (owner, 10 Oct 2026: Gym and
+ * Hotel are hidden for the coming deployment). Comma-separated module ids.
+ *
+ * This hides them from the landing page ONLY — cards, the module map, "Who
+ * it's for", the FAQ's list, the page title and the structured data. No code,
+ * table, API, route or permission is removed. To show them again, build with
+ * `NEXT_PUBLIC_LANDING_HIDDEN_MODULES=` (empty), or change the default here.
+ */
+export const LANDING_HIDDEN_MODULES: readonly string[] = (
+  process.env.NEXT_PUBLIC_LANDING_HIDDEN_MODULES ?? 'gym,hotel'
+)
+  .split(',')
+  .map((id) => id.trim().toLowerCase())
+  .filter(Boolean);
 
 /** Money and quantity ceilings; strings, because money is a string end to end. */
 export const MAX_AMOUNT = '99999999.99';

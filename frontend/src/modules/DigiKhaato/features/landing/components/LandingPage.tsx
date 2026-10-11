@@ -31,16 +31,27 @@ import 'src/i18n/catalogues/landing';
  * `/` route does not carry four plans and a billing toggle nobody can see.
  * Server-rendered as before when the flag is on, so the plans stay in the HTML.
  */
-const PricingSection = dynamic(() => import('./PricingSection').then((module) => module.PricingSection));
+/**
+ * The demo section is its own chunk too (11 Oct 2026). It is server-rendered
+ * like everything else — both transcripts are in the HTML — but its player,
+ * language tabs and the two narrations' text are 5 KB of script the first
+ * screen does not need, so they are not in the route's first-load bundle.
+ */
+const DemoSection = dynamic(() => import('./DemoSection').then((module) => module.DemoSection));
+
+const PricingSection = dynamic(() =>
+  import('./PricingSection').then((module) => module.PricingSection)
+);
 
 /**
  * The public front page, `/` — what a business sees before it has an account.
  * Signed-in browsers never get here (`proxy.ts` sends them to the dashboard),
  * so nothing on it reads the session.
  *
- * The story is "one platform, many modules, shared core", in this order:
- * header · hero · the module map (#platform) · one card per module (#modules)
- * · Shop & billing's use-case explorer (#features) · why YourKhata (#why:
+ * The order (10 Oct 2026): header · hero · one card per module, each with a
+ * recording of its real screens (#modules) · the narrated demo in English or
+ * Hindi (#demo) · Shop & billing's use-case explorer (#features) · the module
+ * map and shared core (#platform) · why YourKhata (#why:
  * what other apps miss, and what a business gets here) · who it's for · also
  * included · how it works (#how) · pricing (#pricing, while `SHOW_PRICING` is
  * on) · FAQ (#faq) · the closing band · footer.
@@ -74,16 +85,17 @@ function LandingPageBase({ className }: Readonly<{ className?: string }>) {
       <UbLink
         href="#main"
         underline={false}
-        className="sr-only z-50 rounded-control bg-surface-card px-4 py-2 ds-body-base-medium focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
+        className="ds-body-base-medium sr-only z-50 rounded-control bg-surface-card px-4 py-2 focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
       >
         {t('landing.skip')}
       </UbLink>
       <LandingHeader />
       <UbBox as="main" id="main" tabIndex={-1} className="outline-none">
         <LandingHero />
-        <PlatformMapSection />
         <ModulesSection />
+        <DemoSection />
         <UseCaseExplorer />
+        <PlatformMapSection />
         <WhySection />
         <AudienceSection />
         <AlsoIncludedSection />

@@ -103,7 +103,15 @@ const FREE_FEATURES: readonly PlanFeature[] = [
   'languages',
 ];
 
-const PAID_FEATURES: readonly PlanFeature[] = ['estimates', 'stock', 'expenses', 'reports', 'import', 'roles', 'credit'];
+const PAID_FEATURES: readonly PlanFeature[] = [
+  'estimates',
+  'stock',
+  'expenses',
+  'reports',
+  'import',
+  'roles',
+  'credit',
+];
 
 export const PRICING: Pricing = {
   status: 'proposed',

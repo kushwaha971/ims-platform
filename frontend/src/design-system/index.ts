@@ -267,6 +267,7 @@ export type {
 export { UbDateInput, isoFinancialYearStart, isoToday } from './UbDateInput';
 export type { UbDateInputProps, UbDateQuickChoice } from './UbDateInput';
 
+export { UbPicture, type UbPictureProps } from './UbPicture';
 export { UbPopover } from './UbPopover';
 export type { UbPopoverProps } from './UbPopover';
 export { UbSwitch } from './UbSwitch';

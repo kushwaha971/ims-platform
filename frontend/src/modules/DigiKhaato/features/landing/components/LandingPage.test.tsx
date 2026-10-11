@@ -15,8 +15,9 @@ import {
 import { renderWithProviders } from 'src/tests/renderWithProviders';
 import { THEME_CHOICE_COOKIE } from 'src/utils/cookieUtils';
 
+import { DEMO_TRANSCRIPT } from '../config/demoTranscript';
 import { FEATURE_CLIPS } from '../config/media';
-import { LANDING_MODULES } from '../config/modules';
+import { LANDING_MODULES, VISIBLE_MODULES } from '../config/modules';
 import { PRICING, YEARLY_BILLED_MONTHS, priceFor, yearlyPrice } from '../config/pricing';
 import {
   LANDING_DESCRIPTION,
@@ -44,7 +45,10 @@ beforeEach(() => {
     configurable: true,
     value: jest.fn(() => Promise.resolve()),
   });
-  Object.defineProperty(HTMLMediaElement.prototype, 'pause', { configurable: true, value: jest.fn() });
+  Object.defineProperty(HTMLMediaElement.prototype, 'pause', {
+    configurable: true,
+    value: jest.fn(),
+  });
 });
 
 const renderPage = () => renderWithProviders(<LandingPage />);
@@ -67,8 +71,13 @@ describe('LandingPage', () => {
   it('shows the badge, the support copy and the micro-copy under the CTAs', () => {
     renderPage();
 
-    expect(screen.getByText('One platform for many kinds of business')).toBeInTheDocument();
-    expect(screen.getByText('Sign up with email. No card needed.')).toBeInTheDocument();
+    expect(screen.getByText('Shop, Library and Lending on one platform')).toBeInTheDocument();
+    // DEC-013: sign-up is a mobile number and a code. The page said "email"
+    // in four places for a day after the sign-in screen stopped asking for one.
+    expect(
+      screen.getByText('Sign up with your mobile number. No card needed.')
+    ).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/sign up with email|email and a password/i);
   });
 
   /** No billing exists, so every "Start free" goes to sign-up and nowhere else. */
@@ -94,7 +103,7 @@ describe('LandingPage', () => {
     const hrefs = within(nav)
       .getAllByRole('link')
       .map((link) => link.getAttribute('href'));
-    expect(hrefs).toEqual(['#platform', '#modules', '#why', '#faq']);
+    expect(hrefs).toEqual(['#modules', '#demo', '#platform', '#why', '#faq']);
     hrefs.forEach((href) => expect(container.querySelector(href as string)).not.toBeNull());
   });
 
@@ -102,29 +111,31 @@ describe('LandingPage', () => {
     renderPage();
 
     const tablist = screen.getByRole('tablist', { name: 'Use cases' });
-    expect(within(tablist).getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
-      'Ledger',
-      'Reminders',
-      'GST bill',
-      'Stock',
-      'Purchases',
-      'Reports',
-    ]);
+    expect(
+      within(tablist)
+        .getAllByRole('tab')
+        .map((tab) => tab.textContent)
+    ).toEqual(['Ledger', 'Reminders', 'GST bill', 'Stock', 'Purchases', 'Reports']);
     fireEvent.click(within(tablist).getByRole('tab', { name: 'Stock' }));
     expect(screen.getByRole('tabpanel', { name: 'Stock' })).toHaveTextContent(
       'Adjust stock with a reason'
     );
   });
 
-  it('answers ten questions in the FAQ, e-invoicing and the lending module honestly', () => {
+  it('answers fourteen questions in the FAQ, e-invoicing and the lending module honestly', () => {
     renderPage();
     const faq = document.getElementById('faq') as HTMLElement;
 
     const questions = within(faq).getAllByRole('button');
-    expect(questions).toHaveLength(10);
+    expect(questions).toHaveLength(14);
+    // What it is and how you get in come first: the two things a cold visitor asks.
+    expect(questions[0]).toHaveTextContent('What is YourKhata?');
+    expect(questions[1]).toHaveTextContent('How do I sign up and log in?');
     fireEvent.click(within(faq).getByRole('button', { name: 'Does it support e-invoicing?' }));
     expect(within(faq).getByText(/^Not today\./)).toBeInTheDocument();
-    fireEvent.click(within(faq).getByRole('button', { name: 'Does the lending module lend money?' }));
+    fireEvent.click(
+      within(faq).getByRole('button', { name: 'Does the lending module lend money?' })
+    );
     expect(within(faq).getByText(/^No\. Lending & collections keeps a record/)).toBeInTheDocument();
   });
 
@@ -142,27 +153,106 @@ describe('LandingPage', () => {
     expect(text).not.toMatch(/\d\s*%/);
   });
 
-  it('opens the narrated demo in a dialog loaded on first click', async () => {
-    renderPage();
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  /**
+   * The narrated demo is a SECTION now (owner, 10 Oct 2026), in English and
+   * Hindi. Before play is pressed there is no <video> in the page at all — two
+   * films cost a visitor one poster image — and nothing ever plays by itself.
+   */
+  it('shows the demo with a language switch, and loads no film until play is pressed', () => {
+    const { container } = renderPage();
+    const demo = container.querySelector('#demo') as HTMLElement;
 
-    fireEvent.click(screen.getByRole('button', { name: 'Watch the demo' }));
+    expect(screen.getByRole('link', { name: 'Watch the demo' })).toHaveAttribute('href', '#demo');
+    expect(demo.querySelector('video')).toBeNull();
+    const languages = within(demo).getByRole('tablist', { name: 'Video language' });
+    expect(
+      within(languages)
+        .getAllByRole('tab')
+        .map((tab) => tab.textContent)
+    ).toEqual(['English', 'हिन्दी']);
+    // Both posters are in the HTML and lazy; CSS shows the one for this screen.
+    expect(
+      [...demo.querySelectorAll('img')].map((img) => [
+        img.getAttribute('src'),
+        img.getAttribute('loading'),
+      ])
+    ).toEqual([
+      ['/media/landing/demo-en-mobile-poster.jpg', 'lazy'],
+      ['/media/landing/demo-en-desktop-poster.jpg', 'lazy'],
+    ]);
 
-    const dialog = await screen.findByRole('dialog', { name: 'YourKhata demo' });
-    const video = within(dialog).getByTestId('landing-demo-video');
-    expect(video).toHaveAttribute('src', '/media/landing/demo-mobile.mp4');
-    expect(video.querySelector('track[kind="captions"]')).not.toBeNull();
+    // jsdom matches no media query, so this is the phone: it gets the PHONE cut.
+    fireEvent.click(within(demo).getByTestId('landing-demo-play'));
+    const video = within(demo).getByTestId('landing-demo-video');
+    expect(video).toHaveAttribute('src', '/media/landing/demo-en-mobile.mp4');
+    expect(video).toHaveAttribute('controls');
+    expect(video).not.toHaveAttribute('muted');
+    const track = video.querySelector('track[kind="captions"]') as HTMLTrackElement;
+    expect(track).toHaveAttribute('src', '/media/landing/demo-en-mobile.vtt');
+    expect(track).toHaveAttribute('srclang', 'en');
+
+    // The other language is the other film, with its own captions.
+    fireEvent.click(within(languages).getByRole('tab', { name: 'हिन्दी' }));
+    expect(demo.querySelector('video')).toBeNull();
+    fireEvent.click(within(demo).getByTestId('landing-demo-play'));
+    const hindi = within(demo).getByTestId('landing-demo-video');
+    expect(hindi).toHaveAttribute('src', '/media/landing/demo-hi-mobile.mp4');
+    expect(hindi.querySelector('track')).toHaveAttribute('srclang', 'hi');
 
     // A missing film is a sentence and a way forward, not a black box.
-    fireEvent.error(video);
-    expect(within(dialog).getByTestId('landing-demo-unavailable')).toBeInTheDocument();
-    expect(within(dialog).getByRole('link', { name: /start free/i })).toHaveAttribute(
+    fireEvent.error(hindi);
+    const unavailable = within(demo).getByTestId('landing-demo-unavailable');
+    expect(within(unavailable).getByRole('link', { name: /start free/i })).toHaveAttribute(
       'href',
       '/signup'
     );
+  });
 
-    fireEvent.keyDown(dialog, { key: 'Escape' });
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  /** From `lg` the same button plays the DESKTOP cut: a wide screen never downloads the phone film. */
+  it('plays the desktop cut on a desktop', () => {
+    const original = window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      matches: /min-width: 1024px/.test(query),
+      media: query,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      onchange: null,
+      dispatchEvent: () => false,
+    })) as typeof window.matchMedia;
+    try {
+      const { container } = renderPage();
+      const demo = container.querySelector('#demo') as HTMLElement;
+      fireEvent.click(within(demo).getByTestId('landing-demo-play'));
+      const video = within(demo).getByTestId('landing-demo-video');
+      expect(video).toHaveAttribute('src', '/media/landing/demo-en-desktop.mp4');
+      expect(video.querySelector('track')).toHaveAttribute(
+        'src',
+        '/media/landing/demo-en-desktop.vtt'
+      );
+    } finally {
+      window.matchMedia = original;
+    }
+  });
+
+  /** Both narrations are in the HTML, whichever language is showing: text a crawler can read. */
+  it('keeps both transcripts and every chapter in the page', () => {
+    const { container } = renderPage();
+    const demo = container.querySelector('#demo') as HTMLElement;
+
+    (['en', 'hi'] as const).forEach((language) => {
+      const block = demo.querySelector(`[data-demo-language="${language}"]`) as HTMLElement;
+      expect(block).toHaveAttribute('lang', language);
+      DEMO_TRANSCRIPT[language].chapters.forEach((chapter) => {
+        chapter.paragraphs.forEach((paragraph) => expect(block.textContent).toContain(paragraph));
+      });
+      expect(within(block).getAllByRole('listitem', { hidden: true })).toHaveLength(
+        DEMO_TRANSCRIPT[language].chapters.length
+      );
+    });
+    expect(demo.querySelector('[data-demo-language="en"]')).not.toHaveAttribute('hidden');
+    expect(demo.querySelector('[data-demo-language="hi"]')).toHaveAttribute('hidden');
   });
 });
 
@@ -173,31 +263,44 @@ describe('LandingPage', () => {
  * recordings shows words and an icon illustration, never a screen.
  */
 describe('the module story', () => {
-  const moduleElements = (container: HTMLElement) =>
-    [...container.querySelectorAll<HTMLElement>('[data-module-card][data-module-id]')];
+  const moduleElements = (container: HTMLElement) => [
+    ...container.querySelectorAll<HTMLElement>('[data-module-card][data-module-id]'),
+  ];
   /** Anything a picture could be, outside decoration drawn from our own icon set. */
   const visualMedia = (el: HTMLElement) =>
     [...el.querySelectorAll('video, img, picture, source, iframe, canvas, svg')].filter(
       (node) => !node.closest('[aria-hidden="true"]')
     );
 
-  /** The map tile, the card and the audience row — three places for each of the five modules. */
-  it('shows the five configured modules in the map, the cards and "Who it\'s for", and no coaching', () => {
+  /**
+   * The map tile, the card and the audience row — three places for each module
+   * the page SHOWS. Gym and Hotel are hidden (owner, 10 Oct 2026) through
+   * `LANDING_HIDDEN_MODULES`: they stay in the config, five of five, and
+   * appear nowhere on the rendered page.
+   */
+  it('shows the visible modules in the map, the cards and "Who it\'s for", and neither hidden one', () => {
     const { container } = renderPage();
     const elements = moduleElements(container);
 
     expect(elements.map((el) => `${el.dataset.moduleCard}:${el.dataset.moduleId}`).sort()).toEqual(
-      LANDING_MODULES.flatMap((module) => ['audience', 'card', 'map'].map((where) => `${where}:${module.id}`)).sort()
+      VISIBLE_MODULES.flatMap((module) =>
+        ['audience', 'card', 'map'].map((where) => `${where}:${module.id}`)
+      ).sort()
     );
     expect(LANDING_MODULES).toHaveLength(5);
+    expect(VISIBLE_MODULES.map((module) => module.id)).toEqual(['shop', 'lending', 'library']);
     const map = screen.getByTestId('landing-module-map');
-    expect(within(map).getAllByRole('link').map((link) => link.textContent)).toEqual([
-      'Shop & billing',
-      'Lending & collections',
-      'Library',
-      'Gym & fitness',
-      'Hotel & stays',
-    ]);
+    expect(
+      within(map)
+        .getAllByRole('link')
+        .map((link) => link.textContent)
+    ).toEqual(['Shop & billing', 'Lending & collections', 'Library']);
+    expect(
+      container.querySelector(
+        '#module-gym, #module-hotel, [data-module-id="gym"], [data-module-id="hotel"]'
+      )
+    ).toBeNull();
+    expect(container.textContent).not.toMatch(/gym|fitness|hotel|guest house/i);
     expect(container.querySelector('#module-coaching, [data-module-id="coaching"]')).toBeNull();
     expect(container.textContent).not.toMatch(/coaching|tuition/i);
   });
@@ -207,38 +310,67 @@ describe('the module story', () => {
    * caption, a heading or an attribute — in either language. `status` stays in
    * the config for the pre-launch check and the page renders nothing from it.
    */
-  it.each(['en', 'hi'] as const)('renders no status chip, status attribute or status wording (%s)', (locale) => {
-    const { container } = renderWithProviders(<LandingPage />, { locale });
+  it.each(['en', 'hi'] as const)(
+    'renders no status chip, status attribute or status wording (%s)',
+    (locale) => {
+      const { container } = renderWithProviders(<LandingPage />, { locale });
 
-    expect(container.querySelector('[data-module-status], [data-testid^="landing-status-"]')).toBeNull();
-    const text = container.textContent ?? '';
-    expect(text).not.toMatch(STATUS_WORDS[locale]);
-    if (locale === 'en') expect(text).not.toMatch(/one module today|more planned|planned to help/i);
-  });
+      expect(
+        container.querySelector('[data-module-status], [data-testid^="landing-status-"]')
+      ).toBeNull();
+      const text = container.textContent ?? '';
+      expect(text).not.toMatch(STATUS_WORDS[locale]);
+      if (locale === 'en')
+        expect(text).not.toMatch(/one module today|more planned|planned to help/i);
+    }
+  );
 
   /**
    * No screenshot, no video, no mock UI and no figure for a module without
-   * recordings: its card is words, the core it uses, and an illustration made
-   * of our own icons (aria-hidden decoration). Checked on the DOM, so a poster
-   * image added to one of these cards later fails here.
+   * recordings: its stage is an illustration made of our own icons (aria-hidden
+   * decoration). Gym and Hotel are the two without recordings and are hidden
+   * from the page, so the rule is checked on the stage itself — which is what
+   * draws them the day they are shown again.
    */
-  it('gives a module without media no video or image, only its illustration and its words', () => {
-    const { container } = renderPage();
+  it('gives a module without media no video or image, only its illustration', () => {
     const withoutMedia = LANDING_MODULES.filter((module) => !module.media);
-    expect(withoutMedia.map((module) => module.id)).toEqual(['lending', 'library', 'gym', 'hotel']);
+    expect(withoutMedia.map((module) => module.id)).toEqual(['gym', 'hotel']);
 
-    moduleElements(container)
-      .filter((el) => withoutMedia.some((module) => module.id === el.dataset.moduleId))
-      .forEach((el) => {
-        expect({ id: el.dataset.moduleId, media: visualMedia(el).length }).toEqual({ id: el.dataset.moduleId, media: 0 });
-        expect(el.querySelector('[data-device], [data-testid="landing-demo-open"], a[href="/signup"], button')).toBeNull();
-        expect(el.textContent).not.toMatch(/\d|₹|%/);
-      });
+    const labels = { play: 'Play video', pause: 'Pause video', fallback: 'Open the video' };
     withoutMedia.forEach((module) => {
+      const { container, unmount } = renderWithProviders(
+        <ModuleStage id={module.id} t={(id) => id} videoLabels={labels} />
+      );
+      expect(
+        container.querySelector(
+          '[data-module-stage="illustration"] [data-module-illustration][aria-hidden="true"]'
+        )
+      ).not.toBeNull();
+      expect(visualMedia(container)).toHaveLength(0);
+      expect(container.querySelector('[data-device], video, img')).toBeNull();
+      unmount();
+    });
+  });
+
+  /** Every card the page shows has a real recording, two actions and its "What you can do" list. */
+  it('gives every visible module a recording, a list and two actions that name it', () => {
+    const { container } = renderPage();
+    VISIBLE_MODULES.forEach((module) => {
       const card = container.querySelector(`#module-${module.id}`) as HTMLElement;
-      expect(card.querySelector('[data-module-stage="illustration"] [data-module-illustration][aria-hidden="true"]')).not.toBeNull();
-      expect(within(card).getAllByRole('listitem').length).toBeGreaterThanOrEqual(4 + module.buildsOn.length);
+      const name = enMessages[`landing.module.${module.id}.name`];
+      expect(
+        card.querySelector('[data-module-stage="media"] [data-device="browser"] video')
+      ).not.toBeNull();
+      expect(card.querySelector('[data-module-illustration]')).toBeNull();
       expect(within(card).getByRole('heading', { name: 'What you can do' })).toBeInTheDocument();
+      expect(within(card).getByRole('link', { name: `Start free with ${name}` })).toHaveAttribute(
+        'href',
+        '/signup'
+      );
+      expect(within(card).getByRole('link', { name: `See ${name} in the demo` })).toHaveAttribute(
+        'href',
+        '#demo'
+      );
     });
   });
 
@@ -250,9 +382,15 @@ describe('the module story', () => {
     const stage = shop.querySelector('[data-module-stage="media"]') as HTMLElement;
     expect(stage).not.toBeNull();
     expect(stage.querySelector('[data-device="browser"] video')).not.toBeNull();
-    expect(within(stage).getByRole('img', { name: /two-item tax invoice/ })).toBeInTheDocument();
+    // Two recordings since 11 Oct 2026: the desktop layout in a browser frame
+    // and the phone layout in a phone frame. CSS shows one; each only loads
+    // on the screen it is for.
+    expect(stage.querySelector('[data-device="phone"] video')).not.toBeNull();
+    expect(within(stage).getAllByRole('img', { name: /two-item tax invoice/ })).toHaveLength(2);
     expect(shop.querySelector('[data-module-illustration]')).toBeNull();
-    expect(container.querySelector('#features video, #features [data-testid="ub-video"]')).not.toBeNull();
+    expect(
+      container.querySelector('#features video, #features [data-testid="ub-video"]')
+    ).not.toBeNull();
   });
 
   /**
@@ -260,10 +398,12 @@ describe('the module story', () => {
    * (vision §4): the SAME stage, given `media` for another module, draws the
    * frame and drops the illustration. No component changes.
    */
-  it('turns any module\'s illustration into its recording when the config gives it media', () => {
+  it("turns any module's illustration into its recording when the config gives it media", () => {
     const labels = { play: 'Play video', pause: 'Pause video', fallback: 'Open the video' };
     const t = (key: string) => key;
-    const { container, rerender } = renderWithProviders(<ModuleStage id="library" t={t} videoLabels={labels} />);
+    const { container, rerender } = renderWithProviders(
+      <ModuleStage id="library" t={t} videoLabels={labels} />
+    );
     expect(container.querySelector('[data-module-illustration]')).not.toBeNull();
     expect(container.querySelector('video, [data-device]')).toBeNull();
 
@@ -275,7 +415,9 @@ describe('the module story', () => {
         videoLabels={labels}
       />
     );
-    expect(container.querySelector('[data-module-stage="media"] [data-device="browser"] video')).not.toBeNull();
+    expect(
+      container.querySelector('[data-module-stage="media"] [data-device="browser"] video')
+    ).not.toBeNull();
     expect(container.querySelector('[data-module-illustration]')).toBeNull();
   });
 
@@ -285,38 +427,50 @@ describe('the module story', () => {
    * rule in `unbuiltFeatureCopy.test.ts`, so a hard-coded string cannot slip
    * past it. In both languages.
    */
-  it.each(['en', 'hi'] as const)("renders each module's words only inside that module (%s)", (locale) => {
-    const { container } = renderWithProviders(<LandingPage />, { locale });
-    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
-    const outside: string[] = [];
-    const inside = new Set<string>();
-    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-      const text = node.textContent ?? '';
-      Object.entries(MODULE_WORDS).forEach(([id, words]) => {
-        if (!words[locale].test(text)) return;
-        if (node.parentElement?.closest(`[data-module-id="${id}"], [data-module-summary]`)) inside.add(id);
-        else outside.push(`${id}: ${text}`);
-      });
+  it.each(['en', 'hi'] as const)(
+    "renders each module's words only inside that module (%s)",
+    (locale) => {
+      const { container } = renderWithProviders(<LandingPage />, { locale });
+      const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+      const outside: string[] = [];
+      const inside = new Set<string>();
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        const text = node.textContent ?? '';
+        Object.entries(MODULE_WORDS).forEach(([id, words]) => {
+          if (!words[locale].test(text)) return;
+          if (node.parentElement?.closest(`[data-module-id="${id}"], [data-module-summary]`))
+            inside.add(id);
+          else outside.push(`${id}: ${text}`);
+        });
+      }
+      expect(outside).toEqual([]);
+      // Not vacuous: every VISIBLE module's words were found, in their own place
+      // — and a hidden module's words were found nowhere at all.
+      expect([...inside].sort()).toEqual(
+        VISIBLE_MODULES.map((module) => module.id)
+          .filter((id) => id in MODULE_WORDS)
+          .sort()
+      );
     }
-    expect(outside).toEqual([]);
-    // Not vacuous: every module's words were found, in their own place.
-    expect([...inside].sort()).toEqual(Object.keys(MODULE_WORDS).sort());
-  });
+  );
 
   /** Vision §4: no "kirana" and no regional jargon, in the text or any attribute. */
-  it.each(['en', 'hi'] as const)('uses no regional jargon, in text or attributes (%s)', (locale) => {
-    const { container } = renderWithProviders(<LandingPage />, { locale });
-    const pattern = locale === 'en' ? LANDING_JARGON.en : LANDING_JARGON.hi;
-    // The attributes a person reads or hears. Ids and file paths such as
-    // `feat-khata-desktop.webm` are code, and the recordings keep their names.
-    const READABLE = ['alt', 'aria-label', 'title', 'placeholder', 'aria-description'];
-    const attributes = [...container.querySelectorAll('*')].flatMap((el) =>
-      READABLE.map((name) => el.getAttribute(name)).filter((value): value is string => !!value)
-    );
+  it.each(['en', 'hi'] as const)(
+    'uses no regional jargon, in text or attributes (%s)',
+    (locale) => {
+      const { container } = renderWithProviders(<LandingPage />, { locale });
+      const pattern = locale === 'en' ? LANDING_JARGON.en : LANDING_JARGON.hi;
+      // The attributes a person reads or hears. Ids and file paths such as
+      // `feat-khata-desktop.webm` are code, and the recordings keep their names.
+      const READABLE = ['alt', 'aria-label', 'title', 'placeholder', 'aria-description'];
+      const attributes = [...container.querySelectorAll('*')].flatMap((el) =>
+        READABLE.map((name) => el.getAttribute(name)).filter((value): value is string => !!value)
+      );
 
-    expect(withoutBrand(container.textContent ?? '')).not.toMatch(pattern);
-    expect(attributes.filter((value) => pattern.test(withoutBrand(value)))).toEqual([]);
-  });
+      expect(withoutBrand(container.textContent ?? '')).not.toMatch(pattern);
+      expect(attributes.filter((value) => pattern.test(withoutBrand(value)))).toEqual([]);
+    }
+  );
 
   /**
    * The page's `<title>` and description are copy too, and are not in the
@@ -326,7 +480,12 @@ describe('the module story', () => {
    * has the lengths.
    */
   it('keeps "kirana" and jargon out of the metadata', () => {
-    for (const text of [LANDING_TITLE, LANDING_DESCRIPTION, LANDING_SHARE_TITLE, LANDING_SHARE_DESCRIPTION]) {
+    for (const text of [
+      LANDING_TITLE,
+      LANDING_DESCRIPTION,
+      LANDING_SHARE_TITLE,
+      LANDING_SHARE_DESCRIPTION,
+    ]) {
       expect(withoutBrand(text)).not.toMatch(LANDING_JARGON.en);
     }
   });
@@ -369,34 +528,44 @@ describe('Why YourKhata', () => {
     ],
   } as const;
 
-  it.each(['en', 'hi'] as const)('renders every point as a contrast, with no competitor named (%s)', (locale) => {
-    const { container } = renderWithProviders(<LandingPage />, { locale });
-    const section = container.querySelector('#why') as HTMLElement;
-    expect(section).not.toBeNull();
-    expect(section).toHaveAttribute('aria-labelledby', 'landing-why-title');
+  it.each(['en', 'hi'] as const)(
+    'renders every point as a contrast, with no competitor named (%s)',
+    (locale) => {
+      const { container } = renderWithProviders(<LandingPage />, { locale });
+      const section = container.querySelector('#why') as HTMLElement;
+      expect(section).not.toBeNull();
+      expect(section).toHaveAttribute('aria-labelledby', 'landing-why-title');
 
-    const cards = [...section.querySelectorAll<HTMLElement>('article[data-why-id]')];
-    expect(cards.map((card) => card.dataset.whyId)).toEqual([...WHY_POINTS]);
-    expect(within(section).getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual([
-      ...HEADINGS[locale],
-    ]);
-    // Every card names the failing in words, not only with the ✕.
-    const missLabel = locale === 'en' ? 'Often elsewhere' : 'अक्सर दूसरी जगह';
-    cards.forEach((card) => expect(within(card).getByText(missLabel)).toBeInTheDocument());
+      const cards = [...section.querySelectorAll<HTMLElement>('article[data-why-id]')];
+      expect(cards.map((card) => card.dataset.whyId)).toEqual([...WHY_POINTS]);
+      expect(
+        within(section)
+          .getAllByRole('heading', { level: 3 })
+          .map((h) => h.textContent)
+      ).toEqual([...HEADINGS[locale]]);
+      // Every card names the failing in words, not only with the ✕.
+      const missLabel = locale === 'en' ? 'Often elsewhere' : 'अक्सर दूसरी जगह';
+      cards.forEach((card) => expect(within(card).getByText(missLabel)).toBeInTheDocument());
 
-    const text = section.textContent ?? '';
-    expect(namesACompetitor(text, locale)).toBe(false);
-    expect(text).not.toMatch(COMPARATIVE_CLAIMS[locale]);
-    // Words and our own icons only: no screenshot, no video.
-    expect(section.querySelector('video, img, picture, iframe, [data-device]')).toBeNull();
-  });
+      const text = section.textContent ?? '';
+      expect(namesACompetitor(text, locale)).toBe(false);
+      expect(text).not.toMatch(COMPARATIVE_CLAIMS[locale]);
+      // Words and our own icons only: no screenshot, no video.
+      expect(section.querySelector('video, img, picture, iframe, [data-device]')).toBeNull();
+    }
+  );
 
-  it('sits after the Shop & billing explorer and is in the header', () => {
+  it('sits after the module map and is in the header', () => {
     const { container } = renderPage();
     const ids = [...container.querySelectorAll('main section[id]')].map((el) => el.id);
-    expect(ids.indexOf('why')).toBe(ids.indexOf('features') + 1);
+    expect(ids.indexOf('why')).toBe(ids.indexOf('platform') + 1);
+    // Reading order: what it does, see it, the shop's jobs, how it fits together, why.
+    expect(ids.slice(0, 5)).toEqual(['modules', 'demo', 'features', 'platform', 'why']);
     const nav = screen.getAllByRole('navigation', { name: 'Main' })[0] as HTMLElement;
-    expect(within(nav).getByRole('link', { name: 'Why YourKhata' })).toHaveAttribute('href', '#why');
+    expect(within(nav).getByRole('link', { name: 'Why YourKhata' })).toHaveAttribute(
+      'href',
+      '#why'
+    );
   });
 
   it('names no competitor anywhere on the rendered page, in either language', () => {
@@ -419,7 +588,11 @@ describe('PricingSection', () => {
       ...plan.features.map((feature) => `landing.pricing.f.${feature}`),
     ]);
     keys.forEach((key) => {
-      expect({ key, en: !!(enMessages as Record<string, string>)[key], hi: !!(hiMessages as Record<string, string>)[key] }).toEqual({
+      expect({
+        key,
+        en: !!(enMessages as Record<string, string>)[key],
+        hi: !!(hiMessages as Record<string, string>)[key],
+      }).toEqual({
         key,
         en: true,
         hi: true,

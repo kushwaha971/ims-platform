@@ -23,21 +23,28 @@ import type { LandingModuleId } from 'modules/DigiKhaato/features/landing/config
  * vocabulary. "हिसाब-किताब" is the everyday Hindi for "accounts" and is
  * excluded by a lookbehind; किताब on its own is a library's book.
  */
-export const MODULE_WORDS: Readonly<Record<Exclude<LandingModuleId, 'shop'>, { en: RegExp; hi: RegExp }>> = {
+export const MODULE_WORDS: Readonly<
+  Record<Exclude<LandingModuleId, 'shop'>, { en: RegExp; hi: RegExp }>
+> = {
   lending: {
     en: /\blend(er|ers|ing)?\b|\bborrow|\bprincipal\b|\binterest\b|\bloans?\b/i,
     hi: /कर्ज़|क़र्ज़|ब्याज|मूलधन/u,
   },
   library: {
-    en: /librar|\bfines?\b|overdue|\bcatalogue\b/i,
-    hi: /लाइब्रेरी|(?<!हिसाब-)किताब|जुर्माना/u,
+    // 10 Oct 2026: the Library module as BUILT is for libraries and study
+    // rooms — its own screens say Students, Seats and Attendance — so
+    // "student" is this module's word now (it was on the withdrawn list below
+    // while Library was only a plan).
+    en: /librar|\bfines?\b|overdue|\bcatalogue\b|\bstudents?\b|study rooms?|reading rooms?/i,
+    hi: /लाइब्रेरी|(?<!हिसाब-)किताब|जुर्माना|छात्र|स्टडी रूम|रीडिंग रूम/u,
   },
   gym: {
     en: /\bgyms?\b|fitness|workout/i,
     hi: /जिम|फ़िटनेस/u,
   },
   hotel: {
-    en: /hotel|\bguests?\b|\brooms?\b|booking|\bbooked\b|check-?(in|out)\b/i,
+    // A study room and a reading room are the Library's, not a hotel's.
+    en: /hotel|\bguests?\b|(?<!study |reading )\brooms?\b|booking|\bbooked\b|check-?(in|out)\b/i,
     hi: /होटल|गेस्ट हाउस|कमर[ाे]|बुकिंग|बुक |चेक-इन|चेक-आउट|मेहमान/u,
   },
 };
@@ -48,12 +55,32 @@ export const MODULE_WORDS: Readonly<Record<Exclude<LandingModuleId, 'shop'>, { e
  * name it again by accident; `research/coaching.md` stays for reference.
  */
 export const WITHDRAWN_MODULE_WORDS = {
-  en: /coaching|tuition|\btutors?\b|\bstudents?\b|guardian/i,
-  hi: /कोचिंग|ट्यूशन|ट्यूटर|छात्र|अभिभावक/u,
+  en: /coaching|tuition|\btutors?\b/i,
+  hi: /कोचिंग|ट्यूशन|ट्यूटर/u,
 } as const;
 
 /** Keys that name EVERY module at once, and may therefore use any module's words. */
-export const SUMMARY_KEYS: readonly string[] = ['landing.faq.modules.q', 'landing.faq.modules.a'];
+/**
+ * 10 Oct 2026 (owner: the hero and the page must say plainly what the product
+ * is and how Shop, Library and Lending differ). The hero's badge and body, the
+ * "What is YourKhata?" answer and the demo section's words are summaries of
+ * the same kind: each names every module on the page, once, in one sentence.
+ */
+export const SUMMARY_KEYS: readonly string[] = [
+  'landing.faq.modules.q',
+  'landing.faq.modules.a',
+  'landing.faq.modules.a.all',
+  'landing.faq.what.q',
+  'landing.faq.what.a',
+  'landing.hero.badge',
+  'landing.hero.body',
+  'landing.demo.body',
+  'landing.demo.chapter.1',
+  'landing.demo.chapter.2',
+  'landing.demo.chapter.3',
+  'landing.demo.chapter.4',
+  'landing.demo.chapter.5',
+];
 
 /** The keys a module owns: its card copy, and an FAQ entry about it alone. */
 export const ownsKey = (id: LandingModuleId, key: string): boolean =>

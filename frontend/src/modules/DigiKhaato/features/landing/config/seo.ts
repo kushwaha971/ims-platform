@@ -16,8 +16,10 @@
  *    bookings", not the trade's shorthand;
  *  - no jargon ("kirana", English "udhaar" / "khata"), vision §4.
  *
- * Imports nothing, so a test can read it without a renderer.
+ * Imports only the module table's flag, so a test can read it without a renderer.
  */
+import { ALL_MODULES_VISIBLE } from './modules';
+
 /**
  * The brand, as a literal. `APP_NAME` is the white-label FALLBACK a tenant's
  * branding replaces and is a build arg that has drifted before (compose once
@@ -26,15 +28,41 @@
  */
 export const BRAND_NAME = 'YourKhata';
 
-export const LANDING_TITLE = 'YourKhata: bills, fees, collections and bookings in one app';
+/**
+ * Two sets of words, chosen by which modules the page shows
+ * (`LANDING_HIDDEN_MODULES`, owner 10 Oct 2026): a title or description that
+ * names room bookings or gym members while the page shows neither is a claim
+ * made only to search engines. `ALL` is the five-module wording; the default
+ * names Shop, Library and Lending. Both keep the limits above.
+ */
+const WORDS = {
+  shown: {
+    title: 'YourKhata: shop billing, library and lending in one app',
+    description:
+      'GST bills, stock and customer dues for shops; students, seats, fees and books for libraries; loans and daily collections for lenders. In Hindi or English.',
+    shareTitle: 'YourKhata — one place for all your business records',
+    shareDescription:
+      'Shop bills and stock, library students, fees and books, and loan collections, on one shared core. Hindi or English.',
+  },
+  all: {
+    title: 'YourKhata: bills, fees, collections and bookings in one app',
+    description:
+      'GST bills and stock, loan collections, library and gym members and their fees, and room bookings: all your records in one place, in Hindi or English.',
+    shareTitle: 'YourKhata — one place for all your business records',
+    shareDescription:
+      'Shop bills and stock, loan collections, library and gym members, and room bookings, on one shared core. Hindi or English.',
+  },
+} as const;
 
-export const LANDING_DESCRIPTION =
-  'GST bills and stock, loan collections, library and gym members and their fees, and room bookings: all your records in one place, in Hindi or English.';
+export const landingWords = (allModules: boolean): (typeof WORDS)['shown' | 'all'] =>
+  allModules ? WORDS.all : WORDS.shown;
 
-export const LANDING_SHARE_TITLE = 'YourKhata — one place for all your business records';
+const CURRENT = landingWords(ALL_MODULES_VISIBLE);
 
-export const LANDING_SHARE_DESCRIPTION =
-  'Shop bills and stock, loan collections, library and gym members, and room bookings, on one shared core. Hindi or English.';
+export const LANDING_TITLE: string = CURRENT.title;
+export const LANDING_DESCRIPTION: string = CURRENT.description;
+export const LANDING_SHARE_TITLE: string = CURRENT.shareTitle;
+export const LANDING_SHARE_DESCRIPTION: string = CURRENT.shareDescription;
 
 /**
  * The link-preview card: 1200 × 630, rendered from the brand SVGs and the hero

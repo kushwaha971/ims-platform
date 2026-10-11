@@ -1,15 +1,12 @@
 'use client';
 
-import { memo, useCallback, useState } from 'react';
-
-import dynamic from 'next/dynamic';
+import { memo } from 'react';
 
 import { PlayCircle } from 'lucide-react';
 
 import {
   UbActionLink,
   UbBox,
-  UbButton,
   UbDeviceFrame,
   UbRotatingText,
   UbStack,
@@ -22,16 +19,6 @@ import { ROUTES } from 'src/routes';
 import { DESKTOP_MEDIA, HERO_DESKTOP, HERO_MOBILE, MOBILE_MEDIA } from '../config/media';
 
 import { LANDING_CONTAINER, SANS_KEY, SERIF_LEAD } from './LandingPrimitives';
-
-/**
- * The narrated demo is ~12 minutes of film behind one button most visitors
- * never press, so the dialog — and the `<video>` it holds — is its own chunk,
- * fetched on the first click. `ssr: false` because it only ever renders open.
- */
-const DemoVideoDialog = dynamic(
-  () => import('./DemoVideoDialog').then((module) => module.DemoVideoDialog),
-  { ssr: false }
-);
 
 const WORD_MARK = '⁣WORD⁣';
 
@@ -72,8 +59,6 @@ export const ROTATING_WORD_KEYS = [
  */
 function LandingHeroBase() {
   const { t } = useTranslation();
-  const [demoOpen, setDemoOpen] = useState(false);
-  const openDemo = useCallback(() => setDemoOpen(true), []);
   const [before, after] = splitAroundWord(t('landing.hero.keyLine', { word: WORD_MARK }));
   const words = ROTATING_WORD_KEYS.map((key) => t(key));
   const videoLabels = {
@@ -91,7 +76,8 @@ function LandingHeroBase() {
           <UbText
             as="span"
             variant="inherit"
-            className="inline-flex items-center gap-2 rounded-pill border border-border-hairline bg-surface-card/80 px-3 py-1.5 ds-body-s-medium text-text-secondary shadow-sm backdrop-blur"
+            data-module-summary
+            className="ds-body-s-medium inline-flex items-center gap-2 rounded-pill border border-border-hairline bg-surface-card/80 px-3 py-1.5 text-text-secondary shadow-sm backdrop-blur"
           >
             <UbBox as="span" aria-hidden className="h-2 w-2 rounded-full bg-accent" />
             {t('landing.hero.badge')}
@@ -104,7 +90,12 @@ function LandingHeroBase() {
             tone="primary"
             className="text-[clamp(2.375rem,1.45rem+3.4vw,3.875rem)] leading-[1.08]"
           >
-            <UbText as="span" variant="inherit" tone="secondary" className={`${SERIF_LEAD} text-balance`}>
+            <UbText
+              as="span"
+              variant="inherit"
+              tone="secondary"
+              className={`${SERIF_LEAD} text-balance`}
+            >
               {t('landing.hero.lead')}
             </UbText>
             <UbText as="span" variant="inherit" className="sr-only">
@@ -121,6 +112,7 @@ function LandingHeroBase() {
           <UbText
             variant="inherit"
             tone="secondary"
+            data-module-summary
             className="max-w-[34rem] text-[clamp(1rem,0.95rem+0.3vw,1.1875rem)] leading-relaxed"
           >
             {t('landing.hero.body')}
@@ -142,16 +134,19 @@ function LandingHeroBase() {
               >
                 {t('landing.nav.startFree')}
               </UbActionLink>
-              <UbButton
+              {/* A link to the demo section, not a dialog: the films are on the
+                  page, with their captions, chapters and transcripts, and a
+                  link works before any script has loaded. */}
+              <UbActionLink
+                href="#demo"
                 variant="outlineNeutral"
                 size="lg"
-                onClick={openDemo}
-                icon={<PlayCircle aria-hidden className="h-5 w-5 text-text-accent" />}
-                className="ub-lift h-12 rounded-[14px] px-6 text-[1.0625rem]"
+                className="ub-lift h-12 gap-2 rounded-[14px] px-6 text-[1.0625rem]"
                 data-testid="landing-demo-open"
               >
+                <PlayCircle aria-hidden className="h-5 w-5 text-text-accent" />
                 {t('landing.hero.demo')}
-              </UbButton>
+              </UbActionLink>
             </UbStack>
             <UbText variant="body-sm" tone="tertiary">
               {t('landing.hero.micro')}
@@ -184,7 +179,6 @@ function LandingHeroBase() {
           </UbBox>
         </UbBox>
       </UbBox>
-      {demoOpen && <DemoVideoDialog open={demoOpen} onOpenChange={setDemoOpen} />}
     </UbBox>
   );
 }

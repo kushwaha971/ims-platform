@@ -45,7 +45,7 @@ export function LandingEyebrow({ children }: Readonly<{ children: ReactNode }>):
     <UbText
       as="span"
       variant="inherit"
-      className="inline-flex items-center gap-2 rounded-pill border border-accent-line bg-accent-quiet px-3 py-1 ds-body-s-medium text-text-accent"
+      className="ds-body-s-medium inline-flex items-center gap-2 rounded-pill border border-accent-line bg-accent-quiet px-3 py-1 text-text-accent"
     >
       <UbBox as="span" aria-hidden className="h-1.5 w-1.5 rounded-full bg-accent" />
       {children}

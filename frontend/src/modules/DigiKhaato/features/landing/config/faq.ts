@@ -19,14 +19,28 @@ import type { LandingModuleId } from './modules';
  * about prices. The caller passes the flag, so this module reads nothing at
  * load time and a test can build either list.
  */
-const BEFORE_COST = ['modules', 'lending', 'phone', 'hindi', 'gst', 'staff', 'export'] as const;
+/**
+ * 10 Oct 2026 — the first four answer what somebody (or an AI answer engine)
+ * arriving cold asks: what it is, how you get in, which modules there are and
+ * what the library one does. Plain, specific and checked against the product:
+ * `signup` describes the mobile-number sign-in exactly as built (DEC-013/014).
+ */
+const BEFORE_COST = [
+  'what',
+  'signup',
+  'modules',
+  'library',
+  'lending',
+  'many',
+  'phone',
+  'hindi',
+  'gst',
+  'staff',
+  'export',
+] as const;
 const AFTER_COST = ['brand', 'einvoice'] as const;
 
-export type FaqId =
-  | (typeof BEFORE_COST)[number]
-  | (typeof AFTER_COST)[number]
-  | 'cost'
-  | 'card';
+export type FaqId = (typeof BEFORE_COST)[number] | (typeof AFTER_COST)[number] | 'cost' | 'card';
 
 export const faqIds = (showPricing: boolean): readonly FaqId[] => [
   ...BEFORE_COST,
@@ -42,9 +56,18 @@ export const faqIds = (showPricing: boolean): readonly FaqId[] => [
  * as "borrower" is in its own place.
  */
 export const FAQ_MODULE_SCOPE: Readonly<Partial<Record<FaqId, LandingModuleId | 'summary'>>> = {
+  what: 'summary',
   modules: 'summary',
+  library: 'library',
   lending: 'lending',
 };
 
 export const faqQuestionKey = (id: FaqId): string => `landing.faq.${id}.q`;
-export const faqAnswerKey = (id: FaqId): string => `landing.faq.${id}.a`;
+/**
+ * "Which modules are there?" names the modules the page SHOWS. With every
+ * module visible it is the five-module answer (`.a.all`); while some are
+ * hidden (`LANDING_HIDDEN_MODULES`) it is `.a`, which names only the three on
+ * the page. The caller passes the flag for the same reason as `showPricing`.
+ */
+export const faqAnswerKey = (id: FaqId, allModules = false): string =>
+  id === 'modules' && allModules ? 'landing.faq.modules.a.all' : `landing.faq.${id}.a`;

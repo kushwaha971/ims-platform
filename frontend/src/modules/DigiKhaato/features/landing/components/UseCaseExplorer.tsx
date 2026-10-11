@@ -95,7 +95,7 @@ function UseCaseDetails({
                 as="span"
                 variant="inherit"
                 aria-label={t('landing.features.stepNumber', { n })}
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-accent-line bg-accent-quiet ds-num-s-semibold text-text-accent"
+                className="ds-num-s-semibold flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-accent-line bg-accent-quiet text-text-accent"
               >
                 {n}
               </UbText>
@@ -117,7 +117,7 @@ function UseCaseDetails({
               as="li"
               key={feature}
               variant="inherit"
-              className="rounded-pill border border-border-hairline bg-surface-subtle px-3 py-1 ds-body-s-medium text-text-secondary"
+              className="ds-body-s-medium rounded-pill border border-border-hairline bg-surface-subtle px-3 py-1 text-text-secondary"
             >
               {feature}
             </UbText>
@@ -153,6 +153,7 @@ function UseCaseExplorerBase() {
     return { value: id, label: t(key(id, 'tab')), icon: <Icon aria-hidden className="h-4 w-4" /> };
   });
   const clip = FEATURE_CLIPS[active].desktop;
+  const phoneClip = FEATURE_CLIPS[active].mobile;
 
   return (
     <UbBox
@@ -169,69 +170,58 @@ function UseCaseExplorerBase() {
           keyLine={t('landing.features.key')}
         />
 
-        {/* ── lg and up: the explorer ─────────────────────────────────────── */}
-        <UbReveal className="mt-12 hidden lg:block">
+        {/* One explorer at every width (10 Oct 2026). Below `lg` this used to
+            be the six jobs stacked, each with its own phone recording — 7,000
+            px of a 22,000 px page on a 360 px phone. Now the chips scroll
+            sideways and one job shows at a time.
+
+            EVERY job's words stay in the HTML: the inactive ones are `hidden`,
+            not unmounted, so a crawler, an answer engine and find-in-page read
+            all six without pressing anything. Only the active job's recording
+            is mounted, so nothing extra is downloaded. */}
+        <UbReveal className="mt-10 lg:mt-12">
           <UbChipTabs
             value={active}
             onValueChange={setActive}
             tabs={tabs}
             ariaLabel={t('landing.features.tablist')}
-            className="items-center gap-8"
+            className="items-center gap-6 lg:gap-8"
+            listClassName="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             panelClassName="w-full"
           >
-            <UbBox className="grid w-full grid-cols-[minmax(0,5fr)_minmax(0,8fr)] items-center gap-8 xl:gap-12">
-              <UbBox className="rounded-[24px] border border-border-hairline bg-surface-card p-7 shadow-[0_18px_50px_-30px_rgb(10_9_11/0.25)] xl:p-8">
-                <UseCaseDetails id={active} t={t} headingAs="h3" />
+            <UbBox className="grid w-full items-center gap-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,8fr)] xl:gap-12">
+              <UbBox className="rounded-[24px] border border-border-hairline bg-surface-card p-5 shadow-[0_18px_50px_-30px_rgb(10_9_11/0.25)] sm:p-7 xl:p-8">
+                {USE_CASE_IDS.map((id) => (
+                  <UbBox key={id} hidden={id !== active} data-use-case={id}>
+                    <UseCaseDetails id={id} t={t} headingAs="h3" />
+                  </UbBox>
+                ))}
               </UbBox>
-              <UbDeviceFrame variant="browser" url="yourkhata.com">
-                <UbVideo
-                  key={clip.id}
-                  {...clip}
-                  alt={t(key(active, 'alt'))}
-                  labels={labels}
-                  media={DESKTOP_MEDIA}
-                />
-              </UbDeviceFrame>
+              <UbBox className="hidden lg:block">
+                <UbDeviceFrame variant="browser" url="yourkhata.com">
+                  <UbVideo
+                    key={clip.id}
+                    {...clip}
+                    alt={t(key(active, 'alt'))}
+                    labels={labels}
+                    media={DESKTOP_MEDIA}
+                  />
+                </UbDeviceFrame>
+              </UbBox>
+              <UbBox className="mx-auto w-[min(64vw,15rem)] lg:hidden">
+                <UbDeviceFrame variant="phone" glow={false}>
+                  <UbVideo
+                    key={phoneClip.id}
+                    {...phoneClip}
+                    alt={t(key(active, 'alt'))}
+                    labels={labels}
+                    media={MOBILE_MEDIA}
+                  />
+                </UbDeviceFrame>
+              </UbBox>
             </UbBox>
           </UbChipTabs>
         </UbReveal>
-
-        {/* ── below lg: the six, stacked ──────────────────────────────────── */}
-        <UbStack as="ul" gap={10} className="mt-12 lg:hidden">
-          {USE_CASE_IDS.map((id) => {
-            const Icon = ICONS[id];
-            const mobile = FEATURE_CLIPS[id].mobile;
-            return (
-              <UbBox as="li" key={id}>
-                <UbReveal
-                  as="article"
-                  aria-labelledby={`landing-uc-${id}`}
-                  className="grid gap-6 rounded-[24px] border border-border-hairline bg-surface-card p-5 sm:grid-cols-[minmax(0,1fr)_minmax(0,15rem)] sm:items-start sm:p-7"
-                >
-                  <UbStack gap={5} className="min-w-0">
-                    <UbStack direction="row" align="center" gap={3}>
-                      <UbBox
-                        aria-hidden
-                        className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-accent-quiet text-text-accent ring-1 ring-inset ring-accent-line"
-                      >
-                        <Icon className="h-5 w-5" />
-                      </UbBox>
-                      <UbText as="h3" id={`landing-uc-${id}`} variant="inherit" className="ds-body-2xl-semibold">
-                        {t(key(id, 'tab'))}
-                      </UbText>
-                    </UbStack>
-                    <UseCaseDetails id={id} t={t} />
-                  </UbStack>
-                  <UbBox className="mx-auto w-[min(68vw,15rem)] sm:row-start-1 sm:col-start-2 sm:w-full">
-                    <UbDeviceFrame variant="phone" glow={false}>
-                      <UbVideo {...mobile} alt={t(key(id, 'alt'))} labels={labels} media={MOBILE_MEDIA} />
-                    </UbDeviceFrame>
-                  </UbBox>
-                </UbReveal>
-              </UbBox>
-            );
-          })}
-        </UbStack>
       </UbBox>
     </UbBox>
   );

@@ -76,7 +76,11 @@ function AlsoIncludedSectionBase() {
               <UbStack direction="row" gap={4} align="start" className={LANDING_CARD}>
                 <IconTile icon={icon} />
                 <UbStack gap={1} className="min-w-0">
-                  <UbText as="h3" variant="inherit" className="ds-body-l-semibold text-text-primary">
+                  <UbText
+                    as="h3"
+                    variant="inherit"
+                    className="ds-body-l-semibold text-text-primary"
+                  >
                     {t(`landing.also.${id}.title`)}
                   </UbText>
                   <UbText variant="inherit" tone="secondary" className="ds-body-base-regular">
@@ -98,7 +102,12 @@ export const AlsoIncludedSection = memo(AlsoIncludedSectionBase);
 function HowItWorksSectionBase() {
   const { t } = useTranslation();
   return (
-    <UbBox as="section" id="how" aria-labelledby="landing-how-title" className={`${LANDING_SECTION} scroll-mt-24`}>
+    <UbBox
+      as="section"
+      id="how"
+      aria-labelledby="landing-how-title"
+      className={`${LANDING_SECTION} scroll-mt-24`}
+    >
       <UbBox className={LANDING_CONTAINER}>
         <LandingSectionHeading
           id="landing-how-title"

@@ -18,6 +18,7 @@ import { useTranslation } from 'src/hooks/useTranslation';
 import { ROUTES } from 'src/routes';
 
 import { FAQ_MODULE_SCOPE, faqAnswerKey, faqIds, faqQuestionKey } from '../config/faq';
+import { ALL_MODULES_VISIBLE } from '../config/modules';
 import { SHOW_PRICING } from '../config/pricing';
 
 import { landingAnchors } from './LandingHeader';
@@ -45,8 +46,15 @@ import {
 function FaqSectionBase() {
   const { t } = useTranslation();
   return (
-    <UbBox as="section" id="faq" aria-labelledby="landing-faq-title" className={`${LANDING_SECTION} scroll-mt-24`}>
-      <UbBox className={`${LANDING_CONTAINER} grid gap-10 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:gap-16`}>
+    <UbBox
+      as="section"
+      id="faq"
+      aria-labelledby="landing-faq-title"
+      className={`${LANDING_SECTION} scroll-mt-24`}
+    >
+      <UbBox
+        className={`${LANDING_CONTAINER} grid gap-10 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:gap-16`}
+      >
         <LandingSectionHeading
           id="landing-faq-title"
           eyebrow={t('landing.faq.eyebrow')}
@@ -70,7 +78,7 @@ function FaqSectionBase() {
                 className="rounded-[18px] bg-surface-card"
               >
                 <UbText variant="inherit" tone="secondary" className="ds-body-base-regular">
-                  {t(faqAnswerKey(id))}
+                  {t(faqAnswerKey(id, ALL_MODULES_VISIBLE))}
                 </UbText>
               </UbDisclosure>
             </UbBox>
@@ -111,7 +119,7 @@ function FinalCtaBase() {
               id="landing-cta-title"
               variant="inherit"
               tone="inherit"
-              className="text-[hsl(var(--landing-band-text))] text-[clamp(2rem,1.3rem+2.6vw,3.25rem)] leading-[1.1]"
+              className="text-[clamp(2rem,1.3rem+2.6vw,3.25rem)] leading-[1.1] text-[hsl(var(--landing-band-text))]"
             >
               <UbText as="span" variant="inherit" tone="inherit" className={SERIF_LEAD}>
                 {t('landing.cta.lead')}
@@ -120,10 +128,20 @@ function FinalCtaBase() {
                 {t('landing.cta.key')}
               </UbText>
             </UbText>
-            <UbText variant="inherit" tone="inherit" className="max-w-xl text-[1.0625rem] leading-relaxed text-[hsl(var(--landing-band-text))]">
+            <UbText
+              variant="inherit"
+              tone="inherit"
+              className="max-w-xl text-[1.0625rem] leading-relaxed text-[hsl(var(--landing-band-text))]"
+            >
               {t('landing.cta.body')}
             </UbText>
-            <UbStack direction="row" wrap gap={3} justify="center" className="max-sm:w-full max-sm:flex-col">
+            <UbStack
+              direction="row"
+              wrap
+              gap={3}
+              justify="center"
+              className="max-sm:w-full max-sm:flex-col"
+            >
               <UbActionLink
                 href={ROUTES.SIGNUP}
                 variant="secondary"
@@ -156,7 +174,13 @@ export const FinalCta = memo(FinalCtaBase);
 function FooterLink({ href, children }: Readonly<{ href: string; children: string }>) {
   return (
     <UbBox as="li">
-      <UbLink href={href} underline={false} tone="secondary" variant="inherit" className="ds-body-base-regular hover:text-text-primary hover:underline">
+      <UbLink
+        href={href}
+        underline={false}
+        tone="secondary"
+        variant="inherit"
+        className="ds-body-base-regular hover:text-text-primary hover:underline"
+      >
         {children}
       </UbLink>
     </UbBox>
@@ -168,15 +192,17 @@ function LandingFooterBase() {
   const year = new Date().getFullYear();
   return (
     <UbBox as="footer" className="border-t border-border-hairline bg-surface-subtle">
-      <UbBox className={`${LANDING_CONTAINER} grid gap-10 py-12 md:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))] md:py-16`}>
+      <UbBox
+        className={`${LANDING_CONTAINER} grid gap-10 py-12 md:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))] md:py-16`}
+      >
         <UbStack gap={4} align="start">
           <UbLogo variant="full" size="md" label="YourKhata" />
-          <UbText variant="inherit" tone="tertiary" className="max-w-xs ds-body-base-regular">
+          <UbText variant="inherit" tone="tertiary" className="ds-body-base-regular max-w-xs">
             {t('landing.footer.tagline')}
           </UbText>
         </UbStack>
         <UbBox as="nav" aria-label={t('landing.footer.product')}>
-          <UbText as="h2" variant="inherit" className="mb-3 ds-body-s-semibold">
+          <UbText as="h2" variant="inherit" className="ds-body-s-semibold mb-3">
             {t('landing.footer.product')}
           </UbText>
           <UbStack as="ul" gap={2}>
@@ -188,7 +214,7 @@ function LandingFooterBase() {
           </UbStack>
         </UbBox>
         <UbBox as="nav" aria-label={t('landing.footer.account')}>
-          <UbText as="h2" variant="inherit" className="mb-3 ds-body-s-semibold">
+          <UbText as="h2" variant="inherit" className="ds-body-s-semibold mb-3">
             {t('landing.footer.account')}
           </UbText>
           <UbStack as="ul" gap={2}>
@@ -197,7 +223,7 @@ function LandingFooterBase() {
           </UbStack>
         </UbBox>
         <UbBox as="nav" aria-label={t('landing.footer.legal')}>
-          <UbText as="h2" variant="inherit" className="mb-3 ds-body-s-semibold">
+          <UbText as="h2" variant="inherit" className="ds-body-s-semibold mb-3">
             {t('landing.footer.legal')}
           </UbText>
           <UbStack as="ul" gap={2}>

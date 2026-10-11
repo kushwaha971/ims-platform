@@ -9,6 +9,7 @@ import { UbAvatar, UbBox, UbDivider, UbText } from 'src/design-system';
 import { MLMenu, MLMenuItem, MLMenuLabel } from 'src/design-system/primitives';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { ROUTES } from 'src/routes';
+import { accountContact, accountDisplayName } from 'src/utils/accountIdentity';
 import { cn } from 'src/utils/cn';
 
 /**
@@ -36,7 +37,9 @@ export function AccountMenu({
   const { user, impersonating, locale, options, setLocale, signOut } = useAccountActions();
 
   if (!user) return null;
-  const displayName = user.name || user.email;
+  // Never the placeholder address of a mobile-number account (accountIdentity.ts).
+  const displayName = accountDisplayName(user);
+  const contact = accountContact(user);
 
   return (
     <MLMenu
@@ -53,7 +56,7 @@ export function AccountMenu({
         ) : (
           <>
             <UbAvatar name={displayName} size="sm" />
-            <AccountIdentity name={user.name} email={user.email} />
+            <AccountIdentity name={user.name} email={contact} />
             <ChevronDown aria-hidden className="h-4 w-4 shrink-0 text-text-tertiary" />
           </>
         )
@@ -63,7 +66,7 @@ export function AccountMenu({
         <>
           <UbBox className="flex items-center gap-3 px-3 py-2">
             <UbAvatar name={displayName} size="md" />
-            <AccountIdentity name={user.name} email={user.email} wide />
+            <AccountIdentity name={user.name} email={contact} wide />
           </UbBox>
           <UbDivider decorative className="my-1" />
         </>

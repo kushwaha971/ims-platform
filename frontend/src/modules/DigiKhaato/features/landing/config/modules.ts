@@ -1,4 +1,6 @@
-import { FEATURE_CLIPS, type LandingClip } from './media';
+import { LANDING_HIDDEN_MODULES } from 'src/constants';
+
+import { MODULE_CLIPS, type LandingClip } from './media';
 
 /**
  * The platform's modules as the landing page shows them. Every surface that
@@ -21,7 +23,9 @@ import { FEATURE_CLIPS, type LandingClip } from './media';
  *    frame; without it, the card shows an illustration drawn from our own
  *    icons. Never an invented screenshot, a mock UI or fake data: a module
  *    gets `media` when it has real recordings of its real screens, and that
- *    one line is the whole change.
+ *    one line is the whole change. Lending and Library got theirs on 10 Oct
+ *    2026, the day both were released (DEC-015): recordings of their real
+ *    screens, from the demo book (`e2e/demo/`).
  *
  * Copy lives in the landing catalogue under `landing.module.<id>.*`; icons are
  * chosen in `LandingModuleParts.tsx`.
@@ -45,12 +49,15 @@ export type CoreId = (typeof CORE_IDS)[number];
 export type LandingModuleId = 'shop' | 'lending' | 'library' | 'gym' | 'hotel';
 
 /**
- * A module's recording: a DESKTOP loop (16:10) shown in a browser frame on
- * every width. One variant only, so a card never downloads two, and its alt
- * text is a catalogue key because it has to be in Hindi too.
+ * A module's recordings: the DESKTOP loop (16:10) in a browser frame from
+ * `sm`, and the PHONE loop in a phone frame below it — the phone layout, not
+ * the desktop picture shrunk. `UbVideo`'s `media` makes sure a visitor only
+ * ever downloads the one their screen shows. The alt text is a catalogue key
+ * because it has to be in Hindi too.
  */
 export interface ModuleMedia {
   readonly clip: LandingClip;
+  readonly mobileClip?: LandingClip;
   readonly altKey: string;
 }
 
@@ -72,19 +79,33 @@ export const LANDING_MODULES: readonly LandingModule[] = [
     visionGroup: 'Shop & billing',
     status: 'live',
     buildsOn: ['people', 'money', 'payments', 'documents', 'reminders', 'reports', 'team', 'csv'],
-    media: { clip: FEATURE_CLIPS.bill.desktop, altKey: 'landing.uc.bill.alt' },
+    media: {
+      clip: MODULE_CLIPS.shop.desktop,
+      mobileClip: MODULE_CLIPS.shop.mobile,
+      altKey: 'landing.uc.bill.alt',
+    },
   },
   {
     id: 'lending',
     visionGroup: 'Lending & collections',
-    status: 'planned',
+    status: 'live',
     buildsOn: ['people', 'money', 'payments', 'reminders', 'documents', 'reports'],
+    media: {
+      clip: MODULE_CLIPS.lending.desktop,
+      mobileClip: MODULE_CLIPS.lending.mobile,
+      altKey: 'landing.module.lending.alt',
+    },
   },
   {
     id: 'library',
     visionGroup: 'Library',
-    status: 'planned',
+    status: 'live',
     buildsOn: ['people', 'payments', 'reminders', 'reports', 'csv'],
+    media: {
+      clip: MODULE_CLIPS.library.desktop,
+      mobileClip: MODULE_CLIPS.library.mobile,
+      altKey: 'landing.module.library.alt',
+    },
   },
   {
     id: 'gym',
@@ -99,6 +120,22 @@ export const LANDING_MODULES: readonly LandingModule[] = [
     buildsOn: ['people', 'money', 'payments', 'documents', 'reports', 'team'],
   },
 ];
+
+/**
+ * The modules the PUBLIC page shows: every module not named in
+ * `LANDING_HIDDEN_MODULES` (src/constants.ts). Every landing surface that lists
+ * modules reads THIS — the map, the cards, "Who it's for", the FAQ, the title
+ * and the structured data — so hiding or showing a module is one configuration
+ * value and no component changes. `LANDING_MODULES` stays the full table, for
+ * the build plan and the tests that hold it to the vision document.
+ */
+export const visibleModules = (hidden: readonly string[]): readonly LandingModule[] =>
+  LANDING_MODULES.filter((module) => !hidden.includes(module.id));
+
+export const VISIBLE_MODULES: readonly LandingModule[] = visibleModules(LANDING_HIDDEN_MODULES);
+
+/** True when the page shows every module — the copy that names all five applies. */
+export const ALL_MODULES_VISIBLE: boolean = VISIBLE_MODULES.length === LANDING_MODULES.length;
 
 /** The "What you can do" lines every module's card carries: `landing.module.<id>.i.<n>`. */
 export const CAN_DO_LINES = [1, 2, 3, 4] as const;

@@ -7,8 +7,14 @@ import { join } from 'node:path';
 import { en, hi } from 'src/tests/allMessages';
 
 import { faqIds } from './faq';
-import { FEATURE_CLIPS } from './media';
-import { CAN_DO_LINES, CORE_IDS, LANDING_MODULES, type ModuleStatus } from './modules';
+import { FEATURE_CLIPS, MODULE_CLIPS } from './media';
+import {
+  CAN_DO_LINES,
+  CORE_IDS,
+  LANDING_MODULES,
+  visibleModules,
+  type ModuleStatus,
+} from './modules';
 
 /**
  * `modules.ts` is the one table the landing page's modules come from. These
@@ -24,7 +30,10 @@ const hiMessages = hi as Record<string, string>;
 
 /** Reads `| **Group** … | … | **Status** … |` rows from the vision doc's §2 table. */
 const visionStatuses = (): Map<string, ModuleStatus> => {
-  const doc = readFileSync(join(process.cwd(), '..', 'docs/platform/00-platform-vision.md'), 'utf8');
+  const doc = readFileSync(
+    join(process.cwd(), '..', 'docs/platform/00-platform-vision.md'),
+    'utf8'
+  );
   const section = doc.slice(doc.indexOf('## 2. Module map'), doc.indexOf('## 3.'));
   const rows = new Map<string, ModuleStatus>();
   section.split('\n').forEach((line) => {
@@ -64,11 +73,21 @@ describe('the landing page module config', () => {
    * and then withdrawn the same day ("I need library mgmt system, not
    * coaching"); it is on neither the vision map nor the page.
    */
-  it('lists the five modules in the owner\'s order, and no coaching', () => {
-    expect(LANDING_MODULES.map((module) => module.id)).toEqual(['shop', 'lending', 'library', 'gym', 'hotel']);
+  it("lists the five modules in the owner's order, and no coaching", () => {
+    expect(LANDING_MODULES.map((module) => module.id)).toEqual([
+      'shop',
+      'lending',
+      'library',
+      'gym',
+      'hotel',
+    ]);
     expect(LANDING_MODULES.map((module) => module.visionGroup)).not.toContain('Coaching & tuition');
-    expect(Object.keys(enMessages).filter((key) => key.startsWith('landing.module.coaching.'))).toEqual([]);
-    expect(Object.keys(hiMessages).filter((key) => key.startsWith('landing.module.coaching.'))).toEqual([]);
+    expect(
+      Object.keys(enMessages).filter((key) => key.startsWith('landing.module.coaching.'))
+    ).toEqual([]);
+    expect(
+      Object.keys(hiMessages).filter((key) => key.startsWith('landing.module.coaching.'))
+    ).toEqual([]);
   });
 
   it('has every module and core piece named in both languages, with the same lines each', () => {
@@ -77,15 +96,23 @@ describe('the landing page module config', () => {
       'landing.modules.buildsOn',
       ...CORE_IDS.flatMap((id) => [`landing.core.${id}`, `landing.core.${id}.short`]),
       ...LANDING_MODULES.flatMap((module) => [
-        ...['name', 'audience', 'purpose', 'keeps'].map((part) => `landing.module.${module.id}.${part}`),
+        ...['name', 'audience', 'purpose', 'keeps'].map(
+          (part) => `landing.module.${module.id}.${part}`
+        ),
         ...CAN_DO_LINES.map((n) => `landing.module.${module.id}.i.${n}`),
       ]),
     ];
     keys.forEach((key) => {
-      expect({ key, en: !!enMessages[key], hi: !!hiMessages[key] }).toEqual({ key, en: true, hi: true });
+      expect({ key, en: !!enMessages[key], hi: !!hiMessages[key] }).toEqual({
+        key,
+        en: true,
+        hi: true,
+      });
     });
     LANDING_MODULES.forEach((module) => {
-      expect(enMessages[`landing.module.${module.id}.i.${CAN_DO_LINES.length + 1}`]).toBeUndefined();
+      expect(
+        enMessages[`landing.module.${module.id}.i.${CAN_DO_LINES.length + 1}`]
+      ).toBeUndefined();
     });
   });
 
@@ -96,10 +123,21 @@ describe('the landing page module config', () => {
    * would be an invented screen.
    */
   it('gives media only to a module with real recordings, from the landing manifest', () => {
-    const known = Object.values(FEATURE_CLIPS).flatMap((clips) => [clips.desktop, clips.mobile]);
-    expect(LANDING_MODULES.filter((module) => module.media).map((module) => module.id)).toEqual(['shop']);
+    const known = [
+      ...Object.values(FEATURE_CLIPS).flatMap((clips) => [clips.desktop, clips.mobile]),
+      ...Object.values(MODULE_CLIPS).flatMap((clips) => [clips.desktop, clips.mobile]),
+    ];
+    // Shop, and since 10 Oct 2026 Lending and Library: all three are built and
+    // their cards show recordings of their real screens. Gym and Hotel are not
+    // built and must never get one.
+    expect(LANDING_MODULES.filter((module) => module.media).map((module) => module.id)).toEqual([
+      'shop',
+      'lending',
+      'library',
+    ]);
     LANDING_MODULES.forEach((module) => {
       if (!module.media) return;
+      // A recording is of a module merchants can use: all three are released.
       expect(module.status).toBe('live');
       expect(known).toContain(module.media.clip);
       expect(enMessages[module.media.altKey]).toBeTruthy();
@@ -107,12 +145,60 @@ describe('the landing page module config', () => {
     });
   });
 
-  /** The FAQ's "which modules are there" names every module, in both languages. */
+  /**
+   * "Which modules are there?" names the modules the page SHOWS: all five in
+   * `.a.all`, and exactly the visible ones — never a hidden one — in `.a`.
+   */
   it('names every module in the "which modules" answer, in both languages', () => {
     expect(faqIds(false)).toContain('modules');
     LANDING_MODULES.forEach((module) => {
-      expect(enMessages['landing.faq.modules.a']).toContain(enMessages[`landing.module.${module.id}.name`]);
-      expect(hiMessages['landing.faq.modules.a']).toContain(hiMessages[`landing.module.${module.id}.name`]);
+      expect(enMessages['landing.faq.modules.a.all']).toContain(
+        enMessages[`landing.module.${module.id}.name`]
+      );
+      expect(hiMessages['landing.faq.modules.a.all']).toContain(
+        hiMessages[`landing.module.${module.id}.name`]
+      );
+    });
+    const shown = visibleModules(['gym', 'hotel']);
+    shown.forEach((module) => {
+      expect(enMessages['landing.faq.modules.a']).toContain(
+        enMessages[`landing.module.${module.id}.name`]
+      );
+      expect(hiMessages['landing.faq.modules.a']).toContain(
+        hiMessages[`landing.module.${module.id}.name`]
+      );
+    });
+    (['gym', 'hotel'] as const).forEach((id) => {
+      expect(enMessages['landing.faq.modules.a']).not.toContain(
+        enMessages[`landing.module.${id}.name`]
+      );
+      expect(hiMessages['landing.faq.modules.a']).not.toContain(
+        hiMessages[`landing.module.${id}.name`]
+      );
+    });
+  });
+});
+
+describe('hiding modules from the landing page (owner, 10 Oct 2026)', () => {
+  it('hides Gym and Hotel by default and keeps Shop, Lending and Library', () => {
+    expect(visibleModules(['gym', 'hotel']).map((module) => module.id)).toEqual([
+      'shop',
+      'lending',
+      'library',
+    ]);
+  });
+
+  it('shows all five again when nothing is hidden — the switch is reversible', () => {
+    expect(visibleModules([]).map((module) => module.id)).toEqual(
+      LANDING_MODULES.map((module) => module.id)
+    );
+  });
+
+  it('removes nothing from the full table: the hidden modules keep their copy in both languages', () => {
+    (['gym', 'hotel'] as const).forEach((id) => {
+      expect(LANDING_MODULES.some((module) => module.id === id)).toBe(true);
+      expect(enMessages[`landing.module.${id}.name`]).toBeTruthy();
+      expect(hiMessages[`landing.module.${id}.name`]).toBeTruthy();
     });
   });
 });

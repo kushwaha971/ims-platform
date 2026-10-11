@@ -19,6 +19,7 @@ import { useAppSelector } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { selectActiveTenant } from 'src/redux/slice/sessionSlice';
 import { ROUTES } from 'src/routes';
+import { accountContact, accountDisplayName } from 'src/utils/accountIdentity';
 
 import { useNavigation } from '../useNavigation';
 
@@ -77,7 +78,7 @@ export function MorePageContent(): React.JSX.Element {
     },
   ];
 
-  const displayName = user ? user.name || user.email : '';
+  const displayName = user ? accountDisplayName(user) : '';
   const accountRows: UbMenuListRow[] = [
     {
       key: 'devices',
@@ -132,7 +133,7 @@ export function MorePageContent(): React.JSX.Element {
                 {
                   key: 'who',
                   label: displayName,
-                  caption: user?.name ? user.email : undefined,
+                  caption: user?.name ? accountContact(user) || undefined : undefined,
                   icon: <UbAvatar name={displayName || '?'} size="sm" />,
                 },
               ]}

@@ -39,7 +39,9 @@ function ThemeToggleBase({ className }: Readonly<{ className?: string }>) {
       aria-pressed={dark}
       onClick={onClick}
       data-testid="landing-theme-toggle"
-      icon={dark ? <Moon aria-hidden className="h-4 w-4" /> : <Sun aria-hidden className="h-4 w-4" />}
+      icon={
+        dark ? <Moon aria-hidden className="h-4 w-4" /> : <Sun aria-hidden className="h-4 w-4" />
+      }
       className={cn('rounded-pill', className)}
     >
       {t('landing.theme.dark')}

@@ -6,7 +6,7 @@ import { UbBox, UbLink, UbReveal, UbStack, UbText } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { cn } from 'src/utils/cn';
 
-import { CORE_IDS, LANDING_MODULES, type LandingModule } from '../config/modules';
+import { CORE_IDS, VISIBLE_MODULES, type LandingModule } from '../config/modules';
 
 import { CoreChip, ModuleIconTile } from './LandingModuleParts';
 import { LANDING_CONTAINER, LANDING_SECTION, LandingSectionHeading } from './LandingPrimitives';
@@ -24,7 +24,7 @@ import { LANDING_CONTAINER, LANDING_SECTION, LandingSectionHeading } from './Lan
  * the section's table of contents.
  *
  * From `lg` the tiles share one row, one column per module — the count is
- * `--module-cols`, set from `LANDING_MODULES.length`, so a module added to the
+ * `--module-cols`, set from `VISIBLE_MODULES.length`, so a module added to the
  * config gets its column with no edit here — and each has its own stub down to
  * a bus line. The bus runs from the centre of the first column to the centre
  * of the last: `(100% - (n - 1) gaps) / 2n` in from each edge, exact for n
@@ -39,8 +39,8 @@ const TILE =
 const MODULE_COLUMNS = 'lg:grid-cols-[repeat(var(--module-cols),minmax(0,1fr))]';
 
 const MAP_VARS = {
-  '--module-cols': LANDING_MODULES.length,
-  '--bus-inset': `calc((100% - ${LANDING_MODULES.length - 1}rem) / ${2 * LANDING_MODULES.length})`,
+  '--module-cols': VISIBLE_MODULES.length,
+  '--bus-inset': `calc((100% - ${VISIBLE_MODULES.length - 1}rem) / ${2 * VISIBLE_MODULES.length})`,
 } as React.CSSProperties;
 
 function ModuleTile({ module, t }: Readonly<{ module: LandingModule; t: (id: string) => string }>) {
@@ -99,12 +99,12 @@ function PlatformMapSectionBase() {
             <UbText
               as="h3"
               variant="inherit"
-              className="mb-3 px-1 ds-body-s-semibold uppercase tracking-[0.08em] text-text-tertiary"
+              className="ds-body-s-semibold mb-3 px-1 uppercase tracking-[0.08em] text-text-tertiary"
             >
               {t('landing.platform.modules')}
             </UbText>
             <UbBox as="ul" className={cn('grid grid-cols-2 gap-3 sm:gap-4', MODULE_COLUMNS)}>
-              {LANDING_MODULES.map((module) => (
+              {VISIBLE_MODULES.map((module) => (
                 <UbBox as="li" key={module.id}>
                   <ModuleTile module={module} t={t} />
                 </UbBox>
@@ -115,10 +115,16 @@ function PlatformMapSectionBase() {
             <UbBox aria-hidden className="relative h-14 lg:h-16">
               <UbBox
                 data-testid="landing-map-stubs"
-                className={cn('absolute inset-x-0 top-0 hidden h-1/2 gap-4 lg:grid', MODULE_COLUMNS)}
+                className={cn(
+                  'absolute inset-x-0 top-0 hidden h-1/2 gap-4 lg:grid',
+                  MODULE_COLUMNS
+                )}
               >
-                {LANDING_MODULES.map((module) => (
-                  <UbBox key={module.id} className="mx-auto h-full w-0 border-l-2 border-accent-line" />
+                {VISIBLE_MODULES.map((module) => (
+                  <UbBox
+                    key={module.id}
+                    className="mx-auto h-full w-0 border-l-2 border-accent-line"
+                  />
                 ))}
               </UbBox>
               <UbBox className="absolute left-[var(--bus-inset)] right-[var(--bus-inset)] top-1/2 hidden h-0 border-t-2 border-accent-line lg:block" />
@@ -126,7 +132,7 @@ function PlatformMapSectionBase() {
               <UbText
                 as="span"
                 variant="inherit"
-                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-pill border border-accent-line bg-surface-card px-3 py-1 ds-body-s-medium text-text-accent shadow-sm"
+                className="ds-body-s-medium absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-pill border border-accent-line bg-surface-card px-3 py-1 text-text-accent shadow-sm"
               >
                 {t('landing.platform.connector')}
               </UbText>
@@ -144,7 +150,11 @@ function PlatformMapSectionBase() {
               <UbStack gap={5} className="relative">
                 <UbStack direction="row" wrap align="center" justify="between" gap={3}>
                   <UbStack gap={1}>
-                    <UbText as="h3" variant="inherit" className="ds-body-xl-semibold text-text-primary">
+                    <UbText
+                      as="h3"
+                      variant="inherit"
+                      className="ds-body-xl-semibold text-text-primary"
+                    >
                       {t('landing.platform.core.title')}
                     </UbText>
                     <UbText variant="inherit" tone="tertiary" className="ds-body-base-regular">
@@ -160,7 +170,7 @@ function PlatformMapSectionBase() {
                 <UbText
                   variant="inherit"
                   tone="secondary"
-                  className="border-t border-border-hairline pt-4 ds-body-base-regular"
+                  className="ds-body-base-regular border-t border-border-hairline pt-4"
                 >
                   {t('landing.platform.core.foot')}
                 </UbText>

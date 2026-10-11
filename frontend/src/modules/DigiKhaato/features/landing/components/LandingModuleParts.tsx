@@ -38,6 +38,8 @@ import {
 import { UbBox, UbDeviceFrame, UbText, UbVideo, type UbVideoLabels } from 'src/design-system';
 import { cn } from 'src/utils/cn';
 
+import { CARD_DESKTOP_MEDIA, CARD_MOBILE_MEDIA } from '../config/media';
+
 import type { CoreId, LandingModuleId, ModuleMedia } from '../config/modules';
 
 /**
@@ -63,7 +65,9 @@ export const MODULE_ICON: Readonly<Record<LandingModuleId, LucideIcon>> = {
  * illustration. Our own icon set only — no screenshot, no mock screen, no
  * figure — so the drawing can never be mistaken for the product's UI.
  */
-export const MODULE_SCENE: Readonly<Record<LandingModuleId, readonly [LucideIcon, LucideIcon, LucideIcon, LucideIcon]>> = {
+export const MODULE_SCENE: Readonly<
+  Record<LandingModuleId, readonly [LucideIcon, LucideIcon, LucideIcon, LucideIcon]>
+> = {
   shop: [ReceiptIndianRupee, Package, Users, Wallet],
   lending: [NotebookPen, CalendarClock, Route, ReceiptText],
   library: [BookCopy, IdCard, Undo2, Hourglass],
@@ -101,10 +105,13 @@ function CoreChipBase({
       variant="inherit"
       className={cn(
         'inline-flex items-center gap-2 rounded-pill border border-border-hairline bg-surface-card text-text-secondary',
-        size === 'md' ? 'px-3.5 py-2 ds-body-base-medium' : 'px-2.5 py-1 ds-body-s-medium'
+        size === 'md' ? 'ds-body-base-medium px-3.5 py-2' : 'ds-body-s-medium px-2.5 py-1'
       )}
     >
-      <Icon aria-hidden className={cn('shrink-0 text-text-accent', size === 'md' ? 'h-4 w-4' : 'h-3.5 w-3.5')} />
+      <Icon
+        aria-hidden
+        className={cn('shrink-0 text-text-accent', size === 'md' ? 'h-4 w-4' : 'h-3.5 w-3.5')}
+      />
       {t(size === 'md' ? `landing.core.${id}` : `landing.core.${id}.short`)}
     </UbText>
   );
@@ -114,7 +121,10 @@ CoreChipBase.displayName = 'CoreChip';
 export const CoreChip = memo(CoreChipBase);
 
 /** A module's icon in its filled accent tile — the same for every module. */
-function ModuleIconTileBase({ id, size = 'md' }: Readonly<{ id: LandingModuleId; size?: 'sm' | 'md' | 'lg' }>) {
+function ModuleIconTileBase({
+  id,
+  size = 'md',
+}: Readonly<{ id: LandingModuleId; size?: 'sm' | 'md' | 'lg' }>) {
   const Icon = MODULE_ICON[id];
   return (
     <UbBox
@@ -163,7 +173,11 @@ function ModuleIllustration({ id }: Readonly<{ id: LandingModuleId }>) {
       <UbBox className="absolute inset-0 bg-[radial-gradient(hsl(var(--border-strong)/0.55)_1px,transparent_1.2px)] [background-size:16px_16px] [mask-image:radial-gradient(75%_75%_at_50%_50%,black,transparent)]" />
       <UbBox className="absolute inset-0 bg-[radial-gradient(55%_60%_at_50%_50%,var(--accent-quiet),transparent_75%)]" />
       {/* spokes from the centre to each satellite */}
-      <svg className="absolute inset-0 h-full w-full" preserveAspectRatio="none" viewBox="0 0 100 100">
+      <svg
+        className="absolute inset-0 h-full w-full"
+        preserveAspectRatio="none"
+        viewBox="0 0 100 100"
+      >
         {SATELLITE_AT.map(([x, y]) => (
           <line
             key={`${x}-${y}`}
@@ -218,16 +232,45 @@ function ModuleStageBase({
   t: (id: string) => string;
   videoLabels: UbVideoLabels;
 }>) {
+  // With a phone recording, the stage is taller below `sm` so the phone frame
+  // has room; the box is fixed-ratio at every width, so nothing shifts when
+  // the poster or the video arrives.
+  const phone = media?.mobileClip;
   return (
     <UbBox
       data-module-stage={media ? 'media' : 'illustration'}
-      className="relative aspect-[4/3] overflow-clip rounded-[18px] border border-border-hairline bg-surface-subtle"
+      className={cn(
+        'relative overflow-clip rounded-[18px] border border-border-hairline bg-surface-subtle',
+        phone ? 'aspect-[5/6] sm:aspect-[4/3]' : 'aspect-[4/3]'
+      )}
     >
       {media ? (
         <UbBox className="absolute inset-0 flex items-center justify-center bg-[radial-gradient(70%_70%_at_50%_40%,var(--accent-quiet),transparent_80%)] p-4 sm:p-5">
-          <UbDeviceFrame variant="browser" url="yourkhata.com" className="w-full">
-            <UbVideo {...media.clip} alt={t(media.altKey)} labels={videoLabels} />
-          </UbDeviceFrame>
+          <UbBox className={cn('w-full', phone && 'hidden sm:block')}>
+            <UbDeviceFrame variant="browser" url="yourkhata.com" className="w-full">
+              <UbVideo
+                {...media.clip}
+                alt={t(media.altKey)}
+                labels={videoLabels}
+                media={phone ? CARD_DESKTOP_MEDIA : undefined}
+              />
+            </UbDeviceFrame>
+          </UbBox>
+          {phone && (
+            <UbBox
+              className="h-full sm:hidden"
+              style={{ aspectRatio: `${phone.width} / ${phone.height}` }}
+            >
+              <UbDeviceFrame variant="phone" glow={false}>
+                <UbVideo
+                  {...phone}
+                  alt={t(media.altKey)}
+                  labels={videoLabels}
+                  media={CARD_MOBILE_MEDIA}
+                />
+              </UbDeviceFrame>
+            </UbBox>
+          )}
         </UbBox>
       ) : (
         <ModuleIllustration id={id} />
