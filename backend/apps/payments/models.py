@@ -102,8 +102,8 @@ class Payment(TenantModel):
     bucket = models.CharField(
         max_length=8,
         choices=LedgerBucket.choices,
-        default=LedgerBucket.MAIN,
-        db_default=LedgerBucket.MAIN.value,
+        default=LedgerBucket.SHOP,
+        db_default=LedgerBucket.SHOP.value,
     )
 
     class Meta:

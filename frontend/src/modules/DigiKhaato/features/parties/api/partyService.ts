@@ -236,10 +236,8 @@ interface PartyDetailApiRow extends Omit<PartyApiRow, 'roles'> {
   readonly opening_balance_direction: string | null;
   readonly opening_balance_as_of: string | null;
   readonly created_at: string;
-  /** A2 — additive, and absent unless they mean something (see `PartyDetail`). */
-  readonly loan_balance?: string;
-  readonly trade_balance?: string;
-  readonly deposit_held?: string;
+  /** DEC-019 — the Shop's own figure, absent unless it means something (see `PartyDetail`). */
+  readonly shop_balance?: string;
 }
 
 interface PartySaveApiResponse {
@@ -280,11 +278,9 @@ const toPartyDetail = (row: PartyDetailApiRow): PartyDetail => ({
   openingDirection: row.opening_balance_direction,
   openingAsOf: row.opening_balance_as_of,
   createdAt: row.created_at,
-  /* A2 — spread only when sent, so an absent figure stays absent rather than
+  /* DEC-019 — spread only when sent, so an absent figure stays absent rather than
      becoming an `undefined` key a `?? '0.00'` would turn into a fact. */
-  ...(row.loan_balance != null ? { loanBalance: row.loan_balance } : {}),
-  ...(row.trade_balance != null ? { tradeBalance: row.trade_balance } : {}),
-  ...(row.deposit_held != null ? { depositHeld: row.deposit_held } : {}),
+  ...(row.shop_balance != null ? { shopBalance: row.shop_balance } : {}),
 });
 
 const toSaveResult = (body: PartySaveApiResponse): PartySaveResult => ({

@@ -106,10 +106,15 @@ def test_enrol_with_both_blocks_records_two_payments_and_keeps_the_deposit_off_t
     assert [c["kind"] for c in body["meta"]["charges"]] == ["admission_fee", "membership_fee"]
     assert all(c["status"] == "paid" for c in body["meta"]["charges"])
     party = Party.objects.get(name="Asha Kulkarni")
-    assert (party.balance, party.deposit_held) == (D("0.00"), D("500.00"))
+    assert (party.balance, party.library_balance, party.deposit_held) == (
+        D("0.00"),
+        D("0.00"),
+        D("500.00"),
+    )
     charges = LedgerEntry.objects.filter(party=party, entry_type="charge")
     assert sorted(charges.values_list("amount", flat=True)) == [D("50.00"), D("150.00")]
-    assert set(charges.values_list("bucket", flat=True)) == {"main"}
+    # DEC-019 — the library's own bucket, never the udhaar book's.
+    assert set(charges.values_list("bucket", flat=True)) == {"library"}
     assert body["data"]["blocks"] == []
 
 

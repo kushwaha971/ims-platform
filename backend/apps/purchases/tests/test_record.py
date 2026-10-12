@@ -13,7 +13,7 @@ from apps.common.audit import AuditAction
 from apps.inventory.models import Item, ItemStock, StockMovement
 from apps.inventory.selectors.drift import stock_drift
 from apps.ledger.models import LedgerEntry
-from apps.ledger.selectors.entry import computed_balance
+from apps.ledger.selectors.entry import computed_shop_balance
 from apps.platform_app.models import AuditLog, DocumentSequence, TenantSetting
 from apps.purchases.models import PurchaseDocument
 from apps.purchases.tests.conftest import BILLS, bill_url, draft, line, record, recorded_bill
@@ -83,11 +83,12 @@ def test_the_worked_example_posts_stock_ledger_last_cost_number_and_audit(
     assert data["ledger_entry"] == {"id": str(entry.id)}
     supplier.refresh_from_db()
     assert (
-        supplier.balance
+        supplier.shop_balance
         == Decimal("-2921.00")
-        == computed_balance(tenant=supplier.tenant, party_id=supplier.id)
+        == computed_shop_balance(tenant=supplier.tenant, party_id=supplier.id)
     )
-    assert supplier.payable_total == Decimal("2921.00")
+    # DEC-019 — a bill is the Shop's money; the udhaar book's split is untouched.
+    assert supplier.payable_total == Decimal("0.00")
 
     prices = dict(Item.objects.values_list("name", "purchase_price"))
     assert prices == {"Rice": Decimal("46.00"), "Sugar": Decimal("37.24")}

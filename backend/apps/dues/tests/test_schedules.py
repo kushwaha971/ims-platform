@@ -88,11 +88,11 @@ def test_confirmed_backdated_posts_each_due_with_its_own_date(
         dt.date(2026, 10, 1),
     ]
     assert {e[1:6] for e in entries} == {
-        (D("1200.00"), "charge", Direction.DEBIT, LedgerBucket.MAIN, "dues_due")
+        (D("1200.00"), "charge", Direction.DEBIT, LedgerBucket.SHOP, "dues_due")
     }
     assert entries[0][6].endswith("· Jul 2026") and entries[0][6].startswith("Subject ")
     party.refresh_from_db()
-    assert party.balance == D("4800.00")
+    assert party.shop_balance == D("4800.00")  # DEC-019: a due is the Shop's money
     assert len(result.posted) == 4
     statuses = dict(DuesDue.objects.values_list("due_on", "status"))
     assert statuses[dt.date(2026, 7, 1)] == DueStatus.OVERDUE  # grace 0, long past
@@ -114,7 +114,7 @@ def test_a_due_today_posts_at_creation_without_confirmation(
     due = DuesDue.objects.get(due_on=today)
     assert due.status == DueStatus.DUE
     party.refresh_from_db()
-    assert party.balance == D("1200.00")
+    assert party.shop_balance == D("1200.00")
 
 
 def test_editing_the_plan_changes_no_running_schedule(
@@ -220,7 +220,7 @@ def test_posting_sources_are_registered_with_the_contract_shape(dues_subject: An
     assert (due.module, dict(due.entry_types), due.buckets) == (
         "dues",
         {"charge": "debit"},
-        frozenset({"main"}),
+        frozenset({"shop"}),
     )
     assert (dict(component.entry_types), component.buckets) == (
         {"interest": "debit", "charge": "debit"},
@@ -228,7 +228,7 @@ def test_posting_sources_are_registered_with_the_contract_shape(dues_subject: An
     )
     assert (dict(adjustment.entry_types), adjustment.buckets) == (
         {"charge": "debit", "adjustment_credit": "credit"},
-        frozenset({"main", "loan"}),
+        frozenset({"shop", "loan"}),
     )
 
 

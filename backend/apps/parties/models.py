@@ -51,14 +51,17 @@ class Party(TenantModel, SoftDeleteModel):
     payable_total = MoneyField(default=0)
     # ── A2 — the bucket caches (ADR-043, ADR-044, contracts §1.3) ───────────
     #
-    # Two more caches, with the same one writer as `balance`
+    # More caches, with the same one writer as `balance`
     # (`parties.services.balance.apply_entry`) and the same replay
-    # (`manage.py recalc_balances`). `balance` stays "what this party owes, net"
-    # and is Σ main + Σ loan; `loan_balance` is the loan part of it, so the TRADE
-    # figure — what aging, the credit limit and a shop write-off read — is
-    # `balance − loan_balance`. `deposit_held` is money held for the party and
-    # returnable: a liability kept entirely OUTSIDE the balance, never negative.
+    # (`manage.py recalc_balances`). DEC-019: each app's money is its own —
+    # `balance` is Σ main (the udhaar book: what its aging, credit limit and
+    # write-off read), `shop_balance` Σ shop (bills and their payments),
+    # `loan_balance` Σ loan, `library_balance` Σ library, and none of them
+    # includes another. `deposit_held` is money held for the party and
+    # returnable: a liability, never negative.
+    shop_balance = MoneyField(default=0, db_default=0)
     loan_balance = MoneyField(default=0, db_default=0)
+    library_balance = MoneyField(default=0, db_default=0)
     deposit_held = MoneyField(default=0, db_default=0)
     last_activity_at = models.DateTimeField(null=True, blank=True)
 

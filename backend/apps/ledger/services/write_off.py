@@ -38,14 +38,13 @@ This is a deliberate departure from FRD EC-2, which accepts an over-credited
 archived party as the outcome of that race; with the lock and the pin, the race
 cannot produce one.
 
-── The TRADE figure, never a loan (A2, R23, owner Q3's default) ─────────────
-The amount defaults to, and is capped at, `balance − loan_balance`: what the
-party owes the SHOP. A loan is forgiven only through lending's own write-off
-(ADR-043), so one tap on a shop screen can never forgive one. With a loan
-outstanding the balance after the write-off is the loan, and the archive that
-follows is refused by PTY-04's ordinary non-zero balance guard (EC-7). A party
-with nothing but a loan has nothing for a shop write-off to do. For every party
-without a loan the trade figure IS the balance, so nothing changes for them.
+── The udhaar book's own figure, never another app's (R23, DEC-019) ─────────
+The amount defaults to, and is capped at, `balance`: what the party owes in the
+udhaar book. A loan is forgiven only through lending's own write-off, a bill
+only by the Shop's credit note, so one tap here can never forgive either; they
+are not in `balance` at all. With one of them still owed, the archive that
+follows is refused by that app's own guard (`APP_BALANCE_GUARDS`). A party
+with nothing in the udhaar book has nothing for this write-off to do.
 
 ── What is deliberately not here ────────────────────────────────────────────
 The credit-limit check (PTY-06 BR-7 / FRD EC-14): a write-off only ever moves

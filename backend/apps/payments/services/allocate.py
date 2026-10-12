@@ -47,7 +47,7 @@ from apps.common.dates import tenant_today
 from apps.common.exceptions import BusinessRuleViolation, NotFound, ValidationFailed
 from apps.common.money import ZERO
 from apps.ledger.services.entries import _parse_amount
-from apps.parties.services.balance import lock_party_of
+from apps.parties.services.balance import balance_of, lock_party_of
 from apps.payments.constants import PaymentStatus
 from apps.payments.models import Allocation, Payment
 from apps.payments.services.record import (
@@ -303,6 +303,7 @@ def allocate_existing(*, ctx: Ctx, payment_id: Any, allocations: Any, reason: st
         "payment": payment,
         "allocations": applied,
         "documents": documents,
-        "party_balance": party.balance if party is not None else None,
+        # DEC-019 — the figure this payment's app shows, not the udhaar book's.
+        "party_balance": balance_of(party, payment.bucket) if party is not None else None,
         "unallocated_amount": payment.unallocated_amount,
     }

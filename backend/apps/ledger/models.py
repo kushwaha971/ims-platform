@@ -192,8 +192,8 @@ class LedgerEntry(TenantModel, ImmutableModel):
                 condition=(models.Q(upi_app__isnull=True) | models.Q(payment_mode=PaymentMode.UPI)),
                 name="ck_ledger_entry_upi_app_needs_upi",
             ),
-            # ADR-043 — three buckets and no fourth without a migration (a fourth
-            # is this CHECK plus a trigger re-creation, contracts §1.2).
+            # ADR-043 — no new bucket without a migration (it is this CHECK, the
+            # payments one, a party cache and DEC-019's re-bucketing, contracts §1.2).
             models.CheckConstraint(
                 condition=models.Q(bucket__in=[choice.value for choice in LedgerBucket]),
                 name="ck_ledger_entry_bucket",

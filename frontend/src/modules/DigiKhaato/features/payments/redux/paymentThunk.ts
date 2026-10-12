@@ -56,15 +56,22 @@ export const fetchPayment = createAsyncThunk<Payment, string, Reject>(
 /** QUERY. The allocation panel's open bills for a party, oldest first. */
 export const fetchOpenDocuments = createAsyncThunk<
   readonly OpenDocument[],
-  { readonly partyId: string; readonly direction: PaymentDirection },
+  {
+    readonly partyId: string;
+    readonly direction: PaymentDirection;
+    readonly bucket?: PaymentBucket;
+  },
   Reject
->('paymentForm/fetchOpenDocuments', async ({ partyId, direction }, { signal, rejectWithValue }) => {
-  try {
-    return await (await service()).listOpenDocuments(partyId, direction, signal);
-  } catch (error) {
-    return rejectWithValue(toApiError(error, 'payments.alloc.error'));
+>(
+  'paymentForm/fetchOpenDocuments',
+  async ({ partyId, direction, bucket }, { signal, rejectWithValue }) => {
+    try {
+      return await (await service()).listOpenDocuments(partyId, direction, signal, bucket);
+    } catch (error) {
+      return rejectWithValue(toApiError(error, 'payments.alloc.error'));
+    }
   }
-});
+);
 
 /** QUERY. PAY-03 — the Collect QR, or the receipt footer's static one. */
 export const fetchCollectQr = createAsyncThunk<
@@ -86,15 +93,19 @@ export const recordPayment = createAsyncThunk<
     readonly values: PaymentFormValues;
     readonly idempotencyKey: string;
     readonly context: string;
+    readonly bucket?: PaymentBucket;
   },
   Reject
->('paymentForm/recordPayment', async ({ values, idempotencyKey, context }, { rejectWithValue }) => {
-  try {
-    return await (await service()).recordPayment(values, idempotencyKey, context);
-  } catch (error) {
-    return rejectWithValue(toApiError(error, 'payments.save.error'));
+>(
+  'paymentForm/recordPayment',
+  async ({ values, idempotencyKey, context, bucket }, { rejectWithValue }) => {
+    try {
+      return await (await service()).recordPayment(values, idempotencyKey, context, bucket);
+    } catch (error) {
+      return rejectWithValue(toApiError(error, 'payments.save.error'));
+    }
   }
-});
+);
 
 /** MUTATION. PAY-05 — void with a reason; bills reopen, the khata line is reversed. */
 export const voidPayment = createAsyncThunk<

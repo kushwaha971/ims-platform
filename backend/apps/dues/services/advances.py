@@ -42,7 +42,7 @@ def apply_advances(*, ctx: Any, schedule: DuesSchedule, due_ids: list[Any]) -> i
     if not due_ids or not applies_advances(schedule):
         return 0
     made = 0
-    for payment in open_advances(tenant=ctx.tenant, party_id=schedule.party_id, bucket="main"):
+    for payment in open_advances(tenant=ctx.tenant, party_id=schedule.party_id, bucket="shop"):
         left = Decimal(payment.unallocated_amount)
         rows: list[dict] = []
         dues = (

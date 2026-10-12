@@ -132,7 +132,7 @@ def _post_ledger(*, ctx: Any, due: DuesDue, party: Any, note: str) -> dict[str, 
         source_type=SOURCE_DUE,
         source_id=due.id,
         note=note,
-        bucket="main",
+        bucket="shop",  # DEC-019
     )
     return {"posted_entry_id": entry.id}
 

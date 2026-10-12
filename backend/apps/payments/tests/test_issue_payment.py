@@ -77,7 +77,7 @@ def test_a_party_can_pay_part_of_the_bill_at_issue(
         .values_list("entry_type", flat=True)
     )
     assert types == [EntryType.INVOICE, EntryType.PAYMENT_IN]
-    assert Party.objects.get(pk=party.pk).balance == Decimal("598.00")
+    assert Party.objects.get(pk=party.pk).shop_balance == Decimal("598.00")
     assert_books_clean()
 
 
@@ -92,7 +92,7 @@ def test_paying_more_than_the_bill_at_issue_keeps_the_rest_as_advance(
     assert data["status"] == "paid" and data["due_on"] is None
     payment = Payment.objects.get()
     assert payment.unallocated_amount == Decimal("102.00")
-    assert Party.objects.get(pk=party.pk).balance == Decimal("-102.00")
+    assert Party.objects.get(pk=party.pk).shop_balance == Decimal("-102.00")
 
 
 def test_voiding_the_payment_taken_at_issue_reopens_the_bill(
@@ -106,7 +106,7 @@ def test_voiding_the_payment_taken_at_issue_reopens_the_bill(
     void(owner, Payment.objects.get().id, "Cheque bounced")
     document = SalesDocument.objects.get()
     assert (document.status, document.amount_due) == ("issued", Decimal("898.00"))
-    assert Party.objects.get(pk=party.pk).balance == Decimal("898.00")
+    assert Party.objects.get(pk=party.pk).shop_balance == Decimal("898.00")
     assert_books_clean()
 
 

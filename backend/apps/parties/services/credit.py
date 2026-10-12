@@ -40,8 +40,9 @@ from __future__ import annotations
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
+from apps.common.constants import LedgerBucket
 from apps.parties.models import Party
-from apps.parties.services.balance import trade_balance
+from apps.parties.services.balance import balance_of
 
 #: FR-2. `warn` is the default because a merchant who has not thought about
 #: this yet should be told, not stopped: a rule nobody chose should never cost
@@ -95,7 +96,7 @@ def credit_mode(tenant: Any) -> str:
     return mode if mode in CREDIT_MODES else DEFAULT_CREDIT_MODE
 
 
-def credit_exposure(party: Party) -> Decimal:
+def credit_exposure(party: Party, bucket: str = LedgerBucket.MAIN) -> Decimal:
     """What this party currently owes, floored at zero (FR-4, BR-3).
 
     ── Why `open_credit_documents` is NOT added ───────────────────────────────
@@ -112,14 +113,14 @@ def credit_exposure(party: Party) -> Decimal:
     excluded at MVP by BR-4, which is also why the check runs at ISSUE rather
     than at draft save.
 
-    ── The TRADE figure, not the whole balance (A2, PLT-X01 BR-5, ADR-043) ───
-    `balance − loan_balance`: a loan is not shop credit, so a borrower's
-    principal must not consume the limit the owner set for their shopping.
-    Compared against the whole balance, a customer who owes the shop ₹2,300 and
-    has a ₹46,625 loan would be blocked from a ₹2,000 bill under a ₹5,000 limit.
-    For every party without a loan the two are the same number.
+    ── Each app's own figure (DEC-019) ─────────────────────────────────────────
+    The limit is tested against the balance of the app being written in: the
+    udhaar book's `balance` for a You gave, the Shop's `shop_balance` for a bill.
+    A loan, a library fee or the other app's credit never consumes it — a
+    customer who owes the khata ₹2,300 and has a ₹46,625 loan is not blocked
+    from a ₹2,000 bill under a ₹5,000 limit.
     """
-    return max(trade_balance(party), ZERO)
+    return max(balance_of(party, bucket), ZERO)
 
 
 def usage_pct(exposure: Decimal, limit: Decimal | None) -> int | None:
@@ -189,7 +190,9 @@ def limit_status(exposure: Decimal, limit: Decimal | None) -> str:
     return "ok"
 
 
-def check_credit(*, party: Party, amount: Decimal, mode: str) -> dict:
+def check_credit(
+    *, party: Party, amount: Decimal, mode: str, bucket: str = LedgerBucket.MAIN
+) -> dict:
     """Would this amount put the party over their limit, and what follows (FR-6).
 
     Returns `{status, mode, limit, exposure_before, exposure_after,
@@ -209,7 +212,7 @@ def check_credit(*, party: Party, amount: Decimal, mode: str) -> dict:
     bypass anything, because it never had the power to allow anything.
     """
     limit = party.credit_limit
-    before = credit_exposure(party)
+    before = credit_exposure(party, bucket)
     after = before + amount
 
     if mode == CREDIT_MODE_OFF or limit is None:

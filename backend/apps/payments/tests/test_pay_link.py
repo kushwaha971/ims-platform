@@ -45,7 +45,7 @@ def test_the_desk_gets_a_link_and_a_qr_and_the_page_shows_the_same(
     assert body["amount"] == "900.00" and body["reference"] == "LIB0007"
     assert body["business_name"] == (shop.legal_name or shop.name)
     assert body["upi_url"] == link["upi_url"]
-    assert "YourKhata" not in str(body) and page["X-Robots-Tag"] == "noindex, nofollow"
+    assert "YourKhata" not in str(body) and page["X-Robots-Tag"] == "noindex, nofollow, noarchive"
 
 
 def test_an_edited_amount_is_a_dead_link_and_so_is_garbage(client: Any, shop: Any) -> None:

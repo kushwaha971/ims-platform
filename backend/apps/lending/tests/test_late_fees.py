@@ -91,7 +91,7 @@ def test_a_per_day_fee_is_suggested_capped_and_moves_the_khata(office: dict) -> 
     # Due 3 days ago, 1 day of grace: 2 days late × ₹10.
     assert figures["late_fee"]["days_late"] == 2 and figures["late_fee"]["suggested"] == "20.00"
     party = Party.objects.get(pk=loan["borrower"]["party_id"])
-    before = party.balance
+    before = party.loan_balance
 
     assert fee(office["client"], loan, "21.00", "over").status_code == 400
     added = fee(office["client"], loan, "20.00")
@@ -100,7 +100,9 @@ def test_a_per_day_fee_is_suggested_capped_and_moves_the_khata(office: dict) -> 
     assert after["schedule"][0]["late_fee"] == "20.00"
     assert Decimal(after["arrears"]) == Decimal(loan["arrears"]) + 20
     party.refresh_from_db()
-    assert party.balance == before + 20  # a charge on the borrower's khata
+    # A charge on the borrower's LOAN (DEC-019): lending's own figure, never the khata's.
+    assert party.loan_balance == before + 20
+    assert party.balance == Decimal("0.00")
 
     again = fee(office["client"], loan, "1.00", "again")
     assert again.status_code == 409 and again.json()["error"]["code"] == "penalty_cap_reached"

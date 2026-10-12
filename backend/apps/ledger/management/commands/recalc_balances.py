@@ -15,10 +15,11 @@ The formula is `ledger.selectors.entry.SIGNED_AMOUNT`, imported rather than
 restated. A replay written from the same prose as the thing it checks is not a
 check; it is a second chance to make the same mistake.
 
-Since A2 (ADR-043) it replays all THREE party caches — `balance` (the `main` and
-`loan` buckets), `loan_balance` and `deposit_held` — through
-`ledger.selectors.drift`, so a party whose balance agrees but whose loan or
-deposit figure does not is still reported, and `--apply` writes all three.
+Since DEC-019 it replays all FIVE party caches — `balance` (the udhaar book's
+`main` bucket), `shop_balance`, `loan_balance`, `library_balance` and
+`deposit_held` — through `ledger.selectors.drift`, so a party whose balance
+agrees but whose shop, loan, library or deposit figure does not is still
+reported, and `--apply` writes them all.
 
 ── Why this command lives in `ledger` and not in `parties` ──────────────────
 It was in `common` while there was nothing to replay, which was fine for a shell
@@ -43,7 +44,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from apps.common.money import ZERO
-from apps.ledger.selectors.drift import drift_of, iter_balances
+from apps.ledger.selectors.drift import OTHER_CACHES, drift_of, iter_balances
 from apps.parties.models import Party
 
 
@@ -82,10 +83,8 @@ class Command(BaseCommand):
                 f"drift  {party.id}  {party.name[:40]:<40}  "
                 f"cached {party.balance}  ledger {computed.balance}"
             )
-            if "loan_balance" in drift.figures:
-                line += f"  loan cached {party.loan_balance} ledger {computed.loan_balance}"
-            if "deposit_held" in drift.figures:
-                line += f"  deposit cached {party.deposit_held} ledger {computed.deposit_held}"
+            for name, cached, ledger in drift.others:
+                line += f"  {name} cached {cached} ledger {ledger}"
             self.stdout.write(line)
             if not apply:
                 continue
@@ -97,15 +96,14 @@ class Command(BaseCommand):
                 locked.balance = computed.balance
                 locked.receivable_total = max(computed.balance, ZERO)
                 locked.payable_total = max(-computed.balance, ZERO)
-                locked.loan_balance = computed.loan_balance
-                locked.deposit_held = computed.deposit_held
+                for name in OTHER_CACHES:
+                    setattr(locked, name, getattr(computed, name))
                 locked.save(
                     update_fields=[
                         "balance",
                         "receivable_total",
                         "payable_total",
-                        "loan_balance",
-                        "deposit_held",
+                        *OTHER_CACHES,
                         "updated_at",
                     ]
                 )

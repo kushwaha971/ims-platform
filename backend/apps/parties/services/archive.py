@@ -55,7 +55,6 @@ from apps.common.context import Ctx
 from apps.common.exceptions import BusinessRuleViolation
 from apps.parties.constants import PartyStatus
 from apps.parties.models import Party
-from apps.parties.services.balance import trade_balance
 from apps.parties.services.write_off import get_write_off_handler
 
 #: How the balance is described back to the client, so the message the merchant
@@ -144,6 +143,28 @@ def _refuse_open_records(block: ArchiveBlock) -> None:
     )
 
 
+#: DEC-019 — each app's own figure on the party, and the module whose being on makes it a
+#: refusal. A loan used to block an archive only because it sat inside `balance`; now each
+#: app's money is its own cache, so each blocks in its own words.
+APP_BALANCE_GUARDS: tuple[tuple[str, str, str], ...] = (
+    ("sales", "shop_balance", "parties.archive.owesOnBills"),
+    ("lending", "loan_balance", "parties.archive.owesOnLoan"),
+    ("library", "library_balance", "parties.archive.owesLibraryFees"),
+)
+
+
+def app_balance_guard(cache: str, module: str, label_id: str) -> ArchiveGuard:
+    """A guard refusing while `cache` is not zero (DEC-019)."""
+
+    def guard(_tenant: Any, party: Party) -> ArchiveBlock | None:
+        if (getattr(party, cache) or ZERO) == ZERO:
+            return None
+        return {"module": module, "count": 1, "label_id": label_id}
+
+    guard.__name__ = f"{cache}_archive_guard"
+    return guard
+
+
 def _reset_guards_for_tests() -> None:  # pragma: no cover - test helper
     global _GUARDS_BASELINE
     if _GUARDS_BASELINE is None:
@@ -187,15 +208,6 @@ def _refuse_nonzero_balance(party: Party) -> None:
         "balance_label": label,
         "suggestion": "write_off" if label == RECEIVABLE else "collect",
     }
-    # R23 / LED-11 (Wave A gate): with a loan open, a shop write-off may clear only the trade
-    # figure and the archive is still refused by the loan — so the dialog must not offer
-    # "Write off ₹<balance>". Added only then, so no other refusal's payload changes.
-    if party.loan_balance != ZERO:
-        details.update(
-            can_write_off=False,
-            amount=str(abs(trade_balance(party))),
-            suggestion="collect",
-        )
     raise BusinessRuleViolation(
         "party_balance_nonzero",
         "Settle the balance or write it off before archiving.",

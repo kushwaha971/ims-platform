@@ -54,11 +54,10 @@ def test_the_owners_register_their_document_targets_in_the_old_order() -> None:
     assert type(sales_target).__module__ == "apps.sales.services.payment_target"
     assert type(purchase_target).__module__ == "apps.purchases.services.payment_target"
     # ── A4b ── payments' deposit targets register after both, in their own bucket.
-    main = {"bucket": "main"}
-    # ── DUE-03 ── the dues engine's `dues_due` (main, auto) registers after them (ADR-056).
+    main = {"bucket": "shop"}
+    # ── DUE-03 ── the dues engine's `dues_due` (shop since DEC-019) registers after them.
     assert [t.document_type for t in targets_for_direction("in", **main)] == [
         "sales_document",
-        "library_charge",
         "dues_due",
     ]
     assert [t.document_type for t in targets_for_direction("out", **main)] == ["purchase_document"]

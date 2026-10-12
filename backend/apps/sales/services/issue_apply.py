@@ -83,7 +83,7 @@ def _usable(payment: Any, party_id: Any) -> bool:
     return (
         payment.party_id == party_id
         and payment.direction == "in"
-        and payment.bucket == "main"
+        and payment.bucket == "shop"  # DEC-019: a Shop advance
         and payment.status == "recorded"
         and payment.unallocated_amount > ZERO
         and not (payment.meta or {}).get("credit_note_id")

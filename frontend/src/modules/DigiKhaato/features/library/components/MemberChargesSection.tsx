@@ -182,6 +182,8 @@ export function MemberChargesSection({
             documentNumber: collecting.number,
             documentDue: collecting.amountDue,
             entry: 'party',
+            // DEC-019 — the library's fees, and an advance that stays the library's.
+            bucket: 'library',
           }}
           onClose={() => setCollecting(null)}
         />

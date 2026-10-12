@@ -102,7 +102,7 @@ def test_run_and_payment_on_one_party_do_not_deadlock(ctx: Any, make_plan: Any, 
         assert outcomes["run"]["posted"] == 1, (index, outcomes["run"])
 
     party.refresh_from_db()
-    assert party.balance == D("100.00") * races - D("10.00") * races
+    assert party.shop_balance == D("100.00") * races - D("10.00") * races
     assert check_balances(tenant_id=ctx.tenant.id)["ok"] is True
 
 

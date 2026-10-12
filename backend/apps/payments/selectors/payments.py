@@ -20,11 +20,10 @@ from django.db.models import (
 )
 from django.db.models.functions import Coalesce
 
-from apps.common.constants import Direction, PaymentMode
+from apps.common.constants import Direction, LedgerBucket, PaymentMode
 from apps.common.money import ZERO
 from apps.ledger.constants import EntryType, SourceType
 from apps.ledger.models import LedgerEntry
-from apps.ledger.selectors.entry import BALANCE_BUCKETS
 from apps.payments.constants import PaymentDirection, PaymentStatus
 from apps.payments.models import Allocation, Payment
 from apps.payments.services.targets import target_for, targets_for_direction
@@ -159,7 +158,7 @@ def open_documents(
     advance is applied to instalments, which FIFO never chooses (PLT-X03 EC-3).
     """
     if bucket is None:
-        chosen = targets_for_direction(direction, auto_only=True, bucket="main")
+        chosen = targets_for_direction(direction, auto_only=True, bucket="shop")
     else:
         chosen = targets_for_direction(direction, bucket=bucket)
     from apps.payments.services.record import merge_oldest_first
@@ -178,7 +177,7 @@ def open_documents(
 
 
 def open_advances(
-    *, tenant: Any, party_id: Any, direction: str = "in", bucket: str = "main"
+    *, tenant: Any, party_id: Any, direction: str = "in", bucket: str = "shop"
 ) -> QuerySet:
     """The advances an AUTOMATIC use may apply (R61): the document port's `apply_open_advances`
     and the dues run. Oldest payment first.
@@ -194,7 +193,7 @@ def open_advances(
 
 
 def parties_with_open_advances(
-    *, tenant: Any, direction: str = "in", bucket: str = "main"
+    *, tenant: Any, direction: str = "in", bucket: str = "shop"
 ) -> set[Any]:
     """The parties `open_advances` would offer anything for — one query, so a nightly run over
     thousands of schedules (DUE-02 step 6) asks per party only where an advance exists."""
@@ -292,7 +291,10 @@ def party_balance_after(payment: Payment) -> Decimal | None:
         .order_by("created_at")
         .first()
     )
-    if entry is None:
+    # DEC-019 — the balance the receipt quotes is the one this payment moved: a Shop
+    # receipt the Shop's, a library fee receipt the library's. A deposit is held, not owed,
+    # so a deposit receipt quotes no balance at all.
+    if entry is None or entry.bucket == LedgerBucket.DEPOSIT:
         return None
     upto = Q(entry_date__lt=entry.entry_date) | Q(
         entry_date=entry.entry_date, created_at__lt=entry.created_at
@@ -306,8 +308,7 @@ def party_balance_after(payment: Payment) -> Decimal | None:
     total = (
         LedgerEntry.objects.filter(tenant_id=payment.tenant_id, party_id=payment.party_id)
         .filter(upto)
-        # A2 — the balance is Σ main + Σ loan; a deposit line was never in it (ADR-043).
-        .filter(BALANCE_BUCKETS)
+        .filter(bucket=entry.bucket)
         .aggregate(total=Coalesce(Sum(signed), Value(ZERO)))["total"]
     )
     return total

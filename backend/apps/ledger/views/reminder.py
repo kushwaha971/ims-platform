@@ -152,7 +152,7 @@ class ReminderDueView(_ReminderBase):
                 "name": p.name,
                 "mobile": p.mobile,
                 # A7 BR-7 — the shop's figure, which is what this list asks for.
-                "balance": str(p.shop_balance),
+                "balance": str(p.khata_balance),
                 "collection_date": p.collection_date.isoformat() if p.collection_date else None,
             }
             for p in page

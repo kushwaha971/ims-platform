@@ -243,14 +243,12 @@ export interface PartyDetail extends Party {
   /** ISO timestamp. PTY-03 FR-11's "added on" in the info panel's Meta block. */
   readonly createdAt: string;
   /**
-   * A2 (PLT-X01 §6) — the loan part of the balance, and the shop part beside it
-   * (`balance − loanBalance`). Decimal strings, SIGNED like the balance. ABSENT — not
-   * "0.00" — unless there is a loan or a module that lends is switched on: a figure
-   * that is always zero is a claim the server cannot verify (the PTY-03 rule).
+   * DEC-019 — what the person owes on Shop bills, SIGNED like the balance. `balance` is
+   * the udhaar book's own; neither includes the other, a loan or a library fee. ABSENT —
+   * not "0.00" — unless it is not zero or the Shop is on (the PTY-03 rule).
    */
-  readonly loanBalance?: string;
-  readonly tradeBalance?: string;
-  /** A2 — money held for the party and returnable; never part of the balance. */
+  readonly shopBalance?: string;
+  /** Held deposits are never on this payload since DEC-019; kept optional for its readers. */
   readonly depositHeld?: string;
   /**
    * A6 (PLT-X04 §6) — the party's roles with the module that owns each. ABSENT

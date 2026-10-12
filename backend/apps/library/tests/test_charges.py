@@ -176,11 +176,12 @@ def test_status_is_derived_from_the_figures(
 
 
 def test_a_charge_posts_one_charge_line_and_never_in_the_loan_bucket(tenant: Any) -> None:
-    """T-LIB-07-5 — the source posts `charge` in main only; a loan-bucket post is refused."""
+    """T-LIB-07-5, DEC-019 — the source posts `charge` in the library's own bucket only; a
+    loan-bucket post is refused. A library fee is never the udhaar book's or the Shop's."""
     party = PartyFactory(tenant=tenant)
     row = charge(tenant, member(tenant, party), "40.00")
     line = LedgerEntry.objects.get(source_type=SOURCE_CHARGE, source_id=row.id)
-    assert (line.entry_type, line.amount, line.bucket) == ("charge", D("40.00"), "main")
+    assert (line.entry_type, line.amount, line.bucket) == ("charge", D("40.00"), "library")
     assert row.number.startswith("FIN/")
     with pytest.raises(LedgerPostingError), transaction.atomic():
         post_source_entry(
@@ -317,6 +318,8 @@ def test_auto_settles_an_older_fine_before_a_newer_charge(library_on: Any) -> No
             "party_id": str(party.id),
             "mode_breakup": [{"mode": "cash", "amount": "30.00"}],
             "allocations": "auto",
+            # DEC-019 — the fee desk's "auto" is among the library's own items.
+            "bucket": "library",
         },
     )
     old.refresh_from_db()

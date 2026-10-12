@@ -21,13 +21,16 @@ class ExpensesConfig(AppConfig):
 
         register_source_resolver(SourceType.EXPENSE, resolve_expenses)
 
-        # A2 (ADR-042, contracts §1.2) — an unpaid party expense posts one credit, `main`.
-        from apps.common.constants import Direction
+        # DEC-019 — an expense on credit is owed by the Shop, in the `shop` bucket.
+        from apps.common.constants import Direction, LedgerBucket
         from apps.ledger.constants import EntryType
         from apps.ledger.services.postings import register_posting_source
 
         register_posting_source(
-            SourceType.EXPENSE, module="expenses", entry_types={EntryType.EXPENSE: Direction.CREDIT}
+            SourceType.EXPENSE,
+            module="expenses",
+            entry_types={EntryType.EXPENSE: Direction.CREDIT},
+            buckets=frozenset({LedgerBucket.SHOP.value}),
         )
 
         # Library P0 — a vertical's profit view reads spend through the seam, never this app.

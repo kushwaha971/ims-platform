@@ -34,7 +34,7 @@ def test_share_link_round_trip_and_regenerate(owner: Any, anonymous_client: Any,
     assert stored.public_token_hash and token not in stored.public_token_hash
 
     public = anonymous_client.get(reverse("v1:public-document", args=[token]))
-    assert public.status_code == 200 and public["X-Robots-Tag"] == "noindex, nofollow"
+    assert public.status_code == 200 and public["X-Robots-Tag"] == "noindex, nofollow, noarchive"
     data = public.json()["data"]
     assert data["number"] == doc["number"] and "created_by" not in data
     assert (

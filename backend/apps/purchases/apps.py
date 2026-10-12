@@ -38,8 +38,8 @@ class PurchasesConfig(AppConfig):
 
         register_void_listener(release_purchase_bill)
 
-        # A2 (ADR-042, contracts §1.2) — what a purchase document posts, `main` only.
-        from apps.common.constants import Direction
+        # A2 (ADR-042, contracts §1.2) — what a purchase document posts, `shop` only (DEC-019).
+        from apps.common.constants import Direction, LedgerBucket
         from apps.ledger.constants import EntryType
         from apps.ledger.services.postings import register_posting_source
 
@@ -50,4 +50,5 @@ class PurchasesConfig(AppConfig):
                 EntryType.PURCHASE_BILL: Direction.CREDIT,
                 EntryType.DEBIT_NOTE: Direction.DEBIT,
             },
+            buckets=frozenset({LedgerBucket.SHOP.value}),
         )

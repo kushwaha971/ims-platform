@@ -282,7 +282,7 @@ def test_a_party_whose_deposit_holds_money_is_not_archived(owner: Any, deposit: 
     assert owner.post(archive, {}, format="json").status_code == 200
 
 
-def test_an_adjustment_says_so_on_the_khata_and_the_statement(
+def test_an_adjustment_says_so_on_every_line_it_wrote(
     owner: Any, deposit: Any, invoice_for: Any
 ) -> None:
     """Wave A gate: the deposit's OUT line of an adjustment was indistinguishable
@@ -310,26 +310,22 @@ def test_an_adjustment_says_so_on_the_khata_and_the_statement(
         {"amount": "80.00", "mode_breakup": upi("80.00"), "reason": "Part"},
     )
 
-    timeline = owner.get(f"/api/v1/parties/{deposit.party_id}/ledger-entries").json()["data"]
+    # DEC-019 — a deposit and the Shop's fine are not the udhaar book's lines, so the source
+    # resolver (what every ledger reader prints) is read directly.
+    from apps.ledger.models import LedgerEntry
+    from apps.ledger.selectors.sources import resolve_sources
+
+    lines = list(LedgerEntry.objects.filter(party=deposit.party, source_type="payment"))
+    sources = resolve_sources(lines)
     marked = {
-        (row["entry_type"], row["bucket"], row["amount"]): (row["source"] or {}).get("adjustment")
-        for row in timeline
-        if row["source_type"] == "payment"
+        (line.entry_type, line.bucket, f"{line.amount:.2f}"): sources[str(line.source_id)].get(
+            "adjustment"
+        )
+        for line in lines
     }
     assert marked == {
         ("payment_in", "deposit", "500.00"): None,  # the deposit received, in cash
         ("payment_out", "deposit", "120.00"): True,  # adjusted against the fine
-        ("payment_in", "main", "120.00"): True,  # the fine settled by it
+        ("payment_in", "shop", "120.00"): True,  # the fine settled by it
         ("payment_out", "deposit", "80.00"): None,  # handed back, by UPI
-    }
-
-    statement = owner.get(f"/api/v1/parties/{deposit.party_id}/statement").json()["meta"]
-    deposit_rows = {
-        (row["direction"], row["amount"]): row["source"].get("adjustment")
-        for row in statement["deposit"]["rows"]
-    }
-    assert deposit_rows == {
-        ("credit", "500.00"): None,
-        ("debit", "120.00"): True,
-        ("debit", "80.00"): None,
     }

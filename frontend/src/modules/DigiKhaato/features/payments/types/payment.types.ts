@@ -46,7 +46,8 @@ export interface PaymentAllocation {
 }
 
 /** A4a (R5) — which kind of balance a payment settles (the ledger's bucket). */
-export type PaymentBucket = 'main' | 'loan' | 'deposit';
+/** DEC-019 — whose money a payment is: each app's own bucket (`main` is the udhaar book's). */
+export type PaymentBucket = 'main' | 'shop' | 'loan' | 'library' | 'deposit';
 
 /** One row of Apply to bills, as the dialog edits it. Money is a string (R-TS-7). */
 export interface ApplyRowForm {
@@ -175,6 +176,11 @@ export interface PaymentContext {
   /** PAY-05 FR-7 "Record again": the voided payment's lines. */
   readonly presetLines?: readonly PaymentModeLine[];
   readonly entry: 'party' | 'invoice' | 'bill' | 'list' | 'collect' | 'again';
+  /**
+   * DEC-019 — whose open items the drawer lists and "auto" settles, and where an advance
+   * stays: the Shop's unless the Library's fee desk opens it (`'library'`).
+   */
+  readonly bucket?: 'shop' | 'library';
 }
 
 export interface PaymentLineForm {

@@ -12,7 +12,7 @@ from django.urls import reverse
 from apps.common.audit import AuditAction
 from apps.inventory.models import ItemStock, StockMovement
 from apps.ledger.models import LedgerEntry
-from apps.ledger.selectors.entry import computed_balance
+from apps.ledger.selectors.entry import computed_shop_balance
 from apps.platform_app.models import AuditLog, DocumentSequence, TenantSetting
 from apps.sales.models import SalesDocument
 from apps.sales.tests.conftest import INVOICES, cash, draft, invoice_url, issue, line, money
@@ -69,9 +69,9 @@ def test_credit_sale_posts_stock_ledger_number_and_audit(
     assert (entry.source_type, str(entry.source_id)) == ("sales_document", doc["id"])
     party.refresh_from_db()
     assert (
-        party.balance
+        party.shop_balance
         == Decimal("1772.00")
-        == computed_balance(tenant=party.tenant, party_id=party.id)
+        == computed_shop_balance(tenant=party.tenant, party_id=party.id)
     )
     moves = StockMovement.objects.filter(source_type="sales_document", source_id=doc["id"])
     assert sorted(m.qty for m in moves) == [Decimal("-4.000"), Decimal("-3.000"), Decimal("-2.000")]

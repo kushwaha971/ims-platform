@@ -547,7 +547,8 @@ def adjust_expected(*, ctx: Ctx, deposit_id: Any, expected_amount: Any, reason: 
 
 
 def _clean_allocations(raw: Any) -> tuple[list[dict], Decimal]:
-    """The charges an application settles: main-bucket targets IN, each > 0."""
+    """The charges an application settles: what the party owes (not a loan, not a deposit), IN,
+    each > 0. A library deposit settles library fees in the library's bucket (DEC-019)."""
     from apps.payments.services.targets import target_for
 
     if not isinstance(raw, list) or not raw:
@@ -562,7 +563,7 @@ def _clean_allocations(raw: Any) -> tuple[list[dict], Decimal]:
         if (
             target is None
             or target.direction != PaymentDirection.IN
-            or target.bucket != LedgerBucket.MAIN
+            or target.bucket in (LedgerBucket.DEPOSIT, LedgerBucket.LOAN)
         ):
             details[f"allocations.{index}.document_type"] = [
                 "A deposit is adjusted against what the party owes."

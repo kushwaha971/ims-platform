@@ -167,7 +167,8 @@ it('opens from a purchase bill as "Pay supplier", money out, preset to that bill
   );
   expect(await screen.findByText('Pay supplier · Agro Traders')).toBeInTheDocument();
   await screen.findByTestId('alloc-picker');
-  expect(service.listOpenDocuments).toHaveBeenCalledWith('p9', 'out', expect.anything());
+  // DEC-019 — the fourth argument is the app's bucket; a bill's own drawer leaves it to the server.
+  expect(service.listOpenDocuments).toHaveBeenCalledWith('p9', 'out', expect.anything(), undefined);
   await user.click(screen.getByTestId('payment-save'));
   await waitFor(() => expect(service.recordPayment).toHaveBeenCalledTimes(1));
   const [sent, , entry] = jest.mocked(service.recordPayment).mock.calls[0] ?? [];

@@ -354,6 +354,8 @@ export function CounterPageContent(): React.JSX.Element {
             documentNumber: collecting.charge.number,
             documentDue: collecting.charge.amountDue,
             entry: 'party',
+            // DEC-019 — the library's fees, and an advance that stays the library's.
+            bucket: 'library',
           }}
           onClose={() => setCollecting(null)}
         />

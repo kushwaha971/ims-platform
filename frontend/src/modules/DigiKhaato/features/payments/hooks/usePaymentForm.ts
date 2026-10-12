@@ -80,9 +80,9 @@ export const usePaymentForm = (context: PaymentContext): UsePaymentFormResult =>
   const loadOpenDocuments = useCallback(
     (partyId: string, direction: PaymentDirection) => {
       if (!partyId) return;
-      void dispatch(fetchOpenDocuments({ partyId, direction }));
+      void dispatch(fetchOpenDocuments({ partyId, direction, bucket: context.bucket }));
     },
-    [dispatch]
+    [dispatch, context.bucket]
   );
 
   // The drawer opened on a known party lists its bills at once (FR-2, NFR ≤ 200 ms).
@@ -99,7 +99,12 @@ export const usePaymentForm = (context: PaymentContext): UsePaymentFormResult =>
       setFormErrors([]);
       try {
         const saved = await dispatch(
-          recordPayment({ values, idempotencyKey: key, context: context.entry })
+          recordPayment({
+            values,
+            idempotencyKey: key,
+            context: context.entry,
+            bucket: context.bucket,
+          })
         ).unwrap();
         // The key now names the payment just written; the next save is a new one.
         rotate();
@@ -152,7 +157,7 @@ export const usePaymentForm = (context: PaymentContext): UsePaymentFormResult =>
         return null;
       }
     },
-    [dispatch, key, rotate, context.entry, loadOpenDocuments]
+    [dispatch, key, rotate, context.entry, context.bucket, loadOpenDocuments]
   );
 
   return useMemo(

@@ -184,11 +184,13 @@ QUERY_BUDGETS: tuple[QueryBudget, ...] = (
         id="auth-me",
         label="GET /auth/me",
         url=lambda w: reverse("v1:auth-me"),
-        budget=7,
+        budget=8,
         composition=(
             *AUTH_FLOOR,
             "platform_membership — `active_membership` for the tenant in the `tid` claim",
             "platform_membership — the caller's other memberships, for the switcher",
+            "platform_membership — `blocked_from`: businesses whose owner blocked this person "
+            "(owner, 12 Oct 2026: a blocked member is told why on sign-in)",
             *MODULE_GATE,
             "platform_membership — the seat count behind `plan_limits.max_users`",
             "platform_session — the current device, for the session card",

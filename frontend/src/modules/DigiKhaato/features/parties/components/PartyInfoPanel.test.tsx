@@ -50,24 +50,15 @@ describe('PartyInfoPanel balances', () => {
     expect(screen.queryByText(/Loan left|Deposit held|Shop balance/)).not.toBeInTheDocument();
   });
 
-  it('shows the loan, the shop balance and the deposit with their words', () => {
-    renderWithProviders(
-      <Harness
-        party={{
-          ...base,
-          loanBalance: '46625.00',
-          tradeBalance: '2300.00',
-          depositHeld: '1000.00',
-        }}
-      />
-    );
+  /**
+   * DEC-019 (QA B3/B9) — the udhaar book's page shows no other app's money: a loan, a
+   * Shop bill, a library fee or a deposit is read on its own app's page. A Shop balance
+   * arriving on the payload draws nothing here.
+   */
+  it('shows no other app’s money even when the payload carries the Shop figure', () => {
+    renderWithProviders(<Harness party={{ ...base, shopBalance: '2300.00' }} />);
 
-    expect(screen.getByText('Balances')).toBeInTheDocument();
-    expect(screen.getAllByText('Loan left').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Shop balance').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Deposit held').length).toBeGreaterThan(0);
-    expect(screen.getByText('₹46,625.00')).toBeInTheDocument();
-    expect(screen.getByText('₹2,300.00')).toBeInTheDocument();
-    expect(screen.getByText('₹1,000.00')).toBeInTheDocument();
+    expect(screen.queryByText('Balances')).not.toBeInTheDocument();
+    expect(screen.queryByText('₹2,300.00')).not.toBeInTheDocument();
   });
 });

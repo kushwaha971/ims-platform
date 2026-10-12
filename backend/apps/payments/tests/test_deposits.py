@@ -65,7 +65,8 @@ def _open(ctx: Ctx, party: Any, expected: str = "500.00", **extra: Any) -> HeldD
 def _figures(deposit: HeldDeposit) -> tuple[Decimal, Decimal, Decimal, str]:
     deposit.refresh_from_db()
     party = Party.objects.get(pk=deposit.party_id)
-    return deposit.held_amount, party.deposit_held, party.balance, deposit.status
+    # DEC-019 — the fines here are Shop invoices, so what is owed is the Shop's figure.
+    return deposit.held_amount, party.deposit_held, party.shop_balance, deposit.status
 
 
 # ── T-PLT-X02-1: the worked example ───────────────────────────────────────────
@@ -102,7 +103,7 @@ def test_the_library_worked_example_step_by_step(
     )
     out, settle = applied["refund_payment"], applied["settle_payment"]
     assert (out.direction, out.primary_mode, out.bucket) == ("out", "adjustment", "deposit")
-    assert (settle.direction, settle.primary_mode, settle.bucket) == ("in", "adjustment", "main")
+    assert (settle.direction, settle.primary_mode, settle.bucket) == ("in", "adjustment", "shop")
     assert out.number.startswith("PAYOUT/") and settle.number.startswith("RCT/")  # R12
     assert SalesDocument.objects.get(pk=fine["id"]).status == "paid"
     assert applied["application"].amount == _d("120.00")
@@ -383,7 +384,7 @@ def test_an_auto_payment_never_touches_a_deposit(ctx: Ctx, make_party: Any) -> N
         },
     )
     assert result["payment"].unallocated_amount == _d("500.00")
-    assert result["payment"].bucket == "main"
+    assert result["payment"].bucket == "shop"
     assert _figures(deposit)[0] == _d("0.00")
     deposit.refresh_from_db()
     assert deposit.received_amount == _d("0.00")

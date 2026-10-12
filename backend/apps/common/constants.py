@@ -182,19 +182,29 @@ class LedgerBucket(models.TextChoices):
     reader. `parties` moves a different cache per bucket and may not import the ledger, and
     `payments` stores the bucket its payment posted in.
 
-    * `main` — the trade khata: sales, purchases, fees, fines, charges, manual entries. Moves
-      `party.balance`, and is the only bucket aging reads.
+    DEC-019 (owner, 12 Oct 2026; QA B3/B9/B10/B36): each app keeps ONLY its own money; the
+    person (name, mobile) is the one thing shared. So each app's money is its own bucket and
+    its own party cache, and no screen has to remember to subtract another app's.
+
+    * `main` — the udhaar book: You gave / You got, the opening balance, a write-off and their
+      corrections. Moves `party.balance`; the only bucket aging and the khata's reminders read.
+    * `shop` — the Shop: sales and purchase documents, expenses on credit, and the payments
+      that settle them. Moves `party.shop_balance` only.
     * `loan` — lending: disbursal, interest, loan charges, collections, waivers. Moves
-      `party.balance` AND `party.loan_balance`; never in aging.
-    * `deposit` — money held for the party and returnable. Moves `party.deposit_held` only,
-      never the balance.
+      `party.loan_balance` only.
+    * `library` — the library's fees, fines, charges, waivers and the payments that settle
+      them. Moves `party.library_balance` only.
+    * `deposit` — money held for the party and returnable. Moves `party.deposit_held` only.
     """
 
-    MAIN = "main", _("Shop")
+    MAIN = "main", _("Udhaar book")
+    SHOP = "shop", _("Shop")
     LOAN = "loan", _("Loan")
     DEPOSIT = "deposit", _("Deposit")
+    LIBRARY = "library", _("Library")
 
 
-#: The buckets `party.balance` is the sum of (BR-1): what the party owes, net. A deposit is a
-#: liability kept entirely outside it.
-BALANCE_BUCKET_VALUES: tuple[str, ...] = (LedgerBucket.MAIN.value, LedgerBucket.LOAN.value)
+#: The buckets `party.balance` is the sum of (BR-1): what the party owes in the UDHAAR BOOK,
+#: net. Since DEC-019 that is its own bucket alone — a bill, a loan or a library fee is
+#: another app's, with its own cache.
+BALANCE_BUCKET_VALUES: tuple[str, ...] = (LedgerBucket.MAIN.value,)

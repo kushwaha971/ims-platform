@@ -88,13 +88,12 @@ def _channel(raw: Any) -> str:
 
 
 def trade_balance(party: Party) -> Decimal:
-    """A7 BR-7 — what the SHOP is owed: `balance − loan_balance` (ADR-043).
+    """A7 BR-7 — what the udhaar book is owed: `balance` (DEC-019).
 
-    A party reminder must never quote a whole loan: a borrower who owes the shop
-    ₹2,300 and the lender ₹46,625 is reminded about ₹2,300 here, and about the
-    instalment (not the loan) from lending's own reminder source.
+    A party reminder never quotes a loan, a bill or a library fee: each is another
+    app's money, reminded from that app's own source.
     """
-    return (party.balance or ZERO) - (getattr(party, "loan_balance", None) or ZERO)
+    return party.balance or ZERO
 
 
 def _check_remindable(party: Party | None, channel: str | None) -> Party:

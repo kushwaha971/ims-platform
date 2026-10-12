@@ -16,6 +16,7 @@ from typing import Any
 import pytest
 from django.urls import reverse
 
+from apps.common.dates import tenant_today
 from apps.ledger.constants import ReminderKind, ReminderStatus
 from apps.ledger.models import Reminder
 from apps.ledger.tests.module_reminder_fixtures import (  # noqa: F401  (fixtures)
@@ -310,18 +311,19 @@ def test_a_shop_without_a_policy_window_sees_no_window_settings(tenant: Any, api
 
 
 def test_a_party_reminder_quotes_the_shop_figure_never_the_loan(tenant: Any, api_as: Any) -> None:
-    """Worked example: balance ₹48,925, loan ₹46,625 → the shop reminder quotes
-    ₹2,300 in the text and the snapshot; a borrower with only a loan is not in the
-    shop's due list and cannot be reminded from it."""
+    """Worked example (DEC-019): ₹2,300 in the udhaar book and a ₹46,625 loan → the khata
+    reminder quotes ₹2,300 in the text and the snapshot, never the loan; a borrower with only
+    a loan is not in the khata's due list and cannot be reminded from it."""
     client, _ = api_as(tenant, role="staff")
-    today = dt.date.today()
+    # The business's own day (IST), as the due list counts it — never the server's UTC date.
+    today = tenant_today(tenant)
     borrower = PartyFactory(tenant=tenant, mobile="9876543210", collection_date=today)
     Party.objects.filter(pk=borrower.pk).update(
-        balance=Decimal("48925.00"), loan_balance=Decimal("46625.00")
+        balance=Decimal("2300.00"), loan_balance=Decimal("46625.00")
     )
     only_loan = PartyFactory(tenant=tenant, mobile="9811111111", collection_date=today)
     Party.objects.filter(pk=only_loan.pk).update(
-        balance=Decimal("1000.00"), loan_balance=Decimal("1000.00")
+        balance=Decimal("0.00"), loan_balance=Decimal("1000.00")
     )
 
     preview = client.post(reverse(PREVIEW), {"party_id": str(borrower.id)}, format="json").json()

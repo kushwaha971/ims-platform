@@ -2,11 +2,11 @@
 `manage.py recalc_balances`, `recalc_balances --check`, `check_invariants` and
 the nightly integrity job (`apps.ledger.services.integrity.check_balances`).
 
-Per party, the three cached figures against their replays over the live entries
-(A2, ADR-043): `balance` against `SIGNED_AMOUNT` (the `main` and `loan` buckets),
-`loan_balance` against `LOAN_SIGNED_AMOUNT`, and `deposit_held` against
-`DEPOSIT_HELD_AMOUNT` — all three imported from `ledger.selectors.entry` rather
-than restated. One correlated subquery per figure, streamed — never a query per
+Per party, the five cached figures against their replays over the live entries
+(A2, ADR-043, DEC-019): `balance` against `SIGNED_AMOUNT` (the udhaar book's
+`main` bucket), `shop_balance`, `loan_balance` and `library_balance` against
+their own bucket's sum, and `deposit_held` against `DEPOSIT_HELD_AMOUNT` — all
+imported from `ledger.selectors.entry` rather than restated. One correlated subquery per figure, streamed — never a query per
 party.
 
 `split_mismatch` is REPORTED alongside a balance drift (the receivable / payable
@@ -26,16 +26,28 @@ from django.db.models.functions import Coalesce
 
 from apps.common.money import ZERO
 from apps.ledger.models import LedgerEntry
-from apps.ledger.selectors.entry import DEPOSIT_HELD_AMOUNT, LOAN_SIGNED_AMOUNT, SIGNED_AMOUNT
+from apps.ledger.selectors.entry import (
+    DEPOSIT_HELD_AMOUNT,
+    LIBRARY_SIGNED_AMOUNT,
+    LOAN_SIGNED_AMOUNT,
+    SHOP_SIGNED_AMOUNT,
+    SIGNED_AMOUNT,
+)
 from apps.parties.models import Party
 
 
 class LedgerFigures(NamedTuple):
-    """What the ledger says a party's three caches should be."""
+    """What the ledger says a party's caches should be."""
 
     balance: Decimal
     loan_balance: Decimal
     deposit_held: Decimal
+    shop_balance: Decimal = ZERO
+    library_balance: Decimal = ZERO
+
+
+#: The caches beside `balance`, each against its own replay (DEC-019).
+OTHER_CACHES: tuple[str, ...] = ("shop_balance", "loan_balance", "library_balance", "deposit_held")
 
 
 @dataclass(frozen=True)
@@ -52,18 +64,14 @@ class BalanceDrift:
     ledger_loan_balance: Decimal = ZERO
     cached_deposit_held: Decimal = ZERO
     ledger_deposit_held: Decimal = ZERO
+    #: Every other cache that disagrees: `{name: (cached, ledger)}`.
+    others: tuple[tuple[str, Decimal, Decimal], ...] = ()
 
     @property
     def figures(self) -> tuple[str, ...]:
-        """Which caches disagree: any of `balance`, `loan_balance`, `deposit_held`."""
-        out = []
-        if self.cached_balance != self.ledger_balance:
-            out.append("balance")
-        if self.cached_loan_balance != self.ledger_loan_balance:
-            out.append("loan_balance")
-        if self.cached_deposit_held != self.ledger_deposit_held:
-            out.append("deposit_held")
-        return tuple(out)
+        """Which caches disagree: `balance` and any of `OTHER_CACHES`."""
+        out = ["balance"] if self.cached_balance != self.ledger_balance else []
+        return tuple(out + [name for name, _c, _l in self.others])
 
 
 def _replay(expression: Any) -> Coalesce:
@@ -87,26 +95,33 @@ def iter_balances(
         computed=_replay(SIGNED_AMOUNT),
         computed_loan=_replay(LOAN_SIGNED_AMOUNT),
         computed_deposit=_replay(DEPOSIT_HELD_AMOUNT),
+        computed_shop=_replay(SHOP_SIGNED_AMOUNT),
+        computed_library=_replay(LIBRARY_SIGNED_AMOUNT),
     )
     for party in parties.iterator(chunk_size=max(1, int(chunk))):
         yield party, LedgerFigures(
-            party.computed or ZERO, party.computed_loan or ZERO, party.computed_deposit or ZERO
+            party.computed or ZERO,
+            party.computed_loan or ZERO,
+            party.computed_deposit or ZERO,
+            party.computed_shop or ZERO,
+            party.computed_library or ZERO,
         )
 
 
 def drift_of(party: Party, computed: LedgerFigures) -> BalanceDrift | None:
-    """None when all three of the party's caches agree with its ledger, else what disagrees."""
+    """None when all of the party's caches agree with its ledger, else what disagrees."""
     cached = party.balance or ZERO
     cached_loan = party.loan_balance or ZERO
     cached_deposit = party.deposit_held or ZERO
     split_bad = (party.receivable_total or ZERO) != max(cached, ZERO) or (
         party.payable_total or ZERO
     ) != max(-cached, ZERO)
-    if (computed.balance, computed.loan_balance, computed.deposit_held) == (
-        cached,
-        cached_loan,
-        cached_deposit,
-    ):
+    others = tuple(
+        (name, getattr(party, name) or ZERO, getattr(computed, name))
+        for name in OTHER_CACHES
+        if (getattr(party, name) or ZERO) != getattr(computed, name)
+    )
+    if computed.balance == cached and not others:
         return None
     return BalanceDrift(
         party.id,
@@ -119,6 +134,7 @@ def drift_of(party: Party, computed: LedgerFigures) -> BalanceDrift | None:
         ledger_loan_balance=computed.loan_balance,
         cached_deposit_held=cached_deposit,
         ledger_deposit_held=computed.deposit_held,
+        others=others,
     )
 
 

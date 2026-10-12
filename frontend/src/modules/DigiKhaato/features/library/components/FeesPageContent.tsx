@@ -315,6 +315,8 @@ export function FeesPageContent(): React.JSX.Element {
             documentNumber: taking.charge.number,
             documentDue: taking.charge.amountDue,
             entry: 'party',
+            // DEC-019 — the library's fees, and an advance that stays the library's.
+            bucket: 'library',
           }}
           onClose={() => {
             setTaking(null);

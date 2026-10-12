@@ -71,7 +71,7 @@ class PurchaseBillTarget:
     document_type = "purchase_document"
     direction = "out"
     #: A4a (contracts §1.4) — the shop khata, and FIFO may choose it, as it always has.
-    bucket = "main"
+    bucket = "shop"  # DEC-019
     auto = True
 
     def _base(self, tenant: Any) -> Any:

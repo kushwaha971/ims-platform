@@ -40,7 +40,7 @@ def _public(client: Any, token: str, **extra: Any) -> Any:
 
 
 def _assert_public_headers(response: Any) -> None:
-    assert response["X-Robots-Tag"] == "noindex, nofollow"
+    assert response["X-Robots-Tag"] == "noindex, nofollow, noarchive"
     assert response["Referrer-Policy"] == "no-referrer"
     assert response["Cache-Control"] == "private, no-store"
     assert response["X-Content-Type-Options"] == "nosniff"

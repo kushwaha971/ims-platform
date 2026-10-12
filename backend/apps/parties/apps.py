@@ -19,3 +19,10 @@ class PartiesConfig(AppConfig):
         from apps.parties.services.relations import guardian_archive_guard
 
         register_archive_guard("parties", guardian_archive_guard)
+
+        # DEC-019 — another app's money left on the party refuses the archive in that app's
+        # words, while that app is on (a loan used to refuse only by being in `balance`).
+        from apps.parties.services.archive import APP_BALANCE_GUARDS, app_balance_guard
+
+        for module, cache, label_id in APP_BALANCE_GUARDS:
+            register_archive_guard(module, app_balance_guard(cache, module, label_id))

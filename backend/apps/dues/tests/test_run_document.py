@@ -122,7 +122,7 @@ def test_document_due_issues_through_the_port_with_skip_and_own_date(
     entry = LedgerEntry.objects.get(source_type="sales_document", source_id=document.id)
     assert (entry.entry_date, entry.amount) == (NOV1, D("1180.00"))
     member.refresh_from_db()
-    assert member.balance == D("1180.00")  # past its ₹100 limit, and billed all the same
+    assert member.shop_balance == D("1180.00")  # past its ₹100 limit, and billed all the same
 
 
 def test_retry_after_a_crash_mid_document_returns_the_standing_invoice(

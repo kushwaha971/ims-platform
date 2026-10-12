@@ -171,7 +171,7 @@ export const toPayment = (row: PaymentApi): Payment => ({
   voidedBy: row.voided_by,
   createdBy: row.created_by,
   createdAt: row.created_at,
-  bucket: row.bucket ?? 'main',
+  bucket: row.bucket ?? 'shop',
   depositPair: toDepositPair(row.deposit_pair),
 });
 
@@ -301,11 +301,12 @@ export const listOpenDocuments = async (
 export const recordPayment = async (
   values: PaymentFormValues,
   idempotencyKey: string,
-  context: string
+  context: string,
+  bucket?: PaymentBucket
 ): Promise<PaymentSaveResult> => {
   const response = await api.post<WriteResponse>(
     API_PATHS.PAYMENTS,
-    { ...toWireBody(values), context },
+    { ...toWireBody(values), context, ...(bucket ? { bucket } : {}) },
     ubConfig({ headers: { 'Idempotency-Key': idempotencyKey } })
   );
   return toSaveResult(response.data);

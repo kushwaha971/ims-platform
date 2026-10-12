@@ -45,8 +45,9 @@ CAPTURED_ON = dt.date(2026, 9, 30)
 #: a named task. Stripped from the live response before comparing — and ONLY these:
 #: `bucket` (A2, every ledger row) and `sections` (A10, `GET /reports/dashboard`'s registered
 #: module sections, `[]` for a tenant with no module that registers one) and `has_any` (the
-#: empty-book flag of 12 Oct 2026 on `/ledger/aging` and `/ledger/summary`'s `meta`).
-ADDED_SINCE_CAPTURE: frozenset[str] = frozenset({"bucket", "sections", "has_any"})
+#: empty-book flag of 12 Oct 2026 on `/ledger/aging` and `/ledger/summary`'s `meta`) and
+#: `shop_balance` (DEC-019, the party detail's Shop figure, sent while the Shop is on).
+ADDED_SINCE_CAPTURE: frozenset[str] = frozenset({"bucket", "sections", "has_any", "shop_balance"})
 
 _UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 #: Values that differ run to run for reasons that have nothing to do with the ledger.
@@ -233,6 +234,18 @@ def _reads(client: Any, parties: dict[str, Party]) -> dict[str, Any]:
     return out
 
 
+def _import_every_app_module() -> None:
+    import importlib
+    import pkgutil
+
+    import apps
+
+    for module in pkgutil.walk_packages(apps.__path__, prefix="apps."):
+        if ".tests" in module.name or ".migrations" in module.name:
+            continue
+        importlib.import_module(module.name)
+
+
 def test_a_main_only_tenant_reads_exactly_what_it_read_before_buckets(
     api_as: Any, partner: Any, plan: Any, monkeypatch: Any
 ) -> None:
@@ -246,6 +259,11 @@ def test_a_main_only_tenant_reads_exactly_what_it_read_before_buckets(
     # file holds the day it was captured on in `ledger_summary.data.as_of`. Unpinned, this test
     # passed only on 30 Sep 2026 and failed on every later day — a red that says nothing about
     # buckets. Pinned to the capture day, the file stays byte-for-byte what it was.
+    # Every application module is imported FIRST: one imported for the first time while the
+    # patch is live would bind the fake day for good (`from apps.common.dates import
+    # tenant_today` at module level), and every later test would issue its bills on
+    # 30 Sep 2026 — the order-dependent failure this caused on 12 Oct 2026.
+    _import_every_app_module()
     monkeypatch.setattr("apps.common.dates.tenant_today", lambda tenant: CAPTURED_ON)
     tenant = TenantFactory(partner=partner, plan=plan, name="Golden Stores", phone="+919900000001")
     parties = _book(tenant)

@@ -203,6 +203,12 @@ def _validate(payload: dict, *, tenant: Any, allow_adjustment: bool = False) -> 
     if allocations not in ("auto", "none") and not isinstance(allocations, list):
         details["allocations"] = ['Send "auto" or a list of allocations.']
 
+    # DEC-019 — which app's money "auto" settles, and where an advance stays: the Shop's by
+    # default; a library fee desk sends `library`. A payment settles one app's money only.
+    bucket = payload.get("bucket") or LedgerBucket.SHOP.value
+    if bucket not in AUTO_BUCKETS:
+        details["bucket"] = ["Choose shop or library."]
+
     earmark = None
     try:
         earmark = clean_earmark((payload.get("meta") or {}).get("earmark"))
@@ -223,6 +229,7 @@ def _validate(payload: dict, *, tenant: Any, allow_adjustment: bool = False) -> 
         "reference": reference,
         "allocations": allocations,
         "earmark": earmark,
+        "bucket": bucket,
     }
 
 
@@ -306,7 +313,7 @@ def merge_oldest_first(
 
 
 def auto_candidates(
-    ctx: Ctx, *, direction: str, party_id: Any, bucket: str = LedgerBucket.MAIN
+    ctx: Ctx, *, direction: str, party_id: Any, bucket: str = LedgerBucket.SHOP
 ) -> list[tuple[Any, Any]]:
     """Every open document FIFO may settle for this party, LOCKED, globally oldest first.
 
@@ -340,25 +347,33 @@ def choose_oldest_first(candidates: list[tuple[Any, Any]], amount: Decimal) -> l
     return chosen
 
 
-def _auto(ctx: Ctx, *, direction: str, party_id: Any, amount: Decimal) -> list[_Chosen]:
+#: DEC-019 — the buckets a payment may name for "auto" and its advance. A loan instalment is
+#: never chosen by FIFO (lending allocates explicitly), and a deposit is received, not owed.
+AUTO_BUCKETS: frozenset[str] = frozenset({LedgerBucket.SHOP.value, LedgerBucket.LIBRARY.value})
+
+
+def _auto(
+    ctx: Ctx, *, direction: str, party_id: Any, amount: Decimal, bucket: str = LedgerBucket.SHOP
+) -> list[_Chosen]:
     """FR-5, R6 — globally oldest first across the auto targets; the remainder is the advance.
 
-    `main` only: an unallocated payment is a shop advance (R5), and every `auto=True` target the
-    contracts register is in the `main` bucket.
+    `shop` only: an unallocated payment is a shop advance (R5, DEC-019). A library fee or a loan
+    instalment is never chosen for it — each is its own bucket.
     """
-    candidates = auto_candidates(ctx, direction=direction, party_id=party_id)
+    candidates = auto_candidates(ctx, direction=direction, party_id=party_id, bucket=bucket)
     return choose_oldest_first(candidates, amount)
 
 
 ONE_BUCKET_MESSAGE = "One payment settles one kind of balance."
 
 
-def single_bucket(targets: Iterable[Any]) -> str:
-    """The one bucket these targets share (`main` for none), or 400 (R5)."""
+def single_bucket(targets: Iterable[Any], default: str = LedgerBucket.SHOP.value) -> str:
+    """The one bucket these targets share (`default` for none — DEC-019: an unallocated
+    payment is an advance of the app that took it, the Shop unless it says), or 400 (R5)."""
     buckets = {target.bucket for target in targets}
     if len(buckets) > 1:
         raise ValidationFailed({"allocations": [ONE_BUCKET_MESSAGE]})
-    return next(iter(buckets), LedgerBucket.MAIN.value)
+    return next(iter(buckets), default)
 
 
 def _manual(
@@ -531,7 +546,9 @@ def _record(
             # R61 — reserved money is never applied by FIFO; it waits for its subject.
             chosen, mode = [], AllocationMode.NONE
         elif allocations == "auto":
-            chosen = _auto(ctx, direction=direction, party_id=party.id, amount=amount)
+            chosen = _auto(
+                ctx, direction=direction, party_id=party.id, amount=amount, bucket=cleaned["bucket"]
+            )
             mode = AllocationMode.AUTO
         elif allocations == "none" or allocations == []:
             chosen, mode = [], AllocationMode.NONE
@@ -542,7 +559,7 @@ def _record(
             mode = AllocationMode.MANUAL
 
     allocated = sum((c.amount for c in chosen), ZERO)
-    bucket = single_bucket(c.target for c in chosen)
+    bucket = single_bucket((c.target for c in chosen), default=cleaned["bucket"])
     number = allocate_number(
         tenant=ctx.tenant,
         kind=SEQUENCE_KIND_FOR_DIRECTION[direction],

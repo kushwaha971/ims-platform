@@ -64,7 +64,7 @@ def test_the_worked_example_applies_part_of_an_advance(
     would count the advance twice."""
     party = advance["party"]
     party.refresh_from_db()
-    assert party.balance == D("-3000.00")
+    assert party.shop_balance == D("-3000.00")
     invoice = invoice_for(party, "1770.00")
     lines_before = LedgerEntry.objects.filter(party=party).count()
 
@@ -85,7 +85,7 @@ def test_the_worked_example_applies_part_of_an_advance(
     assert SalesDocument.objects.get(pk=invoice["id"]).status == "paid"
     assert LedgerEntry.objects.filter(party=party).count() == lines_before
     party.refresh_from_db()
-    assert party.balance == D("-1230.00")
+    assert party.shop_balance == D("-1230.00")
 
 
 def test_more_than_is_unallocated_is_refused_with_what_is_left(

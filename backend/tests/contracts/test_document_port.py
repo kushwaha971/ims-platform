@@ -106,7 +106,7 @@ def test_a_raising_listener_rolls_the_void_back(
     party.refresh_from_db()
     assert document.status == "issued"
     assert LedgerEntry.objects.filter(tenant=port_ctx.tenant).count() == entries
-    assert party.balance == Decimal("2950.00")
+    assert party.shop_balance == Decimal("2950.00")
 
 
 def test_a_block_refuses_the_void_with_the_modules_reason(

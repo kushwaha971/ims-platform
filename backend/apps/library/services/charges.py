@@ -188,7 +188,7 @@ def create_charge(
         source_id=charge.id,
         source_number=charge.number,
         note=charge.description,
-        bucket="main",
+        bucket="library",
     )
     charge.ledger_entry_id = entry.id
     charge.status = derive_status(charge)
@@ -301,7 +301,7 @@ def _post_waiver(
             if reason
             else charge.description
         ),
-        bucket="main",
+        bucket="library",
     )
     waiver.ledger_entry_id = entry.id
     waiver.save(force_insert=True)
@@ -426,11 +426,11 @@ def reverse(*, ctx: Any, charge_id: Any, data: Any) -> LibraryCharge:
 
 
 class LibraryChargeTarget:
-    """A payment IN settling library charges: `main` bucket, FIFO may choose it (R6)."""
+    """A payment IN settling library charges: `library` bucket (DEC-019), FIFO may choose it."""
 
     document_type = CHARGE_KIND
     direction = "in"
-    bucket = "main"
+    bucket = "library"
     auto = True
     _ORDER = ("charge_date", "number", "id")
 

@@ -60,7 +60,7 @@ from django.core.exceptions import ImproperlyConfigured
 #: `payments_allocation.document_type varchar(32)` (R7).
 DOCUMENT_TYPE_MAX_LENGTH = 32
 #: The ledger's buckets (`apps.common.constants.LedgerBucket`), as the protocol's vocabulary.
-TARGET_BUCKETS: frozenset[str] = frozenset({"main", "loan", "deposit"})
+TARGET_BUCKETS: frozenset[str] = frozenset({"main", "shop", "loan", "library", "deposit"})
 TARGET_DIRECTIONS: frozenset[str] = frozenset({"in", "out"})
 
 

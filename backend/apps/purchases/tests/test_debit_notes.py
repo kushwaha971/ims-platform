@@ -80,7 +80,7 @@ def test_a_return_takes_the_goods_off_the_shelf_and_the_amount_off_the_bill(
     assert after["links"]["returned"] == {"1": "5.000"}
     assert [n["number"] for n in after["links"]["debit_notes"]] == ["DN/26-27/0001"]
     supplier.refresh_from_db()
-    assert supplier.balance == Decimal("-2075.00")  # the shop owes 2,075 now
+    assert supplier.shop_balance == Decimal("-2075.00")  # the shop owes 2,075 now
     entry = LedgerEntry.objects.get(source_id=note["id"])
     assert (entry.direction, entry.entry_type, entry.amount) == (
         "debit",
@@ -120,7 +120,7 @@ def test_a_paid_bill_leaves_the_return_as_credit_with_the_supplier(
     note = return_goods(owner, bill, (1, "2")).json()["data"]
     assert note["links"]["applied"] == "0.00" and note["amount_due"] == "200.00"
     supplier.refresh_from_db()
-    assert supplier.balance == Decimal("200.00")  # the supplier owes the shop now
+    assert supplier.shop_balance == Decimal("200.00")  # the supplier owes the shop now
     listing = owner.get(reverse(NOTES)).json()
     assert listing["meta"]["totals"]["amount_due"] == "200.00"
 
@@ -162,7 +162,7 @@ def test_void_brings_the_goods_and_the_bill_back_and_a_noted_bill_waits(
     after = owner.get(bill_url(bill["id"])).json()["data"]
     assert (after["amount_due"], after["links"]["returned"]) == ("1000.00", {})
     supplier.refresh_from_db()
-    assert supplier.balance == Decimal("-1000.00")
+    assert supplier.shop_balance == Decimal("-1000.00")
     assert void(owner, bill["id"]).status_code == 200  # free to void now
 
 

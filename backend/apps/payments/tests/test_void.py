@@ -61,7 +61,7 @@ def test_void_reopens_the_bill_and_reverses_the_khata_line_dated_today(
     assert (reversal.source_type, reversal.source_id) == (SourceType.PAYMENT, original.source_id)
     assert reversal.reason == "Wrong party — was Suresh"
     assert body["meta"]["reversal_entry_id"] == str(reversal.id)
-    assert Party.objects.get(pk=ramesh.pk).balance == Decimal("898.00")
+    assert Party.objects.get(pk=ramesh.pk).shop_balance == Decimal("898.00")
     audit = AuditLog.objects.get(action=AuditAction.PAYMENT_VOIDED)
     assert audit.before["allocations"][0]["amount"] == "500.00"
     assert_books_clean()
@@ -110,9 +110,9 @@ def test_voiding_an_advance_moves_the_balance_by_the_full_amount(
     """T-PAY-05-6 / BR-5 — nothing to reopen; the whole ₹1,000 leaves the khata."""
     party = make_party()
     paid = pay(owner, party_id=str(party.id), mode_breakup=cash_lines("1000.00")).json()["data"]
-    assert Party.objects.get(pk=party.pk).balance == Decimal("-1000.00")
+    assert Party.objects.get(pk=party.pk).shop_balance == Decimal("-1000.00")
     void(owner, paid["id"])
-    assert Party.objects.get(pk=party.pk).balance == Decimal("0.00")
+    assert Party.objects.get(pk=party.pk).shop_balance == Decimal("0.00")
     assert Payment.objects.get().unallocated_amount == Decimal("0.00")
 
 

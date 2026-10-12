@@ -10,6 +10,7 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import Any
 
+from apps.common.constants import LedgerBucket
 from apps.common.context import Ctx
 from apps.common.exceptions import BusinessRuleViolation
 from apps.sales.services import settings as sales_settings
@@ -79,7 +80,10 @@ def credit_check(
         may_override,
     )
 
-    decision = check_credit(party=party, amount=amount, mode=credit_mode(ctx.tenant))
+    # DEC-019 — a bill is tested against the Shop's own balance.
+    decision = check_credit(
+        party=party, amount=amount, mode=credit_mode(ctx.tenant), bucket=LedgerBucket.SHOP
+    )
     details = {
         "limit": str(decision["limit"]) if decision["limit"] is not None else None,
         "balance_after": str(decision["exposure_after"]),

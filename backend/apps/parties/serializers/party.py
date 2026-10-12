@@ -296,9 +296,8 @@ class PartyDetailSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def to_representation(self, instance: Party) -> dict:
-        """A2 (PLT-X01 §6) — `loan_balance`, `trade_balance`, `deposit_held`, when they mean
-        something: present when non-zero or when a module that writes that bucket is on,
-        omitted otherwise, so today's tenants read exactly the payload they read before."""
+        """DEC-019 — `shop_balance` when the Shop is on or it is not zero (`bucket_figures`);
+        never another app's money (a loan, a library fee, a deposit)."""
         from apps.parties.services.balance import bucket_figures
 
         data = super().to_representation(instance)

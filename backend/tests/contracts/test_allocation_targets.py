@@ -182,7 +182,7 @@ def test_the_target_declares_its_shape(document_type: str) -> None:
     target = registered_targets()[document_type]
     assert len(target.document_type) <= 32
     assert target.direction in ("in", "out")
-    assert target.bucket in ("main", "loan", "deposit")
+    assert target.bucket in ("main", "shop", "loan", "library", "deposit")
     assert isinstance(target.auto, bool)
 
 

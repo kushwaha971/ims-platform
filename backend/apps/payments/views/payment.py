@@ -15,7 +15,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
 from rest_framework.views import APIView
 
-from apps.common.constants import ModuleCode
+from apps.common.constants import LedgerBucket, ModuleCode
 from apps.common.context import Ctx
 from apps.common.exceptions import ValidationFailed
 from apps.common.idempotency import idempotent
@@ -181,8 +181,8 @@ class PaymentViewSet(
             raise ValidationFailed({"party_id": ["Choose a party."]}) from None
         # A4a — Apply to bills asks for the payment's bucket; the record panel sends none.
         bucket = request.query_params.get("bucket") or None
-        if bucket is not None and bucket not in ("main", "loan", "deposit"):
-            raise ValidationFailed({"bucket": ["Choose main, loan or deposit."]})
+        if bucket is not None and bucket not in LedgerBucket.values:
+            raise ValidationFailed({"bucket": ["Choose shop, loan, library or deposit."]})
         rows = open_documents(
             tenant=self.get_tenant(), party_id=party_id, direction=direction, bucket=bucket
         )

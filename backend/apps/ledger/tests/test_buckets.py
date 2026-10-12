@@ -1,9 +1,9 @@
-"""A2 / PLT-X01 — ledger buckets, the party caches, the posting registry and two entry types.
+"""A2 / PLT-X01, DEC-019 — ledger buckets, the party caches, the posting registry.
 
-ADR-043: one party balance, with a `loan` bucket and a `deposit` bucket on the ledger line.
-`party.balance = Σ main + Σ loan`, `loan_balance = Σ loan`, `deposit_held = Σ credit(deposit) −
-Σ debit(deposit)`, and a deposit never touches the balance. Every test here names the defect it
-prevents; T-PLT-X01-n numbers are FRD 00's.
+DEC-019 (owner, 12 Oct 2026): each app keeps only its own money. `party.balance = Σ main` (the
+udhaar book), `shop_balance = Σ shop`, `loan_balance = Σ loan`, `library_balance = Σ library`,
+`deposit_held = Σ credit(deposit) − Σ debit(deposit)`, and no cache includes another's. Every
+test here names the defect it prevents; T-PLT-X01-n numbers are FRD 00's.
 
 No vertical exists yet, so the rows in other buckets are posted through a test-only posting
 source (`test_charge`, module `test`) and through the core `payment` source, which payments
@@ -29,9 +29,6 @@ from apps.common.context import Ctx
 from apps.ledger.constants import EntryType, SourceType
 from apps.ledger.models import LedgerEntry
 from apps.ledger.selectors.entry import (
-    computed_balance,
-    computed_deposit_held,
-    computed_loan_balance,
     party_ledger_summary,
 )
 from apps.ledger.services import postings
@@ -79,7 +76,7 @@ def post(
     amount: str,
     *,
     source_type: str,
-    bucket: str = "main",
+    bucket: str | None = None,
     day: dt.date = dt.date(2026, 4, 1),
     source_id: Any = None,
 ) -> tuple[LedgerEntry, Decimal]:
@@ -99,17 +96,39 @@ def post(
     )
 
 
-def caches(party: Party) -> tuple[Decimal, Decimal, Decimal]:
+def caches(party: Party) -> tuple[Decimal, ...]:
+    """`(balance, shop, loan, library, deposit_held)` as the party row holds them."""
     party.refresh_from_db()
-    return party.balance, party.loan_balance, party.deposit_held
-
-
-def replay(party: Party) -> tuple[Decimal, Decimal, Decimal]:
     return (
-        computed_balance(tenant=party.tenant, party_id=party.id),
-        computed_loan_balance(tenant=party.tenant, party_id=party.id),
-        computed_deposit_held(tenant=party.tenant, party_id=party.id),
+        party.balance,
+        party.shop_balance,
+        party.loan_balance,
+        party.library_balance,
+        party.deposit_held,
     )
+
+
+def replay(party: Party) -> tuple[Decimal, ...]:
+    """The same five, re-derived from the ledger by `ledger.selectors.drift`."""
+    from apps.ledger.selectors.drift import iter_balances
+
+    for row, figures in iter_balances(tenant_id=party.tenant_id):
+        if row.pk == party.pk:
+            return (
+                figures.balance,
+                figures.shop_balance,
+                figures.loan_balance,
+                figures.library_balance,
+                figures.deposit_held,
+            )
+    raise AssertionError("party not replayed")
+
+
+def money(*values: str) -> tuple[Decimal, ...]:
+    return tuple(D(value) for value in values)
+
+
+ZEROS = money("0", "0", "0", "0", "0")
 
 
 # ── The column and the trigger ──────────────────────────────────────────────
@@ -194,8 +213,8 @@ def test_the_two_new_entry_types_have_their_labels() -> None:
 
 
 def test_the_four_existing_sources_are_registered_by_their_owners() -> None:
-    """T-PLT-X01-10 — after `django.setup()` the matrix that used to be a literal is the
-    registry's, and `payment` alone is registered in all three buckets."""
+    """T-PLT-X01-10, DEC-019 — after `django.setup()` the matrix that used to be a literal is
+    the registry's; the Shop's documents post in `shop`, and `payment` alone in every bucket."""
     sources = postings.registered_posting_sources()
     assert sources[SourceType.SALES_DOCUMENT].module == "sales"
     assert dict(sources[SourceType.SALES_DOCUMENT].entry_types) == {
@@ -205,9 +224,10 @@ def test_the_four_existing_sources_are_registered_by_their_owners() -> None:
     assert sources[SourceType.PURCHASE_DOCUMENT].module == "purchases"
     assert sources[SourceType.EXPENSE].module == "expenses"
     assert sources[SourceType.PAYMENT].module == "payments"
-    assert sources[SourceType.PAYMENT].buckets == frozenset({"main", "loan", "deposit"})
+    assert sources[SourceType.PAYMENT].buckets == frozenset(LedgerBucket.values)
     for name in (SourceType.SALES_DOCUMENT, SourceType.PURCHASE_DOCUMENT, SourceType.EXPENSE):
-        assert sources[name].buckets == frozenset({"main"})
+        assert sources[name].buckets == frozenset({"shop"})
+    assert sources["library_charge"].buckets == frozenset({"library"})
 
 
 def test_registration_is_idempotent_and_refuses_a_different_shape() -> None:
@@ -222,7 +242,7 @@ def test_registration_is_idempotent_and_refuses_a_different_shape() -> None:
                 EntryType.PAYMENT_IN: Direction.CREDIT,
                 EntryType.PAYMENT_OUT: Direction.DEBIT,
             },
-            buckets=frozenset({"main", "loan", "deposit"}),
+            buckets=frozenset(LedgerBucket.values),
         )
         with pytest.raises(ImproperlyConfigured):
             register_posting_source(
@@ -289,56 +309,73 @@ def test_a_posting_outside_the_registration_writes_nothing(
     with pytest.raises(LedgerPostingError):
         post(party, entry_type, "100.00", source_type=source_type, bucket=bucket)
     assert LedgerEntry.objects.filter(party=party).count() == 0
-    assert caches(party) == (D("0.00"), D("0.00"), D("0.00"))
+    assert caches(party) == ZEROS
 
 
 # ── apply_entry by bucket, and the worked example ───────────────────────────
 
 
 def test_the_worked_example_moves_each_cache_row_by_row(tenant: Any, test_source: str) -> None:
-    """T-PLT-X01-4 — FRD 00 PLT-X01 §9's table: a party who buys, borrows and leaves a
-    deposit. Each figure after each line, in paise-exact rupees."""
+    """T-PLT-X01-4, DEC-019 — a person who keeps a khata, buys on a bill, borrows and leaves a
+    deposit. Each line moves its OWN app's figure and nothing else: QA B3 found a borrower's
+    loan showing as "You will get" on a Shop page because it was inside `balance`."""
     party = PartyFactory(tenant=tenant)
     steps = [
-        (EntryType.INVOICE, "2300.00", SourceType.SALES_DOCUMENT, "main", ("2300.00", "0", "0")),
+        # (entry type, amount, source, bucket, (balance, shop, loan, library, deposit))
+        (EntryType.CHARGE, "500.00", TEST_SOURCE, "main", ("500", "0", "0", "0", "0")),
+        (
+            EntryType.INVOICE,
+            "2300.00",
+            SourceType.SALES_DOCUMENT,
+            None,
+            ("500", "2300", "0", "0", "0"),
+        ),
         (
             EntryType.PAYMENT_OUT,
             "50000.00",
             SourceType.PAYMENT,
             "loan",
-            ("52300.00", "50000.00", "0"),
+            ("500", "2300", "50000", "0", "0"),
         ),
-        (EntryType.INTEREST, "625.00", TEST_SOURCE, "loan", ("52925.00", "50625.00", "0")),
+        (EntryType.INTEREST, "625.00", TEST_SOURCE, "loan", ("500", "2300", "50625", "0", "0")),
         (
             EntryType.PAYMENT_IN,
             "4000.00",
             SourceType.PAYMENT,
             "loan",
-            ("48925.00", "46625.00", "0"),
+            ("500", "2300", "46625", "0", "0"),
         ),
         (
             EntryType.PAYMENT_IN,
             "1000.00",
             SourceType.PAYMENT,
             "deposit",
-            ("48925.00", "46625.00", "1000.00"),
+            ("500", "2300", "46625", "0", "1000"),
+        ),
+        (
+            EntryType.PAYMENT_IN,
+            "300.00",
+            SourceType.PAYMENT,
+            "shop",
+            ("500", "2000", "46625", "0", "1000"),
         ),
     ]
     for entry_type, amount, source, bucket, expected in steps:
-        row, balance = post(party, entry_type, amount, source_type=source, bucket=bucket)
-        assert row.bucket == bucket
-        assert caches(party) == tuple(D(value) for value in expected), entry_type
-        assert balance == D(expected[0])
+        row, moved = post(party, entry_type, amount, source_type=source, bucket=bucket)
+        assert row.bucket == (bucket or "shop")
+        assert caches(party) == money(*expected), entry_type
+        # The figure returned is the one this line moved.
+        assert moved in money(*expected)
     assert replay(party) == caches(party)
     party.refresh_from_db()
-    assert party.balance - party.loan_balance == D("2300.00")  # the trade figure
-    assert party.receivable_total == D("48925.00")
+    assert party.receivable_total == D("500.00")
     assert party.payable_total == D("0.00")
 
 
 def test_a_deposit_leaves_the_balance_and_the_collection_date_alone(tenant: Any) -> None:
     """BR-3 — a deposit received is not a payment: it must not clear the promise date a
-    merchant set for money still owed, as `clear_collection_date_if_settled` would."""
+    merchant set for money still owed, as `clear_collection_date_if_settled` would. Nor, since
+    DEC-019, does it move the udhaar book's "Last entry": nothing happened in the khata."""
     party = PartyFactory(tenant=tenant, collection_date=dt.date(2026, 10, 5))
     with transaction.atomic():
         locked = lock_party(tenant=tenant, party_id=party.id)
@@ -346,10 +383,11 @@ def test_a_deposit_leaves_the_balance_and_the_collection_date_alone(tenant: Any)
             party=locked, direction=Direction.CREDIT, amount=D("1000.00"), bucket="deposit"
         )
     party.refresh_from_db()
-    assert balance == D("0.00")
+    assert balance == D("1000.00")  # the figure it moved
+    assert party.balance == D("0.00")
     assert party.deposit_held == D("1000.00")
     assert party.collection_date == dt.date(2026, 10, 5)
-    assert party.last_activity_at is not None
+    assert party.last_activity_at is None
 
 
 def test_apply_entry_without_a_bucket_is_main(tenant: Any) -> None:
@@ -358,7 +396,7 @@ def test_apply_entry_without_a_bucket_is_main(tenant: Any) -> None:
     with transaction.atomic():
         locked = lock_party(tenant=tenant, party_id=party.id)
         apply_entry(party=locked, direction=Direction.DEBIT, amount=D("250.00"))
-    assert caches(party) == (D("250.00"), D("0.00"), D("0.00"))
+    assert caches(party) == money("250", "0", "0", "0", "0")
 
 
 def test_apply_entry_refuses_an_unknown_bucket(tenant: Any) -> None:
@@ -383,7 +421,7 @@ def test_a_loan_payment_reversal_restores_both_figures_in_its_bucket(
 ) -> None:
     """T-PLT-X01-9 — `reverse_source_entries` writes each reversal in its original's bucket;
     a void of a loan collection that reversed into `main` would leave the loan understated
-    and the shop balance overstated by the same amount."""
+    and the udhaar book overstated by the same amount."""
     import uuid
 
     party = PartyFactory(tenant=tenant)
@@ -397,14 +435,14 @@ def test_a_loan_payment_reversal_restores_both_figures_in_its_bucket(
         bucket="loan",
         source_id=payment_id,
     )
-    assert caches(party) == (D("3800.00"), D("3800.00"), D("0.00"))
+    assert caches(party) == money("0", "0", "3800", "0", "0")
     with transaction.atomic():
         reversals, balance = reverse_source_entries(
             ctx=_ctx(party), source_type=SourceType.PAYMENT, source_id=payment_id, reason="Wrong"
         )
     assert [r.bucket for r in reversals] == ["loan"]
     assert balance == D("5000.00")
-    assert caches(party) == (D("5000.00"), D("5000.00"), D("0.00"))
+    assert caches(party) == money("0", "0", "5000", "0", "0")
     assert replay(party) == caches(party)
 
 
@@ -426,7 +464,7 @@ def test_a_deposit_reversal_lowers_what_is_held(tenant: Any) -> None:
         reverse_source_entries(
             ctx=_ctx(party), source_type=SourceType.PAYMENT, source_id=receipt, reason="Wrong"
         )
-    assert caches(party) == (D("0.00"), D("0.00"), D("0.00"))
+    assert caches(party) == ZEROS
 
 
 # ── The replay (T-PLT-X01-5) ────────────────────────────────────────────────
@@ -468,14 +506,21 @@ def test_five_hundred_random_mixed_bucket_postings_replay_exactly(
                     (EntryType.ADJUSTMENT_CREDIT, TEST_SOURCE),
                 ]
             )
-        else:
-            bucket = "main"
+        elif kind < 0.8:
+            bucket = "shop"
             entry_type, source = rng.choice(
                 [
                     (EntryType.INVOICE, SourceType.SALES_DOCUMENT),
                     (EntryType.CREDIT_NOTE, SourceType.SALES_DOCUMENT),
                     (EntryType.PAYMENT_IN, SourceType.PAYMENT),
+                ]
+            )
+        else:
+            bucket = "main"
+            entry_type, source = rng.choice(
+                [
                     (EntryType.CHARGE, TEST_SOURCE),
+                    (EntryType.ADJUSTMENT_CREDIT, TEST_SOURCE),
                 ]
             )
         source_id = uuid.uuid4()
@@ -500,7 +545,7 @@ def test_five_hundred_random_mixed_bucket_postings_replay_exactly(
             )
     for party in parties:
         assert replay(party) == caches(party), party.name
-        assert caches(party)[2] == held[party.id]
+        assert caches(party)[4] == held[party.id]
     out = StringIO()
     call_command("recalc_balances", "--check", tenant=str(tenant.id), stdout=out)
     assert "0 found" in out.getvalue()
@@ -509,7 +554,7 @@ def test_five_hundred_random_mixed_bucket_postings_replay_exactly(
 def test_recalc_balances_reports_and_repairs_a_drifted_loan_or_deposit_cache(
     tenant: Any, test_source: str
 ) -> None:
-    """`recalc_balances` replays all three caches: a `loan_balance` or `deposit_held` that a
+    """`recalc_balances` replays every cache: a `loan_balance` or `deposit_held` that a
     writer moved without its row is reported, exits 1 under `--check`, and `--apply` repairs
     it — the balance column alone agreeing is not a clean book."""
     party = PartyFactory(tenant=tenant)
@@ -524,20 +569,22 @@ def test_recalc_balances_reports_and_repairs_a_drifted_loan_or_deposit_cache(
     assert "loan" in out.getvalue() and "deposit" in out.getvalue()
 
     call_command("recalc_balances", "--apply", tenant=str(tenant.id), stdout=StringIO())
-    assert caches(party) == (D("900.00"), D("900.00"), D("300.00"))
+    assert caches(party) == money("0", "0", "900", "0", "300")
 
 
 # ── Readers of the balance ──────────────────────────────────────────────────
 
 
-def test_aging_reads_the_main_bucket_only(tenant: Any, test_source: str) -> None:
-    """BR-6 — a disbursal is not "90+ days overdue" trade credit, and a deposit is not a
-    payment that ages the oldest invoice away (ADR-043)."""
+def test_aging_reads_the_udhaar_book_only(tenant: Any, test_source: str) -> None:
+    """BR-6, DEC-019 — Old dues ages the udhaar book: a bill, a disbursal or a deposit is not
+    "90+ days overdue" khata credit. QA B36: the headline counted three loans its own age table
+    did not, and the two disagreed by ₹6,114."""
     from apps.ledger.selectors.aging import aging_rows
 
     party = PartyFactory(tenant=tenant)
     old = dt.date(2026, 1, 5)
-    post(party, EntryType.INVOICE, "1000.00", source_type=SourceType.SALES_DOCUMENT, day=old)
+    post(party, EntryType.CHARGE, "1000.00", source_type=TEST_SOURCE, bucket="main", day=old)
+    post(party, EntryType.INVOICE, "700.00", source_type=SourceType.SALES_DOCUMENT, day=old)
     post(
         party,
         EntryType.PAYMENT_OUT,
@@ -559,46 +606,53 @@ def test_aging_reads_the_main_bucket_only(tenant: Any, test_source: str) -> None
     assert rows[str(party.id)]["90_plus"] == D("1000.00")
 
 
-def test_the_khata_totals_exclude_deposits(tenant: Any) -> None:
-    """BR-4 — "You got in all" on the khata header is money that settled what was owed; a
-    deposit is held and returnable, and counting it there tells the merchant they were paid."""
+def test_the_khata_totals_and_count_are_the_udhaar_books_own(tenant: Any, test_source: str) -> None:
+    """BR-4, DEC-019 — "You gave in all" and "You got in all" on the khata header are the udhaar
+    book's own lines. QA B9: a library fee showed there as "You gave in all ₹500"; a bill or a
+    deposit counted there tells the merchant something happened in the khata that did not."""
     party = PartyFactory(tenant=tenant)
-    post(party, EntryType.INVOICE, "1000.00", source_type=SourceType.SALES_DOCUMENT)
-    post(party, EntryType.PAYMENT_IN, "400.00", source_type=SourceType.PAYMENT)
+    post(party, EntryType.CHARGE, "1000.00", source_type=TEST_SOURCE, bucket="main")
+    post(party, EntryType.ADJUSTMENT_CREDIT, "400.00", source_type=TEST_SOURCE, bucket="main")
+    post(party, EntryType.INVOICE, "900.00", source_type=SourceType.SALES_DOCUMENT)
     post(party, EntryType.PAYMENT_IN, "700.00", source_type=SourceType.PAYMENT, bucket="deposit")
     summary = party_ledger_summary(tenant=tenant, party_id=party.id)
     assert summary["total_debit"] == D("1000.00")
     assert summary["total_credit"] == D("400.00")
-    # The timeline still SHOWS the deposit line (three rows, not two).
-    assert summary["entry_count"] == 3
+    assert summary["entry_count"] == 2
 
 
-def test_the_trade_figure_decides_the_credit_limit(tenant: Any, test_source: str) -> None:
-    """T-PLT-X01-7, BR-5 — the worked example: ₹2,300 owed to the shop plus a ₹46,625 loan,
-    ₹5,000 limit in block mode, a new ₹2,000 invoice. Compared against the whole balance it
-    is refused; against the trade figure (₹4,300 after) it is allowed."""
+def test_each_app_s_own_figure_decides_its_credit_limit(tenant: Any, test_source: str) -> None:
+    """T-PLT-X01-7, DEC-019 — ₹2,300 owed in the khata, a ₹46,625 loan and a ₹9,000 bill, under
+    a ₹5,000 limit in block mode. A new ₹2,000 khata entry is tested against the khata's ₹2,300
+    alone (allowed); a new bill against the Shop's ₹9,000 alone (refused). Compared against the
+    whole of what the person owes, both would be refused."""
     from apps.parties.services.credit import CREDIT_MODE_BLOCK, check_credit, credit_exposure
 
     party = PartyFactory(tenant=tenant, credit_limit=D("5000.00"))
-    post(party, EntryType.INVOICE, "2300.00", source_type=SourceType.SALES_DOCUMENT)
+    post(party, EntryType.CHARGE, "2300.00", source_type=TEST_SOURCE, bucket="main")
+    post(party, EntryType.INVOICE, "9000.00", source_type=SourceType.SALES_DOCUMENT)
     post(party, EntryType.PAYMENT_OUT, "50000.00", source_type=SourceType.PAYMENT, bucket="loan")
     post(party, EntryType.INTEREST, "625.00", source_type=TEST_SOURCE, bucket="loan")
     post(party, EntryType.PAYMENT_IN, "4000.00", source_type=SourceType.PAYMENT, bucket="loan")
     post(party, EntryType.PAYMENT_IN, "1000.00", source_type=SourceType.PAYMENT, bucket="deposit")
     party.refresh_from_db()
     assert credit_exposure(party) == D("2300.00")
-    decision = check_credit(party=party, amount=D("2000.00"), mode=CREDIT_MODE_BLOCK)
-    assert decision["status"] == "ok"
-    assert decision["exposure_after"] == D("4300.00")
+    assert credit_exposure(party, "shop") == D("9000.00")
+    khata = check_credit(party=party, amount=D("2000.00"), mode=CREDIT_MODE_BLOCK)
+    assert khata["status"] == "ok"
+    assert khata["exposure_after"] == D("4300.00")
+    bill = check_credit(party=party, amount=D("2000.00"), mode=CREDIT_MODE_BLOCK, bucket="shop")
+    assert bill["status"] == CREDIT_MODE_BLOCK
 
 
-def test_the_over_limit_filter_uses_the_trade_figure(tenant: Any, test_source: str) -> None:
-    """The list's credit chips and the khata's bar must agree (`limit_status`'s own rule):
-    a borrower whose loan dwarfs their limit but whose shop balance is small is not "over"."""
+def test_the_over_limit_filter_reads_the_khata_figure(tenant: Any, test_source: str) -> None:
+    """The list's credit chips and the khata's bar must agree (`limit_status`'s own rule): a
+    person whose loan or bills dwarf the limit but whose khata balance is small is not "over"."""
     from apps.parties.filters import PartyFilterSet
 
     borrower = PartyFactory(tenant=tenant, credit_limit=D("5000.00"))
-    post(borrower, EntryType.INVOICE, "1000.00", source_type=SourceType.SALES_DOCUMENT)
+    post(borrower, EntryType.CHARGE, "1000.00", source_type=TEST_SOURCE, bucket="main")
+    post(borrower, EntryType.INVOICE, "9000.00", source_type=SourceType.SALES_DOCUMENT)
     post(borrower, EntryType.PAYMENT_OUT, "50000.00", source_type=SourceType.PAYMENT, bucket="loan")
     queryset = Party.objects.filter(tenant=tenant)
     over = PartyFilterSet(data={"credit": "over"}, queryset=queryset).qs
@@ -607,21 +661,21 @@ def test_the_over_limit_filter_uses_the_trade_figure(tenant: Any, test_source: s
     assert borrower.id in {p.id for p in ok}
 
 
-def test_a_shop_write_off_is_capped_at_the_trade_figure(tenant: Any) -> None:
-    """R23 / EC-7 (owner Q3 default) — LED-11's write-off defaults to and is capped at the
-    trade figure, so one tap on a shop screen can never forgive a loan. The loan stands, and
-    archive is then refused by the ordinary non-zero balance guard."""
+def test_a_khata_write_off_never_forgives_a_loan_or_a_bill(tenant: Any, test_source: str) -> None:
+    """R23 / EC-7, DEC-019 — LED-11's write-off defaults to and is capped at the udhaar book's
+    balance, so one tap there can never forgive a loan or a Shop bill: neither is in it."""
     from apps.common.exceptions import BusinessRuleViolation
     from apps.ledger.services.write_off import write_off_party_balance
 
     party = PartyFactory(tenant=tenant)
-    post(party, EntryType.INVOICE, "2300.00", source_type=SourceType.SALES_DOCUMENT)
+    post(party, EntryType.CHARGE, "2300.00", source_type=TEST_SOURCE, bucket="main")
+    post(party, EntryType.INVOICE, "900.00", source_type=SourceType.SALES_DOCUMENT)
     post(party, EntryType.PAYMENT_OUT, "50000.00", source_type=SourceType.PAYMENT, bucket="loan")
 
     with pytest.raises(BusinessRuleViolation) as refused, transaction.atomic():
         locked = lock_party(tenant=tenant, party_id=party.id)
         write_off_party_balance(
-            ctx=_ctx(party), party=locked, request={"reason": "Bad debt", "amount": "52300.00"}
+            ctx=_ctx(party), party=locked, request={"reason": "Bad debt", "amount": "53200.00"}
         )
     assert refused.value.code == "balance_changed"
     assert refused.value.details["amount"] == "2300.00"
@@ -633,7 +687,7 @@ def test_a_shop_write_off_is_capped_at_the_trade_figure(tenant: Any) -> None:
         )
     assert result["amount"] == "2300.00"
     assert result["direction"] == Direction.CREDIT
-    assert caches(party) == (D("50000.00"), D("50000.00"), D("0.00"))
+    assert caches(party) == money("0", "900", "50000", "0", "0")
     assert LedgerEntry.objects.get(pk=result["entry_id"]).bucket == "main"
 
 
@@ -651,48 +705,57 @@ def test_a_write_off_with_only_a_loan_left_has_nothing_to_write_off(tenant: Any)
     assert refused.value.code == "nothing_to_write_off"
 
 
-def test_the_archive_refusal_does_not_offer_to_write_off_a_loan(tenant: Any, api_as: Any) -> None:
-    """Wave A gate: the archive dialog read "Write off ₹2,300.00" for a party owing ₹300 to the
-    shop and ₹2,000 on a loan — it offers the refusal's `balance`, the very figure LED-11's cap
-    exists to keep out of a shop's hands. And with a loan standing, no shop write-off can let the
-    archive through (EC-7), so the offer was a dead end besides. The refusal now says so:
-    `can_write_off: false` and the trade figure as `amount`, only when a loan is open, so every
-    other archive refusal's payload is unchanged."""
+def test_another_app_s_money_refuses_the_archive_in_its_own_words(
+    tenant: Any, api_as: Any, test_source: str
+) -> None:
+    """DEC-019 — a loan used to refuse an archive only by being inside `balance`, and the dialog
+    then offered "Write off ₹2,300" for money that was mostly a loan. Now the udhaar book's own
+    non-zero balance is the ordinary refusal, and a Shop bill left unpaid is refused by the
+    Shop's guard, with its own sentence and no write-off offer."""
     client, _member = api_as(tenant)
-    shop_only = PartyFactory(tenant=tenant)
-    post(shop_only, EntryType.INVOICE, "300.00", source_type=SourceType.SALES_DOCUMENT)
-    borrower = PartyFactory(tenant=tenant)
-    post(borrower, EntryType.INVOICE, "300.00", source_type=SourceType.SALES_DOCUMENT)
-    post(borrower, EntryType.PAYMENT_OUT, "2000.00", source_type=SourceType.PAYMENT, bucket="loan")
+    khata = PartyFactory(tenant=tenant)
+    post(khata, EntryType.CHARGE, "300.00", source_type=TEST_SOURCE, bucket="main")
+    buyer = PartyFactory(tenant=tenant)
+    post(buyer, EntryType.INVOICE, "300.00", source_type=SourceType.SALES_DOCUMENT)
 
-    plain = client.post(f"/api/v1/parties/{shop_only.id}/archive", {}, format="json")
+    plain = client.post(f"/api/v1/parties/{khata.id}/archive", {}, format="json")
     assert plain.status_code == 409 and plain.json()["error"]["code"] == "party_balance_nonzero"
     assert set(plain.json()["error"]["details"]) == {"balance", "balance_label", "suggestion"}
 
-    loan = client.post(f"/api/v1/parties/{borrower.id}/archive", {}, format="json")
-    details = loan.json()["error"]["details"]
-    assert loan.status_code == 409 and details["balance"] == "2300.00"
-    assert details["can_write_off"] is False
-    assert details["amount"] == "300.00"
-    assert details["suggestion"] == "collect"
+    shop = client.post(f"/api/v1/parties/{buyer.id}/archive", {}, format="json")
+    assert shop.status_code == 409
+    assert shop.json()["error"]["code"] == "party_has_open_records"
+    assert shop.json()["error"]["details"] == {
+        "module": "sales",
+        "count": 1,
+        "label_id": "parties.archive.owesOnBills",
+    }
 
 
 # ── The statement and the timeline ──────────────────────────────────────────
 
 
-def test_a_deposit_is_outside_the_running_balance_and_in_its_own_block(
-    tenant: Any, api_as: Any
+def test_the_statement_and_timeline_are_the_udhaar_book_s_own(
+    tenant: Any, api_as: Any, test_source: str
 ) -> None:
-    """T-PLT-X01-8 — the statement's running balance and closing exclude the deposit line,
-    the closing still equals `party.balance` (LED-04 BR-3), and the line is printed in a
-    separate "Deposit held" block with what is held."""
+    """T-PLT-X01-8, DEC-019 — the statement a merchant hands a customer and the khata timeline
+    list only the udhaar book's lines; the closing still equals `party.balance` (LED-04 BR-3).
+    A bill, a deposit or a loan is not printed there, and there is no "Deposit held" block."""
     party = PartyFactory(tenant=tenant)
     post(
         party,
-        EntryType.INVOICE,
+        EntryType.CHARGE,
         "1000.00",
-        source_type=SourceType.SALES_DOCUMENT,
+        source_type=TEST_SOURCE,
+        bucket="main",
         day=dt.date(2026, 4, 1),
+    )
+    post(
+        party,
+        EntryType.INVOICE,
+        "800.00",
+        source_type=SourceType.SALES_DOCUMENT,
+        day=dt.date(2026, 4, 2),
     )
     post(
         party,
@@ -704,9 +767,10 @@ def test_a_deposit_is_outside_the_running_balance_and_in_its_own_block(
     )
     post(
         party,
-        EntryType.PAYMENT_IN,
+        EntryType.ADJUSTMENT_CREDIT,
         "400.00",
-        source_type=SourceType.PAYMENT,
+        source_type=TEST_SOURCE,
+        bucket="main",
         day=dt.date(2026, 4, 3),
     )
     client, _member = api_as(tenant)
@@ -715,88 +779,17 @@ def test_a_deposit_is_outside_the_running_balance_and_in_its_own_block(
     data, meta = body["data"], body["meta"]
     assert [row["amount"] for row in data["rows"]] == ["1000.00", "400.00"]
     assert [row["running_balance"] for row in data["rows"]] == ["1000.00", "600.00"]
-    assert {row["bucket"] for row in data["rows"]} == {"main"}
     assert data["closing_balance"] == "600.00"
     party.refresh_from_db()
     assert D(data["closing_balance"]) == party.balance
-    assert data["totals"]["credit"] == "400.00"
-    assert meta["deposit"]["held"] == "1500.00"
-    assert [row["amount"] for row in meta["deposit"]["rows"]] == ["1500.00"]
-    assert meta["deposit"]["rows"][0]["bucket"] == "deposit"
-    assert meta["deposit"]["rows"][0]["direction"] == "credit"
-
-
-def test_a_statement_without_deposits_has_no_deposit_block(tenant: Any, api_as: Any) -> None:
-    """The block is absent rather than `{rows: [], held: "0.00"}` — every existing statement
-    stays byte-identical (the golden file) and a zero the merchant never asked about is noise."""
-    party = PartyFactory(tenant=tenant)
-    post(party, EntryType.INVOICE, "1000.00", source_type=SourceType.SALES_DOCUMENT)
-    client, _member = api_as(tenant)
-    meta = client.get(f"/api/v1/parties/{party.id}/statement").json()["meta"]
     assert "deposit" not in meta
 
-
-def test_the_deposit_block_honours_the_period(tenant: Any, api_as: Any) -> None:
-    """`held` is what was held at the period's end, and the rows are the period's."""
-    party = PartyFactory(tenant=tenant)
-    post(
-        party,
-        EntryType.PAYMENT_IN,
-        "1000.00",
-        source_type=SourceType.PAYMENT,
-        bucket="deposit",
-        day=dt.date(2026, 4, 2),
-    )
-    post(
-        party,
-        EntryType.PAYMENT_OUT,
-        "300.00",
-        source_type=SourceType.PAYMENT,
-        bucket="deposit",
-        day=dt.date(2026, 5, 2),
-    )
-    client, _member = api_as(tenant)
-    april = client.get(
-        f"/api/v1/parties/{party.id}/statement?date_from=2026-04-01&date_to=2026-04-30"
-    ).json()["meta"]["deposit"]
-    assert april["held"] == "1000.00"
-    assert [row["amount"] for row in april["rows"]] == ["1000.00"]
-    may = client.get(
-        f"/api/v1/parties/{party.id}/statement?date_from=2026-05-01&date_to=2026-05-31"
-    ).json()["meta"]["deposit"]
-    assert may["held"] == "700.00"
-    assert [row["amount"] for row in may["rows"]] == ["300.00"]
-
-
-def test_the_timeline_shows_a_deposit_line_without_moving_the_running_balance(
-    tenant: Any, api_as: Any
-) -> None:
-    """The khata lists every line (with its `bucket`), but a deposit contributes nothing to
-    the running balance, so the newest row still equals the header (PTY-03 FR-6)."""
-    party = PartyFactory(tenant=tenant)
-    post(
-        party,
-        EntryType.INVOICE,
-        "1000.00",
-        source_type=SourceType.SALES_DOCUMENT,
-        day=dt.date(2026, 4, 1),
-    )
-    post(
-        party,
-        EntryType.PAYMENT_IN,
-        "1500.00",
-        source_type=SourceType.PAYMENT,
-        bucket="deposit",
-        day=dt.date(2026, 4, 2),
-    )
-    client, _member = api_as(tenant)
-    body = client.get(f"/api/v1/parties/{party.id}/ledger-entries").json()
-    rows = body["data"]
-    assert [(row["amount"], row["bucket"], row["running_balance"]) for row in rows] == [
-        ("1500.00", "deposit", "1000.00"),
-        ("1000.00", "main", "1000.00"),
+    timeline = client.get(f"/api/v1/parties/{party.id}/ledger-entries").json()
+    assert [(row["amount"], row["bucket"]) for row in timeline["data"]] == [
+        ("400.00", "main"),
+        ("1000.00", "main"),
     ]
-    assert body["meta"]["summary"]["total_credit"] == "0.00"
+    assert timeline["meta"]["summary"]["entry_count"] == 2
 
 
 def test_the_public_statement_helpers_build_a_module_ledger(tenant: Any, test_source: str) -> None:
@@ -831,34 +824,24 @@ def test_the_public_statement_helpers_build_a_module_ledger(tenant: Any, test_so
 # ── The party detail ────────────────────────────────────────────────────────
 
 
-def test_the_party_detail_omits_the_new_figures_for_todays_tenants(
-    tenant: Any, api_as: Any
-) -> None:
-    """PTY-03's rule: a key that is always empty is a claim the code cannot verify. With no
-    module that writes a loan or a deposit switched on, and zero in both, the keys are absent."""
-    party = PartyFactory(tenant=tenant)
-    client, _member = api_as(tenant)
-    data = client.get(f"/api/v1/parties/{party.id}").json()["data"]
-    assert "loan_balance" not in data
-    assert "trade_balance" not in data
-    assert "deposit_held" not in data
-
-
-def test_the_party_detail_shows_the_figures_when_there_are_any(
+def test_the_party_detail_never_sends_another_app_s_money(
     tenant: Any, api_as: Any, test_source: str
 ) -> None:
-    """When a loan or a deposit exists the figures are there, as strings, with the trade
-    figure beside the loan."""
+    """DEC-019 — QA B3/B9: a Shop page showed "Loan left ₹964" and library fees, because the
+    detail sent `loan_balance`, `trade_balance` and `deposit_held`. It now sends the udhaar
+    book's `balance` and the Shop's `shop_balance` (the two apps that read this page), and
+    nothing from lending, the library or a deposit."""
     party = PartyFactory(tenant=tenant)
+    post(party, EntryType.CHARGE, "100.00", source_type=TEST_SOURCE, bucket="main")
     post(party, EntryType.INVOICE, "2300.00", source_type=SourceType.SALES_DOCUMENT)
     post(party, EntryType.PAYMENT_OUT, "5000.00", source_type=SourceType.PAYMENT, bucket="loan")
     post(party, EntryType.PAYMENT_IN, "1000.00", source_type=SourceType.PAYMENT, bucket="deposit")
     client, _member = api_as(tenant)
     data = client.get(f"/api/v1/parties/{party.id}").json()["data"]
-    assert data["balance"] == "7300.00"
-    assert data["loan_balance"] == "5000.00"
-    assert data["trade_balance"] == "2300.00"
-    assert data["deposit_held"] == "1000.00"
+    assert data["balance"] == "100.00"
+    assert data["shop_balance"] == "2300.00"
+    for key in ("loan_balance", "trade_balance", "deposit_held", "library_balance"):
+        assert key not in data
 
 
 # ── Concurrency (T-PLT-X01-11) ──────────────────────────────────────────────
@@ -908,7 +891,7 @@ def test_loan_and_deposit_postings_to_one_party_serialise_on_the_party_lock(
     for thread in threads:
         thread.join(timeout=60)
     assert errors == []
-    assert caches(party) == (D("100.00"), D("100.00"), D("100.00"))
+    assert caches(party) == money("0", "0", "100", "0", "100")
     assert replay(party) == caches(party)
 
 
@@ -925,28 +908,6 @@ def test_the_migration_reverse_restores_the_previous_trigger_exactly() -> None:
     assert extra == {"       OR NEW.bucket IS DISTINCT FROM OLD.bucket"}
 
 
-def test_a_switched_on_writer_module_shows_verified_zeros(
-    tenant: Any, api_as: Any, monkeypatch: Any
-) -> None:
-    """When a module that writes the bucket is effective, a zero IS a verified zero and is
-    sent. Simulated by naming an enabled core module as the writer, since no vertical exists."""
-    from apps.parties.services import balance
-
-    monkeypatch.setattr(
-        balance,
-        "BUCKET_WRITER_MODULES",
-        {"loan": frozenset({"sales"}), "deposit": frozenset({"sales"})},
-    )
-    party = PartyFactory(tenant=tenant)
-    client, _member = api_as(tenant)
-    data = client.get(f"/api/v1/parties/{party.id}").json()["data"]
-    assert (data["loan_balance"], data["trade_balance"], data["deposit_held"]) == (
-        "0.00",
-        "0.00",
-        "0.00",
-    )
-
-
 def test_the_nightly_drift_sample_names_a_loan_or_deposit_figure(tenant: Any) -> None:
     """The nightly job's sample names WHICH cache drifted when it is not the balance, so an
     operator is not left reading two equal balance figures for a party reported as drifted."""
@@ -958,4 +919,47 @@ def test_the_nightly_drift_sample_names_a_loan_or_deposit_figure(tenant: Any) ->
     summary = check_balances(tenant_id=tenant.id)
     assert summary["drifted"] == 1
     assert summary["sample"][0]["figures"] == ["loan_balance"]
-    assert summary["sample"][0]["cached"] == summary["sample"][0]["ledger"] == "900.00"
+    # `cached`/`ledger` are the udhaar book's figure, which agrees (DEC-019: no loan in it).
+    assert summary["sample"][0]["cached"] == summary["sample"][0]["ledger"] == "0.00"
+
+
+def test_the_migration_moves_old_rows_into_their_app_s_bucket(tenant: Any) -> None:
+    """DEC-019's 0009 — every line written before the rule sat in `main`: a bill, a library fee
+    and a khata entry added up into one balance. The migration's SQL moves each into its app's
+    bucket, despite the immutability trigger, and rebuilds the caches so `recalc_balances`
+    finds nothing to correct."""
+    import importlib
+    import uuid
+
+    migration = importlib.import_module("apps.ledger.migrations.0009_rebucket_by_app")
+    party = PartyFactory(tenant=tenant)
+
+    def old_row(entry_type: str, source_type: str, amount: str) -> LedgerEntry:
+        return LedgerEntry.objects.create(
+            tenant=tenant,
+            party=party,
+            direction=Direction.DEBIT,
+            amount=D(amount),
+            entry_date=dt.date(2026, 4, 1),
+            entry_type=entry_type,
+            source_type=source_type,
+            source_id=None if source_type == "manual" else uuid.uuid4(),
+            bucket="main",
+        )
+
+    bill = old_row(EntryType.INVOICE, SourceType.SALES_DOCUMENT, "900.00")
+    fee = old_row(EntryType.CHARGE, "library_charge", "500.00")
+    gave = old_row(EntryType.MANUAL_GAVE, "manual", "200.00")
+    Party.all_objects.filter(pk=party.pk).update(balance=D("1600.00"))
+
+    with connection.cursor() as cursor:
+        cursor.execute(migration.FORWARD)
+
+    assert LedgerEntry.objects.get(pk=bill.pk).bucket == "shop"
+    assert LedgerEntry.objects.get(pk=fee.pk).bucket == "library"
+    assert LedgerEntry.objects.get(pk=gave.pk).bucket == "main"
+    assert caches(party) == money("200", "900", "0", "500", "0")
+    assert replay(party) == caches(party)
+    # The trigger is back: no service may move a line afterwards.
+    with pytest.raises(DatabaseError), transaction.atomic():
+        LedgerEntry.objects.filter(pk=gave.pk).update(bucket="shop")

@@ -134,7 +134,7 @@ def test_issuing_against_an_unpaid_invoice_applies_restocks_and_credits(
     credit = LedgerEntry.objects.get(source_id=note["id"], entry_type="credit_note")
     assert credit.direction == "credit" and credit.amount == Decimal("945.00")
     party.refresh_from_db()
-    assert party.balance == Decimal("945.00")
+    assert party.shop_balance == Decimal("945.00")
 
     back = StockMovement.objects.get(source_id=note["id"])
     assert back.movement_type == "sale_return_in" and back.qty == Decimal("2.000")
@@ -266,7 +266,7 @@ def test_void_reverses_everything_the_issue_did(
     assert not SalesCreditApplication.objects.filter(credit_note_id=note["id"]).exists()
     assert SalesDocumentLine.objects.get(pk=invoice["lines"][0]["id"]).returned_qty == 0
     party.refresh_from_db()
-    assert party.balance == Decimal(invoice["grand_total"])
+    assert party.shop_balance == Decimal(invoice["grand_total"])
     assert StockMovement.objects.filter(source_id=note["id"], movement_type="reversal").count() == 1
     recalc_clean()
 

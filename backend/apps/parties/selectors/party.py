@@ -167,7 +167,7 @@ def party_totals(queryset: QuerySet[Party]) -> dict:
             "id",
             filter=Q(
                 credit_limit__isnull=False,
-                credit_limit__lt=F("balance") - F("loan_balance"),
+                credit_limit__lt=F("balance"),
             ),
         ),
     )

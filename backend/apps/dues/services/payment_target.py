@@ -148,10 +148,10 @@ class _DuesTargetBase:
 
 
 class DuesDueTarget(_DuesTargetBase):
-    """A charge-mode due posted to the ledger: FIFO may settle it, in `main` (BR-7)."""
+    """A charge-mode due posted to the ledger: FIFO may settle it, in `shop` (BR-7, DEC-019)."""
 
     document_type = TARGET_DUE
-    bucket = LedgerBucket.MAIN.value
+    bucket = LedgerBucket.SHOP.value
     auto = True
 
     def _rows(self, tenant: Any) -> QuerySet:

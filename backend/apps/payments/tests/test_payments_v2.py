@@ -63,11 +63,12 @@ class NeverAutoTarget:
 # ── The protocol and the registry ────────────────────────────────────────────
 
 
-def test_the_two_shop_targets_declare_the_main_bucket_and_auto() -> None:
-    """R5/R6 — the shop's invoice and bill are `main` and FIFO may choose them, as it always has."""
+def test_the_two_shop_targets_declare_the_shop_bucket_and_auto() -> None:
+    """R5/R6, DEC-019 — the shop's invoice and bill are the Shop's own bucket and FIFO may
+    choose them; a Shop receipt can never land on a library fee or a loan."""
     for document_type in ("sales_document", "purchase_document"):
         target = target_for(document_type)
-        assert (target.bucket, target.auto) == ("main", True)
+        assert (target.bucket, target.auto) == ("shop", True)
 
 
 @pytest.mark.parametrize(
@@ -106,10 +107,12 @@ def test_targets_for_direction_can_ask_for_auto_targets_only(clean_targets: Any)
     register_target(NeverAutoTarget())
     # ── A4b ── payments' own `held_deposit` is IN too, in the deposit bucket.
     every = [t.document_type for t in targets_for_direction("in", bucket="main")]
+    shop = [t.document_type for t in targets_for_direction("in", bucket="shop")]
     auto = [t.document_type for t in targets_for_direction("in", auto_only=True)]
-    # ── DUE-03 ── the dues engine's `dues_due` (main, auto) registers at start-up too.
-    # ── B10 ── the library's `library_charge` (main, auto) too, before dues (app order).
-    assert every == ["sales_document", "library_charge", "dues_due", "test_never_auto"]
+    # ── DUE-03 ── the dues engine's `dues_due` (shop since DEC-019, auto) registers too.
+    # ── B10 ── the library's `library_charge` is its own bucket (DEC-019), auto.
+    assert every == ["test_never_auto"]
+    assert shop == ["sales_document", "dues_due"]
     assert auto == ["sales_document", "library_charge", "dues_due"]
 
 
@@ -139,7 +142,7 @@ def test_a_shop_payment_is_main_and_its_ledger_line_agrees(
     owner: Any, make_party: Any, invoice_for: Any
 ) -> None:
     """R5 reconciliation — `payments_payment.bucket` is written once and equals the bucket of the
-    payment's own khata line; a shop payment, allocated or not, is `main`."""
+    payment's own khata line; a shop payment, allocated or not, is `shop` (DEC-019)."""
     party = make_party(name="Main Traders")
     invoice_for(party, "500.00")
     allocated = pay(owner, party_id=str(party.id), mode_breakup=cash_lines("300.00"))
@@ -147,7 +150,7 @@ def test_a_shop_payment_is_main_and_its_ledger_line_agrees(
     assert allocated.status_code == advance.status_code == 201
     for payment in Payment.objects.filter(party=party):
         line = LedgerEntry.objects.get(source_type=SourceType.PAYMENT, source_id=payment.id)
-        assert payment.bucket == line.bucket == "main"
+        assert payment.bucket == line.bucket == "shop"
 
 
 def test_a_payment_settling_a_loan_target_posts_in_the_loan_bucket(
@@ -353,7 +356,7 @@ def test_the_payment_list_filters_the_open_advances_by_bucket(
     applied = pay(owner, party_id=str(party.id), mode_breakup=cash_lines("500.00"))
     advance = pay(owner, party_id=str(party.id), mode_breakup=cash_lines("700.00"))
     url = reverse("v1:payment-list")
-    rows = owner.get(f"{url}?unallocated=true&bucket=main").json()["data"]
+    rows = owner.get(f"{url}?unallocated=true&bucket=shop").json()["data"]
     ids = {row["id"] for row in rows}
     assert advance.json()["data"]["id"] in ids
     assert applied.json()["data"]["id"] not in ids

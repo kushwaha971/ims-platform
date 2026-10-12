@@ -22,7 +22,7 @@ from apps.expenses.models import Expense
 from apps.expenses.tests.helpers import EXPENSES, record
 from apps.ledger.constants import EntryStatus, EntryType, SourceType
 from apps.ledger.models import LedgerEntry
-from apps.ledger.selectors.entry import computed_balance
+from apps.ledger.selectors.entry import computed_shop_balance
 from apps.parties.constants import PartyStatus
 from apps.platform_app.models import AuditLog
 from tests.factories.parties import PartyFactory
@@ -179,8 +179,8 @@ def test_an_unpaid_expense_posts_exactly_one_credit_against_the_party(
     assert entry.note.startswith("Rent · EXP/26-27/0001")
 
     landlord.refresh_from_db()
-    assert landlord.balance == Decimal("-12000.00")
-    assert landlord.balance == computed_balance(tenant=tenant, party_id=landlord.id)
+    assert landlord.shop_balance == Decimal("-12000.00")
+    assert landlord.shop_balance == computed_shop_balance(tenant=tenant, party_id=landlord.id)
 
 
 def test_an_unpaid_expense_needs_a_party_and_a_due_date(owner: Any, categories: dict) -> None:

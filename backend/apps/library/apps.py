@@ -74,7 +74,8 @@ class LibraryConfig(AppConfig):
         from apps.payments.services.targets import register_target
         from apps.platform_app.services.guards import register_module_off_guard
 
-        main = frozenset({LedgerBucket.MAIN.value})
+        # DEC-019 — the library's money is its own bucket.
+        main = frozenset({LedgerBucket.LIBRARY.value})
         register_posting_source(
             SOURCE_CHARGE,
             module="library",

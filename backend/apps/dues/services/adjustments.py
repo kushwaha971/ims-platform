@@ -117,10 +117,11 @@ def _post(*, ctx: Any, due: DuesDue, party: Any, adjustment: DuesAdjustment, not
 
 
 def _bucket(due: DuesDue) -> str:
-    """The bucket the due's own money lives in: a loan's components are in `loan`."""
+    """The bucket the due's own money lives in: a loan's components are in `loan`, a charge
+    in `shop` (DEC-019)."""
     from apps.dues.constants import Mode
 
-    return "loan" if due.schedule.mode == Mode.EXPECTATION else "main"
+    return "loan" if due.schedule.mode == Mode.EXPECTATION else "shop"
 
 
 def add_penalty(

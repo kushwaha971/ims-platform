@@ -29,14 +29,12 @@ from apps.ledger.selectors.sources import resolve_sources
 from apps.ledger.selectors.statement import (
     STATEMENT_ORDERING,
     carried_forward,
-    deposit_block,
     has_entries_before_opening,
     opening_balance,
     statement_rows,
     statement_totals,
 )
 from apps.ledger.serializers.entry import (
-    StatementDepositRowSerializer,
     StatementRowSerializer,
     StatementTotalsSerializer,
 )
@@ -179,18 +177,8 @@ class PartyStatementView(TenantScopeMixin, APIView):
         opening = opening_balance(**scope, date_from=date_from)
         closing = self._closing(scope, date_from, date_to, opening)
         meta = paginator.get_meta()
-        # A2 (PLT-X01 §6) — the "Deposit held" block, outside the running balance, and
-        # only when the period has a deposit line: every other statement is unchanged.
-        deposits = deposit_block(**scope, date_from=date_from, date_to=date_to)
-        if deposits is not None:
-            meta["deposit"] = {
-                "rows": StatementDepositRowSerializer(
-                    deposits["rows"],
-                    many=True,
-                    context={"sources": resolve_sources(deposits["rows"])},
-                ).data,
-                "held": str(deposits["held"]),
-            }
+        # DEC-019 — the udhaar book's statement carries no "Deposit held" block: a security
+        # deposit is the library's, kept and returned on the student's own page.
         return StandardResponse.ok(
             {
                 "party": {

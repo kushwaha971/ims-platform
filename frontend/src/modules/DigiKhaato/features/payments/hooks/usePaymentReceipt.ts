@@ -154,7 +154,7 @@ export const usePaymentReceipt = (id: string, autoPrint: boolean): UsePaymentRec
       fetchApplyCandidates({
         partyId: payment.party.id,
         direction: payment.direction,
-        bucket: payment.bucket ?? 'main',
+        bucket: payment.bucket ?? 'shop',
       })
     );
   }, [dispatch, payment]);

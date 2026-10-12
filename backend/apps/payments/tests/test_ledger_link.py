@@ -147,28 +147,28 @@ def test_a_payment_line_cannot_be_reversed_from_the_khata(owner: Any, make_party
 def test_the_timeline_names_each_document_by_number_and_kind(
     owner: Any, make_party: Any, invoice_for: Any
 ) -> None:
-    """FR-5 / US-LED-10-3 — the khata's invoice row and receipt row carry their numbers,
-    and a voided receipt's reversal links to the same receipt."""
+    """FR-5 / US-LED-10-3 — the Shop's invoice line and receipt line carry their numbers, and a
+    voided receipt's reversal links to the same receipt (the source resolver every ledger
+    reader uses). DEC-019: none of them is on the UDHAAR BOOK's timeline or statement — they
+    are the Shop's money, read on the Shop's own pages."""
+    from apps.ledger.selectors.sources import resolve_sources
+
     party = make_party()
     inv = invoice_for(party, "898.00")
     paid = pay(owner, party_id=str(party.id), mode_breakup=cash_lines("500.00")).json()["data"]
     void(owner, paid["id"])
-    rows = owner.get(f"/api/v1/parties/{party.id}/ledger-entries?include_reversed=true").json()[
-        "data"
-    ]
-    by_type = {row["entry_type"]: row["source"] for row in rows}
-    assert by_type["invoice"]["number"] == inv["number"]
-    assert by_type["invoice"]["kind"] == "invoice"
-    assert by_type["payment_in"] == {
-        "type": "payment",
-        "id": paid["id"],
+    rows = LedgerEntry.objects.filter(party=party)
+    sources = resolve_sources(rows)
+    assert sources[inv["id"]]["number"] == inv["number"]
+    assert sources[inv["id"]]["kind"] == "invoice"
+    assert sources[paid["id"]] == {
         "number": paid["number"],
         "status": "void",
         "kind": "payment_in",
-        "url": None,
     }
-    assert by_type["reversal"]["number"] == paid["number"]
+    assert {row.bucket for row in rows} == {"shop"}
 
+    timeline = owner.get(f"/api/v1/parties/{party.id}/ledger-entries?include_reversed=true")
+    assert timeline.json()["data"] == []
     statement = owner.get(f"/api/v1/parties/{party.id}/statement?include_corrections=true")
-    numbers = {row["source"]["number"] for row in statement.json()["data"]["rows"] if row["source"]}
-    assert {inv["number"], paid["number"]} <= numbers
+    assert statement.json()["data"]["rows"] == []

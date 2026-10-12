@@ -85,7 +85,7 @@ def test_each_step_on_a_fixture_schedule(
     first = DuesDue.objects.get(schedule=schedule, seq=1)
     assert first.status == DueStatus.DUE
     entry = LedgerEntry.objects.get(source_type=SOURCE_DUE, source_id=first.id)
-    assert (entry.entry_date, entry.amount, entry.bucket) == (NOV1, D("1200.00"), "main")
+    assert (entry.entry_date, entry.amount, entry.bucket) == (NOV1, D("1200.00"), "shop")
     assert entry.note.endswith("· Nov 2026")
     assert report["posted"] == 1
     # Extend: the window now reaches 1 Nov 2028, one more monthly due.
@@ -153,7 +153,7 @@ def test_running_twice_for_one_date_is_a_no_op(
             ),
             LedgerEntry.objects.count(),
             AuditLog.objects.count(),
-            party.balance,
+            party.shop_balance,
             sorted(DuesSchedule.objects.values_list("id", "materialised_until")),
         )
 
@@ -443,7 +443,7 @@ def test_one_failing_schedule_leaves_the_others_posted_and_notifies_once(
     assert DuesDue.objects.get(schedule=bad, seq=1).status == DueStatus.SCHEDULED
     assert LedgerEntry.objects.filter(party=bad_party).count() == 0
     bad_party.refresh_from_db()
-    assert bad_party.balance == 0
+    assert bad_party.shop_balance == 0
 
     run_for_tenant(tenant=ctx.tenant, today=NOV1)  # the same day fails again
     [row] = Notification.objects.filter(tenant=ctx.tenant, type="dues.run_failed")

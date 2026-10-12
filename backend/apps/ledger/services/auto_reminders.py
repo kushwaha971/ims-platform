@@ -68,7 +68,7 @@ def eligible_parties(*, tenant: Any, due_on: dt.date) -> Any:
     # A7 BR-7 — the shop's figure: a loan is reminded by lending's own source.
     return (
         Party.objects.for_tenant(tenant)
-        .alias(trade=F("balance") - F("loan_balance"))
+        .alias(trade=F("balance"))
         .filter(
             status=PartyStatus.ACTIVE,
             trade__gt=ZERO,
@@ -84,7 +84,7 @@ def due_today_parties(*, tenant: Any, today: dt.date) -> Any:
     """LED-05 §17 — the `reminder_due` row counts these, SMS or no SMS."""
     return (
         Party.objects.for_tenant(tenant)
-        .alias(trade=F("balance") - F("loan_balance"))
+        .alias(trade=F("balance"))
         .filter(status=PartyStatus.ACTIVE, trade__gt=ZERO, collection_date=today)
     )
 

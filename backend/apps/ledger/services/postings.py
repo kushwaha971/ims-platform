@@ -71,7 +71,7 @@ from apps.ledger.constants import (
 )
 from apps.ledger.models import LedgerEntry
 from apps.ledger.services.entries import _audit_snapshot
-from apps.parties.services.balance import apply_entry, lock_party
+from apps.parties.services.balance import apply_entry, balance_of, lock_party
 
 
 class LedgerPostingError(RuntimeError):
@@ -216,18 +216,24 @@ def post_source_entry(
     upi_app: str | None = None,
     reference: str = "",
     source_number: str | None = None,
-    bucket: str = LedgerBucket.MAIN,
+    bucket: str | None = None,
 ) -> tuple[LedgerEntry, Decimal]:
     """Write one document's ledger line against `party` (LOCKED by the caller).
 
     Returns `(entry, balance_after)`. The direction is not a parameter: it is
     a function of `entry_type` (BR-2), and a caller that could pass it could
-    pass the wrong one. `bucket` must be one the source registered (BR-7).
+    pass the wrong one. `bucket` must be one the source registered (BR-7); omitted, it is the
+    source's only bucket (DEC-019: a sales document is the Shop's whoever posts it), and a
+    source registered in several must name it.
     """
     _assert_atomic()
     source = _SOURCES.get(source_type)
     if source is None or entry_type not in source.entry_types:
         raise LedgerPostingError(f"{entry_type!r} is not posted by {source_type!r}")
+    if bucket is None:
+        if len(source.buckets) != 1:
+            raise LedgerPostingError(f"{source_type!r} posts in several buckets: name one")
+        bucket = next(iter(source.buckets))
     if bucket not in source.buckets:
         raise LedgerPostingError(f"{source_type!r} does not post in the {bucket!r} bucket")
     if source_id is None:
@@ -241,7 +247,7 @@ def post_source_entry(
         tenant=ctx.tenant, source_type=source_type, source_id=source_id, entry_type=entry_type
     )
     if existing is not None:
-        return existing, party.balance
+        return existing, balance_of(party, existing.bucket)
 
     direction = source.entry_types[entry_type]
     # A debit carries no mode (`ck_ledger_entry_debit_has_no_mode`): a payment

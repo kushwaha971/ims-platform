@@ -204,10 +204,9 @@ class PartyFilterSet(BaseTenantFilterSet):
         # summary's tiles count with the same predicate (`ledger/selectors/
         # collection.py`). Without it here, tapping "Due today · 3" listed a
         # fourth party who had already paid (AC-2: "lists exactly those").
-        # A7 BR-7 — the TRADE figure, like the ledger summary's tiles it has to
-        # agree with (`ledger/selectors/collection.py`): a borrower who owes only
-        # a loan has no shop collection. Identical to `balance` without a loan.
-        shop_owes = queryset.alias(trade=F("balance") - F("loan_balance")).filter(trade__gt=0)
+        # A7 BR-7 — the udhaar book's own figure (DEC-019: `balance` holds no
+        # other app's money), like the ledger summary's tiles it has to agree with.
+        shop_owes = queryset.filter(balance__gt=0)
         if value == "today":
             return shop_owes.filter(collection_date=today)
         if value == "overdue":
@@ -314,12 +313,9 @@ class PartyFilterSet(BaseTenantFilterSet):
         `credit_usage` column for tenants above ten thousand parties are
         proposed in CCR-28.
         """
-        # A2 (BR-5) — the TRADE figure `balance − loan_balance`, which is what
-        # `credit_exposure` and `limit_status` compare: a loan is not shop credit.
-        # Identical to `balance` for every party without a loan.
-        has_limit = queryset.filter(credit_limit__isnull=False).alias(
-            trade=F("balance") - F("loan_balance")
-        )
+        # A2 (BR-5) — the udhaar book's own figure, which is what `credit_exposure`
+        # and `limit_status` compare (DEC-019: no loan or bill is in `balance`).
+        has_limit = queryset.filter(credit_limit__isnull=False).alias(trade=F("balance"))
         if value == "over":
             return has_limit.filter(trade__gt=F("credit_limit"))
         if value == "near":

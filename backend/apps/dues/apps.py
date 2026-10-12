@@ -21,7 +21,10 @@ class DuesConfig(AppConfig):
         from apps.ledger.constants import EntryType
         from apps.ledger.services.postings import register_posting_source
 
-        main, loan = LedgerBucket.MAIN.value, LedgerBucket.LOAN.value
+        # DEC-019 — a charge-mode due is trade money owed to the business beside its bills
+        # (it is issued through the Shop's document port and paid with them), so it is the
+        # `shop` bucket's; a loan's components stay in `loan`.
+        main, loan = LedgerBucket.SHOP.value, LedgerBucket.LOAN.value
         register_posting_source(
             SOURCE_DUE,
             module="dues",

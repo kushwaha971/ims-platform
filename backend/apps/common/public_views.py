@@ -23,7 +23,7 @@ from apps.common.throttling import durable_throttle
 #: Headers every public-link response carries, success or failure.
 PUBLIC_HEADERS: dict[str, str] = {
     "Cache-Control": "private, no-store",
-    "X-Robots-Tag": "noindex, nofollow",
+    "X-Robots-Tag": "noindex, nofollow, noarchive",
     "Referrer-Policy": "no-referrer",
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",

@@ -28,7 +28,7 @@ from __future__ import annotations
 from typing import Any
 
 from apps.common.audit import AuditAction, write_audit
-from apps.common.constants import Direction
+from apps.common.constants import Direction, LedgerBucket
 from apps.common.context import Ctx
 from apps.common.dates import tenant_today
 from apps.ledger.constants import EntryStatus, EntryType, SourceType
@@ -106,8 +106,11 @@ def _post(
         source_id=document.id,
         note=row["note"],
         status=EntryStatus.POSTED,
+        bucket=LedgerBucket.SHOP,  # DEC-019
     )
-    balance = apply_entry(party=party, direction=row["direction"], amount=row["amount"])
+    balance = apply_entry(
+        party=party, direction=row["direction"], amount=row["amount"], bucket=LedgerBucket.SHOP
+    )
     write_audit(
         ctx=ctx,
         action=AuditAction.LEDGER_ENTRY_CREATED,
@@ -171,11 +174,14 @@ def reverse_bill_credit(
         reason=reason,
         note=f"Void {ledger_note_for(document)}"[:255],
         status=EntryStatus.POSTED,
+        bucket=original.bucket,  # DEC-019: in the original's bucket
     )
     original.status = EntryStatus.REVERSED
     original.reversed_by = reversal
     original.save(update_fields=["status", "reversed_by"])
-    balance = apply_entry(party=party, direction=direction, amount=original.amount)
+    balance = apply_entry(
+        party=party, direction=direction, amount=original.amount, bucket=original.bucket
+    )
     write_audit(
         ctx=ctx,
         action=AuditAction.LEDGER_ENTRY_REVERSED,

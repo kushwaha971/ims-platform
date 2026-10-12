@@ -28,7 +28,8 @@ def _doc(data: dict) -> SalesDocument:
 
 
 def _balance(party: Any) -> Decimal:
-    return Party.objects.get(pk=party.pk).balance
+    # DEC-019 — a payment is the Shop's money: it moves `shop_balance`.
+    return Party.objects.get(pk=party.pk).shop_balance
 
 
 def assert_books_clean() -> None:

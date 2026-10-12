@@ -129,7 +129,7 @@ def test_an_invoice_void_leaves_its_party_payment_as_an_advance(
     payment = Payment.objects.get(pk=paid["id"])
     assert payment.status == "recorded" and payment.unallocated_amount == Decimal("300.00")
     assert not Allocation.objects.filter(document_id=invoice["id"]).exists()
-    assert Party.objects.get(pk=party.id).balance == Decimal("-300.00")
+    assert Party.objects.get(pk=party.id).shop_balance == Decimal("-300.00")
     recalc_clean()
 
 
@@ -160,10 +160,10 @@ def test_voiding_the_refund_payment_lets_the_credit_note_be_voided(
         Decimal("150.00"),
     )
     assert back.meta["refund"]["voided"] is True
-    assert Party.objects.get(pk=party.id).balance == Decimal("-150.00")
+    assert Party.objects.get(pk=party.id).shop_balance == Decimal("-150.00")
 
     voided = owner.post(credit_note_url(note["id"], "void"), {"reason": "Mistake"})
     assert voided.status_code == 200, voided.json()
-    assert Party.objects.get(pk=party.id).balance == Decimal("0.00")
+    assert Party.objects.get(pk=party.id).shop_balance == Decimal("0.00")
     assert LedgerEntry.objects.filter(source_id=note["id"], entry_type="reversal").count() == 1
     recalc_clean()
