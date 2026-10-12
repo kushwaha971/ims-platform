@@ -102,7 +102,26 @@ export function ItemListPageContent(): React.JSX.Element {
   const [unknownCode, setUnknownCode] = useState<string | null>(null);
 
   const { filters, update } = list;
+  const phone = tier === 'cards';
   const sheetSpecs: UbFilterSpec[] = [
+    /* On a phone the stock tabs move into the one Filters sheet as well
+       (approved design, 12 Oct 2026): four tabs and a sheet button were two
+       rows of controls above the first item. */
+    ...(phone
+      ? [
+          {
+            kind: 'single' as const,
+            key: 'tab',
+            label: t('items.list.tabs'),
+            anyLabel: t('items.list.tab.all'),
+            options: (['in', 'low', 'out'] as const).map((tab) => ({
+              value: tab,
+              label: t(`items.list.tab.${tab}`),
+              hint: list.counts ? String(list.counts[tab]) : undefined,
+            })),
+          },
+        ]
+      : []),
     {
       kind: 'single',
       key: 'type',
@@ -130,12 +149,17 @@ export function ItemListPageContent(): React.JSX.Element {
   ];
   // "Active" is the list's default, so to the sheet it is "no filter".
   const sheetValues: UbFilterValues = {
+    tab: phone && filters.tab !== 'all' ? filters.tab : '',
     type: filters.type,
     categoryId: filters.categoryId ?? '',
     status: filters.status === 'archived' ? 'archived' : '',
   };
   const applySheet = (next: UbFilterValues) =>
     update({
+      // Only a CHANGED tab: `update` resets the sort for a new tab.
+      ...(phone && (next.tab || 'all') !== filters.tab
+        ? { tab: (next.tab || 'all') as StockTab }
+        : {}),
       type: (next.type ?? '') as '' | 'goods' | 'service',
       categoryId: next.categoryId ?? '',
       status: next.status === 'archived' ? 'archived' : 'active',
@@ -295,6 +319,78 @@ export function ItemListPageContent(): React.JSX.Element {
 
   const lowOut = counts ? counts.low + counts.out : null;
 
+  /** No item at all, archived included (the server's `hasAny`). */
+  const emptyBook = list.status === 'succeeded' && list.rows.length === 0 && list.hasAny === false;
+  const grid = (
+    <UbDataGrid
+      rows={list.rows}
+      columns={columns}
+      rowId={rowId}
+      rowName={rowName}
+      state={gridState}
+      labels={labels}
+      emptyStates={emptyStates}
+      caption={t('items.list.caption')}
+      storageId="items.list"
+      cardAvatarIcon={itemIcon}
+      page={{
+        page: list.page,
+        pageSize: list.pageSize,
+        total: list.total,
+        totalPages: Math.max(list.totalPages, 1),
+      }}
+      onPageChange={(page) => update({ page })}
+      sort={sort}
+      onSortChange={handleSort}
+      onRowOpen={tier === 'cards' ? handleOpen : undefined}
+      search={
+        <UbSearchInput
+          value={draft}
+          onChange={setDraft}
+          placeholder={t('items.list.searchPlaceholder')}
+          aria-label={t('items.list.searchPlaceholder')}
+          onKeyDown={(event) => {
+            /* FR-7 — a code typed or scanned into the search box plus
+               Enter tries the exact lookup first. */
+            if (event.key === 'Enter' && draft.trim().length >= 4) {
+              event.preventDefault();
+              void openScan(draft.trim()).then((found) => {
+                if (!found) update({ q: draft.trim() });
+              });
+            }
+          }}
+        />
+      }
+      filters={
+        /* Owner, 6 Oct 2026: type, category and status behind ONE Filters
+           button (they took three selects, and three rows on a phone);
+           what is on shows beside it as pills. */
+        <>
+          <UbFilterSheet
+            specs={sheetSpecs}
+            values={sheetValues}
+            onApply={applySheet}
+            labels={{
+              title: t('common.filters.title'),
+              apply: t('common.action.apply'),
+              reset: t('common.action.reset'),
+              close: t('common.action.close'),
+            }}
+          />
+          <UbActiveFilters
+            specs={sheetSpecs}
+            values={sheetValues}
+            onChange={applySheet}
+            labels={{
+              remove: (pill) => t('common.filters.remove', { filter: pill }),
+              clearAll: t('common.filters.clearAll'),
+            }}
+          />
+        </>
+      }
+    />
+  );
+
   return (
     <UbPageShell>
       <UbPageHeader
@@ -339,7 +435,7 @@ export function ItemListPageContent(): React.JSX.Element {
           </>
         }
         primaryAction={
-          canWrite ? (
+          canWrite && !emptyBook ? (
             <UbButton
               icon={<Plus className="h-4 w-4" aria-hidden />}
               iconOnly="mobile"
@@ -358,13 +454,15 @@ export function ItemListPageContent(): React.JSX.Element {
             mobile={{
               menuLabel: t('common.action.moreActions'),
               closeLabel: t('common.action.close'),
-              primary: canWrite
-                ? {
-                    label: t('items.list.add'),
-                    icon: <Plus className="h-6 w-6" aria-hidden />,
-                    onClick: () => itemForm.openCreate(),
-                  }
-                : undefined,
+              // The empty catalogue's one button is in the middle of the screen.
+              primary:
+                canWrite && !emptyBook
+                  ? {
+                      label: t('items.list.add'),
+                      icon: <Plus className="h-6 w-6" aria-hidden />,
+                      onClick: () => itemForm.openCreate(),
+                    }
+                  : undefined,
             }}
           />
         )}
@@ -392,7 +490,7 @@ export function ItemListPageContent(): React.JSX.Element {
           />
         )}
 
-        {list.totals && (
+        {list.totals && !emptyBook && (
           <SummaryStatGrid storageKey="items">
             <UbStatCard
               icon={<Boxes className="h-4 w-4" aria-hidden />}
@@ -422,81 +520,29 @@ export function ItemListPageContent(): React.JSX.Element {
           </SummaryStatGrid>
         )}
 
-        <UbTabs<StockTab>
-          value={filters.tab}
-          onValueChange={(tab) => update({ tab })}
-          tabs={tabs}
-          ariaLabel={t('items.list.tabs')}
-          layout="fit"
-        >
-          <UbDataGrid
-            rows={list.rows}
-            columns={columns}
-            rowId={rowId}
-            rowName={rowName}
-            state={gridState}
-            labels={labels}
-            emptyStates={emptyStates}
-            caption={t('items.list.caption')}
-            storageId="items.list"
-            cardAvatarIcon={itemIcon}
-            page={{
-              page: list.page,
-              pageSize: list.pageSize,
-              total: list.total,
-              totalPages: Math.max(list.totalPages, 1),
-            }}
-            onPageChange={(page) => update({ page })}
-            sort={sort}
-            onSortChange={handleSort}
-            onRowOpen={tier === 'cards' ? handleOpen : undefined}
-            search={
-              <UbSearchInput
-                value={draft}
-                onChange={setDraft}
-                placeholder={t('items.list.searchPlaceholder')}
-                aria-label={t('items.list.searchPlaceholder')}
-                onKeyDown={(event) => {
-                  /* FR-7 — a code typed or scanned into the search box plus
-                     Enter tries the exact lookup first. */
-                  if (event.key === 'Enter' && draft.trim().length >= 4) {
-                    event.preventDefault();
-                    void openScan(draft.trim()).then((found) => {
-                      if (!found) update({ q: draft.trim() });
-                    });
-                  }
-                }}
-              />
-            }
-            filters={
-              /* Owner, 6 Oct 2026: type, category and status behind ONE Filters
-                 button (they took three selects, and three rows on a phone);
-                 what is on shows beside it as pills. */
-              <>
-                <UbFilterSheet
-                  specs={sheetSpecs}
-                  values={sheetValues}
-                  onApply={applySheet}
-                  labels={{
-                    title: t('common.filters.title'),
-                    apply: t('common.action.apply'),
-                    reset: t('common.action.reset'),
-                    close: t('common.action.close'),
-                  }}
-                />
-                <UbActiveFilters
-                  specs={sheetSpecs}
-                  values={sheetValues}
-                  onChange={applySheet}
-                  labels={{
-                    remove: (pill) => t('common.filters.remove', { filter: pill }),
-                    clearAll: t('common.filters.clearAll'),
-                  }}
-                />
-              </>
-            }
+        {emptyBook ? (
+          /* Owner, 12 Oct 2026: "I don't want that type of screen in case of
+             empty" — one sentence and one button on the page; no ₹0 totals,
+             tabs, search or Filters over an empty catalogue. */
+          <UbEmptyState
+            variant="firstUse"
+            title={emptyStates.firstUse.title}
+            description={emptyStates.firstUse.description}
+            action={emptyStates.firstUse.action}
           />
-        </UbTabs>
+        ) : phone ? (
+          grid
+        ) : (
+          <UbTabs<StockTab>
+            value={filters.tab}
+            onValueChange={(tab) => update({ tab })}
+            tabs={tabs}
+            ariaLabel={t('items.list.tabs')}
+            layout="fit"
+          >
+            {grid}
+          </UbTabs>
+        )}
       </UbStack>
 
       {itemForm.open && <ItemFormDrawer form={itemForm} />}

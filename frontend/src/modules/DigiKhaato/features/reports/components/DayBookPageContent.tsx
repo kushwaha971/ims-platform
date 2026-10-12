@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { ArrowDownLeft, ArrowUpRight, Landmark, Wallet } from 'lucide-react';
 
@@ -127,13 +127,24 @@ export function DayBookPageContent(): React.JSX.Element {
   );
 
   const narrowed = filters.types.length > 0;
+  /* Approved design (owner, 12 Oct 2026: "I don't want that type of screen in
+     case of empty"): a period with nothing in it is one plain sentence under
+     the period — not a table of ₹0.00 totals, Filters and "Show voided". The
+     owner's opening and closing cash used to keep the totals card on screen
+     for an empty day; a figure that did not move that day says nothing the
+     sentence does not. */
   const state = !data
     ? book.status === 'failed'
       ? 'error'
       : 'loading'
-    : data.rows.length === 0 && !balances
+    : data.rows.length === 0
       ? 'empty'
       : 'ready';
+  const quiet = state === 'empty' && !narrowed && !filters.includeVoid;
+  const today = filters.preset === 'today';
+  // A phone reads the day as a list; the full table is one tap away.
+  const [fullTable, setFullTable] = useState(false);
+  const phone = tier === 'cards';
 
   return (
     <ReportPageShell<ReportPreset>
@@ -167,41 +178,45 @@ export function DayBookPageContent(): React.JSX.Element {
         },
       }}
       filters={
-        <>
-          <UbFilterSheet
-            specs={typeSpecs}
-            values={{ types: filters.types.join(',') }}
-            onApply={(next) =>
-              book.setTypes(
-                DAY_BOOK_TYPE_FILTERS.filter((group) =>
-                  (next.types ?? '').split(',').includes(group)
+        quiet ? undefined : (
+          <>
+            <UbFilterSheet
+              specs={typeSpecs}
+              values={{ types: filters.types.join(',') }}
+              onApply={(next) =>
+                book.setTypes(
+                  DAY_BOOK_TYPE_FILTERS.filter((group) =>
+                    (next.types ?? '').split(',').includes(group)
+                  )
                 )
-              )
-            }
-            labels={{
-              title: t('common.filters.title'),
-              apply: t('common.action.apply'),
-              reset: t('common.action.reset'),
-              close: t('common.action.close'),
-            }}
-          />
-          <UbActiveFilters
-            specs={typeSpecs}
-            values={{ types: filters.types.join(',') }}
-            onChange={book.clearTypes}
-            labels={{
-              remove: (pill) => t('common.filters.remove', { filter: pill }),
-              clearAll: t('common.filters.clearAll'),
-            }}
-          />
-        </>
+              }
+              labels={{
+                title: t('common.filters.title'),
+                apply: t('common.action.apply'),
+                reset: t('common.action.reset'),
+                close: t('common.action.close'),
+              }}
+            />
+            <UbActiveFilters
+              specs={typeSpecs}
+              values={{ types: filters.types.join(',') }}
+              onChange={book.clearTypes}
+              labels={{
+                remove: (pill) => t('common.filters.remove', { filter: pill }),
+                clearAll: t('common.filters.clearAll'),
+              }}
+            />
+          </>
+        )
       }
       filterEnd={
-        <UbSwitch
-          checked={filters.includeVoid}
-          onCheckedChange={book.setIncludeVoid}
-          label={t('reports.daybook.filter.void')}
-        />
+        quiet ? undefined : (
+          <UbSwitch
+            checked={filters.includeVoid}
+            onCheckedChange={book.setIncludeVoid}
+            label={t('reports.daybook.filter.void')}
+          />
+        )
       }
       exportAction={
         book.canExport
@@ -213,10 +228,10 @@ export function DayBookPageContent(): React.JSX.Element {
       onRetry={book.refetch}
       loadingLabel={t('reports.daybook.loading')}
       empty={{
-        title: t('reports.daybook.empty.title'),
+        title: t(today ? 'reports.daybook.empty.todayTitle' : 'reports.daybook.empty.title'),
         description: narrowed
           ? t('reports.daybook.empty.filtered')
-          : t('reports.daybook.empty.body'),
+          : t(today ? 'reports.daybook.empty.todayBody' : 'reports.daybook.empty.body'),
         variant: narrowed ? 'filtered' : 'firstUse',
         action: narrowed ? (
           <UbButton variant="secondary" onClick={book.clearTypes}>
@@ -269,7 +284,7 @@ export function DayBookPageContent(): React.JSX.Element {
           </SummaryStatGrid>
           {!balances && <UbInputHint>{t('reports.daybook.balancesHidden')}</UbInputHint>}
 
-          {tier === 'cards' ? (
+          {phone && !fullTable ? (
             <>
               {data.rows.length === 0 ? (
                 <UbText variant="body-sm" tone="tertiary">
@@ -301,28 +316,43 @@ export function DayBookPageContent(): React.JSX.Element {
                   </UbButton>
                 </UbStack>
               )}
+              {data.rows.length > 0 && (
+                <UbButton variant="secondary" fullWidth onClick={() => setFullTable(true)}>
+                  {t('reports.daybook.fullTable')}
+                </UbButton>
+              )}
             </>
           ) : (
-            <UbDataGrid
-              rows={data.rows}
-              columns={columns}
-              rowId={rowId}
-              rowName={rowName}
-              state={data.rows.length === 0 ? (narrowed ? 'filtered-empty' : 'empty') : 'rows'}
-              labels={labels}
-              emptyStates={emptyStates}
-              caption={t('reports.daybook.caption')}
-              storageId="reports.daybook"
-              tier={tier}
-              page={{
-                page: data.page,
-                pageSize: data.pageSize,
-                total: data.total,
-                totalPages: data.totalPages,
-              }}
-              onPageChange={book.setPage}
-              busy={book.status === 'refreshing'}
-            />
+            <>
+              {phone && (
+                <UbButton variant="secondary" fullWidth onClick={() => setFullTable(false)}>
+                  {t('reports.daybook.backToList')}
+                </UbButton>
+              )}
+              <UbDataGrid
+                rows={data.rows}
+                columns={columns}
+                rowId={rowId}
+                rowName={rowName}
+                state={data.rows.length === 0 ? (narrowed ? 'filtered-empty' : 'empty') : 'rows'}
+                labels={labels}
+                emptyStates={emptyStates}
+                caption={t('reports.daybook.caption')}
+                storageId="reports.daybook"
+                // "Open as full table" on a phone: every column, scrolled
+                // sideways inside the table rather than the page.
+                tier={phone ? 'full' : tier}
+                allowHorizontalScroll={phone}
+                page={{
+                  page: data.page,
+                  pageSize: data.pageSize,
+                  total: data.total,
+                  totalPages: data.totalPages,
+                }}
+                onPageChange={book.setPage}
+                busy={book.status === 'refreshing'}
+              />
+            </>
           )}
 
           <UbCard title={t('reports.daybook.totals.title')} padded>

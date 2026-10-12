@@ -13,6 +13,7 @@ import { ITEM_ORDERINGS } from '../constants/inventoryConstants';
 import {
   itemFiltersChanged,
   selectItemListCounts,
+  selectItemListHasAny,
   selectItemListError,
   selectItemListPage,
   selectItemListPageSize,
@@ -76,6 +77,8 @@ export interface UseItemListResult {
   readonly filters: ItemListFilters;
   readonly totals: ItemListResult['totals'] | null;
   readonly counts: ItemListResult['counts'] | null;
+  /** The server's: whether any item exists at all; `null` until known. */
+  readonly hasAny: boolean | null;
   readonly status: RequestStatus;
   readonly error: ApiErrorShape | null;
   readonly page: number;
@@ -101,6 +104,7 @@ export function useItemList(): UseItemListResult {
   const error = useAppSelector(selectItemListError);
   const totals = useAppSelector(selectItemListTotals);
   const counts = useAppSelector(selectItemListCounts);
+  const hasAny = useAppSelector(selectItemListHasAny);
   const page = useAppSelector(selectItemListPage);
   const pageSize = useAppSelector(selectItemListPageSize);
   const total = useAppSelector(selectItemListTotal);
@@ -159,6 +163,7 @@ export function useItemList(): UseItemListResult {
       filters,
       totals,
       counts,
+      hasAny,
       status,
       error,
       page,
@@ -176,6 +181,7 @@ export function useItemList(): UseItemListResult {
       filters,
       totals,
       counts,
+      hasAny,
       status,
       error,
       page,

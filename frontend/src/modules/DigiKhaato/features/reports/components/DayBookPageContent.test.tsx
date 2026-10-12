@@ -270,5 +270,17 @@ it('says a quiet day is quiet rather than showing an empty table (§9)', async (
   service.getDayBook.mockResolvedValue(DATA(false, []));
   signIn(['reports.basic.read']);
   renderWithProviders(<DayBookPageContent />);
-  expect(await screen.findByText('No transactions')).toBeInTheDocument();
+  expect(await screen.findByText(/^Nothing recorded/)).toBeInTheDocument();
+});
+
+it('an empty period is one sentence: no ₹0.00 totals, Filters or "Show voided" (owner, 12 Oct 2026)', async () => {
+  // The owner (who sees cash balances) used to get a totals card of ₹0.00
+  // rows for a day with nothing in it.
+  service.getDayBook.mockResolvedValue(DATA(true, []));
+  signIn(['reports.basic.read', 'reports.financial.read']);
+  renderWithProviders(<DayBookPageContent />);
+  expect(await screen.findByText(/^Nothing recorded/)).toBeInTheDocument();
+  expect(screen.queryByText('₹0.00')).not.toBeInTheDocument();
+  expect(screen.queryByTestId('filters-button')).not.toBeInTheDocument();
+  expect(screen.queryByText('Show voided')).not.toBeInTheDocument();
 });

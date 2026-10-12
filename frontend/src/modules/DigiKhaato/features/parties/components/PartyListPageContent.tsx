@@ -10,6 +10,7 @@ import { Plus, Tags } from 'lucide-react';
 import {
   UbActionLink,
   UbButton,
+  UbEmptyState,
   UbPageHeader,
   UbPageHeaderMobileActions,
   UbPageShell,
@@ -435,6 +436,8 @@ export function PartyListPageContent({
      lie the error state exists to avoid telling with rows. The stale-cache
      variant keeps them, because there the rows and totals ARE this query's. */
   const showStats = gridState !== 'empty' && gridState !== 'error';
+  /** Nobody of this kind in the book at all, archived included (server's `hasAny`). */
+  const emptyBook = status === 'succeeded' && rows.length === 0 && meta.hasAny === false;
 
   const sort = useMemo(() => sortFromOrdering(filters.ordering), [filters.ordering]);
 
@@ -540,7 +543,7 @@ export function PartyListPageContent({
              A disabled Add button invites a support call; an absent one says
              nothing a merchant has to interpret. */
           primaryAction={
-            partyForm.canWrite ? (
+            partyForm.canWrite && !emptyBook ? (
               <UbButton
                 icon={<Plus className="h-4 w-4" aria-hidden />}
                 iconOnly="mobile"
@@ -558,13 +561,16 @@ export function PartyListPageContent({
               mobile={{
                 menuLabel: t('common.action.moreActions'),
                 closeLabel: t('common.action.close'),
-                primary: partyForm.canWrite
-                  ? {
-                      label: addLabel,
-                      icon: <Plus className="h-6 w-6" aria-hidden />,
-                      onClick: openBlankCreate,
-                    }
-                  : undefined,
+                // An empty book's one button is in the middle of the screen; a
+                // floating + over it would be the same action twice.
+                primary:
+                  partyForm.canWrite && !emptyBook
+                    ? {
+                        label: addLabel,
+                        icon: <Plus className="h-6 w-6" aria-hidden />,
+                        onClick: openBlankCreate,
+                      }
+                    : undefined,
               }}
             />
           )}
@@ -606,32 +612,34 @@ export function PartyListPageContent({
 
         {/* What is on, once, as pills above the card (owner, 6 Oct 2026);
             the controls themselves are in the grid's toolbar below. */}
-        <PartyListFilters
-          t={t}
-          type={filters.type}
-          typeFixed={Boolean(kind)}
-          balance={filters.balance}
-          collection={filters.collection}
-          onTypeChange={handleType}
-          onBalanceChange={handleBalance}
-          onCollectionChange={handleCollection}
-          credit={filters.credit}
-          onCreditChange={handleCredit}
-          /* The count is the UNFILTERED one when nothing is applied, which is
+        {!emptyBook && (
+          <PartyListFilters
+            t={t}
+            type={filters.type}
+            typeFixed={Boolean(kind)}
+            balance={filters.balance}
+            collection={filters.collection}
+            onTypeChange={handleType}
+            onBalanceChange={handleBalance}
+            onCollectionChange={handleCollection}
+            credit={filters.credit}
+            onCreditChange={handleCredit}
+            /* The count is the UNFILTERED one when nothing is applied, which is
              the number the chip is for. Once a filter narrows the list it
              narrows with it, so the chip answers the question the merchant just
              asked rather than one about a set they are not looking at. */
-          overLimitCount={overLimit}
-          tag={filters.tag}
-          onTagChange={handleTag}
-          tags={tagOptions}
-          role={filters.role ?? ''}
-          onRoleChange={handleRole}
-          roles={roles}
-          activeFilterCount={activeFilterCount}
-          onClear={clearFilters}
-          part="pills"
-        />
+            overLimitCount={overLimit}
+            tag={filters.tag}
+            onTagChange={handleTag}
+            tags={tagOptions}
+            role={filters.role ?? ''}
+            onRoleChange={handleRole}
+            roles={roles}
+            activeFilterCount={activeFilterCount}
+            onClear={clearFilters}
+            part="pills"
+          />
+        )}
 
         {/* FR-15 / §9 Error, stale-cache variant: the refresh failed, the rows
             below are the last good answer to this same query, and the banner
@@ -656,124 +664,168 @@ export function PartyListPageContent({
             setting — putting it on the server means an endpoint and a
             migration for something the merchant expects to undo by closing
             the tab. */}
-        <UbDataGrid
-          rows={rows}
-          columns={columns}
-          rowId={rowId}
-          rowName={rowName}
-          state={gridState}
-          /* §9 Loading: a later load keeps the rows it has, dimmed under a
+        {emptyBook ? (
+          /* Approved design (12 Oct 2026; owner: "I don't want that type of
+             screen in case of empty"): the empty book is one sentence and one
+             button on the page itself — not a dashed box inside a card under a
+             search box and filters. */
+          <UbEmptyState
+            variant="firstUse"
+            title={emptyStates.firstUse.title}
+            description={emptyStates.firstUse.description}
+            action={emptyStates.firstUse.action}
+          />
+        ) : (
+          <UbDataGrid
+            rows={rows}
+            columns={columns}
+            rowId={rowId}
+            rowName={rowName}
+            state={gridState}
+            /* §9 Loading: a later load keeps the rows it has, dimmed under a
              progress bar; the slice turns a page change into `loading` (the
              skeleton) instead, because page 2 is not page 1 dimmed. */
-          busy={isRefreshing}
-          /* §9 Initial: eight skeleton rows, never a full-page spinner. */
-          skeletonRows={8}
-          labels={labels}
-          emptyStates={emptyStates}
-          caption={t('parties.list.caption')}
-          storageId="parties.list"
-          page={meta}
-          onPageChange={setPage}
-          onPageSizeChange={handlePageSize}
-          pageSizeOptions={PAGE_SIZE_OPTIONS}
-          sort={sort}
-          onSortChange={handleSort}
-          onRowOpen={openParty}
-          selectable
-          selectedIds={selectedIds}
-          onSelectionChange={setSelectedIds}
-          /* The count is NOT repeated here. The selection bar paints
+            busy={isRefreshing}
+            /* §9 Initial: eight skeleton rows, never a full-page spinner. */
+            skeletonRows={8}
+            labels={labels}
+            emptyStates={emptyStates}
+            caption={t('parties.list.caption')}
+            storageId="parties.list"
+            page={meta}
+            onPageChange={setPage}
+            onPageSizeChange={handlePageSize}
+            pageSizeOptions={PAGE_SIZE_OPTIONS}
+            sort={sort}
+            onSortChange={handleSort}
+            onRowOpen={openParty}
+            selectable
+            selectedIds={selectedIds}
+            onSelectionChange={setSelectedIds}
+            /* The count is NOT repeated here. The selection bar paints
              "{n} selected" on its left now (BrandHub's arrangement), and this
              slot used to carry the same sentence again three inches to the
              right — so a merchant who ticked one row was told twice. What
              belongs here is what they can DO about the selection. */
-          bulkActions={
-            <>
-              {/* Archived rows are already archived; offering it on that tab
+            bulkActions={
+              <>
+                {/* Archived rows are already archived; offering it on that tab
                   would be a button whose every row comes back skipped. */}
-              {/* Tagging comes FIRST, and the order is the point: it is the
+                {/* Tagging comes FIRST, and the order is the point: it is the
                   everyday move on a selection and archiving is the yearly one,
                   so the destructive button must not be the one a thumb lands on
                   by default. */}
-              {bulkTag.canTag && (
-                <UbButton variant="secondary" size="sm" onClick={bulkTag.start}>
-                  {t('parties.tags.bulk.action')}
+                {bulkTag.canTag && (
+                  <UbButton variant="secondary" size="sm" onClick={bulkTag.start}>
+                    {t('parties.tags.bulk.action')}
+                  </UbButton>
+                )}
+                {bulk.canArchive && filters.status === 'active' && (
+                  <UbButton variant="destructive" size="sm" onClick={bulk.start}>
+                    {t('parties.archive.action')}
+                  </UbButton>
+                )}
+                <UbButton variant="secondary" size="sm" onClick={clearSelection}>
+                  {t('parties.list.bulk.clearSelection')}
                 </UbButton>
-              )}
-              {bulk.canArchive && filters.status === 'active' && (
-                <UbButton variant="destructive" size="sm" onClick={bulk.start}>
-                  {t('parties.archive.action')}
-                </UbButton>
-              )}
-              <UbButton variant="secondary" size="sm" onClick={clearSelection}>
-                {t('parties.list.bulk.clearSelection')}
-              </UbButton>
-            </>
-          }
-          search={
-            <UbTextInput
-              value={searchInput}
-              onChange={setSearchInput}
-              type="text"
-              aria-label={t('parties.list.search.label')}
-              placeholder={t('parties.list.search.placeholder')}
-            />
-          }
-          filters={
-            <>
-              <UbFilterSelect
-                spec={{
-                  kind: 'single',
-                  key: 'status',
-                  label: t('parties.list.filter.status.label'),
-                  options: STATUS_OPTIONS.map((value) => ({
-                    value,
-                    label: t(`parties.list.status.${value}`),
-                  })),
-                }}
-                value={filters.status}
-                onChange={(value) => handleStatus(value)}
-                closeLabel={t('common.action.close')}
-              />
-              <PartyListFilters
-                t={t}
-                type={filters.type}
-                typeFixed={Boolean(kind)}
-                balance={filters.balance}
-                collection={filters.collection}
-                onTypeChange={handleType}
-                onBalanceChange={handleBalance}
-                onCollectionChange={handleCollection}
-                credit={filters.credit}
-                onCreditChange={handleCredit}
-                /* The count is the UNFILTERED one when nothing is applied, which is
+              </>
+            }
+            /* Approved design (12 Oct 2026): an empty book has nothing to search
+             or filter, so the card is the empty state alone. `hasAny` is the
+             server's — a filter that found nothing keeps every control. */
+            search={
+              emptyBook ? undefined : (
+                <UbTextInput
+                  value={searchInput}
+                  onChange={setSearchInput}
+                  type="text"
+                  aria-label={t('parties.list.search.label')}
+                  placeholder={t('parties.list.search.placeholder')}
+                />
+              )
+            }
+            filters={
+              emptyBook ? undefined : tier === 'cards' ? (
+                /* On a phone: the search, ONE Filters button (Show and Balance are
+                 inside it), and the one-tap Sort sheet UAT D5 asked for — a sort
+                 is not a filter, and burying it behind Apply would undo D5. */
+                <>
+                  <PartyListFilters
+                    t={t}
+                    compact
+                    status={filters.status}
+                    onStatusChange={handleStatus}
+                    type={filters.type}
+                    typeFixed={Boolean(kind)}
+                    balance={filters.balance}
+                    collection={filters.collection}
+                    onTypeChange={handleType}
+                    onBalanceChange={handleBalance}
+                    onCollectionChange={handleCollection}
+                    credit={filters.credit}
+                    onCreditChange={handleCredit}
+                    overLimitCount={overLimit}
+                    tag={filters.tag}
+                    onTagChange={handleTag}
+                    tags={tagOptions}
+                    role={filters.role ?? ''}
+                    onRoleChange={handleRole}
+                    roles={roles}
+                    activeFilterCount={activeFilterCount}
+                    onClear={clearFilters}
+                  />
+                  <PartyListSortSheet
+                    t={t}
+                    ordering={filters.ordering}
+                    onOrderingChange={setOrdering}
+                  />
+                </>
+              ) : (
+                <>
+                  <UbFilterSelect
+                    spec={{
+                      kind: 'single',
+                      key: 'status',
+                      label: t('parties.list.filter.status.label'),
+                      options: STATUS_OPTIONS.map((value) => ({
+                        value,
+                        label: t(`parties.list.status.${value}`),
+                      })),
+                    }}
+                    value={filters.status}
+                    onChange={(value) => handleStatus(value)}
+                    closeLabel={t('common.action.close')}
+                  />
+                  <PartyListFilters
+                    t={t}
+                    type={filters.type}
+                    typeFixed={Boolean(kind)}
+                    balance={filters.balance}
+                    collection={filters.collection}
+                    onTypeChange={handleType}
+                    onBalanceChange={handleBalance}
+                    onCollectionChange={handleCollection}
+                    credit={filters.credit}
+                    onCreditChange={handleCredit}
+                    /* The count is the UNFILTERED one when nothing is applied, which is
                    the number the chip is for. Once a filter narrows the list it
                    narrows with it, so the chip answers the question the merchant just
                    asked rather than one about a set they are not looking at. */
-                overLimitCount={overLimit}
-                tag={filters.tag}
-                onTagChange={handleTag}
-                tags={tagOptions}
-                role={filters.role ?? ''}
-                onRoleChange={handleRole}
-                roles={roles}
-                activeFilterCount={activeFilterCount}
-                onClear={clearFilters}
-              />
-              {/* UAT D5 — the cards have no column headers to sort by, so the
-                  phone gets the same orderings from a sheet. Not drawn from
-                  `md` up, where the headers ARE the sort control and a second
-                  one would be the same action twice. */}
-              {tier === 'cards' && (
-                <PartyListSortSheet
-                  t={t}
-                  ordering={filters.ordering}
-                  onOrderingChange={setOrdering}
-                />
-              )}
-            </>
-          }
-        />
+                    overLimitCount={overLimit}
+                    tag={filters.tag}
+                    onTagChange={handleTag}
+                    tags={tagOptions}
+                    role={filters.role ?? ''}
+                    onRoleChange={handleRole}
+                    roles={roles}
+                    activeFilterCount={activeFilterCount}
+                    onClear={clearFilters}
+                  />
+                </>
+              )
+            }
+          />
+        )}
         {/* Loaded when the merchant asks for it, not when the list loads.
             Measured: the form carries React Hook Form's resolver, the Yup
             schema, a Radix switch and the three new inputs, and putting it in

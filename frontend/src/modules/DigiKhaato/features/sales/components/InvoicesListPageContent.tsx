@@ -12,6 +12,7 @@ import {
   UbDateRangePicker,
   UbFilterSelect,
   UbEmptyState,
+  UbFilterSheet,
   UbPageHeader,
   UbPageHeaderMobileActions,
   UbPageShell,
@@ -19,6 +20,7 @@ import {
   UbStack,
   UbTabs,
 } from 'src/design-system';
+import type { UbFilterSpec, UbFilterValues } from 'src/design-system';
 import {
   UbDataGrid,
   useGridTier,
@@ -30,6 +32,7 @@ import { useTranslation } from 'src/hooks/useTranslation';
 import { ROUTES } from 'src/routes';
 
 import {
+  DEFAULT_INVOICE_PRESET,
   INVOICE_PRESETS,
   INVOICE_SEARCH_DEBOUNCE_MS,
   INVOICE_TABS_ORDER,
@@ -183,13 +186,116 @@ export function InvoicesListPageContent(): React.JSX.Element {
   }
 
   const totals = list.totals;
+  /* Approved design (12 Oct 2026): a shop with no bill at all sees the empty
+     card alone — no period, ₹0 totals, tabs or search over nothing. `hasAny`
+     is the server's, so a filter (or This FY) that found nothing keeps them. */
+  const emptyBook = list.status === 'succeeded' && list.rows.length === 0 && list.hasAny === false;
+  const phone = tier === 'cards';
+  const originSpec: UbFilterSpec | null =
+    list.originModules.length > 0
+      ? {
+          kind: 'single',
+          key: 'origin',
+          label: t('sales.origin.filterLabel'),
+          anyLabel: t('sales.origin.filterAll'),
+          options: list.originModules.map((module) => {
+            const id = ORIGIN_MODULE_IDS[module];
+            return { value: module, label: id ? t(id) : module };
+          }),
+        }
+      : null;
+  /* On a phone: the search and ONE Filters button. The tabs (Unpaid, Overdue,
+     Paid…), the period and the origin are inside it; each default reads as
+     "no filter", so the badge counts only what the merchant changed. */
+  const phoneSpecs: UbFilterSpec[] = [
+    {
+      kind: 'single',
+      key: 'tab',
+      label: t('sales.tab.label'),
+      anyLabel: t('sales.tab.all'),
+      options: INVOICE_TABS_ORDER.filter((tab) => tab !== 'all').map((value) => ({
+        value,
+        label: t(`sales.tab.${value}`),
+        hint: list.tabs?.[value] ? String(list.tabs[value]) : undefined,
+      })),
+    },
+    {
+      kind: 'single',
+      key: 'preset',
+      label: t('sales.period.label'),
+      anyLabel: t(`sales.period.${DEFAULT_INVOICE_PRESET}`),
+      options: INVOICE_PRESETS.filter((p) => p !== DEFAULT_INVOICE_PRESET && p !== 'custom').map(
+        (value) => ({ value, label: t(`sales.period.${value}`) })
+      ),
+    },
+    {
+      kind: 'dateRange',
+      key: 'range',
+      label: t('sales.period.between'),
+      fromKey: 'dateFrom',
+      toKey: 'dateTo',
+      fromLabel: t('sales.period.from'),
+      toLabel: t('sales.period.to'),
+      max: list.today,
+    },
+    ...(originSpec ? [originSpec] : []),
+  ];
+  const custom = filters.preset === 'custom';
+  const phoneValues: UbFilterValues = {
+    tab: filters.tab === 'all' ? '' : filters.tab,
+    preset: filters.preset === DEFAULT_INVOICE_PRESET || custom ? '' : filters.preset,
+    dateFrom: custom ? filters.dateFrom : '',
+    dateTo: custom ? filters.dateTo : '',
+    origin: filters.originModule ?? '',
+  };
+  const applyPhone = (next: UbFilterValues) => {
+    const ranged = Boolean(next.dateFrom || next.dateTo);
+    list.applyFilters({
+      tab: (next.tab || 'all') as InvoiceTab,
+      preset: ranged ? 'custom' : ((next.preset || DEFAULT_INVOICE_PRESET) as InvoicePreset),
+      dateFrom: next.dateFrom || filters.dateFrom,
+      dateTo: next.dateTo || filters.dateTo,
+      originModule: next.origin || null,
+    });
+  };
+  const searchBox = (
+    <UbSearchInput
+      value={search}
+      onChange={setSearch}
+      placeholder={t('sales.search.placeholder')}
+      aria-label={t('sales.search.label')}
+      className={phone ? 'min-w-0 flex-1' : 'w-56'}
+    />
+  );
+  const grid = (
+    <UbDataGrid
+      rows={list.rows}
+      columns={columns}
+      rowId={rowId}
+      rowName={rowName}
+      state={gridState}
+      labels={labels}
+      emptyStates={emptyStates}
+      caption={t('sales.list.caption')}
+      storageId="sales.columns"
+      page={{
+        page: list.page,
+        pageSize: list.pageSize,
+        total: list.total,
+        totalPages: Math.max(Math.ceil(list.total / Math.max(list.pageSize, 1)), 1),
+      }}
+      onPageChange={list.setPage}
+      onRowOpen={openRow}
+      cardAvatar={false}
+    />
+  );
   return (
     <UbPageShell>
       <UbPageHeader
         title={t('sales.list.title')}
         actions={<SalesSectionLinks current="invoice" />}
         primaryAction={
-          canWrite ? (
+          canWrite && !emptyBook ? (
             <UbActionLink
               href={NEW_BILL}
               variant="primary"
@@ -209,93 +315,92 @@ export function InvoicesListPageContent(): React.JSX.Element {
             mobile={{
               menuLabel: t('common.action.moreActions'),
               closeLabel: t('common.action.close'),
-              primary: canWrite
-                ? {
-                    label: t('sales.newBill'),
-                    icon: <Plus className="h-6 w-6" aria-hidden />,
-                    href: NEW_BILL,
-                  }
-                : undefined,
+              // The empty book's one button is in the middle of the screen.
+              primary:
+                canWrite && !emptyBook
+                  ? {
+                      label: t('sales.newBill'),
+                      icon: <Plus className="h-6 w-6" aria-hidden />,
+                      href: NEW_BILL,
+                    }
+                  : undefined,
             }}
           />
         )}
       />
       <UbStack gap={4} data-testid="invoices-screen">
-        <UbDateRangePicker<InvoicePreset>
-          presets={presets}
-          preset={filters.preset}
-          onPresetChange={list.setPreset}
-          customPreset="custom"
-          from={filters.dateFrom}
-          to={filters.dateTo}
-          onRangeChange={list.setRange}
-          max={list.today}
-          name="invoice-period"
-          end={
-            list.originModules.length > 0 ? (
-              <UbFilterSelect
-                spec={{
-                  kind: 'single',
-                  key: 'origin',
-                  label: t('sales.origin.filterLabel'),
-                  anyLabel: t('sales.origin.filterAll'),
-                  options: list.originModules.map((module) => {
-                    const id = ORIGIN_MODULE_IDS[module];
-                    return { value: module, label: id ? t(id) : module };
-                  }),
-                }}
-                value={filters.originModule ?? ''}
-                onChange={(next) => list.setOriginModule(next || null)}
-                closeLabel={t('common.action.close')}
-              />
-            ) : undefined
-          }
-          labels={{
-            presets: t('sales.period.label'),
-            from: t('sales.period.from'),
-            to: t('sales.period.to'),
-            apply: t('common.action.apply'),
-            close: t('common.action.close'),
-          }}
-        />
-        {totals && <InvoiceListStats totals={totals} />}
-        <UbTabs<InvoiceTab>
-          value={filters.tab}
-          onValueChange={list.setTab}
-          tabs={tabs}
-          ariaLabel={t('sales.tab.label')}
-          layout="fit"
-          trailing={
-            <UbSearchInput
-              value={search}
-              onChange={setSearch}
-              placeholder={t('sales.search.placeholder')}
-              aria-label={t('sales.search.label')}
-              className="w-56"
-            />
-          }
-        >
-          <UbDataGrid
-            rows={list.rows}
-            columns={columns}
-            rowId={rowId}
-            rowName={rowName}
-            state={gridState}
-            labels={labels}
-            emptyStates={emptyStates}
-            caption={t('sales.list.caption')}
-            storageId="sales.columns"
-            page={{
-              page: list.page,
-              pageSize: list.pageSize,
-              total: list.total,
-              totalPages: Math.max(Math.ceil(list.total / Math.max(list.pageSize, 1)), 1),
-            }}
-            onPageChange={list.setPage}
-            onRowOpen={openRow}
-            cardAvatar={false}
+        {emptyBook ? (
+          /* Owner, 12 Oct 2026: "I don't want that type of screen in case of
+             empty" — one sentence and one button on the page, not a dashed box
+             in a card under a period, ₹0 totals, six tabs and a search. */
+          <UbEmptyState
+            variant="firstUse"
+            title={emptyStates.firstUse.title}
+            description={emptyStates.firstUse.description}
+            action={emptyStates.firstUse.action}
           />
-        </UbTabs>
+        ) : phone ? (
+          <>
+            <UbStack direction="row" gap={2} align="center">
+              {searchBox}
+              <UbFilterSheet
+                specs={phoneSpecs}
+                values={phoneValues}
+                onApply={applyPhone}
+                labels={{
+                  title: t('common.filters.title'),
+                  apply: t('common.action.apply'),
+                  reset: t('common.action.reset'),
+                  close: t('common.action.close'),
+                }}
+              />
+            </UbStack>
+            {totals && <InvoiceListStats totals={totals} />}
+            {grid}
+          </>
+        ) : (
+          <>
+            <UbDateRangePicker<InvoicePreset>
+              presets={presets}
+              preset={filters.preset}
+              onPresetChange={list.setPreset}
+              customPreset="custom"
+              from={filters.dateFrom}
+              to={filters.dateTo}
+              onRangeChange={list.setRange}
+              max={list.today}
+              name="invoice-period"
+              end={
+                originSpec ? (
+                  <UbFilterSelect
+                    spec={originSpec}
+                    value={filters.originModule ?? ''}
+                    onChange={(next) => list.setOriginModule(next || null)}
+                    closeLabel={t('common.action.close')}
+                  />
+                ) : undefined
+              }
+              labels={{
+                presets: t('sales.period.label'),
+                from: t('sales.period.from'),
+                to: t('sales.period.to'),
+                apply: t('common.action.apply'),
+                close: t('common.action.close'),
+              }}
+            />
+            {totals && <InvoiceListStats totals={totals} />}
+            <UbTabs<InvoiceTab>
+              value={filters.tab}
+              onValueChange={list.setTab}
+              tabs={tabs}
+              ariaLabel={t('sales.tab.label')}
+              layout="fit"
+              trailing={searchBox}
+            >
+              {grid}
+            </UbTabs>
+          </>
+        )}
       </UbStack>
     </UbPageShell>
   );

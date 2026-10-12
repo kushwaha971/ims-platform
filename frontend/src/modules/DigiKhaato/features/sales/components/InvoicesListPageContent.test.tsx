@@ -1,6 +1,6 @@
 import type * as ReactModule from 'react';
 
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { resetAllFeatureState } from 'src/redux/actions';
@@ -130,13 +130,39 @@ it('lists this financial year and shows the server totals', async () => {
   expect(lastAsked()).toMatchObject({ tab: 'all', dateFrom: expect.stringMatching(/-04-01$/) });
 });
 
-it('asks the server for paid bills when the Paid tab is chosen', async () => {
+it('asks the server for paid bills when Paid is chosen in the Filters sheet', async () => {
+  // On a phone the status tabs live in the one Filters sheet (approved design,
+  // 12 Oct 2026); jsdom renders the phone layout.
   signIn(['sales.invoice.read']);
+  const user = userEvent.setup();
   renderWithProviders(<InvoicesListPageContent />);
   await screen.findAllByText(/Ramesh Traders/);
-  await userEvent.click(screen.getByRole('tab', { name: /Paid/ }));
+  expect(screen.queryByRole('tab', { name: /Paid/ })).not.toBeInTheDocument();
+  await user.click(screen.getByTestId('filters-button'));
+  const group = await screen.findByRole('radiogroup', { name: 'Bill status' });
+  await user.click(within(group).getByRole('radio', { name: /Paid/ }));
+  await user.click(screen.getByTestId('filters-apply'));
   await waitFor(() => expect(lastAsked().tab).toBe('paid'));
   expect(mockSearch).toBe('tab=paid');
+});
+
+it('a shop with no bill at all sees one sentence and one button (owner, 12 Oct 2026)', async () => {
+  service.listInvoices.mockImplementation(async () => ({ ...page([]), hasAny: false }));
+  signIn(['sales.invoice.read', 'sales.invoice.write']);
+  renderWithProviders(<InvoicesListPageContent />);
+  expect(await screen.findByText('No bills yet')).toBeInTheDocument();
+  expect(screen.queryByText('Billed')).not.toBeInTheDocument();
+  expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
+  expect(screen.queryByTestId('filters-button')).not.toBeInTheDocument();
+  expect(screen.getAllByRole('button', { name: /New bill/ })).toHaveLength(1);
+  expect(screen.queryByRole('link', { name: /New bill/ })).not.toBeInTheDocument();
+});
+
+it('keeps the filters when This FY is empty but older bills exist', async () => {
+  service.listInvoices.mockImplementation(async () => ({ ...page([]), hasAny: true }));
+  signIn(['sales.invoice.read']);
+  renderWithProviders(<InvoicesListPageContent />);
+  expect(await screen.findByTestId('filters-button')).toBeInTheDocument();
 });
 
 it('offers New bill only to a role that can write', async () => {

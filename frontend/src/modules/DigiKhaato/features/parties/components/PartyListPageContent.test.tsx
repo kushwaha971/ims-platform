@@ -146,10 +146,6 @@ beforeEach(() => {
    one dropdown; credit, role, type, collection and tags live in the Filters
    sheet, applied once, and come back as pills. These drive the real controls. */
 type User = ReturnType<typeof userEvent.setup>;
-const pickBalance = async (user: User, label: string): Promise<void> => {
-  await user.click(screen.getByRole('button', { name: /^Balance:/ }));
-  await user.click(await screen.findByRole('option', { name: label }));
-};
 const inFilters = async (user: User, choose: () => Promise<void>): Promise<void> => {
   await user.click(screen.getByTestId('filters-button'));
   await choose();
@@ -159,6 +155,29 @@ const chooseRadio = (user: User, group: string, label: string) => async () => {
   const set = await screen.findByRole('radiogroup', { name: group });
   await user.click(within(set).getByRole('radio', { name: label }));
 };
+/**
+ * Balance and Show are toolbar dropdowns on a computer and live inside the one
+ * Filters sheet on a phone (approved design, 12 Oct 2026). The tests about
+ * WHAT a filter does pick it wherever this rendering puts it.
+ */
+const pickFilter = async (
+  user: User,
+  dropdown: RegExp,
+  group: string,
+  label: string
+): Promise<void> => {
+  const button = screen.queryByRole('button', { name: dropdown });
+  if (button) {
+    await user.click(button);
+    await user.click(await screen.findByRole('option', { name: label }));
+  } else {
+    await inFilters(user, chooseRadio(user, group, label));
+  }
+};
+const pickBalance = (user: User, label: string): Promise<void> =>
+  pickFilter(user, /^Balance:/, 'Balance', label);
+const pickShow = (user: User, label: string): Promise<void> =>
+  pickFilter(user, /^Show:/, 'Show', label);
 const balanceShows = (label: string) => screen.getByRole('button', { name: `Balance: ${label}` });
 
 describe('PartyListPageContent', () => {
@@ -476,12 +495,12 @@ describe('the approved responsive rules, on the real screen', () => {
     renderWithProviders(<PartyListPageContent />);
     await screen.findByText('Ramesh Traders');
 
-    await pickBalance(user, 'I will get');
+    await pickBalance(user, 'You will get');
     await waitFor(() => expect(lastParams()?.balance).toBe('owes_me'));
 
-    await pickBalance(user, 'I will give');
+    await pickBalance(user, 'You will give');
     await waitFor(() => expect(lastParams()?.balance).toBe('i_owe'));
-    expect(balanceShows('I will give')).toBeInTheDocument();
+    expect(balanceShows('You will give')).toBeInTheDocument();
   });
 
   it('filters the list from the receivable tile, and the Balance dropdown says so', async () => {
@@ -499,13 +518,13 @@ describe('the approved responsive rules, on the real screen', () => {
     await screen.findByText('Ramesh Traders');
 
     await user.click(
-      screen.getByRole('button', { name: 'Show only people I will get money from' })
+      screen.getByRole('button', { name: 'Show only people you will get money from' })
     );
 
     await waitFor(() => expect(lastParams()?.balance).toBe('owes_me'));
-    expect(balanceShows('I will get')).toBeInTheDocument();
+    expect(balanceShows('You will get')).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Show only people I will get money from', pressed: true })
+      screen.getByRole('button', { name: 'Show only people you will get money from', pressed: true })
     ).toBeInTheDocument();
   });
 
@@ -517,12 +536,12 @@ describe('the approved responsive rules, on the real screen', () => {
     await screen.findByText('Ramesh Traders');
 
     await user.click(
-      screen.getByRole('button', { name: 'Show only people I have to give money to' })
+      screen.getByRole('button', { name: 'Show only people you have to give money to' })
     );
     await waitFor(() => expect(lastParams()?.balance).toBe('i_owe'));
 
     await user.click(
-      screen.getByRole('button', { name: 'Show only people I have to give money to' })
+      screen.getByRole('button', { name: 'Show only people you have to give money to' })
     );
     await waitFor(() => expect(lastParams()?.balance).toBe(''));
   });
@@ -530,7 +549,7 @@ describe('the approved responsive rules, on the real screen', () => {
   it('announces the totals when a filter changes them', async () => {
     /**
      * PTY-02's NFR. A filter changes the rows visibly and the totals silently;
-     * without the live region a merchant using a screen reader taps "I will get"
+     * without the live region a merchant using a screen reader taps "You will get"
      * and is told nothing about the number they tapped it to find out.
      */
     partyService.listParties.mockResolvedValue(loaded([RAMESH]));
@@ -616,12 +635,11 @@ describe('the approved responsive rules, on the real screen', () => {
 
     /* `UbSelect` is a Radix listbox since `ml-uikit` was vendored, not a native
        `<select>` — `selectOptions` finds nothing. */
-    await user.click(screen.getByRole('button', { name: /^Show:/ }));
-    await user.click(await screen.findByRole('option', { name: 'Archived' }));
+    await pickShow(user, 'Archived');
     await waitFor(() => expect(lastParams()?.status).toBe('archived'));
     expect(await screen.findByRole('button', { name: 'Clear filters (1)' })).toBeInTheDocument();
 
-    await pickBalance(user, 'I will get');
+    await pickBalance(user, 'You will get');
     await waitFor(() => expect(lastParams()?.balance).toBe('owes_me'));
 
     await user.click(screen.getByRole('button', { name: 'Clear filters (2)' }));
@@ -762,8 +780,7 @@ describe('the yearly clean-up', () => {
     renderWithProviders(<PartyListPageContent />);
     await screen.findByText('Ramesh Traders');
 
-    await user.click(screen.getByRole('button', { name: /^Show:/ }));
-    await user.click(await screen.findByRole('option', { name: 'Archived' }));
+    await pickShow(user, 'Archived');
     await user.click(await screen.findByRole('checkbox', { name: 'Select Ramesh Traders' }));
 
     const bar = await screen.findByTestId('ub-grid-toolbar');
@@ -1398,7 +1415,7 @@ describe('PTY-02 §9 — the ten states of the party list', () => {
      * Prevents: a filter change that looked like nothing happened. The slice
      * already kept the old rows during a refresh (`refreshing`), but nothing on
      * screen said a request was in flight — on a 3G phone a merchant tapped
-     * "I will get", saw the same list for two seconds, and tapped it again, which
+     * "You will get", saw the same list for two seconds, and tapped it again, which
      * CLEARED the filter they had just applied.
      */
     partyService.listParties.mockResolvedValue(loaded([RAMESH]));
@@ -1409,7 +1426,7 @@ describe('PTY-02 §9 — the ten states of the party list', () => {
 
     const inFlight = deferred<ReturnType<typeof loaded>>();
     partyService.listParties.mockReturnValue(inFlight.promise);
-    await pickBalance(user, 'I will get');
+    await pickBalance(user, 'You will get');
 
     expect(await screen.findByTestId('ub-grid-busy')).toBeInTheDocument();
     const row = screen.getByText('Ramesh Traders');
@@ -1512,8 +1529,7 @@ describe('PTY-02 §9 — the ten states of the party list', () => {
     await screen.findByText('Ramesh Traders');
 
     partyService.listParties.mockResolvedValue(EMPTY);
-    await user.click(screen.getByRole('button', { name: /^Show:/ }));
-    await user.click(await screen.findByRole('option', { name: 'Archived' }));
+    await pickShow(user, 'Archived');
 
     expect(await screen.findByText('No archived customers')).toBeInTheDocument();
     expect(
@@ -1837,8 +1853,7 @@ describe('the list comes back on its default view (UAT D7)', () => {
     const user = userEvent.setup();
     const first = renderWithProviders(<PartyListPageContent />);
     await screen.findByText('Ramesh Traders');
-    await user.click(screen.getByRole('button', { name: /^Show:/ }));
-    await user.click(await screen.findByRole('option', { name: 'Archived' }));
+    await pickShow(user, 'Archived');
     await waitFor(() => expect(lastParams()?.status).toBe('archived'));
     first.unmount();
 
@@ -1860,8 +1875,7 @@ describe('the list comes back on its default view (UAT D7)', () => {
     const user = userEvent.setup();
     const first = renderWithProviders(<PartyListPageContent />);
     await screen.findByText('Ramesh Traders');
-    await user.click(screen.getByRole('button', { name: /^Show:/ }));
-    await user.click(await screen.findByRole('option', { name: 'Archived' }));
+    await pickShow(user, 'Archived');
     await waitFor(() => expect(lastParams()?.status).toBe('archived'));
     first.unmount();
 
@@ -2001,12 +2015,52 @@ describe('one book: Suppliers', () => {
     await screen.findAllByText('Ramesh Traders');
 
     partyService.listParties.mockResolvedValue(EMPTY);
-    await pickBalance(user, 'I will get');
+    await pickBalance(user, 'You will get');
     await waitFor(() => expect(lastParams().balance).toBe('owes_me'));
     expect(await screen.findByText('No suppliers match these filters')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Clear filters' }));
     await waitFor(() => expect(lastParams().balance ?? '').toBe(''));
     expect(lastParams().type).toBe('supplier');
+  });
+
+  // ── The approved list designs (owner, 12 Oct 2026) ─────────────────────────
+  it('an empty book is one sentence and one button: no search, filters or floating Add', async () => {
+    // Owner: "I don't want that type of screen in case of empty" — a search
+    // box, Show/Balance/Filters and a dashed card over nobody.
+    setTier('cards');
+    partyService.listParties.mockResolvedValue({
+      ...EMPTY,
+      meta: { ...EMPTY.meta, hasAny: false },
+    });
+    renderWithProviders(<PartyListPageContent kind="customer" />);
+    expect(await screen.findByText('No customers yet')).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: /Search/ })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('filters-button')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Show:/ })).not.toBeInTheDocument();
+    // The one Add is the empty state's; no header button or floating + beside it.
+    expect(screen.getAllByRole('button', { name: /^Add/ })).toHaveLength(1);
+  });
+
+  it('a filter that found nothing keeps the controls (the server says customers exist)', async () => {
+    setTier('cards');
+    partyService.listParties.mockResolvedValue({
+      ...EMPTY,
+      meta: { ...EMPTY.meta, hasAny: true },
+    });
+    renderWithProviders(<PartyListPageContent kind="customer" />);
+    expect(await screen.findByTestId('filters-button')).toBeInTheDocument();
+  });
+
+  it('on a phone, Show and Balance are inside the one Filters button', async () => {
+    setTier('cards');
+    partyService.listParties.mockResolvedValue(loaded([RAMESH]));
+    const user = userEvent.setup();
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findByText('Ramesh Traders');
+    expect(screen.queryByRole('button', { name: /^Show:/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Balance:/ })).not.toBeInTheDocument();
+    await pickShow(user, 'Archived');
+    await waitFor(() => expect(lastParams()?.status).toBe('archived'));
   });
 });

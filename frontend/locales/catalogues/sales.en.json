@@ -292,6 +292,7 @@
   "sales.payment.split": "Split payment",
   "sales.payment.title": "Payment",
   "sales.payment.walkInHint": "Walk-in sales must be paid in full",
+  "sales.period.between": "Between dates",
   "sales.period.custom": "Custom",
   "sales.period.from": "From",
   "sales.period.label": "Period",

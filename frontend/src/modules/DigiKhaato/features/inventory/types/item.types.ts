@@ -179,6 +179,11 @@ export interface ItemListResult {
     readonly low: number;
     readonly out: number;
   };
+  /**
+   * The server's `meta.has_any`: any item at all, archived included, whatever
+   * the filters. `false` is an empty catalogue (approved designs, 12 Oct 2026).
+   */
+  readonly hasAny?: boolean;
 }
 
 export interface MovementPage {

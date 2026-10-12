@@ -22,6 +22,8 @@ import {
   type PartyCreditFilter,
   type PartyTypeFilter,
 } from '../constants/partyFilters';
+import { DEFAULT_ORDERING } from '../constants/partyListDefaults';
+import { PHONE_SORT_CHOICES } from '../view-model/partyListSort';
 import { roleChipLabel } from '../view-model/partyRoleDisplay';
 
 /**
@@ -97,6 +99,19 @@ export interface PartyListFiltersProps {
    * above the card. One component, two places, the same specs.
    */
   readonly part?: 'controls' | 'pills';
+  /**
+   * The approved design (12 Oct 2026): on a phone the list's toolbar is the
+   * search and ONE Filters button. With `compact`, Show (active/archived) and
+   * Balance move into the sheet instead of sitting beside it as two more
+   * buttons. Each default reads as "no filter", so the badge counts only what
+   * the merchant changed. (Sort can ride in too through `onOrderingChange`;
+   * the party list keeps its one-tap sort sheet instead, UAT D5.)
+   */
+  readonly compact?: boolean;
+  readonly status?: string;
+  readonly onStatusChange?: (value: string) => void;
+  readonly ordering?: string;
+  readonly onOrderingChange?: (value: string) => void;
 }
 
 function PartyListFiltersBase({
@@ -120,6 +135,11 @@ function PartyListFiltersBase({
   activeFilterCount,
   onClear,
   part = 'controls',
+  compact = false,
+  status = 'active',
+  onStatusChange,
+  ordering = DEFAULT_ORDERING,
+  onOrderingChange,
 }: Readonly<PartyListFiltersProps>) {
   const appliedRoles = role ? role.split(',').filter(Boolean) : [];
 
@@ -217,7 +237,50 @@ function PartyListFiltersBase({
         ]
       : []),
   ];
+  const balanceSpec: UbFilterSpec = {
+    kind: 'single',
+    key: 'balance',
+    label: t('parties.list.filter.balance.label'),
+    anyLabel: t('parties.list.filter.any'),
+    options: BALANCE_FILTERS.map((value) => ({
+      value,
+      label: t(`parties.list.filter.balance.${value}`),
+    })),
+  };
+  const defaultSort = PHONE_SORT_CHOICES.find((c) => c.ordering === DEFAULT_ORDERING);
+  const compactSpecs: UbFilterSpec[] = compact
+    ? [
+        ...(onStatusChange
+          ? [
+              {
+                kind: 'single' as const,
+                key: 'status',
+                label: t('parties.list.filter.status.label'),
+                anyLabel: t('parties.list.status.active'),
+                options: [{ value: 'archived', label: t('parties.list.status.archived') }],
+              },
+            ]
+          : []),
+        balanceSpec,
+        ...(onOrderingChange
+          ? [
+              {
+                kind: 'single' as const,
+                key: 'ordering',
+                label: t('parties.list.sort.label'),
+                anyLabel: defaultSort ? t(defaultSort.labelKey) : undefined,
+                options: PHONE_SORT_CHOICES.filter((c) => c.ordering !== DEFAULT_ORDERING).map(
+                  (c) => ({ value: c.ordering, label: t(c.labelKey) })
+                ),
+              },
+            ]
+          : []),
+      ]
+    : [];
   const values: UbFilterValues = {
+    status: status === 'archived' ? 'archived' : '',
+    balance,
+    ordering: ordering === DEFAULT_ORDERING ? '' : ordering,
     credit,
     role: appliedRoles.join(','),
     type,
@@ -225,6 +288,14 @@ function PartyListFiltersBase({
     tag,
   };
   const apply = (next: UbFilterValues) => {
+    if (compact) {
+      const nextStatus = next.status === 'archived' ? 'archived' : 'active';
+      if (onStatusChange && nextStatus !== status) onStatusChange(nextStatus);
+      if ((next.balance ?? '') !== balance)
+        onBalanceChange((next.balance ?? '') as PartyBalanceFilter);
+      const nextOrdering = next.ordering || DEFAULT_ORDERING;
+      if (onOrderingChange && nextOrdering !== ordering) onOrderingChange(nextOrdering);
+    }
     if ((next.credit ?? '') !== credit) onCreditChange((next.credit ?? '') as PartyCreditFilter);
     if ((next.role ?? '') !== values.role) onRoleChange?.(next.role ?? '');
     if (!typeFixed && (next.type ?? '') !== type)
@@ -250,23 +321,16 @@ function PartyListFiltersBase({
 
   return (
     <>
-      <UbFilterSelect
-        spec={{
-          kind: 'single',
-          key: 'balance',
-          label: t('parties.list.filter.balance.label'),
-          anyLabel: t('parties.list.filter.any'),
-          options: BALANCE_FILTERS.map((value) => ({
-            value,
-            label: t(`parties.list.filter.balance.${value}`),
-          })),
-        }}
-        value={balance}
-        onChange={(next) => onBalanceChange(next as PartyBalanceFilter)}
-        closeLabel={t('common.action.close')}
-      />
+      {!compact && (
+        <UbFilterSelect
+          spec={balanceSpec}
+          value={balance}
+          onChange={(next) => onBalanceChange(next as PartyBalanceFilter)}
+          closeLabel={t('common.action.close')}
+        />
+      )}
       <UbFilterSheet
-        specs={specs}
+        specs={[...compactSpecs, ...specs]}
         values={values}
         onApply={apply}
         labels={{

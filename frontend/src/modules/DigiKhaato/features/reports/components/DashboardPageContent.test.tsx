@@ -185,12 +185,42 @@ it('shows the first-use checklist instead of ₹0 tiles in an empty book (FR-9)'
   );
   signIn([...OWNER, 'parties.party.write']);
   renderWithProviders(<DashboardPageContent />);
-  expect(await screen.findByText('Get your book started')).toBeInTheDocument();
-  expect(screen.getByRole('link', { name: 'Add your first customer' })).toHaveAttribute(
+  expect(await screen.findByTestId('dashboard-first-use')).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'Start: Add your first customer' })).toHaveAttribute(
     'href',
     '/customers'
   );
   expect(screen.queryByText('You will get')).not.toBeInTheDocument();
+});
+
+it('opens a new book on the three steps alone (approved design, 12 Oct 2026)', async () => {
+  // Day one used to add New bill, New purchase, "Send reminders" to nobody, a
+  // refresh button and three empty cards around the checklist.
+  service.getDashboard.mockResolvedValue(
+    DATA({
+      firstUse: { hasParty: false, hasItem: false, hasDocument: false, hasUpi: false },
+      recentActivity: [],
+      topDebtors: [],
+      lowStockItems: [],
+    })
+  );
+  signIn([...OWNER, 'parties.party.write', 'inventory.item.write']);
+  renderWithProviders(<DashboardPageContent />);
+  const steps = await screen.findByRole('list', { name: 'Get your book started' });
+  expect(within(steps).getAllByRole('listitem')).toHaveLength(3);
+  expect(screen.queryByText('Add your UPI ID')).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: /Send reminders/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /Refresh/ })).not.toBeInTheDocument();
+  expect(screen.queryByText('Recent activity')).not.toBeInTheDocument();
+  expect(screen.queryByText('Running low')).not.toBeInTheDocument();
+});
+
+it('shows a card only when it has something in it', async () => {
+  service.getDashboard.mockResolvedValue(DATA({ lowStockItems: [] }));
+  signIn(OWNER);
+  renderWithProviders(<DashboardPageContent />);
+  await screen.findByRole('list', { name: 'Recent activity' });
+  expect(screen.queryByText('Running low')).not.toBeInTheDocument();
 });
 
 it('links each recent event to its document, and each debtor to the khata', async () => {

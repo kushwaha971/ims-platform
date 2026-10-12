@@ -35,6 +35,9 @@ def test_empty_list_returns_the_exact_envelope(tenant: Any, api_as: Any) -> None
             # has to distinguish "no totals yet" from "totals are zero" ends up
             # rendering a blank where a ₹0.00 belongs.
             "totals": {"receivable": "0.00", "payable": "0.00", "count": 0, "over_limit": 0},
+            # Approved designs (12 Oct 2026): an empty book says so, so the
+            # screen can drop its search and filters rather than guess.
+            "has_any": False,
         },
     }
 

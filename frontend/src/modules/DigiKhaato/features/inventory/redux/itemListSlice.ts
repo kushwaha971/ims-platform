@@ -21,6 +21,8 @@ export interface ItemListState {
   totalPages: number;
   totals: ItemListResult['totals'] | null;
   counts: ItemListResult['counts'] | null;
+  /** The server's: whether any item exists at all. `null` until known. */
+  hasAny: boolean | null;
   status: RequestStatus;
   error: ApiErrorShape | null;
   filters: ItemListFilters | null;
@@ -36,6 +38,7 @@ const initialState: ItemListState = {
   totalPages: 0,
   totals: null,
   counts: null,
+  hasAny: null,
   status: 'idle',
   error: null,
   filters: null,
@@ -75,6 +78,7 @@ const itemListSlice = createSlice({
         state.totalPages = result.totalPages;
         state.totals = result.totals;
         state.counts = result.counts;
+        state.hasAny = result.hasAny ?? null;
         state.status = 'succeeded';
         state.stale = false;
         state.staleUrgency = null;
@@ -102,6 +106,7 @@ export const selectItemListStatus = (state: RootState): RequestStatus => slice$(
 export const selectItemListError = (state: RootState): ApiErrorShape | null => slice$(state).error;
 export const selectItemListTotals = (state: RootState): ItemListState['totals'] =>
   slice$(state).totals;
+export const selectItemListHasAny = (state: RootState): boolean | null => slice$(state).hasAny;
 export const selectItemListCounts = (state: RootState): ItemListState['counts'] =>
   slice$(state).counts;
 export const selectItemListPage = (state: RootState): number => slice$(state).page;

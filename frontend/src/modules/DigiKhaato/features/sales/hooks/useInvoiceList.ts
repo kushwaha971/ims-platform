@@ -42,6 +42,13 @@ export interface UseInvoiceListResult extends Omit<InvoiceListState, 'filters'> 
   readonly setPreset: (preset: InvoicePreset) => void;
   readonly setRange: (from: string | null, to: string | null) => void;
   readonly setTab: (tab: InvoiceTab) => void;
+  readonly applyFilters: (next: {
+    tab: InvoiceTab;
+    preset: InvoicePreset;
+    dateFrom: string;
+    dateTo: string;
+    originModule: string | null;
+  }) => void;
   readonly setQuery: (q: string) => void;
   readonly setPage: (page: number) => void;
   readonly clearFilters: () => void;
@@ -127,6 +134,32 @@ export const useInvoiceList = (): UseInvoiceListResult => {
       }),
     [push, filters]
   );
+  /**
+   * The phone's Filters sheet applies several choices at once (approved design,
+   * 12 Oct 2026). One push: calling setTab and then setPreset would each start
+   * from the same `filters`, and the second would undo the first.
+   */
+  const applyFilters = useCallback(
+    (next: {
+      tab: InvoiceTab;
+      preset: InvoicePreset;
+      dateFrom: string;
+      dateTo: string;
+      originModule: string | null;
+    }) => {
+      const resolved = next.preset === 'custom' ? null : resolveInvoicePreset(next.preset, today);
+      push({
+        ...filters,
+        tab: next.tab,
+        preset: next.preset,
+        dateFrom: resolved?.dateFrom ?? next.dateFrom,
+        dateTo: resolved?.dateTo ?? next.dateTo,
+        originModule: next.originModule,
+        page: 1,
+      });
+    },
+    [push, filters, today]
+  );
   const setTab = useCallback(
     (tab: InvoiceTab) => push({ ...filters, tab, page: 1 }),
     [push, filters]
@@ -159,6 +192,7 @@ export const useInvoiceList = (): UseInvoiceListResult => {
     setPreset,
     setRange,
     setTab,
+    applyFilters,
     setQuery,
     setPage,
     clearFilters,

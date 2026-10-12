@@ -20,6 +20,8 @@ export interface InvoiceListState {
   rows: InvoiceListRow[];
   totals: InvoiceListTotals | null;
   tabs: InvoiceTabCounts | null;
+  /** The server's: whether any bill exists, whatever the filters. `null` until known. */
+  hasAny: boolean | null;
   page: number;
   pageSize: number;
   total: number;
@@ -34,6 +36,7 @@ const initialState: InvoiceListState = {
   rows: [],
   totals: null,
   tabs: null,
+  hasAny: null,
   page: 1,
   pageSize: INVOICE_PAGE_SIZE,
   total: 0,
@@ -79,6 +82,7 @@ const invoiceListSlice = createSlice({
         state.rows = action.payload.rows as Draft<InvoiceListRow>[];
         state.totals = action.payload.totals;
         state.tabs = action.payload.tabs as Draft<InvoiceTabCounts>;
+        state.hasAny = action.payload.hasAny ?? null;
         state.page = action.payload.page;
         state.pageSize = action.payload.pageSize;
         state.total = action.payload.total;

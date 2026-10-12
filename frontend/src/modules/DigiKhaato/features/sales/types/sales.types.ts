@@ -265,6 +265,12 @@ export interface InvoiceListPage {
   readonly total: number;
   readonly totals: InvoiceListTotals;
   readonly tabs: InvoiceTabCounts;
+  /**
+   * The server's `meta.has_any`: does this kind of document exist at all,
+   * whatever the tab, period or search? `false` is an empty book (one sentence,
+   * one button); absent from an older server, which keeps every control.
+   */
+  readonly hasAny?: boolean;
 }
 
 /** SAL-03 FR-4 — the UPI string and the QR's module matrix (one row per string of 0/1). */

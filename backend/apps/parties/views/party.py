@@ -212,8 +212,26 @@ class PartyViewSet(CsvExportMixin, TenantScopedNoDeleteViewSet):
         # figures are money, and money is a string on the wire (canon rule 3).
         # Handed the raw dict, the renderer emits `0.0` and the precision is
         # gone before the client ever sees it.
-        meta = {**self.paginator.get_meta(), "totals": PartyTotalsSerializer(totals).data}
+        meta = {
+            **self.paginator.get_meta(),
+            "totals": PartyTotalsSerializer(totals).data,
+            "has_any": bool(page) or self._has_any(request),
+        }
         return StandardResponse.ok(serializer.data, meta=meta)
+
+    def _has_any(self, request: Any) -> bool:
+        """Whether the list's own kind of party exists at all — customers on
+        Customers, suppliers on Suppliers — archived included, whatever the
+        search, balance or status filter. An empty book hides its search and
+        filters (approved designs, 12 Oct 2026); a filter that found nothing
+        must keep them, or the merchant cannot undo it."""
+        qs = Party.objects.for_tenant(self.get_tenant())
+        kind = request.query_params.get("type")
+        if kind == "customer":
+            qs = qs.filter(is_customer=True)
+        elif kind == "supplier":
+            qs = qs.filter(is_supplier=True)
+        return qs.exists()
 
     def export_queryset(self) -> Any:
         """The filtered set, plus `role_codes` for the CSV's `roles` column (A6)."""

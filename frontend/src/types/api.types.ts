@@ -205,6 +205,14 @@ export interface PageMeta {
   readonly pageSize: number;
   readonly total: number;
   readonly totalPages: number;
+  /**
+   * The server's `meta.has_any`: whether the list's kind of record exists at
+   * all, whatever the filters (approved designs, 12 Oct 2026). `false` is an
+   * empty book — one sentence and one button, no search, filters or ₹0 totals;
+   * an empty page with `true` is a filter that found nothing and keeps them.
+   * Absent from an endpoint that does not say, which keeps every control.
+   */
+  readonly hasAny?: boolean;
 }
 
 /** Cursor pagination — ledger entries, movements, notifications. */

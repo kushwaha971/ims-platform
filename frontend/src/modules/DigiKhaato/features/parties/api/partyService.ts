@@ -32,6 +32,7 @@ interface PartyListApiResponse {
     readonly page_size: number;
     readonly total: number;
     readonly total_pages: number;
+    readonly has_any?: boolean;
     /**
      * The header figures for the whole FILTERED set (Part 22 §22.4).
      *
@@ -174,6 +175,9 @@ export const listParties = async (
       pageSize: response.data.meta.page_size,
       total: response.data.meta.total,
       totalPages: response.data.meta.total_pages,
+      ...(response.data.meta.has_any === undefined
+        ? {}
+        : { hasAny: response.data.meta.has_any }),
     },
     // The whole block or none of it: half a total is worse than none, because
     // the screen would show one server figure beside one page figure and label

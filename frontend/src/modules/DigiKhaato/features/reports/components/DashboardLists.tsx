@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic';
 import { BellRing, CircleCheck, Circle } from 'lucide-react';
 
 import {
+  UbActionLink,
   UbAmount,
   UbButton,
   UbCard,
@@ -279,9 +280,12 @@ export function LowStockCard({
 }
 
 /**
- * RPT-01 FR-9 — the first-use checklist, in place of tiles that would all read
- * ₹0. Each step links to the screen that does it, and only the steps this
- * reader can do are listed (a step they cannot take is a dead end).
+ * RPT-01 FR-9 and the approved design (12 Oct 2026) — a new book's whole home
+ * screen: three steps, each with Start, in place of tiles that would all read
+ * ₹0 and cards with nothing in them. A done step is struck through; only the
+ * steps this reader can take are listed (a step they cannot take is a dead
+ * end). The UPI ID is not one of them: it is a setting, asked for where a bill
+ * needs it, and four steps read as a form rather than a start.
  */
 export function FirstUseChecklist({
   firstUse,
@@ -293,7 +297,6 @@ export function FirstUseChecklist({
     readonly party: boolean;
     readonly item: boolean;
     readonly bill: boolean;
-    readonly upi: boolean;
   };
   t: TranslateFn;
 }>): React.JSX.Element {
@@ -306,34 +309,51 @@ export function FirstUseChecklist({
       done: firstUse.hasDocument,
       href: `${ROUTES.SALES_INVOICES}/new`,
     },
-    { key: 'upi', show: steps.upi, done: firstUse.hasUpi, href: ROUTES.SETTINGS_PROFILE },
   ].filter((row) => row.show);
   return (
-    <UbCard
-      title={t('reports.dashboard.firstUse.title')}
-      description={t('reports.dashboard.firstUse.body')}
-      padded
-    >
-      <UbStack as="ol" gap={2}>
-        {rows.map((row) => (
-          <UbStack as="li" key={row.key} direction="row" align="center" className="gap-2">
-            {row.done ? (
-              <CircleCheck className="h-4 w-4 text-success" aria-hidden />
-            ) : (
-              <Circle className="h-4 w-4 text-text-tertiary" aria-hidden />
-            )}
-            {row.done ? (
-              <UbText as="span" variant="body-sm" tone="tertiary" className="line-through">
-                {t(`reports.dashboard.firstUse.${row.key}`)}
-              </UbText>
-            ) : (
-              <UbLink href={row.href} variant="body-sm-medium">
-                {t(`reports.dashboard.firstUse.${row.key}`)}
-              </UbLink>
-            )}
-          </UbStack>
-        ))}
-      </UbStack>
-    </UbCard>
+    <UbStack gap={4} data-testid="dashboard-first-use">
+      <UbText variant="body-sm" tone="secondary">
+        {t('reports.dashboard.firstUse.body')}
+      </UbText>
+      <UbCard padded>
+        <UbStack as="ol" gap={0} aria-label={t('reports.dashboard.firstUse.title')}>
+          {rows.map((row, index) => (
+            <UbStack as="li" key={row.key} gap={0}>
+              {index > 0 && <UbDivider />}
+              <UbStack direction="row" align="center" className="gap-3 py-3">
+                {row.done ? (
+                  <CircleCheck className="h-5 w-5 shrink-0 text-success" aria-hidden />
+                ) : (
+                  <Circle className="h-5 w-5 shrink-0 text-text-tertiary" aria-hidden />
+                )}
+                <UbText
+                  as="span"
+                  variant="body-medium"
+                  tone={row.done ? 'tertiary' : undefined}
+                  className={`min-w-0 flex-1 ${row.done ? 'line-through' : ''}`}
+                >
+                  {t(`reports.dashboard.firstUse.${row.key}`)}
+                </UbText>
+                {!row.done && (
+                  <UbActionLink
+                    href={row.href}
+                    variant="secondary"
+                    size="sm"
+                    aria-label={t('reports.dashboard.firstUse.startStep', {
+                      step: t(`reports.dashboard.firstUse.${row.key}`),
+                    })}
+                  >
+                    {t('reports.dashboard.firstUse.start')}
+                  </UbActionLink>
+                )}
+              </UbStack>
+            </UbStack>
+          ))}
+        </UbStack>
+      </UbCard>
+      <UbText variant="body-sm" tone="tertiary">
+        {t('reports.dashboard.firstUse.later')}
+      </UbText>
+    </UbStack>
   );
 }

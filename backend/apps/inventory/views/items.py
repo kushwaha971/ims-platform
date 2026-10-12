@@ -32,7 +32,7 @@ from apps.inventory.constants import (
     ItemStatus,
     MovementType,
 )
-from apps.inventory.models import StockAdjustment, StockMovement, Unit
+from apps.inventory.models import Item, StockAdjustment, StockMovement, Unit
 from apps.inventory.permissions import (
     AdjustmentPermissions,
     ItemPermissions,
@@ -185,6 +185,9 @@ class ItemViewSet(CsvExportMixin, _InventoryView, viewsets.ViewSet):
         if not valuation:
             meta["totals"]["stock_value"] = None
         meta["valuation_visible"] = valuation
+        # Any item at all, archived included, whatever the filters: an empty
+        # catalogue hides its search, tabs and ₹0 totals (approved designs).
+        meta["has_any"] = bool(page) or Item.objects.filter(tenant=self.get_tenant()).exists()
         return StandardResponse.ok(
             [item_row(item, valuation=valuation) for item in page], meta=meta
         )

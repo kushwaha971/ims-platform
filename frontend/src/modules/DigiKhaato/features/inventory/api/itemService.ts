@@ -248,6 +248,7 @@ export const listItems = async (
       /** `stock_value` is null for a member without `reports.financial.read`. */
       totals: { items: number; stock_value: string | null };
       counts: { all: number; in: number; low: number; out: number };
+      has_any?: boolean;
     };
   }>(`${API_PATHS.ITEMS}${query}`, ubConfig({ signal, suppressErrorSnackbar: true }));
   const { meta } = response.data;
@@ -259,6 +260,7 @@ export const listItems = async (
     totalPages: meta.total_pages,
     totals: { items: meta.totals.items, stockValue: meta.totals.stock_value },
     counts: meta.counts,
+    ...(typeof meta.has_any === 'boolean' ? { hasAny: meta.has_any } : {}),
   };
 };
 

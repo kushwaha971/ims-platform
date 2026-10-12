@@ -81,5 +81,10 @@ def tabbed_list(view: Any, request: Any, tabs: dict[str, tuple[str, ...]]) -> An
             "amount_due": str(totals["amount_due"]),
         },
         "tabs": counts,
+        # Whether this kind of document exists at all, whatever the tab, the
+        # date range or the search: an empty book shows one sentence and one
+        # button, with no tabs, date filter or ₹0 totals over nothing (approved
+        # designs, 12 Oct 2026). A filter that found nothing keeps them.
+        "has_any": bool(rows) or view.get_queryset().exists(),
     }
     return StandardResponse.ok(data, meta=meta)

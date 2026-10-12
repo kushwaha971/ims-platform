@@ -206,7 +206,12 @@ export const createDayBookColumns = ({
       cardSlot: 'none',
       widthShare: 12.5,
       cell: (row) => (
-        <UbText as="span" variant="body-sm" tone="secondary" className="line-clamp-2">
+        <UbText
+          as="span"
+          variant="body-sm"
+          tone="secondary"
+          className="line-clamp-2 whitespace-normal break-words"
+        >
           {describeRow(row, t) || '—'}
         </UbText>
       ),

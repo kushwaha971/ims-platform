@@ -36,8 +36,6 @@ const PHRASES: Readonly<Record<string, string>> = {
   'You will get': RECEIVABLE,
   'You will give': PAYABLE,
   'They owe me': RECEIVABLE_ME,
-  'I will get': RECEIVABLE_ME,
-  'I will give': PAYABLE_ME,
   'You gave': GAVE,
   'You got': GOT,
 };
@@ -60,11 +58,13 @@ describe('Hindi direction strings speak in one family (UAT D1)', () => {
   });
 
   it('gives the two balance chips opposite directions (the reported flip)', () => {
+    // Approved designs (12 Oct 2026): "You will get / You will give" everywhere,
+    // the chips included — they used to say "I will get / I will give".
     const owesMe = HI['parties.list.filter.balance.owes_me'];
     const iOwe = HI['parties.list.filter.balance.i_owe'];
     expect(owesMe).not.toBe(iOwe);
-    expect(owesMe).toBe(RECEIVABLE_ME);
-    expect(iOwe).toBe(PAYABLE_ME);
+    expect(owesMe).toBe(RECEIVABLE);
+    expect(iOwe).toBe(PAYABLE);
   });
 
   it('gives the opening-balance pair opposite directions, matching the header', () => {
