@@ -104,7 +104,10 @@ export const SHOP_APP: AppManifest = {
       permission: 'parties.party.read',
       section: 'parties',
       order: 2,
-      tab: 'customers',
+      // Owner, 12 Oct 2026: "customer and supplier should be two different tabs —
+      // both are different". Its own tab on a phone, not a page under Customers.
+      bottomNav: true,
+      tabLabelId: 'nav.suppliers',
     },
     // LED-09 — "who do I ring first", the collection round's starting list.
     {
@@ -241,7 +244,8 @@ export const SHOP_APP: AppManifest = {
       permission: 'inventory.item.read',
       section: 'stock',
       order: 1,
-      bottomNav: true,
+      // On a phone Items sits in More while the bar holds Home, Customers,
+      // Suppliers and Bills (four tabs and More is the bar's limit).
       badge: 'lowStock',
     },
     {

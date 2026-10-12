@@ -13,9 +13,16 @@ const libraryRows = manifestFor('library')?.navigation ?? [];
 const libraryTabs = libraryRows.filter((row) => row.bottomNav).slice(0, 4);
 
 describe('mobileNavState', () => {
-  it('gives the Shop four tabs: Home, Parties, Bills, Items', () => {
-    /* Prevents: a manifest edit that quietly changes what is in the bar. */
-    expect(shopTabs.map((tab) => tab.key)).toEqual(['dashboard', 'customers', 'invoices', 'items']);
+  it('gives the Shop four tabs: Home, Customers, Suppliers, Bills', () => {
+    /* Prevents: a manifest edit that quietly changes what is in the bar, and
+       Suppliers folded under Customers again (owner, 12 Oct 2026: "both are
+       different"). */
+    expect(shopTabs.map((tab) => tab.key)).toEqual([
+      'dashboard',
+      'customers',
+      'suppliers',
+      'invoices',
+    ]);
   });
 
   it('shows the bar on a menu destination and lights its tab', () => {
@@ -26,9 +33,10 @@ describe('mobileNavState', () => {
     });
   });
 
-  it('lights the parent tab for a page that lives under one (Suppliers → Parties)', () => {
-    /* Prevents: Suppliers lighting More although it is half of the Parties tab. */
-    expect(mobileNavState('/suppliers', shopRows, shopTabs).active).toBe('customers');
+  it('lights Suppliers as its own tab, and a parent tab for a page under one', () => {
+    /* Prevents: Suppliers lighting Customers, and Estimates lighting More
+       although it is one of the Bills tab's pages. */
+    expect(mobileNavState('/suppliers', shopRows, shopTabs).active).toBe('suppliers');
     expect(mobileNavState('/sales/estimates', shopRows, shopTabs).active).toBe('invoices');
   });
 

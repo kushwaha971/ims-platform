@@ -72,13 +72,10 @@ describe('MorePageContent', () => {
     /* Prevents: a feature reachable on desktop and nowhere on a phone, and a
        tab listed twice (once in the bar, once here). */
     renderWithProviders(<MorePageContent />);
-    expect(screen.getByRole('link', { name: 'Suppliers' })).toHaveAttribute(
-      'href',
-      ROUTES.SUPPLIERS
-    );
     expect(screen.getByRole('link', { name: 'Payments' })).toHaveAttribute('href', ROUTES.PAYMENTS);
     expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute('href', ROUTES.SETTINGS);
     expect(screen.queryByRole('link', { name: 'Customers' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Suppliers' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Bills' })).not.toBeInTheDocument();
   });
 
@@ -87,7 +84,7 @@ describe('MorePageContent', () => {
     renderWithProviders(<MorePageContent />);
     await user.type(screen.getByRole('searchbox', { name: 'Find a feature' }), 'pay');
     expect(screen.getByRole('link', { name: 'Payments' })).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Suppliers' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Settings' })).not.toBeInTheDocument();
     await user.clear(screen.getByRole('searchbox', { name: 'Find a feature' }));
     await user.type(screen.getByRole('searchbox', { name: 'Find a feature' }), 'zzz');
     expect(screen.getByText('No feature matches “zzz”.')).toBeInTheDocument();
