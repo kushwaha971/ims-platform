@@ -10,7 +10,9 @@ import {
   UbDateInput,
   UbDialog,
   UbField,
+  UbChoiceChips,
   UbForm,
+  UbMoneyInput,
   UbNativeSelect,
   UbStack,
   UbSwitch,
@@ -27,6 +29,7 @@ import type { MemberAction } from '../api/libraryMemberService';
 import type { ActOutcome } from '../hooks/useMemberDetail';
 import type {
   CloseFormValues,
+  DepositFormValues,
   MemberDetail,
   MembershipType,
   ReasonFormValues,
@@ -58,6 +61,7 @@ export function MemberActionDialog(props: Props): React.JSX.Element {
   if (props.kind === 'close') return <CloseDialog {...props} />;
   if (props.kind === 'suspend') return <SuspendDialog {...props} />;
   if (props.kind === 'rejoin') return <RejoinDialog {...props} />;
+  if (props.kind === 'deposit') return <DepositDialog {...props} />;
   return <ConfirmDialog {...props} />;
 }
 
@@ -332,6 +336,88 @@ function RejoinDialog({ member, types, busy, onClose, onSubmit }: Props): React.
           </UbText>
         )}
       </UbStack>
+    </UbDialog>
+  );
+}
+
+/**
+ * QA B4 — the deposit a student did not pay at admission is taken here, later.
+ * It goes to the held deposit (refundable), never to fee dues or income, and
+ * says so before the librarian confirms.
+ */
+function DepositDialog({ member, busy, onClose, onSubmit }: Props): React.JSX.Element {
+  const { t } = useTranslation();
+  const formId = useId();
+  const [failure, setFailure] = useState<string | null>(null);
+  const { depositSchema } = useMemberSchemas();
+  const due = member.deposit?.due ?? '0.00';
+  const schema = useMemo(() => depositSchema(due), [depositSchema, due]);
+  const form = useForm<DepositFormValues>({
+    resolver: yupResolver(schema),
+    mode: 'onTouched',
+    defaultValues: { amount: due, paymentMode: 'cash' },
+  });
+  return (
+    <UbDialog
+      open
+      onOpenChange={(next) => !next && onClose()}
+      title={t('library.member.deposit.title', { name: member.name })}
+      closeLabel={t('common.action.close')}
+      footer={
+        <Footer
+          formId={formId}
+          busy={busy}
+          onClose={onClose}
+          label={t('library.member.deposit.confirm')}
+        />
+      }
+    >
+      <UbForm
+        id={formId}
+        form={form}
+        formErrors={failure ? [failure] : undefined}
+        onSubmit={async (values) => {
+          const outcome = await onSubmit({
+            mode_breakup: [{ mode: values.paymentMode, amount: values.amount }],
+          });
+          if (outcome.ok) onClose();
+          else setFailure(outcome.error?.message ?? null);
+        }}
+      >
+        <UbStack gap={3}>
+          <UbText variant="body-sm" tone="secondary">
+            {t('library.member.deposit.body', { due: formatInr(due) })}
+          </UbText>
+          <UbField name="amount" label={t('library.member.deposit.amount')}>
+            {(field) => (
+              <UbMoneyInput
+                id={field.id}
+                value={(field.value as string) ?? ''}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                invalid={field.invalid}
+                disabled={busy}
+              />
+            )}
+          </UbField>
+          <UbField name="paymentMode" label={t('library.enrol.paidBy')} controlOwnsLabel>
+            {(field) => (
+              <UbChoiceChips<'cash' | 'upi'>
+                id={field.id}
+                ariaLabel={t('library.enrol.paidBy')}
+                value={field.value as 'cash' | 'upi'}
+                onChange={(next) => field.onChange(next)}
+                onBlur={field.onBlur}
+                options={[
+                  { value: 'cash', label: t('library.enrol.paidBy.cash') },
+                  { value: 'upi', label: t('library.enrol.paidBy.upi') },
+                ]}
+                disabled={busy}
+              />
+            )}
+          </UbField>
+        </UbStack>
+      </UbForm>
     </UbDialog>
   );
 }

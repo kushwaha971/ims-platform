@@ -349,3 +349,23 @@ def test_the_list_says_whether_anybody_was_ever_admitted(api_as: Any, library_on
     assert _enrol(owner, library_on).status_code == 201
     body = owner.get(reverse(MEMBERS), {"q": "nobody-by-this-name"}).json()
     assert body["data"] == [] and body["meta"]["has_any"] is True
+
+
+def test_a_deposit_not_collected_at_admission_is_owed_and_can_be_taken_later(
+    api_as: Any, library_on: Any
+) -> None:
+    """QA B4 — with "Collect now" off the help text promises the deposit is added to
+    what is due, but the student page showed ₹200 owed, "₹0.00 of ₹500.00" held and
+    no way to take it. The summary now says what of the deposit is still to take, and
+    taking it later moves it to held — never to the fee dues, never to income."""
+    client, _ = api_as(library_on, role="staff")
+    body = _enrol(client, library_on).json()["data"]
+    assert body["dues_amount"] == "200.00"
+    assert body["deposit"]["due"] == "500.00"
+
+    taken = client.post(
+        _url("deposit-receive", body["membership_id"]), _cash("500.00"), format="json"
+    ).json()["data"]
+    assert taken["deposit"]["held"] == "500.00"
+    assert taken["deposit"]["due"] == "0.00"
+    assert taken["dues_amount"] == "200.00"

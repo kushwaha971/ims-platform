@@ -244,6 +244,8 @@ def member_summary(m: LibraryMembership, today: dt.date) -> dict:
                 "id": str(deposit.id),
                 "expected": f"{Decimal(deposit.expected_amount):.2f}",
                 "held": f"{Decimal(deposit.held_amount):.2f}",
+                # QA B4 — what is still to take; owed, but never fee dues or income.
+                "due": f"{Decimal(deposit.expected_amount) - Decimal(deposit.received_amount):.2f}",
             }
             if deposit is not None
             else None

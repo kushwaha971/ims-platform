@@ -61,6 +61,8 @@ export interface MemberSummary {
     readonly id: string;
     readonly expected: string;
     readonly held: string;
+    /** QA B4 — still to take: owed, but never fee dues or income. */
+    readonly due: string;
   } | null;
   readonly blocks: readonly MemberBlock[];
 }
@@ -166,4 +168,10 @@ export interface MemberEditFormValues {
   groupLabel: string;
   validUntil: string;
   notes: string;
+}
+
+/** QA B4 — the "Take deposit" dialog. */
+export interface DepositFormValues {
+  amount: string;
+  paymentMode: 'cash' | 'upi';
 }

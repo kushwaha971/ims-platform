@@ -7,6 +7,7 @@ import { useValidationSchemas } from 'src/hooks/useValidationSchemas';
 import type {
   CloseFormValues,
   EnrolFormValues,
+  DepositFormValues,
   MemberEditFormValues,
   ReasonFormValues,
 } from '../types/member.types';
@@ -26,6 +27,8 @@ export interface MemberSchemas {
   readonly reasonSchema: (required: boolean) => Yup.ObjectSchema<ReasonFormValues>;
   readonly closeSchema: Yup.ObjectSchema<CloseFormValues>;
   readonly editSchema: Yup.ObjectSchema<MemberEditFormValues>;
+  /** QA B4 — a deposit taken later: above zero, at most what is still to take. */
+  readonly depositSchema: (due: string) => Yup.ObjectSchema<DepositFormValues>;
 }
 
 /** W03 — `library_membership.locker_label`. */
@@ -82,6 +85,12 @@ export const useMemberSchemas = (): MemberSchemas => {
       notes: v.boundedText(NOTES_MAX),
     }) as Yup.ObjectSchema<MemberEditFormValues>;
 
-    return { enrolSchema, reasonSchema, closeSchema, editSchema };
+    const depositSchema = (due: string) =>
+      Yup.object({
+        amount: v.amountValidation({ max: due }),
+        paymentMode: Yup.mixed<'cash' | 'upi'>().oneOf(['cash', 'upi']).defined(),
+      });
+
+    return { enrolSchema, reasonSchema, closeSchema, editSchema, depositSchema };
   }, [v]);
 };

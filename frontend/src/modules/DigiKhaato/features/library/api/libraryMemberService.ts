@@ -69,7 +69,12 @@ export const toMemberSummary = (row: Wire): MemberSummary => {
     holdsReady: Number(row.holds_ready ?? 0),
     duesAmount: str(row.dues_amount || '0.00'),
     deposit: deposit
-      ? { id: str(deposit.id), expected: str(deposit.expected), held: str(deposit.held) }
+      ? {
+          id: str(deposit.id),
+          expected: str(deposit.expected),
+          held: str(deposit.held),
+          due: str(deposit.due ?? '0.00'),
+        }
       : null,
     blocks: ((row.blocks as Wire[] | undefined) ?? []).map((block) => ({
       code: str(block.code),
@@ -214,7 +219,10 @@ export const enrolMember = async (body: Wire, key: string): Promise<MemberDetail
   return toMemberDetail(response.data.data);
 };
 
-export type MemberAction = 'renew' | 'suspend' | 'reactivate' | 'close' | 'rejoin';
+export type MemberAction = 'renew' | 'suspend' | 'reactivate' | 'close' | 'rejoin' | 'deposit';
+
+/** QA B4 — taking a deposit later is `deposit/receive`; the rest are their own path. */
+const ACTION_PATH: Partial<Record<MemberAction, string>> = { deposit: 'deposit/receive' };
 
 export const actOnMember = async (
   id: string,
@@ -223,7 +231,7 @@ export const actOnMember = async (
   key?: string
 ): Promise<MemberDetail> => {
   const response = await api.post<{ data: Wire }>(
-    LIBRARY_PATHS.MEMBER_ACTION(id, action),
+    LIBRARY_PATHS.MEMBER_ACTION(id, ACTION_PATH[action] ?? action),
     body,
     // Each act's dialog says its own refusal, where it was asked.
     ubConfig({

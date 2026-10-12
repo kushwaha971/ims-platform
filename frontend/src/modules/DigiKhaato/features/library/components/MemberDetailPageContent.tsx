@@ -154,6 +154,10 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
   const busy = detail.actionStatus === 'loading';
   // Shop P0 — what the fee QR asks for: what is owed, else the plan's fee (a renewal).
   const feeAmount = isNonZero(member.duesAmount) ? member.duesAmount : member.planFee;
+  // QA B4 — a deposit not taken at admission is owed beside the fees; it is
+  // counted here and named, never folded into the fee dues the server keeps.
+  const depositDue = member.deposit && isNonZero(member.deposit.due) ? member.deposit.due : null;
+  const owedInAll = (Number(member.duesAmount) + Number(depositDue ?? 0)).toFixed(2);
   const validity = validityLine(member, today);
   const validityText = t(
     validity.id,
@@ -365,11 +369,11 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
               )}
               <UbStack gap={0} className="min-w-28">
                 <UbText variant="caption" tone="tertiary">
-                  {t('library.member.owes')}
+                  {t(depositDue ? 'library.member.toCollect' : 'library.member.owes')}
                 </UbText>
-                {isNonZero(member.duesAmount) ? (
+                {isNonZero(owedInAll) ? (
                   <UbAmount
-                    value={member.duesAmount}
+                    value={owedInAll}
                     size="lg"
                     tone="receivable"
                     label={t('library.member.owes')}
@@ -377,6 +381,11 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
                   />
                 ) : (
                   <UbText variant="metric-sm">{t('library.member.noDues')}</UbText>
+                )}
+                {depositDue && (
+                  <UbText variant="caption" tone="tertiary" data-testid="library-member-owes-deposit">
+                    {t('library.member.owesInclDeposit', { deposit: formatInr(depositDue) })}
+                  </UbText>
                 )}
               </UbStack>
               {member.deposit && (
@@ -395,6 +404,17 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
                   <UbText variant="caption" tone="tertiary">
                     {t('library.member.depositReturned')}
                   </UbText>
+                  {depositDue && !closed && detail.canWrite && (
+                    <UbButton
+                      size="sm"
+                      variant="secondary"
+                      className="mt-1 self-start"
+                      onClick={() => setDialog('deposit')}
+                      data-testid="library-member-take-deposit"
+                    >
+                      {t('library.member.deposit.take')}
+                    </UbButton>
+                  )}
                 </UbStack>
               )}
             </UbStack>

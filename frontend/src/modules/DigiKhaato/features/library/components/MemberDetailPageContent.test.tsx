@@ -155,4 +155,37 @@ describe('MemberDetailPageContent', () => {
     expect(screen.queryByTestId('library-member-renew')).not.toBeInTheDocument();
     expect(screen.queryByTestId('library-more')).not.toBeInTheDocument();
   });
+
+  /**
+   * QA B4 — admitted with "Collect now" off, the student owed ₹1,200 of fees and
+   * ₹500 of security, but the page said "Fee due ₹1,200" and offered no way to
+   * take the security. It now counts both, names the security, and takes it.
+   */
+  it('counts the security still to take and takes it from the page', async () => {
+    jest.mocked(service.getMember).mockResolvedValue({
+      ...ASHA,
+      blocks: [],
+      deposit: { id: 'd1', expected: '500.00', held: '0.00', due: '500.00' },
+    });
+    jest.mocked(service.actOnMember).mockResolvedValue({
+      ...ASHA,
+      blocks: [],
+      deposit: { id: 'd1', expected: '500.00', held: '500.00', due: '0.00' },
+    });
+    signIn(['library.member.read', 'library.member.write']);
+    renderWithProviders(<MemberDetailPageContent id="m1" />);
+    expect(await screen.findByText('To collect')).toBeInTheDocument();
+    expect(screen.getByText('₹1,700.00')).toBeInTheDocument();
+    expect(screen.getByTestId('library-member-owes-deposit')).toHaveTextContent(
+      'incl. ₹500.00 security (refundable)'
+    );
+    await userEvent.click(screen.getByTestId('library-member-take-deposit'));
+    await userEvent.click(await screen.findByTestId('library-member-confirm'));
+    expect(service.actOnMember).toHaveBeenCalledWith(
+      'm1',
+      'deposit',
+      { mode_breakup: [{ mode: 'cash', amount: '500.00' }] },
+      undefined
+    );
+  });
 });
