@@ -9,6 +9,10 @@ import { useTranslation } from 'src/hooks/useTranslation';
 
 import { LANDING_CONTAINER, LANDING_SECTION, LandingSectionHeading } from './LandingPrimitives';
 
+/* Owner, 12 Oct 2026: say it the way the name says it — YOUR khata. Each
+   phrase is its own key so a language can order its own words. */
+const YOURS = ['data', 'computer', 'database', 'all'] as const;
+
 const POINTS: readonly { readonly key: string; readonly icon: LucideIcon }[] = [
   { key: 'offline', icon: WifiOff },
   { key: 'backup', icon: HardDriveDownload },
@@ -44,11 +48,27 @@ function DesktopSoonSectionBase() {
           lead={t('landing.desktop.lead')}
           keyLine={t('landing.desktop.key')}
         />
+        <UbBox
+          as="p"
+          data-testid="landing-desktop-yours"
+          className="mx-auto mt-5 flex max-w-3xl flex-wrap justify-center gap-x-3 gap-y-1 text-center"
+        >
+          {YOURS.map((key) => (
+            <UbText
+              key={key}
+              as="span"
+              variant="inherit"
+              className="text-[clamp(1.125rem,1rem+0.6vw,1.5rem)] font-semibold tracking-[-0.01em] text-text-accent"
+            >
+              {t(`landing.desktop.yours.${key}`)}
+            </UbText>
+          ))}
+        </UbBox>
         <UbText
           variant="inherit"
           tone="secondary"
           align="center"
-          className="mx-auto mt-5 max-w-2xl text-[clamp(1rem,0.95rem+0.25vw,1.125rem)] leading-relaxed"
+          className="mx-auto mt-4 max-w-2xl text-[clamp(1rem,0.95rem+0.25vw,1.125rem)] leading-relaxed"
         >
           {t('landing.desktop.body')}
         </UbText>
