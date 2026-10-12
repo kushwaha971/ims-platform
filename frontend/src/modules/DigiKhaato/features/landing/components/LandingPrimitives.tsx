@@ -76,7 +76,13 @@ function LandingSectionHeadingBase({
       stagger
       className={cn(
         'flex flex-col gap-4',
-        align === 'center' ? 'items-center text-center' : 'items-start text-left',
+        /* `start` belongs to the two-column sections (FAQ, Who it's for), whose
+           heading sits beside its list only from `lg`. Stacked on a phone it
+           is one more centred section heading, like every other one (owner,
+           12 Oct 2026: "the chip and the title are not in the centre"). */
+        align === 'center'
+          ? 'items-center text-center'
+          : 'items-center text-center lg:items-start lg:text-left',
         className
       )}
     >

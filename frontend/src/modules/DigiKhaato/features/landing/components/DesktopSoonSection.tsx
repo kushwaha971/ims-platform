@@ -29,7 +29,8 @@ const POINTS: readonly { readonly key: string; readonly icon: LucideIcon }[] = [
  * sign-up form would be a promise. "Offline for everyday entries", not "fully
  * offline": reminders, share links and UPI still need the internet. The last
  * line points at what is true TODAY (export and delete), so the section is not
- * only a promise.
+ * only a promise. (The owner later removed that line, 12 Oct 2026: the section
+ * says what is coming and stops.)
  */
 function DesktopSoonSectionBase() {
   const { t } = useTranslation();
@@ -93,14 +94,6 @@ function DesktopSoonSectionBase() {
             </UbBox>
           ))}
         </UbReveal>
-        <UbText
-          variant="inherit"
-          tone="tertiary"
-          align="center"
-          className="ds-body-s-regular mx-auto mt-6 max-w-2xl"
-        >
-          {t('landing.desktop.meanwhile')}
-        </UbText>
       </UbBox>
     </UbBox>
   );
