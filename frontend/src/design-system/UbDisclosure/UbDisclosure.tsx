@@ -143,11 +143,12 @@ function UbDisclosureBase({
           hidden={!isOpen}
           // `flex` only while open: an author `display` beats the `[hidden]`
           // rule (same specificity, later layer), and the closed panel would
-          // simply stay on screen.
+          // simply stay on screen. The padding and the rule are open-only too
+          // (QA B25): `hidden="until-found"` hides the CONTENT and keeps the
+          // box, so a closed panel drew an empty bordered strip under its header.
           className={cn(
-            isOpen && 'flex flex-col gap-4',
-            'border-t border-border-hairline px-4 py-4',
-            large && 'px-5 pb-5'
+            isOpen && 'flex flex-col gap-4 border-t border-border-hairline px-4 py-4',
+            isOpen && large && 'px-5 pb-5'
           )}
         >
           {children}
