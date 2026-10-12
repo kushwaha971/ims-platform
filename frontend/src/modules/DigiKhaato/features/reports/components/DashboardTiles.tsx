@@ -15,7 +15,13 @@ import {
   Wallet,
 } from 'lucide-react';
 
-import { UbStatCard, UbStatGrid, UbStatSummary, type UbStatCardDelta } from 'src/design-system';
+import {
+  UbStack,
+  UbStatCard,
+  UbStatGrid,
+  UbStatSummary,
+  type UbStatCardDelta,
+} from 'src/design-system';
 import type { TranslateFn } from 'src/hooks/useTranslation';
 import { formatInr } from 'src/utils/money';
 
@@ -178,44 +184,38 @@ export function DashboardTiles({
     return out;
   }, [tiles, t, units]);
 
-  // Owner, 6 Oct 2026: the eight tiles took the first screen. The figures a
-  // merchant opens the app for stay on one line; the tiles are a tap away.
-  const SUMMARY: readonly TileKey[] = ['toCollect', 'toPay', 'todaySales', 'cashInHand'];
-  const summary = views
-    .filter((view) => SUMMARY.includes(view.key))
-    .map((view) => ({
-      key: view.key,
-      label: view.label,
-      value: view.value,
-      tone:
-        view.key === 'toCollect'
-          ? ('negative' as const)
-          : view.key === 'toPay'
-            ? ('positive' as const)
-            : ('default' as const),
-    }));
+  /* The approved design (12 Oct 2026): the four figures a merchant opens Home
+     for are always-visible tiles; the other four stay one line with "Details",
+     the owner's 6 Oct choice for the figures that took the first screen. */
+  const PRIMARY: readonly TileKey[] = ['toCollect', 'toPay', 'todaySales', 'cashInHand'];
+  const card = (view: TileView) => (
+    <UbStatCard
+      key={view.key}
+      icon={ICON[view.key]}
+      label={view.label}
+      value={view.value}
+      subtext={view.subtext}
+      delta={view.delta}
+      tone={tileTone(view.key, tiles)}
+      onClick={() => router.push(tileHref(view.key, tiles))}
+      actionLabel={t('reports.dashboard.tile.open', { label: view.label, amount: view.full })}
+    />
+  );
+  const primary = views.filter((view) => PRIMARY.includes(view.key));
+  const secondary = views.filter((view) => !PRIMARY.includes(view.key));
 
   return (
-    <UbStatSummary
-      items={summary}
-      storageKey="dashboard"
-      labels={{ show: t('common.summary.show'), hide: t('common.summary.hide') }}
-    >
-      <UbStatGrid>
-        {views.map((view) => (
-          <UbStatCard
-            key={view.key}
-            icon={ICON[view.key]}
-            label={view.label}
-            value={view.value}
-            subtext={view.subtext}
-            delta={view.delta}
-            tone={tileTone(view.key, tiles)}
-            onClick={() => router.push(tileHref(view.key, tiles))}
-            actionLabel={t('reports.dashboard.tile.open', { label: view.label, amount: view.full })}
-          />
-        ))}
-      </UbStatGrid>
-    </UbStatSummary>
+    <UbStack gap={3}>
+      {primary.length > 0 && <UbStatGrid>{primary.map(card)}</UbStatGrid>}
+      {secondary.length > 0 && (
+        <UbStatSummary
+          items={secondary.map((view) => ({ key: view.key, label: view.label, value: view.value }))}
+          storageKey="dashboard"
+          labels={{ show: t('common.summary.show'), hide: t('common.summary.hide') }}
+        >
+          <UbStatGrid>{secondary.map(card)}</UbStatGrid>
+        </UbStatSummary>
+      )}
+    </UbStack>
   );
 }

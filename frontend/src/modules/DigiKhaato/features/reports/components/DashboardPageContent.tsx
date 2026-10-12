@@ -215,10 +215,7 @@ export function DashboardPageContent(): React.JSX.Element {
                   t={t}
                 />
               ) : (
-                <>
-                  {!isMobileLayer && <DashboardTiles tiles={data.tiles} t={t} />}
-                  <DashboardChartsLazy refreshKey={data.generatedAt} />
-                </>
+                !isMobileLayer && <DashboardTiles tiles={data.tiles} t={t} />
               )}
 
               {/* Each card only when it has something in it (approved design):
@@ -230,17 +227,24 @@ export function DashboardPageContent(): React.JSX.Element {
                 const low = !!data.tiles.lowStock && data.lowStockItems.length > 0;
                 if (dayOne || !(activity || debtors || low)) return null;
                 return (
+                  // Who has to give you the most leads (approved design): it is
+                  // the list a merchant acts on; what happened sits beside it.
                   <UbGrid columns={{ base: 1, lg: activity && (debtors || low) ? 2 : 1 }} gap={4}>
-                    {activity && <RecentActivityList items={data.recentActivity} t={t} />}
                     {(debtors || low) && (
                       <UbStack gap={4}>
                         {debtors && <TopDebtorsCard debtors={data.topDebtors} t={t} />}
                         {low && <LowStockCard items={data.lowStockItems} t={t} />}
                       </UbStack>
                     )}
+                    {activity && <RecentActivityList items={data.recentActivity} t={t} />}
                   </UbGrid>
                 );
               })()}
+
+              {/* The charts, below the figures and the lists rather than above
+                  them (approved design, 12 Oct 2026): useful when there is time
+                  to look, not the first thing on the screen. */}
+              {!dayOne && <DashboardChartsLazy refreshKey={data.generatedAt} />}
 
               {/* A10 — the modules' sections, below the core tiles and lists. */}
               <DashboardModuleSections sections={data.sections} onRetry={dash.refresh} t={t} />

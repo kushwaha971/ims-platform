@@ -139,10 +139,13 @@ it('draws exactly the tiles the server sent, each opening its list', async () =>
   signIn(OWNER);
   renderWithProviders(<DashboardPageContent />);
   expect(await screen.findAllByText('You will get')).not.toHaveLength(0);
-  // Owner, 6 Oct 2026: the key figures are one line; the tiles open from Details.
+  // Approved design (12 Oct 2026): the four figures a merchant opens Home for
+  // are tiles from the start; the other four stay one line with Details (the
+  // owner's 6 Oct choice).
+  expect(screen.getByRole('button', { name: /You will get: ₹7,000\.00/ })).toBeInTheDocument();
   const strip = screen.getByTestId('stat-summary');
-  expect(within(strip).getByText('You will get')).toBeInTheDocument();
-  expect(screen.queryByText('To collect today')).toBeNull();
+  expect(within(strip).getByText('To collect today')).toBeInTheDocument();
+  expect(within(strip).queryByText('You will get')).toBeNull();
   await userEvent.click(screen.getByRole('button', { name: 'Details' }));
   for (const label of [
     'You will give',
