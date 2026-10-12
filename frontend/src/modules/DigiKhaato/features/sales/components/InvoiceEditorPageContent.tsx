@@ -6,6 +6,8 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 
 import { Save, Send, Trash2 } from 'lucide-react';
+import { useStore } from 'react-redux';
+
 
 import {
   UbButton,
@@ -25,6 +27,7 @@ import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { selectLocale } from 'src/redux/slice/localeSlice';
 import { selectActiveRole } from 'src/redux/slice/sessionSlice';
+import type { RootState } from 'src/redux/store';
 import { ROUTES } from 'src/routes';
 import { formatInr } from 'src/utils/money';
 
@@ -33,7 +36,7 @@ import { useEditorWindowEffects } from '../hooks/useEditorWindowEffects';
 import { useInvoiceEditor, type EditorKind } from '../hooks/useInvoiceEditor';
 import { deleteEstimateDraft } from '../redux/salesFlowThunk';
 import { deleteInvoiceDraft } from '../redux/salesThunk';
-import { documentTitleId } from '../view-model/invoiceDisplay';
+import { documentTitleId, stockShortLines } from '../view-model/invoiceDisplay';
 
 import { InvoiceEditorDialogs } from './InvoiceEditorDialogs';
 import { InvoiceLinesSection } from './InvoiceLinesSection';
@@ -77,6 +80,7 @@ export function InvoiceEditorPageContent({
   const { t } = useTranslation();
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const store = useStore<RootState>();
   const locale = useAppSelector(selectLocale);
   const role = useAppSelector(selectActiveRole);
   const editor = useInvoiceEditor(documentId, kind);
@@ -104,11 +108,31 @@ export function InvoiceEditorPageContent({
   const hasLines = preview.lines.length > 0 && values.lines.some((l) => l.itemId || l.description);
   const locked = server.issuing || !!server.issued;
   const creditBlocked = server.error?.code === 'credit_limit_exceeded';
+  /*
+   * QA B1 — `insufficient_stock` is a locally presented code (it never toasts),
+   * and the editor had no surface for it: Issue went quiet with the payment
+   * sheet still open over a bill that could not be issued. It is drawn here,
+   * naming each short item and what is on hand.
+   */
+  // The other locally presented codes an issue can meet; none of them toasts.
+  const otherRefusal =
+    !server.issuing &&
+    ['stale_version', 'document_not_draft', 'idempotency_conflict'].includes(
+      server.error?.code ?? ''
+    ) &&
+    server.saveState !== 'conflict';
+  const stockShort =
+    server.error?.code === 'insufficient_stock' ? stockShortLines(server.error.details) : [];
   const mayOverride = role === 'owner' || role === 'admin';
 
   const finishIssue = useCallback(
     async (payment: readonly PaymentRowForm[] | null, override = false) => {
       const result = await issue(payment, override);
+      // The sheet would hide the banner that says why nothing happened (QA B1).
+      const refused = store.getState().invoiceEditor?.error?.code;
+      if (!result && (refused === 'insufficient_stock' || refused === 'credit_limit_exceeded')) {
+        setPaying(false);
+      }
       if (result) {
         setPaying(false);
         autosave.clearLocal();
@@ -116,7 +140,7 @@ export function InvoiceEditorPageContent({
         if (estimate) router.push(`${home}/${result.document.id}`);
       }
     },
-    [issue, autosave, estimate, router, home]
+    [issue, autosave, estimate, router, home, store]
   );
   const startIssue = useCallback(() => {
     if (!hasLines || locked) return;
@@ -269,6 +293,22 @@ export function InvoiceEditorPageContent({
       >
         <UbGrid columns={{ base: 1, lg: 3 }} gap={4}>
           <UbStack gap={4} className="lg:col-span-2">
+            {stockShort.length > 0 && (
+              <UbStatusBanner
+                tone="error"
+                title={t('sales.stock.blocked')}
+                description={stockShort
+                  .map((line) => t('sales.stock.shortLine', line))
+                  .join(' · ')}
+              />
+            )}
+            {otherRefusal && (
+              <UbStatusBanner
+                tone="error"
+                title={t('sales.editor.error.issue')}
+                description={server.error?.message}
+              />
+            )}
             {creditBlocked && (
               <UbStatusBanner
                 tone="error"

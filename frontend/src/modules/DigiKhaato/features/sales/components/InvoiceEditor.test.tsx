@@ -235,3 +235,36 @@ describe('the payment sheet’s row checks (PAY-02 §10)', () => {
     expect(screen.getByTestId('invoice-payment-confirm')).toBeDisabled();
   });
 });
+
+describe('a bill the stock cannot cover (QA B1)', () => {
+  it('names the short item and what is on hand instead of going quiet', async () => {
+    // The 409 was a locally presented code with no local surface: Issue did
+    // nothing, the payment sheet stayed open and nothing said why.
+    signIn(['sales.invoice.write', 'sales.invoice.read']);
+    renderWithProviders(<InvoiceEditorPageContent documentId={null} />);
+    await screen.findByTestId('invoice-issue');
+    act(() => {
+      store.dispatch({
+        type: 'invoiceEditor/issueInvoice/rejected',
+        payload: {
+          code: 'insufficient_stock',
+          status: 409,
+          message: 'Not enough stock.',
+          details: {
+            lines: [
+              {
+                index: 0,
+                item_name: 'QA Pen',
+                requested: '7.000',
+                available: '5.000',
+                unit_code: 'NOS',
+              },
+            ],
+          },
+        },
+      });
+    });
+    expect(await screen.findByText('Not enough stock to issue this bill')).toBeInTheDocument();
+    expect(screen.getByText('QA Pen: 7 NOS on the bill, 5 NOS in stock')).toBeInTheDocument();
+  });
+});

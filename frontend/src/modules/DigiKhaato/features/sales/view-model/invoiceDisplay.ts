@@ -1,5 +1,6 @@
 import type { UbStatusBadgeTone } from 'src/design-system/UbStatusBadge/UbStatusBadge';
 import { isValidWireDate } from 'src/utils/dates';
+import { formatQuantity } from 'src/utils/quantity';
 
 import { resolveExpensePreset } from '../../expenses/view-model/expenseDisplay';
 import { resolvePreset } from '../../ledger/view-model/statementDisplay';
@@ -163,4 +164,22 @@ export const whatsappUrl = (mobile: string | null, text: string): string => {
   const digits = (mobile ?? '').replace(/\D/g, '').slice(-10);
   const target = digits.length === 10 ? `91${digits}` : '';
   return `https://wa.me/${target}?text=${encodeURIComponent(text)}`;
+};
+
+/**
+ * QA B1 — the `insufficient_stock` 409's lines as message params: "QA Pen —
+ * asked 7, 5 NOS in stock". Quantities are trimmed the way a shelf reads them.
+ */
+export const stockShortLines = (
+  details: Readonly<Record<string, unknown>> | undefined
+): { item: string; requested: string; available: string }[] => {
+  const lines = (details?.lines ?? []) as readonly Record<string, unknown>[];
+  return lines.map((line) => {
+    const unit = String(line.unit_code ?? '');
+    return {
+      item: String(line.item_name ?? ''),
+      requested: formatQuantity(String(line.requested ?? '0'), unit),
+      available: formatQuantity(String(line.available ?? '0'), unit),
+    };
+  });
 };

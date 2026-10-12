@@ -19,6 +19,7 @@ import { useAppDispatch } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import { formatAmount, formatInr } from 'src/utils/money';
+import { formatQuantity } from 'src/utils/quantity';
 import { comboPaging } from 'src/utils/searchPaging';
 
 import { getPartyRates } from '../../inventory/api/priceListService';
@@ -124,6 +125,12 @@ export function InvoiceLinesSection({
   const partyName = watch('partyName');
   /** Items whose rate came from the customer's price list, and that rate. */
   const [listed, setListed] = useState<Record<string, { name: string; rate: string }>>({});
+  /**
+   * QA B1 — stock on hand of each tracked item, as the picker read it. The
+   * server still decides at issue; this only warns while the quantity is typed,
+   * so "Only 5 in stock" is seen before Issue rather than after it.
+   */
+  const [stock, setStock] = useState<Record<string, { onHand: string; unit: string }>>({});
 
   // FR-15 — item defaults fill a line when the item is PICKED, never later.
   const pick = useCallback(
@@ -137,6 +144,10 @@ export function InvoiceLinesSection({
       setValue(`${base}.taxCode`, row.taxCode);
       setValue(`${base}.hsnSac`, row.hsnSac ?? '');
       setValue(`${base}.taxInclusive`, row.taxInclusiveSelling ?? false);
+      if (row.trackStock && row.onHand !== null) {
+        const onHand = row.onHand;
+        setStock((current) => ({ ...current, [row.id]: { onHand, unit: row.unit.code } }));
+      }
       // Shop gap §1.6 — a customer on a price list starts from the list's rate.
       // Still a default filled at the pick (FR-15), only a party-specific one;
       // if it cannot be read the item's own price stands.
@@ -302,11 +313,22 @@ export function InvoiceLinesSection({
   const renderLineNote = useCallback(
     (index: number) => {
       const line = lines?.[index];
-      if (!line?.itemId || !partyId) return null;
+      if (!line?.itemId) return null;
+      const held = stock[line.itemId];
+      const short = held !== undefined && Number(line.qty || 0) > Number(held.onHand);
+      const stockNote = short ? (
+        <UbText variant="caption" tone="error" data-testid="line-stock-short">
+          {t('sales.line.stockShort', {
+            qty: formatQuantity(String(Math.max(Number(held.onHand), 0)), held.unit),
+          })}
+        </UbText>
+      ) : null;
+      if (!partyId) return stockNote;
       const fromList = listed[line.itemId];
       const onList = fromList && Number(fromList.rate) === Number(line.unitPrice || 0);
       return (
         <UbStack gap={0}>
+          {stockNote}
           {onList && (
             <UbText variant="caption" tone="secondary" data-testid="price-list-applied">
               {t('sales.line.priceListRate', { list: fromList.name })}
@@ -327,7 +349,7 @@ export function InvoiceLinesSection({
         </UbStack>
       );
     },
-    [lines, partyId, partyName, setValue, listed, t]
+    [lines, partyId, partyName, setValue, listed, stock, t]
   );
 
   return (
