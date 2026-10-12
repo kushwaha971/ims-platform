@@ -489,3 +489,26 @@ ADR-021 ↔ §26.14 contradiction recorded as `CR-j`.
   recording; the privacy page does not yet name PostHog.
 - **Links:** ADR-021 · `frontend/src/components/providers/AnalyticsHost.tsx` ·
   `frontend/src/analytics/posthogClient.ts`
+
+### DEC-018 — An offline desktop edition is planned and announced on the landing page
+
+- **Status:** `decided` (2026-10-12, by the owner, in the session thread). Announcement only;
+  nothing of the edition is built.
+- **Why:** many merchants will not keep their accounts on someone else's server — the reason
+  Tally's install-it-yourself model is still trusted. A desktop edition for **Windows and Mac**
+  would keep the books on the merchant's own computer and work offline for everyday entries.
+- **What is shipped now:** one landing section ("Coming soon · Offline app for Windows and Mac"),
+  with no date, no price, no sign-up form and no button. "Offline for everyday entries", not
+  "fully offline": reminders, share links, UPI and OTP sign-in need the internet.
+- **What it reverses, narrowly:** the landing rules "never mention offline mode" and "no status
+  word". Only `landing.desktop.*` is exempt (`src/tests/moduleVocabulary.ts`
+  `isDesktopSoonKey`); every other landing string is still held to both, and the section has its
+  own test (says "coming soon" plainly, no date, price or figure).
+- **Guardrails until it is built**, so the option stays open at no cost: keep ADR-021 (no
+  cloud-only dependencies; local files; jobs in the database); keep the full data export; keep
+  the email/password sign-in path (a desktop install cannot rely on the OTP provider); keep
+  every external service behind an adapter that can be switched off.
+- **Sequencing (recommendation recorded with it):** after the hosted product has traction. The
+  edition is the same code packaged — a desktop shell (Tauri or Electron) around the local
+  Django + PostgreSQL + Next.js stack — plus a local PIN/password sign-in, automatic backups to
+  a chosen drive, safe self-updating migrations and an offline-tolerant licence check.

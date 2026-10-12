@@ -330,7 +330,13 @@ describe('the module story', () => {
       expect(
         container.querySelector('[data-module-status], [data-testid^="landing-status-"]')
       ).toBeNull();
-      const text = container.textContent ?? '';
+      // The offline desktop section is the one announced future (owner,
+      // 12 Oct 2026); it says "coming soon" on purpose and is pinned by its
+      // own test. Everything else on the page is still held to the rule.
+      const rest = container.cloneNode(true) as HTMLElement;
+      rest.querySelector('[data-testid="landing-desktop-soon"]')?.remove();
+      const text = rest.textContent ?? '';
+      expect(container.querySelector('[data-testid="landing-desktop-soon"]')).not.toBeNull();
       expect(text).not.toMatch(STATUS_WORDS[locale]);
       if (locale === 'en')
         expect(text).not.toMatch(/one module today|more planned|planned to help/i);

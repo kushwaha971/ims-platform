@@ -107,6 +107,15 @@ export const LANDING_JARGON = {
   hi: /किराना|kirana/iu,
 } as const;
 
+/**
+ * Owner, 12 Oct 2026: the ONE announced future on the landing page — the
+ * offline desktop app for Windows and Mac. It reverses, for these keys only,
+ * two standing rules: "never mention offline mode" and "no status word". Every
+ * other landing string is still held to both, and the section's own test pins
+ * that it says "coming soon" plainly and promises no date or price.
+ */
+export const isDesktopSoonKey = (key: string): boolean => key.startsWith('landing.desktop.');
+
 export const withoutBrand = (text: string): string => text.replace(/YourKhata/g, '');
 
 /**

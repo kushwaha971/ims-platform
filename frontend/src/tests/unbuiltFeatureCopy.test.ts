@@ -5,6 +5,7 @@ import {
   MODULE_WORDS,
   namesACompetitor,
   STATUS_WORDS,
+  isDesktopSoonKey,
   SUMMARY_KEYS,
   WITHDRAWN_MODULE_WORDS,
   ownsKey,
@@ -335,6 +336,7 @@ describe('the landing page promises only what is built', () => {
   it.each(UNBUILT.map((row) => [row.what, row]))('never mentions %s', (_what, row) => {
     const offending = landingKeys
       .filter((key) => !(row.what === 'e-invoice' && E_INVOICE_FAQ.has(key)))
+      .filter((key) => !(row.what === 'offline mode' && isDesktopSoonKey(key)))
       .flatMap((key) => [
         ...(row.en.test(enMessages[key] ?? '') ? [`${key} (en): ${enMessages[key]}`] : []),
         ...(row.hi.test(hiMessages[key] ?? '') ? [`${key} (hi): ${hiMessages[key]}`] : []),
@@ -354,10 +356,12 @@ describe('the landing page promises only what is built', () => {
     expect(enMessages['landing.faq.einvoice.a']).toMatch(/^Not today\./);
     expect(enMessages['landing.faq.einvoice.a']).toMatch(/does not/);
     expect(hiMessages['landing.faq.einvoice.a']).toMatch(/^आज नहीं।/u);
-    landingKeys.forEach((key) => {
-      expect(enMessages[key]).not.toMatch(/\bsoon\b|coming/i);
-      expect(hiMessages[key]).not.toMatch(/जल्द/u);
-    });
+    landingKeys
+      .filter((key) => !isDesktopSoonKey(key))
+      .forEach((key) => {
+        expect(enMessages[key]).not.toMatch(/\bsoon\b|coming/i);
+        expect(hiMessages[key]).not.toMatch(/जल्द/u);
+      });
   });
 
   it('keeps the brand name in Latin script in Hindi', () => {
@@ -426,6 +430,7 @@ describe('each module speaks only in its own place', () => {
     // a video file, not a module, and renders only when the film 404s.
     const offending = landingKeys
       .filter((key) => key !== 'landing.demo.unavailable')
+      .filter((key) => !isDesktopSoonKey(key))
       .filter((key) => pattern.test(messages[key] ?? ''))
       .map((key) => `${key}: ${messages[key]}`);
     expect(offending).toEqual([]);
@@ -530,5 +535,27 @@ describe('"Why YourKhata" names nobody and ranks nothing', () => {
   it('says the money goes straight to the business and never through YourKhata', () => {
     expect(enMessages['landing.why.payments.get']).toMatch(/never passes through YourKhata/);
     expect(hiMessages['landing.why.payments.get']).toMatch(/YourKhata से होकर नहीं/u);
+  });
+});
+
+describe('the one announced future: the offline desktop app (owner, 12 Oct 2026)', () => {
+  const enMessages = en as Record<string, string>;
+  const hiMessages = hi as Record<string, string>;
+  const keys = Object.keys(enMessages).filter(isDesktopSoonKey);
+
+  it('says "coming soon" plainly, in both languages', () => {
+    expect(enMessages['landing.desktop.eyebrow']).toMatch(/^Coming soon/);
+    expect(hiMessages['landing.desktop.eyebrow']).toMatch(/^जल्द आ रहा है/u);
+  });
+
+  it('promises no date, price or figure, and keeps "offline" to everyday entries', () => {
+    const offending = keys.flatMap((key) => [
+      ...(/[\d₹%]|\b(19|20)\d\d\b|January|April|December|free/i.test(enMessages[key] ?? '')
+        ? [`${key} (en)`]
+        : []),
+      ...(/[₹%०-९]/u.test(hiMessages[key] ?? '') ? [`${key} (hi)`] : []),
+    ]);
+    expect(offending).toEqual([]);
+    expect(enMessages['landing.desktop.point.offline']).toMatch(/everyday entries/);
   });
 });

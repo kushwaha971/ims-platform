@@ -10,6 +10,7 @@ import { cn } from 'src/utils/cn';
 
 import { SHOW_PRICING } from '../config/pricing';
 
+import { DesktopSoonSection } from './DesktopSoonSection';
 import { FaqSection, FinalCta, LandingFooter } from './LandingClosing';
 import { LandingHeader } from './LandingHeader';
 import { LandingHero } from './LandingHero';
@@ -97,6 +98,7 @@ function LandingPageBase({ className }: Readonly<{ className?: string }>) {
         <UseCaseExplorer />
         <PlatformMapSection />
         <WhySection />
+        <DesktopSoonSection />
         <AudienceSection />
         <AlsoIncludedSection />
         <HowItWorksSection />
