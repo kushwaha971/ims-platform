@@ -123,3 +123,14 @@ Final focused GA4/public-bootstrap/SEO/landing run: 106 tests passed in five sui
 Do not paste the ignored local env files into interview materials or public repositories. The GA4 measurement ID and PostHog project key are public browser configuration; Meta and database credentials are not.
 
 Production environment guide: frontend/.env.example now documents the complete public configuration with analytics disabled until public IDs are supplied. Native frontend values remain local; Railway uses same-origin /api/v1. The final merged homepage budget is 276.5 KB first-load gzip, an explicit 0.5 KB allowance for the new small GA4 owner; merged measurement before the final rebuild was 276.3 KB.
+
+
+## Live release validation and measured performance follow-up
+
+SEO release cbbd7148 deployed successfully to Railway. Live readiness is 200 with database OK. Public solutions return 200, self-canonical tags and server-rendered content; an unknown solution returns 404. Login and Django API responses carry noindex headers. Google Rich Results crawled the library solution and found one valid breadcrumb item. Search Console now reports sitemap Success, seven discovered pages. GA4 realtime shows incoming page_view/first_visit/session_start events; these include verification traffic and are not evidence of organic growth.
+
+The public PageSpeed UI succeeded after the unauthenticated API returned 429. First mobile library-solution lab run: Performance 68, Accessibility 100, Best Practices 100, SEO 100; FCP 1.2s, LCP 5.5s, TBT 380ms, CLS 0. No real-user field data was shown. This is one throttled lab measurement, not a field Core Web Vitals pass.
+
+Measured follow-up: third-party analytics competed with initial rendering. PostHog's anonymous identity effect also loaded its SDK immediately, bypassing its existing idle loader. Both analytics systems are retained. Anonymous identity now uses only an already-loaded SDK; external GA4/PostHog loading is scheduled after page load and idle, with cancellation on route exit. 22 targeted analytics tests, production build and bundle limits passed. Final before/after lab results are provided in the delivered audit copy after rollout.
+
+www.yourkhata.com is unresolved. Railway rejected adding it because the service is at the plan's custom-domain limit. No plan upgrade, domain removal or DNS overwrite was made. Apex HTTP redirects to HTTPS correctly. The historical sitemap_index.xml is a 404 and belongs to older domain history; current sitemap.xml is valid and accepted by Google.

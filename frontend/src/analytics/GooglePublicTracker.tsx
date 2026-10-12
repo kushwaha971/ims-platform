@@ -6,6 +6,8 @@ import { usePathname } from 'next/navigation';
 import { ANALYTICS_ENABLED, GA4_MEASUREMENT_ID } from 'src/constants';
 import { isMarketingPath } from 'src/routes';
 
+import { afterPageLoadIdle } from './afterPageLoadIdle';
+
 /** GA4 measures acquisition only. Never collect auth/customer paths or query values.
  * Enhanced measurement is disabled in GA4; manual page views have one owner.
  */
@@ -23,14 +25,15 @@ export function GooglePublicTracker(): null {
         // Match Google's documented gtag queue protocol.
         win.dataLayer?.push(arguments);
       };
-    if (!document.getElementById('yourkhata-ga4')) {
-      win.gtag('js', new Date());
+    if (!document.getElementById('yourkhata-ga4')) win.gtag('js', new Date());
+    const cancelLoad = afterPageLoadIdle(() => {
+      if (document.getElementById('yourkhata-ga4')) return;
       const script = document.createElement('script');
       script.id = 'yourkhata-ga4';
       script.async = true;
       script.src = `https://www.googletagmanager.com/gtag/js?id=${id}`;
       document.head.appendChild(script);
-    }
+    });
     let referrer = '';
     try {
       referrer = document.referrer ? new URL(document.referrer).origin : '';
@@ -51,6 +54,7 @@ export function GooglePublicTracker(): null {
       page_title: document.title,
     });
     return () => {
+      cancelLoad();
       Reflect.set(win, disabledKey, true);
     };
   }, [pathname]);

@@ -163,3 +163,16 @@ describe('AnalyticsHost', () => {
     expect(screen.queryByTestId('feedback-tab')).toBeNull();
   });
 });
+
+it('does not let anonymous identity loading bypass the deferred SDK path', async () => {
+  mockPath = '/solutions';
+  renderWithProviders(<AnalyticsHost />);
+  await act(async () => {
+    await Promise.resolve();
+  });
+  expect(posthog.init).not.toHaveBeenCalled();
+  await act(async () => {
+    jest.advanceTimersByTime(1600);
+  });
+  await waitFor(() => expect(posthog.capture).toHaveBeenCalled());
+});
