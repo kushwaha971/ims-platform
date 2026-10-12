@@ -22,7 +22,7 @@ import type { ModuleRefusal, SettingsModules } from '../types/settings.types';
  * product itself and are never offered (the server refuses to turn them off),
  * and `team` is part of Settings rather than a feature a shop opts into.
  */
-const HIDDEN: readonly string[] = ['platform', 'parties', 'ledger', 'team', 'help'];
+export const HIDDEN_MODULES: readonly string[] = ['platform', 'parties', 'ledger', 'team', 'help'];
 
 export interface ModuleToggleListProps {
   readonly modules: SettingsModules;
@@ -86,8 +86,8 @@ function ModuleToggleListInner({
     [modules.enabled, onChange]
   );
 
-  const available = modules.available.filter((module) => !HIDDEN.includes(module));
-  const locked = modules.locked.filter((module) => !HIDDEN.includes(module));
+  const available = modules.available.filter((module) => !HIDDEN_MODULES.includes(module));
+  const locked = modules.locked.filter((module) => !HIDDEN_MODULES.includes(module));
 
   return (
     <UbPanel as="section">

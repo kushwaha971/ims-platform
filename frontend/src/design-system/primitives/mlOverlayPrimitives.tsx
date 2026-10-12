@@ -21,12 +21,14 @@
  *    so keyboard and screen-reader focus cannot leave the dialog anyway);
  *  - no nested-overlay stack (nothing in Sprints 1–3 opens a dialog from a
  *    dialog; a second one would need a depth counter for the scroll lock);
- *  - the menu closes on outside pointerdown and Escape, and does not implement
- *    typeahead.
+ *  - the menu closes on choosing an item, on outside pointerdown and on Escape,
+ *    and does not implement typeahead.
  */
 
 import {
+  createContext,
   useCallback,
+  useContext,
   useEffect,
   useId,
   useLayoutEffect,
@@ -488,6 +490,14 @@ export const placeMenu = (
  * the rail's own scroll container grow and scroll; on a phone the 320 px panel
  * ran off the right edge from a trigger in the middle of the top bar.
  */
+/**
+ * How an item closes its menu. A menu is a list of commands: choosing one is
+ * the end of the menu's job, as in every native menu (owner, 12 Oct 2026 — the
+ * apps menu stayed open over the screen it had just switched to). Outside a
+ * menu the context is a no-op, so an item rendered alone still works.
+ */
+const MenuCloseContext = createContext<(() => void) | null>(null);
+
 export function MLMenu({
   trigger,
   triggerClassName,
@@ -562,6 +572,10 @@ export function MLMenu({
   }, []);
 
   const onToggle = useCallback(() => setOpen((value) => !value), []);
+  const close = useCallback(() => {
+    setOpen(false);
+    triggerRef.current?.focus();
+  }, []);
 
   return (
     <div className={cn('relative', className)}>
@@ -611,7 +625,7 @@ export function MLMenu({
                 : undefined
             }
           >
-            {children}
+            <MenuCloseContext.Provider value={close}>{children}</MenuCloseContext.Provider>
           </div>,
           document.body
         )}
@@ -634,13 +648,17 @@ export function MLMenuItem({
   children,
   className,
 }: Readonly<MLMenuItemProps>): React.JSX.Element {
+  const closeMenu = useContext(MenuCloseContext);
   return (
     <button
       type="button"
       role="menuitem"
       disabled={disabled}
       aria-current={selected ? 'true' : undefined}
-      onClick={onSelect}
+      onClick={() => {
+        closeMenu?.();
+        onSelect();
+      }}
       className={cn(
         'ds-body-base-regular flex min-h-9 w-full items-center gap-3 rounded-control px-3 py-2 text-left',
         'ds-body-sm text-text-primary transition-colors duration-fast ease-standard',

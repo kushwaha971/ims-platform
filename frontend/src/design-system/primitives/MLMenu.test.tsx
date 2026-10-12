@@ -55,4 +55,20 @@ describe('MLMenu', () => {
     expect(screen.getByTestId('rail').contains(menu)).toBe(false);
     expect(menu.parentElement).toBe(document.body);
   });
+
+  it('closes when an item is chosen, and runs the item', async () => {
+    /* Owner, 12 Oct 2026: the apps menu stayed open over the app it had just
+       switched to. A menu is a list of commands; choosing one ends it. */
+    const chosen = jest.fn();
+    render(
+      <MLMenu trigger="Open" ariaLabel="Things">
+        <MLMenuItem onSelect={chosen}>One</MLMenuItem>
+      </MLMenu>
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Open' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'One' }));
+    expect(chosen).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open' })).toHaveAttribute('aria-expanded', 'false');
+  });
 });
