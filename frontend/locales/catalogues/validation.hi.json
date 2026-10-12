@@ -48,6 +48,7 @@
   "validation.qty.required": "मात्रा भरें।",
   "validation.qty.tooLarge": "यह मात्रा बहुत बड़ी है।",
   "validation.qty.wholeOnly": "इस यूनिट में पूरी संख्या ही चलेगी।",
+  "validation.required": "यह भरें।",
   "validation.role.required": "भूमिका चुनें",
   "validation.stateCode.format": "सूची में से राज्य चुनें",
   "validation.stateCode.required": "अपना राज्य चुनें"

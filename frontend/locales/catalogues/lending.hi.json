@@ -136,6 +136,7 @@
   "lending.form.count": "किस्तों की गिनती",
   "lending.form.count.range": "{min} से {max} तक।",
   "lending.form.disbursedOn": "पैसे दिए",
+  "lending.form.disbursedOn.required": "पैसे किस दिन दिए, चुनें।",
   "lending.form.endOn": "कब तक",
   "lending.form.fileCharge": "फ़ाइल चार्ज",
   "lending.form.fileCharge.hint": "शुरू में नकद से काटा जाता है।",

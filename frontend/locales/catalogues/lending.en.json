@@ -136,6 +136,7 @@
   "lending.form.count": "Number of instalments",
   "lending.form.count.range": "Between {min} and {max}.",
   "lending.form.disbursedOn": "Money given on",
+  "lending.form.disbursedOn.required": "Choose the day the money was given.",
   "lending.form.endOn": "Pay by",
   "lending.form.fileCharge": "File charge",
   "lending.form.fileCharge.hint": "Taken out of the cash at the start.",

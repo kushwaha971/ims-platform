@@ -80,7 +80,7 @@ export const useLendingSchemas = (): {
       perInstalmentAmount: Yup.string()
         .defined()
         .when('planType', { is: 'fixed_daily', then: () => v.amountValidation() }),
-      disbursedOn: v.requiredText(10),
+      disbursedOn: v.requiredText(10, 'lending.form.disbursedOn.required'),
       firstDueOn: v.requiredText(10, 'lending.form.firstDue.required'),
       collectionWeekdays: Yup.number().defined().min(1, t('lending.form.weekdays.required')),
       paymentMode: Yup.mixed<LoanFormValues['paymentMode']>()

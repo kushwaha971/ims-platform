@@ -30,16 +30,17 @@ export const useSeatSchemas = (): SeatSchemas => {
   return useMemo(() => {
     const seatNumber = () =>
       v
-        .requiredText(4)
+        .requiredText(4, 'library.seats.number.required')
         .test(
           'number',
           t('library.seats.number.invalid'),
           (value) => /^\d{1,4}$/.test(String(value ?? '')) && Number(value) >= 1
         );
     const shiftSchema = Yup.object({
-      name: v.requiredText(SHIFT_NAME_MAX),
-      startsAt: v.requiredText(5),
-      endsAt: v.requiredText(5).test('same', t('library.seats.shift.same'), function check(value) {
+      // QA B7 — each says what to enter, never the generic fallback.
+      name: v.requiredText(SHIFT_NAME_MAX, 'library.seats.shift.name.required'),
+      startsAt: v.requiredText(5, 'library.seats.shift.startsAt.required'),
+      endsAt: v.requiredText(5, 'library.seats.shift.endsAt.required').test('same', t('library.seats.shift.same'), function check(value) {
         return value !== (this.parent as ShiftFormValues).startsAt;
       }),
     }) as Yup.ObjectSchema<ShiftFormValues>;
@@ -52,9 +53,9 @@ export const useSeatSchemas = (): SeatSchemas => {
       zone: v.boundedText(ZONE_MAX),
     }) as Yup.ObjectSchema<SeatRowFormValues>;
     const planSchema = Yup.object({
-      name: v.requiredText(PLAN_NAME_MAX),
+      name: v.requiredText(PLAN_NAME_MAX, 'library.fees.plan.name.required'),
       feeAmount: v.amountValidation({ allowZero: true }),
-      validityMonths: v.requiredText(2),
+      validityMonths: v.requiredText(2, 'library.fees.plan.validity.required'),
       admissionFee: v.optionalAmountValidation(),
       depositAmount: v.optionalAmountValidation(),
     }) as Yup.ObjectSchema<PlanFormValues>;
