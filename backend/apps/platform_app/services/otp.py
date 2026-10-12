@@ -40,7 +40,7 @@ from django.utils import timezone
 from apps.common.audit import AuditAction, write_audit
 from apps.common.exceptions import BusinessRuleViolation
 from apps.platform_app.constants import OtpPurpose
-from apps.platform_app.services import fast2sms, message_central, minimoth, throttle
+from apps.platform_app.services import fast2sms, message_central, meta_whatsapp, throttle
 
 # Message Central's default length; the console provider matches it.
 CODE_LENGTH = 4
@@ -99,13 +99,13 @@ class OtpNotSent(BusinessRuleViolation):
 PROVIDER_MESSAGE_CENTRAL = "message_central"
 PROVIDER_CONSOLE = "console"
 PROVIDER_FAST2SMS = "fast2sms"
-PROVIDER_MINIMOTH = "minimoth"
+PROVIDER_META = "meta_whatsapp"
 
 
 def _provider() -> str:
     """Fast2SMS is explicit and fails closed when its credentials are absent."""
-    if getattr(settings, "UB_OTP_PROVIDER", PROVIDER_CONSOLE) == PROVIDER_MINIMOTH:
-        return PROVIDER_MINIMOTH
+    if getattr(settings, "UB_OTP_PROVIDER", PROVIDER_CONSOLE) == PROVIDER_META:
+        return PROVIDER_META
     if getattr(settings, "UB_OTP_PROVIDER", PROVIDER_CONSOLE) == PROVIDER_FAST2SMS:
         return PROVIDER_FAST2SMS
     if (
@@ -116,15 +116,15 @@ def _provider() -> str:
     return PROVIDER_CONSOLE
 
 
-# MiniMoth chooses its own six-digit code and delivers it on WhatsApp first;
+# Direct Meta codes are six digits and are delivered on WhatsApp;
 # every other provider sends our four digits (or Message Central's) by SMS.
-MINIMOTH_CODE_LENGTH = 6
+META_CODE_LENGTH = 6
 
 
 def code_shape() -> tuple[int, str]:
     """`(digits, channel)` for the provider this server is running with now."""
-    if _provider() == PROVIDER_MINIMOTH:
-        return MINIMOTH_CODE_LENGTH, "whatsapp"
+    if _provider() == PROVIDER_META:
+        return META_CODE_LENGTH, "whatsapp"
     return CODE_LENGTH, "sms"
 
 
@@ -211,7 +211,7 @@ def request_otp(
     if _provider() in (
         PROVIDER_FAST2SMS,
         PROVIDER_MESSAGE_CENTRAL,
-        PROVIDER_MINIMOTH,
+        PROVIDER_META,
     ) and purpose not in (
         OtpPurpose.LOGIN,
         OtpPurpose.SIGNUP,
@@ -222,8 +222,8 @@ def request_otp(
     ttl = int(settings.UB_OTP_TTL_SECONDS)
     provider = _provider()
     via_message_central = provider == PROVIDER_MESSAGE_CENTRAL
-    external_code = via_message_central or provider == PROVIDER_MINIMOTH
-    code = "" if external_code else generate_code()
+    external_code = via_message_central
+    code = "" if external_code else (f"{secrets.randbelow(900000) + 100000}" if provider == PROVIDER_META else generate_code())
 
     with transaction.atomic():
         challenge = OtpChallenge.objects.create(
@@ -251,11 +251,8 @@ def request_otp(
             OtpChallenge.objects.filter(pk=challenge.pk).update(
                 provider_verification_id=verification_id
             )
-        elif provider == PROVIDER_MINIMOTH:
-            verification_id = minimoth.send_otp(mobile)
-            OtpChallenge.objects.filter(pk=challenge.pk).update(
-                provider_verification_id="minimoth:" + verification_id
-            )
+        elif provider == PROVIDER_META:
+            meta_whatsapp.send_otp(mobile, code)
         elif provider == PROVIDER_FAST2SMS:
             fast2sms.send_otp(mobile, code)
         else:
@@ -270,11 +267,9 @@ def request_otp(
     except (
         message_central.MessageCentralError,
         fast2sms.Fast2SmsError,
-        minimoth.MiniMothError,
+        meta_whatsapp.MetaWhatsAppError,
     ) as exc:
         OtpChallenge.objects.filter(pk=challenge.pk).update(expires_at=timezone.now())
-        if isinstance(exc, minimoth.MiniMothError) and exc.status == 429:
-            raise OtpThrottled(600) from exc
         if getattr(exc, "code", None) == message_central.REQUEST_ALREADY_EXISTS:
             # They hold their own 60-second gap; ours matches it, so this is a
             # race or a clock difference. Same answer as our own throttle.
@@ -338,18 +333,15 @@ def consume_challenge(
     # asked BEFORE the row is locked (Part 20 §20.11.2: no lock across a
     # provider call). The same refusals run first, so a spent or expired
     # challenge never costs a provider request; they run again under the lock.
-    provider_answer: message_central.Validation | minimoth.Validation | None = None
+    provider_answer: message_central.Validation | None = None
     if known:
         peek = checked(OtpChallenge.objects.filter(pk=challenge_id).first())
         if peek.provider_verification_id:
             try:
-                if peek.provider_verification_id.startswith("minimoth:"):
-                    provider_answer = minimoth.validate_otp(peek.mobile, str(code))
-                else:
-                    provider_answer = message_central.validate_otp(
-                        peek.mobile, peek.provider_verification_id, str(code)
-                    )
-            except (message_central.MessageCentralError, minimoth.MiniMothError) as exc:
+                provider_answer = message_central.validate_otp(
+                    peek.mobile, peek.provider_verification_id, str(code)
+                )
+            except message_central.MessageCentralError as exc:
                 # Not the person's mistake: no attempt is counted against them.
                 raise OtpNotSent(
                     "We couldn't check the code right now. Please try again in a moment."

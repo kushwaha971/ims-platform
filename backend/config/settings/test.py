@@ -37,10 +37,13 @@ DATABASES["default"]["TEST"] = {  # noqa: F405
 # the owner's Message Central credentials live, so without this every OTP test
 # would text a made-up number on a paid account. Tests of the Message Central
 # service set the credentials themselves and stub the network.
-MINIMOTH_API_KEY = ""
 FAST2SMS_API_KEY = ""
 MC_CUSTOMER_ID = ""
 MC_PASSWORD = ""
 MC_AUTH_TOKEN = ""
 UB_OTP_PROVIDER = "console"
 UB_SMS_BACKEND = "apps.common.integrations.sms.console.ConsoleSmsBackend"
+
+META_WHATSAPP_ACCESS_TOKEN = ""
+META_WHATSAPP_APP_SECRET = ""
+META_WHATSAPP_WEBHOOK_VERIFY_TOKEN = ""

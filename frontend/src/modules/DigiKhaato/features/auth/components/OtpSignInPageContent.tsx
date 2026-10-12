@@ -5,7 +5,7 @@ import { useMemo } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm } from 'react-hook-form';
 
-import { OTP_USES_MINIMOTH } from 'src/constants';
+import { OTP_USES_META } from 'src/constants';
 import {
   UbButton,
   UbField,
@@ -120,19 +120,19 @@ export function OtpSignInPageContent({ mode }: OtpSignInPageContentProps): React
         }
         description={
           otp
-            ? t(viaWhatsApp ? 'auth.otp.minimothCodePrompt' : 'auth.otp.sentTo', {
+            ? t(viaWhatsApp ? 'auth.otp.metaCodePrompt' : 'auth.otp.sentTo', {
                 mobile: formatPhoneForDisplay(otp.mobile),
                 length: codeLength,
               })
-            : t(OTP_USES_MINIMOTH ? 'auth.otp.minimothPrompt' : 'auth.otp.prompt', { appName })
+            : t(OTP_USES_META ? 'auth.otp.metaPrompt' : 'auth.otp.prompt', { appName })
         }
       />
 
       <AuthPanel>
         <UbStack gap={4}>
-          {(otp ? viaWhatsApp : OTP_USES_MINIMOTH) && (
+          {(otp ? viaWhatsApp : OTP_USES_META) && (
             <UbText variant="body-sm" tone="secondary">
-              {t('auth.otp.minimothSafety')}
+              {t('auth.otp.metaSafety')}
             </UbText>
           )}
           {flow.isOffline && (

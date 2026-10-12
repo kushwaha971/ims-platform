@@ -9,7 +9,10 @@ from django.urls import include, path
 
 from apps.common.views import HealthView, ReadinessView, VersionView
 
+from apps.platform_app.views.meta_webhook import meta_webhook
+
 api_v1 = [
+    path("integrations/meta/whatsapp/webhook", meta_webhook, name="meta-whatsapp-webhook"),
     path("auth/", include("apps.platform_app.urls_auth")),
     path("", include("apps.platform_app.urls")),
     path("", include("apps.parties.urls")),

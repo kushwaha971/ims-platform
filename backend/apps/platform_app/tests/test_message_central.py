@@ -180,7 +180,9 @@ def test_a_new_number_signs_in_with_the_code_message_central_sent(
     requested = auth_client.post(reverse(REQUEST_URL), {"mobile": "9845011122"}, format="json")
     assert requested.status_code == 200, requested.content
     body = requested.json()["data"]
-    assert set(body) == {"challenge_id", "expires_in", "retry_after"}
+    assert set(body) == {"challenge_id", "expires_in", "retry_after", "code_length", "channel"}
+    assert body["code_length"] == 4
+    assert body["channel"] == "sms"
     assert body["retry_after"] == 60
     # Neither their id nor any credential leaves Django.
     assert "2949" not in requested.content.decode()

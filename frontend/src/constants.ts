@@ -156,4 +156,4 @@ export const BING_SITE_VERIFICATION: string = process.env.NEXT_PUBLIC_BING_SITE_
  * when it runs, and a screen that guessed the length at build time locked
  * everybody out whenever the two disagreed (review G2, 12 Oct 2026).
  */
-export const OTP_USES_MINIMOTH = process.env.NEXT_PUBLIC_OTP_PROVIDER === 'minimoth';
+export const OTP_USES_META = process.env.NEXT_PUBLIC_OTP_PROVIDER === 'meta_whatsapp';
