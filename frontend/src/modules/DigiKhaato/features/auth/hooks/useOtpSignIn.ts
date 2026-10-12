@@ -1,11 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useDegradedNetwork } from 'src/hooks/useDegradedNetwork';
 import { useTranslation } from 'src/hooks/useTranslation';
-import { endSessionLocally, selectHoldsSession } from 'src/redux/slice/sessionSlice';
 import type { ApiErrorShape } from 'src/types/api.types';
 import type { Locale } from 'src/types/domain.types';
 import { applyServerErrors } from 'src/utils/applyServerErrors';
@@ -82,14 +81,10 @@ export const useOtpSignIn = (): UseOtpSignInResult => {
   const { state: networkState, canWrite } = useDegradedNetwork();
   const [formErrors, setFormErrors] = useState<readonly string[]>([]);
 
-  // NEW-1, as on the password screen this replaces: a sign-in screen that
-  // OPENS over a held session ends it, read once at mount, so the next person
-  // at a shared counter never signs in over the last one's business.
-  const holdsSession = useAppSelector(selectHoldsSession);
-  const [heldAtMount] = useState(holdsSession);
-  useEffect(() => {
-    if (heldAtMount) endSessionLocally(dispatch);
-  }, [heldAtMount, dispatch]);
+  // NEW-1 — a session the store holds when this screen opens is no longer
+  // ended blindly here: `useSignedInGate` asks the server, and a session the
+  // cookies no longer back ends through the transport's `onSessionExpired`
+  // (QA B48: a LIVE one goes into the app instead of under a sign-in form).
 
   const resendSeconds = useCountdown(otp?.resendAt ?? null);
   const throttledSeconds = useCountdown(throttledUntil);

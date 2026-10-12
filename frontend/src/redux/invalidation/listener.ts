@@ -91,7 +91,9 @@ invalidationListener.startListening({
   effect: (action, api) => {
     if (action.meta.aborted) return;
     const before = (api.getOriginalState() as RootState).session.status;
-    if (before === 'authenticated' || before === 'no_tenant') {
+    // QA B47 — a re-check with no verdict keeps the session, and so its data.
+    const ended = (api.getState() as RootState).session.status === 'anonymous';
+    if (ended && (before === 'authenticated' || before === 'no_tenant')) {
       api.dispatch(resetAllFeatureState());
     }
   },

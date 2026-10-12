@@ -301,18 +301,30 @@ api.interceptors.response.use(
 
     if (isRefreshable && config) {
       config._retried = true;
+      // Join the single in-flight refresh, or start it.
+      const waiter = new Promise<void>((resolve, reject) => {
+        pendingQueue.push({ resolve, reject });
+      });
+      // The rejection is delivered through `waiter` below; swallowing it HERE
+      // stops the shared refresh promise becoming an unhandled rejection when
+      // the refresh itself 401s (which is the ordinary session-expiry path).
+      void runRefresh().catch(() => undefined);
       try {
-        // Join the single in-flight refresh, or start it.
-        const waiter = new Promise<void>((resolve, reject) => {
-          pendingQueue.push({ resolve, reject });
-        });
-        // The rejection is delivered through `waiter` below; swallowing it HERE
-        // stops the shared refresh promise becoming an unhandled rejection when
-        // the refresh itself 401s (which is the ordinary session-expiry path).
-        void runRefresh().catch(() => undefined);
         await waiter;
-        return await api.request(config);
-      } catch {
+      } catch (refreshError) {
+        /*
+         * QA B47 — only a refresh the SERVER refused ends the session. A
+         * refresh that never got an answer (offline, a proxy's 502/503) says
+         * nothing about the session, and signing a merchant out over it sent
+         * them to a WhatsApp code for a session that was still valid.
+         */
+        // The refresh's rejection has already been through this interceptor,
+        // so it is usually an ApiErrorShape; a raw AxiosError is read too.
+        const shaped = refreshError as { status?: number; response?: { status?: number } } | null;
+        const refused = shaped?.status ?? shaped?.response?.status;
+        if (refused !== 401 && refused !== 403) {
+          return Promise.reject(toApiError(refreshError));
+        }
         // EXCEPTION 3 (CR-2026-09-19-E) — refresh failed, so the session is
         // genuinely over. `onSessionExpired` + a redirect to login IS the
         // report; a toast on the way out would be a second one, and the screen
@@ -322,6 +334,15 @@ api.interceptors.response.use(
         redirectToLoginOnce();
         return Promise.reject(toApiError(error));
       }
+      /*
+       * QA B47 — the replay is OUTSIDE the try. It used to share it, so a replay
+       * that failed for any other reason — aborted by a navigation, a 503, the
+       * stale-tab guard — was read as "the refresh failed" and signed a valid
+       * session out to /login, after the refresh had already succeeded. Its own
+       * failure now travels through this interceptor like any other request's
+       * (`_retried` stops it refreshing twice).
+       */
+      return api.request(config);
     }
 
     /**

@@ -191,24 +191,37 @@ describe('the login screen, opened over a session the cookies no longer back', (
 });
 
 describe('the session probe that finds no session', () => {
-  it('tears the features down too, when the store still held a session', () => {
-    /* Not a 401 — those reach `onSessionExpired` through the failed refresh.
-       This is the probe failing any other way, which sends the user to a login
-       screen that finds the session already `anonymous` and so has nothing to
-       tear down; the features must not be left behind it. */
-    signInAsTenantB();
-    const dirty = featureState();
-
+  const probeFails = (status: number, code: string): void => {
     store.dispatch(
       fetchSession.rejected(null, 'probe', undefined, {
-        code: 'network_error',
-        message: 'offline',
+        code,
+        message: code,
         details: {},
         requestId: null,
-        status: 0,
+        status,
         warnings: [],
       } as unknown as Parameters<typeof fetchSession.rejected>[3])
     );
+  };
+
+  it('keeps a held session, and its data, when the probe got no verdict', () => {
+    /* QA B47 — an offline or 503 re-check (a tab back from idle) says nothing
+       about the session; ending it sent a signed-in merchant to /login. */
+    signInAsTenantB();
+    const dirty = featureState();
+    probeFails(0, 'network_error');
+    expect(store.getState().session.status).toBe('authenticated');
+    expect(featureState().partyDetail.id).toBe(dirty.partyDetail.id);
+  });
+
+  it('tears the features down too, when the server says the session is gone', () => {
+    /* The probe answered 401 without the refresh path having torn anything down
+       (a 401 normally reaches `onSessionExpired` through the failed refresh);
+       the features must not be left behind the login screen. */
+    signInAsTenantB();
+    const dirty = featureState();
+
+    probeFails(401, 'not_authenticated');
 
     expect(store.getState().session.status).toBe('anonymous');
     expect(featureState().partyList).not.toEqual(dirty.partyList);

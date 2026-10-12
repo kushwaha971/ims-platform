@@ -12,6 +12,7 @@ import {
   UbForm,
   UbLink,
   UbOtpInput,
+  UbPageSkeleton,
   UbPhoneInput,
   UbStack,
   UbStatusBanner,
@@ -25,6 +26,7 @@ import { formatPhoneForDisplay } from 'src/utils/share';
 
 import { useAuthRedirect } from '../hooks/useAuthRedirect';
 import { useOtpSignIn } from '../hooks/useOtpSignIn';
+import { useSignedInGate } from '../hooks/useSignedInGate';
 import { useAuthSchemas } from '../validation/authSchemas';
 
 import { AuthPanel } from './AuthPanel';
@@ -70,6 +72,8 @@ export function OtpSignInPageContent({ mode }: OtpSignInPageContentProps): React
   const flow = useOtpSignIn();
   // Mounted here so a session created on this screen routes itself (FR-9).
   useAuthRedirect();
+  // QA B48 / B49 — never draw the form over a live session.
+  const gate = useSignedInGate();
 
   const mobileForm = useForm<OtpMobileFormValues>({
     resolver: yupResolver(schemas.otpMobileSchema),
@@ -106,6 +110,8 @@ export function OtpSignInPageContent({ mode }: OtpSignInPageContentProps): React
     codeForm.reset({ code: '' });
     await flow.resend();
   };
+
+  if (gate.checking) return <UbPageSkeleton variant="form" count={2} />;
 
   return (
     <UbStack gap={6} className="w-full">

@@ -1,7 +1,7 @@
 import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { resetSession } from 'src/redux/slice/sessionSlice';
+import { resetSession, sessionExpired } from 'src/redux/slice/sessionSlice';
 import { store } from 'src/redux/store';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
 
@@ -53,6 +53,9 @@ const otpError = (reason: string, attemptsLeft: number) => ({
 beforeEach(() => {
   store.dispatch(resetAuth());
   store.dispatch(resetSession());
+  // The bootstrap's verdict on /login with nobody signed in (QA B48: the form
+  // is drawn only once the server has said so).
+  store.dispatch(sessionExpired());
   jest.clearAllMocks();
   authService.requestOtp.mockResolvedValue(CHALLENGE);
   authService.getSession.mockResolvedValue({

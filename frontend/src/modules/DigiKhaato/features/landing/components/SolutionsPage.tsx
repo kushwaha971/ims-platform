@@ -1,5 +1,6 @@
 import { GooglePublicTracker } from 'src/analytics/GooglePublicTracker';
 import { UbActionLink, UbBox, UbJsonLd, UbLink, UbStack, UbText } from 'src/design-system';
+import { ROUTES } from 'src/routes';
 import { absoluteUrl } from 'src/utils/seo';
 
 import { SOLUTIONS, type Solution } from '../config/solutions';
@@ -66,7 +67,7 @@ export function SolutionsPage({ solution }: Readonly<{ solution?: Solution }>): 
           </UbLink>
           <UbStack as="nav" aria-label="Public navigation" direction="row" wrap gap={4}>
             <UbLink href="/solutions">Solutions</UbLink>
-            <UbLink href="/login">Sign in</UbLink>
+            <UbLink href={ROUTES.LOGIN}>Sign in</UbLink>
           </UbStack>
         </UbStack>
       </UbBox>
@@ -179,7 +180,7 @@ export function SolutionsPage({ solution }: Readonly<{ solution?: Solution }>): 
             YourKhata works in a browser on phone or computer. The application supports Hindi and
             English.
           </UbText>
-          <UbActionLink href="/signup" variant="primary" className="self-start">
+          <UbActionLink href={ROUTES.SIGNUP} variant="primary" className="self-start">
             Create your account
           </UbActionLink>
         </UbStack>

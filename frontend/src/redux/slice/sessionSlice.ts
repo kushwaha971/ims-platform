@@ -269,6 +269,15 @@ const sessionSlice = createSlice({
       .addCase(fetchSession.rejected, (state, action) => {
         // An aborted bootstrap is a remount, not a logout.
         if (action.meta.aborted) return;
+        /* QA B47 — a re-check that got no verdict (offline, a 503) says nothing
+           about a session this tab already holds; only the server saying 401 or
+           403 ends it. Without a held session there is nothing to keep. */
+        const verdict = action.payload?.status;
+        const held = state.status === 'authenticated' || state.status === 'no_tenant';
+        if (held && verdict !== 401 && verdict !== 403) {
+          state.error = (action.payload ?? null) as Draft<ApiErrorShape> | null;
+          return;
+        }
         Object.assign(state, endedSession(state));
         state.error = (action.payload ?? null) as Draft<ApiErrorShape> | null;
       })

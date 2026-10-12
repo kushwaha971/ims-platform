@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { resetSession } from 'src/redux/slice/sessionSlice';
+import { resetSession, sessionExpired } from 'src/redux/slice/sessionSlice';
 import { store } from 'src/redux/store';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
 
@@ -26,6 +26,7 @@ const service = jest.requireMock('../api/authService') as {
 
 it('identifies the YourKhata sender before requesting a code and verifies all six digits', async () => {
   store.dispatch(resetSession());
+  store.dispatch(sessionExpired());
   store.dispatch(resetAuth());
   service.requestOtp.mockResolvedValue({
     challengeId: 'moth-1',

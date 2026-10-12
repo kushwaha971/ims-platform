@@ -1,6 +1,7 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 
 import type { SessionPayload } from 'src/redux/slice/sessionSlice';
+import type { RootState } from 'src/redux/store';
 import type { ApiErrorShape } from 'src/types/api.types';
 import { toApiError } from 'src/utils/apiError';
 
@@ -14,8 +15,19 @@ import * as authService from '../api/authService';
  * No JSX, no `window`, no snackbar, no axios, no business rules.
  */
 
+/**
+ * QA B47 — `{ ifIdleFor }` re-reads a HELD session only when it was last read at
+ * least that long ago (a tab back from idle); otherwise the call is skipped
+ * before any request. No argument always reads.
+ */
+export type FetchSessionArg = { readonly ifIdleFor: number } | void;
+
 /** QUERY. §19.7.2 step 1 of the bootstrap sequence. */
-export const fetchSession = createAsyncThunk<SessionPayload, void, { rejectValue: ApiErrorShape }>(
+export const fetchSession = createAsyncThunk<
+  SessionPayload,
+  FetchSessionArg,
+  { rejectValue: ApiErrorShape; state: RootState }
+>(
   'session/fetchSession',
   async (_arg, { signal, rejectWithValue }) => {
     try {
@@ -23,6 +35,14 @@ export const fetchSession = createAsyncThunk<SessionPayload, void, { rejectValue
     } catch (error) {
       return rejectWithValue(toApiError(error, 'auth.session.error'));
     }
+  },
+  {
+    condition: (arg, { getState }) => {
+      if (!arg) return true;
+      const { status, lastFetchedAt } = getState().session;
+      if (status !== 'authenticated' && status !== 'no_tenant') return false;
+      return lastFetchedAt === null || Date.now() - lastFetchedAt >= arg.ifIdleFor;
+    },
   }
 );
 
