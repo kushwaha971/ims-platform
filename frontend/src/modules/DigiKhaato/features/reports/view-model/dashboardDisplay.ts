@@ -64,9 +64,11 @@ export const TILE_ORDER = [
 export type TileKey = (typeof TILE_ORDER)[number];
 
 /** FR-2's "Tap →" column. Every tile leads to the list that makes it up. */
+/* DEC-019 — this is the Shop's home: To collect / To pay are its customers and
+   suppliers on bills, not the whole book (`/parties` reads the Udhaar book). */
 export const TILE_HREF: Readonly<Record<TileKey, string>> = {
-  toCollect: `${ROUTES.PARTIES}?balance=owes_me`,
-  toPay: `${ROUTES.PARTIES}?balance=i_owe`,
+  toCollect: `${ROUTES.CUSTOMERS}?balance=owes_me`,
+  toPay: `${ROUTES.SUPPLIERS}?balance=i_owe`,
   dueToday: `${ROUTES.PARTIES}?collection=today`,
   overdue: `${ROUTES.PARTIES}?collection=overdue`,
   upcoming7d: `${ROUTES.PARTIES}?collection=upcoming`,

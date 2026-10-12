@@ -15,7 +15,7 @@ import 'src/i18n/catalogues/partyBooks';
 export default function CustomersPage(): React.JSX.Element {
   return (
     <Suspense fallback={<UbPageSkeleton variant="list" />}>
-      <PartyListPageContent kind="customer" />
+      <PartyListPageContent kind="customer" book="shop" />
     </Suspense>
   );
 }

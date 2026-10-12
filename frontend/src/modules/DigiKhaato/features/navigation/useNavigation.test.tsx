@@ -188,6 +188,7 @@ describe('the switcher', () => {
 describe('a body without apps (an old fixture)', () => {
   it('falls back to every app with a row this person can see', () => {
     load({ apps: null, activeApp: null, modules: MODULE_CODES.filter((m) => m !== 'library') });
-    expect(listed().apps.map((a) => a.code)).toEqual(['lending', 'shop']);
+    // DEC-019 — the Udhaar book is an app of its own, after the Shop.
+    expect(listed().apps.map((a) => a.code)).toEqual(['lending', 'shop', 'khata']);
   });
 });

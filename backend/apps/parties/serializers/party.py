@@ -102,6 +102,11 @@ class PartyListSerializer(serializers.ModelSerializer):
         roles = self.context.get("party_roles")
         if roles is not None:
             data["roles"] = roles.get(instance.pk, [])
+        # DEC-019 — on the Shop's lists (`?book=shop`) the row's money is what is due on
+        # bills, never the Udhaar book's figure: the two are separate apps.
+        field = self.context.get("balance_field")
+        if field and field != "balance":
+            data["balance"] = self.fields["balance"].to_representation(getattr(instance, field))
         return data
 
 

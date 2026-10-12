@@ -26,6 +26,10 @@ class ModuleCode(models.TextChoices):
     IMPORT_EXPORT = "import_export", _("Import / export")
     HELP = "help", _("Help")
     TEAM = "team", _("Team")
+    # DEC-019 (owner, 12 Oct 2026) — the Udhaar book: You gave / You got with a person,
+    # like Khatabook, an app of its own and never part of the Shop. It is the anchor of
+    # the `khata` app; its money is the ledger's `main` bucket (`party.balance`).
+    KHATA = "khata", _("Udhaar book")
     # ── A1 ── Platform verticals (ADR-041, contracts §1.1). Each is listed in
     # `apps.platform_app.constants.UNRELEASED_MODULES` until its release CR, so
     # no merchant sees, enables or reaches one before it is built (vision §4).

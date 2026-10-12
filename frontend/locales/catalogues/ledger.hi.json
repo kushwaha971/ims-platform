@@ -170,6 +170,8 @@
   "ledger.statement.range.inverted": "शुरू की तारीख़ आख़िरी तारीख़ के बाद है।",
   "ledger.statement.range.tooLong": "5 साल तक की अवधि चुनें।",
   "ledger.statement.shop.gstin": "GSTIN {gstin}",
+  "ledger.statement.shop.in": "आया",
+  "ledger.statement.shop.out": "गया",
   "ledger.statement.shop.phone": "फ़ोन {phone}",
   "ledger.statement.showCorrections": "सुधार दिखाएँ",
   "ledger.statement.title": "हिसाब",
@@ -185,6 +187,8 @@
   "ledger.timeline.got": "आपको कुल मिले",
   "ledger.timeline.loadMore": "पुरानी एंट्रियाँ दिखाएँ",
   "ledger.timeline.loadingMore": "लोड हो रहा है…",
+  "ledger.timeline.shop.empty.body": "इस व्यक्ति के बिल और भुगतान यहाँ दिखेंगे।",
+  "ledger.timeline.shop.empty.title": "अभी कोई बिल या भुगतान नहीं",
   "ledger.timeline.title": "लेन-देन",
   "ledger.timeline.writtenOff": "{side, select, receivable {कुल बट्टे खाते में (मिलने थे)} payable {कुल बट्टे खाते में (देने थे)} other {कुल बट्टे खाते में}}"
 }

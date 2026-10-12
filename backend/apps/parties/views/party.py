@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from django.db.models import Q
+from django.db.models import F, Q
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import action
 from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
@@ -27,7 +27,7 @@ from apps.common.responses import StandardResponse
 from apps.common.throttling import ScopedUserRateThrottle
 from apps.common.viewsets import TenantScopedNoDeleteViewSet
 from apps.parties.constants import archive_via
-from apps.parties.filters import PartyFilterSet
+from apps.parties.filters import PartyFilterSet, list_balance_field
 from apps.parties.models import Party, PartyRelation
 from apps.parties.permissions import (
     PartyManagerActions,
@@ -71,11 +71,18 @@ def _party_type(party: Party) -> str:
     return "supplier" if party.is_supplier else "customer"
 
 
+def _book_balance(party: Party) -> Any:
+    """The figure of the book the list reads (DEC-019): `export_queryset` attaches
+    `list_balance` for the Shop's lists; otherwise it is the Udhaar book's."""
+    return getattr(party, "list_balance", party.balance)
+
+
 def _balance_type(party: Party) -> str:
     """The direction as words, as the statement CSV writes it (LED-04 BR-4)."""
-    if party.balance > 0:
+    balance = _book_balance(party)
+    if balance > 0:
         return "You will get"
-    if party.balance < 0:
+    if balance < 0:
         return "You will give"
     return "Settled"
 
@@ -87,7 +94,7 @@ PARTY_EXPORT_COLUMNS = (
     ExportColumn("display_code", lambda p: p.display_code or ""),
     ExportColumn("mobile", lambda p: p.mobile or ""),
     ExportColumn("type", _party_type),
-    ExportColumn("balance", lambda p: abs(p.balance), numeric=True),
+    ExportColumn("balance", lambda p: abs(_book_balance(p)), numeric=True),
     ExportColumn("balance_type", _balance_type),
     ExportColumn("collection_date", lambda p: csv_date(p.collection_date)),
     ExportColumn("last_activity", lambda p: csv_date(p.last_activity_at)),
@@ -212,7 +219,7 @@ class PartyViewSet(CsvExportMixin, TenantScopedNoDeleteViewSet):
         # The filtered set WITHOUT the export's role annotation (A6): the page and
         # the totals are the same queries they were, and badges are one more.
         queryset = self.filter_queryset(self.get_queryset())
-        totals = party_totals(queryset)
+        totals = party_totals(queryset, field=list_balance_field(request))
         page = self.paginate_queryset(queryset)
         serializer = self.get_serializer(page, many=True, context=self._roles_context(page))
         # Through a serializer, not straight into the envelope: the two
@@ -242,11 +249,24 @@ class PartyViewSet(CsvExportMixin, TenantScopedNoDeleteViewSet):
 
     def export_queryset(self) -> Any:
         """The filtered set, plus `role_codes` for the CSV's `roles` column (A6)."""
-        return with_role_codes(self.filter_queryset(self.get_queryset()), self.get_tenant())
+        queryset = self.filter_queryset(self.get_queryset())
+        field = list_balance_field(self.request)
+        if field != "balance":
+            queryset = queryset.annotate(list_balance=F(field))
+        return with_role_codes(queryset, self.get_tenant())
+
+    def ordering_term(self, term: str) -> str:
+        """DEC-019 — `?ordering=balance` sorts by the book the list reads (`StableOrderingFilter`)."""
+        field = list_balance_field(self.request)
+        if field != "balance" and term.lstrip("-") == "balance":
+            return term.replace("balance", field)
+        return term
 
     def _roles_context(self, page: Any) -> dict[str, Any]:
         """The serializer context, with `party_roles` when a role-bearing module is on."""
         context = self.get_serializer_context()
+        # DEC-019 — the row's `balance` is the figure of the book the list reads.
+        context["balance_field"] = list_balance_field(self.request)
         tenant = self.get_tenant()
         if enabled_roles(tenant):
             context["party_roles"] = roles_for(tenant, [party.pk for party in page or ()])

@@ -92,7 +92,7 @@ describe('the dashboard tiles', () => {
   });
 
   it('opens the list each tile counts (FR-2 "Tap →")', () => {
-    expect(tileHref('toCollect', {})).toBe(`${ROUTES.PARTIES}?balance=owes_me`);
+    expect(tileHref('toCollect', {})).toBe(`${ROUTES.CUSTOMERS}?balance=owes_me`);
     expect(tileHref('dueToday', {})).toBe(`${ROUTES.PARTIES}?collection=today`);
     expect(tileHref('todaySales', {})).toBe(`${ROUTES.SALES_INVOICES}?period=today`);
     expect(tileHref('lowStock', {})).toBe(ROUTES.STOCK_LOW);

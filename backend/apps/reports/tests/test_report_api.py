@@ -146,7 +146,7 @@ def test_one_shops_snapshot_is_never_another_shops(
     tenant: Any, other_tenant: Any, api_as: Any
 ) -> None:
     """§19 — the cache key is the tenant; the other shop computes its own."""
-    b.party(tenant, balance=Decimal("4000"))
+    b.party(tenant, shop_balance=Decimal("4000"))
     mine, _ = api_as(tenant)
     theirs, _ = api_as(other_tenant)
     assert mine.get(reverse(DASHBOARD)).json()["data"]["tiles"]["to_collect"]["amount"] == "4000.00"

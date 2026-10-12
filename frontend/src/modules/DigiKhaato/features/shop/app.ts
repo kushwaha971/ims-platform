@@ -9,7 +9,6 @@ import {
   CreditCard,
   FileMinus,
   FileText,
-  Hourglass,
   LayoutDashboard,
   PackageCheck,
   PackageSearch,
@@ -18,7 +17,6 @@ import {
   Tags,
   Truck,
   Undo2,
-  Wallet,
 } from 'lucide-react';
 
 import { ROUTES } from 'src/routes';
@@ -34,8 +32,9 @@ import type { AppManifest } from '../navigation/appManifest';
  * "Daily" and "Business", with estimates, credit notes and the stock screens
  * reachable only from inside other pages.
  *
- * What is ours and not theirs stays: the khata (Customers), Who owes (aging)
- * and the logged reminders sit under Parties, where a shopkeeper collects.
+ * DEC-019 (12 Oct 2026): the khata — You gave / You got, Old dues, Reminders — is
+ * the Udhaar book's app now, not the Shop's. The Shop keeps its own Customers and
+ * Suppliers, two tabs, each showing what is due on bills.
  */
 export const SHOP_APP: AppManifest = {
   code: 'shop',
@@ -55,7 +54,6 @@ export const SHOP_APP: AppManifest = {
     '/stock',
     '/purchases',
     '/cashbook',
-    '/ledger',
     '/reports',
   ],
   sections: [
@@ -109,29 +107,8 @@ export const SHOP_APP: AppManifest = {
       bottomNav: true,
       tabLabelId: 'nav.suppliers',
     },
-    // LED-09 — "who do I ring first", the collection round's starting list.
-    {
-      key: 'aging',
-      icon: Hourglass,
-      labelId: 'nav.aging',
-      href: ROUTES.LEDGER_AGING,
-      module: 'ledger',
-      permission: 'ledger.entry.read',
-      section: 'parties',
-      order: 3,
-    },
-    // LED-05/06/07 — the buckets, manual and bulk reminders, and the history.
-    {
-      key: 'reminders',
-      icon: Wallet,
-      labelId: 'nav.reminders',
-      href: ROUTES.LEDGER_REMINDERS,
-      module: 'ledger',
-      permission: 'ledger.entry.read',
-      section: 'parties',
-      order: 4,
-      badge: 'overdueReminders',
-    },
+    // DEC-019 — Old dues and Reminders read the Udhaar book's figure, so they are
+    // that app's rows now (`features/khata/app.ts`), not the Shop's.
     // SAL-02/03/06/07/08 — bills, drafts, walk-in cash sales, print and share.
     {
       key: 'invoices',
@@ -316,5 +293,9 @@ export const SHOP_APP: AppManifest = {
       order: 1,
     },
   ],
+  // DEC-019 — a customer's page, opened from here, reads the Shop's book: bills
+  // and the payments against them, never their Udhaar book figure.
+  book: 'shop',
+  peopleHref: ROUTES.CUSTOMERS,
   shell: { partySearch: true },
 };

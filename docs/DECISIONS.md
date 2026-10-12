@@ -557,4 +557,19 @@ ADR-021 ↔ §26.14 contradiction recorded as `CR-j`.
   balance is settled with "You got" in the udhaar book, not with a Shop receipt. The credit
   limit applies to each app's own balance. "Last entry" on a list moves only for that app's
   own entries.
+- **How it is built (phase 2, 12 Oct 2026).** The Udhaar book is the `khata` app, anchored
+  on a new `khata` module (`MODULE_DEPENDENCIES` parties + ledger), registered beside the Shop
+  with `order=95` so a business running both still lands in the Shop. `platform/0018`
+  releases it to every plan and switches it on for every business that runs the Shop —
+  they had the udhaar book yesterday inside the Shop — and for nobody else (DEC-016). Its
+  menu is People (`/khata`), Old dues and Reminders; the last two left the Shop's menu
+  because both read `balance`. The person's page (`/parties/<id>`) stays shared and reads
+  the OPEN app's book (`AppManifest.book`): from the Shop it is the person's bills —
+  `shop_balance`, `?book=shop` on the timeline and the statement, no You gave / You got,
+  no opening balance, credit limit or reminders; from the Udhaar book it is the khata.
+  The party list takes `?book=shop` too (rows, chips, header and sort all read
+  `shop_balance`), and the Shop's home reads `shop_balance` for To collect / To pay / top
+  debtors and drops Due today and Upcoming (the udhaar book's promise dates).
+  Not yet done: manual You gave / You got is not refused by the server for a business
+  without `khata` (the client offers it nowhere else); expenses still have no `app`.
 - **Links:** ADR-043 (buckets), ADR-044 (deposits), DEC-016 (apps chosen at sign-up).

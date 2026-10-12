@@ -106,10 +106,34 @@ export const entryAmountView = (
   if (entryType === 'adjustment_credit') {
     return { tone: 'payable', sign: 'none', labelId: 'ledger.entry.type.adjustment_credit' };
   }
+  /* DEC-019 — only the Udhaar book says "You gave / You got". A bill or a return
+     is the Shop's and says what it is, in plain words; a payment says "Payment
+     received / made" everywhere but the Udhaar book, where it is "You got". */
+  const typed =
+    entryType !== undefined &&
+    (DOCUMENT_ENTRY_TYPES.has(entryType) ||
+      (PAYMENT_ENTRY_TYPES.has(entryType) && bucket !== undefined && bucket !== 'main'));
+  if (typed) {
+    return {
+      tone: direction === 'debit' ? 'receivable' : 'payable',
+      sign: 'none',
+      labelId: `ledger.entry.type.${entryType}`,
+    };
+  }
   return direction === 'debit'
     ? { tone: 'receivable', sign: 'none', labelId: 'ledger.entry.gave' }
     : { tone: 'payable', sign: 'none', labelId: 'ledger.entry.got' };
 };
+
+/** DEC-019 — the Shop's bills and returns, each with its own plain label. */
+const DOCUMENT_ENTRY_TYPES: ReadonlySet<string> = new Set([
+  'invoice',
+  'credit_note',
+  'purchase_bill',
+  'debit_note',
+]);
+/** Payments: "Payment received / made" outside the Udhaar book. */
+const PAYMENT_ENTRY_TYPES: ReadonlySet<string> = new Set(['payment_in', 'payment_out']);
 
 /**
  * What the row says on its first line.

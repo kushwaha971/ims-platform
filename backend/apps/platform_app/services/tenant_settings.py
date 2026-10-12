@@ -45,6 +45,7 @@ CORE_MODULES: frozenset[str] = frozenset({"platform", "parties", "ledger"})
 #: dependency is one line here rather than an `if` in the service.
 MODULE_DEPENDENCIES: dict[str, frozenset[str]] = {
     "sales": frozenset({"parties", "ledger"}),
+    "khata": frozenset({"parties", "ledger"}),  # DEC-019 — the Udhaar book
     # ── A12 ── 10-architecture §2.3. Gym and hospitality need the sales MODULE
     # because their money is tax invoices — a runtime dependency, not an import.
     "lending": frozenset({"parties", "ledger", "payments"}),

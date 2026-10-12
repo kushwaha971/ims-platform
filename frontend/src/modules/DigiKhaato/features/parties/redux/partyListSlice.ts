@@ -93,6 +93,9 @@ export const DEFAULT_PARTY_FILTERS: PartyListFilters = {
   tag: '',
   credit: '',
   role: '',
+  // DEC-019 — the Udhaar book unless the page says otherwise; spelled out so a
+  // seed from these defaults resets a `shop` left by the Shop's Customers tab.
+  book: 'main',
   ordering: DEFAULT_ORDERING,
   page: 1,
   pageSize: DEFAULT_PAGE_SIZE,

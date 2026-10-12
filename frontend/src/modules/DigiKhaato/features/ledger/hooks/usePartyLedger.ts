@@ -6,6 +6,7 @@ import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { usePermissions } from 'src/hooks/usePermissions';
 import { selectNetworkImpaired } from 'src/redux/slice/networkSlice';
 import type { ApiErrorShape, RequestStatus } from 'src/types/api.types';
+import type { LedgerBook } from 'src/types/domain.types';
 
 import { timelineRefreshLimit } from '../constants/timelinePaging';
 import {
@@ -60,7 +61,11 @@ export interface UsePartyLedgerResult {
   readonly superseded: ReadonlySet<string>;
 }
 
-export const usePartyLedger = (partyId: string): UsePartyLedgerResult => {
+export const usePartyLedger = (
+  partyId: string,
+  /** DEC-019 — the open app's book: the Shop's lines, or the Udhaar book's by default. */
+  book: LedgerBook = 'main'
+): UsePartyLedgerResult => {
   const dispatch = useAppDispatch();
   const { can, hasModule } = usePermissions();
   const rows = useAppSelector(selectLedgerEntries);
@@ -95,9 +100,11 @@ export const usePartyLedger = (partyId: string): UsePartyLedgerResult => {
      leave the two to race, and on a slow connection the loser decides. */
   useEffect(() => {
     if (!canRead) return undefined;
-    const promise = dispatch(fetchPartyEntries({ partyId, includeReversed: showCorrections }));
+    const promise = dispatch(
+      fetchPartyEntries({ partyId, includeReversed: showCorrections, book })
+    );
     return () => promise.abort();
-  }, [dispatch, partyId, canRead, showCorrections]);
+  }, [dispatch, partyId, canRead, showCorrections, book]);
 
   /* The silent refresh the invalidation listener asks for. Skipped while the
      network is impaired: a background request on a connection that is already
@@ -114,10 +121,20 @@ export const usePartyLedger = (partyId: string): UsePartyLedgerResult => {
   useEffect(() => {
     if (!stale || isImpaired || !canRead) return undefined;
     const promise = dispatch(
-      fetchPartyEntries({ partyId, includeReversed: showCorrections, limit: refreshLimit })
+      fetchPartyEntries({ partyId, includeReversed: showCorrections, limit: refreshLimit, book })
     );
     return () => promise.abort();
-  }, [stale, staleSeq, isImpaired, canRead, dispatch, partyId, showCorrections, refreshLimit]);
+  }, [
+    stale,
+    staleSeq,
+    isImpaired,
+    canRead,
+    dispatch,
+    partyId,
+    showCorrections,
+    refreshLimit,
+    book,
+  ]);
 
   /* `void` on both: the dispatch returns a promise that resolves whether the
      request succeeded or failed, and there is nothing here to do with it. The
@@ -126,12 +143,12 @@ export const usePartyLedger = (partyId: string): UsePartyLedgerResult => {
      for no caller's benefit. */
   const loadMore = useCallback(() => {
     if (!hasMore || !cursor || moreStatus === 'loading') return;
-    void dispatch(fetchPartyEntries({ partyId, cursor, includeReversed: showCorrections }));
-  }, [dispatch, partyId, hasMore, cursor, moreStatus, showCorrections]);
+    void dispatch(fetchPartyEntries({ partyId, cursor, includeReversed: showCorrections, book }));
+  }, [dispatch, partyId, hasMore, cursor, moreStatus, showCorrections, book]);
 
   const refetch = useCallback(() => {
-    void dispatch(fetchPartyEntries({ partyId, includeReversed: showCorrections }));
-  }, [dispatch, partyId, showCorrections]);
+    void dispatch(fetchPartyEntries({ partyId, includeReversed: showCorrections, book }));
+  }, [dispatch, partyId, showCorrections, book]);
 
   const toggleCorrections = useCallback(
     (next: boolean) => {

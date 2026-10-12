@@ -100,10 +100,9 @@ export function DashboardPageContent(): React.JSX.Element {
 
   const canBill = hasModule('sales') && can('sales.invoice.write');
   const canBuy = hasModule('purchases') && can('purchases.bill.write');
-  // "Send reminders" to nobody was noise on day one (review §1.1): it shows
-  // only when somebody has something to give.
-  const owed = Number(data?.tiles.toCollect?.amount ?? 0) > 0;
-  const canRemind = hasModule('ledger') && can('ledger.reminder.write') && owed;
+  // DEC-019 — the Reminders screen is the Udhaar book's (it reminds people of
+  // their udhaar promise dates), so the Shop's home no longer links to it.
+  const canRemind = false;
   // The approved design (12 Oct 2026): a book with nothing in it is the three
   // steps and nothing else — no actions, no refresh, no empty cards.
   const dayOne = !!data && isFirstUse(data.firstUse);

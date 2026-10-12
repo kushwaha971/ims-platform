@@ -125,6 +125,8 @@ const partyFilterQuery = (
   tag: params.tag || undefined,
   credit: params.credit || undefined,
   role: params.role || undefined,
+  // DEC-019 — only the Shop's book is spelled out; the Udhaar book is the default.
+  book: params.book === 'shop' ? 'shop' : undefined,
   ordering: params.ordering,
 });
 
@@ -175,9 +177,7 @@ export const listParties = async (
       pageSize: response.data.meta.page_size,
       total: response.data.meta.total,
       totalPages: response.data.meta.total_pages,
-      ...(response.data.meta.has_any === undefined
-        ? {}
-        : { hasAny: response.data.meta.has_any }),
+      ...(response.data.meta.has_any === undefined ? {} : { hasAny: response.data.meta.has_any }),
     },
     // The whole block or none of it: half a total is worse than none, because
     // the screen would show one server figure beside one page figure and label

@@ -125,6 +125,7 @@ const toQuery = (
     date_from: filters.dateFrom || undefined,
     date_to: filters.dateTo || undefined,
     include_corrections: filters.includeCorrections ? 'true' : undefined,
+    book: filters.book === 'shop' ? 'shop' : undefined,
     cursor: extra.cursor || undefined,
     limit: extra.limit || undefined,
   });

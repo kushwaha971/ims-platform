@@ -28,9 +28,9 @@ import {
   type UbGridState,
 } from 'src/design-system/UbDataGrid';
 import { useNowMs } from 'src/hooks/useNowMs';
-import { useTranslation } from 'src/hooks/useTranslation';
+import { useTranslation, type TranslateFn } from 'src/hooks/useTranslation';
 import { ROUTES, partyPath } from 'src/routes';
-import type { PartyStatus } from 'src/types/domain.types';
+import type { LedgerBook, PartyStatus } from 'src/types/domain.types';
 
 import {
   ImportActionLink,
@@ -38,6 +38,7 @@ import {
 } from 'modules/DigiKhaato/features/imports/components/ListHeaderActions';
 
 import { partyExportPath } from '../api/partyService';
+import { SHOP_BOOK_WORDS } from '../constants/partyFilters';
 import { PAGE_SIZE_OPTIONS } from '../constants/partyListDefaults';
 import { TAG_CHIPS_PER_ROW } from '../constants/partyTags';
 import { useBulkArchive } from '../hooks/usePartyArchive';
@@ -135,6 +136,7 @@ const STATUS_OPTIONS: readonly PartyStatus[] = ['active', 'archived'];
 
 export function PartyListPageContent({
   kind,
+  book,
 }: Readonly<{
   /**
    * docs/platform/14 step 3b — the Shop's Customers and Suppliers pages are
@@ -143,8 +145,20 @@ export function PartyListPageContent({
    * the whole book, which is what the Library and shared links still open.
    */
   kind?: PartyKind;
+  /**
+   * DEC-019 — which app's money the rows, chips and tiles show: `shop` on the
+   * Shop's Customers and Suppliers (what is due on bills), the Udhaar book's
+   * on `/khata` and `/parties`.
+   */
+  book?: LedgerBook;
 }> = {}): React.JSX.Element {
-  const { t, n } = useTranslation();
+  const { t: baseT, n } = useTranslation();
+  /* DEC-019 — on the Shop's lists the money words are the Shop's ("To collect",
+     "To pay"); everything else, and every other list, is untouched. */
+  const t = useCallback<TranslateFn>(
+    (id, values) => baseT(book === 'shop' ? (SHOP_BOOK_WORDS[id] ?? id) : id, values),
+    [baseT, book]
+  );
   const router = useRouter();
   const partyForm = usePartyForm();
   const {
@@ -171,7 +185,7 @@ export function PartyListPageContent({
     refetch,
     isRefreshing,
     showingSaved,
-  } = usePartyList('replace', kind);
+  } = usePartyList('replace', kind, book);
 
   /** Read outside render, so the column array's memo key is stable. */
   const nowMs = useNowMs();

@@ -45,11 +45,11 @@ export type LedgerEntryType =
   | 'adjustment_credit';
 
 /**
- * A2 (ADR-043) — which kind of money a line is. `main` is the trade khata and every
- * line a shop writes; `loan` is lending's, and is in the balance; `deposit` is money
- * HELD for the party and returnable, and is never in the balance.
+ * A2 (ADR-043), DEC-019 — which app's money a line is: `main` the Udhaar book,
+ * `shop` the Shop's bills and payments, `loan` lending's, `library` the
+ * library's, and `deposit` money HELD for the party and returnable.
  */
-export type LedgerBucket = 'main' | 'loan' | 'deposit';
+export type LedgerBucket = 'main' | 'shop' | 'loan' | 'library' | 'deposit';
 
 export type LedgerSourceType =
   'manual' | 'sales_document' | 'purchase_document' | 'payment' | 'expense' | 'ledger_entry';

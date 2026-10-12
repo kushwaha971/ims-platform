@@ -1,5 +1,5 @@
 import type { PageMeta } from 'src/types/api.types';
-import type { PartyStatus } from 'src/types/domain.types';
+import type { LedgerBook, PartyStatus } from 'src/types/domain.types';
 
 import type {
   PartyBalanceFilter,
@@ -115,6 +115,12 @@ export interface PartyListParams {
    * An unknown or switched-off code is a 400, not "matches nothing".
    */
   readonly role?: string;
+  /**
+   * DEC-019 — which app's money the list shows: `shop` on the Shop's Customers
+   * and Suppliers (bills due), the Udhaar book's otherwise. Fixed by the page,
+   * like `type` on those two, and never written to the address bar.
+   */
+  readonly book?: LedgerBook;
   readonly ordering: string;
   readonly page: number;
   readonly pageSize: number;

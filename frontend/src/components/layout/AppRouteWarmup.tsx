@@ -63,7 +63,8 @@ export function AppRouteWarmup(): null {
 
   useEffect(() => {
     if (!canSpeculate) return;
-    if (pathname === ROUTES.PARTIES) {
+    // DEC-019 — `/khata` is the Udhaar book's list: the same defaults as `/parties`.
+    if (pathname === ROUTES.PARTIES || pathname === ROUTES.KHATA) {
       warmPartyList(dispatch, { params: filters, mode: 'replace' });
     }
     // `filters` is deliberately NOT a dependency: this warms the FIRST request

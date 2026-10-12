@@ -199,7 +199,7 @@ def bucket_window(bucket: str, as_of: dt.date) -> tuple[dt.date | None, dt.date]
     return date_from, date_to
 
 
-def ledger_summary(*, tenant: Any) -> dict[str, Decimal]:
+def ledger_summary(*, tenant: Any, field: str = "balance") -> dict[str, Decimal]:
     """BR-1 / FR-1 — the tenant's position, in two numbers.
 
     `Σ max(balance, 0)` and `Σ max(−balance, 0)` over ACTIVE parties. Read from
@@ -212,6 +212,9 @@ def ledger_summary(*, tenant: Any) -> dict[str, Decimal]:
     Archived parties are excluded because PTY-04 only lets a party be archived
     at a zero balance, so they contribute nothing — but saying so in the query
     is what keeps that true if the archive rule ever softens.
+
+    DEC-019 — `field` is the app's own column: `balance` for the Udhaar book (the
+    default, and what `/ledger/aging` reads), `shop_balance` for the Shop's home.
     """
     from django.db.models import Case, DecimalField, F, Sum, When
     from django.db.models.functions import Coalesce
@@ -226,7 +229,7 @@ def ledger_summary(*, tenant: Any) -> dict[str, Decimal]:
         receivable=Coalesce(
             Sum(
                 Case(
-                    When(balance__gt=0, then=F("balance")),
+                    When(**{f"{field}__gt": 0}, then=F(field)),
                     default=Decimal("0.00"),
                     output_field=money,
                 )
@@ -237,7 +240,7 @@ def ledger_summary(*, tenant: Any) -> dict[str, Decimal]:
         payable=Coalesce(
             Sum(
                 Case(
-                    When(balance__lt=0, then=-F("balance")),
+                    When(**{f"{field}__lt": 0}, then=-F(field)),
                     default=Decimal("0.00"),
                     output_field=money,
                 )

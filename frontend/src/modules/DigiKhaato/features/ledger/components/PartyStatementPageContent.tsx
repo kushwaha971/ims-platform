@@ -56,11 +56,25 @@ import type { StatementRow } from '../types/statement.types';
  * a feed: two money columns and a balance, in the order things happened, with
  * the opening above the first row and the closing under the last.
  */
+const SHOP_STATEMENT_WORDS: Readonly<Record<string, string>> = {
+  'ledger.statement.youGave': 'ledger.statement.shop.out',
+  'ledger.statement.youGot': 'ledger.statement.shop.in',
+};
+
 export function PartyStatementPageContent({ id }: Readonly<{ id: string }>): React.JSX.Element {
-  const { t, d } = useTranslation();
+  const { t: baseT, d } = useTranslation();
   const timezone = useAppSelector(selectTenantTimezone);
   const tenant = useAppSelector(selectActiveTenant);
   const statement = usePartyStatement(id);
+  /* DEC-019 — "You gave / You got" are the Udhaar book's words. The Shop's
+     statement (`?book=shop`) heads its two money columns "Out" and "In", which
+     read right for a customer (goods out, money in) and a supplier (money out,
+     goods in) alike. */
+  const shopBook = statement.filters.book === 'shop';
+  const t = useCallback<TranslateFn>(
+    (key, values) => baseT(shopBook ? (SHOP_STATEMENT_WORDS[key] ?? key) : key, values),
+    [baseT, shopBook]
+  );
   const today = useMemo(() => todayInTenantTz(timezone ?? undefined), [timezone]);
 
   if (!statement.canRead) {

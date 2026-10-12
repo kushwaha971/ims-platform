@@ -139,7 +139,11 @@ const apiError = (status: number) => ({
  */
 /* `role` defaults to the owner, because Edit, Archive and Restore are the owner's
    or an admin's since 12 Oct 2026 — a session with no role sees none of them. */
-const signIn = (permissions: readonly PermissionCode[], role: string = 'owner'): void => {
+const signIn = (
+  permissions: readonly PermissionCode[],
+  role: string = 'owner',
+  activeApp: string = 'khata'
+): void => {
   store.dispatch(
     sessionLoaded({
       user: {
@@ -158,7 +162,10 @@ const signIn = (permissions: readonly PermissionCode[], role: string = 'owner'):
       // two quick actions are gated on the module (§19.7.5): a tenant that has
       // not enabled it sees no card at all, which is a different screen and is
       // asserted separately.
-      enabledModules: ['parties', 'ledger'],
+      enabledModules: ['parties', 'ledger', 'khata'],
+      // DEC-019 — this page is the Udhaar book's khata (You gave / You got); opened
+      // from the Shop it is the person's bills instead, asserted separately.
+      activeApp,
       version: 1,
     })
   );
@@ -532,6 +539,57 @@ describe('the khata page', () => {
     expect(await screen.findByText('This party is archived')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'More actions' })).not.toBeInTheDocument();
+  });
+});
+
+describe('opened from the Shop (DEC-019)', () => {
+  /**
+   * The owner, 12 Oct 2026: the Udhaar book and the Shop are separate apps that
+   * share only the person. Opened from the Shop's Customers this page is the
+   * person's BILLS — what is due on them and the lines behind it — and never
+   * their udhaar figure or the Udhaar book's You gave / You got.
+   */
+  const shopSession = (): void =>
+    signIn(
+      [
+        'parties.party.read',
+        'parties.party.write',
+        'ledger.entry.read',
+        'ledger.entry.write',
+        'ledger.reminder.write',
+      ],
+      'owner',
+      'shop'
+    );
+
+  it('shows what is due on bills in the Shop’s words, not the udhaar figure', async () => {
+    shopSession();
+    partyService.getParty.mockResolvedValue({
+      ...RESULT,
+      party: { ...PARTY, balance: '2300.00', shopBalance: '850.00' },
+    });
+    renderWithProviders(<PartyDetailPageContent id={ID} />);
+
+    expect(await screen.findByText('₹850.00')).toBeInTheDocument();
+    expect(screen.getByText('To collect')).toBeInTheDocument();
+    expect(screen.queryByText('₹2,300.00')).not.toBeInTheDocument();
+    expect(screen.queryByText('You will get')).not.toBeInTheDocument();
+  });
+
+  it('offers no You gave / You got, and reads the Shop’s lines', async () => {
+    shopSession();
+    renderWithProviders(<PartyDetailPageContent id={ID} />);
+
+    expect(await screen.findByText('Ramesh Traders')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /You gave/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /You got/ })).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(ledgerService.listPartyEntries).toHaveBeenCalledWith(
+        ID,
+        expect.objectContaining({ book: 'shop' }),
+        expect.anything()
+      )
+    );
   });
 });
 

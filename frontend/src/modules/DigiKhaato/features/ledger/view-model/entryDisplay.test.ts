@@ -539,8 +539,14 @@ describe('A2 — the two new entry types and the buckets', () => {
     });
   });
 
-  it('reads a loan line like any line, and badges it', () => {
-    expect(entryAmountView('debit', 'payment_out', 'loan').labelId).toBe('ledger.entry.gave');
+  it('reads a loan line by what it is, and badges it', () => {
+    // DEC-019 — "You gave / You got" are the Udhaar book's words only; anywhere
+    // else a payment says what it is.
+    expect(entryAmountView('debit', 'payment_out', 'loan').labelId).toBe(
+      'ledger.entry.type.payment_out'
+    );
+    expect(entryAmountView('credit', 'payment_in', 'main').labelId).toBe('ledger.entry.got');
+    expect(entryAmountView('debit', 'invoice', 'shop').labelId).toBe('ledger.entry.type.invoice');
     expect(bucketBadgeId('loan')).toBe('ledger.bucket.loan');
     expect(bucketBadgeId('deposit')).toBe('ledger.bucket.deposit');
   });

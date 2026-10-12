@@ -288,6 +288,12 @@ combine them. Each app's money is its own ledger bucket and party cache (`main` 
 one from another, and no screen shows another app's figure. The person's name and
 mobile are the one shared record. Read DEC-019 before touching a balance.
 
+The Udhaar book is the `khata` app (module `khata`, `/khata`, `features/khata/app.ts`).
+The shared person page and the party list read ONE book per request — `?book=shop` is
+the Shop's, anything else the Udhaar book's — and the page takes it from the open app's
+manifest (`AppManifest.book`). A new screen that shows a person's money must say which
+book it is reading; a screen that reads `balance` on a Shop page is the bug DEC-019 ended.
+
 **Words:** the users are rural shopkeepers who know basic English. Every label is plain
 everyday English (and simple Hindi) — no jargon, no rule codes, no word cut by an
 ellipsis. Lending says Lent / Collected, Library says Fee / Paid, only the Udhaar book

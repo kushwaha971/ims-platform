@@ -114,6 +114,11 @@ class StableOrderingFilter(OrderingFilter):
             # queryset alone, so the selector's own `order_by` survives and is
             # already total. Nothing to add.
             return ordering
+        # A view may say which column a public sort name means for this request
+        # (DEC-019: `balance` is `shop_balance` on the Shop's lists).
+        translate = getattr(view, "ordering_term", None)
+        if translate is not None:
+            ordering = [translate(term) for term in ordering]
         return [
             _with_null_placement(term, queryset.model)
             for term in with_tie_breaker(ordering, queryset.model)

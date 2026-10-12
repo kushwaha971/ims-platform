@@ -3,6 +3,7 @@
 import { useCallback, useMemo } from 'react';
 
 import { useTranslation, type TranslateFn } from 'src/hooks/useTranslation';
+import type { LedgerBook } from 'src/types/domain.types';
 
 import { manifestFor } from 'modules/appManifests';
 
@@ -22,6 +23,10 @@ import { useNavigation } from './useNavigation';
 export interface UseAppWordsResult {
   readonly w: TranslateFn;
   readonly peopleHref: string | undefined;
+  /** DEC-019 — the book the shared person page reads while this app is open. */
+  readonly book: LedgerBook;
+  /** The open app's code, or null before the session says which. */
+  readonly app: string | null;
 }
 
 export function useAppWords(): UseAppWordsResult {
@@ -30,5 +35,5 @@ export function useAppWords(): UseAppWordsResult {
   const manifest = useMemo(() => (app ? manifestFor(app) : undefined), [app]);
   const words = manifest?.words;
   const w = useCallback<TranslateFn>((id, values) => t(words?.[id] ?? id, values), [t, words]);
-  return { w, peopleHref: manifest?.peopleHref };
+  return { w, peopleHref: manifest?.peopleHref, book: manifest?.book ?? 'main', app: app ?? null };
 }

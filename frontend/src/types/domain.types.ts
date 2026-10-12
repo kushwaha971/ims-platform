@@ -30,6 +30,8 @@ export const MODULE_CODES = [
   'import_export',
   'help',
   'team',
+  // DEC-019 — the Udhaar book, an app of its own (anchor of the `khata` app).
+  'khata',
   // ── A1 ── platform verticals, unreleased until each module's release CR
   'lending',
   'library',
@@ -37,6 +39,14 @@ export const MODULE_CODES = [
   'hospitality',
 ] as const;
 export type ModuleCode = (typeof MODULE_CODES)[number];
+
+/**
+ * DEC-019 — the two ledger books a person's khata-shaped page and list can read
+ * (`?book=` on the server): `main` is the Udhaar book (You gave / You got,
+ * `party.balance`), `shop` is the Shop's bills and the payments against them
+ * (`party.shop_balance`). Each app shows only its own money.
+ */
+export type LedgerBook = 'main' | 'shop';
 
 /**
  * Canon §0.9 permission codenames. Sprint 0 carries the subset the walking

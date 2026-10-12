@@ -1,5 +1,6 @@
 import { API_PATHS } from 'src/api/APIPaths';
 import { api, ubConfig } from 'src/api/AxiosInstances';
+import type { LedgerBook } from 'src/types/domain.types';
 import { toQueryString } from 'src/utils/queryString';
 
 import type {
@@ -190,6 +191,8 @@ export const listPartyEntries = async (
      * over a `?include_reversed=false` nobody needed.
      */
     readonly includeReversed?: boolean;
+    /** DEC-019 — the Shop's lines (`shop`) or, by default, the Udhaar book's. */
+    readonly book?: LedgerBook;
   } = {},
   signal?: AbortSignal
 ): Promise<LedgerPage> => {
@@ -197,6 +200,7 @@ export const listPartyEntries = async (
     cursor: params.cursor || undefined,
     limit: params.limit || undefined,
     include_reversed: params.includeReversed ? 'true' : undefined,
+    book: params.book === 'shop' ? 'shop' : undefined,
   });
   const response = await api.get<LedgerListApiResponse>(
     `${API_PATHS.PARTY_LEDGER_ENTRIES(partyId)}${query}`,

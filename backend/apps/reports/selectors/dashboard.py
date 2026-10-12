@@ -7,8 +7,9 @@ computed by the SAME code as that somewhere else:
 
 * To collect / To pay are `ledger_summary()` — the figures above the party
   list and on `/ledger/aging`'s tabs.
-* Due today / Overdue / Upcoming are `collection_buckets()` — the reminders
-  screen's tabs, so tapping a tile lists exactly the parties it counted.
+* (DEC-019) To collect / To pay read `shop_balance`: this is the Shop's home.
+  Due today and Upcoming were the Udhaar book's promise dates and are that
+  app's Reminders now; Overdue is the Shop's overdue bills.
 * Cash in hand is the day book's `money_position()` up to today — the day
   book's closing cash, so the tile and the report can never disagree.
 * Low stock is `low_stock_queryset()` — the `/stock/low` list and the Items
@@ -63,19 +64,20 @@ def _sum(field: str, predicate: Q) -> Any:
 
 
 def party_tiles(*, tenant: Any, today: dt.date) -> dict[str, dict[str, Any]]:
-    """To collect, To pay, Due today, Overdue (party side) and Upcoming (FR-2)."""
-    from apps.ledger.selectors.aging import ledger_summary
-    from apps.ledger.selectors.collection import collection_buckets
+    """To collect and To pay on the Shop's bills (FR-2, DEC-019).
 
-    summary = ledger_summary(tenant=tenant)
-    buckets = collection_buckets(tenant=tenant, today=today)
+    The dashboard is the SHOP's home, and DEC-019 (owner, 12 Oct 2026) keeps each
+    app's money to itself: these are `shop_balance`, what is due on bills, never
+    the Udhaar book's figure. Due today, Upcoming and the party half of Overdue
+    were the udhaar book's promise dates (`collection_buckets`) and went with it
+    to that app's Reminders; the Shop's overdue is its overdue BILLS.
+    """
+    from apps.ledger.selectors.aging import ledger_summary
+
+    summary = ledger_summary(tenant=tenant, field="shop_balance")
     return {
         "to_collect": {"amount": _money(summary["receivable"])},
         "to_pay": {"amount": _money(summary["payable"])},
-        **{
-            key: {"count": buckets[key]["count"], "amount": _money(buckets[key]["amount"])}
-            for key in ("due_today", "overdue", "upcoming_7d")
-        },
     }
 
 
@@ -181,15 +183,16 @@ def top_debtors(*, tenant: Any) -> list[dict[str, Any]]:
 
     rows = (
         Party.objects.for_tenant(tenant)
-        .filter(status=PartyStatus.ACTIVE, balance__gt=ZERO)
-        .order_by("-balance", "name", "id")
-        .only("id", "name", "balance", "collection_date", "mobile")[:TOP_DEBTORS_LIMIT]
+        # DEC-019 — who owes the SHOP most, on bills.
+        .filter(status=PartyStatus.ACTIVE, shop_balance__gt=ZERO)
+        .order_by("-shop_balance", "name", "id")
+        .only("id", "name", "shop_balance", "collection_date", "mobile")[:TOP_DEBTORS_LIMIT]
     )
     return [
         {
             "id": str(party.id),
             "name": party.name,
-            "balance": _money(party.balance),
+            "balance": _money(party.shop_balance),
             "collection_date": (
                 party.collection_date.isoformat() if party.collection_date else None
             ),
@@ -453,7 +456,7 @@ def build_dashboard(*, tenant: Any, today: dt.date) -> dict[str, Any]:
 #: The tiles a reader sees, and what each needs (§12). Party tiles need only
 #: `parties.party.read` beside the report permission — EC-5: a billing-only
 #: tenant with the ledger module off still has balances, through documents.
-_PARTY_TILES = ("to_collect", "to_pay", "due_today", "overdue", "upcoming_7d")
+_PARTY_TILES = ("to_collect", "to_pay")
 
 
 def project(
@@ -484,8 +487,10 @@ def project(
         for key in _PARTY_TILES:
             tiles[key] = dict(source[key])
         if sales:
-            # BR-6's secondary line — "₹x in 4 bills" — is about bills.
-            tiles["overdue"]["invoices"] = dict(source["overdue_invoices"])
+            # BR-6 — the Shop's overdue is its overdue bills (DEC-019: the party
+            # promise dates are the Udhaar book's), so the tile is the bills alone.
+            bills = dict(source["overdue_invoices"])
+            tiles["overdue"] = {"count": 0, "amount": bills["amount"], "invoices": bills}
     if sales:
         tiles["today_sales"] = dict(source["today_sales"])
     if "reports.financial.read" in granted and {"payments", "expenses"} <= modules:

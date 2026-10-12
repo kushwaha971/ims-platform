@@ -56,6 +56,11 @@ const URL_KEYS = [
   'credit',
   'role',
   'ordering',
+  /* DEC-019 — listed so a seed puts the PAGE's book back (an axis the URL does
+     not name falls back to its default), and never read from the URL: the book
+     is the page's, not the link's. It always equals the page's default, so it
+     is never written either. */
+  'book',
 ] as const;
 
 type UrlKey = (typeof URL_KEYS)[number];

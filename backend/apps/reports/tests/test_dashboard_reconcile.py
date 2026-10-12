@@ -39,33 +39,42 @@ EVERYTHING = frozenset(
 ALL_MODULES = frozenset({"payments", "expenses", "inventory", "sales", "parties", "ledger"})
 
 
+def _dashboard(tenant: Any) -> dict:
+    return build_dashboard(tenant=tenant, today=TODAY)
+
+
 def _tiles(tenant: Any) -> dict:
-    return build_dashboard(tenant=tenant, today=TODAY)["tiles"]
+    return _dashboard(tenant)["tiles"]
 
 
 def test_ac1_to_collect_and_to_pay(tenant: Any) -> None:
-    """AC-1 — balances +5,000, +2,000, −1,500 → To collect ₹7,000, To pay ₹1,500.
-    A supplier who owes US counts in To collect (BR-1); an archived party never."""
-    b.party(tenant, "A", balance=Decimal("5000"))
-    b.party(tenant, "B", balance=Decimal("2000"), is_supplier=True, is_customer=False)
-    b.party(tenant, "C", balance=Decimal("-1500"))
-    b.party(tenant, "Gone", balance=Decimal("0"), status="archived")
+    """AC-1 — Shop balances +5,000, +2,000, −1,500 → To collect ₹7,000, To pay ₹1,500.
+    A supplier who owes US counts in To collect (BR-1); an archived party never.
+    DEC-019 — the dashboard is the Shop's home: an Udhaar book balance (`balance`)
+    is another app's money and is in neither figure."""
+    b.party(tenant, "A", shop_balance=Decimal("5000"), balance=Decimal("900"))
+    b.party(tenant, "B", shop_balance=Decimal("2000"), is_supplier=True, is_customer=False)
+    b.party(tenant, "C", shop_balance=Decimal("-1500"))
+    b.party(tenant, "Udhaar only", balance=Decimal("-4000"))
+    b.party(tenant, "Gone", shop_balance=Decimal("0"), status="archived")
     tiles = _tiles(tenant)
     assert tiles["to_collect"] == {"amount": "7000.00"}
     assert tiles["to_pay"] == {"amount": "1500.00"}
 
 
-def test_ac2_due_today_and_overdue_from_collection_dates(tenant: Any) -> None:
-    """AC-2 — Ramesh due today ₹1,772, Suresh yesterday ₹500; EC-2: a past date on
-    a settled party is not overdue."""
+def test_the_shop_home_carries_no_udhaar_promise_dates(tenant: Any) -> None:
+    """DEC-019 — Due today and Upcoming were the Udhaar book's promise dates; they are
+    that app's Reminders now. The Shop's Overdue tile is its overdue bills alone."""
     b.party(tenant, "Ramesh", balance=Decimal("1772"), collection_date=TODAY)
-    b.party(tenant, "Suresh", balance=Decimal("500"), collection_date=TODAY - dt.timedelta(days=1))
-    b.party(tenant, "Settled", balance=Decimal("0"), collection_date=TODAY - dt.timedelta(days=3))
-    b.party(tenant, "Soon", balance=Decimal("300"), collection_date=TODAY + dt.timedelta(days=3))
-    tiles = _tiles(tenant)
-    assert tiles["due_today"] == {"count": 1, "amount": "1772.00"}
-    assert tiles["overdue"] == {"count": 1, "amount": "500.00"}
-    assert tiles["upcoming_7d"] == {"count": 1, "amount": "300.00"}
+    ramesh = b.party(tenant, "Suresh")
+    b.sale(tenant, TODAY - dt.timedelta(days=40), 1000, party=ramesh, status="overdue", due=600)
+    full = project(_dashboard(tenant), granted=EVERYTHING, modules=ALL_MODULES)["tiles"]
+    assert "due_today" not in full and "upcoming_7d" not in full
+    assert full["overdue"] == {
+        "count": 0,
+        "amount": "600.00",
+        "invoices": {"count": 1, "amount": "600.00"},
+    }
 
 
 def test_ac3_todays_sales_net_credit_notes_and_cash_in_hand(tenant: Any) -> None:
@@ -172,16 +181,10 @@ def test_every_tile_equals_a_naive_recount_of_a_fuzzed_book(tenant: Any) -> None
     tiles = _tiles(tenant)
     active = list(Party.objects.filter(tenant=tenant, status="active"))
     money = lambda value: str(Decimal(value).quantize(Decimal("0.01")))  # noqa: E731
-    assert tiles["to_collect"]["amount"] == money(sum(p.balance for p in active if p.balance > 0))
-    assert tiles["to_pay"]["amount"] == money(sum(-p.balance for p in active if p.balance < 0))
-    owing = [p for p in active if p.balance > 0 and p.collection_date]
-    today_owing = [p for p in owing if p.collection_date == TODAY]
-    late = [p for p in owing if p.collection_date < TODAY]
-    assert tiles["due_today"] == {
-        "count": len(today_owing),
-        "amount": money(sum(p.balance for p in today_owing)),
-    }
-    assert tiles["overdue"] == {"count": len(late), "amount": money(sum(p.balance for p in late))}
+    # DEC-019 — the Shop's own figure: what is due on bills, never the udhaar book's.
+    shop = [p.shop_balance for p in active]
+    assert tiles["to_collect"]["amount"] == money(sum(v for v in shop if v > 0))
+    assert tiles["to_pay"]["amount"] == money(sum(-v for v in shop if v < 0))
 
     docs = list(SalesDocument.objects.filter(tenant=tenant, document_date=TODAY))
     sold = [d for d in docs if d.kind == "invoice" and d.status not in ("draft", "void")]
@@ -252,7 +255,7 @@ def test_project_omits_what_a_reader_may_not_see(tenant: Any) -> None:
     """§12 / FR-6 / §10 — omitted, never zeroed: no financial read → no Cash in hand;
     no stock read (inventory off) → no Low stock; an activity row needs its own
     codename; the unmasked mobile rides only with the Remind permission."""
-    ramesh = b.party(tenant, balance=Decimal("900"), mobile="+919812345678")
+    ramesh = b.party(tenant, shop_balance=Decimal("900"), mobile="+919812345678")
     b.purchase(tenant, TODAY, 100, party=ramesh)
     b.payment(tenant, TODAY, {"cash": 5}, party=ramesh)
     payload = build_dashboard(tenant=tenant, today=TODAY)
@@ -261,9 +264,7 @@ def test_project_omits_what_a_reader_may_not_see(tenant: Any) -> None:
     assert set(full["tiles"]) == {
         "to_collect",
         "to_pay",
-        "due_today",
         "overdue",
-        "upcoming_7d",
         "today_sales",
         "cash_in_hand",
         "low_stock",
@@ -289,7 +290,8 @@ def test_project_omits_what_a_reader_may_not_see(tenant: Any) -> None:
 
     no_sales = project(payload, granted=EVERYTHING - {"sales.invoice.read"}, modules=ALL_MODULES)
     assert "today_sales" not in no_sales["tiles"]
-    assert "invoices" not in no_sales["tiles"]["overdue"]
+    # DEC-019 — the Shop's Overdue IS its overdue bills, so without bills there is none.
+    assert "overdue" not in no_sales["tiles"]
 
 
 def test_first_use_flags(tenant: Any) -> None:

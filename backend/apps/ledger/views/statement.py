@@ -25,6 +25,7 @@ from apps.common.renderers import EnvelopeJSONRenderer, PassthroughCsvRenderer
 from apps.common.responses import StandardResponse
 from apps.common.throttling import ScopedUserRateThrottle
 from apps.common.viewsets import TenantScopeMixin
+from apps.ledger.selectors.entry import BOOK_BALANCE_FIELD, BOOK_BUCKETS, book_of
 from apps.ledger.selectors.sources import resolve_sources
 from apps.ledger.selectors.statement import (
     STATEMENT_ORDERING,
@@ -153,10 +154,14 @@ class PartyStatementView(TenantScopeMixin, APIView):
         # — is a bigger one. The SELECTOR has a single parameter, so they cannot
         # mean different things.
         include_corrections = request.query_params.get("include_corrections", "").lower() == "true"
+        # DEC-019 — `?book=shop` is the Shop's statement (bills and the payments against
+        # them); anything else is the Udhaar book's.
+        self._book = book_of(request.query_params.get("book"))
         scope = {
             "tenant": self.get_tenant(),
             "party_id": party.id,
             "include_corrections": include_corrections,
+            "buckets": BOOK_BUCKETS[self._book],
         }
 
         if request.query_params.get("format") == "csv":
@@ -197,7 +202,7 @@ class PartyStatementView(TenantScopeMixin, APIView):
                     statement_totals(**scope, date_from=date_from, date_to=date_to)
                 ).data,
                 "has_entries_before_opening": has_entries_before_opening(
-                    tenant=scope["tenant"], party_id=party.id
+                    tenant=scope["tenant"], party_id=party.id, buckets=scope["buckets"]
                 ),
             },
             meta=meta,
@@ -230,13 +235,15 @@ class PartyStatementView(TenantScopeMixin, APIView):
 
         if date_from is None and date_to is None:
             party = self._party()
-            if (party.balance or Decimal("0.00")) != closing:
+            cached = getattr(party, BOOK_BALANCE_FIELD[self._book]) or Decimal("0.00")
+            if cached != closing:
                 import logging
 
                 logging.getLogger("apps.ledger").warning(
-                    "ledger.balance_drift party=%s cached=%s ledger=%s",
+                    "ledger.balance_drift party=%s book=%s cached=%s ledger=%s",
                     party.id,
-                    party.balance,
+                    self._book,
+                    cached,
                     closing,
                 )
         return closing

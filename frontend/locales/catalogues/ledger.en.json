@@ -170,6 +170,8 @@
   "ledger.statement.range.inverted": "The start date is after the end date.",
   "ledger.statement.range.tooLong": "Choose a range of up to 5 years.",
   "ledger.statement.shop.gstin": "GSTIN {gstin}",
+  "ledger.statement.shop.in": "In",
+  "ledger.statement.shop.out": "Out",
   "ledger.statement.shop.phone": "Phone {phone}",
   "ledger.statement.showCorrections": "Show corrections",
   "ledger.statement.title": "Statement",
@@ -185,6 +187,8 @@
   "ledger.timeline.got": "You got in all",
   "ledger.timeline.loadMore": "Show older entries",
   "ledger.timeline.loadingMore": "Loading…",
+  "ledger.timeline.shop.empty.body": "Bills and payments with this person will show here.",
+  "ledger.timeline.shop.empty.title": "No bills or payments yet",
   "ledger.timeline.title": "Transactions",
   "ledger.timeline.writtenOff": "{side, select, receivable {Written off in all (to get)} payable {Written off in all (to give)} other {Written off in all}}"
 }

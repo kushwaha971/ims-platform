@@ -7,6 +7,7 @@ import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useDebounce } from 'src/hooks/useDebounce';
 import { selectNetworkImpaired } from 'src/redux/slice/networkSlice';
 import type { ApiErrorShape, PageMeta, RequestStatus } from 'src/types/api.types';
+import type { LedgerBook } from 'src/types/domain.types';
 
 import {
   DEFAULT_PARTY_FILTERS,
@@ -87,12 +88,22 @@ export function usePartyList(
    * its type FIXED: it is their default (so their address stays clean), it is
    * not counted as a filter the merchant applied, and Clear keeps it.
    */
-  kind?: PartyKind
+  kind?: PartyKind,
+  /**
+   * DEC-019 — which app's money the list shows, fixed by the page the same way
+   * `kind` is: the Shop's Customers and Suppliers pass `shop`, the Udhaar book
+   * passes nothing (its book is the default).
+   */
+  book?: LedgerBook
 ): UsePartyListResult {
   const dispatch = useAppDispatch();
   const defaults = useMemo<PartyListFilters>(
-    () => (kind ? { ...DEFAULT_PARTY_FILTERS, type: kind } : DEFAULT_PARTY_FILTERS),
-    [kind]
+    () => ({
+      ...DEFAULT_PARTY_FILTERS,
+      ...(kind ? { type: kind } : {}),
+      book: book ?? 'main',
+    }),
+    [kind, book]
   );
 
   const rows = useAppSelector(selectPartyRows);
@@ -323,7 +334,8 @@ export function usePartyList(
     setSearchInput('');
     dispatch(filtersCleared());
     if (kind) dispatch(filtersChanged({ type: kind }));
-  }, [dispatch, kind]);
+    if (book) dispatch(filtersChanged({ book }));
+  }, [dispatch, kind, book]);
   const refetch = useCallback(() => {
     void dispatch(fetchPartyList({ params: filters, mode: 'replace' }));
   }, [dispatch, filters]);

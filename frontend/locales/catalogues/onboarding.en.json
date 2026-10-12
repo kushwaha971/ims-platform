@@ -10,6 +10,7 @@
   "onboarding.address.pincode": "PIN code",
   "onboarding.address.pincode.placeholder": "Enter the PIN code",
   "onboarding.apps.hint": "Choose one or more. You can add or turn off any of these later from the business menu.",
+  "onboarding.apps.khata.hint": "Write down money you gave and got, like a paper khata.",
   "onboarding.apps.label": "What do you want to use?",
   "onboarding.apps.lending.hint": "Loans given, instalments due each day, and what has been collected.",
   "onboarding.apps.library.hint": "Members, seats, monthly fees and attendance, with books to lend.",

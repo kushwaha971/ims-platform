@@ -66,3 +66,22 @@ export const PAYABLE_FILTER = 'i_owe' as const;
 export type PartyCreditFilter = '' | 'over' | 'near' | 'ok';
 
 export const CREDIT_FILTERS: readonly Exclude<PartyCreditFilter, ''>[] = ['over', 'near', 'ok'];
+
+/**
+ * DEC-019 — the Shop's words for the money columns on its Customers and
+ * Suppliers lists. "You will get / You will give" are the Udhaar book's; on the
+ * Shop's lists the figure is what is due on bills, said in plain words a
+ * shopkeeper uses: "To collect" and "To pay". A map from the shared id to the
+ * Shop's, applied by wrapping `t`, so the filters, tiles and rows all change
+ * together and no component has to know which app it is in.
+ */
+export const SHOP_BOOK_WORDS: Readonly<Record<string, string>> = {
+  'parties.list.balance.receivable': 'parties.list.shop.toCollect',
+  'parties.list.balance.payable': 'parties.list.shop.toPay',
+  'parties.list.totals.receivable': 'parties.list.shop.toCollect',
+  'parties.list.totals.payable': 'parties.list.shop.toPay',
+  'parties.list.filter.balance.owes_me': 'parties.list.shop.toCollect',
+  'parties.list.filter.balance.i_owe': 'parties.list.shop.toPay',
+  'parties.list.totals.receivable.action': 'parties.list.shop.toCollect.action',
+  'parties.list.totals.payable.action': 'parties.list.shop.toPay.action',
+};

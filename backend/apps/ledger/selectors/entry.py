@@ -73,6 +73,20 @@ LOAN_BUCKET = Q(bucket=LedgerBucket.LOAN)
 #: Deposits held (`party.deposit_held`), outside the balance.
 DEPOSIT_BUCKET = Q(bucket=LedgerBucket.DEPOSIT)
 
+#: DEC-019 — the two apps whose people have a khata-shaped page (a timeline, a statement,
+#: a running balance): the Udhaar book reads `main`, the Shop reads `shop`. Lending and
+#: the library have their own pages and are not here. Anything else falls back to the
+#: Udhaar book, so a stray `?book=` can never reveal a third app's rows.
+BOOK_BUCKETS: dict[str, Q] = {"main": BALANCE_BUCKETS, "shop": SHOP_BUCKET}
+#: The party column each book's figures must agree with (BR-3).
+BOOK_BALANCE_FIELD: dict[str, str] = {"main": "balance", "shop": "shop_balance"}
+
+
+def book_of(raw: Any) -> str:
+    """`?book=` as one of `BOOK_BUCKETS`' keys; anything else is the Udhaar book."""
+    return raw if raw in BOOK_BUCKETS else "main"
+
+
 _SIGNED = Case(
     When(direction=Direction.DEBIT, then=F("amount")),
     When(direction=Direction.CREDIT, then=-F("amount")),
@@ -149,7 +163,11 @@ TIMELINE_ORDERING: tuple[str, ...] = ("-entry_date", "-created_at", "-id")
 
 
 def party_entries(
-    *, tenant: Any, party_id: UUID | str, include_reversed: bool = False
+    *,
+    tenant: Any,
+    party_id: UUID | str,
+    include_reversed: bool = False,
+    buckets: Q = BALANCE_BUCKETS,
 ) -> QuerySet[LedgerEntry]:
     """One party's khata, newest first, ready for the cursor paginator.
 
@@ -175,9 +193,9 @@ def party_entries(
     """
     if tenant is None:
         return LedgerEntry.objects.none()
-    # DEC-019 — the udhaar book lists its OWN lines: a bill, a loan, a library fee or a
-    # security deposit is another app's, shown on that app's screens.
-    queryset = LedgerEntry.objects.filter(tenant=tenant, party_id=party_id).filter(BALANCE_BUCKETS)
+    # DEC-019 — a book lists its OWN lines (`buckets`, the udhaar book's by default): a
+    # bill, a loan, a library fee or a security deposit is another app's.
+    queryset = LedgerEntry.objects.filter(tenant=tenant, party_id=party_id).filter(buckets)
     if not include_reversed:
         queryset = queryset.filter(LIVE_ENTRIES)
     return queryset.select_related("created_by").order_by(*TIMELINE_ORDERING)
@@ -234,7 +252,9 @@ def _money_sum(condition: Q) -> Coalesce:
     return Coalesce(Sum("amount", filter=condition), Decimal("0.00"), output_field=MONEY)
 
 
-def split_total_expressions(within: Q | None = None) -> dict[str, Coalesce]:
+def split_total_expressions(
+    within: Q | None = None, buckets: Q = BALANCE_BUCKETS
+) -> dict[str, Coalesce]:
     """The four conditional sums behind every gave / got / written-off figure.
 
     `within` narrows the rows (the timeline passes `LIVE_ENTRIES`; the statement
@@ -245,7 +265,7 @@ def split_total_expressions(within: Q | None = None) -> dict[str, Coalesce]:
     # A2 BR-4 — gave, got and written-off are figures about what is OWED, so a deposit
     # line is in none of them; it is reported in its own block (the statement's
     # "Deposit held") and by `party.deposit_held`.
-    base = (within if within is not None else Q()) & BALANCE_BUCKETS
+    base = (within if within is not None else Q()) & buckets
     debit, credit = Q(direction=Direction.DEBIT), Q(direction=Direction.CREDIT)
     return {
         "debit": _money_sum(base & debit & ~WRITE_OFF_ENTRIES),
@@ -267,7 +287,9 @@ def split_totals(aggregate: dict) -> dict:
     }
 
 
-def party_ledger_summary(*, tenant: Any, party_id: UUID | str) -> dict:
+def party_ledger_summary(
+    *, tenant: Any, party_id: UUID | str, buckets: Q = BALANCE_BUCKETS
+) -> dict:
     """The khata header's figures that come from the LEDGER rather than the party row.
 
     Three of PTY-03 §14's seven. The other four — invoiced, paid against
@@ -290,10 +312,10 @@ def party_ledger_summary(*, tenant: Any, party_id: UUID | str) -> dict:
             "entry_count": 0,
         }
     aggregate = LedgerEntry.objects.filter(tenant=tenant, party_id=party_id).aggregate(
-        **split_total_expressions(LIVE_ENTRIES),
-        # The udhaar book's own live lines (DEC-019): the count decides whether the khata
-        # shows a timeline or a first-use empty state, so another app's lines must not count.
-        entry_count=Count("id", filter=LIVE_ENTRIES & BALANCE_BUCKETS),
+        **split_total_expressions(LIVE_ENTRIES, buckets),
+        # The book's own live lines (DEC-019): the count decides whether the page shows a
+        # timeline or a first-use empty state, so another app's lines must not count.
+        entry_count=Count("id", filter=LIVE_ENTRIES & buckets),
     )
     totals = split_totals(aggregate)
     return {

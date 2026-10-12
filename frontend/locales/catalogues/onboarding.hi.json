@@ -10,6 +10,7 @@
   "onboarding.address.pincode": "पिन कोड",
   "onboarding.address.pincode.placeholder": "पिन कोド लिखें",
   "onboarding.apps.hint": "एक या ज़्यादा चुनें। बाद में व्यापार के मेन्यू से कोई भी जोड़ या बंद कर सकते हैं।",
+  "onboarding.apps.khata.hint": "दिया और लिया पैसा लिखें, कागज़ के खाते की तरह।",
   "onboarding.apps.label": "आप क्या इस्तेमाल करना चाहते हैं?",
   "onboarding.apps.lending.hint": "दिए गए लोन, रोज़ की किस्तें, और अब तक की वसूली।",
   "onboarding.apps.library.hint": "सदस्य, सीटें, महीने की फीस और हाज़िरी, साथ में किताबें देना।",

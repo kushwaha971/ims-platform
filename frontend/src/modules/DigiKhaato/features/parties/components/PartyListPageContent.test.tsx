@@ -2046,6 +2046,30 @@ describe('one book: Suppliers', () => {
     expect(lastParams().type).toBe('supplier');
   });
 
+  // ── DEC-019 — the Shop's lists read the Shop's money ──────────────────────
+  it('the Shop’s Customers ask for the Shop’s book and say "To collect"', async () => {
+    // A list whose request named no book would show the Udhaar book's figure on
+    // a Shop screen — exactly what DEC-019 forbids. The NETWORK is asserted, not
+    // the controls (the PTY-02 lesson: a chip that lights is not a chip that filters).
+    partyService.listParties.mockResolvedValue(loaded([RAMESH]));
+    renderWithProviders(<PartyListPageContent kind="customer" book="shop" />);
+    await screen.findByText('Ramesh Traders');
+    expect(lastParams().book).toBe('shop');
+    expect(screen.getAllByText('To collect').length).toBeGreaterThan(0);
+    expect(screen.queryByText('You will get')).not.toBeInTheDocument();
+  });
+
+  it('the Udhaar book’s list asks for its own book, even after the Shop’s', async () => {
+    // The list slice is shared: a `shop` left by the Customers tab must not leak
+    // into the Udhaar book, or it would show bills under You gave / You got.
+    partyService.listParties.mockResolvedValue(loaded([RAMESH]));
+    const { unmount } = renderWithProviders(<PartyListPageContent kind="customer" book="shop" />);
+    await screen.findByText('Ramesh Traders');
+    unmount();
+    renderWithProviders(<PartyListPageContent book="main" />);
+    await waitFor(() => expect(lastParams().book).toBe('main'));
+  });
+
   // ── The approved list designs (owner, 12 Oct 2026) ─────────────────────────
   it('an empty book is one sentence and one button: no search, filters or floating Add', async () => {
     // Owner: "I don't want that type of screen in case of empty" — a search

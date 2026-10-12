@@ -278,10 +278,6 @@
     "cash_in_hand": {
      "amount": "1100.00"
     },
-    "due_today": {
-     "amount": "0.00",
-     "count": 0
-    },
     "low_stock": {
      "count": 0,
      "out_count": 0
@@ -295,31 +291,18 @@
      }
     },
     "to_collect": {
-     "amount": "3030.00"
+     "amount": "0.00"
     },
     "to_pay": {
-     "amount": "3800.00"
+     "amount": "0.00"
     },
     "today_sales": {
      "amount": "0.00",
      "count": 0,
      "yesterday_amount": "0.00"
-    },
-    "upcoming_7d": {
-     "amount": "0.00",
-     "count": 0
     }
    },
-   "top_debtors": [
-    {
-     "balance": "3030.00",
-     "collection_date": null,
-     "id": "<id-3>",
-     "mobile": "+919700011111",
-     "mobile_masked": "+91 97\u2022\u2022\u2022 \u2022\u2022111",
-     "name": "Ramesh Traders"
-    }
-   ]
+   "top_debtors": []
   },
   "meta": {
    "cached": false,

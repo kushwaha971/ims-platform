@@ -161,7 +161,8 @@ it('draws exactly the tiles the server sent, each opening its list', async () =>
   expect(screen.getByText(/₹900\.00 in 2 bills/)).toBeInTheDocument();
   expect(screen.getByText('1 out of stock')).toBeInTheDocument();
   await userEvent.click(screen.getByRole('button', { name: /You will get: ₹7,000\.00/ }));
-  expect(mockPush).toHaveBeenCalledWith('/parties?balance=owes_me');
+  // DEC-019 — the Shop's home opens the Shop's customers, not the Udhaar book.
+  expect(mockPush).toHaveBeenCalledWith('/customers?balance=owes_me');
 });
 
 it('leaves out a tile the reader may not see, rather than showing it as ₹0 (FR-6)', async () => {

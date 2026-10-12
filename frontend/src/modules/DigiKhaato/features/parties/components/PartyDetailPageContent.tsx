@@ -23,7 +23,7 @@ import {
 } from 'src/design-system';
 import { usePermissions } from 'src/hooks/usePermissions';
 import { useScrolledPast } from 'src/hooks/useScrolledPast';
-import { useTranslation } from 'src/hooks/useTranslation';
+import { useTranslation, type TranslateFn } from 'src/hooks/useTranslation';
 import { ROUTES, partyStatementPath } from 'src/routes';
 import { copyText } from 'src/utils/clipboard';
 
@@ -33,6 +33,7 @@ import { useOpeningBalance } from 'modules/DigiKhaato/features/ledger/hooks/useO
 import { usePartyReminder } from 'modules/DigiKhaato/features/ledger/hooks/usePartyReminder';
 import { useAppWords } from 'modules/DigiKhaato/features/navigation/useAppWords';
 
+import { SHOP_BOOK_WORDS } from '../constants/partyFilters';
 import { usePartyArchive } from '../hooks/usePartyArchive';
 import { usePartyDetail } from '../hooks/usePartyDetail';
 import { usePartyForm } from '../hooks/usePartyForm';
@@ -182,7 +183,20 @@ export function PartyDetailPageContent({
   const { t, d } = useTranslation();
   // docs/platform/14 step 6 — a library's student, a lender's borrower: the
   // open app's words for this person, and its own list to go back to.
-  const { w, peopleHref } = useAppWords();
+  const { w, peopleHref, book, app } = useAppWords();
+  /* DEC-019 — each app shows only its own money. Opened from the Shop this page
+     is the person's bills and payments (`shopBook`); opened from the Udhaar book
+     it is You gave / You got. The udhaar book's own tools (the pair, the opening
+     balance, the credit limit, reminders) are not offered on the Shop's page,
+     and the Shop's payment tools are not offered in the Udhaar book. */
+  const shopBook = book === 'shop';
+  const udhaarApp = app === 'khata';
+  /* The header's money words follow the book: "To collect / To pay" on the Shop's
+     page, "You will get / You will give" in the Udhaar book. */
+  const headerT = useCallback<TranslateFn>(
+    (key, values) => w(shopBook ? (SHOP_BOOK_WORDS[key] ?? key) : key, values),
+    [w, shopBook]
+  );
   const router = useRouter();
   const partyForm = usePartyForm();
   const entryForm = useLedgerEntryForm();
@@ -364,18 +378,32 @@ export function PartyDetailPageContent({
 
   /* The khata's everyday pair. Hidden rather than disabled when the role
      cannot write (§19.7.5 / R-SEC-2), and absent for an archived party. */
-  const canRecord = Boolean(party) && !isArchived && entryForm.canWrite;
+  const canRecord = Boolean(party) && !isArchived && entryForm.canWrite && !shopBook;
   /* PAY-01 — against bills, for a role that records payments; PAY-03's QR is a
      read (§12), offered while the party owes the shop something. */
   const canPay =
-    Boolean(party) && !isArchived && hasModule('payments') && can('payments.payment.write');
-  const balanceNow = summary?.balance ?? shown.balance;
+    Boolean(party) &&
+    !isArchived &&
+    !udhaarApp &&
+    hasModule('payments') &&
+    can('payments.payment.write');
+  /* The figure of the book this page reads: the Shop's from the detail once it has
+     landed (a cached list row is the list's own book until then). */
+  const balanceNow = shopBook
+    ? party
+      ? (party.shopBalance ?? '0.00')
+      : shown.balance
+    : (summary?.balance ?? shown.balance);
   const receivable = balanceNow && !balanceNow.startsWith('-') ? balanceNow : '';
   /* PUR-02 — what the shop owes this supplier, as a magnitude: the default
      amount of "Pay supplier". A negative balance is "You will give". */
   const payable = balanceNow?.startsWith('-') ? balanceNow.slice(1) : '';
   const canCollect =
-    Boolean(party) && !isArchived && hasModule('payments') && can('payments.payment.read');
+    Boolean(party) &&
+    !isArchived &&
+    !udhaarApp &&
+    hasModule('payments') &&
+    can('payments.payment.read');
   const entryPair = (
     <>
       <UbButton variant="primary" onClick={() => entryForm.openEntry(id, 'debit')}>
@@ -419,8 +447,8 @@ export function PartyDetailPageContent({
               <PartyHeaderMenu
                 t={t}
                 triggerRef={moreRef}
-                statementHref={canReadLedger ? partyStatementPath(id) : undefined}
-                onRemind={reminder.canRemind ? reminder.openSheet : undefined}
+                statementHref={canReadLedger ? partyStatementPath(id, book) : undefined}
+                onRemind={reminder.canRemind && !shopBook ? reminder.openSheet : undefined}
                 /* Money in for a customer (or a party marked as neither);
                    money out for a supplier. A party that is both gets both. */
                 onRecordPayment={
@@ -433,7 +461,7 @@ export function PartyDetailPageContent({
                 }
                 onCollect={canCollect ? () => setCollecting(true) : undefined}
                 onEdit={partyForm.canEdit ? openEdit : undefined}
-                onAddOpening={opening.canAdd ? opening.openDrawer : undefined}
+                onAddOpening={opening.canAdd && !shopBook ? opening.openDrawer : undefined}
                 onArchive={archive.canArchive ? archive.open : undefined}
               />
             ) : undefined
@@ -470,15 +498,15 @@ export function PartyDetailPageContent({
         <UbCard>
           <UbBox>
             <PartyDetailHeader
-              t={w}
+              t={headerT}
               name={shown.name}
-              balance={summary?.balance ?? shown.balance}
+              balance={balanceNow}
               displayCode={shown.displayCode}
               mobile={shown.mobile}
               isCustomer={shown.isCustomer}
               isSupplier={shown.isSupplier}
               asOf={asOf}
-              credit={credit}
+              credit={shopBook ? null : credit}
               tags={shown.tags}
               pending={status === 'loading' || status === 'refreshing'}
               onCopyMobile={handleCopyMobile}
@@ -488,7 +516,7 @@ export function PartyDetailPageContent({
             {/* LED-06 FR-6 — "did I already ask?", answered where the balance
                 is. Its own chunk: it carries the reminders slice, and a khata
                 that is only read should not wait on it to paint. */}
-            {party && canReadLedger && (
+            {party && canReadLedger && !shopBook && (
               <UbBox className="mt-3 border-t border-border-hairline pt-3">
                 <PartyReminderStripLazy partyId={id} />
               </UbBox>
@@ -508,7 +536,7 @@ export function PartyDetailPageContent({
                 reads like and when an author is worth naming, neither of which
                 a `UbTimeline` could know. It renders nothing at all when the
                 tenant has not enabled the ledger module. */}
-            <PartyLedgerTimeline partyId={id} readOnly={isArchived} />
+            <PartyLedgerTimeline partyId={id} readOnly={isArchived} book={book} />
           </UbStack>
 
           <UbBox className="w-full lg:sticky lg:top-6 lg:w-[320px] lg:shrink-0">

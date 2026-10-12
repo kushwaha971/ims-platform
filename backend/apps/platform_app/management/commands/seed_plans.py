@@ -44,6 +44,8 @@ MVP_MODULES: tuple[str, ...] = (
     # Released 10 Oct 2026 (PLT-X11 BR-4), with their `*_release` migrations.
     "lending",
     "library",
+    # DEC-019, 12 Oct 2026 — the Udhaar book as its own app (`platform/0018_release_khata`).
+    "khata",
 )
 
 # code -> (name, modules, limits, price)

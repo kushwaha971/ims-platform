@@ -55,6 +55,8 @@ export const ROUTES = {
   // docs/platform/14 step 3b — the Shop's two books; `/parties` is the whole one.
   CUSTOMERS: '/customers',
   SUPPLIERS: '/suppliers',
+  /** DEC-019 — the Udhaar book's own list of people (You gave / You got), an app of its own. */
+  KHATA: '/khata',
   /** PTY-05 FR-7 — the tag manager. A sibling of the list rather than a
    *  settings page: tags are a way of working through the book, and a merchant
    *  renaming one is in the middle of using the list, not configuring the
@@ -190,7 +192,9 @@ export const partiesByTagPath = (name: string): string =>
  * corrections toggle ride in the query string for the same reason (FR-8), which
  * is also what makes the browser's back button and a bookmark both work.
  */
-export const partyStatementPath = (id: string): string => `${partyPath(id)}/statement`;
+/** DEC-019 — `book` is the open app's: the Shop's statement carries `?book=shop`. */
+export const partyStatementPath = (id: string, book: 'main' | 'shop' = 'main'): string =>
+  `${partyPath(id)}/statement${book === 'shop' ? '?book=shop' : ''}`;
 export type Route = (typeof ROUTES)[RouteKey];
 
 /**
@@ -270,6 +274,7 @@ export const APP_ROUTE_PREFIXES: readonly string[] = [
   // so the proxy did not guard them and robots.txt did not disallow them.
   ROUTES.CUSTOMERS,
   ROUTES.SUPPLIERS,
+  ROUTES.KHATA,
   '/ledger',
   ROUTES.ITEMS,
   '/stock',

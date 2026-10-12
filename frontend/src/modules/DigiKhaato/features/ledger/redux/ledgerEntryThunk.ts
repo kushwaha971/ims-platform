@@ -1,6 +1,7 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 
 import type { ApiErrorShape } from 'src/types/api.types';
+import type { LedgerBook } from 'src/types/domain.types';
 import { toApiError } from 'src/utils/apiError';
 
 import {
@@ -45,6 +46,8 @@ export interface FetchEntriesArg {
    * refetch that only wanted the totals to be the server's.
    */
   readonly limit?: number;
+  /** DEC-019 — which app's book the page reads; absent is the Udhaar book. */
+  readonly book?: LedgerBook;
 }
 
 /** QUERY. One page of a party's khata. */
@@ -54,9 +57,9 @@ export const fetchPartyEntries = createAsyncThunk<
   { rejectValue: ApiErrorShape }
 >(
   'ledgerEntry/fetchPartyEntries',
-  async ({ partyId, cursor, includeReversed, limit }, { signal, rejectWithValue }) => {
+  async ({ partyId, cursor, includeReversed, limit, book }, { signal, rejectWithValue }) => {
     try {
-      return await listPartyEntries(partyId, { cursor, includeReversed, limit }, signal);
+      return await listPartyEntries(partyId, { cursor, includeReversed, limit, book }, signal);
     } catch (error) {
       return rejectWithValue(toApiError(error, 'ledger.timeline.error.title'));
     }

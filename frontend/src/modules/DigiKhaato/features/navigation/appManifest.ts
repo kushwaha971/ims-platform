@@ -1,7 +1,7 @@
 import { Settings, Users, type LucideIcon } from 'lucide-react';
 
 import { ROUTES } from 'src/routes';
-import type { ModuleCode, PermissionCode } from 'src/types/domain.types';
+import type { LedgerBook, ModuleCode, PermissionCode } from 'src/types/domain.types';
 
 /**
  * docs/platform/14 §4.2 — an app's navigation is the APP's, declared in its own
@@ -76,6 +76,13 @@ export interface AppManifest {
   readonly words?: Readonly<Record<string, string>>;
   /** Where "back to the list" goes from a shared person page (the khata). */
   readonly peopleHref?: string;
+  /**
+   * DEC-019 — which ledger book the shared person page reads while this app is
+   * open: `main` is the Udhaar book (You gave / You got), `shop` is the Shop's
+   * bills and the payments against them. Each app shows only its own money, so
+   * a Shop customer's page never shows their udhaar figure. Absent is `main`.
+   */
+  readonly book?: LedgerBook;
   /** What the shell offers while this app is open, by capability, never by name. */
   readonly shell?: {
     /** The top bar's party search (the Shop's customers and suppliers). */

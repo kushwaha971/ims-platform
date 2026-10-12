@@ -23,6 +23,7 @@ import {
 import { useAppSelector } from 'src/hooks/useAppStore';
 import { useTranslation, type TranslateFn } from 'src/hooks/useTranslation';
 import { selectSessionUser } from 'src/redux/slice/sessionSlice';
+import type { LedgerBook } from 'src/types/domain.types';
 
 import { useEntryCorrection } from '../hooks/useEntryCorrection';
 import { usePartyLedger } from '../hooks/usePartyLedger';
@@ -94,9 +95,17 @@ const ReverseEntryDialogLazy = dynamic(
  */
 export function PartyLedgerTimeline({
   partyId,
-  readOnly = false,
+  readOnly: archivedReadOnly = false,
+  book = 'main',
 }: Readonly<{
   partyId: string;
+  /**
+   * DEC-019 — the open app's book. On the Shop's (`shop`) the rows are bills,
+   * returns and payments, each fixed by its document: nothing is corrected from
+   * here, and the "You gave / You got in all" strip — the Udhaar book's words —
+   * is not drawn.
+   */
+  book?: LedgerBook;
   /**
    * The party is archived (PTY-04 FR-14): the rows are read, never corrected.
    * The server refuses a correction or a reversal on an archived party with
@@ -106,7 +115,9 @@ export function PartyLedgerTimeline({
   readOnly?: boolean;
 }>): React.JSX.Element | null {
   const { t, d } = useTranslation();
-  const ledger = usePartyLedger(partyId);
+  const ledger = usePartyLedger(partyId, book);
+  const shopBook = book === 'shop';
+  const readOnly = archivedReadOnly || shopBook;
   const correction = useEntryCorrection();
   const user = useAppSelector(selectSessionUser);
   const viewerId = user?.id ?? null;
@@ -142,7 +153,7 @@ export function PartyLedgerTimeline({
         /* LED-03 FR-7: offered only to somebody who could correct, and only
            once there is something to reveal. A MODE, not a filter, so a switch. */
         aside={
-          correction.canCorrect && hasEntries ? (
+          correction.canCorrect && hasEntries && !shopBook ? (
             <UbSwitch
               checked={ledger.showCorrections}
               onCheckedChange={ledger.toggleCorrections}
@@ -156,7 +167,7 @@ export function PartyLedgerTimeline({
       <UbPanel as="section">
         {/* BrandHub PaymentsCard's two-cell total row: label 12/16 medium grey,
             figure 16/24 medium, a hairline between the cells. */}
-        {hasEntries && ledger.summary && (
+        {hasEntries && ledger.summary && !shopBook && (
           <UbBox className="grid grid-cols-2 divide-x divide-border-hairline">
             <UbStack gap={1} className="px-4 py-3">
               <UbText as="span" variant="inherit" className="ds-body-s-medium text-text-tertiary">
@@ -195,6 +206,7 @@ export function PartyLedgerTimeline({
             tone, as the row itself is. With it the header reconciles the way a
             merchant checks it: gave − got − written off = the balance. */}
         {hasEntries &&
+          !shopBook &&
           writtenOffLines(ledger.summary?.writtenOff).map((line) => (
             <UbStack key={line.side} gap={1} className="border-t border-border-hairline px-4 py-3">
               <UbText as="span" variant="inherit" className="ds-body-s-medium text-text-tertiary">
@@ -239,8 +251,12 @@ export function PartyLedgerTimeline({
           <UbBox className="p-4">
             <UbEmptyState
               variant="firstUse"
-              title={t('ledger.timeline.empty.title')}
-              description={t('ledger.timeline.empty.body')}
+              title={t(
+                shopBook ? 'ledger.timeline.shop.empty.title' : 'ledger.timeline.empty.title'
+              )}
+              description={t(
+                shopBook ? 'ledger.timeline.shop.empty.body' : 'ledger.timeline.empty.body'
+              )}
             />
           </UbBox>
         )}

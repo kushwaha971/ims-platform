@@ -1,4 +1,4 @@
-import { BookOpen, HandCoins, LayoutGrid, Store, type LucideIcon } from 'lucide-react';
+import { BookOpen, BookUser, HandCoins, LayoutGrid, Store, type LucideIcon } from 'lucide-react';
 
 /**
  * Step 1's app choice — the client's WORDS for each app the server offers.
@@ -27,6 +27,7 @@ const APP_CHOICES: Readonly<Record<string, AppChoiceConfig>> = {
   shop: { icon: Store, hintId: 'onboarding.apps.shop.hint' },
   library: { icon: BookOpen, hintId: 'onboarding.apps.library.hint' },
   lending: { icon: HandCoins, hintId: 'onboarding.apps.lending.hint' },
+  khata: { icon: BookUser, hintId: 'onboarding.apps.khata.hint' },
 };
 
 const OTHER_APP: AppChoiceConfig = { icon: LayoutGrid, hintId: 'onboarding.apps.other.hint' };

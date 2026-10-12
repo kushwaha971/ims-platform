@@ -10,6 +10,7 @@ was exactly that bug before Sprint 1 closed it.
 from __future__ import annotations
 
 from datetime import date, timedelta
+from typing import Any
 
 import django_filters
 from django.db.models import Exists, F, OuterRef, Q, QuerySet, Value
@@ -34,6 +35,15 @@ UPCOMING_DAYS = 7
 MOBILE_SUFFIX_MIN_DIGITS = 4
 
 GSTIN_LENGTH = 15
+
+
+def list_balance_field(request: Any) -> str:
+    """DEC-019 — which party column the list's money is: `?book=shop` is the Shop's
+    Customers and Suppliers (bills due, `shop_balance`); anything else is the Udhaar
+    book (`balance`). One function, so the rows, the chips, the header and the sort
+    can never read two different columns."""
+    params = getattr(request, "query_params", None) or {}
+    return "shop_balance" if params.get("book") == "shop" else "balance"
 
 
 class PartyFilterSet(BaseTenantFilterSet):
@@ -182,12 +192,14 @@ class PartyFilterSet(BaseTenantFilterSet):
         forty people is owed forty rupees. A "close enough to zero" band would
         hide exactly the rows that a collection round is for.
         """
+        # DEC-019 — the sign of the book the list reads (`?book=shop` → the Shop's bills).
+        field = list_balance_field(self.request)
         if value == "owes_me":
-            return queryset.filter(balance__gt=0)
+            return queryset.filter(**{f"{field}__gt": 0})
         if value == "i_owe":
-            return queryset.filter(balance__lt=0)
+            return queryset.filter(**{f"{field}__lt": 0})
         if value == "settled":
-            return queryset.filter(balance=0)
+            return queryset.filter(**{field: 0})
         return queryset
 
     def filter_collection(self, queryset: QuerySet, _name: str, value: str) -> QuerySet:

@@ -105,7 +105,11 @@ def statement_predicate(*, include_corrections: bool) -> Q:
 
 
 def scoped_rows(
-    *, tenant: Any, party_id: UUID | str, include_corrections: bool
+    *,
+    tenant: Any,
+    party_id: UUID | str,
+    include_corrections: bool,
+    buckets: Q = BALANCE_BUCKETS,
 ) -> QuerySet[LedgerEntry]:
     """One party's running-balance rows, tenant first (canon §0.11 rule 2).
 
@@ -117,7 +121,7 @@ def scoped_rows(
     return (
         LedgerEntry.objects.filter(tenant=tenant, party_id=party_id)
         .filter(statement_predicate(include_corrections=include_corrections))
-        .filter(BALANCE_BUCKETS)
+        .filter(buckets)
     )
 
 
@@ -166,6 +170,7 @@ def opening_balance(
     party_id: UUID | str,
     date_from: dt.date | None,
     include_corrections: bool = False,
+    buckets: Q = BALANCE_BUCKETS,
 ) -> Decimal:
     """BR-2 — what the party owed the instant before this period began.
 
@@ -188,7 +193,12 @@ def opening_balance(
     """
     if date_from is None:
         return ZERO
-    scoped = scoped_rows(tenant=tenant, party_id=party_id, include_corrections=include_corrections)
+    scoped = scoped_rows(
+        tenant=tenant,
+        party_id=party_id,
+        include_corrections=include_corrections,
+        buckets=buckets,
+    )
     return signed_total(scoped.filter(entry_date__lt=date_from))
 
 
@@ -199,6 +209,7 @@ def carried_forward(
     date_from: dt.date | None,
     position: dict | None,
     include_corrections: bool = False,
+    buckets: Q = BALANCE_BUCKETS,
 ) -> Decimal:
     """The running balance the FIRST row of this page carries in from.
 
@@ -226,10 +237,16 @@ def carried_forward(
         party_id=party_id,
         date_from=date_from,
         include_corrections=include_corrections,
+        buckets=buckets,
     )
     if not position:
         return opening
-    scoped = scoped_rows(tenant=tenant, party_id=party_id, include_corrections=include_corrections)
+    scoped = scoped_rows(
+        tenant=tenant,
+        party_id=party_id,
+        include_corrections=include_corrections,
+        buckets=buckets,
+    )
     if date_from is not None:
         scoped = scoped.filter(entry_date__gte=date_from)
     return opening + carried_before(scoped, position=position)
@@ -242,6 +259,7 @@ def statement_rows(
     date_from: dt.date | None = None,
     date_to: dt.date | None = None,
     include_corrections: bool = False,
+    buckets: Q = BALANCE_BUCKETS,
 ) -> QuerySet[LedgerEntry]:
     """The period's rows, ascending, each annotated with `running_delta`.
 
@@ -257,7 +275,12 @@ def statement_rows(
     balance wrong while the closing figure came out right — the subtle half of
     the bug, and the one a merchant would find rather than a test.
     """
-    scoped = scoped_rows(tenant=tenant, party_id=party_id, include_corrections=include_corrections)
+    scoped = scoped_rows(
+        tenant=tenant,
+        party_id=party_id,
+        include_corrections=include_corrections,
+        buckets=buckets,
+    )
     if date_from is not None:
         scoped = scoped.filter(entry_date__gte=date_from)
     if date_to is not None:
@@ -272,6 +295,7 @@ def statement_totals(
     date_from: dt.date | None = None,
     date_to: dt.date | None = None,
     include_corrections: bool = False,
+    buckets: Q = BALANCE_BUCKETS,
 ) -> dict:
     """BR-5 — what was given and what came back, over the period.
 
@@ -290,12 +314,17 @@ def statement_totals(
     credit}` so the strip can print a third line and still add up —
     CR-2026-09-24-A, and `selectors/entry.py` has the whole rule.
     """
-    scoped = scoped_rows(tenant=tenant, party_id=party_id, include_corrections=include_corrections)
+    scoped = scoped_rows(
+        tenant=tenant,
+        party_id=party_id,
+        include_corrections=include_corrections,
+        buckets=buckets,
+    )
     if date_from is not None:
         scoped = scoped.filter(entry_date__gte=date_from)
     if date_to is not None:
         scoped = scoped.filter(entry_date__lte=date_to)
-    return split_totals(scoped.aggregate(**split_total_expressions()))
+    return split_totals(scoped.aggregate(**split_total_expressions(buckets=buckets)))
 
 
 #: The signed amount of a row that COUNTS, and zero for one that does not.
@@ -312,15 +341,22 @@ def statement_totals(
 #: a balance of nothing.
 #: A2 — a deposit line counts for nothing too (it is not in the balance), so on the timeline
 #: it carries the balance as it stood, exactly as a struck-through row does.
-LIVE_SIGNED = Case(
-    When(LIVE_ENTRIES & BALANCE_BUCKETS & Q(direction=Direction.DEBIT), then=F("amount")),
-    When(LIVE_ENTRIES & BALANCE_BUCKETS, then=-F("amount")),
-    default=Value(Decimal("0.00")),
-    output_field=MONEY,
-)
+def live_signed(buckets: Q = BALANCE_BUCKETS) -> Case:
+    """`LIVE_SIGNED` for one book's buckets (DEC-019)."""
+    return Case(
+        When(LIVE_ENTRIES & buckets & Q(direction=Direction.DEBIT), then=F("amount")),
+        When(LIVE_ENTRIES & buckets, then=-F("amount")),
+        default=Value(Decimal("0.00")),
+        output_field=MONEY,
+    )
 
 
-def with_running_balance(queryset: QuerySet[LedgerEntry]) -> QuerySet[LedgerEntry]:
+LIVE_SIGNED = live_signed()
+
+
+def with_running_balance(
+    queryset: QuerySet[LedgerEntry], buckets: Q = BALANCE_BUCKETS
+) -> QuerySet[LedgerEntry]:
     """CR-027 / PTY-03 FR-6 — the timeline's page, with what each row's running balance needs.
 
     The running balance of a row is the balance AFTER it in the ledger's own
@@ -385,17 +421,20 @@ def with_running_balance(queryset: QuerySet[LedgerEntry]) -> QuerySet[LedgerEntr
     disagree about which rows exist. When one lands it has to be applied to
     both, or expressed as a zero contribution the way `include_reversed` is.
     """
+    signed = live_signed(buckets)
     return queryset.annotate(
-        timeline_own=LIVE_SIGNED,
+        timeline_own=signed,
         timeline_delta=Window(
-            expression=Sum(LIVE_SIGNED),
+            expression=Sum(signed),
             order_by=[F("entry_date").desc(), F("created_at").desc(), F("id").desc()],
             frame=RowRange(start=None, end=0),
         ),
     )
 
 
-def timeline_carried(*, tenant: Any, party_id: UUID | str, position: dict | None) -> Decimal:
+def timeline_carried(
+    *, tenant: Any, party_id: UUID | str, position: dict | None, buckets: Q = BALANCE_BUCKETS
+) -> Decimal:
     """The signed total of every counting row at or older than a timeline page's top.
 
     `keyset_after(position, TIMELINE_ORDERING)` is "strictly after the cursor
@@ -414,7 +453,7 @@ def timeline_carried(*, tenant: Any, party_id: UUID | str, position: dict | None
     scoped = (
         LedgerEntry.objects.filter(tenant=tenant, party_id=party_id)
         .filter(LIVE_ENTRIES)
-        .filter(BALANCE_BUCKETS)
+        .filter(buckets)
     )
     if position:
         scoped = scoped.filter(keyset_after(position, TIMELINE_ORDERING))
@@ -439,7 +478,9 @@ def live_total_from_summary(summary: dict) -> Decimal:
     )
 
 
-def has_entries_before_opening(*, tenant: Any, party_id: UUID | str) -> bool:
+def has_entries_before_opening(
+    *, tenant: Any, party_id: UUID | str, buckets: Q = BALANCE_BUCKETS
+) -> bool:
     """FR-11 / LED-02 BR-3 — is there a row dated before the opening balance?
 
     A merchant who types an opening dated 1 April and then backdates an entry to
@@ -464,7 +505,7 @@ def has_entries_before_opening(*, tenant: Any, party_id: UUID | str) -> bool:
     return (
         LedgerEntry.objects.filter(tenant=tenant, party_id=party_id, entry_date__lt=opening)
         .filter(LIVE_ENTRIES)
-        .filter(BALANCE_BUCKETS)
+        .filter(buckets)
         .exists()
     )
 

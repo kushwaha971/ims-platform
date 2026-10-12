@@ -1,3 +1,5 @@
+import type { LedgerBook } from 'src/types/domain.types';
+
 import type {
   LedgerBucket,
   LedgerDirection,
@@ -175,4 +177,10 @@ export interface StatementFilters {
   readonly dateFrom: string | null;
   readonly dateTo: string | null;
   readonly includeCorrections: boolean;
+  /**
+   * DEC-019 — the Shop's statement (`shop`, bills and the payments against them)
+   * or, when absent, the Udhaar book's. Carried in the address (`?book=shop`)
+   * because a statement is a page a merchant sends somebody.
+   */
+  readonly book?: LedgerBook;
 }

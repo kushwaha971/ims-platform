@@ -140,6 +140,7 @@ export const filtersFromQuery = (query: URLSearchParams, today: string): Stateme
     dateFrom: resolved.dateFrom,
     dateTo: resolved.dateTo,
     includeCorrections: query.get('corrections') === 'true',
+    ...(query.get('book') === 'shop' ? { book: 'shop' as const } : {}),
   };
 };
 
@@ -152,6 +153,7 @@ export const queryFromFilters = (filters: StatementFilters): string => {
     if (filters.dateTo) query.set('to', filters.dateTo);
   }
   if (filters.includeCorrections) query.set('corrections', 'true');
+  if (filters.book === 'shop') query.set('book', 'shop');
   return query.toString();
 };
 
