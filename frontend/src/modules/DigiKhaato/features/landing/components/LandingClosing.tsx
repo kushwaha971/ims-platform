@@ -206,6 +206,7 @@ function LandingFooterBase() {
             {t('landing.footer.product')}
           </UbText>
           <UbStack as="ul" gap={2}>
+            <FooterLink href="/solutions">{t('landing.footer.solutions')}</FooterLink>
             {landingAnchors().map((anchor) => (
               <FooterLink key={anchor.href} href={anchor.href}>
                 {t(anchor.key)}

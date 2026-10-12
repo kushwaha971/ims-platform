@@ -157,3 +157,6 @@ export const BING_SITE_VERIFICATION: string = process.env.NEXT_PUBLIC_BING_SITE_
  * everybody out whenever the two disagreed (review G2, 12 Oct 2026).
  */
 export const OTP_USES_META = process.env.NEXT_PUBLIC_OTP_PROVIDER === 'meta_whatsapp';
+
+/** Public GA4 stream ID only; never an API secret. */
+export const GA4_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID ?? '';

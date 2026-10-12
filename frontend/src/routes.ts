@@ -313,6 +313,7 @@ export const GUARDED_ROUTE_PREFIXES: readonly string[] = [
  * is: so there is one list, not one per guard.
  */
 export const PUBLIC_ROUTE_PREFIXES: readonly string[] = [
+  '/solutions',
   // The landing page. A signed-out visitor is the whole audience, and without
   // this entry the bootstrap's `/auth/me` 401 sent them to `/login?next=/`
   // before they had read a word. It matches ONLY itself — see `isPublicPath`:
@@ -373,3 +374,7 @@ export const itemPath = (id: string): string => `${ROUTES.ITEMS}/${encodeURIComp
 export const importKindPath = (kind: string): string =>
   `${ROUTES.IMPORTS}?kind=${encodeURIComponent(kind)}`;
 export const importJobPath = (id: string): string => `${ROUTES.IMPORTS}/${encodeURIComponent(id)}`;
+
+/** Public acquisition pages; no tenant, token or authentication URLs. */
+export const isMarketingPath = (path: string | null): boolean =>
+  path === ROUTES.HOME || path === '/solutions' || Boolean(path?.startsWith('/solutions/'));

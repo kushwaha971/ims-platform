@@ -1,6 +1,8 @@
 import { SITE_URL } from 'src/constants';
 import { GUARDED_ROUTE_PREFIXES, ROUTES } from 'src/routes';
 
+import { SOLUTIONS } from 'modules/DigiKhaato/features/landing/config/solutions';
+
 import type { Metadata } from 'next';
 
 /**
@@ -80,8 +82,8 @@ export const CRAWL_DISALLOW: readonly string[] = [
 /** The sitemap, in the order a person would meet them. */
 export const SITEMAP_PATHS: readonly string[] = [
   ROUTES.HOME,
-  ROUTES.SIGNUP,
-  ROUTES.LOGIN,
+  '/solutions',
+  ...SOLUTIONS.map(({ slug }) => `/solutions/${slug}`),
   ROUTES.LEGAL_TERMS,
   ROUTES.LEGAL_PRIVACY,
 ];

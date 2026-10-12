@@ -1,4 +1,8 @@
+import { NOINDEX_ROBOTS } from 'src/utils/seo';
+
 import { AuthShell } from 'modules/DigiKhaato/features/auth/components/AuthShell';
+
+import type { Metadata } from 'next';
 
 /**
  * Part 19 §19.6.1 — the `(auth)` group.
@@ -15,3 +19,5 @@ export default function AuthLayout({
 }: Readonly<{ children: React.ReactNode }>): React.JSX.Element {
   return <AuthShell>{children}</AuthShell>;
 }
+
+export const metadata: Metadata = { robots: NOINDEX_ROBOTS };
