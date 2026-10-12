@@ -80,6 +80,18 @@ const SERVER_FIELD: Readonly<Record<string, keyof LoanFormValues>> = {
   collection_weekdays: 'collectionWeekdays',
 };
 
+/** The server's field errors, keyed by this form's field names. */
+/** The first specific reason a refusal gives, for the preview panel (QA B6). */
+const firstReason = (error: { details?: Record<string, unknown> } | null): string | null => {
+  const first = Object.values(error?.details ?? {})[0];
+  return Array.isArray(first) && typeof first[0] === 'string' ? first[0] : null;
+};
+
+const toFormDetails = (
+  details: Readonly<Record<string, unknown>> | undefined
+): Record<string, unknown> =>
+  Object.fromEntries(Object.entries(details ?? {}).map(([k, m]) => [SERVER_FIELD[k] ?? k, m]));
+
 /**
  * `/lending/loans/new` (FRD LEN-03, LEN-04; the agreed wireframe): who, the
  * plan, the money, and the live preview the server computes — the schedule,
@@ -167,13 +179,28 @@ export function NewLoanPageContent(): React.JSX.Element {
     if (!(Number(values.principal) > 0)) return undefined;
     let request: { abort: () => void } | null = null;
     const id = window.setTimeout(() => {
-      request = dispatch(previewLendingLoan(JSON.parse(terms) as Record<string, unknown>));
+      const pending = dispatch(previewLendingLoan(JSON.parse(terms) as Record<string, unknown>));
+      request = pending;
+      // QA B6 — a refused preview names its fields: "The deductions must be less than
+      // the amount lent" under File charge, not "Please check the highlighted fields"
+      // with nothing highlighted. A good preview clears what an earlier one marked.
+      void pending.then((result) => {
+        if (previewLendingLoan.fulfilled.match(result)) {
+          form.clearErrors(Object.values(SERVER_FIELD));
+        } else if (result.payload?.code === 'validation_error') {
+          applyServerErrors(
+            { ...result.payload, details: toFormDetails(result.payload.details) },
+            form.setError,
+            Object.values(SERVER_FIELD)
+          );
+        }
+      });
     }, PREVIEW_DEBOUNCE_MS);
     return () => {
       window.clearTimeout(id);
       request?.abort();
     };
-  }, [dispatch, terms, values.principal]);
+  }, [dispatch, terms, values.principal, form]);
 
   const save = async (data: LoanFormValues) => {
     const result = await dispatch(createLendingLoan({ values: data, key }));
@@ -197,10 +224,11 @@ export function NewLoanPageContent(): React.JSX.Element {
       dispatch(showSnackbar({ severity: 'error', id: 'lending.borrower.blockedRefused' }));
       return;
     }
-    const details = Object.fromEntries(
-      Object.entries(failure.details ?? {}).map(([k, m]) => [SERVER_FIELD[k] ?? k, m])
+    applyServerErrors(
+      { ...failure, details: toFormDetails(failure.details) },
+      form.setError,
+      Object.values(SERVER_FIELD)
     );
-    applyServerErrors({ ...failure, details }, form.setError, Object.values(SERVER_FIELD));
   };
 
   if (!canLend) {
@@ -585,7 +613,8 @@ export function NewLoanPageContent(): React.JSX.Element {
               <UbText variant="label">{t('lending.preview.title')}</UbText>
               {!preview ? (
                 <UbText variant="body-sm" tone={previewError ? 'warning' : 'tertiary'}>
-                  {previewError?.message ??
+                  {firstReason(previewError) ??
+                    previewError?.message ??
                     (previewStatus === 'loading'
                       ? t('lending.preview.working')
                       : t('lending.preview.empty'))}
