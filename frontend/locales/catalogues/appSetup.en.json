@@ -1,5 +1,7 @@
 {
   "appSetup.hide": "Hide",
-  "appSetup.progress": "{done} of {total} done. Nothing here stops you using it meanwhile.",
+  "appSetup.progress": "{done} of {total} done. You can skip any of them.",
+  "appSetup.start": "Start",
+  "appSetup.startStep": "Start: {step}",
   "appSetup.title": "Get {app} ready"
 }

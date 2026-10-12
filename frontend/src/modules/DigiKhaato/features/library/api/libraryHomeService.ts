@@ -2,7 +2,7 @@ import { api } from 'src/api/AxiosInstances';
 
 import { LIBRARY_PATHS } from './libraryPaths';
 
-import type { LibraryHome } from '../types/home.types';
+import type { FeesBoard, LibraryHome } from '../types/home.types';
 import type { FeeState } from '../types/member.types';
 
 /** W04 — the library's home: one call and its mapping. */
@@ -55,4 +55,39 @@ export const toLibraryHome = (row: Wire): LibraryHome => {
 export const getLibraryHome = async (signal?: AbortSignal): Promise<LibraryHome> => {
   const response = await api.get<{ data: Wire }>(LIBRARY_PATHS.HOME, { signal });
   return toLibraryHome(response.data.data);
+};
+
+/** The Fees board: Not paid, then Paid this month (approved designs, 12 Oct 2026). */
+export const getFeesBoard = async (signal?: AbortSignal): Promise<FeesBoard> => {
+  const response = await api.get<{ data: Wire }>(LIBRARY_PATHS.FEES_BOARD, { signal });
+  const d = response.data.data;
+  return {
+    students: Number(d.students ?? 0),
+    toCollect: str(d.to_collect),
+    collectedThisMonth: str(d.collected_this_month),
+    notPaid: ((d.not_paid as Wire[] | undefined) ?? []).map((r) => {
+      const charge = (r.charge ?? {}) as Wire;
+      return {
+        membershipId: str(r.membership_id),
+        partyId: str(r.party_id),
+        name: str(r.name),
+        plan: str(r.plan),
+        since: str(r.since),
+        owes: str(r.owes),
+        charge: {
+          id: str(charge.id),
+          number: str(charge.number),
+          amountDue: str(charge.amount_due),
+        },
+      };
+    }),
+    paid: ((d.paid as Wire[] | undefined) ?? []).map((r) => ({
+      paymentId: str(r.payment_id),
+      on: str(r.on),
+      mode: str(r.mode),
+      amount: str(r.amount),
+      name: str(r.name),
+      membershipId: str(r.membership_id),
+    })),
+  };
 };

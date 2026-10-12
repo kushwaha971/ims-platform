@@ -41,6 +41,7 @@ export const LIBRARY_QUERIES = {
   fetchLibrarySeats: 'librarySeats/fetchSeats',
   fetchLibrarySeatMap: 'librarySeats/fetchMap',
   fetchLibraryHome: 'libraryHome/fetch',
+  fetchLibraryFeesBoard: 'libraryHome/fetchFeesBoard',
   fetchLibraryAttendance: 'libraryAttendance/fetch',
   fetchMemberAttendance: 'libraryAttendance/fetchMember',
   fetchFeeReminders: 'libraryMessages/fetch',

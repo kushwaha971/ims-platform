@@ -2,7 +2,7 @@
 
 import { Circle, CircleCheck } from 'lucide-react';
 
-import { UbButton, UbCard, UbLink, UbStack, UbText } from 'src/design-system';
+import { UbActionLink, UbButton, UbCard, UbDivider, UbStack, UbText } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
 
 import { useAppSetup } from '../hooks/useAppSetup';
@@ -45,23 +45,38 @@ export function AppSetupCard({
         ) : undefined
       }
     >
-      <UbStack as="ol" gap={2} aria-label={t('appSetup.title', { app: appName })}>
-        {setup.steps.map((step) => (
-          <UbStack as="li" key={step.key} direction="row" align="center" className="gap-2">
-            {step.done ? (
-              <CircleCheck className="h-4 w-4 shrink-0 text-success" aria-hidden />
-            ) : (
-              <Circle className="h-4 w-4 shrink-0 text-text-tertiary" aria-hidden />
-            )}
-            {step.done ? (
-              <UbText as="span" variant="body-sm" tone="tertiary" className="line-through">
+      {/* Owner, 12 Oct 2026, on the old card of small underlined links: the
+          same rows as the Shop's first day — the step in plain words and a
+          Start button for each step not yet done. */}
+      <UbStack as="ol" gap={0} aria-label={t('appSetup.title', { app: appName })}>
+        {setup.steps.map((step, index) => (
+          <UbStack as="li" key={step.key} gap={0}>
+            {index > 0 && <UbDivider />}
+            <UbStack direction="row" align="center" className="gap-3 py-3">
+              {step.done ? (
+                <CircleCheck className="h-5 w-5 shrink-0 text-success" aria-hidden />
+              ) : (
+                <Circle className="h-5 w-5 shrink-0 text-text-tertiary" aria-hidden />
+              )}
+              <UbText
+                as="span"
+                variant="body-medium"
+                tone={step.done ? 'tertiary' : undefined}
+                className={`min-w-0 flex-1 ${step.done ? 'line-through' : ''}`}
+              >
                 {t(step.labelId)}
               </UbText>
-            ) : (
-              <UbLink href={step.path} variant="body-sm-medium">
-                {t(step.labelId)}
-              </UbLink>
-            )}
+              {!step.done && (
+                <UbActionLink
+                  href={step.path}
+                  variant="secondary"
+                  size="sm"
+                  aria-label={t('appSetup.startStep', { step: t(step.labelId) })}
+                >
+                  {t('appSetup.start')}
+                </UbActionLink>
+              )}
+            </UbStack>
           </UbStack>
         ))}
       </UbStack>

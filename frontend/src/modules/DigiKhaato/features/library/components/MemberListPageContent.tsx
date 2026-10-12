@@ -21,7 +21,7 @@ import {
   type UbFilterSpec,
   type UbFilterValues,
 } from 'src/design-system';
-import { UbDataGrid, type UbDataGridEmptyStates } from 'src/design-system/UbDataGrid';
+import { UbDataGrid, useGridTier, type UbDataGridEmptyStates } from 'src/design-system/UbDataGrid';
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useCommittedSearch } from 'src/hooks/useCommittedSearch';
 import { useIdempotencyKey } from 'src/hooks/useIdempotencyKey';
@@ -90,6 +90,7 @@ export function MemberListPageContent(): React.JSX.Element {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const list = useMemberList();
+  const tier = useGridTier();
   const labels = useLibraryGridLabels();
   const timezone = useAppSelector(selectTenantTimezone);
   const today = todayInTenantTz(timezone ?? undefined);
@@ -269,6 +270,33 @@ export function MemberListPageContent(): React.JSX.Element {
     );
   }
 
+  /* Approved design (12 Oct 2026): nobody admitted yet is the empty state
+     alone — no "0 students · ₹0.00 fee due", search or filters. */
+  const emptyBook = list.status === 'succeeded' && list.rows.length === 0 && list.hasAny === false;
+  const statusSpec: UbFilterSpec = {
+    kind: 'single',
+    key: 'status',
+    label: t('library.members.filter.status'),
+    anyLabel: t('library.members.filter.any'),
+    options: MEMBER_STATUSES.map((status) => ({
+      value: status,
+      label: t(`library.members.chip.${status}`),
+    })),
+  };
+  // On a phone the status joins the one Filters sheet (approved design).
+  const phone = tier === 'cards';
+  const specs = phone ? [statusSpec, ...sheetSpecs] : sheetSpecs;
+  const values = phone ? { ...sheetValues, status: filters.status } : sheetValues;
+  // One update for the whole sheet: two would each start from the same
+  // filters, and the second would undo the first.
+  const apply = (next: UbFilterValues) =>
+    setFilters({
+      hasDues: next.hasDues ?? '',
+      shift: next.shift ?? '',
+      type: next.type ?? '',
+      ...(phone ? { status: next.status ?? '' } : {}),
+    } as Partial<typeof filters>);
+
   return (
     <UbPageShell>
       <UbPageHeader
@@ -286,86 +314,90 @@ export function MemberListPageContent(): React.JSX.Element {
         }
       />
       <UbStack gap={4} data-testid="library-members-screen">
-        {totals && (
-          <UbText variant="body-sm" tone="secondary" data-testid="library-members-totals">
-            {[
-              t('library.members.totals.members', { count: totals.members }),
-              t('library.members.totals.dues', { amount: formatInr(totals.dues) }),
-              ...(Number(totals.depositsHeld) > 0
-                ? [
-                    t('library.members.totals.deposits', {
-                      amount: formatInr(totals.depositsHeld),
-                    }),
-                  ]
-                : []),
-            ].join(' · ')}
-          </UbText>
-        )}
-        <UbSearchInput
-          value={search}
-          onChange={setSearch}
-          placeholder={t('library.members.search.placeholder')}
-          aria-label={t('library.members.search.label')}
-        />
-        {/* Owner, 6 Oct 2026: the status a desk changes most is the one
+        {emptyBook ? (
+          <UbEmptyState
+            variant="firstUse"
+            title={emptyStates.firstUse.title}
+            description={emptyStates.firstUse.description}
+            action={emptyStates.firstUse.action}
+          />
+        ) : (
+          <>
+            {totals && (
+              <UbText variant="body-sm" tone="secondary" data-testid="library-members-totals">
+                {[
+                  t('library.members.totals.members', { count: totals.members }),
+                  t('library.members.totals.dues', { amount: formatInr(totals.dues) }),
+                  ...(Number(totals.depositsHeld) > 0
+                    ? [
+                        t('library.members.totals.deposits', {
+                          amount: formatInr(totals.depositsHeld),
+                        }),
+                      ]
+                    : []),
+                ].join(' · ')}
+              </UbText>
+            )}
+            <UbSearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder={t('library.members.search.placeholder')}
+              aria-label={t('library.members.search.label')}
+            />
+            {/* Owner, 6 Oct 2026: the status a desk changes most is the one
             dropdown; dues, shift and plan sit behind Filters, as pills when on. */}
-        <UbStack direction="row" align="center" gap={2} className="flex-wrap">
-          <UbFilterSelect
-            spec={{
-              kind: 'single',
-              key: 'status',
-              label: t('library.members.filter.status'),
-              anyLabel: t('library.members.filter.any'),
-              options: MEMBER_STATUSES.map((status) => ({
-                value: status,
-                label: t(`library.members.chip.${status}`),
-              })),
-            }}
-            value={filters.status}
-            onChange={(status) => setFilters({ status } as Partial<typeof filters>)}
-            closeLabel={t('common.action.close')}
-          />
-          <UbFilterSheet
-            specs={sheetSpecs}
-            values={sheetValues}
-            onApply={applySheet}
-            labels={{
-              title: t('common.filters.title'),
-              apply: t('common.action.apply'),
-              reset: t('common.action.reset'),
-              close: t('common.action.close'),
-            }}
-          />
-        </UbStack>
-        <UbActiveFilters
-          specs={sheetSpecs}
-          values={sheetValues}
-          onChange={applySheet}
-          labels={{
-            remove: (pill) => t('common.filters.remove', { filter: pill }),
-            clearAll: t('common.filters.clearAll'),
-          }}
-        />
-        <UbDataGrid
-          rows={list.rows}
-          columns={columns}
-          rowId={rowId}
-          rowName={rowName}
-          state={listGridState(list)}
-          labels={labels}
-          emptyStates={emptyStates}
-          caption={t('library.members.caption')}
-          storageId="library.members"
-          page={{
-            page: list.page,
-            pageSize: list.pageSize,
-            total: list.total,
-            totalPages: list.totalPages,
-          }}
-          onPageChange={list.setPage}
-          onRowOpen={openRow}
-          cardAvatar={false}
-        />
+            <UbStack direction="row" align="center" gap={2} className="flex-wrap">
+              {!phone && (
+                <UbFilterSelect
+                  spec={statusSpec}
+                  value={filters.status}
+                  onChange={(status) => setFilters({ status } as Partial<typeof filters>)}
+                  closeLabel={t('common.action.close')}
+                />
+              )}
+              <UbFilterSheet
+                specs={specs}
+                values={values}
+                onApply={apply}
+                labels={{
+                  title: t('common.filters.title'),
+                  apply: t('common.action.apply'),
+                  reset: t('common.action.reset'),
+                  close: t('common.action.close'),
+                }}
+              />
+            </UbStack>
+            <UbActiveFilters
+              specs={sheetSpecs}
+              values={sheetValues}
+              onChange={applySheet}
+              labels={{
+                remove: (pill) => t('common.filters.remove', { filter: pill }),
+                clearAll: t('common.filters.clearAll'),
+              }}
+            />
+            <UbDataGrid
+              rows={list.rows}
+              columns={columns}
+              rowId={rowId}
+              rowName={rowName}
+              state={listGridState(list)}
+              labels={labels}
+              emptyStates={emptyStates}
+              caption={t('library.members.caption')}
+              storageId="library.members"
+              page={{
+                page: list.page,
+                pageSize: list.pageSize,
+                total: list.total,
+                totalPages: list.totalPages,
+              }}
+              onPageChange={list.setPage}
+              onRowOpen={openRow}
+              cardAvatar={false}
+            />
+          </>
+        )}
       </UbStack>
       {enrolling && canWrite && (
         <EnrolMemberDrawerLazy

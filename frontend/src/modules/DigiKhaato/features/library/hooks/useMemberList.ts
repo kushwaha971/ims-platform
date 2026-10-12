@@ -24,7 +24,7 @@ const MEMBERS: CatalogueListSpec<MemberFilters, MemberSummary> = {
 };
 
 export type MemberList = CatalogueList<MemberFilters, MemberSummary> &
-  Pick<LibraryMemberListState, 'totals' | 'types' | 'enrolling'>;
+  Pick<LibraryMemberListState, 'totals' | 'hasAny' | 'types' | 'enrolling'>;
 
 /** F04 (LIB-04 FR-6) — the members list, its totals and the membership types. */
 export const useMemberList = (): MemberList => useCatalogueList(MEMBERS) as MemberList;

@@ -146,10 +146,15 @@ interface PageApi {
     readonly total: number;
     readonly total_pages: number;
     readonly totals?: { members: number; dues: string; deposits_held: string };
+    readonly has_any?: boolean;
   };
 }
 
-export type MemberPage = CataloguePage<MemberSummary> & { readonly totals: MemberTotals };
+export type MemberPage = CataloguePage<MemberSummary> & {
+  readonly totals: MemberTotals;
+  /** The server's `meta.has_any`: anybody ever admitted, whatever the filters. */
+  readonly hasAny?: boolean;
+};
 
 export const listMembers = async (
   filters: MemberFilters,
@@ -170,6 +175,7 @@ export const listMembers = async (
       dues: meta.totals?.dues ?? '0.00',
       depositsHeld: meta.totals?.deposits_held ?? '0.00',
     },
+    ...(typeof meta.has_any === 'boolean' ? { hasAny: meta.has_any } : {}),
   };
 };
 

@@ -35,6 +35,8 @@ import type {
  */
 export type LibraryMemberListState = LibraryListState<MemberFilters, MemberSummary> & {
   totals: MemberTotals | null;
+  /** The server's: anybody ever admitted, whatever the filters; `null` until known. */
+  hasAny: boolean | null;
   types: MembershipType[];
   enrolling: boolean;
 };
@@ -42,6 +44,7 @@ export type LibraryMemberListState = LibraryListState<MemberFilters, MemberSumma
 const initialState: LibraryMemberListState = {
   ...initialListState<MemberFilters, MemberSummary>(MEMBER_FILTER_DEFAULTS),
   totals: null,
+  hasAny: null,
   types: [],
   enrolling: false,
 };
@@ -61,8 +64,10 @@ const libraryMemberListSlice = createSlice({
       .addCase(fetchLibraryMembers.fulfilled, (state, action) => {
         listFulfilled(state, action.meta.arg, action.payload);
         // The late-response guard applies to the totals as to the rows.
-        if (state.answered === JSON.stringify(action.meta.arg))
+        if (state.answered === JSON.stringify(action.meta.arg)) {
           state.totals = action.payload.totals as Draft<MemberTotals>;
+          state.hasAny = action.payload.hasAny ?? null;
+        }
       })
       .addCase(fetchLibraryMembers.rejected, (state, action) =>
         listRejected(state, action.meta.arg, action.meta.aborted, action.payload)

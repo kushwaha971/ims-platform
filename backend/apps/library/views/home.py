@@ -27,3 +27,24 @@ class LibraryHomeView(APIView):
         membership = getattr(tenant, "_ub_membership", None)
         granted = permissions_for(membership) if membership is not None else frozenset()
         return StandardResponse.ok(library_home(tenant, tenant_today(tenant), granted))
+
+
+class FeesBoardView(APIView):
+    """`GET /library/fees/board` — the Fees screen: Not paid, then Paid this month
+    (approved designs, 12 Oct 2026). Money-bearing, so behind the same codename
+    as the home's study figures."""
+
+    scope_exempt = "The library has no row scoping (LIB-14 §1, ADR-052)."
+
+    def get_permissions(self) -> list:
+        return [
+            IsAuthenticated(),
+            ModuleEnabled("library")(),
+            HasPermission("library.member.read")(),
+        ]
+
+    def get(self, request: Any) -> Any:
+        from apps.library.selectors.fees import fees_board
+
+        tenant = get_effective_tenant(request)
+        return StandardResponse.ok(fees_board(tenant, tenant_today(tenant)))

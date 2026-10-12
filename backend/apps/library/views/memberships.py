@@ -106,6 +106,12 @@ class MemberListView(_MemberView):
             [members.member_summary(m, today) for m in rows]
         )
         response.data["meta"]["totals"] = totals
+        # Whether the library has ever admitted anybody, whatever the filters:
+        # an empty list hides its search and filters (approved designs, 12 Oct
+        # 2026); a filter that found nobody keeps them.
+        response.data["meta"]["has_any"] = (
+            bool(rows) or LibraryMembership.objects.filter(tenant=tenant).exists()
+        )
         return response
 
 

@@ -111,11 +111,15 @@ export function LibraryHomePageContent(): React.JSX.Element {
 
   const study = state.home.study;
   const students = `${ROUTES.LIBRARY_MEMBERS}`;
+  /* The approved design (12 Oct 2026): a library with no student yet is the
+     setup checklist and one line — no "Fee unpaid 0 / Collected ₹0.00", no
+     shortcuts, no empty seat box, and no "Everyone has paid" said of nobody. */
+  const dayOne = !!study && study.students === 0;
 
   return (
     <UbPageShell>
       <UbPageHeader
-        title={t('library.home.title')}
+        title={dayOne ? t('library.home.welcome') : t('library.home.title')}
         actions={
           canAdmit ? (
             <UbActionLink
@@ -132,6 +136,10 @@ export function LibraryHomePageContent(): React.JSX.Element {
       {!study ? (
         <UbText variant="body-sm" tone="tertiary">
           {t('library.home.noFigures')}
+        </UbText>
+      ) : dayOne ? (
+        <UbText variant="body-sm" tone="tertiary" data-testid="library-home-first-use">
+          {t('library.home.firstUse.later')}
         </UbText>
       ) : (
         <UbStack gap={5} data-testid="library-home">

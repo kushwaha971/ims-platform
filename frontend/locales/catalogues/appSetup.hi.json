@@ -1,5 +1,7 @@
 {
   "appSetup.hide": "छिपाएँ",
-  "appSetup.progress": "{total} में से {done} हो गए। तब तक भी आप इसे पूरा इस्तेमाल कर सकते हैं।",
+  "appSetup.progress": "{total} में से {done} पूरे। कोई भी कदम छोड़ सकते हैं।",
+  "appSetup.start": "शुरू करें",
+  "appSetup.startStep": "शुरू करें: {step}",
   "appSetup.title": "{app} तैयार करें"
 }

@@ -329,3 +329,13 @@ def test_the_list_finds_the_member_a_party_is(api_as: Any, library_on: Any) -> N
     found = owner.get(reverse(MEMBERS), {"party": first["party_id"]}).json()["data"]
     assert [r["membership_id"] for r in found] == [first["membership_id"]]
     assert owner.get(reverse(MEMBERS), {"party": "nope"}).status_code == 400
+
+
+def test_the_list_says_whether_anybody_was_ever_admitted(api_as: Any, library_on: Any) -> None:
+    """Approved designs (12 Oct 2026): Students with nobody in it hides its
+    search and filters; a search that found nobody keeps them."""
+    owner, _ = api_as(library_on, role="owner")
+    assert owner.get(reverse(MEMBERS)).json()["meta"]["has_any"] is False
+    assert _enrol(owner, library_on).status_code == 201
+    body = owner.get(reverse(MEMBERS), {"q": "nobody-by-this-name"}).json()
+    assert body["data"] == [] and body["meta"]["has_any"] is True

@@ -222,6 +222,7 @@ urlpatterns: list = [
     ),
     # ── B14 ── the library home (LIB-11 §6)
     path("home", hm.LibraryHomeView.as_view(), name="library-home"),
+    path("fees/board", hm.FeesBoardView.as_view(), name="library-fees-board"),
     # ── B15 ── reports (LIB-12 §6)
     path("reports", rpv.ReportIndexView.as_view(), name="library-reports"),
     path("profit", rpv.ProfitView.as_view(), name="library-profit"),

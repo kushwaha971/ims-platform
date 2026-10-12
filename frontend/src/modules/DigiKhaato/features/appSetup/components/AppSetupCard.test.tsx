@@ -34,11 +34,11 @@ it('links each undone step to the page that does it, and strikes the done ones',
   service.getAppSetup.mockResolvedValue(setup());
   renderWithProviders(<AppSetupCard app="library" appName="Library" />);
   expect(await screen.findByText('Get Library ready')).toBeInTheDocument();
-  expect(screen.getByRole('link', { name: 'Lay out your seats' })).toHaveAttribute(
+  expect(screen.getByRole('link', { name: 'Start: Lay out your seats' })).toHaveAttribute(
     'href',
     '/library/seats'
   );
-  expect(screen.queryByRole('link', { name: 'Add your fee plans' })).toBeNull();
+  expect(screen.queryByRole('link', { name: 'Start: Add your fee plans' })).toBeNull();
   expect(screen.getByText(/1 of 2 done/)).toBeInTheDocument();
 });
 
