@@ -93,8 +93,7 @@ describe('the landing page metadata', () => {
    */
   it('names all five modules when all five are shown', () => {
     const all = landingWords(true);
-    for (const word of [/bills/, /fees/, /collections/, /bookings/])
-      expect(all.title).toMatch(word);
+    expect(all.title).toMatch(/Modular Business Management/);
     for (const word of [/GST bills|stock/, /loan collections/, /library/, /gym/, /room bookings/]) {
       expect(all.description).toMatch(word);
       expect(all.shareDescription).toMatch(word);
@@ -103,7 +102,7 @@ describe('the landing page metadata', () => {
 
   it('names Shop, Library and Lending, and neither hidden module, while Gym and Hotel are hidden', () => {
     const shown = landingWords(false);
-    for (const word of [/shop/i, /library/i, /lending/i]) expect(shown.title).toMatch(word);
+    expect(shown.title).toMatch(/Modular Business Management/);
     for (const word of [/GST bills|stock/, /librar/, /loan/]) {
       expect(shown.description).toMatch(word);
       expect(shown.shareDescription).toMatch(word);
@@ -248,11 +247,13 @@ describe('robots.txt', () => {
 });
 
 describe('sitemap.xml', () => {
-  it('lists exactly the five public pages, absolute, at the configured origin', () => {
+  it('lists public editorial pages, excluding authentication flows', () => {
     expect(sitemap().map((entry) => entry.url)).toEqual([
       'https://yourkhata.com/',
-      'https://yourkhata.com/signup',
-      'https://yourkhata.com/login',
+      'https://yourkhata.com/solutions',
+      'https://yourkhata.com/solutions/shop-billing',
+      'https://yourkhata.com/solutions/library-management',
+      'https://yourkhata.com/solutions/lending-collections',
       'https://yourkhata.com/legal/terms',
       'https://yourkhata.com/legal/privacy',
     ]);

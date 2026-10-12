@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { usePathname } from 'next/navigation';
 
+import { afterPageLoadIdle } from 'src/analytics/afterPageLoadIdle';
 import {
   analyticsAllowedOn,
   personProperties,
@@ -34,12 +35,6 @@ import type { PostHog } from 'posthog-js';
  * Off unless the build says `NEXT_PUBLIC_ANALYTICS_ENABLED=true` AND has a
  * key, so a developer's machine and the test stacks send nothing.
  */
-const idle = (run: () => void): void => {
-  const w = window as Window & { requestIdleCallback?: (cb: () => void) => void };
-  if (w.requestIdleCallback) w.requestIdleCallback(run);
-  else window.setTimeout(run, 1500);
-};
-
 export function AnalyticsHost(): React.JSX.Element | null {
   const pathname = usePathname() ?? '';
   const user = useAppSelector(selectSessionUser);
@@ -62,7 +57,7 @@ export function AnalyticsHost(): React.JSX.Element | null {
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
-    idle(() => {
+    const cancelIdle = afterPageLoadIdle(() => {
       if (cancelled) return;
       // A forbidden address: only an SDK that is ALREADY here is told to stop.
       if (!allowed) {
@@ -84,6 +79,7 @@ export function AnalyticsHost(): React.JSX.Element | null {
     });
     return () => {
       cancelled = true;
+      cancelIdle();
     };
   }, [enabled, allowed, pathname]);
 
@@ -91,7 +87,7 @@ export function AnalyticsHost(): React.JSX.Element | null {
   useEffect(() => {
     if (!allowed) return;
     void import('src/analytics/posthogClient')
-      .then(({ loadPosthog }) => loadPosthog())
+      .then(({ loadPosthog, posthogIfLoaded }) => (userId ? loadPosthog() : posthogIfLoaded()))
       .then((posthog) => {
         if (!posthog) return;
         if (!userId) {

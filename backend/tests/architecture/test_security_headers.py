@@ -39,6 +39,7 @@ _PROD_ENV = {
 def test_an_api_response_carries_the_baseline_headers(anonymous_client: Any) -> None:
     """nosniff, DENY, a referrer policy and a CSP that loads nothing — on JSON."""
     response = anonymous_client.get(reverse("health"))
+    assert response["X-Robots-Tag"] == "noindex, nofollow, noarchive"
     assert response["X-Content-Type-Options"] == "nosniff"
     assert response["X-Frame-Options"] == "DENY"
     assert response["Referrer-Policy"] == "same-origin"

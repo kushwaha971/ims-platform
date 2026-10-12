@@ -2,7 +2,11 @@
 
 import { useEffect, type ReactNode } from 'react';
 
+import { usePathname } from 'next/navigation';
+
 import { useAppDispatch } from 'src/hooks/useAppStore';
+import { isMarketingPath } from 'src/routes';
+
 
 import { fetchSession } from '../redux/sessionThunk';
 
@@ -16,11 +20,14 @@ export function SessionBootstrap({
   children,
 }: Readonly<{ children: ReactNode }>): React.JSX.Element {
   const dispatch = useAppDispatch();
+  const pathname = usePathname();
 
   useEffect(() => {
+    // Public acquisition content must render even when the API is unavailable.
+    if (isMarketingPath(pathname)) return;
     const promise = dispatch(fetchSession());
     return () => promise.abort();
-  }, [dispatch]);
+  }, [dispatch, pathname]);
 
   return <>{children}</>;
 }

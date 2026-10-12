@@ -1,3 +1,4 @@
+import { GooglePublicTracker } from 'src/analytics/GooglePublicTracker';
 import { SITE_URL } from 'src/constants';
 import { UbJsonLd } from 'src/design-system';
 import { frauncesItalic } from 'src/fonts/landing';
@@ -137,6 +138,7 @@ export default function HomePage(): React.JSX.Element {
     <>
       <UbJsonLd data={JSON_LD} data-testid="landing-jsonld" />
       <LandingPage className={frauncesItalic.variable} />
+      <GooglePublicTracker />
     </>
   );
 }

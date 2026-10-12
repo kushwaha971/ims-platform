@@ -40,6 +40,8 @@ class ApiSecurityHeadersMiddleware:
         response = self.get_response(request)
         if request.path.startswith(self.prefix) and "Content-Security-Policy" not in response:
             response["Content-Security-Policy"] = API_CONTENT_SECURITY_POLICY
+        if request.path.startswith(self.prefix):
+            response["X-Robots-Tag"] = "noindex, nofollow, noarchive"
         return response
 
 

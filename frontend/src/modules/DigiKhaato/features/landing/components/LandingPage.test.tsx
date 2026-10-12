@@ -71,7 +71,7 @@ describe('LandingPage', () => {
   it('shows the badge, the support copy and the micro-copy under the CTAs', () => {
     renderPage();
 
-    expect(screen.getByText('Shop, Library and Lending on one platform')).toBeInTheDocument();
+    expect(screen.getByText('One platform. Modules for your business.')).toBeInTheDocument();
     // DEC-013: sign-up is a mobile number and a code. The page said "email"
     // in four places for a day after the sign-in screen stopped asking for one.
     expect(

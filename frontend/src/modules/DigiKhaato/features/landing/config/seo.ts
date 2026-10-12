@@ -1,3 +1,5 @@
+/** Owner, 12 Oct 2026: the title identifies a modular business-management platform.
+ * Current module examples belong in descriptions and dedicated solution pages. */
 /**
  * The landing page's words for search engines and link previews
  * (CR-2026-09-29-PLATFORM-C). They are not in the message catalogue because
@@ -37,7 +39,7 @@ export const BRAND_NAME = 'YourKhata';
  */
 const WORDS = {
   shown: {
-    title: 'YourKhata: shop billing, library and lending in one app',
+    title: 'YourKhata | Modular Business Management Software',
     description:
       'GST bills, stock and customer dues for shops; students, seats, fees and books for libraries; loans and daily collections for lenders. In Hindi or English.',
     shareTitle: 'YourKhata — one place for all your business records',
@@ -45,7 +47,7 @@ const WORDS = {
       'Shop bills and stock, library students, fees and books, and loan collections, on one shared core. Hindi or English.',
   },
   all: {
-    title: 'YourKhata: bills, fees, collections and bookings in one app',
+    title: 'YourKhata | Modular Business Management Software',
     description:
       'GST bills and stock, loan collections, library and gym members and their fees, and room bookings: all your records in one place, in Hindi or English.',
     shareTitle: 'YourKhata — one place for all your business records',
@@ -80,13 +82,4 @@ export const LANDING_SHARE_DESCRIPTION: string = CURRENT.shareDescription;
  * Under `/brand/`, so it shares that prefix's cache policy (next.config.js,
  * nginx). Regenerate it when the headline or the mark changes.
  */
-export const OG_IMAGE = {
-  url: '/brand/yourkhata-og.png',
-  width: 1200,
-  height: 630,
-  alt: 'YourKhata — All your records, in one place.',
-  type: 'image/png',
-} as const;
-
-/** The mark as a square raster, for `Organization.logo` (Google asks for ≥ 112 px). */
-export const LOGO_IMAGE = { url: '/icons/icon-512.png', width: 512, height: 512 } as const;
+export { OG_IMAGE, LOGO_IMAGE } from './seoAssets';
