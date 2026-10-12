@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { ArrowLeft, Download, Printer } from 'lucide-react';
 
+import { SummaryStatGrid } from 'src/components/stats/SummaryStatGrid';
 import {
   UbActionLink,
   UbAmount,
@@ -19,7 +20,6 @@ import {
   UbSkeleton,
   UbStack,
   UbStatCard,
-  UbStatGrid,
   UbStatusBadge,
   UbStatusBanner,
   UbText,
@@ -325,7 +325,7 @@ function StatementSummaryStrip({
   const closing = summary.closingBalance;
 
   return (
-    <UbStatGrid>
+    <SummaryStatGrid storageKey="statement">
       {/* `formatInr` on every figure, because `UbStatCard` takes a
           PREFORMATTED value — and §23.2.4's note applies here as it does on the
           party list: receivable is the ledger's debit family and uses `danger`,
@@ -364,7 +364,7 @@ function StatementSummaryStrip({
         subtext={t(balanceLabelId(closing))}
         tone={CLOSING_TONE[balanceDirection(closing)]}
       />
-    </UbStatGrid>
+    </SummaryStatGrid>
   );
 }
 

@@ -143,7 +143,9 @@ it.each([
   signIn(OWNER_STOCK, ['inventory', 'reports']);
   service.getStockSummary.mockResolvedValue(emptySummary(hasAny));
   renderWithProviders(<StockSummaryPageContent />);
-  expect(await screen.findByRole('switch', { name: 'Hide zero stock' })).toBeInTheDocument();
+  // On a phone (jsdom's width) "Hide zero stock" is a choice inside Filters.
+  expect(await screen.findByTestId('filters-button')).toBeInTheDocument();
+  expect(screen.queryByRole('switch', { name: 'Hide zero stock' })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Export' })).toBeInTheDocument();
   // The same queries the empty book asserts ABSENT, so neither test is vacuous.
   expect(screen.getByRole('searchbox')).toBeInTheDocument();

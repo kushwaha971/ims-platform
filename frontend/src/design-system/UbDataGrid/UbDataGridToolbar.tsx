@@ -80,10 +80,14 @@ function UbDataGridToolbarBase({
       data-testid="ub-grid-toolbar"
       className={cn(
         'flex flex-wrap items-center justify-between gap-3 border-b border-border-hairline px-4 py-3',
+        /* Owner, 12 Oct 2026: on a phone the search and its Filters/sort are ONE
+           row, like an app's search bar — the field gives way, the icon
+           buttons beside it do not. */
+        'max-sm:flex-nowrap max-sm:gap-2 max-sm:px-3 max-sm:py-2',
         className
       )}
     >
-      {search && <div className="min-w-0 flex-1 basis-56">{search}</div>}
+      {search && <div className="min-w-0 flex-1 basis-56 max-sm:basis-0">{search}</div>}
       {/* Filters and the column menu share the right-hand group, in BrandHub's
           order: what narrows the ROWS, then what narrows the COLUMNS.
 
@@ -103,7 +107,7 @@ function UbDataGridToolbarBase({
           whole width below `md`, so it can lay its controls out as one row of
           equal parts instead of wrapping them one per line (the item list). */}
       {(filters || columns) && (
-        <div className="flex max-w-full shrink-0 flex-wrap items-center gap-2 max-md:has-[[data-ub-filters=fill]]:w-full">
+        <div className="flex max-w-full shrink-0 flex-wrap items-center gap-2 max-md:has-[[data-ub-filters=fill]]:w-full max-sm:flex-nowrap">
           {filters}
           {columns}
         </div>

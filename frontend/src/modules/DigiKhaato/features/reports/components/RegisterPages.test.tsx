@@ -324,7 +324,9 @@ it.each([
   // The same controls the empty book asserts ABSENT, so neither test is vacuous.
   expect(screen.getByRole('button', { name: /^Show:/ })).toBeInTheDocument();
   expect(screen.getByTestId('filters-button')).toBeInTheDocument();
-  expect(screen.getByRole('switch', { name: 'Show void' })).toBeInTheDocument();
+  // On a phone (jsdom's width) "Show void" is a choice inside Filters, so the
+  // toolbar stays one row; it is not a switch running off the end of it.
+  expect(screen.queryByRole('switch', { name: 'Show void' })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: /Export/ })).toBeInTheDocument();
   expect(screen.getAllByText('This month').length).toBeGreaterThan(0);
   expect(screen.queryByText('No sales yet')).not.toBeInTheDocument();

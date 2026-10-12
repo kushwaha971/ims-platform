@@ -107,6 +107,8 @@ const ALL = ['ledger.entry.read', 'ledger.statement.export'];
 const onScreen = async () => within(await screen.findByTestId('statement-screen'));
 
 beforeEach(() => {
+  // The figures fold into one closed bar by default; these tests read the tiles.
+  window.localStorage.setItem('ub.statSummary.statement', 'open');
   store.dispatch(resetStatement());
   jest.clearAllMocks();
   mockSearch = '';

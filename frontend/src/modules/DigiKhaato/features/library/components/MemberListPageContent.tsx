@@ -338,15 +338,17 @@ export function MemberListPageContent(): React.JSX.Element {
                 ].join(' · ')}
               </UbText>
             )}
-            <UbSearchInput
-              value={search}
-              onChange={setSearch}
-              placeholder={t('library.members.search.placeholder')}
-              aria-label={t('library.members.search.label')}
-            />
             {/* Owner, 6 Oct 2026: the status a desk changes most is the one
-            dropdown; dues, shift and plan sit behind Filters, as pills when on. */}
-            <UbStack direction="row" align="center" gap={2} className="flex-wrap">
+            dropdown; dues, shift and plan sit behind Filters, as pills when on.
+            Owner, 12 Oct 2026: search and those controls are ONE row. */}
+            <UbStack direction="row" align="center" gap={2}>
+              <UbSearchInput
+                value={search}
+                onChange={setSearch}
+                placeholder={t('library.members.search.placeholder')}
+                aria-label={t('library.members.search.label')}
+                className="min-w-0 flex-1"
+              />
               {!phone && (
                 <UbFilterSelect
                   spec={statusSpec}

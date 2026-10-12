@@ -67,7 +67,7 @@ function UbHeroPairBase({
           key={figure.key}
           href={figure.href}
           aria-label={figure.ariaLabel}
-          className="flex min-w-0 flex-col gap-0.5 p-4 outline-none transition-colors hover:bg-surface-hover focus-visible:shadow-focus active:bg-surface-hover"
+          className="flex min-w-0 flex-col gap-0.5 p-3 outline-none transition-colors hover:bg-surface-hover focus-visible:shadow-focus active:bg-surface-hover sm:p-4"
         >
           <span className="flex items-center gap-1 text-[13px] leading-[18px] text-text-tertiary">
             {figure.label}
@@ -75,7 +75,8 @@ function UbHeroPairBase({
           </span>
           <span
             className={cn(
-              'ds-num truncate text-[24px] font-semibold leading-9',
+              'ds-num truncate font-semibold leading-9',
+              heroSize(figure.value),
               TONE_TEXT[figure.tone ?? 'default']
             )}
           >
@@ -86,6 +87,19 @@ function UbHeroPairBase({
     </div>
   );
 }
+
+/**
+ * The hero figure's size from its length (owner, 12 Oct 2026): "₹13,900.00"
+ * was cut to "₹13,900...." on a 360 px phone at 24 px. Half a phone holds about
+ * nine characters at 24 px, twelve at 20 px; longer figures step down again
+ * rather than lose their last digits. From `sm` up there is room for 24 px.
+ */
+const heroSize = (value: string): string =>
+  value.length <= 9
+    ? 'text-[24px]'
+    : value.length <= 12
+      ? 'text-[20px] sm:text-[24px]'
+      : 'text-[17px] sm:text-[24px]';
 
 export interface UbMiniStat {
   readonly key: string;
@@ -114,7 +128,7 @@ function UbMiniStatStripBase({
             <span className="text-[12px] leading-4 text-text-tertiary">{stat.label}</span>
             <span
               className={cn(
-                'ds-num text-[17px] font-semibold leading-6',
+                'ds-num text-[15px] font-semibold leading-5',
                 TONE_TEXT[stat.tone ?? 'default']
               )}
             >
@@ -123,7 +137,7 @@ function UbMiniStatStripBase({
           </>
         );
         const box =
-          'flex min-w-[8.5rem] flex-col gap-0.5 rounded-card border border-border-hairline bg-surface-subtle px-3 py-2.5';
+          'flex min-w-[7.5rem] flex-col gap-0.5 rounded-card border border-border-hairline bg-surface-subtle px-3 py-2';
         return (
           <li key={stat.key} className="flex shrink-0">
             {stat.href ? (

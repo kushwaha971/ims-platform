@@ -6,12 +6,12 @@ import { useRouter } from 'next/navigation';
 
 import { Plus } from 'lucide-react';
 
+import { SummaryStatGrid } from 'src/components/stats/SummaryStatGrid';
 import {
   UbActionLink,
   UbAmount,
   UbDataGrid,
   UbEmptyState,
-  UbGrid,
   UbPageHeader,
   UbPageShell,
   UbSearchInput,
@@ -263,7 +263,7 @@ export function BorrowersPageContent(): React.JSX.Element {
       ) : (
         <UbStack gap={4} data-testid="lending-borrowers">
           {wide && borrowerTotals && (
-            <UbGrid columns={4} gap={3} data-testid="lending-borrowers-totals">
+            <SummaryStatGrid storageKey="lendingBorrowers">
               {round && (
                 <UbStatCard
                   label={t('lending.today.due')}
@@ -287,7 +287,7 @@ export function BorrowersPageContent(): React.JSX.Element {
                 value={formatInr(borrowerTotals.late)}
                 tone={isNonZero(borrowerTotals.late) ? 'danger' : undefined}
               />
-            </UbGrid>
+            </SummaryStatGrid>
           )}
           <UbDataGrid
             rows={borrowers}

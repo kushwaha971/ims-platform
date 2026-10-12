@@ -157,7 +157,7 @@ function UbStatCardBase({
        figure at 20/32 semibold with its subtext on the SAME line, 12/16. An
        80 px tile — it was 112 px, which on a phone was the difference between
        a customer row above the fold and none. */
-    <MLCardContent className="flex flex-col gap-1 px-4 py-3">
+    <MLCardContent className="flex flex-col gap-0.5 px-3 py-2.5 sm:gap-1 sm:px-4 sm:py-3">
       <span className="flex items-center gap-2">
         {icon && (
           <span

@@ -4,6 +4,7 @@ import { useCallback, useMemo } from 'react';
 
 import { useRouter } from 'next/navigation';
 
+import { SummaryStatGrid } from 'src/components/stats/SummaryStatGrid';
 import {
   UbActionLink,
   UbButton,
@@ -11,7 +12,6 @@ import {
   UbPageShell,
   UbStack,
   UbStatCard,
-  UbStatGrid,
   UbStatusBanner,
   UbSwitch,
   UbTabs,
@@ -246,7 +246,7 @@ function GstBody({
           })}
         />
       ) : (
-        <UbStatGrid label={t('reports.gst.tiles')}>
+        <SummaryStatGrid storageKey="gstReport" label={t('reports.gst.tiles')}>
           <UbStatCard
             label={t('reports.gst.tile.taxable')}
             value={formatInr(data.outwardByRate?.total.taxableValue ?? null)}
@@ -267,7 +267,7 @@ function GstBody({
             tone="warning"
             subtext={t('reports.gst.tile.due', { date: formatBusinessDate(data.meta.gstr3bDue) })}
           />
-        </UbStatGrid>
+        </SummaryStatGrid>
       )}
 
       <UbStatusBanner

@@ -55,7 +55,11 @@ import type {
 const NEW_DOCUMENT: Readonly<
   Record<RegisterBook, { href: string; label: string; module: 'sales' | 'purchases' }>
 > = {
-  sales: { href: `${ROUTES.SALES_INVOICES}/new`, label: 'reports.emptyBook.newSale', module: 'sales' },
+  sales: {
+    href: `${ROUTES.SALES_INVOICES}/new`,
+    label: 'reports.emptyBook.newSale',
+    module: 'sales',
+  },
   purchase: {
     href: `${ROUTES.PURCHASE_BILLS}/new`,
     label: 'reports.emptyBook.newPurchase',
@@ -183,7 +187,17 @@ export function RegisterReport({ book }: Readonly<{ book: RegisterBook }>): Reac
       id: 'reports.purchaseRegister.itc',
     },
   } as const;
-  const sheetSpecs: UbFilterSpec[] = sheetKeys.map((key) => {
+  /* On a phone "Show void" is a choice inside the Filters sheet, not a switch
+     that runs off the end of the one toolbar row (owner, 12 Oct 2026). */
+  const phone = tier === 'cards';
+  const voidSpec: UbFilterSpec = {
+    kind: 'single',
+    key: 'includeVoid',
+    label: t('reports.register.void.label'),
+    anyLabel: t('reports.register.void.leaveOut'),
+    options: [{ value: 'yes', label: t('reports.register.void.include') }],
+  };
+  const baseSpecs: UbFilterSpec[] = sheetKeys.map((key) => {
     const source = sheetSource[key];
     return {
       kind: 'single',
@@ -195,18 +209,23 @@ export function RegisterReport({ book }: Readonly<{ book: RegisterBook }>): Reac
         .map((value) => ({ value, label: t(`${source.id}.${value}`) })),
     };
   });
-  const sheetValues: UbFilterValues = Object.fromEntries(
-    sheetKeys.map((key) => {
-      const value = String((filters as unknown as Record<string, unknown>)[key] ?? 'all');
-      return [key, value === 'all' ? '' : value];
-    })
-  );
+  const sheetSpecs: UbFilterSpec[] = phone ? [...baseSpecs, voidSpec] : baseSpecs;
+  const sheetValues: UbFilterValues = {
+    ...Object.fromEntries(
+      sheetKeys.map((key) => {
+        const value = String((filters as unknown as Record<string, unknown>)[key] ?? 'all');
+        return [key, value === 'all' ? '' : value];
+      })
+    ),
+    ...(phone ? { includeVoid: filters.includeVoid ? 'yes' : '' } : {}),
+  };
   const applySheet = (next: UbFilterValues) =>
-    update(
-      Object.fromEntries(
+    update({
+      ...(Object.fromEntries(
         sheetKeys.map((key) => [key, next[key] || 'all'])
-      ) as Partial<RegisterFilters>
-    );
+      ) as Partial<RegisterFilters>),
+      ...(phone ? { includeVoid: next.includeVoid === 'yes' } : {}),
+    });
 
   // Owner, 6 Oct 2026: each single-choice filter is a dropdown, not a chip row.
   const chips = <K extends keyof RegisterFilters>(
@@ -326,11 +345,13 @@ export function RegisterReport({ book }: Readonly<{ book: RegisterBook }>): Reac
         </>
       }
       filterEnd={
-        <UbSwitch
-          checked={filters.includeVoid}
-          onCheckedChange={(checked) => update({ includeVoid: checked })}
-          label={t('reports.register.showVoid')}
-        />
+        phone ? undefined : (
+          <UbSwitch
+            checked={filters.includeVoid}
+            onCheckedChange={(checked) => update({ includeVoid: checked })}
+            label={t('reports.register.showVoid')}
+          />
+        )
       }
     >
       {report.data && report.data.total > 0 && (

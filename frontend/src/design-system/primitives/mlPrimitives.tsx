@@ -46,7 +46,8 @@ export const MLCardContent = forwardRef<HTMLDivElement, MLCardProps>(function ML
   { className, ...rest },
   ref
 ) {
-  return <div ref={ref} className={cn('p-4', className)} {...rest} />;
+  // Owner, 12 Oct 2026: tighter on a phone, where every 8 px is a row of data.
+  return <div ref={ref} className={cn('p-3 sm:p-4', className)} {...rest} />;
 });
 
 export type MLBadgeVariant = 'neutral' | 'success' | 'warning' | 'error' | 'info';

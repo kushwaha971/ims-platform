@@ -7,7 +7,6 @@ import { Check, ChevronDown } from 'lucide-react';
 import { deferredModule, useDeferredModule } from 'src/design-system/primitives/deferredModule';
 import { cn } from 'src/utils/cn';
 
-
 import { useMediaQuery } from '../motion/useMediaQuery';
 
 import { FilterAnchor } from './FilterAnchor';
@@ -43,7 +42,9 @@ export const SHEET_QUERY = '(max-width: 639px)';
 const panels = deferredModule(() => import('./filterPanels'));
 
 export const FILTER_BUTTON_CLASS = cn(
-  'ub-hit ds-body-s-regular inline-flex h-10 max-w-full shrink-0 items-center gap-2 rounded-control border px-3',
+  // Owner, 12 Oct 2026: smaller on a phone so a toolbar fits one row; `ub-hit`
+  // keeps the touch target at 44 px whatever the drawn height.
+  'ub-hit ds-body-s-regular inline-flex h-9 max-w-full shrink-0 items-center gap-1.5 rounded-control border px-2.5 sm:h-10 sm:gap-2 sm:px-3',
   'transition-colors duration-fast ease-standard motion-reduce:transition-none',
   'outline-none focus-visible:shadow-focus disabled:cursor-not-allowed disabled:opacity-60'
 );
@@ -112,7 +113,16 @@ function UbFilterSelectBase({
     ? [{ value: '', label: spec.anyLabel }, ...spec.options]
     : spec.options;
   const current = options.find((option) => option.value === value)?.label ?? spec.anyLabel ?? '';
-  const text = showLabel ? `${spec.label}: ${current}` : current;
+  /* On a phone the button says one thing: the filter's name while it is not
+     set ("Cash or bank"), its value once it is ("Cash"), so a toolbar fits one
+     row. The accessible name keeps both, as on a computer. */
+  const text = !showLabel
+    ? current
+    : sheet
+      ? value === '' && spec.anyLabel
+        ? spec.label
+        : current
+      : `${spec.label}: ${current}`;
   const pick = (next: string) => {
     setOpen(false);
     if (next !== value) onChange(next);

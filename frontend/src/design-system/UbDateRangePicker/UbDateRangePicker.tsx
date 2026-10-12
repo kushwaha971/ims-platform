@@ -84,7 +84,10 @@ export function UbDateRangePicker<P extends string>({
   className,
 }: Readonly<UbDateRangePickerProps<P>>): React.JSX.Element {
   return (
-    <div className={cn('flex flex-wrap items-center gap-2', className)} data-testid="scope-bar">
+    <div
+      className={cn('ub-toolbar-row flex flex-wrap items-center gap-2', className)}
+      data-testid="scope-bar"
+    >
       <UbPeriodSelect<P>
         presets={presets}
         value={preset}

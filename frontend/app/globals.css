@@ -901,6 +901,26 @@
    is a whole screen of controls, so while `data-printing-slip` is on <body> the
    slip's portal is the only child that reaches paper. */
 @layer utilities {
+  /* Owner, 12 Oct 2026: on a phone the period, filters and sort sit in ONE row,
+     like an app's toolbar, instead of wrapping into two or three rows of
+     desktop buttons. A row that is still too wide scrolls sideways with no bar.
+     Below 640 px every filter control opens a bottom sheet rather than a
+     popover, so the scrolling box can never clip an open menu. */
+  @media (max-width: 639px) {
+    .ub-toolbar-row {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+      overscroll-behavior-x: contain;
+    }
+    .ub-toolbar-row::-webkit-scrollbar {
+      display: none;
+    }
+    .ub-toolbar-row > * {
+      flex-shrink: 0;
+    }
+  }
+
   @media print {
     body[data-printing-slip] > *:not(.ub-print-slip) {
       display: none !important;

@@ -7,12 +7,12 @@ import { useRouter } from 'next/navigation';
 
 import { Plus } from 'lucide-react';
 
+import { SummaryStatGrid } from 'src/components/stats/SummaryStatGrid';
 import {
   UbAmount,
   UbButton,
   UbCard,
   UbEmptyState,
-  UbGrid,
   UbListItemText,
   UbPageHeader,
   UbPageShell,
@@ -127,7 +127,7 @@ export function FeesPageContent(): React.JSX.Element {
           </UbCard>
         ) : (
           <UbStack gap={4} data-testid="library-fees-board">
-            <UbGrid columns={2} gap={3}>
+            <SummaryStatGrid storageKey="libraryFees">
               <UbStatCard
                 label={t('library.fees.board.toCollect')}
                 value={formatInr(board.toCollect)}
@@ -138,7 +138,7 @@ export function FeesPageContent(): React.JSX.Element {
                 value={formatInr(board.collectedThisMonth)}
                 tone="success"
               />
-            </UbGrid>
+            </SummaryStatGrid>
             <UbStack gap={2}>
               <UbText variant="label">{t('library.fees.board.notPaid')}</UbText>
               {board.notPaid.length === 0 ? (

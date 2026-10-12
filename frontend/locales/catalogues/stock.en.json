@@ -77,7 +77,9 @@
   "stock.summary.historical": "Showing stock as of {date} (historical)",
   "stock.summary.items": "Items",
   "stock.summary.loading": "Loading stock…",
+  "stock.summary.showZero": "Show zero stock",
   "stock.summary.title": "Stock summary",
   "stock.summary.totalValue": "Stock value",
-  "stock.summary.valueNote": "At weighted-average cost (excl. GST where ITC claimed)"
+  "stock.summary.valueNote": "At weighted-average cost (excl. GST where ITC claimed)",
+  "stock.summary.zeroStock": "Zero stock"
 }

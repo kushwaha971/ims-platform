@@ -7,13 +7,13 @@ import { useRouter, useSearchParams } from 'next/navigation';
 
 import { Plus } from 'lucide-react';
 
+import { SummaryStatGrid } from 'src/components/stats/SummaryStatGrid';
 import {
   UbActionLink,
   UbAmount,
   UbButton,
   UbCard,
   UbEmptyState,
-  UbGrid,
   UbListItemText,
   UbPageHeader,
   UbPageShell,
@@ -137,7 +137,7 @@ export function LoansPageContent(): React.JSX.Element {
       <UbStack gap={4} data-testid="lending-loans">
         {person?.summary ? (
           <UbStack gap={3} data-testid="lending-borrower-summary">
-            <UbGrid columns={{ base: 2, lg: 4 }} gap={3}>
+            <SummaryStatGrid storageKey="lendingBorrower">
               <UbStatCard
                 label={t('lending.borrowers.given')}
                 value={formatInr(person.summary.given)}
@@ -157,7 +157,7 @@ export function LoansPageContent(): React.JSX.Element {
                 value={formatInr(person.summary.late)}
                 tone={isNonZero(person.summary.late) ? 'danger' : undefined}
               />
-            </UbGrid>
+            </SummaryStatGrid>
             {canCollect && person.summary.running > 0 && isNonZero(person.summary.left) ? (
               <UbButton
                 fullWidth
@@ -171,16 +171,16 @@ export function LoansPageContent(): React.JSX.Element {
         ) : null}
         {/* No search or filter over a book with nothing in it, and none on one
             person's page: their loans are a handful, all shown. */}
+        {/* Owner, 12 Oct 2026: the search and the status are ONE row. */}
         {!borrowerId && state.hasLoans && (
-          <UbSearchInput
-            value={search}
-            onChange={setSearch}
-            placeholder={t('lending.loans.search')}
-            aria-label={t('lending.loans.search')}
-          />
-        )}
-        {!borrowerId && state.hasLoans && (
-          <UbStack direction="row" gap={2}>
+          <UbStack direction="row" align="center" gap={2}>
+            <UbSearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder={t('lending.loans.search')}
+              aria-label={t('lending.loans.search')}
+              className="min-w-0 flex-1"
+            />
             <UbFilterSelect
               spec={{
                 kind: 'single',

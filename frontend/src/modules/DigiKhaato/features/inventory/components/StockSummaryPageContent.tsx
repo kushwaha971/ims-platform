@@ -186,6 +186,7 @@ export function StockSummaryPageContent(): React.JSX.Element {
   const report = useStockSummary();
   const masters = useInventoryMasters();
   const { filters, update, summary } = report;
+  const phone = tier === 'cards';
   const sheetSpecs: UbFilterSpec[] = [
     {
       kind: 'single',
@@ -206,15 +207,31 @@ export function StockSummaryPageContent(): React.JSX.Element {
         { value: 'negative', label: t('stock.summary.filter.negative') },
       ],
     },
+    /* On a phone "Hide zero stock" is a choice in the sheet rather than a
+       switch beside the search, so search and Filters keep one row (owner,
+       12 Oct 2026). Hiding is the default, so it reads as "no filter". */
+    ...(phone
+      ? [
+          {
+            kind: 'single' as const,
+            key: 'zero',
+            label: t('stock.summary.zeroStock'),
+            anyLabel: t('stock.summary.hideZero'),
+            options: [{ value: 'show', label: t('stock.summary.showZero') }],
+          },
+        ]
+      : []),
   ];
   const sheetValues: UbFilterValues = {
     categoryId: filters.categoryId ?? '',
     status: filters.status ?? '',
+    ...(phone ? { zero: filters.hideZero ? '' : 'show' } : {}),
   };
   const applySheet = (next: UbFilterValues) =>
     update({
       categoryId: next.categoryId ?? '',
       status: (next.status ?? '') as StockSummaryFilters['status'],
+      ...(phone ? { hideZero: next.zero !== 'show' } : {}),
     });
   const valuation = summary?.valuationVisible ?? false;
   /* RPT-06 — the report's file of exactly this view, under Reports' own
@@ -436,12 +453,14 @@ export function StockSummaryPageContent(): React.JSX.Element {
                       clearAll: t('common.filters.clearAll'),
                     }}
                   />
-                  <UbSwitch
-                    checked={filters.hideZero}
-                    onCheckedChange={(hideZero) => update({ hideZero })}
-                    label={t('stock.summary.hideZero')}
-                    className="min-h-10 w-auto"
-                  />
+                  {!phone && (
+                    <UbSwitch
+                      checked={filters.hideZero}
+                      onCheckedChange={(hideZero) => update({ hideZero })}
+                      label={t('stock.summary.hideZero')}
+                      className="min-h-10 w-auto"
+                    />
+                  )}
                 </UbStack>
               }
             />

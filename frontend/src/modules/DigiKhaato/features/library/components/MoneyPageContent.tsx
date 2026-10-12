@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { IndianRupee, Receipt, Wallet } from 'lucide-react';
 
+import { SummaryStatGrid } from 'src/components/stats/SummaryStatGrid';
 import {
   UbActionLink,
   UbCard,
@@ -16,7 +17,6 @@ import {
   UbPageSkeleton,
   UbStack,
   UbStatCard,
-  UbStatGrid,
   UbText,
 } from 'src/design-system';
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
@@ -154,7 +154,7 @@ export function MoneyPageContent(): React.JSX.Element {
         {!shown && !error && <UbPageSkeleton variant="card" />}
         {shown && !emptyBook && (
           <>
-            <UbStatGrid>
+            <SummaryStatGrid storageKey="libraryMoney">
               <UbStatCard
                 icon={<IndianRupee className="h-4 w-4" aria-hidden />}
                 label={t('library.money.in')}
@@ -173,7 +173,7 @@ export function MoneyPageContent(): React.JSX.Element {
                 value={formatInr(shown.profit.replace('-', ''))}
                 tone={isNegativeAmount(shown.profit) ? 'danger' : 'success'}
               />
-            </UbStatGrid>
+            </SummaryStatGrid>
             <UbCard padded>
               <UbStack gap={2} data-testid="library-money-in">
                 <UbText variant="label">{t('library.money.inTitle')}</UbText>

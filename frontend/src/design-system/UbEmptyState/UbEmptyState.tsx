@@ -82,16 +82,18 @@ function UbEmptyStateBase({
     <MLEmpty
       // R-A-6 — an error state is announced.
       role={variant === 'error' ? 'alert' : undefined}
-      className={cn('gap-3 px-6 py-10', PANEL[variant], className)}
+      /* Owner, 12 Oct 2026: no tall boxes on a phone — the panel is as high as
+         its sentence and button need. */
+      className={cn('gap-2 px-4 py-6 sm:gap-3 sm:px-6 sm:py-10', PANEL[variant], className)}
     >
       <span
         aria-hidden
         className={cn(
-          'mb-1 flex h-12 w-12 items-center justify-center rounded-pill',
+          'mb-1 flex h-10 w-10 items-center justify-center rounded-pill sm:h-12 sm:w-12',
           ICON_TONE[variant]
         )}
       >
-        <Icon className="h-6 w-6" />
+        <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
       </span>
       <MLEmptyTitle>{title}</MLEmptyTitle>
       {description && <MLEmptyDescription>{description}</MLEmptyDescription>}

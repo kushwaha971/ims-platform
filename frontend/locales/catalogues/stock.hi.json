@@ -77,7 +77,9 @@
   "stock.summary.historical": "{date} तक का स्टॉक (पुराना)",
   "stock.summary.items": "आइटम",
   "stock.summary.loading": "स्टॉक लोड हो रहा है…",
+  "stock.summary.showZero": "शून्य स्टॉक दिखाएँ",
   "stock.summary.title": "स्टॉक सारांश",
   "stock.summary.totalValue": "स्टॉक मूल्य",
-  "stock.summary.valueNote": "भारित औसत लागत पर (ITC लेने पर GST छोड़कर)"
+  "stock.summary.valueNote": "भारित औसत लागत पर (ITC लेने पर GST छोड़कर)",
+  "stock.summary.zeroStock": "शून्य स्टॉक"
 }

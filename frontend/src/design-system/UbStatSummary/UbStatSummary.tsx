@@ -82,41 +82,54 @@ function UbStatSummaryBase({
     setChoice(!open);
   };
 
+  /* Owner, 12 Oct 2026: "reduce the size … make it collapsible if the user
+     doesn't want to see". Closed, the whole strip is ONE thin row that is
+     itself the toggle — the first figure and a chevron on a phone, every
+     figure on one line from `sm` up — never two or three wrapped lines of
+     numbers above the list. Open, the compact cards. */
   return (
-    <div className={cn('flex flex-col gap-3', className)} data-testid="stat-summary">
-      <div
+    <div className={cn('flex flex-col gap-2', className)} data-testid="stat-summary">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={panelId}
+        aria-label={open ? labels.hide : labels.show}
+        onClick={toggle}
         className={cn(
-          'flex items-start gap-2',
-          open
-            ? 'justify-end'
-            : 'rounded-card border border-border-hairline bg-surface-card px-3 py-2 ' +
-                // docs/mobile-redesign (A4) — on a phone the figures are one
-                // summary line under the title, not a bordered box.
-                'max-lg:rounded-none max-lg:border-0 max-lg:bg-transparent max-lg:px-0 max-lg:py-0'
+          'ub-hit flex min-h-9 w-full items-center gap-2 rounded-control border border-border-hairline bg-surface-card px-3 py-1.5 text-left',
+          'outline-none transition-colors hover:bg-surface-hover focus-visible:shadow-focus motion-reduce:transition-none'
         )}
       >
-        {/* Open, the cards say it all: the line steps aside to its toggle
-            rather than printing every figure twice. */}
+        {/* Open, the cards say it all: the row says "Hide" rather than printing
+            a figure twice. */}
+        {open && <span className="ds-caption flex-1 text-text-accent">{labels.hide}</span>}
         {!open && (
-          <dl className="flex min-w-0 flex-1 flex-wrap items-center gap-x-5 gap-y-1">
-            {items.map((item) => (
-              <div key={item.key} className="flex items-baseline gap-1.5">
-                <dt className="ds-caption text-text-tertiary">{item.label}</dt>
-                <dd className={cn('ds-body-sm-medium ds-num', TONE[item.tone ?? 'default'])}>
+          <dl className="flex min-w-0 flex-1 flex-nowrap items-center gap-x-4 overflow-hidden">
+            {items.map((item, index) => (
+              <div
+                key={item.key}
+                className={cn(
+                  'flex min-w-0 shrink-0 items-baseline gap-1.5',
+                  index > 0 && 'max-sm:hidden'
+                )}
+              >
+                <dt className="ds-caption truncate text-text-tertiary">{item.label}</dt>
+                <dd
+                  className={cn(
+                    'ds-body-sm-medium ds-num whitespace-nowrap',
+                    TONE[item.tone ?? 'default']
+                  )}
+                >
                   {item.value}
                 </dd>
               </div>
             ))}
           </dl>
         )}
-        <button
-          type="button"
-          aria-expanded={open}
-          aria-controls={panelId}
-          onClick={toggle}
-          className="ub-hit ds-caption inline-flex shrink-0 items-center gap-1 rounded-control px-2 py-1 text-text-accent outline-none hover:bg-surface-hover focus-visible:shadow-focus"
-        >
-          {open ? labels.hide : labels.show}
+        <span className="ds-caption inline-flex shrink-0 items-center gap-0.5 text-text-accent">
+          {items.length > 1 && !open && (
+            <span className="ds-caption text-text-tertiary sm:hidden">+{items.length - 1}</span>
+          )}
           <ChevronDown
             aria-hidden
             className={cn(
@@ -124,8 +137,8 @@ function UbStatSummaryBase({
               open && 'rotate-180'
             )}
           />
-        </button>
-      </div>
+        </span>
+      </button>
       <div id={panelId} hidden={!open}>
         {open && children}
       </div>

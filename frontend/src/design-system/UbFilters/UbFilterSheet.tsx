@@ -73,7 +73,9 @@ function UbFilterSheetBase({
         data-testid="filters-button"
       >
         <SlidersHorizontal aria-hidden className="h-4 w-4 shrink-0" />
-        {showText && <span>{labels.title}</span>}
+        {/* Icon-only on a phone, beside the search or the period, so the row
+            fits (owner, 12 Oct 2026); the button's name still says "Filters". */}
+        {showText && <span className="max-sm:hidden">{labels.title}</span>}
         {count > 0 && (
           <span
             aria-hidden
