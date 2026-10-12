@@ -27,7 +27,6 @@ import { useAuthRedirect } from '../hooks/useAuthRedirect';
 import { useOtpSignIn } from '../hooks/useOtpSignIn';
 import { useAuthSchemas } from '../validation/authSchemas';
 
-import { AuthLegalNotice } from './AuthLegalNotice';
 import { AuthPanel } from './AuthPanel';
 import { AuthScreenHeading } from './AuthScreenHeading';
 
@@ -273,7 +272,6 @@ export function OtpSignInPageContent({ mode }: OtpSignInPageContentProps): React
       )}
       {/* Creating an account is where the terms are accepted, so the sign-up
           screen still says so; the same flow signing in does not. */}
-      {mode === 'signUp' && <AuthLegalNotice />}
     </UbStack>
   );
 }

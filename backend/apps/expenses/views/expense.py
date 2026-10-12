@@ -142,7 +142,7 @@ class ExpenseViewSet(
             "totals": ExpenseTotalsSerializer(totals).data,
             # Approved designs (12 Oct 2026): any expense at all, whatever the
             # filters — an empty book hides its search, tabs and filters.
-            "has_any": self.get_queryset().exists(),
+            "has_any": bool(page) or self.get_queryset().exists(),
         }
         return StandardResponse.ok(data, meta=meta)
 

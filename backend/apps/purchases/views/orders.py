@@ -113,7 +113,7 @@ class PurchaseOrderViewSet(
             **self.paginator.get_meta(),
             # Approved designs (12 Oct 2026): does this kind exist at all, whatever
             # the filters? An empty book hides its search, tabs and ₹0 totals.
-            "has_any": self.get_queryset().exists(),
+            "has_any": bool(page) or self.get_queryset().exists(),
             "totals": {
                 "count": totals["count"],
                 "grand_total": str(totals["grand_total"]),

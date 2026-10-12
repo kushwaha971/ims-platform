@@ -86,9 +86,10 @@ def test_a_step_is_done_when_the_books_say_so() -> None:
     assert _setup(owner, "library")["steps"][0]["done"] is True
 
 
-def test_lending_lists_routes_a_first_loan_and_the_team() -> None:
+def test_lending_lists_a_first_loan_then_routes_and_the_team() -> None:
+    """Approved designs (12 Oct 2026): a lender's first act is a loan."""
     _, owner = _person(_business(), "owner")
-    assert [s["key"] for s in _setup(owner, "lending")["steps"]] == ["routes", "loan", "team"]
+    assert [s["key"] for s in _setup(owner, "lending")["steps"]] == ["loan", "routes", "team"]
 
 
 def test_a_person_sees_only_the_steps_they_could_do() -> None:

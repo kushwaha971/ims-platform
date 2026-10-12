@@ -258,7 +258,7 @@ class LedgerAgingView(TenantScopeMixin, APIView):
                 # Whole-book, never filtered: a tag or an as-of date that finds
                 # nobody keeps its controls; only a business with no entry at
                 # all is reduced to the empty state (`book_has_any`).
-                "has_any": book_has_any(self.get_tenant()),
+                "has_any": bool(rows) or book_has_any(self.get_tenant()),
             },
         )
 
