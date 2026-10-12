@@ -276,3 +276,56 @@ it('renders the register in Hindi from its own catalogue', async () => {
   renderWithProviders(<SalesRegisterPageContent />, { locale: 'hi' });
   expect(await screen.findByRole('heading', { name: 'बिक्री रजिस्टर' })).toBeInTheDocument();
 });
+
+/**
+ * Approved designs (12 Oct 2026): a business that has never issued a document
+ * sees ONE empty state — no period, "Show: Documents", Filters, "Show void" or
+ * Export over nothing. A period that found nothing in a book that HAS
+ * documents keeps every one of them: moving the period is how they are found.
+ */
+const emptyPage = (hasAny: boolean | undefined): RegisterPage => ({
+  ...page([], { ...TOTALS, count: 0 }),
+  ...(hasAny === undefined ? {} : { hasAny }),
+});
+
+it('reduces a sales book with no document to one empty state and a way to bill', async () => {
+  signIn([...SALES_READ, 'reports.export', 'sales.invoice.write'], ['reports', 'sales']);
+  service.getRegister.mockImplementation(async () => emptyPage(false));
+  renderWithProviders(<SalesRegisterPageContent />);
+  expect(await screen.findByText('No sales yet')).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'New bill' })).toHaveAttribute(
+    'href',
+    '/sales/invoices/new'
+  );
+  expect(screen.queryByRole('button', { name: /^Show:/ })).not.toBeInTheDocument();
+  expect(screen.queryByTestId('filters-button')).not.toBeInTheDocument();
+  expect(screen.queryByRole('switch', { name: 'Show void' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /Export/ })).not.toBeInTheDocument();
+  expect(screen.queryByText('This month')).not.toBeInTheDocument();
+});
+
+it('reduces an empty purchase book the same way, without an action for a reader', async () => {
+  signIn(['reports.basic.read', 'purchases.bill.read'], ['reports', 'purchases']);
+  service.getRegister.mockImplementation(async () => emptyPage(false));
+  renderWithProviders(<PurchaseRegisterPageContent />);
+  expect(await screen.findByText('No purchases yet')).toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: 'New bill' })).not.toBeInTheDocument();
+  expect(screen.queryByTestId('filters-button')).not.toBeInTheDocument();
+});
+
+it.each([
+  ['a quiet period in a book with documents', true],
+  ['an older server that does not say', undefined],
+])('keeps every control for %s', async (_label, hasAny) => {
+  signIn([...SALES_READ, 'reports.export', 'sales.invoice.write'], ['reports', 'sales']);
+  service.getRegister.mockImplementation(async () => emptyPage(hasAny));
+  renderWithProviders(<SalesRegisterPageContent />);
+  expect(await screen.findByText('No sales in this period')).toBeInTheDocument();
+  // The same controls the empty book asserts ABSENT, so neither test is vacuous.
+  expect(screen.getByRole('button', { name: /^Show:/ })).toBeInTheDocument();
+  expect(screen.getByTestId('filters-button')).toBeInTheDocument();
+  expect(screen.getByRole('switch', { name: 'Show void' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Export/ })).toBeInTheDocument();
+  expect(screen.getAllByText('This month').length).toBeGreaterThan(0);
+  expect(screen.queryByText('No sales yet')).not.toBeInTheDocument();
+});

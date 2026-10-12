@@ -174,6 +174,7 @@ export const getStockSummary = async (
       as_of: string | null;
       historical: boolean;
       valuation_visible: boolean;
+      has_any?: boolean;
     };
   }>(`${API_PATHS.STOCK_SUMMARY}${query}`, ubConfig({ signal, suppressErrorSnackbar: true }));
   const { meta } = response.data;
@@ -200,6 +201,7 @@ export const getStockSummary = async (
     asOf: meta.as_of,
     historical: meta.historical,
     valuationVisible: meta.valuation_visible,
+    ...(typeof meta.has_any === 'boolean' ? { hasAny: meta.has_any } : {}),
   };
 };
 

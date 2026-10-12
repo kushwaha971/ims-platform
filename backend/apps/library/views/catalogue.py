@@ -63,9 +63,17 @@ class TitleListView(_CatalogueView):
     codenames = {"GET": READ, "POST": WRITE}
 
     def get(self, request: Any) -> Any:
-        return _page(
+        from apps.library.models import LibraryTitle
+
+        response = _page(
             self, request, select.list_titles(self.tenant(), request.query_params), out.title_row
         )
+        # Approved designs (12 Oct 2026): is there any title at all, whatever the
+        # filters? An empty catalogue hides its search and Filters.
+        response.data["meta"]["has_any"] = LibraryTitle.objects.filter(
+            tenant=self.tenant()
+        ).exists()
+        return response
 
     @idempotent("library.title.create")
     def post(self, request: Any) -> Any:

@@ -48,6 +48,8 @@
   "reminders.empty.today.title": "Nobody is due today",
   "reminders.empty.upcoming.body": "No collection dates in the next 7 days.",
   "reminders.empty.upcoming.title": "Nothing coming up",
+  "reminders.emptyBook.body": "When a customer owes you, set a collection date on their khata and they appear here.",
+  "reminders.emptyBook.title": "Nobody to remind yet",
   "reminders.error.body": "Check your connection and try again.",
   "reminders.error.send": "Couldn't record the reminder. The message itself was not affected.",
   "reminders.error.title": "Couldn't load reminders",

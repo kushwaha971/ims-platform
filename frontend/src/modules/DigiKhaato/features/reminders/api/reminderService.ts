@@ -164,13 +164,15 @@ interface BucketWire {
 export const getCollectionSummary = async (signal?: AbortSignal): Promise<CollectionSummary> => {
   const response = await api.get<{
     data: { due_today: BucketWire; overdue: BucketWire; upcoming_7d: BucketWire; as_of: string };
+    meta?: { has_any?: boolean };
   }>(API_PATHS.LEDGER_SUMMARY, ubConfig({ signal, suppressErrorSnackbar: true }));
-  const { data } = response.data;
+  const { data, meta } = response.data;
   return {
     dueToday: data.due_today,
     overdue: data.overdue,
     upcoming: data.upcoming_7d,
     asOf: data.as_of,
+    ...(typeof meta?.has_any === 'boolean' ? { hasAny: meta.has_any } : {}),
   };
 };
 

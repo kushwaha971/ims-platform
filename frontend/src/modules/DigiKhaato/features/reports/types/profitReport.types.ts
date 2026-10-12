@@ -47,6 +47,9 @@ export interface ProfitPage {
   readonly page: number;
   readonly pageSize: number;
   readonly total: number;
+  /** `meta.has_any`: whether the business has ever made a live bill, whatever
+   *  the period and search. Absent from an older server, which then never hides anything. */
+  readonly hasAny?: boolean;
 }
 
 export interface ProfitFilters {

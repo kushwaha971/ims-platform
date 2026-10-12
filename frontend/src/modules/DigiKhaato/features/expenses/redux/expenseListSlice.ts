@@ -18,6 +18,7 @@ import type { Expense, ExpenseFilters, ExpenseTotals } from '../types/expense.ty
 export interface ExpenseListState {
   rows: Expense[];
   totals: ExpenseTotals | null;
+  hasAny: boolean | null;
   page: number;
   pageSize: number;
   total: number;
@@ -32,6 +33,7 @@ export interface ExpenseListState {
 const initialState: ExpenseListState = {
   rows: [],
   totals: null,
+  hasAny: null,
   page: 1,
   pageSize: EXPENSE_PAGE_SIZE,
   total: 0,
@@ -82,6 +84,7 @@ const expenseListSlice = createSlice({
         if (!sameFilters(state.filters, action.meta.arg)) return;
         state.rows = action.payload.rows as Draft<Expense>[];
         state.totals = action.payload.totals as Draft<ExpenseTotals>;
+        state.hasAny = action.payload.hasAny ?? null;
         state.page = action.payload.page;
         state.pageSize = action.payload.pageSize;
         state.total = action.payload.total;
@@ -114,4 +117,5 @@ export const selectExpenseError = (state: RootState): ApiErrorShape | null => sl
 export const selectExpensePage = (state: RootState): number => slice$(state).page;
 export const selectExpensePageSize = (state: RootState): number => slice$(state).pageSize;
 export const selectExpenseTotal = (state: RootState): number => slice$(state).total;
+export const selectExpenseHasAny = (state: RootState): boolean | null => slice$(state).hasAny;
 export const selectExpenseListStale = (state: RootState): boolean => slice$(state).stale;

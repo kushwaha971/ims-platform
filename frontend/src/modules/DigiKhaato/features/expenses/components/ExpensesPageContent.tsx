@@ -13,6 +13,7 @@ import {
   UbDateRangePicker,
   UbEmptyState,
   UbFilterSelect,
+  UbFilterSheet,
   UbPageHeader,
   UbPageHeaderMobileActions,
   UbPageShell,
@@ -24,6 +25,7 @@ import {
   UbText,
   isUbTagColor,
 } from 'src/design-system';
+import type { UbFilterSpec, UbFilterValues } from 'src/design-system';
 import {
   UbDataGrid,
   useGridTier,
@@ -42,7 +44,7 @@ import { formatInr } from 'src/utils/money';
 import { ListExportButton } from 'modules/DigiKhaato/features/imports/components/ListHeaderActions';
 
 import { expenseExportPath } from '../api/expenseService';
-import { EXPENSE_PRESETS } from '../constants/expensePeriod';
+import { DEFAULT_EXPENSE_PRESET, EXPENSE_PRESETS } from '../constants/expensePeriod';
 import { useExpenseForm } from '../hooks/useExpenseForm';
 import { useExpenseList } from '../hooks/useExpenseList';
 import { isNarrowed } from '../view-model/expenseDisplay';
@@ -203,6 +205,142 @@ export function ExpensesPageContent(): React.JSX.Element {
   }
 
   const totals = list.totals;
+  /* Approved designs (12 Oct 2026): `hasAny` is the server's, so a period or
+     filter that found nothing keeps its controls; only a business that has
+     never written an expense is reduced to the empty card. */
+  const emptyBook = list.status === 'succeeded' && list.rows.length === 0 && list.hasAny === false;
+  const phone = tier === 'cards';
+  const categorySpec: UbFilterSpec = {
+    kind: 'single',
+    key: 'category',
+    label: t('expenses.filter.category'),
+    anyLabel: t('expenses.filter.allCategories'),
+    options: categoryOptions,
+  };
+  const modeSpec: UbFilterSpec = {
+    kind: 'single',
+    key: 'mode',
+    label: t('expenses.filter.mode'),
+    anyLabel: t('expenses.filter.allModes'),
+    options: modeOptions,
+  };
+  /* On a phone: the search and ONE Filters button holding the tabs, the
+     period, the category and the mode; each default reads as "no filter". */
+  const phoneSpecs: UbFilterSpec[] = [
+    {
+      kind: 'single',
+      key: 'tab',
+      label: t('expenses.tab.label'),
+      anyLabel: t('expenses.tab.all'),
+      options: tabs.filter((tab) => tab.value !== 'all'),
+    },
+    {
+      kind: 'single',
+      key: 'preset',
+      label: t('expenses.period.label'),
+      anyLabel: t(`expenses.period.${DEFAULT_EXPENSE_PRESET}`),
+      options: presets.filter((p) => p.value !== DEFAULT_EXPENSE_PRESET && p.value !== 'custom'),
+    },
+    {
+      kind: 'dateRange',
+      key: 'range',
+      label: t('expenses.period.between'),
+      fromKey: 'dateFrom',
+      toKey: 'dateTo',
+      fromLabel: t('expenses.period.from'),
+      toLabel: t('expenses.period.to'),
+      max: list.today,
+    },
+    categorySpec,
+    modeSpec,
+  ];
+  const custom = filters.preset === 'custom';
+  const phoneValues: UbFilterValues = {
+    tab: filters.tab === 'all' ? '' : filters.tab,
+    preset: filters.preset === DEFAULT_EXPENSE_PRESET || custom ? '' : filters.preset,
+    dateFrom: custom ? filters.dateFrom : '',
+    dateTo: custom ? filters.dateTo : '',
+    category: filters.categoryId ?? '',
+    mode: filters.mode ?? '',
+  };
+  const applyPhone = (next: UbFilterValues) => {
+    const ranged = Boolean(next.dateFrom || next.dateTo);
+    list.applyFilters({
+      ...filters,
+      tab: (next.tab || 'all') as ExpenseTab,
+      preset: ranged ? 'custom' : ((next.preset || DEFAULT_EXPENSE_PRESET) as ExpensePreset),
+      dateFrom: next.dateFrom || filters.dateFrom,
+      dateTo: next.dateTo || filters.dateTo,
+      categoryId: next.category || null,
+      mode: next.mode ? (next.mode as PaymentMode) : null,
+    });
+  };
+  const searchBox = (
+    <UbSearchInput
+      value={search}
+      onChange={setSearch}
+      placeholder={t('expenses.search.placeholder')}
+      aria-label={t('expenses.search.label')}
+      className={phone ? 'min-w-0 flex-1' : 'w-56'}
+    />
+  );
+  const stats =
+    totals && list.rows.length > 0 ? (
+      <UbStack gap={2}>
+        <SummaryStatGrid storageKey="expenses">
+          <UbStatCard
+            icon={<Receipt className="h-4 w-4" aria-hidden />}
+            /* On the Void tab the figure is money that did NOT go out; calling it
+               "Total" there read as spend. */
+            label={t(filters.tab === 'void' ? 'expenses.total.voided' : 'expenses.total.label')}
+            value={formatInr(totals.amount)}
+            subtext={t('expenses.total.count', { count: totals.count })}
+          />
+        </SummaryStatGrid>
+        {totals.byCategory.length > 0 && (
+          <UbStack direction="row" align="center" className="flex-wrap gap-2">
+            <UbText variant="caption" tone="tertiary">
+              {t('expenses.total.top')}
+            </UbText>
+            {/* The chip carries the NAME only and the figure sits beside it: a
+                tag caps its width, and "Salaries ₹5,00…" cut the half of
+                the chip that answers "how much". */}
+            {totals.byCategory.map((row) => (
+              <UbStack key={row.categoryId} direction="row" align="center" className="gap-1">
+                <UbTag name={row.name} color={isUbTagColor(row.color) ? row.color : null} />
+                <UbText variant="caption" className="ds-num">
+                  {formatInr(row.amount)}
+                </UbText>
+              </UbStack>
+            ))}
+          </UbStack>
+        )}
+      </UbStack>
+    ) : null;
+  const grid = (
+    <UbDataGrid
+      rows={list.rows}
+      columns={columns}
+      rowId={rowId}
+      rowName={rowName}
+      state={gridState}
+      labels={labels}
+      emptyStates={emptyStates}
+      caption={t('expenses.list.caption')}
+      storageId="expenses.list"
+      page={{
+        page: list.page,
+        pageSize: list.pageSize,
+        total: list.total,
+        totalPages: Math.max(Math.ceil(list.total / Math.max(list.pageSize, 1)), 1),
+      }}
+      onPageChange={list.setPage}
+      onRowOpen={openDetail}
+      /* An expense is not a person: no initials disc on a card (the tags
+         sweep's "initials labelling a tag" defect, not repeated here). */
+      cardAvatar={false}
+    />
+  );
 
   return (
     <UbPageShell>
@@ -222,16 +360,18 @@ export function ExpensesPageContent(): React.JSX.Element {
               </UbActionLink>
             )}
             {/* IMP-02 — this period and these filters, as a CSV. */}
-            <ListExportButton
-              listPath={expenseExportPath(list.filters)}
-              permission="reports.export"
-              empty={list.status === 'succeeded' && list.total === 0}
-            />
+            {!emptyBook && (
+              <ListExportButton
+                listPath={expenseExportPath(list.filters)}
+                permission="reports.export"
+                empty={list.status === 'succeeded' && list.total === 0}
+              />
+            )}
           </>
         }
         /* Hidden rather than disabled for a role that cannot write (§19.7.5). */
         primaryAction={
-          canWrite ? (
+          canWrite && !emptyBook ? (
             <UbButton
               icon={<Plus className="h-4 w-4" aria-hidden />}
               iconOnly="mobile"
@@ -250,138 +390,98 @@ export function ExpensesPageContent(): React.JSX.Element {
             mobile={{
               menuLabel: t('common.action.moreActions'),
               closeLabel: t('common.action.close'),
-              primary: canWrite
-                ? {
-                    label: t('expenses.add'),
-                    icon: <Plus className="h-6 w-6" aria-hidden />,
-                    onClick: openDrawer,
-                  }
-                : undefined,
+              // The empty book's one button is in the middle of the screen.
+              primary:
+                canWrite && !emptyBook
+                  ? {
+                      label: t('expenses.add'),
+                      icon: <Plus className="h-6 w-6" aria-hidden />,
+                      onClick: openDrawer,
+                    }
+                  : undefined,
             }}
           />
         )}
       />
 
       <UbStack gap={4} data-testid="expenses-screen">
-        <UbDateRangePicker<ExpensePreset>
-          presets={presets}
-          preset={filters.preset}
-          onPresetChange={list.setPreset}
-          customPreset="custom"
-          from={filters.dateFrom}
-          to={filters.dateTo}
-          onRangeChange={list.setRange}
-          max={list.today}
-          name="expense-period"
-          labels={{
-            presets: t('expenses.period.label'),
-            from: t('expenses.period.from'),
-            to: t('expenses.period.to'),
-            apply: t('common.action.apply'),
-            close: t('common.action.close'),
-          }}
-          end={
-            <>
-              <UbFilterSelect
-                spec={{
-                  kind: 'single',
-                  key: 'category',
-                  label: t('expenses.filter.category'),
-                  anyLabel: t('expenses.filter.allCategories'),
-                  options: categoryOptions,
-                }}
-                value={filters.categoryId ?? ''}
-                onChange={(value) => list.setCategory(value || null)}
-                closeLabel={t('common.action.close')}
-              />
-              <UbFilterSelect
-                spec={{
-                  kind: 'single',
-                  key: 'mode',
-                  label: t('expenses.filter.mode'),
-                  anyLabel: t('expenses.filter.allModes'),
-                  options: modeOptions,
-                }}
-                value={filters.mode ?? ''}
-                onChange={(value) => list.setMode(value ? (value as PaymentMode) : null)}
-                closeLabel={t('common.action.close')}
-              />
-            </>
-          }
-        />
-
-        {totals && list.rows.length > 0 && (
-          <UbStack gap={2}>
-            <SummaryStatGrid storageKey="expenses">
-              <UbStatCard
-                icon={<Receipt className="h-4 w-4" aria-hidden />}
-                /* On the Void tab the figure is money that did NOT go out; calling it
-                   "Total" there read as spend. */
-                label={t(filters.tab === 'void' ? 'expenses.total.voided' : 'expenses.total.label')}
-                value={formatInr(totals.amount)}
-                subtext={t('expenses.total.count', { count: totals.count })}
-              />
-            </SummaryStatGrid>
-            {totals.byCategory.length > 0 && (
-              <UbStack direction="row" align="center" className="flex-wrap gap-2">
-                <UbText variant="caption" tone="tertiary">
-                  {t('expenses.total.top')}
-                </UbText>
-                {/* The chip carries the NAME only and the figure sits beside it: a
-                    tag caps its width, and "Salaries ₹5,00…" cut the half of
-                    the chip that answers "how much". */}
-                {totals.byCategory.map((row) => (
-                  <UbStack key={row.categoryId} direction="row" align="center" className="gap-1">
-                    <UbTag name={row.name} color={isUbTagColor(row.color) ? row.color : null} />
-                    <UbText variant="caption" className="ds-num">
-                      {formatInr(row.amount)}
-                    </UbText>
-                  </UbStack>
-                ))}
-              </UbStack>
-            )}
-          </UbStack>
-        )}
-
-        <UbTabs<ExpenseTab>
-          value={filters.tab}
-          onValueChange={list.setTab}
-          tabs={tabs}
-          ariaLabel={t('expenses.tab.label')}
-          layout="fit"
-          trailing={
-            <UbSearchInput
-              value={search}
-              onChange={setSearch}
-              placeholder={t('expenses.search.placeholder')}
-              aria-label={t('expenses.search.label')}
-              className="w-56"
-            />
-          }
-        >
-          <UbDataGrid
-            rows={list.rows}
-            columns={columns}
-            rowId={rowId}
-            rowName={rowName}
-            state={gridState}
-            labels={labels}
-            emptyStates={emptyStates}
-            caption={t('expenses.list.caption')}
-            storageId="expenses.list"
-            page={{
-              page: list.page,
-              pageSize: list.pageSize,
-              total: list.total,
-              totalPages: Math.max(Math.ceil(list.total / Math.max(list.pageSize, 1)), 1),
-            }}
-            onPageChange={list.setPage}
-            onRowOpen={openDetail}
-            /* An expense is not a person: no initials disc on a card (the tags
-               sweep's "initials labelling a tag" defect, not repeated here). */
-            cardAvatar={false}
+        {emptyBook ? (
+          /* Owner, 12 Oct 2026: an empty book is one sentence and one button —
+             no period, ₹0 totals, tabs or search over nothing. */
+          <UbEmptyState
+            variant="firstUse"
+            title={emptyStates.firstUse.title}
+            description={emptyStates.firstUse.description}
+            action={emptyStates.firstUse.action}
           />
-        </UbTabs>
+        ) : phone ? (
+          <>
+            <UbStack direction="row" gap={2} align="center">
+              {searchBox}
+              <UbFilterSheet
+                specs={phoneSpecs}
+                values={phoneValues}
+                onApply={applyPhone}
+                labels={{
+                  title: t('common.filters.title'),
+                  apply: t('common.action.apply'),
+                  reset: t('common.action.reset'),
+                  close: t('common.action.close'),
+                }}
+              />
+            </UbStack>
+            {stats}
+            {grid}
+          </>
+        ) : (
+          <>
+            <UbDateRangePicker<ExpensePreset>
+              presets={presets}
+              preset={filters.preset}
+              onPresetChange={list.setPreset}
+              customPreset="custom"
+              from={filters.dateFrom}
+              to={filters.dateTo}
+              onRangeChange={list.setRange}
+              max={list.today}
+              name="expense-period"
+              labels={{
+                presets: t('expenses.period.label'),
+                from: t('expenses.period.from'),
+                to: t('expenses.period.to'),
+                apply: t('common.action.apply'),
+                close: t('common.action.close'),
+              }}
+              end={
+                <>
+                  <UbFilterSelect
+                    spec={categorySpec}
+                    value={filters.categoryId ?? ''}
+                    onChange={(value) => list.setCategory(value || null)}
+                    closeLabel={t('common.action.close')}
+                  />
+                  <UbFilterSelect
+                    spec={modeSpec}
+                    value={filters.mode ?? ''}
+                    onChange={(value) => list.setMode(value ? (value as PaymentMode) : null)}
+                    closeLabel={t('common.action.close')}
+                  />
+                </>
+              }
+            />
+            {stats}
+            <UbTabs<ExpenseTab>
+              value={filters.tab}
+              onValueChange={list.setTab}
+              tabs={tabs}
+              ariaLabel={t('expenses.tab.label')}
+              layout="fit"
+              trailing={searchBox}
+            >
+              {grid}
+            </UbTabs>
+          </>
+        )}
       </UbStack>
 
       {form.open && <ExpenseFormDrawerLazy form={form} />}

@@ -315,6 +315,9 @@ export interface StockSummaryResult {
   readonly asOf: string | null;
   readonly historical: boolean;
   readonly valuationVisible: boolean;
+  /** `meta.has_any`: whether the business has ANY tracked item, whatever the
+   *  filters say. Absent from an older server, which then never hides anything. */
+  readonly hasAny?: boolean;
 }
 
 export interface LowStockRow {

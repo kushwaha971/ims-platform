@@ -66,6 +66,7 @@
   "stock.summary.col.avgCost": "Avg cost",
   "stock.summary.col.lastMovement": "Last movement",
   "stock.summary.col.value": "Value",
+  "stock.summary.empty.action": "Go to items",
   "stock.summary.empty.body": "Add items with stock to see what they are worth.",
   "stock.summary.empty.title": "No tracked items yet",
   "stock.summary.error.title": "Couldn't load the stock summary",

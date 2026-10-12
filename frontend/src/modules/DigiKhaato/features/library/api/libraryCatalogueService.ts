@@ -40,7 +40,13 @@ type Wire = Readonly<Record<string, unknown>>;
 
 interface PageApi {
   readonly data: readonly Wire[];
-  readonly meta: { page: number; page_size: number; total: number; total_pages: number };
+  readonly meta: {
+    page: number;
+    page_size: number;
+    total: number;
+    total_pages: number;
+    has_any?: boolean;
+  };
 }
 
 const toPage = <R>(body: PageApi, map: (row: Wire) => R): CataloguePage<R> => ({
@@ -49,6 +55,7 @@ const toPage = <R>(body: PageApi, map: (row: Wire) => R): CataloguePage<R> => ({
   pageSize: body.meta.page_size,
   total: body.meta.total,
   totalPages: body.meta.total_pages,
+  ...(typeof body.meta.has_any === 'boolean' ? { hasAny: body.meta.has_any } : {}),
 });
 
 const withKey = (key: string) => ubConfig({ headers: { 'Idempotency-Key': key } });

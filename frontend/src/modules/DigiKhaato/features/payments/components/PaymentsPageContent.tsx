@@ -13,6 +13,7 @@ import {
   UbDateRangePicker,
   UbEmptyState,
   UbFilterSelect,
+  UbFilterSheet,
   UbPageHeader,
   UbPageHeaderMobileActions,
   UbPageShell,
@@ -21,8 +22,10 @@ import {
   UbStatCard,
   UbTabs,
 } from 'src/design-system';
+import type { UbFilterSpec, UbFilterValues } from 'src/design-system';
 import {
   UbDataGrid,
+  useGridTier,
   type UbDataGridEmptyStates,
   type UbDataGridLabels,
   type UbGridState,
@@ -34,7 +37,11 @@ import { ROUTES } from 'src/routes';
 import { PAYMENT_MODES, type PaymentMode } from 'src/types/domain.types';
 import { formatInr } from 'src/utils/money';
 
-import { PAYMENT_PRESETS, type PaymentPreset } from '../constants/paymentConstants';
+import {
+  DEFAULT_PAYMENT_PRESET,
+  PAYMENT_PRESETS,
+  type PaymentPreset,
+} from '../constants/paymentConstants';
 import { usePaymentList } from '../hooks/usePaymentList';
 import { isNarrowed } from '../view-model/paymentDisplay';
 
@@ -63,6 +70,7 @@ export function PaymentsPageContent(): React.JSX.Element {
   const router = useRouter();
   const { can, hasModule } = usePermissions();
   const list = usePaymentList();
+  const tier = useGridTier();
   const [drawer, setDrawer] = useState<PaymentContext | null>(null);
   const canWrite = hasModule('payments') && can('payments.payment.write');
 
@@ -188,12 +196,121 @@ export function PaymentsPageContent(): React.JSX.Element {
   }
 
   const totals = list.totals;
+  /* Approved designs (12 Oct 2026): `hasAny` is the server's, so a period or
+     filter that found nothing keeps its controls; only a business with no
+     payment at all is reduced to the empty card. */
+  const emptyBook = list.status === 'succeeded' && list.rows.length === 0 && list.hasAny === false;
+  const phone = tier === 'cards';
+  const modeSpec: UbFilterSpec = {
+    kind: 'single',
+    key: 'mode',
+    label: t('payments.filter.mode'),
+    anyLabel: t('payments.filter.allModes'),
+    options: modeOptions.filter((option) => option.value !== ALL),
+  };
+  /* On a phone: the search and ONE Filters button holding the tabs, the
+     period and the mode; each default reads as "no filter". */
+  const phoneSpecs: UbFilterSpec[] = [
+    {
+      kind: 'single',
+      key: 'tab',
+      label: t('payments.tab.label'),
+      anyLabel: t('payments.tab.all'),
+      options: tabs.filter((tab) => tab.value !== 'all'),
+    },
+    {
+      kind: 'single',
+      key: 'preset',
+      label: t('expenses.period.label'),
+      anyLabel: t(`expenses.period.${DEFAULT_PAYMENT_PRESET}`),
+      options: presets.filter((p) => p.value !== DEFAULT_PAYMENT_PRESET && p.value !== 'custom'),
+    },
+    {
+      kind: 'dateRange',
+      key: 'range',
+      label: t('expenses.period.between'),
+      fromKey: 'dateFrom',
+      toKey: 'dateTo',
+      fromLabel: t('expenses.period.from'),
+      toLabel: t('expenses.period.to'),
+      max: list.today,
+    },
+    modeSpec,
+  ];
+  const custom = filters.preset === 'custom';
+  const phoneValues: UbFilterValues = {
+    tab: filters.tab === 'all' ? '' : filters.tab,
+    preset: filters.preset === DEFAULT_PAYMENT_PRESET || custom ? '' : filters.preset,
+    dateFrom: custom ? filters.dateFrom : '',
+    dateTo: custom ? filters.dateTo : '',
+    mode: filters.mode ?? '',
+  };
+  const applyPhone = (next: UbFilterValues) => {
+    const ranged = Boolean(next.dateFrom || next.dateTo);
+    list.applyFilters({
+      ...filters,
+      tab: (next.tab || 'all') as PaymentTab,
+      preset: ranged ? 'custom' : ((next.preset || DEFAULT_PAYMENT_PRESET) as PaymentPreset),
+      dateFrom: next.dateFrom || filters.dateFrom,
+      dateTo: next.dateTo || filters.dateTo,
+      mode: next.mode ? (next.mode as PaymentMode) : null,
+    });
+  };
+  const searchBox = (
+    <UbSearchInput
+      value={search}
+      onChange={setSearch}
+      placeholder={t('payments.search.placeholder')}
+      aria-label={t('payments.search.label')}
+      className={phone ? 'min-w-0 flex-1' : 'w-56'}
+    />
+  );
+  const stats =
+    totals && list.rows.length > 0 ? (
+      <SummaryStatGrid storageKey="payments">
+        <UbStatCard
+          icon={<ArrowDownLeft className="h-4 w-4" aria-hidden />}
+          label={t('payments.total.in')}
+          value={formatInr(totals.amountIn)}
+          subtext={t('payments.total.count', { count: totals.countIn })}
+        />
+        <UbStatCard
+          icon={<ArrowUpRight className="h-4 w-4" aria-hidden />}
+          label={t('payments.total.out')}
+          value={formatInr(totals.amountOut)}
+          subtext={t('payments.total.count', { count: totals.countOut })}
+        />
+      </SummaryStatGrid>
+    ) : null;
+  const grid = (
+    <UbDataGrid
+      rows={list.rows}
+      columns={columns}
+      rowId={rowId}
+      rowName={rowName}
+      state={gridState}
+      labels={labels}
+      emptyStates={emptyStates}
+      caption={t('payments.list.caption')}
+      storageId="payments.list"
+      page={{
+        page: list.page,
+        pageSize: list.pageSize,
+        total: list.total,
+        totalPages: Math.max(Math.ceil(list.total / Math.max(list.pageSize, 1)), 1),
+      }}
+      onPageChange={list.setPage}
+      onRowOpen={openRow}
+      cardAvatar={false}
+    />
+  );
   return (
     <UbPageShell>
       <UbPageHeader
         title={t('payments.title')}
         primaryAction={
-          canWrite && (
+          canWrite &&
+          !emptyBook && (
             <UbButton
               icon={<Plus className="h-4 w-4" aria-hidden />}
               iconOnly="mobile"
@@ -212,105 +329,89 @@ export function PaymentsPageContent(): React.JSX.Element {
             mobile={{
               menuLabel: t('common.action.moreActions'),
               closeLabel: t('common.action.close'),
-              primary: canWrite
-                ? {
-                    label: t('payments.record.title'),
-                    icon: <Plus className="h-6 w-6" aria-hidden />,
-                    onClick: openDrawer,
-                  }
-                : undefined,
+              // The empty book's one button is in the middle of the screen.
+              primary:
+                canWrite && !emptyBook
+                  ? {
+                      label: t('payments.record.title'),
+                      icon: <Plus className="h-6 w-6" aria-hidden />,
+                      onClick: openDrawer,
+                    }
+                  : undefined,
             }}
           />
         )}
       />
       <UbStack gap={4} data-testid="payments-screen">
-        <UbDateRangePicker<PaymentPreset>
-          presets={presets}
-          preset={filters.preset as PaymentPreset}
-          onPresetChange={list.setPreset}
-          customPreset="custom"
-          from={filters.dateFrom}
-          to={filters.dateTo}
-          onRangeChange={list.setRange}
-          max={list.today}
-          name="payment-period"
-          labels={{
-            presets: t('expenses.period.label'),
-            from: t('expenses.period.from'),
-            to: t('expenses.period.to'),
-            apply: t('common.action.apply'),
-            close: t('common.action.close'),
-          }}
-          end={
-            <UbFilterSelect
-              spec={{
-                kind: 'single',
-                key: 'mode',
-                label: t('payments.filter.mode'),
-                anyLabel: t('payments.filter.allModes'),
-                options: modeOptions.filter((option) => option.value !== ALL),
-              }}
-              value={filters.mode ?? ''}
-              onChange={(value) => list.setMode(value ? (value as PaymentMode) : null)}
-              closeLabel={t('common.action.close')}
-            />
-          }
-        />
-
-        {totals && list.rows.length > 0 && (
-          <SummaryStatGrid storageKey="payments">
-            <UbStatCard
-              icon={<ArrowDownLeft className="h-4 w-4" aria-hidden />}
-              label={t('payments.total.in')}
-              value={formatInr(totals.amountIn)}
-              subtext={t('payments.total.count', { count: totals.countIn })}
-            />
-            <UbStatCard
-              icon={<ArrowUpRight className="h-4 w-4" aria-hidden />}
-              label={t('payments.total.out')}
-              value={formatInr(totals.amountOut)}
-              subtext={t('payments.total.count', { count: totals.countOut })}
-            />
-          </SummaryStatGrid>
-        )}
-
-        <UbTabs<PaymentTab>
-          value={filters.tab}
-          onValueChange={list.setTab}
-          tabs={tabs}
-          ariaLabel={t('payments.tab.label')}
-          layout="fit"
-          trailing={
-            <UbSearchInput
-              value={search}
-              onChange={setSearch}
-              placeholder={t('payments.search.placeholder')}
-              aria-label={t('payments.search.label')}
-              className="w-56"
-            />
-          }
-        >
-          <UbDataGrid
-            rows={list.rows}
-            columns={columns}
-            rowId={rowId}
-            rowName={rowName}
-            state={gridState}
-            labels={labels}
-            emptyStates={emptyStates}
-            caption={t('payments.list.caption')}
-            storageId="payments.list"
-            page={{
-              page: list.page,
-              pageSize: list.pageSize,
-              total: list.total,
-              totalPages: Math.max(Math.ceil(list.total / Math.max(list.pageSize, 1)), 1),
-            }}
-            onPageChange={list.setPage}
-            onRowOpen={openRow}
-            cardAvatar={false}
+        {emptyBook ? (
+          /* Owner, 12 Oct 2026: an empty book is one sentence and one button —
+             no period, ₹0 totals, tabs or search over nothing. */
+          <UbEmptyState
+            variant="firstUse"
+            title={emptyStates.firstUse.title}
+            description={emptyStates.firstUse.description}
+            action={emptyStates.firstUse.action}
           />
-        </UbTabs>
+        ) : phone ? (
+          <>
+            <UbStack direction="row" gap={2} align="center">
+              {searchBox}
+              <UbFilterSheet
+                specs={phoneSpecs}
+                values={phoneValues}
+                onApply={applyPhone}
+                labels={{
+                  title: t('common.filters.title'),
+                  apply: t('common.action.apply'),
+                  reset: t('common.action.reset'),
+                  close: t('common.action.close'),
+                }}
+              />
+            </UbStack>
+            {stats}
+            {grid}
+          </>
+        ) : (
+          <>
+            <UbDateRangePicker<PaymentPreset>
+              presets={presets}
+              preset={filters.preset as PaymentPreset}
+              onPresetChange={list.setPreset}
+              customPreset="custom"
+              from={filters.dateFrom}
+              to={filters.dateTo}
+              onRangeChange={list.setRange}
+              max={list.today}
+              name="payment-period"
+              labels={{
+                presets: t('expenses.period.label'),
+                from: t('expenses.period.from'),
+                to: t('expenses.period.to'),
+                apply: t('common.action.apply'),
+                close: t('common.action.close'),
+              }}
+              end={
+                <UbFilterSelect
+                  spec={modeSpec}
+                  value={filters.mode ?? ''}
+                  onChange={(value) => list.setMode(value ? (value as PaymentMode) : null)}
+                  closeLabel={t('common.action.close')}
+                />
+              }
+            />
+            {stats}
+            <UbTabs<PaymentTab>
+              value={filters.tab}
+              onValueChange={list.setTab}
+              tabs={tabs}
+              ariaLabel={t('payments.tab.label')}
+              layout="fit"
+              trailing={searchBox}
+            >
+              {grid}
+            </UbTabs>
+          </>
+        )}
       </UbStack>
 
       {drawer && <PaymentFormDrawerLazy context={drawer} onClose={() => setDrawer(null)} />}

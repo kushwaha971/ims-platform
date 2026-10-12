@@ -465,3 +465,13 @@ def test_a_reference_flag_recount_locks_the_title(api_as: Any, library_on: Any) 
         i for i, s in enumerate(sql) if 'FROM "library_title"' in s and "FOR UPDATE" in s
     )
     assert copy_lock < title_lock
+
+
+def test_the_title_list_says_whether_any_title_exists(api_as: Any, library_on: Any) -> None:
+    """Approved designs (12 Oct 2026): an empty catalogue hides its search and
+    Filters; a search that found nothing keeps them."""
+    client, _ = api_as(library_on, role="owner")
+    assert client.get(reverse(TITLES)).json()["meta"]["has_any"] is False
+    LibraryTitle.objects.create(tenant=library_on, title="Godaan")
+    body = client.get(reverse(TITLES), {"status": "archived"}).json()
+    assert body["data"] == [] and body["meta"]["has_any"] is True

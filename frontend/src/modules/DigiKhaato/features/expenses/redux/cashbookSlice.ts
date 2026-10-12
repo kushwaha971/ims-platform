@@ -21,6 +21,12 @@ export interface CashbookState {
   asked: CashbookFilters | null | undefined;
   status: RequestStatus;
   error: ApiErrorShape | null;
+  /**
+   * `meta.has_any` from the last answer — `null` until a server says. Kept
+   * apart from `data` so a new range does not forget it: whether the book is
+   * empty is a fact about the business, not about the range being asked.
+   */
+  hasAny: boolean | null;
   stale: boolean;
   staleUrgency: 'now' | 'next-mount' | null;
 }
@@ -30,6 +36,7 @@ const initialState: CashbookState = {
   asked: undefined,
   status: 'idle',
   error: null,
+  hasAny: null,
   stale: false,
   staleUrgency: null,
 };
@@ -63,6 +70,7 @@ const cashbookSlice = createSlice({
       .addCase(fetchCashbook.fulfilled, (state, action) => {
         if (!sameAsk(state.asked, action.meta.arg)) return;
         state.data = action.payload as Draft<CashbookData>;
+        state.hasAny = action.payload.hasAny ?? null;
         state.status = 'succeeded';
         state.stale = false;
         state.staleUrgency = null;
@@ -88,4 +96,5 @@ const slice$ = (state: RootState) => injected.selectSlice(state);
 export const selectCashbookData = (state: RootState): CashbookData | null => slice$(state).data;
 export const selectCashbookStatus = (state: RootState): RequestStatus => slice$(state).status;
 export const selectCashbookError = (state: RootState): ApiErrorShape | null => slice$(state).error;
+export const selectCashbookHasAny = (state: RootState): boolean | null => slice$(state).hasAny;
 export const selectCashbookStale = (state: RootState): boolean => slice$(state).stale;

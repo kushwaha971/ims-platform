@@ -24,6 +24,7 @@ export interface PurchaseBillListState {
   rows: PurchaseBillListRow[];
   totals: PurchaseBillTotals | null;
   counts: PurchaseBillTabCounts | null;
+  hasAny: boolean | null;
   page: number;
   pageSize: number;
   total: number;
@@ -38,6 +39,7 @@ const initialState: PurchaseBillListState = {
   rows: [],
   totals: null,
   counts: null,
+  hasAny: null,
   page: 1,
   pageSize: PURCHASE_BILL_PAGE_SIZE,
   total: 0,
@@ -84,6 +86,7 @@ const purchaseBillListSlice = createSlice({
         state.rows = action.payload.rows as Draft<PurchaseBillListRow>[];
         state.totals = action.payload.totals;
         state.counts = action.payload.counts as Draft<PurchaseBillTabCounts>;
+        state.hasAny = action.payload.hasAny ?? null;
         state.page = action.payload.page;
         state.pageSize = action.payload.pageSize;
         state.total = action.payload.total;

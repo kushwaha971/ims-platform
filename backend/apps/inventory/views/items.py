@@ -472,6 +472,9 @@ class StockSummaryView(_InventoryView, APIView):
             "as_of": as_of.isoformat() if as_of else None,
             "historical": historical,
             "valuation_visible": valuation,
+            # Approved designs (12 Oct 2026): over the whole book, never the
+            # filtered set — see `has_tracked_items`.
+            "has_any": bool(rows) or stock_selectors.has_tracked_items(tenant=self.get_tenant()),
         }
         return StandardResponse.ok(rows, meta=meta)
 

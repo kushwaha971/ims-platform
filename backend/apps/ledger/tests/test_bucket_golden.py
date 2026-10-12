@@ -44,8 +44,9 @@ CAPTURED_ON = dt.date(2026, 9, 30)
 #: Keys that did not exist when the golden file was captured and are added on purpose, each by
 #: a named task. Stripped from the live response before comparing — and ONLY these:
 #: `bucket` (A2, every ledger row) and `sections` (A10, `GET /reports/dashboard`'s registered
-#: module sections, `[]` for a tenant with no module that registers one).
-ADDED_SINCE_CAPTURE: frozenset[str] = frozenset({"bucket", "sections"})
+#: module sections, `[]` for a tenant with no module that registers one) and `has_any` (the
+#: empty-book flag of 12 Oct 2026 on `/ledger/aging` and `/ledger/summary`'s `meta`).
+ADDED_SINCE_CAPTURE: frozenset[str] = frozenset({"bucket", "sections", "has_any"})
 
 _UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 #: Values that differ run to run for reasons that have nothing to do with the ledger.
@@ -188,6 +189,10 @@ def _normalise(value: Any, ids: dict[str, str], *, strip: frozenset[str]) -> Any
             if key in strip or key == "at" or key.endswith("_at"):
                 continue
             item = value[key]
+            # An object made ONLY of added keys was itself added: `/ledger/summary` had no
+            # `meta` at capture and now carries `{"has_any": ...}` and nothing else.
+            if strip and isinstance(item, dict) and item and set(item) <= strip:
+                continue
             if key in _VOLATILE_KEYS:
                 out[key] = None if item is None else "<volatile>"
                 continue

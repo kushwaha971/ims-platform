@@ -16,6 +16,7 @@ import { resolveExpensePreset } from '../../expenses/view-model/expenseDisplay';
 import {
   paymentFiltersChanged,
   selectPaymentError,
+  selectPaymentHasAny,
   selectPaymentListStale,
   selectPaymentPage,
   selectPaymentPageSize,
@@ -38,6 +39,7 @@ import type { PaymentFilters, PaymentRow, PaymentTab, PaymentTotals } from '../t
 export interface UsePaymentListResult {
   readonly rows: readonly PaymentRow[];
   readonly totals: PaymentTotals | null;
+  readonly hasAny: boolean | null;
   readonly filters: PaymentFilters;
   readonly today: string;
   readonly status: RequestStatus;
@@ -52,6 +54,8 @@ export interface UsePaymentListResult {
   readonly setMode: (mode: PaymentMode | null) => void;
   readonly setQuery: (q: string) => void;
   readonly setPage: (page: number) => void;
+  /** The phone's Filters sheet: everything but the search in ONE address-bar update. */
+  readonly applyFilters: (next: PaymentFilters) => void;
   readonly clearFilters: () => void;
   readonly refetch: () => void;
 }
@@ -72,6 +76,7 @@ export const usePaymentList = (): UsePaymentListResult => {
   const pageSize = useAppSelector(selectPaymentPageSize);
   const total = useAppSelector(selectPaymentTotal);
   const stale = useAppSelector(selectPaymentListStale);
+  const hasAny = useAppSelector(selectPaymentHasAny);
 
   const canRead = hasModule('payments') && can('payments.payment.read');
   const today = useMemo(() => todayInTenantTz(timezone ?? undefined), [timezone]);
@@ -139,6 +144,19 @@ export const usePaymentList = (): UsePaymentListResult => {
   );
   const setQuery = useCallback((q: string) => push({ ...filters, q, page: 1 }), [push, filters]);
   const setPage = useCallback((next: number) => push({ ...filters, page: next }), [push, filters]);
+  const applyFilters = useCallback(
+    (next: PaymentFilters) => {
+      const resolved =
+        next.preset === 'custom' ? null : resolveExpensePreset(next.preset as PaymentPreset, today);
+      push({
+        ...next,
+        dateFrom: resolved?.dateFrom ?? next.dateFrom,
+        dateTo: resolved?.dateTo ?? next.dateTo,
+        page: 1,
+      });
+    },
+    [push, today]
+  );
   const clearFilters = useCallback(
     () => push({ ...filters, tab: 'all', mode: null, q: '', page: 1 }),
     [push, filters]
@@ -151,6 +169,7 @@ export const usePaymentList = (): UsePaymentListResult => {
     () => ({
       rows,
       totals,
+      hasAny,
       filters,
       today,
       status,
@@ -165,12 +184,14 @@ export const usePaymentList = (): UsePaymentListResult => {
       setMode,
       setQuery,
       setPage,
+      applyFilters,
       clearFilters,
       refetch,
     }),
     [
       rows,
       totals,
+      hasAny,
       filters,
       today,
       status,
@@ -185,6 +206,7 @@ export const usePaymentList = (): UsePaymentListResult => {
       setMode,
       setQuery,
       setPage,
+      applyFilters,
       clearFilters,
       refetch,
     ]

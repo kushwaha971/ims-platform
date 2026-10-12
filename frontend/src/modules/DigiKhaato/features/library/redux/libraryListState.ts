@@ -21,6 +21,8 @@ export interface LibraryListState<F, R> {
   pageSize: number;
   total: number;
   totalPages: number;
+  /** Does the list have anything at all, whatever the filters? `null` until the server says. */
+  hasAny: boolean | null;
   /** The filters the rows on screen answer, serialised. */
   answered: string | null;
   status: RequestStatus;
@@ -36,6 +38,7 @@ export const initialListState = <F, R>(defaults: F): LibraryListState<F, R> => (
   pageSize: 0,
   total: 0,
   totalPages: 1,
+  hasAny: null,
   answered: null,
   status: 'idle',
   error: null,
@@ -76,6 +79,7 @@ export const listFulfilled = <F, R>(
   state.pageSize = page.pageSize;
   state.total = page.total;
   state.totalPages = page.totalPages;
+  state.hasAny = page.hasAny ?? null;
   state.answered = JSON.stringify(filters);
   state.status = 'succeeded';
   state.stale = false;

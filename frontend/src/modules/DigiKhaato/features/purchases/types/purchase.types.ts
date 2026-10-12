@@ -242,6 +242,8 @@ export interface PurchaseBillListPage {
   readonly total: number;
   readonly totals: PurchaseBillTotals;
   readonly counts: PurchaseBillTabCounts;
+  /** Does this kind exist at all, whatever the filters (approved designs, 12 Oct 2026)? */
+  readonly hasAny?: boolean;
 }
 
 /** FR-7 — "Already recorded as PB/26-27/0003 on 12/08/2026". */

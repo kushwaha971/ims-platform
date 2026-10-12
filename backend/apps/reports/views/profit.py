@@ -182,6 +182,9 @@ class ProfitReportView(ReportFormatMixin, TenantScopeMixin, APIView):
                 "page_size": page_size,
                 "total": count,
                 "total_pages": max(1, math.ceil(count / page_size)),
+                # Approved designs (12 Oct 2026): an empty book hides the period
+                # and view pickers; a quiet month keeps them. Never the filtered set.
+                "has_any": bool(data) or selectors.has_any_sale(tenant=tenant),
             },
         )
         response["Cache-Control"] = "private, no-store"

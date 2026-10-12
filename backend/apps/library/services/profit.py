@@ -23,6 +23,25 @@ def _money(value: Decimal) -> str:
     return f"{Decimal(value):.2f}"
 
 
+def has_any_money(tenant: Any) -> bool:
+    """`meta.has_any` (approved designs, 12 Oct 2026): has this reading room EVER
+    taken a fee or recorded an expense, whatever the period?
+
+    A room that has done neither sees one empty state, not period chips over
+    ₹0.00 tiles; a quiet month in a busy room keeps its chips so the owner can
+    move the period. Fees are the same rows `fines_summary` counts (recorded
+    payments allocated to a library charge); spend is asked through the seam
+    over an unbounded period, because the library never imports expenses.
+    """
+    from apps.payments.models import Allocation
+
+    if Allocation.objects.filter(
+        tenant=tenant, document_type="library_charge", payment__status="recorded"
+    ).exists():
+        return True
+    return bool(spend_by_category(tenant, dt.date.min, dt.date.max))
+
+
 def profit(tenant: Any, start: dt.date, end: dt.date) -> dict:
     from apps.library.selectors.reports import fines_summary
 

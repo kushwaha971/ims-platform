@@ -66,6 +66,7 @@
   "stock.summary.col.avgCost": "औसत लागत",
   "stock.summary.col.lastMovement": "आख़िरी हलचल",
   "stock.summary.col.value": "मूल्य",
+  "stock.summary.empty.action": "आइटम पर जाएँ",
   "stock.summary.empty.body": "स्टॉक वाले आइटम जोड़ें, उनका मूल्य यहाँ दिखेगा।",
   "stock.summary.empty.title": "अभी स्टॉक वाला कोई आइटम नहीं",
   "stock.summary.error.title": "स्टॉक सारांश लोड नहीं हो सका",

@@ -197,6 +197,7 @@
   "purchases.payment.removeSplit": "Remove this split",
   "purchases.payment.split": "Split payment",
   "purchases.payment.title": "Paid now?",
+  "purchases.period.between": "Between dates",
   "purchases.period.custom": "Custom",
   "purchases.period.from": "From",
   "purchases.period.label": "Period",

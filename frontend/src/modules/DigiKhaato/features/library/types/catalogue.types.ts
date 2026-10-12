@@ -140,6 +140,8 @@ export interface CataloguePage<R> {
   readonly pageSize: number;
   readonly total: number;
   readonly totalPages: number;
+  /** Any record of this kind at all, whatever the filters (approved designs, 12 Oct 2026). */
+  readonly hasAny?: boolean;
 }
 
 /** The titles list's axes, as the URL carries them (FR-10 — those B05 serves). */

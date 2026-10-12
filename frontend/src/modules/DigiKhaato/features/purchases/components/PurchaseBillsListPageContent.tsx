@@ -11,6 +11,7 @@ import {
   UbButton,
   UbDateRangePicker,
   UbEmptyState,
+  UbFilterSheet,
   UbPageHeader,
   UbPageHeaderMobileActions,
   UbPageShell,
@@ -18,6 +19,7 @@ import {
   UbStack,
   UbTabs,
 } from 'src/design-system';
+import type { UbFilterSpec, UbFilterValues } from 'src/design-system';
 import {
   UbDataGrid,
   useGridTier,
@@ -30,6 +32,7 @@ import { useTranslation } from 'src/hooks/useTranslation';
 import { ROUTES } from 'src/routes';
 
 import {
+  DEFAULT_PURCHASE_BILL_PRESET,
   PURCHASE_BILL_PRESETS,
   PURCHASE_BILL_SEARCH_DEBOUNCE_MS,
   PURCHASE_BILL_TABS_ORDER,
@@ -228,12 +231,105 @@ export function PurchaseBillsListPageContent({
     );
   }
 
+  /* Approved designs (12 Oct 2026): `hasAny` is the server's, so a period or
+     search that found nothing keeps its controls; only a book with none of
+     this kind at all is reduced to the empty card. */
+  const emptyBook = list.status === 'succeeded' && list.rows.length === 0 && list.hasAny === false;
+  const phone = tier === 'cards';
+  /* On a phone: the search and ONE Filters button holding the tabs and the
+     period; each default reads as "no filter". */
+  const phoneSpecs: UbFilterSpec[] = [
+    {
+      kind: 'single',
+      key: 'tab',
+      label: t('purchases.tab.label'),
+      anyLabel: t(`${copy.tab}.all`),
+      options: copy.tabs
+        .filter((tab: PurchaseBillTab) => tab !== 'all')
+        .map((value: PurchaseBillTab) => ({
+          value,
+          label: t(`${copy.tab}.${value}`),
+          hint: list.counts?.[value] ? String(list.counts[value]) : undefined,
+        })),
+    },
+    {
+      kind: 'single',
+      key: 'preset',
+      label: t('purchases.period.label'),
+      anyLabel: t(`purchases.period.${DEFAULT_PURCHASE_BILL_PRESET}`),
+      options: PURCHASE_BILL_PRESETS.filter(
+        (p) => p !== DEFAULT_PURCHASE_BILL_PRESET && p !== 'custom'
+      ).map((value) => ({ value, label: t(`purchases.period.${value}`) })),
+    },
+    {
+      kind: 'dateRange',
+      key: 'range',
+      label: t('purchases.period.between'),
+      fromKey: 'dateFrom',
+      toKey: 'dateTo',
+      fromLabel: t('purchases.period.from'),
+      toLabel: t('purchases.period.to'),
+      max: list.today,
+    },
+  ];
+  const custom = filters.preset === 'custom';
+  const phoneValues: UbFilterValues = {
+    tab: filters.tab === 'all' ? '' : filters.tab,
+    preset: filters.preset === DEFAULT_PURCHASE_BILL_PRESET || custom ? '' : filters.preset,
+    dateFrom: custom ? filters.dateFrom : '',
+    dateTo: custom ? filters.dateTo : '',
+  };
+  const applyPhone = (next: UbFilterValues) => {
+    const ranged = Boolean(next.dateFrom || next.dateTo);
+    list.applyFilters({
+      tab: (next.tab || 'all') as PurchaseBillTab,
+      preset: ranged
+        ? 'custom'
+        : ((next.preset || DEFAULT_PURCHASE_BILL_PRESET) as PurchaseBillPreset),
+      dateFrom: next.dateFrom || filters.dateFrom,
+      dateTo: next.dateTo || filters.dateTo,
+    });
+  };
+  const searchBox = (
+    <UbSearchInput
+      value={search}
+      onChange={setSearch}
+      placeholder={t('purchases.search.placeholder')}
+      aria-label={t('purchases.search.label')}
+      className={phone ? 'min-w-0 flex-1' : 'w-56'}
+    />
+  );
+  const stats = list.totals ? (
+    <PurchaseBillListStats totals={list.totals} order={order} kind={kind} />
+  ) : null;
+  const grid = (
+    <UbDataGrid
+      rows={list.rows}
+      columns={columns}
+      rowId={rowId}
+      rowName={rowName}
+      state={gridState}
+      labels={labels}
+      emptyStates={emptyStates}
+      caption={t('purchases.list.caption')}
+      storageId={order ? 'purchaseOrders.columns' : 'purchases.columns'}
+      page={{
+        page: list.page,
+        pageSize: list.pageSize,
+        total: list.total,
+        totalPages: Math.max(Math.ceil(list.total / Math.max(list.pageSize, 1)), 1),
+      }}
+      onPageChange={list.setPage}
+      onRowOpen={openRow}
+      cardAvatar={false}
+    />
+  );
   return (
     <UbPageShell>
       <UbPageHeader
         title={t(copy.title)}
         primaryAction={
-          canWrite && copy.newLabel ? (
+          canWrite && copy.newLabel && !emptyBook ? (
             <UbActionLink
               href={NEW_BILL}
               variant="primary"
@@ -253,8 +349,9 @@ export function PurchaseBillsListPageContent({
             mobile={{
               menuLabel: t('common.action.moreActions'),
               closeLabel: t('common.action.close'),
+              // The empty book's one button is in the middle of the screen.
               primary:
-                canWrite && copy.newLabel
+                canWrite && copy.newLabel && !emptyBook
                   ? {
                       label: t(copy.newLabel ?? ''),
                       icon: <Plus className="h-6 w-6" aria-hidden />,
@@ -266,62 +363,67 @@ export function PurchaseBillsListPageContent({
         )}
       />
       <UbStack gap={4} data-testid="purchase-bills-screen">
-        <UbDateRangePicker<PurchaseBillPreset>
-          presets={presets}
-          preset={filters.preset}
-          onPresetChange={list.setPreset}
-          customPreset="custom"
-          from={filters.dateFrom}
-          to={filters.dateTo}
-          onRangeChange={list.setRange}
-          max={list.today}
-          name="purchase-period"
-          labels={{
-            presets: t('purchases.period.label'),
-            from: t('purchases.period.from'),
-            to: t('purchases.period.to'),
-            apply: t('common.action.apply'),
-            close: t('common.action.close'),
-          }}
-        />
-        {list.totals && <PurchaseBillListStats totals={list.totals} order={order} kind={kind} />}
-        <UbTabs<PurchaseBillTab>
-          value={filters.tab}
-          onValueChange={list.setTab}
-          tabs={tabs}
-          ariaLabel={t('purchases.tab.label')}
-          layout="fit"
-          trailing={
-            <UbSearchInput
-              value={search}
-              onChange={setSearch}
-              placeholder={t('purchases.search.placeholder')}
-              aria-label={t('purchases.search.label')}
-              className="w-56"
-            />
-          }
-        >
-          <UbDataGrid
-            rows={list.rows}
-            columns={columns}
-            rowId={rowId}
-            rowName={rowName}
-            state={gridState}
-            labels={labels}
-            emptyStates={emptyStates}
-            caption={t('purchases.list.caption')}
-            storageId={order ? 'purchaseOrders.columns' : 'purchases.columns'}
-            page={{
-              page: list.page,
-              pageSize: list.pageSize,
-              total: list.total,
-              totalPages: Math.max(Math.ceil(list.total / Math.max(list.pageSize, 1)), 1),
-            }}
-            onPageChange={list.setPage}
-            onRowOpen={openRow}
-            cardAvatar={false}
+        {emptyBook ? (
+          /* Owner, 12 Oct 2026: an empty book is one sentence and one button —
+             no period, ₹0 totals, tabs or search over nothing. */
+          <UbEmptyState
+            variant="firstUse"
+            title={emptyStates.firstUse.title}
+            description={emptyStates.firstUse.description}
+            action={emptyStates.firstUse.action}
           />
-        </UbTabs>
+        ) : phone ? (
+          <>
+            <UbStack direction="row" gap={2} align="center">
+              {searchBox}
+              <UbFilterSheet
+                specs={phoneSpecs}
+                values={phoneValues}
+                onApply={applyPhone}
+                labels={{
+                  title: t('common.filters.title'),
+                  apply: t('common.action.apply'),
+                  reset: t('common.action.reset'),
+                  close: t('common.action.close'),
+                }}
+              />
+            </UbStack>
+            {stats}
+            {grid}
+          </>
+        ) : (
+          <>
+            <UbDateRangePicker<PurchaseBillPreset>
+              presets={presets}
+              preset={filters.preset}
+              onPresetChange={list.setPreset}
+              customPreset="custom"
+              from={filters.dateFrom}
+              to={filters.dateTo}
+              onRangeChange={list.setRange}
+              max={list.today}
+              name="purchase-period"
+              labels={{
+                presets: t('purchases.period.label'),
+                from: t('purchases.period.from'),
+                to: t('purchases.period.to'),
+                apply: t('common.action.apply'),
+                close: t('common.action.close'),
+              }}
+            />
+            {stats}
+            <UbTabs<PurchaseBillTab>
+              value={filters.tab}
+              onValueChange={list.setTab}
+              tabs={tabs}
+              ariaLabel={t('purchases.tab.label')}
+              layout="fit"
+              trailing={searchBox}
+            >
+              {grid}
+            </UbTabs>
+          </>
+        )}
       </UbStack>
     </UbPageShell>
   );

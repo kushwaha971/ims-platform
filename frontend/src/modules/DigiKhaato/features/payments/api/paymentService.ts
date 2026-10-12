@@ -246,6 +246,7 @@ export const listPayments = async (
         amount_in: string;
         amount_out: string;
       };
+      has_any?: boolean;
     };
   }>(`${API_PATHS.PAYMENTS}${paymentListQuery(filters)}`, ubConfig({ signal }));
   const { data, meta } = response.data;
@@ -261,6 +262,7 @@ export const listPayments = async (
     page: meta.page,
     pageSize: meta.page_size,
     total: meta.total,
+    ...(typeof meta.has_any === 'boolean' ? { hasAny: meta.has_any } : {}),
   };
 };
 

@@ -148,3 +148,54 @@ it('tells the merchant how far the drawer is off, and offers the fix', async () 
   expect(await screen.findByText('Short by ₹120.00')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Add an expense' })).toBeInTheDocument();
 });
+
+const EMPTY_BOOK_TITLE = /No money in or out yet|cashbook\.empty\.firstUse\.title/;
+
+it('shows a business that never moved money one empty state and no ₹0.00', async () => {
+  /* Owner, 12 Oct 2026: an empty book is one sentence and one button. The
+     defect this prevents is the old screen — a period picker, a bucket switch,
+     four ₹0.00 tiles and "Days 0" over a business with nothing in it — and a
+     header "Add" duplicating the empty state's own action. */
+  cashbookService.getCashbook.mockResolvedValue({
+    ...DATA('full'),
+    range: {
+      ...DATA('full').range,
+      in: figures('0.00', '0.00'),
+      out: figures('0.00', '0.00'),
+      closing: figures('0.00', '0.00'),
+    },
+    hasAny: false,
+  });
+  signIn(['expenses.expense.read', 'expenses.expense.write', 'reports.financial.read']);
+  renderWithProviders(<CashbookPageContent />);
+  expect(await screen.findByText(EMPTY_BOOK_TITLE)).toBeInTheDocument();
+  expect(screen.getAllByRole('button', { name: 'Add an expense' })).toHaveLength(1);
+  expect(screen.queryByText(/This month|Today/)).not.toBeInTheDocument();
+  expect(screen.queryByText('Cash or bank')).not.toBeInTheDocument();
+  expect(screen.queryByText('Opening')).not.toBeInTheDocument();
+  expect(screen.queryByText('Money in')).not.toBeInTheDocument();
+  expect(screen.queryByText('Days')).not.toBeInTheDocument();
+  expect(screen.queryByText(/₹0\.00/)).not.toBeInTheDocument();
+  expect(screen.queryByText('Close the day')).not.toBeInTheDocument();
+});
+
+it('keeps every control when the range is quiet but the book is not', async () => {
+  /* A quiet range is not an empty book: the merchant must still be able to
+     move the range to reach the money they did record. */
+  cashbookService.getCashbook.mockResolvedValue({ ...DATA('full'), hasAny: true });
+  signIn(['expenses.expense.read', 'reports.financial.read']);
+  renderWithProviders(<CashbookPageContent />);
+  expect(await screen.findByText('Nothing on these dates')).toBeInTheDocument();
+  expect(screen.queryByText(EMPTY_BOOK_TITLE)).not.toBeInTheDocument();
+  expect(screen.getByText('Opening')).toBeInTheDocument();
+  expect(screen.getByText('Days')).toBeInTheDocument();
+});
+
+it('never hides the controls for a server that does not say', async () => {
+  /* `hasAny` absent (an older server) must read as "unknown", not "empty". */
+  cashbookService.getCashbook.mockResolvedValue(DATA('full'));
+  signIn(['expenses.expense.read', 'reports.financial.read']);
+  renderWithProviders(<CashbookPageContent />);
+  expect(await screen.findByText('Opening')).toBeInTheDocument();
+  expect(screen.queryByText(EMPTY_BOOK_TITLE)).not.toBeInTheDocument();
+});

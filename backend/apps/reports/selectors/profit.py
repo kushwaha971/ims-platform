@@ -116,6 +116,23 @@ def sold_lines(*, tenant: Any, date_from: dt.date, date_to: dt.date) -> Any:
     ).exclude(document__status__in=(DRAFT, VOID))
 
 
+def has_any_sale(*, tenant: Any) -> bool:
+    """Whether this business has EVER made a live bill the profit report reads.
+
+    No period and no search: the screen asks it to tell an empty book (one
+    empty state, no period or view pickers) from a month with no sales (keep
+    the controls — moving the period is how the merchant finds the bills).
+    Drafts and voids never reach this report, so they do not count here.
+    """
+    from apps.sales.models import SalesDocument
+
+    return (
+        SalesDocument.objects.filter(tenant=tenant, kind__in=SALE_KINDS)
+        .exclude(status__in=(DRAFT, VOID))
+        .exists()
+    )
+
+
 def _value_credit() -> Any:
     """The taxable value credited against a line by live value-only credit notes."""
     from apps.sales.models import SalesDocumentLine
@@ -290,6 +307,7 @@ __all__ = [
     "ORDERINGS",
     "expenses_total",
     "grouped",
+    "has_any_sale",
     "line_figures",
     "row_json",
     "sold_lines",

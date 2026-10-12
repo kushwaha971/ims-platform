@@ -22,6 +22,7 @@ from apps.common.renderers import EnvelopeJSONRenderer, PassthroughCsvRenderer
 from apps.common.responses import StandardResponse
 from apps.common.throttling import ScopedUserRateThrottle
 from apps.common.viewsets import TenantScopeMixin
+from apps.ledger.models import LedgerEntry
 from apps.ledger.selectors.aging import BUCKET_KEYS, aging_rows, aging_totals, ledger_summary
 from apps.ledger.services.statement_csv import neutralise
 from apps.ledger.views.exports import audit_export, authorise_export
@@ -36,6 +37,20 @@ MAX_SYNC_CSV_ROWS = 5000
 #: one who owes the most.
 DEFAULT_ORDERING = "-90_plus"
 ALLOWED_ORDERING = {"-90_plus", "90_plus", "-total", "total", "name", "-name"}
+
+
+def book_has_any(tenant: Any) -> bool:
+    """`meta.has_any` (owner, 12 Oct 2026): has this business EVER recorded a
+    ledger entry?
+
+    It decides whether a ledger screen shows its controls or one plain empty
+    state, and it cannot be inferred from the figures: a settled book and an
+    empty one both total ₹0.00, and only the empty one should lose its tabs.
+    Every row counts — reversed and superseded ones too — because a merchant
+    who has corrected an entry has a book, and the screen that hides a
+    correction behind a toggle still needs the toggle.
+    """
+    return LedgerEntry.objects.filter(tenant=tenant).exists()
 
 
 class LedgerSummaryView(TenantScopeMixin, APIView):
@@ -66,7 +81,10 @@ class LedgerSummaryView(TenantScopeMixin, APIView):
                     for key, bucket in buckets.items()
                 },
                 "as_of": today.isoformat(),
-            }
+            },
+            # The reminders screen reads its tab counts from here, so the
+            # empty-book decision rides on the same response (`book_has_any`).
+            meta={"has_any": book_has_any(tenant)},
         )
 
 
@@ -237,6 +255,10 @@ class LedgerAgingView(TenantScopeMixin, APIView):
                 "page": page,
                 "page_size": page_size,
                 "total": len(rows),
+                # Whole-book, never filtered: a tag or an as-of date that finds
+                # nobody keeps its controls; only a business with no entry at
+                # all is reduced to the empty state (`book_has_any`).
+                "has_any": book_has_any(self.get_tenant()),
             },
         )
 

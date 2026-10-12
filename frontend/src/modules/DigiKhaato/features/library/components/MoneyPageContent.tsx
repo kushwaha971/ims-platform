@@ -90,32 +90,60 @@ export function MoneyPageContent(): React.JSX.Element {
     );
   }
   const shown = data && data.from === range.from && data.to === range.to ? data : null;
+  /* Owner, 12 Oct 2026: a room that has never taken a fee nor recorded an
+     expense is shown one sentence and one link — no period chips, no ₹0.00
+     tiles, no empty Money in / Money out cards. `hasAny` is the server's, over
+     all time, so a quiet month in a busy room keeps its chips; an older server
+     that does not send it never hides anything. */
+  const emptyBook = shown?.hasAny === false;
+  /* The header's link folds to its icon on a phone; the empty state's is the
+     only thing on the screen and keeps its words. */
+  const expensesLink = (label: string, testId: string, inHeader: boolean): React.JSX.Element => (
+    <UbActionLink
+      href={ROUTES.EXPENSES}
+      variant="secondary"
+      icon={<Receipt className="h-4 w-4" aria-hidden />}
+      iconOnly={inHeader ? 'mobile' : false}
+      data-testid={testId}
+    >
+      {label}
+    </UbActionLink>
+  );
   return (
     <UbPageShell>
       <UbPageHeader
         title={t('library.money.title')}
         actions={
-          canSpend ? (
-            <UbActionLink
-              href={ROUTES.EXPENSES}
-              variant="secondary"
-              icon={<Receipt className="h-4 w-4" aria-hidden />}
-              iconOnly="mobile"
-              data-testid="library-money-expenses"
-            >
-              {t('library.money.addExpense')}
-            </UbActionLink>
-          ) : undefined
+          canSpend && !emptyBook
+            ? expensesLink(t('library.money.addExpense'), 'library-money-expenses', true)
+            : undefined
         }
       />
       <UbStack gap={4} data-testid="library-money">
-        <UbChoiceChips<Period>
-          id="library-money-period"
-          ariaLabel={t('library.money.period')}
-          value={period}
-          onChange={setPeriod}
-          options={PERIODS.map((p) => ({ value: p, label: t(`library.money.period.${p}`) }))}
-        />
+        {emptyBook ? (
+          <UbEmptyState
+            variant="firstUse"
+            title={t('library.money.empty.title')}
+            description={t('library.money.empty.body')}
+            action={
+              canSpend
+                ? expensesLink(
+                    t('library.money.empty.action'),
+                    'library-money-empty-expenses',
+                    false
+                  )
+                : undefined
+            }
+          />
+        ) : (
+          <UbChoiceChips<Period>
+            id="library-money-period"
+            ariaLabel={t('library.money.period')}
+            value={period}
+            onChange={setPeriod}
+            options={PERIODS.map((p) => ({ value: p, label: t(`library.money.period.${p}`) }))}
+          />
+        )}
         {error && !shown && (
           <UbEmptyState
             variant="error"
@@ -124,7 +152,7 @@ export function MoneyPageContent(): React.JSX.Element {
           />
         )}
         {!shown && !error && <UbPageSkeleton variant="card" />}
-        {shown && (
+        {shown && !emptyBook && (
           <>
             <UbStatGrid>
               <UbStatCard

@@ -465,6 +465,41 @@ describe('the states that are not a list', () => {
     expect(screen.queryByRole('button', { name: 'Clear filters' })).not.toBeInTheDocument();
   });
 
+  it('gives a business with no entry at all one sentence and nothing else', async () => {
+    /* Owner, 12 Oct 2026. Prevents: a new shop's Old dues showing "As of
+       12/10/2026", an export, and "You will get ₹0.00 · You will give ₹0.00"
+       tabs over "All settled" — a report about a book that does not exist. */
+    agingService.getLedgerAging.mockImplementation(async (filters: AgingFilters) => ({
+      ...(await answer([], { ...TOTALS, ...ZERO })(filters)),
+      hasAny: false,
+    }));
+    agingService.getLedgerSummary.mockResolvedValue({ receivable: '0.00', payable: '0.00' });
+    renderWithProviders(<AgingPageContent />);
+
+    expect(await screen.findByText('Nobody owes you yet')).toBeInTheDocument();
+    expect(screen.queryByText('All settled')).not.toBeInTheDocument();
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('aging-export')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /As of/ })).not.toBeInTheDocument();
+    expect(screen.queryByText(/₹0\.00/)).not.toBeInTheDocument();
+  });
+
+  it('keeps every control for a settled book, because that empty list is an answer', async () => {
+    /* Prevents: the collapse firing on "nobody owes anything" rather than on
+       "nothing was ever written" — a settled merchant still needs the as-of
+       date to look back and the Payable tab to see their suppliers. */
+    agingService.getLedgerAging.mockImplementation(async (filters: AgingFilters) => ({
+      ...(await answer([], { ...TOTALS, ...ZERO })(filters)),
+      hasAny: true,
+    }));
+    renderWithProviders(<AgingPageContent />);
+
+    expect(await screen.findByText('All settled')).toBeInTheDocument();
+    expect(screen.getByRole('tablist')).toBeInTheDocument();
+    expect(screen.getByTestId('aging-export')).toBeInTheDocument();
+    expect(screen.queryByText('Nobody owes you yet')).not.toBeInTheDocument();
+  });
+
   it('tells a merchant who narrowed to a tag that the TAG is empty, and clears it', async () => {
     /* Two different sentences: "everyone is settled" said over a tag filter is
        false — it is only Camp Area that is — and a merchant believing it stops

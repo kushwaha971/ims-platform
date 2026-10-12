@@ -100,7 +100,7 @@ class ProfitView(_View):
 
         from apps.common.dates import tenant_today
         from apps.common.exceptions import ValidationFailed
-        from apps.library.services.profit import profit
+        from apps.library.services.profit import has_any_money, profit
 
         tenant = get_effective_tenant(request)
         today = tenant_today(tenant)
@@ -118,4 +118,6 @@ class ProfitView(_View):
         end = day("to", today)
         if end < start or (end - start).days > 366:
             raise ValidationFailed({"to": ["Choose a period of up to a year."]})
-        return StandardResponse.ok(profit(tenant, start, end))
+        return StandardResponse.ok(
+            profit(tenant, start, end), meta={"has_any": has_any_money(tenant)}
+        )

@@ -92,7 +92,14 @@ class PaymentViewSet(
         totals = payment_totals(queryset)
         page = self.paginate_queryset(queryset)
         data = PaymentListSerializer(page, many=True).data
-        return StandardResponse.ok(data, meta={**self.paginator.get_meta(), "totals": totals})
+        meta = {
+            **self.paginator.get_meta(),
+            "totals": totals,
+            # Approved designs (12 Oct 2026): any payment at all, whatever the
+            # filters — an empty book hides its search, tabs and filters.
+            "has_any": self.get_queryset().exists(),
+        }
+        return StandardResponse.ok(data, meta=meta)
 
     def retrieve(self, request: Any, *args: Any, **kwargs: Any) -> Any:
         payment = get_object_or_404(self.get_queryset(), pk=kwargs["pk"])

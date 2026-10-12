@@ -14,6 +14,8 @@
   "ledger.aging.column.party": "पार्टी",
   "ledger.aging.empty.body": "कुछ बाकी नहीं — सबका हिसाब साफ़ है।",
   "ledger.aging.empty.title": "सब साफ़",
+  "ledger.aging.emptyBook.body": "ग्राहक के खाते में दिया-लिया लिखते ही यहाँ दिखेगा कि किस पर कितना और कब से बाकी है।",
+  "ledger.aging.emptyBook.title": "अभी किसी पर बाकी नहीं",
   "ledger.aging.error.body": "बाकी की उम्र की रिपोर्ट लोड नहीं हो सकी।",
   "ledger.aging.error.title": "रिपोर्ट लोड नहीं हुई",
   "ledger.aging.export": "CSV निकालें",

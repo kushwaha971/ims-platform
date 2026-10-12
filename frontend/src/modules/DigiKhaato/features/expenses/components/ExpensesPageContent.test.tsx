@@ -1,6 +1,6 @@
 import type * as ReactModule from 'react';
 
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { resetAllFeatureState } from 'src/redux/actions';
@@ -146,9 +146,32 @@ it('asks the server for voids when the Void tab is chosen', async () => {
   signIn(['expenses.expense.read']);
   renderWithProviders(<ExpensesPageContent />);
   await screen.findByText('Tea for staff');
-  await userEvent.click(screen.getByRole('tab', { name: 'Void' }));
+  // On a phone (jsdom's width) the tabs are inside the one Filters sheet.
+  const user = userEvent.setup();
+  await user.click(screen.getByTestId('filters-button'));
+  const group = await screen.findByRole('radiogroup', { name: 'Which expenses' });
+  await user.click(within(group).getByRole('radio', { name: 'Void' }));
+  await user.click(screen.getByTestId('filters-apply'));
   await waitFor(() => expect(lastAsked().tab).toBe('void'));
-  expect(mockSearch).toBe('tab=void');
+  expect(mockSearch).toContain('tab=void');
+});
+
+it('shows a business with no expense one sentence, not a period, tabs and ₹0', async () => {
+  /* Owner, 12 Oct 2026: "I don't want that type of screen in case of empty". */
+  service.listExpenses.mockImplementation(async () => ({
+    rows: [],
+    totals: { amount: '0.00', count: 0, byCategory: [] },
+    page: 1,
+    pageSize: 25,
+    total: 0,
+    hasAny: false,
+  }));
+  signIn(['expenses.expense.read', 'expenses.expense.write']);
+  renderWithProviders(<ExpensesPageContent />);
+  expect(await screen.findByText('No expenses yet — add your first one')).toBeInTheDocument();
+  expect(screen.queryByTestId('filters-button')).not.toBeInTheDocument();
+  expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
+  expect(screen.getAllByRole('button', { name: 'Add expense' })).toHaveLength(1);
 });
 
 it('offers Add expense only to a role that can record', async () => {

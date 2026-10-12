@@ -67,6 +67,12 @@ export interface CashbookData {
   readonly buckets: readonly CashBucket[];
   /** `today_cash` for a member without `reports.financial.read` (FR-13). */
   readonly scope: 'full' | 'today_cash';
+  /**
+   * `meta.has_any` — has the business EVER moved money, whatever the range
+   * (approved designs, 12 Oct 2026). Absent from an older server, which must
+   * then never be read as "no".
+   */
+  readonly hasAny?: boolean;
 }
 
 export interface CashbookFilters {

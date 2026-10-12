@@ -7,4 +7,10 @@ export interface LibraryMoney {
   readonly expenses: readonly { readonly category: string; readonly amount: string }[];
   readonly expensesTotal: string;
   readonly profit: string;
+  /**
+   * `meta.has_any` — has the room EVER taken a fee or recorded an expense,
+   * whatever the period (approved designs, 12 Oct 2026). Absent from an older
+   * server, which must then never be read as "no".
+   */
+  readonly hasAny?: boolean;
 }

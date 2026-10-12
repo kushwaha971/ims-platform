@@ -1,6 +1,6 @@
 import type * as ReactModule from 'react';
 
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { resetAllFeatureState } from 'src/redux/actions';
@@ -119,7 +119,9 @@ it('lists this financial year and shows the server payables totals (PUR-03 FR-3)
   expect((await screen.findAllByText(/Agro Traders/)).length).toBeGreaterThan(0);
   expect(screen.getByText('To pay', { selector: '*:not(th)' })).toBeInTheDocument();
   expect(screen.getByText('₹4,921.00')).toBeInTheDocument();
-  expect(screen.getByRole('tab', { name: /Unpaid · 2/ })).toBeInTheDocument();
+  // On a phone (jsdom's width) the tabs are inside the one Filters sheet.
+  expect(screen.queryByRole('tab')).not.toBeInTheDocument();
+  expect(screen.getByTestId('filters-button')).toBeInTheDocument();
   expect(screen.getByRole('link', { name: /New bill/ })).toBeInTheDocument();
   expect(lastAsked()).toMatchObject({ tab: 'all', dateFrom: expect.stringMatching(/-04-01$/) });
 });
@@ -128,9 +130,34 @@ it('asks the server for unpaid bills when the Unpaid tab is chosen (AC-1)', asyn
   signIn(['purchases.bill.read']);
   renderWithProviders(<PurchaseBillsListPageContent />);
   await screen.findAllByText(/Agro Traders/);
-  await userEvent.click(screen.getByRole('tab', { name: /Unpaid/ }));
+  const user = userEvent.setup();
+  await user.click(screen.getByTestId('filters-button'));
+  const group = await screen.findByRole('radiogroup', { name: 'Bills by status' });
+  await user.click(within(group).getByRole('radio', { name: /Unpaid/ }));
+  await user.click(screen.getByTestId('filters-apply'));
   await waitFor(() => expect(lastAsked().tab).toBe('unpaid'));
-  expect(mockSearch).toBe('tab=unpaid');
+  expect(mockSearch).toContain('tab=unpaid');
+});
+
+it('shows a shop that has never bought anything one sentence, not tabs and ₹0', async () => {
+  /* Owner, 12 Oct 2026: "I don't want that type of screen in case of empty". */
+  service.listPurchaseBills.mockImplementation(async () => ({ ...page([]), hasAny: false }));
+  signIn(['purchases.bill.read', 'purchases.bill.write']);
+  renderWithProviders(<PurchaseBillsListPageContent />);
+  expect(await screen.findByText('No purchase bills yet')).toBeInTheDocument();
+  expect(screen.queryByTestId('filters-button')).not.toBeInTheDocument();
+  expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
+  expect(screen.queryByText('₹4,921.00')).not.toBeInTheDocument();
+  // One button, in the middle of the screen — not a second one in the header.
+  expect(screen.getAllByRole('button', { name: /New bill/ })).toHaveLength(1);
+  expect(screen.queryByRole('link', { name: /New bill/ })).not.toBeInTheDocument();
+});
+
+it('keeps the filters when a search found nothing in a book that has bills', async () => {
+  service.listPurchaseBills.mockImplementation(async () => ({ ...page([]), hasAny: true }));
+  signIn(['purchases.bill.read']);
+  renderWithProviders(<PurchaseBillsListPageContent />);
+  expect(await screen.findByTestId('filters-button')).toBeInTheDocument();
 });
 
 it('offers New bill only to a role that can record one (the accountant reads)', async () => {

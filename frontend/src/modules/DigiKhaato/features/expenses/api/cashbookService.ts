@@ -57,6 +57,7 @@ interface CashbookApiResponse {
     readonly buckets: readonly CashBucket[];
     readonly scope: CashbookData['scope'];
   };
+  readonly meta?: { readonly has_any?: boolean };
 }
 
 const toRow = (row: CashRowApi): CashRow => ({
@@ -108,7 +109,7 @@ export const getCashbook = async (
     `${API_PATHS.CASHBOOK}${query}`,
     ubConfig({ signal })
   );
-  const { data } = response.data;
+  const { data, meta } = response.data;
   return {
     range: {
       dateFrom: data.range.date_from,
@@ -122,5 +123,6 @@ export const getCashbook = async (
     byCategory: data.breakdown.by_category,
     buckets: data.buckets,
     scope: data.scope,
+    ...(typeof meta?.has_any === 'boolean' ? { hasAny: meta.has_any } : {}),
   };
 };

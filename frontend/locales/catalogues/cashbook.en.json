@@ -13,6 +13,8 @@
   "cashbook.days": "Days",
   "cashbook.empty.body": "No money came in or went out in this range.",
   "cashbook.empty.filtered": "Nothing on these dates",
+  "cashbook.empty.firstUse.body": "When you record a payment or pay an expense, the cash and bank figures for each day show up here.",
+  "cashbook.empty.firstUse.title": "No money in or out yet",
   "cashbook.error.body": "Check your connection and try again.",
   "cashbook.error.title": "Could not load the cashbook",
   "cashbook.expectedCash": "Expected cash in drawer: {amount}",

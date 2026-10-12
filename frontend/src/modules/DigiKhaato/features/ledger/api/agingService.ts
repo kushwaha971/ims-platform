@@ -33,6 +33,7 @@ interface AgingApiResponse {
     readonly page: number;
     readonly page_size: number;
     readonly total: number;
+    readonly has_any?: boolean;
   };
 }
 
@@ -77,6 +78,7 @@ export const getLedgerAging = async (
     page: meta.page,
     pageSize: meta.page_size,
     total: meta.total,
+    ...(typeof meta.has_any === 'boolean' ? { hasAny: meta.has_any } : {}),
   };
 };
 

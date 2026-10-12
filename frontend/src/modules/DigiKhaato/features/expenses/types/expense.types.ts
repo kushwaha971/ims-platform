@@ -86,6 +86,8 @@ export interface ExpensePage {
   readonly page: number;
   readonly pageSize: number;
   readonly total: number;
+  /** Any expense at all, whatever the filters (approved designs, 12 Oct 2026). */
+  readonly hasAny?: boolean;
 }
 
 /** The drawer's form state. `mode`/`upiApp` are kept even when `paid` is off

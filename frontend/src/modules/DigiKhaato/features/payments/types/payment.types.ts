@@ -243,6 +243,8 @@ export interface PaymentPage {
   readonly page: number;
   readonly pageSize: number;
   readonly total: number;
+  /** Any payment at all, whatever the filters (approved designs, 12 Oct 2026). */
+  readonly hasAny?: boolean;
 }
 
 /** PAY-03 — the Collect QR. */

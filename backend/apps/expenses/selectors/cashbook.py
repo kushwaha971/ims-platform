@@ -89,9 +89,17 @@ class CashRow:
 
 
 class CashbookSource(Protocol):
-    """One kind of money event. Both methods are read-only and tenant-scoped."""
+    """One kind of money event. Every method is read-only and tenant-scoped."""
 
     name: str
+
+    def exists(self, *, tenant: Any) -> bool:
+        """Whether this source has ever produced a row, in any bucket, on any date.
+
+        `meta.has_any` (approved designs, 12 Oct 2026): a business that has never
+        moved money sees one empty state instead of a period picker over ₹0.00.
+        """
+        ...
 
     def rows(self, *, tenant: Any, date_from: dt.date, date_to: dt.date) -> Iterable[CashRow]: ...
 
@@ -108,6 +116,9 @@ class ExpenseSource:
     @staticmethod
     def _base(tenant: Any) -> Any:
         return Expense.objects.for_tenant(tenant).filter(status=ExpenseStatus.RECORDED, paid=True)
+
+    def exists(self, *, tenant: Any) -> bool:
+        return self._base(tenant).exists()
 
     def rows(self, *, tenant: Any, date_from: dt.date, date_to: dt.date) -> Iterable[CashRow]:
         queryset = (
@@ -168,6 +179,9 @@ class LedgerCashSource:
             payment_mode__isnull=False,
         )
 
+    def exists(self, *, tenant: Any) -> bool:
+        return self._base(tenant).exists()
+
     def rows(self, *, tenant: Any, date_from: dt.date, date_to: dt.date) -> Iterable[CashRow]:
         queryset = (
             self._base(tenant)
@@ -226,6 +240,19 @@ def register_cashbook_source(source: CashbookSource) -> None:
 
 def cashbook_sources() -> tuple[CashbookSource, ...]:
     return (*CASHBOOK_SOURCES, *_REGISTERED)
+
+
+def has_any_money(*, tenant: Any, sources: tuple[CashbookSource, ...] | None = None) -> bool:
+    """`meta.has_any` — has this business EVER recorded a money event, whatever the range?
+
+    The cashbook screen needs to tell two empties apart: a business with nothing
+    to show (one plain empty state, no period picker, no ₹0.00 tiles) and a range
+    that happens to be quiet (keep every control, so the merchant can move it).
+    Only the server can say which, because the client holds one range at a time.
+    One `EXISTS` per source, stopping at the first that answers yes.
+    """
+    sources = cashbook_sources() if sources is None else sources
+    return any(source.exists(tenant=tenant) for source in sources)
 
 
 def _money(value: Decimal) -> str:

@@ -1,4 +1,5 @@
 {
+  "expenses.period.between": "Between dates",
   "expenses.period.custom": "Custom",
   "expenses.period.from": "From",
   "expenses.period.label": "Period",

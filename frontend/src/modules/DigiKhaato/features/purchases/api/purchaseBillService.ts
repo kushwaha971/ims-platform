@@ -253,6 +253,7 @@ export const listPurchaseBills = async (
       amountDue: s(totals.amount_due ?? '0.00'),
     },
     counts: meta.counts as PurchaseBillTabCounts,
+    ...(typeof meta.has_any === 'boolean' ? { hasAny: meta.has_any } : {}),
   };
 };
 

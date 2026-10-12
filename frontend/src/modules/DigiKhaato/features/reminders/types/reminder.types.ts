@@ -87,6 +87,11 @@ export interface CollectionSummary {
   readonly overdue: BucketFigure;
   readonly upcoming: BucketFigure;
   readonly asOf: string;
+  /**
+   * The server's `meta.has_any`: has this business EVER recorded a ledger
+   * entry? Absent from an older server, which must then hide nothing.
+   */
+  readonly hasAny?: boolean;
 }
 
 export interface ReminderWarning {

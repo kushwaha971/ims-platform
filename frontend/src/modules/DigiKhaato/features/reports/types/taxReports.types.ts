@@ -113,6 +113,10 @@ export interface RegisterPage {
   readonly page: number;
   readonly pageSize: number;
   readonly total: number;
+  /** `meta.has_any`: whether the business has ever issued (sales) or recorded
+   *  (purchases) a document this register lists, whatever the period and
+   *  filters. Absent from an older server, which then never hides anything. */
+  readonly hasAny?: boolean;
 }
 
 export interface RegisterQuery {

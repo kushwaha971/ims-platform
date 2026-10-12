@@ -128,6 +128,7 @@ export const getRegister = async (
     page: n(meta.page),
     pageSize: n(meta.page_size),
     total: n(meta.total),
+    ...(typeof meta.has_any === 'boolean' ? { hasAny: meta.has_any } : {}),
   };
 };
 

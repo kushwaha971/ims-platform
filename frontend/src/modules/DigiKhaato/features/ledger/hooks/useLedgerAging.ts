@@ -16,6 +16,7 @@ import {
   selectAgingAsOf,
   selectAgingCachedAt,
   selectAgingError,
+  selectAgingHasAny,
   selectAgingPage,
   selectAgingPageSize,
   selectAgingTotal,
@@ -63,6 +64,8 @@ export interface UseLedgerAgingResult {
   readonly page: number;
   readonly pageSize: number;
   readonly total: number;
+  /** The server's whole-book `has_any`; `null` until it has answered. */
+  readonly hasAny: boolean | null;
   readonly setKind: (kind: AgingKind) => void;
   readonly setAsOf: (asOf: string) => void;
   readonly setTag: (tag: string | null) => void;
@@ -88,6 +91,7 @@ export const useLedgerAging = (): UseLedgerAgingResult => {
   const page = useAppSelector(selectAgingPage);
   const pageSize = useAppSelector(selectAgingPageSize);
   const total = useAppSelector(selectAgingTotal);
+  const hasAny = useAppSelector(selectAgingHasAny);
   const stale = useAppSelector(selectAgingStale);
   const isImpaired = useAppSelector(selectNetworkImpaired);
 
@@ -191,6 +195,7 @@ export const useLedgerAging = (): UseLedgerAgingResult => {
       page,
       pageSize,
       total,
+      hasAny,
       setKind,
       setAsOf,
       setTag,
@@ -214,6 +219,7 @@ export const useLedgerAging = (): UseLedgerAgingResult => {
       page,
       pageSize,
       total,
+      hasAny,
       setKind,
       setAsOf,
       setTag,

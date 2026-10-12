@@ -18,6 +18,7 @@ import type { PaymentFilters, PaymentRow, PaymentTotals } from '../types/payment
 export interface PaymentListState {
   rows: PaymentRow[];
   totals: PaymentTotals | null;
+  hasAny: boolean | null;
   page: number;
   pageSize: number;
   total: number;
@@ -32,6 +33,7 @@ export interface PaymentListState {
 const initialState: PaymentListState = {
   rows: [],
   totals: null,
+  hasAny: null,
   page: 1,
   pageSize: PAYMENT_PAGE_SIZE,
   total: 0,
@@ -76,6 +78,7 @@ const paymentListSlice = createSlice({
         if (!sameFilters(state.filters, action.meta.arg)) return;
         state.rows = action.payload.rows as Draft<PaymentRow>[];
         state.totals = action.payload.totals as Draft<PaymentTotals>;
+        state.hasAny = action.payload.hasAny ?? null;
         state.page = action.payload.page;
         state.pageSize = action.payload.pageSize;
         state.total = action.payload.total;
@@ -108,4 +111,5 @@ export const selectPaymentError = (state: RootState): ApiErrorShape | null => sl
 export const selectPaymentPage = (state: RootState): number => slice$(state).page;
 export const selectPaymentPageSize = (state: RootState): number => slice$(state).pageSize;
 export const selectPaymentTotal = (state: RootState): number => slice$(state).total;
+export const selectPaymentHasAny = (state: RootState): boolean | null => slice$(state).hasAny;
 export const selectPaymentListStale = (state: RootState): boolean => slice$(state).stale;

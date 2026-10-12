@@ -72,3 +72,43 @@ it('shows fees in, expenses out and a shortfall in words', async () => {
     )
   );
 });
+
+const ZERO_MONEY = (from: string, to: string) => ({
+  from,
+  to,
+  income: [],
+  incomeTotal: '0.00',
+  expenses: [],
+  expensesTotal: '0.00',
+  profit: '0.00',
+});
+const EMPTY_TITLE = /No money in or out yet|library\.money\.empty\.title/;
+
+it('shows a room with no money ever one empty state, no chips and no ₹0.00', async () => {
+  /* Owner, 12 Oct 2026. The defect: This month / Last month / This year chips
+     over three ₹0.00 tiles and two empty cards, for a room that has never taken
+     a fee — and a header link duplicating the empty state's one action. */
+  jest
+    .mocked(service.getLibraryMoney)
+    .mockImplementation(async (from, to) => ({ ...ZERO_MONEY(from, to), hasAny: false }));
+  signIn(['library.reports.read', 'expenses.expense.read'] as PermissionCode[]);
+  renderWithProviders(<MoneyPageContent />);
+  expect(await screen.findByText(EMPTY_TITLE)).toBeInTheDocument();
+  expect(screen.queryByRole('radio', { name: 'This month' })).not.toBeInTheDocument();
+  expect(screen.queryByText(/₹0\.00/)).not.toBeInTheDocument();
+  expect(screen.queryByTestId('library-money-in')).not.toBeInTheDocument();
+  expect(screen.queryByTestId('library-money-out')).not.toBeInTheDocument();
+  expect(screen.queryByTestId('library-money-expenses')).not.toBeInTheDocument();
+  expect(screen.getByTestId('library-money-empty-expenses')).toBeInTheDocument();
+});
+
+it('keeps the period chips when the period is quiet but the room is not', async () => {
+  jest
+    .mocked(service.getLibraryMoney)
+    .mockImplementation(async (from, to) => ({ ...ZERO_MONEY(from, to), hasAny: true }));
+  signIn(['library.reports.read', 'expenses.expense.read'] as PermissionCode[]);
+  renderWithProviders(<MoneyPageContent />);
+  expect(await screen.findByTestId('library-money-in')).toBeInTheDocument();
+  expect(screen.getByRole('radio', { name: 'This month' })).toBeInTheDocument();
+  expect(screen.queryByText(EMPTY_TITLE)).not.toBeInTheDocument();
+});

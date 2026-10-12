@@ -14,6 +14,8 @@
   "ledger.aging.column.party": "Party",
   "ledger.aging.empty.body": "Nothing outstanding — everyone is settled.",
   "ledger.aging.empty.title": "All settled",
+  "ledger.aging.emptyBook.body": "Once you write what you gave and got on a customer’s khata, who owes what — and for how long — shows here.",
+  "ledger.aging.emptyBook.title": "Nobody owes you yet",
   "ledger.aging.error.body": "The aging report could not be loaded.",
   "ledger.aging.error.title": "Couldn’t load aging",
   "ledger.aging.export": "Export CSV",

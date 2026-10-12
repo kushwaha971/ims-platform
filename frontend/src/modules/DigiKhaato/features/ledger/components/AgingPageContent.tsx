@@ -76,6 +76,14 @@ const PartyTagFilterLazy = dynamic(
  *
  * ── Every figure is a way in ─────────────────────────────────────────────
  * FR-4, and the payoff for having built LED-04 first. See `AgingColumns`.
+ *
+ * ── An empty BOOK is not an empty REPORT ─────────────────────────────────
+ * Owner, 12 Oct 2026. A shop that has never written an entry gets one plain
+ * empty state — no as-of date, export, tag picker or "₹0.00" tabs, which
+ * describe a book that does not exist. A settled book, or a tag or date that
+ * finds nobody, keeps every control: that empty list is an ANSWER to a
+ * question the merchant asked. Only the server can tell the two apart
+ * (`meta.has_any`), and until it has said, nothing is hidden.
  */
 export function AgingPageContent(): React.JSX.Element {
   const { t } = useTranslation();
@@ -199,6 +207,9 @@ export function AgingPageContent(): React.JSX.Element {
     [t, aging.summary]
   );
 
+  const emptyBook =
+    aging.status === 'succeeded' && aging.rows.length === 0 && aging.hasAny === false;
+
   if (!aging.canRead) {
     return (
       <UbPageShell>
@@ -219,106 +230,116 @@ export function AgingPageContent(): React.JSX.Element {
       <UbPageHeader
         title={t('ledger.aging.title')}
         actions={
-          <>
-            {/* Text, not a boxed field: the as-of date is read far more
+          emptyBook ? undefined : (
+            <>
+              {/* Text, not a boxed field: the as-of date is read far more
                 often than it is changed, and a form field on a report with no
                 form read as something to fill in. It is still the button that
                 opens the calendar. */}
-            <UbDateInput
-              name="aging-as-of"
-              appearance="inline"
-              inlineLabel={t('ledger.aging.asOf')}
-              aria-label={t('ledger.aging.asOf')}
-              placeholder={t('ledger.entry.date.placeholder')}
-              value={filters.asOf}
-              max={today}
-              onChange={(value: string | null) => setAsOf(value || today)}
-            />
-            {aging.canExport && (
-              <UbActionLink
-                href={reportFile ? agingReportCsvUrl(aging.filters) : agingCsvUrl(aging.filters)}
-                download
-                icon={<Download className="h-4 w-4" aria-hidden />}
-                iconOnly="mobile"
-                data-testid="aging-export"
-              >
-                {t('ledger.aging.export')}
-              </UbActionLink>
-            )}
-          </>
+              <UbDateInput
+                name="aging-as-of"
+                appearance="inline"
+                inlineLabel={t('ledger.aging.asOf')}
+                aria-label={t('ledger.aging.asOf')}
+                placeholder={t('ledger.entry.date.placeholder')}
+                value={filters.asOf}
+                max={today}
+                onChange={(value: string | null) => setAsOf(value || today)}
+              />
+              {aging.canExport && (
+                <UbActionLink
+                  href={reportFile ? agingReportCsvUrl(aging.filters) : agingCsvUrl(aging.filters)}
+                  download
+                  icon={<Download className="h-4 w-4" aria-hidden />}
+                  iconOnly="mobile"
+                  data-testid="aging-export"
+                >
+                  {t('ledger.aging.export')}
+                </UbActionLink>
+              )}
+            </>
+          )
         }
       />
 
       <UbStack gap={4} data-testid="aging-screen">
-        <UbTabs<AgingKind>
-          value={filters.kind}
-          onValueChange={setKind}
-          tabs={tabs}
-          ariaLabel={t('ledger.aging.side')}
-          layout="fit"
-          /* Only once there are tags to pick, for the reason the party list
+        {emptyBook ? (
+          <UbEmptyState
+            variant="firstUse"
+            title={t('ledger.aging.emptyBook.title')}
+            description={t('ledger.aging.emptyBook.body')}
+          />
+        ) : (
+          <UbTabs<AgingKind>
+            value={filters.kind}
+            onValueChange={setKind}
+            tabs={tabs}
+            ariaLabel={t('ledger.aging.side')}
+            layout="fit"
+            /* Only once there are tags to pick, for the reason the party list
              gives: a picker that opens empty is the first thing a merchant
              with no tags would meet. */
-          trailing={
-            tags.length > 0 || filters.tag ? (
-              <PartyTagFilterLazy
-                t={t}
-                value={filters.tag ?? ''}
-                onChange={handleTag}
-                tags={tags}
-                className="w-48 shrink-0"
-              />
-            ) : undefined
-          }
-        >
-          <UbStack gap={4}>
-            {aging.asOfProblem && (
-              <UbStatusBanner tone="error" title={t('ledger.aging.asOf.future')} />
-            )}
+            trailing={
+              tags.length > 0 || filters.tag ? (
+                <PartyTagFilterLazy
+                  t={t}
+                  value={filters.tag ?? ''}
+                  onChange={handleTag}
+                  tags={tags}
+                  className="w-48 shrink-0"
+                />
+              ) : undefined
+            }
+          >
+            <UbStack gap={4}>
+              {aging.asOfProblem && (
+                <UbStatusBanner tone="error" title={t('ledger.aging.asOf.future')} />
+              )}
 
-            {/* §7 — four tiles, youngest first. Only the oldest is painted as
+              {/* §7 — four tiles, youngest first. Only the oldest is painted as
                 a problem: three warning tiles beside it would make every shop's
                 book read as an alarm, and every shop has money in 0–30. */}
-            {aging.totals && aging.rows.length > 0 && (
-              <SummaryStatGrid storageKey="aging">
-                {AGING_BUCKETS.map((bucket) => (
-                  <UbStatCard
-                    key={bucket}
-                    label={t(bucketLabelId(bucket))}
-                    value={formatInr(aging.totals?.[bucket] ?? '0.00')}
-                    tone={bucket === '90_plus' ? 'danger' : 'default'}
-                  />
-                ))}
-              </SummaryStatGrid>
-            )}
+              {aging.totals && aging.rows.length > 0 && (
+                <SummaryStatGrid storageKey="aging">
+                  {AGING_BUCKETS.map((bucket) => (
+                    <UbStatCard
+                      key={bucket}
+                      label={t(bucketLabelId(bucket))}
+                      value={formatInr(aging.totals?.[bucket] ?? '0.00')}
+                      tone={bucket === '90_plus' ? 'danger' : 'default'}
+                    />
+                  ))}
+                </SummaryStatGrid>
+              )}
 
-            <UbDataGrid
-              rows={aging.rows}
-              columns={columns}
-              rowId={rowId}
-              rowName={rowName}
-              state={gridState}
-              labels={labels}
-              emptyStates={emptyStates}
-              caption={t(`ledger.aging.caption.${filters.kind}`)}
-              storageId="ledger.aging"
-              page={{
-                page: aging.page,
-                pageSize: aging.pageSize,
-                total: aging.total,
-                totalPages: Math.max(Math.ceil(aging.total / Math.max(aging.pageSize, 1)), 1),
-              }}
-              onPageChange={setPage}
-              sort={sort}
-              onSortChange={handleSort}
-              /* Cards only. On a table the party cell is already a link to
+              <UbDataGrid
+                rows={aging.rows}
+                columns={columns}
+                rowId={rowId}
+                rowName={rowName}
+                state={gridState}
+                labels={labels}
+                emptyStates={emptyStates}
+                caption={t(`ledger.aging.caption.${filters.kind}`)}
+                storageId="ledger.aging"
+                page={{
+                  page: aging.page,
+                  pageSize: aging.pageSize,
+                  total: aging.total,
+                  totalPages: Math.max(Math.ceil(aging.total / Math.max(aging.pageSize, 1)), 1),
+                }}
+                onPageChange={setPage}
+                sort={sort}
+                onSortChange={handleSort}
+                /* Cards only. On a table the party cell is already a link to
                  the same statement (`AgingColumns`), and the grid wraps the
                  first cell in its row-open button whenever this is passed —
                  which made that link an `<a>` inside a `<button>`. */
-              onRowOpen={tier === 'cards' ? handleOpen : undefined}
-            />
-          </UbStack>
-        </UbTabs>
+                onRowOpen={tier === 'cards' ? handleOpen : undefined}
+              />
+            </UbStack>
+          </UbTabs>
+        )}
       </UbStack>
     </UbPageShell>
   );

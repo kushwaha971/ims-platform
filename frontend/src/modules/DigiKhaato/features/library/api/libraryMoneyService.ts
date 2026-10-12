@@ -14,11 +14,12 @@ export const getLibraryMoney = async (
   to: string,
   signal?: AbortSignal
 ): Promise<LibraryMoney> => {
-  const response = await api.get<{ data: Wire }>(
+  const response = await api.get<{ data: Wire; meta?: { has_any?: boolean } }>(
     `${LIBRARY_PATHS.PROFIT}${toQueryString({ from, to })}`,
     { signal }
   );
   const d = response.data.data;
+  const meta = response.data.meta;
   return {
     from: s(d.from),
     to: s(d.to),
@@ -30,5 +31,6 @@ export const getLibraryMoney = async (
     })),
     expensesTotal: s(d.expenses_total),
     profit: s(d.profit),
+    ...(typeof meta?.has_any === 'boolean' ? { hasAny: meta.has_any } : {}),
   };
 };

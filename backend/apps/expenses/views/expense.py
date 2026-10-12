@@ -36,7 +36,7 @@ from apps.expenses.permissions import (
     ExpenseCategoryPermissions,
     ExpensePermissions,
 )
-from apps.expenses.selectors.cashbook import build_cashbook
+from apps.expenses.selectors.cashbook import build_cashbook, has_any_money
 from apps.expenses.selectors.expense import (
     default_to_recorded,
     expense_detail_queryset,
@@ -137,7 +137,13 @@ class ExpenseViewSet(
         totals = expense_totals(queryset)
         page = self.paginate_queryset(queryset)
         data = ExpenseSerializer(page, many=True).data
-        meta = {**self.paginator.get_meta(), "totals": ExpenseTotalsSerializer(totals).data}
+        meta = {
+            **self.paginator.get_meta(),
+            "totals": ExpenseTotalsSerializer(totals).data,
+            # Approved designs (12 Oct 2026): any expense at all, whatever the
+            # filters — an empty book hides its search, tabs and filters.
+            "has_any": self.get_queryset().exists(),
+        }
         return StandardResponse.ok(data, meta=meta)
 
     def export_queryset(self) -> Any:
@@ -301,5 +307,12 @@ class CashbookView(APIView):
         data["scope"] = "full" if financial else "today_cash"
         return StandardResponse.ok(
             data,
-            meta={"rows_total": rows_total, "generated_at": dt.datetime.now(dt.UTC).isoformat()},
+            meta={
+                "rows_total": rows_total,
+                "generated_at": dt.datetime.now(dt.UTC).isoformat(),
+                # Approved designs (12 Oct 2026): any money event ever, in any
+                # bucket — an empty book shows one empty state and no period
+                # picker; a quiet range in a busy book keeps its controls.
+                "has_any": has_any_money(tenant=tenant),
+            },
         )

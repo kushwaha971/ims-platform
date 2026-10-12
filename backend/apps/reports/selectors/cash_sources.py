@@ -44,10 +44,35 @@ SELECT m ->> 'mode' AS mode, p.direction, SUM((m ->> 'amount')::numeric)
 """
 
 
+_EXISTS_SQL = """
+SELECT EXISTS (
+  SELECT 1
+    FROM payments_payment p
+    CROSS JOIN LATERAL jsonb_array_elements(p.mode_breakup) AS m
+   WHERE p.tenant_id = %(tenant)s AND p.status = 'recorded'
+     AND m ->> 'mode' <> %(adjustment)s
+)
+"""
+
+
 class PaymentCashSource:
     """Recorded payments in and out, by each mode's share."""
 
     name = "payment"
+
+    def exists(self, *, tenant: Any) -> bool:
+        """Any recorded payment with a share that moved money (an all-adjustment
+        payment is never a cashbook row, R4, so it does not make the book non-empty)."""
+        with connection.cursor() as cursor:
+            cursor.execute(
+                _EXISTS_SQL,
+                {
+                    "tenant": str(getattr(tenant, "id", tenant)),
+                    "adjustment": PaymentMode.ADJUSTMENT.value,
+                },
+            )
+            (found,) = cursor.fetchone()
+        return bool(found)
 
     def rows(self, *, tenant: Any, date_from: dt.date, date_to: dt.date) -> Iterable[CashRow]:
         from apps.payments.models import Payment

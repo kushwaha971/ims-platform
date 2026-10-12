@@ -4,7 +4,7 @@ import { useCallback, useMemo } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { UbFilterSelect, UbSearchInput } from 'src/design-system';
+import { UbActionLink, UbFilterSelect, UbSearchInput } from 'src/design-system';
 import {
   UbDataGrid,
   useGridTier,
@@ -12,7 +12,9 @@ import {
   type UbGridState,
 } from 'src/design-system/UbDataGrid';
 import { useCommittedSearch } from 'src/hooks/useCommittedSearch';
+import { usePermissions } from 'src/hooks/usePermissions';
 import { useTranslation } from 'src/hooks/useTranslation';
+import { ROUTES } from 'src/routes';
 
 import { PROFIT_GROUPS } from '../constants/profitReportConstants';
 import { TAX_PERIOD_PRESETS } from '../constants/taxReportConstants';
@@ -26,6 +28,9 @@ import { ReportPageShell } from './ReportPageShell';
 
 import type { ProfitGroup, ProfitRow } from '../types/profitReport.types';
 import type { TaxPeriodPreset } from '../types/taxReports.types';
+
+/** Where a bill is made — the empty book's one action. */
+const NEW_BILL = `${ROUTES.SALES_INVOICES}/new`;
 
 /** Matches the other lists' search: a keystroke is not a request. */
 const SEARCH_DEBOUNCE_MS = 300;
@@ -47,6 +52,8 @@ export function ProfitReportPageContent(): React.JSX.Element {
   const report = useProfitReport();
   const { filters, update, refetch, error } = report;
   const { group } = filters;
+  const { can, hasModule } = usePermissions();
+  const canBill = hasModule('sales') && can('sales.invoice.write');
 
   const commitSearch = useCallback((q: string) => update({ q }), [update]);
   const [search, setSearch] = useCommittedSearch(filters.q, commitSearch, SEARCH_DEBOUNCE_MS);
@@ -87,6 +94,13 @@ export function ProfitReportPageContent(): React.JSX.Element {
             : 'empty'
           : 'rows';
 
+  /* Approved designs (12 Oct 2026): `hasAny` is the server's, over every bill
+     ever. A quiet month keeps the period and view pickers (moving them is how
+     the merchant finds the bills); only a business that has never billed gets
+     the single empty state. `undefined` (an older server) never hides anything. */
+  const emptyBook =
+    report.status === 'succeeded' && rows.length === 0 && report.data?.hasAny === false;
+
   const rowId = useCallback((row: ProfitRow) => row.id ?? `none-${group}`, [group]);
   const rowName = useCallback((row: ProfitRow) => profitRowName(t, group, row), [t, group]);
   const openRow = useCallback(
@@ -101,6 +115,19 @@ export function ProfitReportPageContent(): React.JSX.Element {
     <ReportPageShell<TaxPeriodPreset>
       title={t('reports.profit.title')}
       testId="profit-report"
+      emptyBook={
+        emptyBook
+          ? {
+              title: t('reports.profit.emptyBook.title'),
+              description: t('reports.profit.emptyBook.body'),
+              action: canBill ? (
+                <UbActionLink href={NEW_BILL} variant="secondary">
+                  {t('reports.emptyBook.newSale')}
+                </UbActionLink>
+              ) : undefined,
+            }
+          : null
+      }
       noAccess={
         report.canRead
           ? null

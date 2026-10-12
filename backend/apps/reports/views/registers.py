@@ -122,6 +122,16 @@ class _RegisterBase(CsvExportMixin, APIView):
             else selectors.purchase_register_totals
         )
         totals = totals_of(tenant=self.tenant(), params=params)
+        # Approved designs (12 Oct 2026): an empty BOOK shows one empty state and
+        # no period, filters or void toggle; an empty PERIOD keeps them all. Only
+        # the server can tell the two apart, so it says so — over the whole book,
+        # never the filtered set. A row on this page answers it without a query.
+        has_any_of = (
+            selectors.sales_register_has_any
+            if self.book == "sales"
+            else selectors.purchase_register_has_any
+        )
+        has_any = bool(data) or has_any_of(tenant=self.tenant())
         return StandardResponse.ok(
             data,
             meta={
@@ -134,6 +144,7 @@ class _RegisterBase(CsvExportMixin, APIView):
                 "date_to": params.date_to.isoformat(),
                 "include_void": params.include_void,
                 "totals": _money(totals),
+                "has_any": has_any,
             },
         )
 

@@ -143,6 +143,28 @@ describe('Module reminder tabs', () => {
     expect(moduleService.listModuleReminders).not.toHaveBeenCalled();
   });
 
+  it('an empty shop book collapses only the Shop tab; the module tab still works', async () => {
+    /* Prevents: the owner's empty-book rule (12 Oct 2026) swallowing the
+       whole screen for a lender whose shop khata is empty — their loans are
+       still due, and the Loans tab must still reach them. */
+    service.getCollectionSummary.mockResolvedValue({
+      dueToday: { count: 0, amount: '0.00' },
+      overdue: { count: 0, amount: '0.00' },
+      upcoming: { count: 0, amount: '0.00' },
+      asOf: '2026-10-12',
+      hasAny: false,
+    });
+    const user = userEvent.setup();
+    signIn(STAFF);
+    renderWithProviders(<RemindersPageContent />, { messages: MESSAGES });
+
+    expect(await screen.findByText('Nobody to remind yet')).toBeInTheDocument();
+    expect(screen.queryByRole('tablist', { name: 'Reminder lists' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'Loans' }));
+    expect(await screen.findByText('Instalment 4 of LN-0042')).toBeInTheDocument();
+  });
+
   it("list the module's records by bucket, with Remind or the next allowed time", async () => {
     const user = userEvent.setup();
     signIn(STAFF);

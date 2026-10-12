@@ -48,6 +48,8 @@
   "reminders.empty.today.title": "आज किसी का भुगतान नहीं",
   "reminders.empty.upcoming.body": "अगले 7 दिनों में कोई वसूली तारीख नहीं।",
   "reminders.empty.upcoming.title": "आगे कुछ नहीं",
+  "reminders.emptyBook.body": "जब किसी ग्राहक पर पैसे बाकी हों, उसके खाते पर वसूली तारीख डालें — वह यहाँ दिखेगा।",
+  "reminders.emptyBook.title": "अभी किसी को याद नहीं दिलाना",
   "reminders.error.body": "कनेक्शन जाँचें और फिर कोशिश करें।",
   "reminders.error.send": "रिमाइंडर दर्ज नहीं हो सका। मैसेज पर इसका असर नहीं पड़ा।",
   "reminders.error.title": "रिमाइंडर लोड नहीं हो सके",

@@ -5,6 +5,7 @@ import { useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 
 import {
+  UbActionLink,
   UbButton,
   UbEmptyState,
   UbFilterChip,
@@ -23,7 +24,9 @@ import {
   type UbDataGridEmptyStates,
   type UbGridState,
 } from 'src/design-system/UbDataGrid';
+import { usePermissions } from 'src/hooks/usePermissions';
 import { useTranslation } from 'src/hooks/useTranslation';
+import { ROUTES } from 'src/routes';
 
 import {
   ITC_FILTERS,
@@ -48,6 +51,18 @@ import type {
   TaxPeriodPreset,
 } from '../types/taxReports.types';
 
+/** Where each book's documents are made — the empty book's one action. */
+const NEW_DOCUMENT: Readonly<
+  Record<RegisterBook, { href: string; label: string; module: 'sales' | 'purchases' }>
+> = {
+  sales: { href: `${ROUTES.SALES_INVOICES}/new`, label: 'reports.emptyBook.newSale', module: 'sales' },
+  purchase: {
+    href: `${ROUTES.PURCHASE_BILLS}/new`,
+    label: 'reports.emptyBook.newPurchase',
+    module: 'purchases',
+  },
+};
+
 /**
  * RPT-03 / RPT-04 — one register screen, for either book.
  *
@@ -66,6 +81,11 @@ export function RegisterReport({ book }: Readonly<{ book: RegisterBook }>): Reac
   const labels = useReportGridLabels();
   const { filters, update, refetch, clearFilters, error } = report;
   const ns = book === 'sales' ? 'reports.salesRegister' : 'reports.purchaseRegister';
+  const { can, hasModule } = usePermissions();
+  const newDocument = NEW_DOCUMENT[book];
+  const canCreate =
+    hasModule(newDocument.module) &&
+    can(book === 'sales' ? 'sales.invoice.write' : 'purchases.bill.write');
 
   const columns = useMemo(
     () => createRegisterColumns({ t, book, level: filters.level, isCards: tier === 'cards' }),
@@ -109,6 +129,14 @@ export function RegisterReport({ book }: Readonly<{ book: RegisterBook }>): Reac
             ? 'filtered-empty'
             : 'empty'
           : 'rows';
+
+  /* Approved designs (12 Oct 2026): `hasAny` is the server's, over the whole
+     book. A period or filter that found nothing keeps every control — they are
+     how the merchant finds the rows; only a business that has never issued (or
+     recorded) a document gets the single empty state. `undefined` (an older
+     server) never hides anything. */
+  const emptyBook =
+    report.status === 'succeeded' && rows.length === 0 && report.data?.hasAny === false;
 
   const rowId = useCallback((row: RegisterRow) => row.id, []);
   const rowName = useCallback((row: RegisterRow) => `${row.number} ${row.partyName}`.trim(), []);
@@ -208,6 +236,19 @@ export function RegisterReport({ book }: Readonly<{ book: RegisterBook }>): Reac
     <ReportPageShell<TaxPeriodPreset>
       title={t(`${ns}.title`)}
       testId={`${book}-register`}
+      emptyBook={
+        emptyBook
+          ? {
+              title: t(`${ns}.emptyBook.title`),
+              description: t(`${ns}.emptyBook.body`),
+              action: canCreate ? (
+                <UbActionLink href={newDocument.href} variant="secondary">
+                  {t(newDocument.label)}
+                </UbActionLink>
+              ) : undefined,
+            }
+          : null
+      }
       period={{
         presets: TAX_PERIOD_PRESETS.map((value) => ({
           value,

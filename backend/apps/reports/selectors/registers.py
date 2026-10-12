@@ -145,6 +145,21 @@ def _sales_base(*, tenant: Any, params: Any) -> QuerySet:
     return queryset
 
 
+def sales_register_has_any(*, tenant: Any) -> bool:
+    """Whether this business has EVER issued a document the sales register lists.
+
+    No period, no filter: the screen asks it to tell an empty book (one empty
+    state, no pickers) from a period that found nothing (keep every control,
+    because changing them is how the merchant finds the rows). A void
+    document counts — "Show void" is the control that reveals it.
+    """
+    return (
+        SalesDocument.objects.filter(tenant=tenant, kind__in=SALES_REGISTER_KINDS)
+        .exclude(status=DRAFT)
+        .exists()
+    )
+
+
 def sales_register(*, tenant: Any, params: Any) -> QuerySet:
     """FR-2 — document rows, signed, ordered (EC-5: number ties broken by date)."""
     queryset = _annotate_signed(_sales_base(tenant=tenant, params=params), DOC_MONEY)
@@ -280,6 +295,15 @@ def _purchase_base(*, tenant: Any, params: Any) -> QuerySet:
             )
         )
     return queryset
+
+
+def purchase_register_has_any(*, tenant: Any) -> bool:
+    """`sales_register_has_any` for RPT-04: any recorded (or voided) purchase bill, ever."""
+    return (
+        PurchaseDocument.objects.filter(tenant=tenant, kind__in=PURCHASE_REGISTER_KINDS)
+        .exclude(status=DRAFT)
+        .exists()
+    )
 
 
 def purchase_register(*, tenant: Any, params: Any) -> QuerySet:

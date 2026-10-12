@@ -12,6 +12,7 @@ import {
   UbButton,
   UbDateRangePicker,
   UbEmptyState,
+  UbFilterSheet,
   UbPageHeader,
   UbPageHeaderMobileActions,
   UbPageShell,
@@ -20,6 +21,7 @@ import {
   UbStatCard,
   UbTabs,
 } from 'src/design-system';
+import type { UbFilterSpec, UbFilterValues } from 'src/design-system';
 import {
   UbDataGrid,
   useGridTier,
@@ -31,6 +33,7 @@ import { useTranslation } from 'src/hooks/useTranslation';
 import { formatInr } from 'src/utils/money';
 
 import {
+  DEFAULT_INVOICE_PRESET,
   INVOICE_PRESETS,
   INVOICE_SEARCH_DEBOUNCE_MS,
   type InvoicePreset,
@@ -126,7 +129,8 @@ export function SalesFlowListPageContent({
     [t, ns, newEstimate, router, newHref, newLabelId, clearFilters, error, refetch]
   );
 
-  const narrowed = filters.tab !== 'all' || !!filters.q.trim();
+  const narrowed =
+    filters.tab !== 'all' || !!filters.q.trim() || filters.preset !== DEFAULT_INVOICE_PRESET;
   const gridState: UbGridState =
     list.status === 'loading' || (list.status === 'idle' && list.canRead)
       ? 'loading'
@@ -175,13 +179,124 @@ export function SalesFlowListPageContent({
   }
 
   const totals = list.totals;
+  /* Approved designs (12 Oct 2026): `hasAny` is the server's, so a period or
+     search that found nothing keeps its controls; only a book with none of
+     this kind at all is reduced to the empty card. */
+  const emptyBook = list.status === 'succeeded' && list.rows.length === 0 && list.hasAny === false;
+  const phone = tier === 'cards';
+  /* On a phone: the search and ONE Filters button holding the tabs and the
+     period; each default reads as "no filter". */
+  const phoneSpecs: UbFilterSpec[] = [
+    {
+      kind: 'single',
+      key: 'tab',
+      label: t('sales.tab.label'),
+      anyLabel: t(`${ns}.tab.all`),
+      options: FLOW_TABS[kind]
+        .filter((tab) => tab !== 'all')
+        .map((value) => ({
+          value,
+          label: t(`${ns}.tab.${value}`),
+          hint: list.tabs?.[value] ? String(list.tabs[value]) : undefined,
+        })),
+    },
+    {
+      kind: 'single',
+      key: 'preset',
+      label: t('sales.period.label'),
+      anyLabel: t(`sales.period.${DEFAULT_INVOICE_PRESET}`),
+      options: INVOICE_PRESETS.filter((p) => p !== DEFAULT_INVOICE_PRESET && p !== 'custom').map(
+        (value) => ({ value, label: t(`sales.period.${value}`) })
+      ),
+    },
+    {
+      kind: 'dateRange',
+      key: 'range',
+      label: t('sales.period.between'),
+      fromKey: 'dateFrom',
+      toKey: 'dateTo',
+      fromLabel: t('sales.period.from'),
+      toLabel: t('sales.period.to'),
+      max: list.today,
+    },
+  ];
+  const custom = filters.preset === 'custom';
+  const phoneValues: UbFilterValues = {
+    tab: filters.tab === 'all' ? '' : filters.tab,
+    preset: filters.preset === DEFAULT_INVOICE_PRESET || custom ? '' : filters.preset,
+    dateFrom: custom ? filters.dateFrom : '',
+    dateTo: custom ? filters.dateTo : '',
+  };
+  const applyPhone = (next: UbFilterValues) => {
+    const ranged = Boolean(next.dateFrom || next.dateTo);
+    list.applyFilters({
+      tab: (next.tab || 'all') as FlowTab,
+      preset: ranged ? 'custom' : ((next.preset || DEFAULT_INVOICE_PRESET) as InvoicePreset),
+      dateFrom: next.dateFrom || filters.dateFrom,
+      dateTo: next.dateTo || filters.dateTo,
+    });
+  };
+  const searchBox = (
+    <UbSearchInput
+      value={search}
+      onChange={setSearch}
+      placeholder={t('sales.search.placeholder')}
+      aria-label={t('sales.search.label')}
+      className={phone ? 'min-w-0 flex-1' : 'w-56'}
+    />
+  );
+  const stats = totals ? (
+    <SummaryStatGrid storageKey="salesFlows">
+      <UbStatCard
+        icon={<Receipt className="h-4 w-4" aria-hidden />}
+        label={t(stat)}
+        value={formatInr(totals.grandTotal)}
+      />
+      {kind === 'credit_note' ? (
+        <UbStatCard
+          icon={<IndianRupee className="h-4 w-4" aria-hidden />}
+          label={t('sales.creditNote.openCredit')}
+          value={formatInr(totals.amountDue)}
+        />
+      ) : (
+        <UbStatCard
+          icon={<FileText className="h-4 w-4" aria-hidden />}
+          // The list's own noun: an estimates list counts estimates, not "Bills".
+          label={t(`${ns}.count`)}
+          value={String(totals.count)}
+        />
+      )}
+    </SummaryStatGrid>
+  ) : null;
+  const grid = (
+    <UbDataGrid
+      rows={list.rows}
+      columns={columns}
+      rowId={rowId}
+      rowName={rowName}
+      state={gridState}
+      labels={labels}
+      emptyStates={emptyStates}
+      caption={t(`${ns}.listTitle`)}
+      storageId={`sales.${kind}.columns`}
+      page={{
+        page: list.page,
+        pageSize: list.pageSize,
+        total: list.total,
+        totalPages: Math.max(Math.ceil(list.total / Math.max(list.pageSize, 1)), 1),
+      }}
+      onPageChange={list.setPage}
+      onRowOpen={openRow}
+      cardAvatar={false}
+    />
+  );
   return (
     <UbPageShell>
       <UbPageHeader
         title={t(`${ns}.listTitle`)}
         actions={<SalesSectionLinks current={kind} />}
         primaryAction={
-          newEstimate ? (
+          newEstimate && !emptyBook ? (
             <UbActionLink
               href={newHref}
               variant="primary"
@@ -201,96 +316,81 @@ export function SalesFlowListPageContent({
             mobile={{
               menuLabel: t('common.action.moreActions'),
               closeLabel: t('common.action.close'),
-              primary: newEstimate
-                ? {
-                    label: t(newLabelId),
-                    icon: <Plus className="h-6 w-6" aria-hidden />,
-                    href: newHref,
-                  }
-                : undefined,
+              // The empty book's one button is in the middle of the screen.
+              primary:
+                newEstimate && !emptyBook
+                  ? {
+                      label: t(newLabelId),
+                      icon: <Plus className="h-6 w-6" aria-hidden />,
+                      href: newHref,
+                    }
+                  : undefined,
             }}
           />
         )}
       />
       <UbStack gap={4} data-testid={`${kind}-list-screen`}>
-        <UbDateRangePicker<InvoicePreset>
-          presets={presets}
-          preset={filters.preset}
-          onPresetChange={list.setPreset}
-          customPreset="custom"
-          from={filters.dateFrom}
-          to={filters.dateTo}
-          onRangeChange={list.setRange}
-          max={list.today}
-          name={`${kind}-period`}
-          labels={{
-            presets: t('sales.period.label'),
-            from: t('sales.period.from'),
-            to: t('sales.period.to'),
-            apply: t('common.action.apply'),
-            close: t('common.action.close'),
-          }}
-        />
-        {totals && (
-          <SummaryStatGrid storageKey="salesFlows">
-            <UbStatCard
-              icon={<Receipt className="h-4 w-4" aria-hidden />}
-              label={t(stat)}
-              value={formatInr(totals.grandTotal)}
-            />
-            {kind === 'credit_note' ? (
-              <UbStatCard
-                icon={<IndianRupee className="h-4 w-4" aria-hidden />}
-                label={t('sales.creditNote.openCredit')}
-                value={formatInr(totals.amountDue)}
-              />
-            ) : (
-              <UbStatCard
-                icon={<FileText className="h-4 w-4" aria-hidden />}
-                // The list's own noun: an estimates list counts estimates, not "Bills".
-                label={t(`${ns}.count`)}
-                value={String(totals.count)}
-              />
-            )}
-          </SummaryStatGrid>
-        )}
-        <UbTabs<FlowTab>
-          value={filters.tab}
-          onValueChange={list.setTab}
-          tabs={tabs}
-          ariaLabel={t('sales.tab.label')}
-          layout="fit"
-          trailing={
-            <UbSearchInput
-              value={search}
-              onChange={setSearch}
-              placeholder={t('sales.search.placeholder')}
-              aria-label={t('sales.search.label')}
-              className="w-56"
-            />
-          }
-        >
-          <UbDataGrid
-            rows={list.rows}
-            columns={columns}
-            rowId={rowId}
-            rowName={rowName}
-            state={gridState}
-            labels={labels}
-            emptyStates={emptyStates}
-            caption={t(`${ns}.listTitle`)}
-            storageId={`sales.${kind}.columns`}
-            page={{
-              page: list.page,
-              pageSize: list.pageSize,
-              total: list.total,
-              totalPages: Math.max(Math.ceil(list.total / Math.max(list.pageSize, 1)), 1),
-            }}
-            onPageChange={list.setPage}
-            onRowOpen={openRow}
-            cardAvatar={false}
+        {emptyBook ? (
+          /* Owner, 12 Oct 2026: an empty book is one sentence and one button —
+             no period, ₹0 totals, tabs or search over nothing. */
+          <UbEmptyState
+            variant="firstUse"
+            title={emptyStates.firstUse.title}
+            description={emptyStates.firstUse.description}
+            action={emptyStates.firstUse.action}
           />
-        </UbTabs>
+        ) : phone ? (
+          <>
+            <UbStack direction="row" gap={2} align="center">
+              {searchBox}
+              <UbFilterSheet
+                specs={phoneSpecs}
+                values={phoneValues}
+                onApply={applyPhone}
+                labels={{
+                  title: t('common.filters.title'),
+                  apply: t('common.action.apply'),
+                  reset: t('common.action.reset'),
+                  close: t('common.action.close'),
+                }}
+              />
+            </UbStack>
+            {stats}
+            {grid}
+          </>
+        ) : (
+          <>
+            <UbDateRangePicker<InvoicePreset>
+              presets={presets}
+              preset={filters.preset}
+              onPresetChange={list.setPreset}
+              customPreset="custom"
+              from={filters.dateFrom}
+              to={filters.dateTo}
+              onRangeChange={list.setRange}
+              max={list.today}
+              name={`${kind}-period`}
+              labels={{
+                presets: t('sales.period.label'),
+                from: t('sales.period.from'),
+                to: t('sales.period.to'),
+                apply: t('common.action.apply'),
+                close: t('common.action.close'),
+              }}
+            />
+            {stats}
+            <UbTabs<FlowTab>
+              value={filters.tab}
+              onValueChange={list.setTab}
+              tabs={tabs}
+              ariaLabel={t('sales.tab.label')}
+              layout="fit"
+              trailing={searchBox}
+            >
+              {grid}
+            </UbTabs>
+          </>
+        )}
       </UbStack>
     </UbPageShell>
   );

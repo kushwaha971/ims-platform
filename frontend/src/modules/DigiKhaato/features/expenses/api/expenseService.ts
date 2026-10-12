@@ -66,6 +66,7 @@ interface ExpenseListApiResponse {
         amount: string;
       }[];
     };
+    readonly has_any?: boolean;
   };
 }
 
@@ -171,6 +172,7 @@ export const listExpenses = async (
     page: meta.page,
     pageSize: meta.page_size,
     total: meta.total,
+    ...(typeof meta.has_any === 'boolean' ? { hasAny: meta.has_any } : {}),
   };
 };
 

@@ -46,6 +46,13 @@ export interface UsePurchaseBillListResult extends Omit<PurchaseBillListState, '
   readonly setPreset: (preset: PurchaseBillPreset) => void;
   readonly setRange: (from: string | null, to: string | null) => void;
   readonly setTab: (tab: PurchaseBillTab) => void;
+  /** The phone's Filters sheet: tab, period and dates in ONE address-bar update. */
+  readonly applyFilters: (next: {
+    tab: PurchaseBillTab;
+    preset: PurchaseBillPreset;
+    dateFrom: string;
+    dateTo: string;
+  }) => void;
   readonly setQuery: (q: string) => void;
   readonly setPage: (page: number) => void;
   readonly clearFilters: () => void;
@@ -144,6 +151,25 @@ export const usePurchaseBillList = (
     (tab: PurchaseBillTab) => push({ ...filters, tab, page: 1 }),
     [push, filters]
   );
+  const applyFilters = useCallback(
+    (next: {
+      tab: PurchaseBillTab;
+      preset: PurchaseBillPreset;
+      dateFrom: string;
+      dateTo: string;
+    }) => {
+      const resolved = next.preset === 'custom' ? null : resolvePurchasePreset(next.preset, today);
+      push({
+        ...filters,
+        tab: next.tab,
+        preset: next.preset,
+        dateFrom: resolved?.dateFrom ?? next.dateFrom,
+        dateTo: resolved?.dateTo ?? next.dateTo,
+        page: 1,
+      });
+    },
+    [push, filters, today]
+  );
   const setQuery = useCallback((q: string) => push({ ...filters, q, page: 1 }), [push, filters]);
   const setPage = useCallback((page: number) => push({ ...filters, page }), [push, filters]);
   const clearFilters = useCallback(
@@ -163,6 +189,7 @@ export const usePurchaseBillList = (
     setPreset,
     setRange,
     setTab,
+    applyFilters,
     setQuery,
     setPage,
     clearFilters,

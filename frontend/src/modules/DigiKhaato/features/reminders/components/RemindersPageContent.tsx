@@ -89,6 +89,18 @@ const FILTER_LABEL: Readonly<Record<ReminderKindFilter, string>> = {
  * A single reminder is the khata's sheet, with the server's text. Bulk is the
  * sequential flow in `BulkReminderDialog`: a browser opens one window per tap,
  * so forty reminders are forty taps, each on a real link.
+ *
+ * ── An empty book is one sentence ────────────────────────────────────────
+ * Owner, 12 Oct 2026. A shop with no ledger entry at all sees one empty state
+ * in place of the shop's tabs — not "Today 0 · Late 0 · Next 0" over
+ * "₹0.00 from 0 customers", which is a report about nothing. The flag is the
+ * summary's `meta.has_any` (the same response the tab counts come from), and
+ * it is `undefined` until the server says, so nothing hides early or on an
+ * older server. A book with entries and nobody due keeps its tabs: that empty
+ * list is the answer to "who do I chase today". The settings button stays —
+ * it is the shop's reminder POLICY (auto-SMS, the text), which a merchant may
+ * well set before their first customer owes them, not a control over a list.
+ * Module tabs (library, lending) are untouched: only the Shop scope collapses.
  */
 export function RemindersPageContent(): React.JSX.Element {
   const { t } = useTranslation();
@@ -269,6 +281,7 @@ export function RemindersPageContent(): React.JSX.Element {
   }
 
   const figure = isBucket(tab) ? bucketFigure(summary, tab) : null;
+  const emptyBook = summary?.hasAny === false;
   const pageIds = due.rows.map((row) => row.id);
 
   const dueState: UbGridState =
@@ -290,7 +303,13 @@ export function RemindersPageContent(): React.JSX.Element {
             : 'empty'
           : 'rows';
 
-  const shopTabs = (
+  const shopTabs = emptyBook ? (
+    <UbEmptyState
+      variant="firstUse"
+      title={t('reminders.emptyBook.title')}
+      description={t('reminders.emptyBook.body')}
+    />
+  ) : (
     <UbTabs<ReminderTab>
       value={tab}
       onValueChange={setTab}

@@ -15,6 +15,7 @@ import { todayInTenantTz } from 'src/utils/dates';
 import {
   expenseFiltersChanged,
   selectExpenseError,
+  selectExpenseHasAny,
   selectExpenseListStale,
   selectExpensePage,
   selectExpensePageSize,
@@ -46,6 +47,7 @@ import type {
 export interface UseExpenseListResult {
   readonly rows: readonly Expense[];
   readonly totals: ExpenseTotals | null;
+  readonly hasAny: boolean | null;
   readonly filters: ExpenseFilters;
   readonly today: string;
   readonly status: RequestStatus;
@@ -61,6 +63,8 @@ export interface UseExpenseListResult {
   readonly setMode: (mode: PaymentMode | null) => void;
   readonly setQuery: (q: string) => void;
   readonly setPage: (page: number) => void;
+  /** The phone's Filters sheet: everything but the search in ONE address-bar update. */
+  readonly applyFilters: (next: ExpenseFilters) => void;
   readonly clearFilters: () => void;
   readonly refetch: () => void;
 }
@@ -81,6 +85,7 @@ export const useExpenseList = (): UseExpenseListResult => {
   const pageSize = useAppSelector(selectExpensePageSize);
   const total = useAppSelector(selectExpenseTotal);
   const stale = useAppSelector(selectExpenseListStale);
+  const hasAny = useAppSelector(selectExpenseHasAny);
 
   const canRead = hasModule('expenses') && can('expenses.expense.read');
   const today = useMemo(() => todayInTenantTz(timezone ?? undefined), [timezone]);
@@ -154,6 +159,18 @@ export const useExpenseList = (): UseExpenseListResult => {
   );
   const setQuery = useCallback((q: string) => push({ ...filters, q, page: 1 }), [push, filters]);
   const setPage = useCallback((next: number) => push({ ...filters, page: next }), [push, filters]);
+  const applyFilters = useCallback(
+    (next: ExpenseFilters) => {
+      const resolved = next.preset === 'custom' ? null : resolveExpensePreset(next.preset, today);
+      push({
+        ...next,
+        dateFrom: resolved?.dateFrom ?? next.dateFrom,
+        dateTo: resolved?.dateTo ?? next.dateTo,
+        page: 1,
+      });
+    },
+    [push, today]
+  );
   const clearFilters = useCallback(
     () => push({ ...filters, tab: 'all', categoryId: null, mode: null, q: '', page: 1 }),
     [push, filters]
@@ -166,6 +183,7 @@ export const useExpenseList = (): UseExpenseListResult => {
     () => ({
       rows,
       totals,
+      hasAny,
       filters,
       today,
       status,
@@ -181,12 +199,14 @@ export const useExpenseList = (): UseExpenseListResult => {
       setMode,
       setQuery,
       setPage,
+      applyFilters,
       clearFilters,
       refetch,
     }),
     [
       rows,
       totals,
+      hasAny,
       filters,
       today,
       status,
@@ -202,6 +222,7 @@ export const useExpenseList = (): UseExpenseListResult => {
       setMode,
       setQuery,
       setPage,
+      applyFilters,
       clearFilters,
       refetch,
     ]

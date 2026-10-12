@@ -184,3 +184,57 @@ it('tells a member without the financial read, and asks nothing', async () => {
   expect(await screen.findByText('Profit is for the owner and the accountant')).toBeInTheDocument();
   expect(service.getProfitReport).not.toHaveBeenCalled();
 });
+
+/**
+ * Approved designs (12 Oct 2026): a business that has never billed sees ONE
+ * empty state — no period, "View: By item", search, Export or ₹0 P&L. A quiet
+ * month in a business that HAS billed keeps every control: moving the period
+ * is how the bills are found.
+ */
+const ZERO: ProfitTotals = {
+  bills: 0,
+  saleValue: '0.00',
+  cost: '0.00',
+  profit: '0.00',
+  marginPct: null,
+  uncostedLines: 0,
+  expenses: '0.00',
+  netProfit: '0.00',
+};
+const emptyPage = (hasAny: boolean | undefined): ProfitPage => ({
+  ...page([], ZERO),
+  ...(hasAny === undefined ? {} : { hasAny }),
+});
+const EXPORTING_OWNER: PermissionCode[] = [...OWNER, 'reports.export', 'sales.invoice.write'];
+
+it('reduces a business that has never billed to one empty state and a way to bill', async () => {
+  signIn(EXPORTING_OWNER, MODULES);
+  service.getProfitReport.mockImplementation(async () => emptyPage(false));
+  renderWithProviders(<ProfitReportPageContent />);
+  expect(await screen.findByText('Profit appears here once you make bills.')).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'New bill' })).toHaveAttribute(
+    'href',
+    '/sales/invoices/new'
+  );
+  expect(screen.queryByRole('button', { name: /^View:/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /Export/ })).not.toBeInTheDocument();
+  expect(screen.queryByText('This month')).not.toBeInTheDocument();
+  expect(screen.queryByText('₹0.00')).not.toBeInTheDocument();
+});
+
+it.each([
+  ['a quiet month in a business that has billed', true],
+  ['an older server that does not say', undefined],
+])('keeps every control for %s', async (_label, hasAny) => {
+  signIn(EXPORTING_OWNER, MODULES);
+  service.getProfitReport.mockImplementation(async () => emptyPage(hasAny));
+  renderWithProviders(<ProfitReportPageContent />);
+  expect(await screen.findByText('No sales in this period')).toBeInTheDocument();
+  // The same controls the empty book asserts ABSENT, so neither test is vacuous.
+  expect(screen.getByRole('button', { name: /^View:/ })).toBeInTheDocument();
+  expect(screen.getByRole('searchbox')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Export/ })).toBeInTheDocument();
+  expect(screen.getAllByText('This month').length).toBeGreaterThan(0);
+  expect(screen.queryByRole('link', { name: 'New bill' })).not.toBeInTheDocument();
+});

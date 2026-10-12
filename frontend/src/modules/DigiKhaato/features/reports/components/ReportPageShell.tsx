@@ -55,7 +55,21 @@ export type { ReportEmpty, ReportState } from './ReportStateBody';
  *
  * A reader without access gets `noAccess` alone — no header controls, no
  * export, no request that would 403.
+ *
+ * An EMPTY BOOK (`emptyBook`, approved designs 12 Oct 2026) — the business has
+ * never recorded anything this report reads, per the server's `meta.has_any` —
+ * gets the title and one first-use empty state: no period, filters, switches,
+ * Export or ₹0 figures, because every one of them would be a control over
+ * nothing. A period that found nothing in a book that HAS records is not an
+ * empty book, and keeps all of them; the caller decides which it is.
  */
+
+export interface ReportEmptyBook {
+  readonly title: string;
+  readonly description: string;
+  /** At most one action: where the record this report reads is made. */
+  readonly action?: ReactNode;
+}
 
 export interface ReportAsOf {
   readonly value: string;
@@ -100,6 +114,8 @@ export interface ReportPageShellProps<P extends string> {
   readonly loadingLabel: string;
   /** How many skeleton tiles above the skeleton rows; 0 for a list-only report. */
   readonly skeletonTiles?: number;
+  /** The business has no record this report reads: the title and this, nothing else. */
+  readonly emptyBook?: ReportEmptyBook | null;
   /** The reader may not open this report: render this and nothing else. */
   readonly noAccess?: { readonly title: string; readonly description?: string } | null;
   readonly children?: ReactNode;
@@ -123,6 +139,7 @@ export function ReportPageShell<P extends string>({
   loadingLabel,
   skeletonTiles = 4,
   noAccess,
+  emptyBook,
   children,
   testId,
 }: Readonly<ReportPageShellProps<P>>): React.JSX.Element {
@@ -134,6 +151,22 @@ export function ReportPageShell<P extends string>({
           title={noAccess.title}
           description={noAccess.description}
         />
+      </UbPageShell>
+    );
+  }
+
+  if (emptyBook) {
+    return (
+      <UbPageShell>
+        <UbPageHeader title={title} subtitle={description} />
+        <UbStack gap={4} data-testid={testId}>
+          <UbEmptyState
+            variant="firstUse"
+            title={emptyBook.title}
+            description={emptyBook.description}
+            action={emptyBook.action}
+          />
+        </UbStack>
       </UbPageShell>
     );
   }

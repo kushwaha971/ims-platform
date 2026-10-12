@@ -21,6 +21,8 @@ export interface SalesDocListState {
   rows: InvoiceListRow[];
   totals: InvoiceListTotals | null;
   tabs: Readonly<Record<string, number>> | null;
+  /** Does this kind exist at all, whatever the filters (approved designs, 12 Oct 2026)? */
+  hasAny: boolean | null;
   page: number;
   pageSize: number;
   total: number;
@@ -35,6 +37,7 @@ const initialState: SalesDocListState = {
   rows: [],
   totals: null,
   tabs: null,
+  hasAny: null,
   page: 1,
   pageSize: INVOICE_PAGE_SIZE,
   total: 0,
@@ -82,6 +85,7 @@ const salesDocListSlice = createSlice({
         state.rows = action.payload.rows as Draft<InvoiceListRow>[];
         state.totals = action.payload.totals;
         state.tabs = action.payload.tabs;
+        state.hasAny = action.payload.hasAny ?? null;
         state.page = action.payload.page;
         state.pageSize = action.payload.pageSize;
         state.total = action.payload.total;

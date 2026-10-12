@@ -259,6 +259,71 @@ describe('the reminders screen (LED-05)', () => {
   });
 });
 
+describe('an empty book (owner, 12 Oct 2026)', () => {
+  const ZERO = { count: 0, amount: '0.00' };
+  const noneDue = (hasAny: boolean) => {
+    service.getCollectionSummary.mockResolvedValue({
+      dueToday: ZERO,
+      overdue: ZERO,
+      upcoming: ZERO,
+      asOf: '2026-10-12',
+      hasAny,
+    });
+    service.listDueParties.mockImplementation(
+      async (_bucket: string, page: number, pageSize: number) => ({
+        rows: [],
+        page,
+        pageSize,
+        total: 0,
+      })
+    );
+  };
+
+  it('is one sentence: no tabs, no zero counts, no "₹0.00 from 0 customers"', async () => {
+    /* Prevents: a shop that has never written an entry seeing "Today 0 ·
+       Late 0 · Next 0 · Sent" over "₹0.00 from 0 customers" — a report about
+       a book that does not exist. The settings gear stays: it is the shop's
+       reminder policy, not a control over this list. */
+    noneDue(false);
+    renderWithProviders(<RemindersPageContent />);
+
+    expect(await screen.findByText('Nobody to remind yet')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'When a customer owes you, set a collection date on their khata and they appear here.'
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('tablist', { name: 'Reminder lists' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bucket-caption')).not.toBeInTheDocument();
+    expect(screen.queryByText(/₹0\.00/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reminder settings' })).toBeInTheDocument();
+  });
+
+  it('keeps the tabs for a book that has entries and nobody due', async () => {
+    /* Prevents: the collapse firing on "nothing due today" — that empty list
+       is the answer to "who do I chase", and the merchant needs Late and Next
+       to look further. */
+    noneDue(true);
+    renderWithProviders(<RemindersPageContent />);
+
+    expect(await screen.findByRole('tablist', { name: 'Reminder lists' })).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByTestId('bucket-caption')).toHaveTextContent('₹0.00 from 0 customers')
+    );
+    expect(screen.queryByText('Nobody to remind yet')).not.toBeInTheDocument();
+  });
+
+  it('hides nothing until the server has said (an older server sends no flag)', async () => {
+    /* Prevents: a missing `has_any` read as "empty" and a busy shop's
+       reminders disappearing behind a first-use card. */
+    renderWithProviders(<RemindersPageContent />);
+
+    expect(await screen.findByText('Ramesh Traders')).toBeInTheDocument();
+    expect(screen.getByRole('tablist', { name: 'Reminder lists' })).toBeInTheDocument();
+    expect(screen.queryByText('Nobody to remind yet')).not.toBeInTheDocument();
+  });
+});
+
 describe('Remind all (LED-06 FR-7)', () => {
   it('walks the customers one real link at a time, and never calls window.open', async () => {
     /* Prevents: a loop of window.open — the browser allows one popup per tap

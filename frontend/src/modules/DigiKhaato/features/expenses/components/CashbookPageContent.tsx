@@ -103,13 +103,19 @@ export function CashbookPageContent(): React.JSX.Element {
   const expectedCash = data?.range.closing.cash ?? null;
   const difference = expectedCash !== null ? countDifference(expectedCash, counted) : null;
   const outTotal = data?.range.out.total ?? '0.00';
+  /* Owner, 12 Oct 2026: a business that has never moved money is shown one
+     sentence and one button — no period picker, bucket switch, ₹0.00 tiles or
+     "Days 0". `hasAny` is the server's (any source, any bucket, ever), so a
+     quiet range in a busy book keeps every control and the merchant can move
+     it; `null` (an older server) never hides anything. */
+  const emptyBook = book.status === 'succeeded' && book.hasAny === false && !data?.days.length;
 
   return (
     <UbPageShell>
       <UbPageHeader
         title={t('cashbook.title')}
         actions={
-          form.canWrite ? (
+          form.canWrite && !emptyBook ? (
             <UbButton
               icon={<Plus className="h-4 w-4" aria-hidden />}
               iconOnly="mobile"
@@ -122,7 +128,20 @@ export function CashbookPageContent(): React.JSX.Element {
       />
 
       <UbStack gap={4} data-testid="cashbook-screen">
-        {book.fullScope ? (
+        {emptyBook ? (
+          <UbEmptyState
+            variant="firstUse"
+            title={t('cashbook.empty.firstUse.title')}
+            description={t('cashbook.empty.firstUse.body')}
+            action={
+              form.canWrite ? (
+                <UbButton icon={<Plus className="h-4 w-4" aria-hidden />} onClick={form.openDrawer}>
+                  {t('cashbook.addExpense')}
+                </UbButton>
+              ) : undefined
+            }
+          />
+        ) : book.fullScope ? (
           <UbDateRangePicker<ExpensePreset>
             presets={presets}
             preset={filters.preset}
@@ -181,7 +200,7 @@ export function CashbookPageContent(): React.JSX.Element {
           </UbStack>
         )}
 
-        {data && (
+        {data && !emptyBook && (
           <>
             <SummaryStatGrid storageKey="cashbook">
               <UbStatCard

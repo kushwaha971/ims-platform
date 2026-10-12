@@ -28,6 +28,8 @@ export interface LedgerAgingState {
   page: number;
   pageSize: number;
   total: number;
+  /** `meta.has_any`; `null` until the server says, so nothing hides early. */
+  hasAny: boolean | null;
   status: RequestStatus;
   summaryStatus: RequestStatus;
   error: ApiErrorShape | null;
@@ -45,6 +47,7 @@ const initialState: LedgerAgingState = {
   page: 1,
   pageSize: 25,
   total: 0,
+  hasAny: null,
   status: 'idle',
   summaryStatus: 'idle',
   error: null,
@@ -101,6 +104,7 @@ const ledgerAgingSlice = createSlice({
         state.page = action.payload.page;
         state.pageSize = action.payload.pageSize;
         state.total = action.payload.total;
+        state.hasAny = action.payload.hasAny ?? null;
         state.status = 'succeeded';
         state.error = null;
         state.stale = false;
@@ -162,4 +166,5 @@ export const selectAgingCachedAt = (state: RootState): string | null => slice$(s
 export const selectAgingPage = (state: RootState): number => slice$(state).page;
 export const selectAgingPageSize = (state: RootState): number => slice$(state).pageSize;
 export const selectAgingTotal = (state: RootState): number => slice$(state).total;
+export const selectAgingHasAny = (state: RootState): boolean | null => slice$(state).hasAny;
 export const selectAgingStale = (state: RootState): boolean => slice$(state).stale;

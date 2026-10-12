@@ -108,6 +108,20 @@ SUMMARY_STATUS = {
 }
 
 
+def has_tracked_items(*, tenant: Any) -> bool:
+    """Whether the stock summary has anything to list, whatever its filters say.
+
+    The same item set as `summary_queryset` (BR-1: tracked goods, archived
+    excluded) with no search, category, status, zero-stock or date applied.
+    False is an empty book — the screen shows one empty state and none of its
+    controls; True with no rows is a filter that found nothing, which keeps
+    them, because "Hide zero stock" off is how a merchant finds a sold-out item.
+    """
+    return Item.objects.filter(
+        tenant=tenant, item_type=ItemType.GOODS, track_stock=True, status=ItemStatus.ACTIVE
+    ).exists()
+
+
 def filtered_summary(
     *,
     tenant: Any,

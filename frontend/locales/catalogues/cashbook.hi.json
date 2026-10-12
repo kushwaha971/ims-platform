@@ -13,6 +13,8 @@
   "cashbook.days": "दिन",
   "cashbook.empty.body": "इस अवधि में न पैसा आया, न गया।",
   "cashbook.empty.filtered": "इन तारीखों पर कुछ नहीं",
+  "cashbook.empty.firstUse.body": "जब आप कोई भुगतान दर्ज करेंगे या कोई खर्च चुकाएँगे, तो हर दिन का नकद और बैंक का हिसाब यहाँ दिखेगा।",
+  "cashbook.empty.firstUse.title": "अभी तक कोई पैसा आया या गया नहीं",
   "cashbook.error.body": "कनेक्शन देखें और फिर कोशिश करें।",
   "cashbook.error.title": "रोकड़ बही लोड नहीं हो सकी",
   "cashbook.expectedCash": "गल्ले में होना चाहिए: {amount}",

@@ -221,6 +221,7 @@ export function StockSummaryPageContent(): React.JSX.Element {
      permission (the button itself checks `reports.export`). */
   const { can, hasModule } = usePermissions();
   const canExport = hasModule('reports') && can('reports.basic.read');
+  const canAddItems = can('inventory.item.write');
 
   const columns = useMemo(() => createSummaryColumns({ t, tier, valuation }), [t, tier, valuation]);
 
@@ -240,6 +241,13 @@ export function StockSummaryPageContent(): React.JSX.Element {
             ? 'filtered-empty'
             : 'empty'
           : 'rows';
+  /* Approved designs (12 Oct 2026): `hasAny` is the SERVER's answer over the
+     whole book, so a filter, a search or "Hide zero stock" that found nothing
+     keeps every control (they are how the merchant gets the rows back); only a
+     business with no tracked item at all is reduced to one empty state, with no
+     as-of date, ₹0.00 value, "Items 0", search or switches over nothing. `null`
+     (an older server) never hides anything. */
+  const emptyBook = report.status === 'succeeded' && rows.length === 0 && summary?.hasAny === false;
 
   if (!report.canRead) {
     return (
@@ -261,158 +269,184 @@ export function StockSummaryPageContent(): React.JSX.Element {
       <UbPageHeader
         title={t('stock.summary.title')}
         actions={
-          <>
-            <UbDateInput
-              name="stock-as-of"
-              appearance="inline"
-              inlineLabel={t('stock.summary.asOf')}
-              aria-label={t('stock.summary.asOf')}
-              placeholder={t('items.form.date.placeholder')}
-              value={filters.asOf ?? today}
-              max={today}
-              onChange={(value: string | null) =>
-                update({ asOf: value && value !== today ? value : null })
-              }
-            />
-            <UbActionLink
-              href={ROUTES.STOCK_LOW}
-              variant="secondary"
-              icon={<TriangleAlert className="h-4 w-4" aria-hidden />}
-              iconOnly="mobile"
-            >
-              {t('stock.low.title')}
-            </UbActionLink>
-            {canExport && (
-              <ListExportButton
-                listPath={stockSummaryExportPath(filters)}
-                permission="reports.export"
-                empty={summary ? summary.total === 0 : true}
+          !emptyBook && (
+            <>
+              <UbDateInput
+                name="stock-as-of"
+                appearance="inline"
+                inlineLabel={t('stock.summary.asOf')}
+                aria-label={t('stock.summary.asOf')}
+                placeholder={t('items.form.date.placeholder')}
+                value={filters.asOf ?? today}
+                max={today}
+                onChange={(value: string | null) =>
+                  update({ asOf: value && value !== today ? value : null })
+                }
               />
-            )}
-          </>
+              <UbActionLink
+                href={ROUTES.STOCK_LOW}
+                variant="secondary"
+                icon={<TriangleAlert className="h-4 w-4" aria-hidden />}
+                iconOnly="mobile"
+              >
+                {t('stock.low.title')}
+              </UbActionLink>
+              {canExport && (
+                <ListExportButton
+                  listPath={stockSummaryExportPath(filters)}
+                  permission="reports.export"
+                  empty={summary ? summary.total === 0 : true}
+                />
+              )}
+            </>
+          )
         }
       />
       <UbStack gap={4} data-testid="stock-summary-screen">
-        {summary?.historical && summary.asOf && (
-          <UbStatusBanner
-            tone="info"
-            title={t('stock.summary.historical', { date: formatBusinessDate(summary.asOf) })}
+        {emptyBook ? (
+          <UbEmptyState
+            variant="firstUse"
+            title={t('stock.summary.empty.title')}
+            description={t('stock.summary.empty.body')}
             action={
-              <UbButton variant="secondary" size="sm" onClick={() => update({ asOf: null })}>
-                {t('stock.summary.backToToday')}
-              </UbButton>
+              canAddItems ? (
+                <UbActionLink href={ROUTES.ITEMS} variant="secondary">
+                  {t('stock.summary.empty.action')}
+                </UbActionLink>
+              ) : undefined
             }
           />
-        )}
-        {summary && (
-          <SummaryStatGrid storageKey="stockSummary">
-            {valuation && summary.totals.value !== null && (
-              <UbStatCard
-                label={t('stock.summary.totalValue')}
-                value={formatInr(summary.totals.value)}
-                subtext={t('stock.summary.valueNote')}
+        ) : (
+          <>
+            {summary?.historical && summary.asOf && (
+              <UbStatusBanner
+                tone="info"
+                title={t('stock.summary.historical', { date: formatBusinessDate(summary.asOf) })}
+                action={
+                  <UbButton variant="secondary" size="sm" onClick={() => update({ asOf: null })}>
+                    {t('stock.summary.backToToday')}
+                  </UbButton>
+                }
               />
             )}
-            <UbStatCard label={t('stock.summary.items')} value={String(summary.totals.items)} />
-          </SummaryStatGrid>
-        )}
-        <UbDataGrid
-          rows={rows}
-          columns={columns}
-          rowId={(row) => row.item.id}
-          rowName={(row) => row.item.name}
-          state={gridState}
-          labels={labels}
-          emptyStates={{
-            firstUse: {
-              title: t('stock.summary.empty.title'),
-              description: t('stock.summary.empty.body'),
-            },
-            filtered: {
-              title: t('items.list.filtered.title'),
-              description: t('items.list.filtered.body'),
-              action: (
-                <UbButton
-                  variant="secondary"
-                  onClick={() => update({ q: '', categoryId: '', status: '' })}
-                >
-                  {t('common.action.clearFilters')}
-                </UbButton>
-              ),
-            },
-            error: {
-              title: t('stock.summary.error.title'),
-              description: report.error?.message ?? '',
-              requestId: report.error?.requestId ?? null,
-              requestIdLabel: t('common.error.reference'),
-              action: (
-                <UbButton variant="secondary" onClick={report.refetch}>
-                  {t('common.action.retry')}
-                </UbButton>
-              ),
-            },
-          }}
-          caption={t('stock.summary.caption')}
-          storageId="stock.summary"
-          cardAvatarIcon={goodsIcon}
-          page={{
-            page: summary?.page ?? 1,
-            pageSize: summary?.pageSize ?? 25,
-            total: summary?.total ?? 0,
-            totalPages: Math.max(Math.ceil((summary?.total ?? 0) / (summary?.pageSize ?? 25)), 1),
-          }}
-          onPageChange={(page) => update({ page })}
-          sort={{
-            columnId:
-              sortColumn === 'on_hand' ? 'onHand' : sortColumn === 'value' ? 'value' : 'item',
-            direction: filters.ordering.startsWith('-') ? 'desc' : 'asc',
-          }}
-          onSortChange={(next) => {
-            const field =
-              next.columnId === 'onHand' ? 'on_hand' : next.columnId === 'value' ? 'value' : 'name';
-            update({ ordering: next.direction === 'desc' ? `-${field}` : field });
-          }}
-          onRowOpen={tier === 'cards' ? (row) => router.push(itemPath(row.item.id)) : undefined}
-          search={
-            <UbSearchInput
-              value={filters.q}
-              onChange={(q) => update({ q })}
-              placeholder={t('items.list.searchPlaceholder')}
-              aria-label={t('items.list.searchPlaceholder')}
+            {summary && (
+              <SummaryStatGrid storageKey="stockSummary">
+                {valuation && summary.totals.value !== null && (
+                  <UbStatCard
+                    label={t('stock.summary.totalValue')}
+                    value={formatInr(summary.totals.value)}
+                    subtext={t('stock.summary.valueNote')}
+                  />
+                )}
+                <UbStatCard label={t('stock.summary.items')} value={String(summary.totals.items)} />
+              </SummaryStatGrid>
+            )}
+            <UbDataGrid
+              rows={rows}
+              columns={columns}
+              rowId={(row) => row.item.id}
+              rowName={(row) => row.item.name}
+              state={gridState}
+              labels={labels}
+              emptyStates={{
+                firstUse: {
+                  title: t('stock.summary.empty.title'),
+                  description: t('stock.summary.empty.body'),
+                },
+                filtered: {
+                  title: t('items.list.filtered.title'),
+                  description: t('items.list.filtered.body'),
+                  action: (
+                    <UbButton
+                      variant="secondary"
+                      onClick={() => update({ q: '', categoryId: '', status: '' })}
+                    >
+                      {t('common.action.clearFilters')}
+                    </UbButton>
+                  ),
+                },
+                error: {
+                  title: t('stock.summary.error.title'),
+                  description: report.error?.message ?? '',
+                  requestId: report.error?.requestId ?? null,
+                  requestIdLabel: t('common.error.reference'),
+                  action: (
+                    <UbButton variant="secondary" onClick={report.refetch}>
+                      {t('common.action.retry')}
+                    </UbButton>
+                  ),
+                },
+              }}
+              caption={t('stock.summary.caption')}
+              storageId="stock.summary"
+              cardAvatarIcon={goodsIcon}
+              page={{
+                page: summary?.page ?? 1,
+                pageSize: summary?.pageSize ?? 25,
+                total: summary?.total ?? 0,
+                totalPages: Math.max(
+                  Math.ceil((summary?.total ?? 0) / (summary?.pageSize ?? 25)),
+                  1
+                ),
+              }}
+              onPageChange={(page) => update({ page })}
+              sort={{
+                columnId:
+                  sortColumn === 'on_hand' ? 'onHand' : sortColumn === 'value' ? 'value' : 'item',
+                direction: filters.ordering.startsWith('-') ? 'desc' : 'asc',
+              }}
+              onSortChange={(next) => {
+                const field =
+                  next.columnId === 'onHand'
+                    ? 'on_hand'
+                    : next.columnId === 'value'
+                      ? 'value'
+                      : 'name';
+                update({ ordering: next.direction === 'desc' ? `-${field}` : field });
+              }}
+              onRowOpen={tier === 'cards' ? (row) => router.push(itemPath(row.item.id)) : undefined}
+              search={
+                <UbSearchInput
+                  value={filters.q}
+                  onChange={(q) => update({ q })}
+                  placeholder={t('items.list.searchPlaceholder')}
+                  aria-label={t('items.list.searchPlaceholder')}
+                />
+              }
+              filters={
+                <UbStack direction="row" gap={2} wrap align="center">
+                  {/* Owner, 6 Oct 2026: category and status behind ONE Filters button. */}
+                  <UbFilterSheet
+                    specs={sheetSpecs}
+                    values={sheetValues}
+                    onApply={applySheet}
+                    labels={{
+                      title: t('common.filters.title'),
+                      apply: t('common.action.apply'),
+                      reset: t('common.action.reset'),
+                      close: t('common.action.close'),
+                    }}
+                  />
+                  <UbActiveFilters
+                    specs={sheetSpecs}
+                    values={sheetValues}
+                    onChange={applySheet}
+                    labels={{
+                      remove: (pill) => t('common.filters.remove', { filter: pill }),
+                      clearAll: t('common.filters.clearAll'),
+                    }}
+                  />
+                  <UbSwitch
+                    checked={filters.hideZero}
+                    onCheckedChange={(hideZero) => update({ hideZero })}
+                    label={t('stock.summary.hideZero')}
+                    className="min-h-10 w-auto"
+                  />
+                </UbStack>
+              }
             />
-          }
-          filters={
-            <UbStack direction="row" gap={2} wrap align="center">
-              {/* Owner, 6 Oct 2026: category and status behind ONE Filters button. */}
-              <UbFilterSheet
-                specs={sheetSpecs}
-                values={sheetValues}
-                onApply={applySheet}
-                labels={{
-                  title: t('common.filters.title'),
-                  apply: t('common.action.apply'),
-                  reset: t('common.action.reset'),
-                  close: t('common.action.close'),
-                }}
-              />
-              <UbActiveFilters
-                specs={sheetSpecs}
-                values={sheetValues}
-                onChange={applySheet}
-                labels={{
-                  remove: (pill) => t('common.filters.remove', { filter: pill }),
-                  clearAll: t('common.filters.clearAll'),
-                }}
-              />
-              <UbSwitch
-                checked={filters.hideZero}
-                onCheckedChange={(hideZero) => update({ hideZero })}
-                label={t('stock.summary.hideZero')}
-                className="min-h-10 w-auto"
-              />
-            </UbStack>
-          }
-        />
+          </>
+        )}
       </UbStack>
     </UbPageShell>
   );

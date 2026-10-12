@@ -178,13 +178,19 @@ export function CatalogueListPageContent(): React.JSX.Element {
     );
   }
 
+  /* Approved designs (12 Oct 2026): a reading room with no book yet sees one
+     sentence and one button — no search, availability or Filters over an
+     empty shelf. `hasAny` is the server's, so a search that found nothing
+     keeps them. */
+  const emptyBook = list.status === 'succeeded' && list.rows.length === 0 && list.hasAny === false;
+
   return (
     <UbPageShell>
       <UbPageHeader
         title={t('library.catalogue.title')}
         actions={
           <UbStack direction="row" gap={2}>
-            {list.canWrite && (
+            {list.canWrite && !emptyBook && (
               <UbButton
                 icon={<Plus className="h-4 w-4" aria-hidden />}
                 iconOnly="mobile"
@@ -221,72 +227,83 @@ export function CatalogueListPageContent(): React.JSX.Element {
         }
       />
       <UbStack gap={4} data-testid="library-catalogue-screen">
-        <UbSearchInput
-          value={search}
-          onChange={setSearch}
-          onKeyDown={onSearchKey}
-          placeholder={t('library.catalogue.search.placeholder')}
-          aria-label={t('library.catalogue.search.label')}
-        />
-        {/* Owner, 6 Oct 2026: availability is the one dropdown; type and
+        {emptyBook ? (
+          <UbEmptyState
+            variant="firstUse"
+            title={emptyStates.firstUse.title}
+            description={emptyStates.firstUse.description}
+            action={emptyStates.firstUse.action}
+          />
+        ) : (
+          <>
+            <UbSearchInput
+              value={search}
+              onChange={setSearch}
+              onKeyDown={onSearchKey}
+              placeholder={t('library.catalogue.search.placeholder')}
+              aria-label={t('library.catalogue.search.label')}
+            />
+            {/* Owner, 6 Oct 2026: availability is the one dropdown; type and
             archived sit behind Filters and return as pills when on. */}
-        <UbStack direction="row" align="center" gap={2} className="flex-wrap">
-          <UbFilterSelect
-            spec={{
-              kind: 'single',
-              key: 'availability',
-              label: t('library.filter.availability'),
-              anyLabel: t('library.filter.anyAvailability'),
-              options: [
-                { value: 'on_shelf', label: t('library.filter.onShelf') },
-                { value: 'all_out', label: t('library.filter.allOut') },
-              ],
-            }}
-            value={filters.availability}
-            onChange={(availability) => setFilters({ availability } as Partial<TitleFilters>)}
-            closeLabel={t('common.action.close')}
-          />
-          <UbFilterSheet
-            specs={sheetSpecs}
-            values={sheetValues}
-            onApply={applySheet}
-            labels={{
-              title: t('common.filters.title'),
-              apply: t('common.action.apply'),
-              reset: t('common.action.reset'),
-              close: t('common.action.close'),
-            }}
-          />
-        </UbStack>
-        <UbActiveFilters
-          specs={sheetSpecs}
-          values={sheetValues}
-          onChange={applySheet}
-          labels={{
-            remove: (pill) => t('common.filters.remove', { filter: pill }),
-            clearAll: t('common.filters.clearAll'),
-          }}
-        />
-        <UbDataGrid
-          rows={list.rows}
-          columns={columns}
-          rowId={rowId}
-          rowName={rowName}
-          state={gridState}
-          labels={labels}
-          emptyStates={emptyStates}
-          caption={t('library.catalogue.caption')}
-          storageId="library.titles"
-          page={{
-            page: list.page,
-            pageSize: list.pageSize,
-            total: list.total,
-            totalPages: list.totalPages,
-          }}
-          onPageChange={list.setPage}
-          onRowOpen={openRow}
-          cardAvatar={false}
-        />
+            <UbStack direction="row" align="center" gap={2} className="flex-wrap">
+              <UbFilterSelect
+                spec={{
+                  kind: 'single',
+                  key: 'availability',
+                  label: t('library.filter.availability'),
+                  anyLabel: t('library.filter.anyAvailability'),
+                  options: [
+                    { value: 'on_shelf', label: t('library.filter.onShelf') },
+                    { value: 'all_out', label: t('library.filter.allOut') },
+                  ],
+                }}
+                value={filters.availability}
+                onChange={(availability) => setFilters({ availability } as Partial<TitleFilters>)}
+                closeLabel={t('common.action.close')}
+              />
+              <UbFilterSheet
+                specs={sheetSpecs}
+                values={sheetValues}
+                onApply={applySheet}
+                labels={{
+                  title: t('common.filters.title'),
+                  apply: t('common.action.apply'),
+                  reset: t('common.action.reset'),
+                  close: t('common.action.close'),
+                }}
+              />
+            </UbStack>
+            <UbActiveFilters
+              specs={sheetSpecs}
+              values={sheetValues}
+              onChange={applySheet}
+              labels={{
+                remove: (pill) => t('common.filters.remove', { filter: pill }),
+                clearAll: t('common.filters.clearAll'),
+              }}
+            />
+            <UbDataGrid
+              rows={list.rows}
+              columns={columns}
+              rowId={rowId}
+              rowName={rowName}
+              state={gridState}
+              labels={labels}
+              emptyStates={emptyStates}
+              caption={t('library.catalogue.caption')}
+              storageId="library.titles"
+              page={{
+                page: list.page,
+                pageSize: list.pageSize,
+                total: list.total,
+                totalPages: list.totalPages,
+              }}
+              onPageChange={list.setPage}
+              onRowOpen={openRow}
+              cardAvatar={false}
+            />
+          </>
+        )}
       </UbStack>
       {drawer && <CatalogueDrawersLazy />}
     </UbPageShell>
