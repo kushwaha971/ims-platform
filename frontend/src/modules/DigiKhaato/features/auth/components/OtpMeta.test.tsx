@@ -45,7 +45,9 @@ it('identifies the YourKhata sender before requesting a code and verifies all si
   await user.type(screen.getByRole('textbox', { name: /Mobile number/ }), '9794620535');
   await user.click(screen.getByRole('button', { name: 'Send code' }));
   await screen.findByRole('heading', { name: 'Enter the code' });
-  expect(screen.getByText(/Check WhatsApp for the 6-digit code from YourKhata/)).toBeInTheDocument();
+  expect(
+    screen.getByText(/Check WhatsApp for the 6-digit code from YourKhata/)
+  ).toBeInTheDocument();
   screen.getByLabelText('Digit 1 of 6').focus();
   await user.paste('932234');
   await waitFor(() =>

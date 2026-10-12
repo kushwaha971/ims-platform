@@ -151,10 +151,13 @@ def test_request_then_verify_creates_user_session_and_cookies(
     )
     assert response.status_code == 200
     body = response.json()["data"]
-    assert set(body) == {"challenge_id", "expires_in", "retry_after"}
+    assert set(body) == {"challenge_id", "expires_in", "retry_after", "code_length", "channel"}
+    assert body["code_length"] == 4
+    assert body["channel"] == "sms"
     assert body["expires_in"] == 600
     assert body["retry_after"] == 60
-    assert "code" not in response.content.decode()
+    assert "code" not in body
+    assert fixed_otp not in response.content.decode()
 
     verified = auth_client.post(
         reverse(VERIFY_URL),

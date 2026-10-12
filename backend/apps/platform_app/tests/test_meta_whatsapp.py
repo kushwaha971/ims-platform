@@ -35,6 +35,8 @@ def test_meta_code_is_local_hashed_and_single_use(auth_client, settings, monkeyp
     monkeypatch.setattr(meta_whatsapp, "send_otp", lambda mobile, code: calls.append((mobile, code)))
     result = auth_client.post(reverse("v1:auth-otp-request"), {"mobile":"9794620535"}, format="json")
     assert result.status_code == 200
+    assert result.json()["data"]["code_length"] == 6
+    assert result.json()["data"]["channel"] == "whatsapp"
     from apps.platform_app.models import OtpChallenge
     row = OtpChallenge.objects.get(pk=result.json()["data"]["challenge_id"])
     code = calls[0][1]
