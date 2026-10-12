@@ -121,3 +121,5 @@ Final focused GA4/public-bootstrap/SEO/landing run: 106 tests passed in five sui
 | Dockerfile, frontend/src/constants.ts, .env.example | Public GA4 build configuration; no private credentials |
 
 Do not paste the ignored local env files into interview materials or public repositories. The GA4 measurement ID and PostHog project key are public browser configuration; Meta and database credentials are not.
+
+Production environment guide: frontend/.env.example now documents the complete public configuration with analytics disabled until public IDs are supplied. Native frontend values remain local; Railway uses same-origin /api/v1. The final merged homepage budget is 276.5 KB first-load gzip, an explicit 0.5 KB allowance for the new small GA4 owner; merged measurement before the final rebuild was 276.3 KB.

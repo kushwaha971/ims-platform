@@ -19,8 +19,9 @@ export function GooglePublicTracker(): null {
     Reflect.set(win, disabledKey, false);
     win.dataLayer ??= [];
     if (!win.gtag)
-      win.gtag = (...args: unknown[]) => {
-        win.dataLayer?.push(args);
+      win.gtag = function () {
+        // Match Google's documented gtag queue protocol.
+        win.dataLayer?.push(arguments);
       };
     if (!document.getElementById('yourkhata-ga4')) {
       win.gtag('js', new Date());

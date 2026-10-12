@@ -14,7 +14,7 @@ it('loads one tag and sends only public pathname data, disabling it on exit', ()
   const { rerender, unmount } = render(<GooglePublicTracker />);
   rerender(<GooglePublicTracker />);
   expect(document.querySelectorAll('#yourkhata-ga4')).toHaveLength(1);
-  const queue = Reflect.get(window, 'dataLayer') as unknown[][];
+  const queue = Reflect.get(window, 'dataLayer') as ArrayLike<unknown>[];
   const events = queue.filter((event) => event[0] === 'event');
   expect(events).toHaveLength(1);
   expect(events[0]?.[2]).toMatchObject({ page_location: 'http://localhost/solutions/shop-billing' });
