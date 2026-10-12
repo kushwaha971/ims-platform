@@ -54,6 +54,8 @@ export const isWalkInMobile = (value: string): boolean =>
 
 export interface InvoiceSchemaOptions {
   readonly kind: 'invoice' | 'estimate' | 'sales_order' | 'delivery_challan';
+  /** The business's zone — it decides what "today" is for the bill date (EC-8). */
+  readonly timeZone?: string | null;
 }
 
 /**
@@ -89,7 +91,7 @@ export const buildInvoiceEditorSchema = (
   t: TranslateFn,
   options: InvoiceSchemaOptions
 ): Yup.ObjectSchema<InvoiceFormValues> => {
-  const v = buildValidationSchemas(t);
+  const v = buildValidationSchemas(t, options.timeZone ?? null);
   const { kind } = options;
   const onOrAfterDate = (messageId: string) =>
     Yup.string()

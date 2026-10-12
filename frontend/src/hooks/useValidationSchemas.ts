@@ -12,7 +12,10 @@ import {
   PASSWORD_MAX_LENGTH,
   PASSWORD_MIN_LENGTH_PRIVILEGED,
 } from 'src/constants';
+import { useAppSelector } from 'src/hooks/useAppStore';
 import { useTranslation, type TranslateFn } from 'src/hooks/useTranslation';
+import { selectTenantTimezone } from 'src/redux/slice/sessionSlice';
+import { todayInTenantTz } from 'src/utils/dates';
 import { isValidMobile, readsAsIndian } from 'src/utils/phone';
 import { REGEX } from 'src/utils/regexConstants';
 
@@ -159,7 +162,17 @@ export interface ValidationSchemas {
  * editor builds its schema inside an async resolver, which keeps Yup (≈18 KB
  * gz) out of the route chunk of the screen a counter opens all day.
  */
-export const buildValidationSchemas = (t: TranslateFn): ValidationSchemas => {
+/**
+ * `timeZone` is the business's, and decides what "today" is for every date rule
+ * here (EC-8). The device's clock is the wrong day for this purpose: between
+ * 18:30 and midnight UTC an India business is already on tomorrow, so a phone or
+ * laptop on any other zone refused the form's own default date — the drawer
+ * filled today in the business's zone and the rule called it the future.
+ */
+export const buildValidationSchemas = (
+  t: TranslateFn,
+  timeZone: string | null = null
+): ValidationSchemas => {
   // ── Primitives ──────────────────────────────────────────────────────────
 
   /** Optional string that normalises '' → null so `.notRequired()` behaves. */
@@ -416,7 +429,8 @@ export const buildValidationSchemas = (t: TranslateFn): ValidationSchemas => {
         (value) => !!value && dayjs(value, 'YYYY-MM-DD', true).isValid()
       )
       .test('notFuture', t('validation.date.future'), (value) =>
-        options?.allowFuture ? true : !!value && !dayjs(value).isAfter(dayjs(), 'day')
+        // Wire dates are ISO yyyy-mm-dd, so string order is calendar order.
+        options?.allowFuture ? true : !!value && value <= todayInTenantTz(timeZone ?? undefined)
       )
       .test(
         'min',
@@ -542,7 +556,8 @@ export const buildValidationSchemas = (t: TranslateFn): ValidationSchemas => {
 
 export const useValidationSchemas = (): ValidationSchemas => {
   const { t } = useTranslation();
-  return useMemo(() => buildValidationSchemas(t), [t]);
+  const timeZone = useAppSelector(selectTenantTimezone);
+  return useMemo(() => buildValidationSchemas(t, timeZone), [t, timeZone]);
 };
 
 /**

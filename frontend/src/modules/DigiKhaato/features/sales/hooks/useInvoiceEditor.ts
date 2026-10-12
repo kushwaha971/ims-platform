@@ -105,7 +105,10 @@ export const useInvoiceEditor = (
   const idempotency = useIdempotencyKey();
 
   const { t } = useTranslation();
-  const resolver = useMemo(() => lazyInvoiceResolver(t, { kind }), [t, kind]);
+  const resolver = useMemo(
+    () => lazyInvoiceResolver(t, { kind, timeZone: timezone }),
+    [t, kind, timezone]
+  );
   const shop = editor.context;
   // The bill-discount check prices the bill with the rates on screen.
   const schemaContext = useMemo(

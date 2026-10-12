@@ -1,6 +1,8 @@
 import { renderHook } from '@testing-library/react';
 import { IntlProvider } from 'react-intl';
+import { Provider } from 'react-redux';
 
+import { store } from 'src/redux/store';
 import { en } from 'src/tests/allMessages';
 
 import {
@@ -8,10 +10,13 @@ import {
   type BusinessProfileFormValues,
 } from './businessProfileSchemas';
 
+// The date rules read the business's timezone from the session (EC-8).
 const wrapper = ({ children }: Readonly<{ children: React.ReactNode }>) => (
-  <IntlProvider locale="en" defaultLocale="en" messages={en as Record<string, string>}>
-    {children}
-  </IntlProvider>
+  <Provider store={store}>
+    <IntlProvider locale="en" defaultLocale="en" messages={en as Record<string, string>}>
+      {children}
+    </IntlProvider>
+  </Provider>
 );
 
 const schema = () =>

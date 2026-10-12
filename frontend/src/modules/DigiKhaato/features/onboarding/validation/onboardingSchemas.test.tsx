@@ -1,15 +1,20 @@
 import { renderHook } from '@testing-library/react';
 import { IntlProvider } from 'react-intl';
+import { Provider } from 'react-redux';
 
+import { store } from 'src/redux/store';
 import { en } from 'src/tests/allMessages';
 
 import { useOnboardingSchemas } from './onboardingSchemas';
 
 /** PLT-03 §10, through the hook so the messages are the translated ones. */
+// The date rules read the business's timezone from the session (EC-8).
 const wrapper = ({ children }: Readonly<{ children: React.ReactNode }>) => (
-  <IntlProvider locale="en" defaultLocale="en" messages={en as Record<string, string>}>
-    {children}
-  </IntlProvider>
+  <Provider store={store}>
+    <IntlProvider locale="en" defaultLocale="en" messages={en as Record<string, string>}>
+      {children}
+    </IntlProvider>
+  </Provider>
 );
 
 const schemas = () => renderHook(() => useOnboardingSchemas(), { wrapper }).result.current;

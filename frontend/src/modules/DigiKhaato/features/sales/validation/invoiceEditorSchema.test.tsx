@@ -1,8 +1,10 @@
 import { renderHook } from '@testing-library/react';
-import dayjs from 'dayjs';
 import { IntlProvider } from 'react-intl';
+import { Provider } from 'react-redux';
 
+import { store } from 'src/redux/store';
 import { en } from 'src/tests/allMessages';
+import { addDaysIso, todayInTenantTz } from 'src/utils/dates';
 
 import { emptyInvoiceForm, emptyLine, type InvoiceFormValues } from '../view-model/invoiceForm';
 
@@ -17,13 +19,16 @@ import type { ValidationError } from 'yup';
  * a form with nothing highlighted. These pin each rule to the message the
  * merchant reads under the field, in the server's words.
  */
+// The date rules read the business's timezone from the session (EC-8).
 const wrapper = ({ children }: Readonly<{ children: React.ReactNode }>) => (
-  <IntlProvider locale="en" defaultLocale="en" messages={en as Record<string, string>}>
-    {children}
-  </IntlProvider>
+  <Provider store={store}>
+    <IntlProvider locale="en" defaultLocale="en" messages={en as Record<string, string>}>
+      {children}
+    </IntlProvider>
+  </Provider>
 );
 
-const TODAY = dayjs().format('YYYY-MM-DD');
+const TODAY = todayInTenantTz();
 
 const schemaFor = (kind: 'invoice' | 'estimate' = 'invoice') =>
   renderHook(() => useInvoiceEditorSchema({ kind }), { wrapper }).result.current;
@@ -111,8 +116,10 @@ it('asks for a party on a party bill, and for a real mobile on a walk-in', () =>
 });
 
 it('keeps the dates in order: not in the future, due and valid-until not before the bill', () => {
-  const tomorrow = dayjs().add(1, 'day').format('YYYY-MM-DD');
-  const yesterday = dayjs().subtract(1, 'day').format('YYYY-MM-DD');
+  // The business's day, not the device's (EC-8) — what the rule itself judges by.
+  const today = todayInTenantTz();
+  const tomorrow = addDaysIso(today, 1);
+  const yesterday = addDaysIso(today, -1);
   expect(errorsOf(bill({ documentDate: tomorrow })).documentDate).toBe(
     'This date cannot be in the future.'
   );
