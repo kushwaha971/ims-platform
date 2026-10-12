@@ -99,6 +99,16 @@ const signInAs = (userId: string, role: string): void => {
   );
 };
 
+/**
+ * Every member action refetches the list (`INVALIDATION` → `member`), so the
+ * mocked server has to answer the re-read with the list as it stands AFTER the
+ * write — otherwise the refetch puts the old row back and the test reads a
+ * stale screen that the real product never shows.
+ */
+const serverNowHas = (rows: readonly unknown[]): void => {
+  memberService.listMembers.mockResolvedValue(page(rows));
+};
+
 const moreFor = (name: string) => screen.queryByRole('button', { name: `Actions for ${name}` });
 
 beforeEach(() => {
@@ -150,7 +160,10 @@ describe('who sees the ⋯', () => {
 
 describe('the actions', () => {
   it('blocks only after a confirmation that names the person', async () => {
-    memberService.blockMember.mockResolvedValue({ ...STAFF_ROW, status: 'suspended' });
+    memberService.blockMember.mockImplementation(async () => {
+      serverNowHas([OWNER_ROW, ADMIN_ROW, { ...STAFF_ROW, status: 'suspended' }, BLOCKED_ROW]);
+      return { ...STAFF_ROW, status: 'suspended' };
+    });
     signInAs('u-owner', 'owner');
     const user = userEvent.setup();
     renderWithProviders(<MembersSection />);
@@ -170,7 +183,10 @@ describe('the actions', () => {
   });
 
   it('unblocks in one tap, because it takes nothing away', async () => {
-    memberService.unblockMember.mockResolvedValue({ ...BLOCKED_ROW, status: 'active' });
+    memberService.unblockMember.mockImplementation(async () => {
+      serverNowHas([OWNER_ROW, ADMIN_ROW, STAFF_ROW, { ...BLOCKED_ROW, status: 'active' }]);
+      return { ...BLOCKED_ROW, status: 'active' };
+    });
     signInAs('u-owner', 'owner');
     const user = userEvent.setup();
     renderWithProviders(<MembersSection />);
@@ -186,7 +202,10 @@ describe('the actions', () => {
   });
 
   it('removes after a confirmation, and the row leaves the list', async () => {
-    memberService.removeMember.mockResolvedValue({ ...STAFF_ROW, status: 'removed' });
+    memberService.removeMember.mockImplementation(async () => {
+      serverNowHas([OWNER_ROW, ADMIN_ROW, BLOCKED_ROW]);
+      return { ...STAFF_ROW, status: 'removed' };
+    });
     signInAs('u-owner', 'owner');
     const user = userEvent.setup();
     renderWithProviders(<MembersSection />);
@@ -208,7 +227,10 @@ describe('the actions', () => {
     // Sending the unchanged role back would be harmless; sending an unchanged
     // NAME is not — the server refuses a name it does not own, which would
     // fail a role change the owner was entitled to make.
-    memberService.updateMember.mockResolvedValue({ ...STAFF_ROW, fullName: 'Ramesh K' });
+    memberService.updateMember.mockImplementation(async () => {
+      serverNowHas([OWNER_ROW, ADMIN_ROW, { ...STAFF_ROW, fullName: 'Ramesh K' }, BLOCKED_ROW]);
+      return { ...STAFF_ROW, fullName: 'Ramesh K' };
+    });
     signInAs('u-owner', 'owner');
     const user = userEvent.setup();
     renderWithProviders(<MembersSection />);

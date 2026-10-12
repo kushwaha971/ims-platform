@@ -49,7 +49,15 @@ describe('the pricing flag', () => {
     expect(container.querySelector('#pricing')).toBeNull();
     expect(container.querySelector('a[href="#pricing"]')).toBeNull();
     expect(navHrefs('Main')).not.toContain('#pricing');
-    expect(navHrefs('Product')).toEqual(['#modules', '#demo', '#platform', '#why', '#faq']);
+    // `/solutions` leads the footer's Product list since the public solutions pages (89dcdb3).
+    expect(navHrefs('Product')).toEqual([
+      '/solutions',
+      '#modules',
+      '#demo',
+      '#platform',
+      '#why',
+      '#faq',
+    ]);
     expect(screen.queryByRole('link', { name: 'Pricing' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'What does it cost?' })).toBeNull();
     expect(
@@ -79,6 +87,7 @@ describe('the pricing flag', () => {
       '#faq',
     ]);
     expect(navHrefs('Product')).toEqual([
+      '/solutions',
       '#modules',
       '#demo',
       '#platform',
