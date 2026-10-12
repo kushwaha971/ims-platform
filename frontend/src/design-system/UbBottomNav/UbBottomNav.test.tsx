@@ -51,4 +51,14 @@ describe('UbBottomNav', () => {
     expect(nav).toHaveAttribute('data-ub-bottom-nav');
     expect(nav).toHaveAttribute('data-print', 'hide');
   });
+
+  it('never cuts a label with an ellipsis (QA B23)', () => {
+    /* Prevents: "Custome…" on a 360 px phone. A cut word is unreadable to the
+       shopkeeper this bar is for; the label may wrap, never truncate. The
+       width itself is measured by the phone sweep; this holds the class. */
+    render(<UbBottomNav label="Main menu" items={items} />);
+    for (const label of screen.getAllByTestId('bottom-nav-label')) {
+      expect(label.className).not.toMatch(/\btruncate\b/);
+    }
+  });
 });

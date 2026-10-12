@@ -87,7 +87,14 @@ function UbBottomNavBase({ label, items, className }: Readonly<UbBottomNavProps>
               >
                 {item.icon}
               </span>
-              <span className="w-full truncate px-1 text-center text-[12px] font-medium leading-4">
+              {/* QA B23 — never cut a word: "Custome…" on a 360 px phone. The label
+                  uses the whole cell, tightens a little, and a two-word label may
+                  take a second line; the owner's rule is plain words a rural
+                  shopkeeper reads at a glance, so the word stays and the box fits it. */}
+              <span
+                data-testid="bottom-nav-label"
+                className="line-clamp-2 w-full break-normal px-0.5 text-center text-[11px] font-medium leading-[13px] tracking-tight"
+              >
                 {item.label}
               </span>
               {item.badge ? (
