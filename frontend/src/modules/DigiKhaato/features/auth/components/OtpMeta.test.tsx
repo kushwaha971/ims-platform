@@ -11,7 +11,7 @@ import { OtpSignInPageContent } from './OtpSignInPageContent';
 
 jest.mock('src/constants', () => ({
   ...jest.requireActual('src/constants'),
-  OTP_USES_MINIMOTH: true,
+  OTP_USES_META: true,
 }));
 jest.mock('../api/authService');
 jest.mock('next/navigation', () => ({
@@ -24,7 +24,7 @@ const service = jest.requireMock('../api/authService') as {
   verifyOtp: jest.Mock;
 };
 
-it('identifies the shared sender before requesting a code and verifies all six digits', async () => {
+it('identifies the YourKhata sender before requesting a code and verifies all six digits', async () => {
   store.dispatch(resetSession());
   store.dispatch(resetAuth());
   service.requestOtp.mockResolvedValue({
@@ -40,12 +40,12 @@ it('identifies the shared sender before requesting a code and verifies all six d
   });
   const user = userEvent.setup();
   renderWithProviders(<OtpSignInPageContent mode="signIn" />);
-  expect(screen.getByText(/YourKhata uses MiniMoth/)).toBeInTheDocument();
+  expect(screen.getByText(/YourKhata will send a 6-digit/)).toBeInTheDocument();
   expect(screen.getByText(/Only enter this code on yourkhata.com/)).toBeInTheDocument();
   await user.type(screen.getByRole('textbox', { name: /Mobile number/ }), '9794620535');
   await user.click(screen.getByRole('button', { name: 'Send code' }));
   await screen.findByRole('heading', { name: 'Enter the code' });
-  expect(screen.getByText(/Check WhatsApp for the 6-digit code from MiniMoth/)).toBeInTheDocument();
+  expect(screen.getByText(/Check WhatsApp for the 6-digit code from YourKhata/)).toBeInTheDocument();
   screen.getByLabelText('Digit 1 of 6').focus();
   await user.paste('932234');
   await waitFor(() =>

@@ -145,7 +145,7 @@ describe('UbOtpInput', () => {
   });
 });
 
-it('pastes all six MiniMoth digits and submits once without truncation', async () => {
+it('pastes all six authentication digits and submits once without truncation', async () => {
   const user = userEvent.setup();
   const complete = jest.fn();
   render(<Harness length={6} onComplete={complete} />);
