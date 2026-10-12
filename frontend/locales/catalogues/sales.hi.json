@@ -129,6 +129,7 @@
   "sales.draft.conflictTitle": "ड्राफ्ट कहीं और बदला गया",
   "sales.draft.discard": "हटाएँ",
   "sales.draft.error": "सेव नहीं हुआ",
+  "sales.draft.errorWhy": "सेव नहीं हुआ: {reason}",
   "sales.draft.keepMine": "मेरा रखें (बदल दें)",
   "sales.draft.offline": "ऑफ़लाइन — इस डिवाइस पर सेव",
   "sales.draft.restore": "वापस लाएँ",

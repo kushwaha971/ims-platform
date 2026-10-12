@@ -38,6 +38,18 @@ export type AutosaveIndicator = 'idle' | 'saving' | 'saved' | 'offline' | 'error
 const meaningful = (values: InvoiceFormValues): boolean =>
   !!values.partyId || (values.lines ?? []).some(isCompleteLine);
 
+/**
+ * QA B8 — a percentage discount outside 0–100 is refused by the server (400), so a
+ * save of it can only fail; it waits until the cell is fixed. The cell says why.
+ */
+export const discountsInRange = (values: InvoiceFormValues): boolean =>
+  (values.lines ?? []).every(
+    (line) =>
+      line.discountType !== 'percent' ||
+      !line.discountValue ||
+      (Number(line.discountValue) >= 0 && Number(line.discountValue) <= 100)
+  );
+
 export interface UseDraftAutosaveResult {
   readonly indicator: AutosaveIndicator;
   readonly savedAt: string | null;
@@ -92,7 +104,7 @@ export const useDraftAutosave = (
   // FR-2 — the server copy, 3 s after the last change, while dirty and meaningful.
   const blocked = offline || server.saveState === 'conflict' || server.issuing || !!server.issued;
   useEffect(() => {
-    if (!dirty || blocked || !meaningful(values)) return undefined;
+    if (!dirty || blocked || !meaningful(values) || !discountsInRange(values)) return undefined;
     const timer = window.setTimeout(() => {
       if (saving.current) return;
       saving.current = true;

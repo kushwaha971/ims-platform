@@ -118,7 +118,7 @@ export function InvoiceLinesSection({
   onSubmitShortcut: () => void;
 }>): React.JSX.Element {
   const { t } = useTranslation();
-  const { control, watch, setValue, getValues } = form;
+  const { control, watch, setValue, getValues, trigger } = form;
   const fieldArray = useFieldArray({ control, name: 'lines', keyName: 'key' });
   const lines = watch('lines');
   const partyId = watch('partyId');
@@ -246,16 +246,19 @@ export function InvoiceLinesSection({
         field: 'discountValue',
         track: 'minmax(4.5rem,0.9fr)',
         align: 'end',
-        render: ({ field, id, label, index }) => (
+        render: ({ field, id, label, index, invalid }) => (
           <UbMoneyInput
             id={id}
             aria-label={label}
             value={(field?.value as string) ?? ''}
             currencySymbol="%"
             decimalPlaces={2}
+            invalid={invalid}
             onChange={(next) => {
               field?.onChange(next);
               setValue(`lines.${index}.discountType`, next ? 'percent' : '', { shouldDirty: true });
+              // QA B8 — "150 %" is refused under the cell as it is typed, not at Issue.
+              void trigger(`lines.${index}.discountValue`);
             }}
             placeholder="0"
           />
@@ -306,7 +309,7 @@ export function InvoiceLinesSection({
         ),
       },
     ],
-    [t, lines, disabled, pick, taxFree, taxOptions, preview, setValue]
+    [t, lines, disabled, pick, taxFree, taxOptions, preview, setValue, trigger]
   );
 
   // Shop gap §1.5 — what this customer paid for this item last time.

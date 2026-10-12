@@ -129,6 +129,7 @@
   "sales.draft.conflictTitle": "Draft changed elsewhere",
   "sales.draft.discard": "Discard",
   "sales.draft.error": "Couldn't save",
+  "sales.draft.errorWhy": "Couldn’t save: {reason}",
   "sales.draft.keepMine": "Keep mine (overwrite)",
   "sales.draft.offline": "Offline — saved on this device",
   "sales.draft.restore": "Restore",

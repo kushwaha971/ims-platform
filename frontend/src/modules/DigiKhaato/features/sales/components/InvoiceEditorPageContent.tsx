@@ -244,7 +244,11 @@ export function InvoiceEditorPageContent({
         }
         subtitle={undefined}
         controls={
-          <InvoiceSaveIndicator indicator={autosave.indicator} savedAt={autosave.savedAt} />
+          <InvoiceSaveIndicator
+            indicator={autosave.indicator}
+            savedAt={autosave.savedAt}
+            reason={server.error?.message}
+          />
         }
         actions={
           <>

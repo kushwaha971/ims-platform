@@ -14,7 +14,13 @@ import type { AutosaveIndicator } from '../hooks/useDraftAutosave';
 export function InvoiceSaveIndicator({
   indicator,
   savedAt,
-}: Readonly<{ indicator: AutosaveIndicator; savedAt: string | null }>): React.JSX.Element | null {
+  reason,
+}: Readonly<{
+  indicator: AutosaveIndicator;
+  savedAt: string | null;
+  /** QA B8 — the server's reason for a failed save; "Couldn't save" alone says nothing. */
+  reason?: string | null;
+}>): React.JSX.Element | null {
   const { t } = useTranslation();
   if (indicator === 'idle') return null;
   const time = savedAt ? (formatTimestamp(savedAt).split(', ')[1] ?? '') : '';
@@ -31,7 +37,7 @@ export function InvoiceSaveIndicator({
   const { id, tone } = copy[indicator];
   return (
     <UbText variant="caption" tone={tone} role="status" data-testid="invoice-save-indicator">
-      {t(id, { time })}
+      {indicator === 'error' && reason ? t('sales.draft.errorWhy', { reason }) : t(id, { time })}
     </UbText>
   );
 }
