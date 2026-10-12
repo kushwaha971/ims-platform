@@ -79,3 +79,22 @@ export const fyLabelFor = (value: string): string => {
   const startYear = date.month() >= 3 ? date.year() : date.year() - 1;
   return `${startYear}-${String((startYear + 1) % 100).padStart(2, '0')}`;
 };
+
+/** `"2026-10-12"` + 7 → `"2026-10-19"`, on the calendar (UTC arithmetic, no time zone). */
+export const addDaysIso = (iso: string, days: number): string => {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+};
+
+/**
+ * `"2026-01-31"` + 1 month → `"2026-02-28"`: the same day next month, or that month's last
+ * day when it is shorter — a monthly instalment never skips a month.
+ */
+export const addMonthsIso = (iso: string, months: number): string => {
+  const [year, month, day] = iso.split('-').map(Number) as [number, number, number];
+  const target = new Date(Date.UTC(year, month - 1 + months, 1));
+  const last = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0));
+  target.setUTCDate(Math.min(day, last.getUTCDate()));
+  return target.toISOString().slice(0, 10);
+};

@@ -55,7 +55,7 @@ import {
   type PlanType,
 } from '../types/lending.types';
 import { useLendingSchemas } from '../validation/lendingSchemas';
-import { WEEKDAY_BITS } from '../view-model/lendingDisplay';
+import { WEEKDAY_BITS, defaultFirstDue } from '../view-model/lendingDisplay';
 
 const PREVIEW_DEBOUNCE_MS = 400;
 /** The server's refusal of a loan to a blocked borrower (`borrower_blocked`, 409). */
@@ -63,11 +63,6 @@ const BORROWER_BLOCKED = 'borrower_blocked';
 const MON_TO_SAT = 63;
 const SHOWN_ROWS = 5;
 
-const addDays = (iso: string, days: number): string => {
-  const d = new Date(`${iso}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().slice(0, 10);
-};
 
 /** Server field → this form's field. */
 const SERVER_FIELD: Readonly<Record<string, keyof LoanFormValues>> = {
@@ -133,7 +128,7 @@ export function NewLoanPageContent(): React.JSX.Element {
       instalmentCount: '100',
       perInstalmentAmount: '',
       disbursedOn: today,
-      firstDueOn: addDays(today, 1),
+      firstDueOn: defaultFirstDue(today, 'daily', 'fixed_daily'),
       collectionWeekdays: MON_TO_SAT,
       paymentMode: 'cash',
       notes: '',
@@ -145,6 +140,14 @@ export function NewLoanPageContent(): React.JSX.Element {
   });
   const values = useWatch({ control: form.control }) as LoanFormValues;
   const plan = values.planType;
+
+  // QA B46 / F12 — the first instalment follows "Money given on", the plan and the
+  // frequency, one period on, until the person sets it themselves.
+  const { disbursedOn, frequency } = values;
+  useEffect(() => {
+    if (!disbursedOn || form.getFieldState('firstDueOn').isDirty) return;
+    form.setValue('firstDueOn', defaultFirstDue(disbursedOn, frequency, plan));
+  }, [disbursedOn, frequency, plan, form]);
 
   useEffect(() => {
     void dispatch(fetchLendingRoutes());
@@ -358,7 +361,6 @@ export function NewLoanPageContent(): React.JSX.Element {
                     onChange={(next) => {
                       field.onChange(next);
                       form.setValue('frequency', PLAN_FREQUENCIES[next][0] ?? 'monthly');
-                      if (next === 'flexible') form.setValue('firstDueOn', addDays(today, 90));
                     }}
                     options={PLAN_TYPES.map((p) => ({ value: p, label: t(`lending.plan.${p}`) }))}
                   />

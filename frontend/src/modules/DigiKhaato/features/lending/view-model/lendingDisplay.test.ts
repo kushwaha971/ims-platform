@@ -1,4 +1,5 @@
 import {
+  defaultFirstDue,
   askedToday,
   caption,
   isRemindable,
@@ -93,5 +94,26 @@ describe('a row caption', () => {
     expect(caption(['B-0001', '', null, 'Market lane 2', undefined])).toBe(
       'B-0001 · Market lane 2'
     );
+  });
+});
+
+describe('defaultFirstDue (QA B46 / F12)', () => {
+  /* Prevents: a weekly loan whose first instalment defaults to tomorrow, and a back-dated
+     loan whose first instalment stays where it was — a 2½-month gap and a yearly rate that
+     jumps with it. */
+  it('is one period after the money was given', () => {
+    expect(defaultFirstDue('2026-10-12', 'daily', 'fixed_daily')).toBe('2026-10-13');
+    expect(defaultFirstDue('2026-10-12', 'weekly', 'flat')).toBe('2026-10-19');
+    expect(defaultFirstDue('2026-10-12', 'fortnightly', 'flat')).toBe('2026-10-26');
+    expect(defaultFirstDue('2026-10-12', 'monthly', 'reducing')).toBe('2026-11-12');
+    expect(defaultFirstDue('2026-08-01', 'weekly', 'flat')).toBe('2026-08-08');
+  });
+
+  it('keeps a month-end loan on the last day of a shorter month', () => {
+    expect(defaultFirstDue('2026-01-31', 'monthly', 'flat')).toBe('2026-02-28');
+  });
+
+  it('gives a flexible loan its 90-day end date', () => {
+    expect(defaultFirstDue('2026-10-12', 'monthly', 'flexible')).toBe('2027-01-10');
   });
 });

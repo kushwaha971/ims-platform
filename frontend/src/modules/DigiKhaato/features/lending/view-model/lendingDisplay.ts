@@ -1,6 +1,7 @@
 import type { UbStatusBadgeTone } from 'src/design-system';
+import { addDaysIso, addMonthsIso } from 'src/utils/dates';
 
-import type { LoanStatus, TodayStop } from '../types/lending.types';
+import type { Frequency, LoanStatus, PlanType, TodayStop } from '../types/lending.types';
 
 /** Lending's display decisions, made once so the round, the list and the page agree. */
 export const LOAN_STATUS_TONE: Readonly<Record<LoanStatus, UbStatusBadgeTone>> = {
@@ -85,4 +86,17 @@ const WRITE_OFF_CODE = /^(cannot_trace|death|bad_debt|other): (.*)$/s;
 export const endedReason = (reason: string, t: (id: string) => string): string => {
   const match = WRITE_OFF_CODE.exec(reason);
   return match ? `${t(`lending.end.writeOff.code.${match[1]}`)} · ${match[2]}` : reason;
+};
+
+/**
+ * QA B46 / F12 — the first instalment's default: one period after the money is given (a
+ * day, a week, a fortnight or a month), or 90 days out for a flexible loan's end date. It
+ * used to be "tomorrow" whatever the plan, and it did not move when "Money given on" did,
+ * so a loan back-dated to 1 Aug had its first weekly instalment on 13 Oct and a yearly rate
+ * that jumped with the gap.
+ */
+export const defaultFirstDue = (givenOn: string, frequency: Frequency, plan: PlanType): string => {
+  if (plan === 'flexible') return addDaysIso(givenOn, 90);
+  if (frequency === 'monthly') return addMonthsIso(givenOn, 1);
+  return addDaysIso(givenOn, frequency === 'weekly' ? 7 : frequency === 'fortnightly' ? 14 : 1);
 };
