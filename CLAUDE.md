@@ -278,6 +278,21 @@ constants live in a module that imports nothing, because importing them from
 the file that also holds the Yup schema dragged Yup into the route for another
 17 KB. Module-level imports tree-shake between modules, not within one.
 
+## Each app keeps only its own money; plain words (DEC-019, 12 Oct 2026)
+
+The owner, answering the 12 Oct QA report: the **Udhaar book** (You gave / You got) is
+its own standalone app, like Khatabook; the **Shop** keeps its own Customers and
+Suppliers (two separate tabs, bills due); **Library** and **Lending** keep theirs. Never
+combine them. Each app's money is its own ledger bucket and party cache (`main` →
+`balance`, `shop` → `shop_balance`, `loan`, `library`, `deposit`); no screen subtracts
+one from another, and no screen shows another app's figure. The person's name and
+mobile are the one shared record. Read DEC-019 before touching a balance.
+
+**Words:** the users are rural shopkeepers who know basic English. Every label is plain
+everyday English (and simple Hindi) — no jargon, no rule codes, no word cut by an
+ellipsis. Lending says Lent / Collected, Library says Fee / Paid, only the Udhaar book
+says You gave / You got.
+
 ## A business chooses its apps at sign-up (DEC-016, 11 Oct 2026)
 
 Step 1 of the wizard asks "What do you want to use?" and the list is the

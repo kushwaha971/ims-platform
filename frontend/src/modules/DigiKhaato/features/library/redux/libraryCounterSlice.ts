@@ -92,6 +92,19 @@ const libraryCounterSlice = createSlice({
       state.prompt = null;
       state.search = null;
     },
+    /**
+     * QA B13 — Finish ends the visit: the member, the day's log and the mode all go
+     * back to the start (Issue), so the next student does not meet the last one's
+     * list in Return mode. The log was kept for the day before; the server is the
+     * record, and each loan is on the member's own page.
+     */
+    counterFinished(state) {
+      state.member = null;
+      state.prompt = null;
+      state.search = null;
+      state.session = [];
+      state.mode = 'issue';
+    },
     counterSearchClosed(state) {
       state.search = null;
     },
@@ -186,6 +199,7 @@ export const {
   counterSkipped,
   counterPromptClosed,
   counterMemberCleared,
+  counterFinished,
   counterSearchClosed,
   counterSessionRestored,
   counterModeRestored,

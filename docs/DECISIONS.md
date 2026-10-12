@@ -512,3 +512,49 @@ ADR-021 ↔ §26.14 contradiction recorded as `CR-j`.
   edition is the same code packaged — a desktop shell (Tauri or Electron) around the local
   Django + PostgreSQL + Next.js stack — plus a local PIN/password sign-in, automatic backups to
   a chosen drive, safe self-updating migrations and an offline-tolerant licence check.
+
+### DEC-019 — Each app keeps only its own money; the udhaar book is its own app
+
+- **Status:** `decided` (2026-10-12, by the owner, answering the QA report of the same day).
+- **The owner's words:** "in case of lender or library why there is need of you gave, you
+  got … they are asking for money … give and collection … library asking and enter fees";
+  "want core and required functionality, not any shared functionality — work for what that
+  thing is made, only do that, not other stuff"; "that you gave, you got is a udhar book app
+  and basically it's a different section, it should not relate to any module like khatabook
+  app did". Asked to choose, they confirmed: strictly separate, the contact (name, mobile) the
+  only shared thing; and the udhaar book separate from the Shop too — a Shop bill on credit
+  stays in the Shop.
+- **What it answers:** QA B3 (Lending ₹1,164 vs Shop ₹964 for one borrower; Shop "You got"
+  never reaching the loan), B9 (library fees shown as "You gave" on a Shop page), B10 (Shop
+  expenses in the Library's profit), B36 (Old dues headline including loans its table did not),
+  B39 (an opening balance not payable from Shop's Record payment), and the wording complaint.
+- **The rule.** Five kinds of money, each its own ledger bucket, its own party cache, its own
+  screens, its own words:
+
+  | Bucket | App | Cache | Words |
+  |---|---|---|---|
+  | `main` | Udhaar book (You gave / You got, opening, write-off, reminders, statement, old dues) | `party.balance` | You gave · You got |
+  | `shop` | Shop (bills, purchases, credit/debit notes, expenses on credit, receipts) | `party.shop_balance` | Bill · Payment received/made |
+  | `loan` | Lending | `party.loan_balance` | Lent · Collected |
+  | `library` | Library (fees, fines, charges, waivers, fee payments) | `party.library_balance` | Fee · Paid |
+  | `deposit` | held, refundable | `party.deposit_held` | Security |
+
+  No cache includes another's; no screen subtracts one from another (the old
+  `balance − loan_balance` "trade figure" was applied on half the screens and forgotten on the
+  rest, which is how a loan appeared as shop credit). A payment settles one bucket only, so a
+  Shop receipt can never land on a library fee or a loan (FIFO already filters by bucket).
+  An expense belongs to the app it was recorded in; there is no "shared".
+- **Three apps, never combined (owner, the same day).** "Keep all three separate, not
+  combined — other users may want to use the udhaar book like the Khatabook app." So:
+  the **Udhaar book** is a standalone app any business can switch on by itself, with its own
+  people list, You gave / You got, reminders, statement and old dues; the **Shop** keeps its
+  own **Customers** and **Suppliers**, two separate tabs, showing what is due on bills; and
+  Library and Lending keep theirs. The person (name, mobile) is the one shared record.
+- **Words (owner, the same day).** "My target users are rural shopkeepers, not highly
+  qualified, they know basic English." Every label is plain everyday English (and simple
+  Hindi): no jargon, no codes, no word cut by an ellipsis.
+- **Consequences, accepted.** B39 is closed by the rule rather than by a fix: a khata opening
+  balance is settled with "You got" in the udhaar book, not with a Shop receipt. The credit
+  limit applies to each app's own balance. "Last entry" on a list moves only for that app's
+  own entries.
+- **Links:** ADR-043 (buckets), ADR-044 (deposits), DEC-016 (apps chosen at sign-up).

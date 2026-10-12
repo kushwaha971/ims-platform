@@ -16,6 +16,7 @@ import {
   UbStack,
   UbText,
   UbTextInput,
+  useIsMobileLayer,
 } from 'src/design-system';
 import { usePermissions } from 'src/hooks/usePermissions';
 import { useTranslation } from 'src/hooks/useTranslation';
@@ -58,6 +59,7 @@ const PaymentFormDrawerLazy = dynamic(
 export function CounterPageContent(): React.JSX.Element {
   const { t } = useTranslation();
   const counter = useCounter();
+  const isMobileLayer = useIsMobileLayer();
   const box = useRef<HTMLInputElement | null>(null);
   const [text, setText] = useState('');
   const [finishing, setFinishing] = useState(false);
@@ -151,6 +153,37 @@ export function CounterPageContent(): React.JSX.Element {
     );
   }
 
+  /* QA B22 — on a phone the two columns stack, and the member card came after the
+     whole log; there it sits right under the scan box instead. */
+  const memberPanel = member ? (
+    <CounterMemberPanel
+      member={member}
+      t={t}
+      busy={counter.busy}
+      onRenew={(copyId, code) => counter.submit(code, { copyId, mode: 'renew' })}
+      onLost={
+        canAdjust
+          ? (loanId, title) => {
+              setLosing({ loanId, title, fine: null });
+              void finePreview(loanId)
+                .then((fine) => setLosing((now) => (now ? { ...now, fine } : now)))
+                .catch(() => undefined);
+            }
+          : undefined
+      }
+      onRenewAll={counter.renewAll}
+      onFinish={finish}
+    />
+  ) : (
+    mode === 'issue' && (
+      <UbCard padded>
+        <UbText variant="body-sm" tone="tertiary">
+          {t('library.counter.noMemberYet')}
+        </UbText>
+      </UbCard>
+    )
+  );
+
   const failedKeys = new Set(counter.failed.map((item) => item.key));
   const pending = [...(counter.inFlight ? [counter.inFlight] : []), ...counter.queue];
 
@@ -175,7 +208,11 @@ export function CounterPageContent(): React.JSX.Element {
               id="library-counter-box"
               name="library-counter-box"
               aria-label={t('library.counter.scanHint')}
-              placeholder={t(`library.counter.placeholder.${mode}`)}
+              placeholder={
+                mode === 'issue' && member
+                  ? t('library.counter.placeholder.issueTo', { name: member.name })
+                  : t(`library.counter.placeholder.${mode}`)
+              }
               value={text}
               onChange={setText}
               autoComplete="off"
@@ -198,6 +235,7 @@ export function CounterPageContent(): React.JSX.Element {
               {t('library.counter.keys')}
             </UbText>
           </UbStack>
+          {isMobileLayer && memberPanel}
 
           {search && (
             <UbCard padded>
@@ -267,11 +305,9 @@ export function CounterPageContent(): React.JSX.Element {
 
           {counter.session.length === 0 && pending.length === 0 ? (
             <UbText variant="body-sm" tone="tertiary" data-testid="counter-empty">
-              {t(
-                mode === 'issue' && !member
-                  ? 'library.counter.empty.issue'
-                  : `library.counter.empty.${mode}`
-              )}
+              {mode === 'issue' && member
+                ? t('library.counter.empty.issueTo', { name: member.name })
+                : t(`library.counter.empty.${mode}`)}
             </UbText>
           ) : (
             <CounterSessionList
@@ -289,36 +325,11 @@ export function CounterPageContent(): React.JSX.Element {
           )}
         </UbStack>
 
-        <UbStack gap={3} className="lg:sticky lg:top-4">
-          {member ? (
-            <CounterMemberPanel
-              member={member}
-              t={t}
-              busy={counter.busy}
-              onRenew={(copyId, code) => counter.submit(code, { copyId, mode: 'renew' })}
-              onLost={
-                canAdjust
-                  ? (loanId, title) => {
-                      setLosing({ loanId, title, fine: null });
-                      void finePreview(loanId)
-                        .then((fine) => setLosing((now) => (now ? { ...now, fine } : now)))
-                        .catch(() => undefined);
-                    }
-                  : undefined
-              }
-              onRenewAll={counter.renewAll}
-              onFinish={finish}
-            />
-          ) : (
-            mode === 'issue' && (
-              <UbCard padded>
-                <UbText variant="body-sm" tone="tertiary">
-                  {t('library.counter.noMemberYet')}
-                </UbText>
-              </UbCard>
-            )
-          )}
-        </UbStack>
+        {!isMobileLayer && (
+          <UbStack gap={3} className="lg:sticky lg:top-4">
+            {memberPanel}
+          </UbStack>
+        )}
       </UbStack>
 
       {prompt?.kind === 'override' && (

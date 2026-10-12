@@ -13,7 +13,7 @@ import { newRequestId } from 'src/utils/requestId';
 import { markLibraryLoanLost } from '../redux/libraryChargeThunk';
 import {
   counterEnqueued,
-  counterMemberCleared,
+  counterFinished,
   counterModeChanged,
   counterModeRestored,
   counterNoted,
@@ -211,7 +211,10 @@ export const useCounter = (): Counter => {
     setMode,
     submit,
     pickMember,
-    finish: () => dispatch(counterMemberCleared()),
+    finish: () => {
+      rememberMode('issue');
+      dispatch(counterFinished());
+    },
     closePrompt: () => dispatch(counterPromptClosed()),
     retry: (key: string) => dispatch(counterRetried(key)),
     skip: (key: string) => dispatch(counterSkipped(key)),

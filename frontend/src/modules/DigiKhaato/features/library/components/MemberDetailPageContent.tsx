@@ -383,7 +383,11 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
                   <UbText variant="metric-sm">{t('library.member.noDues')}</UbText>
                 )}
                 {depositDue && (
-                  <UbText variant="caption" tone="tertiary" data-testid="library-member-owes-deposit">
+                  <UbText
+                    variant="caption"
+                    tone="tertiary"
+                    data-testid="library-member-owes-deposit"
+                  >
                     {t('library.member.owesInclDeposit', { deposit: formatInr(depositDue) })}
                   </UbText>
                 )}
