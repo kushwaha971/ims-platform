@@ -56,10 +56,14 @@ describe('the value never becomes a number', () => {
     expect(padDecimals('9007199254740993.75', 2)).toBe('9007199254740993.75');
   });
 
-  it('refuses a minus sign outright rather than complaining about one', () => {
-    // Direction is two buttons — "they owe me" and "I owe them" — because a
-    // minus sign is a thing a shopkeeper has to decode.
-    expect(sanitiseAmount('-500')).toBe('500');
+  it('keeps a typed minus so the form can refuse it in words (QA B14)', () => {
+    // Direction is two buttons — "they owe me" and "I owe them" — so a minus is
+    // never right. Dropping it silently turned a typed "−50" into a saved ₹50
+    // with a success toast; kept, it reaches the validators, which say so.
+    expect(sanitiseAmount('-500')).toBe('-500');
+    expect(sanitiseAmount('−50')).toBe('-50');
+    expect(groupIndian('-125000', 2)).toBe('-1,25,000.00');
+    expect(padDecimals('-50', 2)).toBe('-50.00');
     expect(sanitiseAmount('1a2b3')).toBe('123');
     expect(sanitiseAmount('1.2.3')).toBe('1.23');
   });

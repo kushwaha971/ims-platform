@@ -4,6 +4,7 @@
   "settings.validation.ifsc": "सही आईएफ़एससी लिखें",
   "settings.validation.upiVpa": "name@bank जैसी सही यूपीआई आईडी लिखें",
   "validation.amount.format": "दो दशमलव तक लिखें, जैसे 500.00।",
+  "validation.amount.negative": "0 या उससे ज़्यादा लिखें।",
   "validation.amount.positive": "रकम शून्य से ज़्यादा होनी चाहिए।",
   "validation.amount.required": "रकम भरें।",
   "validation.amount.tooLarge": "यह रकम बहुत बड़ी है।",

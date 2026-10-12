@@ -4,6 +4,7 @@
   "settings.validation.ifsc": "Enter a valid IFSC",
   "settings.validation.upiVpa": "Enter a valid UPI ID like name@bank",
   "validation.amount.format": "Use up to two decimals, like 500.00.",
+  "validation.amount.negative": "Enter 0 or more.",
   "validation.amount.positive": "The amount must be more than zero.",
   "validation.amount.required": "Enter an amount.",
   "validation.amount.tooLarge": "That amount is too large.",

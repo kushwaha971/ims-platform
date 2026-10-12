@@ -35,11 +35,14 @@ import { cn } from 'src/utils/cn';
  * and ₹ dropped) and truncated to the caller's decimal places.
  *
  * ── What it accepts ─────────────────────────────────────────────────────────
- * Digits, one decimal point, and nothing else. A `-` is not rejected with an
- * error message; it simply cannot be typed, because a negative amount is never
- * what a merchant means. Direction is a separate control, always — "they owe
- * me" and "I owe them" are two buttons, not a minus sign a shopkeeper has to
- * decode.
+ * Digits and one decimal point. A negative amount is never what a merchant
+ * means — direction is a separate control, always: "they owe me" and "I owe
+ * them" are two buttons, not a minus sign a shopkeeper has to decode.
+ *
+ * QA B14 (12 Oct 2026) — the minus used to be dropped silently, so a typed
+ * "−50" became 50 and was saved with a success toast. It is now KEPT, as a
+ * leading `-`, so the form's money validators refuse it in words ("Enter 0 or
+ * more") instead of the input quietly changing the number.
  */
 export interface UbMoneyInputProps extends Omit<
   InputHTMLAttributes<HTMLInputElement>,
@@ -56,12 +59,17 @@ export interface UbMoneyInputProps extends Omit<
   readonly className?: string;
 }
 
-/** Digits and at most one point. Everything else never reaches the value. */
+/** Digits, at most one point, and a leading `-` if a minus was typed (QA B14). */
 export const sanitiseAmount = (raw: string): string => {
+  const sign = /[-−]/.test(raw) ? '-' : '';
   const kept = raw.replace(/[^\d.]/g, '');
   const [whole = '', ...rest] = kept.split('.');
-  return rest.length > 0 ? `${whole}.${rest.join('').replace(/\./g, '')}` : whole;
+  return sign + (rest.length > 0 ? `${whole}.${rest.join('').replace(/\./g, '')}` : whole);
 };
+
+/** Runs `format` on the magnitude and puts a leading minus back. */
+const signed = (value: string, format: (magnitude: string) => string): string =>
+  value.startsWith('-') ? `-${format(value.slice(1))}` : format(value);
 
 /**
  * At most `decimalPlaces` after the point, by truncation (QA S-D2: a third
@@ -92,6 +100,8 @@ export const capDecimals = (value: string, decimalPlaces: number): string => {
  */
 export const padDecimals = (value: string, decimalPlaces: number): string => {
   if (!value) return '';
+  if (value.startsWith('-'))
+    return value === '-' ? value : signed(value, (m) => padDecimals(m, decimalPlaces));
   const [whole = '', fraction = ''] = value.split('.');
   const safeWhole = whole || '0';
   if (decimalPlaces <= 0) return safeWhole;
@@ -105,6 +115,8 @@ export const padDecimals = (value: string, decimalPlaces: number): string => {
  */
 export const groupIndian = (value: string, decimalPlaces: number): string => {
   if (!value) return '';
+  if (value.startsWith('-'))
+    return value === '-' ? value : signed(value, (m) => groupIndian(m, decimalPlaces));
   const [whole = '0', fraction = ''] = value.split('.');
   const padded = fraction.padEnd(decimalPlaces, '0').slice(0, decimalPlaces);
   const last3 = whole.slice(-3);

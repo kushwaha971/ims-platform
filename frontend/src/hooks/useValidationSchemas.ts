@@ -212,6 +212,8 @@ export const buildValidationSchemas = (t: TranslateFn): ValidationSchemas => {
   const amountValidation = (options?: { allowZero?: boolean; max?: string }) =>
     Yup.string()
       .required(t('validation.amount.required'))
+      // QA B14 — before the format check, so a typed minus is named for what it is.
+      .test('notNegative', t('validation.amount.negative'), (value) => !value?.startsWith('-'))
       .matches(REGEX.DECIMAL_2DP, t('validation.amount.format'))
       .test('positive', t('validation.amount.positive'), (value) => {
         if (!value) return false;
@@ -240,6 +242,7 @@ export const buildValidationSchemas = (t: TranslateFn): ValidationSchemas => {
       .transform(blankToNull)
       .nullable()
       .notRequired()
+      .test('notNegative', t('validation.amount.negative'), (value) => !value?.startsWith('-'))
       .matches(REGEX.DECIMAL_2DP, {
         message: t('validation.amount.format'),
         excludeEmptyString: true,
