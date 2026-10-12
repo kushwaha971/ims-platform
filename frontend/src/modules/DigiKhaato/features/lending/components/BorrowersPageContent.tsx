@@ -12,6 +12,7 @@ import {
   UbAmount,
   UbDataGrid,
   UbEmptyState,
+  UbFilterSelect,
   UbPageHeader,
   UbPageShell,
   UbSearchInput,
@@ -36,9 +37,12 @@ import { formatInr } from 'src/utils/money';
 import { selectLendingForm } from '../redux/lendingFormSlice';
 import { fetchLendingBorrowers, fetchLendingToday } from '../redux/lendingThunk';
 import { selectLendingToday } from '../redux/lendingTodaySlice';
+import {
+  BORROWER_STATUS_FILTERS,
+  type BorrowerRow,
+  type BorrowerStatusFilter,
+} from '../types/lending.types';
 import { isNonZero } from '../view-model/lendingDisplay';
-
-import type { BorrowerRow } from '../types/lending.types';
 
 type T = ReturnType<typeof useTranslation>['t'];
 
@@ -97,17 +101,24 @@ const borrowerColumns = (t: T): UbDataGridColumn<BorrowerRow>[] => [
     align: 'end',
     cardSlot: 'trailing',
     widthShare: 16,
+    // "Blocked" sits with "Late" under the amount rather than beside the name:
+    // the name is the card's title and owns its line (CLAUDE.md, LED-03).
     cell: (row) =>
-      row.summary ? (
+      row.summary || row.status === 'blocked' ? (
         <UbStack gap={1} align="end">
-          <UbAmount
-            value={row.summary.left}
-            tone={isNonZero(row.summary.late) ? 'receivable' : undefined}
-            label={t('lending.loan.left')}
-            labelHidden
-          />
-          {isNonZero(row.summary.late) ? (
+          {row.summary ? (
+            <UbAmount
+              value={row.summary.left}
+              tone={isNonZero(row.summary.late) ? 'receivable' : undefined}
+              label={t('lending.loan.left')}
+              labelHidden
+            />
+          ) : null}
+          {row.summary && isNonZero(row.summary.late) ? (
             <UbStatusBadge tone="error" label={t('lending.borrowers.late')} />
+          ) : null}
+          {row.status === 'blocked' ? (
+            <UbStatusBadge tone="warning" label={t('lending.borrower.blocked')} />
           ) : null}
         </UbStack>
       ) : null,
@@ -172,15 +183,18 @@ export function BorrowersPageContent(): React.JSX.Element {
   const canSeeRound = hasModule('lending') && can('lending.today.read');
   const wide = useGridTier() === 'full';
   const [q, setQ] = useState('');
+  // Everybody by default: a blocked borrower who still owes is somebody the
+  // lender is looking for (owner, 12 Oct 2026).
+  const [status, setStatus] = useState<BorrowerStatusFilter>('all');
   const [search, setSearch] = useCommittedSearch(q, setQ, 300);
   const columns = useMemo(() => borrowerColumns(t), [t]);
   const labels = useLendingGridLabels(t);
 
   useEffect(() => {
     if (!canRead) return undefined;
-    const promise = dispatch(fetchLendingBorrowers(q));
+    const promise = dispatch(fetchLendingBorrowers({ q, status }));
     return () => promise.abort();
-  }, [canRead, dispatch, q]);
+  }, [canRead, dispatch, q, status]);
   // Today's two figures are for the computer's header row only; a phone
   // never draws them, so it never asks.
   useEffect(() => {
@@ -227,7 +241,9 @@ export function BorrowersPageContent(): React.JSX.Element {
   }
 
   const loaded = borrowersStatus === 'succeeded' || borrowersStatus === 'refreshing';
-  const none = loaded && borrowers.length === 0 && !q;
+  // "No borrowers yet" only when nothing narrows the list: no blocked
+  // borrowers is a filtered-empty list, not a first day.
+  const none = loaded && borrowers.length === 0 && !q && status === 'all';
   let gridState: UbGridState = 'rows';
   if (borrowersStatus === 'idle' || borrowersStatus === 'loading') gridState = 'loading';
   else if (borrowersStatus === 'failed') gridState = 'error';
@@ -308,6 +324,24 @@ export function BorrowersPageContent(): React.JSX.Element {
                 onChange={setSearch}
                 placeholder={t('lending.borrowers.search')}
                 aria-label={t('lending.borrowers.search')}
+              />
+            }
+            // One row with the search (owner, 12 Oct 2026): a single choice,
+            // the loan book's own status control.
+            filters={
+              <UbFilterSelect
+                spec={{
+                  kind: 'single',
+                  key: 'status',
+                  label: t('lending.borrowers.status'),
+                  options: BORROWER_STATUS_FILTERS.map((s) => ({
+                    value: s,
+                    label: t(`lending.borrowers.filter.${s}`),
+                  })),
+                }}
+                value={status}
+                onChange={(next) => setStatus(next as BorrowerStatusFilter)}
+                closeLabel={t('common.action.close')}
               />
             }
           />

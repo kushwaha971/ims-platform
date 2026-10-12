@@ -57,7 +57,8 @@ def test_registry_is_closed_and_complete() -> None:
     # ── LEN ── +4: `loan_not_active`, `loan_disbursal_locked`, `collection_over_payoff`,
     #           `route_has_loans` (FRD lending §0.7).
     # ── L03 ── +1: `lending_nothing_due` (a Remind on a loan with nothing due).
-    assert len(REGISTRY) == 214
+    # ── 12 Oct 2026 ── +1: `borrower_blocked` (a blocked borrower gets no new loan).
+    assert len(REGISTRY) == 215
     assert REGISTRY["attendance_blocked"] == (409, False)  # ATT
     assert REGISTRY["attendance_duplicate"] == (409, False)  # ATT
     assert REGISTRY["entitlement_exhausted"] == (409, False)  # ATT

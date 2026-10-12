@@ -5,7 +5,7 @@ import * as Yup from 'yup';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { useValidationSchemas } from 'src/hooks/useValidationSchemas';
 
-import type { CollectFormValues, LoanFormValues } from '../types/lending.types';
+import type { BorrowerEditValues, CollectFormValues, LoanFormValues } from '../types/lending.types';
 
 /**
  * Lending's forms from the central validators. The server re-checks every rule
@@ -14,6 +14,7 @@ import type { CollectFormValues, LoanFormValues } from '../types/lending.types';
 export const useLendingSchemas = (): {
   readonly collectSchema: Yup.ObjectSchema<CollectFormValues>;
   readonly loanSchema: Yup.ObjectSchema<LoanFormValues>;
+  readonly borrowerEditSchema: Yup.ObjectSchema<BorrowerEditValues>;
 } => {
   const v = useValidationSchemas();
   const { t } = useTranslation();
@@ -103,6 +104,15 @@ export const useLendingSchemas = (): {
         .when('lateFeeKind', { is: (k: string) => k !== 'none', then: () => whole(0, 90) }),
     }) as Yup.ObjectSchema<LoanFormValues>;
 
-    return { collectSchema, loanSchema };
+    // Owner, 12 Oct 2026 — the borrower edit drawer. The column limits are the
+    // server's: area 60 (`NAME_MAX`), notes 500 (`NOTE_MAX`).
+    const borrowerEditSchema = Yup.object({
+      name: v.nameValidation(),
+      mobile: v.mobileValidation(false).defined().default(''),
+      area: v.boundedText(60),
+      notes: v.boundedText(500),
+    }) as Yup.ObjectSchema<BorrowerEditValues>;
+
+    return { collectSchema, loanSchema, borrowerEditSchema };
   }, [v, t]);
 };

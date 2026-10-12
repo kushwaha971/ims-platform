@@ -7,9 +7,11 @@ import './lendingInvalidation';
 
 import type { BorrowerCollectResult, CollectResult, LoanPage } from '../api/lendingService';
 import type {
+  BorrowerEditValues,
   BorrowerPage,
   BorrowerRow,
   BorrowerSplit,
+  BorrowerStatusFilter,
   CollectFormValues,
   CollectionPreview,
   CollectionRow,
@@ -85,16 +87,17 @@ export const fetchLendingLoan = createAsyncThunk<
   }
 });
 
-export const fetchLendingBorrowers = createAsyncThunk<BorrowerPage, string, Reject>(
-  'lendingForm/fetchBorrowers',
-  async (q, { signal, rejectWithValue }) => {
-    try {
-      return await (await service()).listBorrowers(q, signal);
-    } catch (error) {
-      return rejectWithValue(toApiError(error, 'lending.borrowers.error'));
-    }
+export const fetchLendingBorrowers = createAsyncThunk<
+  BorrowerPage,
+  { q?: string; status?: BorrowerStatusFilter },
+  Reject
+>('lendingForm/fetchBorrowers', async (params, { signal, rejectWithValue }) => {
+  try {
+    return await (await service()).listBorrowers(params, signal);
+  } catch (error) {
+    return rejectWithValue(toApiError(error, 'lending.borrowers.error'));
   }
-);
+});
 
 /** QUERY — one borrower and their loans added up, for the head of their loan list. */
 export const fetchLendingBorrower = createAsyncThunk<BorrowerRow, string, Reject>(
@@ -104,6 +107,46 @@ export const fetchLendingBorrower = createAsyncThunk<BorrowerRow, string, Reject
       return await (await service()).getBorrower(id, signal);
     } catch (error) {
       return rejectWithValue(toApiError(error, 'lending.borrowers.error'));
+    }
+  }
+);
+
+// ── Owner, 12 Oct 2026 — edit, block and unblock a borrower (owner or admin) ──
+
+/** COMMAND — name and mobile (the party's), area and notes. */
+export const updateLendingBorrower = createAsyncThunk<
+  BorrowerRow,
+  { id: string; values: BorrowerEditValues; version: number },
+  Reject
+>('lendingForm/updateBorrower', async ({ id, values, version }, { rejectWithValue }) => {
+  try {
+    return await (await service()).updateBorrower(id, values, version);
+  } catch (error) {
+    return rejectWithValue(toApiError(error, 'lending.borrower.edit.error'));
+  }
+});
+
+/** COMMAND — no new loans for this person; collections carry on. */
+export const blockLendingBorrower = createAsyncThunk<
+  BorrowerRow,
+  { id: string; reason: string },
+  Reject
+>('lendingForm/blockBorrower', async ({ id, reason }, { rejectWithValue }) => {
+  try {
+    return await (await service()).blockBorrower(id, reason);
+  } catch (error) {
+    return rejectWithValue(toApiError(error, 'lending.borrower.block.error'));
+  }
+});
+
+/** COMMAND — new loans allowed again. */
+export const unblockLendingBorrower = createAsyncThunk<BorrowerRow, string, Reject>(
+  'lendingForm/unblockBorrower',
+  async (id, { rejectWithValue }) => {
+    try {
+      return await (await service()).unblockBorrower(id);
+    } catch (error) {
+      return rejectWithValue(toApiError(error, 'lending.borrower.block.error'));
     }
   }
 );

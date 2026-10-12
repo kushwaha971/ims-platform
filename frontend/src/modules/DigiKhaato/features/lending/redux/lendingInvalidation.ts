@@ -32,6 +32,9 @@ export const LENDING_MUTATIONS = {
   recordLendingMessage: 'lendingMessages/record',
   adjustLendingDue: 'lendingForm/adjustDue',
   endLendingLoan: 'lendingForm/endLoan',
+  updateLendingBorrower: 'lendingForm/updateBorrower',
+  blockLendingBorrower: 'lendingForm/blockBorrower',
+  unblockLendingBorrower: 'lendingForm/unblockBorrower',
 } as const satisfies Record<string, string>;
 
 export type TLendingMutationName = keyof typeof LENDING_MUTATIONS;
@@ -71,6 +74,17 @@ export const LENDING_INVALIDATION: Readonly<
     refetch: ['lendingToday', 'lendingLoans', 'lendingMessages'],
     stale: ['partyList', 'partyDetail'],
   },
+  // Owner, 12 Oct 2026. The borrower row itself is replaced from the response
+  // by `lendingFormSlice` (a real patch, done in its reducer). A new name or
+  // mobile also shows on every loan row, on the round and on the khata.
+  updateLendingBorrower: {
+    refetch: ['lendingLoans'],
+    stale: ['lendingToday', 'partyList', 'partyDetail'],
+  },
+  // A block changes no money and no loan: the borrower row, replaced from the
+  // response, is all that moves. Loan rows carry no status of their own.
+  blockLendingBorrower: {},
+  unblockLendingBorrower: {},
 };
 
 registerInvalidation({

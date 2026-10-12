@@ -155,3 +155,15 @@ export interface CloseFormValues {
   reason: string;
   applyToDues: boolean;
 }
+
+/**
+ * The student's own record, as the owner or an admin edits it (12 Oct 2026).
+ * `validUntil` is `''` for "no end date". Name and mobile are the linked
+ * party's and are edited on the customer page, not here.
+ */
+export interface MemberEditFormValues {
+  memberNumber: string;
+  groupLabel: string;
+  validUntil: string;
+  notes: string;
+}

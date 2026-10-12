@@ -283,6 +283,30 @@ export interface BorrowerRow {
   readonly route: { readonly id: string; readonly name: string } | null;
   /** This person's loans added up; absent from a server that does not send it. */
   readonly summary?: BorrowerSummary | null;
+  /**
+   * Owner, 12 Oct 2026 — `blocked` means no NEW loan; collections on running
+   * loans carry on. Read as `active` from a server that does not send it.
+   */
+  readonly status: BorrowerStatus;
+  readonly blockedReason: string;
+  readonly notes: string;
+  /** Sent back on an edit, so two people editing one borrower cannot silently undo each other. */
+  readonly version: number;
+}
+
+export const BORROWER_STATUSES = ['active', 'blocked'] as const;
+export type BorrowerStatus = (typeof BORROWER_STATUSES)[number];
+/** The Borrowers list's status choice; `all` is the server's default. */
+export const BORROWER_STATUS_FILTERS = ['all', 'active', 'blocked'] as const;
+export type BorrowerStatusFilter = (typeof BORROWER_STATUS_FILTERS)[number];
+
+/** The edit drawer: name and mobile are the party's, area and notes lending's own. */
+export interface BorrowerEditValues {
+  name: string;
+  /** E.164 from `UbPhoneInput`, or '' to remove it. */
+  mobile: string;
+  area: string;
+  notes: string;
 }
 
 /**

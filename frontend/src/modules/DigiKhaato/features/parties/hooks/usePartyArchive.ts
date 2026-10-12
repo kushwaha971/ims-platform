@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from 'react';
 
 import { useAppDispatch } from 'src/hooks/useAppStore';
+import { useIsOwnerOrAdmin } from 'src/hooks/useIsOwnerOrAdmin';
 import { usePermissions } from 'src/hooks/usePermissions';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import type { ApiErrorShape } from 'src/types/api.types';
@@ -134,7 +135,11 @@ export function usePartyArchive(id: string | null): UsePartyArchiveResult {
   const [restoring, setRestoring] = useState(false);
   const [savingFrom, setSavingFrom] = useState<ArchiveStage>('confirm');
 
-  const canArchive = can('parties.party.delete');
+  /* Owner, 12 Oct 2026: filing a person away — and bringing them back — is the
+     owner's or an admin's act, whatever codenames a role was given. The server
+     refuses it regardless (`PartyManagerActions`); this hides the control. */
+  const isManager = useIsOwnerOrAdmin();
+  const canArchive = can('parties.party.delete') && isManager;
   const canWriteOff = canArchive && can('ledger.entry.write');
 
   const open = useCallback(() => {
@@ -371,5 +376,14 @@ export function useBulkArchive(ids: readonly string[], onDone: () => void): UseB
     [dispatch, ids, onDone]
   );
 
-  return { canArchive: can('parties.party.delete'), open, saving, result, start, close, confirm };
+  const isManager = useIsOwnerOrAdmin();
+  return {
+    canArchive: can('parties.party.delete') && isManager,
+    open,
+    saving,
+    result,
+    start,
+    close,
+    confirm,
+  };
 }

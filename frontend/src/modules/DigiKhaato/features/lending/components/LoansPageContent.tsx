@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -28,6 +28,7 @@ import {
 } from 'src/design-system';
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useCommittedSearch } from 'src/hooks/useCommittedSearch';
+import { useIsOwnerOrAdmin } from 'src/hooks/useIsOwnerOrAdmin';
 import { usePermissions } from 'src/hooks/usePermissions';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { ROUTES } from 'src/routes';
@@ -39,11 +40,27 @@ import { selectLendingLoans } from '../redux/lendingLoansSlice';
 import { fetchLendingBorrower, fetchLendingLoans } from '../redux/lendingThunk';
 import { isNonZero, LOAN_STATUS_TONE } from '../view-model/lendingDisplay';
 
+import { BorrowerHeaderMenu } from './BorrowerHeaderMenu';
+
 /** The sheet loads with the tap that opens it (CLAUDE.md: a form belongs in its own chunk). */
 const CollectFromBorrowerDialogLazy = dynamic(
   () => import('./CollectFromBorrowerDialog').then((m) => m.CollectFromBorrowerDialog),
   { ssr: false }
 );
+
+/* Owner, 12 Oct 2026 — the borrower's ⋯: edit, block, unblock. Each loads
+   with the tap that opens it; the page a lender reads at the door carries none
+   of their form code. */
+const BorrowerEditDrawerLazy = dynamic(
+  () => import('./BorrowerEditDrawer').then((m) => m.BorrowerEditDrawer),
+  { ssr: false }
+);
+const BorrowerBlockDialogLazy = dynamic(
+  () => import('./BorrowerBlockDialog').then((m) => m.BorrowerBlockDialog),
+  { ssr: false }
+);
+
+type BorrowerAct = 'edit' | 'block' | 'unblock';
 
 const STATUSES = ['active', 'closed', 'all'] as const;
 type StatusFilter = (typeof STATUSES)[number];
@@ -73,10 +90,18 @@ export function LoansPageContent(): React.JSX.Element {
   const canRead = hasModule('lending') && can('lending.loan.read');
   const canLend = hasModule('lending') && can('lending.loan.create');
   const canCollect = hasModule('lending') && can('lending.collection.create');
+  // Editing and blocking a person is the owner's or an admin's act only
+  // (owner, 12 Oct 2026); everybody else never sees the ⋯.
+  const isManager = useIsOwnerOrAdmin();
+  const canManage = hasModule('lending') && can('lending.borrower.write') && isManager;
   const [collecting, setCollecting] = useState(false);
+  const [act, setAct] = useState<BorrowerAct | null>(null);
+  const menuRef = useRef<HTMLButtonElement>(null);
   const borrowerId = useSearchParams().get('borrower') ?? '';
   const { borrower } = useAppSelector(selectLendingForm);
   const person = borrowerId && borrower?.id === borrowerId ? borrower : null;
+  // A blocked borrower is given no NEW loan; their running loans are collected as before.
+  const blocked = person?.status === 'blocked';
   const [status, setStatus] = useState<StatusFilter>(borrowerId ? 'all' : 'active');
   const [q, setQ] = useState('');
   const [search, setSearch] = useCommittedSearch(q, setQ, 300);
@@ -119,22 +144,52 @@ export function LoansPageContent(): React.JSX.Element {
       <UbPageHeader
         title={person ? person.name : t('lending.loans.title')}
         actions={
-          canLend ? (
-            <UbActionLink
-              href={
-                person
-                  ? `${ROUTES.LENDING_NEW_LOAN}?borrower=${encodeURIComponent(person.id)}&name=${encodeURIComponent(person.name)}`
-                  : ROUTES.LENDING_NEW_LOAN
-              }
-              icon={<Plus className="h-4 w-4" aria-hidden />}
-              iconOnly={person ? undefined : 'mobile'}
-            >
-              {person ? t('lending.borrower.newLoan') : t('lending.loan.new')}
-            </UbActionLink>
+          canLend || (person && canManage) ? (
+            <>
+              {canLend && !blocked ? (
+                <UbActionLink
+                  href={
+                    person
+                      ? `${ROUTES.LENDING_NEW_LOAN}?borrower=${encodeURIComponent(person.id)}&name=${encodeURIComponent(person.name)}`
+                      : ROUTES.LENDING_NEW_LOAN
+                  }
+                  icon={<Plus className="h-4 w-4" aria-hidden />}
+                  iconOnly={person ? undefined : 'mobile'}
+                >
+                  {person ? t('lending.borrower.newLoan') : t('lending.loan.new')}
+                </UbActionLink>
+              ) : null}
+              {person && canManage ? (
+                <BorrowerHeaderMenu
+                  t={t}
+                  triggerRef={menuRef}
+                  onEdit={() => setAct('edit')}
+                  onBlock={blocked ? undefined : () => setAct('block')}
+                  onUnblock={blocked ? () => setAct('unblock') : undefined}
+                />
+              ) : null}
+            </>
           ) : undefined
         }
       />
       <UbStack gap={4} data-testid="lending-loans">
+        {person && blocked ? (
+          /* Everybody who can read the page sees it, not only the owner: the
+             collector at the door is who must not promise a new loan. */
+          <UbStack gap={1} data-testid="lending-borrower-blocked">
+            <UbStack direction="row" gap={2} align="center" wrap>
+              <UbStatusBadge tone="warning" label={t('lending.borrower.blocked')} />
+              <UbText variant="body-sm" tone="secondary">
+                {t('lending.borrower.blocked.note')}
+              </UbText>
+            </UbStack>
+            {person.blockedReason ? (
+              <UbText variant="caption" tone="tertiary">
+                {t('lending.borrower.blocked.reason', { reason: person.blockedReason })}
+              </UbText>
+            ) : null}
+          </UbStack>
+        ) : null}
         {person?.summary ? (
           <UbStack gap={3} data-testid="lending-borrower-summary">
             <SummaryStatGrid storageKey="lendingBorrower">
@@ -274,6 +329,21 @@ export function LoansPageContent(): React.JSX.Element {
           </UbText>
         )}
       </UbStack>
+      {act === 'edit' && person && (
+        <BorrowerEditDrawerLazy
+          borrower={person}
+          onClose={() => setAct(null)}
+          returnFocusRef={menuRef}
+        />
+      )}
+      {(act === 'block' || act === 'unblock') && person && (
+        <BorrowerBlockDialogLazy
+          borrower={person}
+          mode={act}
+          onClose={() => setAct(null)}
+          returnFocusRef={menuRef}
+        />
+      )}
       {collecting && person && (
         <CollectFromBorrowerDialogLazy
           borrowerId={person.id}

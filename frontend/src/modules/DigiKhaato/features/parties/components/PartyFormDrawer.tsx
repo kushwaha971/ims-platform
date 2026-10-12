@@ -87,12 +87,17 @@ export function PartyFormDrawer({
     editing,
     prefillName,
     isSaving,
-    canWrite,
+    canWrite: canCreate,
+    canEdit,
     formErrors,
     duplicateOf,
     close,
     submit,
   } = partyForm;
+  /* Editing an existing party is the owner's or an admin's (12 Oct 2026); adding
+     one stays with the write right. The page hides Edit already — this keeps
+     the drawer read-only if it is ever opened on a party some other way. */
+  const canWrite = isEdit ? canEdit : canCreate;
 
   const defaults = useMemo<PartyFormValues>(
     () => ({

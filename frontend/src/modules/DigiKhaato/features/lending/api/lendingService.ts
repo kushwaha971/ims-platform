@@ -6,9 +6,11 @@ import { toSplit } from '../view-model/borrowerSplit';
 import { LENDING_PATHS } from './lendingPaths';
 
 import type {
+  BorrowerEditValues,
   BorrowerPage,
   BorrowerRow,
   BorrowerSplit,
+  BorrowerStatusFilter,
   CollectFormValues,
   CollectionPreview,
   CollectionRow,
@@ -415,9 +417,20 @@ export const saveRoute = async (name: string): Promise<void> => {
   await api.post(LENDING_PATHS.ROUTES, { name }, quiet);
 };
 
-export const listBorrowers = async (q: string, signal?: AbortSignal): Promise<BorrowerPage> => {
+/**
+ * `status` absent (or `all`) is everybody, the server's default. The new-loan
+ * picker asks for `active`: a blocked person cannot be given a loan, so
+ * offering them there is offering a refusal.
+ */
+export const listBorrowers = async (
+  params: { q?: string; status?: BorrowerStatusFilter },
+  signal?: AbortSignal
+): Promise<BorrowerPage> => {
   const response = await api.get<{ data: Wire[]; meta?: { totals?: Wire } }>(
-    `${LENDING_PATHS.BORROWERS}${toQueryString({ q: q || undefined })}`,
+    `${LENDING_PATHS.BORROWERS}${toQueryString({
+      q: params.q || undefined,
+      status: params.status && params.status !== 'all' ? params.status : undefined,
+    })}`,
     { signal }
   );
   const totals = response.data.meta?.totals;
@@ -438,6 +451,10 @@ const toBorrower = (b: Wire): BorrowerRow => {
     mobile: strOrNull(b.mobile),
     area: str(b.area),
     route: route ? { id: str(route.id), name: str(route.name) } : null,
+    status: b.status === 'blocked' ? 'blocked' : 'active',
+    blockedReason: str(b.blocked_reason),
+    notes: str(b.notes),
+    version: num(b.version),
     summary: sum
       ? {
           loans: num(sum.loans),
@@ -453,7 +470,52 @@ const toBorrower = (b: Wire): BorrowerRow => {
 
 /** One borrower with their loans added up — the line above their list of loans. */
 export const getBorrower = async (id: string, signal?: AbortSignal): Promise<BorrowerRow> => {
-  const response = await api.get<{ data: Wire }>(`${LENDING_PATHS.BORROWERS}/${id}`, { signal });
+  const response = await api.get<{ data: Wire }>(LENDING_PATHS.BORROWER(id), { signal });
+  return toBorrower(response.data.data);
+};
+
+// ── Edit and block a borrower (owner, 12 Oct 2026; owner or admin only) ────
+
+/**
+ * `PATCH /lending/borrowers/{id}`. Name and mobile change on the PARTY (the
+ * server goes through the parties app's own service), so a number another
+ * party holds comes back as a field error on `mobile`. The drawer says field
+ * errors itself, hence quiet; anything else reaches the global snackbar from
+ * the thunk's caller.
+ */
+export const updateBorrower = async (
+  id: string,
+  values: BorrowerEditValues,
+  version: number
+): Promise<BorrowerRow> => {
+  const response = await api.patch<{ data: Wire }>(
+    LENDING_PATHS.BORROWER(id),
+    {
+      version,
+      name: values.name.trim(),
+      mobile: values.mobile.trim() || null,
+      area: values.area.trim(),
+      notes: values.notes.trim(),
+    },
+    quiet
+  );
+  return toBorrower(response.data.data);
+};
+
+/**
+ * No new loans for this person from now; collections on running loans carry
+ * on. Not quiet: a refusal has nothing to anchor to in a one-field dialog, so
+ * the global snackbar says it.
+ */
+export const blockBorrower = async (id: string, reason: string): Promise<BorrowerRow> => {
+  const response = await api.post<{ data: Wire }>(LENDING_PATHS.BORROWER_BLOCK(id), {
+    reason: reason.trim() || undefined,
+  });
+  return toBorrower(response.data.data);
+};
+
+export const unblockBorrower = async (id: string): Promise<BorrowerRow> => {
+  const response = await api.post<{ data: Wire }>(LENDING_PATHS.BORROWER_UNBLOCK(id), {});
   return toBorrower(response.data.data);
 };
 

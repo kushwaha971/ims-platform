@@ -22,7 +22,17 @@ import type { ModuleRefusal, SettingsModules } from '../types/settings.types';
  * product itself and are never offered (the server refuses to turn them off),
  * and `team` is part of Settings rather than a feature a shop opts into.
  */
-export const HIDDEN_MODULES: readonly string[] = ['platform', 'parties', 'ledger', 'team', 'help'];
+/* Owner, 12 Oct 2026: Gym and Hotel are out of the current scope — hidden even
+   on a development stack that releases every module (`UB_UNRELEASED_MODULES`). */
+export const HIDDEN_MODULES: readonly string[] = [
+  'platform',
+  'parties',
+  'ledger',
+  'team',
+  'help',
+  'gym',
+  'hospitality',
+];
 
 export interface ModuleToggleListProps {
   readonly modules: SettingsModules;

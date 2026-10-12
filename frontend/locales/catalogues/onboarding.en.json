@@ -15,6 +15,8 @@
   "onboarding.apps.library.hint": "Members, seats, monthly fees and attendance, with books to lend.",
   "onboarding.apps.other.hint": "Its own menu and screens, beside anything else you choose.",
   "onboarding.apps.shop.hint": "Customers and suppliers on credit, bills, stock, purchases and expenses.",
+  "onboarding.blocked.body": "Ask the owner to unblock you. You can also set up a business of your own below.",
+  "onboarding.blocked.title": "Your access to {business} has been blocked by its owner",
   "onboarding.creating": "Creating…",
   "onboarding.done": "Your business is ready.",
   "onboarding.email.label": "Email",

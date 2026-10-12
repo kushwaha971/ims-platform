@@ -21,7 +21,7 @@ from apps.common.exceptions import NotFound
 from apps.common.idempotency import idempotent
 from apps.common.money import ZERO
 from apps.common.pagination import PagePagination
-from apps.common.permissions import HasPermission, ModuleEnabled
+from apps.common.permissions import HasPermission, ModuleEnabled, OwnerOrAdmin
 from apps.common.responses import StandardResponse
 from apps.common.tenancy import get_effective_tenant
 from apps.library.models import LibraryMembership
@@ -34,14 +34,42 @@ WRITE = "library.member.write"
 CLOSE = "library.member.close"
 EXEMPT = "The library has no row scoping (LIB-14 §1, ADR-052)."
 
+#: Owner, 12 Oct 2026 — editing a student's record and suspending, reactivating,
+#: closing or re-admitting them is the owner's or an admin's act only, on top of
+#: the codename. What a PATCH may still carry for anybody holding
+#: `library.member.write` is PLACEMENT: the desk moves students between seats,
+#: shifts and lockers on the seat board every day (W02, `SeatDialog`), and that
+#: moves a chair rather than editing the person. `version` rides along with
+#: every PATCH. Anything else — member number, group, end date, notes, guardian
+#: — needs the owner or an admin, and a mixed body is refused whole.
+STAFF_PATCH_KEYS: frozenset[str] = frozenset({"seat_id", "shift_id", "locker_label", "version"})
+
+
+def _body_keys(request: Any) -> set[str]:
+    data = getattr(request, "data", None)
+    return set(data.keys()) if hasattr(data, "keys") else set()
+
 
 class _MemberView(APIView):
     scope_exempt = EXEMPT
     codename: str = WRITE
+    #: True on the acts that block or unblock a person (see `STAFF_PATCH_KEYS`).
+    manager_only: bool = False
 
     def get_permissions(self) -> list:
-        codename = READ if self.request.method in SAFE_METHODS else self.codename
-        return [IsAuthenticated(), ModuleEnabled("library")(), HasPermission(codename)()]
+        safe = self.request.method in SAFE_METHODS
+        codename = READ if safe else self.codename
+        checks = [IsAuthenticated(), ModuleEnabled("library")(), HasPermission(codename)()]
+        if not safe and self._needs_manager():
+            checks.append(OwnerOrAdmin())
+        return checks
+
+    def _needs_manager(self) -> bool:
+        if self.manager_only:
+            return True
+        if self.request.method == "PATCH":
+            return not _body_keys(self.request) <= STAFF_PATCH_KEYS
+        return False
 
     def ctx(self) -> Ctx:
         return Ctx.from_request(self.request)
@@ -129,7 +157,13 @@ class MemberDetailView(_MemberView):
         return StandardResponse.ok(_detail(ctx.tenant, row))
 
 
-def _action(service: Any, codename: str, *, idempotent_scope: str | None = None) -> type:
+def _action(
+    service: Any,
+    codename: str,
+    *,
+    idempotent_scope: str | None = None,
+    manager_only: bool = False,
+) -> type:
     """One POST endpoint per membership act; each answers with the member as it now is."""
 
     class _Action(_MemberView):
@@ -152,6 +186,7 @@ def _action(service: Any, codename: str, *, idempotent_scope: str | None = None)
             return StandardResponse.ok(_detail(ctx.tenant, membership_obj), meta=meta)
 
     _Action.codename = codename
+    _Action.manager_only = manager_only
     if idempotent_scope:
         _Action.post = idempotent(idempotent_scope)(_Action.post)  # type: ignore[method-assign]
     _Action.__name__ = f"Member{service.__name__.title().replace('_', '')}View"
@@ -178,10 +213,16 @@ def _deposit_action(service: Any, codename: str) -> type:
 
 MemberRenewView = _action(members.renew, WRITE, idempotent_scope="library.member.renew")
 MemberChangeTypeView = _action(members.change_type, WRITE)
-MemberSuspendView = _action(members.suspend, CLOSE)
-MemberReactivateView = _action(members.reactivate, CLOSE)
-MemberCloseView = _action(members.close, CLOSE, idempotent_scope="library.member.close")
-MemberRejoinView = _action(members.rejoin, WRITE, idempotent_scope="library.member.rejoin")
+# Renew and change-type stay with the codename: taking a month's fee and moving a
+# student to another plan is counter work, not blocking or editing the person.
+MemberSuspendView = _action(members.suspend, CLOSE, manager_only=True)
+MemberReactivateView = _action(members.reactivate, CLOSE, manager_only=True)
+MemberCloseView = _action(
+    members.close, CLOSE, idempotent_scope="library.member.close", manager_only=True
+)
+MemberRejoinView = _action(
+    members.rejoin, WRITE, idempotent_scope="library.member.rejoin", manager_only=True
+)
 MemberDepositReceiveView = _deposit_action(members.receive, WRITE)
 MemberDepositApplyView = _deposit_action(members.apply, CLOSE)
 MemberDepositRefundView = _deposit_action(members.refund, CLOSE)

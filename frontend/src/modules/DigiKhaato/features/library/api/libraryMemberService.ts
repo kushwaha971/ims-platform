@@ -254,6 +254,41 @@ export const placeMember = async (
   return toMemberDetail(response.data.data);
 };
 
+/** The student's own record — the keys `members.patch` accepts besides placement. */
+export type MemberEditBody = Readonly<
+  Partial<{
+    memberNumber: string;
+    groupLabel: string;
+    validUntil: string | null;
+    notes: string;
+  }>
+>;
+
+/**
+ * `PATCH /library/members/{id}` with the student's record (owner or admin only,
+ * 12 Oct 2026). Only the keys passed are sent — the drawer passes what changed.
+ * Quiet, because the drawer says a field's refusal on the field and hands
+ * anything else to the snackbar itself.
+ */
+export const updateMember = async (
+  id: string,
+  body: MemberEditBody,
+  version: number
+): Promise<MemberDetail> => {
+  const response = await api.patch<{ data: Wire }>(
+    LIBRARY_PATHS.MEMBER(id),
+    {
+      ...(body.memberNumber !== undefined ? { member_number: body.memberNumber } : {}),
+      ...(body.groupLabel !== undefined ? { group_label: body.groupLabel } : {}),
+      ...(body.validUntil !== undefined ? { valid_until: body.validUntil } : {}),
+      ...(body.notes !== undefined ? { notes: body.notes } : {}),
+      version,
+    },
+    ubConfig({ suppressErrorSnackbar: true })
+  );
+  return toMemberDetail(response.data.data);
+};
+
 export interface PlanBody {
   readonly name: string;
   readonly feeAmount: string;

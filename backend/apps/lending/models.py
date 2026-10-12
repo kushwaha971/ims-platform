@@ -19,6 +19,7 @@ from apps.lending.constants import (
     NAME_MAX,
     NOTE_MAX,
     REASON_MAX,
+    BorrowerStatus,
     DeductionKind,
     Frequency,
     LoanStatus,
@@ -63,6 +64,13 @@ class LendingBorrower(TenantModel):
     )
     area = models.CharField(max_length=NAME_MAX, default="", blank=True)
     notes = models.TextField(default="", blank=True)
+    #: Owner, 12 Oct 2026 — a blocked borrower gets no new loan; collections on
+    #: the loans they already hold carry on (`services.borrowers`).
+    status = models.CharField(max_length=10, default=BorrowerStatus.ACTIVE)
+    blocked_at = models.DateTimeField(null=True, blank=True)
+    #: Optional, in the owner's words. Kept until unblocked, then cleared: the
+    #: audit rows keep the history, the row says only what is true now.
+    blocked_reason = models.CharField(max_length=REASON_MAX, default="", blank=True)
     version = models.IntegerField(default=1)
 
     class Meta:
@@ -70,6 +78,9 @@ class LendingBorrower(TenantModel):
         constraints = [
             models.UniqueConstraint(
                 fields=["tenant", "borrower_number"], name="uq_lending_borrower_number"
+            ),
+            models.CheckConstraint(
+                condition=_in("status", BorrowerStatus), name="ck_lending_borrower_status"
             ),
         ]
 

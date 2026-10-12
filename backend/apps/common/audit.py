@@ -61,6 +61,11 @@ class AuditAction:
     # docs/platform/14 §6 decision 1 — which apps a member is in, and as what.
     MEMBER_APPS_CHANGED = "member.apps_changed"
     MEMBER_REMOVED = "member.removed"
+    # Owner, 12 Oct 2026 — the manager's half of the team screen: a name
+    # corrected, and a member locked out (`suspended`) and let back in.
+    MEMBER_UPDATED = "member.updated"
+    MEMBER_BLOCKED = "member.blocked"
+    MEMBER_UNBLOCKED = "member.unblocked"
     PARTY_CREATED = "party.created"
     PARTY_UPDATED = "party.updated"
     PARTY_ARCHIVED = "party.archived"

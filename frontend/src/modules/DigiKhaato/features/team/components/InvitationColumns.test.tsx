@@ -54,6 +54,8 @@ describe('invitations table — the actions column fits its button (D4)', () => 
       nowMs: 0,
       canWrite: true,
       onRegenerate: jest.fn(),
+      viewer: { isManager: false, role: null, userId: null },
+      onOpenActions: jest.fn(),
     }).find((c) => c.id === 'actions');
 
     expect(invitationActions?.headerHidden).toBeFalsy();

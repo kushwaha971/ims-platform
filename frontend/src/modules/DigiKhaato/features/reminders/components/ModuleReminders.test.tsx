@@ -299,8 +299,9 @@ describe('Module reminder tabs', () => {
       locale: 'hi',
       messages: hi as Record<string, string>,
     });
-    // No lending catalogue in Hindi here: the tab falls back to a word.
-    await user.click(await screen.findByRole('tab', { name: 'सुविधा' }));
+    // No lending catalogue in Hindi here: the tab is the module's own name,
+    // which the shell carries in both languages.
+    await user.click(await screen.findByRole('tab', { name: 'कर्ज़ और वसूली' }));
     expect(await screen.findByRole('heading', { name: 'आज देय' })).toBeInTheDocument();
     expect(screen.queryByText('lending.reminders.tab')).not.toBeInTheDocument();
   });

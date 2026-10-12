@@ -154,6 +154,17 @@ def session_rows(user: Any) -> list[dict]:
     ]
 
 
+def blocked_business_names(user: Any) -> list[str]:
+    """Names of the businesses whose owner or admin blocked this person."""
+    from apps.platform_app.models import Membership, MembershipStatus
+
+    return list(
+        Membership.objects.filter(user=user, status=MembershipStatus.SUSPENDED)
+        .order_by("tenant__name")
+        .values_list("tenant__name", flat=True)
+    )
+
+
 def build(
     *,
     user: Any,
@@ -179,6 +190,10 @@ def build(
     payload: dict[str, Any] = {
         "user": user_block(user, is_new=is_new),
         "tenants": tenants,
+        # Owner, 12 Oct 2026: a member the owner BLOCKED keeps their account but
+        # not the business. Name it, so a blocked person who signs in is told
+        # why rather than dropped into setting up a business of their own.
+        "blocked_from": blocked_business_names(user),
         # docs/platform/14 §4.1 — where this session goes next, decided here so
         # sign-in, refresh, a deep link and a password reset cannot disagree.
         "landing": resolve_landing(user=user, membership=membership, tenants=tenants, app=current),

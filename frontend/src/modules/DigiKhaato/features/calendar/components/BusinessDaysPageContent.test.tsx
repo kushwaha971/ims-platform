@@ -159,6 +159,13 @@ describe('Business days', () => {
   });
 
   it('uses whole generic sentences for a feature with no name on this screen', async () => {
+    // A module with no name anywhere — Library and Lending carry one in the
+    // shell now, so they can no longer stand in for "a feature not named here".
+    service.listClosedDays.mockResolvedValue({
+      ...DATA,
+      rows: [DATA.rows[0], { ...DATA.rows[1], module: 'salon' }],
+      readers: ['salon'],
+    });
     signIn(['platform.calendar.manage']);
     renderWithProviders(<BusinessDaysPageContent />);
     expect(await screen.findByText('A feature uses different days')).toBeInTheDocument();

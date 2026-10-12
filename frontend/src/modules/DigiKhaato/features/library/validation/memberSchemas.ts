@@ -4,7 +4,12 @@ import * as Yup from 'yup';
 
 import { useValidationSchemas } from 'src/hooks/useValidationSchemas';
 
-import type { CloseFormValues, EnrolFormValues, ReasonFormValues } from '../types/member.types';
+import type {
+  CloseFormValues,
+  EnrolFormValues,
+  MemberEditFormValues,
+  ReasonFormValues,
+} from '../types/member.types';
 
 /**
  * F04 (LIB-04 §9) — the members' forms, composed from the central validators.
@@ -13,11 +18,14 @@ import type { CloseFormValues, EnrolFormValues, ReasonFormValues } from '../type
 const REASON_MAX = 160;
 const GROUP_MAX = 40;
 const NUMBER_MAX = 24;
+/** `library_membership.notes`, as `members.patch` bounds it. */
+const NOTES_MAX = 2000;
 
 export interface MemberSchemas {
   readonly enrolSchema: Yup.ObjectSchema<EnrolFormValues>;
   readonly reasonSchema: (required: boolean) => Yup.ObjectSchema<ReasonFormValues>;
   readonly closeSchema: Yup.ObjectSchema<CloseFormValues>;
+  readonly editSchema: Yup.ObjectSchema<MemberEditFormValues>;
 }
 
 /** W03 — `library_membership.locker_label`. */
@@ -65,6 +73,15 @@ export const useMemberSchemas = (): MemberSchemas => {
       applyToDues: Yup.boolean().defined(),
     }) as Yup.ObjectSchema<CloseFormValues>;
 
-    return { enrolSchema, reasonSchema, closeSchema };
+    /* A student already HAS a number, so unlike enrolment (where empty means
+       "the next one") an empty box here would be a request to erase it. */
+    const editSchema = Yup.object({
+      memberNumber: v.requiredBoundedText(NUMBER_MAX, 1, 'library.member.edit.number.required'),
+      groupLabel: v.boundedText(GROUP_MAX),
+      validUntil: Yup.string().defined(),
+      notes: v.boundedText(NOTES_MAX),
+    }) as Yup.ObjectSchema<MemberEditFormValues>;
+
+    return { enrolSchema, reasonSchema, closeSchema, editSchema };
   }, [v]);
 };

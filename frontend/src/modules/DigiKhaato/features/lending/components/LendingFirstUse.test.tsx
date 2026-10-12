@@ -226,6 +226,10 @@ describe('Collect from a borrower', () => {
       mobile: null,
       area: '',
       route: null,
+      status: 'active',
+      blockedReason: '',
+      notes: '',
+      version: 1,
       summary: {
         loans: 3,
         running: 3,

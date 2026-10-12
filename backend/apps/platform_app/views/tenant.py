@@ -17,6 +17,7 @@ from apps.common.context import Ctx
 from apps.common.exceptions import NoActiveTenant, NotFound, ValidationFailed
 from apps.common.idempotency import idempotent
 from apps.common.pagination import PagePagination
+from apps.common.permissions import OwnerOrAdmin
 from apps.common.responses import StandardResponse
 from apps.common.tenancy import get_effective_tenant
 from apps.platform_app import tokens
@@ -37,8 +38,10 @@ from apps.platform_app.serializers.tenant import (
     InvitationCreateSerializer,
     InvitationListQuerySerializer,
     InvitationReadSerializer,
+    MEMBER_LIST_STATUSES,
     MemberCreateSerializer,
     MemberReadSerializer,
+    MemberUpdateSerializer,
     MembershipPatchSerializer,
     MembershipReadSerializer,
     TenantCreateSerializer,
@@ -48,6 +51,7 @@ from apps.platform_app.serializers.tenant import (
 )
 from apps.platform_app.services import credentials as credentials_service
 from apps.platform_app.services import entitlements
+from apps.platform_app.services import member_admin
 from apps.platform_app.services import memberships as membership_service
 from apps.platform_app.services import onboarding as onboarding_service
 from apps.platform_app.services import sessions as session_service
@@ -525,6 +529,16 @@ class MemberListCreateView(APIView):
     def get(self, request: Any) -> Any:
         tenant = _tenant_or_refuse(request)
         queryset = members_of(tenant=tenant)
+        # `?status=suspended` lists the blocked, so a long team can be asked
+        # "who have I locked out?". Anything else — `removed` included — is a
+        # field error rather than silently the whole list.
+        status = request.query_params.get("status")
+        if status:
+            if status not in MEMBER_LIST_STATUSES:
+                raise ValidationFailed(
+                    {"status": [f"Choose one of: {', '.join(MEMBER_LIST_STATUSES)}."]}
+                )
+            queryset = queryset.filter(status=status)
         paginator = PagePagination()
         page = paginator.paginate_queryset(queryset, request, view=self)
         # A13: one `effective_modules` per page, not per row (`role_active`).
@@ -606,6 +620,99 @@ class MemberAppsView(APIView):
             ctx=Ctx.from_request(request),
         )
         return StandardResponse.ok({"grants": membership_service.app_grants_json(membership)})
+
+
+#: Owner, 12 Oct 2026: acting on a PERSON is the owner's or an admin's act.
+#: `MembersManagePermission` says the action; `OwnerOrAdmin` says the actor's
+#: standing, so a custom role granted the codename still cannot reach these.
+MEMBER_ADMIN_PERMISSIONS = [IsAuthenticated, MembersManagePermission, OwnerOrAdmin]
+
+
+def _member_body(membership: Any) -> dict:
+    return MemberReadSerializer(membership).data
+
+
+class MemberDetailView(APIView):
+    """`PATCH /members/{id}` — correct a member's name or change their role.
+
+    The self-service `PATCH /memberships/{id}` is a different resource (the
+    caller's own default business); this one is a manager acting on somebody
+    else, under the rules `member_admin` sets out.
+    """
+
+    permission_classes = MEMBER_ADMIN_PERMISSIONS
+
+    def patch(self, request: Any, membership_id: Any) -> Any:
+        serializer = MemberUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        membership = member_admin.update_member(
+            tenant=_tenant_or_refuse(request),
+            membership_id=membership_id,
+            actor=request.user,
+            ctx=Ctx.from_request(request),
+            full_name=data.get("full_name"),
+            role_code=data.get("role"),
+        )
+        return StandardResponse.ok(_member_body(membership))
+
+
+class MemberBlockView(APIView):
+    """`POST /members/{id}/block` — suspend, and sign them out here on every device.
+
+    Keyed like PTY-04's archive: a lost response on a 2G connection must
+    replay the 200 rather than leave the merchant unsure whether the person at
+    the till is still signed in.
+    """
+
+    permission_classes = MEMBER_ADMIN_PERMISSIONS
+
+    @idempotent("member_block")
+    def post(self, request: Any, membership_id: Any) -> Any:
+        membership = member_admin.block_member(
+            tenant=_tenant_or_refuse(request),
+            membership_id=membership_id,
+            actor=request.user,
+            ctx=Ctx.from_request(request),
+        )
+        return StandardResponse.ok(_member_body(membership))
+
+
+class MemberUnblockView(APIView):
+    """`POST /members/{id}/unblock` — active again, subject to the seat limit."""
+
+    permission_classes = MEMBER_ADMIN_PERMISSIONS
+
+    @idempotent("member_unblock")
+    def post(self, request: Any, membership_id: Any) -> Any:
+        membership = member_admin.unblock_member(
+            tenant=_tenant_or_refuse(request),
+            membership_id=membership_id,
+            actor=request.user,
+            ctx=Ctx.from_request(request),
+        )
+        return StandardResponse.ok(_member_body(membership))
+
+
+class MemberRemoveView(APIView):
+    """`POST /members/{id}/remove` — off the team; the row is kept, never deleted.
+
+    A POST on a sub-path rather than `DELETE /members/{id}`, for the reason
+    PTY-04 gives for archive: the membership is not destroyed, and a verb that
+    reads "delete" would promise something the server does not do.
+    """
+
+    permission_classes = MEMBER_ADMIN_PERMISSIONS
+
+    @idempotent("member_remove")
+    def post(self, request: Any, membership_id: Any) -> Any:
+        membership = member_admin.remove_member(
+            tenant=_tenant_or_refuse(request),
+            membership_id=membership_id,
+            actor=request.user,
+            ctx=Ctx.from_request(request),
+        )
+        return StandardResponse.ok(_member_body(membership))
 
 
 class MemberCredentialsView(APIView):

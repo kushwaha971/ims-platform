@@ -36,7 +36,10 @@ export interface MemberApiRow {
   readonly role_active?: boolean;
   /** A13: the catalogue key the role's name is drawn with. */
   readonly role_label_id?: string;
-  /** `active | invited | suspended`. `removed` rows are never listed. */
+  /**
+   * `active | invited | suspended`. `removed` rows are never listed.
+   * `suspended` is what the team screen calls BLOCKED (owner, 12 Oct 2026).
+   */
   readonly status: string;
   readonly joined_at: string | null;
   readonly last_login_at: string | null;
@@ -71,7 +74,21 @@ export interface Member {
 export interface MemberListParams {
   readonly page: number;
   readonly pageSize: number;
+  /** `GET /members?status=` — absent means every listed status. */
+  readonly status?: 'active' | 'invited' | 'suspended';
 }
+
+/**
+ * What the edit dialog sends (owner, 12 Oct 2026). Each field is present only
+ * when it CHANGED — see `memberService.updateMember` for why that matters.
+ */
+export interface MemberEdit {
+  readonly fullName?: string;
+  readonly role?: MemberRoleCode;
+}
+
+/** The two confirmations a member row can open. Unblock needs none. */
+export type MemberConfirmKind = 'block' | 'remove';
 
 export interface MemberListResult {
   readonly rows: readonly Member[];

@@ -524,7 +524,10 @@ describe('the approved responsive rules, on the real screen', () => {
     await waitFor(() => expect(lastParams()?.balance).toBe('owes_me'));
     expect(balanceShows('You will get')).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Show only people you will get money from', pressed: true })
+      screen.getByRole('button', {
+        name: 'Show only people you will get money from',
+        pressed: true,
+      })
     ).toBeInTheDocument();
   });
 
@@ -675,7 +678,9 @@ describe('the yearly clean-up', () => {
    * selection" — the one thing a merchant can DO with a selection, and the
    * reason the bar exists at all, was missing.
    */
-  const signIn = (permissions: readonly PermissionCode[]): void => {
+  /* `role` defaults to the owner: bulk archive is the owner's or an admin's
+     since 12 Oct 2026, whatever codenames another role holds. */
+  const signIn = (permissions: readonly PermissionCode[], role: string = 'owner'): void => {
     store.dispatch(
       sessionLoaded({
         user: {
@@ -687,7 +692,7 @@ describe('the yearly clean-up', () => {
           mustChangePassword: false,
           passwordExpiresAt: null,
         },
-        activeTenant: { id: 't1', name: 'Kumar Stores', timezone: 'Asia/Kolkata' },
+        activeTenant: { id: 't1', name: 'Kumar Stores', timezone: 'Asia/Kolkata', role },
         tenants: [{ id: 't1', name: 'Kumar Stores', timezone: 'Asia/Kolkata' }],
         permissions: [...permissions],
         enabledModules: [],
@@ -725,6 +730,23 @@ describe('the yearly clean-up', () => {
     const bar = await selectFirstRow(user);
 
     expect(within(bar).queryByRole('button', { name: 'Archive' })).not.toBeInTheDocument();
+  });
+
+  it('does not offer it to staff, even holding the delete codename', async () => {
+    /** Prevents a bulk Archive the server refuses (`PartyManagerActions`). The
+     *  selection bar is still there — Clear selection proves it opened. */
+    signIn(['parties.party.read', 'parties.party.delete'], 'staff');
+    const user = userEvent.setup();
+    const bar = await selectFirstRow(user);
+    expect(within(bar).getByRole('button', { name: 'Clear selection' })).toBeInTheDocument();
+    expect(within(bar).queryByRole('button', { name: 'Archive' })).not.toBeInTheDocument();
+  });
+
+  it('offers it to an admin', async () => {
+    signIn(['parties.party.read', 'parties.party.delete'], 'admin');
+    const user = userEvent.setup();
+    const bar = await selectFirstRow(user);
+    expect(within(bar).getByRole('button', { name: 'Archive' })).toBeInTheDocument();
   });
 
   it('says up front that anyone with a balance will be skipped', async () => {
@@ -808,7 +830,7 @@ describe('tags on the party list', () => {
           mustChangePassword: false,
           passwordExpiresAt: null,
         },
-        activeTenant: { id: 't1', name: 'Kumar Stores', timezone: 'Asia/Kolkata' },
+        activeTenant: { id: 't1', name: 'Kumar Stores', timezone: 'Asia/Kolkata', role: 'owner' },
         tenants: [{ id: 't1', name: 'Kumar Stores', timezone: 'Asia/Kolkata' }],
         permissions: [...permissions],
         enabledModules: [],
@@ -1357,7 +1379,7 @@ describe('PTY-02 §9 — the ten states of the party list', () => {
           mustChangePassword: false,
           passwordExpiresAt: null,
         },
-        activeTenant: { id: 't1', name: 'Kumar Stores', timezone: 'Asia/Kolkata' },
+        activeTenant: { id: 't1', name: 'Kumar Stores', timezone: 'Asia/Kolkata', role: 'owner' },
         tenants: [{ id: 't1', name: 'Kumar Stores', timezone: 'Asia/Kolkata' }],
         permissions: [...permissions],
         enabledModules: [],

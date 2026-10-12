@@ -68,7 +68,10 @@ const ASHA: MemberDetail = {
   version: 1,
 };
 
-const signIn = (permissions: PermissionCode[]): void => {
+/* `role` defaults to the owner: editing, suspending, closing and re-admitting a
+   student are the owner's or an admin's since 12 Oct 2026, so a session with
+   no role sees none of them (`MemberEditDrawer.test.tsx` covers the roles). */
+const signIn = (permissions: PermissionCode[], role: string = 'owner'): void => {
   store.dispatch(
     sessionLoaded({
       user: {
@@ -80,7 +83,7 @@ const signIn = (permissions: PermissionCode[]): void => {
         mustChangePassword: false,
         passwordExpiresAt: null,
       },
-      activeTenant: { id: 't1', name: 'Saraswati Library', timezone: 'Asia/Kolkata' },
+      activeTenant: { id: 't1', name: 'Saraswati Library', timezone: 'Asia/Kolkata', role },
       tenants: [{ id: 't1', name: 'Saraswati Library', timezone: 'Asia/Kolkata' }],
       permissions,
       enabledModules: ['library'],

@@ -251,6 +251,8 @@ _REGISTRY: dict[str, tuple[int, bool]] = {
     "penalty_cap_reached": (409, False),  # D cap
     # LEN-10 — a loan with money collected is written off or closed, never cancelled.
     "loan_has_collections": (409, False),  # D count
+    # Owner, 12 Oct 2026 — a blocked borrower is given no new loan (collections go on).
+    "borrower_blocked": (409, False),  # D borrower_id
     # Library P0 — QR self check-in: no student matches; the policy wants the desk.
     "checkin_not_found": (404, False),
     "checkin_see_desk": (409, False),

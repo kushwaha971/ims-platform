@@ -37,6 +37,7 @@ from apps.lending.constants import (
     SOURCE_DEDUCTION,
     SUBJECT_LOAN,
     TARGET_LOAN,
+    BorrowerStatus,
     DeductionKind,
     LoanStatus,
 )
@@ -463,6 +464,17 @@ def create_loan(*, ctx: Any, data: Any) -> LendingLoan:
         raise ValidationFailed({"payment_mode": ["Choose cash, UPI, bank or cheque."]})
     note = str(data.get("notes") or "").strip()[:500]
     borrower = _borrower(ctx, data)
+    # Re-read under a row lock: `block_borrower` locks the same row, so a block
+    # that commits while this loan is being written cannot be read past.
+    borrower = LendingBorrower.objects.select_for_update().get(pk=borrower.pk)
+    if borrower.status == BorrowerStatus.BLOCKED:
+        # Only a NEW loan is refused. Collections on the loans they hold go on
+        # (`services.borrowers`): blocking somebody never stops money coming back.
+        raise BusinessRuleViolation(
+            "borrower_blocked",
+            "This borrower is blocked. Unblock them to give a new loan.",
+            details={"borrower_id": str(borrower.id)},
+        )
     party = lock_party(tenant=ctx.tenant, party_id=borrower.party_id)
     if party.status == "archived":
         raise BusinessRuleViolation(
@@ -674,7 +686,14 @@ def borrower_summaries(tenant: Any, borrower_ids: Any, today: dt.date) -> dict[A
 
     ids = list(borrower_ids)
     out: dict[Any, dict] = {
-        bid: {"loans": 0, "running": 0, "given": ZERO, "collected": ZERO, "left": ZERO, "late": ZERO}
+        bid: {
+            "loans": 0,
+            "running": 0,
+            "given": ZERO,
+            "collected": ZERO,
+            "left": ZERO,
+            "late": ZERO,
+        }
         for bid in ids
     }
     if not ids:
@@ -765,6 +784,7 @@ def loan_json(loan: LendingLoan, today: dt.date, *, with_schedule: bool = False)
             "name": loan.party.name,
             "mobile": loan.party.mobile,
             "area": loan.borrower.area,
+            "status": loan.borrower.status,
         },
         "route": {"id": str(loan.route_id), "name": loan.route.name} if loan.route_id else None,
         "route_seq": loan.route_seq,

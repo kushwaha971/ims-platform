@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
-from apps.common.permissions import HasPermission
+from typing import Any
+
+from rest_framework.permissions import BasePermission
+
+from apps.common.permissions import HasPermission, OwnerOrAdmin
 
 # `HasPermission` is fail-closed: an action missing from this map is denied,
 # not allowed (`common/permissions.py` — `codename = required.get(action)`,
@@ -58,3 +62,54 @@ PartyPermissions = HasPermission(
 # first disagree for a member with a `deny` override, which is to say the exact
 # member somebody set the override FOR.
 WriteOffPermissions = HasPermission("ledger.entry.write")
+
+
+# ── Owner, 12 Oct 2026 — editing and filing away a PERSON is a manager's act ──
+#
+# Who may edit a customer's or supplier's details, archive them, bring them back
+# or clear a batch of them out of the book: the owner or an admin, and nobody
+# else, whatever codenames a custom role was ticked. `PartyPermissions` above
+# still decides the codename; this decides the actor's standing, and both must
+# pass.
+#
+# The PATCH is split by BODY rather than refused whole, because the same route
+# carries one thing that is not "editing the person": the khata page's promise
+# date (`collection_date`, PTY-03), which the counter sets every day while a
+# customer says "Friday, bhaiya". A PATCH that touches only the keys below keeps
+# working for whoever holds `parties.party.write`; any other key — name, mobile,
+# type, GST, addresses, notes, credit limit and days, SMS consent, tags — needs
+# the owner or an admin. A mixed body is refused whole rather than applied in
+# part, so a client is never told "saved" about a change that was dropped.
+#
+# Not covered here, deliberately: creating a party (staff add customers at the
+# counter), the relation routes (a guardian link is the A6 write right), and
+# bulk tagging (`/parties/tags/bulk`, PTY-05) — none of them edits or blocks
+# the person.
+STAFF_PATCH_KEYS: frozenset[str] = frozenset({"collection_date"})
+
+_MANAGER_ACTIONS: frozenset[str] = frozenset({"archive", "restore", "bulk_archive"})
+_EDIT_ACTIONS: frozenset[str] = frozenset({"update", "partial_update"})
+
+
+def _body_keys(request: Any) -> set[str]:
+    data = getattr(request, "data", None)
+    return set(data.keys()) if hasattr(data, "keys") else set()
+
+
+class PartyManagerActions(BasePermission):
+    """Archive, restore, bulk-archive and an identity PATCH: owner or admin only."""
+
+    message = OwnerOrAdmin.message
+
+    def has_permission(self, request: Any, view: Any) -> bool:
+        action = getattr(view, "action", None)
+        if action in _MANAGER_ACTIONS:
+            return OwnerOrAdmin().has_permission(request, view)
+        if action in _EDIT_ACTIONS:
+            keys = _body_keys(request)
+            # An empty body edits nothing, but it is still an edit request and
+            # there is no reason to answer it for somebody who may not edit.
+            if keys and keys <= STAFF_PATCH_KEYS:
+                return True
+            return OwnerOrAdmin().has_permission(request, view)
+        return True

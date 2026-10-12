@@ -185,6 +185,10 @@ export const MUTATIONS = {
   // DEC-012 — owner-issued credentials
   addMember: 'member/addMember',
   regenerateCredentials: 'member/regenerateCredentials',
+  editMember: 'member/editMember',
+  blockMember: 'member/blockMember',
+  unblockMember: 'member/unblockMember',
+  removeMember: 'member/removeMember',
   // PLT-02 — password login, set and reset
   passwordLogin: 'auth/passwordLogin',
   setPassword: 'auth/setPassword',

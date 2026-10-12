@@ -116,7 +116,9 @@ class TenantCreateSerializer(serializers.Serializer):
     def validate(self, attrs: dict) -> dict:
         runs_shop = "apps" not in attrs or "shop" in attrs["apps"]
         if runs_shop and not attrs.get("business_type"):
-            raise serializers.ValidationError({"business_type": ["Choose what kind of business it is."]})
+            raise serializers.ValidationError(
+                {"business_type": ["Choose what kind of business it is."]}
+            )
         attrs.setdefault("business_type", BusinessType.OTHER.value)
         return attrs
 
@@ -441,6 +443,29 @@ class MembershipPatchSerializer(serializers.Serializer):
         if value is not True:
             raise serializers.ValidationError("Choose another business as your default instead.")
         return value
+
+
+class MemberUpdateSerializer(serializers.Serializer):
+    """`PATCH /members/{id}` — what a manager may change about a member.
+
+    Both optional; an empty body is a no-op rather than an error, so a form
+    that submits unchanged values does not fail. Whether the role may be given,
+    and whether the name is this business's to edit, are the SERVICE's rules
+    (`member_admin.update_member`): they depend on who is asking and on rows a
+    serializer cannot see.
+    """
+
+    full_name = serializers.CharField(max_length=120, required=False, trim_whitespace=True)
+    role = serializers.CharField(max_length=32, required=False)
+
+
+#: `?status=` on `GET /members`. `removed` is deliberately absent: removed rows
+#: are kept for the record and never listed (`members_of`).
+MEMBER_LIST_STATUSES = (
+    MembershipStatus.ACTIVE,
+    MembershipStatus.INVITED,
+    MembershipStatus.SUSPENDED,
+)
 
 
 # `?status=all` on the invitation list. Not an `InvitationStatus`: it is the

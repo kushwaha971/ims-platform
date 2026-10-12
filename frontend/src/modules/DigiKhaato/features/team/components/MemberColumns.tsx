@@ -2,17 +2,20 @@ import type { UbDataGridColumn } from 'src/design-system/UbDataGrid';
 import { accountContact } from 'src/utils/accountIdentity';
 
 import { accessStateOf } from '../view-model/credentialsShare';
+import { hasAnyMemberAction, memberActionsFor } from '../view-model/memberActions';
 import { roleText } from '../view-model/roleDisplay';
 
 import {
   MemberAccessCell,
   MemberMetaCell,
+  MemberMoreCell,
   MemberRoleCell,
   MemberNameCell,
   MemberRegenerateCell,
 } from './MemberRow';
 
 import type { Member } from '../types/member.types';
+import type { MemberActionViewer } from '../view-model/memberActions';
 
 /**
  * Part 19 §19.9.4 — a MODULE-LEVEL column factory, memoised by the screen on
@@ -48,6 +51,9 @@ export interface MemberColumnDeps {
   readonly nowMs: number;
   readonly canWrite: boolean;
   readonly onRegenerate: (membershipId: string) => void;
+  /** Owner, 12 Oct 2026 — who is looking, for `memberActionsFor`. */
+  readonly viewer: MemberActionViewer;
+  readonly onOpenActions: (membershipId: string) => void;
 }
 
 export const createMemberColumns = ({
@@ -56,6 +62,8 @@ export const createMemberColumns = ({
   nowMs,
   canWrite,
   onRegenerate,
+  viewer,
+  onOpenActions,
 }: MemberColumnDeps): readonly UbDataGridColumn<Member>[] => [
   {
     id: 'name',
@@ -128,17 +136,40 @@ export const createMemberColumns = ({
     cardSlot: 'trailing',
     widthShare: 16,
     align: 'end',
-    cell: (member) => (
-      <MemberRegenerateCell
-        membershipId={member.id}
-        label={t('team.regenerate.action')}
-        canWrite={canWrite}
-        // Hidden once they have chosen their own password, and for somebody
-        // only invited: the server refuses both, and a control whose only
-        // outcome is a refusal teaches the merchant to distrust the screen.
-        visible={member.mustChangePassword && member.status !== 'invited'}
-        onRegenerate={onRegenerate}
-      />
-    ),
+    cell: (member) => {
+      // Owner, 12 Oct 2026: for the owner and admins the row's actions live
+      // behind one ⋯ — Edit, Block or Unblock, Remove, and the reissue that
+      // used to be the only button here. Three or four buttons in a card's
+      // trailing slot is the "Delet" defect PTY-05 found at 360 px.
+      if (hasAnyMemberAction(memberActionsFor(viewer, member))) {
+        return (
+          <MemberMoreCell
+            membershipId={member.id}
+            label={t('team.member.actions', {
+              name:
+                member.fullName || accountContact({ email: member.email, mobile: member.mobile }),
+            })}
+            canWrite={canWrite}
+            onOpen={onOpenActions}
+          />
+        );
+      }
+      return (
+        <MemberRegenerateCell
+          membershipId={member.id}
+          label={t('team.regenerate.action')}
+          canWrite={canWrite}
+          // Hidden once they have chosen their own password, and for somebody
+          // only invited: the server refuses both, and a control whose only
+          // outcome is a refusal teaches the merchant to distrust the screen.
+          visible={
+            member.mustChangePassword &&
+            member.status !== 'invited' &&
+            member.status !== 'suspended'
+          }
+          onRegenerate={onRegenerate}
+        />
+      );
+    },
   },
 ];

@@ -132,7 +132,7 @@ const signIn = (permissions: readonly PermissionCode[]): void => {
         mustChangePassword: false,
         passwordExpiresAt: null,
       },
-      activeTenant: { id: 't1', name: 'Fit Gym', timezone: 'Asia/Kolkata' },
+      activeTenant: { id: 't1', name: 'Fit Gym', timezone: 'Asia/Kolkata', role: 'owner' },
       tenants: [{ id: 't1', name: 'Fit Gym', timezone: 'Asia/Kolkata' }],
       permissions: [...permissions],
       enabledModules: ['parties'],
@@ -326,7 +326,8 @@ describe('Archive refused by a module', () => {
     partyService.archiveParty.mockRejectedValue({
       code: 'party_has_open_records',
       message: '',
-      details: { module: 'gym', count: 2, label_id: 'gym.archive.activeMemberships' },
+      // A module this screen has no name for: Gym has one in the shell now.
+      details: { module: 'salon', count: 2, label_id: 'salon.archive.activeMemberships' },
       requestId: 'req_1',
       status: 409,
       warnings: [],
@@ -343,6 +344,6 @@ describe('Archive refused by a module', () => {
     expect(
       await screen.findByText('Rahul still has 2 open records. Close them first.')
     ).toBeInTheDocument();
-    expect(screen.queryByText(/gym\.archive/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/salon\.archive/)).not.toBeInTheDocument();
   });
 });

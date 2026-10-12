@@ -60,8 +60,12 @@ from apps.platform_app.views.tenant import (
     InvitationDetailView,
     InvitationListCreateView,
     MemberAppsView,
+    MemberBlockView,
     MemberCredentialsView,
+    MemberDetailView,
     MemberListCreateView,
+    MemberRemoveView,
+    MemberUnblockView,
     MembershipDetailView,
     RoleListView,
     TenantCreateView,
@@ -152,6 +156,13 @@ urlpatterns = [
     ),
     path("members", MemberListCreateView.as_view(), name="member-list"),
     path("members/<uuid:membership_id>/apps", MemberAppsView.as_view(), name="member-apps"),
+    # Owner, 12 Oct 2026 — the manager's half: edit, block, unblock, remove.
+    path("members/<uuid:membership_id>", MemberDetailView.as_view(), name="member-detail"),
+    path("members/<uuid:membership_id>/block", MemberBlockView.as_view(), name="member-block"),
+    path(
+        "members/<uuid:membership_id>/unblock", MemberUnblockView.as_view(), name="member-unblock"
+    ),
+    path("members/<uuid:membership_id>/remove", MemberRemoveView.as_view(), name="member-remove"),
     # A13 (PLT-X12) — canon roles plus the module roles of enabled modules.
     path("roles", RoleListView.as_view(), name="role-list"),
     # A9b (PLT-X08) — the tenant's closed-day calendar.

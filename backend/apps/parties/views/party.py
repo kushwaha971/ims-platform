@@ -29,7 +29,11 @@ from apps.common.viewsets import TenantScopedNoDeleteViewSet
 from apps.parties.constants import archive_via
 from apps.parties.filters import PartyFilterSet
 from apps.parties.models import Party, PartyRelation
-from apps.parties.permissions import PartyPermissions, WriteOffPermissions
+from apps.parties.permissions import (
+    PartyManagerActions,
+    PartyPermissions,
+    WriteOffPermissions,
+)
 from apps.parties.selectors.party import (
     list_parties,
     party_detail_queryset,
@@ -116,6 +120,9 @@ class PartyViewSet(CsvExportMixin, TenantScopedNoDeleteViewSet):
         IsAuthenticated,
         ModuleEnabled(ModuleCode.PARTIES),
         PartyPermissions,
+        # After the codename, so a role without `parties.party.write` still hears
+        # the codename's refusal; see `PartyManagerActions` for the PATCH split.
+        PartyManagerActions,
     ]
     # Three budgets, chosen per request in `get_throttles` below. No class-level
     # `throttle_scope`: a single scope on this class is what put every GET on

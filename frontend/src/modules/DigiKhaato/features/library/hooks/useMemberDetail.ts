@@ -3,6 +3,7 @@
 import { useCallback, useEffect } from 'react';
 
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
+import { useIsOwnerOrAdmin } from 'src/hooks/useIsOwnerOrAdmin';
 import { usePermissions } from 'src/hooks/usePermissions';
 import { selectNetworkImpaired } from 'src/redux/slice/networkSlice';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
@@ -14,11 +15,12 @@ import {
 } from '../redux/libraryMemberDetailSlice';
 import {
   actOnLibraryMember,
+  editLibraryMember,
   fetchLibraryMember,
   placeLibraryMember,
 } from '../redux/libraryMemberThunk';
 
-import type { MemberAction } from '../api/libraryMemberService';
+import type { MemberAction, MemberEditBody } from '../api/libraryMemberService';
 
 export type ActOutcome =
   { readonly ok: true } | { readonly ok: false; readonly error: ApiErrorShape | null };
@@ -26,8 +28,17 @@ export type ActOutcome =
 export interface MemberDetailResult extends LibraryMemberDetailState {
   readonly canRead: boolean;
   readonly canWrite: boolean;
-  /** Suspend, reactivate and close (`library.member.close`, owner and admin). */
+  /**
+   * Suspend, reactivate and close: `library.member.close` AND the owner or an
+   * admin (owner, 12 Oct 2026) — a custom role ticked the codename still may not.
+   */
   readonly canClose: boolean;
+  /** Re-admit a student who left: `library.member.write` and the owner or an admin. */
+  readonly canRejoin: boolean;
+  /** Edit the student's number, group, end date and note: the owner or an admin. */
+  readonly canEdit: boolean;
+  /** Save the edit drawer; sends only the keys passed, with the member's version. */
+  readonly edit: (body: MemberEditBody) => Promise<ActOutcome>;
   readonly refetch: () => void;
   readonly act: (
     action: MemberAction,
@@ -52,7 +63,9 @@ export const useMemberDetail = (id: string): MemberDetailResult => {
   const state = useAppSelector(selectLibraryMemberDetail);
   const isImpaired = useAppSelector(selectNetworkImpaired);
   const { can, hasModule } = usePermissions();
+  const isManager = useIsOwnerOrAdmin();
   const canRead = hasModule('library') && can('library.member.read');
+  const canWrite = canRead && can('library.member.write');
 
   useEffect(() => {
     if (!canRead) return undefined;
@@ -114,12 +127,36 @@ export const useMemberDetail = (id: string): MemberDetailResult => {
     [dispatch, id, state.member?.version]
   );
 
+  const edit = useCallback(
+    async (body: MemberEditBody): Promise<ActOutcome> => {
+      const version = state.member?.version ?? 1;
+      const result = await dispatch(editLibraryMember({ id, version, body }));
+      if (editLibraryMember.fulfilled.match(result)) {
+        dispatch(
+          showSnackbar({
+            severity: 'success',
+            id: 'library.member.done.edit',
+            params: { name: result.payload.name },
+          })
+        );
+        return { ok: true };
+      }
+      return { ok: false, error: result.payload ?? null };
+    },
+    [dispatch, id, state.member?.version]
+  );
+
   return {
     ...state,
     canRead,
     place,
-    canWrite: canRead && can('library.member.write'),
-    canClose: canRead && can('library.member.close'),
+    canWrite,
+    /* Seat placement stays on `canWrite`: the desk moves students on the seat
+       board daily, and the server keeps that PATCH open to the codename. */
+    canClose: canRead && can('library.member.close') && isManager,
+    canRejoin: canWrite && isManager,
+    canEdit: canWrite && isManager,
+    edit,
     refetch,
     act,
   };

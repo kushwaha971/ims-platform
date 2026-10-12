@@ -754,7 +754,8 @@
   "12 Oct 2026, Shop to the approved designs (owner): the shared page meta type gained `hasAny` and the shared column helpers wrap the day book's description; reports routes, /login and /signup sat on their ceiling and tipped by under 0.1 KB. Measured with analytics OFF. Raised by the measured + 0.5 rule: /reports/gst-summary firstLoad 342→343; /reports/purchase-register firstLoad 342→343; /reports/sales-register firstLoad 342→343; /signup firstLoad 292→293; /login firstLoad 292→293.",
   "12 Oct 2026, Library to the approved designs (owner): /library/fees became the Fees board — two figures, Not paid with Take fee, Paid this month — reading the new GET /library/fees/board through the home slice, with the core payment drawer behind dynamic(). Measured with analytics OFF. Raised by the measured + 0.5 rule: /library/fees route 64→70; /library/fees firstLoad 300→306.",
   "12 Oct 2026: purchase orders and debit notes share the bills list, which now folds its tabs and period into one Filters sheet on a phone and collapses an empty book to one sentence (measured with analytics off). Raised by the measured + 0.5 rule: /purchases/orders route 73→74; /purchases/orders firstLoad 309→310; /purchases/debit-notes route 73→74; /purchases/debit-notes firstLoad 309→310.",
-  "12 Oct 2026: the compact phone layout — the phone Filters sheet on the sales/purchase flow lists and the registers' Show void as a sheet choice (measured with analytics off). Raised by the measured + 0.5 rule: /reports/purchase-register route 106→107; /reports/sales-register route 106→107; /sales/challans route 77→78; /sales/challans firstLoad 313→314; /sales/orders route 77→78; /sales/orders firstLoad 313→314; /purchases/orders route 74→75; /purchases/orders firstLoad 310→311; /purchases/debit-notes route 74→75; /purchases/debit-notes firstLoad 310→311."
+  "12 Oct 2026: the compact phone layout — the phone Filters sheet on the sales/purchase flow lists and the registers' Show void as a sheet choice (measured with analytics off). Raised by the measured + 0.5 rule: /reports/purchase-register route 106→107; /reports/sales-register route 106→107; /sales/challans route 77→78; /sales/challans firstLoad 313→314; /sales/orders route 77→78; /sales/orders firstLoad 313→314; /purchases/orders route 74→75; /purchases/orders firstLoad 310→311; /purchases/debit-notes route 74→75; /purchases/debit-notes firstLoad 310→311.",
+  "12 Oct 2026: edit and block people — the shared app grew 0.7 KB (see //shared) and these first loads followed it. Raised by the measured + 0.5 rule: /purchases/orders/[id]/edit firstLoad 385→386; /purchases/bills/[id]/edit firstLoad 385→386; /purchases/orders/new firstLoad 385→386; /purchases/bills/new firstLoad 385→386; /settings/profile firstLoad 373→374; /lending/loans/new firstLoad 365→366; /library/settings firstLoad 348→349; /reports/purchase-register firstLoad 343→344; /reports/sales-register firstLoad 343→344; /parties/[id] firstLoad 339→340; /items/[id] firstLoad 337→338; /onboarding/step/[n] firstLoad 329→330; /ledger/aging firstLoad 328→330; /settings/branding firstLoad 325→326; /settings/team route 80→83; /settings/team firstLoad 316→320; /items/price-lists/[id] firstLoad 318→319; /library/members firstLoad 316→317; /sales/challans firstLoad 314→315; /sales/orders firstLoad 314→315; /library/catalogue firstLoad 311→313; /purchases/orders firstLoad 311→312; /purchases/debit-notes firstLoad 311→312; /library/copies firstLoad 310→312; /library/counter firstLoad 310→311; /library/members/[membershipId] route 73→74; /library/members/[membershipId] firstLoad 309→311; /library firstLoad 307→308; /library/fees route 70→71; /library/fees firstLoad 306→308; /library/seats firstLoad 305→306; /library/copies/[copyId] firstLoad 304→306; /library/money firstLoad 304→305; /library/attendance firstLoad 303→304; /lending/borrowers route 64→67; /lending/borrowers firstLoad 300→304; /lending/loans route 65→67; /lending/loans firstLoad 301→304; /stock/low firstLoad 301→302; /library/messages firstLoad 301→302; /purchases/orders/[id] firstLoad 301→302; /purchases/debit-notes/[id] firstLoad 301→302; /purchases/bills/[id] firstLoad 301→302; /lending firstLoad 301→302; /library/catalogue/locations firstLoad 300→301; /library/catalogue/categories firstLoad 300→301; /lending/loans/[loanId] firstLoad 300→301; /parties/tags firstLoad 298→299; /settings/business-days firstLoad 297→298; /settings/data firstLoad 293→294; /lending/routes route 56→57; /lending/routes firstLoad 293→294; /settings/devices firstLoad 291→292; /reset-password firstLoad 288→289; /set-password firstLoad 286→287; /forgot-password firstLoad 286→287; /switch firstLoad 285→286; /settings/plan firstLoad 284→285; /d/[token] firstLoad 274→276; /admin/tenants firstLoad 267→269; /admin/partners firstLoad 263→264; /admin/tenants/[id] firstLoad 260→262; /admin/health firstLoad 257→258; /accept-invite/[token] firstLoad 247→249; /admin firstLoad 247→248; /legal/terms firstLoad 243→245; /legal/privacy firstLoad 243→245; /onboarding firstLoad 241→243."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -964,11 +965,12 @@
   "runtime chunk table, inside its 128 budget. The method (evaluate both",
   "builds' shell chunks, diff module by module) is written down in",
   "docs/platform/progress/wave-a-gate.md for the next time the shell moves.",
-  "F04 (4 Oct 2026, library members) — shared app 105.5 -> 106.4, measured by building with and without the library's khata-panel registration (register.ts -> partyPanel.ts): that one import regroups Turbopack's common chunks (two shell chunks became three) and the shell's RAW bytes move by 114; the 0.9 KB is gzip losing across the extra chunk boundary, not library code in the shell (no library module is in any shared chunk). sharedApp 106 -> 107, and the 34 routes whose first load moved by that 0.9 KB past their ceiling were raised by the measured + 0.5 rule; /library/members (64.7 / 298.2) and /library/members/[membershipId] (58.6 / 292.1) are new entries, and the other library routes moved 1-2 KB because the library invalidation map now carries the member thunks."
+  "F04 (4 Oct 2026, library members) — shared app 105.5 -> 106.4, measured by building with and without the library's khata-panel registration (register.ts -> partyPanel.ts): that one import regroups Turbopack's common chunks (two shell chunks became three) and the shell's RAW bytes move by 114; the 0.9 KB is gzip losing across the extra chunk boundary, not library code in the shell (no library module is in any shared chunk). sharedApp 106 -> 107, and the 34 routes whose first load moved by that 0.9 KB past their ceiling were raised by the measured + 0.5 rule; /library/members (64.7 / 298.2) and /library/members/[membershipId] (58.6 / 292.1) are new entries, and the other library routes moved 1-2 KB because the library invalidation map now carries the member thunks.",
+  "Owner, 12 Oct 2026 (edit and block people) — shared app 109.0 -> 109.7: four team thunks joined the shell's invalidation registry and map, the session carries `blocked_from` (a blocked member is told which business blocked them), `MLMenu` gained the context that closes it on a choice, and `useIsOwnerOrAdmin` is read by the shell's menus. sharedApp 109 -> 110; the routes whose first load moved past their ceiling by that 0.7 KB were raised by the measured + 0.5 rule."
  ],
  "shared": {
   "framework": 128,
-  "sharedApp": 109
+  "sharedApp": 110
  },
  "//routes": [
   "The `route` figures are §19.9.2's, unchanged, and every route is comfortably",
@@ -1315,15 +1317,15 @@
  "routes": {
   "/library/money": {
    "route": 68,
-   "firstLoad": 304
+   "firstLoad": 305
   },
   "/purchases/debit-notes/[id]": {
    "route": 65,
-   "firstLoad": 301
+   "firstLoad": 302
   },
   "/purchases/debit-notes": {
    "route": 75,
-   "firstLoad": 311
+   "firstLoad": 312
   },
   "/sales/challans/[id]": {
    "route": 76,
@@ -1331,7 +1333,7 @@
   },
   "/sales/challans": {
    "route": 78,
-   "firstLoad": 314
+   "firstLoad": 315
   },
   "/sales/challans/new": {
    "route": 149,
@@ -1343,19 +1345,19 @@
   },
   "/purchases/orders/[id]": {
    "route": 65,
-   "firstLoad": 301
+   "firstLoad": 302
   },
   "/purchases/orders": {
    "route": 75,
-   "firstLoad": 311
+   "firstLoad": 312
   },
   "/purchases/orders/new": {
    "route": 149,
-   "firstLoad": 385
+   "firstLoad": 386
   },
   "/purchases/orders/[id]/edit": {
    "route": 149,
-   "firstLoad": 385
+   "firstLoad": 386
   },
   "/sales/orders/[id]": {
    "route": 76,
@@ -1363,7 +1365,7 @@
   },
   "/sales/orders": {
    "route": 78,
-   "firstLoad": 314
+   "firstLoad": 315
   },
   "/sales/orders/new": {
    "route": 149,
@@ -1427,23 +1429,23 @@
   },
   "/onboarding/step/[n]": {
    "route": 93,
-   "firstLoad": 329
+   "firstLoad": 330
   },
   "/design-system": {
    "route": 110,
    "firstLoad": 346
   },
   "/settings/team": {
-   "route": 80,
-   "firstLoad": 316
+   "route": 83,
+   "firstLoad": 320
   },
   "/parties/[id]": {
    "route": 103,
-   "firstLoad": 339
+   "firstLoad": 340
   },
   "/parties/tags": {
    "route": 62,
-   "firstLoad": 298
+   "firstLoad": 299
   },
   "/parties/[id]/statement": {
    "route": 93,
@@ -1451,15 +1453,15 @@
   },
   "/ledger/aging": {
    "route": 93,
-   "firstLoad": 328
+   "firstLoad": 330
   },
   "/switch": {
    "route": 50,
-   "firstLoad": 285
+   "firstLoad": 286
   },
   "/settings/plan": {
    "route": 48,
-   "firstLoad": 284
+   "firstLoad": 285
   },
   "/settings": {
    "route": 102,
@@ -1467,11 +1469,11 @@
   },
   "/settings/profile": {
    "route": 137,
-   "firstLoad": 373
+   "firstLoad": 374
   },
   "/settings/branding": {
    "route": 89,
-   "firstLoad": 325
+   "firstLoad": 326
   },
   "/settings/activity": {
    "route": 101,
@@ -1479,7 +1481,7 @@
   },
   "/settings/devices": {
    "route": 55,
-   "firstLoad": 291
+   "firstLoad": 292
   },
   "/stock/summary": {
    "route": 115,
@@ -1495,11 +1497,11 @@
   },
   "/items/[id]": {
    "route": 101,
-   "firstLoad": 337
+   "firstLoad": 338
   },
   "/stock/low": {
    "route": 65,
-   "firstLoad": 301
+   "firstLoad": 302
   },
   "/expenses": {
    "route": 107,
@@ -1531,35 +1533,35 @@
   },
   "/admin": {
    "route": 11,
-   "firstLoad": 247
+   "firstLoad": 248
   },
   "/admin/partners": {
    "route": 27,
-   "firstLoad": 263
+   "firstLoad": 264
   },
   "/admin/health": {
    "route": 21,
-   "firstLoad": 257
+   "firstLoad": 258
   },
   "/admin/tenants/[id]": {
    "route": 24,
-   "firstLoad": 260
+   "firstLoad": 262
   },
   "/admin/tenants": {
    "route": 31,
-   "firstLoad": 267
+   "firstLoad": 269
   },
   "/settings/data": {
    "route": 57,
-   "firstLoad": 293
+   "firstLoad": 294
   },
   "/purchases/bills/[id]": {
    "route": 65,
-   "firstLoad": 301
+   "firstLoad": 302
   },
   "/purchases/bills/[id]/edit": {
    "route": 149,
-   "firstLoad": 385
+   "firstLoad": 386
   },
   "/purchases/bills": {
    "route": 95,
@@ -1567,7 +1569,7 @@
   },
   "/purchases/bills/new": {
    "route": 149,
-   "firstLoad": 385
+   "firstLoad": 386
   },
   "/reports": {
    "route": 72,
@@ -1587,11 +1589,11 @@
   },
   "/reports/purchase-register": {
    "route": 107,
-   "firstLoad": 343
+   "firstLoad": 344
   },
   "/reports/sales-register": {
    "route": 107,
-   "firstLoad": 343
+   "firstLoad": 344
   },
   "/login": {
    "route": 57,
@@ -1603,31 +1605,31 @@
   },
   "/settings/business-days": {
    "route": 61,
-   "firstLoad": 297
+   "firstLoad": 298
   },
   "/library/catalogue": {
    "route": 75,
-   "firstLoad": 311
+   "firstLoad": 313
   },
   "/library/copies": {
    "route": 74,
-   "firstLoad": 310
+   "firstLoad": 312
   },
   "/library/copies/[copyId]": {
    "route": 69,
-   "firstLoad": 304
+   "firstLoad": 306
   },
   "/library/settings": {
    "route": 112,
-   "firstLoad": 348
+   "firstLoad": 349
   },
   "/library/members": {
    "route": 80,
-   "firstLoad": 316
+   "firstLoad": 317
   },
   "/library/members/[membershipId]": {
-   "route": 73,
-   "firstLoad": 309
+   "route": 74,
+   "firstLoad": 311
   },
   "/library/catalogue/[titleId]": {
    "route": 66,
@@ -1635,23 +1637,23 @@
   },
   "/library/catalogue/categories": {
    "route": 64,
-   "firstLoad": 300
+   "firstLoad": 301
   },
   "/library/catalogue/locations": {
    "route": 64,
-   "firstLoad": 300
+   "firstLoad": 301
   },
   "/library/counter": {
    "route": 74,
-   "firstLoad": 310
+   "firstLoad": 311
   },
   "/library/seats": {
    "route": 69,
-   "firstLoad": 305
+   "firstLoad": 306
   },
   "/library/fees": {
-   "route": 70,
-   "firstLoad": 306
+   "route": 71,
+   "firstLoad": 308
   },
   "/signup": {
    "route": 56,
@@ -1659,35 +1661,35 @@
   },
   "/reset-password": {
    "route": 52,
-   "firstLoad": 288
+   "firstLoad": 289
   },
   "/forgot-password": {
    "route": 50,
-   "firstLoad": 286
+   "firstLoad": 287
   },
   "/set-password": {
    "route": 51,
-   "firstLoad": 286
+   "firstLoad": 287
   },
   "/d/[token]": {
    "route": 39,
-   "firstLoad": 274
+   "firstLoad": 276
   },
   "/accept-invite/[token]": {
    "route": 11,
-   "firstLoad": 247
+   "firstLoad": 249
   },
   "/legal/privacy": {
    "route": 8,
-   "firstLoad": 243
+   "firstLoad": 245
   },
   "/legal/terms": {
    "route": 8,
-   "firstLoad": 243
+   "firstLoad": 245
   },
   "/onboarding": {
    "route": 6,
-   "firstLoad": 241
+   "firstLoad": 243
   },
   "/_not-found": {
    "route": 1,
@@ -1695,31 +1697,31 @@
   },
   "/library": {
    "route": 71,
-   "firstLoad": 307
+   "firstLoad": 308
   },
   "/library/attendance": {
    "route": 67,
-   "firstLoad": 303
+   "firstLoad": 304
   },
   "/library/messages": {
    "route": 65,
-   "firstLoad": 301
+   "firstLoad": 302
   },
   "/lending/loans/new": {
    "route": 129,
-   "firstLoad": 365
+   "firstLoad": 366
   },
   "/lending": {
    "route": 65,
-   "firstLoad": 301
+   "firstLoad": 302
   },
   "/lending/loans/[loanId]": {
    "route": 64,
-   "firstLoad": 300
+   "firstLoad": 301
   },
   "/lending/loans": {
-   "route": 65,
-   "firstLoad": 301
+   "route": 67,
+   "firstLoad": 304
   },
   "/customers": {
    "route": 110,
@@ -1731,19 +1733,19 @@
   },
   "/items/price-lists/[id]": {
    "route": 82,
-   "firstLoad": 318
+   "firstLoad": 319
   },
   "/lending/messages": {
    "route": 56,
    "firstLoad": 293
   },
   "/lending/routes": {
-   "route": 56,
-   "firstLoad": 293
+   "route": 57,
+   "firstLoad": 294
   },
   "/lending/borrowers": {
-   "route": 64,
-   "firstLoad": 300
+   "route": 67,
+   "firstLoad": 304
   },
   "/items/price-lists": {},
   "/login/email": {

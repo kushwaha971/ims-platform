@@ -7,7 +7,9 @@ import * as memberService from '../api/memberService';
 
 import type {
   IssuedCredentials,
+  Member,
   MemberDraft,
+  MemberEdit,
   MemberListParams,
   MemberListResult,
 } from '../types/member.types';
@@ -70,5 +72,68 @@ export const regenerateCredentials = createAsyncThunk<
     return await memberService.regenerateCredentials(membershipId, idempotencyKey);
   } catch (error) {
     return rejectWithValue(toApiError(error, 'team.member.regenerate.error'));
+  }
+});
+
+// ── Owner, 12 Oct 2026: the manager's half — edit, block, unblock, remove ───
+
+export interface EditMemberArg {
+  readonly membershipId: string;
+  readonly changes: MemberEdit;
+}
+
+/** MUTATION — a corrected name or a new role. The answer is the updated row. */
+export const editMember = createAsyncThunk<Member, EditMemberArg, { rejectValue: ApiErrorShape }>(
+  'member/editMember',
+  async ({ membershipId, changes }, { rejectWithValue }) => {
+    try {
+      return await memberService.updateMember(membershipId, changes);
+    } catch (error) {
+      return rejectWithValue(toApiError(error, 'team.member.edit.error'));
+    }
+  }
+);
+
+export interface MemberActionArg {
+  readonly membershipId: string;
+  readonly idempotencyKey: string;
+}
+
+/** MUTATION — locked out of this business, signed out everywhere in it. */
+export const blockMember = createAsyncThunk<
+  Member,
+  MemberActionArg,
+  { rejectValue: ApiErrorShape }
+>('member/blockMember', async ({ membershipId, idempotencyKey }, { rejectWithValue }) => {
+  try {
+    return await memberService.blockMember(membershipId, idempotencyKey);
+  } catch (error) {
+    return rejectWithValue(toApiError(error, 'team.member.block.error'));
+  }
+});
+
+/** MUTATION — let back in. May be refused for want of a seat. */
+export const unblockMember = createAsyncThunk<
+  Member,
+  MemberActionArg,
+  { rejectValue: ApiErrorShape }
+>('member/unblockMember', async ({ membershipId, idempotencyKey }, { rejectWithValue }) => {
+  try {
+    return await memberService.unblockMember(membershipId, idempotencyKey);
+  } catch (error) {
+    return rejectWithValue(toApiError(error, 'team.member.unblock.error'));
+  }
+});
+
+/** MUTATION — off the team. The row leaves the list; the server keeps it. */
+export const removeMember = createAsyncThunk<
+  Member,
+  MemberActionArg,
+  { rejectValue: ApiErrorShape }
+>('member/removeMember', async ({ membershipId, idempotencyKey }, { rejectWithValue }) => {
+  try {
+    return await memberService.removeMember(membershipId, idempotencyKey);
+  } catch (error) {
+    return rejectWithValue(toApiError(error, 'team.member.remove.error'));
   }
 });

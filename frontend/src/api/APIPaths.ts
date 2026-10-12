@@ -60,6 +60,15 @@ export const API_PATHS = {
   /** DEC-012 — the team, and adding to it with owner-issued credentials. */
   MEMBERS: '/members',
   MEMBER_CREDENTIALS: (membershipId: string) => `/members/${seg(membershipId)}/credentials`,
+  /**
+   * Owner, 12 Oct 2026 — a manager acting on somebody else: edit (PATCH),
+   * block, unblock, remove. The three POSTs inherit `/members`' mandatory
+   * `Idempotency-Key` by prefix, which they want: a lost 200 must replay.
+   */
+  MEMBER: (membershipId: string) => `/members/${seg(membershipId)}`,
+  MEMBER_BLOCK: (membershipId: string) => `/members/${seg(membershipId)}/block`,
+  MEMBER_UNBLOCK: (membershipId: string) => `/members/${seg(membershipId)}/unblock`,
+  MEMBER_REMOVE: (membershipId: string) => `/members/${seg(membershipId)}/remove`,
   INVITATIONS: '/invitations',
   INVITATION: (id: string) => `/invitations/${seg(id)}`,
   /** PLT-05 FR-10 — the seat-consuming accept. */

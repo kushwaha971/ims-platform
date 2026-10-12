@@ -77,6 +77,7 @@ export const LIBRARY_MUTATIONS = {
   addLibrarySeatRow: 'librarySeats/addRow',
   setLibrarySeatActive: 'librarySeats/setSeatActive',
   placeLibraryMember: 'libraryMemberDetail/place',
+  editLibraryMember: 'libraryMemberDetail/edit',
   saveLibraryPlan: 'libraryMemberList/savePlan',
   checkInLibraryStudent: 'libraryAttendance/checkIn',
   checkOutLibraryStudent: 'libraryAttendance/checkOut',
@@ -177,6 +178,13 @@ export const LIBRARY_INVALIDATION: Readonly<
   placeLibraryMember: {
     patch: [['libraryMemberDetail', 'member']],
     stale: ['libraryMemberList', 'librarySeats', 'libraryHome'],
+  },
+  // 12 Oct 2026 — the owner edits a student's number, group, end date or note:
+  // the page takes the answer; the list's columns and the home's "plans ending"
+  // both show those fields. No money moves, so the khata is untouched.
+  editLibraryMember: {
+    patch: [['libraryMemberDetail', 'member']],
+    stale: ['libraryMemberList', 'libraryHome'],
   },
   // A plan's fee and length show on every student row that holds it.
   saveLibraryPlan: { refetch: ['libraryMemberList'] },

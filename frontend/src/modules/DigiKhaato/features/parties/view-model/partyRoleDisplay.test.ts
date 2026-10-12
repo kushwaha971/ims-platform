@@ -32,9 +32,10 @@ describe('role labels', () => {
 
   it('fall back to the module name, then to a plain word — never the id', () => {
     expect(roleChipLabel(translator({ 'nav.module.gym': 'Gym' }), MEMBER)).toBe('Gym');
-    expect(roleChipLabel(translator(), MEMBER)).toBe('Role');
+    // A module with no name loaded anywhere (Gym has one in the shell now).
+    expect(roleChipLabel(translator(), { ...MEMBER, module: 'salon' })).toBe('Role');
     // A badge with nothing to say is not drawn.
-    expect(roleBadgeLabel(translator(), MEMBER)).toBeNull();
+    expect(roleBadgeLabel(translator(), { ...MEMBER, module: 'salon' })).toBeNull();
   });
 });
 
@@ -52,7 +53,7 @@ describe('openRecordsMessage', () => {
     expect(openRecordsMessage(translator({ 'nav.module.gym': 'Gym' }), block, 'Rahul')).toBe(
       'Gym has 2 open records for Rahul. Close them first.'
     );
-    expect(openRecordsMessage(translator(), block, 'Rahul')).toBe(
+    expect(openRecordsMessage(translator(), { ...block, module: 'salon' }, 'Rahul')).toBe(
       'Rahul still has 2 open records. Close them first.'
     );
   });

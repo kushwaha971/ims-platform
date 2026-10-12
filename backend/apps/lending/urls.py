@@ -23,6 +23,16 @@ urlpatterns: list = [
         name="lending-borrower",
     ),
     path(
+        "borrowers/<uuid:borrower_id>/block",
+        ln.BorrowerBlockView.as_view(),
+        name="lending-borrower-block",
+    ),
+    path(
+        "borrowers/<uuid:borrower_id>/unblock",
+        ln.BorrowerUnblockView.as_view(),
+        name="lending-borrower-unblock",
+    ),
+    path(
         "borrowers/<uuid:borrower_id>/collections/preview",
         co.BorrowerCollectionPreviewView.as_view(),
         name="lending-borrower-collection-preview",

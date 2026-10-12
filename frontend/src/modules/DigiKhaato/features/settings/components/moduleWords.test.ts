@@ -32,3 +32,8 @@ it.each(['en', 'hi'])('names and describes every module Settings can list, in %s
   );
   expect(missing).toEqual([]);
 });
+
+it('never lists Gym or Hotel, which are out of the current scope', () => {
+  // Owner, 12 Oct 2026: hidden even on a stack that releases every module.
+  expect(HIDDEN_MODULES).toEqual(expect.arrayContaining(['gym', 'hospitality']));
+});

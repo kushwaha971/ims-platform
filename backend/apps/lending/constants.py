@@ -36,6 +36,17 @@ class RateUnit(models.TextChoices):
     PER_YEAR = "per_year"
 
 
+class BorrowerStatus(models.TextChoices):
+    """Whether a borrower may be given a NEW loan (owner, 12 Oct 2026).
+
+    Blocking is about the next loan only: what they already owe stays owed and
+    stays collectable, so nothing on a running loan reads this.
+    """
+
+    ACTIVE = "active"
+    BLOCKED = "blocked"
+
+
 class LoanStatus(models.TextChoices):
     ACTIVE = "active"
     CLOSED = "closed"

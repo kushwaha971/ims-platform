@@ -11,11 +11,11 @@ from apps.common.context import Ctx
 from apps.common.dates import tenant_today
 from apps.common.idempotency import idempotent
 from apps.common.pagination import PagePagination
-from apps.common.permissions import HasPermission, ModuleEnabled
+from apps.common.permissions import HasPermission, ModuleEnabled, OwnerOrAdmin
 from apps.common.responses import StandardResponse
 from apps.common.tenancy import get_effective_tenant
 from apps.lending.models import LendingBorrower
-from apps.lending.services import loans
+from apps.lending.services import borrowers, loans
 
 EXEMPT = "Lending's agent scoping arrives with routes (FRD LEN-07); every reader sees the book."
 
@@ -82,7 +82,37 @@ def borrower_json(b: LendingBorrower, summary: dict | None = None) -> dict:
         "area": b.area,
         "route": {"id": str(b.route_id), "name": b.route.name} if b.route_id else None,
         "notes": b.notes,
+        # Owner, 12 Oct 2026: `blocked` means no new loan; collections go on.
+        "status": b.status,
+        "blocked_at": b.blocked_at.isoformat() if b.blocked_at else None,
+        "blocked_reason": b.blocked_reason,
+        "version": b.version,
     }
+
+
+#: `?status=` on the Borrowers list. Absent means everybody: the list is the
+#: book of PEOPLE, and a blocked borrower who still owes money is somebody the
+#: lender is looking for, not somebody to hide. The new-loan picker asks for
+#: `active`, because it is the one place a blocked person cannot be chosen.
+BORROWER_STATUS_FILTERS = ("active", "blocked", "all")
+
+
+class _BorrowerWriteView(_LendingView):
+    """Edit, block and unblock: the codename AND the actor's standing.
+
+    Staff hold `lending.borrower.write` so the counter can add a borrower with
+    a loan; changing or blocking an existing person is the owner's or an
+    admin's act only (owner, 12 Oct 2026), whatever a custom role was given.
+    """
+
+    read = "lending.borrower.read"
+    write = "lending.borrower.write"
+
+    def get_permissions(self) -> list:
+        checks = super().get_permissions()
+        if self.request.method not in SAFE_METHODS:
+            checks.append(OwnerOrAdmin())
+        return checks
 
 
 class BorrowerListView(_LendingView):
@@ -92,8 +122,15 @@ class BorrowerListView(_LendingView):
     def get(self, request: Any) -> Any:
         from django.db.models import Q
 
+        from apps.common.exceptions import ValidationFailed
+
         tenant = get_effective_tenant(request)
         qs = LendingBorrower.objects.filter(tenant=tenant).select_related("party", "route")
+        status = request.query_params.get("status") or "all"
+        if status not in BORROWER_STATUS_FILTERS:
+            raise ValidationFailed({"status": ["Choose active, blocked or all."]})
+        if status != "all":
+            qs = qs.filter(status=status)
         term = (request.query_params.get("q") or "").strip()
         if term:
             qs = qs.filter(
@@ -113,31 +150,50 @@ class BorrowerListView(_LendingView):
         return response
 
 
-class BorrowerDetailView(_LendingView):
+def _borrower_response(tenant: Any, borrower: LendingBorrower) -> Any:
+    totals = loans.borrower_summaries(tenant, [borrower.id], tenant_today(tenant))
+    return StandardResponse.ok(borrower_json(borrower, totals.get(borrower.id)))
+
+
+class BorrowerDetailView(_BorrowerWriteView):
     """`GET /lending/borrowers/{id}` — one person and their loans added up.
+    `PATCH` edits them: `{version, name?, mobile?, area?, route_id?, notes?}`.
 
     The loans themselves are `GET /lending/loans?borrower={id}`, each with its
     own figures: this is the line above them.
     """
 
-    read = "lending.borrower.read"
-
     def get(self, request: Any, borrower_id: Any) -> Any:
-        from django.core.exceptions import ValidationError
-
-        from apps.common.exceptions import NotFound
-
         tenant = get_effective_tenant(request)
-        try:
-            borrower = (
-                LendingBorrower.objects.filter(tenant=tenant)
-                .select_related("party", "route")
-                .get(pk=borrower_id)
-            )
-        except (LendingBorrower.DoesNotExist, ValidationError, ValueError, TypeError) as exc:
-            raise NotFound("Borrower not found.") from exc
-        totals = loans.borrower_summaries(tenant, [borrower.id], tenant_today(tenant))
-        return StandardResponse.ok(borrower_json(borrower, totals.get(borrower.id)))
+        borrower = borrowers.get_borrower(tenant, borrower_id)
+        fresh = LendingBorrower.objects.select_related("party", "route").get(pk=borrower.pk)
+        return _borrower_response(tenant, fresh)
+
+    def patch(self, request: Any, borrower_id: Any) -> Any:
+        ctx = Ctx.from_request(request)
+        borrower = borrowers.update_borrower(ctx=ctx, borrower_id=borrower_id, data=request.data)
+        return _borrower_response(ctx.tenant, borrower)
+
+
+class BorrowerBlockView(_BorrowerWriteView):
+    """`POST /lending/borrowers/{id}/block {reason?}` — no new loans; collections go on."""
+
+    def post(self, request: Any, borrower_id: Any) -> Any:
+        ctx = Ctx.from_request(request)
+        data = request.data if isinstance(request.data, dict) else {}
+        borrower = borrowers.block_borrower(
+            ctx=ctx, borrower_id=borrower_id, reason=data.get("reason")
+        )
+        return _borrower_response(ctx.tenant, borrower)
+
+
+class BorrowerUnblockView(_BorrowerWriteView):
+    """`POST /lending/borrowers/{id}/unblock` — new loans are allowed again."""
+
+    def post(self, request: Any, borrower_id: Any) -> Any:
+        ctx = Ctx.from_request(request)
+        borrower = borrowers.unblock_borrower(ctx=ctx, borrower_id=borrower_id)
+        return _borrower_response(ctx.tenant, borrower)
 
 
 class LoanDueFiguresView(_LendingView):

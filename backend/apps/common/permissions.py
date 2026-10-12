@@ -307,3 +307,31 @@ class IsSuperAdmin(BasePermission):
     def has_permission(self, request: Any, view: Any) -> bool:
         user = getattr(request, "user", None)
         return bool(user and user.is_authenticated and getattr(user, "is_super_admin", False))
+
+
+#: Owner, 12 Oct 2026: editing and blocking a PERSON the business manages —
+#: a team member, a customer or supplier, a student, a borrower — is the
+#: owner's or an admin's act, never another role's, whatever codenames a custom
+#: role was given. A role check rather than a codename, for the reason
+#: `parties.services.credit.may_override` gives: a decision about who may act on
+#: people is not something a shop can delegate by ticking a permission box.
+MANAGER_ROLES: tuple[str, ...] = ("owner", "admin")
+
+
+def is_owner_or_admin(membership: Any) -> bool:
+    """Is this ACTIVE membership the owner's or an admin's?"""
+    role = getattr(membership, "role", None)
+    return membership is not None and getattr(role, "code", None) in MANAGER_ROLES
+
+
+class OwnerOrAdmin(BasePermission):
+    """The signed-in member is the business's owner or an admin.
+
+    Use it alongside `HasPermission`, not instead of it: the codename still says
+    the module and the action; this says the actor's standing.
+    """
+
+    message = _("Only the owner or an admin can do this.")
+
+    def has_permission(self, request: Any, view: Any) -> bool:
+        return is_owner_or_admin(_authenticated_membership(request))

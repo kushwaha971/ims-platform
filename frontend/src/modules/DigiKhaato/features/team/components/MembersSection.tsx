@@ -19,10 +19,13 @@ import { accountDisplayName } from 'src/utils/accountIdentity';
 
 import { Can } from '../../auth/components/Can';
 import { PAGE_SIZE_OPTIONS } from '../constants/teamDefaults';
+import { useMemberAdmin } from '../hooks/useMemberAdmin';
 import { useMembers } from '../hooks/useMembers';
+import { memberActionsFor, NO_MEMBER_ACTIONS } from '../view-model/memberActions';
 import { memberCountOf } from '../view-model/memberCount';
 
 import { INVITE_AVATAR_ICON } from './InvitationRow';
+import { MemberActionsMenu } from './MemberActionsMenu';
 import { createMemberColumns } from './MemberColumns';
 
 import type { Member } from '../types/member.types';
@@ -35,6 +38,13 @@ import type { Member } from '../types/member.types';
  */
 const AddMemberDialog = dynamic(
   () => import('./AddMemberDialog').then((module) => module.AddMemberDialog),
+  { ssr: false }
+);
+
+/* Owner, 12 Oct 2026 — the edit form carries the same form stack as the add
+   dialog, so it is fetched when it opens, for the same reason. */
+const EditMemberDialog = dynamic(
+  () => import('./EditMemberDialog').then((module) => module.EditMemberDialog),
   { ssr: false }
 );
 
@@ -77,6 +87,21 @@ export function MembersSection(): React.JSX.Element {
     setPage,
     refetch,
   } = members;
+  const admin = useMemberAdmin();
+  const {
+    viewer,
+    actionsTarget,
+    openActions,
+    closeActions,
+    openEdit,
+    editTarget,
+    confirm,
+    isActing,
+    requestConfirm,
+    cancelConfirm,
+    confirmAction,
+    unblock,
+  } = admin;
 
   /** Read outside render, so the column array's memo key is stable. */
   const nowMs = useNowMs();
@@ -91,8 +116,10 @@ export function MembersSection(): React.JSX.Element {
         nowMs,
         canWrite,
         onRegenerate: requestRegenerate,
+        viewer,
+        onOpenActions: openActions,
       }),
-    [t, formatDate, nowMs, canWrite, requestRegenerate]
+    [t, formatDate, nowMs, canWrite, requestRegenerate, viewer, openActions]
   );
 
   const labels = useMemo<UbDataGridLabels>(
@@ -193,6 +220,32 @@ export function MembersSection(): React.JSX.Element {
     void confirmRegenerate();
   }, [confirmRegenerate]);
 
+  const handleBlock = useCallback((id: string) => requestConfirm('block', id), [requestConfirm]);
+  const handleRemove = useCallback((id: string) => requestConfirm('remove', id), [requestConfirm]);
+  const handleUnblock = useCallback(
+    (id: string) => {
+      void unblock(id);
+    },
+    [unblock]
+  );
+  const handleConfirmOpenChange = useCallback(
+    (next: boolean) => {
+      if (!next) cancelConfirm();
+    },
+    [cancelConfirm]
+  );
+  const handleConfirmAction = useCallback(() => {
+    void confirmAction();
+  }, [confirmAction]);
+  const confirmName = confirm
+    ? accountDisplayName({
+        name: confirm.member.fullName,
+        email: confirm.member.email,
+        mobile: confirm.member.mobile,
+      })
+    : '';
+  const confirmKind = confirm?.kind ?? 'block';
+
   return (
     <UbStack gap={2}>
       {/* `UbSectionHeading` now exists (the BrandHub pass), so the title,
@@ -233,6 +286,37 @@ export function MembersSection(): React.JSX.Element {
 
       {addOpen && <AddMemberDialog members={members} />}
       {lastCredentials && <CredentialsDialog members={members} />}
+
+      <MemberActionsMenu
+        member={actionsTarget}
+        actions={actionsTarget ? memberActionsFor(viewer, actionsTarget) : NO_MEMBER_ACTIONS}
+        t={t}
+        onClose={closeActions}
+        onEdit={openEdit}
+        onBlock={handleBlock}
+        onUnblock={handleUnblock}
+        onRemove={handleRemove}
+        onRegenerate={requestRegenerate}
+      />
+      {editTarget && <EditMemberDialog admin={admin} canWrite={canWrite} />}
+
+      {/* Block and Remove ask first, in a sentence that says what happens to
+          the PERSON — signed out everywhere, and for Remove, off the team —
+          because that is the consequence the owner is weighing. Unblock asks
+          nothing: it takes nothing away from anybody. */}
+      <UbConfirmDialog
+        open={Boolean(confirm)}
+        onOpenChange={handleConfirmOpenChange}
+        title={t(`team.member.${confirmKind}.title`, { name: confirmName })}
+        description={t(`team.member.${confirmKind}.body`, { name: confirmName })}
+        confirmLabel={t(`team.member.${confirmKind}.confirm`)}
+        cancelLabel={t('common.action.cancel')}
+        busyLabel={t(`team.member.${confirmKind}.working`)}
+        closeLabel={t('common.action.close')}
+        busy={isActing}
+        destructive
+        onConfirm={handleConfirmAction}
+      />
 
       <UbConfirmDialog
         open={Boolean(regenerateTarget)}

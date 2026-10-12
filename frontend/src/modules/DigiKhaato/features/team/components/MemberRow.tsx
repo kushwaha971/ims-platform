@@ -2,7 +2,7 @@
 
 import { memo, useCallback } from 'react';
 
-import { KeyRound } from 'lucide-react';
+import { KeyRound, MoreHorizontal } from 'lucide-react';
 
 import { UbButton, UbStack, UbStatusBadge, UbText } from 'src/design-system';
 
@@ -87,6 +87,9 @@ const ACCESS_TONE: Readonly<Record<MemberAccessState, 'info' | 'success' | 'warn
   // Info, as the switcher shows the same state from the invitee's side: nothing
   // is wrong and there is nothing for the owner to fix — the next move is theirs.
   invited: 'info',
+  // Error, not neutral: a blocked person cannot work, and that must be the
+  // first thing an owner scanning the list for "why can't Ramesh sign in" sees.
+  blocked: 'error',
   active: 'success',
   // Warning, not neutral: "has not signed in yet" is a thing the owner may need
   // to act on — the password is still in a chat thread and may never have
@@ -150,5 +153,45 @@ export const MemberRegenerateCell = memo(function MemberRegenerateCell({
         {label}
       </UbButton>
     </Can>
+  );
+});
+
+/**
+ * Owner, 12 Oct 2026 — the manager's ⋯ on a member row.
+ *
+ * Drawn only where `memberActionsFor` offers something (owner or admin, not
+ * their own row, not the owner's, not another admin's unless the viewer is the
+ * owner). Its accessible name carries the person's name, because a column of
+ * ten buttons all announced as "More actions" tells a screen-reader user
+ * nothing about which row each one is for. Disabled offline (class C), not
+ * hidden, as every write on this screen is.
+ */
+export const MemberMoreCell = memo(function MemberMoreCell({
+  membershipId,
+  label,
+  canWrite,
+  onOpen,
+}: Readonly<{
+  membershipId: string;
+  label: string;
+  canWrite: boolean;
+  onOpen: (membershipId: string) => void;
+}>) {
+  const handleClick = useCallback(() => {
+    onOpen(membershipId);
+  }, [onOpen, membershipId]);
+
+  return (
+    <UbButton
+      variant="ghost"
+      size="sm"
+      iconOnly
+      aria-label={label}
+      onClick={handleClick}
+      disabled={!canWrite}
+      icon={<MoreHorizontal aria-hidden className="h-4 w-4" />}
+    >
+      {label}
+    </UbButton>
   );
 });

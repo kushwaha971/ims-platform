@@ -10,6 +10,7 @@ import {
   CirclePlay,
   DoorClosed,
   MessageCircle,
+  Pencil,
   QrCode,
   Receipt,
   RefreshCw,
@@ -76,6 +77,12 @@ const UpiPayQrDialogLazy = dynamic(
 const SeatDialogLazy = dynamic(() => import('./SeatDialog').then((m) => m.SeatDialog), {
   ssr: false,
 });
+/* A form belongs in the chunk that OPENS it (CLAUDE.md): RHF's resolver and the
+   schema load with the tap on "Edit details", not with the page. */
+const MemberEditDrawerLazy = dynamic(
+  () => import('./MemberEditDrawer').then((m) => m.MemberEditDrawer),
+  { ssr: false }
+);
 
 /**
  * F04 (LIB-04 §7, §8) — `/library/members/[membershipId]`: who the member is,
@@ -93,6 +100,7 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
   const today = todayInTenantTz(timezone ?? undefined);
   const [dialog, setDialog] = useState<MemberDialogKind | null>(null);
   const [seating, setSeating] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [messaging, setMessaging] = useState<MessageKind | null>(null);
   const [showingQr, setShowingQr] = useState(false);
   const { member } = detail;
@@ -232,6 +240,17 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
                   icon: Armchair,
                   action: detail.canWrite && !closed ? () => setSeating(true) : undefined,
                 },
+                /* Owner, 12 Oct 2026 — editing, suspending, reactivating, closing
+                   and re-admitting a student are the owner's or an admin's; the
+                   hook's flags already carry that, so these items are simply not
+                   drawn for anybody else (§19.7.5). Kept on any status: a closed
+                   student's note or number can still be wrong. */
+                {
+                  key: 'edit',
+                  label: t('library.member.edit'),
+                  icon: Pencil,
+                  action: detail.canEdit ? () => setEditing(true) : undefined,
+                },
                 {
                   key: 'suspend',
                   label: t('library.member.suspend'),
@@ -257,7 +276,7 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
                   key: 'rejoin',
                   label: t('library.member.rejoin'),
                   icon: UserRoundPlus,
-                  action: detail.canWrite && closed ? () => setDialog('rejoin') : undefined,
+                  action: detail.canRejoin && closed ? () => setDialog('rejoin') : undefined,
                 },
               ]}
             />
@@ -480,6 +499,14 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
           busy={busy}
           onClose={() => setSeating(false)}
           onSubmit={detail.place}
+        />
+      )}
+      {editing && (
+        <MemberEditDrawerLazy
+          member={member}
+          busy={busy}
+          onClose={() => setEditing(false)}
+          onSubmit={detail.edit}
         />
       )}
       {dialog && (

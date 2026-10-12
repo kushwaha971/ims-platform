@@ -58,6 +58,8 @@ import { useLendingSchemas } from '../validation/lendingSchemas';
 import { WEEKDAY_BITS } from '../view-model/lendingDisplay';
 
 const PREVIEW_DEBOUNCE_MS = 400;
+/** The server's refusal of a loan to a blocked borrower (`borrower_blocked`, 409). */
+const BORROWER_BLOCKED = 'borrower_blocked';
 const MON_TO_SAT = 63;
 const SHOWN_ROWS = 5;
 
@@ -149,7 +151,9 @@ export function NewLoanPageContent(): React.JSX.Element {
   }, [dispatch]);
   useEffect(() => {
     if (values.borrowerMode !== 'existing') return undefined;
-    const promise = dispatch(fetchLendingBorrowers(search));
+    // Active only: a blocked borrower cannot be given a loan, so the picker
+    // does not offer them (owner, 12 Oct 2026).
+    const promise = dispatch(fetchLendingBorrowers({ q: search, status: 'active' }));
     return () => promise.abort();
   }, [dispatch, search, values.borrowerMode]);
 
@@ -184,6 +188,12 @@ export function NewLoanPageContent(): React.JSX.Element {
     }
     const failure = result.payload;
     if (!failure) return;
+    if (String(failure.code) === BORROWER_BLOCKED) {
+      // Reached only by a page opened before the block, or a link to a
+      // blocked person: the picker and their page both hide the way here.
+      dispatch(showSnackbar({ severity: 'error', id: 'lending.borrower.blockedRefused' }));
+      return;
+    }
     const details = Object.fromEntries(
       Object.entries(failure.details ?? {}).map(([k, m]) => [SERVER_FIELD[k] ?? k, m])
     );

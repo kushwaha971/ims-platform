@@ -60,6 +60,7 @@ export function CatalogueActionsMenu({
               className="justify-start"
               icon={<item.icon className="h-4 w-4" aria-hidden />}
               onClick={() => run(item.action)}
+              data-testid={`library-action-${item.key}`}
             >
               {item.label}
             </UbButton>

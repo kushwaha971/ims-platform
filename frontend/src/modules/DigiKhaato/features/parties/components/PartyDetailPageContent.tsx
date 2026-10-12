@@ -432,7 +432,7 @@ export function PartyDetailPageContent({
                   canPay && shown.isSupplier ? () => setPaying({ direction: 'out' }) : undefined
                 }
                 onCollect={canCollect ? () => setCollecting(true) : undefined}
-                onEdit={partyForm.canWrite ? openEdit : undefined}
+                onEdit={partyForm.canEdit ? openEdit : undefined}
                 onAddOpening={opening.canAdd ? opening.openDrawer : undefined}
                 onArchive={archive.canArchive ? archive.open : undefined}
               />

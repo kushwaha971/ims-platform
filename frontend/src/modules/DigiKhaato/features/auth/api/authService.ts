@@ -171,6 +171,7 @@ interface SessionApiResponse {
       readonly order: number;
     }[];
     readonly active_app?: string | null;
+    readonly blocked_from?: readonly string[];
     readonly apps_addable?: readonly {
       readonly code: string;
       readonly label_id: string;
@@ -420,6 +421,7 @@ export const getSession = async (signal?: AbortSignal): Promise<SessionPayload> 
         }))
       : null,
     activeApp: data.active_app ?? null,
+    blockedFrom: [...(data.blocked_from ?? [])],
     appsAddable: (data.apps_addable ?? []).map((app) => ({
       code: app.code,
       labelId: app.label_id,

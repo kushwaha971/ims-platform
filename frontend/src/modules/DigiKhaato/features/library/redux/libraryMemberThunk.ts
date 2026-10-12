@@ -5,7 +5,12 @@ import { toApiError } from 'src/utils/apiError';
 
 import './libraryInvalidation';
 
-import type { MemberAction, MemberPage, PlanBody } from '../api/libraryMemberService';
+import type {
+  MemberAction,
+  MemberEditBody,
+  MemberPage,
+  PlanBody,
+} from '../api/libraryMemberService';
 import type { MemberDetail, MemberFilters, MembershipType } from '../types/member.types';
 
 /**
@@ -90,6 +95,19 @@ export const placeLibraryMember = createAsyncThunk<
 >('libraryMemberDetail/place', async ({ id, version, body }, { rejectWithValue }) => {
   try {
     return await (await service()).placeMember(id, body, version);
+  } catch (error) {
+    return rejectWithValue(toApiError(error, 'library.member.error.save'));
+  }
+});
+
+/** The student's own record — owner or admin only (12 Oct 2026). */
+export const editLibraryMember = createAsyncThunk<
+  MemberDetail,
+  { id: string; version: number; body: MemberEditBody },
+  Reject
+>('libraryMemberDetail/edit', async ({ id, version, body }, { rejectWithValue }) => {
+  try {
+    return await (await service()).updateMember(id, body, version);
   } catch (error) {
     return rejectWithValue(toApiError(error, 'library.member.error.save'));
   }

@@ -378,8 +378,15 @@ def test_the_permission_matrix_for_create(
     assert _create(client, name=f"Party for {role}").status_code == expected
 
 
-@pytest.mark.parametrize("role,expected", [("owner", 200), ("staff", 200), ("accountant", 403)])
+@pytest.mark.parametrize(
+    "role,expected", [("owner", 200), ("admin", 200), ("staff", 403), ("accountant", 403)]
+)
 def test_the_permission_matrix_for_edit(tenant: Any, api_as: Any, role: str, expected: int) -> None:
+    """Editing a party's details is the owner's or an admin's (owner, 12 Oct 2026).
+
+    Staff used to be 200 here; they still create parties and set the promise
+    date, which `test_people_owner_or_admin.py` pins separately.
+    """
     client, _ = api_as(tenant, role=role)
     party = PartyFactory(tenant=tenant)
     response = client.patch(reverse(DETAIL, args=[party.id]), {"name": "Edited"}, format="json")
@@ -559,9 +566,7 @@ def test_a_party_may_have_another_countrys_mobile(tenant: Any, api_as: Any, mobi
     assert response.json()["data"]["mobile"] == mobile
 
 
-def test_a_mobile_too_long_for_its_column_is_a_message_not_a_500(
-    tenant: Any, api_as: Any
-) -> None:
+def test_a_mobile_too_long_for_its_column_is_a_message_not_a_500(tenant: Any, api_as: Any) -> None:
     """`+` and fifteen digits is sixteen characters in a `varchar(15)` column."""
     client, _ = api_as(tenant)
     response = _create(client, name="Too long", mobile="+441234567890123")

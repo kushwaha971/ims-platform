@@ -32,6 +32,20 @@ export interface AddMemberFormValues {
 export const ADD_MEMBER_FIELDS = ['fullName', 'email', 'role', 'mobile'] as const;
 
 /**
+ * The edit dialog (owner, 12 Oct 2026): a manager corrects a name or changes a
+ * role. No mobile — it is how the person signs in, and changing somebody's
+ * sign-in number from another person's phone is an account takeover with a
+ * friendly label on it.
+ */
+export interface EditMemberFormValues {
+  fullName: string;
+  role: MemberRoleCode;
+}
+
+/** `full_name` is the server's spelling; `applyServerErrors` maps it. */
+export const EDIT_MEMBER_FIELDS = ['fullName', 'role'] as const;
+
+/**
  * `roleCodes` is what the dialog offers (A13): the server's assignable roles,
  * module roles of enabled modules included, or the canon three before that
  * list arrives. `owner` is never among them (`assignableRoleOptions`).
@@ -40,6 +54,7 @@ export const useMemberSchemas = (
   roleCodes: readonly MemberRoleCode[] = INVITABLE_ROLES
 ): {
   readonly addMemberSchema: Yup.ObjectSchema<AddMemberFormValues>;
+  readonly editMemberSchema: Yup.ObjectSchema<EditMemberFormValues>;
 } => {
   const v = useValidationSchemas();
 
@@ -54,6 +69,10 @@ export const useMemberSchemas = (
         // OTP, so it is required (and Indian — the field is locked to +91,
         // because the sign-in code is sent to India only).
         mobile: v.mobileValidation(true).nonNullable().defined(),
+      }),
+      editMemberSchema: Yup.object({
+        fullName: v.nameValidation().defined(),
+        role: v.enumValidation<MemberRoleCode>(roleCodes, 'validation.role.required').defined(),
       }),
     }),
     [v, roleCodes]

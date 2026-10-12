@@ -137,7 +137,9 @@ const apiError = (status: number) => ({
  * with an empty permission set proves those controls are absent and nothing
  * else, which is how a negative assertion passes for entirely the wrong reason.
  */
-const signIn = (permissions: readonly PermissionCode[]): void => {
+/* `role` defaults to the owner, because Edit, Archive and Restore are the owner's
+   or an admin's since 12 Oct 2026 — a session with no role sees none of them. */
+const signIn = (permissions: readonly PermissionCode[], role: string = 'owner'): void => {
   store.dispatch(
     sessionLoaded({
       user: {
@@ -149,7 +151,7 @@ const signIn = (permissions: readonly PermissionCode[]): void => {
         mustChangePassword: false,
         passwordExpiresAt: null,
       },
-      activeTenant: { id: 't1', name: 'Kumar Stores', timezone: 'Asia/Kolkata' },
+      activeTenant: { id: 't1', name: 'Kumar Stores', timezone: 'Asia/Kolkata', role },
       tenants: [{ id: 't1', name: 'Kumar Stores', timezone: 'Asia/Kolkata' }],
       permissions: [...permissions],
       // `ledger` among them, because the khata page's transactions card and its
@@ -1998,5 +2000,75 @@ describe('the docked You gave / You got pair on a phone', () => {
     scrollPast(true);
 
     expect(screen.queryByTestId('khata-dock')).not.toBeInTheDocument();
+  });
+});
+
+/* ── Owner, 12 Oct 2026 — editing and filing a person away is a manager's act ── */
+
+describe('who may edit, archive and restore a party', () => {
+  /** Every party codename plus the ledger read, so a missing control below is
+   *  the ROLE's doing and never a codename's. */
+  const EVERY: readonly PermissionCode[] = [
+    'parties.party.read',
+    'parties.party.write',
+    'parties.party.delete',
+    'ledger.entry.read',
+  ];
+
+  it.each(['staff', 'cashier_custom'])(
+    'hides Edit and Archive from %s holding every party codename',
+    async (role) => {
+      /** Prevents drawing two controls the server refuses (`PartyManagerActions`). */
+      const user = userEvent.setup();
+      signIn(EVERY, role);
+      renderWithProviders(<PartyDetailPageContent id={ID} />);
+      await screen.findByText('Ramesh Traders');
+
+      await openMenu(user);
+      // The positive first: the menu is open and still offers the statement.
+      expect(await screen.findByRole('button', { name: 'Statement' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Archive' })).not.toBeInTheDocument();
+    }
+  );
+
+  it.each(['owner', 'admin'])('offers %s Edit and Archive', async (role) => {
+    const user = userEvent.setup();
+    signIn(EVERY, role);
+    renderWithProviders(<PartyDetailPageContent id={ID} />);
+    await screen.findByText('Ramesh Traders');
+
+    await openMenu(user);
+    expect(await screen.findByRole('button', { name: 'Edit' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Archive' })).toBeInTheDocument();
+  });
+
+  it('keeps the promise date for staff — it is the counter’s, not an edit of the person', async () => {
+    /** The server keeps a `collection_date`-only PATCH open to the write right;
+     *  the control must not vanish along with Edit. */
+    const user = userEvent.setup();
+    signIn(EVERY, 'staff');
+    renderWithProviders(<PartyDetailPageContent id={ID} />);
+    await screen.findByText('Ramesh Traders');
+
+    await user.click(screen.getByRole('button', { name: 'Today' }));
+    await waitFor(() => expect(partyService.setCollectionDate).toHaveBeenCalled());
+  });
+
+  it('offers Restore to an admin and not to staff holding the delete codename', async () => {
+    partyService.getParty.mockResolvedValue({
+      ...RESULT,
+      party: { ...PARTY, status: 'archived' as const },
+    });
+    signIn(EVERY, 'staff');
+    const { unmount } = renderWithProviders(<PartyDetailPageContent id={ID} />);
+    await screen.findByText('This party is archived');
+    expect(screen.queryByRole('button', { name: 'Restore' })).not.toBeInTheDocument();
+    unmount();
+
+    signIn(EVERY, 'admin');
+    renderWithProviders(<PartyDetailPageContent id={ID} />);
+    await screen.findByText('This party is archived');
+    expect(screen.getByRole('button', { name: 'Restore' })).toBeInTheDocument();
   });
 });

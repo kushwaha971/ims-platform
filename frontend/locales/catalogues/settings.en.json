@@ -35,8 +35,6 @@
   "settings.module.closeFirst": "Close them first, then turn this off.",
   "settings.module.error": "We could not change that feature.",
   "settings.module.expenses.description": "Shop expenses like rent and electricity.",
-  "settings.module.gym.description": "Members, plans and check-ins for a gym.",
-  "settings.module.hospitality.description": "Rooms, bookings and guests for a hotel or stay.",
   "settings.module.import_export.description": "Bring records in from a file and take them out.",
   "settings.module.intro": "Turn off what your business does not use. Nothing is deleted — turning a feature back on brings its records back.",
   "settings.module.inventory.description": "Items, stock levels and low-stock alerts.",

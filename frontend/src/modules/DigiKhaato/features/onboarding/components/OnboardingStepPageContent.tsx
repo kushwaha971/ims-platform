@@ -5,6 +5,7 @@ import { useCallback, useMemo } from 'react';
 import { UbBottomBar, UbButton, UbPageSkeleton, UbStack, UbStatusBanner } from 'src/design-system';
 import { useAppSelector } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
+import { selectBlockedFrom } from 'src/redux/slice/sessionSlice';
 import { selectAppName } from 'src/redux/slice/whiteLabelSlice';
 
 import { SHOP_APP } from '../constants/appChoices';
@@ -54,6 +55,7 @@ export function OnboardingStepPageContent({
   const appName = useAppSelector(selectAppName);
   const onboarding = useOnboarding(routeStep);
   const effectiveModules = useEffectiveModules();
+  const blockedFrom = useAppSelector(selectBlockedFrom);
 
   const steps = useMemo(
     () => ONBOARDING_STEPS.map((entry) => ({ key: entry.key, label: t(entry.labelId) })),
@@ -87,6 +89,17 @@ export function OnboardingStepPageContent({
             tone="offline"
             title={t('common.network.offline')}
             description={t('onboarding.offline.body')}
+          />
+        )}
+
+        {/* Owner, 12 Oct 2026: a member the owner blocked signs in to no
+            business. Say which one and why, before offering them a business of
+            their own — otherwise the shop just seems to have vanished. */}
+        {onboarding.step <= 1 && blockedFrom.length > 0 && (
+          <UbStatusBanner
+            tone="warning"
+            title={t('onboarding.blocked.title', { business: blockedFrom.join(', ') })}
+            description={t('onboarding.blocked.body')}
           />
         )}
 

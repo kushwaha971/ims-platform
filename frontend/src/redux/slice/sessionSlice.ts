@@ -142,6 +142,8 @@ export interface SessionState {
   activeApp: string | null;
   /** The apps the OWNER could add here (empty for everyone else). */
   appsAddable: SessionApp[];
+  /** Businesses whose owner or admin blocked this person (owner, 12 Oct 2026). */
+  blockedFrom: string[];
   lastFetchedAt: number | null;
   /**
    * N1-P1 — has THIS DOCUMENT (this JS runtime) held a session before?
@@ -169,6 +171,7 @@ const initialState: SessionState = {
   apps: null,
   activeApp: null,
   appsAddable: [],
+  blockedFrom: [],
   lastFetchedAt: null,
   heldInThisDocument: false,
 };
@@ -206,6 +209,7 @@ export interface SessionPayload {
   readonly apps?: readonly SessionApp[] | null;
   readonly activeApp?: string | null;
   readonly appsAddable?: readonly SessionApp[];
+  readonly blockedFrom?: readonly string[];
 }
 
 const sessionSlice = createSlice({
@@ -229,6 +233,7 @@ const sessionSlice = createSlice({
       state.apps = payload.apps ? [...payload.apps] : null;
       state.activeApp = payload.activeApp ?? null;
       state.appsAddable = payload.appsAddable ? [...payload.appsAddable] : [];
+      state.blockedFrom = payload.blockedFrom ? [...payload.blockedFrom] : [];
       state.lastFetchedAt = Date.now();
       state.error = null;
       state.status = payload.activeTenant ? 'authenticated' : 'no_tenant';
@@ -406,6 +411,8 @@ export const selectLanding = (state: RootState): Landing => {
 export const selectSessionApps = (state: RootState): readonly SessionApp[] | null =>
   state.session.apps;
 export const selectActiveApp = (state: RootState): string | null => state.session.activeApp;
+export const selectBlockedFrom = (state: RootState): readonly string[] => state.session.blockedFrom;
+
 export const selectAppsAddable = (state: RootState): readonly SessionApp[] =>
   state.session.appsAddable;
 

@@ -6,12 +6,15 @@ import { rootReducer, type RootState } from 'src/redux/store';
 import type { ApiErrorShape, RequestStatus } from 'src/types/api.types';
 
 import {
+  blockLendingBorrower,
   collectFromBorrower,
   collectLendingLoan,
   createLendingLoan,
   fetchLendingBorrower,
   fetchLendingBorrowers,
   previewLendingLoan,
+  unblockLendingBorrower,
+  updateLendingBorrower,
 } from './lendingThunk';
 
 import type { BorrowerRow, LoanPreview } from '../types/lending.types';
@@ -44,6 +47,26 @@ const initialState: LendingFormState = {
   saving: false,
   stale: false,
   staleUrgency: null,
+};
+
+/**
+ * An edit, a block or an unblock answers with the borrower as the server now
+ * holds them: that row replaces the page's borrower and their line in the
+ * list, keeping the figures the list already had (the server sends the same
+ * ones; a list row without them must not lose them to a write).
+ */
+const replaceBorrower = (state: Draft<LendingFormState>, next: BorrowerRow): void => {
+  if (state.borrower?.id === next.id) {
+    state.borrower = {
+      ...next,
+      summary: next.summary ?? state.borrower.summary,
+    } as Draft<BorrowerRow>;
+  }
+  const at = state.borrowers.findIndex((row) => row.id === next.id);
+  if (at >= 0) {
+    const was = state.borrowers[at];
+    state.borrowers[at] = { ...next, summary: next.summary ?? was?.summary } as Draft<BorrowerRow>;
+  }
 };
 
 const lendingFormSlice = createSlice({
@@ -117,6 +140,15 @@ const lendingFormSlice = createSlice({
       })
       .addCase(collectLendingLoan.rejected, (state) => {
         state.saving = false;
+      })
+      .addCase(updateLendingBorrower.fulfilled, (state, action) => {
+        replaceBorrower(state, action.payload);
+      })
+      .addCase(blockLendingBorrower.fulfilled, (state, action) => {
+        replaceBorrower(state, action.payload);
+      })
+      .addCase(unblockLendingBorrower.fulfilled, (state, action) => {
+        replaceBorrower(state, action.payload);
       })
       .addCase(resetAllFeatureState, () => initialState);
   },

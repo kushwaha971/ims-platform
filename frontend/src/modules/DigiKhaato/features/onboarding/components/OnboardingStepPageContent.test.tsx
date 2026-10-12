@@ -96,6 +96,38 @@ beforeEach(() => {
   });
 });
 
+describe('a member the owner blocked (owner, 12 Oct 2026)', () => {
+  afterEach(() => {
+    store.dispatch({ type: 'session/sessionAnonymous', payload: null });
+  });
+
+  it('is told which business blocked them before being offered a new one', () => {
+    /* Without it a blocked salesman signs in to no business and is walked into
+       setting up his own, with no word of why the shop vanished. */
+    store.dispatch({
+      type: 'session/sessionLoaded',
+      payload: {
+        user: { id: 'u1', name: 'Ramesh', email: null, mobile: '+919822012345', locale: 'en' },
+        activeTenant: null,
+        tenants: [],
+        permissions: [],
+        enabledModules: [],
+        version: null,
+        blockedFrom: ['Gupta Kirana Store'],
+      },
+    });
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+    expect(
+      screen.getByText('Your access to Gupta Kirana Store has been blocked by its owner')
+    ).toBeInTheDocument();
+  });
+
+  it('says nothing to someone nobody blocked', () => {
+    renderWithProviders(<OnboardingStepPageContent step={1} />);
+    expect(screen.queryByText(/has been blocked by its owner/)).not.toBeInTheDocument();
+  });
+});
+
 describe('the wizard — step 1 (FR-2)', () => {
   it('renders the four-step progress and the nine business-type tiles', () => {
     renderWithProviders(<OnboardingStepPageContent step={1} />);

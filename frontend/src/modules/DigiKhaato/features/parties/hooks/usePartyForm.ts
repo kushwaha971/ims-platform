@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useDegradedNetwork } from 'src/hooks/useDegradedNetwork';
 import { useIdempotencyKey } from 'src/hooks/useIdempotencyKey';
+import { useIsOwnerOrAdmin } from 'src/hooks/useIsOwnerOrAdmin';
 import { usePermissions } from 'src/hooks/usePermissions';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import type { ApiErrorShape } from 'src/types/api.types';
@@ -48,6 +49,12 @@ export interface UsePartyFormResult {
   readonly editing: PartyDetail | null;
   readonly isSaving: boolean;
   readonly canWrite: boolean;
+  /**
+   * May this viewer EDIT an existing party — `canWrite` and the owner or an
+   * admin (owner, 12 Oct 2026). `canWrite` alone still governs creating a
+   * party and the khata page's promise date, which the counter does daily.
+   */
+  readonly canEdit: boolean;
   readonly formErrors: readonly string[];
   /** The id of the party already holding the mobile that was just refused. */
   readonly duplicateOf: string | null;
@@ -95,6 +102,8 @@ export const usePartyForm = (): UsePartyFormResult => {
    * the refusal.
    */
   const canWrite = can('parties.party.write') && canWriteIn('deferred');
+  const isManager = useIsOwnerOrAdmin();
+  const canEdit = canWrite && isManager;
 
   const openCreate = useCallback(
     (name?: string) => {
@@ -227,6 +236,7 @@ export const usePartyForm = (): UsePartyFormResult => {
       editing,
       isSaving: status === 'loading',
       canWrite,
+      canEdit,
       formErrors,
       duplicateOf,
       warnings,
@@ -243,6 +253,7 @@ export const usePartyForm = (): UsePartyFormResult => {
       prefillName,
       status,
       canWrite,
+      canEdit,
       formErrors,
       duplicateOf,
       warnings,

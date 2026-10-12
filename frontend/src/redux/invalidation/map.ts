@@ -157,6 +157,13 @@ export const INVALIDATION: TInvalidationMap = {
   // A reissue changes `must_change_password` and the expiry on one row, which
   // is what the list is FOR. It spends no seat, so the session is untouched.
   regenerateCredentials: { refetch: ['member'] },
+  // Owner, 12 Oct 2026 — the manager's edit, block, unblock and remove. Each
+  // changes a row the team list is showing; block, unblock and remove also
+  // move the seat count the plan banner reads, so the plan goes stale too.
+  editMember: { refetch: ['member'] },
+  blockMember: { refetch: ['member'], stale: ['plan'] },
+  unblockMember: { refetch: ['member'], stale: ['plan'] },
+  removeMember: { refetch: ['member'], stale: ['plan'] },
 
   // ── PTY-01 — create and edit a party ──────────────────────────────────────
   // `refetch`, not `stale`: the drawer opens over the list the merchant is

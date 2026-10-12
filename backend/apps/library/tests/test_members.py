@@ -254,7 +254,9 @@ def test_close_applies_the_deposit_to_dues_then_refunds_the_rest(
 
 def test_a_refund_is_a_role_not_a_grant(api_as: Any, library_on: Any) -> None:
     """T-LIB-04-5, D28 — staff with `library.member.close` granted still cannot hand money
-    back; closing without a refund succeeds."""
+    back. Since 12 Oct 2026 (owner) they cannot close at all either — closing a student
+    is the owner's or an admin's act whatever was granted — so the plain close that
+    used to succeed for them is now the admin's."""
     owner, _ = api_as(library_on, role="owner")
     body = _enrol(owner, library_on, collect_deposit=_cash("500.00")).json()["data"]
     staff, who = api_as(library_on, role="staff")
@@ -270,11 +272,19 @@ def test_a_refund_is_a_role_not_a_grant(api_as: Any, library_on: Any) -> None:
         HTTP_IDEMPOTENCY_KEY="c1",
     )
     assert refused.status_code == 403
-    plain = staff.post(
+    staff_plain = staff.post(
         _url("close", body["membership_id"]),
         {"reason": "Moved"},
         format="json",
         HTTP_IDEMPOTENCY_KEY="c2",
+    )
+    assert staff_plain.status_code == 403
+    admin, _ = api_as(library_on, role="admin")
+    plain = admin.post(
+        _url("close", body["membership_id"]),
+        {"reason": "Moved"},
+        format="json",
+        HTTP_IDEMPOTENCY_KEY="c3",
     )
     assert plain.status_code == 200, plain.content
 

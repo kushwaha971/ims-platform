@@ -63,7 +63,8 @@ const page = (rows: readonly unknown[], rolesOn: boolean) => ({
 
 const ROLES = [
   { code: 'gym_member', module: 'gym', labelId: 'gym.role.members', count: 1 },
-  { code: 'lending_borrower', module: 'lending', labelId: 'lending.role.borrowers', count: 0 },
+  // A module with no name loaded here (Lending has one in the shell now).
+  { code: 'salon_client', module: 'salon', labelId: 'salon.role.clients', count: 0 },
 ];
 
 beforeEach(() => {
@@ -98,7 +99,7 @@ describe('Role chips', () => {
     const members = await screen.findByRole('checkbox', { name: 'Members' });
     // A role whose catalogue is not loaded here falls back to a whole word, never an id.
     expect(screen.getByRole('checkbox', { name: 'Role' })).toBeInTheDocument();
-    expect(screen.queryByText('lending.role.borrowers')).not.toBeInTheDocument();
+    expect(screen.queryByText('salon.role.clients')).not.toBeInTheDocument();
 
     await user.click(members);
     await user.click(screen.getByTestId('filters-apply'));

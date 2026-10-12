@@ -15,6 +15,8 @@
   "onboarding.apps.library.hint": "सदस्य, सीटें, महीने की फीस और हाज़िरी, साथ में किताबें देना।",
   "onboarding.apps.other.hint": "इसका अपना मेन्यू और स्क्रीन, बाकी चुनी हुई चीज़ों के साथ।",
   "onboarding.apps.shop.hint": "उधार वाले ग्राहक और सप्लायर, बिल, स्टॉक, खरीद और खर्च।",
+  "onboarding.blocked.body": "दोबारा पहुँच के लिए मालिक से कहें। आप नीचे अपना खुद का कारोबार भी शुरू कर सकते हैं।",
+  "onboarding.blocked.title": "{business} में आपकी पहुँच मालिक ने रोक दी है",
   "onboarding.creating": "बनाया जा रहा है…",
   "onboarding.done": "आपका व्यापार तैयार है।",
   "onboarding.email.label": "ईमेल",

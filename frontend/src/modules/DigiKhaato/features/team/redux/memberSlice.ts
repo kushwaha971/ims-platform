@@ -1,4 +1,4 @@
-import { createSlice, type Draft, type PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, isAnyOf, type Draft, type PayloadAction } from '@reduxjs/toolkit';
 
 import { resetAllFeatureState } from 'src/redux/actions';
 import { acceptInvalidation } from 'src/redux/invalidation/listener';
@@ -7,9 +7,17 @@ import type { ApiErrorShape, PageMeta, RequestStatus } from 'src/types/api.types
 
 import { DEFAULT_PAGE_SIZE } from '../constants/teamDefaults';
 
-import { addMember, fetchMembers, regenerateCredentials } from './memberThunk';
+import {
+  addMember,
+  blockMember,
+  editMember,
+  fetchMembers,
+  regenerateCredentials,
+  removeMember,
+  unblockMember,
+} from './memberThunk';
 
-import type { IssuedCredentials, Member } from '../types/member.types';
+import type { IssuedCredentials, Member, MemberConfirmKind } from '../types/member.types';
 
 /**
  * Part 19 §19.3.2 Shape A — a list slice plus the two overlays this screen
@@ -48,6 +56,19 @@ export interface MemberState {
   regenerateTargetId: string | null;
   regenerateStatus: RequestStatus;
 
+  /**
+   * Owner, 12 Oct 2026 — the manager's half. ONE ⋯ sheet for the whole list,
+   * pointed at the row that was tapped (`EntryActionsMenu`'s reasoning: a
+   * dialog per row is a portal per row waiting to be opened).
+   */
+  actionsTargetId: string | null;
+  editTargetId: string | null;
+  editStatus: RequestStatus;
+  /** Block and Remove ask first; Unblock does not — it takes nothing away. */
+  confirm: { readonly kind: MemberConfirmKind; readonly id: string } | null;
+  /** Block, unblock or remove in flight (one at a time: the sheet is modal). */
+  actionStatus: RequestStatus;
+
   lastFetchedAt: number | null;
   stale: boolean;
   staleUrgency: 'now' | 'next-mount' | null;
@@ -66,9 +87,19 @@ const initialState: MemberState = {
   lastCredentials: null,
   regenerateTargetId: null,
   regenerateStatus: 'idle',
+  actionsTargetId: null,
+  editTargetId: null,
+  editStatus: 'idle',
+  confirm: null,
+  actionStatus: 'idle',
   lastFetchedAt: null,
   stale: false,
   staleUrgency: null,
+};
+
+/** The server's answer for one row, in place — the list's order is the server's. */
+const replaceRow = (state: Draft<MemberState>, member: Member): void => {
+  state.rows = state.rows.map((row) => (row.id === member.id ? (member as Draft<Member>) : row));
 };
 
 const memberSlice = createSlice({
@@ -101,6 +132,26 @@ const memberSlice = createSlice({
     },
     regenerateCancelled(state) {
       state.regenerateTargetId = null;
+    },
+    memberActionsOpened(state, action: PayloadAction<string>) {
+      state.actionsTargetId = action.payload;
+    },
+    memberActionsClosed(state) {
+      state.actionsTargetId = null;
+    },
+    editMemberOpened(state, action: PayloadAction<string>) {
+      state.editTargetId = action.payload;
+      state.editStatus = 'idle';
+    },
+    editMemberClosed(state) {
+      state.editTargetId = null;
+    },
+    memberConfirmRequested(state, action: PayloadAction<{ kind: MemberConfirmKind; id: string }>) {
+      state.confirm = action.payload;
+      state.actionStatus = 'idle';
+    },
+    memberConfirmCancelled(state) {
+      state.confirm = null;
     },
     resetMembers: () => initialState,
   },
@@ -165,7 +216,51 @@ const memberSlice = createSlice({
         state.regenerateTargetId = null;
       })
 
-      .addCase(resetAllFeatureState, () => initialState);
+      .addCase(editMember.pending, (state) => {
+        state.editStatus = 'loading';
+      })
+      .addCase(editMember.fulfilled, (state, action) => {
+        state.editStatus = 'succeeded';
+        state.editTargetId = null;
+        replaceRow(state, action.payload);
+      })
+      .addCase(editMember.rejected, (state, action) => {
+        if (action.meta.aborted) return;
+        // The dialog STAYS open: a refused name or role is a field error the
+        // merchant fixes in place (`applyServerErrors`), not a toast over a
+        // form that vanished with what they typed.
+        state.editStatus = 'failed';
+      })
+
+      .addCase(resetAllFeatureState, () => initialState)
+
+      .addMatcher(
+        isAnyOf(blockMember.pending, unblockMember.pending, removeMember.pending),
+        (state) => {
+          state.actionStatus = 'loading';
+        }
+      )
+      .addMatcher(isAnyOf(blockMember.fulfilled, unblockMember.fulfilled), (state, action) => {
+        state.actionStatus = 'succeeded';
+        state.confirm = null;
+        replaceRow(state, action.payload);
+      })
+      .addMatcher(isAnyOf(removeMember.fulfilled), (state, action) => {
+        state.actionStatus = 'succeeded';
+        state.confirm = null;
+        state.rows = state.rows.filter((row) => row.id !== action.payload.id);
+        state.meta = { ...state.meta, total: Math.max(0, state.meta.total - 1) };
+      })
+      .addMatcher(
+        isAnyOf(blockMember.rejected, unblockMember.rejected, removeMember.rejected),
+        (state, action) => {
+          if (action.meta.aborted) return;
+          // Closes, as the reissue confirm does: the refusal is on its way to
+          // the global snackbar, and a confirm left open reads as "press again".
+          state.actionStatus = 'failed';
+          state.confirm = null;
+        }
+      );
   },
 });
 
@@ -176,6 +271,12 @@ export const {
   credentialsDismissed,
   regenerateRequested,
   regenerateCancelled,
+  memberActionsOpened,
+  memberActionsClosed,
+  editMemberOpened,
+  editMemberClosed,
+  memberConfirmRequested,
+  memberConfirmCancelled,
   resetMembers,
 } = memberSlice.actions;
 
@@ -200,3 +301,12 @@ export const selectRegenerateTargetId = (state: RootState): string | null =>
 export const selectRegenerateStatus = (state: RootState): RequestStatus =>
   state.member.regenerateStatus;
 export const selectMemberStale = (state: RootState): boolean => state.member.stale;
+export const selectMemberActionsTargetId = (state: RootState): string | null =>
+  state.member.actionsTargetId;
+export const selectEditMemberTargetId = (state: RootState): string | null =>
+  state.member.editTargetId;
+export const selectEditMemberStatus = (state: RootState): RequestStatus => state.member.editStatus;
+export const selectMemberConfirm = (state: RootState): MemberState['confirm'] =>
+  state.member.confirm;
+export const selectMemberActionStatus = (state: RootState): RequestStatus =>
+  state.member.actionStatus;

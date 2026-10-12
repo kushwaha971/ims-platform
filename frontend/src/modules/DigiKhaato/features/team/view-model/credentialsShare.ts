@@ -51,7 +51,7 @@ export const buildShareText = ({
  * owns both and a third column that could disagree with them is a bug waiting
  * for a clock skew.
  */
-export type MemberAccessState = 'invited' | 'active' | 'pending' | 'expired';
+export type MemberAccessState = 'invited' | 'blocked' | 'active' | 'pending' | 'expired';
 
 /**
  * `invited` comes first and overrides the password fields (CR-2026-09-23-B).
@@ -70,6 +70,10 @@ export const accessStateOf = (
   now: number = Date.now()
 ): MemberAccessState => {
   if (member.status === 'invited') return 'invited';
+  // Blocked (owner, 12 Oct 2026) outranks every password state: a suspended
+  // member holds no access whatever their password says, and "Signed in" on a
+  // row the owner just locked out would read as the block having failed.
+  if (member.status === 'suspended') return 'blocked';
   if (!member.mustChangePassword) return 'active';
   if (!member.passwordExpiresAt) return 'pending';
   const expiresAt = Date.parse(member.passwordExpiresAt);
