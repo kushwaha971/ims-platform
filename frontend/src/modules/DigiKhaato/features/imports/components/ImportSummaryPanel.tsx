@@ -13,7 +13,8 @@ import {
 import { useTranslation } from 'src/hooks/useTranslation';
 import { ROUTES } from 'src/routes';
 
-import { summaryValue } from '../view-model/importDisplay';
+import { isImportKind } from '../constants/importAccess';
+import { createdCount, summaryValue } from '../view-model/importDisplay';
 
 import type { UseImportWizardResult } from '../hooks/useImportWizard';
 import type { ImportJob } from '../types/import.types';
@@ -22,6 +23,8 @@ import type { ImportJob } from '../types/import.types';
 const RECORDS_ROUTE: Readonly<Record<string, string>> = {
   parties: ROUTES.PARTIES,
   items: ROUTES.ITEMS,
+  students: ROUTES.LIBRARY_MEMBERS,
+  loans: ROUTES.LENDING_LOANS,
 };
 
 /**
@@ -36,6 +39,7 @@ export function ImportSummaryPanel({
   const { t } = useTranslation();
   const summary = job.summary ?? {};
   const route = RECORDS_ROUTE[job.kind];
+  const kind = isImportKind(job.kind) ? job.kind : 'parties';
   // QA B33/B28 — "Everything in the file was saved" was said over skipped rows.
   const skippedRows = Number(summary.skipped_rows ?? 0);
   const skippedDuplicates = Number(summary.skipped_duplicates ?? 0);
@@ -54,9 +58,7 @@ export function ImportSummaryPanel({
     <UbStack gap={4}>
       <UbStatusBanner
         tone="success"
-        title={t(`imports.done.title.${job.kind === 'items' ? 'items' : 'parties'}`, {
-          count: Number(summary.created_parties ?? summary.created_items ?? 0),
-        })}
+        title={t(`imports.done.title.${kind}`, { count: createdCount(summary) })}
         description={body}
       />
       <UbStatGrid>
@@ -76,7 +78,7 @@ export function ImportSummaryPanel({
       <UbStack direction="row" gap={2} wrap>
         {route && (
           <UbActionLink href={route} variant="primary">
-            {t(`imports.done.goTo.${job.kind === 'items' ? 'items' : 'parties'}`)}
+            {t(`imports.done.goTo.${kind}`)}
           </UbActionLink>
         )}
         <UbButton variant="secondary" onClick={wizard.uploadAnother}>

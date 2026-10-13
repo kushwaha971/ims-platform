@@ -532,7 +532,9 @@ SPEC = register(
         commit_rows=commit_rows,
         unique_columns=("mobile", "display_code"),
         max_rows=10_000,
-        modules=("parties", "ledger"),
+        # `sales` is the Shop's anchor (DEC-019): parties and a ledger alone are what a
+        # library or a lender also has, and this is the Shop's customers and suppliers.
+        modules=("parties", "ledger", "sales"),
         summary_fields=(
             "created_parties",
             "opening_entries",

@@ -33,6 +33,8 @@ import { applyServerErrors } from 'src/utils/applyServerErrors';
 import { todayInTenantTz } from 'src/utils/dates';
 import { formatInr } from 'src/utils/money';
 
+import { ImportActionLink } from 'modules/DigiKhaato/features/imports/components/ListHeaderActions';
+
 import { MEMBER_SEARCH_DEBOUNCE_MS } from '../constants/memberConstants';
 import { useLibraryGridLabels } from '../hooks/useLibraryGridLabels';
 import { useMemberList } from '../hooks/useMemberList';
@@ -303,13 +305,17 @@ export function MemberListPageContent(): React.JSX.Element {
         title={t('library.member.title')}
         actions={
           canWrite ? (
-            <UbButton
-              icon={<UserPlus className="h-4 w-4" aria-hidden />}
-              onClick={() => setEnrolling(true)}
-              data-testid="library-member-add"
-            >
-              {t('library.members.add')}
-            </UbButton>
+            <>
+              <UbButton
+                icon={<UserPlus className="h-4 w-4" aria-hidden />}
+                onClick={() => setEnrolling(true)}
+                data-testid="library-member-add"
+              >
+                {t('library.members.add')}
+              </UbButton>
+              {/* QA F10 — the paper register in one file (existing students, F1). */}
+              <ImportActionLink kind="students" />
+            </>
           ) : undefined
         }
       />

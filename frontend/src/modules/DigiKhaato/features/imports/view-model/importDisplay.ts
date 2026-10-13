@@ -87,7 +87,25 @@ export const previewCell = (
 };
 
 /** The completion card's money fields, which are formatted as rupees. */
-const MONEY_SUMMARY_FIELDS = new Set(['opening_receivable', 'opening_payable', 'stock_value']);
+const MONEY_SUMMARY_FIELDS = new Set([
+  'opening_receivable',
+  'opening_payable',
+  'stock_value',
+  'deposits_held',
+  'old_dues',
+  'lent',
+  'collected',
+]);
+
+/** How many records the import created, whatever its kind called them. */
+export const createdCount = (summary: Readonly<Record<string, string | number>>): number =>
+  Number(
+    summary.created_parties ??
+      summary.created_items ??
+      summary.created_students ??
+      summary.created_loans ??
+      0
+  );
 
 export const summaryValue = (field: string, value: string | number | undefined): string => {
   if (value === undefined || value === null) return '—';

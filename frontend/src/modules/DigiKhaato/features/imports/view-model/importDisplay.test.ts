@@ -1,6 +1,7 @@
 import { POLL_STEPS } from '../constants/importKinds';
 
 import {
+  createdCount,
   commitBlockReason,
   fileSizeLabel,
   pollDelay,
@@ -131,6 +132,15 @@ describe('the rest of the read', () => {
   it('formats money summary fields as rupees and counts as counts', () => {
     expect(summaryValue('opening_receivable', '2300.00')).toBe('₹2,300.00');
     expect(summaryValue('created_parties', 412)).toBe('412');
+  });
+
+  it('counts what a students or loans import created, and shows their money as rupees (QA F10)', () => {
+    // The completion card read `created_parties ?? created_items` and said "0 parties
+    // imported" over two hundred students.
+    expect(createdCount({ created_students: 212 })).toBe(212);
+    expect(createdCount({ created_loans: 40, lent: '35000.00' })).toBe(40);
+    expect(summaryValue('lent', '35000.00')).toBe('₹35,000.00');
+    expect(summaryValue('deposits_held', '500.00')).toBe('₹500.00');
   });
 
   it('labels a file size in the unit a person reads', () => {

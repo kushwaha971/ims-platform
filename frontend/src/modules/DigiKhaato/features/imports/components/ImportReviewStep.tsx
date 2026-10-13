@@ -57,13 +57,19 @@ export function ImportReviewStep({
   // QA B28 — what to do with rows the book already has; skipping is the safe default.
   const [duplicates, setDuplicates] = useState<ImportCommitOptions['duplicates']>('skip');
   // QA B33 — with problem rows, the button imports the good ones and skips the rest.
-  const skipErrors = job.errorRows > 0;
+  // Not when NOTHING would import: "Import the 0 good rows now and skip these" was
+  // said live over a file whose every row had a problem (QA F10 look).
+  const skipErrors = job.errorRows > 0 && job.validRows > 0;
 
   const problemsLine = (() => {
     const owed = Number(job.totalsProblems.opening_receivable ?? 0);
     const owing = Number(job.totalsProblems.opening_payable ?? 0);
     const stock = Number(job.totalsProblems.stock_value ?? 0);
-    const amount = owed + owing + stock;
+    // QA F10 — a refused loan's money is not "lent" in the totals either.
+    const lent = Number(job.totalsProblems.lent ?? 0);
+    const held =
+      Number(job.totalsProblems.deposits ?? 0) + Number(job.totalsProblems.old_dues ?? 0);
+    const amount = owed + owing + stock + lent + held;
     return amount > 0
       ? t('imports.review.problemMoney', { amount: formatInr(amount.toFixed(2)) })
       : null;
@@ -98,6 +104,19 @@ export function ImportReviewStep({
       return t('imports.review.itemsTotals', {
         categories: created,
         value: formatInr(String(job.totals.stock_value ?? '0')),
+      });
+    }
+    if (kind === 'students') {
+      return t('imports.review.studentsTotals', {
+        deposits: formatInr(String(job.totals.deposits_held ?? '0')),
+        dues: formatInr(String(job.totals.old_dues ?? '0')),
+      });
+    }
+    if (kind === 'loans') {
+      return t('imports.review.loansTotals', {
+        lent: formatInr(String(job.totals.lent ?? '0')),
+        collected: formatInr(String(job.totals.collected ?? '0')),
+        remaining: formatInr(String(job.totals.remaining ?? '0')),
       });
     }
     return null;
@@ -145,7 +164,11 @@ export function ImportReviewStep({
         <UbStatusBanner
           tone="warning"
           title={t('imports.errorsFound', { count: job.errorRows })}
-          description={t('imports.review.skipHint', { good: job.validRows })}
+          description={
+            skipErrors
+              ? t('imports.review.skipHint', { good: job.validRows })
+              : t('imports.review.fixHint')
+          }
         />
       )}
 

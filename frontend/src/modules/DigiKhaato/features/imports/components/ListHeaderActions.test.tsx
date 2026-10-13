@@ -40,7 +40,7 @@ const signIn = (permissions: readonly PermissionCode[]): void => {
       activeTenant: { id: 't1', name: 'Kumar Stores', timezone: 'Asia/Kolkata' },
       tenants: [{ id: 't1', name: 'Kumar Stores', timezone: 'Asia/Kolkata' }],
       permissions: [...permissions],
-      enabledModules: ['parties', 'ledger', 'inventory', 'import_export'],
+      enabledModules: ['parties', 'ledger', 'inventory', 'sales', 'import_export'],
       version: 1,
     })
   );

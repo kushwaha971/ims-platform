@@ -171,3 +171,15 @@ def _ensure_loaded() -> None:
         return
     _LOADED = True
     from apps.imports.mappers import items, parties  # noqa: F401
+
+
+def __getattr__(name: str) -> Any:
+    """The framework owns scalars: a vertical's importer reads its cells with the
+    coercers the core mappers use — `from apps.imports.registry import coerce`,
+    since this is the one module of `imports` a vertical may import (R27). Loaded
+    on first use, so this module still imports nothing but `common` and Django."""
+    if name in ("coerce", "CoerceError"):
+        from apps.imports.services import coerce
+
+        return coerce if name == "coerce" else coerce.CoerceError
+    raise AttributeError(name)

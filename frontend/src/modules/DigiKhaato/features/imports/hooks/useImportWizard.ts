@@ -43,6 +43,9 @@ export interface UseImportWizardResult {
   readonly step: 1 | 2 | 3;
   /** Whether the member may import this kind at all (§19.7.5 — drawn or not). */
   readonly canImport: (kind: ImportKind) => boolean;
+  /** QA F10 — whether the business uses the app this kind belongs to at all. A shop
+   * is not offered "Students" with "Ask the owner" under it: no owner can say yes. */
+  readonly offered: (kind: ImportKind) => boolean;
   readonly start: (file: File) => void;
   /** QA B33/B28 — all-or-nothing by default; or skip the problem rows / duplicates. */
   readonly commit: (options?: ImportCommitOptions) => void;
@@ -79,6 +82,11 @@ export const useImportWizard = ({
   const cancelling = useAppSelector(selectImportCancelling);
 
   const kind = isImportKind(rawKind) ? rawKind : job && isImportKind(job.kind) ? job.kind : null;
+
+  const offered = useCallback(
+    (candidate: ImportKind) => IMPORT_KINDS[candidate].modules.every((module) => hasModule(module)),
+    [hasModule]
+  );
 
   const canImport = useCallback(
     (candidate: ImportKind) => {
@@ -200,6 +208,7 @@ export const useImportWizard = ({
     cancelling,
     step: wizardStep(job && job.id === jobId ? job : null, kind),
     canImport,
+    offered,
     start,
     commit,
     cancel,

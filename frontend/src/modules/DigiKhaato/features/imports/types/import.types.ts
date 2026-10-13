@@ -5,7 +5,7 @@
  */
 
 /** The kinds this client has a wizard for (the server's registry is the authority). */
-export type ImportKind = 'parties' | 'items';
+export type ImportKind = 'parties' | 'items' | 'students' | 'loans';
 
 /** Canon §0.7's import-job set, verbatim. */
 export type ImportStatus =

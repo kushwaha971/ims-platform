@@ -87,6 +87,10 @@ class LendingConfig(AppConfig):
         )
         # LEN-12 — the policy, the reminder sources and the fixed texts.
         messages.register()
+        # QA F10 — running loans from the old register, through the import wizard.
+        from apps.lending import importers
+
+        importers.register()
 
         # docs/platform/14 §4.2 — Lending & collections as an app.
         from apps.platform_app.apps_registry import AppSpec, register_app
@@ -96,7 +100,10 @@ class LendingConfig(AppConfig):
                 code="lending",
                 label_id="nav.workspace.lending",
                 anchor="lending",
-                capabilities=frozenset({"lending", "parties", "ledger", "payments", "dues"}),
+                # `import_export` — QA F10: the running-loans import (migration 0007).
+                capabilities=frozenset(
+                    {"lending", "parties", "ledger", "payments", "dues", "import_export"}
+                ),
                 entry_permission="lending.today.read",
                 home_path="/lending",
                 order=20,

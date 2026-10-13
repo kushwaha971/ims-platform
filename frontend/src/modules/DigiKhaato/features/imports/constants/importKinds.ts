@@ -50,9 +50,38 @@ export const IMPORT_KINDS: Readonly<Record<ImportKind, ImportKindConfig>> = {
       { key: 'opening_stock_qty', format: 'qty' },
     ],
   },
+  students: {
+    ...IMPORT_ACCESS.students,
+    kind: 'students',
+    previewColumns: [
+      { key: 'name', format: 'text' },
+      { key: 'mobile', format: 'mobile' },
+      { key: 'plan', format: 'text' },
+      { key: 'joined', format: 'date' },
+      { key: 'paid_till', format: 'date' },
+      { key: 'deposit', format: 'money' },
+      { key: 'old_dues', format: 'money' },
+      { key: 'seat', format: 'text' },
+      { key: 'shift', format: 'text' },
+    ],
+  },
+  loans: {
+    ...IMPORT_ACCESS.loans,
+    kind: 'loans',
+    previewColumns: [
+      { key: 'name', format: 'text' },
+      { key: 'mobile', format: 'mobile' },
+      { key: 'amount', format: 'money' },
+      { key: 'given_on', format: 'date' },
+      { key: 'collect', format: 'label' },
+      { key: 'instalments', format: 'text' },
+      { key: 'each_instalment', format: 'money' },
+      { key: 'collected', format: 'money' },
+    ],
+  },
 };
 
-export const IMPORT_KIND_ORDER: readonly ImportKind[] = ['parties', 'items'];
+export const IMPORT_KIND_ORDER: readonly ImportKind[] = ['parties', 'items', 'students', 'loans'];
 
 /** §17.8.0 — the framework's file limit, refused client-side with the server's words. */
 export const IMPORT_MAX_BYTES = 5 * 1024 * 1024;

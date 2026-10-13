@@ -35,6 +35,8 @@ import { ROUTES } from 'src/routes';
 import { formatBusinessDate } from 'src/utils/dates';
 import { formatInr } from 'src/utils/money';
 
+import { ImportActionLink } from 'modules/DigiKhaato/features/imports/components/ListHeaderActions';
+
 import { selectLendingForm } from '../redux/lendingFormSlice';
 import { selectLendingLoans } from '../redux/lendingLoansSlice';
 import { fetchLendingBorrower, fetchLendingLoans } from '../redux/lendingThunk';
@@ -159,6 +161,8 @@ export function LoansPageContent(): React.JSX.Element {
                   {person ? t('lending.borrower.newLoan') : t('lending.loan.new')}
                 </UbActionLink>
               ) : null}
+              {/* QA F10 — a lender's whole register, in one file, on the book's own list. */}
+              {!person ? <ImportActionLink kind="loans" /> : null}
               {person && canManage ? (
                 <BorrowerHeaderMenu
                   t={t}

@@ -118,8 +118,21 @@ def test_already_collected_cannot_be_the_whole_loan_or_more(office: dict) -> Non
     refused = _loan(office, "d", existing={"instalments_collected": 100})
     assert refused.status_code == 400
     assert "existing" in refused.json()["error"]["details"]
-    refused = _loan(office, "e", existing={"collected_amount": "0"})
+    refused = _loan(office, "e", existing={"instalments_collected": 0})
     assert refused.status_code == 400
+    refused = _loan(office, "g", existing={"collected_amount": "-1"})
+    assert refused.status_code == 400
+
+
+def test_a_running_loan_with_nothing_collected_yet_still_moves_no_cash(office: dict) -> None:
+    """QA F10: a loan from the old register given last week, first instalment not yet
+    due — `collected_amount: 0` — comes in with no collection and no cash today."""
+    before = _cash(office["tenant"])
+    made = _loan(office, "h", existing={"collected_amount": "0"})
+    assert made.status_code == 201, made.json()
+    assert made.json()["data"]["collected"] == "0.00"
+    assert not LendingCollection.objects.filter(loan_id=made.json()["data"]["id"]).exists()
+    assert _cash(office["tenant"]) == before
 
 
 def test_a_new_loan_is_unchanged_its_cash_leaves_the_drawer(office: dict) -> None:

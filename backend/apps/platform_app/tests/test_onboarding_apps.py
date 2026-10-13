@@ -114,6 +114,17 @@ def test_a_business_that_chose_one_app_runs_only_that_app(
     assert not modules & {"sales", "purchases", "inventory", "expenses"}
 
 
+@pytest.mark.parametrize("app", ["library", "lending"])
+def test_a_library_or_a_lender_alone_can_import_its_register(
+    api_as: Any, tenant: Any, onboarding_ready: Any, app: str
+) -> None:
+    """QA F10: only the Shop brought `import_export`, so a reading room that chose
+    Library alone had no Import action and the server refused its students file."""
+    client, _member = api_as(tenant)
+    created = _tenant_of(_create(client, apps=[app]))
+    assert "import_export" in created.enabled_modules
+
+
 def test_several_apps_can_be_chosen_together(
     api_as: Any, tenant: Any, onboarding_ready: Any
 ) -> None:

@@ -122,6 +122,10 @@ class LibraryConfig(AppConfig):
         from apps.library.services import fee_messages
 
         fee_messages.register()
+        # ── QA F10 ── students from the paper register, through the import wizard.
+        from apps.library import importers
+
+        importers.register()
         register_schedule(Schedule(tasks.OVERDUE_TODAY, period="daily", at_hour_ist=9, minute=0))
 
         # ── B14 ── the library's block on the core dashboard (LIB-11 FR-1).
@@ -159,8 +163,17 @@ class LibraryConfig(AppConfig):
                 code="library",
                 label_id="nav.workspace.library",
                 anchor="library",
+                # `import_export` — QA F10: the students import (migration 0011).
                 capabilities=frozenset(
-                    {"library", "parties", "ledger", "payments", "dues", "attendance"}
+                    {
+                        "library",
+                        "parties",
+                        "ledger",
+                        "payments",
+                        "dues",
+                        "attendance",
+                        "import_export",
+                    }
                 ),
                 entry_permission="library.member.read",
                 home_path="/library",

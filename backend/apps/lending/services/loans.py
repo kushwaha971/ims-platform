@@ -452,7 +452,9 @@ def parse_existing(data: dict, schedule: Schedule) -> Decimal | None:
     """QA F8 — `existing: {instalments_collected | collected_amount}` for a loan brought in
     from paper, or None for a new loan. N instalments are the first N on the schedule
     (what a paper register counts); an amount may be any figure. Either way it must
-    leave something owed: a loan paid in full has nothing to bring in."""
+    leave something owed: a loan paid in full has nothing to bring in. An amount of 0
+    is a loan from the old book whose first collection has not come yet (QA F10's
+    loan import: given last week, nothing paid) — still not today's cash."""
     raw = data.get("existing")
     if raw in (None, False, ""):
         return None
@@ -475,7 +477,7 @@ def parse_existing(data: dict, schedule: Schedule) -> Decimal | None:
             amount = q2(Decimal(str(raw.get("collected_amount") or "")))
         except (ArithmeticError, ValueError):
             raise ValidationFailed({"existing": ["Enter the amount already collected."]}) from None
-    if amount <= ZERO:
+    if amount < ZERO or (amount == ZERO and count not in (None, "")):
         raise ValidationFailed({"existing": ["Enter the amount already collected."]})
     if amount >= total:
         raise ValidationFailed(
@@ -665,7 +667,7 @@ def create_loan(*, ctx: Any, data: Any) -> LendingLoan:
     loan.schedule_id = result.schedule.id
     loan.disbursal_payment_id = disbursal["payment"].id
     loan.save(update_fields=["schedule_id", "disbursal_payment_id", "updated_at"])
-    if already is not None:
+    if already:
         from apps.lending.services.collections import record_opening
 
         record_opening(ctx=ctx, loan=loan, amount=already, on=today)

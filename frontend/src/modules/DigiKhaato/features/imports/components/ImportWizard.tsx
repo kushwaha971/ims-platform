@@ -68,7 +68,8 @@ export function ImportWizard({
       }
       return <UbSkeleton variant="card" label={t('imports.loading')} />;
     }
-    if (!wizard.kind) return <ImportKindPicker canImport={wizard.canImport} />;
+    if (!wizard.kind)
+      return <ImportKindPicker canImport={wizard.canImport} offered={wizard.offered} />;
     return <ImportUploadStep kind={wizard.kind} wizard={wizard} />;
   })();
 

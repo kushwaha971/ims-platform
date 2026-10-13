@@ -49,7 +49,10 @@ const OWNER: readonly PermissionCode[] = [
   'inventory.item.write',
 ];
 
-const signIn = (permissions: readonly PermissionCode[]): void => {
+const signIn = (
+  permissions: readonly PermissionCode[],
+  modules: readonly string[] = ['parties', 'ledger', 'inventory', 'sales', 'import_export']
+): void => {
   store.dispatch(
     sessionLoaded({
       user: {
@@ -64,7 +67,7 @@ const signIn = (permissions: readonly PermissionCode[]): void => {
       activeTenant: { id: 't1', name: 'Kumar Stores', timezone: 'Asia/Kolkata' },
       tenants: [{ id: 't1', name: 'Kumar Stores', timezone: 'Asia/Kolkata' }],
       permissions: [...permissions],
-      enabledModules: ['parties', 'ledger', 'inventory', 'import_export'],
+      enabledModules: [...modules] as never,
       version: 1,
     })
   );
@@ -157,6 +160,13 @@ describe('the review step', () => {
       skipErrors: true,
       duplicates: 'skip',
     });
+  });
+
+  it('does not offer to import 0 good rows when every row has a problem (QA F10 look)', async () => {
+    renderJob({ ...READY, validRows: 0, errorRows: 2, totalRows: 2, canCommit: false });
+    expect(await screen.findByText(/Fix these rows in your sheet/)).toBeInTheDocument();
+    expect(screen.queryByText(/Import the 0 good rows/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /skip 2/ })).not.toBeInTheDocument();
   });
 
   it('says the money in problem rows apart from the totals (QA B27)', async () => {
@@ -313,6 +323,23 @@ describe('choosing and uploading', () => {
     renderWithProviders(<ImportWizard kind={null} jobId={null} exportId={null} />);
     expect(screen.getAllByText('Ask the owner — your role cannot import this.')).toHaveLength(2);
     expect(screen.queryByRole('link', { name: 'Choose' })).not.toBeInTheDocument();
+  });
+
+  it('offers a reading room its students and not a shop its loans (QA F10)', () => {
+    // Every kind used to be drawn, with "Ask the owner" under the ones the business
+    // never switched on — a question no owner can answer yes to.
+    signIn(
+      ['library.member.write', 'library.member.read'],
+      ['library', 'parties', 'ledger', 'import_export']
+    );
+    renderWithProviders(<ImportWizard kind={null} jobId={null} exportId={null} />);
+    expect(screen.getByText('Students')).toBeInTheDocument();
+    expect(screen.queryByText('Running loans')).not.toBeInTheDocument();
+    expect(screen.queryByText('Customers and suppliers')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Choose' })).toHaveAttribute(
+      'href',
+      '/imports?kind=students'
+    );
   });
 
   it('refuses a file over 5 MB before sending a byte (EC-3)', async () => {

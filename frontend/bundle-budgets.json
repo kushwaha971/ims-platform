@@ -764,7 +764,8 @@
   "QA F1/F2 (13 Oct 2026, library admission: an existing student's dates and dues, any amount in any mode) — the library routes moved 0.1-0.3 KB: the ten new words in the library catalogue every library route loads. The shared mode-line schema and wire mapping were first imported from the payments modules that hold them and cost those routes 2.7-3.4 KB; they now live in two modules that import almost nothing (`payments/validation/paymentLineSchema.ts`, `payments/view-model/modeBreakup.ts`) — the PTY-01 lesson, a fourth time. Raised by the measured + 0.5 rule: /library/members route -> 81; /library/counter firstLoad -> 314; /library/members/[membershipId] route -> 75; /library firstLoad -> 311; /library/seats firstLoad -> 309; /library/messages route -> 66; /library/catalogue/categories route -> 65; /library/catalogue/locations route -> 65.",
   "QA F4 / B51 (13 Oct 2026, library messages to any student and to a group) — the library routes moved 0.1-0.5 KB: the library catalogue every library route loads gained the words for the plan end date, thanks, your own message, the group drawer and the message log, and libraryMessageThunk (statically reachable through the library slice) gained two thunks. /library/members/[membershipId] also renders the message log card itself (+0.5 route); the group drawer and the custom-message form are dynamic() so neither is in a route chunk. /d/[token] and two library route chunks crossed their line by under 0.05 KB: nothing they import changed — webpack moved the shared `money` words, which PaymentModeEditor now loads itself (F2). Raised by the measured + 0.5 rule: /library/members firstLoad -> 319.7; /library/catalogue firstLoad -> 314.8; /library/members/[membershipId] route -> 76; /library/members/[membershipId] firstLoad -> 314.6; /library/counter route -> 75.5; /library/copies firstLoad -> 313.7; /library/fees route -> 71.6; /library/money route -> 68.7; /library/attendance firstLoad -> 306.9; /library/catalogue/[titleId] route -> 66.5; /library/messages firstLoad -> 304.9; /library/catalogue/categories firstLoad -> 303.6; /library/catalogue/locations firstLoad -> 303.6; /d/[token] route -> 39.5.",
   "QA F6 (13 Oct 2026, the seat map across the whole day) — the library catalogue every library route loads gained the seat map's words (part taken, full, other shift, the filters, the panel's actions). The seat panel is dynamic(): imported statically, its free-seat confirmation, member thunks and message-dialog loader moved webpack's shared groupings and put 0.2-0.4 KB on 71 unrelated routes (the sales and purchase forms, settings, admin); lazily loaded, it is one library route over by 0.1. Raised by the measured + 0.5 rule: /library/copies/[copyId] route -> 69.6.",
-  "QA F8 (13 Oct 2026, a loan brought in from the old book) — /lending/loans/new gained the 'Loan already running' switch (UbSwitch is new to that route), the instalments-or-amount choice and its field. The form is the page itself, so it cannot be dynamic(). Raised by the measured + 0.5 rule: /lending/loans/new route -> 131.8; /lending/loans/new firstLoad -> 370.4."
+  "QA F8 (13 Oct 2026, a loan brought in from the old book) — /lending/loans/new gained the 'Loan already running' switch (UbSwitch is new to that route), the instalments-or-amount choice and its field. The form is the page itself, so it cannot be dynamic(). Raised by the measured + 0.5 rule: /lending/loans/new route -> 131.8; /lending/loans/new firstLoad -> 370.4.",
+  "QA F10 phase B (13 Oct 2026, students and running loans from a file) — /library/members and /lending/loans gained the Import action, which renders `imports.action.import` and so loads the `exports` catalogue with the list (the same thing /parties and /items already pay); the wizard itself is a different route. /imports and /imports/[id] gained two kinds' preview columns and words. Raised by the measured + 0.5 rule: /library/members route -> 82.8, firstLoad -> 321.4; /lending/loans route -> 68.7, firstLoad -> 307.3; /imports and /imports/[id] firstLoad -> 289."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -1534,11 +1535,11 @@
   },
   "/imports": {
    "route": 50,
-   "firstLoad": 288
+   "firstLoad": 289
   },
   "/imports/[id]": {
    "route": 50,
-   "firstLoad": 288
+   "firstLoad": 289
   },
   "/admin": {
    "route": 11,
@@ -1633,8 +1634,8 @@
    "firstLoad": 352
   },
   "/library/members": {
-   "route": 81,
-   "firstLoad": 319.7
+   "route": 82.8,
+   "firstLoad": 321.4
   },
   "/library/members/[membershipId]": {
    "route": 76.0,
@@ -1729,8 +1730,8 @@
    "firstLoad": 303
   },
   "/lending/loans": {
-   "route": 67,
-   "firstLoad": 305
+   "route": 68.7,
+   "firstLoad": 307.3
   },
   "/customers": {
    "route": 110,
